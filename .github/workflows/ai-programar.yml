@@ -8,6 +8,17 @@ name: IA — programar (orquestador Fase 2)
 #
 # Requiere secrets de repo: PLATAFORMA_URL, AI_GATEWAY_SECRET (y opcional ALERTA_TOKEN
 # para el aviso Telegram). Si faltan, el paso correspondiente degrada sin romper.
+#
+# 🚨 Secret opcional pero IMPORTANTE — GH_PAT_TRIGGER (Personal Access Token, permiso
+# Contents:write + Pull requests:write sobre ESTE repo): el push/PR-open de "Abrir PR
+# draft" necesita un token que NO sea el GITHUB_TOKEN automático del run, porque GitHub
+# no dispara `pull_request` (tests.yml/ci.yml/qa.yml) a partir de eventos hechos con ese
+# token por defecto (anti-recursión) — verificado en vivo el 29/07/2026 (PR #1139): el
+# paso de veredicto comentó "✅ CI en verde" habiendo corrido SOLO el check de Vercel,
+# porque tests.yml nunca llegó a ejecutarse. Sin GH_PAT_TRIGGER, el workflow sigue
+# funcionando (fallback a github.token) pero el veredicto de CI puede ser un FALSO
+# POSITIVO — no confíes en un "✅" de un PR de ai-programar.yml hasta que este secret
+# exista. Detalle: docs/DIRECTOR-CODIGO.md.
 
 on:
   workflow_dispatch:
@@ -76,8 +87,16 @@ jobs:
         id: pr
         if: steps.diff.outputs.cambios == 'si'
         env:
-          GH_TOKEN: ${{ github.token }}
+          # Con GH_PAT_TRIGGER puesto, el push/PR-open cuenta como un actor "externo" al
+          # run y SÍ dispara tests.yml/ci.yml/qa.yml en el PR (igual que cuando abre el
+          # PR una sesión de Claude Code). Sin ese secret, cae a github.token — el PR se
+          # sigue abriendo, pero el veredicto de CI de más abajo puede ser falso (ver
+          # nota de cabecera del workflow).
+          GH_TOKEN: ${{ secrets.GH_PAT_TRIGGER || github.token }}
         run: |
+          if [ -z "${{ secrets.GH_PAT_TRIGGER }}" ]; then
+            echo "::warning::Sin GH_PAT_TRIGGER — uso github.token. tests.yml puede NO dispararse en el PR y el veredicto de CI sería un falso positivo. Ver cabecera de este workflow."
+          fi
           BRANCH="ai/programar-${{ github.run_id }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
