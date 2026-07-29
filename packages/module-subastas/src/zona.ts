@@ -37,6 +37,16 @@ export function slugZonaFotocasa(municipio: string | null | undefined): string |
   return CAPITALES.has(slug) ? `${slug}-capital` : slug
 }
 
+/**
+ * Slug de distrito dentro de una capital, a partir del nombre que publica el
+ * propio Fotocasa en sus anuncios («Cerro - Amate» → `cerro-amate`).
+ */
+export function slugDistritoFotocasa(distrito: string | null | undefined): string | null {
+  if (!distrito) return null
+  const slug = normalizar(distrito).replace(/-+/g, '-')
+  return slug.length >= 3 ? slug : null
+}
+
 /** Respuesta de la edge function `zona-fotocasa` (contrato del puente). */
 export interface ZonaPortal {
   totalZona: number | null
@@ -44,6 +54,7 @@ export interface ZonaPortal {
   p25m2: number | null
   p50m2: number | null
   p75m2: number | null
+  anuncios?: Array<{ cp: string | null; distrito: string | null }>
 }
 
 /** Muestra mínima para fiarse de la mediana de una zona. */

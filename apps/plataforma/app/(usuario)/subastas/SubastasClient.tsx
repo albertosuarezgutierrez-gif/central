@@ -39,7 +39,7 @@ interface Resultado {
   tipoBien?: string | null; esPlaya?: boolean; margenFlip?: number | null
   margenFlipPct?: number | null; flipApto?: boolean; semaforo?: string | null
   analisis?: PuntoAnalisis[] | null
-  precioM2Zona?: number | null; muestraZona?: number | null
+  precioM2Zona?: number | null; muestraZona?: number | null; zonaPortal?: string | null
 }
 interface Filtros {
   tipo: string; playa: boolean; m2min: string; m2max: string; eurM2Max: string
@@ -771,7 +771,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                     )}
                     {r.precioM2Zona != null && (
                       <p style={{ margin: '6px 0 0', color: 'var(--muted)', fontSize: 13 }}>
-                        📍 Zona: ~{Math.round(r.precioM2Zona).toLocaleString('es-ES')}€/m² en venta
+                        📍 Zona{r.zonaPortal ? ` (${r.zonaPortal})` : ''}: ~{Math.round(r.precioM2Zona).toLocaleString('es-ES')}€/m² en venta
                         {r.muestraZona != null && ` (${r.muestraZona} anuncios de Fotocasa)`}
                         {r.subasta.superficie != null && r.subasta.valorSubasta != null && r.subasta.superficie > 0 && (
                           <> — este sale a <strong style={{ color: 'var(--text)' }}>
