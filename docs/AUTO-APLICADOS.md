@@ -13,6 +13,20 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-29 (ligera)** · `.claude/skills/plataforma-maestro/SKILL.md` + `apps/plataforma/CLAUDE.md` ·
+  añadida fila/sección **Subastas** (radar de subastas del BOE, PRs #1113-#1120, 28/07/2026): 8 commits
+  con módulo nuevo `@central/module-subastas`, 6 crons, página de usuario y API completa habían
+  aterrizado sin ninguna mención en el skill router ni en el CLAUDE.md de la app (el sello
+  `<!-- verificado -->` de `plataforma-maestro` seguía en 19/07). Sigue el mismo patrón/formato ya
+  usado para Concursos/Empresas/trading-analista (fila en la tabla "Dónde vive cada cosa" + sección
+  propia en `apps/plataforma/CLAUDE.md`), contenido sacado de los diffs reales (sin inventar rutas/
+  tablas). Sello `verificado` bumped a 2026-07-29. Resto sin drift: heartbeat de crons con los mismos
+  2 falsos positivos que el 28/07 (`limpiadoras/auto-sessions` 89h, `updates/sync` 86h — confirmado
+  200 reciente por Vercel MCP, patrón idempotente/gaps normales ya documentado, sin acción nueva);
+  `docs/SKILLS.md` cuadra con `.claude/skills/`; sin contradicciones en reglas dictadas por Alberto.
+  **Hallazgo carril 2 (informe + Telegram):** backlog de PRs abiertos sigue escalando (73 hoy, 69 el
+  27/07, más antiguo #725 del 03/07 con 26 días) — 3ª vez que se señala sin que baje. Commit de esta
+  auditoría.
 - **2026-07-28 (ligera)** · sin archivos de reconciliación (nada que auto-aplicar) · rango desde la
   última auditoría (26/07 08:42, profunda) trae 25 commits, pero **todos** los que tocaban código
   (token de rutina en BD #1106, fix 401 en silencio #1104, pricing raíles a plataforma #1101, exime

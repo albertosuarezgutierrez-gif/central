@@ -429,6 +429,20 @@ Las licitaciones son **transversales a los negocios de la cuenta** (fontanería,
 - **OJO envs:** para que los crons de email envíen, el proyecto Vercel `plataforma` necesita `SMTP_*`/`RESEND_API_KEY` (hoy viven en `ialimp`). `NVIDIA_API_KEY` y `CRON_SECRET` ya están. PLACSP da **403** a IPs no-Vercel → la ingesta solo corre en preview/prod.
 - **Tablas** (BD compartida, ya aplicadas): `concursos`, `concursos_licitaciones`, `concursos_seguidos`, `concursos_perfil_empresa`, `concursos_radar_criterios`, `concursos_radar_anuncios`, `biblioteca_documentos` (+ columnas `resumen_ia`, `avisado_email_at`, `recordatorio_cierre_at`).
 
+## Subastas de inmuebles del BOE (agente) — PRs #1113-#1120 (28/07/2026)
+Radar de subastas judiciales/notariales del BOE con coste real de adquisición. Sección de usuario **🏛️ Subastas** (`app/(usuario)/subastas/{page,SubastasClient}.tsx`). Módulo PURO **`@central/module-subastas`** (BOE parsing, Catastro, geo, extracción de importes en texto español, scoring, comparables de mercado, costes/tesorería del depósito).
+- **Ingesta de alertas del BOE por IMAP dedicado, NO por el triaje de correo:** `lib/subastas/gmail-boe.ts` abre «Todos los mensajes» (`specialUse \All`) y busca por remitente (`no-responder@boe.es`) porque las alertas llegan ya etiquetadas/archivadas fuera de INBOX — el lector incremental de `lib/correo/**` (que solo mira INBOX y trunca el cuerpo) nunca las vería. Es una decisión deliberada, no un gap del triaje.
+- **API:** `app/api/subastas/{criterios,radar,seguidas,route,oferta}`. **Crons** (`vercel.json`): `subastas-ingesta`, `subastas-radar`, `subastas-cierre`, `subastas-mercado`, `subastas-enriquecer`, `subastas-avisos`.
+- **Coste real:** ficha del BOE + valor de mercado (comparables) + valor Catastro + tesorería del depósito (`lib/subastas/{tesoreria,mercado,enriquecer}.ts`).
+- **Yield con datos PROPIOS (28/07/2026):** `lib/subastas/rendimiento.ts` usa la mediana real de los 4 pisos turísticos del grupo (`incomes` + `properties.bedrooms`) para estimar el retorno de un inmueble en subasta, siempre con caveat de que asume rendimiento similar.
+- **Puja máxima:** bisección sobre `calcularCoste` para hallar la puja que deja un descuento real objetivo (hereda toda la lógica fiscal, incluida la base imponible por valor de referencia).
+- **Aviso Telegram por subasta** (no agregado si ≤10/día) con botones `subr_seguir`/`subr_descartar` (prefijo `subr_` en el webhook) — seguir = alta idempotente en `subastas_seguidas`; descartar registra la decisión (base de un aprendizaje futuro, aún no implementado).
+- **Captura de resultados** (`capturarResultados` en `enriquecer.ts`, cron `subastas-enriquecer`): re-consulta subastas concluidas y guarda `resultado`/`importe_adjudicacion`. El parser es defensivo (si no reconoce el marcado de "concluida", loguea y deja NULL) — pendiente de validar contra una conclusión real.
+- **Antesala concursal:** cruza el corpus BORME (empresas en concurso) contra promotoras/inmobiliarias de las provincias de los criterios de Alberto y avisa por Telegram.
+- **Borrador de oferta a la baja** (`POST /api/subastas/oferta`): la IA (cadena gratis `aiComplete`) solo redacta el texto — precio, mediana de zona, bajadas y antigüedad del anuncio siempre vienen de la BD, nunca los inventa.
+- **Tablas** (BD compartida, `prisma/sql/2026-07-28_*.sql`): `subastas_seguidas` + las de mercado/comparables/bajadas de precio/chollo avisado.
+- Fases 3 (BOP Sevilla/Huelva/Cádiz, Junta, Sareb, servicers) bloqueadas por allowlist de red pendiente de Alberto — no por código. Detalle completo en `docs/CONTEXTO-SESIONES.md` (entradas 28/07/2026).
+
 ## Reglas
 - Multi-tenant: SIEMPRE filtrar por `cuenta_id` en todas las queries.
 - Sin credenciales en repo.
