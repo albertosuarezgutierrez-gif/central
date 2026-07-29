@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-29T07:39:42Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-29T08:53:31Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -217,7 +217,6 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (29/07/2026) 🔨🏖️ Subastas — lentes con filtros + Fotocasa con 👤 particular (29/07/2026, tarde).
 - (29/07/2026) 🔒 Director de código Fase 2: cierre de PR con veredicto real de CI (29/07/2026).
 - (29/07/2026) 🔧 Subastas — HOTFIX /subastas caída + FASE 3 construida con datos reales (29/07/2026, mañana).
 - (29/07/2026) 🧹 agentes-entrenador — "repara todo" (29/07/2026): backlog de PRs + trabajo perdido recuperado.
@@ -227,4 +226,5 @@
 - (28/07/2026) 🎯 Subastas — LOTE «todo lo que quedaba» (28/07/2026, noche). MERGEADO (PR #1120, squash `a9609d3`).
 - (28/07/2026) ⬇️ Subastas — SEGUIMIENTO DE BAJADAS DE PRECIO + antigüedad estimada del anuncio (28/07/2026).
 - (28/07/2026) 💡 Subastas — UNIFICADA la inversión inmobiliaria: detector de CHOLLOS de venta directa (28/07/2026).
+- (28/07/2026) 📅 Trading — aviso de Google Calendar creado para la cohorte 3 (28/07/2026, sesión de charla).
 
