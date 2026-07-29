@@ -16,6 +16,24 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔒 Director de código Fase 2: cierre de PR con veredicto real de CI (29/07/2026).** Alberto: "quiero
+  optimizar el trabajo de programación y usarte solo para pensar/organizar/revisar". Al auditar cómo se
+  "cierra" un plan del orquestador (`.github/workflows/ai-programar.yml`) se vio que el PR draft se abría
+  con la disculpa genérica "SIN verificar. Revisa el diff y corre tsc/tests" **aunque `tests.yml` YA
+  typechequea automáticamente cualquier PR** (matriz `strategy.matrix.app`, dispara solo en
+  `pull_request→main`) — el aviso era falso/pesimista y nadie leía el resultado real. Cambio, sin tocar
+  la arquitectura de 3 roles (decisor/planificador/ejecutor) que ya funciona: **`ai-programar.yml`** ahora
+  espera el veredicto (`gh pr checks --watch`, tope 15 min, `continue-on-error` para no romper el run) y lo
+  **comenta en el propio PR** + lo refleja en el aviso Telegram (✅ compila / ❌ roto, no mergear / ⏳ sin
+  confirmar a tiempo). Deliberadamente NO repite install+prisma+tsc dentro del job (duplicaría minutos de
+  Action) — reusa el check que ya existe. El texto del PR ya no miente: aclara que compilar en verde solo
+  confirma sintaxis, la LÓGICA la sigue revisando un humano (o Claude). Job `timeout-minutes` 15→35 para dar
+  margen a la espera. Detalle en `docs/DIRECTOR-CODIGO.md` (sección Fase 2, nota "Cierre verificado").
+  **Nota de proceso:** la rama llevaba 346 commits de retraso sobre `main` (10 días de trabajo de otras
+  sesiones en paralelo) — al ir a mergear se descubrió que **`apps/almacen` ya se había añadido a la
+  matriz de `tests.yml` en otra sesión mientras tanto** (ese gap, sí real cuando se detectó, ya estaba
+  resuelto); solo quedaba pendiente el cambio de `ai-programar.yml`.
+
 - **📄 Subastas — documentos de la ficha del BOE al enriquecedor: HECHO y PROBADO en producción
   (29/07/2026, PR #1131 mergeado, `980681a`).** El cron `subastas-enriquecer` ahora descarga hasta 3
   documentos por ficha BOE (`procesarDocumentos` en `lib/subastas/documentos.ts`, pdf-parse perezoso,

@@ -127,6 +127,12 @@ El ciclo completo, encadenado, con el planificador Claude alto de verdad:
   por Telegram. NUNCA mergea. El código del coder barato **no llega a `main` sin revisión humana**. Secrets de
   repo: `PLATAFORMA_URL`, `AI_GATEWAY_SECRET` (+ `ALERTA_TOKEN` opcional para el aviso). El paso "Abrir PR
   draft" **no falla el run** si el ajuste de repo está apagado: pushea la rama e imprime el enlace.
+  **Cierre verificado (19/07/2026):** el PR ya NO se queda con la disculpa genérica "sin verificar" — como
+  abrir el PR dispara automáticamente `tests.yml` (typecheck de la app tocada) sobre esa misma PR, el
+  workflow espera el veredicto (`gh pr checks --watch`, tope 15 min, `continue-on-error`) y lo **comenta en
+  el PR** (✅ compila / ❌ roto / ⏳ sin confirmar a tiempo) + lo refleja en el aviso Telegram. No se repite
+  install/typecheck dentro de `ai-programar.yml` (duplicaría minutos de Action): se reusa el check que ya
+  existe. Compilar en verde solo confirma sintaxis — la revisión de LÓGICA sigue siendo humana (o de Claude).
 
 > **✅ PROBADO end-to-end el 17/07/2026** (PR autogenerado #966): acota (qwen) → **plan Opus 4.1** → ejecuta
 > qwen (falló) → **guardia lo rechazó → escaló a Opus** → diff sano → **PR draft abierto solo**. Nada roto se
