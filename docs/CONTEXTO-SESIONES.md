@@ -16,6 +16,25 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💸 Transferencias SEPA "libres" (formulario) + fix redirect del pago de facturas (29/07/2026, rama
+  `claude/agente-contable-notificaciones-cbouni`).** Alberto: "con la conexión de los bancos, ¿puedes hacer
+  transferencias?" → sí, pero el PIS (Enable Banking) estaba solo cableado al pago de facturas de proveedor y
+  APAGADO. Pidió desarrollar además la **transferencia libre a cualquier destinatario**. Hecho:
+  - **`POST /api/banca/transferencia`** (con sesión): valida IBAN (mod-97 de `@central/module-pagos::validarIban`),
+    importe > 0 y **tope de seguridad `TRANSFERENCIA_MAX_EUR`** (default 3000€). Con PIS activo → `iniciarPago`
+    devuelve `auth_url` para firmar en el banco (SCA); sin PIS → **SEPA XML pain.001** para importar a mano
+    (útil YA aunque PIS siga apagado). El `debtor` sale de `EB_DEBTOR_IBAN`.
+  - **`/banca/transferencia`** (`app/(usuario)/banca/transferencia/page.tsx`): formulario con **paso de
+    confirmación** que muestra IBAN+importe exactos antes de ordenar. Entrada en la sidebar (💸 Transferencia).
+    **DISEÑO DE SEGURIDAD:** la IA NO interviene (no inventa importes/IBANs — regla del repo); el dueño teclea,
+    confirma y firma en el banco. Doble control: confirmación en pantalla + SCA.
+  - **Fix bug**: `lib/agente-facturas/pagos.ts` construía el `redirectUrl` del callback con precedencia rota
+    (`A ?? B ? C : D` ignoraba el valor de `NEXTAUTH_URL`). Extraído a **`lib/base-url.ts::baseUrl()`** (reusado
+    por el endpoint nuevo). Verificado `tsc` 0 + `next build` exit 0.
+  - **PENDIENTE de Alberto (config, no código):** para que las transferencias sean "un clic + firma" (PIS) en vez
+    de SEPA XML, faltan en Vercel `EB_PIS_ENABLED=true` + `EB_DEBTOR_IBAN` (IBAN Kutxabank), y confirmar que el
+    tier de Enable Banking incluye PIS. Sin eso, el formulario ya funciona vía SEPA XML.
+
 - **🔒 Director de código Fase 2: cierre de PR con veredicto real de CI (29/07/2026).** Alberto: "quiero
   optimizar el trabajo de programación y usarte solo para pensar/organizar/revisar". Al auditar cómo se
   "cierra" un plan del orquestador (`.github/workflows/ai-programar.yml`) se vio que el PR draft se abría
