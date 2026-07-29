@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-29T07:39:42Z",
-  "sha": "818d7dea6c2831187a6e5836f09ce98cc7fe6ae1",
+  "generadoEn": "2026-07-29T07:50:34Z",
+  "sha": "67c9478ff77822789931973785d3fac818e8f540",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -51133,12 +51133,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 17
+          "linea": 20
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/subastas-mercado",
-      "hash": "21b1d95d977b"
+      "hash": "360f4feb90d2"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-radar/route.ts",
@@ -55209,7 +55209,7 @@
         "subastas_debug_token"
       ],
       "rutaApi": "/api/subastas/fase3-debug",
-      "hash": "29d1a6670d9b"
+      "hash": "bb0272085bae"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/oferta/route.ts",
