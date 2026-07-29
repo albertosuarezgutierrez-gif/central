@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-29T06:18:48Z",
-  "sha": "83b99388aaf56e88b77fb6f56e28c1a99ec16665",
+  "generadoEn": "2026-07-29T06:26:54Z",
+  "sha": "c2f4a25a8a81e1a47368e4f8141021e5c8fdce31",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -57563,7 +57563,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "fe93d0fd3c1f"
+      "hash": "0795cdca6776"
     },
     {
       "ruta": "apps/plataforma/lib/borme-ingesta.ts",
