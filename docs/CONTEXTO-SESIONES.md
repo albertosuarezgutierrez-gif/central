@@ -16,6 +16,7 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+<<<<<<< HEAD
 - **🔨🏖️ Subastas — lentes con filtros + Fotocasa con 👤 particular (29/07/2026, tarde).** Petición de
   Alberto: «busco inmuebles para comprar-reformar-vender, una segunda residencia en playa de Huelva
   (sin tope de precio — "soy capaz de pagar más si es interesante"), parking también es buen negocio,
@@ -36,6 +37,44 @@
     Urso, Jerez 184,2k = promoción). **La ficha de Fotocasa responde 200 a fetch simple** (sin WAF desde
     pg_net; pendiente confirmar desde Vercel en la prueba E2E).
   - Pendiente E2E tras merge: `fase3-debug?accion=clasificar` y `?accion=mercado` en producción.
+=======
+- **🚨 Director de código Fase 2: la prueba end-to-end del "veredicto de CI" destapó un FALSO POSITIVO real
+  (29/07/2026, PR #1139).** Tras mergear el cierre del bucle (entrada de abajo), Alberto pidió probarlo de
+  verdad: se lanzó `ai-programar.yml` con una tarea real (formato de € en
+  `apps/ialimp/app/admin/planes/page.tsx`) → acotó, planificó, ejecutó (arregló 1 de las 2 líneas pedidas —
+  la otra la describí mal yo mismo en la orden, el coder no adivinó y no tocó nada que no encajara, lo
+  correcto), abrió el PR #1139 y comentó **"✅ CI en verde"**. Pero al auditar el PR: **`tests.yml`/`ci.yml`/
+  `qa.yml`/`gitleaks` NUNCA se ejecutaron** — solo corrió el check de Vercel (trivial, skip). Causa: el paso
+  "Abrir PR draft" usa el `GITHUB_TOKEN` automático del run, y GitHub **no dispara `pull_request` a partir
+  de eventos hechos con ese token** (anti-recursión). El paso "Anotar veredicto" no lo sabía → vio 1 check
+  en verde (Vercel) y reportó "todo verde" sin que el código se hubiera typechequeado de verdad. Es el mismo
+  problema que este cambio quería resolver, reaparecido por otra vía — detectado ANTES de que Alberto
+  confiara en un verde falso. **PR #1139 dejado en draft, SIN mergear** (además toca ialimp, cliente en vivo
+  Sique Brilla). **Fix real pendiente — necesita algo que solo Alberto puede crear:** un Personal Access
+  Token con permiso de repo (secret nuevo, p.ej. `GH_PAT_TRIGGER`) para que `ai-programar.yml` pushee/abra
+  el PR con un token "externo" al run (así SÍ dispara `pull_request`, como hacen las sesiones de Claude Code
+  al abrir PR — verificado con #1137/#1020, que sí typechequearon solos). Hasta entonces, **cualquier PR
+  abierto por `ai-programar.yml` con "✅ CI en verde" hay que verificarlo a mano** en la pestaña Checks antes
+  de confiar en él. Detalle en `docs/DIRECTOR-CODIGO.md`.
+
+- **🔒 Director de código Fase 2: cierre de PR con veredicto real de CI (29/07/2026).** Alberto: "quiero
+  optimizar el trabajo de programación y usarte solo para pensar/organizar/revisar". Al auditar cómo se
+  "cierra" un plan del orquestador (`.github/workflows/ai-programar.yml`) se vio que el PR draft se abría
+  con la disculpa genérica "SIN verificar. Revisa el diff y corre tsc/tests" **aunque `tests.yml` YA
+  typechequea automáticamente cualquier PR** (matriz `strategy.matrix.app`, dispara solo en
+  `pull_request→main`) — el aviso era falso/pesimista y nadie leía el resultado real. Cambio, sin tocar
+  la arquitectura de 3 roles (decisor/planificador/ejecutor) que ya funciona: **`ai-programar.yml`** ahora
+  espera el veredicto (`gh pr checks --watch`, tope 15 min, `continue-on-error` para no romper el run) y lo
+  **comenta en el propio PR** + lo refleja en el aviso Telegram (✅ compila / ❌ roto, no mergear / ⏳ sin
+  confirmar a tiempo). Deliberadamente NO repite install+prisma+tsc dentro del job (duplicaría minutos de
+  Action) — reusa el check que ya existe. El texto del PR ya no miente: aclara que compilar en verde solo
+  confirma sintaxis, la LÓGICA la sigue revisando un humano (o Claude). Job `timeout-minutes` 15→35 para dar
+  margen a la espera. Detalle en `docs/DIRECTOR-CODIGO.md` (sección Fase 2, nota "Cierre verificado").
+  **Nota de proceso:** la rama llevaba 346 commits de retraso sobre `main` (10 días de trabajo de otras
+  sesiones en paralelo) — al ir a mergear se descubrió que **`apps/almacen` ya se había añadido a la
+  matriz de `tests.yml` en otra sesión mientras tanto** (ese gap, sí real cuando se detectó, ya estaba
+  resuelto); solo quedaba pendiente el cambio de `ai-programar.yml`.
+>>>>>>> origin/main
 
 - **📄 Subastas — documentos de la ficha del BOE al enriquecedor: HECHO y PROBADO en producción
   (29/07/2026, PR #1131 mergeado, `980681a`).** El cron `subastas-enriquecer` ahora descarga hasta 3

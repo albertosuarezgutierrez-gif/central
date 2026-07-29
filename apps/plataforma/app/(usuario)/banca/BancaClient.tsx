@@ -425,9 +425,9 @@ export function ExportarBtn() {
   return <a href="/api/banca/export" style={{ ...ghost, textDecoration: 'none', display: 'inline-block' }}>📥 Exportar (CSV)</a>
 }
 
-type DupMov = { id: string; fecha: string | null; concepto: string; importe: number; conciliado: boolean; origen?: string }
+type DupMov = { id: string; fecha: string | null; concepto: string; importe: number; conciliado: boolean; origen?: string; cuentaLabel?: string }
 type DupGrupoUI = { clave: string; confianza: 'alta' | 'baja'; importe: number; superaUmbral: boolean; movimientos: DupMov[] }
-type DupResueltoUI = { id: string; fecha: string | null; concepto: string; importe: number; estado: 'ignorado' | 'confirmado' }
+type DupResueltoUI = { id: string; fecha: string | null; concepto: string; importe: number; estado: 'ignorado' | 'confirmado'; cuentaLabel?: string }
 
 // Bandeja "Posibles cargos duplicados": pares sospechosos de cobro doble. El dueño los resuelve
 // con un clic ("Es normal" / "Es un cobro doble"); la decisión persiste. Plegable de "ya
@@ -462,7 +462,7 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
     setBusy(null)
     if (r.ok) {
       setPend(p => p.filter(x => x.clave !== g.clave))
-      setRes(prev => [...g.movimientos.map(m => ({ id: m.id, fecha: m.fecha, concepto: m.concepto, importe: m.importe, estado })), ...prev])
+      setRes(prev => [...g.movimientos.map(m => ({ id: m.id, fecha: m.fecha, concepto: m.concepto, importe: m.importe, estado, cuentaLabel: m.cuentaLabel })), ...prev])
       router.refresh()
     }
   }
@@ -497,6 +497,7 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
                 <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px', padding: '3px 0' }}>
                   <span style={{ color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</span>
                   <span style={{ flex: 1, minWidth: 0, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}{m.conciliado ? ' 🔗' : ''}</span>
+                  {m.cuentaLabel && <span title="Banco / cuenta donde está este cargo" style={{ fontSize: '10px', color: 'var(--text)', background: 'var(--primary-light)', borderRadius: '4px', padding: '1px 6px', flexShrink: 0, fontWeight: 600, whiteSpace: 'nowrap' }}>🏦 {m.cuentaLabel}</span>}
                   {m.origen && <span style={{ fontSize: '10px', color: 'var(--muted)', background: 'var(--border)', borderRadius: '4px', padding: '1px 5px', flexShrink: 0, fontWeight: 500 }}>{m.origen}</span>}
                   <span style={{ fontWeight: 700, color: '#dc2626', width: '92px', textAlign: 'right', flexShrink: 0 }}>{eur(m.importe)}</span>
                 </div>
@@ -523,6 +524,7 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
                 <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)', fontSize: '13px' }}>
                   <span style={{ color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</span>
                   <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</span>
+                  {m.cuentaLabel && <span title="Banco / cuenta" style={{ fontSize: '10px', color: 'var(--text)', background: 'var(--primary-light)', borderRadius: '4px', padding: '1px 6px', flexShrink: 0, fontWeight: 600, whiteSpace: 'nowrap' }}>🏦 {m.cuentaLabel}</span>}
                   <span style={{ fontSize: '11px', color: 'var(--muted)', flexShrink: 0 }}>{m.estado === 'confirmado' ? 'cobro doble' : 'normal'}</span>
                   <span style={{ fontWeight: 700, color: '#dc2626', width: '80px', textAlign: 'right', flexShrink: 0 }}>{eur(m.importe)}</span>
                   <button disabled={busy === m.id} onClick={() => reactivar(m.id)} style={{ ...dupGhost, fontSize: '12px', flexShrink: 0 }}>Reactivar</button>
