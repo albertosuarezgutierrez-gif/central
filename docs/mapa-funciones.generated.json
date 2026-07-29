@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-29T06:50:42Z",
-  "sha": "027dba2dfb07e8d4b5a77e583cffe7a7fbd5f790",
+  "generadoEn": "2026-07-29T06:58:05Z",
+  "sha": "9ed585976e2946029fbbb7b9723b19d6b2c1ef73",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -43783,7 +43783,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 557,
+          "linea": 559,
           "resumen": "Botón que abre Claude Code web y copia /facturas-correo al portapapeles listo para pegar."
         },
         {
@@ -43792,7 +43792,7 @@
           "exportada": true,
           "params": "{ cuentas, destinoLabel, initial, periodo }: { cuentas: { id: string; label: string; sincronizada?: boolean }[] destinoLabel: Record<string, string> initial: { movimientos: MovLedgerUI[]; total: number; hayMas: boolean } // Rango por defect",
           "retorno": null,
-          "linea": 596
+          "linea": 598
         },
         {
           "nombre": "IngresosPorRevisar",
@@ -43800,7 +43800,7 @@
           "exportada": true,
           "params": "{ ingresos, destinoLabel }: { ingresos: MovLedgerUI[] destinoLabel: Record<string, string> }",
           "retorno": null,
-          "linea": 876,
+          "linea": 878,
           "resumen": "Bandeja de INGRESOS por revisar: abonos cuyo negocio está sin confirmar. Antes no aparecían en ningún sitio accionable (la revisión de gastos es solo importe<0). Aquí el dueño les asigna el negocio (d"
         },
         {
@@ -43809,7 +43809,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 941
+          "linea": 943
         }
       ],
       "tablas": [
@@ -43817,7 +43817,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "f1c186269396"
+      "hash": "0d8fbcb53b93"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/BenchmarkPisos.tsx",
@@ -50831,7 +50831,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": "/api/cron/health-check",
-      "hash": "32bfc737019e"
+      "hash": "59dd330d20f4"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/ia-director-refresh/route.ts",
@@ -57532,7 +57532,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<DupResuelto[]>",
-          "linea": 1134
+          "linea": 1137
         },
         {
           "nombre": "resolverDuplicados",
@@ -57540,7 +57540,7 @@
           "exportada": true,
           "params": "cuentaId: string, ids: string[], estado: 'ignorado' | 'confirmado' | null,",
           "retorno": "Promise<number>",
-          "linea": 1156,
+          "linea": 1161,
           "resumen": "Marca (o desmarca) movimientos como duplicado resuelto. Scoped por cuenta_id vía join: solo toca movimientos de cuentas bancarias de la sesión. estado=null → deshacer (vuelve a NULL)."
         },
         {
@@ -57549,7 +57549,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<ResumenDestino[]>",
-          "linea": 1174
+          "linea": 1179
         }
       ],
       "tablas": [
@@ -57563,7 +57563,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "0795cdca6776"
+      "hash": "dec9a493222d"
     },
     {
       "ruta": "apps/plataforma/lib/borme-ingesta.ts",
