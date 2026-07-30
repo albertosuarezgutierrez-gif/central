@@ -31,7 +31,7 @@
   de documentos sube el flag si la certificación dice «sin cargas de procedencia»; el UPDATE de la ficha es
   sticky (OR); punto ámbar de embargo en `analisis.ts` (el verde de cargas no lo tape). Backfill
   `2026-07-30_cargas_conocidas_certificacion.sql` aplicado + fila de radar/analisis de San Pablo corregida
-  a mano en prod (el cron reconcilia tras el merge). 194 tests módulo · tsc 0.
+  a mano en prod (el cron reconcilia tras el merge). 193 tests módulo · tsc 0.
 
 - **💶 Auditoría pricing dinámico pre-cutover (30/07/2026, rama `claude/dynamic-pricing-audit-4cbdxv`).**
   A 3 días de confirmar 100% dinámico: SIN bloqueantes técnicos. Motor vivo (Busto/Luxury aplican a diario,
