@@ -59,6 +59,11 @@ export interface SubastaInmueble {
   lon?: number | null
   /** 'catastro' = parcela exacta · 'municipio' = centroide aproximado (OSM). */
   geoPrecision?: 'catastro' | 'municipio' | null
+  codigoPostal?: string | null
+  /** Uso principal según Catastro (Residencial, Comercial…). */
+  usoCatastral?: string | null
+  /** Superficie construida OFICIAL, distinta de la registral del anuncio. */
+  superficieCatastro?: number | null
   descripcion?: string | null
   url?: string | null
 

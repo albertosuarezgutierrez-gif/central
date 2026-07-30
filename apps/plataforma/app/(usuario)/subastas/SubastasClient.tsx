@@ -4,7 +4,7 @@
 // hardcodea colores y se vuelve ilegible en modo oscuro.
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { eur } from '@/lib/dinero'
-import { urlGoogleMaps } from '@central/module-subastas'
+import { direccionCatastro, urlFichaCatastro, urlGoogleMaps, urlStreetView } from '@central/module-subastas'
 import MapaSubastas from './MapaSubastas'
 
 const PAGE = 50
@@ -30,6 +30,11 @@ interface Subasta {
   lat?: number | null
   lon?: number | null
   geoPrecision?: string | null
+  refCatastral?: string | null
+  codigoPostal?: string | null
+  anioConstruccion?: number | null
+  usoCatastral?: string | null
+  superficieCatastro?: number | null
   descripcion?: string | null
   url?: string | null
   fechaFin?: string | null
@@ -262,9 +267,14 @@ function LineaRendimiento({ r, dormitorios }: { r: Rendimiento | null | undefine
 function FichaSubasta({ s, o, acciones, extra }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode }) {
   const [abierto, setAbierto] = useState(false)
   const cierre = fecha(s.fechaFin)
-  // Coordenadas exactas del Catastro si las hay; si no, búsqueda por dirección
-  // o municipio. Sin ninguna pista de ubicación, el botón no sale.
-  const mapsUrl = urlGoogleMaps(s)
+  // Dirección oficial del Catastro troceada (planta/puerta aparte) y, con ella,
+  // el enlace al PORTAL en vez de a un pin anónimo. Sin ninguna pista de
+  // ubicación, el botón no sale.
+  const dirCat = direccionCatastro(s.direccion)
+  const mapsUrl = urlGoogleMaps({ ...s, direccion: dirCat?.postal ?? s.direccion })
+  const panoUrl = urlStreetView(s.lat, s.lon)
+  const catastroUrl = urlFichaCatastro(s.refCatastral)
+  const exacta = s.geoPrecision === 'catastro'
 
   return (
     <div style={card}>
@@ -280,13 +290,43 @@ function FichaSubasta({ s, o, acciones, extra }: { s: Subasta; o?: Oportunidad |
         </p>
       )}
 
+      {/* 🏛️ Ubicación oficial del Catastro. Va ARRIBA y en el color del texto:
+          es el dato que Alberto busca primero y antes no se pintaba en ningún
+          sitio (solo estaba en la BD), así que la ficha parecía no tener
+          dirección — «la ubicación es muy mala», 30/07/2026. */}
+      {dirCat && (
+        <p style={{ margin: '8px 0 0', color: 'var(--text)', fontSize: 14, fontWeight: 600 }}>
+          🏛️ {dirCat.postal}
+          {(dirCat.planta || dirCat.puerta) && (
+            <span style={{ fontWeight: 400, color: 'var(--muted)' }}>
+              {' · '}
+              {dirCat.planta && `planta ${dirCat.planta}`}
+              {dirCat.planta && dirCat.puerta && ', '}
+              {dirCat.puerta && `puerta ${dirCat.puerta}`}
+            </span>
+          )}
+          {!exacta && <span style={{ fontWeight: 400, color: 'var(--muted)' }}> · ubicación aproximada</span>}
+        </p>
+      )}
+
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, fontSize: 12, color: 'var(--muted)' }}>
-        {s.provincia && <span>📍 {s.provincia}</span>}
+        {s.provincia && <span>📍 {s.municipio ? `${s.municipio} (${s.provincia})` : s.provincia}</span>}
         {cierre && <span>⏰ cierra {cierre}</span>}
         {s.valorSubasta != null && <span>salida {eur(s.valorSubasta)}</span>}
         {s.tasacion != null && <span>tasación {eur(s.tasacion)}</span>}
         {s.situacionPosesoria === 'ocupada' && <span>⚠️ ocupada</span>}
       </div>
+
+      {/* Datos oficiales del Catastro: son los que valoran el inmueble (m²
+          reales, antigüedad, uso) y ya estaban en la BD sin mostrarse. */}
+      {(s.superficieCatastro != null || s.anioConstruccion != null || s.usoCatastral) && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 6, fontSize: 12, color: 'var(--muted)' }}>
+          {s.superficieCatastro != null && <span>📐 {s.superficieCatastro} m² catastrales</span>}
+          {s.anioConstruccion != null && <span>🏗️ construido en {s.anioConstruccion}</span>}
+          {s.usoCatastral && <span>🏷️ {s.usoCatastral}</span>}
+          {s.codigoPostal && <span>✉️ {s.codigoPostal}</span>}
+        </div>
+      )}
 
       {/* El origen del valor va SIEMPRE junto a la cifra: una estimación por
           comparables no puede parecer una tasación. */}
@@ -341,7 +381,19 @@ function FichaSubasta({ s, o, acciones, extra }: { s: Subasta; o?: Oportunidad |
         )}
         {mapsUrl && (
           <a href={mapsUrl} target="_blank" rel="noreferrer" style={{ ...boton(), display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
-            📍 Google Maps{s.lat == null || s.geoPrecision === 'municipio' ? ' (aprox.)' : ''}
+            📍 Mapa{!exacta && !dirCat ? ' (aprox.)' : ''}
+          </a>
+        )}
+        {/* Ver la fachada y el barrio: en subastas «sin posibilidad de visita»
+            es la única inspección posible sin desplazarse. */}
+        {panoUrl && exacta && (
+          <a href={panoUrl} target="_blank" rel="noreferrer" style={{ ...boton(), display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
+            👁️ Ver la calle
+          </a>
+        )}
+        {catastroUrl && (
+          <a href={catastroUrl} target="_blank" rel="noreferrer" style={{ ...boton(), display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
+            🏛️ Catastro
           </a>
         )}
         {acciones}

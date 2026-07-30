@@ -24,6 +24,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏛️ Subastas: ubicación EXACTA y datos del Catastro visibles en la ficha (30/07/2026, rama
+  `claude/national-property-map-kszwhp`).** Alberto: «SUB-JA-2026-263723 la ubicación es muy mala». Causa:
+  el punto era correcto (Catastro) pero **la ficha no pintaba la dirección en NINGÚN sitio** (estaba solo en
+  BD) y el botón de Maps mandaba `query=lat,lon` → pin anónimo sin portal ni Street View. Fix: `direccionCatastro()`
+  trocea el `ldt` denso («AV PEDRO ROMERO (DE) 2 Es:1 Pl:07 Pt:B 41007 SEVILLA» → postal + planta + puerta),
+  la ficha muestra dirección/planta/m² catastrales/año/uso, y **`urlGoogleMaps` prioriza la DIRECCIÓN sobre las
+  coordenadas** (cambio deliberado) + 👁️ Street View + 🏛️ ficha del Catastro. **Idea de Alberto:** sacar la
+  referencia catastral por DIRECCIÓN (`Consulta_DNPLOC` + `ConsultaVia` para el nombre oficial — el Catastro
+  archiva «Avenida de Madrid» como «MADRID DE»). Acierta 4/16 direcciones reales; el resto falla por datos de
+  origen imprecisos (parcelas de polígono, «S/N», direcciones antiguas), no por el parser → degrada al
+  centroide. Prod: 8 exactas (antes 4) + 25 aproximadas. ⚠️ Los DATOS del bien exigen la RC de 20; con la de
+  parcela (14) el Catastro devuelve el listado del edificio sin `<bico>` y sale vacío. 223 tests módulo.
+
 - **🗺️ Subastas: mapa nacional + enlace a Google Maps por ficha (30/07/2026, rama
   `claude/national-property-map-kszwhp`).** Idea de Alberto sobre la captura de `/subastas`: ver todos los
   inmuebles señalados de un vistazo. Módulo puro: `parsearCoordenadas` (Catastro `Consulta_CPMRC`, ojo
