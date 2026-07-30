@@ -24,6 +24,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🕳️ Barrido del monorepo: afirmar ausencias no comprobadas (30/07/2026, misma rama).** Alberto:
+  «haz esto con todo lo que tenemos». Barrido de las 8 apps + packages buscando el patrón del bullet
+  siguiente. **Inventario completo en `docs/AUDITORIA-AUSENCIAS.md`** (✅ hecho / ⬜ pendiente, por
+  gravedad). Arreglados los 8 peores: la app de la limpiadora decía **«¡Descansa!»** ante un 500 (Sique
+  Brilla EN PRODUCCIÓN — el piso se quedaba sin limpiar); el escritor de `subastas.documentos` grababa
+  `[]` irreversible si el BOE devolvía algo que no era la ficha (guard `fichaLegible`); el semáforo
+  documental salía 🟢 sin haber leído un carácter; el saldo consolidado sumaba **0€** las cuentas que el
+  banco no devolvió y esa cifra iba al email de tesorería; el Telegram del extracto decía «✅ todos
+  clasificados» si fallaba la consulta; transporte daba **«Todo en regla ✅»** a un camión sin ITV
+  registrada; sivra concluía «NO estamos caros» sin datos de mercado; rrhh prometía **30 días de
+  vacaciones** inventándose el convenio. Pendientes (⬜ en el doc): el sync del PMS de ialimp —`ultimo_sync`
+  vs `last_sync_at`, columna que nadie escribe— y el escaneo IMAP de facturas, ambos sin heartbeat.
+
 - **📎 Subastas: «sin documentos adjuntos» era MENTIRA (30/07/2026, rama `claude/documentos-adjuntos-o95xl1`).**
   Alberto con dos capturas: la ficha de `SUB-JA-2026-263723` decía «sin documentos adjuntos» y el BOE publicaba
   EDICTO + CERTIFICACIÓN DE CARGAS. No era el parser (`enlacesDocumentos` saca los 2 enlaces del HTML vivo):
