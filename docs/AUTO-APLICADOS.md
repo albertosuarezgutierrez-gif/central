@@ -13,6 +13,19 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-30** · `docs/ESTRUCTURA.md`, `MATRIZ.md` · auditoría ligera diaria (rango 26→30/07/2026,
+  50 commits). Contadores de `packages/module-*` desactualizados (decían 20/25, la carpeta real tiene
+  26) y faltaban filas para 6 módulos ya cableados: `module-subastas` (ya estaba, solo contaba mal),
+  `module-transporte`, `module-nominas`, `module-trading`, `module-geo`, `module-pagos`. Además 3
+  módulos que la tabla marcaba "⏳ sin consumo" ya tienen vertical consumidora real, verificado por
+  `grep @central/<module> apps/*/package.json`: `module-flota` (ahora también `apps/transporte`,
+  antes solo ia-rest), `module-alquiler` (`apps/alquiler`, desplegada) y `module-intercompany`
+  (`apps/plataforma`). Sección "1. Verticales" de `ESTRUCTURA.md` solo listaba 5 apps; añadidas
+  `transporte`/`alquiler`/`almacen` (viven en el repo desde finales de junio/julio). `MATRIZ.md`:
+  contador de packages (37→38) y añadida a la fila `plataforma` la lista de módulos que compone
+  (`module-concursos`/`module-subastas`/`module-intercompany`/`module-trading`/`module-pagos`,
+  ausente pese a que transporte/alquiler/almacen sí llevan la suya). Commit de esta auditoría.
+
 - **2026-07-29 (ligera)** · `.claude/skills/plataforma-maestro/SKILL.md` + `apps/plataforma/CLAUDE.md` ·
   añadida fila/sección **Subastas** (radar de subastas del BOE, PRs #1113-#1120, 28/07/2026): 8 commits
   con módulo nuevo `@central/module-subastas`, 6 crons, página de usuario y API completa habían

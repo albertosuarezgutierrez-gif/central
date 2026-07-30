@@ -10,6 +10,7 @@ const NAV_NEGOCIO = [
   // «Radiografía» y las entradas fiscales sueltas (rutas vivas, alcanzables desde sus enlaces).
   // /dashboard sigue existiendo pero redirige aquí (segmento Negocios).
   { href: '/banca', icon: '🏠', label: 'Inicio' },
+  { href: '/banca/transferencia', icon: '💸', label: 'Transferencia' },
   { href: '/agente', icon: '🤖', label: 'Agente precios' },
   { href: '/contable', icon: '🧮', label: 'Contable' },
   { href: '/limpiezas', icon: '🧹', label: 'Limpiezas' },
