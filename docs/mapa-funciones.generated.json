@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-30T18:27:51Z",
-  "sha": "3bfc857cd4cbd2b4de1fe715f7d0adfdf5581789",
+  "generadoEn": "2026-07-30T19:10:00Z",
+  "sha": "1cde16bbb1cbea87acc76514e4e40ece3a112521",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47415,7 +47415,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 17,
+          "linea": 18,
           "resumen": "Tanto por uno guardado → % para la UI."
         },
         {
@@ -47424,7 +47424,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 24,
+          "linea": 25,
           "resumen": "Primera página por SSR: la pantalla entra con datos, sin spinner inicial."
         }
       ],
@@ -47435,7 +47435,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "20befc4b6655"
+      "hash": "7bad8787d08e"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/subastas/SubastasClient.tsx",
@@ -47450,7 +47450,7 @@
           "exportada": false,
           "params": "activo = false",
           "retorno": "React.CSSProperties",
-          "linea": 178
+          "linea": 181
         },
         {
           "nombre": "fecha",
@@ -47458,7 +47458,7 @@
           "exportada": false,
           "params": "iso: string | null | undefined",
           "retorno": "string | null",
-          "linea": 185
+          "linea": 188
         },
         {
           "nombre": "Puntuacion",
@@ -47466,7 +47466,7 @@
           "exportada": false,
           "params": "{ v }: { v: number | null }",
           "retorno": null,
-          "linea": 199,
+          "linea": 202,
           "resumen": "Semáforo de la puntuación. `null` se pinta distinto a 0: no es lo mismo."
         },
         {
@@ -47475,7 +47475,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 207
+          "linea": 210
         },
         {
           "nombre": "PanelTesoreria",
@@ -47483,7 +47483,7 @@
           "exportada": false,
           "params": "{ t }: { t: Tesoreria }",
           "retorno": null,
-          "linea": 214,
+          "linea": 217,
           "resumen": "Dinero que hay que tener bloqueado para poder pujar. Lo que importa NO es la suma de depósitos sino el máximo simultáneo: los que no se solapan reutilizan el mismo dinero."
         },
         {
@@ -47492,7 +47492,7 @@
           "exportada": false,
           "params": "{ r, dormitorios }: { r: Rendimiento | null | undefined; dormitorios?: number | null }",
           "retorno": null,
-          "linea": 281,
+          "linea": 284,
           "resumen": "Yield turístico estimado con los pisos PROPIOS. Siempre con el caveat: los pisos de referencia son de Sevilla capital — fuera de ahí es extrapolación."
         },
         {
@@ -47501,7 +47501,7 @@
           "exportada": false,
           "params": "{ s, plantaAparte }: { s: Subasta; plantaAparte?: boolean }",
           "retorno": null,
-          "linea": 305,
+          "linea": 308,
           "resumen": "repetirla sería ruido."
         },
         {
@@ -47510,7 +47510,7 @@
           "exportada": false,
           "params": "{ s, d }: { s: Subasta; d?: Documental | null }",
           "retorno": null,
-          "linea": 342,
+          "linea": 345,
           "resumen": "Resumen de CARGAS + documentación de la subasta. Vive dentro de `FichaSubasta` a propósito: antes el semáforo y las notas del edicto solo se pintaban en la pestaña «Todas» (iban en su `extra`), así qu"
         },
         {
@@ -47519,7 +47519,7 @@
           "exportada": false,
           "params": "{ s, o, acciones, extra, doc }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null }",
           "retorno": null,
-          "linea": 422
+          "linea": 436
         },
         {
           "nombre": "SubastasClient",
@@ -47527,14 +47527,14 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Inicial | null }",
           "retorno": null,
-          "linea": 567
+          "linea": 581
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "9533eddb5d75"
+      "hash": "0cc6d5bbf24e"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -55395,7 +55395,7 @@
         "subastas_debug_token"
       ],
       "rutaApi": "/api/subastas/fase3-debug",
-      "hash": "b880b30ef98d"
+      "hash": "20901d3c7834"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/mapa/route.ts",
@@ -55490,7 +55490,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 15
+          "linea": 16
         }
       ],
       "tablas": [
@@ -55500,7 +55500,7 @@
         "subastas_criterios"
       ],
       "rutaApi": "/api/subastas",
-      "hash": "59c1a4f7a1f2"
+      "hash": "8ba2982f0af8"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/seguidas/route.ts",
@@ -57288,7 +57288,7 @@
           "exportada": true,
           "params": "audio: Buffer, fileName: string, mimeType?: string, opts: { timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 122,
+          "linea": 130,
           "resumen": "Transcribe voz → texto (STT) con Groq Whisper (`whisper-large-v3`, gratis). Usa GROQ_API_KEY (la misma del fallback de texto). Devuelve '' si no reconoce nada. Para las notas de voz del agente de cont"
         },
         {
@@ -57297,7 +57297,7 @@
           "exportada": false,
           "params": "p: Promise<T>, ms: number",
           "retorno": "Promise<T>",
-          "linea": 159,
+          "linea": 167,
           "resumen": "Corta una llamada colgada (Groq no acepta `signal`, y NIM se ha colgado antes)."
         },
         {
@@ -57306,7 +57306,7 @@
           "exportada": false,
           "params": "user: string",
           "retorno": "Promise<string>",
-          "linea": 167,
+          "linea": 175,
           "resumen": "Extracción por Groq (rápido, mismo Llama-70b). Lanza si no hay GROQ_API_KEY o Groq falla."
         },
         {
@@ -57315,13 +57315,13 @@
           "exportada": true,
           "params": "input: { text?: string imageBase64?: string mimeType?: string }",
           "retorno": "Promise<Record<string, any>>",
-          "linea": 179,
+          "linea": 187,
           "resumen": "Extrae datos estructurados de una factura. Devuelve {} si NINGÚN modelo logra leerla (el llamador lo trata como \"no legible\" y avisa, en vez de tragárselo en silencio). PDF (texto) → Groq (rápido) → N"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "46d8bec35b91"
+      "hash": "1204feaeba32"
     },
     {
       "ruta": "apps/plataforma/lib/ai-gateway.ts",
@@ -65023,7 +65023,7 @@
           "exportada": true,
           "params": "f: any",
           "retorno": "SubastaInmueble",
-          "linea": 53,
+          "linea": 54,
           "resumen": "Fila cruda de `subastas` → el tipo del módulo."
         },
         {
@@ -65032,7 +65032,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<FilaCriterios[]>",
-          "linea": 115,
+          "linea": 116,
           "resumen": "Cuentas con el radar activo y sus criterios."
         },
         {
@@ -65041,7 +65041,7 @@
           "exportada": true,
           "params": "limite = 500",
           "retorno": "Promise<SubastaInmueble[]>",
-          "linea": 141,
+          "linea": 142,
           "resumen": "Subastas candidatas: en plazo (o sin fecha conocida) y recientes. No se rebarre todo el histórico en cada pasada."
         },
         {
@@ -65050,7 +65050,7 @@
           "exportada": true,
           "params": "cuentaId: string, criterios: CriteriosSubasta, corpus: SubastaInmueble[], params: ParamsCoste = {},",
           "retorno": "Promise<number>",
-          "linea": 164,
+          "linea": 165,
           "resumen": "Casa el corpus con los criterios de una cuenta e inserta lo nuevo. El upsert REFRESCA el snapshot y las cifras: el radar corre a las 06:30, DESPUÉS del enriquecimiento (06:15) y del valor de mercado ("
         },
         {
@@ -65059,7 +65059,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 236,
+          "linea": 238,
           "resumen": "Pasada completa: descarga el corpus UNA vez y lo empareja con cada cuenta."
         }
       ],
@@ -65071,7 +65071,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "b23ff2f31881"
+      "hash": "76f4c181313b"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/boe.ts",
@@ -65142,6 +65142,28 @@
       "hash": "c32783bb3cfb"
     },
     {
+      "ruta": "apps/plataforma/lib/subastas/caducidad-fila.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Resumen de caducidad (art. 86 LH) a partir del cuadro guardado en `subastas.cargas_detalle`, para que la ficha lo enseñe SIN ABRIR nada. Va aquí y no en la UI porque el cálculo lo hace el módulo puro y necesita la fecha de hoy: en un componente cliente sería no determinista entre servidor y cliente ",
+      "exporta": [
+        "caducidadDeFila"
+      ],
+      "funciones": [
+        {
+          "nombre": "caducidadDeFila",
+          "kind": "function",
+          "exportada": true,
+          "params": "cargasDetalle: unknown, hoy = new Date()",
+          "retorno": "ResumenCaducidad | null",
+          "linea": 21,
+          "resumen": "`null` cuando no hay nada que decir — que es el caso normal. Solo devuelve algo cuando de verdad hay una anotación pasada de plazo y sin prórroga: así la ficha no gana ruido en las subastas limpias."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "05500e7bffee"
+    },
+    {
       "ruta": "apps/plataforma/lib/subastas/calibracion.ts",
       "ambito": "apps/plataforma",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Calibración con resultados REALES: lee las subastas concluidas con resultado capturado (`capturarResultados`) y delega el cálculo en el módulo puro. Con el corpus recién nacido devuelve [] — la UI simplemente no pinta nada.",
@@ -65197,7 +65219,7 @@
     {
       "ruta": "apps/plataforma/lib/subastas/clasificar.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Clasificador de lentes sobre el corpus: 🔨 flip, 🏖️ playa Huelva y 🚦 semáforo documental. Todo DETERMINISTA con lógica del módulo puro — aquí solo va la BD. Corre al final del cron `subastas-enriquecer`, cuando la fila ya tiene ficha, Catastro, mercado y notas del edicto.",
+      "resumen": "Clasificador de lentes sobre el corpus: 🔨 flip, 🏖️ playa (Huelva y Cádiz) y 🚦 semáforo documental. Todo DETERMINISTA con lógica del módulo puro — aquí solo va la BD. Corre al final del cron `subastas-enriquecer`, cuando la fila ya tiene ficha, Catastro, mercado y notas del edicto.",
       "exporta": [
         "clasificarSubastas"
       ],
@@ -65215,7 +65237,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "de34755dccf5"
+      "hash": "ea33a209b9c1"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/consulta-juzgado.ts",
@@ -65250,7 +65272,7 @@
           "exportada": true,
           "params": "d: DatosConsulta, escrito: string, deps: { enviar: (args: { to: string; subject: string; text: string; replyTo?: string }) => Promise<unknown> registrar: (args: { dedupeKey: string; email: string; escrito: string }) => Promise<unknown> repl",
           "retorno": "Promise<",
-          "linea": 114,
+          "linea": 121,
           "resumen": "Envía la consulta por email al órgano gestor y deja constancia. Devuelve el estado para que el llamante lo diga en Telegram. Se manda desde el buzón del monorepo (`MAIL_FROM`) con Reply-To al correo d"
         },
         {
@@ -65259,13 +65281,13 @@
           "exportada": true,
           "params": "d: DatosConsulta, preguntas: string[]",
           "retorno": "string",
-          "linea": 146,
+          "linea": 153,
           "resumen": "Escrito completo listo para mandar. `plantilla` = sin pasar por la IA."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f0d90040b7b3"
+      "hash": "d402220efec6"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/documentos.ts",
@@ -65327,7 +65349,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 289,
+          "linea": 291,
           "resumen": "· sin los resultados no hay calibración (la memoria del agente). Así que se borra la BANDEJA de avisos (`subastas_radar`, efímera por diseño) y se marca la subasta como archivada. El histórico se qued"
         }
       ],
@@ -65336,7 +65358,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "090412b5bea3"
+      "hash": "e55df05ccca0"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/enriquecer.ts",
@@ -65575,8 +65597,8 @@
           "exportada": true,
           "params": "pdf: Buffer",
           "retorno": "Promise<ImageInput[]>",
-          "linea": 64,
-          "resumen": "Recompone las páginas de un PDF escaneado. Devuelve PNG en base64, listos para el modelo de visión. `[]` si el PDF no lleva imágenes aprovechables. Por qué hay que agrupar: los escáneres guardan cada "
+          "linea": 78,
+          "resumen": "Recompone las páginas de un PDF escaneado. Devuelve JPEG en base64, listos para el modelo de visión. `[]` si el PDF no lleva imágenes aprovechables. Por qué hay que agrupar: los escáneres guardan cada"
         },
         {
           "nombre": "modeloRegistral",
@@ -65584,7 +65606,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<string | undefined>",
-          "linea": 104,
+          "linea": 118,
           "resumen": "Modelo de la categoría `registral` del catálogo del Director (o el de la pasarela)."
         },
         {
@@ -65593,7 +65615,7 @@
           "exportada": false,
           "params": "texto: string, modelo: string | undefined",
           "retorno": "Promise<CuadroCargas>",
-          "linea": 114,
+          "linea": 128,
           "resumen": "Una pasada de lectura sobre texto."
         },
         {
@@ -65602,8 +65624,8 @@
           "exportada": false,
           "params": "paginas: ImageInput[], modelo: string | undefined",
           "retorno": "Promise<CuadroCargas>",
-          "linea": 133,
-          "resumen": "Una pasada de lectura sobre imágenes (en lotes, para no saturar al modelo)."
+          "linea": 152,
+          "resumen": "Una pasada de lectura sobre imágenes: una llamada por página, en tandas."
         },
         {
           "nombre": "leerDocumento",
@@ -65611,7 +65633,7 @@
           "exportada": true,
           "params": "contenido: { texto: string | null; pdf: Buffer | null; imagen: ImageInput | null },",
           "retorno": "Promise<LecturaDocumento>",
-          "linea": 170,
+          "linea": 196,
           "resumen": "Lee UN documento y devuelve su cuadro de cargas. Hace la doble pasada y aplica el consenso. Nunca lanza: un documento ilegible devuelve un cuadro vacío con confianza 0, y el pipeline sigue con el sigu"
         },
         {
@@ -65620,13 +65642,13 @@
           "exportada": true,
           "params": "lecturas: LecturaDocumento[]",
           "retorno": "CuadroCargas",
-          "linea": 219,
+          "linea": 245,
           "resumen": "Fusiona los cuadros de varios documentos de la MISMA ficha (edicto + certificación + cesión…). Se queda con la vía del procedimiento que algún documento haya sabido determinar y deduplica cargas por t"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b047d6a66fa5"
+      "hash": "edb451ec7033"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/mercado.ts",
@@ -83754,6 +83776,64 @@
       "hash": "3ce17122590c"
     },
     {
+      "ruta": "packages/module-subastas/src/caducidad.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── CADUCIDAD DE LAS ANOTACIONES PREVENTIVAS DE EMBARGO (art. 86 LH). PURO. Una anotación preventiva de embargo NO dura para siempre: caduca a los CUATRO AÑOS desde su fecha, salvo que se prorrogue por mandamiento judicial (otr",
+      "exporta": [
+        "parsearFechaRegistral",
+        "estadoCaducidad",
+        "caducidadDelCuadro"
+      ],
+      "funciones": [
+        {
+          "nombre": "parsearFechaRegistral",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined",
+          "retorno": "",
+          "linea": 73,
+          "resumen": "Fecha registral tolerante: el lector devuelve el campo tal cual lo escribe el registro, que rara vez es ISO («15 de agosto de 2020», «12/03/2015», «2009»). Cuando solo hay año se toma el **31 de dicie"
+        },
+        {
+          "nombre": "fechaValida",
+          "kind": "function",
+          "exportada": false,
+          "params": "anio: number, mes: number, dia: number, exacta: boolean",
+          "retorno": "",
+          "linea": 101
+        },
+        {
+          "nombre": "estadoCaducidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Carga, hoy: Date",
+          "retorno": "Caducidad",
+          "linea": 113,
+          "resumen": "Estado de caducidad de UNA carga. `hoy` se pasa siempre desde fuera: el módulo es puro y determinista, y así los tests no dependen de la fecha en que se ejecuten."
+        },
+        {
+          "nombre": "caducidadDelCuadro",
+          "kind": "function",
+          "exportada": true,
+          "params": "subsistentes: Carga[], hoy: Date",
+          "retorno": "CaducidadCuadro",
+          "linea": 186,
+          "resumen": "Reparte las cargas SUBSISTENTES entre las que están firmes y las que podrían haber caducado, sin decidir por el usuario. Nunca toca el importe conservador: quien llama decide si enseña el escenario al"
+        },
+        {
+          "nombre": "anios",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "string",
+          "linea": 211
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "50adde7a3055"
+    },
+    {
       "ruta": "packages/module-subastas/src/cargas-prompt.ts",
       "ambito": "packages/module-subastas",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Prompt del LECTOR REGISTRAL. PURO (una constante y un extractor de JSON). Se separa de `cargas.ts` porque es la pieza que más se va a iterar: cada certificación con una redacción nueva enseña algo. Los ajustes van aquí, sin",
@@ -83794,7 +83874,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 103
+          "linea": 120
         },
         {
           "nombre": "normalizarCuadroCargas",
@@ -83802,17 +83882,25 @@
           "exportada": true,
           "params": "bruto: unknown, fuente: FuenteCargas",
           "retorno": "CuadroCargas",
-          "linea": 117,
+          "linea": 134,
           "resumen": "Normaliza el JSON del lector a un `CuadroCargas` de confianza. Defensivo a propósito: un LLM puede devolver un tipo inventado, un importe con formato español, o cargas a medias — nada de eso debe lanz"
         },
         {
           "nombre": "cargasQueSubsisten",
           "kind": "function",
           "exportada": true,
-          "params": "cuadro: CuadroCargas",
+          "params": "cuadro: CuadroCargas, hoy?: Date",
           "retorno": "CargasSubsistentes",
-          "linea": 176,
+          "linea": 199,
           "resumen": "QUÉ HEREDA EL ADJUDICATARIO. Determinista, porque de esto sale la puja máxima. Reglas (LEC): · Ejecución HIPOTECARIA directa: la hipoteca que se ejecuta se cancela y las cargas POSTERIORES se purgan ("
+        },
+        {
+          "nombre": "formatearEur",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "string",
+          "linea": 286
         },
         {
           "nombre": "mismoAcreedorQueEjecutante",
@@ -83820,7 +83908,7 @@
           "exportada": true,
           "params": "cargas: Carga[], ejecutante: string | null | undefined",
           "retorno": "boolean",
-          "linea": 257,
+          "linea": 304,
           "resumen": "¿El ejecutante es también el acreedor de una carga ANTERIOR que subsiste? Es el matiz que decide si el caso «hipoteca anterior en embargo» es una ruina o solo un trámite: cuando coinciden, el crédito "
         },
         {
@@ -83829,7 +83917,7 @@
           "exportada": true,
           "params": "a: CuadroCargas, b: CuadroCargas",
           "retorno": "",
-          "linea": 277,
+          "linea": 324,
           "resumen": "Consenso entre DOS lecturas independientes del mismo documento. Alberto pidió que la IA extraiga las cifras; esta es la red que evita que un dígito mal leído se propague a una puja. Se emparejan las c"
         },
         {
@@ -83838,7 +83926,7 @@
           "exportada": true,
           "params": "anterior: CuadroCargas, nuevo: CuadroCargas",
           "retorno": "CambioCargas[]",
-          "linea": 346,
+          "linea": 393,
           "resumen": "Compara el cuadro que se leyó de la certificación del BOE con uno NUEVO (una nota simple recién pedida al registro, por ejemplo). Hace falta porque la certificación que el juzgado adjunta a la ficha s"
         },
         {
@@ -83847,13 +83935,13 @@
           "exportada": true,
           "params": "cuadro: CuadroCargas, subsistentes: CargasSubsistentes",
           "retorno": "string",
-          "linea": 396,
+          "linea": 443,
           "resumen": "Resumen legible del cuadro para la ficha y el aviso de Telegram."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3b9d2a87d944"
+      "hash": "a6b69a19d4b6"
     },
     {
       "ruta": "packages/module-subastas/src/catastro.ts",
@@ -84819,7 +84907,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b198fb8fcb6c"
+      "hash": "128c51a244e0"
     },
     {
       "ruta": "packages/module-subastas/src/idealista-api.ts",
@@ -84856,7 +84944,7 @@
           "exportada": true,
           "params": "zona: string | null | undefined",
           "retorno": "CentroBusqueda | null",
-          "linea": 180,
+          "linea": 196,
           "resumen": "Centro de búsqueda de un municipio/zona vigilada. `null` si la zona no está en la tabla — la llamada NO se hace (mejor no gastar cuota en una búsqueda mal centrada que inventar coordenadas)."
         },
         {
@@ -84865,13 +84953,13 @@
           "exportada": true,
           "params": "usadasEsteMes: number, maxPorPasada = 3",
           "retorno": "number",
-          "linea": 205,
+          "linea": 221,
           "resumen": "Cuántas llamadas puede gastar UNA pasada del cron, dado lo ya consumido este mes. Devuelve 0 cuando el presupuesto (menos el margen) está agotado."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "faec33b50412"
+      "hash": "b33738797d5c"
     },
     {
       "ruta": "packages/module-subastas/src/junta.ts",
@@ -85225,9 +85313,12 @@
     {
       "ruta": "packages/module-subastas/src/playa.ts",
       "ambito": "packages/module-subastas",
-      "resumen": "──────────────────────────────────────────────────────────────────────────── Radar 🏖️ segunda residencia: costa de Huelva. PURO. No es una lente de inversión: es uso propio. Aquí solo se decide si un inmueble está en la zona que busca Alberto — el criterio de \"me gusta\" es suyo, el agente solo se l",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Radar 🏖️ segunda residencia: costa de Huelva y costa de Cádiz. PURO. No es una lente de inversión: es uso propio. Aquí solo se decide si un inmueble está en la zona que busca Alberto — el criterio de \"me gusta\" es suyo, el",
       "exporta": [
-        "esPlayaHuelva"
+        "esPlayaHuelva",
+        "esPlayaCadiz",
+        "esPlaya",
+        "costaDe"
       ],
       "funciones": [
         {
@@ -85236,13 +85327,48 @@
           "exportada": true,
           "params": "municipio: string | null | undefined, descripcion?: string | null, provincia?: string | null,",
           "retorno": "boolean",
-          "linea": 53,
+          "linea": 109,
           "resumen": "¿Está en la costa de Huelva? Municipio en la lista, o núcleo de playa citado en la descripción/dirección. Los municipios grandes (Almonte, Moguer, Lepe…) incluyen interior — mejor un falso positivo qu"
+        },
+        {
+          "nombre": "esPlayaCadiz",
+          "kind": "function",
+          "exportada": true,
+          "params": "municipio: string | null | undefined, descripcion?: string | null, provincia?: string | null,",
+          "retorno": "boolean",
+          "linea": 118,
+          "resumen": "¿Está en la costa de Cádiz? Misma mecánica que Huelva."
+        },
+        {
+          "nombre": "esPlaya",
+          "kind": "function",
+          "exportada": true,
+          "params": "municipio: string | null | undefined, descripcion?: string | null, provincia?: string | null,",
+          "retorno": "boolean",
+          "linea": 131,
+          "resumen": "La lente 🏖️ completa: costa de Huelva **o** costa de Cádiz. Es la que deben usar la app y el radar; las dos anteriores quedan para poder distinguir la zona cuando hace falta nombrarla."
+        },
+        {
+          "nombre": "costaDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "municipio: string | null | undefined, descripcion?: string | null, provincia?: string | null,",
+          "retorno": "'Huelva' | 'Cádiz' | null",
+          "linea": 140,
+          "resumen": "Nombre de la costa para el texto del aviso. `null` si no es ninguna."
+        },
+        {
+          "nombre": "enLitoral",
+          "kind": "function",
+          "exportada": false,
+          "params": "municipio: string | null | undefined, descripcion: string | null | undefined, provincia: string | null | undefined, municipios: readonly string[], nucleos: readonly string[], provinciaNorm: string,",
+          "retorno": "boolean",
+          "linea": 150
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "48a2bcd079db"
+      "hash": "9b817c88255c"
     },
     {
       "ruta": "packages/module-subastas/src/radar.ts",
@@ -86860,7 +86986,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2356,
-    "funciones": 6238
+    "archivos": 2358,
+    "funciones": 6249
   }
 }
