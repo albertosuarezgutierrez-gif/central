@@ -37,6 +37,14 @@ interface Subasta {
   tasacion?: number | null
   situacionPosesoria?: string
   superficie?: number | null
+  superficieOrigen?: 'catastro' | 'anuncio' | null
+  anioConstruccion?: number | null
+  usoCatastral?: string | null
+  refCatastral?: string | null
+  tipoBien?: string | null
+  dormitorios?: number | null
+  banos?: number | null
+  planta?: string | null
 }
 interface Rendimiento { ingresoAnual: number; yieldBruto: number; aniosRecuperacion: number }
 interface PuntoAnalisis { clave: string; nivel: 'verde' | 'ambar' | 'rojo'; detalle: string }
@@ -259,6 +267,52 @@ function LineaRendimiento({ r, dormitorios }: { r: Rendimiento | null | undefine
   )
 }
 
+/**
+ * Qué es y cómo es el inmueble: m², dormitorios, baños, planta, año y dirección.
+ * Es lo primero que se mira y hasta ahora no salía en ninguna ficha, aunque el
+ * dato ya estuviera en la BD (se usaba solo para calcular el €/m² y el yield).
+ *
+ * Las superficies del Catastro y de la escritura discrepan a menudo, así que el
+ * origen va pegado a la cifra. Cuando el anuncio no publica nada se dice —
+ * callar parecería un fallo de la pantalla, que es justo la duda que generó esto.
+ */
+function Caracteristicas({ s }: { s: Subasta }) {
+  const partes: string[] = []
+  if (s.tipoBien && TIPO_LABEL[s.tipoBien]) partes.push(TIPO_LABEL[s.tipoBien])
+  if (s.superficie != null && s.superficie > 0) {
+    partes.push(`${s.superficie.toLocaleString('es-ES', { maximumFractionDigits: 2 })} m²${s.superficieOrigen === 'catastro' ? ' (Catastro)' : s.superficieOrigen === 'anuncio' ? ' (escritura)' : ''}`)
+  }
+  if (s.dormitorios != null) partes.push(`${s.dormitorios} dorm.`)
+  if (s.banos != null) partes.push(`${s.banos} baño${s.banos === 1 ? '' : 's'}`)
+  if (s.planta) partes.push(`planta ${s.planta}`)
+  if (s.anioConstruccion != null) partes.push(`construido en ${s.anioConstruccion}`)
+  if (s.usoCatastral) partes.push(`uso ${s.usoCatastral.toLowerCase()}`)
+
+  if (partes.length === 0 && !s.direccion && !s.refCatastral) {
+    return (
+      <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+        🏚️ El anuncio no publica las características del inmueble (ni m², ni distribución).
+      </p>
+    )
+  }
+
+  return (
+    <div style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--text)' }}>
+      {partes.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 10px' }}>
+          {partes.map((p, i) => <span key={i}>{p}</span>)}
+        </div>
+      )}
+      {s.direccion && (
+        <div style={{ marginTop: 2, color: 'var(--muted)', fontSize: 12 }}>📌 {s.direccion}</div>
+      )}
+      {s.refCatastral && (
+        <div style={{ marginTop: 2, color: 'var(--muted)', fontSize: 12 }}>🗂️ Ref. catastral {s.refCatastral}</div>
+      )}
+    </div>
+  )
+}
+
 function FichaSubasta({ s, o, acciones, extra }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode }) {
   const [abierto, setAbierto] = useState(false)
   const cierre = fecha(s.fechaFin)
@@ -273,8 +327,12 @@ function FichaSubasta({ s, o, acciones, extra }: { s: Subasta; o?: Oportunidad |
         {o && <Puntuacion v={o.puntuacion} />}
       </div>
 
+      {/* Primero QUÉ es (m², distribución, dirección); la descripción registral
+          después: es densa y a veces solo dice «ver certificación de cargas». */}
+      <Caracteristicas s={s} />
+
       {s.descripcion && (
-        <p style={{ margin: '8px 0', color: 'var(--text)', fontSize: 14, lineHeight: 1.45 }}>
+        <p style={{ margin: '8px 0', color: 'var(--muted)', fontSize: 13, lineHeight: 1.45 }}>
           {s.descripcion.slice(0, 240)}
           {s.descripcion.length > 240 ? '…' : ''}
         </p>
@@ -798,7 +856,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                   <>
                     {/* Etiquetas de lente: qué es y para qué sirve. */}
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>
-                      {r.tipoBien && TIPO_LABEL[r.tipoBien] && <span>{TIPO_LABEL[r.tipoBien]}</span>}
+                      {/* El tipo de bien ya sale en las características de la ficha. */}
                       {r.esPlaya && <span>🏖️ costa Huelva</span>}
                       {r.flipApto && r.margenFlipPct != null && (
                         <span style={{ color: r.margenFlipPct >= 0.25 ? 'var(--positive, #15803d)' : 'var(--muted)', fontWeight: 600 }}>

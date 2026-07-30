@@ -10,10 +10,12 @@ import {
   esPlayaHuelva,
   evaluarFlip,
   evaluarOportunidad,
+  extraerDatos,
   FLIP_MARGEN_MIN,
   superficieUtil,
   type CriteriosSubasta,
   type SubastaInmueble,
+  type TipoBien,
   type TipoSubasta,
 } from '@central/module-subastas'
 
@@ -44,6 +46,12 @@ export const COLS_SUBASTA = Prisma.raw(
 /** Fila cruda de `subastas` → el tipo del módulo. */
 export function filaASubasta(f: any): SubastaInmueble {
   const num = (v: any): number | null => (v == null ? null : Number(v))
+  const superficie = superficieUtil(num(f.superficie_catastro), num(f.superficie))
+  // Características físicas: la columna manda, y si el enriquecimiento aún no
+  // la ha rellenado se cae a lo que diga la descripción registral (que es de
+  // donde salen esas columnas). Sin este fallback la ficha aparece vacía en
+  // los anuncios recién ingeridos, que es justo cuando se miran.
+  const d = extraerDatos(f.descripcion)
   return {
     dedupeKey: f.dedupe_key,
     fuente: f.fuente,
@@ -79,8 +87,14 @@ export function filaASubasta(f: any): SubastaInmueble {
     // usara la registral, el valor estimado saldría con otra superficie que la
     // referencia guardada — y una subasta sin superficie en el anuncio pero CON
     // ficha catastral (Belmonte: 100 m²) se quedaba sin poder estimarse.
-    superficie: superficieUtil(num(f.superficie_catastro), num(f.superficie)),
+    superficie,
+    superficieOrigen: superficie == null ? null : num(f.superficie_catastro) === superficie ? 'catastro' : 'anuncio',
     anioConstruccion: f.anio_construccion ?? null,
+    usoCatastral: f.uso_catastral ?? null,
+    tipoBien: (f.tipo_bien as TipoBien | null) ?? d.tipoBien ?? null,
+    dormitorios: f.dormitorios ?? d.dormitorios,
+    banos: f.banos ?? d.banos,
+    planta: f.planta ?? d.planta,
     valorReferencia: num(f.valor_referencia),
     // Tercer escalón de valor cuando no hay tasación ni valor de referencia.
     precioM2Mercado: num(f.precio_m2_mercado),

@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏠 Subastas: las características del inmueble ya se ven en la ficha (30/07/2026, rama
+  `claude/property-features-missing-je4vtw`).** Alberto sobre una captura de `/subastas`: «no aparecen las
+  características». Cierto — m², dormitorios, baños, planta, año, uso y dirección estaban en BD y solo se
+  usaban para calcular €/m² y yield; la ficha nunca los pintaba. `SubastaInmueble` gana esos campos +
+  `superficieOrigen` (Catastro vs escritura: discrepan a menudo), `filaASubasta` los mapea con fallback a
+  `extraerDatos(descripcion)` cuando la columna está vacía, y `FichaSubasta` los muestra arriba del todo
+  (si el anuncio no publica nada, lo dice en vez de callar). El radar repinta su snapshot con la foto viva
+  del corpus si la subasta sigue vigente, así no hay que esperar al cron. tsc 0 · 659+202 tests · build OK.
+
 - **🗺️ Subastas: mapa nacional + enlace a Google Maps por ficha (30/07/2026, rama
   `claude/national-property-map-kszwhp`).** Idea de Alberto sobre la captura de `/subastas`: ver todos los
   inmuebles señalados de un vistazo. Módulo puro: `parsearCoordenadas` (Catastro `Consulta_CPMRC`, ojo
