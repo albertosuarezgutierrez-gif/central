@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-30T10:58:06Z",
+  "generadoEn": "2026-07-30T17:18:51Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1423,7 +1423,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 20
+        "evidencias": 21
       },
       "rrhh": {
         "estado": "no",
@@ -3729,6 +3729,7 @@
       "ia_director_aprendizaje",
       "ia_director_prompt",
       "ia_presupuestos",
+      "idealista_api_usos",
       "mapa_arquitectura",
       "mensajes_aprendizaje",
       "mensajes_auto_config",
@@ -3962,6 +3963,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🏠 Subastas/chollos — API OFICIAL de Idealista preparada y DORMIDA (30/07/2026, PR #1168).",
+      "fecha": "30/07/2026"
+    },
+    {
       "titulo": "💶 Auditoría pricing dinámico pre-cutover (30/07/2026, rama `claude/dynamic-pricing-audit-4cbdxv`).",
       "fecha": "30/07/2026"
     },
@@ -4015,10 +4020,6 @@
     },
     {
       "titulo": "💶 Subastas — REFERENCIA DE MERCADO con los correos de Idealista (28/07/2026).",
-      "fecha": "28/07/2026"
-    },
-    {
-      "titulo": "⚖️ NUEVO — Radar de subastas de inmuebles `/subastas` (28/07/2026, Fase 1).",
       "fecha": "28/07/2026"
     }
   ],
