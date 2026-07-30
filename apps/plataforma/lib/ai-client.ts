@@ -11,6 +11,20 @@ import { registrarUso, estimarTokens, costeEur } from '@/lib/ai-gateway'
 const NVIDIA_TEXT  = 'meta/llama-3.3-70b-instruct'
 const NVIDIA_VISION = 'meta/llama-3.2-90b-vision-instruct'
 
+/**
+ * Modelo MULTIMODAL por defecto para leer documentos de varias páginas.
+ *
+ * NIM (el suplente gratis) solo acepta UNA imagen por petición, y eso obliga a
+ * leer página a página — que es justo lo que hizo fallar la lectura registral:
+ * sin ver el cuadro de cargas entero, el modelo no puede saber el RANGO de cada
+ * carga, y el rango decide si se hereda o se purga.
+ *
+ * `gpt-5.6-luna` se eligió del catálogo real de OpenRouter (30/07/2026) por ser
+ * multimodal, tener 1M de contexto —caben de sobra 12 páginas escaneadas— y
+ * costar 0,1 $/M de entrada. Override por env sin tocar código.
+ */
+const VISION_MULTIPAGINA = process.env.OPENROUTER_VISION_MODEL || 'openai/gpt-5.6-luna'
+
 function nimConfig(): NimConfig {
   const apiKey = process.env.NVIDIA_API_KEY
   if (!apiKey) throw new Error('NVIDIA_API_KEY no configurada en Vercel')
@@ -60,7 +74,12 @@ export async function aiVision(
   system: string,
   images: ImageInput[],
   userText: string,
-  opts: { maxTokens?: number; model?: string; timeoutMs?: number; endpoint?: string } = {},
+  opts: {
+    maxTokens?: number; model?: string; timeoutMs?: number; endpoint?: string
+    /** `true` = varias imágenes en la MISMA llamada: exige modelo multimodal y
+     *  NO cae a NIM, que solo acepta una (mejor lanzar que mandar basura). */
+    multiPagina?: boolean
+  } = {},
 ): Promise<string> {
   const endpoint = opts.endpoint ?? 'vision'
   const maxTokens = opts.maxTokens ?? 2000
@@ -74,7 +93,7 @@ export async function aiVision(
   // quedó con cero cargas por esto, que se lee como «finca limpia» — el peor
   // fallo posible. Cuando el catálogo del Director aún no ofrece la categoría
   // `registral`, se va directo a NIM, que sí tiene modelo de visión conocido.
-  const modeloVision = opts.model ?? process.env.OPENROUTER_VISION_MODEL
+  const modeloVision = opts.model ?? (opts.multiPagina ? VISION_MULTIPAGINA : process.env.OPENROUTER_VISION_MODEL)
   const or = modeloVision ? openrouterConfigPasarela() : null
   if (or) {
     const t0 = Date.now()
@@ -96,8 +115,15 @@ export async function aiVision(
         app: 'plataforma', endpoint, proveedor: 'openrouter', modelo: modeloVision ?? null,
         ok: false, ms: Date.now() - t0, error: msg,
       })
-      console.warn('[ai-client] visión OpenRouter falló, cae a NIM:', msg)
+      console.warn('[ai-client] visión OpenRouter falló:', msg)
+      // Con varias imágenes NO hay suplente posible: NIM las rechaza. Se lanza
+      // para que el llamante pueda reintentar página a página, que sí funciona.
+      if (opts.multiPagina) throw e
     }
+  }
+
+  if (opts.multiPagina) {
+    throw new Error('Lectura multipágina sin modelo multimodal disponible (falta OPENROUTER_API_KEY).')
   }
 
   // Suplente gratis: NIM vision.
