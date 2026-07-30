@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-30T09:47:07Z",
-  "sha": "4cd5e4ad7884fbad109b7d6f5f5c0f861cb4250c",
+  "generadoEn": "2026-07-30T10:11:37Z",
+  "sha": "929b92c4ae4a7b1f2e68b789527adde55d65ca8a",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47359,6 +47359,50 @@
       "hash": "e89c8b49dc54"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/subastas/MapaSubastas.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "MapaSubastas"
+      ],
+      "funciones": [
+        {
+          "nombre": "loadLeaflet",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<any>",
+          "linea": 17
+        },
+        {
+          "nombre": "esc",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 61
+        },
+        {
+          "nombre": "popupHtml",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: Punto",
+          "retorno": "string",
+          "linea": 63
+        },
+        {
+          "nombre": "MapaSubastas",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 82
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1258d0e07679"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/subastas/page.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -47397,7 +47441,7 @@
           "exportada": false,
           "params": "activo = false",
           "retorno": "React.CSSProperties",
-          "linea": 141
+          "linea": 148
         },
         {
           "nombre": "fecha",
@@ -47405,7 +47449,7 @@
           "exportada": false,
           "params": "iso: string | null | undefined",
           "retorno": "string | null",
-          "linea": 148
+          "linea": 155
         },
         {
           "nombre": "Puntuacion",
@@ -47413,7 +47457,7 @@
           "exportada": false,
           "params": "{ v }: { v: number | null }",
           "retorno": null,
-          "linea": 162,
+          "linea": 169,
           "resumen": "Semáforo de la puntuación. `null` se pinta distinto a 0: no es lo mismo."
         },
         {
@@ -47422,7 +47466,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 170
+          "linea": 177
         },
         {
           "nombre": "PanelTesoreria",
@@ -47430,7 +47474,7 @@
           "exportada": false,
           "params": "{ t }: { t: Tesoreria }",
           "retorno": null,
-          "linea": 177,
+          "linea": 184,
           "resumen": "Dinero que hay que tener bloqueado para poder pujar. Lo que importa NO es la suma de depósitos sino el máximo simultáneo: los que no se solapan reutilizan el mismo dinero."
         },
         {
@@ -47439,7 +47483,7 @@
           "exportada": false,
           "params": "{ r, dormitorios }: { r: Rendimiento | null | undefined; dormitorios?: number | null }",
           "retorno": null,
-          "linea": 244,
+          "linea": 251,
           "resumen": "Yield turístico estimado con los pisos PROPIOS. Siempre con el caveat: los pisos de referencia son de Sevilla capital — fuera de ahí es extrapolación."
         },
         {
@@ -47448,7 +47492,7 @@
           "exportada": false,
           "params": "{ s, o, acciones, extra }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode }",
           "retorno": null,
-          "linea": 255
+          "linea": 262
         },
         {
           "nombre": "SubastasClient",
@@ -47456,14 +47500,14 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Inicial | null }",
           "retorno": null,
-          "linea": 339
+          "linea": 354
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "e13f169fa0cf"
+      "hash": "e489d66a2d64"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -51189,7 +51233,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 21
+          "linea": 22
         }
       ],
       "tablas": [
@@ -51197,7 +51241,7 @@
         "subastas"
       ],
       "rutaApi": "/api/cron/subastas-enriquecer",
-      "hash": "f7809c9b7a0a"
+      "hash": "4aeca9c3108a"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-ingesta/route.ts",
@@ -55312,6 +55356,31 @@
       ],
       "rutaApi": "/api/subastas/fase3-debug",
       "hash": "2d0adc68db3b"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/subastas/mapa/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Puntos para el mapa nacional de subastas: las vigentes con coordenadas — exactas del Catastro o aproximadas al centro del municipio, cada una marcada con su precisión. Las que ni eso se cuentan aparte, para que el mapa no parezca completo cuando no lo es.",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 16
+        }
+      ],
+      "tablas": [
+        "next",
+        "subastas",
+        "subastas_radar"
+      ],
+      "rutaApi": "/api/subastas/mapa",
+      "hash": "4106b80705fc"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/oferta/route.ts",
@@ -64912,7 +64981,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<FilaCriterios[]>",
-          "linea": 88,
+          "linea": 93,
           "resumen": "Cuentas con el radar activo y sus criterios."
         },
         {
@@ -64921,7 +64990,7 @@
           "exportada": true,
           "params": "limite = 500",
           "retorno": "Promise<SubastaInmueble[]>",
-          "linea": 112,
+          "linea": 117,
           "resumen": "Subastas candidatas: en plazo (o sin fecha conocida) y recientes. No se rebarre todo el histórico en cada pasada."
         },
         {
@@ -64930,7 +64999,7 @@
           "exportada": true,
           "params": "cuentaId: string, criterios: CriteriosSubasta, corpus: SubastaInmueble[]",
           "retorno": "Promise<number>",
-          "linea": 134,
+          "linea": 139,
           "resumen": "Casa el corpus con los criterios de una cuenta e inserta lo nuevo. El upsert REFRESCA el snapshot y las cifras: el radar corre a las 06:30, DESPUÉS del enriquecimiento (06:15) y del valor de mercado ("
         },
         {
@@ -64939,7 +65008,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 201,
+          "linea": 206,
           "resumen": "Pasada completa: descarga el corpus UNA vez y lo empareja con cada cuenta."
         }
       ],
@@ -64951,7 +65020,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "0c025a3a0470"
+      "hash": "551bed23fec1"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/boe.ts",
@@ -65124,6 +65193,8 @@
       "exporta": [
         "bajarFicha",
         "bajarCatastro",
+        "bajarCoordenadas",
+        "geocodificarMunicipio",
         "capturarResultados"
       ],
       "funciones": [
@@ -65133,7 +65204,7 @@
           "exportada": false,
           "params": "url: string, ms = 20000",
           "retorno": "Promise<string>",
-          "linea": 28
+          "linea": 31
         },
         {
           "nombre": "bajarFicha",
@@ -65141,7 +65212,7 @@
           "exportada": true,
           "params": "identificador: string",
           "retorno": "Promise<FichaBoe>",
-          "linea": 39,
+          "linea": 42,
           "resumen": "Descarga y parsea las tres pestañas de la ficha de una subasta."
         },
         {
@@ -65150,8 +65221,34 @@
           "exportada": true,
           "params": "refCatastral: string",
           "retorno": "Promise<DatosCatastro | null>",
-          "linea": 52,
+          "linea": 55,
           "resumen": "Consulta el Catastro por referencia catastral. `null` si no hay dato."
+        },
+        {
+          "nombre": "bajarCoordenadas",
+          "kind": "function",
+          "exportada": true,
+          "params": "refCatastral: string",
+          "retorno": "Promise<CoordenadasCatastro | null>",
+          "linea": 70,
+          "resumen": "Coordenadas WGS84 por referencia catastral (`Consulta_CPMRC`, probado el 30/07/2026). El servicio trabaja a nivel de PARCELA: acepta los 14 primeros caracteres; con la referencia de 20 del bien concre"
+        },
+        {
+          "nombre": "esperarTurnoNominatim",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<void>",
+          "linea": 86
+        },
+        {
+          "nombre": "geocodificarMunicipio",
+          "kind": "function",
+          "exportada": true,
+          "params": "municipio: string, provincia?: string | null,",
+          "retorno": "Promise<CoordenadasCatastro | null>",
+          "linea": 104,
+          "resumen": "Centro del municipio por Nominatim (OSM, gratis). Es el escalón APROXIMADO para las subastas sin referencia catastral (la mayoría del corpus): mejor un pin honesto en el centro del pueblo que un mapa "
         },
         {
           "nombre": "capturarResultados",
@@ -65159,7 +65256,7 @@
           "exportada": true,
           "params": "max = 20",
           "retorno": "Promise<",
-          "linea": 76,
+          "linea": 136,
           "resumen": "el marcado de una CONCLUIDA aún no se ha podido ver, así que el parser (`resultadoDeFicha`) es defensivo — si no reconoce nada deja la fila pendiente y aquí se loguean las claves vistas para ajustar e"
         }
       ],
@@ -65167,7 +65264,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "6ec5dba6e31f"
+      "hash": "002411b28794"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/gmail-boe.ts",
@@ -83236,6 +83333,7 @@
       "exporta": [
         "parsearCatastro",
         "errorCatastro",
+        "parsearCoordenadas",
         "superficieUtil"
       ],
       "funciones": [
@@ -83282,18 +83380,27 @@
           "resumen": "¿La respuesta indica error del servicio (referencia inexistente, etc.)?"
         },
         {
+          "nombre": "parsearCoordenadas",
+          "kind": "function",
+          "exportada": true,
+          "params": "xml: string",
+          "retorno": "CoordenadasCatastro | null",
+          "linea": 109,
+          "resumen": "Convierte el XML de `Consulta_CPMRC` en coordenadas WGS84. `null` si el servicio no las da (error, referencia inexistente o respuesta corrupta) — nunca devuelve un punto inventado."
+        },
+        {
           "nombre": "superficieUtil",
           "kind": "function",
           "exportada": true,
           "params": "catastro?: number | null, anuncio?: number | null",
           "retorno": "number | null",
-          "linea": 104,
+          "linea": 134,
           "resumen": "Superficie con la que valorar el inmueble: la del CATASTRO manda sobre la que publica el anuncio. POR QUÉ el Catastro primero: es la oficial y es la que usa el cálculo del €/m² de mercado. Si el scori"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7d0e0bd029d0"
+      "hash": "66e0d612e10a"
     },
     {
       "ruta": "packages/module-subastas/src/comparables.ts",
@@ -83912,7 +84019,8 @@
       "ambito": "packages/module-subastas",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Municipio → provincia. PURO. Por qué existe: `provinciaDeTexto` de @central/module-concursos resuelve NOMBRES DE PROVINCIA, pero las descripciones del BOE citan el MUNICIPIO («Dos Hermanas», «Belmonte de Miranda», «El Puert",
       "exporta": [
-        "provinciaPorMunicipio"
+        "provinciaPorMunicipio",
+        "urlGoogleMaps"
       ],
       "funciones": [
         {
@@ -83923,11 +84031,20 @@
           "retorno": "string | null",
           "linea": 36,
           "resumen": "Deduce la provincia de un texto libre (descripción del bien y/o nombre de la búsqueda guardada). Devuelve `null` si no hay indicio — nunca adivina."
+        },
+        {
+          "nombre": "urlGoogleMaps",
+          "kind": "function",
+          "exportada": true,
+          "params": "u: UbicacionSubasta",
+          "retorno": "string | null",
+          "linea": 62,
+          "resumen": "URL de Google Maps para VER dónde está el inmueble. Prioridad: coordenadas exactas (Catastro) > búsqueda por dirección > municipio+provincia. Con solo la provincia devuelve `null`: un pin en mitad de "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0db10eb0d543"
+      "hash": "34ad0aa716bf"
     },
     {
       "ruta": "packages/module-subastas/src/junta.ts",
@@ -85792,7 +85909,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2339,
-    "funciones": 6149
+    "archivos": 2341,
+    "funciones": 6159
   }
 }
