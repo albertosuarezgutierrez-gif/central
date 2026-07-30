@@ -46,7 +46,10 @@ export const CRON_JOBS: CronJob[] = [
   { path: '/api/sivra/pricing/apply-auto', schedule: '30 8,14,20 * * *' },
   { path: '/api/sivra/pricing/resumen-diario', schedule: '0 9 * * *' },
   { path: '/api/sivra/pricing/pilot-track', schedule: '15 9 * * *' },
-  { path: '/api/sivra/updates/sync', schedule: '0 5 * * *' },
+  // days=7: el sync es idempotente y la ventana ancha hace que un apagón de varios días del
+  // scheduler (o del webhook Smoobu) se auto-repare en la siguiente corrida — con el default
+  // de 2 días, las reservas modificadas durante el apagón de julio-2026 se habrían perdido.
+  { path: '/api/sivra/updates/sync?days=7', schedule: '0 5 * * *' },
   { path: '/api/sivra/limpiadoras/auto-sessions', schedule: '0 5 * * *' },
   { path: '/api/sivra/limpiadoras/auto-assign', schedule: '30 5 * * *' },
   { path: '/api/sivra/limpiadoras/alerta-ventana', schedule: '0 8 * * *' },
