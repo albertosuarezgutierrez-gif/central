@@ -24,6 +24,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏷️ Banca: compra de tarjeta ya no cae en palabra-trampa + bandeja pregunta el NEGOCIO (30/07/2026,
+  rama `claude/restaurante-charge-agent-issue-8lxiwv`).** Restaurante "LA HACIENDA GOLF" caía a
+  `categoria='impuestos'` ('HACIENDA' a secas en `categorizarPorReglas`, tras las reglas de comercio).
+  Reglas extraídas a `lib/categoria-reglas.ts` (PURO, 6 tests): compra con tarjeta → 'tarjeta' ANTES de
+  reglas de comercio; 'HACIENDA' suelto retirado. `RevisarBandeja` de `/banca` ahora pregunta el negocio
+  (botones Correduría/Personal + Otro…) vía `/api/banca/destino` (confirma + aprende regla), en vez de la
+  taxonomía PGC que confundía a Alberto. Backfill `2026-07-30_categoria_compra_tarjeta.sql` aplicado (3 filas).
+
 - **🧹 Ahorro de tokens/contexto: rotación de memoria + skills router (30/07/2026, rama
   `claude/short-responses-token-saving-qh7i88`).** Memoria viva rotada por meses (983→~492 KB; junio →
   `docs/memoria/2026-06.md` vía `scripts/rotar-memoria.mjs`, idempotente, la dispara `/auditoria-diaria` a

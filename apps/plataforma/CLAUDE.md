@@ -287,6 +287,20 @@ declara **UN solo cron**: `/api/cron/dispatch` cada minuto.
   (fila única + regla por comercio); `listarPorRevisar` filtra `destino_confirmado=false`; backfill idempotente
   `2026-07-15_limpiar_requiere_revision_destino.sql` (aplicado). Verificado con `next build` OK. Al añadir un
   camino nuevo que confirme destino (Telegram, agente contable, endpoint…), replica el invariante (a)+(b).
+- [x] **🏷️ Compra de tarjeta nunca cae en palabra-trampa + bandeja «Gastos por revisar» pregunta el
+  NEGOCIO (30/07/2026):** un pago en el restaurante "LA HACIENDA GOLF" caía a `categoria='impuestos'`
+  porque `categorizarPorReglas` usaba `'HACIENDA'` a secas y la regla de compra con tarjeta iba DESPUÉS
+  de las reglas de comercio (el nombre del comercio puede contener cualquier trampa: 'BAR LA MUTUA'…).
+  Fix: reglas extraídas a **`lib/categoria-reglas.ts`** (módulo PURO, testeado con `node --test`;
+  `categorizar.ts` reexporta) — la liquidación de tarjeta y la COMPRA con tarjeta se detectan PRIMERO
+  (compra → siempre `tarjeta`; el consumo vive en `subcategoria` y la deducibilidad en `destino`) y
+  `'HACIENDA'` suelto se retiró (solo frases del fisco: AEAT/HACIENDA PUBLICA/TRIBUT HACIENDA…, misma
+  lección que `subcategoria-keywords` del 07/07). Además la **RevisarBandeja de `/banca` ya no pide la
+  categoría contable** (taxonomía PGC que descolocaba a Alberto — "no es nada de estas categorías"):
+  pregunta lo realmente dudoso, el **negocio**, con botones 🛡️ Correduría / 👨‍👩‍👧 Personal + «Otro…»
+  (Dúplex/Pisos/Traspaso) contra `/api/banca/destino` (confirma, limpia flag e aprende regla del
+  comercio — invariante PR #906). `/api/banca/revisar` (asignar categoría) queda vivo pero sin UI.
+  Backfill `prisma/sql/2026-07-30_categoria_compra_tarjeta.sql` (aplicado: 3 filas → `tarjeta`).
 - [x] **Health-check: Check 6 (alertas) RETIRADO (11/07/2026):** contaba filas de la tabla `alertas` (de **IALIMP**, operativa de limpiezas de Sique Brilla) con >30 días **sin filtrar por empresa** → metía el backlog de Vanessa al Telegram de Alberto (saltó con `🟡 152 alertas`). Esas alertas no son de plataforma; ialimp ya las gestiona (panel 🔔 + cron semanal `alertas-pendientes` que avisa a `empresas.email`). **No reintroducir ningún conteo de `alertas` en el health-check de plataforma** (es de otro tenant). Raíz del atasco: el log `asignacion_auto` de ialimp se insertaba sin leer y no se purgaba (corregido en ese repo). Diseño: `docs/superpowers/specs/2026-07-11-health-check-alertas-limpiezas-design.md`.
 - [x] **Fiscal — «Mi declaración» ya no se cuelga en «Calculando…» (03/07/2026, PR #721 mergeado):**
   La IA salió del camino crítico: `/api/finanzas/comparativa` ya NO llama al LLM (antes `enriquecerConIA`
