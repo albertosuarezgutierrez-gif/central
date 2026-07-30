@@ -24,6 +24,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💶 Auditoría pricing dinámico pre-cutover (30/07/2026, rama `claude/dynamic-pricing-audit-4cbdxv`).**
+  A 3 días de confirmar 100% dinámico: SIN bloqueantes técnicos. Motor vivo (Busto/Luxury aplican a diario,
+  última 29/07; crons pricing todos en el dispatcher #1165), datos frescos (market_rates y snapshots de hoy,
+  12 meses de comps en los 4 pisos), raíl ±/día con ancla por día natural OK, evidencia piloto sólida
+  (Busto 16 y Luxury 14 noches reservadas a precio motor, ADR muy sobre PL). PENDIENTE de Alberto:
+  activar `apply_enabled` de Dúplex/House y desconectar PL. Vigilar: `incomes` sin insertar desde 25/07
+  (1er sync post-dispatcher mañana 05:00 UTC), comps House solo proxy 8p×1,15 (la API de Booking topa en
+  8 adultos; aforo 12 correcto en BD). Aforo Luxury actualizado 4→5 en `pricing_piso_zona` (OK Alberto 30/07).
+  Doc de skill actualizada (suelos 65/72 del 28/07). 6 alertas de guard abiertas pre-recalibración.
+
 - **🏷️ Banca: compra de tarjeta ya no cae en palabra-trampa + bandeja pregunta el NEGOCIO (30/07/2026,
   rama `claude/restaurante-charge-agent-issue-8lxiwv`).** Restaurante "LA HACIENDA GOLF" caía a
   `categoria='impuestos'` ('HACIENDA' a secas en `categorizarPorReglas`, tras las reglas de comercio).
