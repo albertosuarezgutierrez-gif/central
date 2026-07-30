@@ -31,10 +31,13 @@
   10 tests con XML real. Columnas `subastas.{lat,lon,geo_precision}` (migración aplicada); el cron
   `subastas-enriquecer` geocodifica exacto por ref. catastral y **aproximado al centroide del municipio**
   por Nominatim cuando no la hay (solo 5/34 la traían) — el mapa pinta los aproximados en hueco y lo dice.
-  Pestaña 🗺️ Mapa (Leaflet+OSM por CDN, montaje perezoso) + `/api/subastas/mapa`. **Nominatim NO se pudo
-  probar** (proxy del contenedor da 403): los 4 puntos exactos ya están en BD, los aproximados dependen de
-  la 1ª pasada del cron en Vercel. Bonus: el cron ya no reintenta fichas BOE de la fuente `junta` (23 filas
-  que fallaban siempre y monopolizaban la cola).
+  Pestaña 🗺️ Mapa (Leaflet+OSM por CDN, montaje perezoso) + `/api/subastas/mapa`. Nominatim da 403 desde el
+  proxy del contenedor pero **responde 200 desde cloud** (verificado con `pg_net` desde Supabase) → funcionará
+  en Vercel; 4 puntos exactos ya en BD, los aproximados los pone la 1ª pasada del cron. ⚠️ Nominatim BLOQUEA
+  IP si se pasa de 1 req/s → cerrojo de módulo (1,1 s, serializa) + presupuesto de 25 s por pasada;
+  `enriquecida_at` se deja NULL SOLO si no se intentó (si el municipio es ilocalizable se marca, o volvería a
+  monopolizar la cola). Bonus: el cron ya no reintenta fichas BOE de la fuente `junta` (23 filas que fallaban
+  siempre y, al ir primeras por `enriquecida_at NULLS FIRST`, tapaban a las del BOE).
 
 - **🏷️ Banca: compra de tarjeta ya no cae en palabra-trampa + bandeja pregunta el NEGOCIO (30/07/2026,
   rama `claude/restaurante-charge-agent-issue-8lxiwv`).** Restaurante "LA HACIENDA GOLF" caía a

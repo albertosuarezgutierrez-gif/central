@@ -75,17 +75,38 @@ export async function bajarCoordenadas(refCatastral: string): Promise<Coordenada
 }
 
 /**
+ * Nominatim exige **≤1 petición/segundo** y lo hace cumplir BLOQUEANDO LA IP —
+ * y la IP sería la de Vercel, compartida por todo lo demás. No basta con que el
+ * cron vaya en serie: las filas que solo se geocodifican (fuentes sin ficha en
+ * el BOE) no pagan ninguna otra latencia, así que saldrían seguidas. Este
+ * cerrojo de módulo serializa y espacia TODAS las llamadas del proceso.
+ */
+const ESPERA_NOMINATIM_MS = 1100
+let ultimaNominatim = 0
+async function esperarTurnoNominatim(): Promise<void> {
+  const ahora = Date.now()
+  const espera = Math.max(0, ultimaNominatim + ESPERA_NOMINATIM_MS - ahora)
+  // Se reserva el turno ANTES de esperar: dos llamadas concurrentes se ponen en
+  // cola una detrás de otra en vez de dormir lo mismo y salir a la vez.
+  ultimaNominatim = ahora + espera
+  if (espera > 0) await new Promise((r) => setTimeout(r, espera))
+}
+
+/**
  * Centro del municipio por Nominatim (OSM, gratis). Es el escalón APROXIMADO
  * para las subastas sin referencia catastral (la mayoría del corpus): mejor un
  * pin honesto en el centro del pueblo que un mapa con el 15% de los inmuebles.
  * Quien lo pinte debe declarar la imprecisión (columna `geo_precision`).
- * Nominatim pide ≤1 req/s: el cron procesa ~12 filas en serie, dentro del límite.
+ *
+ * Verificado el 30/07/2026: el servicio responde 200 desde infraestructura
+ * cloud (probado con `pg_net` desde Supabase). Respeta el límite de 1 req/s.
  */
 export async function geocodificarMunicipio(
   municipio: string,
   provincia?: string | null,
 ): Promise<CoordenadasCatastro | null> {
   const q = [municipio.trim(), provincia?.trim(), 'España'].filter(Boolean).join(', ')
+  await esperarTurnoNominatim()
   const r = await fetch(
     `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=es&q=${encodeURIComponent(q)}`,
     { headers: { 'User-Agent': 'central-subastas/1.0', Accept: 'application/json' }, signal: AbortSignal.timeout(15000), cache: 'no-store' },
