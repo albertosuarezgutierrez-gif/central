@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⚖️ Subastas: «Cargas no publicadas» falso cuando la certificación va como DOCUMENTO (30/07/2026,
+  rama `claude/subasta-carga-no-publicadas-jm7ky6`).** SUB-JA-2026-263723 (San Pablo, cierra 31/07) salía
+  «Cargas no publicadas» pese a la CERTIFICACIÓN adjunta ya leída en `notas_edicto`: `cargas_conocidas` solo
+  miraba el campo «Cargas» de la ficha (vacío) y el refresco 24h del enriquecedor lo machacaba. Fix: el paso
+  de documentos sube el flag si la certificación dice «sin cargas de procedencia»; el UPDATE de la ficha es
+  sticky (OR); punto ámbar de embargo en `analisis.ts` (el verde de cargas no lo tape). Backfill
+  `2026-07-30_cargas_conocidas_certificacion.sql` aplicado + fila de radar/analisis de San Pablo corregida
+  a mano en prod (el cron reconcilia tras el merge). 193 tests módulo · tsc 0.
+
 - **💶 Auditoría pricing dinámico pre-cutover (30/07/2026, rama `claude/dynamic-pricing-audit-4cbdxv`).**
   A 3 días de confirmar 100% dinámico: SIN bloqueantes técnicos. Motor vivo (Busto/Luxury aplican a diario,
   última 29/07; crons pricing todos en el dispatcher #1165), datos frescos (market_rates y snapshots de hoy,

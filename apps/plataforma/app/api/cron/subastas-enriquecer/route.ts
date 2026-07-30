@@ -65,7 +65,9 @@ export async function GET(req: NextRequest) {
             sin_visita = ${f.sinVisita},
             cargas = COALESCE(${f.cargas}, cargas),
             cargas_texto = COALESCE(${f.cargasTexto}, cargas_texto),
-            cargas_conocidas = ${f.cargasConocidas},
+            -- Sticky: el true puede venir de la CERTIFICACIÓN adjunta (paso de
+            -- documentos), que la ficha no refleja en su campo «Cargas».
+            cargas_conocidas = (${f.cargasConocidas} OR COALESCE(cargas_conocidas, false)),
             autoridad = COALESCE(${f.autoridad}, autoridad),
             telefono_autoridad = COALESCE(${f.telefonoAutoridad}, telefono_autoridad),
             email_autoridad = COALESCE(${f.emailAutoridad}, email_autoridad),

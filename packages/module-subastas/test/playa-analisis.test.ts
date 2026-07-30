@@ -68,6 +68,13 @@ test('«no consta» de vivienda habitual NO cuenta como vivienda habitual', () =
   assert.equal(a.puntos.some((p) => p.clave === 'vivienda_habitual'), false)
 })
 
+test('anotación de embargo en la certificación suma punto ámbar (no queda verde tapado)', () => {
+  const notas = 'Certificación: sin cargas de procedencia registradas\n⚠️ Certificación: anotación de EMBARGO — revisar importe, vigencia y si es posterior (se cancelaría)'
+  const a = analisisDocumental(base({ situacionPosesoria: 'libre', cargasConocidas: true, cargas: 0 }), notas)
+  assert.ok(a.puntos.some((p) => p.clave === 'embargo' && p.nivel === 'ambar'))
+  assert.equal(a.semaforo, 'ambar')
+})
+
 test('sin tasación ni valor de referencia → punto de valoración', () => {
   const a = analisisDocumental(base({ tasacion: null }), '')
   assert.ok(a.puntos.some((p) => p.clave === 'valoracion'))
