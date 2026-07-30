@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-30T11:20:21Z",
-  "sha": "27297012c21882ac044c52cf6bcb8fa157c53683",
+  "generadoEn": "2026-07-30T14:28:12Z",
+  "sha": "f1fa6bcf3656101c238341a788748001a0d958c9",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47426,7 +47426,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "41abe22a9faa"
+      "hash": "626405665d41"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/subastas/SubastasClient.tsx",
@@ -47441,7 +47441,7 @@
           "exportada": false,
           "params": "activo = false",
           "retorno": "React.CSSProperties",
-          "linea": 158
+          "linea": 171
         },
         {
           "nombre": "fecha",
@@ -47449,7 +47449,7 @@
           "exportada": false,
           "params": "iso: string | null | undefined",
           "retorno": "string | null",
-          "linea": 165
+          "linea": 178
         },
         {
           "nombre": "Puntuacion",
@@ -47457,7 +47457,7 @@
           "exportada": false,
           "params": "{ v }: { v: number | null }",
           "retorno": null,
-          "linea": 179,
+          "linea": 192,
           "resumen": "Semáforo de la puntuación. `null` se pinta distinto a 0: no es lo mismo."
         },
         {
@@ -47466,7 +47466,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 187
+          "linea": 200
         },
         {
           "nombre": "PanelTesoreria",
@@ -47474,7 +47474,7 @@
           "exportada": false,
           "params": "{ t }: { t: Tesoreria }",
           "retorno": null,
-          "linea": 194,
+          "linea": 207,
           "resumen": "Dinero que hay que tener bloqueado para poder pujar. Lo que importa NO es la suma de depósitos sino el máximo simultáneo: los que no se solapan reutilizan el mismo dinero."
         },
         {
@@ -47483,7 +47483,7 @@
           "exportada": false,
           "params": "{ r, dormitorios }: { r: Rendimiento | null | undefined; dormitorios?: number | null }",
           "retorno": null,
-          "linea": 261,
+          "linea": 274,
           "resumen": "Yield turístico estimado con los pisos PROPIOS. Siempre con el caveat: los pisos de referencia son de Sevilla capital — fuera de ahí es extrapolación."
         },
         {
@@ -47492,16 +47492,25 @@
           "exportada": false,
           "params": "{ s, plantaAparte }: { s: Subasta; plantaAparte?: boolean }",
           "retorno": null,
-          "linea": 285,
+          "linea": 298,
           "resumen": "repetirla sería ruido."
+        },
+        {
+          "nombre": "ResumenDocumental",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ s, d }: { s: Subasta; d?: Documental | null }",
+          "retorno": null,
+          "linea": 335,
+          "resumen": "Resumen de CARGAS + documentación de la subasta. Vive dentro de `FichaSubasta` a propósito: antes el semáforo y las notas del edicto solo se pintaban en la pestaña «Todas» (iban en su `extra`), así qu"
         },
         {
           "nombre": "FichaSubasta",
           "kind": "function",
           "exportada": false,
-          "params": "{ s, o, acciones, extra }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode }",
+          "params": "{ s, o, acciones, extra, doc }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null }",
           "retorno": null,
-          "linea": 310
+          "linea": 415
         },
         {
           "nombre": "SubastasClient",
@@ -47509,14 +47518,14 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Inicial | null }",
           "retorno": null,
-          "linea": 452
+          "linea": 560
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "e35f13acdf01"
+      "hash": "00aea3b0def3"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -55468,7 +55477,7 @@
         "subastas"
       ],
       "rutaApi": "/api/subastas",
-      "hash": "0f2fdb82144d"
+      "hash": "fa1adea15bef"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/seguidas/route.ts",
@@ -64981,7 +64990,7 @@
           "exportada": true,
           "params": "f: any",
           "retorno": "SubastaInmueble",
-          "linea": 47,
+          "linea": 48,
           "resumen": "Fila cruda de `subastas` → el tipo del módulo."
         },
         {
@@ -64990,7 +64999,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<FilaCriterios[]>",
-          "linea": 109,
+          "linea": 110,
           "resumen": "Cuentas con el radar activo y sus criterios."
         },
         {
@@ -64999,7 +65008,7 @@
           "exportada": true,
           "params": "limite = 500",
           "retorno": "Promise<SubastaInmueble[]>",
-          "linea": 133,
+          "linea": 134,
           "resumen": "Subastas candidatas: en plazo (o sin fecha conocida) y recientes. No se rebarre todo el histórico en cada pasada."
         },
         {
@@ -65008,7 +65017,7 @@
           "exportada": true,
           "params": "cuentaId: string, criterios: CriteriosSubasta, corpus: SubastaInmueble[]",
           "retorno": "Promise<number>",
-          "linea": 155,
+          "linea": 156,
           "resumen": "Casa el corpus con los criterios de una cuenta e inserta lo nuevo. El upsert REFRESCA el snapshot y las cifras: el radar corre a las 06:30, DESPUÉS del enriquecimiento (06:15) y del valor de mercado ("
         },
         {
@@ -65017,7 +65026,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 222,
+          "linea": 223,
           "resumen": "Pasada completa: descarga el corpus UNA vez y lo empareja con cada cuenta."
         }
       ],
@@ -65029,7 +65038,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "8e46310e2d32"
+      "hash": "9763ef4324f7"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/boe.ts",
@@ -65160,7 +65169,7 @@
           "exportada": false,
           "params": "url: string, ms = 20000",
           "retorno": "Promise<Response>",
-          "linea": 25
+          "linea": 30
         },
         {
           "nombre": "textoDePdf",
@@ -65168,7 +65177,7 @@
           "exportada": false,
           "params": "buf: Buffer",
           "retorno": "Promise<string>",
-          "linea": 35
+          "linea": 40
         },
         {
           "nombre": "procesarDocumentosDeFicha",
@@ -65176,8 +65185,8 @@
           "exportada": true,
           "params": "identificador: string",
           "retorno": "Promise<DocumentosFicha>",
-          "linea": 52,
-          "resumen": "Procesa los documentos de UNA ficha. Devuelve las notas halladas."
+          "linea": 68,
+          "resumen": "Procesa los documentos de UNA ficha. Devuelve las notas y el listado."
         },
         {
           "nombre": "procesarDocumentos",
@@ -65185,7 +65194,7 @@
           "exportada": true,
           "params": "max = 10",
           "retorno": "Promise<",
-          "linea": 79,
+          "linea": 104,
           "resumen": "Pasada sobre las subastas vivas del BOE sin documentos procesados. Best-effort: un fallo de descarga deja la fila a NULL y se reintenta mañana."
         }
       ],
@@ -65193,7 +65202,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "27e5078b8205"
+      "hash": "e62ccb7bf605"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/enriquecer.ts",
@@ -86039,6 +86048,6 @@
   ],
   "resumen": {
     "archivos": 2341,
-    "funciones": 6172
+    "funciones": 6173
   }
 }
