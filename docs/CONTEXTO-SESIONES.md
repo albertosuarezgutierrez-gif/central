@@ -30,7 +30,8 @@
   12 meses de comps en los 4 pisos), raíl ±/día con ancla por día natural OK, evidencia piloto sólida
   (Busto 16 y Luxury 14 noches reservadas a precio motor, ADR muy sobre PL). PENDIENTE de Alberto:
   activar `apply_enabled` de Dúplex/House y desconectar PL. Vigilar: `incomes` sin insertar desde 25/07
-  (1er sync post-dispatcher mañana 05:00 UTC), aforo Luxury 4 vs 5 camas, comps House solo proxy 8p×1,15.
+  (1er sync post-dispatcher mañana 05:00 UTC), comps House solo proxy 8p×1,15 (la API de Booking topa en
+  8 adultos; aforo 12 correcto en BD). Aforo Luxury actualizado 4→5 en `pricing_piso_zona` (OK Alberto 30/07).
   Doc de skill actualizada (suelos 65/72 del 28/07). 6 alertas de guard abiertas pre-recalibración. dedupe PSD2 anti-drift + ventana Smoobu (30/07/2026, rama
   `claude/health-check-2026-07-30-vlv4c7`).** Check 1: el mismo abono BBVA entra 2 veces porque el banco
   re-sirve el concepto con `Nº`→`N` (3er caso: 16/06, 25/06, 22/07 413,17€ Dúplex) → guarda post-ingesta
