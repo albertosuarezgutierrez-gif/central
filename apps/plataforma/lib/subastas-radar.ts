@@ -7,21 +7,26 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import {
   coincideSubasta,
-  esPlayaHuelva,
+  costaDe,
+  esPlaya,
   evaluarFlip,
   evaluarOportunidad,
   extraerDatos,
   FLIP_MARGEN_MIN,
   superficieUtil,
   type CriteriosSubasta,
+  type ParamsCoste,
   type SubastaInmueble,
   type TipoBien,
   type TipoSubasta,
 } from '@central/module-subastas'
+import { paramsCoste } from '@/lib/subastas/params-coste'
 
 export interface FilaCriterios {
   cuenta_id: string
   criterios: CriteriosSubasta
+  /** Coste del dinero declarado por la cuenta (vacío si paga al contado). */
+  params: ParamsCoste
 }
 
 /**
@@ -41,7 +46,8 @@ export const COLS_SUBASTA = Prisma.raw(
     'arrendamiento_inscrito, telefono_autoridad, email_autoridad, codigo_postal, superficie_catastro, ' +
     'uso_catastral, direccion_catastro, precio_m2_mercado, muestra_mercado, zona_mercado, notas_edicto, ' +
     'documentos, es_playa, margen_flip, margen_flip_pct, flip_apto, semaforo, analisis, precio_m2_zona, ' +
-    'muestra_zona, zona_portal, lat, lon, geo_precision',
+    'muestra_zona, zona_portal, lat, lon, geo_precision, ' +
+    'cargas_detalle, cargas_fuente, documentos_leidos, lector_version',
 )
 
 /** Fila cruda de `subastas` → el tipo del módulo. */
@@ -110,11 +116,13 @@ export function filaASubasta(f: any): SubastaInmueble {
 export async function cuentasConRadar(): Promise<FilaCriterios[]> {
   const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT cuenta_id, provincias, palabras_clave, tipos, precio_min, precio_max,
-           descuento_min, excluir_ocupadas
+           descuento_min, excluir_ocupadas,
+           financia_pct, financia_tipo_anual, financia_meses, financia_comision
     FROM subastas_criterios WHERE activo = true
   `)
   return filas.map((f) => ({
     cuenta_id: f.cuenta_id,
+    params: paramsCoste(f),
     criterios: {
       provincias: f.provincias ?? [],
       palabrasClave: f.palabras_clave ?? [],
@@ -136,6 +144,7 @@ export async function corpusVigente(limite = 500): Promise<SubastaInmueble[]> {
     SELECT ${COLS_SUBASTA} FROM subastas
     WHERE es_inmueble = true
       AND (fecha_fin IS NULL OR fecha_fin >= now())
+      AND archivada_at IS NULL
     ORDER BY actualizado_en DESC
     LIMIT ${limite}
   `)
@@ -153,7 +162,12 @@ export async function corpusVigente(limite = 500): Promise<SubastaInmueble[]> {
  * lo tuviera. `avisado_at` y `descartado` NO se tocan: la idempotencia del aviso y
  * la decisión de Alberto mandan sobre el refresco.
  */
-export async function casarParaCuenta(cuentaId: string, criterios: CriteriosSubasta, corpus: SubastaInmueble[]): Promise<number> {
+export async function casarParaCuenta(
+  cuentaId: string,
+  criterios: CriteriosSubasta,
+  corpus: SubastaInmueble[],
+  params: ParamsCoste = {},
+): Promise<number> {
   // 🧠 Aprendizaje de los descartes de Telegram: 3 descartes con motivo «zona»
   // en el mismo municipio = Alberto no quiere más avisos de allí. Aplica a todo
   // (también a la lente playa): tres noes explícitos mandan. Se reactiva
@@ -178,16 +192,17 @@ export async function casarParaCuenta(cuentaId: string, criterios: CriteriosSuba
   let nuevos = 0
   for (const s of corpus) {
     if (s.municipio && municipiosExcluidos.has(s.municipio.toUpperCase())) continue
-    const oportunidad = evaluarOportunidad(s)
+    const oportunidad = evaluarOportunidad(s, null, params)
     const c = coincideSubasta(s, criterios, oportunidad)
 
-    // 🏖️ Costa de Huelva = segunda residencia: entra al radar AUNQUE no case
+    // 🏖️ Costa de Huelva y de Cádiz = segunda residencia: entra al radar AUNQUE no case
     // con los criterios de inversión (sin tope de precio, decisión de Alberto
     // 29/07/2026 — el precio va en el aviso y decide él).
-    const playa = esPlayaHuelva(s.municipio, s.descripcion, s.provincia)
+    const playa = esPlaya(s.municipio, s.descripcion, s.provincia)
+    const costa = costaDe(s.municipio, s.descripcion, s.provincia)
     if (!c.casa && !playa) continue
-    const motivos = c.casa ? [...c.motivos] : ['🏖️ Costa de Huelva — posible segunda residencia (fuera de tus criterios de inversión)']
-    if (c.casa && playa) motivos.push('🏖️ Costa de Huelva — también vale como segunda residencia')
+    const motivos = c.casa ? [...c.motivos] : [`🏖️ Costa de ${costa} — posible segunda residencia (fuera de tus criterios de inversión)`]
+    if (c.casa && playa) motivos.push(`🏖️ Costa de ${costa} — también vale como segunda residencia`)
 
     // 🔨 Lente flip: si el margen estimado supera el mínimo, se dice.
     const flip = evaluarFlip(s, oportunidad, anio)
@@ -226,8 +241,8 @@ export async function pasadaRadar(): Promise<{ cuentas: number; nuevos: number }
 
   const corpus = await corpusVigente()
   let nuevos = 0
-  for (const { cuenta_id, criterios } of cuentas) {
-    nuevos += await casarParaCuenta(cuenta_id, criterios, corpus)
+  for (const { cuenta_id, criterios, params } of cuentas) {
+    nuevos += await casarParaCuenta(cuenta_id, criterios, corpus, params)
   }
   return { cuentas: cuentas.length, nuevos }
 }

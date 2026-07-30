@@ -13,15 +13,22 @@
 // ────────────────────────────────────────────────────────────────────────────
 
 import type { CosteAdquisicion, ParamsCoste, SubastaInmueble } from './types.ts'
+import { deudaComunidadEstimada } from './comunidad.ts'
+import { costeFinanciacion } from './financiacion.ts'
 
 /** Porcentaje del valor de subasta que hay que consignar para poder pujar. */
 export const PCT_DEPOSITO = 0.05
+
+/** Los parámetros que SIEMPRE tienen valor por defecto (los opcionales no). */
+type ParamsBase = Required<
+  Omit<ParamsCoste, 'financiacion' | 'estimarComunidad' | 'aniosImpagoComunidad' | 'cuotaComunidadMensual'>
+>
 
 /**
  * Parámetros por defecto para Andalucía (2026). Los tipos impositivos son los
  * vigentes; el resto son órdenes de magnitud conservadores y sobreescribibles.
  */
-export const PARAMS_ANDALUCIA: Required<ParamsCoste> = {
+export const PARAMS_ANDALUCIA: ParamsBase = {
   tipoItp: 0.07,   // tipo general de ITP en Andalucía
   tipoIva: 0.21,   // cuando el ejecutado es persona jurídica
   tipoAjd: 0.012,  // AJD, acompaña al IVA
@@ -103,24 +110,53 @@ export function calcularCoste(
     avisos.push(`Inmueble ocupado o de posesión dudosa: se estiman ${formatearEur(LANZAMIENTO_ESTIMADO)} de lanzamiento.`)
   }
 
-  if (p.comunidadPendiente === 0) {
+  // ── Comunidad de propietarios (art. 9.1.e LPH) ────────────────────────────
+  // Nadie publica lo que el ejecutado debe a su comunidad, y el comprador lo
+  // hereda: sin estimarlo, el coste puerta abierta se queda sistemáticamente
+  // corto en pisos, locales, garajes y trasteros.
+  let comunidadPendiente = p.comunidadPendiente
+  if (comunidadPendiente === 0 && p.estimarComunidad !== false) {
+    const deuda = deudaComunidadEstimada({
+      tipoBien: s.tipoBien ?? null,
+      superficie: s.superficie ?? null,
+      aniosImpago: p.aniosImpagoComunidad ?? null,
+      cuotaMensual: p.cuotaComunidadMensual ?? null,
+    })
+    if (deuda.importe != null) comunidadPendiente = deuda.importe
+    avisos.push(deuda.nota)
+  } else if (comunidadPendiente === 0) {
     avisos.push('No se han incluido derramas de comunidad pendientes: se heredan el año en curso y los 3 anteriores.')
   }
+
   if (p.plusvaliaMunicipal === 0) {
     avisos.push('No se ha incluido la plusvalía municipal (corresponde al ejecutado, pero conviene confirmarlo).')
   }
 
-  const total = redondear(
+  const subtotal = redondear(
     precio +
       cargasPreferentes +
       impuestoTransmision +
       p.notariaRegistro +
       p.cancelacionCargas +
       p.plusvaliaMunicipal +
-      p.comunidadPendiente +
+      comunidadPendiente +
       p.ibiPendiente +
       lanzamiento,
   )
+
+  // ── Coste del dinero ──────────────────────────────────────────────────────
+  // Solo si se declara cómo se financia: inventar un puente que igual no existe
+  // falsearía el coste tanto como ignorarlo. El desembolso a financiar es lo
+  // que falta por poner, ya descontado el depósito consignado para pujar.
+  let costeDinero = 0
+  if (p.financiacion) {
+    const consignado = deposito(s.valorSubasta) ?? 0
+    const f = costeFinanciacion(Math.max(0, subtotal - consignado), p.financiacion)
+    costeDinero = f.total
+    if (costeDinero > 0) avisos.push(f.nota)
+  }
+
+  const total = redondear(subtotal + costeDinero)
 
   return {
     remate: redondear(precio),
@@ -131,9 +167,10 @@ export function calcularCoste(
     notariaRegistro: p.notariaRegistro,
     cancelacionCargas: p.cancelacionCargas,
     plusvaliaMunicipal: p.plusvaliaMunicipal,
-    comunidadPendiente: p.comunidadPendiente,
+    comunidadPendiente: redondear(comunidadPendiente),
     ibiPendiente: p.ibiPendiente,
     lanzamiento,
+    costeFinanciacion: costeDinero,
     total,
     avisos,
   }

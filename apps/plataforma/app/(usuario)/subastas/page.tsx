@@ -6,11 +6,20 @@ import { evaluarOportunidad, pujaMaximaParaDescuento, yieldTuristico } from '@ce
 import { COLS_SUBASTA, filaASubasta } from '@/lib/subastas-radar'
 import { tesoreriaSubastas } from '@/lib/subastas/tesoreria'
 import { chollosVigentes, leerIndiceINE, pulsoMercado } from '@/lib/subastas/mercado'
-import { calibracionResultados } from '@/lib/subastas/calibracion'
+import { calibracionDePuja, calibracionResultados } from '@/lib/subastas/calibracion'
+import { paramsCoste } from '@/lib/subastas/params-coste'
+import { caducidadDeFila } from '@/lib/subastas/caducidad-fila'
 import { ingresoPorDormitorio } from '@/lib/subastas/rendimiento'
 import SubastasClient from './SubastasClient'
 
 export const dynamic = 'force-dynamic'
+
+/** Tanto por uno guardado → % para la UI. */
+function aPct(v: unknown): number | null {
+  if (v == null) return null
+  const n = Number(v)
+  return Number.isFinite(n) ? Math.round(n * 10000) / 100 : null
+}
 
 /** Primera página por SSR: la pantalla entra con datos, sin spinner inicial. */
 export default async function SubastasPage() {
@@ -19,16 +28,16 @@ export default async function SubastasPage() {
 
   let inicial = null
   try {
-    const [filas, total, criterios, radar, tesoreria, chollos, ingresoDorm, indice, calibracion, pulso] = await Promise.all([
+    const [filas, total, criterios, radar, tesoreria, chollos, ingresoDorm, indice, calibracion, pulso, calibPuja] = await Promise.all([
       prisma.$queryRaw<any[]>(Prisma.sql`
         SELECT ${COLS_SUBASTA} FROM subastas
-        WHERE es_inmueble = true AND (fecha_fin IS NULL OR fecha_fin >= now())
+        WHERE es_inmueble = true AND archivada_at IS NULL AND (fecha_fin IS NULL OR fecha_fin >= now())
         ORDER BY fecha_fin ASC NULLS LAST, actualizado_en DESC
         LIMIT 30
       `),
       prisma.$queryRaw<{ total: number }[]>(Prisma.sql`
         SELECT COUNT(*)::int AS total FROM subastas
-        WHERE es_inmueble = true AND (fecha_fin IS NULL OR fecha_fin >= now())
+        WHERE es_inmueble = true AND archivada_at IS NULL AND (fecha_fin IS NULL OR fecha_fin >= now())
       `),
       prisma.$queryRaw<any[]>(Prisma.sql`
         SELECT * FROM subastas_criterios WHERE cuenta_id = ${session.id}::uuid
@@ -62,6 +71,8 @@ export default async function SubastasPage() {
       calibracionResultados().catch(() => []),
       // Pulso de enfriamiento del corpus propio (% de anuncios que bajan).
       pulsoMercado().catch(() => null),
+      // ¿Nuestra puja máxima se parece al remate real? `lectura: null` sin muestra.
+      calibracionDePuja().catch(() => null),
     ])
 
     // El radar guarda un SNAPSHOT (sobrevive a la poda del corpus), pero se
@@ -71,7 +82,10 @@ export default async function SubastasPage() {
     const vivas = new Map<string, ReturnType<typeof filaASubasta>>()
     // Cargas/semáforo/notas/documentos van APARTE del snapshot: la ficha del
     // radar los pinta igual que la de «Todas» (antes solo salían allí).
-    const docs = new Map<string, { semaforo: string | null; analisis: unknown; notasEdicto: string | null; documentos: unknown }>()
+    const docs = new Map<string, {
+      semaforo: string | null; analisis: unknown; notasEdicto: string | null; documentos: unknown
+      caducidad: ReturnType<typeof caducidadDeFila>
+    }>()
     if (radar.length > 0) {
       const claves = radar.map((r) => r.dedupe_key as string)
       const corpus = await prisma
@@ -87,24 +101,27 @@ export default async function SubastasPage() {
           analisis: f.analisis ?? null,
           notasEdicto: f.notas_edicto ?? null,
           documentos: f.documentos ?? null,
+          caducidad: caducidadDeFila(f.cargas_detalle),
         })
       }
     }
 
     const c = criterios[0]
+    // Coste del dinero: solo si esta cuenta ha declarado cómo financia.
+    const params = paramsCoste(c)
     inicial = {
       resultados: filas.map((f) => {
         const s = filaASubasta(f)
         // `filaASubasta` ya cae a la descripción registral cuando la columna
         // está vacía (mismo dato que pinta la ficha, sin recalcularlo aquí).
         const dormitorios = s.dormitorios ?? null
-        const oportunidad = evaluarOportunidad(s)
+        const oportunidad = evaluarOportunidad(s, null, params)
         const rendimiento = ingresoDorm && dormitorios
           ? yieldTuristico(ingresoDorm.porDormitorio, dormitorios, oportunidad.coste.total)
           : null
         // Hasta cuánto pujar para que salga con ≥25% de descuento REAL.
         const pujaMaxima = oportunidad.valorMercado
-          ? pujaMaximaParaDescuento(s, oportunidad.valorMercado, 0.25)
+          ? pujaMaximaParaDescuento(s, oportunidad.valorMercado, 0.25, params)
           : null
         return {
           subasta: s, oportunidad, rendimiento, dormitorios, pujaMaxima,
@@ -117,6 +134,7 @@ export default async function SubastasPage() {
           semaforo: f.semaforo ?? null,
           analisis: f.analisis ?? null,
           documentos: f.documentos ?? null,
+          caducidad: caducidadDeFila(f.cargas_detalle),
           precioM2Zona: f.precio_m2_zona != null ? Number(f.precio_m2_zona) : null,
           muestraZona: f.muestra_zona ?? null,
           zonaPortal: f.zona_portal ?? null,
@@ -131,6 +149,11 @@ export default async function SubastasPage() {
         precio_max: c?.precio_max == null ? null : Number(c.precio_max),
         descuento_min: c?.descuento_min ?? 0,
         excluir_ocupadas: c?.excluir_ocupadas ?? false,
+        // En BD van en tanto por uno; la UI los teclea y los lee en %.
+        financia_pct: aPct(c?.financia_pct),
+        financia_tipo_anual: aPct(c?.financia_tipo_anual),
+        financia_meses: c?.financia_meses == null ? null : Number(c.financia_meses),
+        financia_comision: aPct(c?.financia_comision),
       },
       radar: radar.map((r) => ({
         ...r,
@@ -148,6 +171,7 @@ export default async function SubastasPage() {
       indice,
       calibracion,
       pulso,
+      calibPuja,
     }
   } catch (e) {
     console.error('[subastas page inicial]', e)

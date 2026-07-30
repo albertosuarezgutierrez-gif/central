@@ -17,6 +17,7 @@ import { prisma } from '@/lib/db'
 import {
   extraerDatos,
   parsearAlertaBoe,
+  provinciaCanonica,
   provinciaPorMunicipio,
   type DatosDescripcion,
   type SubastaInmueble,
@@ -76,7 +77,7 @@ export async function upsertSubastas(subastas: SubastaEnriquecida[]): Promise<nu
         fts, actualizado_en
       ) VALUES (
         ${s.dedupeKey}, ${s.fuente}, ${s.identificador ?? null}, ${s.tipo}, ${s.autoridad ?? null},
-        ${s.provincia ?? null}, ${s.municipio ?? null}, ${s.descripcion ?? null}, ${s.url ?? null},
+        ${provinciaCanonica(s.provincia)}, ${s.municipio ?? null}, ${s.descripcion ?? null}, ${s.url ?? null},
         ${s.fechaInicio ?? null}::timestamptz, ${s.fechaFin ?? null}::timestamptz,
         ${s.valorSubasta ?? null}, ${s.tasacion ?? null}, ${s.pujaMinima ?? null}, ${s.tramos ?? null},
         ${s.deposito ?? null}, ${s.cargas ?? null}, ${s.cargasTexto ?? null}, ${s.cargasConocidas ?? null},

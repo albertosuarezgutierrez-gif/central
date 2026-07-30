@@ -9,8 +9,8 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { bajarCatastro, bajarCoordenadas, bajarFicha, buscarRefPorDireccion, capturarResultados, geocodificarMunicipio } from '@/lib/subastas/enriquecer'
-import { paramsDnploc, type CoordenadasCatastro } from '@central/module-subastas'
-import { procesarDocumentos } from '@/lib/subastas/documentos'
+import { paramsDnploc, provinciaCanonica, type CoordenadasCatastro } from '@central/module-subastas'
+import { archivarPasadas, procesarDocumentos } from '@/lib/subastas/documentos'
 import { clasificarSubastas } from '@/lib/subastas/clasificar'
 
 export const dynamic = 'force-dynamic'
@@ -153,7 +153,9 @@ export async function GET(req: NextRequest) {
             autoridad = COALESCE(${f.autoridad}, autoridad),
             telefono_autoridad = COALESCE(${f.telefonoAutoridad}, telefono_autoridad),
             email_autoridad = COALESCE(${f.emailAutoridad}, email_autoridad),
-            provincia = COALESCE(${f.provincia}, provincia),
+            -- Canónica: la ficha del BOE escribe «Sevilla» y la Junta «SEVILLA»;
+            -- sin unificar, todo lo que agrupa por provincia parte la muestra.
+            provincia = COALESCE(${provinciaCanonica(f.provincia)}, provincia),
             municipio = COALESCE(${f.localidad}, municipio),
             codigo_postal = COALESCE(${f.codigoPostal}, codigo_postal),
             direccion = COALESCE(${f.direccion}, direccion),
@@ -192,7 +194,7 @@ export async function GET(req: NextRequest) {
     // Documentos de la ficha (edictos con texto → señales explícitas).
     const documentos = await procesarDocumentos().catch((e) => {
       console.error('[subastas-enriquecer] documentos', e)
-      return { revisadas: 0, conHallazgos: 0 }
+      return { revisadas: 0, conHallazgos: 0, conCargas: 0, analizadas: 0 }
     })
 
     // Lentes (flip / playa / semáforo): determinista y barato, al final para
@@ -202,7 +204,15 @@ export async function GET(req: NextRequest) {
       return { revisadas: 0, playa: 0, flipViables: 0 }
     })
 
-    return NextResponse.json({ ok: true, procesadas: pendientes.length, enriquecidas: ok, fallos, ...resultados, documentos, lentes })
+    // Cierre del ciclo: lo ya pasado sale de la vista y su fila de la bandeja de
+    // avisos se borra. El HISTÓRICO se conserva: sin él no hay detección de
+    // reapariciones (la misma finca más barata) ni calibración con resultados.
+    const archivado = await archivarPasadas().catch((e) => {
+      console.error('[subastas-enriquecer] archivar', e)
+      return { archivadas: 0, radarLimpiado: 0 }
+    })
+
+    return NextResponse.json({ ok: true, procesadas: pendientes.length, enriquecidas: ok, fallos, ...resultados, documentos, lentes, archivado })
   } catch (e: any) {
     console.error('[subastas-enriquecer]', e)
     return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })

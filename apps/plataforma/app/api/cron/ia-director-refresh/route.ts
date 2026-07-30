@@ -57,7 +57,25 @@ const PREFERIDOS: Record<string, { tags: string[]; lista: string[] }> = {
     tags: ['general', 'barato'],
     lista: ['meta-llama/llama-3.3-70b-instruct', 'meta-llama/llama-3.1-70b-instruct', 'mistralai/mistral-small-3.1-24b-instruct'],
   },
+  registral: {
+    // LECTURA DE DOCUMENTOS ESCANEADOS (certificaciones de cargas del BOE, notas
+    // simples, edictos fotocopiados). Exige entrada de IMAGEN — `requiereImagen`
+    // más abajo descarta al que no la acepte, porque un modelo de solo texto
+    // aquí no falla: devuelve un cuadro de cargas vacío y parece que la finca
+    // está limpia. Preferencia por capacidad de OCR sobre precio: de estas
+    // cifras sale la puja máxima, y equivocarse cuesta decenas de miles de €.
+    tags: ['registral', 'vision', 'documentos'],
+    lista: [
+      'google/gemini-2.5-flash',
+      'google/gemini-2.5-pro',
+      'anthropic/claude-sonnet-4.5',
+      'qwen/qwen2.5-vl-72b-instruct',
+    ],
+  },
 }
+
+/** Categorías que NO pueden servirse con un modelo de solo texto. */
+const REQUIERE_IMAGEN = new Set(['registral'])
 
 const CRITERIOS: Record<string, string> = {
   logica: 'Lógica, datos, cifras, clasificación, SQL',
@@ -66,6 +84,7 @@ const CRITERIOS: Record<string, string> = {
   redaccion: 'Redacción humana cuidada (emails a clientes, textos comerciales) o visión',
   contexto: 'Contexto masivo (documentos largos) o multimodal',
   general: 'Todo lo demás (chat corto, resúmenes, extracción simple)',
+  registral: 'Leer documentos ESCANEADOS con cifras (certificaciones de cargas, notas simples): OCR fiable de fotocopias',
 }
 
 // USD por millón de tokens desde el pricing de OpenRouter (viene en USD por token, string).
@@ -130,7 +149,15 @@ export async function GET(req: NextRequest) {
     const techoCat = cat === 'plan' ? techoPlan : techoOut
     const elegido = def.lista.find(id => {
       const m = vivos.get(id)
-      return m && (porMillon(m.pricing?.completion) ?? 0) <= techoCat && !malos.has(id)
+      if (!m || (porMillon(m.pricing?.completion) ?? 0) > techoCat || malos.has(id)) return false
+      // Las categorías multimodales no admiten un modelo de solo texto: leería
+      // vacío y el resultado (una finca «sin cargas») sería peor que un error.
+      if (REQUIERE_IMAGEN.has(cat)) {
+        const modalidades = m.architecture?.input_modalities ?? []
+        // Si OpenRouter no informa la modalidad, se acepta: la lista ya está curada.
+        if (modalidades.length && !modalidades.includes('image')) return false
+      }
+      return true
     })
     if (!elegido) continue
     porCategoria[cat] = elegido

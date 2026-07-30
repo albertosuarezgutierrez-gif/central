@@ -20,7 +20,7 @@ export const MUNICIPIOS_POR_PROVINCIA: Array<[string, RegExp]> = [
   ],
   [
     'Cádiz',
-    /puerto de santa maria|puerto santamaria|el puerto de sta|jerez|chiclana|conil|rota\b|sanlucar|barbate|vejer|algeciras|cadiz/,
+    /puerto de santa maria|puerto santamaria|el puerto de sta|jerez|chiclana|novo sancti petri|la barrosa|conil|rota\b|chipiona|costa ballena|sanlucar|barbate|zahara de los atunes|atlanterra|vejer|los canos de meca|el palmar|tarifa|bolonia|san fernando|puerto real|la linea|san roque|sotogrande|algeciras|cadiz/,
   ],
   [
     'Sevilla',
@@ -40,6 +40,40 @@ export function provinciaPorMunicipio(...textos: Array<string | null | undefined
     if (re.test(t)) return provincia
   }
   return null
+}
+
+/**
+ * Las 52 provincias españolas en su forma CANÓNICA (con tildes y capitalizadas),
+ * indexadas por su forma normalizada. Es la lista de referencia para unificar lo
+ * que cada fuente escribe a su manera.
+ */
+const PROVINCIAS_CANONICAS = [
+  'Álava', 'Albacete', 'Alicante', 'Almería', 'Asturias', 'Ávila', 'Badajoz', 'Baleares',
+  'Barcelona', 'Burgos', 'Cáceres', 'Cádiz', 'Cantabria', 'Castellón', 'Ceuta', 'Ciudad Real',
+  'Córdoba', 'Cuenca', 'Girona', 'Granada', 'Guadalajara', 'Guipúzcoa', 'Huelva', 'Huesca',
+  'Jaén', 'La Coruña', 'La Rioja', 'Las Palmas', 'León', 'Lleida', 'Lugo', 'Madrid', 'Málaga',
+  'Melilla', 'Murcia', 'Navarra', 'Ourense', 'Palencia', 'Pontevedra', 'Salamanca',
+  'Santa Cruz de Tenerife', 'Segovia', 'Sevilla', 'Soria', 'Tarragona', 'Teruel', 'Toledo',
+  'Valencia', 'Valladolid', 'Vizcaya', 'Zamora', 'Zaragoza',
+]
+
+const POR_NORMALIZADA = new Map(PROVINCIAS_CANONICAS.map((p) => [norm(p), p]))
+
+/**
+ * Unifica la forma de escribir una provincia. Existe porque cada fuente la
+ * escribe distinto —el BOE manda «Sevilla» y la Junta de Andalucía «SEVILLA»— y
+ * cualquier cosa que AGRUPE por el valor literal las contaba como provincias
+ * distintas: la calibración de adjudicaciones partía la muestra de Sevilla en dos
+ * (5 + 4) y ninguna de las mitades alcanzaba el mínimo para publicar su ratio.
+ *
+ * El radar no sufría el problema porque compara con `norm()`, pero agrupar y
+ * comparar no pueden usar criterios distintos. Devuelve la entrada tal cual si no
+ * reconoce la provincia: mejor un valor sin unificar que perder el dato.
+ */
+export function provinciaCanonica(provincia: string | null | undefined): string | null {
+  const p = (provincia ?? '').trim()
+  if (!p) return null
+  return POR_NORMALIZADA.get(norm(p)) ?? p
 }
 
 // ── Enlace a Google Maps ─────────────────────────────────────────────────────

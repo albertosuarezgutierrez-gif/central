@@ -62,6 +62,8 @@ interface Documental {
   analisis?: PuntoAnalisis[] | null
   notasEdicto?: string | null
   documentos?: DocumentoAdjunto[] | null
+  /** Anotaciones de embargo pasadas de plazo (art. 86 LH). `null` = ninguna. */
+  caducidad?: { cuantas: number; importeSiCaducan: number | null } | null
 }
 interface Resultado {
   subasta: Subasta; oportunidad: Oportunidad; rendimiento?: Rendimiento | null
@@ -69,6 +71,7 @@ interface Resultado {
   tipoBien?: string | null; esPlaya?: boolean; margenFlip?: number | null
   margenFlipPct?: number | null; flipApto?: boolean; semaforo?: string | null
   analisis?: PuntoAnalisis[] | null; documentos?: DocumentoAdjunto[] | null
+  caducidad?: { cuantas: number; importeSiCaducan: number | null } | null
   precioM2Zona?: number | null; muestraZona?: number | null; zonaPortal?: string | null
 }
 interface Filtros {
@@ -93,6 +96,11 @@ interface Criterios {
   precio_max: number | null
   descuento_min: number
   excluir_ocupadas: boolean
+  /** Coste del dinero, en % tal cual se teclean. null = se paga al contado. */
+  financia_pct?: number | null
+  financia_tipo_anual?: number | null
+  financia_meses?: number | null
+  financia_comision?: number | null
 }
 interface FilaRadar {
   id: string
@@ -160,6 +168,8 @@ interface Inicial {
   indice?: { anual: number | null; trimestral: number | null; etiqueta: string | null } | null
   calibracion?: Array<{ provincia: string; muestra: number; adjudicadas: number; desiertas: number; ratioMediano: number | null; muestraRatio: number }>
   pulso?: { anuncios: number; conBajada: number; pctConBajada: number; recorteMedio: number | null } | null
+  /** Contraste de nuestra puja máxima contra el remate real. `lectura` null = sin muestra. */
+  calibPuja?: { muestra: number; porEncima: number; porDebajo: number; ratioMediano: number | null; lectura: string | null } | null
 }
 
 const card: React.CSSProperties = {
@@ -385,6 +395,17 @@ function ResumenDocumental({ s, d }: { s: Subasta; d?: Documental | null }) {
       <p style={{ margin: 0, fontSize: 13, color: 'var(--text)' }}>
         ⚖️ {titular.emoji} {titular.texto}
       </p>
+      {/* La cifra de arriba es la CONSERVADORA. Esta línea es una hipótesis a
+          confirmar, nunca un descuento: por eso va debajo y sin sustituirla. */}
+      {d?.caducidad && (
+        <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+          ⏳ {d.caducidad.cuantas === 1 ? 'Una anotación de embargo lleva' : `${d.caducidad.cuantas} anotaciones de embargo llevan`}{' '}
+          más de 4 años sin constancia de prórroga: {d.caducidad.cuantas === 1 ? 'podría' : 'podrían'} estar
+          caducada{d.caducidad.cuantas === 1 ? '' : 's'} (art. 86 LH)
+          {d.caducidad.importeSiCaducan != null && <> y heredarías <strong>{eur(d.caducidad.importeSiCaducan)}</strong></>}.
+          {' '}Sin confirmar — pide nota simple actualizada.
+        </p>
+      )}
       <details style={{ marginTop: 4 }}>
         <summary style={{ cursor: 'pointer', fontSize: 13, color: 'var(--text)', minHeight: 36, display: 'flex', alignItems: 'center' }}>
           📑 Cargas y documentación{d?.semaforo ? ` ${NIVEL_EMOJI[d.semaforo] ?? ''}` : ''} — {resumenDocs}
@@ -681,7 +702,8 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(crit),
       })
-      setAviso(r.ok ? 'Criterios guardados.' : 'No se pudieron guardar.')
+      // El coste se calcula en el servidor: hasta recargar se sigue viendo el anterior.
+      setAviso(r.ok ? 'Criterios guardados. Recarga la página para ver el coste recalculado.' : 'No se pudieron guardar.')
     } catch {
       setAviso('No se pudieron guardar.')
     } finally {
@@ -761,6 +783,23 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                 {c.desiertas > 0 ? `, ${c.desiertas} desiertas` : ''}).
               </span>
             ))}
+        </p>
+      )}
+
+      {/* ¿Nuestro techo de puja se parece a lo que paga el mercado? Solo se pinta
+          cuando hay muestra suficiente (el módulo devuelve `lectura: null` si no). */}
+      {datos.calibPuja?.lectura && (
+        <p style={{
+          ...card, marginTop: 0, marginBottom: 12, fontSize: 13, color: 'var(--text)',
+          background: 'var(--warning-bg, #fef3c7)', padding: 12,
+        }}>
+          🎯 <strong>Nuestra puja máxima vs. el remate real:</strong> {datos.calibPuja.lectura}
+          {datos.calibPuja.ratioMediano != null && (
+            <span style={{ color: 'var(--muted)' }}>
+              {' '}(mediana remate/puja {datos.calibPuja.ratioMediano.toLocaleString('es-ES', { maximumFractionDigits: 2 })};
+              {' '}{datos.calibPuja.porEncima} por encima, {datos.calibPuja.porDebajo} por debajo)
+            </span>
+          )}
         </p>
       )}
 
@@ -970,7 +1009,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, minHeight: 36 }}>
                 <input type="checkbox" checked={filtros.playa}
                        onChange={(e) => setFiltros((f) => ({ ...f, playa: e.target.checked }))} />
-                🏖️ Costa de Huelva
+                🏖️ Costa (Huelva y Cádiz)
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, minHeight: 36 }}>
                 <input type="checkbox" checked={filtros.sinOcupadas}
@@ -1028,7 +1067,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                 key={r.subasta.dedupeKey}
                 s={r.subasta}
                 o={r.oportunidad}
-                doc={{ semaforo: r.semaforo, analisis: r.analisis, notasEdicto: r.notasEdicto, documentos: r.documentos }}
+                doc={{ semaforo: r.semaforo, analisis: r.analisis, notasEdicto: r.notasEdicto, documentos: r.documentos, caducidad: r.caducidad }}
                 acciones={<button onClick={() => seguir(r.subasta)} style={boton()}>👀 Seguir</button>}
                 extra={
                   <>
@@ -1131,7 +1170,52 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
             Ojo: también descarta las de posesión desconocida, que son muchas.
           </p>
 
-          <button onClick={guardarCriterios} disabled={guardando} style={boton(true)}>
+          {/* Coste del dinero: sin declararlo NO se computa. Un puente que no
+              existe falsearía el coste tanto como ignorar el que sí existe. */}
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, marginTop: 4 }}>
+            <div style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600 }}>💸 Cómo financias la compra</div>
+            <p style={{ fontSize: 12, color: 'var(--muted)', margin: '4px 0 10px' }}>
+              El art. 670 LEC da <strong>40 días</strong> para consignar el resto del precio y ningún banco
+              hipoteca un inmueble que aún no es tuyo: si no pones todo en efectivo necesitas un préstamo
+              puente, y esos intereses se comen el margen. Déjalo vacío si pagas al contado.
+            </p>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <label style={{ display: 'grid', gap: 4, fontSize: 13, color: 'var(--muted)' }}>
+                % financiado
+                <input
+                  type="number" inputMode="decimal" min={0} max={100} style={{ ...control, width: 130 }}
+                  value={crit.financia_pct ?? ''}
+                  onChange={(e) => setCrit({ ...crit, financia_pct: e.target.value === '' ? null : Number(e.target.value) })}
+                />
+              </label>
+              <label style={{ display: 'grid', gap: 4, fontSize: 13, color: 'var(--muted)' }}>
+                Interés anual (%)
+                <input
+                  type="number" inputMode="decimal" min={0} max={60} step="0.1" style={{ ...control, width: 130 }}
+                  value={crit.financia_tipo_anual ?? ''}
+                  onChange={(e) => setCrit({ ...crit, financia_tipo_anual: e.target.value === '' ? null : Number(e.target.value) })}
+                />
+              </label>
+              <label style={{ display: 'grid', gap: 4, fontSize: 13, color: 'var(--muted)' }}>
+                Meses del puente
+                <input
+                  type="number" inputMode="numeric" min={1} max={36} placeholder="4" style={{ ...control, width: 130 }}
+                  value={crit.financia_meses ?? ''}
+                  onChange={(e) => setCrit({ ...crit, financia_meses: e.target.value === '' ? null : Number(e.target.value) })}
+                />
+              </label>
+              <label style={{ display: 'grid', gap: 4, fontSize: 13, color: 'var(--muted)' }}>
+                Comisión apertura (%)
+                <input
+                  type="number" inputMode="decimal" min={0} max={10} step="0.1" style={{ ...control, width: 130 }}
+                  value={crit.financia_comision ?? ''}
+                  onChange={(e) => setCrit({ ...crit, financia_comision: e.target.value === '' ? null : Number(e.target.value) })}
+                />
+              </label>
+            </div>
+          </div>
+
+          <button onClick={guardarCriterios} disabled={guardando} style={{ ...boton(true), marginTop: 14 }}>
             {guardando ? 'Guardando…' : 'Guardar criterios'}
           </button>
         </section>

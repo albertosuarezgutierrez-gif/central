@@ -48,6 +48,91 @@
   proxy del contenedor cierra `*.vercel.app`): 11/11 filas → 8 con adjuntos, 3 vacías de verdad.
   ⚠️ Regla: nunca afirmar una ausencia a partir de un dato que aún no se ha mirado. tsc 0 · 664 tests · build OK.
 
+- **⚖️ Subastas: caducidad de embargos (art. 86 LH) + costa de Cádiz (30/07/2026, rama
+  `claude/subasta-carga-no-publicadas-jm7ky6` reiniciada tras mergear #1176).**
+  - **Caducidad (idea 1, la que faltaba)** — `caducidad.ts`: una anotación preventiva de embargo caduca a
+    los 4 años, pero el registro NO la borra sola, así que seguía sumándose entera al coste como carga
+    fantasma. Ahora se MARCA y se cuantifica el escenario alternativo (`posiblesCaducadas`,
+    `importeSiCaducan`); **`importe` no cambia nunca** — la prórroga se anota AL MARGEN, que es lo que peor
+    lee un escaneo, y equivocarse ahí lleva a pujar de más. Cualquier rastro de «prórroga» desactiva la
+    conclusión; margen de 6 meses; solo embargos (la hipoteca es inscripción, art. 82 LH). La pregunta al
+    juzgado pasa a ser nominativa (acreedor + fecha + importe).
+  - **Costa de Cádiz en la lente 🏖️** (petición de Alberto): municipios del litoral + núcleos (Zahara,
+    Novo Sancti Petri, Caños de Meca, Costa Ballena, Sotogrande…), `esPlaya`/`costaDe` sustituyen a
+    `esPlayaHuelva` en radar y clasificador. **Jerez NO entra en esa lente** a propósito (no es costa; ya
+    llega por la provincia de sus criterios) — meterlo saltaría el filtro de precio y de descuento.
+    Centros de búsqueda de Idealista completados para Cádiz.
+  - ⚠️ **Los comparables de Cádiz están casi vacíos** (solo Sanlúcar, 20 anuncios): sin €/m² de zona no hay
+    descuento ni margen flip. Hacen falta alertas de Idealista/Fotocasa de esas zonas al correo, o que
+    Idealista apruebe la API (solicitada el 30/07). Eso NO lo puede resolver el código.
+  - **🚨 VALIDACIÓN EN PRODUCCIÓN DEL LECTOR: el rescate del escaneado funciona, la lectura por IA NO
+    llegaba a ejecutarse** (30/07/2026, tras mergear #1176). El puente devolvió `via:'vision'`,
+    `paginas:10` (las páginas exactas) pero **0 cargas** y `procedimiento:'desconocido'`. En `ai_usos`,
+    TODAS las llamadas `registral-vision` fallaban por tres causas, ninguna del prompt:
+    (a) **OpenRouter 404 «No endpoints found that support image input»** — sin modelo del catálogo
+    (`registral` aún no está: el cron `ia-director-refresh` es semanal) caía al `OPENROUTER_MODEL` por
+    defecto, que es de TEXTO. Fix: `aiVision` NO llama a OpenRouter sin modelo multimodal explícito
+    (`opts.model` o env nueva `OPENROUTER_VISION_MODEL`); va directo a NIM, que sí tiene visión.
+    (b) **NIM 400 «At most 1 image(s) may be provided»** — `llama-3.2-90b-vision` acepta UNA imagen por
+    petición y se mandaban 4. Fix: `IMAGENES_POR_LLAMADA = 1` + 4 llamadas en paralelo para no comerse
+    el `maxDuration`. (c) **NIM 400 payload > 25 MB** — PNG sin pérdida de 3.000 px. Fix: JPEG calidad 82.
+    `LECTOR_VERSION` a **3** para que relea las 34 fichas. **Falta re-validar contra Belmonte.**
+  - 324 tests módulo · 215 app · tsc 0 · build OK.
+
+- **⚖️ Subastas — 3 partidas que faltaban en el coste real (30/07/2026, misma rama/PR #1176).** De las 5
+  ideas que propuse, Alberto aprobó «2, 4 y 5» (la 3 —nota simple viva— la dejó **para el final del todo**;
+  la 1 —caducidad de anotaciones, art. 86 LH— sigue **sin decidir**).
+  - **Comunidad (art. 9.1.e LPH)** — `comunidad.ts`: el adquirente hereda la anualidad en curso + 3
+    anteriores y NADIE lo publica (ni BOE ni certificación). Se estima por baremo €/m²·mes solo en
+    propiedad horizontal; `importe: null` (nunca 0) si no procede o falta superficie. Entra sola en
+    `calcularCoste` con su aviso; `estimarComunidad:false` vuelve al comportamiento anterior.
+  - **Coste del dinero (art. 670 LEC)** — `financiacion.ts`: 40 días para consignar y ningún banco
+    hipoteca lo que aún no es tuyo → puente. **NO se inventa**: se declara por cuenta en ⚙️ Criterios
+    (`subastas_criterios.financia_*`, migración aplicada, guardadas en tanto por uno / tecleadas en %) y
+    se aplica en las 3 vistas de usuario (página, `/api/subastas`, radar). El cron `clasificar` NO lo usa
+    (esas columnas son del corpus global, compartido entre cuentas).
+  - **Bucle de la puja** — nueva `subastas.puja_maxima_calc` (migración aplicada): el clasificador congela
+    el techo calculado mientras la subasta está viva y `calibracionDePuja()` lo contrasta con el remate
+    real al concluir. Sin muestra (≥5) devuelve `lectura: null` y la UI calla.
+  - 303 tests módulo · 215 app · tsc 0 · build OK.
+- **🔍⚖️ Subastas — el agente LEE los escaneados y solo avisa de lo rentable y limpio (30/07/2026,
+  rama `claude/subasta-carga-no-publicadas-jm7ky6`).** Tras el PR #1172, Alberto vio otra ficha con
+  «Cargas no publicadas» (SUB-JA-2026-264269, Belmonte): tenía su certificación adjunta pero es un
+  ESCANEO (`chars:0` en pdf-parse) → se descartaba en silencio. Solo 4 de 34 vigentes tenían cargas.
+  - **Rescate de escaneados:** `pdf-imagenes.ts` (puro) localiza los JPEG por marcadores SOI/EOI y
+    agrupa las BANDAS en páginas (263 bandas → 10 páginas en el caso real); `lector-registral.ts` las
+    recompone con **sharp** (nueva dep de plataforma) y las lee por visión. **Verificado contra el PDF
+    real: el módulo reproduce las 10 páginas exactas que se leyeron a mano.**
+  - **Cargas estructuradas + QUÉ SUBSISTE** (`cargas.ts` puro): rango anterior/posterior/la-que-ejecuta
+    y purga de los arts. 668/670 LEC. **En ejecución por EMBARGO la hipoteca anterior NO se purga** —
+    Belmonte: salida 19.329€ + 44.850€ de hipoteca de 2009. Procedimiento desconocido → `null`, nunca 0.
+    Doble lectura + `consensoCuadros` anula el importe en que discrepen (Alberto decidió que la IA
+    extraiga cifras; esta es la red).
+  - **Director:** categoría `registral` con exigencia de modalidad `image` (un modelo de solo texto
+    devolvería cargas vacías = «finca limpia», el peor fallo) + `openrouterVision` en core-ai.
+  - **`lector_version`** en BD: subirla relee las fichas (antes `notas_edicto=''` las congelaba).
+  - **«añade todo» (5 ideas):** `decidirAviso` (solo rentable Y limpio interrumpe; lo no leído ESPERA
+    salvo cierre ≤4 días, marcado sin verificar) · `reaparicion.ts` (misma finca más barata, identidad
+    por REF CATASTRAL, nunca por descripción) · `calibracionPorCargas` (¿el mercado castiga las cargas?)
+    · `valoracion-historica.ts` (serie €/m² propia desde las tasaciones pactadas en escritura) ·
+    `compararCuadros` (nota simple nueva vs certificación vieja) · botones Telegram «📝 consulta al
+    juzgado» y «📨 enviar» (`subastas_consultas`).
+  - **Provincia canónica + ciclo de vida:** `provinciaCanonica()` unifica «Sevilla»/«SEVILLA» (la
+    calibración partía la muestra en dos y ninguna mitad llegaba al mínimo) y `ciclo-vida.ts` +
+    `archivarPasadas()` sacan lo ya pasado de la lista/radar **sin borrar el histórico** (borrarlo mataría
+    la detección de reapariciones y la calibración).
+  - Migraciones aplicadas: `2026-07-30_cargas_lector_registral.sql` + `_reapariciones_valoracion.sql`
+    + `_ciclo_vida_y_provincia.sql`. Mergeado `main` (PRs #1175/#1177 tocaban el mismo terreno: 5
+    conflictos en `geo.ts`/`index.ts`/`COLS_SUBASTA`/cron/memoria, resueltos conservando ambas cosas).
+    283 tests · tsc 0 · build OK; CI/Tests/QA/gitleaks verdes sobre `259a714`.
+    **🚨 LANDMINE (30/07/2026):** los pushes de una sesión Claude a una rama con PR abierto **no siempre
+    disparan los workflows** (GitHub no genera eventos `pull_request` para pushes hechos con el token de
+    la app: los 3 commits de #1176 pasaron sin CI y `get_check_runs` del PR solo mostraba Vercel). No dar
+    por verde un PR sin comprobar que existe run para ESE sha; si falta, lanzarlo con `workflow_dispatch`
+    (ci.yml y tests.yml lo soportan; qa.yml y gitleaks.yml NO).
+    **PENDIENTE:** la llamada al modelo solo se puede probar en producción
+    (el preview va tras el SSO de Vercel); `eurM2Actualizado` queda null hasta ingerir la serie histórica
+    del IPV (hoy `mercado_indices` solo guarda la última variación); enganchar la nota simple al 📎 del chat.
 - **⚖️ Subastas: resumen de CARGAS + documentación en TODAS las fichas (30/07/2026, rama
   `claude/cargas-documentacion-subasta-b02s5y`).** Alberto sobre una captura de 📡 Radar: «aquí debería
   haber resumen de cargas y de la documentación». El dato ya existía (semáforo, `analisis`, `notas_edicto`,
@@ -56,6 +141,16 @@
   `<details>` con semáforo, texto oficial de cargas, notas del edicto y documentos). Nueva columna
   `subastas.documentos` (jsonb, aplicada): `procesarDocumentosDeFicha` guarda el LISTADO entero de adjuntos
   con `legible` (los escaneados se marcan «léelo a mano») aunque solo descargue 3. tsc 0 · 215 tests · build OK.
+
+- **🏠 Subastas/chollos — API OFICIAL de Idealista preparada y DORMIDA (30/07/2026, PR #1168).** ¿Se puede
+  "conectar Idealista" como ChatGPT? Su app en ChatGPT es exclusiva de OpenAI, NO conectable desde fuera; la
+  vía legítima es la **API oficial** (developers.idealista.com, gratis ~100 búsquedas/mes). Alberto solicitó
+  el alta el 30/07 y **espera el mail con la key**. Módulo puro `idealista-api.ts` (mapeo a `Comparable` — el
+  `propertyCode` ES el id de `/inmueble/<id>/`, así que dedupe natural con las alertas — centros lat/lng por
+  zona vigilada y presupuesto racionado) + `apps/plataforma/lib/subastas/idealista-api.ts` (OAuth2 + ingesta
+  por `upsertComparable`, extraído de `mercado.ts` como puerta única del corpus; ledger `idealista_api_usos`,
+  migración aplicada) cableado best-effort en el cron `subastas-mercado`. **Al llegar el mail:** pegar
+  `IDEALISTA_API_KEY`/`IDEALISTA_API_SECRET` en god-panel → 🔑 Secretos y listo, sin tocar código.
 
 - **🏠 Subastas: las características del inmueble ya se ven en la ficha (30/07/2026, rama
   `claude/property-features-missing-je4vtw`, PR #1177).** Alberto sobre una captura de `/subastas`: «no

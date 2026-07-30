@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-30T14:29:22Z",
-  "sha": "578c2cbcc3ba87306ed0cf3d4211d851ff29d23e",
+  "generadoEn": "2026-07-30T19:10:00Z",
+  "sha": "1cde16bbb1cbea87acc76514e4e40ece3a112521",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47410,12 +47410,21 @@
       ],
       "funciones": [
         {
+          "nombre": "aPct",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 18,
+          "resumen": "Tanto por uno guardado → % para la UI."
+        },
+        {
           "nombre": "SubastasPage",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 16,
+          "linea": 25,
           "resumen": "Primera página por SSR: la pantalla entra con datos, sin spinner inicial."
         }
       ],
@@ -47426,7 +47435,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "626405665d41"
+      "hash": "7bad8787d08e"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/subastas/SubastasClient.tsx",
@@ -47441,7 +47450,7 @@
           "exportada": false,
           "params": "activo = false",
           "retorno": "React.CSSProperties",
-          "linea": 171
+          "linea": 181
         },
         {
           "nombre": "fecha",
@@ -47449,7 +47458,7 @@
           "exportada": false,
           "params": "iso: string | null | undefined",
           "retorno": "string | null",
-          "linea": 178
+          "linea": 188
         },
         {
           "nombre": "Puntuacion",
@@ -47457,7 +47466,7 @@
           "exportada": false,
           "params": "{ v }: { v: number | null }",
           "retorno": null,
-          "linea": 192,
+          "linea": 202,
           "resumen": "Semáforo de la puntuación. `null` se pinta distinto a 0: no es lo mismo."
         },
         {
@@ -47466,7 +47475,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 200
+          "linea": 210
         },
         {
           "nombre": "PanelTesoreria",
@@ -47474,7 +47483,7 @@
           "exportada": false,
           "params": "{ t }: { t: Tesoreria }",
           "retorno": null,
-          "linea": 207,
+          "linea": 217,
           "resumen": "Dinero que hay que tener bloqueado para poder pujar. Lo que importa NO es la suma de depósitos sino el máximo simultáneo: los que no se solapan reutilizan el mismo dinero."
         },
         {
@@ -47483,7 +47492,7 @@
           "exportada": false,
           "params": "{ r, dormitorios }: { r: Rendimiento | null | undefined; dormitorios?: number | null }",
           "retorno": null,
-          "linea": 274,
+          "linea": 284,
           "resumen": "Yield turístico estimado con los pisos PROPIOS. Siempre con el caveat: los pisos de referencia son de Sevilla capital — fuera de ahí es extrapolación."
         },
         {
@@ -47492,7 +47501,7 @@
           "exportada": false,
           "params": "{ s, plantaAparte }: { s: Subasta; plantaAparte?: boolean }",
           "retorno": null,
-          "linea": 298,
+          "linea": 308,
           "resumen": "repetirla sería ruido."
         },
         {
@@ -47501,7 +47510,7 @@
           "exportada": false,
           "params": "{ s, d }: { s: Subasta; d?: Documental | null }",
           "retorno": null,
-          "linea": 335,
+          "linea": 345,
           "resumen": "Resumen de CARGAS + documentación de la subasta. Vive dentro de `FichaSubasta` a propósito: antes el semáforo y las notas del edicto solo se pintaban en la pestaña «Todas» (iban en su `extra`), así qu"
         },
         {
@@ -47510,7 +47519,7 @@
           "exportada": false,
           "params": "{ s, o, acciones, extra, doc }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null }",
           "retorno": null,
-          "linea": 415
+          "linea": 436
         },
         {
           "nombre": "SubastasClient",
@@ -47518,14 +47527,14 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Inicial | null }",
           "retorno": null,
-          "linea": 560
+          "linea": 581
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "00aea3b0def3"
+      "hash": "0cc6d5bbf24e"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -51002,7 +51011,7 @@
           "exportada": false,
           "params": "v?: string",
           "retorno": null,
-          "linea": 72,
+          "linea": 91,
           "resumen": "USD por millón de tokens desde el pricing de OpenRouter (viene en USD por token, string)."
         },
         {
@@ -51011,7 +51020,7 @@
           "exportada": false,
           "params": "porCategoria: Record<string, string>, slugs: string[]",
           "retorno": "string",
-          "linea": 74
+          "linea": 93
         },
         {
           "nombre": "GET",
@@ -51019,7 +51028,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 86
+          "linea": 105
         }
       ],
       "tablas": [
@@ -51030,7 +51039,7 @@
         "set"
       ],
       "rutaApi": "/api/cron/ia-director-refresh",
-      "hash": "fb524153c229"
+      "hash": "5cce4aafd477"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/paper-tracker/route.ts",
@@ -51197,11 +51206,12 @@
       "tablas": [
         "borme_eventos",
         "next",
+        "subastas",
         "subastas_criterios",
         "subastas_radar"
       ],
       "rutaApi": "/api/cron/subastas-avisos",
-      "hash": "3b3b96dfdb8c"
+      "hash": "68af6a83a67b"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-cierre/route.ts",
@@ -51259,7 +51269,7 @@
         "subastas"
       ],
       "rutaApi": "/api/cron/subastas-enriquecer",
-      "hash": "34a51538cb6a"
+      "hash": "75cbb5a56d26"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-ingesta/route.ts",
@@ -51296,12 +51306,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 20
+          "linea": 21
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/subastas-mercado",
-      "hash": "3c53d5b8aed3"
+      "hash": "e609d96402c4"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-radar/route.ts",
@@ -54265,12 +54275,15 @@
         "movimientos_bancarios",
         "next",
         "set",
+        "subastas",
+        "subastas_consultas",
+        "subastas_criterios",
         "subastas_descartes",
         "subastas_radar",
         "subastas_seguidas"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "456a5a1b9d97"
+      "hash": "753d43093d97"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -55327,12 +55340,21 @@
       ],
       "funciones": [
         {
+          "nombre": "pct",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 10,
+          "resumen": "Tanto por uno guardado → % para la UI. (No exportar: `route.ts` solo admite handlers.)"
+        },
+        {
           "nombre": "GET",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 9
+          "linea": 16
         },
         {
           "nombre": "PUT",
@@ -55340,7 +55362,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 35
+          "linea": 49
         }
       ],
       "tablas": [
@@ -55349,7 +55371,7 @@
         "subastas_criterios"
       ],
       "rutaApi": "/api/subastas/criterios",
-      "hash": "b0956ec0c096"
+      "hash": "cabc1a2cdeab"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/fase3-debug/route.ts",
@@ -55373,7 +55395,7 @@
         "subastas_debug_token"
       ],
       "rutaApi": "/api/subastas/fase3-debug",
-      "hash": "2d0adc68db3b"
+      "hash": "20901d3c7834"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/mapa/route.ts",
@@ -55468,16 +55490,17 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 14
+          "linea": 16
         }
       ],
       "tablas": [
         "next",
         "rojo",
-        "subastas"
+        "subastas",
+        "subastas_criterios"
       ],
       "rutaApi": "/api/subastas",
-      "hash": "fa1adea15bef"
+      "hash": "8ba2982f0af8"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/seguidas/route.ts",
@@ -57228,6 +57251,7 @@
       "resumen": "ai-client.ts — Wrapper IA para plataforma (gateway directo). Plataforma ES la pasarela central, por lo que llama directamente a @central/core-ai sin necesidad de enrutar por HTTP. NVIDIA_API_KEY en Vercel env. /",
       "exporta": [
         "aiComplete",
+        "aiVision",
         "aiTranscribe",
         "aiExtractInvoice"
       ],
@@ -57238,7 +57262,7 @@
           "exportada": false,
           "params": "",
           "retorno": "NimConfig",
-          "linea": 12
+          "linea": 14
         },
         {
           "nombre": "aiComplete",
@@ -57246,8 +57270,17 @@
           "exportada": true,
           "params": "messages: { role: string; content: string }[], opts: { timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 29,
+          "linea": 31,
           "resumen": "Completion de texto (system+user…). Mismo contrato de siempre: recibe mensajes {role,content} y devuelve el texto. Antes iba DIRECTO a NVIDIA NIM con modelo pinneado (Llama 3.3-70b), saltándose OpenRo"
+        },
+        {
+          "nombre": "aiVision",
+          "kind": "function",
+          "exportada": true,
+          "params": "system: string, images: ImageInput[], userText: string, opts: { maxTokens?: number; model?: string; timeoutMs?: number; endpoint?: string } = {},",
+          "retorno": "Promise<string>",
+          "linea": 59,
+          "resumen": "VISIÓN / OCR con el modelo que decida la app. Un solo punto de entrada para leer imágenes desde plataforma (certificaciones registrales escaneadas, tickets, fotos de facturas). Enrutado: si hay `OPENR"
         },
         {
           "nombre": "aiTranscribe",
@@ -57255,7 +57288,7 @@
           "exportada": true,
           "params": "audio: Buffer, fileName: string, mimeType?: string, opts: { timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 48,
+          "linea": 130,
           "resumen": "Transcribe voz → texto (STT) con Groq Whisper (`whisper-large-v3`, gratis). Usa GROQ_API_KEY (la misma del fallback de texto). Devuelve '' si no reconoce nada. Para las notas de voz del agente de cont"
         },
         {
@@ -57264,7 +57297,7 @@
           "exportada": false,
           "params": "p: Promise<T>, ms: number",
           "retorno": "Promise<T>",
-          "linea": 85,
+          "linea": 167,
           "resumen": "Corta una llamada colgada (Groq no acepta `signal`, y NIM se ha colgado antes)."
         },
         {
@@ -57273,7 +57306,7 @@
           "exportada": false,
           "params": "user: string",
           "retorno": "Promise<string>",
-          "linea": 93,
+          "linea": 175,
           "resumen": "Extracción por Groq (rápido, mismo Llama-70b). Lanza si no hay GROQ_API_KEY o Groq falla."
         },
         {
@@ -57282,13 +57315,13 @@
           "exportada": true,
           "params": "input: { text?: string imageBase64?: string mimeType?: string }",
           "retorno": "Promise<Record<string, any>>",
-          "linea": 105,
+          "linea": 187,
           "resumen": "Extrae datos estructurados de una factura. Devuelve {} si NINGÚN modelo logra leerla (el llamador lo trata como \"no legible\" y avisa, en vez de tragárselo en silencio). PDF (texto) → Groq (rápido) → N"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2c7b63612813"
+      "hash": "1204feaeba32"
     },
     {
       "ruta": "apps/plataforma/lib/ai-gateway.ts",
@@ -64935,7 +64968,7 @@
           "exportada": true,
           "params": "descripcion: string | null | undefined, busqueda: string",
           "retorno": "string | null",
-          "linea": 33,
+          "linea": 34,
           "resumen": "Provincia del anuncio: primero por municipio (lo que citan las descripciones del BOE), y si no hay indicio, por nombre de provincia. El nombre de la búsqueda guardada entra como último recurso: cuando"
         },
         {
@@ -64944,7 +64977,7 @@
           "exportada": true,
           "params": "subastas: SubastaEnriquecida[]",
           "retorno": "Promise<number>",
-          "linea": 51
+          "linea": 52
         },
         {
           "nombre": "ingerirDesdeCorreo",
@@ -64952,7 +64985,7 @@
           "exportada": true,
           "params": "dias = 7, maxCorreos = 100",
           "retorno": "Promise<",
-          "linea": 130,
+          "linea": 131,
           "resumen": "Ingesta desde las alertas del BOE en el correo. Devuelve lo leído y lo escrito."
         },
         {
@@ -64961,7 +64994,7 @@
           "exportada": true,
           "params": "diasRetencion = 90",
           "retorno": "Promise<number>",
-          "linea": 155,
+          "linea": 156,
           "resumen": "Poda del corpus: las subastas cerradas hace mucho ya no aportan."
         }
       ],
@@ -64970,7 +65003,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "b7836676c77f"
+      "hash": "141f790bf41d"
     },
     {
       "ruta": "apps/plataforma/lib/subastas-radar.ts",
@@ -64990,7 +65023,7 @@
           "exportada": true,
           "params": "f: any",
           "retorno": "SubastaInmueble",
-          "linea": 48,
+          "linea": 54,
           "resumen": "Fila cruda de `subastas` → el tipo del módulo."
         },
         {
@@ -64999,7 +65032,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<FilaCriterios[]>",
-          "linea": 110,
+          "linea": 116,
           "resumen": "Cuentas con el radar activo y sus criterios."
         },
         {
@@ -65008,16 +65041,16 @@
           "exportada": true,
           "params": "limite = 500",
           "retorno": "Promise<SubastaInmueble[]>",
-          "linea": 134,
+          "linea": 142,
           "resumen": "Subastas candidatas: en plazo (o sin fecha conocida) y recientes. No se rebarre todo el histórico en cada pasada."
         },
         {
           "nombre": "casarParaCuenta",
           "kind": "function",
           "exportada": true,
-          "params": "cuentaId: string, criterios: CriteriosSubasta, corpus: SubastaInmueble[]",
+          "params": "cuentaId: string, criterios: CriteriosSubasta, corpus: SubastaInmueble[], params: ParamsCoste = {},",
           "retorno": "Promise<number>",
-          "linea": 156,
+          "linea": 165,
           "resumen": "Casa el corpus con los criterios de una cuenta e inserta lo nuevo. El upsert REFRESCA el snapshot y las cifras: el radar corre a las 06:30, DESPUÉS del enriquecimiento (06:15) y del valor de mercado ("
         },
         {
@@ -65026,7 +65059,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 223,
+          "linea": 238,
           "resumen": "Pasada completa: descarga el corpus UNA vez y lo empareja con cada cuenta."
         }
       ],
@@ -65038,7 +65071,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "9763ef4324f7"
+      "hash": "76f4c181313b"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/boe.ts",
@@ -65109,11 +65142,36 @@
       "hash": "c32783bb3cfb"
     },
     {
+      "ruta": "apps/plataforma/lib/subastas/caducidad-fila.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Resumen de caducidad (art. 86 LH) a partir del cuadro guardado en `subastas.cargas_detalle`, para que la ficha lo enseñe SIN ABRIR nada. Va aquí y no en la UI porque el cálculo lo hace el módulo puro y necesita la fecha de hoy: en un componente cliente sería no determinista entre servidor y cliente ",
+      "exporta": [
+        "caducidadDeFila"
+      ],
+      "funciones": [
+        {
+          "nombre": "caducidadDeFila",
+          "kind": "function",
+          "exportada": true,
+          "params": "cargasDetalle: unknown, hoy = new Date()",
+          "retorno": "ResumenCaducidad | null",
+          "linea": 21,
+          "resumen": "`null` cuando no hay nada que decir — que es el caso normal. Solo devuelve algo cuando de verdad hay una anotación pasada de plazo y sin prórroga: así la ficha no gana ruido en las subastas limpias."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "05500e7bffee"
+    },
+    {
       "ruta": "apps/plataforma/lib/subastas/calibracion.ts",
       "ambito": "apps/plataforma",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Calibración con resultados REALES: lee las subastas concluidas con resultado capturado (`capturarResultados`) y delega el cálculo en el módulo puro. Con el corpus recién nacido devuelve [] — la UI simplemente no pinta nada.",
       "exporta": [
-        "calibracionResultados"
+        "calibracionResultados",
+        "calibracionCargas",
+        "calibracionDePuja",
+        "valoracionPropiaPorZona"
       ],
       "funciones": [
         {
@@ -65122,19 +65180,46 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<CalibracionZona[]>",
-          "linea": 10
+          "linea": 19
+        },
+        {
+          "nombre": "calibracionCargas",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<CalibracionCargas[]>",
+          "linea": 44,
+          "resumen": "Calibración cruzada con las CARGAS leídas: ¿el mercado castiga de verdad a las fincas que arrastran cargas anteriores? Es la comprobación empírica de la regla que aplica `cargasQueSubsisten`. Si el gr"
+        },
+        {
+          "nombre": "calibracionDePuja",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<CalibracionPuja>",
+          "linea": 71,
+          "resumen": "¿ACERTAMOS con la puja máxima? Contrasta el techo que el clasificador congeló (`puja_maxima_calc`, calculado ANTES del remate) contra lo que de verdad pagó el adjudicatario. Es el bucle que cierra el "
+        },
+        {
+          "nombre": "valoracionPropiaPorZona",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<ReferenciaZona[]>",
+          "linea": 95,
+          "resumen": "Serie de €/m² PROPIA a partir de las tasaciones que las escrituras de hipoteca pactaron «a efectos de subasta» y que el lector registral extrae de las certificaciones. A diferencia de los comparables "
         }
       ],
       "tablas": [
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "3ba4cd680468"
+      "hash": "67558fdde972"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/clasificar.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Clasificador de lentes sobre el corpus: 🔨 flip, 🏖️ playa Huelva y 🚦 semáforo documental. Todo DETERMINISTA con lógica del módulo puro — aquí solo va la BD. Corre al final del cron `subastas-enriquecer`, cuando la fila ya tiene ficha, Catastro, mercado y notas del edicto.",
+      "resumen": "Clasificador de lentes sobre el corpus: 🔨 flip, 🏖️ playa (Huelva y Cádiz) y 🚦 semáforo documental. Todo DETERMINISTA con lógica del módulo puro — aquí solo va la BD. Corre al final del cron `subastas-enriquecer`, cuando la fila ya tiene ficha, Catastro, mercado y notas del edicto.",
       "exporta": [
         "clasificarSubastas"
       ],
@@ -65145,31 +65230,83 @@
           "exportada": true,
           "params": "max = 400",
           "retorno": "Promise<",
-          "linea": 16
+          "linea": 17
         }
       ],
       "tablas": [
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "1ae1a4a49662"
+      "hash": "ea33a209b9c1"
+    },
+    {
+      "ruta": "apps/plataforma/lib/subastas/consulta-juzgado.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── «Siguiente paso» de una subasta: el escrito de consulta al juzgado o notaría. Por qué existe: leer la certificación deja dudas que SOLO puede resolver el órgano que lleva la ejecución, y son dudas que cuestan dinero. El cas",
+      "exporta": [
+        "preguntasParaJuzgado",
+        "enviarConsulta",
+        "escritoConsulta"
+      ],
+      "funciones": [
+        {
+          "nombre": "eur",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 38
+        },
+        {
+          "nombre": "preguntasParaJuzgado",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosConsulta",
+          "retorno": "string[]",
+          "linea": 46,
+          "resumen": "Las preguntas que hay que hacer sobre ESTA subasta, ordenadas por cuánto dinero mueven. Determinista y testeable: mismo estado de la ficha → mismas preguntas."
+        },
+        {
+          "nombre": "enviarConsulta",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosConsulta, escrito: string, deps: { enviar: (args: { to: string; subject: string; text: string; replyTo?: string }) => Promise<unknown> registrar: (args: { dedupeKey: string; email: string; escrito: string }) => Promise<unknown> repl",
+          "retorno": "Promise<",
+          "linea": 121,
+          "resumen": "Envía la consulta por email al órgano gestor y deja constancia. Devuelve el estado para que el llamante lo diga en Telegram. Se manda desde el buzón del monorepo (`MAIL_FROM`) con Reply-To al correo d"
+        },
+        {
+          "nombre": "escritoConsulta",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosConsulta, preguntas: string[]",
+          "retorno": "string",
+          "linea": 153,
+          "resumen": "Escrito completo listo para mandar. `plantilla` = sin pasar por la IA."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d402220efec6"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/documentos.ts",
       "ambito": "apps/plataforma",
-      "resumen": "──────────────────────────────────────────────────────────────────────────── Documentos adjuntos a la ficha del BOE: descarga + extracción de señales. Aquí va SOLO la red y la BD; el parseo es puro (`@central/module-subastas`). Qué hace por subasta: baja la pestaña general de la ficha, lista sus doc",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Documentos adjuntos a la ficha del BOE: descarga + lectura completa. Aquí va SOLO la red y la BD; el parseo y la lógica son puros (`@central/module-subastas`), y la lectura por IA vive en `lector-registral`. Qué hace por su",
       "exporta": [
         "procesarDocumentosDeFicha",
-        "procesarDocumentos"
+        "mereceAnalisisProfundo",
+        "procesarDocumentos",
+        "archivarPasadas"
       ],
       "funciones": [
         {
           "nombre": "bajar",
           "kind": "function",
           "exportada": false,
-          "params": "url: string, ms = 20000",
+          "params": "url: string, ms = 30000",
           "retorno": "Promise<Response>",
-          "linea": 30
+          "linea": 61
         },
         {
           "nombre": "textoDePdf",
@@ -65177,16 +65314,25 @@
           "exportada": false,
           "params": "buf: Buffer",
           "retorno": "Promise<string>",
-          "linea": 40
+          "linea": 71
         },
         {
           "nombre": "procesarDocumentosDeFicha",
           "kind": "function",
           "exportada": true,
-          "params": "identificador: string",
-          "retorno": "Promise<DocumentosFicha>",
-          "linea": 68,
-          "resumen": "Procesa los documentos de UNA ficha. Devuelve las notas y el listado."
+          "params": "identificador: string, opts: { leerCargas?: boolean } = {},",
+          "retorno": "Promise<ResultadoFicha>",
+          "linea": 105,
+          "resumen": "Procesa TODOS los documentos de UNA ficha: señales del edicto + cuadro de cargas. `leerCargas: false` se queda en las señales por regex (gratis), para las subastas que no han pasado el gate de rentabi"
+        },
+        {
+          "nombre": "mereceAnalisisProfundo",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: { flip_apto: boolean | null margen_flip_pct: number | null es_playa: boolean | null descuento_estimado: number | null }",
+          "retorno": "boolean",
+          "linea": 190,
+          "resumen": "¿Merece esta subasta el análisis profundo (que cuesta llamadas de IA)? El embudo de Alberto: primero rentabilidad, y solo si cuadra, documentación. Entra si es un flip viable, si es de la costa de Hue"
         },
         {
           "nombre": "procesarDocumentos",
@@ -65194,15 +65340,25 @@
           "exportada": true,
           "params": "max = 10",
           "retorno": "Promise<",
-          "linea": 104,
-          "resumen": "Pasada sobre las subastas vivas del BOE sin documentos procesados. Best-effort: un fallo de descarga deja la fila a NULL y se reintenta mañana."
+          "linea": 206,
+          "resumen": "Pasada sobre las subastas vivas: lee los documentos de las que no están al día con la versión actual del lector. Best-effort: un fallo de descarga deja la fila como está y se reintenta mañana."
+        },
+        {
+          "nombre": "archivarPasadas",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 291,
+          "resumen": "· sin los resultados no hay calibración (la memoria del agente). Así que se borra la BANDEJA de avisos (`subastas_radar`, efímera por diseño) y se marca la subasta como archivada. El histórico se qued"
         }
       ],
       "tablas": [
-        "subastas"
+        "subastas",
+        "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "e62ccb7bf605"
+      "hash": "e55df05ccca0"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/enriquecer.ts",
@@ -65344,6 +65500,58 @@
       "hash": "ae9e739861df"
     },
     {
+      "ruta": "apps/plataforma/lib/subastas/idealista-api.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── API OFICIAL de Idealista → comparables de mercado. Aísla red y BD; el mapeo, los centros de zona y el presupuesto son PUROS (`@central/module-subastas`). POR QUÉ EXISTE: las alertas de correo solo cubren las búsquedas guard",
+      "exporta": [
+        "idealistaApiDisponible",
+        "ingerirComparablesIdealistaApi"
+      ],
+      "funciones": [
+        {
+          "nombre": "idealistaApiDisponible",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 37
+        },
+        {
+          "nombre": "obtenerToken",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<string>",
+          "linea": 42,
+          "resumen": "Token OAuth2 client_credentials. Dura ~12h; una pasada del cron pide uno y listo."
+        },
+        {
+          "nombre": "buscarZona",
+          "kind": "function",
+          "exportada": false,
+          "params": "token: string, centro: { lat: number; lng: number; distancia: number }",
+          "retorno": "Promise<RespuestaIdealistaApi>",
+          "linea": 61,
+          "resumen": "Una búsqueda de VIVIENDA en venta alrededor del centro de la zona."
+        },
+        {
+          "nombre": "ingerirComparablesIdealistaApi",
+          "kind": "function",
+          "exportada": true,
+          "params": "maxPorPasada = 3",
+          "retorno": "Promise<",
+          "linea": 91,
+          "resumen": "Pasada del cron: elige las zonas con subastas vivas cuya búsqueda API está caducada (o nunca hecha), consulta las que el presupuesto permita y vuelca los anuncios al corpus. Cada llamada queda anotada"
+        }
+      ],
+      "tablas": [
+        "idealista_api_usos",
+        "subastas"
+      ],
+      "rutaApi": null,
+      "hash": "f05419b0fa25"
+    },
+    {
       "ruta": "apps/plataforma/lib/subastas/junta.ts",
       "ambito": "apps/plataforma",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Adaptador de la D.G. de Patrimonio de la Junta de Andalucía (Fase 3). Aquí va SOLO la red; el parseo es puro (`@central/module-subastas/junta`). Dos páginas Drupal renderizadas en servidor (verificadas el 29/07/2026): · sub",
@@ -65374,11 +65582,81 @@
       "hash": "2205cca32463"
     },
     {
+      "ruta": "apps/plataforma/lib/subastas/lector-registral.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── LECTOR REGISTRAL: convierte los documentos de una ficha del BOE en un cuadro de cargas estructurado. Aquí va la RED y la IMAGEN; la lógica es pura (`@central/module-subastas`). Tres caminos según lo que traiga el documento:",
+      "exporta": [
+        "paginasDePdfEscaneado",
+        "leerDocumento",
+        "fusionarCuadros"
+      ],
+      "funciones": [
+        {
+          "nombre": "paginasDePdfEscaneado",
+          "kind": "function",
+          "exportada": true,
+          "params": "pdf: Buffer",
+          "retorno": "Promise<ImageInput[]>",
+          "linea": 78,
+          "resumen": "Recompone las páginas de un PDF escaneado. Devuelve JPEG en base64, listos para el modelo de visión. `[]` si el PDF no lleva imágenes aprovechables. Por qué hay que agrupar: los escáneres guardan cada"
+        },
+        {
+          "nombre": "modeloRegistral",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<string | undefined>",
+          "linea": 118,
+          "resumen": "Modelo de la categoría `registral` del catálogo del Director (o el de la pasarela)."
+        },
+        {
+          "nombre": "leerTexto",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string, modelo: string | undefined",
+          "retorno": "Promise<CuadroCargas>",
+          "linea": 128,
+          "resumen": "Una pasada de lectura sobre texto."
+        },
+        {
+          "nombre": "leerImagenes",
+          "kind": "function",
+          "exportada": false,
+          "params": "paginas: ImageInput[], modelo: string | undefined",
+          "retorno": "Promise<CuadroCargas>",
+          "linea": 152,
+          "resumen": "Una pasada de lectura sobre imágenes: una llamada por página, en tandas."
+        },
+        {
+          "nombre": "leerDocumento",
+          "kind": "function",
+          "exportada": true,
+          "params": "contenido: { texto: string | null; pdf: Buffer | null; imagen: ImageInput | null },",
+          "retorno": "Promise<LecturaDocumento>",
+          "linea": 196,
+          "resumen": "Lee UN documento y devuelve su cuadro de cargas. Hace la doble pasada y aplica el consenso. Nunca lanza: un documento ilegible devuelve un cuadro vacío con confianza 0, y el pipeline sigue con el sigu"
+        },
+        {
+          "nombre": "fusionarCuadros",
+          "kind": "function",
+          "exportada": true,
+          "params": "lecturas: LecturaDocumento[]",
+          "retorno": "CuadroCargas",
+          "linea": 245,
+          "resumen": "Fusiona los cuadros de varios documentos de la MISMA ficha (edicto + certificación + cesión…). Se queda con la vía del procedimiento que algún documento haya sabido determinar y deduplica cargas por t"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "edb451ec7033"
+    },
+    {
       "ruta": "apps/plataforma/lib/subastas/mercado.ts",
       "ambito": "apps/plataforma",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Referencia de mercado para valorar las subastas. Aísla red y BD; el parseo y la mediana son PUROS (`@central/module-subastas/comparables`). POR QUÉ EXISTE: el BOE publica «Tasación 0,00 €» en la práctica totalidad de los an",
       "exporta": [
         "ingerirComparables",
+        "upsertComparable",
         "enriquecerAnunciantesFotocasa",
         "referenciaZonasFotocasa",
         "comparablesVigentes",
@@ -65402,12 +65680,21 @@
           "resumen": "Ingesta de comparables desde las alertas de Idealista del correo. El mismo anuncio se repite en correos sucesivos mientras sigue vivo, de ahí el `ON CONFLICT (portal, ref_anuncio)`: se actualiza el pr"
         },
         {
+          "nombre": "upsertComparable",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: Comparable, vistoEn: Date",
+          "retorno": "Promise<number>",
+          "linea": 81,
+          "resumen": "Upsert de UN comparable en `mercado_comparables` — la puerta única del corpus, compartida por las alertas de correo y la API oficial de Idealista (`lib/subastas/idealista-api.ts`): mismo dedupe `(port"
+        },
+        {
           "nombre": "enriquecerAnunciantesFotocasa",
           "kind": "function",
           "exportada": true,
           "params": "max = 8",
           "retorno": "Promise<",
-          "linea": 122
+          "linea": 132
         },
         {
           "nombre": "consultarZona",
@@ -65415,7 +65702,7 @@
           "exportada": false,
           "params": "slug: string, etiqueta: string, fallos: string[]",
           "retorno": "Promise<void>",
-          "linea": 196,
+          "linea": 206,
           "resumen": "Consulta una zona en el puente y la cachea; aprende CP→distrito de los anuncios."
         },
         {
@@ -65424,7 +65711,7 @@
           "exportada": true,
           "params": "max = 6",
           "retorno": "Promise<",
-          "linea": 257
+          "linea": 267
         },
         {
           "nombre": "comparablesVigentes",
@@ -65432,7 +65719,7 @@
           "exportada": true,
           "params": "meses = MESES_VIGENCIA",
           "retorno": "Promise<Comparable[]>",
-          "linea": 337,
+          "linea": 347,
           "resumen": "Comparables vigentes, ya en el tipo del módulo. Se cargan en memoria a propósito: la mediana por zona vive en el módulo puro (probada) y el filtro de zona es insensible a acentos, algo que en Postgres"
         },
         {
@@ -65441,7 +65728,7 @@
           "exportada": true,
           "params": "f: { municipio?: string | null busqueda_origen?: string | null provincia?: string | null }",
           "retorno": "string[]",
-          "linea": 378,
+          "linea": 388,
           "resumen": "Zonas por las que buscar el €/m² de una subasta, de la más específica a la más amplia. La primera que reúna muestra suficiente gana. `busqueda_origen` es el nombre de la búsqueda guardada del BOE («PU"
         },
         {
@@ -65450,7 +65737,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 393,
+          "linea": 403,
           "resumen": "Calcula y persiste el €/m² de mercado en las subastas que lo necesitan. Solo toca las que NO tienen tasación ni valor de referencia: donde hay una tasación real, los comparables no pintan nada (y el s"
         },
         {
@@ -65459,7 +65746,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<CholloSeguido[]>",
-          "linea": 473,
+          "linea": 483,
           "resumen": "Chollos vigentes + antigüedad estimada. La calibración del ritmo de refs usa `created_at` (primera vez que NOSOTROS vimos cada ref): para los anuncios que van ENTRANDO al corpus con los correos diario"
         },
         {
@@ -65468,7 +65755,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 507,
+          "linea": 517,
           "resumen": "Aviso Telegram de los chollos NUEVOS (una sola vez por anuncio). La mediana de zona se mueve a diario y un anuncio podría entrar y salir del umbral: `chollo_avisado_at` fija que cada anuncio avisa UNA"
         },
         {
@@ -65477,7 +65764,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 557
+          "linea": 567
         },
         {
           "nombre": "refrescarIndiceINE",
@@ -65485,7 +65772,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 585,
+          "linea": 595,
           "resumen": "Refresca la caché del IPV si está caducada. Best-effort (el cron lo llama)."
         },
         {
@@ -65494,7 +65781,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<IndicesVivienda | null>",
-          "linea": 619,
+          "linea": 629,
           "resumen": "Lee el IPV cacheado (sin red). Campos a null si aún no se han capturado."
         },
         {
@@ -65503,7 +65790,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<PulsoMercado | null>",
-          "linea": 650
+          "linea": 660
         },
         {
           "nombre": "avisarBajadas",
@@ -65511,7 +65798,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 677,
+          "linea": 687,
           "resumen": "Aviso Telegram de las BAJADAS DE PRECIO nuevas en las zonas vigiladas. Una bajada es señal aunque el anuncio no llegue a chollo: el vendedor ya ha cedido una vez y es el candidato natural a una oferta"
         }
       ],
@@ -65525,7 +65812,70 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "025a73f7ccc1"
+      "hash": "8f1dec4fda04"
+    },
+    {
+      "ruta": "apps/plataforma/lib/subastas/params-coste.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Parámetros de coste POR CUENTA: hoy, cómo se financia la operación. El coste del dinero (art. 670 LEC: 40 días para consignar, sin hipoteca posible sobre un inmueble que aún no es tuyo) no se puede inventar — un puente que ",
+      "exporta": [
+        "paramsCoste"
+      ],
+      "funciones": [
+        {
+          "nombre": "paramsCoste",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FilaFinanciacion | null | undefined",
+          "retorno": "ParamsCoste",
+          "linea": 27,
+          "resumen": "Traduce la fila de criterios a `ParamsCoste`. Puro: la cuenta ya viene leída (todas las pantallas que lo necesitan ya consultan `subastas_criterios`, así que esto no añade ni una query)."
+        },
+        {
+          "nombre": "num",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 45
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a816fce0fa2c"
+    },
+    {
+      "ruta": "apps/plataforma/lib/subastas/reapariciones.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Detección y aviso de la MISMA FINCA que vuelve a subasta más barata. Solo BD + Telegram; el emparejamiento y el umbral son puros (`@central/module-subastas/reaparicion`). Por qué es de las señales más valiosas del canal: cu",
+      "exporta": [
+        "avisarReapariciones"
+      ],
+      "funciones": [
+        {
+          "nombre": "escapar",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 20
+        },
+        {
+          "nombre": "avisarReapariciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 28,
+          "resumen": "Busca reapariciones en el corpus y avisa de las nuevas. Devuelve cuántas se detectaron y cuántas se avisaron (las ya avisadas no se repiten)."
+        }
+      ],
+      "tablas": [
+        "subastas",
+        "subastas_reapariciones"
+      ],
+      "rutaApi": null,
+      "hash": "858df753d3a5"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/rendimiento.ts",
@@ -79021,6 +79371,8 @@
       "resumen": "Cliente OpenRouter (endpoint OpenAI-compatible), identity-agnostic. Espejo de `moonshot.ts`. ¿Por qué OpenRouter? Es un AGREGADOR: una sola API key da acceso a cientos de modelos de decenas de proveedores, con FALLBACK NATIVO entre modelos (parámetro `models: [...]` — si el primero falla o está satu",
       "exporta": [
         "openrouterChatEx",
+        "openrouterVisionEx",
+        "openrouterVision",
         "openrouterChat",
         "openrouterSearchEx",
         "openrouterChatTools"
@@ -79032,7 +79384,7 @@
           "exportada": false,
           "params": "config: OpenRouterConfig",
           "retorno": "string",
-          "linea": 59
+          "linea": 60
         },
         {
           "nombre": "headers",
@@ -79040,7 +79392,7 @@
           "exportada": false,
           "params": "config: OpenRouterConfig, key: string",
           "retorno": "Record<string, string>",
-          "linea": 64
+          "linea": 65
         },
         {
           "nombre": "buildBody",
@@ -79048,7 +79400,7 @@
           "exportada": false,
           "params": "config: OpenRouterConfig, msgs: unknown[], opts: OpenRouterChatOptions, extra: Record<string, unknown> = {},",
           "retorno": "Record<string, unknown>",
-          "linea": 73,
+          "linea": 74,
           "resumen": "Construye el body OpenAI-compatible común a chat y tools. `models` (plural) activa el fallback nativo de OpenRouter; si va, OpenRouter ignora `model`, así que mandamos solo uno."
         },
         {
@@ -79057,7 +79409,7 @@
           "exportada": false,
           "params": "opts: OpenRouterChatOptions",
           "retorno": "unknown[]",
-          "linea": 101,
+          "linea": 102,
           "resumen": "System prompt como bloque multiparte con cache_control cuando opts.cacheSystem — OpenRouter lo traduce al prompt caching del proveedor (DeepSeek/Anthropic/Gemini). Sin la marca, string plano."
         },
         {
@@ -79066,8 +79418,26 @@
           "exportada": true,
           "params": "config: OpenRouterConfig, messages: NimChatMessage[], opts: OpenRouterChatOptions = {},",
           "retorno": "Promise<OpenRouterChatResult>",
-          "linea": 114,
+          "linea": 115,
           "resumen": "Chat con OpenRouter devolviendo también el modelo REAL usado y el usage (para registrar coste exacto en el auditor de la pasarela). `openrouterChat` es el atajo que devuelve solo texto."
+        },
+        {
+          "nombre": "openrouterVisionEx",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: OpenRouterConfig, system: string, images: ImageInput[], userText: string, opts: OpenRouterChatOptions = {},",
+          "retorno": "Promise<OpenRouterChatResult>",
+          "linea": 150,
+          "resumen": "VISIÓN (multi-imagen) por OpenRouter. Espejo de `nimVision`, pero con el agregador delante: así la app puede elegir CUALQUIER modelo multimodal del catálogo (Gemini, Qwen-VL, Llama-Vision, Pixtral…) y"
+        },
+        {
+          "nombre": "openrouterVision",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: OpenRouterConfig, system: string, images: ImageInput[], userText: string, opts: OpenRouterChatOptions = {},",
+          "retorno": "Promise<string>",
+          "linea": 187,
+          "resumen": "Atajo de `openrouterVisionEx` que devuelve solo el texto."
         },
         {
           "nombre": "openrouterChat",
@@ -79075,7 +79445,7 @@
           "exportada": true,
           "params": "config: OpenRouterConfig, messages: NimChatMessage[], opts: OpenRouterChatOptions = {},",
           "retorno": "Promise<string>",
-          "linea": 136,
+          "linea": 198,
           "resumen": "Llamada de chat a OpenRouter. Devuelve el contenido del primer choice. Espejo de `moonshotChat`."
         },
         {
@@ -79084,7 +79454,7 @@
           "exportada": true,
           "params": "config: OpenRouterConfig, system: string, user: string, opts: { model?: string; maxTokens?: number; temperature?: number; timeoutMs?: number; maxResults?: number; fetchImpl?: typeof fetch } = {},",
           "retorno": "Promise<OpenRouterChatResult>",
-          "linea": 152,
+          "linea": 214,
           "resumen": "Búsqueda web + síntesis vía el PLUGIN `web` de OpenRouter (Exa por debajo): inyecta resultados de búsqueda reales en el prompt de CUALQUIER modelo. Espejo funcional de `geminiSearch` para usarlo como "
         },
         {
@@ -79093,13 +79463,13 @@
           "exportada": true,
           "params": "config: OpenRouterConfig, messages: NimToolMessage[], tools: unknown[], opts: OpenRouterChatOptions = {},",
           "retorno": "Promise<NimToolResult>",
-          "linea": 173,
+          "linea": 235,
           "resumen": "Function-calling con OpenRouter (formato de tools OpenAI). Espejo de `groqChatTools`, con el mismo contrato `NimToolMessage`/`NimToolResult` para ser drop-in en `aiTools`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fc485172a96f"
+      "hash": "3fa067521099"
     },
     {
       "ruta": "packages/core-ai/src/stt.ts",
@@ -83317,16 +83687,27 @@
       "ambito": "packages/module-subastas",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Calibración del scoring con RESULTADOS reales de subastas concluidas. PURO. El BOE publica el resultado de cada subasta (adjudicada/desierta y el importe de adjudicación); `capturarResultados` lo guarda. Con muestra suficie",
       "exporta": [
-        "calibracionAdjudicaciones"
+        "calibracionPorCargas",
+        "calibracionAdjudicaciones",
+        "calibracionPuja"
       ],
       "funciones": [
+        {
+          "nombre": "calibracionPorCargas",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: ResultadoConCargas[]",
+          "retorno": "CalibracionCargas[]",
+          "linea": 68,
+          "resumen": "Calibración por PRESENCIA DE CARGAS. Es la comprobación empírica de la regla que este módulo aplica a mano: si el grupo `con_cargas` queda desierto mucho más a menudo o se remata mucho más bajo, el me"
+        },
         {
           "nombre": "mediana",
           "kind": "function",
           "exportada": false,
           "params": "valores: number[]",
           "retorno": "number | null",
-          "linea": 36
+          "linea": 95
         },
         {
           "nombre": "calibracionAdjudicaciones",
@@ -83334,13 +83715,22 @@
           "exportada": true,
           "params": "filas: ResultadoConcluido[], minMuestra = MIN_MUESTRA_CALIBRACION,",
           "retorno": "CalibracionZona[]",
-          "linea": 48,
+          "linea": 107,
           "resumen": "Calibración por provincia + agregado global a partir de los resultados capturados. Solo salen provincias con `minMuestra` concluidas; el agregado `(todas)` sale siempre que haya al menos una."
+        },
+        {
+          "nombre": "calibracionPuja",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: ResultadoConPuja[], minMuestra = MIN_MUESTRA_PUJA,",
+          "retorno": "CalibracionPuja",
+          "linea": 186,
+          "resumen": "Contrasta la puja máxima calculada contra el remate REAL. Es el bucle que cierra el sistema: hasta ahora el agente calculaba un techo de puja y nadie comprobaba nunca si ese techo tenía algo que ver c"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "912938355266"
+      "hash": "b169a63a9435"
     },
     {
       "ruta": "packages/module-subastas/src/analisis.ts",
@@ -83363,6 +83753,195 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "e4db68fb7071"
+    },
+    {
+      "ruta": "packages/module-subastas/src/aviso.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── ¿DE ESTA SE AVISA? PURO y determinista. Política de Alberto (30/07/2026): «que solo me avise de las que sean rentables y claras, que no haya cosas raras». Hasta ahora el radar avisaba de todo lo que casaba criterios, con la",
+      "exporta": [
+        "decidirAviso"
+      ],
+      "funciones": [
+        {
+          "nombre": "decidirAviso",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaAviso",
+          "retorno": "ResultadoAviso",
+          "linea": 56
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3ce17122590c"
+    },
+    {
+      "ruta": "packages/module-subastas/src/caducidad.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── CADUCIDAD DE LAS ANOTACIONES PREVENTIVAS DE EMBARGO (art. 86 LH). PURO. Una anotación preventiva de embargo NO dura para siempre: caduca a los CUATRO AÑOS desde su fecha, salvo que se prorrogue por mandamiento judicial (otr",
+      "exporta": [
+        "parsearFechaRegistral",
+        "estadoCaducidad",
+        "caducidadDelCuadro"
+      ],
+      "funciones": [
+        {
+          "nombre": "parsearFechaRegistral",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined",
+          "retorno": "",
+          "linea": 73,
+          "resumen": "Fecha registral tolerante: el lector devuelve el campo tal cual lo escribe el registro, que rara vez es ISO («15 de agosto de 2020», «12/03/2015», «2009»). Cuando solo hay año se toma el **31 de dicie"
+        },
+        {
+          "nombre": "fechaValida",
+          "kind": "function",
+          "exportada": false,
+          "params": "anio: number, mes: number, dia: number, exacta: boolean",
+          "retorno": "",
+          "linea": 101
+        },
+        {
+          "nombre": "estadoCaducidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Carga, hoy: Date",
+          "retorno": "Caducidad",
+          "linea": 113,
+          "resumen": "Estado de caducidad de UNA carga. `hoy` se pasa siempre desde fuera: el módulo es puro y determinista, y así los tests no dependen de la fecha en que se ejecuten."
+        },
+        {
+          "nombre": "caducidadDelCuadro",
+          "kind": "function",
+          "exportada": true,
+          "params": "subsistentes: Carga[], hoy: Date",
+          "retorno": "CaducidadCuadro",
+          "linea": 186,
+          "resumen": "Reparte las cargas SUBSISTENTES entre las que están firmes y las que podrían haber caducado, sin decidir por el usuario. Nunca toca el importe conservador: quien llama decide si enseña el escenario al"
+        },
+        {
+          "nombre": "anios",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "string",
+          "linea": 211
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "50adde7a3055"
+    },
+    {
+      "ruta": "packages/module-subastas/src/cargas-prompt.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Prompt del LECTOR REGISTRAL. PURO (una constante y un extractor de JSON). Se separa de `cargas.ts` porque es la pieza que más se va a iterar: cada certificación con una redacción nueva enseña algo. Los ajustes van aquí, sin",
+      "exporta": [
+        "extraerJson"
+      ],
+      "funciones": [
+        {
+          "nombre": "extraerJson",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined",
+          "retorno": "unknown",
+          "linea": 82,
+          "resumen": "Extrae el primer objeto JSON de la respuesta del modelo. Los modelos de razonamiento envuelven la salida en `<think>`, y casi todos la adornan con ```json a pesar de pedirles lo contrario. Devuelve `n"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "69491629bfc4"
+    },
+    {
+      "ruta": "packages/module-subastas/src/cargas.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── CARGAS REGISTRALES. Módulo PURO: tipos, prompt del especialista, parseo de la respuesta de la IA y —lo importante— la regla determinista de QUÉ CARGA SUBSISTE para quien se adjudica el inmueble. Por qué esto es el núcleo de",
+      "exporta": [
+        "normalizarCuadroCargas",
+        "cargasQueSubsisten",
+        "mismoAcreedorQueEjecutante",
+        "consensoCuadros",
+        "compararCuadros",
+        "resumirCargas"
+      ],
+      "funciones": [
+        {
+          "nombre": "NUM",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 120
+        },
+        {
+          "nombre": "normalizarCuadroCargas",
+          "kind": "function",
+          "exportada": true,
+          "params": "bruto: unknown, fuente: FuenteCargas",
+          "retorno": "CuadroCargas",
+          "linea": 134,
+          "resumen": "Normaliza el JSON del lector a un `CuadroCargas` de confianza. Defensivo a propósito: un LLM puede devolver un tipo inventado, un importe con formato español, o cargas a medias — nada de eso debe lanz"
+        },
+        {
+          "nombre": "cargasQueSubsisten",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuadro: CuadroCargas, hoy?: Date",
+          "retorno": "CargasSubsistentes",
+          "linea": 199,
+          "resumen": "QUÉ HEREDA EL ADJUDICATARIO. Determinista, porque de esto sale la puja máxima. Reglas (LEC): · Ejecución HIPOTECARIA directa: la hipoteca que se ejecuta se cancela y las cargas POSTERIORES se purgan ("
+        },
+        {
+          "nombre": "formatearEur",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "string",
+          "linea": 286
+        },
+        {
+          "nombre": "mismoAcreedorQueEjecutante",
+          "kind": "function",
+          "exportada": true,
+          "params": "cargas: Carga[], ejecutante: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 304,
+          "resumen": "¿El ejecutante es también el acreedor de una carga ANTERIOR que subsiste? Es el matiz que decide si el caso «hipoteca anterior en embargo» es una ruina o solo un trámite: cuando coinciden, el crédito "
+        },
+        {
+          "nombre": "consensoCuadros",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: CuadroCargas, b: CuadroCargas",
+          "retorno": "",
+          "linea": 324,
+          "resumen": "Consenso entre DOS lecturas independientes del mismo documento. Alberto pidió que la IA extraiga las cifras; esta es la red que evita que un dígito mal leído se propague a una puja. Se emparejan las c"
+        },
+        {
+          "nombre": "compararCuadros",
+          "kind": "function",
+          "exportada": true,
+          "params": "anterior: CuadroCargas, nuevo: CuadroCargas",
+          "retorno": "CambioCargas[]",
+          "linea": 393,
+          "resumen": "Compara el cuadro que se leyó de la certificación del BOE con uno NUEVO (una nota simple recién pedida al registro, por ejemplo). Hace falta porque la certificación que el juzgado adjunta a la ficha s"
+        },
+        {
+          "nombre": "resumirCargas",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuadro: CuadroCargas, subsistentes: CargasSubsistentes",
+          "retorno": "string",
+          "linea": 443,
+          "resumen": "Resumen legible del cuadro para la ficha y el aviso de Telegram."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a6b69a19d4b6"
     },
     {
       "ruta": "packages/module-subastas/src/catastro.ts",
@@ -83521,6 +84100,48 @@
       "hash": "fac50ae381cb"
     },
     {
+      "ruta": "packages/module-subastas/src/ciclo-vida.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── CICLO DE VIDA de una subasta. PURO. Alberto (30/07/2026): «las subastas ya pasadas, borrarlas y no tenerlas en cuenta… lo que comentaste de que hay subastas que salen varias veces, ¿no?». La segunda parte de la frase es la ",
+      "exporta": [
+        "estadoCiclo",
+        "esVigente",
+        "seConservaParaAprender"
+      ],
+      "funciones": [
+        {
+          "nombre": "estadoCiclo",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaCiclo",
+          "retorno": "EstadoCiclo",
+          "linea": 48,
+          "resumen": "Una subasta sin fecha de conclusión NO se archiva por tiempo: puede ser un lote de adquisición directa de la Junta, que no tiene plazo de cierre publicado."
+        },
+        {
+          "nombre": "esVigente",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaCiclo",
+          "retorno": "boolean",
+          "linea": 64,
+          "resumen": "¿Debe salir en la lista y poder avisar?"
+        },
+        {
+          "nombre": "seConservaParaAprender",
+          "kind": "function",
+          "exportada": true,
+          "params": "_e: EntradaCiclo",
+          "retorno": "boolean",
+          "linea": 73,
+          "resumen": "¿Se conserva para el aprendizaje? SIEMPRE. Está aquí como función explícita para que quede escrito en el código: si alguna vez se añade una limpieza de histórico, tiene que romper este test."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "68ae189b55e2"
+    },
+    {
       "ruta": "packages/module-subastas/src/comparables.ts",
       "ambito": "packages/module-subastas",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Comparables de mercado a partir de las alertas de portales inmobiliarios que Alberto ya recibe. PURO. POR QUÉ EXISTE: el BOE publica «Tasación 0,00 €» en la práctica totalidad de las subastas (comprobado en las 4 reales), y",
@@ -83628,6 +84249,54 @@
       "hash": "55444d217ddd"
     },
     {
+      "ruta": "packages/module-subastas/src/comunidad.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── DEUDA DE COMUNIDAD que hereda el adjudicatario (art. 9.1.e LPH). PURO. Es la partida que más veces se olvida y la única del coste que NO aparece en ningún sitio de la subasta: ni el BOE ni la certificación registral dicen l",
+      "exporta": [
+        "tienePropiedadHorizontal",
+        "deudaComunidadEstimada"
+      ],
+      "funciones": [
+        {
+          "nombre": "tienePropiedadHorizontal",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo?: TipoBien | null",
+          "retorno": "boolean",
+          "linea": 84,
+          "resumen": "¿Está el inmueble en régimen de propiedad horizontal? Solo entonces hay comunidad de la que heredar deuda. Una parcela, una finca rústica o una nave aislada no; un edificio entero tampoco (es el dueño"
+        },
+        {
+          "nombre": "deudaComunidadEstimada",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaComunidad",
+          "retorno": "DeudaComunidad",
+          "linea": 95,
+          "resumen": "Estima lo que el comprador va a heredar de deuda con la comunidad. Devuelve `importe: null` —y NUNCA 0— cuando no procede o no hay datos, por la misma razón que en las cargas: un 0 se lee como «no deb"
+        },
+        {
+          "nombre": "redondear",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "number",
+          "linea": 144
+        },
+        {
+          "nombre": "formatearEur",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "string",
+          "linea": 148
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7e5c28b1f594"
+    },
+    {
       "ruta": "packages/module-subastas/src/costes.ts",
       "ambito": "packages/module-subastas",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Coste REAL de quedarse un inmueble subastado (\"precio puerta abierta\"). PURO. El descuento sobre tasación que pinta cualquier portal es ficción: lo que determina si una subasta es negocio es el remate MÁS todo lo que arrast",
@@ -83644,7 +84313,7 @@
           "exportada": true,
           "params": "valorSubasta: number | null | undefined, pct = PCT_DEPOSITO",
           "retorno": "number | null",
-          "linea": 40,
+          "linea": 47,
           "resumen": "Lo que hay que consignar para pujar en una subasta."
         },
         {
@@ -83653,7 +84322,7 @@
           "exportada": true,
           "params": "s: SubastaInmueble, remate?: number | null, params: ParamsCoste = {},",
           "retorno": "CosteAdquisicion",
-          "linea": 52,
+          "linea": 59,
           "resumen": "Calcula el coste puerta abierta. @param s la subasta ya normalizada @param remate precio de adjudicación a simular; por defecto el valor de subasta @param params parámetros de coste (por defecto, Anda"
         },
         {
@@ -83662,7 +84331,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "number",
-          "linea": 142
+          "linea": 179
         },
         {
           "nombre": "pct",
@@ -83670,7 +84339,7 @@
           "exportada": false,
           "params": "x: number",
           "retorno": "string",
-          "linea": 146
+          "linea": 183
         },
         {
           "nombre": "formatearEur",
@@ -83678,7 +84347,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 152,
+          "linea": 189,
           "resumen": "Formato español (2.162,49 €) para los avisos. La UI usa el helper `eur()` de la app; aquí se replica porque el módulo es puro y no importa nada de fuera."
         },
         {
@@ -83687,7 +84356,7 @@
           "exportada": true,
           "params": "s: SubastaInmueble, valorMercado: number, descuentoObjetivo = 0.25, params: ParamsCoste = {},",
           "retorno": "number | null",
-          "linea": 167,
+          "linea": 204,
           "resumen": "Puja MÁXIMA para que la adquisición salga con al menos `descuentoObjetivo` de descuento real sobre `valorMercado` — con el coste puerta abierta entero dentro, no solo el remate. Se resuelve por bisecc"
         },
         {
@@ -83696,7 +84365,7 @@
           "exportada": false,
           "params": "puja: number, s: SubastaInmueble",
           "retorno": "number",
-          "linea": 192,
+          "linea": 229,
           "resumen": "El portal solo acepta pujas en tramos desde el valor de salida: se alinea hacia abajo."
         },
         {
@@ -83705,13 +84374,13 @@
           "exportada": true,
           "params": "ingresoPorDormitorio: number, dormitorios: number, costeTotal: number,",
           "retorno": "YieldTuristico | null",
-          "linea": 215,
+          "linea": 252,
           "resumen": "Yield estimado POR DORMITORIO: `ingresoPorDormitorio` sale del histórico real de los pisos del usuario (€ netos/año por dormitorio). Es la métrica disponible con sus datos (sus pisos no tienen m² regi"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dc1a9f834ef7"
+      "hash": "e869c26803b9"
     },
     {
       "ruta": "packages/module-subastas/src/edicto.ts",
@@ -84053,6 +84722,52 @@
       "hash": "c3e39927fda1"
     },
     {
+      "ruta": "packages/module-subastas/src/financiacion.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── COSTE DEL DINERO en una subasta. PURO. En una subasta no se compra como en el mercado libre: no hay «financiación sujeta a tasación». El art. 670 LEC da **40 días** desde la aprobación del remate para consignar la diferenci",
+      "exporta": [
+        "costeFinanciacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "costeFinanciacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "importe: number, p: ParamsFinanciacion",
+          "retorno": "CosteFinanciacion",
+          "linea": 59,
+          "resumen": "Coste del puente para desembolsar `importe`. `importe` es el desembolso REAL que hay que poner encima de la mesa (coste puerta abierta menos el depósito ya consignado, que también es dinero tuyo pero "
+        },
+        {
+          "nombre": "redondear",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "number",
+          "linea": 94
+        },
+        {
+          "nombre": "formatearEur",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "string",
+          "linea": 98
+        },
+        {
+          "nombre": "formatearPct",
+          "kind": "function",
+          "exportada": false,
+          "params": "x: number",
+          "retorno": "string",
+          "linea": 102
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0eb5600e2a95"
+    },
+    {
       "ruta": "packages/module-subastas/src/flip.ts",
       "ambito": "packages/module-subastas",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Lente FLIP: ¿este inmueble sirve para comprar-reformar-vender? PURO. Todo determinista: la reforma se estima por baremo (€/m² según la edad del edificio, dato del Catastro), nunca por IA. Si falta un dato clave el margen es",
@@ -84138,6 +84853,7 @@
       "resumen": "──────────────────────────────────────────────────────────────────────────── Municipio → provincia. PURO. Por qué existe: `provinciaDeTexto` de @central/module-concursos resuelve NOMBRES DE PROVINCIA, pero las descripciones del BOE citan el MUNICIPIO («Dos Hermanas», «Belmonte de Miranda», «El Puert",
       "exporta": [
         "provinciaPorMunicipio",
+        "provinciaCanonica",
         "urlGoogleMaps",
         "urlStreetView",
         "urlFichaCatastro"
@@ -84153,12 +84869,21 @@
           "resumen": "Deduce la provincia de un texto libre (descripción del bien y/o nombre de la búsqueda guardada). Devuelve `null` si no hay indicio — nunca adivina."
         },
         {
+          "nombre": "provinciaCanonica",
+          "kind": "function",
+          "exportada": true,
+          "params": "provincia: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 73,
+          "resumen": "Unifica la forma de escribir una provincia. Existe porque cada fuente la escribe distinto —el BOE manda «Sevilla» y la Junta de Andalucía «SEVILLA»— y cualquier cosa que AGRUPE por el valor literal la"
+        },
+        {
           "nombre": "urlGoogleMaps",
           "kind": "function",
           "exportada": true,
           "params": "u: UbicacionSubasta",
           "retorno": "string | null",
-          "linea": 70,
+          "linea": 104,
           "resumen": "URL de Google Maps para VER dónde está el inmueble. 🚨 La DIRECCIÓN POSTAL manda sobre las coordenadas, aunque parezca al revés. Con `query=<lat,lon>` Google planta un pin anónimo en mitad de la manza"
         },
         {
@@ -84167,7 +84892,7 @@
           "exportada": true,
           "params": "lat?: number | null, lon?: number | null",
           "retorno": "string | null",
-          "linea": 97,
+          "linea": 131,
           "resumen": "Street View del portal. Para un inmueble que no se puede visitar (la mayoría de las subastas advierten «sin posibilidad de visita») ver la fachada y el barrio es la única inspección posible sin despla"
         },
         {
@@ -84176,13 +84901,65 @@
           "exportada": true,
           "params": "refCatastral?: string | null",
           "retorno": "string | null",
-          "linea": 106,
+          "linea": 140,
           "resumen": "Ficha pública del Catastro por referencia catastral (plano de la parcela, superficies por uso, año, linderos). Acepta la de 14 o la de 20 caracteres."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b869c2360214"
+      "hash": "128c51a244e0"
+    },
+    {
+      "ruta": "packages/module-subastas/src/idealista-api.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── API OFICIAL de Idealista (Search API v3.5) → Comparables. PURO. POR QUÉ EXISTE: las alertas de correo solo cubren las búsquedas guardadas que Alberto crea a mano, y el buscador de Fotocasa (edge proxy) es un apaño contra un",
+      "exporta": [
+        "tipoDesdePropertyType",
+        "comparablesDesdeApiIdealista",
+        "centroBusquedaIdealista",
+        "llamadasPermitidasIdealista"
+      ],
+      "funciones": [
+        {
+          "nombre": "tipoDesdePropertyType",
+          "kind": "function",
+          "exportada": true,
+          "params": "propertyType: string | null | undefined",
+          "retorno": "TipoComparable",
+          "linea": 71,
+          "resumen": "Tipo del anuncio a partir del `propertyType` de la API."
+        },
+        {
+          "nombre": "comparablesDesdeApiIdealista",
+          "kind": "function",
+          "exportada": true,
+          "params": "respuesta: RespuestaIdealistaApi",
+          "retorno": "Comparable[]",
+          "linea": 83,
+          "resumen": "Mapea los anuncios de una respuesta de la API al mismo `Comparable` que producen los parsers de correo — así entran al corpus por el MISMO upsert y el `propertyCode` deduplica contra los ids ya vistos"
+        },
+        {
+          "nombre": "centroBusquedaIdealista",
+          "kind": "function",
+          "exportada": true,
+          "params": "zona: string | null | undefined",
+          "retorno": "CentroBusqueda | null",
+          "linea": 196,
+          "resumen": "Centro de búsqueda de un municipio/zona vigilada. `null` si la zona no está en la tabla — la llamada NO se hace (mejor no gastar cuota en una búsqueda mal centrada que inventar coordenadas)."
+        },
+        {
+          "nombre": "llamadasPermitidasIdealista",
+          "kind": "function",
+          "exportada": true,
+          "params": "usadasEsteMes: number, maxPorPasada = 3",
+          "retorno": "number",
+          "linea": 221,
+          "resumen": "Cuántas llamadas puede gastar UNA pasada del cron, dado lo ya consumido este mes. Devuelve 0 cuando el presupuesto (menos el margen) está agotado."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b33738797d5c"
     },
     {
       "ruta": "packages/module-subastas/src/junta.ts",
@@ -84482,11 +85259,66 @@
       "hash": "07be3ab261e4"
     },
     {
+      "ruta": "packages/module-subastas/src/pdf-imagenes.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Rescate de PDFs ESCANEADOS. PURO (opera sobre bytes, sin red ni dependencias). El problema: las certificaciones registrales que el BOE adjunta a sus fichas son fotocopias. `pdf-parse` devuelve 0 caracteres y el pipeline las",
+      "exporta": [
+        "localizarJpegs",
+        "dimensionesJpeg",
+        "agruparBandas",
+        "pareceEscaneado"
+      ],
+      "funciones": [
+        {
+          "nombre": "localizarJpegs",
+          "kind": "function",
+          "exportada": true,
+          "params": "pdf: Uint8Array, minBytes = MIN_BYTES_UTIL",
+          "retorno": "ImagenEmbebida[]",
+          "linea": 39,
+          "resumen": "Localiza los JPEG embebidos en el binario de un PDF, en orden de aparición (que es el orden de las páginas en todos los escaneos vistos). No decodifica: solo devuelve los offsets, para que el caller d"
+        },
+        {
+          "nombre": "dimensionesJpeg",
+          "kind": "function",
+          "exportada": true,
+          "params": "jpeg: Uint8Array",
+          "retorno": "DimensionesJpeg | null",
+          "linea": 76,
+          "resumen": "Ancho y alto de un JPEG sin decodificarlo, recorriendo sus marcadores hasta el SOF (FFC0..FFCF salvo los que no son SOF). Se necesita para agrupar bandas por anchura y para saber cuánto alto acumula c"
+        },
+        {
+          "nombre": "agruparBandas",
+          "kind": "function",
+          "exportada": true,
+          "params": "bandas: BandaAgrupable[], altoMaximo = 3000",
+          "retorno": "BandaAgrupable[][]",
+          "linea": 113,
+          "resumen": "Agrupa bandas consecutivas en «páginas»: mismo ancho y sin pasar del alto máximo. Devuelve los grupos en orden. Puro: entra la lista de dimensiones, sale cómo hay que apilarlas. `altoMaximo` acota el "
+        },
+        {
+          "nombre": "pareceEscaneado",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined, minChars = 500",
+          "retorno": "boolean",
+          "linea": 138,
+          "resumen": "¿El texto extraído de un PDF da para leerlo, o es un escaneo? El umbral es por CARACTERES ÚTILES (sin espacios): un PDF escaneado suele devolver un puñado de caracteres basura, no una cadena vacía lim"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "babef1fa8aac"
+    },
+    {
       "ruta": "packages/module-subastas/src/playa.ts",
       "ambito": "packages/module-subastas",
-      "resumen": "──────────────────────────────────────────────────────────────────────────── Radar 🏖️ segunda residencia: costa de Huelva. PURO. No es una lente de inversión: es uso propio. Aquí solo se decide si un inmueble está en la zona que busca Alberto — el criterio de \"me gusta\" es suyo, el agente solo se l",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Radar 🏖️ segunda residencia: costa de Huelva y costa de Cádiz. PURO. No es una lente de inversión: es uso propio. Aquí solo se decide si un inmueble está en la zona que busca Alberto — el criterio de \"me gusta\" es suyo, el",
       "exporta": [
-        "esPlayaHuelva"
+        "esPlayaHuelva",
+        "esPlayaCadiz",
+        "esPlaya",
+        "costaDe"
       ],
       "funciones": [
         {
@@ -84495,13 +85327,48 @@
           "exportada": true,
           "params": "municipio: string | null | undefined, descripcion?: string | null, provincia?: string | null,",
           "retorno": "boolean",
-          "linea": 53,
+          "linea": 109,
           "resumen": "¿Está en la costa de Huelva? Municipio en la lista, o núcleo de playa citado en la descripción/dirección. Los municipios grandes (Almonte, Moguer, Lepe…) incluyen interior — mejor un falso positivo qu"
+        },
+        {
+          "nombre": "esPlayaCadiz",
+          "kind": "function",
+          "exportada": true,
+          "params": "municipio: string | null | undefined, descripcion?: string | null, provincia?: string | null,",
+          "retorno": "boolean",
+          "linea": 118,
+          "resumen": "¿Está en la costa de Cádiz? Misma mecánica que Huelva."
+        },
+        {
+          "nombre": "esPlaya",
+          "kind": "function",
+          "exportada": true,
+          "params": "municipio: string | null | undefined, descripcion?: string | null, provincia?: string | null,",
+          "retorno": "boolean",
+          "linea": 131,
+          "resumen": "La lente 🏖️ completa: costa de Huelva **o** costa de Cádiz. Es la que deben usar la app y el radar; las dos anteriores quedan para poder distinguir la zona cuando hace falta nombrarla."
+        },
+        {
+          "nombre": "costaDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "municipio: string | null | undefined, descripcion?: string | null, provincia?: string | null,",
+          "retorno": "'Huelva' | 'Cádiz' | null",
+          "linea": 140,
+          "resumen": "Nombre de la costa para el texto del aviso. `null` si no es ninguna."
+        },
+        {
+          "nombre": "enLitoral",
+          "kind": "function",
+          "exportada": false,
+          "params": "municipio: string | null | undefined, descripcion: string | null | undefined, provincia: string | null | undefined, municipios: readonly string[], nucleos: readonly string[], provinciaNorm: string,",
+          "retorno": "boolean",
+          "linea": 150
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "48a2bcd079db"
+      "hash": "9b817c88255c"
     },
     {
       "ruta": "packages/module-subastas/src/radar.ts",
@@ -84544,6 +85411,48 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "caee77415953"
+    },
+    {
+      "ruta": "packages/module-subastas/src/reaparicion.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── LA MISMA FINCA QUE VUELVE MÁS BARATA. PURO. Muchas subastas quedan desiertas y el juzgado las reconvoca con el tipo rebajado. Ahí está una de las mejores oportunidades del canal: un inmueble que ya se estudió (con sus carga",
+      "exporta": [
+        "claveFinca",
+        "detectarReapariciones",
+        "textoReaparicion"
+      ],
+      "funciones": [
+        {
+          "nombre": "claveFinca",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Convocatoria",
+          "retorno": "",
+          "linea": 53,
+          "resumen": "Clave de identidad de una finca. `null` si no hay dato fiable — y entonces la convocatoria NO entra en el emparejamiento, a propósito: es mejor perderse una reaparición que inventarla."
+        },
+        {
+          "nombre": "detectarReapariciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "convocatorias: Convocatoria[], bajadaMinima = BAJADA_MINIMA,",
+          "retorno": "Reaparicion[]",
+          "linea": 71,
+          "resumen": "Empareja convocatorias VIVAS con convocatorias anteriores de la misma finca y devuelve las que han bajado de tipo al menos `bajadaMinima`. Ordena por bajada descendente: lo que más ha caído, primero."
+        },
+        {
+          "nombre": "textoReaparicion",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: Reaparicion",
+          "retorno": "string",
+          "linea": 114,
+          "resumen": "Línea para el aviso de Telegram."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5929e9702f1b"
     },
     {
       "ruta": "packages/module-subastas/src/scoring.ts",
@@ -84621,6 +85530,36 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "1bcb81d1c16d"
+    },
+    {
+      "ruta": "packages/module-subastas/src/valoracion-historica.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── SERIE DE VALORACIÓN PROPIA. PURO. Las certificaciones registrales llevan un dato que nadie mira: el valor que la escritura de hipoteca pactó «a efectos de subasta» (en Belmonte, 47.274,90€ en 2009). Es una TASACIÓN BANCARIA",
+      "exporta": [
+        "referenciaPorZona"
+      ],
+      "funciones": [
+        {
+          "nombre": "mediana",
+          "kind": "function",
+          "exportada": false,
+          "params": "valores: number[]",
+          "retorno": "number | null",
+          "linea": 43
+        },
+        {
+          "nombre": "referenciaPorZona",
+          "kind": "function",
+          "exportada": true,
+          "params": "tasaciones: TasacionPactada[], factorPorAnio: Record<number, number> = {}, minMuestra = MIN_MUESTRA_TASACIONES,",
+          "retorno": "ReferenciaZona[]",
+          "linea": 58,
+          "resumen": "Referencia de €/m² por zona a partir de las tasaciones pactadas. `factorPorAnio` traduce un valor de ese año a euros de hoy (p. ej. `{2009: 0.82}` si el mercado está un 18% por debajo del pico). Un añ"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c42a988310ff"
     },
     {
       "ruta": "packages/module-subastas/src/zona.ts",
@@ -86047,7 +86986,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2341,
-    "funciones": 6173
+    "archivos": 2358,
+    "funciones": 6249
   }
 }

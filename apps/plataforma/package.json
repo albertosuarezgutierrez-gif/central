@@ -32,6 +32,7 @@
     "imapflow": "^1.0.171",
     "mailparser": "^3.7.1",
     "pdf-parse": "^1.1.1",
+    "sharp": "^0.34.5",
     "xlsx": "^0.18.5",
     "zod": "^3.23.8",
     "@anthropic-ai/sdk": "^0.52.0",
