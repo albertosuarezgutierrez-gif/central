@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-30T06:00:24Z",
+  "generadoEn": "2026-07-30T06:19:43Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3214,6 +3214,7 @@
       "/api/cron/correo-digest",
       "/api/cron/correo-resumen-semanal",
       "/api/cron/correo-triaje",
+      "/api/cron/dispatch",
       "/api/cron/facturas-conciliar-gmail",
       "/api/cron/facturas-resumen-semanal",
       "/api/cron/facturas-scan",
@@ -3713,6 +3714,7 @@
       "correo_cursor",
       "correo_reglas",
       "correo_triaje",
+      "cron_dispatch_cursor",
       "cuentas_bancarias",
       "domotica_acceso_pin",
       "domotica_dispositivos",
@@ -4382,7 +4384,7 @@
     "packages": 36,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1150,
+    "apis": 1151,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

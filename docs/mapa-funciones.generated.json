@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-30T06:00:24Z",
-  "sha": "4844e17ea58898ce485824c8310a6bd82e05a725",
+  "generadoEn": "2026-07-30T06:19:43Z",
+  "sha": "e1aa52873e3b0317292e0e3bfbf1df66b75d12f6",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -50770,6 +50770,48 @@
       "hash": "862804c8771c"
     },
     {
+      "ruta": "apps/plataforma/app/api/cron/dispatch/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "/api/cron/dispatch — ÚNICO cron declarado en vercel.json (cada minuto). Lee el manifiesto `lib/cron-dispatch.ts`, calcula qué jobs tocan este minuto (con catch-up de minutos que el scheduler de Vercel haya omitido, vía cursor en BD) y los dispara por HTTP con el mismo `Authorization: Bearer CRON_SEC",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "baseUrl",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 15
+        },
+        {
+          "nombre": "reclamarVentana",
+          "kind": "function",
+          "exportada": false,
+          "params": "ahora: Date",
+          "retorno": "Promise<Date[] | 'ya-procesado'>",
+          "linea": 26,
+          "resumen": "Reclama en BD la ventana de minutos a procesar. El cursor (fila única) hace dos cosas: evita el doble disparo si coinciden dos instancias, y habilita el catch-up (si el scheduler se saltó las 06:00, l"
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 49
+        }
+      ],
+      "tablas": [
+        "cron_dispatch_cursor",
+        "next",
+        "previo"
+      ],
+      "rutaApi": "/api/cron/dispatch",
+      "hash": "98277fb453e0"
+    },
+    {
       "ruta": "apps/plataforma/app/api/cron/facturas-conciliar-gmail/route.ts",
       "ambito": "apps/plataforma",
       "resumen": "/api/cron/facturas-conciliar-gmail — Pasada DIARIA que engancha justificantes desde Gmail. Recorre las cuentas, barre el buzón de contabilidad y ata cada factura a su cargo del banco «sin justificante» (match conservador: mismo signo + importe al céntimo + fecha ±N días, nunca a ciegas). Ataca el ba",
@@ -59828,6 +59870,66 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "fa72b303af2d"
+    },
+    {
+      "ruta": "apps/plataforma/lib/cron-dispatch.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Programación ÚNICA de los crons de plataforma. Vercel Pro admite como mucho 40 crons por proyecto y este llegó a declarar 60 en vercel.json: el scheduler empezó a omitir disparos en silencio (29/07/2026: `psd2-sync` de las 06:00 sin ningún log, con sus 3 vecinos del mismo minuto corriendo — auditorí",
+      "exporta": [
+        "cronMatches",
+        "truncarAMinuto",
+        "ventanaMinutos",
+        "jobsDue"
+      ],
+      "funciones": [
+        {
+          "nombre": "parseCampo",
+          "kind": "function",
+          "exportada": false,
+          "params": "campo: string, min: number, max: number",
+          "retorno": "Set<number> | null",
+          "linea": 79,
+          "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
+        },
+        {
+          "nombre": "cronMatches",
+          "kind": "function",
+          "exportada": true,
+          "params": "schedule: string, fecha: Date",
+          "retorno": "boolean",
+          "linea": 109,
+          "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
+        },
+        {
+          "nombre": "truncarAMinuto",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: Date",
+          "retorno": "Date",
+          "linea": 131
+        },
+        {
+          "nombre": "ventanaMinutos",
+          "kind": "function",
+          "exportada": true,
+          "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
+          "retorno": "Date[]",
+          "linea": 139,
+          "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
+        },
+        {
+          "nombre": "jobsDue",
+          "kind": "function",
+          "exportada": true,
+          "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
+          "retorno": "CronJob[]",
+          "linea": 151,
+          "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f438c7f7f35d"
     },
     {
       "ruta": "apps/plataforma/lib/deducibilidad.ts",
@@ -85676,7 +85778,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2336,
-    "funciones": 6141
+    "archivos": 2338,
+    "funciones": 6149
   }
 }

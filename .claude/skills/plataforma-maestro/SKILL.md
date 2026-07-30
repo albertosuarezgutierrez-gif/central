@@ -35,6 +35,8 @@ Antes de tocar nada: lee `apps/plataforma/CLAUDE.md` y el archivo de references/
    (`prefers-color-scheme`) ni hex fijos mezclados con `var(--text)`.
 10. **DOS tablas de facturas independientes:** `facturas_drive` (panel `/sivra/facturas-control`)
     vs `facturas_proveedor` (agente Gmail→pago). No confundirlas ni cruzar escrituras.
+11. **Cron nuevo = fila en `lib/cron-dispatch.ts::CRON_JOBS`, NUNCA en `vercel.json`** (dispatcher
+    único `/api/cron/dispatch` cada minuto; Vercel Pro tope 40 crons y hay ~60 jobs, 30/07/2026).
 
 ## ÍNDICE de references/
 **Lee SOLO el archivo de references/ que necesite la tarea; no los cargues todos.**

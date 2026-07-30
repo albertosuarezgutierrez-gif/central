@@ -92,6 +92,23 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
 ## Root Directory en Vercel
 `apps/plataforma` — install `npx --yes pnpm@10.33.0 install --no-frozen-lockfile`.
 
+## ⏰ Crons — dispatcher único (30/07/2026)
+**Vercel Pro admite 40 crons/proyecto y este llegó a 60 → el scheduler omitía disparos en silencio**
+(29/07/2026: `psd2-sync` de las 06:00 sin log alguno; auditoría PR #1162). Desde entonces `vercel.json`
+declara **UN solo cron**: `/api/cron/dispatch` cada minuto.
+- **Fuente de verdad de qué corre y cuándo: `lib/cron-dispatch.ts` (`CRON_JOBS`, horarios UTC).**
+  🚨 Un cron nuevo se añade AHÍ, **nunca** a `vercel.json` (volvería a acercarnos al límite). Las menciones
+  históricas "cron X en `vercel.json`" de este doc y de las skills se leen ahora como "job X en el manifiesto".
+- El dispatcher (`app/api/cron/dispatch/route.ts`) dispara los jobs del minuto por HTTP con
+  `Authorization: Bearer CRON_SECRET` — el MISMO header que adjuntaba Vercel, así que los handlers
+  (`isCronAuthorized`) y el pass-through del middleware funcionan sin cambios.
+- **Catch-up:** cursor `cron_dispatch_cursor` (fila única; `prisma/sql/2026-07-30_cron_dispatch_cursor.sql`,
+  aplicada) — si el scheduler se salta un minuto, la pasada siguiente procesa la ventana pendiente (tope
+  15 min) y un claim `FOR UPDATE` evita el doble disparo. Sin la tabla degrada al minuto actual.
+- Envs: base URL = `VERCEL_PROJECT_PRODUCTION_URL` (auto de Vercel); override opcional `CRON_DISPATCH_BASE_URL`.
+- Trade-off asumido: el dispatcher es un punto único — si muere, TODOS los crons enmudecen. Red de
+  seguridad: el heartbeat de `/auditoria-diaria` (paso 2-bis) lo cazaría en la primera pasada (frescura en BD).
+
 ## Estado (15/06/2026) — PANEL UNIFICADO (PR #249 MERGED)
 - [x] Tablas `cuentas/sociedades/negocios` aplicadas en Supabase.
 - [x] Shell: login + dashboard con tarjetas por negocio.
