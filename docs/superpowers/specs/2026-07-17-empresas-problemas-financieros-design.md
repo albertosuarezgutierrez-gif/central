@@ -100,8 +100,11 @@ enriquecimiento rellene el dato; pesos = primera versión, tuneables):
 | Disolución / extinción | evento | 45 | **BORME (gratis)** — ya ingerido |
 
 **Nota de sourcing:** salvo concurso/disolución/ampliación (BORME, gratis, ya funcionando), **todo el bloque A
-depende de las cuentas depositadas** → requiere eInforma. RAI/ASNEF pueden necesitar un **producto de morosidad
-aparte** (Experian/Equifax) si el módulo de incidencias de eInforma no los cubre al detalle.
+depende de las cuentas depositadas** → requiere eInforma. ~~RAI/ASNEF pueden necesitar un producto de morosidad
+aparte.~~ **CONFIRMADO (30/07/2026):** RAI, ASNEF, EBE, ICIRED y RIJ salen como **«No consultado»** en el informe
+de eInforma — son un **add-on de pago** que hay que cotizar aparte. Lo que sí viene incluido es **Paydex**
+(demora real de pago con importes y tramos) y los contadores judicial/concursal. Detalle en
+`docs/EINFORMA-CONTRATACION.md` §5.4.
 
 **B. "Tocó financiación"**
 - Ampliaciones de capital recientes (BORME, gratis), entrada de socios, préstamos participativos, avales ICO, prendas/hipotecas.
@@ -205,8 +208,14 @@ campos se pueblen; hoy están vacíos (dormidos) hasta contratar eInforma.
 - **Cobertura del cribado gratis:** BORME da *eventos* (concurso, ampliaciones) bien, pero "fondos propios
   negativos en sector sano" sin evento puede requerir cuentas depositadas (de pago por empresa) o SABI. Validar
   en fase 1 cuántas candidatas salen solo con gratis antes de decidir SABI.
+  **Escalón intermedio nuevo (30/07/2026):** Informa D&B vende **ficheros a medida por CNAE + zona a 1–3€ por
+  empresa** con partidas de balance — cubre este hueco a 1/5–1/20 del coste unitario del informe y **evita el
+  salto a SABI** (15.000€/año). Ver `docs/EINFORMA-CONTRATACION.md`.
 - **Calidad de la facturación estimada** en fuentes gratis (a menudo por tramos, no exacta).
-- **Presupuesto eInforma:** definir tope mensual y coste por consulta antes de conectar la API.
+- ~~**Presupuesto eInforma:** definir tope mensual y coste por consulta antes de conectar la API.~~
+  **RESUELTO (30/07/2026)** — oferta real de Informa D&B en `docs/EINFORMA-CONTRATACION.md`: bonos anuales
+  de 50/100/200/500 informes → **15–30€ por informe** (el default `EMPRESAS_ENRIQUECER_COSTE_EUR=12` del
+  código se queda corto) y el gasto es **prepago anual**, no metered.
 - **Legalidad/uso:** datos de fuentes oficiales para uso interno; revisar términos de cada API antes de escalar.
 
 ## 10. Enfoque incremental sugerido
