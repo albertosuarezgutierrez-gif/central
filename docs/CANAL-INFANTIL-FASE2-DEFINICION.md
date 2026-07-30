@@ -45,10 +45,23 @@ caracol es calmo por naturaleza — el posicionamiento entero encarnado en el pr
   es un caracol RÁPIDO — el nuestro es exactamente lo contrario), diseño propio desde
   bocetos, sin parecidos con Gary (Bob Esponja: caracol-gato con ojos de tallo caricato).
   Chequeo de similitud antes de fijar el diseño final (regla PI de la Fase 1).
-- **Nombre**: debe pronunciarse igual de bien en ES/IT/DE/NL. Candidatos (elige Alberto):
-  **Lolo**, **Nilo**, **Momo**. Antes de fijarlo: búsqueda rápida de colisiones (YouTube,
-  EUIPO/OEPM, apps infantiles) — hay personajes infantiles con nombres parecidos y conviene
-  el que esté más libre.
+- **Nombre — chequeo de colisiones HECHO (30/07/2026):**
+  - **Momo: DESCARTADO.** El "Momo challenge" (criatura de terror viral) sigue vivo como
+    asociación en búsquedas de padres, y en DACH "Momo" es la novela icónica de Michael Ende
+    — doble colisión. Además existen ya varios "Momo Kids TV" en YouTube.
+  - **Lolo: RIESGO ALTO por saturación.** Hay canales preescolares activos llamados así en
+    el nicho exacto ("LoLo en Español - Canciones Infantiles", "Lolo Cartoon - Pree School")
+    + videojuegos "Adventures of Lolo" + hipocorístico común español → SEO imposible.
+  - **Nilo: RECOMENDADO (riesgo bajo).** Ningún personaje infantil activo con ese nombre en
+    ES/EN/IT; handles libres en el nicho; idéntico en los 4 idiomas ("Nilo el caracol / la
+    lumaca / die Schnecke / het slakje"). Única señal: "Nilo Toys" (fabricante EE.UU. de
+    mesas de madera, clase 28) — **pendiente búsqueda formal en TMview + OEPM (clases
+    9/16/28/41) antes de registrar**. Alternativas si TMview revela conflicto: **Rulo**
+    (evoca la espiral de la concha, limpio) o **Tilo**.
+  - Al fijar nombre: reservar los handles @nilo… en YouTube/Instagram/TikTok (cuesta cero).
+  - **Caracol protagonista: campo libre confirmado** — los caracoles conocidos son
+    secundarios (Gary, Snailey) o de otro nicho/tono (Turbo, franquicia dormida, 6+);
+    no existe ningún canal preescolar en ES/EN/IT liderado por un caracol con marca propia.
 
 ### Alternativas (si el caracol no convence)
 - **Una nubecita** que viaja y cambia de forma (dibuja el mundo con su lluvia fina). Igual de
