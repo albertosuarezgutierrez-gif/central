@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-30T06:19:43Z",
-  "sha": "e1aa52873e3b0317292e0e3bfbf1df66b75d12f6",
+  "generadoEn": "2026-07-30T07:35:25Z",
+  "sha": "3474af19120305d7d3152bf3da43ca71dc0d159c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -59888,7 +59888,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 79,
+          "linea": 82,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -59897,7 +59897,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 109,
+          "linea": 112,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -59906,7 +59906,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 131
+          "linea": 134
         },
         {
           "nombre": "ventanaMinutos",
@@ -59914,7 +59914,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 139,
+          "linea": 142,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -59923,13 +59923,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 151,
+          "linea": 154,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f438c7f7f35d"
+      "hash": "9714f5c336b4"
     },
     {
       "ruta": "apps/plataforma/lib/deducibilidad.ts",
@@ -62949,7 +62949,7 @@
           "exportada": true,
           "params": "dateFrom?: string",
           "retorno": "Promise<",
-          "linea": 118,
+          "linea": 149,
           "resumen": "Re-sincroniza todas las conexiones vinculadas de todas las cuentas (cron diario). dateFrom: override para importar histórico (p. ej. \"2026-01-01\"). Por defecto 89 días."
         }
       ],
@@ -62961,7 +62961,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "cb6706b8b52e"
+      "hash": "7a624a13c9bc"
     },
     {
       "ruta": "apps/plataforma/lib/reclamacion.ts",

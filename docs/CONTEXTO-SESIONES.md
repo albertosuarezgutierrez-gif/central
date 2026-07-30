@@ -32,6 +32,15 @@
   (botones Correduría/Personal + Otro…) vía `/api/banca/destino` (confirma + aprende regla), en vez de la
   taxonomía PGC que confundía a Alberto. Backfill `2026-07-30_categoria_compra_tarjeta.sql` aplicado (3 filas).
 
+- **⚕️ Health check 30/07 resuelto: dedupe PSD2 anti-drift + ventana Smoobu (30/07/2026, rama
+  `claude/health-check-2026-07-30-vlv4c7`).** Check 1: el mismo abono BBVA entra 2 veces porque el banco
+  re-sirve el concepto con `Nº`→`N` (3er caso: 16/06, 25/06, 22/07 413,17€ Dúplex) → guarda post-ingesta
+  en `lib/psd2.ts` (compara conceptos sin puntuación, conserva la fila antigua) + saneo
+  `2026-07-30_dedupe_psd2_concepto_drift.sql` aplicado (dup del 22/07 ignorado, Check 1 a 0). Check 4
+  (Smoobu 4d): los crons iban mudos por el límite de 40 (ya arreglado por el dispatcher #1165, vivo desde
+  hoy 06:42); el sync pasa a `?days=7` en `CRON_JOBS` para que un apagón multi-día se auto-repare.
+  Verificar mañana tras las 05:00 UTC que `incomes` refresca.
+
 - **🧹 Ahorro de tokens/contexto: rotación de memoria + skills router (30/07/2026, rama
   `claude/short-responses-token-saving-qh7i88`).** Memoria viva rotada por meses (983→~492 KB; junio →
   `docs/memoria/2026-06.md` vía `scripts/rotar-memoria.mjs`, idempotente, la dispara `/auditoria-diaria` a
