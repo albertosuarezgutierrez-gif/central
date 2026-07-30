@@ -142,3 +142,80 @@ export function calibracionAdjudicaciones(
   out.push(calibrar('(todas)', conResultado))
   return out
 }
+
+// ── ¿Acertamos con la puja máxima? ──────────────────────────────────────────
+
+/**
+ * Una subasta concluida de la que ADEMÁS guardamos la puja máxima que el agente
+ * había calculado antes del remate. Es el único material con el que se puede
+ * saber si el modelo de coste es realista o si vive en otro mercado.
+ */
+export interface ResultadoConPuja extends ResultadoConcluido {
+  /** Puja máxima que calculamos para el descuento objetivo. `null` = no se calculó. */
+  pujaMaxima: number | null
+}
+
+export interface CalibracionPuja {
+  /** Concluidas con puja calculada Y remate conocido. */
+  muestra: number
+  /** Las que se remataron POR ENCIMA de nuestro techo: no eran ganables. */
+  porEncima: number
+  /** Las que se remataron por debajo: eran ganables al precio que decíamos. */
+  porDebajo: number
+  /**
+   * Mediana de `importeAdjudicacion / pujaMaxima`. > 1 = el mercado paga más de
+   * lo que estábamos dispuestos a pujar (somos conservadores y no ganaremos
+   * casi ninguna); < 1 = nuestro techo es holgado y podríamos apretar más.
+   */
+  ratioMediano: number | null
+  /** Lectura en una frase, o `null` si no hay muestra suficiente. */
+  lectura: string | null
+}
+
+/** Muestra mínima para atreverse a leer la desviación de la puja. */
+export const MIN_MUESTRA_PUJA = 5
+
+/**
+ * Contrasta la puja máxima calculada contra el remate REAL.
+ *
+ * Es el bucle que cierra el sistema: hasta ahora el agente calculaba un techo
+ * de puja y nadie comprobaba nunca si ese techo tenía algo que ver con lo que
+ * de verdad pagó el mercado. Sin muestra suficiente devuelve `lectura: null`
+ * en vez de una conclusión sacada de dos casos.
+ */
+export function calibracionPuja(
+  filas: ResultadoConPuja[],
+  minMuestra = MIN_MUESTRA_PUJA,
+): CalibracionPuja {
+  const utiles = filas.filter(
+    (f) => (f.pujaMaxima ?? 0) > 0 && (f.importeAdjudicacion ?? 0) > 0 && /adjudicad/i.test(f.resultado ?? ''),
+  )
+
+  const porEncima = utiles.filter((f) => f.importeAdjudicacion! > f.pujaMaxima!).length
+  const ratios = utiles.map((f) => f.importeAdjudicacion! / f.pujaMaxima!)
+  const ratioMediano = mediana(ratios)
+
+  let lectura: string | null = null
+  if (utiles.length >= minMuestra && ratioMediano != null) {
+    const pct = Math.round(Math.abs(ratioMediano - 1) * 100)
+    if (ratioMediano > 1.05) {
+      lectura =
+        `El mercado remata un ${pct}% POR ENCIMA de nuestra puja máxima (${porEncima} de ${utiles.length} casos): ` +
+        'el descuento objetivo es demasiado exigente para estas zonas y casi nunca ganaremos una subasta.'
+    } else if (ratioMediano < 0.95) {
+      lectura =
+        `El mercado remata un ${pct}% POR DEBAJO de nuestro techo (${utiles.length} casos): hay margen para exigir ` +
+        'más descuento sin quedarnos fuera.'
+    } else {
+      lectura = `Nuestra puja máxima está en línea con el remate real (${utiles.length} casos).`
+    }
+  }
+
+  return {
+    muestra: utiles.length,
+    porEncima,
+    porDebajo: utiles.length - porEncima,
+    ratioMediano,
+    lectura,
+  }
+}

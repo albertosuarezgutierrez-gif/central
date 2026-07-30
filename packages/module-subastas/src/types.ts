@@ -6,6 +6,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 
 import type { TipoBien } from './extraccion.ts'
+import type { ParamsFinanciacion } from './financiacion.ts'
 
 /** De dónde vino el anuncio. Añadir una fuente = añadir un adaptador, nada más. */
 export type Fuente =
@@ -146,6 +147,8 @@ export interface CosteAdquisicion {
   ibiPendiente: number
   /** Coste estimado de recuperar la posesión si está ocupada. */
   lanzamiento: number
+  /** Intereses + comisión del puente. 0 si no se declaró financiación. */
+  costeFinanciacion: number
   total: number
   /** Avisos legibles sobre supuestos y estimaciones del cálculo. */
   avisos: string[]
@@ -162,9 +165,24 @@ export interface ParamsCoste {
   notariaRegistro?: number
   cancelacionCargas?: number
   plusvaliaMunicipal?: number
+  /**
+   * Deuda con la comunidad. Si va a 0 se ESTIMA por baremo (art. 9.1.e LPH),
+   * salvo que `estimarComunidad` sea `false`.
+   */
   comunidadPendiente?: number
+  /** `false` desactiva la estimación automática de deuda de comunidad. */
+  estimarComunidad?: boolean
+  /** Años de impago conocidos (del juzgado/administrador), para afinar la estimación. */
+  aniosImpagoComunidad?: number
+  /** Cuota mensual REAL de comunidad si se conoce; manda sobre el baremo por m². */
+  cuotaComunidadMensual?: number
   ibiPendiente?: number
   lanzamiento?: number
+  /**
+   * Cómo se financia el desembolso. Sin esto NO se computa coste del dinero:
+   * suponer un puente que quizá no existe falsearía el coste.
+   */
+  financiacion?: ParamsFinanciacion
 }
 
 /** Resultado de evaluar la oportunidad de una subasta. */

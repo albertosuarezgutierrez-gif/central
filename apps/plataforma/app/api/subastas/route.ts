@@ -6,14 +6,16 @@ import { prisma } from '@/lib/db'
 import { requireEmpresaId } from '@/lib/tenant'
 import { evaluarOportunidad } from '@central/module-subastas'
 import { COLS_SUBASTA, filaASubasta } from '@/lib/subastas-radar'
+import { paramsCoste } from '@/lib/subastas/params-coste'
 
 export const dynamic = 'force-dynamic'
 
 const POR_PAGINA = 30
 
 export async function GET(req: NextRequest) {
+  let cuentaId: string
   try {
-    await requireEmpresaId()
+    cuentaId = await requireEmpresaId()
   } catch {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
@@ -66,14 +68,21 @@ export async function GET(req: NextRequest) {
   const where = Prisma.sql`WHERE ${Prisma.join(cond, ' AND ')}`
 
   try {
-    const [filas, total] = await Promise.all([
+    const [filas, total, criterios] = await Promise.all([
       prisma.$queryRaw<any[]>(Prisma.sql`
         SELECT ${COLS_SUBASTA} FROM subastas ${where}
         ORDER BY fecha_fin ASC NULLS LAST, actualizado_en DESC
         LIMIT ${POR_PAGINA} OFFSET ${offset}
       `),
       prisma.$queryRaw<{ total: number }[]>(Prisma.sql`SELECT COUNT(*)::int AS total FROM subastas ${where}`),
+      // Coste del dinero declarado por la cuenta (si lo hay): el listado tiene
+      // que dar el MISMO coste que la pantalla, no uno sin financiar.
+      prisma.$queryRaw<any[]>(Prisma.sql`
+        SELECT financia_pct, financia_tipo_anual, financia_meses, financia_comision
+        FROM subastas_criterios WHERE cuenta_id = ${cuentaId}::uuid
+      `).catch(() => [] as any[]),
     ])
+    const params = paramsCoste(criterios[0])
 
     // La oportunidad se calcula al vuelo: es determinista y barato, y así
     // refleja siempre el último enriquecimiento sin quedarse cacheada.
@@ -81,7 +90,7 @@ export async function GET(req: NextRequest) {
       const s = filaASubasta(f)
       return {
         subasta: s,
-        oportunidad: evaluarOportunidad(s),
+        oportunidad: evaluarOportunidad(s, null, params),
         notasEdicto: f.notas_edicto ?? null,
         tipoBien: f.tipo_bien ?? null,
         esPlaya: f.es_playa ?? false,

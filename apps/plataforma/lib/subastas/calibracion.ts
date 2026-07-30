@@ -8,8 +8,10 @@ import { prisma } from '@/lib/db'
 import {
   calibracionAdjudicaciones,
   calibracionPorCargas,
+  calibracionPuja,
   referenciaPorZona,
   type CalibracionCargas,
+  type CalibracionPuja,
   type CalibracionZona,
   type ReferenciaZona,
 } from '@central/module-subastas'
@@ -53,6 +55,32 @@ export async function calibracionCargas(): Promise<CalibracionCargas[]> {
       resultado: f.resultado,
       cargasSubsistentes: f.cargas == null ? null : Number(f.cargas),
       cargasConocidas: f.cargas_conocidas ?? false,
+    })),
+  )
+}
+
+/**
+ * ¿ACERTAMOS con la puja máxima? Contrasta el techo que el clasificador congeló
+ * (`puja_maxima_calc`, calculado ANTES del remate) contra lo que de verdad pagó
+ * el adjudicatario. Es el bucle que cierra el sistema: sin esto, el agente
+ * calcula un techo de puja para siempre y nadie sabe nunca si es realista.
+ *
+ * Con el corpus recién nacido devuelve `lectura: null` — la UI calla en vez de
+ * concluir algo de dos casos.
+ */
+export async function calibracionDePuja(): Promise<CalibracionPuja> {
+  const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
+    SELECT provincia, valor_subasta, importe_adjudicacion, resultado, puja_maxima_calc
+    FROM subastas
+    WHERE es_inmueble = true AND resultado IS NOT NULL AND puja_maxima_calc IS NOT NULL
+  `)
+  return calibracionPuja(
+    filas.map((f) => ({
+      provincia: f.provincia,
+      valorSubasta: f.valor_subasta == null ? null : Number(f.valor_subasta),
+      importeAdjudicacion: f.importe_adjudicacion == null ? null : Number(f.importe_adjudicacion),
+      resultado: f.resultado,
+      pujaMaxima: f.puja_maxima_calc == null ? null : Number(f.puja_maxima_calc),
     })),
   )
 }

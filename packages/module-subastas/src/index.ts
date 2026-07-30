@@ -82,8 +82,17 @@ export type { Comparable } from './comparables.ts'
 export { detectarChollos, zonasDeComparable, estimarAntiguedad, CHOLLO_DESCUENTO_MIN, CHOLLO_DESCUENTO_SOSPECHOSO } from './comparables.ts'
 export type { Chollo, ObservacionRef, VelocidadZona, ZonaPortalRef } from './comparables.ts'
 // Calibración con RESULTADOS reales: a qué % del tipo se adjudica de verdad
-export { calibracionAdjudicaciones, calibracionPorCargas, MIN_MUESTRA_CALIBRACION } from './adjudicaciones.ts'
-export type { ResultadoConcluido, CalibracionZona, ResultadoConCargas, CalibracionCargas } from './adjudicaciones.ts'
+export { calibracionAdjudicaciones, calibracionPorCargas, calibracionPuja, MIN_MUESTRA_CALIBRACION, MIN_MUESTRA_PUJA } from './adjudicaciones.ts'
+export type {
+  ResultadoConcluido, CalibracionZona, ResultadoConCargas, CalibracionCargas,
+  ResultadoConPuja, CalibracionPuja,
+} from './adjudicaciones.ts'
+// Deuda con la comunidad (art. 9.1.e LPH) y coste del dinero del puente: las
+// dos partidas que no publica nadie y que se comen el margen.
+export { deudaComunidadEstimada, tienePropiedadHorizontal, ANUALIDADES_MAXIMAS, ANIOS_IMPAGO_ASUMIDOS, CUOTA_M2_MES } from './comunidad.ts'
+export type { DeudaComunidad, EntradaComunidad } from './comunidad.ts'
+export { costeFinanciacion, DIAS_PARA_PAGAR, MESES_PUENTE_ASUMIDOS } from './financiacion.ts'
+export type { ParamsFinanciacion, CosteFinanciacion } from './financiacion.ts'
 // API oficial de Idealista (Search API): consulta directa por zona vigilada,
 // mismo corpus y mismo dedupe que las alertas de correo
 export { comparablesDesdeApiIdealista, tipoDesdePropertyType, centroBusquedaIdealista, llamadasPermitidasIdealista, IDEALISTA_LIMITE_MENSUAL, IDEALISTA_MARGEN_MENSUAL, IDEALISTA_DIAS_CACHE_ZONA } from './idealista-api.ts'

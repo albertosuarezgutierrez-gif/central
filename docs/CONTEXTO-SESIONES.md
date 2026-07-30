@@ -24,6 +24,22 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⚖️ Subastas — 3 partidas que faltaban en el coste real (30/07/2026, misma rama/PR #1176).** De las 5
+  ideas que propuse, Alberto aprobó «2, 4 y 5» (la 3 —nota simple viva— la dejó **para el final del todo**;
+  la 1 —caducidad de anotaciones, art. 86 LH— sigue **sin decidir**).
+  - **Comunidad (art. 9.1.e LPH)** — `comunidad.ts`: el adquirente hereda la anualidad en curso + 3
+    anteriores y NADIE lo publica (ni BOE ni certificación). Se estima por baremo €/m²·mes solo en
+    propiedad horizontal; `importe: null` (nunca 0) si no procede o falta superficie. Entra sola en
+    `calcularCoste` con su aviso; `estimarComunidad:false` vuelve al comportamiento anterior.
+  - **Coste del dinero (art. 670 LEC)** — `financiacion.ts`: 40 días para consignar y ningún banco
+    hipoteca lo que aún no es tuyo → puente. **NO se inventa**: se declara por cuenta en ⚙️ Criterios
+    (`subastas_criterios.financia_*`, migración aplicada, guardadas en tanto por uno / tecleadas en %) y
+    se aplica en las 3 vistas de usuario (página, `/api/subastas`, radar). El cron `clasificar` NO lo usa
+    (esas columnas son del corpus global, compartido entre cuentas).
+  - **Bucle de la puja** — nueva `subastas.puja_maxima_calc` (migración aplicada): el clasificador congela
+    el techo calculado mientras la subasta está viva y `calibracionDePuja()` lo contrasta con el remate
+    real al concluir. Sin muestra (≥5) devuelve `lectura: null` y la UI calla.
+  - 303 tests módulo · 215 app · tsc 0 · build OK.
 - **🔍⚖️ Subastas — el agente LEE los escaneados y solo avisa de lo rentable y limpio (30/07/2026,
   rama `claude/subasta-carga-no-publicadas-jm7ky6`).** Tras el PR #1172, Alberto vio otra ficha con
   «Cargas no publicadas» (SUB-JA-2026-264269, Belmonte): tenía su certificación adjunta pero es un
