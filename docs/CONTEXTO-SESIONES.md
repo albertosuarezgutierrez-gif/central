@@ -32,7 +32,17 @@
   activar `apply_enabled` de Dúplex/House y desconectar PL. Vigilar: `incomes` sin insertar desde 25/07
   (1er sync post-dispatcher mañana 05:00 UTC), comps House solo proxy 8p×1,15 (la API de Booking topa en
   8 adultos; aforo 12 correcto en BD). Aforo Luxury actualizado 4→5 en `pricing_piso_zona` (OK Alberto 30/07).
-  Doc de skill actualizada (suelos 65/72 del 28/07). 6 alertas de guard abiertas pre-recalibración. dedupe PSD2 anti-drift + ventana Smoobu (30/07/2026, rama
+  Doc de skill actualizada (suelos 65/72 del 28/07). 6 alertas de guard abiertas pre-recalibración.
+
+- **🏷️ Banca: compra de tarjeta ya no cae en palabra-trampa + bandeja pregunta el NEGOCIO (30/07/2026,
+  rama `claude/restaurante-charge-agent-issue-8lxiwv`).** Restaurante "LA HACIENDA GOLF" caía a
+  `categoria='impuestos'` ('HACIENDA' a secas en `categorizarPorReglas`, tras las reglas de comercio).
+  Reglas extraídas a `lib/categoria-reglas.ts` (PURO, 6 tests): compra con tarjeta → 'tarjeta' ANTES de
+  reglas de comercio; 'HACIENDA' suelto retirado. `RevisarBandeja` de `/banca` ahora pregunta el negocio
+  (botones Correduría/Personal + Otro…) vía `/api/banca/destino` (confirma + aprende regla), en vez de la
+  taxonomía PGC que confundía a Alberto. Backfill `2026-07-30_categoria_compra_tarjeta.sql` aplicado (3 filas).
+
+- **⚕️ Health check 30/07 resuelto: dedupe PSD2 anti-drift + ventana Smoobu (30/07/2026, rama
   `claude/health-check-2026-07-30-vlv4c7`).** Check 1: el mismo abono BBVA entra 2 veces porque el banco
   re-sirve el concepto con `Nº`→`N` (3er caso: 16/06, 25/06, 22/07 413,17€ Dúplex) → guarda post-ingesta
   en `lib/psd2.ts` (compara conceptos sin puntuación, conserva la fila antigua) + saneo
@@ -69,8 +79,8 @@
   - Verificado: 13/13 tests, `tsc --noEmit` 0. El heartbeat de `/auditoria-diaria` (paso 2-bis) sigue
     valiendo tal cual (vigila frescura en BD, no `vercel.json`) y ahora además vigila de facto el
     dispatcher (si muere, TODOS los crons enmudecen → saltaría en la primera pasada).
-- **💸 Transferencias SEPA "libres" (formulario) + fix redirect del pago de facturas (29/07/2026, rama
-  `claude/agente-contable-notificaciones-cbouni`).** Alberto: "con la conexión de los bancos, ¿puedes hacer
+- **💸 Transferencias SEPA "libres" (formulario) + fix redirect del pago de facturas (29/07/2026, ✅ MERGEADO
+  PR #1138, squash commit `4844e17`).** Alberto: "con la conexión de los bancos, ¿puedes hacer
   transferencias?" → sí, pero el PIS (Enable Banking) estaba solo cableado al pago de facturas de proveedor y
   APAGADO. Pidió desarrollar además la **transferencia libre a cualquier destinatario**. Hecho:
   - **`POST /api/banca/transferencia`** (con sesión): valida IBAN (mod-97 de `@central/module-pagos::validarIban`),
@@ -84,10 +94,13 @@
   - **Fix bug**: `lib/agente-facturas/pagos.ts` construía el `redirectUrl` del callback con precedencia rota
     (`A ?? B ? C : D` ignoraba el valor de `NEXTAUTH_URL`). Extraído a **`lib/base-url.ts::baseUrl()`** (reusado
     por el endpoint nuevo). Verificado `tsc` 0 + `next build` exit 0.
-  - **PENDIENTE de Alberto (config, no código):** para que las transferencias sean "un clic + firma" (PIS) en vez
-    de SEPA XML, faltan en Vercel `EB_PIS_ENABLED=true` + `EB_DEBTOR_IBAN` (IBAN Kutxabank), y confirmar que el
-    tier de Enable Banking incluye PIS. Sin eso, el formulario ya funciona vía SEPA XML.
-
+  - **PIS DESCARTADO (revisado en Enable Banking por Claude for Chrome, 29/07/2026):** en producción solo hay
+    **AIS** (lectura); el PIS que hay es de **sandbox**. Enable Banking exige ser **PISP autorizado** (licencia
+    regulatoria) o contratar un proveedor que lo sea, con presupuesto a medida (sin precios en panel). Para uso
+    personal NO compensa → **no activar `EB_PIS_ENABLED`/`EB_DEBTOR_IBAN` en prod** (fallaría, sin scope PIS). El
+    camino bueno y definitivo es el **SEPA XML** (rellenas el formulario → fichero → lo subes a Kutxabank y firmas).
+    El código PIS queda latente por si algún día se contrata; el objetivo ("prepárame la transferencia para solo
+    firmar") ya está cubierto por SEPA XML.
 - **🧠📈 Subastas — «añade todo»: calibración real, recordatorio 24h, chollos vs buscador, descartes que
   aprenden y señal de RECESIÓN (INE): HECHO y PROBADO E2E (29/07/2026, mediodía; PR #1159).** Alberto pidió
   implementar las 5 ideas de la sesión y preguntó «se habla de recesión inmobiliaria, ¿cómo lo averiguamos?».
