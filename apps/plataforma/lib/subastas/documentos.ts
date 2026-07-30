@@ -229,6 +229,9 @@ export async function procesarDocumentos(max = 10): Promise<{
           cargas_texto = COALESCE(${hayCargas ? resumirCargas(r.cuadro, subsistentes) : null}, cargas_texto),
           cargas_conocidas = (COALESCE(cargas_conocidas, false) OR ${hayCargas}),
           cargas_fuente = COALESCE(${hayCargas ? r.cuadro.fuente : null}, cargas_fuente),
+          -- Tasación pactada en la escritura: alimenta la serie de €/m² propia.
+          valoracion_pactada = COALESCE(${r.cuadro.valoracionPactada?.importe ?? null}, valoracion_pactada),
+          valoracion_pactada_anio = COALESCE(${r.cuadro.valoracionPactada?.anio ?? null}, valoracion_pactada_anio),
           documentos_leidos = ${r.leidos},
           actualizado_en = now()
         WHERE dedupe_key = ${f.dedupe_key}

@@ -6,6 +6,7 @@ import {
   mismoAcreedorQueEjecutante,
   normalizarCuadroCargas,
   resumirCargas,
+  compararCuadros,
   type CuadroCargas,
 } from '../src/cargas.ts'
 import { extraerJson } from '../src/cargas-prompt.ts'
@@ -269,4 +270,39 @@ test('pareceEscaneado distingue el PDF con texto del fotocopiado', () => {
   assert.ok(pareceEscaneado('   \n  '))
   assert.ok(pareceEscaneado('cuatro palabras sueltas del OCR'))
   assert.equal(pareceEscaneado('x'.repeat(600)), false)
+})
+
+// ── Comparar con una nota simple nueva (la certificación del BOE suele ser vieja)
+
+test('compararCuadros detecta carga nueva, cancelada, importe cambiado y desaparecida', () => {
+  const nuevo = {
+    ...BELMONTE,
+    cargas: [
+      // La hipoteca sigue, pero con menos pendiente.
+      { ...BELMONTE.cargas[0], importe: 21000 },
+      // El embargo de Gijón ya está cancelado (caducó).
+      { ...BELMONTE.cargas[1], cancelada: true },
+      // Aparece un embargo nuevo de Hacienda.
+      { tipo: 'embargo' as const, acreedor: 'AEAT', importe: 4200, fecha: '2025-03-01', rango: 'anterior' as const, cancelada: false, literal: 'embargo AEAT' },
+    ],
+  }
+  const cambios = compararCuadros(BELMONTE, nuevo)
+  const tipos = cambios.map((c) => c.tipo)
+
+  assert.ok(tipos.includes('importe'))
+  assert.ok(tipos.includes('cancelada'))
+  assert.ok(tipos.includes('nueva'))
+  // La anotación letra D) (la que ejecuta) no está en el nuevo cuadro → desaparecida.
+  assert.ok(tipos.includes('desaparecida'))
+  assert.ok(cambios.find((c) => c.tipo === 'nueva')!.detalle.includes('AEAT'))
+  assert.ok(cambios.find((c) => c.tipo === 'importe')!.detalle.includes('21.000,00€'))
+})
+
+test('compararCuadros no inventa cambios cuando el cuadro es el mismo', () => {
+  assert.deepEqual(compararCuadros(BELMONTE, BELMONTE), [])
+})
+
+test('compararCuadros ignora variaciones de céntimos (redondeo del OCR)', () => {
+  const nuevo = { ...BELMONTE, cargas: [{ ...BELMONTE.cargas[0], importe: 44850.2 }, ...BELMONTE.cargas.slice(1)] }
+  assert.equal(compararCuadros(BELMONTE, nuevo).length, 0)
 })

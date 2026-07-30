@@ -33,6 +33,65 @@ export interface CalibracionZona {
 /** Muestra mínima por provincia para publicar su calibración. */
 export const MIN_MUESTRA_CALIBRACION = 3
 
+/**
+ * Fila concluida ENRIQUECIDA con lo que se leyó de su certificación, para poder
+ * contrastar teoría contra realidad: ¿de verdad se remata más bajo (o queda
+ * desierta) una finca que arrastra cargas anteriores?
+ */
+export interface ResultadoConCargas extends ResultadoConcluido {
+  /** Lo que heredaba el adjudicatario. `null` = no se llegó a leer. */
+  cargasSubsistentes: number | null
+  cargasConocidas: boolean
+}
+
+export interface CalibracionCargas {
+  grupo: 'con_cargas' | 'sin_cargas' | 'sin_leer'
+  muestra: number
+  adjudicadas: number
+  desiertas: number
+  /** % de las concluidas que acabaron desiertas. */
+  tasaDesierta: number | null
+  ratioMediano: number | null
+  muestraRatio: number
+}
+
+/**
+ * Calibración por PRESENCIA DE CARGAS. Es la comprobación empírica de la regla
+ * que este módulo aplica a mano: si el grupo `con_cargas` queda desierto mucho
+ * más a menudo o se remata mucho más bajo, el mercado le está dando la razón al
+ * semáforo, y el descuento exigido a esas fincas debería subir.
+ *
+ * Sin muestra no se concluye nada: se devuelven los grupos con sus contadores y
+ * el ratio a `null`, para que la UI muestre «aún sin datos» en vez de un número
+ * que no significa nada.
+ */
+export function calibracionPorCargas(filas: ResultadoConCargas[]): CalibracionCargas[] {
+  const grupos: Array<CalibracionCargas['grupo']> = ['con_cargas', 'sin_cargas', 'sin_leer']
+
+  return grupos.map((grupo) => {
+    const delGrupo = filas.filter((f) => {
+      if (!f.cargasConocidas || f.cargasSubsistentes == null) return grupo === 'sin_leer'
+      return f.cargasSubsistentes > 0 ? grupo === 'con_cargas' : grupo === 'sin_cargas'
+    })
+
+    const adjudicadas = delGrupo.filter((f) => /adjudicad/i.test(f.resultado ?? '')).length
+    const desiertas = delGrupo.filter((f) => /desiert/i.test(f.resultado ?? '')).length
+    const ratios = delGrupo
+      .filter((f) => f.importeAdjudicacion != null && (f.valorSubasta ?? 0) > 0)
+      .map((f) => f.importeAdjudicacion! / f.valorSubasta!)
+
+    return {
+      grupo,
+      muestra: delGrupo.length,
+      adjudicadas,
+      desiertas,
+      tasaDesierta: adjudicadas + desiertas > 0 ? desiertas / (adjudicadas + desiertas) : null,
+      ratioMediano: mediana(ratios),
+      muestraRatio: ratios.length,
+    }
+  })
+}
+
 function mediana(valores: number[]): number | null {
   if (!valores.length) return null
   const v = [...valores].sort((a, b) => a - b)

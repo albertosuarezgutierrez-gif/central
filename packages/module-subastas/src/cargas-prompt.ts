@@ -37,7 +37,8 @@ Devuelve SOLO un objeto JSON, sin explicación ni markdown, con esta forma:
       "literal": "cita textual del documento donde consta esta carga"
     }
   ],
-  "notas": ["observaciones relevantes en una frase"]
+  "notas": ["observaciones relevantes en una frase"],
+  "valoracionPactada": { "importe": número o null, "anio": año o null }
 }
 
 REGLAS QUE NO PUEDES SALTARTE:
@@ -68,7 +69,9 @@ REGLAS QUE NO PUEDES SALTARTE:
 
 9. Si el documento NO es una certificación ni un edicto (por ejemplo una tasación, un justificante de pago o una minuta de honorarios), devuelve "cargas": [] y explica en "notas" qué es. No fuerces cargas donde no las hay.
 
-10. "confianza": baja (< 0.5) si el escaneo es malo, si faltan páginas o si no puedes fijar los rangos.`
+10. "confianza": baja (< 0.5) si el escaneo es malo, si faltan páginas o si no puedes fijar los rangos.
+
+11. "valoracionPactada": si la escritura de hipoteca fijó un valor "a efectos de subasta", recógelo con el año de la escritura. Es una tasación real de la finca y sirve para valorarla. Ejemplo: "Se valora a efectos de subasta en 47.274,90 euros" en una hipoteca de 2009 → {"importe": 47274.90, "anio": 2009}. Si no consta, null en ambos. NO lo confundas con el tipo de la subasta actual ni con la responsabilidad hipotecaria.`
 
 /**
  * Extrae el primer objeto JSON de la respuesta del modelo. Los modelos de

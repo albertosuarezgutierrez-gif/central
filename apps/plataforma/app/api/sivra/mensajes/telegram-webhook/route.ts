@@ -305,11 +305,97 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
+    // ── Reaparición: la misma finca vuelve más barata ────────────────────────
+    // El aviso viene por `dedupe_key` (no por fila de radar): la segunda vuelta
+    // puede no haber casado criterios, y aun así interesa seguirla.
+    if (prefix === 'subv') {
+      const clave = args[0]
+      if (!clave) { await tgAnswerCallback(cb.id, 'No encontrada'); return NextResponse.json({ ok: true }) }
+      if (action === 'no') {
+        await tgAnswerCallback(cb.id, '🚫 Vale, no insisto con esta')
+        return NextResponse.json({ ok: true })
+      }
+      const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
+        SELECT dedupe_key, fecha_fin FROM subastas WHERE dedupe_key = ${clave} LIMIT 1
+      `)
+      if (!filas.length) { await tgAnswerCallback(cb.id, 'No encontrada'); return NextResponse.json({ ok: true }) }
+      // Alta en seguidas para la cuenta real (la única con criterios de subastas).
+      const cuentas = await prisma.$queryRaw<any[]>(Prisma.sql`
+        SELECT cuenta_id FROM subastas_criterios WHERE activo = true ORDER BY created_at ASC LIMIT 1
+      `).catch(() => [])
+      const cuentaId = cuentas[0]?.cuenta_id
+      if (!cuentaId) { await tgAnswerCallback(cb.id, 'No hay cuenta con criterios activos'); return NextResponse.json({ ok: true }) }
+      await prisma.$executeRaw(Prisma.sql`
+        INSERT INTO subastas_seguidas (cuenta_id, dedupe_key, subasta, fecha_fin)
+        SELECT ${cuentaId}::uuid, dedupe_key, to_jsonb(subastas) - 'fts', fecha_fin
+        FROM subastas WHERE dedupe_key = ${clave}
+        ON CONFLICT DO NOTHING
+      `).catch((e) => console.error('[telegram-webhook] subv:seguir', e))
+      await tgAnswerCallback(cb.id, '👀 Siguiéndola — entra en el aviso de cierre')
+      return NextResponse.json({ ok: true })
+    }
+
     // ── Siguiente paso de una subasta: consulta al juzgado ──────────────────
     // Las dudas que deja la certificación (¿subsiste la hipoteca anterior?, ¿está
     // ocupado?, ¿cuánto se debe de comunidad?) solo las resuelve el órgano que
     // lleva la ejecución, y son las que deciden si la operación sale o no. Este
     // botón redacta el escrito con las preguntas de ESA subasta.
+    // Enviar de verdad la consulta al órgano gestor. Se manda desde el buzón del
+    // monorepo con Reply-To a Alberto: así la respuesta le llega a él (y el triaje
+    // de correo puede reconocerla), no a un buzón que nadie lee.
+    if (prefix === 'subn' && action === 'enviar') {
+      const radarId = args[0]
+      if (!radarId) { await tgAnswerCallback(cb.id, 'No encontrado'); return NextResponse.json({ ok: true }) }
+      await tgAnswerCallback(cb.id, '📨 Enviando…')
+      try {
+        const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
+          SELECT r.dedupe_key, r.subasta, s.cargas_detalle, s.autoridad, s.telefono_autoridad,
+                 s.email_autoridad, s.direccion, s.arrendamiento_inscrito
+          FROM subastas_radar r
+          LEFT JOIN subastas s ON s.dedupe_key = r.dedupe_key
+          WHERE r.id = ${radarId}::uuid
+        `)
+        const fila = filas[0]
+        if (!fila) { await tgSend('No encuentro esa subasta.'); return NextResponse.json({ ok: true }) }
+
+        const { preguntasParaJuzgado, escritoConsulta, enviarConsulta } = await import('@/lib/subastas/consulta-juzgado')
+        const { getTransporter, MAIL_FROM } = await import('@/lib/mailer')
+        const datos = {
+          subasta: fila.subasta ?? { dedupeKey: fila.dedupe_key },
+          cuadro: fila.cargas_detalle ?? null,
+          autoridad: fila.autoridad ?? null,
+          telefono: fila.telefono_autoridad ?? null,
+          email: fila.email_autoridad ?? null,
+          direccion: fila.direccion ?? null,
+          arrendamientoInscrito: fila.arrendamiento_inscrito ?? null,
+        }
+        const escrito = escritoConsulta(datos, preguntasParaJuzgado(datos))
+        // Sin SMTP configurado en este proyecto Vercel no se puede enviar: se dice
+        // en claro en vez de fallar en silencio (las envs SMTP_* viven hoy en ialimp).
+        const transporter = getTransporter()
+        if (!transporter) {
+          await tgSend('⚠️ No hay correo saliente configurado en plataforma (falta SMTP). El texto lo tienes arriba para mandarlo a mano.')
+          return NextResponse.json({ ok: true })
+        }
+
+        const r = await enviarConsulta(datos, escrito, {
+          enviar: ({ to, subject, text, replyTo }) =>
+            transporter.sendMail({ from: `"Subastas" <${MAIL_FROM}>`, to, subject, text, replyTo }),
+          registrar: ({ dedupeKey, email, escrito: cuerpo }) =>
+            prisma.$executeRaw(Prisma.sql`
+              INSERT INTO subastas_consultas (dedupe_key, email_destino, escrito, enviado_at)
+              VALUES (${dedupeKey}, ${email}, ${cuerpo}, now())
+            `),
+          replyTo: process.env.GMAIL_USER || undefined,
+        })
+        await tgSend(r.enviado ? `✅ ${r.motivo}` : `⚠️ No la he enviado: ${r.motivo}`)
+      } catch (e) {
+        console.error('[telegram-webhook] subn:enviar', e)
+        await tgSend('No he podido enviar la consulta. El texto lo tienes arriba para mandarlo a mano.').catch(() => {})
+      }
+      return NextResponse.json({ ok: true })
+    }
+
     if (prefix === 'subn' && action === 'consulta') {
       const radarId = args[0]
       if (!radarId) { await tgAnswerCallback(cb.id, 'No encontrado'); return NextResponse.json({ ok: true }) }
@@ -343,11 +429,19 @@ export async function POST(req: NextRequest) {
           datos.telefono ? `☎️ ${datos.telefono}` : null,
         ].filter(Boolean).join('  ·  ')
 
-        await tgSend(
+        // Con correo del órgano se ofrece mandarla desde aquí; sin él, solo el texto
+        // (muchos juzgados publican solo teléfono o exigen sede judicial).
+        const cuerpo =
           `📝 <b>Consulta para ${escapeHtml(String(datos.subasta.identificador ?? fila.dedupe_key))}</b>` +
-            `${contacto ? `\n${escapeHtml(contacto)}` : ''}\n\n<pre>${escapeHtml(escrito)}</pre>`,
-          { html: true },
-        )
+          `${contacto ? `\n${escapeHtml(contacto)}` : ''}\n\n<pre>${escapeHtml(escrito)}</pre>`
+        if (datos.email) {
+          // tgSendButtons ya manda parse_mode HTML.
+          await tgSendButtons(cuerpo, [[
+            { texto: '📨 Enviar al juzgado', callback: `subn:enviar:${radarId}` },
+          ]])
+        } else {
+          await tgSend(cuerpo, { html: true })
+        }
       } catch (e) {
         console.error('[telegram-webhook] subn:consulta', e)
         await tgSend('No he podido preparar la consulta. Lo tienes en /subastas.').catch(() => {})

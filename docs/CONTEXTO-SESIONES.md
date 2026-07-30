@@ -24,6 +24,33 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔍⚖️ Subastas — el agente LEE los escaneados y solo avisa de lo rentable y limpio (30/07/2026,
+  rama `claude/subasta-carga-no-publicadas-jm7ky6`).** Tras el PR #1172, Alberto vio otra ficha con
+  «Cargas no publicadas» (SUB-JA-2026-264269, Belmonte): tenía su certificación adjunta pero es un
+  ESCANEO (`chars:0` en pdf-parse) → se descartaba en silencio. Solo 4 de 34 vigentes tenían cargas.
+  - **Rescate de escaneados:** `pdf-imagenes.ts` (puro) localiza los JPEG por marcadores SOI/EOI y
+    agrupa las BANDAS en páginas (263 bandas → 10 páginas en el caso real); `lector-registral.ts` las
+    recompone con **sharp** (nueva dep de plataforma) y las lee por visión. **Verificado contra el PDF
+    real: el módulo reproduce las 10 páginas exactas que se leyeron a mano.**
+  - **Cargas estructuradas + QUÉ SUBSISTE** (`cargas.ts` puro): rango anterior/posterior/la-que-ejecuta
+    y purga de los arts. 668/670 LEC. **En ejecución por EMBARGO la hipoteca anterior NO se purga** —
+    Belmonte: salida 19.329€ + 44.850€ de hipoteca de 2009. Procedimiento desconocido → `null`, nunca 0.
+    Doble lectura + `consensoCuadros` anula el importe en que discrepen (Alberto decidió que la IA
+    extraiga cifras; esta es la red).
+  - **Director:** categoría `registral` con exigencia de modalidad `image` (un modelo de solo texto
+    devolvería cargas vacías = «finca limpia», el peor fallo) + `openrouterVision` en core-ai.
+  - **`lector_version`** en BD: subirla relee las fichas (antes `notas_edicto=''` las congelaba).
+  - **«añade todo» (5 ideas):** `decidirAviso` (solo rentable Y limpio interrumpe; lo no leído ESPERA
+    salvo cierre ≤4 días, marcado sin verificar) · `reaparicion.ts` (misma finca más barata, identidad
+    por REF CATASTRAL, nunca por descripción) · `calibracionPorCargas` (¿el mercado castiga las cargas?)
+    · `valoracion-historica.ts` (serie €/m² propia desde las tasaciones pactadas en escritura) ·
+    `compararCuadros` (nota simple nueva vs certificación vieja) · botones Telegram «📝 consulta al
+    juzgado» y «📨 enviar» (`subastas_consultas`).
+  - Migraciones aplicadas: `2026-07-30_cargas_lector_registral.sql` + `_reapariciones_valoracion.sql`.
+    240 tests · tsc 0 · build OK. **PENDIENTE:** la llamada al modelo solo se puede probar en producción
+    (el preview va tras el SSO de Vercel); `eurM2Actualizado` queda null hasta ingerir la serie histórica
+    del IPV (hoy `mercado_indices` solo guarda la última variación); enganchar la nota simple al 📎 del chat.
+
 - **⚖️ Subastas: «Cargas no publicadas» falso cuando la certificación va como DOCUMENTO — MERGEADO
   (30/07/2026, PR #1172).** SUB-JA-2026-263723 (San Pablo, cierra 31/07) salía
   «Cargas no publicadas» pese a la CERTIFICACIÓN adjunta ya leída en `notas_edicto`: `cargas_conocidas` solo

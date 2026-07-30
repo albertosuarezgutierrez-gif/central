@@ -100,6 +100,48 @@ export function preguntasParaJuzgado(d: DatosConsulta): string[] {
   return q
 }
 
+/**
+ * Envía la consulta por email al órgano gestor y deja constancia. Devuelve el
+ * estado para que el llamante lo diga en Telegram.
+ *
+ * Se manda desde el buzón del monorepo (`MAIL_FROM`) con Reply-To al correo de
+ * Alberto, de forma que la respuesta del juzgado le llegue a él y el agente de
+ * triaje de correo pueda reconocerla y volcarla a la ficha.
+ *
+ * No se envía nada si la ficha no publica correo del órgano: muchos juzgados solo
+ * dan teléfono, y ahí el escrito se entrega a mano o por sede judicial.
+ */
+export async function enviarConsulta(
+  d: DatosConsulta,
+  escrito: string,
+  deps: {
+    enviar: (args: { to: string; subject: string; text: string; replyTo?: string }) => Promise<unknown>
+    registrar: (args: { dedupeKey: string; email: string; escrito: string }) => Promise<unknown>
+    replyTo?: string
+  },
+): Promise<{ enviado: boolean; motivo: string }> {
+  const email = (d.email ?? '').trim()
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    return {
+      enviado: false,
+      motivo: d.telefono
+        ? `La ficha no publica correo del órgano gestor; solo teléfono (${d.telefono}).`
+        : 'La ficha no publica correo ni teléfono del órgano gestor.',
+    }
+  }
+
+  const ref = d.subasta.identificador ?? d.subasta.dedupeKey
+  await deps.enviar({
+    to: email,
+    subject: `Solicitud de información — subasta ${ref}`,
+    text: escrito,
+    replyTo: deps.replyTo,
+  })
+  await deps.registrar({ dedupeKey: d.subasta.dedupeKey, email, escrito }).catch(() => {})
+
+  return { enviado: true, motivo: `Enviada a ${email}` }
+}
+
 /** Escrito completo listo para mandar. `plantilla` = sin pasar por la IA. */
 export function escritoConsulta(d: DatosConsulta, preguntas: string[]): string {
   const s = d.subasta

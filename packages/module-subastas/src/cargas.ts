@@ -59,8 +59,22 @@ export interface Carga {
   literal: string | null
 }
 
+/**
+ * Valor que la escritura de hipoteca pactó «a efectos de subasta». Es una
+ * TASACIÓN BANCARIA real de la finca, con su año: en Belmonte, 47.274,90€ en
+ * 2009. Acumulando estos pares se construye una serie de valoración propia por
+ * zona, independiente de los comparables de los portales (que son precios de
+ * oferta, no de tasación).
+ */
+export interface ValoracionPactada {
+  importe: number | null
+  anio: number | null
+}
+
 export interface CuadroCargas {
   cargas: Carga[]
+  /** Tasación pactada en la escritura, si la certificación la recoge. */
+  valoracionPactada?: ValoracionPactada
   /**
    * Vía por la que se subasta. Determina la purga:
    * `hipotecaria` = ejecución hipotecaria directa (arts. 681 ss. LEC);
@@ -122,8 +136,18 @@ export function normalizarCuadroCargas(bruto: unknown, fuente: FuenteCargas): Cu
   const proc = String(o.procedimiento ?? '').toLowerCase()
   const confianza = typeof o.confianza === 'number' && o.confianza >= 0 && o.confianza <= 1 ? o.confianza : 0.5
 
+  // Tasación pactada: solo se acepta con un año plausible (hay escrituras de los
+  // 90 en el registro, pero un «año» de 3 cifras es basura del OCR).
+  const vp = (o.valoracionPactada ?? {}) as Record<string, unknown>
+  const anioVp = Number(vp.anio)
+  const valoracionPactada: ValoracionPactada | undefined =
+    NUM(vp.importe) != null || (anioVp >= 1950 && anioVp <= 2100)
+      ? { importe: NUM(vp.importe), anio: anioVp >= 1950 && anioVp <= 2100 ? anioVp : null }
+      : undefined
+
   return {
     cargas,
+    valoracionPactada,
     procedimiento: proc === 'hipotecaria' || proc === 'embargo' ? proc : 'desconocido',
     sinMasCargas: o.sinMasCargas === true,
     notas: Array.isArray(o.notas) ? o.notas.filter((n): n is string => typeof n === 'string').map((n) => n.slice(0, 400)) : [],
@@ -298,6 +322,74 @@ export function consensoCuadros(a: CuadroCargas, b: CuadroCargas): { cuadro: Cua
     },
     discrepancias,
   }
+}
+
+export interface CambioCargas {
+  tipo: 'nueva' | 'desaparecida' | 'importe' | 'cancelada'
+  carga: Carga
+  detalle: string
+}
+
+/**
+ * Compara el cuadro que se leyó de la certificación del BOE con uno NUEVO (una
+ * nota simple recién pedida al registro, por ejemplo).
+ *
+ * Hace falta porque la certificación que el juzgado adjunta a la ficha suele ser
+ * de hace años —la de Belmonte es de agosto de 2020— y las cargas se mueven: se
+ * cancelan hipotecas, caducan embargos y aparecen otros nuevos. Antes de pujar en
+ * serio, una nota simple actualizada cuesta unos euros y esta función dice
+ * exactamente qué ha cambiado, en vez de obligar a releer dos documentos.
+ *
+ * Se emparejan las cargas por tipo + acreedor normalizado, no por importe (el
+ * importe es justo lo que puede haber cambiado).
+ */
+export function compararCuadros(anterior: CuadroCargas, nuevo: CuadroCargas): CambioCargas[] {
+  const norma = (c: Carga) => `${c.tipo}|${(c.acreedor ?? '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20)}`
+  const cambios: CambioCargas[] = []
+  const eur = (n: number) =>
+    `${n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' })}€`
+
+  for (const n of nuevo.cargas) {
+    const previa = anterior.cargas.find((a) => norma(a) === norma(n))
+    if (!previa) {
+      cambios.push({
+        tipo: 'nueva',
+        carga: n,
+        detalle: `Carga NUEVA que no estaba en la certificación: ${n.tipo.replace(/_/g, ' ')}` +
+          `${n.acreedor ? ` a favor de ${n.acreedor}` : ''}${n.importe != null ? ` por ${eur(n.importe)}` : ''}.`,
+      })
+      continue
+    }
+    if (n.cancelada && !previa.cancelada) {
+      cambios.push({
+        tipo: 'cancelada',
+        carga: n,
+        detalle: `Ya está CANCELADA: ${n.tipo.replace(/_/g, ' ')}${n.acreedor ? ` de ${n.acreedor}` : ''}` +
+          `${previa.importe != null ? ` (eran ${eur(previa.importe)})` : ''}. Deja de contar en el coste.`,
+      })
+      continue
+    }
+    if (previa.importe != null && n.importe != null && Math.abs(previa.importe - n.importe) > Math.max(previa.importe, n.importe) * 0.01) {
+      cambios.push({
+        tipo: 'importe',
+        carga: n,
+        detalle: `Cambia el importe de ${n.tipo.replace(/_/g, ' ')}: ${eur(previa.importe)} → ${eur(n.importe)}.`,
+      })
+    }
+  }
+
+  for (const a of anterior.cargas.filter((c) => !c.cancelada)) {
+    if (!nuevo.cargas.some((n) => norma(n) === norma(a))) {
+      cambios.push({
+        tipo: 'desaparecida',
+        carga: a,
+        detalle: `Ya no aparece: ${a.tipo.replace(/_/g, ' ')}${a.acreedor ? ` de ${a.acreedor}` : ''}` +
+          `${a.importe != null ? ` (${eur(a.importe)})` : ''}. Probablemente cancelada o caducada.`,
+      })
+    }
+  }
+
+  return cambios
 }
 
 /** Resumen legible del cuadro para la ficha y el aviso de Telegram. */

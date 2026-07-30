@@ -69,8 +69,8 @@ export type { Comparable } from './comparables.ts'
 export { detectarChollos, zonasDeComparable, estimarAntiguedad, CHOLLO_DESCUENTO_MIN, CHOLLO_DESCUENTO_SOSPECHOSO } from './comparables.ts'
 export type { Chollo, ObservacionRef, VelocidadZona, ZonaPortalRef } from './comparables.ts'
 // Calibración con RESULTADOS reales: a qué % del tipo se adjudica de verdad
-export { calibracionAdjudicaciones, MIN_MUESTRA_CALIBRACION } from './adjudicaciones.ts'
-export type { ResultadoConcluido, CalibracionZona } from './adjudicaciones.ts'
+export { calibracionAdjudicaciones, calibracionPorCargas, MIN_MUESTRA_CALIBRACION } from './adjudicaciones.ts'
+export type { ResultadoConcluido, CalibracionZona, ResultadoConCargas, CalibracionCargas } from './adjudicaciones.ts'
 // Fotocasa: mismas zonas, más particulares — segunda fuente de comparables
 export { parsearAlertaFotocasa, esAlertaFotocasa, datosFichaFotocasa, PORTAL_FOTOCASA } from './fotocasa.ts'
 export type { FichaFotocasa } from './fotocasa.ts'
@@ -88,6 +88,14 @@ export type { AnalisisDocumental, PuntoAnalisis, Nivel } from './analisis.ts'
 export { decidirAviso, DIAS_URGENTE } from './aviso.ts'
 export type { DecisionAviso, EntradaAviso, ResultadoAviso } from './aviso.ts'
 
+// La misma finca que vuelve a subasta con el tipo rebajado (identidad por catastro)
+export { detectarReapariciones, claveFinca, textoReaparicion, BAJADA_MINIMA } from './reaparicion.ts'
+export type { Convocatoria, Reaparicion } from './reaparicion.ts'
+
+// Serie de valoración PROPIA a partir de las tasaciones pactadas en las escrituras
+export { referenciaPorZona, MIN_MUESTRA_TASACIONES } from './valoracion-historica.ts'
+export type { TasacionPactada, ReferenciaZona } from './valoracion-historica.ts'
+
 // Cargas registrales: cuadro estructurado + QUÉ SUBSISTE para el adjudicatario.
 // La regla de subsistencia es determinista a propósito (de ella sale la puja).
 export {
@@ -96,8 +104,9 @@ export {
   mismoAcreedorQueEjecutante,
   consensoCuadros,
   resumirCargas,
+  compararCuadros,
 } from './cargas.ts'
-export type { Carga, CuadroCargas, CargasSubsistentes, TipoCarga, RangoCarga, FuenteCargas } from './cargas.ts'
+export type { Carga, CuadroCargas, CargasSubsistentes, TipoCarga, RangoCarga, FuenteCargas, ValoracionPactada, CambioCargas } from './cargas.ts'
 export { PROMPT_LECTOR_REGISTRAL, extraerJson } from './cargas-prompt.ts'
 
 // Rescate de PDFs escaneados (certificaciones fotocopiadas → imágenes legibles)

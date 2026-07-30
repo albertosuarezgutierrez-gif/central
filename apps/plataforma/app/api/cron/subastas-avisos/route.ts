@@ -181,6 +181,14 @@ export async function GET(req: NextRequest) {
 
     const antesala = await avisarAntesalaConcursal().catch(() => 0)
 
+    // La misma finca que vuelve más barata tras quedar desierta: no pasa por el
+    // filtro de «nuevas del radar» porque no es nueva, es una segunda vuelta.
+    const { avisarReapariciones } = await import('@/lib/subastas/reapariciones')
+    const reapariciones = await avisarReapariciones().catch((e) => {
+      console.error('[subastas-avisos] reapariciones', e)
+      return { detectadas: 0, avisadas: 0 }
+    })
+
     return NextResponse.json({
       ok: true,
       avisados: aAvisar.length,
@@ -188,6 +196,7 @@ export async function GET(req: NextRequest) {
       // Vuelven mañana, ya con la documentación leída.
       esperandoLector: esperando.length,
       antesala,
+      reapariciones,
     })
   } catch (e: any) {
     console.error('[subastas-avisos]', e)
