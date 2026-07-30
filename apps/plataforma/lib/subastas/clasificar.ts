@@ -1,4 +1,4 @@
-// Clasificador de lentes sobre el corpus: 🔨 flip, 🏖️ playa Huelva y 🚦
+// Clasificador de lentes sobre el corpus: 🔨 flip, 🏖️ playa (Huelva y Cádiz) y 🚦
 // semáforo documental. Todo DETERMINISTA con lógica del módulo puro — aquí
 // solo va la BD. Corre al final del cron `subastas-enriquecer`, cuando la fila
 // ya tiene ficha, Catastro, mercado y notas del edicto.
@@ -6,7 +6,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import {
   analisisDocumental,
-  esPlayaHuelva,
+  esPlaya,
   evaluarFlip,
   evaluarOportunidad,
   FLIP_MARGEN_MIN,
@@ -26,14 +26,14 @@ export async function clasificarSubastas(max = 400): Promise<{ revisadas: number
   `)
 
   const anio = new Date().getFullYear()
-  let playa = 0
+  let enPlaya = 0
   let flipViables = 0
 
   for (const f of filas) {
     const s = filaASubasta(f)
     const oportunidad = evaluarOportunidad(s)
     const flip = evaluarFlip(s, oportunidad, anio)
-    const esPlaya = esPlayaHuelva(s.municipio, s.descripcion, s.provincia)
+    const playa = esPlaya(s.municipio, s.descripcion, s.provincia)
     const analisis = analisisDocumental(s, f.notas_edicto ?? null)
     // Techo de puja para un 25% de descuento REAL — el mismo que pinta la ficha.
     // Se CONGELA aquí: cuando la subasta concluya, esta fila deja de entrar en la
@@ -44,12 +44,12 @@ export async function clasificarSubastas(max = 400): Promise<{ revisadas: number
       ? pujaMaximaParaDescuento(s, oportunidad.valorMercado, 0.25)
       : null
 
-    if (esPlaya) playa++
+    if (playa) enPlaya++
     if (flip.apto && (flip.margenPct ?? -1) >= FLIP_MARGEN_MIN) flipViables++
 
     await prisma.$executeRaw(Prisma.sql`
       UPDATE subastas SET
-        es_playa = ${esPlaya},
+        es_playa = ${playa},
         margen_flip = ${flip.margen},
         margen_flip_pct = ${flip.margenPct},
         flip_apto = ${flip.apto},
@@ -60,5 +60,5 @@ export async function clasificarSubastas(max = 400): Promise<{ revisadas: number
     `)
   }
 
-  return { revisadas: filas.length, playa, flipViables }
+  return { revisadas: filas.length, playa: enPlaya, flipViables }
 }

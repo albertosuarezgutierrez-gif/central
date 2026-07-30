@@ -41,8 +41,22 @@ import { elegirPorCategoria } from '@/lib/ia-director'
 const ALTO_PAGINA = 3000
 /** Techo de páginas por documento: una certificación cabe de sobra; evita facturas sorpresa. */
 const MAX_PAGINAS = 12
-/** Techo de imágenes por llamada de visión (los modelos degradan con muchas a la vez). */
-const IMAGENES_POR_LLAMADA = 4
+/**
+ * 🚨 UNA imagen por llamada. No es una preferencia: `llama-3.2-90b-vision` de
+ * NIM —el suplente gratis— rechaza con HTTP 400 cualquier petición con más de
+ * una («At most 1 image(s) may be provided in one request»), y con 4 páginas de
+ * 3.000 px el payload además se pasaba del tope de 25 MB. Las dos cosas
+ * dejaron la validación de producción del 30/07/2026 con CERO cargas, que es
+ * justo lo que se lee como «finca limpia».
+ */
+const IMAGENES_POR_LLAMADA = 1
+/**
+ * Calidad JPEG de la página. El PNG sin pérdida de una página escaneada ronda
+ * los 6-8 MB; en JPEG 82 baja a ~600 KB y el texto registral sigue siendo
+ * perfectamente legible para el modelo. Es lo que mantiene el payload lejos del
+ * tope del proveedor.
+ */
+const CALIDAD_JPEG = 82
 
 export interface LecturaDocumento {
   cuadro: CuadroCargas
@@ -54,8 +68,8 @@ export interface LecturaDocumento {
 }
 
 /**
- * Recompone las páginas de un PDF escaneado. Devuelve PNG en base64, listos para
- * el modelo de visión. `[]` si el PDF no lleva imágenes aprovechables.
+ * Recompone las páginas de un PDF escaneado. Devuelve JPEG en base64, listos
+ * para el modelo de visión. `[]` si el PDF no lleva imágenes aprovechables.
  *
  * Por qué hay que agrupar: los escáneres guardan cada página como decenas de
  * bandas horizontales (263 para 11 páginas en el caso real de Belmonte). Una
@@ -87,11 +101,11 @@ export async function paginasDePdfEscaneado(pdf: Buffer): Promise<ImageInput[]> 
       return item
     })
     try {
-      const png = await sharp({ create: { width: ancho, height: alto, channels: 3, background: '#ffffff' } })
+      const jpg = await sharp({ create: { width: ancho, height: alto, channels: 3, background: '#ffffff' } })
         .composite(composicion)
-        .png({ compressionLevel: 9 })
+        .jpeg({ quality: CALIDAD_JPEG, mozjpeg: true })
         .toBuffer()
-      paginas.push({ mediaType: 'image/png', data: png.toString('base64') })
+      paginas.push({ mediaType: 'image/jpeg', data: jpg.toString('base64') })
     } catch (e) {
       // Una página que no compone no invalida el documento: se sigue con las demás.
       console.warn('[lector-registral] composición fallida', e)
@@ -129,23 +143,35 @@ async function leerTexto(texto: string, modelo: string | undefined): Promise<Cua
   return normalizarCuadroCargas(extraerJson(text), 'texto_documento')
 }
 
-/** Una pasada de lectura sobre imágenes (en lotes, para no saturar al modelo). */
+/** Llamadas de visión simultáneas. Con una imagen por llamada, sin esto una
+ *  certificación de 10 páginas leída dos veces tardaría minutos y se comería el
+ *  `maxDuration` del cron. */
+const LLAMADAS_EN_PARALELO = 4
+
+/** Una pasada de lectura sobre imágenes: una llamada por página, en tandas. */
 async function leerImagenes(paginas: ImageInput[], modelo: string | undefined): Promise<CuadroCargas> {
   const trozos: string[] = []
-  for (let i = 0; i < paginas.length; i += IMAGENES_POR_LLAMADA) {
-    const lote = paginas.slice(i, i + IMAGENES_POR_LLAMADA)
-    const texto = await aiVision(
-      PROMPT_LECTOR_REGISTRAL,
-      lote,
-      i === 0
-        ? 'Lee estas páginas de la certificación registral y devuelve el JSON del cuadro de cargas.'
-        : 'Continúan las páginas del mismo documento. Devuelve el JSON con lo que aporten estas páginas.',
-      { maxTokens: 2000, model: modelo, endpoint: 'registral-vision' },
-    ).catch((e) => {
-      console.warn('[lector-registral] visión fallida en el lote', i, e)
-      return ''
-    })
-    if (texto) trozos.push(texto)
+  for (let i = 0; i < paginas.length; i += LLAMADAS_EN_PARALELO * IMAGENES_POR_LLAMADA) {
+    const tanda: Array<Promise<string>> = []
+    for (let j = i; j < Math.min(i + LLAMADAS_EN_PARALELO * IMAGENES_POR_LLAMADA, paginas.length); j += IMAGENES_POR_LLAMADA) {
+      const lote = paginas.slice(j, j + IMAGENES_POR_LLAMADA)
+      const pagina = j + 1
+      tanda.push(
+        aiVision(
+          PROMPT_LECTOR_REGISTRAL,
+          lote,
+          `Página ${pagina} de ${paginas.length} de la certificación registral. Devuelve el JSON del cuadro ` +
+            'de cargas con lo que aparezca EN ESTA PÁGINA; si no aporta cargas, devuelve la lista vacía.',
+          { maxTokens: 2000, model: modelo, endpoint: 'registral-vision' },
+        ).catch((e) => {
+          console.warn('[lector-registral] visión fallida en la página', pagina, e)
+          return ''
+        }),
+      )
+    }
+    for (const texto of await Promise.all(tanda)) {
+      if (texto) trozos.push(texto)
+    }
   }
   if (!trozos.length) return normalizarCuadroCargas(null, 'ocr_ia')
 

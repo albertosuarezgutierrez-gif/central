@@ -67,12 +67,20 @@ export async function aiVision(
   const timeoutMs = opts.timeoutMs ?? 60_000
   const entrada = system + userText
 
-  const or = openrouterConfigPasarela()
+  // 🚨 Sin un modelo MULTIMODAL explícito NO se llama a OpenRouter (30/07/2026).
+  // El default de la pasarela es un modelo de TEXTO (`OPENROUTER_MODEL`), y
+  // mandarle imágenes devuelve «No endpoints found that support image input»
+  // (404) en cada intento: la validación del lector registral en producción se
+  // quedó con cero cargas por esto, que se lee como «finca limpia» — el peor
+  // fallo posible. Cuando el catálogo del Director aún no ofrece la categoría
+  // `registral`, se va directo a NIM, que sí tiene modelo de visión conocido.
+  const modeloVision = opts.model ?? process.env.OPENROUTER_VISION_MODEL
+  const or = modeloVision ? openrouterConfigPasarela() : null
   if (or) {
     const t0 = Date.now()
     try {
       const res = await openrouterVisionEx(or, system, images, userText, {
-        model: opts.model,
+        model: modeloVision,
         maxTokens,
         signal: AbortSignal.timeout(timeoutMs),
       })
@@ -85,7 +93,7 @@ export async function aiVision(
     } catch (e) {
       const msg = e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 200) : 'error'
       await registrarUso({
-        app: 'plataforma', endpoint, proveedor: 'openrouter', modelo: opts.model ?? null,
+        app: 'plataforma', endpoint, proveedor: 'openrouter', modelo: modeloVision ?? null,
         ok: false, ms: Date.now() - t0, error: msg,
       })
       console.warn('[ai-client] visión OpenRouter falló, cae a NIM:', msg)

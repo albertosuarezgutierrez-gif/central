@@ -7,7 +7,8 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import {
   coincideSubasta,
-  esPlayaHuelva,
+  costaDe,
+  esPlaya,
   evaluarFlip,
   evaluarOportunidad,
   extraerDatos,
@@ -194,13 +195,14 @@ export async function casarParaCuenta(
     const oportunidad = evaluarOportunidad(s, null, params)
     const c = coincideSubasta(s, criterios, oportunidad)
 
-    // 🏖️ Costa de Huelva = segunda residencia: entra al radar AUNQUE no case
+    // 🏖️ Costa de Huelva y de Cádiz = segunda residencia: entra al radar AUNQUE no case
     // con los criterios de inversión (sin tope de precio, decisión de Alberto
     // 29/07/2026 — el precio va en el aviso y decide él).
-    const playa = esPlayaHuelva(s.municipio, s.descripcion, s.provincia)
+    const playa = esPlaya(s.municipio, s.descripcion, s.provincia)
+    const costa = costaDe(s.municipio, s.descripcion, s.provincia)
     if (!c.casa && !playa) continue
-    const motivos = c.casa ? [...c.motivos] : ['🏖️ Costa de Huelva — posible segunda residencia (fuera de tus criterios de inversión)']
-    if (c.casa && playa) motivos.push('🏖️ Costa de Huelva — también vale como segunda residencia')
+    const motivos = c.casa ? [...c.motivos] : [`🏖️ Costa de ${costa} — posible segunda residencia (fuera de tus criterios de inversión)`]
+    if (c.casa && playa) motivos.push(`🏖️ Costa de ${costa} — también vale como segunda residencia`)
 
     // 🔨 Lente flip: si el margen estimado supera el mínimo, se dice.
     const flip = evaluarFlip(s, oportunidad, anio)

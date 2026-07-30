@@ -49,7 +49,7 @@ export function preguntasParaJuzgado(d: DatosConsulta): string[] {
   const cuadro = d.cuadro
 
   if (cuadro) {
-    const subsistentes = cargasQueSubsisten(cuadro)
+    const subsistentes = cargasQueSubsisten(cuadro, new Date())
     const hipotecasAnteriores = subsistentes.cargas.filter((c) => c.tipo === 'hipoteca')
 
     // LA pregunta: en ejecución por embargo, la hipoteca anterior no se purga.
@@ -71,11 +71,18 @@ export function preguntasParaJuzgado(d: DatosConsulta): string[] {
       q.push(`¿Podrían indicar el importe actualmente pendiente de las siguientes cargas anteriores: ${sinImporte.map((c) => c.tipo.replace(/_/g, ' ')).join(', ')}?`)
     }
 
-    const embargosViejos = subsistentes.cargas.filter(
-      (c) => c.tipo === 'embargo' && c.fecha != null && /(19|20)\d{2}/.test(c.fecha) && Number(c.fecha.match(/(19|20)\d{2}/)![0]) <= new Date().getFullYear() - 4,
-    )
-    if (embargosViejos.length) {
-      q.push('Consta anotación de embargo anterior con más de cuatro años de antigüedad: ¿ha sido prorrogada o ha caducado conforme al artículo 86 de la Ley Hipotecaria?')
+    // Caducidad (art. 86 LH): la carga fantasma que infla el coste. Quién puede
+    // resolverlo de verdad es el juzgado, así que la pregunta va nominativa —
+    // con acreedor y fecha— para que la respuesta sea accionable.
+    if (subsistentes.posiblesCaducadas.length) {
+      const detalle = subsistentes.posiblesCaducadas
+        .map((c) => `${c.acreedor ? `a favor de ${c.acreedor}` : 'sin acreedor identificado'}${c.fecha ? `, de fecha ${c.fecha}` : ''}${c.importe != null ? `, por ${eur(c.importe)}` : ''}`)
+        .join('; ')
+      q.push(
+        `Consta${subsistentes.posiblesCaducadas.length === 1 ? '' : 'n'} anotación${subsistentes.posiblesCaducadas.length === 1 ? '' : 'es'} preventiva${subsistentes.posiblesCaducadas.length === 1 ? '' : 's'} ` +
+          `de embargo anterior${subsistentes.posiblesCaducadas.length === 1 ? '' : 'es'} con más de cuatro años de antigüedad (${detalle}): ` +
+          '¿ha sido prorrogada conforme al artículo 86 de la Ley Hipotecaria o ha caducado y procede su cancelación?',
+      )
     }
     if (!cuadro.sinMasCargas) {
       q.push('¿Se encuentra en el expediente certificación registral actualizada de dominio y cargas? En caso afirmativo, ¿podría facilitarse copia?')

@@ -21,6 +21,8 @@
 // depende la puja máxima.
 // ────────────────────────────────────────────────────────────────────────────
 
+import { caducidadDelCuadro } from './caducidad.ts'
+
 /** Naturaleza de la carga. `otra` es válida: no se fuerza una taxonomía cerrada. */
 export type TipoCarga =
   | 'hipoteca'
@@ -91,12 +93,27 @@ export interface CuadroCargas {
 }
 
 export interface CargasSubsistentes {
-  /** Suma de lo que el adjudicatario hereda. `null` = no se puede afirmar. */
+  /**
+   * Suma de lo que el adjudicatario hereda. `null` = no se puede afirmar.
+   * Es SIEMPRE la cifra conservadora: incluye las anotaciones que podrían haber
+   * caducado, porque mientras no se confirme la caducidad hay que contar con ellas.
+   */
   importe: number | null
   /** Las cargas que subsisten, para poder enseñarlas una a una. */
   cargas: Carga[]
   /** Las que se purgan con la adjudicación (informativo, tranquiliza). */
   purgadas: Carga[]
+  /**
+   * Anotaciones de embargo que por fecha PODRÍAN estar caducadas (art. 86 LH).
+   * Van dentro de `cargas` y dentro de `importe`: esto es solo la marca.
+   */
+  posiblesCaducadas: Carga[]
+  /**
+   * Coste si se confirma que esas anotaciones ya no existen — el escenario
+   * optimista, que se enseña al lado del conservador, nunca en su lugar.
+   * `null` cuando no se puede cuantificar.
+   */
+  importeSiCaducan: number | null
   avisos: string[]
 }
 
@@ -172,8 +189,14 @@ export function normalizarCuadroCargas(bruto: unknown, fuente: FuenteCargas): Cu
  *  · Las canceladas/caducadas no cuentan nunca.
  *  · Las afecciones fiscales no se suman (suelen ir sin importe y caducan a los
  *    5 años), pero se avisa de que existen.
+ *  · Las anotaciones de embargo pasadas de plazo (art. 86 LH) se MARCAN como
+ *    posibles caducadas y se cuantifica el escenario alternativo, pero siguen
+ *    dentro de `importe`: ver `caducidad.ts` para el porqué.
+ *
+ * @param hoy fecha de referencia para la caducidad. Se pasa desde fuera para que
+ *            la función siga siendo determinista; sin ella no se evalúa.
  */
-export function cargasQueSubsisten(cuadro: CuadroCargas): CargasSubsistentes {
+export function cargasQueSubsisten(cuadro: CuadroCargas, hoy?: Date): CargasSubsistentes {
   const vivas = cuadro.cargas.filter((c) => !c.cancelada)
   const avisos: string[] = []
 
@@ -182,6 +205,8 @@ export function cargasQueSubsisten(cuadro: CuadroCargas): CargasSubsistentes {
       importe: null,
       cargas: vivas.filter((c) => c.rango === 'anterior'),
       purgadas: [],
+      posiblesCaducadas: [],
+      importeSiCaducan: null,
       avisos: ['No se ha podido determinar si la subasta va por ejecución hipotecaria o por embargo: sin eso NO se puede saber qué cargas se purgan. Verificar en el edicto antes de pujar.'],
     }
   }
@@ -237,7 +262,29 @@ export function cargasQueSubsisten(cuadro: CuadroCargas): CargasSubsistentes {
     avisos.push('La certificación no cierra con la fórmula «sin más cargas»: puede faltar información registral.')
   }
 
-  return { importe, cargas: subsisten, purgadas, avisos }
+  // ── Caducidad de las anotaciones (art. 86 LH) ─────────────────────────────
+  // Se marca, se cuantifica aparte y se avisa; NUNCA se descuenta de `importe`.
+  let posiblesCaducadas: Carga[] = []
+  let importeSiCaducan: number | null = null
+  if (hoy) {
+    const cad = caducidadDelCuadro(subsisten, hoy)
+    posiblesCaducadas = cad.posiblesCaducadas
+    avisos.push(...cad.notas)
+    if (posiblesCaducadas.length && importe != null && !cad.ahorroIncompleto) {
+      importeSiCaducan = Math.round((importe - cad.ahorroPotencial) * 100) / 100
+      avisos.push(
+        `Si se confirmara la caducidad de ${posiblesCaducadas.length === 1 ? 'esa anotación' : `esas ${posiblesCaducadas.length} anotaciones`}, ` +
+          `lo que se hereda bajaría de ${formatearEur(importe)} a ${formatearEur(importeSiCaducan)}. ` +
+          'Cuenta con la cifra alta hasta tener una nota simple actualizada.',
+      )
+    }
+  }
+
+  return { importe, cargas: subsisten, purgadas, posiblesCaducadas, importeSiCaducan, avisos }
+}
+
+function formatearEur(n: number): string {
+  return `${n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' })}€`
 }
 
 /**
@@ -419,6 +466,17 @@ export function resumirCargas(cuadro: CuadroCargas, subsistentes: CargasSubsiste
       : 'No subsiste ninguna carga: se adquiere libre.')
   } else {
     lineas.push('Cargas subsistentes sin cuantificar.')
+  }
+
+  // El escenario alternativo va SIEMPRE debajo del conservador y etiquetado como
+  // hipótesis: nunca sustituye a la cifra que manda.
+  if (subsistentes.posiblesCaducadas.length) {
+    lineas.push(
+      `⏳ ${subsistentes.posiblesCaducadas.length === 1 ? 'Una anotación de embargo podría' : `${subsistentes.posiblesCaducadas.length} anotaciones de embargo podrían`} ` +
+        `estar caducada${subsistentes.posiblesCaducadas.length === 1 ? '' : 's'} (art. 86 LH)` +
+        (subsistentes.importeSiCaducan != null ? `: en ese caso heredaría ${eur(subsistentes.importeSiCaducan)}` : '') +
+        '. Sin confirmar.',
+    )
   }
 
   return [...lineas, ...cuadro.notas.map((n) => `· ${n}`), ...subsistentes.avisos].join('\n')

@@ -24,6 +24,37 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⚖️ Subastas: caducidad de embargos (art. 86 LH) + costa de Cádiz (30/07/2026, rama
+  `claude/subasta-carga-no-publicadas-jm7ky6` reiniciada tras mergear #1176).**
+  - **Caducidad (idea 1, la que faltaba)** — `caducidad.ts`: una anotación preventiva de embargo caduca a
+    los 4 años, pero el registro NO la borra sola, así que seguía sumándose entera al coste como carga
+    fantasma. Ahora se MARCA y se cuantifica el escenario alternativo (`posiblesCaducadas`,
+    `importeSiCaducan`); **`importe` no cambia nunca** — la prórroga se anota AL MARGEN, que es lo que peor
+    lee un escaneo, y equivocarse ahí lleva a pujar de más. Cualquier rastro de «prórroga» desactiva la
+    conclusión; margen de 6 meses; solo embargos (la hipoteca es inscripción, art. 82 LH). La pregunta al
+    juzgado pasa a ser nominativa (acreedor + fecha + importe).
+  - **Costa de Cádiz en la lente 🏖️** (petición de Alberto): municipios del litoral + núcleos (Zahara,
+    Novo Sancti Petri, Caños de Meca, Costa Ballena, Sotogrande…), `esPlaya`/`costaDe` sustituyen a
+    `esPlayaHuelva` en radar y clasificador. **Jerez NO entra en esa lente** a propósito (no es costa; ya
+    llega por la provincia de sus criterios) — meterlo saltaría el filtro de precio y de descuento.
+    Centros de búsqueda de Idealista completados para Cádiz.
+  - ⚠️ **Los comparables de Cádiz están casi vacíos** (solo Sanlúcar, 20 anuncios): sin €/m² de zona no hay
+    descuento ni margen flip. Hacen falta alertas de Idealista/Fotocasa de esas zonas al correo, o que
+    Idealista apruebe la API (solicitada el 30/07). Eso NO lo puede resolver el código.
+  - **🚨 VALIDACIÓN EN PRODUCCIÓN DEL LECTOR: el rescate del escaneado funciona, la lectura por IA NO
+    llegaba a ejecutarse** (30/07/2026, tras mergear #1176). El puente devolvió `via:'vision'`,
+    `paginas:10` (las páginas exactas) pero **0 cargas** y `procedimiento:'desconocido'`. En `ai_usos`,
+    TODAS las llamadas `registral-vision` fallaban por tres causas, ninguna del prompt:
+    (a) **OpenRouter 404 «No endpoints found that support image input»** — sin modelo del catálogo
+    (`registral` aún no está: el cron `ia-director-refresh` es semanal) caía al `OPENROUTER_MODEL` por
+    defecto, que es de TEXTO. Fix: `aiVision` NO llama a OpenRouter sin modelo multimodal explícito
+    (`opts.model` o env nueva `OPENROUTER_VISION_MODEL`); va directo a NIM, que sí tiene visión.
+    (b) **NIM 400 «At most 1 image(s) may be provided»** — `llama-3.2-90b-vision` acepta UNA imagen por
+    petición y se mandaban 4. Fix: `IMAGENES_POR_LLAMADA = 1` + 4 llamadas en paralelo para no comerse
+    el `maxDuration`. (c) **NIM 400 payload > 25 MB** — PNG sin pérdida de 3.000 px. Fix: JPEG calidad 82.
+    `LECTOR_VERSION` a **3** para que relea las 34 fichas. **Falta re-validar contra Belmonte.**
+  - 324 tests módulo · 215 app · tsc 0 · build OK.
+
 - **⚖️ Subastas — 3 partidas que faltaban en el coste real (30/07/2026, misma rama/PR #1176).** De las 5
   ideas que propuse, Alberto aprobó «2, 4 y 5» (la 3 —nota simple viva— la dejó **para el final del todo**;
   la 1 —caducidad de anotaciones, art. 86 LH— sigue **sin decidir**).

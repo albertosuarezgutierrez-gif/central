@@ -60,6 +60,8 @@ interface Documental {
   analisis?: PuntoAnalisis[] | null
   notasEdicto?: string | null
   documentos?: DocumentoAdjunto[] | null
+  /** Anotaciones de embargo pasadas de plazo (art. 86 LH). `null` = ninguna. */
+  caducidad?: { cuantas: number; importeSiCaducan: number | null } | null
 }
 interface Resultado {
   subasta: Subasta; oportunidad: Oportunidad; rendimiento?: Rendimiento | null
@@ -67,6 +69,7 @@ interface Resultado {
   tipoBien?: string | null; esPlaya?: boolean; margenFlip?: number | null
   margenFlipPct?: number | null; flipApto?: boolean; semaforo?: string | null
   analisis?: PuntoAnalisis[] | null; documentos?: DocumentoAdjunto[] | null
+  caducidad?: { cuantas: number; importeSiCaducan: number | null } | null
   precioM2Zona?: number | null; muestraZona?: number | null; zonaPortal?: string | null
 }
 interface Filtros {
@@ -368,6 +371,17 @@ function ResumenDocumental({ s, d }: { s: Subasta; d?: Documental | null }) {
       <p style={{ margin: 0, fontSize: 13, color: 'var(--text)' }}>
         ⚖️ {titular.emoji} {titular.texto}
       </p>
+      {/* La cifra de arriba es la CONSERVADORA. Esta línea es una hipótesis a
+          confirmar, nunca un descuento: por eso va debajo y sin sustituirla. */}
+      {d?.caducidad && (
+        <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+          ⏳ {d.caducidad.cuantas === 1 ? 'Una anotación de embargo lleva' : `${d.caducidad.cuantas} anotaciones de embargo llevan`}{' '}
+          más de 4 años sin constancia de prórroga: {d.caducidad.cuantas === 1 ? 'podría' : 'podrían'} estar
+          caducada{d.caducidad.cuantas === 1 ? '' : 's'} (art. 86 LH)
+          {d.caducidad.importeSiCaducan != null && <> y heredarías <strong>{eur(d.caducidad.importeSiCaducan)}</strong></>}.
+          {' '}Sin confirmar — pide nota simple actualizada.
+        </p>
+      )}
       <details style={{ marginTop: 4 }}>
         <summary style={{ cursor: 'pointer', fontSize: 13, color: 'var(--text)', minHeight: 36, display: 'flex', alignItems: 'center' }}>
           📑 Cargas y documentación{d?.semaforo ? ` ${NIVEL_EMOJI[d.semaforo] ?? ''}` : ''} — {resumenDocs}
@@ -967,7 +981,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, minHeight: 36 }}>
                 <input type="checkbox" checked={filtros.playa}
                        onChange={(e) => setFiltros((f) => ({ ...f, playa: e.target.checked }))} />
-                🏖️ Costa de Huelva
+                🏖️ Costa (Huelva y Cádiz)
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, minHeight: 36 }}>
                 <input type="checkbox" checked={filtros.sinOcupadas}
@@ -1025,7 +1039,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                 key={r.subasta.dedupeKey}
                 s={r.subasta}
                 o={r.oportunidad}
-                doc={{ semaforo: r.semaforo, analisis: r.analisis, notasEdicto: r.notasEdicto, documentos: r.documentos }}
+                doc={{ semaforo: r.semaforo, analisis: r.analisis, notasEdicto: r.notasEdicto, documentos: r.documentos, caducidad: r.caducidad }}
                 acciones={<button onClick={() => seguir(r.subasta)} style={boton()}>👀 Seguir</button>}
                 extra={
                   <>

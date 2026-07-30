@@ -53,7 +53,7 @@ const MAX_BYTES_DOC = 20 * 1024 * 1024
  * arregla el punto 2 de arriba — sin esto, mejorar el prompt no rescata nada de
  * lo ya (mal) leído.
  */
-export const LECTOR_VERSION = 2
+export const LECTOR_VERSION = 3
 
 /** Documentos que NO merecen una llamada de IA: no contienen cargas. */
 const RUIDO = /^(justificante|minuta|honorarios|tasa|pago|aranceles?)\b/i
@@ -184,7 +184,7 @@ interface FilaPendiente {
 /**
  * ¿Merece esta subasta el análisis profundo (que cuesta llamadas de IA)?
  * El embudo de Alberto: primero rentabilidad, y solo si cuadra, documentación.
- * Entra si es un flip viable, si es de la costa de Huelva (segunda residencia,
+ * Entra si es un flip viable, si es de la costa de Huelva o de Cádiz (segunda residencia,
  * sin tope de precio) o si el descuento estimado ya es goloso.
  */
 export function mereceAnalisisProfundo(f: {
@@ -235,7 +235,9 @@ export async function procesarDocumentos(max = 10): Promise<{
       if (profundo) analizadas++
       const r = await procesarDocumentosDeFicha(f.identificador, { leerCargas: profundo })
 
-      const subsistentes = cargasQueSubsisten(r.cuadro)
+      // Con fecha: así el resumen guardado ya marca las anotaciones que por el
+      // art. 86 LH podrían estar caducadas (marcar, no descontar).
+      const subsistentes = cargasQueSubsisten(r.cuadro, new Date())
       const hayCargas = r.cuadro.cargas.length > 0
       if (hayCargas) conCargas++
       if (r.notas.length) conHallazgos++
