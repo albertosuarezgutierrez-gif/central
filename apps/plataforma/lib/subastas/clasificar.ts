@@ -33,7 +33,10 @@ export async function clasificarSubastas(max = 400): Promise<{ revisadas: number
     const oportunidad = evaluarOportunidad(s)
     const flip = evaluarFlip(s, oportunidad, anio)
     const esPlaya = esPlayaHuelva(s.municipio, s.descripcion, s.provincia)
-    const analisis = analisisDocumental(s, f.notas_edicto ?? null)
+    // El listado de adjuntos va al análisis para que «procesado sin hallazgos»
+    // no se confunda con «no se ha leído nada» (ficha sin adjuntos o todos
+    // escaneados): sin él, el semáforo podía salir 🟢 sin abrir un documento.
+    const analisis = analisisDocumental(s, f.notas_edicto ?? null, Array.isArray(f.documentos) ? f.documentos : null)
 
     if (esPlaya) playa++
     if (flip.apto && (flip.margenPct ?? -1) >= FLIP_MARGEN_MIN) flipViables++

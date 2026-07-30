@@ -18,7 +18,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
-import { datosDeEdicto, enlacesDocumentos, notasDeEdicto } from '@central/module-subastas'
+import { datosDeEdicto, enlacesDocumentos, fichaLegible, notasDeEdicto } from '@central/module-subastas'
 
 const UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36'
 const FICHA = 'https://subastas.boe.es/detalleSubasta.php'
@@ -67,6 +67,13 @@ export interface DocumentosFicha {
 /** Procesa los documentos de UNA ficha. Devuelve las notas y el listado. */
 export async function procesarDocumentosDeFicha(identificador: string): Promise<DocumentosFicha> {
   const html = await (await bajar(`${FICHA}?idSub=${encodeURIComponent(identificador)}`)).text()
+  // 🚨 Antes de creerse un «no hay adjuntos», comprobar que esto ES la ficha.
+  // Un 200 que no lo sea daría `[]`, se grabaría como «sin documentos» y la
+  // cola no volvería a mirar esta subasta jamás. Lanzando, la fila se queda a
+  // NULL («sin revisar») y se reintenta en la pasada siguiente.
+  if (!fichaLegible(html, identificador)) {
+    throw new Error('la respuesta del Portal no es la ficha de esta subasta')
+  }
   // Se listan TODOS (los enlaces son gratis) y se descargan solo los primeros.
   const todos = enlacesDocumentos(html)
 

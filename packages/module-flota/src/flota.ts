@@ -10,6 +10,7 @@ import type {
   RentabilidadPorte,
   RentabilidadVehiculo,
   Repostaje,
+  TipoDocumentoVehiculo,
   Vehiculo,
 } from './types'
 
@@ -207,6 +208,45 @@ export function alertasDocumentos(
     })
     .filter((a) => a.estado !== 'vigente')
     .sort((a, b) => a.diasParaCaducar - b.diasParaCaducar)
+}
+
+/** Documentos que la ley exige a un vehículo en circulación. */
+export const DOCS_OBLIGATORIOS: TipoDocumentoVehiculo[] = ['itv', 'seguro']
+
+/** Un vehículo al que le FALTA algún documento obligatorio en el sistema. */
+export interface VehiculoSinDocumentar {
+  vehiculoId: string
+  matricula: string
+  faltan: TipoDocumentoVehiculo[]
+}
+
+/**
+ * Vehículos sin ITV o sin seguro REGISTRADOS.
+ *
+ * 🚨 `alertasDocumentos` solo puede avisar de lo que existe en la tabla: un
+ * vehículo sin NINGUNA fila de documento no produce alerta, y el semáforo lo
+ * daba por «todo en regla». Un camión con la ITV sin registrar es más peligroso
+ * que uno con la ITV caducada —y era justo el que salía verde—, así que la
+ * ausencia de dato tiene que verse como lo que es: un hueco, no un aprobado.
+ */
+export function vehiculosSinDocumentar(
+  vehiculos: Vehiculo[],
+  documentos: DocumentoVehiculo[],
+  obligatorios: TipoDocumentoVehiculo[] = DOCS_OBLIGATORIOS,
+): VehiculoSinDocumentar[] {
+  const porVehiculo = new Map<string, Set<string>>()
+  for (const d of documentos) {
+    const set = porVehiculo.get(d.vehiculoId) ?? new Set<string>()
+    set.add(d.tipo)
+    porVehiculo.set(d.vehiculoId, set)
+  }
+  return vehiculos
+    .map((v) => ({
+      vehiculoId: v.id,
+      matricula: v.matricula,
+      faltan: obligatorios.filter((t) => !porVehiculo.get(v.id)?.has(t)),
+    }))
+    .filter((x) => x.faltan.length > 0)
 }
 
 // ── Intercompany (gancho del holding) ─────────────────────────────────────────

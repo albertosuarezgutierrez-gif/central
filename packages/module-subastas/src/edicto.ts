@@ -43,6 +43,25 @@ export interface DatosEdicto {
   anotacionEmbargo: boolean
 }
 
+/**
+ * ¿El HTML recibido es DE VERDAD la ficha de esa subasta?
+ *
+ * 🚨 Sin esta comprobación, cualquier respuesta 200 que no sea la ficha (página
+ * de error del Portal, muro de un WAF, mantenimiento) produce `enlacesDocumentos
+ * → []`, que se persiste como «esta subasta no publica documentos» — y la cola
+ * del cron no vuelve a mirarla nunca. Es la MISMA mentira que motivó todo esto,
+ * pero grabada en la BD en vez de pintada en pantalla.
+ *
+ * Las fichas reales siempre traen los enlaces de sus pestañas
+ * (`detalleSubasta.php?idSub=<id>&ver=N`), tengan o no adjuntos — verificado el
+ * 30/07/2026 contra fichas vivas CON documentos y SIN ellos.
+ */
+export function fichaLegible(html: string, identificador: string): boolean {
+  if (!html || !identificador) return false
+  const id = identificador.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`detalleSubasta\\.php\\?idSub=${id}(&amp;|&)ver=`, 'i').test(html)
+}
+
 /** Enlaces a documentos de una ficha del portal (HTML de cualquier pestaña). */
 export function enlacesDocumentos(html: string): DocumentoFicha[] {
   const docs: DocumentoFicha[] = []

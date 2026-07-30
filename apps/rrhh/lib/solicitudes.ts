@@ -70,11 +70,19 @@ export async function justificanteDeSolicitud(empresaId: string, solicitudId: st
   return rows[0]?.justificante_path ?? null
 }
 
-/** Resumen de vacaciones de un empleado para un año dado. */
+/**
+ * Resumen de vacaciones de un empleado para un año dado.
+ *
+ * 🚨 `devengados` es `null` cuando el CONVENIO de la empresa no está cargado.
+ * Antes caía a `?? 30`: eso no es un valor por defecto, es inventarse una
+ * condición laboral y enseñársela al trabajador como su saldo disponible (si
+ * su convenio da 22 días laborables, se le prometían 30). Sin convenio no hay
+ * saldo que calcular — hay que decirlo, no rellenarlo.
+ */
 export async function resumenVacaciones(empresaId: string, empleadoId: string, anio: number) {
   const [empresa] = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT convenio_datos FROM rrhh.empresas WHERE id = ${empresaId}::uuid LIMIT 1`)
-  const devengados = parseDiasVacaciones(empresa?.convenio_datos?.vacaciones) ?? 30
+  const devengados = parseDiasVacaciones(empresa?.convenio_datos?.vacaciones)
 
   const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT estado,
@@ -88,14 +96,23 @@ export async function resumenVacaciones(empresaId: string, empleadoId: string, a
 
   const en_tramite = rows.find((r: any) => r.estado === 'solicitada')?.dias ?? 0
   const aprobados  = rows.find((r: any) => r.estado === 'aprobada')?.dias ?? 0
-  return { devengados, aprobados, en_tramite, pendientes: Math.max(0, devengados - aprobados - en_tramite) }
+  return {
+    devengados,
+    aprobados,
+    en_tramite,
+    // Sin días devengados no hay resta posible: `null` = «no se sabe», nunca 0
+    // (un 0 se leería como «no te quedan vacaciones», que es peor todavía).
+    pendientes: devengados == null ? null : Math.max(0, devengados - aprobados - en_tramite),
+    convenioCargado: devengados != null,
+  }
 }
 
 /** Saldo de vacaciones de todos los empleados de una empresa (para la vista admin). */
 export async function saldoVacacionesEmpleados(empresaId: string, anio: number) {
   const [empresa] = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT convenio_datos FROM rrhh.empresas WHERE id = ${empresaId}::uuid LIMIT 1`)
-  const devengados = parseDiasVacaciones(empresa?.convenio_datos?.vacaciones) ?? 30
+  // Ver `resumenVacaciones`: sin convenio cargado no se inventa un saldo.
+  const devengados = parseDiasVacaciones(empresa?.convenio_datos?.vacaciones)
 
   const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT empleado_id::text, estado,
@@ -107,15 +124,15 @@ export async function saldoVacacionesEmpleados(empresaId: string, anio: number) 
       AND estado IN ('solicitada', 'aprobada')
     GROUP BY empleado_id, estado`)
 
-  const map = new Map<string, { aprobados: number; en_tramite: number; pendientes: number }>()
+  const map = new Map<string, { aprobados: number; en_tramite: number; pendientes: number | null }>()
   for (const r of rows) {
-    const cur = map.get(r.empleado_id) ?? { aprobados: 0, en_tramite: 0, pendientes: 0 }
+    const cur = map.get(r.empleado_id) ?? { aprobados: 0, en_tramite: 0, pendientes: null as number | null }
     if (r.estado === 'aprobada') cur.aprobados = r.dias
     if (r.estado === 'solicitada') cur.en_tramite = r.dias
-    cur.pendientes = Math.max(0, devengados - cur.aprobados - cur.en_tramite)
+    cur.pendientes = devengados == null ? null : Math.max(0, devengados - cur.aprobados - cur.en_tramite)
     map.set(r.empleado_id, cur)
   }
-  return { map, devengados }
+  return { map, devengados, convenioCargado: devengados != null }
 }
 
 /** Ausencias aprobadas de la empresa en un rango de fechas (para el calendario admin). */

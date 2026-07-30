@@ -269,8 +269,27 @@ export async function enviarResumenTarjeta(
   const lineasTop = top5.map(([c, v]) => `  · ${c}: ${fmtEur(v)}`).join('\n')
   const lineasDest = [...porDestino.entries()].map(([d, v]) => `  · ${destinoLabel[d] ?? d}: ${fmtEur(v)}`).join('\n')
 
-  // Movimientos dudosos para revisión interactiva
-  const dudosos = await getMovimientosDudosos(ids, mes).catch(() => [] as Awaited<ReturnType<typeof getMovimientosDudosos>>)
+  // Movimientos dudosos para revisión interactiva.
+  // 🚨 Un `[]` por FALLO de la consulta no puede acabar diciendo «todos
+  // clasificados»: este Telegram es el único aviso que se recibe del extracto,
+  // y si afirma que está todo bien nadie vuelve a mirarlo.
+  let dudosos: Awaited<ReturnType<typeof getMovimientosDudosos>> = []
+  let dudososFallo = false
+  try {
+    dudosos = await getMovimientosDudosos(ids, mes)
+  } catch {
+    dudososFallo = true
+  }
+  // OJO: `sinClasificar` (arriba) son los cargos sin `destino`. Tampoco están
+  // clasificados aunque no lleven `requiere_revision` y por tanto no entren en
+  // `getMovimientosDudosos` — antes se los contaba como «clasificados».
+  const estadoClasificacion = dudososFallo
+    ? '⚠️ No se ha podido comprobar cuáles necesitan revisión (fallo al consultar): revísalo a mano.'
+    : dudosos.length > 0
+      ? `❓ ${dudosos.length} necesitan revisión`
+      : sinClasificar > 0
+        ? `❓ ${sinClasificar} sin clasificar`
+        : '✅ todos clasificados'
 
   // Calcular deducible/no deducible para el resumen
   const deducibleDestinos = new Set(['turistico_pisos', 'turistico_duplex', 'seguros'])
@@ -282,8 +301,8 @@ export async function enviarResumenTarjeta(
     `<b>${label.toUpperCase()}</b>`,
     '',
     `Total gastado: <b>${fmtEur(totalMes)}</b>${diffStr}`,
-    `✅ ${cargos.length - dudosos.length} clasificados automáticamente`,
-    dudosos.length > 0 ? `❓ ${dudosos.length} necesitan revisión` : '✅ todos clasificados',
+    `✅ ${Math.max(0, cargos.length - dudosos.length - sinClasificar)} clasificados automáticamente`,
+    estadoClasificacion,
     '',
     `Deducible: <b>${fmtEur(totalDeducible)}</b> · No deducible: ${fmtEur(totalNoDeducible)}`,
     '',
@@ -342,6 +361,14 @@ export type SaldoConsolidado = {
   total: number
   porSociedad: Array<{ sociedadId: string; sociedadNombre: string; saldo: number }>
   cuentas: CuentaBancaria[]
+  /**
+   * Cuentas visibles cuyo `saldo_actual` es NULL — el banco no lo devolvió o
+   * nunca se han sincronizado. NO suman al `total`, así que el total es un
+   * MÍNIMO, no la foto completa. Quien lo presente (pantalla, email de
+   * tesorería) tiene que decirlo: un total al que le faltan cuentas leído como
+   * cifra firme dispara alarmas falsas o esconde dinero.
+   */
+  sinSaldo: number
 }
 
 // Saldo consolidado de TODAS las cuentas bancarias de una cuenta (scoped por cuenta_id).
@@ -380,16 +407,21 @@ export async function getSaldoConsolidado(cuentaId: string): Promise<SaldoConsol
 
   const porSocMap = new Map<string, { sociedadId: string; sociedadNombre: string; saldo: number }>()
   let total = 0
+  let sinSaldo = 0
   for (const c of lista) {
     if (c.oculta) continue
-    const s = c.saldoActual ?? 0
+    // Un saldo desconocido NO es cero: se cuenta aparte y el total queda como
+    // mínimo declarado (mismo criterio que `lib/subastas/tesoreria.ts`, que ya
+    // filtra `saldo_actual IS NOT NULL` en vez de sumar ceros).
+    if (c.saldoActual == null) { sinSaldo++; continue }
+    const s = c.saldoActual
     total += s
     const prev = porSocMap.get(c.sociedadId) ?? { sociedadId: c.sociedadId, sociedadNombre: c.sociedadNombre, saldo: 0 }
     prev.saldo += s
     porSocMap.set(c.sociedadId, prev)
   }
 
-  return { total, porSociedad: [...porSocMap.values()], cuentas: lista }
+  return { total, porSociedad: [...porSocMap.values()], cuentas: lista, sinSaldo }
 }
 
 // ── Saldo por cuenta + últimos movimientos (home) ──────────────────────────────

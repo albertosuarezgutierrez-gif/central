@@ -208,11 +208,18 @@ const fechaCorta = (iso: string) => new Date(iso).toLocaleDateString('es-ES', { 
  */
 function PanelTesoreria({ t }: { t: Tesoreria }) {
   const { plan, saldo } = t
-  if (plan.pico <= 0) return null
-  const falta = plan.deficit != null && plan.deficit > 0
+  // `incompletos` = compromisos que NO se han podido calcular (el BOE aún no
+  // publica depósito ni valor de subasta: 12 de las 34 vivas el 30/07/2026).
+  // Con pico 0 e incompletos, ocultar el panel entero hacía leer «no tienes
+  // nada comprometido» — que es lo contrario de lo que se sabe. Solo se
+  // esconde cuando de verdad no hay nada que contar.
+  const sinCalcular = plan.incompletos.length
+  if (plan.pico <= 0 && sinCalcular === 0) return null
+  const calculado = plan.pico > 0
+  const falta = calculado && plan.deficit != null && plan.deficit > 0
 
   return (
-    <div style={{ ...card, borderLeft: `4px solid ${falta ? 'var(--danger, #dc2626)' : 'var(--success, #16a34a)'}` }}>
+    <div style={{ ...card, borderLeft: `4px solid ${falta ? 'var(--danger, #dc2626)' : calculado ? 'var(--success, #16a34a)' : 'var(--warning, #d97706)'}` }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'baseline' }}>
         <strong style={{ color: 'var(--text)', fontSize: 15 }}>💰 Depósitos para pujar</strong>
         <span style={{ fontSize: 12, color: 'var(--muted)' }}>
@@ -222,24 +229,34 @@ function PanelTesoreria({ t }: { t: Tesoreria }) {
         </span>
       </div>
 
-      <p style={{ margin: '8px 0 0', color: 'var(--text)', fontSize: 14 }}>
-        Necesitas <strong>{eur(plan.pico)}</strong> bloqueados a la vez
-        {plan.picoDesde && ` desde el ${fechaCorta(plan.picoDesde)}`}
-        {plan.picoSubastas.length > 1 && ` (${plan.picoSubastas.length} subastas solapadas)`}.
-      </p>
-      {plan.total > plan.pico && (
+      {calculado ? (
+        <p style={{ margin: '8px 0 0', color: 'var(--text)', fontSize: 14 }}>
+          Necesitas <strong>{eur(plan.pico)}</strong> bloqueados a la vez
+          {plan.picoDesde && ` desde el ${fechaCorta(plan.picoDesde)}`}
+          {plan.picoSubastas.length > 1 && ` (${plan.picoSubastas.length} subastas solapadas)`}.
+        </p>
+      ) : (
+        <p style={{ margin: '8px 0 0', color: 'var(--text)', fontSize: 14 }}>
+          🟠 No se puede calcular cuánto tendrías bloqueado: {sinCalcular === 1 ? 'la subasta' : `las ${sinCalcular} subastas`} en
+          juego {sinCalcular === 1 ? 'no publica' : 'no publican'} todavía depósito ni valor de subasta.
+          <strong> No es 0€</strong> — es un dato que el BOE aún no da.
+        </p>
+      )}
+      {calculado && plan.total > plan.pico && (
         <p style={{ margin: '2px 0 0', color: 'var(--muted)', fontSize: 12 }}>
           La suma de todos los depósitos es {eur(plan.total)}, pero no coinciden todos en el tiempo.
         </p>
       )}
 
-      <p style={{ margin: '6px 0 0', fontSize: 14, color: falta ? 'var(--danger, #dc2626)' : 'var(--text)' }}>
-        {saldo.cuentas === 0
-          ? '⚠️ No hay saldo de cuentas corrientes con el que contrastar.'
-          : falta
-            ? `🚨 Disponible ${eur(saldo.total)} → faltan ${eur(plan.deficit!)}.`
-            : `✅ Disponible ${eur(saldo.total)}, suficiente.`}
-      </p>
+      {calculado && (
+        <p style={{ margin: '6px 0 0', fontSize: 14, color: falta ? 'var(--danger, #dc2626)' : 'var(--text)' }}>
+          {saldo.cuentas === 0
+            ? '⚠️ No hay saldo de cuentas corrientes con el que contrastar.'
+            : falta
+              ? `🚨 Disponible ${eur(saldo.total)} → faltan ${eur(plan.deficit!)}.`
+              : `✅ Disponible ${eur(saldo.total)}, suficiente.`}
+        </p>
+      )}
       {saldo.desactualizado && saldo.masAntiguo && (
         <p style={{ margin: '2px 0 0', color: 'var(--muted)', fontSize: 12 }}>
           Ojo: el saldo más antiguo que se ha sumado es del {fechaCorta(saldo.masAntiguo)}.

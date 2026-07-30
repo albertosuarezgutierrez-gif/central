@@ -79,3 +79,27 @@ test('sin tasación ni valor de referencia → punto de valoración', () => {
   const a = analisisDocumental(base({ tasacion: null }), '')
   assert.ok(a.puntos.some((p) => p.clave === 'valoracion'))
 })
+
+// ── «Procesado sin hallazgos» solo vale si se ha leído algo ──────────────────
+
+test('sin adjuntos leídos, el semáforo NO se da por claro aunque no haya hallazgos', () => {
+  const limpia = base({ situacionPosesoria: 'libre', cargasConocidas: true, cargas: 0, tasacion: 100000 })
+
+  // Todos los adjuntos escaneados: cero caracteres leídos.
+  const escaneados = analisisDocumental(limpia, '', [{ legible: false }, { legible: false }])
+  assert.equal(escaneados.semaforo, 'ambar')
+  assert.ok(escaneados.puntos.some((p) => p.clave === 'documentacion'))
+
+  // La ficha no publica documentación: tampoco hay nada comprobado.
+  const sinDocs = analisisDocumental(limpia, '', [])
+  assert.equal(sinDocs.semaforo, 'ambar')
+
+  // Con un adjunto legible SÍ se ha leído: «sin hallazgos» es una conclusión.
+  const leido = analisisDocumental(limpia, '', [{ legible: true }])
+  assert.ok(!leido.puntos.some((p) => p.clave === 'documentacion'))
+})
+
+test('sin pasar el listado de adjuntos se mantiene el comportamiento anterior', () => {
+  const limpia = base({ situacionPosesoria: 'libre', cargasConocidas: true, cargas: 0, tasacion: 100000 })
+  assert.ok(!analisisDocumental(limpia, '').puntos.some((p) => p.clave === 'documentacion'))
+})

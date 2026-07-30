@@ -58,7 +58,11 @@ export async function GET(req: NextRequest) {
     cond.push(Prisma.sql`flip_apto = true AND margen_flip_pct >= ${margenMin / 100}`)
   }
   if (semaforo === 'verde') cond.push(Prisma.sql`semaforo = 'verde'`)
-  else if (semaforo === 'sin_rojo') cond.push(Prisma.sql`semaforo IS DISTINCT FROM 'rojo'`)
+  // «Sin 🔴 problema» = ANALIZADA y sin bandera roja. `IS DISTINCT FROM` daba
+  // TRUE también para NULL, así que colaba las subastas que nunca se han
+  // analizado entre las que se han comprobado limpias — indistinguibles, y en
+  // el filtro con el que se decide a cuáles dedicar tiempo.
+  else if (semaforo === 'sin_rojo') cond.push(Prisma.sql`semaforo IS NOT NULL AND semaforo <> 'rojo'`)
   if (municipio && municipio.trim()) cond.push(Prisma.sql`(municipio ILIKE ${'%' + municipio.trim() + '%'} OR descripcion ILIKE ${'%' + municipio.trim() + '%'})`)
 
   const where = Prisma.sql`WHERE ${Prisma.join(cond, ' AND ')}`
