@@ -65,44 +65,54 @@ export async function ingerirComparables(dias = 30, maxCorreos = 150): Promise<{
     for (const c of correos) {
     for (const a of parser(c.html)) {
       anuncios++
-      const r = await prisma.$executeRaw(Prisma.sql`
-        INSERT INTO mercado_comparables
-          (portal, ref_anuncio, titulo, tipo, zona, precio, precio_inicial, superficie, habitaciones, precio_m2, url, visto_en)
-        VALUES (
-          ${a.portal}, ${a.refAnuncio}, ${a.titulo}, ${a.tipo}, ${a.zona}, ${a.precio}, ${a.precio},
-          ${a.superficie}, ${a.habitaciones}, ${a.precioM2}, ${a.url}, ${c.fecha}
-        )
-        ON CONFLICT (portal, ref_anuncio) DO UPDATE SET
-          titulo = EXCLUDED.titulo,
-          tipo = EXCLUDED.tipo,
-          zona = COALESCE(EXCLUDED.zona, mercado_comparables.zona),
-          -- SEGUIMIENTO DE BAJADAS: si el precio nuevo es menor, se registra la
-          -- bajada ANTES de pisarlo. Detectarlo por comparación (y no por el
-          -- correo de "bajada de precio" del portal) cubre cualquier vía por la
-          -- que llegue el precio nuevo. En Postgres los SET ven la fila VIEJA,
-          -- así que el orden de las asignaciones no importa.
-          precio_anterior = CASE WHEN EXCLUDED.precio <> mercado_comparables.precio
-            THEN mercado_comparables.precio ELSE mercado_comparables.precio_anterior END,
-          bajadas = mercado_comparables.bajadas +
-            CASE WHEN EXCLUDED.precio < mercado_comparables.precio THEN 1 ELSE 0 END,
-          ultima_bajada_at = CASE WHEN EXCLUDED.precio < mercado_comparables.precio
-            THEN EXCLUDED.visto_en ELSE mercado_comparables.ultima_bajada_at END,
-          precio = EXCLUDED.precio,
-          superficie = COALESCE(EXCLUDED.superficie, mercado_comparables.superficie),
-          habitaciones = COALESCE(EXCLUDED.habitaciones, mercado_comparables.habitaciones),
-          precio_m2 = COALESCE(EXCLUDED.precio_m2, mercado_comparables.precio_m2),
-          visto_en = GREATEST(EXCLUDED.visto_en, mercado_comparables.visto_en)
-        -- Solo actualiza un correo IGUAL O MÁS NUEVO que lo ya visto: en un
-        -- backfill (?dias=60) los correos no llegan en orden y, sin esta guarda,
-        -- un correo viejo "resubiría" el precio y fabricaría una bajada falsa
-        -- al reprocesar el siguiente.
-        WHERE EXCLUDED.visto_en >= mercado_comparables.visto_en
-      `)
-      upserts += Number(r)
+      upserts += await upsertComparable(a, c.fecha)
     }
     }
   }
   return { correos: nCorreos, anuncios, upserts }
+}
+
+/**
+ * Upsert de UN comparable en `mercado_comparables` — la puerta única del
+ * corpus, compartida por las alertas de correo y la API oficial de Idealista
+ * (`lib/subastas/idealista-api.ts`): mismo dedupe `(portal, ref_anuncio)` y
+ * mismo seguimiento de bajadas venga por donde venga el precio.
+ */
+export async function upsertComparable(a: Comparable, vistoEn: Date): Promise<number> {
+  const r = await prisma.$executeRaw(Prisma.sql`
+    INSERT INTO mercado_comparables
+      (portal, ref_anuncio, titulo, tipo, zona, precio, precio_inicial, superficie, habitaciones, precio_m2, url, visto_en)
+    VALUES (
+      ${a.portal}, ${a.refAnuncio}, ${a.titulo}, ${a.tipo}, ${a.zona}, ${a.precio}, ${a.precio},
+      ${a.superficie}, ${a.habitaciones}, ${a.precioM2}, ${a.url}, ${vistoEn}
+    )
+    ON CONFLICT (portal, ref_anuncio) DO UPDATE SET
+      titulo = EXCLUDED.titulo,
+      tipo = EXCLUDED.tipo,
+      zona = COALESCE(EXCLUDED.zona, mercado_comparables.zona),
+      -- SEGUIMIENTO DE BAJADAS: si el precio nuevo es menor, se registra la
+      -- bajada ANTES de pisarlo. Detectarlo por comparación (y no por el
+      -- correo de "bajada de precio" del portal) cubre cualquier vía por la
+      -- que llegue el precio nuevo. En Postgres los SET ven la fila VIEJA,
+      -- así que el orden de las asignaciones no importa.
+      precio_anterior = CASE WHEN EXCLUDED.precio <> mercado_comparables.precio
+        THEN mercado_comparables.precio ELSE mercado_comparables.precio_anterior END,
+      bajadas = mercado_comparables.bajadas +
+        CASE WHEN EXCLUDED.precio < mercado_comparables.precio THEN 1 ELSE 0 END,
+      ultima_bajada_at = CASE WHEN EXCLUDED.precio < mercado_comparables.precio
+        THEN EXCLUDED.visto_en ELSE mercado_comparables.ultima_bajada_at END,
+      precio = EXCLUDED.precio,
+      superficie = COALESCE(EXCLUDED.superficie, mercado_comparables.superficie),
+      habitaciones = COALESCE(EXCLUDED.habitaciones, mercado_comparables.habitaciones),
+      precio_m2 = COALESCE(EXCLUDED.precio_m2, mercado_comparables.precio_m2),
+      visto_en = GREATEST(EXCLUDED.visto_en, mercado_comparables.visto_en)
+    -- Solo actualiza una observación IGUAL O MÁS NUEVA que lo ya visto: en un
+    -- backfill (?dias=60) los correos no llegan en orden y, sin esta guarda,
+    -- un correo viejo "resubiría" el precio y fabricaría una bajada falsa
+    -- al reprocesar el siguiente.
+    WHERE EXCLUDED.visto_en >= mercado_comparables.visto_en
+  `)
+  return Number(r)
 }
 
 /**

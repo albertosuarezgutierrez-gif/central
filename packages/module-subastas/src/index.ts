@@ -77,6 +77,10 @@ export type { Chollo, ObservacionRef, VelocidadZona, ZonaPortalRef } from './com
 // Calibración con RESULTADOS reales: a qué % del tipo se adjudica de verdad
 export { calibracionAdjudicaciones, MIN_MUESTRA_CALIBRACION } from './adjudicaciones.ts'
 export type { ResultadoConcluido, CalibracionZona } from './adjudicaciones.ts'
+// API oficial de Idealista (Search API): consulta directa por zona vigilada,
+// mismo corpus y mismo dedupe que las alertas de correo
+export { comparablesDesdeApiIdealista, tipoDesdePropertyType, centroBusquedaIdealista, llamadasPermitidasIdealista, IDEALISTA_LIMITE_MENSUAL, IDEALISTA_MARGEN_MENSUAL, IDEALISTA_DIAS_CACHE_ZONA } from './idealista-api.ts'
+export type { AnuncioIdealistaApi, RespuestaIdealistaApi, CentroBusqueda } from './idealista-api.ts'
 // Fotocasa: mismas zonas, más particulares — segunda fuente de comparables
 export { parsearAlertaFotocasa, esAlertaFotocasa, datosFichaFotocasa, PORTAL_FOTOCASA } from './fotocasa.ts'
 export type { FichaFotocasa } from './fotocasa.ts'

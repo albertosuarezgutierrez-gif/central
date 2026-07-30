@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { aplicarReferenciaMercado, avisarBajadas, avisarChollos, enriquecerAnunciantesFotocasa, ingerirComparables, referenciaZonasFotocasa, refrescarIndiceINE } from '@/lib/subastas/mercado'
+import { ingerirComparablesIdealistaApi } from '@/lib/subastas/idealista-api'
 
 export const dynamic = 'force-dynamic'
 // 300 y no 60: con Fotocasa la lectura IMAP procesa el DOBLE de correos y la
@@ -32,6 +33,13 @@ export async function GET(req: NextRequest) {
     const anunciantes = await enriquecerAnunciantesFotocasa().catch((e) => {
       console.error('[subastas-mercado] anunciantes', e)
       return { revisados: 0, particulares: 0 }
+    })
+    // API oficial de Idealista (si hay credenciales): búsqueda directa por zona
+    // vigilada, mismo corpus y mismo dedupe que las alertas. Inerte sin
+    // IDEALISTA_API_KEY/IDEALISTA_API_SECRET; presupuesto ~100 llamadas/mes.
+    const idealistaApi = await ingerirComparablesIdealistaApi().catch((e) => {
+      console.error('[subastas-mercado] idealista-api', e)
+      return { disponible: false, llamadas: 0, anuncios: 0, upserts: 0, usadasMes: 0, fallos: [String(e?.message ?? e)] }
     })
     // Mediana €/m² de las zonas con subastas vivas (buscador de Fotocasa, caché
     // 30 días) — ANTES de aplicar la referencia, que la usa como fallback.
@@ -58,7 +66,7 @@ export async function GET(req: NextRequest) {
       console.error('[subastas-mercado] indice INE', e)
       return { ok: false, detalle: String(e?.message ?? e) }
     })
-    return NextResponse.json({ ok: true, ...ingesta, ...aplicacion, ...chollos, bajadas: bajadas.bajadas, anunciantes, zonas, indice })
+    return NextResponse.json({ ok: true, ...ingesta, ...aplicacion, ...chollos, bajadas: bajadas.bajadas, anunciantes, zonas, indice, idealistaApi })
   } catch (e: any) {
     console.error('[subastas-mercado]', e)
     return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
