@@ -31,8 +31,12 @@
   colisiones), reglas de calma MEDIBLES (≤6 cortes/min, 60-80 bpm, final que "se aquieta"), registro de
   autoría humana (carpeta `docs/ip-canal-infantil/` + ficha de dirección por vídeo), pipeline descrito
   (Firefly→vector + Remotion paramétrico + Suno + voz humana; 10-40€/mes), sandbox de 10 vídeos concretos
-  en 2 canales (ES+IT), y criterio de corte a 6 meses (<250€ pérdida máx). **Pendiente de Alberto:** ¿caracol
-  sí/no?, nombre, y quién pone la voz. Fase 3 (código Remotion + assets + script datos) SOLO con aprobación.
+  en 2 canales (ES+IT), y criterio de corte a 6 meses (<250€ pérdida máx). **Decisiones CERRADAS (misma
+  tarde): personaje CARACOL, nombre NILO** (chequeo de colisiones hecho: Momo descartado —challenge + Ende
+  en DACH—, Lolo saturado en el nicho; Nilo limpio, pendiente TMview/OEPM antes de registrar marca; plan B
+  Rulo/Tilo) **y voz = la hija de Alberto en GRABACIÓN REAL** (clon ElevenLabs descartado para el sandbox:
+  AI Act art. 50 + "altered content" + menor; opción futura solo para dubs IT/DE). Fase 3 (código Remotion +
+  assets + script datos) SOLO con aprobación de Alberto.
 - **👨‍👩‍👧 Estudio de demanda parental (Fase 1b del experimento canal infantil) — HECHO (30/07/2026, solo
   informe, cero código; mismo PR #1167).** Alberto quiso empezar por "qué piden los padres" antes de decidir.
   Hallazgo de método: los vídeos "made for kids" tienen comentarios desactivados (COPPA) → se minó en foros
