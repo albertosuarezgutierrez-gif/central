@@ -5,6 +5,8 @@
 // Puro: sin red, sin BD, sin secretos.
 // ────────────────────────────────────────────────────────────────────────────
 
+import type { TipoBien } from './extraccion.ts'
+
 /** De dónde vino el anuncio. Añadir una fuente = añadir un adaptador, nada más. */
 export type Fuente =
   | 'boe'        // Portal de Subastas del BOE (judicial, notarial, AEAT, TGSS)
@@ -97,7 +99,22 @@ export interface SubastaInmueble {
   refCatastral?: string | null
   /** Superficie en m², del Catastro o del anuncio. */
   superficie?: number | null
+  /**
+   * De dónde salió `superficie`. Va SIEMPRE con la cifra: los m² del Catastro y
+   * los de la escritura discrepan a menudo (El Puerto de Santa María: 112 vs
+   * 115,66) y quien mira la ficha necesita saber cuál está leyendo.
+   */
+  superficieOrigen?: 'catastro' | 'anuncio' | null
   anioConstruccion?: number | null
+
+  // ── Características físicas del inmueble ──────────────────────────────────
+  // Lo que alguien mira ANTES que el precio: qué es y cómo es. Salen de la
+  // descripción registral (`extraerDatos`) o de la ficha del Catastro.
+  tipoBien?: TipoBien | null
+  dormitorios?: number | null
+  banos?: number | null
+  /** Planta tal cual la publica el anuncio: «séptima», «baja», «2ª»… */
+  planta?: string | null
   /** Valor de referencia del Catastro — base imponible del ITP desde 2022. */
   valorReferencia?: number | null
   /**

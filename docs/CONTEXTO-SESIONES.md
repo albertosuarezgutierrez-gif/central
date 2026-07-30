@@ -24,6 +24,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏠 Subastas: las características del inmueble ya se ven en la ficha (30/07/2026, rama
+  `claude/property-features-missing-je4vtw`, PR #1177).** Alberto sobre una captura de `/subastas`: «no
+  aparecen las características». Cierto — tipo, m², dormitorios, baños y planta estaban en BD y solo se
+  usaban para calcular €/m² y yield. `SubastaInmueble` gana esos campos + `superficieOrigen` (Catastro vs
+  escritura: discrepan a menudo), `filaASubasta` los mapea con fallback a `extraerDatos(descripcion)` cuando
+  la columna está vacía, y `FichaSubasta` los pinta arriba del todo (si el anuncio no publica nada, lo dice
+  en vez de callar). El radar repinta su snapshot con la foto viva del corpus si la subasta sigue vigente,
+  así no hay que esperar al cron. Solapaba con #1175: los m² salen UNA vez (con su origen) y la planta no se
+  repite si ya la da la dirección del Catastro.
+
 - **🏛️ Subastas: ubicación EXACTA y datos del Catastro visibles en la ficha (30/07/2026, rama
   `claude/national-property-map-kszwhp`).** Alberto: «SUB-JA-2026-263723 la ubicación es muy mala». Causa:
   el punto era correcto (Catastro) pero **la ficha no pintaba la dirección en NINGÚN sitio** (estaba solo en
