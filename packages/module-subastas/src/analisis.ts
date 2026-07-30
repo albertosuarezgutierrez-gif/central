@@ -30,9 +30,16 @@ export interface AnalisisDocumental {
  * extrajo de los documentos de la ficha (`notasDeEdicto`): NULL = documentos
  * aún no procesados; '' = procesados sin hallazgos.
  */
-export function analisisDocumental(s: SubastaInmueble, notasEdicto: string | null | undefined): AnalisisDocumental {
+export function analisisDocumental(
+  s: SubastaInmueble,
+  notasEdicto: string | null | undefined,
+  documentos?: Array<{ legible?: boolean | null }> | null,
+): AnalisisDocumental {
   const puntos: PuntoAnalisis[] = []
   const notas = notasEdicto ?? null
+  // Cuántos adjuntos se han llegado a LEER de verdad. `undefined` = quien llama
+  // no pasa el listado (comportamiento antiguo): solo se mira `notas == null`.
+  const leidos = documentos == null ? null : documentos.filter((d) => d.legible === true).length
 
   // ── Posesión: el mayor riesgo real de una subasta ─────────────────────────
   const posesion = s.situacionPosesoria ?? 'desconocida'
@@ -63,6 +70,20 @@ export function analisisDocumental(s: SubastaInmueble, notasEdicto: string | nul
   if (notas == null) {
     puntos.push({ clave: 'documentacion', nivel: 'ambar', detalle: 'Documentos de la ficha aún sin procesar (o escaneados sin texto).' })
   } else {
+    // 🚨 `notas === ''` significa «procesado sin hallazgos», y eso solo vale si
+    // se llegó a LEER algo. Con la ficha sin adjuntos, o con todos escaneados
+    // sin capa de texto, no se ha leído un solo carácter: dar el semáforo por
+    // claro sería declarar limpia una documentación que nadie ha abierto — y
+    // ese semáforo viaja por Telegram y decide si se puja.
+    if (leidos === 0) {
+      puntos.push({
+        clave: 'documentacion',
+        nivel: 'ambar',
+        detalle: documentos!.length === 0
+          ? 'La ficha no publica edicto ni certificación: no hay documentación que analizar.'
+          : 'Los adjuntos de la ficha son escaneados sin texto: hay que leerlos a mano antes de pujar.',
+      })
+    }
     if (/herencia yacente/i.test(notas)) {
       puntos.push({ clave: 'herencia', nivel: 'ambar', detalle: 'Ejecución contra herencia yacente: plazos procesales más largos.' })
     }

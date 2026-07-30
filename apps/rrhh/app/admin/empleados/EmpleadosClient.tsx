@@ -4,7 +4,7 @@ import ActivarPush from '@/components/ActivarPush'
 import AdminShell from '@/components/AdminShell'
 import AsistentePanelAdmin from '@/components/AsistentePanelAdmin'
 
-type Vac = { aprobados: number; en_tramite: number; pendientes: number }
+type Vac = { aprobados: number; en_tramite: number; pendientes: number | null }
 type E = { id: string; nombre: string; apellidos: string | null; dni: string | null; nss: string | null; email: string | null; puesto: string | null; estado: string; acceso_token: string | null; vacaciones?: Vac; fecha_reconocimiento_medico?: string | null }
 
 function diasParaCaducarReconocimiento(fecha: string | null | undefined): number | null {
@@ -156,7 +156,14 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa,
                           <span className="text-ok">{e.vacaciones.aprobados}</span>
                           {e.vacaciones.en_tramite > 0 && <span className="text-ink-3">+{e.vacaciones.en_tramite}</span>}
                           <span className="text-ink-3"> / </span>
-                          <span className={e.vacaciones.pendientes <= 0 ? 'text-alert' : ''}>{e.vacaciones.pendientes} pend.</span>
+                          {/* `null` = convenio de la empresa sin cargar: no hay saldo
+                              que calcular, y un número inventado aquí acabaría en la
+                              planificación de vacaciones del empleado. */}
+                          {e.vacaciones.pendientes == null ? (
+                            <span className="text-ink-3" title="Convenio sin cargar: no se puede calcular el saldo">— pend.</span>
+                          ) : (
+                            <span className={e.vacaciones.pendientes <= 0 ? 'text-alert' : ''}>{e.vacaciones.pendientes} pend.</span>
+                          )}
                         </span>
                       )}
                     </td>

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-30T19:10:00Z",
+  "generadoEn": "2026-07-30T19:46:20Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3965,6 +3965,14 @@
   ],
   "novedades": [
     {
+      "titulo": "🕳️ Barrido del monorepo: afirmar ausencias no comprobadas (30/07/2026, misma rama).",
+      "fecha": "30/07/2026"
+    },
+    {
+      "titulo": "📎 Subastas: «sin documentos adjuntos» era MENTIRA (30/07/2026, rama `claude/documentos-adjuntos-o95xl1`).",
+      "fecha": "30/07/2026"
+    },
+    {
       "titulo": "⚖️ Subastas — 3 partidas que faltaban en el coste real (30/07/2026, misma rama/PR #1176).",
       "fecha": "30/07/2026"
     },
@@ -4014,14 +4022,6 @@
     },
     {
       "titulo": "📅 Trading — aviso de Google Calendar creado para la cohorte 3 (28/07/2026, sesión de charla).",
-      "fecha": "28/07/2026"
-    },
-    {
-      "titulo": "📐 Subastas — la superficie del CATASTRO no llegaba al scoring (28/07/2026, tras mergear #1114).",
-      "fecha": "28/07/2026"
-    },
-    {
-      "titulo": "💰 Subastas — TESORERÍA DEL DEPÓSITO + snapshot del radar que se quedaba congelado (28/07/2026).",
       "fecha": "28/07/2026"
     }
   ],

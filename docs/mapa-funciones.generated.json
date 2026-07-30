@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-30T19:32:38Z",
-  "sha": "4488bd96857bc7494fce2629513139c3735352fa",
+  "generadoEn": "2026-07-30T19:46:20Z",
+  "sha": "896d4f71b0f9b6a93c8c1c369ed9303ec12767ac",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -40515,12 +40515,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 771
+          "linea": 803
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "22402de3348a"
+      "hash": "8f2fa13d367f"
     },
     {
       "ruta": "apps/ialimp/app/layout.tsx",
@@ -47450,7 +47450,7 @@
           "exportada": false,
           "params": "activo = false",
           "retorno": "React.CSSProperties",
-          "linea": 181
+          "linea": 183
         },
         {
           "nombre": "fecha",
@@ -47458,7 +47458,7 @@
           "exportada": false,
           "params": "iso: string | null | undefined",
           "retorno": "string | null",
-          "linea": 188
+          "linea": 190
         },
         {
           "nombre": "Puntuacion",
@@ -47466,7 +47466,7 @@
           "exportada": false,
           "params": "{ v }: { v: number | null }",
           "retorno": null,
-          "linea": 202,
+          "linea": 204,
           "resumen": "Semáforo de la puntuación. `null` se pinta distinto a 0: no es lo mismo."
         },
         {
@@ -47475,7 +47475,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 210
+          "linea": 212
         },
         {
           "nombre": "PanelTesoreria",
@@ -47483,7 +47483,7 @@
           "exportada": false,
           "params": "{ t }: { t: Tesoreria }",
           "retorno": null,
-          "linea": 217,
+          "linea": 219,
           "resumen": "Dinero que hay que tener bloqueado para poder pujar. Lo que importa NO es la suma de depósitos sino el máximo simultáneo: los que no se solapan reutilizan el mismo dinero."
         },
         {
@@ -47492,7 +47492,7 @@
           "exportada": false,
           "params": "{ r, dormitorios }: { r: Rendimiento | null | undefined; dormitorios?: number | null }",
           "retorno": null,
-          "linea": 284,
+          "linea": 303,
           "resumen": "Yield turístico estimado con los pisos PROPIOS. Siempre con el caveat: los pisos de referencia son de Sevilla capital — fuera de ahí es extrapolación."
         },
         {
@@ -47501,7 +47501,7 @@
           "exportada": false,
           "params": "{ s, plantaAparte }: { s: Subasta; plantaAparte?: boolean }",
           "retorno": null,
-          "linea": 308,
+          "linea": 327,
           "resumen": "repetirla sería ruido."
         },
         {
@@ -47510,7 +47510,7 @@
           "exportada": false,
           "params": "{ s, d }: { s: Subasta; d?: Documental | null }",
           "retorno": null,
-          "linea": 345,
+          "linea": 364,
           "resumen": "Resumen de CARGAS + documentación de la subasta. Vive dentro de `FichaSubasta` a propósito: antes el semáforo y las notas del edicto solo se pintaban en la pestaña «Todas» (iban en su `extra`), así qu"
         },
         {
@@ -47519,7 +47519,7 @@
           "exportada": false,
           "params": "{ s, o, acciones, extra, doc }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null }",
           "retorno": null,
-          "linea": 436
+          "linea": 464
         },
         {
           "nombre": "SubastasClient",
@@ -47527,14 +47527,14 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Inicial | null }",
           "retorno": null,
-          "linea": 581
+          "linea": 609
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "0cc6d5bbf24e"
+      "hash": "d8e88de26930"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -50555,7 +50555,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/banca-alertas",
-      "hash": "d24cbc321b36"
+      "hash": "2e6368cded73"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/borme-ingesta/route.ts",
@@ -55495,12 +55495,11 @@
       ],
       "tablas": [
         "next",
-        "rojo",
         "subastas",
         "subastas_criterios"
       ],
       "rutaApi": "/api/subastas",
-      "hash": "8ba2982f0af8"
+      "hash": "9ba39c9b5754"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/seguidas/route.ts",
@@ -57615,7 +57614,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<SaldoConsolidado>",
-          "linea": 349,
+          "linea": 376,
           "resumen": "Saldo consolidado de TODAS las cuentas bancarias de una cuenta (scoped por cuenta_id). Las cuentas con oculta=true se devuelven al final del array pero NO suman al total."
         },
         {
@@ -57624,7 +57623,7 @@
           "exportada": true,
           "params": "cuentaId: string, maxMovs = 5",
           "retorno": "Promise<CuentaConMovimientos[]>",
-          "linea": 425,
+          "linea": 457,
           "resumen": "Saldo de cada cuenta bancaria PROPIA (excluye titular='conyuge', las de Pilar) con sus últimos `maxMovs` movimientos (por nº, no por días: si el feed lleva días sin traer nada, la tarjeta no se queda "
         },
         {
@@ -57633,7 +57632,7 @@
           "exportada": true,
           "params": "cuentaId: string, anio: number",
           "retorno": "Promise<CobradoPisos>",
-          "linea": 496
+          "linea": 528
         },
         {
           "nombre": "getSerieCobrosPisos",
@@ -57641,7 +57640,7 @@
           "exportada": true,
           "params": "cuentaId: string, meses = 6",
           "retorno": "Promise<MesCobros[]>",
-          "linea": 527
+          "linea": 559
         },
         {
           "nombre": "getTopGastosMes",
@@ -57649,7 +57648,7 @@
           "exportada": true,
           "params": "cuentaId: string, n = 5",
           "retorno": "Promise<GastoGrande[]>",
-          "linea": 566
+          "linea": 598
         },
         {
           "nombre": "mapMov",
@@ -57657,7 +57656,7 @@
           "exportada": false,
           "params": "r: MovRow",
           "retorno": "MovimientoBancario",
-          "linea": 612
+          "linea": 644
         },
         {
           "nombre": "listarMovimientos",
@@ -57665,7 +57664,7 @@
           "exportada": true,
           "params": "cuentaId: string, cuentaBancariaId?: string, limite = 100,",
           "retorno": "Promise<MovimientoBancario[]>",
-          "linea": 628,
+          "linea": 660,
           "resumen": "Últimos movimientos de una cuenta (todas sus cuentas bancarias, o una concreta)."
         },
         {
@@ -57674,7 +57673,7 @@
           "exportada": true,
           "params": "cuentaId: string, filtros: LedgerFiltros = {}, limite = 50, offset = 0,",
           "retorno": "Promise<",
-          "linea": 682
+          "linea": 714
         },
         {
           "nombre": "listarIngresosPorRevisar",
@@ -57682,7 +57681,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<MovLedger[]>",
-          "linea": 742,
+          "linea": 774,
           "resumen": "INGRESOS (abonos) marcados para revisar cuyo NEGOCIO está sin confirmar. Antes un ingreso mal clasificado no tenía dónde aparecer (la revisión de /finanzas/gastos es solo importe<0); estos abonos se s"
         },
         {
@@ -57691,7 +57690,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<MovimientoBancario[]>",
-          "linea": 784,
+          "linea": 816,
           "resumen": "GASTOS que la IA marcó \"por revisar\": lo dudoso es el NEGOCIO (destino) — la bandeja de /banca lo resuelve vía /api/banca/destino (confirma + aprende regla del comercio)."
         },
         {
@@ -57700,7 +57699,7 @@
           "exportada": true,
           "params": "cuentaId: string, meses = 12",
           "retorno": "Promise<MesEvolucion[]>",
-          "linea": 812
+          "linea": 844
         },
         {
           "nombre": "getMovimientosExport",
@@ -57708,7 +57707,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<MovExport[]>",
-          "linea": 835
+          "linea": 867
         },
         {
           "nombre": "getComparativaMensual",
@@ -57716,7 +57715,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<",
-          "linea": 870
+          "linea": 902
         },
         {
           "nombre": "getGastosPorCategoria",
@@ -57724,7 +57723,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<GastoCategoria[]>",
-          "linea": 897
+          "linea": 929
         },
         {
           "nombre": "getEvolucionPorDestino",
@@ -57732,7 +57731,7 @@
           "exportada": true,
           "params": "cuentaId: string, meses = 6",
           "retorno": "Promise<",
-          "linea": 915
+          "linea": 947
         },
         {
           "nombre": "getAlertas",
@@ -57740,7 +57739,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<Alertas>",
-          "linea": 960
+          "linea": 992
         },
         {
           "nombre": "getDuplicadosSospechosos",
@@ -57748,7 +57747,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<DupGrupo[]>",
-          "linea": 1042,
+          "linea": 1074,
           "resumen": "Pares de gastos sospechosos de cobro doble: mismo importe + misma contraparte/concepto en ±4 días, últimos 60 días, AMBOS sin resolver (duplicado_estado IS NULL). Excluye pares donde los dos están con"
         },
         {
@@ -57757,7 +57756,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<DupResuelto[]>",
-          "linea": 1138
+          "linea": 1170
         },
         {
           "nombre": "resolverDuplicados",
@@ -57765,7 +57764,7 @@
           "exportada": true,
           "params": "cuentaId: string, ids: string[], estado: 'ignorado' | 'confirmado' | null,",
           "retorno": "Promise<number>",
-          "linea": 1162,
+          "linea": 1194,
           "resumen": "Marca (o desmarca) movimientos como duplicado resuelto. Scoped por cuenta_id vía join: solo toca movimientos de cuentas bancarias de la sesión. estado=null → deshacer (vuelve a NULL)."
         },
         {
@@ -57774,7 +57773,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<ResumenDestino[]>",
-          "linea": 1180
+          "linea": 1212
         }
       ],
       "tablas": [
@@ -57788,7 +57787,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "608772f88498"
+      "hash": "a46b03baa247"
     },
     {
       "ruta": "apps/plataforma/lib/base-url.ts",
@@ -65237,7 +65236,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "ea33a209b9c1"
+      "hash": "cbca9244eac6"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/consulta-juzgado.ts",
@@ -65306,7 +65305,7 @@
           "exportada": false,
           "params": "url: string, ms = 30000",
           "retorno": "Promise<Response>",
-          "linea": 61
+          "linea": 62
         },
         {
           "nombre": "textoDePdf",
@@ -65314,7 +65313,7 @@
           "exportada": false,
           "params": "buf: Buffer",
           "retorno": "Promise<string>",
-          "linea": 71
+          "linea": 72
         },
         {
           "nombre": "procesarDocumentosDeFicha",
@@ -65322,7 +65321,7 @@
           "exportada": true,
           "params": "identificador: string, opts: { leerCargas?: boolean } = {},",
           "retorno": "Promise<ResultadoFicha>",
-          "linea": 105,
+          "linea": 106,
           "resumen": "Procesa TODOS los documentos de UNA ficha: señales del edicto + cuadro de cargas. `leerCargas: false` se queda en las señales por regex (gratis), para las subastas que no han pasado el gate de rentabi"
         },
         {
@@ -65331,7 +65330,7 @@
           "exportada": true,
           "params": "f: { flip_apto: boolean | null margen_flip_pct: number | null es_playa: boolean | null descuento_estimado: number | null }",
           "retorno": "boolean",
-          "linea": 190,
+          "linea": 198,
           "resumen": "¿Merece esta subasta el análisis profundo (que cuesta llamadas de IA)? El embudo de Alberto: primero rentabilidad, y solo si cuadra, documentación. Entra si es un flip viable, si es de la costa de Hue"
         },
         {
@@ -65340,7 +65339,7 @@
           "exportada": true,
           "params": "max = 10",
           "retorno": "Promise<",
-          "linea": 206,
+          "linea": 214,
           "resumen": "Pasada sobre las subastas vivas: lee los documentos de las que no están al día con la versión actual del lector. Best-effort: un fallo de descarga deja la fila como está y se reintenta mañana."
         },
         {
@@ -65349,7 +65348,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 291,
+          "linea": 299,
           "resumen": "· sin los resultados no hay calibración (la memoria del agente). Así que se borra la BANDEJA de avisos (`subastas_radar`, efímera por diseño) y se marca la subasta como archivada. El histórico se qued"
         }
       ],
@@ -65358,7 +65357,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "73a0eb2cce08"
+      "hash": "d233ac41ef8e"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/enriquecer.ts",
@@ -65912,6 +65911,38 @@
       "hash": "b84ffeb177b1"
     },
     {
+      "ruta": "apps/plataforma/lib/subastas/resumen-docs.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Titular de la documentación adjunta de una subasta. Puro (sin BD ni red): lo consume la ficha de `/subastas` y lo cubren tests con `node --test`. ────────────────────────────────────────────────────────────────────────────",
+      "exporta": [
+        "estadoDocumentacion",
+        "resumenDocumentos"
+      ],
+      "funciones": [
+        {
+          "nombre": "estadoDocumentacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "docs: DocumentoAdjunto[] | null | undefined, publicaAdjuntos = true,",
+          "retorno": "EstadoDocumentacion",
+          "linea": 25,
+          "resumen": "`null`/`undefined` = la ficha AÚN NO se ha revisado. `[]` = revisada y el BOE no publica adjuntos. Son cosas distintas y hay que decirlas distinto. @param publicaAdjuntos `false` para las fuentes SIN "
+        },
+        {
+          "nombre": "resumenDocumentos",
+          "kind": "function",
+          "exportada": true,
+          "params": "docs: DocumentoAdjunto[] | null | undefined, publicaAdjuntos = true,",
+          "retorno": "string",
+          "linea": 43,
+          "resumen": "Texto del `<summary>` de «Cargas y documentación». 🚨 Nunca afirmar una ausencia que no se sabe: la columna `documentos` es más nueva que las filas del corpus, así que una subasta ingerida antes la ti"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "37829e785b50"
+    },
+    {
       "ruta": "apps/plataforma/lib/subastas/tesoreria.ts",
       "ambito": "apps/plataforma",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Tesorería del depósito — capa de app: saca de la BD los compromisos y el saldo real, y delega el cálculo en el módulo puro (`planTesoreria`). POR QUÉ: pujar exige consignar el 5% ANTES, y el dinero queda bloqueado hasta des",
@@ -66270,7 +66301,7 @@
           "exportada": true,
           "params": "cuentaId: string, hoy: string = new Date().toISOString().slice(0, 10),",
           "retorno": "Promise<Tesoreria>",
-          "linea": 10
+          "linea": 16
         }
       ],
       "tablas": [
@@ -66278,7 +66309,7 @@
         "movimientos_bancarios"
       ],
       "rutaApi": null,
-      "hash": "5f4cfd47a039"
+      "hash": "7c9c0290515e"
     },
     {
       "ruta": "apps/plataforma/lib/tickets.ts",
@@ -68232,7 +68263,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "e5285854c290"
+      "hash": "072e73fe2ceb"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/page.tsx",
@@ -70481,9 +70512,9 @@
           "nombre": "StatVac",
           "kind": "function",
           "exportada": false,
-          "params": "{ label, valor, color }: { label: string; valor: number; color?: string }",
+          "params": "{ label, valor, color }: { label: string; valor: number | null; color?: string }",
           "retorno": null,
-          "linea": 10
+          "linea": 18
         },
         {
           "nombre": "SolicitudesEmpleado",
@@ -70491,14 +70522,14 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 19
+          "linea": 27
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "e70ab00eb531"
+      "hash": "98465d07f792"
     },
     {
       "ruta": "apps/rrhh/components/Wordmark.tsx",
@@ -71999,8 +72030,8 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, anio: number",
           "retorno": null,
-          "linea": 74,
-          "resumen": "Resumen de vacaciones de un empleado para un año dado."
+          "linea": 82,
+          "resumen": "Resumen de vacaciones de un empleado para un año dado. 🚨 `devengados` es `null` cuando el CONVENIO de la empresa no está cargado. Antes caía a `?? 30`: eso no es un valor por defecto, es inventarse u"
         },
         {
           "nombre": "saldoVacacionesEmpleados",
@@ -72008,7 +72039,7 @@
           "exportada": true,
           "params": "empresaId: string, anio: number",
           "retorno": null,
-          "linea": 95,
+          "linea": 111,
           "resumen": "Saldo de vacaciones de todos los empleados de una empresa (para la vista admin)."
         },
         {
@@ -72017,7 +72048,7 @@
           "exportada": true,
           "params": "empresaId: string, desde: string, hasta: string",
           "retorno": null,
-          "linea": 122,
+          "linea": 139,
           "resumen": "Ausencias aprobadas de la empresa en un rango de fechas (para el calendario admin)."
         },
         {
@@ -72026,7 +72057,7 @@
           "exportada": true,
           "params": "empresaId: string, usuarioId: string, solicitudId: string, aprobar: boolean",
           "retorno": null,
-          "linea": 135,
+          "linea": 152,
           "resumen": "El gestor resuelve una solicitud (aprobar/rechazar). Devuelve aviso si hay solapamiento."
         }
       ],
@@ -72035,7 +72066,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "479c54c30f0b"
+      "hash": "2b0f67f72aef"
     },
     {
       "ruta": "apps/rrhh/lib/storage.ts",
@@ -77549,7 +77580,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a0a182899bb1"
+      "hash": "4d6138275e16"
     },
     {
       "ruta": "apps/sivra/lib/pricing-calendar.ts",
@@ -78024,7 +78055,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "575567884aa3"
+      "hash": "e6efe665940a"
     },
     {
       "ruta": "apps/transporte/app/(usuario)/flota/page.tsx",
@@ -78725,7 +78756,7 @@
           "exportada": false,
           "params": "d: Dec",
           "retorno": "number | null",
-          "linea": 26
+          "linea": 27
         },
         {
           "nombre": "isoDate",
@@ -78733,7 +78764,7 @@
           "exportada": false,
           "params": "d: Date | null | undefined",
           "retorno": "string | null",
-          "linea": 27
+          "linea": 28
         },
         {
           "nombre": "iso",
@@ -78741,7 +78772,7 @@
           "exportada": false,
           "params": "d: Date | null | undefined",
           "retorno": "string | null",
-          "linea": 29
+          "linea": 30
         },
         {
           "nombre": "aVehiculo",
@@ -78749,7 +78780,7 @@
           "exportada": false,
           "params": "r: any",
           "retorno": "Vehiculo",
-          "linea": 33,
+          "linea": 34,
           "resumen": "eslint-disable @typescript-eslint/no-explicit-any"
         },
         {
@@ -78758,7 +78789,7 @@
           "exportada": false,
           "params": "r: any",
           "retorno": "DocumentoVehiculo",
-          "linea": 50
+          "linea": 51
         },
         {
           "nombre": "aPorte",
@@ -78766,7 +78797,7 @@
           "exportada": false,
           "params": "r: any",
           "retorno": "Porte",
-          "linea": 62
+          "linea": 63
         },
         {
           "nombre": "aMantenimiento",
@@ -78774,7 +78805,7 @@
           "exportada": false,
           "params": "r: any",
           "retorno": "Mantenimiento",
-          "linea": 82
+          "linea": 83
         },
         {
           "nombre": "aRepostaje",
@@ -78782,7 +78813,7 @@
           "exportada": false,
           "params": "r: any",
           "retorno": "Repostaje",
-          "linea": 95
+          "linea": 96
         },
         {
           "nombre": "aServicio",
@@ -78790,7 +78821,7 @@
           "exportada": false,
           "params": "r: any",
           "retorno": "ServicioTransporte",
-          "linea": 106
+          "linea": 107
         },
         {
           "nombre": "listVehiculos",
@@ -78798,7 +78829,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<(Vehiculo &",
-          "linea": 127,
+          "linea": 128,
           "resumen": "─── Consultas ─────────────────────────────────────────────────────────────────"
         },
         {
@@ -78807,7 +78838,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<DocumentoVehiculo[]>",
-          "linea": 132
+          "linea": 133
         },
         {
           "nombre": "listPortes",
@@ -78815,7 +78846,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<Porte[]>",
-          "linea": 137
+          "linea": 138
         },
         {
           "nombre": "listPortesDeServicios",
@@ -78823,7 +78854,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<PorteView[]>",
-          "linea": 155
+          "linea": 156
         },
         {
           "nombre": "listPosicionesUltimas",
@@ -78831,7 +78862,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<PosicionView[]>",
-          "linea": 189,
+          "linea": 190,
           "resumen": "Última posición de cada vehículo de la cuenta (para el mapa del operador)."
         },
         {
@@ -78840,7 +78871,7 @@
           "exportada": true,
           "params": "deviceId: string,",
           "retorno": "Promise<",
-          "linea": 216,
+          "linea": 217,
           "resumen": "Vehículo por el identificador de su tracker GPS (IMEI/uniqueId). Único global → deriva la cuenta."
         },
         {
@@ -78849,7 +78880,7 @@
           "exportada": true,
           "params": "vehiculoId: string",
           "retorno": "Promise<string | null>",
-          "linea": 224,
+          "linea": 225,
           "resumen": "Porte \"en curso\" de un vehículo (para asociarle la posición y disparar geocerca/km). El más reciente que no esté ya cerrado; null si no hay ninguno activo (la posición se guarda igual)."
         },
         {
@@ -78858,7 +78889,7 @@
           "exportada": true,
           "params": "input: { vehiculoId: string porteId?: string | null lat: number lng: number velocidadKmh?: number | null rumbo?: number | null capturadoAt?: Date | null }",
           "retorno": "Promise<",
-          "linea": 237,
+          "linea": 238,
           "resumen": "Ingesta de UNA posición (única vía de escritura, la usan el conductor por enlace y el hardware). Guarda la posición y, si va asociada a un porte, aplica geocerca: marca la siguiente parada pendiente e"
         },
         {
@@ -78867,7 +78898,7 @@
           "exportada": true,
           "params": "token: string",
           "retorno": null,
-          "linea": 290,
+          "linea": 291,
           "resumen": "Conductor por su enlace mágico → datos mínimos + sus portes activos (con vehículo y ruta)."
         },
         {
@@ -78876,7 +78907,7 @@
           "exportada": true,
           "params": "token: string",
           "retorno": null,
-          "linea": 306,
+          "linea": 307,
           "resumen": "Seguimiento público de un servicio por su token (vista cliente: camión + ruta)."
         },
         {
@@ -78885,7 +78916,7 @@
           "exportada": false,
           "params": "vehiculoIds: string[]",
           "retorno": "Promise<PosicionView[]>",
-          "linea": 319
+          "linea": 320
         },
         {
           "nombre": "listServicios",
@@ -78893,7 +78924,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<ServicioTransporte[]>",
-          "linea": 343
+          "linea": 344
         },
         {
           "nombre": "getDashboard",
@@ -78901,7 +78932,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<DashboardData>",
-          "linea": 362
+          "linea": 365
         },
         {
           "nombre": "margenesDeServicios",
@@ -78909,13 +78940,13 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": null,
-          "linea": 397,
+          "linea": 401,
           "resumen": "Margen por servicio (para la tabla de servicios), resolviendo el coste con los portes/vehículos."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bfb2c55bff4a"
+      "hash": "1e53b1f1021f"
     },
     {
       "ruta": "apps/transporte/middleware.ts",
@@ -81903,6 +81934,7 @@
         "asignarVehiculo",
         "estadoDocumento",
         "alertasDocumentos",
+        "vehiculosSinDocumentar",
         "esPorteIntercompany",
         "totalIntercompany"
       ],
@@ -81913,7 +81945,7 @@
           "exportada": true,
           "params": "n: number",
           "retorno": "number",
-          "linea": 16
+          "linea": 17
         },
         {
           "nombre": "costeDesdeKm",
@@ -81921,7 +81953,7 @@
           "exportada": false,
           "params": "km: number | null | undefined, v: Vehiculo",
           "retorno": "number",
-          "linea": 22
+          "linea": 23
         },
         {
           "nombre": "costePorteEstimado",
@@ -81929,7 +81961,7 @@
           "exportada": true,
           "params": "porte: Porte, vehiculo: Vehiculo",
           "retorno": "number",
-          "linea": 29,
+          "linea": 30,
           "resumen": "Coste estimado del porte: el explícito si existe, si no km estimados × tarifa + fija."
         },
         {
@@ -81938,7 +81970,7 @@
           "exportada": true,
           "params": "porte: Porte, vehiculo: Vehiculo",
           "retorno": "number",
-          "linea": 35,
+          "linea": 36,
           "resumen": "Coste real del porte: el explícito si existe, si no km reales × tarifa + fija."
         },
         {
@@ -81947,7 +81979,7 @@
           "exportada": true,
           "params": "porte: Porte, vehiculo: Vehiculo",
           "retorno": "number",
-          "linea": 41,
+          "linea": 42,
           "resumen": "Coste real por km de un porte (0 si no hay km reales)."
         },
         {
@@ -81956,7 +81988,7 @@
           "exportada": true,
           "params": "porte: Porte, vehiculo: Vehiculo",
           "retorno": "RentabilidadPorte",
-          "linea": 48,
+          "linea": 49,
           "resumen": "Rentabilidad de un porte: estimado vs real, desviaciones y margen sobre lo facturado."
         },
         {
@@ -81965,7 +81997,7 @@
           "exportada": true,
           "params": "vehiculo: Vehiculo, portes: Porte[], mantenimientos: Mantenimiento[] = [], repostajes: Repostaje[] = [],",
           "retorno": "RentabilidadVehiculo",
-          "linea": 66,
+          "linea": 67,
           "resumen": "Rentabilidad agregada de un vehículo en un periodo (ingresos vs combustible+mantenimiento)."
         },
         {
@@ -81974,7 +82006,7 @@
           "exportada": true,
           "params": "vehiculo: Vehiculo, carga: Carga",
           "retorno": "boolean",
-          "linea": 99,
+          "linea": 100,
           "resumen": "¿El vehículo cubre la carga? Capacidad (kg/m³) y tipo requerido (p. ej. frigorífico)."
         },
         {
@@ -81983,7 +82015,7 @@
           "exportada": false,
           "params": "a: Intervalo, b: Intervalo",
           "retorno": "boolean",
-          "linea": 115
+          "linea": 116
         },
         {
           "nombre": "intervaloPorte",
@@ -81991,7 +82023,7 @@
           "exportada": true,
           "params": "porte: Porte",
           "retorno": "Intervalo | null",
-          "linea": 121,
+          "linea": 122,
           "resumen": "Intervalo de un porte a partir de salida/llegada (null si no tiene ambas)."
         },
         {
@@ -82000,7 +82032,7 @@
           "exportada": true,
           "params": "vehiculoId: string, intervalo: Intervalo, portes: Porte[],",
           "retorno": "boolean",
-          "linea": 127,
+          "linea": 128,
           "resumen": "¿El vehículo está libre en el intervalo? (sin portes activos que solapen)."
         },
         {
@@ -82009,7 +82041,7 @@
           "exportada": true,
           "params": "vehiculos: Vehiculo[], carga: Carga, opts: { intervalo?: Intervalo; portes?: Porte[] } = {},",
           "retorno": "Vehiculo[]",
-          "linea": 143,
+          "linea": 144,
           "resumen": "Vehículos aptos para una carga y (opcionalmente) libres en un intervalo, ordenados por el \"mejor ajuste\": el de menor capacidad suficiente primero (no malgastar el camión grande)."
         },
         {
@@ -82018,7 +82050,7 @@
           "exportada": true,
           "params": "vehiculos: Vehiculo[], carga: Carga, opts: { intervalo?: Intervalo; portes?: Porte[] } = {},",
           "retorno": "Vehiculo | null",
-          "linea": 156,
+          "linea": 157,
           "resumen": "Asignación inteligente: el mejor vehículo apto y libre, o null si no hay."
         },
         {
@@ -82027,7 +82059,7 @@
           "exportada": false,
           "params": "desdeISO: string, hastaISO: string",
           "retorno": "number",
-          "linea": 168
+          "linea": 169
         },
         {
           "nombre": "estadoDocumento",
@@ -82035,7 +82067,7 @@
           "exportada": true,
           "params": "doc: DocumentoVehiculo, hoyISO: string, diasAviso = 30,",
           "retorno": "",
-          "linea": 177,
+          "linea": 178,
           "resumen": "Estado de un documento frente a una fecha de referencia (hoy): caducado si ya pasó, por_caducar si quedan ≤ diasAviso, vigente en otro caso."
         },
         {
@@ -82044,8 +82076,17 @@
           "exportada": true,
           "params": "documentos: DocumentoVehiculo[], hoyISO: string, diasAviso = 30,",
           "retorno": "AlertaDocumento[]",
-          "linea": 191,
+          "linea": 192,
           "resumen": "Alertas de documentos caducados o a punto de caducar (ordenadas por urgencia)."
+        },
+        {
+          "nombre": "vehiculosSinDocumentar",
+          "kind": "function",
+          "exportada": true,
+          "params": "vehiculos: Vehiculo[], documentos: DocumentoVehiculo[], obligatorios: TipoDocumentoVehiculo[] = DOCS_OBLIGATORIOS,",
+          "retorno": "VehiculoSinDocumentar[]",
+          "linea": 232,
+          "resumen": "Vehículos sin ITV o sin seguro REGISTRADOS. 🚨 `alertasDocumentos` solo puede avisar de lo que existe en la tabla: un vehículo sin NINGUNA fila de documento no produce alerta, y el semáforo lo daba po"
         },
         {
           "nombre": "esPorteIntercompany",
@@ -82053,7 +82094,7 @@
           "exportada": true,
           "params": "porte: Porte",
           "retorno": "boolean",
-          "linea": 215,
+          "linea": 255,
           "resumen": "Un porte es intercompany si es interno y mueve entre dos sociedades distintas del grupo."
         },
         {
@@ -82062,13 +82103,13 @@
           "exportada": true,
           "params": "portes: Porte[]",
           "retorno": "number",
-          "linea": 225,
+          "linea": 265,
           "resumen": "Total facturado en portes intercompany (lo que se elimina en el consolidado del holding)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a3aee77f4369"
+      "hash": "f2f631fd2a42"
     },
     {
       "ruta": "packages/module-geo/src/geo.ts",
@@ -83753,7 +83794,7 @@
           "nombre": "analisisDocumental",
           "kind": "function",
           "exportada": true,
-          "params": "s: SubastaInmueble, notasEdicto: string | null | undefined",
+          "params": "s: SubastaInmueble, notasEdicto: string | null | undefined, documentos?: Array<{ legible?: boolean | null }> | null,",
           "retorno": "AnalisisDocumental",
           "linea": 33,
           "resumen": "Checklist documental. `notasEdicto` son las líneas que el enriquecedor ya extrajo de los documentos de la ficha (`notasDeEdicto`): NULL = documentos aún no procesados; '' = procesados sin hallazgos."
@@ -83761,7 +83802,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e4db68fb7071"
+      "hash": "07992036257d"
     },
     {
       "ruta": "packages/module-subastas/src/aviso.ts",
@@ -84396,18 +84437,28 @@
       "ambito": "packages/module-subastas",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Documentos adjuntos a la ficha del Portal de Subastas del BOE. PURO. La ficha lista sus documentos como enlaces `verDocumento.php?idSub=…&idDoc=…` (verificado el 29/07/2026 contra dos fichas reales: EDICTO, CERTIFICACIÓN DE",
       "exporta": [
+        "fichaLegible",
         "enlacesDocumentos",
         "datosDeEdicto",
         "notasDeEdicto"
       ],
       "funciones": [
         {
+          "nombre": "fichaLegible",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string, identificador: string",
+          "retorno": "boolean",
+          "linea": 59,
+          "resumen": "¿El HTML recibido es DE VERDAD la ficha de esa subasta? 🚨 Sin esta comprobación, cualquier respuesta 200 que no sea la ficha (página de error del Portal, muro de un WAF, mantenimiento) produce `enlac"
+        },
+        {
           "nombre": "enlacesDocumentos",
           "kind": "function",
           "exportada": true,
           "params": "html: string",
           "retorno": "DocumentoFicha[]",
-          "linea": 47,
+          "linea": 66,
           "resumen": "Enlaces a documentos de una ficha del portal (HTML de cualquier pestaña)."
         },
         {
@@ -84416,7 +84467,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "DatosEdicto",
-          "linea": 66,
+          "linea": 85,
           "resumen": "Señales explícitas del texto de un edicto. Nunca infiere: solo literales."
         },
         {
@@ -84425,13 +84476,13 @@
           "exportada": true,
           "params": "d: DatosEdicto",
           "retorno": "string[]",
-          "linea": 91,
+          "linea": 110,
           "resumen": "Los hallazgos, como líneas legibles para la ficha. `[]` = nada explícito."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ae149320e5e7"
+      "hash": "abccc6e224fe"
     },
     {
       "ruta": "packages/module-subastas/src/email-boe.ts",
@@ -86995,7 +87046,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2358,
-    "funciones": 6250
+    "archivos": 2359,
+    "funciones": 6254
   }
 }

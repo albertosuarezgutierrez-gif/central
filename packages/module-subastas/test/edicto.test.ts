@@ -4,7 +4,7 @@
 // 29/07/2026 (errata «VIVENDA» incluida — venía así en el documento).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { datosDeEdicto, enlacesDocumentos, notasDeEdicto } from '../src/edicto.ts'
+import { datosDeEdicto, enlacesDocumentos, fichaLegible, notasDeEdicto } from '../src/edicto.ts'
 
 // Anclas reales de la ficha (con &amp; y entidades tal cual las sirve el portal).
 const FICHA_HTML = `
@@ -129,4 +129,24 @@ test('un edicto normal no dispara las señales de certificación', () => {
   assert.equal(d.sinCargasProcedencia, false)
   assert.equal(d.sinTitularesPosteriores, false)
   assert.equal(d.anotacionEmbargo, false)
+})
+
+// ── fichaLegible: no creerse un «no hay adjuntos» de una página que no es la ficha ──
+
+const FICHA_OK = `<a href="detalleSubasta.php?idSub=SUB-JA-2026-263723&amp;ver=1&amp;idBus=">Información general</a>
+  <a href="detalleSubasta.php?idSub=SUB-JA-2026-263723&amp;ver=3&amp;idBus=">Bienes</a>`
+
+test('fichaLegible reconoce la ficha real por los enlaces de sus pestañas', () => {
+  assert.equal(fichaLegible(FICHA_OK, 'SUB-JA-2026-263723'), true)
+})
+
+test('fichaLegible rechaza una página que no es la ficha (error/WAF con 200)', () => {
+  // Este es el caso caro: `enlacesDocumentos` devolvería [] y se grabaría como
+  // «esta subasta no publica documentos», sin volver a reintentarlo nunca.
+  assert.equal(fichaLegible('<html><body>Servicio no disponible</body></html>', 'SUB-JA-2026-263723'), false)
+  assert.equal(fichaLegible('', 'SUB-JA-2026-263723'), false)
+})
+
+test('fichaLegible rechaza la ficha de OTRA subasta', () => {
+  assert.equal(fichaLegible(FICHA_OK, 'SUB-JA-2026-999999'), false)
 })
