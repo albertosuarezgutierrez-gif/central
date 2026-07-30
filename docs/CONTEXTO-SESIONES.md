@@ -71,6 +71,16 @@
   `subastas.documentos` (jsonb, aplicada): `procesarDocumentosDeFicha` guarda el LISTADO entero de adjuntos
   con `legible` (los escaneados se marcan «léelo a mano») aunque solo descargue 3. tsc 0 · 215 tests · build OK.
 
+- **🏠 Subastas/chollos — API OFICIAL de Idealista preparada y DORMIDA (30/07/2026, PR #1168).** ¿Se puede
+  "conectar Idealista" como ChatGPT? Su app en ChatGPT es exclusiva de OpenAI, NO conectable desde fuera; la
+  vía legítima es la **API oficial** (developers.idealista.com, gratis ~100 búsquedas/mes). Alberto solicitó
+  el alta el 30/07 y **espera el mail con la key**. Módulo puro `idealista-api.ts` (mapeo a `Comparable` — el
+  `propertyCode` ES el id de `/inmueble/<id>/`, así que dedupe natural con las alertas — centros lat/lng por
+  zona vigilada y presupuesto racionado) + `apps/plataforma/lib/subastas/idealista-api.ts` (OAuth2 + ingesta
+  por `upsertComparable`, extraído de `mercado.ts` como puerta única del corpus; ledger `idealista_api_usos`,
+  migración aplicada) cableado best-effort en el cron `subastas-mercado`. **Al llegar el mail:** pegar
+  `IDEALISTA_API_KEY`/`IDEALISTA_API_SECRET` en god-panel → 🔑 Secretos y listo, sin tocar código.
+
 - **🏠 Subastas: las características del inmueble ya se ven en la ficha (30/07/2026, rama
   `claude/property-features-missing-je4vtw`, PR #1177).** Alberto sobre una captura de `/subastas`: «no
   aparecen las características». Cierto — tipo, m², dormitorios, baños y planta estaban en BD y solo se

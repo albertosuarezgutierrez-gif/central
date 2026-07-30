@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-30T14:29:22Z",
-  "sha": "578c2cbcc3ba87306ed0cf3d4211d851ff29d23e",
+  "generadoEn": "2026-07-30T17:18:51Z",
+  "sha": "4d9bb4d89d446fbae67122d2b29b23021d484a89",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -51296,12 +51296,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 20
+          "linea": 21
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/subastas-mercado",
-      "hash": "3c53d5b8aed3"
+      "hash": "e609d96402c4"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-radar/route.ts",
@@ -65344,6 +65344,58 @@
       "hash": "ae9e739861df"
     },
     {
+      "ruta": "apps/plataforma/lib/subastas/idealista-api.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── API OFICIAL de Idealista → comparables de mercado. Aísla red y BD; el mapeo, los centros de zona y el presupuesto son PUROS (`@central/module-subastas`). POR QUÉ EXISTE: las alertas de correo solo cubren las búsquedas guard",
+      "exporta": [
+        "idealistaApiDisponible",
+        "ingerirComparablesIdealistaApi"
+      ],
+      "funciones": [
+        {
+          "nombre": "idealistaApiDisponible",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 37
+        },
+        {
+          "nombre": "obtenerToken",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<string>",
+          "linea": 42,
+          "resumen": "Token OAuth2 client_credentials. Dura ~12h; una pasada del cron pide uno y listo."
+        },
+        {
+          "nombre": "buscarZona",
+          "kind": "function",
+          "exportada": false,
+          "params": "token: string, centro: { lat: number; lng: number; distancia: number }",
+          "retorno": "Promise<RespuestaIdealistaApi>",
+          "linea": 61,
+          "resumen": "Una búsqueda de VIVIENDA en venta alrededor del centro de la zona."
+        },
+        {
+          "nombre": "ingerirComparablesIdealistaApi",
+          "kind": "function",
+          "exportada": true,
+          "params": "maxPorPasada = 3",
+          "retorno": "Promise<",
+          "linea": 91,
+          "resumen": "Pasada del cron: elige las zonas con subastas vivas cuya búsqueda API está caducada (o nunca hecha), consulta las que el presupuesto permita y vuelca los anuncios al corpus. Cada llamada queda anotada"
+        }
+      ],
+      "tablas": [
+        "idealista_api_usos",
+        "subastas"
+      ],
+      "rutaApi": null,
+      "hash": "f05419b0fa25"
+    },
+    {
       "ruta": "apps/plataforma/lib/subastas/junta.ts",
       "ambito": "apps/plataforma",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Adaptador de la D.G. de Patrimonio de la Junta de Andalucía (Fase 3). Aquí va SOLO la red; el parseo es puro (`@central/module-subastas/junta`). Dos páginas Drupal renderizadas en servidor (verificadas el 29/07/2026): · sub",
@@ -65379,6 +65431,7 @@
       "resumen": "──────────────────────────────────────────────────────────────────────────── Referencia de mercado para valorar las subastas. Aísla red y BD; el parseo y la mediana son PUROS (`@central/module-subastas/comparables`). POR QUÉ EXISTE: el BOE publica «Tasación 0,00 €» en la práctica totalidad de los an",
       "exporta": [
         "ingerirComparables",
+        "upsertComparable",
         "enriquecerAnunciantesFotocasa",
         "referenciaZonasFotocasa",
         "comparablesVigentes",
@@ -65402,12 +65455,21 @@
           "resumen": "Ingesta de comparables desde las alertas de Idealista del correo. El mismo anuncio se repite en correos sucesivos mientras sigue vivo, de ahí el `ON CONFLICT (portal, ref_anuncio)`: se actualiza el pr"
         },
         {
+          "nombre": "upsertComparable",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: Comparable, vistoEn: Date",
+          "retorno": "Promise<number>",
+          "linea": 81,
+          "resumen": "Upsert de UN comparable en `mercado_comparables` — la puerta única del corpus, compartida por las alertas de correo y la API oficial de Idealista (`lib/subastas/idealista-api.ts`): mismo dedupe `(port"
+        },
+        {
           "nombre": "enriquecerAnunciantesFotocasa",
           "kind": "function",
           "exportada": true,
           "params": "max = 8",
           "retorno": "Promise<",
-          "linea": 122
+          "linea": 132
         },
         {
           "nombre": "consultarZona",
@@ -65415,7 +65477,7 @@
           "exportada": false,
           "params": "slug: string, etiqueta: string, fallos: string[]",
           "retorno": "Promise<void>",
-          "linea": 196,
+          "linea": 206,
           "resumen": "Consulta una zona en el puente y la cachea; aprende CP→distrito de los anuncios."
         },
         {
@@ -65424,7 +65486,7 @@
           "exportada": true,
           "params": "max = 6",
           "retorno": "Promise<",
-          "linea": 257
+          "linea": 267
         },
         {
           "nombre": "comparablesVigentes",
@@ -65432,7 +65494,7 @@
           "exportada": true,
           "params": "meses = MESES_VIGENCIA",
           "retorno": "Promise<Comparable[]>",
-          "linea": 337,
+          "linea": 347,
           "resumen": "Comparables vigentes, ya en el tipo del módulo. Se cargan en memoria a propósito: la mediana por zona vive en el módulo puro (probada) y el filtro de zona es insensible a acentos, algo que en Postgres"
         },
         {
@@ -65441,7 +65503,7 @@
           "exportada": true,
           "params": "f: { municipio?: string | null busqueda_origen?: string | null provincia?: string | null }",
           "retorno": "string[]",
-          "linea": 378,
+          "linea": 388,
           "resumen": "Zonas por las que buscar el €/m² de una subasta, de la más específica a la más amplia. La primera que reúna muestra suficiente gana. `busqueda_origen` es el nombre de la búsqueda guardada del BOE («PU"
         },
         {
@@ -65450,7 +65512,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 393,
+          "linea": 403,
           "resumen": "Calcula y persiste el €/m² de mercado en las subastas que lo necesitan. Solo toca las que NO tienen tasación ni valor de referencia: donde hay una tasación real, los comparables no pintan nada (y el s"
         },
         {
@@ -65459,7 +65521,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<CholloSeguido[]>",
-          "linea": 473,
+          "linea": 483,
           "resumen": "Chollos vigentes + antigüedad estimada. La calibración del ritmo de refs usa `created_at` (primera vez que NOSOTROS vimos cada ref): para los anuncios que van ENTRANDO al corpus con los correos diario"
         },
         {
@@ -65468,7 +65530,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 507,
+          "linea": 517,
           "resumen": "Aviso Telegram de los chollos NUEVOS (una sola vez por anuncio). La mediana de zona se mueve a diario y un anuncio podría entrar y salir del umbral: `chollo_avisado_at` fija que cada anuncio avisa UNA"
         },
         {
@@ -65477,7 +65539,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 557
+          "linea": 567
         },
         {
           "nombre": "refrescarIndiceINE",
@@ -65485,7 +65547,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 585,
+          "linea": 595,
           "resumen": "Refresca la caché del IPV si está caducada. Best-effort (el cron lo llama)."
         },
         {
@@ -65494,7 +65556,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<IndicesVivienda | null>",
-          "linea": 619,
+          "linea": 629,
           "resumen": "Lee el IPV cacheado (sin red). Campos a null si aún no se han capturado."
         },
         {
@@ -65503,7 +65565,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<PulsoMercado | null>",
-          "linea": 650
+          "linea": 660
         },
         {
           "nombre": "avisarBajadas",
@@ -65511,7 +65573,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 677,
+          "linea": 687,
           "resumen": "Aviso Telegram de las BAJADAS DE PRECIO nuevas en las zonas vigiladas. Una bajada es señal aunque el anuncio no llegue a chollo: el vendedor ya ha cedido una vez y es el candidato natural a una oferta"
         }
       ],
@@ -65525,7 +65587,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "025a73f7ccc1"
+      "hash": "8f1dec4fda04"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/rendimiento.ts",
@@ -84185,6 +84247,58 @@
       "hash": "b869c2360214"
     },
     {
+      "ruta": "packages/module-subastas/src/idealista-api.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── API OFICIAL de Idealista (Search API v3.5) → Comparables. PURO. POR QUÉ EXISTE: las alertas de correo solo cubren las búsquedas guardadas que Alberto crea a mano, y el buscador de Fotocasa (edge proxy) es un apaño contra un",
+      "exporta": [
+        "tipoDesdePropertyType",
+        "comparablesDesdeApiIdealista",
+        "centroBusquedaIdealista",
+        "llamadasPermitidasIdealista"
+      ],
+      "funciones": [
+        {
+          "nombre": "tipoDesdePropertyType",
+          "kind": "function",
+          "exportada": true,
+          "params": "propertyType: string | null | undefined",
+          "retorno": "TipoComparable",
+          "linea": 71,
+          "resumen": "Tipo del anuncio a partir del `propertyType` de la API."
+        },
+        {
+          "nombre": "comparablesDesdeApiIdealista",
+          "kind": "function",
+          "exportada": true,
+          "params": "respuesta: RespuestaIdealistaApi",
+          "retorno": "Comparable[]",
+          "linea": 83,
+          "resumen": "Mapea los anuncios de una respuesta de la API al mismo `Comparable` que producen los parsers de correo — así entran al corpus por el MISMO upsert y el `propertyCode` deduplica contra los ids ya vistos"
+        },
+        {
+          "nombre": "centroBusquedaIdealista",
+          "kind": "function",
+          "exportada": true,
+          "params": "zona: string | null | undefined",
+          "retorno": "CentroBusqueda | null",
+          "linea": 180,
+          "resumen": "Centro de búsqueda de un municipio/zona vigilada. `null` si la zona no está en la tabla — la llamada NO se hace (mejor no gastar cuota en una búsqueda mal centrada que inventar coordenadas)."
+        },
+        {
+          "nombre": "llamadasPermitidasIdealista",
+          "kind": "function",
+          "exportada": true,
+          "params": "usadasEsteMes: number, maxPorPasada = 3",
+          "retorno": "number",
+          "linea": 205,
+          "resumen": "Cuántas llamadas puede gastar UNA pasada del cron, dado lo ya consumido este mes. Devuelve 0 cuando el presupuesto (menos el margen) está agotado."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "faec33b50412"
+    },
+    {
       "ruta": "packages/module-subastas/src/junta.ts",
       "ambito": "packages/module-subastas",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Parseo PURO de las páginas de patrimonio de la Junta de Andalucía (Drupal, renderizado en servidor — verificado contra el HTML real el 29/07/2026): · subastas-abierto.html → subastas con plazo de solicitudes abierto · inmue",
@@ -86047,7 +86161,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2341,
-    "funciones": 6173
+    "archivos": 2343,
+    "funciones": 6182
   }
 }
