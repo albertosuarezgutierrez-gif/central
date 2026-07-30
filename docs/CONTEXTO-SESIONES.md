@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⚖️ Subastas: resumen de CARGAS + documentación en TODAS las fichas (30/07/2026, rama
+  `claude/cargas-documentacion-subasta-b02s5y`).** Alberto sobre una captura de 📡 Radar: «aquí debería
+  haber resumen de cargas y de la documentación». El dato ya existía (semáforo, `analisis`, `notas_edicto`,
+  `cargas_texto`) pero se pintaba SOLO en la pestaña «Todas» — iba en su `extra`, y la ficha del Radar se
+  montaba sin él. Nuevo `ResumenDocumental` DENTRO de `FichaSubasta` (titular de cargas siempre visible +
+  `<details>` con semáforo, texto oficial de cargas, notas del edicto y documentos). Nueva columna
+  `subastas.documentos` (jsonb, aplicada): `procesarDocumentosDeFicha` guarda el LISTADO entero de adjuntos
+  con `legible` (los escaneados se marcan «léelo a mano») aunque solo descargue 3. tsc 0 · 215 tests · build OK.
+
 - **🏠 Subastas: las características del inmueble ya se ven en la ficha (30/07/2026, rama
   `claude/property-features-missing-je4vtw`, PR #1177).** Alberto sobre una captura de `/subastas`: «no
   aparecen las características». Cierto — tipo, m², dormitorios, baños y planta estaban en BD y solo se

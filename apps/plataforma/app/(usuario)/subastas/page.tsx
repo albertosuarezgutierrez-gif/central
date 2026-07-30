@@ -69,6 +69,9 @@ export default async function SubastasPage() {
     // viva, se pinta con la foto de HOY —así las características aparecen sin
     // esperar al cron— y si ya no está en el corpus, manda el snapshot.
     const vivas = new Map<string, ReturnType<typeof filaASubasta>>()
+    // Cargas/semáforo/notas/documentos van APARTE del snapshot: la ficha del
+    // radar los pinta igual que la de «Todas» (antes solo salían allí).
+    const docs = new Map<string, { semaforo: string | null; analisis: unknown; notasEdicto: string | null; documentos: unknown }>()
     if (radar.length > 0) {
       const claves = radar.map((r) => r.dedupe_key as string)
       const corpus = await prisma
@@ -77,7 +80,15 @@ export default async function SubastasPage() {
           console.error('[subastas page radar corpus]', e)
           return [] as any[]
         })
-      for (const f of corpus) vivas.set(f.dedupe_key, filaASubasta(f))
+      for (const f of corpus) {
+        vivas.set(f.dedupe_key, filaASubasta(f))
+        docs.set(f.dedupe_key, {
+          semaforo: f.semaforo ?? null,
+          analisis: f.analisis ?? null,
+          notasEdicto: f.notas_edicto ?? null,
+          documentos: f.documentos ?? null,
+        })
+      }
     }
 
     const c = criterios[0]
@@ -105,6 +116,7 @@ export default async function SubastasPage() {
           flipApto: f.flip_apto ?? false,
           semaforo: f.semaforo ?? null,
           analisis: f.analisis ?? null,
+          documentos: f.documentos ?? null,
           precioM2Zona: f.precio_m2_zona != null ? Number(f.precio_m2_zona) : null,
           muestraZona: f.muestra_zona ?? null,
           zonaPortal: f.zona_portal ?? null,
@@ -120,7 +132,11 @@ export default async function SubastasPage() {
         descuento_min: c?.descuento_min ?? 0,
         excluir_ocupadas: c?.excluir_ocupadas ?? false,
       },
-      radar: radar.map((r) => ({ ...r, subasta: vivas.get(r.dedupe_key) ?? r.subasta })),
+      radar: radar.map((r) => ({
+        ...r,
+        subasta: vivas.get(r.dedupe_key) ?? r.subasta,
+        doc: docs.get(r.dedupe_key) ?? null,
+      })),
       tesoreria,
       chollos: chollos.map((ch) => ({
         ...ch,
