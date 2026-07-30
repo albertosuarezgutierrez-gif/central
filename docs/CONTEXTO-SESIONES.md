@@ -1343,6 +1343,21 @@
   tarde (fin de campaña). Ambas devoluciones (2.968,26 renta + 4.172,10 IS) bajo **vigilancia
   semanal del banco** (trigger semanal, busca «DEVOLUCIONES TRIBUTARIAS AEAT», ignora los 100€/mes
   de maternidad del mod. 140 de Pilar).
+  **ACTUALIZACIÓN 30/07 — CIERRE de la vigilancia de proveedores (facturas 2024 para la 551):**
+  parte final tras 7 días de chequeos cada 12h. **Recuperado:** TotalEnergies COMPLETO (27 facturas
+  jun-dic 2024 en `_buzon_pdf`); Factor Energía ya estaba completo en Drive (abr-may, contrato acabó
+  20/05/2024); parciales en Drive de PriceLabs/Digi/Netflix/Petroprix/Azulejos (ver inventario del
+  23/07). **Respondieron sin facturas:** Emasesa (e-facturas 2024 ya en el Gmail de Alberto — 3
+  tandas 23-abr/23-jul/22-oct, descarga pendiente vía Claude-Chrome con los enlaces tokenizados).
+  **MUDOS tras 7 días:** Digi, PriceLabs y Delgado Rojas → recordatorios redactados como borradores
+  en el Gmail de Alberto el 30/07 (Digi: reiterar duplicados 2024; PriceLabs en inglés: follow-up
+  abr-ago+oct; Delgado Rojas: re-insistencia con aviso de «valorar otras vías»). **Pendiente de
+  Alberto:** enviar los 3 recordatorios, descargas Claude-Chrome (Emasesa desde Gmail; Digi/
+  PriceLabs/Petroprix jun-dic de portales) y subirlo TODO a la carpeta nueva y separada de Drive
+  que pidió María (ella lo va contabilizando; propuesta: `Punto y Coma/2024/REG-SALDO-recuperadas`).
+  Netflix: sin factura posible → extracto o 678 (decisión ya comunicada: meterlo igual). Vigilancia
+  de proveedores CERRADA (no se re-arma); siguen vivas la vigilancia semanal de devoluciones AEAT
+  y el cierre de ajustes 551/contrato con Asecon a primeros de septiembre.
 - **👶 Guardería EI Estrella Polar → deducción de cuota marcada + regla de comercio (20/07, pregunta de
   Alberto «la guardería no es deducible en la renta?»).** Matiz: NO es gasto deducible de la base, pero SÍ
   genera el **incremento por gastos de guardería de la deducción por maternidad** (hasta €1.000/hijo <3, en
