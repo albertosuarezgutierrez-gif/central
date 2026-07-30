@@ -24,7 +24,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **⚕️ Health check 30/07 resuelto: dedupe PSD2 anti-drift + ventana Smoobu (30/07/2026, rama
+- **💶 Auditoría pricing dinámico pre-cutover (30/07/2026, rama `claude/dynamic-pricing-audit-4cbdxv`).**
+  A 3 días de confirmar 100% dinámico: SIN bloqueantes técnicos. Motor vivo (Busto/Luxury aplican a diario,
+  última 29/07; crons pricing todos en el dispatcher #1165), datos frescos (market_rates y snapshots de hoy,
+  12 meses de comps en los 4 pisos), raíl ±/día con ancla por día natural OK, evidencia piloto sólida
+  (Busto 16 y Luxury 14 noches reservadas a precio motor, ADR muy sobre PL). PENDIENTE de Alberto:
+  activar `apply_enabled` de Dúplex/House y desconectar PL. Vigilar: `incomes` sin insertar desde 25/07
+  (1er sync post-dispatcher mañana 05:00 UTC), aforo Luxury 4 vs 5 camas, comps House solo proxy 8p×1,15.
+  Doc de skill actualizada (suelos 65/72 del 28/07). 6 alertas de guard abiertas pre-recalibración. dedupe PSD2 anti-drift + ventana Smoobu (30/07/2026, rama
   `claude/health-check-2026-07-30-vlv4c7`).** Check 1: el mismo abono BBVA entra 2 veces porque el banco
   re-sirve el concepto con `Nº`→`N` (3er caso: 16/06, 25/06, 22/07 413,17€ Dúplex) → guarda post-ingesta
   en `lib/psd2.ts` (compara conceptos sin puntuación, conserva la fila antigua) + saneo
