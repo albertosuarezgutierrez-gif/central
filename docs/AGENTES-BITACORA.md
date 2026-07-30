@@ -15,6 +15,18 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-07-30 · facturas-correo** · hizo: pasada diaria (ventana 3d). Health-check Vía B sano
+  (última copia a `_buzon_pdf` 29/07, 1 día). Colas `PDF-pendiente`/`Revisar` vacías, sin backlog.
+  IONOS 29/07 (10,89€) ya venía archivado+conciliado de una pasada previa del mismo día. Archivada
+  y conciliada 1 factura nueva: DIGI julio (76,00€, Punto Y Coma Gestion SL, servicio en Socorro
+  24 → `turistico_pisos`/`prop_house_sevillana`), cargo bancario exacto del 30/07 encontrado y
+  auto-confirmado. Sin subidas manuales nuevas en `_subir_aqui`/raíz. Descartados por fuera de
+  alcance: hilo de Punto y Coma (Impuesto Sociedades 2025, correspondencia con gestoría, no es
+  gasto a archivar) e hilo reenviado por jsuarezsalas@gmail.com sobre reclamación a Mapfre de
+  "Finca El Triunfo" (siniestro de un tercero, no vertical de Alberto). dudas: si "Finca El Triunfo"
+  es relevante para Alberto más allá de reenvíos informativos (mismo apellido Suárez, aparece
+  también un dominio `haciendaeltriunfo.es` pagado vía IONOS ya archivado en 07/2026) — no he
+  tocado nada, solo lo dejo anotado por si conviene aclarar el vínculo; fallos: —; PRs/commits: —
 - **2026-07-29 · agentes-entrenador** · hizo: pasada a petición de Alberto ("repara todo") tras
   descubrir que 2 pasadas semanales previas (26/07 PR #1090, 27/07 PR #1108) y varios PRs de otros
   agentes se habían quedado **cerrados sin mergear** en un barrido manual de Alberto (73→31 PR
