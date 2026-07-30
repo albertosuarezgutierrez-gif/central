@@ -16,6 +16,8 @@ interface Oportunidad {
   deposito: number | null
   valorMercado: number | null
   origenValor?: 'tasacion' | 'valor_referencia' | 'comparables' | null
+  /** El €/m² sale de la mediana de un municipio grande: orienta, no tasa. */
+  valorOrientativo?: boolean
   coste: { total: number; impuestoTransmision: number; impuestoConcepto: string; baseImponible: number }
   motivos: string[]
   avisos: string[]
@@ -505,6 +507,17 @@ function FichaSubasta({ s, o, acciones, extra, doc }: { s: Subasta; o?: Oportuni
       {o?.valorMercado != null && (
         <div style={{ marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>
           Valor de mercado {eur(o.valorMercado)} · {ORIGEN_VALOR[o.origenValor ?? 'tasacion']}
+          {/* La cifra manda sobre el descuento, la puntuación y la puja: si está
+              construida con la mediana de una ciudad entera hay que verlo AQUÍ,
+              no enterrado en los avisos del detalle plegado. */}
+          {o.valorOrientativo && (
+            <span
+              title="El €/m² es la mediana de todo el municipio, donde el precio cambia mucho por barrio. Orienta, pero no sirve para decidir una puja."
+              style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 999, fontSize: 11, fontWeight: 700, background: 'var(--warning-bg, #fef3c7)', color: 'var(--text)' }}
+            >
+              ⚠️ orientativo
+            </span>
+          )}
         </div>
       )}
 

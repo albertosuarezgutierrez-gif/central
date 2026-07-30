@@ -31,7 +31,7 @@ export async function clasificarSubastas(max = 400): Promise<{ revisadas: number
 
   for (const f of filas) {
     const s = filaASubasta(f)
-    const oportunidad = evaluarOportunidad(s)
+    const oportunidad = evaluarOportunidad(s, null, undefined, anio)
     const flip = evaluarFlip(s, oportunidad, anio)
     const playa = esPlaya(s.municipio, s.descripcion, s.provincia)
     const analisis = analisisDocumental(s, f.notas_edicto ?? null)
@@ -55,7 +55,8 @@ export async function clasificarSubastas(max = 400): Promise<{ revisadas: number
         flip_apto = ${flip.apto},
         semaforo = ${analisis.semaforo},
         analisis = ${JSON.stringify(analisis.puntos)}::jsonb,
-        puja_maxima_calc = ${pujaMaxima}
+        puja_maxima_calc = ${pujaMaxima},
+        valor_orientativo = ${oportunidad.valorOrientativo}
       WHERE dedupe_key = ${f.dedupe_key}
     `)
   }
