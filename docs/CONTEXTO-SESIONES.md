@@ -16,8 +16,8 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **💸 Transferencias SEPA "libres" (formulario) + fix redirect del pago de facturas (29/07/2026, rama
-  `claude/agente-contable-notificaciones-cbouni`).** Alberto: "con la conexión de los bancos, ¿puedes hacer
+- **💸 Transferencias SEPA "libres" (formulario) + fix redirect del pago de facturas (29/07/2026, ✅ MERGEADO
+  PR #1138, squash commit `4844e17`).** Alberto: "con la conexión de los bancos, ¿puedes hacer
   transferencias?" → sí, pero el PIS (Enable Banking) estaba solo cableado al pago de facturas de proveedor y
   APAGADO. Pidió desarrollar además la **transferencia libre a cualquier destinatario**. Hecho:
   - **`POST /api/banca/transferencia`** (con sesión): valida IBAN (mod-97 de `@central/module-pagos::validarIban`),
@@ -31,9 +31,13 @@
   - **Fix bug**: `lib/agente-facturas/pagos.ts` construía el `redirectUrl` del callback con precedencia rota
     (`A ?? B ? C : D` ignoraba el valor de `NEXTAUTH_URL`). Extraído a **`lib/base-url.ts::baseUrl()`** (reusado
     por el endpoint nuevo). Verificado `tsc` 0 + `next build` exit 0.
-  - **PENDIENTE de Alberto (config, no código):** para que las transferencias sean "un clic + firma" (PIS) en vez
-    de SEPA XML, faltan en Vercel `EB_PIS_ENABLED=true` + `EB_DEBTOR_IBAN` (IBAN Kutxabank), y confirmar que el
-    tier de Enable Banking incluye PIS. Sin eso, el formulario ya funciona vía SEPA XML.
+  - **PIS DESCARTADO (revisado en Enable Banking por Claude for Chrome, 29/07/2026):** en producción solo hay
+    **AIS** (lectura); el PIS que hay es de **sandbox**. Enable Banking exige ser **PISP autorizado** (licencia
+    regulatoria) o contratar un proveedor que lo sea, con presupuesto a medida (sin precios en panel). Para uso
+    personal NO compensa → **no activar `EB_PIS_ENABLED`/`EB_DEBTOR_IBAN` en prod** (fallaría, sin scope PIS). El
+    camino bueno y definitivo es el **SEPA XML** (rellenas el formulario → fichero → lo subes a Kutxabank y firmas).
+    El código PIS queda latente por si algún día se contrata; el objetivo ("prepárame la transferencia para solo
+    firmar") ya está cubierto por SEPA XML.
 - **🧠📈 Subastas — «añade todo»: calibración real, recordatorio 24h, chollos vs buscador, descartes que
   aprenden y señal de RECESIÓN (INE): HECHO y PROBADO E2E (29/07/2026, mediodía; PR #1159).** Alberto pidió
   implementar las 5 ideas de la sesión y preguntó «se habla de recesión inmobiliaria, ¿cómo lo averiguamos?».
