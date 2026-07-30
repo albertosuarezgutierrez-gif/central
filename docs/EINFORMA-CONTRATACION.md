@@ -78,25 +78,133 @@ nada de reexponer estos datos a terceros como SaaS.
    genera candidatas que merezcan informe.
 4. **SABI: descartado por ahora** (15.000€/año). El fichero a medida cubre el mismo hueco de cribado.
 
-## 5. ⏳ Pendiente para poder cerrar el adapter
+## 5. Hallazgos técnicos (adjuntos analizados el 30/07/2026)
 
-El correo trae los adjuntos que faltaban, pero **el contenedor de las sesiones de Claude no puede
-descargar adjuntos de Gmail** (el conector solo lee texto y metadatos, y no hay salida de red hacia
-Google). Para que se puedan usar, hay que **guardarlos en Google Drive** (ahí sí llega el conector) o
-pegar su contenido:
+Los adjuntos del correo están en la carpeta de Drive **`Einforma`**. Analizados: el JSON de ejemplo, el
+diccionario de datos y el informe financiero de muestra (46 páginas, SEVILLA CONTROL SAU).
 
-| Adjunto | Para qué lo necesitamos |
-|---|---|
-| `API CONFIGURABLE v2.zip` | **Rutas reales** de OAuth2 y del informe → `RUTAS` de `lib/empresas-einforma.ts` (hoy `/api/v1/oauth/token` y `/api/v1/companies/{cif}/report` son una **suposición**) |
-| `DICCIONARIODATOS_API_INFORME_EVOLUTION.xlsx` | **Nombres exactos de campo** → `mapearFinanciero()` (hoy adivina `balance.patrimonioNeto`, `balance.ebitda`, `ratios.deudaEbitda`…) |
-| `EJEMPLO JSON INFORME_EVOLUTION A80192727.json` | **Fixture real** para el test del mapeo puro (`empresas-einforma.test.ts` hoy usa un JSON inventado) |
-| `Informa Financiero - SEVILLA CONTROL SAU.pdf` + `Cuentas anuales Sevilla Control.xlsx` | Ver qué trae de verdad un informe: confirma si cubre **RAI/ASNEF** o hace falta producto de morosidad aparte (duda abierta del diseño §5-A) |
-| `cnae2009 - CÓDIGOS PARA BASES DE DATOS NACIONAL.pdf` | Lista CNAE para los filtros del fichero y del radar de sectores |
-| `Presentación SABI.pdf` | Descartado por precio (§4) |
+### 5.1 🚨 El producto es CONFIGURABLE y la configuración de la demo NO nos vale
 
-Con esos tres primeros ficheros, activar eInforma pasa a ser **una edición de dos sitios**
-(`RUTAS` + `mapearFinanciero`) tal y como se dejó preparado, más las envs
-`EINFORMA_CLIENT_ID` / `EINFORMA_CLIENT_SECRET`.
+El JSON de ejemplo responde a `"productoSolicitado":"informe_personalizado"`. **Los bloques y campos que
+devuelve la API son los que se pactan al contratar**, no un informe fijo. Y la configuración de la demo
+trae MUCHO menos de lo que necesita nuestro scoring:
+
+De la cuenta de pérdidas y ganancias devuelve **exactamente dos partidas** — `40100` (importe neto de la
+cifra de negocios) y `49500` (resultado del ejercicio). Nada más. **No trae patrimonio neto, ni EBITDA, ni
+fondo de maniobra, ni deuda financiera, ni CNAE, ni incidencias de pago.** El diccionario lo confirma: no
+existe un bloque de balance de situación en esta configuración.
+
+**Acción obligatoria antes de firmar:** entregar a Borja la lista EXACTA de partidas y bloques a activar.
+Si no, contrataremos un informe que no puede alimentar el bloque A del scoring. Como mínimo:
+patrimonio neto, EBITDA (o las partidas para calcularlo), activo y pasivo corriente (fondo de maniobra),
+deudas con entidades de crédito a corto y largo plazo, CNAE, y el bloque de morosidad (§5.4).
+
+### 5.2 Forma real de la respuesta — el mapeo actual está mal a nivel de estructura
+
+`lib/empresas-einforma.ts::mapearFinanciero` supone campos con nombre (`balance.patrimonioNeto`,
+`ratios.deudaEbitda`). La realidad:
+
+- Todo cuelga de **`datosProducto`**, no de la raíz. La raíz lleva el sobre:
+  `productoSolicitado`, `campoCodificadoRespuesta` (`valor:0` = «Operación efectuada correctamente» →
+  **es el código de error que hay que comprobar**) y `datosPeticion`.
+- Tres bloques: `informacionComercial` (`identificacion.cif`, `identificacion.denominacionActual`,
+  `datosGenerales`, `direcciones.direccionActual` con coordenadas, `empleados.numeroTotalEmpleados`),
+  `estructuraCorporativa` e `informacionFinanciera`.
+- **Las cifras NO son campos: son una lista de partidas con código de PGC.**
+  `informacionFinanciera.listaBalances[]` → `listaPartidasCuentaPerdidasGanancias[]` →
+  `{codigoPartida, campoCodificadoPartidaConPlantilla:{literal}, valor}`. Hay que **indexar por
+  `codigoPartida`**, no leer rutas fijas.
+- Los enumerados vienen como `campoCodificado*` = `{valor, tablaDecodificacion, literal}`. El `literal`
+  ya viene resuelto, así que no hace falta bajarse las tablas de decodificación.
+- `datosPeticion.parametrosCliente` acepta **`referencia`** (texto libre; en el ejemplo `"ALTA SOPORTE"`)
+  → úsala para etiquetar cada consulta y cuadrar el ledger `empresas_enriquecimiento_coste` contra la
+  factura de Informa.
+
+### 5.3 🚨 LANDMINE — los balances mezclan individual y consolidado
+
+`listaBalances` trae **3 ejercicios**, cada uno con `cabeceraBalance`. En el ejemplo real:
+
+| Ejercicio | `indicadorBalanceIndividual` | `campoCodificadoOrigen` |
+|---|---|---|
+| 2025 | **false** (consolidado) | Fuentes Propias |
+| 2024 | true (individual) | Registro Mercantil |
+| 2023 | true (individual) | Registro Mercantil |
+
+Comparar el EBITDA de 2025 contra el de 2024 sin mirar ese flag es comparar el grupo contra la sociedad:
+saldría una «caída» inventada y dispararía la señal «EBITDA negativo 2 ejercicios». **Filtrar siempre por
+`indicadorBalanceIndividual` antes de encadenar ejercicios.** Ojo también con `duracionMeses` (un
+ejercicio corto no es comparable) y con `campoCodificadoUnidadDivisa`.
+
+Lo bueno: `cabeceraBalance` trae `fechaCierre`, `fechaRecepcion`, `annoBalance` y **`annoDeposito`**, así
+que la señal «depósito de cuentas con más de 12 meses de retraso» sale directa y sin cálculo raro. Y tener
+3 ejercicios de serie cubre la señal de «EBITDA negativo 2 ejercicios consecutivos», que el diseño daba
+por difícil.
+
+### 5.4 🚨 RAI/ASNEF NO vienen incluidos — son un add-on de pago
+
+Resuelve la duda abierta del diseño §5-A. En el informe de muestra, los cinco ficheros de morosidad salen
+literalmente como **`No consultado`**: `RAI`, `ASNEF EMPRESAS`, `EBE MOROSIDAD`, `ICIRED`, `RIJ`. La
+sección «Ficheros de morosidad» es un formulario de venta cruzada con casillas para añadirlos (y avisa de
+que al incluirlos se recalcula la Nota Informa).
+
+**Hay que pedirle el precio a Borja aparte.** Lo que sí viene sin coste extra y cubre parte del hueco:
+
+- **Paydex** — comportamiento de pago real declarado por proveedores: `MEDIA DE DÍAS DE DEMORA` 16,
+  `D&B PAYDEX` 69, `NÚMERO DE EXPERIENCIAS DE PAGO (ÚLTIMOS 12 MESES)` 17, `% IMPORTE TOTAL EN DEMORA` 26%,
+  con desglose por tramos de importe. Mide «paga tarde», no «está fichado como impagador».
+- **Información Judicial y Concursal** — tres contadores: `PROCEDIMIENTOS CONCURSALES Y ESPECIALES`,
+  `INCIDENCIAS JUDICIALES`, `RECLAMACIONES ADMINISTRATIVAS`.
+
+Para un ranking interno de «quién va mal», Paydex + judicial/concursal probablemente basta. El add-on solo
+se justifica si el sistema llega a decidir exposición o crédito real.
+
+### 5.5 Lo que el informe trae de regalo y el diseño no contemplaba
+
+El informe completo (no necesariamente la API — hay que pedir que se incluyan) tiene señales mejores que
+varias de las que teníamos previstas construir a mano:
+
+- **Scoring propio ya calculado:** `NOTA INFORMA` (0–20), `OPINIÓN DE CRÉDITO` (€), `SCORE LIQUIDEZ`
+  (0–100 + probabilidad de retraso), `PROBABILIDAD DE CESE` (%), `RESILIENCIA` (0–100),
+  `Riesgo del Sector` a 1 y a 2-3 años, y `ASEGURABLE POR CESCE` (Sí/No — un booleano de un tercero
+  independiente que, si pasa a No, es señal de primer orden).
+- **`Últimos Cambios en la Empresa`** — feed de eventos **con signo**: `Nota Informa (Disminución)`,
+  `Comportamiento de Pagos-Paydex (Empeora)`, con fecha. Es la señal más barata de monitorizar y encaja
+  directamente con nuestro modelo de vigilancia continua.
+- **`Motivos de los Últimos Cálculos Relevantes en la Nota INFORMA`** — por qué cambió la nota, en texto
+  («Se ha producido una variación por no disponibilidad de cuentas»).
+- **Ratios con percentiles del sector** (`PTILE25/50/75`) — normaliza cualquier ratio contra su sector.
+  **Puede ahorrarnos buena parte del trabajo de benchmark con la Central de Balances del Banco de España**
+  que el diseño §4 daba por necesario.
+- **Nº de consultas del informe** (`97 veces en el último trimestre`) — un pico suele significar que
+  varios proveedores están comprobando solvencia. Señal adelantada y gratis.
+- **BORME estructurado por tipo de acto** con contadores y fechas, incluida la detección de **escisiones**
+  (en la muestra, una escisión parcial que se llevó la rama inmobiliaria: vaciado de activos).
+- **Periodo medio de cobro vs de pago** (47 vs 80 días en la muestra) — la tijera clásica de tensión de caja.
+- **Comentarios narrativos autogenerados** por sección, ya redactados y bastante duros.
+
+### 5.6 Lo que NO hay, y hay que dejar de buscarlo
+
+- **Edad o fecha de nacimiento de los administradores: no existe** en el informe (el aviso legal lo acota
+  a la actividad empresarial). Sí hay `fechaNombramiento`, cargo, cargos no vigentes y el patrón de
+  apellidos, que sirven de heurística de relevo generacional pero no de dato. El bloque E del diseño
+  sigue siendo **manual**, como estaba previsto.
+- **Ratio deuda/EBITDA: no viene calculado.** Hay que componerlo desde las partidas de deuda
+  (`Deudas con entidades de crédito` a largo y corto plazo, arrendamiento financiero, otros pasivos
+  financieros) — no hay un rótulo agregado de «deuda financiera».
+
+### 5.7 ⏳ Lo único que sigue pendiente
+
+Las **rutas exactas de la API** (endpoint de token y de informe). Están en `API CONFIGURABLE v2.zip`, que
+no se puede leer desde las sesiones de Claude: los ficheros de Drive llegan codificados en base64 y un ZIP
+de 2,65 MB no cabe en la ventana de contexto. Su contenido descomprimido (`API Documentation_v2.mhtml`,
+695 KB) tampoco: el conector de Drive no sabe extraer texto de un archivo web MHTML.
+
+**Vía que sí funciona:** abrir el MHTML en Chrome, imprimirlo a PDF y subir el PDF a la carpeta `Einforma`.
+De un PDF el conector extrae texto en el servidor y se lee sin problema de tamaño. Alternativa: pedirle a
+Borja la documentación en PDF directamente.
+
+Mientras tanto, `RUTAS` en `lib/empresas-einforma.ts` (`/api/v1/oauth/token`,
+`/api/v1/companies/{cif}/report`) sigue siendo **una suposición mía sin verificar**.
 
 ## 6. Contacto
 
