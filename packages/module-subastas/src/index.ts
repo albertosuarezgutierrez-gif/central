@@ -52,13 +52,15 @@ export type { DatosDescripcion, TipoBien } from './extraccion.ts'
 export { superficieM2, palabrasANumero, numeroAlFinal } from './numeros-es.ts'
 
 // Municipio → provincia (las descripciones del BOE citan municipios, no provincias)
-export { provinciaPorMunicipio, MUNICIPIOS_POR_PROVINCIA } from './geo.ts'
+// + enlace a Google Maps con la mejor ubicación disponible
+export { provinciaPorMunicipio, MUNICIPIOS_POR_PROVINCIA, urlGoogleMaps } from './geo.ts'
+export type { UbicacionSubasta } from './geo.ts'
 
 // Ficha del Portal de Subastas (las CIFRAS) y Catastro (superficie, año, uso)
 export { parsearFichaBoe, paresFicha, resultadoDeFicha } from './ficha-boe.ts'
 export type { FichaBoe, ResultadoSubasta } from './ficha-boe.ts'
-export { parsearCatastro, errorCatastro, superficieUtil } from './catastro.ts'
-export type { DatosCatastro } from './catastro.ts'
+export { parsearCatastro, errorCatastro, superficieUtil, parsearCoordenadas } from './catastro.ts'
+export type { DatosCatastro, CoordenadasCatastro } from './catastro.ts'
 
 // Comparables de mercado desde las alertas de los portales (Idealista): el
 // €/m² por zona que sirve de valor de mercado cuando el BOE publica «Tasación 0,00 €»

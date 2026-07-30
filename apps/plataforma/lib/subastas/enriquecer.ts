@@ -14,7 +14,9 @@ import { prisma } from '@/lib/db'
 import {
   errorCatastro,
   parsearCatastro,
+  parsearCoordenadas,
   parsearFichaBoe,
+  type CoordenadasCatastro,
   type DatosCatastro,
   type FichaBoe,
   paresFicha,
@@ -24,6 +26,7 @@ import {
 const UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36'
 const FICHA = 'https://subastas.boe.es/detalleSubasta.php'
 const CATASTRO = 'https://ovc.catastro.meh.es/ovcservweb/OVCSWLocalizacionRC/OVCCallejero.asmx/Consulta_DNPRC'
+const CATASTRO_COORD = 'https://ovc.catastro.meh.es/ovcservweb/OVCSWLocalizacionRC/OVCCoordenadas.asmx/Consulta_CPMRC'
 
 async function bajar(url: string, ms = 20000): Promise<string> {
   const r = await fetch(url, {
@@ -57,6 +60,42 @@ export async function bajarCatastro(refCatastral: string): Promise<DatosCatastro
     return null
   }
   return parsearCatastro(xml)
+}
+
+/**
+ * Coordenadas WGS84 por referencia catastral (`Consulta_CPMRC`, probado el
+ * 30/07/2026). El servicio trabaja a nivel de PARCELA: acepta los 14 primeros
+ * caracteres; con la referencia de 20 del bien concreto responde error.
+ */
+export async function bajarCoordenadas(refCatastral: string): Promise<CoordenadasCatastro | null> {
+  const rc14 = refCatastral.replace(/\s+/g, '').slice(0, 14)
+  if (rc14.length < 14) return null
+  const xml = await bajar(`${CATASTRO_COORD}?Provincia=&Municipio=&SRS=EPSG:4326&RC=${encodeURIComponent(rc14)}`)
+  return parsearCoordenadas(xml)
+}
+
+/**
+ * Centro del municipio por Nominatim (OSM, gratis). Es el escalón APROXIMADO
+ * para las subastas sin referencia catastral (la mayoría del corpus): mejor un
+ * pin honesto en el centro del pueblo que un mapa con el 15% de los inmuebles.
+ * Quien lo pinte debe declarar la imprecisión (columna `geo_precision`).
+ * Nominatim pide ≤1 req/s: el cron procesa ~12 filas en serie, dentro del límite.
+ */
+export async function geocodificarMunicipio(
+  municipio: string,
+  provincia?: string | null,
+): Promise<CoordenadasCatastro | null> {
+  const q = [municipio.trim(), provincia?.trim(), 'España'].filter(Boolean).join(', ')
+  const r = await fetch(
+    `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=es&q=${encodeURIComponent(q)}`,
+    { headers: { 'User-Agent': 'central-subastas/1.0', Accept: 'application/json' }, signal: AbortSignal.timeout(15000), cache: 'no-store' },
+  )
+  if (!r.ok) return null
+  const j = (await r.json().catch(() => null)) as Array<{ lat?: string; lon?: string }> | null
+  const lat = Number(j?.[0]?.lat)
+  const lon = Number(j?.[0]?.lon)
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || (lat === 0 && lon === 0)) return null
+  return { lat, lon }
 }
 
 // ── Captura del RESULTADO tras la conclusión ─────────────────────────────────

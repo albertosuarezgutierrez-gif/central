@@ -89,6 +89,36 @@ export function errorCatastro(xml: string): string | null {
   return des ? decodificarHtml(des) : null
 }
 
+// ── Coordenadas por referencia catastral (Consulta_CPMRC) ───────────────────
+// Servicio hermano del de arriba, mismo host y también libre:
+//   …/OVCCoordenadas.asmx/Consulta_CPMRC?Provincia=&Municipio=&SRS=EPSG:4326&RC=<rc14>
+// Con SRS=EPSG:4326, <xcen> es la LONGITUD y <ycen> la LATITUD (en ese orden,
+// que es el que despista). Acepta la referencia de la PARCELA (14 caracteres);
+// el recorte de los 20 a 14 lo hace el adaptador de la app.
+
+export interface CoordenadasCatastro {
+  lat: number
+  lon: number
+}
+
+/**
+ * Convierte el XML de `Consulta_CPMRC` en coordenadas WGS84. `null` si el
+ * servicio no las da (error, referencia inexistente o respuesta corrupta) —
+ * nunca devuelve un punto inventado.
+ */
+export function parsearCoordenadas(xml: string): CoordenadasCatastro | null {
+  if (!xml || errorCatastro(xml)) return null
+  // A diferencia de <sfc>/<cpt>, aquí el decimal viene con PUNTO («-6.2334177»):
+  // el `numero()` de arriba (que quita puntos de millar) lo destrozaría.
+  const lon = Number(xml.match(/<xcen>([\s\S]*?)<\/xcen>/i)?.[1]?.trim())
+  const lat = Number(xml.match(/<ycen>([\s\S]*?)<\/ycen>/i)?.[1]?.trim())
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
+  // Un (0,0) o un valor fuera de rango es dato corrupto, no una finca en el golfo de Guinea.
+  if (lat === 0 && lon === 0) return null
+  if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return null
+  return { lat, lon }
+}
+
 /**
  * Superficie con la que valorar el inmueble: la del CATASTRO manda sobre la que
  * publica el anuncio.

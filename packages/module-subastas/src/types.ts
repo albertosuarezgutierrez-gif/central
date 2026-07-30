@@ -52,6 +52,13 @@ export interface SubastaInmueble {
   autoridad?: string | null
   provincia?: string | null
   municipio?: string | null
+  /** Dirección postal (Catastro si la hay; si no, la extraída del anuncio). */
+  direccion?: string | null
+  /** Coordenadas WGS84. Alimentan el mapa nacional y el enlace a Google Maps. */
+  lat?: number | null
+  lon?: number | null
+  /** 'catastro' = parcela exacta · 'municipio' = centroide aproximado (OSM). */
+  geoPrecision?: 'catastro' | 'municipio' | null
   descripcion?: string | null
   url?: string | null
 

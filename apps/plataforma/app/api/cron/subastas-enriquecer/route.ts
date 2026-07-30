@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { isCronAuthorized } from '@/lib/cron-auth'
-import { bajarCatastro, bajarFicha, capturarResultados } from '@/lib/subastas/enriquecer'
+import { bajarCatastro, bajarCoordenadas, bajarFicha, capturarResultados, geocodificarMunicipio } from '@/lib/subastas/enriquecer'
 import { procesarDocumentos } from '@/lib/subastas/documentos'
 import { clasificarSubastas } from '@/lib/subastas/clasificar'
 
@@ -25,9 +25,9 @@ export async function GET(req: NextRequest) {
 
   try {
     // Prioridad: las que nunca se enriquecieron y las que cierran antes.
-    const pendientes = await prisma.$queryRaw<{ dedupe_key: string; identificador: string | null; ref_catastral: string | null }[]>(
+    const pendientes = await prisma.$queryRaw<{ dedupe_key: string; fuente: string; identificador: string | null; ref_catastral: string | null; lat: number | null; municipio: string | null; provincia: string | null }[]>(
       Prisma.sql`
-        SELECT dedupe_key, identificador, ref_catastral
+        SELECT dedupe_key, fuente, identificador, ref_catastral, lat, municipio, provincia
         FROM subastas
         WHERE identificador IS NOT NULL
           AND (fecha_fin IS NULL OR fecha_fin >= now())
@@ -42,10 +42,38 @@ export async function GET(req: NextRequest) {
 
     for (const p of pendientes) {
       try {
+        // Las fuentes SIN ficha en el Portal del BOE (Junta…) solo necesitan
+        // coordenadas: antes entraban en `bajarFicha`, fallaban SIEMPRE y se
+        // reintentaban en cada pasada, monopolizando la cola (van primeras por
+        // `enriquecida_at NULLS FIRST`) sin llegar a enriquecerse nunca.
+        if (p.fuente !== 'boe') {
+          const geoJ = p.lat == null && p.ref_catastral ? await bajarCoordenadas(p.ref_catastral).catch(() => null) : null
+          const geoJAprox = p.lat == null && !geoJ && p.municipio
+            ? await geocodificarMunicipio(p.municipio, p.provincia).catch(() => null)
+            : null
+          await prisma.$executeRaw(Prisma.sql`
+            UPDATE subastas SET
+              lat = COALESCE(lat, ${geoJ?.lat ?? geoJAprox?.lat ?? null}),
+              lon = COALESCE(lon, ${geoJ?.lon ?? geoJAprox?.lon ?? null}),
+              geo_precision = COALESCE(geo_precision, ${geoJ ? 'catastro' : geoJAprox ? 'municipio' : null}),
+              enriquecida_at = now()
+            WHERE dedupe_key = ${p.dedupe_key}
+          `)
+          ok++
+          continue
+        }
+
         const f = await bajarFicha(p.identificador!)
         // La referencia catastral puede venir del correo o aparecer en la ficha.
         const rc = p.ref_catastral
         const cat = rc ? await bajarCatastro(rc).catch(() => null) : null
+        // Coordenadas: no cambian, así que solo se piden mientras falten.
+        // Exactas por ref. catastral; sin ella, centro del municipio (aprox).
+        const geo = rc && p.lat == null ? await bajarCoordenadas(rc).catch(() => null) : null
+        const muni = f.localidad ?? p.municipio
+        const geoAprox = !geo && p.lat == null && muni
+          ? await geocodificarMunicipio(muni, f.provincia ?? p.provincia).catch(() => null)
+          : null
 
         await prisma.$executeRaw(Prisma.sql`
           UPDATE subastas SET
@@ -79,6 +107,9 @@ export async function GET(req: NextRequest) {
             uso_catastral = COALESCE(${cat?.uso ?? null}, uso_catastral),
             direccion_catastro = COALESCE(${cat?.direccion ?? null}, direccion_catastro),
             cuota_participacion = COALESCE(cuota_participacion, ${cat?.cuotaParticipacion ?? null}),
+            lat = COALESCE(lat, ${geo?.lat ?? geoAprox?.lat ?? null}),
+            lon = COALESCE(lon, ${geo?.lon ?? geoAprox?.lon ?? null}),
+            geo_precision = COALESCE(geo_precision, ${geo ? 'catastro' : geoAprox ? 'municipio' : null}),
             enriquecida_at = now(),
             actualizado_en = now()
           WHERE dedupe_key = ${p.dedupe_key}

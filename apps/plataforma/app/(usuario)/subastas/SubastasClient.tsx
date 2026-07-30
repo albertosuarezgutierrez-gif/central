@@ -4,6 +4,8 @@
 // hardcodea colores y se vuelve ilegible en modo oscuro.
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { eur } from '@/lib/dinero'
+import { urlGoogleMaps } from '@central/module-subastas'
+import MapaSubastas from './MapaSubastas'
 
 const PAGE = 50
 const PROVINCIAS = ['Sevilla', 'Huelva', 'Cádiz', 'Asturias']
@@ -23,6 +25,11 @@ interface Subasta {
   identificador?: string | null
   tipo: string
   provincia?: string | null
+  municipio?: string | null
+  direccion?: string | null
+  lat?: number | null
+  lon?: number | null
+  geoPrecision?: string | null
   descripcion?: string | null
   url?: string | null
   fechaFin?: string | null
@@ -255,6 +262,9 @@ function LineaRendimiento({ r, dormitorios }: { r: Rendimiento | null | undefine
 function FichaSubasta({ s, o, acciones, extra }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode }) {
   const [abierto, setAbierto] = useState(false)
   const cierre = fecha(s.fechaFin)
+  // Coordenadas exactas del Catastro si las hay; si no, búsqueda por dirección
+  // o municipio. Sin ninguna pista de ubicación, el botón no sale.
+  const mapsUrl = urlGoogleMaps(s)
 
   return (
     <div style={card}>
@@ -329,6 +339,11 @@ function FichaSubasta({ s, o, acciones, extra }: { s: Subasta; o?: Oportunidad |
             Ver ficha oficial
           </a>
         )}
+        {mapsUrl && (
+          <a href={mapsUrl} target="_blank" rel="noreferrer" style={{ ...boton(), display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
+            📍 Google Maps{s.lat == null || s.geoPrecision === 'municipio' ? ' (aprox.)' : ''}
+          </a>
+        )}
         {acciones}
       </div>
       {extra}
@@ -337,7 +352,7 @@ function FichaSubasta({ s, o, acciones, extra }: { s: Subasta; o?: Oportunidad |
 }
 
 export default function SubastasClient({ inicial }: { inicial: Inicial | null }) {
-  const [tab, setTab] = useState<'radar' | 'chollos' | 'todas' | 'criterios'>('radar')
+  const [tab, setTab] = useState<'radar' | 'chollos' | 'todas' | 'mapa' | 'criterios'>('radar')
   const [datos, setDatos] = useState<Inicial | null>(inicial)
   const [visibles, setVisibles] = useState(PAGE)
   const [crit, setCrit] = useState<Criterios>(
@@ -525,6 +540,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
         <button onClick={() => setTab('todas')} style={boton(tab === 'todas')}>
           📋 Todas ({datos.total})
         </button>
+        <button onClick={() => setTab('mapa')} style={boton(tab === 'mapa')}>🗺️ Mapa</button>
         <button onClick={() => setTab('criterios')} style={boton(tab === 'criterios')}>⚙️ Criterios</button>
       </div>
 
@@ -834,6 +850,18 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
               {buscando ? 'Cargando…' : `Ver más (${totalLista - lista.length} restantes)`}
             </button>
           )}
+        </section>
+      )}
+
+      {tab === 'mapa' && (
+        <section>
+          <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 0 }}>
+            Todos los inmuebles en subasta vigentes, de un vistazo sobre el mapa. Con referencia
+            catastral el punto es el oficial del Catastro; sin ella se marca en hueco el centro del
+            municipio — nunca se hace pasar por una dirección exacta.
+          </p>
+          {/* Montaje perezoso: Leaflet y los puntos solo se cargan al abrir esta pestaña. */}
+          <MapaSubastas />
         </section>
       )}
 

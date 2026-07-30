@@ -24,6 +24,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🗺️ Subastas: mapa nacional + enlace a Google Maps por ficha (30/07/2026, rama
+  `claude/national-property-map-kszwhp`).** Idea de Alberto sobre la captura de `/subastas`: ver todos los
+  inmuebles señalados de un vistazo. Módulo puro: `parsearCoordenadas` (Catastro `Consulta_CPMRC`, ojo
+  `xcen`=LON/`ycen`=LAT) + `urlGoogleMaps` (coords > dirección > municipio; solo-provincia → sin enlace),
+  10 tests con XML real. Columnas `subastas.{lat,lon,geo_precision}` (migración aplicada); el cron
+  `subastas-enriquecer` geocodifica exacto por ref. catastral y **aproximado al centroide del municipio**
+  por Nominatim cuando no la hay (solo 5/34 la traían) — el mapa pinta los aproximados en hueco y lo dice.
+  Pestaña 🗺️ Mapa (Leaflet+OSM por CDN, montaje perezoso) + `/api/subastas/mapa`. **Nominatim NO se pudo
+  probar** (proxy del contenedor da 403): los 4 puntos exactos ya están en BD, los aproximados dependen de
+  la 1ª pasada del cron en Vercel. Bonus: el cron ya no reintenta fichas BOE de la fuente `junta` (23 filas
+  que fallaban siempre y monopolizaban la cola).
+
 - **🏷️ Banca: compra de tarjeta ya no cae en palabra-trampa + bandeja pregunta el NEGOCIO (30/07/2026,
   rama `claude/restaurante-charge-agent-issue-8lxiwv`).** Restaurante "LA HACIENDA GOLF" caía a
   `categoria='impuestos'` ('HACIENDA' a secas en `categorizarPorReglas`, tras las reglas de comercio).

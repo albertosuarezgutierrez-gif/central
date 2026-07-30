@@ -41,3 +41,32 @@ export function provinciaPorMunicipio(...textos: Array<string | null | undefined
   }
   return null
 }
+
+// ── Enlace a Google Maps ─────────────────────────────────────────────────────
+
+/** Ubicación mínima para poder enlazar el inmueble en un mapa externo. */
+export interface UbicacionSubasta {
+  lat?: number | null
+  lon?: number | null
+  direccion?: string | null
+  municipio?: string | null
+  provincia?: string | null
+}
+
+/**
+ * URL de Google Maps para VER dónde está el inmueble. Prioridad: coordenadas
+ * exactas (Catastro) > búsqueda por dirección > municipio+provincia. Con solo
+ * la provincia devuelve `null`: un pin en mitad de "Sevilla" confunde más que
+ * ayuda.
+ */
+export function urlGoogleMaps(u: UbicacionSubasta): string | null {
+  if (u.lat != null && u.lon != null && Number.isFinite(u.lat) && Number.isFinite(u.lon)) {
+    return `https://www.google.com/maps/search/?api=1&query=${u.lat},${u.lon}`
+  }
+  const partes = [u.direccion, u.municipio, u.provincia]
+    .map((p) => p?.trim())
+    .filter((p): p is string => !!p)
+  // Sin dirección ni municipio no hay nada que señalar.
+  if (!partes.length || (partes.length === 1 && partes[0] === u.provincia?.trim())) return null
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(partes.join(', ') + ', España')}`
+}
