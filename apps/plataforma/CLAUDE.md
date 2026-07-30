@@ -92,6 +92,23 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
 ## Root Directory en Vercel
 `apps/plataforma` — install `npx --yes pnpm@10.33.0 install --no-frozen-lockfile`.
 
+## ⏰ Crons — dispatcher único (30/07/2026)
+**Vercel Pro admite 40 crons/proyecto y este llegó a 60 → el scheduler omitía disparos en silencio**
+(29/07/2026: `psd2-sync` de las 06:00 sin log alguno; auditoría PR #1162). Desde entonces `vercel.json`
+declara **UN solo cron**: `/api/cron/dispatch` cada minuto.
+- **Fuente de verdad de qué corre y cuándo: `lib/cron-dispatch.ts` (`CRON_JOBS`, horarios UTC).**
+  🚨 Un cron nuevo se añade AHÍ, **nunca** a `vercel.json` (volvería a acercarnos al límite). Las menciones
+  históricas "cron X en `vercel.json`" de este doc y de las skills se leen ahora como "job X en el manifiesto".
+- El dispatcher (`app/api/cron/dispatch/route.ts`) dispara los jobs del minuto por HTTP con
+  `Authorization: Bearer CRON_SECRET` — el MISMO header que adjuntaba Vercel, así que los handlers
+  (`isCronAuthorized`) y el pass-through del middleware funcionan sin cambios.
+- **Catch-up:** cursor `cron_dispatch_cursor` (fila única; `prisma/sql/2026-07-30_cron_dispatch_cursor.sql`,
+  aplicada) — si el scheduler se salta un minuto, la pasada siguiente procesa la ventana pendiente (tope
+  15 min) y un claim `FOR UPDATE` evita el doble disparo. Sin la tabla degrada al minuto actual.
+- Envs: base URL = `VERCEL_PROJECT_PRODUCTION_URL` (auto de Vercel); override opcional `CRON_DISPATCH_BASE_URL`.
+- Trade-off asumido: el dispatcher es un punto único — si muere, TODOS los crons enmudecen. Red de
+  seguridad: el heartbeat de `/auditoria-diaria` (paso 2-bis) lo cazaría en la primera pasada (frescura en BD).
+
 ## Estado (15/06/2026) — PANEL UNIFICADO (PR #249 MERGED)
 - [x] Tablas `cuentas/sociedades/negocios` aplicadas en Supabase.
 - [x] Shell: login + dashboard con tarjetas por negocio.
@@ -270,6 +287,20 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
   (fila única + regla por comercio); `listarPorRevisar` filtra `destino_confirmado=false`; backfill idempotente
   `2026-07-15_limpiar_requiere_revision_destino.sql` (aplicado). Verificado con `next build` OK. Al añadir un
   camino nuevo que confirme destino (Telegram, agente contable, endpoint…), replica el invariante (a)+(b).
+- [x] **🏷️ Compra de tarjeta nunca cae en palabra-trampa + bandeja «Gastos por revisar» pregunta el
+  NEGOCIO (30/07/2026):** un pago en el restaurante "LA HACIENDA GOLF" caía a `categoria='impuestos'`
+  porque `categorizarPorReglas` usaba `'HACIENDA'` a secas y la regla de compra con tarjeta iba DESPUÉS
+  de las reglas de comercio (el nombre del comercio puede contener cualquier trampa: 'BAR LA MUTUA'…).
+  Fix: reglas extraídas a **`lib/categoria-reglas.ts`** (módulo PURO, testeado con `node --test`;
+  `categorizar.ts` reexporta) — la liquidación de tarjeta y la COMPRA con tarjeta se detectan PRIMERO
+  (compra → siempre `tarjeta`; el consumo vive en `subcategoria` y la deducibilidad en `destino`) y
+  `'HACIENDA'` suelto se retiró (solo frases del fisco: AEAT/HACIENDA PUBLICA/TRIBUT HACIENDA…, misma
+  lección que `subcategoria-keywords` del 07/07). Además la **RevisarBandeja de `/banca` ya no pide la
+  categoría contable** (taxonomía PGC que descolocaba a Alberto — "no es nada de estas categorías"):
+  pregunta lo realmente dudoso, el **negocio**, con botones 🛡️ Correduría / 👨‍👩‍👧 Personal + «Otro…»
+  (Dúplex/Pisos/Traspaso) contra `/api/banca/destino` (confirma, limpia flag e aprende regla del
+  comercio — invariante PR #906). `/api/banca/revisar` (asignar categoría) queda vivo pero sin UI.
+  Backfill `prisma/sql/2026-07-30_categoria_compra_tarjeta.sql` (aplicado: 3 filas → `tarjeta`).
 - [x] **Health-check: Check 6 (alertas) RETIRADO (11/07/2026):** contaba filas de la tabla `alertas` (de **IALIMP**, operativa de limpiezas de Sique Brilla) con >30 días **sin filtrar por empresa** → metía el backlog de Vanessa al Telegram de Alberto (saltó con `🟡 152 alertas`). Esas alertas no son de plataforma; ialimp ya las gestiona (panel 🔔 + cron semanal `alertas-pendientes` que avisa a `empresas.email`). **No reintroducir ningún conteo de `alertas` en el health-check de plataforma** (es de otro tenant). Raíz del atasco: el log `asignacion_auto` de ialimp se insertaba sin leer y no se purgaba (corregido en ese repo). Diseño: `docs/superpowers/specs/2026-07-11-health-check-alertas-limpiezas-design.md`.
 - [x] **Fiscal — «Mi declaración» ya no se cuelga en «Calculando…» (03/07/2026, PR #721 mergeado):**
   La IA salió del camino crítico: `/api/finanzas/comparativa` ya NO llama al LLM (antes `enriquecerConIA`

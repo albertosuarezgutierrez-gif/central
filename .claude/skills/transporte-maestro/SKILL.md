@@ -1,11 +1,9 @@
 ---
 name: transporte-maestro
 description: >
-  Router de contexto de la vertical TRANSPORTE (flota/camiones como negocio: portes internos
-  intercompany + servicios a terceros). NO duplica los docs: dice qué existe, dónde vive y qué NO
-  romper antes de tocar nada. USAR SIEMPRE que Alberto pida cualquier cosa de transporte: flota,
-  vehículos, conductores, documental ITV/seguro, portes, rutas, servicios de transporte,
-  rentabilidad por vehículo, o el intercompany flota→catering. Compone los módulos puros
+  Router de contexto de la vertical TRANSPORTE (flota/camiones: portes intercompany + terceros).
+  USAR SIEMPRE que Alberto pida algo de transporte: flota, vehículos, conductores, ITV/seguro,
+  portes, rutas, rentabilidad por vehículo, o el intercompany flota→catering. Compone
   @central/module-flota y @central/module-transporte. Sin secretos: solo nombres de variable.
 ---
 

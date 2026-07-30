@@ -3,6 +3,13 @@
 > Registro vivo de las herramientas de este repo y **cuándo usar cada una**. Existe para no
 > volver a olvidar lo que ya tenemos. Lo mantiene `/auditoria-diaria` (reconcilia contra
 > `.claude/skills/` y `.claude/commands/`); si añades o quitas una, actualiza aquí también.
+>
+> **📐 Patrón router + references (ahorro de contexto, 30/07/2026):** las skills grandes
+> (maestros, agentes con mucho contexto) llevan un `SKILL.md` corto (qué es + "🚨 no romper"
+> + índice) y el detalle VERBATIM en `references/*.md`, que se leen SOLO si la tarea lo pide.
+> Al crear o engordar una skill: si el `SKILL.md` pasa de ~5 KB, muévele el cuerpo a
+> `references/` y deja el router. Las `description:` del frontmatter, ≤350 caracteres
+> (se cargan TODAS en TODAS las sesiones).
 
 ## Auditoría y memoria
 | Skill / comando | Cuándo usarla |

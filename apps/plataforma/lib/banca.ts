@@ -779,7 +779,8 @@ export async function listarIngresosPorRevisar(cuentaId: string, limite = 40): P
   }))
 }
 
-// Movimientos que la IA marcó "por revisar" (categoría dudosa): el dueño les pone categoría.
+// GASTOS que la IA marcó "por revisar": lo dudoso es el NEGOCIO (destino) — la bandeja de /banca
+// lo resuelve vía /api/banca/destino (confirma + aprende regla del comercio).
 export async function listarPorRevisar(cuentaId: string, limite = 40): Promise<MovimientoBancario[]> {
   const rows = await prisma.$queryRaw<MovRow[]>`
     SELECT ${SELECT_MOV}
