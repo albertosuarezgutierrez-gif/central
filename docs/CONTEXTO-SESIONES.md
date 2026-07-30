@@ -24,6 +24,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📎 Subastas: «sin documentos adjuntos» era MENTIRA (30/07/2026, rama `claude/documentos-adjuntos-o95xl1`).**
+  Alberto con dos capturas: la ficha de `SUB-JA-2026-263723` decía «sin documentos adjuntos» y el BOE publicaba
+  EDICTO + CERTIFICACIÓN DE CARGAS. No era el parser (`enlacesDocumentos` saca los 2 enlaces del HTML vivo):
+  la columna `documentos` se estrenó ese mismo día (#1179) y el cron que la rellena corre a las 06:15 UTC, así
+  que las 11 subastas vivas la tenían a NULL — y la ficha pintaba ese NULL como lista vacía. Fix: helper puro
+  `lib/subastas/resumen-docs.ts` (`estadoDocumentacion`/`resumenDocumentos`, 5 tests) que separa **NULL = sin
+  revisar** de **[] = revisada sin adjuntos**; las fuentes sin ficha documental (Junta) no quedan «pendientes»
+  eternas. **Backfill ya hecho en prod** por el endpoint `fase3-debug?accion=documentos` (pg_net, porque el
+  proxy del contenedor cierra `*.vercel.app`): 11/11 filas → 8 con adjuntos, 3 vacías de verdad.
+  ⚠️ Regla: nunca afirmar una ausencia a partir de un dato que aún no se ha mirado. tsc 0 · 664 tests · build OK.
+
 - **⚖️ Subastas: resumen de CARGAS + documentación en TODAS las fichas (30/07/2026, rama
   `claude/cargas-documentacion-subasta-b02s5y`).** Alberto sobre una captura de 📡 Radar: «aquí debería
   haber resumen de cargas y de la documentación». El dato ya existía (semáforo, `analisis`, `notas_edicto`,

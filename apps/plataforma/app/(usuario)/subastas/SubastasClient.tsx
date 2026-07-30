@@ -4,6 +4,7 @@
 // hardcodea colores y se vuelve ilegible en modo oscuro.
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { eur } from '@/lib/dinero'
+import { estadoDocumentacion, resumenDocumentos, type DocumentoAdjunto } from '@/lib/subastas/resumen-docs'
 import { direccionCatastro, urlFichaCatastro, urlGoogleMaps, urlStreetView } from '@central/module-subastas'
 import MapaSubastas from './MapaSubastas'
 
@@ -22,6 +23,8 @@ interface Oportunidad {
 }
 interface Subasta {
   dedupeKey: string
+  /** `'boe'` es la única fuente con ficha documental (adjuntos en PDF). */
+  fuente?: string | null
   identificador?: string | null
   tipo: string
   provincia?: string | null
@@ -53,7 +56,6 @@ interface Subasta {
 }
 interface Rendimiento { ingresoAnual: number; yieldBruto: number; aniosRecuperacion: number }
 interface PuntoAnalisis { clave: string; nivel: 'verde' | 'ambar' | 'rojo'; detalle: string }
-interface DocumentoAdjunto { titulo: string; url: string; legible?: boolean | null }
 /** Todo lo que se sabe de la DOCUMENTACIÓN de una subasta (no del inmueble). */
 interface Documental {
   semaforo?: string | null
@@ -334,13 +336,21 @@ function Caracteristicas({ s, plantaAparte }: { s: Subasta; plantaAparte?: boole
  */
 function ResumenDocumental({ s, d }: { s: Subasta; d?: Documental | null }) {
   const notas = (d?.notasEdicto ?? '').split('\n').map((n) => n.trim()).filter(Boolean)
-  const docs = d?.documentos ?? []
+  // OJO: `null` = la ficha aún no se ha revisado, `[]` = revisada y sin adjuntos.
+  // Colapsarlos en `[]` es lo que hacía que una subasta con edicto y
+  // certificación de cargas publicados dijera «sin documentos adjuntos».
+  const docs = d?.documentos ?? null
+  // Solo el BOE publica adjuntos: en los lotes de la Junta un NULL no está
+  // pendiente de nada. Sin `fuente` (snapshots antiguos del radar) se asume BOE
+  // porque ante la duda toca decir «sin revisar», no negar los adjuntos.
+  const publicaAdjuntos = (s.fuente ?? 'boe') === 'boe'
+  const sinRevisar = estadoDocumentacion(docs, publicaAdjuntos) === 'sin_revisar'
   const puntos = d?.analisis ?? []
   const cargasTexto = (s.cargasTexto ?? '').trim()
   const conCargas = s.cargas != null && s.cargas > 0
   const noPublicadas = s.cargasConocidas === false
 
-  if (!conCargas && !noPublicadas && !cargasTexto && notas.length === 0 && docs.length === 0 && puntos.length === 0) {
+  if (!conCargas && !noPublicadas && !cargasTexto && notas.length === 0 && !docs?.length && puntos.length === 0) {
     return null
   }
 
@@ -351,10 +361,7 @@ function ResumenDocumental({ s, d }: { s: Subasta; d?: Documental | null }) {
       ? { emoji: '🟠', texto: 'Cargas no publicadas: pide la certificación registral antes de pujar.' }
       : { emoji: '🟢', texto: 'Sin cargas anteriores subsistentes publicadas.' }
 
-  const legibles = docs.filter((x) => x.legible === false).length
-  const resumenDocs = docs.length === 0
-    ? 'sin documentos adjuntos'
-    : `${docs.length} documento${docs.length === 1 ? '' : 's'}${legibles > 0 ? `, ${legibles} sin capa de texto` : ''}`
+  const resumenDocs = resumenDocumentos(docs, publicaAdjuntos)
 
   return (
     <div style={{ marginTop: 10 }}>
@@ -386,7 +393,7 @@ function ResumenDocumental({ s, d }: { s: Subasta; d?: Documental | null }) {
           <p key={n} style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--text)' }}>📄 {n}</p>
         ))}
 
-        {docs.length > 0 && (
+        {docs && docs.length > 0 && (
           <div style={{ marginTop: 8 }}>
             <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>📎 Documentación adjunta a la subasta:</div>
             <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12 }}>
@@ -401,10 +408,14 @@ function ResumenDocumental({ s, d }: { s: Subasta; d?: Documental | null }) {
           </div>
         )}
 
-        {docs.length === 0 && notas.length === 0 && (
+        {/* El aviso se ata a que los adjuntos estén SIN REVISAR, no a que no
+            haya notas: una ficha leída antes de existir la columna `documentos`
+            tiene notas del edicto y la lista a NULL — y era justo ahí donde la
+            ficha afirmaba en falso que la subasta no traía adjuntos. */}
+        {sinRevisar && (
           <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--muted)' }}>
-            Todavía no se ha leído la documentación de esta ficha (se procesa a diario).
-            Ábrela en «Ver ficha oficial».
+            📎 Todavía no se han listado los adjuntos de esta ficha (se repasa a diario).
+            Puede haber edicto y certificación de cargas publicados: ábrela en «Ver ficha oficial».
           </p>
         )}
       </details>
