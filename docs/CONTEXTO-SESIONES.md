@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🐌 Canal infantil — Fase 2 DEFINICIÓN hecha (30/07/2026, sin código; mismo PR #1167).** Alberto aprobó
+  "fase 2, solo definir". Entregado `docs/CANAL-INFANTIL-FASE2-DEFINICION.md`: posicionamiento ("dibujos
+  tranquilos, hechos con cuidado, en castellano"), personaje propuesto **caracol** (la lentitud como
+  identidad de marca; alternativas nube/lirón; nombres candidatos Lolo/Nilo/Momo pendientes de chequeo de
+  colisiones), reglas de calma MEDIBLES (≤6 cortes/min, 60-80 bpm, final que "se aquieta"), registro de
+  autoría humana (carpeta `docs/ip-canal-infantil/` + ficha de dirección por vídeo), pipeline descrito
+  (Firefly→vector + Remotion paramétrico + Suno + voz humana; 10-40€/mes), sandbox de 10 vídeos concretos
+  en 2 canales (ES+IT), y criterio de corte a 6 meses (<250€ pérdida máx). **Pendiente de Alberto:** ¿caracol
+  sí/no?, nombre, y quién pone la voz. Fase 3 (código Remotion + assets + script datos) SOLO con aprobación.
 - **👨‍👩‍👧 Estudio de demanda parental (Fase 1b del experimento canal infantil) — HECHO (30/07/2026, solo
   informe, cero código; mismo PR #1167).** Alberto quiso empezar por "qué piden los padres" antes de decidir.
   Hallazgo de método: los vídeos "made for kids" tienen comentarios desactivados (COPPA) → se minó en foros
