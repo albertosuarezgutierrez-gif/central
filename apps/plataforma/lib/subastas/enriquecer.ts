@@ -14,7 +14,9 @@ import { prisma } from '@/lib/db'
 import {
   errorCatastro,
   parsearCatastro,
+  parsearCoordenadas,
   parsearFichaBoe,
+  type CoordenadasCatastro,
   type DatosCatastro,
   type FichaBoe,
   paresFicha,
@@ -24,6 +26,7 @@ import {
 const UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36'
 const FICHA = 'https://subastas.boe.es/detalleSubasta.php'
 const CATASTRO = 'https://ovc.catastro.meh.es/ovcservweb/OVCSWLocalizacionRC/OVCCallejero.asmx/Consulta_DNPRC'
+const CATASTRO_COORD = 'https://ovc.catastro.meh.es/ovcservweb/OVCSWLocalizacionRC/OVCCoordenadas.asmx/Consulta_CPMRC'
 
 async function bajar(url: string, ms = 20000): Promise<string> {
   const r = await fetch(url, {
@@ -57,6 +60,63 @@ export async function bajarCatastro(refCatastral: string): Promise<DatosCatastro
     return null
   }
   return parsearCatastro(xml)
+}
+
+/**
+ * Coordenadas WGS84 por referencia catastral (`Consulta_CPMRC`, probado el
+ * 30/07/2026). El servicio trabaja a nivel de PARCELA: acepta los 14 primeros
+ * caracteres; con la referencia de 20 del bien concreto responde error.
+ */
+export async function bajarCoordenadas(refCatastral: string): Promise<CoordenadasCatastro | null> {
+  const rc14 = refCatastral.replace(/\s+/g, '').slice(0, 14)
+  if (rc14.length < 14) return null
+  const xml = await bajar(`${CATASTRO_COORD}?Provincia=&Municipio=&SRS=EPSG:4326&RC=${encodeURIComponent(rc14)}`)
+  return parsearCoordenadas(xml)
+}
+
+/**
+ * Nominatim exige **≤1 petición/segundo** y lo hace cumplir BLOQUEANDO LA IP —
+ * y la IP sería la de Vercel, compartida por todo lo demás. No basta con que el
+ * cron vaya en serie: las filas que solo se geocodifican (fuentes sin ficha en
+ * el BOE) no pagan ninguna otra latencia, así que saldrían seguidas. Este
+ * cerrojo de módulo serializa y espacia TODAS las llamadas del proceso.
+ */
+const ESPERA_NOMINATIM_MS = 1100
+let ultimaNominatim = 0
+async function esperarTurnoNominatim(): Promise<void> {
+  const ahora = Date.now()
+  const espera = Math.max(0, ultimaNominatim + ESPERA_NOMINATIM_MS - ahora)
+  // Se reserva el turno ANTES de esperar: dos llamadas concurrentes se ponen en
+  // cola una detrás de otra en vez de dormir lo mismo y salir a la vez.
+  ultimaNominatim = ahora + espera
+  if (espera > 0) await new Promise((r) => setTimeout(r, espera))
+}
+
+/**
+ * Centro del municipio por Nominatim (OSM, gratis). Es el escalón APROXIMADO
+ * para las subastas sin referencia catastral (la mayoría del corpus): mejor un
+ * pin honesto en el centro del pueblo que un mapa con el 15% de los inmuebles.
+ * Quien lo pinte debe declarar la imprecisión (columna `geo_precision`).
+ *
+ * Verificado el 30/07/2026: el servicio responde 200 desde infraestructura
+ * cloud (probado con `pg_net` desde Supabase). Respeta el límite de 1 req/s.
+ */
+export async function geocodificarMunicipio(
+  municipio: string,
+  provincia?: string | null,
+): Promise<CoordenadasCatastro | null> {
+  const q = [municipio.trim(), provincia?.trim(), 'España'].filter(Boolean).join(', ')
+  await esperarTurnoNominatim()
+  const r = await fetch(
+    `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=es&q=${encodeURIComponent(q)}`,
+    { headers: { 'User-Agent': 'central-subastas/1.0', Accept: 'application/json' }, signal: AbortSignal.timeout(15000), cache: 'no-store' },
+  )
+  if (!r.ok) return null
+  const j = (await r.json().catch(() => null)) as Array<{ lat?: string; lon?: string }> | null
+  const lat = Number(j?.[0]?.lat)
+  const lon = Number(j?.[0]?.lon)
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || (lat === 0 && lon === 0)) return null
+  return { lat, lon }
 }
 
 // ── Captura del RESULTADO tras la conclusión ─────────────────────────────────

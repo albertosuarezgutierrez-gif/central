@@ -24,6 +24,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🗺️ Subastas: mapa nacional + enlace a Google Maps por ficha (30/07/2026, rama
+  `claude/national-property-map-kszwhp`).** Idea de Alberto sobre la captura de `/subastas`: ver todos los
+  inmuebles señalados de un vistazo. Módulo puro: `parsearCoordenadas` (Catastro `Consulta_CPMRC`, ojo
+  `xcen`=LON/`ycen`=LAT) + `urlGoogleMaps` (coords > dirección > municipio; solo-provincia → sin enlace),
+  10 tests con XML real. Columnas `subastas.{lat,lon,geo_precision}` (migración aplicada); el cron
+  `subastas-enriquecer` geocodifica exacto por ref. catastral y **aproximado al centroide del municipio**
+  por Nominatim cuando no la hay (solo 5/34 la traían) — el mapa pinta los aproximados en hueco y lo dice.
+  Pestaña 🗺️ Mapa (Leaflet+OSM por CDN, montaje perezoso) + `/api/subastas/mapa`. Nominatim da 403 desde el
+  proxy del contenedor pero **responde 200 desde cloud** (verificado con `pg_net` desde Supabase) → funcionará
+  en Vercel; 4 puntos exactos ya en BD, los aproximados los pone la 1ª pasada del cron. ⚠️ Nominatim BLOQUEA
+  IP si se pasa de 1 req/s → cerrojo de módulo (1,1 s, serializa) + presupuesto de 25 s por pasada;
+  `enriquecida_at` se deja NULL SOLO si no se intentó (si el municipio es ilocalizable se marca, o volvería a
+  monopolizar la cola). Bonus: el cron ya no reintenta fichas BOE de la fuente `junta` (23 filas que fallaban
+  siempre y, al ir primeras por `enriquecida_at NULLS FIRST`, tapaban a las del BOE).
 - **⚖️ Subastas: «Cargas no publicadas» falso cuando la certificación va como DOCUMENTO — MERGEADO
   (30/07/2026, PR #1172).** SUB-JA-2026-263723 (San Pablo, cierra 31/07) salía
   «Cargas no publicadas» pese a la CERTIFICACIÓN adjunta ya leída en `notas_edicto`: `cargas_conocidas` solo
