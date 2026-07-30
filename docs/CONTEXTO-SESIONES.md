@@ -62,6 +62,14 @@
     **PENDIENTE:** la llamada al modelo solo se puede probar en producción
     (el preview va tras el SSO de Vercel); `eurM2Actualizado` queda null hasta ingerir la serie histórica
     del IPV (hoy `mercado_indices` solo guarda la última variación); enganchar la nota simple al 📎 del chat.
+- **⚖️ Subastas: resumen de CARGAS + documentación en TODAS las fichas (30/07/2026, rama
+  `claude/cargas-documentacion-subasta-b02s5y`).** Alberto sobre una captura de 📡 Radar: «aquí debería
+  haber resumen de cargas y de la documentación». El dato ya existía (semáforo, `analisis`, `notas_edicto`,
+  `cargas_texto`) pero se pintaba SOLO en la pestaña «Todas» — iba en su `extra`, y la ficha del Radar se
+  montaba sin él. Nuevo `ResumenDocumental` DENTRO de `FichaSubasta` (titular de cargas siempre visible +
+  `<details>` con semáforo, texto oficial de cargas, notas del edicto y documentos). Nueva columna
+  `subastas.documentos` (jsonb, aplicada): `procesarDocumentosDeFicha` guarda el LISTADO entero de adjuntos
+  con `legible` (los escaneados se marcan «léelo a mano») aunque solo descargue 3. tsc 0 · 215 tests · build OK.
 
 - **🏠 Subastas: las características del inmueble ya se ven en la ficha (30/07/2026, rama
   `claude/property-features-missing-je4vtw`, PR #1177).** Alberto sobre una captura de `/subastas`: «no
@@ -72,6 +80,32 @@
   en vez de callar). El radar repinta su snapshot con la foto viva del corpus si la subasta sigue vigente,
   así no hay que esperar al cron. Solapaba con #1175: los m² salen UNA vez (con su origen) y la planta no se
   repite si ya la da la dirección del Catastro.
+
+- **🏢 Empresas: oferta REAL de eInforma/Informa D&B + Pablo confirmado en el proyecto (30/07/2026, rama
+  `claude/proyecto-empresa-einforma-nzet3l`).** Pablo (`pablo.j.p.c@hotmail.com`) reenvió la oferta de Borja Piña
+  (delegado Andalucía). Precios: bonos de informes 50/100/200/500 al año → **15–30€/informe** (el default
+  `EMPRESAS_ENRIQUECER_COSTE_EUR=12` se queda corto y el gasto es **prepago anual**, no metered) y —hallazgo
+  clave— **ficheros a medida por CNAE+zona a 1–3€/empresa con balance**, que cubren el cribado masivo y **matan
+  la necesidad de SABI** (15.000€/año). Todo en `docs/EINFORMA-CONTRATACION.md` (recomendación: pedir primero
+  el recuento del fichero, que es gratis; bono de 50 solo si hace falta firmar ya). **Bloqueante:** los adjuntos
+  con la doc de la API **no se bajan desde el contenedor** (el conector de Gmail no descarga adjuntos) → Alberto
+  los subió a la carpeta de Drive **`Einforma`**, de donde SÍ se leen. Acceso invitado de Pablo verificado ACTIVO
+  en BD (`empresas_acceso_token`, nota con su email); BORME vivo (2.098 eventos, último 29/07), enriquecimiento 0.
+
+- **🚨 Empresas/eInforma: el adapter está MAL a nivel de estructura y el producto es CONFIGURABLE (30/07/2026,
+  misma rama).** Analizados el JSON real, el diccionario de datos y el informe de muestra (46 pág.). Tres cosas
+  que cambian el plan: (1) el payload cuelga de **`datosProducto`** y las cifras **no son campos con nombre**,
+  sino `listaBalances[].listaPartidasCuentaPerdidasGanancias[]` con `{codigoPartida, valor}` → hay que **indexar
+  por código de PGC** (40100 cifra de negocios, 49500 resultado); (2) **la configuración de la demo solo trae 2
+  partidas** y NO incluye patrimonio neto, EBITDA, fondo de maniobra ni CNAE → **hay que dar a Borja la lista
+  exacta de campos ANTES de firmar** o contratamos un informe que no alimenta el scoring; (3) **RAI/ASNEF/EBE/
+  ICIRED/RIJ salen «No consultado» = add-on de pago** (viene Paydex + contadores judicial/concursal). LANDMINE:
+  `listaBalances` mezcla ejercicios individuales y consolidados (`indicadorBalanceIndividual`) — comparar años sin
+  filtrarlo inventa caídas. Regalos: scoring propio (Nota Informa 0-20, opinión de crédito, prob. de cese,
+  CESCE), feed `Últimos Cambios` con signo, y **ratios con percentiles de sector** (puede ahorrar el benchmark
+  del Banco de España). NO existe la edad de los administradores → el bloque cualitativo sigue manual. Todo en
+  `docs/EINFORMA-CONTRATACION.md` §5; el aviso está también en la cabecera de `lib/empresas-einforma.ts`.
+  **Pendiente:** rutas de la API (van en un ZIP/MHTML ilegibles por tamaño → imprimir a PDF y subir a Drive).
 
 - **🏛️ Subastas: ubicación EXACTA y datos del Catastro visibles en la ficha (30/07/2026, rama
   `claude/national-property-map-kszwhp`).** Alberto: «SUB-JA-2026-263723 la ubicación es muy mala». Causa:

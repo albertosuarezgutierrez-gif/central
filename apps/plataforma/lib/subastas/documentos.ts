@@ -21,6 +21,11 @@
 // El coste se controla con un GATE de rentabilidad, no recortando la lectura: se
 // analizan a fondo solo las subastas que ya han pasado el filtro de chollo/flip
 // (decisión de Alberto, 30/07/2026: «solo chollos y rentables»).
+//
+// El LISTADO de documentos se guarda entero en `documentos` (jsonb) aunque no se
+// lean todos: saber que la subasta TIENE una certificación de cargas —y poder
+// abrirla— vale por sí mismo. `legible:false` = no se ha podido leer (hay que
+// abrirlo a mano); `null` = no se llegó a intentar.
 // ────────────────────────────────────────────────────────────────────────────
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
@@ -72,6 +77,15 @@ async function textoDePdf(buf: Buffer): Promise<string> {
   return String(text ?? '')
 }
 
+/** Un documento de la ficha tal y como se guarda en `subastas.documentos`. */
+export interface DocumentoAdjunto {
+  titulo: string
+  url: string
+  /** `false` = no se ha podido leer automáticamente (escaneado sin visión, o error).
+   *  `null` = no se intentó (tope de descargas por pasada). */
+  legible: boolean | null
+}
+
 export interface ResultadoFicha {
   notas: string[]
   cuadro: CuadroCargas
@@ -79,6 +93,8 @@ export interface ResultadoFicha {
   leidos: number
   /** Detalle por documento, para poder auditar de dónde salió cada cifra. */
   detalle: Array<{ titulo: string; via: string; paginas: number; cargas: number; discrepancias: string[] }>
+  /** TODOS los documentos que publica la ficha, no solo los leídos. */
+  documentos: DocumentoAdjunto[]
 }
 
 /**
@@ -91,14 +107,17 @@ export async function procesarDocumentosDeFicha(
   opts: { leerCargas?: boolean } = {},
 ): Promise<ResultadoFicha> {
   const html = await (await bajar(`${FICHA}?idSub=${encodeURIComponent(identificador)}`)).text()
-  const docs = enlacesDocumentos(html).slice(0, MAX_DOCS_POR_FICHA)
+  // Se listan TODOS (los enlaces son gratis) y se descargan solo los primeros.
+  const todos = enlacesDocumentos(html)
 
   const notas = new Set<string>()
   const lecturas: LecturaDocumento[] = []
   const detalle: ResultadoFicha['detalle'] = []
+  const documentos: DocumentoAdjunto[] = todos.map((d) => ({ titulo: d.titulo, url: d.url, legible: null }))
   let leidos = 0
 
-  for (const doc of docs) {
+  for (let i = 0; i < Math.min(todos.length, MAX_DOCS_POR_FICHA); i++) {
+    const doc = todos[i]
     try {
       const r = await bajar(doc.url, 40000)
       const buf = Buffer.from(await r.arrayBuffer())
@@ -112,18 +131,27 @@ export async function procesarDocumentosDeFicha(
       // Señales explícitas del edicto: solo del texto, y gratis.
       if (texto) {
         for (const n of notasDeEdicto(datosDeEdicto(texto))) notas.add(n)
+        documentos[i].legible = true
         leidos++
       }
 
-      if (!opts.leerCargas) continue
-      if (RUIDO.test(doc.titulo)) continue
+      // Sin análisis profundo un escaneo se queda sin leer: la ficha debe poder
+      // decir «ábrelo a mano» en vez de callar.
+      if (!opts.leerCargas || RUIDO.test(doc.titulo)) {
+        if (escaneado || esImagen) documentos[i].legible = false
+        continue
+      }
 
       const lectura = await leerDocumento({
         texto: escaneado ? null : texto || null,
         pdf: escaneado ? buf : null,
         imagen: esImagen ? { mediaType: tipo.split(';')[0], data: buf.toString('base64') } : null,
       })
-      if (escaneado || esImagen) leidos++
+      if (escaneado || esImagen) {
+        // La visión lo ha rescatado solo si ha devuelto páginas de verdad.
+        documentos[i].legible = lectura.paginas > 0
+        leidos++
+      }
 
       lecturas.push(lectura)
       detalle.push({
@@ -134,11 +162,12 @@ export async function procesarDocumentosDeFicha(
         discrepancias: lectura.discrepancias,
       })
     } catch (e) {
+      documentos[i].legible = false
       console.warn('[subastas-documentos]', identificador, doc.titulo, e)
     }
   }
 
-  return { notas: [...notas], cuadro: fusionarCuadros(lecturas), leidos, detalle }
+  return { notas: [...notas], cuadro: fusionarCuadros(lecturas), leidos, detalle, documentos }
 }
 
 /** Fila mínima que necesita la pasada. */
@@ -191,7 +220,7 @@ export async function procesarDocumentos(max = 10): Promise<{
     WHERE fuente = 'boe' AND identificador IS NOT NULL
       AND es_inmueble = true
       AND (fecha_fin IS NULL OR fecha_fin >= now())
-      AND COALESCE(lector_version, 0) < ${LECTOR_VERSION}
+      AND (COALESCE(lector_version, 0) < ${LECTOR_VERSION} OR documentos IS NULL)
     ORDER BY fecha_fin ASC NULLS LAST
     LIMIT ${max}
   `)
@@ -234,6 +263,7 @@ export async function procesarDocumentos(max = 10): Promise<{
           valoracion_pactada = COALESCE(${r.cuadro.valoracionPactada?.importe ?? null}, valoracion_pactada),
           valoracion_pactada_anio = COALESCE(${r.cuadro.valoracionPactada?.anio ?? null}, valoracion_pactada_anio),
           documentos_leidos = ${r.leidos},
+          documentos = ${JSON.stringify(r.documentos)}::jsonb,
           actualizado_en = now()
         WHERE dedupe_key = ${f.dedupe_key}
       `)

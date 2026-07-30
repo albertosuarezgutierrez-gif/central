@@ -47,15 +47,26 @@ interface Subasta {
   dormitorios?: number | null
   banos?: number | null
   planta?: string | null
+  cargas?: number | null
+  cargasTexto?: string | null
+  cargasConocidas?: boolean
 }
 interface Rendimiento { ingresoAnual: number; yieldBruto: number; aniosRecuperacion: number }
 interface PuntoAnalisis { clave: string; nivel: 'verde' | 'ambar' | 'rojo'; detalle: string }
+interface DocumentoAdjunto { titulo: string; url: string; legible?: boolean | null }
+/** Todo lo que se sabe de la DOCUMENTACIÓN de una subasta (no del inmueble). */
+interface Documental {
+  semaforo?: string | null
+  analisis?: PuntoAnalisis[] | null
+  notasEdicto?: string | null
+  documentos?: DocumentoAdjunto[] | null
+}
 interface Resultado {
   subasta: Subasta; oportunidad: Oportunidad; rendimiento?: Rendimiento | null
   dormitorios?: number | null; pujaMaxima?: number | null; notasEdicto?: string | null
   tipoBien?: string | null; esPlaya?: boolean; margenFlip?: number | null
   margenFlipPct?: number | null; flipApto?: boolean; semaforo?: string | null
-  analisis?: PuntoAnalisis[] | null
+  analisis?: PuntoAnalisis[] | null; documentos?: DocumentoAdjunto[] | null
   precioM2Zona?: number | null; muestraZona?: number | null; zonaPortal?: string | null
 }
 interface Filtros {
@@ -91,6 +102,8 @@ interface FilaRadar {
   coste_total: string | number | null
   visto: boolean
   fecha_fin: string | null
+  /** Análisis y documentación de HOY (del corpus vivo), no del snapshot. */
+  doc?: Documental | null
 }
 interface Tesoreria {
   origen: 'seguidas' | 'radar'
@@ -307,7 +320,99 @@ function Caracteristicas({ s, plantaAparte }: { s: Subasta; plantaAparte?: boole
   )
 }
 
-function FichaSubasta({ s, o, acciones, extra }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode }) {
+/**
+ * Resumen de CARGAS + documentación de la subasta.
+ *
+ * Vive dentro de `FichaSubasta` a propósito: antes el semáforo y las notas del
+ * edicto solo se pintaban en la pestaña «Todas» (iban en su `extra`), así que
+ * en 📡 Radar —la pestaña que Alberto mira— una ficha con cargas conocidas,
+ * embargo anotado y cuatro notas del edicto salía muda. En una subasta las
+ * cargas que subsisten se SUMAN al precio: es el dato que decide si se puja.
+ *
+ * El titular va siempre visible (una línea); el detalle en un `<details>`
+ * cerrado (regla de rendimiento del repo).
+ */
+function ResumenDocumental({ s, d }: { s: Subasta; d?: Documental | null }) {
+  const notas = (d?.notasEdicto ?? '').split('\n').map((n) => n.trim()).filter(Boolean)
+  const docs = d?.documentos ?? []
+  const puntos = d?.analisis ?? []
+  const cargasTexto = (s.cargasTexto ?? '').trim()
+  const conCargas = s.cargas != null && s.cargas > 0
+  const noPublicadas = s.cargasConocidas === false
+
+  if (!conCargas && !noPublicadas && !cargasTexto && notas.length === 0 && docs.length === 0 && puntos.length === 0) {
+    return null
+  }
+
+  // Titular: qué pasa con las cargas, sin abrir nada.
+  const titular = conCargas
+    ? { emoji: '🔴', texto: `Cargas anteriores que SUBSISTEN y se suman al precio: ${eur(s.cargas as number)}` }
+    : noPublicadas
+      ? { emoji: '🟠', texto: 'Cargas no publicadas: pide la certificación registral antes de pujar.' }
+      : { emoji: '🟢', texto: 'Sin cargas anteriores subsistentes publicadas.' }
+
+  const legibles = docs.filter((x) => x.legible === false).length
+  const resumenDocs = docs.length === 0
+    ? 'sin documentos adjuntos'
+    : `${docs.length} documento${docs.length === 1 ? '' : 's'}${legibles > 0 ? `, ${legibles} sin capa de texto` : ''}`
+
+  return (
+    <div style={{ marginTop: 10 }}>
+      <p style={{ margin: 0, fontSize: 13, color: 'var(--text)' }}>
+        ⚖️ {titular.emoji} {titular.texto}
+      </p>
+      <details style={{ marginTop: 4 }}>
+        <summary style={{ cursor: 'pointer', fontSize: 13, color: 'var(--text)', minHeight: 36, display: 'flex', alignItems: 'center' }}>
+          📑 Cargas y documentación{d?.semaforo ? ` ${NIVEL_EMOJI[d.semaforo] ?? ''}` : ''} — {resumenDocs}
+        </summary>
+
+        {puntos.length > 0 && (
+          <ul style={{ margin: '6px 0 0', paddingLeft: 18, fontSize: 12, color: 'var(--muted)' }}>
+            {puntos.map((pt) => (
+              <li key={pt.clave}>{NIVEL_EMOJI[pt.nivel]} {pt.detalle}</li>
+            ))}
+          </ul>
+        )}
+
+        {/* Texto literal de cargas de la ficha/certificación: es la fuente, no
+            un resumen nuestro, y por eso se muestra entero. */}
+        {cargasTexto && (
+          <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--text)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+            ⚖️ <strong>Cargas (texto oficial):</strong> {cargasTexto}
+          </p>
+        )}
+
+        {notas.map((n) => (
+          <p key={n} style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--text)' }}>📄 {n}</p>
+        ))}
+
+        {docs.length > 0 && (
+          <div style={{ marginTop: 8 }}>
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>📎 Documentación adjunta a la subasta:</div>
+            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12 }}>
+              {docs.map((doc) => (
+                <li key={doc.url} style={{ marginBottom: 4 }}>
+                  <a href={doc.url} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)' }}>{doc.titulo}</a>
+                  {doc.legible === false && <span style={{ color: 'var(--muted)' }}> · escaneado, léelo a mano</span>}
+                  {doc.legible == null && <span style={{ color: 'var(--muted)' }}> · no analizado</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {docs.length === 0 && notas.length === 0 && (
+          <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+            Todavía no se ha leído la documentación de esta ficha (se procesa a diario).
+            Ábrela en «Ver ficha oficial».
+          </p>
+        )}
+      </details>
+    </div>
+  )
+}
+
+function FichaSubasta({ s, o, acciones, extra, doc }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null }) {
   const [abierto, setAbierto] = useState(false)
   const cierre = fecha(s.fechaFin)
   // Dirección oficial del Catastro troceada (planta/puerta aparte) y, con ella,
@@ -418,6 +523,9 @@ function FichaSubasta({ s, o, acciones, extra }: { s: Subasta; o?: Oportunidad |
           )}
         </>
       )}
+
+      {/* Cargas + documentación: en TODAS las pestañas, no solo en «Todas». */}
+      <ResumenDocumental s={s} d={doc} />
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
         {s.url && (
@@ -664,6 +772,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                 <FichaSubasta
                   key={r.id}
                   s={r.subasta}
+                  doc={r.doc}
                   o={{
                     puntuacion: r.puntuacion,
                     descuento: null,
@@ -891,6 +1000,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                 key={r.subasta.dedupeKey}
                 s={r.subasta}
                 o={r.oportunidad}
+                doc={{ semaforo: r.semaforo, analisis: r.analisis, notasEdicto: r.notasEdicto, documentos: r.documentos }}
                 acciones={<button onClick={() => seguir(r.subasta)} style={boton()}>👀 Seguir</button>}
                 extra={
                   <>
@@ -904,19 +1014,6 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                         </span>
                       )}
                     </div>
-                    {r.semaforo && (
-                      <details style={{ marginTop: 6 }}>
-                        <summary style={{ cursor: 'pointer', fontSize: 13, color: 'var(--text)', minHeight: 36, display: 'flex', alignItems: 'center' }}>
-                          {NIVEL_EMOJI[r.semaforo]} Análisis documental{' '}
-                          {r.semaforo === 'verde' ? '— sin pegas detectadas' : r.semaforo === 'rojo' ? '— problema serio' : '— hay que verificar'}
-                        </summary>
-                        <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 12, color: 'var(--muted)' }}>
-                          {(r.analisis ?? []).map((pt) => (
-                            <li key={pt.clave}>{NIVEL_EMOJI[pt.nivel]} {pt.detalle}</li>
-                          ))}
-                        </ul>
-                      </details>
-                    )}
                     {r.precioM2Zona != null && (
                       <p style={{ margin: '6px 0 0', color: 'var(--muted)', fontSize: 13 }}>
                         📍 Zona{r.zonaPortal ? ` (${r.zonaPortal})` : ''}: ~{Math.round(r.precioM2Zona).toLocaleString('es-ES')}€/m² en venta
@@ -935,9 +1032,6 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                       </p>
                     )}
                     <LineaRendimiento r={r.rendimiento} dormitorios={r.dormitorios} />
-                    {(r.notasEdicto ?? '').split('\n').filter(Boolean).map((n) => (
-                      <p key={n} style={{ margin: '6px 0 0', color: 'var(--text)', fontSize: 13 }}>📄 {n}</p>
-                    ))}
                   </>
                 }
               />
