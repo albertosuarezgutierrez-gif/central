@@ -1,3 +1,59 @@
+# Auditoría LIGERA — 30/07/2026
+
+Rango cubierto: 26→30/07/2026 (`b16d8d1`→`8c6cf17`, 50 commits), casi todo el nuevo agente de
+**Subastas de inmuebles del BOE** (`@central/module-subastas`, PRs #1113-#1160): parsers de edicto/
+certificación/Fotocasa, lentes flip/playa/semáforo, calibración con resultados reales, recordatorio
+24h, señal de recesión (INE). Doc de la vertical (`apps/plataforma/CLAUDE.md`) y skill `plataforma-maestro`
+ya estaban al día (los fue anotando la propia sesión); el drift real estaba en los docs transversales
+de estructura, que no se habían tocado desde antes de que existieran `transporte`/`alquiler`/`almacen`.
+
+## Carril 1 — auto-aplicado a `main` (commit `76f8766`)
+- **`docs/ESTRUCTURA.md` + `MATRIZ.md`:** contadores de `packages/module-*` desactualizados (decían
+  20 y 25; la carpeta real tiene 26) y 6 módulos ya cableados sin fila propia: `module-subastas` (solo
+  mal contado), `module-transporte`, `module-nominas`, `module-trading`, `module-geo`, `module-pagos`.
+  3 módulos marcados «⏳ sin consumo» ya tienen vertical real (verificado `grep @central/<module>
+  apps/*/package.json`): `module-flota` (+`apps/transporte`), `module-alquiler` (`apps/alquiler`),
+  `module-intercompany` (`apps/plataforma`). Tabla "1. Verticales" de `ESTRUCTURA.md` solo listaba 5
+  apps (faltaban transporte/alquiler/almacen). `MATRIZ.md`: contador 37→38 + fila `plataforma` con los
+  módulos que compone. Detalle línea a línea en `docs/AUTO-APLICADOS.md`.
+- Memoria (`CONTEXTO-SESIONES.md`), skills-maestro y manuales: **sin drift** — ya reconciliados por
+  las propias sesiones que hicieron el trabajo (buena señal, no hizo falta tocar nada ahí).
+
+## 🔴 Heartbeat de crons — 1 MUDO real confirmado
+Los 3 candidatos iniciales (`limpiadoras/auto-sessions` 113h, `updates/sync` 110h, `psd2-sync` 44h)
+se investigaron por Vercel MCP antes de dar por bueno cualquiera:
+
+- **`limpiadoras/auto-sessions` (cleaning_sessions, 113h) → falso positivo, ya documentado
+  (2026-07-02).** Cron idempotente: solo inserta si hay salida nueva en los próximos 14 días sin
+  sesión creada; huecos de 4-9 días son la norma. Sin acción.
+- **`updates/sync` (incomes, 110h) → 🟡 monitorizar, no confirmado como fallo.** El cron SÍ corrió
+  (`GET /api/sivra/updates/sync 200` a las 05:00:01 el 29/07, logs Vercel). Es idempotente (solo
+  escribe si Smoobu trae una reserva nueva o modificada); 5 días sin ninguna reserva nueva/modificada
+  en los 4 pisos es posible en temporada baja pero es el extremo del rango observado — vigilar si se
+  alarga más.
+- **`psd2-sync` (movimientos_bancarios, 44h) → 🔴 MUDO REAL, un ciclo perdido.** El cron corrió bien
+  el 28/07 (`06:00:03 GET /api/cron/psd2-sync 200`) pero **el 29/07 a las 06:00 NO HAY NINGÚN LOG**,
+  ni siquiera el de edge-middleware que sí dejaron 3 crons vecinos con el MISMO minuto exacto
+  (`borme-ingesta`, `subastas-ingesta`, `concursos-radar`, los tres `200` a las 06:00-06:01 del
+  29/07). La petición nunca llegó a la app — no es un fallo del handler (auth/lógica), es el
+  **scheduler de Vercel el que no disparó esa invocación concreta**. El proyecto `plataforma` tiene
+  **60 crons** en `vercel.json` (4 solo en el minuto `0 6 * * *`); no se pudo confirmar por API el
+  límite exacto del plan actual, pero está cerca o por encima de los 40 que Vercel documenta para
+  Pro — candidato más probable si se repite.
+  - **Acción de Alberto:** comprobar en el dashboard de Vercel (Project → Cron Jobs) si hay algún
+    aviso de límite, y si el 30/07 a las 06:00 `psd2-sync` vuelve a fallar (un vistazo a
+    `movimientos_bancarios` mañana lo confirma). Con 2 fallos seguidos, valorar mover `psd2-sync`
+    a un minuto sin otros 3 crons a la vez o abrir ticket a soporte Vercel.
+  - Sin fix de código: no hay bug en el handler, así que no hay nada que meter en un PR.
+
+## Verificación
+`git log --since=2026-07-26 --stat` (50 commits) · heartbeat SQL vía Supabase MCP
+(`wswbehlcuxqxyinousql`) · logs de runtime vía Vercel MCP (proyecto `plataforma`,
+`prj_yNvQa4Gwy9HqGA1dAIkHfdLcxIfQ`) para los 3 candidatos a MUDO · `grep` de consumo real de
+`packages/module-*` contra los 8 `apps/*/package.json`.
+
+---
+
 # Auditoría LIGERA — 20/07/2026
 
 Pasada diaria estándar (bloques baratos: lockfile, heartbeat de crons, coherencia de docs; sin
