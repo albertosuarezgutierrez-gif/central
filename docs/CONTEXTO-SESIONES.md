@@ -24,6 +24,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏢 Empresas: oferta REAL de eInforma/Informa D&B + Pablo confirmado en el proyecto (30/07/2026, rama
+  `claude/proyecto-empresa-einforma-nzet3l`).** Pablo (`pablo.j.p.c@hotmail.com`) reenvió la oferta de Borja Piña
+  (delegado Andalucía). Precios: bonos de informes 50/100/200/500 al año → **15–30€/informe** (el default
+  `EMPRESAS_ENRIQUECER_COSTE_EUR=12` se queda corto y el gasto es **prepago anual**, no metered) y —hallazgo
+  clave— **ficheros a medida por CNAE+zona a 1–3€/empresa con balance**, que cubren el cribado masivo y **matan
+  la necesidad de SABI** (15.000€/año). Todo en `docs/EINFORMA-CONTRATACION.md` (recomendación: pedir primero
+  el recuento del fichero, que es gratis; bono de 50 solo si hace falta firmar ya). **Bloqueante:** los adjuntos
+  con la doc de la API (rutas, diccionario de datos, JSON de ejemplo) **no se pueden bajar desde el contenedor**
+  → Alberto debe subirlos a Drive para cerrar `lib/empresas-einforma.ts`. Acceso invitado de Pablo verificado
+  ACTIVO en BD (`empresas_acceso_token`, nota actualizada con su email); BORME vivo (2.098 eventos, último 29/07),
+  enriquecimiento 0 y gasto 0€.
+
 - **🏛️ Subastas: ubicación EXACTA y datos del Catastro visibles en la ficha (30/07/2026, rama
   `claude/national-property-map-kszwhp`).** Alberto: «SUB-JA-2026-263723 la ubicación es muy mala». Causa:
   el punto era correcto (Catastro) pero **la ficha no pintaba la dirección en NINGÚN sitio** (estaba solo en
