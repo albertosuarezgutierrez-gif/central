@@ -24,6 +24,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏠 Subastas: las características del inmueble ya se ven en la ficha (30/07/2026, rama
+  `claude/property-features-missing-je4vtw`, PR #1177).** Alberto sobre una captura de `/subastas`: «no
+  aparecen las características». Cierto — tipo, m², dormitorios, baños y planta estaban en BD y solo se
+  usaban para calcular €/m² y yield. `SubastaInmueble` gana esos campos + `superficieOrigen` (Catastro vs
+  escritura: discrepan a menudo), `filaASubasta` los mapea con fallback a `extraerDatos(descripcion)` cuando
+  la columna está vacía, y `FichaSubasta` los pinta arriba del todo (si el anuncio no publica nada, lo dice
+  en vez de callar). El radar repinta su snapshot con la foto viva del corpus si la subasta sigue vigente,
+  así no hay que esperar al cron. Solapaba con #1175: los m² salen UNA vez (con su origen) y la planta no se
+  repite si ya la da la dirección del Catastro.
+
 - **🏢 Empresas: oferta REAL de eInforma/Informa D&B + Pablo confirmado en el proyecto (30/07/2026, rama
   `claude/proyecto-empresa-einforma-nzet3l`).** Pablo (`pablo.j.p.c@hotmail.com`) reenvió la oferta de Borja Piña
   (delegado Andalucía). Precios: bonos de informes 50/100/200/500 al año → **15–30€/informe** (el default
