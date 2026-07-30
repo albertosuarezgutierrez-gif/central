@@ -24,6 +24,60 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⚖️ Subastas — 3 partidas que faltaban en el coste real (30/07/2026, misma rama/PR #1176).** De las 5
+  ideas que propuse, Alberto aprobó «2, 4 y 5» (la 3 —nota simple viva— la dejó **para el final del todo**;
+  la 1 —caducidad de anotaciones, art. 86 LH— sigue **sin decidir**).
+  - **Comunidad (art. 9.1.e LPH)** — `comunidad.ts`: el adquirente hereda la anualidad en curso + 3
+    anteriores y NADIE lo publica (ni BOE ni certificación). Se estima por baremo €/m²·mes solo en
+    propiedad horizontal; `importe: null` (nunca 0) si no procede o falta superficie. Entra sola en
+    `calcularCoste` con su aviso; `estimarComunidad:false` vuelve al comportamiento anterior.
+  - **Coste del dinero (art. 670 LEC)** — `financiacion.ts`: 40 días para consignar y ningún banco
+    hipoteca lo que aún no es tuyo → puente. **NO se inventa**: se declara por cuenta en ⚙️ Criterios
+    (`subastas_criterios.financia_*`, migración aplicada, guardadas en tanto por uno / tecleadas en %) y
+    se aplica en las 3 vistas de usuario (página, `/api/subastas`, radar). El cron `clasificar` NO lo usa
+    (esas columnas son del corpus global, compartido entre cuentas).
+  - **Bucle de la puja** — nueva `subastas.puja_maxima_calc` (migración aplicada): el clasificador congela
+    el techo calculado mientras la subasta está viva y `calibracionDePuja()` lo contrasta con el remate
+    real al concluir. Sin muestra (≥5) devuelve `lectura: null` y la UI calla.
+  - 303 tests módulo · 215 app · tsc 0 · build OK.
+- **🔍⚖️ Subastas — el agente LEE los escaneados y solo avisa de lo rentable y limpio (30/07/2026,
+  rama `claude/subasta-carga-no-publicadas-jm7ky6`).** Tras el PR #1172, Alberto vio otra ficha con
+  «Cargas no publicadas» (SUB-JA-2026-264269, Belmonte): tenía su certificación adjunta pero es un
+  ESCANEO (`chars:0` en pdf-parse) → se descartaba en silencio. Solo 4 de 34 vigentes tenían cargas.
+  - **Rescate de escaneados:** `pdf-imagenes.ts` (puro) localiza los JPEG por marcadores SOI/EOI y
+    agrupa las BANDAS en páginas (263 bandas → 10 páginas en el caso real); `lector-registral.ts` las
+    recompone con **sharp** (nueva dep de plataforma) y las lee por visión. **Verificado contra el PDF
+    real: el módulo reproduce las 10 páginas exactas que se leyeron a mano.**
+  - **Cargas estructuradas + QUÉ SUBSISTE** (`cargas.ts` puro): rango anterior/posterior/la-que-ejecuta
+    y purga de los arts. 668/670 LEC. **En ejecución por EMBARGO la hipoteca anterior NO se purga** —
+    Belmonte: salida 19.329€ + 44.850€ de hipoteca de 2009. Procedimiento desconocido → `null`, nunca 0.
+    Doble lectura + `consensoCuadros` anula el importe en que discrepen (Alberto decidió que la IA
+    extraiga cifras; esta es la red).
+  - **Director:** categoría `registral` con exigencia de modalidad `image` (un modelo de solo texto
+    devolvería cargas vacías = «finca limpia», el peor fallo) + `openrouterVision` en core-ai.
+  - **`lector_version`** en BD: subirla relee las fichas (antes `notas_edicto=''` las congelaba).
+  - **«añade todo» (5 ideas):** `decidirAviso` (solo rentable Y limpio interrumpe; lo no leído ESPERA
+    salvo cierre ≤4 días, marcado sin verificar) · `reaparicion.ts` (misma finca más barata, identidad
+    por REF CATASTRAL, nunca por descripción) · `calibracionPorCargas` (¿el mercado castiga las cargas?)
+    · `valoracion-historica.ts` (serie €/m² propia desde las tasaciones pactadas en escritura) ·
+    `compararCuadros` (nota simple nueva vs certificación vieja) · botones Telegram «📝 consulta al
+    juzgado» y «📨 enviar» (`subastas_consultas`).
+  - **Provincia canónica + ciclo de vida:** `provinciaCanonica()` unifica «Sevilla»/«SEVILLA» (la
+    calibración partía la muestra en dos y ninguna mitad llegaba al mínimo) y `ciclo-vida.ts` +
+    `archivarPasadas()` sacan lo ya pasado de la lista/radar **sin borrar el histórico** (borrarlo mataría
+    la detección de reapariciones y la calibración).
+  - Migraciones aplicadas: `2026-07-30_cargas_lector_registral.sql` + `_reapariciones_valoracion.sql`
+    + `_ciclo_vida_y_provincia.sql`. Mergeado `main` (PRs #1175/#1177 tocaban el mismo terreno: 5
+    conflictos en `geo.ts`/`index.ts`/`COLS_SUBASTA`/cron/memoria, resueltos conservando ambas cosas).
+    283 tests · tsc 0 · build OK; CI/Tests/QA/gitleaks verdes sobre `259a714`.
+    **🚨 LANDMINE (30/07/2026):** los pushes de una sesión Claude a una rama con PR abierto **no siempre
+    disparan los workflows** (GitHub no genera eventos `pull_request` para pushes hechos con el token de
+    la app: los 3 commits de #1176 pasaron sin CI y `get_check_runs` del PR solo mostraba Vercel). No dar
+    por verde un PR sin comprobar que existe run para ESE sha; si falta, lanzarlo con `workflow_dispatch`
+    (ci.yml y tests.yml lo soportan; qa.yml y gitleaks.yml NO).
+    **PENDIENTE:** la llamada al modelo solo se puede probar en producción
+    (el preview va tras el SSO de Vercel); `eurM2Actualizado` queda null hasta ingerir la serie histórica
+    del IPV (hoy `mercado_indices` solo guarda la última variación); enganchar la nota simple al 📎 del chat.
 - **⚖️ Subastas: resumen de CARGAS + documentación en TODAS las fichas (30/07/2026, rama
   `claude/cargas-documentacion-subasta-b02s5y`).** Alberto sobre una captura de 📡 Radar: «aquí debería
   haber resumen de cargas y de la documentación». El dato ya existía (semáforo, `analisis`, `notas_edicto`,

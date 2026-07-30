@@ -33,6 +33,65 @@ export interface CalibracionZona {
 /** Muestra mínima por provincia para publicar su calibración. */
 export const MIN_MUESTRA_CALIBRACION = 3
 
+/**
+ * Fila concluida ENRIQUECIDA con lo que se leyó de su certificación, para poder
+ * contrastar teoría contra realidad: ¿de verdad se remata más bajo (o queda
+ * desierta) una finca que arrastra cargas anteriores?
+ */
+export interface ResultadoConCargas extends ResultadoConcluido {
+  /** Lo que heredaba el adjudicatario. `null` = no se llegó a leer. */
+  cargasSubsistentes: number | null
+  cargasConocidas: boolean
+}
+
+export interface CalibracionCargas {
+  grupo: 'con_cargas' | 'sin_cargas' | 'sin_leer'
+  muestra: number
+  adjudicadas: number
+  desiertas: number
+  /** % de las concluidas que acabaron desiertas. */
+  tasaDesierta: number | null
+  ratioMediano: number | null
+  muestraRatio: number
+}
+
+/**
+ * Calibración por PRESENCIA DE CARGAS. Es la comprobación empírica de la regla
+ * que este módulo aplica a mano: si el grupo `con_cargas` queda desierto mucho
+ * más a menudo o se remata mucho más bajo, el mercado le está dando la razón al
+ * semáforo, y el descuento exigido a esas fincas debería subir.
+ *
+ * Sin muestra no se concluye nada: se devuelven los grupos con sus contadores y
+ * el ratio a `null`, para que la UI muestre «aún sin datos» en vez de un número
+ * que no significa nada.
+ */
+export function calibracionPorCargas(filas: ResultadoConCargas[]): CalibracionCargas[] {
+  const grupos: Array<CalibracionCargas['grupo']> = ['con_cargas', 'sin_cargas', 'sin_leer']
+
+  return grupos.map((grupo) => {
+    const delGrupo = filas.filter((f) => {
+      if (!f.cargasConocidas || f.cargasSubsistentes == null) return grupo === 'sin_leer'
+      return f.cargasSubsistentes > 0 ? grupo === 'con_cargas' : grupo === 'sin_cargas'
+    })
+
+    const adjudicadas = delGrupo.filter((f) => /adjudicad/i.test(f.resultado ?? '')).length
+    const desiertas = delGrupo.filter((f) => /desiert/i.test(f.resultado ?? '')).length
+    const ratios = delGrupo
+      .filter((f) => f.importeAdjudicacion != null && (f.valorSubasta ?? 0) > 0)
+      .map((f) => f.importeAdjudicacion! / f.valorSubasta!)
+
+    return {
+      grupo,
+      muestra: delGrupo.length,
+      adjudicadas,
+      desiertas,
+      tasaDesierta: adjudicadas + desiertas > 0 ? desiertas / (adjudicadas + desiertas) : null,
+      ratioMediano: mediana(ratios),
+      muestraRatio: ratios.length,
+    }
+  })
+}
+
 function mediana(valores: number[]): number | null {
   if (!valores.length) return null
   const v = [...valores].sort((a, b) => a - b)
@@ -82,4 +141,81 @@ export function calibracionAdjudicaciones(
     .sort((a, b) => b.muestra - a.muestra)
   out.push(calibrar('(todas)', conResultado))
   return out
+}
+
+// ── ¿Acertamos con la puja máxima? ──────────────────────────────────────────
+
+/**
+ * Una subasta concluida de la que ADEMÁS guardamos la puja máxima que el agente
+ * había calculado antes del remate. Es el único material con el que se puede
+ * saber si el modelo de coste es realista o si vive en otro mercado.
+ */
+export interface ResultadoConPuja extends ResultadoConcluido {
+  /** Puja máxima que calculamos para el descuento objetivo. `null` = no se calculó. */
+  pujaMaxima: number | null
+}
+
+export interface CalibracionPuja {
+  /** Concluidas con puja calculada Y remate conocido. */
+  muestra: number
+  /** Las que se remataron POR ENCIMA de nuestro techo: no eran ganables. */
+  porEncima: number
+  /** Las que se remataron por debajo: eran ganables al precio que decíamos. */
+  porDebajo: number
+  /**
+   * Mediana de `importeAdjudicacion / pujaMaxima`. > 1 = el mercado paga más de
+   * lo que estábamos dispuestos a pujar (somos conservadores y no ganaremos
+   * casi ninguna); < 1 = nuestro techo es holgado y podríamos apretar más.
+   */
+  ratioMediano: number | null
+  /** Lectura en una frase, o `null` si no hay muestra suficiente. */
+  lectura: string | null
+}
+
+/** Muestra mínima para atreverse a leer la desviación de la puja. */
+export const MIN_MUESTRA_PUJA = 5
+
+/**
+ * Contrasta la puja máxima calculada contra el remate REAL.
+ *
+ * Es el bucle que cierra el sistema: hasta ahora el agente calculaba un techo
+ * de puja y nadie comprobaba nunca si ese techo tenía algo que ver con lo que
+ * de verdad pagó el mercado. Sin muestra suficiente devuelve `lectura: null`
+ * en vez de una conclusión sacada de dos casos.
+ */
+export function calibracionPuja(
+  filas: ResultadoConPuja[],
+  minMuestra = MIN_MUESTRA_PUJA,
+): CalibracionPuja {
+  const utiles = filas.filter(
+    (f) => (f.pujaMaxima ?? 0) > 0 && (f.importeAdjudicacion ?? 0) > 0 && /adjudicad/i.test(f.resultado ?? ''),
+  )
+
+  const porEncima = utiles.filter((f) => f.importeAdjudicacion! > f.pujaMaxima!).length
+  const ratios = utiles.map((f) => f.importeAdjudicacion! / f.pujaMaxima!)
+  const ratioMediano = mediana(ratios)
+
+  let lectura: string | null = null
+  if (utiles.length >= minMuestra && ratioMediano != null) {
+    const pct = Math.round(Math.abs(ratioMediano - 1) * 100)
+    if (ratioMediano > 1.05) {
+      lectura =
+        `El mercado remata un ${pct}% POR ENCIMA de nuestra puja máxima (${porEncima} de ${utiles.length} casos): ` +
+        'el descuento objetivo es demasiado exigente para estas zonas y casi nunca ganaremos una subasta.'
+    } else if (ratioMediano < 0.95) {
+      lectura =
+        `El mercado remata un ${pct}% POR DEBAJO de nuestro techo (${utiles.length} casos): hay margen para exigir ` +
+        'más descuento sin quedarnos fuera.'
+    } else {
+      lectura = `Nuestra puja máxima está en línea con el remate real (${utiles.length} casos).`
+    }
+  }
+
+  return {
+    muestra: utiles.length,
+    porEncima,
+    porDebajo: utiles.length - porEncima,
+    ratioMediano,
+    lectura,
+  }
 }

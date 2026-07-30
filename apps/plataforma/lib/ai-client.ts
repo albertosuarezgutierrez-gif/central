@@ -3,8 +3,10 @@
  * Plataforma ES la pasarela central, por lo que llama directamente a @central/core-ai
  * sin necesidad de enrutar por HTTP. NVIDIA_API_KEY en Vercel env.
  */
-import { nimChat, nimVision, groqText, groqTranscribe, type NimConfig, type NimChatMessage } from '@central/core-ai'
+import { nimChat, nimVision, groqText, groqTranscribe, openrouterVisionEx, type NimConfig, type NimChatMessage, type ImageInput } from '@central/core-ai'
 import { chatConDirector } from '@/lib/pasarela'
+import { openrouterConfigPasarela } from '@/lib/ia-director'
+import { registrarUso, estimarTokens, costeEur } from '@/lib/ai-gateway'
 
 const NVIDIA_TEXT  = 'meta/llama-3.3-70b-instruct'
 const NVIDIA_VISION = 'meta/llama-3.2-90b-vision-instruct'
@@ -38,6 +40,78 @@ export async function aiComplete(
     timeoutMs: opts.timeoutMs ?? 20_000,
   })
   return text
+}
+
+/**
+ * VISIÓN / OCR con el modelo que decida la app. Un solo punto de entrada para
+ * leer imágenes desde plataforma (certificaciones registrales escaneadas,
+ * tickets, fotos de facturas).
+ *
+ * Enrutado: si hay `OPENROUTER_API_KEY` va por el agregador —así el Director
+ * puede elegir CUALQUIER modelo multimodal del catálogo y hay fallback nativo
+ * entre modelos— y si falla o no está configurado, cae a NIM
+ * (`llama-3.2-90b-vision`, gratis). Degrada, nunca muere.
+ *
+ * Registra siempre en `ai_usos` con el coste real cuando el proveedor lo informa:
+ * leer 10 páginas escaneadas cuesta tokens de verdad y tiene que verse en el
+ * panel de gasto de IA.
+ */
+export async function aiVision(
+  system: string,
+  images: ImageInput[],
+  userText: string,
+  opts: { maxTokens?: number; model?: string; timeoutMs?: number; endpoint?: string } = {},
+): Promise<string> {
+  const endpoint = opts.endpoint ?? 'vision'
+  const maxTokens = opts.maxTokens ?? 2000
+  const timeoutMs = opts.timeoutMs ?? 60_000
+  const entrada = system + userText
+
+  const or = openrouterConfigPasarela()
+  if (or) {
+    const t0 = Date.now()
+    try {
+      const res = await openrouterVisionEx(or, system, images, userText, {
+        model: opts.model,
+        maxTokens,
+        signal: AbortSignal.timeout(timeoutMs),
+      })
+      const tokens = res.usage?.total_tokens ?? estimarTokens(entrada, res.text) + images.length * 800
+      await registrarUso({
+        app: 'plataforma', endpoint, proveedor: 'openrouter', modelo: res.model,
+        ok: true, ms: Date.now() - t0, tokens, costeEur: costeEur('openrouter', tokens),
+      })
+      return res.text
+    } catch (e) {
+      const msg = e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 200) : 'error'
+      await registrarUso({
+        app: 'plataforma', endpoint, proveedor: 'openrouter', modelo: opts.model ?? null,
+        ok: false, ms: Date.now() - t0, error: msg,
+      })
+      console.warn('[ai-client] visión OpenRouter falló, cae a NIM:', msg)
+    }
+  }
+
+  // Suplente gratis: NIM vision.
+  const t1 = Date.now()
+  try {
+    const text = await nimVision(nimConfig(), system, images, userText, maxTokens, {
+      signal: AbortSignal.timeout(timeoutMs),
+    })
+    const tokens = estimarTokens(entrada, text) + images.length * 258
+    await registrarUso({
+      app: 'plataforma', endpoint, proveedor: 'nim', modelo: NVIDIA_VISION,
+      ok: true, ms: Date.now() - t1, tokens, costeEur: costeEur('nim', tokens),
+    })
+    return text
+  } catch (e) {
+    const msg = e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 200) : 'error'
+    await registrarUso({
+      app: 'plataforma', endpoint, proveedor: 'nim', modelo: NVIDIA_VISION,
+      ok: false, ms: Date.now() - t1, error: msg,
+    })
+    throw e
+  }
 }
 
 /**

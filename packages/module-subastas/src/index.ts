@@ -53,7 +53,14 @@ export { superficieM2, palabrasANumero, numeroAlFinal } from './numeros-es.ts'
 
 // Municipio → provincia (las descripciones del BOE citan municipios, no provincias)
 // + enlaces externos con la mejor ubicación disponible (mapa, calle, Catastro)
-export { provinciaPorMunicipio, MUNICIPIOS_POR_PROVINCIA, urlGoogleMaps, urlStreetView, urlFichaCatastro } from './geo.ts'
+export {
+  provinciaPorMunicipio,
+  provinciaCanonica,
+  MUNICIPIOS_POR_PROVINCIA,
+  urlGoogleMaps,
+  urlStreetView,
+  urlFichaCatastro,
+} from './geo.ts'
 export type { UbicacionSubasta } from './geo.ts'
 
 // Ficha del Portal de Subastas (las CIFRAS) y Catastro (superficie, año, uso)
@@ -75,8 +82,17 @@ export type { Comparable } from './comparables.ts'
 export { detectarChollos, zonasDeComparable, estimarAntiguedad, CHOLLO_DESCUENTO_MIN, CHOLLO_DESCUENTO_SOSPECHOSO } from './comparables.ts'
 export type { Chollo, ObservacionRef, VelocidadZona, ZonaPortalRef } from './comparables.ts'
 // Calibración con RESULTADOS reales: a qué % del tipo se adjudica de verdad
-export { calibracionAdjudicaciones, MIN_MUESTRA_CALIBRACION } from './adjudicaciones.ts'
-export type { ResultadoConcluido, CalibracionZona } from './adjudicaciones.ts'
+export { calibracionAdjudicaciones, calibracionPorCargas, calibracionPuja, MIN_MUESTRA_CALIBRACION, MIN_MUESTRA_PUJA } from './adjudicaciones.ts'
+export type {
+  ResultadoConcluido, CalibracionZona, ResultadoConCargas, CalibracionCargas,
+  ResultadoConPuja, CalibracionPuja,
+} from './adjudicaciones.ts'
+// Deuda con la comunidad (art. 9.1.e LPH) y coste del dinero del puente: las
+// dos partidas que no publica nadie y que se comen el margen.
+export { deudaComunidadEstimada, tienePropiedadHorizontal, ANUALIDADES_MAXIMAS, ANIOS_IMPAGO_ASUMIDOS, CUOTA_M2_MES } from './comunidad.ts'
+export type { DeudaComunidad, EntradaComunidad } from './comunidad.ts'
+export { costeFinanciacion, DIAS_PARA_PAGAR, MESES_PUENTE_ASUMIDOS } from './financiacion.ts'
+export type { ParamsFinanciacion, CosteFinanciacion } from './financiacion.ts'
 // API oficial de Idealista (Search API): consulta directa por zona vigilada,
 // mismo corpus y mismo dedupe que las alertas de correo
 export { comparablesDesdeApiIdealista, tipoDesdePropertyType, centroBusquedaIdealista, llamadasPermitidasIdealista, IDEALISTA_LIMITE_MENSUAL, IDEALISTA_MARGEN_MENSUAL, IDEALISTA_DIAS_CACHE_ZONA } from './idealista-api.ts'
@@ -93,6 +109,40 @@ export type { Flip } from './flip.ts'
 export { esPlayaHuelva, MUNICIPIOS_PLAYA_HUELVA, NUCLEOS_PLAYA_HUELVA, TOPE_PLAYA } from './playa.ts'
 export { analisisDocumental } from './analisis.ts'
 export type { AnalisisDocumental, PuntoAnalisis, Nivel } from './analisis.ts'
+
+// Ciclo de vida: vigente / cerrada / archivada. Las pasadas salen de la vista
+// pero NUNCA se borran (sin ellas no hay reaparición ni calibración).
+export { estadoCiclo, esVigente, seConservaParaAprender, DIAS_PARA_ARCHIVAR } from './ciclo-vida.ts'
+export type { EstadoCiclo, EntradaCiclo } from './ciclo-vida.ts'
+
+// Política de aviso: solo lo rentable Y limpio interrumpe por Telegram
+export { decidirAviso, DIAS_URGENTE } from './aviso.ts'
+export type { DecisionAviso, EntradaAviso, ResultadoAviso } from './aviso.ts'
+
+// La misma finca que vuelve a subasta con el tipo rebajado (identidad por catastro)
+export { detectarReapariciones, claveFinca, textoReaparicion, BAJADA_MINIMA } from './reaparicion.ts'
+export type { Convocatoria, Reaparicion } from './reaparicion.ts'
+
+// Serie de valoración PROPIA a partir de las tasaciones pactadas en las escrituras
+export { referenciaPorZona, MIN_MUESTRA_TASACIONES } from './valoracion-historica.ts'
+export type { TasacionPactada, ReferenciaZona } from './valoracion-historica.ts'
+
+// Cargas registrales: cuadro estructurado + QUÉ SUBSISTE para el adjudicatario.
+// La regla de subsistencia es determinista a propósito (de ella sale la puja).
+export {
+  normalizarCuadroCargas,
+  cargasQueSubsisten,
+  mismoAcreedorQueEjecutante,
+  consensoCuadros,
+  resumirCargas,
+  compararCuadros,
+} from './cargas.ts'
+export type { Carga, CuadroCargas, CargasSubsistentes, TipoCarga, RangoCarga, FuenteCargas, ValoracionPactada, CambioCargas } from './cargas.ts'
+export { PROMPT_LECTOR_REGISTRAL, extraerJson } from './cargas-prompt.ts'
+
+// Rescate de PDFs escaneados (certificaciones fotocopiadas → imágenes legibles)
+export { localizarJpegs, dimensionesJpeg, agruparBandas, pareceEscaneado } from './pdf-imagenes.ts'
+export type { ImagenEmbebida, DimensionesJpeg, BandaAgrupable } from './pdf-imagenes.ts'
 
 // Coste "puerta abierta"
 export { calcularCoste, deposito, pujaMaximaParaDescuento, yieldTuristico, PARAMS_ANDALUCIA, PCT_DEPOSITO, LANZAMIENTO_ESTIMADO } from './costes.ts'
