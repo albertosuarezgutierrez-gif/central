@@ -16,7 +16,26 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **💸 Transferencias SEPA "libres" (formulario) + fix redirect del pago de facturas (29/07/2026, rama
+- **⏰ Crons de plataforma consolidados en UN dispatcher — fix del límite de 40 crons de Vercel Pro
+  (30/07/2026, rama `claude/audit-30-07-hv2njr`).** La auditoría del 30/07 (PR #1162) confirmó que el
+  scheduler de Vercel NO disparó `psd2-sync` el 29/07 06:00 (sin ningún log, con sus 3 vecinos del mismo
+  minuto corriendo): `apps/plataforma/vercel.json` declaraba **60 crons** con el límite Pro en **40**.
+  Alberto: "resuelve". Solución:
+  - **`vercel.json` declara UN solo cron**: `/api/cron/dispatch` cada minuto (`* * * * *`).
+  - **Manifiesto en código = fuente de verdad:** `lib/cron-dispatch.ts` (los 60 jobs con sus horarios
+    UTC intactos + matcher cron puro con listas/rangos/pasos, 13 tests `node --test`). **⚠️ Para añadir
+    o cambiar un cron de plataforma: tocar SOLO `CRON_JOBS` en ese archivo, NUNCA `vercel.json`.**
+  - **`app/api/cron/dispatch/route.ts`**: calcula los jobs del minuto y los dispara en paralelo por HTTP
+    con `Authorization: Bearer CRON_SECRET` (mismo header que adjuntaba Vercel → handlers y middleware
+    sin cambios). Base URL: `VERCEL_PROJECT_PRODUCTION_URL` (override `CRON_DISPATCH_BASE_URL`).
+  - **Catch-up de minutos omitidos** (lo que convierte el incidente en imposible de repetir): cursor de
+    fila única `cron_dispatch_cursor` (migración `prisma/sql/2026-07-30_cron_dispatch_cursor.sql`,
+    **aplicada por Supabase MCP**) — si el scheduler se salta un minuto, la pasada siguiente procesa la
+    ventana pendiente (tope 15 min); también evita doble disparo entre instancias (claim `FOR UPDATE`).
+    Sin la tabla, degrada al minuto actual sin catch-up.
+  - Verificado: 13/13 tests, `tsc --noEmit` 0. El heartbeat de `/auditoria-diaria` (paso 2-bis) sigue
+    valiendo tal cual (vigila frescura en BD, no `vercel.json`) y ahora además vigila de facto el
+    dispatcher (si muere, TODOS los crons enmudecen → saltaría en la primera pasada).
   `claude/agente-contable-notificaciones-cbouni`).** Alberto: "con la conexión de los bancos, ¿puedes hacer
   transferencias?" → sí, pero el PIS (Enable Banking) estaba solo cableado al pago de facturas de proveedor y
   APAGADO. Pidió desarrollar además la **transferencia libre a cualquier destinatario**. Hecho:
