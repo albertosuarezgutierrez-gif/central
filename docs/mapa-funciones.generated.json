@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-30T14:28:12Z",
-  "sha": "f1fa6bcf3656101c238341a788748001a0d958c9",
+  "generadoEn": "2026-07-30T14:29:22Z",
+  "sha": "578c2cbcc3ba87306ed0cf3d4211d851ff29d23e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -60997,7 +60997,7 @@
           "exportada": true,
           "params": "",
           "retorno": "boolean",
-          "linea": 48
+          "linea": 62
         },
         {
           "nombre": "obtenerToken",
@@ -61005,7 +61005,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<string>",
-          "linea": 53,
+          "linea": 67,
           "resumen": "Pide un access_token por client_credentials (Basic auth con client_id:client_secret)."
         },
         {
@@ -61014,7 +61014,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 72
+          "linea": 86
         },
         {
           "nombre": "ruta",
@@ -61022,7 +61022,7 @@
           "exportada": false,
           "params": "obj: unknown, camino: string",
           "retorno": "unknown",
-          "linea": 78,
+          "linea": 92,
           "resumen": "Lee una ruta 'a.b.c' de un objeto sin lanzar."
         },
         {
@@ -61031,7 +61031,7 @@
           "exportada": true,
           "params": "payload: unknown",
           "retorno": "DatosFinancieros",
-          "linea": 86,
+          "linea": 100,
           "resumen": "Extrae los datos financieros del payload del informe. Los caminos de campo (`ruta(...)`) son la ⚠️ PARTE A CONFIRMAR con el payload real de eInforma; están todos aquí para ajustarlos de una vez."
         },
         {
@@ -61040,7 +61040,7 @@
           "exportada": false,
           "params": "p: Record<string, unknown>",
           "retorno": "boolean | null",
-          "linea": 107
+          "linea": 121
         },
         {
           "nombre": "enriquecerEinforma",
@@ -61048,13 +61048,13 @@
           "exportada": true,
           "params": "cif: string",
           "retorno": "Promise<DatosFinancieros>",
-          "linea": 116,
+          "linea": 130,
           "resumen": "Enriquece una empresa por su CIF contra eInforma. Lanza EinformaNoConfigurado si falta la key."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "70f9c011cad2"
+      "hash": "95dc0c0accc9"
     },
     {
       "ruta": "apps/plataforma/lib/empresas-enriquecer.ts",
