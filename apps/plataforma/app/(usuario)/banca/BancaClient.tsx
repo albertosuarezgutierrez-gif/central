@@ -364,21 +364,24 @@ const input: React.CSSProperties = { border: '1px solid var(--border)', borderRa
 const cancel: React.CSSProperties = { background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 14px', fontSize: '14px', cursor: 'pointer', color: 'var(--text)' }
 const submitBtn: React.CSSProperties = { background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }
 
-// Bandeja "Por revisar": la IA dudó de la categoría; el dueño la asigna con un desplegable.
-export function RevisarBandeja({ movimientos, categorias }: {
+// Bandeja "Por revisar": lo que de verdad estaba en duda es el NEGOCIO del gasto (¿deducible de
+// la correduría, del Dúplex/pisos, o personal?) — no la categoría contable, que para una compra
+// con tarjeta es obvia ('tarjeta'). El dueño responde con un toque; /api/banca/destino confirma,
+// limpia el flag y APRENDE la regla del comercio (se aplica a iguales pasados y futuros).
+export function RevisarBandeja({ movimientos, destinoLabel }: {
   movimientos: Array<{ id: string; fecha: string | null; concepto: string; importe: number }>
-  categorias: Array<{ value: string; label: string }>
+  destinoLabel: Record<string, string>
 }) {
   const router = useRouter()
   const [pendientes, setPendientes] = useState(movimientos)
   const [guardando, setGuardando] = useState<string | null>(null)
 
-  async function asignar(id: string, categoria: string) {
-    if (!categoria) return
+  async function asignar(id: string, destino: string) {
+    if (!destino) return
     setGuardando(id)
-    const res = await fetch('/api/banca/revisar', {
+    const res = await fetch('/api/banca/destino', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ movimientoId: id, categoria }),
+      body: JSON.stringify({ id, destino }),
     })
     setGuardando(null)
     if (res.ok) {
@@ -388,31 +391,44 @@ export function RevisarBandeja({ movimientos, categorias }: {
   }
 
   if (pendientes.length === 0) return null
+  const btn: React.CSSProperties = {
+    border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg)',
+    color: 'var(--text)', padding: '10px 12px', minHeight: '44px', fontSize: '13px',
+    fontWeight: 600, cursor: 'pointer', flexShrink: 0,
+  }
   return (
     <section style={{ marginBottom: '32px' }}>
       <style>{`
         @media (max-width: 768px) {
           /* Card apilada en móvil (sin scroll horizontal): concepto a ancho completo arriba,
-             fecha + importe en una línea, desplegable de categoría a ancho completo abajo. */
+             fecha + importe en una línea, botones de negocio a ancho completo abajo. */
           .banca-revisar-row { flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
           .banca-revisar-concepto { order: -1; flex: 1 1 100% !important; white-space: normal !important; overflow: visible !important; }
           .banca-revisar-fecha { width: auto !important; }
           .banca-revisar-importe { width: auto !important; margin-left: auto; }
-          .banca-revisar-select { flex: 0 0 100% !important; width: 100% !important; }
+          .banca-revisar-acciones { order: 1; flex: 0 0 100% !important; }
+          .banca-revisar-acciones button { flex: 1 1 auto; }
         }
       `}</style>
-      <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>🏷️ Gastos por revisar · categoría ({pendientes.length})</h2>
-      <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>La IA no tuvo clara la <strong>categoría contable</strong> de estos gastos. Asígnasela tú con un clic. (El <em>negocio</em> de los ingresos dudosos se asigna arriba, en «Ingresos por revisar».)</p>
+      <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>🏷️ Gastos por revisar · ¿de qué negocio? ({pendientes.length})</h2>
+      <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>La IA no tuvo claro a quién pertenecen estos gastos: ¿deducible del negocio o personal? Un toque lo resuelve y <strong>aprende la regla del comercio</strong>. (Los ingresos dudosos se asignan arriba, en «Ingresos por revisar».)</p>
       <div style={{ background: 'var(--surface)', border: '1px solid #f59e0b66', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
         {pendientes.map((m, i) => (
           <div key={m.id} className="banca-revisar-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
             <div className="banca-revisar-fecha" style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
             <div className="banca-revisar-concepto" style={{ flex: 1, minWidth: 0, fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</div>
             <div className="banca-revisar-importe" style={{ fontSize: '14px', fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
-            <select className="banca-revisar-select" defaultValue="" disabled={guardando === m.id} onChange={e => asignar(m.id, e.target.value)} style={{ ...input, flexShrink: 0, width: '152px' }}>
-              <option value="" disabled>{guardando === m.id ? 'Guardando…' : 'Categoría…'}</option>
-              {categorias.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-            </select>
+            <div className="banca-revisar-acciones" style={{ display: 'flex', gap: '8px', flexShrink: 0, alignItems: 'center' }}>
+              <button style={btn} disabled={guardando === m.id} onClick={() => asignar(m.id, 'seguros')}>🛡️ Correduría</button>
+              <button style={btn} disabled={guardando === m.id} onClick={() => asignar(m.id, 'personal')}>👨‍👩‍👧 Personal</button>
+              <select defaultValue="" disabled={guardando === m.id} onChange={e => asignar(m.id, e.target.value)}
+                style={{ ...input, minHeight: '44px', flexShrink: 0, width: '96px', fontSize: '13px' }}>
+                <option value="" disabled>{guardando === m.id ? 'Guardando…' : 'Otro…'}</option>
+                {DESTINOS_RECLASIF.filter(d => d !== 'seguros' && d !== 'personal').map(d => (
+                  <option key={d} value={d}>{destinoLabel[d] || d}</option>
+                ))}
+              </select>
+            </div>
           </div>
         ))}
       </div>

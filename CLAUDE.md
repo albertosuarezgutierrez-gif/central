@@ -47,8 +47,11 @@
 
 ## Memoria entre sesiones (entorno efímero)
 El contenedor cloud se borra al acabar la sesión: lo único que persiste es lo commiteado.
-Al terminar, actualiza `docs/CONTEXTO-SESIONES.md` (entrada nueva arriba). El hook `Stop`
-(`.claude/hooks/persist-memoria.sh`) lo commitea y empuja.
+Al terminar, actualiza `docs/CONTEXTO-SESIONES.md` (entrada nueva arriba, **máx ~8 líneas**,
+fecha `(dd/mm/aaaa)` en la primera línea — el detalle vive en el PR, no aquí). El hook `Stop`
+(`.claude/hooks/persist-memoria.sh`) lo commitea y empuja. El archivo vivo solo guarda el mes
+corriente; los meses cerrados se rotan a `docs/memoria/AAAA-MM.md` (`scripts/rotar-memoria.mjs`,
+lo dispara la auditoría a primeros de mes). Historia antigua → leer `docs/memoria/`.
 
 Salvaguardas para no perder información:
 - **Guardián de cierre** (`persist-memoria.sh`): si la sesión hizo commits que tocan algo

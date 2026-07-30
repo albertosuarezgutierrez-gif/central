@@ -1,12 +1,10 @@
 ---
 name: alquiler-maestro
 description: >
-  Router de contexto de la vertical ALQUILER de materiales/menaje (mesas, sillas, vajilla, carpas…)
-  tanto interna al grupo (intercompany) como a terceros (ingreso real). NO duplica los docs: dice qué
-  existe, dónde vive y qué NO romper. USAR SIEMPRE que Alberto pida cualquier cosa de alquiler de
-  materiales: catálogo/stock, tarifas por día, fianzas, disponibilidad por fechas, ciclo
-  reserva→entrega→devolución, recargo por retraso, o el intercompany materiales→eventos. Compone el
-  módulo puro @central/module-alquiler. Sin secretos: solo nombres de variable.
+  Router de contexto de la vertical ALQUILER de materiales/menaje (intercompany + terceros).
+  USAR SIEMPRE que Alberto pida algo de alquiler de materiales: catálogo/stock, tarifas, fianzas,
+  disponibilidad, ciclo reserva→entrega→devolución, recargos, o el intercompany materiales→eventos.
+  Compone @central/module-alquiler. Sin secretos: solo nombres de variable.
 ---
 
 # ALQUILER — router de contexto

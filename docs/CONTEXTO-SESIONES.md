@@ -5,9 +5,17 @@
 > es lo commiteado aquí. Este archivo es el "estado vivo" del proyecto entre sesiones.
 >
 > **Cómo se mantiene:** al terminar cada sesión, Claude añade una entrada nueva
-> arriba del todo en "Registro de sesiones" y actualiza "Estado actual" y
-> "Pendientes" si algo cambió. Un hook `Stop` (`.claude/hooks/persist-memoria.sh`)
-> commitea y empuja este archivo automáticamente.
+> arriba del todo y actualiza el estado si algo cambió. Un hook `Stop`
+> (`.claude/hooks/persist-memoria.sh`) commitea y empuja este archivo automáticamente.
+>
+> **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
+> qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
+> el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+>
+> **🔄 Rotación mensual:** aquí vive SOLO el mes corriente. Los meses cerrados se
+> archivan en `docs/memoria/AAAA-MM.md` con `node scripts/rotar-memoria.mjs`
+> (idempotente; lo dispara `/auditoria-diaria` a primeros de mes). La historia no
+> se pierde: se lee de `docs/memoria/` solo cuando hace falta.
 >
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
@@ -16,27 +24,97 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **🏠 Subastas/chollos — API OFICIAL de Idealista preparada y DORMIDA (30/07/2026, rama
-  `claude/idealista-investment-project-o082ap`).** Alberto preguntó si se puede "conectar Idealista" como
-  hace ChatGPT. Respuesta: la app de Idealista en ChatGPT (mar-2026) es exclusiva del ecosistema OpenAI,
-  NO conectable desde fuera; la vía legítima es la **API oficial** (developers.idealista.com, gratis,
-  **~100 búsquedas/mes**, hasta 50 anuncios/llamada con precio/m²/€·m²). **Alberto ya solicitó el alta
-  (30/07) y espera el mail con la key.** Integración dejada lista e INERTE hasta que lleguen credenciales:
-  - **Módulo puro** `packages/module-subastas/src/idealista-api.ts` (5 tests): mapeo `elementList` →
-    `Comparable` (el `propertyCode` de la API ES el id de `/inmueble/<id>/` de los correos → mismo dedupe
-    `(portal, ref_anuncio)`), tabla de **centros de búsqueda** lat/lng por zona vigilada (zona desconocida
-    = `null` = no se gasta cuota) y presupuesto (`llamadasPermitidasIdealista`: límite 100, margen 15,
-    ración 3/pasada).
-  - **App**: `apps/plataforma/lib/subastas/idealista-api.ts` (OAuth2 client_credentials + búsqueda
-    `center/distance` de VIVIENDA en venta + ingesta por `upsertComparable` — helper EXTRAÍDO del upsert de
-    `mercado.ts`, ahora puerta única del corpus para correos y API). Zonas candidatas = municipios con
-    subasta viva; caché 30 días/zona; ledger en tabla **`idealista_api_usos`** (migración
-    `2026-07-30_idealista_api_usos.sql`, **aplicada** por Supabase MCP). Paso cableado best-effort en el
-    cron `subastas-mercado` (clave `idealistaApi` en la respuesta; `disponible:false` sin envs).
-  - **Cuando llegue el mail:** pegar `IDEALISTA_API_KEY` + `IDEALISTA_API_SECRET` en god-panel →
-    🔑 Secretos (filas añadidas a `secrets-registry.ts`, editables, redeploy automático) y listo — la
-    siguiente pasada del cron empieza a nutrir comparables. Verificado: 197 tests módulo + 653 plataforma
-    + `tsc` 0.
+- **🏠 Subastas/chollos — API OFICIAL de Idealista preparada y DORMIDA (30/07/2026, PR #1168).** ¿Se puede
+  "conectar Idealista" como ChatGPT? Su app en ChatGPT es exclusiva de OpenAI, NO conectable desde fuera; la
+  vía legítima es la **API oficial** (developers.idealista.com, gratis ~100 búsquedas/mes). Alberto solicitó
+  el alta el 30/07 y **espera el mail con la key**. Módulo puro `idealista-api.ts` (mapeo a `Comparable` — el
+  `propertyCode` ES el id de `/inmueble/<id>/`, así que dedupe natural con las alertas — centros lat/lng por
+  zona vigilada y presupuesto racionado) + `apps/plataforma/lib/subastas/idealista-api.ts` (OAuth2 + ingesta
+  por `upsertComparable`, extraído de `mercado.ts` como puerta única del corpus; ledger `idealista_api_usos`,
+  migración aplicada) cableado best-effort en el cron `subastas-mercado`. **Al llegar el mail:** pegar
+  `IDEALISTA_API_KEY`/`IDEALISTA_API_SECRET` en god-panel → 🔑 Secretos y listo, sin tocar código.
+
+- **🏠 Subastas: las características del inmueble ya se ven en la ficha (30/07/2026, rama
+  `claude/property-features-missing-je4vtw`, PR #1177).** Alberto sobre una captura de `/subastas`: «no
+  aparecen las características». Cierto — tipo, m², dormitorios, baños y planta estaban en BD y solo se
+  usaban para calcular €/m² y yield. `SubastaInmueble` gana esos campos + `superficieOrigen` (Catastro vs
+  escritura: discrepan a menudo), `filaASubasta` los mapea con fallback a `extraerDatos(descripcion)` cuando
+  la columna está vacía, y `FichaSubasta` los pinta arriba del todo (si el anuncio no publica nada, lo dice
+  en vez de callar). El radar repinta su snapshot con la foto viva del corpus si la subasta sigue vigente,
+  así no hay que esperar al cron. Solapaba con #1175: los m² salen UNA vez (con su origen) y la planta no se
+  repite si ya la da la dirección del Catastro.
+
+- **🏛️ Subastas: ubicación EXACTA y datos del Catastro visibles en la ficha (30/07/2026, rama
+  `claude/national-property-map-kszwhp`).** Alberto: «SUB-JA-2026-263723 la ubicación es muy mala». Causa:
+  el punto era correcto (Catastro) pero **la ficha no pintaba la dirección en NINGÚN sitio** (estaba solo en
+  BD) y el botón de Maps mandaba `query=lat,lon` → pin anónimo sin portal ni Street View. Fix: `direccionCatastro()`
+  trocea el `ldt` denso («AV PEDRO ROMERO (DE) 2 Es:1 Pl:07 Pt:B 41007 SEVILLA» → postal + planta + puerta),
+  la ficha muestra dirección/planta/m² catastrales/año/uso, y **`urlGoogleMaps` prioriza la DIRECCIÓN sobre las
+  coordenadas** (cambio deliberado) + 👁️ Street View + 🏛️ ficha del Catastro. **Idea de Alberto:** sacar la
+  referencia catastral por DIRECCIÓN (`Consulta_DNPLOC` + `ConsultaVia` para el nombre oficial — el Catastro
+  archiva «Avenida de Madrid» como «MADRID DE»). Acierta 4/16 direcciones reales; el resto falla por datos de
+  origen imprecisos (parcelas de polígono, «S/N», direcciones antiguas), no por el parser → degrada al
+  centroide. Prod: 8 exactas (antes 4) + 25 aproximadas. ⚠️ Los DATOS del bien exigen la RC de 20; con la de
+  parcela (14) el Catastro devuelve el listado del edificio sin `<bico>` y sale vacío. 223 tests módulo.
+
+- **🗺️ Subastas: mapa nacional + enlace a Google Maps por ficha (30/07/2026, rama
+  `claude/national-property-map-kszwhp`).** Idea de Alberto sobre la captura de `/subastas`: ver todos los
+  inmuebles señalados de un vistazo. Módulo puro: `parsearCoordenadas` (Catastro `Consulta_CPMRC`, ojo
+  `xcen`=LON/`ycen`=LAT) + `urlGoogleMaps` (coords > dirección > municipio; solo-provincia → sin enlace),
+  10 tests con XML real. Columnas `subastas.{lat,lon,geo_precision}` (migración aplicada); el cron
+  `subastas-enriquecer` geocodifica exacto por ref. catastral y **aproximado al centroide del municipio**
+  por Nominatim cuando no la hay (solo 5/34 la traían) — el mapa pinta los aproximados en hueco y lo dice.
+  Pestaña 🗺️ Mapa (Leaflet+OSM por CDN, montaje perezoso) + `/api/subastas/mapa`. Nominatim da 403 desde el
+  proxy del contenedor pero **responde 200 desde cloud** (verificado con `pg_net` desde Supabase) → funcionará
+  en Vercel; 4 puntos exactos ya en BD, los aproximados los pone la 1ª pasada del cron. ⚠️ Nominatim BLOQUEA
+  IP si se pasa de 1 req/s → cerrojo de módulo (1,1 s, serializa) + presupuesto de 25 s por pasada;
+  `enriquecida_at` se deja NULL SOLO si no se intentó (si el municipio es ilocalizable se marca, o volvería a
+  monopolizar la cola). Bonus: el cron ya no reintenta fichas BOE de la fuente `junta` (23 filas que fallaban
+  siempre y, al ir primeras por `enriquecida_at NULLS FIRST`, tapaban a las del BOE).
+- **⚖️ Subastas: «Cargas no publicadas» falso cuando la certificación va como DOCUMENTO — MERGEADO
+  (30/07/2026, PR #1172).** SUB-JA-2026-263723 (San Pablo, cierra 31/07) salía
+  «Cargas no publicadas» pese a la CERTIFICACIÓN adjunta ya leída en `notas_edicto`: `cargas_conocidas` solo
+  miraba el campo «Cargas» de la ficha (vacío) y el refresco 24h del enriquecedor lo machacaba. Fix: el paso
+  de documentos sube el flag si la certificación dice «sin cargas de procedencia»; el UPDATE de la ficha es
+  sticky (OR); punto ámbar de embargo en `analisis.ts` (el verde de cargas no lo tape). Backfill
+  `2026-07-30_cargas_conocidas_certificacion.sql` aplicado. 193 tests módulo · tsc 0 · 14 checks verdes.
+  **Prod reconciliada tras el deploy:** reclasificadas las 34 vigentes (San Pablo con `cargas` verde +
+  punto `embargo` ámbar nuevo, semáforo ámbar por posesión/valoración; radar sin el aviso falso).
+
+- **💶 Auditoría pricing dinámico pre-cutover (30/07/2026, rama `claude/dynamic-pricing-audit-4cbdxv`).**
+  A 3 días de confirmar 100% dinámico: SIN bloqueantes técnicos. Motor vivo (Busto/Luxury aplican a diario,
+  última 29/07; crons pricing todos en el dispatcher #1165), datos frescos (market_rates y snapshots de hoy,
+  12 meses de comps en los 4 pisos), raíl ±/día con ancla por día natural OK, evidencia piloto sólida
+  (Busto 16 y Luxury 14 noches reservadas a precio motor, ADR muy sobre PL). PENDIENTE de Alberto:
+  activar `apply_enabled` de Dúplex/House y desconectar PL. Vigilar: `incomes` sin insertar desde 25/07
+  (1er sync post-dispatcher mañana 05:00 UTC), comps House solo proxy 8p×1,15 (la API de Booking topa en
+  8 adultos; aforo 12 correcto en BD). Aforo Luxury actualizado 4→5 en `pricing_piso_zona` (OK Alberto 30/07).
+  Doc de skill actualizada (suelos 65/72 del 28/07). 6 alertas de guard abiertas pre-recalibración.
+
+- **🏷️ Banca: compra de tarjeta ya no cae en palabra-trampa + bandeja pregunta el NEGOCIO (30/07/2026,
+  rama `claude/restaurante-charge-agent-issue-8lxiwv`).** Restaurante "LA HACIENDA GOLF" caía a
+  `categoria='impuestos'` ('HACIENDA' a secas en `categorizarPorReglas`, tras las reglas de comercio).
+  Reglas extraídas a `lib/categoria-reglas.ts` (PURO, 6 tests): compra con tarjeta → 'tarjeta' ANTES de
+  reglas de comercio; 'HACIENDA' suelto retirado. `RevisarBandeja` de `/banca` ahora pregunta el negocio
+  (botones Correduría/Personal + Otro…) vía `/api/banca/destino` (confirma + aprende regla), en vez de la
+  taxonomía PGC que confundía a Alberto. Backfill `2026-07-30_categoria_compra_tarjeta.sql` aplicado (3 filas).
+
+- **⚕️ Health check 30/07 resuelto: dedupe PSD2 anti-drift + ventana Smoobu (30/07/2026, rama
+  `claude/health-check-2026-07-30-vlv4c7`).** Check 1: el mismo abono BBVA entra 2 veces porque el banco
+  re-sirve el concepto con `Nº`→`N` (3er caso: 16/06, 25/06, 22/07 413,17€ Dúplex) → guarda post-ingesta
+  en `lib/psd2.ts` (compara conceptos sin puntuación, conserva la fila antigua) + saneo
+  `2026-07-30_dedupe_psd2_concepto_drift.sql` aplicado (dup del 22/07 ignorado, Check 1 a 0). Check 4
+  (Smoobu 4d): los crons iban mudos por el límite de 40 (ya arreglado por el dispatcher #1165, vivo desde
+  hoy 06:42); el sync pasa a `?days=7` en `CRON_JOBS` para que un apagón multi-día se auto-repare.
+  Verificar mañana tras las 05:00 UTC que `incomes` refresca.
+
+- **🧹 Ahorro de tokens/contexto: rotación de memoria + skills router (30/07/2026, rama
+  `claude/short-responses-token-saving-qh7i88`).** Memoria viva rotada por meses (983→~492 KB; junio →
+  `docs/memoria/2026-06.md` vía `scripts/rotar-memoria.mjs`, idempotente, la dispara `/auditoria-diaria` a
+  primeros de mes) + regla nueva: entradas ≤8 líneas. Skills gordas (ia-rest/plataforma/perfil-fiscal/pricing/
+  facturas-correo/trading-analista/sivra) → patrón router+`references/` (~4 KB al invocar en vez de 20-77 KB;
+  contenido VERBATIM en references, leído bajo demanda; patrón documentado en `docs/SKILLS.md`). Descripciones
+  de frontmatter recortadas a ≤350 chars y `using-superpowers` condensada (se inyecta en cada arranque).
 
 - **⏰ Crons de plataforma consolidados en UN dispatcher — fix del límite de 40 crons de Vercel Pro
   (30/07/2026, rama `claude/audit-30-07-hv2njr`).** La auditoría del 30/07 (PR #1162) confirmó que el
@@ -58,7 +136,8 @@
   - Verificado: 13/13 tests, `tsc --noEmit` 0. El heartbeat de `/auditoria-diaria` (paso 2-bis) sigue
     valiendo tal cual (vigila frescura en BD, no `vercel.json`) y ahora además vigila de facto el
     dispatcher (si muere, TODOS los crons enmudecen → saltaría en la primera pasada).
-  `claude/agente-contable-notificaciones-cbouni`).** Alberto: "con la conexión de los bancos, ¿puedes hacer
+- **💸 Transferencias SEPA "libres" (formulario) + fix redirect del pago de facturas (29/07/2026, ✅ MERGEADO
+  PR #1138, squash commit `4844e17`).** Alberto: "con la conexión de los bancos, ¿puedes hacer
   transferencias?" → sí, pero el PIS (Enable Banking) estaba solo cableado al pago de facturas de proveedor y
   APAGADO. Pidió desarrollar además la **transferencia libre a cualquier destinatario**. Hecho:
   - **`POST /api/banca/transferencia`** (con sesión): valida IBAN (mod-97 de `@central/module-pagos::validarIban`),
@@ -72,9 +151,13 @@
   - **Fix bug**: `lib/agente-facturas/pagos.ts` construía el `redirectUrl` del callback con precedencia rota
     (`A ?? B ? C : D` ignoraba el valor de `NEXTAUTH_URL`). Extraído a **`lib/base-url.ts::baseUrl()`** (reusado
     por el endpoint nuevo). Verificado `tsc` 0 + `next build` exit 0.
-  - **PENDIENTE de Alberto (config, no código):** para que las transferencias sean "un clic + firma" (PIS) en vez
-    de SEPA XML, faltan en Vercel `EB_PIS_ENABLED=true` + `EB_DEBTOR_IBAN` (IBAN Kutxabank), y confirmar que el
-    tier de Enable Banking incluye PIS. Sin eso, el formulario ya funciona vía SEPA XML.
+  - **PIS DESCARTADO (revisado en Enable Banking por Claude for Chrome, 29/07/2026):** en producción solo hay
+    **AIS** (lectura); el PIS que hay es de **sandbox**. Enable Banking exige ser **PISP autorizado** (licencia
+    regulatoria) o contratar un proveedor que lo sea, con presupuesto a medida (sin precios en panel). Para uso
+    personal NO compensa → **no activar `EB_PIS_ENABLED`/`EB_DEBTOR_IBAN` en prod** (fallaría, sin scope PIS). El
+    camino bueno y definitivo es el **SEPA XML** (rellenas el formulario → fichero → lo subes a Kutxabank y firmas).
+    El código PIS queda latente por si algún día se contrata; el objetivo ("prepárame la transferencia para solo
+    firmar") ya está cubierto por SEPA XML.
 - **🧠📈 Subastas — «añade todo»: calibración real, recordatorio 24h, chollos vs buscador, descartes que
   aprenden y señal de RECESIÓN (INE): HECHO y PROBADO E2E (29/07/2026, mediodía; PR #1159).** Alberto pidió
   implementar las 5 ideas de la sesión y preguntó «se habla de recesión inmobiliaria, ¿cómo lo averiguamos?».
@@ -220,6 +303,7 @@
   boilerplate «estuviera ocupado» probado como no-señal). Rama resincronizada a main; trigger de cierre
   borrado. Queda vivo el pendiente de vigilar los crons de mañana 06:00-09:00 y el endpoint TEMPORAL
   `fase3-debug` (borrar al cerrar Fase 3).
+
 - **🔧 Subastas — HOTFIX /subastas caída + FASE 3 construida con datos reales (29/07/2026, mañana).**
   - **Hotfix (PR #1124, mergeado):** `/subastas` decía «No se han podido cargar los datos» — la columna
     `fts` (tsvector) de `subastas` NO la sabe deserializar `prisma.$queryRaw`: en cuanto dejó de ser NULL,
@@ -285,6 +369,7 @@
     · `SUB-JA-2026-264600` (Punta Umbría, Bulevar del Agua 1, Los Molinos): 198 m², año 1996, tipo 420.800€
     (valor pactado 2008) ≈2.122€/m²; certificación: SIN cargas anteriores subsistentes, 2ª hipoteca posterior
     (se purga); el crédito lo compró UN PARTICULAR (cesión 09/2025) — dato de negociación.
+
 - **🧹 agentes-entrenador — "repara todo" (29/07/2026): backlog de PRs + trabajo perdido recuperado.**
   Alberto pidió "repara todo" tras el aviso del backlog de PRs (73 abiertos). Al llegar, ya había un
   barrido manual suyo (73→31) que cerró ~40 PR **sin mergear** — incl. las 2 pasadas propias del
@@ -413,11 +498,13 @@
     Check 11 vigila `%lavander%` en gastos / `%LAVANDERIA%` en banco (commit c49741d), y
     `catToField` mapea LIMPIEZA/LAVANDERIA a sus campos (antes caían a «otros»). `tsc` 0. OJO cash-basis:
     el P&L de JULIO mostrará las DOS facturas de Giraldillo pagadas el 05/07 (1.112,30€) — es caja, no error.
+
 - **✂️ Regla global «Estilo de respuesta» en CLAUDE.md raíz (23/07/2026).** A petición de Alberto (respuestas
   demasiado extensas): nueva regla global permanente que pide respuestas sintéticas y directas en el chat
   (resultado primero, sin recapitular ni narrar cada paso; extenderse solo si Alberto lo pide). NO aplica a
   código/comentarios/commits/PR. Alternativas mencionadas a Alberto: `/output-style` y ser concreto con qué
   archivo/vertical tocar para no explorar a ciegas (el mayor gasto de tokens no es el texto final sino leer repo).
+
 - **🎯 Subastas — LOTE «todo lo que quedaba» (28/07/2026, noche). MERGEADO (PR #1120, squash `a9609d3`).**
   Decisiones de Alberto al cierre: (a) crea él la búsqueda de Idealista **vivienda, costa de Huelva**
   (Punta Umbría/Islantilla-Lepe; alertas al Gmail → las lee el cron 06:20); (b) **allowlist YA AÑADIDA
@@ -506,6 +593,7 @@
     y **retirada la entrada 🏡 Inversión** de Mis pisos (la página `/sivra/inversion` sigue viva por URL,
     reversible — patrón de des-duplicación de siempre). `/trading` (📈 Inversión bursátil) no se toca.
   - Verificado: 125 tests del módulo · `tsc` 0 · guardia 26/26 · `next build` OK (`/subastas` 4,95 kB).
+
 - **📅 Trading — aviso de Google Calendar creado para la cohorte 3 (28/07/2026, sesión de charla).** Alberto
   preguntó por el estado del laboratorio y pidió un aviso en calendario. Creado evento en su Google Calendar:
   **lunes 17/08/2026 09:00** «🧪 Laboratorio inversión: congelar cohorte 3 (DOBLE) + contraste forward vs
@@ -746,6 +834,7 @@
     `agentes-entrenador` y `buscador-ia` y pegar el MISMO `ALERTA_TOKEN` que ya funciona en el de pricing.
     Las variables de un entorno de rutina solo se editan en la UI de claude.ai/code.
   - Verificado: `tsc` 0 · 24/24 tests `node --test` · `next build` exit 0.
+
 - **✅ buscador-ia — 27/07/2026: pasada semanal sana + criterio ampliado a calidad/precio.** Watch de
   deprecación: los 4 eslabones de la cadena directa de `@central/core-ai` (NIM `meta/llama-3.3-70b-instruct`,
   Groq `openai/gpt-oss-120b`, Gemini `gemini-flash-latest`, Kimi `kimi-k2.6`) confirmados **vivos** por
@@ -1024,12 +1113,14 @@
   magnitud; peor mes histórico −19,1%. **100% paper, cero órdenes reales, el criterio de selección NO se
   auto-modifica.** Hipótesis **H7 pre-registrada** (`docs/TRADING-HIPOTESIS-PREREGISTRO.md`), evaluación
   2026-10-15.
+
 - **📱 plataforma: «Ingresos por revisar» legible en móvil (22/07/2026, PR #1070).** La fila de `/banca`
   era un flex de una sola línea (fecha 84px + concepto + select «Asignar negocio…» 160px + importe 92px)
   que a ~320px comprimía el concepto casi a 0 y el desplegable lo tapaba — no se podía leer de qué ingreso
   se trataba. Mismo patrón responsive que ya usa «Gastos por revisar» justo encima: a ≤768px la fila se
   apila en card (concepto ancho completo arriba, fecha+importe en una línea, desplegable ancho completo
   debajo). Solo CSS/clases, sin lógica. Verificado `next build` exit 0.
+
 - **💧 EMASESA julio-2026 imputado a piso + agente enseñado a hacerlo solo (22/07/2026).** Los 3 recibos
   `RECIBO EMASESA … EMASEPE26…` del 20/07 (Kutxa, 117,99€ · 80,26€ · 50,48€) entraban como `turistico_pisos`
   pero con `propiedad_id=NULL` porque el concepto bancario solo trae la ref del recibo (`PE26…`), NO el nº de
@@ -1040,6 +1131,7 @@
   `conciliado`, `factura_ref`) y registrados en `facturas_drive` (mes 7, `fuente='manual'`). **Fix durable:**
   la skill `facturas-correo` (sección EMASESA) ahora lleva el procedimiento paso a paso (correo→contrato→piso,
   con `propiedad_id` en la tabla y fallback por ranking de importe) para que cada pasada del agente lo impute solo.
+
 - **🧭 FISCAL — consejo breve "Qué haría yo" en las dos puertas de la renta (22/07/2026, rama
   `claude/agent-brief-advice-vcmx76`).** Alberto pidió "añadir un breve consejo del agente sabiendo los números y
   la normativa" sobre la pantalla de «Mi declaración». Como el módulo YA tiene mucho consejo repartido (avisos 💡,
@@ -1068,6 +1160,7 @@
   `ALERTA_TOKEN` (mismo valor que ya funciona en la auditoría diaria) en las Instrucciones de la Rutina; (b)
   confirmar el conector Gmail adjunto en la Rutina. No redacté emails ni contacté empresas: el prompt real de la
   campaña vive en el trigger, no en el repo, y no procede inventarlo.
+
 - **🏷️ PRICING — la Rutina semanal marca ✅ pero NO estudia mercado de forma fiable + punto ciego del monitor
   cerrado (22/07/2026).** Al verificar la Rutina `Agente de pricing (sivra) — semanal` (existe, activa, con los 5
   conectores de viaje, carga la skill `pricing-agente`), la BD desmintió los checks verdes: cruzando sus
@@ -1094,6 +1187,7 @@
   9 fechas (< las ~12 del prompt). Lección clave: un agente puede "correr en verde" (✅ = la sesión terminó) y no
   producir NADA — la verificación fiable es la HUELLA en BD por unidad de trabajo (piso), cotejada por quien NO
   ejecutó, no el recuento que la propia sesión reporte.
+
 - **🏷️ SIVRA — Guardián de precios: arreglado el RUIDO (avisos duplicados) y un HUECO de exactitud (22/07).**
   El aviso Telegram «5 avisos sin ver» traía repetidos. Causa: el dedup del guard (`apps/plataforma/app/api/
   sivra/pricing/guard/route.ts`) miraba «últimas 24h» y, con el cron diario a la misma hora, cada pasada quedaba
@@ -1118,6 +1212,7 @@
   vivo. Verificado en prod tras el merge: deploy READY, avisos sin duplicados (4 distintos), y el premio de
   mercado hoy no toca ninguna fecha disponible (los eventos grandes ya reservados; único ≥1,5× es Busto 26-dic,
   ya a 421€ > mercado 196€). Documentado en la skill `pricing-agente` (bloque «Actualización 22/07»).
+
 - **📈 TRADING — universo del radar 550→800 + hallazgo de huérfanas (22/07, 2ª parte de lo de SPOT).**
   Al PROBAR el fix IFRS con datos reales (marqué 15 extranjeras como rancias → el cron `trading-universo`
   las recalculó): **11 rescatadas** con Piotroski/ROIC reales (ASML 8/ROIC 31,7%, Unilever, BABA, Diageo,
@@ -1135,6 +1230,7 @@
   **15/15**, no hizo falta el fix robusto. Estaban en 551-800. (Queda como mejora futura, NO urgente, el fix
   robusto —que el cron refresque también las filas YA en tabla, no solo el top-N— porque el universo CHURNEA:
   la tabla creció 693→995 en 2 días y hay ~195 filas huérfanas fuera del tope 800 que nunca se refrescan.)
+
 - **📈 TRADING — nuestro motor de factores es CIEGO a los emisores extranjeros (22/07).** Alberto trajo un
   gráfico **mensual de SPOT** (tesis discrecional: *"va a cruzar las medias y siempre ha respetado la EMA50"*)
   y pidió pasarlo por «nuestro análisis». Hallazgo: en `trading_universo` SPOT tiene **todos los fundamentales
@@ -1220,6 +1316,7 @@
   VACÍA → el snapshot semanal del Director de IA no se guarda (cron `ia-director-refresh`, pos 52 — pendiente de
   diagnosticar igual que el paper-tracker); (c) `concursos_radar_anuncios` VACÍA (puede ser legítimo). El agente de
   pricing sigue ~16 días sin decisiones (huella prop_* 3,8 días).
+
 - **🐕 TRADING — perro guardián de la pasada nocturna (21/07).** Tras deduplicar las rutinas y auditar, se
   detectó el hueco: si la rutina `trading-analista` volviera a desaparecer/pausarse o fallara en silencio
   (IBKR caído, token 401, egress 403), NADIE se enteraría — el NAV solo se quedaría viejo en /banca. Se añade
@@ -1231,6 +1328,7 @@
   `tgSend`, `eur`), cron en `apps/plataforma/vercel.json`. Verificado: tsc 0 en los archivos nuevos, 5/5 tests.
   Auditoría previa salió limpia (una sola rutina de trading, pasada de anoche confirmada por timestamps en BD:
   NAV 20/07 22:16 CEST, tesis 22:36; universo 557/557 frescos — el "251 con error" era un hipo puntual ya curado).
+
 - **🤖 TRADING — rutinas duplicadas resueltas: una sola pasada nocturna (21/07).** Había DOS Rutinas de
   Claude Code haciendo lo mismo (ambas «carga la skill `trading-analista` y ejecuta una pasada nocturna,
   SOLO paper»): (1) **«Agente trading-analista»** (`trig_01HN5xZPpPHkGABf2ThziJtW`, activa, ~22:15 CEST
@@ -1250,6 +1348,7 @@
   gestores de paquetes marcada), horario «weekdays 22:15 CEST», vars `ALERTA_TOKEN`/`PLATAFORMA_URL` intactas.
   Confirmada además la ausencia de cualquier otro duplicado de trading (búsqueda «inversión/paper/trading-analista»
   → solo R1). Caso cerrado. Sin cambios de código en el repo; esto era gestión de triggers.
+
 - **🏷️ PRICING — por qué se cuelan reservas baratas + guardián de sub-mercado (20/07).** Alberto mandó
   captura de una reserva de Luxury Busto (Elena Martín, 18-20 sep 2026) a **110€/noche brutos** con el
   mercado real ~160€. **Causa estructural, no mala suerte:** (1) el agente de pricing «de verdad» (sesión
@@ -1267,6 +1366,7 @@
   semanal del agente desde la UI de Rutinas de claude.ai** (por API no lleva los conectores de viajes →
   correría a ciegas); (b) **re-anclaje cold-start** de Luxury/Busto a mercado — necesito `CRON_SECRET` o que
   Alberto dispare `/api/pricing/aplicar-propuesta` en dryRun. Rama `claude/precio-mediatico-knp0ju`.
+
 - **🏢 Análisis Punto y Coma SL ejercicio 2025 + Apps Script en forma amplia — 18/07/2026.** Sesión de
   análisis (sin código). (1) **Extracto BBVA ****9871 de la SL 2023-2025 procesado** (Excel que subió
   Alberto; datos sensibles NO en git — el origen está en su correo del 29/06 a mperez@asecon y en el
@@ -1384,6 +1484,7 @@
   ya y justificante» (26/07, vigente) y posibles restos del ping del 25/07 (obsoleto si se envía el
   nuevo). Vigilancia del IS CERRADA con este parte; la de proveedores sigue hasta el 30/07 (Digi,
   PriceLabs y Delgado Rojas sin responder a 26/07).
+
 - **👶 Guardería EI Estrella Polar → deducción de cuota marcada + regla de comercio (20/07, pregunta de
   Alberto «la guardería no es deducible en la renta?»).** Matiz: NO es gasto deducible de la base, pero SÍ
   genera el **incremento por gastos de guardería de la deducción por maternidad** (hasta €1.000/hijo <3, en
@@ -1453,6 +1554,7 @@
   necesitan la respuesta). Contradice a propósito la regla «Operador → SIEMPRE Telegram» del maestro,
   por petición explícita. **Caveat**: los `critico` también esperan al resumen (hasta ~24h); si eso
   molesta, pasar a `ambos` o dejar criticos inmediatos. tsc 0 · round-trip BD verificado.
+
 - **🛡️⚖️📅 Tres capas nuevas del radar (20/07 tarde, «haz todo»; deterministas, contexto-nunca-filtro).**
   (1) **Guardián de calidad de datos** — la lección de MCD automatizada: `lib/trading/calidad-datos.ts`
   (PURO, 4 tests) escanea la caché ANTES de cada ranking buscando IMPOSIBLES (mkt_cap <1e9/>1e13,
@@ -1466,6 +1568,7 @@
   (patrón de 10-Q/10-K del año pasado +365d, ventana 10 días, mismo submissions JSON que 8-K/Form 4 —
   cero fetch extra); siempre etiquetado «estimado». Todo persistido en `salud`
   (`anomalias`/`correlacionTop`/`resultadosProximos`). Tests 69/69 · tsc 0 · build OK.
+
 - **🐞 BUG de datos cazado en el digest del 20/07: MCD nº 1 por ARTEFACTO + guarda `accionesPlausibles`
   (20/07 mediodía).** Alberto pegó el digest y salté sobre dos anomalías: (a) los momentum gigantes del
   caza-cohetes (SNDK +4715%, MU +776%…) — VERIFICADO por web que son REALES: superciclo de memoria IA
@@ -1479,6 +1582,7 @@
   MCD saneada por SQL (campos null + `actualizado_en`=epoch para reproceso con la guarda) y ranking
   re-lanzado tras el deploy. Lección para la skill/auditoría: si un nombre raro aparece nº 1, comprobar
   su mkt_cap ANTES de creer el ranking.
+
 - **💼 Cartera de estudio AMPLIADA: una por cohorte + curva en euros (20/07 tarde, «me gusta, añade
   todo»).** (a) `medirCarterasEstudio()` valora los 30.000€ en CADA cohorte congelada (hoy c1 18/07 y
   c2 20/07; las futuras entran solas) — comparar entradas separa el efecto del momento de compra del
@@ -1487,6 +1591,7 @@
   (IO) + gráfica Recharts en la card (línea cartera vs SPY discontinua; con <2 puntos, aviso de que se
   dibuja con los snapshots semanales); (c) el digest del paper-tracker lista una línea 💼 por cohorte.
   La ruta `GET /api/trading/cartera-estudio` devuelve `{carteras, curvas}`. Tests 60/60 · tsc 0 · build OK.
+
 - **💼 CARTERA DE ESTUDIO — 30.000€ simulados (20/07 tarde, petición de Alberto).** "¿Cuánto dinero
   estaría dando esto?" → los 30.000€ (≈ su saldo real de IBKR, aquí SOLO un parámetro: `CAPITAL_ESTUDIO_EUR`
   en `cartera-estudio.ts` — NO se lee el bróker y JAMÁS se opera) se reparten equiponderados en la cohorte
@@ -1500,6 +1605,7 @@
   cierres SIN dividendos (igual para cesta y SPY → comparativa justa), sin comisiones ni rebalanceo, y "el
   dinero real solo si el forward bate al SPY sostenido" (regla firmada). Es la MISMA medición del forward
   en euros — legibilidad, no información nueva. Tests 58/58 · tsc 0 · build OK.
+
 - **💬 Agente huéspedes — arreglado el "Le doy Enviar y dice «no está disponible»" (20/07).** Alberto mandó
   captura: borrador de despedida a Grégory (Dúplex Center, checkout, FR) con botones ✅ Enviar/✏️/🔧; al pulsar
   Enviar → "Ya no está disponible". **Causa raíz (confirmada con BD):** el MISMO mensaje del huésped se procesó
@@ -1513,6 +1619,7 @@
   el disparo manual se exime. (B) `telegram-webhook/route.ts` — cuando la fila pendiente ya no existe, aviso claro
   ("Ese borrador ya se envió o se gestionó") + `tgEditMessage` retira los botones del mensaje pulsado (defensa
   ante duplicados viejos ya en el chat y dobles clics). Sin migración. Rama `claude/envio-no-disponible-2wxjk5`.
+
 - **🐛 fix(ia-rest/blog-seo): parseo robusto del JSON del artículo (20/07) — branch `claude/blog-article-json-parse-lc22m7`.**
   Aviso Telegram «❌ Error generando artículo blog: No se pudo parsear JSON del artículo». Causa raíz doble en
   `apps/ia-rest/src/app/api/cron/blog-seo/route.ts`: (1) el prompt pedía **~1800 palabras** con techo de solo
@@ -1525,6 +1632,7 @@
   (c) `generarTSX` defensivo (filtra secciones/FAQ a medias, fallbacks en cabecera) y error con inicio+cola+len.
   Verificado con 10 casos (truncamiento, newline crudo, comillas escapadas, basura→null) + tsc strict de los
   helpers. Sin `node_modules` en el contenedor → sin `next build` local.
+
 - **📊 Volumen (acumulación institucional) + 🧑‍💼 insiders Form 4 en el digest (20/07 tarde, 2ª tanda).**
   Idea de Alberto: los picos de volumen son la única huella pública de los fondos entrando en una acción
   (y no, el momentum NO lo captura — es solo precio). Montado DETERMINISTA y como CONTEXTO (nunca
@@ -1539,6 +1647,7 @@
   (`extraerFilingsForm4` en `edgar.ts`, cap 3 filings/símbolo, 7 días) → `transaccionesFiling` (form4.ts,
   ya existía) → línea «🧑‍💼 Insiders Form 4» con compras (~k$) y ventas; persistido en `salud.insiders`.
   Tests 55/55 · tsc 0 · build OK.
+
 - **🌅 Vigía del PREMARKET montado (20/07 tarde).** Idea de Alberto: un gap grande de premarket es otro
   indicador útil. Investigado Finviz a petición suya → **descartado** (403/Cloudflare a bots y el
   premarket solo está en Finviz Elite, ~25-40 $/mes); la fuente elegida es **gratis y ya nuestra**: el
@@ -1552,6 +1661,7 @@
   regla que medias/8-K; sin cambio del modelo → no requiere hipótesis pre-registrada). Matiz apuntado
   en la skill: en un modelo value un gap-up gordo suele ser el precio escapándose de la entrada, no un
   «compra ya». Tests 47/47 · tsc 0 · build OK.
+
 - **🔗 Enlace de invitado para el Laboratorio de inversión, para pasarle la pantalla a amigos (20/07/2026).**
   Alberto pidió un token de acceso que enseñe SOLO su pantalla de `/trading` (sin darles cuenta ni acceso al
   resto de la plataforma). Mismo patrón exacto que el acceso invitado de «Empresas» (Pablo, 17/07/2026):
@@ -1867,6 +1977,7 @@
   programada**, y afecta a más de un agente. Se avisó por el canal nativo de la sesión en su lugar.
   **Pendiente de Alberto**: añadir `*.vercel.app` (o el host concreto) al allowlist de red de las
   rutinas — arregla ambos bloqueadores a la vez.
+
 - **📈 Trading Fase B: forward paper VISIBLE en `/trading` (18/07/2026, SOLO paper).** El forward paper solo se
   veía por Telegram; ahora tiene superficie de navegador. Nueva sección **🧪 Forward paper** en
   `app/(usuario)/trading/page.tsx` (server component): lee los snapshots persistidos de `trading_paper_track`,
@@ -1901,6 +2012,7 @@
   "RECIBO BANSABADELL F." (83,33€/mes, ene-jun 2025) son una financiación personal ya cancelada — se
   añadió como keyword explícita a `otros_gasto` (ya estaba bien clasificada; solo se blinda para que un
   futuro re-barrido no la mueva). 20/20 + 502/502 tests, `tsc` 0, `next build` OK.
+
 - **🔧 Fix: 1.314,95€ de cuota RETA de Alberto mal clasificados como gasto personal (18/07/2026).**
   Auditoría disparada por Alberto al ver "Cuota autonomos" en el nuevo epígrafe 🏠 Personal (captura de
   pantalla). `lib/destino.ts` ya clasifica una cuota TGSS en BBVA como `destino='seguros'` (deducible,
@@ -1916,6 +2028,7 @@
   filas con patrones de correduría (TGSS/aseguradoras/comisiones/Dúplex) atrapadas en `destino='personal'`.
   **Pendiente evaluar** (no se tocó): si conviene añadir una subcategoría personal "salud" propia en vez
   de usar `otros_gasto` como cajón para gastos médicos sueltos.
+
 - **📈 Trading Fase B: COHORTES del forward paper + curva persistida en BD (18/07/2026, SOLO paper).** Robustez
   del forward test (ideas 1+2 de Alberto): (1) **cohortes** — `paper-cartera.ts` pasa de UNA cesta congelada a
   una lista `COHORTES_PAPER` (se congela una NUEVA cada ~30 días, `DIAS_ENTRE_COHORTES`); cada cohorte es una
@@ -1931,6 +2044,7 @@
   (3) métricas ajustadas a riesgo (drawdown/vol/tracking error) en el digest; (4) atribución = trackear una cesta
   gurús-SIN-filtro-calidad como 2º benchmark para saber si el filtro Piotroski/ROIC aporta. Invariantes intactas:
   cero órdenes reales, dinero real solo tras batir al SPY hacia delante.
+
 - **🧭 DECISIÓN APLAZADA — datos de pago (EODHD MCP u otros) SOLO si los resultados reales lo piden (18/07/2026).**
   Alberto compartió **EODHD** («MCP Server for Financial Data», 72 tools de SOLO LECTURA, API key gratis: precios
   EOD/históricos, fundamentales, noticias). Encaja con nuestros dolores (Stooq→Yahoo bloquean IPs de datacenter de
@@ -1963,6 +2077,7 @@
   lógica: el componente gestiona su propio filtro de fechas (mes actual por defecto) vía sus propias
   llamadas a `/api/finanzas/categorias*`, así que la página solo le pasa el año en curso. `tsc` 0 ·
   `next build` OK. La página `/finanzas?tab=categorias` sigue existiendo (no se tocó).
+
 - **📈 Trading Fase B: LUZ VERDE al forward paper — cesta combinada CONGELADA (18/07/2026, SOLO paper).**
   La selección combinada (gurús ∩ calidad, `/api/trading/seleccion`) pasó el test de robustez de Alberto: en
   backtest 2023→hoy la **MEDIANA** de la cesta batió al SPY **+159,9% vs +95,2%** (8/8 en verde, 6/8 sobre el
@@ -2033,6 +2148,7 @@
   IB Gateway + IBC en host siempre encendido, NO Vercel).** Decisión de Alberto: A ahora (filtro barato), B cuando A
   dé un candidato que bata al SPY. **Verificar en Vercel** (yo no puedo desde el sandbox): que Stooq devuelva precios.
   Invariantes intactas: cero órdenes reales, dinero real solo tras batir al SPY fuera de muestra.
+
 - **🔧 Corrección: los ingresos de Pilar YA se ven en `/finanzas/pilar` (18/07/2026, PR #993).** El bullet
   de abajo (PR #991) grabó sus cifras en `fiscal_perfil.conyuge_*`, pero esas columnas **no las lee ninguna
   pantalla** — `/finanzas/pilar` y "Mi declaración" calculan todo en vivo desde `movimientos_bancarios`
@@ -2043,6 +2159,7 @@
   cuotas de autónomos (467,45€). Nuevo: `ResumenPilar.notas` + banner 📝 en `PilarClient.tsx` que muestra el
   `comentario` de un movimiento cargado a mano (aquí, el supuesto de IVA 21%/retención 15% sin confirmar
   contra la factura real). Detalle completo y LANDMINE actualizados en la skill `perfil-fiscal`.
+
 - **📈 Trading Fase B: montados los 2 pilares de ingesta que faltaban — EDGAR XBRL + insiders Form 4 (18/07/2026, SOLO paper).**
   Tras mergear #992 (gurús Dataroma), se completan las fuentes de SELECCIÓN. **(1) Fundamentales GRATIS de EDGAR**
   (`app/api/trading/fundamentales/route.ts`, Bearer `ALERTA_TOKEN`, `maxDuration=60`): resuelve ticker→CIK
@@ -2060,6 +2177,7 @@
   `conDatos`/`transacciones` no vengan en 0. Ambos endpoints NO operan ni persisten — priorizan QUÉ estudiar y los
   mejores entran al mismo `/analizar`. Skill `trading-analista` actualizada con ambos. Invariantes intactas: cero
   órdenes reales, dinero real solo tras batir al SPY fuera de muestra.
+
 - **👶 Ingresos H1-2026 de Pilar (autónoma) cargados en `fiscal_perfil` (18/07/2026).** Pilar mandó por
   correo un extracto Kutxabank (`movimientos Pilar primer semestre2026.xls`, subido a Drive porque el Gmail
   MCP de esta sesión no expone descarga de adjuntos) con sus movimientos ene-jun 2026 — cuenta personal, NO
@@ -2076,6 +2194,7 @@
   el extracto también trae 3 pagos "PENSION SS" (ene-mar, 1.085+980+770=2.835€) que es la **prestación por
   nacimiento/cuidado del menor** de la SS — **exenta de IRPF** (art. 7.h LIRPF, mismo tratamiento que la
   prestación propia de Alberto de PR #843) — no sumar a su rendimiento de actividad al declarar.
+
 - **📈 Trading Fase B: #982 y #990 MERGEADOS + ingesta de gurús 13F vía Dataroma (18/07/2026, SOLO paper).**
   Ambos PRs de la Fase B en main (#982 core+factores+rvol; #990 barrera de selección en `/analizar` + `guru13f`).
   Nuevo (rama reiniciada desde main): **endpoint `POST /api/trading/gurus`** (`app/api/trading/gurus/route.ts`,
@@ -2088,6 +2207,7 @@
   (`GESTORES_DEFECTO`) y el markup real (si `gestoresConDatos` sale vacío, ajustar selectores/códigos). **Aún por
   montar** (necesitan iteración en vivo en Vercel, no en el sandbox): fundamentales EDGAR XBRL e insiders Form 4.
   Invariantes intactas: cero órdenes reales, dinero real solo tras batir al SPY fuera de muestra.
+
 - **📈 Trading Fase B: #982 MERGEADO + barrera de selección por factores en `/analizar` (18/07/2026, SOLO paper).**
   PR #982 (aviso Telegram compra + gates ADX/SMA50 + spec Fase B + `factores.ts`/`piotroski.ts`/`magicFormula.ts`
   + endpoint `/api/trading/factores` + RVOL robusto con mediana y umbral 1,5×) **mergeado a main** (squash 708a918).
@@ -2097,6 +2217,7 @@
   `factorScore` viaja en cada idea. 77/77 tests `node --test`, typecheck limpio. Invariantes intactas: cero órdenes
   reales, dinero real solo tras batir al SPY fuera de muestra. Pendiente: validar el ranking de factores OOS vs SPY
   (bloqueado por conector IBKR intermitente); luego B2 (13F gurús Dataroma/EDGAR + insiders Form 4).
+
 - **🔑 Rutina trading-analista autenticada con `ALERTA_TOKEN`, no `CRON_SECRET` (18/07/2026).** Al montar el
   trigger diario de `trading-analista` (refresca el saldo IBKR de la vista 💶 Dinero + pasada paper) salió a la
   luz que el **entorno de una rutina de Claude Code es texto plano VISIBLE** («no metas secretos»), así que meter
@@ -2109,6 +2230,7 @@
   `trading-analista` y `docs/RUTINAS-PROGRAMADAS.md` actualizados (Bearer ALERTA_TOKEN). **PENDIENTE Alberto:**
   añadir `ALERTA_TOKEN` (mismo valor que en Vercel) al entorno «Default» de la rutina y re-ejecutar; `PLATAFORMA_URL`
   ya la añadió. Verificado en sesión: el conector IBKR lee el NAV (33.658,82€); faltaba solo el token en el entorno.
+
 - **🔍 AUDITORÍA PRICING COMPLETA («está fallando mucho») — 18/07/2026 tarde.** Informe en
   `docs/AUDITORIA-PRICING-2026-07.md`. Diagnóstico: el motor no falla por datos sino por MECÁNICA —
   (R1) el raíl «±20%/día» era **por PASADA** (3 crons/día = ±73%/día → la V de Karol G: 326→112→701€
@@ -2126,6 +2248,7 @@
   pre-fixes resueltas en lote (quedan las 3 de hoy como control). **R8 diferido a propósito** (4º cambio de
   fórmula el mismo día = el patrón que causó el bug R2). Vigilancia 7d: escrituras <1.000/7d, ping-pong <10%,
   Karol G estable ~690-800€ base.
+
 - **📈 Trading: Fase 1 técnica CERRADA (no bate al mercado) + spec Fase B por SELECCIÓN — 18/07/2026 (SOLO paper).**
   Validado con datos REALES de 2 años de IBKR sobre **7 valores + SPY** (scratchpad, `backtestSimbolo`/`backtestOOS`/
   `backtestCartera`): el sistema técnico **NO bate a comprar-y-mantener** — cartera +13,7% (maxDD 6,1%) vs cesta
@@ -2184,6 +2307,7 @@
   (nunca órdenes reales). Verificado: `next build` exit 0, 7 tests cuenta-buzon OK. Skill `trading-analista`
   actualizada (paso 1). **PENDIENTE Alberto:** nada obligatorio; opcional `TRADING_CUENTA_ID` en Vercel si algún día
   hay ambigüedad de cuenta.
+
 - **💸 Pricing: suelo PriceLabs (raíl anti-desplome) — 18/07/2026.** El aviso «91 fechas <70% de PL» era
   `luxury_busto` hundiendo las noches de puente (Pilar, Todos los Santos) a **0,64×PL** — el motor cotiza por
   MES y el bucket de octubre promedia la noche especial, cuyo premio de evento se ancla a la base global baja;
@@ -2373,6 +2497,7 @@
   `ejecutar` (qwen 0€ + Opus 0,034€) = la firma del escalado. **Nada se auto-mergea.** Docs actualizados
   (`docs/DIRECTOR-CODIGO.md`, `apps/plataforma/CLAUDE.md`, skill `delegar-codigo`). El PR #966 es de la tarea de
   prueba (Alberto lo mergea si le sirve `eurSinDecimales`, o lo cierra); ramas `ai/programar-*` de test borrables.
+
 - **✅ Orquestador Fase 2 «caro planifica / barato ejecuta» PROBADO end-to-end + endurecido (17/07/2026, rama
   `claude/director-agent-token-optimization-g5z5f5`).** Al ejercitar por primera vez la Action `ai-programar`
   aparecieron 3 causas encadenadas, cada una destapada por instrumentar `ai_usos.error`:
@@ -2393,6 +2518,7 @@
   roto). (b) El workflow ya **no falla** si el toggle de PRs está apagado: pushea la rama e imprime el enlace para
   abrir el PR a mano (warning), con instrucción de encender el ajuste. tsc 0, next build 0. **PENDIENTE de
   Alberto (opcional):** activar el toggle de PRs para que el PR draft se abra solo. **Nada se auto-mergea nunca.**
+
 - **📈 Agente `trading-analista` (IBKR) — Fase 1 CONSTRUIDA en paper, sin ejecución real (17/07/2026, rama
   `claude/interactive-brokers-mcp-hbww2h`, PR #961 draft).** Alberto tiene cuenta en Interactive Brokers y
   acceso al MCP oficial. Brainstorming → spec (`docs/superpowers/specs/2026-07-17-agente-trading-ibkr-design.md`)
@@ -2422,6 +2548,7 @@
   sin `ILIKE ANY(array)`. **Instrumentado:** `acotarArchivos` captura el mensaje de excepción (`errorMapa`) y el
   endpoint `/api/ai/codigo` lo escribe en `ai_usos.error` aunque registre ok:true — así el próximo run es
   DECISIVO (o funciona, o dice el error exacto). tsc 0, next build 0. Pendiente: merge + deploy + relanzar Action.
+
 - **🐛 Director de código: `word_similarity` sin cualificar rompía el acotado en runtime (fix 17/07/2026, rama
   `claude/director-agent-token-optimization-g5z5f5`).** Al ejercitar por PRIMERA VEZ el orquestador Fase 2 (Action
   `ai-programar`, tras poner el secret `AI_GATEWAY_SECRET` en GitHub), el paso ACOTA (`/api/ai/codigo`) devolvía 0
@@ -2435,6 +2562,7 @@
   primera fila real en `ai_usos` con `endpoint='codigo'` (qwen-2.5-coder, 0€). Tras merge+deploy, relanzar la Action
   cierra el end-to-end (plan Opus → ejecuta qwen → PR draft). (El SQL `mapa_arquitectura` ya estaba aplicado: 2.192
   filas; `PLATAFORMA_URL` ya estaba como secret, faltaba `AI_GATEWAY_SECRET`, ya puesto por Alberto vía Claude-Chrome.)
+
 - **🏢 Empresas — búsqueda web GRATIS en 3 sitios (17/07/2026, rama `claude/empresas-problemas-financieros-h46hr6`).**
   Alberto: «con la IA de OpenRouter, ¿añadimos búsquedas en Google?» → «todo». Reusa `lib/websearch.ts::buscarWeb`
   (Gemini grounding GRATIS → plugin web OpenRouter de pago, gateado por presupuesto diario). Nuevo
@@ -2445,6 +2573,7 @@
   sector con fuentes); (3) **🌐 toggle en el agente** → `POST /api/empresas/agente {web:true}` busca en web y pasa el
   contexto a `responderEmpresas(pregunta, provincia, contextoWeb)`. Todos van por `accesoEmpresas` (Pablo también).
   Verificado: tests 21/21, `tsc` 0, `next build` 0 (rutas investigar/sector-web/agente presentes).
+
 - **🏢 Empresas — token de invitado MOVIDO a BD (no env) para poder ponerlo/rotarlo sin Vercel (17/07/2026,
   rama `claude/empresas-problemas-financieros-h46hr6`).** Alberto pidió que lo configurara yo; el conector de
   Vercel de las sesiones de Claude **no permite escribir env vars**, así que el token de acceso invitado pasó de
@@ -2457,6 +2586,7 @@
   cookie/sesión sigue el gate de sesión (no abre nada). Enriquecimiento POST + ingesta-manual siguen SOLO sesión.
   **Rotar/revocar:** `UPDATE empresas_acceso_token SET token=… / activo=false` por Supabase MCP (sin tocar Vercel).
   `tsc` 0, `next build` 0. Pendiente: Alberto abre el enlace y confirma que ve el panel.
+
 - **🐛 Agente contable: consejo de ahorro sobre un TRASPASO mal etiquetado (fix 17/07/2026, rama
   `claude/director-agent-token-optimization-g5z5f5`).** Tras arreglar el enrutado (los consejos ya llegan al
   LLM), Alberto: *"dame 3 consejos para reducir mi gasto"* → *"Optimiza comisiones bancarias (#10 −1.691,58€)"*.
@@ -2476,6 +2606,7 @@
   reducir un traspaso/liquidación de tarjeta ni un ingreso, y la lista "Movimientos" NO es muestra de gasto.
   Tests 131/131 contable (3 nuevos en `contexto.test.ts`), tsc 0, next build 0. **PENDIENTE de Alberto:**
   confirmar qué es la cuenta "0128" para reclasificar los 3 movimientos (→ `traspaso_interno`) y aprender la regla.
+
 - **🏢 Empresas — acceso INVITADO por token para Pablo + prueba end-to-end (17/07/2026, rama
   `claude/empresas-problemas-financieros-h46hr6`).** Alberto: «pantalla para Pablo, acceso mejor con un token».
   - **Acceso por token (sin cuenta):** env `EMPRESAS_INVITADO_TOKEN` (secreto, sin fallback). Página nueva
@@ -2490,6 +2621,7 @@
     `next build` 0 (rutas `/invitado/empresas` y `/api/empresas/*` presentes). BD: enriquecimiento/ficha/coste a 0
     (sin contaminar), BORME con las 14 empresas reales intactas. Live real (BORME por boe.es y app Vercel) no
     verificable desde el sandbox — lo prueba Alberto/Pablo en el panel.
+
 - **🏢 Empresas en dificultad — capa de enriquecimiento COMPLETA, solo pendiente la API key de eInforma
   (17/07/2026, rama `claude/empresas-problemas-financieros-h46hr6`).** Alberto: «haz todo, solo pendiente API
   eInforma». Construida toda la tubería de enriquecimiento de modo que lo ÚNICO que falta es contratar eInforma:
@@ -2512,6 +2644,7 @@
   - **PENDIENTE Alberto:** contratar eInforma → meter `EINFORMA_CLIENT_ID/SECRET` en Vercel + confirmar las
     rutas/campos del payload en `empresas-einforma.ts`. Precio eInforma: informe financiero ~29,50€ retail /
     ~10-12€ en pack; API desde 40€/mes + entorno de pruebas gratis. RAI en informe comercial; ASNEF = Equifax aparte.
+
 - **🏢 Empresas en dificultad — Fase 2 pieza 1 (agente) + modelo de scoring financiero (17/07/2026, rama
   `claude/empresas-problemas-financieros-h46hr6`).** (a) **Agente conversacional MERGEADO (PR #954):** chat en
   `/empresas` que responde por provincia/tipo/score sobre el dataset real (BORME Fase 1) vía pasarela IA gratis;
@@ -2525,6 +2658,7 @@
   CEO/consejo, salud, descendencia, preconcurso). **GATE:** casi todo el bloque A depende de **eInforma** (cuentas
   depositadas) + posible producto de morosidad para RAI/ASNEF; el filtro de facturación y el CNAE por empresa
   también. Pendiente: Alberto contrata eInforma + tope de gasto → se cablea enriquecimiento + radar CNAE real.
+
 - **🐛 Agente contable: preguntas de CONSEJO caían al router determinista (fix 17/07/2026, rama
   `claude/director-agent-token-optimization-g5z5f5`).** "Dame 3 consejos para reducir mi gasto este mes"
   devolvía "No encuentro cargos de reducir": la frase contiene "gasto" → pasaba la guarda de dinero de
@@ -2559,6 +2693,7 @@
   **Enlace añadido al menú** (`app/(usuario)/nav-links.tsx`: fila `Manual`). CSS nuevo `.manual-*` al final de `globals.css` (usa
   `var(--brand,...)` con fallback). Verificado: `tsc` 0, `next build` OK (ruta `/manual`), **capturas Playwright móvil+escritorio**
   (`--brand=#004433`, logo cargado, títulos verdes). Los textos guía replican los subtítulos reales de cada sección.
+
 - **🎨 `@central/brand` — capa de marca por cliente + Joaquín Jaén 100% corporativo (17/07/2026, PR #943 MERGEADO a `main` squash `e8aa589`).**
   Decisión de Alberto: sistematizar el diseño por CLIENTE en toda la casa de marcas (JJ, Rico González, Global…) — **ni
   agente programado ni MCP nuevo**, sino (1) capa de tema compartida + (2) skill de alta de marca on-demand; el MCP de
@@ -2613,6 +2748,7 @@
   `scripts/drive/reorganizar-drive.gs` (Apps Script one-shot con `DRY_RUN`, lo corre Alberto: mueve carpetas +
   reparte sueltos + aparta el `.git`/basura a `_REVISAR_BORRAR`); Paso 4 = vigilante semanal (Apps Script con
   trigger que barre `_buzon`/raíz y avisa por Telegram). Presentación del plan: artefacto Claude (link en el chat).
+
 - **🏬 `apps/almacen` — maestro editable/borrable + fixes de UX móvil (17/07/2026, rama `claude/warehouse-module-review-angvve`, PR nuevo tras mergear #935).**
   Tras probar Alberto en producción, ronda de correcciones:
   - **Todo editable y borrable:** **Familias** (renombrar + borrar por fila; antes solo listaba nombres),
@@ -2630,7 +2766,6 @@
     y, cuando lo aprueben, se conecta **su** dominio (Vercel → proyecto `almacen` → Settings → Domains → Add + CNAME).
     Nota: la integración Vercel MCP de la sesión no ve el proyecto `almacen` (no puede tocar sus dominios por API);
     los cambios de dominio se hacen a mano en el panel.
-
 
 - **🏬 `apps/almacen` FASES 2·3·4 — operativa completa de almacén (16/07/2026, rama `claude/warehouse-module-review-angvve`, PR nuevo).**
   Continúa la Fase 1 (#929, ya en main) con las tres fases restantes en la misma rama:
@@ -2737,7 +2872,6 @@
   = redirect). ⚠️ Deja **desactualizada** la sección "Home /dashboard = RESUMEN" de `apps/plataforma/CLAUDE.md`
   (ver nota añadida). Pendiente opcional: lazy-load del segmento Negocios; agrupación más fina del menú por «💶 Dinero».
 
-
 - **⚙️ Fase 1.5 delegación de código — CLI `scripts/ai-ejecutar.mjs` (16/07/2026, rama
   `claude/director-agent-token-optimization-g5z5f5`, PR draft nuevo tras mergear #922).** Operacionaliza el
   ejecutor barato: Node puro sin deps que envuelve `POST /api/ai/ejecutar` — `--ruta`/`--instruccion`/`--criterio`
@@ -2780,6 +2914,7 @@
   fusión de rutas Resumen+Banca con segmentado `Dinero|Negocios`, ficha de movimiento al tocar (PR2),
   reagrupar el menú lateral por «💶 Dinero» (PR3). Decisiones por defecto tomadas: «Revisar correo» dentro
   de «⋯ Más», segmento por defecto Dinero, menú aparcado.
+
 - **📦 Catálogo REAL de Joaquín Jaén cargado en `apps/almacen` (16/07/2026, rama `claude/warehouse-module-review-angvve`).**
   Se extrajo el **catálogo de alquiler online completo** (`plataformacateringjoaquinjaen.com/alquiler`, 8 categorías /
   21 subcategorías) usando **Claude Chrome** (el agente de navegador en el navegador de Alberto, que sí tiene red —
@@ -2989,6 +3124,7 @@
   Ahorro estimado **−90/95%** de Build CPU Minutes. Verificación real = ver caer el uso en el dashboard a los
   2-3 días (y que los deploys de proyectos no afectados salgan como «Ignored»). Doc corregida:
   `SKILL-proyecto-claude.md` ya no dice "sin límite, sin ignoreCommand".
+
 - **🔐 Endurecimiento header-only del token de alertas `ALERTA_TOKEN` (14/07/2026, rama
   `claude/alerta-token-header-only`):** follow-up sobre el `ALERTA_TOKEN` que introdujo el PR #871.
   `/api/internal/alerta` (`app/api/internal/alerta/route.ts`) ahora acepta el token dedicado
@@ -3021,6 +3157,7 @@
   **Aparte (pre-existentes, NO de esta rama):** timeouts de crons (facturas-scan/conciliar-gmail, ai/chat,
   concursos-ingesta) y 2 errores Prisma en producción — `/api/cron/concursos-cierre` (`make_interval(days => bigint)
   no existe` → falta cast `::int`) y `/api/sivra/pricing/resumen-diario` (`column "created_at" does not exist`).
+
 - **🔍 Auditoría contable completa (14/07/2026).** Informe en `docs/AUDITORIA-CONTABLE-2026-07.md`.
   Alberto pidió asegurar que no se hubiera perdido ningún gasto. Contra la BD (cuenta `4fdc993a…`):
   - **Gasto real OCULTO recuperado (~406€):** movimientos PSD2 (feed real) que estaban TODOS `ignorado`
@@ -3061,7 +3198,6 @@
     **`FACTURAS_CUENTA_ID`** → cuenta con `email==GMAIL_USER` → la única real si solo hay una; si no se
     resuelve, no escanea). Se excluyen las cuentas `[seed-demo]` del cron. `verificarPagosPendientes` (global)
     se llama una vez. Las 6 filas basura de Anthropic del demo borradas. Tests 7/7, `tsc` 0.
-
 
 - **🛒 Tickets de súper — F5a: OCR + guardado + subir/listar en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`).**
   Arranca la F5 (el módulo grande). **BD nueva** `prisma/sql/2026-07-13_tickets_compra.sql`: `tickets_compra`
@@ -3172,6 +3308,7 @@
   Sigue pendiente (fases aprobadas): sugerir por fila en el libro, desviación explicada, cierre narrado, aviso
   fiscal, antifraude, fugas, benchmark pisos, resumen mensual Telegram, adjuntar/conciliar factura por foto en
   banca, y el módulo 🛒 tickets de súper + comparador de precios.
+
 - **💳 Extracto de tarjeta al agente — Fase 3 (comodidades) (13/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
   Cierra el ciclo del extracto de tarjeta (Fases 1+2 ya en `main`, PR #881). Dos comodidades:
   - **Extracto consultable por el chat.** Al archivar el PDF en Drive, `procesarExtractoTarjeta` persiste el
@@ -3272,6 +3409,7 @@
   botón **«Portal/Comunidad»** (relé Tuya contacto seco en el telefonillo del Dúplex; Alberto mirando el
   MHCOZY 1CH 12V). Rama `claude/domótica-pin-creation-errors-sg63g0` (reiniciada desde main tras mergear
   #837).
+
 - **🔑 Agente SEO housesevillana: `GITHUB_TOKEN` ahora auto-provisionable desde el panel (13/07/2026,
   rama `claude/sivra-seo-github-token-ryjhmh`).** El cron semanal de sivra (`/api/seo-refresh`,
   `0 10 * * 1`) falló por Telegram: `Falta GITHUB_TOKEN en el entorno de sivra`. Causa raíz (ya anotada
@@ -3534,6 +3672,7 @@
     con `Facturas/Procesada`) — sin backlog. **Pendiente de Alberto (no del agente):** Booking 03/07 (3 facturas
     `1656693936/1656760428/1656793743` → bandeja de revisión, confirmar a mano) y **ASECON 10/07** (gestoría,
     pedir reemisión a nombre de Alberto, está a nombre de Punto y Coma).
+
 - **🔐 Domótica NIVIAN — PIN por reserva ARREGLADO: 3 bugs (12/07/2026, rama
   `claude/domótica-pin-creation-errors-sg63g0`).** El monitor avisó de que el programador de accesos
   (`/api/sivra/domotica/acceso/programador`, cron `40 4,12,20 * * *` UTC = 06:40 Madrid) no creaba NINGÚN
@@ -3561,6 +3700,7 @@
     3 ficheros. **PENDIENTE prod (dev no llega a Tuya):** correr la sonda de las 2 cerraduras y crear 1 PIN
     manual (`/sivra/domotica`) para confirmar que el NIVIAN soporta la vía online (Socorro) y offline v1.1
     (BustoTavera) antes de fiarse del cron. Docs: `docs/DOMOTICA-TUYA.md`.
+
 - **🏦 BANCA: libro completo de movimientos + arreglo correduría muda (12/07/2026, rama
   `claude/banco-all-movements-lv8e7o`).** Alberto: "quiero ver TODOS los movimientos" + "la correduría
   cobra 0 aunque hay comisiones (Generali/Caser/Occident de julio)".
@@ -3669,6 +3809,7 @@
   Etapa C reconciliar datos viejo→compartido con las 6 facturas VeriFactu intactas · Etapa D flip de
   `SUPABASE_URL` en Vercel + redeploy · Etapa E jubilar el viejo. Plan completo:
   `/root/.claude/plans/carril-1-auto-aplicado-a-silly-crab.md` (efímero — resumen aquí).
+
 - **🎬 Reels IA de Instagram — Veo 3 Fast + 2 arreglos de raíz (11/07/2026, rama
   `claude/instagram-video-improvements-m6avu9`, PR #791).** El motor Veo 3 Fast (audio nativo) ya se
   mergeó en **PR #789**. Al probar un reel de ejemplo salieron DOS cosas rotas de ANTES (no del #789):
@@ -3683,6 +3824,7 @@
   09-10/07) → mis parches de OpenRouter (ia-rest + pasarela) quedaron **superseded y descartados**; el PR #791
   final es SOLO la migración `video_job`. **Prueba:** `GET /api/cron/instagram?manual=1&formato=reel` desde
   navegador → Telegram → 🔄 Comprobar (~1-2 min) → revisar que **suena** y **sin subtítulos quemados**.
+
 - **⚠️ Punto ciego de contexto corregido: el INGRESO por piso vive en `incomes` (inglés), no en el banco
   (11/07/2026, rama `claude/ai-accounting-agent-3a9o22`).** Investigando "cuánto ingresó el Dúplex" (daba 0€
   porque el agente contable lee el banco, donde todos los pisos van juntos en `destino='turistico_pisos'`),
@@ -3741,6 +3883,7 @@
   ponerla/rotarla desde `/operador/secretos` (write-through a Vercel + redeploy) sin entrar a Vercel. El panel
   necesita `VERCEL_ADMIN_TOKEN` en plataforma. Nota: `OPENROUTER_API_KEY` casi seguro YA está en plataforma
   (Director `activo` desde 10/07). Alcance elegido: solo plataforma (cubre a todas las verticales por la pasarela).
+
 - **Health-check: el 🟡 «152 alertas» era de Vanessa, no de Alberto → reorientado (11/07/2026, rama
   `claude/health-check-alerts-qidakc`).** El Check 6 del health-check de plataforma contaba filas de la tabla
   `alertas` (que es de **ialimp**, operativa de limpiezas de Sique Brilla) sin filtrar por empresa y lo metía al
@@ -3980,6 +4123,7 @@
   07/07 para borrar). Regla nueva en Paso 3: reusar SIEMPRE la carpeta de mes existente más antigua,
   nunca crear una segunda. Pendiente de Alberto: vaciar `_DUPLICADOS_BORRAR` (3 avisos) borrando los
   ficheros/carpeta reales y luego el aviso.
+
 - **✅ Índice de arquitectura a nivel de FUNCIÓN + Director de código (10/07/2026, rama
   `claude/agent-token-optimization-146k3e`).** Alberto: "los agentes programadores gastan demasiados tokens
   leyendo archivos enteros para entender el flujo antes de tocar el definitivo". Auditoría: la radiografía ya
@@ -4010,6 +4154,7 @@
   ✅ **RESUELTO** (ver entrada de arriba, #806/#810): Alberto añadió los secrets `PLATAFORMA_URL` + `CRON_SECRET`
   → `auditoria.yml` ya inyecta las ~2025 filas en cada push a `main` (con reintentos). Opcional runtime:
   `DIRECTOR_MODO=activo` (arranca en sombra), `MAPA_STALE_DIAS` (default 7).
+
 - **🟢 EN VIVO: triaje de correo + Agente Director (10/07/2026).** Alberto activó en el proyecto Vercel
   `plataforma` (por la extensión Claude para Chrome, verificado desde aquí con el MCP de Vercel — deployment
   de producción `ARkMaj5dp` en READY sirviendo tráfico):
@@ -4046,6 +4191,7 @@
   lista de `estructura.ts` para los asistentes (agrupados por vertical, sin semáforo porque son *bajo demanda*),
   y el titular reconcilia los dos números. Verificado: `tsc` 0, `next build` OK. Nota: los autónomos que son
   rutinas Claude siguen en ⚪ "sin telemetría" (no dejan rastro en BD); pendiente opcional darles un latido.
+
 - **✅ Análisis de agentes + panel de agentes + Director ampliado (09/07/2026, rama
   `claude/agents-analysis-director-935c3q`).** Alberto: "análisis de todos los agentes, esquema, actualiza
   funciones en mi panel; hemos creado un agente director por si se le puede dar más funciones". Tres entregables:
@@ -4135,6 +4281,7 @@
   `subcategoria='club'`. OJO aprendido: `categorizar.ts::analizarMovimientos` aplica `banca_destino_reglas`
   SOLO para `destino`, **no** lee su columna `subcategoria` — la subcategoría futura la pone el diccionario
   determinista `subcategoria-keywords.ts` al Auto-clasificar (por eso el fix de datos es el UPDATE, no reglas).
+
 - **🎬 Reels IA de Instagram → Veo 3 Fast con audio nativo (07/07/2026, rama
   `claude/instagram-video-improvements-m6avu9`, PR #789).** Alberto: "quiero mejores vídeos para
   instagram". El Reel IA del miércoles usaba **Kling 2.5-turbo/pro** (t2v, 10s, **MUDO**). Se sube el
@@ -4150,6 +4297,7 @@
   **PENDIENTE (Alberto):** confirmar que `FAL_API_KEY` tiene acceso/saldo a Veo 3 Fast; **verificar que el
   audio de Veo sobrevive al re-encode de Cloudinary** (`videoConSubtitulo`/endcard) revisando el primer reel.
   Spec: `docs/superpowers/specs/2026-07-07-instagram-veo3-reels-design.md`.
+
 - **🔐 Domótica — selector de tipo manual (07/07/2026, rama `claude/tuya-device-setup-1dpz09`).** Alberto
   vio que «Socorro» (la cerradura NIVIAN) se pintaba como **ventilador** (Encender/Velocidad/Luz) en vez de
   tarjeta 🔐 de acceso: su categoría Tuya no está en `CATS_ACCESO` (o vino vacía) y «Buscar dispositivos» no
@@ -4158,6 +4306,7 @@
   ruta `dispositivos` (GET) y el cron `acceso/programador`. UI: **selector 🌀/🔐/Otro** en cada tarjeta
   (`SelectorTipo` en `DomoticaClient.tsx`, guarda por el PATCH de config existente). Marcando «Socorro» como
   🔐 Cerradura sale su tarjeta de acceso (sonda + PIN). Tests 46/46.
+
 - **🔐 Domótica accesos NIVIAN — Fase 2 (PIN automático por reserva) implementada (07/07/2026, rama
   `claude/tuya-device-setup-1dpz09`).** La Fase 0+1 (sonda + panel + abrir) se **mergeó** (PR #785, squash
   `cabcbb2`); Alberto pidió «mergea porque no aparece nada y sigue fase 2» (el preview de la rama no tiene las
@@ -4176,6 +4325,7 @@
   `node --test` 44/44. **Se valida en producción** (dev no alcanza la Tuya API); si `crearPinTemporal` falla en
   todas las vías, la fila queda `error` + aviso Telegram y la sonda dirá qué expone el NIVIAN. **Pendiente:**
   cablear `codigosFijos` (limpiadora, mismo mecanismo sin caducidad) cuando la creación de PIN quede confirmada.
+
 - **🔐 Domótica accesos NIVIAN — Fase 0+1 (sonda + panel) implementada (07/07/2026, rama
   `claude/tuya-device-setup-1dpz09`, PR #785).** Los 2 «teclados» descubiertos son **NIVIAN
   NV-ACCESS-PIN-RFID-W** (control de acceso **Wi-Fi**, PIN + tarjeta RFID); el tercero es el ventilador
@@ -4197,6 +4347,7 @@
   RR.HH./portal empleado, contabilidad+banca PSD2+copiloto IA, concursos públicos (radar PLACSP por CPV 55/15) y
   agentes (fiscal, pago proveedores, triaje, control facturas). Se quitó el lenguaje interno ("Design Partner")
   por ser modelo de negocio, no argumento de cliente. Fuente editable: Artifact en claude.ai (misma URL).
+
 - **🧾 Categoría 'Impuestos' + repaso del "sin categoría" (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).**
   Al revisar los ~26.000€ "sin categoría" salió que **~20.340€ eran IRPF/Hacienda** (la renta: pago de junio
   12.020€ + 2º plazo de noviembre 8.014€ + tributos menores), no consumo. Decisión de Alberto: **categoría
@@ -4219,6 +4370,7 @@
   por email (+ set en-tanda para no repetir dentro del mismo lote) en `enviarEmailsSevilla`,
   `proponerEmailsVertical` y el cron `crm-envio-auto`. tsc 0. Hueco teórico restante ya cerrado; no hace falta
   UNIQUE en `leads.email` (hay muchos NULL y posibles duplicados históricos que romperían la migración).
+
 - **🌀 Domótica Tuya — el listado de dispositivos ahora sí ve el ventilador vinculado por QR
   (07/07/2026, rama `claude/tuya-device-setup-1dpz09`).** Alberto abrió `/sivra/domotica` y seguía en
   "Sin dispositivos". **Causa raíz de código:** `tuyaListDevices()` (`lib/domotica/tuya.ts`) llamaba solo a
@@ -4478,6 +4630,7 @@
     único movimiento; Booking / varios candidatos / descuadre / dudas → toque a Alberto, nunca auto.
   - **Pendiente de Alberto:** verificar tras el redeploy que el scan de las 06:00 devuelve 200 (no 504) y que
     empieza a entrar Booking en `gastos` con `drive_url`.
+
 - **✅ auditoría 05/07 — cron `correo-triaje` YA NO está mudo; clasificador arreglado (PRs #743/#744/#745, 04/07/2026).**
   El bloqueo de envs `GMAIL_USER`/`GMAIL_APP_PASSWORD` en Production que reportó la auditoría del 04/07
   (entrada de abajo) **se resolvió** — el heartbeat de hoy confirma `correo_triaje` con actividad hace 3,4h
@@ -4498,6 +4651,7 @@
     (~08:20-09:20 UTC, 9 correos) todavía cayendo a `dudoso` con confianza 0 — probablemente arranque en
     frío de Groq o un rate-limit puntual — pero **0 correos `dudoso` desde entonces** en las ~15h siguientes
     hasta la última pasada (22:40 UTC). Sigue todo en modo sombra (0 acciones reales); no requiere más acción.
+
 - **⚕️ Health-check 04/07 — 3 hallazgos del monitor matinal (branch `claude/ia-rest-monitor-health-g3irwd`).**
   Analicé el Health Check que llegó por Telegram (🔴 backlog 1056 · 🟡 105 alertas · 🔴 CIMA 404):
   1. **CIMA LIQ 404 → cron apagado tras flag.** `ws.cimaseg.es/wsEstandar/` devuelve 404 (endpoint WSE nunca
@@ -4781,134 +4935,6 @@
   - **CREATE ventilador techo Socorro** (€123,45, F28-132832, 09/06/2026): la factura lleva "Monte Carmelo 68" como dirección fiscal del cliente (≠ lugar de instalación). Clasificado `turistico_pisos` (Socorro), archivado en `facturas_drive` (`create-socorro`), conciliado con movimiento `4ad69aaa` "COMPRA EN CREATE" 02/06/2026. **Regla**: dirección fiscal del cliente en una factura ≠ lugar de uso del artículo; para material (CREATE/IKEA/ferretería) siempre confirmar con Alberto si va a pisos o vivienda habitual.
   - **`amortizable` = NUNCA** (regla permanente de Alberto): el campo existe en BD pero NO se usa. Ninguna factura se marca `amortizable=true`. Dimitri azotea Socorro (€907,50) se corrigió a `false`.
 
-- **✅ rrhh: ficha editable empleado + branding + auditoría + ialimp agente IA (30/06/2026, PRs #602 #609 #620 #621 mergeados).**
-  - #621: ficha editable de empleado (datos contacto, personales, laborales) + branding Mariscos González + acceso portal empleado desde admin. Responsive.
-  - #620: logo corporativo en admin sidebar + distribución nóminas PDF con IA (pdfjs-dist@4 fix: `.mjs`).
-  - #609: agente análisis IA por apartamento en ialimp (`POST /api/admin/ia/analizar-apartamento`).
-  - #602: docs transporte/alquiler + fix nodemailer CVE. **Pendiente manual: vars SMTP en Vercel plataforma.**
-
-- **💧 EMASESA 2026: 9 facturas cuadradas y registradas en BD (30/06/2026).**
-  Mapeo definitivo contratos EMASESA → piso (Kutxabank, `turistico_pisos`):
-  | Contrato | Dirección | Piso | proveedor en facturas_drive |
-  |---|---|---|---|
-  | 0104785292 | C/ Socorro 24 | House Sevillana | `emasesa-socorro` |
-  | 0105137440 | C/ Bustos Tavera 22 Bajo DER | Luxury Busto | `emasesa-luxury` |
-  | 0105185751 | C/ Bustos Tavera 22 Bajo IZQ | Busto Reform | `emasesa-reform` |
-  - **"derecha siempre Luxury"** (confirmado por Alberto). Busto Reform = izquierda.
-  - **9 facturas insertadas** en `facturas_drive` (ene/mar/may 2026, `fuente='manual'`, sin Drive URL — portal EMASESA únicamente).
-  - **6 duplicados marcados** como `duplicado_estado='ignorado'` en `movimientos_bancarios` (marzo y mayo tenían doble entrada PSD2+Excel).
-  - **9 canónicos confirmados** con `destino_confirmado=true` + `comentario` con piso/contrato/nº factura.
-  - Facturas bimestrales: meses 1,3,5 cubiertos; julio será el siguiente ciclo.
-  - C/ San Luis 9 era piso anterior de Punto y Coma SL, ya no en cartera.
-
-- **📌 DECISIÓN FISCAL PERMANENTE: declaración 2025 presentada, scope = solo 2026 (30/06/2026).**
-  Alberto confirmó que la declaración IRPF 2025 (y Pilar) **ya está presentada**. Regla permanente:
-  - **Solo importa 2026 en adelante** para clasificación de gastos, revisión de movimientos y cálculos fiscales.
-  - **BD limpiada**: `UPDATE movimientos_bancarios SET destino_confirmado=true, requiere_revision=false WHERE fecha_operacion < '2026-01-01'` → 630 filas confirmadas. Bandeja "Por revisar" queda vacía para el periodo actual y no aparecerán entradas históricas.
-  - Anotado en skill `perfil-fiscal` con bloque `⚠️ Declaración 2025 ya presentada`.
-
-- **🔧 plataforma/BD: reclasificaciones masivas bandeja "Por revisar" (30/06 sesión continuación).**
-  Se resolvieron todos los movimientos mal clasificados que seguían apareciendo en la UI:
-  - **Gimnasio Círculo Mercantil** (7 filas, mar–jun 2026, -€30/mes): `destino='personal'` correcto. Aplicado `destino_confirmado=true` a todos. Salen de la bandeja. La deducción autonómica andaluza (D.A. 1ª Ley 7/2021, 15%, máx. €15/año) ya estaba anotada en `comentario`.
-  - **Escuela Infantil Ratón Pérez** (20 filas, ene-2025 a jun-2026): `destino='personal'` correcto. Aplicado `destino_confirmado=true` a todos. Deducción maternidad ampliada (Art. 81 bis LIRPF) ya anotada en `comentario`.
-  - **TGSS RETA cuota autónomos en BBVA** (7 filas: 3 short-concepto + 4 PSD2 format, mar–jun 2026): estaban mal como `seguros`. Reclasificados a `destino='personal'`, `destino_confirmado=true`, `requiere_revision=false`. Fix retroactivo del PR #613 (`RE_TGSS` solo afecta entradas nuevas).
-  - **Comisiones correduría Occident/ASISA** (56 filas, jul-2025 a jun-2026): M00171 (Occident), 8/92361 (Occident sub), M1454 (ASISA) importados con `destino='personal'` por no casar el patrón ILIKE case. Reclasificados a `destino='seguros'`, `destino_confirmado=true`, `requiere_revision=false`.
-  - **Bandeja residual**: quedan ~27 entradas sin clasificar (varios "Adeudo nº" en BBVA sin contraparte legible, traspasos internos sin concepto, un Booking oct-2025 en turistico_pisos). Pendiente de revisión manual por Alberto.
-
-- **🧾 plataforma/BD: backfill facturas_drive Giraldillo + seguros reclasificados + skill perfil-fiscal (30/06, PR #613 ✅ mergeado).**
-  Sesión de cierre y lavandería. Todo lo que se hizo:
-  - **`facturas_drive` Giraldillo 2026**: insertadas 5 facturas de El Giraldillo (lavandería pisos) — ene: €598,95, feb: €635,40, mar: €579,75, abr: €489,70, may: €598,95. Drive IDs registrados. Tabla: `facturas_drive (proveedor='giraldillo', anio=2026, mes=1..5)`.
-  - **`facturas_drive` otros**: Dmytro azotea Socorro (2026-02-17, €907,50) y CREATE ventilador (F28132832, 2026-06-09, €123,45). Nombres en Drive: `Dimitri.pdf` y `CREATE.pdf` (se dejan así).
-  - **OCCIDENT GCO,S.A. (2026-01-16, -€593,45)**: seguro del apartamento Socorro → reclasificado a `destino='turistico_pisos'`, `destino_confirmado=true`. Art. 23.1 LIRPF → deducible del alquiler de Socorro (50% Alberto, 50% Pilar).
-  - **RECIBO POLIZAS GIP (2026-01-02, -€211,60)**: seguro salud ASISA póliza 009460888 → reclasificado a `destino='seguros'`, `destino_confirmado=true`. Art. 30.2.5ª LIRPF → deducible actividad económica autónomo (€500/persona/año).
-  - **Skill `perfil-fiscal` actualizado**: ASISA → `seguros` (Art. 30.2.5ª, máx. €1.500/año entre Alberto+Pilar+hijos); gimnasio Círculo Mercantil → `personal` pero D.A. 1ª Ley 7/2021 Andalucía (15%, máx €15/año vía `comentario`); donativos Fundación Sagrados Corazones → Ley 49/2002 (80%+35%, requiere Modelo 182). Reglas de `banca_destino_reglas` sembradas al 23/06.
-  - **fix `destino.ts`**: cuota RETA (TGSS) en BBVA ya no cae a `seguros` por descarte → `personal` sin `revisar`.
-  - **PR #613**: squash-mergeado a main.
-
-- **🏷️ plataforma/BD: anotaciones fiscales IRPF en movimientos_bancarios (30/06) — solo `comentario`, siguen en bucket `no_deducible`.**
-  El campo `comentario` de `movimientos_bancarios` se usa para marcar gastos personales que tienen deducción en IRPF personal pero no son gastos de actividad (no cambia `destino`). Anotados:
-  - **21 donativos Fundación Sagrados Corazones** (ene-2025 a jun-2026, -€10/mes): Ley 49/2002 mecenazgo → 80% deducción primeros €150 en cuota IRPF + 35% resto. Pedir certificado anual (Modelo 182). IDs: todas las filas con `concepto ILIKE '%fundaci%sagrado%'`.
-  - **4 cuotas gimnasio Círculo Mercantil** (mar-jun 2026, -€30/mes): D.A. 1ª Ley 7/2021 Andalucía → 15% gastos deportivos, máx. €100/año de base → deducción máxima **€15/año** en cuota IRPF autonómica. ⚠️ En sesión anterior se indicó erróneamente que el gimnasio NO era deducible — SÍ lo es a nivel autonómico andaluz.
-  - **4 recibos seguro salud ASISA póliza 009460888** (mar-jun 2026, -€180,99/mes): Art. 30.2.5ª LIRPF → deducible en estimación directa autónomo: €500/persona/año (€1.500 total si Alberto+Pilar+1 hijo). Con 12 meses = €2.172, máx deducible €1.500.
-  - **17 recibos guardería Escuela Infantil Ratón Pérez** (ene-2025 a jun-2026): Art. 81 bis LIRPF deducción maternidad ampliada → 15% gastos guardería hijos <3 años, máx. €1.000 base → hasta **€150 extra** en cuota. Conservar facturas del centro.
-  - **IMPORTANTE — ¿qué edad tiene el hijo?** La deducción guardería aplica solo a hijos <3 años. Si en 2026 tiene ya 3+, solo aplica en IRPF 2025.
-  - **Plataforma:** todos quedan en bucket `no_deducible` (destino=personal). La plataforma clasifica gastos de ACTIVIDAD. Estas deducciones son de cuota IRPF personal — el asesor las recoge de los comentarios.
-
-- **🧾 plataforma/BD: facturas Endesa Dúplex registradas en facturas_drive (30/06).**
-  4 facturas subidas a Drive carpeta 2026 por Alberto → insertadas en `facturas_drive` vía SQL:
-  - Mar-26: €69,21 (`20260314-P26CON011796753.pdf`, Drive `1pwpjjzwY06KNUx6-l98k4AaluRktMbfy`)
-  - Abr-26: €60,10 (`20260420-P26CON016684421.pdf`, Drive `1n1JmgSFHex6cz2OkgI7l_TRgWR7q0QdA`)
-  - May-26: €56,88 (`20260519-P26CON021226634.pdf`, Drive `1wCc9VAU3KCzjpwkFQElUU1L0eMHKKq3v`)
-  - Jun-26: €89,69 (`20260613-P26CON025735465.pdf`, Drive `1thpfK1MjVMRVI-SwATmhpHu1f8Pd5I-q`)
-  Contrato Endesa Dúplex: 130139482171, PJ Francisco Molina 4 1C, BBVA ES34.
-
-- **🔧 plataforma: fix IBAN guard PSD2 (30/06, PR #613 ✅ mergeado).**
-  `lib/psd2.ts::sincronizarSesion()`: guard `if (!/^[A-Z]{2}[0-9]{2}/.test(iban)) continue` evita insertar UUID como IBAN en `cuentas_bancarias`. Skill `plataforma-maestro` actualizado con el landmine. Fix del bug que causó 75 duplicados (cuenta fantasma UUID vs IBAN real).
-
-- **🚨 plataforma/BD: cuenta bancaria fantasma PSD2 + 75 duplicados eliminados (30/06).**
-  - **Causa raíz:** una sesión PSD2 (Enable Banking) creó una segunda `cuenta_bancaria` para la misma cuenta BBVA física pero con `iban` = UUID en lugar del IBAN real (`ES34...`). Al no coincidir el `cuenta_bancaria_id`, el `dedupe_hash` (que lo incluye) no detectó los duplicados → 75 movimientos duplicados activos en la BD inflaban finanzas.
-  - **Cuenta fantasma:** `id=88560ea2-747c-41bd-a98a-6c654f7a34e5`, banco=BBVA, `iban=cdb981d3-...` (UUID inválido). Cuenta real: `8ce760ca-0cfb-4daa-8f8c-7fb5ba72d627`, IBAN=`ES3401829465600202331175`.
-  - **Fix aplicado:** `UPDATE movimientos_bancarios SET duplicado_estado='ignorado' WHERE cuenta_bancaria_id='88560ea2...' AND EXISTS (gemelo en cuenta real)`. 75 registros ignorados.
-  - **Investigación pendiente** (agente en background): confirmar cómo el código PSD2 crea cuentas_bancarias y añadir guard para no duplicar. Ver resultado agente antes de commitear fix preventivo.
-  - **Síntoma que delató el bug:** fila "Sin identificar (revisar)" de 76.30€ en `/correduria` que Alberto identificó como duplicado de Pelayo. El movimiento real (con `compania_seguros='Pelayo'`) estaba en la cuenta real; el fantasma (sin compañía) aparecía como segunda fila.
-  - **⚠️ LANDMINE dedupe cross-cuenta:** `dedupe_hash = cuenta_bancaria_id|fecha|importe|concepto` — NO detecta duplicados entre cuentas distintas aunque sean el mismo banco. Si PSD2 crea una segunda cuenta para el mismo banco, los movimientos se duplican silenciosamente. Solución a implementar: al crear `cuenta_bancaria` por PSD2, buscar primero si ya existe una con mismo `banco` + `cuenta_id` y IBAN válido; si sí, reutilizarla en lugar de crear nueva.
-
-- **🔧 plataforma: fix CUOTA autónomo clasificado como Seguros + backfill facturas_drive Sique Brilla (30/06).**
-  - **Bug CUOTA autónomos BBVA:** `lib/destino.ts` asignaba `seguros` por descarte a TODO cargo de BBVA que no casaba con el Dúplex. Una cuota RETA (TGSS/Seg.Social) de Alberto en BBVA caía ahí. Fix: añadida detección `RE_TGSS` antes del descarte BBVA → devuelve `personal` sin `revisar`. Commit en rama `claude/laundry-invoice-analysis-4yoys8`.
-  - **Backfill `facturas_drive`:** Sique Brilla no tenía NINGÚN mes registrado en BD aunque las facturas estaban en Drive → `/sivra/facturas-control` mostraba "Falta" para todos los meses. Insertadas vía SQL directo (Supabase MCP):
-    - Ene-26: 798,60€ · Mar-26: 1.074,48€ · Abr-26: 1.439,90€ · May-26: 1.360,04€ · Jun-26: 902,65€
-  - **⚠️ WORKFLOW CRÍTICO — "factura subida a Drive ≠ registrada en BD":** el botón "Subir PDF" de `/sivra/facturas-control` hace Drive + BD en un solo paso. Si la factura se sube DIRECTAMENTE a Google Drive (fuera de la plataforma), la tabla `facturas_drive` no se entera y la página sigue mostrando "Falta". **La regla es: toda factura debe registrarse vía la plataforma** (`/sivra/facturas-control` → "Subir PDF"), o insertar manualmente con SQL en `facturas_drive (proveedor, anio, mes, drive_url, drive_file_id, importe, nombre_archivo, fuente='manual')`. El agente de Gmail (cron `facturas-scan`) usa `fuente='agente'` pero solo procesa `facturas_proveedor`, NO `facturas_drive`. Son dos tablas distintas:
-    - `facturas_drive`: control de presencia/estado mensual por proveedor (usa `/sivra/facturas-control`).
-    - `facturas_proveedor`: facturas para el flujo de pago OCR→Telegram→banco (usa el agente Gmail).
-  - **Resuelto**: fix `destino.ts` y reclasificaciones OCCIDENT+GIP mergeados en PR #613 (30/06).
-
-- **📊 plataforma/sivra: P&L mensual por piso turístico — implementado y mergeado (30/06, PR #611 ✅).**
-  Nueva funcionalidad que cruza ingresos Smoobu con costes reales (lavandería, limpieza, suministros) para calcular el beneficio real por piso cada mes.
-  Archivos nuevos/modificados en `apps/plataforma`:
-  - `lib/sivra/pl-mensual.ts`: lógica de cálculo. Reparte El Giraldillo entre los 3 pisos Kutxa con fórmula `maxGuests × reservas_del_mes`. Usa `v_movimientos_activos` (vista deduplicada). Los movimientos ya en `movimiento_reparto` se suman directamente.
-  - `app/api/sivra/pl-mensual/route.ts`: `GET /api/sivra/pl-mensual?mes=YYYY-MM`, requiere sesión, valida formato.
-  - `app/(usuario)/sivra/resultado-pisos/page.tsx`: página con selector de mes, KPI cards (ingresos totales, gastos, resultado neto, margen global) y tabla desglosada por piso (lavandería | alquiler | suministros | comunidad | otros | total | resultado | margen%).
-  - `app/(usuario)/UserSidebar.tsx`: añadido "Resultado pisos" como primer ítem de "Pisos · detalle".
-  Valores validados SQL mayo 2026: House Sevillana €8.359,62 ing / €7.940,28 res; Luxury Busto €1.924,98 / €1.439,44; Dúplex €1.722,06 / €1.562,32; Busto Reform €1.658,64 / €1.346,63.
-  Pisos Kutxa (`prop_house_sevillana`, `prop_busto_reform`, `prop_luxury_busto`) comparten lavandería; Dúplex Center (BBVA) es independiente.
-  **Pendiente**: EMASESA, DIGI, PriceLabs, Netflix, IONOS, ENDESA por piso aún sin mapear → indicado en nota al pie de la tabla. PR #611 a revisar por Alberto.
-
-- **🧾 skill facturas-correo: conciliación SIQUE 2026 completa (30/06, PR #610 mergeado ✅).**
-  Archivadas y conciliadas facturas SIQUE (Si Que Brilla SL, NIF B22992523) ene–jun 2026 en Drive y BD.
-  Mayo 2026 (1.360,04 €): banco `c9f835ee-7782-4b95-a87b-7b9f92ee63eb` marcado conciliado, Drive `1HNRrPy4L35ESjjOSdTtoczVUt6l-isYz`.
-  Junio 2026 (902,65 €): Drive `16NKosRE-eEkOVwRSqZjC2oF3EG9_eqFf`, ⏳ banco pendiente (~2026-07-02, "TRANSF. 2100 LIMPIEZA APARTAMENTOS JUNIO").
-  Skill actualizado con: SQL verificación limpiezas vs `incomes` (checkouts del mes por piso), mapeo nombres factura→BD (LUXURY→`Luxury Busto`, DUPLEX→`Duplex Center`, CASA SOCORRO→`House sevillana`, BUSTOS REFORMA→`Busto Reform`), regla bloqueos-no-cuentan, regla ±1 último día del mes.
-  **Pendiente**: cuando llegue la transferencia de junio (~2026-07-02), conciliar con `UPDATE movimientos_bancarios SET conciliado=true, factura_ref='16NKosRE-eEkOVwRSqZjC2oF3EG9_eqFf', destino='turistico_pisos' WHERE id = '<id>'`.
-
-- **💳 plataforma: agente de pago de facturas — Fase 2 mergeada a main (30/06, PR #606 ✅).**
-  PRs #605 (Fase 1) y #606 (Fase 2) ambos mergeados a main. Sistema completo operativo.
-  Pendiente manual por Alberto: `EB_PIS_ENABLED=true` y `EB_DEBTOR_IBAN=<IBAN Kutxabank>` en Vercel plataforma.
-  Fase 3 (backlog): foto ticket → pago, aplazar con email, scoring proveedores, pago fraccionado.
-
-- **💳 plataforma: agente de pago de facturas a proveedores — Fase 2 enriquecimiento (30/06, PR #606 mergeado).**
-  Sobre la base de Fase 1 (PR #605 mergeado). Cuatro ideas implementadas:
-  - **Idea #3 — Resumen semanal**: nuevo cron `GET /api/cron/facturas-resumen-semanal` (lunes 09:15). Si hay >1 factura en `nueva`/`pendiente_revision`, envía mensaje agrupado con total + botones ✅ Pagar todo / 📋 Revisar una a una. `resumenSemanal(cuentaId)` exportada en `pagos.ts`. `pagarTodo(cuentaId)` llama `aprobarPago` para cada factura pendiente.
-  - **Idea #4 — Presupuesto por proveedor**: nueva tabla `presupuesto_proveedores (cuenta_id, proveedor, budget_anual, anno)` — **migración aplicada en prod**. `notificarFactura` ahora consulta el gasto acumulado del año + el budget y añade una línea *"Giraldillo lleva €X este año (budget €Y · N%)"* al Telegram si hay presupuesto configurado. Nuevo endpoint `GET/PUT /api/banca/pago/presupuesto` para gestionar budgets por proveedor.
-  - **Idea #11 — Vínculo factura-reserva**: tras insertar una factura en `escanearNuevasFacturas`, comprueba en `incomes` si hay un checkout en ±2 días de la fecha de factura. Si existe, envía Telegram "¿Asociar con estancia [huésped] en [piso] (salida [fecha])?" con botones ✅ Sí / ❌ No. Callback `pago_vincular` guarda `reserva_id = "propertyId:checkOut"` en la fila.
-  - **Idea #2 — Alerta factura recurrente ausente**: `alertarFacturasAusentes(cuentaId)` (nueva export en `pagos.ts`, llamada desde el cron diario día 7+). Para cada proveedor con ≥2 facturas históricas que no tenga ninguna este mes, envía alerta Telegram "⚠️ Sin factura de X este mes".
-  - **Callbacks Telegram nuevos**: `pago_pagartodo`, `pago_revisarunauna`, `pago_vincular`, `pago_novinc` — manejados en el webhook.
-
-- **💳 plataforma: agente de pago de facturas a proveedores — Fase 1 completa (30/06, PR #605 mergeado a main).**
-  Implementado el flujo completo: Gmail → OCR → Telegram con botones → Enable Banking PIS (o SEPA XML fallback) → auto-conciliación con extracto bancario.
-  - **`packages/@central/module-pagos`**: nuevo módulo portable. Tipos (`FacturaProveedor`, `EstadoFactura`, `PagoParams`…), generador SEPA XML pain.001.001.03 puro, validador de IBAN (checksum ISO 7064). Sin BD ni secretos.
-  - **`prisma/sql/2026-06-30_facturas_proveedor.sql`**: nueva tabla `facturas_proveedor` (cuenta_id, proveedor, importe, estado, pago_id, pago_url, cuota_iva…). Índice único de dedupe por (cuenta_id, proveedor, numero_factura). **Migración aplicada en prod (wswbehlcuxqxyinousql).**
-  - **`lib/enablebanking.ts`**: añadidas funciones PIS — `iniciarPago()`, `estadoPago()`, `disponiblePis()`. Flag de activación: `EB_PIS_ENABLED=true`.
-  - **`lib/agente-facturas/pagos.ts`**: orquestador — `escanearNuevasFacturas()` (Gmail IMAP → OCR → BD → Telegram), `aprobarPago()` (PIS o SEPA XML), `aplazarPago()`, `rechazarFactura()`, `verificarPagosPendientes()` (pago_iniciado → ACSC → pagada), `conciliarConBanco()` (cruce con `v_movimientos_activos` por proveedor+importe+fecha±3d).
-  - **API routes**: `POST /api/banca/pago/aprobar|rechazar|aplazar`, `GET /api/banca/pago/callback` (exento en middleware — redirect del banco tras SCA).
-  - **Cron** `GET /api/cron/facturas-scan` (`vercel.json` 15 6 * * *): scan + verify + conciliar para todas las cuentas activas.
-  - **Telegram webhook** extendido con `prefix === 'pago'` → `aprobar|aplazar|rechazar`. Formato callbacks: `pago_aprobar:<id>`, `pago_aplazar:<id>`, `pago_rechazar:<id>`.
-  - **`lib/finanzas.ts`**: `trimestres` ahora incluye `ivaSoportado` (suma `cuota_iva` de `facturas_proveedor WHERE estado='pagada'` del año). Tipo `ResumenFinanciero.fiscal.trimestres` actualizado.
-  - **`middleware.ts`**: `/api/banca/pago/callback` añadido a `PUBLIC`.
-  - **`next.config.ts`**: `@central/module-pagos` en `transpilePackages`.
-  - **`package.json` plataforma**: `@central/module-pagos: workspace:*`.
-  - **Nuevas env a añadir en Vercel plataforma**: `EB_PIS_ENABLED=true` (cuando se confirme tier), `EB_DEBTOR_IBAN` (IBAN de Kutxabank para debitar).
-
-- **📞 Datos de contacto de Alberto:** móvil `637 349 990`. Usar en firmas de emails comerciales de ia-rest e ialimp.
 - **📊 PRICING Busto: datos de mercado corregidos + Feria Apr 18-25 bajada aplicada EN VIVO (05/07).**
   El motor tarificaba agosto y septiembre muy por debajo del mercado real porque los datos de `market_rates` (de 2026-06-23) usaban un pool incorrecto. Corregido via Supabase MCP + `pg_net`:
   - **Agosto 7-9** (10 comps reales Booking, 2p aptos Casco Antiguo): p55=171€. BD previa tenía p55=84€ — motor infravaloraba agosto >50%.
@@ -4919,3683 +4945,3 @@
   - Auditado en `pricing_applied` (7 filas, source='agente', dry_run=false) y `pricing_decisiones` (7 filas, motivo+variables).
   - **TÉCNICA NUEVA — pg_net como proxy para Smoobu:** el entorno cloud bloquea CONNECT a `housesevillana.vercel.app`, `plataforma-ten-flame.vercel.app` Y `login.smoobu.com`. Solución: usar `net.http_get/post` de pg_net (ya instalado, v0.20.0) + leer respuesta en `net._http_response` (esperar ~5s y consultar por `id`). La API de Supabase NO bloquea `login.smoobu.com` desde su infraestructura. Patrón: `SELECT net.http_get(url, headers) AS request_id` → esperar → `SELECT content FROM net._http_response WHERE id=<request_id>`. NO usar `http_collect_response(id, async:=false)` — falla con "query has no destination for result data" (bug interno pg_net).
   - **pricing_aprendizaje** actualizado (temporada='feria_2027') con todo el contexto..
-
-- **🐛 ia-rest CRM: emails a leads no se enviaban — 4 bugs corregidos + QA mejorado (29/06, PR #599 mergeado).**
-  Alberto reportó que los emails a leads habían dejado de enviarse. Causa raíz: `lead-onboarding` faltaba en el array `crons` de `apps/ia-rest/vercel.json` → el cron nunca corría → los leads no tenían `email_draft` → el botón "📨 Enviar email" de Telegram no aparecía. Tres bugs adicionales corregidos en la misma PR:
-  - `vercel.json` (ia-rest): añadido cron `lead-onboarding` `*/30 7-17 * * 1-5`.
-  - `lead-onboarding/route.ts`: ventana de tiempo 72h → 7d para recuperar leads acumulados.
-  - `telegram/webhook/route.ts`: al enviar email, ahora fija `siguiente_contacto_at = now+3d` + `ultima_actividad_at` para que el lead vuelva a aparecer en `pipeline-comercial`.
-  - `pipeline-comercial/route.ts`: añadido `'enviado'` a la lista de estados urgentes.
-  - **QA agent mejorado** (`qa-runner.ts`): `checkCrons()` ahora lee `vercel.json` real (antes devolvía `ok` sin verificar nada); ventana CRM ampliada a 7d; nuevo check "Leads enviados sin `siguiente_contacto_at`".
-
-- **🔴 RRHH: fix crash `/admin/empleados` — search_path de rrhh_app (29/06, PR #596 mergeado).**
-  `central-rrhh.vercel.app/admin/empleados` petaba con "Application error: server-side exception". Logs de Supabase mostraban `relation "empleados" does not exist` desde el user `rrhh_app`. **Causa raíz:** `rrhh_app` tenía `rolconfig = null` (sin `search_path`). Supavisor en transaction mode descarta `SET search_path` entre conexiones, así que el `?schema=rrhh` del `DATABASE_URL` no se aplicaba y las queries sin prefijo fallaban. **Fix doble:** (1) `ALTER ROLE rrhh_app SET search_path = rrhh, public` — aplicado en prod vía Supabase MCP al instante; (2) prefijo `rrhh.` explícito en todos los `$queryRaw`/`$executeRaw` del app (11 ficheros). Migración documentada en `0018_fix_rrhh_app_search_path.sql`. PR #596 mergeado, todos los builds verdes.
-
-- **🧾 IALIMP: escáner de facturas multi-foto + acceso directo en dashboard (29/06, PR #595 mergeado a main).**
-  - **`/admin/contabilidad`**: botón "📷 Escanear" → picker multi-foto → IA (NVIDIA Vision 90B) analiza cada imagen → si certeza alta y base imponible > 0, auto-contabiliza directo; el resto va a cola de revisión manual con datos pre-rellenos en el modal de apunte.
-  - **`/dashboard`**: nueva tarjeta `ScanFacturasCard` (acceso directo desde la pantalla principal) que hace el mismo flujo sin entrar a Contabilidad.
-  - Sin cambios de schema ni crons; usa `/api/admin/escanear/process` (ya existente) y `/api/admin/contabilidad/apuntes`.
-
-- **📞 REUNIÓN Singular Cleaning con Rafa — resultado: NO CLIENTE (29/06).**
-  - Rafa tiene herramienta interna propia (~1,5 años), cubre planificación/empleados/facturación con conector Holded. Equipo contento. Expansión internacional preparada. Su conclusión: *"creo que hemos programado el mismo motor"*.
-  - **Principal objeción: falta soporte 24/7** — lo mencionaron expresamente como el único gap que les duele. Alberto no puede ofrecerlo ahora.
-  - Segunda brecha: conector Holded (ialimp tiene facturación propia pero no conecta con Holded).
-  - **Positivo:** Rafa ofreció pasar contactos de clientes susceptibles de usar la plataforma. Quedaron en buenas: "vamos hablando".
-  - Transcripción archivada en Google Drive (`Grabación de llamadas Rafa Singular Cleaning_260629_173733`).
-  - **Acción pendiente:** si Alberto implementa soporte 24/7 o conector Holded, Singular Cleaning es el primer candidato a retomar.
-
-- **🧹 IALIMP: tenant demo Singular Cleaning + sesiones futuras sin asignar (29/06).**
-  - Empresa `Singular Cleaning` creada en Supabase: `empresa_id=e20589e6-8c3a-4808-b764-3c88d5484809`, login `info@singularcleaning.es`/`1234`, white-label azul `#1B5EBE`/verde `#3DB346`.
-  - 3 limpiadoras (María PIN 1111, Carmen PIN 2222, Lucía PIN 3333), 2 clientes gestores, 6 propiedades en Sevilla, 1 factura de GestaPisos (junio), stock básico.
-  - Insertadas 6 sesiones futuras sin `limpiadora_id` (30 jun y 1 jul) para demo del botón 🧹 Asignación automática.
-  - Disponibilidad de las 3 limpiadoras ya configurada en `limpiadora_disponibilidad`.
-  - **PR #592 mergeado**: página pública `/propuesta/singular-cleaning` (sin auth, colores Singular Cleaning, calculadora de ahorro interactiva, QR para acceso limpiadora, 8 módulos, CTA final).
-  - **URL presentación**: `https://app.ialimp.es/propuesta/singular-cleaning`
-
-- **🛰️ SIVRA: el cron SEO semanal nunca había corrido — fix middleware 307 (29/06, PR #593 mergeado a main).**
-  Tras activar el cron SEO (env `SEO_AGENT_ENABLED=true` en Vercel `sivra`, hecho por Alberto), los logs mostraban `GET /api/seo-refresh → 307`. **Causa real (NO era la env var):** el `matcher` de `apps/sivra/middleware.ts` excluye los crons para que no pasen por el middleware, pero a `/api/seo-refresh` se le olvidó añadirlo (es el único cron que se quedó en sivra; los demás migraron a plataforma). El cron (sin sesión NextAuth) era redirigido a `/login` (307) ANTES de llegar al handler — que tiene su propia auth por `Bearer CRON_SECRET`. **Llevaba sin correr desde #419.**
-  - **Fix**: añadido `api/seo-refresh` a la negative-lookahead del matcher. 1 línea, aditivo. `tests.yml` (typecheck 7 apps + guardián) verde.
-  - **Verificado por Alberto**: `CRON_SECRET` y `SERPER_API_KEY` ya existían en Vercel `sivra`. Con el fix, el lunes 10:00 UTC el cron debería dar 200 y ejecutar el agente SEO con búsqueda real (Serper).
-  - **Nota de proceso**: la rama designada `claude/agent-error-visibility-k4ayma` estaba divergida con commits ya mergeados; force-push denegado por el clasificador → se publicó en rama nueva `claude/sivra-cron-307-fix`. El bot de radiografía volvió a meter un conflicto de ficheros generados → resuelto mergeando main y tomando su versión (diff neto = 1 línea).
-
-- **🔍 AUDITORÍA del monorepo + acciones manuales de Alberto resueltas (29/06).** Auditoría `auditoria-central` (PR #576): fix `core-receipts` en transpilePackages. Alberto cerró además las 3 acciones manuales: (1) cron SEO activado (env), (2) **seguridad BD apretada** — `portal_rates` ALL→SELECT y `v_movimientos_activos` a `security_invoker` (verificado seguro: ninguna app referencia esos objetos, plataforma lee la tabla base por Prisma con rol que bypassa RLS), (3) deps documentadas. Advisor de seguridad ahora a 0 ERRORS.
-
-- **💬 AGENTE HUÉSPED SIVRA: respuesta en TEXTO PLANO (no JSON) + modelo 405b (29/06, PR #588, absorbe #547).**
-  Mergeado tras OK de Alberto ("mergea, no hay cliente 100% activo"). Arregla el "sigue sin tener contexto": `decidir.ts` pedía un JSON y, cuando el 70B gratis fallaba al emitirlo, caía a un fallback que ignoraba TODO el system prompt (reglas + hilo) → borrador genérico. Ahora genera el mensaje en **texto plano** (las reglas siempre se aplican) y deriva escalado/sentimiento/`requiere_respuesta` aparte (reglas `esSensible`/`esCierre` + clasificador de UNA palabra `debeEscalar`). Guardrail anti-invención intacto. Modelo `AGENTE_HUESPED_MODEL` (default `meta/llama-3.1-405b-instruct`, aditivo→cae al 70B). **Verificado**: suite del agente `node --test` 74/74, tsc 0 en `agente-huesped/`. **Riesgo bajo**: auto-envío OFF por defecto (`mensajes_auto_config.auto_enabled=false`) → cada respuesta se propone por Telegram con ✅/✏️/🔧; nada llega al huésped sin el ✅ de Alberto.
-
-- **🧹 BANCA: guarda anti-duplicado CROSS-ORIGEN Excel↔PSD2 (29/06, PR #585 — absorbe el código de #541).**
-  El saneamiento de datos de #541 YA estaba aplicado en BD; faltaba en `main` la **prevención en código**. `lib/banca.ts::importarExtracto` marca `duplicado_estado='ignorado'` (reversible, idempotente, conservador) las filas de un Excel que ya tienen gemelo PSD2 por `(cuenta, fecha, importe)`, conservando siempre el feed del banco. + LANDMINE en `apps/plataforma/CLAUDE.md` + SQL (`2026-06-26_dedupe_cross_origen.sql`, `2026-06-26_v_movimientos_activos.sql`, ya aplicados). `test:guardia` 22/22, banca.ts tsc 0. No incluidas las ampliaciones de skills de #541 (las mantiene la rutina de auditoría).
-
-- **🔧 FIXES consolidados de crons + estructura (29/06, rama `claude/fixes-crons-estructura`, PR).**
-  Tras "mergea todo", en vez de mergear a ciegas PRs viejos (basados en `main` antiguo y arrastrando radiografías auto-generadas obsoletas), se aplicaron LIMPIOS sobre `main` actual SOLO los 3 fixes de código todavía vigentes (verificados contra `main`); los snapshots de memoria/pricing viejos se dejan (históricos). Absorbe #563, #564 y #556.
-  - **`concursos-cierre` (era #564)**: `current_date + ${DIAS_AVISO}` (Prisma manda el número como `bigint` → Postgres `date + bigint` no existe → 500 diario 09:00 UTC) → `current_date + make_interval(days => ${DIAS_AVISO})`. Mantiene `DIAS_AVISO` (mejor que el literal `INTERVAL '3 days'` del PR original).
-  - **`mercado/cron` (era #563)**: queries Serper sin `site:` (los portales renderizan precio con JS → snippets sin cifra) + extrae `answerBox`/`sitelinks` + prompt LLM relajado (acepta rangos→extremo inferior). Restaura datos en `market_rates` para el motor de pricing.
-  - **`estructura.ts` VERTICALES (era #556)**: añade `rrhh` y `transporte` (faltaban → KPI "APPS: 6" no cuadraba con "Apps · 4").
-  - **Verificado**: `test:guardia` 22/22 ✅; los 3 ficheros editados typecheck 0. Las radiografías auto-generadas se regeneran solas en el push.
-  - **Sin mergear (pendiente revisión 1-a-1 con Alberto)**: #547 (reescritura agente huésped sivra) y #541 (dedupe bancario, SQL ya aplicado) — mayor radio/comportamiento.
-
-- **🛰️ TRANSPORTE: ingesta de hardware GPS AGNÓSTICA del fabricante (29/06, rama `claude/transporte-gps-ingesta`, PR #580).**
-  A petición de Alberto ("el proyecto es 100% adaptable, hazlo importante y que cada cliente elija el hardware que quiera"): capa de ingesta para que el GPS deje de depender SOLO del móvil del conductor.
-  - **Cómo**: `POST|GET /api/ingest/[formato]` con 3 formatos — `osmand` (balizas baratas + app Traccar Client, GET query params, velocidad en nudos), `traccar` (webhook "Forward" de un servidor Traccar, POST JSON `position`/`device`), `generico` (nuestro JSON `{deviceId,lat,lng,...}`). Acepta lote (array).
-  - **Mapeo aparato→vehículo**: nueva columna `flota_vehiculos.device_id` (IMEI/uniqueId, único global → deriva la cuenta). Migración `prisma/sql/2026-06-29_flota_device.sql` **APLICADA** a la BD compartida (additiva). El `device_id` se edita por vehículo en el form de flota (`_forms.tsx` + `/api/vehiculos`).
-  - **Una sola vía de escritura**: extraída `ingerirPosicion()` a `lib/transporte-repo.ts` (escribe `flota_posiciones` + geocerca + km reales); la usan IGUAL el conductor por enlace (`/api/conductor/posicion`, refactorizado) y el hardware. El endpoint resuelve `getVehiculoPorDevice` → `porteActivoDeVehiculo` → `ingerirPosicion`.
-  - **Normalización pura** en `@central/module-geo` (`src/ingest.ts`: `normalizarOsmAnd/Traccar/Generico`, `normalizarLectura`, `nudosAKmh`, `parseTimestamp`; 9 tests `node --test`, 19/19 verde). Reutilizable por cualquier vertical.
-  - **Auth**: clave `FLOTA_INGEST_SECRET` (`lib/ingest-auth.ts`, patrón guarda sin literal en prod; `?key=`/`x-ingest-key`/Bearer). Ruta `/api/ingest` exenta en `middleware.ts`.
-  - **Verificado**: `tsc` 0 (module-geo + transporte), `next build` ✓ (registra `/api/ingest/[formato]`), `test:guardia` 22/22. Demo: `device_id='jj-demo-gps-01'` en el camión JJ-01 → `GET /api/ingest/osmand?key=<secret>&id=jj-demo-gps-01&lat=37.1&lon=-5.95&speed=40`.
-  - **🟡 Alberto (manual)**: añadir env `FLOTA_INGEST_SECRET` al proyecto Vercel `transporte`. La columna ya está aplicada en prod (misma BD compartida).
-
-- **🧹 IALIMP: ruta /presentacion/singular-cleaning + sin precio (29/06, PR #578 mergeado a main).**
-  - Regla permanente: **precio nunca por escrito en la app** — Alberto lo habla directamente con el cliente.
-  - **Nueva ruta** `app.ialimp.es/presentacion/singular-cleaning` (página "Presentación de plataforma", sin sección de precios). `/presentacion` añadido a `PUBLIC_PATHS` en middleware.
-  - **Ruta anterior** `app.ialimp.es/propuesta/singular-cleaning` sigue existiendo pero también sin sección de precios. La palabra "propuesta" implica propuesta económica; se usa "presentación" en adelante.
-  - Tenant demo intacto (ver entrada anterior): `info@singularcleaning.es`/`1234`, PIN limpiadoras 1111/2222/3333.
-  - Logo SC (monograma SVG azul/verde) embebido inline en la página. `logo_url` en Supabase es null — admin white-label sin logo personalizado (no crítico para la reunión).
-
-- **🧹 IALIMP: presentación + demo tenant Singular Cleaning (29/06, rama `claude/singular-cleaning-analysis-0scn5x`, PR #575 mergeado).**
-  Preparación reunión de ventas con Rafa de Singular Cleaning (empresa limpieza pisos turísticos Sevilla, ~50-60 usuarios, usan Holded para facturación).
-  - **Tenant demo** sembrado via Supabase MCP (project `wswbehlcuxqxyinousql`): empresa `info@singularcleaning.es`/`1234`, 3 limpiadoras (María PIN 1111, Carmen PIN 2222, Lucía PIN 3333), 2 gestoras (GestaPisos Sevilla SL, Andalucía VFT Gestión SL), 6 propiedades en Sevilla, 5 sesiones para 2026-06-29, factura SC-2026-001 GestaPisos 450€ base, 5 productos stock, disponibilidad de limpiadoras.
-  - Postura Holded: no se construye integración, se presenta la facturación propia de ialimp como reemplazo a medio plazo.
-
-- **🏢 PLATAFORMA: mapa consolidado de la flota del holding (god-panel) — extra 4 del GPS (29/06, rama `claude/plataforma-mapa-holding`, PR draft).**
-  Cierra el 4º extra del GPS: ver en **un solo mapa** la flota de **todas las sociedades del grupo** (narrativa holding). Página operador `/(usuario)/operador/flota-mapa` (guard `getAdmin()`), mapa Leaflet+OSM (CDN, sin dep) coloreado por señal viva/perdida + lista por vehículo/cuenta; polling `GET /api/operador/flota-mapa` cada 7 s. Datos por **`$queryRaw`** (`lib/flota-holding.ts`, `DISTINCT ON (vehiculo_id)` última posición + join `flota_vehiculos`/`cuentas`) — sin modelo Prisma nuevo; `GRANT SELECT` a `prisma_plataforma` en `flota_posiciones`/`flota_vehiculos`. Nav en `UserSidebar` + `CommandPalette` (🛰️ Flota (mapa)). `tsc` 0 + `next build` ✓ (rutas registradas) + `test:guardia` 22/22. **Con esto los 4 extras del GPS quedan hechos**; pendientes solo push de llegada (VAPID) y purga >30 d.
-
-- **🛰️ TRANSPORTE: localización GPS en vivo + módulo transversal `@central/module-geo` (29/06, rama `claude/transporte-gps`, PR draft).**
-  Funcionalidad "novedosa" para la demo JJ: ver la flota en un mapa en tiempo real. **Decisiones**: mapa **Leaflet + OpenStreetMap** (gratis, sin API key; cargado por CDN, sin dep npm); legalidad **art. 90 LOPDGDD** (se rastrea el **vehículo**, **solo con servicio activo**, aviso visible, minimización + purga) — texto del aviso a validar por asesoría.
-  - **`@central/module-geo`** (puro, transversal — lo reutiliza cualquier vertical para geolocalizar personal de campo): `haversineKm`, `rumbo`, `velocidadKmh`, `tieneSenal`, `ultimaPosicionPorVehiculo`, `dentroDeGeocerca`, `etaMin`, `kmDeTraza`, `progresoRuta`, `simularTrayecto`. Tests `node --test` 10/10.
-  - **Datos** (BD compartida, scope cuenta): tabla `flota_posiciones` (append-only, minimización) + `flota_conductores.acceso_token` + `transporte_servicios.seguimiento_token` + `lat`/`lng` en `transporte_paradas`. **Aplicado** por MCP; DDL `apps/transporte/prisma/sql/2026-06-29_flota_gps.sql`.
-  - **App**: `/(usuario)/mapa` (mapa + **simulación** en cliente con `simularTrayecto`, polling `/api/mapa/posiciones`); **conductor por enlace mágico** `/conductor/acceso/[token]` (`watchPosition`→`/api/conductor/posicion`, aviso legal); **geocerca** marca paradas/entregado + **km reales** (`kmDeTraza`)→margen; **link de seguimiento cliente** `/seguir/[token]` con **ETA**. Rutas públicas exentas en `middleware.ts`. `MapaLeaflet` compartido en `app/_components`.
-  - **Demo sembrada** (`…seed_demo_gps.sql`): ruta Sevilla→Jerez (servicio "Bodega Real"), tokens `jj-demo-conductor` / `jj-demo-jerez`, posición viva. Probar: `/mapa` (+▶ Simular), `/seguir/jj-demo-jerez`, `/conductor/acceso/jj-demo-conductor`.
-  - **Verificado**: module-geo 10/10 · `tsc` 0 + `next build` ✓ (rutas registradas) · `test:guardia` 22/22.
-  - **Extras elegidos por Alberto (los 4)**: link cliente ✅, geocerca+aviso ✅ (push de llegada con `core-push`/VAPID = follow-up), km reales→margen ✅, **mapa consolidado del holding en plataforma = follow-up** (toca otra app). Pendiente además: purga automática de posiciones >30 d.
-- **📈 PRICING AGENTE (sivra): ciclo semanal autónomo — 29/06/2026 (sesión programada, sin PR)**
-  Ciclo completo de recopilación de mercado + memoria. Sin commits de código (solo datos en BD).
-  - **180 nuevos registros `market_rates`** (search_date=2026-06-29, portal="booking"): 40 busto, 60 duplex, 60 luxury, 20 house. Cobertura: Sep 2026 – Abr 2027 (fines de semana clave + festivos + Semana Santa + Feria). [El motor `apply-auto` (cron diario de plataforma) ahora tiene datos reales para tarificar Busto; los otros pisos tienen apply_enabled=false.]
-  - **Feria 2027 confirmada a 293€ p50 (2p)** — el motor tenía un dato OBSOLETO (162€). Ya corregido en `pricing_aprendizaje('prop_busto_reform', 'feria_2027')`. Precios Busto para Feria: Abr17 ya VENDIDO (196€, pérdida vs mercado 293€, lección cara), Abr18=516€/Abr19=432€ sobreestimados — el cron `apply-auto` los corrige automáticamente (tope ±20%/día: 516→413→330 en ~2 días).
-  - **Semana Santa 2027 Busto 100% RESERVADA** a buenos precios (473-549€ vs p50 504€). Duplex/Luxury/House en buen punto.
-  - **6 entradas escritas en `pricing_aprendizaje`**: feria_2027(ALL+busto), semana_santa_2027(ALL), maraton_feb_2027(ALL), cobertura_mercado_jun2026(ALL), grandes_grupos(house).
-  - **⚠️ ALERTA: `pricing_eventos_auto` VACÍA** — los crons Ticketmaster (`/eventos/sync`) y websearch (`/eventos/websearch`) NO están poblando la tabla. El motor usa eventFactor del calendario estático, sin eventos de Ticketmaster ni ferias/congresos de Gemini. **Alberto: revisar que esos crons en `apps/plataforma/vercel.json` están activos y con los envs `TICKETMASTER_API_KEY`/`CRON_SECRET` correctos.**
-  - p50 mercado actualizado por piso/evento: Busto(2p) SS=504€/Feria=293€/Maratón=257€; Duplex+Luxury(4p) SS=498€/Feria=295€/Maratón=282€; House(8p) SS=1.083€/Feria=583€.
-  - CRON_SECRET no disponible en sesión → no se llamó `aplicar-propuesta` directamente. El apply-auto recoge los datos esta noche.
-
-- **🚏 TRANSPORTE: ruta multiparada (portes + paradas editables) → vertical 100% (28/06, rama `claude/transporte-multiparada`, PR draft).**
-  Cierra el equivalente a "multi-línea" en transporte (su modelo no tiene líneas: un servicio agrupa **portes**, y cada porte una **ruta de paradas**). Editor anidado en el servicio (botón 🚏 por fila): lista de portes (asignar vehículo + estado/km/coste/importe/interno) y, dentro de cada uno, lista de paradas (orden por índice + dirección + recogida/entrega).
-  - **API** `PATCH /api/servicios/portes?servicioId=`: reemplazo atómico del conjunto (`$transaction([deleteMany portes del servicio, ...create con paradas anidadas])`); valida pertenencia del servicio y que los vehículos sean de la cuenta. Repo nuevo `listPortesDeServicios()` (portes+paradas en orden). Al cambiar portes, el coste/margen de la tabla de servicios se recalcula solo (`margenServicio`).
-  - **Verificado**: `tsc` 0 + `next build` ✓ (ruta `/api/servicios/portes` registrada) · `test:guardia` 22/22 · BD: 3 portes demo ligados a servicios, 0 huérfanos (el editor los precarga). El esquema ya tenía `transporte_portes`/`transporte_paradas` → sin migración.
-  - Con esto **transporte + alquiler quedan 100% (CRUD + estructura multi-elemento en ambas)**.
-
-- **✏️ TRANSPORTE + ALQUILER: edición (update) → CRUD COMPLETO (28/06, rama `claude/verticales-edicion`, PR draft).**
-  Cierra el CRUD de las 4 entidades de cara a la demo JJ. Cada fila tiene ahora ✏️ (editar) + 🗑 (borrar), y arriba el alta.
-  - **Patrón**: hook `useSubmit(endpoint, 'POST'|'PATCH')` en `_forms.tsx` de cada app; campos extraídos a `*Fields`; `Nuevo*` (alta inline) y `Edit*` (modal `Overlay` prefijado con la fila actual). El PATCH reusa el **mismo `zod Body`** que el POST (el form de edición envía todos los campos).
-  - **API**: añadido `PATCH` (scope `where {id, cuentaId}`, `updateMany`) a `/api/vehiculos`, `/api/servicios`, `/api/materiales`. En `/api/alquileres` el PATCH actualiza cabecera y **reemplaza la línea única** (`lineas:{deleteMany:{},create:[…]}`) tomando nombre/tarifa del catálogo; comprueba pertenencia (404 si el alquiler no es de la cuenta).
-  - **Verificado**: `tsc --noEmit` 0 + `next build` ✓ en ambas apps · `test:guardia` 22/22 · prueba contra BD compartida: datos demo intactos (2 veh / 3 serv / 5 mat / 3 alq / 6 líneas), **scope del UPDATE** confirmado (acotado a JJ toca 2 filas, otra cuenta 0), e **intercompany cuadra**: transporte interno 40.000€ + alquiler interno 20.000€ = **60.000€**; terceros alquiler 3.900€.
-  - **Multi-línea** ✅ (añadido en el mismo PR #568): el alta/edición de alquiler maneja **N líneas** (lista dinámica material+cantidad con +añadir/quitar, mín. 1). API `/api/alquileres` POST+PATCH aceptan `lineas:[{materialId,cantidad}]`; helper `construirLineas()` copia nombre/tarifa del catálogo (scopeado por cuenta) y el PATCH reemplaza el conjunto entero (`deleteMany+create`). El esquema ya soportaba multi-línea (el seed tiene 6 líneas en 3 alquileres) → sin migración. tsc 0 + next build ✓. Skills + `apps/alquiler/CLAUDE.md` actualizados. **CRUD de transporte+alquiler queda 100% completo.**
-
-- **✍️ TRANSPORTE + ALQUILER: altas (crear) + borrado — ya NO son solo lectura (28/06, rama `claude/verticales-altas-edicion`, PR draft).**
-  Para la demo de JJ, ambas verticales pasan de solo-lectura a **interactivas**:
-  - **Transporte**: API `/api/vehiculos` y `/api/servicios` (POST crear + DELETE, scope `cuentaId`, validación zod). Formularios cliente en `apps/transporte/app/(usuario)/_forms.tsx` (`NuevoVehiculo`, `NuevoServicio`, `DeleteButton`) cableados en flota y servicios (alta arriba + 🗑 por fila).
-  - **Alquiler**: API `/api/materiales` y `/api/alquileres` (POST+DELETE). El alta de alquiler crea **1 línea** desde un material del catálogo (toma nombre/tarifa del material; total se calcula con module-alquiler). Formularios en `apps/alquiler/app/(usuario)/_forms.tsx`.
-  - Borrado FK-safe (deleteMany scoped + 409 si tiene dependientes). Sesión `getSession()` en cada route (401 si no).
-  - **Verificado**: `tsc --noEmit` 0 + `next build` ✓ en las dos apps.
-  - **Pendiente**: edición (update) y multi-línea en alquiler. Skills `transporte-maestro`/`alquiler-maestro` actualizadas.
-
-- **✉️ feat(sivra/agente-mensajes): ✏️ Modificar ahora genera borrador IA desde idea en bruto — 28/06/2026 (rama `claude/ai-message-drafting-djwtgv`, PR draft)**
-  Antes: Alberto pulsaba ✏️ Modificar, escribía el texto completo y se enviaba verbatim (o traducido). Ahora: Alberto escribe su idea en bruto ("Lo siento, la limpieza ya va de camino") y la IA genera un mensaje profesional en el idioma del huésped usando el contexto completo de la reserva + historial reciente.
-  - **`lib/sivra/agente-huesped/redactar.ts`** (nuevo): `redactarDesdeIdea(idea, ctx, complete?)` — función pura inyectable. Prompt: anfitrión de {propiedad} + historial últimas 3 conversaciones de `mensajes_log` + pregunta del huésped + idioma.
-  - **`telegram-webhook/route.ts`**: helper `cargarCtxRedaccion()` carga `incomes` + `mensajes_log` en paralelo. Reemplaza bloque de traducción verbatim por `redactarDesdeIdea()`. Mensaje del bot actualizado: "Escribe tu idea en bruto y la IA la redactará".
-  - **Escape hatch**: 🔧 Retocar sigue siendo para ajustes finos sobre el borrador existente (sin cambio).
-  - **7 tests** en `redactar.test.ts` — todos pasan ✅. Sin cambios en BD.
-  - Spec: `docs/superpowers/specs/2026-06-28-redaccion-ia-modificar-design.md`
-
-- **📦 VERTICAL ALQUILER de materiales — app nueva sobre `module-alquiler` (27/06, rama `claude/vertical-alquiler`, PR draft).**
-  Segunda vertical "componible" de la tanda JJ (tras transporte), mismo patrón. `apps/alquiler` (Next 15 + Prisma sobre BD compartida) que compone el módulo puro `@central/module-alquiler` (ya existente): catálogo de material con stock/tarifas, y alquileres (órdenes) a terceros (ingreso real) o internos al grupo (intercompany materiales→eventos). `lib/alquiler-repo.ts` adapta Prisma↔dominio + compone la lógica (precio por días, disponibilidad por solape, resumen, intercompany). Pantallas: dashboard (activos, ingresos terceros, 🔗 intercompany, fianzas, disponibilidad de material), materiales, alquileres. **tsc 0 · next build ✓.**
-  - **Datos** (BD compartida, scope `cuenta_id`): `alquiler_materiales`/`alquiler_alquileres`/`alquiler_lineas` — esquema **aplicado** (apply_migration `vertical_alquiler_schema`) + DDL en `apps/alquiler/prisma/sql/2026-06-27_alquiler_schema.sql`.
-  - **Rol propio `prisma_alquiler`** creado (clon de `prisma_sivra`, sin contraseña). Auth: cookie `alquiler_session`, secreto `ALQUILER_SESSION_SECRET`, sesión stateless contra `cuentas`.
-  - **Demo JJ sembrado** (`0de5…0001`): 5 materiales, 3 alquileres (1 interno = **intercompany 20.000€**, que casa con materiales→catering del consolidado de plataforma; 2 a terceros = 3.900€), 6 líneas. Fichero + teardown: `prisma/sql/2026-06-27_seed_demo_alquiler.sql`.
-  - **Integración**: `alquiler` en la matriz typecheck de CI, fila en MATRIZ.md, skill `alquiler-maestro` + enrutado en central-maestro + índice SKILLS.
-  - **✅ DESPLEGADA Y PROBADA (27/06):** Alberto creó el proyecto Vercel `alquiler` (Root Directory `apps/alquiler`, envs OK), puso contraseña a `prisma_alquiler` y el **login demo funciona** (`prisma_alquiler` con conexiones vivas en `pg_stat_activity`, 0 fallos). Las **4 verticales nuevas/tocadas** (transporte, alquiler, plataforma, ialimp) conectan cada una con su rol propio. Demo coherente: **transporte 40k + alquiler 20k = 60k** que plataforma elimina.
-  - **Siguiente producto**: altas/edición en pantalla (hoy lectura), parte de daños con fotos, contrato de alquiler.
-  - ⚠️ **Nota RLS:** Supabase **auto-activó RLS** en las tablas nuevas (`flota_*`/`transporte_*`/`alquiler_*`). No rompe nada porque los roles `prisma_*` tienen BYPASSRLS; pero un acceso sin bypass (REST/anon) vería 0 filas hasta crear políticas.
-
-- **🔐 BD compartida: cada app con su ROL propio + rotación de credenciales (27/06) — cierre del incidente del reset de `postgres`.**
-  Al desplegar la vertical `transporte` se conectó como `postgres` y se reseteó su contraseña → rompía a quien usara `postgres`. Estado FINAL (verificado en `pg_stat_activity`, 0 fallos de auth):
-  - **Cada app conecta con su rol dedicado**: sivra→`prisma_sivra`, ialimp→`prisma_ialimp`, plataforma→`prisma_plataforma`, transporte→`prisma_transporte` (todos: `login`, `BYPASSRLS`, grants DML completos sobre las 183 tablas de `public`, **sin CREATE** = mínimo privilegio), rrhh→`rrhh_app`. **`postgres` ya no lo usa ninguna app.**
-  - **Contraseñas rotadas:** `postgres` y `prisma_sivra` ✅ (confirmado). Las de `prisma_ialimp/_plataforma/_transporte` **pasaron por el chat** → rotarlas también si no se ha hecho ya (método: `ALTER ROLE <rol> WITH PASSWORD '…'` en Supabase SQL Editor + actualizar `DATABASE_URL`/`DIRECT_URL` de esa app en Vercel + redeploy).
-  - **Conexión pooler:** `<rol>.wswbehlcuxqxyinousql@aws-0-eu-west-1.pooler.supabase.com` (6543 pooled `?pgbouncer=true` / 5432 direct). **Migraciones** se aplican como `postgres` (vía Supabase/MCP), no por el rol de la app (no tiene CREATE).
-  - Para crear una vertical/app nueva: dale **su propio rol** (clónalo de `prisma_sivra`) en vez de usar `postgres`. **NUNCA** contraseñas en repo/memoria/chat.
-  - ⚠️ *Nota de proceso:* la entrada original de esto (PR #554) se **perdió** porque un PR paralelo (#553) branchado de main anterior la sobrescribió al hacer squash — riesgo conocido de `CONTEXTO-SESIONES.md`: branchea de main lo más tarde posible al anotar.
-
-- **💰 feat(rrhh): automatización de nóminas IMPLEMENTADA — 27/06/2026 (PR #562, rama `claude/payroll-automation-hr-f67d9c`)**
-  Plan de 15 tasks completado. Lo entregado:
-  - `packages/module-nominas`: motor puro de cálculo SS+IRPF+neto. 7 tests unitarios ✅
-  - DB: migraciones 0015/0016/0017 aplicadas en Supabase (contratos_laborales, nominas, incidencias_mes + cnae/at_ep en empresas)
-  - `lib/contratos.ts` + `lib/at-ep-agente.ts` + `lib/nominas.ts` + `lib/nomina-pdf.tsx`
-  - API routes: `/api/admin/contratos/[empleadoId]`, `/api/admin/nominas` (GET list + periods), `/api/admin/nominas/generar`, `/api/admin/nominas/[nominaId]/incidencias`, `/api/admin/nominas/[nominaId]/incidencias/[incId]`, `/api/admin/nominas/[nominaId]/confirmar`
-  - Cron `/api/cron/nominas` (`0 8 25 * *`) en vercel.json
-  - Admin pages: `/admin/nominas`, `/admin/nominas/[periodo]` (NominasPanel), `/admin/empleados/[id]/contrato`
-  - AdminShell: +nav "Nóminas"; ExpedienteClient: +enlace "Contrato laboral →"
-  - 38 tests pasan ✅. Vercel CI verde (alquiler falla por issue pre-existente no relacionado).
-  **Pendiente en Vercel:** añadir env `CRON_SECRET` al proyecto `central-rrhh`.
-
-- **🔍 feat(plataforma/finanzas): buscador y filtros en pestaña Gastos — 26/06/2026 (PR #553 draft, rama `claude/gastos-filters-search-l8x53n`)**
-- **🔍 feat(plataforma/finanzas): buscador y filtros en pestaña Gastos — 26/06/2026 (PR #553 ✅ MERGEADO)**
-  `GastosTab.tsx` — filtros 100% client-side sobre los datos ya cargados (sin petición extra al servidor): buscador de texto
-  (concepto / comercio / comentario), selector de destino, selector de bucket fiscal, selector de banco (dinámico, solo si
-  hay >1), toggle "❗ Sin justificante" y toggle "📦 Amortizables". Botón "✕ limpiar" cuando hay filtros activos. Contadores
-  "N de M" en bandeja y buckets. Sugerir todo se oculta con filtros para no operar sobre subconjunto incompleto. ✅ Mergeado (27/06/2026).
-
-- **🔐 INCIDENTE + BLINDAJE roles de BD (26/06/2026, PR #554):** Para desplegar `apps/transporte` (vertical nueva, ya en main) se conectó la app como usuario **`postgres`** de la BD compartida y se **reseteó su contraseña** en Supabase. Mapa de roles REAL de la BD compartida (`wswbehlcuxqxyinousql`): **sivra → `prisma_sivra`** (login, BYPASSRLS, grants completos en `public`), **rrhh → `rrhh_app`**; **ialimp** iba con `prisma_sivra`; **plataforma** y **transporte** con `postgres`. Tras el reset, parche aplicado por Alberto: las 3 apps (transporte/ialimp/plataforma) pasaron a **`postgres`+contraseña nueva** → funcionan, pero como **SUPERUSUARIO** (se saltan RLS) = deuda de seguridad. Verificado: conexiones `postgres`/Supavisor vivas, `prisma_sivra` intacto, 0 fallos de auth. **Blindaje DB-side hecho:** creados `prisma_ialimp`, `prisma_plataforma`, `prisma_transporte` (clones de `prisma_sivra`: login, BYPASSRLS, 183 tablas de `public`, **sin contraseña** → inertes). **PENDIENTE (Alberto):** `ALTER ROLE <rol> WITH PASSWORD …` para los 3, apuntar `DATABASE_URL`/`DIRECT_URL` de cada app a su rol propio (`<rol>.wswbehlcuxqxyinousql@aws-0-eu-west-1.pooler.supabase.com`, 6543 pooled / 5432 direct) + redeploy; luego **rotar** contraseñas de `postgres` y `prisma_sivra` (ambas se expusieron en chat). **NUNCA** guardar contraseñas en repo/memoria.
-
-- **📄 docs(rrhh): CLAUDE.md creado para apps/rrhh — 26/06/2026 (PR #552 draft, rama `claude/apps-missing-claude-md-hmr9nf`)**
-  `apps/rrhh` era la única vertical del monorepo sin CLAUDE.md. Se creó documentando: qué es iarrhh (Portal del Empleado
-  multi-tenant), URL/Vercel (`central-rrhh.vercel.app`), BD (schema `rrhh`, rol `rrhh_app` con BYPASSRLS, Prisma), alta de
-  empresas desde plataforma vía `POST /api/operador/empresas` (Bearer `RRHH_OPERADOR_SECRET`), estructura de rutas
-  (`/login`, `/admin/*`, `/e/[token]`, `/api/admin/*`, `/api/operador/*`, `/api/e/*`), packages consumidos
-  (`transpilePackages`), patrones clave de `lib/` (auth, empleado-auth, tenant, asistente, firma, documental, push,
-  branding) y reglas del monorepo (secrets con `requireSecret()`, scope `@central/*`). PR en revisión/CI.
-
-- **🔁 AGENTE SEO (housesevillana): cron semanal ALINEADO con el botón — 26/06/2026 (PR #551, rama `claude/seo-cron-serper`)**
-  Había DOS agentes SEO divergentes: el botón "Actualizar SEO ahora" (ruta `apps/plataforma`, ya endurecida con Serper) y
-  el **cron semanal automático** (`apps/sivra/app/api/seo-refresh`, lunes 10:00, gateado por `SEO_AGENT_ENABLED`), que
-  seguía con el camino viejo (`aiSearch`→Gemini, `JSON.parse` pelado, sin alertas) y podía dar 429/`JSON.parse('')`. Se le
-  portó el mismo `runSeoAnalysis` de 3 niveles (Serper 4 búsquedas + NIM → `aiSearch`/Gemini → NIM), `parseSeoJson` con
-  guard y `tgAlert('critico')` en el catch. Conserva lo suyo: campo `schema` y escritura vía `prisma.seoProposal.create`
-  (`topCompetitors` con `Prisma.InputJsonValue`/`Prisma.JsonNull`). **Divergencia resuelta** — si cambia uno, replicar en
-  el otro. El cron sigue apagado por el kill-switch hasta que Alberto lo active. 13 checks verdes, mergeado.
-
-- **🔎 AGENTE SEO (housesevillana): más competidores — 4 búsquedas Serper + 4-6 competidores REALES — 26/06/2026 (PR #550, rama `claude/seo-more-competitors`)**
-  La key Serper ya pegada y funcionando (devolvía competencia real: Genteel Home, Wimdu, etc.). Alberto pidió "ajusta →
-  Más competidores". `runSeoAnalysis` (nivel 1, Serper) sube de **2 → 4 búsquedas** (apartamento turístico centro 6 dorm.,
-  casa vacacional grupos parking 12 pax, alquiler vacacional grupos grandes precio/noche, VFT casa completa parking patio),
-  cada una con su `.catch(()=>'')` para que una consulta caída no tumbe al resto; el prompt pide **listar 4-6 competidores
-  REALES** extraídos de los resultados, sin inventar. Sigue gratis (free tier Serper, agente semanal+manual), mismo
-  fallback a NIM. **De paso** se arregló un fallo de typecheck PREEXISTENTE (no del SEO) que bloqueaba el gate global de
-  CI: `equipaje.test.ts` indexaba `CONSIGNA_POR_ZONA` con un `string` ancho → `for (const zona of ['busto','duplex'] as
-  const)`. 13 checks verdes, mergeado a main → redeploy automático de producción. **Listo para que Alberto pruebe** el
-  botón "Actualizar SEO ahora".
-
-- **💬 AGENTE HUÉSPEDES (sivra/plataforma): deja de responder a los mensajes que Alberto envía A MANO — 26/06/2026 (rama `claude/sevillana-guest-message-78f0b9`)**
-  Alberto detectó (reserva 131511815, House Sevillana) que el agente le redactó una respuesta a un mensaje **suyo**
-  ("Importante recordar el ruido en las horas de descanso"), tratándolo como pregunta del huésped. Causa: la atribución
-  host/guest en `contexto.ts` se apoyaba SOLO en `sent_by_owner` de Smoobu, que vino vacío; y como el mensaje se mandó a
-  mano (no por el agente) tampoco estaba en `mensajes_log`, así que `corregirAtribucion` no lo rescataba → quedó como
-  'guest' y el guard "último=host" no saltó. **Fix:** se recupera la señal NATIVA de Smoobu `type` (la usaba el código
-  probado del viejo sivra: `type===1` = huésped, cualquier otro = host) en un helper puro **`atribuirEmisor`**
-  (`atribucion.ts`), usado en `contexto.ts` (historial del agente), el sondeo `auto-reply` (skip si el último del hilo es
-  host, defensa para el desfase threads↔messages), `seed-aprendizaje` y la ruta de display `[bookingId]`. Si Smoobu no
-  manda `type`, cae al comportamiento previo (`sent_by_owner`) → sin regresión. 5 tests nuevos en `atribucion.test.ts`
-  (incl. reproducción del bug). `node --test` verde.
-
-- **🔎 AGENTE SEO (housesevillana): búsqueda de competencia EN VIVO y GRATIS vía Serper — 26/06/2026 (rama `claude/seo-refresh-serper`)**
-  Tras dejar el agente funcionando en modo degradado (NIM sin búsqueda, porque el grounding de Gemini es de
-  pago/cuota ínfima en free tier → 429), Alberto pidió competencia en vivo sin pagar. Clave: el LLM (NIM/Groq)
-  ya es gratis; lo capado era la BÚSQUEDA. **`runSeoAnalysis` ahora tiene 3 niveles:** (1) **Serper** (Google
-  Search API, free ~2.500/mes) hace 2 búsquedas reales → NIM redacta el SEO con esos resultados (competencia en
-  vivo, coste 0); (2) Gemini grounding si tuviera cuota; (3) NIM solo (último recurso). Reutiliza el patrón
-  `serperSearch` del módulo de mercado. **`SERPER_API_KEY` es editable desde el panel** `/operador/secretos`
-  (write-through a sivra+plataforma, ver `lib/secrets-registry.ts`) — Alberto la pega ahí, no hace falta tocar
-  Vercel a mano. PENDIENTE de Alberto: pegar la key en el panel. Sin key, sigue degradado (NIM) sin romper.
-
-- **🔎 AGENTE SEO (housesevillana): 4º y ÚLTIMO eslabón — INSERT con columnas inexistentes — 26/06/2026 (rama `claude/seo-refresh-fix-insert-columns`)**
-  Tras #545 (fallback NIM), el botón llegó hasta el **final**: generó SEO + lo commiteó en GitHub, y solo falló el último
-  `INSERT` en `seo_proposals` con `column "updatedAt" of relation "seo_proposals" does not exist` (42703). La tabla REAL de
-  la BD compartida (verificado por `information_schema`) **no tiene `updatedAt`**; sí `createdAt`/`appliedAt`. Además `id` es
-  TEXT y `topCompetitors` es jsonb. **Fix** (`route.ts`): el INSERT (1) quita `"updatedAt"`, (2) castea `gen_random_uuid()::text`
-  para el id TEXT, (3) castea el parámetro `${...}::jsonb` para topCompetitors (Prisma lo bindea como text → 42804 sin cast).
-  Verificado con INSERT real en transacción **revertida** contra la BD (sin escribir en prod). Con esto la cadena queda
-  **completa de punta a punta**: #521 (Buffer) + GITHUB_TOKEN + #544 (Gemini) + #545 (fallback NIM) + este INSERT.
-
-- **🔎 AGENTE SEO (housesevillana): 3er eslabón — fallback NIM cuando Gemini da 429 — 26/06/2026 (rama `claude/seo-refresh-fallback-nim`)**
-  Tras mergear #544 (Anthropic→Gemini) y redeploy, el botón "Actualizar SEO" dio `Gemini HTTP 429: You exceeded your
-  current quota`. **No es bug de código** (de hecho confirma que el fix funciona: ya es Gemini + error claro): `geminiSearch`
-  usa `tools:[{google_search:{}}]` (Google Search **grounding**), cuya cuota en el plan **gratuito** de `GEMINI_API_KEY` es
-  ínfima/0 sin billing. **Fix de resiliencia** (`apps/plataforma/app/api/sivra/seo-refresh/route.ts`): `runSeoAnalysis` intenta
-  Gemini y, si falla (429/cualquier error) o no hay key, **degrada a `aiComplete` (NIM/Groq texto, gratis, SIN búsqueda)** —
-  el SEO se genera igual desde los datos de la propiedad, sin romper. Es el patrón que el propio core-ai documenta ("la app
-  decide el fallback") y que la pasarela ya usa en chat. **PENDIENTE de Alberto (opcional, para SEO con competencia en vivo):**
-  activar billing en el proyecto de Google AI de `GEMINI_API_KEY` (grounded search casi no existe en free tier). Sin eso, el
-  agente funciona en modo degradado. Cadena completa: #521 (Buffer) + GITHUB_TOKEN + #544 (Gemini) + este fallback.
-
-- **🔎 AGENTE SEO (housesevillana): 2º fallo latente — Anthropic huérfano → migrado a la pasarela — 26/06/2026 (rama `claude/seo-refresh-gateway-migration`)**
-  Tras arreglar el crash del `Buffer.from` (PR #521) y que Alberto pusiera `GITHUB_TOKEN` en Vercel `plataforma`, el botón
-  "Actualizar SEO" volvió a fallar, ahora con `SyntaxError: Unexpected end of JSON input` (`JSON.parse('')`). Causa (logs de
-  runtime): `runSeoAnalysis` en `apps/plataforma/app/api/sivra/seo-refresh/route.ts` llamaba a **Anthropic directo**
-  (`ANTHROPIC_API_KEY` + `api.anthropic.com`, web_search), pero el monorepo **migró de Anthropic a la pasarela** y esa key ya no
-  está en plataforma → respuesta vacía → `JSON.parse('')` revienta. **Fix:** la ruta usa ahora **`geminiSearch` de `@central/core-ai`**
-  directamente (plataforma ES la pasarela; `GEMINI_API_KEY` ya está), igual que `/api/ai/search`. Se elimina la dependencia de
-  `ANTHROPIC_API_KEY` y se lanza error claro si Gemini devuelve vacío o no-JSON.
-  **Barrida de patrones iguales (a petición de Alberto, "que no vuelva a pasar"):** Anthropic huérfano solo estaba aquí en plataforma
-  (en ia-rest es fallback deliberado que degrada). `Buffer.from(x.content)` sin guarda: plataforma y sivra ya blindados; `ia-rest
-  super/blog/route.ts:98` está protegido por `if (!ghRes.ok)` (riesgo bajo). La visibilidad (aviso Telegram del catch, PR #521) hace
-  que estos fallos de runtime dejen de ser silenciosos. **PENDIENTE de Alberto:** al mergear, redeploy `plataforma` y reprobar el botón.
-
-- **🚚 VERTICAL TRANSPORTE: módulo nuevo + app nueva (camiones como negocio) — rama `claude/vertical-transporte` (PR draft) — 26/06/2026**
-  Arranque de la vertical Transporte (decidida el 26/06 como vertical propia, no embebida en ia-rest). Tras hablar con Alberto: **app nueva `apps/transporte`** + **módulo nuevo** + **BD compartida** (un proyecto Supabase nuevo cuesta y aislaría el intercompany).
-  - **`@central/module-transporte`** (puro, mergeable, riesgo 0): capa "servicio/orden" espejo de `module-alquiler`, que **compone `module-flota`** (reutiliza sus funciones de coste). `ServicioTransporte` (interno intercompany / externo a terceros), precio (importe pactado o `sugerirImporte` = coste de portes × margen), máquina de estados (presupuestado→planificado→en_curso→entregado→facturado), `resumenServicios`, `margenServicio`, `totalIntercompany`/`operacionIntercompanyDe` (tipo `'flota'`, parentType `'porte'`). Tests con **vitest 9/9** (no `node --test`: importa flota cross-package y el index de flota tiene re-exports de valor sin extensión que Node no resuelve — patrón core-firma/module-rrhh). Añadido a `test:vitest` raíz.
-  - **`apps/transporte`** (Next 15 + Prisma sobre BD compartida, auth JWT propia): config espejo de plataforma (`outputFileTracingRoot`, `transpilePackages`, vercel.json, eslint, middleware). Auth contra la tabla `cuentas` compartida, cookie `transporte_session`, secreto **propio** `TRANSPORTE_SESSION_SECRET` (sin literal en prod), sesión **stateless** (no escribe `session_jti` para no pisar plataforma). `lib/transporte-repo.ts` adapta Prisma↔dominio y compone la lógica. Pantallas: **dashboard** (KPIs flota + semáforo ITV/seguro + rentabilidad por vehículo + 🔗 tarjeta intercompany), **flota**, **servicios**. `tsc --noEmit` 0, `next build` ✓ (dashboard/flota/servicios dinámicos).
-  - **Datos**: tablas `flota_*` + `transporte_*` (scope `cuenta_id`, prefijo nuevo, no toca nada). DDL **documentado** en `apps/transporte/prisma/sql/2026-06-26_transporte_schema.sql` — aplicar a mano (preview→prod tras OK). Incluye `flota_conductores` (gap nuevo).
-  - **Intercompany**: `operacionIntercompanyDe()` → tabla `operaciones_intercompany` que **ya lee plataforma** (un porte interno flota→catering aparece eliminado en el consolidado del holding sin tocar plataforma).
-  - **CI**: `transporte` añadido a la matriz `typecheck` de `.github/workflows/tests.yml`.
-  - **Skill**: nuevo `transporte-maestro` (router de la vertical) + enrutado añadido en `central-maestro` + índice `docs/SKILLS.md`. **PR #542 MERGEADO** a main (squash) el 26/06.
-  - **BD + demo APLICADOS por mí** (26/06): el esquema `flota_*`/`transporte_*` está **creado en la BD compartida** (apply_migration `vertical_transporte_schema`) y se **sembró un demo** en la cuenta JJ (`0de5…0001`): 2 vehículos, 1 conductor, 3 docs (semáforo ITV/seguro), 3 servicios (2 a terceros = 2.050€, 1 interno Logística→Catering = intercompany 40.000€), 3 portes. Fichero reproducible + **teardown**: `apps/transporte/prisma/sql/2026-06-26_seed_demo_transporte.sql`. **Solo falta el proyecto Vercel de `apps/transporte`** (lo crea Alberto) para que la web esté viva.
-  - **PENDIENTE (Alberto)**: crear el **proyecto Vercel** (Root Directory `apps/transporte`, install pnpm, envs `DATABASE_URL`/`DIRECT_URL`/`TRANSPORTE_SESSION_SECRET`) y aplicar el SQL. Siguiente iteración de producto: altas/edición (hoy las pantallas son de lectura), planificador con `asignarVehiculo`, rutas multiparada, facturación a terceros (core-fiscal).
-
-- **🧳 AGENTE HUÉSPED SIVRA: zona busto gana consigna MÁS CERCANA (Lock & Explore – Castellar) — rama `claude/equipaje-busto-castellar` — 26/06/2026**
-  Alberto aportó un punto de consigna más pegado a la zona busto (enlace Google Maps; *calle Castellar*). Identificado por búsqueda web = **Lock & Explore – Castellar, C/ Castellar 60A, 41003** (taquillas automáticas 24/7; `lockandexplore.com/sevilla-castellar-store`). Se añade como el **MÁS CERCANO** de la zona busto (House Sevillana / Busto Reform / Luxury Busto), dejando *Locker in the City – Alfalfa* como alternativa. Cambio de modelo: `CONSIGNA_POR_ZONA` pasa de `Record<zona, Consigna>` a **`Record<zona, Consigna[]>`** (lista ORDENADA por cercanía, el primero = más cercano). `bloqueEquipaje` ahora pinta "La más cercana: …" (1º) + "También cerca: …" (resto) + redes. Zona duplex sigue con un único punto (Plaza del Duque). Sigue guardrail-safe (todo en la `ficha`). Tests ampliados (orden Castellar<Alfalfa, guardrail de la web nueva); suite agente `node --test` **63/63**. Doc: skill `sivra-maestro` actualizada.
-
-- **🧳 AGENTE HUÉSPED SIVRA: consigna de equipaje AHORA POR ZONA (punto físico concreto por piso) — rama `claude/agente-huesped-consigna-zona` (PR #539 MERGEADO) — 26/06/2026**
-  Refinamiento del equipaje (resuelve el "pendiente de decisión" de la entrada de abajo): Alberto pidió un punto físico concreto por zona además de las redes, porque "suelen preguntar" y los pisos están en dos zonas. `equipaje.ts` reescrito: `CONSIGNAS_RED` (Radical Storage, Bounce, LOCK & enjoy! — puntos por toda la ciudad, sirven a todos) **+** `CONSIGNA_POR_ZONA` (taquillas 24/7 concretas) **+** `zonaDePiso(propertyId)`. Mapeo: **House Sevillana / Busto Reform / Luxury Busto → zona `busto` → Locker in the City – Alfalfa** (~5 min); **Dúplex Center (Pasaje Francisco Molina, C. Martín Villa, 41003) → zona `duplex` → Locker in the City – Plaza del Duque** (~3 min). `bloqueEquipaje(propertyId)` antepone "la más cercana a este apartamento" y luego ofrece las redes como alternativa; piso sin zona conocida → solo redes. `contexto.ts` pasa `bloqueEquipaje(propertyId)` (antes sin arg). Sigue guardrail-safe (todo en la `ficha`) y en allowlist de graduación. Tests `equipaje.test.ts` reescritos (9 casos: zonaDePiso, Dúplex→Plaza del Duque, Busto→Alfalfa, sin-zona→solo redes, control checkout); suite agente `node --test` **61/61**. Doc: skill `sivra-maestro` actualizada.
-
-- **🟢 DEMO HOLDING JJ SEMBRADA EN PROD (BD compartida) + financiero manual por negocio — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)**
-  Para la reunión de JJ, con OK explícito de Alberto ("hazlo en real, si hay OK metemos sus datos y borramos los ficticios"), se **aplicó a la BD compartida** (`wswbehlcuxqxyinousql`, schema public) y se **sembró un grupo demo**:
-  - **DDL aplicado** (`apply_migration` `operaciones_intercompany_y_financiero_manual`): tabla `operaciones_intercompany` (cuenta_id/sociedad_origen/destino/importe/…); columnas `negocios.ingresos_manual`/`gastos_manual`. Aditivo: nadie más las lee; la prod actual de plataforma (código viejo) y la cuenta real de Alberto no se ven afectadas.
-  - **Financiero manual** (código): `manualFinanciero()` en `lib/financiero.ts` + el dashboard usa cifras manuales cuando el negocio no tiene `app`. Habilita negocios sin app (y el demo).
-  - **Seed `[seed-demo]`** (cuenta `0de50000-…-0001`, login **`demo-jj@central.local` / `JJdemo2026`**): 3 sociedades (Catering / Logística / Eventos&Materiales JJ), 3 negocios con cifras, 2 operaciones intercompany (Logística→Catering 40k flota; Materiales→Catering 20k menaje). Consolidado: **bruto 770k/545k/225k**, intercompany eliminado **60k**, **consolidado 710k/485k/225k** (neto invariante). Fichero reproducible/limpieza: `prisma/sql/2026-06-26_seed_demo_holding_jj.sql`.
-  - **LIMPIEZA cuando entren datos reales:** `DELETE FROM cuentas WHERE id='0de50000-0000-4000-a000-000000000001';` (cascada borra sociedades+negocios+operaciones).
-  - **Visible en el PREVIEW de plataforma** del PR #537 (que ya lleva el código intercompany); en PROD aparecerá al mergear #537. La tarjeta del holding solo sale para cuentas con operaciones intercompany → la cuenta real de Alberto no la ve.
-
-- **📦 NUEVO `@central/module-alquiler` (vertical alquiler de materiales) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)**
-  Cuarto módulo de la tanda JJ y base de una de las dos verticales nuevas del diseño (alquiler de menaje/material **interno a eventos del grupo Y a terceros** — Alberto: "a veces alquila su material a terceros"). PURO, se **compone** sobre `module-encargo` (tipo 'alquiler') y referencia materiales por id (sin acoplar tipos). Lógica: `diasAlquiler` (inclusivo), `importeLinea` (por día o tarifa fija), `subtotal`/`totalAlquiler` (descuento; la fianza no suma), `recargoRetraso` (días tarde × tarifa/día), máquina de estados `reservado→entregado→devuelto` (+cancelado), `comprometidoEnVentana`/`disponibleEnVentana` (solape de fechas, junto al stock de module-materiales), y **costura intercompany** (`esIntercompany`/`totalIntercompany`/`operacionIntercompanyDe`: un alquiler interno entre dos sociedades del grupo se elimina; a terceros es ingreso real). **10/10 tests `node --test`, tsc 0 errores, guardián 22/22, radiografía regenerada (`npm run auditar` → 30 packages).** Sin consumo aún (blast radius 0). Docs (ESTRUCTURA.md) actualizados.
-
-- **🚚 FLOTA = vertical propia (transporte), NO dentro de ia-rest — decisión de Alberto, 26/06/2026**
-  Se construyó una UI de flota en el panel `/owner` de ia-rest (`/owner/flota` + pestaña en `GRUPOS`) y **se REVIRTIÓ**: Alberto recordó que la flota/transporte **será una vertical aparte** (como el alquiler), no embebida en ia-rest. Lo que QUEDA en ia-rest: el endpoint `GET /api/owner/flota/resumen` (#534, ya en main) como **puerto de datos** de su propio transporte-en-eventos. El consumo de `module-flota` como producto será la **vertical Transporte** (app nueva que compone module-flota, paralela a la vertical Alquiler basada en module-alquiler). Pendiente: crear esa app cuando Alberto provisione su proyecto Vercel.
-
-- **🔗 CABLEADO `module-intercompany` → apps/plataforma (PREVIEW, NO mergear sin revisión) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)**
-  Cableado del gancho del holding al dashboard consolidado, montado como **capa ADITIVA e independiente** (NO toca el cálculo existente `getResumenNegocio` ni la suma bruta `totalIngresos`/`totalResultado` → los números reales de Alberto no cambian). Piezas: `apps/plataforma/lib/intercompany.ts` (lee `operaciones_intercompany`, delega TODA la consolidación al módulo puro `consolidar()`) + `lib/intercompany-mapeo.ts` (helpers PUROS sin imports en runtime → testeables: `filaAOperacion`, `resumenPorSociedad` negocio→sociedad) + tarjeta **🔗 Consolidado del holding** en `dashboard/page.tsx` (bruto − intercompany eliminado = real del grupo, + tabla por sociedad). **Tolerancia clave:** si la tabla no existe (migración no aplicada) o no hay operaciones internas → `consolidado === suma bruta` y la tarjeta **NO se muestra** (cero cambio para Alberto). **Migración como ARCHIVO documentado NO aplicado:** `prisma/sql/2026-06-26_operaciones_intercompany.sql` (BD compartida con ialimp/sivra vivos → se ejecuta a mano cuando Alberto lo apruebe). Dep `@central/module-intercompany` + `transpilePackages`. Verificación: helpers 4/4 (`node --test`, local; plataforma no corre sus tests en CI), `tsc` 0 errores en mis archivos (los 7 restantes son symlinks/deps de entorno que CI resuelve con `pnpm install`). **PR draft, NO mergear: pendiente revisión de Alberto en el preview de Vercel.**
-
-- **🧳 AGENTE HUÉSPED SIVRA: respuesta de CONSIGNA/EQUIPAJE (no tenemos servicio + consignas cercanas) — rama `claude/agente-huesped-equipaje` (PR pendiente) — 26/06/2026**
-  Mismo patrón que el parking (PR #527), pedido por Alberto: pregunta recurrente "¿dónde guardo/dejo las maletas?" → el piso NO tiene consigna; el agente se disculpa y recomienda consignas cercanas del centro. **A) curada** (no búsqueda en vivo): nuevo `equipaje.ts` (`CONSIGNAS_CERCANAS`+`bloqueEquipaje()`) inyectado en la **`ficha`** (`contexto.ts`) → guardrail-safe; categoría `equipaje` en `detectCategory` **ANTES que checkout** (porque "dejar las maletas" contiene "dejar") + en allowlist de graduación (`graduacion.ts` y `telegram-msg.ts`). **Consignas = REDES** (Radical Storage, Bounce + LOCK & enjoy!): tienen muchos puntos por todo el centro → **un solo bloque cubre los 4 pisos y las dos zonas** (cluster Luxury/Busto/Socorro y Dúplex); el huésped busca el punto más cercano a la dirección del piso (que está en la ficha). Datos por búsqueda web (jun-2026). Tests: `equipaje.test.ts` (incl. control de que "dejar las maletas" cae en equipaje, no checkout); suite agente `node --test` 58/58. **Pendiente decisión de Alberto:** ¿dejar redes (cubren todo) o añadir un punto físico concreto por zona? Doc: skill `sivra-maestro` actualizada.
-
-- **💬 AGENTE HUÉSPED SIVRA: contexto del hilo + bucle de re-borrador (ver antes de enviar) — PR #535 MERGEADO — 26/06/2026**
-  Dos mejoras pedidas por Alberto al agente de mensajería (`apps/plataforma/lib/sivra/agente-huesped/*`):
-  - **(1) Contexto del hilo:** antes el agente redactaba mirando solo ficha+guía+aprendizajes+ÚLTIMO mensaje; el historial se cargaba (`contexto.ts`) pero **NO se le pasaba a la IA** (solo se usaba para el guardrail). Ahora `decidir.ts` le pasa el **hilo** como mensajes previos a `aiComplete` vía nuevo `hilo.ts::hiloComoMensajes` (**últimos 15, ambos lados**, huésped=user / anfitrión=assistant; quita el último si == pregunta para no duplicar). Regla añadida al prompt: "continúa la conversación, NO repitas lo ya dicho". Mejora también el **auto-envío** (mismo motor `decidir`). `hilo.ts` es PURO (solo `import type`) → testeable; `hilo.test.ts` 5/5.
-  - **(2) Bucle de re-borrador (Modificar/Retocar YA NO envían directo):** tras ✏️ Modificar o 🔧 Retocar, el agente **re-propone** el texto FINAL con `reproponerBorrador` (`telegram-msg.ts`): en el idioma del huésped + `🔁` español para verificar, con botones ✅/✏️/🔧, manteniendo el pendiente. **Solo ✅ Enviar manda al huésped.** Así Alberto ve SIEMPRE lo que sale (incluida la traducción es→idioma del huésped) y puede **encadenar vueltas**. En `telegram-webhook/route.ts` los paths `esperando_retoque`/`esperando_edit` ya no hacen `enviarAlHuesped`+`DELETE`; el atajo "ok/vale" en Modificar sigue enviando el borrador tal cual.
-  - **Caveat asumido:** `mensajes_log` no reescribe el texto editado (solo flag `auto_sent` al enviar); el **aprendizaje** sí usa el texto final (`aprenderCorreccion(pend.borrador)`). Suite agente `node --test` 52/52; typecheck filtrado limpio. Doc: skill `sivra-maestro` actualizada.
-
-- **🔌 CABLEADO `module-flota` → ia-rest (primer consumo real de un módulo nuevo) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)**
-  Tras la trilogía de núcleos (flota/intercompany/encargo), primer cableado a una app. **Aditivo y de bajo riesgo** (no cambia rutas ni comportamiento existente): `apps/ia-rest/src/lib/flota-adapter.ts` (mapea `vehiculos_grupo`/`evento_transporte` → `Vehiculo`/`Porte` con columnas reales verificadas en BD; ojo `tarifa_fija_evento`→`tarifaFija`; `import type` → adaptador puro y testeable) + endpoint **solo lectura** `GET /api/owner/flota/resumen` (rentabilidad por vehículo: coste estimado vs real + desviación, vía module-flota). Dep `@central/module-flota` añadida a `package.json` + `transpilePackages` (next.config.js y .ts). CI usa `--no-frozen-lockfile` → regenera lockfile. **module-flota pasa a CONSUMIDO** (radiografía 15/19). Verificación: adaptador 4/4 (`node --test`, local), guardián 22/22; typecheck+build de ia-rest los valida CI. Nota infra: ia-rest no corre sus `test/*.test.ts` en CI (solo typecheck+build), por eso el test del adaptador es evidencia local.
-
-- **🔕 AGENTE HUÉSPED SIVRA: quitado el recordatorio horario de escalados pendientes — 26/06/2026 (rama `claude/quitar-recordatorio-escalados`)**
-  Alberto recibía cada hora por Telegram "⏳ Escalados pendientes de tu OK" repitiendo los MISMOS 2 borradores sin aprobar (reservas 142771692 general y 144860521 wifi/FR), con el contador "hace Xh" subiendo. **No era un bug:** verificado que el webhook de Telegram (`telegram-webhook/route.ts`) hace `DELETE FROM mensajes_pendientes_tg` en TODAS las acciones terminales (✅ enviar / descartar / modificar / aprobar) → los 2 seguían en cola solo porque nunca se pulsó ningún botón. Con el bajo volumen de Alberto el aviso horario solo molesta. **Cambio:** eliminado el cron `/api/sivra/mensajes/recordar-pendientes` de `apps/plataforma/vercel.json` + borrado el route huérfano (solo lo llamaba ese cron). El **resumen diario** (`resumen-diario`, 19:00) ya reporta "X te esperan", así que sigue habiendo un repaso 1×/día. Los 2 pendientes actuales quedan en cola (sin nag); se resuelven aprobándolos/descartándolos en Telegram cuando Alberto quiera.
-- **🔕 AGENTE HUÉSPED SIVRA: quitado el recordatorio horario de escalados pendientes — PR #532 MERGEADO — 26/06/2026**
-  Alberto recibía cada hora por Telegram "⏳ Escalados pendientes de tu OK" repitiendo los MISMOS 2 borradores sin aprobar (reservas 142771692 general y 144860521 wifi/FR), con el contador "hace Xh" subiendo. **No era un bug:** verificado que el webhook de Telegram (`telegram-webhook/route.ts`) hace `DELETE FROM mensajes_pendientes_tg` en TODAS las acciones terminales (✅ enviar / descartar / modificar / aprobar) → los 2 seguían en cola solo porque nunca se pulsó ningún botón. Con el bajo volumen de Alberto el aviso horario solo molesta. **Cambio (PR #532):** eliminado el cron `/api/sivra/mensajes/recordar-pendientes` de `apps/plataforma/vercel.json` + borrado el route huérfano (solo lo llamaba ese cron). El **resumen diario** (`resumen-diario`, 19:00) ya reporta "X te esperan", así que sigue habiendo un repaso 1×/día. **Los 2 pendientes se DESCARTARON** (`DELETE FROM mensajes_pendientes_tg` por Supabase MCP, decisión de Alberto) — cola vacía. La skill `sivra-maestro` NO listaba este cron, así que no hubo nada obsoleto que corregir ahí.
-- **🧩 NUEVO `@central/module-encargo` (el agregado central) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)**
-  Tercer desarrollo modular de la tanda. La "pieza central" de la modularización (docs §3): un evento, un porte, un alquiler o una cita son el MISMO patrón → el **Encargo** los une bajo una identidad común con **máquina de estados** (borrador→presupuestado→confirmado→en_curso→completado, +cancelado desde cualquier abierto) y enlaces por id a cada capacidad (CRM, presupuestos, agenda, inventario, proveedores, portal, feedback, flota, intercompany). Funciones: `puedeTransicionar`/`transicionar` (inmutable, lanza si inválida), `componentesVinculados`/`estaCompleto`/`componentesFaltantes`, `resumenEncargos` (por estado/tipo, abiertos, valor, completados-mes). No acopla tipos entre módulos (solo ids). **10/10 tests, tsc 0 errores, guardián 22/22. Sin consumo aún (blast radius 0).** Es la base para montar las verticales nuevas (alquiler, transporte). Docs actualizados (ESTRUCTURA.md).
-
-- **🔗 NUEVO `@central/module-intercompany` (el gancho del holding) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)**
-  Segundo desarrollo modular para la visión holding de Joaquín. Núcleo PURO de **consolidación con eliminación** de operaciones entre sociedades del mismo grupo (cocina→tiendas, flota→catering, materiales→eventos): `consolidar(sociedades, operaciones)` devuelve agregado bruto (suma simple, lo de hoy) · eliminaciones · **consolidado real** · detalle por sociedad (ingresos/gastos intercompany). Solo se elimina si AMBOS extremos están en el holding (cliente/proveedor externo NO se elimina). **Invariante testeada:** eliminar intercompany no cambia el resultado neto, solo deshincha ingresos/gastos. Puerto `OperacionAdapter`; costura `parent` para trazar el Encargo (porte/alquiler/lote). **10/10 tests, tsc 0 errores, guardián 22/22.** **Sin consumo aún (blast radius 0).** Decisión de Alberto: el **cableado a `apps/plataforma`** (tabla de operaciones + eliminación en el dashboard, app VIVA) se hará aparte y se revisa en PREVIEW antes de main. Docs actualizados (ESTRUCTURA.md).
-- **🔍 AUDITORÍA DIARIA — 26/06/2026** (rutina programada, modo ligero)
-  8 commits nuevos (PSD2 fix + module-flota + core-receipts docs + sivra parking), todos documentados. Heartbeat: todos los crons ✅ — `mercado/cron` se autocuró (SERPER_API_KEY añadida por Alberto). 1 corrección documental: `MATRIZ.md` — `module-flota` añadido al árbol de packages. **Carry-forward 🔴 persistente (4ª semana): `concursos_radar_criterios` SIGUE SIN APLICARSE en Supabase** → cron `/api/concursos/radar` de plataforma falla en producción. Informe completo: `docs/AUDITORIA-2026-06.md` § Addendum 2026-06-26.
-
-- **🅿️ AGENTE HUÉSPED SIVRA: respuesta de PARKING con parkings cercanos — PR #527 MERGEADO — 25/06/2026**
-  Alberto pidió que, cuando un huésped pregunte por parking, el agente conteste que **nuestro parking está ocupado** y le recomiende estos parkings de los alrededores (centro de Sevilla) **con web y teléfono**: José Laguillo, Escuelas Pías, Imagen y Plaza de la Concordia.
-  - **Implementación:** nuevo `apps/plataforma/lib/sivra/agente-huesped/parking.ts` (constante `PARKINGS_CERCANOS` + `bloqueParking()`), inyectado en la **`ficha`** del piso en `contexto.ts`. Va en la ficha (no solo en el prompt) **a propósito**: el guardrail anti-invención (`contieneDatoInventado`) valida teléfonos/URLs contra las FUENTES (ficha+guía+historial); al estar los teléfonos en la ficha, el agente puede darlos **sin escalar a humano**. La categoría `parking` ya está en la allowlist de graduación → puede auto-enviarse.
-  - **REGLA DE ORO respetada:** el bloque solo se usa si el huésped pregunta por aparcamiento (no se añade info no pedida).
-  - **Datos finales (búsqueda web + enlaces aportados por Alberto, jun-2026):** José Laguillo/AUSSA (954 21 02 19, apparkya.com/parking/parking-jose-laguillo), Escuelas Pías (954 56 17 58, parkingescuelaspias.es), Imagen (954 21 00 68, parkingimagen.es), Plaza Concordia/SABA (954 21 88 31, saba.es).
-  - **Tests:** `parking.test.ts` (4 casos, incluido control de guardrail). `node --test` → 13/13 OK.
-  - **Doc:** skill `sivra-maestro` actualizada con el bullet de parking.
-- **🚚 NUEVO `@central/module-flota` (extracción de la flota a módulo) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`, PR #525)**
-  Primer desarrollo tras la auditoría. Extraída la flota a medida de ia-rest (`vehiculos_grupo`+`evento_transporte`) a un **paquete portable** `packages/module-flota` (TS puro, patrón puerto/adaptador como el resto). Lógica pura: costes estimado/real por porte, rentabilidad por porte y por vehículo, **asignación inteligente** por capacidad/tipo (frigorífico) + disponibilidad (solapes), **gestión documental** ITV/seguro/mantenimiento (alertas caducado/por-caducar), y **costura intercompany** (`esInterno`+`sociedadOrigen/Destino`, `totalIntercompany`). **15/15 tests `node --test` verdes, `tsc` 0 errores, guardián 22/22.** Radiografía regenerada (`npm run auditar`: 27 packages). **Sin consumo aún** (no lo importa ninguna app → blast radius 0): pendiente el adaptador en ia-rest + la vertical Transporte. Docs actualizados (ESTRUCTURA.md, DISENO-modulos-materiales-flota.md).
-
-- **🔍 AUDITORÍA COMPLETA DEL PROYECTO + visión holding Joaquín Jaén + docs corregidos — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)**
-  Alberto se reúne con el DUEÑO (Joaquín) la semana que viene; quiere **vender la visión holding completa**. Al preparar la auditoría se descubrió que **el proyecto está MUCHO más construido de lo que decían los docs** — y se corrigió la documentación para que **no vuelva a pasar**.
-  - **Mapa del negocio de Joaquín (5 negocios, NO 6):** restaurante, catering/eventos (núcleo), haciendas (propias+terceros), **alquiler de materiales (también a TERCEROS)**, transporte/flota. "Tiendas comida para llevar" de los docs viejos **NO existe** (descartado por Alberto). Cocina central abastece restaurante+catering. Gancho = **intercompany**.
-  - **Auditoría de capacidades (6 agentes en paralelo, verificada en código):** 10 `core-*` (8 HECHO, core-email PARCIAL, core-payments ESBOZO) + **16 `module-*`** (14 HECHO y CONSUMIDOS; solo `module-agenda` y `module-revenue` HECHOS pero SIN consumo) + 5 apps (ia-rest ~488 rutas, ialimp, sivra, plataforma, rrhh). **`module-materiales` YA soporta alquiler** (tarifa/fianza/daños/`ReservaAnticipada`/`ClienteMaterial`). **`module-crm`/`presupuestos`/`proveedores`/`feedback` están consumidos** (los docs los marcaban "⏳ no usado" — falso).
-  - **Gaps REALES (lo único genuinamente pendiente):** (1) **intercompany** en `apps/plataforma` = INEXISTENTE (consolidado = suma simple, sin eliminación de operaciones entre sociedades); (2) **`module-flota`** no existe → la flota vive a medida en ia-rest (`vehiculos_grupo`+`evento_transporte`). **DECISIÓN (Alberto): extraerla a `module-flota` + vertical Transporte**, patrón `module-crm`←`leads_evento`; (3) `module-agenda` y `module-revenue` HECHOS pero sin cablear (haciendas/flota/kits, BI); (4) **haciendas** = NO es desarrollo nuevo → **clonar ialimp** (calendario iCal + portal propietario + turnaround, ~70% reutilizable).
-  - **PRINCIPIO (Alberto, innegociable):** todo desarrollo nuevo = **modular** (`packages/module-*`), reutilizable por otros clientes/sectores. Joaquín = **design partner**.
-  - **Docs CORREGIDOS para que no recurra:** `docs/ESTRUCTURA.md` (contadores 6→10 core, 9→16 module, columna "¿Usado hoy?" arreglada, +app rrhh, banner→radiografía viva); banners de realidad en `docs/DISENO-modularizacion-verticales.md` y `docs/DISENO-modulos-materiales-flota.md` (estaban como "no implementado"); comentario obsoleto de `packages/module-crm/src/index.ts`. **Fuente de verdad = `docs/ARQUITECTURA.generated.md`** (`npm run auditar`, al día: 5 verticales · 26 packages · 951 APIs). **Antes de "diseñar" algo, mirar ESTRUCTURA.md.**
-  - **Entregable:** Google Doc "Auditoría Holding Joaquín Jaén" en Drive (carpeta reuniones JJ `0AFsLksoArH7GUk9PVA`). Pendiente: actualizarlo a la realidad corregida (sobrestimaba los gaps).
-- **✅ CORE-RECEIPTS: ciclo completo cerrado (#307 + #488 + #489 MERGEADOS) — 25/06/2026**
-  Cerrada la capacidad transversal de emitir los recibos/facturas REALES (no fake — choca con VeriFactu)
-  más bonitos y con marca, vía el nuevo paquete compartido **`@central/core-receipts`** (TS puro,
-  `node --test`, deps `workspace:*`). Las 3 fases shippables están en `main`:
-  - **#307 — Fase 1 (reducida):** scaffold del paquete + modelo `ReceiptDoc` (unión discriminada) +
-    `assertFiscalIntegrity` (guardia **fail-closed**: si el render no contiene los importes fiscales
-    exactos, lanza `FiscalIntegrityError`) + migración de **3 generadores térmicos de cocina** ESC/POS
-    (`generarEscPos`/`generarTextoPlano`/`generarTicketCuenta`) con **golden tests byte-equality**.
-    `generarEscPosCuenta` se quedó en ia-rest (main le añadió e-recibo digital `recibo_url`+QR → conflicto
-    semántico; se redujo el alcance por decisión de Alberto). Helper `withFrozenClock` en los tests porque
-    ese generador lee `new Date()` (pillado por verificación independiente: un subagente lo dio por verde y
-    no lo estaba).
-  - **#488 — Fase 2:** `renderInvoiceHtml(doc, branding)` — renderer HTML de factura con CSS vars
-    `--brand-*`, paridad visual con la plantilla anterior; adoptado en la factura imprimible del propietario
-    de ialimp.
-  - **#489 — Task 4 (white-label):** `apps/ialimp/app/api/propietario/[token]/factura/[id]/route.ts`
-    usa `getBranding(cliente.empresa_id)` en vez de `BRAND_DEFAULT` → **cada empresa ve su marca** en la
-    factura (Sique Brilla = oro/negro `#0a0805`/`#d4a017`; resto = índigo ialimp `#4f46e5`). Alberto lo sacó
-    de draft y lo mergeó él mismo (visto bueno visual en preview de ialimp, que salió verde).
-  - **PENDIENTE a propósito (NO construir a ciegas):** **Fase 3** (glosa IA por emisión, Modo A) y
-    **Fase 4** (Modo B, layout experimental con IA) + **PDF** vía `@react-pdf/renderer`. Solo esbozadas en
-    `docs/superpowers/specs/2026-06-16-core-receipts-design.md`. Cargan decisiones de coste/producto reales
-    (gasto LLM **por factura** renderizada, gateway IA de ialimp = `lib/ai-client.ts` no core-ai, peso del
-    bundle PDF) → requieren **brainstorm/diseño** antes de tocar código. NO es trabajo mecánico.
-- **🔄 AUDITORÍA DIARIA: nuevo modelo de entrega en DOS CARRILES + avisos Telegram — branch `claude/stale-info-daily-updates-cena38` — 26/06/2026**
-  Alberto se topó con info desactualizada pese a la rutina nocturna. Diagnóstico: el problema NO era de alcance (la auditoría ya reconciliaba memoria/skills/docs/manuales) sino de **entrega** — todo se quedaba en un PR draft que, sin mergear, dejaba la info vieja viva. Rediseño de `/auditoria-diaria`:
-  - **Carril 1 (auto-aplicar):** los arreglos de **texto** (memoria/skills/`CLAUDE.md`/`SKILLS.md`/`CONTEXTO-SESIONES.md`/manuales) se **commitean y empujan directos a `main`**, sin PR. Con **guardarraíl (B):** solo cambios acotados; lo grande/estructural se trata como carril 2. Bitácora de transparencia en **`docs/AUTO-APLICADOS.md` (G)**.
-  - **Carril 2 (revisión):** código, infra, gran radio, hallazgos ambiguos y **crons mudos** → **PR draft** + **aviso Telegram (A)** con `tgSendButtons` (botón-URL al PR draft) para "pasártelo en conversación". Nunca a `main`.
-  - **Frescura (D):** sello `<!-- verificado: YYYY-MM-DD -->` al pie de los docs + nuevo **`docs/FUENTES-DE-VERDAD.md` (F)** que mapea doc/skill → paths de código (qué releer cuando algo cambia).
-  - **Heartbeat semanal (C):** en la pasada `--profunda` (domingos) manda SIEMPRE un Telegram "sigo viva" aunque no haya hallazgos (vigila al vigilante).
-  - **Archivos tocados:** `.claude/commands/auditoria-diaria.md` (reescrito), `docs/RUTINAS-PROGRAMADAS.md`, `docs/SKILLS.md`, `CLAUDE.md`, nuevos `docs/FUENTES-DE-VERDAD.md` + `docs/AUTO-APLICADOS.md`.
-  - **Fase 2 anotada (sin implementar):** E (shift-left: avisar en PR si tocas código sin actualizar su doc) + H (trigger por evento tras merge a `main`).
-  - **⚠️ ACCIÓN MANUAL DE ALBERTO:** añadir `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` a la env de la rutina de auditoría en `claude.ai/code → Rutinas`. Sin ellos la auditoría corre igual pero no avisa por Telegram.
-
-- **✅ BANCA/PSD2: arreglada la RAÍZ de los movimientos duplicados — PR #524 MERGEADO — 25/06/2026**
-  Alberto detectó la cuota del préstamo (`CUOTA PTMO 856289293-5`, –772,86€ el 05/06) **duplicada** en el dashboard. Investigado: **15 movimientos PSD2 duplicados** en `movimientos_bancarios` (cuota PTMO ×3 meses, recibos `TARJ.CRDTO` ×6, `KUTXABANK SEG. VIDA` ×2, `RECIBO AYTO. SEVILLA`, comisión emisión, liq. intereses, devolución AEAT). **⚠️ REINCIDENTE:** esto ya pasó y se limpió a mano (ver entrada "16 registros eliminados… CUOTA PTMO… AEAT deducción maternidad" más abajo) **sin arreglar la causa** → reincidió. Esta vez se ataca la raíz. **Causa raíz:** `lib/psd2.ts::hashMov` deduplicaba por `entry_reference` del banco (o fallback `accountUid|fecha|importe`); **ambos ROTAN entre sesiones de Enable Banking**, así que el cron `psd2-sync` del 24/06 reinsertó lo ya importado el 14/06 con otro hash → burló `ON CONFLICT (cuenta_bancaria_id, dedupe_hash)`. La dedup por contenido existente era **solo en memoria** (no protege entre pasadas).
-  - **Fix código:** `hashMov` pasa a clave por **CONTENIDO estable** = `cuenta_bancaria_id|fecha|importe(2dec)|upper(trim(concepto))` (ignora entry_reference/accountUid). Verificado byte-a-byte node↔postgres. Call sites actualizados (`accountUid`→`cbId`); eliminado el `vistosContenido` redundante. Landmine documentado en `apps/plataforma/CLAUDE.md` + skill `plataforma-maestro`.
-  - **Migración:** `prisma/sql/2026-06-25_psd2_dedupe_contenido.sql` (borra sobrantes conservando el más antiguo + backfill de `dedupe_hash` de todas las filas psd2 al esquema de contenido).
-  - **✅ APLICADO Y VERIFICADO (Supabase MCP):** DELETE de los 15 sobrantes + backfill de TODAS las filas psd2 al hash de contenido. Verificación: **0 filas con hash incorrecto, 0 grupos duplicados**; la cuota PTMO 05/06 quedó con hash `7044dc1c…` = exactamente el que produce el código desplegado → el próximo cron `psd2-sync` (06:00 UTC) hará match en el `ON CONFLICT` y NO reduplicará.
-  - **MATIZ asumido:** dos movimientos PSD2 realmente idénticos el mismo día (misma cuenta/importe/concepto) se colapsarían en uno (rarísimo en cuenta personal; ya lo asumía el dedup en-memoria previo).
-
-- **🔍 AUDITORÍA DIARIA — 25/06/2026** (rutina programada, modo ligero)
-  Hallazgo 🔴: `mercado/cron` MUDO desde el 23/06 — `SERPER_API_KEY` configurada en Vercel `sivra` pero **NO en `plataforma`** donde el cron realmente corre. Vercel runtime errors lo confirman (23/06 y 24/06 a las 07:15 UTC). **Acción: añadir `SERPER_API_KEY` a Vercel proyecto `plataforma`** (mismo valor que en `sivra`). `auto-sessions` falso positivo (55h mudo porque todas las sesiones ya existen). CIMA LIQ operativo (tabla ✅, cron ✅, primer run esperado hoy 07:30 UTC). `pilot-track` autocurado ✅. Reconciliación: `plataforma-maestro` actualizado con CIMA LIQ; entrada CIMA LIQ reordenada aquí. Informe completo: `docs/AUDITORIA-2026-06.md` § Addendum 2026-06-25.
-
-- **🏢 CORREDURÍA: integración CIMA LIQ → cruce BBVA → alerta Telegram — PR #508 draft — 24/06/2026**
-  Alberto quiere conectar su correduría (CS-F/0170, ASegura S.L.) a CIMA (WSE Estándar TIREA) para descargar ficheros de liquidaciones y verificar que cuadran con lo cobrado en BBVA.
-  - **`apps/plataforma/lib/cima.ts`**: cliente SOAP completo (`recibirFicherosPendientes` + `confirmarFicherosRecibidos`). Parsea EIAC 6.0: cabecera tipo-0 (código compañía pos 2-6, periodo AAAAMM pos 12-18), pie tipo-9 (importes × 100). Decodifica base64 latin1. Mapeo de códigos CIMA → nombres (Mapfre/Allianz/Reale/Generali/Occident/AXA/…).
-  - **`apps/plataforma/app/api/cron/cima-liq/route.ts`**: cron diario. Descarga LIQ, hace upsert en `cima_liquidaciones` por `nombre_fichero`, cruza contra `movimientos_bancarios` (`destino='seguros'`) en ventana ±45 días del cierre del periodo. Si |diff| > 5 € → Telegram `🟡` con detalle; si todo cuadra → Telegram `✅`.
-  - **BD:** tabla `cima_liquidaciones` + índice `idx_cima_liq_cuenta_periodo` — **migración aplicada vía Supabase MCP** (`wswbehlcuxqxyinousql`).
-  - **`vercel.json`**: cron añadido `30 7 * * *` (07:30 UTC diario).
-  - **Branch:** `claude/amazing-mccarthy-nk11hw`. **PR #508** draft — builds Vercel en progreso al cierre de sesión.
-  - **Credenciales CIMA** (Vercel env secrets — nunca en chat): `CIMA_WSE_USER=cima.albertocsf0170ws`, `CIMA_WSE_PLATAFORMA=ALBERTOSUAREZ_6393`, `CIMA_WSE_PASSWORD` (ya configurada por Alberto).
-  - **Pendiente:** test manual `GET /api/cron/cima-liq?secret=<CRON_SECRET>` en preview. Codeoscopic/Avant2 pendiente de credenciales sandbox renovadas (contactar a Juan Manuel / LOOR.es — ticket #267336 cerrado el 19/06).
-- **💬 GASTOS: comentarios por movimiento + saneo de clasificación del Dúplex — branch `claude/expense-deductibility-control-sfx6od`, PR #491 — 24/06/2026**
-  - **Comentarios por gasto** (lo pidió Alberto, "así controlamos mejor"): nueva columna `movimientos_bancarios.comentario` (`prisma/sql/2026-06-24_mov_comentario.sql`, aplicada). Endpoint `POST /api/banca/comentario` (`{id,comentario}`, trim 500, scoped por cuenta). `lib/finanzas.ts` `GastoMov.comentario` + SELECT. UI en `GastosTab.tsx`: botón «💬 comentar» + `ComentarioEditor` (top-level, estado local para no perder foco) en `Fila` y en `Grupo` de count 1. `tsc` OK.
-  - **Saneo manual de clasificación (BD compartida, vía MCP; cuenta `4fdc993a…`):** Alberto fue revisando cargos de BBVA mal metidos en `seguros` (correduría) por venir del **Excel pelado** ("Adeudo nº…", pre-PSD2). Corregido a `turistico_duplex` + comentario: **Seguro Dúplex** 270,60€ (11/12/25), **Internet Dúplex** 20,90€, **Luz Dúplex** ×4 (TE Electricidad y Gas España; regla `banca_destino_reglas` clave `TE ELECTRICIDAD Y GAS ESPANA`), **Comunidad Dúplex** ×15 (Pasaje Francisco Molina 4; regla clave `COMU. DE PROP.PASAJE FRANCISCO MOLINA`). **Seguro RC del corredor** 399,13€ → confirmado en correduría (correcto). IBI Dúplex 130,46€ ya estaba bien.
-  - **⚠️ Lección — reglas por substring sobre-amplias:** al aprender la regla «ELECTRICIDAD» (ILIKE `%ELECTRICIDAD%`) arrastró por error ENDESA (otros pisos → `turistico_pisos`) y ENERGÍA XXI (luz personal → `personal`) porque su concepto trae "FACTURA DE ELECTRICIDAD". Revertido y sustituido por la clave específica `TE ELECTRICIDAD Y GAS ESPANA`. Verificar SIEMPRE el `concepto` COMPLETO (no truncado) antes de reclasificar por substring.
-  - **Conexión bancaria (PSD2):** BBVA activa desde 20/03/2026, Kutxa desde 17/03/2026 (banca abierta da solo ~90 días de histórico → no se puede sacar ene-2025 por PSD2). Todo lo anterior viene del **Excel** (xls-bbva/xls-kutxa desde 01/01/2025), que se solapa con PSD2 y se deduplica (`duplicado_estado='ignorado'` en la copia pobre). El histórico está completo; lo que falta en meses viejos es solo el concepto rico, no recuperable.
-  - **⏳ Pendiente:** recibo municipal Ayto. Sevilla **242,93€** (ref …153000286…) imputado al Dúplex por error pero NO es su IBI (el IBI son 130,46€) — sin identificar a qué inmueble pertenece; el cargo BBVA no trae referencia catastral (solo nº de recibo). Opción: rastrear Gmail/Drive por el recibo. Seguir saneando histórico pre-marzo-2026.
-  - **Saneo histórico 2025 (cont.):** el bucket `seguros` (BBVA) era un cajón de sastre. Corregido: **Internet del Dúplex = FINETWORK** (–20,90€/mes, 18 cargos 2025–2026 → `turistico_duplex`, regla `FINETWORK`); **TGSS cotización autónomos** (–387,72€/mes, 17 cargos) → se queda en correduría (`seguros`) confirmado, criterio de Alberto = gasto del negocio; **Bizums «Enviado:…»** (19) → `personal`. Pendiente aún: –19,50€ recaudación municipal Ayto. Sevilla (sin identificar), y varios sueltos en seguros (Punto y Coma/dinero cedido, facturas limpieza/lavandería de pisos, –15000 traspasos, etc.).
-  - **✅ Saneo 2025 COMPLETO (bandeja «por revisar» = 0):** triados todos los cargos del cajón `seguros` (BBVA). Luz/agua/IBI/basura del Dúplex → `turistico_duplex` (con comentarios); lavandería/limpieza → `turistico_pisos`; Studium/Codeoscopic/CIMA/Registradores/TGSS → correduría (con factura de Drive donde la había, en `factura_ref`); golf/baja paternidad/transferencias sueltas → `personal`. Facturas localizadas vía Google Drive (hay 2 hojas propias de Alberto «Organizar/Unificación Gastos Renta» como referencia). OJO atribución de suministros: en Drive hay luz de varias direcciones (Socorro 24=familiar, Bustos Tavera 22=Punto y Coma SL, San Luis, Dúplex) — los «luz» de BBVA se imputaron al Dúplex por decisión de Alberto.
-  - **🤖 Criterio fiscal del agente de sugerencia (`/api/finanzas/gastos/sugerir` + `/sugerir-lote`):** prompts afinados con la regla de Alberto — **`no_deducible` SOLO lo claramente personal/familiar; el resto es deducible → `negocio` (correduría) o `renta` (pisos)**. Ante la duda no marcar personal "por si acaso". Añadidos ejemplos: TGSS/autónomos→negocio; luz/agua/internet/comunidad/IBI/seguro del piso→renta; Bizums/golf→no_deducible.
-  - **🛠️ Fix colateral en ia-rest (`apps/ia-rest/src/app/estado/page.tsx`):** el preview de ia-rest del PR fallaba el build al prerenderizar `/estado` (`SyntaxError: Unexpected token '<' … is not valid JSON`). Causa: `getEstado()` hacía `return r.json()` SIN `await` dentro del try → el `JSON.parse` (cuando `/api/estado` responde HTML en build) se resolvía en el caller, FUERA del try/catch → tumbaba el prerender. Fix: `return await r.json()` (la página ya maneja `data===null` con valores por defecto). No reproducible en local (falta enlazar `@central/core-receipts`, que sí resuelve en Vercel); verificado el mecanismo con prueba aislada de semántica try/catch+await.
-
-- **⚡ GASTOS: reparto AUTOMÁTICO por actividad (limpiezas × camas) — branch `claude/expense-deductibility-control-sfx6od`, PR #491 — 24/06/2026**
-  - Sobre el desglose por % (abajo), Alberto pidió que el margen por piso sea **lo más real posible**. Método decidido: repartir el cargo compartido **proporcional a la actividad** de cada piso en el mes del cargo, ponderado por **huéspedes**: `peso = Σ huéspedes servidos en el mes` (= nº_limpiezas × huéspedes por salida). (Alberto: «mejor número de limpieza, pero a su vez por huéspedes».) Se usan los huéspedes reales de cada limpieza (`cleaning_sessions.num_huespedes`) y, cuando falta, `properties.maxGuests`. Driver fijo para todos los gastos — sin preferencia de driver-por-tipo.
-  - **`/api/finanzas/gastos/reparto-sugerido` (GET, SOLO LECTURA):** dado `movimientoId`, calcula los % sugeridos por actividad del mes del cargo (Σ huéspedes). Fallbacks: sin limpiezas ese mes → por capacidad (`maxGuests`); sin capacidad → equitativo. Cuadra a 100,0. Scoped por `cuenta_id`. NO escribe nada.
-  - **`GastosTab.tsx` (`DesgloseEditor`):** botón **«⚡ por actividad»** que pre-rellena los % (el usuario revisa y guarda por el flujo normal `POST /desglose`). Nota explicativa con el detalle `piso N limp · M huésp`.
-  - **Datos clave (BD `wswbehlcuxqxyinousql`):** `cleaning_sessions.property_id` guarda el slug `prop_*` de los 4 pisos turísticos (filtrar por esos slugs ya escopa a la cuenta); NO se filtra por `completed_at` (las limpiezas vienen de iCal y rara vez se marcan completadas, pero la salida `session_date` sí ocurrió). `properties.maxGuests`: Busto 2 · Duplex 4 · Luxury 5 · House 12. Verificado junio 2026 → Luxury 37,3% · House 35,5% · Duplex 18,2% · Busto 9,1%.
-  - **NO cambia la deducibilidad fiscal:** el total deducible sigue contando entero como `turistico_pisos` en `/finanzas`; el reparto solo afina el P&L por piso. Sin migración nueva (reutiliza `movimiento_reparto`). `tsc --noEmit` OK.
-  - **Pendiente / posibles mejoras:** reflejar el desglose también en la pestaña Fiscal (hoy total sin cambio); poder lanzar el reparto desde el detalle del apartamento; opción de ponderar por `beds` (camas) en vez de huéspedes.
-
-- **🧾 GASTOS: fecha·banco en cargos sueltos (PR #487 MERGED) + desglose por piso — branch `claude/expense-deductibility-control-sfx6od` — 24/06/2026**
-  - **PR #487 (merged):** la bandeja «Por revisar» de `/finanzas?tab=gastos` mostraba solo el concepto bruto del banco (`Adeudo nº…`) sin fecha ni banco → imposible localizar el cargo. Ahora la cabecera de grupo muestra **fecha · banco** en cargos sueltos (`count===1`). 1 línea en `GastosTab.tsx`.
-  - **Desglose por piso (siguiente PR, en curso):** reparto de un cargo que factura en bloque (lavandería/suministros) entre varios pisos **por porcentaje**. Decisión de Alberto: «ambos» (verlo en el cargo + alimentar P&L por piso) y método **por %**.
-    - **BD:** tabla `movimiento_reparto (movimiento_id, propiedad, porcentaje, importe)` + columna `movimientos_bancarios.desglosado` (`prisma/sql/2026-06-24_movimiento_reparto.sql`, aplicada por MCP). El reparto **NO cambia la deducibilidad fiscal** (el movimiento sigue contando entero como `turistico_pisos` en `/finanzas`); solo alimenta el P&L por piso.
-    - **`lib/finanzas.ts`:** `GastoMov.desglose[]` + `GastosControl.pisos[]`; `getGastosControl` trae repartos y lista de pisos (excluye `prop_multi_apartamentos`).
-    - **`/api/finanzas/gastos/desglose` (POST):** valida pisos reales + suma ≈100%, recalcula importes, reemplaza el reparto, marca `desglosado`. Repartos vacío = quitar desglose. Scoped por `cuenta_id`.
-    - **`GastosTab.tsx`:** botón «🪧 desglosar por piso» en cargos de bucket `renta`; componente `DesgloseEditor` (checkbox+% por piso, «partes iguales», validación suma 100). Chips de reparto inline cuando está desglosado.
-    - **`lib/propiedades.ts` (`getApartamentoDetalle`):** la parte repartida a cada piso se suma a sus gastos del mes/año y aparece como categoría «🪧 Compartido (repartido)».
-    - **Pendiente:** Sueldo «por la baja» sigue sin resolver (falta de quién es la nómina).
-- **✨ AGENTE HUÉSPEDES SIVRA · "no responder" a cierres de conversación — 25/06/2026 — branch `claude/asi-w7sdu9`**
-  Alberto probó EN VIVO el flujo de mensajería (Luxury Busto · David, reserva 142771692): tras retocar un borrador ("añade que la cafetera es italiana" → quedó "cafetera convencional **italiana**", algo redundante), el huésped cerró con **"Perfecto, gracias"** y el agente igualmente propuso "De nada, David…". Alberto: *"en este caso no cabe respuesta"*. Faltaba poder **descartar** sin enviar.
-  - **Decisión (opción "Ambas"):** el agente DETECTA el cierre y AVISA, pero deja decidir a Alberto (Enviar de cortesía o 🚫 No responder). No auto-descarta.
-  - **Cambios (sin migración de BD — el descarte solo borra el pendiente):**
-    (1) `decidir.ts`: nuevo campo `Decision.requiere_respuesta?` + el system prompt pide `requiere_respuesta:false` SOLO en cierres tipo gracias/perfecto/ok/buenas noches/👍 (aun así rellena `reply` de cortesía). `needs_human` o guardrail fuerzan `true` (una queja nunca se descarta).
-    (2) `telegram-msg.ts`: si `requiere_respuesta===false`, añade nota "ℹ️ Parece un cierre — quizá no requiere respuesta" + botón **🚫 No responder** (`hsp_skip`). Helper `confirmarDescartado`.
-    (3) `telegram-webhook/route.ts`: maneja `action==='skip'` → edita el mensaje a "🚫 Descartado", borra `mensajes_pendientes_tg`, no envía nada ni aprende.
-    (4) `orquestador.ts`: guard `dec.requiere_respuesta !== false` en `puedeAuto` → un cierre nunca se auto-envía aunque la categoría esté graduada.
-  - **Pendiente/observado:** el retoque ("italiana" sobre "convencional") no DEPURA el adjetivo previo → puede quedar redundante. No tocado en esta sesión (calidad de `aplicarRetoque`, a vigilar). Typecheck local solo da errores preexistentes de deps no instaladas (`@types/node`, módulos workspace), ninguno del código nuevo.
-- **🔎 AGENTE SEO: fix crash + visibilidad de errores — 25/06/2026 (rama `claude/agent-error-visibility-k4ayma`)**
-  - **Caso:** el botón "Actualizar SEO" de `/sivra/seo` (en **plataforma**, `-flame.vercel.app`) mostraba
-    `TypeError [ERR_INVALID_ARG_TYPE] ... Received undefined`. Logs de Vercel (runtime errors, 3 ocurrencias,
-    última 25/06 15:45): el crash es `Buffer.from(d.content)` en `fetchLanding()` de
-    `app/api/sivra/seo-refresh/route.ts` — la GitHub Contents API devuelve respuesta **sin `content`**
-    (probable `GITHUB_TOKEN` ausente/inválido en el proyecto Vercel `plataforma`; no está en su tabla de envs)
-    y el código decodificaba a ciegas. La copia de plataforma se quedó en la versión SIN guarda; `apps/sivra/lib/seo-landing.ts` ya estaba blindada.
-  - **Fix:** nueva `apps/plataforma/lib/sivra/seo-landing.ts` (portada de sivra) con `decodeLanding()` puro y
-    testeado (`seo-landing.test.ts`, 3 tests `node --test` verdes): si la respuesta no es un fichero, lanza error
-    CLARO citando `GITHUB_TOKEN` en vez del Buffer críptico. La ruta importa la lib (elimina copias inline frágiles).
-  - **Visibilidad ("que el agente lo vea"):** el `catch` ahora avisa por Telegram (`tgAlert(..., 'critico')`,
-    bot único del monorepo) distinguiendo `[cron automático]` vs `[manual]`. Antes el cron semanal fallaba en
-    silencio (nadie leía su 500).
-  - **PENDIENTE de Alberto (ops):** poner/arreglar `GITHUB_TOKEN` con acceso al repo `house-sevillana-landing`
-    en el proyecto Vercel **plataforma** — el fix convierte el crash en error claro, pero el SEO no actualizará
-    hasta que el token sea válido. Aparte: la ruta sigue usando Anthropic directo (`ANTHROPIC_API_KEY`) cuando el
-    resto del monorepo migró a la pasarela — NO tocado en este PR.
-- **🐛 PANEL OPERADOR ia-rest · "Error cargando CRM (401)" — 25/06/2026 (rama `claude/crm-error-d2j3sq` · PR #522 MERGED a main)**
-  - **Síntoma:** `plataforma-ten-flame.vercel.app/operador/iarest/crm` mostraba **"Error cargando CRM (401)"** (captura de Alberto).
-  - **Causa raíz (diagnóstico):** NO es la sesión del operador. La *página* `crm/page.tsx` es Server Component que
-    redirige a `/dashboard` si `getAdmin()` es nulo → como la pantalla renderizó el cliente, la cookie `plataforma_admin`
-    es válida. El 401 era el **pass-through** del 401 que devuelve **ia-rest** por el puerto HTTP cuando su
-    `OPERADOR_SHARED_SECRET` falta o **no coincide** con el de plataforma (si faltara EN plataforma sería 502, no 401).
-    Las **8** sub-páginas `/operador/iarest/*` comparten el mismo helper y estaban TODAS caídas por lo mismo. Encaja con
-    el trasiego de secretos del PR #512.
-  - **⚠️ ACCIÓN PENDIENTE DE ALBERTO (lo que de verdad carga los datos):** poner el **MISMO valor** de
-    `OPERADOR_SHARED_SECRET` en el proyecto Vercel **`ia-rest`** que el de **`plataforma`** + redeploy de ia-rest
-    (desde `/operador/secretos` o el panel de Vercel). El código NO puede arreglar esto (no se inventan literales de secreto).
-  - **Cambios de código (hechos):** nuevo helper compartido `lib/iarest-port.ts` (`fetchIarest` + `iarestError`) + lógica
-    pura `lib/iarest-port-core.ts` (`iarestErrorPayload`, 5 tests `node --test` verdes). Migradas las 8 rutas
-    `app/api/admin/iarest/**`: un 401/403 de ia-rest ya **NO** se propaga como 401 (→ 502 con mensaje accionable
-    "OPERADOR_SHARED_SECRET debe tener el MISMO valor…"); así un 401 del navegador significa SOLO "sesión de operador".
-    `CrmClient.tsx` ahora muestra el **mensaje** del servidor, no un "(401)" desnudo. tsc local solo da ruido ambiental
-    (node_modules sin instalar); CI de Vercel valida el build real.
-
-- **🏠 HOME `/dashboard` plataforma · rework "de un vistazo" — 25/06/2026 — rama `claude/dashboard-home-page-obwrta`**
-  Alberto pidió que la página principal muestre más cosas de golpe (2 capturas: dashboard actual + calendario Multi Smoobu). Solo plataforma, **sin migración de BD**. Cambios en `lib/banca.ts` (3 funciones nuevas) y `app/(usuario)/dashboard/page.tsx` (helpers + componentes).
-  - **Saldo por cuenta** (`getCuentasConMovimientos`, excluye `titular='conyuge'` = Pilar): tarjeta por cuenta bancaria propia con saldo + movimientos de los **2 últimos días** al máximo detalle (fecha, concepto, contraparte, destino, importe, **saldo posterior**, badges 🔗/🔎). Componente `SaldoPorCuenta`/`MovRow`.
-  - **Pisos "ya cobrado"** = **conciliado con banco** (decisión de Alberto). `getCobradoPisos`: suma abonos `importe>0` `destino IN (turistico_duplex,turistico_pisos)` para **mes** y **YTD**. **El banco solo separa Dúplex (BBVA) vs Pisos (Kutxa agrupados)**, no por piso individual → el desglose por piso sale de `incomes.amount` (neto) etiquetado como *facturado*, con ocupación del mes y ADR. `PisosWidget` reescrito.
-  - **Reservas por piso ±7 días** (`getReservasVentana`, estancias que solapan la ventana): agrupadas por piso con huésped + **neto** (`amount`). Componente `ReservasPorPiso` (sustituye "Esta semana en los pisos").
-  - **Extras pedidos:** tarjeta **Pendiente de cobrar OTA** (`getEstadoCobrosOTA`), **Top gastos del mes** (`getTopGastosMes`), **aviso Modelo 130** de Pilar (`getResumenPilar` → próximo trimestre vivo). Se conservan corredería y banner de gastos por revisar.
-  - tsc verde (único error preexistente ajeno: `globals.css` en layout). Pendiente: revisar en producción que las cifras "cobrado" cuadran con `/cuadre-booking`.
-- **📊 PRICING REVISIÓN SEMANAL — 29/06/2026 (rama `claude/dynamic-pricing-uhvnak`)**
-  - **Resultado clave: 0 de 337 noches a suelo** (antes: 270/349). Los 3 PRs de la semana pasada (#440 #493 #520) funcionan.
-  - **Datos nuevos Booking.com (35 comps):** Feria Abr18(domingo, p55=172€ vs sábado 298€), Mayo p55=284€, Junio p55=408€, Dic26 p55=130€. Insertados en `market_rates` directamente con `search_date=2026-06-29`.
-  - **Anomalía detectada y en corrección:** Abr18-21 están a 432-516€ vs mercado real del domingo de Feria ~172€. Motor bajará ±20%/día; llegará a ~210-215€ en 3-4 días.
-  - **Potencial identificado:** Mayo avg 243€ vs p55 284€ (+17% upside); Junio avg 248€ vs p55 408€ (motor subirá gradualmente, vigilar conversión).
-  - **Estado crons:** apply-auto 3x/día operativo (último Jun 28 14:30). `pricing_eventos_auto` VACÍO — falta `TICKETMASTER_API_KEY` en Vercel `plataforma` + posible bug websearch Gemini. **Acción manual de Alberto:** copiar `TICKETMASTER_API_KEY` de Vercel `ia-rest` al proyecto `plataforma`.
-  - **Aprendizaje persistido:** `pricing_aprendizaje` actualizado (feria_2027_dias_semana, may_jun_2027, cobertura_jun2026_v2).
-  - **Próxima revisión sugerida:** ~7 días (06/07) tras ver conversión de las nuevas subidas May/Jun.
-
-- **⚡ PRICING: salto directo en eventos + apply 3x/día — 25/06/2026 (rama `claude/dynamic-pricing-uhvnak`)**
-  - **Caso:** reserva Busto oct'26 (François, 7 noches) entró a **122€/noche plano** sin capturar el premium del
-    **puente Hispanidad** (mercado ~196€). No es suelo ni config (events_enabled=true): el motor sube **gradual**
-    (±20%/día, 1 pasada/día) → una fecha de evento tarda días en escalar y el huésped la reserva barata antes.
-  - **Fix 1 — salto de evento** (`app/api/sivra/pricing/apply/route.ts`): se captura `eventTarget` y se aplica
-    **DESPUÉS del raíl ±20%** (igual que el suelo) → una fecha de evento del calendario sube a su precio **de golpe**.
-    Solo al ALZA. Gateado por `events_enabled`.
-  - **Fix 2:** `apply-auto` 1→**3 pasadas/día** (08:30/14:30/20:30) en `vercel.json`.
-  - **Review octubre:** sembrado `market_rates` oct (p55 160€) → resto de octubre se levanta hacia ~130-145€.
-    Aprendizaje `pricing_aprendizaje.octubre`. La reserva de François ya hecha no se toca. PR #440 y #493 MERGEADOS;
-    pendiente manual `TICKETMASTER_API_KEY` en Vercel `plataforma`. tsc verde.
-
-- **🐛 AGENTE HUÉSPEDES SIVRA · "se respondía a sí mismo" — 25/06/2026 — branch `claude/luxury-busto-kitchen-amenities-14rz2x`**
-  Alberto reenvió un borrador del agente (Luxury Busto · David, reserva 142771692) donde la "pregunta del huésped" era **"Sí, el alojamiento dispone de cafetera y microondas."** y el borrador "Genial, David, me alegra que hayas encontrado lo que necesitas en la cocina" → **eso era NUESTRA propia respuesta**, no un mensaje del huésped. Confirmado en `mensajes_log`: a las 07:46 el agente AUTO-ENVIÓ esa frase (categoría graduada `checkin`); a las 08:48 la reprocesó **como si fuera un mensaje nuevo del huésped** y se propuso una respuesta a sí mismo.
-  - **Causa raíz:** la atribución host/guest en `contexto.ts` dependía SOLO de `m.sent_by_owner` de Smoobu, que `/api/threads` no trae y `/api/reservations/{id}/messages` a veces deja vacío. Nuestra respuesta reapareció en el hilo sin esa marca → etiquetada `guest` → fallaron TODOS los guards (`ultimoMsg.from==='host'`, `ya_respondido`, dedup por msgId distinto, `esMensajeAutomatico` —nuestros envíos van sin asunto—).
-  - **Fix (ground truth = lo que NOSOTROS enviamos):** nuevo módulo puro `lib/sivra/agente-huesped/atribucion.ts` (`normalizarTexto`/`setEnviados`/`corregirAtribucion`/`esEcoPropio`, +5 tests `node --test`). `contexto.ts` carga las respuestas ya enviadas (`mensajes_log.auto_sent=true`, últimas 30) y **corrige a `host`** cualquier mensaje del hilo cuyo texto coincida (expone `Contexto.enviados:Set<string>`). `orquestador.ts` añade guard `esEcoPropio(pregunta, ctx.enviados)` → `accion:'eco_propio'` (cubre el sondeo, que pasa la pregunta directa de `/api/threads` aunque aún no esté en el historial). Umbral anti-falso-positivo: solo se cruzan textos ≥15 chars (un huésped no reproduce una frase entera nuestra; un "sí"/"ok" suelto podría coincidir por azar). Disparo manual exento.
-  - **Sin migración de BD.** No había propuesta fantasma atascada en `mensajes_pendientes_tg` (el `ON CONFLICT` la sobrescribió con la pregunta real "Qué tipo de cafetera?"). Tests del agente: 43/43 verde.
-
-- **🧹 LIMPIEZA · revisión correos GitHub + barrido de envs/credenciales muertas — 25/06/2026 — branch `claude/github-noreply-email-review-lbzv7k` · PR draft #512**
-  Alberto pidió revisar el Gmail de `noreply@github.com` (resumen) y luego limpiar lo que no se usa. Avisos de GitHub: caducidad de tokens (`iarest` fine-grained → caducó; `ialimp` classic con scopes admin amplios) + 2FA obligatorio.
-  - **Token `iarest` = env `GH_PAT`** (ia-rest): se gestiona desde el **panel de operador** `https://plataforma-ten-flame.vercel.app/operador/secretos` (login `/login`). Alberto lo **regeneró** (caduca **25-jul-2026**) y lo iba a pegar en `GH_PAT`. Consumidores a verificar tras el cambio: blog SEO (`apps/ia-rest/src/app/api/cron/blog-seo/route.ts`), agente arquitecto (`.../api/super/agente-arquitecto/route.ts`), publicar blog (`.../api/super/blog/route.ts`).
-  - **Token `ialimp` (classic):** NO lo consume ninguna app del repo (no está en `secrets-registry.ts`). Decisión de Alberto ("lo que no se usa, fuera"): **borrarlo en GitHub**, no registrarlo en el panel.
-  - **Barrido de envs/credenciales muertas** (subagente, read-only): ~95 declaradas → solo **4 muertas**. (1) `STRIPE_PUBLISHABLE_KEY` en `apps/ia-rest/.env.example` era nombre equivocado (el código usa `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`) → **renombrada** = único cambio del PR #512. (2-4) `SIVRA_URL`, `IAREST_SUPABASE_URL`, `IAREST_SUPABASE_SERVICE_KEY` → muertas, **borrar a mano en Vercel proyecto plataforma** (ya documentadas como pendientes). `DATABASE_URL`/`DIRECT_URL` NO están muertas (Prisma las lee implícito).
-  - **Packages muertos:** `@central/module-agenda` y `@central/module-revenue` sin consumidores PERO **se mantienen a propósito** (andamio para verticales futuras — decisión de Alberto, no tocar).
-  - **PR #512** (draft): CI verde (10/11 al cerrar la sesión, faltaba solo "Lint·TypeCheck·Build"). Suscrito a su actividad + cron horario de auto-revisión.
-  - **🐛 BUG del panel de secretos encontrado y arreglado (mismo PR #512):** al guardar `GH_PAT` (clave que YA existía en Vercel), el panel devolvía `"A variable with the name GH_PAT already exists … on branch undefined"`. Causa: `upsertProjectEnv` (`apps/plataforma/lib/vercel-env.ts`) solo hacía el PATCH si el error de Vercel traía `error.envVarId`, y la API NO siempre lo incluye → caía al mensaje crudo sin actualizar. Fix: si el create falla por conflicto, se **lista** la env del proyecto (`GET /v9/projects/{id}/env`, sin `decrypt` → nunca se lee el valor) y se hace **PATCH solo del valor** (preservando target/rama → evita el conflicto "branch undefined"); rota todas las entradas con ese nombre. **Requiere merge + deploy de plataforma a producción** para que el panel deje de fallar.
-  - **Verificación de la env muerta:** Alberto confirmó que `SIVRA_URL`/`IAREST_SUPABASE_URL`/`IAREST_SUPABASE_SERVICE_KEY` ya NO existen en el proyecto Vercel plataforma (eran referencias residuales en docs). `DATABASE_URL`/`DIRECT_URL` son envs compartidas del equipo (no a nivel proyecto).
-  - **🧹 Limpieza total del rename `ia.rest`→`central` (mismo PR #512):** al renovar el `GH_PAT` se descubrió que el código seguía apuntando al repo viejo `albertosuarezgutierrez-gif/ia.rest` (ya no existe; renombrado a `central`) Y, peor, usaba rutas de cuando el repo era solo la app (`src/app/blog/…`) en vez de las del monorepo (`apps/ia-rest/src/app/blog/…`). Arreglado: (a) nombre de repo `ia.rest`→`central` en las 4 rutas que llaman a la API de GitHub (`blog/route.ts`, `blog-publicar`, `agente-arquitecto`, `blog-seo`); (b) rutas del blog prefijadas con `apps/ia-rest/` (`blog/route.ts` ×2, `blog-publicar`); (c) ejemplos de ruta del agente-arquitecto actualizados a `apps/ia-rest/…`; (d) URLs de descarga APK/bridge (`bridge-config.ts`, `app/route.ts`, `descargar/page.tsx`, `version.json`) y la URL `raw` de `bridge-setup.sh` (ahora `…/central/main/apps/ia-rest/scripts/bridge-local.js`); (e) docs/skills de referencia (`ia-rest-maestro`, `ia-rest-project.skill`, `SKILL-proyecto-claude`, `manual-iarest`). Dejadas SIN tocar las referencias históricas (log de sesión 828 ya corregido en 772, y el plan datado 2026-06-21). **El `GH_PAT` fine-grained debe acotarse al repo `central` con permiso Contents Read and write.**
-  - **PENDIENTES de Alberto:** ✅ 2FA ya activo · ✅ token `ialimp` borrado · ✅ envs muertas no existían · ⏳ configurar `GH_PAT` (acceso a repo `central`, Contents R/W) y meterlo en Vercel ia-rest (o por el panel ya arreglado, tras merge+deploy). Posible recordatorio para mediados de julio (token caduca 25-jul).
-
-- **📘 MANUAL + datos demo + fix login para reunión Catering JJ — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)**
-  - **Manual operativo** cocina central + logística como página estática: `apps/ia-rest/public/manual-jj.html` → **`https://www.iarest.es/manual-jj.html`** (noindex; 15 secciones + flujo boda). Junto al guion `guion-demo-jj.html`.
-  - **Datos demo sembrados en PRODUCCIÓN** (BD `wswbehlcuxqxyinousql`, schema `iarest`, tenant JJ `067c8bab-…`), marcador `[seed-demo]` para revertir: dietas en Boda Familia Pérez (sin gluten 5, vegano 3), 8 recepciones, materiales 5→21 + 3 kits + 22 líneas + rotura/reserva/proveedores/clientes, 2 menús de evento, y boda CRM con 6 costes + 8 invitados + 4 APPCC. **Solo el tenant JJ.**
-  - **Login JJ aclarado:** Carmen 1234 / Joaquín(owner) 1369 / Montador 4040 / cocineros Marta 2001·Diego 2002·Lucía 2003. El "error pin" era por el **`)` pegado al enlace** (`...jaen)` no resuelve) o entrar sin `?r=` (cae a DEMO). `resolve_restaurante` + `login_pin` verificados OK en prod.
-
-- **🔧 AGENTE HUÉSPEDES SIVRA · BOTÓN "RETOCAR SOBRE EL BORRADOR" — 25/06/2026 (branch `claude/luxury-busto-guest-reply-n8ltqp`)**
-  Origen: borrador real (Luxury Busto · David, reserva 142771692) — el huésped preguntó el TIPO de cafetera y el borrador solo decía "cafetera y microondas". Alberto quería **retocar el borrador** (no reescribir entero), enviar y aprender. Spec/plan en `docs/superpowers/{specs,plans}/2026-06-25-retoque-borrador-huesped*`.
-  - **Qué se hizo:** nuevo botón **🔧 Retocar** (`callback hsp_tune`) junto a ✅ Enviar / ✏️ Modificar en la propuesta de Telegram. Al pulsarlo escribes una INSTRUCCIÓN corta ("añade que la cafetera es italiana") y la IA la aplica sobre el borrador (que ya está en el idioma del huésped → resultado en su idioma sin traducir aparte). Helper puro-inyectable `lib/sivra/agente-huesped/retoque.ts` (`aplicarRetoque`, aiComplete por **import dinámico** para que el test corra con `node --test`). Modo `esperando_retoque` en el webhook; confirmación a Alberto con línea 🔁 en español si el huésped no es hispanohablante.
-  - **Aprendizaje Q→A:** nueva columna `mensajes_pendientes_tg.pregunta` (+ `esperando_retoque`) — el agente ahora guarda el par pregunta→respuesta (antes `mensajes_aprendizaje` se llenaba con `pregunta=''`). Arreglado también en los caminos Modificar/aprobación existentes.
-  - **Archivos:** `telegram-msg.ts` (botón + persistir pregunta), `telegram-webhook/route.ts` (acción tune + fix aprendizaje), `retoque.ts`+`retoque.test.ts` (NUEVOS), `prisma/sql/2026-06-25_retoque_borrador.sql`.
-  - **Verificación:** 38/38 tests del módulo (`node --test`) verdes; SQL **aplicada y verificada contra Supabase real** (`wswbehlcuxqxyinousql`); los cambios no introducen errores de `tsc` nuevos (los 92 errores `Prisma` del repo son el cliente sin `prisma generate`, env sin engine binary tras el proxy). No toca RLS ni ialimp.
-
-- **📦 RECEPCIÓN DE MERCANCÍA MULTI-MODAL (cocina central) · IMPLEMENTADO Y MERGEADO — 25/06/2026 — PR #511 (branch `claude/information-extraction-orls7m`)**
-  Construido end-to-end (spec→plan→código→pruebas→merge) tras el "ok a todo hazlo, prueba y mergea" de Alberto. Spec y plan en `docs/superpowers/{specs,plans}/2026-06-25-recepcion-mercancia-multimodal*`.
-  - **Qué se hizo:** (B) `geminiVision` nuevo en `@central/core-ai` + `callAIVision` reordenado a **gateway→Gemini→NIM** (fallback real que antes no existía; afecta a TODA la visión del proyecto — marcado en el PR). Compresión de foto relajada a ~1.8 MB (Gemini admite imágenes grandes → lee la letra pequeña). (A) escáner EAN cliente (`BarcodeDetector` nativo + fallback `@zxing/browser`), ruta `/api/cocina/recepciones/ean` (catálogo propio→Open Food Facts), `nombrePorEan` extraído a `lib/recepcion-ean.ts`. (C) migración `cocina_recepciones.codigo_barras`+`evidencia_url` (aplicada vía MCP) y persistencia. (2) `/temperatura` (foto de sonda→Tª). (3) `/evidencia` (sube original al bucket privado `recepciones` ya creado, URL firmada 1 año). (4) `/caducidades` + lógica pura `recepcion-caducidades.ts` + **banner FEFO on-screen** en `/produccion`. (5) escaneo continuo multi-EAN con dedupe.
-  - **Verificación:** 10/10 tests (`node --test`: 3 core-ai + 7 ia-rest), `tsc --noEmit` 0 errores, **`next build` OK**.
-  - **Decisiones de Alberto:** `callAIVision` global (no acotado) + bucket `recepciones` nuevo. Voz FUERA. Esperado-vs-recibido = futuro (necesita "lista esperada").
-  - **PENDIENTE/seguimiento:** vigilar que el reorden de `callAIVision` no degrade otros usos de visión (qr-assistant, etc.); si hace falta, captura "enfocada" de lote/caducidad como iteración (hoy va por el flujo de `reconocer`).
-
-- **📦 RECEPCIÓN DE MERCANCÍA MULTI-MODAL (cocina central) · SPEC — 25/06/2026 — branch `claude/information-extraction-orls7m`**
-  Alberto enseñó una foto (multipack de atún de Mercadona) procesada por la foto-recepción de `/produccion` (Catering JJ): salió mal (`producto`="…PORTE", `lote`="30g (6x8…)" = confundió el peso con el lote, `proveedor` vacío). Diagnóstico: el endpoint `api/cocina/recepciones/reconocer` **solo** usa `callAIVision` → **NIM `llama-3.2-11b-vision` sin fallback**, y la foto se machaca a **≤170 KB** (`fotoAJpegPequeno`) por el tope de 180 KB inline de NIM → letra pequeña ilegible. Decisión: hacerlo **multi-modal** ("que sirva para todo": packs de súper + albaranes + mayorista).
-  - **Spec escrito y commiteado:** `docs/superpowers/specs/2026-06-25-recepcion-mercancia-multimodal-design.md`.
-  - **Alcance elegido por Alberto:** Núcleo C (escáner EAN cliente `BarcodeDetector`+ZXing con catálogo propio que aprende EAN de marca blanca · motor **Gemini Vision** nuevo en `@central/core-ai` como fallback real de `callAIVision` · fin de la compresión a 170 KB · captura lote/caducidad enfocada + persistir `codigo_barras`) **+ idea 2** (Tª por foto de la sonda) **+ idea 3** (foto-albarán archivada en Storage como prueba APPCC) **+ idea 4** (banner **FEFO on-screen** en la pantalla de Carmen; Telegram solo opcional para Alberto, por la regla "operador→Telegram, usuarios finales→pantalla") **+ idea 5** (escaneo continuo multi-EAN). **Voz FUERA.** **Esperado vs recibido (idea 6) = futuro** (necesita "lista esperada" que no existe).
-  - **Migraciones previstas (schema `iarest`, aditivas):** `cocina_recepciones.codigo_barras text` + `evidencia_url text`.
-  - **⚠️ Decisión abierta pendiente del visto bueno de Alberto:** (1) el cambio de orden en `callAIVision` (Gemini→NIM) afecta a TODOS los consumidores de visión, no solo recepción → confirmar si se acota o no; (2) bucket Storage `recepciones` nuevo para la foto-evidencia.
-  - **PENDIENTE:** Alberto revisa el spec → si OK, pasar a `writing-plans` (plan de implementación). Aún NO hay código, solo el spec.
-- **👻 AGENTE HUÉSPED · fix "escalado fantasma" (recordatorio horario de un mensaje ya respondido) — 25/06/2026 — branch `claude/busto-reform-guest-reply-imltis`**
-  Síntoma: a Alberto le llegaba cada hora "⏳ Escalados pendientes de tu OK" con la reserva 142612302 y el texto que YA había enviado. **Causa (diagnosticada en la BD real):** a las 21:25 se envió la respuesta a Patrycja (`mensajes_log auto_sent=true, edited=true`); a las 21:28 el MISMO mensaje "everything perfect" se reprocesó y creó una **propuesta duplicada** en `mensajes_pendientes_tg` que nadie contestó (ya estaba contestada). El cron `recordar-pendientes` (horario, lista todo lo >3h) la sacaba sin parar.
-  - **Raíz:** el dedup por `msgId` divergía entre el **sondeo** (`/api/threads`, id numérico) y el **webhook** (`procesarMensajeHuesped(bookingId)` sin msgId → cae a `ultimoGuest.id` del historial `/api/reservations/{id}/messages`, otra fuente / `created_at`) → mismo mensaje, **dos claves** → se procesa 2×. Y el **envío saliente propio** dispara `newMessage`, que con el desfase de Smoobu burla el guard "último=host".
-  - **Fix (`orquestador.ts`):** guard robusto independiente del id — antes de procesar, si existe en `mensajes_log` un envío `auto_sent=true` con `created_at >= ts` del último mensaje del huésped → `accion: 'ya_respondido'` (no propone). Se salta en disparo MANUAL (`msgId 'manual:…'`, que sirve para re-proponer a propósito). Best-effort (si la consulta falla, sigue el flujo). 34 tests del agente verdes.
-  - **Limpieza:** borrada a mano la fila fantasma (`mensajes_pendientes_tg` booking 142612302, tg_message_id 1128) vía Supabase MCP → 0 pendientes.
-
-- **💬 AGENTE HUÉSPED · responder a lo que escribe el huésped (no soltar horarios) — 24/06/2026 — branch `claude/busto-reform-guest-reply-imltis`**
-  Feedback de Alberto sobre un borrador para Patrycja (Busto Reform, reserva 142612302): el huésped solo escribió *"Everything is perfect, thank you!"* (y ya está dentro del apartamento) y el agente respondió con un bloque largo que **repetía la hora de check-in/check-out**. Queja: *"¿por qué saca tema de hora si ya está dentro? hay que responder sobre lo que escriba… que parezca real"*.
-  - **Causa:** el system prompt de `apps/plataforma/lib/sivra/agente-huesped/decidir.ts` forzaba **"4-6 frases" + despedida genérica** en TODA respuesta → con un simple agradecimiento el modelo rellenaba con datos no pedidos (horarios).
-  - **Fix (solo prompt):** "REGLA DE ORO: responde EXACTAMENTE a lo que el huésped dice y a nada más; NO añadas info no pedida (horarios entrada/salida, normas, parking, wifi) salvo que pregunte; el huésped YA está dentro → no repetir check-in/out salvo pregunta expresa". Longitud **adaptada al mensaje**: agradecimiento/comentario positivo → 1-2 frases cálidas; pregunta real → detalle necesario. Tono "persona real, no folleto". Sin cambios de lógica/tipos; los 34 tests del agente siguen verdes.
-  - **Verificado EN VIVO:** Alberto corrigió el borrador de Patrycja por Telegram (✏️ Modificar) y el sistema lo envió ("✅ Enviado al huésped" en EN, sin horarios). El fix del prompt automatiza este criterio de aquí en adelante.
-
-- **🔐 PANEL DE SECRETOS · FASE 2 (escritura blindada + redeploy auto) — 24/06/2026 — mergeado #502/#494/#503/#504**
-  Sobre el panel-inventario de #492 (solo lectura), Alberto eligió la **"Versión blindada"**: poder **crear/editar** desde el god-panel de operador, pero **solo** claves de **API externa** marcadas `editable` en el registro (NUNCA firma-sesión, NUNCA borrados — eso sigue en Vercel). Defensa en profundidad (6 candados): operador logueado (`getAdmin`) → **2º factor** = re-teclear la contraseña de operador (`loginAdmin`/bcrypt) → allow-list por registro (`editable` + `vercelProject`) → doble candado que rechaza `tipo==='firma-sesion'` → **write-only** (jamás se lee/devuelve el valor; POST/PATCH a la API de Vercel, production+preview) → **auditoría** en `secrets_audit` (actor/clave/proyecto/fecha, sin valor) → **INERTE** sin `VERCEL_ADMIN_TOKEN` (503).
-  - **Redeploy automático (#504, `48bd3d8`):** tras escribir la env, el endpoint lanza un redeploy de producción del proyecto destino (`redeployProjectProduction` → Vercel `POST /v13/deployments` con `deploymentId`+`withLatestCommit`). **Best-effort**: si falla, el guardado vale y el panel avisa de redeployar a mano. Objetivo cumplido de Alberto: **gestionar claves sin entrar nunca a Vercel.**
-  - **Archivos:** `lib/vercel-env.ts` (`upsertProjectEnv` write-only + `redeployProjectProduction`), `app/api/operador/secretos/set/route.ts` (POST con 6 candados + redeploy auto; devuelve `{redeployed, redeployError}`), `app/(usuario)/operador/secretos/SecretosClient.tsx` (botón ✏️ Editar + form inline), `lib/secrets-registry.ts` (`editable`/`vercelProject`), `prisma/sql/2026-06-24_secrets_audit.sql` (tabla, **ya aplicada** vía Supabase MCP).
-  - **Activación (hecho por Alberto):** token Vercel `plataforma-secrets-panel` (scope team, Never) puesto como `VERCEL_ADMIN_TOKEN` (Sensitive) en *plataforma* Production+Preview. ⚠️ Token con escritura+deploy sobre los 5 proyectos del team → rotarlo periódicamente.
-  - **Claves editables:** GEMINI/GROQ (plataforma) · RESEND_WEBHOOK_SECRET/GOOGLE_PLACES_API_KEY/TURNSTILE_SECRET_KEY (ialimp) · GOOGLE_CLIENT_SECRET/CLOUDINARY_API_SECRET/GH_PAT (ia-rest) · SERPER_API_KEY (sivra) · **CIMA_WSE_PASSWORD (plataforma — alta nueva #503, web service Codeoscopic/CIMA de la correduría; aún sin consumidor en código).**
-  - **Flujo para gestionar una clave nueva desde el panel:** registrarla en `secrets-registry.ts` con `editable:true` + `vercelProject` (el panel NO crea nombres arbitrarios, por diseño — es la allow-list).
-  - **Probado en vivo:** Alberto editó `CIMA_WSE_PASSWORD` en producción → "✅ Guardada en Vercel" (circuito auth→2FA→allow-list→escritura→auditoría OK). El redeploy auto entró después (#504).
-  - **PENDIENTE elegido por Alberto:** subir el 2º factor a **TOTP** (app autenticadora, factor independiente) — más adelante. Idea adicional barata: **rate-limit** de intentos en el endpoint `set` (hoy no hay).
-
-- **💸 VIGILANTE DE COBROS OTA (Booking/Airbnb/Expedia) — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`**
-  Pedido por Alberto tras el webhook en tiempo real ("emparejador de cobros"). Objetivo: avisar **solo en el dashboard** cuando una reserva OTA hizo checkout hace más del margen del canal y la OTA aún no ha pagado. Flujo brainstorming→spec→plan→build (spec+plan en `docs/superpowers/{specs,plans}/2026-06-24-vigilante-cobros-ota*`).
-  - **Diseño clave:** el canal del abono NO es fiable (los cobros del Dúplex llegan con concepto genérico `ABONO… LIQ. OP.`, sin nombre de OTA) → el match es **OTA-wide por importe+fecha**, y el **margen lo aporta el canal de la RESERVA** (`incomes.portal`): Booking/Airbnb **7d**, Expedia **35d**. Umbral aviso **50€**, tolerancia 0,02€. v1 dispara **solo por pendientes**; huérfanos = contexto.
-  - **Archivos:** `lib/sivra/cobros-ota.ts` (lógica PURA `reconciliarCobrosOTA` + 8 tests `node --test`), `lib/sivra/cobros-ota-db.ts` (`getEstadoCobrosOTA`, separado para no romper el type-stripping de node --test con el import de prisma), `lib/banca.ts` (`getAlertas` → `cobrosPendientes/Eur/Detalle`), `app/(usuario)/dashboard/page.tsx` (banner 💸). **Sin tablas/crons/envs nuevos** — se calcula al vuelo en el dashboard.
-  - PENDIENTE fase 2 (anotado): huérfanos como disparo, emparejador por referencia exacta `NO.<ref>ID`, split por piso.
-
-- **🔗 WEBHOOK SMOOBU → reacciones en cadena (limpieza + pricing reactivo) — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`**
-  Sobre el webhook de reservas en tiempo real, Alberto pidió aprovechar la conexión para 1 (limpieza auto), 3 (pricing reactivo) y 5 (cuadre Booking); 2 (alertas) y 4 (bienvenida) quedan para más tarde.
-  - **#5 cuadre Booking:** NO requiere código. `/api/duplex/cuadre-booking` es un informe de solo lectura (banco vs `incomes`); con `incomes` ya en tiempo real, el cuadre queda vivo solo. El emparejador por cobro individual (cuelga del feed del banco, no de Smoobu) queda como tarea futura.
-  - **#1 + #3 (webhook/route.ts):** tras `runSync` en eventos de reserva, se lanza `reaccionarAReserva()` que ejecuta en **`after()` de Next 15** (NO bloquea la respuesta a Smoobu → evita reintentos por timeout): (a) `auto-sessions` GET (crea/ajusta sesiones de limpieza, idempotente) y (b) `apply-auto` GET con `days=45` (repricing reactivo de la ventana cercana; el motor respeta pausa/confianza/apply_enabled). Ambos reutilizados vía import + `NextRequest` forjado con `CRON_SECRET` (Bearer + `?secret`). El cron diario sigue tarificando 365d como red de seguridad.
-  - Caveat conocido: `auto-sessions` no borra la sesión de limpieza de una reserva CANCELADA (limitación preexistente del cron, no regresión).
-
-- **🐛 FIX BUILD ia-rest: `/estado` rompía el prerender — 24/06/2026**
-  El build de ia-rest fallaba (FAILED en Vercel) al pre-renderizar `app/estado/page.tsx`: `SyntaxError: Unexpected token '<' ... is not valid JSON`. Causa: `getEstado()` hacía `return r.json()` **sin `await`** dentro de un try/catch → cuando `/api/estado` devuelve HTML (durante el build el endpoint propio aún no está vivo), el rechazo de `r.json()` escapaba al try/catch y reventaba el export. Fix: `return await r.json()` → el catch lo atrapa y la página usa sus datos por defecto. (No tiene relación con el agente/webhook; salió a la luz porque el PR #490 reconstruye todas las apps.)
-
-- **⚡ SMOOBU WEBHOOK EN TIEMPO REAL: mensajes + reservas/dinero — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`**
-  Disparador: a Alberto le llegó una incidencia de huésped (Patrycja, 142612302, "no keys") y respondió a mano en Booking porque "no llegó a Telegram". Diagnóstico: el agente SÍ la procesó (categoria=acceso, needs_human, propuesta a Telegram) pero ~2 min tarde — el poller `auto-reply` corre cada 3 min (`*/3 * * * *`) y Booking le mandó el push instantáneo antes. NO estaba roto, solo lento. (Borré la propuesta colgada de esa reserva para que no re-spamee.)
-  - **Fix raíz: activar el webhook de Smoobu.** Alberto lo configuró en Smoobu **Advanced → API Keys → Webhook URLs** (la UI actual no filtra por evento → manda TODOS los eventos). URL: `https://plataforma-ten-flame.vercel.app/api/sivra/mensajes/webhook`. PENDIENTE confirmar 200 vs 401 (no hay llamadas en logs aún; no pude probar el endpoint desde el contenedor — proxy bloquea `*.vercel.app`). Si 401 → hay `SMOOBU_WEBHOOK_SECRET` y la URL necesita `?k=<secret>`.
-  - **Como Smoobu manda TODOS los eventos**, aproveché para que el webhook actualice **reservas+ingresos en tiempo real** (idea de Alberto: "¿no es mejor un agente que analice y actualice el programa?"). Principio acordado: **el código determinista actualiza los números (NUNCA un LLM); el agente solo analiza/avisa.** Extraído `runSync` a `lib/sivra/smoobu-sync.ts` (reusado por el cron `updates/sync` y por el webhook). El webhook enruta por `action`: `newMessage`→agente; `new/update/cancelReservation`→`runSync(2,5)` (idempotente, upsert en `incomes`); resto→ignora. El cron `updates/sync` (cada ~6h) queda como red de seguridad.
-  - PENDIENTE (futuro paso 2): capa de análisis del agente encima de los datos ya en vivo (alertas de ocupación, huecos, cobros que no cuadran).
-
-- **🤖 AGENTE HUÉSPEDES: escalados atascados + aprendizaje incompleto — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`**
-  Alberto recibía cada hora el recordatorio "Escalados pendientes de tu OK" con las MISMAS 3 reservas (142846717 checkin ~24h, 131511815 general en `esperando_edit=true` ~22h, 132494657 recomendacion ~21h — la de Gladys). Causa: el cron `recordar-pendientes` re-avisa de toda fila de `mensajes_pendientes_tg` con `created_at > 3h`, y esas 3 nunca se cerraron (la 131511815 quedó a medias: pulsó ✏️ Modificar y no envió la corrección). **Acción:** `DELETE` de las 3 filas de `mensajes_pendientes_tg` ("dar por contestado, empezar de nuevo" — pidió Alberto). La idempotencia (`update_logs`) evita que se vuelvan a proponer.
-  - **Verificación del aprendizaje (lo pidió Alberto):** SÍ funciona pero solo a medias. Estado BD: `mensajes_aprendizaje=1`, `mensajes_log=30` (corregidos=1, enviados=6), `mensajes_auto_config auto_enabled=0`. El bucle estaba cerrado SOLO para correcciones: `aprenderCorreccion()` (corrección por force_reply) → `mensajes_aprendizaje` → `contexto.ts` (últimos 8/piso) → `decidir.ts` (prompt "EJEMPLOS APROBADOS POR EL ANFITRIÓN"). Pero **aprobar tal cual (✅ Enviar / "ok"/"vale") NO guardaba ejemplo** → con 6 envíos solo 1 aprendido.
-  - **Fix (`telegram-webhook/route.ts`):** ahora las DOS ramas de aprobación (botón `send`/`grant`/`grad` y aprobación corta por texto) también llaman `aprenderCorreccion()` con el borrador aprobado → el agente aprende de TODAS las respuestas de Alberto, no solo de las correcciones.
-
-- **🟢 ia-rest /produccion · Recepción de mercancía: la IA ya lee la foto de etiqueta — 24/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)**
-  - **Bug reportado por Alberto (Catering JJ):** el botón "📷 Foto de etiqueta / albarán" no leía nada y se veía como un rectángulo gris muerto.
-  - **Causa 1 (cosmética):** en estado "Leyendo…" el texto iba `color: C.ink3` sobre fondo `C.ink3` → invisible. Fix: texto en blanco.
-  - **Causa 2 (de fondo):** la foto se mandaba **en crudo** a NVIDIA NIM (`integrate.api.nvidia.com`, `meta/llama-3.2-11b-vision-instruct`), que **rechaza imágenes inline > ~180 KB**. Una foto de móvil lo supera → la IA fallaba/colgaba. Fix: `fotoAJpegPequeno()` reduce y recomprime en canvas (JPEG, orientación EXIF) hasta <170 KB antes de enviar; fallback a crudo si no hay canvas. + `catch` que avisa.
-  - **Mejoras posteriores (mismo día, pedidas por Alberto al probar):** (a) **nombre por código de barras** — si la foto es solo el EAN, `recepciones/reconocer` lo resuelve contra **Open Food Facts** y rellena el nombre real (no vuelca los dígitos en Producto); (b) campo **"Fecha recepción"** visible en el form, **hoy** por defecto (el API ya tenía la columna `fecha`).
-  - **Archivos:** `apps/ia-rest/src/app/produccion/page.tsx` + `.../api/cocina/recepciones/reconocer/route.ts`. `tsc --noEmit` verde.
-  - **⚠️ Mismo patrón latente** en `WineScannerModal.tsx` (y otros escáneres) que también mandan `readAsDataURL` en crudo → si fallan, aplicar el mismo `fotoAJpegPequeno`.
-- **📄 Guion de demo de Catering JJ como URL — 24/06/2026** (PR #395 mergeado a `main`)
-  - El guion de la boda 100 pax (cocina · dietas · material · owner · montador) servido como página estática: `apps/ia-rest/public/guion-demo-jj.html` → **`https://www.iarest.es/guion-demo-jj.html`** (mismo patrón que `demo-saboga.html`). `noindex` (pública, lleva PIN de demo).
-- **🍽️ CATERING JJ: guion-URL + recepción por foto + módulos catering — 24/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`, PRs #395/#496/#497/#499 mergeados)**
-  Sesión de soporte en vivo con Alberto (owner de Catering JJ = tenant **`demo`** con branding "Joaquín Jaén"; el login `?r=catering-joaquin-jaen` resuelve a `demo`).
-  - **Guion de demo como URL (#395):** `apps/ia-rest/public/guion-demo-jj.html` (estático, `noindex`) → **`https://www.iarest.es/guion-demo-jj.html`**. Boda 100 pax: cocina · dietas · material · owner · montador, con "🎙️ Di esto / 👆 Haz esto". Mismo patrón que `demo-saboga.html`.
-  - **Recepción de mercancía — la foto no se leía (#496):** dos bugs en `/produccion`. (1) botón "Leyendo…" con `color==fondo` (C.ink3) → invisible, parecía muerto → texto en blanco. (2) **GOTCHA NIM:** la foto se mandaba en crudo a NVIDIA NIM (`meta/llama-3.2-11b-vision`, `integrate.api.nvidia.com`) que **rechaza imágenes inline > ~180 KB**; una foto de móvil siempre lo supera → no leía. Fix: `fotoAJpegPequeno()` reduce/recomprime en canvas a <170 KB antes de enviar. **Aplicar el mismo patrón a `WineScannerModal`/otros escáneres si fallan** (mandan `readAsDataURL` en crudo).
-  - **EAN→nombre + fecha (#496):** si la foto es solo el código de barras, `recepciones/reconocer` resuelve el EAN contra **Open Food Facts** (`nombrePorEan`) y rellena el nombre real; campo "Fecha recepción" (hoy por defecto). *(Después, la rama `nice-mendel` (#498, commit 4fb6287) refactorizó el flujo a recepción BATCH multi-foto + plantilla de pedido habitual; el lookup EAN y reconocer siguen intactos.)*
-  - **Módulos catering activables (#497):** el menú owner oculta los grupos `materiales` (`/owner/materiales`) y `eventos` si `modulos_activos` no los lleva, y **no estaban en la lista conmutable de `ModulosTab`**. Añadido grupo "Catering & eventos" con toggles `eventos`+`materiales`; `eventos` añadido a `TODOS_MODULOS` en `api/owner/modulos`. **Importante:** `modulos_activos` se lee SOLO al cargar la página (la PUT no refresca el menú).
-  - **Auto-recargar al guardar módulos (#499):** por lo anterior, activar un módulo no hacía aparecer su sección hasta recargar a mano (confuso). `ModulosTab.guardar()` ahora hace `window.location.reload()` a los 900 ms tras el ✓.
-  - **Infra observada:** la Supabase accesible por MCP (`efncqyvhniaxsirhdxaa`, "ia-rest") **NO es la de producción de iarest.es** (no tiene `cocina_recepciones`; solo `demo`+`saboga`). La BD viva de producción está en otro proyecto no conectado al MCP. → no se puede verificar `modulos_activos` real desde aquí.
-
-- **📦 RECEPCIÓN BATCH + PEDIDO HABITUAL (ia-rest) — PR #498 draft — branch `claude/nice-mendel-7q88xm` — 24/06/2026**
-  Carmen (Catering JJ) recibía un pedido a la vez con confirmación por foto; con muchos repartidores seguidos el flujo era lento.
-  - **Flujo nuevo:** botón "Añadir foto" multi-disparo — cada foto acumula productos en una tabla de revisión editable (`recPendientes[]`). "Registrar todo (N)" los inserta en paralelo con `Promise.allSettled`. Sin dialogo intermedio.
-  - **Reconocimiento de pedido habitual:** si la IA reconoce el proveedor en la foto, se consulta el endpoint nuevo `GET /api/cocina/recepciones/plantilla?proveedor=X`. Si hay historial, se pre-cargan los productos de la ÚLTIMA entrega de ese proveedor (plantilla histórica) en vez de volver a leer la foto. Banner ámbar "Pedido habitual detectado". Sin ML, sin tablas nuevas.
-  - **Archivos modificados:**
-    - `apps/ia-rest/src/app/produccion/page.tsx` — reemplaza `reconocerFoto`/`crearRecepcion`/`recForm` por `añadirFotoACola`/`registrarTodos`/`recPendientes`. UI de tabla inline editable.
-    - `apps/ia-rest/src/app/api/cocina/recepciones/plantilla/route.ts` — **nuevo** endpoint GET que busca `MAX(fecha)` por proveedor en `cocina_recepciones` y devuelve esos productos.
-  - **Vercel:** 5/5 builds Ready (24/06 19:32 UTC). tsc sin errores nuevos.
-  - **Pendiente:** merge del PR una vez Alberto revise. Ideas opcionales anotadas en sesión: alerta caducidad próxima, alert temperatura APPCC vía Telegram, linking recepciones→ingredientes.
-
-- **🛡️ PRICING: guard de SUELO ESTACIONAL + review Busto con Booking — 24/06/2026 (rama `claude/dynamic-pricing-uhvnak`)**
-  - **Caso real que lo motivó:** entró reserva Busto Apr 10-13'27 (Booking) a **94€ lista / 70€ neto**. `rate_snapshots` mostró
-    que el motor **decayó esa fecha de 129€ (17-jun) al suelo 94€ (22-jun)** al caducar los comps del mes (perdió bucket → cayó
-    al global bajo → se deslizó a min_price); el huésped la pilló barata el 23-jun, horas antes del reseteo de comps. La fuga
-    no es solo "no subir": el motor **BAJA semanas altas al suelo** cuando el mercado caduca.
-  - **Fix (motor):** suelo estacional en `app/api/sivra/pricing/apply/route.ts` = `min_price × FLOOR_SEASONAL[mes]`
-    (nueva `seasonalFloorFactor()` en `lib/pricing-calendar.ts`; alta mar-jun/sep-oct/dic, eventos suben más, acotado a
-    max_price). Gateado por **`pricing_settings.seasonal_floor_k`** (migración `prisma/sql/2026-06-24_pricing_seasonal_floor.sql`,
-    default **0 = inerte**). **Busto activado a k=1** → suelos: Abr/May 117€, Mar/Sep 113€, Jun 104€, Oct/Dic 108€, baja 90€. No
-    depende de mercado fresco (a diferencia de PR #440).
-  - **Review Busto (Booking apartamentos 2pax centro):** sembrado `market_rates` (search_date HOY) Jul/Ago/Sep/Nov/Dic
-    (p55 103/84/132/131/114) → las 24 noches libres de abril pasaron de suelo a **146€ media (0 a suelo)**. Septiembre era el
-    leak (95 vs 132); agosto correcto (~92, no tocar); Feb 19-21 = Maratón (evento, no baseline). Aprendizajes en
-    `pricing_aprendizaje` (`abril_pre_feria`, `sep_media`).
-  - **PR #440 MERGEADO** (Ticketmaster + 3 fuentes gratis). Pendiente manual: `TICKETMASTER_API_KEY` en Vercel `plataforma`
-    (copiar de `ia-rest`). tsc verde; migraciones aplicadas a la BD.
-
-- **🔑 PANEL-INVENTARIO DE SECRETOS en el god-panel — branch `claude/unified-api-token-management-aklwp8` — 24/06/2026**
-  Lo que Alberto pidió desde el principio ("un apartado para todo el proyecto"), versión **mapa, no baúl** (Opción A, solo lectura, cero valores):
-  - **`apps/plataforma/lib/secrets-registry.ts`** — registro declarativo de ~40 credenciales: `{name, tipo, proposito, verticales, dondeVive, proyecto?, obligatoria?, nota?}`. `tipo` ∈ firma-sesion/token-inter-app/cron/api-externa/login-humano/hash-usuario. `dondeVive` ∈ vercel-equipo/vercel-proyecto/bitwarden/bd-hash. **Sin un solo valor.** Es también documentación viva de qué secreto vive dónde.
-  - **Página `/operador/secretos`** (`app/(usuario)/operador/secretos/{page,SecretosClient}.tsx`): agrupa por tipo (críticos arriba), filtro, banner "no se muestran valores", badges de vertical + obligatoria + nota. Auth `getAdmin()` (cookie `plataforma_admin`). Item `🔑 Secretos` añadido a `NAV_OPERADOR` en `UserSidebar.tsx`.
-  - **Pendiente / fase 2 (a decidir con Alberto):** "write-through" para editar valores desde el panel (escribiría a Vercel por API, bien blindado) — hoy el panel solo enlaza mentalmente a Vercel/Bitwarden. La columna "dónde vive" ya está; falta el botón de edición si lo quiere.
-  - Guardián de secretos sigue verde (el registro no dispara falsos positivos). Validación final en preview de Vercel.
-  - **✅ CIERRE (24/06/2026):** las 3 entradas (hardening + prevención + panel) se **mergearon a `main` en PR #492** (squash `8ff9acf`). CI `tests.yml` verde (guardián + typecheck de las 5 apps, rrhh incluido → sin deuda de tipos); 5/5 previews de Vercel Ready. **VAPID de ia-rest ROTADA** por Alberto (nueva pública/privada en Vercel ia-rest Production&Preview + redeploy) → clave filtrada anulada. Envs de auth verificadas presentes en Vercel (`JWT_SECRET` ialimp; `JWT_SECRET_CRM`/`CRON_SECRET`/`SUPER_ACCESS_KEY` ia-rest). **Pendientes (opcionales):** fase 2 del panel (write-through a Vercel), adoptar `requireSecret()` en call-sites, cablear `eslint.config.mjs` en `rrhh`, y los opcionales del plan (gitleaks histórico, `tests.yml` como required check, guardián de rutas sin auth).
-
-- **🛡️ PREVENCIÓN AUTOMÁTICA de fallbacks de secretos (+ VAPID privada filtrada) — branch `claude/unified-api-token-management-aklwp8` — 24/06/2026**
-  Continuación del hardening: que esta clase de fallo se detecte sola. Por qué no se detectaba antes: ninguna red miraba el patrón (gitleaks solo ve secretos "de alta entropía" en commits nuevos; no había regla ESLint; el guardián solo vigilaba `@iarest/`; la auditoría es manual).
-  - **Guardián nuevo `test/regression-secrets.test.ts`** (gate en `pnpm test:guardia`, Node puro): falla si un secreto de auth cae a un literal sin guarda de prod. Excluye `NEXT_PUBLIC_*` y `|| ''`. **En su 1ª ejecución cazó una VAPID PRIVATE KEY real hardcodeada** en `apps/ia-rest/src/lib/push.ts`, `qr-notify.ts` y `api/push/send/route.ts` → blanqueada (`|| ''`). **PENDIENTE Alberto: rotar el par VAPID de ia-rest** (`npx web-push generate-vapid-keys`, poner en Vercel; OJO: invalida las suscripciones push existentes → re-suscribir).
-  - **Regla ESLint** `securityRules` (en `eslint.config.base.mjs`, `no-restricted-syntax`, warn) compuesta en ia-rest/ialimp/sivra/plataforma. **rrhh NO tiene `eslint.config.mjs`** (hallazgo aparte).
-  - **`requireSecret()` en `@central/core-identity`** (`src/secret.ts` + test vitest) — encapsula la guarda de prod. Adopción en call-sites: PENDIENTE (helper listo).
-  - **rrhh añadido al typecheck de CI** (`tests.yml` matrix) — antes se escapaba (lleva `ignoreBuildErrors`). OJO: si rrhh tuviera deuda de tipos, ese job saldrá rojo (es real, a reparar).
-  - **Docs:** comentado el porqué de `ignoreBuildErrors` en plataforma/ialimp/rrhh; regla en `CLAUDE.md` raíz; check en `auditoria-central`. **Hook `.githooks/pre-commit`** (versionado) corre los guardianes dep-free → wiring 1 vez: `git config core.hooksPath .githooks`.
-  - Guardián verificado en verde local. Resto se valida en preview de Vercel.
-
-- **🔐 HARDENING SECRETOS DE AUTH: fuera fallbacks hardcodeados — branch `claude/unified-api-token-management-aklwp8` — 24/06/2026**
-  Auditoría de la gestión de tokens/secretos inter-app (emparejamientos emisor↔validador). **Estructura sana** (OPERADOR_SHARED_SECRET, RRHH_OPERADOR_SECRET, CRON_SECRET, AI_GATEWAY_SECRET, JWT_SECRET bien emparejados, `===`, sin endpoints operador desprotegidos). Reparados los **fallbacks con literal** que en prod serían una credencial conocida del repo:
-  - **ialimp:** `app/api/auth/register/route.ts` (firmaba con `'ialimp-secret-2026'` sin guarda de prod → ahora fail-hard en producción) y `app/api/auth/logout/route.ts` (mismo patrón). El resto de ialimp (`lib/auth.ts`/`tenant.ts`/`propietario-auth.ts`) ya fallaba en duro.
-  - **ia-rest CRM:** nuevo helper único **`src/lib/crm-secret.ts` → `crmSecret()`** (fail-hard en prod, dev-fallback `ia-rest-crm-2026`); adoptado en `leads/unsubscribe`, `telegram/webhook`, crons `crm-followup-sevilla`/`crm-envio-auto`/`crm-recordatorio-dia2` (firman/validan los JWT de baja → MISMO secreto en ambos lados, era el riesgo).
-  - **ia-rest OAuth super:** `super/google-oauth{,-callback}` ya no caen a `'iarest'` para el state CSRF; mantienen la cadena `CRON_SECRET || SUPER_ACCESS_KEY` y fallan en duro en prod.
-  - **Docs:** `apps/ia-rest/.env.example` ahora documenta `JWT_SECRET_CRM` y `DEMO_SEED_SECRET` (se usaban en código sin estar en ningún `.env.example`).
-  - **Verificado en preview (5/5 verde):** el primer push falló el build de ia-rest (`crm-envio-auto/route.ts`: `crmSecret()` adoptado sin añadir el `import`); fix en commit aparte → re-build de las 5 apps **Ready** (central-rrhh skipped, no le afectaba). En prod estas envs SIEMPRE están puestas → sin cambio de comportamiento, solo se elimina el downgrade silencioso.
-  - **Lección:** al extraer un helper y adoptarlo en N ficheros, verificar `import` en TODOS (un `grep` de "usa vs importa") antes de empujar; `tsc` local no corre sin `node_modules`, la red de seguridad fue la preview de Vercel.
-  - **Pendiente:** el "panel-inventario de secretos" (Opción A) que Alberto pidió queda por diseñar/construir. PR draft: **#492** (`claude/unified-api-token-management-aklwp8`).
-
-- **🔍 AUDITORÍA LIGERA DIARIA — 24/06/2026**
-  Rango: desde 21/06 (último addendum) hasta HEAD. 66 commits en plataforma + nuevo `packages/core-telegram`.
-  - **Crons:** ✅ 8/8 vivos. `pricing/guard` aparecía ⛔ MUDO por falso positivo del heartbeat SQL (mide filas en `pricing_alerts`, que solo se escriben cuando hay reversiones; Vercel confirma 7 ejecuciones en 7 días). Corregido en `auditoria-diaria.md`.
-  - **Lockfile desincronizado 🟡:** `@central/core-telegram@workspace:*` añadido a `apps/plataforma/package.json` + `transpilePackages` pero `pnpm-lock.yaml` no actualizado. **Acción Alberto:** `pnpm install` local + commitear lockfile.
-  - **Docs corregidos:** `MATRIZ.md` + `CLAUDE.md` raíz actualizados para incluir `@central/core-telegram` (bot único del monorepo, creado 22/06, consumido por plataforma).
-  - **Memoria y skills:** CONTEXTO-SESIONES.md en sync hasta 23/06; SKILLS.md en sync con `.claude/skills/` y `.claude/commands/`. Sin entries faltantes.
-  - **Carry-forwards pendientes de Alberto:** Q1 (tabla `concursos_radar_criterios`), Q4 (listing buckets Supabase), Q5 (SMTP plataforma), Q6 (vulns ialimp), B2 (jubilar BD vieja ia-rest).
-  - PR draft: `claude/auditoria-diaria-2026-06-24`.
-
-- **📊 RECONCILIACIÓN INGRESOS Casa Sevillana 2026 + KPI «a día de hoy» — PR #485 — 23/06/2026**
-  Alberto quiso verificar que los 41.177€ de ingresos 2026 de Casa Sevillana (Socorro) en plataforma cuadran con la realidad. Análisis manual sobre capturas de Booking, Expedia, Airbnb:
-  - **Booking.com cobrado 2026:** 35.778,98€ (ene 6.690,82 + feb 3.503,63 + mar 5.792,39 + abr 8.568,53 + may 7.385,35 + jun 3.838,26) — confirmado por captura de la app Booking.
-  - **Expedia cobrado 2026:** 1.593,24€ + 1.094,77€ + 26,82€ (ajuste extracto 9570613) = 2.714,83€ — confirmado por Alberto.
-  - **Airbnb cobrado 2026:** 1.219€ (1 reserva, Alberto Galan, 12-14 jun). Solo esa en 2026 para Casa Sevillana.
-  - **Total cobrado confirmado: ~39.712,81€**. Los 41.177€ del programa incluyen reservas con check-out futuro (aún no liquidadas por Booking). Cuadra.
-  - **Código (`financiero.ts` + `dashboard/page.tsx`):** `ResumenFinanciero` gana `ingresosHoy?` / `resultadoHoy?`; `getResumenSivra` añade 3ª query paralela con filtro `"checkOut"::date <= CURRENT_DATE`; `NegocioCard` muestra el KPI «a día de hoy» con fallback YTD para ialimp/ia-rest, más «Proyectado año: X€» si hay diferencia.
-
-- **✅ DASHBOARD: widget correduría mostraba compañías incorrectas — PR #480 — branch `claude/vibrant-cori-7j28op` — 23/06/2026**
-  El widget "Correduría 2026" del dashboard agrupaba movimientos usando solo `compania_seguros` (campo de asignación manual), ignorando las reglas aprendidas (`correduria_reglas`) y la detección automática (`detectarCompania`). Las compañías identificadas por nombre/clave pero no confirmadas a mano aparecían todas como "Otras" → faltaban compañías en el widget.
-  - **`app/(usuario)/dashboard/page.tsx`:** `getResumenCorreduria` reescrita para replicar exactamente la lógica de `/api/correduria/route.ts`: fetch paralelo de reglas + aplicación de cadena manual→regla→`detectarCompania`, filtros `importe > 0` y `duplicado_estado <> 'ignorado'`, JOIN directo por `cb.cuenta_id` (no a través de `sociedades`).
-  - **Skill `plataforma-maestro`** actualizado con landmine: widgets de dashboard deben replicar la cadena de detección JS completa, nunca simplificar con GROUP BY en SQL.
-  - PR mergeado a main.
-
-- **✅ SMOOBU 401 era una API KEY MAL en la BD (NO era migración HMAC) — PR #482 revierte #481 — 23/06/2026**
-  **CORRIGE el diagnóstico anterior.** Smoobu **NO** está migrado a HMAC para esta cuenta. El header **legacy `Api-Key`** con la key CORRECTA devuelve **200** (probado en prod contra `/api/threads`: `total_threads: 1210`). Lo que rompía desde por la mañana era que en `pms_connections.smoobu_api_key` había un valor INVÁLIDO (`usr_live_bdc8…cbd31`) que **no autentica por NINGÚN método** (probadas ~19 variantes: header `Api-Key` full/sin-prefijo/secret + HMAC con secret string/bytes, firma b64/hex, ~12 formatos de canónica → todas 401 `Authentication required`). La HMAC del PR #481 se construyó sobre una premisa falsa y dejó el agente en 401 en prod.
-  - **Fix (verificado, prod 200):** (1) BD `pms_connections.smoobu_api_key` = la key buena `5xA62g1B…aW9w` (42 chars, sin prefijo) — **arregla también ialimp/Sique Brilla y sivra**, que comparten la fila y usan el mismo header. (2) **`lib/smoobu.ts`**: `smoobuFetch` vuelve a añadir el header `Api-Key` (se eliminó la firma HMAC, `getSmoobuCreds`, `canonicalString`); `getSmoobuKey()` sigue siendo la fuente única. (3) Borrado el endpoint temporal `diag-hmac`.
-  - **Lección:** ante 401 de Smoobu, lo PRIMERO es validar que la key de `pms_connections` es la real (probar `Api-Key: <key>` contra `/api/threads`), no asumir cambios de esquema. La columna `smoobu_api_secret` quedó en la tabla pero **sin uso** (inocua).
-  - `smoobuFetch` (header `Api-Key`) ya lo usan agente (`contexto`/`guia`/`enviar`) + poller `auto-reply`. El resto de rutas Smoobu de plataforma/ialimp/sivra ya funcionaban con `Api-Key` legacy y volvieron solas al corregir la key en BD.
-
-- **🤖 AGENTE HUÉSPEDES: hotfix 500 ".map is not a function" — 23/06/2026**
-  Al re-proponer a José el endpoint devolvió **500** `(intermediate value).map is not a function`. Causa: en `contexto.ts` se hacía `d.messages || d || []` (y `d.bookings || d.data || []`) y luego `.map`; si Smoobu devuelve un OBJETO (p.ej. error/límite de rate, agravado por la 4ª llamada que añadió el early-checkin) en vez de un array, el `.map` revienta y tumba TODO el agente. Fix: `Array.isArray(...) ? ... : []` en mensajes Y en la consulta de reservas → como mucho degrada (historial/disponibilidad vacíos), nunca 500.
-
-- **🤖 AGENTE HUÉSPEDES: robustez del envío + "Modificar"→aprobar — 23/06/2026**
-  Alberto pulsó **✏️ Modificar** en un borrador (reserva 131511815) y respondió **"Ok"** pensando que aprobaba; el handler trató "Ok" como el texto a ENVIAR al huésped → "❌ No se pudo enviar al huésped" (Smoobu rechazó). Además el código **borraba el pendiente aunque el envío fallara** → botones muertos. Arreglos en `telegram-webhook/route.ts` + `enviar.ts`:
-  - **Aprobación corta:** si respondes a Modificar con `ok/vale/sí/dale/👍…` se interpreta como **aprobar** → se envía el BORRADOR existente (no la palabra), no se manda "Ok" al huésped.
-  - **Fallo de envío no destruye el pendiente:** en ✅ Enviar y en Modificar, si `enviarAlHuesped` devuelve false NO se borra la fila ni se marca "Enviado" → puedes reintentar.
-  - **`enviar.ts` ahora loguea el motivo** (status + cuerpo de Smoobu) para diagnosticar por qué rechaza una reserva (antes se tragaba el error).
-  - Pendiente: confirmar la causa del rechazo de Smoobu para 131511815 (¿mensajería del canal no disponible? lo dirá el log en el próximo intento).
-
-- **✅ BANCA: eliminar 16 falsos duplicados PSD2 y prevenir recurrencia — PR #465 — 23/06/2026**
-  BBVA y Kutxa devuelven cada transacción dos veces en el feed PSD2 con `entry_reference` distintos → dos hashes → dos filas → falsas alertas en "Posibles cargos duplicados". NO era solapamiento Norma43/PSD2.
-  - **BD (Supabase MCP):** 16 registros eliminados (CUOTA PTMO hipoteca Montecarmelo, TARJ.CRDTO x2 tarjetas, KUTXABANK SEG. VIDA, RECIBO AYTO SEVILLA, AEAT deducción maternidad, etc.)
-  - **`lib/psd2.ts`:** dedup secundario `fecha+importe+concepto` dentro de cada sync call (el hash-based solo cubre within-call con mismo entry_reference)
-  - **`lib/banca.ts`:** `getDuplicadosSospechosos` excluye pares cross-origen (psd2↔norma43/xls) y pares psd2+psd2 mismo concepto+fecha (backstop)
-  - **`lib/duplicados.ts` + `BancaClient.tsx`:** campo `origen` propagado hasta UI → badge de fuente en cada fila de la tarjeta de duplicados
-  - **Pendiente manual:** RECIBO EXCMO. AYUNTAMIEN 2026-06-02 (2 entradas `xls-kutxa`, son 2 facturas IBI distintas del Ayuntamiento con EXPTE diferentes) → Alberto puede resolver con "Es normal" en /banca
-  - **Nota arquitectónica:** TARJ.CRDTO 4662032019750300 y 4662032019650302 son DOS tarjetas reales (Alberto + mujer), pero BBVA PSD2 duplicaba cada una; después de la limpieza quedan 1 entrada/mes por tarjeta. Correcto.
-
-- **🧾 GASTOS: KPI dashboard «sin revisar / sin justificante» + pasada facturas-correo (PriceLabs) — branch `claude/expense-deductibility-control-sfx6od` — 23/06/2026**
-  - **Dashboard KPI (mejora #4 de Alberto):** `getAlertas` (`lib/banca.ts`) ahora alinea `porRevisar` con la bandeja de `/finanzas?tab=gastos` (`requiere_revision AND NOT destino_confirmado AND destino<>'traspaso_interno'`) y añade **`sinJustificante`** (cargos deducibles del año — seguros/turistico_* — no amortizables, sin `conciliado`/`factura_ref`). El banner del dashboard enlaza a `/finanzas?tab=gastos` (antes `/banca`) y muestra ambas líneas. Build OK.
-  - **Pasada `facturas-correo` (mejora #5):** ventana 7d sin facturas deducibles nuevas (solo docs de firma BBVA + mensajería Booking). **PriceLabs:** 5 cargos en banco (feb–jun, todos pisos) estaban 0/5 con 📎 → conciliados 4/5 (mar–jun) con `factura_ref=gmail:<thread>`; feb pendiente (aviso fuera de ventana). **Hallazgo:** los correos de PriceLabs son AVISOS DE COBRO, no el PDF (la factura real vive en el portal de facturación tras login) → el 100%-desde-email no es posible; el Apps Script no los baja. Para el PDF oficial hay que entrar a pricelabs.co/billing.
-  - **Decisiones de Alberto (esta sesión):** #2 amortización **descartada** (no tiene gastos grandes que amortizar ahora). #3 **split/desglose de un cargo por piso** (p.ej. lavandería que factura en bloque sin separar por piso) = **siguiente PR** (pendiente de plantear). Sueldo «por la baja» sigue pendiente (de quién es la nómina).
-
-- **🤖 AGENTE HUÉSPEDES: early check-in solo si la noche anterior está libre (gratis) — 23/06/2026**
-  Regla de Alberto: el early check-in (entrada antes de las 15:00) es **GRATIS**, pero SOLO se confirma si la **noche anterior está libre** (nadie duerme la víspera). OJO: puede haber una reserva que SALE el MISMO día de la llegada (`departure === arrival`) → esa noche está ocupada → NO hay early check-in. **NUNCA se ofrece de pago** (antes el prompt lo ofrecía como servicio de pago, inventado).
-  - **`disponibilidad.ts` (nuevo, puro):** `nocheAnteriorLibre(arrival, estancias, selfId)` — ocupada si alguna otra estancia `arrival<=víspera && departure>=llegada` (incluye salir el mismo día); excluye la propia reserva y cancelaciones. 8 tests `node --test` OK.
-  - **`contexto.ts`:** consulta las reservas del piso en Smoobu (`/api/reservations?apartments[]=…&from=llegada-30&to=llegada`) y expone `earlyCheckinPosible`.
-  - **`decidir.ts`:** bloque EARLY CHECK-IN según `earlyCheckinPosible` (gratis si libre / no posible si ocupada). LATE CHECK-OUT pasa a `needs_human` (lo decide Alberto, depende de la reserva siguiente).
-  - Verificado en vivo: reserva 131511815 (House Sevillana, huésped llega 12:30-13:00) → borrador correcto a 15:00.
-
-- **🧾 GASTOS Fases 3-4: IA en bloque + justificante automático — branch `claude/expense-deductibility-control-sfx6od` — 23/06/2026**
-  - **Fase 3 (IA en bloque):** `POST /api/finanzas/gastos/sugerir-lote` (una llamada IA para todos los grupos de la bandeja, `= ANY(ids::uuid[])` scoped por cuenta). `GastosTab`: botón **«🤖 Sugerir todo»** → chip de propuesta por grupo con **✓ aceptar** (aplica destino vía regla de comercio + amortizable a todo el grupo) y **«✓ Aceptar todas las sugerencias»**. Build OK.
-  - **Fase 4 (justificante automático):** la skill `facturas-correo` ahora, al casar factura↔movimiento, **marca `conciliado=true` + `factura_ref`** en `movimientos_bancarios` → enciende el badge **📎 con factura** del panel. PriceLabs/SaaS por email: archivar TODAS en Drive y conciliar (PriceLabs al 100%). (Lo ejecuta el agente en su pasada; el código del puente queda listo.)
-  - **Pendiente:** Sueldo «por la baja» (de quién es la nómina).
-
-- **🧾 GASTOS Fase 2: bandeja agrupada por comercio — branch `claude/expense-deductibility-control-sfx6od` — 23/06/2026**
-  La bandeja «Por revisar» ahora se **agrupa por comercio** (`claveComercio`): "PETROPRIX ×3 · 50€" con una sola decisión que clasifica todos los iguales. `lib/finanzas.ts` `getGastosControl` devuelve `porRevisarGrupos` (GastoGrupo[] ordenado por count); `GastoMov` gana `comercio`. `GastosTab.tsx`: componente `Grupo` con acciones de grupo (**✓ Está bien** → confirma todos en lote; **↪ Reclasificar** → un `/api/banca/destino` sobre el representante que **aprende la regla del comercio** y la aplica a todos) + expandir para ver/afinar los movimientos sueltos. Build OK. (Fase 3-4 pendientes: IA en bloque + auto-proponer reglas; justificante auto `facturas-correo`→Drive.)
-
-- **🧾 GASTOS Fase 1: bandeja «Por revisar» usable (963→135) + aprendizaje por COMERCIO — branch `claude/expense-deductibility-control-sfx6od` — 23/06/2026**
-  La bandeja mostraba 603/963 (todo lo no confirmado). Ahora **`porRevisar = requiere_revision AND NOT destino_confirmado AND ≠traspaso`** → solo lo DUDOSO. `lib/destino.ts`: descarte **BBVA** → `revisar:true` (se contaría como correduría, confirmar); Kutxa personal por descarte → `revisar:false` (caso normal, no inunda); Bizum → `confirmado:true`. `DestinoDetalle` gana `confirmado?`. `lib/categorizar.ts`: `guardarCategoria` persiste `destino_confirmado`; aplica reglas de `banca_destino_reglas` por **substring** (prioridad sobre auto → anula "seguros solo BBVA"; guarda: no a cónyuge; gana la clave más larga). **Aprendizaje por comercio:** `lib/correduria.ts` `claveComercio()` + `/api/banca/destino` aprende por comercio si no hay código de referencia. Tests 15/15. **Reglas sembradas (BD, cuenta `4fdc993a…`):** IONOS/PETROPRIX/PRIMAPRIX→`seguros`; NETFLIX/`GUTIERREZ ALCALA`→`turistico_pisos`; GENERALI coche (one-off, sin regla)→`seguros`; Bizum (88) confirmados; backfill `requiere_revision` (solo BBVA descarte). Bandeja 963→**135**.
-  - **Pendiente (fases 2-4):** agrupar bandeja por comercio; sugerencia IA en bloque + auto-proponer reglas; justificante auto (`facturas-correo`→Drive, PriceLabs al 100%). **Sueldo −1.440 «por la baja»** aparcado (falta de quién es la nómina).
-
-- **👷 RRHH — alta masiva 22 empleados Mariscos González + mejoras UI lista — 23/06/2026**
-  Branch `claude/awesome-carson-3obe34`. PR draft #469 (builds Vercel en curso al cerrar).
-  - **BD (SQL vía MCP `wswbehlcuxqxyinousql`):** migración `0014_nss` (`ALTER TABLE rrhh.empleados ADD COLUMN nss TEXT`); INSERT 22 trabajadores de "Almacén de Mariscos González" (empresa de Pilar), ordenados A-Z, con DNI y NSS del PDF oficial SS. Email NULL — Pilar los añadirá desde la UI.
-  - **`prisma/schema.prisma`:** campo `nss String?` en modelo `empleados`.
-  - **`app/admin/empleados/page.tsx`:** SELECT incluye `dni, nss`; fetchea `nombre` del `usuario_rrhh` y `nombre` de la `empresa` para el banner de bienvenida.
-  - **`app/admin/empleados/EmpleadosClient.tsx`:** tipo `E` con `dni, nss`; banner "Bienvenida, Pilar · Mariscos González"; chips DNI+NSS en cada fila; buscador ampliado (nombre, DNI, Nº SS).
-  - **`app/api/admin/empleados/route.ts`:** GET incluye `nss` en SELECT.
-  - **Pendiente:** Pilar debe añadir el email a cada empleado para que puedan recibir documentos a firmar.
-
-- **🧾 GASTOS: Bizum SIEMPRE personal — branch `claude/expense-deductibility-control-sfx6od` (follow-up del #468) — 23/06/2026**
-  Alberto, probando el control de gastos, avisa que un **Bizum es siempre personal**. Bug en `lib/destino.ts`: la regla Bizum→personal solo cubría ABONOS (`RE_PERSONAL_IN`); un **Bizum ENVIADO desde BBVA** caía a `seguros` por descarte (los cargos de BBVA que no son del Dúplex). Fix: regla propia `if (/\bBIZUM\b/i…) → personal` **tras el bloque de cónyuge** (a Pilar un Bizum sí es cobro de cliente → `actividad_pilar`), cubre ambos signos y bancos; se quitó `BIZUM` de `RE_PERSONAL_IN` (redundante). Test nuevo (12/12 ✓). SQL: reclasificados **3 cargos** (180 €) de `seguros`→`personal` (scope titular, no cónyuge); ahora los 99 Bizum están en personal.
-
-- **🤖 AGENTE HUÉSPEDES: arreglado el timeout (504) del disparo manual/webhook — 23/06/2026**
-  Al re-proponer raquel (booking 142846717) con el horario ya corregido (15:00), el endpoint `/api/sivra/mensajes/auto-reply?booking=…&q=…` daba **504 Vercel Runtime Timeout**: el camino de una reserva hace 3 llamadas IA secuenciales (decisión + 2 traducciones EN→ES) y el upsert del borrador es el ÚLTIMO paso → se moría antes de persistir (la fila pendiente seguía con "13:00"). Las llamadas IA van ANTES de `tgSendButtons`, así que un 504 NO manda Telegram (no hay spam a Alberto), pero tampoco re-propone.
-  - **`telegram-msg.ts`:** las dos traducciones (pregunta + borrador) ahora en **`Promise.all`** (antes secuenciales).
-  - **`auto-reply/route.ts` y `webhook/route.ts`:** `maxDuration` 60 → **300** (máximo en plan Pro). El webhook en tiempo real corría el mismo trabajo pesado y también podía dar 504 con un huésped que necesita traducción.
-  - Tras desplegar: re-disparar raquel y confirmar en `mensajes_pendientes_tg` que el borrador dice **15:00**.
-
-- **🧾 CONTROL DE GASTOS (deducible negocio / renta / no deducible) en /finanzas — branch `claude/expense-deductibility-control-sfx6od` — 23/06/2026**
-  Alberto no podía separar qué gasto es deducible (actividad/renta) de lo personal ni reclasificar un cargo. Caso que lo motivó: ventilador CREATE (123,45 €, Kutxa) para un piso → deducible como `turistico_pisos` PERO mobiliario → **a amortizar**, no gasto del año al 100%.
-  - **Hallazgo:** la deducibilidad YA está en `movimientos_bancarios.destino` (no hizo falta columna de bucket). Mapa bucket: `seguros`→negocio, `turistico_*`→renta, `personal/null`→no deducible, `traspaso_interno`→fuera.
-  - **BD:** nueva columna `movimientos_bancarios.amortizable BOOLEAN DEFAULT false` (migración `prisma/sql/2026-06-23_mov_amortizable.sql`, aplicada por MCP `wswbehlcuxqxyinousql`).
-  - **`/finanzas` reorganizado en 3 pestañas** (`?tab=`): **Ingresos** (correduría+pisos+Pilar) · **Gastos** (panel nuevo) · **Fiscal/Resumen** (gráfico, base imponible, tramos, deducciones, Modelo 179). KPIs de cabecera fijos. Decisión de Alberto: pestañas propias.
-  - **Pestaña Gastos (`GastosTab.tsx`):** bandeja **«Por revisar»** primero (= `requiere_revision OR NOT destino_confirmado`, sin traspasos) + buckets colapsables. Por fila: reclasificar (aprende regla), confirmar (✓ está bien), toggle **amortizable**, **🤖 sugerir** (IA), badge **📎 con factura / ❗ sin justificante** + «buscar factura» (Gmail). Mejoras elegidas por Alberto: justificante+alerta, sugerencia IA, export asesoría.
-  - **Amortizables:** se EXCLUYEN del gasto deducible del año (en `getResumenFinanciero` y trimestres) y se listan aparte (nota en base imponible + sección en el CSV). v1 NO calcula el % de amortización (solo separa y lista).
-  - **Aprendizaje:** al reclasificar SIEMPRE se crea regla (`banca_destino_reglas`) — `/api/banca/destino` generalizado para reaplicar a TODOS los iguales (ya no solo dentro de `seguros`).
-  - **Nuevo:** `lib/finanzas.ts` `getGastosControl()` + tipos bucket; rutas `POST /api/banca/amortizable`, `GET /api/finanzas/gastos`, `POST /api/finanzas/gastos/sugerir`, `GET /api/finanzas/gastos/export`. Reusa patrón de reclasificación de `CorreduriaClient` y `aiComplete` de `lib/ai-client`.
-  - **Verificado:** `next build` ✓, 11 tests `destino` ✓, CREATE localizado en bandeja por-revisar (read-only). **Fuera de alcance v1:** split por línea de pedido mixto, % de amortización.
-
-- **🤖 AGENTE HUÉSPEDES: override de horarios por piso (Smoobu da hora desfasada) — 23/06/2026**
-  Al probar: Smoobu graba la hora de check-in POR RESERVA al crearse; cambiar el ajuste del apartamento solo afecta a reservas NUEVAS, y la API del apartamento NO expone la hora → `reserva['check-in']` viene desfasado (13:00 cuando la entrada real es 15:00). Solución: **`horarios.ts`** (override por piso, fuente de verdad): todos 15:00 salvo **Busto Reform 13:00**, salida 11:00; `contexto.ts` lo aplica por encima de Smoobu (fallback a Smoobu si el piso no está en la tabla). Tests OK.
-  **Seguridad:** Alberto graduó `checkin` a auto-envío por error → se **desactivó** (`DELETE mensajes_auto_config WHERE categoria='checkin'`) porque con la hora desfasada habría auto-enviado horas mal. Re-graduar solo cuando el horario sea fiable (ya lo es con el override).
-
-- **🟣 PILAR autónoma: sección completa /finanzas/pilar — PR #462 MERGEADO — 23/06/2026**
-  Branch `feature/pilar-autonoma`. Sección completa para la contabilidad autónoma de Pilar (cónyuge) bajo el mismo login, sin segundo usuario.
-  - **BD (SQL aplicado vía MCP `wswbehlcuxqxyinousql`):** `cuentas_bancarias.titular TEXT DEFAULT 'titular'`, `fiscal_perfil` + 5 campos cónyuge autónoma, `movimientos_bancarios.subcategoria TEXT`.
-  - **Import banca:** select "Titular de la cuenta" en `BancaClient.tsx` (Yo / Cónyuge Pilar), se pasa a la API y guarda en `cuentas_bancarias.titular`.
-  - **Auto-clasificación:** `lib/destino.ts` → `clasificarDestinoDetalle(banco, concepto, contraparte, importe, titular)`: para cónyuge, TGSS→`actividad_pilar/cuota_autonomos`, abono→`actividad_pilar/cobro_cliente`, resto→`actividad_pilar/gasto_profesional`. `lib/categorizar.ts` usa `titular` y persiste `subcategoria`.
-  - **`getResumenPilar(cuentaId, year, quarter)`** en `lib/finanzas.ts`: 4 queries paralelas (totales, clientes, por mes, recientes), concentración (>75% → alerta), Modelo 130 por trimestre (`rendimiento_neto × 0.20 − retenciones_15%`), badges estado (pasado/próximo/futuro).
-  - **`compararDeclaracion()`** en `lib/fiscal-deducciones.ts`: conjunta vs separada — ahorro y recomendación.
-  - **`/finanzas/pilar`**: página nueva completa (KPIs morado, evolución mensual, Modelo 130 con fechas límite, tabla clientes con alerta concentración, movimientos recientes con subcategoria badges).
-  - **`/finanzas`**: card compacta "🟣 Actividad de Pilar" en el grid de accesos rápidos.
-  - **`/api/finanzas/perfil`**: campos cónyuge autónoma en GET/PUT.
-  - **12 archivos modificados/creados.**
-
-- **🤖 AGENTE HUÉSPEDES: modificación traducida + sin asunto "Re: tu estancia" — 23/06/2026**
-  Feedback en vivo de Alberto:
-  - **Modificar traduce:** Alberto SIEMPRE escribe su corrección en español; si el huésped es de otro idioma, el agente la **traduce a ese idioma** antes de enviar y le confirma a Alberto en español lo que se mandó. Se guarda el idioma del huésped en `mensajes_pendientes_tg.idioma` (migración `2026-06-23_pendientes_tg_idioma.sql`, aplicada por MCP) y el handler `edit` de `telegram-webhook` traduce con `aiComplete`.
-  - **Sin asunto:** `enviarAlHuesped` ya no manda `subject='Re: tu estancia'` (salía repetido en cada mensaje); ahora solo incluye `subject` si se pasa explícito. Decisión de Alberto: sin asunto.
-
-- **✅ AGENTE HUÉSPEDES: arreglada la idempotencia (no reprocesa/duplica) — branch `claude/agente-huesped-idempotencia` — 23/06/2026**
-  Seguimiento del agente en producción (Telegram): funcionaba (clasifica, propone, auto-gradúa), pero **reprocesaba el MISMO mensaje** en cada sondeo/webhook → propuestas duplicadas y **un auto-envío doble** (reserva 130550600 salió 2 veces). **Causa:** el webhook llamaba `procesarMensajeHuesped(bookingId)` SIN `msgId`, y el dedup se saltaba si `msgId` venía vacío (`if (msgId && …)`); además el "check-then-mark" no era atómico (carrera sondeo↔webhook).
-  - **`lib/sivra/agente-huesped/clave-dedup.ts` (nuevo, puro):** `claveDedup(bookingId,msgId,pregunta)` = el id de Smoobu si lo hay; si no, clave estable `c:<booking>:<sha1(texto)>` (normaliza espacios/mayúsculas). 4 tests `node --test` (20 OK en el agente).
-  - **`idempotencia.ts`:** nuevo `claimMensaje(key)` = INSERT … ON CONFLICT DO NOTHING RETURNING → reclamo **atómico** (solo uno gana la carrera); `liberarMensaje(key)` para reintentar si el procesado falla a mitad.
-  - **`orquestador.ts`:** reclama la clave AL ENTRAR (corta duplicados aunque no haya msgId); si el envío falla o salta excepción, libera el reclamo (no pierde el mensaje). Quitado el `marcarMensajeProcesado` tardío.
-  - **Pendiente menor:** el duplicado ya enviado al huésped no se deshace (a partir de ahora no se repite). Latente (dominio de #454): si el `latest_message` del hilo fuese la propia respuesta del agente, la heurística de `auto-reply` podría intentar procesarla (no observado).
-
-- **✅ BANCA: la correduría (`seguros`) es SIEMPRE BBVA — branch `claude/seguros-solo-bbva` — 23/06/2026**
-  Regla de Alberto: la **correduría de seguros vive solo en la cuenta BBVA**. Un "RECIBO GENERALI/OCCIDENT/LIBERTY SEGUROS" en **Kutxabank** (u otro banco) es el seguro PROPIO (coche/hogar), NO una comisión de la correduría — antes el clasificador los metía en la matriz de correduría por casar el nombre de la aseguradora en cualquier banco.
-  - **`lib/destino.ts`:** el destino `seguros` solo se asigna en **BBVA** (tanto en abonos —comisiones/liquidaciones— como en cargos). En Kutxa/otros, un recibo de seguro propio → `personal` (si fuese de un piso, se reclasifica a Pisos desde el desglose). Tests `node --test` (11 OK en destino).
-  - **Data (BD compartida, por MCP + `prisma/sql/2026-06-23_seguros_solo_bbva.sql`):** 13 movimientos no-BBVA sacados de `seguros` → `personal` (12 Kutxa Generali/Occident/Liberty + 1 N26 Cabify). Quedan 264 en `seguros`, todos BBVA.
-  - **Fiscal (pendiente de Alberto):** el seguro del coche normalmente NO es deducible en IRPF salvo afectación del vehículo a la actividad; los recibos de seguro de un **piso turístico** SÍ son gasto deducible del alquiler → reclasificarlos a Pisos. Ver skill `perfil-fiscal`.
-
-- **🤖 AGENTE HUÉSPEDES: datos oficiales de Smoobu como fuente + traducción del borrador — branch `claude/auto-respond-guest-messages-ai-syzmhb` — 23/06/2026**
-  Tras probar en producción, Alberto detectó respuestas **vagas** (p.ej. hora de salida sin decir la hora). **Causa raíz:** el `guest-app-url` de Smoobu es una **SPA JS** (`"You need to enable JavaScript"`, ~56 chars) → `mensajes_guia_cache` SIEMPRE vacía → el agente decidía con "(sin guía cargada)". Además el código usaba `arrival`/`departure` (las FECHAS) e **ignoraba** `check-in`/`check-out` de la reserva (que en Smoobu son las **HORAS**, p.ej. 11:00 de salida).
-  - **`contexto.ts`:** nueva **ficha estructurada** desde datos oficiales de Smoobu (dirección, **horario entrada/salida**, capacidad, equipamiento) + campos `horaCheckIn`/`horaCheckOut`/`direccion`/`ficha`. checkIn/checkOut pasan a ser solo las fechas.
-  - **`decidir.ts`:** la ficha + el **HORARIO OFICIAL** entran como fuente de verdad del prompt ("úsalo SIEMPRE para horas, NO seas vago"). La ficha se añade a las fuentes del guardrail anti-invención (si no, decir "11:00" se marcaría como inventado y escalaría).
-  - **`telegram-msg.ts`:** si el huésped escribe en otro idioma, se traduce al español **la pregunta Y el borrador** (🔁) para que Alberto entienda qué se le va a responder. Al huésped se le sigue respondiendo en SU idioma.
-  - **`diagnostico-guia`:** vuelca `reservaHoras` (arrival/departure/check-in/check-out/language) para verificar valores reales.
-  - **✅ VERIFICADO en prod (PR #456 mergeado):** `reservaHoras` del Dúplex = `check-in 13:00 / check-out 11:00 / language es`. El agente ya responde con la hora exacta y en español.
-- **🐛 AGENTE HUÉSPEDES: 2 BUGS GRAVES detectados al probar #456 (mismo branch, follow-up) — 23/06/2026**
-  Al revisar `mensajes_log` tras el deploy salieron dos fallos serios:
-  1. **Auto-envío indebido en Fase 1:** `mensajes_auto_config` tenía `categoria='general'` con `auto_enabled=true`. Como casi todo cae en el catch-all 'general', el agente **auto-enviaba TODO sin que Alberto revisara** (p.ej. el checkout vago del Dúplex y la respuesta a Gladys fueron auto-enviados, no aprobados). **Causa:** `evaluarGraduacion` usaba una *blocklist* (SENSIBLES) en vez de *allowlist*; 'general' no estaba bloqueado → tras 5 aprobaciones se graduó. **Fix:** `graduacion.ts` ahora usa **allowlist `GRADUABLES`** (wifi/acceso/checkin/checkout/parking/normas/contacto/faq); 'general' y sensibles NUNCA se gradúan. **Data:** borrada la fila `general` de `mensajes_auto_config` (vuelve a Fase 1, propose-only).
-  2. **Idioma:** `detectLang("Nos iremos sobre las 10.30")` → 'en' (sin tildes ni keywords) → se respondió en INGLÉS a huésped español. **Fix:** se usa el **idioma OFICIAL de la reserva** (`reserva.language`, p.ej. "es") como primario; `detectLang(texto)` solo si Smoobu no lo trae. (`contexto.idiomaReserva` + orquestador.)
-- **🤖 AGENTE HUÉSPEDES: responde en el idioma ESCRITO + tono más cordial + disparo manual — 23/06/2026**
-  Feedback de Alberto probando en vivo (reserva 142846717, raquel, escribe en inglés pero perfil Smoobu=es): la respuesta salía en español y muy seca.
-  - **Idioma = el que ESCRIBE el huésped** (no el perfil de Smoobu). `detectLang(text, fallback)` reescrito con puntuación ES/EN (antes "Nos iremos sobre las 10.30" caía a inglés); si el mensaje no da señal, usa el idioma de la reserva como fallback. Orquestador: `detectLang(pregunta, idiomaReserva||'en')`. Al huésped se le responde en SU idioma; en Telegram Alberto ve pregunta+borrador traducidos al español (🔁).
-  - **Tono:** prompt de `decidir` ahora cálido/cercano, 4-6 frases, saludo por nombre + cierre ofreciendo ayuda (antes "breve 3-4 frases" → secas).
-  - **Disparo manual** `GET /api/sivra/mensajes/auto-reply?booking=<id>&q=<pregunta>` (PR #458) para reproponer una reserva concreta. Se usó para corregir el checkout del Dúplex (Alberto aprobó y le gustó).
-  - **NOTA merge:** main trajo en paralelo un refactor de idempotencia (`claveDedup`/`claimMensaje`/`liberarMensaje`, reclamo atómico anti-duplicados). Se conservó ese refactor y se metió DENTRO mi lógica de idioma nueva.
-- **✅ AGENTE HUÉSPEDES: webhooks fuera del gate + borrador IA robusto + fechas — PR #455 MERGEADO — 23/06/2026**
-  Middleware exime `/api/sivra/mensajes/{telegram-webhook,webhook}` (traen su propia auth; antes 307→/login colgaba el botón Modificar). `decidir` usa el texto del modelo como borrador si no devuelve JSON. Telegram muestra Entrada/Salida. Idempotencia por `mensajes_procesados`. **Nota:** los borradores vacíos vistos al probar fueron por **concurrencia** (doble disparo manual del cron a la vez sobre NIM/Groq) — el cron normal corre 1 vez/3min, secuencial.
-- **✅ BANCA: el cron ya no deshace confirmaciones de destino + Booking histórico protegido — branch `claude/booking-confirmado-guard` — 23/06/2026**
-  Follow-up de #448. **Bug detectado al probar:** el cron de categorización movía Booking histórico del Dúplex (los abonos BBVA "Transferencia recibida" que #444 fijó por SQL **sin** marcar `analizado_at`) de `turistico_duplex` → `personal`, porque la nueva regla manda "Transferencia recibida" a secas a personal+revisar. Reclasificó indebidamente ~8.494€ de Booking real.
-  - **Código (`lib/categorizar.ts`):** `analizarMovimientos` ahora **respeta cualquier `destino_confirmado`** (lo lee en el SELECT y lo preserva por encima de la detección automática). Una confirmación manual del dueño NO se vuelve a pisar. Tests `node --test` (22 OK).
-  - **Data (BD compartida, por MCP + `prisma/sql/2026-06-23_proteger_booking_historico.sql`):** re-confirmados como Booking del Dúplex TODOS los abonos BBVA `concepto='transferencia recibida'` (marcados `analizado_at`+`destino_confirmado` para que el cron no los toque). **Excepción:** el abono 2026-01-07 de **1.148,85€** NO es Booking (era personal en el estado aprobado en #446; un traspaso grande puntual) → devuelto a personal.
-  - **Verificado:** total Booking del Dúplex = **30.234,91€** (estado aprobado), cuadre 2026 = **11.046,53€**, 0 "Transferencia recibida" sin proteger.
-- **💶 Mejora bloque Tramos IRPF en /finanzas — PR #451 — 23/06/2026**
-  Branch `claude/tender-cannon-ovy6sk`. Solo toca `apps/plataforma`.
-- **💶 Mejora bloque Tramos IRPF en /finanzas — PR #451 MERGEADO — 23/06/2026**
-  Branch `claude/tender-cannon-ovy6sk`. Solo toca `apps/plataforma`. **Mergeado a main** (squash).
-  - Corregido mensaje factualmente incorrecto: "Si metes 210.998€ más en gastos deducibles, reduces el tramo" era incorrecto (esa cifra es la distancia para SUBIR al 47%, no para bajar).
-  - Añadido **tipo efectivo** (cuota total / base) junto al tipo marginal.
-  - Añadido **ahorro en euros** si se baja de tramo (ej. 29.002€ × 8% = 2.320€) — dato accionable.
-  - Añadida **barra de progreso dentro del tramo** con % recorrido e importes de inicio/fin.
-  - Añadida **etiqueta ▲ con importe** sobre el marcador de posición en la barra.
-  - Separadas las dos direcciones: "para bajar (gastos deducibles)" vs "para subir (más ingresos)".
-  - Ficheros: `lib/finanzas.ts` (calcularTramos + tipo ResumenFinanciero) + `FinanzasClient.tsx` (TramoBar + recuadro).
-
-- **📝 SPEC: Agente de respuesta a huéspedes (SIVRA) — branch `claude/auto-respond-guest-messages-ai-syzmhb` — 22/06/2026**
-  Sesión de **brainstorming** (sin código aún). Alberto quiere un agente IA que responda los mensajes de
-  huéspedes de los pisos turísticos. Investigada la **API de Smoobu** + el código existente. Decisiones:
-  - **Hallazgo Smoobu:** existe `POST /api/reservations/{id}/messages/send-message-to-guest` (responder EN el
-    hilo, no por email suelto como hace hoy el cron) y webhook **`newMessage`** (tiempo real, hoy no hay receptor).
-    La **Guía del Huésped NO está como datos en la API**: solo se da el enlace `guest-app-url` (web `guest.smoobu.com`).
-    `/api/apartments/{id}` solo da hechos (dirección, lat/lng, amenities, timeZone).
-  - **Fuente de conocimiento (prioridad):** (1) contenido de la **URL personal del huésped** (`guest-app-url`) leído
-    con IA, (2) hechos de la API, (3) **búsqueda web** para recomendaciones (Gemini), (4) ficha por piso editable
-    (`knowledge_base`) como plan B/override. Adiós al WiFi/teléfono hardcodeado del `reply/route.ts` actual.
-  - **Autonomía híbrida** + canal **Telegram** (propone → ✅ aceptar / ✏️ modificar por `force_reply`; modificar = aprende).
-    Arranque Fase 1 (revisión total) → Fase 2 (autónomo por categoría según acierto). Extras aprobados: anti-invención,
-    auto-mejora de la guía, escudo de reseñas, upsell+botones+resumen diario.
-  - **Telegram (decisión 22/06):** **un solo bot** para todo el monorepo + paquete compartido nuevo
-    **`@central/core-telegram`** (los `lib/telegram.ts` de ia-rest/plataforma/sivra migran a él). Un bot = un webhook →
-    receptor único con enrutado por prefijo de `callback_data` (`hsp_` para este agente).
-  - **Smoobu (decisión 22/06):** la key se lee centralizada en `lib/smoobu.ts` (tabla `pms_connections` + fallback env
-    `SMOOBU_API_KEY`); asegurar el env en el Vercel que lo use. Si pasa a ser transversal → módulo compartido
-    `@central/core-pms` (paralelo a `core-telegram`). Poner el env en Vercel es paso MANUAL de Alberto (no hay valor ni red aquí).
-  - **Dónde:** todo en `apps/plataforma` (mensajería interna de sivra: `/api/sivra/mensajes/*`). Spec en
-    `docs/superpowers/specs/2026-06-22-agente-respuesta-huespedes-sivra-design.md`.
-  - **OJO entorno:** el contenedor de desarrollo está **sin `SMOOBU_API_KEY` y SIN salida de red** (todo egress da 403,
-    incl. example.com). No se puede probar la API de Smoobu desde aquí → el **paso 1 de implementación** es un sondeo de
-    solo lectura ejecutado **en Vercel** (`GET /api/sivra/mensajes/diagnostico-guia`) que vuelca el JSON real y dice si
-    `guest-app-url` es HTML legible o app JS.
-  - **Spec APROBADO por Alberto (22/06).** Plan de implementación escrito en
-    `docs/superpowers/plans/2026-06-22-agente-respuesta-huespedes-sivra.md` (16 tareas en 6 fases: sondeo, core-telegram,
-    tablas, guía/contexto, guardrail/decisión, envío/Telegram/aprendizaje, webhook, red de seguridad+resumen, upsell).
-  - **✅ PLAN IMPLEMENTADO (22/06).** Código completo en la rama. Tablas aplicadas en Supabase compartida vía MCP.
-    Ficheros: paquete `packages/core-telegram` (bot único; `lib/telegram.ts` re-exporta); `apps/plataforma/lib/sivra/agente-huesped/*`
-    (reglas, guia, recomendar, contexto, guardrail, sensibilidad, decidir, enviar, aprender, telegram-msg, orquestador);
-    rutas `app/api/sivra/mensajes/{diagnostico-guia,webhook,telegram-webhook,resumen-diario}/route.ts`; `auto-reply` pasa a
-    red de seguridad; `reply/route.ts` usa `reglas.ts`; SQL `prisma/sql/2026-06-22_agente_huespedes.sql`.
-    **20 tests `node --test` verdes** (core-telegram 4 + reglas 6 + guardrail 5 + sensibilidad 5). `tsc`/`next build` NO
-    corridos aquí (sin node_modules ni red) → los valida Vercel/CI en el PR.
-  - **AMPLIACIÓN (22/06, commit `37a8059`):** Smoobu YA capta los mensajes de Booking (no se filtra por canal) → el
-    agente ya responde Booking por Smoobu; el email de Booking es solo copia. Añadido: **sondeo cada 5 min**
-    (`vercel.json` `*/5`, webhook sigue dando tiempo real) + **idempotencia compartida** webhook↔sondeo
-    (`idempotencia.ts`, key `agente-huesped:<msgId>` en `update_logs`, dedup en `orquestador.ts`); **auto-graduación**
-    por categoría (`graduacion.ts`: tras 5 aprobaciones sin corregir, la categoría básica se auto-responde; nunca las
-    sensibles) + botón Telegram `hsp_grad` "Aprobar y a partir de ahora solas"; **traducción al español** de la pregunta
-    del huésped en la propuesta de Telegram; **recordar-pendientes** (cron horario, escalados sin OK >3h); **seed-aprendizaje**
-    (arranque en caliente desde el histórico de respuestas de Smoobu). Plan: `/root/.claude/plans/acabo-de-recibir-un-fuzzy-quiche.md`.
-  - **Pendientes (post-deploy, manuales de Alberto):** (a) envs en Vercel `plataforma`: `TELEGRAM_BOT_TOKEN`,
-    `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `SMOOBU_WEBHOOK_SECRET`; (b) ejecutar `GET /api/sivra/mensajes/diagnostico-guia`
-    en Vercel y anotar veredicto HTML vs SPA (ajustar `guia.ts` si SPA); (c) registrar webhook Smoobu (`?k=SECRET`) y webhook
-    Telegram (`setWebhook`, un solo webhook por bot — ojo si ia-rest ya lo tiene); (d) Fase 2 autónoma: rellenar
-    `mensajes_auto_config` por categoría solo cuando `mensajes_log` muestre alto acierto.
-
-- **✅ BANCA: Booking del Dúplex por marcador FIABLE (LIQ.OP) + dedup doble conteo — branch `claude/booking-dedup-liqop` — 23/06/2026**
-  Cierre del "pendiente de fondo: capturar el ordenante al importar BBVA". **Hallazgo:** BBVA **NUNCA** da el ordenante real — ni en Excel (concepto colapsado a "Transferencia recibida") ni en PSD2/Enable Banking, donde `debtor.name` devuelve el **TITULAR** (Alberto), no Booking.com. Capturar el ordenante es imposible. **Pero** los cobros de Booking por PSD2 sí traen el marcador específico **`LIQ. OP. Nº`** en el concepto → ese es el discriminante fiable (ya lo usaba `lib/destino.ts`).
-  - **Doble conteo detectado y depurado:** Excel y PSD2 se solapaban (23-mar→16-jun 2026) → los **mismos 22 cobros (8.459,17€)** estaban duplicados (dedupe_hash distinto por concepto distinto), inflando el P&L por destino del Dúplex (no el cuadre, que filtraba por concepto). Decisión de Alberto: conservar PSD2, borrar los 22 de Excel del solapamiento. SQL aplicado por MCP + registrado en `prisma/sql/2026-06-23_dedupe_booking_psd2_xls.sql`. Total Dúplex Booking: 38.694€ (inflado) → **30.234,91€** (correcto: 64 xls + 22 psd2).
-  - **`lib/destino.ts`:** nuevo `clasificarDestinoDetalle()` → `{destino, revisar}`. Los abonos de BBVA que **no casan ningún patrón** ya NO caen a Dúplex por descarte: van a `personal` + **`revisar:true`** (decisión de Alberto). Booking real = `LIQ. OP. Nº`. `clasificarDestino()` se mantiene como wrapper.
-  - **`lib/categorizar.ts`:** `analizarMovimientos` usa el detalle y marca `requiere_revision` cuando el destino es ambiguo (los abonos de BBVA sin patrón van a la bandeja "por revisar" en vez de colarse en el Dúplex). Reglas aprendidas (`banca_destino_reglas`) siguen teniendo prioridad y nunca marcan revisión.
-  - **`/api/duplex/cuadre-booking`:** cuenta el banco por **`destino='turistico_duplex' AND importe>0`** (no por el texto "transferencia recibida"), así suma tanto el histórico Excel como el PSD2 (LIQ.OP) sin doble conteo. 2026 sigue cuadrando: banco **11.046,53€** vs Smoobu ≈10.685€. Tests `node --test` (22 OK).
-
-- **✅ CUADRE Booking↔Smoobu del Dúplex — branch `claude/cuadre-booking-smoobu` — 22/06/2026**
-  Verificación: lo cobrado de Booking en banco (BBVA, transferencias planas → `turistico_duplex`) vs lo que dice Smoobu (`incomes`, `propertyId='prop_duplex_center'`, `portal='BOOKING'`, `amount`=neto). Página `/cuadre-booking` (sidebar Pisos·detalle 🔁) + API `/api/duplex/cuadre-booking?año=`. Tabla mensual Banco/Smoobu/Δ/estado + TOTAL (veredicto). **No casa 1-a-1** (Booking agrupa pagos y con desfase respecto al check-in) → el cuadre fiable es el TOTAL; mes a mes orientativo. 2026: banco ≈11.046€ vs Smoobu ≈10.685€ → cuadra. Smoobu key vía `pms_connections` (sivra `getSmoobuKey()`); aquí se leen los `incomes` ya sincronizados, sin llamar a la API en vivo.
-
-- **📚 DOC: consolidado el módulo correduría + aprendizaje en los routers — 22/06/2026**
-  Documentado en `plataforma-maestro` (SKILL) y `apps/plataforma/CLAUDE.md` (Estado): página `/correduria`, `lib/correduria.ts`, tablas de aprendizaje `correduria_reglas` (clave→compañía) y `banca_destino_reglas` (clave→destino), override `movimientos_bancarios.compania_seguros`, y el cambio de `lib/destino.ts` (abonos planos de BBVA = Booking→Dúplex; `RE_LIQUID_SEGUROS`). Para que una sesión nueva sepa que existe sin releer todos los PRs. Pendiente de fondo anotado: capturar el "ordenante" al importar BBVA.
-
-- **✅ BANCA: ingresos de Booking del Dúplex dejan de colarse en seguros (BBVA) — branch `claude/banca-booking-bbva` — 22/06/2026**
-  Los abonos de **Booking** al Dúplex llegan a BBVA como **"Transferencia recibida" a secas** porque la importación **NO guarda el ordenante** ("Booking.com B.V."), así que eran indistinguibles y caían en `seguros` por descarte. Las comisiones reales SÍ traen concepto identificable.
-  - **`lib/destino.ts`:** los ABONOS de BBVA sin patrón de comisión ahora → `turistico_duplex` (Booking), no `seguros`. Nuevo `RE_LIQUID_SEGUROS` (SALDO AGENTE/REMSALDO/SALDO CUENTA/PAGO SALDO CTA/PD005) para que las liquidaciones de agente sin la palabra "comisión" SIGAN en seguros. `RECIBIDO:` (Bizum de particular) → personal. Tests nuevos en `lib/destino.test.ts` (18 OK).
-  - **Reclasificado ya** (SQL, cuenta BBVA de Alberto): **31 "Transferencia recibida" → Dúplex (12.042,85€)**, **12 "Recibido: …" → personal (343€)**.
-  - **Compañía Caser:** "Caja de Seguros Reunidos" = Caser; concepto `PD005 SALDO AGENTE`. Regla `PD005→Caser` sembrada (correduria_reglas) + 4 movimientos aplicados.
-  - OJO raíz: la importación de BBVA pierde el "Ordenante" → arreglo de fondo pendiente (capturarlo en la ingesta para no depender del descarte).
-
-
-- **✅ BANCA: auto-aprendizaje del DESTINO al sacar de seguros — branch `claude/banca-aprendizaje-destino` — 22/06/2026**
-  Simétrico al aprendizaje de compañía (#439), pero para el NEGOCIO: cuando Alberto saca un movimiento de seguros ("No es de seguros"), el sistema aprende `clave→destino` y lo aplica a los iguales (pasados y futuros). Caso real: la **pensión por baja de paternidad** llega mensual con el **DNI `28823484E`** como única referencia (sin la palabra "pensión"), así que caía en `seguros` por descarte.
-  - **Migración** (BD compartida): tabla `banca_destino_reglas (cuenta_id, clave, destino, UNIQUE(cuenta_id,clave))`. SQL en `prisma/sql/2026-06-22_banca_destino_reglas.sql`. **El código (DNI) vive en BD, nunca en el repo.**
-  - **`/api/banca/destino`:** al reclasificar, UPSERT en `banca_destino_reglas` + propaga a los movimientos en `seguros` con esa clave (`claveReferencia` de `lib/correduria.ts`).
-  - **`lib/categorizar.ts` (`analizarMovimientos`):** antes de la detección automática consulta `banca_destino_reglas`; si la clave casa, usa el destino aprendido. Así los futuros ingresos con ese código se clasifican solos.
-  - **Aplicado ya** (SQL): 3 movimientos de la pensión (dic-25, ene-26, mar-26; 3.457,44€) movidos `seguros→personal` + regla `28823484E→personal` sembrada para la cuenta de Alberto.
-
-
-- **✅ CORREDURÍA: auto-aprendizaje de compañía por código de referencia — branch `claude/correduria-aprendizaje-companias` — 22/06/2026**
-  Los abonos de seguros que entran "por descarte" no traen el nombre de la aseguradora, solo un **código de referencia** estable en el concepto (`M1454`, `M00171`, `8/92361`…). Ahora cuando Alberto asigna una compañía en el desglose, el sistema **aprende** la regla `clave→compañía` y la aplica sola a todos los movimientos con ese código (pasados y futuros).
-  - **Migración** (BD compartida): tabla `correduria_reglas (cuenta_id, clave, compania, UNIQUE(cuenta_id,clave))`. SQL en `prisma/sql/2026-06-22_correduria_reglas.sql`.
-  - **`lib/correduria.ts`:** `claveReferencia(concepto)` extrae el código (token con letra+dígito o `/`, ≥4 chars; rechaza fechas tipo `202604`). `'Asisa'` añadida a `COMPANIAS_CONOCIDAS` (compañía propia, no dentro de 'Salud').
-  - **`/api/banca/confirmar`:** al asignar compañía, UPSERT en `correduria_reglas` + propaga `compania_seguros`+`destino_confirmado` a los movimientos de la cuenta con ese código (`concepto ILIKE %clave%`).
-  - **Matriz y detalle:** compañía efectiva = `compania_seguros` → **regla aprendida** → `detectarCompania()`. El KPI "Pendiente de confirmar" ya solo cuenta lo que sigue en `Otras` (lo identificado/aprendido sale).
-  - **Sembrado + aplicado ya** (SQL): `M1454→Asisa` (21 movs), `M00171→Occident` + `8/92361→Occident` (28 movs). Tests `claveReferencia` en `lib/correduria.test.ts` (39/39 OK).
-
-
-- **✅ CORREDURÍA: fecha del desglose en formato día/mes/año — branch `claude/correduria-formato-fecha` — 22/06/2026**
-  El desglose mostraba la fecha en ISO (`2026-06-03`). Ahora `fmtFecha()` en `CorreduriaClient.tsx` la pinta como `03/06/2026` (día/mes/año, formato español).
-
-- **✅ CORREDURÍA: asignar compañía al confirmar — branch `claude/correduria-asignar-compania` — 22/06/2026**
-  Seguimiento de #435: al confirmar que un movimiento de "Sin identificar" ES de seguros, ahora se puede **elegir la compañía** (antes se quedaba en "Otras" porque la compañía solo se deducía del concepto). Selector = lista `COMPANIAS_CONOCIDAS` + "Otra…" (texto libre) + "No lo sé" (confirma sin compañía).
-  - **Migración aplicada a la BD compartida `wswbehlcuxqxyinousql`:** columna `movimientos_bancarios.compania_seguros text` (override manual; NULL = detección automática). SQL en `prisma/sql/2026-06-22_mov_compania_seguros.sql`.
-  - **`/api/banca/confirmar`** acepta ahora `compania?` opcional (si viene, set `compania_seguros` + `destino_confirmado`; si no, solo confirma → compat con /finanzas).
-  - **Matriz y detalle** (`/api/correduria` y `/detalle`) agrupan por `compania_seguros || detectarCompania(...)`. `lib/correduria.ts` exporta `COMPANIAS_CONOCIDAS`. UI: selector en el modal de desglose (`CorreduriaClient.tsx`), botón "✓ Es de seguros · elegir compañía" / "✍️ Cambiar compañía".
-
-- **✅ CORREDURÍA: formato `1.543€` + desglose clicable con confirmación — MERGEADO PR #435 — branch `claude/brokerage-amount-breakdown-cl3tqb` — 22/06/2026**
-  Alberto pidió sobre la página `/correduria`: (a) formato importe+€ (`1.543€`, no `€3581`), y (b) poder **pinchar un importe y ver de qué movimientos sale** para confirmar que de verdad son de una compañía de seguros (la fila "Otras" es cajón por descarte y puede colar cosas que no son seguros). Implementado + 4 extras.
-  1. **Formato `1.543€`:** `eur()` en `CorreduriaClient.tsx` con separador de miles MANUAL (no depende del ICU de Vercel, que no agrupaba → de ahí el `€3581`). Importe primero, € detrás.
-  2. **Desglose clicable:** cualquier importe (celda compañía×mes, total de fila, total de mes, total anual) abre un modal con los movimientos que lo componen (fecha·concepto·contraparte·importe·banco). API `GET /api/correduria/detalle?año=&compania=&mes=` (`compania` admite `__TOTAL__` y `__PENDIENTE__`).
-  3. **Confirmar / reclasificar por movimiento:** `✓ Es de seguros` reusa `POST /api/banca/confirmar`; `No es de seguros ▾` usa el **nuevo `POST /api/banca/destino`** (cambia `destino` y marca `destino_confirmado=true`, scoped por cuenta) → sale de la correduría.
-  4. **Extras:** (1) etiqueta del porqué `✅ por nombre` vs `⚠️ por descarte (BBVA)` con resalte; (2) auto-confirmar las que casan por nombre (estado = `destino_confirmado || motivo==='nombre'`, sin backfill); (3) KPI "Pendiente de confirmar €" (= descarte sin confirmar) + filtro `__PENDIENTE__`; (4) "Otras" se muestra como "Sin identificar (revisar)" (solo etiqueta).
-  - **Módulo nuevo `lib/correduria.ts`** (puro): `detectarCompania` (extraído de la API, ahora compartido matriz+detalle), `motivoSeguros`, `companiaLabel`. Regex `RE_SEGUROS`/`RE_COMISIONES` exportadas desde `lib/destino.ts`. Import con extensión `.ts` (habilita `allowImportingTsExtensions`) para que `node --test` resuelva la cadena.
-  - **Tests:** `lib/correduria.test.ts` (5 casos) → toda la batería `node --test lib/*.test.ts` 37/37 OK. **Sin migración** (reusa `destino_confirmado`).
-  - **Vercel:** plataforma + resto de proyectos **Ready** en el PR. Mergeado a main (squash, sha `2a6f737`).
-
-- **✅ CORREDURÍA + TABLA PISOS + TRAMO IRPF — PR #434 (draft) — branch `claude/hopeful-allen-xw84rs` — 22/06/2026**
-  Alberto quería controlar mejor las comisiones de su correduría de seguros y ampliar las vistas de pisos y fiscal.
-  1. **Sidebar limpiado:** eliminado duplicado "Agente IA" (mismo href `/agente` que "Agente precios"). Añadido ítem "🛡️ Correduría" entre Finanzas y Banca en `UserSidebar.tsx`.
-  2. **Nueva página `/correduria`:** tabla compañía × mes con liquidaciones de seguros. API `GET /api/correduria?año=XXXX` (query `movimientos_bancarios` donde `destino='seguros'`, detección de compañía por regex replicada de `lib/finanzas.ts`). `CorreduriaClient.tsx` con selector de año, KPIs, matriz y fila de totales. Archivos: `app/api/correduria/route.ts`, `app/(usuario)/correduria/page.tsx`, `app/(usuario)/correduria/CorreduriaClient.tsx`.
-  3. **`/finanzas` simplificado:** bloque correduría compactado: se eliminaron la lista de últimos movimientos y el mini gráfico; se añadió enlace "Ver detalle ↗" a `/correduria`. Archivo: `FinanzasClient.tsx`.
-  4. **`/sivra/income` — vista tabla:** toggle "Lista / Tabla×mes" en cabecera. Vista tabla = propiedad × mes calculada client-side de los datos ya cargados. Selector de año. Archivo: `app/(usuario)/sivra/income/page.tsx`.
-  5. **`/sivra/fiscal` — panel tramo IRPF:** componente `TramoIRPFPanel` al inicio de la página. Barra de tramos, tramo actual, margen al siguiente, cuota estimada, retenciones 15%, a ingresar estimado. Datos de `/api/finanzas` (reutiliza cálculo existente). Archivo: `app/(usuario)/sivra/fiscal/page.tsx`.
-  - Vercel PR #434: todos los proyectos **Ready** ✅ (plataforma, sivra, ialimp, ia-rest, central-rrhh).
-  - Pendiente: merge a main.
-
-- **✅ FINANZAS: badges X/Y verificación movimientos + export gestoría mejorado — MERGEADO PR #431 — 22/06/2026**
-  Alberto pidió más desglose en `/finanzas` para cruzar ingresos con movimientos del banco. Se implementaron 2 features:
-  1. **Badge X/Y verificación por card:** campo `destino_confirmado boolean` en `movimientos_bancarios` (migración aplicada en Supabase). Cada card (Correduría, Pisos, Personal) muestra "X/Y ✓" en verde/ámbar. Botón "✓" por movimiento llama a `POST /api/banca/confirmar` (scoped por `cuenta_id`). UI actualiza sin reload.
-  2. **Export CSV gestoría mejorado:** retención calculada POR FILA (`bruto = neto / 0,85`) en vez de solo totales, pisos separados por banco (Kutxa vs BBVA Duplex), gastos personales incluidos (antes faltaban), resumen fiscal con deducciones y resultado a pagar/devolver.
-  - Archivos: `lib/finanzas.ts`, `FinanzasClient.tsx`, `app/api/banca/confirmar/route.ts`, `app/api/finanzas/export/route.ts`, `prisma/sql/2026-06-22_mov_destino_confirmado.sql`
-  - Vercel: todos los proyectos rebuilding con el nuevo commit en main.
-
-- **🧾 facturas-correo: lectura de PDF RESUELTA por vía B (Apps Script → Drive) — 22/06/2026**
-  Tras la pasada del 22/06 (única factura nueva: recordatorio BSH 56,05 € → **Monte Carmelo, personal,
-  NO deducible**, etiquetada `Facturas/Procesada`) se cerró el agujero de leer importes dentro de PDF.
-  - **Fix de correctitud:** la etiqueta real es `Facturas/Procesada` (femenino), no `Procesado` → corregido en `SKILL.md`.
-  - **El conector Gmail gestionado NO baja adjuntos** (solo cuerpo + IDs). Resuelto con **VÍA B (activa)**:
-    Apps Script de Alberto **`Facturas a Drive`** (trigger horario) copia los PDF de correos recientes a
-    **Drive `FACTURAS Apartamentos / _buzon_pdf`** (fileId **`1lQXsajYn-7zkupIpEwvA_Sdr2BI95pbh`**) con
-    nombre `YYYY-MM-DD_remitente_archivo.pdf` y etiqueta el hilo `PDF-guardado`. El agente los lee con
-    `read_file_content` (probado: BSH, Cabify, Glovo legibles) y cruza por fecha+remitente. Sin token, sin red.
-    ⚠️ El script copia CUALQUIER PDF reciente (p. ej. boletines del cole) → el Paso 2 los descarta.
-  - **Vía A (cableada pero NO activa):** `/.mcp.json` declara `gmail-adjuntos` (`@gongrzhe/server-gmail-autoauth-mcp`)
-    + `scripts/setup-gmail-mcp.sh` + guía `SETUP-adjuntos.md`. La cubre la vía B; usar A solo si se quita el Apps Script.
-  - **Dato fiscal visto en PDF:** el recibo de Glovo factura a **Punto y Coma SL (Socorro 24, NIF B90446683)**.
-  - Cambios solo de config/docs, sin tocar apps. PR #428 (vía A) mergeado; este PR = activar vía B en la skill + memoria.
-
-- **🚨 CRONS CONGELADOS 5 DÍAS — el middleware de plataforma bloqueaba `/api/sivra/*` — 22/06/2026**
-  - **Síntoma:** auditando "que Busto funcione 100%" se vio que el motor de pricing llevaba **parado
-    desde el 16-17 jun**: `rate_snapshots`, `pricing_applied`, `incomes` (sync Smoobu), `market_rates`,
-    `pricing_alerts`, etc. sin filas frescas. NO era el motor ni la clave Smoobu (la conexión
-    `pms_connections` id `c8c1fb07…` está activa con key válida).
-  - **Causa raíz:** `apps/plataforma/middleware.ts` gatea TODO tras la cookie `plataforma_session`
-    y solo exime `PUBLIC` (incluye `/api/cron` pero **NO** `/api/sivra`). Los crons migrados a
-    plataforma (#348) viven bajo `/api/sivra/*` → el cron de Vercel (sin cookie, con `Bearer
-    CRON_SECRET`) se **redirige 307 → /login** y el handler nunca corre. Patrón confirmado en BD:
-    **todos los `/api/cron/*` vivos, todos los `/api/sivra/*` muertos** (murieron el 16-17 jun = últimas
-    corridas en el proyecto sivra antes de retirarlo en #413). Todos los handlers de cron ya aceptan
-    el Bearer (`isCronAuthorized` o `secretOk || getSession()`), así que el ÚNICO bloqueo era el middleware.
-  - **✅ Fix (esta sesión):** `middleware.ts` deja pasar el gate a las peticiones con `CRON_SECRET`
-    válido (Bearer o `?secret=`) ANTES del chequeo de cookie. Cubre todos los crons de cualquier ruta,
-    sin exponer los endpoints de datos (el navegador sin secreto sigue gateado). Surte efecto solo en
-    **producción de plataforma** (los crons corren sobre el deploy de prod) → tras mergear a `main`.
-  - **✅ Heartbeat (esta sesión):** nuevo paso **2-bis** en `/auditoria-diaria` — query de frescura por
-    Supabase MCP que marca 🔴 cualquier cron mudo (diarios > 36h) y avisa a Alberto. Agnóstico a la causa
-    (cubre middleware, clave, bug, caída Vercel…). Doc en `docs/RUTINAS-PROGRAMADAS.md`.
-  - **✅ Verificado en producción (22-jun):** tras mergear #429 y disparar los Run en Vercel,
-    `pricing_applied` = **205 filas de hoy** (apply-auto) y `rate_snapshots` = **1.464 de hoy**
-    (4 pisos × 366d, **Busto 366**). El fix del middleware queda probado end-to-end (antes esas
-    peticiones morían en /login). El hueco de mercado de 5 días es irrecuperable.
-  - **⚠️ Lección operativa:** NO dispares los 3 crons de Smoobu a mano **a la vez** — `snapshot`
-    dio 0 filas la 1ª vez por **rate-limit de Smoobu** (apply-auto ganó la carrera); relanzado SOLO
-    → 200 OK y 1.464 filas. En operación normal van **escalonados** (`updates/sync` 05:00 ·
-    `rates/snapshot` 07:00 · `apply-auto` 08:30 UTC), así que no chocan. `updates/sync` solo mueve
-    `incomes.createdAt` si entra una reserva nueva → su "0 hoy" no es fallo.
-  - **🔭 Observación pendiente (Busto):** lo que se aplica live (~116€) ≈ PriceLabs (~118€) y 373/851 veces
-    POR DEBAJO de PL → Busto sigue/infraprecia a PL en vez de ganarle (el motor calculaba ~201€). Revisar
-    el gap motor-vs-aplicado y poner `max_price` (hoy `null`) cuando se retome.
-
-- **💸 PRICING / baja de PriceLabs — seguimiento semanal + fix de pipeline — 22/06/2026**
-  - **Recalibración del motor (8-jun) funcionó:** ratio `price_ours`/PriceLabs (snapshots reales)
-    bajó de 2-3× a Duplex **1.39×**, Luxury Busto **1.61×**, Busto Reform **1.75×**. ⚠️ House Sevillana
-    se quedó **corto** (0.61× — PL le pide ~821€ vs 433€ nuestros): revisar aparte.
-  - **🐛 Pipeline de experimentos estaba ROTO:** la función `update_experiment_results()` (la llama el
-    cron `check-results`) referenciaba `incomes.property_id`/`incomes.total_price` (columnas inexistentes:
-    son `"propertyId"` y `amount`/`amount_gross`) → fallaba en cada ejecución, **ningún experimento se
-    cerraba**. `incomes` NO está obsoleta (1.964 filas, sync Smoobu vivo hasta 16-jun); la unificación de
-    `/finanzas` es el consolidado **fiscal/IRPF** (`lib/finanzas.ts`), cosa distinta de las reservas.
-  - **✅ Arreglado (22-jun):** función reescrita sobre `rate_snapshots.was_booked` (señal noche-a-noche,
-    capta mitad de estancia). SQL versionado en `apps/sivra/sql/2026-06-22_fix_update_experiment_results.sql`
-    + aplicada a mano en Supabase. Backfill hecho: Duplex 14/15-jun → **libre** (estaban a 3-4× PL, no
-    entraron), Luxury Busto 17-oct → pendiente.
-  - **🔎 Mejora de la revisión (v3):** `revenue_realized` pasa a ser el **ADR bruto REAL** del income que
-    cubre la noche (`amount_gross / (checkOut-checkIn)`; OJO: `incomes.nights` viene a 0, hay que calcular
-    las noches de las fechas). Así "reservado ≥ PL" es fiable: se verifica si la reserva entró a NUESTRO
-    precio (`revenue_realized ~ price_set`) y el margen real vs PL (`revenue_realized` vs `pe.price_pricelabs`).
-    ⚠️ Aprendizaje de datos: `rate_snapshots.price_ours` es el precio HIPOTÉTICO del motor (`calcOurs`), NO
-    el live; el precio publicado real (lo que controla PriceLabs en Smoobu) es `price_pricelabs`. Validado:
-    las reservas recientes entraron a precio PL (~92€ Luxury Busto), no a los 400+ del motor.
-  - **🚀 Mejoras "todo" (22-jun) — auto-registro + digest + estudio:**
-    - **Hallazgo clave:** solo **`busto_reform` tiene `apply_enabled=true`**; los otros 3 (duplex, luxury,
-      house_sevillana) OFF → PriceLabs los controla de facto. `pricing_applied` tiene **851 escrituras live**
-      (source `market-anchored`, el cron), **0 del agente manual**. Por eso no había experimentos.
-    - **Idea 1 — auto-registro (HECHO):** función `auto_register_experiments()` (SQL en
-      `apps/sivra/sql/2026-06-22_auto_register_experiments.sql`) crea un experimento por cada fecha futura con
-      escritura live; baseline PL = snapshot MÁS ANTIGUO (resuelve contaminación de `price_pricelabs`, idea 4).
-      La llama el cron `check-results` a diario. Backfill: **344 experimentos** (Busto Reform), todos pendientes.
-    - **Idea 3 — digest+criterio (HECHO):** endpoint `GET /api/sivra/pricing/experiments/digest` (plataforma)
-      + cron semanal (lun 9:00). Por piso: cerrados≥PL, reservados≥PL, ocupación, ADR real vs baseline PL,
-      `revenue_extra_vs_pl` y `listo_para_baja` (≥10 cerrados≥PL, ocupación≥50%, ADR≥PL baseline). Criterio explícito.
-    - **Idea 2 — House Sevillana (estudio):** motor 542€ vs PL 397€ (120d), ocupación 40%, PL NUNCA superó al
-      motor en pasado → históricamente **infrapreciado vía PL**; reserva real de ADR 610€ lo confirma. NO
-      enchufar el motor a ciegas: hace falta estudio de mercado dedicado (skill `pricing-agente`) de ese piso.
-    - **Pendiente real para cancelar PL:** ya cableado, la evidencia se acumula sola a medida que pasan las 344
-      noches de Busto Reform. Para extender la baja a los otros pisos hay que poner `apply_enabled=true`
-      (decisión de negocio; en House Sevillana, antes el estudio). El raíl `/api/pricing/*` sigue en `apps/sivra`.
-- **📝 ia-rest BLOG SEO: timeout 504 arreglado (modelo rápido 8B) + botón "Generar ahora" + acceso /super restaurado — PR #302 (mergeado 21/06)**
-  A raíz del aviso de Telegram "❌ Error generando artículo blog: NIM falló: NVIDIA timeout".
-  - **Causa raíz:** `/api/cron/blog-seo` se corta a **~60s** (el plan de Vercel **NO respeta `maxDuration=300`** en el
-    proyecto ia-rest, aunque sí en plataforma). Generar ~1800 palabras con `llama-3.3-70b` (no-stream) tarda >60s →
-    Vercel mata la función con **504** (devuelve texto plano, no JSON → el front petaba al parsear "Unexpected token 'A'…").
-    El primer intento (PR #254: timeout interno 110s + reintento + `maxDuration=300`) **no servía**: la plataforma corta antes.
-  - **Fix (PR #302, en producción):** generar con el **modelo rápido `meta/llama-3.1-8b-instruct`** (~30-40s),
-    `max_tokens` 3000, timeout interno 45s (salta antes del corte de Vercel → fallo = JSON limpio, no 504). `callAI`
-    acepta un 6º arg `model?` (sobrescribe el modelo NIM por llamada) y, si se fuerza `model`, **salta la pasarela
-    central** (que usa su modelo por defecto e ignoraría el 8B). Verificado en preview: "va ok". *Tradeoff:* 8B < 70B en
-    calidad; el artículo es **borrador** que se revisa. Para recuperar 70B: subir el límite de función en Vercel (plan) o
-    job en background.
-  - **Botón "⚡ Generar ahora" (PR #283):** el tab Blog de `/super` (`BlogSuperTab` en `app/super/page.tsx`) no tenía
-    generación manual (solo el cron de los lunes). Llama a `/api/cron/blog-seo` con `x-ia-session` (sin exponer `CRON_SECRET`).
-  - **🚨 Hueco de la migración Fase A2 (credenciales `personal`):** en la BD unificada (`wswbehlcuxqxyinousql`, schema
-    `iarest`), `personal` tenía **`email` y `password_hash` en NULL en TODAS las filas** → el login por email de
-    `super_admin` daba 401 con cualquier clave. **Restaurada** la fila super_admin (`alberto.suarez.gutierrez@gmail.com`).
-    **PENDIENTE (verificar, no urgente):** owner/camarero/cocina/running/jefe_sala/gestor siguen con email/password NULL;
-    probablemente entran por **PIN/código** (no por email) → seguramente no roto, pero conviene confirmar antes de migrar.
-  - **Datos viejos NO migrados (por diseño, A2 = solo-esquema):** la BD vieja `efncqyvhniaxsirhdxaa` conserva 8
-    `blog_borradores` (TODOS `publicado` → **vivos como ficheros** `app/blog/<slug>/page.tsx`, se sirven en iarest.es/blog),
-    395 leads y 142 comandas. La unificada arranca vacía → por eso `/super → Blog` dice "No hay artículos". Proyecto viejo a **jubilar**.
-
-- **🧹 Limpieza de PRs draft abiertos (merge masivo) + fix test destino — 21/06/2026**
-  Petición de Alberto ("mergea todo y prueba todo"). Se cerraron los 10 PRs draft pendientes de
-  otras sesiones a estado terminal: **mergeados** #416 (memoria Groq), #410 (competencia ia-rest +
-  VeriFactu 2027), #406/#405/#402/#387 (auditorías), #392 (skill perfil-fiscal), #413 (retirada
-  sivra Fase 1). **Cerrada** #302 (blog-seo: su fix ya estaba en main vía `c4db1df`, superada).
-  **Retenida #307** (`@central/core-receipts`): NO es "solo spec" como decía — trae el paquete
-  nuevo + refactor de `apps/ia-rest/src/lib/courier.ts` (−473 líneas, impresión térmica ESC/POS);
-  cambio de código gordo sin revisar → pendiente de decisión de Alberto (no mergeado).
-  Conflictos resueltos (CONTEXTO/MATRIZ/skills/generados) preservando lo ya en main.
-  **Regresión cazada y corregida:** `destino.test.ts` fallaba 1/7 porque una aserción de #392
-  (`LIQ. OP.→seguros`) chocaba con la regla deliberada de hoy (`LIQ. OP.` de BBVA = Booking dúplex).
-  Test alineado al comportamiento vigente → 8/8. Suite repo verde (guardián 21, packages, vitest 40).
-
-- **🗑️ RETIRADA DE `apps/sivra` — Fase 1 HECHA (sin riesgo) — 21/06/2026**
-  Sivra ya está 100% consolidado en `apps/plataforma` (`/sivra/*`, APIs, crons); la app standalone
-  `housesevillana.vercel.app` está **deprecada**. **Fase 1 (esta sesión, rama `claude/dynamic-pricing-uhvnak`):**
-  - **Quitada la dependencia de `SIVRA_URL`**: `app/api/sivra/mensajes/reply/route.ts` ya NO hace `fetch` HTTP
-    a la app sivra para el aviso de early check-in/out. Se portó la lógica a `lib/limpiadoras-early.ts`
-    (`registrarAvisoHuesped`) + nuevo endpoint `app/api/sivra/limpiadoras/early-checkin/route.ts` (POST+PATCH,
-    auth `getSession()`); el caller la llama **directa** (sin red, sin 404 si se apaga sivra).
-  - **Deduplicado `pricing-calendar`**: borrado `lib/sivra/pricing-calendar.ts` (idéntico a `lib/pricing-calendar.ts`);
-    repuntados imports en `pricing/apply`, `pricing/apply-auto`, `pricing/pilot-track` a `@/lib/pricing-calendar`.
-  - **Dashboard**: el card de negocio "sivra" enlaza ahora a `/sivra/income` interno (antes `SIVRA_URL`).
-  - Marcado deprecado en `apps/sivra/CLAUDE.md` y `MATRIZ.md`.
-  - *(Merge previo: se fusionó `claude/plataforma-url` — que traía la consolidación de 81 archivos sivra — en
-    `claude/dynamic-pricing-uhvnak`; conflictos solo en docs/generados, resueltos.)*
-  - **FASE 2 — GATE RESUELTO + parte destructiva CANCELADA (21/06/2026):**
-    - **(B) Limpiadoras reales — confirmado:** Alberto confirma que las limpiadoras las crea la **empresa en
-      ialimp**, ahora mismo solo **Sique Brilla**. Verificado contra la BD real (`wswbehlcuxqxyinousql`):
-      las **16** limpiadoras (15 activas) son **todas de `Sique Brilla SL`** (empresa de ialimp); las **36
-      sesiones/90d** (6 limpiadoras distintas, último 14-jun) son **100% Sique Brilla**, 0 huérfanas/otro
-      origen. → El flujo de limpiadoras de sivra no tiene usuarias reales; seguro retirarlo.
-    - **Pricing — confirmado:** los crons de pricing/mercado/limpiadoras ya están **todos en
-      `apps/plataforma/vercel.json`**; `apps/sivra/vercel.json` tiene `crons: []`. Apagar sivra NO tumba el pricing
-      automático. **PERO** el raíl del **agente de pricing** (`/api/pricing/aplicar-propuesta` + `/api/pricing/pisos-zona`)
-      **sigue SOLO en sivra** (no portado a plataforma) → razón adicional para no apagar sivra.
-    - **🚫 PERO la parte destructiva NO se hace (decisión de Alberto: "eso no tocar"):** `apps/sivra` también
-      es la **web PÚBLICA de reserva directa de House Sevillana** (`housesevillana.es`: landing multidioma
-      `app/[locale]`, SEO `sitemap.ts`/`robots.ts`/schema). Esa parte **NO está en plataforma** y **se queda
-      viva**. Por tanto: **NO redirigir el dominio, NO borrar `apps/sivra`, NO borrar el proyecto Vercel
-      `sivra` ni la env `SIVRA_URL`.** Una sesión futura NO debe ejecutar el viejo plan de "borrar y redirigir".
-    - **Lo que sí queda hecho:** Fase 1 (quitar dep `SIVRA_URL` en runtime, dedup pricing-calendar, dashboard
-      interno) + esta nota de gate. Sivra queda como **app pública de reservas únicamente**; la gestión interna
-      vive en plataforma.
-- **🧾 GROUND TRUTH FISCAL de Alberto persistido — 19/06/2026** (rama `claude/tax-deductions-personal-finance-e098a7`)
-  - Sesión de revisión de la **Renta 2025** (borradores AEAT, libro de familia, Excel gastos/reservas,
-    PDFs IBKR y seguro, hilos con la asesoría Asecon). Salieron hechos que el repo tenía mal/ausentes
-    y se han persistido en **4 sitios** (datos sensibles SOLO en BD; en git solo estructura).
-  - **Hechos clave aclarados:**
-    - **Cónyuge = Pilar Piña Franco** (el repo asumía "Carmen"). **3 hijos** → **familia numerosa general**.
-    - **Villasís = el Dúplex = Duplex Center** = Pasaje Villasís 1 / Pasaje Francisco Molina 4 (**mismo
-      piso**, dos accesos). Tributa en **IRPF personal**.
-    - **Socorro** (House Sevillana) → **IRPF personal 50/50** Alberto+Pilar, **aunque** cobre en cuenta
-      de **Punto y Coma SL** (sin contrato de cesión → riesgo de paralela; recurrente desde 2024).
-    - **Asesoría = Asecon Consultores** (renta personal + sociedad). **Interactive Brokers**: ganancias
-      no salen en el borrador → declarar + **revisar Modelo 720**.
-    - Reglas de gasto: trading/FTMO = personal; notaría/registro de compraventa = adquisición;
-      mobiliario/obras = amortizar; los ~19,5 € del Ayto = tasa de basura (NO IBI).
-  - **Cambios (git):** nueva skill **`.claude/skills/perfil-fiscal/`** (+ índice en `docs/SKILLS.md`);
-    `facturas-correo/SKILL.md` y `apps/sivra/docs/contabilidad.md` corregidos (alias Villasís, cónyuge,
-    regla Socorro-personal); `apps/plataforma/lib/destino.ts` reconoce "Villasís/Francisco Molina" como
-    dúplex; caveat del **prorrateo de maternidad** documentado en `lib/fiscal-deducciones.ts`.
-  - **Cambios (BD, NO git):** `fiscal_perfil` de Alberto → `gasto_guarderia_anual` real (escuela infantil
-    autorizada) y `fiscal_descendientes` con las **fechas reales** de nacimiento (años 2018/2024/2025) en
-    vez de placeholders. (Fechas exactas e importes viven solo en la BD, no aquí.)
-  - **Pendiente:** confirmar si Busto Reform/Luxury Busto van por Punto y Coma SL; decisión individual vs
-    conjunta (la herramienta tiene `declaracion_conjunta=true`); (opcional) prorrateo mensual de maternidad
-    en el motor. La asesoría tiene aún pendiente meter familia numerosa, hijo nov-2025, guardería e IBKR.
-- **🗂️ CONTROL DE FACTURAS + FIX BANCA CORREDURÍA — 18/06/2026** (PR #384 + PR #385 mergeados a `main`)
-  - **PR #384** — `fix(plataforma/banca)`: los ingresos de la correduría no cuadraban (~€10.026 ocultos en P&L). Causa: en abonos Norma 43, el banco rotula la contraparte con el TITULAR → la regla 'titular ⇒ traspaso_interno' escondía comisiones. Fix: lógica pura extraída a `lib/destino.ts` (nuevo, testeable `node --test`, 7 casos reales del extracto). ABONOS se clasifican por CONCEPTO (`LIQ.COMISIONES`/aseguradoras ⇒ `seguros`; pensión/nómina/Bizum ⇒ `personal`). CARGOS sin cambios (el titular sí marca traspaso en salidas). `lib/categorizar.ts` reexporta. SQL de reclasificación aplicado a BD compartida (`prisma/migrations/2026-06-16_reclasificar_abonos_correduria.sql`).
-  - **PR #385** — `feat(plataforma)`: panel `/sivra/facturas-control` (entrada 🗂️ Facturas en sidebar, sección Mis pisos). Estado por proveedor/mes: ✅ En Drive / ⏳ En plazo / ❌ Falta. 17 proveedores recurrentes (mensual/bimestral_impar/anual_marzo) en `lib/sivra/facturas-control.ts`. API `GET/POST /api/sivra/facturas-control` (sube PDF → Apps Script → Drive → tabla `facturas_drive`). Alerta `facturasFaltantes` del mes anterior en `getAlertas(lib/banca.ts)` → banner en `/dashboard`.
-- **🛡️ CORREDURÍA — Reconciliación Modelo 190 IRPF 2025 + gestión cobros pendientes — 21/06/2026**
-  - **Análisis Modelo 190 vs BD completo:** Modelo 190 bruto €8.593,76 → neto esperado €7.305. BD tras correcciones: €6.176,53. Gap ~€1.128 = timing (dic-2025 cobrado ene-2026).
-  - **Compañías identificadas definitivamente:**
-    - Occident: `Saldo. m00171` + `Saldo. 8/92361` ✅
-    - Mapfre: `Liq.comisiones YYYYMM` ✅
-    - Caser: `fra-comis` ✅
-    - Generali: `G.65792 liq.XXX generali se` + `Pago saldo cta` ✅
-    - Pelayo: `COMISIONES [nombre] [7 dígitos]` ✅
-    - ASISA: **M1454** (~€46/mes) ✅ confirmado por Alberto
-    - Aegon: `REMSALDO` ✅
-    - AXA: `Liq. saldo cuenta` ✅ (importe pequeño, ~€41 neto)
-    - Reale: `Liquidacion de comisiones` ✅
-    - Fidelidade: probable `Pd005 saldo agente` (pendiente confirmar)
-  - **Compañías con dinero retenido sin pagar:**
-    - **Allianz (mediador 18638/PA342520):** saldo **€521,53** a abr-2026. Extractos en Gmail desde mediador@allianz.es asunto "Cuenta Agente".
-    - **Helvetia:** trámite cambio cuenta iniciado mar-2025 (Nieves Calvo → Cac.corredores@helvetia.es + Elena Pérez) nunca completado.
-    - **AXA (mediador 634471):** sin comercial asignado, importe pendiente desconocido.
-  - **3 borradores Gmail creados** (Allianz/Helvetia/AXA) con IBAN ES34 0182 9465 6002 0233 1175 y enlace Drive.
-  - **⚠️ Certificado BBVA:** el PDF guardado en Drive era un justificante Bizum (equivocado). Pedir certificado de titularidad real desde app BBVA (Mis productos → cuenta → Documentos → Certificado de titularidad) y adjuntar manualmente a los 3 borradores.
-  - **Google Apps Script** creado para salvar adjuntos Gmail→Drive (script.google.com, función `guardarCertificadoBBVAenDrive`).
-  - **Pendiente Alberto:** obtener certificado titularidad BBVA real → adjuntar a los 3 borradores → enviar.
-
-- **🕵️ ia-rest: inteligencia competitiva (comandiavoz.com) — 21/06/2026**
-  - **Disparador:** Alberto pasó un anuncio de Meta/Instagram (`fbclid`) de **comandiavoz.com**
-    (parece comanda-por-voz para hostelería = competidor directo de ia.rest) y pidió estudiar competencia.
-  - **Bloqueo del entorno:** egress de red cortado en la sesión web (`WebFetch` → 403 "Host not in
-    allowlist" para TODOS los hosts; `WebSearch` US-only no indexa el dominio). **No se pudo leer
-    comandiavoz.com** → su perfil queda pendiente (ver checklist §11 del doc).
-  - **Hecho:** `apps/ia-rest/docs/competencia.md` — mapa del mercado VERIFICADO (Veovox, Storyous,
-    Qamarero, SmartBar; precios TPV ES: Glop/Ágora/Revo/Last.app/Tipsi/Cuiner; dolores cuantificados),
-    battlecard ia.rest y checklist para cerrar el perfil de comandiavoz. Rama `claude/competitor-research-rca1fz`.
-  - **🚨 VeriFactu APLAZADO a 2027 — CORREGIDO:** el RD-ley 15/2025 (BOE 3-dic-2025) prorrogó un año
-    (sociedades 1-ene-**2027**, resto 1-jul-**2027**). Corregido en este PR: maestro/skill (`SKILL.md`
-    §VeriFactu) **y** código `apps/ia-rest/src/lib/verifactu.ts` (`VERIFACTU_STATUS`, solo info en API,
-    no gatea lógica). **Pendiente Alberto:** confirmar en sede oficial AEAT antes de uso legal/comercial.
-  - **Para cerrar:** habilitar egress (o pegar el contenido de comandiavoz.com) y rellenar §2/§7/§11 del doc.
-- **📝 Doc drift corregido — crons de sivra — 21/06/2026**
-  El `CLAUDE.md` de sivra y el skill `sivra-maestro` decían "10 crons en vercel.json", pero es
-  **obsoleto**: el `vercel.json` de sivra solo tiene **1 cron** (`/api/seo-refresh` semanal, #419).
-  Los ~18 crons de negocio (pricing/apply-auto, mercado, limpiadoras, expenses, eventos, mensajes,
-  updates…) se **migraron a plataforma** (#348/#288) y viven en `apps/plataforma/vercel.json` como
-  `/api/sivra/*` (plataforma tiene 25 crons en total). Corregidos ambos docs; **no re-programar esos
-  crons en sivra** o correrían por duplicado. (Solo documentación, sin cambio de código.)
-
-- **🔎 Agente SEO de housesevillana.es (sivra) — Bloque A (paridad con ia-rest sin Google) — 21/06/2026**
-  Spec/plan en `docs/superpowers/{specs,plans}/2026-06-21-agente-seo-housesevillana-bloqueA*`.
-  - **Contexto:** housesevillana.es es una **landing estática de un fichero** (`app/route.ts` en repo
-    aparte `house-sevillana-landing`), editada por la GitHub API desde `apps/sivra/app/api/seo-refresh`.
-    No aplica el modelo "cambios como datos en BD" de ia-rest; la paridad = **seguridad + revert + schema**.
-  - **Hecho (Bloque A):** helpers extraídos a `lib/seo-landing.ts` (DRY, compartidos con revert);
-    **kill switch** `SEO_AGENT_ENABLED` (solo gatea el cron; el botón manual con sesión funciona siempre);
-    **snapshot+revert** (nueva columna `seo_proposals.currentOgDescription` + endpoint `/api/seo-revert`
-    que re-commitea title/desc/OG anteriores + botón "Revertir" en `/seo` + estado texto `REVERTED`);
-    **JSON-LD conservador** (solo reemplaza si ya existe bloque `ld+json` en la landing; si no, lo guarda
-    en `schemaDescription` y sigue). El análisis ya iba por `aiSearch` (pasarela/Gemini, fallback NIM).
-  - **Migración aplicada** a Supabase `wswbehlcuxqxyinousql` (`seo_proposals_revert`, aditiva): solo
-    `add column currentOgDescription text`. OJO: `seo_proposals.status` es **text** en la BD (NO hay enum
-    `SeoStatus` real) → `REVERTED` es solo a nivel Prisma/app; no se alteró ningún tipo.
-  - **Verificado:** lógica pura de `applySeoReplacements` (7 checks, vía node) ✅, `next build` sivra ✅.
-  - **⚠️ PENDIENTE de despliegue:** `GITHUB_TOKEN` en el Vercel de sivra (acceso a `house-sevillana-landing`)
-    y `SEO_AGENT_ENABLED=true` para activar el cron. Sin ellos: error claro / cron inactivo.
-  - **Bloque B pendiente:** conectar **GSC+GA4** de housesevillana.es (datos reales) — requiere OAuth de
-    Alberto; mismo trabajo que la **Fase 0 de ialimp** (compartir fontanería GSC/GA4).
-- **💶 FINANZAS — Reconciliación BBVA 2025 con Modelo 190 IRPF + correcciones masivas BD — 21/06/2026**
-  - **Importación completa:** Kutxabank XLS (581 filas) + BBVA XLSX (379 filas) Jan 2025–Jun 2026 en `movimientos_bancarios`. Total BD: Kutxa 733, BBVA 458, Tarjeta 434, N26 1 → 1.626 filas. Autocategorización SQL de 848 filas NULL.
-  - **Dúplex BBVA 2026 corregido a €12.195,38:** filas XLS duplicadas de PSD2 marcadas `ignorado`; 8 "Transferencia recibida" Jan-Mar 2026 (antes de cobertura PSD2) reclasificadas a `turistico_duplex`.
-  - **Correcciones BBVA 2025 — "Transferencia recibida" = Booking dúplex:** Alberto confirmó que TODAS las "Transferencia recibida" en BBVA son pagos de Booking (dúplex). Reclasificadas 57 filas → `turistico_duplex` (€19.188). Dúplex BBVA 2025 recuperado.
-  - **Otras correcciones BBVA 2025:** Traspaso €6.000 + Cuenta cancelada €1.014,72 → `traspaso_interno`; Deuda €600 + Abono devolución €47,90 → `personal`; ANULACION RECIBO OCCIDENT (Kutxa) €627,01 → `personal` (devolución prima, no comisión).
-  - **Seguros BBVA 2025 limpio:** €6.176,53 neto (bruto estimado €7.267 ÷ 0,85). Modelo 190 bruto: €8.593,76 → neto €7.305. Gap ~€1.128 = timing (comisiones dic-2025 cobradas en ene-2026 que el pagador ya declaró en 2025).
-  - **`porCompania` mejorado (`finanzas.ts` líneas 441-475):** añadidos patrones Plataforma m00171, 8/92361, Liq.comisiones, Fra-comis, Comisiones mensuales, Pd005, Remsaldo, M1454, Liq. saldo cuenta, Pago saldo cta, Liquidación comisiones. Ya no todo va a "Otras comisiones".
-  - **Matches exactos Modelo 190 vs BD:** AXA €41,80 neto (Liq. saldo cuenta) ✓ | Reale €47,66 neto (Liquidacion comisiones) ✓ | Generali pequeño €32,24 (Pago saldo cta) ✓.
-  - **Pendiente:** Identificar a qué compañías corresponden los códigos de plataforma (m00171, liq.comisiones, M1454, etc.) para el desglose completo del Modelo 190. Necesita que Alberto lo confirme con su gestoría o extracto detallado de la plataforma.
-
-- **🧹 CONCURSOS (plataforma) — auto-saneo de provincia en la ingesta + skills actualizadas — 21/06/2026**
-  - **Bug visto:** buscar Sevilla daba 0 aunque había 3 (Autoridad Portuaria/EMASESA): eran filas de una
-    ingesta vieja, ya fuera del feed, con `provincia=NULL` → el filtro estricto las ocultaba. Backfill manual aplicado.
-  - **Arreglo permanente:** la ingesta (`lib/concursos-ingesta.ts`) ahora **auto-sanea** en cada pasada:
-    rellena la provincia de las EN PLAZO sin ubicación deduciéndola del órgano (`provinciaDeTexto`); y el
-    `ON CONFLICT` usa `COALESCE(EXCLUDED.provincia, …)` para no pisar una provincia ya conocida con NULL.
-  - **Skills sincronizadas:** `ialimp-maestro` (concursos YA NO viven en ialimp), `central-maestro` (concursos→plataforma),
-    `plataforma-maestro` (nueva entrada de concursos en "Dónde vive cada cosa").
-  - **Diferencia Buscar vs Actualizar:** Buscar = filtra el corpus ya guardado (instantáneo); Actualizar = descarga
-    lo último de PLACSP (solo trae datos en Vercel; 403 fuera).
-
-- **🎯 CONCURSOS (plataforma) — filtro por zona ESTRICTO, probado en vivo — 21/06/2026**
-  - Tras poblar provincia por código postal del órgano (#418), el filtro de zona pasa a **estricto**: al elegir
-    zona se muestran SOLO las ubicadas en ella. Verificado en la BD: **Andalucía → 6 resultados, todos andaluces,
-    0 de Canarias** (antes se colaban por la inclusión de NULL).
-  - **Límite de la fuente:** el feed PLACSP solo trae ubicación en ~56% de los anuncios; el ~44% restante queda
-    sin provincia y aparece solo en "Toda España" (no se cuela en otras zonas). Backfill de normalización aplicado
-    en la BD (`provincia` = provincia oficial o NULL; se limpiaron municipios crudos de la versión anterior).
-
-- **🎯 CONCURSOS (plataforma) — filtro por ZONA fiable vía CÓDIGO POSTAL + desplegable de provincia — 21/06/2026**
-  - **Problema:** al elegir zona (Andalucía) salían licitaciones de otra región (Canarias) porque la
-    provincia estaba vacía en el corpus y el filtro incluía las de ubicación desconocida (recall sobre precisión).
-    Deducir la provincia del NOMBRE del órgano solo cubría ~30%.
-  - **Solución de raíz:** la provincia se deduce del **código postal del órgano** (PostalZone del feed) →
-    `provinciaDeCP` (mapa oficial 52 prov., 04=Almería…41=Sevilla…35=Las Palmas). Extracción **recursiva**
-    (`buscarValor`) para no depender de la ruta exacta del XML (PLACSP da 403 fuera de Vercel, no se pudo inspeccionar).
-    Precedencia: CP → CountrySubentity → CityName → nombre del órgano.
-  - **UI:** el campo "Provincia" pasa de texto libre a **desplegable** dependiente de la zona (`provinciasDeComunidad`).
-  - **Pendiente de dato:** se rellena al **reingerir** (cron 6 h o botón "Actualizar ahora"); el corpus viejo
-    queda null hasta entonces. El filtro sigue incluyendo las de ubicación aún desconocida (residuo pequeño).
-
-- **🍽️ ia-rest PREAVISO de marcha — Fase 1 MERGEADA + voz + Fase 2 auto en marcha — 21/06/2026**
-  - **Fase 1 (PR #408, MERGEADO en main):** botón 📣 en `/kds` → push + banner Realtime en `/edge`
-    → camarero confirma "mesa lista" → cocina lo ve. Tabla `preavisos` (schema iarest), gate
-    `restaurantes.preaviso_activo` (off por defecto, toggle en `/owner`). Migración aplicada en prod.
-  - **Voz en los cascos (Capa 1-2, en #408):** `/edge` lee el preaviso en voz alta (reutiliza
-    `speak()` VOX+WebSpeech) + vibración si la pantalla está visible y `!ttsOff`. Bloqueado en
-    navegador = solo tono del push (iOS imposible). Spec: `2026-06-21-preaviso-voz-cascos-design.md`.
-  - **Fase 2a — DISPARO AUTOMÁTICO (nuevo, rama `claude/plate-change-server-alert-n8prlu`):**
-    modelo v1 = umbral fijo por restaurante `restaurantes.preaviso_auto_min` (0=solo manual,
-    configurable en `/owner`). Cron `/api/cron/preavisos-auto` (cada 2 min) dispara el preaviso solo
-    para comandas en cocina que superan el umbral y no tienen preaviso (`emitido_por='auto'`). Lógica
-    crear+push extraída a `lib/preaviso-server.ts` (compartida con el POST manual). Migración
-    `preaviso_auto_min` APLICADA en prod. **Build verde.** Los preavisos manuales registran
-    `emitido_at` vs comanda `created_at` → base para aprender antelación por plato en el futuro.
-  - **Fase 2b — VOZ NATIVA bloqueado (APK Android, PENDIENTE construir):** spec
-    `2026-06-21-preaviso-voz-nativa-apk-design.md`. SÍ hay proyecto Android editable en
-    `apps/ia-rest/android/` (Kotlin, WebView + `BridgeService` foreground con Realtime Supabase, sin
-    FCM). Plan: extender `BridgeService` para escuchar `preavisos` por Realtime y hablar con el TTS
-    nativo de Android con la pantalla apagada. Caveat: compilar/firmar/publicar la APK (keystore) es
-    paso manual de Alberto; Claude escribe el Kotlin.
-  - **Docs de usuario (#414):** actualizada la ayuda en app (`help-prompts.ts`, roles camarero/cocina/owner)
-    y `public/manual.html` (subsección Preaviso) con la voz + el disparo automático. Los PDF de
-    `public/manuals/*` son binarios → pendientes de regenerar por Alberto (texto listo).
-  - **Auto-mantenimiento de manuales:** ampliado `/auditoria-diaria` (paso 4) para que el agente nocturno
-    también reconcilie los manuales de usuario (help-prompts.ts + manual.html) cuando haya features nuevas,
-    y deje los PDF como acción manual. Antes solo cubría memoria/skills/CLAUDE.md/SKILLS.md.
-  - **Fase 2b — VOZ NATIVA bloqueado: CÓDIGO ESCRITO (no compilado) en #414.** Nuevo
-    `android/.../PreavisoVozService.kt` (foreground `specialUse` + Supabase Realtime sobre
-    `preavisos` + TTS `es-ES`, habla solo si la app NO está visible → no duplica la voz web).
-    `BridgeInterface.setPreavisoSesion(...)`, `MainActivity` set `appVisible` en onResume/onPause,
-    manifest con permiso `FOREGROUND_SERVICE_SPECIAL_USE`. La WebView pasa las credenciales
-    Supabase ACTUALES (no hardcode). **Pendiente: build+firma+publicar APK (v13/v3.1) por Alberto.**
-  - **✅ HALLAZGO (pre-existente) ARREGLADO:** `BridgeService.kt` tenía hardcodeado el proyecto
-    Supabase viejo `efncqyvhniaxsirhdxaa` (sin schema `iarest` ya) para el Realtime de impresión.
-    La app vive en `wswbehlcuxqxyinousql` (BD unificada, schema `iarest`). Arreglado: la WebView
-    inyecta URL/anon/schema actuales vía `IaRestBridge.setSupabase` (desde `AppBadge`, todas las
-    páginas privadas); sin creds → omite Realtime y sigue por polling (sin regresión). Llega en APK v3.1.
-  - **📋 Acciones de Alberto:** `docs/ACCIONES-ALBERTO-preaviso.md` (merge #414, activar toggle,
-    build+firma+release APK v3.1, regenerar 3 PDF). BD y web ya hechos/automáticos.
-  - **Texto PDF manuales:** `docs/manuals-texto-preaviso.md` (camarero/cocina/owner) listo para
-    pegar al regenerar los PDF (binarios, no los toca Claude).
-  - **⚠️ Aclaración BD:** ia.rest en PROD usa `wswbehlcuxqxyinousql` (schema `iarest`), NO el
-    proyecto `efncqyvhniaxsirhdxaa` (ese es el viejo standalone, ya sin tablas iarest).
-  - **⚠️ Correción de nota previa:** el código de ia.rest SÍ vive en `central` (`apps/ia-rest`), buildea
-    en Vercel y se mergeó por #408. La nota antigua de "repo aparte" está desactualizada.
-
-- **🤖 IA: fallback de TEXTO restaurado con Groq (mismo Llama 3.3 70B, gratis) — 21/06/2026**
-  - **Contexto:** Alberto preguntó si los modelos gratis de moda (Llama 3, Groq, Mistral, Cohere, HF…)
-    valdrían para el proyecto. Auditoría: **casi todo ya integrado y gratis** — texto/visión = Llama 3.3
-    70B + 3.2 11B Vision por **NVIDIA NIM**, voz = **Groq Whisper**, búsqueda web = **Gemini Flash**.
-    El hueco real NO era falta de modelos sino **falta de redundancia**: tras retirar Anthropic (sin saldo,
-    17/06), NIM quedó como **punto único de fallo** del texto (`callAI` lanzaba error si NIM caía).
-  - **Hecho:** adaptador puro `groqText`/`groqChat`/`groqChatTools` en `@central/core-ai`
-    (`packages/core-ai/src/groq.ts`, espejo de `nim.ts`, endpoint OpenAI-compat de Groq, default
-    `llama-3.3-70b-versatile`). Cableado fallback automático **NIM → Groq** en `apps/ia-rest/src/lib/ai-client.ts`
-    (`callAI` y `callAITools`). Reutiliza `GROQ_API_KEY` (ya existía para Whisper); override opcional
-    `GROQ_BRAIN_MODEL`. Visión sigue NIM-only (Groq no tiene vision model gratis equivalente). `noFallback`
-    pasa a ser legacy (ya no bloquea el fallback gratis). Doc en `docs/IA-busqueda-web-y-proveedores.md`.
-  - **✅ MERGEADO (PR #415, squash en `main`):** 11/11 checks verdes (typecheck de las 4 verticales,
-    tests, build, los 5 previews de Vercel Ready). Incluyó también un fix de CI ajeno: shim de tipos
-    `apps/plataforma/types/pdf-parse.d.ts` (deuda preexistente de `lib/concursos.ts`, #403).
-  - **Reconciliadas skills/docs** (que describían "NIM → Anthropic/Haiku fallback", ya obsoleto):
-    `.claude/skills/ia-rest-maestro/SKILL.md` (STACK IA), `packages/core-ai/README.md` (exports `groq*`
-    + scope `@central`), `docs/SKILL-proyecto-claude.md`, `docs/HANDOFF-unificacion-casa-marcas.md`, y
-    specs/planes forward-looking (maître-ia, consolidación/duplicados bancarios). Todos → "NIM → Groq, gratis".
-  - **Propagado a sivra/ialimp/plataforma (misma PR #415):** el fallback NIM → Groq se metió en el
-    **wrapper compartido** `aiComplete`/`aiTools` de `packages/core-ai/src/client.ts`. Como las rutas-servidor
-    de la **pasarela** (`apps/plataforma/app/api/ai/{chat,tools}/route.ts`) llaman a esos wrappers, UNA edición
-    cubre a la vez (a) el camino directo de las 3 verticales y (b) el tráfico por pasarela. En el chat de
-    pasarela queda **NIM → Groq → Gemini** (Gemini ya existía). Visión NIM-only. Verificado: tsc 0 errores en
-    plataforma/ia-rest/sivra (sivra tras `prisma generate`).
-    - ✅ **`GROQ_API_KEY` puesta en el Vercel de plataforma** (Production+Preview) y redeploy de prod
-      **READY** → el fallback **NIM → Groq → Gemini queda ACTIVO en producción** (host de la pasarela,
-      por donde va casi todo el tráfico de sivra/ialimp/plataforma). ia-rest ya la tenía (Whisper).
-      Override `GROQ_BRAIN_MODEL`. **Opcional pendiente:** la misma key en **sivra** e **ialimp** solo si
-      se quiere cubrir su camino directo SIN pasarela (por pasarela ya están cubiertas).
-    - Recordatorio de arquitectura: la IA vive en el núcleo compartido `@central/core-ai` (añadir un
-      proveedor nuevo = un solo sitio, lo heredan todos los módulos), pero las **claves son por vertical**
-      (cada proyecto Vercel inyecta las suyas) — por eso `GROQ_API_KEY` se configura por proyecto.
-  - **Pendiente (futuro):** **Cohere Rerank/Embed** para mejorar RAG (buscador de
-    comparables en sivra `app/api/mercado/*` y concursos LCSP en plataforma) — ese es el hueco de
-    CALIDAD real. Mistral solo si se quiere diversidad de modelo; Ollama solo si self-host.
-
-- **🌐 URLs de producción (no perder) — 16/06/2026**
-  - **plataforma** (web principal: dashboard + chat 🤖 Agente IA en `/agente`): **`https://plataforma-ten-flame.vercel.app`** (login `/login`).
-  - **sivra** (motor de pricing dinámico + endpoints `/api/pricing/*`, `/api/mercado/*`, etc.): `housesevillana.vercel.app` (la pantalla de login es la verde "SIVRA").
-  - Son **apps distintas** (no confundir): el chat del agente está en *plataforma*; aplicar precios a Smoobu se hace por el endpoint de *sivra* (logueado o por el cron con `CRON_SECRET`).
-
-- **🍽️ idea ia-rest: PREAVISO de marcha cocina⇄sala — SPEC escrito — 21/06/2026**
-  - **Idea de Alberto:** avisar al camarero con tiempo de un cambio de plato (sale carne caliente →
-    desbarasar y montar el cubierto/plato ANTES de que salga, para que no se enfríe esperando).
-  - **Diseño (brainstorming, todo delegado a mi criterio):** Fase 1 botón manual "📣 Preaviso" en `/kds`
-    (cocina manda) → push al camarero de la mesa (infra `qr-call-waiter`) → aviso nombra los platos
-    (info ya en la comanda, cero config) → camarero confirma "mesa lista" en `/edge` (dos direcciones)
-    → cocina lo ve por Realtime `kds-{id}` y emplata. Tabla nueva `preavisos` (schema `iarest`).
-    Fase 2 (futuro): automático por tiempos aprendidos (el botón manual genera esos datos) + menaje por producto.
-  - **Hecho:** spec en `docs/superpowers/specs/2026-06-21-preaviso-marcha-cocina-sala-design.md`
-    (commit en rama `claude/plate-change-server-alert-n8prlu`). **Pendiente revisión de Alberto** antes
-    de sacar el plan (`writing-plans`).
-  - **⚠️ Ojo al implementar:** el código de ia.rest vive en su PROPIO repo (`albertosuarezgutierrez-gif/ia.rest`),
-    no en `central`. Esta sesión solo tiene scope sobre `central` (ahí está el spec). Para construirlo hay que
-    abrir/añadir el repo de ia.rest.
-
-- **🐛 CONCURSOS (plataforma) — buscador daba 0 al filtrar por zona — 20/06/2026**
-  - **Causa:** el feed PLACSP a menudo NO trae `provincia` (0/57 de las en-plazo la tenían), pero el
-    buscador filtraba en duro `provincia ILIKE …` → cualquier CCAA/provincia seleccionada = 0 resultados.
-    (El corpus SÍ tiene datos: 201 filas, 57 en plazo, con CPV y FTS OK.)
-  - **Fix 1 (inmediato):** `api/concursos/radar/buscar` incluye también las de ubicación desconocida
-    (`provincia IS NULL OR ''`) al filtrar por zona → deja de dar 0.
-  - **Fix 2 (a futuro):** el parser `lib/concursos-radar.ts` saca la provincia como fallback de la
-    dirección del órgano de contratación (`LocatedContractingParty.Party.PostalAddress`), no solo de
-    `RealizedLocation` (que el feed omite). Se rellena al re-ingerir (cron cada 6 h, UPSERT por dedupe_key).
-
-- **🔀 AGENTE DE CONCURSOS — PORTADO de ialimp → PLATAFORMA (y borrado de ialimp) — 19/06/2026**
-  - **Por qué:** las licitaciones son **transversales a los negocios de la cuenta** (fontanería, catering JJ,
-    limpieza…), no de la vertical de limpiezas. Decisión de Alberto: el agente va en **plataforma**, no en ialimp.
-  - **Plataforma (nuevo):** sección de usuario **🏛️ Concursos** (`/concursos`, sidebar *Mi negocio* + command palette).
-    Scope = **CUENTA** (`requireEmpresaId()` shim → `requireSession().id` = `cuenta_id`; las tablas guardan ese id en
-    su columna `empresa_id`). Corpus `concursos_licitaciones` GLOBAL. Consume `@central/module-concursos`.
-  - **Shims clave en plataforma** (para reusar el código de ialimp sin reescribir): `lib/prisma.ts` (→`lib/db`),
-    `lib/tenant.ts` (`requireEmpresaId`), `lib/mailer.ts` (`getTransporter`/`MAIL_FROM` sobre `@central/core-email`),
-    y `aiComplete()` añadido a `lib/ai-client.ts` (NVIDIA `nimChat`). Crons de email hacen `JOIN cuentas` (no `empresas`).
-    OCR NO portado (deps pdfjs/canvas). 4 crons en `vercel.json` (ingesta/radar/avisos/cierre).
-  - **ialimp (borrado):** eliminadas páginas `/admin/concursos`, rutas `api/admin/concursos`, 4 crons, libs
-    `concursos*.ts`, y entradas de menú (`DashboardClient` NAV/NAV_MODULO). Las **tablas se quedan** (las usa plataforma).
-  - **Verificado:** build de plataforma ✓ y de ialimp ✓ (tras el borrado). Sin migraciones nuevas (reusa tablas).
-  - **PENDIENTE para que los emails salgan:** poner `SMTP_*`/`RESEND_API_KEY` en el proyecto Vercel **plataforma**
-    (hoy viven en ialimp). `NVIDIA_API_KEY`/`CRON_SECRET` ya están en plataforma.
-
-- **🟢 AGENTE DE CONCURSOS (ialimp) — FASE 3+4: del hallazgo a la oferta + usabilidad — 19/06/2026** (PR #400 mergeado a `main`)
-  - **H "Preparar candidatura 1 clic":** botón en cada resultado del buscador → `POST /api/admin/concursos/preparar`
-    crea un `concursos` con **ficha mínima** desde el anuncio (sin pliego) y lo abre en el workspace (evento DOM
-    `concurso-preparado` → `FichaView`). El sobre administrativo (DEUC+declaración) ya funciona con perfil+biblioteca;
-    para Go/No-Go, criterios, memoria y oferta hay que subir el pliego.
-  - **D "¿Me conviene?":** (1) **resumen IA** por anuncio (`POST radar/resumen`, `aiRunner`, cacheado en
-    `concursos_licitaciones.resumen_ia` — migración `2026-06-19_concursos_licitaciones_resumen.sql`, aplicada); (2)
-    **semáforo de encaje DETERMINISTA** (módulo puro `encajeConcurso(anuncio, criterios)` vs criterios del radar →
-    🟢/🟡, sin IA). 96 tests del módulo en verde (+6 de encaje).
-  - **K "Búsqueda en lenguaje natural":** caja "✨ Describe lo que buscas" → `POST radar/interpretar` (la IA traduce a
-    `{cpv, ccaa, provincia, presupuesto, q}`) → rellena los filtros y busca; degrada a búsqueda por texto si la IA falla.
-  - **Nota:** "🏛️ Concursos" YA está en el menú lateral del panel (`DashboardClient.tsx` NAV, sin gating por rol).
-    El agente está COMPLETO salvo extra opcional (BOE como fuente adicional + unificar el radar sobre el corpus).
-
-- **🟢 AGENTE DE CONCURSOS (ialimp) — FASE 2: proactivo (seguimiento + avisos) — 19/06/2026** (PR #398 mergeado a `main`)
-  - **El agente pasa de *pull* (buscar) a proactivo (te trae y te avisa).** Tres piezas:
-  - **G "Mis concursos" (seguimiento):** tabla `concursos_seguidos` (scope `empresa_id`, `dedupe_key`,
-    `licitacion` jsonb = snapshot, `estado` interesado→adjudicado/perdido, `notas`, `fin_presentacion`,
-    `recordatorio_cierre_at`). API `app/api/admin/concursos/seguidos` (GET/POST/PATCH/DELETE por `dedupe_key`).
-    UI: botón "📌 Seguir" en el buscador + panel "📌 Mis concursos" (sincronizados por evento DOM
-    `concursos-seguidos-changed`). El buscador devuelve `dedupe_key`.
-  - **C "Recordatorio de cierre":** cron `/api/cron/concursos-cierre` (diario 9:00) → email a `empresas.email`
-    de los seguidos (interesado/preparando) que cierran en ≤3 días, idempotente vía `recordatorio_cierre_at`.
-  - **B "Avisos de nuevos":** cron `/api/cron/concursos-avisos` (diario 7:30) → digest por email de los matches
-    del radar (`concursos_radar_anuncios`) aparecidos en 48 h y no enviados, empresas con `radar_activo`.
-    Idempotente vía columna nueva `avisado_email_at`; >2 días sin enviar se marcan sin email (sin backfill-blast).
-  - **Sin push** (las suscripciones son de limpiadoras) → todo por email (`lib/mailer.ts`), patrón cron-impagos.
-  - **Migraciones aplicadas a mano en Supabase:** `2026-06-19_concursos_seguidos.sql`, `2026-06-19_radar_anuncios_avisado.sql`.
-  - **OJO crons en `vercel.json`:** `concursos-cierre` (0 9 * * *) y `concursos-avisos` (30 7 * * *), auth Bearer `CRON_SECRET`.
-  - **Pendiente Fase 3:** H "preparar candidatura 1 clic" (wire al análisis F1-F6) + D resumen IA "¿me conviene?"; luego K lenguaje natural; BOE como fuente.
-
-- **🟢 AGENTE DE CONCURSOS (ialimp) — buscador por sector/zona + ingesta a demanda — 19/06/2026** (PRs #393, #394, #396 mergeados a `main`)
-  - **Contexto:** Alberto quería que el buscador de concursos le trajera catering/fontanería **en Andalucía**. El corpus
-    `concursos_licitaciones` estaba vacío y **PLACSP bloquea por IP (403)** cualquier fetch que no venga de Vercel
-    (por eso no se puede sembrar desde el contenedor de dev; la ingesta real solo corre en preview/prod).
-  - **#393 — Selector de sector (CPV):** catálogo puro `packages/module-concursos/src/sectores.ts` (32 sectores
-    PYME → divisiones CPV) + chips "Tu sector" en el buscador (`apps/ialimp/app/admin/concursos/page.tsx`).
-  - **#394 — Fontanería + fix CPV:** añadido sector **Fontanería** (`4533`). **Bug corregido:** varios sectores
-    usaban prefijos CPV **con punto** (`79.7`, `92.4`…) que el buscador (`LIKE 'prefijo%'` sobre códigos sin punto)
-    **no casaba nunca** → normalizados a `797`/`924`/`374`/`7934`. Test que prohíbe puntos en los prefijos.
-  - **#396 — Agente F1:** (A) botón **"⟳ Actualizar ahora"** = ingesta a demanda. Lógica extraída a
-    `apps/ialimp/lib/concursos-ingesta.ts` (`descargarAtom`/`ingerirAnuncios`), reutilizada por el cron
-    `concursos-ingesta`, el cron `concursos-radar` (quitada duplicación) y el nuevo `POST /api/admin/concursos/ingesta`.
-    (F) **Filtro por zona/CCAA**: mapa puro `packages/module-concursos/src/provincias.ts`
-    (`COMUNIDADES`/`provinciasDeComunidad`/`comunidadDeProvincia`, tolerante a acentos), filtro `?ccaa=` en el
-    buscador (expande a provincias por `ILIKE`) + selector "Tu zona" recordado en `localStorage`. Probado el filtro a
-    nivel BD (Andalucía + sector) con filas de prueba (limpiadas). Módulo **88/88**, build ialimp ✓.
-  - **Roadmap acordado (siguientes fases, NO hechas):** F2 = G "Mis concursos" (seguimiento) + B avisos proactivos
-    email/push por sector+zona + C recordatorio antes del cierre. F3 = H "preparar candidatura 1 clic" (wire al
-    análisis F1-F6) + D resumen IA "¿me conviene?". F4 = K búsqueda en lenguaje natural. BOE/TED descartados (bajo ROI local).
-  - **Pendiente menor:** el manual (`public/manual.html`) NO cubre el módulo de concursos (0 menciones) — documentarlo entero es tarea aparte.
-
-- **🟢 DIETAS por COMENSALES PUNTUALES (cocina/catering JJ) — 19/06/2026** (PR #391 mergeado a `main`)
-  - **Por qué:** crítica de Joaquín — las dietas son de **comensales puntuales** (5 sin gluten, 3 veganos),
-    NO un filtro global que cambie el menú entero por 1 persona. Antes, "✨ Sugerir menú" pasaba
-    "Restricciones" como texto libre a la IA → habría hecho TODO el menú sin gluten. Corregido de raíz.
-  - **Modelo:** un evento = **menú principal** (todos los PAX) **+** grupos `{dieta, nº comensales, plato adaptado del catálogo}`.
-    El plato adaptado es una receta del catálogo (la IA no inventa: si falta, lo dice en notas).
-  - **DB (BD viva + repo):** `2026-06-19_cocina_dietas.sql` → `cocina_evento_elaboraciones` +`comensales int` +`dieta text`
-    (NULL/NULL = menú principal, retrocompatible). El PK `(evento_id,receta_id)` impedía varias filas por receta →
-    sustituido por **id sintético** (`gen_random_uuid()`) + 2 índices únicos parciales (principal / por dieta).
-    *El código en producción sigue siendo compatible (inserts sin dieta funcionan igual).*
-  - **Motor puro `@central/module-trazabilidad`:** `EventoInput.dietas[]`, `ElaboracionTraza.{dieta,comensales,receta_base}`;
-    `generarParte` genera **elaboraciones de dieta** (agrupa receta+dieta, suma comensales, escala el escandallo por
-    COMENSALES, no por PAX). Nuevo `dietas.ts`: `alergenosIncompatibles(dieta)` + `avisosDietas()` (#3). **36 tests verdes.**
-  - **API:** `parte` devuelve `elaboraciones`+`dietas[]`; `eventos` POST/PATCH persisten ambos (helper
-    `lib/cocina-elaboraciones.ts`); `menu-sugerido` reescrito → `{menu, alternativas:[{dieta,comensales,platos}], notas}` (#9 sustitución IA).
-  - **UI `/produccion`:** EventoForm con sección "Comensales con dieta especial"; "Sugerir menú" con grupos de dieta;
-    fichas de dieta con chip "🟢 sin gluten · 5 raciones"; `duracionTarea` usa comensales; reparto IA ignora líneas de dieta;
-    **avisos de seguridad** (#3), **resumen de dietas para sala** (#4), **hoja de alérgenos imprimible** (#1).
-  - Verificado: `tsc --noEmit` limpio + tests del paquete verdes; 5/5 previews Vercel en verde. Backlog:
-    #2 etiqueta/plato, #6 lista compra resta dietas, #7 coste/margen, #8 plantillas evento, #10 histórico cliente.
-
-- **📅 `diaHabitual` en facturas-control — 19/06/2026** (PR #389, builds Ready)
-  - Usuario vio 13 facturas en estado "Falta"/"En plazo" sin saber cuándo llega cada una.
-  - Añadido `diaHabitual?: number | null` a `ProveedorRecurrente` en `lib/sivra/facturas-control.ts`.
-  - Los 17 proveedores recurrentes tienen ahora su día típico del mes (1, 5, 8, 10, 15, 25).
-  - La UI (`sivra/facturas-control/page.tsx`) muestra "~día X" en gris debajo del nombre del proveedor.
-  - La API route (`route.ts`) no necesitó cambios (spread `...p` ya pasa `diaHabitual` al JSON).
-  - **Stop hook:** local branch `claude/responsive-panel` → remote `claude/nice-heisenberg-jo4vy1`.
-    El hook busca `origin/claude/responsive-panel` (no existe) → cae a `origin/HEAD` (main) →
-    escanea 28 commits. Fix manual: `git fetch origin claude/responsive-panel && git push --force origin HEAD:claude/responsive-panel`.
-
-- **🟢 fix(ia-rest/blog-seo) + fix(plataforma/banca) + feat(plataforma): Control de Facturas — 18/06/2026** (PRs #384, #385 mergeados; blog-seo sin PR propio)
-  - **fix(ia-rest/blog-seo):** `callAI` gana 6º arg `model` opcional. El cron `app/api/cron/blog-seo/route.ts`
-    usa `meta/llama-3.1-8b-instruct` (8B) con timeout interno <60 s para no superar el límite de Vercel.
-    `ia-rest-maestro` skill actualizada. Añadida spec `docs/superpowers/specs/2026-06-16-core-receipts-design.md`.
-    Recrea PR #302 (stale draft, código portado directamente a main).
-  - **fix(plataforma/banca) — PR #384:** Ingresos de la correduría (comisiones + liquidaciones Allianz/Mapfre)
-    llegaban con signo negativo y se clasificaban como gastos, descuadrando el panel `/finanzas`. Solución:
-    nuevo `apps/plataforma/lib/destino.ts` (clasificador basado en destino, no en signo) +
-    `lib/destino.test.ts` (44 tests). Migración `2026-06-16_reclasificar_abonos_correduria.sql` (aplica
-    `UPDATE movimientos_bancarios SET clasificacion_manual=...` a los movimientos históricos mal clasificados).
-    Recrea PR #331 (stale draft).
-  - **feat(plataforma): Control de Facturas — PR #385:** Panel `/sivra/facturas-control` en plataforma
-    (lista de proveedores recurrentes con frecuencia esperada vs. última factura recibida).
-    `GET /api/sivra/facturas-control` compara `facturas_drive` contra el registry en
-    `apps/plataforma/lib/sivra/facturas-control.ts`. Alerta `facturasFaltantes` en `getAlertas`
-    (`lib/banca.ts`) + banner en `/dashboard` + entrada `🗂️ Facturas` en el sidebar (Mis pisos).
-    Spec `docs/superpowers/plans/2026-06-16-facturas-control.md` (741 líneas). Recrea PR #322.
-
-- **🐛 FIXES COMUNICACIÓN + FINANZAS — 18/06/2026** (PR #382 mergeado a `main`)
-  - **`/comunicacion` → Nuevo mensaje → Persona**: dropdown vacío corregido. `sivraAdapter` no
-    tenía `listarDirectorio` → añadido: query `limpiadoras WHERE activa = true ORDER BY nombre`
-    (single-tenant, sin filtro empresa_id). Ahora muestra las 15 limpiadoras activas.
-  - **`/finanzas` → BBVA 0€ personal**: comportamiento correcto (todos los movimientos personales
-    BBVA son positivos — Bizum recibido, pensiones). Añadida nota explicativa inline en
-    `FinanzasClient.tsx` cuando `gastos === 0` y la etiqueta contiene "BBVA".
-
-- **🔗 UNIFICACIÓN spine `eventos` (boda = cocina + material + CRM) — 19/06/2026** (rama `claude/jj-logistica-materiales-k5eko3`)
-  - **Aclaración:** el módulo CRM de eventos (`eventos` "Eventos v2": presupuesto/espacio/fechas
-    montaje) y `cocina_eventos` YA existían; lo que faltaba era **unirlos**. Hecho.
-  - **DB (BD viva + repo):** `cocina_eventos.evento_id uuid REFERENCES eventos(id)` (puente, nullable).
-    Migración `apps/ia-rest/supabase/migrations/2026-06-19_cocina_evento_crm_link.sql`.
-  - **API nueva** `api/cocina/eventos/[id]/crm` (GET/POST): crea una ficha `eventos` mínima desde el
-    evento de cocina (cliente=nombre, fecha, aforo=pax, modo_local='cerrado', requiere_appcc) o enlaza
-    a una existente; **re-apunta el material** ya asignado del id de cocina → id del evento CRM.
-  - **Anclaje del material:** `api/cocina/eventos/[id]/material` ahora usa `evento_id ?? cocina_evento.id`
-    como `destino_ref`. Si la boda tiene ficha CRM, cocina + material cuelgan del MISMO `eventos.id`.
-  - **UI `/produccion`:** botón **🔗 Ficha CRM** por evento (crea/enlaza) → chip cuando está unido;
-    el panel de material indica "unido a la ficha CRM". `parte` devuelve `evento_id`.
-  - **Legacy** `inventario_menaje_evento` (menaje viejo sobre `eventos`) se deja como está (no migrado).
-  - Verificado: `tsc --noEmit` limpio; insert de `eventos` probado contra constraints (smoke + limpieza).
-
-- **🔗 INTEGRACIÓN boda → cocina + material (1er corte CONSTRUIDO) — 18/06/2026** (rama `claude/jj-logistica-materiales-k5eko3`)
-  - Nuevo: cada **evento de cocina** (`/produccion`) lleva su **material** (mesas/sillas/menaje). Botón
-    **📦 Material** por evento → panel para añadir **kits** o **material suelto**, con descuento de stock,
-    valor en riesgo (coste de reposición) y quitar (repone stock).
-  - **API** `apps/ia-rest/src/app/api/cocina/eventos/[id]/material/route.ts` (GET/POST/DELETE), auth de
-    cocina (`x-ia-session`), scope `local_id`. Enlace **genérico sin FK dura**:
-    `materiales_asignacion.destino_tipo='evento'`, `destino_ref=cocina_eventos.id`, `destino_nombre=nombre`.
-  - **UI** en `produccion/page.tsx`: panel desplegable bajo cada evento (solo responsable).
-  - **DECISIÓN/DESVIACIÓN:** el v1 ancla en **`cocina_eventos`** (lo que JJ usa hoy), NO en la tabla CRM
-    `eventos` que se había elegido — porque JJ no usa el módulo CRM de eventos y así es testeable ya. La
-    unificación sobre `eventos` (CRM) sigue siendo el norte; migración futura = repuntar `destino_ref`.
-  - **Sembrado para probar** (Catering Joaquín Jaén): owner **PIN 1369** (/owner→Materiales), montador
-    **PIN 4040** (/montaje), Carmen **1234** (/produccion). 5 materiales + kit "Boda 100 pax" + 2 asignaciones.
-    Enlace: `https://www.iarest.es/login?r=catering-joaquin-jaen`.
-  - Verificación: pendiente preview Vercel de ia-rest (sin toolchain TS local).
-
-- **📦 MATERIALES · Fase B aplicada a la BD VIVA + diseño integración con cocina — 18/06/2026**
-  (rama `claude/jj-logistica-materiales-k5eko3`)
-  - **Bug de fondo resuelto:** el código de Fase B del módulo materiales (mesas/sillas/menaje de
-    catering JJ) estaba desplegado pero **solo existían 3 de 16 tablas** en la BD viva
-    (`wswbehlcuxqxyinousql`, schema `iarest`). Sus migraciones apuntaban a la BD VIEJA
-    (`efncqyvhniaxsirhdxaa`) y nunca se aplicaron al schema compartido → las ~15 pantallas/rutas de
-    Fase B (espacios, kits, proveedores, clientes, reservas, movimientos, unidades/QR, mantenimiento,
-    inventario físico, categorías, alertas) fallaban 404/500 en producción.
-  - **Aplicadas las 4 migraciones** (`materiales_v2`, `_categorias`, `_ledger`, `_fase_b`) al schema
-    `iarest` con `SET search_path TO iarest, public` (para que aterricen en `iarest`, NO en `public`
-    de ialimp/sivra). **Verificado:** 16 tablas `materiales_*` en `iarest`, **0 en `public`**,
-    `materiales` con 25 columnas (tipo/estado/proveedor_id/codigo_qr/stock_minimo OK), **RLS 16/16**.
-    Añadida policy `service_role_all` a `materiales_categorias` (solo tenía la de current_setting).
-  - **Repo sincronizado:** corregidos los headers de las 4 migraciones (BD vieja → compartida iarest)
-    + añadido `search_path` para que reaplicarlas vaya al schema correcto.
-  - **Diseño integración boda → cocina + material** (decisión Alberto: anclar en la tabla `eventos`,
-    el CRM rico, NO en `cocina_eventos`): doc nuevo
-    `docs/superpowers/specs/2026-06-18-eventos-spine-cocina-materiales-design.md`. Principio
-    "**junto pero separado por módulo**": `eventos` = tronco común; cocina (`cocina_eventos.evento_id`,
-    columna nueva propuesta) y materiales (enlace genérico `parent_tipo/destino_tipo='evento'`, sin FK
-    dura) cuelgan del mismo evento sin depender entre sí. Incluye 1er corte ("Material del evento" con
-    kits + `disponibilidadEnFecha`) y 17 ideas. **NO implementado aún** (solo diseño).
-  - **Pendiente para sesión siguiente:** construir el panel "Material del evento" + `cocina_eventos.evento_id`.
-
-- **📱 RESPONSIVE COMPLETO — 18/06/2026** (PR #381 mergeado a `main`)
-  - Añadidas media queries `@media (max-width: 768px)` en 30+ páginas de `apps/plataforma`.
-  - Lote 1: `LayoutShell`, `dashboard`, `banca` (×2), `finanzas/FinanzasClient`.
-  - Lote 2: `apartamentos` (×2), `sivra/mercado`, `sivra/pricing`, `sivra/pricing-auto`,
-    `sivra/income`, `sivra/expenses`, `sivra/gastos-fijos`, `sivra/fiscal`.
-  - Lote 3: `sivra/limpiadoras` (×2), `sivra/mensajes`, `sivra/calendario`, `sivra/inversion`, `sivra/seo`.
-  - Lote 4: `operador/clientes`, `operador/personas`, `operador/iarest/*` (8 páginas),
-    `operador/rrhh/*` (2 páginas), `comunicacion` (×2), `CommandPalette`.
-  - Estrategia: `<style>` JSX tags + `className` en divs estructurales. Sin Tailwind, sin reescribir
-    inline styles. Breakpoints: 768px (tablet/mobile) y 480px (xs). Utilidades globales en `globals.css`.
-  - Todos los CI verdes (4 typechecks + tests + 4 builds Vercel Ready).
-- **🧮 DEDUCCIONES FISCALES en `/finanzas` (plataforma) — 18/06/2026** (rama `claude/tax-deductions-personal-finance-e098a7`)
-  - Nuevo apartado de **deducciones IRPF** en el módulo `/finanzas`: el cálculo ya no se queda en
-    los tramos, ahora llega a **cuota íntegra → mínimos → deducciones → retenciones → a pagar/devolver**.
-  - **Motor PURO testeado** `apps/plataforma/lib/fiscal-deducciones.ts` (+ `.test.ts`, 6 casos, `node --test`):
-    mínimo personal y familiar, maternidad (hijos <3, madre con actividad), familia numerosa,
-    autonómicas **Andalucía** (nacimiento + FN), donativos, plan de pensiones. Importes en
-    `IMPORTES_POR_ANIO` (con `fuente`/`revisado`). Optimizador: avisos de oportunidad, checklist
-    "deducciones que te dejas", transiciones de edad, calendario fiscal.
-  - **BD** (migración `2026-06-18_fiscal_perfil_descendientes.sql`, aplicada a `wswbehlcuxqxyinousql`):
-    `fiscal_perfil`, `fiscal_descendientes`, `fiscal_novedades`, `fiscal_justificantes`, `fiscal_historico`.
-    3 modelos Prisma nuevos. Datos de Alberto sembrados (3 hijos 2018/2024/2025, madre autónoma, FN general).
-  - **UI** `FinanzasClient.tsx`: banner de novedad fiscal, tarjeta de deducciones+cuota, simulador
-    "¿y si…?" (plan de pensiones), checklist, calendario, histórico interanual, y **formulario**
-    de situación familiar (`PUT /api/finanzas/perfil`). CSV gestoría ampliado con el desglose.
-  - **Vigilante** skill **`fiscal-novedades`** (BOE estatal + BOJA Andalucía): contrasta los importes,
-    abre PR draft al actualizar la constante e inserta en `fiscal_novedades` (`beneficia`=subió) →
-    la app **avisa en pantalla**. Registrada en `docs/SKILLS.md` + `docs/RUTINAS-PROGRAMADAS.md` (rutina #5,
-    ~mensual). **NO** se cuelga del agente de concursos (ese sondea PLACSP por CPV, fuente distinta).
-  - Pendiente: crear el **trigger** de la rutina en `claude.ai/code → Rutinas`. Importes Andalucía son
-    orientativos (afinar contra BOJA en la 1ª pasada del vigilante).
-- **🔍 AUDITORÍA PROFUNDA SEMANAL — 18/06/2026** (`docs/AUDITORIA-2026-06.md` addendum)
-  - Estado general: **SANO**. 0 errores de tipos en las 5 apps (ia-rest, sivra, ialimp,
-    plataforma, rrhh). Tests verdes (rrhh 25/25, packages 40/40, guardián 21/21). Lockfile en
-    sync. Radiografía al día. 0 referencias `@iarest/` (guardián).
-  - **Supabase**: 0 ERRORS mantenido. Nuevo hallazgo 🟡: bucket `documentos-contables` con
-    listing público habilitado → revisar (expone índice de ficheros a agentes anon).
-  - **Docs**: `RUTINAS-PROGRAMADAS.md` desync — dice "pendiente de activar" pero las rutinas
-    están activas → PR #375 (draft) lo corrige. Pendiente de que Alberto lo mergee.
-  - **PRs stale**: 8 drafts abiertos sin actividad (#302, #307, #312, #322, #331, #351, #364,
-    #375). Revisar y cerrar los que ya no procedan.
-  - **Carry-forward**: aplicar migraciones `concursos_radar` en Supabase (A3 de jun-12) + jubilar
-    proyecto viejo `efncqyvhniaxsirhdxaa` (B2).
-  - **Rutinas programadas** activas (confirmado por esta sesión): ligera diaria 04:00 CEST +
-    profunda semanal domingos. Ambas abren PR draft; sin cambios → sin PR.
-
-- **🧠 MEMORIA ANTI-PÉRDIDA + AUDITORÍA NOCTURNA — 18/06/2026** (rama `claude/project-review-skill-p0jrkc`)
-  - **Guardián de cierre**: el hook `Stop` (`.claude/hooks/persist-memoria.sh`) ahora, si la
-    sesión hizo commits que tocan algo distinto de la memoria pero NO anotó este archivo,
-    **bloquea una vez** y pide anotarlo antes de cerrar. Usa el SHA base que graba el nuevo
-    hook `SessionStart` `memoria-record-base.sh`. Sesiones de solo lectura nunca se bloquean.
-  - **Hook `PreCompact`** (`.claude/hooks/memoria-precompact.sh`): recuerda volcar memoria
-    antes de compactar sesiones largas. Ambos hooks registrados en `.claude/settings.json`.
-  - **Auditoría programada**: `/auditoria-diaria` ahora tiene cadencia escalonada — **ligera**
-    (diaria, reconcilia memoria/skills/docs + checks baratos) y **profunda** (`--profunda`,
-    semanal, `auditoria-central` entera). Documentado en **`docs/RUTINAS-PROGRAMADAS.md`**.
-  - **Índice de skills**: nuevo **`docs/SKILLS.md`** (qué skills hay y cuándo usar cada una);
-    `/auditoria-diaria` lo mantiene al día contra `.claude/skills/` y `.claude/commands/`.
-  - **Triggers ACTIVOS** (creados por Alberto en `claude.ai/code → Rutinas`, 18/06): diaria
-    `Ejecuta /auditoria-diaria` 04:00 CEST; semanal `Ejecuta /auditoria-diaria --profunda`
-    domingos. Conectores: Supabase + Vercel (**GitHub es nativo** al vincular el repo, no es
-    un conector MCP aparte). PR #374 mergeado a `main`.
-  - **Límite conocido:** sesiones de solo charla (decisión sin commit) no las caza el
-    guardián → anótalas a mano.
-
-- **🔍 AUDITORÍA DIARIA — 18/06/2026** (`docs/AUDITORIA-2026-06-18.md`) — **estado SANO, sin bugs nuevos.**
-  - Rango #356→#372. Verde: lockfile en sync, radiografía al día, guardián 21/21, `transpilePackages`
-    vs deps coherente (los 2 módulos nuevos de cocina — `module-trazabilidad`, `module-organizador-trabajo`
-    — declarados en ambos), **typecheck 0 errores en las 5 apps**, tests en verde, multi-tenant OK en las
-    APIs nuevas de cocina (scope `local_id` + guards).
-  - Reconciliado: memoria (#372 no anotado), skill `ia-rest-maestro` (faltaban APIs `personal`/`validar-pin`),
-    y sincronizado `apps/ia-rest/next.config.js` (residuo con 3 paquetes) con el `.ts` (14) como red de seguridad.
-  - **Acción manual (no urgente):** opcional borrar el `next.config.js` redundante de ia-rest (ya sincronizado).
-    (Nota: `rrhh` SÍ despliega como `central-rrhh` en el equipo Vercel — confirmado por el CI del PR.)
-  - Vulns: 2 high `xlsx` (ialimp solo escribe → no explotable, ya documentado) + 4 moderate transitivas
-    (postcss/uuid/file-type) — no se tocan (override arriesga el build de apps vivas).
-
-- **✨ COCINA CENTRAL · GENERADOR DE MENÚS IA — 18/06/2026** (PR #379 merged, `65a68a1`)
-  - **API `/api/cocina/menu-sugerido`** (`callAI`, solo responsable): describe el evento (pax/restricciones) →
-    la IA compone un menú **eligiendo SOLO del catálogo `cocina_recetas` del local** (valida ids, no inventa),
-    equilibra entrante/principal/postre. En `/produccion` (panel Eventos): botón **"✨ Sugerir menú"** → abre
-    `EventoForm` **prerrellenado** con las elaboraciones propuestas (revisión humana antes de guardar) + notas IA.
-  - Skill `ia-rest-maestro` actualizado con reparto IA / atribución / foto-recepción / generador de menús.
-
-- **🤖 COCINA CENTRAL · REPARTO IA + ATRIBUCIÓN + FOTO-RECEPCIÓN — 18/06/2026** (PR #377 merged, `fa1e48e`)
-  - **Reparto IA con aprendizaje:** tabla `cocina_asignaciones` (receta_id→trabajador_id, `origen` ia|manual).
-    API `/api/cocina/asignaciones` (GET + set/bulk, solo responsable). En `/produccion`: botón **"✨ Repartir con IA"**
-    (`asignarTrabajo` por partida sobre el equipo real, `requiere_rol=partida` + `trabajador.roles=partidas`; fallback a
-    semilla con todas las partidas). Selector por ficha → los ajustes de Carmen quedan `origen='manual'` (señal de aprendizaje).
-  - **Atribución + tiempos (APPCC real):** `cocina_registros.hecho_por/hecho_por_id/hecho_at/firma_por_id`; controles con `por`.
-    La ficha y el dossier muestran "Hecho por X · hora" y el autor de cada control.
-  - **📷 Foto-recepción:** `cocina_recepciones.caducidad`; API `/api/cocina/recepciones/reconocer` (`callAIVision`, reutiliza
-    patrón de `/api/vinos/reconocer`): foto de etiqueta/albarán → producto/proveedor/lote/caducidad/Tª; albarán multi-producto
-    registra todos. Botón "📷 Foto de etiqueta/albarán" en el panel Recepción + campo Caducidad.
-  - **Aprendizaje real (análisis de overrides → ajustar la propuesta) = pendiente.**
-
-- **🗺️ ROADMAP COCINA CENTRAL (backlog acordado — "todo menos voz") — 18/06/2026**
-  - Decisión Alberto: ejecutar todo el backlog **menos control por voz** (voz → PENDIENTE). La IA hace y aprende.
-  - **Pendiente por orden sugerido:** (1) **Generador de menús IA** (describe evento → propone menú del catálogo) ·
-    (2) **Etiqueta de regeneración en destino** + **etiquetas APPCC imprimibles por elaboración** (lote/caducidad/alérgenos) ·
-    (3) **Control de Tª de cámaras programado con alarma** · (4) **Comparador de precios de proveedores** (requiere capturar
-    precio en foto-albarán) · (5) **Lista de la compra automática** (escandallo×PAX → pedido por proveedor, 1 clic) ·
-    (6) **Parte/eventos desde PDF del cliente** (visión doc) · (7) **Cronograma del día "en riesgo"** (motor ya da holgura/empezar_antes) ·
-    (8) **Hoja de alérgenos por evento (PDF)** · (9) **Hoja de carga/picking del furgón + Tª transporte** ·
-    (10) **Costes/márgenes por evento → plataforma** · (11) **Recalibrado automático de tiempos** (usa `hecho_at`) ·
-    (12) **Plantillas de evento** · (13) **Mise en place consolidada con cantidades** · (14) **No conformidades + partes de limpieza (L+D)** ·
-    (15) **Modo "inspección sanitaria" (dossier total)** · (16) **QR de trazabilidad en etiqueta** · (17) **Presupuesto/PDF al cliente** ·
-    (18) **Resumen diario a Carmen** · (19) **Mermas/sobrantes** · (20) **Asistente conversacional del parte** · (21) **Foto del plato terminado** ·
-    (22) **Histórico de partes + dossier PDF** · (23) **Firma de entrega digital del cliente** · (24) **Ficha de cliente/CRM**.
-  - **PENDIENTE explícito:** control por voz (recalibrado para cocina central, sin comandas).
-
-- **👥 COCINA CENTRAL · GESTIÓN DE EQUIPO — 18/06/2026** (PR #372 merged, `a43fdb1`)
-  - Carmen (responsable) gestiona su equipo desde `/produccion` (panel "👥 Equipo"): alta/edición/baja/borrado
-    de miembros con **PIN 4 díg. único por local** + `partidas`; muestra el enlace del local + PIN de cada persona.
-  - **API `/api/cocina/personal`** (GET/POST/PUT/DELETE) con guard **solo-responsable** (`cocina_rol === 'responsable'`,
-    403 si no). Crea filas en `personal` con `rol='cocina'`. `/api/cocina/yo` añade `access_token` del local.
-  - Cada miembro entra por el **mismo enlace del local** con su PIN; `/api/cocina/yo` le sirve su vista por rol/partida.
-  - `cocina_rol` previsto `co-responsable` (aún no habilitado en el guard). Reunión Carmen: **jueves 25, 12:00**.
-
-- **🏭 COCINA CENTRAL — CICLO COMPLETO EN BD Y EDITABLE — 18/06/2026** (Catering Joaquín Jaén, `/produccion`)
-  - **Carmen** (rol `cocina`, PIN **1234** de prueba) entra por su enlace → **`/produccion`** (no al KDS de mesas).
-  - **Ya NO es consultivo: herramienta completa, persistida en BD `iarest`** (service_role). PRs mergeados:
-    - **#363** eventos editables (CRUD + asignación de elaboraciones) + GET `/api/cocina/parte`.
-    - **#365** CRUD de **recetas/escandallo** (partida, min/PAX, muestra, controles APPCC, "depende de", ingredientes por PAX con desinf/descong).
-    - **#366** **operativa del día**: tabla `cocina_registros`; cada ficha marca **hecho**, registra **Tª por control**, **muestra testigo**, **firma**; chip "✓ Lista / ⛔ Pendiente"; controles impresos en el dossier.
-    - **#368** **recepción de mercancía** (`cocina_recepciones`): registrar albarán (producto/proveedor/lote/Tª/conforme); rellena Lote/Prov./Tª de la ficha por coincidencia de nombre.
-    - **#369** **vistas por rol/partida** (`personal.cocina_rol`): GET `/api/cocina/yo`; responsable ve todo; **cocinero** solo su(s) partida(s) sin gestión; **preparación** = recepción + "Bases a preparar".
-  - **Tablas nuevas (iarest, aditivas):** `cocina_eventos`, `cocina_recetas`, `cocina_receta_ingredientes`, `cocina_evento_elaboraciones`, `cocina_registros`, `cocina_recepciones`; `restaurantes.modo` (`cocina_central`); `personal.partidas text[]` + `personal.cocina_rol` (Carmen=`responsable`).
-  - **APIs:** `/api/cocina/parte` `eventos[/id]` `recetas[/id]` `registros` `recepciones[/id]` `yo`. Auth por sesión firmada `x-ia-session` + `local_id`.
-  - **CICLO COMPLETO (5 bloques):** recetas → eventos → asignar → recepción → ejecutar el día (Tª/firma/muestra) → dossier; con roles cocinero/preparación. Motor `@central/module-trazabilidad` + `module-organizador-trabajo`.
-  - **PENDIENTE/MEJORAS:** dar de alta usuarios reales de cocinero/preparación (con su `cocina_rol`/`partidas`) — aún sin ellos para Catering JJ; reparto con personas reales (ahora 3 cocineros semilla); "Bases a preparar" como checklist persistido; PIN propio (ahora 1234 de prueba). Reunión Carmen: **jueves 25, 12:00**.
-- **📨 FIX FORMULARIO DE CONTACTO (landing) — no avisaba NUNCA — 18/06/2026** (PR #360 merged en main)
-  - `iarest.es/#contacto` (home) manda `restaurante:""` y email opcional, pero `/api/leads/landing` exigía
-    `nombre && restaurante && email` → **400 en CADA envío de la home**, antes de guardar y antes de avisar
-    (`tgAlert()` + `enviarEmailNuevoLead()` van en `Promise.allSettled`, no se llegaban a ejecutar). El cliente
-    ignora la respuesta y muestra "Recibido" → fallo invisible. Las otras landings (catering/hostelería/espacios)
-    SÍ mandan `restaurante`, por eso esas funcionaban.
-  - **Fix** (solo `app/api/leads/landing/route.ts`): la API exige `nombre` + al menos un medio de contacto
-    (teléfono **o** email); `restaurante`/`email` vacíos se normalizan (`'Sin especificar'` / `''` / `null`)
-    respetando los NOT NULL reales de `leads_landing` (restaurante, email) y `leads` (restaurante, telefono);
-    dedup CRM por email o, si no hay, por teléfono; `consent_rgpd: true`.
-  - **Verificado EN VIVO** (Alberto rellenó el form real): llega **Telegram** ✅ + **email** ✅ a `hola@iarest.es`
-    (alias send-as + recepción confirmada en su Gmail). → `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` SÍ están en
-    Vercel y Resend tiene `iarest.es` verificado.
-  - **Gotcha leads perdidos:** los envíos fallidos NO dejaron rastro en BD (400 antes del insert). El recuento de
-    intentos perdidos vive en **GA4 → evento `generate_lead`** (`origen=landing-principal`), que el form dispara en
-    cliente pase lo que pase con la API. GA guarda el evento, no nombre/teléfono.
-
-- **🧾 FACTURAS CORREO · Pasada completa 60 días + fix skill — 18/06/2026**
-  - **Archivadas en Drive** (`FACTURAS Apartamentos/2026/`): 7 facturas Anthropic (abr–jun) + Codeoscopic €769.56.
-    - **Cuentas Anthropic** (dos, mismo NIF 28823484E, ambas deducibles `seguros`):
-      - `albertosuarezgutierrez@gmail.com` → **Anthropic Ireland Ltd** (EU, API credits, IVA 21%):
-        `2026-04-15` €21.78 · `2026-04-17` $6.05 · `2026-05-02` $6.05 · `2026-05-05` €142.50
-      - `manuelsuarezz@gmail.com` → **Anthropic PBC** (US, Max plan 20x, Mastercard **-0341** sin identificar):
-        `2026-04-13` €163.21 (KX7NRNU6-0003, crédito −16.79) · `2026-05-13` €180.00 (KX7NRNU6-0004)
-    - **Codeoscopic** `2026-05-21` €769.56 (Workspace software correduría, ya pagado por transferencia).
-    - Todos como documentos de texto en Drive (PDFs no subibles por MCP base64). PDFs originales pendientes de subida manual.
-  - **Fix skill** (commit `e069a49`): añadida exclusión explícita de **notificaciones operativas de la correduría**
-    (recibos devueltos de clientes, avisos de emisión, circulares de Allianz/Mapfre/Generali/Occident) — el agente
-    rutinario había etiquetado `Facturas/Procesada` un email de "recibo devuelto de cliente" de Allianz (falso positivo).
-  - **FACTURA MAPFRE** (31/05): es liquidación de comisiones (INGRESO de la correduría), NO gasto deducible → excluida.
-  - **N26 sin conectar a PSD2**: Vercel ($190.93 anterior) y facturas Anthropic pagadas desde N26 no aparecerán en banco hasta subir extracto manual.
-  - **Pendientes detectados en pasada 60d** (sin procesar aún):
-    - EMASESA × 3 (Bustos Tavera DER, Bustos Tavera IZQ, Socorro 24) — agua pisos turísticos
-    - Endesa SOCORRO 24 (Ref P26CON021029273, "Luz pendiente 2026") — luz pisos
-    - Lavandería El Giraldillo (AFV-11528, 25/05/2026) — lavandería pisos, **factura pendiente de pago**
-    - IONOS Correo Basic 1 (31/05/2026, ~€1.50/mes)
-  - **Para tu decisión (sin respuesta de Alberto):** Registro de la Propiedad "Factura 2025/AM 2345" (¿qué propiedad?) · Amazon WORKPRO Grapadora (¿pisos o personal?)
-
-- **🏭 COCINA CENTRAL DE CATERING ≠ RESTAURANTE — 18/06/2026** (concepto clave, decisión de Alberto)
-  - **Distinción fundamental:** una **cocina central de preparación** (catering / comida para llevar / obrador) es
-    un MODELO DISTINTO al de un restaurante. ia-rest nació para restaurante (mesas, comandas, voz, KDS). Para la
-    cocina central **NO aplican** mesas/comandas/voz/KDS: su mundo es **eventos → parte de elaboración → producción
-    → trazabilidad APPCC → recepción de mercancía**. NO calibrar el KDS de restaurante para catering — es el mundo
-    equivocado; se le da **pantalla propia**.
-  - **Modo del local:** columna nueva aditiva `iarest.restaurantes.modo` (`'restaurante'` por defecto |
-    `'cocina_central'`). El local de Carmen (Catering Joaquín Jaén, id `067c8bab-4edf-4765-a0d6-11b6ea112e8f`) está
-    marcado `cocina_central`. El login lee el flag (`/api/auth` → sesión firma `cocina_central`) y enruta
-    `cocina`+`cocina_central` → **`/produccion`** (no a `/kds`). `/cocina` se deja intacto (sigue → /kds para restaurantes).
-  - **ROLES de la cocina central (modelo acordado):**
-    - **Responsable de cocina central** (Carmen): distribuye el trabajo, **recepciona mercancía**, coordina, **firma**
-      la salida, supervisa APPCC. Ve TODO (parte, reparto, productividad, dossier).
-    - **Cocinero/a**: cocina/monta los platos finales con material ya tratado; **no toca mercancía cruda**. Ve su lista del día.
-    - **Preparación** (a estudiar/implementar): recepción + mise en place de las BASES. **Frontera recomendada por
-      Claude = "contacto con mercancía cruda"** (recepción/lavar/desinfectar/descongelar/cortar/porcionar + bases frías →
-      preparación; cocción/montaje → cocinero). Principio APPCC de **marcha adelante** (crudo y cocinado no se cruzan).
-    - En el motor `@central/module-organizador-trabajo`: se modela con `requiere_rol` por tarea + `depende_de`
-      (encadenado base→plato ya hecho). `asignarTrabajo` respeta `requiere_rol`.
-  - **Hecho esta sesión:** módulo `@central/module-trazabilidad` (APPCC: ficha ingredientes·lote·proveedor·desinf·
-    descong, controles térmico/abatimiento/congelación, muestras testigo, **bloqueo de salida**, **14 alérgenos
-    automáticos**, **generarParte** desde catálogo+eventos; 29 tests). Demos: `/propuesta/parte-jj`, `parte-jj-vivo`,
-    `parte-jj-traza`, `parte-jj-auto` (mergeadas). Acceso de **Carmen** creado (rol `cocina`, PIN **4 dígitos**, login por
-    token de local; el PIN va en CLARO en BD → rate-limited). Arreglos: nombre del local en `/login?t=`, móvil (tablas
-    del parte → filas; header KDS envuelve), parpadeo del panel Elaboraciones del KDS (#361).
-  - **PENDIENTE (bloqueado solo por outage del clasificador de Bash):** `next build` + commit + PR + merge de la
-    **vista de Carmen `/produccion`** (home de cocina central LIMPIO: header fino con nombre del local + Salir, **sin
-    voz/mesas/comandas**, parte del día + reparto + trazabilidad + dossier imprimible, móvil-first). Rama
-    `claude/cocina-central` (código listo y revisado, sin commitear).
-  - **SIGUIENTE (gated):** persistencia real en BD (rama Supabase + gate) y las pantallas de **cocinero** y
-    **preparación** (taggeando cada (sub)elaboración por "contacto con crudo"). Reunión Carmen: **jueves 25, 12:00**.
-
-- **🍳 PARTE DE CARMEN — DEMO + VIVO MERGEADOS — 17/06/2026** (Catering Joaquín Jaén, cocina)
-  - **PR #352** → `iarest.es/propuesta/parte-jj`: parte de elaboración real del 20/6 (estático, datos OCR del PDF
-    de Carmen). 4 eventos por color, 4 partidas, sub-elaboraciones como "Depende de", badges APPCC. Marca verde/dorado.
-  - **PR #354** → `iarest.es/propuesta/parte-jj-vivo`: el parte **conducido por el motor puro REAL**
-    `@central/module-organizador-trabajo` (enchufado como workspace dep + `transpilePackages`). `asignarTrabajo`
-    reparte por cocinero, `agruparPorPartida` arma columnas, `avisosAlCompletar` encadena base→plato (pulsar
-    "Hecho" en un fondo/salsa dispara "Lista para empezar" en el plato). Verificado con `next build` (164/164) +
-    64/64 tests del módulo. Sin BD/secretos (semilla en cliente).
-  - **Reunión con Carmen: jueves 25 a las 12:00.** Logo real DESCARTADO por Alberto ("con las mejoras mejor, el
-    logotipo no es importante").
-  - **PENDIENTE (gated, plan #351):** persistencia real sobre `produccion_tareas` (cocinero entra a ia.rest, ve su
-    día repartido + cronómetro + avisos encadenados desde BD). Toca la Supabase compartida → rama Supabase + gate
-    manual antes de prod. ia-rest YA tiene base: `produccion_tareas`, rutas `/api/produccion/*`, UI cocinero/productividad.
-- **🍳 DEMO PARTE CARMEN MERGEADO — 17/06/2026** (PR #352 merged en main, CI + Tests + 5/5 Vercel ✅)
-  - Página `apps/ia-rest/src/app/propuesta/parte-jj/page.tsx` → **`iarest.es/propuesta/parte-jj`**.
-  - Para la reunión con **Carmen (cocina, Catering Joaquín Jaén) — jueves 25 a las 12:00**: su **parte de
-    elaboración REAL del 20/6/2026** ya organizado por nuestro sistema. 4 eventos por color (Hacienda El Alba
-    115 pax, Finca Los Fresnos 131, Hacienda Trinidad 136, Decanato 20), 4 partidas (Frío/Caliente/Corte/Montaje),
-    sub-elaboraciones como "Depende de" (dependencias), badges de puntos de control APPCC. Marca verde `#02473B`
-    + dorado `#9E8152`.
-  - **Autocontenida** (`'use client'`, sin BD/imports/secretos) = molde visual. La versión viva sobre
-    `produccion_tareas` sigue siendo hito posterior (plan en PR #351, con gate manual de migración Supabase).
-  - **PENDIENTE (diferido por Alberto, "luego lo hago"):** logo real `logo-jj.svg` en repo + aplicarlo a
-    decks/UI. Decks ya mergeados: `/propuesta/catering-jj-cocina` (Carmen) y `/propuesta/catering-jj-deck` (grupo/Joaquín).
-
-- **💶 MÓDULO /finanzas MERGEADO — 17/06/2026** (PR #341 merged en main, 5/5 Vercel ✅)
-  - Hub financiero consolidado para Alberto: correduría seguros, 4 pisos turísticos, gastos personales BBVA/Kutxa, fiscal IRPF.
-  - Archivos nuevos: `lib/finanzas.ts` · `app/api/finanzas/route.ts` · `app/api/finanzas/export/route.ts` · `app/(usuario)/finanzas/page.tsx` · `app/(usuario)/finanzas/FinanzasClient.tsx`.
-  - `UserSidebar.tsx`: "💶 Finanzas" segundo ítem en Mi negocio, "🤖 Agente IA" renombrado (era "Agente precios"), Mercado 📊→🗺️, sección "Mis pisos"→"Pisos · detalle".
-  - Lógica fiscal: `calcularTramos()` (tramos IRPF 2025 declaración conjunta, reducción €3.400). Correduría = cobrado neto / 0.85 (bruto); retenciones = cobrado × 0.15/0.85; no modelo 130 ni 303.
-  - Pisos propios (House Sevillana + Duplex Center): placeholder amortización 3%. Pisos subarrendados (Luxury Busto + Busto Reform): alquiler pagado = deducible 100%.
-  - Export CSV (`/api/finanzas/export?year=YYYY`) para gestoría: filtro destino seguros+turistico_pisos+turistico_duplex.
-  - Bloque Modelo 179: tracker de obligación informativa trimestral para los 4 pisos turísticos.
-  - Filtros temporales: año + Q1/Q2/Q3/Q4.
-
-- **🧹 EDGE FUNCTIONS sin Anthropic — 17/06/2026** (PR pendiente) — **ya NO queda Anthropic en ia-rest.**
-  - `supabase/functions/qr-assistant`: eliminado el fallback Anthropic (ya usaba NIM como principal).
-  - `supabase/functions/eventos-entorno`: web_search de Anthropic → **Gemini `gemini-2.0-flash` + `google_search`**
-    (mismo prompt/JSON). `fuente` pasa de `claude-websearch` → `gemini-websearch` (re-corre 1 vez por local, dedup ok).
-  - **DESPLIEGUE MANUAL (Alberto):** estas son edge functions de **Supabase** (no Vercel), así que no se
-    despliegan con el push. Hay que `supabase functions deploy qr-assistant eventos-entorno` y poner el
-    **secret `GEMINI_API_KEY`** en el proyecto Supabase de ia-rest (`efncqyvhniaxsirhdxaa`) para eventos-entorno.
-
-- **🧹 QUITAR ANTHROPIC de ia-rest (#4) — 17/06/2026** (PR pendiente)
-  - Eliminada la dependencia **`@anthropic-ai/sdk`** del `package.json` de ia-rest + sus 3 imports:
-    `brain.ts` (`callAnthropic`, fallback de pago del POS) y `ai-client.ts` (`anthropicText`/`anthropicVision`).
-    El brain ahora es **NIM puro** (si falla → aviso); `callAI`/`callAIVision` lanzan error si NIM no está
-    (sin fallback de pago). `noFallback` se mantiene en firmas por compatibilidad.
-  - `pnpm-lock.yaml` regenerado (−32 líneas, solo Anthropic). `package-lock.json` de ia-rest es **vestigial**
-    (npm; el build usa pnpm `--no-frozen-lockfile`), no se tocó. `tsc` limpio (0 errores).
-  - **Pendiente (queda, PR aparte):** 2 **edge functions Deno** (`supabase/functions/qr-assistant`,
-    `eventos-entorno`) aún llaman a `api.anthropic.com` por `fetch` → migrar a NIM/Gemini (runtime distinto).
-    Referencias inertes a `ANTHROPIC_API_KEY` (health/qa-runner/transcribe: solo booleano/diagnóstico) se dejaron.
-
-- **💸 PASARELA IA · coste real + fallback + healthcheck — 17/06/2026** (PR pendiente)
-  - **Coste/tokens reales en `/operador/ia`**: `ai_usos` gana columnas `tokens`+`coste_eur` (migración
-    `2026-06-17_ai_usos_coste.sql`, **YA aplicada** en Supabase `wswbehlcuxqxyinousql`, aditiva/idempotente).
-    `ai-gateway.ts`: `estimarTokens` (~4 chars/token), `costeEur` (precio €/1k por proveedor, env
-    `AI_PRECIO_NIM_EUR_1K`=0 / `AI_PRECIO_GEMINI_EUR_1K`=0.0002). Los 4 endpoints registran tokens+€.
-    El panel muestra KPIs **Coste €** y **Tokens**, € por app, y tokens/€ por llamada.
-  - **Alerta de presupuesto**: `estadoPresupuesto()` + banner en `/operador/ia` al ≥80% (rojo al 100%).
-  - **Fallback de proveedor DENTRO de la pasarela**: `/api/ai/chat` hace **NIM → Gemini** si NIM falla
-    (con `GEMINI_API_KEY`) → las verticales podrán quedarse sin keys de proveedor propias.
-  - **Healthcheck**: `GET /api/ai/health` (sin secreto, no gasta) → `{ok, proveedores:{nim,gemini}, limite}`.
-  - **NO incluido (pendiente, PR aparte):** quitar `@anthropic-ai/sdk` de ia-rest — lo tocan 11 ficheros
-    (qa-runner, brain, transcribe, health, edge functions…), merece su propio PR testeado.
-
-- **✅ PR #336 MERGED — 17/06/2026** — Fase 5 COMPLETA: Sistema (QA runs + training IA), Crecimiento (Instagram/Blog/Leads landing) y CRM (pipeline de leads con filtros, buscador, fila expandible con contactos/notas) en `/operador/iarest/*`. 5/5 proyectos Vercel ✅ Ready. `iarest.es/super` ya absorbido al 100% en plataforma (modo read-only). Ver detalle abajo.
-
-- **✅ PR #335 MERGED — 17/06/2026** — Fase 5 Restaurantes: lista completa de locales con KPIs + detalle por restaurante en `/operador/iarest/restaurantes/[id]`.
-
-- **✅ PR #334 MERGED — 17/06/2026** — Fase 5 Suscripciones Stripe (read-only) en `/operador/iarest/suscripciones`. Rebase sobre main (conflicto en generated files: commit intermedio saltado). 4/4 proyectos Vercel ✅ Ready. Ver entrada de sesión 17/06 para detalle.
-
-- **✅ PR #333 MERGED — 17/06/2026** — Panel ia-rest/super en plataforma (`/operador/iarest/cobros|soporte|sugerencias`). Rebase completado contra main (conflictos en UserSidebar.tsx y generated files resueltos). 5/5 proyectos Vercel ✅ Ready antes del merge. Ver entrada de sesión 16/06 para detalle completo.
-
-- **🍽️ PLATAFORMA · Panel ia-rest/super absorbido → /operador/iarest/* — 16/06/2026** (rama `claude/nice-heisenberg-jo4vy1`)
-  - **PR #332 MERGED**: `/admin` (god-panel dark 338 líneas) → redirect a `/operador/clientes`. Limpieza definitiva.
-  - **Panel ia-rest** (mismo PR): 3 nuevos endpoints en ia-rest `/api/admin/` (Bearer `OPERADOR_SHARED_SECRET`, mismo patrón que `/api/operador/`):
-    - `cobros/route.ts` — lee `v_cobro_resumen_super` + `resumen_cobros_mensual`. Totales globales + histórico 12m.
-    - `soporte/route.ts` — GET/POST(responder)/PATCH(cambiar estado) de tickets de soporte.
-    - `sugerencias/route.ts` — GET/PATCH sugerencias del equipo de sala (estado, nota admin, leída).
-  - Plataforma: 3 proxy APIs en `/api/admin/iarest/` (auth `plataforma_admin` cookie → Bearer ia-rest) + 4 páginas:
-    - `/operador/iarest` — overview con cards de sección + link al panel legacy `iarest.es/super`.
-    - `/operador/iarest/cobros` — tabla de volumen/comisiones por restaurante + histórico mensual. Read-only.
-    - `/operador/iarest/soporte` — lista de tickets con panel lateral: responder inline + cambiar estado (abierto/escalado/resuelto).
-    - `/operador/iarest/sugerencias` — lista de ideas con filtros (categoría/estado/no leídas) + nota interna editable.
-  - **UserSidebar**: sub-items indentados bajo 🍽️ ia-rest (💶 Cobros, 🎫 Soporte, 💡 Sugerencias).
-  - **Auth iarest.es/super no tocada**: los `/api/super/*` siguen con `x-ia-session`. Los `/api/admin/*` son endpoints nuevos aditivos.
-  - **Env requerido en ia-rest Vercel**: `OPERADOR_SHARED_SECRET` (ya existe, mismo valor que plataforma). Sin él, los 3 endpoints devuelven 401 silencioso.
-  - **Pendiente Fase 5**: CRM/leads (~20 endpoints), Clientes/Restaurantes (~11), Instagram/Blog (~15), sistema/health (~12), autocuras — iterativos.
-  - **Pendiente Fase 4**: Admin limpiadoras (riesgo ialimp — auditoría RLS previa necesaria).
-
-- **🧰 FUNCTION-CALLING POR LA PASARELA · cerrar el último cabo — 16/06/2026** (PR #329 MERGED, squash `92e6140`)
-  - Nuevo endpoint **`POST /api/ai/tools`** en plataforma (espejo de `/api/ai/chat`): `verificarSecreto` +
-    `dentroDePresupuesto` + `registrarUso` (endpoint `'tools'`). Recibe `messages`+`tools` (OpenAI),
-    responde `{content, tool_calls}`.
-  - **`@central/core-ai`**: `aiTools` (lee `NVIDIA_API_KEY`, en `client.ts`) + `gatewayTools` (adaptador
-    vertical, en `gateway.ts`). Exports añadidos.
-  - **ia-rest** `callAITools` enruta por la pasarela (`gatewayTools`) y cae a `nimChatTools` directo si falla.
-  - **Resultado:** las **4 vías** de IA de ia-rest (`callAI`/`callAISearch`/`callAIVision`/`callAITools`)
-    pasan ya por la pasarela cuando está configurada → gasto 100% centralizado en `/operador/ia`. `tsc` limpio.
-
-- **🔌 IA POR LA PASARELA · cerrar los 2 pendientes del #325 — 16/06/2026** (PR #327)
-  - **sivra `seo-refresh`** ya NO usa Anthropic web_search: `lib/ai-client.ts` gana `aiSearch()` →
-    `gatewaySearch` (pasarela central, Gemini+Google Search); sin pasarela cae a NIM puro. Eliminada
-    `ANTHROPIC_API_KEY` de la ruta. **Con esto NINGÚN agente del repo llama ya a Anthropic como vía principal.**
-  - **ia-rest `lib/ai-client.ts`** enruta por la **pasarela central** (como ialimp/sivra): `gatewayCfg()`
-    (`AI_GATEWAY_URL`+`AI_GATEWAY_SECRET`, env de equipo Vercel); `callAI`/`callAISearch`/`callAIVision`
-    intentan la pasarela primero y caen al camino directo NIM→Anthropic si no está / falla.
-    `callAITools` (function-calling de los agentes del god-panel) sigue **directo a NIM** (la pasarela no
-    expone tool-calling).
-  - Anthropic queda solo como fallback de transición en ia-rest (hoy sin saldo). `tsc` limpio en ambas apps.
-
-- **🤖 AGENTES IA-REST · quitar Anthropic de los 4 agentes del god-panel — 16/06/2026** (PR #325 MERGED, squash `97bdcc2`)
-  - **Motivo**: los 4 agentes daban error 500 *"Anthropic no disponible (sin crédito)"*. Decisión de Alberto:
-    quitar Anthropic → **NVIDIA NIM + Gemini** (gratis, sin saldo).
-  - **`@central/core-ai`**: nuevo `nimChatTools` (function-calling con NIM, endpoint OpenAI-compatible) +
-    tipos `NimToolMessage`/`NimToolCall`/`NimToolResult`. NIM corre el bucle agéntico; la app ejecuta sus tools.
-  - **ia-rest `lib/ai-client.ts`**: `callAITools(system, messages, tools)` (wrapper de `nimChatTools`).
-  - **Agentes migrados** (las herramientas se ejecutan igual; solo cambió el "cerebro"):
-    - `agentes-ai` (solo búsqueda web) → **Gemini** (`callAISearch`).
-    - `agente-arquitecto` (GitHub/Drive) → **NIM function-calling**.
-    - `agentes-seo` (web_search + GSC/GA4) → **NIM**; `web_search` pasa a tool custom respaldada por **Gemini**.
-    - `cron/seo-agent` (web_search + escritura SEO + GSC/GA4) → **NIM + Gemini**.
-  - Funciona con `NVIDIA_API_KEY` + `GEMINI_API_KEY` que ia-rest **ya tiene**. `tsc` limpio. 5 deploys Vercel en verde.
-  - **PENDIENTE**: (a) **sivra `seo-refresh`** (cron) aún usa Anthropic web_search → migrar igual a Gemini.
-    (b) Conectar el `ai-client` de ia-rest a la pasarela central (como ialimp/sivra) para centralizar su gasto.
-
-
-- **📧 FACTURAS CORREO · Sistema completo en producción — 16/06/2026** (PR #324 MERGED)
-  - **Flujo diario automatizado:**
-    - 06:00 UTC → cron PSD2 sincroniza BBVA + Kutxa (23 movimientos insertados en primera sync)
-    - 08:00 CEST → Rutina Claude `Revisar facturas correo` procesa Gmail → Drive → Supabase
-  - **Infraestructura:**
-    - `CRON_SECRET` configurado en Vercel plataforma → cron PSD2 ya funciona
-    - Rutina activa en `claude.ai/code → Rutinas` (daily 8:00 CEST, repo `central`, MCPs Gmail+Drive+Supabase)
-    - Botón `📧 Revisar correo` en Banca → abre Claude Code + copia `/facturas-correo` al portapapeles
-    - Slash command `/facturas-correo` disponible en Claude Code web
-  - **Clasificaciones confirmadas por Alberto:**
-    - IKEA/Taskrabbit/ferretería → `turistico_pisos`; TotalEnergies → `turistico_pisos`
-    - Anthropic Ireland → `seguros`; BSH + Tutrocito 122.87€ → `personal`
-    - Círculo Mercantil → siempre `personal`
-  - **Regla reenvíos Pilar** (actualizada en skill): Taskrabbit/fontanero/Amazon/ferretería → siempre "Para tu decisión" (no auto-clasificar)
-  - **Archivados en Drive** (`FACTURAS Apartamentos/2026/06-Junio-2026/`): Vercel, Anthropic, TotalEnergies, PriceLabs, Taskrabbit 85.41€ (montaje IKEA, 16/06)
-  - **Pendiente subida manual**: IKEA 888.89€ PDF + PDFs TotalEnergies (MCP Gmail no descarga adjuntos)
-  - **Vercel 190.93€ + Anthropic 217.80€**: pagados desde **N26** → pendiente conectar N26 al PSD2 o subir extracto manual
-  - **Etiqueta Gmail**: `Facturas/Procesada` (Label_11) — todos los correos procesados etiquetados
-
-
-- **🤖 IA UNIFICADA · ialimp + sivra a la pasarela central + endpoint de VISIÓN — 16/06/2026** (rama `claude/bold-ride-s4s8eq`)
-  - **Decisión de Alberto**: la IA NO se configura por proyecto. Las **keys de proveedor viven solo en
-    plataforma**; cada vertical llama a la pasarela. La conexión (`AI_GATEWAY_URL` + `AI_GATEWAY_SECRET`)
-    se pone **UNA vez como Variables Compartidas a nivel de equipo (Team) en Vercel** → todos los
-    proyectos la heredan, sin repetir por proyecto.
-  - **Pasarela ampliada con VISIÓN/OCR**: `gatewayVision` (core-ai) + `POST /api/ai/vision` en plataforma
-    (NIM vision, Bearer, presupuesto, registro en `ai_usos`). Necesario porque ialimp/sivra hacen mucho OCR.
-  - **ialimp** (100% migrado): `lib/ai-client.ts` reescrito → `aiComplete` y `aiVision` enrutan por la
-    pasarela con fallback a NIM directo. Los **7 sitios de OCR** (`concursos-ocr`, `cron/procesar-documentos`,
-    `propietario/escanear`, `admin/escanear/process`, `admin/ia/{analizar-foto,analizar-botes,comparar-foto}`)
-    cambiados de `nimVision`→`aiVision` (misma firma). `lib/concursos.ts` importa `aiComplete` del wrapper.
-  - **sivra**: `lib/ai-client.ts` → `aiComplete` y `aiExtractInvoice` (OCR facturas) por la pasarela con fallback.
-  - **ia-rest PENDIENTE** (Fase 2): los 4 agentes con **tool-calling de Anthropic** (agente-arquitecto, agentes-seo,
-    agentes-ai, cron/seo-agent) + el `seo-refresh` de sivra NO migran: la pasarela hace chat+búsqueda+visión, no
-    tool-calling. Para unificarlos hay que extender la pasarela con un endpoint de tool-calling (Anthropic). Las
-    llamadas NIM/Gemini planas de ia-rest sí se pueden migrar (su `ai-client.ts`) en otro PR.
-  - **Migración SIN romper nada**: sin los envs, todo sigue con las keys directas; al ponerlos, pasa por la pasarela.
-  - **Tras configurar**: el gasto de ialimp/sivra/rrhh se ve en plataforma → god-panel → 🤖 IA · gasto.
-
-- **🤖 RRHH · Verticales conectadas a la pasarela de IA central — 16/06/2026** (rama `claude/bold-ride-s4s8eq`)
-  - El **asistente del empleado** (`lib/asistente.ts`) y el **agente de convenios** (`lib/convenio-agente.ts`)
-    de iarrhh ya **llaman a la pasarela de plataforma** en vez de a NIM/Gemini directos → las keys de
-    proveedor y el **control de coste/uso** quedan centralizados en plataforma (`/operador/ia`).
-  - **Nuevo**: `lib/ai.ts` — `viaIA()` (pura, testeada), `iaDisponible()`, `iaChat()` (pasarela→NIM),
-    `iaSearch()` (pasarela search→degrada a chat; fallback Gemini/NIM directo). Prioriza la pasarela;
-    si no está configurada, usa la key directa (transición sin romper nada). Test `lib/ai.test.ts`.
-  - **Envs nuevos en Vercel `central-rrhh`**: `AI_GATEWAY_URL` (= URL de plataforma) + `AI_GATEWAY_SECRET`
-    (mismo valor que en plataforma). Al activarlos se podrán quitar `NVIDIA_API_KEY`/`GEMINI_API_KEY` de rrhh.
-  - **Bonus**: esto probablemente **arregla el "asistente no disponible"** (la key vivía en rrhh; ahora la
-    llamada la hace plataforma, donde `NVIDIA_API_KEY` ya funciona).
-
-- **🎨 RRHH · Marca blanca por empresa (white-label) — 16/06/2026** (rama `claude/bold-ride-s4s8eq`)
-  - Cada empresa define su **color corporativo (hex)** y su **logo** desde **Mi cuenta** (gestor);
-    el **Portal del Empleado** (`/e`) se tiñe con ellos (logo en cabecera + acento de la marca).
-  - Reutilizable para CUALQUIER cliente (no hardcodea Mariscos González). Para aplicar la marca de
-    Mariscos: el sitio `mariscosgonzalez.com` **no es accesible** desde el entorno (bloqueado por la
-    allowlist de egress) → Alberto sube el logo + elige el color en Mi cuenta (self-service).
-  - **Nuevo**: `lib/branding.ts` (puro: `normalizaHex`, `derivarPaleta`, `estiloMarca`) + test;
-    `app/api/admin/cuenta/branding/route.ts` (POST multipart, gestor); migración
-    `0013_empresa_branding.sql` (`empresas.color_primario`, `empresas.logo_path`; **aplicada**).
-  - **Modificado**: `lib/empresa.ts` (`getBranding`, `actualizarBranding`); `app/e/page.tsx` +
-    `app/e/ExpedienteEmpleado.tsx` (aplica color vía CSS vars `--accent*` inline + logo); `app/admin/cuenta/page.tsx`
-    + `CuentaClient.tsx` (sección "Identidad corporativa"). Logo en bucket privado `rrhh-documentos`
-    (`branding/<empresa>/...`), servido por URL firmada en cada render.
-  - **AI gateway (PR #315 MERGED)**: pasarela de IA en plataforma (`/api/ai/chat` NIM, `/api/ai/search`
-    Gemini, Bearer `AI_GATEWAY_SECRET`) + god-panel `🤖 IA · gasto` (`/operador/ia`) + tabla `public.ai_usos`.
-    Pendiente Alberto: env `AI_GATEWAY_SECRET` (+opc. `GEMINI_API_KEY`, `AI_GATEWAY_LIMITE_MENSUAL`) en plataforma.
-
-- **🏠 PLATAFORMA · Sivra Fase 3 completa: mercado, pricing lab, pricing automático + calendario por portal — 16/06/2026** (PR #316 mergeado, rama `claude/sivra-fase3-mercado-pricing`)
-  - **Páginas migradas** de sivra → plataforma `/sivra/*`:
-    - `/sivra/mercado` — benchmark de competidores: panel por escenario (normal/corpus), toggle de portales, percentiles p25/p50/p75, búsqueda en tiempo real (Serper+NIM). APIs `GET /api/sivra/mercado/stats`, `GET /api/sivra/mercado/search`, `POST /api/sivra/mercado/ingest`.
-    - `/sivra/pricing` — Pricing Lab en modo shadow: tabla de experimentos A/B por propiedad (booked/libre/activo), stats de ocupación vs PriceLabs. APIs `GET|POST|DELETE /api/sivra/pricing/experiments`, `GET /api/sivra/pricing/stats`.
-    - `/sivra/pricing-auto` — Motor de precios completo: 13 parámetros por propiedad, botón de pánico, historial de aplicaciones, resultados €, pilot tracking 🟢🟡🔴. APIs `GET /api/sivra/pricing/settings`, `GET /api/sivra/pricing/apply`, `GET /api/sivra/pricing/historial`, `GET /api/sivra/pricing/resultados`, `GET /api/sivra/pricing/pilot-track`, etc.
-  - **Calendario Gantt** (`/sivra/calendario`) — barras ahora coloreadas por portal de reserva (Airbnb rojo, Booking azul, VRBO azul oscuro, Directo violeta, Otros gris). Leyenda actualizada. Antes eran por propiedad (redundante con filas).
-  - **Libs puras copiadas de sivra**: `lib/sivra/pricing-engine.ts` (motor de recomendación), `lib/sivra/pricing-calendar.ts` (eventos/estaciones), `lib/sivra/pilot-track.ts` (evaluación 🟢🟡🔴).
-  - **7 nuevos crons** en `vercel.json`: mercado/cron (07:15), mercado/sweep (dom 03:00), pricing/guard (07:30), pricing/experiments/check-results (08:00), pricing/apply-auto (08:30), pricing/resumen-diario (09:00), pricing/pilot-track (09:15).
-  - **UserSidebar.tsx** — NAV_PISOS ampliado con 3 entradas: Mensajes, Mercado, Pricing Lab, Pricing auto.
-  - **Estado CI**: todos los proyectos en Ready ✅ (plataforma, ialimp, sivra, ia-rest, central-rrhh)
-  - **Siguiente Fase 4**: Admin limpiadoras (⚠️ riesgo ialimp, requiere auditoría RLS previa)
-
-- **🏠 PLATAFORMA · Sivra Fase 2 completa: /sivra/mensajes (Smoobu) + fixes responsive dashboard — 16/06/2026** (PR #310, mergeado)
-  - **Mensajería de huéspedes** migrada de sivra → plataforma:
-    - `lib/smoobu.ts` — `getSmoobuKey()` lee `pms_connections.smoobu_api_key` (tabla de ialimp) con caché 5min; fallback a `SMOOBU_API_KEY` env solo si BD falla
-    - `GET /api/sivra/mensajes` — threads Smoobu + join `incomes` (checkIn/checkOut/portal) + `mensajes_status` (overrides manuales). Clasifica: trivial/info/importante → estado: respondido/pendiente/urgente
-    - `GET|PATCH /api/sivra/mensajes/[bookingId]` — mensajes por reserva, cambio de estado persiste en `mensajes_status` (ON CONFLICT UPDATE)
-    - `POST /api/sivra/mensajes/reply` — reglas de negocio (late checkout, early checkin, parking) → RAG en `knowledge_base` → `aiComplete` de `@central/core-ai`. Notifica `SIVRA_URL/api/limpiadoras/early-checkin` para early in/out
-    - `GET|POST|PATCH|DELETE /api/sivra/mensajes/knowledge` — CRUD base de conocimiento (tabla `knowledge_base`)
-    - `/sivra/mensajes/page.tsx` — UI completa: paneles redimensionables, lista de threads con filtros (estado/propiedad/búsqueda), chat, sugerencia IA, traducción vía MyMemory, Gmail draft, guardar en KB. Mobile: vista única list/chat con toggle
-  - **UserSidebar** — NAV_PISOS actualizado a 8 entradas (añadida Mensajes entre Fiscal y Inversión)
-  - **Dashboard fixes responsive**:
-    - Fecha `checkIn` ahora usa `::date::text` (antes `::text` devolvía timestamp completo `2026-06-16 12:00:00+00`)
-    - Widget "Esta semana en los pisos": `maxWidth: 90` en nombre de piso (era `minWidth`) + `minWidth: 0` en contenedor → importe ya no se corta en móvil
-  - **Env vars necesarias en proyecto Vercel `plataforma`**: `SMOOBU_API_KEY` (fallback), `SMOOBU_PMS_CONNECTION_ID` (opcional, tiene default), `SIVRA_URL` (para notificar limpiadoras)
-
-- **🏠 PLATAFORMA · Sivra Fase 1b completa: income, expenses, gastos-fijos, fiscal, calendario Gantt, widget dashboard — 16/06/2026** (PR #305, rama `claude/sivra-fase1b-income-expenses`)
-  - **Páginas migradas** de sivra → plataforma `/sivra/*`:
-    - `/sivra/income` — lista completa de reservas con filtros (portal, propiedad, fecha, huésped) + 4 KPIs: reservas, ingresos brutos, media/reserva, noches. API `GET /api/sivra/income`.
-    - `/sivra/expenses` — gastos manuales con formulario, subida a Drive, filtros por mes/propiedad/categoría. APIs `GET/POST/DELETE /api/sivra/expenses` + `POST /api/sivra/expenses/parse-invoice` (OCR NVIDIA NIM).
-    - `/sivra/gastos-fijos` — CRUD de plantillas de gastos recurrentes. APIs `GET/POST/PUT/DELETE /api/sivra/expenses/fijos` + `GET /api/sivra/expenses/fijos/generar` (cron día 1/mes).
-    - `/sivra/fiscal` — NUEVA (no existía en sivra): export IRPF por piso/trimestre. Tabla de rendimientos brutos, gastos deducibles (por categorías: limpieza, suministros, seguros, ibi, amortización, comisiones), resultado neto, descarga CSV con BOM UTF-8. API `GET /api/sivra/fiscal?year=YYYY`.
-  - **Calendario Gantt** completo (reescritura desde cero, `/sivra/calendario`):
-    - Barras de reserva con posicionado absoluto (DAY_W=46, ROW_H=52, LABEL_W=130, DAYS=30)
-    - Color de propiedad + stripe de portal (Airbnb rojo, Booking azul, VRBO azul oscuro, Directo violeta)
-    - ADR/noche visible en barras anchas, nombre del huésped
-    - Detector de gaps (1-2 días libres entre reservas) → fondo rojo suave
-    - Indicator de limpieza (checkout+checkin mismo día/piso) → emoji 🧹 en cabecera de columna
-    - Panel de detalle al click en reserva
-    - Stats de propiedades con barra de ocupación %
-    - Tabla de próximas llegadas con ADR al final
-  - **Widget "Esta semana en los pisos"** en `/dashboard`:
-    - `getProximasLlegadas()` — query server-side sobre `incomes` + `properties`, próximos 7 días
-    - Filas: dot color por propiedad, etiqueta HOY/MÑN/dd/mm, nombre piso, huésped, noches, badge portal, importe
-    - HOY resaltado en `--primary-light`; link directo a `/sivra/calendario`
-  - **lib/sivra/fingerprint.ts** — helper de deduplicación para gastos (copiado de sivra)
-  - **lib/sivra/gastos-fijos.ts** — generador mensual de entradas desde plantillas
-  - **vercel.json** — añadido cron `0 6 1 * *` para `/api/sivra/expenses/fijos/generar`
-  - **UserSidebar.tsx** — NAV_PISOS actualizado con 7 entradas: Calendario, Ingresos, Gastos, Gastos fijos, Fiscal IRPF, Inversión, SEO
-  - **Fix TypeScript**: `inversion/page.tsx` corregido `'break-words'` → `'break-word'` (typecheck CI)
-  - **Estado CI**: todos los proyectos en Ready ✅ (plataforma, ialimp, sivra, ia-rest)
-  - **Pendiente Fase 2**: `/sivra/mensajes` (Smoobu, getSmoobuKey()), OCR Gmail, crons sync
-
-- **📊 SIVRA · Backfill de ingresos Smoobu completado (sep-2025→may-2026) — 16/06/2026**
-  El panel "Mis apartamentos / Febrero 2026" mostraba **0 € de ingresos** (Gastos: 1.641 €, resultado −1.641 €).
-  Causa raíz: la API key de Smoobu estuvo rota ~sep-2025→14-jun-2026 y el cron solo tiene ventana de 2 días
-  (`modifiedFrom = hoy − 2 días`), por lo que nunca rellenó hacia atrás. PRs #294 y #297 añadieron
-  `from`/`to` de llegada (Smoobu solo devuelve próximas si no se pasan esas fechas) y `maxPages` al
-  endpoint `GET /api/updates/sync`. Backfill ejecutado por tramos via `web_fetch_vercel_url`; a pesar de
-  los 502 de Cloudflare (timeout de gateway), el Lambda de Vercel procesa y escribe. Resultado final:
-  - 2025-09: 17 res · 7.653 € ✅ | 2025-10: 36 res · 12.783 € ✅ | 2025-11: 20 res · 7.490 € ✅
-  - 2025-12: 15 res · 10.342 € ✅ | 2026-01: 15 res · 4.927 € ✅ | 2026-02: 24 res · **9.902 €** ✅
-  - 2026-03: 23 res · 8.171 € ✅ | 2026-04: 33 res · **17.961 €** ✅ | 2026-05: 27 res · **13.665 €** ✅
-  **El hueco sep-2025→may-2026 está 100% cerrado.** El cron diario (ventana 2 días) ya corre con la key
-  correcta (de `pms_connections`, arreglada el 14/06/2026) y mantiene los datos al día. Verificado por
-  Supabase SQL (`SELECT … FROM incomes GROUP BY mes`).
-
-- **📖 MANUAL de iarrhh para Pilar (Mariscos González) + roadmap RR.HH. + CI verde — 16/06/2026**
-  - **Manual de usuario** del Portal del Empleado (responsable RR.HH.): `apps/rrhh/public/manual.html`
-    (servido en `central-rrhh.vercel.app/manual.html`), dirigido a **Pilar** (Mariscos González). Cubre
-    entrar/cambiar contraseña, alta de trabajador (email obligatorio), enviar enlace de acceso, expediente
-    (5 carpetas), nóminas + **firma eIDAS art.26 con OTP**, cómo firma el empleado, vacaciones/permisos,
-    chat, baja vs borrado, qué ve el empleado, FAQ. **Sin credenciales** (no se hardcodean: el fichero es
-    público). Enlace **📖 Manual** añadido al sidebar del panel (`components/AdminShell.tsx`).
-  - **Roadmap RR.HH.** consolidado y durable en **`docs/ROADMAP-rrhh.md`** (PR #296, mergeado): todas las
-    ideas con top-3 (asistente IA del trabajador + multi-idioma, verificación pública por QR estilo
-    VeriFactu, plantillas legales versionadas).
-  - **CI verde en main:** fix `packages/core-firma/src/firma.ts` (cast `BufferSource` en `hashDocumento`,
-    PR #293 mergeado) — el `Typecheck · ialimp` que rompía main tras el merge de #287 ya pasa.
-  - **Pendiente conocido (no mío, latente):** `components/ActivarPush.tsx` tiene el MISMO patrón
-    `Uint8Array→BufferSource` sin castear (rrhh no está en el matrix estricto de Typecheck y `next build`
-    ignora TS, por eso no rompe CI). Candidato a limpiar cuando se toque ese fichero.
-
-- **🧩 RR.HH. CAPACIDAD COMPARTIDA — Fases 1+2 + verificación + arreglos rrhh — 16/06/2026** (PR #287, rama `claude/bold-ride-s4s8eq`)
-  - **Fase 1 (ialimp da RR.HH. a las limpiadoras):** consume `@central/module-rrhh` + `module-documental` +
-    `core-firma`. Tablas `documentos_limpiadora`/`firmas_limpiadora`/`firma_otps_limpiadora` (+ `limpiadoras.email`
-    OBLIGATORIO para el OTP, `+dni`). Bucket **privado** `documentos-limpiadora` (policy read). `lib/{carpetas,storage,
-    expediente,firma}-limpiadora.ts` + `lib/nomina-pdf.ts` (pdf-lib, agrega `partes_trabajo`). Rutas `/api/l/expediente*`
-    (firma OTP) + `/api/admin/limpiadoras/[id]/{expediente,nomina}`. UI: **`/l/documentos`** (botón en `/l`) + pestaña
-    **📁 Expediente** en `/admin/rrhh` (`components/ExpedienteLimpiadoraAdmin.tsx`). Remitente OTP parametrizado
-    `FIRMA_FROM` (default `hola@ialimp.es`). Migración `2026-06-16_rrhh_limpiadora.sql` aplicada.
-  - **Fase 2 (identidad de persona compartida):** `@central/core-identity` añade tipo **`Persona`** + helpers puros
-    (`nuevaPersonaId`, `normalizarDni/Email`, `coincidenciaPersona`, `mismaPersona`). Columna **`persona_id`** (uuid,
-    indexada) en `limpiadoras` y `rrhh.empleados`, **provisión automática al alta**. Verificado e2e: join cross-vertical
-    por `persona_id` (misma persona en ialimp ↔ rrhh).
-  - **Arreglos panel Empleados (rrhh):** faltaban editar/borrar en la UI (el backend ya los tenía). Añadido editar inline
-    + estado activo/baja, **alta completa** (email OBLIGATORIO + DNI/tel/puesto), buscador + filtro, **copiar/regenerar
-    enlace**, **borrado blindado** (409 si tiene firmas → conservar evidencia). Fix PATCH parcial (no machaca dni/tel).
-    Fix infra: **policy read del bucket `rrhh-documentos`** (sin ella, con RLS, el firmado de URLs devolvía null → no se
-    descargaban los documentos del expediente).
-  - **Tests:** los 4 paquetes vitest (`core-firma`/`module-rrhh`/`module-documental`/`module-chat`) + `core-identity`
-    estaban huérfanos (sin runner) → **cableados** (`vitest` devDep root + `test:vitest` dentro de `test`). **40/40 verdes.**
-  - **Fase 3 (consolidación en plataforma, SOLO LECTURA) — HECHA:** nuevo endpoint READ-ONLY en rrhh
-    `/api/operador/personas` (empleados+persona_id por el puerto operador). En plataforma `lib/personas.ts`
-    consolida "la persona a través de verticales" (ialimp.limpiadoras por prisma directo + rrhh por HTTP),
-    agrupa por `persona_id` y PROPONE enlaces no hechos por DNI/email (`coincidenciaPersona`). God-panel:
-    `/operador/personas` (`PersonasClient.tsx`, item nuevo en `UserSidebar`) + `GET /api/admin/personas`.
-  - **Pendiente:** **enlace MANUAL** del `persona_id` cross-vertical (escritura: setear el mismo persona_id
-    en ambas filas/dos apps — hoy solo se SUGIERE en `/operador/personas`). **Roadmap completo en
-    `docs/ROADMAP-rrhh.md`** (todas las ideas con top-3 marcado: asistente IA del trabajador + multi-idioma,
-    verificación pública por QR estilo VeriFactu, plantillas legales versionadas; + fichaje RD 8/2019,
-    art. 28 RGPD, canal de denuncias, coste laboral en plataforma, pago real Stripe, etc.).
-
-- **🧩 RR.HH. COMO CAPACIDAD COMPARTIDA — Fase 0: `@central/module-rrhh` — 16/06/2026**
-  Objetivo (decisión de Alberto): RR.HH. (nóminas + firma + expediente) reutilizable por **cualquier
-  vertical** y **cliente directo**. Casos que cubre el diseño: (1) limpiadoras de ialimp (Vanessa),
-  (2) cualquier vertical futura, (3) cliente RR.HH. directo tipo **Joaquín Jaén** (entra como `empresa`
-  en la app rrhh por el god-panel/puerto operador ya existente, sin tocar nada). Identidad de persona
-  cross-vertical vía `core-identity` + consolidación en `plataforma`.
-  - **Hecho (Fase 0):** nuevo paquete **`@central/module-rrhh`** (`packages/module-rrhh`, TS puro):
-    orquestación de firma con OTP **owner-agnóstica** (puertos `RepoFirma`/`PuertoEmailFirma`/
-    `PuertoDescarga` que inyecta cada vertical) + taxonomía `CARPETAS_RRHH` compartida (reusa
-    `module-documental`). Tests vitest **9/9**.
-  - **Refactor sin cambio de comportamiento:** `apps/rrhh/lib/firma.ts` ahora es un adaptador fino que
-    construye los puertos con el SQL de rrhh (`rrhh.documentos/firmas/firma_otps`) y delega en el módulo;
-    `apps/rrhh/lib/carpetas.ts` reusa `CARPETAS_RRHH`. Añadido `file:` dep + `transpilePackages`. Tests
-    rrhh 3/3 y core-firma 9/9 verdes; sin regresión.
-  - **Pendiente (Fase 1+):** ialimp ofrece RR.HH. a limpiadoras (migraciones `documentos/firmas/
-    firma_otps_limpiadora`, bucket privado, nómina PDF desde `partes_trabajo`, UI `/l/documentos`).
-    **Decisiones abiertas:** email de limpiadora obligatorio (para OTP) y marca del remitente. Fase 2
-    identidad de persona; Fase 3 consolidación en plataforma. Roadmap: fichaje (RD 8/2019), art. 28 RGPD,
-    canal de denuncias (Ley 2/2023), vacaciones, onboarding, gestoría.
-- **🤖 SIVRA · Agente de pricing — 1er ciclo con datos reales + motor por temporada (Paso 6/B2) — 16/06/2026**
-  Continuación del agente (#291 ya MERGED). Ejecutado el primer ciclo y construido B2.
-  - **Zona poblada** (`pricing_piso_zona`): 4 pisos, CP 41003 (Bustos Tavera / Casco Antiguo), aforo y tipo
-    reales sacados de `propiedades` (el endpoint `/api/pricing/pisos-zona` requiere sesión y al abrirlo sin
-    login redirige; por eso se pobló por SQL desde `propiedades`).
-  - **Mercado real por zona+aforo** (`market_rates`, conector Booking MCP): finde julio (p50 ~132€ 4pax / ~122€
-    2pax), **Semana Santa 2027 p50 ~462€/noche (¡~3,3× normal!, ya disparado 9m vista)**, Feria 2027 (~162€, aún
-    sin rampar → oportunidad de adelantarse; FECHAS A CONFIRMAR).
-  - **Memoria** (`pricing_aprendizaje`): factor pelotazo SS, baseline verano, nota Feria. **Decisiones dry-run**
-    (`pricing_decisiones`, fuente `agente_bootstrap`): SS 2027 base Smoobu Duplex 371 / Luxury 354 / Busto 319, min-stay 3.
-  - **Paso 6/B2 (motor por temporada)** en `apps/sivra/app/api/pricing/apply/route.ts`: el motor tarificaba con
-    UN percentil por piso (mezclando fechas → precios planos). Ahora agrupa comps por **mes de `checkin_date`**
-    (más reciente por scenario+fecha+nombre, ventana 120d) y tarifica cada fecha con el mercado de SU mes;
-    fallback al global si <3 comps. Evento: si usa bucket mensual (ya refleja el evento) NO multiplica por
-    `eventFactor` (sin doble conteo) pero garantiza ≥ global×eventFactor; en fallback, comportamiento idéntico
-    al previo. Validado por SQL (buckets jul/oct/SS/Feria correctos). Va en rama `claude/pricing-b2-temporada`.
-  - **Pendiente:** (1) calibrar coste→`min_price` (suelo) de Duplex/Luxury/House (hoy NULL; apply_enabled=false →
-    solo dry-run); (2) House Sevillana necesita comps de unidad grande (12 plazas) + activar apply_enabled;
-    (3) aplicar a Smoobu vía raíles (Paso 4) requiere CRON_SECRET (cron) o sesión — Claude no puede llamarlo solo;
-    (4) confirmar fechas exactas de Feria 2027 y re-consultar conectores más cerca.
-
-- **🤖 SIVRA · Agente de pricing IA — raíles + skill + chat (Fase 2-B, Pasos 4/5/5-bis) — 16/06/2026 — PR #291 (draft)**
-  Construido el cerebro + los raíles del agente de pricing autónomo (sobre #290, que ya creó las 3 tablas).
-  - **Paso 4 (raíl, sivra):** `POST /api/pricing/aplicar-propuesta`. La IA propone y este endpoint aplica la
-    cadena que la IA NO puede saltarse: pausa global → `apply_enabled` → suelo de coste (`min_price`) →
-    tope ±`max_change_pct`/día vs precio actual → techo opcional → **circuit-breaker** (aborta la pasada
-    entera, HTTP 409, si la intención cruda mueve demasiadas fechas o un % medio enorme) → solo fechas
-    disponibles → escribe en Smoobu → audita en `pricing_applied` (`source='agente'`) + `pricing_decisiones`.
-    `dryRun` por defecto TRUE.
-  - **Paso 5 (cerebro):** skill `.claude/skills/pricing-agente/SKILL.md` para la sesión recurrente de Claude.
-    Lee `pricing_aprendizaje` + mide outcomes → reúne variables (mercado por zona/fecha vía conectores MCP,
-    eventos, ocupación, costes, características) → decide (máx. margen, pelotazo en eventos con ramp) → aplica
-    por el Paso 4 → escribe aprendizaje. Memoria = BD (sesión efímera).
-  - **Paso 5-bis (humano en el bucle, plataforma):** entrada de sidebar 🤖 Agente precios → `/agente`, chat
-    (`app/(usuario)/agente/page.tsx` + `app/api/agente/chat/route.ts`). Alberto pregunta "¿por qué X el día Y?"
-    (lee `pricing_decisiones.motivo`) y da instrucciones ("no bajes Busto de 120") que se guardan en
-    `pricing_aprendizaje` y el agente respeta el próximo ciclo. NO escribe precios (solo el Paso 4).
-  - **CI:** sivra/plataforma/ialimp/ia-rest deploy verde. `central-rrhh` falla (pre-existente, su `main` está
-    roto; este PR no toca `apps/rrhh`). Verificado `tsc` sin errores nuevos en los ficheros añadidos.
-  - **Pendiente (necesita a Alberto):** Paso 1 (datos) — lanzar `/api/pricing/pisos-zona` logueado en sivra
-    para poblar zona/CP/aforo reales. Luego: Paso 3 (bootstrap mercado por piso/fecha con conectores, lo hago
-    yo) y primeros ciclos del agente en dry-run antes de vivo.
-- **📧 Skill `facturas-correo` creada (agente de facturas por email) — 16/06/2026**
-  Nueva skill `.claude/skills/facturas-correo/SKILL.md`: agente PROGRAMADO que revisa el Gmail de
-  Alberto, localiza facturas/justificantes, los clasifica (personal vs negocio deducible con las
-  reglas de `lib/categorizar.ts`), archiva los deducibles en Drive (`Facturas/<año>/<negocio>`), los
-  concilia contra `movimientos_bancarios` (Supabase) y deja un resumen en 3 bloques. Idempotente vía
-  etiqueta Gmail `Facturas/Procesado`. Alcance v1 elegido por Alberto: **Leer + Drive + conciliar**.
-  - **PENDIENTE DE ALBERTO (manual, 1 vez):** crear el **trigger diario en Claude Code web** con el
-    prompt «Ejecuta la skill `facturas-correo`» (entorno con MCP de Gmail + Drive + Supabase conectados).
-    Sin el trigger, la skill solo corre cuando él la pide. NO hay agente 24/7 — son pasadas programadas.
-
-- **🏦 PLATAFORMA · Banca: clasificación IBI + revisión de gastos reales — 16/06/2026**
-  Sesión de uso real con Alberto sobre los movimientos importados:
-  - **Fix regla de categorización** (`lib/categorizar.ts`): el IBI del ayuntamiento caía en `proveedor`
-    porque el banco trunca "AYUNTAMIENTO"→"AYUNTAMIEN" y la regla buscaba la palabra entera + no contemplaba
-    "IBI". Ahora la regla de `impuestos` incluye `AYUNTAMIEN`, ` IBI ` (con espacios, para no chocar con
-    "RECIBIDO"), `CONTRIBUCION`, `PLUSVALIA`. Los IBI futuros se auto-categorizan como 🏛️ Impuestos.
-  - **IBI Monte Carmelo 68** (ref. catastral `4707007TG3440N0003TR`, 2× −171,55 € = mismo inmueble al 50%
-    Alberto / 50% su mujer): corregidos a `categoria=impuestos` y **`destino=personal`** — es su **vivienda
-    habitual**, NO deducible. (El Dúplex es Pasaje Francisco, no Monte Carmelo.) Hecho por SQL (Supabase MCP).
-  - **Cargos duplicados** (PR #282, ya en prod): el caso "HORNO NUEVA FLORIDA −2,80 €" (5 compras repartidas)
-    se clasifica correctamente como **"Sospecha baja"** y queda bajo el umbral del banner (5 €), así que no
-    molesta en el dashboard. Confirmado que la feature ya hace lo pedido; Alberto silencia cada grupo con
-    "Es normal" (→ `duplicado_estado='ignorado'`). NO se reconstruyó nada.
-
-- **🧾 SIVRA · Contabilidad: REGLA de separación de cuentas anclada — 15/06/2026**
-  La gráfica "Evolución mensual" del dashboard mezcla todo en un único Ingresos/Gastos → **a Alberto no le vale**
-  (mezcla cuentas bancarias y mezcla lo personal con lo de los pisos = poco informativo). Regla fijada:
-  **BBVA** = Duplex Center + seguros (unidad **aparte**); **Kutxa** = gastos personales + los **3 apartamentos
-  turísticos**, que hay que sacar **limpios sin lo personal**. Los 3 turísticos (confirmado por Alberto):
-  **Socorro = House Sevillana** (Calle Socorro 24, `prop_house_sevillana`), **Busto Tavera = Busto Reform**
-  (`prop_busto_reform`) **+ Luxury Busto** (`prop_luxury_busto`). Duplex Center NO entra en esa P&L.
-  Detalle + mapeo + gap del modelo de datos en **`apps/sivra/docs/contabilidad.md`** (enlazado desde
-  `apps/sivra/CLAUDE.md` y router `sivra-maestro`). **Pendiente:** implementar la segregación + filtro mes/año
-  + gráfico resumen en la vista "Mis apartamentos" / dashboard.
-
-- **⚠️ `apps/plataforma` · Resolución de cargos duplicados (banca) IMPLEMENTADO — 15/06/2026 — PR #282 (draft)**
-  El banner del dashboard ya detectaba "posibles cargos duplicados" (`getAlertas`) pero era ingenuo
-  (falsos positivos con micro-gastos recurrentes, p. ej. HORNO NUEVA FLORIDA −3 €) y de solo lectura.
-  Ahora es **fiable y accionable**, en 3 fases (todas pusheadas y desplegando en Vercel):
-  - **F1:** columna aditiva `movimientos_bancarios.duplicado_estado` (NULL/ignorado/confirmado, migración
-    `2026-06-15_banca_duplicados.sql` **ya aplicada** por Supabase MCP en `wswbehlcuxqxyinousql`).
-    Lógica PURA y testeada en `lib/duplicados.ts` (`clasificarConfianza`, `superaUmbralBanner`,
-    `esRecurrente`, `agruparDuplicados`; `lib/duplicados.test.ts`, 8 tests `node --test` verde). `lib/banca.ts`:
-    `getDuplicadosSospechosos`/`getDuplicadosResueltos`/`resolverDuplicados`; `getAlertas` reusa la misma
-    fuente con **umbral** (`DUP_UMBRAL_BANNER`, 5 €) → micro-gastos no disparan el banner. Excluye pares ya
-    conciliados a facturas distintas. API `POST /api/banca/duplicados`. UI `DuplicadosBandeja` en `/banca`
-    (resolver/deshacer + plegable "ya resueltos"); banner del dashboard enlaza a `/banca#duplicados`.
-  - **F2:** borrador de reclamación IA (`lib/reclamacion.ts` con `aiComplete`, degrada a plantilla) +
-    `POST /api/banca/duplicados/reclamacion` + botón/modal "Reclamar" en la bandeja.
-  - **F3:** auto-detección de recurrentes (subconsulta de ocurrencias en 60 d → `esRecurrente` degrada a
-    confianza baja). Verificado con datos reales: el IBI (recibo mismo día) sale como sospecha ALTA; HORNO
-    (16/mes) y GALOS (19/mes) quedan silenciados.
-  - **Spec:** `docs/superpowers/specs/2026-06-15-duplicados-bancarios-design.md`. **Plan:**
-    `docs/superpowers/plans/2026-06-15-duplicados-bancarios.md`.
-  - **Pendiente (opcional):** enganchar duplicados al email del cron `banca-alertas`.
-
-- **✍️ `apps/rrhh` (iarrhh) FASE 2 — FIRMA ELECTRÓNICA AVANZADA (eIDAS art. 26) — 16/06/2026**
-  Decisión: **firma propia** legalmente válida (no Firmafy ahora; avanzada basta para nóminas/contratos
-  por art. 29 ET + STS 1023/2016). Firmafy queda **enchufable** como otro proveedor del puerto.
-  - **Núcleo puro `@central/core-firma`** (`packages/core-firma`): puerto `ProveedorFirma` +
-    `FirmaPropia`. `hashDocumento` (SHA-256/WebCrypto), `nombreCoincide`, `cumpleArt26`,
-    `verificarIntegridad`, `TEXTO_CONSENTIMIENTO`, evidencia. Tests vitest **9/9**. Añadido a
-    `transpilePackages` + `file:` dep en rrhh.
-  - **Cómo cumple art.26:** (a) empleado teclea su nombre, se valida que coincide con el titular;
-    (b) guarda nombre+email/DNI; (c) control exclusivo por **token personal** del empleado
-    (`metodo='sesion_token'`; OTP email = refuerzo futuro); (d) **SHA-256 del documento** al firmar →
-    alteración detectable.
-  - **DB:** tabla `rrhh.firmas` (`prisma/migrations/0006_firmas.sql`, aplicada; FK a documentos
-    ON DELETE CASCADE, RLS on). `documentos.estado_firma`: `no_requiere→pendiente→firmado`.
-  - **App:** `lib/firma.ts` (`solicitarFirma`/`firmarDocumento`), `lib/storage.ts#descargarObjeto`,
-    API `POST /api/admin/empleados/[id]/documentos/[docId]/solicitar-firma` (avisa al empleado) y
-    `POST /api/e/expediente/[docId]/firmar` (avisa a responsables). UI: admin badge+"Solicitar firma";
-    empleado badge+"Firmar" (modal consentimiento + teclear nombre). Spec:
-    `docs/superpowers/specs/2026-06-16-rrhh-firma-avanzada-design.md`.
-  - **Probado:** core-firma 9/9; build rrhh verde; integración BD (estado→firmado, evidencia,
-    integro_original=true / integro_si_modificado=false, cascade) → datos de prueba borrados;
-    `hashDocumento`==`node:crypto` SHA-256.
-  - **Refuerzo OTP por email (hecho, 16/06/2026):** al pulsar "Firmar" se envía un código de 6 dígitos
-    al email del empleado (tabla `firma_otps`, `0007_firma_otps.sql`, hash SHA-256, 10 min, 5 intentos);
-    si se emitió, es obligatorio para firmar → `metodo='otp_email'`. **Degrada limpio:** sin email/SMTP
-    se firma por sesión (`sesion_token`), la firma sigue válida. **Remitente: reusamos Resend de ia.rest**
-    (`hola@iarest.es`, dominio verificado) con display **"iarrhh"** (`lib/mailer.ts` sobre `@central/core-email`;
-    `notificar.ts` migrado a ese mailer). **Requiere `RESEND_API_KEY` en el proyecto Vercel central-rrhh**
-    (mismo valor que ia-rest); sin ella, OTP no se envía y se firma por sesión. Endpoint
-    `POST /api/e/expediente/[docId]/firmar/codigo`. Probado: build verde + integración BD (upsert resetea
-    intentos, hash válido, firma `otp_email`, OTP consumido) → datos borrados.
-  - **Pendiente:** poner `RESEND_API_KEY` en central-rrhh (Vercel) para activar el OTP en vivo; proveedor
-    **Firmafy** (cuando Alberto tenga alta/credenciales — el flujo rrhh no cambia, solo se elige proveedor).
-    **Precio** al cliente.
-
-- **🎨🏢🔑 `apps/rrhh` (iarrhh) — REDISEÑO + ALTA DESDE GOD-PANEL + CAMBIO PASS — 15/06/2026 — PRs #276/#278/#279/#280**
-  Marca propia **iarrhh** (no del cliente). Todo en producción y **verificado en vivo**.
-  - **Rediseño visual (#276):** vestida toda `apps/rrhh` con la imagen de la casa (estilo ia-rest):
-    paleta papel/tinta + acento **teal `#2B6A6E`**, fuentes Inter Tight/Newsreader/JetBrains Mono,
-    sidebar admin (`components/AdminShell.tsx`), wordmark `ia·rrhh` (`components/Wordmark.tsx`),
-    monograma SVG (`public/icon.svg`), portal del empleado móvil-primero. Tokens en `globals.css` +
-    `tailwind.config.ts`. **Sin tocar lógica/API/datos.** Spec: `docs/superpowers/specs/2026-06-15-iarrhh-rediseno-visual-design.md`.
-  - **Alta de empresa desde el god-panel (#278):** el operador crea empresa cliente + responsable desde
-    **plataforma → `/operador/clientes` → ➕ Nuevo cliente → "RR.HH. · iarrhh"**. Arquitectura **puerto HTTP**
-    (patrón ia-rest, NO escritura directa cross-schema): rrhh expone `GET/POST /api/operador/empresas`
-    (`lib/operador.ts` + ruta); plataforma lo consume con `lib/adapters/rrhh.ts` (vertical `'rrhh'` en el
-    contrato `VerticalAdapter`). El responsable luego entra en iarrhh y crea a sus empleados.
-    Spec: `docs/superpowers/specs/2026-06-15-alta-empresa-rrhh-god-panel-design.md`.
-  - **⚠️ LANDMINE de secretos (#279):** `OPERADOR_SHARED_SECRET` en plataforma **YA ES** el secreto del
-    puerto god-panel↔**ia-rest**. Reutilizarlo para rrhh rompía la integración ia-rest. **Desacoplado:**
-    iarrhh usa su **propio** `RRHH_OPERADOR_SECRET`. NO volver a colapsarlos.
-  - **Cambio de contraseña del responsable (#280):** `/admin/cuenta` (`POST /api/auth/cambiar-password`),
-    ítem "Mi cuenta" en el sidebar.
-  - **Envs (3 proyectos Vercel):**
-    - `central-rrhh`: `RRHH_OPERADOR_SECRET`.
-    - `plataforma`: `RRHH_OPERADOR_SECRET` (mismo valor que central-rrhh) + `RRHH_URL` (=`https://central-rrhh.vercel.app`)
-      + `OPERADOR_SHARED_SECRET` (este es el de ia-rest, valor compartido con el proyecto `ia-rest`).
-    - `ia-rest`: `OPERADOR_SHARED_SECRET` (mismo valor que en plataforma).
-  - **Verificado en vivo:** Alberto creó una empresa de prueba por el panel → fila correcta en BD (cadena
-    UI→plataforma→HTTP→rrhh→BD OK) → borrada. BD queda con 1 empresa real: **Mariscos González** (responsable
-    **Pilar Piña** `pilar.pina.franco@gmail.com`; contraseña reseteada a `Mariscos2026` para onboarding,
-    cambiable desde Mi cuenta).
-  - **Pendiente:** firma avanzada vía **Firmafy** (Fase 2, necesita alta/credenciales con el partner —
-    acción de Alberto; dejar montado puerto `core-firma`); **precio** al cliente.
-
-- **🧑‍💼 NUEVA VERTICAL `apps/rrhh` · Portal del Empleado — Fase 1 cimiento IMPLEMENTADO — 15/06/2026 — PR #269**
-  Petición de Pilar (RR.HH. de Mariscos González, audio): intranet de empleados con expediente
-  documental por trabajador (carpetas: datos personales/contratos/nóminas/partes médicos/otros, subida
-  **bidireccional**), **firma electrónica avanzada** (eIDAS art. 26 — basta avanzada para nóminas/contratos
-  por art. 29 ET + STS 1023/2016; NO cualificada), chat y solicitudes (vacaciones/permisos/parte médico).
-  - **Spec:** `docs/superpowers/specs/2026-06-15-apps-rrhh-portal-empleado-design.md`. **Plan Fase 1:**
-    `docs/superpowers/plans/2026-06-15-rrhh-fase1-cimiento.md`.
-  - **Arquitectura definitiva (decisión 15/06):** se aprovecha que Sique Brilla (ialimp) está **inactivo**
-    para crear paquetes compartidos sin duplicar: **`core-firma`** (núcleo firma), **`module-chat`** (ialimp
-    lo adopta, rrhh lo consume; datos por `cuenta_id` en plataforma cuando haya cliente multi-producto) y
-    **`module-documental`** (motor de expedientes agnóstico de entidad sobre `core-storage`; rrhh lo estrena,
-    ialimp migra después JSONB→tablas). Chat NO como app/servicio propio (rompe la matriz).
-  - **Firma proveedor:** investigación comparada (Firmafy/Signaturit/DocuSign/Viafirma/Click&Sign/Tecalis).
-    Para el piloto → **Firmafy** (avanzada biométrica + 6 evidencias + custodia 10 años + Programa Partners)
-    o Click&Sign (pago por uso). Adaptador `self-hosted` (PAdES + RFC 3161) a futuro. Pendiente cotización partner.
-  - **IMPLEMENTADO (cimiento, probado):** scaffold `apps/rrhh` (Next 15, espejo de ialimp), Prisma schema
-    (`empresas`, `usuarios_rrhh`, `empleados`), auth JWT responsable (`lib/auth.ts`/`lib/tenant.ts`, sesión
-    única por jti) + acceso empleado por enlace mágico+PIN (`lib/empleado-auth.ts`), lógica de empleados con
-    tests (`lib/empleados.ts` + `.test.ts`, **3/3 verde**), API empleados acotada por `empresa_id`
-    (alta/lista/editar/baja), rutas login/logout, UI mínima (`/login`, `/admin/empleados`, `/e/[token]`).
-    **`next build` verde** (10 rutas). `vitest` verde.
-  - **🗄️ BD RESUELTA (15/06, decisión Alberto = gratis):** no se pudo crear proyecto Supabase dedicado
-    (org al **límite de 2 proyectos gratis**: `wswbehlcuxqxyinousql` + `efncqyvhniaxsirhdxaa`). Se optó por
-    **schema `rrhh` en el proyecto COMPARTIDO** (`wswbehlcuxqxyinousql`), aislado del `public` de
-    ialimp/sivra/plataforma. **Migración `rrhh_0001_cimiento` APLICADA** (3 tablas `rrhh.empresas/
-    usuarios_rrhh/empleados`, RLS activado, verificadas). No afecta a las otras apps (schema y tablas
-    propias). La conexión de rrhh usará `DATABASE_URL` con `?schema=rrhh`. **Migrable a proyecto dedicado**
-    cuando se pase a plan de pago (mejor aislamiento RGPD de los datos de salud). Pendiente: cargar env
-    `DATABASE_URL`/`JWT_SECRET`/keys en el (futuro) proyecto Vercel `rrhh`.
-  - **📁 `module-documental` IMPLEMENTADO + expediente en rrhh (15/06):** nuevo paquete
-    **`packages/@central/module-documental`** = motor de expedientes **AGNÓSTICO DE ENTIDAD** (puro, sin BD/
-    Storage): `tipos.ts` (OwnerRef opaco, Actor `gestor|titular`, ConfigCarpeta), `permisos.ts`
-    (puedeSubir/puedeVer/carpetasVisibles, indexarCarpetas), `documental.ts` (validarSubida +
-    construirPathStorage `<tipo>/<id>/<carpeta>/<uuid>.<ext>`). **Tests 8/8 verde.** Las categorías,
-    permisos y Storage los inyecta cada vertical (rrhh lo estrena; ialimp migrará después su JSONB).
-  - **rrhh consume el módulo** vía `file:` deps + `transpilePackages` (`@central/module-documental` +
-    `@central/core-storage`). `lib/carpetas.ts` (taxonomía empleado: datos_personales/contratos/nominas/
-    partes_medicos/otros + permisos por carpeta), `lib/storage.ts` (subir/borrar con service_role + URL
-    firmada vía core-storage), `lib/documental.ts` (listar/subir/borrar, scope empresa+empleado). API:
-    `/api/admin/empleados/[id]/documentos` (GET expediente con URLs firmadas, POST subir FormData) +
-    `[docId]` (DELETE). **Tabla `rrhh.documentos` APLICADA** + **bucket privado `rrhh-documentos` creado**.
-    `next build` verde.
-  - **🖥️ UI del expediente IMPLEMENTADA (ambos lados) — 15/06:** lado **gestor** `/admin/empleados/[id]`
-    (`ExpedienteClient.tsx`: carpetas con subir/descargar por URL firmada/borrar) + lado **empleado** `/e`
-    (`getSesionEmpleado` lee cookie, `ExpedienteEmpleado.tsx`: ve sus carpetas visibles y **sube solo donde
-    el módulo lo permite** — datos personales y partes médicos). API `/api/e/expediente` (GET/POST, actor
-    `titular`). `/e/[token]` redirige a `/e` tras login. **Flujo documental BIDIRECCIONAL completo.**
-    `next build` verde (16 rutas).
-  - **💬 `module-chat` IMPLEMENTADO + chat en rrhh — 15/06:** nuevo paquete `packages/@central/module-chat`
-    (motor puro de mensajería 1-a-1 gestor↔titular: tipos, `noLeidos`, `contraparte`, `ordenarCronologico`,
-    `validarTexto`; **tests 4/4 verde**). rrhh lo consume (`file:` + transpilePackages): tabla
-    `rrhh.mensajes` (un hilo implícito por empleado, leído por parte) **aplicada**, `lib/chat.ts`
-    (listar+marca leído / enviar, scoped por empresa), API `/api/admin/empleados/[id]/chat` (gestor) +
-    `/api/e/chat` (empleado), y **`components/ChatPanel.tsx`** reutilizable (polling 5s) embebido en el
-    expediente del gestor y en `/e`. `next build` verde. (Datos por `cuenta_id` en plataforma = unificación futura.)
-  - **📝 SOLICITUDES self-service IMPLEMENTADAS — 15/06:** flujo empleado→gestor (HR-específico, nativo en
-    rrhh, no paquete). Tabla `rrhh.solicitudes` **aplicada** (tipo vacaciones/permiso_retribuido/parte_medico/
-    baja/otro, estado solicitada→aprobada/rechazada). `lib/solicitudes.ts` (crear/listar/resolver + validación
-    de fechas/tipo). API: `/api/e/solicitudes` (empleado crea/ve), `/api/admin/solicitudes` (+`?pendientes=1`)
-    y `/[id]` PATCH (aprobar/rechazar). UI: bandeja `/admin/solicitudes` + bloque en el portal `/e`. `next
-    build` verde (16 páginas).
-  - **📧 NOTIFICACIONES EMAIL integradas (listas para claves) — 15/06:** `lib/notificar.ts`
-    (`avisarResponsables`) avisa por email a los `usuarios_rrhh` cuando el empleado **sube un documento,
-    crea una solicitud o escribe por el chat**. Usa `nodemailer` DIRECTO (no `core-email`: su bundle fallaba
-    por symlinks/webpack "Can't resolve nodemailer"). Best-effort/no-op si no hay SMTP → funciona al cargar
-    `SMTP_HOST/PORT/USER/PASSWORD`. **Trampa de build resuelta:** un comentario JSDoc con `SMTP_*` seguido de
-    `/` cerraba el bloque `/* */` (evitar `*` + `/` en comentarios). `next build` verde.
-  - **🔔 PWA + WEB PUSH integrados (listos para claves) — 15/06:** `public/{manifest.json,icon.svg,sw.js}`
-    + `RegisterSW` (PWA instalable; SW con handler `push`/`notificationclick`). Tabla
-    `rrhh.push_subscriptions` **aplicada**. `lib/push.ts` (`web-push` DIRECTO, no core-push, mismo motivo
-    que email) con `pushResponsables`/`pushEmpleado` (no-op sin VAPID, borra subs 410/404). Subscribe:
-    `/api/admin/push/subscribe` (gestor) + `/api/e/push/subscribe` (empleado). Botón `ActivarPush` en
-    `/admin/empleados` y `/e`. Push enganchado junto al email en las 3 acciones del empleado (doc/solicitud/
-    mensaje → responsables). `next build` verde. **VAPID generadas (entregadas a Alberto para el env), NO
-    commiteadas.**
-  - **PENDIENTE (necesita Alberto):** proyecto **Vercel `rrhh`** + env (`DATABASE_URL?schema=rrhh`,
-    `JWT_SECRET`, Supabase url/anon/service_role, opcional SMTP_*, VAPID público+privado). **Fase 2:** firma
-    (Firmafy, cotización partner). **Precio:** diferido. (Push y email ya funcionan al cargar sus claves.)
-- **🏦 PLATAFORMA · Banca: análisis + fiscal + operativa — 15/06/2026 — PR #272 (MERGED)**
-  Construido el menú completo de ideas sobre el modelo existente (`movimientos_bancarios`, `destino`,
-  `categoria`), sin migraciones.
-  - **Dashboard**: comparativa "este mes vs anterior" (`getComparativaMensual`), desglose de gastos por
-    categoría del año (`getGastosPorCategoria`, barras CSS), banner de alertas accionables
-    (`getAlertas`: nº por revisar + posibles cargos duplicados por mismo importe+contraparte en ±4 días).
-  - **/banca**: buscador + filtros cliente (texto/ingreso-gasto/categoría, `MovimientosTabla`), neto por
-    negocio últimos 6 meses (`getEvolucionPorDestino`, tabla), estimación fiscal orientativa por trimestre
-    (`lib/fiscal.ts` `getEstimacionFiscal`: IVA 21% + IRPF fraccionado 20%, con aviso de que la real la
-    hace el gestor), y **Exportar CSV** (`/api/banca/export`, sep `;` + coma decimal + BOM).
-  - `CATEGORIA_LABEL` movido a `lib/categorizar.ts` (compartido dashboard/banca). Verificado `tsc` + `next build`.
-  - **PENDIENTES (decisión de Alberto, NO urgente):**
-    1. **⏳ PENDIENTE DE VERIFICAR — clasificar gastos de tarjeta que siguen en `personal`**:
-       GALOS CMI (~911 €, 38×), **Amazon (49 compras, −1.619 €, +446 € devuelto → neto −1.173 €; pico
-       en dic = regalos, pinta personal)**, JHS Sevilla (~138 €). El concepto bancario NO trae el
-       producto → Alberto verifica en "Tus pedidos" de amazon.es (y los otros) qué es negocio
-       (deducible) y qué personal, y luego se recolocan los `destino`/`categoria`.
-    2. **🗂️ Controlar que cada gasto tenga su FACTURA en Google Drive — y si no, subirla.** Para los
-       gastos deducibles hay que tener el justificante archivado. Idea: cruzar movimientos (sobre todo
-       los deducibles de negocio) contra las facturas en Drive (vía MCP `Google_Drive`), marcar los que
-       no tengan factura localizada y subir/pedir las que falten. Conecta con la conciliación y con el
-       OCR de facturas (`/api/banca/factura`) ya existentes.
-    3. **Rotar la clave privada de Enable Banking** (se vio en chat durante el debug; higiene, opcional):
-       regenerar y reemplazar `ENABLEBANKING_PRIVATE_KEY` en el proyecto Vercel `plataforma`.
-
-- **🧾 IA-REST · E-recibo digital MVP IMPLEMENTADO (QR en ticket de cuenta) — 15/06/2026 — PR #256**
-  Ejecutado el plan `apps/ia-rest/docs/superpowers/plans/2026-06-15-e-recibo-digital.md` (subagent-driven).
-  - **Tabla nueva `iarest.recibos_digitales`** (token único + snapshot JSONB autocontenido + RLS service_role).
-    Migración aplicada en el proyecto compartido `wswbehlcuxqxyinousql`, schema `iarest`.
-  - **`src/lib/recibo.ts`**: tipo `ReciboSnapshot`, `generarTokenRecibo()` (16 bytes base64url),
-    `crearReciboDigital()` (insert, devuelve token; no bloquea impresión si falla).
-  - **`src/lib/courier.ts`**: en `crearPrintJobCuenta` se crea el recibo (snapshot + token) y se imprime
-    un **bloque QR ESC/POS** (`escposQR`, modelo 2) en el ticket de cuenta → `iarest.es/recibo/[token]`.
-    El fallback de texto plano imprime la URL. `aeat` queda `null` (la factura legal se emite en cobro, no al pedir cuenta).
-  - **Ruta pública `src/app/recibo/[token]/page.tsx` + `ReciboView.tsx`**: server component, token = secreto
-    (sin sesión), diseño mobile-first con tema `C` (avatar inicial + nombre + items + total + IVA + AEAT si hay).
-    `next build` OK, ruta `ƒ /recibo/[token]`.
-  - **Fase 2 pendiente:** descargar PDF · pedir factura con NIF desde el móvil · email · marca avanzada
-    por restaurante (logo/color en `restaurantes` — hoy no existen esos campos).
-
-- **🏨 PLATAFORMA: detalle completo por apartamento — PR #255 (MERGED) — 15/06/2026**
-  Ficha enriquecida en `/apartamentos` y nueva página `/apartamentos/[id]` con analítica completa por piso.
-
-  - **`lib/propiedades.ts`**: `getPropiedades()` enriquecida con ocupación %, ADR y top portal del mes (10 queries paralelas). Nueva función `getApartamentoDetalle(id)` con KPIs mes/año/YoY, próximas reservas, últimas 20, mix de portales, histórico 12 meses, gastos por categoría (tabla `gastos`, no `expenses`) + gastos compartidos.
-
-  - **`/apartamentos`**: tarjetas con barra de ocupación visual (verde ≥70%, ámbar ≥40%, rojo), ADR y portal principal. Cada tarjeta es link a `/apartamentos/[id]`.
-
-  - **`/apartamentos/[id]`** (nuevo server component):
-    - 8 KPIs: ingresos mes (con YoY %), gastos mes, resultado, ocupación %, ADR, ingresos YTD, gastos YTD, resultado YTD
-    - Gap detector: detecta huecos entre reservas próximas y muestra `⚠️ Huecos libres: Xd (fecha → fecha)`
-    - Break-even: `Math.ceil(gastosFijos / 12 / adr)` noches/mes para cubrir costes fijos (ALQUILER+COMUNIDAD+SEGURO)
-    - Mix de portales con barras de % visuales
-    - Histórico mensual 12 meses (más reciente primero) con ocupación visual
-    - Gastos por categoría con iconos (incl. SEGURO 🛡️) + gastos compartidos como referencia
-    - Últimas 20 reservas con bruto/neto
-
-- **🔑 SIVRA: Smoobu key unificada → fuente única en BD (14/06/2026)**
-  La API key de Smoobu estaba duplicada: en `SMOOBU_API_KEY` (env de Vercel, que usaba TODO sivra) y en
-  `pms_connections.smoobu_api_key` (BD, lado ialimp/limpiezas). Misma key, dos sitios → riesgo de drift al rotar.
-  Unificado: nuevo `apps/sivra/lib/smoobu.ts` (`getSmoobuKey()`) lee la key de la **BD** (`pms_connections`, fila
-  de Alberto `c8c1fb07-…`, seleccionada por id porque la tabla es multi-tenant), con el env **solo como respaldo**.
-  Migradas las **12 rutas** que hablaban con Smoobu (pricing apply/restore, rates, rates/snapshot, mensajes/*,
-  updates/sync, limpiadoras auto-sessions y alerta-ventana). Ahora se **rota en un único sitio** (la conexión de
-  ialimp) sin redeploy. Verificado: la consulta del helper devuelve la key (32 chars, activa) y `tsc` limpio.
-
-- **🚨 SIVRA pricing: PAUSA GLOBAL activada — bug de techo en fechas de evento (14/06/2026)**
-  Entró la **1ª reserva de Busto Reform** (Emilio J. Martín, 25-28 mar 2027 = **Semana Santa**, vendida al base
-  previo de Smoobu ~307-319€/noche; **NO** a precio de nuestro motor — `pricing_applied` vacío para esas fechas).
-  Al verificar, se destapó un fallo serio: ahora que `apply` corre los **365 días** sin timeout (fix #213), el cron
-  `apply-auto` (08:30) **capaba a `max_price`=125€** todas las fechas de evento. La guardia de confianza es **por
-  piso, no por fecha** (Busto: 14 comps, 5d → pasa), y el motor usa **un único percentil de mercado** (~168€, de
-  fechas normales) para todo el año, rematando con el techo del piloto **al final de la cadena**. Impacto medido:
-  **172 fechas disponibles >125€** (Semana Santa + **Feria de Abril 2027** a 366€) → ~**9.788€ base** en riesgo.
-  - **Acción inmediata (hecha):** `UPDATE pricing_config SET paused=true WHERE id=1` → el cron degrada a
-    simulación (`dryRun` forzado), **no escribe en Smoobu**. Verificado que `apply` lo lee. Reserva intacta
-    (reservada ≠ `available`). **Contrapartida:** también se congela el pricing al alza de fechas normales.
-  - **PENDIENTE (fix de producto, PR aparte):** techo **event-aware** (`max_price × eventFactor` o "nunca bajar
-    una fecha de evento por debajo de su base actual") + comps **por fecha/temporada** (no un percentil único) +
-    guardia de confianza por fecha. Reactivar la pausa SOLO tras el fix. Detalle en `pricing-automatico.md` §9.
-
-- **🧾 IA-REST · IDEA (no implementada): ticket moderno + e-recibo digital — 15/06/2026**
-  Alberto comparte `receiptmaker.ai` (generador de recibos por IA → PDF/imagen con logo,
-  colores, tipografías; familia receiptmaker.io/.org, muchas orientadas a recibos "fake/demo").
-  Análisis con contexto del código real (`apps/ia-rest/src/lib/courier.ts`):
-
-  - **Trampa clave:** ia.rest NO imprime PDF/imagen. Imprime **ESC/POS térmico** (80mm,
-    48 chars monoespaciados, codepage PC437, **monocromo, sin tipografías**). El output de
-    receiptmaker **no es replicable en térmica** → sirve como *inspiración de layout/jerarquía*,
-    NO como solución técnica.
-  - **Lo que ve el cliente hoy:** `generarEscPosCuenta()` (ticket de cuenta) + QR AEAT VeriFactu
-    (`generarTicketCuenta()`). La comanda de cocina (`generarEscPos`) es interna.
-
-  - **Dos frentes de "modernizar" (decisión pendiente de Alberto):**
-    1. **Ticket térmico** — margen acotado: añadir **logo raster** (ESC/POS `GS v 0`, bitmap
-       monocromo), mejor jerarquía/espaciado, aprovechar mejor el QR. Pulido, no revolución.
-    2. **E-recibo digital** — *aquí brilla la inspiración de receiptmaker*: e-ticket **HTML**
-       con logo/colores/tipografía reales, enviado por **email (Resend, ya existe)** o accesible
-       por **QR impreso** ("ve tu recibo / pide factura aquí"). Encaja con infra existente
-       (sesiones QR `qr_sesiones_cliente`, `verifactu`, email). **Recomendación:** este es el
-       movimiento diferenciador, no pelear contra la térmica.
-
-  - **Estado:** solo análisis guardado. Rama de trabajo abierta `claude/modern-ticket-design-r4ngkz`
-    por si se decide implementar (con brainstorming antes de tocar código).
-
-- **🎛️ PLATAFORMA: panel unificado — un solo shell (Mi negocio + Operador) — PR #249 (MERGED) — 15/06/2026**
-  Dos zonas separadas (usuario `/dashboard` + god-panel `/admin`) unificadas en una sola pantalla con sidebar único, tema claro y un solo login.
-
-  - **Auth unificado:** `app/api/auth/login/route.ts` ahora emite ambas cookies (`plataforma_session` + `plataforma_admin`) cuando el email coincide con un superadmin activo. Nuevo helper `findActiveAdminByEmail(email)` en `lib/superadmin.ts` (solo lectura, sin bcrypt, sin escrituras). `logout` borra ambas cookies.
-
-  - **Sidebar único con dos grupos:**
-    - *Mi negocio* (siempre): Resumen · Banca · 🏨 Apartamentos · 🧹 Limpiezas · 💬 Comunicación
-    - *Operador* (solo si sesión de superadmin): 🏢 Clientes · 🍽️ ia-rest · 🗺️ Estructura
-
-  - **Nuevas páginas — Mi negocio:**
-    - `/apartamentos`: tarjetas de los 4 pisos sivra con KPIs del mes + próxima reserva (`getPropiedades()` de `lib/propiedades.ts`)
-    - `/limpiezas`: portal propietario ialimp embebido en iframe sin segundo login (`getPropietarioAccessToken`)
-
-  - **Nuevas páginas — Operador (tema claro, mismas APIs `/api/admin/*`):**
-    - `/operador/clientes`: lista por vertical, bloquear/liberar, modal 360, modal nuevo cliente (`ClientesClient.tsx`)
-    - `/operador/estructura`: `MapaArquitectura`
-    - `/operador/iarest`: placeholder + enlace directo
-
-  - **Corrección conciliación bancaria:** `candidatosSivra()` en `lib/conciliacion.ts` leía `expenses` (34 filas, congelada desde abril). Corregido a `gastos` (71 filas, tabla real del agente IA de sivra). Recupera ~37 gastos invisibles (€5.670). `gastos.propiedad` usa el mismo slug que `properties.id` = `negocio.refExt`.
-
-  - **PWA:** `public/manifest.json` + `public/icon.svg` + metadata en `app/layout.tsx`.
-
-  - **Command palette Cmd/Ctrl+K:** `CommandPalette.tsx` sin deps externas, overlay claro, filtro por texto, teclas ↑↓↵.
-
-  - **Strip "Hoy" en dashboard:** check-ins/check-outs del día + movimientos bancarios del día. Solo se muestra si hay actividad.
-
-  - **Limpieza BD:** sociedad "Sique Brilla SL" (y su negocio) eliminada de la cuenta de Alberto en plataforma (tablas `sociedades`/`negocios`). **NO toca ialimp** — la empresa de Vanessa sigue operativa.
-
-  - **`/admin` sigue vivo** como fallback. Siguiente paso: convertirlo a redirect cuando Alberto confirme que `/operador/clientes` funciona bien.
-
-- **🏦 PLATAFORMA: conexión bancaria PSD2 EN VIVO (Enable Banking) + categorización IA diaria — 14/06/2026**
-  La consolidación bancaria pasó de "código inerte" a **funcionando con datos reales de Alberto**. Larga sesión.
-  - **Enable Banking en producción (restricted mode = GRATIS para cuentas propias)**: tras descartar GoCardless
-    (altas cerradas), el conector PSD2 corre sobre **Enable Banking**. El **tier gratuito "restricted/linked accounts"
-    permite conectar TUS PROPIAS cuentas sin contrato ni pago** (solo el modo comercial para cuentas de terceros es de
-    pago). Auth = **JWT RS256** firmado con la clave privada de la app (kid=APP_ID, aud=api.enablebanking.com).
-    Variables en Vercel (proyecto plataforma): `ENABLEBANKING_APP_ID` + `ENABLEBANKING_PRIVATE_KEY`.
-  - **Conectadas y sincronizando a diario**: **Kutxabank** (IBAN real, 257 mov incl. histórico Q1 del Excel fusionado)
-    y **BBVA** (73 mov). Saldo del grupo real **41.186,94 €**. App Enable Banking activa: `ff26f315-…`.
-  - **Trampas resueltas (todas reales, documentadas para la próxima)**:
-    1. `DECODER routines::unsupported` → la clave se pegó **sin cabecera PEM** (solo cuerpo base64). `cargarClavePrivada()`
-       en `lib/enablebanking.ts` ahora tolera: PEM normal, en una línea, con comillas, `\n` escapados, **cuerpo base64
-       suelto (DER pkcs8/pkcs1/sec1)** y PEM re-codificado en base64.
-    2. `Wrong signature` → la clave privada en Vercel **no era la pareja** del certificado registrado (Enable Banking NO
-       tiene botón de regenerar; el cert se fija al **crear** la app). Solución: **crear app nueva** y usar App ID + clave
-       privada **de esa misma creación atómica**. Verificado por **huella SHA-256 de la clave pública** derivada.
-       OJO Vercel: una env var nueva **solo entra en despliegues creados DESPUÉS de guardarla** (hizo falta Redeploy real).
-    3. Transacciones vacías → el endpoint **exige `date_from`** y **PSD2 limita a ~90 días** (>90d → 422
-       `WRONG_TRANSACTIONS_PERIOD`). Se piden 89 días.
-    4. Timeout 504 al conectar Kutxa → el callback insertaba mov **uno a uno**. Ahora **inserción en bloque**
-       (`Prisma.join`) + `maxDuration=300` en callback y cron. Idempotente (dedupe por `entry_reference`).
-  - **Endpoints/lib**: `lib/enablebanking.ts` (cliente JWT), `lib/psd2.ts` (sincroniza por `session_id` guardado en
-    `conexiones_banco.requisition_id`), `psd2/{instituciones,conectar,callback}` + cron `psd2-sync`. (Hubo un endpoint
-    temporal `/api/cron/psd2-diag` para depurar la clave **sin exponer secretos** — ya retirado.)
-  - **Auto-categorización IA diaria + "Por revisar" (PR #242)**: el cron `psd2-sync`, tras sincronizar, **categoriza con
-    IA** los movimientos nuevos; cuando **duda marca `requiere_revision=true`** (columna nueva) y en `/banca` sale la
-    bandeja **🔎 Por revisar** donde el dueño asigna categoría (`POST /api/banca/revisar`). Degrada sin `NVIDIA_API_KEY`.
-  - **PENDIENTE de Alberto**: (a) **`NVIDIA_API_KEY`** (gratis, NVIDIA NIM) en el Vercel de plataforma para que la
-    categorización IA etiquete de verdad; (b) **rotar la clave privada** de Enable Banking (se compartió un `.pem` en el
-    chat durante la depuración — riesgo bajo en restricted mode/solo-lectura de cuentas propias, pero conviene rotarla).
-
-- **🧹 IALIMP: portal del propietario responsive en escritorio (sidebar fija) — PR #239 — 14/06/2026**
-  Alberto reportó que el **portal del propietario** (`/propietario/[token]` y `/propietario` por email+contraseña,
-  ambos `PropietarioClient.tsx`) se veía en PC como una columna móvil estrecha centrada (`maxWidth:1080`), con las
-  tarjetas amontonadas a la izquierda. Arreglo solo en `PropietarioClient.tsx`:
-  - **Escritorio (≥1024px):** barra lateral de navegación **fija** a la izquierda (248px: logo, propietario, los
-    `MENU_ITEMS`, cerrar sesión); el contenido ocupa el ancho disponible (tope 1280px centrado) y las rejillas
-    `auto-fill` reparten 3-4 columnas. Se oculta el botón hamburguesa (`.prop-hamburger`).
-  - **Móvil (<1024px, sin cambios):** header con hamburguesa + drawer, una columna fluida.
-  - **Excepción consciente a la regla "no media queries"** de `apps/ialimp/CLAUDE.md`: una sidebar solo-PC necesita
-    un breakpoint, así que se usa **una única media query** dentro del bloque `<style>` que el componente ya inyectaba,
-    **acotada solo al portal** (clases `.prop-root`/`.prop-deskbar`/`.prop-hamburger`/`.prop-content`). No se toca el
-    resto de la app. Build local no viable en el contenedor (deps `workspace:*` del monorepo no resuelven con npm
-    aislado) → validado con **typecheck ialimp + preview de ialimp verdes** antes de mergear (cliente en vivo).
-
-- **🤖 AUTOMATIZACIÓN: comando `/auditoria-diaria` (reconciliación memoria/skills) — PR #237 (MERGED) — 14/06/2026**
-  Alberto preguntó si el "agente arquitecto" podría revisar 1×/día las conversaciones y actualizar la memoria/skills.
-  **Matiz clave aclarado:** las conversaciones NO persisten (entorno efímero) → no se pueden "releer". El equivalente
-  útil que SÍ funciona: auditar lo que persiste (código+infra+docs) y reconciliar con ello la memoria/skills.
-  - Nuevo **`.claude/commands/auditoria-diaria.md`**: slash-command (y prompt para un **trigger programado**) que
-    encuadra por `git log` desde la última auditoría (sin commits → no abre PR), corre la skill `auditoria-central`
-    completa, genera `docs/AUDITORIA-<mes>.md`, reconcilia `CONTEXTO-SESIONES.md` + skills-maestro + `apps/*/CLAUDE.md`
-    con la realidad (si discrepan, manda el código), arregla solo bugs de bajo riesgo y entrega un **PR draft** con el
-    informe. Complementa (no sustituye) al hook `Stop` `persist-memoria.sh`.
-  - **Pendiente de Alberto (acción manual):** crear el trigger programado 1×/día en Claude Code web (triggers /
-    scheduled sessions) sobre `central` con prompt `/auditoria-diaria`. El cron NO se configura desde el repo.
-
-- **📱 PLATAFORMA: god-panel `/admin` 100% adaptable a móvil (hamburguesa plegable) — PR #236 (MERGED) — 14/06/2026**
-  Alberto reportó (con captura del móvil en `flame.vercel.app`) que el panel de control no era usable en móvil:
-  la barra lateral fija de 200px (`<nav>` con pestañas Negocios/ia-rest/Sivra/Estructura) se comía el ancho y
-  dejaba los KPIs y las tarjetas de clientes en una columna estrujada. Pidió "hamburguesa plegable".
-  - **Cambio (solo `apps/plataforma/app/admin/page.tsx`, presentación pura, sin tocar datos/auth/queries):**
-    detección de viewport con `window.matchMedia('(max-width: 768px)')` (estados `isMobile` + `menuOpen`,
-    coherente con el patrón del fichero: inline styles, sin Tailwind). En **móvil** el `<nav>` pasa a **drawer
-    fijo** (`position:fixed`, `transform: translateX(-100%/0)`, transición .25s) que se abre con un botón
-    **hamburguesa ☰** en la cabecera; backdrop semitransparente que cierra al tocar fuera; se cierra solo al
-    elegir pestaña o pulsar ✕; el nombre del operador se mueve dentro del drawer y "Nuevo cliente" se compacta a
-    ➕. En **escritorio** comportamiento idéntico al anterior (barra fija 200px).
-  - CI: los 4 deploys de Vercel (plataforma, ialimp, sivra, ia-rest) **Ready**. Mergeado en squash.
-
-- **🧹 IALIMP: arreglo "No autenticado" + bloqueo 2º login + pantalla Incidencias + revisar limpieza hecha — PRs #231/#233/#234 (MERGED) — 14/06/2026**
-  Sesión a raíz de un problema EN VIVO de Vanessa (Sique Brilla): al subir limpiezas le salía **"No autenticado"**
-  y, al elegir cliente en *Nueva limpieza*, *"Este cliente no tiene propiedades creadas"* (FALSO: AITANA ORTIZ
-  MOGOLLON tiene 7 pisos, verificado en Supabase). Diagnóstico: su sesión era rechazada (sesión única: un 2º login
-  desde el móvil rotaba el `session_jti` y **expulsaba** al portátil), y las rutas `/api/admin/*` devolvían el
-  fallo de auth como **500 `{error:'No autenticado'}`** que el modal se tragaba mostrando "sin pisos".
-  - **PR #231 (MERGED)** — `lib/tenant.ts`: clase `AuthError` (401) + helper `apiError(e)` (401 si AuthError, 500
-    si no); rutas `propiedades`/`sesiones`/`sesiones[id]` lo usan. `NuevaLimpiezaModal` distingue 401 (sesión
-    cerrada → aviso + `/login`), error de carga (mensaje + reintentar) y "sin pisos" real.
-  - **PR #233 (MERGED)** — **2º login = BLOQUEO con aviso, NO expulsión** (decisión de Alberto: mantener 1
-    dispositivo). Migración **`2026-06-14_sesion_activa.sql`** (flag `sesion_activa` en `empresas` y
-    `usuarios_empresa`, APLICADA en Supabase). `/api/auth/login` y `login-usuario`: si `sesion_activa` y no
-    `forzar` → **409 `{sesion_abierta:true}`**; `/login` muestra «Ya hay una sesión abierta» + botón **«Entrar
-    aquí y cerrar la otra»** (reintenta con `forzar:true`, rota jti y expulsa al otro). `/api/auth/logout` pone
-    `sesion_activa=false` (sin tocar jti, para no resucitar tokens por la regla de gracia). Sin lockout: el forzar
-    siempre entra. El propietario (`clientes`) sigue con expulsión por jti.
-  - **PR #234 (MERGED)** — respondiendo a Vanessa («¿dónde salen incidencias, el OK de la limpieza y el chat?»):
-    (1) **Pantalla de Incidencias** `/admin/incidencias` (menú **⚠️ Incidencias**) + `GET/PUT /api/admin/incidencias`
-    (tabla `incidencias` sin `empresa_id`, se acota por `property_id IN (sesiones de la empresa)`; urgentes primero;
-    marcar resuelta/reabrir con nota; foto por proxy `photoSrc`). Antes solo llegaba el push, no había vista.
-    (2) **Revisar limpieza HECHA**: `GET /api/admin/sesiones/[id]/completions` (lee `session_completions`) + botón
-    **«📷 Ver limpieza»** en Inicio → modal con fotos + checklist + horas de entrada/salida.
-    (3) **Guard de sesión global** `components/SessionGuard.tsx` (en `app/layout.tsx`): parchea `window.fetch`,
-    si una respuesta de `/api/admin/*` es sesión cerrada (401 o cuerpo "No autenticado") redirige a `/login` en
-    toda la app. (4) Carga rápida: ya cubierto por «Duplicar» + programaciones recurrentes (solo se documentó).
-  - Las 3 PRs con **preview de ialimp verde** antes de mergear (cliente en vivo). `CLAUDE.md` y `public/manual.html`
-    actualizados (menú Incidencias, "Ver limpieza", aviso de sesión única). **Chat con el equipo** ya existía:
-    menú **💬 Chat equipo** (`/admin/chat`). **OK de limpieza** = estado «✓ Hecha» en Inicio + filtro «Hechas».
-
-- **🧹 IALIMP: "Agenda" añadida al menú del panel admin — PR #229 (MERGED, `24a76d7`) — 14/06/2026**
-  Vanessa (Sique Brilla) no encontraba dónde ver/repartir las limpiezas **por limpiadora**. La pantalla
-  `/admin/agenda` (cuadrante semanal con una fila por limpiadora + panel "Asignar limpiadora por día") **ya
-  existía y estaba completa, pero estaba huérfana**: no figuraba en el `NAV` de `app/dashboard/DashboardClient.tsx`,
-  así que solo se abría tecleando la URL. Fix mínimo: entrada `📅 Agenda` en `NAV` (tras Operaciones) + mapeo
-  `'/admin/agenda':'agenda'` en `NAV_MODULO` (respeta el permiso de módulo `agenda` ya existente). Manual
-  (`public/manual.html`) actualizado con la tarjeta Agenda. Sin tocar BD/queries/multi-tenant. 4 previews verdes
-  → mergeado a `main` (en producción `app.ialimp.es`).
-
-- **🏦 PLATAFORMA: consolidación bancaria inteligente (F1–F6) — 14/06/2026**
-  Épico nuevo en `apps/plataforma`: importar el banco, ver saldo/movimientos consolidados de todas las
-  sociedades, categorizar con IA, conciliar con facturas, prever tesorería y conectar el banco por PSD2.
-  Tablas nuevas en la **BD compartida** (RLS, aditivas, scoped por `cuenta_id`): `cuentas_bancarias`,
-  `movimientos_bancarios` (con `dedupe_hash` único), `conexiones_banco`. Aplicadas por Supabase MCP.
-  - **PR #211 (MERGED, `a3103bd`)** — F1 (importar **Norma 43** + **Excel multi-banco**, KPI "Saldo del
-    grupo", página `/banca`, dedupe) · F2 (auto-categorización IA con `@central/core-ai`, NIM gratis) ·
-    F3 (conciliación banco↔`incomes`/`expenses` de sivra y `v_contab_ingresos`/`v_contab_gastos` de ialimp) ·
-    F5 (previsión 30/60/90d + cron alerta) · fix CI `allowImportingTsExtensions` al `tsconfig.base`.
-  - **Importador Excel multi-banco** (`lib/extracto-xls.ts`, SheetJS): detección de columnas robusta a
-    **Kutxa** y **BBVA** (fecha valor vs fecha, concepto en 2 columnas, saldo "Disponible", orden asc/desc).
-  - **PR #216 (MERGED, `a9adf00`)** — F4: **OCR de facturas** (`nimVision`) + casado con el movimiento.
-  - **PR #217 (MERGED, `26d89b7`)** — F6: **conexión automática PSD2**, primera versión sobre **GoCardless
-    Bank Account Data** (`lib/gocardless.ts` + `lib/psd2.ts` + endpoints `psd2/instituciones|conectar|callback`
-    + cron `psd2-sync`).
-  - **F6-bis — switch a Enable Banking (DRAFT, rama `claude/banca-psd2-enablebanking`)**: los registros de
-    GoCardless están **cerrados** (Alberto no pudo darse de alta), así que se reescribió la capa de proveedor a
-    **Enable Banking** (tier gratuito que admite altas). Auth distinta: **JWT RS256** firmado con la clave
-    privada de la app (no hay endpoint de token); flujo `aspsps → POST /auth → POST /sessions → accounts`.
-    Nuevo `lib/enablebanking.ts` (reemplaza `lib/gocardless.ts`, borrado); `lib/psd2.ts` y los endpoints usan
-    sesiones (el `session_id` se guarda en `conexiones_banco.requisition_id`, `proveedor='enablebanking'`). Sin
-    migración nueva. Inerte hasta poner `ENABLEBANKING_APP_ID` y `ENABLEBANKING_PRIVATE_KEY` en el Vercel de
-    plataforma (degrada limpio). **Mapeo de campos a verificar con credenciales reales** (este entorno no las tiene).
-  - **Datos reales de Alberto YA cargados** en su cuenta (sociedad "Alberto Suárez Gutiérrez", NIF):
-    **Kutxa** (244 mov, 21.161,96 €, apartamentos) + **BBVA** (40 mov, 20.034,98 €, seguros + Dúplex Center) =
-    **41.196,94 €** consolidados. Los movimientos cargados por SQL NO están categorizados/conciliados: usar
-    los botones 🤖 Re-analizar IA y 🔗 Conciliar en `/banca` (necesitan `NVIDIA_API_KEY`).
-  - **Pendiente (mejoras)**: F4 → guardar el justificante (imagen) y soportar PDF; F6 → dar de alta una app
-    en Enable Banking, poner `ENABLEBANKING_APP_ID/PRIVATE_KEY` en Vercel, verificar el mapeo de campos con un
-    banco real y mergear. Lógica pura testeada con `node --test` (norma43, tesorería).
-
-- **💶 SIVRA: gastos fijos mensuales AUTOMÁTICOS + fix dashboard — PR #208 (merged) y #209 — 14/06/2026**
-  Sesión sobre la vertical **sivra** (intranet pisos). Dos entregas:
-  - **PR #208 (mergeado)** — auditoría del dashboard a partir de un pantallazo real:
-    - 🔴 Gráfico "Evolución mensual" salía **vacío**: el `<BarChart>` leía `dataKey="y0"/"y1"` pero la API
-      emite series por año (`[year]`/`[year-1]`). Fix: `dataKey={String(year)}`.
-    - 🟡 Delta `↑0.0%` engañoso sin periodo previo → ahora muestra **"nuevo"** (`delta()` devuelve `null`).
-    - 🟢 Entradas/Salidas/Entradas mañana ahora indican el **piso** (🏠 nombre), usando `propertyName` que
-      `/api/incomes/today` ya devolvía. Detalle en `docs/AUDITORIA-2026-06.md` (addendum 14/06).
-  - **PR #209** — **gastos fijos mensuales 100% automáticos** (alquileres, comunidad dúplex, etc.):
-    - Tabla nueva **`gastos_fijos`** (RLS como `gastos`, índice único por `fingerprint`). DDL en
-      `apps/sivra/sql/gastos_fijos.sql` (migraciones `create_gastos_fijos`, `gastos_fijos_fingerprint_sync`).
-    - **Automático de punta a punta**: el cron `/api/expenses/fijos/generar` (`vercel.json` `"0 6 1 * *"`)
-      llama `sincronizarReglasFijas()` → importa a `gastos_fijos` las **reglas mensuales que el agente de
-      facturas ya aprendió** (`gastos_reglas`, periodicidad mensual) casando por fingerprint, sin pisar
-      ediciones manuales; luego imputa el mes con **dedup POR MES**.
-    - **"La factura real manda"**: `insertarGasto()` borra el placeholder `origen='fijo'` del mismo mes al
-      imputar la factura real → **cero duplicados** (`lib/agente-facturas/imputar.ts`).
-    - Página **`/gastos-fijos`** (nuevo ítem sidebar): CRUD + "Generar mes actual ahora". Alquileres de
-      Bustos Tavera **migrados** del backfill manual (día 8) a este sistema (día 1).
-    - **Backfill 2026 (ene→jun) ya ejecutado en BD**: junio poblado con 5 fijos (877,22 €); meses con
-      factura real se respetaron. Helpers en `lib/agente-facturas/gastos-fijos.ts`.
-    - Verificado: `tsc --noEmit -p apps/sivra/tsconfig.json` ✅ 0 errores; 4 deploys Vercel verdes.
-
-- **⏱️ Control horario en ia-rest (roadmap #2) — branch `claude/control-horario` — 14/06/2026 (PR #205, draft)**
-  PR #199 (auditoría de caja) **MERGEADO a main** (squash, `c54175c`). Épico nuevo por fases, principio
-  **100% configurable** (`config_horario`: límites + toggles por local, defaults legales). Módulo puro nuevo
-  **`@central/module-horario`** (`packages/`, plantilla de `module-contabilidad`, tests `node --test`).
-  - **Fase 1 (verde)** — Registro de jornada legal RD 8/2019: `resumenJornada`/`detalleJornada`/
-    `chequearDescansos`/`horasExtra` + `config_horario` (migración MCP) + `GET /api/owner/horario` +
-    `GET/POST /api/owner/horario/config` + tab "Jornada" (grupo Auditoría, `owner/page.tsx`) con CSV,
-    sparkline y panel de configuración. Reusa la base de fichaje existente (`turnos`, `fichar_entrada/salida`).
-  - **Fase 2 (verde)** — Anti-fraude: validación de IP del centro en `turnos/fichar` (gated `validar_ip_local`
-    + `ips_local`) + `POST /api/owner/horario/autocierre` (cierra colgados > `autocierre_horas`) + botón en el tab.
-  - **Fase 3 (pusheada)** — Coste de personal: `costePersonal` (módulo) + `config_horario.costes_empleado`
-    (mapa; camareros es VISTA, por eso va aquí) + bloque coste en el GET (cruza ventas de `facturas_verifactu`)
-    + `POST /api/owner/horario/coste` + KPIs/coste-hora editable en el tab. Flag `coste_personal`.
-  - **PENDIENTE del épico**: Fase 2b (fichaje por QR + recordatorios push), Fase 4 (cuadrante/plantilla
-    previsto vs real), Fase 5 (ausencias/vacaciones), Fase 6 (consolidado multi-local en plataforma +
-    festivos + export gestoría), y firma del empleado + informe PDF oficial (RD 8/2019). Migraciones MCP en
-    proyecto ia-rest `efncqyvhniaxsirhdxaa`.
-- **📦 Reposición de stock (ia-rest) — branch `claude/reposicion-stock-iarest` — 14/06/2026**
-  4ª de la tanda "automatizar agentes" (la #3 impagos-sivra se SALTÓ: sivra no tiene cuentas por cobrar,
-  sus "facturas" son gasto/proveedores y pago a limpiadoras). Cron diario `/api/cron/reposicion-stock`
-  (08:15) que lee `materiales` (Supabase propia de ia-rest), detecta `cantidad_disponible < stock_minimo`
-  (activos, con `stock_minimo` no nulo) y avisa por **Telegram** (`tgAlert(..., 'aviso')`) con líneas
-  ordenadas por faltante + proveedor + coste estimado de reposición.
-  - **Código** (`apps/ia-rest/src`): `lib/reposicion-stock.ts` (puro: `faltante`/`costeReposicion`/
-    `formatAvisoStock`) + `lib/reposicion-stock.test.ts` (3/3 ✅); `app/api/cron/reposicion-stock/route.ts`
-    (auth Bearer `CRON_SECRET`, `createServerClient`); cron en `vercel.json`. **Sin migración** (usa
-    `materiales.stock_minimo`, ya existente). ia-rest = BD propia `efncqyvhniaxsirhdxaa`.
-  - **OJO**: ia-rest **sí valida tipos en build** (no `ignoreBuildErrors`) → cuidado con type-guards.
-  - **Verificado**: `node --test` 3/3 ✅, `next build` (161/161 páginas, ruta como función, type-check OK) ✅.
-  - **⚠️ PENDIENTE despliegue**: requiere `materiales.stock_minimo` aplicado en la BD de ia-rest (migración
-    materiales v2) y `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` (ya existen para el resto de alertas).
-  - **Roadmap restante**: NPS post-servicio (ialimp) · scoring limpiadoras (ialimp) · orquestador concursos.
-- **⭐ Scoring/ranking de limpiadoras (ialimp) — branch `claude/scoring-limpiadoras-ialimp` (PR #207) — 14/06/2026**
-  6ª de la tanda "automatizar agentes". Endpoint `GET /api/admin/limpiadoras/ranking` que puntúa y
-  ordena a las limpiadoras de la empresa sobre la **vista existente `rendimiento_limpiadoras`** (sin
-  migraciones). Score 0-100 = calidad (`rating_medio`/5, 55%) + fiabilidad (1 − quejas/sesiones, 45%).
-  - **Anclado a datos reales**: `sesiones_completadas` viene 0 → **excluida**; `rating_medio` suele ser
-    null → **no penaliza a 0** (score = fiabilidad, `sin_valoraciones: true`); `confianza` por volumen.
-  - **Código** (`apps/ialimp`): `lib/scoring-limpiadoras.ts` (puro: `puntuarLimpiadora`/`rankingLimpiadoras`)
-    + `lib/scoring-limpiadoras.test.ts` (5/5 ✅); `app/api/admin/limpiadoras/ranking/route.ts`
-    (Prisma `$queryRaw`, auth `requireEmpresaId()` de `@/lib/tenant`). **OJO bigint**: las columnas
-    `bigint`/`numeric` de la vista llegan como BigInt/Decimal → se coaccionan a `Number` (si no, rompe
-    `JSON.stringify` y la aritmética).
-  - **Verificado**: `node --test` 5/5 ✅; `next build` (161/161 páginas, ruta `ƒ` registrada) ✅.
-  - **Nota**: ialimp usa **Prisma** (no supabase-js), auth JWT propio (cookie `ialimp_session`), ignora
-    errores TS en build. Ya había consumidores de la vista (`/api/admin/rrhh/analisis`); este es el ranking.
-  - **Tanda previa (otras ramas/PR)**: briefing #203 · impagos-ialimp #204 · ~~impagos-sivra~~ (N/A) ·
-    reposición-stock-iarest #206. **Roadmap restante**: NPS post-servicio (ialimp) · orquestador concursos.
-- **💸 Agente de impagos (ialimp) — branch `claude/impagos-ialimp` — 14/06/2026**
-  2ª de la tanda "automatizar agentes" (PR por PR). Cron diario `/api/cron/impagos` (08:30) que detecta
-  facturas a clientes **vencidas y no cobradas** y manda recordatorios **escalonados +3/+10/+21 días** al
-  cliente, sin repetir escalón, **+ resumen diario a la empresa** (`empresas.email`).
-  - **Migración aplicada** (Supabase compartida `wswbehlcuxqxyinousql`): tabla `recordatorios_impagos`
-    (aditiva, RLS on sin policies como el resto; único `(factura_id, escalon)`). Fichero en
-    `apps/ialimp/prisma/migrations/2026-06-14_recordatorios_impagos.sql`.
-  - **Código**: `lib/impagos.ts` (puro: `escalonAEnviar`/`textoRecordatorio`/`resumenEmpresaTexto`) +
-    `lib/impagos.test.ts` (5/5 ✅); endpoint `app/api/cron/impagos/route.ts` (reutiliza
-    `emailFacturacionCliente` + `getTransporter`/`MAIL_FROM`); cron en `vercel.json`.
-  - Filtro: `estado IN ('emitida','vencida') AND fecha_vencimiento<hoy AND fecha_cobro IS NULL AND pagada_online_at IS NULL`.
-  - `facturas_clientes` hoy **vacía** (Sique Brilla aún no factura por aquí) → 0 envíos hasta que emita.
-  - **Verificado**: `node --test` 5/5 ✅, `next build` (161/161 páginas, ruta `/api/cron/impagos` como función) ✅.
-  - **⚠️ PENDIENTE despliegue**: `CRON_SECRET` ya existe; el envío real necesita el SMTP ya configurado (IONOS).
-    NO mergear a `main` sin preview verde (cliente Vanessa EN VIVO).
-  - **Roadmap restante**: impagos **sivra** → reposición stock (ia-rest) → NPS (ialimp) → scoring limpiadoras →
-    orquestador concursos. Diferidas (APIs externas): reputación, VeriFactu.
-- **📊 Briefing consolidado (plataforma) — branch `claude/briefing-consolidado-plataforma` — 14/06/2026**
-  1ª de la tanda "automatizar agentes" (auditoría previa: ver entrada de instagram-ideas). `plataforma`
-  no tenía **ningún cron**; ahora un cron semanal (lunes 08:00) consolida ingresos/gastos/resultado YTD
-  de **todos los negocios de cada cuenta** y envía un email al dueño.
-  - **Lógica pura** `apps/plataforma/lib/briefing.ts` (`agregarBriefing` + `formatBriefingTexto`, € inline
-    para no arrastrar `financiero→db→prisma`) con tests `node --test` (`lib/briefing.test.ts`, 3/3 ✅).
-  - **Endpoint** `app/api/cron/briefing/route.ts` (GET, auth `CRON_SECRET` o `?secret=`): reutiliza
-    `getResumenNegocio` de `lib/financiero.ts` (ialimp+sivra BD, ia-rest puerto HTTP) y `enviarAvisoEmail`
-    de `lib/notificaciones.ts` (Resend, no-op sin `RESEND_API_KEY`).
-  - **Cron** en `vercel.json` (`0 8 * * 1`) + `/api/cron` añadido a `PUBLIC` del `middleware.ts`.
-  - **Verificado**: `node --test` 3/3 ✅, `tsc --noEmit` (código de prod limpio) ✅, `next build` ✅.
-  - **⚠️ PENDIENTE despliegue**: en el Vercel de plataforma definir `CRON_SECRET` y `RESEND_API_KEY`+`MAIL_FROM`.
-  - **Roadmap restante** (PR por PR): impagos (ialimp/sivra) → reposición stock (ia-rest) → NPS (ialimp)
-    → scoring limpiadoras (ialimp) → orquestador concursos (ialimp). Diferidas (APIs externas): reputación
-    Google/Booking, reintentos VeriFactu. Plan: `docs/superpowers/plans/2026-06-14-briefing-consolidado-plataforma.md`.
-- **⏰ Cron huérfano arreglado: `instagram-ideas` (ia-rest) — branch `claude/agents-missing-schedules-u838j3` — 13/06/2026**
-  Auditoría de "agentes sin tarea programada": crucé todos los endpoints `cron`/`agent` de las 4 apps
-  contra los `crons` de cada `vercel.json`. Resultado: la mayoría OK; los `agente-*` interactivos
-  (asesoria, owner/compras+eventos, super/arquitecto+ai+seo, leads, sivra agente/chat, ialimp
-  cotizador, expenses backfill) **no llevan cron a propósito** (bajo demanda). **Único huérfano real:**
-  `apps/ia-rest/src/app/api/cron/instagram-ideas/route.ts` estaba diseñado como cron (auth `CRON_SECRET`,
-  cabecera "lunes, antes de blog-seo") pero **faltaba en `vercel.json`** → nunca se disparaba solo.
-  **Fix:** añadido `{ "path": "/api/cron/instagram-ideas", "schedule": "30 7 * * 1" }` (lunes 07:30,
-  antes de blog-seo 08:00). No requiere exclusión de middleware (matcher solo cubre `/api/super/*`).
-- **🔎 Agente SEO autónomo de ia.rest (Fase 1) — branch `claude/seo-agent-auto-activation-5ypj5x` — 13/06/2026**
-  Cron `/api/cron/seo-agent` (**martes y viernes 07:00 UTC**) que lee **GSC+GA4** y, de forma
-  **autónoma**, adapta el SEO de **iarest.es**: titles/metas, JSON-LD, bloques de contenido y
-  artículos nuevos. Principio rector: **los cambios son DATOS, no código** (nunca commitea ni rompe
-  el build). Spec/plan en `docs/superpowers/{specs,plans}/2026-06-13-agente-seo-autonomo-iarest*`.
-  - **Migración aplicada** a Supabase **`efncqyvhniaxsirhdxaa`** (proyecto ia-rest), **schema `public`**
-    (¡no `iarest`! — ahí vive `blog_borradores`, que es donde apunta `createServerClient`). Tablas
-    nuevas con **RLS habilitado**: `seo_overrides` (title/meta/canonical/og/jsonld por ruta),
-    `seo_content_blocks` (bloques por ruta+posición), `seo_articulos` (artículos en BD), `seo_cambios`
-    (snapshot antes/después + auditoría).
-  - **Red de seguridad**: kill switch `SEO_AGENT_ENABLED` (si != 'true', el cron sale sin tocar nada),
-    allowlist de rutas (`/restaurantes`, `/restaurantes/*`), máx. `SEO_MAX_CAMBIOS` (def. 5)/pasada,
-    anti-oscilación 7 días, umbral `SEO_MIN_IMPR` (def. 30) en el prompt, informe Telegram y reversión
-    vía `/api/super/seo-revert`.
-  - **Código** (`apps/ia-rest`): `src/lib/seo/{types,guardrails,gsc-ga4,store,targets}.ts`,
-    `src/components/seo/SeoBlocks.tsx`, ruta dinámica `src/app/blog/[slug]/page.tsx`, endpoints
-    `api/cron/seo-agent` y `api/super/seo-revert`. Páginas `/restaurantes` y `/restaurantes/[ciudad]`
-    leen override en `generateMetadata` + slot `<SeoBlocks>`. GSC/GA4 extraídos de `agentes-seo` al
-    módulo compartido `gsc-ga4.ts`.
-  - **Superficie editable Fase 1**: solo páginas server (`/restaurantes`, `[ciudad]`) + artículos
-    nuevos. `/` y `/espacios` son client-components (`next/head`) → fuera del override por ahora.
-  - **Verificado**: test puro `scripts/seo/test-guardrails.ts` (14 checks) ✅, `next build` ✅,
-    `npm run qa` sin problemas ✅, 4 tablas confirmadas en BD.
-  - **⚠️ PENDIENTE de despliegue**: en el Vercel de ia-rest, dejar `SEO_AGENT_ENABLED` sin poner/`false`
-    hasta querer activarlo; al activar (`=true`), revisar el primer informe Telegram y `/super → SEO`
-    antes de confiar. Opcional: `SEO_MAX_CAMBIOS`, `SEO_MIN_IMPR`.
-  - **Fase 0/2 (ialimp.es) pendiente**: ialimp **no tiene GSC/GA4 conectado** (cero OAuth/analytics en
-    `apps/ialimp`) y su landing es **HTML estático**; requiere conectar analíticas antes de extender el
-    agente (y extraer la lógica a `@central/core-seo`).
-
-- **🔎 Auditoría de caja POR EMPLEADO en ia-rest — branch `claude/logistastrator-analysis-q78y60` — 13/06/2026 (PR #199)**
-  Épico por fases sobre el cuadre de caja. **Bloque A completado (fases 1-4)**:
-  - **Fase 1** — Migración `arqueos_caja_empleado` (aditiva, RLS espejo de `arqueos_caja`; aplicada vía
-    Supabase MCP a proyecto ia-rest `efncqyvhniaxsirhdxaa`) + columnas `config_contabilidad.umbral_descuadre`
-    y `.conteo_ciego`. `cierre-diario` persiste `cuadre_por_empleado` (delete-then-insert) y **cruza con
-    turno** (movimientos sin camarero → titular del turno vía `turnos`+`camareros`).
-  - **Fase 2** — Puras `resumirDescuadresEmpleado`/`detectarPatronRecurrente`/`serieDescuadreEmpleado`
-    (+tests, 23 total) · `GET /api/owner/contabilidad/arqueos-empleado` · UI panel "Histórico por
-    empleado" (tabla acumulado/media/peor + sparkline + CSV + badge merma recurrente).
-  - **Fase 3** — `lib/push.ts` (`enviarPushARoles`) · alertas por umbral + patrón recurrente → push a
-    owner/gestor · UI marca en rojo los que superan umbral.
-  - **Fase 4** — Motivo obligatorio por empleado (400 con `pendientes` + UI de reintento) · conteo ciego
-    (config + "revelar" en UI) · firma del empleado (`PATCH .../arqueos-empleado/[id]/confirmar` +
-    columnas `confirmado_por/at`).
-  - **Verificado**: 23/23 tests, `tsc` limpio, eslint sin errores (solo warnings). Migración aplicada y
-    comprobada por MCP.
-  - **Bloque B completado (fases 5-9)**: F5 conciliación de tarjeta (`arqueos_caja.tarjeta_liquidada/
-    diferencia_tarjeta`); F6 tesorería (`movimientos_tesoreria` + endpoint GET/POST + panel saldo caja
-    fuerte); F7 abastecimiento de cambio (`config_contabilidad.min_monedas` + aviso en cierre); F8
-    tolerancia por empleado (`config_contabilidad.umbrales_empleado` + endpoint `umbral-empleado` +
-    columna editable en histórico; `umbralDe()` en validación/alertas); F9 consolidado multi-local:
-    endpoint operador `GET /api/operador/descuadres-empleado` en ia-rest + `apps/plataforma`
-    (`lib/descuadres.ts` + `GET /api/admin/descuadres-iarest`, vía puerto HTTP con OPERADOR_SHARED_SECRET).
-    Migraciones aplicadas por MCP. ia-rest `tsc` limpio (los errores `tsc` de plataforma son preexistentes,
-    no gatean su build).
-  - **PENDIENTE (cabos)**: UI empleado-facing de firma/conteo ciego en el POS (`/edge`); página visual
-    del consolidado en el god-panel de plataforma (el data path ya está). Tras esto: roadmap #2 control horario.
-
-- **💶 Cuadre de caja en ia-rest — branch `claude/logistastrator-analysis-q78y60` — 13/06/2026**
-  A raíz de un estudio competitivo de **Logista Strator** (TPV/retail de Logista; NO es logística),
-  se decide reforzar ia-rest donde ellos pegan fuerte: **gestión de efectivo**. Al verificar contra
-  código + BD se descubre que **`arqueos_caja` ya existía** con los campos del cuadre
-  (`fondo_inicial/salidas_caja/fondo_final/diferencia_caja`) pero **el `cierre-diario` los hardcodeaba a 0**
-  y nunca leía `movimientos_caja`. Se **completa** (sin tabla ni endpoints nuevos, cero duplicación):
-  - **Lógica pura** en `@central/module-contabilidad` (`src/caja.ts`): `calcularCuadreCaja`,
-    `totalDesglose`, `DENOMINACIONES_EUR`, `calcularCuadrePorEmpleado` + tipos
-    `MovimientoCaja`/`CuadreCaja`/`CuadreEmpleado`. Saldo teórico = Σ movimientos del cajón; conteo
-    físico = desglose manual o último arqueo/cierre; descuadre = real − teórico. **18 tests `node:test`**
-    (el paquete no tenía script `test`; añadido).
-  - **`apps/ia-rest/.../contabilidad/cierre-diario/route.ts`**: lee `movimientos_caja` del día y
-    persiste el cuadre global real + `cerrado_por`/`notas`; devuelve `cuadre` y `cuadre_por_empleado`.
-  - **UI** `ContabilidadTab.tsx` (sub-tab Cierre): checkbox "Hacer arqueo", conteo por denominación
-    en vivo, notas, y tarjeta de cuadre **configurable (toggle Caja única / Por empleado)** — por
-    empleado agrupa los arqueos de cada camarero desde `movimientos_caja` (sin migración).
-  - **Verificado**: 15/15 tests ✅, `tsc --noEmit` ia-rest ✅, eslint archivos tocados 0 errores ✅.
-    Sin migración (columnas ya existían). **Roadmap restante** (PRs aparte): completar control horario
-    (plantilla/ausencias/informe jornada legal), alta Kit Digital (admin), Tier 2 (pago unificado, carta digital).
-
-- **🧾 Agente de facturas de SIVRA — branch `claude/invoice-processing-agent-7fwjst` — 13/06/2026**
-  Agente diario que lee **Gmail (IMAP) + carpeta de Drive**, archiva facturas y las imputa en
-  `gastos` de sivra, con **aprendizaje de recurrentes** y **modo mixto** (lo claro entra solo,
-  lo dudoso a bandeja). Spec/plan en `docs/superpowers/{specs,plans}/2026-06-13-agente-facturas-sivra*`.
-  - **Migración aplicada** a Supabase `wswbehlcuxqxyinousql` (`agente_facturas_2026_06_13`, aditiva):
-    `gastos` += `irpf_porcentaje/origen/fingerprint/motivo_revision` (irpf/confianza/revisado YA existían);
-    tablas nuevas `gastos_reglas` (memoria) y `agente_log` (auditoría); **seed** de los 2 alquileres
-    de Bustos Tavera 22 (Bajo Dcha→Luxury Busto, Bajo Izq→Busto Reform, ALQUILER, IVA 21% / IRPF 19%).
-  - **Bandeja = `gastos.revisado=false`** (no se creó tabla aparte). GET de gastos excluye `revisado=false`.
-  - **Código** (`apps/sivra`): `lib/agente-facturas/*` (fingerprint, reglas/confianza, conciliar IVA/IRPF,
-    extraer, gmail IMAP, drive list/get/archive, imputar, anomalías, avisos, procesar, resumen-mensual);
-    `lib/telegram.ts` (portado de ia-rest). Endpoints: `/api/expenses/agent/{scan,backfill,resumen-mensual}`,
-    `/api/expenses/pendientes(/[id])`. UI: `/expenses/pendientes` + badge en `/expenses`; desplegable
-    += **ALQUILER** y **Personal (no pisos)**. `scripts/drive-upload.gs` ampliado (list/get/archive).
-  - **Resumen mensual por Telegram** (cron día 1, mes anterior) con **desglose de rentabilidad por piso**
-    (ingresos − gastos; `properties.id` = `gastos.propiedad` = `prop_*`). Cron diario `scan` 06:00.
-  - **Verificado**: 11 tests `node:test` (incl. los 2 recibos reales) ✅, `tsc --noEmit` ✅,
-    `next build` ✅, query de rentabilidad probada contra BD real.
-  - **⚠️ PENDIENTE de despliegue (no testeable sin credenciales):** en el Vercel de **sivra** añadir
-    `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`, apuntar `DRIVE_SCRIPT_URL` a la carpeta real y poner su
-    `ROOT_FOLDER_ID` en `drive-upload.gs`; (opcional) `GMAIL_FACTURAS_LABEL` + regla de Gmail.
-    Lanzar el **backfill primero en dry-run** (`/api/expenses/agent/backfill?secret=...`) y luego `&commit=1`.
-    Deps nuevas: `imapflow`, `mailparser`, `@types/mailparser`.
-
-- **📦 module-materiales Fase B — PR #189 mergeado — 12/06/2026**
-  Implementación completa de la Fase B del plan `module-materiales` (spec en `.claude/plans/polished-growing-stonebraker.md`):
-  - **8 APIs nuevas** en `apps/ia-rest/src/app/api/materiales/`:
-    - `clientes/` (GET/POST/PATCH/DELETE), `proveedores/` (GET/POST/PATCH/DELETE)
-    - `kits/` (GET/POST/PATCH/DELETE), `kits/[id]/items/` (GET/POST/DELETE), `kits/instanciar/` (POST — expande kit × N → movimientos salida con validación de stock)
-    - `mantenimiento/` (GET/POST/PATCH), `reservas/` (GET/POST/DELETE soft-cancel)
-    - `inventario-fisico/` (GET/POST), `inventario-fisico/[id]/lineas/` (GET/PATCH), `inventario-fisico/[id]/cerrar/` (POST — genera ajuste/rotura movements)
-  - **Migración SQL** `supabase/migrations/2026-06-12_materiales_fase_b.sql`: tablas `materiales_proveedores`, `materiales_clientes`, `materiales_kits`, `materiales_kits_items`, `materiales_inventario_fisico`, `materiales_inventario_fisico_lineas`, `materiales_mantenimiento`, `materiales_reservas` — todas con RLS `service_role_all`.
-  - **UI** `owner/materiales/page.tsx`: tabs Kits, Clientes, Proveedores, Mantenimiento, Reservas, Inventario Físico wizard añadidos.
-  - **Fixes CI** iterativos: Turbopack `await` en callback no-async, TS strict `never[]` → tipado explícito en `instanciar/route.ts` y `cerrar/route.ts`.
-  - **CI final**: 10/10 checks ✅, 4 Vercel ✅. Squash-mergeado a `main` (SHA `8174ffd`).
-  - **✅ RESUELTO (18/06/2026):** la migración (y `_v2`/`_categorias`/`_ledger`) se aplicó a la BD VIVA
-    correcta — schema `iarest` del proyecto compartido `wswbehlcuxqxyinousql`, no la vieja
-    `efncqyvhniaxsirhdxaa`. 16/16 tablas + RLS verificadas. Ver entrada de 18/06 arriba.
-    - **⚠️ Matiz (15/07):** esto se aplicó al **schema `iarest` clonado** de la compartida, pero el **runtime de
-      producción de ia-rest sigue leyendo el silo `efncqyvhniaxsirhdxaa.public`** hasta el flip. Que el DDL viva
-      en la compartida ≠ que producción la use. Ver banner canónico de arquitectura al principio del archivo.
-
-- **🧱 Config de build compartida en la MATRIZ — PR #180 — 12/06/2026**
-  "Lo compartido sube a la matriz" aplicado a la config de build/herramientas:
-  - **`tsconfig.base.json`** en la raíz; las 4 apps lo `extends` y solo declaran lo suyo
-    (paths, include/exclude, overrides). Equivalencia probada (showConfig + deep-equal).
-  - **`eslint.config.base.mjs`** en la raíz (solo DATOS: ignores + ruleset legado a `warn`,
-    sin imports de paquetes → no depende del node_modules de la raíz). Las 4 apps pasan a
-    **flat-config con `eslint-config-next ^16.2.6`** y `lint: eslint`; sivra migra desde
-    `.eslintrc.json`, ialimp/plataforma estrenan eslint. Verificado **0 errores** en las 4;
-    ia-rest queda **idéntico** (0 err / 1164 warn, mismo desglose → no rompe su build/CI).
-  - **Estabilización del PR**: se puso la rama al día con `main` (estaba ~11 commits atrás →
-    fallos "merge conflict marker" en typecheck ia-rest), se anotaron tipos en
-    `ialimp .../concursos-ingesta` (TS7022 latente, preexistente).
-  - **⚠️ Seguridad**: un commit concurrente había revertido en `mis-restaurantes/route.ts` la
-    corrección IDOR/suplantación de sesión de `main` (volvía a parsear la cabecera cruda
-    `x-ia-session`). Al fusionar `main` se **restauró la versión firmada/segura** (`getSession`).
-    Documentado en el PR para que no se vuelva a revertir.
-
-- **🧭 SKILLS-ROUTER DE CONTEXTO POR VERTICAL — rama `claude/project-scope-agent-validation-ip9f8b` — 12/06/2026**
-  Para resolver "el proyecto es muy amplio, se pide contexto de objetivos antes de tocar nada":
-  se añaden 4 skills-router **finos** (estilo `auditoria-central`, NO copian docs → apuntan a la
-  fuente de verdad, así no hay drift) en `.claude/skills/`:
-  - `central-maestro` — dispatcher de entrada del monorepo: orienta (CLAUDE.md/MATRIZ/CONTEXTO),
-    identifica la vertical y enruta al maestro correcto + recuerda reglas de matriz/packages/BD compartida.
-  - `sivra-maestro`, `ialimp-maestro`, `plataforma-maestro` — un router por vertical con gate
-    "antes de tocar nada", mapa de dónde vive cada cosa, infra (sin secretos) y landmines.
-  - `ia-rest-maestro` ya existía (doc gordo); los nuevos lo referencian, no lo tocan.
-  - Cada router obliga a leer objetivos/CLAUDE.md de la vertical y a comprobar la frontera multi-tenant
-    de la BD compartida antes de planificar. Se apoyan en el SessionStart hook (`using-superpowers`) ya activo.
-
-- **🤖 NUEVOS AGENTES IA + mejoras — PR #175 mergeado — 12/06/2026**
-  Se crean 7 nuevos agentes y se mejoran 2 existentes en ia.rest:
-  - **U1** `agentes-ai/route.ts` reescrito con agentic loop de hasta 10 iteraciones (igual que `agentes-seo`). Los 5 agentes genéricos (Ventas, Legal, Competencia, Contenido, Onboarding) ahora tienen capacidad real de web_search iterativo.
-  - **U4** `AgenteArquitectoTab` añadido al menú `/super → Sistema` (antes inaccesible desde UI).
-  - **N2** Agente Compras (`/api/owner/agente-compras`) + `AgenteModuloChat` en `/owner → Almacén`.
-  - **N3** Edge Function `qr-assistant` (Deno) + botón 🤖 flotante en `/q/[token]` para clientes QR.
-  - **N4** GET en `/api/super/leads/agente` genera briefing del historial completo + botón "🤖 BRIEFING" en `CRMAgentTab`.
-  - **N6** Agente Eventos (`/api/owner/agente-eventos`) + `AgenteModuloChat` en `EventosTab`.
-  - **N7** `AsesoriaAgente` + `/api/asesoria/agente` — chat flotante para contables en `/asesoria`.
-  - **Componente reutilizable** `AgenteModuloChat` en `components/owner/` para módulos owner.
-  - Fix CI: `supabase.raw` inválido en `agente-compras/route.ts` → filtrado en JS.
-  - N1 (owner insights) ya existía como `OwnerCopiloto`. N5 (registro) no viable sin auth.
-  - ⚠️ Pendiente: desplegar Edge Function `qr-assistant` con `supabase functions deploy qr-assistant` (está en repo pero sin deploy).
-
-- **🗑️ plataforma/admin: quita pestaña "Mis propiedades", acceso directo a ialimp — PR #171 mergeado — 12/06/2026**
-  La pestaña "🏠 Mis propiedades" desaparece del panel de operador. En su lugar, botón en la cabecera
-  "🏠 Mis propiedades ↗" que abre el portal del propietario de ialimp en pestaña nueva con auto-login
-  (token mágico vía `/api/admin/propiedades`). Tab por defecto pasa a ser "Negocios".
-
-
-- **📦 REFACTOR `@central/module-inventario` → `@central/module-materiales` — PR #172 — 12/06/2026**
-  - **Paquete nuevo:** `packages/module-materiales` (TS puro, sin deps runtime). Elimina `packages/module-inventario`.
-  - **Tipos nuevos:** `Material` (reemplaza `Articulo`), `Espacio`, `AsignacionMaterial`, `TransferenciaMaterial`,
-    `ResumenContable`; campos nuevos: `tipo` (consumible|activo), `estado` (operativo|deteriorado|en_reparacion|baja),
-    `stockMinimo`, `codigoInterno`, `garantiaHasta`, `documentos`, `precioCompra`.
-  - **Funciones puras nuevas:** `gastoCompras`, `resumenContable`, `puedeTransferir`, `alertasStockMinimo`
-    (además de las ya existentes: `round2`, `resumenStock`, `valorStock`, etc.).
-  - **Adapters actualizados en los 3 consumidores** (método renombrado `toArticulo`→`toMaterial`):
-    - `apps/ia-rest/src/lib/inventario-menaje.ts` (añadido `materialAdapter` para la tabla `materiales` con los nuevos campos)
-    - `apps/ialimp/lib/adapters/inventario.ts`
-    - `apps/sivra/lib/adapters/inventario.ts`
-  - **Rutas actualizadas:** `apps/ia-rest/.../menaje/route.ts`, `apps/ialimp/.../stock/route.ts`,
-    `apps/sivra/.../limpiadoras/productos/route.ts` — import cambiado a `@central/module-materiales`.
-  - **`package.json` + `next.config.ts`** de ia-rest, ialimp, sivra: dep actualizada de `module-inventario` → `module-materiales`.
-  - **SQL `apps/ia-rest/supabase/migrations/2026-06-12_materiales_v2.sql`** — aplicada al proyecto Supabase
-    `efncqyvhniaxsirhdxaa`: añade columnas nuevas a `materiales` + crea `materiales_espacios` y
-    `materiales_transferencias` con RLS (service_role).
-  - **15 tests** en `packages/module-materiales/test/materiales.test.ts` — todos pasan con `node --test`.
-  - **Fix CI:** dos rutas usaban `articuloAdapter.toArticulo` (ya inexistente) → cambiado a `toMaterial`
-    (sivra y ialimp; detectado por Vercel CI, corregido en commit `ff16bd9`).
-  - **`apps/plataforma/lib/estructura.ts`** actualizado: `module-inventario` → `module-materiales` con descripción del dominio.
-  - **✅ MERGEADO a `main`** (PR #172). Los 4 proyectos Vercel verdes.
-  - **NOTA arquitectura:** el scope de `module-materiales` es *agnóstico de vertical y de BD* (port/adapter).
-    Espacios (`Espacio`) son entidades de primera clase con `refTipo`/`refId` opcionales para enlazar entidades externas.
-    Multi-tenancy a nivel `negocioId` (más fino que `empresaId`/`restauranteId`).
-
-- **🔒 SEGURIDAD BD compartida — COMPLETO — 500 → 318 advisories, 0 ERROR — 12/06/2026**
-  3 migraciones aplicadas sobre `wswbehlcuxqxyinousql`. PR #169 mergeado. Detalle en `docs/AUDITORIA-2026-06.md` A4.
-  - ✅ 62 vistas `SECURITY DEFINER` → `security_invoker = on` (47 iarest + 15 public)
-  - ✅ `instagram_estilos_usados` → RLS habilitada
-  - ✅ 114 funciones `function_search_path_mutable` → `SET search_path='iarest'`
-  - ✅ 7 políticas `service_role_*` → `TO service_role` (qr slots/items/sesiones/valoraciones,
-    reglas_envio, voice_profiles, comanda_modificaciones)
-  - ℹ️ 17 `rls_policy_always_true` intencionales (bridge hardware, QR anon, super_admin) — sin acción
-  - ℹ️ 77 `anon/authenticated_security_definer_function_executable` intencionales (login_pin, resolve_restaurante)
-  - **No quedan pendientes de seguridad accionables en la BD.**
-
-- **🔍 AUDITORÍA CON CONTEXTO del monorepo (post-reestructuración) — PR #164 — 12/06/2026**
-  Auditoría completa tras el rename `@iarest/*`→`@central/*`, la migración de BD de ia-rest al Supabase
-  compartido y `file:`→`workspace:*`. Informe en **`docs/AUDITORIA-2026-06.md`**. Skill nuevo
-  **`.claude/skills/auditoria-central`** para repetirla.
-  - **Bugs reales encontrados y ARREGLADOS** (el CI solo cubría ia-rest y no los veía):
-    - `aiComplete(prompt, número)` en `apps/ialimp/lib/{google-leads,mailing}.ts` → debía ser objeto
-      `{maxTokens|timeoutMs}`; el número se ignoraba en runtime (leads truncados a 800 tok; "timeout 8s" era 30s).
-    - `@central/core-identity` usado en 8 ficheros de auth de ialimp **sin estar en deps ni transpilePackages**
-      (todos los `@central/*` exportan TS crudo) → añadido a `package.json` + `next.config.ts`.
-    - **16 errores de tipos de ialimp saldados** → las **4 apps a 0 errores** (`tsc --noEmit`).
-  - **Red de seguridad añadida:** tests de `@central/core-fiscal` (IVA, NIF/CIF/IBAN, huella VeriFactu con
-    snapshot), guardián `test/regression-scope.test.ts` (anti-`@iarest/`), orquestadores `pnpm test`/`test:packages`/
-    `test:guardia`. **Suite: 104 tests, 0 fallos.** CI nuevo `.github/workflows/tests.yml` (tests + typecheck de
-    las 4 apps; antes solo ia-rest).
-  - **Infra verificada por MCP:** BD compartida tiene **499 security advisories (63 ERROR)** — 62 `security_definer_view`,
-    24 `rls_policy_always_true`, 114 `function_search_path_mutable` (sensibles por ser BD multi-tenant; muchos
-    preexisten a la migración). Schema `iarest` sano (266 tablas). Proyecto Supabase viejo de ia-rest
-    (`efncqyvhniaxsirhdxaa`) sigue ACTIVE (jubilar tras el corte de envs).
-  - **✅ Alberto aplicó las 2 migraciones del radar de concursos** (`radar_*` en `concursos_perfil_empresa` +
-    tabla `concursos_radar_anuncios`) → cron `/api/cron/concursos-radar` ya no falla. Verificado en BD.
-  - **✅ MERGEADO a `main`** (PR #164) + **seguimiento PR #166**:
-    - **CI verde de verdad** (no solo local): `Tests & Typecheck` pasa en CI los 104 tests + typecheck de las
-      **4 apps**. **OJO/GOTCHA del CI:** `prisma generate` y `tsc` deben ejecutarse **desde el dir de cada app**
-      (`working-directory: apps/<app>`), NO desde la raíz — `prisma`/`typescript` son deps de cada app, no de la
-      raíz (si no: `ERR_PNPM ... Command "prisma" not found`). Los 3 schemas escriben al MISMO `@prisma/client`,
-      pero en CI cada app va en un job aparte (no colisionan). Este bug rompió `tests.yml` en main y se arregló en #166.
-    - **Vulnerabilidades (M3):** `axios` (high, vía `node-ical`) resuelto con `pnpm.overrides "axios": ">=1.16.0"`
-      en la raíz (→1.17.0); `pnpm audit` baja de 16 high a 1. **`xlsx`** queda (high, sin parche npm) pero es
-      **no explotable**: ialimp solo ESCRIBE xlsx (export contab.), nunca parsea (las vulns son al LEER). Remediación
-      oficial = tarball CDN de SheetJS (bloqueada en el entorno de build; no se arriesga el build del cliente vivo).
-    - `workflow_dispatch` añadido a `ci.yml`/`tests.yml` (estaba mal indentado bajo `pull_request:`, corregido).
-  - **✅ RESUELTO (sesión 12/06/2026):** los **63 advisories ERROR** de la BD compartida → 0 ERROR.
-    Ver entrada nueva arriba. (xlsx queda como remediación opcional, documentada.)
-- **🚨 PRODUCCIÓN ia-rest lee la BD UNIFICADA VACÍA (Fase A2 a medias) — demo reparado — 12/06/2026**
-  - **⛔ OBSOLETO / NO ES EL ESTADO ACTUAL** (ver banner canónico de arquitectura al principio del archivo):
-    este apunte describe un **intento parcial que se revirtió**; producción de ia-rest **sigue en el silo
-    `efncqyvhniaxsirhdxaa.public`**. Se conserva por historial.
-  - **`www.iarest.es` lee `wswbehlcuxqxyinousql` schema `iarest`** (BD unificada), NO `efncqyvhniaxsirhdxaa.public`
-    (BD vieja con todos los datos). La unificada tenía estructura+RPCs pero **0 restaurantes / 0 personal** →
-    nadie podía entrar. Diagnóstico: `GET /api/owner/modulos?restaurante_id=...001` devolvía el fallback genérico.
-  - **Reparado (probado):** copiado restaurante demo (...001) + 7 personal a `wswbehlcuxqxyinousql.iarest`,
-    creada+sembrada `materiales`. Verificado (search_path=iarest): `resolve_restaurante('DEMO')` ok, `login_pin`
-    1369 y 4040 → success; endpoint de prod ya devuelve la config del demo. Añadido botón Salir en /montaje.
-  - **⚠️ PENDIENTE GRANDE:** Saboga y demás datos reales **siguen solo en `efncqyvhniaxsirhdxaa.public`**;
-    producción no los ve. Falta migración real de datos (Fase A2 completa) o revertir el env a la BD vieja.
-  - **⚠️ Fragilidad:** las RPCs de `iarest` referencian tablas sin prefijo; dependen del search_path de PostgREST.
-
-- **📦 MÓDULO DE MATERIALES (Bloque B) CONSTRUIDO — 12/06/2026**
-  - Módulo **independiente de eventos** (decisión Alberto: sirve para catering, haciendas y hasta alquiler puro),
-    100% configurable por el dueño, con **acceso granular por empleado** vía `personal.modulos_gestion`.
-  - **Por qué tablas nuevas (no reutilizar `inventario_menaje_evento`):** la vieja tiene FK dura a `eventos` →
-    acopla. Las nuevas viven en schema `iarest`, patrón `produccion_*` (`restaurante_id`, RLS service_role).
-    La asignación apunta a un **destino genérico** (`destino_tipo` = evento|hacienda|cliente|obra), sin FK.
-  - **DB (migración `2026-06-12_materiales.sql`, aplicada a `wswbehlcuxqxyinousql`):** `iarest.materiales`
-    (catálogo + stock), `iarest.materiales_asignacion` (salida/devolución), `iarest.materiales_dano` (rotura+foto+coste).
-  - **API:** `/api/materiales` (catálogo CRUD) · `/api/materiales/asignacion` (asignar descuenta stock / devolver
-    repone sanas) · `/api/materiales/dano` (rotura con foto, da baja del total, coste = ud×reposición) ·
-    `/api/materiales/perfil` (asignaciones del empleado logueado, gated por `modulos_gestion`).
-  - **UI dueño:** `/owner/materiales` (3 tabs: Catálogo · Asignaciones · Roturas) + entrada `materiales` en `GRUPOS`
-    e icono `box`. **UI empleado:** `/montaje` (patrón `/cocinero`: ve su material, marca recogido/devuelto,
-    registra rotura con foto). **Routing:** empleado con `materiales` aterriza en `/montaje`.
-  - **Gating:** `materiales` añadido a `TODOS_MODULOS` y al checklist de "Acceso a gestión" del panel de personal.
-  - **Verificado:** `next build` verde (exit 0) con `@central/*` linkados (pnpm install). Spec en
-    `docs/superpowers/specs/2026-06-12-modulo-materiales-design.md`. PR **#163** (draft, CI verde).
-  - **⚠️ OJO con la BD (corregido):** la BD VIVA de ia-rest es el proyecto **`efncqyvhniaxsirhdxaa`,
-    schema `public`** (ahí están `restaurantes`/`personal`/`inventario_menaje`; demo `DEMO` + "Saboga
-    Catering"). El proyecto compartido `wswbehlcuxqxyinousql.iarest` está VACÍO (la migración A2 del plan
-    de unificación NO se ha ejecutado). Primero creé las tablas en el sitio equivocado; corregido →
-    tablas en `efncqyvhniaxsirhdxaa.public`. (Nota: las tablas `produccion_*`/`checklist_*` de la sesión
-    anterior podrían estar también en el proyecto equivocado — revisar si esas features fallan en prod.)
-  - **🧪 Cuenta DEMO sembrada para probar:** owner **Alberto PIN 1369** → `/owner` → tab **Materiales**
-    (5 materiales con stock, 4 asignaciones, 1 rotura) y `/montaje` (el owner ve todo). Montador
-    **PIN 4040** (rol gestor, acceso solo a `materiales`) → entra directo a `/montaje`. Módulos
-    `materiales/checklists/produccion` activados en el restaurante demo.
-  - **Pendiente del bloque:** previsión IA (aforo/temporada/temperatura), código de barras/báscula, multi-almacén
-    por hacienda con reparto. Crear bucket Storage `materiales` en Supabase (hay fallback a data-url mientras tanto).
-
-- **🎤 DECK presencial JJ + estructura real corregida — 12/06/2026**
-  - **Deck presencial** construido en `apps/ia-rest`: ruta pública **`/propuesta/catering-jj-deck`** (en prod:
-    `https://iarest.es/propuesta/catering-jj-deck`). 11 slides full-screen (nav teclado/clic), paleta de
-    `PropuestaBase`, diagrama del grupo **inline** (componentes `Node`/`Arrow`, sin SVG). PRs **#156** (deck) y
-    **#157** (corrección) mergeados a `main`.
-  - **⚠️ Corrección de estructura real de JJ (manda sobre el brief a ciegas)** — volcada en
-    `docs/BRIEF-joaquin-jaen.md` (nueva sección "⭐ ESTRUCTURA REAL DEL GRUPO" arriba del todo):
-    - **Cocina central (la hermana)** = producción → **produce para eventos/catering** y abastece haciendas.
-    - **Restaurantes `Doble J` y `Las Dos Jotas`** = **independientes, cada uno pide lo suyo** (no dependen de cocina central).
-    - **Haciendas `El Alba` (propiedad) + `Trinidad` (alquiler)** = cada una su unidad (montaje/pases/barra) **con su almacén**.
-    - **NO tienen tiendas para llevar (aún)** · **flota/alquiler-materiales NO confirmados** (eran supuestos del brief a ciegas).
-    - Añadido al brief: **control de almacenes/economato** (almacén por hacienda + cocina central, código de barras,
-      pedido al mínimo, mermas, reparto entre haciendas) y **control de cada hacienda** (calendario/stock/montaje/KDS/barra).
-    - **No nombrar marcas internas ante JJ** (ialimp/sivra/"limpieza"/"pisos") — en el deck se quitó `ialimp` del slide
-      de equipo y se anonimizaron las otras en "ya funciona".
-  - **🔧 En curso (subagente):** enganchar los **accesos de H/I en los menús** (`/owner/checklists`,
-    `/owner/productividad`, `/checklist` camarero, `/cocinero`) — PR aparte, pendiente de revisar/mergear.
-  - **Pendiente:** comisiones/marketplace "de verdad"; tiempos estándar reales de cocina; conectar sistema de cocina de ella.
-
-- **⭐ REUNIÓN con Joaquín Jaén (dueño) + hermanos CELEBRADA — inteligencia real — 11/06/2026**
-  Transcripción analizada y volcada en `docs/BRIEF-joaquin-jaen.md` (sección "POST-REUNIÓN"). Cambia el brief a
-  ciegas. Asistentes: **ella = responsable de todas las cocinas** (perfil técnico fuerte), **él = restaurante +
-  comercial**, Joaquín + otro hermano decisores.
-  - **Hallazgo nº1:** la cocina **NO es campo virgen** — la responsable lleva ~3 años con un sistema propio muy
-    serio (proveedores→artículos con ficha técnica/alérgenos→ingredientes→elaboraciones con procesos→etiquetas QR
-    trazabilidad/caducidad→escandallo dinámico→partes de trabajo por partida 5 días antes→báscula→cronometraje→
-    economato→merma). Más profundo que la cocina de ia-rest. **Es protectora ("es lo mío") y su objeción es el
-    factor humano.** → conectar/co-diseñar con ella, NO reemplazar. Mayor activo y mayor riesgo de adopción.
-  - **Apertura real a corto = comercial + logística (el hermano, el que quiere "probar ya").** Necesita CRM
-    comercial + **incentivos/ranking de comerciales** (bonos por margen/ticket/reseñas, contratos % escalable),
-    ERP facturación/contabilidad, y **logística de material de eventos = dpto. más atrasado** (inventario menaje,
-    previsión por evento, roturas post-boda, consumo estacional) → coincide con `DISENO-modulos-materiales-flota.md`.
-  - **Producto "wow" que quieren:** marketplace de catering + presupuestador self-service (cliente configura evento →
-    menú con margen → paga), multi-tarificador de eventos, bot de bodas, maridaje de vino por IA.
-  - **Plan revisado:** piloto por **Logística/Material** (bajo riesgo político, diseño ya hecho); demo de venta por
-    **marketplace de catering**; cocina = "conectamos con lo que ella ya construyó". Siguiente paso: presentación +
-    piloto 1 dpto.; contacto por WhatsApp de Alberto; ellos mandan resumen.
-  - **Faltan datos:** nº sociedades/CIFs + intercompany; stack exacto del sistema de cocina de ella; tamaño catálogo
-    de material + eventos/mes; estructura de comisiones de los comerciales.
-  - **✅ Bloques H e I CONSTRUIDOS y MERGEADOS a `main` (PR #154):** en `apps/ia-rest`.
-    - **H — Checklist operativo:** tablas `iarest.checklist_plantillas/ejecuciones`; rutas `/api/checklists/*`
-      (plantillas, turno con **índice de carga** leyendo `comandas`, marcar con foto, informe con flag
-      "sin excusa"); pantallas `/checklist` (empleado) y `/owner/checklists` (editor + informe). Bucket
-      Storage `checklists` (público) creado.
-    - **I — Perfil del cocinero + productividad:** tablas `iarest.produccion_tareas/tiempos_estandar`;
-      rutas `/api/produccion/*` (planificar con `callAI` + fallback round-robin, perfil, tiempo
-      empezar/terminar, productividad, cocineros); pantallas `/cocinero` y `/owner/productividad`.
-    - Módulos nuevos `checklists` y `produccion` en `TODOS_MODULOS`. Migraciones aplicadas en BD
-      compartida (schema `iarest`). MVP **manual + IA** (no toca el sistema de cocina de ella).
-    - **Cómo verlo (demo):** entrar por `/login` (owner PIN 1369 → `/owner/checklists` y `/owner/productividad`;
-      camarero 7672 → `/checklist`; cocina 3297 → `/cocinero`). Las rutas aún **no tienen botón en los menús**
-      (creadas como pantallas standalone para no tocar las páginas grandes).
-    - **Pendiente:** enganchar accesos en los menús (`/owner`, camarero, cocina); cargar tiempos estándar reales;
-      conectar el sistema de cocina de ella; **guión/deck** presencial para la próxima reunión.
-  - **Propuestas web refinadas (PR #138, mergeada):** las 4 propuestas `catering-jj*` reposicionan la cocina
-    ("conectamos, no reemplazamos") y añaden las cartas que pidió la familia: **comercial+comisiones**, **material
-    de eventos** (roturas/previsión) y **presupuesto self-service del cliente**. Estas dos últimas se presentan
-    **como si ya existieran** (decisión de Alberto) — **a construir mañana**. Piloto del hub reorientado a
-    material+comercial. **Pendiente mañana:** (1) construir comisiones/marketplace de verdad; (2) **guión/deck**
-    presencial para la próxima reunión.
-
-- **✅ BRIEF JOAQUÍN JAÉN + diagramas — preparación presentación holding — 11/06/2026**
-  Sesión de preparación para reunión con **Joaquín Jaén** (holding: restaurante, catering, haciendas,
-  alquiler de materiales, transporte, tiendas para llevar). Todo en `main` vía rama `claude/joaquin-jaen-expansion-4nyju5`.
-  - **`docs/BRIEF-joaquin-jaen.md`** — quién es, cómo caben sus 6 negocios (tabla), idea técnica (`Encargo`
-    + intercompany), estado real hoy (hecho vs diseñado), modelo comercial (módulos activables), preguntas
-    clave para cerrar, guion de presentación de ~8 slides.
-  - **`docs/DISENO-modulos-materiales-flota.md`** — diseño a fondo de las dos verticales nuevas (alquiler
-    de materiales + flota/transporte): modelo de datos, ciclo de vida, pantallas, reutilización de módulos,
-    fases sugeridas y qué demostrar a Joaquín.
-  - **Diagramas SVG + PNG** (`docs/diagrams/`):
-    - `joaquin-encargo.svg/.png` — cómo el agregado `Encargo` (parent_id+parent_type) une todos los
-      `module-*` (CRM, presupuestos, agenda, inventario, proveedores, portales, feedback, facturación).
-    - `joaquin-holding-intercompany.svg/.png` — el "gancho holding": cocina central → tiendas, flota →
-      catering, materiales → eventos facturados entre sociedades y consolidados eliminando intercompany en
-      `plataforma` (neto real del grupo).
-  - **`add_concursos.sql` APLICADA** en BD compartida `wswbehlcuxqxyinousql` (schema `public`): tabla
-    `concursos` con 12 columnas + 3 índices. Marca el pendiente de Alberto del #116 como cerrado.
-  - **INFORME unificación** (`docs/INFORME-unificacion-central.md`) planificado en plan mode: estado
-    real de adopción de packages/*, esquema de capas, plan priorizado Fases A–F. Pendiente ejecutar.
-  - **Pendiente (Alberto):** borrar envs `IAREST_SUPABASE_URL`/`IAREST_SUPABASE_SERVICE_KEY` de Vercel
-    (plataforma); resetear password + jubilar BD `efncqyvhniaxsirhdxaa`; `DROP iarest._mig_ddl` (opcional).
-    Presentación Joaquín: ejecutar diagramas + ~8 slides.
-
-- **⚙️ GOTCHA del entorno cloud (descubierto 11/06, importante para futuras sesiones):** en el contenedor remoto el **`git push` por HTTPS da `503` de forma persistente** (read/fetch/ls-remote SÍ funcionan; solo el push está bloqueado) → el hook `Stop` de memoria NO puede empujar. **Para escribir en GitHub usa las tools MCP** (`mcp__github__push_files` / `create_or_update_file`) o, para ficheros grandes, **rama temporal vía MCP → PR → `merge_pull_request`**. OJO: `push_files` mete el contenido **inline** y un agente puede **truncarlo** (pasó con este `CONTEXTO`, ~69 KB: quedó en "PENDING"/"PLACEHOLDER" y hubo que restaurarlo). Patrón seguro para ficheros grandes: subir a **rama aparte**, **verificar tamaño/marcadores**, y solo entonces **PR + merge** a `main` (commits `chore:` no redepliegan). Para restaurar un fichero a una versión previa sin retecleo: existe el blob en el historial (`git checkout <sha> -- <fichero>` desde un equipo con push).
-
-- **✅ Gestión de limpiezas para Vanessa + patrones de edición reutilizables — EN PRODUCCIÓN** (backfill 11/06; trabajo del 09/06 que se había perdido de esta memoria al hacer squash-merge)
-  (PR #111 → commit `3e3cc646` · PR #112 → commit `abe64527` · deploys de producción `ialimp` e `ia-rest` verificados READY. El PR #109, que mezclaba ambos trabajos y arrastraba commits de plataforma, se cerró a favor de 2 PRs limpios.)
-  - **IALIMP (gestión de sesiones):** columnas `orden_manual` (int) y `urgente_manual` (bool) en `cleaning_sessions` (migración `2026-06-09_orden_manual_sesiones.sql`, aplicada en Supabase). Vista `sesiones_limpiadora` ampliada con `notas`/`orden_manual`/`urgente_manual`.
-    - `PATCH /api/admin/sesiones/[id]` ampliado (session_date, hora_inicio [TEXT, sin cast], hora_checkout/checkin [::time], num_huespedes, notas, orden_manual, urgente_manual; recalcula ventana; push «⏰ Cambio de horario» si cambia fecha/hora de sesión asignada). Nuevo `POST /api/admin/sesiones/reordenar` (orden manual por día; `reset:true` → auto).
-    - UI en Inicio y Agenda: ✏️ editar (`NuevaLimpiezaModal` modo edición = PATCH + eliminar), ↑↓ reordenar, ⏰ mover día, 🔥 urgente, ⧉ duplicar, filtro ⚠️ sin asignar, aviso de solapamiento. App limpiadora `/l`: chips 🔥/📝 + bloque destacado de notas/urgente antes del checklist.
-    - Docs: `public/manual.html`, `docs/guia-limpiadoras.md` (WhatsApp), `docs/mejoras-vanessa.md` (admin), `apps/ialimp/CLAUDE.md` (sección orden_manual/editar).
-  - **Patrones reutilizables (PR #112):** modo edición (✏️ + PUT) en Stock y Lencería (ialimp); `ProgramacionModal` modo edición (PATCH + eliminar); botones ↑/↓ para reordenar la carta del owner en ia-rest (swap `orden` + PUT).
-  - Nota operativa: el push HTTP del contenedor daba 503 → todo se subió vía `mcp__github__push_files`; los PRs se mergearon con squash.
-
-- **💰 SIVRA pricing: piloto validado + 🏷️ rename scope @central + 🧠 module-revenue Fase 1 — 11/06/2026 (tarde)**
-  Sesión larga. Cuatro hitos:
-  1. **Piloto Busto Reform VALIDADO de punta a punta:** se subió el techo `max_price` 110→**125€** base
-     (`pricing_settings`), se ejecutó `apply` en vivo desde el panel (Alberto pulsó "Aplicar") y el **23/06
-     pasó a 125€ en Smoobu, confirmado por Alberto en el calendario**. Mercado huésped p50 168€; el motor quiere
-     ~144€ base pero el techo del propietario manda (125). El piso está reservado del 11 al 18 → el motor solo
-     toca fechas libres (correcto).
-  2. **🐛 BUG CRÍTICO de la automatización encontrado y reparado:** los crons de pricing daban **401/«CRON_SECRET
-     no definido»** porque el despliegue que los corría era ANTERIOR a que Alberto metiera la env. Diagnosticado
-     con los **logs de runtime de Vercel** (MCP de Vercel, ya conectado): `apply-auto` 08:30 → 401; `guard` ahora
-     → 401 limpio (sin el aviso) = `CRON_SECRET` YA activo en el deploy post-merge. **El cron de mañana 08:30
-     correrá de verdad por primera vez.** (El acceso de Vercel NO pasa el login NextAuth → mis llamadas a
-     `/api/pricing/apply` dan 401; el disparo manual lo hace Alberto con su sesión, o con el secreto.)
-  3. **🏷️ RENAME de scope `@iarest/*` → `@central/*` en TODO el monorepo (PR #147, MERGEADO):** 15 paquetes,
-     deps de las 4 apps, todos los imports, `transpilePackages`, `scripts/auditar-estructura.mjs` y `pnpm-lock.yaml`
-     regenerado. Verificado con las **4 previews de Vercel en verde**. **Principio anotado en `CLAUDE.md`:** los
-     cambios que rompen (renames, reestructuras de BD) **se hacen AHORA, sin clientes** — con clientes ya no.
-     ⚠️ Los PRs abiertos que aún importan `@iarest/*` (#137, #138, #136…) necesitarán rebase a `@central/*`.
-  4. **🧠 `@central/module-revenue` Fase 1 (PR #148, MERGEADO):** paquete **puro y multisector** (patrón
-     `module-concursos`: TS puro, sin BD/red/secretos) de análisis de demanda. Entradas `DemandEvent`/`CapacitySlot`;
-     funciones `occupancyByDow`, `seasonalityByMonth`, `leadTimeStats`, `pickupCurve`, `paceVsBaseline`, `channelMix`,
-     `revenueKpis`, todas con guardia de muestra. **9/9 tests `node --test`** + `tsc` limpio. El mismo cerebro
-     servirá a ia-rest (cubiertos) e ialimp (servicios) con su adapter. Spec:
-     `docs/superpowers/specs/2026-06-11-revenue-module-design.md`; plan: `docs/superpowers/plans/2026-06-11-module-revenue-fase1.md`.
-  - **Diseño aprobado (spec completa, 3 fases):** análisis + **auto-ajuste dentro de límites + freno**, configurable
-    y supervisable **por dueño/piso** (override manual gana, topes min/max = autoridad final). Extras aprobados:
-    **backtest "¿qué habrías ganado?"**, modo por palanca (supervisado/auto), "explica por qué", presets.
-  - **PENDIENTE (siguiente sesión):** **Fase 1b** = cablear SIVRA (adapters `incomes`→`DemandEvent[]`,
-    `rate_snapshots`→`CapacitySlot[]`; endpoint + panel `/revenue` + digest semanal) → aquí Alberto valida la
-    hipótesis "domingos fuertes" con sus datos. Luego **Fase 2** y **Fase 3** (ritmo/antelación, min-stay vía API
-    Smoobu, alarma de "dinero perdido"). Datos ya disponibles: `incomes` = **1.745 reservas reales** (6 años, canal,
-    createdAt, checkIn/out) — no hace falta ingestar nada nuevo.
-  - **Pendiente menor de Alberto:** activar `apply_enabled` en Dúplex/Luxury/House al desconectar PriceLabs.
-
-- **📸 Auditoría agente Instagram (ia.rest) — "no sube nada" RESUELTO — 11/06/2026**
-  Síntoma de Alberto: la automatización de Instagram genera pero no publica nada desde el ~2-jun.
-  - **Causa raíz (confirmada en vivo):** el **corte de BD del 10-jun**. Producción pasó a leer el schema
-    nuevo `iarest`, pero los borradores y el historial quedaron **huérfanos en la BD vieja**
-    (`efncqyvhniaxsirhdxaa`, `public`). Al aprobar en Telegram, el webhook buscaba el borrador en la BD nueva,
-    no lo encontraba → respondía **"Ya procesado"** → no publicaba. **Token, webhook y código estaban OK.**
-  - **Diagnóstico end-to-end (sin egress desde el contenedor):** se hizo vía Supabase MCP + Edge Functions
-    temporales (`tg-send` confirmó que el token del bot vive como secret en EFs; `tg-webhookinfo` confirmó webhook
-    sano: URL correcta, 0 pending, 0 errores). Se publicó un **post real** (`18102380903021918`) creando un borrador
-    en la BD **nueva** y aprobándolo → confirma que toda la cadena funciona.
-  - **Resuelto:** (1) **migrados los 19 borradores pendientes** vieja→nueva (EF `ig-migrate`, service role) →
-    `iarest.instagram_borradores`: 19 pendientes + 1 aprobado. (2) Desde el viernes el cron generará ya en la BD
-    nueva (flujo normal). (3) **PR #142 MERGEADO a `main`**: arregla `obtenerMetricas` (pedía métricas inválidas/`impressions`
-    deprecada) y añade registro de fallos de publicación en `system_errors` (callback Telegram + `/super` + cron); fin de
-    fallos silenciosos.
-  - **⚠️ Hallazgo de fondo (pendiente):** el corte de BD a `iarest` **no estaba realmente migrado** para Instagram
-    (drafts/historial seguían en la vieja). Revisar que el resto de datos (comandas, etc.) estén realmente en la nueva
-    o que producción siga apuntando a la vieja — la tabla `comandas` del schema nuevo está vacía.
-  - **🧹 Limpieza manual pendiente (Alberto):** borrar del dashboard Supabase las EFs temporales (ya inertes, devuelven 410):
-    `ig-test-send` (en ambos proyectos), `tg-webhookinfo` (viejo) e `ig-migrate` (nuevo).
-  - **Decisión de producto de Alberto:** mantener el modelo **publicación automática previa autorización en Telegram**
-    (no autopublicar sin aprobar).
-- **✅ IALIMP — chat del equipo visible en el menú lateral (PR #114, mergeado a prod) — 10/06/2026**
-  Vanessa (Sique Brilla) probaba el chat con las limpiadoras y no lo encontraba en su panel. El chat
-  (`/admin/chat`) **ya existía y funcionaba**, pero solo era accesible desde la barra inferior del **móvil**;
-  en el **menú lateral del escritorio** (`NAV` en `app/dashboard/DashboardClient.tsx`) no había entrada de chat
-  y el único 💬 era «Asistente» (que es el **ayudante de IA**, `/admin/asistente`) → confusión.
-  - **Fix:** añadida entrada **«💬 Chat equipo» → `/admin/chat`** al menú lateral; el asistente de IA pasa a
-    **«🤖 Asistente IA»** para no chocar el icono 💬. (NOTA: después la rama de Concursos añadió también
-    «🏛️ Concursos» al mismo `NAV`; conviven sin problema.)
-  - `public/manual.html`: sección Chat con la ruta exacta (lateral en escritorio / barra inferior en móvil) +
-    aclaración Chat-equipo vs Asistente-IA + recordatorio de cómo lo ve la limpiadora en `/l`.
-  - Solo navegación + manual. Sin datos, API ni migraciones. **Mergeado a `main` (squash `86bd78a`) y desplegado
-    a producción (`app.ialimp.es`).** Lo de «enviar el enlace» y «editar» que Vanessa también probaba ya iba bien.
-
-- **📡 Concursos — Infra F7: Radar PLACSP en vivo + OCR de pliegos — 11/06/2026 (rama `claude/concursos-radar-ocr-infra`)**
-  Cierra la infraestructura de F7 sobre el núcleo puro ya en producción. Spec/plan:
-  `docs/superpowers/specs/2026-06-11-concursos-radar-ocr-infra-design.md` · `docs/superpowers/plans/2026-06-11-concursos-radar-ocr-infra.md`.
-  - **Parser ATOM PURO (`apps/ialimp/lib/concursos-radar.ts`, TDD `node --test` → 4/4):** `parsearAtomPlacsp` (CODICE de PLACSP, `fast-xml-parser` con `removeNSPrefix`, tolerante a campos ausentes → título/objeto/cpv/presupuesto/órgano/url/expediente), `dedupeKey` (expediente > atom_id > url) y `matchesDeAtom` (empareja con `filtrarRadar`/`coincideRadar` del módulo → puntuación + motivos + dedupe). Fixture en `lib/__fixtures__/placsp-sample.atom.xml`.
-  - **Adaptación del módulo (aditiva, 79/79 intacto):** subpath export `"./radar": "./src/radar.ts"` en `packages/module-concursos/package.json` para poder importar `filtrarRadar`/`coincideRadar` bajo `node --test` (el bare `index.ts` arrastra imports extensionless que el type-stripping de Node 22 rechaza). Los tipos siguen importándose del bare package.
-  - **Radar (app):** migraciones `add_concursos_radar_criterios.sql` (amplía `concursos_perfil_empresa` con `radar_activo`/`radar_cpv[]`/`radar_palabras_clave[]`/`radar_presupuesto_min·max`) y `add_concursos_radar_anuncios.sql` (tabla con `unique(empresa_id, dedupe_key)`). Endpoints `radar/criterios` (GET/PUT), `radar` (GET lista + `no_vistos`), `radar/visto` (POST), `radar/importar` (POST import manual de ATOM). Cron `/api/cron/concursos-radar` cada 6 h (`0 */6 * * *`, en `vercel.json`): descarga la sindicación ATOM paginada (`PLACSP_FEED_URL` configurable, default público, hasta 3 páginas siguiendo `rel="next"`), filtra por empresa con `radar_activo` e inserta matches nuevos (`ON CONFLICT DO NOTHING`). **Aviso in-app** (contador de no vistos) — NO web-push (las suscripciones push de ialimp son de limpiadoras).
-  - **OCR (app):** `lib/concursos-ocr.ts` — `rasterizarPdf` (pdfjs-dist legacy `legacy/build/pdf.mjs` + `@napi-rs/canvas`, hasta 12 págs) y `ocrPaginasPliego` (cada página → `nimVision`, modelo de visión que ialimp ya usa, sin claves nuevas). Integrado en `analizar/route.ts`: si `necesitaOcr(texto)` → OCR → reanaliza; respuesta añade `ocr_aplicado`. `next.config.ts`: `@napi-rs/canvas`/`pdfjs-dist` en `serverExternalPackages` (load-bearing).
-  - **UI (`/admin/concursos/page.tsx`):** panel **"📡 Radar de oportunidades"** (criterios CPV/palabras/presupuesto + toggle activo + lista de matches con puntuación/motivos/enlace/«visto» + badge de no vistos) y aviso **"📄 Documento escaneado — OCR"** en la ficha (prop `ocrAplicado`).
-  - **Verificación:** parser 4/4, módulo 79/79, `apps/ialimp npm run build → ✓ Compiled successfully` en cada tarea (aborta luego por `JWT_SECRET` ausente = env local).
-  - **⚠️ Pendiente de Alberto:** (1) aplicar las 2 migraciones en Supabase; (2) **validar la rasterización OCR en la preview de Vercel** (riesgo: pdfjs+napi-canvas en runtime serverless; fallback documentado = subir páginas como imágenes); (3) opcional: ajustar `PLACSP_FEED_URL` por CPV/región. El cron no necesita secreto (lo invoca Vercel cron).
-- **🔌 Portar ialimp y sivra a módulos compartidos (proveedores, inventario, CRM) — 11/06/2026**
-  PR #143 mergeado. Cierra la deuda de reimplementación detectada en la auditoría de estructura (PR #141).
-  Patrón Ports & Adapters: cada vertical aporta su adapter que implementa la interfaz del módulo compartido.
-  Sin cambios de BD — solo adaptadores + reuso de funciones puras del módulo.
-  - **ialimp (multi-tenant):**
-    - `apps/ialimp/lib/adapters/proveedores.ts` → `ProveedorAdapter<ProveedorRow>` sobre `@iarest/module-proveedores`
-    - `apps/ialimp/lib/adapters/inventario.ts` → `ArticuloAdapter<ProductoStockRow>` + `AsignacionAdapter<StockConsumoRow>` sobre `@iarest/module-inventario`
-    - `apps/ialimp/lib/adapters/crm.ts` → `OportunidadAdapter<LeadRow>` con mapeo de estados (`propuesta_enviada→propuesta`, `presupuestado→negociacion`) sobre `@iarest/module-crm`
-    - `api/admin/proveedores` GET: añade `proveedores_canonicos`; `api/admin/stock` GET: añade `resumen`; `api/admin/leads` GET: añade `pipeline`
-    - `package.json`: deps `module-proveedores`, `module-inventario`, `module-crm` con `workspace:*`
-  - **sivra (single-tenant):**
-    - `apps/sivra/lib/adapters/proveedores.ts` → igual que ialimp pero sin `empresa_id`
-    - `apps/sivra/lib/adapters/inventario.ts` → catálogo de referencia (`cantidadTotal=0`, sin stock operativo)
-    - `api/admin/limpiadoras/proveedores` GET: añade `proveedores_canonicos`; `api/admin/limpiadoras/productos` GET: añade `resumen`
-    - `package.json`: deps `module-proveedores`, `module-inventario`
-  - **Radiografía:** 0 reimplementaciones (antes 3). `kits_limpiadoras` queda fuera del módulo a propósito (asignación permanente limpiadora ≠ AsignacionActivo por sesión).
-  - **✅ PR #143 MERGEADO a `main` — 11/06/2026.** Builds Vercel todos verdes (ialimp, sivra, plataforma, ia-rest).
-
-- **🏛️ Concursos F7 — Radar PLACSP + OCR (CIERRA el agente F2–F7) — 11/06/2026**
-  Última fase del agente de concursos (`packages/module-concursos`). Plan:
-  `docs/superpowers/plans/2026-06-11-concursos-f7-radar-ocr.md`.
-  - **Módulo puro (`src/radar.ts`, TDD, 7 tests nuevos → 79/79 verde):** `coincideRadar` (empareja un anuncio con los
-    criterios de la empresa: CPV por prefijo +50, palabras clave sin acentos +30; presupuesto fuera de rango DESCARTA),
-    `filtrarRadar` (los que casan, ordenados por relevancia) y `necesitaOcr` (heurística: texto extraído < `MIN_TEXTO_PLIEGO`=200
-    → PDF escaneado, hay que pasarle OCR). Tipos `AnuncioRadar`/`CriteriosRadar`/`CoincidenciaRadar`. Sigue puro (sin BD/IA/secretos).
-  - **Infraestructura pendiente (documentada, NO en esta sesión):** el **sondeo en vivo de PLACSP** (feed Atom de la
-    Plataforma de Contratación del Sector Público → normalizar a `AnuncioRadar[]` → `filtrarRadar` por empresa → avisar por
-    web-push) y el **motor OCR** (cuando `necesitaOcr` es true: Tesseract/cloud) requieren cron + claves; el módulo expone el
-    contrato que consumirán. No verificable en este entorno.
-  - **✅ ESTADO DEL AGENTE:** **F2–F7 completas a nivel de módulo puro** (con tests, **79/79**) e **integradas en ialimp F2–F6**
-    (biblioteca · sobre administrativo/DEUC · memoria técnica · oferta económica · presentación/plazos). F7 entrega el núcleo
-    radar/OCR; la captación en vivo queda como infraestructura. Todo en PR #135 (rama `claude/public-tender-agent-module-mid0hu`).
-  - **✅ Migraciones APLICADAS por Alberto en Supabase (`wswbehlcuxqxyinousql`) — 11/06/2026:** `add_biblioteca_concursos.sql`
-    (tabla `biblioteca_documentos`, F2), `add_concursos_perfil.sql` (tabla `concursos_perfil_empresa`, F3),
-    `add_concursos_memoria.sql` (col. `concursos.memoria` jsonb, F4), `add_concursos_oferta.sql` (col. `concursos.oferta` jsonb, F5).
-    Los paneles F2–F5 ya tienen la BD lista en producción.
-  - **✅ PR #135 MERGEADO a `main` — 11/06/2026:** agente de concursos F2–F7 en producción. Se resolvieron 2 conflictos
-    sucesivos con `main` (solo en `docs/CONTEXTO-SESIONES.md`/`apps/ialimp/CLAUDE.md`, entradas de doc en paralelo —
-    conservados ambos lados). Suite 79/79 tras cada merge. Deploy de producción de ialimp disparado por el merge.
-
-- **🏛️ Concursos F6 — Presentación + plazos/subsanación — 11/06/2026**
-  Sexta fase del agente de concursos (`packages/module-concursos`). Cierra el flujo: cuenta atrás al fin de plazo,
-  comprobación de que los sobres requeridos están listos para presentar y plazo de subsanación en días hábiles. Plan:
-  `docs/superpowers/plans/2026-06-11-concursos-f6-presentacion-plazos.md`.
-  - **Módulo puro (`src/presentacion.ts`, TDD, 10 tests nuevos → 72/72 verde):** `diasEntre` (días naturales entre dos
-    fechas ISO en UTC), `sumarDiasHabiles` (suma días hábiles saltando sábados/domingos, sin festivos), `estadoPresentacion`
-    (plazo abierto/urgente ≤3 días + sobres REQUERIDOS: técnico solo si hay juicio de valor, económico solo si hay criterio
-    económico, administrativo siempre → `listo` + `pendientes`) y `plazoSubsanacion` (3 días hábiles por defecto, art. 141 LCSP).
-    Tipos `SobresListos`/`EstadoPresentacion`/`PlazoSubsanacion` en `types.ts`; re-exports en `index.ts`. Sigue puro
-    (sin BD/IA/secretos).
-  - **Integración ialimp (referencia):** **sin migración nueva** (cómputo en vivo en cliente). Panel **"Presentación"** en la
-    ficha de `/admin/concursos`: cuenta atrás al fin de plazo (🔴 urgente / ⛔ cerrado), checklist de sobres listos
-    (administrativo/técnico/económico) que alimenta `estadoPresentacion`, veredicto "Listo para presentar" o lista de pendientes,
-    y aviso del plazo de subsanación (3 días hábiles) calculado con `plazoSubsanacion`. Usa las funciones puras importadas de
-    `@iarest/module-concursos` (sin LLM ni endpoint). `✓ Compiled successfully` (aborta después en "Collecting page data" por
-    `JWT_SECRET` ausente del entorno local — env, no código).
-
-- **🏛️ Concursos F5 — Oferta económica + rentabilidad — 11/06/2026**
-  Quinta fase del agente de concursos (`packages/module-concursos`). Ayuda al licitador a fijar el precio de su
-  oferta: que sea **rentable** (cubre coste + margen), **competitiva** (puntúa) y **no temeraria**. Plan:
-  `docs/superpowers/plans/2026-06-11-concursos-f5-oferta-economica.md`.
-  - **Módulo puro (`src/oferta.ts`, TDD, 9 tests nuevos → 62/62 verde):** `costeTotal` (directos + indirectos),
-    `precioMinimoRentable` (coste, o `coste / (1 − margen/100)` con margen objetivo sobre el precio) y `evaluarOferta`
-    (margen €/%, puntos económicos reutilizando `calcularPuntuacionEconomica`, baja temeraria con `umbralBajaTemeraria`
-    y viabilidad). Tipos `CosteEjecucion`/`EvaluacionOferta` en `types.ts`; re-exports en `index.ts`. El **coste lo aporta
-    la app** (puede venir de contabilidad); el módulo solo opera números. Sigue puro (sin BD/IA/secretos).
-  - **Integración ialimp (referencia):** columna **`concursos.oferta`** jsonb (`prisma/migrations/add_concursos_oferta.sql`);
-    endpoint `app/api/admin/concursos/[id]/oferta` (GET carga / PUT guarda los datos de entrada), con `requireEmpresaId` +
-    Prisma `$queryRaw` con casts (patrón del v1); panel **"Oferta económica"** en la ficha de `/admin/concursos`. La
-    **evaluación se calcula en vivo en el cliente** con `evaluarOferta`/`precioMinimoRentable` (módulo puro importado, sin LLM):
-    precio mínimo rentable, margen, puntos económicos, aviso de baja temeraria y veredicto de viabilidad; el PUT solo persiste
-    los datos de entrada. `✓ Compiled successfully` (aborta después en "Collecting page data" por `JWT_SECRET` ausente del entorno local — env, no código).
-  - **⚠️ Pendiente de Alberto:** aplicar `apps/ialimp/prisma/migrations/add_concursos_oferta.sql` en la BD compartida.
-
-- **🏛️ Concursos F4 — Memoria técnica que puntúa — 11/06/2026**
-  Cuarta fase del agente de concursos (`packages/module-concursos`). Genera la **memoria técnica** atacando los
-  **criterios de juicio de valor** de la ficha y estima cuántos puntos técnicos cubre. Plan:
-  `docs/superpowers/plans/2026-06-11-concursos-f4-memoria-tecnica.md`.
-  - **Módulo puro (`src/memoria.ts`, TDD, 8 tests nuevos → 53/53 verde):** `planificarMemoria` (deriva una
-    sección por criterio de juicio de valor, ordenadas por puntos desc), `construirPromptMemoria` (par
-    `{system, user}` por sección, lo pasa la app al LLM como `construirPromptPliego`) y `coberturaMemoria`
-    (estima puntos cubiertos: una sección "puntúa" si su contenido alcanza `MIN_CONTENIDO_CHARS`; lista las
-    `vacias`). Tipos `SeccionMemoria`/`SeccionMemoriaRellena`/`MemoriaTecnica`/`CoberturaMemoria` en `types.ts`;
-    re-exports en `index.ts`. Sigue puro (sin BD/IA/secretos).
-  - **Integración ialimp (referencia):** columna **`concursos.memoria`** jsonb (`prisma/migrations/add_concursos_memoria.sql`);
-    endpoint `app/api/admin/concursos/[id]/memoria` (GET devuelve memoria guardada + cobertura; POST planifica, redacta
-    cada sección con el LLM vía el **`aiRunner`** de `lib/concursos.ts` —que envuelve `aiComplete` de core-ai— y persiste),
-    con `requireEmpresaId` + Prisma `$queryRaw` con casts (patrón del v1); panel **"Memoria técnica"** en la ficha de
-    `/admin/concursos` (botón "✍️ Generar memoria técnica" + barra de cobertura + secciones en `<details>`).
-    `✓ Compiled successfully` (aborta después en "Collecting page data" por `JWT_SECRET` ausente del entorno local — env, no código).
-  - **⚠️ Pendiente de Alberto:** aplicar `apps/ialimp/prisma/migrations/add_concursos_memoria.sql` en la BD compartida.
-
-- **🏛️ Concursos F3 — Sobre administrativo + DEUC — 11/06/2026**
-  Tercera fase del agente de concursos (`packages/module-concursos`). Genera el **Sobre 1 (administrativo)**
-  de un concurso tirando de la biblioteca de empresa (lista de documentos exigidos con qué doc los cubre),
-  más el **DEUC** y la **declaración responsable** (art. 140 LCSP) rellenos como datos. Plan:
-  `docs/superpowers/plans/2026-06-11-concursos-f3-sobre-administrativo-deuc.md`.
-  - **Módulo puro (`src/deuc.ts`, TDD, 5 tests nuevos → 45/45 verde):** `documentosSobreAdministrativo`
-    (reutiliza `derivarChecklist` del v1 + `tipoDeDocumento` de F2, filtra a sobre `administrativo` y marca
-    `cubiertoPor` con el doc de la biblioteca), `construirDeuc` (ensambla las partes I–IV/VI desde ficha+empresa,
-    motivos de exclusión y veracidad a favor), `construirDeclaracionResponsable` (identidad + afirmaciones estándar).
-    Tipos `DatosIdentificacionEmpresa`/`ItemSobreAdministrativo`/`Deuc`/`DeclaracionResponsable` en `types.ts`;
-    re-exports en `index.ts`. Sigue puro (sin BD/IA/secretos); produce datos (la app los renderiza al PDF/XML oficial más adelante).
-  - **Integración ialimp (referencia):** tabla **`concursos_perfil_empresa`** (`prisma/migrations/add_concursos_perfil.sql`,
-    una fila por empresa, scope `empresa_id`); endpoints `app/api/admin/concursos/perfil` (GET/PUT del perfil) y
-    `app/api/admin/concursos/[id]/sobre-administrativo` (GET cruza ficha + biblioteca + perfil → sobre + DEUC + declaración),
-    ambos con `requireEmpresaId` + Prisma `$queryRaw` con casts (patrón del v1); página `/admin/concursos/perfil` (formulario
-    del perfil) + panel "Sobre administrativo" en la ficha de `/admin/concursos` (botón "📋 Generar sobre administrativo (DEUC)")
-    y enlace "🏢 Perfil de empresa" en cabecera. `✓ Compiled successfully` (aborta después en "Collecting page data" por
-    `JWT_SECRET` ausente del entorno local — env, no código).
-  - **⚠️ Pendiente de Alberto:** aplicar `apps/ialimp/prisma/migrations/add_concursos_perfil.sql` en la BD compartida.
-
-- **🏛️ Concursos F2 — Biblioteca de empresa (PR #135) — 11/06/2026**
-  Segunda fase del agente de concursos (`packages/module-concursos`). El cliente sube sus documentos/datos
-  **una vez** y cada concurso autocompleta su checklist, marca lo que falta y avisa de caducidades. Se diseñó
-  primero el **spec norte del agente completo** (F2–F7: biblioteca · sobre administrativo/DEUC · memoria técnica
-  que puntúa · oferta económica+rentabilidad · presentación/plazos · radar PLACSP+OCR) en
-  `docs/superpowers/specs/2026-06-11-agente-concursos-completo-design.md`, con plan de F2 en
-  `docs/superpowers/plans/2026-06-11-concursos-f2-biblioteca-empresa.md`. Implementación por fases, empezando por F2.
-  - **Módulo puro (`src/biblioteca.ts`, TDD, 12 tests nuevos → 40/40 verde):** `tipoDeDocumento` (clasificador
-    nombre→tipo, conservador, sin acentos), `autocompletarChecklist` (marca `hecho` lo cubierto, inmutable),
-    `documentosFaltantes` (lo que la biblioteca no cubre), `documentosCaducados` (vence antes del corte/fin de plazo).
-    Tipos `TipoDocumentoBiblioteca`/`DocumentoBiblioteca`/`Biblioteca` en `types.ts`; re-exports en `index.ts`. Sigue puro
-    (sin BD/IA/secretos).
-  - **Integración ialimp (referencia):** tabla **`biblioteca_documentos`** (`prisma/migrations/add_biblioteca_concursos.sql`,
-    scope `empresa_id`); endpoint `app/api/admin/concursos/biblioteca` (GET lista/POST alta, `requireEmpresaId` + Prisma
-    `$queryRaw` con casts en SQL, patrón del v1); página `/admin/concursos/biblioteca` ("Mi biblioteca", white-label);
-    `/admin/concursos` autocompleta el checklist (✅/⬜) y avisa de documentos faltantes con enlace. `✓ Compiled successfully`.
-  - **⚠️ Pendiente de Alberto:** aplicar `apps/ialimp/prisma/migrations/add_biblioteca_concursos.sql` en la BD compartida
-    (no aplicado desde la sesión, como el resto de migraciones). Follow-up: `public/manual.html` al promover la sección.
-- **🚀 SIVRA pricing auto — producción activa + legacy eliminado — 11/06/2026**
-  Sesión de cierre: vars Vercel confirmadas por Alberto y motor diario activo.
-  - **✅ Vars Vercel configuradas por Alberto:** `CRON_SECRET`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`,
-    `VAPID_PRIVATE_KEY` → motor diario `apply-auto` (08:30) y notificaciones push **activos en
-    producción** (`sybra.vercel.app`).
-  - **✅ Busto Reform:** `apply_enabled=true`, PriceLabs desconectado → el cron escribe precio
-    base en Smoobu cada mañana según mercado + parámetros del propietario.
-  - **✅ Legacy `detect-opportunities` eliminado:** el cron antiguo mandaba correos con precios
-    calculados por la fórmula vieja (base × SEASONAL × DOW, sin ancla de mercado ni topes del
-    propietario) → cifras absurdas (ej. Dúplex 368€ vs mercado real ~155€). Eliminados: cron en
-    `vercel.json`, endpoint `api/pricing/detect-opportunities`, exclusión del middleware.
-    El motor nuevo (`apply-auto` + `resumen-diario`) lo sustituye completamente.
-  - **⏳ Pendiente de Alberto:** desconectar PriceLabs de Dúplex Center, Luxury Busto y House
-    Sevillana, y activar `apply_enabled` en `sybra.vercel.app/pricing-auto` para cada uno.
-
-- **✅ SIVRA en PRODUCCIÓN: pricing automático + 2 fixes de cuelgue (#108, #113, #115) — 10/06/2026 (tarde)**
-  Los 3 PRs **mergeados a `main` y desplegados** en `sybra.vercel.app` (dominio de prod del proyecto Vercel `sivra`;
-  alias: sybra/sivra-app/housesevillana). Resumen de la tarde:
-  - **#108** pricing automático completo (ver entrada de abajo).
-  - **🐛 #113 — cuelgue "Cargando…" en `/limpiadoras`:** Alberto entró en el móvil con sesión admin caducada + cookie
-    `limpiadora_token` zombi → el middleware lo mandaba a `/limpiadoras`, cuyo `load()` hacía `fetch().json()` **sin
-    try/catch** → si fallaba, `setLoading(false)` nunca corría → spinner eterno, sin logout ni botón atrás. Fix:
-    `app/limpiadoras/page.tsx` valida el token al montar (`GET /api/limpiadoras/auth`; si null → `DELETE` cookie +
-    redirect a login), try/catch/finally + estado error + botón "Reintentar", header con **"Salir"** y enlace
-    **"¿Eres administrador? Entrar"**. Nuevo helper `lib/limpiadora-auth.ts` (token válido O sesión admin) aplicado a los
-    endpoints `/api/limpiadoras/*` (sessions, fichar, complete, incidencias, inventario, early-checkin) → 401 si inválido.
-  - **🐛 #115 — mismo patrón en `/gastos`:** `fetchGastos` sin try/finally → blindado. Auditadas las demás páginas del
-    dashboard (income, inversion, updates, mensajes, seo, properties, calendario, knowledge, mercado): ya correctas.
-  - **🔑 Claves VAPID generadas** (para avisos push): se le pasaron a Alberto por chat para pegar en Vercel
-    (`NEXT_PUBLIC_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`). NO van en el repo.
-  - **⏳ PENDIENTE DE ALBERTO (en Vercel → proyecto sivra → Environment Variables, Production+Preview):**
-    1. `CRON_SECRET` (cadena larga al azar) → **activa el `apply-auto` diario**; sin él el cron no escribe (más seguro) y
-       el panel manual sigue funcionando con su sesión. 2. `NEXT_PUBLIC_VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY` (push).
-       Tras añadirlas: **Deployments → Redeploy**. 3. Desconectar **PriceLabs** en cada piso a automatizar + marcar
-       `apply_enabled` en `/pricing-auto`. (Opcional) `MARKET_API_URL`/`MARKET_API_KEY` para la fuente de mercado auto.
-  - **Acceso del propietario:** `https://sybra.vercel.app/login` con `ADMIN_EMAIL`/`ADMIN_PASSWORD` (los de siempre,
-    viven en Vercel) → menú **⚙ Pricing Auto**.
-
-- **🗑️ Desactivar/reactivar cliente en ialimp (baja reversible, conserva histórico) — 11/06/2026**
-  La UI ya tenía `c.activo` a medio cablear pero SIN backend. Completado: migración
-  `add_cliente_desactivacion.sql` (auditoría `desactivado_*`; `clientes.activo` ya existía, aplicada en
-  Supabase). Rutas `POST /api/admin/clientes/[id]/desactivar` (GET=preview de impacto) y `/reactivar`.
-  Desactivar = `activo=false` + cancela limpiezas futuras no hechas + corta acceso del portal (rota
-  `session_jti`, **nunca a NULL**); conserva facturas, chat, limpiezas hechas y pisos. El cron `pms/sync`
-  excluye propiedades/conexiones de clientes inactivos (si no, recrearía las limpiezas). `GET
-  /api/admin/clientes` devuelve solo activos por defecto (`?incluir_inactivos=1` para todos) → limpia todos
-  los selectores. UI: filtro Activos/Inactivos + modal de confirmación con resumen + aviso de impagos +
-  motivo + botón Reactivar. Spec: `docs/superpowers/specs/2026-06-11-desactivar-cliente-design.md`.
-  **✅ Probado en vivo contra producción** (cliente `[TEST] Pisos Sevilla Centro SL`, sin tocar datos
-  reales): desactivar deja `activo=false` + auditoría `desactivado_*` + `session_jti` rotado (corta sesión
-  del portal) + lo excluye del selector activo y del cron `pms/sync`; reactivar restaura todo y conserva los
-  2 pisos. Ciclo completo verificado y cliente dejado como estaba. Pendiente único: prueba de la UI/HTTP
-  autenticada como Vanessa (no se pudo ejercitar sin su sesión); la capa de datos está verificada.
-
-- **🎛️ God-panel (panel único de operador) F1–F5 en `apps/plataforma/admin` — 10/06/2026 (PR #118)**
-  Panel de Alberto que gobierna TODAS las verticales desde un sitio, reutilizando la tabla `superadmins`
-  (mismo login que el `/superadmin` de ialimp; cookie `plataforma_admin`). Adaptadores por vertical
-  (`lib/adapters/*`, contrato `VerticalAdapter`): ialimp+sivra por BD compartida directa, ia-rest por
-  **puerto HTTP** (`/api/operador/restaurantes`, Bearer `OPERADOR_SHARED_SECRET`). **F1** listado unificado +
-  bloquear/liberar (`empresas.activa`/`restaurantes.activo`) + vista 360. **F2** módulos por cliente: tabla
-  `tenant_modulos` (opt-out) + toggles + gateo real en ialimp (login→`modulos_off` en JWT→middleware; menú
-  oculta lo apagado; default vacío = Vanessa intacta). **F3** crear cliente (empresa ialimp / restaurante
-  ia-rest). **F4** ia-rest por puerto. **F5** unificación NO destructiva (banner en `/superadmin`, sin borrar
-  mailing). Apartado **🗺️ Estructura** (verticales/módulos/agentes). 3 builds verdes; capa de datos probada.
-  **Nota:** la BD ya está unificada (#117/#119) → a futuro el adaptador de ia-rest puede leer el schema
-  `iarest` directo en vez del puerto HTTP. **Pendiente de Alberto:** `OPERADOR_SHARED_SECRET` (plataforma+ia-rest).
-- **✅ CORTE BD ia-rest → proyecto compartido EJECUTADO Y VERIFICADO EN PRODUCCIÓN (PR #117) — 10/06/2026**
-  El corte (Fase A2) está **hecho**: ia-rest producción consulta el schema `iarest` del compartido
-  (`wswbehlcuxqxyinousql`). La causa de que los redeploys no funcionaran NO era caché ni "Sensitive":
-  **el código que lee `NEXT_PUBLIC_SUPABASE_SCHEMA` vivía solo en la rama del PR #110 (sin mergear)**;
-  producción despliega desde `main`, que nunca miró la variable → todo iba a `public` → 404.
-  - **Fix quirúrgico (PR #117, mergeado a main):** extraído de la rama SOLO el interruptor de schema —
-    `lib/supabase.ts` (`SB_SCHEMA`/`SB_OPTS`) + los 9 ficheros con `createClient` (cobertura 100%, 10 call
-    sites), sin arrastrar `module-*` ni nada más. 9 ficheros, +35/−9, env-gated y reversible por envs.
-  - **Verificado con logs de Supabase:** antes del deploy los crons daban 404 (`alerta_reglas`, `comandas`,
-    `qr_sesiones_cliente`, RPCs…); tras el deploy (18:45) **todo 200/204**. El preview del PR ya lo había
-    confirmado (build → `web_restaurante`/`blog_borradores` 200).
-  - **PR #110 TAMBIÉN MERGEADO a `main` (10/06):** todo el trabajo restante de la rama
-    `claude/joaquin-jaen-expansion-4nyju5` (HITO 3 financiero ia-rest en plataforma, `packages/module-*`
-    —crm/inventario/agenda/presupuestos/proveedores/portales/feedback/ocr/asn—, docs de diseño de
-    modularización y materiales/flota) queda en `main`. Conflictos de merge resueltos: `asn/route.ts`
-    (se mantiene la versión con `@iarest/module-asn` + `SB_OPTS`) y `CONTEXTO-SESIONES.md` (versión de la
-    rama, histórico completo). 80 ficheros, +2892/−162. Las 4 apps tenían previews verdes.
-  - **✅ UNIFICACIÓN DE BD COMPLETA (PR #119, mergeado a main):** plataforma leía el financiero de ia-rest
-    del proyecto VIEJO por un puente service-role; ahora lee `iarest.v_resumen_financiero_anual` con la
-    **conexión Prisma normal** (rol `postgres`, con `USAGE` sobre `iarest`; verificado en vivo — `authenticator`
-    NO tiene acceso → aislamiento intacto). Eliminado `apps/plataforma/lib/iarest.ts` y la dependencia de
-    `IAREST_SUPABASE_*`. `next build` de plataforma verde. **Resultado: las 3 apps en UNA sola BD, sin ningún
-    puente externo — nada en el código apunta ya a `efncqyvhniaxsirhdxaa`.**
-  - **PENDIENTE (todo de Alberto, ya nada de unión por mi parte):** borrar de Vercel (plataforma) las envs
-    `IAREST_SUPABASE_URL`/`IAREST_SUPABASE_SERVICE_KEY` (ya no se usan); resetear password BD del proyecto viejo
-    (quedó en chat) y **jubilar `efncqyvhniaxsirhdxaa`** cuando lo vea estable. ~~`add_concursos.sql` (del #116)~~
-    → **✅ aplicada** (11/06). Opcional/mío con tu OK: `DROP iarest._mig_ddl` (andamiaje de la migración,
-    destructivo). Rollback del corte = revertir las 3 envs de Vercel de ia-rest (el código en `main` sin
-    `NEXT_PUBLIC_SUPABASE_SCHEMA` vuelve a `public`).
-  - **Skill `ia-rest-maestro` actualizada:** sección Supabase y tabla de infraestructura apuntan al compartido
-    `wswbehlcuxqxyinousql` + schema `iarest` (con nota de fijar el schema en todo cliente/Realtime/EF nuevo).
-- **🏛️ NUEVO módulo `packages/module-concursos` — agente de concursos públicos (v1) — 10/06/2026**
-  Módulo enchufable (patrón `module-contabilidad`: lógica **pura** TS, sin BD, sin UI, sin secretos) para preparar
-  documentación de licitaciones (LCSP). **NO es una vertical**: cualquier app lo consume para que su cliente, de
-  **cualquier sector** (limpieza, catering, fontanería…), se presente a concursos. El LLM entra por un **puerto
-  inyectado `AiRunner`** → el módulo nunca importa `core-ai` ni lee `process.env`.
-  - **API del módulo:** `analizarPliego(runner, texto)` / `analizarConcurso(runner, texto, perfil, hoy)` →
-    `FichaConcurso` (objeto, presupuesto, plazos, solvencia, criterios con pesos/fórmula, documentos por sobre) +
-    derivados puros: `derivarChecklist`, `evaluarGoNoGo` (semáforo + banderas rojas), `calcularGarantias`,
-    `umbralBajaTemeraria` (RGLCAP art. 85), `calcularPuntuacionEconomica`. **28 tests** (`node --test`, 28/28 verde).
-  - **Integración de referencia en ialimp** (1er consumidor, validable de punta a punta): dep `workspace:*` +
-    `transpilePackages`; `lib/concursos.ts` (AiRunner con `aiComplete` + `extraerTextoPdf` con `pdf-parse`);
-    ruta `app/api/admin/concursos/analizar` (POST analiza PDF/texto y persiste, GET lista; scope `empresa_id`);
-    página `/admin/concursos` (subir pliego → ficha + semáforo Go/No-Go + checklist); enlace en el menú del dashboard;
-    migración `prisma/migrations/add_concursos.sql` (tabla `concursos`, jsonb ficha/checklist/go_no_go/garantias).
-  - **Verificado:** `✓ Compiled successfully` en `next build` de ialimp (transpilePackages resuelve el módulo; ruta y
-    página emitidas en `.next`). **Aislamiento OK** (grep: sin imports de `@iarest/*`/`process.env`/prisma en `src/`).
-    **PR #116 (borrador)** — CI Vercel en **verde** (ialimp, ia-rest, sivra, plataforma → Ready).
-  - **Roadmap (mismo módulo, fases F2–F9):** biblioteca de empresa, sobre administrativo/DEUC, memoria técnica que
-    puntúa, oferta económica + rentabilidad (cruce `module-contabilidad`), plazos/subsanación, presentación lista para
-    subir, RAG + radar PLACSP, OCR. Spec del v1: plan aprobado en sesión.
-  - **Pendiente de Alberto:** ~~`add_concursos.sql`~~ → **✅ aplicada en BD compartida (11/06)**. El v1 lee
-    `NVIDIA_API_KEY` (ya configurada en ialimp). Manual `public/manual.html` y la doc de regla de
-    `apps/ialimp/CLAUDE.md` quedan como follow-up al promover la sección a producción.
-
-- **✅ SIVRA pricing automático — PRODUCTO COMPLETO mergeado a producción (PR #108) — 10/06/2026**
-  De piloto a producto vendible en una sesión. Sobre el motor anclado al mercado + panel `/pricing-auto`:
-  - **Automático de verdad:** pipeline de crons en `vercel.json` — `07:30` `pricing/guard` (detector de reversión de
-    PriceLabs + suelo de coste), `08:30` `pricing/apply-auto` (escribe el precio respetando pausa, guardia de confianza
-    y `apply_enabled`), `09:00` `pricing/resumen-diario` (email+push).
-  - **Salvaguardas ("no puede fallar"):** pausa global (`pricing_config.paused`, botón de pánico), guardia de confianza
-    (no escribe con <5 comps o mercado >7d), detector de reversión (alerta `precio_revertido`), `pricing/restore`
-    (deshacer), topes min/max del propietario como autoridad final.
-  - **Motor:** `lib/pricing-calendar.ts` (compartido con snapshot) → `eventFactor` (Semana Santa/Feria, +50% máx, flag
-    `events_enabled`) y `gap_discount_pct` (noche-hueco). Conversión huésped→base por `channel_markup`.
-  - **Panel ampliado:** medidor € extra vs PriceLabs (`pricing/resultados`), histórico (`pricing/historial`), restaurar,
-    pausa, botón de avisos push, toggles de eventos. Endpoints `pricing/settings` (GET estado+reco / PATCH).
-  - **Avisos:** `lib/pricing-notify.ts` (email `@iarest/core-email` + push). `lib/push.ts` (`@iarest/core-push`),
-    tabla **dedicada** `pricing_push_subs` (aislada de `push_subscriptions` compartida), suscripción
-    `/api/propietario/push-subscribe` + SW `public/sw.js`.
-  - **Seguridad:** `lib/cron-auth.ts` — crons de pricing/mercado exigen `CRON_SECRET` (o sesión admin); transición abierta
-    si no está definido. Fuente de mercado automática (Estrategia 2) `mercado/ingest-auto` gated por `MARKET_API_*`.
-  - **Migraciones BD (`wswbehlcuxqxyinousql`):** `pricing_settings`+`events_enabled`/`gap_discount_pct`, `pricing_config`,
-    `pricing_push_subs`. **Mergeado a `main` y desplegado a producción (`sybra.vercel.app`).**
-  - **✅ Vars Vercel configuradas (11/06):** `CRON_SECRET`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` —
-    motor diario y push activos en producción. Pendiente: activar `apply_enabled` en los otros 3 pisos al
-    desconectar PriceLabs. Doc: `apps/sivra/docs/pricing-automatico.md`.
-
-- **🔵 Migración BD ia-rest → proyecto compartido (Fase A2) — rama `claude/joaquin-jaen-expansion-4nyju5` — 10/06/2026**
-  Unificación de datos: ia-rest deja su proyecto Supabase separado (`efncqyvhniaxsirhdxaa`) y pasa al
-  **compartido `wswbehlcuxqxyinousql`** en un **schema propio `iarest`** (ialimp/sivra siguen en `public`).
-  Ejecutado por **dblink server-to-server** + ejecutor plpgsql (sin tooling local). Detalle y corte final en
-  `docs/RUNBOOK-migracion-bd-iarest.md`.
-  - **Esquema migrado y verificado (paridad):** 215 tablas + 47 vistas + 121 funcs + 428 policies + 32 triggers
-    + 428 FKs + 731 índices + 5 secuencias. **0 funciones con `search_path=public`** (aislamiento total vs
-    ialimp/sivra). Única tabla sin RLS aparte de la temporal: `instagram_estilos_usados` (paridad: en origen
-    tampoco tenía). Vistas/tablas clave (`restaurantes`, `leads`, `v_resumen_financiero_anual`) queryables
-    (0 filas = migración solo-esquema; datos demo desechables, la app arranca limpia).
-  - **Código ia-rest listo:** `SB_SCHEMA`/`SB_OPTS` en `src/lib/supabase.ts` (lee `NEXT_PUBLIC_SUPABASE_SCHEMA`,
-    default `public` = comportamiento actual) + 8 ficheros con `createClient` propio parcheados. `next build` verde.
-  - **Edge Functions: 43/43 migradas** al compartido, cada `createClient` a schema `iarest`, verify_jwt cuadrando
-    con origen (true solo en monitor-health, stripe-checkout, analizar-cv, lead-research). Se desbloqueó tras
-    Alberto borrar funciones basura (de ~100 → 44, tope del plan).
-  - **PENDIENTE (solo Alberto, en orden):** (1) re-meter secrets de Edge Functions en el compartido
-    (Stripe/MONEI/NVIDIA/Telegram/Resend/VeriFactu…); (2) Settings→API→Exposed schemas → añadir `iarest`;
-    (3) Vercel ia-rest → swap `NEXT_PUBLIC_SUPABASE_URL`/`ANON_KEY`/`SERVICE_ROLE_KEY` al compartido + añadir
-    `NEXT_PUBLIC_SUPABASE_SCHEMA=iarest` → Redeploy. **Luego (yo):** smoke test, plataforma lee iarest nativo
-    (retirar puente service-role), DROP `iarest._mig_ddl`. **Después:** resetear password BD ia-rest (quedó en
-    chat) y jubilar proyecto viejo. Rollback = revertir las 3 envs de Vercel.
-
-- **✅ HITO 3 (financiero ia-rest en plataforma) + 📐 diseño de modularización — rama `claude/joaquin-jaen-expansion-4nyju5` — 09/06/2026**
-  Preparación de la reunión con **Joaquín Jaén** (holding: restaurante, catering, haciendas de eventos, alquiler de
-  materiales, transporte de camiones, tiendas de comida para llevar). Dos entregables:
-  - **HITO 3 (código):** plataforma ya consolida el financiero de ia-rest, que vive en BD **separada**
-    (`efncqyvhniaxsirhdxaa`). Nueva vista `v_resumen_financiero_anual` (migración `apps/ia-rest/supabase/migrations/
-    20260609_*`, **ya aplicada** vía MCP) que agrega `facturas_verifactu.base_imponible` (ingresos) y
-    `facturas_compra.importe_base` (gastos) por `local_id`+`anio`. Nuevo cliente service-role
-    `apps/plataforma/lib/iarest.ts` (`@supabase/supabase-js`) y `getResumenIaRest(localId, anio)` en `lib/financiero.ts`
-    (ya no es stub "BD separada"). UI `GestionSociedad.tsx` pide `refExt`=`local_id` para `app='ia-rest'`. `refExt` = UUID del local.
-    Typecheck verde. **PENDIENTE de Alberto:** añadir envs `IAREST_SUPABASE_URL` + `IAREST_SUPABASE_SERVICE_KEY` en Vercel (plataforma).
-  - **Diseño de modularización (doc):** `docs/DISENO-modularizacion-verticales.md` — sacar de ia-rest las capacidades
-    horizontales (CRM, agenda, inventario, presupuestos, proveedores, portales, feedback, ocr, asn) a `packages/module-*`
-    con patrón conector/adaptador + agregado genérico `Encargo`, registro de KPIs en plataforma, intercompany del holding,
-    y matriz de consumo por negocio (incl. plantilla "clínica estética"). **Sin extraer código aún** (siguiente ronda).
-  - **Diseño a fondo materiales/flota (hecho):** `docs/DISENO-modulos-materiales-flota.md` — extiende
-    `inventario_menaje*` (alquiler: tarifas, fianza, daños) y `vehiculos_grupo`+`evento_transporte` (flota:
-    ITV/seguro/mantenimiento, rutas multi-parada, asignación inteligente) hacia `module-*`, con doble
-    facturación interno(intercompany)/externo. **Pendiente:** extracción real de los `module-*` y construir las verticales.
-  - **`packages/module-crm` (hecho):** primer `module-*` real — tipos genéricos (`Oportunidad`, `ParentRef`
-    con `parentType` = costura del Encargo), puertos (`OportunidadRepository`, `OportunidadAdapter<T>`) y lógica
-    pura de pipeline (`resumenPipeline`, `valorPonderado`, probabilidad por estado). Agnóstico de BD.
-  - **Extracción CRM en ia-rest (HECHA, definitiva):** ia-rest consume `@iarest/module-crm`. Nuevo
-    `apps/ia-rest/src/lib/crm-eventos.ts` con `leadsEventoAdapter` (mapea `leads_evento` ↔ `Oportunidad`,
-    estado `presupuesto_enviado`↔`propuesta`, `evento_id`→`parent`). La ruta `api/owner/eventos/leads` delega
-    el cálculo de pipeline en `resumenPipeline` del módulo (contrato de respuesta preservado + nuevo `valor_ponderado`).
-    Verificado con `next build` real (Next 16) en verde. El CRM super-admin (`leads`) queda intacto (otro concern).
-  - **`packages/module-inventario` + extracción en ia-rest (HECHO, definitivo):** módulo genérico (`Articulo`,
-    `AsignacionActivo` con `parent/parentType`, helpers `disponibilidadTrasReserva/Devolucion`, `costeDanos`,
-    `resumenStock`). ia-rest: `apps/ia-rest/src/lib/inventario-menaje.ts` (`menajeArticuloAdapter` +
-    `menajeAsignacionAdapter` sobre `inventario_menaje`/`inventario_menaje_evento`); la ruta `api/owner/menaje`
-    delega la regla de disponibilidad en el módulo. Base del futuro **alquiler de materiales**. `next build` verde.
-  - **`packages/module-presupuestos` + extracción en ia-rest (HECHO, definitivo):** módulo genérico (líneas,
-    costes, descuento, `calcularMargen`, `esRentable`, `resumenPresupuesto`). ia-rest:
-    `apps/ia-rest/src/lib/presupuestos-evento.ts` (`presupuestoEventoAdapter` + `costesDeEvento`, mapea la
-    tarifa adulto/niño + costes a líneas genéricas); la ruta `api/owner/eventos/presupuestos` delega el cálculo
-    de margen/rentabilidad en el módulo. `next build` verde.
-  - **`packages/module-proveedores` + extracción en ia-rest (HECHO):** módulo genérico (`ProveedorServicio` con
-    `parent`, `calcularComision`, `totalComisiones`, `comisionesCobradas`). ia-rest:
-    `apps/ia-rest/src/lib/proveedores-evento.ts` (`proveedorServicioAdapter`, estado `comision_cobrada`↔`cobrada`);
-    ruta `api/owner/eventos/proveedores-asignaciones` delega comisión y sumas. `next build` verde.
-  - **`packages/module-feedback` + extracción en ia-rest (HECHO):** módulo genérico (`Feedback`, `Propina` con
-    `parent`/token, `resumenValoraciones`, `totalPropinas`, `propinasPagadas`). ia-rest:
-    `apps/ia-rest/src/lib/feedback-visita.ts` (`feedbackVisitaAdapter` + `propinaAdapter`); las rutas
-    `api/owner/feedback` y `api/owner/propinas` añaden un `resumen` agregado vía el módulo. `next build` verde.
-  - **`packages/module-asn` + extracción en ia-rest (HECHO):** módulo genérico (`ASN`, `LineaASN`,
-    `totalLineas`, `unidadesTotales`). ia-rest: `apps/ia-rest/src/lib/asn-pedido.ts` (`asnItemAdapter` sobre
-    `pedidos_proveedor.asn_items`); la ruta pública `api/asn` añade `total_albaran` vía el módulo. `next build` verde.
-  - **`packages/module-agenda` (HECHO, contrato):** módulo genérico de disponibilidad/reserva de recurso
-    (`Recurso`, `Reserva`, `Intervalo`, `haySolape`, `recursoDisponible`, `recursosDisponibles`). Es el motor
-    transversal de venues/flota/alquiler/citas. Sin extracción de ia-rest (los eventos son por fecha, no reserva
-    de recurso) → queda como contrato para las verticales nuevas. Typecheck verde.
-  - **✅ MODULARIZACIÓN COMPLETA: 7 `module-*`** (crm, inventario, presupuestos, proveedores, feedback, asn, agenda).
-    6 con extracción real en ia-rest verificada con `next build`; agenda como contrato. Costura común `parent/parentType`
-    (agregado Encargo). **Siguiente:** construir las verticales nuevas (alquiler de materiales, flota) componiendo estos módulos.
-  - **📋 Informe de unificación + decisión de BD (HECHO):** `docs/INFORME-unificacion-central.md` — foto del estado
-    (matriz de adopción de `core-*`/`module-*` por app, qué está unido vs duplicado), esquema de capas, y plan de 6 fases.
-    **DECISIÓN (Alberto): BD UNIFICADA** — un solo proyecto Supabase con **schemas por vertical** (`iarest/ialimp/sivra`)
-    + **schema de control** (cuentas/sociedades/negocios/usuarios/RBAC/módulos/billing). Como **ia-rest NO tiene clientes
-    activos**, su BD (`efncqyvhniaxsirhdxaa`) **se migra a la compartida AHORA** (no la última); el conector service-role
-    de HITO 3 queda como puente temporal + válvula para BD dedicada de un futuro cliente grande. **Arranque sugerido:**
-    Fase A2 (migrar ia-rest) + Fase A (identidad/RBAC sobre core-identity, migrar sivra de NextAuth) → dedupe → contabilidad.
-  - **Ejecución de la unificación — INCREMENTOS HECHOS (verificados con build/tsc):**
-    1. **Fase C·1** validadores fiscales NIF/CIF/IBAN → `core-fiscal` (subpath `/validacion` puro); ialimp re-export. `next build` ✅.
-    2. **Fase A** fábrica de tokens jose (`createSessionToken`/`verifySessionToken` + jti) en `core-identity`. tsc ✅.
-    3. **Fase A** plataforma adopta esa fábrica (`lib/auth.ts` delega, firmas idénticas). build ✅.
-    4. **Fase D** registro `ResumenProvider` en plataforma (`financiero.ts`, DataConnector SPI, sustituye `if app===`). tsc ✅.
-  - **PENDIENTE de la unificación (orden):** adoptar el contrato auth en ialimp (live) y **migrar sivra de NextAuth**;
-    Fase B (ia-rest adopta `module-contabilidad`); resto Fase C (supabase client ialimp [keys mezcladas anon/service],
-    `aiExtractInvoice`→core-ai, ia-rest→core-email); **Fase A2 EJECUTADA (2026-06-10): esquema de ia-rest MIGRADO al schema `iarest` de la BD compartida**
-    vía dblink server-to-server (215 tablas, 47 vistas, 121 funciones, 32 triggers, 428 policies, 428 FKs,
-    448 índices, buckets) con paridad verificada — ver `docs/RUNBOOK-migracion-bd-iarest.md` (ESTADO REAL).
-    Código ia-rest listo para el corte por envs (`SB_OPTS`/`NEXT_PUBLIC_SUPABASE_SCHEMA`). **CORTE PENDIENTE de:**
-    (1) migrar las **43 Edge Functions** del proyecto viejo al compartido (solo 16 con fuente en repo, resto vía
-    MCP get_edge_function) parcheadas a schema iarest; (2) Alberto re-introduce los secrets de functions;
-    (3) Alberto añade `iarest` a Exposed schemas; (4) Alberto cambia 3 envs Vercel + añade
-    `NEXT_PUBLIC_SUPABASE_SCHEMA=iarest` + Redeploy; (5) smoke test + plataforma nativa + DROP `iarest._mig_ddl`
-    + resetear password BD ia-rest (quedó en chat). La app sigue 100% en la BD vieja hasta el corte (nada roto).
-
-- **🔄 PR #107 — ialimp consume `nimVision` de core-ai en 6 rutas IA (feat/ialimp-ia-core-ai) — 09/06/2026**
-  Las 6 rutas de visión de ialimp dejaban de pasar por el módulo y llamaban a la API NVIDIA inline. Ahora delegan en `nimVision`:
-  - **`core-ai/nim.ts`**: `nimVision` 6º param `signal?` → `opts: {temperature?, signal?}` (aditivo). Permite afinar temperatura
-    (OCR 0.05 / fotos 0.1; antes fija 0.1). Si `system` va vacío, NO envía mensaje de sistema (replica el patrón
-    single-user-message de los agentes ialimp). Conserva `nimChat` (multi-turno) de main.
-  - **Rutas migradas** (preservan modelo 90b-vision, temp y max_tokens exactos): `admin/ia/{analizar-foto(0.1/256),
-    comparar-foto(0.1/400),analizar-botes(0.05/600)}`, `admin/escanear/process(0.05/800)`,
-    `cron/procesar-documentos(0.05/800)`, `propietario/[token]/escanear(0.1/1200)`.
-  - **sivra** `aiExtractInvoice`: adapta su llamada a `{ signal: AbortSignal.timeout(30_000) }` (forma opts). **ia-rest** `callAIVision`
-    pasa 5 args → sin cambios. `upload-photo` solo llama a analizar/comparar server-to-server → no toca NVIDIA.
-  - PR en draft; CI en cola. **Pendiente:** validar preview ialimp (escáner docs + análisis fotos) antes de mergear.
-
-- **✅ PR #105 + #106 MERGEADOS A PRODUCCIÓN — 09/06/2026** (deploy ialimp `app.ialimp.es` READY, verificado en Vercel)
-  - **#105** (unificar crypto + aiComplete): `core-identity/crypto.ts` (`genHex/genJti/sha256Hex`) + `core-ai/client.ts`
-    (`aiComplete`). Adopción en ialimp (auth, propietario-auth, ai-client, enviar-acceso, 4 rutas hashPin), plataforma (auth),
-    sivra (ai-client). Fix CI: `NimChatMessage` se importa de `./nim`, no `./types`. Fix audit: `enviar-acceso` usa `sha256Hex`.
-  - **#106** (demo ia.rest): `GET /api/demo` + `POST /api/demo/seed` (protegido por env `DEMO_SEED_SECRET`) → crea "Bar Demo"
-    (slug `demo`, código `DEMO`, PINs 1234/2222/3333/4444, 8 mesas, 17 productos, turno activo). Idempotente.
-    **PENDIENTE de Alberto:** añadir env `DEMO_SEED_SECRET` en Vercel `ia-rest` y llamar al seed para testear.
-  - **Auditoría exhaustiva del monorepo** (7 módulos + 4 apps): estado SANO. Pendientes menores: 2 rutas sivra con
-    `crypto.subtle` inline (opcional), ia-rest financiero en plataforma (BD separada). **ia.rest mensajería** = tabla
-    `mensajes_turno` (chat camarero↔cocina, privado/grupo, audio), totalmente implementada.
-  - **Vanessa puede trabajar**: producción intacta y estable (los cambios solo mueven código, sin tocar BD/RLS/buckets).
-
-- **✅ BD plataforma desmembrada (estructura real) — 09/06/2026**
-  Sociedades reales en `wswbehlcuxqxyinousql` (tabla `sociedades`):
-  - **Alberto Suárez Gutiérrez** (CIF vacío — editable desde `/dashboard` con ✎):
-    - ia.rest (hostelería, app=ia-rest) — sin clientes aún, muestra "📊 BD separada"
-    - Casa Sevillana (inmobiliario, app=sivra)
-    - Busto Reform, Duplex Center, Luxury Busto (inmobiliario, app=sivra, con sus `ref_ext` de propiedades Smoobu)
-  - **Sique Brilla SL** (B22992523, NIF real de `empresas`):
-    - Sique Brilla (limpieza, app=ialimp, `ref_ext=05edacff-ea49-42fe-8997-f9369613a845`)
-  Eliminada la sociedad fake "Tu Empresa SL" (CIF B12345678). Restructurado por SQL directo vía Supabase MCP.
-  **Próximo paso:** cuando Vanessa empiece a operar (reactivar `documentos_contables.activo=true`), el financiero de Sique Brilla aparecerá automáticamente en el dashboard. Alberto puede ajustar el CIF de su sociedad personal desde la UI.
-
-- **✅ HITO 5 — Plataforma CRUD completo (edición + registro de cuenta) — 09/06/2026**
-  (PR #104 mergeado; producción `https://plataforma-ten-flame.vercel.app`)
-  - `PATCH /api/sociedades/[id]` y `PATCH /api/negocios/[id]` — edición scoped por `cuenta_id`.
-  - `POST /api/auth/register` + `/register` — alta de cuenta por UI con auto-login (`/register` público en middleware).
-  - `EditarSociedadBtn`/`EditarNegocioBtn` — modales ✎ con valores precargados.
-  - **Plataforma COMPLETA**: registro · login · CRUD sociedad/negocio · financiero real (ialimp+sivra).
-  - **PENDIENTE:** volcar Sique Brilla (cuenta real) + ia-rest financiero (sin clientes aún).
-
-- **✅ HITO 4 — Gestión de sociedades y negocios por UI en plataforma — 09/06/2026**
-  (PR #103 mergeado)
-  - `POST/DELETE /api/sociedades` y `POST/DELETE /api/negocios` — crear/eliminar scoped por `cuenta_id`.
-  - `GestionSociedad.tsx` — modales ＋ Sociedad / ＋ Negocio / ✕, con `router.refresh()`.
-
-- **✅ HITO 3 — Dashboard financiero en plataforma (ialimp + sivra) — 09/06/2026**
-  (PR #102 mergeado; preview producción `https://plataforma-ten-flame.vercel.app`)
-  - **`apps/plataforma/lib/financiero.ts`** nuevo: `getResumenNegocio(app, refExt, anio)` dispatcher.
-    - `ialimp` → `getResumenIalimp(empresaId, anio)`: lee `v_contab_pyg` WHERE `empresa_id` + `anio`.
-    - `sivra` → `getResumenSivra(anio, propertyId?)`: suma `incomes` + `expenses` por año, filtrado por piso si se pasa `refExt`.
-    - `ia-rest` → `getResumenIaRest()`: devuelve `{disponible:false, nota:'BD separada'}` (BD separada).
-  - **`apps/plataforma/app/dashboard/page.tsx`** actualizado: KPI bar consolidada (ingresos + resultado YTD)
-    + tarjetas por negocio con Ingresos/Gastos/Resultado reales.
-  - **Todos los builds verdes**: ia-rest ✅ · ialimp ✅ · sivra ✅ · plataforma ✅.
-  - **PENDIENTE:** conectar ia-rest BD (`efncqyvhniaxsirhdxaa`) para mostrar datos reales (hoy: "📊 BD separada").
-
-- **✅ HITO 2 CIMIENTO — `Cuenta → Sociedad → Negocio` + `apps/plataforma` shell — 09/06/2026**
-  (PR #101 mergeado; Vercel `https://plataforma-ten-flame.vercel.app`)
-  - **`packages/core-identity`** extendido: `Cuenta`, `Sociedad`, `Negocio`, `Sector`, `CuentaSession`.
-  - **BD compartida (`wswbehlcuxqxyinousql`):** tablas `cuentas/sociedades/negocios` aplicadas.
-    Cuenta de Alberto cargada con 3 negocios: ia.rest (hosteleria), Sique Brilla (limpieza), Casa Sevillana (inmobiliario).
-  - **`apps/plataforma`** en producción: login + dashboard consolidado por sociedad/negocio + links a verticales.
-    Auth: `plataforma_session` + `session_jti`. Stack: Next.js 15 · jose/bcryptjs · Prisma → BD compartida.
-  - **HITO 3 siguiente:** resumen financiero real en tarjetas (federar `module-contabilidad` cruzando las 2 BD).
-
-- **✅ HITO 1 CONTABILIDAD — `packages/module-contabilidad` creado y adoptado en las 3 verticales — 09/06/2026**
-  (PR #100, rama `feat/module-contabilidad`, rebased sobre main con pnpm `workspace:*`)
-  - `packages/module-contabilidad`: módulo TS puro, sin deps npm, DB-agnostic. Exports: tipos PORT
-    (`Apunte`, `IVATrimestral`, `ResumenTesoreria`, `RentabilidadEntidad`, `PlantillaRecurrente`) +
-    funciones puras (`calcularIVA`, `calcularPyG`, `calcularTesoreria`, `calcularRentabilidad`,
-    `calcularCuotaIva`, `calcularTotal`, `round2`).
-  - **ialimp** — `calcularCuotaIva`/`calcularTotal` en `apuntes/route.ts` e `ingresos/route.ts`.
-  - **sivra** — `round2` en `facturacion/route.ts` (reemplaza `Math.round(x*100)/100` × 4 usos).
-  - **ia-rest** — `round2` en `cron/cobro-inactividad/route.ts` (totalEur + comisión).
-  - Todas las apps usan `workspace:*` + `transpilePackages` + `outputFileTracingRoot`.
-  - Previews Vercel: **ialimp ✅ · sivra ✅ · ia-rest ✅** (tras rebase sobre main).
-
-- **🧭 DECISIÓN ESTRATÉGICA: plataforma modular unificada — 09/06/2026 (ver `docs/PLAN-plataforma-modular.md`)**
-  - **Norte del proyecto:** unificar los **módulos transversales** (contabilidad, ventas, almacén,
-    RRHH, marketing, SEO, web, mensajería, IA) en UNA implementación que se **enciende** por vertical;
-    las **verticales se quedan como especialidades** (cada una su peculiaridad). "Una mejora vale para todas".
-  - **3 verticales:** **Hostelería** (ia.rest: restaurantes+catering/eventos+espacios) · **Limpieza/
-    Mantenimiento** (ialimp, lado operativo + servicio) · **Inmobiliario/Propietarios** (= `sivra` +
-    portal-propietario de `ialimp` **UNIFICADOS**; la limpieza es un servicio contratable). sivra+ialimp
-    ya comparten BD; ia.rest tiene otra.
-  - **Principio:** "motor común + enchufe por vertical" (ej. Contabilidad = motor IVA/PyG/tesorería común
-    + de dónde salen ingresos/gastos según el sector). **Fase 1 = Contabilidad** (la de ialimp es la más
-    madura → base del módulo compartido). Fase 2 = unificar Inmobiliario. Fase 3+ = resto de módulos.
-  - **Añadidos al plan:** cuenta/identidad ÚNICA (`core-identity`, su 1er uso) · "marketplace" para
-    encender servicios · datos-compartidos-vs-aislados (mismo motor, 2 BD). **Esquema:** `docs/esquema-
-    casa-marcas.svg`. **Pendiente:** nombre de la matriz (Encaje) → rename del scope. **Metodología:
-    esquema + preview verde antes de cada código; Vanessa intacta.**
-  - **👉 DESARROLLO (lo programa Sonnet):** el plan maestro + **handoff/roadmap está en
-    `docs/PLAN-plataforma-modular.md` §9** (patrón, guardarraíles, hitos, definición de hecho). **Empezar
-    por HITO 1 = módulo Contabilidad compartido** (`packages/module-contabilidad`, agnóstico de BD,
-    adoptar vertical a vertical preservando comportamiento, ialimp la última). Leerlo ENTERO antes de tocar código.
-  - **🔑 EL CLIENTE REAL (§3.bis del plan):** un **DUEÑO con VARIOS negocios de sectores distintos**
-    ("todo dueño accede a todo lo suyo"). Ej.: Joaquín Jaén = restaurante+catering+camiones+tiendas;
-    otro = fontanería+taller. → jerarquía **Cuenta→Negocios→Sector**; **sectores ENCHUFABLES** (no solo
-    3: transporte, fontanería, taller, retail…); `core-identity` es CENTRAL. Refuerza unificar módulos
-    (contabilidad/RRHH/ventas/almacén = 80% igual en cualquier sector). **Nueva Fase 0.5** = cimiento
-    Cuenta→Negocios + identidad única, antes de los módulos.
-
-- **✅ pnpm WORKSPACES + FASE 3 REANUDADA (core-push, core-storage, core-email) — TODO EN PRODUCCIÓN — 09/06/2026**
-  - **Migración a pnpm workspaces (PR #94, en prod las 3 verticales).** Sustituye los `file:` deps por
-    `workspace:*`. Esto **desbloquea** núcleos compartidos con **dependencia npm propia** (lo que `file:`
-    deps no resolvía en Vercel). Config: `pnpm-workspace.yaml`, `.npmrc` (`strict-peer-dependencies=false`
-    + `auto-install-peers` + reintentos de fetch), root `package.json` con `packageManager: pnpm@10.33.0`
-    + `pnpm.onlyBuiltDependencies` (pnpm 10 no corre postinstall por defecto). CI (ci/qa.yml) migrado a pnpm.
-  - 🔴 **CAUSA RAÍZ del fallo de build (resuelta) — LECCIÓN CLAVE:** Vercel **NO usa** nuestro
-    `packageManager`; autodetecta otro pnpm que considera el `pnpm-lock.yaml` *"not compatible"* y
-    **re-resuelve todo el workspace** contra el registro en vivo → tormenta de metadatos → bug de undici
-    `ERR_INVALID_THIS` (`Value of "this" must be of type URLSearchParams`) → install KO. **NO era la
-    versión de Node** (pasaba en 20 y 24). **FIX (en los 3 `apps/*/vercel.json`):** `installCommand` =
-    **`npx --yes pnpm@10.33.0 install --no-frozen-lockfile`** → usa SIEMPRE 10.33, honra el lockfile,
-    sin re-resolución → sin fetches → sin `ERR_INVALID_THIS`, determinista con store fría o caliente.
-  - **Fase 3 reanudada — 2 núcleos nuevos extraídos y EN PRODUCCIÓN:**
-    - **`@iarest/core-push` (PR #95)** — envoltura pura sobre `web-push` (`sendWebPush` → `{ok,gone,...}`).
-      **1er núcleo con dep npm propia** (la prueba de que pnpm lo desbloquea). Consumido por **ia-rest**
-      (`/api/push/send`) e **ialimp** (`lib/push.ts`). Pendiente menor: migrar `ia-rest/lib/qr-notify.ts`.
-    - **`@iarest/core-storage` (PR #96)** — firmado de signed URLs de Supabase Storage vía REST (puro,
-      sin `supabase-js`): `storageObjectPath`/`signStorageObject`/`publicStorageUrl`. Consumido por
-      **ialimp** (`lib/cleaning-photos.ts`, exports preservados) y **sivra** (`/api/limpiadoras/photo`).
-    - **`@iarest/core-email` (PR #97)** — transporter de `nodemailer` desde env (dep npm propia):
-      `createMailTransporter()` (multi-proveedor Resend→SMTP→Gmail) + `gmailTransporter()` (Gmail
-      explícito) + `MAIL_TIMEOUTS`. **ialimp** (`lib/mailer.ts` `getTransporter`/`MAIL_FROM`, idéntico)
-      y **sivra** (4 rutas: resumen-semanal, alerta-ventana, huespedes-repetidos, detect-opportunities,
-      usaban Gmail inline → `gmailTransporter()`; el stub auto-reply no se tocó). sivra solo tiene
-      `GMAIL_*` → mismo proveedor, sin riesgo de cambio.
-    - **`core-push` cerrado en ia-rest (PR #98):** `lib/qr-notify.ts` (último `web-push` inline) migrado a
-      `sendWebPush`; se eliminó la dep `web-push`/`@types/web-push` de ia-rest (el núcleo trae su copia).
-  - **Núcleos compartidos hoy:** `core-ai`, `core-fiscal`, `core-push`, `core-storage`, `core-email`
-    (+ `core-identity` con consumidores: crypto en ialimp/plataforma, identidad en plataforma). Patrón para añadir uno:
-    `packages/core-x` (mirror de `core-ai`) + `workspace:*`/`file:` en las apps + `transpilePackages`. Si tiene dep npm, va en su `package.json`.
-  - **Pendiente Fase 3 (opcional):** que ia-rest adopte `core-email` para su envío con Resend (hoy usa su
-    propio cliente); `core-security` (rate-limit en BD, 1 consumidor).
-  - **Limpieza HECHA por Alberto (09/06):** auto-delete head branches ✅ activado · Vercel `ia-rest-app`
-    e `ialimp-fuentes` ✅ borrados · repos viejos `sivra`/`ialimp` ✅ ARCHIVADOS (read-only). Quedan por
-    borrar 10 ramas mergeadas (comando `git push origin --delete …` desde su terminal).
-  - **🔧 Fix derivado del archivado (PR #99):** archivar el repo `ialimp` detuvo su Action "Deploy landing"
-    = el ÚNICO que desplegaba `ialimp.es` (el workflow del monorepo estaba en `apps/ialimp/.github/`, que
-    GitHub NO ejecuta — solo corre `.github/workflows/` de la RAÍZ). Reubicado a la raíz con rutas a
-    `apps/ialimp/landing/ialimp-es`. **PENDIENTE de Alberto:** añadir el secreto **`VERCEL_TOKEN`** al repo
-    `ia.rest` (Settings → Secrets → Actions) para que la landing vuelva a auto-desplegar; probar con "Run
-    workflow". `ialimp.es` sigue ONLINE (lo ya publicado no se cayó). Proyecto Vercel `ialimp-landing` intacto.
-  - **Pendiente clave:** **Marca de la matriz** → elegir nombre (Claude Design recomienda **"Encaje"**;
-    dominios `encaje.ai`/`encaje.app` libres, `.com`/`.es` ocupados) → renombrar scope `@iarest/* → @<marca>/*`
-    (rename mecánico, listo para ejecutar en cuanto se decida).
-
-- **ℹ️ NOTA OPERATIVA (sesión 09/06):** el **proxy git local da 503 en push** toda la sesión → los push se hacen
-  vía **MCP github** (`push_files`/`create_pull_request`), que sí funciona (API de GitHub directa). El repo GitHub
-  sigue llamándose `ia.rest` (redirige desde/hacia `central`); las llamadas MCP usan `repo: "ia.rest"`.
-
-- **✅ MATRIZ DEFINITIVA: `ia.rest` bajado a `apps/ia-rest`, LIVE en producción — 08/06/2026 (PR #90)**
-  - **Las 3 verticales viven bajo `apps/` y la raíz es la matriz.** `iarest.es` ya sirve desde
-    `apps/ia-rest` (deploy de producción **READY**, Next 16.2.6, `✓ Compiled`, alias `iarest.es`/
-    `www.iarest.es`). `sivra` y `ialimp` ya estaban en `apps/*`.
-  - **Cómo se resolvió que `apps/ia-rest` consuma `packages/*` sin pnpm** (patrón para futuras
-    verticales): `file:` deps (`@iarest/core-ai|core-fiscal` → `node_modules/@iarest/*` por symlink) +
-    `next.config` con `outputFileTracingRoot`/`turbopack.root` = raíz del monorepo + se quitaron los
-    `tsconfig paths` de `@iarest/*` (resuelven por node_modules). CI a `working-directory: apps/ia-rest`.
-    Detalle en `MATRIZ.md`.
-  - **Cutover sin downtime (orden CRÍTICO):** primero Root Directory del proyecto Vercel `ia-rest` →
-    `apps/ia-rest`, **después** merge. (Al revés: la raíz-matriz genera un build vacío de ~1s que
-    "tiene éxito" y **reemplazaría producción** → caída.) Red: Instant Rollback de Vercel.
-  - Verificado antes de mergear: build/tsc/lint/qa **locales** en verde + **CI de GitHub** verde
-    (ambos ya en `apps/ia-rest`).
-  - 🟡 **Limpieza pendiente (sin prisa):** proyectos Vercel `ia-rest-docs` y `repo` (catch-all del
-    root, `live:false`, solo dominios `*.vercel.app`) ahora fallan porque la raíz ya no es app →
-    **borrarlos** o ignorarlos (no afectan a producción). + archivar/borrar repos viejos `sivra`/
-    `ialimp`. + Fase 3 (adopción de `packages/core-*` por sivra/ialimp).
-
-- **🏛️ MATRIZ definida + corrección: `ia.rest` es una VERTICAL, no la matriz — 08/06/2026**
-  - Alberto corrige (acertadamente): en la casa de marcas, **`ia.rest` es una vertical más**, no la
-    matriz. La raíz hace de matriz; las 3 verticales son hermanas bajo `apps/`. Manifiesto nuevo:
-    **`MATRIZ.md`** (raíz) define estructura, verticales y regla.
-  - **Hallazgo técnico (cambia el riesgo del movimiento de ia.rest):** `ia.rest` **ya consume
-    `packages/*`** (`@iarest/core-ai`, `@iarest/core-fiscal` vía `tsconfig paths` +
-    `transpilePackages`, rutas relativas a la raíz). Por eso **bajar `ia.rest` a `apps/ia-rest` NO es
-    un `git mv` simple**: requiere montar **workspace** (pnpm/npm que abarque `apps/*`+`packages/*`)

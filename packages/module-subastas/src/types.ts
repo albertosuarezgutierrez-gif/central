@@ -5,6 +5,8 @@
 // Puro: sin red, sin BD, sin secretos.
 // ────────────────────────────────────────────────────────────────────────────
 
+import type { TipoBien } from './extraccion.ts'
+
 /** De dónde vino el anuncio. Añadir una fuente = añadir un adaptador, nada más. */
 export type Fuente =
   | 'boe'        // Portal de Subastas del BOE (judicial, notarial, AEAT, TGSS)
@@ -52,6 +54,18 @@ export interface SubastaInmueble {
   autoridad?: string | null
   provincia?: string | null
   municipio?: string | null
+  /** Dirección postal (Catastro si la hay; si no, la extraída del anuncio). */
+  direccion?: string | null
+  /** Coordenadas WGS84. Alimentan el mapa nacional y el enlace a Google Maps. */
+  lat?: number | null
+  lon?: number | null
+  /** 'catastro' = parcela exacta · 'municipio' = centroide aproximado (OSM). */
+  geoPrecision?: 'catastro' | 'municipio' | null
+  codigoPostal?: string | null
+  /** Uso principal según Catastro (Residencial, Comercial…). */
+  usoCatastral?: string | null
+  /** Superficie construida OFICIAL, distinta de la registral del anuncio. */
+  superficieCatastro?: number | null
   descripcion?: string | null
   url?: string | null
 
@@ -85,7 +99,22 @@ export interface SubastaInmueble {
   refCatastral?: string | null
   /** Superficie en m², del Catastro o del anuncio. */
   superficie?: number | null
+  /**
+   * De dónde salió `superficie`. Va SIEMPRE con la cifra: los m² del Catastro y
+   * los de la escritura discrepan a menudo (El Puerto de Santa María: 112 vs
+   * 115,66) y quien mira la ficha necesita saber cuál está leyendo.
+   */
+  superficieOrigen?: 'catastro' | 'anuncio' | null
   anioConstruccion?: number | null
+
+  // ── Características físicas del inmueble ──────────────────────────────────
+  // Lo que alguien mira ANTES que el precio: qué es y cómo es. Salen de la
+  // descripción registral (`extraerDatos`) o de la ficha del Catastro.
+  tipoBien?: TipoBien | null
+  dormitorios?: number | null
+  banos?: number | null
+  /** Planta tal cual la publica el anuncio: «séptima», «baja», «2ª»… */
+  planta?: string | null
   /** Valor de referencia del Catastro — base imponible del ITP desde 2022. */
   valorReferencia?: number | null
   /**

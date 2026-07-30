@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-30T06:19:43Z",
-  "sha": "e1aa52873e3b0317292e0e3bfbf1df66b75d12f6",
+  "generadoEn": "2026-07-30T11:20:21Z",
+  "sha": "27297012c21882ac044c52cf6bcb8fa157c53683",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -43754,10 +43754,10 @@
           "nombre": "RevisarBandeja",
           "kind": "function",
           "exportada": true,
-          "params": "{ movimientos, categorias }: { movimientos: Array<{ id: string; fecha: string | null; concepto: string; importe: number }> categorias: Array<{ value: string; label: string }> }",
+          "params": "{ movimientos, destinoLabel }: { movimientos: Array<{ id: string; fecha: string | null; concepto: string; importe: number }> destinoLabel: Record<string, string> }",
           "retorno": null,
-          "linea": 368,
-          "resumen": "Bandeja \"Por revisar\": la IA dudó de la categoría; el dueño la asigna con un desplegable."
+          "linea": 371,
+          "resumen": "Bandeja \"Por revisar\": lo que de verdad estaba en duda es el NEGOCIO del gasto (¿deducible de la correduría, del Dúplex/pisos, o personal?) — no la categoría contable, que para una compra con tarjeta "
         },
         {
           "nombre": "ExportarBtn",
@@ -43765,7 +43765,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 424,
+          "linea": 440,
           "resumen": "Descarga el CSV de todos los movimientos para enviárselo al gestor."
         },
         {
@@ -43774,7 +43774,7 @@
           "exportada": true,
           "params": "{ grupos, resueltos }: { grupos: DupGrupoUI[]; resueltos: DupResueltoUI[] }",
           "retorno": null,
-          "linea": 435,
+          "linea": 451,
           "resumen": "Bandeja \"Posibles cargos duplicados\": pares sospechosos de cobro doble. El dueño los resuelve con un clic (\"Es normal\" / \"Es un cobro doble\"); la decisión persiste. Plegable de \"ya resueltos\" para rea"
         },
         {
@@ -43783,7 +43783,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 559,
+          "linea": 575,
           "resumen": "Botón que abre Claude Code web y copia /facturas-correo al portapapeles listo para pegar."
         },
         {
@@ -43792,7 +43792,7 @@
           "exportada": true,
           "params": "{ cuentas, destinoLabel, initial, periodo }: { cuentas: { id: string; label: string; sincronizada?: boolean }[] destinoLabel: Record<string, string> initial: { movimientos: MovLedgerUI[]; total: number; hayMas: boolean } // Rango por defect",
           "retorno": null,
-          "linea": 598
+          "linea": 614
         },
         {
           "nombre": "IngresosPorRevisar",
@@ -43800,7 +43800,7 @@
           "exportada": true,
           "params": "{ ingresos, destinoLabel }: { ingresos: MovLedgerUI[] destinoLabel: Record<string, string> }",
           "retorno": null,
-          "linea": 878,
+          "linea": 894,
           "resumen": "Bandeja de INGRESOS por revisar: abonos cuyo negocio está sin confirmar. Antes no aparecían en ningún sitio accionable (la revisión de gastos es solo importe<0). Aquí el dueño les asigna el negocio (d"
         },
         {
@@ -43809,7 +43809,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 943
+          "linea": 959
         }
       ],
       "tablas": [
@@ -43817,7 +43817,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "0d8fbcb53b93"
+      "hash": "798dcf6dbb7b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/BenchmarkPisos.tsx",
@@ -44049,7 +44049,7 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: F",
           "retorno": "Promise<T | F>",
-          "linea": 37,
+          "linea": 35,
           "resumen": "/banca = Inicio unificado con control 💶 Dinero | 🏢 Negocios (SegTabs, por navegación → carga perezosa: cada pestaña computa SOLO sus datos). Dinero (por defecto): resumen negocio+personal (misma fue"
         },
         {
@@ -44058,14 +44058,14 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string; tab?: string }> }",
           "retorno": null,
-          "linea": 41
+          "linea": 39
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "74c5f7c77a11"
+      "hash": "99d78d2e13fb"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",
@@ -47359,6 +47359,50 @@
       "hash": "e89c8b49dc54"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/subastas/MapaSubastas.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "MapaSubastas"
+      ],
+      "funciones": [
+        {
+          "nombre": "loadLeaflet",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<any>",
+          "linea": 18
+        },
+        {
+          "nombre": "esc",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 63
+        },
+        {
+          "nombre": "popupHtml",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: Punto",
+          "retorno": "string",
+          "linea": 65
+        },
+        {
+          "nombre": "MapaSubastas",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 95
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6896d975252b"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/subastas/page.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -47382,7 +47426,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "28109f47eb52"
+      "hash": "41abe22a9faa"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/subastas/SubastasClient.tsx",
@@ -47397,7 +47441,7 @@
           "exportada": false,
           "params": "activo = false",
           "retorno": "React.CSSProperties",
-          "linea": 141
+          "linea": 158
         },
         {
           "nombre": "fecha",
@@ -47405,7 +47449,7 @@
           "exportada": false,
           "params": "iso: string | null | undefined",
           "retorno": "string | null",
-          "linea": 148
+          "linea": 165
         },
         {
           "nombre": "Puntuacion",
@@ -47413,7 +47457,7 @@
           "exportada": false,
           "params": "{ v }: { v: number | null }",
           "retorno": null,
-          "linea": 162,
+          "linea": 179,
           "resumen": "Semáforo de la puntuación. `null` se pinta distinto a 0: no es lo mismo."
         },
         {
@@ -47422,7 +47466,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 170
+          "linea": 187
         },
         {
           "nombre": "PanelTesoreria",
@@ -47430,7 +47474,7 @@
           "exportada": false,
           "params": "{ t }: { t: Tesoreria }",
           "retorno": null,
-          "linea": 177,
+          "linea": 194,
           "resumen": "Dinero que hay que tener bloqueado para poder pujar. Lo que importa NO es la suma de depósitos sino el máximo simultáneo: los que no se solapan reutilizan el mismo dinero."
         },
         {
@@ -47439,8 +47483,17 @@
           "exportada": false,
           "params": "{ r, dormitorios }: { r: Rendimiento | null | undefined; dormitorios?: number | null }",
           "retorno": null,
-          "linea": 244,
+          "linea": 261,
           "resumen": "Yield turístico estimado con los pisos PROPIOS. Siempre con el caveat: los pisos de referencia son de Sevilla capital — fuera de ahí es extrapolación."
+        },
+        {
+          "nombre": "Caracteristicas",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ s, plantaAparte }: { s: Subasta; plantaAparte?: boolean }",
+          "retorno": null,
+          "linea": 285,
+          "resumen": "repetirla sería ruido."
         },
         {
           "nombre": "FichaSubasta",
@@ -47448,7 +47501,7 @@
           "exportada": false,
           "params": "{ s, o, acciones, extra }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode }",
           "retorno": null,
-          "linea": 255
+          "linea": 310
         },
         {
           "nombre": "SubastasClient",
@@ -47456,14 +47509,14 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Inicial | null }",
           "retorno": null,
-          "linea": 339
+          "linea": 452
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "e13f169fa0cf"
+      "hash": "e35f13acdf01"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -51189,7 +51242,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 21
+          "linea": 22
         }
       ],
       "tablas": [
@@ -51197,7 +51250,7 @@
         "subastas"
       ],
       "rutaApi": "/api/cron/subastas-enriquecer",
-      "hash": "029d85d02737"
+      "hash": "34a51538cb6a"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-ingesta/route.ts",
@@ -55314,6 +55367,31 @@
       "hash": "2d0adc68db3b"
     },
     {
+      "ruta": "apps/plataforma/app/api/subastas/mapa/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Puntos para el mapa nacional de subastas: las vigentes con coordenadas — exactas del Catastro o aproximadas al centro del municipio, cada una marcada con su precisión. Las que ni eso se cuentan aparte, para que el mapa no parezca completo cuando no lo es.",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 16
+        }
+      ],
+      "tablas": [
+        "next",
+        "subastas",
+        "subastas_radar"
+      ],
+      "rutaApi": "/api/subastas/mapa",
+      "hash": "e16325663bb5"
+    },
+    {
       "ruta": "apps/plataforma/app/api/subastas/oferta/route.ts",
       "ambito": "apps/plataforma",
       "resumen": "Borrador de oferta a la baja para un chollo. La IA SOLO redacta: todas las cifras (precio, mediana de zona, bajadas, antigüedad) salen de la BD y van en el prompt — nunca las inventa el modelo. Cadena gratis de la pasarela.",
@@ -57571,8 +57649,8 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<MovimientoBancario[]>",
-          "linea": 783,
-          "resumen": "Movimientos que la IA marcó \"por revisar\" (categoría dudosa): el dueño les pone categoría."
+          "linea": 784,
+          "resumen": "GASTOS que la IA marcó \"por revisar\": lo dudoso es el NEGOCIO (destino) — la bandeja de /banca lo resuelve vía /api/banca/destino (confirma + aprende regla del comercio)."
         },
         {
           "nombre": "getEvolucionMensual",
@@ -57580,7 +57658,7 @@
           "exportada": true,
           "params": "cuentaId: string, meses = 12",
           "retorno": "Promise<MesEvolucion[]>",
-          "linea": 811
+          "linea": 812
         },
         {
           "nombre": "getMovimientosExport",
@@ -57588,7 +57666,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<MovExport[]>",
-          "linea": 834
+          "linea": 835
         },
         {
           "nombre": "getComparativaMensual",
@@ -57596,7 +57674,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<",
-          "linea": 869
+          "linea": 870
         },
         {
           "nombre": "getGastosPorCategoria",
@@ -57604,7 +57682,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<GastoCategoria[]>",
-          "linea": 896
+          "linea": 897
         },
         {
           "nombre": "getEvolucionPorDestino",
@@ -57612,7 +57690,7 @@
           "exportada": true,
           "params": "cuentaId: string, meses = 6",
           "retorno": "Promise<",
-          "linea": 914
+          "linea": 915
         },
         {
           "nombre": "getAlertas",
@@ -57620,7 +57698,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<Alertas>",
-          "linea": 959
+          "linea": 960
         },
         {
           "nombre": "getDuplicadosSospechosos",
@@ -57628,7 +57706,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<DupGrupo[]>",
-          "linea": 1041,
+          "linea": 1042,
           "resumen": "Pares de gastos sospechosos de cobro doble: mismo importe + misma contraparte/concepto en ±4 días, últimos 60 días, AMBOS sin resolver (duplicado_estado IS NULL). Excluye pares donde los dos están con"
         },
         {
@@ -57637,7 +57715,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<DupResuelto[]>",
-          "linea": 1137
+          "linea": 1138
         },
         {
           "nombre": "resolverDuplicados",
@@ -57645,7 +57723,7 @@
           "exportada": true,
           "params": "cuentaId: string, ids: string[], estado: 'ignorado' | 'confirmado' | null,",
           "retorno": "Promise<number>",
-          "linea": 1161,
+          "linea": 1162,
           "resumen": "Marca (o desmarca) movimientos como duplicado resuelto. Scoped por cuenta_id vía join: solo toca movimientos de cuentas bancarias de la sesión. estado=null → deshacer (vuelve a NULL)."
         },
         {
@@ -57654,7 +57732,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<ResumenDestino[]>",
-          "linea": 1179
+          "linea": 1180
         }
       ],
       "tablas": [
@@ -57668,7 +57746,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "dec9a493222d"
+      "hash": "608772f88498"
     },
     {
       "ruta": "apps/plataforma/lib/base-url.ts",
@@ -57880,6 +57958,37 @@
       "hash": "c7fe08c9c893"
     },
     {
+      "ruta": "apps/plataforma/lib/categoria-reglas.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Taxonomía de CATEGORÍA CONTABLE (eje PGC orientativo) + reglas deterministas por palabra clave. Módulo PURO (sin BD ni red) → testeable con `node --test`. La persistencia y la IA viven en categorizar.ts, que reexporta todo esto para no romper los imports existentes.",
+      "exporta": [
+        "pgcDe",
+        "categorizarPorReglas"
+      ],
+      "funciones": [
+        {
+          "nombre": "pgcDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "cat: string",
+          "retorno": "string",
+          "linea": 28
+        },
+        {
+          "nombre": "categorizarPorReglas",
+          "kind": "function",
+          "exportada": true,
+          "params": "concepto: string | null, contraparte: string | null, importe: number",
+          "retorno": "Categoria | null",
+          "linea": 35,
+          "resumen": "Reglas deterministas: categoriza por palabras clave del concepto/contraparte SIN IA. Cubre la mayoría de movimientos al instante (y sin gastar el cupo gratuito de NIM). Lo que no encaje devuelve null "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ec4a37f9a598"
+    },
+    {
       "ruta": "apps/plataforma/lib/categorias-personales.ts",
       "ambito": "apps/plataforma",
       "resumen": "apps/plataforma/lib/categorias-personales.ts FUENTE ÚNICA de las subcategorías de gasto/ingreso PERSONAL. Antes había 3 listas divergentes (categoria-ia.ts, auto-tag/route.ts, CategoriasTab.tsx) y la auto-clasificación no podía asignar 'seguro' ni 'suministros_piso' y emitía 'otros' donde el resto u",
@@ -57942,20 +58051,12 @@
       ],
       "funciones": [
         {
-          "nombre": "pgcDe",
-          "kind": "function",
-          "exportada": false,
-          "params": "cat: string",
-          "retorno": "string",
-          "linea": 36
-        },
-        {
           "nombre": "categorizarLote",
           "kind": "function",
           "exportada": true,
           "params": "movs: MovParaCategorizar[]",
           "retorno": "Promise<Categorizacion[]>",
-          "linea": 44,
+          "linea": 22,
           "resumen": "Clasifica un lote en una sola llamada IA. Devuelve [] si no hay IA o falla."
         },
         {
@@ -57964,17 +58065,8 @@
           "exportada": true,
           "params": "concepto: string | null, contraparte: string | null,",
           "retorno": "string | null",
-          "linea": 101,
+          "linea": 79,
           "resumen": "Detección determinista de deducciones de cuota IRPF (no de base, sino de cuota directa). mecenazgo: Ley 49/2002 (donaciones a fundaciones) — 80% primeros €150, 40% resto. guarderia: Art.81bis LIRPF (g"
-        },
-        {
-          "nombre": "categorizarPorReglas",
-          "kind": "function",
-          "exportada": false,
-          "params": "concepto: string | null, contraparte: string | null, importe: number",
-          "retorno": "Categoria | null",
-          "linea": 124,
-          "resumen": "Reglas deterministas: categoriza por palabras clave del concepto/contraparte SIN IA. Cubre la mayoría de movimientos al instante (y sin gastar el cupo gratuito de NIM). Lo que no encaje devuelve null "
         },
         {
           "nombre": "guardarCategoria",
@@ -57982,7 +58074,7 @@
           "exportada": false,
           "params": "cuentaId: string, id: string, c: Categorizacion, destino: Destino, subcategoria?: string, confirmado = false, deduccionCuotaTipo?: string | null,",
           "retorno": "Promise<number>",
-          "linea": 151
+          "linea": 104
         },
         {
           "nombre": "subcategoriaIngesta",
@@ -57990,7 +58082,7 @@
           "exportada": false,
           "params": "destino: Destino, importe: number, concepto: string | null, contraparte: string | null, dSub?: string,",
           "retorno": "string | undefined",
-          "linea": 173,
+          "linea": 126,
           "resumen": "Subcategoría de GASTO PERSONAL a fijar en la ingesta. Prioridad: la regla del dueño / vía Pilar (dSub) manda; si no, para gasto personal se intenta la keyword determinista (instantánea, gratis). Devue"
         },
         {
@@ -57999,7 +58091,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 400",
           "retorno": "Promise<",
-          "linea": 183
+          "linea": 136
         },
         {
           "nombre": "casarDevolucionesSepa",
@@ -58007,7 +58099,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<",
-          "linea": 275,
+          "linea": 228,
           "resumen": "Empareja las DEVOLUCIONES de adeudos SEPA (recibos domiciliados devueltos) con su cargo original por la referencia común \"N <ref>\": copia al abono de anulación el destino del cargo y da AMBOS por conf"
         },
         {
@@ -58016,7 +58108,7 @@
           "exportada": true,
           "params": "cuentaId: string, movimientoId: string, categoria: string",
           "retorno": "Promise<boolean>",
-          "linea": 319,
+          "linea": 272,
           "resumen": "Asignación MANUAL de categoría por el dueño (resuelve un \"por revisar\"). Valida la categoría, deriva la cuenta PGC y quita la marca de revisión. Scoped por cuenta_id."
         },
         {
@@ -58025,7 +58117,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 333,
+          "linea": 286,
           "resumen": "Categoriza los movimientos pendientes de TODAS las cuentas que tengan alguno sin analizar (lo usa el cron diario tras sincronizar los bancos). Devuelve el total categorizado."
         }
       ],
@@ -58036,7 +58128,7 @@
         "movimientos_bancarios"
       ],
       "rutaApi": null,
-      "hash": "09463a1d4ffe"
+      "hash": "fad34a725564"
     },
     {
       "ruta": "apps/plataforma/lib/cazador-deducciones.ts",
@@ -59888,7 +59980,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 79,
+          "linea": 82,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -59897,7 +59989,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 109,
+          "linea": 112,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -59906,7 +59998,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 131
+          "linea": 134
         },
         {
           "nombre": "ventanaMinutos",
@@ -59914,7 +60006,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 139,
+          "linea": 142,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -59923,13 +60015,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 151,
+          "linea": 154,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f438c7f7f35d"
+      "hash": "9714f5c336b4"
     },
     {
       "ruta": "apps/plataforma/lib/deducibilidad.ts",
@@ -62949,7 +63041,7 @@
           "exportada": true,
           "params": "dateFrom?: string",
           "retorno": "Promise<",
-          "linea": 118,
+          "linea": 149,
           "resumen": "Re-sincroniza todas las conexiones vinculadas de todas las cuentas (cron diario). dateFrom: override para importar histórico (p. ej. \"2026-01-01\"). Por defecto 89 días."
         }
       ],
@@ -62961,7 +63053,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "cb6706b8b52e"
+      "hash": "7a624a13c9bc"
     },
     {
       "ruta": "apps/plataforma/lib/reclamacion.ts",
@@ -64889,7 +64981,7 @@
           "exportada": true,
           "params": "f: any",
           "retorno": "SubastaInmueble",
-          "linea": 45,
+          "linea": 47,
           "resumen": "Fila cruda de `subastas` → el tipo del módulo."
         },
         {
@@ -64898,7 +64990,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<FilaCriterios[]>",
-          "linea": 88,
+          "linea": 109,
           "resumen": "Cuentas con el radar activo y sus criterios."
         },
         {
@@ -64907,7 +64999,7 @@
           "exportada": true,
           "params": "limite = 500",
           "retorno": "Promise<SubastaInmueble[]>",
-          "linea": 112,
+          "linea": 133,
           "resumen": "Subastas candidatas: en plazo (o sin fecha conocida) y recientes. No se rebarre todo el histórico en cada pasada."
         },
         {
@@ -64916,7 +65008,7 @@
           "exportada": true,
           "params": "cuentaId: string, criterios: CriteriosSubasta, corpus: SubastaInmueble[]",
           "retorno": "Promise<number>",
-          "linea": 134,
+          "linea": 155,
           "resumen": "Casa el corpus con los criterios de una cuenta e inserta lo nuevo. El upsert REFRESCA el snapshot y las cifras: el radar corre a las 06:30, DESPUÉS del enriquecimiento (06:15) y del valor de mercado ("
         },
         {
@@ -64925,7 +65017,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 201,
+          "linea": 222,
           "resumen": "Pasada completa: descarga el corpus UNA vez y lo empareja con cada cuenta."
         }
       ],
@@ -64937,7 +65029,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "0c025a3a0470"
+      "hash": "8e46310e2d32"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/boe.ts",
@@ -65083,8 +65175,8 @@
           "kind": "function",
           "exportada": true,
           "params": "identificador: string",
-          "retorno": "Promise<string[]>",
-          "linea": 45,
+          "retorno": "Promise<DocumentosFicha>",
+          "linea": 52,
           "resumen": "Procesa los documentos de UNA ficha. Devuelve las notas halladas."
         },
         {
@@ -65093,7 +65185,7 @@
           "exportada": true,
           "params": "max = 10",
           "retorno": "Promise<",
-          "linea": 69,
+          "linea": 79,
           "resumen": "Pasada sobre las subastas vivas del BOE sin documentos procesados. Best-effort: un fallo de descarga deja la fila a NULL y se reintenta mañana."
         }
       ],
@@ -65101,7 +65193,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "4218781e7072"
+      "hash": "27e5078b8205"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/enriquecer.ts",
@@ -65110,6 +65202,10 @@
       "exporta": [
         "bajarFicha",
         "bajarCatastro",
+        "bajarCoordenadas",
+        "resolverNombreVia",
+        "buscarRefPorDireccion",
+        "geocodificarMunicipio",
         "capturarResultados"
       ],
       "funciones": [
@@ -65119,7 +65215,7 @@
           "exportada": false,
           "params": "url: string, ms = 20000",
           "retorno": "Promise<string>",
-          "linea": 28
+          "linea": 39
         },
         {
           "nombre": "bajarFicha",
@@ -65127,7 +65223,7 @@
           "exportada": true,
           "params": "identificador: string",
           "retorno": "Promise<FichaBoe>",
-          "linea": 39,
+          "linea": 50,
           "resumen": "Descarga y parsea las tres pestañas de la ficha de una subasta."
         },
         {
@@ -65136,8 +65232,52 @@
           "exportada": true,
           "params": "refCatastral: string",
           "retorno": "Promise<DatosCatastro | null>",
-          "linea": 52,
-          "resumen": "Consulta el Catastro por referencia catastral. `null` si no hay dato."
+          "linea": 72,
+          "resumen": "Consulta el Catastro por referencia catastral. `null` si no hay dato. ⚠️ Solo devuelve datos del BIEN (superficie, año, uso) con la referencia COMPLETA de 20 caracteres. Con la de parcela (14) el serv"
+        },
+        {
+          "nombre": "bajarCoordenadas",
+          "kind": "function",
+          "exportada": true,
+          "params": "refCatastral: string",
+          "retorno": "Promise<CoordenadasCatastro | null>",
+          "linea": 87,
+          "resumen": "Coordenadas WGS84 por referencia catastral (`Consulta_CPMRC`, probado el 30/07/2026). El servicio trabaja a nivel de PARCELA: acepta los 14 primeros caracteres; con la referencia de 20 del bien concre"
+        },
+        {
+          "nombre": "resolverNombreVia",
+          "kind": "function",
+          "exportada": true,
+          "params": "provincia: string, municipio: string, sigla: string, calle: string,",
+          "retorno": "Promise<string | null>",
+          "linea": 99,
+          "resumen": "Nombre OFICIAL de la vía según el callejero del Catastro (`ConsultaVia`, que busca por prefijo). Imprescindible porque el Catastro archiva los artículos al final: «Avenida de Madrid» → «MADRID DE»."
+        },
+        {
+          "nombre": "buscarRefPorDireccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { provincia: string municipio: string sigla: string calle: string numero: string }",
+          "retorno": "Promise<",
+          "linea": 123,
+          "resumen": "DIRECCIÓN → referencia catastral (`Consulta_DNPLOC`, servicio libre; probado el 30/07/2026). Es lo que desbloquea la ubicación EXACTA de la mayor parte del corpus: el BOE publica la dirección del inmu"
+        },
+        {
+          "nombre": "esperarTurnoNominatim",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<void>",
+          "linea": 162
+        },
+        {
+          "nombre": "geocodificarMunicipio",
+          "kind": "function",
+          "exportada": true,
+          "params": "municipio: string, provincia?: string | null,",
+          "retorno": "Promise<CoordenadasCatastro | null>",
+          "linea": 180,
+          "resumen": "Centro del municipio por Nominatim (OSM, gratis). Es el escalón APROXIMADO para las subastas sin referencia catastral (la mayoría del corpus): mejor un pin honesto en el centro del pueblo que un mapa "
         },
         {
           "nombre": "capturarResultados",
@@ -65145,7 +65285,7 @@
           "exportada": true,
           "params": "max = 20",
           "retorno": "Promise<",
-          "linea": 76,
+          "linea": 212,
           "resumen": "el marcado de una CONCLUIDA aún no se ha podido ver, así que el parser (`resultadoDeFicha`) es defensivo — si no reconoce nada deja la fila pendiente y aquí se loguean las claves vistas para ajustar e"
         }
       ],
@@ -65153,7 +65293,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "6ec5dba6e31f"
+      "hash": "ab4db3ccdf86"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/gmail-boe.ts",
@@ -83213,7 +83353,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "34868c7aa332"
+      "hash": "e4db68fb7071"
     },
     {
       "ruta": "packages/module-subastas/src/catastro.ts",
@@ -83222,6 +83362,15 @@
       "exporta": [
         "parsearCatastro",
         "errorCatastro",
+        "refParcela",
+        "direccionCatastro",
+        "parsearInmueblesDnploc",
+        "parcelaUnica",
+        "parsearVias",
+        "nombreViaBuscable",
+        "elegirVia",
+        "paramsDnploc",
+        "parsearCoordenadas",
         "superficieUtil"
       ],
       "funciones": [
@@ -83231,7 +83380,7 @@
           "exportada": false,
           "params": "xml: string, tag: string",
           "retorno": "string | null",
-          "linea": 38
+          "linea": 39
         },
         {
           "nombre": "numero",
@@ -83239,7 +83388,7 @@
           "exportada": false,
           "params": "xml: string, tag: string",
           "retorno": "number | null",
-          "linea": 45
+          "linea": 46
         },
         {
           "nombre": "parsearCatastro",
@@ -83247,7 +83396,7 @@
           "exportada": true,
           "params": "xml: string",
           "retorno": "DatosCatastro",
-          "linea": 54,
+          "linea": 55,
           "resumen": "Convierte el XML de `Consulta_DNPRC` en datos utilizables."
         },
         {
@@ -83256,7 +83405,7 @@
           "exportada": false,
           "params": "",
           "retorno": "DatosCatastro",
-          "linea": 78
+          "linea": 79
         },
         {
           "nombre": "errorCatastro",
@@ -83264,8 +83413,89 @@
           "exportada": true,
           "params": "xml: string",
           "retorno": "string | null",
-          "linea": 87,
+          "linea": 88,
           "resumen": "¿La respuesta indica error del servicio (referencia inexistente, etc.)?"
+        },
+        {
+          "nombre": "refParcela",
+          "kind": "function",
+          "exportada": true,
+          "params": "rc?: string | null",
+          "retorno": "string | null",
+          "linea": 111,
+          "resumen": "Referencia catastral de PARCELA: los 14 primeros caracteres. Es la que acepta `Consulta_CPMRC` (con los 20 del bien concreto responde «LA REFERENCIA CATASTRAL DEBE SER DE 14 POSICIONES», comprobado el"
+        },
+        {
+          "nombre": "direccionCatastro",
+          "kind": "function",
+          "exportada": true,
+          "params": "ldt?: string | null",
+          "retorno": "DireccionCatastro | null",
+          "linea": 136,
+          "resumen": "Convierte el `ldt` del Catastro en algo que un humano y un buscador de mapas entiendan. El formato de origen es denso y con ruido: «AV PEDRO ROMERO (DE) 2 Es:1 Pl:07 Pt:B 41007 SEVILLA» y de ahí sale "
+        },
+        {
+          "nombre": "parsearInmueblesDnploc",
+          "kind": "function",
+          "exportada": true,
+          "params": "xml: string",
+          "retorno": "InmuebleCatastro[]",
+          "linea": 186,
+          "resumen": "Parsea `Consulta_DNPLOC` — el servicio LIBRE que resuelve DIRECCIÓN → referencia catastral. Es lo que permite ubicar con exactitud las subastas que el BOE publica con dirección pero SIN referencia cat"
+        },
+        {
+          "nombre": "parcelaUnica",
+          "kind": "function",
+          "exportada": true,
+          "params": "inmuebles: InmuebleCatastro[]",
+          "retorno": "string | null",
+          "linea": 216,
+          "resumen": "Parcela común a todos los inmuebles de una respuesta DNPLOC. `null` si la respuesta mezcla parcelas (dirección ambigua): en ese caso NO se elige una a dedo, porque ubicaría el inmueble en el edificio "
+        },
+        {
+          "nombre": "parsearVias",
+          "kind": "function",
+          "exportada": true,
+          "params": "xml: string",
+          "retorno": "Array<",
+          "linea": 256,
+          "resumen": "Nombres de vía del callejero oficial (`ConsultaVia`), que busca por PREFIJO. Hace falta porque `Consulta_DNPLOC` exige el nombre EXACTO como lo guarda el Catastro, y ese formato mueve los artículos al"
+        },
+        {
+          "nombre": "nombreViaBuscable",
+          "kind": "function",
+          "exportada": true,
+          "params": "calle: string",
+          "retorno": "string",
+          "linea": 273,
+          "resumen": "Nombre con el que preguntar al callejero: sin los artículos delanteros, porque el Catastro los coloca detrás («DE MADRID» → busca «MADRID» → devuelve «MADRID DE»)."
+        },
+        {
+          "nombre": "elegirVia",
+          "kind": "function",
+          "exportada": true,
+          "params": "vias: Array<{ tipo: string; nombre: string }>, buscada: string",
+          "retorno": "string | null",
+          "linea": 282,
+          "resumen": "Elige el nombre oficial entre los que devuelve el callejero. Prefiere la coincidencia exacta; si hay varias candidatas distintas y ninguna exacta, devuelve `null` en lugar de arriesgarse a ubicar en o"
+        },
+        {
+          "nombre": "paramsDnploc",
+          "kind": "function",
+          "exportada": true,
+          "params": "direccion?: string | null",
+          "retorno": "ParamsDnploc | null",
+          "linea": 306,
+          "resumen": "Traduce la dirección tal como la publica el BOE a los parámetros de `Consulta_DNPLOC`. Ejemplos reales del corpus: «AVENIDA PEDRO ROMERO Nº 2, planta séptima de la casa número…» → { sigla:'AV', calle:"
+        },
+        {
+          "nombre": "parsearCoordenadas",
+          "kind": "function",
+          "exportada": true,
+          "params": "xml: string",
+          "retorno": "CoordenadasCatastro | null",
+          "linea": 354,
+          "resumen": "Convierte el XML de `Consulta_CPMRC` en coordenadas WGS84. `null` si el servicio no las da (error, referencia inexistente o respuesta corrupta) — nunca devuelve un punto inventado."
         },
         {
           "nombre": "superficieUtil",
@@ -83273,13 +83503,13 @@
           "exportada": true,
           "params": "catastro?: number | null, anuncio?: number | null",
           "retorno": "number | null",
-          "linea": 104,
+          "linea": 379,
           "resumen": "Superficie con la que valorar el inmueble: la del CATASTRO manda sobre la que publica el anuncio. POR QUÉ el Catastro primero: es la oficial y es la que usa el cálculo del €/m² de mercado. Si el scori"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7d0e0bd029d0"
+      "hash": "fac50ae381cb"
     },
     {
       "ruta": "packages/module-subastas/src/comparables.ts",
@@ -83898,7 +84128,10 @@
       "ambito": "packages/module-subastas",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Municipio → provincia. PURO. Por qué existe: `provinciaDeTexto` de @central/module-concursos resuelve NOMBRES DE PROVINCIA, pero las descripciones del BOE citan el MUNICIPIO («Dos Hermanas», «Belmonte de Miranda», «El Puert",
       "exporta": [
-        "provinciaPorMunicipio"
+        "provinciaPorMunicipio",
+        "urlGoogleMaps",
+        "urlStreetView",
+        "urlFichaCatastro"
       ],
       "funciones": [
         {
@@ -83909,11 +84142,38 @@
           "retorno": "string | null",
           "linea": 36,
           "resumen": "Deduce la provincia de un texto libre (descripción del bien y/o nombre de la búsqueda guardada). Devuelve `null` si no hay indicio — nunca adivina."
+        },
+        {
+          "nombre": "urlGoogleMaps",
+          "kind": "function",
+          "exportada": true,
+          "params": "u: UbicacionSubasta",
+          "retorno": "string | null",
+          "linea": 70,
+          "resumen": "URL de Google Maps para VER dónde está el inmueble. 🚨 La DIRECCIÓN POSTAL manda sobre las coordenadas, aunque parezca al revés. Con `query=<lat,lon>` Google planta un pin anónimo en mitad de la manza"
+        },
+        {
+          "nombre": "urlStreetView",
+          "kind": "function",
+          "exportada": true,
+          "params": "lat?: number | null, lon?: number | null",
+          "retorno": "string | null",
+          "linea": 97,
+          "resumen": "Street View del portal. Para un inmueble que no se puede visitar (la mayoría de las subastas advierten «sin posibilidad de visita») ver la fachada y el barrio es la única inspección posible sin despla"
+        },
+        {
+          "nombre": "urlFichaCatastro",
+          "kind": "function",
+          "exportada": true,
+          "params": "refCatastral?: string | null",
+          "retorno": "string | null",
+          "linea": 106,
+          "resumen": "Ficha pública del Catastro por referencia catastral (plano de la parcela, superficies por uso, año, linderos). Acepta la de 14 o la de 20 caracteres."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0db10eb0d543"
+      "hash": "b869c2360214"
     },
     {
       "ruta": "packages/module-subastas/src/junta.ts",
@@ -85778,7 +86038,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2338,
-    "funciones": 6149
+    "archivos": 2341,
+    "funciones": 6172
   }
 }

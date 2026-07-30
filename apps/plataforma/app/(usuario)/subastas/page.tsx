@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { Prisma } from '@prisma/client'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
-import { evaluarOportunidad, extraerDatos, pujaMaximaParaDescuento, yieldTuristico } from '@central/module-subastas'
+import { evaluarOportunidad, pujaMaximaParaDescuento, yieldTuristico } from '@central/module-subastas'
 import { COLS_SUBASTA, filaASubasta } from '@/lib/subastas-radar'
 import { tesoreriaSubastas } from '@/lib/subastas/tesoreria'
 import { chollosVigentes, leerIndiceINE, pulsoMercado } from '@/lib/subastas/mercado'
@@ -64,12 +64,29 @@ export default async function SubastasPage() {
       pulsoMercado().catch(() => null),
     ])
 
+    // El radar guarda un SNAPSHOT (sobrevive a la poda del corpus), pero se
+    // escribió con las columnas que había en su pasada. Si la subasta sigue
+    // viva, se pinta con la foto de HOY —así las características aparecen sin
+    // esperar al cron— y si ya no está en el corpus, manda el snapshot.
+    const vivas = new Map<string, ReturnType<typeof filaASubasta>>()
+    if (radar.length > 0) {
+      const claves = radar.map((r) => r.dedupe_key as string)
+      const corpus = await prisma
+        .$queryRaw<any[]>(Prisma.sql`SELECT ${COLS_SUBASTA} FROM subastas WHERE dedupe_key IN (${Prisma.join(claves)})`)
+        .catch((e) => {
+          console.error('[subastas page radar corpus]', e)
+          return [] as any[]
+        })
+      for (const f of corpus) vivas.set(f.dedupe_key, filaASubasta(f))
+    }
+
     const c = criterios[0]
     inicial = {
       resultados: filas.map((f) => {
         const s = filaASubasta(f)
-        // Dormitorios: columna si existe; si no, de la descripción registral.
-        const dormitorios = f.dormitorios ?? extraerDatos(s.descripcion).dormitorios
+        // `filaASubasta` ya cae a la descripción registral cuando la columna
+        // está vacía (mismo dato que pinta la ficha, sin recalcularlo aquí).
+        const dormitorios = s.dormitorios ?? null
         const oportunidad = evaluarOportunidad(s)
         const rendimiento = ingresoDorm && dormitorios
           ? yieldTuristico(ingresoDorm.porDormitorio, dormitorios, oportunidad.coste.total)
@@ -103,7 +120,7 @@ export default async function SubastasPage() {
         descuento_min: c?.descuento_min ?? 0,
         excluir_ocupadas: c?.excluir_ocupadas ?? false,
       },
-      radar,
+      radar: radar.map((r) => ({ ...r, subasta: vivas.get(r.dedupe_key) ?? r.subasta })),
       tesoreria,
       chollos: chollos.map((ch) => ({
         ...ch,

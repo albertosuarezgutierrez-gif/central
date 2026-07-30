@@ -8,7 +8,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { isCronAuthorized } from '@/lib/cron-auth'
-import { bajarCatastro, bajarFicha, capturarResultados } from '@/lib/subastas/enriquecer'
+import { bajarCatastro, bajarCoordenadas, bajarFicha, buscarRefPorDireccion, capturarResultados, geocodificarMunicipio } from '@/lib/subastas/enriquecer'
+import { paramsDnploc, type CoordenadasCatastro } from '@central/module-subastas'
 import { procesarDocumentos } from '@/lib/subastas/documentos'
 import { clasificarSubastas } from '@/lib/subastas/clasificar'
 
@@ -25,9 +26,10 @@ export async function GET(req: NextRequest) {
 
   try {
     // Prioridad: las que nunca se enriquecieron y las que cierran antes.
-    const pendientes = await prisma.$queryRaw<{ dedupe_key: string; identificador: string | null; ref_catastral: string | null }[]>(
+    const pendientes = await prisma.$queryRaw<{ dedupe_key: string; fuente: string; identificador: string | null; ref_catastral: string | null; lat: number | null; geo_precision: string | null; municipio: string | null; provincia: string | null; direccion: string | null }[]>(
       Prisma.sql`
-        SELECT dedupe_key, identificador, ref_catastral
+        SELECT dedupe_key, fuente, identificador, ref_catastral, lat, geo_precision,
+               municipio, provincia, direccion
         FROM subastas
         WHERE identificador IS NOT NULL
           AND (fecha_fin IS NULL OR fecha_fin >= now())
@@ -40,12 +42,92 @@ export async function GET(req: NextRequest) {
     let ok = 0
     const fallos: string[] = []
 
+    // Presupuesto de tiempo: geocodificar un municipio cuesta ≥1,1 s por el
+    // límite de 1 req/s de Nominatim, así que una pasada con `?max=40` podría
+    // comerse el `maxDuration`. Se deja margen para el resto de la pasada
+    // (resultados, documentos, lentes) y lo que no entre va a la siguiente:
+    // las coordenadas se guardan para siempre, no hay prisa.
+    //
+    // Devuelve `'sin_presupuesto'` cuando NO se ha llegado a intentar, que es
+    // distinto de haberlo intentado sin éxito: solo lo primero justifica volver
+    // a coger la fila en la pasada siguiente (si un municipio es ilocalizable
+    // —«LA M1 DE LA UE-1 DEL PP-G3 DE GUILLENA»— insistir cada pasada la
+    // devolvería al principio de la cola, que es el bug que se arregla arriba).
+    const inicio = Date.now()
+    const PRESUPUESTO_GEO_MS = 25000
+    const geoConTiempo = async (
+      municipio: string,
+      provincia: string | null,
+    ): Promise<CoordenadasCatastro | null | 'sin_presupuesto'> =>
+      Date.now() - inicio < PRESUPUESTO_GEO_MS
+        ? await geocodificarMunicipio(municipio, provincia).catch(() => null)
+        : 'sin_presupuesto'
+    const coords = (r: CoordenadasCatastro | null | 'sin_presupuesto') => (r === 'sin_presupuesto' ? null : r)
+
     for (const p of pendientes) {
       try {
+        // Las fuentes SIN ficha en el Portal del BOE (Junta…) solo necesitan
+        // coordenadas: antes entraban en `bajarFicha`, fallaban SIEMPRE y se
+        // reintentaban en cada pasada, monopolizando la cola (van primeras por
+        // `enriquecida_at NULLS FIRST`) sin llegar a enriquecerse nunca.
+        if (p.fuente !== 'boe') {
+          const geoJ = p.lat == null && p.ref_catastral ? await bajarCoordenadas(p.ref_catastral).catch(() => null) : null
+          const rJ = p.lat == null && !geoJ && p.municipio
+            ? await geoConTiempo(p.municipio, p.provincia)
+            : null
+          const geoJAprox = coords(rJ)
+          // Solo se deja SIN marcar (para reintentar ya en la pasada siguiente)
+          // si no se llegó a intentar por falta de presupuesto.
+          const reintentar = rJ === 'sin_presupuesto'
+          await prisma.$executeRaw(Prisma.sql`
+            UPDATE subastas SET
+              lat = COALESCE(lat, ${geoJ?.lat ?? geoJAprox?.lat ?? null}),
+              lon = COALESCE(lon, ${geoJ?.lon ?? geoJAprox?.lon ?? null}),
+              geo_precision = COALESCE(geo_precision, ${geoJ ? 'catastro' : geoJAprox ? 'municipio' : null}),
+              enriquecida_at = ${reintentar ? null : new Date()}::timestamptz
+            WHERE dedupe_key = ${p.dedupe_key}
+          `)
+          ok++
+          continue
+        }
+
         const f = await bajarFicha(p.identificador!)
-        // La referencia catastral puede venir del correo o aparecer en la ficha.
-        const rc = p.ref_catastral
+        const muni = f.localidad ?? p.municipio
+        const prov = f.provincia ?? p.provincia
+
+        // 🏛️ Referencia catastral: la del correo/ficha si la hay y, si NO, se
+        // BUSCA POR DIRECCIÓN en el Catastro (`Consulta_DNPLOC`). Esto es lo que
+        // da ubicación exacta a la mayoría del corpus: el BOE publica la
+        // dirección casi siempre, pero la referencia solo a veces (5 de 34 el
+        // 30/07/2026). Idea de Alberto ese mismo día.
+        let rc = p.ref_catastral
+        let rcDeDireccion: string | null = null
+        if (!rc && muni && prov) {
+          const dir = paramsDnploc(f.direccion ?? p.direccion)
+          if (dir) {
+            const hallado = await buscarRefPorDireccion({
+              provincia: prov, municipio: muni, ...dir,
+            }).catch(() => null)
+            if (hallado) {
+              // La completa (20) solo cuando el portal tiene un único inmueble;
+              // si no, la de parcela basta para ubicar el edificio.
+              rc = hallado.refCompleta ?? hallado.refParcela
+              rcDeDireccion = rc
+            }
+          }
+        }
+
         const cat = rc ? await bajarCatastro(rc).catch(() => null) : null
+        // Coordenadas exactas: no cambian, así que se piden mientras falten O
+        // mientras el punto guardado sea el centroide del municipio (mejorable).
+        const mejorable = p.lat == null || p.geo_precision === 'municipio'
+        const geo = rc && mejorable ? await bajarCoordenadas(rc).catch(() => null) : null
+        // En el camino del BOE la ficha ya se ha descargado, así que la fila se
+        // marca igualmente: perder el punto aproximado de una pasada no
+        // justifica repetir la ficha entera en la siguiente.
+        const geoAprox = coords(!geo && p.lat == null && muni
+          ? await geoConTiempo(muni, prov)
+          : null)
 
         await prisma.$executeRaw(Prisma.sql`
           UPDATE subastas SET
@@ -65,7 +147,9 @@ export async function GET(req: NextRequest) {
             sin_visita = ${f.sinVisita},
             cargas = COALESCE(${f.cargas}, cargas),
             cargas_texto = COALESCE(${f.cargasTexto}, cargas_texto),
-            cargas_conocidas = ${f.cargasConocidas},
+            -- Sticky: el true puede venir de la CERTIFICACIÓN adjunta (paso de
+            -- documentos), que la ficha no refleja en su campo «Cargas».
+            cargas_conocidas = (${f.cargasConocidas} OR COALESCE(cargas_conocidas, false)),
             autoridad = COALESCE(${f.autoridad}, autoridad),
             telefono_autoridad = COALESCE(${f.telefonoAutoridad}, telefono_autoridad),
             email_autoridad = COALESCE(${f.emailAutoridad}, email_autoridad),
@@ -79,6 +163,16 @@ export async function GET(req: NextRequest) {
             uso_catastral = COALESCE(${cat?.uso ?? null}, uso_catastral),
             direccion_catastro = COALESCE(${cat?.direccion ?? null}, direccion_catastro),
             cuota_participacion = COALESCE(cuota_participacion, ${cat?.cuotaParticipacion ?? null}),
+            -- La hallada por dirección se guarda para no repetir la búsqueda.
+            ref_catastral = COALESCE(ref_catastral, ${rcDeDireccion}),
+            -- El punto EXACTO pisa un centroide de municipio previo: ganamos
+            -- precisión y la fila puede llevar días con el aproximado puesto.
+            lat = COALESCE(${geo?.lat ?? null}, lat, ${geoAprox?.lat ?? null}),
+            lon = COALESCE(${geo?.lon ?? null}, lon, ${geoAprox?.lon ?? null}),
+            geo_precision = CASE
+              WHEN ${geo?.lat ?? null}::double precision IS NOT NULL THEN 'catastro'
+              ELSE COALESCE(geo_precision, ${geoAprox ? 'municipio' : null})
+            END,
             enriquecida_at = now(),
             actualizado_en = now()
           WHERE dedupe_key = ${p.dedupe_key}

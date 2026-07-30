@@ -142,6 +142,10 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
 4. **Reconciliación de memoria y skills** (el núcleo, **carril 1**):
    - `docs/CONTEXTO-SESIONES.md`: añade entrada(s) de lo hecho en el rango que no esté
      anotado; mueve a "hecho" los pendientes ya resueltos; corrige el "Estado actual".
+   - **Rotación mensual de la memoria (ahorro de contexto):** si el archivo vivo contiene
+     entradas de un mes YA CERRADO, ejecuta `node scripts/rotar-memoria.mjs` (idempotente;
+     las archiva en `docs/memoria/AAAA-MM.md`). Además, si ves entradas nuevas que violan
+     la regla de tamaño (~8 líneas máx), resúmelas en el archivo vivo (carril 1).
    - Skills-maestro (`central-maestro`, `ia-rest-maestro`, `sivra-maestro`,
      `ialimp-maestro`, `plataforma-maestro`) y los `apps/*/CLAUDE.md`: corrige cualquier
      afirmación que el código contradiga (rutas, envs, tablas, reglas, estado). Si una

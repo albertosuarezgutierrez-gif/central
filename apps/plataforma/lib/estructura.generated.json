@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-30T06:19:43Z",
+  "generadoEn": "2026-07-30T10:58:06Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1423,7 +1423,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 17
+        "evidencias": 20
       },
       "rrhh": {
         "estado": "no",
@@ -3361,6 +3361,7 @@
       "/api/subastas",
       "/api/subastas/criterios",
       "/api/subastas/fase3-debug",
+      "/api/subastas/mapa",
       "/api/subastas/oferta",
       "/api/subastas/radar",
       "/api/subastas/seguidas",
@@ -3811,7 +3812,7 @@
     {
       "id": "agentes-entrenador",
       "name": "agentes-entrenador",
-      "description": "Agente PROGRAMADO semanal que mejora los prompts de los agentes del monorepo por RENDIMIENTO (qué hicieron de verdad, qué falló, qué corrigió Alberto) y por CALIDAD transversal (contradicciones/redundancias entre skills). NO vigila frescura factual (eso es de /auditoria-diaria). Lee docs/AGENTES-BITACORA.md, docs/FEEDBACK-AGENTES.md, git/PRs de la semana y BD (solo lectura). Entrega cambios de comportamiento SIEMPRE por PR draft + aviso Telegram; solo lo factual trivial directo a main. Úsala cuando Alberto pida \"revisa/mejora los prompts de los agentes\" o cuando la dispare su trigger semanal (domingo). Sin secretos, solo nombres de variable."
+      "description": "Agente PROGRAMADO semanal (domingo) que mejora los prompts de los agentes por RENDIMIENTO y calidad transversal. NO vigila frescura factual (eso es /auditoria-diaria). Cambios de comportamiento SIEMPRE por PR draft + Telegram; nunca se auto-modifica. Úsala si Alberto pide \"revisa/mejora los prompts de los agentes\" o al disparo semanal. Sin secretos."
     },
     {
       "id": "alquiler-maestro",
@@ -3831,7 +3832,7 @@
     {
       "id": "buscador-ia",
       "name": "buscador-ia",
-      "description": "Agente PROGRAMADO SEMANAL que vigila el ecosistema de LLMs que alimentan la cadena de fallback del monorepo (`@central/core-ai`). Criterio de selección = MEJOR RELACIÓN CALIDAD/PRECIO, no \"gratis a toda costa\" (un candidato de pago barato que rinda claramente mejor sí cuenta). Tres patas en una pasada — (1) WATCH DE DEPRECACIÓN de los modelos que están REALMENTE cableados (NIM llama-3.3-70b, Groq, Gemini, Kimi) para cazar retiradas de catálogo ANTES de que rompan producción (como el `meta/llama-3.1-405b-instruct` que NVIDIA retiró y dejó \"IA no disponible\" a un huésped), (2) DESCUBRIMIENTO de modelos/proveedores nuevos (gratis o de pago barato) que merezca meter en la cadena, y (3) MINI-EVAL de los candidatos con 2 prompts fijos. Actualiza `docs/BUSCADOR-IA.md` (estado entre ejecuciones), avisa por Telegram si algo merece ojo humano y abre PR draft solo para cambios pequeños y seguros (swap de id de modelo muerto, plumbing de un proveedor nuevo). Úsala cuando Alberto pida \"revisa las novedades de IA / si hay una IA mejor que meter\" o cuando la dispare su trigger semanal. Sin secretos: solo nombres de variable."
+      "description": "Agente PROGRAMADO semanal que vigila los LLMs de la cadena de fallback de `@central/core-ai` por CALIDAD/PRECIO — watch de deprecación de los modelos cableados (NIM, Groq, Gemini, Kimi), descubrimiento de candidatos y mini-eval. Estado en docs/BUSCADOR-IA.md; Telegram + PR draft solo para swaps seguros. Úsala si Alberto pide \"revisa las novedades de IA / si hay una IA mejor\" o al disparo semanal. Sin secretos."
     },
     {
       "id": "central-maestro",
@@ -3841,17 +3842,17 @@
     {
       "id": "code-map",
       "name": "code-map",
-      "description": "Úsala al EMPEZAR cualquier tarea de CÓDIGO en el monorepo `central` cuando haya que localizar QUÉ archivo o función maneja algo (arreglar un bug, tocar una feature, \"¿dónde está X?\"), ANTES de hacer Grep/Read a ciegas. Consulta la tabla Supabase `mapa_arquitectura` (índice de firmas de todo el repo, poblado por scripts/auditar-estructura.mjs) para acotar a coste ~0 tokens los archivos candidatos, y así leer SOLO esos en vez de barrer medio repositorio. Es el gemelo \"lado sesión\" del endpoint `/api/ai/codigo` (Director de código). NO reemplaza a Grep/Read: los enfoca. Si la tabla no está disponible o no devuelve candidatos, degrada al método clásico."
+      "description": "Úsala al EMPEZAR cualquier tarea de CÓDIGO cuando haya que localizar QUÉ archivo/función maneja algo, ANTES de Grep/Read a ciegas — consulta la tabla Supabase `mapa_arquitectura` (índice de firmas del repo) para acotar candidatos a coste ~0 y leer SOLO esos. No reemplaza a Grep/Read: los enfoca. Sin tabla o sin candidatos, método clásico."
     },
     {
       "id": "correo-triaje",
       "name": "correo-triaje",
-      "description": "Router de contexto del AGENTE DE TRIAJE DE CORREO de Alberto. A diferencia de otros agentes programados, NO corre como sesión Claude sino como CRON de Vercel en apps/plataforma (cada ~10 min): lee lo nuevo del Gmail por IMAP, clasifica cada correo con la pasarela IA, y actúa — ruido a Triaje/Ruido+archivado, contabilidad etiquetada como buzón puente de facturas-correo, personal/huéspedes/leads con aviso Telegram inmediato, phishing marcado con cautela. Úsala cuando Alberto pida \"revisa/ajusta el triaje de correo\", quiera añadir una categoría o remitente, o cuando /auditoria-diaria reconcilie la tabla de rutas. NO duplica el código: dice qué existe, dónde vive y cómo extenderlo. Sin secretos."
+      "description": "Router de contexto del agente de TRIAJE DE CORREO — cron de Vercel en apps/plataforma cada ~10 min (NO sesión Claude) que lee Gmail por IMAP, clasifica y actúa (etiquetas, archivado, aviso Telegram). Úsala si Alberto pide \"revisa/ajusta el triaje de correo\", añadir categoría/remitente, o cuando /auditoria-diaria reconcilie la tabla de rutas. Sin secretos."
     },
     {
       "id": "delegar-codigo",
       "name": "delegar-codigo",
-      "description": "Úsala en el monorepo `central` cuando una tarea de código tenga trabajo MECÁNICO o VOLUMINOSO (renames masivos, aplicar un mismo patrón a N archivos, boilerplate repetitivo, migraciones planas) y quieras AHORRAR TOKENS de Claude. El esquema \"caro planifica / barato ejecuta\": tú (Claude alto) organizas y decides, y delegas la escritura de cada archivo a un modelo coder BARATO vía el endpoint `/api/ai/ejecutar` de plataforma (OpenRouter, categoría `codigo`). Tú no generas los diffs grandes: solo planificas, delegas y REVISAS/verificas. NO la uses para lógica sutil (el round-trip + revisión no compensa) ni cuando no haya volumen. Gemela del endpoint; complementa a `code-map` (que acota QUÉ archivos)."
+      "description": "Úsala cuando una tarea tenga código MECÁNICO o VOLUMINOSO (renames masivos, mismo patrón en N archivos, boilerplate, migraciones planas) — Claude planifica y REVISA, y delega la escritura a un coder barato vía `/api/ai/ejecutar` de plataforma (OpenRouter, categoría `codigo`). NO para lógica sutil ni cambios de 1-2 archivos. Complementa a `code-map`."
     },
     {
       "id": "facturas-correo",
@@ -3861,12 +3862,12 @@
     {
       "id": "fiscal-novedades",
       "name": "fiscal-novedades",
-      "description": "Agente PROGRAMADO que vigila cambios en las deducciones del IRPF (estatales en el BOE y autonómicas de Andalucía en el BOJA/AEAT) y los contrasta con los importes que usa el módulo /finanzas de plataforma (IMPORTES_POR_ANIO en apps/plataforma/lib/fiscal-deducciones.ts). Cuando un importe cambia, abre un PR draft que actualiza la constante e inserta una fila en fiscal_novedades para que la app avise EN PANTALLA si el cambio beneficia a Alberto. Úsala cuando Alberto pida \"revisa si han cambiado las deducciones\" o cuando la dispare su trigger (mensual + antes de la campaña de renta). NO se cuelga del agente de concursos (ese sondea PLACSP por CPV)."
+      "description": "Agente PROGRAMADO (mensual + pre-renta) que vigila cambios en deducciones IRPF (BOE estatal, BOJA/AEAT Andalucía) y los contrasta con IMPORTES_POR_ANIO de apps/plataforma/lib/fiscal-deducciones.ts; si cambian, PR draft + fila en fiscal_novedades para aviso en pantalla. Úsala si Alberto pide \"revisa si han cambiado las deducciones\"."
     },
     {
       "id": "github-vigia",
       "name": "github-vigia",
-      "description": "Agente PROGRAMADO que vigila el ecosistema GitHub/OSS que le interesa al monorepo. Tres patas en una pasada mensual — (1) releases de la lista curada de repos vigilados en docs/VIGIA-OSS.md (VROOM, OSRM, openrouteservice, Leaflet, Traccar, web-push…), (2) descubrimiento de herramientas/repos nuevos por vertical, y (3) dependencias npm desactualizadas o con CVE. Actualiza docs/VIGIA-OSS.md (estado entre ejecuciones), avisa por Telegram si algo merece ojo humano y abre PR draft solo para bumps pequeños y seguros. Úsala cuando Alberto pida \"revisa las novedades de GitHub / del ecosistema\" o cuando la dispare su trigger mensual (día 15). Sin secretos: solo nombres de variable."
+      "description": "Agente PROGRAMADO mensual (día 15) que vigila el ecosistema GitHub/OSS — releases de los repos curados en docs/VIGIA-OSS.md, descubrimiento por vertical, y deps npm desactualizadas o con CVE. Actualiza docs/VIGIA-OSS.md, Telegram + PR draft solo para bumps seguros. Úsala si Alberto pide \"revisa las novedades de GitHub / del ecosistema\". Sin secretos."
     },
     {
       "id": "ia-rest-maestro",
@@ -3886,12 +3887,12 @@
     {
       "id": "marca-cliente",
       "name": "marca-cliente",
-      "description": "Alta/intake de la identidad corporativa de un cliente o tenant de la casa de marcas y aplicación 100% a su app. Úsala cuando entre un cliente nuevo (Joaquín Jaén, Rico González, Global…) o haya un rebrand y haya que dejar su UI IDÉNTICA a SU marca (logo real, colores exactos, tipografía), o cuando Alberto pida \"adáptalo a la imagen corporativa de X\" / \"que sea corporativo 100%\". Convierte la marca cruda (su logo + su web + fotos) en un objeto `Marca` de `@central/brand` y lo enchufa. NO es un agente programado: es un flujo bajo demanda. Complementa la skill `adobe-diseno` (vectorizar/limpiar el logo) y Adobe Fonts (tipografía exacta)."
+      "description": "Alta/intake de la identidad corporativa de un cliente/tenant y aplicación 100% a su app — convierte su marca real (logo, web, fotos) en un objeto `Marca` de `@central/brand` y lo enchufa dejando la UI IDÉNTICA a su marca. Úsala con cliente nuevo, rebrand, o si Alberto pide \"adáptalo a la imagen corporativa de X\". Complementa `adobe-diseno` y Adobe Fonts."
     },
     {
       "id": "perfil-fiscal",
       "name": "perfil-fiscal",
-      "description": "Router de contexto FISCAL y PATRIMONIAL de Alberto (persona física) + la sociedad Punto y Coma SL. Úsalo SIEMPRE que Alberto pida algo de su renta/IRPF, declaración, gastos deducibles, qué piso tributa dónde, su asesoría, o cuando trabajes con `facturas-correo`, `fiscal-novedades` o el módulo `/finanzas`. NO duplica los datos personales (esos viven en la BD `fiscal_perfil`/`fiscal_descendientes`); aquí está la ESTRUCTURA: qué entidad declara qué, las reglas de gasto y los caveats. Sin cifras ni datos sensibles."
+      "description": "Router de contexto FISCAL y PATRIMONIAL de Alberto (persona física) + Punto y Coma SL. Úsalo SIEMPRE que Alberto pida algo de su renta/IRPF, declaración, gastos deducibles, qué piso tributa dónde, o su asesoría, y al trabajar con `facturas-correo`, `fiscal-novedades` o el módulo `/finanzas`. Sin cifras ni datos sensibles."
     },
     {
       "id": "plataforma-maestro",
@@ -3961,6 +3962,10 @@
   ],
   "novedades": [
     {
+      "titulo": "💶 Auditoría pricing dinámico pre-cutover (30/07/2026, rama `claude/dynamic-pricing-audit-4cbdxv`).",
+      "fecha": "30/07/2026"
+    },
+    {
       "titulo": "🔒 Director de código Fase 2: cierre de PR con veredicto real de CI (29/07/2026).",
       "fecha": "29/07/2026"
     },
@@ -4015,10 +4020,6 @@
     {
       "titulo": "⚖️ NUEVO — Radar de subastas de inmuebles `/subastas` (28/07/2026, Fase 1).",
       "fecha": "28/07/2026"
-    },
-    {
-      "titulo": "✅ FORWARD-PAPER (Fase 1) YA SE MIDE — `trading_paper_track` poblada (27/07/2026).",
-      "fecha": "27/07/2026"
     }
   ],
   "saludRepo": {
@@ -4384,7 +4385,7 @@
     "packages": 36,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1151,
+    "apis": 1152,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
