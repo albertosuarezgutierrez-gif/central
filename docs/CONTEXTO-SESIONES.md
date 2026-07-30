@@ -16,6 +16,28 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏠 Subastas/chollos — API OFICIAL de Idealista preparada y DORMIDA (30/07/2026, rama
+  `claude/idealista-investment-project-o082ap`).** Alberto preguntó si se puede "conectar Idealista" como
+  hace ChatGPT. Respuesta: la app de Idealista en ChatGPT (mar-2026) es exclusiva del ecosistema OpenAI,
+  NO conectable desde fuera; la vía legítima es la **API oficial** (developers.idealista.com, gratis,
+  **~100 búsquedas/mes**, hasta 50 anuncios/llamada con precio/m²/€·m²). **Alberto ya solicitó el alta
+  (30/07) y espera el mail con la key.** Integración dejada lista e INERTE hasta que lleguen credenciales:
+  - **Módulo puro** `packages/module-subastas/src/idealista-api.ts` (5 tests): mapeo `elementList` →
+    `Comparable` (el `propertyCode` de la API ES el id de `/inmueble/<id>/` de los correos → mismo dedupe
+    `(portal, ref_anuncio)`), tabla de **centros de búsqueda** lat/lng por zona vigilada (zona desconocida
+    = `null` = no se gasta cuota) y presupuesto (`llamadasPermitidasIdealista`: límite 100, margen 15,
+    ración 3/pasada).
+  - **App**: `apps/plataforma/lib/subastas/idealista-api.ts` (OAuth2 client_credentials + búsqueda
+    `center/distance` de VIVIENDA en venta + ingesta por `upsertComparable` — helper EXTRAÍDO del upsert de
+    `mercado.ts`, ahora puerta única del corpus para correos y API). Zonas candidatas = municipios con
+    subasta viva; caché 30 días/zona; ledger en tabla **`idealista_api_usos`** (migración
+    `2026-07-30_idealista_api_usos.sql`, **aplicada** por Supabase MCP). Paso cableado best-effort en el
+    cron `subastas-mercado` (clave `idealistaApi` en la respuesta; `disponible:false` sin envs).
+  - **Cuando llegue el mail:** pegar `IDEALISTA_API_KEY` + `IDEALISTA_API_SECRET` en god-panel →
+    🔑 Secretos (filas añadidas a `secrets-registry.ts`, editables, redeploy automático) y listo — la
+    siguiente pasada del cron empieza a nutrir comparables. Verificado: 197 tests módulo + 653 plataforma
+    + `tsc` 0.
+
 - **⏰ Crons de plataforma consolidados en UN dispatcher — fix del límite de 40 crons de Vercel Pro
   (30/07/2026, rama `claude/audit-30-07-hv2njr`).** La auditoría del 30/07 (PR #1162) confirmó que el
   scheduler de Vercel NO disparó `psd2-sync` el 29/07 06:00 (sin ningún log, con sus 3 vecinos del mismo
