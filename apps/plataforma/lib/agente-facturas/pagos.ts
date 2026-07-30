@@ -11,6 +11,7 @@ import { aiExtractInvoice } from '@/lib/ai-client'
 import { tgSend, tgSendButtons, tgEditMessage } from '@central/core-telegram'
 import { iniciarPago, estadoPago, disponiblePis } from '@/lib/enablebanking'
 import type { EstadoPagoEB } from '@/lib/enablebanking'
+import { baseUrl } from '@/lib/base-url'
 import type { FacturaProveedor } from '@central/module-pagos'
 
 const ETIQUETA_GMAIL = 'Facturas/Proveedor'
@@ -177,7 +178,7 @@ export async function aprobarPago(
   await prisma.$executeRaw(Prisma.sql`UPDATE facturas_proveedor SET estado = 'aprobada' WHERE id = ${facturaId}::uuid`)
 
   if (disponiblePis() && factura.iban_proveedor) {
-    const redirectUrl = `${process.env.NEXTAUTH_URL ?? process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'}/api/banca/pago/callback?facturaId=${facturaId}`
+    const redirectUrl = `${baseUrl()}/api/banca/pago/callback?facturaId=${facturaId}`
     try {
       const pago = await iniciarPago({
         debtorIban,
