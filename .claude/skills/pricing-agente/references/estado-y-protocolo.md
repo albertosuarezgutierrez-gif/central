@@ -26,13 +26,17 @@
 
 - **Zona** poblada (`pricing_piso_zona`): 4 pisos, CP 41003 (Bustos Tavera / Casco Antiguo).
 - **Costes/suelos** ya calibrados (`pricing_aprendizaje/ALL/costes` + `pricing_settings.min_price`):
-  busto 90 · duplex 85 · luxury 95 · house 180. Coste real/noche ~14-30€ (limpieza + fijos; busto y luxury
-  son **subarriendo** → la renta es coste duro). El suelo es protección, no precio.
+  **busto 65 · duplex 85 · luxury 72 · house 180** (busto/luxury recalibrados 28/07/2026 con OK explícito
+  de Alberto tras análisis de comps reales — detalle en `pricing_aprendizaje` temporada `suelo`; los 115/95
+  anteriores quedaban por encima del mercado flojo → fechas al suelo y días sin reserva). Coste real/noche
+  ~14-30€ (limpieza + fijos; busto y luxury son **subarriendo** → la renta es coste duro). El suelo es
+  protección, no precio. NO volver a subirlos por encima del p25 de fechas flojas sin OK de Alberto.
 - **Motor por temporada (B2)** YA en prod: `apply/route.ts` tarifica por mes de `checkin_date` con fallback al
   global. NO hace falta reimplementar bucketing; solo alimentar `market_rates` con comps fechados por mes.
 - **EN VIVO `busto_reform` y `luxury_busto`** (`apply_enabled=true`; Luxury desde 13/07 con OK de Alberto,
-  desconectado de PriceLabs). Duplex/House en dry-run — plan: activarlos el ~27/07 si los dos primeros
-  validan, luego desconectarlos de PL y cancelar la suscripción (~3/08). NO actives `apply_enabled` de
+  desconectado de PriceLabs). Duplex/House siguen en dry-run a 30/07 — plan: activarlos antes del ~3/08
+  (cierre PriceLabs), desconectarlos de PL y cancelar la suscripción. La activación la hace Alberto
+  (`apply_enabled=true`); auditoría 30/07 no encontró bloqueantes técnicos. NO actives `apply_enabled` de
   otros pisos sin OK explícito de Alberto.
 - **Mercado cargado a 12 meses** (Booking MCP, barrido F1 13/07): verano, Semana Santa 2027 (~462€ p50),
   Feria 2027, may/jun/jul 2027. **Ticketmaster VIVO** (cron semanal; busca por latlong — postalCode da 0

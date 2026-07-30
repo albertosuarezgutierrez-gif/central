@@ -41,12 +41,20 @@ async function textoDePdf(buf: Buffer): Promise<string> {
   return String(text ?? '')
 }
 
+export interface DocumentosFicha {
+  notas: string[]
+  /** La certificación registral adjunta acredita las cargas de procedencia:
+   *  las cargas SÍ están publicadas (en el documento, no en el campo de la ficha). */
+  cargasPublicadas: boolean
+}
+
 /** Procesa los documentos de UNA ficha. Devuelve las notas halladas. */
-export async function procesarDocumentosDeFicha(identificador: string): Promise<string[]> {
+export async function procesarDocumentosDeFicha(identificador: string): Promise<DocumentosFicha> {
   const html = await (await bajar(`${FICHA}?idSub=${encodeURIComponent(identificador)}`)).text()
   const docs = enlacesDocumentos(html).slice(0, MAX_DOCS_POR_FICHA)
 
   const notas = new Set<string>()
+  let cargasPublicadas = false
   for (const doc of docs) {
     try {
       const r = await bajar(doc.url, 25000)
@@ -54,12 +62,14 @@ export async function procesarDocumentosDeFicha(identificador: string): Promise<
       if (buf.length > MAX_BYTES_DOC) continue
       const texto = await textoDePdf(buf).catch(() => '')
       if (texto.replace(/\s+/g, ' ').trim().length < MIN_CHARS_TEXTO) continue // escaneado
-      for (const n of notasDeEdicto(datosDeEdicto(texto))) notas.add(n)
+      const datos = datosDeEdicto(texto)
+      if (datos.sinCargasProcedencia) cargasPublicadas = true
+      for (const n of notasDeEdicto(datos)) notas.add(n)
     } catch (e) {
       console.warn('[subastas-documentos]', identificador, doc.titulo, e)
     }
   }
-  return [...notas]
+  return { notas: [...notas], cargasPublicadas }
 }
 
 /**
@@ -80,9 +90,15 @@ export async function procesarDocumentos(max = 10): Promise<{ revisadas: number;
   let conHallazgos = 0
   for (const f of filas) {
     try {
-      const notas = await procesarDocumentosDeFicha(f.identificador)
+      const { notas, cargasPublicadas } = await procesarDocumentosDeFicha(f.identificador)
       await prisma.$executeRaw(Prisma.sql`
-        UPDATE subastas SET notas_edicto = ${notas.join('\n')}, actualizado_en = now()
+        UPDATE subastas SET
+          notas_edicto = ${notas.join('\n')},
+          -- La certificación adjunta cuenta como publicación de cargas: solo
+          -- sube el flag, nunca lo baja (el campo «Cargas» de la ficha suele
+          -- venir vacío cuando la info vive en el documento).
+          cargas_conocidas = (COALESCE(cargas_conocidas, false) OR ${cargasPublicadas}),
+          actualizado_en = now()
         WHERE dedupe_key = ${f.dedupe_key}
       `)
       if (notas.length) conHallazgos++

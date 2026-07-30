@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-30T08:01:44Z",
-  "sha": "af62ae9fb87078ea36f7305a8e4be3428f826363",
+  "generadoEn": "2026-07-30T09:47:07Z",
+  "sha": "4cd5e4ad7884fbad109b7d6f5f5c0f861cb4250c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -51197,7 +51197,7 @@
         "subastas"
       ],
       "rutaApi": "/api/cron/subastas-enriquecer",
-      "hash": "029d85d02737"
+      "hash": "f7809c9b7a0a"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-ingesta/route.ts",
@@ -65097,8 +65097,8 @@
           "kind": "function",
           "exportada": true,
           "params": "identificador: string",
-          "retorno": "Promise<string[]>",
-          "linea": 45,
+          "retorno": "Promise<DocumentosFicha>",
+          "linea": 52,
           "resumen": "Procesa los documentos de UNA ficha. Devuelve las notas halladas."
         },
         {
@@ -65107,7 +65107,7 @@
           "exportada": true,
           "params": "max = 10",
           "retorno": "Promise<",
-          "linea": 69,
+          "linea": 79,
           "resumen": "Pasada sobre las subastas vivas del BOE sin documentos procesados. Best-effort: un fallo de descarga deja la fila a NULL y se reintenta mañana."
         }
       ],
@@ -65115,7 +65115,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "4218781e7072"
+      "hash": "27e5078b8205"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/enriquecer.ts",
@@ -83227,7 +83227,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "34868c7aa332"
+      "hash": "e4db68fb7071"
     },
     {
       "ruta": "packages/module-subastas/src/catastro.ts",

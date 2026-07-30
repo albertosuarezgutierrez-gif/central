@@ -38,6 +38,25 @@
   `enriquecida_at` se deja NULL SOLO si no se intentó (si el municipio es ilocalizable se marca, o volvería a
   monopolizar la cola). Bonus: el cron ya no reintenta fichas BOE de la fuente `junta` (23 filas que fallaban
   siempre y, al ir primeras por `enriquecida_at NULLS FIRST`, tapaban a las del BOE).
+- **⚖️ Subastas: «Cargas no publicadas» falso cuando la certificación va como DOCUMENTO — MERGEADO
+  (30/07/2026, PR #1172).** SUB-JA-2026-263723 (San Pablo, cierra 31/07) salía
+  «Cargas no publicadas» pese a la CERTIFICACIÓN adjunta ya leída en `notas_edicto`: `cargas_conocidas` solo
+  miraba el campo «Cargas» de la ficha (vacío) y el refresco 24h del enriquecedor lo machacaba. Fix: el paso
+  de documentos sube el flag si la certificación dice «sin cargas de procedencia»; el UPDATE de la ficha es
+  sticky (OR); punto ámbar de embargo en `analisis.ts` (el verde de cargas no lo tape). Backfill
+  `2026-07-30_cargas_conocidas_certificacion.sql` aplicado. 193 tests módulo · tsc 0 · 14 checks verdes.
+  **Prod reconciliada tras el deploy:** reclasificadas las 34 vigentes (San Pablo con `cargas` verde +
+  punto `embargo` ámbar nuevo, semáforo ámbar por posesión/valoración; radar sin el aviso falso).
+
+- **💶 Auditoría pricing dinámico pre-cutover (30/07/2026, rama `claude/dynamic-pricing-audit-4cbdxv`).**
+  A 3 días de confirmar 100% dinámico: SIN bloqueantes técnicos. Motor vivo (Busto/Luxury aplican a diario,
+  última 29/07; crons pricing todos en el dispatcher #1165), datos frescos (market_rates y snapshots de hoy,
+  12 meses de comps en los 4 pisos), raíl ±/día con ancla por día natural OK, evidencia piloto sólida
+  (Busto 16 y Luxury 14 noches reservadas a precio motor, ADR muy sobre PL). PENDIENTE de Alberto:
+  activar `apply_enabled` de Dúplex/House y desconectar PL. Vigilar: `incomes` sin insertar desde 25/07
+  (1er sync post-dispatcher mañana 05:00 UTC), comps House solo proxy 8p×1,15 (la API de Booking topa en
+  8 adultos; aforo 12 correcto en BD). Aforo Luxury actualizado 4→5 en `pricing_piso_zona` (OK Alberto 30/07).
+  Doc de skill actualizada (suelos 65/72 del 28/07). 6 alertas de guard abiertas pre-recalibración.
 
 - **🏷️ Banca: compra de tarjeta ya no cae en palabra-trampa + bandeja pregunta el NEGOCIO (30/07/2026,
   rama `claude/restaurante-charge-agent-issue-8lxiwv`).** Restaurante "LA HACIENDA GOLF" caía a
