@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-29T11:09:47Z",
+  "generadoEn": "2026-07-30T06:00:24Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1253,7 +1253,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "rrhh": {
         "estado": "no",
@@ -3170,6 +3170,7 @@
       "/api/banca/reglas",
       "/api/banca/revisar",
       "/api/banca/ticket",
+      "/api/banca/transferencia",
       "/api/comunicacion/categorias",
       "/api/comunicacion/conversaciones",
       "/api/comunicacion/conversaciones/[id]",
@@ -4381,7 +4382,7 @@
     "packages": 36,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1149,
+    "apis": 1150,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

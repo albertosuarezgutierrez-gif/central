@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-29T11:09:47Z",
-  "sha": "fab0ab3a2d421321f365e260aac978209ae60b4b",
+  "generadoEn": "2026-07-30T06:00:24Z",
+  "sha": "4844e17ea58898ce485824c8310a6bd82e05a725",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -44145,6 +44145,34 @@
       "hash": "5237b6f00960"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/banca/transferencia/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "TransferenciaPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "TransferenciaPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 42
+        },
+        {
+          "nombre": "Fila",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ k, v, destacado }: { k: string; v: string; destacado?: boolean }",
+          "retorno": null,
+          "linea": 177
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "500f6f83f228"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/CommandPalette.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -47760,12 +47788,12 @@
           "exportada": true,
           "params": "{ email, nombre, isOperator, operadorRol, rol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string; rol?: string | null }",
           "retorno": null,
-          "linea": 67
+          "linea": 68
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c42e967dd9bb"
+      "hash": "767cc638cf9b"
     },
     {
       "ruta": "apps/plataforma/app/admin/MapaArquitectura.tsx",
@@ -49609,6 +49637,27 @@
       "tablas": [],
       "rutaApi": "/api/banca/ticket",
       "hash": "eac2a7d1a5e3"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/banca/transferencia/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 21,
+          "resumen": "POST /api/banca/transferencia { creditorName, creditorIban, importe, concepto } Ordena una transferencia SEPA \"libre\" (a cualquier destinatario que teclee el dueño). La IA NO participa: los datos vien"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/banca/transferencia",
+      "hash": "c709b9302f40"
     },
     {
       "ruta": "apps/plataforma/app/api/comunicacion/categorias/route.ts",
@@ -56705,7 +56754,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<number>",
-          "linea": 20
+          "linea": 21
         },
         {
           "nombre": "notificarFactura",
@@ -56713,7 +56762,7 @@
           "exportada": false,
           "params": "facturaId: string, proveedor: string, importe: number, fechaVenc: string | null, cuentaId: string,",
           "retorno": "Promise<void>",
-          "linea": 107
+          "linea": 108
         },
         {
           "nombre": "aprobarPago",
@@ -56721,7 +56770,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string, debtorIban: string,",
           "retorno": "Promise<",
-          "linea": 163
+          "linea": 164
         },
         {
           "nombre": "aplazarPago",
@@ -56729,7 +56778,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string, dias = 7",
           "retorno": "Promise<boolean>",
-          "linea": 224
+          "linea": 225
         },
         {
           "nombre": "rechazarFactura",
@@ -56737,7 +56786,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 240
+          "linea": 241
         },
         {
           "nombre": "verificarPagosPendientes",
@@ -56745,7 +56794,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<number>",
-          "linea": 254
+          "linea": 255
         },
         {
           "nombre": "conciliarConBanco",
@@ -56753,7 +56802,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<number>",
-          "linea": 283
+          "linea": 284
         },
         {
           "nombre": "pagarTodo",
@@ -56761,7 +56810,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<",
-          "linea": 322
+          "linea": 323
         },
         {
           "nombre": "resumenSemanal",
@@ -56769,7 +56818,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 338
+          "linea": 339
         },
         {
           "nombre": "alertarFacturasAusentes",
@@ -56777,7 +56826,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<number>",
-          "linea": 367
+          "linea": 368
         },
         {
           "nombre": "proponerVinculoReserva",
@@ -56785,7 +56834,7 @@
           "exportada": false,
           "params": "facturaId: string, proveedor: string, fechaFactura: string | null,",
           "retorno": "Promise<void>",
-          "linea": 400
+          "linea": 401
         },
         {
           "nombre": "actualizarMensajeTg",
@@ -56793,7 +56842,7 @@
           "exportada": false,
           "params": "msgId: number | null, texto: string",
           "retorno": "Promise<void>",
-          "linea": 431
+          "linea": 432
         }
       ],
       "tablas": [
@@ -56806,7 +56855,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "e52058ac0a32"
+      "hash": "4ea8b0e144ba"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/procesar.ts",
@@ -57578,6 +57627,28 @@
       ],
       "rutaApi": null,
       "hash": "dec9a493222d"
+    },
+    {
+      "ruta": "apps/plataforma/lib/base-url.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "URL base pública de la app, para construir redirects absolutos (p. ej. el callback tras la firma bancaria SCA). Prioriza NEXTAUTH_URL (valor explícito con protocolo); si no, usa el VERCEL_URL que Vercel inyecta SIN protocolo; y en local cae a localhost. (Sustituye a la expresión con precedencia rota",
+      "exporta": [
+        "baseUrl"
+      ],
+      "funciones": [
+        {
+          "nombre": "baseUrl",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 6,
+          "resumen": "URL base pública de la app, para construir redirects absolutos (p. ej. el callback tras la firma bancaria SCA). Prioriza NEXTAUTH_URL (valor explícito con protocolo); si no, usa el VERCEL_URL que Verc"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f3e1172be1e5"
     },
     {
       "ruta": "apps/plataforma/lib/borme-ingesta.ts",
@@ -85605,7 +85676,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2333,
-    "funciones": 6137
+    "archivos": 2336,
+    "funciones": 6141
   }
 }
