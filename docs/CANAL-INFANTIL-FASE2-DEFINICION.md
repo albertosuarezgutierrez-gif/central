@@ -156,6 +156,15 @@ Mezcla de los huecos validados (calma / canciones tranquilas / lenguaje temprano
 - Alta de canales, identidad visual de canal (banner, miniaturas — plantilla fija, misma
   composición siempre: personaje + fondo + 2-3 palabras).
 
-## Decisiones que quedan en manos de Alberto
-1. **¿Caracol sí o no?** (o nube/lirón). 2. **Nombre** (Lolo / Nilo / Momo u otro, tras el
-chequeo de colisiones). 3. **Quién pone la voz humana** de las piezas de lenguaje.
+## Decisiones CERRADAS (30/07/2026)
+1. **Personaje: CARACOL** (Alberto sin objeción; recomendado por campo libre + animabilidad).
+2. **Nombre: NILO** (recomendado tras el chequeo de colisiones; pendiente solo la verificación
+   formal TMview/OEPM antes de registrar marca; plan B: Rulo/Tilo).
+3. **Voz: la hija de Alberto, GRABACIÓN REAL** (no clon). Alberto preguntó por clonarla
+   (grabar una vez → generar el resto con TTS): técnicamente posible con ElevenLabs, pero
+   descartado para el sandbox porque (a) voz clonada de persona real = declaración obligatoria
+   AI Act art. 50 + toggle "altered content" de YouTube en cada vídeo, (b) contradice el
+   posicionamiento "hecho con cuidado humano", (c) al ser menor exige cautelas extra
+   (consentimiento de ambos progenitores, dato biométrico), y (d) los guiones del sandbox son
+   tan cortos que una tarde de grabación lo cubre todo. El clon queda como opción futura SOLO
+   para dubs IT/DE si el canal despega, asumiendo el etiquetado.
