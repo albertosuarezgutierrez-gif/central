@@ -24,6 +24,30 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🕳️ Barrido del monorepo: afirmar ausencias no comprobadas (30/07/2026, misma rama).** Alberto:
+  «haz esto con todo lo que tenemos». Barrido de las 8 apps + packages buscando el patrón del bullet
+  siguiente. **Inventario completo en `docs/AUDITORIA-AUSENCIAS.md`** (✅ hecho / ⬜ pendiente, por
+  gravedad). Arreglados los 8 peores: la app de la limpiadora decía **«¡Descansa!»** ante un 500 (Sique
+  Brilla EN PRODUCCIÓN — el piso se quedaba sin limpiar); el escritor de `subastas.documentos` grababa
+  `[]` irreversible si el BOE devolvía algo que no era la ficha (guard `fichaLegible`); el semáforo
+  documental salía 🟢 sin haber leído un carácter; el saldo consolidado sumaba **0€** las cuentas que el
+  banco no devolvió y esa cifra iba al email de tesorería; el Telegram del extracto decía «✅ todos
+  clasificados» si fallaba la consulta; transporte daba **«Todo en regla ✅»** a un camión sin ITV
+  registrada; sivra concluía «NO estamos caros» sin datos de mercado; rrhh prometía **30 días de
+  vacaciones** inventándose el convenio. Pendientes (⬜ en el doc): el sync del PMS de ialimp —`ultimo_sync`
+  vs `last_sync_at`, columna que nadie escribe— y el escaneo IMAP de facturas, ambos sin heartbeat.
+
+- **📎 Subastas: «sin documentos adjuntos» era MENTIRA (30/07/2026, rama `claude/documentos-adjuntos-o95xl1`).**
+  Alberto con dos capturas: la ficha de `SUB-JA-2026-263723` decía «sin documentos adjuntos» y el BOE publicaba
+  EDICTO + CERTIFICACIÓN DE CARGAS. No era el parser (`enlacesDocumentos` saca los 2 enlaces del HTML vivo):
+  la columna `documentos` se estrenó ese mismo día (#1179) y el cron que la rellena corre a las 06:15 UTC, así
+  que las 11 subastas vivas la tenían a NULL — y la ficha pintaba ese NULL como lista vacía. Fix: helper puro
+  `lib/subastas/resumen-docs.ts` (`estadoDocumentacion`/`resumenDocumentos`, 5 tests) que separa **NULL = sin
+  revisar** de **[] = revisada sin adjuntos**; las fuentes sin ficha documental (Junta) no quedan «pendientes»
+  eternas. **Backfill ya hecho en prod** por el endpoint `fase3-debug?accion=documentos` (pg_net, porque el
+  proxy del contenedor cierra `*.vercel.app`): 11/11 filas → 8 con adjuntos, 3 vacías de verdad.
+  ⚠️ Regla: nunca afirmar una ausencia a partir de un dato que aún no se ha mirado. tsc 0 · 664 tests · build OK.
+
 - **⚖️ Subastas: caducidad de embargos (art. 86 LH) + costa de Cádiz (30/07/2026, rama
   `claude/subasta-carga-no-publicadas-jm7ky6` reiniciada tras mergear #1176).**
   - **Caducidad (idea 1, la que faltaba)** — `caducidad.ts`: una anotación preventiva de embargo caduca a

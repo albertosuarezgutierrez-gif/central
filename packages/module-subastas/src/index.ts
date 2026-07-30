@@ -42,7 +42,7 @@ export { parsearPatrimonioJunta, loteASubasta, municipioDeLote, fechaTextualEs }
 export type { LoteJunta } from './junta.ts'
 
 // Documentos adjuntos a la ficha del BOE: edictos con texto → señales explícitas
-export { enlacesDocumentos, datosDeEdicto, notasDeEdicto } from './edicto.ts'
+export { enlacesDocumentos, fichaLegible, datosDeEdicto, notasDeEdicto } from './edicto.ts'
 export type { DocumentoFicha, DatosEdicto } from './edicto.ts'
 
 // Extracción de datos desde la descripción registral (tipo, superficie,

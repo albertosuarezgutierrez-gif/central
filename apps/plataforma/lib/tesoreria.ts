@@ -5,7 +5,13 @@ import { prisma } from './db'
 import { getSaldoConsolidado } from './banca'
 import { detectarRecurrentes, proyectar, type Recurrente, type Proyeccion } from './tesoreria-core'
 
-export type Tesoreria = { saldoActual: number; recurrentes: Recurrente[]; proyecciones: Proyeccion[] }
+export type Tesoreria = {
+  saldoActual: number
+  recurrentes: Recurrente[]
+  proyecciones: Proyeccion[]
+  /** Cuentas visibles sin saldo conocido: `saldoActual` es un MÍNIMO, no el total. */
+  cuentasSinSaldo: number
+}
 
 export async function getTesoreria(
   cuentaId: string,
@@ -30,5 +36,5 @@ export async function getTesoreria(
 
   const recurrentes = detectarRecurrentes(movs)
   const proyecciones = [30, 60, 90].map(d => proyectar(saldo.total, recurrentes, d, hoy))
-  return { saldoActual: saldo.total, recurrentes, proyecciones }
+  return { saldoActual: saldo.total, recurrentes, proyecciones, cuentasSinSaldo: saldo.sinSaldo }
 }

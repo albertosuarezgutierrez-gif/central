@@ -34,7 +34,10 @@ export async function clasificarSubastas(max = 400): Promise<{ revisadas: number
     const oportunidad = evaluarOportunidad(s)
     const flip = evaluarFlip(s, oportunidad, anio)
     const playa = esPlaya(s.municipio, s.descripcion, s.provincia)
-    const analisis = analisisDocumental(s, f.notas_edicto ?? null)
+    // El listado de adjuntos va al análisis para que «procesado sin hallazgos»
+    // no se confunda con «no se ha leído nada» (ficha sin adjuntos o todos
+    // escaneados): sin él, el semáforo podía salir 🟢 sin abrir un documento.
+    const analisis = analisisDocumental(s, f.notas_edicto ?? null, Array.isArray(f.documentos) ? f.documentos : null)
     // Techo de puja para un 25% de descuento REAL — el mismo que pinta la ficha.
     // Se CONGELA aquí: cuando la subasta concluya, esta fila deja de entrar en la
     // consulta de arriba (ya tiene semáforo y la fecha pasó), así que el número

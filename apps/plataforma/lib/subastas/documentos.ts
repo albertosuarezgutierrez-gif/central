@@ -33,6 +33,7 @@ import {
   cargasQueSubsisten,
   datosDeEdicto,
   enlacesDocumentos,
+  fichaLegible,
   mismoAcreedorQueEjecutante,
   notasDeEdicto,
   pareceEscaneado,
@@ -107,6 +108,13 @@ export async function procesarDocumentosDeFicha(
   opts: { leerCargas?: boolean } = {},
 ): Promise<ResultadoFicha> {
   const html = await (await bajar(`${FICHA}?idSub=${encodeURIComponent(identificador)}`)).text()
+  // 🚨 Antes de creerse un «no hay adjuntos», comprobar que esto ES la ficha.
+  // Un 200 que no lo sea daría `[]`, se grabaría como «sin documentos» y la
+  // cola no volvería a mirar esta subasta jamás. Lanzando, la fila se queda a
+  // NULL («sin revisar») y se reintenta en la pasada siguiente.
+  if (!fichaLegible(html, identificador)) {
+    throw new Error('la respuesta del Portal no es la ficha de esta subasta')
+  }
   // Se listan TODOS (los enlaces son gratis) y se descargan solo los primeros.
   const todos = enlacesDocumentos(html)
 
