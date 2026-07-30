@@ -24,6 +24,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏷️ Banca: compra de tarjeta ya no cae en palabra-trampa + bandeja pregunta el NEGOCIO (30/07/2026,
+  rama `claude/restaurante-charge-agent-issue-8lxiwv`).** Restaurante "LA HACIENDA GOLF" caía a
+  `categoria='impuestos'` ('HACIENDA' a secas en `categorizarPorReglas`, tras las reglas de comercio).
+  Reglas extraídas a `lib/categoria-reglas.ts` (PURO, 6 tests): compra con tarjeta → 'tarjeta' ANTES de
+  reglas de comercio; 'HACIENDA' suelto retirado. `RevisarBandeja` de `/banca` ahora pregunta el negocio
+  (botones Correduría/Personal + Otro…) vía `/api/banca/destino` (confirma + aprende regla), en vez de la
+  taxonomía PGC que confundía a Alberto. Backfill `2026-07-30_categoria_compra_tarjeta.sql` aplicado (3 filas).
+
 - **⚕️ Health check 30/07 resuelto: dedupe PSD2 anti-drift + ventana Smoobu (30/07/2026, rama
   `claude/health-check-2026-07-30-vlv4c7`).** Check 1: el mismo abono BBVA entra 2 veces porque el banco
   re-sirve el concepto con `Nº`→`N` (3er caso: 16/06, 25/06, 22/07 413,17€ Dúplex) → guarda post-ingesta

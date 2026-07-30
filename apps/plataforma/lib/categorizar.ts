@@ -9,33 +9,11 @@
 import { aiComplete, cleanJSON } from '@central/core-ai'
 import { prisma } from './db'
 import { clasificarPorKeywords } from './subcategoria-keywords'
+import { CATEGORIAS, pgcDe, categorizarPorReglas, type Categoria } from './categoria-reglas'
 
-// Taxonomía cerrada de categorías (la IA debe elegir una de estas).
-export const CATEGORIAS = [
-  'nomina', 'proveedor', 'impuestos', 'suministros', 'alquiler',
-  'comision_bancaria', 'cobro_cliente', 'transferencia', 'tarjeta',
-  'prestamo', 'seguro', 'otros',
-] as const
-export type Categoria = typeof CATEGORIAS[number]
-
-// Etiqueta visible (con emoji) por categoría. Compartida por /banca y el dashboard.
-export const CATEGORIA_LABEL: Record<Categoria, string> = {
-  nomina: '👤 Nómina', proveedor: '📦 Proveedor', impuestos: '🏛️ Impuestos',
-  suministros: '💡 Suministros', alquiler: '🏠 Alquiler', comision_bancaria: '🏦 Comisión',
-  cobro_cliente: '💰 Cobro cliente', transferencia: '🔁 Transferencia', tarjeta: '💳 Tarjeta',
-  prestamo: '📉 Préstamo', seguro: '🛡️ Seguro', otros: '• Otros',
-}
-
-// Mapa categoría → cuenta PGC orientativa (Plan General Contable español).
-const PGC: Record<Categoria, string> = {
-  nomina: '640', proveedor: '600', impuestos: '475', suministros: '628',
-  alquiler: '621', comision_bancaria: '626', cobro_cliente: '700',
-  transferencia: '572', tarjeta: '572', prestamo: '170', seguro: '625', otros: '629',
-}
-
-function pgcDe(cat: string): string {
-  return (CATEGORIAS as readonly string[]).includes(cat) ? PGC[cat as Categoria] : PGC.otros
-}
+// La taxonomía, etiquetas, mapa PGC y reglas deterministas viven en lib/categoria-reglas.ts
+// (módulo PURO, testeable con `node --test`). Se reexportan para no romper imports existentes.
+export { CATEGORIAS, CATEGORIA_LABEL, pgcDe, categorizarPorReglas, type Categoria } from './categoria-reglas'
 
 export type MovParaCategorizar = { id: string; concepto: string | null; contraparte: string | null; importe: number }
 export type Categorizacion = { id: string; categoria: Categoria; conceptoNormalizado: string; categoriaPgc: string; requiereRevision: boolean }
@@ -115,31 +93,6 @@ export function detectarDeduccionCuotaTipo(
   if (has('GYM DUO', 'GYM SOCIO', 'CUOTA GYM', 'CUOTA GIMNASIO', 'PISCINA MUNICIPAL',
     'CLUB DEPORTIVO', 'POLIDEPORTIVO', 'INSTALACION DEPORTIVA', 'CUOTA PADEL', 'CUOTA TENIS',
     'CUOTA NATACION', 'CUOTA NATACIÓN')) return 'deportiva_and'
-  return null
-}
-
-// Reglas deterministas: categoriza por palabras clave del concepto/contraparte SIN IA.
-// Cubre la mayoría de movimientos al instante (y sin gastar el cupo gratuito de NIM). Lo
-// que no encaje devuelve null → va a la IA. Orden: de lo más específico a lo más genérico.
-function categorizarPorReglas(concepto: string | null, contraparte: string | null, importe: number): Categoria | null {
-  const t = `${concepto ?? ''} ${contraparte ?? ''}`.toUpperCase()
-  const has = (...ks: string[]) => ks.some(k => t.includes(k))
-
-  if (has('SEGURO', 'GENERALI', 'MAPFRE', ' AXA', 'ALLIANZ', 'MUTUA', 'ZURICH', 'REALE', 'CASER', 'LINEA DIRECTA', 'PELAYO')) return 'seguro'
-  if (has('NOMINA', 'NÓMINA', 'PAGA EXTRA', 'SALARIO', 'PAGO DE NOMINA')) return 'nomina'
-  if (has('AEAT', 'AGENCIA TRIBUTARIA', 'HACIENDA', 'IMPUEST', 'IRPF', 'TRIBUTARI', 'RECAUDACION', 'RECAUDACIÓN', 'AYUNTAMIEN', ' IBI ', 'CONTRIBUCION', 'PLUSVALIA', 'TGSS', 'SEGURIDAD SOCIAL', 'TESOR. GRAL', 'TESORERIA GENERAL', 'MODELO 3', 'TASA ')) return 'impuestos'
-  if (has('PRESTAMO', 'PRÉSTAMO', 'AMORTIZAC', 'CUOTA PREST', 'HIPOTECA', 'FINANCIAC', 'LEASING')) return 'prestamo'
-  if (has('COMISION', 'COMISIÓN', 'COMIS.', 'MANTENIMIENTO CUENTA', 'CUOTA TARJETA', 'GASTOS ADMIN')) return 'comision_bancaria'
-  if (has('ALQUILER', 'ARRENDAMIENT', 'RENTA MENSUAL')) return 'alquiler'
-  if (has('ENDESA', 'IBERDROLA', 'NATURGY', 'REPSOL', 'MOVISTAR', 'VODAFONE', 'ORANGE', 'FINETWORK', 'TELEFONICA', 'JAZZTEL', 'MASMOVIL', 'EMASESA', 'CANAL ISABEL', 'GAS NATURAL', 'SUMINISTRO', 'ELECTRIC', 'FACTURA DE AGUA', 'FACTURA LUZ', 'FACTURA GAS')) return 'suministros'
-  if (has('BIZUM')) return importe >= 0 ? 'cobro_cliente' : 'transferencia'
-  // OJO: incluir 'TRANSF.' (con punto) además de 'TRANSF ' (con espacio): los conceptos de Kutxabank
-  // llegan como `TRANSF. 0128 F0552026` (punto, no espacio) y sin esto se colaban a la IA, que las
-  // rebautizaba con etiquetas inventadas ("Comisión bancaria" para una transferencia de 1.691,58€).
-  if (has('TRANSFERENCIA', 'TRASPASO', 'ABONO POR TRANSF', 'TRANSF ', 'TRANSF.')) return importe >= 0 ? 'cobro_cliente' : 'transferencia'
-  if (has('PAGO RECIBO 466', 'TARJ.CRDTO', 'TARJ CRDTO')) return 'transferencia'   // liquidación de tarjeta
-  if (has('TARJETA', 'TARJ.', 'COMPRA EN', 'PAGO EN ', 'PAGO TARJETA', 'COMERCIO')) return 'tarjeta'
-  if (has('RECIBO', 'ADEUDO', 'SEPA', 'DOMICILIAC', 'CUOTA ')) return 'proveedor'
   return null
 }
 
