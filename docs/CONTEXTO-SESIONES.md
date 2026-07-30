@@ -46,8 +46,20 @@
     · `valoracion-historica.ts` (serie €/m² propia desde las tasaciones pactadas en escritura) ·
     `compararCuadros` (nota simple nueva vs certificación vieja) · botones Telegram «📝 consulta al
     juzgado» y «📨 enviar» (`subastas_consultas`).
-  - Migraciones aplicadas: `2026-07-30_cargas_lector_registral.sql` + `_reapariciones_valoracion.sql`.
-    240 tests · tsc 0 · build OK. **PENDIENTE:** la llamada al modelo solo se puede probar en producción
+  - **Provincia canónica + ciclo de vida:** `provinciaCanonica()` unifica «Sevilla»/«SEVILLA» (la
+    calibración partía la muestra en dos y ninguna mitad llegaba al mínimo) y `ciclo-vida.ts` +
+    `archivarPasadas()` sacan lo ya pasado de la lista/radar **sin borrar el histórico** (borrarlo mataría
+    la detección de reapariciones y la calibración).
+  - Migraciones aplicadas: `2026-07-30_cargas_lector_registral.sql` + `_reapariciones_valoracion.sql`
+    + `_ciclo_vida_y_provincia.sql`. Mergeado `main` (PRs #1175/#1177 tocaban el mismo terreno: 5
+    conflictos en `geo.ts`/`index.ts`/`COLS_SUBASTA`/cron/memoria, resueltos conservando ambas cosas).
+    283 tests · tsc 0 · build OK; CI/Tests/QA/gitleaks verdes sobre `259a714`.
+    **🚨 LANDMINE (30/07/2026):** los pushes de una sesión Claude a una rama con PR abierto **no siempre
+    disparan los workflows** (GitHub no genera eventos `pull_request` para pushes hechos con el token de
+    la app: los 3 commits de #1176 pasaron sin CI y `get_check_runs` del PR solo mostraba Vercel). No dar
+    por verde un PR sin comprobar que existe run para ESE sha; si falta, lanzarlo con `workflow_dispatch`
+    (ci.yml y tests.yml lo soportan; qa.yml y gitleaks.yml NO).
+    **PENDIENTE:** la llamada al modelo solo se puede probar en producción
     (el preview va tras el SSO de Vercel); `eurM2Actualizado` queda null hasta ingerir la serie histórica
     del IPV (hoy `mercado_indices` solo guarda la última variación); enganchar la nota simple al 📎 del chat.
 
