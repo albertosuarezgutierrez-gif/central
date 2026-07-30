@@ -69,6 +69,11 @@ export function analisisDocumental(s: SubastaInmueble, notasEdicto: string | nul
     if (/vivienda habitual del demandado:\s*s[ií]/i.test(notas)) {
       puntos.push({ clave: 'vivienda_habitual', nivel: 'ambar', detalle: 'Vivienda habitual del demandado: el lanzamiento puede prorrogarse.' })
     }
+    // Sin esto, una certificación con embargo pero «sin cargas de procedencia»
+    // pondría el punto de cargas en verde y el embargo quedaría invisible.
+    if (/anotaci[oó]n de EMBARGO/i.test(notas)) {
+      puntos.push({ clave: 'embargo', nivel: 'ambar', detalle: 'Anotación de embargo en la certificación: verificar importe, vigencia y si es posterior (se cancelaría con la adjudicación).' })
+    }
   }
 
   // ── Valoración: ¿con qué se está comparando el precio? ────────────────────
