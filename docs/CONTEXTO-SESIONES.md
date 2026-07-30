@@ -23,6 +23,15 @@
 ---
 
 ## 📌 Estado actual (lo más reciente arriba)
+
+- **🧹 Ahorro de tokens/contexto: rotación de memoria + skills router (30/07/2026, rama
+  `claude/short-responses-token-saving-qh7i88`).** Memoria viva rotada por meses (983→~492 KB; junio →
+  `docs/memoria/2026-06.md` vía `scripts/rotar-memoria.mjs`, idempotente, la dispara `/auditoria-diaria` a
+  primeros de mes) + regla nueva: entradas ≤8 líneas. Skills gordas (ia-rest/plataforma/perfil-fiscal/pricing/
+  facturas-correo/trading-analista/sivra) → patrón router+`references/` (~4 KB al invocar en vez de 20-77 KB;
+  contenido VERBATIM en references, leído bajo demanda; patrón documentado en `docs/SKILLS.md`). Descripciones
+  de frontmatter recortadas a ≤350 chars y `using-superpowers` condensada (se inyecta en cada arranque).
+
 - **💸 Transferencias SEPA "libres" (formulario) + fix redirect del pago de facturas (29/07/2026, rama
   `claude/agente-contable-notificaciones-cbouni`).** Alberto: "con la conexión de los bancos, ¿puedes hacer
   transferencias?" → sí, pero el PIS (Enable Banking) estaba solo cableado al pago de facturas de proveedor y
