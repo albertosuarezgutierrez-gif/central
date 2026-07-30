@@ -41,6 +41,18 @@
   - ⚠️ **Los comparables de Cádiz están casi vacíos** (solo Sanlúcar, 20 anuncios): sin €/m² de zona no hay
     descuento ni margen flip. Hacen falta alertas de Idealista/Fotocasa de esas zonas al correo, o que
     Idealista apruebe la API (solicitada el 30/07). Eso NO lo puede resolver el código.
+  - **🚨 VALIDACIÓN EN PRODUCCIÓN DEL LECTOR: el rescate del escaneado funciona, la lectura por IA NO
+    llegaba a ejecutarse** (30/07/2026, tras mergear #1176). El puente devolvió `via:'vision'`,
+    `paginas:10` (las páginas exactas) pero **0 cargas** y `procedimiento:'desconocido'`. En `ai_usos`,
+    TODAS las llamadas `registral-vision` fallaban por tres causas, ninguna del prompt:
+    (a) **OpenRouter 404 «No endpoints found that support image input»** — sin modelo del catálogo
+    (`registral` aún no está: el cron `ia-director-refresh` es semanal) caía al `OPENROUTER_MODEL` por
+    defecto, que es de TEXTO. Fix: `aiVision` NO llama a OpenRouter sin modelo multimodal explícito
+    (`opts.model` o env nueva `OPENROUTER_VISION_MODEL`); va directo a NIM, que sí tiene visión.
+    (b) **NIM 400 «At most 1 image(s) may be provided»** — `llama-3.2-90b-vision` acepta UNA imagen por
+    petición y se mandaban 4. Fix: `IMAGENES_POR_LLAMADA = 1` + 4 llamadas en paralelo para no comerse
+    el `maxDuration`. (c) **NIM 400 payload > 25 MB** — PNG sin pérdida de 3.000 px. Fix: JPEG calidad 82.
+    `LECTOR_VERSION` a **3** para que relea las 34 fichas. **Falta re-validar contra Belmonte.**
   - 324 tests módulo · 215 app · tsc 0 · build OK.
 
 - **⚖️ Subastas — 3 partidas que faltaban en el coste real (30/07/2026, misma rama/PR #1176).** De las 5

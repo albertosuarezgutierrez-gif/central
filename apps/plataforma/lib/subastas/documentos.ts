@@ -53,7 +53,7 @@ const MAX_BYTES_DOC = 20 * 1024 * 1024
  * arregla el punto 2 de arriba — sin esto, mejorar el prompt no rescata nada de
  * lo ya (mal) leído.
  */
-export const LECTOR_VERSION = 2
+export const LECTOR_VERSION = 3
 
 /** Documentos que NO merecen una llamada de IA: no contienen cargas. */
 const RUIDO = /^(justificante|minuta|honorarios|tasa|pago|aranceles?)\b/i
