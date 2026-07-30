@@ -5,9 +5,23 @@
 // ⏳ PENDIENTE de la API key de Alberto: sin `EINFORMA_CLIENT_ID`/`EINFORMA_CLIENT_SECRET` esto lanza
 //    `EinformaNoConfigurado` y el resto del sistema degrada sin romper.
 //
-// ⚠️ Las RUTAS y los CAMPOS EXACTOS del payload (marcados abajo) hay que CONFIRMARLOS contra la
-//    documentación / entorno de pruebas de eInforma al activar la key. Están centralizados en RUTAS y en
-//    `mapearFinanciero` para que confirmarlos sea una edición de dos sitios, no una reescritura.
+// 🚨 ESTE MAPEO ESTÁ MAL Y SE SABE (comprobado 30/07/2026 contra el JSON de ejemplo y el diccionario
+//    de datos reales de Informa D&B — ver `docs/EINFORMA-CONTRATACION.md` §5). NO te fíes de la forma
+//    que asume `mapearFinanciero`: se escribió a ciegas antes de tener la documentación. En la API real:
+//      · Todo cuelga de `datosProducto`, no de la raíz (la raíz lleva el sobre de la petición y
+//        `campoCodificadoRespuesta.valor`, que es el código de error a comprobar).
+//      · Las cifras NO son campos con nombre: son `informacionFinanciera.listaBalances[]` →
+//        `listaPartidasCuentaPerdidasGanancias[]` con `{codigoPartida, valor}` — hay que INDEXAR POR
+//        CÓDIGO DE PARTIDA del PGC (40100 = cifra de negocios, 49500 = resultado del ejercicio).
+//      · `listaBalances` mezcla ejercicios INDIVIDUALES y CONSOLIDADOS: filtrar por
+//        `cabeceraBalance.indicadorBalanceIndividual` antes de comparar años, o se inventan caídas.
+//    No se reescribe todavía porque el producto es CONFIGURABLE y la lista de partidas que devolverá
+//    depende de lo que se pacte al contratar (la configuración de la demo solo trae 2 partidas y NO
+//    incluye patrimonio neto, EBITDA, fondo de maniobra ni CNAE). Primero se cierra el contrato con la
+//    lista de campos, luego se reescribe este mapeo contra el payload real.
+//
+// ⚠️ Las RUTAS siguen SIN VERIFICAR (la doc va en un ZIP que no se ha podido leer). Están centralizadas
+//    en RUTAS para que confirmarlas sea una edición de un sitio.
 
 // Lo que guardamos por empresa tras enriquecer (subconjunto de columnas de empresas_enriquecimiento).
 export interface DatosFinancieros {

@@ -7,8 +7,13 @@
 // pdf-parse y guarda en `notas_edicto` las señales EXPLÍCITAS (herencia
 // yacente, vivienda habitual, «no consta la situación posesoria»).
 //
+// El LISTADO de documentos se guarda entero en `documentos` (jsonb) aunque no
+// se descarguen todos: saber que la subasta tiene una certificación de cargas
+// —y poder abrirla— vale por sí mismo, y antes se descartaba.
+//
 // Los documentos ESCANEADOS (certificaciones registrales, típicamente) no
-// tienen capa de texto: se saltan sin error. `notas_edicto = ''` marca
+// tienen capa de texto: se saltan sin error y quedan marcados `legible:false`
+// para que la ficha pueda decir «ábrela a mano». `notas_edicto = ''` marca
 // «procesada sin hallazgos» para no re-descargar cada día.
 // ────────────────────────────────────────────────────────────────────────────
 import { Prisma } from '@prisma/client'
@@ -41,35 +46,55 @@ async function textoDePdf(buf: Buffer): Promise<string> {
   return String(text ?? '')
 }
 
+/** Un documento de la ficha tal y como se guarda en `subastas.documentos`. */
+export interface DocumentoAdjunto {
+  titulo: string
+  url: string
+  /** `false` = escaneado o ilegible: no se ha podido leer automáticamente.
+   *  `null` = no se intentó (por el tope de descargas por pasada). */
+  legible: boolean | null
+}
+
 export interface DocumentosFicha {
   notas: string[]
   /** La certificación registral adjunta acredita las cargas de procedencia:
    *  las cargas SÍ están publicadas (en el documento, no en el campo de la ficha). */
   cargasPublicadas: boolean
+  /** TODOS los documentos que publica la ficha, no solo los descargados. */
+  documentos: DocumentoAdjunto[]
 }
 
-/** Procesa los documentos de UNA ficha. Devuelve las notas halladas. */
+/** Procesa los documentos de UNA ficha. Devuelve las notas y el listado. */
 export async function procesarDocumentosDeFicha(identificador: string): Promise<DocumentosFicha> {
   const html = await (await bajar(`${FICHA}?idSub=${encodeURIComponent(identificador)}`)).text()
-  const docs = enlacesDocumentos(html).slice(0, MAX_DOCS_POR_FICHA)
+  // Se listan TODOS (los enlaces son gratis) y se descargan solo los primeros.
+  const todos = enlacesDocumentos(html)
 
   const notas = new Set<string>()
   let cargasPublicadas = false
-  for (const doc of docs) {
+  const documentos: DocumentoAdjunto[] = todos.map((d) => ({ titulo: d.titulo, url: d.url, legible: null }))
+
+  for (let i = 0; i < Math.min(todos.length, MAX_DOCS_POR_FICHA); i++) {
+    const doc = todos[i]
     try {
       const r = await bajar(doc.url, 25000)
       const buf = Buffer.from(await r.arrayBuffer())
       if (buf.length > MAX_BYTES_DOC) continue
       const texto = await textoDePdf(buf).catch(() => '')
-      if (texto.replace(/\s+/g, ' ').trim().length < MIN_CHARS_TEXTO) continue // escaneado
+      if (texto.replace(/\s+/g, ' ').trim().length < MIN_CHARS_TEXTO) {
+        documentos[i].legible = false // escaneado: solo lectura humana
+        continue
+      }
+      documentos[i].legible = true
       const datos = datosDeEdicto(texto)
       if (datos.sinCargasProcedencia) cargasPublicadas = true
       for (const n of notasDeEdicto(datos)) notas.add(n)
     } catch (e) {
+      documentos[i].legible = false
       console.warn('[subastas-documentos]', identificador, doc.titulo, e)
     }
   }
-  return { notas: [...notas], cargasPublicadas }
+  return { notas: [...notas], cargasPublicadas, documentos }
 }
 
 /**
@@ -82,7 +107,7 @@ export async function procesarDocumentos(max = 10): Promise<{ revisadas: number;
     WHERE fuente = 'boe' AND identificador IS NOT NULL
       AND es_inmueble = true
       AND (fecha_fin IS NULL OR fecha_fin >= now())
-      AND notas_edicto IS NULL
+      AND (notas_edicto IS NULL OR documentos IS NULL)
     ORDER BY fecha_fin ASC NULLS LAST
     LIMIT ${max}
   `)
@@ -90,10 +115,11 @@ export async function procesarDocumentos(max = 10): Promise<{ revisadas: number;
   let conHallazgos = 0
   for (const f of filas) {
     try {
-      const { notas, cargasPublicadas } = await procesarDocumentosDeFicha(f.identificador)
+      const { notas, cargasPublicadas, documentos } = await procesarDocumentosDeFicha(f.identificador)
       await prisma.$executeRaw(Prisma.sql`
         UPDATE subastas SET
           notas_edicto = ${notas.join('\n')},
+          documentos = ${JSON.stringify(documentos)}::jsonb,
           -- La certificación adjunta cuenta como publicación de cargas: solo
           -- sube el flag, nunca lo baja (el campo «Cargas» de la ficha suele
           -- venir vacío cuando la info vive en el documento).
