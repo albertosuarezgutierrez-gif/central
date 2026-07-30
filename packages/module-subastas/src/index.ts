@@ -52,7 +52,7 @@ export type { DatosDescripcion, TipoBien } from './extraccion.ts'
 export { superficieM2, palabrasANumero, numeroAlFinal } from './numeros-es.ts'
 
 // Municipio → provincia (las descripciones del BOE citan municipios, no provincias)
-export { provinciaPorMunicipio, MUNICIPIOS_POR_PROVINCIA } from './geo.ts'
+export { provinciaPorMunicipio, provinciaCanonica, MUNICIPIOS_POR_PROVINCIA } from './geo.ts'
 
 // Ficha del Portal de Subastas (las CIFRAS) y Catastro (superficie, año, uso)
 export { parsearFichaBoe, paresFicha, resultadoDeFicha } from './ficha-boe.ts'
@@ -83,6 +83,11 @@ export type { Flip } from './flip.ts'
 export { esPlayaHuelva, MUNICIPIOS_PLAYA_HUELVA, NUCLEOS_PLAYA_HUELVA, TOPE_PLAYA } from './playa.ts'
 export { analisisDocumental } from './analisis.ts'
 export type { AnalisisDocumental, PuntoAnalisis, Nivel } from './analisis.ts'
+
+// Ciclo de vida: vigente / cerrada / archivada. Las pasadas salen de la vista
+// pero NUNCA se borran (sin ellas no hay reaparición ni calibración).
+export { estadoCiclo, esVigente, seConservaParaAprender, DIAS_PARA_ARCHIVAR } from './ciclo-vida.ts'
+export type { EstadoCiclo, EntradaCiclo } from './ciclo-vida.ts'
 
 // Política de aviso: solo lo rentable Y limpio interrumpe por Telegram
 export { decidirAviso, DIAS_URGENTE } from './aviso.ts'

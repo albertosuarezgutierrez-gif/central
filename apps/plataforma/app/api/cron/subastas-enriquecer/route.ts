@@ -8,8 +8,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { isCronAuthorized } from '@/lib/cron-auth'
+import { provinciaCanonica } from '@central/module-subastas'
 import { bajarCatastro, bajarFicha, capturarResultados } from '@/lib/subastas/enriquecer'
-import { procesarDocumentos } from '@/lib/subastas/documentos'
+import { archivarPasadas, procesarDocumentos } from '@/lib/subastas/documentos'
 import { clasificarSubastas } from '@/lib/subastas/clasificar'
 
 export const dynamic = 'force-dynamic'
@@ -71,7 +72,9 @@ export async function GET(req: NextRequest) {
             autoridad = COALESCE(${f.autoridad}, autoridad),
             telefono_autoridad = COALESCE(${f.telefonoAutoridad}, telefono_autoridad),
             email_autoridad = COALESCE(${f.emailAutoridad}, email_autoridad),
-            provincia = COALESCE(${f.provincia}, provincia),
+            -- Canónica: la ficha del BOE escribe «Sevilla» y la Junta «SEVILLA»;
+            -- sin unificar, todo lo que agrupa por provincia parte la muestra.
+            provincia = COALESCE(${provinciaCanonica(f.provincia)}, provincia),
             municipio = COALESCE(${f.localidad}, municipio),
             codigo_postal = COALESCE(${f.codigoPostal}, codigo_postal),
             direccion = COALESCE(${f.direccion}, direccion),
@@ -110,7 +113,15 @@ export async function GET(req: NextRequest) {
       return { revisadas: 0, playa: 0, flipViables: 0 }
     })
 
-    return NextResponse.json({ ok: true, procesadas: pendientes.length, enriquecidas: ok, fallos, ...resultados, documentos, lentes })
+    // Cierre del ciclo: lo ya pasado sale de la vista y su fila de la bandeja de
+    // avisos se borra. El HISTÓRICO se conserva: sin él no hay detección de
+    // reapariciones (la misma finca más barata) ni calibración con resultados.
+    const archivado = await archivarPasadas().catch((e) => {
+      console.error('[subastas-enriquecer] archivar', e)
+      return { archivadas: 0, radarLimpiado: 0 }
+    })
+
+    return NextResponse.json({ ok: true, procesadas: pendientes.length, enriquecidas: ok, fallos, ...resultados, documentos, lentes, archivado })
   } catch (e: any) {
     console.error('[subastas-enriquecer]', e)
     return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })

@@ -115,6 +115,7 @@ export async function corpusVigente(limite = 500): Promise<SubastaInmueble[]> {
     SELECT ${COLS_SUBASTA} FROM subastas
     WHERE es_inmueble = true
       AND (fecha_fin IS NULL OR fecha_fin >= now())
+      AND archivada_at IS NULL
     ORDER BY actualizado_en DESC
     LIMIT ${limite}
   `)

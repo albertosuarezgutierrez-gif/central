@@ -40,7 +40,9 @@ export async function GET(req: NextRequest) {
 
   const cond: Prisma.Sql[] = [Prisma.sql`es_inmueble = true`]
   if (provincia && provincia !== 'all') cond.push(Prisma.sql`provincia = ${provincia}`)
-  if (enPlazo) cond.push(Prisma.sql`(fecha_fin IS NULL OR fecha_fin >= now())`)
+  // «En plazo» excluye también lo archivado: las pasadas se conservan en la
+  // base como histórico (reaparición + calibración) pero no salen en la lista.
+  if (enPlazo) cond.push(Prisma.sql`archivada_at IS NULL AND (fecha_fin IS NULL OR fecha_fin >= now())`)
   if (precioMax) {
     const p = Number(precioMax)
     if (Number.isFinite(p)) cond.push(Prisma.sql`(valor_subasta IS NULL OR valor_subasta <= ${p})`)

@@ -22,13 +22,13 @@ export default async function SubastasPage() {
     const [filas, total, criterios, radar, tesoreria, chollos, ingresoDorm, indice, calibracion, pulso] = await Promise.all([
       prisma.$queryRaw<any[]>(Prisma.sql`
         SELECT ${COLS_SUBASTA} FROM subastas
-        WHERE es_inmueble = true AND (fecha_fin IS NULL OR fecha_fin >= now())
+        WHERE es_inmueble = true AND archivada_at IS NULL AND (fecha_fin IS NULL OR fecha_fin >= now())
         ORDER BY fecha_fin ASC NULLS LAST, actualizado_en DESC
         LIMIT 30
       `),
       prisma.$queryRaw<{ total: number }[]>(Prisma.sql`
         SELECT COUNT(*)::int AS total FROM subastas
-        WHERE es_inmueble = true AND (fecha_fin IS NULL OR fecha_fin >= now())
+        WHERE es_inmueble = true AND archivada_at IS NULL AND (fecha_fin IS NULL OR fecha_fin >= now())
       `),
       prisma.$queryRaw<any[]>(Prisma.sql`
         SELECT * FROM subastas_criterios WHERE cuenta_id = ${session.id}::uuid

@@ -32,6 +32,7 @@ import {
   notasDeEdicto,
   pareceEscaneado,
   resumirCargas,
+  DIAS_PARA_ARCHIVAR,
   type CuadroCargas,
 } from '@central/module-subastas'
 import { fusionarCuadros, leerDocumento, type LecturaDocumento } from '@/lib/subastas/lector-registral'
@@ -242,4 +243,38 @@ export async function procesarDocumentos(max = 10): Promise<{
   }
 
   return { revisadas: filas.length, conHallazgos, conCargas, analizadas }
+}
+
+/**
+ * Cierre del ciclo: saca de la VISTA lo que ya pasó, conservando el histórico.
+ *
+ * Alberto pidió «borrar las pasadas», y en la misma frase apuntó que hay fincas
+ * que salen varias veces — que es exactamente la razón para NO borrarlas:
+ *  · sin la convocatoria vieja no se detecta que la finca vuelve más barata;
+ *  · sin los resultados no hay calibración (la memoria del agente).
+ *
+ * Así que se borra la BANDEJA de avisos (`subastas_radar`, efímera por diseño) y
+ * se marca la subasta como archivada. El histórico se queda.
+ */
+export async function archivarPasadas(): Promise<{ archivadas: number; radarLimpiado: number }> {
+  // Archivadas: pasadas CON resultado conocido, o pasadas hace tanto que el
+  // portal ya no va a publicarlo (DIAS_PARA_ARCHIVAR del módulo).
+  const archivadas = await prisma.$executeRaw(Prisma.sql`
+    UPDATE subastas SET archivada_at = now(), actualizado_en = now()
+    WHERE archivada_at IS NULL
+      AND fecha_fin IS NOT NULL
+      AND fecha_fin < now()
+      AND (resultado IS NOT NULL OR fecha_fin < now() - make_interval(days => ${DIAS_PARA_ARCHIVAR}::int))
+  `)
+
+  // La bandeja de avisos de lo ya cerrado: eso sí se borra, no sirve de nada.
+  const radarLimpiado = await prisma.$executeRaw(Prisma.sql`
+    DELETE FROM subastas_radar r
+    USING subastas s
+    WHERE s.dedupe_key = r.dedupe_key
+      AND s.fecha_fin IS NOT NULL
+      AND s.fecha_fin < now() - interval '1 day'
+  `)
+
+  return { archivadas: Number(archivadas), radarLimpiado: Number(radarLimpiado) }
 }
