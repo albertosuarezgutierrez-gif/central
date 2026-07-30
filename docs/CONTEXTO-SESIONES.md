@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **👨‍👩‍👧 Estudio de demanda parental (Fase 1b del experimento canal infantil) — HECHO (30/07/2026, solo
+  informe, cero código; mismo PR #1167).** Alberto quiso empezar por "qué piden los padres" antes de decidir.
+  Hallazgo de método: los vídeos "made for kids" tienen comentarios desactivados (COPPA) → se minó en foros
+  ES, reseñas de apps y TikTok/prensa. Resultado en `docs/ESTUDIO-DEMANDA-PADRES.md`: la demanda mejor
+  documentada es la intersección **anti-AI-slop + baja estimulación + castellano peninsular** (ForoCoches
+  oct-2025, "Ms Rachel pero en español", carta Fairplay abr-2026) — o sea, LO CONTRARIO del plan original de
+  IA en masa. Barrido de mercados: España pierde la ecuación económica; mejores tableros **DACH > Italia >
+  neerlandés**, jugables a la vez con animación SIN DIÁLOGO. Recomendación: GO al sandbox de Fase 2 (5-10
+  vídeos: calma + canciones tranquilas ES + lenguaje temprano + sílabas; publicar ES+IT; corte a 6 meses).
+  Fase 2 (IP/biblia + pipeline + script YouTube Data API) pendiente de aprobación de Alberto.
 - **📺 Estudio de viabilidad: canal YouTube de dibujos animados infantiles con IA — HECHO (30/07/2026,
   solo informe, cero código).** Alberto propuso "estudiar los vídeos top y elaborar vídeos, todo automático
   con IA" y pidió incluir rentabilidad y legalidad (AI Act 2/8/2026). Investigación con fuentes en
