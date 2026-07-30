@@ -71,8 +71,18 @@ test('el decimal con punto NO se trata como millar', () => {
   assert.ok(c && c.lon === -6.22 && c.lat === 36.59)
 })
 
-test('urlGoogleMaps: con coordenadas manda el punto exacto', () => {
+test('urlGoogleMaps: la DIRECCIÓN manda sobre las coordenadas', () => {
+  // Cambio deliberado (30/07/2026): `query=<lat,lon>` deja un pin anónimo en
+  // mitad de la manzana, sin portal ni Street View — inservible para valorar el
+  // inmueble. La dirección postal resuelve el portal exacto. Las coordenadas
+  // siguen siendo el respaldo cuando no hay dirección (test siguiente).
   const u = urlGoogleMaps({ lat: 36.5997, lon: -6.2249, direccion: 'CL VIRGEN MILAGROS 79', municipio: 'El Puerto de Santa María' })
+  assert.ok(u && !u.includes('36.5997'), u ?? 'sin url')
+  assert.match(decodeURIComponent(u!), /CL VIRGEN MILAGROS 79, El Puerto de Santa María/)
+})
+
+test('urlGoogleMaps: sin dirección, las coordenadas son el respaldo', () => {
+  const u = urlGoogleMaps({ lat: 36.5997, lon: -6.2249, municipio: 'El Puerto de Santa María' })
   assert.equal(u, 'https://www.google.com/maps/search/?api=1&query=36.5997,-6.2249')
 })
 

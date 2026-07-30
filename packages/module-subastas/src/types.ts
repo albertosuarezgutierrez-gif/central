@@ -61,6 +61,11 @@ export interface SubastaInmueble {
   lon?: number | null
   /** 'catastro' = parcela exacta · 'municipio' = centroide aproximado (OSM). */
   geoPrecision?: 'catastro' | 'municipio' | null
+  codigoPostal?: string | null
+  /** Uso principal según Catastro (Residencial, Comercial…). */
+  usoCatastral?: string | null
+  /** Superficie construida OFICIAL, distinta de la registral del anuncio. */
+  superficieCatastro?: number | null
   descripcion?: string | null
   url?: string | null
 
@@ -101,8 +106,6 @@ export interface SubastaInmueble {
    */
   superficieOrigen?: 'catastro' | 'anuncio' | null
   anioConstruccion?: number | null
-  /** Uso del Catastro (Residencial, Comercial…). */
-  usoCatastral?: string | null
 
   // ── Características físicas del inmueble ──────────────────────────────────
   // Lo que alguien mira ANTES que el precio: qué es y cómo es. Salen de la

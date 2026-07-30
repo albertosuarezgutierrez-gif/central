@@ -25,13 +25,27 @@
 ## 📌 Estado actual (lo más reciente arriba)
 
 - **🏠 Subastas: las características del inmueble ya se ven en la ficha (30/07/2026, rama
-  `claude/property-features-missing-je4vtw`).** Alberto sobre una captura de `/subastas`: «no aparecen las
-  características». Cierto — m², dormitorios, baños, planta, año, uso y dirección estaban en BD y solo se
-  usaban para calcular €/m² y yield; la ficha nunca los pintaba. `SubastaInmueble` gana esos campos +
-  `superficieOrigen` (Catastro vs escritura: discrepan a menudo), `filaASubasta` los mapea con fallback a
-  `extraerDatos(descripcion)` cuando la columna está vacía, y `FichaSubasta` los muestra arriba del todo
-  (si el anuncio no publica nada, lo dice en vez de callar). El radar repinta su snapshot con la foto viva
-  del corpus si la subasta sigue vigente, así no hay que esperar al cron. tsc 0 · 659+202 tests · build OK.
+  `claude/property-features-missing-je4vtw`, PR #1177).** Alberto sobre una captura de `/subastas`: «no
+  aparecen las características». Cierto — tipo, m², dormitorios, baños y planta estaban en BD y solo se
+  usaban para calcular €/m² y yield. `SubastaInmueble` gana esos campos + `superficieOrigen` (Catastro vs
+  escritura: discrepan a menudo), `filaASubasta` los mapea con fallback a `extraerDatos(descripcion)` cuando
+  la columna está vacía, y `FichaSubasta` los pinta arriba del todo (si el anuncio no publica nada, lo dice
+  en vez de callar). El radar repinta su snapshot con la foto viva del corpus si la subasta sigue vigente,
+  así no hay que esperar al cron. Solapaba con #1175: los m² salen UNA vez (con su origen) y la planta no se
+  repite si ya la da la dirección del Catastro.
+
+- **🏛️ Subastas: ubicación EXACTA y datos del Catastro visibles en la ficha (30/07/2026, rama
+  `claude/national-property-map-kszwhp`).** Alberto: «SUB-JA-2026-263723 la ubicación es muy mala». Causa:
+  el punto era correcto (Catastro) pero **la ficha no pintaba la dirección en NINGÚN sitio** (estaba solo en
+  BD) y el botón de Maps mandaba `query=lat,lon` → pin anónimo sin portal ni Street View. Fix: `direccionCatastro()`
+  trocea el `ldt` denso («AV PEDRO ROMERO (DE) 2 Es:1 Pl:07 Pt:B 41007 SEVILLA» → postal + planta + puerta),
+  la ficha muestra dirección/planta/m² catastrales/año/uso, y **`urlGoogleMaps` prioriza la DIRECCIÓN sobre las
+  coordenadas** (cambio deliberado) + 👁️ Street View + 🏛️ ficha del Catastro. **Idea de Alberto:** sacar la
+  referencia catastral por DIRECCIÓN (`Consulta_DNPLOC` + `ConsultaVia` para el nombre oficial — el Catastro
+  archiva «Avenida de Madrid» como «MADRID DE»). Acierta 4/16 direcciones reales; el resto falla por datos de
+  origen imprecisos (parcelas de polígono, «S/N», direcciones antiguas), no por el parser → degrada al
+  centroide. Prod: 8 exactas (antes 4) + 25 aproximadas. ⚠️ Los DATOS del bien exigen la RC de 20; con la de
+  parcela (14) el Catastro devuelve el listado del edificio sin `<bico>` y sale vacío. 223 tests módulo.
 
 - **🗺️ Subastas: mapa nacional + enlace a Google Maps por ficha (30/07/2026, rama
   `claude/national-property-map-kszwhp`).** Idea de Alberto sobre la captura de `/subastas`: ver todos los

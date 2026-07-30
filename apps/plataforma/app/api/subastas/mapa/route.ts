@@ -26,7 +26,7 @@ export async function GET() {
     const [filas, sinUbicar, radar] = await Promise.all([
       prisma.$queryRaw<any[]>(Prisma.sql`
         SELECT dedupe_key, identificador, tipo_bien, provincia, municipio,
-               COALESCE(direccion_catastro, direccion) AS direccion,
+               COALESCE(direccion_catastro, direccion) AS direccion, ref_catastral,
                valor_subasta, fecha_fin, url, lat, lon, geo_precision, situacion_posesoria
         FROM subastas
         WHERE ${vigente} AND lat IS NOT NULL AND lon IS NOT NULL
@@ -50,6 +50,7 @@ export async function GET() {
       provincia: f.provincia ?? null,
       municipio: f.municipio ?? null,
       direccion: f.direccion ?? null,
+      refCatastral: f.ref_catastral ?? null,
       valorSubasta: f.valor_subasta == null ? null : Number(f.valor_subasta),
       fechaFin: f.fecha_fin ? new Date(f.fecha_fin).toISOString() : null,
       url: f.url ?? null,

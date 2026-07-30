@@ -12,10 +12,16 @@
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import {
+  elegirVia,
   errorCatastro,
+  nombreViaBuscable,
+  parcelaUnica,
+  parsearVias,
   parsearCatastro,
   parsearCoordenadas,
   parsearFichaBoe,
+  parsearInmueblesDnploc,
+  refParcela,
   type CoordenadasCatastro,
   type DatosCatastro,
   type FichaBoe,
@@ -27,6 +33,8 @@ const UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Geck
 const FICHA = 'https://subastas.boe.es/detalleSubasta.php'
 const CATASTRO = 'https://ovc.catastro.meh.es/ovcservweb/OVCSWLocalizacionRC/OVCCallejero.asmx/Consulta_DNPRC'
 const CATASTRO_COORD = 'https://ovc.catastro.meh.es/ovcservweb/OVCSWLocalizacionRC/OVCCoordenadas.asmx/Consulta_CPMRC'
+const CATASTRO_DIR = 'https://ovc.catastro.meh.es/ovcservweb/OVCSWLocalizacionRC/OVCCallejero.asmx/Consulta_DNPLOC'
+const CATASTRO_VIA = 'https://ovc.catastro.meh.es/ovcservweb/OVCSWLocalizacionRC/OVCCallejero.asmx/ConsultaVia'
 
 async function bajar(url: string, ms = 20000): Promise<string> {
   const r = await fetch(url, {
@@ -51,7 +59,16 @@ export async function bajarFicha(identificador: string): Promise<FichaBoe> {
   return parsearFichaBoe(general, bien, autoridad)
 }
 
-/** Consulta el Catastro por referencia catastral. `null` si no hay dato. */
+/**
+ * Consulta el Catastro por referencia catastral. `null` si no hay dato.
+ *
+ * ⚠️ Solo devuelve datos del BIEN (superficie, año, uso) con la referencia
+ * COMPLETA de 20 caracteres. Con la de parcela (14) el servicio responde el
+ * LISTADO de inmuebles del edificio, sin bloque `<bico>`, y el parseo sale vacío
+ * — comprobado el 30/07/2026. Por eso una referencia hallada por dirección en un
+ * portal con varios pisos da ubicación exacta pero no datos del piso: no se sabe
+ * cuál de ellos se subasta y inventarlo sería peor que no tenerlo.
+ */
 export async function bajarCatastro(refCatastral: string): Promise<DatosCatastro | null> {
   const xml = await bajar(`${CATASTRO}?Provincia=&Municipio=&RC=${encodeURIComponent(refCatastral)}`)
   const err = errorCatastro(xml)
@@ -68,10 +85,69 @@ export async function bajarCatastro(refCatastral: string): Promise<DatosCatastro
  * caracteres; con la referencia de 20 del bien concreto responde error.
  */
 export async function bajarCoordenadas(refCatastral: string): Promise<CoordenadasCatastro | null> {
-  const rc14 = refCatastral.replace(/\s+/g, '').slice(0, 14)
-  if (rc14.length < 14) return null
+  const rc14 = refParcela(refCatastral)
+  if (!rc14) return null
   const xml = await bajar(`${CATASTRO_COORD}?Provincia=&Municipio=&SRS=EPSG:4326&RC=${encodeURIComponent(rc14)}`)
   return parsearCoordenadas(xml)
+}
+
+/**
+ * Nombre OFICIAL de la vía según el callejero del Catastro (`ConsultaVia`, que
+ * busca por prefijo). Imprescindible porque el Catastro archiva los artículos al
+ * final: «Avenida de Madrid» → «MADRID DE».
+ */
+export async function resolverNombreVia(
+  provincia: string,
+  municipio: string,
+  sigla: string,
+  calle: string,
+): Promise<string | null> {
+  const buscada = nombreViaBuscable(calle)
+  if (!buscada) return null
+  const q = new URLSearchParams({ Provincia: provincia, Municipio: municipio, TipoVia: sigla, NombreVia: buscada })
+  const vias = parsearVias(await bajar(`${CATASTRO_VIA}?${q.toString()}`))
+  return elegirVia(vias, buscada)
+}
+
+/**
+ * DIRECCIÓN → referencia catastral (`Consulta_DNPLOC`, servicio libre; probado
+ * el 30/07/2026). Es lo que desbloquea la ubicación EXACTA de la mayor parte del
+ * corpus: el BOE publica la dirección del inmueble pero solo a veces su
+ * referencia catastral (5 de 34 subastas vigentes el 30/07/2026).
+ *
+ * Devuelve la referencia de PARCELA cuando todos los inmuebles del portal
+ * coinciden en ella — que es el caso normal («CL PACO GANDIA 26» → 10 pisos, una
+ * parcela) y basta para ubicar el edificio. Si la respuesta mezcla parcelas la
+ * dirección era ambigua y se devuelve `null` en lugar de adivinar.
+ */
+export async function buscarRefPorDireccion(p: {
+  provincia: string
+  municipio: string
+  sigla: string
+  calle: string
+  numero: string
+}): Promise<{ refParcela: string; refCompleta: string | null } | null> {
+  // Paso previo obligado: el nombre EXACTO del callejero. `Consulta_DNPLOC` no
+  // perdona («DE MADRID» no existe; está archivada como «MADRID DE»).
+  const oficial = await resolverNombreVia(p.provincia, p.municipio, p.sigla, p.calle).catch(() => null)
+
+  const q = new URLSearchParams({
+    Provincia: p.provincia,
+    Municipio: p.municipio,
+    Sigla: p.sigla,
+    Calle: oficial ?? p.calle,
+    Numero: p.numero,
+    Bloque: '',
+    Escalera: '',
+    Planta: '',
+    Puerta: '',
+  })
+  const inmuebles = parsearInmueblesDnploc(await bajar(`${CATASTRO_DIR}?${q.toString()}`))
+  const parcela = parcelaUnica(inmuebles)
+  if (!parcela) return null
+  // La referencia COMPLETA solo se da por buena si el portal tiene un único
+  // inmueble; con varios no se sabe cuál se subasta y el dato sería inventado.
+  return { refParcela: parcela, refCompleta: inmuebles.length === 1 ? inmuebles[0].refCompleta : null }
 }
 
 /**
