@@ -81,15 +81,46 @@ export async function sincronizarSesion(
         ${m.importe}, ${m.concepto || null}, ${m.contraparte || null},
         ${m.entryReference || null}, 'psd2', ${hashMov(cbId, m)}
       )`)
-      const res = await prisma.$executeRaw(Prisma.sql`
+      const nuevas = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
         INSERT INTO movimientos_bancarios
           (cuenta_bancaria_id, fecha_operacion, fecha_valor, importe, concepto, contraparte, referencia, origen, dedupe_hash)
         VALUES ${Prisma.join(filasMov)}
         ON CONFLICT (cuenta_bancaria_id, dedupe_hash) DO NOTHING
+        RETURNING id
       `)
-      const ins = Number(res)
+      const ins = nuevas.length
       insertados += ins
       duplicados += validos.length - ins
+
+      // Guarda anti-drift del concepto: BBVA re-sirve a veces el MISMO movimiento con la
+      // puntuación del concepto mutilada entre sesiones («LIQ. OP. Nº» ↔ «LIQ. OP. N»), y como
+      // el dedupe_hash incluye el concepto literal, el ON CONFLICT no lo caza (pares reales:
+      // 16/06, 25/06 y 22/07/2026). Si un recién insertado tiene un gemelo psd2 MÁS ANTIGUO
+      // con mismos (fecha, importe) y el mismo concepto una vez quitado todo lo no alfanumérico,
+      // el nuevo es el duplicado — se conserva siempre la fila que el P&L ya contó. Dos
+      // movimientos legítimos distintos del mismo día no colisionan: con concepto idéntico ya
+      // los colapsa el hash (matiz aceptado), y si difieren en algo más que puntuación no casan.
+      if (ins > 0) {
+        await prisma.$executeRaw(Prisma.sql`
+          UPDATE movimientos_bancarios n
+          SET duplicado_estado = 'ignorado',
+              comentario = COALESCE(n.comentario || ' | ', '') || 'auto-dedup: mismo movimiento psd2 con el concepto re-servido distinto'
+          WHERE n.id = ANY(${nuevas.map(f => f.id)}::uuid[])
+            AND coalesce(n.duplicado_estado, '') <> 'ignorado'
+            AND EXISTS (
+              SELECT 1 FROM movimientos_bancarios v
+              WHERE v.origen = 'psd2'
+                AND v.cuenta_bancaria_id = n.cuenta_bancaria_id
+                AND v.fecha_operacion IS NOT DISTINCT FROM n.fecha_operacion
+                AND v.importe = n.importe
+                AND v.id <> n.id
+                AND v.created_at < n.created_at
+                AND coalesce(v.duplicado_estado, '') <> 'ignorado'
+                AND regexp_replace(upper(coalesce(v.concepto, '')), '[^A-Z0-9]', '', 'g')
+                    = regexp_replace(upper(coalesce(n.concepto, '')), '[^A-Z0-9]', '', 'g')
+            )
+        `)
+      }
 
       // Categorizar con IA los movimientos recién insertados
       if (ins > 0) {

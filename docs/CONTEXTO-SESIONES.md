@@ -31,8 +31,12 @@
   colisiones), reglas de calma MEDIBLES (≤6 cortes/min, 60-80 bpm, final que "se aquieta"), registro de
   autoría humana (carpeta `docs/ip-canal-infantil/` + ficha de dirección por vídeo), pipeline descrito
   (Firefly→vector + Remotion paramétrico + Suno + voz humana; 10-40€/mes), sandbox de 10 vídeos concretos
-  en 2 canales (ES+IT), y criterio de corte a 6 meses (<250€ pérdida máx). **Pendiente de Alberto:** ¿caracol
-  sí/no?, nombre, y quién pone la voz. Fase 3 (código Remotion + assets + script datos) SOLO con aprobación.
+  en 2 canales (ES+IT), y criterio de corte a 6 meses (<250€ pérdida máx). **Decisiones CERRADAS (misma
+  tarde): personaje CARACOL, nombre NILO** (chequeo de colisiones hecho: Momo descartado —challenge + Ende
+  en DACH—, Lolo saturado en el nicho; Nilo limpio, pendiente TMview/OEPM antes de registrar marca; plan B
+  Rulo/Tilo) **y voz = la hija de Alberto en GRABACIÓN REAL** (clon ElevenLabs descartado para el sandbox:
+  AI Act art. 50 + "altered content" + menor; opción futura solo para dubs IT/DE). Fase 3 (código Remotion +
+  assets + script datos) SOLO con aprobación de Alberto.
 - **👨‍👩‍👧 Estudio de demanda parental (Fase 1b del experimento canal infantil) — HECHO (30/07/2026, solo
   informe, cero código; mismo PR #1167).** Alberto quiso empezar por "qué piden los padres" antes de decidir.
   Hallazgo de método: los vídeos "made for kids" tienen comentarios desactivados (COPPA) → se minó en foros
@@ -55,6 +59,23 @@
   pero dibujos claramente irreales no son "deepfake"; la ley española de las multas 35M€ AÚN en el Congreso
   (no en vigor a jul-2026). Fase 2 (IP + pipeline + script YouTube Data API) SOLO si Alberto aprueba el GO
   condicionado. Rama `claude/animated-children-videos-analysis-16u60t`.
+- **🏷️ Banca: compra de tarjeta ya no cae en palabra-trampa + bandeja pregunta el NEGOCIO (30/07/2026,
+  rama `claude/restaurante-charge-agent-issue-8lxiwv`).** Restaurante "LA HACIENDA GOLF" caía a
+  `categoria='impuestos'` ('HACIENDA' a secas en `categorizarPorReglas`, tras las reglas de comercio).
+  Reglas extraídas a `lib/categoria-reglas.ts` (PURO, 6 tests): compra con tarjeta → 'tarjeta' ANTES de
+  reglas de comercio; 'HACIENDA' suelto retirado. `RevisarBandeja` de `/banca` ahora pregunta el negocio
+  (botones Correduría/Personal + Otro…) vía `/api/banca/destino` (confirma + aprende regla), en vez de la
+  taxonomía PGC que confundía a Alberto. Backfill `2026-07-30_categoria_compra_tarjeta.sql` aplicado (3 filas).
+
+- **⚕️ Health check 30/07 resuelto: dedupe PSD2 anti-drift + ventana Smoobu (30/07/2026, rama
+  `claude/health-check-2026-07-30-vlv4c7`).** Check 1: el mismo abono BBVA entra 2 veces porque el banco
+  re-sirve el concepto con `Nº`→`N` (3er caso: 16/06, 25/06, 22/07 413,17€ Dúplex) → guarda post-ingesta
+  en `lib/psd2.ts` (compara conceptos sin puntuación, conserva la fila antigua) + saneo
+  `2026-07-30_dedupe_psd2_concepto_drift.sql` aplicado (dup del 22/07 ignorado, Check 1 a 0). Check 4
+  (Smoobu 4d): los crons iban mudos por el límite de 40 (ya arreglado por el dispatcher #1165, vivo desde
+  hoy 06:42); el sync pasa a `?days=7` en `CRON_JOBS` para que un apagón multi-día se auto-repare.
+  Verificar mañana tras las 05:00 UTC que `incomes` refresca.
+
 - **🧹 Ahorro de tokens/contexto: rotación de memoria + skills router (30/07/2026, rama
   `claude/short-responses-token-saving-qh7i88`).** Memoria viva rotada por meses (983→~492 KB; junio →
   `docs/memoria/2026-06.md` vía `scripts/rotar-memoria.mjs`, idempotente, la dispara `/auditoria-diaria` a
