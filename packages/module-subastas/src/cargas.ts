@@ -23,6 +23,12 @@
 
 import { caducidadDelCuadro } from './caducidad.ts'
 
+/**
+ * Confianza mínima de la lectura para poder afirmar que una finca se adquiere
+ * LIBRE de cargas. Por debajo, la ausencia de cargas se lee como «no se sabe».
+ */
+export const CONFIANZA_MINIMA_LIBRE = 0.5
+
 /** Naturaleza de la carga. `otra` es válida: no se fuerza una taxonomía cerrada. */
 export type TipoCarga =
   | 'hipoteca'
@@ -237,7 +243,7 @@ export function cargasQueSubsisten(cuadro: CuadroCargas, hoy?: Date): CargasSubs
   }
 
   const conImporte = subsisten.filter((c) => c.importe != null)
-  const importe = subsisten.length === 0
+  let importe = subsisten.length === 0
     ? 0
     : conImporte.length === subsisten.length
       ? conImporte.reduce((s, c) => s + (c.importe ?? 0), 0)
@@ -245,6 +251,23 @@ export function cargasQueSubsisten(cuadro: CuadroCargas, hoy?: Date): CargasSubs
 
   if (importe == null && subsisten.length) {
     avisos.push('Hay cargas que subsisten sin importe legible: el coste real está incompleto.')
+  }
+
+  // 🚨 «Se adquiere libre» hay que GANÁRSELO (30/07/2026). Un 0 aquí es la
+  // afirmación más fuerte que hace este módulo, y la validación en producción
+  // demostró que se puede llegar a él por accidente: el lector solo cazó UNA
+  // carga de las cuatro de Belmonte, la etiquetó mal como «la que ejecuta» —
+  // así que se purgó— y el resultado fue «no subsiste ninguna carga» sobre una
+  // finca que arrastra 44.850€. Cero cargas subsistentes solo significa «libre»
+  // si el registro CIERRA con la fórmula «sin más cargas» y la lectura tenía
+  // confianza. Si no, es «no lo sé», que es `null`.
+  if (importe === 0 && subsisten.length === 0 && (!cuadro.sinMasCargas || cuadro.confianza < CONFIANZA_MINIMA_LIBRE)) {
+    importe = null
+    avisos.push(
+      'No se ha identificado ninguna carga subsistente, pero la lectura no da para afirmar que la finca esté libre' +
+        (cuadro.confianza < CONFIANZA_MINIMA_LIBRE ? ` (confianza de lectura ${Math.round(cuadro.confianza * 100)}%)` : '') +
+        ': trátala como «cargas sin determinar» y pide la certificación o una nota simple antes de pujar.',
+    )
   }
 
   // El patrón que arruina la operación: hipoteca anterior en una subasta por embargo.

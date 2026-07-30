@@ -52,7 +52,16 @@
     (b) **NIM 400 «At most 1 image(s) may be provided»** — `llama-3.2-90b-vision` acepta UNA imagen por
     petición y se mandaban 4. Fix: `IMAGENES_POR_LLAMADA = 1` + 4 llamadas en paralelo para no comerse
     el `maxDuration`. (c) **NIM 400 payload > 25 MB** — PNG sin pérdida de 3.000 px. Fix: JPEG calidad 82.
-    `LECTOR_VERSION` a **3** para que relea las 34 fichas. **Falta re-validar contra Belmonte.**
+    `LECTOR_VERSION` a **3** para que relea las 34 fichas.
+  - **RE-VALIDACIÓN tras el fix (19:17 UTC): el transporte OK (38/38 llamadas, 0 fallos), la LECTURA sigue
+    mal.** De las 4 cargas de Belmonte el modelo caza 1, pone al DEUDOR como acreedor, y la etiqueta
+    `la_que_ejecuta` cuando es ANTERIOR → se purga → **«se adquiere libre»** sobre una finca con 44.850€.
+    Sospecha: leer PÁGINA A PÁGINA quitó el contexto que permite ordenar las cargas (el cuadro se reparte
+    entre páginas). El consenso sí anuló el importe discrepante y la confianza bajó a 0,35.
+    **Salvaguarda puesta:** `cargasQueSubsisten` ya NO devuelve `0` («libre») si el registro no cierra con
+    «sin más cargas» o la confianza < `CONFIANZA_MINIMA_LIBRE` (0,5) — devuelve `null` con aviso.
+    **PENDIENTE: recuperar el contexto entre páginas** (numerarlas y pasar las cargas ya vistas, o volver a
+    lotes con un proveedor que acepte varias imágenes) y afinar el prompt en acreedor/rango.
   - 324 tests módulo · 215 app · tsc 0 · build OK.
 
 - **⚖️ Subastas — 3 partidas que faltaban en el coste real (30/07/2026, misma rama/PR #1176).** De las 5

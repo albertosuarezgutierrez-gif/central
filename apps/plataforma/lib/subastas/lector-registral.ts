@@ -148,8 +148,44 @@ async function leerTexto(texto: string, modelo: string | undefined): Promise<Cua
  *  `maxDuration` del cron. */
 const LLAMADAS_EN_PARALELO = 4
 
-/** Una pasada de lectura sobre imágenes: una llamada por página, en tandas. */
+/**
+ * Una pasada de lectura sobre imágenes.
+ *
+ * Camino BUENO: el documento ENTERO en una sola llamada a un modelo multimodal.
+ * Es lo único que permite acertar el RANGO de cada carga —anterior, posterior o
+ * la que ejecuta—, porque el rango se deduce del ORDEN entre asientos, y ese
+ * orden solo se ve mirando el cuadro completo. Leyendo página suelta, el modelo
+ * de Belmonte etiquetó como «la que ejecuta» una hipoteca ANTERIOR, se purgó y
+ * la finca salió «libre» con 44.850€ encima.
+ *
+ * Camino de RESPALDO: si no hay modelo multimodal o la llamada falla, se vuelve
+ * a página a página con NIM. Peor lectura, pero nunca deja de leer.
+ */
 async function leerImagenes(paginas: ImageInput[], modelo: string | undefined): Promise<CuadroCargas> {
+  if (paginas.length > 1) {
+    try {
+      const texto = await aiVision(
+        PROMPT_LECTOR_REGISTRAL,
+        paginas,
+        `Estas son las ${paginas.length} páginas de la certificación registral, EN ORDEN. ` +
+          'Léelas como un solo documento y devuelve el JSON del cuadro de cargas completo. ' +
+          'El RANGO de cada carga sale del orden de los asientos respecto a la que motiva la ' +
+          'ejecución: lo inscrito ANTES es anterior y lo inscrito DESPUÉS es posterior.',
+        { maxTokens: 3000, endpoint: 'registral-vision', multiPagina: true, timeoutMs: 120_000 },
+      )
+      const cuadro = normalizarCuadroCargas(extraerJson(texto), 'ocr_ia')
+      // Una lectura vacía no vale como lectura: mejor reintentar por páginas.
+      if (cuadro.cargas.length || cuadro.procedimiento !== 'desconocido') return cuadro
+      console.warn('[lector-registral] lectura multipágina vacía, se reintenta por páginas')
+    } catch (e) {
+      console.warn('[lector-registral] multipágina no disponible, se lee por páginas:', e)
+    }
+  }
+  return leerPaginaAPagina(paginas, modelo)
+}
+
+/** Respaldo: una llamada por página, en tandas. Peor contexto, pero siempre lee. */
+async function leerPaginaAPagina(paginas: ImageInput[], modelo: string | undefined): Promise<CuadroCargas> {
   const trozos: string[] = []
   for (let i = 0; i < paginas.length; i += LLAMADAS_EN_PARALELO * IMAGENES_POR_LLAMADA) {
     const tanda: Array<Promise<string>> = []
