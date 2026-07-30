@@ -1,28 +1,58 @@
 // ────────────────────────────────────────────────────────────────────────────
-// Documentos adjuntos a la ficha del BOE: descarga + extracción de señales.
-// Aquí va SOLO la red y la BD; el parseo es puro (`@central/module-subastas`).
+// Documentos adjuntos a la ficha del BOE: descarga + lectura completa.
+// Aquí va SOLO la red y la BD; el parseo y la lógica son puros
+// (`@central/module-subastas`), y la lectura por IA vive en `lector-registral`.
 //
-// Qué hace por subasta: baja la pestaña general de la ficha, lista sus
-// documentos (`verDocumento.php`), descarga hasta 3, extrae el texto con
-// pdf-parse y guarda en `notas_edicto` las señales EXPLÍCITAS (herencia
-// yacente, vivienda habitual, «no consta la situación posesoria»).
+// Qué hace por subasta: baja la ficha, lista TODOS sus documentos, y de cada uno
+// saca (a) las señales explícitas del edicto por regex y (b) el cuadro de cargas
+// estructurado. Los PDF escaneados —que son la mayoría de las certificaciones—
+// se rescatan extrayendo sus imágenes y leyéndolas con un modelo de visión.
 //
-// Los documentos ESCANEADOS (certificaciones registrales, típicamente) no
-// tienen capa de texto: se saltan sin error. `notas_edicto = ''` marca
-// «procesada sin hallazgos» para no re-descargar cada día.
+// 🚨 Tres fallos que tenía la versión anterior y que dejaban 30 de 34 subastas
+// vigentes diciendo «Cargas no publicadas» (auditado el 30/07/2026):
+//   1. `MIN_CHARS_TEXTO` descartaba en SILENCIO los escaneos. La certificación de
+//      Belmonte pesaba 3,2 MB y `pdf-parse` devolvía 0 caracteres: se saltaba.
+//   2. `notas_edicto = ''` («procesada sin hallazgos») CONGELABA la ficha para
+//      siempre: la consulta solo cogía `notas_edicto IS NULL`, así que una ficha
+//      mal leída una vez no se reintentaba nunca. Ahora hay versión de lector.
+//   3. Tope de 3 documentos por ficha, sin criterio: si la certificación era el
+//      cuarto enlace, no se leía.
+//
+// El coste se controla con un GATE de rentabilidad, no recortando la lectura: se
+// analizan a fondo solo las subastas que ya han pasado el filtro de chollo/flip
+// (decisión de Alberto, 30/07/2026: «solo chollos y rentables»).
 // ────────────────────────────────────────────────────────────────────────────
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
-import { datosDeEdicto, enlacesDocumentos, notasDeEdicto } from '@central/module-subastas'
+import {
+  cargasQueSubsisten,
+  datosDeEdicto,
+  enlacesDocumentos,
+  mismoAcreedorQueEjecutante,
+  notasDeEdicto,
+  pareceEscaneado,
+  resumirCargas,
+  type CuadroCargas,
+} from '@central/module-subastas'
+import { fusionarCuadros, leerDocumento, type LecturaDocumento } from '@/lib/subastas/lector-registral'
 
 const UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36'
 const FICHA = 'https://subastas.boe.es/detalleSubasta.php'
-const MAX_DOCS_POR_FICHA = 3
-const MAX_BYTES_DOC = 10 * 1024 * 1024
-/** Menos texto que esto = PDF escaneado sin capa de texto: no hay nada que leer. */
-const MIN_CHARS_TEXTO = 500
+const MAX_DOCS_POR_FICHA = 6
+const MAX_BYTES_DOC = 20 * 1024 * 1024
 
-async function bajar(url: string, ms = 20000): Promise<Response> {
+/**
+ * Versión del lector. Se guarda en `subastas.lector_version`: al subirla, las
+ * fichas ya procesadas se vuelven a leer en la siguiente pasada. Es lo que
+ * arregla el punto 2 de arriba — sin esto, mejorar el prompt no rescata nada de
+ * lo ya (mal) leído.
+ */
+export const LECTOR_VERSION = 2
+
+/** Documentos que NO merecen una llamada de IA: no contienen cargas. */
+const RUIDO = /^(justificante|minuta|honorarios|tasa|pago|aranceles?)\b/i
+
+async function bajar(url: string, ms = 30000): Promise<Response> {
   const r = await fetch(url, {
     headers: { 'User-Agent': UA },
     signal: AbortSignal.timeout(ms),
@@ -41,70 +71,172 @@ async function textoDePdf(buf: Buffer): Promise<string> {
   return String(text ?? '')
 }
 
-export interface DocumentosFicha {
+export interface ResultadoFicha {
   notas: string[]
-  /** La certificación registral adjunta acredita las cargas de procedencia:
-   *  las cargas SÍ están publicadas (en el documento, no en el campo de la ficha). */
-  cargasPublicadas: boolean
+  cuadro: CuadroCargas
+  /** Documentos que se han podido leer (con texto o por visión). */
+  leidos: number
+  /** Detalle por documento, para poder auditar de dónde salió cada cifra. */
+  detalle: Array<{ titulo: string; via: string; paginas: number; cargas: number; discrepancias: string[] }>
 }
 
-/** Procesa los documentos de UNA ficha. Devuelve las notas halladas. */
-export async function procesarDocumentosDeFicha(identificador: string): Promise<DocumentosFicha> {
+/**
+ * Procesa TODOS los documentos de UNA ficha: señales del edicto + cuadro de
+ * cargas. `leerCargas: false` se queda en las señales por regex (gratis), para
+ * las subastas que no han pasado el gate de rentabilidad.
+ */
+export async function procesarDocumentosDeFicha(
+  identificador: string,
+  opts: { leerCargas?: boolean } = {},
+): Promise<ResultadoFicha> {
   const html = await (await bajar(`${FICHA}?idSub=${encodeURIComponent(identificador)}`)).text()
   const docs = enlacesDocumentos(html).slice(0, MAX_DOCS_POR_FICHA)
 
   const notas = new Set<string>()
-  let cargasPublicadas = false
+  const lecturas: LecturaDocumento[] = []
+  const detalle: ResultadoFicha['detalle'] = []
+  let leidos = 0
+
   for (const doc of docs) {
     try {
-      const r = await bajar(doc.url, 25000)
+      const r = await bajar(doc.url, 40000)
       const buf = Buffer.from(await r.arrayBuffer())
       if (buf.length > MAX_BYTES_DOC) continue
-      const texto = await textoDePdf(buf).catch(() => '')
-      if (texto.replace(/\s+/g, ' ').trim().length < MIN_CHARS_TEXTO) continue // escaneado
-      const datos = datosDeEdicto(texto)
-      if (datos.sinCargasProcedencia) cargasPublicadas = true
-      for (const n of notasDeEdicto(datos)) notas.add(n)
+
+      const tipo = r.headers.get('content-type') ?? ''
+      const esImagen = /^image\//.test(tipo)
+      const texto = esImagen ? '' : await textoDePdf(buf).catch(() => '')
+      const escaneado = !esImagen && pareceEscaneado(texto)
+
+      // Señales explícitas del edicto: solo del texto, y gratis.
+      if (texto) {
+        for (const n of notasDeEdicto(datosDeEdicto(texto))) notas.add(n)
+        leidos++
+      }
+
+      if (!opts.leerCargas) continue
+      if (RUIDO.test(doc.titulo)) continue
+
+      const lectura = await leerDocumento({
+        texto: escaneado ? null : texto || null,
+        pdf: escaneado ? buf : null,
+        imagen: esImagen ? { mediaType: tipo.split(';')[0], data: buf.toString('base64') } : null,
+      })
+      if (escaneado || esImagen) leidos++
+
+      lecturas.push(lectura)
+      detalle.push({
+        titulo: doc.titulo,
+        via: lectura.via,
+        paginas: lectura.paginas,
+        cargas: lectura.cuadro.cargas.length,
+        discrepancias: lectura.discrepancias,
+      })
     } catch (e) {
       console.warn('[subastas-documentos]', identificador, doc.titulo, e)
     }
   }
-  return { notas: [...notas], cargasPublicadas }
+
+  return { notas: [...notas], cuadro: fusionarCuadros(lecturas), leidos, detalle }
+}
+
+/** Fila mínima que necesita la pasada. */
+interface FilaPendiente {
+  dedupe_key: string
+  identificador: string
+  autoridad: string | null
+  flip_apto: boolean | null
+  margen_flip_pct: number | null
+  es_playa: boolean | null
+  descuento_estimado: number | null
 }
 
 /**
- * Pasada sobre las subastas vivas del BOE sin documentos procesados.
- * Best-effort: un fallo de descarga deja la fila a NULL y se reintenta mañana.
+ * ¿Merece esta subasta el análisis profundo (que cuesta llamadas de IA)?
+ * El embudo de Alberto: primero rentabilidad, y solo si cuadra, documentación.
+ * Entra si es un flip viable, si es de la costa de Huelva (segunda residencia,
+ * sin tope de precio) o si el descuento estimado ya es goloso.
  */
-export async function procesarDocumentos(max = 10): Promise<{ revisadas: number; conHallazgos: number }> {
-  const filas = await prisma.$queryRaw<Array<{ dedupe_key: string; identificador: string }>>(Prisma.sql`
-    SELECT dedupe_key, identificador FROM subastas
+export function mereceAnalisisProfundo(f: {
+  flip_apto: boolean | null
+  margen_flip_pct: number | null
+  es_playa: boolean | null
+  descuento_estimado: number | null
+}): boolean {
+  if (f.es_playa) return true
+  if (f.flip_apto && (f.margen_flip_pct ?? 0) >= 0.25) return true
+  return (f.descuento_estimado ?? 0) >= 0.4
+}
+
+/**
+ * Pasada sobre las subastas vivas: lee los documentos de las que no están al día
+ * con la versión actual del lector. Best-effort: un fallo de descarga deja la
+ * fila como está y se reintenta mañana.
+ */
+export async function procesarDocumentos(max = 10): Promise<{
+  revisadas: number
+  conHallazgos: number
+  conCargas: number
+  analizadas: number
+}> {
+  const filas = await prisma.$queryRaw<FilaPendiente[]>(Prisma.sql`
+    SELECT dedupe_key, identificador, autoridad, flip_apto, margen_flip_pct, es_playa,
+           CASE
+             WHEN COALESCE(tasacion, valor_referencia) > 0 AND valor_subasta > 0
+               THEN 1 - (valor_subasta / COALESCE(tasacion, valor_referencia))
+             ELSE NULL
+           END AS descuento_estimado
+    FROM subastas
     WHERE fuente = 'boe' AND identificador IS NOT NULL
       AND es_inmueble = true
       AND (fecha_fin IS NULL OR fecha_fin >= now())
-      AND notas_edicto IS NULL
+      AND COALESCE(lector_version, 0) < ${LECTOR_VERSION}
     ORDER BY fecha_fin ASC NULLS LAST
     LIMIT ${max}
   `)
 
   let conHallazgos = 0
+  let conCargas = 0
+  let analizadas = 0
+
   for (const f of filas) {
     try {
-      const { notas, cargasPublicadas } = await procesarDocumentosDeFicha(f.identificador)
+      const profundo = mereceAnalisisProfundo(f)
+      if (profundo) analizadas++
+      const r = await procesarDocumentosDeFicha(f.identificador, { leerCargas: profundo })
+
+      const subsistentes = cargasQueSubsisten(r.cuadro)
+      const hayCargas = r.cuadro.cargas.length > 0
+      if (hayCargas) conCargas++
+      if (r.notas.length) conHallazgos++
+
+      // El ejecutante suele venir en la autoridad/descripción: si coincide con el
+      // acreedor de una carga anterior, el riesgo baja mucho (el crédito ejecutado
+      // es el garantizado por ella). Se anota, no se decide por él.
+      const mismoAcreedor = mismoAcreedorQueEjecutante(r.cuadro.cargas, f.autoridad)
+      const notas = mismoAcreedor
+        ? [...r.notas, 'El ejecutante figura también como acreedor de una carga anterior: esa carga podría cancelarse al satisfacerse el crédito (confirmar con el juzgado).']
+        : r.notas
+
       await prisma.$executeRaw(Prisma.sql`
         UPDATE subastas SET
           notas_edicto = ${notas.join('\n')},
-          -- La certificación adjunta cuenta como publicación de cargas: solo
-          -- sube el flag, nunca lo baja (el campo «Cargas» de la ficha suele
-          -- venir vacío cuando la info vive en el documento).
-          cargas_conocidas = (COALESCE(cargas_conocidas, false) OR ${cargasPublicadas}),
+          lector_version = ${LECTOR_VERSION},
+          -- Solo se escriben las cargas cuando de verdad se han leído: una pasada
+          -- sin análisis profundo NO puede borrar lo que ya se sabía.
+          cargas_detalle = COALESCE(${hayCargas ? JSON.stringify(r.cuadro) : null}::jsonb, cargas_detalle),
+          cargas = COALESCE(${hayCargas ? subsistentes.importe : null}, cargas),
+          cargas_texto = COALESCE(${hayCargas ? resumirCargas(r.cuadro, subsistentes) : null}, cargas_texto),
+          cargas_conocidas = (COALESCE(cargas_conocidas, false) OR ${hayCargas}),
+          cargas_fuente = COALESCE(${hayCargas ? r.cuadro.fuente : null}, cargas_fuente),
+          documentos_leidos = ${r.leidos},
           actualizado_en = now()
         WHERE dedupe_key = ${f.dedupe_key}
       `)
-      if (notas.length) conHallazgos++
     } catch (e) {
       console.error('[subastas-documentos]', f.identificador, e)
     }
   }
-  return { revisadas: filas.length, conHallazgos }
+
+  return { revisadas: filas.length, conHallazgos, conCargas, analizadas }
 }

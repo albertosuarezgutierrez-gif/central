@@ -100,7 +100,7 @@ export async function GET(req: NextRequest) {
     // Documentos de la ficha (edictos con texto → señales explícitas).
     const documentos = await procesarDocumentos().catch((e) => {
       console.error('[subastas-enriquecer] documentos', e)
-      return { revisadas: 0, conHallazgos: 0 }
+      return { revisadas: 0, conHallazgos: 0, conCargas: 0, analizadas: 0 }
     })
 
     // Lentes (flip / playa / semáforo): determinista y barato, al final para

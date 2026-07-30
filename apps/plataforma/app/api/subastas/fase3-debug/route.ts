@@ -57,7 +57,32 @@ export async function GET(req: NextRequest) {
   }
   if (sp.get('accion') === 'documentos') {
     try {
-      return NextResponse.json({ ok: true, ...(await procesarDocumentos()) })
+      const max = Math.min(Math.max(parseInt(sp.get('max') || '10', 10) || 10, 1), 40)
+      return NextResponse.json({ ok: true, ...(await procesarDocumentos(max)) })
+    } catch (e: any) {
+      return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
+    }
+  }
+  // Lectura registral de UNA ficha, devolviendo el cuadro de cargas SIN escribir en
+  // BD: es la forma de validar el prompt del lector contra una certificación real
+  // (escaneada incluida) antes de soltarlo sobre el corpus.
+  if (sp.get('accion') === 'cargas') {
+    const idSub = sp.get('id') ?? ''
+    if (!idSub) return NextResponse.json({ error: 'falta ?id=' }, { status: 400 })
+    try {
+      const { procesarDocumentosDeFicha } = await import('@/lib/subastas/documentos')
+      const { cargasQueSubsisten, resumirCargas } = await import('@central/module-subastas')
+      const r = await procesarDocumentosDeFicha(idSub, { leerCargas: true })
+      const subsistentes = cargasQueSubsisten(r.cuadro)
+      return NextResponse.json({
+        ok: true,
+        leidos: r.leidos,
+        detalle: r.detalle,
+        notas: r.notas,
+        cuadro: r.cuadro,
+        subsistentes,
+        resumen: resumirCargas(r.cuadro, subsistentes),
+      })
     } catch (e: any) {
       return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
     }

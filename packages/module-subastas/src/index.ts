@@ -84,6 +84,26 @@ export { esPlayaHuelva, MUNICIPIOS_PLAYA_HUELVA, NUCLEOS_PLAYA_HUELVA, TOPE_PLAY
 export { analisisDocumental } from './analisis.ts'
 export type { AnalisisDocumental, PuntoAnalisis, Nivel } from './analisis.ts'
 
+// Política de aviso: solo lo rentable Y limpio interrumpe por Telegram
+export { decidirAviso, DIAS_URGENTE } from './aviso.ts'
+export type { DecisionAviso, EntradaAviso, ResultadoAviso } from './aviso.ts'
+
+// Cargas registrales: cuadro estructurado + QUÉ SUBSISTE para el adjudicatario.
+// La regla de subsistencia es determinista a propósito (de ella sale la puja).
+export {
+  normalizarCuadroCargas,
+  cargasQueSubsisten,
+  mismoAcreedorQueEjecutante,
+  consensoCuadros,
+  resumirCargas,
+} from './cargas.ts'
+export type { Carga, CuadroCargas, CargasSubsistentes, TipoCarga, RangoCarga, FuenteCargas } from './cargas.ts'
+export { PROMPT_LECTOR_REGISTRAL, extraerJson } from './cargas-prompt.ts'
+
+// Rescate de PDFs escaneados (certificaciones fotocopiadas → imágenes legibles)
+export { localizarJpegs, dimensionesJpeg, agruparBandas, pareceEscaneado } from './pdf-imagenes.ts'
+export type { ImagenEmbebida, DimensionesJpeg, BandaAgrupable } from './pdf-imagenes.ts'
+
 // Coste "puerta abierta"
 export { calcularCoste, deposito, pujaMaximaParaDescuento, yieldTuristico, PARAMS_ANDALUCIA, PCT_DEPOSITO, LANZAMIENTO_ESTIMADO } from './costes.ts'
 export type { YieldTuristico } from './costes.ts'

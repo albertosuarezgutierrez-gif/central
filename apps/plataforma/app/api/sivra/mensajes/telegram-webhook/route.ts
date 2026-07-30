@@ -305,6 +305,56 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
+    // ── Siguiente paso de una subasta: consulta al juzgado ──────────────────
+    // Las dudas que deja la certificación (¿subsiste la hipoteca anterior?, ¿está
+    // ocupado?, ¿cuánto se debe de comunidad?) solo las resuelve el órgano que
+    // lleva la ejecución, y son las que deciden si la operación sale o no. Este
+    // botón redacta el escrito con las preguntas de ESA subasta.
+    if (prefix === 'subn' && action === 'consulta') {
+      const radarId = args[0]
+      if (!radarId) { await tgAnswerCallback(cb.id, 'No encontrado'); return NextResponse.json({ ok: true }) }
+      await tgAnswerCallback(cb.id, '📝 Preparando la consulta…')
+      try {
+        const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
+          SELECT r.dedupe_key, r.subasta, s.cargas_detalle, s.autoridad, s.telefono_autoridad,
+                 s.email_autoridad, s.direccion, s.arrendamiento_inscrito
+          FROM subastas_radar r
+          LEFT JOIN subastas s ON s.dedupe_key = r.dedupe_key
+          WHERE r.id = ${radarId}::uuid
+        `)
+        const fila = filas[0]
+        if (!fila) { await tgSend('No encuentro esa subasta.'); return NextResponse.json({ ok: true }) }
+
+        const { preguntasParaJuzgado, escritoConsulta } = await import('@/lib/subastas/consulta-juzgado')
+        const datos = {
+          subasta: fila.subasta ?? { dedupeKey: fila.dedupe_key },
+          cuadro: fila.cargas_detalle ?? null,
+          autoridad: fila.autoridad ?? null,
+          telefono: fila.telefono_autoridad ?? null,
+          email: fila.email_autoridad ?? null,
+          direccion: fila.direccion ?? null,
+          arrendamientoInscrito: fila.arrendamiento_inscrito ?? null,
+        }
+        const preguntas = preguntasParaJuzgado(datos)
+        const escrito = escritoConsulta(datos, preguntas)
+
+        const contacto = [
+          datos.email ? `✉️ ${datos.email}` : null,
+          datos.telefono ? `☎️ ${datos.telefono}` : null,
+        ].filter(Boolean).join('  ·  ')
+
+        await tgSend(
+          `📝 <b>Consulta para ${escapeHtml(String(datos.subasta.identificador ?? fila.dedupe_key))}</b>` +
+            `${contacto ? `\n${escapeHtml(contacto)}` : ''}\n\n<pre>${escapeHtml(escrito)}</pre>`,
+          { html: true },
+        )
+      } catch (e) {
+        console.error('[telegram-webhook] subn:consulta', e)
+        await tgSend('No he podido preparar la consulta. Lo tienes en /subastas.').catch(() => {})
+      }
+      return NextResponse.json({ ok: true })
+    }
+
     // ── Motivo de un descarte del radar (aprendizaje) ───────────────────────
     if (prefix === 'subd') {
       const radarId = args[0]
