@@ -24,6 +24,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔎 Portales privados de subastas: sondeo técnico, SIN implementar (30/07/2026).** Alberto pregunta si
+  conectar Escrapalia / Eactivos / Gobid. Verificado con `pg_net` desde Supabase (los tres dan 403 al
+  contenedor de Claude, 200 desde cloud — misma trampa que Nominatim; ninguno tiene muro Incapsula tipo
+  Sareb). **Eactivos = el único que encaja en el radar de inmuebles:** SSR 924 KB, filtro por provincia en
+  el HTML (Sevilla=12), categorías con URL limpia (`/listado-de-naves-industriales`, `-maquinaria`,
+  `-unidad-productiva`…) y **154 atributos `toolparam*`** (web anotada a propósito para agentes); pendiente
+  localizar su endpoint AJAX (el listado no viene en el HTML). **Escrapalia = SPA** (portada 3,5 KB sin
+  lotes, sitemap estático de 2020) y **Gobid.es sirve el catálogo ITALIANO** (1 lote español de ~14) → los
+  dos descartados como fuente del radar. Idea aparte: su catálogo (maquinaria, furgón isotermo, cámara
+  frigorífica, mobiliario de bar) mapea con transporte/almacén/alquiler/ia-rest, no con pisos. Siguiente
+  paso propuesto y NO ejecutado: suscribirse a la alerta por email de eactivos (patrón `gmail-boe.ts`)
+  antes de escribir adaptador. Decisión de Alberto pendiente.
+
 - **🕳️ Barrido del monorepo: afirmar ausencias no comprobadas (30/07/2026, misma rama).** Alberto:
   «haz esto con todo lo que tenemos». Barrido de las 8 apps + packages buscando el patrón del bullet
   siguiente. **Inventario completo en `docs/AUDITORIA-AUSENCIAS.md`** (✅ hecho / ⬜ pendiente, por
