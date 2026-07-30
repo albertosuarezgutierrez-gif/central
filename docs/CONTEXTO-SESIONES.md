@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📺 Estudio de viabilidad: canal YouTube de dibujos animados infantiles con IA — HECHO (30/07/2026,
+  solo informe, cero código).** Alberto propuso "estudiar los vídeos top y elaborar vídeos, todo automático
+  con IA" y pidió incluir rentabilidad y legalidad (AI Act 2/8/2026). Investigación con fuentes en
+  `docs/ESTUDIO-YOUTUBE-INFANTIL.md`. **Veredicto: NO-GO al plan original** (la granja automática es el
+  objetivo declarado del enforcement de YouTube 2026 — purga de enero: 16 canales kids-IA terminados; RPM
+  "made for kids" 0,3–3 US$/1000 por COPPA no sostiene el proyecto); **GO condicionado** a variante: IP
+  propia con autoría humana documentada + canal sandbox 5–10 vídeos + checklist legal (etiquetar IA,
+  "made for kids", sin voces clonadas ni IPs ajenas) + plan B B2B (vídeos personalizados para
+  guarderías/editoriales con el motor de la casa de marcas). Legal: AI Act art. 50 aplica desde 2/8/2026
+  pero dibujos claramente irreales no son "deepfake"; la ley española de las multas 35M€ AÚN en el Congreso
+  (no en vigor a jul-2026). Fase 2 (IP + pipeline + script YouTube Data API) SOLO si Alberto aprueba el GO
+  condicionado. Rama `claude/animated-children-videos-analysis-16u60t`.
 - **🧠📈 Subastas — «añade todo»: calibración real, recordatorio 24h, chollos vs buscador, descartes que
   aprenden y señal de RECESIÓN (INE): HECHO y PROBADO E2E (29/07/2026, mediodía; PR #1159).** Alberto pidió
   implementar las 5 ideas de la sesión y preguntó «se habla de recesión inmobiliaria, ¿cómo lo averiguamos?».
