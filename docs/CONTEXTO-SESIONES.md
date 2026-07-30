@@ -51,6 +51,43 @@
     (el preview va tras el SSO de Vercel); `eurM2Actualizado` queda null hasta ingerir la serie histórica
     del IPV (hoy `mercado_indices` solo guarda la última variación); enganchar la nota simple al 📎 del chat.
 
+- **🏠 Subastas: las características del inmueble ya se ven en la ficha (30/07/2026, rama
+  `claude/property-features-missing-je4vtw`, PR #1177).** Alberto sobre una captura de `/subastas`: «no
+  aparecen las características». Cierto — tipo, m², dormitorios, baños y planta estaban en BD y solo se
+  usaban para calcular €/m² y yield. `SubastaInmueble` gana esos campos + `superficieOrigen` (Catastro vs
+  escritura: discrepan a menudo), `filaASubasta` los mapea con fallback a `extraerDatos(descripcion)` cuando
+  la columna está vacía, y `FichaSubasta` los pinta arriba del todo (si el anuncio no publica nada, lo dice
+  en vez de callar). El radar repinta su snapshot con la foto viva del corpus si la subasta sigue vigente,
+  así no hay que esperar al cron. Solapaba con #1175: los m² salen UNA vez (con su origen) y la planta no se
+  repite si ya la da la dirección del Catastro.
+
+- **🏛️ Subastas: ubicación EXACTA y datos del Catastro visibles en la ficha (30/07/2026, rama
+  `claude/national-property-map-kszwhp`).** Alberto: «SUB-JA-2026-263723 la ubicación es muy mala». Causa:
+  el punto era correcto (Catastro) pero **la ficha no pintaba la dirección en NINGÚN sitio** (estaba solo en
+  BD) y el botón de Maps mandaba `query=lat,lon` → pin anónimo sin portal ni Street View. Fix: `direccionCatastro()`
+  trocea el `ldt` denso («AV PEDRO ROMERO (DE) 2 Es:1 Pl:07 Pt:B 41007 SEVILLA» → postal + planta + puerta),
+  la ficha muestra dirección/planta/m² catastrales/año/uso, y **`urlGoogleMaps` prioriza la DIRECCIÓN sobre las
+  coordenadas** (cambio deliberado) + 👁️ Street View + 🏛️ ficha del Catastro. **Idea de Alberto:** sacar la
+  referencia catastral por DIRECCIÓN (`Consulta_DNPLOC` + `ConsultaVia` para el nombre oficial — el Catastro
+  archiva «Avenida de Madrid» como «MADRID DE»). Acierta 4/16 direcciones reales; el resto falla por datos de
+  origen imprecisos (parcelas de polígono, «S/N», direcciones antiguas), no por el parser → degrada al
+  centroide. Prod: 8 exactas (antes 4) + 25 aproximadas. ⚠️ Los DATOS del bien exigen la RC de 20; con la de
+  parcela (14) el Catastro devuelve el listado del edificio sin `<bico>` y sale vacío. 223 tests módulo.
+
+- **🗺️ Subastas: mapa nacional + enlace a Google Maps por ficha (30/07/2026, rama
+  `claude/national-property-map-kszwhp`).** Idea de Alberto sobre la captura de `/subastas`: ver todos los
+  inmuebles señalados de un vistazo. Módulo puro: `parsearCoordenadas` (Catastro `Consulta_CPMRC`, ojo
+  `xcen`=LON/`ycen`=LAT) + `urlGoogleMaps` (coords > dirección > municipio; solo-provincia → sin enlace),
+  10 tests con XML real. Columnas `subastas.{lat,lon,geo_precision}` (migración aplicada); el cron
+  `subastas-enriquecer` geocodifica exacto por ref. catastral y **aproximado al centroide del municipio**
+  por Nominatim cuando no la hay (solo 5/34 la traían) — el mapa pinta los aproximados en hueco y lo dice.
+  Pestaña 🗺️ Mapa (Leaflet+OSM por CDN, montaje perezoso) + `/api/subastas/mapa`. Nominatim da 403 desde el
+  proxy del contenedor pero **responde 200 desde cloud** (verificado con `pg_net` desde Supabase) → funcionará
+  en Vercel; 4 puntos exactos ya en BD, los aproximados los pone la 1ª pasada del cron. ⚠️ Nominatim BLOQUEA
+  IP si se pasa de 1 req/s → cerrojo de módulo (1,1 s, serializa) + presupuesto de 25 s por pasada;
+  `enriquecida_at` se deja NULL SOLO si no se intentó (si el municipio es ilocalizable se marca, o volvería a
+  monopolizar la cola). Bonus: el cron ya no reintenta fichas BOE de la fuente `junta` (23 filas que fallaban
+  siempre y, al ir primeras por `enriquecida_at NULLS FIRST`, tapaban a las del BOE).
 - **⚖️ Subastas: «Cargas no publicadas» falso cuando la certificación va como DOCUMENTO — MERGEADO
   (30/07/2026, PR #1172).** SUB-JA-2026-263723 (San Pablo, cierra 31/07) salía
   «Cargas no publicadas» pese a la CERTIFICACIÓN adjunta ya leída en `notas_edicto`: `cargas_conocidas` solo

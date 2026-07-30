@@ -4,6 +4,8 @@
 // hardcodea colores y se vuelve ilegible en modo oscuro.
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { eur } from '@/lib/dinero'
+import { direccionCatastro, urlFichaCatastro, urlGoogleMaps, urlStreetView } from '@central/module-subastas'
+import MapaSubastas from './MapaSubastas'
 
 const PAGE = 50
 const PROVINCIAS = ['Sevilla', 'Huelva', 'Cádiz', 'Asturias']
@@ -23,6 +25,16 @@ interface Subasta {
   identificador?: string | null
   tipo: string
   provincia?: string | null
+  municipio?: string | null
+  direccion?: string | null
+  lat?: number | null
+  lon?: number | null
+  geoPrecision?: string | null
+  refCatastral?: string | null
+  codigoPostal?: string | null
+  anioConstruccion?: number | null
+  usoCatastral?: string | null
+  superficieCatastro?: number | null
   descripcion?: string | null
   url?: string | null
   fechaFin?: string | null
@@ -30,6 +42,11 @@ interface Subasta {
   tasacion?: number | null
   situacionPosesoria?: string
   superficie?: number | null
+  superficieOrigen?: 'catastro' | 'anuncio' | null
+  tipoBien?: string | null
+  dormitorios?: number | null
+  banos?: number | null
+  planta?: string | null
 }
 interface Rendimiento { ingresoAnual: number; yieldBruto: number; aniosRecuperacion: number }
 interface PuntoAnalisis { clave: string; nivel: 'verde' | 'ambar' | 'rojo'; detalle: string }
@@ -252,9 +269,55 @@ function LineaRendimiento({ r, dormitorios }: { r: Rendimiento | null | undefine
   )
 }
 
+/**
+ * Cómo es el inmueble: qué tipo de bien es, cuántos m² tiene y cómo está
+ * distribuido. La ficha ya traía la ubicación y los datos del Catastro
+ * (antigüedad, uso, CP); esto es lo que faltaba — estaba en la BD y solo se
+ * usaba por dentro para calcular el €/m² y el yield.
+ *
+ * Los m² del Catastro y los de la escritura discrepan a menudo, así que el
+ * origen va pegado a la cifra. Cuando el anuncio no publica nada se dice —
+ * callar parecería un fallo de la pantalla, que es justo la duda que generó esto.
+ *
+ * `plantaAparte` = la dirección del Catastro ya está pintando la planta arriba;
+ * repetirla sería ruido.
+ */
+function Caracteristicas({ s, plantaAparte }: { s: Subasta; plantaAparte?: boolean }) {
+  const partes: string[] = []
+  if (s.tipoBien && TIPO_LABEL[s.tipoBien]) partes.push(TIPO_LABEL[s.tipoBien])
+  if (s.superficie != null && s.superficie > 0) {
+    partes.push(`${s.superficie.toLocaleString('es-ES', { maximumFractionDigits: 2 })} m²${s.superficieOrigen === 'catastro' ? ' (Catastro)' : s.superficieOrigen === 'anuncio' ? ' (escritura)' : ''}`)
+  }
+  if (s.dormitorios != null) partes.push(`${s.dormitorios} dorm.`)
+  if (s.banos != null) partes.push(`${s.banos} baño${s.banos === 1 ? '' : 's'}`)
+  if (s.planta && !plantaAparte) partes.push(`planta ${s.planta}`)
+
+  if (partes.length === 0) {
+    return (
+      <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+        🏚️ El anuncio no publica las características del inmueble (ni m², ni distribución).
+      </p>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 10px', margin: '8px 0 0', fontSize: 13, color: 'var(--text)' }}>
+      {partes.map((p, i) => <span key={i}>{p}</span>)}
+    </div>
+  )
+}
+
 function FichaSubasta({ s, o, acciones, extra }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode }) {
   const [abierto, setAbierto] = useState(false)
   const cierre = fecha(s.fechaFin)
+  // Dirección oficial del Catastro troceada (planta/puerta aparte) y, con ella,
+  // el enlace al PORTAL en vez de a un pin anónimo. Sin ninguna pista de
+  // ubicación, el botón no sale.
+  const dirCat = direccionCatastro(s.direccion)
+  const mapsUrl = urlGoogleMaps({ ...s, direccion: dirCat?.postal ?? s.direccion })
+  const panoUrl = urlStreetView(s.lat, s.lon)
+  const catastroUrl = urlFichaCatastro(s.refCatastral)
+  const exacta = s.geoPrecision === 'catastro'
 
   return (
     <div style={card}>
@@ -263,20 +326,53 @@ function FichaSubasta({ s, o, acciones, extra }: { s: Subasta; o?: Oportunidad |
         {o && <Puntuacion v={o.puntuacion} />}
       </div>
 
+      {/* Primero QUÉ es (tipo, m², distribución); la descripción registral
+          después: es densa y a veces solo dice «ver certificación de cargas». */}
+      <Caracteristicas s={s} plantaAparte={!!dirCat?.planta} />
+
       {s.descripcion && (
-        <p style={{ margin: '8px 0', color: 'var(--text)', fontSize: 14, lineHeight: 1.45 }}>
+        <p style={{ margin: '8px 0', color: 'var(--muted)', fontSize: 13, lineHeight: 1.45 }}>
           {s.descripcion.slice(0, 240)}
           {s.descripcion.length > 240 ? '…' : ''}
         </p>
       )}
 
+      {/* 🏛️ Ubicación oficial del Catastro. Va ARRIBA y en el color del texto:
+          es el dato que Alberto busca primero y antes no se pintaba en ningún
+          sitio (solo estaba en la BD), así que la ficha parecía no tener
+          dirección — «la ubicación es muy mala», 30/07/2026. */}
+      {dirCat && (
+        <p style={{ margin: '8px 0 0', color: 'var(--text)', fontSize: 14, fontWeight: 600 }}>
+          🏛️ {dirCat.postal}
+          {(dirCat.planta || dirCat.puerta) && (
+            <span style={{ fontWeight: 400, color: 'var(--muted)' }}>
+              {' · '}
+              {dirCat.planta && `planta ${dirCat.planta}`}
+              {dirCat.planta && dirCat.puerta && ', '}
+              {dirCat.puerta && `puerta ${dirCat.puerta}`}
+            </span>
+          )}
+          {!exacta && <span style={{ fontWeight: 400, color: 'var(--muted)' }}> · ubicación aproximada</span>}
+        </p>
+      )}
+
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, fontSize: 12, color: 'var(--muted)' }}>
-        {s.provincia && <span>📍 {s.provincia}</span>}
+        {s.provincia && <span>📍 {s.municipio ? `${s.municipio} (${s.provincia})` : s.provincia}</span>}
         {cierre && <span>⏰ cierra {cierre}</span>}
         {s.valorSubasta != null && <span>salida {eur(s.valorSubasta)}</span>}
         {s.tasacion != null && <span>tasación {eur(s.tasacion)}</span>}
         {s.situacionPosesoria === 'ocupada' && <span>⚠️ ocupada</span>}
       </div>
+
+      {/* Resto de datos oficiales del Catastro. Los m² NO van aquí: los pinta
+          `Caracteristicas` arriba, con su origen (Catastro o escritura). */}
+      {(s.anioConstruccion != null || s.usoCatastral || s.codigoPostal) && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 6, fontSize: 12, color: 'var(--muted)' }}>
+          {s.anioConstruccion != null && <span>🏗️ construido en {s.anioConstruccion}</span>}
+          {s.usoCatastral && <span>🏷️ {s.usoCatastral}</span>}
+          {s.codigoPostal && <span>✉️ {s.codigoPostal}</span>}
+        </div>
+      )}
 
       {/* El origen del valor va SIEMPRE junto a la cifra: una estimación por
           comparables no puede parecer una tasación. */}
@@ -329,6 +425,23 @@ function FichaSubasta({ s, o, acciones, extra }: { s: Subasta; o?: Oportunidad |
             Ver ficha oficial
           </a>
         )}
+        {mapsUrl && (
+          <a href={mapsUrl} target="_blank" rel="noreferrer" style={{ ...boton(), display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
+            📍 Mapa{!exacta && !dirCat ? ' (aprox.)' : ''}
+          </a>
+        )}
+        {/* Ver la fachada y el barrio: en subastas «sin posibilidad de visita»
+            es la única inspección posible sin desplazarse. */}
+        {panoUrl && exacta && (
+          <a href={panoUrl} target="_blank" rel="noreferrer" style={{ ...boton(), display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
+            👁️ Ver la calle
+          </a>
+        )}
+        {catastroUrl && (
+          <a href={catastroUrl} target="_blank" rel="noreferrer" style={{ ...boton(), display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
+            🏛️ Catastro
+          </a>
+        )}
         {acciones}
       </div>
       {extra}
@@ -337,7 +450,7 @@ function FichaSubasta({ s, o, acciones, extra }: { s: Subasta; o?: Oportunidad |
 }
 
 export default function SubastasClient({ inicial }: { inicial: Inicial | null }) {
-  const [tab, setTab] = useState<'radar' | 'chollos' | 'todas' | 'criterios'>('radar')
+  const [tab, setTab] = useState<'radar' | 'chollos' | 'todas' | 'mapa' | 'criterios'>('radar')
   const [datos, setDatos] = useState<Inicial | null>(inicial)
   const [visibles, setVisibles] = useState(PAGE)
   const [crit, setCrit] = useState<Criterios>(
@@ -525,6 +638,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
         <button onClick={() => setTab('todas')} style={boton(tab === 'todas')}>
           📋 Todas ({datos.total})
         </button>
+        <button onClick={() => setTab('mapa')} style={boton(tab === 'mapa')}>🗺️ Mapa</button>
         <button onClick={() => setTab('criterios')} style={boton(tab === 'criterios')}>⚙️ Criterios</button>
       </div>
 
@@ -782,7 +896,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                   <>
                     {/* Etiquetas de lente: qué es y para qué sirve. */}
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>
-                      {r.tipoBien && TIPO_LABEL[r.tipoBien] && <span>{TIPO_LABEL[r.tipoBien]}</span>}
+                      {/* El tipo de bien ya sale en las características de la ficha. */}
                       {r.esPlaya && <span>🏖️ costa Huelva</span>}
                       {r.flipApto && r.margenFlipPct != null && (
                         <span style={{ color: r.margenFlipPct >= 0.25 ? 'var(--positive, #15803d)' : 'var(--muted)', fontWeight: 600 }}>
@@ -834,6 +948,18 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
               {buscando ? 'Cargando…' : `Ver más (${totalLista - lista.length} restantes)`}
             </button>
           )}
+        </section>
+      )}
+
+      {tab === 'mapa' && (
+        <section>
+          <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 0 }}>
+            Todos los inmuebles en subasta vigentes, de un vistazo sobre el mapa. Con referencia
+            catastral el punto es el oficial del Catastro; sin ella se marca en hueco el centro del
+            municipio — nunca se hace pasar por una dirección exacta.
+          </p>
+          {/* Montaje perezoso: Leaflet y los puntos solo se cargan al abrir esta pestaña. */}
+          <MapaSubastas />
         </section>
       )}
 
