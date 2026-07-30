@@ -143,3 +143,27 @@ test('una hipoteca vieja NUNCA se marca como caducada por mucho que pasen los a�
   assert.deepEqual(r.posiblesCaducadas, [])
   assert.equal(r.importe, 44850)
 })
+
+// ── «Se adquiere libre» hay que ganárselo ───────────────────────────────────
+
+const SIN_CARGAS = (extra: Partial<CuadroCargas> = {}): CuadroCargas => ({
+  cargas: [], procedimiento: 'embargo', sinMasCargas: true, notas: [], fuente: 'ocr_ia', confianza: 0.9, ...extra,
+})
+
+test('sin cargas, con «sin más cargas» y buena confianza SÍ es libre', () => {
+  const r = cargasQueSubsisten(SIN_CARGAS(), HOY)
+  assert.equal(r.importe, 0)
+})
+
+test('sin cargas pero con la lectura floja NO se afirma que esté libre', () => {
+  // El caso real de Belmonte: el lector cazó una sola carga de cuatro, la
+  // etiquetó mal y salió «se adquiere libre» sobre una finca con 44.850€.
+  const r = cargasQueSubsisten(SIN_CARGAS({ confianza: 0.35 }), HOY)
+  assert.equal(r.importe, null)
+  assert.ok(r.avisos.some((a) => /no da para afirmar que la finca esté libre/.test(a)))
+})
+
+test('sin la fórmula «sin más cargas» tampoco se afirma', () => {
+  const r = cargasQueSubsisten(SIN_CARGAS({ sinMasCargas: false }), HOY)
+  assert.equal(r.importe, null)
+})

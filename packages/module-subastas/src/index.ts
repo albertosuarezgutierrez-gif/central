@@ -141,6 +141,7 @@ export {
   consensoCuadros,
   resumirCargas,
   compararCuadros,
+  CONFIANZA_MINIMA_LIBRE,
 } from './cargas.ts'
 export type { Carga, CuadroCargas, CargasSubsistentes, TipoCarga, RangoCarga, FuenteCargas, ValoracionPactada, CambioCargas } from './cargas.ts'
 export { PROMPT_LECTOR_REGISTRAL, extraerJson } from './cargas-prompt.ts'
