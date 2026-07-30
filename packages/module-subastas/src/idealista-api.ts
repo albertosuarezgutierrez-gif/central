@@ -145,15 +145,31 @@ const CENTROS: Array<[RegExp, CentroBusqueda]> = [
   [/moguer/, { lat: 37.274, lng: -6.838, distancia: 5000 }],
   [/palos de la frontera/, { lat: 37.229, lng: -6.894, distancia: 5000 }],
   [/huelva/, { lat: 37.261, lng: -6.944, distancia: 6000 }],
-  // Cádiz
+  // Cádiz — los núcleos de playa van ANTES que su municipio: Novo Sancti Petri
+  // no está donde el casco de Chiclana, y una búsqueda mal centrada devuelve
+  // comparables de otro mercado (que es peor que no tener ninguno).
+  [/novo sancti petri|sancti petri|la barrosa/, { lat: 36.372, lng: -6.171, distancia: 4000 }],
+  [/zahara de los atunes|atlanterra/, { lat: 36.138, lng: -5.847, distancia: 4000 }],
+  [/los canos de meca|canos de meca/, { lat: 36.186, lng: -6.02, distancia: 3000 }],
+  [/el palmar/, { lat: 36.226, lng: -6.032, distancia: 3000 }],
+  [/bolonia|valdevaqueros/, { lat: 36.088, lng: -5.771, distancia: 4000 }],
+  [/costa ballena/, { lat: 36.647, lng: -6.42, distancia: 4000 }],
+  [/sotogrande|torreguadiaro/, { lat: 36.287, lng: -5.281, distancia: 5000 }],
+  [/puerto sherry|valdelagrana/, { lat: 36.588, lng: -6.245, distancia: 4000 }],
   [/puerto de santa maria|puerto santamaria/, { lat: 36.601, lng: -6.233, distancia: 6000 }],
   [/jerez/, { lat: 36.685, lng: -6.126, distancia: 7000 }],
   [/chiclana/, { lat: 36.419, lng: -6.148, distancia: 7000 }],
   [/conil/, { lat: 36.277, lng: -6.088, distancia: 5000 }],
   [/rota\b/, { lat: 36.622, lng: -6.361, distancia: 5000 }],
+  [/chipiona/, { lat: 36.737, lng: -6.435, distancia: 5000 }],
   [/sanlucar/, { lat: 36.778, lng: -6.352, distancia: 6000 }],
   [/barbate/, { lat: 36.192, lng: -5.921, distancia: 5000 }],
   [/vejer/, { lat: 36.252, lng: -5.966, distancia: 5000 }],
+  [/tarifa/, { lat: 36.014, lng: -5.606, distancia: 6000 }],
+  [/san fernando/, { lat: 36.462, lng: -6.199, distancia: 5000 }],
+  [/puerto real/, { lat: 36.528, lng: -6.19, distancia: 5000 }],
+  [/la linea de la concepcion|la linea\b/, { lat: 36.167, lng: -5.35, distancia: 5000 }],
+  [/san roque/, { lat: 36.21, lng: -5.386, distancia: 6000 }],
   [/cadiz/, { lat: 36.529, lng: -6.293, distancia: 5000 }],
   // Sevilla
   [/dos hermanas/, { lat: 37.283, lng: -5.922, distancia: 6000 }],

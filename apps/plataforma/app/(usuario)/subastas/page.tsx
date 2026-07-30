@@ -8,6 +8,7 @@ import { tesoreriaSubastas } from '@/lib/subastas/tesoreria'
 import { chollosVigentes, leerIndiceINE, pulsoMercado } from '@/lib/subastas/mercado'
 import { calibracionDePuja, calibracionResultados } from '@/lib/subastas/calibracion'
 import { paramsCoste } from '@/lib/subastas/params-coste'
+import { caducidadDeFila } from '@/lib/subastas/caducidad-fila'
 import { ingresoPorDormitorio } from '@/lib/subastas/rendimiento'
 import SubastasClient from './SubastasClient'
 
@@ -81,7 +82,10 @@ export default async function SubastasPage() {
     const vivas = new Map<string, ReturnType<typeof filaASubasta>>()
     // Cargas/semáforo/notas/documentos van APARTE del snapshot: la ficha del
     // radar los pinta igual que la de «Todas» (antes solo salían allí).
-    const docs = new Map<string, { semaforo: string | null; analisis: unknown; notasEdicto: string | null; documentos: unknown }>()
+    const docs = new Map<string, {
+      semaforo: string | null; analisis: unknown; notasEdicto: string | null; documentos: unknown
+      caducidad: ReturnType<typeof caducidadDeFila>
+    }>()
     if (radar.length > 0) {
       const claves = radar.map((r) => r.dedupe_key as string)
       const corpus = await prisma
@@ -97,6 +101,7 @@ export default async function SubastasPage() {
           analisis: f.analisis ?? null,
           notasEdicto: f.notas_edicto ?? null,
           documentos: f.documentos ?? null,
+          caducidad: caducidadDeFila(f.cargas_detalle),
         })
       }
     }
@@ -129,6 +134,7 @@ export default async function SubastasPage() {
           semaforo: f.semaforo ?? null,
           analisis: f.analisis ?? null,
           documentos: f.documentos ?? null,
+          caducidad: caducidadDeFila(f.cargas_detalle),
           precioM2Zona: f.precio_m2_zona != null ? Number(f.precio_m2_zona) : null,
           muestraZona: f.muestra_zona ?? null,
           zonaPortal: f.zona_portal ?? null,

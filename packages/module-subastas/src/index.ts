@@ -106,7 +106,12 @@ export type { ZonaPortal } from './zona.ts'
 // Lente flip (comprar-reformar-vender), radar playa y análisis documental
 export { evaluarFlip, reformaEstimada, REFORMA_EUR_M2, PCT_COSTES_VENTA, FLIP_MARGEN_MIN } from './flip.ts'
 export type { Flip } from './flip.ts'
-export { esPlayaHuelva, MUNICIPIOS_PLAYA_HUELVA, NUCLEOS_PLAYA_HUELVA, TOPE_PLAYA } from './playa.ts'
+export {
+  esPlaya, esPlayaHuelva, esPlayaCadiz, costaDe,
+  MUNICIPIOS_PLAYA_HUELVA, NUCLEOS_PLAYA_HUELVA,
+  MUNICIPIOS_PLAYA_CADIZ, NUCLEOS_PLAYA_CADIZ,
+  TOPE_PLAYA,
+} from './playa.ts'
 export { analisisDocumental } from './analisis.ts'
 export type { AnalisisDocumental, PuntoAnalisis, Nivel } from './analisis.ts'
 
@@ -139,6 +144,10 @@ export {
 } from './cargas.ts'
 export type { Carga, CuadroCargas, CargasSubsistentes, TipoCarga, RangoCarga, FuenteCargas, ValoracionPactada, CambioCargas } from './cargas.ts'
 export { PROMPT_LECTOR_REGISTRAL, extraerJson } from './cargas-prompt.ts'
+// Caducidad de las anotaciones de embargo (art. 86 LH): la carga fantasma que
+// infla el coste. Marca y cuantifica el escenario alternativo; nunca descuenta.
+export { estadoCaducidad, caducidadDelCuadro, parsearFechaRegistral, ANIOS_CADUCIDAD_ANOTACION, MESES_MARGEN } from './caducidad.ts'
+export type { Caducidad, EstadoCaducidad, CaducidadCuadro } from './caducidad.ts'
 
 // Rescate de PDFs escaneados (certificaciones fotocopiadas → imágenes legibles)
 export { localizarJpegs, dimensionesJpeg, agruparBandas, pareceEscaneado } from './pdf-imagenes.ts'

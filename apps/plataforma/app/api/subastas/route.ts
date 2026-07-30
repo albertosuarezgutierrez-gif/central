@@ -7,6 +7,7 @@ import { requireEmpresaId } from '@/lib/tenant'
 import { evaluarOportunidad } from '@central/module-subastas'
 import { COLS_SUBASTA, filaASubasta } from '@/lib/subastas-radar'
 import { paramsCoste } from '@/lib/subastas/params-coste'
+import { caducidadDeFila } from '@/lib/subastas/caducidad-fila'
 
 export const dynamic = 'force-dynamic'
 
@@ -100,6 +101,7 @@ export async function GET(req: NextRequest) {
         semaforo: f.semaforo ?? null,
         analisis: f.analisis ?? null,
         documentos: f.documentos ?? null,
+        caducidad: caducidadDeFila(f.cargas_detalle),
         precioM2Zona: f.precio_m2_zona != null ? Number(f.precio_m2_zona) : null,
         muestraZona: f.muestra_zona ?? null,
         zonaPortal: f.zona_portal ?? null,

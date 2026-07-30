@@ -20,7 +20,7 @@ export const MUNICIPIOS_POR_PROVINCIA: Array<[string, RegExp]> = [
   ],
   [
     'Cádiz',
-    /puerto de santa maria|puerto santamaria|el puerto de sta|jerez|chiclana|conil|rota\b|sanlucar|barbate|vejer|algeciras|cadiz/,
+    /puerto de santa maria|puerto santamaria|el puerto de sta|jerez|chiclana|novo sancti petri|la barrosa|conil|rota\b|chipiona|costa ballena|sanlucar|barbate|zahara de los atunes|atlanterra|vejer|los canos de meca|el palmar|tarifa|bolonia|san fernando|puerto real|la linea|san roque|sotogrande|algeciras|cadiz/,
   ],
   [
     'Sevilla',

@@ -24,6 +24,25 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⚖️ Subastas: caducidad de embargos (art. 86 LH) + costa de Cádiz (30/07/2026, rama
+  `claude/subasta-carga-no-publicadas-jm7ky6` reiniciada tras mergear #1176).**
+  - **Caducidad (idea 1, la que faltaba)** — `caducidad.ts`: una anotación preventiva de embargo caduca a
+    los 4 años, pero el registro NO la borra sola, así que seguía sumándose entera al coste como carga
+    fantasma. Ahora se MARCA y se cuantifica el escenario alternativo (`posiblesCaducadas`,
+    `importeSiCaducan`); **`importe` no cambia nunca** — la prórroga se anota AL MARGEN, que es lo que peor
+    lee un escaneo, y equivocarse ahí lleva a pujar de más. Cualquier rastro de «prórroga» desactiva la
+    conclusión; margen de 6 meses; solo embargos (la hipoteca es inscripción, art. 82 LH). La pregunta al
+    juzgado pasa a ser nominativa (acreedor + fecha + importe).
+  - **Costa de Cádiz en la lente 🏖️** (petición de Alberto): municipios del litoral + núcleos (Zahara,
+    Novo Sancti Petri, Caños de Meca, Costa Ballena, Sotogrande…), `esPlaya`/`costaDe` sustituyen a
+    `esPlayaHuelva` en radar y clasificador. **Jerez NO entra en esa lente** a propósito (no es costa; ya
+    llega por la provincia de sus criterios) — meterlo saltaría el filtro de precio y de descuento.
+    Centros de búsqueda de Idealista completados para Cádiz.
+  - ⚠️ **Los comparables de Cádiz están casi vacíos** (solo Sanlúcar, 20 anuncios): sin €/m² de zona no hay
+    descuento ni margen flip. Hacen falta alertas de Idealista/Fotocasa de esas zonas al correo, o que
+    Idealista apruebe la API (solicitada el 30/07). Eso NO lo puede resolver el código.
+  - 324 tests módulo · 215 app · tsc 0 · build OK.
+
 - **⚖️ Subastas — 3 partidas que faltaban en el coste real (30/07/2026, misma rama/PR #1176).** De las 5
   ideas que propuse, Alberto aprobó «2, 4 y 5» (la 3 —nota simple viva— la dejó **para el final del todo**;
   la 1 —caducidad de anotaciones, art. 86 LH— sigue **sin decidir**).

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { esPlayaHuelva } from '../src/playa.ts'
+import { costaDe, esPlaya, esPlayaCadiz, esPlayaHuelva } from '../src/playa.ts'
 import { analisisDocumental } from '../src/analisis.ts'
 import type { SubastaInmueble } from '../src/types.ts'
 
@@ -78,4 +78,39 @@ test('anotación de embargo en la certificación suma punto ámbar (no queda ver
 test('sin tasación ni valor de referencia → punto de valoración', () => {
   const a = analisisDocumental(base({ tasacion: null }), '')
   assert.ok(a.puntos.some((p) => p.clave === 'valoracion'))
+})
+
+// ── Costa de Cádiz (añadida el 30/07/2026) ──────────────────────────────────
+
+test('los municipios del litoral gaditano entran en la lente', () => {
+  for (const m of ['Chiclana de la Frontera', 'Conil de la Frontera', 'Barbate', 'Tarifa', 'Rota', 'Chipiona', 'El Puerto de Santa María']) {
+    assert.equal(esPlayaCadiz(m), true, `${m} debería ser costa de Cádiz`)
+    assert.equal(esPlaya(m), true)
+  }
+})
+
+test('un núcleo de playa entra aunque el municipio sea otro', () => {
+  // Zahara de los Atunes es Barbate; Novo Sancti Petri es Chiclana.
+  assert.equal(esPlayaCadiz(null, 'Vivienda en Zahara de los Atunes', 'Cádiz'), true)
+  assert.equal(esPlayaCadiz(null, 'Apartamento en Novo Sancti Petri', 'Cádiz'), true)
+})
+
+test('Jerez NO es costa: entra por criterios, no por la lente de segunda residencia', () => {
+  assert.equal(esPlaya('Jerez de la Frontera', null, 'Cádiz'), false)
+})
+
+test('la bahía industrial se queda fuera a propósito', () => {
+  assert.equal(esPlayaCadiz('Algeciras', null, 'Cádiz'), false)
+  assert.equal(esPlayaCadiz('Los Barrios', null, 'Cádiz'), false)
+})
+
+test('costaDe nombra la costa para el texto del aviso', () => {
+  assert.equal(costaDe('Punta Umbría'), 'Huelva')
+  assert.equal(costaDe('Conil de la Frontera'), 'Cádiz')
+  assert.equal(costaDe('Écija'), null)
+})
+
+test('un municipio de otra provincia no cuela por el texto', () => {
+  // «Rota» citada en una descripción de Sevilla no debe activar la lente.
+  assert.equal(esPlayaCadiz(null, 'finca en Rota', 'Sevilla'), false)
 })

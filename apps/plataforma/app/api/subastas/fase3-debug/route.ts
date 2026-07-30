@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
       const { procesarDocumentosDeFicha } = await import('@/lib/subastas/documentos')
       const { cargasQueSubsisten, resumirCargas } = await import('@central/module-subastas')
       const r = await procesarDocumentosDeFicha(idSub, { leerCargas: true })
-      const subsistentes = cargasQueSubsisten(r.cuadro)
+      const subsistentes = cargasQueSubsisten(r.cuadro, new Date())
       return NextResponse.json({
         ok: true,
         leidos: r.leidos,
