@@ -28,6 +28,14 @@ const PROBES: Record<string, Prisma.Sql> = {
       GROUP BY p.piso
     ) t`,
   correo_triaje: Prisma.sql`SELECT max(updated_at) AS ultimo FROM correo_cursor`,
+  // ialimp: `last_sync_at` es la columna que el sync escribe DE VERDAD en cada
+  // pasada (la del panel, `ultimo_sync`, está a NULL desde siempre — nadie la
+  // rellena). Solo cuentan las conexiones activas: una desactivada a mano no es
+  // una avería.
+  ialimp_pms: Prisma.sql`SELECT max(last_sync_at) AS ultimo FROM pms_connections WHERE activa = true`,
+  // Facturas: la frescura se mide sobre la ÚLTIMA PASADA BUENA, no sobre la
+  // última ejecución — así un cron que corre y falla siempre también salta.
+  facturas_gmail: Prisma.sql`SELECT ultimo_ok_at AS ultimo FROM agente_latidos WHERE agente = 'facturas_gmail'`,
 }
 
 async function handler(req: NextRequest) {
@@ -38,6 +46,7 @@ async function handler(req: NextRequest) {
   const ahora = new Date()
   const resultados: Array<Record<string, unknown>> = []
   const alertas: string[] = []
+  const sondasRotas: string[] = []
 
   for (const ag of AGENTES_VIGILADOS) {
     const probe = PROBES[ag.id]
@@ -49,19 +58,45 @@ async function handler(req: NextRequest) {
       resultados.push({ id: ag.id, ...ev, ultimo: ultimo?.toISOString() ?? null })
       if (ev.alerta) alertas.push(`• <b>${ag.etiqueta}</b>: ${ev.motivo}.\n  ${ag.nota}`)
     } catch (e) {
-      // Fail-quiet: un error de la propia sonda (tabla ausente, etc.) NO debe generar falsa alarma.
+      // 🚨 Una sonda rota NO es un agente sano. Antes se tragaba en silencio
+      // "para no dar falsas alarmas", pero eso convierte un vigía averiado en un
+      // parte de buena salud: si la tabla desaparece o cambia de nombre, el
+      // agente deja de estar vigilado y nadie se entera. Se avisa aparte y con
+      // otro tono: «no se ha podido comprobar», que no es «está bien».
       resultados.push({ id: ag.id, error: String((e as Error)?.message ?? e) })
+      sondasRotas.push(`• <b>${ag.etiqueta}</b>: no se ha podido comprobar (${String((e as Error)?.message ?? e).slice(0, 120)}).`)
     }
   }
 
-  if (alertas.length > 0) {
-    await tgSend(
-      `💓⚠️ <b>Latidos de agentes — ${alertas.length} sin señal</b>\n\n${alertas.join('\n\n')}`,
-      { html: true },
+  // El PMS de ialimp marca `last_sync_at` aunque la pasada haya dado errores, así
+  // que la frescura sola no lo cubre: una conexión que sincroniza puntual pero
+  // falla en cada intento pasaría por sana.
+  const conErrores = await prisma
+    .$queryRaw<Array<{ cliente_nombre: string; sync_error: string }>>(
+      Prisma.sql`SELECT cliente_nombre, sync_error FROM pms_connections WHERE activa = true AND sync_error IS NOT NULL`,
     )
+    .catch(() => null)
+  if (conErrores == null) {
+    sondasRotas.push('• <b>🧹 Errores de sincronización de ialimp</b>: no se ha podido comprobar.')
+  } else {
+    for (const c of conErrores) {
+      alertas.push(
+        `• <b>🧹 PMS de ialimp — ${c.cliente_nombre}</b>: sincroniza, pero con errores: ${String(c.sync_error).slice(0, 160)}.\n` +
+          '  Las reservas pueden estar entrando a medias: revisa la clave de Smoobu y los iCal.',
+      )
+    }
   }
 
-  return NextResponse.json({ ok: true, alertas: alertas.length, resultados })
+  if (alertas.length > 0 || sondasRotas.length > 0) {
+    const bloques: string[] = []
+    if (alertas.length > 0) bloques.push(`<b>Sin señal / con errores (${alertas.length})</b>\n${alertas.join('\n\n')}`)
+    if (sondasRotas.length > 0) {
+      bloques.push(`<b>Sin poder comprobar (${sondasRotas.length})</b> — esto NO es «todo bien»:\n${sondasRotas.join('\n')}`)
+    }
+    await tgSend(`💓⚠️ <b>Latidos de agentes</b>\n\n${bloques.join('\n\n')}`, { html: true })
+  }
+
+  return NextResponse.json({ ok: true, alertas: alertas.length, sondasRotas: sondasRotas.length, resultados })
 }
 
 export { handler as GET, handler as POST }
