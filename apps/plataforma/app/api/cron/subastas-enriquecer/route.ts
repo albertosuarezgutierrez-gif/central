@@ -8,8 +8,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { isCronAuthorized } from '@/lib/cron-auth'
-import { bajarCatastro, bajarCoordenadas, bajarFicha, capturarResultados, geocodificarMunicipio } from '@/lib/subastas/enriquecer'
-import type { CoordenadasCatastro } from '@central/module-subastas'
+import { bajarCatastro, bajarCoordenadas, bajarFicha, buscarRefPorDireccion, capturarResultados, geocodificarMunicipio } from '@/lib/subastas/enriquecer'
+import { paramsDnploc, type CoordenadasCatastro } from '@central/module-subastas'
 import { procesarDocumentos } from '@/lib/subastas/documentos'
 import { clasificarSubastas } from '@/lib/subastas/clasificar'
 
@@ -26,9 +26,10 @@ export async function GET(req: NextRequest) {
 
   try {
     // Prioridad: las que nunca se enriquecieron y las que cierran antes.
-    const pendientes = await prisma.$queryRaw<{ dedupe_key: string; fuente: string; identificador: string | null; ref_catastral: string | null; lat: number | null; municipio: string | null; provincia: string | null }[]>(
+    const pendientes = await prisma.$queryRaw<{ dedupe_key: string; fuente: string; identificador: string | null; ref_catastral: string | null; lat: number | null; geo_precision: string | null; municipio: string | null; provincia: string | null; direccion: string | null }[]>(
       Prisma.sql`
-        SELECT dedupe_key, fuente, identificador, ref_catastral, lat, municipio, provincia
+        SELECT dedupe_key, fuente, identificador, ref_catastral, lat, geo_precision,
+               municipio, provincia, direccion
         FROM subastas
         WHERE identificador IS NOT NULL
           AND (fecha_fin IS NULL OR fecha_fin >= now())
@@ -91,18 +92,41 @@ export async function GET(req: NextRequest) {
         }
 
         const f = await bajarFicha(p.identificador!)
-        // La referencia catastral puede venir del correo o aparecer en la ficha.
-        const rc = p.ref_catastral
-        const cat = rc ? await bajarCatastro(rc).catch(() => null) : null
-        // Coordenadas: no cambian, así que solo se piden mientras falten.
-        // Exactas por ref. catastral; sin ella, centro del municipio (aprox).
-        const geo = rc && p.lat == null ? await bajarCoordenadas(rc).catch(() => null) : null
         const muni = f.localidad ?? p.municipio
+        const prov = f.provincia ?? p.provincia
+
+        // 🏛️ Referencia catastral: la del correo/ficha si la hay y, si NO, se
+        // BUSCA POR DIRECCIÓN en el Catastro (`Consulta_DNPLOC`). Esto es lo que
+        // da ubicación exacta a la mayoría del corpus: el BOE publica la
+        // dirección casi siempre, pero la referencia solo a veces (5 de 34 el
+        // 30/07/2026). Idea de Alberto ese mismo día.
+        let rc = p.ref_catastral
+        let rcDeDireccion: string | null = null
+        if (!rc && muni && prov) {
+          const dir = paramsDnploc(f.direccion ?? p.direccion)
+          if (dir) {
+            const hallado = await buscarRefPorDireccion({
+              provincia: prov, municipio: muni, ...dir,
+            }).catch(() => null)
+            if (hallado) {
+              // La completa (20) solo cuando el portal tiene un único inmueble;
+              // si no, la de parcela basta para ubicar el edificio.
+              rc = hallado.refCompleta ?? hallado.refParcela
+              rcDeDireccion = rc
+            }
+          }
+        }
+
+        const cat = rc ? await bajarCatastro(rc).catch(() => null) : null
+        // Coordenadas exactas: no cambian, así que se piden mientras falten O
+        // mientras el punto guardado sea el centroide del municipio (mejorable).
+        const mejorable = p.lat == null || p.geo_precision === 'municipio'
+        const geo = rc && mejorable ? await bajarCoordenadas(rc).catch(() => null) : null
         // En el camino del BOE la ficha ya se ha descargado, así que la fila se
         // marca igualmente: perder el punto aproximado de una pasada no
         // justifica repetir la ficha entera en la siguiente.
         const geoAprox = coords(!geo && p.lat == null && muni
-          ? await geoConTiempo(muni, f.provincia ?? p.provincia)
+          ? await geoConTiempo(muni, prov)
           : null)
 
         await prisma.$executeRaw(Prisma.sql`
@@ -139,9 +163,16 @@ export async function GET(req: NextRequest) {
             uso_catastral = COALESCE(${cat?.uso ?? null}, uso_catastral),
             direccion_catastro = COALESCE(${cat?.direccion ?? null}, direccion_catastro),
             cuota_participacion = COALESCE(cuota_participacion, ${cat?.cuotaParticipacion ?? null}),
-            lat = COALESCE(lat, ${geo?.lat ?? geoAprox?.lat ?? null}),
-            lon = COALESCE(lon, ${geo?.lon ?? geoAprox?.lon ?? null}),
-            geo_precision = COALESCE(geo_precision, ${geo ? 'catastro' : geoAprox ? 'municipio' : null}),
+            -- La hallada por dirección se guarda para no repetir la búsqueda.
+            ref_catastral = COALESCE(ref_catastral, ${rcDeDireccion}),
+            -- El punto EXACTO pisa un centroide de municipio previo: ganamos
+            -- precisión y la fila puede llevar días con el aproximado puesto.
+            lat = COALESCE(${geo?.lat ?? null}, lat, ${geoAprox?.lat ?? null}),
+            lon = COALESCE(${geo?.lon ?? null}, lon, ${geoAprox?.lon ?? null}),
+            geo_precision = CASE
+              WHEN ${geo?.lat ?? null}::double precision IS NOT NULL THEN 'catastro'
+              ELSE COALESCE(geo_precision, ${geoAprox ? 'municipio' : null})
+            END,
             enriquecida_at = now(),
             actualizado_en = now()
           WHERE dedupe_key = ${p.dedupe_key}

@@ -4,6 +4,7 @@
 // flota del god-panel, sin dependencia npm). Solo se monta al abrir la pestaña
 // 🗺️ Mapa, así que la carga del script no la paga quien no lo usa.
 import { useEffect, useRef, useState } from 'react'
+import { direccionCatastro, urlFichaCatastro, urlGoogleMaps, urlStreetView } from '@central/module-subastas'
 import { eur } from '@/lib/dinero'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -51,6 +52,7 @@ interface Punto {
   aproximado: boolean
   ocupada: boolean
   enRadar: boolean
+  refCatastral: string | null
 }
 
 const TIPO_EMOJI: Record<string, string> = {
@@ -61,10 +63,19 @@ const TIPO_EMOJI: Record<string, string> = {
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
 function popupHtml(p: Punto): string {
-  const gm = `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}`
+  // La dirección del Catastro, ya legible, es la que se enseña y la que alimenta
+  // el enlace al mapa (un `query=lat,lon` deja un pin sin nombre).
+  const dirCat = direccionCatastro(p.direccion)
+  const gm = urlGoogleMaps({ ...p, direccion: dirCat?.postal ?? p.direccion })
+  const pano = p.aproximado ? null : urlStreetView(p.lat, p.lon)
+  const cat = urlFichaCatastro(p.refCatastral)
+
   const partes = [
     `${TIPO_EMOJI[p.tipoBien ?? ''] ?? '📌'} <b>${esc(p.identificador ?? p.dedupeKey)}</b>`,
-    p.direccion ? esc(p.direccion) : null,
+    dirCat ? `🏛️ ${esc(dirCat.postal)}` : p.direccion ? esc(p.direccion) : null,
+    dirCat?.planta || dirCat?.puerta
+      ? esc([dirCat.planta && `planta ${dirCat.planta}`, dirCat.puerta && `puerta ${dirCat.puerta}`].filter(Boolean).join(', '))
+      : null,
     [p.municipio, p.provincia].filter(Boolean).map((x) => esc(x!)).join(' · ') || null,
     p.valorSubasta != null ? `salida <b>${eur(p.valorSubasta)}</b>` : null,
     p.fechaFin ? `⏰ cierra ${new Date(p.fechaFin).toLocaleDateString('es-ES')}` : null,
@@ -73,7 +84,9 @@ function popupHtml(p: Punto): string {
     p.enRadar ? '🎯 en tu radar' : null,
     [
       p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noreferrer">Ficha oficial</a>` : null,
-      `<a href="${gm}" target="_blank" rel="noreferrer">Google Maps</a>`,
+      gm ? `<a href="${esc(gm)}" target="_blank" rel="noreferrer">Mapa</a>` : null,
+      pano ? `<a href="${esc(pano)}" target="_blank" rel="noreferrer">Ver la calle</a>` : null,
+      cat ? `<a href="${esc(cat)}" target="_blank" rel="noreferrer">Catastro</a>` : null,
     ].filter(Boolean).join(' · '),
   ]
   return partes.filter(Boolean).join('<br>')
