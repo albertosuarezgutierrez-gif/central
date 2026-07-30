@@ -24,6 +24,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔍 Subastas: el documento registral se lee ENTERO y «se adquiere libre» hay que ganárselo (30/07/2026, PR #1182).**
+  - Página a página el modelo no veía el orden de los asientos → ponía la hipoteca como `la_que_ejecuta`, la purgaba
+    y declaraba libre una finca con 44.850€. Ahora todas las páginas van en UNA llamada multimodal (OpenRouter,
+    `OPENROUTER_VISION_MODEL`), con respaldo automático a la lectura página a página. `LECTOR_VERSION` 3→4.
+  - Salvaguarda: cero cargas solo es «libre» si la certificación dice «sin más cargas» Y la confianza ≥ 0,5.
+  - **Probado en producción** (Belmonte, `SUB-JA-2026-264269`): rangos CORRECTOS, confianza 0,97 (antes 0,35).
+  - Pendiente: el embargo letra C) se cuenta DOS veces (3.600 + 2.600 desde dos documentos → 51.050€ en vez de
+    48.450€); la fórmula «SIN MÁS CARGAS salvo afecciones fiscales» entra como carga; las fechas vienen en LETRA
+    y `parsearFechaRegistral` no las lee, así que la caducidad del art. 86 no llega a evaluarse.
+
 - **⚖️ Subastas: caducidad de embargos (art. 86 LH) + costa de Cádiz (30/07/2026, rama
   `claude/subasta-carga-no-publicadas-jm7ky6` reiniciada tras mergear #1176).**
   - **Caducidad (idea 1, la que faltaba)** — `caducidad.ts`: una anotación preventiva de embargo caduca a
