@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-30T07:35:25Z",
-  "sha": "3474af19120305d7d3152bf3da43ca71dc0d159c",
+  "generadoEn": "2026-07-30T08:01:44Z",
+  "sha": "af62ae9fb87078ea36f7305a8e4be3428f826363",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -43754,10 +43754,10 @@
           "nombre": "RevisarBandeja",
           "kind": "function",
           "exportada": true,
-          "params": "{ movimientos, categorias }: { movimientos: Array<{ id: string; fecha: string | null; concepto: string; importe: number }> categorias: Array<{ value: string; label: string }> }",
+          "params": "{ movimientos, destinoLabel }: { movimientos: Array<{ id: string; fecha: string | null; concepto: string; importe: number }> destinoLabel: Record<string, string> }",
           "retorno": null,
-          "linea": 368,
-          "resumen": "Bandeja \"Por revisar\": la IA dudó de la categoría; el dueño la asigna con un desplegable."
+          "linea": 371,
+          "resumen": "Bandeja \"Por revisar\": lo que de verdad estaba en duda es el NEGOCIO del gasto (¿deducible de la correduría, del Dúplex/pisos, o personal?) — no la categoría contable, que para una compra con tarjeta "
         },
         {
           "nombre": "ExportarBtn",
@@ -43765,7 +43765,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 424,
+          "linea": 440,
           "resumen": "Descarga el CSV de todos los movimientos para enviárselo al gestor."
         },
         {
@@ -43774,7 +43774,7 @@
           "exportada": true,
           "params": "{ grupos, resueltos }: { grupos: DupGrupoUI[]; resueltos: DupResueltoUI[] }",
           "retorno": null,
-          "linea": 435,
+          "linea": 451,
           "resumen": "Bandeja \"Posibles cargos duplicados\": pares sospechosos de cobro doble. El dueño los resuelve con un clic (\"Es normal\" / \"Es un cobro doble\"); la decisión persiste. Plegable de \"ya resueltos\" para rea"
         },
         {
@@ -43783,7 +43783,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 559,
+          "linea": 575,
           "resumen": "Botón que abre Claude Code web y copia /facturas-correo al portapapeles listo para pegar."
         },
         {
@@ -43792,7 +43792,7 @@
           "exportada": true,
           "params": "{ cuentas, destinoLabel, initial, periodo }: { cuentas: { id: string; label: string; sincronizada?: boolean }[] destinoLabel: Record<string, string> initial: { movimientos: MovLedgerUI[]; total: number; hayMas: boolean } // Rango por defect",
           "retorno": null,
-          "linea": 598
+          "linea": 614
         },
         {
           "nombre": "IngresosPorRevisar",
@@ -43800,7 +43800,7 @@
           "exportada": true,
           "params": "{ ingresos, destinoLabel }: { ingresos: MovLedgerUI[] destinoLabel: Record<string, string> }",
           "retorno": null,
-          "linea": 878,
+          "linea": 894,
           "resumen": "Bandeja de INGRESOS por revisar: abonos cuyo negocio está sin confirmar. Antes no aparecían en ningún sitio accionable (la revisión de gastos es solo importe<0). Aquí el dueño les asigna el negocio (d"
         },
         {
@@ -43809,7 +43809,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 943
+          "linea": 959
         }
       ],
       "tablas": [
@@ -43817,7 +43817,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "0d8fbcb53b93"
+      "hash": "798dcf6dbb7b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/BenchmarkPisos.tsx",
@@ -44049,7 +44049,7 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: F",
           "retorno": "Promise<T | F>",
-          "linea": 37,
+          "linea": 35,
           "resumen": "/banca = Inicio unificado con control 💶 Dinero | 🏢 Negocios (SegTabs, por navegación → carga perezosa: cada pestaña computa SOLO sus datos). Dinero (por defecto): resumen negocio+personal (misma fue"
         },
         {
@@ -44058,14 +44058,14 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string; tab?: string }> }",
           "retorno": null,
-          "linea": 41
+          "linea": 39
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "74c5f7c77a11"
+      "hash": "99d78d2e13fb"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",
@@ -57571,8 +57571,8 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<MovimientoBancario[]>",
-          "linea": 783,
-          "resumen": "Movimientos que la IA marcó \"por revisar\" (categoría dudosa): el dueño les pone categoría."
+          "linea": 784,
+          "resumen": "GASTOS que la IA marcó \"por revisar\": lo dudoso es el NEGOCIO (destino) — la bandeja de /banca lo resuelve vía /api/banca/destino (confirma + aprende regla del comercio)."
         },
         {
           "nombre": "getEvolucionMensual",
@@ -57580,7 +57580,7 @@
           "exportada": true,
           "params": "cuentaId: string, meses = 12",
           "retorno": "Promise<MesEvolucion[]>",
-          "linea": 811
+          "linea": 812
         },
         {
           "nombre": "getMovimientosExport",
@@ -57588,7 +57588,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<MovExport[]>",
-          "linea": 834
+          "linea": 835
         },
         {
           "nombre": "getComparativaMensual",
@@ -57596,7 +57596,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<",
-          "linea": 869
+          "linea": 870
         },
         {
           "nombre": "getGastosPorCategoria",
@@ -57604,7 +57604,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<GastoCategoria[]>",
-          "linea": 896
+          "linea": 897
         },
         {
           "nombre": "getEvolucionPorDestino",
@@ -57612,7 +57612,7 @@
           "exportada": true,
           "params": "cuentaId: string, meses = 6",
           "retorno": "Promise<",
-          "linea": 914
+          "linea": 915
         },
         {
           "nombre": "getAlertas",
@@ -57620,7 +57620,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<Alertas>",
-          "linea": 959
+          "linea": 960
         },
         {
           "nombre": "getDuplicadosSospechosos",
@@ -57628,7 +57628,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<DupGrupo[]>",
-          "linea": 1041,
+          "linea": 1042,
           "resumen": "Pares de gastos sospechosos de cobro doble: mismo importe + misma contraparte/concepto en ±4 días, últimos 60 días, AMBOS sin resolver (duplicado_estado IS NULL). Excluye pares donde los dos están con"
         },
         {
@@ -57637,7 +57637,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<DupResuelto[]>",
-          "linea": 1137
+          "linea": 1138
         },
         {
           "nombre": "resolverDuplicados",
@@ -57645,7 +57645,7 @@
           "exportada": true,
           "params": "cuentaId: string, ids: string[], estado: 'ignorado' | 'confirmado' | null,",
           "retorno": "Promise<number>",
-          "linea": 1161,
+          "linea": 1162,
           "resumen": "Marca (o desmarca) movimientos como duplicado resuelto. Scoped por cuenta_id vía join: solo toca movimientos de cuentas bancarias de la sesión. estado=null → deshacer (vuelve a NULL)."
         },
         {
@@ -57654,7 +57654,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<ResumenDestino[]>",
-          "linea": 1179
+          "linea": 1180
         }
       ],
       "tablas": [
@@ -57668,7 +57668,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "dec9a493222d"
+      "hash": "608772f88498"
     },
     {
       "ruta": "apps/plataforma/lib/base-url.ts",
@@ -57880,6 +57880,37 @@
       "hash": "c7fe08c9c893"
     },
     {
+      "ruta": "apps/plataforma/lib/categoria-reglas.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Taxonomía de CATEGORÍA CONTABLE (eje PGC orientativo) + reglas deterministas por palabra clave. Módulo PURO (sin BD ni red) → testeable con `node --test`. La persistencia y la IA viven en categorizar.ts, que reexporta todo esto para no romper los imports existentes.",
+      "exporta": [
+        "pgcDe",
+        "categorizarPorReglas"
+      ],
+      "funciones": [
+        {
+          "nombre": "pgcDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "cat: string",
+          "retorno": "string",
+          "linea": 28
+        },
+        {
+          "nombre": "categorizarPorReglas",
+          "kind": "function",
+          "exportada": true,
+          "params": "concepto: string | null, contraparte: string | null, importe: number",
+          "retorno": "Categoria | null",
+          "linea": 35,
+          "resumen": "Reglas deterministas: categoriza por palabras clave del concepto/contraparte SIN IA. Cubre la mayoría de movimientos al instante (y sin gastar el cupo gratuito de NIM). Lo que no encaje devuelve null "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ec4a37f9a598"
+    },
+    {
       "ruta": "apps/plataforma/lib/categorias-personales.ts",
       "ambito": "apps/plataforma",
       "resumen": "apps/plataforma/lib/categorias-personales.ts FUENTE ÚNICA de las subcategorías de gasto/ingreso PERSONAL. Antes había 3 listas divergentes (categoria-ia.ts, auto-tag/route.ts, CategoriasTab.tsx) y la auto-clasificación no podía asignar 'seguro' ni 'suministros_piso' y emitía 'otros' donde el resto u",
@@ -57942,20 +57973,12 @@
       ],
       "funciones": [
         {
-          "nombre": "pgcDe",
-          "kind": "function",
-          "exportada": false,
-          "params": "cat: string",
-          "retorno": "string",
-          "linea": 36
-        },
-        {
           "nombre": "categorizarLote",
           "kind": "function",
           "exportada": true,
           "params": "movs: MovParaCategorizar[]",
           "retorno": "Promise<Categorizacion[]>",
-          "linea": 44,
+          "linea": 22,
           "resumen": "Clasifica un lote en una sola llamada IA. Devuelve [] si no hay IA o falla."
         },
         {
@@ -57964,17 +57987,8 @@
           "exportada": true,
           "params": "concepto: string | null, contraparte: string | null,",
           "retorno": "string | null",
-          "linea": 101,
+          "linea": 79,
           "resumen": "Detección determinista de deducciones de cuota IRPF (no de base, sino de cuota directa). mecenazgo: Ley 49/2002 (donaciones a fundaciones) — 80% primeros €150, 40% resto. guarderia: Art.81bis LIRPF (g"
-        },
-        {
-          "nombre": "categorizarPorReglas",
-          "kind": "function",
-          "exportada": false,
-          "params": "concepto: string | null, contraparte: string | null, importe: number",
-          "retorno": "Categoria | null",
-          "linea": 124,
-          "resumen": "Reglas deterministas: categoriza por palabras clave del concepto/contraparte SIN IA. Cubre la mayoría de movimientos al instante (y sin gastar el cupo gratuito de NIM). Lo que no encaje devuelve null "
         },
         {
           "nombre": "guardarCategoria",
@@ -57982,7 +57996,7 @@
           "exportada": false,
           "params": "cuentaId: string, id: string, c: Categorizacion, destino: Destino, subcategoria?: string, confirmado = false, deduccionCuotaTipo?: string | null,",
           "retorno": "Promise<number>",
-          "linea": 151
+          "linea": 104
         },
         {
           "nombre": "subcategoriaIngesta",
@@ -57990,7 +58004,7 @@
           "exportada": false,
           "params": "destino: Destino, importe: number, concepto: string | null, contraparte: string | null, dSub?: string,",
           "retorno": "string | undefined",
-          "linea": 173,
+          "linea": 126,
           "resumen": "Subcategoría de GASTO PERSONAL a fijar en la ingesta. Prioridad: la regla del dueño / vía Pilar (dSub) manda; si no, para gasto personal se intenta la keyword determinista (instantánea, gratis). Devue"
         },
         {
@@ -57999,7 +58013,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 400",
           "retorno": "Promise<",
-          "linea": 183
+          "linea": 136
         },
         {
           "nombre": "casarDevolucionesSepa",
@@ -58007,7 +58021,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<",
-          "linea": 275,
+          "linea": 228,
           "resumen": "Empareja las DEVOLUCIONES de adeudos SEPA (recibos domiciliados devueltos) con su cargo original por la referencia común \"N <ref>\": copia al abono de anulación el destino del cargo y da AMBOS por conf"
         },
         {
@@ -58016,7 +58030,7 @@
           "exportada": true,
           "params": "cuentaId: string, movimientoId: string, categoria: string",
           "retorno": "Promise<boolean>",
-          "linea": 319,
+          "linea": 272,
           "resumen": "Asignación MANUAL de categoría por el dueño (resuelve un \"por revisar\"). Valida la categoría, deriva la cuenta PGC y quita la marca de revisión. Scoped por cuenta_id."
         },
         {
@@ -58025,7 +58039,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 333,
+          "linea": 286,
           "resumen": "Categoriza los movimientos pendientes de TODAS las cuentas que tengan alguno sin analizar (lo usa el cron diario tras sincronizar los bancos). Devuelve el total categorizado."
         }
       ],
@@ -58036,7 +58050,7 @@
         "movimientos_bancarios"
       ],
       "rutaApi": null,
-      "hash": "09463a1d4ffe"
+      "hash": "fad34a725564"
     },
     {
       "ruta": "apps/plataforma/lib/cazador-deducciones.ts",
@@ -85778,7 +85792,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2338,
+    "archivos": 2339,
     "funciones": 6149
   }
 }
