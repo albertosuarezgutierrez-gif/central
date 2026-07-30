@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-30T19:10:00Z",
-  "sha": "1cde16bbb1cbea87acc76514e4e40ece3a112521",
+  "generadoEn": "2026-07-30T19:32:38Z",
+  "sha": "4488bd96857bc7494fce2629513139c3735352fa",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -57262,7 +57262,7 @@
           "exportada": false,
           "params": "",
           "retorno": "NimConfig",
-          "linea": 14
+          "linea": 28
         },
         {
           "nombre": "aiComplete",
@@ -57270,16 +57270,16 @@
           "exportada": true,
           "params": "messages: { role: string; content: string }[], opts: { timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 31,
+          "linea": 45,
           "resumen": "Completion de texto (system+user…). Mismo contrato de siempre: recibe mensajes {role,content} y devuelve el texto. Antes iba DIRECTO a NVIDIA NIM con modelo pinneado (Llama 3.3-70b), saltándose OpenRo"
         },
         {
           "nombre": "aiVision",
           "kind": "function",
           "exportada": true,
-          "params": "system: string, images: ImageInput[], userText: string, opts: { maxTokens?: number; model?: string; timeoutMs?: number; endpoint?: string } = {},",
+          "params": "system: string, images: ImageInput[], userText: string, opts: { maxTokens?: number; model?: string; timeoutMs?: number; endpoint?: string /** `true` = varias imágenes en la MISMA llamada: exige modelo multimodal y * NO cae a NIM, que solo a",
           "retorno": "Promise<string>",
-          "linea": 59,
+          "linea": 73,
           "resumen": "VISIÓN / OCR con el modelo que decida la app. Un solo punto de entrada para leer imágenes desde plataforma (certificaciones registrales escaneadas, tickets, fotos de facturas). Enrutado: si hay `OPENR"
         },
         {
@@ -57288,7 +57288,7 @@
           "exportada": true,
           "params": "audio: Buffer, fileName: string, mimeType?: string, opts: { timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 130,
+          "linea": 156,
           "resumen": "Transcribe voz → texto (STT) con Groq Whisper (`whisper-large-v3`, gratis). Usa GROQ_API_KEY (la misma del fallback de texto). Devuelve '' si no reconoce nada. Para las notas de voz del agente de cont"
         },
         {
@@ -57297,7 +57297,7 @@
           "exportada": false,
           "params": "p: Promise<T>, ms: number",
           "retorno": "Promise<T>",
-          "linea": 167,
+          "linea": 193,
           "resumen": "Corta una llamada colgada (Groq no acepta `signal`, y NIM se ha colgado antes)."
         },
         {
@@ -57306,7 +57306,7 @@
           "exportada": false,
           "params": "user: string",
           "retorno": "Promise<string>",
-          "linea": 175,
+          "linea": 201,
           "resumen": "Extracción por Groq (rápido, mismo Llama-70b). Lanza si no hay GROQ_API_KEY o Groq falla."
         },
         {
@@ -57315,13 +57315,13 @@
           "exportada": true,
           "params": "input: { text?: string imageBase64?: string mimeType?: string }",
           "retorno": "Promise<Record<string, any>>",
-          "linea": 187,
+          "linea": 213,
           "resumen": "Extrae datos estructurados de una factura. Devuelve {} si NINGÚN modelo logra leerla (el llamador lo trata como \"no legible\" y avisa, en vez de tragárselo en silencio). PDF (texto) → Groq (rápido) → N"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1204feaeba32"
+      "hash": "527873a391ff"
     },
     {
       "ruta": "apps/plataforma/lib/ai-gateway.ts",
@@ -65358,7 +65358,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "e55df05ccca0"
+      "hash": "73a0eb2cce08"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/enriquecer.ts",
@@ -65624,8 +65624,17 @@
           "exportada": false,
           "params": "paginas: ImageInput[], modelo: string | undefined",
           "retorno": "Promise<CuadroCargas>",
-          "linea": 152,
-          "resumen": "Una pasada de lectura sobre imágenes: una llamada por página, en tandas."
+          "linea": 164,
+          "resumen": "Una pasada de lectura sobre imágenes. Camino BUENO: el documento ENTERO en una sola llamada a un modelo multimodal. Es lo único que permite acertar el RANGO de cada carga —anterior, posterior o la que"
+        },
+        {
+          "nombre": "leerPaginaAPagina",
+          "kind": "function",
+          "exportada": false,
+          "params": "paginas: ImageInput[], modelo: string | undefined",
+          "retorno": "Promise<CuadroCargas>",
+          "linea": 188,
+          "resumen": "Respaldo: una llamada por página, en tandas. Peor contexto, pero siempre lee."
         },
         {
           "nombre": "leerDocumento",
@@ -65633,7 +65642,7 @@
           "exportada": true,
           "params": "contenido: { texto: string | null; pdf: Buffer | null; imagen: ImageInput | null },",
           "retorno": "Promise<LecturaDocumento>",
-          "linea": 196,
+          "linea": 232,
           "resumen": "Lee UN documento y devuelve su cuadro de cargas. Hace la doble pasada y aplica el consenso. Nunca lanza: un documento ilegible devuelve un cuadro vacío con confianza 0, y el pipeline sigue con el sigu"
         },
         {
@@ -65642,13 +65651,13 @@
           "exportada": true,
           "params": "lecturas: LecturaDocumento[]",
           "retorno": "CuadroCargas",
-          "linea": 245,
+          "linea": 281,
           "resumen": "Fusiona los cuadros de varios documentos de la MISMA ficha (edicto + certificación + cesión…). Se queda con la vía del procedimiento que algún documento haya sabido determinar y deduplica cargas por t"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "edb451ec7033"
+      "hash": "d250ab6acfe6"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/mercado.ts",
@@ -83874,7 +83883,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 120
+          "linea": 126
         },
         {
           "nombre": "normalizarCuadroCargas",
@@ -83882,7 +83891,7 @@
           "exportada": true,
           "params": "bruto: unknown, fuente: FuenteCargas",
           "retorno": "CuadroCargas",
-          "linea": 134,
+          "linea": 140,
           "resumen": "Normaliza el JSON del lector a un `CuadroCargas` de confianza. Defensivo a propósito: un LLM puede devolver un tipo inventado, un importe con formato español, o cargas a medias — nada de eso debe lanz"
         },
         {
@@ -83891,7 +83900,7 @@
           "exportada": true,
           "params": "cuadro: CuadroCargas, hoy?: Date",
           "retorno": "CargasSubsistentes",
-          "linea": 199,
+          "linea": 205,
           "resumen": "QUÉ HEREDA EL ADJUDICATARIO. Determinista, porque de esto sale la puja máxima. Reglas (LEC): · Ejecución HIPOTECARIA directa: la hipoteca que se ejecuta se cancela y las cargas POSTERIORES se purgan ("
         },
         {
@@ -83900,7 +83909,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 286
+          "linea": 309
         },
         {
           "nombre": "mismoAcreedorQueEjecutante",
@@ -83908,7 +83917,7 @@
           "exportada": true,
           "params": "cargas: Carga[], ejecutante: string | null | undefined",
           "retorno": "boolean",
-          "linea": 304,
+          "linea": 327,
           "resumen": "¿El ejecutante es también el acreedor de una carga ANTERIOR que subsiste? Es el matiz que decide si el caso «hipoteca anterior en embargo» es una ruina o solo un trámite: cuando coinciden, el crédito "
         },
         {
@@ -83917,7 +83926,7 @@
           "exportada": true,
           "params": "a: CuadroCargas, b: CuadroCargas",
           "retorno": "",
-          "linea": 324,
+          "linea": 347,
           "resumen": "Consenso entre DOS lecturas independientes del mismo documento. Alberto pidió que la IA extraiga las cifras; esta es la red que evita que un dígito mal leído se propague a una puja. Se emparejan las c"
         },
         {
@@ -83926,7 +83935,7 @@
           "exportada": true,
           "params": "anterior: CuadroCargas, nuevo: CuadroCargas",
           "retorno": "CambioCargas[]",
-          "linea": 393,
+          "linea": 416,
           "resumen": "Compara el cuadro que se leyó de la certificación del BOE con uno NUEVO (una nota simple recién pedida al registro, por ejemplo). Hace falta porque la certificación que el juzgado adjunta a la ficha s"
         },
         {
@@ -83935,13 +83944,13 @@
           "exportada": true,
           "params": "cuadro: CuadroCargas, subsistentes: CargasSubsistentes",
           "retorno": "string",
-          "linea": 443,
+          "linea": 466,
           "resumen": "Resumen legible del cuadro para la ficha y el aviso de Telegram."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a6b69a19d4b6"
+      "hash": "ae87c1603d9f"
     },
     {
       "ruta": "packages/module-subastas/src/catastro.ts",
@@ -86987,6 +86996,6 @@
   ],
   "resumen": {
     "archivos": 2358,
-    "funciones": 6249
+    "funciones": 6250
   }
 }
