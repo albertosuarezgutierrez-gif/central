@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-31T07:00:47Z",
+  "generadoEn": "2026-07-31T07:26:07Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3968,6 +3968,14 @@
   ],
   "novedades": [
     {
+      "titulo": "🏛️ Subastas: revisión de la cadena de ubicación — 8 fallos reales corregidos (31/07/2026).",
+      "fecha": "31/07/2026"
+    },
+    {
+      "titulo": "🏛️ Subastas: 3 fallos de la búsqueda por dirección + el Catastro corta por volumen (31/07/2026).",
+      "fecha": "31/07/2026"
+    },
+    {
       "titulo": "🛡️ Pricing: tres centinelas para que el motor se queje solo (31/07/2026, rama `claude/pricing-check-31-07`).",
       "fecha": "31/07/2026"
     },
@@ -4017,14 +4025,6 @@
     },
     {
       "titulo": "🔧 Subastas — HOTFIX /subastas caída + FASE 3 construida con datos reales (29/07/2026, mañana).",
-      "fecha": "29/07/2026"
-    },
-    {
-      "titulo": "🧹 agentes-entrenador — \"repara todo\" (29/07/2026): backlog de PRs + trabajo perdido recuperado.",
-      "fecha": "29/07/2026"
-    },
-    {
-      "titulo": "🐟 PR #1055 \"mariscos\" — CONFIRMADO cliente real, en pausa deliberada (29/07/2026).",
       "fecha": "29/07/2026"
     }
   ],

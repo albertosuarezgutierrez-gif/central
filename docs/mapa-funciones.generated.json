@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-31T07:00:47Z",
-  "sha": "1c243ab344ff2d2ed39ddbf4fdea823724b73598",
+  "generadoEn": "2026-07-31T07:26:07Z",
+  "sha": "0211846d88532da1a95637527bc11f5c9b973c97",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47423,12 +47423,30 @@
           "linea": 18
         },
         {
+          "nombre": "emojiTipo",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "t: string | null",
+          "retorno": null,
+          "linea": 66,
+          "resumen": "`Object.hasOwn`: un `tipo_bien` que se llamara «constructor» o «toString» devolvería la función heredada del prototipo (que no es nullish, así que el `??` no salta) y acabaría interpolada en el HTML d"
+        },
+        {
           "nombre": "esc",
           "kind": "arrow",
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 63
+          "linea": 68
+        },
+        {
+          "nombre": "enlace",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "url: string | null, texto: string",
+          "retorno": null,
+          "linea": 70,
+          "resumen": "Solo http(s) sale como enlace: un `javascript:` colado por la ingesta se ejecutaría al pulsar."
         },
         {
           "nombre": "popupHtml",
@@ -47436,7 +47454,7 @@
           "exportada": false,
           "params": "p: Punto",
           "retorno": "string",
-          "linea": 65
+          "linea": 73
         },
         {
           "nombre": "MapaSubastas",
@@ -47444,12 +47462,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 95
+          "linea": 104
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6896d975252b"
+      "hash": "d16ca3668c9f"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/subastas/page.tsx",
@@ -47499,7 +47517,7 @@
           "exportada": false,
           "params": "activo = false",
           "retorno": "React.CSSProperties",
-          "linea": 185
+          "linea": 186
         },
         {
           "nombre": "fecha",
@@ -47507,7 +47525,7 @@
           "exportada": false,
           "params": "iso: string | null | undefined",
           "retorno": "string | null",
-          "linea": 192
+          "linea": 193
         },
         {
           "nombre": "Puntuacion",
@@ -47515,7 +47533,7 @@
           "exportada": false,
           "params": "{ v }: { v: number | null }",
           "retorno": null,
-          "linea": 206,
+          "linea": 207,
           "resumen": "Semáforo de la puntuación. `null` se pinta distinto a 0: no es lo mismo."
         },
         {
@@ -47524,7 +47542,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 214
+          "linea": 215
         },
         {
           "nombre": "PanelTesoreria",
@@ -47532,7 +47550,7 @@
           "exportada": false,
           "params": "{ t }: { t: Tesoreria }",
           "retorno": null,
-          "linea": 221,
+          "linea": 222,
           "resumen": "Dinero que hay que tener bloqueado para poder pujar. Lo que importa NO es la suma de depósitos sino el máximo simultáneo: los que no se solapan reutilizan el mismo dinero."
         },
         {
@@ -47541,7 +47559,7 @@
           "exportada": false,
           "params": "{ r, dormitorios }: { r: Rendimiento | null | undefined; dormitorios?: number | null }",
           "retorno": null,
-          "linea": 305,
+          "linea": 306,
           "resumen": "Yield turístico estimado con los pisos PROPIOS. Siempre con el caveat: los pisos de referencia son de Sevilla capital — fuera de ahí es extrapolación."
         },
         {
@@ -47550,7 +47568,7 @@
           "exportada": false,
           "params": "{ s, plantaAparte }: { s: Subasta; plantaAparte?: boolean }",
           "retorno": null,
-          "linea": 329,
+          "linea": 330,
           "resumen": "repetirla sería ruido."
         },
         {
@@ -47559,7 +47577,7 @@
           "exportada": false,
           "params": "{ s, d }: { s: Subasta; d?: Documental | null }",
           "retorno": null,
-          "linea": 366,
+          "linea": 367,
           "resumen": "Resumen de CARGAS + documentación de la subasta. Vive dentro de `FichaSubasta` a propósito: antes el semáforo y las notas del edicto solo se pintaban en la pestaña «Todas» (iban en su `extra`), así qu"
         },
         {
@@ -47568,7 +47586,7 @@
           "exportada": false,
           "params": "{ dedupeKey }: { dedupeKey: string }",
           "retorno": null,
-          "linea": 490,
+          "linea": 491,
           "resumen": "«Nota simple viva»: la certificación que adjunta el juzgado es de hace años y las cargas se mueven. Aquí se sube una nota simple recién pedida al registro y el agente dice QUÉ HA CAMBIADO — es lo únic"
         },
         {
@@ -47577,7 +47595,7 @@
           "exportada": false,
           "params": "{ s, o, acciones, extra, doc }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null }",
           "retorno": null,
-          "linea": 580
+          "linea": 581
         },
         {
           "nombre": "SubastasClient",
@@ -47585,14 +47603,14 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Inicial | null }",
           "retorno": null,
-          "linea": 737
+          "linea": 752
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "a8de68c61e87"
+      "hash": "f41ca545e9fe"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -51321,7 +51339,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 22
+          "linea": 27
         }
       ],
       "tablas": [
@@ -51329,7 +51347,7 @@
         "subastas"
       ],
       "rutaApi": "/api/cron/subastas-enriquecer",
-      "hash": "75cbb5a56d26"
+      "hash": "858d7a664696"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-ingesta/route.ts",
@@ -55499,7 +55517,7 @@
         "subastas_radar"
       ],
       "rutaApi": "/api/subastas/mapa",
-      "hash": "e16325663bb5"
+      "hash": "ac914749bc83"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/nota-simple/route.ts",
@@ -65254,7 +65272,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<FilaCriterios[]>",
-          "linea": 122,
+          "linea": 124,
           "resumen": "Cuentas con el radar activo y sus criterios."
         },
         {
@@ -65263,7 +65281,7 @@
           "exportada": true,
           "params": "limite = 500",
           "retorno": "Promise<SubastaInmueble[]>",
-          "linea": 148,
+          "linea": 150,
           "resumen": "Subastas candidatas: en plazo (o sin fecha conocida) y recientes. No se rebarre todo el histórico en cada pasada."
         },
         {
@@ -65272,7 +65290,7 @@
           "exportada": true,
           "params": "cuentaId: string, criterios: CriteriosSubasta, corpus: SubastaInmueble[], params: ParamsCoste = {},",
           "retorno": "Promise<number>",
-          "linea": 171,
+          "linea": 173,
           "resumen": "Casa el corpus con los criterios de una cuenta e inserta lo nuevo. El upsert REFRESCA el snapshot y las cifras: el radar corre a las 06:30, DESPUÉS del enriquecimiento (06:15) y del valor de mercado ("
         },
         {
@@ -65281,7 +65299,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 244,
+          "linea": 246,
           "resumen": "Pasada completa: descarga el corpus UNA vez y lo empareja con cada cuenta."
         }
       ],
@@ -65293,7 +65311,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "6b1a9d6d703d"
+      "hash": "7784dbe04057"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/boe.ts",
@@ -65602,7 +65620,24 @@
           "exportada": false,
           "params": "url: string, ms = 20000",
           "retorno": "Promise<string>",
-          "linea": 39
+          "linea": 41
+        },
+        {
+          "nombre": "turnoCatastro",
+          "kind": "function",
+          "exportada": false,
+          "params": "pausaExtra = 0",
+          "retorno": "Promise<void>",
+          "linea": 71,
+          "resumen": "Reserva el siguiente turno del cerrojo y espera a que llegue. `pausaExtra` añade un descanso contado DESDE AHORA (para el reintento: el servicio acaba de cortar y hay que darle aire, no basta con el e"
+        },
+        {
+          "nombre": "bajarCatastroHttp",
+          "kind": "function",
+          "exportada": false,
+          "params": "url: string",
+          "retorno": "Promise<string>",
+          "linea": 78
         },
         {
           "nombre": "bajarFicha",
@@ -65610,8 +65645,8 @@
           "exportada": true,
           "params": "identificador: string",
           "retorno": "Promise<FichaBoe>",
-          "linea": 50,
-          "resumen": "Descarga y parsea las tres pestañas de la ficha de una subasta."
+          "linea": 107,
+          "resumen": "Descarga y parsea las tres pestañas de la ficha de una subasta. 🚨 Un HTTP 200 que NO sea la ficha (mantenimiento del Portal, muro de un WAF, página de error) es lo más peligroso que puede pasar aquí:"
         },
         {
           "nombre": "bajarCatastro",
@@ -65619,7 +65654,7 @@
           "exportada": true,
           "params": "refCatastral: string",
           "retorno": "Promise<DatosCatastro | null>",
-          "linea": 72,
+          "linea": 132,
           "resumen": "Consulta el Catastro por referencia catastral. `null` si no hay dato. ⚠️ Solo devuelve datos del BIEN (superficie, año, uso) con la referencia COMPLETA de 20 caracteres. Con la de parcela (14) el serv"
         },
         {
@@ -65628,7 +65663,7 @@
           "exportada": true,
           "params": "refCatastral: string",
           "retorno": "Promise<CoordenadasCatastro | null>",
-          "linea": 87,
+          "linea": 147,
           "resumen": "Coordenadas WGS84 por referencia catastral (`Consulta_CPMRC`, probado el 30/07/2026). El servicio trabaja a nivel de PARCELA: acepta los 14 primeros caracteres; con la referencia de 20 del bien concre"
         },
         {
@@ -65636,17 +65671,17 @@
           "kind": "function",
           "exportada": true,
           "params": "provincia: string, municipio: string, sigla: string, calle: string,",
-          "retorno": "Promise<string | null>",
-          "linea": 99,
-          "resumen": "Nombre OFICIAL de la vía según el callejero del Catastro (`ConsultaVia`, que busca por prefijo). Imprescindible porque el Catastro archiva los artículos al final: «Avenida de Madrid» → «MADRID DE»."
+          "retorno": "Promise<",
+          "linea": 165,
+          "resumen": "Nombre OFICIAL de la vía según el callejero del Catastro (`ConsultaVia`). Se pregunta por UNA PALABRA distintiva, no por el nombre entero: el servicio busca por subcadena y el Catastro reescribe los n"
         },
         {
           "nombre": "buscarRefPorDireccion",
           "kind": "function",
           "exportada": true,
-          "params": "p: { provincia: string municipio: string sigla: string calle: string numero: string }",
+          "params": "p: ParamsDnploc & { provincia: string; municipio: string },",
           "retorno": "Promise<",
-          "linea": 123,
+          "linea": 193,
           "resumen": "DIRECCIÓN → referencia catastral (`Consulta_DNPLOC`, servicio libre; probado el 30/07/2026). Es lo que desbloquea la ubicación EXACTA de la mayor parte del corpus: el BOE publica la dirección del inmu"
         },
         {
@@ -65655,7 +65690,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<void>",
-          "linea": 162
+          "linea": 261
         },
         {
           "nombre": "geocodificarMunicipio",
@@ -65663,7 +65698,7 @@
           "exportada": true,
           "params": "municipio: string, provincia?: string | null,",
           "retorno": "Promise<CoordenadasCatastro | null>",
-          "linea": 180,
+          "linea": 279,
           "resumen": "Centro del municipio por Nominatim (OSM, gratis). Es el escalón APROXIMADO para las subastas sin referencia catastral (la mayoría del corpus): mejor un pin honesto en el centro del pueblo que un mapa "
         },
         {
@@ -65672,7 +65707,7 @@
           "exportada": true,
           "params": "max = 20",
           "retorno": "Promise<",
-          "linea": 212,
+          "linea": 311,
           "resumen": "el marcado de una CONCLUIDA aún no se ha podido ver, así que el parser (`resultadoDeFicha`) es defensivo — si no reconoce nada deja la fila pendiente y aquí se loguean las claves vistas para ajustar e"
         }
       ],
@@ -65680,7 +65715,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "ab4db3ccdf86"
+      "hash": "7c7e5543742c"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/gmail-boe.ts",
@@ -84462,8 +84497,10 @@
         "direccionCatastro",
         "parsearInmueblesDnploc",
         "parcelaUnica",
+        "normVia",
+        "tokensVia",
+        "terminoBusquedaVia",
         "parsearVias",
-        "nombreViaBuscable",
         "elegirVia",
         "paramsDnploc",
         "parsearCoordenadas",
@@ -84549,22 +84586,40 @@
           "resumen": "Parcela común a todos los inmuebles de una respuesta DNPLOC. `null` si la respuesta mezcla parcelas (dirección ambigua): en ese caso NO se elige una a dedo, porque ubicaría el inmueble en el edificio "
         },
         {
+          "nombre": "normVia",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 261,
+          "resumen": "Normaliza CONSERVANDO LA Ñ. `norm()` la convierte en «N» y eso rompe la búsqueda en el callejero del Catastro: verificado el 31/07/2026 que `NombreVia=CAÑAL` encuentra «CARLOS CAÑAL» y `NombreVia=CANA"
+        },
+        {
+          "nombre": "tokensVia",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string",
+          "retorno": "string[]",
+          "linea": 279,
+          "resumen": "Tokens con los que se compara un nombre de vía (sin artículos ni Ñ)."
+        },
+        {
+          "nombre": "terminoBusquedaVia",
+          "kind": "function",
+          "exportada": true,
+          "params": "calle: string",
+          "retorno": "string",
+          "linea": 293,
+          "resumen": "Término con el que preguntar al callejero. **El servicio busca por SUBCADENA** (verificado: `OLIVA` encuentra «NUESTRA SEÑORA D LA OLIVA»), así que se manda UNA palabra distintiva en vez del nombre en"
+        },
+        {
           "nombre": "parsearVias",
           "kind": "function",
           "exportada": true,
           "params": "xml: string",
           "retorno": "Array<",
-          "linea": 256,
-          "resumen": "Nombres de vía del callejero oficial (`ConsultaVia`), que busca por PREFIJO. Hace falta porque `Consulta_DNPLOC` exige el nombre EXACTO como lo guarda el Catastro, y ese formato mueve los artículos al"
-        },
-        {
-          "nombre": "nombreViaBuscable",
-          "kind": "function",
-          "exportada": true,
-          "params": "calle: string",
-          "retorno": "string",
-          "linea": 273,
-          "resumen": "Nombre con el que preguntar al callejero: sin los artículos delanteros, porque el Catastro los coloca detrás («DE MADRID» → busca «MADRID» → devuelve «MADRID DE»)."
+          "linea": 310,
+          "resumen": "Nombres de vía del callejero oficial (`ConsultaVia`), que busca por SUBCADENA. Hace falta porque `Consulta_DNPLOC` exige el nombre EXACTO como lo guarda el Catastro, y ese formato es impredecible: mue"
         },
         {
           "nombre": "elegirVia",
@@ -84572,8 +84627,8 @@
           "exportada": true,
           "params": "vias: Array<{ tipo: string; nombre: string }>, buscada: string",
           "retorno": "string | null",
-          "linea": 282,
-          "resumen": "Elige el nombre oficial entre los que devuelve el callejero. Prefiere la coincidencia exacta; si hay varias candidatas distintas y ninguna exacta, devuelve `null` en lugar de arriesgarse a ubicar en o"
+          "linea": 333,
+          "resumen": "Elige el nombre OFICIAL entre los candidatos del callejero comparando TOKENS, no cadenas: es la única forma de casar «PACO GANDÍA» con «PACO GANDIA» y «Nuestra Señora de la Oliva» con «NUESTRA SEÑORA "
         },
         {
           "nombre": "paramsDnploc",
@@ -84581,7 +84636,7 @@
           "exportada": true,
           "params": "direccion?: string | null",
           "retorno": "ParamsDnploc | null",
-          "linea": 306,
+          "linea": 367,
           "resumen": "Traduce la dirección tal como la publica el BOE a los parámetros de `Consulta_DNPLOC`. Ejemplos reales del corpus: «AVENIDA PEDRO ROMERO Nº 2, planta séptima de la casa número…» → { sigla:'AV', calle:"
         },
         {
@@ -84590,7 +84645,7 @@
           "exportada": true,
           "params": "xml: string",
           "retorno": "CoordenadasCatastro | null",
-          "linea": 354,
+          "linea": 435,
           "resumen": "Convierte el XML de `Consulta_CPMRC` en coordenadas WGS84. `null` si el servicio no las da (error, referencia inexistente o respuesta corrupta) — nunca devuelve un punto inventado."
         },
         {
@@ -84599,13 +84654,13 @@
           "exportada": true,
           "params": "catastro?: number | null, anuncio?: number | null",
           "retorno": "number | null",
-          "linea": 379,
+          "linea": 467,
           "resumen": "Superficie con la que valorar el inmueble: la del CATASTRO manda sobre la que publica el anuncio. POR QUÉ el Catastro primero: es la oficial y es la que usa el cálculo del €/m² de mercado. Si el scori"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fac50ae381cb"
+      "hash": "ba8b4caa67a5"
     },
     {
       "ruta": "packages/module-subastas/src/ciclo-vida.ts",
@@ -85372,6 +85427,7 @@
       "exporta": [
         "provinciaPorMunicipio",
         "provinciaCanonica",
+        "esDireccionPostal",
         "urlGoogleMaps",
         "urlStreetView",
         "urlFichaCatastro"
@@ -85396,12 +85452,21 @@
           "resumen": "Unifica la forma de escribir una provincia. Existe porque cada fuente la escribe distinto —el BOE manda «Sevilla» y la Junta de Andalucía «SEVILLA»— y cualquier cosa que AGRUPE por el valor literal la"
         },
         {
+          "nombre": "esDireccionPostal",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto?: string | null",
+          "retorno": "boolean",
+          "linea": 108,
+          "resumen": "¿Este texto es una DIRECCIÓN POSTAL que un buscador de mapas pueda resolver, o es prosa registral? 🚨 Por qué existe: la dirección que el BOE publica sale de la descripción registral y a veces no es u"
+        },
+        {
           "nombre": "urlGoogleMaps",
           "kind": "function",
           "exportada": true,
           "params": "u: UbicacionSubasta",
           "retorno": "string | null",
-          "linea": 104,
+          "linea": 138,
           "resumen": "URL de Google Maps para VER dónde está el inmueble. 🚨 La DIRECCIÓN POSTAL manda sobre las coordenadas, aunque parezca al revés. Con `query=<lat,lon>` Google planta un pin anónimo en mitad de la manza"
         },
         {
@@ -85410,7 +85475,7 @@
           "exportada": true,
           "params": "lat?: number | null, lon?: number | null",
           "retorno": "string | null",
-          "linea": 131,
+          "linea": 165,
           "resumen": "Street View del portal. Para un inmueble que no se puede visitar (la mayoría de las subastas advierten «sin posibilidad de visita») ver la fachada y el barrio es la única inspección posible sin despla"
         },
         {
@@ -85419,13 +85484,13 @@
           "exportada": true,
           "params": "refCatastral?: string | null",
           "retorno": "string | null",
-          "linea": 140,
+          "linea": 174,
           "resumen": "Ficha pública del Catastro por referencia catastral (plano de la parcela, superficies por uso, año, linderos). Acepta la de 14 o la de 20 caracteres."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "128c51a244e0"
+      "hash": "3b7b19e2dd99"
     },
     {
       "ruta": "packages/module-subastas/src/idealista-api.ts",
@@ -87557,6 +87622,6 @@
   ],
   "resumen": {
     "archivos": 2366,
-    "funciones": 6298
+    "funciones": 6305
   }
 }
