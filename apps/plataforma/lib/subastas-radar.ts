@@ -67,8 +67,10 @@ export function filaASubasta(f: any): SubastaInmueble {
     autoridad: f.autoridad,
     provincia: f.provincia,
     municipio: f.municipio,
-    // Para el enlace a Google Maps: la del Catastro es la oficial.
-    direccion: f.direccion_catastro ?? f.direccion ?? null,
+    // SIN fusionar: la del anuncio puede ser prosa registral y la del Catastro
+    // es el dato oficial. Quien pinte o enlace decide con cuál se queda.
+    direccion: f.direccion ?? null,
+    direccionCatastro: f.direccion_catastro ?? null,
     lat: num(f.lat),
     lon: num(f.lon),
     geoPrecision: f.geo_precision ?? null,

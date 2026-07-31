@@ -24,6 +24,34 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏛️ Subastas: revisión de la cadena de ubicación — 8 fallos reales corregidos (31/07/2026).** Encargo
+  «que no vuelva a suceder + revisa qué más puede pasar». 🔴 (a) `bajarFicha` no validaba la respuesta y el
+  UPDATE del cron escribía las CIFRAS sin `COALESCE`: un 200 de mantenimiento del BOE **borraba** tipo/
+  depósito/tasación del corpus durante 24 h → guarda `fichaLegible` (ya existía en `documentos.ts`) + COALESCE
+  en los 9 campos. (b) **`maxDuration` 60→300**: los cerrojos de Catastro/Nominatim se comían el minuto y la
+  pasada se truncaba (nunca llegaba a documentos/lentes/archivado). (c) La **prosa registral pisaba las
+  coordenadas exactas** — nuevo `esDireccionPostal` (puro, testeado) y `direccion`/`direccion_catastro` van
+  YA SEPARADAS hasta la UI (el sello 🏛️ es solo del Catastro). (d) `elegirVia` decía «ambigua» y el caller
+  seguía igual con el nombre crudo → ahora ABANDONA (esa referencia se persiste para siempre). (e) **Mapa
+  vacío intermitente** por closure obsoleta de Leaflet (estado `listo`). (f) Fila del BOE con ficha rota
+  monopolizaba la cola → cede el sitio. (g) `parsearCoordenadas` exige punto DENTRO de España (ejes cruzados).
+  (h) Las filas no-BOE ya suben de `municipio` a `catastro`. Desmentido: el Catastro **sí** acepta «EL PUERTO
+  DE SANTA MARIA» (la forma invertida da error) — no hay que canonizar municipios. 361 tests + 26 guardián.
+
+- **🏛️ Subastas: 3 fallos de la búsqueda por dirección + el Catastro corta por volumen (31/07/2026).**
+  1ª pasada del cron con el código nuevo: **Nominatim SÍ funciona desde Vercel** (25→27 aproximadas solo),
+  pero las 2 nuevas del BOE con dirección limpia no sacaron referencia. Causas halladas (todas verificadas
+  contra el servicio): (a) **la Ñ** — `norm()` la convertía en N y `CANAL` no encuentra «CARLOS CAÑAL»
+  (nuevo `normVia` la conserva); (b) **el Catastro ABREVIA los nombres** («Ronda de Ntra. Sra. de la Oliva»
+  → «NUESTRA SEÑORA D LA OLIVA», DE→D) y el callejero **busca por SUBCADENA** → ahora se pregunta por UNA
+  palabra distintiva (`terminoBusquedaVia`) y se elige por TOKENS (`elegirVia`), no por prefijo; (c) el
+  **interior** (`ESC.1 PL.4 PT.B`) ahora se extrae y se manda a DNPLOC: acota al piso exacto, desbloquea los
+  portales con varias parcelas y da la referencia de 20 (con m²/año del bien). Bug de paso: en «ESC.1» el
+  patrón `ES` casaba antes que `ESC` y la escalera salía «C». **Acierto medido 5/16** (antes 4); el resto
+  falla por datos de ORIGEN (números inexistentes en Catastro, «S/N», parcelas de polígono). 🚨 **El Catastro
+  CORTA la conexión por volumen** (visto encadenando consultas) y ahora se le piden hasta 5 por subasta →
+  cerrojo de 350 ms + reintento solo ante fallo de red en `bajarCatastroHttp`. 354 tests del módulo.
+
 - **🛡️ Pricing: tres centinelas para que el motor se queje solo (31/07/2026, rama `claude/pricing-check-31-07`).**
   Los tres fallos del día (Feria 2027 mal fechada, comps de otro aforo, septiembre sin eventos) eran el mismo:
   un dato metido a ojo que nadie volvió a mirar y que el motor no podía desmentir. Nuevo
