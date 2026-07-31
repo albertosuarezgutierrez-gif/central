@@ -31,8 +31,14 @@
   (`lib/trading/edgar.ts`) los colapsaba en una clave quedándose con el más viejo. Resultado 2 años
   atrás, balance 1, y ratios cruzando ambos (ROA = beneficio FY2024 ÷ activos FY2025). Ahora se indexa
   por el CIERRE (`end`). Además: capex ausente ya NO se toma como 0 (convertía FCF en CFO). Verificado
-  contra la SEC vía `pg_net`. **Pendiente de decisión de Alberto:** 299 símbolos sin `deudaLp` (EV sin
-  deuda → EY inflado), 156 sin capex, 551 con `margenBruto=0` (pierden 1 punto de Piotroski siempre).
+  contra la SEC vía `pg_net`. Segunda tanda (misma rama): alias de deuda/capex sacados de companyfacts
+  REALES (AVGO usa `LongTermDebtAndCapitalLeaseObligations`, JPM `…IncludingCurrentMaturities`, LLY
+  `PaymentsToAcquireOtherPropertyPlantAndEquipment`), margen bruto DERIVADO de ventas − coste cuando no
+  hay `GrossProfit` (GOOGL/AMZN/META/WMT/LLY), y **divisa**: `serieAnual` recorría todas las unidades →
+  TLK daba FCF yield 2.679% (rupias) y AMX un EY 9,14% que parecía normal. Ahora una sola divisa, la del
+  ejercicio más reciente (USD solo desempata: TM tenía una traducción de conveniencia de 2013 que
+  anclaba la empresa a hace 13 años), y si no es USD se anulan EY/FCF yield. Parser verificado contra
+  companyfacts reales de GOOGL/AMZN/AVGO/TM. PR #1189.
 
 - **🔐 Spec + plan aprobados: login con huella (WebAuthn/passkey) en plataforma (29/07/2026,
   sin implementar).** Diseño: `@simplewebauthn`, tabla `webauthn_credentials` scoped por

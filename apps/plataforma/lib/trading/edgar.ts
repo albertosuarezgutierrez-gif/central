@@ -28,12 +28,16 @@ const diasEntre = (a: string, b: string) => Math.abs((Date.parse(b) - Date.parse
 // (solo trae 2 comparativos), y ratios que MEZCLAN ambos — el ROA de ORCL salía como beneficio de
 // FY2024 ÷ activos de FY2025. Fallaba en silencio porque el orden de magnitud seguía siendo creíble.
 // La clave correcta es `end`, que TODOS los hechos anuales de un mismo ejercicio comparten.
-export function serieAnual(facts: CompanyFacts['facts'], concepto: string): Map<string, number> {
+export function serieAnual(facts: CompanyFacts['facts'], concepto: string, unidad = 'USD'): Map<string, number> {
   const out = new Map<string, number>()
   const filedDe = new Map<string, string>()
   const nodos = [facts?.['us-gaap']?.[concepto], facts?.['dei']?.[concepto], facts?.['ifrs-full']?.[concepto]].filter(Boolean)
   for (const nodo of nodos) {
-    for (const puntos of Object.values(nodo!.units ?? {})) {
+    // Una MISMA unidad, nunca todas: un emisor puede publicar el mismo concepto en USD y en su moneda
+    // local (BABA y PDD lo hacen en USD y CNY), y recorrer `units` entero dejaba el valor al azar del
+    // orden de las claves. Mezclar divisas con una capitalización en dólares fabrica valor de la nada.
+    const puntos = nodo!.units?.[unidad]
+    if (puntos) {
       for (const p of puntos) {
         if (typeof p.val !== 'number' || !p.end) continue
         if (!p.form || !FORMAS_ANUALES.has(p.form) || p.fp !== 'FY') continue
@@ -51,6 +55,37 @@ export function serieAnual(facts: CompanyFacts['facts'], concepto: string): Map<
   return out
 }
 
+// Unidades que NO son dinero (no sirven para deducir la divisa del informe).
+const UNIDADES_NO_MONETARIAS = new Set(['shares', 'pure'])
+
+// Divisa en la que el emisor presenta las cuentas HOY: gana la que tenga el ejercicio más reciente y,
+// a igualdad de cierre, el dólar. No basta con "USD si existe": Toyota arrastra una traducción de
+// conveniencia a dólares de 2013 junto a sus cuentas vivas en yenes, y quedarse con el dólar por
+// preferencia anclaba la empresa a un ejercicio de hace trece años. Con esta regla, un emisor que
+// publica en las dos divisas a la vez (BABA, PDD: USD y CNY) resuelve a USD, y uno que solo presenta
+// en su moneda local devuelve esa — y el consumidor DEBE saber que no puede cruzarla con una
+// capitalización en dólares.
+export function monedaInforme(facts: CompanyFacts['facts'], alias: readonly string[]): string | undefined {
+  let mejor: { unidad: string; fin: string } | undefined
+  for (const c of alias) {
+    for (const taxonomia of ['us-gaap', 'dei', 'ifrs-full'] as const) {
+      for (const [unidad, puntos] of Object.entries(facts?.[taxonomia]?.[c]?.units ?? {})) {
+        if (UNIDADES_NO_MONETARIAS.has(unidad)) continue
+        let fin: string | undefined
+        for (const p of puntos ?? []) {
+          if (!p.end || !p.form || !FORMAS_ANUALES.has(p.form) || p.fp !== 'FY') continue
+          if (!fin || p.end > fin) fin = p.end
+        }
+        if (!fin) continue
+        const gana = !mejor || fin > mejor.fin
+          || (fin === mejor.fin && mejor.unidad !== 'USD' && (unidad === 'USD' || unidad < mejor.unidad))
+        if (gana) mejor = { unidad, fin }
+      }
+    }
+  }
+  return mejor?.unidad
+}
+
 // Etiqueta de ejercicio (solo para MOSTRAR: `fuente_fy` del radar y `fyUltimo` de la API). El año
 // natural del cierre coincide con la etiqueta del emisor salvo en los calendarios de 52/53 semanas que
 // cierran en los primeros días de enero, que pertenecen al ejercicio anterior (un cierre a 31/01 —
@@ -63,9 +98,9 @@ export function anioFiscalDe(periodo: string): number {
 // Valor del primer alias con dato para ese cierre de ejercicio. Si el concepto no cae EXACTAMENTE en
 // `periodo` se acepta el cierre más próximo dentro de 45 días: las acciones de portada (taxonomía
 // `dei`) se fechan unas semanas después del cierre y los calendarios de 52/53 semanas lo mueven días.
-function valorPeriodo(facts: CompanyFacts['facts'], alias: string[], periodo: string): number | undefined {
+function valorPeriodo(facts: CompanyFacts['facts'], alias: readonly string[], periodo: string, unidad = 'USD'): number | undefined {
   for (const c of alias) {
-    const serie = serieAnual(facts, c)
+    const serie = serieAnual(facts, c, unidad)
     const exacto = serie.get(periodo)
     if (exacto != null) return exacto
     let mejor: { dias: number; val: number } | undefined
@@ -78,46 +113,65 @@ function valorPeriodo(facts: CompanyFacts['facts'], alias: string[], periodo: st
   return undefined
 }
 const div = (a?: number, b?: number) => (a != null && b != null && b !== 0 ? a / b : 0)
+const resta = (a?: number, b?: number) => (a != null && b != null ? a - b : undefined)
 
 // Cada input lleva sus alias US-GAAP PRIMERO y, al final, los conceptos IFRS (`ifrs-full`) equivalentes
-// para los emisores extranjeros (20-F). `valorFy` devuelve el primer alias con dato → una empresa de EEUU
-// resuelve por el nombre us-gaap (sin cambio) y una extranjera cae al nombre IFRS. `Assets`/`GrossProfit`
+// para los emisores extranjeros (20-F). `valorPeriodo` devuelve el primer alias con dato → una empresa de
+// EEUU resuelve por el nombre us-gaap (sin cambio) y una extranjera cae al nombre IFRS. `Assets`/`GrossProfit`
 // comparten nombre en ambas taxonomías (los cubre el nodo `ifrs-full` que añadió `serieAnual`).
+// El orden dentro de cada lista importa: primero la medida MÁS AJUSTADA al concepto, y los agregados al
+// final como último recurso. Los nombres salieron de mirar los companyfacts reales de las mayores del
+// universo (31/07/2026), no de adivinar: un alias que falta NO se distingue de "esta empresa no tiene
+// deuda", y ese silencio dejaba el EV sin deuda y el earnings yield inflado.
 const ALIAS = {
   netIncome: ['NetIncomeLoss', 'ProfitLoss'],
   assets: ['Assets'],
   cfo: ['NetCashProvidedByUsedInOperatingActivities', 'NetCashProvidedByUsedInOperatingActivitiesContinuingOperations', 'CashFlowsFromUsedInOperatingActivities'],
-  deudaLp: ['LongTermDebtNoncurrent', 'LongTermDebt', 'NoncurrentPortionOfNoncurrentBorrowings', 'LongtermBorrowings', 'Borrowings'],
+  // AVGO dejó de usar `LongTermDebtNoncurrent` en sus 10-K tras FY2021 y pasó a `…AndCapitalLeaseObligations`
+  // (62.000 M$ que el radar leía como cero); JPM usa la variante `…IncludingCurrentMaturities` (435.000 M$).
+  deudaLp: ['LongTermDebtNoncurrent', 'LongTermDebtAndCapitalLeaseObligations', 'LongTermDebtAndFinanceLeaseObligation',
+            'LongTermDebt', 'LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities', 'DebtLongtermAndShorttermCombinedAmount',
+            'NoncurrentPortionOfNoncurrentBorrowings', 'LongtermBorrowings', 'Borrowings'],
   caja: ['CashAndCashEquivalentsAtCarryingValue', 'CashAndCashEquivalents'],
   activoCorriente: ['AssetsCurrent', 'CurrentAssets'],
   pasivoCorriente: ['LiabilitiesCurrent', 'CurrentLiabilities'],
   acciones: ['WeightedAverageNumberOfDilutedSharesOutstanding', 'WeightedAverageNumberOfSharesOutstandingBasic', 'CommonStockSharesOutstanding', 'EntityCommonStockSharesOutstanding', 'WeightedAverageShares', 'AdjustedWeightedAverageShares'],
   ventas: ['Revenues', 'RevenueFromContractWithCustomerExcludingAssessedTax', 'SalesRevenueNet', 'Revenue', 'RevenueFromContractsWithCustomers'],
   brutoBeneficio: ['GrossProfit'],
+  // Muchas grandes (GOOGL, AMZN, META, WMT, LLY) NO etiquetan `GrossProfit`: presentan el coste y se
+  // deja el margen al lector. Sin esto su margen bruto salía 0 y fallaban SIEMPRE la señal de margen
+  // del F-score, con lo que su Piotroski no era comparable con el de quien sí lo etiqueta.
+  costeVentas: ['CostOfRevenue', 'CostOfGoodsAndServicesSold', 'CostOfGoodsSold', 'CostOfServices', 'CostOfSales'],
   ebit: ['OperatingIncomeLoss', 'ProfitLossFromOperatingActivities'],
-  capex: ['PaymentsToAcquirePropertyPlantAndEquipment', 'PaymentsToAcquireProductiveAssets', 'PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities'],
+  // OJO: `CapitalExpendituresIncurredButNotYetPaid` NO es capex (es el devengo pendiente de pago) y
+  // `PaymentsToAcquireIntangibleAssets` son intangibles — meterlos aquí falsearía el flujo libre.
+  capex: ['PaymentsToAcquirePropertyPlantAndEquipment', 'PaymentsToAcquireProductiveAssets',
+          'PaymentsToAcquireOtherPropertyPlantAndEquipment', 'PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities'],
 }
 
 // Cierres de ejercicio (por CUALQUIER alias) que tienen dato — para anclar la extracción sin atarse a
 // un nombre us-gaap concreto (si no, un emisor IFRS cuyo beneficio es `ProfitLoss` y no `NetIncomeLoss`
 // no ancla nunca).
-function periodosDe(facts: CompanyFacts['facts'], alias: string[]): Set<string> {
+function periodosDe(facts: CompanyFacts['facts'], alias: readonly string[], unidad: string): Set<string> {
   const s = new Set<string>()
-  for (const c of alias) for (const fin of serieAnual(facts, c).keys()) s.add(fin)
+  for (const c of alias) for (const fin of serieAnual(facts, c, unidad).keys()) s.add(fin)
   return s
 }
 
-function anioDe(facts: CompanyFacts['facts'], periodo: string): AnioFinanciero {
-  const assets = valorPeriodo(facts, ALIAS.assets, periodo)
-  const ventas = valorPeriodo(facts, ALIAS.ventas, periodo)
+function anioDe(facts: CompanyFacts['facts'], periodo: string, moneda: string): AnioFinanciero {
+  const assets = valorPeriodo(facts, ALIAS.assets, periodo, moneda)
+  const ventas = valorPeriodo(facts, ALIAS.ventas, periodo, moneda)
+  // Margen bruto: etiquetado si existe; si no, derivado de ventas − coste de ventas.
+  const bruto = valorPeriodo(facts, ALIAS.brutoBeneficio, periodo, moneda)
+    ?? resta(ventas, valorPeriodo(facts, ALIAS.costeVentas, periodo, moneda))
   return {
-    roa: div(valorPeriodo(facts, ALIAS.netIncome, periodo), assets),
-    cfo: valorPeriodo(facts, ALIAS.cfo, periodo) ?? 0,
-    beneficioNeto: valorPeriodo(facts, ALIAS.netIncome, periodo) ?? 0,
-    ratioDeudaLp: div(valorPeriodo(facts, ALIAS.deudaLp, periodo), assets),
-    ratioCorriente: div(valorPeriodo(facts, ALIAS.activoCorriente, periodo), valorPeriodo(facts, ALIAS.pasivoCorriente, periodo)),
-    acciones: valorPeriodo(facts, ALIAS.acciones, periodo) ?? 0,
-    margenBruto: div(valorPeriodo(facts, ALIAS.brutoBeneficio, periodo), ventas),
+    roa: div(valorPeriodo(facts, ALIAS.netIncome, periodo, moneda), assets),
+    cfo: valorPeriodo(facts, ALIAS.cfo, periodo, moneda) ?? 0,
+    beneficioNeto: valorPeriodo(facts, ALIAS.netIncome, periodo, moneda) ?? 0,
+    ratioDeudaLp: div(valorPeriodo(facts, ALIAS.deudaLp, periodo, moneda), assets),
+    ratioCorriente: div(valorPeriodo(facts, ALIAS.activoCorriente, periodo, moneda), valorPeriodo(facts, ALIAS.pasivoCorriente, periodo, moneda)),
+    acciones: valorPeriodo(facts, ALIAS.acciones, periodo, 'shares') ?? 0,
+    margenBruto: div(bruto, ventas),
     rotacionActivos: div(ventas, assets),
   }
 }
@@ -128,6 +182,9 @@ export type FundamentalesEmpresa = {
   // 2 ejercicios más recientes: [0]=actual, [1]=previo. `periodo` es el cierre real (fuente de verdad
   // del alineamiento entre conceptos); `fy` es solo la etiqueta legible de ese cierre.
   anios: Array<{ fy: number; periodo: string; fin: AnioFinanciero }>
+  // Divisa de TODOS los importes de abajo. Si no es 'USD', el emisor presenta en su moneda local y los
+  // importes NO se pueden cruzar con una capitalización en dólares (EV, earnings yield, FCF yield).
+  moneda?: string
   ebit?: number             // año más reciente (para earnings yield = EBIT/EV que calcula el consumidor)
   capitalInvertido?: number // activos − pasivo corriente (capital empleado, para ROIC)
   roic?: number             // EBIT / capital invertido
@@ -143,30 +200,35 @@ export type FundamentalesEmpresa = {
 // piezas para la fórmula mágica (ROIC ya calculado; earnings yield lo cierra el consumidor con el EV).
 export function extraerFundamentales(cf: CompanyFacts, simbolo: string): FundamentalesEmpresa | null {
   const facts = cf.facts
+  // Toda la extracción se hace en UNA sola divisa, la del informe (USD salvo que el emisor solo
+  // publique en la suya). Así los ratios internos son coherentes y el consumidor sabe, por `moneda`,
+  // si puede cruzar los importes con una capitalización en dólares.
+  const moneda = monedaInforme(facts, ALIAS.assets) ?? 'USD'
   // Cierres que tienen las dos anclas mínimas (beneficio neto + activos), de más nuevo a más viejo.
   // Alias-aware: cubre US-GAAP (NetIncomeLoss) e IFRS (ProfitLoss) sin atarse a un nombre concreto. El
   // cruce tolera unos días de desfase entre el cierre del resultado y el del balance (52/53 semanas).
-  const cierresAssets = [...periodosDe(facts, ALIAS.assets)]
-  const conAncla = [...periodosDe(facts, ALIAS.netIncome)]
+  const cierresAssets = [...periodosDe(facts, ALIAS.assets, moneda)]
+  const conAncla = [...periodosDe(facts, ALIAS.netIncome, moneda)]
     .filter(fin => cierresAssets.some(a => diasEntre(a, fin) <= 7))
     .sort((a, b) => (a < b ? 1 : a > b ? -1 : 0))
   if (conAncla.length === 0) return null
-  const anios = conAncla.slice(0, 2).map(periodo => ({ fy: anioFiscalDe(periodo), periodo, fin: anioDe(facts, periodo) }))
+  const anios = conAncla.slice(0, 2).map(periodo => ({ fy: anioFiscalDe(periodo), periodo, fin: anioDe(facts, periodo, moneda) }))
 
   const ult = anios[0].periodo
-  const ebit = valorPeriodo(facts, ALIAS.ebit, ult)
-  const capitalInvertido = valorPeriodo(facts, ALIAS.assets, ult) != null
-    ? (valorPeriodo(facts, ALIAS.assets, ult)! - (valorPeriodo(facts, ALIAS.pasivoCorriente, ult) ?? 0))
+  const ebit = valorPeriodo(facts, ALIAS.ebit, ult, moneda)
+  const activosUlt = valorPeriodo(facts, ALIAS.assets, ult, moneda)
+  const capitalInvertido = activosUlt != null
+    ? (activosUlt - (valorPeriodo(facts, ALIAS.pasivoCorriente, ult, moneda) ?? 0))
     : undefined
   const roic = ebit != null && capitalInvertido && capitalInvertido !== 0 ? ebit / capitalInvertido : undefined
 
-  const deudaLp = valorPeriodo(facts, ALIAS.deudaLp, ult)
-  const caja = valorPeriodo(facts, ALIAS.caja, ult)
-  const ventas = valorPeriodo(facts, ALIAS.ventas, ult)
-  const neto = valorPeriodo(facts, ALIAS.netIncome, ult)
+  const deudaLp = valorPeriodo(facts, ALIAS.deudaLp, ult, moneda)
+  const caja = valorPeriodo(facts, ALIAS.caja, ult, moneda)
+  const ventas = valorPeriodo(facts, ALIAS.ventas, ult, moneda)
+  const neto = valorPeriodo(facts, ALIAS.netIncome, ult, moneda)
   const margenNeto = ventas ? div(neto, ventas) : undefined
-  const capex = valorPeriodo(facts, ALIAS.capex, ult)
-  return { simbolo, cik: cf.cik != null ? String(cf.cik).padStart(10, '0') : undefined, anios, ebit, capitalInvertido, roic,
+  const capex = valorPeriodo(facts, ALIAS.capex, ult, moneda)
+  return { simbolo, cik: cf.cik != null ? String(cf.cik).padStart(10, '0') : undefined, anios, moneda, ebit, capitalInvertido, roic,
            deudaLp, caja, margenNeto, acciones: anios[0].fin.acciones || undefined, capex }
 }
 

@@ -27,11 +27,14 @@ export function factoresEnFecha(cf: CompanyFacts | null, puntos: PuntoPrecio[], 
       piotroski = f.anios.length >= 2 ? piotroskiFScore(f.anios[0].fin, f.anios[1].fin).score : null
       roic = f.roic ?? null
       const mktCap = precio != null && f.acciones ? precio * f.acciones : null
-      const ev = mktCap != null ? mktCap + (f.deudaLp ?? 0) - (f.caja ?? 0) : null
+      // Precio en dólares: si el emisor presenta en su moneda local, los múltiplos no se pueden
+      // calcular (ver nota en `universo.ts`). Los ratios internos (ROIC, Piotroski) sí valen.
+      const enDolares = (f.moneda ?? 'USD') === 'USD'
+      const ev = mktCap != null && enDolares ? mktCap + (f.deudaLp ?? 0) - (f.caja ?? 0) : null
       ey = f.ebit != null && ev ? f.ebit / ev : null
       const cfo = f.anios[0]?.fin.cfo
       // Capex ausente ⇒ flujo libre DESCONOCIDO, no "capex cero" (ver nota en `universo.ts`).
-      fcfy = cfo != null && cfo !== 0 && mktCap && f.capex != null ? (cfo - f.capex) / mktCap : null
+      fcfy = cfo != null && cfo !== 0 && mktCap && enDolares && f.capex != null ? (cfo - f.capex) / mktCap : null
     }
   }
   return {
