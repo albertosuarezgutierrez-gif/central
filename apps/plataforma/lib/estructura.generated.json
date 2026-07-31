@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-31T07:26:07Z",
+  "generadoEn": "2026-07-31T07:35:21Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4000,6 +4000,10 @@
       "fecha": "30/07/2026"
     },
     {
+      "titulo": "🔎 Portales privados de subastas: sondeo técnico, SIN implementar (30/07/2026).",
+      "fecha": "30/07/2026"
+    },
+    {
       "titulo": "🕳️ Barrido del monorepo: afirmar ausencias no comprobadas (30/07/2026, misma rama).",
       "fecha": "30/07/2026"
     },
@@ -4021,10 +4025,6 @@
     },
     {
       "titulo": "🔒 Director de código Fase 2: cierre de PR con veredicto real de CI (29/07/2026).",
-      "fecha": "29/07/2026"
-    },
-    {
-      "titulo": "🔧 Subastas — HOTFIX /subastas caída + FASE 3 construida con datos reales (29/07/2026, mañana).",
       "fecha": "29/07/2026"
     }
   ],

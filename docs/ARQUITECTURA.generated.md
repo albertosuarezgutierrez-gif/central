@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-31T07:26:07Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-31T07:35:21Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -225,6 +225,6 @@
 - (31/07/2026) ⚖️ Subastas: 3 defectos del lector registral + «nota simple viva» (31/07/2026).
 - (30/07/2026) 💰 Subastas: el «valor de mercado» dejaba de fabricar chollos falsos (30/07/2026, PR #1183).
 - (30/07/2026) 🔍 Subastas: el documento registral se lee ENTERO y «se adquiere libre» hay que ganárselo (30/07/2026, PR #1182).
+- (30/07/2026) 🔎 Portales privados de subastas: sondeo técnico, SIN implementar (30/07/2026).
 - (30/07/2026) 🕳️ Barrido del monorepo: afirmar ausencias no comprobadas (30/07/2026, misma rama).
-- (30/07/2026) 📎 Subastas: «sin documentos adjuntos» era MENTIRA (30/07/2026, rama `claude/documentos-adjuntos-o95xl1`).
 
