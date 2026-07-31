@@ -25,6 +25,7 @@ import {
   consensoCuadros,
   dimensionesJpeg,
   extraerJson,
+  fusionarCargas,
   localizarJpegs,
   normalizarCuadroCargas,
   pareceEscaneado,
@@ -214,7 +215,7 @@ async function leerPaginaAPagina(paginas: ImageInput[], modelo: string | undefin
   // Un documento puede repartir sus cargas entre varios lotes: se fusionan los
   // cuadros parciales quedándose con la información de cada uno.
   const cuadros = trozos.map((t) => normalizarCuadroCargas(extraerJson(t), 'ocr_ia'))
-  return cuadros.reduce((acc, c) => ({
+  const unido = cuadros.reduce((acc, c) => ({
     cargas: [...acc.cargas, ...c.cargas],
     procedimiento: acc.procedimiento !== 'desconocido' ? acc.procedimiento : c.procedimiento,
     sinMasCargas: acc.sinMasCargas || c.sinMasCargas,
@@ -222,6 +223,10 @@ async function leerPaginaAPagina(paginas: ImageInput[], modelo: string | undefin
     fuente: 'ocr_ia',
     confianza: Math.min(acc.confianza, c.confianza),
   }))
+  // El mismo asiento puede aparecer en dos lotes de páginas (la anotación se
+  // cita en el cuadro y otra vez en las notas al margen): una fila por asiento.
+  const { cargas, avisos } = fusionarCargas(unido.cargas)
+  return { ...unido, cargas, notas: [...new Set([...unido.notas, ...avisos])] }
 }
 
 /**
@@ -276,26 +281,23 @@ export async function leerDocumento(
 /**
  * Fusiona los cuadros de varios documentos de la MISMA ficha (edicto +
  * certificación + cesión…). Se queda con la vía del procedimiento que algún
- * documento haya sabido determinar y deduplica cargas por tipo+rango+importe.
+ * documento haya sabido determinar y deduplica cargas por IDENTIDAD REGISTRAL
+ * (la letra de la anotación, la fecha…), nunca por importe: cada documento cita
+ * una parte distinta de la misma deuda —el informe de valoración el principal,
+ * la certificación la responsabilidad total— y deduplicar por importe dejaba el
+ * mismo embargo contado dos veces. Ver `fusionarCargas` en el módulo.
  */
 export function fusionarCuadros(lecturas: LecturaDocumento[]): CuadroCargas {
   const conCargas = lecturas.filter((l) => l.cuadro.cargas.length || l.cuadro.procedimiento !== 'desconocido')
   if (!conCargas.length) return normalizarCuadroCargas(null, 'ocr_ia')
 
-  const clave = (c: { tipo: string; rango: string; importe: number | null }) => `${c.tipo}|${c.rango}|${c.importe ?? '?'}`
-  const vistas = new Set<string>()
-  const cargas = conCargas.flatMap((l) => l.cuadro.cargas).filter((c) => {
-    const k = clave(c)
-    if (vistas.has(k)) return false
-    vistas.add(k)
-    return true
-  })
+  const { cargas, avisos } = fusionarCargas(conCargas.flatMap((l) => l.cuadro.cargas))
 
   return {
     cargas,
     procedimiento: conCargas.find((l) => l.cuadro.procedimiento !== 'desconocido')?.cuadro.procedimiento ?? 'desconocido',
     sinMasCargas: conCargas.some((l) => l.cuadro.sinMasCargas),
-    notas: [...new Set(conCargas.flatMap((l) => l.cuadro.notas))],
+    notas: [...new Set([...conCargas.flatMap((l) => l.cuadro.notas), ...avisos])],
     fuente: conCargas.some((l) => l.via === 'vision') ? 'ocr_ia' : 'texto_documento',
     confianza: Math.max(...conCargas.map((l) => l.cuadro.confianza)),
   }

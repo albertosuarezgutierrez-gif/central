@@ -463,6 +463,120 @@ function ResumenDocumental({ s, d }: { s: Subasta; d?: Documental | null }) {
   )
 }
 
+interface CambioNota { tipo: 'nueva' | 'desaparecida' | 'importe' | 'cancelada'; detalle: string }
+interface RespuestaNota {
+  cambios?: CambioNota[]
+  importeSubsistente?: number | null
+  fechaNota?: string | null
+  ilegible?: boolean
+  avisos?: string[]
+  resumen?: string
+  error?: string
+}
+
+const EMOJI_CAMBIO: Record<CambioNota['tipo'], string> = {
+  nueva: '🆕', desaparecida: '🕳️', importe: '🔁', cancelada: '✅',
+}
+
+/**
+ * «Nota simple viva»: la certificación que adjunta el juzgado es de hace años y
+ * las cargas se mueven. Aquí se sube una nota simple recién pedida al registro y
+ * el agente dice QUÉ HA CAMBIADO — es lo único que convierte el «podría estar
+ * caducada» del art. 86 LH en un hecho.
+ *
+ * Va en un `<details>` con montaje perezoso: no monta ni el formulario hasta
+ * que se abre.
+ */
+function NotaSimpleViva({ dedupeKey }: { dedupeKey: string }) {
+  const [abierto, setAbierto] = useState(false)
+  const [cargando, setCargando] = useState(false)
+  const [r, setR] = useState<RespuestaNota | null>(null)
+  const [texto, setTexto] = useState('')
+  const [fichero, setFichero] = useState<File | null>(null)
+
+  async function enviar() {
+    if (!fichero && !texto.trim()) return
+    setCargando(true)
+    setR(null)
+    try {
+      const form = new FormData()
+      form.append('dedupe_key', dedupeKey)
+      if (fichero) form.append('fichero', fichero)
+      if (texto.trim()) form.append('texto', texto.trim())
+      const res = await fetch('/api/subastas/nota-simple', { method: 'POST', body: form })
+      setR(await res.json())
+    } catch (e: any) {
+      setR({ error: e?.message ?? 'No se ha podido leer la nota' })
+    } finally {
+      setCargando(false)
+    }
+  }
+
+  return (
+    <details style={{ marginTop: 6 }} onToggle={(e) => setAbierto((e.currentTarget as HTMLDetailsElement).open)}>
+      <summary style={{ cursor: 'pointer', fontSize: 13, color: 'var(--text)', minHeight: 36, display: 'flex', alignItems: 'center' }}>
+        📄 ¿Tienes una nota simple actualizada? Comparo qué ha cambiado
+      </summary>
+      {abierto && (
+        <div style={{ marginTop: 8 }}>
+          <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--muted)' }}>
+            La certificación de cargas del juzgado suele tener años. Sube la nota simple (PDF, incluso escaneado)
+            o pega su texto: se lee con el mismo lector y se compara con lo que ya sabíamos de esta finca.
+          </p>
+          <input
+            type="file"
+            accept="application/pdf,image/*"
+            onChange={(e) => setFichero(e.target.files?.[0] ?? null)}
+            style={{ ...control, width: '100%', maxWidth: '100%', padding: 8, display: 'block' }}
+          />
+          <textarea
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            placeholder="…o pega aquí el texto de la nota simple"
+            rows={4}
+            style={{ ...control, width: '100%', maxWidth: '100%', marginTop: 8, padding: 8, fontFamily: 'inherit', fontSize: 13 }}
+          />
+          <button type="button" onClick={enviar} disabled={cargando || (!fichero && !texto.trim())} style={{ ...boton(true), marginTop: 8 }}>
+            {cargando ? 'Leyendo la nota…' : '🔍 Comparar con la certificación'}
+          </button>
+
+          {r?.error && <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--negative, #b91c1c)' }}>⚠️ {r.error}</p>}
+
+          {r && !r.error && (
+            <div style={{ marginTop: 10 }}>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--text)' }}>
+                {r.ilegible
+                  ? '🟠 No se ha podido sacar ninguna carga de la nota.'
+                  : r.importeSubsistente == null
+                    ? '🟠 Según esta nota no se puede afirmar cuánto se hereda.'
+                    : r.importeSubsistente > 0
+                      ? `🔴 Según tu nota${r.fechaNota ? ` de ${r.fechaNota}` : ''}, hereda ${eur(r.importeSubsistente)}`
+                      : `🟢 Según tu nota${r.fechaNota ? ` de ${r.fechaNota}` : ''}, no subsiste ninguna carga anterior`}
+              </p>
+              {r.cambios && r.cambios.length > 0 ? (
+                <ul style={{ margin: '6px 0 0', paddingLeft: 18, fontSize: 12, color: 'var(--text)' }}>
+                  {r.cambios.map((c, i) => (
+                    <li key={i} style={{ marginBottom: 3 }}>{EMOJI_CAMBIO[c.tipo]} {c.detalle}</li>
+                  ))}
+                </ul>
+              ) : (
+                !r.ilegible && (
+                  <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+                    Sin cambios respecto a lo que ya teníamos leído de la certificación.
+                  </p>
+                )
+              )}
+              {(r.avisos ?? []).map((a) => (
+                <p key={a} style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--muted)' }}>· {a}</p>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </details>
+  )
+}
+
 function FichaSubasta({ s, o, acciones, extra, doc }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null }) {
   const [abierto, setAbierto] = useState(false)
   const cierre = fecha(s.fechaFin)
@@ -588,6 +702,7 @@ function FichaSubasta({ s, o, acciones, extra, doc }: { s: Subasta; o?: Oportuni
 
       {/* Cargas + documentación: en TODAS las pestañas, no solo en «Todas». */}
       <ResumenDocumental s={s} d={doc} />
+      <NotaSimpleViva dedupeKey={s.dedupeKey} />
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
         {s.url && (
