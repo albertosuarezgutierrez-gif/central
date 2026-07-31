@@ -390,8 +390,18 @@ export async function fundamentalesCik(simbolo: string, cik: string, timeoutMs =
 // ranking por artefacto, y de paso contaminó los z-scores de valor de TODO el universo). En un universo
 // de large-caps NINGUNA empresa tiene menos de 1M de acciones: por debajo, el dato es basura → null
 // (la empresa pierde el factor valor esa semana en vez de envenenar el ranking).
+//
+// El mismo error existe hacia ARRIBA y es igual de silencioso (31/07/2026): Nomura publica
+// 3.066.458.811.000.000 acciones —su cifra real, 3.066.458.811, escalada ×1e6 por el propio emisor— y
+// Grupo Aeroportuario del Pacífico 505.277.464.000, que son sus 505 millones ×1000. Cazarlo por arriba
+// es más delicado que por abajo porque hay empresas con MUCHÍSIMAS acciones de verdad (LATAM 604.000
+// millones, Santander Chile 188.000, Banco de Chile 101.000), así que el techo se pone donde ya no cabe
+// ninguna: **1e13**, unas 15 veces por encima del mayor recuento real que hemos visto. Sin él, PAC pasa
+// (5e11 es indistinguible de LATAM) pero Nomura no. Hoy el fallo está tapado porque los tres son
+// emisores extranjeros y `capitalizacionCruzable` ya anula su capitalización; esta guarda es para que
+// siga sin doler el día que `acciones` se use para otra cosa (métricas por acción) o cambie ese gate.
 export function accionesPlausibles(n: number | null | undefined): number | null {
-  return typeof n === 'number' && Number.isFinite(n) && n >= 1e6 ? n : null
+  return typeof n === 'number' && Number.isFinite(n) && n >= 1e6 && n <= 1e13 ? n : null
 }
 
 // El JSON crudo de company_tickers (para listaUniverso). Best-effort → null.
