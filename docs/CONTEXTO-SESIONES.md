@@ -24,6 +24,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔐 Spec + plan aprobados: login con huella (WebAuthn/passkey) en plataforma (29/07/2026,
+  sin implementar).** Diseño: `@simplewebauthn`, tabla `webauthn_credentials` scoped por
+  `cuenta_id`, atajo de contraseña de respaldo, reutiliza la cookie `plataforma_session`.
+  Docs en `docs/superpowers/plans/2026-07-17-huella-webauthn-plataforma{,-design}.md` (10
+  tareas TDD). **Pendiente:** implementación — nadie la ha empezado todavía.
+
 - **🕳️ Barrido del monorepo: afirmar ausencias no comprobadas (30/07/2026, misma rama).** Alberto:
   «haz esto con todo lo que tenemos». Barrido de las 8 apps + packages buscando el patrón del bullet
   siguiente. **Inventario completo en `docs/AUDITORIA-AUSENCIAS.md`** (✅ hecho / ⬜ pendiente, por
