@@ -71,6 +71,34 @@ el fallo era doble y sistémico:
   coste está infravalorado) y Dúplex/House **no tienen calibración de suelo contra competencia** (la de Busto y
   Luxury es del 28/07). Recuerda que el suelo protege el LISTADO, no el efectivo (canal ≈0,76× a ≥7 noches).
 
+### 🛡️ Centinelas del guardián (31/07/2026) — el sistema se contrasta solo contra el mercado
+Los tres fallos de ese día tenían la misma forma: **un dato metido a ojo que nadie volvió a mirar**, y que el
+motor usó como verdad durante meses porque NO TENÍA FORMA DE QUEJARSE. La respuesta no es «revisar más», es que
+el guardián (`/api/sivra/pricing/guard`, cron 07:30) compare lo que hacemos contra el mercado real. Lógica pura
+y testeada en **`lib/sivra/pricing-centinelas.ts`** (14/14), cableada en el route como chequeos #6/#7/#8:
+- **#6 `precio_por_plaza` / `suelo_por_plaza`** — el € por plaza EFECTIVO (tras canal ×0,76) del precio vivo más
+  barato y del suelo. Umbral 18€/plaza. **Solo pisos de ≥6 plazas**, y no es un tecnicismo: en un piso pequeño
+  las plazas son en buena parte sofás-cama (Luxury: 5 plazas en 2 dormitorios), así que el reparto no significa
+  nada — su suelo de 72€ da 10,94€/plaza y sin embargo cubre coste 2,4× y va a mercado. Por debajo del umbral el
+  centinela devuelve **«no evaluado», no «correcto»**: a esos pisos los vigilan el suelo de coste y el ancla.
+- **#7 `evento_sin_respaldo`** — fecha declarada con factor ≥2 cuyo mercado NO la respalda (ratio fecha/mes < 1,15)
+  → la fecha del evento probablemente está desplazada. Es el centinela que habría cazado la Feria 2027.
+- **#8 `evento_no_catalogado`** — el espejo: mercado ≥1,5× su mes SIN evento en ninguna fuente → hay algo en
+  Sevilla que no sabemos. Es el que destaparía la Bienal.
+- **Control de composición (importante):** el p50 de la fecha y el del mes se calculan **sobre los mismos
+  pisos-escenario** (el JOIN restringe el mes a los escenarios que barrieron esa fecha). Sin eso, un barrido
+  desigual —un día solo barrido para la casa de 12 plazas— dispararía «evento desconocido» cada semana.
+- **Umbral de #7 a 1,15, no 1,25, a propósito:** el p50 del MES ya viene inflado por el propio evento (abril 2027
+  va a 310€ justo porque dentro caen Feria y Semana Santa). Con los datos reales del 31/07 el 1,15 separa igual
+  los días de Feria (1,25×) de los días normales mal marcados (0,87× y 1,04×) sin castigar los meses con eventos.
+- **Simulado contra el mercado real del 31/07: 3 avisos, no una avalancha** — 27-nov-2026 (1,75× sin evento),
+  07-ago-2026 (1,54× sin evento) y 18-abr-2027 (declarado ×2,5, mercado 0,87× → la última noche de Feria está
+  sobrevalorada). Los cuatro pisos pasan el €/plaza. **Ojo al denominador:** la respuesta devuelve
+  `fechas_evaluadas` (21 el 31/07) — si es baja, el barrido cubre pocas fechas y el SILENCIO de #7/#8 **no
+  significa que el calendario esté bien**. Ampliar el barrido de mercado ensancha estos centinelas.
+- Los tres comparten la regla del repo: sin muestra devuelven `evaluado:false`, **nunca un «todo bien» que en
+  realidad significa «no lo he mirado»**.
+
 - **Zona** poblada (`pricing_piso_zona`): 4 pisos, CP 41003 (Bustos Tavera / Casco Antiguo).
 - **Costes/suelos** ya calibrados (`pricing_aprendizaje/ALL/costes` + `pricing_settings.min_price`):
   **busto 65 · duplex 85 · luxury 72 · house 180** (busto/luxury recalibrados 28/07/2026 con OK explícito

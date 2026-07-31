@@ -24,6 +24,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🛡️ Pricing: tres centinelas para que el motor se queje solo (31/07/2026, rama `claude/pricing-check-31-07`).**
+  Los tres fallos del día (Feria 2027 mal fechada, comps de otro aforo, septiembre sin eventos) eran el mismo:
+  un dato metido a ojo que nadie volvió a mirar y que el motor no podía desmentir. Nuevo
+  `lib/sivra/pricing-centinelas.ts` (puro, 14 tests) cableado en el guardián (cron 07:30) como chequeos #6/#7/#8:
+  **€/plaza** (solo pisos ≥6 plazas — en uno pequeño las plazas son sofás-cama y la métrica engaña),
+  **evento declarado que el mercado no respalda** (cazaría la Feria) y **mercado disparado sin evento catalogado**
+  (destaparía la Bienal). El p50 de fecha y el del mes se calculan sobre los MISMOS escenarios, si no un barrido
+  desigual alertaría cada semana. Simulado contra el mercado real: **3 avisos, no una avalancha**. Los tres
+  devuelven `evaluado:false` sin muestra — nunca un «todo bien» que significa «no lo he mirado».
+
 - **🏠 Pricing: el estudio de competencia comparaba una CASA DE 12 PLAZAS con apartamentos de 4 — arreglado
   (31/07/2026, rama `claude/pricing-check-31-07`).** Lo cazó Alberto: «Socorro tiene 12 plazas, a 165€ saldrían
   13,75€ por persona». Fallo doble: el cron `mercado/sweep` buscaba con «4 personas» y guardaba los MISMOS comps
