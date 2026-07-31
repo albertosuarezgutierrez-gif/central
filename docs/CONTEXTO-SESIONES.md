@@ -24,6 +24,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏛️ Subastas: 3 fallos de la búsqueda por dirección + el Catastro corta por volumen (31/07/2026).**
+  1ª pasada del cron con el código nuevo: **Nominatim SÍ funciona desde Vercel** (25→27 aproximadas solo),
+  pero las 2 nuevas del BOE con dirección limpia no sacaron referencia. Causas halladas (todas verificadas
+  contra el servicio): (a) **la Ñ** — `norm()` la convertía en N y `CANAL` no encuentra «CARLOS CAÑAL»
+  (nuevo `normVia` la conserva); (b) **el Catastro ABREVIA los nombres** («Ronda de Ntra. Sra. de la Oliva»
+  → «NUESTRA SEÑORA D LA OLIVA», DE→D) y el callejero **busca por SUBCADENA** → ahora se pregunta por UNA
+  palabra distintiva (`terminoBusquedaVia`) y se elige por TOKENS (`elegirVia`), no por prefijo; (c) el
+  **interior** (`ESC.1 PL.4 PT.B`) ahora se extrae y se manda a DNPLOC: acota al piso exacto, desbloquea los
+  portales con varias parcelas y da la referencia de 20 (con m²/año del bien). Bug de paso: en «ESC.1» el
+  patrón `ES` casaba antes que `ESC` y la escalera salía «C». **Acierto medido 5/16** (antes 4); el resto
+  falla por datos de ORIGEN (números inexistentes en Catastro, «S/N», parcelas de polígono). 🚨 **El Catastro
+  CORTA la conexión por volumen** (visto encadenando consultas) y ahora se le piden hasta 5 por subasta →
+  cerrojo de 350 ms + reintento solo ante fallo de red en `bajarCatastroHttp`. 354 tests del módulo.
+
 - **💰 Subastas: el «valor de mercado» dejaba de fabricar chollos falsos (30/07/2026, PR #1183).**
   - Alberto: «334.645€ no es real para esa zona». Cierto: un piso de 1965 en Avda. Pedro Romero (Sevilla)
     salía con 86,7% de margen de flip. Tres causas a la vez, todas fuera de la subasta.

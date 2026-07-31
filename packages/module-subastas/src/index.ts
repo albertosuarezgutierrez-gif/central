@@ -69,7 +69,7 @@ export type { FichaBoe, ResultadoSubasta } from './ficha-boe.ts'
 export {
   parsearCatastro, errorCatastro, superficieUtil, parsearCoordenadas,
   refParcela, direccionCatastro, parsearInmueblesDnploc, parcelaUnica, paramsDnploc,
-  parsearVias, nombreViaBuscable, elegirVia,
+  parsearVias, nombreViaBuscable, elegirVia, normVia, tokensVia, terminoBusquedaVia,
 } from './catastro.ts'
 export type { DatosCatastro, CoordenadasCatastro, DireccionCatastro, InmuebleCatastro, ParamsDnploc } from './catastro.ts'
 

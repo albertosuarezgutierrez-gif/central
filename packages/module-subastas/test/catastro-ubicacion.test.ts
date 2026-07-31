@@ -9,7 +9,10 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
   direccionCatastro,
+  elegirVia,
+  normVia,
   paramsDnploc,
+  terminoBusquedaVia,
   parcelaUnica,
   parsearInmueblesDnploc,
   refParcela,
@@ -104,12 +107,19 @@ test('respuesta de error o vacía devuelve lista vacía', () => {
 test('REAL — dirección registral con coleta descriptiva', () => {
   // Tal como la publica el BOE en SUB-JA-2026-263723.
   const p = paramsDnploc('AVENIDA PEDRO ROMERO Nº 2, planta séptima de la casa número Ochenta y ocho, en el Barrio D, del Polígono de San Pablo')
-  assert.deepEqual(p, { sigla: 'AV', calle: 'PEDRO ROMERO', numero: '2' })
+  assert.deepEqual(
+    { sigla: p?.sigla, calle: p?.calle, numero: p?.numero },
+    { sigla: 'AV', calle: 'PEDRO ROMERO', numero: '2' },
+  )
 })
 
 test('REAL — «C/ PACO GANDÍA 26» pierde la tilde (el Catastro la guarda sin ella)', () => {
   // Verificado contra el servicio: con GANDIA responde; con GANDÍA, no.
-  assert.deepEqual(paramsDnploc('C/ PACO GANDÍA 26'), { sigla: 'CL', calle: 'PACO GANDIA', numero: '26' })
+  const g = paramsDnploc('C/ PACO GANDÍA 26')
+  assert.deepEqual(
+    { sigla: g?.sigla, calle: g?.calle, numero: g?.numero },
+    { sigla: 'CL', calle: 'PACO GANDIA', numero: '26' },
+  )
 })
 
 test('reconoce los tipos de vía habituales', () => {
@@ -168,4 +178,73 @@ test('urlFichaCatastro: acepta 14 y 20, rechaza lo corto', () => {
   assert.match(urlFichaCatastro('8033101TG3483S0026RR')!, /RefC=8033101TG3483S0026RR/)
   assert.equal(urlFichaCatastro('8033101'), null)
   assert.equal(urlFichaCatastro(null), null)
+})
+
+// ── Regresiones del 31/07/2026 ───────────────────────────────────────────────
+// Tres fallos vistos en producción tras la primera pasada del cron. Cada test
+// fija un caso REAL comprobado contra el servicio.
+
+test('REGRESIÓN — la Ñ sobrevive a la normalización (CAÑAL ≠ CANAL)', () => {
+  // Verificado contra ConsultaVia: `NombreVia=CAÑAL` encuentra «CARLOS CAÑAL»;
+  // `CANAL` no devuelve NADA. Perder la Ñ dejó sin ubicar Carlos Cañal 28.
+  assert.equal(normVia('Carlos Cañal'), 'CARLOS CAÑAL')
+  assert.equal(normVia('SÉNECA'), 'SENECA', 'las tildes de vocales sí se van')
+  assert.equal(paramsDnploc('Calle Carlos Cañal, número 28-A')?.calle, 'CARLOS CAÑAL')
+})
+
+test('REGRESIÓN — se pregunta por UNA palabra distintiva, no por el nombre entero', () => {
+  // El Catastro abrevia a su gusto: «Ronda de Nuestra Señora de la Oliva» está
+  // archivada como «NUESTRA SEÑORA D LA OLIVA» (DE → D). Preguntar el nombre
+  // completo no encuentra nada; preguntar «NUESTRA» u «OLIVA» sí, porque el
+  // servicio busca por subcadena.
+  assert.equal(terminoBusquedaVia('PACO GANDIA'), 'GANDIA')
+  assert.equal(terminoBusquedaVia('CARLOS CAÑAL'), 'CARLOS', 'la más larga, con Ñ intacta')
+  const t = terminoBusquedaVia('NUESTRA SEÑORA DE LA OLIVA')
+  assert.ok(['NUESTRA', 'SEÑORA', 'OLIVA'].includes(t), t)
+  assert.ok(!['DE', 'LA'].includes(t), 'nunca un artículo')
+})
+
+test('REGRESIÓN — la vía oficial se elige por TOKENS, tolerando abreviaturas', () => {
+  // Caso real: buscar «OLIVA» devuelve el nombre abreviado del Catastro.
+  assert.equal(
+    elegirVia([{ tipo: 'RD', nombre: 'NUESTRA SEÑORA D LA OLIVA' }], 'NUESTRA SEÑORA DE LA OLIVA'),
+    'NUESTRA SEÑORA D LA OLIVA',
+  )
+  // Caso real: «GANDIA» devuelve DOS vías; gana la que no tiene palabras de más.
+  assert.equal(
+    elegirVia([{ tipo: 'CL', nombre: 'CIUDAD DE GANDIA' }, { tipo: 'CL', nombre: 'PACO GANDIA' }], 'PACO GANDIA'),
+    'PACO GANDIA',
+  )
+  // Ambigüedad real (dos candidatas igual de ajustadas) → no se elige a dedo.
+  assert.equal(
+    elegirVia([{ tipo: 'CL', nombre: 'REAL ALTA' }, { tipo: 'CL', nombre: 'REAL BAJA' }], 'REAL'),
+    null,
+  )
+  // Ninguna contiene los tokens buscados → null, no la primera que pase.
+  assert.equal(elegirVia([{ tipo: 'CL', nombre: 'CIUDAD DE GANDIA' }], 'PACO GANDIA'), null)
+})
+
+test('REGRESIÓN — el interior se extrae y «ESC.1» no captura la C', () => {
+  // El orden de la alternancia importaba: `ES` casaba antes que `ESC` y la
+  // escalera salía «C» en vez de «1».
+  const a = paramsDnploc('CL. CHAROLISTAS, 4, ESC.1 PLANTA 4, PUERTA B')
+  assert.deepEqual(
+    { e: a?.escalera, pl: a?.planta, pt: a?.puerta },
+    { e: '1', pl: '4', pt: 'B' },
+  )
+  const b = paramsDnploc('RD NUESTRA SEÑORA DE LA OLIVA 6 ESC: 5 PL:04 PT:A')
+  assert.deepEqual({ e: b?.escalera, pl: b?.planta, pt: b?.puerta }, { e: '5', pl: '04', pt: 'A' })
+  // «2º IZQUIERDA» sin etiquetas: planta por el ordinal, puerta por la palabra.
+  const c = paramsDnploc('C/ ANTONIO GONZALEZ CARREÑO, Nº8, 2º IZQUIERDA')
+  assert.equal(c?.planta, '2')
+  assert.equal(c?.puerta, 'IZ')
+  assert.equal(c?.calle, 'ANTONIO GONZALEZ CARREÑO')
+})
+
+test('sin datos de interior, los campos van a null (no a cadena vacía)', () => {
+  // La consulta los manda como '' y un valor basura filtraría de más.
+  const p = paramsDnploc('CALLE SÉNECA, Nº 15')
+  assert.equal(p?.escalera, null)
+  assert.equal(p?.planta, null)
+  assert.equal(p?.puerta, null)
 })

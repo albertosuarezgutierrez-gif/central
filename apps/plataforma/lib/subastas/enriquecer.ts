@@ -14,15 +14,16 @@ import { prisma } from '@/lib/db'
 import {
   elegirVia,
   errorCatastro,
-  nombreViaBuscable,
   parcelaUnica,
   parsearVias,
+  terminoBusquedaVia,
   parsearCatastro,
   parsearCoordenadas,
   parsearFichaBoe,
   parsearInmueblesDnploc,
   refParcela,
   type CoordenadasCatastro,
+  type ParamsDnploc,
   type DatosCatastro,
   type FichaBoe,
   paresFicha,
@@ -44,6 +45,37 @@ async function bajar(url: string, ms = 20000): Promise<string> {
   })
   if (!r.ok) throw new Error(`HTTP ${r.status}`)
   return r.text()
+}
+
+/**
+ * 🚨 El Catastro CORTA LA CONEXIÓN cuando se le piden muchas cosas seguidas —
+ * «Connection reset by peer», sin código de error ni cuerpo (comprobado el
+ * 31/07/2026 encadenando consultas). Y ahora se le piden hasta CINCO por subasta
+ * (callejero → DNPLOC con interior → DNPLOC sin interior → coordenadas → datos),
+ * así que una pasada de 12 filas dispararía ~60 llamadas seguidas y el corte
+ * dejaría el enriquecimiento a medias sin que nada lo notase.
+ *
+ * Dos defensas: espaciar las llamadas (cerrojo de módulo, igual que Nominatim) y
+ * reintentar una vez ante fallo de RED —no ante un error HTTP legítimo, que se
+ * repetiría igual—, dándole al servicio tiempo de recuperarse.
+ */
+const ESPERA_CATASTRO_MS = 350
+let ultimaCatastro = 0
+async function bajarCatastroHttp(url: string): Promise<string> {
+  const ahora = Date.now()
+  const espera = Math.max(0, ultimaCatastro + ESPERA_CATASTRO_MS - ahora)
+  ultimaCatastro = ahora + espera
+  if (espera > 0) await new Promise((r) => setTimeout(r, espera))
+  try {
+    return await bajar(url)
+  } catch (e) {
+    const msg = String((e as Error)?.message ?? e)
+    // Un HTTP 4xx/5xx es respuesta del servicio: reintentarlo no cambia nada.
+    if (/^HTTP \d/.test(msg)) throw e
+    await new Promise((r) => setTimeout(r, 1500))
+    ultimaCatastro = Date.now()
+    return bajar(url)
+  }
 }
 
 /** Descarga y parsea las tres pestañas de la ficha de una subasta. */
@@ -70,7 +102,7 @@ export async function bajarFicha(identificador: string): Promise<FichaBoe> {
  * cuál de ellos se subasta y inventarlo sería peor que no tenerlo.
  */
 export async function bajarCatastro(refCatastral: string): Promise<DatosCatastro | null> {
-  const xml = await bajar(`${CATASTRO}?Provincia=&Municipio=&RC=${encodeURIComponent(refCatastral)}`)
+  const xml = await bajarCatastroHttp(`${CATASTRO}?Provincia=&Municipio=&RC=${encodeURIComponent(refCatastral)}`)
   const err = errorCatastro(xml)
   if (err) {
     console.warn('[subastas/catastro]', refCatastral, err)
@@ -87,14 +119,20 @@ export async function bajarCatastro(refCatastral: string): Promise<DatosCatastro
 export async function bajarCoordenadas(refCatastral: string): Promise<CoordenadasCatastro | null> {
   const rc14 = refParcela(refCatastral)
   if (!rc14) return null
-  const xml = await bajar(`${CATASTRO_COORD}?Provincia=&Municipio=&SRS=EPSG:4326&RC=${encodeURIComponent(rc14)}`)
+  const xml = await bajarCatastroHttp(`${CATASTRO_COORD}?Provincia=&Municipio=&SRS=EPSG:4326&RC=${encodeURIComponent(rc14)}`)
   return parsearCoordenadas(xml)
 }
 
 /**
- * Nombre OFICIAL de la vía según el callejero del Catastro (`ConsultaVia`, que
- * busca por prefijo). Imprescindible porque el Catastro archiva los artículos al
- * final: «Avenida de Madrid» → «MADRID DE».
+ * Nombre OFICIAL de la vía según el callejero del Catastro (`ConsultaVia`).
+ *
+ * Se pregunta por UNA PALABRA distintiva, no por el nombre entero: el servicio
+ * busca por subcadena y el Catastro reescribe los nombres a su manera —mueve los
+ * artículos al final («Avenida de Madrid» → «MADRID DE») y los abrevia
+ * («…de la Oliva» → «NUESTRA SEÑORA D LA OLIVA»)—, así que preguntar por el
+ * nombre completo no encuentra nada. La elección final se hace por TOKENS.
+ * ⚠️ La Ñ va intacta en la consulta: `CAÑAL` encuentra «CARLOS CAÑAL» y `CANAL`
+ * no devuelve nada (verificado el 31/07/2026).
  */
 export async function resolverNombreVia(
   provincia: string,
@@ -102,11 +140,11 @@ export async function resolverNombreVia(
   sigla: string,
   calle: string,
 ): Promise<string | null> {
-  const buscada = nombreViaBuscable(calle)
-  if (!buscada) return null
-  const q = new URLSearchParams({ Provincia: provincia, Municipio: municipio, TipoVia: sigla, NombreVia: buscada })
-  const vias = parsearVias(await bajar(`${CATASTRO_VIA}?${q.toString()}`))
-  return elegirVia(vias, buscada)
+  const termino = terminoBusquedaVia(calle)
+  if (!termino) return null
+  const q = new URLSearchParams({ Provincia: provincia, Municipio: municipio, TipoVia: sigla, NombreVia: termino })
+  const vias = parsearVias(await bajarCatastroHttp(`${CATASTRO_VIA}?${q.toString()}`))
+  return elegirVia(vias, calle)
 }
 
 /**
@@ -120,29 +158,46 @@ export async function resolverNombreVia(
  * parcela) y basta para ubicar el edificio. Si la respuesta mezcla parcelas la
  * dirección era ambigua y se devuelve `null` en lugar de adivinar.
  */
-export async function buscarRefPorDireccion(p: {
-  provincia: string
-  municipio: string
-  sigla: string
-  calle: string
-  numero: string
-}): Promise<{ refParcela: string; refCompleta: string | null } | null> {
-  // Paso previo obligado: el nombre EXACTO del callejero. `Consulta_DNPLOC` no
+export async function buscarRefPorDireccion(
+  p: ParamsDnploc & { provincia: string; municipio: string },
+): Promise<{ refParcela: string; refCompleta: string | null } | null> {
+  // Paso previo obligado: el nombre oficial del callejero. `Consulta_DNPLOC` no
   // perdona («DE MADRID» no existe; está archivada como «MADRID DE»).
   const oficial = await resolverNombreVia(p.provincia, p.municipio, p.sigla, p.calle).catch(() => null)
+  const calle = oficial ?? p.calle
 
-  const q = new URLSearchParams({
-    Provincia: p.provincia,
-    Municipio: p.municipio,
-    Sigla: p.sigla,
-    Calle: oficial ?? p.calle,
-    Numero: p.numero,
-    Bloque: '',
-    Escalera: '',
-    Planta: '',
-    Puerta: '',
-  })
-  const inmuebles = parsearInmueblesDnploc(await bajar(`${CATASTRO_DIR}?${q.toString()}`))
+  const consultar = async (interior: boolean) => {
+    const q = new URLSearchParams({
+      Provincia: p.provincia,
+      Municipio: p.municipio,
+      Sigla: p.sigla,
+      Calle: calle,
+      Numero: p.numero,
+      Bloque: interior ? p.bloque ?? '' : '',
+      Escalera: interior ? p.escalera ?? '' : '',
+      Planta: interior ? p.planta ?? '' : '',
+      Puerta: interior ? p.puerta ?? '' : '',
+    })
+    return parsearInmueblesDnploc(await bajarCatastroHttp(`${CATASTRO_DIR}?${q.toString()}`))
+  }
+
+  // 1º con el INTERIOR, que es lo que identifica el piso concreto y devuelve su
+  // referencia de 20 (y con ella m², año y uso del bien, no solo del edificio).
+  // Además desbloquea los portales cuyos inmuebles se reparten entre VARIAS
+  // parcelas, donde la consulta sin interior es ambigua y no ubica nada
+  // («CL CHAROLISTAS 4»: 21 inmuebles, varias parcelas).
+  const hayInterior = !!(p.bloque || p.escalera || p.planta || p.puerta)
+  if (hayInterior) {
+    const exactos = await consultar(true).catch(() => [])
+    const parcela = parcelaUnica(exactos)
+    if (parcela) {
+      return { refParcela: parcela, refCompleta: exactos.length === 1 ? exactos[0].refCompleta : null }
+    }
+    // El formato del interior no siempre casa («4» vs «04», «IZ» vs «A»): si no
+    // encuentra nada, se reintenta sin él antes de rendirse.
+  }
+
+  const inmuebles = await consultar(false)
   const parcela = parcelaUnica(inmuebles)
   if (!parcela) return null
   // La referencia COMPLETA solo se da por buena si el portal tiene un único
