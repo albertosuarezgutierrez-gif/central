@@ -24,6 +24,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 Agente de facturas: ahora mira A NOMBRE DE QUIÉN viene la factura (31/07/2026).**
+  - Disparador: la bandeja pidió revisar una obra de 2.420,59€ de LUANSA que era del tejado de la
+    **Hacienda El Triunfo** (factura a «El Triunfo CB», CIF E26631895) — ajena a Alberto. Entró porque el
+    abogado la mandó a MAPFRE como prueba y el hilo se le reenvió. Descartada de `gastos` a mano.
+  - `receptor.ts` (puro + 10 tests): tres estados `nuestro`/`ajeno`/`desconocido`. Solo descarta con
+    NIF identificado que NO casa con los titulares; el nombre solo confirma, nunca descarta. Titulares =
+    `sociedades` + env `FACTURAS_TITULARES_NIF`. Decisión de Alberto: **ignorar + avisar** por Telegram.
+  - Bug arreglado de paso: en IONOS el extractor guardaba el NIF de Alberto como CIF del proveedor →
+    envenenaba la huella (ningún proveedor aprendía regla). El prompt ya pide emisor y receptor por separado.
+  - Fila nueva en `sociedades`: PUNTO Y COMA GESTION, S.L. (B90446683) — sin ella DIGI salía «ajena».
+  - **Pendiente:** PDF escaneado sin capa de texto se descarta (`extraer.ts` no cae a visión); 24 adjuntos
+    ilegibles en la pasada del 31/07. Y no hay destino para gastos de la correduría en `negocios`.
+
 - **💰 Subastas: el «valor de mercado» dejaba de fabricar chollos falsos (30/07/2026, PR #1183).**
   - Alberto: «334.645€ no es real para esa zona». Cierto: un piso de 1965 en Avda. Pedro Romero (Sevilla)
     salía con 86,7% de margen de flip. Tres causas a la vez, todas fuera de la subasta.

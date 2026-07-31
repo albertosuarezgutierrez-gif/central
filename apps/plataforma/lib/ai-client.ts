@@ -171,8 +171,10 @@ const INVOICE_SYSTEM = `Eres un extractor de datos de facturas españolas.
 Analiza el texto o imagen de la factura y devuelve SOLO JSON sin markdown:
 {
   "fecha": "YYYY-MM-DD",
-  "proveedor": "nombre empresa emisora",
-  "nif_proveedor": "NIF/CIF si aparece",
+  "proveedor": "nombre empresa EMISORA (quien cobra)",
+  "nif_proveedor": "NIF/CIF de la empresa EMISORA si aparece",
+  "cliente": "nombre del DESTINATARIO de la factura (quien paga), si aparece",
+  "nif_cliente": "NIF/CIF del DESTINATARIO si aparece",
   "concepto": "descripción del servicio/producto",
   "numero_factura": "número de factura si aparece",
   "base_imponible": 0.00,
@@ -184,6 +186,11 @@ Analiza el texto o imagen de la factura y devuelve SOLO JSON sin markdown:
   "categoria": "ALQUILER|LIMPIEZA|MANTENIMIENTO|SUMINISTROS|COMUNIDAD|SEGURO|IMPUESTOS|PLATAFORMAS|MOBILIARIO|REFORMAS|OTRO"
 }
 Reglas: fecha formato YYYY-MM-DD. Números decimales con punto. categoria según el tipo de gasto.
+Una factura tiene DOS partes: quien la emite (proveedor, normalmente con logo y cuenta bancaria
+de cobro) y a quién se la emite (cliente/destinatario, bajo etiquetas como "Cliente", "Nombre",
+"Facturar a", "Razón social"). NO los mezcles: "nif_proveedor" es SIEMPRE el del emisor y
+"nif_cliente" SIEMPRE el del destinatario. Si solo hay un NIF y no puedes decidir de quién es,
+pon el otro a null en vez de repetirlo.
 Si es un recibo o adeudo de ALQUILER de local/vivienda con retención de IRPF, rellena "irpf" con el
 importe RETENIDO en positivo (p.ej. 57.63) e "irpf_porcentaje" (p.ej. 19); normalmente
 total = base_imponible + iva - irpf. Si no hay retención, irpf=0 e irpf_porcentaje=0.
