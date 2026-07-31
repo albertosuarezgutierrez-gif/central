@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { isTradingLecturaAutorizado } from '@/lib/trading/auth'
-import { fundamentalesSimbolo } from '@/lib/trading/edgar'
+import { fundamentalesSimbolo, capitalizacionCruzable } from '@/lib/trading/edgar'
 import { piotroskiFScore, rankearMagicFormula, type EntradaMagic } from '@central/module-trading'
 
 // SELECCIÓN por CALIDAD/VALOR (Fase B) con fundamentales GRATIS de EDGAR (SEC XBRL). Para cada símbolo
@@ -25,17 +25,18 @@ export async function POST(req: NextRequest) {
     const f = brutos[i]
     if (!f) return { simbolo, disponible: false as const }
     const piotroski = f.anios.length >= 2 ? piotroskiFScore(f.anios[0].fin, f.anios[1].fin) : undefined
-    // Earnings yield solo si el consumidor aporta el EV (EDGAR no trae precio de mercado) Y el emisor
-    // presenta en dólares: el EV que llega es en USD, así que un EBIT en yenes o pesos daría un
-    // múltiplo inventado (ver nota en `lib/trading/universo.ts`).
+    // Earnings yield solo si el consumidor aporta el EV (EDGAR no trae precio de mercado) Y ese EV en
+    // dólares es cruzable con estas cuentas: un EBIT en yenes o pesos, o un EV calculado con el precio
+    // de un ADR y las acciones ordinarias, dan un múltiplo inventado (ver `capitalizacionCruzable`).
     const evSim = evUp[simbolo]
-    const enDolares = (f.moneda ?? 'USD') === 'USD'
-    const earningsYield = f.ebit != null && evSim && evSim !== 0 && enDolares ? f.ebit / evSim : undefined
+    const earningsYield = f.ebit != null && evSim && evSim !== 0 && capitalizacionCruzable(f) ? f.ebit / evSim : undefined
     if (earningsYield != null && f.roic != null) magic.push({ simbolo, earningsYield, roic: f.roic })
     return {
       simbolo, disponible: true as const,
       fyUltimo: f.anios[0]?.fy,
       moneda: f.moneda,
+      emisorExtranjero: f.emisorExtranjero,
+      ebitDerivado: f.ebitDerivado,
       piotroskiScore: piotroski?.score,
       piotroskiDetalle: piotroski?.detalle,
       roic: f.roic,
