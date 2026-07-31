@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-31T06:43:55Z",
+  "generadoEn": "2026-07-31T06:52:25Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3968,6 +3968,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🚨 Fundamentales del radar de trading iban 2 años atrasados y MEZCLADOS (31/07/2026).",
+      "fecha": "31/07/2026"
+    },
+    {
       "titulo": "⚖️ Subastas: 3 defectos del lector registral + «nota simple viva» (31/07/2026).",
       "fecha": "31/07/2026"
     },
@@ -4022,10 +4026,6 @@
     {
       "titulo": "✂️ Regla global «Estilo de respuesta» en CLAUDE.md raíz (23/07/2026).",
       "fecha": "23/07/2026"
-    },
-    {
-      "titulo": "🎯 Subastas — LOTE «todo lo que quedaba» (28/07/2026, noche). MERGEADO (PR #1120, squash `a9609d3`).",
-      "fecha": "28/07/2026"
     }
   ],
   "saludRepo": {

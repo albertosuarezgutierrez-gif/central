@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-31T06:43:55Z",
-  "sha": "a1276fc548bd5c2a9b7dd47ebce603e1f0784a19",
+  "generadoEn": "2026-07-31T06:52:25Z",
+  "sha": "e7ec492bf10bd4e1a41c9d114f08be5f901a302c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -55802,7 +55802,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/trading/fundamentales",
-      "hash": "83ec8384a451"
+      "hash": "244727d33d70"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/gurus/route.ts",
@@ -66865,7 +66865,7 @@
           "exportada": true,
           "params": "lote = 40",
           "retorno": "Promise<",
-          "linea": 48,
+          "linea": 52,
           "resumen": "Recolecta el siguiente lote: siembra desde trading_universo (+SPY como benchmark) y rellena las filas más rancias. Mismo patrón/ritmo que refrescarLoteUniverso (~4 símbolos/s contra SEC)."
         },
         {
@@ -66874,13 +66874,13 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 103,
+          "linea": 107,
           "resumen": "La LUPA de gurús: convicciones ACTUALES de Dataroma cruzadas con los factores actuales de la caché del radar — la materia prima para responder \"¿por qué se posicionan en esas empresas?\". Se guarda en "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6e69ae602cc5"
+      "hash": "ecd652f1f531"
     },
     {
       "ruta": "apps/plataforma/lib/trading/buscar-simbolo.ts",
@@ -67239,6 +67239,8 @@
       "resumen": "Fundamentales GRATIS desde EDGAR (SEC) — API XBRL `companyfacts`. Alternativa sin coste a FMP para la pata de CALIDAD/VALOR de la Fase B: alimenta directamente `piotroskiFScore` (2 ejercicios) y el ROIC de la fórmula mágica. Mapea los conceptos US-GAAP **e IFRS** a los inputs que el módulo ya consum",
       "exporta": [
         "serieAnual",
+        "monedaInforme",
+        "anioFiscalDe",
         "extraerFundamentales",
         "recortarFactsHasta",
         "companyfactsCrudo",
@@ -67257,22 +67259,48 @@
       ],
       "funciones": [
         {
+          "nombre": "diasEntre",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a: string, b: string",
+          "retorno": null,
+          "linea": 16
+        },
+        {
           "nombre": "serieAnual",
           "kind": "function",
           "exportada": true,
-          "params": "facts: CompanyFacts['facts'], concepto: string",
-          "retorno": "Map<number, number>",
-          "linea": 18,
-          "resumen": "Serie ANUAL (fiscal year → valor) de un concepto, buscándolo en us-gaap, dei e ifrs-full (emisores extranjeros que presentan 20-F en IFRS). Se queda con los valores de informe anual (10-K / 20-F) y pe"
+          "params": "facts: CompanyFacts['facts'], concepto: string, unidad = 'USD'",
+          "retorno": "Map<string, number>",
+          "linea": 31,
+          "resumen": "Serie ANUAL de un concepto, indexada por el CIERRE DE EJERCICIO AL QUE PERTENECE EL DATO (`end`), buscándolo en us-gaap, dei e ifrs-full (emisores extranjeros que presentan 20-F en IFRS). 🚨 LANDMINE "
         },
         {
-          "nombre": "valorFy",
+          "nombre": "monedaInforme",
+          "kind": "function",
+          "exportada": true,
+          "params": "facts: CompanyFacts['facts'], alias: readonly string[]",
+          "retorno": "string | undefined",
+          "linea": 68,
+          "resumen": "Divisa en la que el emisor presenta las cuentas HOY: gana la que tenga el ejercicio más reciente y, a igualdad de cierre, el dólar. No basta con \"USD si existe\": Toyota arrastra una traducción de conv"
+        },
+        {
+          "nombre": "anioFiscalDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "periodo: string",
+          "retorno": "number",
+          "linea": 93,
+          "resumen": "Etiqueta de ejercicio (solo para MOSTRAR: `fuente_fy` del radar y `fyUltimo` de la API). El año natural del cierre coincide con la etiqueta del emisor salvo en los calendarios de 52/53 semanas que cie"
+        },
+        {
+          "nombre": "valorPeriodo",
           "kind": "function",
           "exportada": false,
-          "params": "facts: CompanyFacts['facts'], alias: string[], fy: number",
+          "params": "facts: CompanyFacts['facts'], alias: readonly string[], periodo: string, unidad = 'USD'",
           "retorno": "number | undefined",
-          "linea": 39,
-          "resumen": "Primer concepto con dato para ese FY (recorre la lista de alias US-GAAP)."
+          "linea": 101,
+          "resumen": "Valor del primer alias con dato para ese cierre de ejercicio. Si el concepto no cae EXACTAMENTE en `periodo` se acepta el cierre más próximo dentro de 45 días: las acciones de portada (taxonomía `dei`"
         },
         {
           "nombre": "div",
@@ -67280,24 +67308,32 @@
           "exportada": false,
           "params": "a?: number, b?: number",
           "retorno": null,
-          "linea": 46
+          "linea": 115
         },
         {
-          "nombre": "fysDe",
+          "nombre": "resta",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a?: number, b?: number",
+          "retorno": null,
+          "linea": 116
+        },
+        {
+          "nombre": "periodosDe",
           "kind": "function",
           "exportada": false,
-          "params": "facts: CompanyFacts['facts'], alias: string[]",
-          "retorno": "Set<number>",
-          "linea": 69,
-          "resumen": "FYs (por CUALQUIER alias) que tienen dato — para anclar la extracción sin atarse a un nombre us-gaap concreto (si no, un emisor IFRS cuyo beneficio es `ProfitLoss` y no `NetIncomeLoss` no ancla nunca)"
+          "params": "facts: CompanyFacts['facts'], alias: readonly string[], unidad: string",
+          "retorno": "Set<string>",
+          "linea": 155,
+          "resumen": "Cierres de ejercicio (por CUALQUIER alias) que tienen dato — para anclar la extracción sin atarse a un nombre us-gaap concreto (si no, un emisor IFRS cuyo beneficio es `ProfitLoss` y no `NetIncomeLoss"
         },
         {
           "nombre": "anioDe",
           "kind": "function",
           "exportada": false,
-          "params": "facts: CompanyFacts['facts'], fy: number",
+          "params": "facts: CompanyFacts['facts'], periodo: string, moneda: string",
           "retorno": "AnioFinanciero",
-          "linea": 75
+          "linea": 161
         },
         {
           "nombre": "extraerFundamentales",
@@ -67305,7 +67341,7 @@
           "exportada": true,
           "params": "cf: CompanyFacts, simbolo: string",
           "retorno": "FundamentalesEmpresa | null",
-          "linea": 107,
+          "linea": 201,
           "resumen": "Extrae del companyfacts los DOS ejercicios más recientes en el formato que consume el módulo, más las piezas para la fórmula mágica (ROIC ya calculado; earnings yield lo cierra el consumidor con el EV"
         },
         {
@@ -67314,7 +67350,7 @@
           "exportada": true,
           "params": "cf: CompanyFacts, fecha: string, conceptos?: ReadonlySet<string>",
           "retorno": "CompanyFacts",
-          "linea": 143,
+          "linea": 243,
           "resumen": "Recorta un companyfacts a lo CONOCIDO en `fecha` (punto-en-el-tiempo del retrovisor/backtest): solo sobreviven los puntos con `filed <= fecha` (un punto sin `filed` se descarta — mejor perder un dato "
         },
         {
@@ -67323,7 +67359,7 @@
           "exportada": true,
           "params": "cik: string, timeoutMs = 10000",
           "retorno": "Promise<unknown | null>",
-          "linea": 162,
+          "linea": 262,
           "resumen": "El companyfacts CRUDO por CIK (el backtest lo recorta por fecha varias veces sin re-descargar)."
         },
         {
@@ -67332,7 +67368,7 @@
           "exportada": true,
           "params": "json: unknown",
           "retorno": "Map<string, string>",
-          "linea": 167,
+          "linea": 267,
           "resumen": "Mapa ticker → CIK (10 dígitos) del fichero público company_tickers.json de la SEC."
         },
         {
@@ -67341,7 +67377,7 @@
           "exportada": false,
           "params": "url: string, timeoutMs: number",
           "retorno": "Promise<unknown | null>",
-          "linea": 178
+          "linea": 278
         },
         {
           "nombre": "resolverCik",
@@ -67349,7 +67385,7 @@
           "exportada": true,
           "params": "ticker: string, timeoutMs = 8000",
           "retorno": "Promise<string | undefined>",
-          "linea": 187,
+          "linea": 287,
           "resumen": "Resuelve el CIK de un ticker (cachea el mapa en memoria de la lambda). Best-effort → undefined."
         },
         {
@@ -67358,7 +67394,7 @@
           "exportada": true,
           "params": "simbolo: string, timeoutMs = 8000",
           "retorno": "Promise<FundamentalesEmpresa | null>",
-          "linea": 196,
+          "linea": 296,
           "resumen": "Descarga y extrae los fundamentales de un símbolo (resuelve CIK → companyfacts). Best-effort → null."
         },
         {
@@ -67367,7 +67403,7 @@
           "exportada": true,
           "params": "json: unknown, n = 550",
           "retorno": "Array<",
-          "linea": 206,
+          "linea": 306,
           "resumen": "Las N mayores de EEUU desde company_tickers.json (viene ~ordenado por capitalización — propiedad NO documentada; el consumidor tiene una semilla de respaldo). Dedupe por CIK (una clase por empresa) y "
         },
         {
@@ -67376,7 +67412,7 @@
           "exportada": true,
           "params": "simbolo: string, cik: string, timeoutMs = 8000",
           "retorno": "Promise<FundamentalesEmpresa | null>",
-          "linea": 225,
+          "linea": 325,
           "resumen": "companyfacts por CIK ya conocido (el refresco del radar guarda el CIK y se ahorra resolverlo)."
         },
         {
@@ -67385,7 +67421,7 @@
           "exportada": true,
           "params": "n: number | null | undefined",
           "retorno": "number | null",
-          "linea": 235,
+          "linea": 335,
           "resumen": "Guarda de PLAUSIBILIDAD del nº de acciones (bug real 20/07/2026: MCD reportó 712 en vez de 712 MILLONES en el XBRL → mktCap de 196.044$ → EV≈deuda → earnings/FCF yield inflados ×1e6 → nº 1 del ranking"
         },
         {
@@ -67394,7 +67430,7 @@
           "exportada": true,
           "params": "timeoutMs = 10000",
           "retorno": "Promise<unknown | null>",
-          "linea": 240,
+          "linea": 340,
           "resumen": "El JSON crudo de company_tickers (para listaUniverso). Best-effort → null."
         },
         {
@@ -67403,7 +67439,7 @@
           "exportada": true,
           "params": "subs: unknown, desde: string",
           "retorno": "Evento8K[]",
-          "linea": 267,
+          "linea": 367,
           "resumen": "Parseo PURO del submissions JSON de la SEC: 8-K presentados desde `desde` (ISO) cuyos items estén en la lista relevante. Tolera JSON malformado (devuelve [])."
         },
         {
@@ -67412,7 +67448,7 @@
           "exportada": true,
           "params": "cik: string, timeoutMs = 8000",
           "retorno": "Promise<unknown | null>",
-          "linea": 286,
+          "linea": 386,
           "resumen": "El submissions JSON crudo por CIK — el radar lo baja UNA vez por símbolo y saca de él tanto los 8-K (extraerEventos8K) como los Form 4 (extraerFilingsForm4). Best-effort → null."
         },
         {
@@ -67421,7 +67457,7 @@
           "exportada": true,
           "params": "cik: string, desde: string, timeoutMs = 8000",
           "retorno": "Promise<Evento8K[]>",
-          "linea": 291,
+          "linea": 391,
           "resumen": "Eventos 8-K recientes por CIK ya conocido (submissions JSON). Best-effort → []."
         },
         {
@@ -67430,7 +67466,7 @@
           "exportada": true,
           "params": "subs: unknown, hoy: string, ventanaDias = 10",
           "retorno": "string | null",
-          "linea": 307,
+          "linea": 407,
           "resumen": "── 📅 Semana de resultados ESTIMADA ────────────────────────────────────────────────────────────── La SEC no publica fechas FUTURAS de resultados; lo que sí tenemos (gratis y determinista) es el PATRÓ"
         },
         {
@@ -67439,12 +67475,12 @@
           "exportada": true,
           "params": "subs: unknown, desde: string",
           "retorno": "FilingForm4[]",
-          "linea": 324
+          "linea": 424
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9b66e1edf822"
+      "hash": "adb91e3fae87"
     },
     {
       "ruta": "apps/plataforma/lib/trading/form4.ts",
@@ -68036,7 +68072,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d096defc0a79"
+      "hash": "27a83ffabc3b"
     },
     {
       "ruta": "apps/plataforma/lib/trading/volumen.ts",
@@ -87421,6 +87457,6 @@
   ],
   "resumen": {
     "archivos": 2364,
-    "funciones": 6287
+    "funciones": 6291
   }
 }
