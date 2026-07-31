@@ -4,6 +4,10 @@ import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
 import { tgAlert } from "@/lib/telegram"
 import { decidirSubMercado, decidirReservaBaja } from "@/lib/sivra/pricing-guardia"
+import {
+  decidirEventoSinRespaldo, decidirEventoNoCatalogado, decidirPrecioPorPlaza,
+} from "@/lib/sivra/pricing-centinelas"
+import { eventFactor } from "@/lib/pricing-calendar"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -25,8 +29,18 @@ export const maxDuration = 60
 //   #5 Reserva por debajo de mercado (NUEVO): una reserva recién entrada con ADR bruto muy por debajo
 //      del p50 real del piso PARA SU FECHA (no el blended de todas las fechas — así una reserva de
 //      evento cara "en absoluto" pero barata para su día, p.ej. Karol G, se detecta; ver #5 abajo).
+//   #6 €/plaza (31/07): un piso GRANDE vendiéndose a precio de hostal por persona. Vino de Alberto
+//      ("Socorro son 12 plazas, a 165€ salen 13,75€ por persona"): el total engaña, el reparto no.
+//   #7 Evento declarado que el mercado NO respalda (31/07): la Feria de Abril 2027 llevaba meses en
+//      el calendario con las fechas de OTRA semana y nadie lo vio. Ahora el mercado lo desmiente solo.
+//   #8 Mercado disparado SIN evento catalogado (31/07): el espejo del #7 — busca lo que NO sabemos
+//      (septiembre 2026, con la Bienal dentro, no tenía un solo evento en ninguna de las dos fuentes).
 // Crea alertas en pricing_alerts (dedup: no recrea mientras el mismo aviso siga abierto) y manda UN
 // Telegram con lo nuevo sin avisar (avisado_at).
+//
+// Los tres centinelas nuevos viven en `lib/sivra/pricing-centinelas.ts` (puros, testeados) y comparten
+// una regla: cuando no hay muestra devuelven "no evaluado", NUNCA un "todo bien" — que es lo que dejó
+// pasar los tres fallos de arriba durante meses.
 
 const PROP_NAMES: Record<string, string> = {
   prop_house_sevillana: "House Sevillana",
@@ -181,6 +195,98 @@ export async function GET(req: NextRequest) {
     }))
     .filter(r => r.ev.alerta)
 
+  // #6 €/plaza: precio VIVO más barato de cada piso repartido entre sus plazas. Solo se juzgan los
+  // pisos grandes (el centinela descarta solo los pequeños: ver la nota de pricing-centinelas.ts).
+  // OJO: SQL dentro de un template literal de TS — aquí NO se pueden usar backticks ni $ { }.
+  const porPlaza = await prisma.$queryRaw<{
+    property_id: string; plazas: number | null; min_price: number | null
+    vivo: number | null; fecha: string | null
+  }[]>(Prisma.sql`
+    WITH ult AS (
+      SELECT property_id, MAX(snapshot_date) AS sd FROM rate_snapshots GROUP BY property_id
+    ),
+    barato AS (
+      SELECT DISTINCT ON (r.property_id)
+        r.property_id, r.price_pricelabs::float8 AS vivo, r.rate_date::text AS fecha
+      FROM rate_snapshots r
+      JOIN ult ON ult.property_id = r.property_id AND ult.sd = r.snapshot_date
+      WHERE r.rate_date >= CURRENT_DATE AND r.available = 1 AND r.price_pricelabs IS NOT NULL
+      ORDER BY r.property_id, r.price_pricelabs ASC, r.rate_date
+    )
+    SELECT s.property_id, z.max_guests::int AS plazas, s.min_price::float8 AS min_price,
+           b.vivo, b.fecha
+    FROM pricing_settings s
+    LEFT JOIN pricing_piso_zona z ON z.property_id = s.property_id
+    LEFT JOIN barato b ON b.property_id = s.property_id
+  `).catch(() => [])
+
+  const plazaHits = porPlaza
+    .map(p => ({
+      ...p,
+      vivoEv: decidirPrecioPorPlaza({ precio: Number(p.vivo ?? 0), plazas: p.plazas }),
+      sueloEv: decidirPrecioPorPlaza({ precio: Number(p.min_price ?? 0), plazas: p.plazas }),
+    }))
+    .filter(p => p.vivoEv.alerta || p.sueloEv.alerta)
+
+  // #7/#8 Calendario contra mercado. El p50 de la fecha y el del mes se calculan SOBRE LOS MISMOS
+  // pisos-escenario (el JOIN restringe el mes a los escenarios que barrieron esa fecha): si un día
+  // solo se barrió para la casa de 12 plazas, su mes también sale de la casa, no de la media de
+  // todos. Sin ese control, un barrido desigual dispararía "evento desconocido" cada semana.
+  const mercadoDia = await prisma.$queryRaw<{
+    fecha: string; comps: number; p50_fecha: number; p50_mes: number
+  }[]>(Prisma.sql`
+    WITH base AS (
+      SELECT scenario, checkin_date, price_night
+      FROM market_rates
+      WHERE search_date >= CURRENT_DATE - INTERVAL '30 days'
+        AND price_night > 0 AND scenario LIKE 'prop_%' AND checkin_date >= CURRENT_DATE
+    ),
+    por_fecha AS (
+      SELECT scenario, checkin_date,
+             percentile_cont(0.5) WITHIN GROUP (ORDER BY price_night) AS p50, COUNT(*) AS n
+      FROM base GROUP BY scenario, checkin_date
+    ),
+    por_mes AS (
+      SELECT scenario, date_trunc('month', checkin_date) AS mes,
+             percentile_cont(0.5) WITHIN GROUP (ORDER BY price_night) AS p50, COUNT(*) AS n
+      FROM base GROUP BY scenario, date_trunc('month', checkin_date)
+    )
+    SELECT f.checkin_date::text AS fecha,
+           SUM(f.n)::int AS comps,
+           percentile_cont(0.5) WITHIN GROUP (ORDER BY f.p50)::float8 AS p50_fecha,
+           percentile_cont(0.5) WITHIN GROUP (ORDER BY m.p50)::float8 AS p50_mes
+    FROM por_fecha f
+    JOIN por_mes m ON m.scenario = f.scenario AND m.mes = date_trunc('month', f.checkin_date)
+    WHERE m.p50 > 0 AND m.n >= 20
+    GROUP BY f.checkin_date
+  `).catch(() => [])
+
+  // Factor de evento tal y como lo ve el motor: el MAYOR entre el calendario del repo y la tabla que
+  // llenan los agentes de eventos. Si una fuente conoce la fecha, la otra no cuenta como "no había".
+  const autoEvRows = await prisma.$queryRaw<{ rate_date: string; factor: number }[]>(Prisma.sql`
+    SELECT rate_date::text AS rate_date, MAX(factor)::float8 AS factor
+    FROM pricing_eventos_auto WHERE rate_date >= CURRENT_DATE GROUP BY rate_date
+  `).catch(() => [])
+  const autoEv = new Map(autoEvRows.map(r => [r.rate_date, Number(r.factor)]))
+
+  type EventoHit = { fecha: string; factor: number; p50Fecha: number; p50Mes: number; motivo: string }
+  const sinRespaldo: EventoHit[] = []
+  const noCatalogados: EventoHit[] = []
+  for (const d of mercadoDia) {
+    const factor = Math.max(eventFactor(d.fecha), autoEv.get(d.fecha) ?? 1)
+    const entrada = {
+      factorEvento: factor,
+      p50Fecha: Number(d.p50_fecha),
+      p50Mes: Number(d.p50_mes),
+      compsFecha: Number(d.comps),
+    }
+    const hit = { fecha: d.fecha, factor, p50Fecha: entrada.p50Fecha, p50Mes: entrada.p50Mes }
+    const a = decidirEventoSinRespaldo(entrada)
+    if (a.alerta) sinRespaldo.push({ ...hit, motivo: a.motivo })
+    const b = decidirEventoNoCatalogado(entrada)
+    if (b.alerta) noCatalogados.push({ ...hit, motivo: b.motivo })
+  }
+
   // Inserta alerta si no hay ya una IGUAL sin resolver (sin límite de tiempo). Antes la ventana era
   // "últimas 24h": como el cron corre a diario a la misma hora, cada pasada quedaba justo fuera de esa
   // ventana y creaba una fila NUEVA por día → el mismo aviso (p.ej. "tocando el precio mínimo") se
@@ -244,6 +350,46 @@ export async function GET(req: NextRequest) {
     if (ok) created++
   }
 
+  for (const p of plazaHits) {
+    const nombre = PROP_NAMES[p.property_id] ?? p.property_id
+    if (p.vivoEv.alerta) {
+      const ok = await pushAlert({
+        tipo: "precio_por_plaza", prioridad: "alta", property_id: p.property_id,
+        titulo: `${nombre}: a ${Math.round(Number(p.vivo))}€ salen menos de 18€ por plaza`,
+        detalle: `${p.vivoEv.motivo} La noche más barata publicada es el ${p.fecha}. Con ${p.plazas} plazas ese total es precio de hostal por persona: sube el suelo o revisa de dónde sale ese precio.`,
+        dato_actual: Math.round(Number(p.vivo)), fecha_ref: p.fecha ?? undefined,
+      })
+      if (ok) created++
+    }
+    if (p.sueloEv.alerta) {
+      const ok = await pushAlert({
+        tipo: "suelo_por_plaza", prioridad: "media", property_id: p.property_id,
+        titulo: `${nombre}: el suelo de ${Math.round(Number(p.min_price))}€ deja el € por plaza demasiado bajo`,
+        detalle: `${p.sueloEv.motivo} El suelo es lo más barato a lo que este piso puede llegar a venderse: con ${p.plazas} plazas conviene subirlo.`,
+        dato_actual: Math.round(Number(p.min_price)),
+      })
+      if (ok) created++
+    }
+  }
+  for (const e of sinRespaldo) {
+    const ok = await pushAlert({
+      tipo: "evento_sin_respaldo", prioridad: "media", property_id: "_calendario",
+      titulo: `Evento del ${e.fecha} (x${e.factor}) sin respaldo en el mercado`,
+      detalle: `${e.motivo} Comprueba las fechas en el calendario de eventos: así estuvo la Feria de Abril 2027, una semana desplazada, desde que se metió.`,
+      dato_actual: Math.round(e.p50Fecha), dato_mercado: Math.round(e.p50Mes), fecha_ref: e.fecha,
+    })
+    if (ok) created++
+  }
+  for (const e of noCatalogados) {
+    const ok = await pushAlert({
+      tipo: "evento_no_catalogado", prioridad: "media", property_id: "_calendario",
+      titulo: `El mercado del ${e.fecha} se dispara y no tenemos evento`,
+      detalle: `${e.motivo} Mira qué hay en Sevilla ese día y añádelo al calendario: si el mercado sube y nosotros no, regalamos la noche.`,
+      dato_actual: Math.round(e.p50Fecha), dato_mercado: Math.round(e.p50Mes), fecha_ref: e.fecha,
+    })
+    if (ok) created++
+  }
+
   // ── AVISO A ALBERTO POR TELEGRAM ──────────────────────────────────────────────
   // Manda UN mensaje con las alertas alta/media aún NO avisadas (cubre también las que crea
   // mercado/cron, p.ej. precio_bajo). Se marca `avisado_at` para no repetir el mismo aviso.
@@ -286,6 +432,12 @@ export async function GET(req: NextRequest) {
     floor_hits: floorHits.length,
     sub_mercado: subHits.length,
     reservas_bajas: reservasBajas.length,
+    por_plaza: plazaHits.length,
+    // `fechas_evaluadas` es el denominador honesto de #7/#8: si sale bajo, el barrido de mercado
+    // cubre pocas fechas y el silencio de los centinelas NO significa que el calendario esté bien.
+    fechas_evaluadas: mercadoDia.length,
+    eventos_sin_respaldo: sinRespaldo.length,
+    eventos_no_catalogados: noCatalogados.length,
     alerts_created: created,
     avisadas,
   })

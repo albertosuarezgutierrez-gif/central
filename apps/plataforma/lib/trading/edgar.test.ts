@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { serieAnual, extraerFundamentales, mapaTickers, listaUniverso, extraerEventos8K, extraerFilingsForm4, accionesPlausibles, estimarProximoInforme } from './edgar.ts'
+import { serieAnual, anioFiscalDe, monedaInforme, extraerFundamentales, mapaTickers, listaUniverso, extraerEventos8K, extraerFilingsForm4, accionesPlausibles, estimarProximoInforme } from './edgar.ts'
 import { piotroskiFScore } from '@central/module-trading'
 
 // Fixture mínimo con la forma real de companyfacts (2 ejercicios: FY2023 mejor que FY2022).
@@ -29,18 +29,77 @@ const CF = {
   },
 }
 
-test('serieAnual coge el valor FY de 10-K por ejercicio', () => {
+test('serieAnual indexa por el CIERRE del ejercicio del dato, no por el `fy` del informe', () => {
   const s = serieAnual(CF.facts, 'NetIncomeLoss')
-  assert.equal(s.get(2022), 100)
-  assert.equal(s.get(2023), 150)
+  assert.equal(s.get('2022-12-31'), 100)
+  assert.equal(s.get('2023-12-31'), 150)
 })
 
-test('serieAnual con el filed más reciente gana ante FY repetido', () => {
+test('serieAnual con el filed más reciente gana ante el mismo cierre repetido', () => {
   const facts = { 'us-gaap': { Assets: unidad([
     { end: '2023-12-31', val: 900, fy: 2023, filed: '2024-01-01' },
     { end: '2023-12-31', val: 1100, fy: 2023, filed: '2024-05-01' },  // reexpresión posterior
   ]) } }
-  assert.equal(serieAnual(facts, 'Assets').get(2023), 1100)
+  assert.equal(serieAnual(facts, 'Assets').get('2023-12-31'), 1100)
+})
+
+// ── 🚨 REGRESIÓN (31/07/2026): comparativos de un mismo informe ────────────────────────────────────
+// Datos REALES de ORCL descargados de la SEC (companyconcept NetIncomeLoss/Assets, CIK 0001341439).
+// El 10-K de FY2026 publica TRES ejercicios de resultado y DOS de balance, y los cinco hechos llevan
+// `fy:2026, fp:FY, filed:2026-06-22`. Indexando por `fy` se colapsaban en una clave y ganaba el primero
+// del array (el más viejo): el radar daba beneficio de FY2024 (10.467 M$) etiquetado como FY2026 y lo
+// dividía entre los activos de FY2025 (168.361 M$) para el ROA.
+const ORCL_10K_FY2026 = {
+  cik: 1341439,
+  facts: {
+    'us-gaap': {
+      NetIncomeLoss: { units: { USD: [
+        { start: '2023-06-01', end: '2024-05-31', val: 10_467e6, fy: 2026, fp: 'FY', form: '10-K', filed: '2026-06-22' },
+        { start: '2024-06-01', end: '2025-05-31', val: 12_443e6, fy: 2026, fp: 'FY', form: '10-K', filed: '2026-06-22' },
+        { start: '2025-06-01', end: '2026-05-31', val: 17_087e6, fy: 2026, fp: 'FY', form: '10-K', filed: '2026-06-22' },
+      ] } },
+      Assets: { units: { USD: [
+        { end: '2025-05-31', val: 168_361e6, fy: 2026, fp: 'FY', form: '10-K', filed: '2026-06-22' },
+        { end: '2026-05-31', val: 261_759e6, fy: 2026, fp: 'FY', form: '10-K', filed: '2026-06-22' },
+      ] } },
+    },
+  },
+}
+
+test('serieAnual separa los ejercicios comparativos que comparten `fy` y `filed` (caso ORCL)', () => {
+  const s = serieAnual(ORCL_10K_FY2026.facts, 'NetIncomeLoss')
+  assert.equal(s.size, 3, 'los tres comparativos son ejercicios distintos, no uno')
+  assert.equal(s.get('2026-05-31'), 17_087e6)
+  assert.equal(s.get('2025-05-31'), 12_443e6)
+  assert.equal(s.get('2024-05-31'), 10_467e6)
+})
+
+test('extraerFundamentales coge el ejercicio VIVO y no mezcla años en un mismo ratio (caso ORCL)', () => {
+  const f = extraerFundamentales(ORCL_10K_FY2026, 'ORCL')!
+  assert.equal(f.anios[0].periodo, '2026-05-31')
+  assert.equal(f.anios[0].fy, 2026)
+  assert.equal(f.anios[0].fin.beneficioNeto, 17_087e6)   // antes: 10.467 M$, el de FY2024
+  assert.equal(f.anios[1].periodo, '2025-05-31')
+  assert.equal(f.anios[1].fin.beneficioNeto, 12_443e6)
+  // ROA del ejercicio vivo con los activos DE ESE MISMO ejercicio (antes: FY2024 ÷ activos FY2025).
+  assert.ok(Math.abs(f.anios[0].fin.roa - 17_087 / 261_759) < 1e-9)
+})
+
+test('serieAnual descarta las columnas trimestrales que un 10-K publica con `fp:FY`', () => {
+  const facts = { 'us-gaap': { NetIncomeLoss: { units: { USD: [
+    { start: '2025-06-01', end: '2026-05-31', val: 1000, fy: 2026, fp: 'FY', form: '10-K', filed: '2026-06-22' },
+    { start: '2026-03-01', end: '2026-05-31', val: 250, fy: 2026, fp: 'FY', form: '10-K', filed: '2026-06-22' },  // Q4
+  ] } } } }
+  const s = serieAnual(facts, 'NetIncomeLoss')
+  assert.equal(s.size, 1)
+  assert.equal(s.get('2026-05-31'), 1000, 'el trimestre no puede pisar al ejercicio completo')
+})
+
+test('anioFiscalDe etiqueta el cierre: enero temprano = ejercicio anterior; 31/01 = su año natural', () => {
+  assert.equal(anioFiscalDe('2026-05-31'), 2026)
+  assert.equal(anioFiscalDe('2025-12-31'), 2025)
+  assert.equal(anioFiscalDe('2026-01-03'), 2025)   // calendario 52/53 semanas
+  assert.equal(anioFiscalDe('2026-01-31'), 2026)   // minorista tipo Walmart (su propio FY2026)
 })
 
 test('extraerFundamentales devuelve 2 ejercicios en el formato del módulo + ROIC', () => {
@@ -222,6 +281,93 @@ test('estimarProximoInforme proyecta el 10-Q del año pasado a la ventana próxi
   assert.equal(estimarProximoInforme(subs, '2026-07-20'), '2026-07-25')
   assert.equal(estimarProximoInforme(subs, '2026-08-10'), null)   // ya pasó la ventana
   assert.equal(estimarProximoInforme(null, '2026-07-20'), null)   // JSON roto
+})
+
+// ── 💱 Divisa del informe ──────────────────────────────────────────────────────────────────────────
+// Los importes se cruzan con una capitalización en DÓLARES, así que mezclar divisas fabrica múltiplos
+// de la nada: en producción TLK (rupias) daba un FCF yield del 2.679% y AMX (pesos) un earnings yield
+// del 9,14% que parecía normal. BABA y PDD publican los mismos conceptos en USD y en CNY.
+function unidadEn(divisa: string, puntos: Array<{ end: string; val: number; fy: number; filed: string }>) {
+  return { units: { [divisa]: puntos.map(p => ({ ...p, fp: 'FY', form: '20-F' })) } }
+}
+const CF_YENES = {
+  cik: 1094517,
+  facts: {
+    'ifrs-full': {
+      ProfitLoss: unidadEn('JPY', [{ end: '2024-03-31', val: 4_944_933e6, fy: 2025, filed: '2025-06-25' }, { end: '2025-03-31', val: 4_765_086e6, fy: 2025, filed: '2025-06-25' }]),
+      Assets: unidadEn('JPY', [{ end: '2024-03-31', val: 90_114_296e6, fy: 2025, filed: '2025-06-25' }, { end: '2025-03-31', val: 93_601_350e6, fy: 2025, filed: '2025-06-25' }]),
+      LongtermBorrowings: unidadEn('JPY', [{ end: '2025-03-31', val: 22_963_400e6, fy: 2025, filed: '2025-06-25' }]),
+    },
+  },
+}
+
+test('monedaInforme prefiere USD cuando el emisor publica en las dos divisas', () => {
+  const facts = { 'us-gaap': { Assets: { units: {
+    CNY: [{ end: '2026-03-31', val: 1800, fy: 2026, fp: 'FY', form: '20-F', filed: '2026-06-01' }],
+    USD: [{ end: '2026-03-31', val: 250, fy: 2026, fp: 'FY', form: '20-F', filed: '2026-06-01' }],
+  } } } }
+  assert.equal(monedaInforme(facts, ['Assets']), 'USD')
+  assert.equal(serieAnual(facts, 'Assets', 'USD').get('2026-03-31'), 250)
+})
+
+test('monedaInforme NO se ancla a una traducción de conveniencia vieja en dólares (caso TM)', () => {
+  // Toyota arrastra un `Assets` en USD de 2013 junto a sus cuentas vivas en yenes. Preferir el dólar
+  // por preferencia dejaba la empresa clavada en un ejercicio de hace trece años.
+  const facts = { 'ifrs-full': { Assets: { units: {
+    USD: [{ end: '2013-03-31', val: 300e9, fy: 2013, fp: 'FY', form: '20-F', filed: '2013-06-24' }],
+    JPY: [{ end: '2025-03-31', val: 93_601_350e6, fy: 2025, fp: 'FY', form: '20-F', filed: '2025-06-25' }],
+  } } } }
+  assert.equal(monedaInforme(facts, ['Assets']), 'JPY')
+})
+
+test('monedaInforme cae a la moneda local si el emisor no publica en USD, y no mezcla', () => {
+  assert.equal(monedaInforme(CF_YENES.facts, ['Assets']), 'JPY')
+  const f = extraerFundamentales(CF_YENES, 'TM')!
+  assert.equal(f.moneda, 'JPY')
+  assert.equal(f.deudaLp, 22_963_400e6)                      // en yenes, coherente con el resto
+  assert.equal(f.anios[0].periodo, '2025-03-31')
+  assert.ok(Math.abs(f.anios[0].fin.roa - 4_765_086 / 93_601_350) < 1e-9)   // ratio interno: válido
+})
+
+test('monedaInforme ignora las unidades que no son dinero', () => {
+  const facts = { 'us-gaap': { CommonStockSharesOutstanding: { units: {
+    shares: [{ end: '2025-12-31', val: 1e9, fy: 2025, fp: 'FY', form: '10-K', filed: '2026-02-01' }],
+  } } } }
+  assert.equal(monedaInforme(facts, ['CommonStockSharesOutstanding']), undefined)
+})
+
+// ── 📊 Margen bruto derivado y alias de deuda ──────────────────────────────────────────────────────
+test('margen bruto: se deriva de ventas − coste de ventas cuando no hay GrossProfit etiquetado', () => {
+  // Forma de GOOGL/AMZN/META/WMT/LLY: publican el coste, no el margen.
+  const cf = structuredClone(CF)
+  delete (cf.facts['us-gaap'] as Record<string, unknown>).GrossProfit
+  ;(cf.facts['us-gaap'] as Record<string, unknown>).CostOfRevenue = unidad([
+    { end: '2022-12-31', val: 500, fy: 2022, filed: '2023-02-01' },
+    { end: '2023-12-31', val: 580, fy: 2023, filed: '2024-02-01' },
+  ])
+  const f = extraerFundamentales(cf, 'X')!
+  assert.ok(Math.abs(f.anios[0].fin.margenBruto - (1000 - 580) / 1000) < 1e-9)  // 42%, igual que etiquetado
+  assert.ok(Math.abs(f.anios[1].fin.margenBruto - (800 - 500) / 800) < 1e-9)    // 37,5%
+  // Y con el margen ya calculable, la señal del F-score deja de ser falsa por omisión.
+  assert.equal(piotroskiFScore(f.anios[0].fin, f.anios[1].fin).detalle.mejorMargenBruto, true)
+})
+
+test('margen bruto queda a 0 solo si NO hay ni GrossProfit ni coste de ventas', () => {
+  const cf = structuredClone(CF)
+  delete (cf.facts['us-gaap'] as Record<string, unknown>).GrossProfit
+  assert.equal(extraerFundamentales(cf, 'X')!.anios[0].fin.margenBruto, 0)
+})
+
+test('deudaLp resuelve los conceptos que usan de verdad AVGO y JPM', () => {
+  const conAlias = (concepto: string, val: number) => {
+    const cf = structuredClone(CF)
+    delete (cf.facts['us-gaap'] as Record<string, unknown>).LongTermDebtNoncurrent
+    ;(cf.facts['us-gaap'] as Record<string, unknown>)[concepto] = unidad([{ end: '2023-12-31', val, fy: 2023, filed: '2024-02-01' }])
+    return extraerFundamentales(cf, 'X')!.deudaLp
+  }
+  assert.equal(conAlias('LongTermDebtAndCapitalLeaseObligations', 620), 620)                    // AVGO
+  assert.equal(conAlias('LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities', 4352), 4352)  // JPM
+  assert.equal(conAlias('DebtLongtermAndShorttermCombinedAmount', 425), 425)                    // LLY/MA
 })
 
 test('accionesPlausibles descarta cifras de acciones sin escalar (caso MCD: 712 en vez de 712M)', () => {

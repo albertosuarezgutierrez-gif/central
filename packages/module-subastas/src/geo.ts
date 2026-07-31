@@ -88,6 +88,36 @@ export interface UbicacionSubasta {
 }
 
 /**
+ * ¿Este texto es una DIRECCIÓN POSTAL que un buscador de mapas pueda resolver,
+ * o es prosa registral?
+ *
+ * 🚨 Por qué existe: la dirección que el BOE publica sale de la descripción
+ * registral y a veces no es una dirección, es un párrafo — «Vivienda en planta
+ * primera tipo F, con acceso a través del portal desde la calle, Edificio…»
+ * (caso real del corpus, 31/07/2026). Mandar eso a Google devuelve CUALQUIER
+ * cosa, y encima pisando unas coordenadas catastrales exactas que sí teníamos:
+ * el mapa pintaba el pin correcto y el botón «Mapa» de la misma tarjeta llevaba
+ * a otro sitio.
+ *
+ * Criterio deliberadamente simple y comprobable: tiene que empezar por un tipo
+ * de vía (o llevarlo muy al principio, que en el BOE es normal anteponer el
+ * municipio) y traer un número de portal detrás. `POLÍGONO`/`PARAJE` NO cuentan
+ * como vía: «POLÍGONO 41 PARCELA 7» no resuelve en ningún buscador y es mejor
+ * caer al punto que ya tengamos.
+ */
+export function esDireccionPostal(texto?: string | null): boolean {
+  const t = (texto ?? '').trim()
+  if (!t || t.length > 140) return false
+  const VIA = /\b(?:C\/|CALLE|AVENIDA|AVDA?|AV|PLAZA|PZ|PASEO|CAMINO|CARRETERA|CTRA|URBANIZACION|URBANIZACIÓN|BARRIADA|RONDA|RD|BULEVAR|TRAVESIA|TRAVESÍA|GLORIETA|CL|PS|CM|BO|UR)\b|C\//i
+  const m = t.match(VIA)
+  // Más allá de los primeros ~40 caracteres ya no es el encabezado de una
+  // dirección: es una «calle» citada en mitad de un párrafo.
+  if (!m || (m.index ?? 0) > 40) return false
+  const cola = t.slice((m.index ?? 0) + m[0].length)
+  return /\d/.test(cola) || /\bS\/N\b/i.test(cola)
+}
+
+/**
  * URL de Google Maps para VER dónde está el inmueble.
  *
  * 🚨 La DIRECCIÓN POSTAL manda sobre las coordenadas, aunque parezca al revés.
@@ -100,11 +130,15 @@ export interface UbicacionSubasta {
  *
  * Con solo la provincia devuelve `null`: un pin en mitad de "Sevilla" confunde
  * más que ayuda.
+ *
+ * ⚠️ «La dirección manda» vale para una dirección DE VERDAD (`esDireccionPostal`).
+ * Un párrafo de la descripción registral no manda sobre nada: ahí las
+ * coordenadas —cuando son las exactas del Catastro— son lo único fiable.
  */
 export function urlGoogleMaps(u: UbicacionSubasta): string | null {
   const busqueda = (q: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`
 
-  const dir = u.direccion?.trim()
+  const dir = esDireccionPostal(u.direccion) ? u.direccion!.trim() : null
   if (dir) {
     // El CP ya identifica la localidad; añadir el municipio otra vez despista al
     // buscador cuando la dirección catastral lo trae dentro.

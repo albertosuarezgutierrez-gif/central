@@ -18,14 +18,29 @@ const ETIQUETA_GMAIL = 'Facturas/Proveedor'
 
 // ── Escaneo de Gmail → OCR → BD → Telegram ───────────────────────────────────
 
-export async function escanearNuevasFacturas(cuentaId: string): Promise<number> {
+/**
+ * 🚨 `nuevas: 0` NO significa «no había facturas»: puede ser «no se pudo mirar»
+ * (IMAP caído, app-password rotada, etiqueta de Gmail renombrada). Antes ambos
+ * casos devolvían el mismo `0` y aguas abajo el chat afirmaba «no tienes
+ * facturas de proveedor pendientes 🎉» sin que nada lo desmintiera. Por eso el
+ * resultado lleva `ok`: quien llame debe registrarlo como latido y avisar.
+ */
+export interface ResultadoEscaneo {
+  nuevas: number
+  /** `false` = la pasada NO se pudo completar; `nuevas` no es una conclusión. */
+  ok: boolean
+  error: string | null
+}
+
+export async function escanearNuevasFacturas(cuentaId: string): Promise<ResultadoEscaneo> {
   let nuevas = 0
   const desde = new Date(Date.now() - 7 * 24 * 3600 * 1000) // últimos 7 días
   let correos: Awaited<ReturnType<typeof listarCandidatos>> = []
   try {
     correos = await listarCandidatos({ desde, etiqueta: ETIQUETA_GMAIL })
-  } catch {
-    return 0
+  } catch (e: any) {
+    // El buzón no se ha podido leer: se dice, no se disfraza de «0 facturas».
+    return { nuevas: 0, ok: false, error: String(e?.message ?? e).slice(0, 200) }
   }
 
   for (const correo of correos) {
@@ -102,7 +117,7 @@ export async function escanearNuevasFacturas(cuentaId: string): Promise<number> 
     await proponerVinculoReserva(facturaId, proveedor, fechaFactura).catch(() => {})
   }
 
-  return nuevas
+  return { nuevas, ok: true, error: null }
 }
 
 async function notificarFactura(

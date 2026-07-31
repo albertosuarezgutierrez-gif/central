@@ -82,9 +82,21 @@ export function evaluarFlip(s: SubastaInmueble, o: Oportunidad, anioActual: numb
 
   if ((s.porcentajeSubastado ?? 100) < 100) motivos.push('Proindiviso: no se puede vender el 100% del inmueble.')
 
-  const apto = tipoApto && !posesionBloquea && (s.porcentajeSubastado ?? 100) >= 100
+  // Un flip se decide por el precio de venta, así que un €/m² que no describe
+  // al inmueble (la mediana de una ciudad entera) no puede declararlo apto: es
+  // exactamente así como un piso de 1965 en Sevilla salió con un 86,7% de
+  // margen. Se sigue calculando el número, pero no se recomienda.
+  if (o.valorOrientativo) {
+    motivos.push('El valor de venta sale de la mediana de todo el municipio: no basta para decidir un flip.')
+  }
 
-  if (o.valorMercado == null || o.coste.total <= 0) {
+  const apto =
+    tipoApto && !posesionBloquea && (s.porcentajeSubastado ?? 100) >= 100 && !o.valorOrientativo
+
+  // El flip vende REFORMADO, así que compara contra el valor sin el descuento
+  // por estado — la mejora ya se paga aparte, en `reformaEstimada`.
+  const valorVenta = o.valorMercadoReformado ?? o.valorMercado
+  if (valorVenta == null || o.coste.total <= 0) {
     motivos.push('Sin valor de mercado o sin coste calculable: margen no estimable.')
     return { margen: null, margenPct: null, reforma: null, costesVenta: null, apto, motivos, avisos }
   }
@@ -96,9 +108,9 @@ export function evaluarFlip(s: SubastaInmueble, o: Oportunidad, anioActual: numb
   }
   if (ref.aviso) avisos.push(ref.aviso)
 
-  const costesVenta = Math.round(o.valorMercado * PCT_COSTES_VENTA)
+  const costesVenta = Math.round(valorVenta * PCT_COSTES_VENTA)
   const invertido = o.coste.total + ref.importe
-  const margen = Math.round(o.valorMercado - invertido - costesVenta)
+  const margen = Math.round(valorVenta - invertido - costesVenta)
   const margenPct = invertido > 0 ? Math.round((margen / invertido) * 1000) / 1000 : null
 
   if (o.origenValor === 'comparables') {

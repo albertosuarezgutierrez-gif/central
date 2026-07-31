@@ -15,6 +15,14 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-07-31 · pricing-agente (check-in programado del cutover)** · hizo: verificado que el sync de
+  Smoobu NO está roto (cron 05:01 → 200; `incomes` parado desde 25/07 es sequía real, corroborada por
+  `available` de Smoobu) y que el motor tarifica en mercado (Busto 81€ vs p50 80€). Documentada en
+  `references/ciclo.md` la trampa `price_ours` (fórmula legacy congelada) que ya ha provocado DOS falsas
+  alarmas — la del 27/07 y una mía hoy, detectada antes de reportarla. Aprendizaje escrito en
+  `pricing_aprendizaje` (ALL/2026-08). dudas: por qué Luxury liberó 1-12 agosto sin reserva en `incomes`
+  (¿bloqueo manual?); fallos: — (hallazgo comercial: agosto arranca a 0/31 en tres pisos, escalado a
+  Alberto); PRs/commits: rama `claude/pricing-check-31-07`.
 - **2026-07-30 · pricing-agente (auditoría pre-cutover, sesión interactiva)** · hizo: auditoría de
   preparación 100% dinámico (BD + crons + raíles + evidencia piloto) — sin bloqueantes; actualizada la
   doc de skill (suelos 65/72 del 28/07) y programado re-check del apply-auto de hoy; dudas: aforo Luxury

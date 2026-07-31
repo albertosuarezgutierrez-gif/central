@@ -27,6 +27,12 @@ export interface EntradaAviso {
   rentable: boolean
   /** Semáforo documental, o `null` si aún no se ha calculado. */
   semaforo: Nivel | null
+  /**
+   * El valor de mercado sale de una zona demasiado gruesa (mediana municipal de
+   * una ciudad desigual). «Rentable» calculado contra un número así no es un
+   * hecho: es una corazonada con decimales.
+   */
+  valorOrientativo?: boolean
   /** Lo que heredaría el adjudicatario. `null` = no se ha podido cuantificar. */
   cargasSubsistentes: number | null
   /** ¿Se ha leído de verdad la certificación? */
@@ -57,6 +63,12 @@ export function decidirAviso(e: EntradaAviso): ResultadoAviso {
   const no = (motivo: string): ResultadoAviso => ({ decision: 'silenciar', motivo, sinVerificar: false })
 
   if (!e.rentable) return no('No pasa el filtro de rentabilidad')
+
+  // El valor de mercado es el que manda en «rentable»: si está construido con
+  // la mediana de una ciudad entera, la rentabilidad no está comprobada.
+  if (e.valorOrientativo) {
+    return no('El valor de mercado sale de la mediana de todo el municipio: la rentabilidad no está comprobada')
+  }
 
   // ── Cosas raras que se saben con certeza ──────────────────────────────────
   if (e.cargasSubsistentes != null && e.cargasSubsistentes > 0) {

@@ -24,6 +24,159 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏛️ Subastas: revisión de la cadena de ubicación — 8 fallos reales corregidos (31/07/2026).** Encargo
+  «que no vuelva a suceder + revisa qué más puede pasar». 🔴 (a) `bajarFicha` no validaba la respuesta y el
+  UPDATE del cron escribía las CIFRAS sin `COALESCE`: un 200 de mantenimiento del BOE **borraba** tipo/
+  depósito/tasación del corpus durante 24 h → guarda `fichaLegible` (ya existía en `documentos.ts`) + COALESCE
+  en los 9 campos. (b) **`maxDuration` 60→300**: los cerrojos de Catastro/Nominatim se comían el minuto y la
+  pasada se truncaba (nunca llegaba a documentos/lentes/archivado). (c) La **prosa registral pisaba las
+  coordenadas exactas** — nuevo `esDireccionPostal` (puro, testeado) y `direccion`/`direccion_catastro` van
+  YA SEPARADAS hasta la UI (el sello 🏛️ es solo del Catastro). (d) `elegirVia` decía «ambigua» y el caller
+  seguía igual con el nombre crudo → ahora ABANDONA (esa referencia se persiste para siempre). (e) **Mapa
+  vacío intermitente** por closure obsoleta de Leaflet (estado `listo`). (f) Fila del BOE con ficha rota
+  monopolizaba la cola → cede el sitio. (g) `parsearCoordenadas` exige punto DENTRO de España (ejes cruzados).
+  (h) Las filas no-BOE ya suben de `municipio` a `catastro`. Desmentido: el Catastro **sí** acepta «EL PUERTO
+  DE SANTA MARIA» (la forma invertida da error) — no hay que canonizar municipios. 361 tests + 26 guardián.
+
+- **🏛️ Subastas: 3 fallos de la búsqueda por dirección + el Catastro corta por volumen (31/07/2026).**
+  1ª pasada del cron con el código nuevo: **Nominatim SÍ funciona desde Vercel** (25→27 aproximadas solo),
+  pero las 2 nuevas del BOE con dirección limpia no sacaron referencia. Causas halladas (todas verificadas
+  contra el servicio): (a) **la Ñ** — `norm()` la convertía en N y `CANAL` no encuentra «CARLOS CAÑAL»
+  (nuevo `normVia` la conserva); (b) **el Catastro ABREVIA los nombres** («Ronda de Ntra. Sra. de la Oliva»
+  → «NUESTRA SEÑORA D LA OLIVA», DE→D) y el callejero **busca por SUBCADENA** → ahora se pregunta por UNA
+  palabra distintiva (`terminoBusquedaVia`) y se elige por TOKENS (`elegirVia`), no por prefijo; (c) el
+  **interior** (`ESC.1 PL.4 PT.B`) ahora se extrae y se manda a DNPLOC: acota al piso exacto, desbloquea los
+  portales con varias parcelas y da la referencia de 20 (con m²/año del bien). Bug de paso: en «ESC.1» el
+  patrón `ES` casaba antes que `ESC` y la escalera salía «C». **Acierto medido 5/16** (antes 4); el resto
+  falla por datos de ORIGEN (números inexistentes en Catastro, «S/N», parcelas de polígono). 🚨 **El Catastro
+  CORTA la conexión por volumen** (visto encadenando consultas) y ahora se le piden hasta 5 por subasta →
+  cerrojo de 350 ms + reintento solo ante fallo de red en `bajarCatastroHttp`. 354 tests del módulo.
+
+- **🛡️ Pricing: tres centinelas para que el motor se queje solo (31/07/2026, rama `claude/pricing-check-31-07`).**
+  Los tres fallos del día (Feria 2027 mal fechada, comps de otro aforo, septiembre sin eventos) eran el mismo:
+  un dato metido a ojo que nadie volvió a mirar y que el motor no podía desmentir. Nuevo
+  `lib/sivra/pricing-centinelas.ts` (puro, 14 tests) cableado en el guardián (cron 07:30) como chequeos #6/#7/#8:
+  **€/plaza** (solo pisos ≥6 plazas — en uno pequeño las plazas son sofás-cama y la métrica engaña),
+  **evento declarado que el mercado no respalda** (cazaría la Feria) y **mercado disparado sin evento catalogado**
+  (destaparía la Bienal). El p50 de fecha y el del mes se calculan sobre los MISMOS escenarios, si no un barrido
+  desigual alertaría cada semana. Simulado contra el mercado real: **3 avisos, no una avalancha**. Los tres
+  devuelven `evaluado:false` sin muestra — nunca un «todo bien» que significa «no lo he mirado».
+
+- **🏠 Pricing: el estudio de competencia comparaba una CASA DE 12 PLAZAS con apartamentos de 4 — arreglado
+  (31/07/2026, rama `claude/pricing-check-31-07`).** Lo cazó Alberto: «Socorro tiene 12 plazas, a 165€ saldrían
+  13,75€ por persona». Fallo doble: el cron `mercado/sweep` buscaba con «4 personas» y guardaba los MISMOS comps
+  para los 4 pisos (`guests=4` fijo), y `apply/route.ts` calculaba los percentiles **sin mirar `guests`**. Ahora
+  el sweep busca por el aforo REAL de cada piso y cada comp se normaliza con `pricing_factor_aforo()` (función
+  SQL aplicada + gemela pura `lib/sivra/pricing-aforo.ts`, 10 tests). **Exponente k=1,1 MEDIDO** con el p50 de la
+  MISMA fecha a distinto aforo (14 fechas). Efecto en el ancla: Busto y Dúplex **sin cambio** (validación de que
+  no distorsiona), House 258€→403€, **Luxury 123€→157€ (EN VIVO, vigilar ocupación)**. Suelo de House 180€→300€
+  (25€/plaza) con OK de Alberto. Además `seasonalFloorFactor` ya mira las dos fuentes de eventos: los 3 días de
+  Karol G tenían suelo de junio normal. Hueco pendiente: **septiembre 2026 sin ningún evento** (Bienal de Flamenco).
+
+- **🎪 Pricing: FERIA DE ABRIL 2027 estaba mal fechada en el calendario — corregido (31/07/2026, rama
+  `claude/pricing-check-31-07`).** Alberto pidió revisar que los eventos de Sevilla se tuvieran en cuenta y que
+  los costes cubrieran el suelo. Hallazgo: `pricing-calendar.ts` tenía la Feria «estimada 18-25 abr» (patrón de
+  2026 calcado) cuando la oficial es **13-18 abr (alumbrado 12)** → 19-25 abr, semana normal, se tarificaba de
+  Feria (×2,5 de precio y ×2 de suelo, que impide bajar) y los días reales de Feria se quedaban sin suelo de
+  evento. Verificado contra mercado (15-abr p50 417€ · 17-abr 304€ · 20-abr 162€). Corregido en las dos copias.
+  Semana Santa 2027 (21-28 mar) sí estaba bien. **Costes recalculados con datos vivos: ningún suelo vende bajo
+  coste** (busto 19,40€/noche vs suelo 65€ · luxury 29,70€ vs 72€ · duplex 10,60€ vs 85€ · house ≥30€ vs 180€).
+  Pendiente: House **no tiene ni un gasto fijo registrado** y Dúplex/House siguen sin calibrar el suelo contra
+  competencia. Ojo estructural: `seasonalFloorFactor` solo lee el calendario, no `pricing_eventos_auto`.
+
+- **📉 Pricing 31/07: sistema SANO, pero agosto arranca a CERO (31/07/2026, rama `claude/pricing-check-31-07`).**
+  Verificación de la víspera del cutover: sync de Smoobu vivo (05:01, HTTP 200), motor aplicando a diario
+  (Busto agosto 74→65, `market-anchored`), y precios REALES en mercado (Busto 81€ vs p50 80€; Luxury 84€ vs
+  109€, por debajo). `incomes` parado desde 25/07 **no es avería** — sequía real confirmada por dos fuentes
+  (hueco histórico máx: 12 días). ⚠️ Lo serio es comercial: **agosto empieza con 0/31 noches vendidas en
+  Busto, Luxury y Dúplex** (House 11/31, aún en PriceLabs). Sin explicar: Luxury tenía 1-12 ago ocupadas el
+  23/07 y libres el 30/07 sin reserva en `incomes` (¿bloqueo manual retirado?) → confirmar con Alberto.
+  Documentada en el skill la trampa `rate_snapshots.price_ours` (fórmula legacy congelada, 2ª falsa alarma).
+- **🚨 Fundamentales del radar de trading iban 2 años atrasados y MEZCLADOS (31/07/2026).** Salió
+  mirando ORCL: su ficha daba FCF yield **+3,49%** cuando el flujo libre real de FY2026 es
+  **−23.700 M$ (−6,99%)**. Causa: en companyfacts de la SEC `fy`/`fp` identifican el INFORME, no el
+  periodo del dato — un 10-K trae 2-3 comparativos con el MISMO `fy` y `filed`, y `serieAnual`
+  (`lib/trading/edgar.ts`) los colapsaba en una clave quedándose con el más viejo. Resultado 2 años
+  atrás, balance 1, y ratios cruzando ambos (ROA = beneficio FY2024 ÷ activos FY2025). Ahora se indexa
+  por el CIERRE (`end`). Además: capex ausente ya NO se toma como 0 (convertía FCF en CFO). Verificado
+  contra la SEC vía `pg_net`. Segunda tanda (misma rama): alias de deuda/capex sacados de companyfacts
+  REALES (AVGO usa `LongTermDebtAndCapitalLeaseObligations`, JPM `…IncludingCurrentMaturities`, LLY
+  `PaymentsToAcquireOtherPropertyPlantAndEquipment`), margen bruto DERIVADO de ventas − coste cuando no
+  hay `GrossProfit` (GOOGL/AMZN/META/WMT/LLY), y **divisa**: `serieAnual` recorría todas las unidades →
+  TLK daba FCF yield 2.679% (rupias) y AMX un EY 9,14% que parecía normal. Ahora una sola divisa, la del
+  ejercicio más reciente (USD solo desempata: TM tenía una traducción de conveniencia de 2013 que
+  anclaba la empresa a hace 13 años), y si no es USD se anulan EY/FCF yield. Parser verificado contra
+  companyfacts reales de GOOGL/AMZN/AVGO/TM. **PR #1189 MERGEADO.** Lecciones en el landmine del
+  SKILL.md de `trading-analista` (+ contrato del parser en `references/seleccion-y-senales.md`) y en
+  la regla global del CLAUDE.md raíz («el dato que SÍ está pero se lee mal»). Los valores viejos de
+  `trading_universo` se curan solos: el cron refresca 50 símbolos cada 6 h (~5 días de ciclo).
+
+- **⚖️ Subastas: 3 defectos del lector registral + «nota simple viva» (31/07/2026).**
+  - **Fechas EN LETRA** (`caducidad.ts`): «diecisiete de agosto de dos mil nueve» ya se parsea (también
+    mixtas y el año suelto en letra). Sin esto el art. 86 LH no se evaluaba justo sobre las anotaciones
+    más viejas, que son las únicas que pueden estar caducadas. Sin día → último del mes (menos antigüedad).
+  - **La fórmula de cierre no es una carga** (`cargas.ts::esFormulaDeCierre`): «SIN MÁS CARGAS, salvo
+    AFECCIONES FISCALES» entraba como carga de rango desconocido y se contaba como subsistente; ahora sale
+    de la lista, pasa a `notas` y marca `sinMasCargas`. Si trae importe o fecha, sigue siendo carga.
+  - **El mismo asiento contado dos veces** (`fusionarCargas` + `identidadCarga`): el dedupe iba por
+    tipo+rango+IMPORTE, que es lo que cambia entre documentos (certificación = responsabilidad total,
+    informe = principal) → el embargo letra C sumaba 3.600+2.600. Ahora la identidad es la **letra de la
+    anotación** (o fecha+acreedor) y se queda con el importe MAYOR y el rango más caro, avisando.
+  - **Idea 3 — nota simple viva:** tabla `subastas_notas_simples` (aplicada) + `lib/subastas/nota-simple.ts`
+    + `POST/GET /api/subastas/nota-simple` + bloque en la ficha. Se sube la nota (PDF/escaneo/texto), la lee
+    el mismo lector y `compararCuadros` dice qué cambió. **NO pisa las columnas `cargas_*`** de `subastas`
+    (corpus global); la nota es de la cuenta. Sin cargas leídas no se guarda ni se concluye nada.
+  - 362 tests módulo · 664 app · tsc 0 · build OK. Pendiente de Alberto: alertas Idealista/Fotocasa de
+    Jerez y Cádiz ciudad (hasta entonces esas 3 subastas siguen ⚠️ orientativas).
+
+- **💰 Subastas: el «valor de mercado» dejaba de fabricar chollos falsos (30/07/2026, PR #1183).**
+  - Alberto: «334.645€ no es real para esa zona». Cierto: un piso de 1965 en Avda. Pedro Romero (Sevilla)
+    salía con 86,7% de margen de flip. Tres causas a la vez, todas fuera de la subasta.
+  - Módulo nuevo `valoracion.ts`: (a) `superficieValorable` toma la MENOR de registral/catastral (127 vs
+    117,10); (b) `ajusteEstado` descuenta 20%/10% al €/m² de los anuncios según la edad; (c)
+    `granularidadZona` marca ORIENTATIVA la mediana de un municipio grande y desigual (Sevilla, Jerez…),
+    y una referencia así ya no sostiene `flip_apto` ni un aviso por Telegram (`aviso.ts`, `clasificar.ts`).
+  - El flip compara contra `valorMercadoReformado` (sin el ajuste de estado) para no pagar la reforma dos veces.
+  - Columna `subastas.valor_orientativo` (migración aplicada) + chip ⚠️ en la ficha.
+  - **VERIFICADO en producción** (31/07, `?accion=clasificar` sobre las 36 vigentes): Pedro Romero pasa de
+    **334.645€ → 246.888€** (2.635 €/m² × 117,10 m² × 0,8) y su margen de flip de **0,867 → 0,706**, pero lo
+    que de verdad importa es que `flip_apto` cayó a **false** por orientativo. Marcadas ⚠️ orientativas **3 de
+    36** (Sevilla, Dos Hermanas y El Puerto de Santa María — las tres con mediana municipal del buscador); las
+    otras 33 se valoran con zona fina. **flips viables ≥25%: 0** (antes los había): ninguna subasta viva se
+    recomienda hoy con un número que no describa al inmueble.
+  - **Corpus:** 345 comparables y solo 2 de Sevilla, 0 de Jerez, 0 de Cádiz — casi todo costa de Huelva.
+    Alberto da de alta alertas de Idealista/Fotocasa de Jerez y Cádiz ciudad. Las SUBASTAS de Jerez ya
+    llegaban solas (Cádiz está en sus provincias); el alta es solo para los comparables de precio.
+
+- **🔍 Subastas: el documento registral se lee ENTERO y «se adquiere libre» hay que ganárselo (30/07/2026, PR #1182).**
+  - Página a página el modelo no veía el orden de los asientos → ponía la hipoteca como `la_que_ejecuta`, la purgaba
+    y declaraba libre una finca con 44.850€. Ahora todas las páginas van en UNA llamada multimodal (OpenRouter,
+    `OPENROUTER_VISION_MODEL`), con respaldo automático a la lectura página a página. `LECTOR_VERSION` 3→4.
+  - Salvaguarda: cero cargas solo es «libre» si la certificación dice «sin más cargas» Y la confianza ≥ 0,5.
+  - **Probado en producción** (Belmonte, `SUB-JA-2026-264269`): rangos CORRECTOS, confianza 0,97 (antes 0,35).
+  - Pendiente: el embargo letra C) se cuenta DOS veces (3.600 + 2.600 desde dos documentos → 51.050€ en vez de
+    48.450€); la fórmula «SIN MÁS CARGAS salvo afecciones fiscales» entra como carga; las fechas vienen en LETRA
+    y `parsearFechaRegistral` no las lee, así que la caducidad del art. 86 no llega a evaluarse.
+
+- **💓 Los dos vigilantes que faltaban, con aviso por Telegram (30/07/2026, rama `claude/documentos-adjuntos-o95xl1`
+  reiniciada tras mergear #1180).** Alberto: «hazlo que me avise por telegram». Eran los dos ⬜ más graves del
+  barrido, ambos de infraestructura muda. **(1) Sync del PMS de ialimp:** `pms_connections` tiene DOS columnas de
+  fecha y el panel leía la muerta — `/api/pms/sync` escribe `last_sync_at` y el dashboard leía `ultimo_sync`, NULL
+  en producción desde siempre; el chip verde salía de `activa` + «no consta error», que incluye «lleva semanas sin
+  correr». Nuevo helper puro `apps/ialimp/lib/pms-estado.ts` (8 tests) + chip con el estado real. **(2) Escaneo de
+  facturas de Gmail:** `catch { return 0 }` hacía «no se pudo leer el buzón» ≡ «no hay facturas»; ahora devuelve
+  `{nuevas, ok, error}`. **Vigía:** tabla nueva `agente_latidos` (aplicada) para los agentes que solo escriben
+  cuando hay trabajo — la frescura se mide sobre la última pasada BUENA — y dos entradas nuevas en
+  `lib/monitoring/latidos.ts` (`ialimp_pms` 6 h, `facturas_gmail` 30 h) que avisan por Telegram desde el cron
+  `agentes-latido`. Extra: una sonda que revienta ya no se traga en silencio, va en un bloque «Sin poder
+  comprobar — esto NO es todo bien». Comprobado contra la BD real: el sync de Smoobu late cada 10 min.
+
+- **🔐 Spec + plan aprobados: login con huella (WebAuthn/passkey) en plataforma (29/07/2026,
+  sin implementar).** Diseño: `@simplewebauthn`, tabla `webauthn_credentials` scoped por
+  `cuenta_id`, atajo de contraseña de respaldo, reutiliza la cookie `plataforma_session`.
+  Docs en `docs/superpowers/plans/2026-07-17-huella-webauthn-plataforma{,-design}.md` (10
+  tareas TDD). **Pendiente:** implementación — nadie la ha empezado todavía.
+
 - **🔎 Portales privados de subastas: sondeo técnico, SIN implementar (30/07/2026).** Alberto pregunta si
   conectar Escrapalia / Eactivos / Gobid. Verificado con `pg_net` desde Supabase (los tres dan 403 al
   contenedor de Claude, 200 desde cloud — misma trampa que Nominatim; ninguno tiene muro Incapsula tipo
@@ -32,10 +185,12 @@
   `-unidad-productiva`…) y **154 atributos `toolparam*`** (web anotada a propósito para agentes); pendiente
   localizar su endpoint AJAX (el listado no viene en el HTML). **Escrapalia = SPA** (portada 3,5 KB sin
   lotes, sitemap estático de 2020) y **Gobid.es sirve el catálogo ITALIANO** (1 lote español de ~14) → los
-  dos descartados como fuente del radar. Idea aparte: su catálogo (maquinaria, furgón isotermo, cámara
-  frigorífica, mobiliario de bar) mapea con transporte/almacén/alquiler/ia-rest, no con pisos. Siguiente
-  paso propuesto y NO ejecutado: suscribirse a la alerta por email de eactivos (patrón `gmail-boe.ts`)
-  antes de escribir adaptador. Decisión de Alberto pendiente.
+  dos descartados como fuente del radar. Idea aparte: su catálogo (maquinaria, furgón isotermo, mobiliario)
+  mapea con **`apps/transporte` y `apps/alquiler` ÚNICAMENTE** — corregido por Alberto: ia-rest es un SaaS
+  que VENDE a restaurantes y almacén es del cliente Joaquín Jaén, así que comprar equipamiento ahí sería
+  para terceros, no activo propio. Con solo dos negocios no compensa ingesta automática (alerta por email y
+  ya). Siguiente paso propuesto y NO ejecutado: suscribirse a la alerta por email de eactivos (patrón
+  `gmail-boe.ts`) antes de escribir adaptador. Decisión de Alberto pendiente.
 
 - **🕳️ Barrido del monorepo: afirmar ausencias no comprobadas (30/07/2026, misma rama).** Alberto:
   «haz esto con todo lo que tenemos». Barrido de las 8 apps + packages buscando el patrón del bullet
