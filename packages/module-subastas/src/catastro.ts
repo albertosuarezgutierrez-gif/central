@@ -320,15 +320,6 @@ export function parsearVias(xml: string): Array<{ tipo: string; nombre: string }
 }
 
 /**
- * Nombre con el que preguntar al callejero: sin los artículos delanteros, porque
- * el Catastro los coloca detrás («DE MADRID» → busca «MADRID» → devuelve
- * «MADRID DE»).
- */
-export function nombreViaBuscable(calle: string): string {
-  return calle.replace(/^(?:DE\s+LOS|DE\s+LAS|DE\s+LA|DEL|DE|LOS|LAS|LA|EL)\s+/i, '').trim()
-}
-
-/**
  * Elige el nombre OFICIAL entre los candidatos del callejero comparando TOKENS,
  * no cadenas: es la única forma de casar «PACO GANDÍA» con «PACO GANDIA» y
  * «Nuestra Señora de la Oliva» con «NUESTRA SEÑORA D LA OLIVA» a la vez.
@@ -416,16 +407,22 @@ export function paramsDnploc(direccion?: string | null): ParamsDnploc | null {
   // Interior: «ESC.1 PLANTA 4, PUERTA B», «Es:1 Pl:07 Pt:B», «2º IZQUIERDA»…
   const cola = resto.slice(finNombre)
   const uno = (re: RegExp): string | null => cola.match(re)?.[1]?.trim() || null
-  const puerta = uno(/\b(?:PUERTA|PTA|PT)[:.\s]*([A-ZÑ0-9]{1,4})\b/)
+  // ⚠️ Las abreviaturas de DOS letras (ES/PL/PT) exigen separador explícito
+  // («Es:1», «Pl.07»). Sin él, `ES` casa con el verbo «es» —el texto va en
+  // mayúsculas— y «…QUE ES DE LA FINCA…» daba `escalera='DE'`: no ubica mal
+  // (el Catastro devuelve vacío) pero quema una consulta de más por fila, que
+  // es justo lo que aprieta el presupuesto de la pasada.
+  const puerta = uno(/\b(?:PUERTA|PTA)[:.\s]*([A-ZÑ0-9]{1,4})\b/)
+    ?? uno(/\bPT[:.]\s*([A-ZÑ0-9]{1,4})\b/)
     ?? (/\bIZQ(?:UIERDA|DA)?\b/.test(cola) ? 'IZ' : /\bD(?:E)?R(?:ECHA|CHA)?\b/.test(cola) ? 'DR' : null)
 
   return {
     sigla,
     calle: calle.toUpperCase(),
     numero: mNum[1],
-    bloque: uno(/\b(?:BLOQUE|BLQ|BQ)[:.\s]*([A-ZÑ0-9]{1,4})\b/),
-    escalera: uno(/\b(?:ESCALERA|ESC|ES)[:.\s]*([A-ZÑ0-9]{1,4})\b/),
-    planta: uno(/\b(?:PLANTA|PL)[:.\s]*([A-ZÑ0-9]{1,3})\b/) ?? uno(/\b(\d{1,2})[º°]\s/),
+    bloque: uno(/\b(?:BLOQUE|BLQ)[:.\s]*([A-ZÑ0-9]{1,4})\b/) ?? uno(/\bBQ[:.]\s*([A-ZÑ0-9]{1,4})\b/),
+    escalera: uno(/\b(?:ESCALERA|ESC)[:.\s]*([A-ZÑ0-9]{1,4})\b/) ?? uno(/\bES[:.]\s*([A-ZÑ0-9]{1,4})\b/),
+    planta: uno(/\bPLANTA[:.\s]*([A-ZÑ0-9]{1,3})\b/) ?? uno(/\bPL[:.]\s*([A-ZÑ0-9]{1,3})\b/) ?? uno(/\b(\d{1,2})[º°]\s/),
     puerta,
   }
 }
@@ -445,6 +442,13 @@ export function parsearCoordenadas(xml: string): CoordenadasCatastro | null {
   // Un (0,0) o un valor fuera de rango es dato corrupto, no una finca en el golfo de Guinea.
   if (lat === 0 && lon === 0) return null
   if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return null
+  // 🚨 Y tiene que caer en ESPAÑA. El Catastro solo cataloga fincas españolas,
+  // así que un punto fuera de la caja (incluidas Canarias, Ceuta y Melilla) es
+  // basura — y el modo típico de equivocarse aquí es CRUZAR los ejes (`xcen` es
+  // la LONGITUD), que da coordenadas perfectamente válidas… en Rusia. Sin este
+  // filtro ese punto se guardaría con `geo_precision='catastro'` y se enseñaría
+  // como «ubicación exacta».
+  if (lat < 27 || lat > 44 || lon < -19 || lon > 5) return null
   return { lat, lon }
 }
 

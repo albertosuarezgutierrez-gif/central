@@ -248,3 +248,25 @@ test('sin datos de interior, los campos van a null (no a cadena vacía)', () => 
   assert.equal(p?.planta, null)
   assert.equal(p?.puerta, null)
 })
+
+test('paramsDnploc: el verbo «es» no se toma por escalera (31/07/2026)', () => {
+  // Las abreviaturas de dos letras exigen separador: sin él, `ES` casaba con el
+  // verbo «es» del texto registral en mayúsculas y salía `escalera='DE'` →
+  // consulta al Catastro con un interior inventado (que devuelve vacío) y una
+  // llamada tirada por fila, justo lo que aprieta el presupuesto de la pasada.
+  const p = paramsDnploc('CALLE ALPECHÍN, 41, QUE ES DE LA FINCA MATRIZ')
+  assert.equal(p?.calle, 'ALPECHIN')
+  assert.equal(p?.numero, '41')
+  assert.equal(p?.escalera, null)
+})
+
+test('paramsDnploc: las abreviaturas CON separador siguen valiendo', () => {
+  const p = paramsDnploc('CL. CHAROLISTAS, 4, ESC.1 PLANTA 4, PUERTA B')
+  assert.equal(p?.escalera, '1')
+  assert.equal(p?.planta, '4')
+  assert.equal(p?.puerta, 'B')
+  const q = paramsDnploc('AV PEDRO ROMERO 2 Es:1 Pl:07 Pt:B')
+  assert.equal(q?.escalera, '1')
+  assert.equal(q?.planta, '07')
+  assert.equal(q?.puerta, 'B')
+})

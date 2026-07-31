@@ -44,6 +44,7 @@ interface Punto {
   provincia: string | null
   municipio: string | null
   direccion: string | null
+  direccionCatastro: string | null
   valorSubasta: number | null
   fechaFin: string | null
   url: string | null
@@ -59,19 +60,27 @@ const TIPO_EMOJI: Record<string, string> = {
   vivienda: '🏠', garaje: '🅿️', local: '🏬', nave: '🏭', parcela: '🧱',
   finca_rustica: '🌾', trastero: '📦', edificio: '🏢',
 }
+// `Object.hasOwn`: un `tipo_bien` que se llamara «constructor» o «toString»
+// devolvería la función heredada del prototipo (que no es nullish, así que el
+// `??` no salta) y acabaría interpolada en el HTML del popup.
+const emojiTipo = (t: string | null) => (t && Object.hasOwn(TIPO_EMOJI, t) ? TIPO_EMOJI[t] : '📌')
 
-const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+/** Solo http(s) sale como enlace: un `javascript:` colado por la ingesta se ejecutaría al pulsar. */
+const enlace = (url: string | null, texto: string) =>
+  url && /^https?:\/\//i.test(url) ? `<a href="${esc(url)}" target="_blank" rel="noreferrer">${texto}</a>` : null
 
 function popupHtml(p: Punto): string {
-  // La dirección del Catastro, ya legible, es la que se enseña y la que alimenta
-  // el enlace al mapa (un `query=lat,lon` deja un pin sin nombre).
-  const dirCat = direccionCatastro(p.direccion)
+  // 🏛️ SOLO para la dirección del Catastro (el `ldt` oficial). La del anuncio
+  // puede ser un párrafo del edicto y no merece ni el emoji ni mandar sobre las
+  // coordenadas exactas — de eso se encarga `urlGoogleMaps`.
+  const dirCat = direccionCatastro(p.direccionCatastro)
   const gm = urlGoogleMaps({ ...p, direccion: dirCat?.postal ?? p.direccion })
   const pano = p.aproximado ? null : urlStreetView(p.lat, p.lon)
   const cat = urlFichaCatastro(p.refCatastral)
 
   const partes = [
-    `${TIPO_EMOJI[p.tipoBien ?? ''] ?? '📌'} <b>${esc(p.identificador ?? p.dedupeKey)}</b>`,
+    `${emojiTipo(p.tipoBien)} <b>${esc(p.identificador ?? p.dedupeKey)}</b>`,
     dirCat ? `🏛️ ${esc(dirCat.postal)}` : p.direccion ? esc(p.direccion) : null,
     dirCat?.planta || dirCat?.puerta
       ? esc([dirCat.planta && `planta ${dirCat.planta}`, dirCat.puerta && `puerta ${dirCat.puerta}`].filter(Boolean).join(', '))
@@ -83,10 +92,10 @@ function popupHtml(p: Punto): string {
     p.ocupada ? '⚠️ ocupada / posesión dudosa' : null,
     p.enRadar ? '🎯 en tu radar' : null,
     [
-      p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noreferrer">Ficha oficial</a>` : null,
-      gm ? `<a href="${esc(gm)}" target="_blank" rel="noreferrer">Mapa</a>` : null,
-      pano ? `<a href="${esc(pano)}" target="_blank" rel="noreferrer">Ver la calle</a>` : null,
-      cat ? `<a href="${esc(cat)}" target="_blank" rel="noreferrer">Catastro</a>` : null,
+      enlace(p.url, 'Ficha oficial'),
+      enlace(gm, 'Mapa'),
+      enlace(pano, 'Ver la calle'),
+      enlace(cat, 'Catastro'),
     ].filter(Boolean).join(' · '),
   ]
   return partes.filter(Boolean).join('<br>')
@@ -95,8 +104,16 @@ function popupHtml(p: Punto): string {
 export default function MapaSubastas() {
   const [puntos, setPuntos] = useState<Punto[] | null>(null)
   const [sinUbicar, setSinUbicar] = useState(0)
+  const [omitidos, setOmitidos] = useState(0)
   const [error, setError] = useState(false)
   const [soloRadar, setSoloRadar] = useState(false)
+  // 🚨 El «ya hay mapa» tiene que ser ESTADO, no una ref: antes el `.then` de
+  // Leaflet llamaba a `dibujar` con la closure del PRIMER render (`puntos ===
+  // null`) y, si el script tardaba más que la fetch, no se pintaba ni un
+  // marcador — mapa vacío sin error, que se «arreglaba» solo al tocar el
+  // checkbox 🎯. Con estado, el efecto de dibujo vuelve a correr cuando el mapa
+  // está listo, con los puntos de verdad.
+  const [listo, setListo] = useState(false)
   const divRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<any>(null)
   const layerRef = useRef<any>(null)
@@ -110,6 +127,7 @@ export default function MapaSubastas() {
         if (cancel) return
         setPuntos(j.puntos ?? [])
         setSinUbicar(j.sinUbicar ?? 0)
+        setOmitidos(j.omitidos ?? 0)
       })
       .catch(() => { if (!cancel) setError(true) })
     return () => { cancel = true }
@@ -129,11 +147,10 @@ export default function MapaSubastas() {
           }).addTo(mapRef.current)
           layerRef.current = L.layerGroup().addTo(mapRef.current)
         }
-        dibujar(L)
+        setListo(true)
       })
       .catch(() => setError(true))
     return () => { cancel = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function dibujar(L: any) {
@@ -162,7 +179,9 @@ export default function MapaSubastas() {
         fillOpacity: p.aproximado ? 0.15 : 0.85,
         dashArray: p.aproximado ? '3 3' : undefined,
       })
-        .bindPopup(popupHtml(p))
+        // Perezoso: el HTML de cada popup (5 regex de `direccionCatastro` por
+        // punto) solo se construye al abrirlo, no en cada repintado.
+        .bindPopup(() => popupHtml(p))
         .addTo(layer)
     })
     if (pts.length && !fittedRef.current) {
@@ -174,9 +193,9 @@ export default function MapaSubastas() {
   }
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.L && mapRef.current) dibujar(window.L)
+    if (listo && typeof window !== 'undefined' && window.L && mapRef.current) dibujar(window.L)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [puntos, soloRadar])
+  }, [puntos, soloRadar, listo])
 
   const enRadar = (puntos ?? []).filter((p) => p.enRadar).length
 
@@ -207,7 +226,8 @@ export default function MapaSubastas() {
               ` y ${puntos.filter((p) => p.aproximado).length} aproximados al centro de su municipio (sin referencia catastral publicada).` +
               (sinUbicar > 0
                 ? ` Otros ${sinUbicar} vigentes siguen sin ubicar, pendientes de la próxima pasada de enriquecimiento.`
-                : '')}
+                : '') +
+              (omitidos > 0 ? ` ⚠️ Hay ${omitidos} más ya ubicados que no caben en el mapa (se pintan los que cierran antes).` : '')}
       </p>
     </div>
   )

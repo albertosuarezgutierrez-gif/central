@@ -14,6 +14,7 @@ import { prisma } from '@/lib/db'
 import {
   elegirVia,
   errorCatastro,
+  fichaLegible,
   parcelaUnica,
   parsearVias,
   terminoBusquedaVia,
@@ -60,25 +61,49 @@ async function bajar(url: string, ms = 20000): Promise<string> {
  * repetiría igual—, dándole al servicio tiempo de recuperarse.
  */
 const ESPERA_CATASTRO_MS = 350
+const ESPERA_REINTENTO_CATASTRO_MS = 1500
 let ultimaCatastro = 0
-async function bajarCatastroHttp(url: string): Promise<string> {
+/**
+ * Reserva el siguiente turno del cerrojo y espera a que llegue. `pausaExtra`
+ * añade un descanso contado DESDE AHORA (para el reintento: el servicio acaba
+ * de cortar y hay que darle aire, no basta con el espaciado normal).
+ */
+async function turnoCatastro(pausaExtra = 0): Promise<void> {
   const ahora = Date.now()
-  const espera = Math.max(0, ultimaCatastro + ESPERA_CATASTRO_MS - ahora)
-  ultimaCatastro = ahora + espera
+  const salida = Math.max(ahora + pausaExtra, ultimaCatastro + ESPERA_CATASTRO_MS)
+  ultimaCatastro = salida
+  const espera = salida - ahora
   if (espera > 0) await new Promise((r) => setTimeout(r, espera))
+}
+async function bajarCatastroHttp(url: string): Promise<string> {
+  await turnoCatastro()
   try {
     return await bajar(url)
   } catch (e) {
     const msg = String((e as Error)?.message ?? e)
     // Un HTTP 4xx/5xx es respuesta del servicio: reintentarlo no cambia nada.
     if (/^HTTP \d/.test(msg)) throw e
-    await new Promise((r) => setTimeout(r, 1500))
-    ultimaCatastro = Date.now()
+    // El reintento pasa por el MISMO cerrojo (con una espera más larga, que el
+    // servicio acaba de cortar la conexión): saltárselo dejaría salir la
+    // llamada a la vez que la siguiente que ya tuviera turno reservado —
+    // justo la ráfaga que el cerrojo existe para evitar.
+    await turnoCatastro(ESPERA_REINTENTO_CATASTRO_MS)
     return bajar(url)
   }
 }
 
-/** Descarga y parsea las tres pestañas de la ficha de una subasta. */
+/**
+ * Descarga y parsea las tres pestañas de la ficha de una subasta.
+ *
+ * 🚨 Un HTTP 200 que NO sea la ficha (mantenimiento del Portal, muro de un WAF,
+ * página de error) es lo más peligroso que puede pasar aquí: `parsearFichaBoe`
+ * nunca lanza —devuelve todos los campos a `null`— y quien llama no distingue
+ * «la subasta no publica tipo» de «no he podido leer la ficha». El cron
+ * escribiría esos nulls encima de las cifras buenas del corpus y marcaría
+ * `enriquecida_at`, así que el estropicio duraría 24 h sin que nada lo notase.
+ * Por eso se valida ANTES de parsear y se lanza: la fila queda intacta y vuelve
+ * a la cola en la pasada siguiente. Misma guarda que `documentos.ts`.
+ */
 export async function bajarFicha(identificador: string): Promise<FichaBoe> {
   const base = `${FICHA}?idSub=${encodeURIComponent(identificador)}`
   // Las pestañas secundarias son un extra: si fallan, la general ya trae las
@@ -88,6 +113,9 @@ export async function bajarFicha(identificador: string): Promise<FichaBoe> {
     bajar(`${base}&ver=3`).catch(() => ''),
     bajar(`${base}&ver=2`).catch(() => ''),
   ])
+  if (!fichaLegible(general, identificador)) {
+    throw new Error('la respuesta del Portal no es la ficha de esta subasta')
+  }
   return parsearFichaBoe(general, bien, autoridad)
 }
 
@@ -139,12 +167,16 @@ export async function resolverNombreVia(
   municipio: string,
   sigla: string,
   calle: string,
-): Promise<string | null> {
+): Promise<{ nombre: string | null; ambigua: boolean }> {
   const termino = terminoBusquedaVia(calle)
-  if (!termino) return null
+  if (!termino) return { nombre: null, ambigua: false }
   const q = new URLSearchParams({ Provincia: provincia, Municipio: municipio, TipoVia: sigla, NombreVia: termino })
   const vias = parsearVias(await bajarCatastroHttp(`${CATASTRO_VIA}?${q.toString()}`))
-  return elegirVia(vias, calle)
+  const nombre = elegirVia(vias, calle)
+  // Se distingue «el callejero no conoce ese término» de «hay varias vías y
+  // ninguna gana»: lo segundo es el `null` DELIBERADO de `elegirVia` y quien
+  // llama no puede tirar para adelante con el nombre crudo (ver abajo).
+  return { nombre, ambigua: !nombre && vias.length > 0 }
 }
 
 /**
@@ -163,8 +195,20 @@ export async function buscarRefPorDireccion(
 ): Promise<{ refParcela: string; refCompleta: string | null } | null> {
   // Paso previo obligado: el nombre oficial del callejero. `Consulta_DNPLOC` no
   // perdona («DE MADRID» no existe; está archivada como «MADRID DE»).
-  const oficial = await resolverNombreVia(p.provincia, p.municipio, p.sigla, p.calle).catch(() => null)
-  const calle = oficial ?? p.calle
+  //
+  // 🚨 Si el callejero devuelve VARIAS vías y ninguna gana, `elegirVia` responde
+  // `null` a propósito —«ubicar en la calle equivocada es peor que no ubicar»— y
+  // aquí se ABANDONA. Seguir con el nombre crudo tiraría por tierra esa
+  // decisión, y lo que sale de aquí no es un pin y ya está: se persiste en
+  // `ref_catastral` (con `COALESCE`, o sea para siempre) y de ella salen los m²
+  // con los que se valora la subasta.
+  const via = await resolverNombreVia(p.provincia, p.municipio, p.sigla, p.calle)
+    .catch(() => ({ nombre: null, ambigua: false }))
+  if (via.ambigua) return null
+  // Sin candidatas (o con el callejero caído) se prueba el nombre del anuncio:
+  // `Consulta_DNPLOC` exige coincidencia exacta, así que un nombre que no sea el
+  // oficial no devuelve otra finca — devuelve vacío.
+  const calle = via.nombre ?? p.calle
 
   const consultar = async (interior: boolean) => {
     const q = new URLSearchParams({
@@ -280,6 +324,10 @@ export async function capturarResultados(max = 20): Promise<{ revisadas: number;
   for (const f of filas) {
     try {
       const html = await bajar(`${FICHA}?idSub=${encodeURIComponent(f.identificador)}`)
+      // Misma cautela que en `bajarFicha`: sin esto, una página de error del
+      // Portal daría `pares` vacío y se registraría como «sin estado
+      // reconocible», ensuciando el log que sirve para ajustar el parser.
+      if (!fichaLegible(html, f.identificador)) throw new Error('la respuesta del Portal no es la ficha')
       const pares = paresFicha(html)
       const res = resultadoDeFicha(pares)
       if (!res) {

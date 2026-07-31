@@ -23,10 +23,10 @@ export async function GET() {
 
   try {
     const vigente = Prisma.sql`es_inmueble = true AND (fecha_fin IS NULL OR fecha_fin >= now())`
-    const [filas, sinUbicar, radar] = await Promise.all([
+    const [filas, sinUbicar, ubicadas, radar] = await Promise.all([
       prisma.$queryRaw<any[]>(Prisma.sql`
         SELECT dedupe_key, identificador, tipo_bien, provincia, municipio,
-               COALESCE(direccion_catastro, direccion) AS direccion, ref_catastral,
+               direccion, direccion_catastro, ref_catastral,
                valor_subasta, fecha_fin, url, lat, lon, geo_precision, situacion_posesoria
         FROM subastas
         WHERE ${vigente} AND lat IS NOT NULL AND lon IS NOT NULL
@@ -35,6 +35,9 @@ export async function GET() {
       `),
       prisma.$queryRaw<{ total: number }[]>(Prisma.sql`
         SELECT COUNT(*)::int AS total FROM subastas WHERE ${vigente} AND (lat IS NULL OR lon IS NULL)
+      `),
+      prisma.$queryRaw<{ total: number }[]>(Prisma.sql`
+        SELECT COUNT(*)::int AS total FROM subastas WHERE ${vigente} AND lat IS NOT NULL AND lon IS NOT NULL
       `),
       prisma.$queryRaw<{ dedupe_key: string }[]>(Prisma.sql`
         SELECT dedupe_key FROM subastas_radar
@@ -50,6 +53,7 @@ export async function GET() {
       provincia: f.provincia ?? null,
       municipio: f.municipio ?? null,
       direccion: f.direccion ?? null,
+      direccionCatastro: f.direccion_catastro ?? null,
       refCatastral: f.ref_catastral ?? null,
       valorSubasta: f.valor_subasta == null ? null : Number(f.valor_subasta),
       fechaFin: f.fecha_fin ? new Date(f.fecha_fin).toISOString() : null,
@@ -61,7 +65,11 @@ export async function GET() {
       enRadar: enRadar.has(f.dedupe_key),
     }))
 
-    return NextResponse.json({ puntos, sinUbicar: sinUbicar[0]?.total ?? 0 })
+    // `omitidos`: lo que el `LIMIT` deja fuera. Sin este dato el pie del mapa
+    // afirmaría «N con ubicación exacta» contando solo lo que le llegó, que al
+    // pasar del tope sería mentira (y silenciosa).
+    const omitidos = Math.max(0, (ubicadas[0]?.total ?? 0) - puntos.length)
+    return NextResponse.json({ puntos, sinUbicar: sinUbicar[0]?.total ?? 0, omitidos })
   } catch (e: any) {
     console.error('[api/subastas/mapa]', e)
     return NextResponse.json({ error: e?.message ?? String(e) }, { status: 500 })

@@ -24,6 +24,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏛️ Subastas: revisión de la cadena de ubicación — 8 fallos reales corregidos (31/07/2026).** Encargo
+  «que no vuelva a suceder + revisa qué más puede pasar». 🔴 (a) `bajarFicha` no validaba la respuesta y el
+  UPDATE del cron escribía las CIFRAS sin `COALESCE`: un 200 de mantenimiento del BOE **borraba** tipo/
+  depósito/tasación del corpus durante 24 h → guarda `fichaLegible` (ya existía en `documentos.ts`) + COALESCE
+  en los 9 campos. (b) **`maxDuration` 60→300**: los cerrojos de Catastro/Nominatim se comían el minuto y la
+  pasada se truncaba (nunca llegaba a documentos/lentes/archivado). (c) La **prosa registral pisaba las
+  coordenadas exactas** — nuevo `esDireccionPostal` (puro, testeado) y `direccion`/`direccion_catastro` van
+  YA SEPARADAS hasta la UI (el sello 🏛️ es solo del Catastro). (d) `elegirVia` decía «ambigua» y el caller
+  seguía igual con el nombre crudo → ahora ABANDONA (esa referencia se persiste para siempre). (e) **Mapa
+  vacío intermitente** por closure obsoleta de Leaflet (estado `listo`). (f) Fila del BOE con ficha rota
+  monopolizaba la cola → cede el sitio. (g) `parsearCoordenadas` exige punto DENTRO de España (ejes cruzados).
+  (h) Las filas no-BOE ya suben de `municipio` a `catastro`. Desmentido: el Catastro **sí** acepta «EL PUERTO
+  DE SANTA MARIA» (la forma invertida da error) — no hay que canonizar municipios. 361 tests + 26 guardián.
+
 - **🏛️ Subastas: 3 fallos de la búsqueda por dirección + el Catastro corta por volumen (31/07/2026).**
   1ª pasada del cron con el código nuevo: **Nominatim SÍ funciona desde Vercel** (25→27 aproximadas solo),
   pero las 2 nuevas del BOE con dirección limpia no sacaron referencia. Causas halladas (todas verificadas
