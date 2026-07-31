@@ -27,7 +27,11 @@ export default async function DashboardPage() {
       ORDER BY cs.hora_inicio ASC NULLS LAST, l.nombre ASC
     `),
     prisma.$queryRaw<any[]>(Prisma.sql`
-      SELECT id, cliente_nombre, pms_tipo, activa, ultimo_sync, sync_error
+      -- OJO: la columna que el sync escribe de verdad es last_sync_at.
+      -- ultimo_sync es una columna legacy que NADIE rellena (NULL en producción
+      -- desde siempre): leerla hacía que la fecha del último sync no se viera
+      -- nunca y solo quedara el chip verde. Ver lib/pms-estado.ts.
+      SELECT id, cliente_nombre, pms_tipo, activa, last_sync_at, sync_error
       FROM pms_connections
       WHERE empresa_id = ${empresa_id}::uuid
       ORDER BY cliente_nombre

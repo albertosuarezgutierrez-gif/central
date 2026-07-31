@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import NuevaLimpiezaModal from '@/components/NuevaLimpiezaModal'
 import AlertasBadge from '@/components/AlertasBadge'
 import { photoSrc } from '@/lib/photo'
+import { estadoSync, esSyncSano } from '@/lib/pms-estado'
 
 interface Props {
   empresa: any
@@ -1274,26 +1275,33 @@ export default function DashboardClient({
                     Sin conexiones PMS configuradas.
                   </p>
                 )}
-                {conexiones.map((c: any) => (
-                  <div key={c.id} className="pms-card">
-                    <div>
-                      <div style={{ fontWeight:700, fontSize:13, color:'#0f172a' }}>{c.cliente_nombre}</div>
-                      <div style={{ fontSize:11, color:'#94a3b8', textTransform:'uppercase', marginTop:2 }}>{c.pms_tipo}</div>
-                      {c.ultimo_sync && (
-                        <div style={{ fontSize:11, color:'#94a3b8', marginTop:4 }}>
-                          Sync: {new Date(c.ultimo_sync).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short'})}
+                {conexiones.map((c: any) => {
+                  // El chip sale del estado REAL (frescura + error), no de la
+                  // casilla `activa`: un verde por «no consta error» tapaba que
+                  // la sincronización llevara días muerta y que todo lo que
+                  // cuelga de ella («hoy no hay limpiezas») fuera mentira.
+                  const s = estadoSync({ activa: c.activa, lastSyncAt: c.last_sync_at, syncError: c.sync_error })
+                  const sano = esSyncSano(s)
+                  const grave = s.estado === 'nunca' || s.estado === 'desactualizado' || s.estado === 'error'
+                  return (
+                    <div key={c.id} className="pms-card">
+                      <div>
+                        <div style={{ fontWeight:700, fontSize:13, color:'#0f172a' }}>{c.cliente_nombre}</div>
+                        <div style={{ fontSize:11, color:'#94a3b8', textTransform:'uppercase', marginTop:2 }}>{c.pms_tipo}</div>
+                        <div style={{ fontSize:11, color: grave ? '#dc2626' : '#94a3b8', marginTop:4 }}>
+                          {s.detalle}
                         </div>
-                      )}
+                      </div>
+                      <span style={{
+                        fontSize:11, fontWeight:700, padding:'4px 10px', borderRadius:20, whiteSpace:'nowrap',
+                        background: grave ? '#fee2e2' : sano ? '#d1fae5' : '#f1f5f9',
+                        color:      grave ? '#dc2626' : sano ? '#059669' : '#94a3b8',
+                      }}>
+                        {s.etiqueta}
+                      </span>
                     </div>
-                    <span style={{
-                      fontSize:11, fontWeight:700, padding:'4px 10px', borderRadius:20,
-                      background: c.sync_error ? '#fee2e2' : c.activa ? '#d1fae5' : '#f1f5f9',
-                      color:      c.sync_error ? '#dc2626' : c.activa ? '#059669' : '#94a3b8',
-                    }}>
-                      {c.sync_error ? '⚠ Error' : c.activa ? '● Activo' : '○ Inactivo'}
-                    </span>
-                  </div>
-                ))}
+                  )
+                })}
               </>
             )}
           </div>{/* dash-content */}

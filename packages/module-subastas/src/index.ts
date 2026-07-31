@@ -112,6 +112,13 @@ export {
   MUNICIPIOS_PLAYA_CADIZ, NUCLEOS_PLAYA_CADIZ,
   TOPE_PLAYA,
 } from './playa.ts'
+// De qué está hecho el «valor de mercado»: metros que no inflan, descuento por
+// estado del edificio y zonas demasiado gruesas para tasar nada.
+export {
+  granularidadZona, referenciaOrientativa, superficieValorable, ajusteEstado,
+  MUNICIPIOS_HETEROGENEOS, AJUSTE_ESTADO,
+} from './valoracion.ts'
+export type { GranularidadZona, SuperficieValorable, AjusteEstado } from './valoracion.ts'
 export { analisisDocumental } from './analisis.ts'
 export type { AnalisisDocumental, PuntoAnalisis, Nivel } from './analisis.ts'
 
@@ -139,6 +146,10 @@ export {
   cargasQueSubsisten,
   mismoAcreedorQueEjecutante,
   consensoCuadros,
+  fusionarCargas,
+  identidadCarga,
+  letraAnotacion,
+  esFormulaDeCierre,
   resumirCargas,
   compararCuadros,
   CONFIANZA_MINIMA_LIBRE,

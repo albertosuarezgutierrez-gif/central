@@ -43,6 +43,66 @@
   la regla global del CLAUDE.md raíz («el dato que SÍ está pero se lee mal»). Los valores viejos de
   `trading_universo` se curan solos: el cron refresca 50 símbolos cada 6 h (~5 días de ciclo).
 
+- **⚖️ Subastas: 3 defectos del lector registral + «nota simple viva» (31/07/2026).**
+  - **Fechas EN LETRA** (`caducidad.ts`): «diecisiete de agosto de dos mil nueve» ya se parsea (también
+    mixtas y el año suelto en letra). Sin esto el art. 86 LH no se evaluaba justo sobre las anotaciones
+    más viejas, que son las únicas que pueden estar caducadas. Sin día → último del mes (menos antigüedad).
+  - **La fórmula de cierre no es una carga** (`cargas.ts::esFormulaDeCierre`): «SIN MÁS CARGAS, salvo
+    AFECCIONES FISCALES» entraba como carga de rango desconocido y se contaba como subsistente; ahora sale
+    de la lista, pasa a `notas` y marca `sinMasCargas`. Si trae importe o fecha, sigue siendo carga.
+  - **El mismo asiento contado dos veces** (`fusionarCargas` + `identidadCarga`): el dedupe iba por
+    tipo+rango+IMPORTE, que es lo que cambia entre documentos (certificación = responsabilidad total,
+    informe = principal) → el embargo letra C sumaba 3.600+2.600. Ahora la identidad es la **letra de la
+    anotación** (o fecha+acreedor) y se queda con el importe MAYOR y el rango más caro, avisando.
+  - **Idea 3 — nota simple viva:** tabla `subastas_notas_simples` (aplicada) + `lib/subastas/nota-simple.ts`
+    + `POST/GET /api/subastas/nota-simple` + bloque en la ficha. Se sube la nota (PDF/escaneo/texto), la lee
+    el mismo lector y `compararCuadros` dice qué cambió. **NO pisa las columnas `cargas_*`** de `subastas`
+    (corpus global); la nota es de la cuenta. Sin cargas leídas no se guarda ni se concluye nada.
+  - 362 tests módulo · 664 app · tsc 0 · build OK. Pendiente de Alberto: alertas Idealista/Fotocasa de
+    Jerez y Cádiz ciudad (hasta entonces esas 3 subastas siguen ⚠️ orientativas).
+
+- **💰 Subastas: el «valor de mercado» dejaba de fabricar chollos falsos (30/07/2026, PR #1183).**
+  - Alberto: «334.645€ no es real para esa zona». Cierto: un piso de 1965 en Avda. Pedro Romero (Sevilla)
+    salía con 86,7% de margen de flip. Tres causas a la vez, todas fuera de la subasta.
+  - Módulo nuevo `valoracion.ts`: (a) `superficieValorable` toma la MENOR de registral/catastral (127 vs
+    117,10); (b) `ajusteEstado` descuenta 20%/10% al €/m² de los anuncios según la edad; (c)
+    `granularidadZona` marca ORIENTATIVA la mediana de un municipio grande y desigual (Sevilla, Jerez…),
+    y una referencia así ya no sostiene `flip_apto` ni un aviso por Telegram (`aviso.ts`, `clasificar.ts`).
+  - El flip compara contra `valorMercadoReformado` (sin el ajuste de estado) para no pagar la reforma dos veces.
+  - Columna `subastas.valor_orientativo` (migración aplicada) + chip ⚠️ en la ficha.
+  - **VERIFICADO en producción** (31/07, `?accion=clasificar` sobre las 36 vigentes): Pedro Romero pasa de
+    **334.645€ → 246.888€** (2.635 €/m² × 117,10 m² × 0,8) y su margen de flip de **0,867 → 0,706**, pero lo
+    que de verdad importa es que `flip_apto` cayó a **false** por orientativo. Marcadas ⚠️ orientativas **3 de
+    36** (Sevilla, Dos Hermanas y El Puerto de Santa María — las tres con mediana municipal del buscador); las
+    otras 33 se valoran con zona fina. **flips viables ≥25%: 0** (antes los había): ninguna subasta viva se
+    recomienda hoy con un número que no describa al inmueble.
+  - **Corpus:** 345 comparables y solo 2 de Sevilla, 0 de Jerez, 0 de Cádiz — casi todo costa de Huelva.
+    Alberto da de alta alertas de Idealista/Fotocasa de Jerez y Cádiz ciudad. Las SUBASTAS de Jerez ya
+    llegaban solas (Cádiz está en sus provincias); el alta es solo para los comparables de precio.
+
+- **🔍 Subastas: el documento registral se lee ENTERO y «se adquiere libre» hay que ganárselo (30/07/2026, PR #1182).**
+  - Página a página el modelo no veía el orden de los asientos → ponía la hipoteca como `la_que_ejecuta`, la purgaba
+    y declaraba libre una finca con 44.850€. Ahora todas las páginas van en UNA llamada multimodal (OpenRouter,
+    `OPENROUTER_VISION_MODEL`), con respaldo automático a la lectura página a página. `LECTOR_VERSION` 3→4.
+  - Salvaguarda: cero cargas solo es «libre» si la certificación dice «sin más cargas» Y la confianza ≥ 0,5.
+  - **Probado en producción** (Belmonte, `SUB-JA-2026-264269`): rangos CORRECTOS, confianza 0,97 (antes 0,35).
+  - Pendiente: el embargo letra C) se cuenta DOS veces (3.600 + 2.600 desde dos documentos → 51.050€ en vez de
+    48.450€); la fórmula «SIN MÁS CARGAS salvo afecciones fiscales» entra como carga; las fechas vienen en LETRA
+    y `parsearFechaRegistral` no las lee, así que la caducidad del art. 86 no llega a evaluarse.
+
+- **💓 Los dos vigilantes que faltaban, con aviso por Telegram (30/07/2026, rama `claude/documentos-adjuntos-o95xl1`
+  reiniciada tras mergear #1180).** Alberto: «hazlo que me avise por telegram». Eran los dos ⬜ más graves del
+  barrido, ambos de infraestructura muda. **(1) Sync del PMS de ialimp:** `pms_connections` tiene DOS columnas de
+  fecha y el panel leía la muerta — `/api/pms/sync` escribe `last_sync_at` y el dashboard leía `ultimo_sync`, NULL
+  en producción desde siempre; el chip verde salía de `activa` + «no consta error», que incluye «lleva semanas sin
+  correr». Nuevo helper puro `apps/ialimp/lib/pms-estado.ts` (8 tests) + chip con el estado real. **(2) Escaneo de
+  facturas de Gmail:** `catch { return 0 }` hacía «no se pudo leer el buzón» ≡ «no hay facturas»; ahora devuelve
+  `{nuevas, ok, error}`. **Vigía:** tabla nueva `agente_latidos` (aplicada) para los agentes que solo escriben
+  cuando hay trabajo — la frescura se mide sobre la última pasada BUENA — y dos entradas nuevas en
+  `lib/monitoring/latidos.ts` (`ialimp_pms` 6 h, `facturas_gmail` 30 h) que avisan por Telegram desde el cron
+  `agentes-latido`. Extra: una sonda que revienta ya no se traga en silencio, va en un bloque «Sin poder
+  comprobar — esto NO es todo bien». Comprobado contra la BD real: el sync de Smoobu late cada 10 min.
+
 - **🔐 Spec + plan aprobados: login con huella (WebAuthn/passkey) en plataforma (29/07/2026,
   sin implementar).** Diseño: `@simplewebauthn`, tabla `webauthn_credentials` scoped por
   `cuenta_id`, atajo de contraseña de respaldo, reutiliza la cookie `plataforma_session`.

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-30T19:46:20Z",
+  "generadoEn": "2026-07-31T06:43:55Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1423,7 +1423,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 26
+        "evidencias": 27
       },
       "rrhh": {
         "estado": "no",
@@ -3362,6 +3362,7 @@
       "/api/subastas/criterios",
       "/api/subastas/fase3-debug",
       "/api/subastas/mapa",
+      "/api/subastas/nota-simple",
       "/api/subastas/oferta",
       "/api/subastas/radar",
       "/api/subastas/seguidas",
@@ -3690,6 +3691,7 @@
       "tenant_modulos"
     ],
     "plataforma": [
+      "agente_latidos",
       "agente_salud",
       "ai_usos",
       "banca_destino_reglas",
@@ -3758,6 +3760,7 @@
       "subastas_criterios",
       "subastas_debug_token",
       "subastas_descartes",
+      "subastas_notas_simples",
       "subastas_radar",
       "subastas_reapariciones",
       "subastas_seguidas",
@@ -3965,6 +3968,18 @@
   ],
   "novedades": [
     {
+      "titulo": "⚖️ Subastas: 3 defectos del lector registral + «nota simple viva» (31/07/2026).",
+      "fecha": "31/07/2026"
+    },
+    {
+      "titulo": "💰 Subastas: el «valor de mercado» dejaba de fabricar chollos falsos (30/07/2026, PR #1183).",
+      "fecha": "30/07/2026"
+    },
+    {
+      "titulo": "🔍 Subastas: el documento registral se lee ENTERO y «se adquiere libre» hay que ganárselo (30/07/2026, PR #1182).",
+      "fecha": "30/07/2026"
+    },
+    {
       "titulo": "🕳️ Barrido del monorepo: afirmar ausencias no comprobadas (30/07/2026, misma rama).",
       "fecha": "30/07/2026"
     },
@@ -4010,18 +4025,6 @@
     },
     {
       "titulo": "🎯 Subastas — LOTE «todo lo que quedaba» (28/07/2026, noche). MERGEADO (PR #1120, squash `a9609d3`).",
-      "fecha": "28/07/2026"
-    },
-    {
-      "titulo": "⬇️ Subastas — SEGUIMIENTO DE BAJADAS DE PRECIO + antigüedad estimada del anuncio (28/07/2026).",
-      "fecha": "28/07/2026"
-    },
-    {
-      "titulo": "💡 Subastas — UNIFICADA la inversión inmobiliaria: detector de CHOLLOS de venta directa (28/07/2026).",
-      "fecha": "28/07/2026"
-    },
-    {
-      "titulo": "📅 Trading — aviso de Google Calendar creado para la cohorte 3 (28/07/2026, sesión de charla).",
       "fecha": "28/07/2026"
     }
   ],
@@ -4388,7 +4391,7 @@
     "packages": 36,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1152,
+    "apis": 1153,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
