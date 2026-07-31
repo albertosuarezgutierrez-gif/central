@@ -100,9 +100,10 @@ export async function POST(req: NextRequest) {
       SELECT scenario, MAX(search_date) sd FROM market_rates
       WHERE scenario LIKE 'prop_%' AND price_night > 0 GROUP BY scenario
     ),
-    -- 🚨 Cada comparable se NORMALIZA al aforo del piso (`pricing_factor_aforo`) antes de entrar en
-    -- el percentil. Sin esto, una casa de 12 plazas se tarificaba contra apartamentos de 4-8 y salía
-    -- a mitad de precio (hallazgo 31/07/2026). Con comps del mismo aforo el factor es 1 y no cambia nada.
+    -- Cada comparable se NORMALIZA al aforo del piso (pricing_factor_aforo) antes de entrar en el
+    -- percentil. Sin esto, una casa de 12 plazas se tarificaba contra apartamentos de 4-8 y salia
+    -- a mitad de precio (hallazgo 31/07/2026). Con comps del mismo aforo el factor es 1: no cambia nada.
+    -- OJO: esta consulta va en un template literal de TS, aqui NO se pueden usar backticks ni $ { }.
     mkt AS (
       SELECT m.scenario,
         percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))::numeric med,
@@ -170,8 +171,8 @@ export async function POST(req: NextRequest) {
     property_id: string; ym: string; med_guest: number; flo_guest: number; cei_guest: number; n: number
   }[]>(Prisma.sql`
     WITH recent AS (
-      -- price_night NORMALIZADO al aforo del piso (ver `pricing_factor_aforo`); con comps del mismo
-      -- aforo el factor es 1. Sin esto los buckets de un piso grande salían a precio de apartamento.
+      -- price_night NORMALIZADO al aforo del piso (ver pricing_factor_aforo); con comps del mismo
+      -- aforo el factor es 1. Sin esto los buckets de un piso grande salian a precio de apartamento.
       SELECT DISTINCT ON (m.scenario, m.checkin_date, m.comp_name)
         m.scenario, m.checkin_date,
         m.price_night * pricing_factor_aforo(z.max_guests, m.guests) AS price_night
@@ -204,8 +205,8 @@ export async function POST(req: NextRequest) {
   const MIN_FECHA_BUCKET = 3
   const fechaRows = await prisma.$queryRaw<{ property_id: string; rate_date: string; med_guest: number; n: number }[]>(Prisma.sql`
     WITH recent AS (
-      -- price_night NORMALIZADO al aforo del piso (ver `pricing_factor_aforo`); con comps del mismo
-      -- aforo el factor es 1. Sin esto los buckets de un piso grande salían a precio de apartamento.
+      -- price_night NORMALIZADO al aforo del piso (ver pricing_factor_aforo); con comps del mismo
+      -- aforo el factor es 1. Sin esto los buckets de un piso grande salian a precio de apartamento.
       SELECT DISTINCT ON (m.scenario, m.checkin_date, m.comp_name)
         m.scenario, m.checkin_date,
         m.price_night * pricing_factor_aforo(z.max_guests, m.guests) AS price_night

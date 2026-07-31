@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { factorAforo, elegirAforo, FACTOR_MAX, FACTOR_MIN } from './pricing-aforo'
+import { factorAforo, elegirAforo, FACTOR_MAX, FACTOR_MIN } from './pricing-aforo.ts'
 
 test('mismo aforo no toca el precio', () => {
   assert.equal(factorAforo(4, 4), 1)
