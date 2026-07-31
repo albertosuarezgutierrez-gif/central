@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-31T06:02:56Z",
-  "sha": "a40c40b96ff8b15ab306ef7b8ac59a646ec63672",
+  "generadoEn": "2026-07-31T07:00:47Z",
+  "sha": "1c243ab344ff2d2ed39ddbf4fdea823724b73598",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47563,12 +47563,21 @@
           "resumen": "Resumen de CARGAS + documentación de la subasta. Vive dentro de `FichaSubasta` a propósito: antes el semáforo y las notas del edicto solo se pintaban en la pestaña «Todas» (iban en su `extra`), así qu"
         },
         {
+          "nombre": "NotaSimpleViva",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ dedupeKey }: { dedupeKey: string }",
+          "retorno": null,
+          "linea": 490,
+          "resumen": "«Nota simple viva»: la certificación que adjunta el juzgado es de hace años y las cargas se mueven. Aquí se sube una nota simple recién pedida al registro y el agente dice QUÉ HA CAMBIADO — es lo únic"
+        },
+        {
           "nombre": "FichaSubasta",
           "kind": "function",
           "exportada": false,
           "params": "{ s, o, acciones, extra, doc }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null }",
           "retorno": null,
-          "linea": 466
+          "linea": 580
         },
         {
           "nombre": "SubastasClient",
@@ -47576,14 +47585,14 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Inicial | null }",
           "retorno": null,
-          "linea": 622
+          "linea": 737
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "30fe8dd6e7fb"
+      "hash": "a8de68c61e87"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -54574,7 +54583,16 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 23
+          "linea": 22
+        },
+        {
+          "nombre": "pisosPorAforo",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<Map<number, string[]>>",
+          "linea": 29,
+          "resumen": "🚨 El barrido busca por el AFORO REAL de cada piso, NO con \"4 personas\" para todos (bug hasta el 31/07/2026: guardaba los MISMOS comps de 4 plazas para los 4 pisos con `guests=4` fijo, así que House —"
         },
         {
           "nombre": "weekendInMonth",
@@ -54582,7 +54600,7 @@
           "exportada": false,
           "params": "m: number",
           "retorno": "",
-          "linea": 26,
+          "linea": 41,
           "resumen": "Primer viernes→domingo (2 noches) del mes a `m` meses vista."
         },
         {
@@ -54591,7 +54609,7 @@
           "exportada": false,
           "params": "query: string",
           "retorno": "Promise<string>",
-          "linea": 36
+          "linea": 51
         },
         {
           "nombre": "extractPrices",
@@ -54599,7 +54617,7 @@
           "exportada": false,
           "params": "snippets: string, checkin: string, checkout: string",
           "retorno": "Promise<any[]>",
-          "linea": 50
+          "linea": 65
         },
         {
           "nombre": "GET",
@@ -54607,16 +54625,17 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 64
+          "linea": 79
         }
       ],
       "tablas": [
         "market_rates",
         "next",
+        "pricing_piso_zona",
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/sweep",
-      "hash": "8d66c9561dcb"
+      "hash": "28f95f175059"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pl-mensual/route.ts",
@@ -54765,6 +54784,7 @@
         "pricing_config",
         "pricing_eventos_auto",
         "pricing_flight_demand",
+        "pricing_piso_zona",
         "pricing_pl_referencia",
         "pricing_settings",
         "rate_snapshots",
@@ -54772,7 +54792,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "e41ec4527b7c"
+      "hash": "eba9bcc56791"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -54913,10 +54933,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 40
+          "linea": 54
         }
       ],
       "tablas": [
+        "barato",
+        "base",
         "incomes",
         "last_applied",
         "live",
@@ -54925,14 +54947,20 @@
         "mkt_blend",
         "mkt_date",
         "next",
+        "por_fecha",
+        "por_mes",
         "pricing_alerts",
         "pricing_applied",
+        "pricing_eventos_auto",
+        "pricing_piso_zona",
         "pricing_settings",
         "rate_snapshots",
-        "snap"
+        "restringe",
+        "snap",
+        "ult"
       ],
       "rutaApi": "/api/sivra/pricing/guard",
-      "hash": "ba5795685009"
+      "hash": "4f1777b9cbf8"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/historial/route.ts",
@@ -55474,6 +55502,44 @@
       "hash": "e16325663bb5"
     },
     {
+      "ruta": "apps/plataforma/app/api/subastas/nota-simple/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Nota simple actualizada de una subasta: se sube (PDF, imagen o texto pegado), se lee con el lector registral y se dice QUÉ HA CAMBIADO desde la certificación que adjuntó el juzgado. Ver `lib/subastas/nota-simple.ts`.",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "cuenta",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<string | null>",
+          "linea": 17
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 25
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 35
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/subastas/nota-simple",
+      "hash": "1e5f7ad1f29f"
+    },
+    {
       "ruta": "apps/plataforma/app/api/subastas/oferta/route.ts",
       "ambito": "apps/plataforma",
       "resumen": "Borrador de oferta a la baja para un chollo. La IA SOLO redacta: todas las cifras (precio, mediana de zona, bajadas, antigüedad) salen de la BD y van en el prompt — nunca las inventa el modelo. Cadena gratis de la pasarela.",
@@ -55755,7 +55821,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/trading/fundamentales",
-      "hash": "83ec8384a451"
+      "hash": "244727d33d70"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/gurus/route.ts",
@@ -62978,7 +63044,7 @@
           "exportada": true,
           "params": "base: number, dateStr: string",
           "retorno": "number",
-          "linea": 66,
+          "linea": 71,
           "resumen": "⚠️ LEGACY / NO ES EL PRECIO REAL (hallazgo 27/07/2026, ver docs/CONTEXTO-SESIONES.md): esta fórmula estática (base fija × estacional × día-semana) es de ANTES de que existiera el motor anclado al merc"
         },
         {
@@ -62987,22 +63053,22 @@
           "exportada": true,
           "params": "dateStr: string",
           "retorno": "number",
-          "linea": 77,
+          "linea": 82,
           "resumen": "Factor RELATIVO de evento para el motor anclado al mercado: sólo sube en fechas con evento declarado (Semana Santa/Feria/…); el resto de estacionalidad/día ya la refleja el mercado. Honra el calendari"
         },
         {
           "nombre": "seasonalFloorFactor",
           "kind": "function",
           "exportada": true,
-          "params": "dateStr: string",
+          "params": "dateStr: string, evExterno = 1",
           "retorno": "number",
-          "linea": 97,
+          "linea": 109,
           "resumen": "Suelo estacional relativo a min_price para una fecha. En fechas de evento sube con el evento (mitad del factor, acotado a ×2.0) para que Semana Santa/Feria no puedan venderse a suelo. Devuelve 1.0 (si"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e271054c8f68"
+      "hash": "444544ec59ec"
     },
     {
       "ruta": "apps/plataforma/lib/programador.ts",
@@ -64767,6 +64833,87 @@
       "hash": "a8c6da585103"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/pricing-aforo.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Ajuste de comparables por AFORO (plazas) — helper PURO, sin BD. EL PROBLEMA QUE RESUELVE (hallazgo 31/07/2026, aviso de Alberto sobre Socorro/House): el barrido de mercado guardaba los MISMOS comps para los 4 pisos con `guests=4` fijo, y el motor (`apply/route.ts`) calculaba sus percentiles SIN filt",
+      "exporta": [
+        "factorAforo",
+        "elegirAforo"
+      ],
+      "funciones": [
+        {
+          "nombre": "factorAforo",
+          "kind": "function",
+          "exportada": true,
+          "params": "plazasPiso: number | null | undefined, plazasComp: number | null | undefined",
+          "retorno": "number",
+          "linea": 30,
+          "resumen": "Cuánto vale un piso de `plazasPiso` frente a comps de `plazasComp`. Devuelve 1 si falta algún dato o si el aforo coincide (caso normal: no toca nada)."
+        },
+        {
+          "nombre": "elegirAforo",
+          "kind": "function",
+          "exportada": true,
+          "params": "muestras: MuestraAforo[], plazasPiso: number | null | undefined, muestraMinima: number = MUESTRA_MINIMA,",
+          "retorno": "",
+          "linea": 49,
+          "resumen": "Decide contra qué aforo tarificar y con qué corrección. Prefiere SIEMPRE los comps del aforo exacto del piso cuando tienen muestra suficiente (factor 1). Si no, coge el aforo con más muestra y devuelv"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "921158fc3d71"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pricing-centinelas.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-centinelas.ts — centinelas PUROS (sin BD ni red) que vigilan el pricing. POR QUÉ EXISTEN (31/07/2026). Los tres fallos caros encontrados ese día tenían la misma forma: un dato metido a ojo o marcado \"provisional\", que nadie volvió a mirar, y que el motor siguió usando como verdad d",
+      "exporta": [
+        "decidirEventoSinRespaldo",
+        "decidirEventoNoCatalogado",
+        "decidirPrecioPorPlaza"
+      ],
+      "funciones": [
+        {
+          "nombre": "NO_EVALUADO",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "motivo: string",
+          "retorno": "Veredicto",
+          "linea": 28
+        },
+        {
+          "nombre": "decidirEventoSinRespaldo",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: EventoSinRespaldoInput, o: EventoSinRespaldoOpts = {},",
+          "retorno": "Veredicto",
+          "linea": 59,
+          "resumen": "OJO con el umbral: el p50 del MES ya viene inflado por el propio evento (abril 2027 va a 310€ de mediana justo porque dentro caen Feria y Semana Santa). Exigirle a una noche de Feria que supere esa me"
+        },
+        {
+          "nombre": "decidirEventoNoCatalogado",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: EventoNoCatalogadoInput, o: EventoNoCatalogadoOpts = {},",
+          "retorno": "Veredicto",
+          "linea": 108
+        },
+        {
+          "nombre": "decidirPrecioPorPlaza",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: PrecioPorPlazaInput, o: PrecioPorPlazaOpts = {}",
+          "retorno": "Veredicto",
+          "linea": 163,
+          "resumen": "⚠️ Solo aplica a pisos GRANDES, y no es un tecnicismo: en un apartamento pequeño las \"plazas\" son en buena parte sofás-cama (Luxury son 5 plazas en 2 dormitorios), así que dividir por ellas da un núme"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b8549ffbeac7"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/pricing-engine.ts",
       "ambito": "apps/plataforma",
       "resumen": "Motor de precio ANCLADO AL MERCADO — FUENTE ÚNICA del cálculo. Lo consumen `recommend`, `settings` (panel) y `pilot-track` (agente) para que el \"precio recomendado\" sea el mismo en todos. Es lógica pura (sin DB ni red). `computeRecommendation` devuelve el precio a nivel MERCADO (huésped) acotado a [",
@@ -65672,7 +65819,7 @@
           "exportada": true,
           "params": "pdf: Buffer",
           "retorno": "Promise<ImageInput[]>",
-          "linea": 78,
+          "linea": 79,
           "resumen": "Recompone las páginas de un PDF escaneado. Devuelve JPEG en base64, listos para el modelo de visión. `[]` si el PDF no lleva imágenes aprovechables. Por qué hay que agrupar: los escáneres guardan cada"
         },
         {
@@ -65681,7 +65828,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<string | undefined>",
-          "linea": 118,
+          "linea": 119,
           "resumen": "Modelo de la categoría `registral` del catálogo del Director (o el de la pasarela)."
         },
         {
@@ -65690,7 +65837,7 @@
           "exportada": false,
           "params": "texto: string, modelo: string | undefined",
           "retorno": "Promise<CuadroCargas>",
-          "linea": 128,
+          "linea": 129,
           "resumen": "Una pasada de lectura sobre texto."
         },
         {
@@ -65699,7 +65846,7 @@
           "exportada": false,
           "params": "paginas: ImageInput[], modelo: string | undefined",
           "retorno": "Promise<CuadroCargas>",
-          "linea": 164,
+          "linea": 165,
           "resumen": "Una pasada de lectura sobre imágenes. Camino BUENO: el documento ENTERO en una sola llamada a un modelo multimodal. Es lo único que permite acertar el RANGO de cada carga —anterior, posterior o la que"
         },
         {
@@ -65708,7 +65855,7 @@
           "exportada": false,
           "params": "paginas: ImageInput[], modelo: string | undefined",
           "retorno": "Promise<CuadroCargas>",
-          "linea": 188,
+          "linea": 189,
           "resumen": "Respaldo: una llamada por página, en tandas. Peor contexto, pero siempre lee."
         },
         {
@@ -65717,7 +65864,7 @@
           "exportada": true,
           "params": "contenido: { texto: string | null; pdf: Buffer | null; imagen: ImageInput | null },",
           "retorno": "Promise<LecturaDocumento>",
-          "linea": 232,
+          "linea": 237,
           "resumen": "Lee UN documento y devuelve su cuadro de cargas. Hace la doble pasada y aplica el consenso. Nunca lanza: un documento ilegible devuelve un cuadro vacío con confianza 0, y el pipeline sigue con el sigu"
         },
         {
@@ -65726,13 +65873,13 @@
           "exportada": true,
           "params": "lecturas: LecturaDocumento[]",
           "retorno": "CuadroCargas",
-          "linea": 281,
-          "resumen": "Fusiona los cuadros de varios documentos de la MISMA ficha (edicto + certificación + cesión…). Se queda con la vía del procedimiento que algún documento haya sabido determinar y deduplica cargas por t"
+          "linea": 290,
+          "resumen": "Fusiona los cuadros de varios documentos de la MISMA ficha (edicto + certificación + cesión…). Se queda con la vía del procedimiento que algún documento haya sabido determinar y deduplica cargas por I"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d250ab6acfe6"
+      "hash": "2553effcbcad"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/mercado.ts",
@@ -65897,6 +66044,78 @@
       ],
       "rutaApi": null,
       "hash": "8f1dec4fda04"
+    },
+    {
+      "ruta": "apps/plataforma/lib/subastas/nota-simple.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── NOTA SIMPLE VIVA. La certificación de dominio y cargas que el juzgado adjunta a la ficha del BOE está fechada años antes de la subasta (la de Belmonte, en agosto de 2020) y el registro no se congela: se cancelan hipotecas, ",
+      "exporta": [
+        "fechaDeLaNota",
+        "analizarNotaSimple",
+        "guardarNotaSimple",
+        "notasSimplesDe"
+      ],
+      "funciones": [
+        {
+          "nombre": "fechaDeLaNota",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null",
+          "retorno": "string | null",
+          "linea": 69,
+          "resumen": "Fecha de expedición de la nota. El registro la escribe en la cabecera con fórmulas muy variadas, así que se busca la primera fecha que aparezca cerca de las palabras que la anuncian; si no hay ninguna"
+        },
+        {
+          "nombre": "analizarNotaSimple",
+          "kind": "function",
+          "exportada": true,
+          "params": "dedupeKey: string, contenido: { texto?: string | null; pdf?: Buffer | null; mediaType?: string | null },",
+          "retorno": "Promise<ResultadoNotaSimple>",
+          "linea": 81,
+          "resumen": "Lee la nota simple y la contrasta con lo que ya se sabía de esa subasta. Nunca lanza por culpa del documento: un PDF ilegible devuelve un resultado vacío y explicado."
+        },
+        {
+          "nombre": "cuadroDeLaCertificacion",
+          "kind": "function",
+          "exportada": false,
+          "params": "dedupeKey: string",
+          "retorno": "Promise<CuadroCargas | null>",
+          "linea": 136,
+          "resumen": "Cuadro leído de la certificación adjunta al BOE (el corpus global)."
+        },
+        {
+          "nombre": "guardarNotaSimple",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, dedupeKey: string, r: ResultadoNotaSimple,",
+          "retorno": "Promise<string>",
+          "linea": 147,
+          "resumen": "Guarda la nota analizada. Histórico: nunca pisa la anterior."
+        },
+        {
+          "nombre": "notasSimplesDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, dedupeKey: string",
+          "retorno": "Promise<NotaSimpleGuardada[]>",
+          "linea": 166,
+          "resumen": "Las notas simples que la cuenta ya subió de esta subasta, la más nueva primero."
+        },
+        {
+          "nombre": "textoDePdf",
+          "kind": "function",
+          "exportada": false,
+          "params": "buf: Buffer",
+          "retorno": "Promise<string>",
+          "linea": 186
+        }
+      ],
+      "tablas": [
+        "subastas",
+        "subastas_notas_simples"
+      ],
+      "rutaApi": null,
+      "hash": "c3f6ee69c213"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/params-coste.ts",
@@ -66746,7 +66965,7 @@
           "exportada": true,
           "params": "lote = 40",
           "retorno": "Promise<",
-          "linea": 48,
+          "linea": 52,
           "resumen": "Recolecta el siguiente lote: siembra desde trading_universo (+SPY como benchmark) y rellena las filas más rancias. Mismo patrón/ritmo que refrescarLoteUniverso (~4 símbolos/s contra SEC)."
         },
         {
@@ -66755,13 +66974,13 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 103,
+          "linea": 107,
           "resumen": "La LUPA de gurús: convicciones ACTUALES de Dataroma cruzadas con los factores actuales de la caché del radar — la materia prima para responder \"¿por qué se posicionan en esas empresas?\". Se guarda en "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6e69ae602cc5"
+      "hash": "ecd652f1f531"
     },
     {
       "ruta": "apps/plataforma/lib/trading/buscar-simbolo.ts",
@@ -67120,6 +67339,8 @@
       "resumen": "Fundamentales GRATIS desde EDGAR (SEC) — API XBRL `companyfacts`. Alternativa sin coste a FMP para la pata de CALIDAD/VALOR de la Fase B: alimenta directamente `piotroskiFScore` (2 ejercicios) y el ROIC de la fórmula mágica. Mapea los conceptos US-GAAP **e IFRS** a los inputs que el módulo ya consum",
       "exporta": [
         "serieAnual",
+        "monedaInforme",
+        "anioFiscalDe",
         "extraerFundamentales",
         "recortarFactsHasta",
         "companyfactsCrudo",
@@ -67138,22 +67359,48 @@
       ],
       "funciones": [
         {
+          "nombre": "diasEntre",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a: string, b: string",
+          "retorno": null,
+          "linea": 16
+        },
+        {
           "nombre": "serieAnual",
           "kind": "function",
           "exportada": true,
-          "params": "facts: CompanyFacts['facts'], concepto: string",
-          "retorno": "Map<number, number>",
-          "linea": 18,
-          "resumen": "Serie ANUAL (fiscal year → valor) de un concepto, buscándolo en us-gaap, dei e ifrs-full (emisores extranjeros que presentan 20-F en IFRS). Se queda con los valores de informe anual (10-K / 20-F) y pe"
+          "params": "facts: CompanyFacts['facts'], concepto: string, unidad = 'USD'",
+          "retorno": "Map<string, number>",
+          "linea": 31,
+          "resumen": "Serie ANUAL de un concepto, indexada por el CIERRE DE EJERCICIO AL QUE PERTENECE EL DATO (`end`), buscándolo en us-gaap, dei e ifrs-full (emisores extranjeros que presentan 20-F en IFRS). 🚨 LANDMINE "
         },
         {
-          "nombre": "valorFy",
+          "nombre": "monedaInforme",
+          "kind": "function",
+          "exportada": true,
+          "params": "facts: CompanyFacts['facts'], alias: readonly string[]",
+          "retorno": "string | undefined",
+          "linea": 68,
+          "resumen": "Divisa en la que el emisor presenta las cuentas HOY: gana la que tenga el ejercicio más reciente y, a igualdad de cierre, el dólar. No basta con \"USD si existe\": Toyota arrastra una traducción de conv"
+        },
+        {
+          "nombre": "anioFiscalDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "periodo: string",
+          "retorno": "number",
+          "linea": 93,
+          "resumen": "Etiqueta de ejercicio (solo para MOSTRAR: `fuente_fy` del radar y `fyUltimo` de la API). El año natural del cierre coincide con la etiqueta del emisor salvo en los calendarios de 52/53 semanas que cie"
+        },
+        {
+          "nombre": "valorPeriodo",
           "kind": "function",
           "exportada": false,
-          "params": "facts: CompanyFacts['facts'], alias: string[], fy: number",
+          "params": "facts: CompanyFacts['facts'], alias: readonly string[], periodo: string, unidad = 'USD'",
           "retorno": "number | undefined",
-          "linea": 39,
-          "resumen": "Primer concepto con dato para ese FY (recorre la lista de alias US-GAAP)."
+          "linea": 101,
+          "resumen": "Valor del primer alias con dato para ese cierre de ejercicio. Si el concepto no cae EXACTAMENTE en `periodo` se acepta el cierre más próximo dentro de 45 días: las acciones de portada (taxonomía `dei`"
         },
         {
           "nombre": "div",
@@ -67161,24 +67408,32 @@
           "exportada": false,
           "params": "a?: number, b?: number",
           "retorno": null,
-          "linea": 46
+          "linea": 115
         },
         {
-          "nombre": "fysDe",
+          "nombre": "resta",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a?: number, b?: number",
+          "retorno": null,
+          "linea": 116
+        },
+        {
+          "nombre": "periodosDe",
           "kind": "function",
           "exportada": false,
-          "params": "facts: CompanyFacts['facts'], alias: string[]",
-          "retorno": "Set<number>",
-          "linea": 69,
-          "resumen": "FYs (por CUALQUIER alias) que tienen dato — para anclar la extracción sin atarse a un nombre us-gaap concreto (si no, un emisor IFRS cuyo beneficio es `ProfitLoss` y no `NetIncomeLoss` no ancla nunca)"
+          "params": "facts: CompanyFacts['facts'], alias: readonly string[], unidad: string",
+          "retorno": "Set<string>",
+          "linea": 155,
+          "resumen": "Cierres de ejercicio (por CUALQUIER alias) que tienen dato — para anclar la extracción sin atarse a un nombre us-gaap concreto (si no, un emisor IFRS cuyo beneficio es `ProfitLoss` y no `NetIncomeLoss"
         },
         {
           "nombre": "anioDe",
           "kind": "function",
           "exportada": false,
-          "params": "facts: CompanyFacts['facts'], fy: number",
+          "params": "facts: CompanyFacts['facts'], periodo: string, moneda: string",
           "retorno": "AnioFinanciero",
-          "linea": 75
+          "linea": 161
         },
         {
           "nombre": "extraerFundamentales",
@@ -67186,7 +67441,7 @@
           "exportada": true,
           "params": "cf: CompanyFacts, simbolo: string",
           "retorno": "FundamentalesEmpresa | null",
-          "linea": 107,
+          "linea": 201,
           "resumen": "Extrae del companyfacts los DOS ejercicios más recientes en el formato que consume el módulo, más las piezas para la fórmula mágica (ROIC ya calculado; earnings yield lo cierra el consumidor con el EV"
         },
         {
@@ -67195,7 +67450,7 @@
           "exportada": true,
           "params": "cf: CompanyFacts, fecha: string, conceptos?: ReadonlySet<string>",
           "retorno": "CompanyFacts",
-          "linea": 143,
+          "linea": 243,
           "resumen": "Recorta un companyfacts a lo CONOCIDO en `fecha` (punto-en-el-tiempo del retrovisor/backtest): solo sobreviven los puntos con `filed <= fecha` (un punto sin `filed` se descarta — mejor perder un dato "
         },
         {
@@ -67204,7 +67459,7 @@
           "exportada": true,
           "params": "cik: string, timeoutMs = 10000",
           "retorno": "Promise<unknown | null>",
-          "linea": 162,
+          "linea": 262,
           "resumen": "El companyfacts CRUDO por CIK (el backtest lo recorta por fecha varias veces sin re-descargar)."
         },
         {
@@ -67213,7 +67468,7 @@
           "exportada": true,
           "params": "json: unknown",
           "retorno": "Map<string, string>",
-          "linea": 167,
+          "linea": 267,
           "resumen": "Mapa ticker → CIK (10 dígitos) del fichero público company_tickers.json de la SEC."
         },
         {
@@ -67222,7 +67477,7 @@
           "exportada": false,
           "params": "url: string, timeoutMs: number",
           "retorno": "Promise<unknown | null>",
-          "linea": 178
+          "linea": 278
         },
         {
           "nombre": "resolverCik",
@@ -67230,7 +67485,7 @@
           "exportada": true,
           "params": "ticker: string, timeoutMs = 8000",
           "retorno": "Promise<string | undefined>",
-          "linea": 187,
+          "linea": 287,
           "resumen": "Resuelve el CIK de un ticker (cachea el mapa en memoria de la lambda). Best-effort → undefined."
         },
         {
@@ -67239,7 +67494,7 @@
           "exportada": true,
           "params": "simbolo: string, timeoutMs = 8000",
           "retorno": "Promise<FundamentalesEmpresa | null>",
-          "linea": 196,
+          "linea": 296,
           "resumen": "Descarga y extrae los fundamentales de un símbolo (resuelve CIK → companyfacts). Best-effort → null."
         },
         {
@@ -67248,7 +67503,7 @@
           "exportada": true,
           "params": "json: unknown, n = 550",
           "retorno": "Array<",
-          "linea": 206,
+          "linea": 306,
           "resumen": "Las N mayores de EEUU desde company_tickers.json (viene ~ordenado por capitalización — propiedad NO documentada; el consumidor tiene una semilla de respaldo). Dedupe por CIK (una clase por empresa) y "
         },
         {
@@ -67257,7 +67512,7 @@
           "exportada": true,
           "params": "simbolo: string, cik: string, timeoutMs = 8000",
           "retorno": "Promise<FundamentalesEmpresa | null>",
-          "linea": 225,
+          "linea": 325,
           "resumen": "companyfacts por CIK ya conocido (el refresco del radar guarda el CIK y se ahorra resolverlo)."
         },
         {
@@ -67266,7 +67521,7 @@
           "exportada": true,
           "params": "n: number | null | undefined",
           "retorno": "number | null",
-          "linea": 235,
+          "linea": 335,
           "resumen": "Guarda de PLAUSIBILIDAD del nº de acciones (bug real 20/07/2026: MCD reportó 712 en vez de 712 MILLONES en el XBRL → mktCap de 196.044$ → EV≈deuda → earnings/FCF yield inflados ×1e6 → nº 1 del ranking"
         },
         {
@@ -67275,7 +67530,7 @@
           "exportada": true,
           "params": "timeoutMs = 10000",
           "retorno": "Promise<unknown | null>",
-          "linea": 240,
+          "linea": 340,
           "resumen": "El JSON crudo de company_tickers (para listaUniverso). Best-effort → null."
         },
         {
@@ -67284,7 +67539,7 @@
           "exportada": true,
           "params": "subs: unknown, desde: string",
           "retorno": "Evento8K[]",
-          "linea": 267,
+          "linea": 367,
           "resumen": "Parseo PURO del submissions JSON de la SEC: 8-K presentados desde `desde` (ISO) cuyos items estén en la lista relevante. Tolera JSON malformado (devuelve [])."
         },
         {
@@ -67293,7 +67548,7 @@
           "exportada": true,
           "params": "cik: string, timeoutMs = 8000",
           "retorno": "Promise<unknown | null>",
-          "linea": 286,
+          "linea": 386,
           "resumen": "El submissions JSON crudo por CIK — el radar lo baja UNA vez por símbolo y saca de él tanto los 8-K (extraerEventos8K) como los Form 4 (extraerFilingsForm4). Best-effort → null."
         },
         {
@@ -67302,7 +67557,7 @@
           "exportada": true,
           "params": "cik: string, desde: string, timeoutMs = 8000",
           "retorno": "Promise<Evento8K[]>",
-          "linea": 291,
+          "linea": 391,
           "resumen": "Eventos 8-K recientes por CIK ya conocido (submissions JSON). Best-effort → []."
         },
         {
@@ -67311,7 +67566,7 @@
           "exportada": true,
           "params": "subs: unknown, hoy: string, ventanaDias = 10",
           "retorno": "string | null",
-          "linea": 307,
+          "linea": 407,
           "resumen": "── 📅 Semana de resultados ESTIMADA ────────────────────────────────────────────────────────────── La SEC no publica fechas FUTURAS de resultados; lo que sí tenemos (gratis y determinista) es el PATRÓ"
         },
         {
@@ -67320,12 +67575,12 @@
           "exportada": true,
           "params": "subs: unknown, desde: string",
           "retorno": "FilingForm4[]",
-          "linea": 324
+          "linea": 424
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9b66e1edf822"
+      "hash": "adb91e3fae87"
     },
     {
       "ruta": "apps/plataforma/lib/trading/form4.ts",
@@ -67917,7 +68172,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d096defc0a79"
+      "hash": "27a83ffabc3b"
     },
     {
       "ruta": "apps/plataforma/lib/trading/volumen.ts",
@@ -77673,7 +77928,7 @@
           "exportada": true,
           "params": "base: number, dateStr: string",
           "retorno": "number",
-          "linea": 56,
+          "linea": 61,
           "resumen": "Multiplicador absoluto sobre una base (uso del snapshot \"shadow\": price_ours)."
         },
         {
@@ -77682,13 +77937,13 @@
           "exportada": true,
           "params": "dateStr: string",
           "retorno": "number",
-          "linea": 67,
+          "linea": 72,
           "resumen": "Factor RELATIVO de evento para el motor anclado al mercado: sólo sube en fechas con evento declarado (Semana Santa/Feria/…); el resto de estacionalidad/día ya la refleja el mercado. Honra el calendari"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "57aef14acc35"
+      "hash": "04100bc53201"
     },
     {
       "ruta": "apps/sivra/lib/pricing-engine.ts",
@@ -83917,8 +84172,61 @@
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "",
-          "linea": 73,
+          "linea": 75,
           "resumen": "Fecha registral tolerante: el lector devuelve el campo tal cual lo escribe el registro, que rara vez es ISO («15 de agosto de 2020», «12/03/2015», «2009»). Cuando solo hay año se toma el **31 de dicie"
+        },
+        {
+          "nombre": "palabras",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string",
+          "retorno": "string",
+          "linea": 110,
+          "resumen": "Texto sin puntuación ni acentos: `palabrasANumero` corta en cuanto ve «nueve,»."
+        },
+        {
+          "nombre": "fechaEnLetra",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string",
+          "retorno": "",
+          "linea": 119,
+          "resumen": "Fecha con el mes escrito con su nombre y el día y/o el año en letra. Devuelve `null` en cuanto algo no cuadre: una fecha a medias es peor que ninguna, porque el art. 86 LH se calcula sobre ella."
+        },
+        {
+          "nombre": "anioEnLetra",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string",
+          "retorno": "number | null",
+          "linea": 140,
+          "resumen": "Año escrito con palabras («año dos mil nueve»), sin mes que lo acompañe."
+        },
+        {
+          "nombre": "numeroAlFinalMixto",
+          "kind": "function",
+          "exportada": false,
+          "params": "t: string",
+          "retorno": "number | null",
+          "linea": 150,
+          "resumen": "Último número del fragmento, en cifra («el 17») o en letra («diecisiete»)."
+        },
+        {
+          "nombre": "numeroAlPrincipio",
+          "kind": "function",
+          "exportada": false,
+          "params": "t: string",
+          "retorno": "number | null",
+          "linea": 157,
+          "resumen": "Primer número del fragmento, en cifra («2009 ante…») o en letra («dos mil nueve»)."
+        },
+        {
+          "nombre": "ultimoDiaDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "anio: number, mes: number",
+          "retorno": "number",
+          "linea": 163
         },
         {
           "nombre": "fechaValida",
@@ -83926,7 +84234,7 @@
           "exportada": false,
           "params": "anio: number, mes: number, dia: number, exacta: boolean",
           "retorno": "",
-          "linea": 101
+          "linea": 172
         },
         {
           "nombre": "estadoCaducidad",
@@ -83934,7 +84242,7 @@
           "exportada": true,
           "params": "c: Carga, hoy: Date",
           "retorno": "Caducidad",
-          "linea": 113,
+          "linea": 184,
           "resumen": "Estado de caducidad de UNA carga. `hoy` se pasa siempre desde fuera: el módulo es puro y determinista, y así los tests no dependen de la fecha en que se ejecuten."
         },
         {
@@ -83943,7 +84251,7 @@
           "exportada": true,
           "params": "subsistentes: Carga[], hoy: Date",
           "retorno": "CaducidadCuadro",
-          "linea": 186,
+          "linea": 257,
           "resumen": "Reparte las cargas SUBSISTENTES entre las que están firmes y las que podrían haber caducado, sin decidir por el usuario. Nunca toca el importe conservador: quien llama decide si enseña el escenario al"
         },
         {
@@ -83952,12 +84260,12 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 211
+          "linea": 282
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "50adde7a3055"
+      "hash": "d9860a0ca565"
     },
     {
       "ruta": "packages/module-subastas/src/cargas-prompt.ts",
@@ -83987,8 +84295,12 @@
       "resumen": "──────────────────────────────────────────────────────────────────────────── CARGAS REGISTRALES. Módulo PURO: tipos, prompt del especialista, parseo de la respuesta de la IA y —lo importante— la regla determinista de QUÉ CARGA SUBSISTE para quien se adjudica el inmueble. Por qué esto es el núcleo de",
       "exporta": [
         "normalizarCuadroCargas",
+        "esFormulaDeCierre",
         "cargasQueSubsisten",
         "mismoAcreedorQueEjecutante",
+        "letraAnotacion",
+        "identidadCarga",
+        "fusionarCargas",
         "consensoCuadros",
         "compararCuadros",
         "resumirCargas"
@@ -84012,12 +84324,21 @@
           "resumen": "Normaliza el JSON del lector a un `CuadroCargas` de confianza. Defensivo a propósito: un LLM puede devolver un tipo inventado, un importe con formato español, o cargas a medias — nada de eso debe lanz"
         },
         {
+          "nombre": "esFormulaDeCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Carga",
+          "retorno": "boolean",
+          "linea": 216,
+          "resumen": "¿Esta «carga» es en realidad la fórmula con la que el registro CIERRA la certificación? Caso real (30/07/2026): «SIN MÁS CARGAS, salvo AFECCIONES FISCALES vigentes» entraba en la lista como una carga "
+        },
+        {
           "nombre": "cargasQueSubsisten",
           "kind": "function",
           "exportada": true,
           "params": "cuadro: CuadroCargas, hoy?: Date",
           "retorno": "CargasSubsistentes",
-          "linea": 205,
+          "linea": 244,
           "resumen": "QUÉ HEREDA EL ADJUDICATARIO. Determinista, porque de esto sale la puja máxima. Reglas (LEC): · Ejecución HIPOTECARIA directa: la hipoteca que se ejecuta se cancela y las cargas POSTERIORES se purgan ("
         },
         {
@@ -84026,7 +84347,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 309
+          "linea": 348
         },
         {
           "nombre": "mismoAcreedorQueEjecutante",
@@ -84034,8 +84355,69 @@
           "exportada": true,
           "params": "cargas: Carga[], ejecutante: string | null | undefined",
           "retorno": "boolean",
-          "linea": 327,
+          "linea": 366,
           "resumen": "¿El ejecutante es también el acreedor de una carga ANTERIOR que subsiste? Es el matiz que decide si el caso «hipoteca anterior en embargo» es una ruina o solo un trámite: cuando coinciden, el crédito "
+        },
+        {
+          "nombre": "letraAnotacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Carga",
+          "retorno": "string | null",
+          "linea": 385,
+          "resumen": "Letra con la que el registro identifica una anotación preventiva («anotación letra C»). Es el identificador REGISTRAL del asiento: no cambia de un documento a otro, a diferencia del importe, que cada "
+        },
+        {
+          "nombre": "normAcreedor",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string | null",
+          "retorno": null,
+          "linea": 390
+        },
+        {
+          "nombre": "identidadCarga",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Carga",
+          "retorno": "string",
+          "linea": 397,
+          "resumen": "Identidad del ASIENTO, para reconocer la misma carga leída en documentos distintos. Por orden de fiabilidad: la letra de la anotación, la fecha con el titular y, si no hay nada de eso, la firma antigu"
+        },
+        {
+          "nombre": "rangoConservador",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: RangoCarga, b: RangoCarga",
+          "retorno": "RangoCarga",
+          "linea": 406,
+          "resumen": "El rango que MÁS cuesta de los dos: subsistir es más caro que purgarse."
+        },
+        {
+          "nombre": "fusionarCargas",
+          "kind": "function",
+          "exportada": true,
+          "params": "cargas: Carga[]",
+          "retorno": "",
+          "linea": 427,
+          "resumen": "Fusiona las cargas leídas en VARIOS documentos de la misma finca (edicto, certificación, informe de valoración…) dejando UNA fila por asiento. 🚨 El caso que la motiva (30/07/2026): la certificación c"
+        },
+        {
+          "nombre": "describir",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: Carga",
+          "retorno": "string",
+          "linea": 465
+        },
+        {
+          "nombre": "emparejarLecturas",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: Carga[], b: Carga[]",
+          "retorno": "Map<Carga, Carga>",
+          "linea": 477,
+          "resumen": "Empareja las cargas de dos lecturas del MISMO documento. Primero por identidad registral (la letra de la anotación, la fecha…) y solo después, entre las que quedan sueltas, por tipo+rango — que es lo "
         },
         {
           "nombre": "consensoCuadros",
@@ -84043,7 +84425,7 @@
           "exportada": true,
           "params": "a: CuadroCargas, b: CuadroCargas",
           "retorno": "",
-          "linea": 347,
+          "linea": 506,
           "resumen": "Consenso entre DOS lecturas independientes del mismo documento. Alberto pidió que la IA extraiga las cifras; esta es la red que evita que un dígito mal leído se propague a una puja. Se emparejan las c"
         },
         {
@@ -84052,7 +84434,7 @@
           "exportada": true,
           "params": "anterior: CuadroCargas, nuevo: CuadroCargas",
           "retorno": "CambioCargas[]",
-          "linea": 416,
+          "linea": 576,
           "resumen": "Compara el cuadro que se leyó de la certificación del BOE con uno NUEVO (una nota simple recién pedida al registro, por ejemplo). Hace falta porque la certificación que el juzgado adjunta a la ficha s"
         },
         {
@@ -84061,13 +84443,13 @@
           "exportada": true,
           "params": "cuadro: CuadroCargas, subsistentes: CargasSubsistentes",
           "retorno": "string",
-          "linea": 466,
+          "linea": 626,
           "resumen": "Resumen legible del cuadro para la ficha y el aviso de Telegram."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ae87c1603d9f"
+      "hash": "9f8cac615857"
     },
     {
       "ruta": "packages/module-subastas/src/catastro.ts",
@@ -87174,7 +87556,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2362,
-    "funciones": 6263
+    "archivos": 2366,
+    "funciones": 6298
   }
 }

@@ -24,6 +24,7 @@ prob_reserva`. Reglas:
 | Comps históricos por `checkin_date` | tabla `market_rates` (barrido `/api/mercado/sweep`) |
 | Eventos (puentes/festivos + aforo) | `apps/sivra/lib/pricing-calendar.ts` (`eventFactor`) + tabla `pricing_eventos_auto` (Ticketmaster) |
 | Ocupación + antelación de reserva | tablas `rate_snapshots` (`available`, `was_booked`), `incomes` |
+| **Precio VIVO de un piso hoy** | `rate_snapshots.price_pricelabs` (pese al nombre = precio real en Smoobu) o `pricing_applied.new_price`. **NUNCA `price_ours`** — ver trampa abajo |
 | Costes por piso (suelo) | `gastos_fijos`/`gastos` + limpieza (`coste_por_sesion`/`sesiones_con_precio`) + `channel_markup` |
 | Reglas por piso | tabla `pricing_settings` (`min_price`, `max_change_pct`, `apply_enabled`, percentiles…) |
 | **Memoria/aprendizaje** | tabla `pricing_aprendizaje` (se lee al empezar, se escribe al final) |
@@ -31,6 +32,17 @@ prob_reserva`. Reglas:
 
 Pisos (property_id → smoobu_id): `prop_house_sevillana` 352007 · `prop_busto_reform` 352418 ·
 `prop_duplex_center` 352928 · `prop_luxury_busto` 352943.
+
+### 🪤 Trampa `rate_snapshots.price_ours` — ha causado YA DOS falsas alarmas (27/07 y 31/07/2026)
+`price_ours` **NO es el precio del motor ni el precio vivo**: es una fórmula estática LEGACY (`calcOurs`
+en `pricing-calendar.ts`: base fija × estacional × día-de-semana) anterior al motor anclado a mercado.
+Se queda **congelada semanas** mientras el precio real se mueve a diario → si diagnosticas con ella
+concluirás que "el motor tarifica al doble del mercado" cuando en realidad está en mercado. Pasó el
+27/07 y volvió a pasar en la verificación del 31/07 (Busto agosto: `price_ours` 131-176€ congelado desde
+el 11/07, precio REAL 65-81€ contra un mercado de 80€). El aviso está en la cabecera de
+`app/api/sivra/rates/snapshot/route.ts`. **Para cualquier juicio sobre el nivel de precio usa
+`price_pricelabs` (precio real vivo en Smoobu) o `pricing_applied.new_price` (lo que escribió el motor).**
+`available` de esa misma tabla SÍ es real (viene de Smoobu) y es válido para ocupación.
 
 ## El ciclo (cada ~7 días; autónomo). Hazlo en este orden:
 
