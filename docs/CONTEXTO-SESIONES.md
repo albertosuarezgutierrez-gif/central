@@ -24,6 +24,29 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💰 Subastas: el «valor de mercado» dejaba de fabricar chollos falsos (30/07/2026, PR #1183).**
+  - Alberto: «334.645€ no es real para esa zona». Cierto: un piso de 1965 en Avda. Pedro Romero (Sevilla)
+    salía con 86,7% de margen de flip. Tres causas a la vez, todas fuera de la subasta.
+  - Módulo nuevo `valoracion.ts`: (a) `superficieValorable` toma la MENOR de registral/catastral (127 vs
+    117,10); (b) `ajusteEstado` descuenta 20%/10% al €/m² de los anuncios según la edad; (c)
+    `granularidadZona` marca ORIENTATIVA la mediana de un municipio grande y desigual (Sevilla, Jerez…),
+    y una referencia así ya no sostiene `flip_apto` ni un aviso por Telegram (`aviso.ts`, `clasificar.ts`).
+  - El flip compara contra `valorMercadoReformado` (sin el ajuste de estado) para no pagar la reforma dos veces.
+  - Columna `subastas.valor_orientativo` (migración aplicada) + chip ⚠️ en la ficha.
+  - **Corpus:** 345 comparables y solo 2 de Sevilla, 0 de Jerez, 0 de Cádiz — casi todo costa de Huelva.
+    Alberto da de alta alertas de Idealista/Fotocasa de Jerez y Cádiz ciudad. Las SUBASTAS de Jerez ya
+    llegaban solas (Cádiz está en sus provincias); el alta es solo para los comparables de precio.
+
+- **🔍 Subastas: el documento registral se lee ENTERO y «se adquiere libre» hay que ganárselo (30/07/2026, PR #1182).**
+  - Página a página el modelo no veía el orden de los asientos → ponía la hipoteca como `la_que_ejecuta`, la purgaba
+    y declaraba libre una finca con 44.850€. Ahora todas las páginas van en UNA llamada multimodal (OpenRouter,
+    `OPENROUTER_VISION_MODEL`), con respaldo automático a la lectura página a página. `LECTOR_VERSION` 3→4.
+  - Salvaguarda: cero cargas solo es «libre» si la certificación dice «sin más cargas» Y la confianza ≥ 0,5.
+  - **Probado en producción** (Belmonte, `SUB-JA-2026-264269`): rangos CORRECTOS, confianza 0,97 (antes 0,35).
+  - Pendiente: el embargo letra C) se cuenta DOS veces (3.600 + 2.600 desde dos documentos → 51.050€ en vez de
+    48.450€); la fórmula «SIN MÁS CARGAS salvo afecciones fiscales» entra como carga; las fechas vienen en LETRA
+    y `parsearFechaRegistral` no las lee, así que la caducidad del art. 86 no llega a evaluarse.
+
 - **💓 Los dos vigilantes que faltaban, con aviso por Telegram (30/07/2026, rama `claude/documentos-adjuntos-o95xl1`
   reiniciada tras mergear #1180).** Alberto: «hazlo que me avise por telegram». Eran los dos ⬜ más graves del
   barrido, ambos de infraestructura muda. **(1) Sync del PMS de ialimp:** `pms_connections` tiene DOS columnas de

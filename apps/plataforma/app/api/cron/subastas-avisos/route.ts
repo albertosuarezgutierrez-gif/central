@@ -101,6 +101,9 @@ export async function GET(req: NextRequest) {
         d: decidirAviso({
           // Rentabilidad: el radar ya casó criterios, y las lentes marcan flip/playa.
           rentable: true,
+          // …pero «rentable» se calculó contra un valor de mercado que a veces
+          // es la mediana de una ciudad entera. Eso no basta para interrumpir.
+          valorOrientativo: p.valor_orientativo === true,
           semaforo: p.semaforo ?? null,
           cargasSubsistentes: p.cargas_subsistentes == null ? null : Number(p.cargas_subsistentes),
           cargasConocidas: p.cargas_conocidas ?? false,

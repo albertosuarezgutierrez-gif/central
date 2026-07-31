@@ -47,7 +47,7 @@ export const COLS_SUBASTA = Prisma.raw(
     'uso_catastral, direccion_catastro, precio_m2_mercado, muestra_mercado, zona_mercado, notas_edicto, ' +
     'documentos, es_playa, margen_flip, margen_flip_pct, flip_apto, semaforo, analisis, precio_m2_zona, ' +
     'muestra_zona, zona_portal, lat, lon, geo_precision, ' +
-    'cargas_detalle, cargas_fuente, documentos_leidos, lector_version',
+    'cargas_detalle, cargas_fuente, documentos_leidos, lector_version, valor_orientativo',
 )
 
 /** Fila cruda de `subastas` → el tipo del módulo. */
@@ -99,6 +99,9 @@ export function filaASubasta(f: any): SubastaInmueble {
     // ficha catastral (Belmonte: 100 m²) se quedaba sin poder estimarse.
     superficie,
     superficieOrigen: superficie == null ? null : num(f.superficie_catastro) === superficie ? 'catastro' : 'anuncio',
+    // Los m² del anuncio SIN mezclar con los del Catastro: `superficie` ya se
+    // quedó con la mejor de las dos, y para valorar hay que poder compararlas.
+    superficieRegistral: num(f.superficie),
     anioConstruccion: f.anio_construccion ?? null,
     tipoBien: (f.tipo_bien as TipoBien | null) ?? d.tipoBien ?? null,
     dormitorios: f.dormitorios ?? d.dormitorios,
@@ -108,6 +111,9 @@ export function filaASubasta(f: any): SubastaInmueble {
     // Tercer escalón de valor cuando no hay tasación ni valor de referencia.
     precioM2Mercado: num(f.precio_m2_mercado),
     muestraMercado: f.muestra_mercado ?? null,
+    // De la etiqueta de zona depende que ese €/m² valga para decidir o solo
+    // para hacerse una idea (`granularidadZona`).
+    zonaMercado: f.zona_mercado ?? null,
     lotes: f.lotes ?? null,
   }
 }
