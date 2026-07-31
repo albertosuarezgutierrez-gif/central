@@ -38,7 +38,10 @@
   TLK daba FCF yield 2.679% (rupias) y AMX un EY 9,14% que parecía normal. Ahora una sola divisa, la del
   ejercicio más reciente (USD solo desempata: TM tenía una traducción de conveniencia de 2013 que
   anclaba la empresa a hace 13 años), y si no es USD se anulan EY/FCF yield. Parser verificado contra
-  companyfacts reales de GOOGL/AMZN/AVGO/TM. PR #1189.
+  companyfacts reales de GOOGL/AMZN/AVGO/TM. **PR #1189 MERGEADO.** Lecciones en el landmine del
+  SKILL.md de `trading-analista` (+ contrato del parser en `references/seleccion-y-senales.md`) y en
+  la regla global del CLAUDE.md raíz («el dato que SÍ está pero se lee mal»). Los valores viejos de
+  `trading_universo` se curan solos: el cron refresca 50 símbolos cada 6 h (~5 días de ciclo).
 
 - **🔐 Spec + plan aprobados: login con huella (WebAuthn/passkey) en plataforma (29/07/2026,
   sin implementar).** Diseño: `@simplewebauthn`, tabla `webauthn_credentials` scoped por
