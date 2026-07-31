@@ -37,6 +37,30 @@
   - **Pendiente:** PDF escaneado sin capa de texto se descarta (`extraer.ts` no cae a visión); 24 adjuntos
     ilegibles en la pasada del 31/07. Y no hay destino para gastos de la correduría en `negocios`.
 
+- **🔎 Verificación en caliente del arreglo de los ADR + techo al nº de acciones (31/07/2026).** Sin esperar
+  al cron: bajados por `pg_net` los companyfacts de los 5 peores del radar y pasados por el parser ya
+  mergeado. NMR (30.061.813 mil M$ de capitalización), PAC, LTM, BSAC y BCH → los 5 salen `emisorExtranjero`
+  y capitalización **NULL**. Ojo con LTM: presenta en DÓLARES, así que solo lo caza la regla del 20-F —
+  la de divisa no habría bastado. Hallazgo nuevo: el nº de acciones también viene inflado por el propio
+  emisor (Nomura ×1e6, PAC ×1000) y `accionesPlausibles` solo miraba hacia abajo → techo en 1e13, que caza
+  a Nomura sin tocar a los que sí tienen 1e11 acciones de verdad (LATAM, Santander Chile). PAC no es
+  separable y se queda. Hoy lo tapa el gate del ADR; la guarda es para cuando `acciones` se use para otra cosa.
+
+- **🧯 Segunda tanda del parser de EDGAR + retrovisor honesto (31/07/2026, PR #1193).** JNJ/LLY/GE no
+  etiquetan `OperatingIncomeLoss` y se quedaban sin ROIC **y** sin earnings yield: ahora se deriva
+  EBIT ≈ pretax + `InterestExpenseNonoperating` (calibrado con WMT: −1,2% vs el etiquetado). Y la
+  capitalización de un **ADR de emisor extranjero** (20-F) es incalculable —precio del ADR × acciones
+  ordinarias, ratio desconocido y ausente de la SEC—: `capitalizacionCruzable()` la deja a **null**
+  junto con EV/EY/FCF yield, en vez de guardar una cifra inflada ×N. Límite anotado: un ADS que
+  presenta 10-K (ONC) no se distingue con datos gratis; adivinar el ratio sería repetir el fallo.
+- **📉 Y el retrovisor dice que el modelo valor+calidad NO bate al mercado (31/07/2026).** Con el
+  parser YA corregido, punto-en-el-tiempo sobre 22 grandes de EEUU y 22 cortes mensuales
+  (2024-07→2026-04, `trading_backtest`): top5 +10,98% a 91 días vs universo +10,51% (**+0,47%**,
+  gana en 12/22 ventanas, Spearman 0,072 ≈ ruido). Lo único con señal es la COLA: cola5 +8,33%,
+  o sea −2,65% frente al top5. Muestra solapada y sesgada a mega-caps → **no es evidencia de nada**,
+  pero desmiente que arreglar el dato bastara para tener alfa. Sin tocar el modelo (eso va por
+  preregistro). `trading_universo` tarda ~4 días de cron en repoblarse con los valores corregidos.
+
 - **🏛️ Subastas: revisión de la cadena de ubicación — 8 fallos reales corregidos (31/07/2026).** Encargo
   «que no vuelva a suceder + revisa qué más puede pasar». 🔴 (a) `bajarFicha` no validaba la respuesta y el
   UPDATE del cron escribía las CIFRAS sin `COALESCE`: un 200 de mantenimiento del BOE **borraba** tipo/

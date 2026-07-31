@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-31T07:35:21Z",
+  "generadoEn": "2026-07-31T08:51:48Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3968,6 +3968,18 @@
   ],
   "novedades": [
     {
+      "titulo": "🔎 Verificación en caliente del arreglo de los ADR + techo al nº de acciones (31/07/2026).",
+      "fecha": "31/07/2026"
+    },
+    {
+      "titulo": "🧯 Segunda tanda del parser de EDGAR + retrovisor honesto (31/07/2026, PR #1193).",
+      "fecha": "31/07/2026"
+    },
+    {
+      "titulo": "📉 Y el retrovisor dice que el modelo valor+calidad NO bate al mercado (31/07/2026).",
+      "fecha": "31/07/2026"
+    },
+    {
       "titulo": "🏛️ Subastas: revisión de la cadena de ubicación — 8 fallos reales corregidos (31/07/2026).",
       "fecha": "31/07/2026"
     },
@@ -4014,18 +4026,6 @@
     {
       "titulo": "⚖️ Subastas — 3 partidas que faltaban en el coste real (30/07/2026, misma rama/PR #1176).",
       "fecha": "30/07/2026"
-    },
-    {
-      "titulo": "🏠 Subastas/chollos — API OFICIAL de Idealista preparada y DORMIDA (30/07/2026, PR #1168).",
-      "fecha": "30/07/2026"
-    },
-    {
-      "titulo": "💶 Auditoría pricing dinámico pre-cutover (30/07/2026, rama `claude/dynamic-pricing-audit-4cbdxv`).",
-      "fecha": "30/07/2026"
-    },
-    {
-      "titulo": "🔒 Director de código Fase 2: cierre de PR con veredicto real de CI (29/07/2026).",
-      "fecha": "29/07/2026"
     }
   ],
   "saludRepo": {

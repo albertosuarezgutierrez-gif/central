@@ -143,6 +143,20 @@ const ALIAS = {
   // del F-score, con lo que su Piotroski no era comparable con el de quien sí lo etiqueta.
   costeVentas: ['CostOfRevenue', 'CostOfGoodsAndServicesSold', 'CostOfGoodsSold', 'CostOfServices', 'CostOfSales'],
   ebit: ['OperatingIncomeLoss', 'ProfitLossFromOperatingActivities'],
+  // JNJ, LLY y GE no etiquetan `OperatingIncomeLoss` en sus últimos 10-K (verificado 31/07/2026 contra
+  // companyfacts reales) y se quedaban sin ROIC ni earnings yield — es decir, sin factor valor NI
+  // calidad. Derivación estándar de respaldo: EBIT ≈ resultado antes de impuestos + gasto financiero
+  // no operativo. Calibrado con WMT, que publica los dos: FY2026 pretax 29.469 M$ vs `OperatingIncomeLoss`
+  // 29.825 M$ (−1,2%). El gasto financiero bueno es `InterestExpenseNonoperating` (JNJ 971 M$, LLY 895 M$);
+  // GE no publica ninguno recientemente y se queda solo con el pretax — aproximación que INFRAvalora el
+  // EBIT, o sea que empuja el earnings yield hacia abajo: se equivoca por el lado prudente.
+  // ⚠️ Para un BANCO esta suma NO es un resultado de explotación (los intereses son su coste de ventas)
+  // y su EV tampoco es interpretable → el múltiplo no significa nada. Excluir financieras del factor
+  // valor sigue PENDIENTE (necesita el SIC de `submissions`, que no baja este módulo).
+  antesImpuestos: ['IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest',
+                   'IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments',
+                   'ProfitLossBeforeTax'],
+  gastoFinanciero: ['InterestExpenseNonoperating', 'InterestExpense', 'InterestAndDebtExpense', 'FinanceCosts'],
   // OJO: `CapitalExpendituresIncurredButNotYetPaid` NO es capex (es el devengo pendiente de pago) y
   // `PaymentsToAcquireIntangibleAssets` son intangibles — meterlos aquí falsearía el flujo libre.
   capex: ['PaymentsToAcquirePropertyPlantAndEquipment', 'PaymentsToAcquireProductiveAssets',
@@ -156,6 +170,29 @@ function periodosDe(facts: CompanyFacts['facts'], alias: readonly string[], unid
   const s = new Set<string>()
   for (const c of alias) for (const fin of serieAnual(facts, c, unidad).keys()) s.add(fin)
   return s
+}
+
+// ¿El ejercicio `periodo` se publicó en un 20-F (foreign private issuer)?
+//
+// 🚨 Importa para el DINERO, no para la contabilidad: lo que cotiza en EEUU de un emisor extranjero es
+// un ADR, y un ADR representa N acciones ordinarias (Telkom 100, Toyota 10, HSBC 5…). El nº de acciones
+// que trae companyfacts son las ORDINARIAS del mercado de origen, así que `precio_ADR × acciones` infla
+// la capitalización por el ratio del ADR: TLK salía con ~500.000 M$ de capitalización. **El ratio no
+// está en companyfacts ni en submissions**, así que no se puede corregir — solo se puede NO afirmar
+// (capitalización → null, y con ella EV, earnings yield y FCF yield). Los ratios internos (ROIC,
+// Piotroski, márgenes) no dependen del precio y siguen siendo válidos.
+export function presenta20F(facts: CompanyFacts['facts'], periodo: string): boolean {
+  for (const c of [...ALIAS.netIncome, ...ALIAS.assets]) {
+    for (const taxonomia of ['us-gaap', 'dei', 'ifrs-full'] as const) {
+      for (const puntos of Object.values(facts?.[taxonomia]?.[c]?.units ?? {})) {
+        for (const p of puntos ?? []) {
+          if (p.fp !== 'FY' || !p.form || !p.end || !p.form.startsWith('20-F')) continue
+          if (diasEntre(p.end, periodo) <= 45) return true
+        }
+      }
+    }
+  }
+  return false
 }
 
 function anioDe(facts: CompanyFacts['facts'], periodo: string, moneda: string): AnioFinanciero {
@@ -185,15 +222,29 @@ export type FundamentalesEmpresa = {
   // Divisa de TODOS los importes de abajo. Si no es 'USD', el emisor presenta en su moneda local y los
   // importes NO se pueden cruzar con una capitalización en dólares (EV, earnings yield, FCF yield).
   moneda?: string
+  // Presenta 20-F ⇒ lo que cotiza en EEUU es un ADR y su capitalización NO se puede calcular con las
+  // acciones ordinarias del XBRL (ver `presenta20F`). Usa `capitalizacionCruzable()` para decidir.
+  emisorExtranjero?: boolean
   ebit?: number             // año más reciente (para earnings yield = EBIT/EV que calcula el consumidor)
+  ebitDerivado?: boolean    // true si no venía etiquetado y salió de pretax + gasto financiero (aproximado)
   capitalInvertido?: number // activos − pasivo corriente (capital empleado, para ROIC)
   roic?: number             // EBIT / capital invertido
   // Para EV y mktCap (radar): valores ABSOLUTOS del FY más reciente.
   deudaLp?: number
   caja?: number
+  ventas?: number       // FY más reciente, en `moneda`
   margenNeto?: number   // beneficio neto / ventas
   acciones?: number     // = anios[0].fin.acciones (comodidad del consumidor)
   capex?: number        // FY más reciente (para FCF = CFO − capex; el yield lo cierra el consumidor con mktCap)
+}
+
+// ¿Se pueden cruzar los importes contables de esta empresa con una capitalización en dólares calculada
+// como `precio en EEUU × acciones del XBRL`? Solo si presenta en USD (si no, mezcla divisas) y no es un
+// emisor extranjero (si lo es, el precio es de un ADR de ratio desconocido). Cuando devuelve false, el
+// consumidor pone a **null** —nunca a 0— EV, earnings yield y FCF yield: el ranking trata el null como
+// neutral, mientras que un 0 sería afirmar un dato que nadie ha calculado.
+export function capitalizacionCruzable(f: Pick<FundamentalesEmpresa, 'moneda' | 'emisorExtranjero'> | null | undefined): boolean {
+  return !!f && (f.moneda ?? 'USD') === 'USD' && !f.emisorExtranjero
 }
 
 // Extrae del companyfacts los DOS ejercicios más recientes en el formato que consume el módulo, más las
@@ -215,7 +266,12 @@ export function extraerFundamentales(cf: CompanyFacts, simbolo: string): Fundame
   const anios = conAncla.slice(0, 2).map(periodo => ({ fy: anioFiscalDe(periodo), periodo, fin: anioDe(facts, periodo, moneda) }))
 
   const ult = anios[0].periodo
-  const ebit = valorPeriodo(facts, ALIAS.ebit, ult, moneda)
+  // EBIT etiquetado si existe; si no, derivado (ver comentario de `antesImpuestos` en ALIAS). El gasto
+  // financiero ausente NO invalida la derivación: sumar 0 deja el EBIT por debajo del real, que es el
+  // lado prudente. Lo que sí sería inventar es derivar sin pretax → ahí se queda en undefined.
+  const ebitEtiquetado = valorPeriodo(facts, ALIAS.ebit, ult, moneda)
+  const pretax = ebitEtiquetado == null ? valorPeriodo(facts, ALIAS.antesImpuestos, ult, moneda) : undefined
+  const ebit = ebitEtiquetado ?? (pretax != null ? pretax + (valorPeriodo(facts, ALIAS.gastoFinanciero, ult, moneda) ?? 0) : undefined)
   const activosUlt = valorPeriodo(facts, ALIAS.assets, ult, moneda)
   const capitalInvertido = activosUlt != null
     ? (activosUlt - (valorPeriodo(facts, ALIAS.pasivoCorriente, ult, moneda) ?? 0))
@@ -228,8 +284,10 @@ export function extraerFundamentales(cf: CompanyFacts, simbolo: string): Fundame
   const neto = valorPeriodo(facts, ALIAS.netIncome, ult, moneda)
   const margenNeto = ventas ? div(neto, ventas) : undefined
   const capex = valorPeriodo(facts, ALIAS.capex, ult, moneda)
-  return { simbolo, cik: cf.cik != null ? String(cf.cik).padStart(10, '0') : undefined, anios, moneda, ebit, capitalInvertido, roic,
-           deudaLp, caja, margenNeto, acciones: anios[0].fin.acciones || undefined, capex }
+  return { simbolo, cik: cf.cik != null ? String(cf.cik).padStart(10, '0') : undefined, anios, moneda,
+           emisorExtranjero: presenta20F(facts, ult), ebit, ebitDerivado: ebitEtiquetado == null && ebit != null,
+           capitalInvertido, roic, deudaLp, caja, ventas, margenNeto,
+           acciones: anios[0].fin.acciones || undefined, capex }
 }
 
 // Lista plana de los conceptos US-GAAP/dei que consumen los extractores — para que el backtest pueda
@@ -332,8 +390,18 @@ export async function fundamentalesCik(simbolo: string, cik: string, timeoutMs =
 // ranking por artefacto, y de paso contaminó los z-scores de valor de TODO el universo). En un universo
 // de large-caps NINGUNA empresa tiene menos de 1M de acciones: por debajo, el dato es basura → null
 // (la empresa pierde el factor valor esa semana en vez de envenenar el ranking).
+//
+// El mismo error existe hacia ARRIBA y es igual de silencioso (31/07/2026): Nomura publica
+// 3.066.458.811.000.000 acciones —su cifra real, 3.066.458.811, escalada ×1e6 por el propio emisor— y
+// Grupo Aeroportuario del Pacífico 505.277.464.000, que son sus 505 millones ×1000. Cazarlo por arriba
+// es más delicado que por abajo porque hay empresas con MUCHÍSIMAS acciones de verdad (LATAM 604.000
+// millones, Santander Chile 188.000, Banco de Chile 101.000), así que el techo se pone donde ya no cabe
+// ninguna: **1e13**, unas 15 veces por encima del mayor recuento real que hemos visto. Sin él, PAC pasa
+// (5e11 es indistinguible de LATAM) pero Nomura no. Hoy el fallo está tapado porque los tres son
+// emisores extranjeros y `capitalizacionCruzable` ya anula su capitalización; esta guarda es para que
+// siga sin doler el día que `acciones` se use para otra cosa (métricas por acción) o cambie ese gate.
 export function accionesPlausibles(n: number | null | undefined): number | null {
-  return typeof n === 'number' && Number.isFinite(n) && n >= 1e6 ? n : null
+  return typeof n === 'number' && Number.isFinite(n) && n >= 1e6 && n <= 1e13 ? n : null
 }
 
 // El JSON crudo de company_tickers (para listaUniverso). Best-effort → null.

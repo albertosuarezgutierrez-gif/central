@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { serieAnual, anioFiscalDe, monedaInforme, extraerFundamentales, mapaTickers, listaUniverso, extraerEventos8K, extraerFilingsForm4, accionesPlausibles, estimarProximoInforme } from './edgar.ts'
+import { serieAnual, anioFiscalDe, monedaInforme, extraerFundamentales, mapaTickers, listaUniverso, extraerEventos8K, extraerFilingsForm4, accionesPlausibles, estimarProximoInforme, capitalizacionCruzable } from './edgar.ts'
 import { piotroskiFScore } from '@central/module-trading'
 
 // Fixture mínimo con la forma real de companyfacts (2 ejercicios: FY2023 mejor que FY2022).
@@ -375,4 +375,82 @@ test('accionesPlausibles descarta cifras de acciones sin escalar (caso MCD: 712 
   assert.equal(accionesPlausibles(712_000_000), 712_000_000)
   assert.equal(accionesPlausibles(null), null)
   assert.equal(accionesPlausibles(NaN), null)
+})
+
+test('accionesPlausibles descarta también la escala inflada del emisor (caso NMR: 3,07 mil billones)', () => {
+  // Nomura publica su recuento real (3.066.458.811) multiplicado por 1e6. Con el ADR ya bloqueado no
+  // hace daño hoy, pero el dato es basura y no debe propagarse.
+  assert.equal(accionesPlausibles(3_066_458_811_000_000), null)
+  // Y NO puede cazar a las que sí tienen muchísimas acciones de verdad.
+  assert.equal(accionesPlausibles(604_437_877_587), 604_437_877_587)   // LATAM, real
+  assert.equal(accionesPlausibles(188_446_126_794), 188_446_126_794)   // Santander Chile, real
+  assert.equal(accionesPlausibles(505_277_464_000), 505_277_464_000)   // PAC: ×1000 e indistinguible → pasa
+})
+
+// ── 🧮 EBIT derivado (JNJ/LLY/GE no etiquetan OperatingIncomeLoss) ─────────────────────────────────
+test('EBIT: se deriva de pretax + gasto financiero no operativo cuando falta OperatingIncomeLoss', () => {
+  const cf = structuredClone(CF)
+  delete (cf.facts['us-gaap'] as Record<string, unknown>).OperatingIncomeLoss
+  ;(cf.facts['us-gaap'] as Record<string, unknown>)
+    .IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest =
+      unidad([{ end: '2023-12-31', val: 170, fy: 2023, filed: '2024-02-01' }])
+  ;(cf.facts['us-gaap'] as Record<string, unknown>).InterestExpenseNonoperating =
+      unidad([{ end: '2023-12-31', val: 12, fy: 2023, filed: '2024-02-01' }])
+  const f = extraerFundamentales(cf, 'LLY')!
+  assert.equal(f.ebit, 182)
+  assert.equal(f.ebitDerivado, true)
+  assert.ok(Math.abs(f.roic! - 182 / (1100 - 200)) < 1e-9)   // el ROIC deja de ser incalculable
+})
+
+test('EBIT derivado sin gasto financiero publicado (caso GE): solo el pretax, nunca inventar el interés', () => {
+  const cf = structuredClone(CF)
+  delete (cf.facts['us-gaap'] as Record<string, unknown>).OperatingIncomeLoss
+  ;(cf.facts['us-gaap'] as Record<string, unknown>)
+    .IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest =
+      unidad([{ end: '2023-12-31', val: 170, fy: 2023, filed: '2024-02-01' }])
+  assert.equal(extraerFundamentales(cf, 'GE')!.ebit, 170)   // por debajo del real = lado prudente
+})
+
+test('EBIT etiquetado gana al derivado (WMT publica los dos y difieren un 1%)', () => {
+  const cf = structuredClone(CF)
+  ;(cf.facts['us-gaap'] as Record<string, unknown>)
+    .IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest =
+      unidad([{ end: '2023-12-31', val: 170, fy: 2023, filed: '2024-02-01' }])
+  const f = extraerFundamentales(cf, 'WMT')!
+  assert.equal(f.ebit, 180)
+  assert.equal(f.ebitDerivado, false)
+})
+
+test('sin pretax NI OperatingIncomeLoss el EBIT queda indefinido, no 0', () => {
+  const cf = structuredClone(CF)
+  delete (cf.facts['us-gaap'] as Record<string, unknown>).OperatingIncomeLoss
+  const f = extraerFundamentales(cf, 'X')!
+  assert.equal(f.ebit, undefined)
+  assert.equal(f.roic, undefined)
+})
+
+// ── 🪪 ADR de emisor extranjero: la capitalización NO es calculable ────────────────────────────────
+test('presenta20F marca al emisor extranjero y bloquea el cruce con una capitalización en dólares', () => {
+  const cf = structuredClone(CF) as unknown as { facts: Record<string, Record<string, { units: Record<string, Array<Record<string, unknown>>> }>> }
+  for (const c of ['NetIncomeLoss', 'Assets']) for (const p of cf.facts['us-gaap'][c].units.USD) p.form = '20-F'
+  const f = extraerFundamentales(cf as never, 'TLK')!
+  assert.equal(f.emisorExtranjero, true)
+  assert.equal(capitalizacionCruzable(f), false)
+})
+
+test('un 10-K en dólares sí es cruzable', () => {
+  const f = extraerFundamentales(CF, 'X')!
+  assert.equal(f.emisorExtranjero, false)
+  assert.equal(capitalizacionCruzable(f), true)
+})
+
+test('capitalizacionCruzable rechaza la moneda local aunque el emisor presente 10-K', () => {
+  assert.equal(capitalizacionCruzable({ moneda: 'JPY', emisorExtranjero: false }), false)
+  assert.equal(capitalizacionCruzable(extraerFundamentales(CF_YENES, 'TM')), false)
+  assert.equal(capitalizacionCruzable(null), false)
+  assert.equal(capitalizacionCruzable({}), true)   // sin datos de moneda ⇒ USD por defecto
+})
+
+test('ventas del último ejercicio se exponen para el consumidor', () => {
+  assert.equal(extraerFundamentales(CF, 'X')!.ventas, 1000)
 })
