@@ -99,9 +99,16 @@ export const FLOOR_SEASONAL = [1.00, 1.00, 1.25, 1.30, 1.30, 1.15, 1.00, 1.00, 1
 // Suelo estacional relativo a min_price para una fecha. En fechas de evento sube con el evento
 // (mitad del factor, acotado a ×2.0) para que Semana Santa/Feria no puedan venderse a suelo.
 // Devuelve 1.0 (sin efecto) en temporada baja sin evento.
-export function seasonalFloorFactor(dateStr: string): number {
+//
+// `evExterno` = factor de evento que NO vive en este calendario, sino en `pricing_eventos_auto` (lo
+// que descubren Ticketmaster y la búsqueda web). Sin él, un concierto que solo conoce la tabla subía
+// el precio objetivo pero NO protegía el suelo (hallazgo 31/07/2026: los 3 días de Karol G en La
+// Cartuja —el pelotazo del año, factor 2,5— tenían el suelo de un junio cualquiera, así que si sus
+// comps caducaban el precio podía deslizarse hasta el mínimo). El motor pasa aquí el mismo factor
+// que usa para el precio.
+export function seasonalFloorFactor(dateStr: string, evExterno = 1): number {
   const mon = new Date(dateStr + "T00:00:00").getMonth()
-  const ev = EVENTS[dateStr]
-  const eventFloor = ev ? Math.min(1 + (ev - 1) * 0.5, 2.0) : 1.0
+  const ev = Math.max(EVENTS[dateStr] ?? 0, Number(evExterno) || 0)
+  const eventFloor = ev > 1 ? Math.min(1 + (ev - 1) * 0.5, 2.0) : 1.0
   return Math.max(1.0, FLOOR_SEASONAL[mon] ?? 1.0, eventFloor)
 }

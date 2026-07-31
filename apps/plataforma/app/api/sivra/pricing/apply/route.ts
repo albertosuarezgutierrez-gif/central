@@ -100,16 +100,20 @@ export async function POST(req: NextRequest) {
       SELECT scenario, MAX(search_date) sd FROM market_rates
       WHERE scenario LIKE 'prop_%' AND price_night > 0 GROUP BY scenario
     ),
+    -- 🚨 Cada comparable se NORMALIZA al aforo del piso (`pricing_factor_aforo`) antes de entrar en
+    -- el percentil. Sin esto, una casa de 12 plazas se tarificaba contra apartamentos de 4-8 y salía
+    -- a mitad de precio (hallazgo 31/07/2026). Con comps del mismo aforo el factor es 1 y no cambia nada.
     mkt AS (
       SELECT m.scenario,
-        percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY m.price_night)::numeric med,
-        percentile_cont(s.floor_pctl)  WITHIN GROUP (ORDER BY m.price_night)::numeric flo,
-        percentile_cont(s.ceil_pctl)   WITHIN GROUP (ORDER BY m.price_night)::numeric cei,
+        percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))::numeric med,
+        percentile_cont(s.floor_pctl)  WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))::numeric flo,
+        percentile_cont(s.ceil_pctl)   WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))::numeric cei,
         percentile_cont(0.5) WITHIN GROUP (ORDER BY m.score)::numeric mkt_score,
         COUNT(*)::int AS sample_n,
         (CURRENT_DATE - MAX(l.sd))::int AS market_age_days
       FROM market_rates m JOIN latest l ON l.scenario = m.scenario AND l.sd = m.search_date
       JOIN pricing_settings s ON s.property_id = m.scenario
+      LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
       WHERE m.price_night > 0
       GROUP BY m.scenario, s.target_pctl, s.floor_pctl, s.ceil_pctl
     ),
@@ -166,9 +170,13 @@ export async function POST(req: NextRequest) {
     property_id: string; ym: string; med_guest: number; flo_guest: number; cei_guest: number; n: number
   }[]>(Prisma.sql`
     WITH recent AS (
+      -- price_night NORMALIZADO al aforo del piso (ver `pricing_factor_aforo`); con comps del mismo
+      -- aforo el factor es 1. Sin esto los buckets de un piso grande salían a precio de apartamento.
       SELECT DISTINCT ON (m.scenario, m.checkin_date, m.comp_name)
-        m.scenario, m.checkin_date, m.price_night
+        m.scenario, m.checkin_date,
+        m.price_night * pricing_factor_aforo(z.max_guests, m.guests) AS price_night
       FROM market_rates m
+      LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
       WHERE m.price_night > 0 AND m.scenario LIKE 'prop_%'
         AND m.checkin_date >= CURRENT_DATE
         AND m.search_date >= CURRENT_DATE - 120
@@ -196,9 +204,13 @@ export async function POST(req: NextRequest) {
   const MIN_FECHA_BUCKET = 3
   const fechaRows = await prisma.$queryRaw<{ property_id: string; rate_date: string; med_guest: number; n: number }[]>(Prisma.sql`
     WITH recent AS (
+      -- price_night NORMALIZADO al aforo del piso (ver `pricing_factor_aforo`); con comps del mismo
+      -- aforo el factor es 1. Sin esto los buckets de un piso grande salían a precio de apartamento.
       SELECT DISTINCT ON (m.scenario, m.checkin_date, m.comp_name)
-        m.scenario, m.checkin_date, m.price_night
+        m.scenario, m.checkin_date,
+        m.price_night * pricing_factor_aforo(z.max_guests, m.guests) AS price_night
       FROM market_rates m
+      LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
       WHERE m.price_night > 0 AND m.scenario LIKE 'prop_%'
         AND m.checkin_date >= CURRENT_DATE
         AND m.search_date >= CURRENT_DATE - 120
@@ -455,7 +467,11 @@ export async function POST(req: NextRequest) {
       // Suelo estacional: impide que una fecha de temporada alta (primavera/Navidad/eventos) se
       // deslice al suelo base cuando el mercado de ese mes caduca. Inerte si seasonal_floor_k=0.
       if (Number(r.seasonal_floor_k) > 0 && r.min_price != null) {
-        const factor = 1 + (seasonalFloorFactor(date) - 1) * Number(r.seasonal_floor_k)
+        // El suelo mira los eventos de AMBAS fuentes (calendario + `pricing_eventos_auto`), igual que
+        // el precio: si no, un evento que solo conoce la tabla (Karol G) subía el objetivo pero dejaba
+        // el suelo de un día normal.
+        const evParaSuelo = r.events_enabled ? (autoEv.get(date) ?? 1) : 1
+        const factor = 1 + (seasonalFloorFactor(date, evParaSuelo) - 1) * Number(r.seasonal_floor_k)
         let sf = Math.round(r.min_price * factor)
         if (r.max_price != null) sf = Math.min(sf, r.max_price)
         target = Math.max(target, sf)

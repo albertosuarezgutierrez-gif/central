@@ -24,6 +24,27 @@
 - **Copia LEGADA:** `apps/sivra/app/api/pricing/guard/route.ts` NO está programada (solo la de plataforma) y
   arrastra el bug viejo de dedup + solo tiene checks #1/#3 — candidata a retirar; no la reactives.
 
+### 🚨 AFORO: los comps se normalizan al tamaño del piso (31/07/2026 — aviso de Alberto sobre Socorro)
+Alberto: «Socorro tiene 12 plazas, no se puede vender a 165€, saldrían 13,75€ por persona». Tenía razón y
+el fallo era doble y sistémico:
+- **Recogida:** el cron `mercado/sweep` buscaba con «4 personas» y guardaba los **mismos comps** para los
+  4 pisos con `guests=4` fijo. Ahora busca por el **aforo REAL** de cada piso (`pricing_piso_zona.max_guests`);
+  los pisos con el mismo aforo comparten búsqueda (coste: 1 por aforo distinto y ventana, hoy 4).
+- **Consumo:** `apply/route.ts` calculaba los percentiles **sin mirar `guests`** → una casa de 12 plazas se
+  tarificaba contra apartamentos de 4-8 y salía a mitad de precio. Ahora cada comp se **normaliza** con
+  `pricing_factor_aforo(plazas_piso, plazas_comp)` (función SQL, gemela de `lib/sivra/pricing-aforo.ts`).
+- **El exponente (k=1,1) está MEDIDO, no inventado:** p50 de la MISMA fecha con aforos distintos (entre
+  fechas distintas mandaría la temporada). House 8p vs Dúplex 4p en 12 fechas → ratio 2,20 al doblar plazas;
+  House 12p vs Luxury 5p en 2 fechas → 2,52 para 2,4×. Validación cruzada: comps 8p de House p50 319€ ×1,56
+  = 498€, y su precio vivo real está en 450-522€.
+- **Efecto medido en el ancla de mercado:** Busto 95€→95€ y Dúplex 118€→118€ (**sin cambio**, sus comps ya
+  eran de su aforo) · House 258€→403€ (+56%) · **Luxury 123€→157€ (+28%, y está EN VIVO** — vigilar
+  ocupación tras el merge; el raíl ±20%/día y el circuit-breaker acotan la subida).
+- **Suelo de House 180€ → 300€** (25€/plaza) con OK de Alberto. A 180€ eran 15€/plaza, el más bajo de los
+  cuatro siendo el activo de más valor. Referencia: su peor venta real en 8 meses fue 334€/noche.
+- **Regla nueva: al juzgar el precio de un piso grande, mira SIEMPRE el €/plaza**, no solo el total. Un
+  número que parece alto («360€») puede ser precio de hostal repartido entre 12 personas.
+
 ### Revisión de eventos y costes (31/07/2026, a petición de Alberto)
 - **🚨 Feria de Abril 2027 estaba MAL FECHADA en `pricing-calendar.ts`** (corregido): el calendario la tenía
   «estimada 18-25 abr» (patrón de 2026 calcado) cuando las fechas oficiales son **13-18 abr, alumbrado el 12**.
@@ -33,9 +54,14 @@
   «dos semanas después de Semana Santa» — se confirman contra el mercado (un p50 que se dispara) o fuente oficial.**
 - **Semana Santa 2027 (21-28 mar) SÍ está bien** en el calendario y el pico casa con el mercado (25-mar p50 554€,
   26-mar 462€). No está en `pricing_eventos_auto`, pero el motor toma el MAX de ambas fuentes.
-- **⚠️ El suelo estacional solo mira el CALENDARIO, no `pricing_eventos_auto`** (`seasonalFloorFactor` lee `EVENTS`).
-  Un evento que solo exista en la tabla (los que descubren Ticketmaster/websearch) sube el precio objetivo pero
-  **no protege el suelo**. Si un evento importante se descubre por la tabla, añádelo también al calendario.
+- **✅ ARREGLADO 31/07/2026 — el suelo ya mira las DOS fuentes de eventos.** `seasonalFloorFactor(fecha, evExterno)`
+  acepta el factor de `pricing_eventos_auto` y el motor le pasa el mismo que usa para el precio. Antes solo leía
+  el calendario, así que los 3 días de **Karol G** (factor 2,5, solo en la tabla) tenían el suelo de un junio
+  cualquiera: subían de precio pero podían deslizarse al mínimo si sus comps caducaban.
+- **🕳️ HUECOS DE EVENTOS vivos (calendario + tabla, próximos 12 meses):** **septiembre 2026 = CERO eventos en
+  ambas fuentes** pese a ser mes alto (`SEASONAL` 1,40) y con ventas reales de House a 449-847€/noche — ahí cae
+  la **Bienal de Flamenco** (años pares), pendiente de confirmar fechas con Alberto. Julio 2027 también vacío
+  (límite del horizonte). Agosto 2026 solo tiene el Sevilla-Rayo. El resto de meses está cubierto.
 - **Horizonte vs calendario:** `PRICING_HORIZON_DAYS`=365 y el calendario acaba el **2027-05-02** → may-jul 2027
   se tarifica sin eventos de calendario (solo lo que traiga la tabla). El watchdog de `pilot-track` avisa.
 - **Costes por noche (recalculados con datos vivos; detalle en `pricing_aprendizaje/ALL/costes_por_noche_31_07_2026`):**

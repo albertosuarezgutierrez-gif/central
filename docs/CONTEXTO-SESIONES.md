@@ -24,6 +24,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏠 Pricing: el estudio de competencia comparaba una CASA DE 12 PLAZAS con apartamentos de 4 — arreglado
+  (31/07/2026, rama `claude/pricing-check-31-07`).** Lo cazó Alberto: «Socorro tiene 12 plazas, a 165€ saldrían
+  13,75€ por persona». Fallo doble: el cron `mercado/sweep` buscaba con «4 personas» y guardaba los MISMOS comps
+  para los 4 pisos (`guests=4` fijo), y `apply/route.ts` calculaba los percentiles **sin mirar `guests`**. Ahora
+  el sweep busca por el aforo REAL de cada piso y cada comp se normaliza con `pricing_factor_aforo()` (función
+  SQL aplicada + gemela pura `lib/sivra/pricing-aforo.ts`, 10 tests). **Exponente k=1,1 MEDIDO** con el p50 de la
+  MISMA fecha a distinto aforo (14 fechas). Efecto en el ancla: Busto y Dúplex **sin cambio** (validación de que
+  no distorsiona), House 258€→403€, **Luxury 123€→157€ (EN VIVO, vigilar ocupación)**. Suelo de House 180€→300€
+  (25€/plaza) con OK de Alberto. Además `seasonalFloorFactor` ya mira las dos fuentes de eventos: los 3 días de
+  Karol G tenían suelo de junio normal. Hueco pendiente: **septiembre 2026 sin ningún evento** (Bienal de Flamenco).
+
 - **🎪 Pricing: FERIA DE ABRIL 2027 estaba mal fechada en el calendario — corregido (31/07/2026, rama
   `claude/pricing-check-31-07`).** Alberto pidió revisar que los eventos de Sevilla se tuvieran en cuenta y que
   los costes cubrieran el suelo. Hallazgo: `pricing-calendar.ts` tenía la Feria «estimada 18-25 abr» (patrón de
