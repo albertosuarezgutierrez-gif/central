@@ -24,6 +24,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🚨 Fundamentales del radar de trading iban 2 años atrasados y MEZCLADOS (31/07/2026).** Salió
+  mirando ORCL: su ficha daba FCF yield **+3,49%** cuando el flujo libre real de FY2026 es
+  **−23.700 M$ (−6,99%)**. Causa: en companyfacts de la SEC `fy`/`fp` identifican el INFORME, no el
+  periodo del dato — un 10-K trae 2-3 comparativos con el MISMO `fy` y `filed`, y `serieAnual`
+  (`lib/trading/edgar.ts`) los colapsaba en una clave quedándose con el más viejo. Resultado 2 años
+  atrás, balance 1, y ratios cruzando ambos (ROA = beneficio FY2024 ÷ activos FY2025). Ahora se indexa
+  por el CIERRE (`end`). Además: capex ausente ya NO se toma como 0 (convertía FCF en CFO). Verificado
+  contra la SEC vía `pg_net`. **Pendiente de decisión de Alberto:** 299 símbolos sin `deudaLp` (EV sin
+  deuda → EY inflado), 156 sin capex, 551 con `margenBruto=0` (pierden 1 punto de Piotroski siempre).
+
 - **🔐 Spec + plan aprobados: login con huella (WebAuthn/passkey) en plataforma (29/07/2026,
   sin implementar).** Diseño: `@simplewebauthn`, tabla `webauthn_credentials` scoped por
   `cuenta_id`, atajo de contraseña de respaldo, reutiliza la cookie `plataforma_session`.

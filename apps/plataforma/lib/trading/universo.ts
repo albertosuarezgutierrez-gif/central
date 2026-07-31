@@ -54,7 +54,11 @@ export async function refrescarLoteUniverso(lote = 50): Promise<{ fuente: string
       const ev = mktCap != null ? mktCap + (f?.deudaLp ?? 0) - (f?.caja ?? 0) : null
       const earningsYield = f?.ebit != null && ev ? f.ebit / ev : null
       const cfo = f?.anios[0]?.fin.cfo
-      const fcfYield = cfo != null && cfo !== 0 && mktCap ? (cfo - (f?.capex ?? 0)) / mktCap : null
+      // Sin capex publicado NO se puede afirmar el flujo libre: dar por hecho `capex = 0` deja
+      // FCF ≡ CFO y pinta de generadora de caja a una empresa que la está quemando (ORCL FY2026:
+      // CFO 32.000 M$ contra un capex de 55.660 M$ → FCF −23.700 M$). Ausente = null, que el ranking
+      // trata como neutral; nunca 0, que es una afirmación que nadie ha comprobado.
+      const fcfYield = cfo != null && cfo !== 0 && mktCap && f?.capex != null ? (cfo - f.capex) / mktCap : null
       const momentum = momentum12_1(cierres)
       const ok = piotroski != null && f?.roic != null
       if (ok) conDatos++

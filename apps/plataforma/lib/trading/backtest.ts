@@ -30,7 +30,8 @@ export function factoresEnFecha(cf: CompanyFacts | null, puntos: PuntoPrecio[], 
       const ev = mktCap != null ? mktCap + (f.deudaLp ?? 0) - (f.caja ?? 0) : null
       ey = f.ebit != null && ev ? f.ebit / ev : null
       const cfo = f.anios[0]?.fin.cfo
-      fcfy = cfo != null && cfo !== 0 && mktCap ? (cfo - (f.capex ?? 0)) / mktCap : null
+      // Capex ausente ⇒ flujo libre DESCONOCIDO, no "capex cero" (ver nota en `universo.ts`).
+      fcfy = cfo != null && cfo !== 0 && mktCap && f.capex != null ? (cfo - f.capex) / mktCap : null
     }
   }
   return {

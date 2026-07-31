@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { serieAnual, extraerFundamentales, mapaTickers, listaUniverso, extraerEventos8K, extraerFilingsForm4, accionesPlausibles, estimarProximoInforme } from './edgar.ts'
+import { serieAnual, anioFiscalDe, extraerFundamentales, mapaTickers, listaUniverso, extraerEventos8K, extraerFilingsForm4, accionesPlausibles, estimarProximoInforme } from './edgar.ts'
 import { piotroskiFScore } from '@central/module-trading'
 
 // Fixture mínimo con la forma real de companyfacts (2 ejercicios: FY2023 mejor que FY2022).
@@ -29,18 +29,77 @@ const CF = {
   },
 }
 
-test('serieAnual coge el valor FY de 10-K por ejercicio', () => {
+test('serieAnual indexa por el CIERRE del ejercicio del dato, no por el `fy` del informe', () => {
   const s = serieAnual(CF.facts, 'NetIncomeLoss')
-  assert.equal(s.get(2022), 100)
-  assert.equal(s.get(2023), 150)
+  assert.equal(s.get('2022-12-31'), 100)
+  assert.equal(s.get('2023-12-31'), 150)
 })
 
-test('serieAnual con el filed más reciente gana ante FY repetido', () => {
+test('serieAnual con el filed más reciente gana ante el mismo cierre repetido', () => {
   const facts = { 'us-gaap': { Assets: unidad([
     { end: '2023-12-31', val: 900, fy: 2023, filed: '2024-01-01' },
     { end: '2023-12-31', val: 1100, fy: 2023, filed: '2024-05-01' },  // reexpresión posterior
   ]) } }
-  assert.equal(serieAnual(facts, 'Assets').get(2023), 1100)
+  assert.equal(serieAnual(facts, 'Assets').get('2023-12-31'), 1100)
+})
+
+// ── 🚨 REGRESIÓN (31/07/2026): comparativos de un mismo informe ────────────────────────────────────
+// Datos REALES de ORCL descargados de la SEC (companyconcept NetIncomeLoss/Assets, CIK 0001341439).
+// El 10-K de FY2026 publica TRES ejercicios de resultado y DOS de balance, y los cinco hechos llevan
+// `fy:2026, fp:FY, filed:2026-06-22`. Indexando por `fy` se colapsaban en una clave y ganaba el primero
+// del array (el más viejo): el radar daba beneficio de FY2024 (10.467 M$) etiquetado como FY2026 y lo
+// dividía entre los activos de FY2025 (168.361 M$) para el ROA.
+const ORCL_10K_FY2026 = {
+  cik: 1341439,
+  facts: {
+    'us-gaap': {
+      NetIncomeLoss: { units: { USD: [
+        { start: '2023-06-01', end: '2024-05-31', val: 10_467e6, fy: 2026, fp: 'FY', form: '10-K', filed: '2026-06-22' },
+        { start: '2024-06-01', end: '2025-05-31', val: 12_443e6, fy: 2026, fp: 'FY', form: '10-K', filed: '2026-06-22' },
+        { start: '2025-06-01', end: '2026-05-31', val: 17_087e6, fy: 2026, fp: 'FY', form: '10-K', filed: '2026-06-22' },
+      ] } },
+      Assets: { units: { USD: [
+        { end: '2025-05-31', val: 168_361e6, fy: 2026, fp: 'FY', form: '10-K', filed: '2026-06-22' },
+        { end: '2026-05-31', val: 261_759e6, fy: 2026, fp: 'FY', form: '10-K', filed: '2026-06-22' },
+      ] } },
+    },
+  },
+}
+
+test('serieAnual separa los ejercicios comparativos que comparten `fy` y `filed` (caso ORCL)', () => {
+  const s = serieAnual(ORCL_10K_FY2026.facts, 'NetIncomeLoss')
+  assert.equal(s.size, 3, 'los tres comparativos son ejercicios distintos, no uno')
+  assert.equal(s.get('2026-05-31'), 17_087e6)
+  assert.equal(s.get('2025-05-31'), 12_443e6)
+  assert.equal(s.get('2024-05-31'), 10_467e6)
+})
+
+test('extraerFundamentales coge el ejercicio VIVO y no mezcla años en un mismo ratio (caso ORCL)', () => {
+  const f = extraerFundamentales(ORCL_10K_FY2026, 'ORCL')!
+  assert.equal(f.anios[0].periodo, '2026-05-31')
+  assert.equal(f.anios[0].fy, 2026)
+  assert.equal(f.anios[0].fin.beneficioNeto, 17_087e6)   // antes: 10.467 M$, el de FY2024
+  assert.equal(f.anios[1].periodo, '2025-05-31')
+  assert.equal(f.anios[1].fin.beneficioNeto, 12_443e6)
+  // ROA del ejercicio vivo con los activos DE ESE MISMO ejercicio (antes: FY2024 ÷ activos FY2025).
+  assert.ok(Math.abs(f.anios[0].fin.roa - 17_087 / 261_759) < 1e-9)
+})
+
+test('serieAnual descarta las columnas trimestrales que un 10-K publica con `fp:FY`', () => {
+  const facts = { 'us-gaap': { NetIncomeLoss: { units: { USD: [
+    { start: '2025-06-01', end: '2026-05-31', val: 1000, fy: 2026, fp: 'FY', form: '10-K', filed: '2026-06-22' },
+    { start: '2026-03-01', end: '2026-05-31', val: 250, fy: 2026, fp: 'FY', form: '10-K', filed: '2026-06-22' },  // Q4
+  ] } } } }
+  const s = serieAnual(facts, 'NetIncomeLoss')
+  assert.equal(s.size, 1)
+  assert.equal(s.get('2026-05-31'), 1000, 'el trimestre no puede pisar al ejercicio completo')
+})
+
+test('anioFiscalDe etiqueta el cierre: enero temprano = ejercicio anterior; 31/01 = su año natural', () => {
+  assert.equal(anioFiscalDe('2026-05-31'), 2026)
+  assert.equal(anioFiscalDe('2025-12-31'), 2025)
+  assert.equal(anioFiscalDe('2026-01-03'), 2025)   // calendario 52/53 semanas
+  assert.equal(anioFiscalDe('2026-01-31'), 2026)   // minorista tipo Walmart (su propio FY2026)
 })
 
 test('extraerFundamentales devuelve 2 ejercicios en el formato del módulo + ROIC', () => {
