@@ -34,6 +34,20 @@
   latido = 🟠 «aún no se sabe», nunca 🟢). NO duplicado en `AGENTES_VIGILADOS` (evitar doble aviso). PR #1192.
   **Aparte y sin arreglar:** `facturas-scan` y `subastas-enriquecer` dan **504 (timeout 60 s)** cada mañana — por eso
   `agente_latidos` está vacía; el vigía de las 07:45 lo cantará como «sin señal».
+- **🧯 Segunda tanda del parser de EDGAR + retrovisor honesto (31/07/2026, PR #1193).** JNJ/LLY/GE no
+  etiquetan `OperatingIncomeLoss` y se quedaban sin ROIC **y** sin earnings yield: ahora se deriva
+  EBIT ≈ pretax + `InterestExpenseNonoperating` (calibrado con WMT: −1,2% vs el etiquetado). Y la
+  capitalización de un **ADR de emisor extranjero** (20-F) es incalculable —precio del ADR × acciones
+  ordinarias, ratio desconocido y ausente de la SEC—: `capitalizacionCruzable()` la deja a **null**
+  junto con EV/EY/FCF yield, en vez de guardar una cifra inflada ×N. Límite anotado: un ADS que
+  presenta 10-K (ONC) no se distingue con datos gratis; adivinar el ratio sería repetir el fallo.
+- **📉 Y el retrovisor dice que el modelo valor+calidad NO bate al mercado (31/07/2026).** Con el
+  parser YA corregido, punto-en-el-tiempo sobre 22 grandes de EEUU y 22 cortes mensuales
+  (2024-07→2026-04, `trading_backtest`): top5 +10,98% a 91 días vs universo +10,51% (**+0,47%**,
+  gana en 12/22 ventanas, Spearman 0,072 ≈ ruido). Lo único con señal es la COLA: cola5 +8,33%,
+  o sea −2,65% frente al top5. Muestra solapada y sesgada a mega-caps → **no es evidencia de nada**,
+  pero desmiente que arreglar el dato bastara para tener alfa. Sin tocar el modelo (eso va por
+  preregistro). `trading_universo` tarda ~4 días de cron en repoblarse con los valores corregidos.
 
 - **🏛️ Subastas: revisión de la cadena de ubicación — 8 fallos reales corregidos (31/07/2026).** Encargo
   «que no vuelva a suceder + revisa qué más puede pasar». 🔴 (a) `bajarFicha` no validaba la respuesta y el
@@ -187,6 +201,21 @@
   `cuenta_id`, atajo de contraseña de respaldo, reutiliza la cookie `plataforma_session`.
   Docs en `docs/superpowers/plans/2026-07-17-huella-webauthn-plataforma{,-design}.md` (10
   tareas TDD). **Pendiente:** implementación — nadie la ha empezado todavía.
+
+- **🔎 Portales privados de subastas: sondeo técnico, SIN implementar (30/07/2026).** Alberto pregunta si
+  conectar Escrapalia / Eactivos / Gobid. Verificado con `pg_net` desde Supabase (los tres dan 403 al
+  contenedor de Claude, 200 desde cloud — misma trampa que Nominatim; ninguno tiene muro Incapsula tipo
+  Sareb). **Eactivos = el único que encaja en el radar de inmuebles:** SSR 924 KB, filtro por provincia en
+  el HTML (Sevilla=12), categorías con URL limpia (`/listado-de-naves-industriales`, `-maquinaria`,
+  `-unidad-productiva`…) y **154 atributos `toolparam*`** (web anotada a propósito para agentes); pendiente
+  localizar su endpoint AJAX (el listado no viene en el HTML). **Escrapalia = SPA** (portada 3,5 KB sin
+  lotes, sitemap estático de 2020) y **Gobid.es sirve el catálogo ITALIANO** (1 lote español de ~14) → los
+  dos descartados como fuente del radar. Idea aparte: su catálogo (maquinaria, furgón isotermo, mobiliario)
+  mapea con **`apps/transporte` y `apps/alquiler` ÚNICAMENTE** — corregido por Alberto: ia-rest es un SaaS
+  que VENDE a restaurantes y almacén es del cliente Joaquín Jaén, así que comprar equipamiento ahí sería
+  para terceros, no activo propio. Con solo dos negocios no compensa ingesta automática (alerta por email y
+  ya). Siguiente paso propuesto y NO ejecutado: suscribirse a la alerta por email de eactivos (patrón
+  `gmail-boe.ts`) antes de escribir adaptador. Decisión de Alberto pendiente.
 
 - **🕳️ Barrido del monorepo: afirmar ausencias no comprobadas (30/07/2026, misma rama).** Alberto:
   «haz esto con todo lo que tenemos». Barrido de las 8 apps + packages buscando el patrón del bullet

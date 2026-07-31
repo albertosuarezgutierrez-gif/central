@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-31T07:26:07Z",
+  "generadoEn": "2026-07-31T08:06:09Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3968,6 +3968,14 @@
   ],
   "novedades": [
     {
+      "titulo": "🧯 Segunda tanda del parser de EDGAR + retrovisor honesto (31/07/2026, PR #1193).",
+      "fecha": "31/07/2026"
+    },
+    {
+      "titulo": "📉 Y el retrovisor dice que el modelo valor+calidad NO bate al mercado (31/07/2026).",
+      "fecha": "31/07/2026"
+    },
+    {
       "titulo": "🏛️ Subastas: revisión de la cadena de ubicación — 8 fallos reales corregidos (31/07/2026).",
       "fecha": "31/07/2026"
     },
@@ -4000,6 +4008,10 @@
       "fecha": "30/07/2026"
     },
     {
+      "titulo": "🔎 Portales privados de subastas: sondeo técnico, SIN implementar (30/07/2026).",
+      "fecha": "30/07/2026"
+    },
+    {
       "titulo": "🕳️ Barrido del monorepo: afirmar ausencias no comprobadas (30/07/2026, misma rama).",
       "fecha": "30/07/2026"
     },
@@ -4014,18 +4026,6 @@
     {
       "titulo": "🏠 Subastas/chollos — API OFICIAL de Idealista preparada y DORMIDA (30/07/2026, PR #1168).",
       "fecha": "30/07/2026"
-    },
-    {
-      "titulo": "💶 Auditoría pricing dinámico pre-cutover (30/07/2026, rama `claude/dynamic-pricing-audit-4cbdxv`).",
-      "fecha": "30/07/2026"
-    },
-    {
-      "titulo": "🔒 Director de código Fase 2: cierre de PR con veredicto real de CI (29/07/2026).",
-      "fecha": "29/07/2026"
-    },
-    {
-      "titulo": "🔧 Subastas — HOTFIX /subastas caída + FASE 3 construida con datos reales (29/07/2026, mañana).",
-      "fecha": "29/07/2026"
     }
   ],
   "saludRepo": {
