@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-30T19:46:20Z",
-  "sha": "896d4f71b0f9b6a93c8c1c369ed9303ec12767ac",
+  "generadoEn": "2026-07-31T05:54:27Z",
+  "sha": "1d00d9d89ad32d1eeccdf884f90e81c91a3ea4c0",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -40346,7 +40346,7 @@
           "exportada": false,
           "params": "t?: string | null",
           "retorno": "string",
-          "linea": 37,
+          "linea": 38,
           "resumen": "timestamptz (texto, p.ej. \"2026-06-14 09:30:00+00\") → \"09:30\""
         },
         {
@@ -40355,7 +40355,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 58,
+          "linea": 59,
           "resumen": "── Tarjeta de escaneo rápido de facturas ──────────────────────────"
         },
         {
@@ -40364,12 +40364,12 @@
           "exportada": true,
           "params": "{ empresa, sesionesIniciales, conexiones, clientes, limpiadoras, today, modulosOff = [] }: Props",
           "retorno": null,
-          "linea": 126
+          "linea": 127
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "df05460acd79"
+      "hash": "03762faac121"
     },
     {
       "ruta": "apps/ialimp/app/dashboard/page.tsx",
@@ -40396,7 +40396,7 @@
         "pms_connections"
       ],
       "rutaApi": null,
-      "hash": "f573fa26b191"
+      "hash": "ca99e84bd94b"
     },
     {
       "ruta": "apps/ialimp/app/l/acceso/[token]/page.tsx",
@@ -42919,6 +42919,55 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "218931ef8af8"
+    },
+    {
+      "ruta": "apps/ialimp/lib/pms-estado.ts",
+      "ambito": "apps/ialimp",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Estado REAL de una conexión con el PMS (Smoobu/iCal). Puro: sin BD ni red. 🚨 Por qué existe: el panel pintaba un chip «● Activo» verde a partir de `activa` y `sync_error`. Ninguna de las dos dice si la sincronización SIGUE",
+      "exporta": [
+        "antiguedadTexto",
+        "estadoSync",
+        "esSyncSano"
+      ],
+      "funciones": [
+        {
+          "nombre": "horasDesde",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: Date | string | null, ahora: Date",
+          "retorno": "number | null",
+          "linea": 41
+        },
+        {
+          "nombre": "antiguedadTexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "horas: number",
+          "retorno": "string",
+          "linea": 49,
+          "resumen": "Texto humano de una antigüedad en horas."
+        },
+        {
+          "nombre": "estadoSync",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: ConexionPms, ahora: Date = new Date(), maxHoras: number = HORAS_SYNC_FRESCO,",
+          "retorno": "ResumenSync",
+          "linea": 55
+        },
+        {
+          "nombre": "esSyncSano",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResumenSync",
+          "retorno": "boolean",
+          "linea": 107,
+          "resumen": "¿El chip debe pintarse en rojo/ámbar? (verde solo con dato fresco y sin error)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8894657a68fd"
     },
     {
       "ruta": "apps/ialimp/lib/propietario-auth.ts",
@@ -50523,16 +50572,18 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 33
+          "linea": 41
         }
       ],
       "tablas": [
+        "agente_latidos",
         "correo_cursor",
         "market_rates",
-        "next"
+        "next",
+        "pms_connections"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "dd0412f837ea"
+      "hash": "c9cb41108ec1"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -50951,7 +51002,7 @@
           "exportada": false,
           "params": "req: Request",
           "retorno": "boolean",
-          "linea": 13
+          "linea": 14
         },
         {
           "nombre": "GET",
@@ -50959,7 +51010,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 20
+          "linea": 21
         }
       ],
       "tablas": [
@@ -50967,7 +51018,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/facturas-scan",
-      "hash": "213f1edd2403"
+      "hash": "94e00073d8f7"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/health-check/route.ts",
@@ -56904,8 +56955,8 @@
           "kind": "function",
           "exportada": true,
           "params": "cuentaId: string",
-          "retorno": "Promise<number>",
-          "linea": 21
+          "retorno": "Promise<ResultadoEscaneo>",
+          "linea": 35
         },
         {
           "nombre": "notificarFactura",
@@ -56913,7 +56964,7 @@
           "exportada": false,
           "params": "facturaId: string, proveedor: string, importe: number, fechaVenc: string | null, cuentaId: string,",
           "retorno": "Promise<void>",
-          "linea": 108
+          "linea": 123
         },
         {
           "nombre": "aprobarPago",
@@ -56921,7 +56972,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string, debtorIban: string,",
           "retorno": "Promise<",
-          "linea": 164
+          "linea": 179
         },
         {
           "nombre": "aplazarPago",
@@ -56929,7 +56980,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string, dias = 7",
           "retorno": "Promise<boolean>",
-          "linea": 225
+          "linea": 240
         },
         {
           "nombre": "rechazarFactura",
@@ -56937,7 +56988,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 241
+          "linea": 256
         },
         {
           "nombre": "verificarPagosPendientes",
@@ -56945,7 +56996,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<number>",
-          "linea": 255
+          "linea": 270
         },
         {
           "nombre": "conciliarConBanco",
@@ -56953,7 +57004,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<number>",
-          "linea": 284
+          "linea": 299
         },
         {
           "nombre": "pagarTodo",
@@ -56961,7 +57012,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<",
-          "linea": 323
+          "linea": 338
         },
         {
           "nombre": "resumenSemanal",
@@ -56969,7 +57020,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 339
+          "linea": 354
         },
         {
           "nombre": "alertarFacturasAusentes",
@@ -56977,7 +57028,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<number>",
-          "linea": 368
+          "linea": 383
         },
         {
           "nombre": "proponerVinculoReserva",
@@ -56985,7 +57036,7 @@
           "exportada": false,
           "params": "facturaId: string, proveedor: string, fechaFactura: string | null,",
           "retorno": "Promise<void>",
-          "linea": 401
+          "linea": 416
         },
         {
           "nombre": "actualizarMensajeTg",
@@ -56993,7 +57044,7 @@
           "exportada": false,
           "params": "msgId: number | null, texto: string",
           "retorno": "Promise<void>",
-          "linea": 432
+          "linea": 447
         }
       ],
       "tablas": [
@@ -57006,7 +57057,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "4ea8b0e144ba"
+      "hash": "fc6040fc2fad"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/procesar.ts",
@@ -62672,6 +62723,31 @@
       "hash": "e6c4972aa4ee"
     },
     {
+      "ruta": "apps/plataforma/lib/monitoring/latido-escribir.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Escritura de la huella de un agente en `agente_latidos`. Para los agentes cuyo trabajo NO deja rastro propio cuando no hay nada que hacer (el escaneo de facturas de Gmail es el caso canónico: `facturas_proveedor` solo crece si llega una factura). Sin esta huella, «no llegó ninguna factura» y «el buz",
+      "exporta": [
+        "registrarLatido"
+      ],
+      "funciones": [
+        {
+          "nombre": "registrarLatido",
+          "kind": "function",
+          "exportada": true,
+          "params": "agente: string, ok: boolean, detalle?: string | null,",
+          "retorno": "Promise<void>",
+          "linea": 20,
+          "resumen": "Deja constancia de una pasada. Best-effort a propósito: si la tabla no existe todavía o la escritura falla, NO se rompe el agente que la llama — pero tampoco se finge que latió (simplemente no hay hue"
+        }
+      ],
+      "tablas": [
+        "agente_latidos",
+        "set"
+      ],
+      "rutaApi": null,
+      "hash": "9ea6a77deea1"
+    },
+    {
       "ruta": "apps/plataforma/lib/monitoring/latidos.ts",
       "ambito": "apps/plataforma",
       "resumen": "💓 Latidos de agentes — vigía genérico de que los agentes/crons de la casa siguen produciendo. La lección del watchdog de trading (un agente que desaparece/no corre en silencio) NO es exclusiva de trading: ya pasó con el **agente de pricing** (dejó de correr y una reserva de Luxury entró un 40% por ",
@@ -62690,7 +62766,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e8111a3588fa"
+      "hash": "c16221c01ba3"
     },
     {
       "ruta": "apps/plataforma/lib/norma43.ts",
@@ -87046,7 +87122,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2359,
-    "funciones": 6254
+    "archivos": 2361,
+    "funciones": 6259
   }
 }

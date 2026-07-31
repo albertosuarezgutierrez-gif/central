@@ -35,6 +35,24 @@ Next.js `^15.5` · React 19 · Prisma `^5.22` · **JWT (jose + bcryptjs, SIN Nex
 - **Controlar qué está "Ready" en producción = panel de Vercel** (`vercel.com/.../ialimp`, filtro *Production*): muestra el deploy *Current* en vivo y los *rollback candidates* para volver atrás en 1 clic. GitHub/PR = el *qué cambió*; Vercel = el *qué está publicado*. (Conviene activar avisos de deploy a Slack/email en Settings → Notifications.)
 - Cada PR mergeado a `main` = un deploy de producción. Solo `main` despliega a producción.
 
+## 🚨 LANDMINE — `pms_connections.ultimo_sync` NO la escribe nadie (30/07/2026)
+La tabla tiene **dos** columnas de fecha de sincronización y solo una está viva: `/api/pms/sync` escribe
+**`last_sync_at`**, mientras que `ultimo_sync` (la que declara `schema.prisma` y la que leía el dashboard)
+está a **NULL en producción desde siempre**. Efecto: la fecha del último sync no se mostraba nunca y en el
+panel solo quedaba el chip verde «● Activo», que además salía de `activa` + `sync_error IS NULL` — y
+«no consta error» incluye «lleva tres semanas sin ejecutarse». Con la sincronización muerta, `cleaning_sessions`
+deja de recibir reservas y **todo lo que cuelga de ella miente en la misma dirección**: la app de la limpiadora
+dice «Sin limpiezas este día», el briefing dice «sin sesiones programadas» y el panel se queda tan ancho.
+- El estado real se calcula con el helper PURO **`lib/pms-estado.ts`** (`estadoSync`/`esSyncSano`, testeado):
+  inactiva · sin sincronizar nunca · desactualizada hace X · con errores · activa hace X. Verde SOLO con dato
+  fresco (<3 h) y sin errores. **Al leer el estado del PMS, usa este helper — nunca `activa` a pelo.**
+- **Vigilante externo:** el cron `agentes-latido` de `apps/plataforma` avisa por **Telegram** si `last_sync_at`
+  pasa de 6 h o si hay `sync_error` (registro en `apps/plataforma/lib/monitoring/latidos.ts`, id `ialimp_pms`).
+  Es el aviso de infraestructura del SaaS (para Alberto), NO el backlog operativo de Vanessa — ese sigue
+  fuera del Telegram de Alberto, ver la nota del Check 6 retirado en el CLAUDE.md de plataforma.
+- Si algún día se limpia la deuda: borrar `ultimo_sync` del schema y de la BD, no "arreglarla" escribiendo
+  en las dos.
+
 ## Multi-tenant (CRÍTICO — frontera de seguridad)
 - **Scoping por `empresa_id` en TODA query y route.** Nunca consultes ni asignes datos sin filtrar por empresa. Una fuga entre empresas es un fallo grave de RGPD.
 - Middleware: 401 a `/api/*` no público sin cookie `ialimp_session`. Eximidos: `/api/auth`, `/api/pms`, `/api/leads`, `/api/propietario`, `/api/cotizador`, `/api/catastro`, `/l`, `/api/l`.

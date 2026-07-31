@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-30T19:46:20Z",
+  "generadoEn": "2026-07-31T05:54:27Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3690,6 +3690,7 @@
       "tenant_modulos"
     ],
     "plataforma": [
+      "agente_latidos",
       "agente_salud",
       "ai_usos",
       "banca_destino_reglas",

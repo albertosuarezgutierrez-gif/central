@@ -47,6 +47,19 @@
     48.450€); la fórmula «SIN MÁS CARGAS salvo afecciones fiscales» entra como carga; las fechas vienen en LETRA
     y `parsearFechaRegistral` no las lee, así que la caducidad del art. 86 no llega a evaluarse.
 
+- **💓 Los dos vigilantes que faltaban, con aviso por Telegram (30/07/2026, rama `claude/documentos-adjuntos-o95xl1`
+  reiniciada tras mergear #1180).** Alberto: «hazlo que me avise por telegram». Eran los dos ⬜ más graves del
+  barrido, ambos de infraestructura muda. **(1) Sync del PMS de ialimp:** `pms_connections` tiene DOS columnas de
+  fecha y el panel leía la muerta — `/api/pms/sync` escribe `last_sync_at` y el dashboard leía `ultimo_sync`, NULL
+  en producción desde siempre; el chip verde salía de `activa` + «no consta error», que incluye «lleva semanas sin
+  correr». Nuevo helper puro `apps/ialimp/lib/pms-estado.ts` (8 tests) + chip con el estado real. **(2) Escaneo de
+  facturas de Gmail:** `catch { return 0 }` hacía «no se pudo leer el buzón» ≡ «no hay facturas»; ahora devuelve
+  `{nuevas, ok, error}`. **Vigía:** tabla nueva `agente_latidos` (aplicada) para los agentes que solo escriben
+  cuando hay trabajo — la frescura se mide sobre la última pasada BUENA — y dos entradas nuevas en
+  `lib/monitoring/latidos.ts` (`ialimp_pms` 6 h, `facturas_gmail` 30 h) que avisan por Telegram desde el cron
+  `agentes-latido`. Extra: una sonda que revienta ya no se traga en silencio, va en un bloque «Sin poder
+  comprobar — esto NO es todo bien». Comprobado contra la BD real: el sync de Smoobu late cada 10 min.
+
 - **🔐 Spec + plan aprobados: login con huella (WebAuthn/passkey) en plataforma (29/07/2026,
   sin implementar).** Diseño: `@simplewebauthn`, tabla `webauthn_credentials` scoped por
   `cuenta_id`, atajo de contraseña de respaldo, reutiliza la cookie `plataforma_session`.
