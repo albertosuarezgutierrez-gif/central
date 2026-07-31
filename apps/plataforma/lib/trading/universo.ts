@@ -51,10 +51,21 @@ export async function refrescarLoteUniverso(lote = 50): Promise<{ fuente: string
       const precio = cierres.at(-1) ?? null
       const piotroski = f && f.anios.length >= 2 ? piotroskiFScore(f.anios[0].fin, f.anios[1].fin).score : null
       const mktCap = precio != null && accionesPlausibles(f?.acciones) ? precio * accionesPlausibles(f?.acciones)! : null
-      const ev = mktCap != null ? mktCap + (f?.deudaLp ?? 0) - (f?.caja ?? 0) : null
+      // El precio (y por tanto la capitalización) viene en DÓLARES. Un emisor que presenta cuentas en
+      // su moneda local —Toyota en yenes, Telkom en rupias, América Móvil en pesos— no puede cruzar sus
+      // importes con ella: daba un FCF yield del 2.679% en TLK y del 124% en TM (que las guardas de
+      // `calidad-datos` sí cazan por absurdas) pero también un 9,14% de earnings yield en AMX, que
+      // parece perfectamente normal y es puro artefacto de divisa. Los ratios internos (ROIC,
+      // Piotroski, margen) sí valen: se calculan dentro de una sola moneda.
+      const enDolares = (f?.moneda ?? 'USD') === 'USD'
+      const ev = mktCap != null && enDolares ? mktCap + (f?.deudaLp ?? 0) - (f?.caja ?? 0) : null
       const earningsYield = f?.ebit != null && ev ? f.ebit / ev : null
       const cfo = f?.anios[0]?.fin.cfo
-      const fcfYield = cfo != null && cfo !== 0 && mktCap ? (cfo - (f?.capex ?? 0)) / mktCap : null
+      // Sin capex publicado NO se puede afirmar el flujo libre: dar por hecho `capex = 0` deja
+      // FCF ≡ CFO y pinta de generadora de caja a una empresa que la está quemando (ORCL FY2026:
+      // CFO 32.000 M$ contra un capex de 55.660 M$ → FCF −23.700 M$). Ausente = null, que el ranking
+      // trata como neutral; nunca 0, que es una afirmación que nadie ha comprobado.
+      const fcfYield = cfo != null && cfo !== 0 && mktCap && enDolares && f?.capex != null ? (cfo - f.capex) / mktCap : null
       const momentum = momentum12_1(cierres)
       const ok = piotroski != null && f?.roic != null
       if (ok) conDatos++

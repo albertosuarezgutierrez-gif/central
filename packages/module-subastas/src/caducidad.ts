@@ -26,6 +26,8 @@
 // ────────────────────────────────────────────────────────────────────────────
 
 import type { Carga } from './cargas.ts'
+import { norm } from './parsing.ts'
+import { palabrasANumero, numeroAlFinal } from './numeros-es.ts'
 
 /** Plazo del art. 86 LH: la anotación caduca a los 4 años de su fecha. */
 export const ANIOS_CADUCIDAD_ANOTACION = 4
@@ -86,11 +88,80 @@ export function parsearFechaRegistral(texto: string | null | undefined): { fecha
     if (mes >= 0) return fechaValida(+literal[3], mes + 1, +literal[1], true)
   }
 
-  // Último recurso: un año suelto plausible.
+  // Fecha EN LETRA, que es como el registro escribe los asientos antiguos:
+  // «diecisiete de agosto de dos mil nueve». Sin esto la caducidad del art. 86
+  // LH no se llegaba a evaluar sobre justo las anotaciones más viejas —las
+  // únicas que pueden estar caducadas—, así que la comprobación no servía de
+  // nada en la práctica. Admite la forma mixta (día en cifra y año en letra o
+  // al revés): el OCR de una certificación mezcla las dos.
+  const enLetra = fechaEnLetra(t)
+  if (enLetra) return enLetra
+
+  // Último recurso: un año suelto plausible, en cifra o en letra.
   const anio = /\b(19\d{2}|20\d{2})\b/.exec(t)
   if (anio) return fechaValida(+anio[1], 12, 31, false)
+  const anioLetra = anioEnLetra(t)
+  if (anioLetra) return fechaValida(anioLetra, 12, 31, false)
 
   return null
+}
+
+/** Texto sin puntuación ni acentos: `palabrasANumero` corta en cuanto ve «nueve,». */
+function palabras(texto: string): string {
+  return norm(texto).replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+/**
+ * Fecha con el mes escrito con su nombre y el día y/o el año en letra.
+ * Devuelve `null` en cuanto algo no cuadre: una fecha a medias es peor que
+ * ninguna, porque el art. 86 LH se calcula sobre ella.
+ */
+function fechaEnLetra(texto: string): { fecha: Date; exacta: boolean } | null {
+  const t = palabras(texto)
+  const m = new RegExp(`\\b(${MESES.join('|')})\\b`).exec(t)
+  if (!m) return null
+
+  const mes = MESES.indexOf(m[1]) + 1
+  const antes = t.slice(0, m.index).replace(/\s+de\s*$/, '')
+  const despues = t.slice(m.index + m[1].length).replace(/^\s*de\s+/, '')
+
+  const anio = numeroAlPrincipio(despues)
+  if (anio == null || anio < 1900 || anio > 2100) return null
+
+  const dia = numeroAlFinalMixto(antes)
+  // Sin día legible se toma el último del mes, no el primero: es la lectura que
+  // da MENOS antigüedad y, por tanto, la que menos tiende a dar por caducada
+  // una carga. Toda la ambigüedad se resuelve hacia el lado caro.
+  if (dia == null) return fechaValida(anio, mes, ultimoDiaDe(anio, mes), false)
+  return fechaValida(anio, mes, dia, true)
+}
+
+/** Año escrito con palabras («año dos mil nueve»), sin mes que lo acompañe. */
+function anioEnLetra(texto: string): number | null {
+  const trozos = palabras(texto).split(' ')
+  for (let i = 0; i < trozos.length; i++) {
+    const n = palabrasANumero(trozos.slice(i).join(' '))
+    if (n != null && n >= 1900 && n <= 2100) return n
+  }
+  return null
+}
+
+/** Último número del fragmento, en cifra («el 17») o en letra («diecisiete»). */
+function numeroAlFinalMixto(t: string): number | null {
+  const cifra = /(\d{1,2})\s*$/.exec(t)
+  if (cifra) return +cifra[1]
+  return numeroAlFinal(t)
+}
+
+/** Primer número del fragmento, en cifra («2009 ante…») o en letra («dos mil nueve»). */
+function numeroAlPrincipio(t: string): number | null {
+  const cifra = /^(\d{4})\b/.exec(t)
+  if (cifra) return +cifra[1]
+  return palabrasANumero(t)
+}
+
+function ultimoDiaDe(anio: number, mes: number): number {
+  return new Date(Date.UTC(anio, mes, 0)).getUTCDate()
 }
 
 const MESES = [
