@@ -55,8 +55,19 @@ export interface SubastaInmueble {
   autoridad?: string | null
   provincia?: string | null
   municipio?: string | null
-  /** Dirección postal (Catastro si la hay; si no, la extraída del anuncio). */
+  /**
+   * Dirección tal cual la publica el ANUNCIO (descripción registral). Puede ser
+   * prosa, no una dirección postal — cualquier uso debe pasarla por
+   * `esDireccionPostal` antes de creérsela.
+   */
   direccion?: string | null
+  /**
+   * `ldt` del CATASTRO, el dato oficial. Va aparte de `direccion` a propósito:
+   * mezclarlos hacía que la ficha etiquetase «🏛️» un párrafo del edicto y que
+   * el enlace al mapa mandase esa prosa a Google pisando el punto exacto
+   * (31/07/2026). Se formatea con `direccionCatastro()`.
+   */
+  direccionCatastro?: string | null
   /** Coordenadas WGS84. Alimentan el mapa nacional y el enlace a Google Maps. */
   lat?: number | null
   lon?: number | null

@@ -105,6 +105,12 @@ es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
   cierra la **fórmula mágica** (earnings yield = EBIT/EV) y la rankea (`rankingMagic`). Parser puro testeado
   (`lib/trading/edgar.ts`: `extraerFundamentales`/`serieAnual`/`mapaTickers`); corre en el egress de Vercel. Si
   `conDatos` viene 0 en producción, revisar el User-Agent SEC y el resolver de CIK. NO opera; alimenta `/analizar`.
+  **Contrato del parser tras el PR #1189 (leer antes de tocarlo — ver el landmine del SKILL.md):** la serie se
+  indexa por el **cierre de ejercicio (`end`)**, nunca por el `fy` del informe; cada empresa se extrae en **una
+  sola divisa** (`FundamentalesEmpresa.moneda`) y si NO es `USD` el consumidor debe anular earnings yield y FCF
+  yield —se cruzan con una capitalización en dólares— conservando ROIC/Piotroski/márgenes, que son ratios
+  internos; y un concepto ausente sale `undefined`, que `zscores` trata como neutral, **nunca 0**. `anios[i]`
+  lleva `periodo` (el cierre real, fuente de verdad del alineamiento) además de `fy` (etiqueta legible).
 - **`POST {PLATAFORMA_URL}/api/trading/insiders`** con `{ simbolos?: string[], limite?, soloCompras? }` (Bearer
   `ALERTA_TOKEN`): escanea los **Form 4** más recientes de la SEC y devuelve la convicción por símbolo — el
   **CLUSTER BUY** (varios directivos DISTINTOS comprando a la vez) sube; las ventas restan. Por defecto solo el

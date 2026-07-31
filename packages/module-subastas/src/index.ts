@@ -60,6 +60,7 @@ export {
   urlGoogleMaps,
   urlStreetView,
   urlFichaCatastro,
+  esDireccionPostal,
 } from './geo.ts'
 export type { UbicacionSubasta } from './geo.ts'
 
@@ -69,7 +70,7 @@ export type { FichaBoe, ResultadoSubasta } from './ficha-boe.ts'
 export {
   parsearCatastro, errorCatastro, superficieUtil, parsearCoordenadas,
   refParcela, direccionCatastro, parsearInmueblesDnploc, parcelaUnica, paramsDnploc,
-  parsearVias, nombreViaBuscable, elegirVia,
+  parsearVias, elegirVia, normVia, tokensVia, terminoBusquedaVia,
 } from './catastro.ts'
 export type { DatosCatastro, CoordenadasCatastro, DireccionCatastro, InmuebleCatastro, ParamsDnploc } from './catastro.ts'
 
@@ -146,6 +147,10 @@ export {
   cargasQueSubsisten,
   mismoAcreedorQueEjecutante,
   consensoCuadros,
+  fusionarCargas,
+  identidadCarga,
+  letraAnotacion,
+  esFormulaDeCierre,
   resumirCargas,
   compararCuadros,
   CONFIANZA_MINIMA_LIBRE,

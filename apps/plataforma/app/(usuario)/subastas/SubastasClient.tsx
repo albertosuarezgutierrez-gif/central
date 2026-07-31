@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { eur } from '@/lib/dinero'
 import { estadoDocumentacion, resumenDocumentos, type DocumentoAdjunto } from '@/lib/subastas/resumen-docs'
-import { direccionCatastro, urlFichaCatastro, urlGoogleMaps, urlStreetView } from '@central/module-subastas'
+import { direccionCatastro, esDireccionPostal, urlFichaCatastro, urlGoogleMaps, urlStreetView } from '@central/module-subastas'
 import MapaSubastas from './MapaSubastas'
 
 const PAGE = 50
@@ -32,6 +32,7 @@ interface Subasta {
   provincia?: string | null
   municipio?: string | null
   direccion?: string | null
+  direccionCatastro?: string | null
   lat?: number | null
   lon?: number | null
   geoPrecision?: string | null
@@ -463,13 +464,132 @@ function ResumenDocumental({ s, d }: { s: Subasta; d?: Documental | null }) {
   )
 }
 
+interface CambioNota { tipo: 'nueva' | 'desaparecida' | 'importe' | 'cancelada'; detalle: string }
+interface RespuestaNota {
+  cambios?: CambioNota[]
+  importeSubsistente?: number | null
+  fechaNota?: string | null
+  ilegible?: boolean
+  avisos?: string[]
+  resumen?: string
+  error?: string
+}
+
+const EMOJI_CAMBIO: Record<CambioNota['tipo'], string> = {
+  nueva: '🆕', desaparecida: '🕳️', importe: '🔁', cancelada: '✅',
+}
+
+/**
+ * «Nota simple viva»: la certificación que adjunta el juzgado es de hace años y
+ * las cargas se mueven. Aquí se sube una nota simple recién pedida al registro y
+ * el agente dice QUÉ HA CAMBIADO — es lo único que convierte el «podría estar
+ * caducada» del art. 86 LH en un hecho.
+ *
+ * Va en un `<details>` con montaje perezoso: no monta ni el formulario hasta
+ * que se abre.
+ */
+function NotaSimpleViva({ dedupeKey }: { dedupeKey: string }) {
+  const [abierto, setAbierto] = useState(false)
+  const [cargando, setCargando] = useState(false)
+  const [r, setR] = useState<RespuestaNota | null>(null)
+  const [texto, setTexto] = useState('')
+  const [fichero, setFichero] = useState<File | null>(null)
+
+  async function enviar() {
+    if (!fichero && !texto.trim()) return
+    setCargando(true)
+    setR(null)
+    try {
+      const form = new FormData()
+      form.append('dedupe_key', dedupeKey)
+      if (fichero) form.append('fichero', fichero)
+      if (texto.trim()) form.append('texto', texto.trim())
+      const res = await fetch('/api/subastas/nota-simple', { method: 'POST', body: form })
+      setR(await res.json())
+    } catch (e: any) {
+      setR({ error: e?.message ?? 'No se ha podido leer la nota' })
+    } finally {
+      setCargando(false)
+    }
+  }
+
+  return (
+    <details style={{ marginTop: 6 }} onToggle={(e) => setAbierto((e.currentTarget as HTMLDetailsElement).open)}>
+      <summary style={{ cursor: 'pointer', fontSize: 13, color: 'var(--text)', minHeight: 36, display: 'flex', alignItems: 'center' }}>
+        📄 ¿Tienes una nota simple actualizada? Comparo qué ha cambiado
+      </summary>
+      {abierto && (
+        <div style={{ marginTop: 8 }}>
+          <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--muted)' }}>
+            La certificación de cargas del juzgado suele tener años. Sube la nota simple (PDF, incluso escaneado)
+            o pega su texto: se lee con el mismo lector y se compara con lo que ya sabíamos de esta finca.
+          </p>
+          <input
+            type="file"
+            accept="application/pdf,image/*"
+            onChange={(e) => setFichero(e.target.files?.[0] ?? null)}
+            style={{ ...control, width: '100%', maxWidth: '100%', padding: 8, display: 'block' }}
+          />
+          <textarea
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            placeholder="…o pega aquí el texto de la nota simple"
+            rows={4}
+            style={{ ...control, width: '100%', maxWidth: '100%', marginTop: 8, padding: 8, fontFamily: 'inherit', fontSize: 13 }}
+          />
+          <button type="button" onClick={enviar} disabled={cargando || (!fichero && !texto.trim())} style={{ ...boton(true), marginTop: 8 }}>
+            {cargando ? 'Leyendo la nota…' : '🔍 Comparar con la certificación'}
+          </button>
+
+          {r?.error && <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--negative, #b91c1c)' }}>⚠️ {r.error}</p>}
+
+          {r && !r.error && (
+            <div style={{ marginTop: 10 }}>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--text)' }}>
+                {r.ilegible
+                  ? '🟠 No se ha podido sacar ninguna carga de la nota.'
+                  : r.importeSubsistente == null
+                    ? '🟠 Según esta nota no se puede afirmar cuánto se hereda.'
+                    : r.importeSubsistente > 0
+                      ? `🔴 Según tu nota${r.fechaNota ? ` de ${r.fechaNota}` : ''}, hereda ${eur(r.importeSubsistente)}`
+                      : `🟢 Según tu nota${r.fechaNota ? ` de ${r.fechaNota}` : ''}, no subsiste ninguna carga anterior`}
+              </p>
+              {r.cambios && r.cambios.length > 0 ? (
+                <ul style={{ margin: '6px 0 0', paddingLeft: 18, fontSize: 12, color: 'var(--text)' }}>
+                  {r.cambios.map((c, i) => (
+                    <li key={i} style={{ marginBottom: 3 }}>{EMOJI_CAMBIO[c.tipo]} {c.detalle}</li>
+                  ))}
+                </ul>
+              ) : (
+                !r.ilegible && (
+                  <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+                    Sin cambios respecto a lo que ya teníamos leído de la certificación.
+                  </p>
+                )
+              )}
+              {(r.avisos ?? []).map((a) => (
+                <p key={a} style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--muted)' }}>· {a}</p>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </details>
+  )
+}
+
 function FichaSubasta({ s, o, acciones, extra, doc }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null }) {
   const [abierto, setAbierto] = useState(false)
   const cierre = fecha(s.fechaFin)
   // Dirección oficial del Catastro troceada (planta/puerta aparte) y, con ella,
   // el enlace al PORTAL en vez de a un pin anónimo. Sin ninguna pista de
   // ubicación, el botón no sale.
-  const dirCat = direccionCatastro(s.direccion)
+  // 🚨 SOLO el `ldt` del Catastro lleva el sello 🏛️. La dirección del anuncio
+  // sale de la descripción registral y a veces es prosa («Vivienda en planta
+  // primera tipo F, con acceso…»): etiquetarla como dato oficial —y mandarla a
+  // Google pisando unas coordenadas catastrales exactas— llevaba a otro sitio.
+  const dirCat = direccionCatastro(s.direccionCatastro)
+  const dirAnuncio = !dirCat && esDireccionPostal(s.direccion) ? s.direccion : null
   const mapsUrl = urlGoogleMaps({ ...s, direccion: dirCat?.postal ?? s.direccion })
   const panoUrl = urlStreetView(s.lat, s.lon)
   const catastroUrl = urlFichaCatastro(s.refCatastral)
@@ -509,6 +629,15 @@ function FichaSubasta({ s, o, acciones, extra, doc }: { s: Subasta; o?: Oportuni
             </span>
           )}
           {!exacta && <span style={{ fontWeight: 400, color: 'var(--muted)' }}> · ubicación aproximada</span>}
+        </p>
+      )}
+
+      {/* Sin ficha catastral, la dirección del anuncio — sin sello oficial y
+          solo cuando de verdad parece una dirección postal. */}
+      {dirAnuncio && (
+        <p style={{ margin: '8px 0 0', color: 'var(--text)', fontSize: 14 }}>
+          📮 {dirAnuncio}
+          <span style={{ color: 'var(--muted)', fontSize: 12 }}> · según el anuncio</span>
         </p>
       )}
 
@@ -588,6 +717,7 @@ function FichaSubasta({ s, o, acciones, extra, doc }: { s: Subasta; o?: Oportuni
 
       {/* Cargas + documentación: en TODAS las pestañas, no solo en «Todas». */}
       <ResumenDocumental s={s} d={doc} />
+      <NotaSimpleViva dedupeKey={s.dedupeKey} />
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
         {s.url && (
@@ -597,7 +727,7 @@ function FichaSubasta({ s, o, acciones, extra, doc }: { s: Subasta; o?: Oportuni
         )}
         {mapsUrl && (
           <a href={mapsUrl} target="_blank" rel="noreferrer" style={{ ...boton(), display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
-            📍 Mapa{!exacta && !dirCat ? ' (aprox.)' : ''}
+            📍 Mapa{!exacta && !dirCat && !dirAnuncio ? ' (aprox.)' : ''}
           </a>
         )}
         {/* Ver la fachada y el barrio: en subastas «sin posibilidad de visita»

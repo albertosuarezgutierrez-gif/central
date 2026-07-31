@@ -34,9 +34,14 @@ export const EVENTS: Record<string, number> = {
   // Semana Santa 2027 (Domingo de Resurrección 28-mar): la Madrugá (25-26 mar) es el pico.
   "2027-03-21":2.20,"2027-03-22":2.30,"2027-03-23":2.40,"2027-03-24":2.50,
   "2027-03-25":3.00,"2027-03-26":3.20,"2027-03-27":2.80,"2027-03-28":2.50,
-  // Feria de Abril 2027 (~2 semanas tras Semana Santa): estimada 18-25 abr.
-  "2027-04-18":2.50,"2027-04-19":2.60,"2027-04-20":2.80,"2027-04-21":3.00,
-  "2027-04-22":3.20,"2027-04-23":3.20,"2027-04-24":3.00,"2027-04-25":2.60,
+  // Feria de Abril 2027: fechas OFICIALES 13-18 abr (alumbrado la noche del lunes 12).
+  // ⚠️ CORREGIDO 31/07/2026: estaban estimadas "18-25 abr" (~1 semana TARDE, calcadas del patrón de
+  // 2026). Doble daño: (a) 19-25 abr —semana normal— se tarificaba de Feria (hasta ×2,5 de precio Y
+  // ×2 de SUELO, que impide bajar) y (b) los días de Feria REAL no tenían suelo de evento, así que
+  // podían caer al suelo base si el mercado no llegaba fresco. Verificado con mercado real: 15-abr
+  // p50 417€ y 17-abr 304€ (Feria) frente a 20-abr 162€ (fecha normal que el calendario inflaba ×2,8).
+  "2027-04-12":2.50,"2027-04-13":2.60,"2027-04-14":2.80,"2027-04-15":3.00,
+  "2027-04-16":3.20,"2027-04-17":3.20,"2027-04-18":2.60,
   // Puente de mayo 2027 (1-may sáb) + Cruces de Mayo
   "2027-04-30":1.30,"2027-05-01":1.45,"2027-05-02":1.40,
 }

@@ -29,6 +29,30 @@ Detalle paso a paso en `references/pasada-diaria.md`.
 - **Congelar cohortes = AÑADIR entrada a `COHORTES_PAPER`, nunca editar una existente** (no
   romper el out-of-sample). No cambiar pesos del blend por el retrovisor: solo si el FORWARD
   lo confirma.
+- **🚨 LANDMINE — los fundamentales de EDGAR mienten en silencio si el parser se despista
+  (31/07/2026, PR #1189).** Salió mirando ORCL: la ficha daba **FCF yield +3,49%** cuando el flujo
+  libre real de FY2026 era **−23.700 M$ (−6,99%)**. Cuatro fallos, todos del mismo tipo — el dato
+  malo era *creíble*, así que ninguna guarda saltó. Las tres reglas que NO se pueden volver a romper
+  en `lib/trading/edgar.ts`:
+  1. **`fy`/`fp` identifican el INFORME, no el periodo del dato** (ese lo dan `start`/`end`). Un 10-K
+     trae 2-3 comparativos con el MISMO `fy` y `filed`. Indexar por `fy` se quedaba con el más viejo
+     → resultado 2 años atrasado, balance 1, y ratios cruzando ambos. **Se indexa por `end`.**
+  2. **Una sola divisa por empresa.** Recorrer todas las unidades mezclaba yenes/rupias/pesos con una
+     capitalización en dólares (TLK: FCF yield 2.679%; AMX: EY 9,14% que parecía normal). Gana la
+     divisa con el ejercicio más reciente, USD solo desempata (Toyota arrastra una traducción de
+     conveniencia de 2013). Si no es USD → EY y FCF yield a **null**; los ratios internos sí valen.
+  3. **Dato ausente = `null`, jamás 0.** Capex ausente dejaba FCF ≡ CFO; deuda ausente dejaba el EV
+     sin deuda. Los alias de concepto se amplían **mirando companyfacts reales**, no adivinando
+     nombres (AVGO cambió de `LongTermDebtNoncurrent` a `…AndCapitalLeaseObligations` tras FY2021).
+  **Cómo verificar sin credenciales:** el sandbox de las sesiones no alcanza `data.sec.gov` (403 del
+  proxy), pero **`pg_net` desde Supabase sí** — `net.http_get` a `companyconcept`/`companyfacts` con
+  el User-Agent de contacto y luego SQL sobre `net._http_response`. Y antes de dar por bueno un
+  cambio del parser, **córrelo contra companyfacts reales**, no solo contra los fixtures: la
+  regresión de la divisa (Toyota anclada a 2013) los tests sintéticos no la veían.
+- **Cambiar cómo PUNTÚA el modelo ≠ arreglar el dato que entra.** Que el Piotroski siga siendo sobre
+  9 aunque una señal sea incalculable es una decisión del MODELO → preregistro
+  (`docs/TRADING-HIPOTESIS-PREREGISTRO.md`). Hacer que esa señal sea calculable para más empresas es
+  un arreglo de DATOS y va por PR normal. No confundir los dos carriles.
 - **Secretos:** usa `ALERTA_TOKEN` (bajo privilegio), nunca `CRON_SECRET` en el prompt del
   trigger, nunca inventes el token, nunca literales — por env.
 - **Preflight al ARRANCAR:** `GET /api/internal/alerta` (Bearer `ALERTA_TOKEN`). Con `401`,

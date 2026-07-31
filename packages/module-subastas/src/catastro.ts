@@ -224,19 +224,19 @@ export function parcelaUnica(inmuebles: InmuebleCatastro[]): string | null {
  * en la calle equivocada de otro municipio).
  */
 const SIGLAS: Array<[RegExp, string]> = [
-  [/^(av|avd|avda|avenida)\b/, 'AV'],
-  [/^(c|c\/|cl|calle)\b/, 'CL'],
-  [/^(pz|pza|plaza)\b/, 'PZ'],
-  [/^(ps|paseo)\b/, 'PS'],
-  [/^(cr|ctra|carretera)\b/, 'CR'],
-  [/^(cm|camino)\b/, 'CM'],
-  [/^(tr|travesia)\b/, 'TR'],
-  [/^(rd|ronda)\b/, 'RD'],
-  [/^(gl|glorieta)\b/, 'GL'],
-  [/^(ur|urb|urbanizacion)\b/, 'UR'],
-  [/^(pg|pol|poligono)\b/, 'PG'],
-  [/^(bo|barrio)\b/, 'BO'],
-  [/^(lg|lugar)\b/, 'LG'],
+  [/^(av|avd|avda|avenida)\b/i, 'AV'],
+  [/^(c|c\/|cl|calle)\b/i, 'CL'],
+  [/^(pz|pza|plaza)\b/i, 'PZ'],
+  [/^(ps|paseo)\b/i, 'PS'],
+  [/^(cr|ctra|carretera)\b/i, 'CR'],
+  [/^(cm|camino)\b/i, 'CM'],
+  [/^(tr|travesia)\b/i, 'TR'],
+  [/^(rd|ronda)\b/i, 'RD'],
+  [/^(gl|glorieta)\b/i, 'GL'],
+  [/^(ur|urb|urbanizacion)\b/i, 'UR'],
+  [/^(pg|pol|poligono)\b/i, 'PG'],
+  [/^(bo|barrio)\b/i, 'BO'],
+  [/^(lg|lugar)\b/i, 'LG'],
 ]
 
 /** Parámetros de `Consulta_DNPLOC` deducidos de una dirección en texto libre. */
@@ -244,14 +244,68 @@ export interface ParamsDnploc {
   sigla: string
   calle: string
   numero: string
+  /** Datos de interior, cuando el anuncio los publica. Acotan al PISO exacto. */
+  bloque?: string | null
+  escalera?: string | null
+  planta?: string | null
+  puerta?: string | null
 }
 
 /**
- * Nombres de vía del callejero oficial (`ConsultaVia`), que busca por PREFIJO.
+ * Normaliza CONSERVANDO LA Ñ. `norm()` la convierte en «N» y eso rompe la
+ * búsqueda en el callejero del Catastro: verificado el 31/07/2026 que
+ * `NombreVia=CAÑAL` encuentra «CARLOS CAÑAL» y `NombreVia=CANAL` **no devuelve
+ * nada**. La Ñ solo se pierde al COMPARAR (ahí conviene, para tolerar las dos
+ * grafías), nunca al preguntar.
+ */
+export function normVia(s: string): string {
+  // La ñ se aparta ANTES de barrer los diacríticos y se repone después: en NFD
+  // una ñ es «n + tilde combinante», así que el barrido se la llevaría.
+  const RESGUARDO = '\u0001'
+  return s
+    .replace(/[ñÑ]/g, RESGUARDO)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(new RegExp(RESGUARDO, 'g'), 'Ñ')
+    .toUpperCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/** Palabras que no distinguen una vía de otra. */
+const VACIAS = new Set(['DE', 'DEL', 'D', 'LA', 'LAS', 'EL', 'LOS', 'Y', 'A', 'EN'])
+
+/** Tokens con los que se compara un nombre de vía (sin artículos ni Ñ). */
+export function tokensVia(nombre: string): string[] {
+  return norm(nombre)
+    .toUpperCase()
+    .split(/[^A-Z0-9Ñ]+/i)
+    .filter((t) => t && !VACIAS.has(t))
+}
+
+/**
+ * Término con el que preguntar al callejero. **El servicio busca por SUBCADENA**
+ * (verificado: `OLIVA` encuentra «NUESTRA SEÑORA D LA OLIVA»), así que se manda
+ * UNA palabra distintiva en vez del nombre entero: el Catastro abrevia por su
+ * cuenta —«DE» → «D»— y cualquier comparación literal del nombre completo falla.
+ * Se elige la palabra más larga que no sea artículo, con la Ñ intacta.
+ */
+export function terminoBusquedaVia(calle: string): string {
+  const palabras = normVia(calle)
+    .split(/[^A-ZÑ0-9]+/i)
+    .filter((p) => p.length > 1 && !VACIAS.has(norm(p).toUpperCase()))
+  if (!palabras.length) return normVia(calle)
+  return palabras.reduce((mejor, p) => (p.length > mejor.length ? p : mejor), palabras[0])
+}
+
+/**
+ * Nombres de vía del callejero oficial (`ConsultaVia`), que busca por SUBCADENA.
  * Hace falta porque `Consulta_DNPLOC` exige el nombre EXACTO como lo guarda el
- * Catastro, y ese formato mueve los artículos al final: «Avenida de Madrid» está
- * archivada como **«MADRID DE»** y «Avenida de la Estación» como
- * **«ESTACION DE LA»**. Sin este paso fallaban 12 de 16 direcciones reales.
+ * Catastro, y ese formato es impredecible: mueve los artículos al final
+ * («Avenida de Madrid» → **«MADRID DE»**) y además ABREVIA por su cuenta
+ * («Ronda de Nuestra Señora de la Oliva» → **«NUESTRA SEÑORA D LA OLIVA»**, con
+ * «DE» reducido a «D» — visto el 31/07/2026). Por eso nunca se compara el nombre
+ * completo: se pregunta por una palabra distintiva y se elige por tokens.
  */
 export function parsearVias(xml: string): Array<{ tipo: string; nombre: string }> {
   if (!xml || errorCatastro(xml)) return []
@@ -266,29 +320,30 @@ export function parsearVias(xml: string): Array<{ tipo: string; nombre: string }
 }
 
 /**
- * Nombre con el que preguntar al callejero: sin los artículos delanteros, porque
- * el Catastro los coloca detrás («DE MADRID» → busca «MADRID» → devuelve
- * «MADRID DE»).
- */
-export function nombreViaBuscable(calle: string): string {
-  return calle.replace(/^(?:DE\s+LOS|DE\s+LAS|DE\s+LA|DEL|DE|LOS|LAS|LA|EL)\s+/i, '').trim()
-}
-
-/**
- * Elige el nombre oficial entre los que devuelve el callejero. Prefiere la
- * coincidencia exacta; si hay varias candidatas distintas y ninguna exacta,
- * devuelve `null` en lugar de arriesgarse a ubicar en otra calle.
+ * Elige el nombre OFICIAL entre los candidatos del callejero comparando TOKENS,
+ * no cadenas: es la única forma de casar «PACO GANDÍA» con «PACO GANDIA» y
+ * «Nuestra Señora de la Oliva» con «NUESTRA SEÑORA D LA OLIVA» a la vez.
+ *
+ * Gana la vía que contiene TODOS los tokens significativos de la buscada (los
+ * artículos y la Ñ se ignoran al comparar). Si empatan varias —«GANDIA» devuelve
+ * «CIUDAD DE GANDIA» y «PACO GANDIA»— desempata la que menos palabras sobrantes
+ * tenga; si ni así hay una ganadora clara, `null`: ubicar en la calle equivocada
+ * es peor que no ubicar.
  */
 export function elegirVia(vias: Array<{ tipo: string; nombre: string }>, buscada: string): string | null {
   if (!vias.length) return null
-  const objetivo = norm(buscada)
-  const exacta = vias.find((v) => norm(v.nombre) === objetivo)
-  if (exacta) return exacta.nombre
-  // «MADRID DE» para la búsqueda «MADRID»: el nombre oficial empieza por lo
-  // buscado y lo que sobra son solo artículos.
-  const conArticulo = vias.filter((v) => norm(v.nombre).replace(/\s+(de los|de las|de la|del|de)$/, '') === objetivo)
-  if (conArticulo.length === 1) return conArticulo[0].nombre
-  return vias.length === 1 ? vias[0].nombre : null
+  const objetivo = tokensVia(buscada)
+  if (!objetivo.length) return vias.length === 1 ? vias[0].nombre : null
+
+  const candidatas = vias
+    .map((v) => ({ nombre: v.nombre, tokens: tokensVia(v.nombre) }))
+    .filter((v) => objetivo.every((t) => v.tokens.includes(t)))
+  if (!candidatas.length) return null
+
+  candidatas.sort((a, b) => a.tokens.length - b.tokens.length)
+  // Dos candidatas igual de ajustadas = ambigüedad real, no se elige a dedo.
+  if (candidatas.length > 1 && candidatas[0].tokens.length === candidatas[1].tokens.length) return null
+  return candidatas[0].nombre
 }
 
 /**
@@ -298,10 +353,16 @@ export function elegirVia(vias: Array<{ tipo: string; nombre: string }>, buscada
  *      → { sigla:'AV', calle:'PEDRO ROMERO', numero:'2' }
  *   «C/ PACO GANDÍA 26» → { sigla:'CL', calle:'PACO GANDIA', numero:'26' }
  *
- * Quita los acentos porque el Catastro guarda los nombres sin ellos («GANDIA»),
- * y corta la coleta descriptiva que el registro añade tras el número.
- * `null` cuando no hay sigla o número reconocibles: sin ambos la consulta
- * devolvería cualquier cosa.
+ * Conserva la Ñ (`normVia`) porque el callejero la exige, y corta la coleta
+ * descriptiva que el registro añade tras el número. `null` cuando no hay sigla o
+ * número reconocibles: sin ambos la consulta devolvería cualquier cosa.
+ *
+ * Extrae además el INTERIOR (escalera/planta/puerta) cuando el anuncio lo
+ * publica. No es un adorno: acota la consulta al PISO exacto y con ello se
+ * obtiene la referencia de 20 —y por tanto los m², año y uso del bien— en vez de
+ * la de parcela. En «CL. CHAROLISTAS, 4, ESC.1 PLANTA 4, PUERTA B» el portal
+ * tiene 21 inmuebles repartidos en VARIAS parcelas, así que sin el interior no
+ * se podía ni ubicar (comprobado el 31/07/2026).
  */
 export function paramsDnploc(direccion?: string | null): ParamsDnploc | null {
   const bruto = (direccion ?? '').trim()
@@ -311,10 +372,10 @@ export function paramsDnploc(direccion?: string | null): ParamsDnploc | null {
   // justo DETRÁS de ella («CALLE ALPECHÍN, 41», «AVDA. PABLO IGLESIAS, 24»), y
   // cortar ahí dejaba la dirección sin número y sin consulta posible (fallaba en
   // 10 de 16 direcciones reales del corpus, 30/07/2026).
-  const cabeza = norm(bruto)
+  const cabeza = normVia(bruto)
     // «Nº 2» / «núm. 2» / «numero 2» → el número queda suelto. Se usa lookahead
     // porque `º` no es carácter de palabra y un `\b` detrás nunca casaría.
-    .replace(/\bn(?:[º°o]|um(?:ero)?)\.?(?=\s|\d|$)/g, ' ')
+    .replace(/\bN(?:[º°O]|UM(?:ERO)?)\.?(?=\s|\d|$)/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
   if (!cabeza) return null
@@ -336,14 +397,34 @@ export function paramsDnploc(direccion?: string | null): ParamsDnploc | null {
   // (con ella) tienen que funcionar igual.
   const finNombre = resto.search(/[,;(]|\d/)
   if (finNombre <= 0) return null
-  const calle = resto.slice(0, finNombre).replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
+  const calle = resto.slice(0, finNombre).replace(/[^A-ZÑ0-9 ]/gi, ' ').replace(/\s+/g, ' ').trim()
   if (!calle) return null
 
   // El número del portal: el primer entero tras el nombre.
   const mNum = resto.slice(finNombre).match(/\b(\d{1,4})\b/)
   if (!mNum) return null
 
-  return { sigla, calle: calle.toUpperCase(), numero: mNum[1] }
+  // Interior: «ESC.1 PLANTA 4, PUERTA B», «Es:1 Pl:07 Pt:B», «2º IZQUIERDA»…
+  const cola = resto.slice(finNombre)
+  const uno = (re: RegExp): string | null => cola.match(re)?.[1]?.trim() || null
+  // ⚠️ Las abreviaturas de DOS letras (ES/PL/PT) exigen separador explícito
+  // («Es:1», «Pl.07»). Sin él, `ES` casa con el verbo «es» —el texto va en
+  // mayúsculas— y «…QUE ES DE LA FINCA…» daba `escalera='DE'`: no ubica mal
+  // (el Catastro devuelve vacío) pero quema una consulta de más por fila, que
+  // es justo lo que aprieta el presupuesto de la pasada.
+  const puerta = uno(/\b(?:PUERTA|PTA)[:.\s]*([A-ZÑ0-9]{1,4})\b/)
+    ?? uno(/\bPT[:.]\s*([A-ZÑ0-9]{1,4})\b/)
+    ?? (/\bIZQ(?:UIERDA|DA)?\b/.test(cola) ? 'IZ' : /\bD(?:E)?R(?:ECHA|CHA)?\b/.test(cola) ? 'DR' : null)
+
+  return {
+    sigla,
+    calle: calle.toUpperCase(),
+    numero: mNum[1],
+    bloque: uno(/\b(?:BLOQUE|BLQ)[:.\s]*([A-ZÑ0-9]{1,4})\b/) ?? uno(/\bBQ[:.]\s*([A-ZÑ0-9]{1,4})\b/),
+    escalera: uno(/\b(?:ESCALERA|ESC)[:.\s]*([A-ZÑ0-9]{1,4})\b/) ?? uno(/\bES[:.]\s*([A-ZÑ0-9]{1,4})\b/),
+    planta: uno(/\bPLANTA[:.\s]*([A-ZÑ0-9]{1,3})\b/) ?? uno(/\bPL[:.]\s*([A-ZÑ0-9]{1,3})\b/) ?? uno(/\b(\d{1,2})[º°]\s/),
+    puerta,
+  }
 }
 
 /**
@@ -361,6 +442,13 @@ export function parsearCoordenadas(xml: string): CoordenadasCatastro | null {
   // Un (0,0) o un valor fuera de rango es dato corrupto, no una finca en el golfo de Guinea.
   if (lat === 0 && lon === 0) return null
   if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return null
+  // 🚨 Y tiene que caer en ESPAÑA. El Catastro solo cataloga fincas españolas,
+  // así que un punto fuera de la caja (incluidas Canarias, Ceuta y Melilla) es
+  // basura — y el modo típico de equivocarse aquí es CRUZAR los ejes (`xcen` es
+  // la LONGITUD), que da coordenadas perfectamente válidas… en Rusia. Sin este
+  // filtro ese punto se guardaría con `geo_precision='catastro'` y se enseñaría
+  // como «ubicación exacta».
+  if (lat < 27 || lat > 44 || lon < -19 || lon > 5) return null
   return { lat, lon }
 }
 

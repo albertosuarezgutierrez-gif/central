@@ -14,7 +14,12 @@ import { archivarPasadas, procesarDocumentos } from '@/lib/subastas/documentos'
 import { clasificarSubastas } from '@/lib/subastas/clasificar'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+// 🚨 300 s, no 60: la pasada espacia a propósito sus llamadas a servicios
+// públicos (Catastro 350 ms entre consultas —hasta cinco por subasta—, Nominatim
+// 1,1 s por su límite de 1 req/s). Con `?max=40` esos descansos por sí solos se
+// comen el minuto y la pasada se truncaba a mitad, dejando filas sin enriquecer
+// en silencio. Mismo techo que `subastas-mercado`.
+export const maxDuration = 300
 
 /** Se reenriquece pasado este tiempo: los importes cambian durante la subasta. */
 const REFRESCO_HORAS = 24
@@ -44,9 +49,10 @@ export async function GET(req: NextRequest) {
 
     // Presupuesto de tiempo: geocodificar un municipio cuesta ≥1,1 s por el
     // límite de 1 req/s de Nominatim, así que una pasada con `?max=40` podría
-    // comerse el `maxDuration`. Se deja margen para el resto de la pasada
-    // (resultados, documentos, lentes) y lo que no entre va a la siguiente:
-    // las coordenadas se guardan para siempre, no hay prisa.
+    // comerse el `maxDuration` (300 s). Se deja margen amplio para el resto de
+    // la pasada (fichas, Catastro, resultados, documentos, lentes) y lo que no
+    // entre va a la siguiente: las coordenadas se guardan para siempre, no hay
+    // prisa.
     //
     // Devuelve `'sin_presupuesto'` cuando NO se ha llegado a intentar, que es
     // distinto de haberlo intentado sin éxito: solo lo primero justifica volver
@@ -54,7 +60,7 @@ export async function GET(req: NextRequest) {
     // —«LA M1 DE LA UE-1 DEL PP-G3 DE GUILLENA»— insistir cada pasada la
     // devolvería al principio de la cola, que es el bug que se arregla arriba).
     const inicio = Date.now()
-    const PRESUPUESTO_GEO_MS = 25000
+    const PRESUPUESTO_GEO_MS = 60000
     const geoConTiempo = async (
       municipio: string,
       provincia: string | null,
@@ -71,7 +77,13 @@ export async function GET(req: NextRequest) {
         // reintentaban en cada pasada, monopolizando la cola (van primeras por
         // `enriquecida_at NULLS FIRST`) sin llegar a enriquecerse nunca.
         if (p.fuente !== 'boe') {
-          const geoJ = p.lat == null && p.ref_catastral ? await bajarCoordenadas(p.ref_catastral).catch(() => null) : null
+          // `mejorable`, igual que en la rama BOE: una fila que ya se geocodificó
+          // al centroide del municipio DEBE poder subir a punto exacto cuando
+          // aparece la referencia catastral. Con la condición vieja
+          // (`lat == null`) los lotes de la Junta se quedaban aproximados para
+          // siempre en cuanto tenían un punto, aunque fuese el malo.
+          const mejorableJ = p.lat == null || p.geo_precision === 'municipio'
+          const geoJ = mejorableJ && p.ref_catastral ? await bajarCoordenadas(p.ref_catastral).catch(() => null) : null
           const rJ = p.lat == null && !geoJ && p.municipio
             ? await geoConTiempo(p.municipio, p.provincia)
             : null
@@ -81,10 +93,16 @@ export async function GET(req: NextRequest) {
           const reintentar = rJ === 'sin_presupuesto'
           await prisma.$executeRaw(Prisma.sql`
             UPDATE subastas SET
-              lat = COALESCE(lat, ${geoJ?.lat ?? geoJAprox?.lat ?? null}),
-              lon = COALESCE(lon, ${geoJ?.lon ?? geoJAprox?.lon ?? null}),
-              geo_precision = COALESCE(geo_precision, ${geoJ ? 'catastro' : geoJAprox ? 'municipio' : null}),
-              enriquecida_at = ${reintentar ? null : new Date()}::timestamptz
+              -- El punto EXACTO pisa el centroide previo (misma regla que la
+              -- rama BOE); el aproximado solo entra si no había nada.
+              lat = COALESCE(${geoJ?.lat ?? null}, lat, ${geoJAprox?.lat ?? null}),
+              lon = COALESCE(${geoJ?.lon ?? null}, lon, ${geoJAprox?.lon ?? null}),
+              geo_precision = CASE
+                WHEN ${geoJ?.lat ?? null}::double precision IS NOT NULL THEN 'catastro'
+                ELSE COALESCE(geo_precision, ${geoJAprox ? 'municipio' : null})
+              END,
+              enriquecida_at = ${reintentar ? null : new Date()}::timestamptz,
+              actualizado_en = now()
             WHERE dedupe_key = ${p.dedupe_key}
           `)
           ok++
@@ -135,16 +153,24 @@ export async function GET(req: NextRequest) {
             tipo = COALESCE(${f.tipo}, tipo),
             fecha_inicio = COALESCE(${f.fechaInicio}::timestamptz, fecha_inicio),
             fecha_fin = COALESCE(${f.fechaFin}::timestamptz, fecha_fin),
-            valor_subasta = ${f.valorSubasta},
-            tasacion = ${f.tasacion},
-            puja_minima = ${f.pujaMinima},
-            tramos = ${f.tramos},
-            deposito = ${f.deposito},
-            cantidad_reclamada = ${f.cantidadReclamada},
+            -- 🚨 COALESCE también en las CIFRAS. Antes se escribían crudas, así
+            -- que cualquier pasada que leyera la ficha «a medias» (una pestaña
+            -- caída, un cambio de marcado que el parser no reconozca) BORRABA
+            -- del corpus el tipo de salida, el depósito o la tasación — y con
+            -- enriquecida_at recién puesta, el agujero duraba 24 h. Una cifra
+            -- que se deja de publicar no se cae del anuncio: lo que se cae es
+            -- nuestra lectura. Los importes se refrescan igual cuando la ficha
+            -- SÍ trae valor (que es lo que cambia durante la subasta).
+            valor_subasta = COALESCE(${f.valorSubasta}, valor_subasta),
+            tasacion = COALESCE(${f.tasacion}, tasacion),
+            puja_minima = COALESCE(${f.pujaMinima}, puja_minima),
+            tramos = COALESCE(${f.tramos}, tramos),
+            deposito = COALESCE(${f.deposito}, deposito),
+            cantidad_reclamada = COALESCE(${f.cantidadReclamada}, cantidad_reclamada),
             lotes = COALESCE(${f.lotes}, lotes),
-            situacion_posesoria = ${f.situacionPosesoria},
-            arrendamiento_inscrito = ${f.arrendamientoInscrito},
-            sin_visita = ${f.sinVisita},
+            situacion_posesoria = COALESCE(${f.situacionPosesoria}, situacion_posesoria),
+            arrendamiento_inscrito = COALESCE(${f.arrendamientoInscrito}, arrendamiento_inscrito),
+            sin_visita = COALESCE(${f.sinVisita}, sin_visita),
             cargas = COALESCE(${f.cargas}, cargas),
             cargas_texto = COALESCE(${f.cargasTexto}, cargas_texto),
             -- Sticky: el true puede venir de la CERTIFICACIÓN adjunta (paso de
@@ -182,6 +208,19 @@ export async function GET(req: NextRequest) {
         ok++
       } catch (e: any) {
         fallos.push(`${p.identificador}: ${e?.message ?? e}`)
+        // 🚨 La fila que falla CEDE EL SITIO. Sin esto se queda con
+        // `enriquecida_at IS NULL` y, como la cola va `NULLS FIRST`, un puñado
+        // de identificadores muertos (ficha retirada, 404 permanente) se come
+        // las 12 plazas de la pasada TODOS los días y el resto del corpus no se
+        // enriquece nunca — el mismo bug que ya se arregló para las fuentes sin
+        // ficha, colándose por otra puerta. Se marca como si se hubiera
+        // enriquecido hace `REFRESCO_HORAS - 1`: vuelve a ser elegible dentro de
+        // una hora, pero detrás de las que aún no se han intentado.
+        await prisma.$executeRaw(Prisma.sql`
+          UPDATE subastas
+          SET enriquecida_at = now() - make_interval(hours => ${REFRESCO_HORAS - 1}::int)
+          WHERE dedupe_key = ${p.dedupe_key}
+        `).catch(() => {})
       }
     }
 

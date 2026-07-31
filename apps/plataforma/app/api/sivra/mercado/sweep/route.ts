@@ -18,9 +18,24 @@ export const maxDuration = 300
 // 8 búsquedas Serper + 8 extracciones NIM por ejecución (los comps se reutilizan para los
 // 4 pisos, que el motor ya diferencia por calidad/percentiles propios).
 
-const PROPS = ["prop_house_sevillana", "prop_busto_reform", "prop_duplex_center", "prop_luxury_busto"]
 const MONTHS_AHEAD = 8
 const fmt = (d: Date) => d.toISOString().slice(0, 10)
+
+// 🚨 El barrido busca por el AFORO REAL de cada piso, NO con "4 personas" para todos (bug hasta el
+// 31/07/2026: guardaba los MISMOS comps de 4 plazas para los 4 pisos con `guests=4` fijo, así que
+// House —12 plazas— se comparaba con apartamentos de 4 y salía a mitad de precio). Los pisos que
+// comparten aforo comparten búsqueda, así que el coste es 1 búsqueda por AFORO DISTINTO y ventana
+// (hoy 4: 2, 4, 5 y 12 plazas), no 1 por piso.
+async function pisosPorAforo(): Promise<Map<number, string[]>> {
+  const filas = await prisma.$queryRaw<{ property_id: string; max_guests: number }[]>`
+    SELECT property_id, COALESCE(max_guests, 4)::int AS max_guests FROM pricing_piso_zona`
+  const porAforo = new Map<number, string[]>()
+  for (const f of filas) {
+    const aforo = Number(f.max_guests) > 0 ? Number(f.max_guests) : 4
+    porAforo.set(aforo, [...(porAforo.get(aforo) ?? []), f.property_id])
+  }
+  return porAforo
+}
 
 // Primer viernes→domingo (2 noches) del mes a `m` meses vista.
 function weekendInMonth(m: number): { checkin: string; checkout: string } {
@@ -72,40 +87,48 @@ export async function GET(req: NextRequest) {
   }
 
   let upserted = 0
-  const ventanas: { checkin: string; comps: number }[] = []
+  const ventanas: { checkin: string; aforo: number; comps: number }[] = []
   const errors: string[] = []
+
+  const porAforo = await pisosPorAforo()
+  if (!porAforo.size) {
+    return NextResponse.json({ error: "pricing_piso_zona vacía: sin aforos no hay comparables fiables" }, { status: 409 })
+  }
 
   for (let m = 1; m <= MONTHS_AHEAD; m++) {
     const { checkin, checkout } = weekendInMonth(m)
-    try {
-      const snippets = await serperSearch(
-        `apartamentos turísticos Sevilla centro ${checkin} ${checkout} 4 personas site:booking.com precio noche`
-      )
-      const comps = await extractPrices(snippets, checkin, checkout)
-      let n = 0
-      for (const apt of comps) {
-        const night = Number(apt?.price_night)
-        if (!apt?.name || !Number.isFinite(night) || night <= 0) continue
-        const score = apt?.score != null && Number.isFinite(Number(apt.score)) ? Number(apt.score) : null
-        // Mismos comps de zona para los 4 pisos; el motor los diferencia por percentiles/calidad propios.
-        for (const scenario of PROPS) {
-          try {
-            await prisma.$executeRaw(Prisma.sql`
-              INSERT INTO market_rates
-                (search_date, checkin_date, checkout_date, guests, portal, scenario,
-                 comp_name, price_night, price_total, score, review_count, location, currency)
-              VALUES (CURRENT_DATE, ${checkin}::date, ${checkout}::date, 4, 'booking', ${scenario},
-                ${String(apt.name)}, ${Math.round(night)}::int, ${Math.round(night) * 2}::int,
-                ${score}::numeric, 0, ${String(apt.location || "")}, 'EUR')
-              ON CONFLICT (search_date, portal, scenario, comp_name, checkin_date) DO UPDATE
-              SET price_night=EXCLUDED.price_night, score=EXCLUDED.score, created_at=NOW()`)
-            upserted++; if (scenario === PROPS[0]) n++
-          } catch { /* dup */ }
+    for (const [aforo, pisos] of porAforo) {
+      try {
+        const snippets = await serperSearch(
+          `apartamentos turísticos Sevilla centro ${checkin} ${checkout} ${aforo} personas site:booking.com precio noche`
+        )
+        const comps = await extractPrices(snippets, checkin, checkout)
+        let n = 0
+        for (const apt of comps) {
+          const night = Number(apt?.price_night)
+          if (!apt?.name || !Number.isFinite(night) || night <= 0) continue
+          const score = apt?.score != null && Number.isFinite(Number(apt.score)) ? Number(apt.score) : null
+          // Estos comps son del aforo de ESTOS pisos: se guardan con su `guests` real para que el
+          // motor sepa contra qué está comparando (y aplique `factorAforo` si algún día no cuadra).
+          for (const scenario of pisos) {
+            try {
+              await prisma.$executeRaw(Prisma.sql`
+                INSERT INTO market_rates
+                  (search_date, checkin_date, checkout_date, guests, portal, scenario,
+                   comp_name, price_night, price_total, score, review_count, location, currency)
+                VALUES (CURRENT_DATE, ${checkin}::date, ${checkout}::date, ${aforo}::int, 'booking', ${scenario},
+                  ${String(apt.name)}, ${Math.round(night)}::int, ${Math.round(night) * 2}::int,
+                  ${score}::numeric, 0, ${String(apt.location || "")}, 'EUR')
+                ON CONFLICT (search_date, portal, scenario, comp_name, checkin_date) DO UPDATE
+                SET price_night=EXCLUDED.price_night, guests=EXCLUDED.guests, score=EXCLUDED.score, created_at=NOW()`)
+              upserted++; if (scenario === pisos[0]) n++
+            } catch { /* dup */ }
+          }
         }
+        ventanas.push({ checkin, aforo, comps: n })
+      } catch (e) {
+        errors.push(`${checkin} (${aforo}p): ${String(e).slice(0, 80)}`)
       }
-      ventanas.push({ checkin, comps: n })
-    } catch (e) {
-      errors.push(`${checkin}: ${String(e).slice(0, 80)}`)
     }
   }
 
