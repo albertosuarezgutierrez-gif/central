@@ -24,6 +24,27 @@
 - **Copia LEGADA:** `apps/sivra/app/api/pricing/guard/route.ts` NO está programada (solo la de plataforma) y
   arrastra el bug viejo de dedup + solo tiene checks #1/#3 — candidata a retirar; no la reactives.
 
+### Revisión de eventos y costes (31/07/2026, a petición de Alberto)
+- **🚨 Feria de Abril 2027 estaba MAL FECHADA en `pricing-calendar.ts`** (corregido): el calendario la tenía
+  «estimada 18-25 abr» (patrón de 2026 calcado) cuando las fechas oficiales son **13-18 abr, alumbrado el 12**.
+  Doble daño: 19-25 abr (semana normal) se tarificaba de Feria —hasta ×2,5 de precio y ×2 de SUELO, que además
+  impide corregir a la baja— y los días de Feria REAL se quedaban sin suelo de evento. Comprobado contra mercado
+  real: 15-abr p50 417€ y 17-abr 304€ frente a 20-abr 162€. **Lección: las fechas de Feria NO se estiman
+  «dos semanas después de Semana Santa» — se confirman contra el mercado (un p50 que se dispara) o fuente oficial.**
+- **Semana Santa 2027 (21-28 mar) SÍ está bien** en el calendario y el pico casa con el mercado (25-mar p50 554€,
+  26-mar 462€). No está en `pricing_eventos_auto`, pero el motor toma el MAX de ambas fuentes.
+- **⚠️ El suelo estacional solo mira el CALENDARIO, no `pricing_eventos_auto`** (`seasonalFloorFactor` lee `EVENTS`).
+  Un evento que solo exista en la tabla (los que descubren Ticketmaster/websearch) sube el precio objetivo pero
+  **no protege el suelo**. Si un evento importante se descubre por la tabla, añádelo también al calendario.
+- **Horizonte vs calendario:** `PRICING_HORIZON_DAYS`=365 y el calendario acaba el **2027-05-02** → may-jul 2027
+  se tarifica sin eventos de calendario (solo lo que traiga la tabla). El watchdog de `pilot-track` avisa.
+- **Costes por noche (recalculados con datos vivos; detalle en `pricing_aprendizaje/ALL/costes_por_noche_31_07_2026`):**
+  busto **19,40€** (suelo 65€ → 3,3×) · luxury **29,70€** (suelo 72€ → 2,4×, el más ajustado: su estancia media de
+  2,7 noches encarece la limpieza por noche) · duplex **10,60€** (suelo 85€ → 8×) · house **≥30€** (suelo 180€).
+  **Ningún suelo vende bajo coste.** Huecos: House **no tiene ni un gasto fijo registrado** (290 m², 6 dorm — su
+  coste está infravalorado) y Dúplex/House **no tienen calibración de suelo contra competencia** (la de Busto y
+  Luxury es del 28/07). Recuerda que el suelo protege el LISTADO, no el efectivo (canal ≈0,76× a ≥7 noches).
+
 - **Zona** poblada (`pricing_piso_zona`): 4 pisos, CP 41003 (Bustos Tavera / Casco Antiguo).
 - **Costes/suelos** ya calibrados (`pricing_aprendizaje/ALL/costes` + `pricing_settings.min_price`):
   **busto 65 · duplex 85 · luxury 72 · house 180** (busto/luxury recalibrados 28/07/2026 con OK explícito

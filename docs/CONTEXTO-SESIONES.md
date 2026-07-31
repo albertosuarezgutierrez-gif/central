@@ -24,6 +24,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🎪 Pricing: FERIA DE ABRIL 2027 estaba mal fechada en el calendario — corregido (31/07/2026, rama
+  `claude/pricing-check-31-07`).** Alberto pidió revisar que los eventos de Sevilla se tuvieran en cuenta y que
+  los costes cubrieran el suelo. Hallazgo: `pricing-calendar.ts` tenía la Feria «estimada 18-25 abr» (patrón de
+  2026 calcado) cuando la oficial es **13-18 abr (alumbrado 12)** → 19-25 abr, semana normal, se tarificaba de
+  Feria (×2,5 de precio y ×2 de suelo, que impide bajar) y los días reales de Feria se quedaban sin suelo de
+  evento. Verificado contra mercado (15-abr p50 417€ · 17-abr 304€ · 20-abr 162€). Corregido en las dos copias.
+  Semana Santa 2027 (21-28 mar) sí estaba bien. **Costes recalculados con datos vivos: ningún suelo vende bajo
+  coste** (busto 19,40€/noche vs suelo 65€ · luxury 29,70€ vs 72€ · duplex 10,60€ vs 85€ · house ≥30€ vs 180€).
+  Pendiente: House **no tiene ni un gasto fijo registrado** y Dúplex/House siguen sin calibrar el suelo contra
+  competencia. Ojo estructural: `seasonalFloorFactor` solo lee el calendario, no `pricing_eventos_auto`.
+
 - **📉 Pricing 31/07: sistema SANO, pero agosto arranca a CERO (31/07/2026, rama `claude/pricing-check-31-07`).**
   Verificación de la víspera del cutover: sync de Smoobu vivo (05:01, HTTP 200), motor aplicando a diario
   (Busto agosto 74→65, `market-anchored`), y precios REALES en mercado (Busto 81€ vs p50 80€; Luxury 84€ vs
