@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { getSmoobuKey } from '@/lib/smoobu'
 import { PORTAL_MAP } from '@/lib/portales'
+import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 
 const BOOKING_NET_FACTOR = 0.8028
 
@@ -33,7 +34,52 @@ async function fetchPage(p: number, from: string, apiKey: string, arrFrom?: stri
   return { bookings: d.bookings || [], pageCount: d.page_count || 1 }
 }
 
-export async function runSync(days: number, maxPages = 20, arrFrom?: string, arrTo?: string) {
+/** De dónde viene la pasada: el cron diario (red de seguridad) o el webhook de Smoobu (tiempo real). */
+export type OrigenSync = 'cron' | 'webhook' | 'manual'
+
+/**
+ * 💓 Deja la huella de la pasada en `agente_latidos`, corra bien o mal.
+ *
+ * 🚨 Es lo ÚNICO que distingue «no ha entrado ninguna reserva nueva» de «no se
+ * ha podido hablar con Smoobu». Sin ella, la salud del sync se medía por
+ * `MAX(incomes."createdAt")` — o sea, por si había reservas nuevas — y eso daba
+ * las dos mentiras a la vez: 🔴 falso en cuanto pasaban 2 días tranquilos (que
+ * es lo normal: ~0,7 reservas nuevas al día), y 🟢 falso en cuanto entraba UNA
+ * reserva suelta aunque el sync llevara semanas muerto. Ver `lib/sivra/estado-sync.ts`.
+ *
+ * Best-effort por diseño (`registrarLatido` se traga sus errores): la huella
+ * nunca debe tumbar el sync. Si la escritura falla no se finge nada — se queda
+ * sin huella, y el vigía lo lee como «sin señal», que es lo honesto.
+ */
+async function anotarPasada(origen: OrigenSync, ok: boolean, datos: Record<string, unknown>) {
+  await registrarLatido('smoobu_sync', ok, JSON.stringify({ origen, ...datos }))
+}
+
+export async function runSync(
+  days: number,
+  maxPages = 20,
+  arrFrom?: string,
+  arrTo?: string,
+  origen: OrigenSync = 'cron',
+) {
+  try {
+    return await ejecutarSync(days, maxPages, arrFrom, arrTo, origen)
+  } catch (e) {
+    // Un fallo tiene que quedar ANOTADO, no solo propagado: el 500 se pierde en
+    // los logs de Vercel, la huella no. Se re-lanza para que el llamante siga
+    // enterándose igual que antes.
+    await anotarPasada(origen, false, { error: String((e as Error)?.message ?? e).slice(0, 200) })
+    throw e
+  }
+}
+
+async function ejecutarSync(
+  days: number,
+  maxPages: number,
+  arrFrom: string | undefined,
+  arrTo: string | undefined,
+  origen: OrigenSync,
+) {
   const API_KEY = await getSmoobuKey()
   if (!API_KEY) throw new Error('SMOOBU_API_KEY no configurada')
 
@@ -114,6 +160,13 @@ export async function runSync(days: number, maxPages = 20, arrFrom?: string, arr
       } else cnt.skipped++
     }
   }
+
+  // `vistas` (reservas que Smoobu devolvió en la ventana) va aparte de `nuevas`:
+  // un 0 en `nuevas` es «no hay reservas nuevas», un 0 en `vistas` es «Smoobu no
+  // me ha dado NADA», que huele a clave con permisos recortados.
+  await anotarPasada(origen, true, {
+    dias: days, vistas: all.length, nuevas: cnt.new, modificadas: cnt.modified, canceladas: cnt.cancelled,
+  })
 
   return {
     success: true,

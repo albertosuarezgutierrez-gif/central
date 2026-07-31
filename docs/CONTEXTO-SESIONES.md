@@ -24,6 +24,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⚕️ «🔴 Smoobu sync: último registro hace 5 días» era FALSA ALARMA — el check medía lo que no era (31/07/2026).**
+  El cron `/api/sivra/updates/sync` había corrido esa mañana (05:01 UTC, 200 en logs de Vercel): lo viejo era la
+  última reserva NUEVA (25/07). El Check 4 del health-check derivaba la salud del sync de `MAX(incomes."createdAt")`,
+  que solo avanza si entra una reserva — con ~0,7 nuevas/día los huecos de 3-7 días son normales (junio ya tuvo uno
+  de 7). Mentía en las dos direcciones: 🔴 falso en temporada tranquila y 🟢 falso si el sync moría pero entraba una
+  reserva suelta. Fix: `runSync` deja huella en `agente_latidos('smoobu_sync')` en CADA pasada (bien o mal, con
+  `vistas` aparte de `nuevas`) y el Check 4 la lee vía `lib/sivra/estado-sync.ts` (puro, 10 tests, 3 estados; sin
+  latido = 🟠 «aún no se sabe», nunca 🟢). NO duplicado en `AGENTES_VIGILADOS` (evitar doble aviso). PR #1192.
+  **Aparte y sin arreglar:** `facturas-scan` y `subastas-enriquecer` dan **504 (timeout 60 s)** cada mañana — por eso
+  `agente_latidos` está vacía; el vigía de las 07:45 lo cantará como «sin señal».
+
 - **🏛️ Subastas: revisión de la cadena de ubicación — 8 fallos reales corregidos (31/07/2026).** Encargo
   «que no vuelva a suceder + revisa qué más puede pasar». 🔴 (a) `bajarFicha` no validaba la respuesta y el
   UPDATE del cron escribía las CIFRAS sin `COALESCE`: un 200 de mantenimiento del BOE **borraba** tipo/

@@ -7,7 +7,7 @@ export const maxDuration = 300
 export async function POST(req: NextRequest) {
   try {
     const b = await req.json().catch(() => ({}))
-    return NextResponse.json(await runSync(b.days || 2, b.maxPages || 20, b.from, b.to))
+    return NextResponse.json(await runSync(b.days || 2, b.maxPages || 20, b.from, b.to, 'manual'))
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }

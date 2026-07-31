@@ -7,6 +7,7 @@ import { getPLMensual, mesPorDefecto } from '@/lib/sivra/pl-mensual'
 import { getResumenFinanciero } from '@/lib/finanzas'
 import { calcularEstadoDeclaracion } from '@/lib/comparativa-declaracion'
 import { facturasMensualesFaltantes } from '@/lib/sivra/facturas-mensuales'
+import { estadoSyncSmoobu } from '@/lib/sivra/estado-sync'
 import { eur } from '@/lib/dinero'
 import type { NextRequest } from 'next/server'
 
@@ -67,15 +68,37 @@ export async function GET(req: NextRequest) {
     if (ratio < 0.7) fallos.push(`🔴 Cuadre OTA: banco ${eur(Number(totalBanco))} vs incomes ${eur(Number(totalInc))} (ratio ${ratio.toFixed(2)} < 0.70)`)
     else ok.push(`✅ Cuadre OTA: banco/incomes ratio ${ratio.toFixed(2)}`)
 
-    // Check 4: Sync reciente de incomes (Smoobu)
-    const ultimoSync = await prisma.$queryRaw<Array<{ ultima: Date }>>(Prisma.sql`
-      SELECT MAX("createdAt") as ultima FROM incomes
+    // Check 4: ¿está sincronizando Smoobu? — POR SU LATIDO, no por `incomes`.
+    //
+    // 🚨 Hasta el 31/07/2026 esto miraba `MAX(incomes."createdAt")` y avisaba en
+    // rojo por encima de 2 días. Esa columna solo avanza cuando entra una reserva
+    // NUEVA, así que medía la demanda de Alberto, no la salud del sync: con ~0,7
+    // reservas nuevas al día los huecos de 3-7 días son lo normal (el corpus ya
+    // traía uno de 7 días en junio) → 🔴 falso el 31/07 con el cron corriendo esa
+    // misma mañana. Y al revés: una sola reserva suelta lo ponía verde aunque el
+    // sync llevara semanas muerto. La huella de `agente_latidos` (que `runSync`
+    // escriba SIEMPRE que corre) es lo único que separa «no hay reservas nuevas»
+    // de «no se ha podido hablar con Smoobu». Lógica en `lib/sivra/estado-sync.ts`
+    // (pura y testeada). NO volver a derivar esto de `incomes`.
+    //
+    // Deliberadamente NO se duplica en `AGENTES_VIGILADOS` (cron `agentes-latido`,
+    // 07:45): sería el mismo aviso dos veces cada mañana, y un monitor que repite
+    // se acaba ignorando. Este check es su hogar.
+    const latidoSync = await prisma.$queryRaw<Array<{
+      ultimo_at: Date | null; ultimo_ok_at: Date | null; ok: boolean; detalle: string | null
+    }>>(Prisma.sql`
+      SELECT ultimo_at, ultimo_ok_at, ok, detalle FROM agente_latidos WHERE agente = 'smoobu_sync'
     `)
-    const diasDesdeSync = ultimoSync[0]?.ultima
-      ? Math.floor((Date.now() - new Date(ultimoSync[0].ultima).getTime()) / 86400000)
-      : 999
-    if (diasDesdeSync > 2) fallos.push(`🔴 Smoobu sync: último registro hace ${diasDesdeSync} días`)
-    else ok.push(`✅ Smoobu sync: activo (hace ${diasDesdeSync}d)`)
+    const filaSync = latidoSync[0]
+    const estadoSync = estadoSyncSmoobu({
+      ahora: new Date(),
+      latido: filaSync
+        ? { ultimoOkAt: filaSync.ultimo_ok_at, ultimoAt: filaSync.ultimo_at, ok: filaSync.ok, detalle: filaSync.detalle }
+        : null,
+    })
+    if (estadoSync.nivel === 'fallo') fallos.push(`🔴 ${estadoSync.titular}`)
+    else if (estadoSync.nivel === 'aviso') fallos.push(`🟠 ${estadoSync.titular}`)
+    else ok.push(`✅ ${estadoSync.titular}`)
 
     // Check 5: Incomes con amount NULL
     const nullAmt = await prisma.$queryRaw<Array<{ n: bigint }>>(Prisma.sql`

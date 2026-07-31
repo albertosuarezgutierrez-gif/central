@@ -50,7 +50,13 @@ export type AgenteVigilado = {
 // Sembrado (21/07/2026) con las huellas FIABLES y de más valor. Deliberadamente NO se vigilan:
 //   - facturas (facturas_proveedor solo escribe si hay factura → falsa alarma),
 //   - psd2/banca (ya cubierto por la skill psd2-health-check; y sin movimientos no escribe),
-//   - trading (tiene su propio watchdog dedicado con lógica de días).
+//   - trading (tiene su propio watchdog dedicado con lógica de días),
+//   - **smoobu_sync** (31/07/2026): SÍ deja huella fiable en `agente_latidos`, pero su vigilancia
+//     vive en el Check 4 del health-check (cron `health-check`, 07:00 UTC) con lógica propia de
+//     tres estados en `lib/sivra/estado-sync.ts`. Meterlo también aquí mandaría el MISMO aviso dos
+//     veces cada mañana (07:00 y 07:45) y un monitor que repite se acaba ignorando — que es el
+//     modo de fallo que este archivo dice evitar en su regla de oro. Si algún día se centraliza,
+//     hay que RETIRAR el Check 4 en el mismo cambio, no dejar los dos.
 export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   {
     id: 'pricing',

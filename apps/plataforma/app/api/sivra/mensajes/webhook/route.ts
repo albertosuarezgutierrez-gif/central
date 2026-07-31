@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   // Ventana corta (2 días) porque el evento llega justo cuando la reserva se acaba de modificar.
   if (EVENTOS_RESERVA.has(action)) {
     try {
-      const synced = await runSync(2, 5)
+      const synced = await runSync(2, 5, undefined, undefined, 'webhook')
       // Limpieza + pricing reactivo en segundo plano (no bloquean la respuesta a Smoobu).
       reaccionarAReserva()
       return NextResponse.json({ ok: true, action, synced })
