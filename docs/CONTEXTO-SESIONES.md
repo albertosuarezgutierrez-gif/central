@@ -33,6 +33,12 @@
     y una referencia así ya no sostiene `flip_apto` ni un aviso por Telegram (`aviso.ts`, `clasificar.ts`).
   - El flip compara contra `valorMercadoReformado` (sin el ajuste de estado) para no pagar la reforma dos veces.
   - Columna `subastas.valor_orientativo` (migración aplicada) + chip ⚠️ en la ficha.
+  - **VERIFICADO en producción** (31/07, `?accion=clasificar` sobre las 36 vigentes): Pedro Romero pasa de
+    **334.645€ → 246.888€** (2.635 €/m² × 117,10 m² × 0,8) y su margen de flip de **0,867 → 0,706**, pero lo
+    que de verdad importa es que `flip_apto` cayó a **false** por orientativo. Marcadas ⚠️ orientativas **3 de
+    36** (Sevilla, Dos Hermanas y El Puerto de Santa María — las tres con mediana municipal del buscador); las
+    otras 33 se valoran con zona fina. **flips viables ≥25%: 0** (antes los había): ninguna subasta viva se
+    recomienda hoy con un número que no describa al inmueble.
   - **Corpus:** 345 comparables y solo 2 de Sevilla, 0 de Jerez, 0 de Cádiz — casi todo costa de Huelva.
     Alberto da de alta alertas de Idealista/Fotocasa de Jerez y Cádiz ciudad. Las SUBASTAS de Jerez ya
     llegaban solas (Cádiz está en sus provincias); el alta es solo para los comparables de precio.
