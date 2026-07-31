@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db'
 import { piotroskiFScore, momentum12_1 } from '@central/module-trading'
-import { descargarTickersSec, listaUniverso, fundamentalesCik, accionesPlausibles } from './edgar'
+import { descargarTickersSec, listaUniverso, fundamentalesCik, accionesPlausibles, capitalizacionCruzable } from './edgar'
 import { cierresDiarios } from './precios-stooq'
 import { UNIVERSO_SEMILLA } from './universo-semilla'
 
@@ -50,22 +50,27 @@ export async function refrescarLoteUniverso(lote = 50): Promise<{ fuente: string
       const cierres = await cierresDiarios(fila.simbolo, haceDias(400), hoyIso())
       const precio = cierres.at(-1) ?? null
       const piotroski = f && f.anios.length >= 2 ? piotroskiFScore(f.anios[0].fin, f.anios[1].fin).score : null
-      const mktCap = precio != null && accionesPlausibles(f?.acciones) ? precio * accionesPlausibles(f?.acciones)! : null
-      // El precio (y por tanto la capitalización) viene en DÓLARES. Un emisor que presenta cuentas en
-      // su moneda local —Toyota en yenes, Telkom en rupias, América Móvil en pesos— no puede cruzar sus
-      // importes con ella: daba un FCF yield del 2.679% en TLK y del 124% en TM (que las guardas de
-      // `calidad-datos` sí cazan por absurdas) pero también un 9,14% de earnings yield en AMX, que
-      // parece perfectamente normal y es puro artefacto de divisa. Los ratios internos (ROIC,
-      // Piotroski, margen) sí valen: se calculan dentro de una sola moneda.
-      const enDolares = (f?.moneda ?? 'USD') === 'USD'
-      const ev = mktCap != null && enDolares ? mktCap + (f?.deudaLp ?? 0) - (f?.caja ?? 0) : null
+      const acciones = accionesPlausibles(f?.acciones)
+      // El precio (y por tanto la capitalización) viene en DÓLARES y por ACCIÓN COTIZADA EN EEUU. Hay
+      // dos formas de que no se pueda cruzar con los importes del XBRL, y `capitalizacionCruzable` cubre
+      // las dos: (a) el emisor presenta en su moneda local —Toyota en yenes, Telkom en rupias, AMX en
+      // pesos— lo que daba un FCF yield del 2.679% en TLK y del 124% en TM (absurdos que `calidad-datos`
+      // sí caza) pero también un 9,14% de earnings yield en AMX, que parece normal y es puro artefacto
+      // de divisa; (b) presenta 20-F y lo que cotiza es un ADR de ratio desconocido, así que el nº de
+      // acciones ordinarias del XBRL no casa con el precio. Los ratios internos (ROIC, Piotroski,
+      // margen) sí valen siempre: se calculan dentro de una sola moneda y sin precio.
+      const cruzable = capitalizacionCruzable(f)
+      // La capitalización se GUARDA a null cuando no es cruzable, no solo se deja de usar: se pinta en
+      // el panel, y un ADR con la capitalización inflada ×100 es una cifra falsa en pantalla.
+      const mktCap = precio != null && acciones && cruzable ? precio * acciones : null
+      const ev = mktCap != null ? mktCap + (f?.deudaLp ?? 0) - (f?.caja ?? 0) : null
       const earningsYield = f?.ebit != null && ev ? f.ebit / ev : null
       const cfo = f?.anios[0]?.fin.cfo
       // Sin capex publicado NO se puede afirmar el flujo libre: dar por hecho `capex = 0` deja
       // FCF ≡ CFO y pinta de generadora de caja a una empresa que la está quemando (ORCL FY2026:
       // CFO 32.000 M$ contra un capex de 55.660 M$ → FCF −23.700 M$). Ausente = null, que el ranking
       // trata como neutral; nunca 0, que es una afirmación que nadie ha comprobado.
-      const fcfYield = cfo != null && cfo !== 0 && mktCap && enDolares && f?.capex != null ? (cfo - f.capex) / mktCap : null
+      const fcfYield = cfo != null && cfo !== 0 && mktCap && f?.capex != null ? (cfo - f.capex) / mktCap : null
       const momentum = momentum12_1(cierres)
       const ok = piotroski != null && f?.roic != null
       if (ok) conDatos++
