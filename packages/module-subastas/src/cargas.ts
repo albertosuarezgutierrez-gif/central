@@ -156,6 +156,12 @@ export function normalizarCuadroCargas(bruto: unknown, fuente: FuenteCargas): Cu
     }
   })
 
+  // La fórmula con la que CIERRA la certificación no es un asiento: sacarla de
+  // la lista de cargas (y quedarse con lo que de verdad dice, que es que no hay
+  // más). Ver `esFormulaDeCierre` para el porqué.
+  const asientos = cargas.filter((c) => !esFormulaDeCierre(c))
+  const cierres = cargas.filter((c) => esFormulaDeCierre(c))
+
   const proc = String(o.procedimiento ?? '').toLowerCase()
   const confianza = typeof o.confianza === 'number' && o.confianza >= 0 && o.confianza <= 1 ? o.confianza : 0.5
 
@@ -168,15 +174,48 @@ export function normalizarCuadroCargas(bruto: unknown, fuente: FuenteCargas): Cu
       ? { importe: NUM(vp.importe), anio: anioVp >= 1950 && anioVp <= 2100 ? anioVp : null }
       : undefined
 
+  const notas = Array.isArray(o.notas) ? o.notas.filter((n): n is string => typeof n === 'string').map((n) => n.slice(0, 400)) : []
+  for (const c of cierres) {
+    notas.push(
+      `Fórmula de cierre de la certificación (no es un asiento): «${c.literal ?? c.acreedor ?? 'sin más cargas'}».` +
+        (/afecc/i.test(c.literal ?? '') ? ' Menciona AFECCIONES FISCALES vigentes: confirmar en la Hacienda autonómica si siguen vivas (caducan a los 5 años).' : ''),
+    )
+  }
+
   return {
-    cargas,
+    cargas: asientos,
     valoracionPactada,
     procedimiento: proc === 'hipotecaria' || proc === 'embargo' ? proc : 'desconocido',
-    sinMasCargas: o.sinMasCargas === true,
-    notas: Array.isArray(o.notas) ? o.notas.filter((n): n is string => typeof n === 'string').map((n) => n.slice(0, 400)) : [],
+    // La fórmula de cierre ES la declaración de «sin más cargas»: si el lector
+    // la metió como carga en vez de marcar el flag, se honra igual.
+    sinMasCargas: o.sinMasCargas === true || cierres.length > 0,
+    notas,
     fuente,
     confianza,
   }
+}
+
+/** «Sin más cargas», «no constan otras cargas», «libre de cargas»… */
+const RE_CIERRE = /\bsin\s+m[aá]s\s+cargas\b|\bno\s+(?:existen|constan|hay)\s+(?:m[aá]s|otras)\s+cargas\b|\blibre\s+de\s+cargas\b|\bsin\s+otras?\s+cargas\b/i
+
+/**
+ * ¿Esta «carga» es en realidad la fórmula con la que el registro CIERRA la
+ * certificación?
+ *
+ * Caso real (30/07/2026): «SIN MÁS CARGAS, salvo AFECCIONES FISCALES vigentes»
+ * entraba en la lista como una carga `afeccion_fiscal` de rango `desconocido`.
+ * Eso es doblemente falso: no es un asiento (no tiene importe, ni fecha, ni
+ * titular) y, sobre todo, dice justo lo CONTRARIO de lo que se le hacía decir —
+ * es la declaración de que no hay nada más. Como carga de rango desconocido se
+ * contaba «por prudencia» como subsistente y ensuciaba los avisos de la ficha.
+ *
+ * Se exige que NO traiga importe ni fecha: una afección fiscal de verdad, con
+ * su cuantía y su asiento, sigue siendo una carga aunque el literal mencione la
+ * fórmula. Ante la duda, se conserva como carga (el lado caro).
+ */
+export function esFormulaDeCierre(c: Carga): boolean {
+  if (c.importe != null || c.fecha != null) return false
+  return RE_CIERRE.test(c.literal ?? '') || RE_CIERRE.test(c.acreedor ?? '')
 }
 
 /**
@@ -338,6 +377,126 @@ export function mismoAcreedorQueEjecutante(cargas: Carga[], ejecutante: string |
 }
 
 /**
+ * Letra con la que el registro identifica una anotación preventiva («anotación
+ * letra C»). Es el identificador REGISTRAL del asiento: no cambia de un
+ * documento a otro, a diferencia del importe, que cada documento cita por una
+ * parte distinta (principal, o principal + intereses y costas).
+ */
+export function letraAnotacion(c: Carga): string | null {
+  const m = /\bletra\s+([a-zñ])\b/i.exec(c.literal ?? '')
+  return m ? m[1].toUpperCase() : null
+}
+
+const normAcreedor = (s: string | null) => (s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20)
+
+/**
+ * Identidad del ASIENTO, para reconocer la misma carga leída en documentos
+ * distintos. Por orden de fiabilidad: la letra de la anotación, la fecha con el
+ * titular y, si no hay nada de eso, la firma antigua (tipo+rango+importe).
+ */
+export function identidadCarga(c: Carga): string {
+  const letra = letraAnotacion(c)
+  if (letra) return `${c.tipo}|letra:${letra}`
+  if (c.fecha) return `${c.tipo}|fecha:${c.fecha.toLowerCase()}|${normAcreedor(c.acreedor)}`
+  if (c.acreedor) return `${c.tipo}|acreedor:${normAcreedor(c.acreedor)}`
+  return `${c.tipo}|${c.rango}|${c.importe ?? '?'}`
+}
+
+/** El rango que MÁS cuesta de los dos: subsistir es más caro que purgarse. */
+function rangoConservador(a: RangoCarga, b: RangoCarga): RangoCarga {
+  const orden: RangoCarga[] = ['anterior', 'desconocido', 'posterior', 'la_que_ejecuta']
+  return orden[Math.min(orden.indexOf(a), orden.indexOf(b))]
+}
+
+/**
+ * Fusiona las cargas leídas en VARIOS documentos de la misma finca (edicto,
+ * certificación, informe de valoración…) dejando UNA fila por asiento.
+ *
+ * 🚨 El caso que la motiva (30/07/2026): la certificación citaba el embargo
+ * letra C) por 3.600€ (responsabilidad total) y el informe de valoración por
+ * 2.600€ (solo el principal). Al deduplicar por tipo+rango+IMPORTE —que es
+ * justo lo que cambia— sobrevivían las dos filas y el mismo embargo se contaba
+ * DOS VECES: 51.050€ de cargas heredadas donde había 48.450€. Un coste inflado
+ * descarta subastas que sí eran negocio, igual que uno rebajado hace pujar de
+ * más.
+ *
+ * Al fusionar se queda con el importe MAYOR (lo que puede reclamar el acreedor)
+ * y con el rango más caro, y avisa de la discrepancia: nunca promedia ni elige
+ * en silencio.
+ */
+export function fusionarCargas(cargas: Carga[]): { cargas: Carga[]; avisos: string[] } {
+  const avisos: string[] = []
+  const porIdentidad = new Map<string, Carga>()
+
+  for (const c of cargas) {
+    const k = identidadCarga(c)
+    const previa = porIdentidad.get(k)
+    if (!previa) {
+      porIdentidad.set(k, c)
+      continue
+    }
+
+    if (previa.importe != null && c.importe != null && Math.abs(previa.importe - c.importe) > Math.max(previa.importe, c.importe) * 0.01) {
+      avisos.push(
+        `${describir(c)} aparece en dos documentos con importes distintos (${formatearEur(previa.importe)} y ${formatearEur(c.importe)}): ` +
+          'se cuenta el MAYOR, que suele ser la responsabilidad total (principal + intereses + costas) frente al principal a secas. Confirmar en la certificación.',
+      )
+    }
+    if (previa.rango !== c.rango) {
+      avisos.push(`${describir(c)} consta con rango distinto según el documento (${previa.rango} y ${c.rango}): se cuenta el más caro.`)
+    }
+
+    porIdentidad.set(k, {
+      ...previa,
+      importe: previa.importe == null ? c.importe : c.importe == null ? previa.importe : Math.max(previa.importe, c.importe),
+      rango: rangoConservador(previa.rango, c.rango),
+      // Cancelada solo si TODOS los documentos lo dicen: uno que no lo mencione
+      // no basta para dar por cancelada una carga.
+      cancelada: previa.cancelada && c.cancelada,
+      acreedor: previa.acreedor ?? c.acreedor,
+      fecha: previa.fecha ?? c.fecha,
+      literal: previa.literal ?? c.literal,
+    })
+  }
+
+  return { cargas: [...porIdentidad.values()], avisos }
+}
+
+function describir(c: Carga): string {
+  const letra = letraAnotacion(c)
+  if (letra) return `La anotación letra ${letra}`
+  return `La carga ${c.tipo.replace(/_/g, ' ')}${c.acreedor ? ` de ${c.acreedor}` : ''}`
+}
+
+/**
+ * Empareja las cargas de dos lecturas del MISMO documento. Primero por identidad
+ * registral (la letra de la anotación, la fecha…) y solo después, entre las que
+ * quedan sueltas, por tipo+rango — que es lo único que había antes y confundía
+ * dos embargos anteriores entre sí.
+ */
+function emparejarLecturas(a: Carga[], b: Carga[]): Map<Carga, Carga> {
+  const pares = new Map<Carga, Carga>()
+  const libres = new Set(b)
+
+  for (const ca of a) {
+    const cb = [...libres].find((x) => identidadCarga(x) === identidadCarga(ca))
+    if (cb) {
+      pares.set(ca, cb)
+      libres.delete(cb)
+    }
+  }
+  for (const ca of a) {
+    if (pares.has(ca)) continue
+    const cb = [...libres].find((x) => x.tipo === ca.tipo && x.rango === ca.rango)
+    if (cb) {
+      pares.set(ca, cb)
+      libres.delete(cb)
+    }
+  }
+  return pares
+}
+
+/**
  * Consenso entre DOS lecturas independientes del mismo documento. Alberto pidió
  * que la IA extraiga las cifras; esta es la red que evita que un dígito mal
  * leído se propague a una puja. Se emparejan las cargas por tipo+rango y se
@@ -346,10 +505,10 @@ export function mismoAcreedorQueEjecutante(cargas: Carga[], ejecutante: string |
  */
 export function consensoCuadros(a: CuadroCargas, b: CuadroCargas): { cuadro: CuadroCargas; discrepancias: string[] } {
   const discrepancias: string[] = []
-  const clave = (c: Carga) => `${c.tipo}|${c.rango}`
+  const pares = emparejarLecturas(a.cargas, b.cargas)
 
   const cargas: Carga[] = a.cargas.map((ca) => {
-    const cb = b.cargas.find((x) => clave(x) === clave(ca))
+    const cb = pares.get(ca)
     if (!cb) {
       discrepancias.push(`La segunda lectura no vio la carga ${ca.tipo} (${ca.rango}).`)
       return { ...ca, importe: null }
@@ -370,7 +529,8 @@ export function consensoCuadros(a: CuadroCargas, b: CuadroCargas): { cuadro: Cua
     return ca
   })
 
-  const soloEnB = b.cargas.filter((cb) => !a.cargas.some((ca) => clave(ca) === clave(cb)))
+  const emparejadas = new Set(pares.values())
+  const soloEnB = b.cargas.filter((cb) => !emparejadas.has(cb))
   for (const cb of soloEnB) {
     discrepancias.push(`Solo la segunda lectura vio una carga ${cb.tipo} (${cb.rango}): se incluye sin importe.`)
     cargas.push({ ...cb, importe: null })

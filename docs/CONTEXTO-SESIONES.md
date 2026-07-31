@@ -24,6 +24,24 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⚖️ Subastas: 3 defectos del lector registral + «nota simple viva» (31/07/2026).**
+  - **Fechas EN LETRA** (`caducidad.ts`): «diecisiete de agosto de dos mil nueve» ya se parsea (también
+    mixtas y el año suelto en letra). Sin esto el art. 86 LH no se evaluaba justo sobre las anotaciones
+    más viejas, que son las únicas que pueden estar caducadas. Sin día → último del mes (menos antigüedad).
+  - **La fórmula de cierre no es una carga** (`cargas.ts::esFormulaDeCierre`): «SIN MÁS CARGAS, salvo
+    AFECCIONES FISCALES» entraba como carga de rango desconocido y se contaba como subsistente; ahora sale
+    de la lista, pasa a `notas` y marca `sinMasCargas`. Si trae importe o fecha, sigue siendo carga.
+  - **El mismo asiento contado dos veces** (`fusionarCargas` + `identidadCarga`): el dedupe iba por
+    tipo+rango+IMPORTE, que es lo que cambia entre documentos (certificación = responsabilidad total,
+    informe = principal) → el embargo letra C sumaba 3.600+2.600. Ahora la identidad es la **letra de la
+    anotación** (o fecha+acreedor) y se queda con el importe MAYOR y el rango más caro, avisando.
+  - **Idea 3 — nota simple viva:** tabla `subastas_notas_simples` (aplicada) + `lib/subastas/nota-simple.ts`
+    + `POST/GET /api/subastas/nota-simple` + bloque en la ficha. Se sube la nota (PDF/escaneo/texto), la lee
+    el mismo lector y `compararCuadros` dice qué cambió. **NO pisa las columnas `cargas_*`** de `subastas`
+    (corpus global); la nota es de la cuenta. Sin cargas leídas no se guarda ni se concluye nada.
+  - 362 tests módulo · 664 app · tsc 0 · build OK. Pendiente de Alberto: alertas Idealista/Fotocasa de
+    Jerez y Cádiz ciudad (hasta entonces esas 3 subastas siguen ⚠️ orientativas).
+
 - **💰 Subastas: el «valor de mercado» dejaba de fabricar chollos falsos (30/07/2026, PR #1183).**
   - Alberto: «334.645€ no es real para esa zona». Cierto: un piso de 1965 en Avda. Pedro Romero (Sevilla)
     salía con 86,7% de margen de flip. Tres causas a la vez, todas fuera de la subasta.
@@ -33,6 +51,12 @@
     y una referencia así ya no sostiene `flip_apto` ni un aviso por Telegram (`aviso.ts`, `clasificar.ts`).
   - El flip compara contra `valorMercadoReformado` (sin el ajuste de estado) para no pagar la reforma dos veces.
   - Columna `subastas.valor_orientativo` (migración aplicada) + chip ⚠️ en la ficha.
+  - **VERIFICADO en producción** (31/07, `?accion=clasificar` sobre las 36 vigentes): Pedro Romero pasa de
+    **334.645€ → 246.888€** (2.635 €/m² × 117,10 m² × 0,8) y su margen de flip de **0,867 → 0,706**, pero lo
+    que de verdad importa es que `flip_apto` cayó a **false** por orientativo. Marcadas ⚠️ orientativas **3 de
+    36** (Sevilla, Dos Hermanas y El Puerto de Santa María — las tres con mediana municipal del buscador); las
+    otras 33 se valoran con zona fina. **flips viables ≥25%: 0** (antes los había): ninguna subasta viva se
+    recomienda hoy con un número que no describa al inmueble.
   - **Corpus:** 345 comparables y solo 2 de Sevilla, 0 de Jerez, 0 de Cádiz — casi todo costa de Huelva.
     Alberto da de alta alertas de Idealista/Fotocasa de Jerez y Cádiz ciudad. Las SUBASTAS de Jerez ya
     llegaban solas (Cádiz está en sus provincias); el alta es solo para los comparables de precio.
