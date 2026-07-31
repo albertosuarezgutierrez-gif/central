@@ -377,6 +377,16 @@ test('accionesPlausibles descarta cifras de acciones sin escalar (caso MCD: 712 
   assert.equal(accionesPlausibles(NaN), null)
 })
 
+test('accionesPlausibles descarta también la escala inflada del emisor (caso NMR: 3,07 mil billones)', () => {
+  // Nomura publica su recuento real (3.066.458.811) multiplicado por 1e6. Con el ADR ya bloqueado no
+  // hace daño hoy, pero el dato es basura y no debe propagarse.
+  assert.equal(accionesPlausibles(3_066_458_811_000_000), null)
+  // Y NO puede cazar a las que sí tienen muchísimas acciones de verdad.
+  assert.equal(accionesPlausibles(604_437_877_587), 604_437_877_587)   // LATAM, real
+  assert.equal(accionesPlausibles(188_446_126_794), 188_446_126_794)   // Santander Chile, real
+  assert.equal(accionesPlausibles(505_277_464_000), 505_277_464_000)   // PAC: ×1000 e indistinguible → pasa
+})
+
 // ── 🧮 EBIT derivado (JNJ/LLY/GE no etiquetan OperatingIncomeLoss) ─────────────────────────────────
 test('EBIT: se deriva de pretax + gasto financiero no operativo cuando falta OperatingIncomeLoss', () => {
   const cf = structuredClone(CF)

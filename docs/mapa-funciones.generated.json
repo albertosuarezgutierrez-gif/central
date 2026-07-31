@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-31T08:06:09Z",
-  "sha": "2d81924cf5d60389ec375de6aee39209feaa9ec1",
+  "generadoEn": "2026-07-31T08:51:48Z",
+  "sha": "cb137b65361c250f8e892b372d027bde36a4700e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -67576,7 +67576,7 @@
           "exportada": true,
           "params": "n: number | null | undefined",
           "retorno": "number | null",
-          "linea": 393,
+          "linea": 403,
           "resumen": "Guarda de PLAUSIBILIDAD del nº de acciones (bug real 20/07/2026: MCD reportó 712 en vez de 712 MILLONES en el XBRL → mktCap de 196.044$ → EV≈deuda → earnings/FCF yield inflados ×1e6 → nº 1 del ranking"
         },
         {
@@ -67585,7 +67585,7 @@
           "exportada": true,
           "params": "timeoutMs = 10000",
           "retorno": "Promise<unknown | null>",
-          "linea": 398,
+          "linea": 408,
           "resumen": "El JSON crudo de company_tickers (para listaUniverso). Best-effort → null."
         },
         {
@@ -67594,7 +67594,7 @@
           "exportada": true,
           "params": "subs: unknown, desde: string",
           "retorno": "Evento8K[]",
-          "linea": 425,
+          "linea": 435,
           "resumen": "Parseo PURO del submissions JSON de la SEC: 8-K presentados desde `desde` (ISO) cuyos items estén en la lista relevante. Tolera JSON malformado (devuelve [])."
         },
         {
@@ -67603,7 +67603,7 @@
           "exportada": true,
           "params": "cik: string, timeoutMs = 8000",
           "retorno": "Promise<unknown | null>",
-          "linea": 444,
+          "linea": 454,
           "resumen": "El submissions JSON crudo por CIK — el radar lo baja UNA vez por símbolo y saca de él tanto los 8-K (extraerEventos8K) como los Form 4 (extraerFilingsForm4). Best-effort → null."
         },
         {
@@ -67612,7 +67612,7 @@
           "exportada": true,
           "params": "cik: string, desde: string, timeoutMs = 8000",
           "retorno": "Promise<Evento8K[]>",
-          "linea": 449,
+          "linea": 459,
           "resumen": "Eventos 8-K recientes por CIK ya conocido (submissions JSON). Best-effort → []."
         },
         {
@@ -67621,7 +67621,7 @@
           "exportada": true,
           "params": "subs: unknown, hoy: string, ventanaDias = 10",
           "retorno": "string | null",
-          "linea": 465,
+          "linea": 475,
           "resumen": "── 📅 Semana de resultados ESTIMADA ────────────────────────────────────────────────────────────── La SEC no publica fechas FUTURAS de resultados; lo que sí tenemos (gratis y determinista) es el PATRÓ"
         },
         {
@@ -67630,12 +67630,12 @@
           "exportada": true,
           "params": "subs: unknown, desde: string",
           "retorno": "FilingForm4[]",
-          "linea": 482
+          "linea": 492
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d9498191f021"
+      "hash": "80ab019058b2"
     },
     {
       "ruta": "apps/plataforma/lib/trading/form4.ts",

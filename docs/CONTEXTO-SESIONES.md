@@ -34,6 +34,15 @@ y el definitivo justo tras el escaneo, y `evaluarLatido` con `ultimo_at`+`detall
 dispara» de «se dispara y no termina». Verificado: tsc 0 · 702 tests · build OK · upsert probado en BD.
 Queda: confirmar la huella real en la pasada de mañana 06:15 UTC. PR pendiente de merge.
 
+- **🔎 Verificación en caliente del arreglo de los ADR + techo al nº de acciones (31/07/2026).** Sin esperar
+  al cron: bajados por `pg_net` los companyfacts de los 5 peores del radar y pasados por el parser ya
+  mergeado. NMR (30.061.813 mil M$ de capitalización), PAC, LTM, BSAC y BCH → los 5 salen `emisorExtranjero`
+  y capitalización **NULL**. Ojo con LTM: presenta en DÓLARES, así que solo lo caza la regla del 20-F —
+  la de divisa no habría bastado. Hallazgo nuevo: el nº de acciones también viene inflado por el propio
+  emisor (Nomura ×1e6, PAC ×1000) y `accionesPlausibles` solo miraba hacia abajo → techo en 1e13, que caza
+  a Nomura sin tocar a los que sí tienen 1e11 acciones de verdad (LATAM, Santander Chile). PAC no es
+  separable y se queda. Hoy lo tapa el gate del ADR; la guarda es para cuando `acciones` se use para otra cosa.
+
 - **🧯 Segunda tanda del parser de EDGAR + retrovisor honesto (31/07/2026, PR #1193).** JNJ/LLY/GE no
   etiquetan `OperatingIncomeLoss` y se quedaban sin ROIC **y** sin earnings yield: ahora se deriva
   EBIT ≈ pretax + `InterestExpenseNonoperating` (calibrado con WMT: −1,2% vs el etiquetado). Y la

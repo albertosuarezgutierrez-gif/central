@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-31T08:06:09Z",
+  "generadoEn": "2026-07-31T08:51:48Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3968,6 +3968,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔎 Verificación en caliente del arreglo de los ADR + techo al nº de acciones (31/07/2026).",
+      "fecha": "31/07/2026"
+    },
+    {
       "titulo": "🧯 Segunda tanda del parser de EDGAR + retrovisor honesto (31/07/2026, PR #1193).",
       "fecha": "31/07/2026"
     },
@@ -4021,10 +4025,6 @@
     },
     {
       "titulo": "⚖️ Subastas — 3 partidas que faltaban en el coste real (30/07/2026, misma rama/PR #1176).",
-      "fecha": "30/07/2026"
-    },
-    {
-      "titulo": "🏠 Subastas/chollos — API OFICIAL de Idealista preparada y DORMIDA (30/07/2026, PR #1168).",
       "fecha": "30/07/2026"
     }
   ],
