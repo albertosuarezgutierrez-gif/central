@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-31T06:52:25Z",
-  "sha": "e7ec492bf10bd4e1a41c9d114f08be5f901a302c",
+  "generadoEn": "2026-07-31T07:00:47Z",
+  "sha": "1c243ab344ff2d2ed39ddbf4fdea823724b73598",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54583,7 +54583,16 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 23
+          "linea": 22
+        },
+        {
+          "nombre": "pisosPorAforo",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<Map<number, string[]>>",
+          "linea": 29,
+          "resumen": "🚨 El barrido busca por el AFORO REAL de cada piso, NO con \"4 personas\" para todos (bug hasta el 31/07/2026: guardaba los MISMOS comps de 4 plazas para los 4 pisos con `guests=4` fijo, así que House —"
         },
         {
           "nombre": "weekendInMonth",
@@ -54591,7 +54600,7 @@
           "exportada": false,
           "params": "m: number",
           "retorno": "",
-          "linea": 26,
+          "linea": 41,
           "resumen": "Primer viernes→domingo (2 noches) del mes a `m` meses vista."
         },
         {
@@ -54600,7 +54609,7 @@
           "exportada": false,
           "params": "query: string",
           "retorno": "Promise<string>",
-          "linea": 36
+          "linea": 51
         },
         {
           "nombre": "extractPrices",
@@ -54608,7 +54617,7 @@
           "exportada": false,
           "params": "snippets: string, checkin: string, checkout: string",
           "retorno": "Promise<any[]>",
-          "linea": 50
+          "linea": 65
         },
         {
           "nombre": "GET",
@@ -54616,16 +54625,17 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 64
+          "linea": 79
         }
       ],
       "tablas": [
         "market_rates",
         "next",
+        "pricing_piso_zona",
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/sweep",
-      "hash": "8d66c9561dcb"
+      "hash": "28f95f175059"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pl-mensual/route.ts",
@@ -54774,6 +54784,7 @@
         "pricing_config",
         "pricing_eventos_auto",
         "pricing_flight_demand",
+        "pricing_piso_zona",
         "pricing_pl_referencia",
         "pricing_settings",
         "rate_snapshots",
@@ -54781,7 +54792,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "e41ec4527b7c"
+      "hash": "eba9bcc56791"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -54922,10 +54933,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 40
+          "linea": 54
         }
       ],
       "tablas": [
+        "barato",
+        "base",
         "incomes",
         "last_applied",
         "live",
@@ -54934,14 +54947,20 @@
         "mkt_blend",
         "mkt_date",
         "next",
+        "por_fecha",
+        "por_mes",
         "pricing_alerts",
         "pricing_applied",
+        "pricing_eventos_auto",
+        "pricing_piso_zona",
         "pricing_settings",
         "rate_snapshots",
-        "snap"
+        "restringe",
+        "snap",
+        "ult"
       ],
       "rutaApi": "/api/sivra/pricing/guard",
-      "hash": "ba5795685009"
+      "hash": "4f1777b9cbf8"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/historial/route.ts",
@@ -63025,7 +63044,7 @@
           "exportada": true,
           "params": "base: number, dateStr: string",
           "retorno": "number",
-          "linea": 66,
+          "linea": 71,
           "resumen": "⚠️ LEGACY / NO ES EL PRECIO REAL (hallazgo 27/07/2026, ver docs/CONTEXTO-SESIONES.md): esta fórmula estática (base fija × estacional × día-semana) es de ANTES de que existiera el motor anclado al merc"
         },
         {
@@ -63034,22 +63053,22 @@
           "exportada": true,
           "params": "dateStr: string",
           "retorno": "number",
-          "linea": 77,
+          "linea": 82,
           "resumen": "Factor RELATIVO de evento para el motor anclado al mercado: sólo sube en fechas con evento declarado (Semana Santa/Feria/…); el resto de estacionalidad/día ya la refleja el mercado. Honra el calendari"
         },
         {
           "nombre": "seasonalFloorFactor",
           "kind": "function",
           "exportada": true,
-          "params": "dateStr: string",
+          "params": "dateStr: string, evExterno = 1",
           "retorno": "number",
-          "linea": 97,
+          "linea": 109,
           "resumen": "Suelo estacional relativo a min_price para una fecha. En fechas de evento sube con el evento (mitad del factor, acotado a ×2.0) para que Semana Santa/Feria no puedan venderse a suelo. Devuelve 1.0 (si"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e271054c8f68"
+      "hash": "444544ec59ec"
     },
     {
       "ruta": "apps/plataforma/lib/programador.ts",
@@ -64812,6 +64831,87 @@
       ],
       "rutaApi": null,
       "hash": "a8c6da585103"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pricing-aforo.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Ajuste de comparables por AFORO (plazas) — helper PURO, sin BD. EL PROBLEMA QUE RESUELVE (hallazgo 31/07/2026, aviso de Alberto sobre Socorro/House): el barrido de mercado guardaba los MISMOS comps para los 4 pisos con `guests=4` fijo, y el motor (`apply/route.ts`) calculaba sus percentiles SIN filt",
+      "exporta": [
+        "factorAforo",
+        "elegirAforo"
+      ],
+      "funciones": [
+        {
+          "nombre": "factorAforo",
+          "kind": "function",
+          "exportada": true,
+          "params": "plazasPiso: number | null | undefined, plazasComp: number | null | undefined",
+          "retorno": "number",
+          "linea": 30,
+          "resumen": "Cuánto vale un piso de `plazasPiso` frente a comps de `plazasComp`. Devuelve 1 si falta algún dato o si el aforo coincide (caso normal: no toca nada)."
+        },
+        {
+          "nombre": "elegirAforo",
+          "kind": "function",
+          "exportada": true,
+          "params": "muestras: MuestraAforo[], plazasPiso: number | null | undefined, muestraMinima: number = MUESTRA_MINIMA,",
+          "retorno": "",
+          "linea": 49,
+          "resumen": "Decide contra qué aforo tarificar y con qué corrección. Prefiere SIEMPRE los comps del aforo exacto del piso cuando tienen muestra suficiente (factor 1). Si no, coge el aforo con más muestra y devuelv"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "921158fc3d71"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pricing-centinelas.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-centinelas.ts — centinelas PUROS (sin BD ni red) que vigilan el pricing. POR QUÉ EXISTEN (31/07/2026). Los tres fallos caros encontrados ese día tenían la misma forma: un dato metido a ojo o marcado \"provisional\", que nadie volvió a mirar, y que el motor siguió usando como verdad d",
+      "exporta": [
+        "decidirEventoSinRespaldo",
+        "decidirEventoNoCatalogado",
+        "decidirPrecioPorPlaza"
+      ],
+      "funciones": [
+        {
+          "nombre": "NO_EVALUADO",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "motivo: string",
+          "retorno": "Veredicto",
+          "linea": 28
+        },
+        {
+          "nombre": "decidirEventoSinRespaldo",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: EventoSinRespaldoInput, o: EventoSinRespaldoOpts = {},",
+          "retorno": "Veredicto",
+          "linea": 59,
+          "resumen": "OJO con el umbral: el p50 del MES ya viene inflado por el propio evento (abril 2027 va a 310€ de mediana justo porque dentro caen Feria y Semana Santa). Exigirle a una noche de Feria que supere esa me"
+        },
+        {
+          "nombre": "decidirEventoNoCatalogado",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: EventoNoCatalogadoInput, o: EventoNoCatalogadoOpts = {},",
+          "retorno": "Veredicto",
+          "linea": 108
+        },
+        {
+          "nombre": "decidirPrecioPorPlaza",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: PrecioPorPlazaInput, o: PrecioPorPlazaOpts = {}",
+          "retorno": "Veredicto",
+          "linea": 163,
+          "resumen": "⚠️ Solo aplica a pisos GRANDES, y no es un tecnicismo: en un apartamento pequeño las \"plazas\" son en buena parte sofás-cama (Luxury son 5 plazas en 2 dormitorios), así que dividir por ellas da un núme"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b8549ffbeac7"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-engine.ts",
@@ -77828,7 +77928,7 @@
           "exportada": true,
           "params": "base: number, dateStr: string",
           "retorno": "number",
-          "linea": 56,
+          "linea": 61,
           "resumen": "Multiplicador absoluto sobre una base (uso del snapshot \"shadow\": price_ours)."
         },
         {
@@ -77837,13 +77937,13 @@
           "exportada": true,
           "params": "dateStr: string",
           "retorno": "number",
-          "linea": 67,
+          "linea": 72,
           "resumen": "Factor RELATIVO de evento para el motor anclado al mercado: sólo sube en fechas con evento declarado (Semana Santa/Feria/…); el resto de estacionalidad/día ya la refleja el mercado. Honra el calendari"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "57aef14acc35"
+      "hash": "04100bc53201"
     },
     {
       "ruta": "apps/sivra/lib/pricing-engine.ts",
@@ -87456,7 +87556,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2364,
-    "funciones": 6291
+    "archivos": 2366,
+    "funciones": 6298
   }
 }

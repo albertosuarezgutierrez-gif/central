@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-31T06:52:25Z",
+  "generadoEn": "2026-07-31T07:00:47Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3968,6 +3968,14 @@
   ],
   "novedades": [
     {
+      "titulo": "🛡️ Pricing: tres centinelas para que el motor se queje solo (31/07/2026, rama `claude/pricing-check-31-07`).",
+      "fecha": "31/07/2026"
+    },
+    {
+      "titulo": "📉 Pricing 31/07: sistema SANO, pero agosto arranca a CERO (31/07/2026, rama `claude/pricing-check-31-07`).",
+      "fecha": "31/07/2026"
+    },
+    {
       "titulo": "🚨 Fundamentales del radar de trading iban 2 años atrasados y MEZCLADOS (31/07/2026).",
       "fecha": "31/07/2026"
     },
@@ -4018,14 +4026,6 @@
     {
       "titulo": "🐟 PR #1055 \"mariscos\" — CONFIRMADO cliente real, en pausa deliberada (29/07/2026).",
       "fecha": "29/07/2026"
-    },
-    {
-      "titulo": "💸 PRICING — auditoría pre-baja de PriceLabs (28/07/2026, a petición de Alberto).",
-      "fecha": "28/07/2026"
-    },
-    {
-      "titulo": "✂️ Regla global «Estilo de respuesta» en CLAUDE.md raíz (23/07/2026).",
-      "fecha": "23/07/2026"
     }
   ],
   "saludRepo": {
