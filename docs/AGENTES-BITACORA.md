@@ -15,6 +15,14 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-07-31 · facturas-correo (trigger diario)** · hizo: Paso 0 (Vía B sana, última copia
+  30/07, sin backlog PDF-pendiente/Revisar) + repaso de candidatos 28-30/07: DIGI (76€) e IONOS
+  (10,89€) ya archivados/reconciliados por una pasada previa sin auto-informe propio; Gasolina de
+  Pilar ya cerrada como personal; etiquetadas `Facturas/Procesada` 2 hilos sin gasto real (Informa/SABI
+  de pablo.j.p.c, reclamación MAPFRE Finca El Triunfo de un familiar — no es gasto de Alberto) que
+  llevaban colándose en la query de candidatos; `agente_salud` actualizado. Sin nada nuevo que archivar
+  ni conciliar esta pasada; dudas: —; fallos: pasada(s) del 29-30/07 archivaron sin dejar entrada en
+  esta bitácora (detectado al reconstruir el estado); PRs/commits: commit directo a `main`.
 - **2026-07-30 · pricing-agente (auditoría pre-cutover, sesión interactiva)** · hizo: auditoría de
   preparación 100% dinámico (BD + crons + raíles + evidencia piloto) — sin bloqueantes; actualizada la
   doc de skill (suelos 65/72 del 28/07) y programado re-check del apply-auto de hoy; dudas: aforo Luxury
