@@ -13,6 +13,19 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-31** · `docs/CONTEXTO-SESIONES.md` · añadida entrada de estado sobre el spec+plan
+  de login con huella (WebAuthn/passkey) en plataforma (commit `6244118`, 29/07) · era un
+  diseño aprobado por Alberto, sin implementar, que no quedó anotado como pendiente en la
+  memoria · commit de esta auditoría.
+- **2026-07-31** · heartbeat de crons (Supabase, 14 huellas) · 12/14 ✅; 2 ⛔ MUDO por umbral
+  investigados y descartados como falso positivo: `limpiadoras/auto-sessions` (137h, dentro del
+  patrón "huecos de 4-9 días" ya documentado el 02/07) y **`updates/sync`/`incomes` (134h,
+  NUEVO)** — confirmado por Vercel runtime logs que el cron corre a diario (200 en las 5
+  pasadas 26-30/07) y simplemente no hubo reservas/modificaciones nuevas en Smoobu en 6 días
+  (el sync es idempotente, `days=7` por diseño desde el apagón del scheduler de julio). No
+  requiere acción ni PR — anotado aquí para que la próxima auditoría no lo re-investigue desde
+  cero (mismo patrón que la entrada del 02/07 para `limpiadoras/auto-sessions`).
+
 - **2026-07-30** · `docs/ESTRUCTURA.md`, `MATRIZ.md` · auditoría ligera diaria (rango 26→30/07/2026,
   50 commits). Contadores de `packages/module-*` desactualizados (decían 20/25, la carpeta real tiene
   26) y faltaban filas para 6 módulos ya cableados: `module-subastas` (ya estaba, solo contaba mal),
