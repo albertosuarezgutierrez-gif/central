@@ -71,4 +71,27 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
     maxHoras: 6,
     nota: 'El cursor de correo no avanza. Revisa el cron correo-triaje en Vercel (¿IMAP/auth caídos?).',
   },
+  {
+    id: 'ialimp_pms',
+    etiqueta: '🧹 Sincronización del PMS de ialimp (Smoobu/iCal, cron cada 10 min)',
+    // Cadencia de 10 min → 6 h son 36 pasadas perdidas: no es un tropiezo, está muerta.
+    maxHoras: 6,
+    nota:
+      'Si el PMS no sincroniza, `cleaning_sessions` deja de recibir reservas y TODO lo que cuelga de ' +
+      'ella miente en la misma dirección: la app de la limpiadora dice «Sin limpiezas este día», el ' +
+      'briefing dice «sin sesiones programadas» y el panel se queda tan ancho. Es una vertical con ' +
+      'cliente EN PRODUCCIÓN (Sique Brilla): un piso sin limpiar sale caro. Revisa el cron /api/pms/sync ' +
+      'de ialimp y la clave de Smoobu en pms_connections.',
+  },
+  {
+    id: 'facturas_gmail',
+    etiqueta: '🧾 Escaneo de facturas en Gmail (cron diario 06:15)',
+    // Diario → 30 h deja margen para un día saltado sin dar la lata.
+    maxHoras: 30,
+    nota:
+      'El escaneo del buzón no completa una pasada buena (¿app-password rotada, etiqueta renombrada, ' +
+      'IMAP caído?). Mientras esté así, el agente contable dirá «no tienes facturas de proveedor ' +
+      'pendientes» porque no ha podido mirar, no porque no las haya — y el IVA soportado del trimestre ' +
+      'saldrá corto. Huella: agente_latidos.facturas_gmail.',
+  },
 ]

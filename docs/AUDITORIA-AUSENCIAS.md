@@ -9,7 +9,14 @@
 adjuntos» mientras el BOE publicaba su edicto Y su certificación de cargas (PR #1180). El barrido
 posterior buscó el mismo patrón en todo el monorepo. Esto es el inventario resultante.
 
-**Cómo leerlo:** ✅ arreglado en el PR #1180 · ⬜ pendiente. Dentro de cada bloque, por gravedad.
+**Cómo leerlo:** ✅ arreglado · ⬜ pendiente. Dentro de cada bloque, por gravedad.
+La primera tanda salió en el **PR #1180**; los dos vigilantes de infraestructura (sync del PMS de
+ialimp y escaneo de facturas de Gmail), en el siguiente.
+
+**🔔 Quién avisa ahora:** el cron diario **`agentes-latido`** (07:45 UTC) manda **Telegram** cuando un
+agente vigilado deja de latir, cuando el PMS sincroniza con errores, o cuando la propia sonda no se
+puede ejecutar — este último caso separado y con otro tono, porque «no se ha podido comprobar» no es
+«todo bien». Registro de agentes vigilados en `apps/plataforma/lib/monitoring/latidos.ts`.
 
 ---
 
@@ -24,8 +31,8 @@ posterior buscó el mismo patrón en todo el monorepo. Esto es el inventario res
 | ✅ | `apps/plataforma/lib/banca.ts` (`enviarResumenTarjeta`) | Si fallaba la consulta de dudosos, el Telegram del extracto decía **«✅ todos clasificados»** — y es el único aviso que se recibe. Además contaba como «clasificados» los cargos con `destino` NULL. |
 | ✅ | `apps/transporte` (semáforo documental) | Un vehículo **sin ITV ni seguro registrados** no genera alerta de caducidad → «Sin caducidades próximas. **Todo en regla ✅**». El camión con la ITV sin dar de alta era precisamente el que salía verde. Nueva `vehiculosSinDocumentar()` (pura, testeada). |
 | ⬜ | `apps/ialimp/app/api/admin/ia/briefing/route.ts` | «Sin sesiones programadas hoy» / «Equipo completo» / «Stock OK» sobre tablas que **solo** puebla el sync del PMS. El prompt además pide al LLM `Si todo va bien, dilo con confianza`. `Stock OK` tiene un fallo extra: `stock_actual <= stock_minimo` con `stock_actual` NULL es NULL en SQL → el producto nunca inventariado no entra y cuenta como suficiente. |
-| ⬜ | `apps/ialimp` — `ultimo_sync` vs `last_sync_at` | `app/api/pms/sync` escribe `last_sync_at`, pero el dashboard lee **`ultimo_sync`** (que por tanto está siempre NULL): la fecha de última sincronización **nunca se muestra** y solo queda el chip verde «● Activo». `sync_error IS NULL` no es «fue bien», es «no consta error» — incluye «lleva tres semanas muerto». **Este es el que hace indetectables los dos anteriores.** |
-| ⬜ | `apps/plataforma/lib/agente-facturas/pagos.ts` | `catch { return 0 }` en el escaneo IMAP: app-password rotada o etiqueta renombrada = «0 facturas nuevas». Aguas abajo el chat afirma **«No tienes facturas de proveedor pendientes 🎉»** y el resumen semanal calla. `lib/monitoring/latidos.ts` excluye a propósito esta tabla de los latidos → el agente se queda **sin ningún heartbeat**. |
+| ✅ | `apps/ialimp` — `ultimo_sync` vs `last_sync_at` | El panel leía `ultimo_sync`, una columna que **nadie escribe** (NULL en producción desde siempre) mientras el sync guarda `last_sync_at` → la fecha de la última sincronización no se mostraba jamás y solo quedaba el chip verde, sacado de `activa` + «no consta error». Ahora el chip sale del estado REAL (helper puro `lib/pms-estado.ts`, 8 tests): inactiva · sin sincronizar nunca · desactualizada hace X · con errores · activa hace X. Y hay **aviso por Telegram** si la sincronización lleva >6 h muerta o da errores. |
+| ✅ | `apps/plataforma/lib/agente-facturas/pagos.ts` | `catch { return 0 }` hacía indistinguible «no llegó ninguna factura» de «no se pudo leer el buzón», y el chat remataba con «No tienes facturas de proveedor pendientes 🎉». Ahora `escanearNuevasFacturas` devuelve `{nuevas, ok, error}` y el cron deja huella en la tabla nueva **`agente_latidos`** corra bien o mal, con **aviso por Telegram** si pasa >30 h sin una pasada buena. |
 | ⬜ | `apps/plataforma/lib/psd2.ts` | Un 401/429/timeout de Enable Banking da `[]` movimientos **y aun así actualiza `ultimo_sync = now()`**: la marca de frescura miente. Ese 0 alimenta saldo, P&L, cuadre OTA, correduría y cuadre de tarjetas. |
 
 ## 🟠 Gravedad media — decisiones de negocio
