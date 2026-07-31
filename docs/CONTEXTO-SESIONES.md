@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📉 Pricing 31/07: sistema SANO, pero agosto arranca a CERO (31/07/2026, rama `claude/pricing-check-31-07`).**
+  Verificación de la víspera del cutover: sync de Smoobu vivo (05:01, HTTP 200), motor aplicando a diario
+  (Busto agosto 74→65, `market-anchored`), y precios REALES en mercado (Busto 81€ vs p50 80€; Luxury 84€ vs
+  109€, por debajo). `incomes` parado desde 25/07 **no es avería** — sequía real confirmada por dos fuentes
+  (hueco histórico máx: 12 días). ⚠️ Lo serio es comercial: **agosto empieza con 0/31 noches vendidas en
+  Busto, Luxury y Dúplex** (House 11/31, aún en PriceLabs). Sin explicar: Luxury tenía 1-12 ago ocupadas el
+  23/07 y libres el 30/07 sin reserva en `incomes` (¿bloqueo manual retirado?) → confirmar con Alberto.
+  Documentada en el skill la trampa `rate_snapshots.price_ours` (fórmula legacy congelada, 2ª falsa alarma).
+
 - **🔐 Spec + plan aprobados: login con huella (WebAuthn/passkey) en plataforma (29/07/2026,
   sin implementar).** Diseño: `@simplewebauthn`, tabla `webauthn_credentials` scoped por
   `cuenta_id`, atajo de contraseña de respaldo, reutiliza la cookie `plataforma_session`.
