@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-31T06:43:55Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-31T07:35:21Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -217,14 +217,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (31/07/2026) 🏛️ Subastas: revisión de la cadena de ubicación — 8 fallos reales corregidos (31/07/2026).
+- (31/07/2026) 🏛️ Subastas: 3 fallos de la búsqueda por dirección + el Catastro corta por volumen (31/07/2026).
+- (31/07/2026) 🛡️ Pricing: tres centinelas para que el motor se queje solo (31/07/2026, rama `claude/pricing-check-31-07`).
+- (31/07/2026) 📉 Pricing 31/07: sistema SANO, pero agosto arranca a CERO (31/07/2026, rama `claude/pricing-check-31-07`).
+- (31/07/2026) 🚨 Fundamentales del radar de trading iban 2 años atrasados y MEZCLADOS (31/07/2026).
 - (31/07/2026) ⚖️ Subastas: 3 defectos del lector registral + «nota simple viva» (31/07/2026).
 - (30/07/2026) 💰 Subastas: el «valor de mercado» dejaba de fabricar chollos falsos (30/07/2026, PR #1183).
 - (30/07/2026) 🔍 Subastas: el documento registral se lee ENTERO y «se adquiere libre» hay que ganárselo (30/07/2026, PR #1182).
+- (30/07/2026) 🔎 Portales privados de subastas: sondeo técnico, SIN implementar (30/07/2026).
 - (30/07/2026) 🕳️ Barrido del monorepo: afirmar ausencias no comprobadas (30/07/2026, misma rama).
-- (30/07/2026) 📎 Subastas: «sin documentos adjuntos» era MENTIRA (30/07/2026, rama `claude/documentos-adjuntos-o95xl1`).
-- (30/07/2026) ⚖️ Subastas — 3 partidas que faltaban en el coste real (30/07/2026, misma rama/PR #1176).
-- (30/07/2026) 🏠 Subastas/chollos — API OFICIAL de Idealista preparada y DORMIDA (30/07/2026, PR #1168).
-- (30/07/2026) 💶 Auditoría pricing dinámico pre-cutover (30/07/2026, rama `claude/dynamic-pricing-audit-4cbdxv`).
-- (29/07/2026) 🔒 Director de código Fase 2: cierre de PR con veredicto real de CI (29/07/2026).
-- (29/07/2026) 🔧 Subastas — HOTFIX /subastas caída + FASE 3 construida con datos reales (29/07/2026, mañana).
 

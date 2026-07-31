@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-31T06:43:55Z",
-  "sha": "a1276fc548bd5c2a9b7dd47ebce603e1f0784a19",
+  "generadoEn": "2026-07-31T07:26:07Z",
+  "sha": "0211846d88532da1a95637527bc11f5c9b973c97",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47423,12 +47423,30 @@
           "linea": 18
         },
         {
+          "nombre": "emojiTipo",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "t: string | null",
+          "retorno": null,
+          "linea": 66,
+          "resumen": "`Object.hasOwn`: un `tipo_bien` que se llamara «constructor» o «toString» devolvería la función heredada del prototipo (que no es nullish, así que el `??` no salta) y acabaría interpolada en el HTML d"
+        },
+        {
           "nombre": "esc",
           "kind": "arrow",
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 63
+          "linea": 68
+        },
+        {
+          "nombre": "enlace",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "url: string | null, texto: string",
+          "retorno": null,
+          "linea": 70,
+          "resumen": "Solo http(s) sale como enlace: un `javascript:` colado por la ingesta se ejecutaría al pulsar."
         },
         {
           "nombre": "popupHtml",
@@ -47436,7 +47454,7 @@
           "exportada": false,
           "params": "p: Punto",
           "retorno": "string",
-          "linea": 65
+          "linea": 73
         },
         {
           "nombre": "MapaSubastas",
@@ -47444,12 +47462,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 95
+          "linea": 104
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6896d975252b"
+      "hash": "d16ca3668c9f"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/subastas/page.tsx",
@@ -47499,7 +47517,7 @@
           "exportada": false,
           "params": "activo = false",
           "retorno": "React.CSSProperties",
-          "linea": 185
+          "linea": 186
         },
         {
           "nombre": "fecha",
@@ -47507,7 +47525,7 @@
           "exportada": false,
           "params": "iso: string | null | undefined",
           "retorno": "string | null",
-          "linea": 192
+          "linea": 193
         },
         {
           "nombre": "Puntuacion",
@@ -47515,7 +47533,7 @@
           "exportada": false,
           "params": "{ v }: { v: number | null }",
           "retorno": null,
-          "linea": 206,
+          "linea": 207,
           "resumen": "Semáforo de la puntuación. `null` se pinta distinto a 0: no es lo mismo."
         },
         {
@@ -47524,7 +47542,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 214
+          "linea": 215
         },
         {
           "nombre": "PanelTesoreria",
@@ -47532,7 +47550,7 @@
           "exportada": false,
           "params": "{ t }: { t: Tesoreria }",
           "retorno": null,
-          "linea": 221,
+          "linea": 222,
           "resumen": "Dinero que hay que tener bloqueado para poder pujar. Lo que importa NO es la suma de depósitos sino el máximo simultáneo: los que no se solapan reutilizan el mismo dinero."
         },
         {
@@ -47541,7 +47559,7 @@
           "exportada": false,
           "params": "{ r, dormitorios }: { r: Rendimiento | null | undefined; dormitorios?: number | null }",
           "retorno": null,
-          "linea": 305,
+          "linea": 306,
           "resumen": "Yield turístico estimado con los pisos PROPIOS. Siempre con el caveat: los pisos de referencia son de Sevilla capital — fuera de ahí es extrapolación."
         },
         {
@@ -47550,7 +47568,7 @@
           "exportada": false,
           "params": "{ s, plantaAparte }: { s: Subasta; plantaAparte?: boolean }",
           "retorno": null,
-          "linea": 329,
+          "linea": 330,
           "resumen": "repetirla sería ruido."
         },
         {
@@ -47559,7 +47577,7 @@
           "exportada": false,
           "params": "{ s, d }: { s: Subasta; d?: Documental | null }",
           "retorno": null,
-          "linea": 366,
+          "linea": 367,
           "resumen": "Resumen de CARGAS + documentación de la subasta. Vive dentro de `FichaSubasta` a propósito: antes el semáforo y las notas del edicto solo se pintaban en la pestaña «Todas» (iban en su `extra`), así qu"
         },
         {
@@ -47568,7 +47586,7 @@
           "exportada": false,
           "params": "{ dedupeKey }: { dedupeKey: string }",
           "retorno": null,
-          "linea": 490,
+          "linea": 491,
           "resumen": "«Nota simple viva»: la certificación que adjunta el juzgado es de hace años y las cargas se mueven. Aquí se sube una nota simple recién pedida al registro y el agente dice QUÉ HA CAMBIADO — es lo únic"
         },
         {
@@ -47577,7 +47595,7 @@
           "exportada": false,
           "params": "{ s, o, acciones, extra, doc }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null }",
           "retorno": null,
-          "linea": 580
+          "linea": 581
         },
         {
           "nombre": "SubastasClient",
@@ -47585,14 +47603,14 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Inicial | null }",
           "retorno": null,
-          "linea": 737
+          "linea": 752
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "a8de68c61e87"
+      "hash": "f41ca545e9fe"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -51321,7 +51339,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 22
+          "linea": 27
         }
       ],
       "tablas": [
@@ -51329,7 +51347,7 @@
         "subastas"
       ],
       "rutaApi": "/api/cron/subastas-enriquecer",
-      "hash": "75cbb5a56d26"
+      "hash": "858d7a664696"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-ingesta/route.ts",
@@ -54583,7 +54601,16 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 23
+          "linea": 22
+        },
+        {
+          "nombre": "pisosPorAforo",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<Map<number, string[]>>",
+          "linea": 29,
+          "resumen": "🚨 El barrido busca por el AFORO REAL de cada piso, NO con \"4 personas\" para todos (bug hasta el 31/07/2026: guardaba los MISMOS comps de 4 plazas para los 4 pisos con `guests=4` fijo, así que House —"
         },
         {
           "nombre": "weekendInMonth",
@@ -54591,7 +54618,7 @@
           "exportada": false,
           "params": "m: number",
           "retorno": "",
-          "linea": 26,
+          "linea": 41,
           "resumen": "Primer viernes→domingo (2 noches) del mes a `m` meses vista."
         },
         {
@@ -54600,7 +54627,7 @@
           "exportada": false,
           "params": "query: string",
           "retorno": "Promise<string>",
-          "linea": 36
+          "linea": 51
         },
         {
           "nombre": "extractPrices",
@@ -54608,7 +54635,7 @@
           "exportada": false,
           "params": "snippets: string, checkin: string, checkout: string",
           "retorno": "Promise<any[]>",
-          "linea": 50
+          "linea": 65
         },
         {
           "nombre": "GET",
@@ -54616,16 +54643,17 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 64
+          "linea": 79
         }
       ],
       "tablas": [
         "market_rates",
         "next",
+        "pricing_piso_zona",
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/sweep",
-      "hash": "8d66c9561dcb"
+      "hash": "28f95f175059"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pl-mensual/route.ts",
@@ -54774,6 +54802,7 @@
         "pricing_config",
         "pricing_eventos_auto",
         "pricing_flight_demand",
+        "pricing_piso_zona",
         "pricing_pl_referencia",
         "pricing_settings",
         "rate_snapshots",
@@ -54781,7 +54810,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "e41ec4527b7c"
+      "hash": "eba9bcc56791"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -54922,10 +54951,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 40
+          "linea": 54
         }
       ],
       "tablas": [
+        "barato",
+        "base",
         "incomes",
         "last_applied",
         "live",
@@ -54934,14 +54965,20 @@
         "mkt_blend",
         "mkt_date",
         "next",
+        "por_fecha",
+        "por_mes",
         "pricing_alerts",
         "pricing_applied",
+        "pricing_eventos_auto",
+        "pricing_piso_zona",
         "pricing_settings",
         "rate_snapshots",
-        "snap"
+        "restringe",
+        "snap",
+        "ult"
       ],
       "rutaApi": "/api/sivra/pricing/guard",
-      "hash": "ba5795685009"
+      "hash": "4f1777b9cbf8"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/historial/route.ts",
@@ -55480,7 +55517,7 @@
         "subastas_radar"
       ],
       "rutaApi": "/api/subastas/mapa",
-      "hash": "e16325663bb5"
+      "hash": "ac914749bc83"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/nota-simple/route.ts",
@@ -55802,7 +55839,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/trading/fundamentales",
-      "hash": "83ec8384a451"
+      "hash": "244727d33d70"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/gurus/route.ts",
@@ -63025,7 +63062,7 @@
           "exportada": true,
           "params": "base: number, dateStr: string",
           "retorno": "number",
-          "linea": 66,
+          "linea": 71,
           "resumen": "⚠️ LEGACY / NO ES EL PRECIO REAL (hallazgo 27/07/2026, ver docs/CONTEXTO-SESIONES.md): esta fórmula estática (base fija × estacional × día-semana) es de ANTES de que existiera el motor anclado al merc"
         },
         {
@@ -63034,22 +63071,22 @@
           "exportada": true,
           "params": "dateStr: string",
           "retorno": "number",
-          "linea": 77,
+          "linea": 82,
           "resumen": "Factor RELATIVO de evento para el motor anclado al mercado: sólo sube en fechas con evento declarado (Semana Santa/Feria/…); el resto de estacionalidad/día ya la refleja el mercado. Honra el calendari"
         },
         {
           "nombre": "seasonalFloorFactor",
           "kind": "function",
           "exportada": true,
-          "params": "dateStr: string",
+          "params": "dateStr: string, evExterno = 1",
           "retorno": "number",
-          "linea": 97,
+          "linea": 109,
           "resumen": "Suelo estacional relativo a min_price para una fecha. En fechas de evento sube con el evento (mitad del factor, acotado a ×2.0) para que Semana Santa/Feria no puedan venderse a suelo. Devuelve 1.0 (si"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e271054c8f68"
+      "hash": "444544ec59ec"
     },
     {
       "ruta": "apps/plataforma/lib/programador.ts",
@@ -64814,6 +64851,87 @@
       "hash": "a8c6da585103"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/pricing-aforo.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Ajuste de comparables por AFORO (plazas) — helper PURO, sin BD. EL PROBLEMA QUE RESUELVE (hallazgo 31/07/2026, aviso de Alberto sobre Socorro/House): el barrido de mercado guardaba los MISMOS comps para los 4 pisos con `guests=4` fijo, y el motor (`apply/route.ts`) calculaba sus percentiles SIN filt",
+      "exporta": [
+        "factorAforo",
+        "elegirAforo"
+      ],
+      "funciones": [
+        {
+          "nombre": "factorAforo",
+          "kind": "function",
+          "exportada": true,
+          "params": "plazasPiso: number | null | undefined, plazasComp: number | null | undefined",
+          "retorno": "number",
+          "linea": 30,
+          "resumen": "Cuánto vale un piso de `plazasPiso` frente a comps de `plazasComp`. Devuelve 1 si falta algún dato o si el aforo coincide (caso normal: no toca nada)."
+        },
+        {
+          "nombre": "elegirAforo",
+          "kind": "function",
+          "exportada": true,
+          "params": "muestras: MuestraAforo[], plazasPiso: number | null | undefined, muestraMinima: number = MUESTRA_MINIMA,",
+          "retorno": "",
+          "linea": 49,
+          "resumen": "Decide contra qué aforo tarificar y con qué corrección. Prefiere SIEMPRE los comps del aforo exacto del piso cuando tienen muestra suficiente (factor 1). Si no, coge el aforo con más muestra y devuelv"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "921158fc3d71"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pricing-centinelas.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-centinelas.ts — centinelas PUROS (sin BD ni red) que vigilan el pricing. POR QUÉ EXISTEN (31/07/2026). Los tres fallos caros encontrados ese día tenían la misma forma: un dato metido a ojo o marcado \"provisional\", que nadie volvió a mirar, y que el motor siguió usando como verdad d",
+      "exporta": [
+        "decidirEventoSinRespaldo",
+        "decidirEventoNoCatalogado",
+        "decidirPrecioPorPlaza"
+      ],
+      "funciones": [
+        {
+          "nombre": "NO_EVALUADO",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "motivo: string",
+          "retorno": "Veredicto",
+          "linea": 28
+        },
+        {
+          "nombre": "decidirEventoSinRespaldo",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: EventoSinRespaldoInput, o: EventoSinRespaldoOpts = {},",
+          "retorno": "Veredicto",
+          "linea": 59,
+          "resumen": "OJO con el umbral: el p50 del MES ya viene inflado por el propio evento (abril 2027 va a 310€ de mediana justo porque dentro caen Feria y Semana Santa). Exigirle a una noche de Feria que supere esa me"
+        },
+        {
+          "nombre": "decidirEventoNoCatalogado",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: EventoNoCatalogadoInput, o: EventoNoCatalogadoOpts = {},",
+          "retorno": "Veredicto",
+          "linea": 108
+        },
+        {
+          "nombre": "decidirPrecioPorPlaza",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: PrecioPorPlazaInput, o: PrecioPorPlazaOpts = {}",
+          "retorno": "Veredicto",
+          "linea": 163,
+          "resumen": "⚠️ Solo aplica a pisos GRANDES, y no es un tecnicismo: en un apartamento pequeño las \"plazas\" son en buena parte sofás-cama (Luxury son 5 plazas en 2 dormitorios), así que dividir por ellas da un núme"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b8549ffbeac7"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/pricing-engine.ts",
       "ambito": "apps/plataforma",
       "resumen": "Motor de precio ANCLADO AL MERCADO — FUENTE ÚNICA del cálculo. Lo consumen `recommend`, `settings` (panel) y `pilot-track` (agente) para que el \"precio recomendado\" sea el mismo en todos. Es lógica pura (sin DB ni red). `computeRecommendation` devuelve el precio a nivel MERCADO (huésped) acotado a [",
@@ -65154,7 +65272,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<FilaCriterios[]>",
-          "linea": 122,
+          "linea": 124,
           "resumen": "Cuentas con el radar activo y sus criterios."
         },
         {
@@ -65163,7 +65281,7 @@
           "exportada": true,
           "params": "limite = 500",
           "retorno": "Promise<SubastaInmueble[]>",
-          "linea": 148,
+          "linea": 150,
           "resumen": "Subastas candidatas: en plazo (o sin fecha conocida) y recientes. No se rebarre todo el histórico en cada pasada."
         },
         {
@@ -65172,7 +65290,7 @@
           "exportada": true,
           "params": "cuentaId: string, criterios: CriteriosSubasta, corpus: SubastaInmueble[], params: ParamsCoste = {},",
           "retorno": "Promise<number>",
-          "linea": 171,
+          "linea": 173,
           "resumen": "Casa el corpus con los criterios de una cuenta e inserta lo nuevo. El upsert REFRESCA el snapshot y las cifras: el radar corre a las 06:30, DESPUÉS del enriquecimiento (06:15) y del valor de mercado ("
         },
         {
@@ -65181,7 +65299,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 244,
+          "linea": 246,
           "resumen": "Pasada completa: descarga el corpus UNA vez y lo empareja con cada cuenta."
         }
       ],
@@ -65193,7 +65311,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "6b1a9d6d703d"
+      "hash": "7784dbe04057"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/boe.ts",
@@ -65502,7 +65620,24 @@
           "exportada": false,
           "params": "url: string, ms = 20000",
           "retorno": "Promise<string>",
-          "linea": 39
+          "linea": 41
+        },
+        {
+          "nombre": "turnoCatastro",
+          "kind": "function",
+          "exportada": false,
+          "params": "pausaExtra = 0",
+          "retorno": "Promise<void>",
+          "linea": 71,
+          "resumen": "Reserva el siguiente turno del cerrojo y espera a que llegue. `pausaExtra` añade un descanso contado DESDE AHORA (para el reintento: el servicio acaba de cortar y hay que darle aire, no basta con el e"
+        },
+        {
+          "nombre": "bajarCatastroHttp",
+          "kind": "function",
+          "exportada": false,
+          "params": "url: string",
+          "retorno": "Promise<string>",
+          "linea": 78
         },
         {
           "nombre": "bajarFicha",
@@ -65510,8 +65645,8 @@
           "exportada": true,
           "params": "identificador: string",
           "retorno": "Promise<FichaBoe>",
-          "linea": 50,
-          "resumen": "Descarga y parsea las tres pestañas de la ficha de una subasta."
+          "linea": 107,
+          "resumen": "Descarga y parsea las tres pestañas de la ficha de una subasta. 🚨 Un HTTP 200 que NO sea la ficha (mantenimiento del Portal, muro de un WAF, página de error) es lo más peligroso que puede pasar aquí:"
         },
         {
           "nombre": "bajarCatastro",
@@ -65519,7 +65654,7 @@
           "exportada": true,
           "params": "refCatastral: string",
           "retorno": "Promise<DatosCatastro | null>",
-          "linea": 72,
+          "linea": 132,
           "resumen": "Consulta el Catastro por referencia catastral. `null` si no hay dato. ⚠️ Solo devuelve datos del BIEN (superficie, año, uso) con la referencia COMPLETA de 20 caracteres. Con la de parcela (14) el serv"
         },
         {
@@ -65528,7 +65663,7 @@
           "exportada": true,
           "params": "refCatastral: string",
           "retorno": "Promise<CoordenadasCatastro | null>",
-          "linea": 87,
+          "linea": 147,
           "resumen": "Coordenadas WGS84 por referencia catastral (`Consulta_CPMRC`, probado el 30/07/2026). El servicio trabaja a nivel de PARCELA: acepta los 14 primeros caracteres; con la referencia de 20 del bien concre"
         },
         {
@@ -65536,17 +65671,17 @@
           "kind": "function",
           "exportada": true,
           "params": "provincia: string, municipio: string, sigla: string, calle: string,",
-          "retorno": "Promise<string | null>",
-          "linea": 99,
-          "resumen": "Nombre OFICIAL de la vía según el callejero del Catastro (`ConsultaVia`, que busca por prefijo). Imprescindible porque el Catastro archiva los artículos al final: «Avenida de Madrid» → «MADRID DE»."
+          "retorno": "Promise<",
+          "linea": 165,
+          "resumen": "Nombre OFICIAL de la vía según el callejero del Catastro (`ConsultaVia`). Se pregunta por UNA PALABRA distintiva, no por el nombre entero: el servicio busca por subcadena y el Catastro reescribe los n"
         },
         {
           "nombre": "buscarRefPorDireccion",
           "kind": "function",
           "exportada": true,
-          "params": "p: { provincia: string municipio: string sigla: string calle: string numero: string }",
+          "params": "p: ParamsDnploc & { provincia: string; municipio: string },",
           "retorno": "Promise<",
-          "linea": 123,
+          "linea": 193,
           "resumen": "DIRECCIÓN → referencia catastral (`Consulta_DNPLOC`, servicio libre; probado el 30/07/2026). Es lo que desbloquea la ubicación EXACTA de la mayor parte del corpus: el BOE publica la dirección del inmu"
         },
         {
@@ -65555,7 +65690,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<void>",
-          "linea": 162
+          "linea": 261
         },
         {
           "nombre": "geocodificarMunicipio",
@@ -65563,7 +65698,7 @@
           "exportada": true,
           "params": "municipio: string, provincia?: string | null,",
           "retorno": "Promise<CoordenadasCatastro | null>",
-          "linea": 180,
+          "linea": 279,
           "resumen": "Centro del municipio por Nominatim (OSM, gratis). Es el escalón APROXIMADO para las subastas sin referencia catastral (la mayoría del corpus): mejor un pin honesto en el centro del pueblo que un mapa "
         },
         {
@@ -65572,7 +65707,7 @@
           "exportada": true,
           "params": "max = 20",
           "retorno": "Promise<",
-          "linea": 212,
+          "linea": 311,
           "resumen": "el marcado de una CONCLUIDA aún no se ha podido ver, así que el parser (`resultadoDeFicha`) es defensivo — si no reconoce nada deja la fila pendiente y aquí se loguean las claves vistas para ajustar e"
         }
       ],
@@ -65580,7 +65715,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "ab4db3ccdf86"
+      "hash": "7c7e5543742c"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/gmail-boe.ts",
@@ -66865,7 +67000,7 @@
           "exportada": true,
           "params": "lote = 40",
           "retorno": "Promise<",
-          "linea": 48,
+          "linea": 52,
           "resumen": "Recolecta el siguiente lote: siembra desde trading_universo (+SPY como benchmark) y rellena las filas más rancias. Mismo patrón/ritmo que refrescarLoteUniverso (~4 símbolos/s contra SEC)."
         },
         {
@@ -66874,13 +67009,13 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 103,
+          "linea": 107,
           "resumen": "La LUPA de gurús: convicciones ACTUALES de Dataroma cruzadas con los factores actuales de la caché del radar — la materia prima para responder \"¿por qué se posicionan en esas empresas?\". Se guarda en "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6e69ae602cc5"
+      "hash": "ecd652f1f531"
     },
     {
       "ruta": "apps/plataforma/lib/trading/buscar-simbolo.ts",
@@ -67239,6 +67374,8 @@
       "resumen": "Fundamentales GRATIS desde EDGAR (SEC) — API XBRL `companyfacts`. Alternativa sin coste a FMP para la pata de CALIDAD/VALOR de la Fase B: alimenta directamente `piotroskiFScore` (2 ejercicios) y el ROIC de la fórmula mágica. Mapea los conceptos US-GAAP **e IFRS** a los inputs que el módulo ya consum",
       "exporta": [
         "serieAnual",
+        "monedaInforme",
+        "anioFiscalDe",
         "extraerFundamentales",
         "recortarFactsHasta",
         "companyfactsCrudo",
@@ -67257,22 +67394,48 @@
       ],
       "funciones": [
         {
+          "nombre": "diasEntre",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a: string, b: string",
+          "retorno": null,
+          "linea": 16
+        },
+        {
           "nombre": "serieAnual",
           "kind": "function",
           "exportada": true,
-          "params": "facts: CompanyFacts['facts'], concepto: string",
-          "retorno": "Map<number, number>",
-          "linea": 18,
-          "resumen": "Serie ANUAL (fiscal year → valor) de un concepto, buscándolo en us-gaap, dei e ifrs-full (emisores extranjeros que presentan 20-F en IFRS). Se queda con los valores de informe anual (10-K / 20-F) y pe"
+          "params": "facts: CompanyFacts['facts'], concepto: string, unidad = 'USD'",
+          "retorno": "Map<string, number>",
+          "linea": 31,
+          "resumen": "Serie ANUAL de un concepto, indexada por el CIERRE DE EJERCICIO AL QUE PERTENECE EL DATO (`end`), buscándolo en us-gaap, dei e ifrs-full (emisores extranjeros que presentan 20-F en IFRS). 🚨 LANDMINE "
         },
         {
-          "nombre": "valorFy",
+          "nombre": "monedaInforme",
+          "kind": "function",
+          "exportada": true,
+          "params": "facts: CompanyFacts['facts'], alias: readonly string[]",
+          "retorno": "string | undefined",
+          "linea": 68,
+          "resumen": "Divisa en la que el emisor presenta las cuentas HOY: gana la que tenga el ejercicio más reciente y, a igualdad de cierre, el dólar. No basta con \"USD si existe\": Toyota arrastra una traducción de conv"
+        },
+        {
+          "nombre": "anioFiscalDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "periodo: string",
+          "retorno": "number",
+          "linea": 93,
+          "resumen": "Etiqueta de ejercicio (solo para MOSTRAR: `fuente_fy` del radar y `fyUltimo` de la API). El año natural del cierre coincide con la etiqueta del emisor salvo en los calendarios de 52/53 semanas que cie"
+        },
+        {
+          "nombre": "valorPeriodo",
           "kind": "function",
           "exportada": false,
-          "params": "facts: CompanyFacts['facts'], alias: string[], fy: number",
+          "params": "facts: CompanyFacts['facts'], alias: readonly string[], periodo: string, unidad = 'USD'",
           "retorno": "number | undefined",
-          "linea": 39,
-          "resumen": "Primer concepto con dato para ese FY (recorre la lista de alias US-GAAP)."
+          "linea": 101,
+          "resumen": "Valor del primer alias con dato para ese cierre de ejercicio. Si el concepto no cae EXACTAMENTE en `periodo` se acepta el cierre más próximo dentro de 45 días: las acciones de portada (taxonomía `dei`"
         },
         {
           "nombre": "div",
@@ -67280,24 +67443,32 @@
           "exportada": false,
           "params": "a?: number, b?: number",
           "retorno": null,
-          "linea": 46
+          "linea": 115
         },
         {
-          "nombre": "fysDe",
+          "nombre": "resta",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a?: number, b?: number",
+          "retorno": null,
+          "linea": 116
+        },
+        {
+          "nombre": "periodosDe",
           "kind": "function",
           "exportada": false,
-          "params": "facts: CompanyFacts['facts'], alias: string[]",
-          "retorno": "Set<number>",
-          "linea": 69,
-          "resumen": "FYs (por CUALQUIER alias) que tienen dato — para anclar la extracción sin atarse a un nombre us-gaap concreto (si no, un emisor IFRS cuyo beneficio es `ProfitLoss` y no `NetIncomeLoss` no ancla nunca)"
+          "params": "facts: CompanyFacts['facts'], alias: readonly string[], unidad: string",
+          "retorno": "Set<string>",
+          "linea": 155,
+          "resumen": "Cierres de ejercicio (por CUALQUIER alias) que tienen dato — para anclar la extracción sin atarse a un nombre us-gaap concreto (si no, un emisor IFRS cuyo beneficio es `ProfitLoss` y no `NetIncomeLoss"
         },
         {
           "nombre": "anioDe",
           "kind": "function",
           "exportada": false,
-          "params": "facts: CompanyFacts['facts'], fy: number",
+          "params": "facts: CompanyFacts['facts'], periodo: string, moneda: string",
           "retorno": "AnioFinanciero",
-          "linea": 75
+          "linea": 161
         },
         {
           "nombre": "extraerFundamentales",
@@ -67305,7 +67476,7 @@
           "exportada": true,
           "params": "cf: CompanyFacts, simbolo: string",
           "retorno": "FundamentalesEmpresa | null",
-          "linea": 107,
+          "linea": 201,
           "resumen": "Extrae del companyfacts los DOS ejercicios más recientes en el formato que consume el módulo, más las piezas para la fórmula mágica (ROIC ya calculado; earnings yield lo cierra el consumidor con el EV"
         },
         {
@@ -67314,7 +67485,7 @@
           "exportada": true,
           "params": "cf: CompanyFacts, fecha: string, conceptos?: ReadonlySet<string>",
           "retorno": "CompanyFacts",
-          "linea": 143,
+          "linea": 243,
           "resumen": "Recorta un companyfacts a lo CONOCIDO en `fecha` (punto-en-el-tiempo del retrovisor/backtest): solo sobreviven los puntos con `filed <= fecha` (un punto sin `filed` se descarta — mejor perder un dato "
         },
         {
@@ -67323,7 +67494,7 @@
           "exportada": true,
           "params": "cik: string, timeoutMs = 10000",
           "retorno": "Promise<unknown | null>",
-          "linea": 162,
+          "linea": 262,
           "resumen": "El companyfacts CRUDO por CIK (el backtest lo recorta por fecha varias veces sin re-descargar)."
         },
         {
@@ -67332,7 +67503,7 @@
           "exportada": true,
           "params": "json: unknown",
           "retorno": "Map<string, string>",
-          "linea": 167,
+          "linea": 267,
           "resumen": "Mapa ticker → CIK (10 dígitos) del fichero público company_tickers.json de la SEC."
         },
         {
@@ -67341,7 +67512,7 @@
           "exportada": false,
           "params": "url: string, timeoutMs: number",
           "retorno": "Promise<unknown | null>",
-          "linea": 178
+          "linea": 278
         },
         {
           "nombre": "resolverCik",
@@ -67349,7 +67520,7 @@
           "exportada": true,
           "params": "ticker: string, timeoutMs = 8000",
           "retorno": "Promise<string | undefined>",
-          "linea": 187,
+          "linea": 287,
           "resumen": "Resuelve el CIK de un ticker (cachea el mapa en memoria de la lambda). Best-effort → undefined."
         },
         {
@@ -67358,7 +67529,7 @@
           "exportada": true,
           "params": "simbolo: string, timeoutMs = 8000",
           "retorno": "Promise<FundamentalesEmpresa | null>",
-          "linea": 196,
+          "linea": 296,
           "resumen": "Descarga y extrae los fundamentales de un símbolo (resuelve CIK → companyfacts). Best-effort → null."
         },
         {
@@ -67367,7 +67538,7 @@
           "exportada": true,
           "params": "json: unknown, n = 550",
           "retorno": "Array<",
-          "linea": 206,
+          "linea": 306,
           "resumen": "Las N mayores de EEUU desde company_tickers.json (viene ~ordenado por capitalización — propiedad NO documentada; el consumidor tiene una semilla de respaldo). Dedupe por CIK (una clase por empresa) y "
         },
         {
@@ -67376,7 +67547,7 @@
           "exportada": true,
           "params": "simbolo: string, cik: string, timeoutMs = 8000",
           "retorno": "Promise<FundamentalesEmpresa | null>",
-          "linea": 225,
+          "linea": 325,
           "resumen": "companyfacts por CIK ya conocido (el refresco del radar guarda el CIK y se ahorra resolverlo)."
         },
         {
@@ -67385,7 +67556,7 @@
           "exportada": true,
           "params": "n: number | null | undefined",
           "retorno": "number | null",
-          "linea": 235,
+          "linea": 335,
           "resumen": "Guarda de PLAUSIBILIDAD del nº de acciones (bug real 20/07/2026: MCD reportó 712 en vez de 712 MILLONES en el XBRL → mktCap de 196.044$ → EV≈deuda → earnings/FCF yield inflados ×1e6 → nº 1 del ranking"
         },
         {
@@ -67394,7 +67565,7 @@
           "exportada": true,
           "params": "timeoutMs = 10000",
           "retorno": "Promise<unknown | null>",
-          "linea": 240,
+          "linea": 340,
           "resumen": "El JSON crudo de company_tickers (para listaUniverso). Best-effort → null."
         },
         {
@@ -67403,7 +67574,7 @@
           "exportada": true,
           "params": "subs: unknown, desde: string",
           "retorno": "Evento8K[]",
-          "linea": 267,
+          "linea": 367,
           "resumen": "Parseo PURO del submissions JSON de la SEC: 8-K presentados desde `desde` (ISO) cuyos items estén en la lista relevante. Tolera JSON malformado (devuelve [])."
         },
         {
@@ -67412,7 +67583,7 @@
           "exportada": true,
           "params": "cik: string, timeoutMs = 8000",
           "retorno": "Promise<unknown | null>",
-          "linea": 286,
+          "linea": 386,
           "resumen": "El submissions JSON crudo por CIK — el radar lo baja UNA vez por símbolo y saca de él tanto los 8-K (extraerEventos8K) como los Form 4 (extraerFilingsForm4). Best-effort → null."
         },
         {
@@ -67421,7 +67592,7 @@
           "exportada": true,
           "params": "cik: string, desde: string, timeoutMs = 8000",
           "retorno": "Promise<Evento8K[]>",
-          "linea": 291,
+          "linea": 391,
           "resumen": "Eventos 8-K recientes por CIK ya conocido (submissions JSON). Best-effort → []."
         },
         {
@@ -67430,7 +67601,7 @@
           "exportada": true,
           "params": "subs: unknown, hoy: string, ventanaDias = 10",
           "retorno": "string | null",
-          "linea": 307,
+          "linea": 407,
           "resumen": "── 📅 Semana de resultados ESTIMADA ────────────────────────────────────────────────────────────── La SEC no publica fechas FUTURAS de resultados; lo que sí tenemos (gratis y determinista) es el PATRÓ"
         },
         {
@@ -67439,12 +67610,12 @@
           "exportada": true,
           "params": "subs: unknown, desde: string",
           "retorno": "FilingForm4[]",
-          "linea": 324
+          "linea": 424
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9b66e1edf822"
+      "hash": "adb91e3fae87"
     },
     {
       "ruta": "apps/plataforma/lib/trading/form4.ts",
@@ -68036,7 +68207,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d096defc0a79"
+      "hash": "27a83ffabc3b"
     },
     {
       "ruta": "apps/plataforma/lib/trading/volumen.ts",
@@ -77792,7 +77963,7 @@
           "exportada": true,
           "params": "base: number, dateStr: string",
           "retorno": "number",
-          "linea": 56,
+          "linea": 61,
           "resumen": "Multiplicador absoluto sobre una base (uso del snapshot \"shadow\": price_ours)."
         },
         {
@@ -77801,13 +77972,13 @@
           "exportada": true,
           "params": "dateStr: string",
           "retorno": "number",
-          "linea": 67,
+          "linea": 72,
           "resumen": "Factor RELATIVO de evento para el motor anclado al mercado: sólo sube en fechas con evento declarado (Semana Santa/Feria/…); el resto de estacionalidad/día ya la refleja el mercado. Honra el calendari"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "57aef14acc35"
+      "hash": "04100bc53201"
     },
     {
       "ruta": "apps/sivra/lib/pricing-engine.ts",
@@ -84326,8 +84497,10 @@
         "direccionCatastro",
         "parsearInmueblesDnploc",
         "parcelaUnica",
+        "normVia",
+        "tokensVia",
+        "terminoBusquedaVia",
         "parsearVias",
-        "nombreViaBuscable",
         "elegirVia",
         "paramsDnploc",
         "parsearCoordenadas",
@@ -84413,22 +84586,40 @@
           "resumen": "Parcela común a todos los inmuebles de una respuesta DNPLOC. `null` si la respuesta mezcla parcelas (dirección ambigua): en ese caso NO se elige una a dedo, porque ubicaría el inmueble en el edificio "
         },
         {
+          "nombre": "normVia",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 261,
+          "resumen": "Normaliza CONSERVANDO LA Ñ. `norm()` la convierte en «N» y eso rompe la búsqueda en el callejero del Catastro: verificado el 31/07/2026 que `NombreVia=CAÑAL` encuentra «CARLOS CAÑAL» y `NombreVia=CANA"
+        },
+        {
+          "nombre": "tokensVia",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string",
+          "retorno": "string[]",
+          "linea": 279,
+          "resumen": "Tokens con los que se compara un nombre de vía (sin artículos ni Ñ)."
+        },
+        {
+          "nombre": "terminoBusquedaVia",
+          "kind": "function",
+          "exportada": true,
+          "params": "calle: string",
+          "retorno": "string",
+          "linea": 293,
+          "resumen": "Término con el que preguntar al callejero. **El servicio busca por SUBCADENA** (verificado: `OLIVA` encuentra «NUESTRA SEÑORA D LA OLIVA»), así que se manda UNA palabra distintiva en vez del nombre en"
+        },
+        {
           "nombre": "parsearVias",
           "kind": "function",
           "exportada": true,
           "params": "xml: string",
           "retorno": "Array<",
-          "linea": 256,
-          "resumen": "Nombres de vía del callejero oficial (`ConsultaVia`), que busca por PREFIJO. Hace falta porque `Consulta_DNPLOC` exige el nombre EXACTO como lo guarda el Catastro, y ese formato mueve los artículos al"
-        },
-        {
-          "nombre": "nombreViaBuscable",
-          "kind": "function",
-          "exportada": true,
-          "params": "calle: string",
-          "retorno": "string",
-          "linea": 273,
-          "resumen": "Nombre con el que preguntar al callejero: sin los artículos delanteros, porque el Catastro los coloca detrás («DE MADRID» → busca «MADRID» → devuelve «MADRID DE»)."
+          "linea": 310,
+          "resumen": "Nombres de vía del callejero oficial (`ConsultaVia`), que busca por SUBCADENA. Hace falta porque `Consulta_DNPLOC` exige el nombre EXACTO como lo guarda el Catastro, y ese formato es impredecible: mue"
         },
         {
           "nombre": "elegirVia",
@@ -84436,8 +84627,8 @@
           "exportada": true,
           "params": "vias: Array<{ tipo: string; nombre: string }>, buscada: string",
           "retorno": "string | null",
-          "linea": 282,
-          "resumen": "Elige el nombre oficial entre los que devuelve el callejero. Prefiere la coincidencia exacta; si hay varias candidatas distintas y ninguna exacta, devuelve `null` en lugar de arriesgarse a ubicar en o"
+          "linea": 333,
+          "resumen": "Elige el nombre OFICIAL entre los candidatos del callejero comparando TOKENS, no cadenas: es la única forma de casar «PACO GANDÍA» con «PACO GANDIA» y «Nuestra Señora de la Oliva» con «NUESTRA SEÑORA "
         },
         {
           "nombre": "paramsDnploc",
@@ -84445,7 +84636,7 @@
           "exportada": true,
           "params": "direccion?: string | null",
           "retorno": "ParamsDnploc | null",
-          "linea": 306,
+          "linea": 367,
           "resumen": "Traduce la dirección tal como la publica el BOE a los parámetros de `Consulta_DNPLOC`. Ejemplos reales del corpus: «AVENIDA PEDRO ROMERO Nº 2, planta séptima de la casa número…» → { sigla:'AV', calle:"
         },
         {
@@ -84454,7 +84645,7 @@
           "exportada": true,
           "params": "xml: string",
           "retorno": "CoordenadasCatastro | null",
-          "linea": 354,
+          "linea": 435,
           "resumen": "Convierte el XML de `Consulta_CPMRC` en coordenadas WGS84. `null` si el servicio no las da (error, referencia inexistente o respuesta corrupta) — nunca devuelve un punto inventado."
         },
         {
@@ -84463,13 +84654,13 @@
           "exportada": true,
           "params": "catastro?: number | null, anuncio?: number | null",
           "retorno": "number | null",
-          "linea": 379,
+          "linea": 467,
           "resumen": "Superficie con la que valorar el inmueble: la del CATASTRO manda sobre la que publica el anuncio. POR QUÉ el Catastro primero: es la oficial y es la que usa el cálculo del €/m² de mercado. Si el scori"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fac50ae381cb"
+      "hash": "ba8b4caa67a5"
     },
     {
       "ruta": "packages/module-subastas/src/ciclo-vida.ts",
@@ -85236,6 +85427,7 @@
       "exporta": [
         "provinciaPorMunicipio",
         "provinciaCanonica",
+        "esDireccionPostal",
         "urlGoogleMaps",
         "urlStreetView",
         "urlFichaCatastro"
@@ -85260,12 +85452,21 @@
           "resumen": "Unifica la forma de escribir una provincia. Existe porque cada fuente la escribe distinto —el BOE manda «Sevilla» y la Junta de Andalucía «SEVILLA»— y cualquier cosa que AGRUPE por el valor literal la"
         },
         {
+          "nombre": "esDireccionPostal",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto?: string | null",
+          "retorno": "boolean",
+          "linea": 108,
+          "resumen": "¿Este texto es una DIRECCIÓN POSTAL que un buscador de mapas pueda resolver, o es prosa registral? 🚨 Por qué existe: la dirección que el BOE publica sale de la descripción registral y a veces no es u"
+        },
+        {
           "nombre": "urlGoogleMaps",
           "kind": "function",
           "exportada": true,
           "params": "u: UbicacionSubasta",
           "retorno": "string | null",
-          "linea": 104,
+          "linea": 138,
           "resumen": "URL de Google Maps para VER dónde está el inmueble. 🚨 La DIRECCIÓN POSTAL manda sobre las coordenadas, aunque parezca al revés. Con `query=<lat,lon>` Google planta un pin anónimo en mitad de la manza"
         },
         {
@@ -85274,7 +85475,7 @@
           "exportada": true,
           "params": "lat?: number | null, lon?: number | null",
           "retorno": "string | null",
-          "linea": 131,
+          "linea": 165,
           "resumen": "Street View del portal. Para un inmueble que no se puede visitar (la mayoría de las subastas advierten «sin posibilidad de visita») ver la fachada y el barrio es la única inspección posible sin despla"
         },
         {
@@ -85283,13 +85484,13 @@
           "exportada": true,
           "params": "refCatastral?: string | null",
           "retorno": "string | null",
-          "linea": 140,
+          "linea": 174,
           "resumen": "Ficha pública del Catastro por referencia catastral (plano de la parcela, superficies por uso, año, linderos). Acepta la de 14 o la de 20 caracteres."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "128c51a244e0"
+      "hash": "3b7b19e2dd99"
     },
     {
       "ruta": "packages/module-subastas/src/idealista-api.ts",
@@ -87420,7 +87621,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2364,
-    "funciones": 6287
+    "archivos": 2366,
+    "funciones": 6305
   }
 }

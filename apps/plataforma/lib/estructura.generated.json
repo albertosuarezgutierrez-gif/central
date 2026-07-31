@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-31T06:43:55Z",
+  "generadoEn": "2026-07-31T07:35:21Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3968,6 +3968,26 @@
   ],
   "novedades": [
     {
+      "titulo": "🏛️ Subastas: revisión de la cadena de ubicación — 8 fallos reales corregidos (31/07/2026).",
+      "fecha": "31/07/2026"
+    },
+    {
+      "titulo": "🏛️ Subastas: 3 fallos de la búsqueda por dirección + el Catastro corta por volumen (31/07/2026).",
+      "fecha": "31/07/2026"
+    },
+    {
+      "titulo": "🛡️ Pricing: tres centinelas para que el motor se queje solo (31/07/2026, rama `claude/pricing-check-31-07`).",
+      "fecha": "31/07/2026"
+    },
+    {
+      "titulo": "📉 Pricing 31/07: sistema SANO, pero agosto arranca a CERO (31/07/2026, rama `claude/pricing-check-31-07`).",
+      "fecha": "31/07/2026"
+    },
+    {
+      "titulo": "🚨 Fundamentales del radar de trading iban 2 años atrasados y MEZCLADOS (31/07/2026).",
+      "fecha": "31/07/2026"
+    },
+    {
       "titulo": "⚖️ Subastas: 3 defectos del lector registral + «nota simple viva» (31/07/2026).",
       "fecha": "31/07/2026"
     },
@@ -3977,6 +3997,10 @@
     },
     {
       "titulo": "🔍 Subastas: el documento registral se lee ENTERO y «se adquiere libre» hay que ganárselo (30/07/2026, PR #1182).",
+      "fecha": "30/07/2026"
+    },
+    {
+      "titulo": "🔎 Portales privados de subastas: sondeo técnico, SIN implementar (30/07/2026).",
       "fecha": "30/07/2026"
     },
     {
@@ -4002,30 +4026,6 @@
     {
       "titulo": "🔒 Director de código Fase 2: cierre de PR con veredicto real de CI (29/07/2026).",
       "fecha": "29/07/2026"
-    },
-    {
-      "titulo": "🔧 Subastas — HOTFIX /subastas caída + FASE 3 construida con datos reales (29/07/2026, mañana).",
-      "fecha": "29/07/2026"
-    },
-    {
-      "titulo": "🧹 agentes-entrenador — \"repara todo\" (29/07/2026): backlog de PRs + trabajo perdido recuperado.",
-      "fecha": "29/07/2026"
-    },
-    {
-      "titulo": "🐟 PR #1055 \"mariscos\" — CONFIRMADO cliente real, en pausa deliberada (29/07/2026).",
-      "fecha": "29/07/2026"
-    },
-    {
-      "titulo": "💸 PRICING — auditoría pre-baja de PriceLabs (28/07/2026, a petición de Alberto).",
-      "fecha": "28/07/2026"
-    },
-    {
-      "titulo": "✂️ Regla global «Estilo de respuesta» en CLAUDE.md raíz (23/07/2026).",
-      "fecha": "23/07/2026"
-    },
-    {
-      "titulo": "🎯 Subastas — LOTE «todo lo que quedaba» (28/07/2026, noche). MERGEADO (PR #1120, squash `a9609d3`).",
-      "fecha": "28/07/2026"
     }
   ],
   "saludRepo": {

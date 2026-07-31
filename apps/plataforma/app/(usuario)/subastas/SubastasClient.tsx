@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { eur } from '@/lib/dinero'
 import { estadoDocumentacion, resumenDocumentos, type DocumentoAdjunto } from '@/lib/subastas/resumen-docs'
-import { direccionCatastro, urlFichaCatastro, urlGoogleMaps, urlStreetView } from '@central/module-subastas'
+import { direccionCatastro, esDireccionPostal, urlFichaCatastro, urlGoogleMaps, urlStreetView } from '@central/module-subastas'
 import MapaSubastas from './MapaSubastas'
 
 const PAGE = 50
@@ -32,6 +32,7 @@ interface Subasta {
   provincia?: string | null
   municipio?: string | null
   direccion?: string | null
+  direccionCatastro?: string | null
   lat?: number | null
   lon?: number | null
   geoPrecision?: string | null
@@ -583,7 +584,12 @@ function FichaSubasta({ s, o, acciones, extra, doc }: { s: Subasta; o?: Oportuni
   // Dirección oficial del Catastro troceada (planta/puerta aparte) y, con ella,
   // el enlace al PORTAL en vez de a un pin anónimo. Sin ninguna pista de
   // ubicación, el botón no sale.
-  const dirCat = direccionCatastro(s.direccion)
+  // 🚨 SOLO el `ldt` del Catastro lleva el sello 🏛️. La dirección del anuncio
+  // sale de la descripción registral y a veces es prosa («Vivienda en planta
+  // primera tipo F, con acceso…»): etiquetarla como dato oficial —y mandarla a
+  // Google pisando unas coordenadas catastrales exactas— llevaba a otro sitio.
+  const dirCat = direccionCatastro(s.direccionCatastro)
+  const dirAnuncio = !dirCat && esDireccionPostal(s.direccion) ? s.direccion : null
   const mapsUrl = urlGoogleMaps({ ...s, direccion: dirCat?.postal ?? s.direccion })
   const panoUrl = urlStreetView(s.lat, s.lon)
   const catastroUrl = urlFichaCatastro(s.refCatastral)
@@ -623,6 +629,15 @@ function FichaSubasta({ s, o, acciones, extra, doc }: { s: Subasta; o?: Oportuni
             </span>
           )}
           {!exacta && <span style={{ fontWeight: 400, color: 'var(--muted)' }}> · ubicación aproximada</span>}
+        </p>
+      )}
+
+      {/* Sin ficha catastral, la dirección del anuncio — sin sello oficial y
+          solo cuando de verdad parece una dirección postal. */}
+      {dirAnuncio && (
+        <p style={{ margin: '8px 0 0', color: 'var(--text)', fontSize: 14 }}>
+          📮 {dirAnuncio}
+          <span style={{ color: 'var(--muted)', fontSize: 12 }}> · según el anuncio</span>
         </p>
       )}
 
@@ -712,7 +727,7 @@ function FichaSubasta({ s, o, acciones, extra, doc }: { s: Subasta; o?: Oportuni
         )}
         {mapsUrl && (
           <a href={mapsUrl} target="_blank" rel="noreferrer" style={{ ...boton(), display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
-            📍 Mapa{!exacta && !dirCat ? ' (aprox.)' : ''}
+            📍 Mapa{!exacta && !dirCat && !dirAnuncio ? ' (aprox.)' : ''}
           </a>
         )}
         {/* Ver la fachada y el barrio: en subastas «sin posibilidad de visita»
