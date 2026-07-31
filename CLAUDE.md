@@ -110,6 +110,17 @@ Qué hacer:
 - La lógica del titular va en un **helper puro y testeado** (referencia:
   `apps/plataforma/lib/subastas/resumen-docs.ts` + su `.test.ts`), no incrustada en el JSX.
 
+**Hermano de esta regla: el dato que SÍ está pero se lee mal.** Un `NULL` colapsado a 0 y un dato
+leído del año o de la divisa equivocados producen la misma mentira, y el segundo es peor porque **no
+hay hueco que delate el fallo**: sale un número plausible. Caso fundacional (31/07/2026, PR #1189):
+el radar de trading daba a ORCL un flujo de caja libre de **+3,49%** cuando la empresa quemaba
+**−23.700 M$ (−6,99%)** — los campos `fy`/`fp` de la SEC identifican el INFORME, no el periodo del
+dato, y encima se mezclaban divisas (yenes contra una capitalización en dólares). Al parsear una
+fuente externa: **la clave de un dato es su periodo y su unidad, no la etiqueta del documento que lo
+publica**; ante varias unidades/monedas, elige UNA explícitamente y propágala; y valida el parser
+**contra un documento real de la fuente**, no solo contra fixtures — los fixtures se escriben con la
+misma suposición equivocada que el código y por eso los tests pasaban.
+
 Al añadir una columna de enriquecimiento nueva, esto es parte del PR, no un apaño posterior. Si un
 cambio toca una pantalla que ya viola la regla, corrígela en el mismo PR.
 

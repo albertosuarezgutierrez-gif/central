@@ -24,6 +24,25 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🚨 Fundamentales del radar de trading iban 2 años atrasados y MEZCLADOS (31/07/2026).** Salió
+  mirando ORCL: su ficha daba FCF yield **+3,49%** cuando el flujo libre real de FY2026 es
+  **−23.700 M$ (−6,99%)**. Causa: en companyfacts de la SEC `fy`/`fp` identifican el INFORME, no el
+  periodo del dato — un 10-K trae 2-3 comparativos con el MISMO `fy` y `filed`, y `serieAnual`
+  (`lib/trading/edgar.ts`) los colapsaba en una clave quedándose con el más viejo. Resultado 2 años
+  atrás, balance 1, y ratios cruzando ambos (ROA = beneficio FY2024 ÷ activos FY2025). Ahora se indexa
+  por el CIERRE (`end`). Además: capex ausente ya NO se toma como 0 (convertía FCF en CFO). Verificado
+  contra la SEC vía `pg_net`. Segunda tanda (misma rama): alias de deuda/capex sacados de companyfacts
+  REALES (AVGO usa `LongTermDebtAndCapitalLeaseObligations`, JPM `…IncludingCurrentMaturities`, LLY
+  `PaymentsToAcquireOtherPropertyPlantAndEquipment`), margen bruto DERIVADO de ventas − coste cuando no
+  hay `GrossProfit` (GOOGL/AMZN/META/WMT/LLY), y **divisa**: `serieAnual` recorría todas las unidades →
+  TLK daba FCF yield 2.679% (rupias) y AMX un EY 9,14% que parecía normal. Ahora una sola divisa, la del
+  ejercicio más reciente (USD solo desempata: TM tenía una traducción de conveniencia de 2013 que
+  anclaba la empresa a hace 13 años), y si no es USD se anulan EY/FCF yield. Parser verificado contra
+  companyfacts reales de GOOGL/AMZN/AVGO/TM. **PR #1189 MERGEADO.** Lecciones en el landmine del
+  SKILL.md de `trading-analista` (+ contrato del parser en `references/seleccion-y-senales.md`) y en
+  la regla global del CLAUDE.md raíz («el dato que SÍ está pero se lee mal»). Los valores viejos de
+  `trading_universo` se curan solos: el cron refresca 50 símbolos cada 6 h (~5 días de ciclo).
+
 - **⚖️ Subastas: 3 defectos del lector registral + «nota simple viva» (31/07/2026).**
   - **Fechas EN LETRA** (`caducidad.ts`): «diecisiete de agosto de dos mil nueve» ya se parsea (también
     mixtas y el año suelto en letra). Sin esto el art. 86 LH no se evaluaba justo sobre las anotaciones
