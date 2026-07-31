@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/session"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
-import { eventFactor, seasonalFloorFactor, PRICING_HORIZON_DAYS } from "@/lib/pricing-calendar"
+import { eventFactor, seasonalFloorFactor, PRICING_HORIZON_DAYS, EVENTS } from "@/lib/pricing-calendar"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { getSmoobuKey } from "@/lib/smoobu"
 import { tgSend } from "@central/core-telegram"
@@ -166,11 +166,40 @@ export async function POST(req: NextRequest) {
   `).catch(() => [])
   const flightIdx = new Map(flightRows.map(r => [r.rate_date, Number(r.demand_index)]))
 
+  // ─── Bucket por MES = precio de una noche NORMAL de ese mes ──────────────────────────────
+  // 🚨 El bucket del mes NO puede incluir las noches de evento (31/07/2026). Luxury acabó a 841€ las 28
+  // noches de junio de 2027 —168€ por plaza en un piso de 5— porque su ÚNICA muestra de mercado de ese
+  // mes eran 10 comps del día 11, la noche de Karol G (p50 931€). El motor tomaba ese p50 como "junio
+  // normal" y se lo aplicaba a todo el mes; para contrastar, el 18 de junio el mercado va a 109€. El
+  // premio del evento NO se pierde: lo aplican el bucket por FECHA EXACTA y el factor de evento, que
+  // corren aparte. Aquí solo queremos el suelo de referencia del mes.
+  //
+  // Dos guardas, porque cada una tapa un agujero distinto:
+  //   · Se EXCLUYEN las fechas con evento conocido (calendario del repo + `pricing_eventos_auto`).
+  //   · Se exige muestra de varias FECHAS distintas (MIN_FECHAS_MES), no solo muchos comps: 10 anuncios
+  //     de un mismo día son un día, no un mes. Sin esto, un barrido que solo cubra un evento sin
+  //     catalogar volvería a contaminar el bucket por la puerta de atrás.
+  // OJO: SQL dentro de un template literal de TS — aqui NO se pueden usar backticks ni $ { }.
   const MIN_BUCKET = 3
+  const MIN_FECHAS_MES = 3
+  const FACTOR_EVENTO_EXCLUIR = 1.15
+  // Las fechas del calendario del repo van como params ESCALARES en un VALUES, no como array: los
+  // arrays de Prisma ya fallaron una vez contra el pooler de Supabase (landmine del acotado de código).
+  const fechasEventoCalendario = Object.entries(EVENTS)
+    .filter(([, f]) => Number(f) >= FACTOR_EVENTO_EXCLUIR)
+    .map(([d]) => d)
+  const eventosCalendarioSql = fechasEventoCalendario.length
+    ? Prisma.sql`UNION SELECT d::date FROM (VALUES ${Prisma.join(fechasEventoCalendario.map(d => Prisma.sql`(${d})`))}) AS t(d)`
+    : Prisma.empty
   const mesRows = await prisma.$queryRaw<{
-    property_id: string; ym: string; med_guest: number; flo_guest: number; cei_guest: number; n: number
+    property_id: string; ym: string; med_guest: number; flo_guest: number; cei_guest: number
+    n: number; fechas: number
   }[]>(Prisma.sql`
-    WITH recent AS (
+    WITH eventos AS (
+      SELECT DISTINCT rate_date FROM pricing_eventos_auto WHERE factor >= ${FACTOR_EVENTO_EXCLUIR}
+      ${eventosCalendarioSql}
+    ),
+    recent AS (
       -- price_night NORMALIZADO al aforo del piso (ver pricing_factor_aforo); con comps del mismo
       -- aforo el factor es 1. Sin esto los buckets de un piso grande salian a precio de apartamento.
       SELECT DISTINCT ON (m.scenario, m.checkin_date, m.comp_name)
@@ -181,20 +210,22 @@ export async function POST(req: NextRequest) {
       WHERE m.price_night > 0 AND m.scenario LIKE 'prop_%'
         AND m.checkin_date >= CURRENT_DATE
         AND m.search_date >= CURRENT_DATE - 120
+        AND m.checkin_date NOT IN (SELECT rate_date FROM eventos)
       ORDER BY m.scenario, m.checkin_date, m.comp_name, m.search_date DESC
     )
     SELECT r.scenario AS property_id, to_char(r.checkin_date, 'YYYY-MM') AS ym,
       ROUND(percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY r.price_night))::int AS med_guest,
       ROUND(percentile_cont(s.floor_pctl)  WITHIN GROUP (ORDER BY r.price_night))::int AS flo_guest,
       ROUND(percentile_cont(s.ceil_pctl)   WITHIN GROUP (ORDER BY r.price_night))::int AS cei_guest,
-      COUNT(*)::int AS n
+      COUNT(*)::int AS n,
+      COUNT(DISTINCT r.checkin_date)::int AS fechas
     FROM recent r JOIN pricing_settings s ON s.property_id = r.scenario
     GROUP BY r.scenario, to_char(r.checkin_date, 'YYYY-MM'), s.target_pctl, s.floor_pctl, s.ceil_pctl
   `).catch(() => [])
-  const mes = new Map<string, Map<string, { med: number; flo: number; cei: number; n: number }>>()
+  const mes = new Map<string, Map<string, { med: number; flo: number; cei: number; n: number; fechas: number }>>()
   for (const m of mesRows) {
     if (!mes.has(m.property_id)) mes.set(m.property_id, new Map())
-    mes.get(m.property_id)!.set(m.ym, { med: m.med_guest, flo: m.flo_guest, cei: m.cei_guest, n: m.n })
+    mes.get(m.property_id)!.set(m.ym, { med: m.med_guest, flo: m.flo_guest, cei: m.cei_guest, n: m.n, fechas: m.fechas })
   }
 
   // ─── Idea #4: mercado por FECHA EXACTA (resolución por día en noches de evento) ─────────
@@ -370,7 +401,9 @@ export async function POST(req: NextRequest) {
       const old = info.price != null ? Math.round(info.price) : null
       const ym = date.slice(0, 7)
       const mb = mesProp?.get(ym)
-      const useMonth = !!mb && mb.n >= MIN_BUCKET
+      // El bucket del mes solo vale si hay comps SUFICIENTES y de VARIAS fechas: 10 anuncios del mismo
+      // dia describen ese dia, no el mes (lección de junio 2027, ver la nota de la consulta).
+      const useMonth = !!mb && mb.n >= MIN_BUCKET && mb.fechas >= MIN_FECHAS_MES
       const baseD = useMonth ? Math.round((mb!.med * dqFactor) / markup) : baseTargetGlobal
       const floorD = useMonth ? Math.round(mb!.flo / markup) : floorBaseGlobal
       const ceilD = useMonth ? Math.round(mb!.cei / markup) : ceilBaseGlobal
@@ -569,7 +602,7 @@ export async function POST(req: NextRequest) {
     results.push({
       property: r.property_id,
       recommended_guest: r.recommended_guest, base_target: baseTargetGlobal,
-      meses_con_mercado: mesProp ? [...mesProp.entries()].filter(([, v]) => v.n >= MIN_BUCKET).map(([k]) => k) : [],
+      meses_con_mercado: mesProp ? [...mesProp.entries()].filter(([, v]) => v.n >= MIN_BUCKET && v.fechas >= MIN_FECHAS_MES).map(([k]) => k) : [],
       meses_calientes: [...(velocidad.get(r.property_id)?.entries() ?? [])].filter(([, n]) => n >= 2).map(([k, n]) => `${k}:${n}`),
       bounds: { floor_base: floorBaseGlobal, ceil_base: ceilBaseGlobal, min: r.min_price, max: r.max_price },
       dates_con_cambio: ops.length, written, sample: audit.slice(0, 3),
