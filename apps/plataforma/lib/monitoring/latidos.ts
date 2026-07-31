@@ -14,24 +14,66 @@
 export type EvalLatido = {
   /** true = hay que avisar (huella vieja o inexistente). */
   alerta: boolean
-  /** Horas desde el último latido (null si nunca latió). */
+  /** Horas desde el último latido BUENO (null si nunca completó una pasada). */
   horas: number | null
   /** Motivo legible para el aviso / log. */
   motivo: string
 }
 
+/**
+ * ⚠️ «No ha latido» son DOS averías distintas y hay que decir cuál (lección del
+ * 31/07/2026): el escaneo de facturas corría cada día y moría en 504 antes de
+ * escribir su huella, y el aviso decía «sin ninguna señal registrada» — que se
+ * lee como «el cron no se dispara» y manda a mirar el sitio equivocado (IMAP,
+ * app-password) en vez del reloj de la función.
+ *
+ * Por eso, además de la última pasada BUENA (`ultimo` = `ultimo_ok_at`), se pasa
+ * la última EJECUCIÓN (`ultimoIntento` = `ultimo_at`, la escriba quien la escriba,
+ * haya ido bien o mal). Con las dos se distingue:
+ *   · ni intento ni pasada buena → no se está disparando (o no escribe huella)
+ *   · intento fresco, ninguna pasada buena → se dispara y NO termina
+ *   · pasada buena vieja → estuvo bien y dejó de estarlo
+ */
 export function evaluarLatido(params: {
   ahora: Date
   ultimo: Date | null
   maxHoras: number
+  ultimoIntento?: Date | null
+  detalle?: string | null
 }): EvalLatido {
-  const { ahora, ultimo, maxHoras } = params
+  const { ahora, ultimo, maxHoras, ultimoIntento = null, detalle = null } = params
+  const horasDe = (d: Date) => (ahora.getTime() - d.getTime()) / 3_600_000
+  const coletilla = detalle ? ` — último parte: «${detalle}»` : ''
+  const hIntento = ultimoIntento ? horasDe(ultimoIntento) : null
+
   if (!ultimo) {
-    return { alerta: true, horas: null, motivo: 'sin ninguna señal registrada' }
+    if (hIntento !== null) {
+      return {
+        alerta: true,
+        horas: null,
+        motivo:
+          `se ejecuta pero NUNCA completa una pasada buena (último intento hace ${hIntento.toFixed(1)} h). ` +
+          `No es que no se dispare: arranca y se queda a medias${coletilla}`,
+      }
+    }
+    return {
+      alerta: true,
+      horas: null,
+      motivo: 'sin ninguna señal registrada: ni una sola ejecución ha dejado huella',
+    }
   }
-  const horas = (ahora.getTime() - ultimo.getTime()) / 3_600_000
+
+  const horas = horasDe(ultimo)
   if (horas > maxHoras) {
-    return { alerta: true, horas, motivo: `${horas.toFixed(1)} h sin actividad (umbral ${maxHoras} h)` }
+    // Si sigue arrancando, el problema está en que no termina, no en el disparo.
+    const matiz = hIntento !== null && hIntento <= maxHoras
+      ? `, aunque SÍ arrancó hace ${hIntento.toFixed(1)} h (se ejecuta y no termina)`
+      : ''
+    return {
+      alerta: true,
+      horas,
+      motivo: `${horas.toFixed(1)} h sin una pasada buena (umbral ${maxHoras} h)${matiz}${coletilla}`,
+    }
   }
   return { alerta: false, horas, motivo: `activo (${horas.toFixed(1)} h)` }
 }
@@ -89,9 +131,11 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
     // Diario → 30 h deja margen para un día saltado sin dar la lata.
     maxHoras: 30,
     nota:
-      'El escaneo del buzón no completa una pasada buena (¿app-password rotada, etiqueta renombrada, ' +
-      'IMAP caído?). Mientras esté así, el agente contable dirá «no tienes facturas de proveedor ' +
-      'pendientes» porque no ha podido mirar, no porque no las haya — y el IVA soportado del trimestre ' +
-      'saldrá corto. Huella: agente_latidos.facturas_gmail.',
+      'El escaneo del buzón no completa una pasada buena. Mira en este orden: (1) si el cron ' +
+      'devuelve 504 en los logs de Vercel, la pasada no cabe en su tiempo y muere a medias — fue la ' +
+      'causa el 31/07/2026; (2) app-password rotada, etiqueta renombrada o IMAP caído. Mientras esté ' +
+      'así, el agente contable dirá «no tienes facturas de proveedor pendientes» porque no ha podido ' +
+      'mirar, no porque no las haya — y el IVA soportado del trimestre saldrá corto. ' +
+      'Huella: agente_latidos.facturas_gmail.',
   },
 ]

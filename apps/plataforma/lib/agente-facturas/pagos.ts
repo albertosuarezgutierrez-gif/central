@@ -6,7 +6,7 @@
 import { prisma } from '@/lib/db'
 import { eur } from '@/lib/dinero'
 import { Prisma } from '@prisma/client'
-import { listarCandidatos, marcarProcesado } from './gmail'
+import { listarCandidatosConLimite, marcarProcesado, type ListadoCandidatos } from './gmail'
 import { aiExtractInvoice } from '@/lib/ai-client'
 import { tgSend, tgSendButtons, tgEditMessage } from '@central/core-telegram'
 import { iniciarPago, estadoPago, disponiblePis } from '@/lib/enablebanking'
@@ -30,20 +30,53 @@ export interface ResultadoEscaneo {
   /** `false` = la pasada NO se pudo completar; `nuevas` no es una conclusión. */
   ok: boolean
   error: string | null
+  /**
+   * Correos que quedaron SIN mirar al agotarse el presupuesto de tiempo. Se retoman
+   * en la pasada siguiente (el dedupe por `gmail_uid` hace la pasada idempotente),
+   * pero si esto no baja de cero nunca, hay un atasco que contar.
+   */
+  pendientes: number
 }
 
-export async function escanearNuevasFacturas(cuentaId: string): Promise<ResultadoEscaneo> {
+/**
+ * @param opts.deadline epoch ms en el que el escaneo debe estar de vuelta. Sin él
+ *   el trabajo es ilimitado y la función acaba muriendo por `maxDuration` — que es
+ *   justo como se perdía el latido antes del 31/07/2026.
+ */
+export async function escanearNuevasFacturas(
+  cuentaId: string,
+  opts: { deadline?: number } = {},
+): Promise<ResultadoEscaneo> {
   let nuevas = 0
   const desde = new Date(Date.now() - 7 * 24 * 3600 * 1000) // últimos 7 días
-  let correos: Awaited<ReturnType<typeof listarCandidatos>> = []
+  const { deadline } = opts
+  // El listado se lleva como mucho el 60% del presupuesto: si se lo comiera entero,
+  // no quedaría tiempo para procesar ni una factura de las que acaba de encontrar.
+  const deadlineListado = deadline ? Date.now() + (deadline - Date.now()) * 0.6 : undefined
+
+  let listado: ListadoCandidatos
   try {
-    correos = await listarCandidatos({ desde, etiqueta: ETIQUETA_GMAIL })
+    listado = await listarCandidatosConLimite({ desde, etiqueta: ETIQUETA_GMAIL, deadline: deadlineListado })
   } catch (e: any) {
     // El buzón no se ha podido leer: se dice, no se disfraza de «0 facturas».
-    return { nuevas: 0, ok: false, error: String(e?.message ?? e).slice(0, 200) }
+    return { nuevas: 0, ok: false, error: String(e?.message ?? e).slice(0, 200), pendientes: 0 }
   }
+  const correos = listado.correos
 
-  for (const correo of correos) {
+  // Se procesa igualmente lo que sí se listó (trabajo aprovechado), pero la pasada
+  // NO se declara buena: no se ha llegado a ver el buzón entero.
+  const ok = !listado.truncado
+  const error: string | null = listado.truncado
+    ? `el listado del buzón no cupo en el presupuesto de tiempo (${correos.length} correo(s) leídos de la ventana de 7 días)`
+    : null
+  let pendientes = 0
+
+  for (let i = 0; i < correos.length; i++) {
+    if (deadline && Date.now() > deadline) {
+      pendientes = correos.length - i
+      break
+    }
+    const correo = correos[i]
     if (correo.sinAdjunto) continue
 
     const adjunto = correo.adjuntos[0]
@@ -117,7 +150,7 @@ export async function escanearNuevasFacturas(cuentaId: string): Promise<Resultad
     await proponerVinculoReserva(facturaId, proveedor, fechaFactura).catch(() => {})
   }
 
-  return { nuevas, ok: true, error: null }
+  return { nuevas, ok, error, pendientes }
 }
 
 async function notificarFactura(

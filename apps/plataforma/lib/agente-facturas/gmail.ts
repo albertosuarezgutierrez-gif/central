@@ -28,11 +28,26 @@ function nuevoCliente(): ImapFlow {
   return new ImapFlow({ host: 'imap.gmail.com', port: 993, secure: true, auth: { user, pass }, logger: false })
 }
 
+export interface ListadoCandidatos {
+  correos: CorreoCandidato[]
+  /** `true` = el listado se cortó por presupuesto de tiempo: NO se ha visto el buzón entero. */
+  truncado: boolean
+}
+
 // Lista correos candidatos a factura desde `desde` (Date). Si `etiqueta` existe
 // como buzón en Gmail, se usa esa; si no, INBOX.
-export async function listarCandidatos(opts: { desde: Date; etiqueta?: string }): Promise<CorreoCandidato[]> {
+//
+// 🚨 `deadline` (epoch ms) acota el listado: bajar y parsear el `source` completo de
+// cada mensaje de la ventana es la parte cara, y sin tope se come el `maxDuration`
+// de la función entera — la pasada muere en 504 y NO llega a escribir su latido
+// (incidente 31/07/2026, ver `app/api/cron/facturas-scan/route.ts`). Al cortar se
+// devuelve `truncado: true`: quien llame NO puede decir «he mirado el buzón».
+export async function listarCandidatosConLimite(
+  opts: { desde: Date; etiqueta?: string; deadline?: number },
+): Promise<ListadoCandidatos> {
   const client = nuevoCliente()
   const out: CorreoCandidato[] = []
+  let truncado = false
   await client.connect()
   try {
     let buzon = 'INBOX'
@@ -46,6 +61,7 @@ export async function listarCandidatos(opts: { desde: Date; etiqueta?: string })
     const lock = await client.getMailboxLock(buzon)
     try {
       for await (const msg of client.fetch({ since: opts.desde }, { uid: true, source: true })) {
+        if (opts.deadline && Date.now() > opts.deadline) { truncado = true; break }
         const parsed = await simpleParser(msg.source as Buffer)
         const adjuntos: Adjunto[] = (parsed.attachments || [])
           .filter((a) => ATTACH_OK.test(a.contentType || ''))
@@ -69,7 +85,12 @@ export async function listarCandidatos(opts: { desde: Date; etiqueta?: string })
   } finally {
     await client.logout().catch(() => {})
   }
-  return out
+  return { correos: out, truncado }
+}
+
+/** Variante sin presupuesto (compatibilidad con los llamadores que no lo acotan). */
+export async function listarCandidatos(opts: { desde: Date; etiqueta?: string }): Promise<CorreoCandidato[]> {
+  return (await listarCandidatosConLimite(opts)).correos
 }
 
 // Marca un correo como procesado: keyword IMAP + copia a la etiqueta si existe.

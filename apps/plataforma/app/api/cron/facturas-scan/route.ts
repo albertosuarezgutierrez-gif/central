@@ -9,7 +9,19 @@ import { resolverCuentaBuzon } from '@/lib/agente-facturas/cuenta-buzon'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+// 🚨 60 s no daban: el 31/07/2026 esta ruta llevaba 3 de sus últimas 4 pasadas en 504
+// («Task timed out after 60 seconds»), muriendo a mitad del escaneo — con facturas ya
+// insertadas, pero SIN llegar nunca a `registrarLatido`. Por eso el vigía informaba de
+// «sin ninguna señal registrada» de un agente que en realidad sí corría todos los días.
+// 300 s es el estándar de la casa para crons pesados y cabe en los 280 s que espera el
+// dispatcher (`app/api/cron/dispatch/route.ts`). El techo NO sustituye al presupuesto de
+// abajo: subir el límite solo mueve la pared de sitio.
+export const maxDuration = 300
+
+/** El escaneo (IMAP + OCR + IA por adjunto) devuelve el control como muy tarde aquí. */
+const PRESUPUESTO_ESCANEO_MS = 180_000
+/** A partir de aquí no se arranca ningún paso nuevo: la respuesta tiene que salir. */
+const PRESUPUESTO_TOTAL_MS = 250_000
 
 function isCronAuthorized(req: Request): boolean {
   const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
@@ -20,6 +32,13 @@ function isCronAuthorized(req: Request): boolean {
 
 export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+  const t0 = Date.now()
+  // Huella de INTENTO, antes de tocar nada. Si la función muere a mitad (timeout,
+  // OOM, un throw en cualquier paso), esta fila es lo único que distingue «el cron
+  // no se dispara» de «se dispara y no termina» — y son averías distintas. No toca
+  // `ultimo_ok_at`: sigue siendo un latido de agente enfermo, no una pasada buena.
+  await registrarLatido('facturas_gmail', false, 'pasada en curso — aún sin completar')
 
   // Cuentas reales (se excluyen las de prueba `[seed-demo]`: no tienen Gmail ni banca propios y solo
   // generarían ruido). La tabla `cuentas` no tiene columna de estado → el marcador es el nombre.
@@ -43,12 +62,14 @@ export async function GET(req: Request) {
   // afirmaba «no tienes facturas pendientes 🎉» indefinidamente.
   let escaneoOk: boolean | null = null
   let escaneoError: string | null = null
+  let pendientes = 0
   if (cuentaBuzon) {
     try {
-      const r = await escanearNuevasFacturas(cuentaBuzon)
+      const r = await escanearNuevasFacturas(cuentaBuzon, { deadline: t0 + PRESUPUESTO_ESCANEO_MS })
       totalNuevas += r.nuevas
       escaneoOk = r.ok
       escaneoError = r.error
+      pendientes = r.pendientes
     } catch (e: any) {
       escaneoOk = false
       escaneoError = String(e?.message ?? e).slice(0, 200)
@@ -58,17 +79,31 @@ export async function GET(req: Request) {
     escaneoOk = false
     escaneoError = 'no se ha podido resolver la cuenta dueña del buzón (GMAIL_USER / FACTURAS_CUENTA_ID)'
   }
+  // El latido definitivo se escribe AQUÍ, en cuanto se sabe cómo fue el escaneo, y no
+  // al final de la ruta: lo que se vigila es el buzón, así que no puede depender de que
+  // la conciliación bancaria de después llegue a terminar.
   await registrarLatido(
     'facturas_gmail',
     escaneoOk === true,
-    escaneoOk ? `${totalNuevas} factura(s) nueva(s)` : escaneoError,
+    escaneoOk
+      ? `${totalNuevas} factura(s) nueva(s)` +
+        (pendientes > 0 ? ` · ${pendientes} correo(s) sin mirar por presupuesto de tiempo` : '')
+      : escaneoError,
   )
 
+  // Los pasos de abajo solo arrancan si queda presupuesto: agotarlo aquí devolvería
+  // un 504 y dejaría la conciliación a medias sin que nadie lo supiera.
+  const quedaTiempo = () => Date.now() - t0 < PRESUPUESTO_TOTAL_MS
+  let truncado = false
+
   // Verificación de pagos en curso (global, sin cuentaId): una sola pasada.
-  try { totalConfirmados += await verificarPagosPendientes() } catch { /* continuar */ }
+  if (quedaTiempo()) {
+    try { totalConfirmados += await verificarPagosPendientes() } catch { /* continuar */ }
+  } else truncado = true
 
   // Conciliación con banco y alertas de justificantes: por cada cuenta real (usan su propia banca).
   for (const cuenta of cuentas) {
+    if (!quedaTiempo()) { truncado = true; break }
     try { totalConciliados += await conciliarConBanco(cuenta.id) } catch { /* continuar */ }
     try { totalAlertas += await alertarFacturasAusentes(cuenta.id) } catch { /* continuar */ }
   }
@@ -77,7 +112,9 @@ export async function GET(req: Request) {
   // facturas», es «no se pudo mirar el buzón».
   return NextResponse.json({
     ok: true,
-    escaneo: { ok: escaneoOk, error: escaneoError },
+    escaneo: { ok: escaneoOk, error: escaneoError, pendientes },
+    truncado,
+    ms: Date.now() - t0,
     nuevas: totalNuevas, confirmados: totalConfirmados, conciliados: totalConciliados, alertas: totalAlertas,
   })
 }

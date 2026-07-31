@@ -24,6 +24,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 💓 El latido de facturas no faltaba: la pasada moría en 504 antes de escribirlo (31/07/2026)
+Aviso «🧾 Escaneo de facturas: sin ninguna señal registrada» el mismo día de estrenar el vigía (#1184).
+No era IMAP ni la app-password: `facturas-scan` corre a diario y **muere en 504 a los 60 s** (3 de sus
+últimas 4 pasadas), a mitad del escaneo — ese 06:16 ya había insertado IONOS y Punto y Coma — sin llegar
+nunca a `registrarLatido`, que estaba al final. Fix: `maxDuration` 60→300 **+ presupuesto de tiempo**
+(deadline en el escaneo y en el listado IMAP, que devuelve `truncado`), **latido de intento al empezar**
+y el definitivo justo tras el escaneo, y `evaluarLatido` con `ultimo_at`+`detalle` para separar «no se
+dispara» de «se dispara y no termina». Verificado: tsc 0 · 702 tests · build OK · upsert probado en BD.
+Queda: confirmar la huella real en la pasada de mañana 06:15 UTC. PR pendiente de merge.
+
 - **🏛️ Subastas: revisión de la cadena de ubicación — 8 fallos reales corregidos (31/07/2026).** Encargo
   «que no vuelva a suceder + revisa qué más puede pasar». 🔴 (a) `bajarFicha` no validaba la respuesta y el
   UPDATE del cron escribía las CIFRAS sin `COALESCE`: un 200 de mantenimiento del BOE **borraba** tipo/
