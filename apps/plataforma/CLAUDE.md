@@ -533,6 +533,24 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
   ⚠️ TEMPORAL mientras dure la fase: endpoint puente `/api/subastas/fase3-debug` (token en BD
   `subastas_debug_token`, hosts oficiales cerrados, en PUBLIC del middleware) — eliminarlo al cerrar Fase 3.
 
+## 💓 Latidos de agentes — el vigía que avisa por Telegram (ampliado 30/07/2026)
+`lib/monitoring/latidos.ts` (registro + `evaluarLatido` puro) + cron `agentes-latido` (07:45 UTC) →
+**Telegram**. Regla de oro: solo se vigilan huellas que se refrescan en CADA pasada del agente.
+- **Huella para los agentes que solo escriben "cuando hay trabajo": tabla `agente_latidos`**
+  (`prisma/sql/2026-07-30_agente_latidos.sql`, **aplicada**; `agente` PK, `ultimo_at` = último intento,
+  `ultimo_ok_at` = última pasada BUENA, `ok`, `detalle`). Se escribe con `lib/monitoring/latido-escribir.ts::registrarLatido`.
+  La frescura se mide sobre **`ultimo_ok_at`**, así que un agente que corre y falla siempre también salta.
+  Estrenada por el **escaneo de facturas de Gmail** (`facturas-scan`), que antes no tenía NINGÚN vigilante
+  porque `facturas_proveedor` solo crece si llega una factura. `escanearNuevasFacturas` devuelve ahora
+  `{nuevas, ok, error}`: un `nuevas:0` con `ok:false` es «no se pudo mirar el buzón», no «no hay facturas»
+  (antes el chat contestaba «No tienes facturas de proveedor pendientes 🎉» con el IMAP caído).
+- **`ialimp_pms`**: vigila `pms_connections.last_sync_at` (la columna VIVA; `ultimo_sync` no la escribe
+  nadie — ver el landmine en `apps/ialimp/CLAUDE.md`) y además avisa si hay `sync_error`, porque el sync
+  marca la fecha aunque la pasada haya fallado. Es infraestructura del SaaS de Alberto, **no** el backlog
+  operativo de Vanessa (eso sigue vetado, ver Check 6 retirado).
+- **Una sonda que revienta ya NO se traga en silencio**: va en un bloque aparte del Telegram, «Sin poder
+  comprobar — esto NO es "todo bien"». Un vigía averiado que calla es un parte de buena salud falso.
+
 ## Reglas
 - Multi-tenant: SIEMPRE filtrar por `cuenta_id` en todas las queries.
 - Sin credenciales en repo.

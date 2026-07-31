@@ -106,6 +106,14 @@ export interface SubastaInmueble {
    * 115,66) y quien mira la ficha necesita saber cuál está leyendo.
    */
   superficieOrigen?: 'catastro' | 'anuncio' | null
+  /**
+   * Los m² tal y como los da la descripción REGISTRAL, sin mezclar con los del
+   * Catastro. `superficie` se queda con la mejor de las dos para todo lo demás;
+   * esta se guarda aparte porque para VALORAR hay que poder compararlas (ver
+   * `superficieValorable`): una referencia catastral de parcela devuelve los
+   * metros del edificio, no los del piso que se subasta.
+   */
+  superficieRegistral?: number | null
   anioConstruccion?: number | null
 
   // ── Características físicas del inmueble ──────────────────────────────────
@@ -126,6 +134,13 @@ export interface SubastaInmueble {
   precioM2Mercado?: number | null
   /** Nº de anuncios que sostienen ese €/m². Menos muestra, menos fiabilidad. */
   muestraMercado?: number | null
+  /**
+   * Etiqueta de la zona de la que salió ese €/m² («Matalascañas»,
+   * «SEVILLA · san-pablo-santa-justa», «SEVILLA (buscador Fotocasa)»). De ella
+   * depende que la referencia sea utilizable o solo orientativa: la mediana de
+   * una ciudad entera no describe a un piso concreto (ver `valoracion.ts`).
+   */
+  zonaMercado?: string | null
 
   lotes?: number | null
 }
@@ -192,6 +207,18 @@ export interface Oportunidad {
   valorMercado: number | null
   /** De dónde salió `valorMercado`. `null` cuando no se pudo estimar. */
   origenValor: 'tasacion' | 'valor_referencia' | 'comparables' | null
+  /**
+   * El valor SIN el descuento por estado: lo que valdría ya reformado. Es el
+   * que mira la lente flip (que resta la reforma aparte); usarlo en cualquier
+   * otro sitio sería contar dos veces la mejora.
+   */
+  valorMercadoReformado: number | null
+  /**
+   * `true` cuando el €/m² sale de una zona demasiado gruesa para describir a
+   * este inmueble (la mediana de una ciudad entera). El valor se enseña, pero
+   * no debe sostener un aviso ni un «flip apto».
+   */
+  valorOrientativo: boolean
   /** Descuento en tanto por uno sobre el valor de mercado. Negativo = sobrecoste. */
   descuento: number | null
   /** Lo que hay que consignar para poder pujar. */

@@ -10,6 +10,7 @@
 
 import { calcularCoste, deposito } from './costes.ts'
 import type { Oportunidad, ParamsCoste, SubastaInmueble } from './types.ts'
+import { ajusteEstado, granularidadZona, referenciaOrientativa, superficieValorable } from './valoracion.ts'
 
 /** Multiplicadores de riesgo. Se aplican en cadena sobre el descuento. */
 export const FACTORES = {
@@ -26,11 +27,13 @@ export const FACTORES = {
  * Evalúa una subasta: coste real, descuento, depósito y puntuación 0-100.
  *
  * @param remate precio de adjudicación a simular; por defecto el valor de subasta
+ * @param anioActual año de referencia para el ajuste por estado del edificio
  */
 export function evaluarOportunidad(
   s: SubastaInmueble,
   remate?: number | null,
   params?: ParamsCoste,
+  anioActual: number = new Date().getFullYear(),
 ): Oportunidad {
   const coste = calcularCoste(s, remate, params)
   const motivos: string[] = []
@@ -41,6 +44,8 @@ export function evaluarOportunidad(
   // Catastro exige certificado digital, así que el tercer escalón —el €/m² de
   // los comparables de la zona— es el que salva la mayoría de los casos.
   let valorMercado: number | null = null
+  let valorMercadoReformado: number | null = null
+  let valorOrientativo = false
   let origenValor: Oportunidad['origenValor'] = null
   if (s.tasacion != null && s.tasacion > 0) {
     valorMercado = s.tasacion
@@ -49,14 +54,34 @@ export function evaluarOportunidad(
     valorMercado = s.valorReferencia
     origenValor = 'valor_referencia'
     avisos.push('Sin tasación publicada: se compara contra el valor de referencia del Catastro.')
-  } else if (s.precioM2Mercado != null && s.precioM2Mercado > 0 && s.superficie != null && s.superficie > 0) {
-    valorMercado = Math.round(s.precioM2Mercado * s.superficie)
-    origenValor = 'comparables'
-    const muestra = s.muestraMercado != null ? ` (${s.muestraMercado} anuncios)` : ''
-    avisos.push(
-      `Sin tasación ni valor de referencia: valor ESTIMADO con el precio de mercado de la zona` +
-        `${muestra}, ${Math.round(s.precioM2Mercado)}€/m² × ${s.superficie} m². Es una estimación, no una tasación.`,
-    )
+  } else if (s.precioM2Mercado != null && s.precioM2Mercado > 0) {
+    // Los tres correctivos del incidente de la Avenida Pedro Romero: metros que
+    // no inflan, descuento por estado, y aviso si la zona es demasiado gruesa.
+    const sup = superficieValorable(s.superficieRegistral ?? s.superficie, s.superficieCatastro)
+    if (sup != null) {
+      const estado = ajusteEstado(s.anioConstruccion, anioActual)
+      valorMercadoReformado = Math.round(s.precioM2Mercado * sup.m2)
+      valorMercado = Math.round(valorMercadoReformado * estado.factor)
+      origenValor = 'comparables'
+
+      const muestra = s.muestraMercado != null ? ` (${s.muestraMercado} anuncios)` : ''
+      avisos.push(
+        `Sin tasación ni valor de referencia: valor ESTIMADO con el precio de mercado de la zona` +
+          `${muestra}, ${Math.round(s.precioM2Mercado)}€/m² × ${sup.m2} m². Es una estimación, no una tasación.`,
+      )
+      if (sup.aviso) avisos.push(sup.aviso)
+      if (estado.nota) avisos.push(estado.nota)
+
+      const gran = granularidadZona(s.zonaMercado, s.municipio)
+      if (referenciaOrientativa(gran)) {
+        valorOrientativo = true
+        avisos.push(
+          `El €/m² es la mediana de TODO el municipio (${s.municipio ?? 'la ciudad'}), donde el precio ` +
+            `cambia mucho de un barrio a otro: sirve para hacerse una idea, no para decidir una puja. ` +
+            `Hace falta un comparable del barrio.`,
+        )
+      }
+    }
   }
 
   // La venta de adjudicado no es una subasta: no hay depósito ni puja.
@@ -67,6 +92,8 @@ export function evaluarOportunidad(
     return {
       coste,
       valorMercado: null,
+      valorMercadoReformado: null,
+      valorOrientativo: false,
       origenValor: null,
       descuento: null,
       deposito: dep,
@@ -125,6 +152,8 @@ export function evaluarOportunidad(
   return {
     coste,
     valorMercado,
+    valorMercadoReformado,
+    valorOrientativo,
     origenValor,
     descuento: Math.round(descuento * 10000) / 10000,
     deposito: dep,
