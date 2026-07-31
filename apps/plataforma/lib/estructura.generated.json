@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-31T05:54:27Z",
+  "generadoEn": "2026-07-31T06:02:56Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3966,6 +3966,14 @@
   ],
   "novedades": [
     {
+      "titulo": "💰 Subastas: el «valor de mercado» dejaba de fabricar chollos falsos (30/07/2026, PR #1183).",
+      "fecha": "30/07/2026"
+    },
+    {
+      "titulo": "🔍 Subastas: el documento registral se lee ENTERO y «se adquiere libre» hay que ganárselo (30/07/2026, PR #1182).",
+      "fecha": "30/07/2026"
+    },
+    {
       "titulo": "🕳️ Barrido del monorepo: afirmar ausencias no comprobadas (30/07/2026, misma rama).",
       "fecha": "30/07/2026"
     },
@@ -4015,14 +4023,6 @@
     },
     {
       "titulo": "⬇️ Subastas — SEGUIMIENTO DE BAJADAS DE PRECIO + antigüedad estimada del anuncio (28/07/2026).",
-      "fecha": "28/07/2026"
-    },
-    {
-      "titulo": "💡 Subastas — UNIFICADA la inversión inmobiliaria: detector de CHOLLOS de venta directa (28/07/2026).",
-      "fecha": "28/07/2026"
-    },
-    {
-      "titulo": "📅 Trading — aviso de Google Calendar creado para la cohorte 3 (28/07/2026, sesión de charla).",
       "fecha": "28/07/2026"
     }
   ],

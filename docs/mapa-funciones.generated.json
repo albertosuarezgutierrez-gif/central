@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-31T05:54:27Z",
-  "sha": "1d00d9d89ad32d1eeccdf884f90e81c91a3ea4c0",
+  "generadoEn": "2026-07-31T06:02:56Z",
+  "sha": "a40c40b96ff8b15ab306ef7b8ac59a646ec63672",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47499,7 +47499,7 @@
           "exportada": false,
           "params": "activo = false",
           "retorno": "React.CSSProperties",
-          "linea": 183
+          "linea": 185
         },
         {
           "nombre": "fecha",
@@ -47507,7 +47507,7 @@
           "exportada": false,
           "params": "iso: string | null | undefined",
           "retorno": "string | null",
-          "linea": 190
+          "linea": 192
         },
         {
           "nombre": "Puntuacion",
@@ -47515,7 +47515,7 @@
           "exportada": false,
           "params": "{ v }: { v: number | null }",
           "retorno": null,
-          "linea": 204,
+          "linea": 206,
           "resumen": "Semáforo de la puntuación. `null` se pinta distinto a 0: no es lo mismo."
         },
         {
@@ -47524,7 +47524,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 212
+          "linea": 214
         },
         {
           "nombre": "PanelTesoreria",
@@ -47532,7 +47532,7 @@
           "exportada": false,
           "params": "{ t }: { t: Tesoreria }",
           "retorno": null,
-          "linea": 219,
+          "linea": 221,
           "resumen": "Dinero que hay que tener bloqueado para poder pujar. Lo que importa NO es la suma de depósitos sino el máximo simultáneo: los que no se solapan reutilizan el mismo dinero."
         },
         {
@@ -47541,7 +47541,7 @@
           "exportada": false,
           "params": "{ r, dormitorios }: { r: Rendimiento | null | undefined; dormitorios?: number | null }",
           "retorno": null,
-          "linea": 303,
+          "linea": 305,
           "resumen": "Yield turístico estimado con los pisos PROPIOS. Siempre con el caveat: los pisos de referencia son de Sevilla capital — fuera de ahí es extrapolación."
         },
         {
@@ -47550,7 +47550,7 @@
           "exportada": false,
           "params": "{ s, plantaAparte }: { s: Subasta; plantaAparte?: boolean }",
           "retorno": null,
-          "linea": 327,
+          "linea": 329,
           "resumen": "repetirla sería ruido."
         },
         {
@@ -47559,7 +47559,7 @@
           "exportada": false,
           "params": "{ s, d }: { s: Subasta; d?: Documental | null }",
           "retorno": null,
-          "linea": 364,
+          "linea": 366,
           "resumen": "Resumen de CARGAS + documentación de la subasta. Vive dentro de `FichaSubasta` a propósito: antes el semáforo y las notas del edicto solo se pintaban en la pestaña «Todas» (iban en su `extra`), así qu"
         },
         {
@@ -47568,7 +47568,7 @@
           "exportada": false,
           "params": "{ s, o, acciones, extra, doc }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null }",
           "retorno": null,
-          "linea": 464
+          "linea": 466
         },
         {
           "nombre": "SubastasClient",
@@ -47576,14 +47576,14 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Inicial | null }",
           "retorno": null,
-          "linea": 609
+          "linea": 622
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "d8e88de26930"
+      "hash": "30fe8dd6e7fb"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -51262,7 +51262,7 @@
         "subastas_radar"
       ],
       "rutaApi": "/api/cron/subastas-avisos",
-      "hash": "68af6a83a67b"
+      "hash": "cf1b639490dd"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-cierre/route.ts",
@@ -65107,7 +65107,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<FilaCriterios[]>",
-          "linea": 116,
+          "linea": 122,
           "resumen": "Cuentas con el radar activo y sus criterios."
         },
         {
@@ -65116,7 +65116,7 @@
           "exportada": true,
           "params": "limite = 500",
           "retorno": "Promise<SubastaInmueble[]>",
-          "linea": 142,
+          "linea": 148,
           "resumen": "Subastas candidatas: en plazo (o sin fecha conocida) y recientes. No se rebarre todo el histórico en cada pasada."
         },
         {
@@ -65125,7 +65125,7 @@
           "exportada": true,
           "params": "cuentaId: string, criterios: CriteriosSubasta, corpus: SubastaInmueble[], params: ParamsCoste = {},",
           "retorno": "Promise<number>",
-          "linea": 165,
+          "linea": 171,
           "resumen": "Casa el corpus con los criterios de una cuenta e inserta lo nuevo. El upsert REFRESCA el snapshot y las cifras: el radar corre a las 06:30, DESPUÉS del enriquecimiento (06:15) y del valor de mercado ("
         },
         {
@@ -65134,7 +65134,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 238,
+          "linea": 244,
           "resumen": "Pasada completa: descarga el corpus UNA vez y lo empareja con cada cuenta."
         }
       ],
@@ -65146,7 +65146,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "76f4c181313b"
+      "hash": "6b1a9d6d703d"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/boe.ts",
@@ -65312,7 +65312,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "cbca9244eac6"
+      "hash": "2d62a4165c3c"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/consulta-juzgado.ts",
@@ -83894,12 +83894,12 @@
           "exportada": true,
           "params": "e: EntradaAviso",
           "retorno": "ResultadoAviso",
-          "linea": 56
+          "linea": 62
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3ce17122590c"
+      "hash": "6003f95dd673"
     },
     {
       "ruta": "packages/module-subastas/src/caducidad.ts",
@@ -84933,7 +84933,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8c5de0641609"
+      "hash": "fca153697a52"
     },
     {
       "ruta": "packages/module-subastas/src/fotocasa.ts",
@@ -85602,10 +85602,10 @@
           "nombre": "evaluarOportunidad",
           "kind": "function",
           "exportada": true,
-          "params": "s: SubastaInmueble, remate?: number | null, params?: ParamsCoste,",
+          "params": "s: SubastaInmueble, remate?: number | null, params?: ParamsCoste, anioActual: number = new Date().getFullYear(),",
           "retorno": "Oportunidad",
-          "linea": 30,
-          "resumen": "Evalúa una subasta: coste real, descuento, depósito y puntuación 0-100. @param remate precio de adjudicación a simular; por defecto el valor de subasta"
+          "linea": 32,
+          "resumen": "Evalúa una subasta: coste real, descuento, depósito y puntuación 0-100. @param remate precio de adjudicación a simular; por defecto el valor de subasta @param anioActual año de referencia para el ajus"
         },
         {
           "nombre": "porcentaje",
@@ -85613,7 +85613,7 @@
           "exportada": false,
           "params": "x: number",
           "retorno": "string",
-          "linea": 138
+          "linea": 167
         },
         {
           "nombre": "formatearEur",
@@ -85621,12 +85621,12 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 142
+          "linea": 171
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9aefb1c689c4"
+      "hash": "0998e3c83bad"
     },
     {
       "ruta": "packages/module-subastas/src/tesoreria.ts",
@@ -85696,6 +85696,58 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c42a988310ff"
+    },
+    {
+      "ruta": "packages/module-subastas/src/valoracion.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── De qué está hecho el «valor de mercado». PURO. Incidente que lo motiva (30/07/2026, Alberto): un piso de 1965 en la Avenida Pedro Romero de Sevilla, tipo de subasta 77.746,93€, salía con un valor de mercado de 334.645€ y un",
+      "exporta": [
+        "granularidadZona",
+        "referenciaOrientativa",
+        "superficieValorable",
+        "ajusteEstado"
+      ],
+      "funciones": [
+        {
+          "nombre": "granularidadZona",
+          "kind": "function",
+          "exportada": true,
+          "params": "zonaMercado: string | null | undefined, municipio?: string | null,",
+          "retorno": "GranularidadZona | null",
+          "linea": 66,
+          "resumen": "Qué de fina es la zona que sostiene el €/m². `zonaMercado` es la etiqueta que escribe el cron («Matalascañas», «SEVILLA · san-pablo-santa-justa», «SEVILLA (buscador Fotocasa)»…). El separador ` · ` ma"
+        },
+        {
+          "nombre": "referenciaOrientativa",
+          "kind": "function",
+          "exportada": true,
+          "params": "g: GranularidadZona | null",
+          "retorno": "boolean",
+          "linea": 97,
+          "resumen": "Una referencia ORIENTATIVA se enseña, pero no puede sostener por sí sola un aviso ni un «flip apto»: sabemos que el número no describe al inmueble."
+        },
+        {
+          "nombre": "superficieValorable",
+          "kind": "function",
+          "exportada": true,
+          "params": "registral: number | null | undefined, catastral: number | null | undefined,",
+          "retorno": "SuperficieValorable | null",
+          "linea": 118,
+          "resumen": "Los metros con los que se valora. Cuando hay dos cifras y discrepan se toma la MENOR, y se dice. No es un capricho conservador: con una referencia catastral de PARCELA (14 caracteres) el Catastro devu"
+        },
+        {
+          "nombre": "ajusteEstado",
+          "kind": "function",
+          "exportada": true,
+          "params": "anioConstruccion: number | null | undefined, anioActual: number,",
+          "retorno": "AjusteEstado",
+          "linea": 168,
+          "resumen": "Ajuste por estado a partir del año de construcción. Sin año no se ajusta (factor 1) pero se avisa: inventar una penalización tampoco es honesto."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3de8482c029a"
     },
     {
       "ruta": "packages/module-subastas/src/zona.ts",
@@ -87122,7 +87174,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2361,
-    "funciones": 6259
+    "archivos": 2362,
+    "funciones": 6263
   }
 }

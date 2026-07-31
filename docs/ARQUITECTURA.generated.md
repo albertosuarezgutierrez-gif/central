@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-31T05:54:27Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-31T06:02:56Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -217,6 +217,8 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (30/07/2026) 💰 Subastas: el «valor de mercado» dejaba de fabricar chollos falsos (30/07/2026, PR #1183).
+- (30/07/2026) 🔍 Subastas: el documento registral se lee ENTERO y «se adquiere libre» hay que ganárselo (30/07/2026, PR #1182).
 - (30/07/2026) 🕳️ Barrido del monorepo: afirmar ausencias no comprobadas (30/07/2026, misma rama).
 - (30/07/2026) 📎 Subastas: «sin documentos adjuntos» era MENTIRA (30/07/2026, rama `claude/documentos-adjuntos-o95xl1`).
 - (30/07/2026) ⚖️ Subastas — 3 partidas que faltaban en el coste real (30/07/2026, misma rama/PR #1176).
@@ -225,6 +227,4 @@
 - (29/07/2026) 🔒 Director de código Fase 2: cierre de PR con veredicto real de CI (29/07/2026).
 - (29/07/2026) 🔧 Subastas — HOTFIX /subastas caída + FASE 3 construida con datos reales (29/07/2026, mañana).
 - (29/07/2026) 🧹 agentes-entrenador — "repara todo" (29/07/2026): backlog de PRs + trabajo perdido recuperado.
-- (29/07/2026) 🐟 PR #1055 "mariscos" — CONFIRMADO cliente real, en pausa deliberada (29/07/2026).
-- (28/07/2026) 💸 PRICING — auditoría pre-baja de PriceLabs (28/07/2026, a petición de Alberto).
 
