@@ -68,8 +68,8 @@ export default function EmpresaClient({ branding }: { branding: Branding }) {
 
       <section className="mb-6 rounded-card border border-line bg-card p-4">
         <h2 className="mb-3 text-base font-semibold">Subir documento</h2>
-        <form onSubmit={subirDoc} className="grid gap-3">
-          <div className="flex flex-wrap gap-2">
+        <form onSubmit={subirDoc} className="grid grid-cols-1 gap-3">
+          <div className="flex min-w-0 flex-wrap gap-2">
             <select value={docCategoria} onChange={e => cambiarCategoria(e.target.value)} className="text-sm" aria-label="Categoría del documento">
               {CATEGORIAS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
@@ -86,9 +86,9 @@ export default function EmpresaClient({ branding }: { branding: Branding }) {
             )}
             <input placeholder="Nombre del documento (opcional)" value={docNombre} onChange={e => setDocNombre(e.target.value)} className="flex-1 min-w-[160px] text-sm" />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             <input key={docFileKey} type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xml"
-              onChange={e => setDocFile(e.target.files?.[0] ?? null)} className="flex-1 text-sm" />
+              onChange={e => setDocFile(e.target.files?.[0] ?? null)} className="min-w-0 flex-1 text-sm" />
             <button type="submit" disabled={subiendoDoc}>{subiendoDoc ? 'Subiendo…' : 'Subir'}</button>
           </div>
           {docMsg && <p className={`text-sm ${docMsg.startsWith('Error') ? 'text-alert' : 'text-ok'}`}>{docMsg}</p>}
@@ -96,7 +96,7 @@ export default function EmpresaClient({ branding }: { branding: Branding }) {
       </section>
 
       {porCategoria.length > 0 ? (
-        <div className="grid gap-4">
+        <div className="grid grid-cols-1 gap-4">
           {porCategoria.map(cat => (
             <section key={cat.id} className="rounded-card border border-line bg-card p-4">
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-3">{cat.label}</h2>

@@ -130,13 +130,13 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
 
       <section className="my-3 max-w-sm rounded-card border border-line bg-card p-4">
         <h2 className="mb-2 text-base">Identidad corporativa (marca blanca)</h2>
-        <form onSubmit={guardarMarca} className="grid gap-2.5">
+        <form onSubmit={guardarMarca} className="grid grid-cols-1 gap-2.5">
           <label className="text-ink-2 text-sm">Color corporativo</label>
           <div className="flex items-center gap-2">
             <input type="color" value={/^#[0-9a-fA-F]{6}$/.test(color) ? color : '#2b6a6e'}
               onChange={e => setColor(e.target.value)} className="h-10 w-12 p-1" aria-label="Color corporativo" />
-            <input value={color} onChange={e => setColor(e.target.value)} placeholder="#2b6a6e" className="flex-1" />
-            <span className="inline-block h-9 w-9 rounded-lg border border-line" style={{ background: color }} aria-hidden />
+            <input value={color} onChange={e => setColor(e.target.value)} placeholder="#2b6a6e" className="min-w-0 flex-1" />
+            <span className="inline-block h-9 w-9 shrink-0 rounded-lg border border-line" style={{ background: color }} aria-hidden />
           </div>
 
           <label className="text-ink-2 mt-1 text-sm">Logo (PNG, JPG, SVG o WebP · máx. 2 MB)</label>
@@ -146,7 +146,10 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
               <button type="button" onClick={quitarLogo} disabled={guardandoBrand} className="bg-paper-2 text-ink-2 hover:bg-line text-xs">Quitar</button>
             </div>
           )}
+          {/* w-full + min-w-0: el ancho intrínseco del control de archivo (~370 px) ensanchaba
+              el grid del formulario y sacaba la sección del viewport en móvil. */}
           <input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp"
+            className="w-full min-w-0"
             onChange={e => setLogoFile(e.target.files?.[0] ?? null)} />
 
           <button type="submit" disabled={guardandoBrand}>{guardandoBrand ? 'Guardando…' : 'Guardar marca'}</button>
@@ -157,7 +160,7 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
 
       <section className="my-3 max-w-sm rounded-card border border-line bg-card p-4">
         <h2 className="mb-2 text-base">Convenio colectivo</h2>
-        <form onSubmit={guardarConvenio} className="grid gap-2.5">
+        <form onSubmit={guardarConvenio} className="grid grid-cols-1 gap-2.5">
           <input placeholder="Código del convenio (REGCON)" value={cod} onChange={e => setCod(e.target.value)} />
           <input placeholder="Nombre del convenio (opcional)" value={nom} onChange={e => setNom(e.target.value)} />
           <button type="submit">Guardar convenio</button>
@@ -180,7 +183,7 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
               {datos.dias_permisos && Object.keys(datos.dias_permisos).length > 0 && (
                 <div>
                   <p className="text-ink-3 text-xs">Días de permisos (orientativo):</p>
-                  <ul className="grid gap-0.5">
+                  <ul className="grid grid-cols-1 gap-0.5">
                     {Object.entries(datos.dias_permisos).map(([k, v]) => (
                       <li key={k} className="text-xs">· {k.replace(/_/g, ' ')}: <strong>{String(v)}</strong></li>
                     ))}
@@ -199,7 +202,7 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
       <section className="my-3 rounded-card border border-line bg-card p-4">
         <h2 className="mb-3 text-base">Documentación de empresa</h2>
         <form onSubmit={subirDoc} className="mb-4 grid gap-2">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex min-w-0 flex-wrap gap-2">
             <select value={docCategoria} onChange={e => cambiarCategoria(e.target.value)} className="text-sm" aria-label="Categoría del documento">
               {CATEGORIAS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
@@ -216,8 +219,8 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
             )}
             <input placeholder="Nombre del documento (opcional)" value={docNombre} onChange={e => setDocNombre(e.target.value)} className="flex-1 text-sm" />
           </div>
-          <div className="flex items-center gap-2">
-            <input key={docFileKey} type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xml" onChange={e => setDocFile(e.target.files?.[0] ?? null)} className="flex-1 text-sm" />
+          <div className="flex min-w-0 items-center gap-2">
+            <input key={docFileKey} type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xml" onChange={e => setDocFile(e.target.files?.[0] ?? null)} className="min-w-0 flex-1 text-sm" />
             <button type="submit" disabled={subiendoDoc}>{subiendoDoc ? 'Subiendo…' : 'Subir'}</button>
           </div>
           {docMsg && <p className="text-sm text-ok">{docMsg}</p>}
@@ -258,7 +261,7 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
 
       <section className="my-3 max-w-sm rounded-card border border-line bg-card p-4">
         <h2 className="mb-2 text-base">Cambiar contraseña</h2>
-        <form onSubmit={enviar} className="grid gap-2.5">
+        <form onSubmit={enviar} className="grid grid-cols-1 gap-2.5">
           <input type="password" placeholder="Contraseña actual" value={actual} onChange={e => setActual(e.target.value)} />
           <input type="password" placeholder="Nueva contraseña (mín. 8)" value={nueva} onChange={e => setNueva(e.target.value)} minLength={8} />
           <button type="submit">Guardar</button>
