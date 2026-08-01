@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-01T12:25:22Z",
-  "sha": "f3053f16bd2cd79013e5342297ab88f226276609",
+  "generadoEn": "2026-08-01T12:35:55Z",
+  "sha": "e38038792e794fa4a852b22c2ffbe1cdebdfeffe",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -51064,6 +51064,7 @@
         }
       ],
       "tablas": [
+        "agente_latidos",
         "ai_usos",
         "cuentas",
         "cuentas_bancarias",
@@ -51074,7 +51075,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": "/api/cron/health-check",
-      "hash": "b95eaa7b296a"
+      "hash": "18189772fe51"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/ia-director-refresh/route.ts",
@@ -65359,7 +65360,7 @@
           "exportada": false,
           "params": "s?: string",
           "retorno": "Date | null",
-          "linea": 11
+          "linea": 12
         },
         {
           "nombre": "nights",
@@ -65367,7 +65368,7 @@
           "exportada": false,
           "params": "ci: Date | null, co: Date | null",
           "retorno": "number",
-          "linea": 17
+          "linea": 18
         },
         {
           "nombre": "fetchPage",
@@ -65375,7 +65376,7 @@
           "exportada": false,
           "params": "p: number, from: string, apiKey: string, arrFrom?: string, arrTo?: string",
           "retorno": null,
-          "linea": 21
+          "linea": 22
         },
         {
           "nombre": "runSync",
@@ -65383,7 +65384,7 @@
           "exportada": true,
           "params": "days: number, maxPages = 20, arrFrom?: string, arrTo?: string",
           "retorno": null,
-          "linea": 36
+          "linea": 37
         }
       ],
       "tablas": [
@@ -65391,7 +65392,7 @@
         "properties"
       ],
       "rutaApi": null,
-      "hash": "10a0f028b021"
+      "hash": "199f3ab5b5df"
     },
     {
       "ruta": "apps/plataforma/lib/smoobu.ts",
