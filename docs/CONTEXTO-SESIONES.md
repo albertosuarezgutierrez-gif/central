@@ -24,6 +24,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📈 Trading: el panel de estrategias por fin discrimina + limpieza de huérfanas (01/08/2026).** Revisión
+  «¿cómo va inversión?»: la pasada nocturna SÍ corre (NAV+tesis del 31/07), pero `puntuarTesis` devolvía el
+  movimiento BRUTO del precio para las 3 direcciones → las 4 estrategias empataban en `retornoMedio` por
+  construcción y `ajustesDeStats` penalizaba por caídas del mercado, no por errores. Ahora `retorno` = seguir
+  la tesis (bajista invierte signo, neutral = 0); 168 resultados históricos migrados en BD y stats recalculadas
+  (reversión +0,38% · momentum −0,27%). Tablas huérfanas `trading_forward_paper(_marca)` retiradas (pre-registro
+  cohorte 1 archivado en TRADING-HIPOTESIS-PREREGISTRO.md). 110 tests módulo · 721 app · tsc 0 · build OK.
+
 ### 💸 PriceLabs: baja ejecutada en Busto+Luxury; Luxury reactivado en el motor propio (01/08/2026)
 Alberto confirmó que **Busto Reform y Luxury ya están dados de baja de PriceLabs** (Dúplex/House siguen
 en PL por decisión suya, transición en dos fases). El informe de decisión (BD 31/07) encontró a **Luxury
