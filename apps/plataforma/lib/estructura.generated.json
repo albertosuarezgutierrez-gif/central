@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-31T08:51:48Z",
+  "generadoEn": "2026-08-01T07:31:52Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3968,6 +3968,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔴 Luxury a 841€/noche todo junio 2027 por UN día de concierto — bucket de mes contaminado (31/07/2026).",
+      "fecha": "31/07/2026"
+    },
+    {
       "titulo": "🔎 Verificación en caliente del arreglo de los ADR + techo al nº de acciones (31/07/2026).",
       "fecha": "31/07/2026"
     },
@@ -4021,10 +4025,6 @@
     },
     {
       "titulo": "📎 Subastas: «sin documentos adjuntos» era MENTIRA (30/07/2026, rama `claude/documentos-adjuntos-o95xl1`).",
-      "fecha": "30/07/2026"
-    },
-    {
-      "titulo": "⚖️ Subastas — 3 partidas que faltaban en el coste real (30/07/2026, misma rama/PR #1176).",
       "fecha": "30/07/2026"
     }
   ],
