@@ -24,6 +24,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 facturas-correo (01/08/2026, trigger diario).** Vía B sana, sin backlog. Archivada la factura
+  de la lavandería Giraldillo AFV-11808 (72,60€, deducible); pago aún pendiente, sin conciliar. **Hallazgo
+  colateral:** el cron `facturas-scan` (`apps/plataforma/lib/agente-facturas/drive.ts`) archiva TODO lo que
+  procesa en `ALBERTO 2026 PERSONAL (SEGUROS)/<mes>` en vez del árbol de negocio — mismo patrón que Castuera
+  (10/07, aviso aún sin borrar). No es un bug de esta skill (yo re-archivo bien y aviso en
+  `_DUPLICADOS_BORRAR`), pero conviene revisar la resolución de carpeta de ese cron algún día. Detalle en
+  `docs/AGENTES-BITACORA.md`.
+
 - **🔎 Verificación en caliente del arreglo de los ADR + techo al nº de acciones (31/07/2026).** Sin esperar
   al cron: bajados por `pg_net` los companyfacts de los 5 peores del radar y pasados por el parser ya
   mergeado. NMR (30.061.813 mil M$ de capitalización), PAC, LTM, BSAC y BCH → los 5 salen `emisorExtranjero`

@@ -15,6 +15,17 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-01 · facturas-correo (trigger diario)** · hizo: Vía B sana (dias_caido=0, `agente_salud`
+  actualizado), sin backlog en `PDF-pendiente`/`Revisar`. 2 candidatos: Giraldillo AFV-11808 (72,60€,
+  lavandería, deducible `turistico_pisos`) archivado en Drive con nombre normalizado, conciliación
+  bancaria pendiente (factura sigue "PENDIENTE" de pago, sin cargo aún) — y ParkingLibre (extracto a
+  0,00€, sin gasto real, sin archivar). Ambos hilos `Facturas/Procesada`. **Hallazgo:** el cron de
+  producción `facturas-scan` (`apps/plataforma/lib/agente-facturas/drive.ts`) sigue archivando TODO lo
+  que procesa (Giraldillo y ParkingLibre de hoy incl.) en `ALBERTO 2026 PERSONAL (SEGUROS)/<mes>` en vez
+  de la estructura de negocio — mismo patrón ya visto con Castuera el 10/07 (aviso aún sin borrar);
+  registrado nuevo aviso en `_DUPLICADOS_BORRAR` para Giraldillo. dudas: —; fallos: — (la mis-ubicación
+  del cron no es de esta skill, pero convendría revisar `DRIVE_SCRIPT_URL`/resolución de carpeta);
+  PRs/commits: rama `claude/inspiring-gauss-us1b8v`.
 - **2026-07-31 · pricing-agente (check-in programado del cutover)** · hizo: verificado que el sync de
   Smoobu NO está roto (cron 05:01 → 200; `incomes` parado desde 25/07 es sequía real, corroborada por
   `available` de Smoobu) y que el motor tarifica en mercado (Busto 81€ vs p50 80€). Documentada en
