@@ -24,6 +24,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 💓 El latido de facturas no faltaba: la pasada moría en 504 antes de escribirlo (31/07/2026)
+Aviso «🧾 Escaneo de facturas: sin ninguna señal registrada» el mismo día de estrenar el vigía (#1184).
+No era IMAP ni la app-password: `facturas-scan` corre a diario y **muere en 504 a los 60 s** (3 de sus
+últimas 4 pasadas), a mitad del escaneo — ese 06:16 ya había insertado IONOS y Punto y Coma — sin llegar
+nunca a `registrarLatido`, que estaba al final. Fix: `maxDuration` 60→300 **+ presupuesto de tiempo**
+(deadline en el escaneo y en el listado IMAP, que devuelve `truncado`), **latido de intento al empezar**
+y el definitivo justo tras el escaneo, y `evaluarLatido` con `ultimo_at`+`detalle` para separar «no se
+dispara» de «se dispara y no termina». Verificado: tsc 0 · 702 tests · build OK · upsert probado en BD.
+**01/08:** el PR sigue SIN mergear y la pasada de las 06:15 volvió a dar 504 (`agente_latidos` sigue vacía,
+ninguna factura nueva desde el 31/07) — los logs añaden el porqué: los reintentos de `aiExtractInvoice`
+(NIM timeout, Groq JSON truncado) son los que se comen los 60 s. PR #1194 pendiente de merge.
+
 - **🔴 Luxury a 841€/noche todo junio 2027 por UN día de concierto — bucket de mes contaminado (31/07/2026).**
   La primera pasada del motor con el factor de aforo (08:30) subió Luxury el +20% (tope del raíl) en sus 250
   fechas y dejó a la vista un fallo anterior: **el bucket por MES se calculaba con las noches de evento dentro**.

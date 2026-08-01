@@ -548,6 +548,21 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
   nadie — ver el landmine en `apps/ialimp/CLAUDE.md`) y además avisa si hay `sync_error`, porque el sync
   marca la fecha aunque la pasada haya fallado. Es infraestructura del SaaS de Alberto, **no** el backlog
   operativo de Vanessa (eso sigue vetado, ver Check 6 retirado).
+- **🚨 LANDMINE — la huella se escribe DENTRO del trabajo que vigila: si la función muere, no hay
+  huella (31/07/2026).** El mismo día de estrenar el vigía saltó «🧾 Escaneo de facturas: sin ninguna
+  señal registrada» y la nota mandaba a mirar IMAP/app-password. No era eso: `facturas-scan` corría
+  todos los días y **moría en 504** («Task timed out after 60 seconds», 3 de sus últimas 4 pasadas)
+  a mitad del escaneo — con facturas ya insertadas (IONOS y Punto y Coma ese 06:16) pero sin llegar
+  jamás a `registrarLatido`, que estaba al final. Tres arreglos, aplicables a cualquier agente nuevo:
+  (a) **`maxDuration` 60 → 300** y **presupuesto de tiempo explícito** (`escanearNuevasFacturas(…, {deadline})`
+  y `listarCandidatosConLimite`, que corta el listado IMAP): subir el techo solo mueve la pared, el
+  presupuesto es lo que garantiza que la pasada VUELVE; (b) **latido de INTENTO al empezar** (`ok=false`,
+  no toca `ultimo_ok_at`) + **latido definitivo justo después del escaneo**, nunca al final de la ruta —
+  la huella del buzón no puede depender de que la conciliación bancaria posterior termine; (c) `evaluarLatido`
+  recibe también `ultimo_at` y `detalle` para **distinguir «no se dispara» de «se dispara y no termina»**
+  (antes ambas eran el mismo «sin ninguna señal» y mandaban a buscar al sitio equivocado). Un listado IMAP
+  truncado devuelve `ok:false`: se ha visto MEDIO buzón, y eso no es haberlo mirado. Los `pendientes`
+  van en el `detalle` (se retoman en la pasada siguiente, dedupe por `gmail_uid`).
 - **Una sonda que revienta ya NO se traga en silencio**: va en un bloque aparte del Telegram, «Sin poder
   comprobar — esto NO es "todo bien"». Un vigía averiado que calla es un parte de buena salud falso.
 
