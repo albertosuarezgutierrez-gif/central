@@ -115,6 +115,15 @@ export async function runSync(days: number, maxPages = 20, arrFrom?: string, arr
     }
   }
 
+  // Latido del sync (huella FIABLE: se refresca en CADA pasada que termina bien, haya o no
+  // reservas — `incomes` solo escribe cuando entra una nueva, así que no sirve de huella).
+  // Lo lee el Check 4 del health-check para distinguir "sync averiado" de "temporada sin
+  // reservas". Best-effort: sin la tabla (2026-08-01_sync_latidos.sql) no rompe el sync.
+  await prisma.$executeRaw(Prisma.sql`
+    INSERT INTO sync_latidos (clave, ultimo) VALUES ('smoobu', now())
+    ON CONFLICT (clave) DO UPDATE SET ultimo = now()
+  `).catch(() => {})
+
   return {
     success: true,
     message: `${cnt.new} nuevas, ${cnt.modified} modificadas, ${cnt.cancelled} canceladas`,

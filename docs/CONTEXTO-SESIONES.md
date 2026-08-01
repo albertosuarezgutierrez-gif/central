@@ -24,6 +24,13 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⚕️ Check 4 del health-check reescrito: latido del sync, no última reserva (01/08/2026, rama
+  `claude/health-check-2026-07-30-vlv4c7`).** Feedback de Alberto: la sequía de reservas (25/07→01/08,
+  sync verificado sano por logs 200) se pintaba como 🔴 — «que especifique el fallo, ya que no es un
+  fallo». Nueva tabla `sync_latidos` (migración `2026-08-01_sync_latidos.sql`, aplicada+semilla);
+  `runSync` la refresca en cada pasada buena (best-effort). Check 4: 🔴 solo si el latido lleva >26h
+  (sync averiado de verdad); sin reservas nuevas → línea ✅ informativa «temporada floja, no es un fallo».
+
 ### 💸 PriceLabs: baja ejecutada en Busto+Luxury; Luxury reactivado en el motor propio (01/08/2026)
 Alberto confirmó que **Busto Reform y Luxury ya están dados de baja de PriceLabs** (Dúplex/House siguen
 en PL por decisión suya, transición en dos fases). El informe de decisión (BD 31/07) encontró a **Luxury
