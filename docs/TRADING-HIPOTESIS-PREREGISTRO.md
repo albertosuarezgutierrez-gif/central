@@ -80,6 +80,22 @@ primer dato forward — la cohorte 2 y el radar empiezan a medir el 20/07/2026).
 - **Datos:** `trading_cohetes_track` (curva) + `trading_cohetes_rebalanceo` (libro). NO se auto-modifica
   el criterio de selección; cualquier cambio de reglas lo decide Alberto con este forward.
 
+## 📦 Archivo — pre-registro original de la cohorte 1 (tabla `trading_forward_paper`, retirada 01/08/2026)
+La primera cohorte se pre-registró el 18/07/2026 en una tabla ad-hoc (`trading_forward_paper`, con
+`trading_forward_paper_marca` para marcas interinas) que quedó huérfana cuando el forward pasó a
+`COHORTES_PAPER` (código) + `trading_paper_track` (cron `paper-tracker`). Antes de retirar ambas
+tablas se archiva aquí su única fila — es el registro firmado y no se puede perder. Los símbolos y la
+fecha coinciden con la cohorte `2026-07-18.v1` de `paper-cartera.ts`; el detalle extra son los
+precios de entrada (cierre IBKR del 18/07) y la ventana:
+- **fecha_inicio** 2026-07-18 · **ventana_fin** 2027-01-18 · **benchmark** SPY @ 750,72 ·
+  **ponderación** equal-weight · **params** gurús ∩ calidad (Piotroski≥6, ROIC≥0,10).
+- **Picks (entry, cierre 18/07):** MSFT 401,10 · APP 434,48 · DAL 86,70 · CVI 33,46 · NYT 76,71 ·
+  LYV 179,85 · GOOG 353,81 · AMZN 249,89.
+- **Métrica firmada:** mediana de retornos por símbolo (equal-weight, 8 nombres) desde el cierre de
+  fecha_inicio > retorno de SPY en la misma ventana; sin re-seleccionar durante la ventana.
+- **Notas firmadas:** la selección arrastra look-ahead/survivorship (elegida sobre histórico
+  conocido), por eso el forward es el único test sin sesgo; n=8 pequeño; checkpoint principal 6 meses.
+
 ---
 *Cambios a este documento: solo AÑADIR entradas fechadas; nunca editar una hipótesis ya registrada
 (si una condición resultó mal planteada, se registra una enmienda nueva explicando por qué).*

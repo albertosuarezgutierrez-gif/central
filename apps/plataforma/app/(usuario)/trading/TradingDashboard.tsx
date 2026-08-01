@@ -262,7 +262,9 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
           <summary style={{ fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 8 }}>📊 Rendimiento por estrategia <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>(walk-forward, fuera de muestra)</span></summary>
           <div style={{ ...card, padding: 0, overflowX: 'auto' }}>
             <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 520 }}>
-              <thead><tr><th style={th}>Estrategia</th><th style={th}>Régimen</th><th style={th}>Aciertos</th><th style={th}>Retorno medio</th><th style={th}>Muestra</th></tr></thead>
+              {/* «Retorno medio» = retorno de SEGUIR la señal (bajista gana si cae; neutral = fuera de mercado, 0),
+    no el movimiento bruto del precio — ver puntuarTesis en @central/module-trading. */}
+              <thead><tr><th style={th}>Estrategia</th><th style={th}>Régimen</th><th style={th}>Aciertos</th><th style={th}>Retorno medio (siguiendo la señal)</th><th style={th}>Muestra</th></tr></thead>
               <tbody>
                 {stats.map(e => (
                   <tr key={e.id}>
