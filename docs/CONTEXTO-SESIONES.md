@@ -24,6 +24,13 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⚕️ Check 4 del health-check reescrito: latido del sync, no última reserva (01/08/2026, rama
+  `claude/health-check-2026-07-30-vlv4c7`).** Feedback de Alberto: la sequía de reservas (25/07→01/08,
+  sync verificado sano por logs 200) se pintaba como 🔴 — «que especifique el fallo, ya que no es un
+  fallo». `runSync` registra latido en **`agente_latidos`** (`smoobu_sync`, patrón #1184: intento al
+  empezar + ok al terminar; semilla aplicada). Check 4: 🔴 solo si `ultimo_ok_at` lleva >26h (sync
+  averiado de verdad); sin reservas nuevas → línea ✅ informativa «temporada floja, no es un fallo».
+
 ### 📐 El mercado de House se leía de pisos de OTRO tamaño (01/08/2026)
 Alberto: «House Sevillana aún está en PriceLabs como dúplex». Cierto fuera y también DENTRO: los 30
 comparables vivos de una casa de **12 plazas** eran de apartamentos de **8** (media 314€). El motor
@@ -86,6 +93,7 @@ sin entradas (final de Copa, congresos de FIBES, giras sin fecha). Asimetría de
 y avisa por Telegram. Migración `2026-08-01_pricing_eventos_previstos.sql` APLICADA. Bienal metida
 como previsto (factor 1.25, solo findes) porque el mercado NO la respalda todavía: el 12/09 sale más
 barato que el 05/09. Crons de eventos y barrido pasados a DIARIOS. 105 tests, tsc 0, build OK.
+>>>>>>> origin/main
 
 ### 💸 PriceLabs: baja ejecutada en Busto+Luxury; Luxury reactivado en el motor propio (01/08/2026)
 Alberto confirmó que **Busto Reform y Luxury ya están dados de baja de PriceLabs** (Dúplex/House siguen

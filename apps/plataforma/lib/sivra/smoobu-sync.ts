@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { getSmoobuKey } from '@/lib/smoobu'
 import { PORTAL_MAP } from '@/lib/portales'
+import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 
 const BOOKING_NET_FACTOR = 0.8028
 
@@ -34,6 +35,12 @@ async function fetchPage(p: number, from: string, apiKey: string, arrFrom?: stri
 }
 
 export async function runSync(days: number, maxPages = 20, arrFrom?: string, arrTo?: string) {
+  // Latido de INTENTO antes de tocar Smoobu (patrón agente_latidos, landmine 31/07/2026):
+  // si la pasada muere a medias, queda constancia de que SE DISPARÓ y no terminó — sin esto,
+  // «no se dispara» y «se dispara y no termina» son el mismo silencio. `incomes` no sirve de
+  // huella (solo escribe cuando entra una reserva); el Check 4 del health-check lee ultimo_ok_at.
+  await registrarLatido('smoobu_sync', false, 'inicio de pasada')
+
   const API_KEY = await getSmoobuKey()
   if (!API_KEY) throw new Error('SMOOBU_API_KEY no configurada')
 
@@ -131,6 +138,9 @@ export async function runSync(days: number, maxPages = 20, arrFrom?: string, arr
       } else cnt.skipped++
     }
   }
+
+  await registrarLatido('smoobu_sync', true,
+    `${cnt.new} nuevas, ${cnt.modified} modificadas, ${cnt.cancelled} canceladas (${all.length} vistas, desde ${from})`)
 
   return {
     success: true,
