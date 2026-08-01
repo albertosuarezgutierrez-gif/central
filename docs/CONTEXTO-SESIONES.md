@@ -40,6 +40,10 @@ salía mi propuesta de bajar House a 330-350€: **retirada**. Dos arreglos: el 
 contra el mercado NORMALIZADO (iba en crudo → en el único piso donde importaba medía un 36% barato y
 no podía disparar) y **centinela #9 `comps_otro_aforo`** (puro + 8 tests; umbral x1,35 para que
 Luxury 5-plazas-con-comps-de-4 no haga ruido). El barrido diario de #1203 repone los comps buenos.
+**Coletilla (mismo día, cierra el último pendiente): el «pico» del sábado 17/10 en House NO era un evento**,
+era este mismo fallo. Es la ÚNICA fecha suya medida a 12 plazas (barrido del 09/06); el resto van a 8. En bruto
+salía 610€ contra 307-382€ y parecía un pelotazo; normalizadas las dos a 12 plazas, el 17/10 (610€) queda en
+mitad del pelotón — 05/09 596€, 19/06/27 610€ clavado. No hay nada que catalogar ese día.
 
 ### 🏠 Un piso puede cambiar de PRODUCTO: `historico_desde` + Gemini fuera (01/08/2026)
 Dato de Alberto: **House Sevillana estuvo alquilada como DOS pisos turísticos independientes** hasta
