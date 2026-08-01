@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-01T20:11:08Z",
-  "sha": "8b5c29d2f8d9763c292aa92d52bc50693cb8ff89",
+  "generadoEn": "2026-08-01T20:30:01Z",
+  "sha": "e4e1a7dba6e01e7d1b689ef8066cc8093c09a1f5",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47490,11 +47490,10 @@
       "tablas": [
         "next",
         "subastas",
-        "subastas_criterios",
-        "subastas_radar"
+        "subastas_criterios"
       ],
       "rutaApi": null,
-      "hash": "7bad8787d08e"
+      "hash": "1a7114537d39"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/subastas/SubastasClient.tsx",
@@ -51255,7 +51254,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<number>",
-          "linea": 27,
+          "linea": 28,
           "resumen": "Señal ANTICIPADA: promotoras/inmobiliarias en concurso de acreedores en las provincias vigiladas. Sus inmuebles suelen acabar en subasta o liquidación meses después — enterarse hoy da ventaja. Ventana"
         },
         {
@@ -51264,7 +51263,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 53
+          "linea": 54
         },
         {
           "nombre": "GET",
@@ -51272,18 +51271,17 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 57
+          "linea": 58
         }
       ],
       "tablas": [
         "borme_eventos",
         "next",
-        "subastas",
         "subastas_criterios",
         "subastas_radar"
       ],
       "rutaApi": "/api/cron/subastas-avisos",
-      "hash": "cf1b639490dd"
+      "hash": "77edc52dcfff"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-cierre/route.ts",
@@ -55528,7 +55526,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 16
+          "linea": 17
         }
       ],
       "tablas": [
@@ -55537,7 +55535,7 @@
         "subastas_radar"
       ],
       "rutaApi": "/api/subastas/mapa",
-      "hash": "ac914749bc83"
+      "hash": "bf0d1730f090"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/nota-simple/route.ts",
@@ -55613,7 +55611,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 10
+          "linea": 11
         },
         {
           "nombre": "POST",
@@ -55621,7 +55619,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 38
+          "linea": 45
         }
       ],
       "tablas": [
@@ -55629,7 +55627,7 @@
         "subastas_radar"
       ],
       "rutaApi": "/api/subastas/radar",
-      "hash": "a4bcd8adfeea"
+      "hash": "ccc26a0f83c4"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/route.ts",
@@ -55654,7 +55652,7 @@
         "subastas_criterios"
       ],
       "rutaApi": "/api/subastas",
-      "hash": "9ba39c9b5754"
+      "hash": "02f7fef1b743"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/seguidas/route.ts",
@@ -65490,7 +65488,7 @@
           "exportada": true,
           "params": "f: any",
           "retorno": "SubastaInmueble",
-          "linea": 54,
+          "linea": 96,
           "resumen": "Fila cruda de `subastas` → el tipo del módulo."
         },
         {
@@ -65499,7 +65497,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<FilaCriterios[]>",
-          "linea": 124,
+          "linea": 166,
           "resumen": "Cuentas con el radar activo y sus criterios."
         },
         {
@@ -65508,7 +65506,7 @@
           "exportada": true,
           "params": "limite = 500",
           "retorno": "Promise<SubastaInmueble[]>",
-          "linea": 150,
+          "linea": 192,
           "resumen": "Subastas candidatas: en plazo (o sin fecha conocida) y recientes. No se rebarre todo el histórico en cada pasada."
         },
         {
@@ -65517,7 +65515,7 @@
           "exportada": true,
           "params": "cuentaId: string, criterios: CriteriosSubasta, corpus: SubastaInmueble[], params: ParamsCoste = {},",
           "retorno": "Promise<number>",
-          "linea": 173,
+          "linea": 213,
           "resumen": "Casa el corpus con los criterios de una cuenta e inserta lo nuevo. El upsert REFRESCA el snapshot y las cifras: el radar corre a las 06:30, DESPUÉS del enriquecimiento (06:15) y del valor de mercado ("
         },
         {
@@ -65526,7 +65524,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 246,
+          "linea": 286,
           "resumen": "Pasada completa: descarga el corpus UNA vez y lo empareja con cada cuenta."
         }
       ],
@@ -65538,7 +65536,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "7784dbe04057"
+      "hash": "11f8e2f66e2c"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/boe.ts",
@@ -65825,7 +65823,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "d233ac41ef8e"
+      "hash": "67db85dd25bb"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/enriquecer.ts",
@@ -84464,12 +84462,12 @@
           "exportada": true,
           "params": "e: EntradaAviso",
           "retorno": "ResultadoAviso",
-          "linea": 62
+          "linea": 70
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6003f95dd673"
+      "hash": "f64dbd229287"
     },
     {
       "ruta": "packages/module-subastas/src/caducidad.ts",

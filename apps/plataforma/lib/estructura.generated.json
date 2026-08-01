@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-01T17:43:11Z",
+  "generadoEn": "2026-08-01T20:30:01Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3968,6 +3968,10 @@
     }
   ],
   "novedades": [
+    {
+      "titulo": "⏰ Subasta vencida seguía en «🎯 Mi radar» (01/08/2026, rama `claude/expired-auction-visible-eoow4t`).",
+      "fecha": "01/08/2026"
+    },
     {
       "titulo": "📈 Trading: el panel de estrategias por fin discrimina + limpieza de huérfanas (01/08/2026).",
       "fecha": "01/08/2026"
