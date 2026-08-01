@@ -24,6 +24,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⚖️ «Cargas no publicadas» con la certificación publicada y enlazada (01/08/2026, rama
+  `claude/carga-no-recogida-analizada-vjkwc9`).** Alberto con captura: `SUB-JA-2026-264478` tenía en el BOE
+  su «certificación de dominio y cargas», el cron la había listado y descargado (`documentos_leidos=1`), y la
+  ficha remataba con «Cargas no publicadas: pide la certificación registral». **Causa:** el gate de
+  rentabilidad `mereceAnalisisProfundo` (salida = tasación → 0% descuento, flip −30,6%) bloqueaba la lectura
+  IA, así que `cargas_conocidas` se quedaba en `false` — y `false` se pintaba como «el BOE no lo publica».
+  **Fix:** `estadoCargas`/`titularCargas` en `module-subastas/cargas.ts` (5 estados, testeados) usados por la
+  ficha y por `analisisDocumental`, con enlace directo al PDF; y el gate de rentabilidad deja de ser gate de
+  lectura: si la ficha publica documento de cargas se lee igual (`LECTOR_VERSION` 4→5, cargas primero en la
+  cola de descarga). 14 vivas, solo 3 pasaban el gate.
+
 ### 🔴 La comisión de Booking se descontaba DOS VECES — 17.723€ en 2026 (01/08/2026)
 Auditoría a fondo del precio dinámico pedida por Alberto. El hallazgo más caro NO es del motor:
 `incomes` tiene un **trigger** (`incomes_compute_net`) que calcula `amount = amount_gross × (1 −
