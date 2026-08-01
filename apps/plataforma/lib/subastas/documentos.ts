@@ -33,6 +33,7 @@ import {
   cargasQueSubsisten,
   datosDeEdicto,
   enlacesDocumentos,
+  esDocumentoDeCargas,
   fichaLegible,
   mismoAcreedorQueEjecutante,
   notasDeEdicto,
@@ -54,7 +55,7 @@ const MAX_BYTES_DOC = 20 * 1024 * 1024
  * arregla el punto 2 de arriba — sin esto, mejorar el prompt no rescata nada de
  * lo ya (mal) leído.
  */
-export const LECTOR_VERSION = 4
+export const LECTOR_VERSION = 5
 
 /** Documentos que NO merecen una llamada de IA: no contienen cargas. */
 const RUIDO = /^(justificante|minuta|honorarios|tasa|pago|aranceles?)\b/i
@@ -96,6 +97,8 @@ export interface ResultadoFicha {
   detalle: Array<{ titulo: string; via: string; paginas: number; cargas: number; discrepancias: string[] }>
   /** TODOS los documentos que publica la ficha, no solo los leídos. */
   documentos: DocumentoAdjunto[]
+  /** ¿Se llegó a llamar al lector registral (IA) en esta ficha? */
+  analisisProfundo: boolean
 }
 
 /**
@@ -118,13 +121,30 @@ export async function procesarDocumentosDeFicha(
   // Se listan TODOS (los enlaces son gratis) y se descargan solo los primeros.
   const todos = enlacesDocumentos(html)
 
+  // 🚨 El gate de RENTABILIDAD no puede ser también el gate de LECTURA.
+  // Si la ficha publica la certificación de cargas, se lee — punto. Una lectura
+  // cuesta céntimos; pujar sin saber qué cargas se heredan cuesta el inmueble.
+  // Caso real (01/08/2026, SUB-JA-2026-264478): salida = tasación, margen de
+  // flip −30,6% → `mereceAnalisisProfundo` decía que no, la certificación se
+  // descargaba pero NUNCA se analizaba, y la ficha remataba diciendo «Cargas no
+  // publicadas» con el PDF enlazado justo debajo.
+  const leerCargas = (opts.leerCargas ?? false) || todos.some((d) => esDocumentoDeCargas(d.titulo))
+
   const notas = new Set<string>()
   const lecturas: LecturaDocumento[] = []
   const detalle: ResultadoFicha['detalle'] = []
   const documentos: DocumentoAdjunto[] = todos.map((d) => ({ titulo: d.titulo, url: d.url, legible: null }))
   let leidos = 0
 
-  for (let i = 0; i < Math.min(todos.length, MAX_DOCS_POR_FICHA); i++) {
+  // Los documentos de cargas se descargan PRIMERO: con el tope de
+  // `MAX_DOCS_POR_FICHA`, una certificación que fuera el séptimo enlace se
+  // quedaba fuera por orden de aparición, que es un criterio que no significa nada.
+  const orden = todos
+    .map((_, i) => i)
+    .sort((a, b) => Number(esDocumentoDeCargas(todos[b].titulo)) - Number(esDocumentoDeCargas(todos[a].titulo)))
+    .slice(0, MAX_DOCS_POR_FICHA)
+
+  for (const i of orden) {
     const doc = todos[i]
     try {
       const r = await bajar(doc.url, 40000)
@@ -145,7 +165,7 @@ export async function procesarDocumentosDeFicha(
 
       // Sin análisis profundo un escaneo se queda sin leer: la ficha debe poder
       // decir «ábrelo a mano» en vez de callar.
-      if (!opts.leerCargas || RUIDO.test(doc.titulo)) {
+      if (!leerCargas || RUIDO.test(doc.titulo)) {
         if (escaneado || esImagen) documentos[i].legible = false
         continue
       }
@@ -175,7 +195,7 @@ export async function procesarDocumentosDeFicha(
     }
   }
 
-  return { notas: [...notas], cuadro: fusionarCuadros(lecturas), leidos, detalle, documentos }
+  return { notas: [...notas], cuadro: fusionarCuadros(lecturas), leidos, detalle, documentos, analisisProfundo: leerCargas }
 }
 
 /** Fila mínima que necesita la pasada. */
@@ -239,9 +259,11 @@ export async function procesarDocumentos(max = 10): Promise<{
 
   for (const f of filas) {
     try {
-      const profundo = mereceAnalisisProfundo(f)
-      if (profundo) analizadas++
-      const r = await procesarDocumentosDeFicha(f.identificador, { leerCargas: profundo })
+      // El gate de rentabilidad solo ADELANTA la decisión: la ficha puede
+      // volver a decir que sí si publica un documento de cargas (que no se sabe
+      // hasta haberla bajado). El contador cuenta lo que de verdad se analizó.
+      const r = await procesarDocumentosDeFicha(f.identificador, { leerCargas: mereceAnalisisProfundo(f) })
+      if (r.analisisProfundo) analizadas++
 
       // Con fecha: así el resumen guardado ya marca las anotaciones que por el
       // art. 86 LH podrían estar caducadas (marcar, no descontar).
