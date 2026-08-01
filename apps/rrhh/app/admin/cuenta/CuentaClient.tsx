@@ -1,19 +1,11 @@
 'use client'
 import { useState, useEffect } from 'react'
 import AdminShell from '@/components/AdminShell'
+import { CATEGORIAS, MESES, etiquetaCategoria, pideAnio, pideMes, sufijoPeriodo } from '@/lib/categorias-empresa'
 
 type Analisis = { resumen?: string; dias_permisos?: Record<string, number | string>; jornada_anual_horas?: number | string | null; vacaciones?: number | string | null; fuente?: string | null; _meta?: { aviso?: string; con_busqueda?: boolean } }
 type Branding = { nombre: string; color_primario: string | null; logo_url: string | null; tiene_fichaje?: boolean }
 type DocEmpresa = { id: string; categoria: string; nombre: string; storage_path: string; anio: number | null; mes: number | null; subido_at: string; url: string | null }
-
-const CATEGORIAS = [
-  { id: 'cif', label: 'CIF' },
-  { id: 'escritura', label: 'Escritura' },
-  { id: 'seguro_social', label: 'Seguro Social (TC2)' },
-  { id: 'poliza', label: 'Póliza de seguro' },
-  { id: 'otro', label: 'Otro' },
-]
-const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
 export default function CuentaClient({ convenio, analisis, analisisFecha, branding }: {
   convenio: { codigo: string; nombre: string }
@@ -91,6 +83,12 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
     if (!confirm(`¿Borrar "${nombre}"?`)) return
     await fetch(`/api/admin/cuenta/documentos/${id}`, { method: 'DELETE' })
     await cargarDocs()
+  }
+
+  function cambiarCategoria(id: string) {
+    setDocCategoria(id)
+    if (!pideAnio(id)) setDocAnio('')
+    if (!pideMes(id)) setDocMes('')
   }
 
   const [datos, setDatos] = useState<Analisis | null>(analisis)
@@ -202,14 +200,14 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
         <h2 className="mb-3 text-base">Documentación de empresa</h2>
         <form onSubmit={subirDoc} className="mb-4 grid gap-2">
           <div className="flex flex-wrap gap-2">
-            <select value={docCategoria} onChange={e => setDocCategoria(e.target.value)} className="text-sm">
+            <select value={docCategoria} onChange={e => cambiarCategoria(e.target.value)} className="text-sm" aria-label="Categoría del documento">
               {CATEGORIAS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
-            {(docCategoria === 'seguro_social' || docCategoria === 'poliza') && (
+            {pideAnio(docCategoria) && (
               <>
-                <input placeholder="Año (ej. 2026)" value={docAnio} onChange={e => setDocAnio(e.target.value)} className="w-24 text-sm" />
-                {docCategoria === 'seguro_social' && (
-                  <select value={docMes} onChange={e => setDocMes(e.target.value)} className="text-sm">
+                <input placeholder="Año (ej. 2026)" value={docAnio} onChange={e => setDocAnio(e.target.value)} className="w-24 text-sm" aria-label="Año" />
+                {pideMes(docCategoria) && (
+                  <select value={docMes} onChange={e => setDocMes(e.target.value)} className="text-sm" aria-label="Mes">
                     <option value="">Mes</option>
                     {MESES.map((m, i) => <option key={i + 1} value={String(i + 1)}>{m}</option>)}
                   </select>
@@ -239,7 +237,7 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
               <tbody>
                 {docs.map(d => (
                   <tr key={d.id} className="border-b border-line/50 last:border-0 hover:bg-paper-2/50">
-                    <td className="py-1.5 pr-2 text-xs text-ink-3 capitalize">{CATEGORIAS.find(c => c.id === d.categoria)?.label ?? d.categoria}{d.anio ? ` ${d.anio}` : ''}{d.mes ? `/${String(d.mes).padStart(2,'0')}` : ''}</td>
+                    <td className="py-1.5 pr-2 text-xs text-ink-3">{etiquetaCategoria(d.categoria)}{d.anio ? ` ${sufijoPeriodo(d.anio, d.mes)}` : ''}</td>
                     <td className="py-1.5 pr-2">{d.nombre}</td>
                     <td className="py-1.5 pr-2 text-xs text-ink-3 hidden sm:table-cell">{new Date(d.subido_at).toLocaleDateString('es-ES')}</td>
                     <td className="py-1.5 text-right">

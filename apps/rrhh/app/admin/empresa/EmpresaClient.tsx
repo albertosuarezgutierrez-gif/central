@@ -1,19 +1,10 @@
 'use client'
 import { useState, useEffect } from 'react'
 import AdminShell from '@/components/AdminShell'
+import { CATEGORIAS, MESES, pideAnio, pideMes, sufijoPeriodo } from '@/lib/categorias-empresa'
 
 type Branding = { nombre: string; color_primario: string | null; logo_url: string | null; tiene_fichaje?: boolean }
 type DocEmpresa = { id: string; categoria: string; nombre: string; storage_path: string; anio: number | null; mes: number | null; subido_at: string; url: string | null }
-
-const CATEGORIAS = [
-  { id: 'cif', label: 'CIF' },
-  { id: 'escritura', label: 'Escritura' },
-  { id: 'seguro_social', label: 'Seguro Social (TC2)' },
-  { id: 'poliza', label: 'Póliza de seguro' },
-  { id: 'contrato', label: 'Contrato' },
-  { id: 'otro', label: 'Otro' },
-]
-const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
 export default function EmpresaClient({ branding }: { branding: Branding }) {
   const [docs, setDocs] = useState<DocEmpresa[]>([])
@@ -53,10 +44,23 @@ export default function EmpresaClient({ branding }: { branding: Branding }) {
     await cargarDocs()
   }
 
-  const porCategoria = CATEGORIAS.map(c => ({
-    ...c,
+  function cambiarCategoria(id: string) {
+    setDocCategoria(id)
+    if (!pideAnio(id)) setDocAnio('')
+    if (!pideMes(id)) setDocMes('')
+  }
+
+  const conocidas = CATEGORIAS.map(c => ({
+    id: c.id,
+    label: c.label,
     items: docs.filter(d => d.categoria === c.id),
-  })).filter(c => c.items.length > 0)
+  }))
+  // Documentos de categorías ya retiradas: se agrupan por su id en crudo en vez
+  // de desaparecer de la pantalla.
+  const idsConocidos = new Set(CATEGORIAS.map(c => c.id))
+  const huerfanas = [...new Set(docs.map(d => d.categoria).filter(c => !idsConocidos.has(c)))]
+    .map(id => ({ id, label: id, items: docs.filter(d => d.categoria === id) }))
+  const porCategoria = [...conocidas, ...huerfanas].filter(c => c.items.length > 0)
 
   return (
     <AdminShell activo="empresa" logoUrl={branding.logo_url} nombreEmpresa={branding.nombre} colorPrimario={branding.color_primario} tieneFichaje={branding.tiene_fichaje}>
@@ -66,14 +70,14 @@ export default function EmpresaClient({ branding }: { branding: Branding }) {
         <h2 className="mb-3 text-base font-semibold">Subir documento</h2>
         <form onSubmit={subirDoc} className="grid gap-3">
           <div className="flex flex-wrap gap-2">
-            <select value={docCategoria} onChange={e => setDocCategoria(e.target.value)} className="text-sm">
+            <select value={docCategoria} onChange={e => cambiarCategoria(e.target.value)} className="text-sm" aria-label="Categoría del documento">
               {CATEGORIAS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
-            {(docCategoria === 'seguro_social' || docCategoria === 'poliza') && (
+            {pideAnio(docCategoria) && (
               <>
-                <input placeholder="Año (ej. 2026)" value={docAnio} onChange={e => setDocAnio(e.target.value)} className="w-24 text-sm" />
-                {docCategoria === 'seguro_social' && (
-                  <select value={docMes} onChange={e => setDocMes(e.target.value)} className="text-sm">
+                <input placeholder="Año (ej. 2026)" value={docAnio} onChange={e => setDocAnio(e.target.value)} className="w-24 text-sm" aria-label="Año" />
+                {pideMes(docCategoria) && (
+                  <select value={docMes} onChange={e => setDocMes(e.target.value)} className="text-sm" aria-label="Mes">
                     <option value="">Mes</option>
                     {MESES.map((m, i) => <option key={i + 1} value={String(i + 1)}>{m}</option>)}
                   </select>
@@ -105,7 +109,7 @@ export default function EmpresaClient({ branding }: { branding: Branding }) {
                           {d.url
                             ? <a href={d.url} target="_blank" rel="noopener noreferrer" className="text-accent no-underline hover:underline">{d.nombre}</a>
                             : <span>{d.nombre}</span>}
-                          {d.anio && <span className="ml-1 text-xs text-ink-3">{d.anio}{d.mes ? `/${String(d.mes).padStart(2,'0')}` : ''}</span>}
+                          {d.anio && <span className="ml-1 text-xs text-ink-3">{sufijoPeriodo(d.anio, d.mes)}</span>}
                         </td>
                         <td className="py-2 pr-3 text-xs text-ink-3 hidden sm:table-cell whitespace-nowrap">
                           {new Date(d.subido_at).toLocaleDateString('es-ES')}
