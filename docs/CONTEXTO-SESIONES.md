@@ -32,7 +32,20 @@ nunca a `registrarLatido`, que estaba al final. Fix: `maxDuration` 60→300 **+ 
 (deadline en el escaneo y en el listado IMAP, que devuelve `truncado`), **latido de intento al empezar**
 y el definitivo justo tras el escaneo, y `evaluarLatido` con `ultimo_at`+`detalle` para separar «no se
 dispara» de «se dispara y no termina». Verificado: tsc 0 · 702 tests · build OK · upsert probado en BD.
-Queda: confirmar la huella real en la pasada de mañana 06:15 UTC. PR pendiente de merge.
+**01/08:** el PR sigue SIN mergear y la pasada de las 06:15 volvió a dar 504 (`agente_latidos` sigue vacía,
+ninguna factura nueva desde el 31/07) — los logs añaden el porqué: los reintentos de `aiExtractInvoice`
+(NIM timeout, Groq JSON truncado) son los que se comen los 60 s. PR #1194 pendiente de merge.
+
+- **🔴 Luxury a 841€/noche todo junio 2027 por UN día de concierto — bucket de mes contaminado (31/07/2026).**
+  La primera pasada del motor con el factor de aforo (08:30) subió Luxury el +20% (tope del raíl) en sus 250
+  fechas y dejó a la vista un fallo anterior: **el bucket por MES se calculaba con las noches de evento dentro**.
+  El único mercado de Luxury en junio-27 son 10 comps del día 11 (Karol G, p50 931€) → todo el mes heredaba
+  precio de concierto (168€/plaza; un junio normal va a ~109€). Arreglado en `apply/route.ts`: el bucket del mes
+  **excluye las fechas con evento** (calendario + `pricing_eventos_auto` ≥1,15) y exige **≥3 fechas DISTINTAS**,
+  no solo ≥3 comps — 10 anuncios del mismo día describen un día, no un mes. Verificado contra la BD: junio-27
+  desaparece del bucket (cae al global) y 6 meses más con muestra de un solo día dejan de fiarse. **Luxury
+  congelado** (`apply_enabled=false`) hasta desplegar. Alberto pidió además bajar agosto (0/31 vendido) —
+  pendiente: aplicar precios requiere `CRON_SECRET`/sesión, el token de rutina solo permite dry-run.
 
 - **🔎 Verificación en caliente del arreglo de los ADR + techo al nº de acciones (31/07/2026).** Sin esperar
   al cron: bajados por `pg_net` los companyfacts de los 5 peores del radar y pasados por el parser ya

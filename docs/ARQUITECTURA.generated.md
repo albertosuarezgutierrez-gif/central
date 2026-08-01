@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-31T08:51:48Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-01T07:31:52Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -217,6 +217,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (31/07/2026) 🔴 Luxury a 841€/noche todo junio 2027 por UN día de concierto — bucket de mes contaminado (31/07/2026).
 - (31/07/2026) 🔎 Verificación en caliente del arreglo de los ADR + techo al nº de acciones (31/07/2026).
 - (31/07/2026) 🧯 Segunda tanda del parser de EDGAR + retrovisor honesto (31/07/2026, PR #1193).
 - (31/07/2026) 📉 Y el retrovisor dice que el modelo valor+calidad NO bate al mercado (31/07/2026).
@@ -226,5 +227,4 @@
 - (31/07/2026) 📉 Pricing 31/07: sistema SANO, pero agosto arranca a CERO (31/07/2026, rama `claude/pricing-check-31-07`).
 - (31/07/2026) 🚨 Fundamentales del radar de trading iban 2 años atrasados y MEZCLADOS (31/07/2026).
 - (31/07/2026) ⚖️ Subastas: 3 defectos del lector registral + «nota simple viva» (31/07/2026).
-- (30/07/2026) 💰 Subastas: el «valor de mercado» dejaba de fabricar chollos falsos (30/07/2026, PR #1183).
 
