@@ -16,6 +16,37 @@ import { openrouterConfigPasarela } from '@/lib/ia-director'
 const WEB_RESULTS = 5
 const PLUGIN_EUR = Number(process.env.AI_PRECIO_WEBPLUGIN_EUR ?? 0.018)
 
+// ─── Breaker de Gemini ──────────────────────────────────────────────────────────────────────
+// Hallazgo del 01/08/2026: `GEMINI_API_KEY` llevaba **548 llamadas y CERO éxitos** desde el 16/06,
+// en todos los endpoints y con los tres modelos que se han ido probando. No era una racha de 429 por
+// uso: es una key sin cuota (proyecto de Google Cloud sin facturación ni free tier habilitado, o la
+// Generative Language API sin activar). El fallback la tapaba tan bien que nadie lo vio en mes y
+// medio — pagando OpenRouter en todas las búsquedas y, encima, pagando ANTES el intento fallido.
+//
+// Este breaker no arregla la key (eso es una acción fuera del código): evita seguir pagando el
+// peaje. Tras `GEMINI_BREAKER_FALLOS` fallos SEGUIDOS se salta Gemini durante
+// `GEMINI_BREAKER_PAUSA_MIN` minutos y se va directo a OpenRouter. Mismo patrón que el breaker del
+// Director (`lib/ia-director.ts`). En memoria del proceso: en serverless se reinicia con cada
+// instancia fría, y está bien — es un atajo de coste, no un estado que debamos persistir.
+const BREAKER_FALLOS = Number(process.env.GEMINI_BREAKER_FALLOS ?? 3)
+const BREAKER_PAUSA_MS = Number(process.env.GEMINI_BREAKER_PAUSA_MIN ?? 15) * 60_000
+let geminiFallosSeguidos = 0
+let geminiPausadoHasta = 0
+
+function geminiEnPausa(): boolean {
+  return BREAKER_FALLOS > 0 && geminiPausadoHasta > Date.now()
+}
+function anotarFalloGemini(): void {
+  geminiFallosSeguidos++
+  if (BREAKER_FALLOS > 0 && geminiFallosSeguidos >= BREAKER_FALLOS) {
+    geminiPausadoHasta = Date.now() + BREAKER_PAUSA_MS
+  }
+}
+function anotarExitoGemini(): void {
+  geminiFallosSeguidos = 0
+  geminiPausadoHasta = 0
+}
+
 export type BuscarWebOpts = {
   /** App que llama (atribución en ai_usos). */
   app: string
@@ -42,15 +73,23 @@ export async function buscarWeb(system: string, user: string, opts: BuscarWebOpt
   const errores: string[] = []
 
   const geminiKey = process.env.GEMINI_API_KEY
-  if (geminiKey) {
+  if (geminiKey && geminiEnPausa()) {
+    errores.push('gemini: breaker abierto (fallos seguidos)')
+  } else if (geminiKey) {
     const t0 = Date.now()
     try {
       const text = await geminiSearch({ apiKey: geminiKey }, system, user, { maxTokens, timeoutMs })
+      anotarExitoGemini()
       const tokens = estimarTokens(system, user, text)
       await registrarUso({ app, endpoint, proveedor: 'gemini', modelo: 'gemini-flash-latest', ok: true, ms: Date.now() - t0, tokens, costeEur: costeEur('gemini', tokens) })
       return { text, proveedor: 'gemini', modelo: 'gemini-flash-latest' }
     } catch (e) {
-      const msg = e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 200) : 'error'
+      anotarFalloGemini()
+      // 400 caracteres, no 200: el 429 de Google mete el `quotaId` y el `quotaMetric` en `details`,
+      // que es lo que dice CUÁL de las cuotas se agotó (la del modelo, la del grounding, la del
+      // proyecto). Con el corte anterior el mensaje se quedaba justo en «please check your plan and
+      // billing details» y no había forma de saber qué mirar sin reproducirlo a mano.
+      const msg = e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 400) : 'error'
       errores.push(`gemini: ${msg}`)
       await registrarUso({ app, endpoint, proveedor: 'gemini', modelo: 'gemini-flash-latest', ok: false, ms: Date.now() - t0, error: msg })
       console.warn('[websearch] Gemini falló, intento OpenRouter web:', msg)

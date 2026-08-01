@@ -263,16 +263,27 @@ export async function GET(req: NextRequest) {
 
   // Factor de evento tal y como lo ve el motor: el MAYOR entre el calendario del repo y la tabla que
   // llenan los agentes de eventos. Si una fuente conoce la fecha, la otra no cuenta como "no había".
+  //
+  // 🚨 Si esta consulta falla, el centinela #8 («el mercado sube y no sabemos por qué») marcaría como
+  // NO CATALOGADAS todas las fechas de evento del calendario automático — un aluvión de falsos
+  // positivos indistinguible de un hallazgo real. Antes se tragaba con un mapa vacío; ahora se anota
+  // y los dos centinelas de evento se desactivan en esta pasada en vez de mentir.
+  let eventosIlegibles = false
   const autoEvRows = await prisma.$queryRaw<{ rate_date: string; factor: number }[]>(Prisma.sql`
     SELECT rate_date::text AS rate_date, MAX(factor)::float8 AS factor
-    FROM pricing_eventos_auto WHERE rate_date >= CURRENT_DATE GROUP BY rate_date
-  `).catch(() => [])
+    FROM pricing_eventos_auto
+    WHERE rate_date >= CURRENT_DATE AND estado = 'confirmado'
+    GROUP BY rate_date
+  `).catch(() => { eventosIlegibles = true; return [] })
   const autoEv = new Map(autoEvRows.map(r => [r.rate_date, Number(r.factor)]))
 
   type EventoHit = { fecha: string; factor: number; p50Fecha: number; p50Mes: number; motivo: string }
   const sinRespaldo: EventoHit[] = []
   const noCatalogados: EventoHit[] = []
-  for (const d of mercadoDia) {
+  // Sin la tabla de eventos NO se evalúan estos dos centinelas: la mitad de su entrada falta, y un
+  // veredicto con datos a medias vale menos que ninguno. `fechas_evaluadas` sale a 0 en la respuesta,
+  // que es lo honesto — el denominador dice cuántas se miraron de verdad.
+  for (const d of eventosIlegibles ? [] : mercadoDia) {
     const factor = Math.max(eventFactor(d.fecha), autoEv.get(d.fecha) ?? 1)
     const entrada = {
       factorEvento: factor,
@@ -427,7 +438,10 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({
-    ok: true,
+    ok: !eventosIlegibles,
+    degradado: eventosIlegibles
+      ? "pricing_eventos_auto ilegible: los centinelas de evento (#7 y #8) NO se han evaluado en esta pasada"
+      : undefined,
     reversions: reversions.length,
     floor_hits: floorHits.length,
     sub_mercado: subHits.length,
@@ -435,7 +449,7 @@ export async function GET(req: NextRequest) {
     por_plaza: plazaHits.length,
     // `fechas_evaluadas` es el denominador honesto de #7/#8: si sale bajo, el barrido de mercado
     // cubre pocas fechas y el silencio de los centinelas NO significa que el calendario esté bien.
-    fechas_evaluadas: mercadoDia.length,
+    fechas_evaluadas: eventosIlegibles ? 0 : mercadoDia.length,
     eventos_sin_respaldo: sinRespaldo.length,
     eventos_no_catalogados: noCatalogados.length,
     alerts_created: created,

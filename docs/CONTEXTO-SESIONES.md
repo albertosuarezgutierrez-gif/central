@@ -24,6 +24,26 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🎪 De dónde salen los eventos de Sevilla: auditoría y arreglo completo (01/08/2026)
+Pregunta de Alberto («¿de dónde saca los eventos, funciona?»). Tres fuentes: calendario a mano
+(`lib/pricing-calendar.ts`), Ticketmaster y búsqueda web, combinadas por `MAX()`. **Agujeros:**
+agosto+septiembre 2026 VACÍOS en el calendario (83 días) y septiembre sin una sola fila automática —
+con la **Bienal de Flamenco del 9/09 al 3/10** sin catalogar; el barrido de mercado solo miraba **el
+primer viernes de cada mes** (5-7 fechas/mes, octubre con 15 días de retraso), así que las noches de
+evento NUNCA tenían comps y los centinelas #7/#8 no llegaban a la muestra mínima; techo real 1.60 en
+los crons (el 2.5 era inalcanzable); `.catch(()=>[])` en apply:161 y guard:269 que tarificaban la
+Feria como un martes respondiendo `ok:true`; y ningún latido sobre `pricing_eventos_auto`.
+**🔴 `GEMINI_API_KEY` lleva 548 llamadas y CERO éxitos desde el 16/06** — no es una racha de 429, es
+una key sin cuota; el fallback a OpenRouter lo tapó mes y medio. Añadido breaker + Check 12 del
+health-check (proveedor con ≥20 llamadas y 0 éxitos en 7 días). **Alberto: regenera la key en Google
+AI Studio o bórrala del proyecto Vercel** — mientras esté puesta y muerta se paga el intento fallido.
+**Idea de Alberto → eventos PREVISTOS:** nueva 2ª pasada que busca en PRENSA lo anunciado pero aún
+sin entradas (final de Copa, congresos de FIBES, giras sin fecha). Asimetría deliberada: un previsto
+**NO mueve el precio** (una noticia no es demanda comprada), solo **protege el suelo**, pide barrido
+y avisa por Telegram. Migración `2026-08-01_pricing_eventos_previstos.sql` APLICADA. Bienal metida
+como previsto (factor 1.25, solo findes) porque el mercado NO la respalda todavía: el 12/09 sale más
+barato que el 05/09. Crons de eventos y barrido pasados a DIARIOS. 105 tests, tsc 0, build OK.
+
 ### 💸 PriceLabs: baja ejecutada en Busto+Luxury; Luxury reactivado en el motor propio (01/08/2026)
 Alberto confirmó que **Busto Reform y Luxury ya están dados de baja de PriceLabs** (Dúplex/House siguen
 en PL por decisión suya, transición en dos fases). El informe de decisión (BD 31/07) encontró a **Luxury

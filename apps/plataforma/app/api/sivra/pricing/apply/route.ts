@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
 import { eventFactor, seasonalFloorFactor, PRICING_HORIZON_DAYS, EVENTS } from "@/lib/pricing-calendar"
+import { combinarEventosDeFecha, type EventoBruto } from "@/lib/sivra/eventos-estado"
 import { factorLastMinute } from "@/lib/sivra/pricing-lastminute"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { getSmoobuKey } from "@/lib/smoobu"
@@ -155,11 +156,38 @@ export async function POST(req: NextRequest) {
   const end = new Date(today); end.setDate(end.getDate() + days)
   const startDate = fmt(today), endDate = fmt(end)
 
-  const autoEvRows = await prisma.$queryRaw<{ rate_date: string; factor: number }[]>(Prisma.sql`
-    SELECT rate_date::text AS rate_date, MAX(factor)::float8 AS factor
-    FROM pricing_eventos_auto WHERE rate_date >= CURRENT_DATE GROUP BY rate_date
-  `).catch(() => [])
-  const autoEv = new Map(autoEvRows.map(r => [r.rate_date, Number(r.factor)]))
+  // Eventos descubiertos (Ticketmaster / búsqueda web / prensa / mano de Alberto). Se traen SIN
+  // agregar por fecha porque el efecto depende del `estado` de cada fila: un 'previsto' —una noticia
+  // de prensa sobre algo que aún no tiene entradas— protege el suelo pero NO mueve el precio. Un
+  // MAX(factor) plano mezclaría las dos cosas y una previsión inflaría el precio objetivo. Toda esa
+  // lógica vive en el helper puro `lib/sivra/eventos-estado.ts`.
+  //
+  // 🚨 El `.catch()` NO devuelve un mapa vacío y ya está. Un fallo de esta consulta significaría
+  // tarificar la Feria como un martes de febrero, y hasta el 01/08/2026 eso pasaba respondiendo
+  // `ok:true` sin una palabra. Ahora se marca y sale en la respuesta y en el aviso.
+  let eventosIlegibles = false
+  const autoEvRows = await prisma.$queryRaw<{
+    rate_date: string; factor: number; estado: string | null; confianza: number | null
+  }[]>(Prisma.sql`
+    SELECT rate_date::text AS rate_date, factor::float8 AS factor, estado, confianza::float8 AS confianza
+    FROM pricing_eventos_auto WHERE rate_date >= CURRENT_DATE
+  `).catch(() => { eventosIlegibles = true; return [] })
+
+  const porFecha = new Map<string, EventoBruto[]>()
+  for (const r of autoEvRows) {
+    const lista = porFecha.get(r.rate_date) ?? []
+    lista.push({ estado: r.estado, factor: Number(r.factor), confianza: r.confianza })
+    porFecha.set(r.rate_date, lista)
+  }
+  /** factor que puede mover el PRECIO: solo eventos confirmados */
+  const autoEv = new Map<string, number>()
+  /** factor que protege el SUELO: confirmados + la parte prudente de los previstos */
+  const autoEvSuelo = new Map<string, number>()
+  for (const [fecha, lista] of porFecha) {
+    const ef = combinarEventosDeFecha(lista)
+    if (ef.factorPrecio > 1) autoEv.set(fecha, ef.factorPrecio)
+    if (ef.factorSuelo > 1) autoEvSuelo.set(fecha, ef.factorSuelo)
+  }
 
   // Señal de demanda por vuelos a SVQ (Fase 3). Solo influye si flight_demand_k>0 por piso.
   const flightRows = await prisma.$queryRaw<{ rate_date: string; demand_index: number }[]>(Prisma.sql`
@@ -548,7 +576,14 @@ export async function POST(req: NextRequest) {
         // El suelo mira los eventos de AMBAS fuentes (calendario + `pricing_eventos_auto`), igual que
         // el precio: si no, un evento que solo conoce la tabla (Karol G) subía el objetivo pero dejaba
         // el suelo de un día normal.
-        const evParaSuelo = r.events_enabled ? (autoEv.get(date) ?? 1) : 1
+        //
+        // Y usa `autoEvSuelo`, no `autoEv`: aquí SÍ entran los eventos PREVISTOS (los que la prensa da
+        // por hechos pero aún no tienen entradas — la final de Copa, un congreso recién anunciado).
+        // Es la única puerta por la que se les deja pasar, y es deliberado: proteger el suelo de una
+        // fecha que al final no era nada cuesta unas noches sin vender baratas; NO protegerla y que sí
+        // fuera la final significa haberla vendido a precio de sábado corriente, y eso no se recupera.
+        // El razonamiento completo está en `lib/sivra/eventos-estado.ts`.
+        const evParaSuelo = r.events_enabled ? (autoEvSuelo.get(date) ?? 1) : 1
         const factor = 1 + (seasonalFloorFactor(date, evParaSuelo) - 1) * Number(r.seasonal_floor_k)
         let sf = Math.round(r.min_price * factor)
         if (r.max_price != null) sf = Math.min(sf, r.max_price)
@@ -668,5 +703,25 @@ export async function POST(req: NextRequest) {
     } catch { /* no crítico */ }
   }
 
-  return NextResponse.json({ ok: true, dryRun, paused, days, properties: recs.length, results, pl_avisos: plAvisos.length })
+  // 🚨 Si no se pudieron leer los eventos, esta pasada tarificó Semana Santa como un martes de
+  // febrero. Hasta el 01/08/2026 eso salía como `ok:true` y nadie se enteraba nunca: el `.catch`
+  // devolvía un mapa vacío, que es indistinguible de «no hay eventos». Ahora la pasada se declara
+  // degradada Y avisa, porque es de las averías más caras que puede tener el motor.
+  if (eventosIlegibles) {
+    try {
+      await tgSend(
+        "🚨 *Pricing: la tabla de eventos no se pudo leer*\n\n" +
+        "La pasada ha tarificado SIN eventos: si hay Feria, Semana Santa o un concierto grande en la " +
+        "ventana, esas noches se han calculado como días normales. Los precios aplicados en esta " +
+        "pasada NO son de fiar para fechas de evento.\n\n" +
+        "Revisa `pricing_eventos_auto` en Supabase y vuelve a lanzar el motor.",
+      )
+    } catch { /* el aviso es best-effort; el flag de la respuesta manda */ }
+  }
+
+  return NextResponse.json({
+    ok: !eventosIlegibles,
+    degradado: eventosIlegibles ? "pricing_eventos_auto ilegible: tarificado SIN eventos" : undefined,
+    dryRun, paused, days, properties: recs.length, results, pl_avisos: plAvisos.length,
+  })
 }

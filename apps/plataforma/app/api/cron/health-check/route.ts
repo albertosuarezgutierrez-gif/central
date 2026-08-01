@@ -228,6 +228,34 @@ export async function GET(req: NextRequest) {
       catch (e) { fallos.push(`🔴 Página rota: ${nombre} → ${e instanceof Error ? e.message : String(e)}`) }
     }
 
+    // Check 12: proveedor de IA MUERTO — el que falla SIEMPRE y nadie echa de menos.
+    //
+    // Caso fundacional (01/08/2026): `GEMINI_API_KEY` acumulaba **548 llamadas y 0 éxitos** desde el
+    // 16/06 —en search, chat, eventos, empresas y contable, con tres modelos distintos— y no saltó
+    // nada en mes y medio. La cadena de fallback funcionó tan bien que convirtió una credencial
+    // muerta en un peaje invisible: cada llamada pagaba el intento fallido (y su timeout) antes de
+    // caer al camino de pago. Una cadena de respaldo sana enmascara la avería del eslabón; por eso
+    // hay que mirar el eslabón, no el resultado final.
+    //
+    // Umbral deliberadamente alto (≥20 llamadas, 0 éxitos, 7 días) para no confundir «apagado a
+    // propósito» —que no genera filas— con «configurado y roto», que es lo caro.
+    const proveedoresMuertos = await prisma.$queryRaw<
+      { proveedor: string; llamadas: bigint; ultimo_error: string | null }[]
+    >`
+      SELECT proveedor, COUNT(*) AS llamadas, MAX(left(COALESCE(error, ''), 140)) AS ultimo_error
+      FROM ai_usos
+      WHERE creada_at > now() - interval '7 days' AND proveedor IS NOT NULL
+      GROUP BY proveedor
+      HAVING COUNT(*) >= 20 AND COUNT(*) FILTER (WHERE ok) = 0`
+    for (const p of proveedoresMuertos) {
+      fallos.push(
+        `🔴 IA «${p.proveedor}»: ${Number(p.llamadas)} llamadas en 7 días y NINGUNA correcta. ` +
+        `La cadena de fallback lo tapa, así que todo "funciona" mientras se paga el camino de pago ` +
+        `y el intento fallido de este. Último error: ${p.ultimo_error ?? 'sin detalle'}`,
+      )
+    }
+    if (!proveedoresMuertos.length) ok.push('✅ Ningún proveedor de IA muerto')
+
   } catch (err) {
     fallos.push(`🔴 Error ejecutando health check: ${err instanceof Error ? err.message : String(err)}`)
   }
