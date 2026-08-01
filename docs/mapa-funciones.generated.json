@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-01T17:43:11Z",
-  "sha": "50e3851f8158fbf73d3dd55808b4914f7b37db63",
+  "generadoEn": "2026-08-01T20:30:01Z",
+  "sha": "e4e1a7dba6e01e7d1b689ef8066cc8093c09a1f5",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -7779,20 +7779,12 @@
           "linea": 19
         },
         {
-          "nombre": "solicitarIndexacion",
-          "kind": "function",
-          "exportada": false,
-          "params": "path: string",
-          "retorno": null,
-          "linea": 27
-        },
-        {
           "nombre": "fn",
           "kind": "arrow",
           "exportada": false,
           "params": "name: string, description: string, parameters: any",
           "retorno": null,
-          "linea": 50,
+          "linea": 58,
           "resumen": "Tools en formato OpenAI (NVIDIA NIM, function-calling). web_search es custom, respaldada por Gemini."
         },
         {
@@ -7801,12 +7793,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 62
+          "linea": 70
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/seo-agent",
-      "hash": "84ef145a1cdc"
+      "hash": "5a958bdf3925"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cuenta-nominal/route.ts",
@@ -19553,7 +19545,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0a6e499c54fe"
+      "hash": "aae52c145332"
     },
     {
       "ruta": "apps/ia-rest/src/app/blog/comanda-por-voz-como-funciona/page.tsx",
@@ -19653,7 +19645,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4172dfd63c4c"
+      "hash": "0f0f5ac2ff04"
     },
     {
       "ruta": "apps/ia-rest/src/app/blog/tpv-restaurante/page.tsx",
@@ -19693,7 +19685,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "99709339304e"
+      "hash": "b03b6b39e545"
     },
     {
       "ruta": "apps/ia-rest/src/app/blog/verifactu-restaurantes-guia-2026/page.tsx",
@@ -19713,7 +19705,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f10df2753c83"
+      "hash": "35fcaf0b9dbd"
     },
     {
       "ruta": "apps/ia-rest/src/app/carta/[code]/CartaPublicClient.tsx",
@@ -19854,7 +19846,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2521cb1a7920"
+      "hash": "1b5a87713c4e"
     },
     {
       "ruta": "apps/ia-rest/src/app/central/page.tsx",
@@ -20454,7 +20446,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "22621f1ed0e5"
+      "hash": "15020ac0000f"
     },
     {
       "ruta": "apps/ia-rest/src/app/estado/page.tsx",
@@ -20656,7 +20648,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d0f958386316"
+      "hash": "ff24201023c7"
     },
     {
       "ruta": "apps/ia-rest/src/app/hosteleria/page.tsx",
@@ -20678,7 +20670,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "11dc1169059d"
+      "hash": "48f11f035ed2"
     },
     {
       "ruta": "apps/ia-rest/src/app/hub/page.tsx",
@@ -21042,12 +21034,12 @@
           "exportada": true,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 187
+          "linea": 180
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fedd36642394"
+      "hash": "034ca172bd4b"
     },
     {
       "ruta": "apps/ia-rest/src/app/login/page.tsx",
@@ -22255,7 +22247,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "10f9449b752a"
+      "hash": "ef9aebb0c871"
     },
     {
       "ruta": "apps/ia-rest/src/app/portal-eventos/page.tsx",
@@ -23521,7 +23513,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "99070fdc5112"
+      "hash": "1d05ba6b1b8a"
     },
     {
       "ruta": "apps/ia-rest/src/app/restaurante-mediterraneo/page.tsx",
@@ -23557,7 +23549,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b499a9fc8e86"
+      "hash": "b2a58545d762"
     },
     {
       "ruta": "apps/ia-rest/src/app/restaurantes/[ciudad]/page.tsx",
@@ -24000,7 +23992,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b018c5f44d5e"
+      "hash": "105f99918894"
     },
     {
       "ruta": "apps/ia-rest/src/app/terminos/page.tsx",
@@ -31020,7 +31012,7 @@
           "exportada": true,
           "params": "ruta: string",
           "retorno": null,
-          "linea": 17,
+          "linea": 78,
           "resumen": "Devuelve el SEO efectivo (default + override) y los bloques de una ruta."
         },
         {
@@ -31029,13 +31021,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 30,
+          "linea": 91,
           "resumen": "Inventario para la tool list_seo_targets."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8981dad4e2a0"
+      "hash": "6649725c3433"
     },
     {
       "ruta": "apps/ia-rest/src/lib/sepa.ts",
@@ -47498,11 +47490,10 @@
       "tablas": [
         "next",
         "subastas",
-        "subastas_criterios",
-        "subastas_radar"
+        "subastas_criterios"
       ],
       "rutaApi": null,
-      "hash": "7bad8787d08e"
+      "hash": "1a7114537d39"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/subastas/SubastasClient.tsx",
@@ -51263,7 +51254,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<number>",
-          "linea": 27,
+          "linea": 28,
           "resumen": "Señal ANTICIPADA: promotoras/inmobiliarias en concurso de acreedores en las provincias vigiladas. Sus inmuebles suelen acabar en subasta o liquidación meses después — enterarse hoy da ventaja. Ventana"
         },
         {
@@ -51272,7 +51263,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 53
+          "linea": 54
         },
         {
           "nombre": "GET",
@@ -51280,18 +51271,17 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 57
+          "linea": 58
         }
       ],
       "tablas": [
         "borme_eventos",
         "next",
-        "subastas",
         "subastas_criterios",
         "subastas_radar"
       ],
       "rutaApi": "/api/cron/subastas-avisos",
-      "hash": "cf1b639490dd"
+      "hash": "77edc52dcfff"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-cierre/route.ts",
@@ -55536,7 +55526,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 16
+          "linea": 17
         }
       ],
       "tablas": [
@@ -55545,7 +55535,7 @@
         "subastas_radar"
       ],
       "rutaApi": "/api/subastas/mapa",
-      "hash": "ac914749bc83"
+      "hash": "bf0d1730f090"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/nota-simple/route.ts",
@@ -55621,7 +55611,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 10
+          "linea": 11
         },
         {
           "nombre": "POST",
@@ -55629,7 +55619,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 38
+          "linea": 45
         }
       ],
       "tablas": [
@@ -55637,7 +55627,7 @@
         "subastas_radar"
       ],
       "rutaApi": "/api/subastas/radar",
-      "hash": "a4bcd8adfeea"
+      "hash": "ccc26a0f83c4"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/route.ts",
@@ -55662,7 +55652,7 @@
         "subastas_criterios"
       ],
       "rutaApi": "/api/subastas",
-      "hash": "9ba39c9b5754"
+      "hash": "02f7fef1b743"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/seguidas/route.ts",
@@ -65498,7 +65488,7 @@
           "exportada": true,
           "params": "f: any",
           "retorno": "SubastaInmueble",
-          "linea": 54,
+          "linea": 96,
           "resumen": "Fila cruda de `subastas` → el tipo del módulo."
         },
         {
@@ -65507,7 +65497,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<FilaCriterios[]>",
-          "linea": 124,
+          "linea": 166,
           "resumen": "Cuentas con el radar activo y sus criterios."
         },
         {
@@ -65516,7 +65506,7 @@
           "exportada": true,
           "params": "limite = 500",
           "retorno": "Promise<SubastaInmueble[]>",
-          "linea": 150,
+          "linea": 192,
           "resumen": "Subastas candidatas: en plazo (o sin fecha conocida) y recientes. No se rebarre todo el histórico en cada pasada."
         },
         {
@@ -65525,7 +65515,7 @@
           "exportada": true,
           "params": "cuentaId: string, criterios: CriteriosSubasta, corpus: SubastaInmueble[], params: ParamsCoste = {},",
           "retorno": "Promise<number>",
-          "linea": 173,
+          "linea": 213,
           "resumen": "Casa el corpus con los criterios de una cuenta e inserta lo nuevo. El upsert REFRESCA el snapshot y las cifras: el radar corre a las 06:30, DESPUÉS del enriquecimiento (06:15) y del valor de mercado ("
         },
         {
@@ -65534,7 +65524,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 246,
+          "linea": 286,
           "resumen": "Pasada completa: descarga el corpus UNA vez y lo empareja con cada cuenta."
         }
       ],
@@ -65546,7 +65536,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "7784dbe04057"
+      "hash": "11f8e2f66e2c"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/boe.ts",
@@ -65833,7 +65823,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "d233ac41ef8e"
+      "hash": "67db85dd25bb"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/enriquecer.ts",
@@ -84472,12 +84462,12 @@
           "exportada": true,
           "params": "e: EntradaAviso",
           "retorno": "ResultadoAviso",
-          "linea": 62
+          "linea": 70
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6003f95dd673"
+      "hash": "f64dbd229287"
     },
     {
       "ruta": "packages/module-subastas/src/caducidad.ts",
@@ -87910,6 +87900,6 @@
   ],
   "resumen": {
     "archivos": 2371,
-    "funciones": 6329
+    "funciones": 6328
   }
 }

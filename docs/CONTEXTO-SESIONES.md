@@ -57,6 +57,33 @@ latido a `ok:false` solo si no llegó a cubrir la temporada. Una muestra que cae
 corre una semana: el bucket mensual EXCLUYE las fechas de evento, así que ahí no sumaría.
 De paso, corregido en el hilo: `amount_gross` de `incomes` es lo que paga el huésped, **no** el neto.
 
+- **⏰ Subasta vencida seguía en «🎯 Mi radar» (01/08/2026, rama `claude/expired-auction-visible-eoow4t`).**
+  Alberto con captura: `SUB-JA-2026-263723` cerró el 31/07 18:13 y al día siguiente seguía con botones de
+  pujar. **Causa:** NINGÚN camino de lectura del radar filtraba por fecha — la bandeja se limpiaba solo con
+  el `DELETE` diario de `archivarPasadas` (06:15 UTC) y encima con `now() - 1 day` de gracia → visible entre
+  14 y 38 h tras cerrar (y para siempre si el cron falla). **Fix:** filtros CANÓNICOS `SUBASTA_VIGENTE` /
+  `RADAR_VIGENTE` + `RADAR_CON_CORPUS` en `lib/subastas-radar.ts`, aplicados a SSR, `/api/subastas/radar`
+  (lista y badge), `/api/subastas`, `/api/subastas/mapa` y el cron de avisos; borrado sin día de gracia.
+  De regalo: `decidirAviso` ganó `cerrada` (con `Math.ceil`, vencida hace horas = 0 días = «urgentísima» →
+  sonaba en Telegram) y el aviso ya lee `valor_orientativo` (no se seleccionaba: la guarda nunca saltaba).
+
+- **🔍 Auditoría del agente SEO de iarest.es: NUNCA ha aplicado un cambio (01/08/2026, rama
+  `claude/iarest-seo-agent-2v61fi`).** Alberto: «la web no tiene visitas, ¿qué hace el agente SEO?».
+  Evidencia BD prod (`efncqyvhniaxsirhdxaa`): `seo_cambios`/`seo_articulos`/`seo_overrides`/
+  `seo_content_blocks` = **0 filas**; `blog_borradores` parado desde el 25/05. Causas: (1) la allowlist
+  `RUTAS_SEO_EDITABLES` es solo `['/restaurantes','/restaurantes/*']` → home y las 8 landings de sector
+  quedan FUERA (y `/restaurantes` tiene 2 restaurantes / 1 web activa); (2) umbral `SEO_MIN_IMPR`=30
+  impresiones GSC → sin tráfico nada lo supera (pescadilla). NO comprobado: `SEO_AGENT_ENABLED` en Vercel
+  ni GSC/GA4 reales (env fuera del repo). Informe: `docs/INFORME-SEO-iarest-2026-08-01.md`.
+  **Decisión de Alberto: ia.rest NO publica precio** — conversión = formulario `/#contacto` + WhatsApp
+  `wa.me/34637349990`. Aplicado en el mismo PR #1208: fuera la tarifa de layout (incl. 3 `Offer` de
+  JSON-LD), home (calculadora y comparativa BORRADAS, no ocultadas), 8 landings y 4 posts; se mantienen
+  precios de terceros y cifras de la demo de catering. Agente SEO: allowlist 2→11 rutas, `SEO_DEFAULTS`
+  sin cifras, regla inviolable «nunca publiques precio» en el SYSTEM, `solicitarIndexacion()` eliminado
+  (la Indexing API solo cubre JobPosting/BroadcastEvent) y el silencio >21 días pasa a alerta Telegram.
+  Verificado: `tsc` 0 errores + `next build` OK + guardrails 14/14. **Pendiente en Vercel (no en repo):
+  `SEO_AGENT_ENABLED=true`, bajar `SEO_MIN_IMPR` a 3-5, key de Gemini en 429.**
+
 - **⚕️ Check 4 del health-check reescrito: latido del sync, no última reserva (01/08/2026, rama
   `claude/health-check-2026-07-30-vlv4c7`).** Feedback de Alberto: la sequía de reservas (25/07→01/08,
   sync verificado sano por logs 200) se pintaba como 🔴 — «que especifique el fallo, ya que no es un

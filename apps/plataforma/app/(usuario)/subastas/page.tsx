@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { evaluarOportunidad, pujaMaximaParaDescuento, yieldTuristico } from '@central/module-subastas'
-import { COLS_SUBASTA, filaASubasta } from '@/lib/subastas-radar'
+import { COLS_SUBASTA, filaASubasta, RADAR_CON_CORPUS, RADAR_VIGENTE, SUBASTA_VIGENTE } from '@/lib/subastas-radar'
 import { tesoreriaSubastas } from '@/lib/subastas/tesoreria'
 import { chollosVigentes, leerIndiceINE, pulsoMercado } from '@/lib/subastas/mercado'
 import { calibracionDePuja, calibracionResultados } from '@/lib/subastas/calibracion'
@@ -31,22 +31,26 @@ export default async function SubastasPage() {
     const [filas, total, criterios, radar, tesoreria, chollos, ingresoDorm, indice, calibracion, pulso, calibPuja] = await Promise.all([
       prisma.$queryRaw<any[]>(Prisma.sql`
         SELECT ${COLS_SUBASTA} FROM subastas
-        WHERE es_inmueble = true AND archivada_at IS NULL AND (fecha_fin IS NULL OR fecha_fin >= now())
+        WHERE es_inmueble = true AND ${SUBASTA_VIGENTE}
         ORDER BY fecha_fin ASC NULLS LAST, actualizado_en DESC
         LIMIT 30
       `),
       prisma.$queryRaw<{ total: number }[]>(Prisma.sql`
         SELECT COUNT(*)::int AS total FROM subastas
-        WHERE es_inmueble = true AND archivada_at IS NULL AND (fecha_fin IS NULL OR fecha_fin >= now())
+        WHERE es_inmueble = true AND ${SUBASTA_VIGENTE}
       `),
       prisma.$queryRaw<any[]>(Prisma.sql`
         SELECT * FROM subastas_criterios WHERE cuenta_id = ${session.id}::uuid
       `),
+      // La bandeja SOLO trae lo que aún puede pujarse: una subasta cerrada no
+      // vuelve a salir aquí aunque el `DELETE` diario todavía no haya pasado.
       prisma.$queryRaw<any[]>(Prisma.sql`
-        SELECT id, dedupe_key, subasta, puntuacion, motivos, avisos, coste_total, descuento, visto, fecha_fin
-        FROM subastas_radar
-        WHERE cuenta_id = ${session.id}::uuid AND descartado = false
-        ORDER BY puntuacion DESC NULLS LAST, created_at DESC
+        SELECT r.id, r.dedupe_key, r.subasta, r.puntuacion, r.motivos, r.avisos,
+               r.coste_total, r.descuento, r.visto,
+               COALESCE(s.fecha_fin, r.fecha_fin) AS fecha_fin
+        ${RADAR_CON_CORPUS}
+        WHERE r.cuenta_id = ${session.id}::uuid AND ${RADAR_VIGENTE}
+        ORDER BY r.puntuacion DESC NULLS LAST, r.created_at DESC
         LIMIT 50
       `),
       // Si la tesorería falla (banca sin sincronizar, etc.) la pantalla sigue

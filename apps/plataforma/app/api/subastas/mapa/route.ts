@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { requireEmpresaId } from '@/lib/tenant'
+import { SUBASTA_VIGENTE } from '@/lib/subastas-radar'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,7 +23,7 @@ export async function GET() {
   }
 
   try {
-    const vigente = Prisma.sql`es_inmueble = true AND (fecha_fin IS NULL OR fecha_fin >= now())`
+    const vigente = Prisma.sql`es_inmueble = true AND ${SUBASTA_VIGENTE}`
     const [filas, sinUbicar, ubicadas, radar] = await Promise.all([
       prisma.$queryRaw<any[]>(Prisma.sql`
         SELECT dedupe_key, identificador, tipo_bien, provincia, municipio,
