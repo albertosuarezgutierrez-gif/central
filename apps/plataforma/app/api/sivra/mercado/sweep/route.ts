@@ -3,6 +3,9 @@ import { getSession } from "@/lib/session"
 import { chatConDirector } from "@/lib/pasarela"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
+import { EVENTS } from "@/lib/pricing-calendar"
+import { ventanasDelBarrido, type EventoFecha } from "@/lib/sivra/mercado-ventanas"
+import { registrarLatido } from "@/lib/monitoring/latido-escribir"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -17,9 +20,20 @@ export const maxDuration = 300
 // ADITIVO: solo INSERTA en market_rates. No toca el pricing (eso es B2). Coste acotado:
 // 8 búsquedas Serper + 8 extracciones NIM por ejecución (los comps se reutilizan para los
 // 4 pisos, que el motor ya diferencia por calidad/percentiles propios).
+//
+// 🚨 AMPLIADO 01/08/2026 — el barrido también mide las fechas de EVENTO. Hasta hoy solo miraba el
+// primer viernes de cada mes, así que las noches que el motor tarifica al triple (Feria, Semana
+// Santa, los tres días de Karol G) NUNCA tenían comps propios: se tarificaban a ciegas y, peor, los
+// dos centinelas que las vigilan (#7 «evento sin respaldo» y #8 «el mercado sube y no sabemos por
+// qué») se quedaban en `evaluado:false` para siempre por falta de muestra. Qué fechas entran lo
+// decide el helper PURO `lib/sivra/mercado-ventanas.ts` (un bloque de evento = una ventana, los más
+// cercanos primero, con tope). Ver el porqué completo en su cabecera.
 
 const MONTHS_AHEAD = 8
-const fmt = (d: Date) => d.toISOString().slice(0, 10)
+// Ventanas EXTRA de evento por pasada. Cada una cuesta 1 búsqueda Serper + 1 extracción por aforo
+// distinto (hoy 4), así que 6 ≈ +24 búsquedas sobre las 32 de la base. Sube esto solo mirando la
+// duración real de la pasada: `maxDuration` es 300 s.
+const MAX_VENTANAS_EVENTO = Number(process.env.SIVRA_SWEEP_MAX_EVENTOS ?? 6)
 
 // 🚨 El barrido busca por el AFORO REAL de cada piso, NO con "4 personas" para todos (bug hasta el
 // 31/07/2026: guardaba los MISMOS comps de 4 plazas para los 4 pisos con `guests=4` fijo, así que
@@ -37,15 +51,30 @@ async function pisosPorAforo(): Promise<Map<number, string[]>> {
   return porAforo
 }
 
-// Primer viernes→domingo (2 noches) del mes a `m` meses vista.
-function weekendInMonth(m: number): { checkin: string; checkout: string } {
-  const d = new Date()
-  d.setUTCDate(1)
-  d.setUTCMonth(d.getUTCMonth() + m)
-  while (d.getUTCDay() !== 5) d.setUTCDate(d.getUTCDate() + 1) // avanzar a viernes
-  const fri = new Date(d)
-  const sun = new Date(d); sun.setUTCDate(sun.getUTCDate() + 2)
-  return { checkin: fmt(fri), checkout: fmt(sun) }
+// Fechas de evento de las DOS fuentes que conoce el motor: el calendario del repo y lo que
+// descubren los crons (Ticketmaster / búsqueda web). Si la tabla falla NO se cae la pasada: se
+// barre la base mensual y se dice en la respuesta, que es distinto de «no había eventos».
+async function fechasDeEvento(): Promise<{ eventos: EventoFecha[]; tablaOk: boolean }> {
+  const eventos: EventoFecha[] = Object.entries(EVENTS).map(([fecha, factor]) => ({
+    fecha, factor: Number(factor), nombre: 'calendario',
+  }))
+  try {
+    const filas = await prisma.$queryRaw<{ rate_date: Date; factor: number; nombre: string }[]>(Prisma.sql`
+      SELECT rate_date, MAX(factor)::float AS factor, MIN(nombre) AS nombre
+      FROM pricing_eventos_auto
+      WHERE rate_date >= CURRENT_DATE
+      GROUP BY rate_date`)
+    for (const f of filas) {
+      eventos.push({
+        fecha: new Date(f.rate_date).toISOString().slice(0, 10),
+        factor: Number(f.factor),
+        nombre: String(f.nombre ?? '').slice(0, 60),
+      })
+    }
+    return { eventos, tablaOk: true }
+  } catch {
+    return { eventos, tablaOk: false }
+  }
 }
 
 async function serperSearch(query: string): Promise<string> {
@@ -87,7 +116,7 @@ export async function GET(req: NextRequest) {
   }
 
   let upserted = 0
-  const ventanas: { checkin: string; aforo: number; comps: number }[] = []
+  const ventanas: { checkin: string; aforo: number; comps: number; motivo: string; etiqueta?: string }[] = []
   const errors: string[] = []
 
   const porAforo = await pisosPorAforo()
@@ -95,8 +124,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "pricing_piso_zona vacía: sin aforos no hay comparables fiables" }, { status: 409 })
   }
 
-  for (let m = 1; m <= MONTHS_AHEAD; m++) {
-    const { checkin, checkout } = weekendInMonth(m)
+  const { eventos, tablaOk } = await fechasDeEvento()
+  if (!tablaOk) errors.push("pricing_eventos_auto ilegible: se barre la base mensual, pero SIN las fechas de evento descubiertas por los crons")
+
+  const plan = ventanasDelBarrido(new Date().toISOString().slice(0, 10), eventos, {
+    mesesBase: MONTHS_AHEAD,
+    maxEventos: MAX_VENTANAS_EVENTO,
+  })
+
+  for (const { checkin, checkout, motivo, etiqueta } of plan) {
     for (const [aforo, pisos] of porAforo) {
       try {
         const snippets = await serperSearch(
@@ -125,12 +161,21 @@ export async function GET(req: NextRequest) {
             } catch { /* dup */ }
           }
         }
-        ventanas.push({ checkin, aforo, comps: n })
+        ventanas.push({ checkin, aforo, comps: n, motivo, etiqueta })
       } catch (e) {
         errors.push(`${checkin} (${aforo}p): ${String(e).slice(0, 80)}`)
       }
     }
   }
 
-  return NextResponse.json({ ok: errors.length === 0, upserted, ventanas, errors })
+  // Huella para el vigía: una pasada que no trae NI UN comp es un fallo, aunque no lance.
+  const conComps = ventanas.filter(v => v.comps > 0).length
+  const ok = errors.length === 0 && conComps > 0
+  const eventosBarridos = plan.filter(v => v.motivo === 'evento').length
+  await registrarLatido('sivra_mercado_sweep', ok, [
+    `${upserted} comps en ${ventanas.length} ventanas (${eventosBarridos} de evento)`,
+    errors.length ? `${errors.length} fallos: ${errors[0]}` : '',
+  ].filter(Boolean).join(' · ')).catch(() => {})
+
+  return NextResponse.json({ ok, upserted, ventanas, eventosBarridos, errors })
 }

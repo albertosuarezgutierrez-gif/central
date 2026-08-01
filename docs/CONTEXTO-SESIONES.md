@@ -24,6 +24,69 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 📐 El mercado de House se leía de pisos de OTRO tamaño (01/08/2026)
+Alberto: «House Sevillana aún está en PriceLabs como dúplex». Cierto fuera y también DENTRO: los 30
+comparables vivos de una casa de **12 plazas** eran de apartamentos de **8** (media 314€). El motor
+no mentía —normaliza con `pricing_factor_aforo` desde el 31/07— pero su ancla estaba **extrapolada
+(x1,56), no medida**: 403€ frente a los 621-694€ de los últimos comps de 12 plazas reales. De ahí
+salía mi propuesta de bajar House a 330-350€: **retirada**. Dos arreglos: el guardián compara #4/#5
+contra el mercado NORMALIZADO (iba en crudo → en el único piso donde importaba medía un 36% barato y
+no podía disparar) y **centinela #9 `comps_otro_aforo`** (puro + 8 tests; umbral x1,35 para que
+Luxury 5-plazas-con-comps-de-4 no haga ruido). El barrido diario de #1203 repone los comps buenos.
+
+### 🏠 Un piso puede cambiar de PRODUCTO: `historico_desde` + Gemini fuera (01/08/2026)
+Dato de Alberto: **House Sevillana estuvo alquilada como DOS pisos turísticos independientes** hasta
+que se decidió alquilarla entera (6 habitaciones, 12 personas). El corte se ve solísimo en BD:
+**ADR 112/99/129/166 (2020-23) → 473/418/446 (2024-26)**, ticket medio 519€ → 1.171€. Ese salto ya
+causó el error de proponer bajarla a 285€ (promediando las dos etapas salía «ADR de agosto 102€»), y
+estaba envenenando también la antelación que alimenta la palanca de last-minute: la mediana de
+octubre de House salía de 51 reservas, 30 de ellas de cuando era otro negocio. Nueva columna
+**`pricing_settings.historico_desde`** (migración aplicada; House = 2024-01-01, el resto NULL = «no ha
+cambiado») y el motor la respeta al medir la antelación. Efecto: House octubre **34 → 26 días**
+(muestra 20). **Regla:** al analizar el histórico de un piso, comprobar antes si sigue siendo el
+mismo producto — el número que sale de mezclar épocas es plausible y nada delata el fallo.
+**Gemini APAGADO** (decisión de Alberto: «usa OpenRouter, que tienes todo»). La key llevaba 548
+llamadas y 0 éxitos desde el 16/06 y el fallback la tapaba pagando el intento fallido antes de cada
+llamada. Ahora OpenRouter es el primario y Gemini solo se intenta con `GEMINI_WEBSEARCH=1`.
+
+### 📅 Smoobu SÍ da la fecha real de reserva — y eso INVIERTE el diagnóstico de octubre (01/08/2026)
+El 31/07 se dio por imposible reconstruir la curva de anticipación desde `incomes` porque `createdAt`
+es la fecha de la importación masiva. Cierto de esa columna — pero la **API de Smoobu publica
+`created-at`** (kebab-case, como `guest-name`) y lo trae **también para el histórico**. Verificado por
+`pg_net` desde Supabase, sin sacar la key de la BD. Nueva columna **`incomes.reserved_at`**
+(migración aplicada) + backfill: **1.843 de 1.984 reservas (93%) ya con fecha real, desde 2020**.
+**🔴 Lo que cambia:** la antelación medida desde `rate_snapshots` era una mediana GLOBAL por piso, y
+Semana Santa + Feria la disparaban. Con el histórico REAL de **octubre** (6 años, muestra 46-67 por
+piso): **House 34 días · Busto 18 · Dúplex 17 · Luxury 16** — frente a los 108/57/32/7 globales.
+O sea: **«Busto va tarde en octubre» era FALSO** (yo lo dije el 31/07). Busto vende octubre con ~18
+días de mediana, así que 7/31 a dos meses vista es su comportamiento NORMAL. **Octubre no va mal.**
+Y la palanca de last-minute con la mediana global habría empezado a descontar el precio de Busto
+**tres meses antes** de que octubre se venda — regalando margen en el mejor mes del año. Corregido:
+`apply/route.ts` mide la antelación **por piso Y por mes** desde `reserved_at`; sin muestra de ese mes
+la palanca se queda quieta. Sigue APAGADA en los 4 (`lastminute_k=0`), así que no llegó a hacer daño.
+Endpoint `/api/sivra/incomes/backfill-reserved-at` (idempotente, con presupuesto de tiempo) para
+rellenar lo que falte. **Regla:** la antelación depende del MES tanto como del piso.
+
+### 🎪 De dónde salen los eventos de Sevilla: auditoría y arreglo completo (01/08/2026)
+Pregunta de Alberto («¿de dónde saca los eventos, funciona?»). Tres fuentes: calendario a mano
+(`lib/pricing-calendar.ts`), Ticketmaster y búsqueda web, combinadas por `MAX()`. **Agujeros:**
+agosto+septiembre 2026 VACÍOS en el calendario (83 días) y septiembre sin una sola fila automática —
+con la **Bienal de Flamenco del 9/09 al 3/10** sin catalogar; el barrido de mercado solo miraba **el
+primer viernes de cada mes** (5-7 fechas/mes, octubre con 15 días de retraso), así que las noches de
+evento NUNCA tenían comps y los centinelas #7/#8 no llegaban a la muestra mínima; techo real 1.60 en
+los crons (el 2.5 era inalcanzable); `.catch(()=>[])` en apply:161 y guard:269 que tarificaban la
+Feria como un martes respondiendo `ok:true`; y ningún latido sobre `pricing_eventos_auto`.
+**🔴 `GEMINI_API_KEY` lleva 548 llamadas y CERO éxitos desde el 16/06** — no es una racha de 429, es
+una key sin cuota; el fallback a OpenRouter lo tapó mes y medio. Añadido breaker + Check 12 del
+health-check (proveedor con ≥20 llamadas y 0 éxitos en 7 días). **Alberto: regenera la key en Google
+AI Studio o bórrala del proyecto Vercel** — mientras esté puesta y muerta se paga el intento fallido.
+**Idea de Alberto → eventos PREVISTOS:** nueva 2ª pasada que busca en PRENSA lo anunciado pero aún
+sin entradas (final de Copa, congresos de FIBES, giras sin fecha). Asimetría deliberada: un previsto
+**NO mueve el precio** (una noticia no es demanda comprada), solo **protege el suelo**, pide barrido
+y avisa por Telegram. Migración `2026-08-01_pricing_eventos_previstos.sql` APLICADA. Bienal metida
+como previsto (factor 1.25, solo findes) porque el mercado NO la respalda todavía: el 12/09 sale más
+barato que el 05/09. Crons de eventos y barrido pasados a DIARIOS. 105 tests, tsc 0, build OK.
+
 ### 💸 PriceLabs: baja ejecutada en Busto+Luxury; Luxury reactivado en el motor propio (01/08/2026)
 Alberto confirmó que **Busto Reform y Luxury ya están dados de baja de PriceLabs** (Dúplex/House siguen
 en PL por decisión suya, transición en dos fases). El informe de decisión (BD 31/07) encontró a **Luxury

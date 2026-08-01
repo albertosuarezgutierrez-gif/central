@@ -6,12 +6,30 @@
 // House pasa de 460€ a 23 días vista a 428€ el día de entrada —un 7% en tres semanas— y se queda con el
 // 70% de las noches vacías. Aguantar el precio hasta el final no es una estrategia, es no tener una.
 //
-// LA REFERENCIA NO ES UN NÚMERO INVENTADO, ES LA ANTELACIÓN REAL DE CADA PISO. Se mide en
-// `rate_snapshots`: cada vez que una fecha pasa de libre a ocupada entre dos snapshots, eso es una
-// reserva entrando, y `rate_date - snapshot_date` es su antelación. Medido el 01/08/2026:
-//   Busto 108 días · Luxury 57 · House 32 · Dúplex 7.
-// Esa dispersión es la razón de que un umbral único no valga: a 60 días, Busto va tardísimo y Dúplex
-// ni ha empezado a vender. Con la mediana de cada piso, la misma fórmula sirve para los cuatro.
+// LA REFERENCIA NO ES UN NÚMERO INVENTADO, ES LA ANTELACIÓN REAL DE CADA PISO. Esa dispersión es la
+// razón de que un umbral único no valga: a 60 días, un piso va tardísimo y otro ni ha empezado a
+// vender. Con la mediana de cada piso, la misma fórmula sirve para los cuatro.
+//
+// 🚨 Y LA MEDIANA TIENE QUE SER POR PISO **Y POR MES**, no global (corregido el 01/08/2026).
+// La primera versión la sacaba de `rate_snapshots` sobre TODAS las fechas del calendario, y las de
+// Semana Santa y Feria —que se reservan con medio año de antelación— tiraban la mediana hacia
+// arriba. Al llegar el histórico real de Smoobu (campo `created-at`, que sí trae la fecha en que se
+// hizo la reserva) la diferencia resultó ser de un orden de magnitud:
+//
+//     piso              global (snapshots)   octubre 2024   octubre 2025
+//     Busto Reform            108 días            13              3
+//     Luxury Busto             57                 17             11
+//     House Sevillana          32                 24             39
+//     Duplex Center             7                 11             11
+//
+// Con la mediana global, Busto habría empezado a descontar precio de octubre **tres meses antes** de
+// que octubre empiece siquiera a venderse — regalando margen en el mejor mes del año por una señal
+// de urgencia falsa. La misma cifra inflada produjo además un diagnóstico equivocado («Busto va
+// tarde en octubre») cuando 7 de 31 noches a dos meses vista es su comportamiento normal en ese mes.
+//
+// De ahí que el motor pase `antelacionMediana` YA calculada para el MES de esa fecha, con la muestra
+// que la sostiene, y que `muestraMinima` sea la guarda: sin datos suficientes de ese mes, la palanca
+// se queda quieta en vez de inventarse una urgencia.
 //
 // La urgencia arranca en la mediana y crece hasta el día de entrada, despacio al principio (curva
 // cuadrática): pasada la mediana ya se ha vendido la MITAD de lo que se suele vender, así que seguir
