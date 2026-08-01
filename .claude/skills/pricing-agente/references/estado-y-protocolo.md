@@ -71,6 +71,28 @@ el fallo era doble y sistémico:
   coste está infravalorado) y Dúplex/House **no tienen calibración de suelo contra competencia** (la de Busto y
   Luxury es del 28/07). Recuerda que el suelo protege el LISTADO, no el efectivo (canal ≈0,76× a ≥7 noches).
 
+### 🚨 House cambió de categoría en 2024 — NO promedies su histórico entero (01/08/2026)
+ADR de House por año: **67 · 106 · 147 · 175** (2020-23) → **553 · 459 · 487** (2024-26). Ticket medio 2026:
+**1.424€** por reserva (fines de semana de 2 noches a 2.257-2.882€). Promediar las dos etapas da cifras
+plausibles y FALSAS: así salió un «ADR de agosto de 102€» que casi lleva a bajar House a 285€ — regalarlo.
+**Regla: al analizar House usa SOLO desde 2024.** Es el mismo fallo que el de los ADR del radar de trading
+(número creíble, periodo equivocado, sin hueco que lo delate); aquí lo cazó Alberto, no el sistema.
+- **Pero el precio de AGOSTO sí está alto** — no es contradicción, es estacionalidad: el ADR de 487€ sale de
+  abril, mayo, septiembre, octubre y diciembre. Competencia real de Booking (12 personas, 16-23/08/2026):
+  mediana **228€/noche**, techo 443€ (Luxury Palace, 9,6); House pide 450-483€, por encima del techo. La
+  reserva cancelada de esas fechas eran **334€/noche**. Desde 2024, House no vende agosto (1 y 7 noches).
+- **Suelo PLANO = error de diseño.** El ADR de House va de ~230€ en agosto a >500€ en octubre. Un `min_price`
+  único no puede servir a los dos. Pendiente: calibrar el suelo por temporada con la serie 2024+.
+- **⚠️ No hay curva de anticipación:** el `createdAt` de las reservas de 2024-25 es la fecha de la IMPORTACIÓN
+  masiva (junio 2026), no la de la reserva. Cualquier «vamos tarde/normal» calculado con esa columna es
+  inventado. Resolverlo antes de decidir precios de octubre por ritmo de venta.
+- **🔴 Octubre 2026 (el mejor mes de Sevilla) a 2 meses vista:** Busto 7/31 · Dúplex **0/31** · House 6/31 ·
+  Luxury 4/31, con los precios publicados a **2-4× el ADR realizado de octubre 2024-25** (Busto 307€ vs 77-86€ ·
+  Dúplex 194€ vs 90-100€ · Luxury 212€ vs 98-100€ · House 867€ vs 423-499€). House sí ha colocado sus 6 noches
+  a **709€**, su mejor ADR de octubre, así que el precio alto no es absurdo — el problema es el volumen.
+- **El corpus aún no tiene comps del aforo real:** el sweep arreglado (#1186) es **semanal (dom 03:00 UTC)**;
+  hasta la pasada del 02/08 House solo tenía 20 comps de 12 plazas del 09/06 frente a 136 de 8 plazas.
+
 ### 🛡️ Centinelas del guardián (31/07/2026) — el sistema se contrasta solo contra el mercado
 Los tres fallos de ese día tenían la misma forma: **un dato metido a ojo que nadie volvió a mirar**, y que el
 motor usó como verdad durante meses porque NO TENÍA FORMA DE QUEJARSE. La respuesta no es «revisar más», es que
