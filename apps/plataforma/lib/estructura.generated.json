@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-01T07:31:52Z",
+  "generadoEn": "2026-08-01T09:41:33Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3968,64 +3968,8 @@
   ],
   "novedades": [
     {
-      "titulo": "🔴 Luxury a 841€/noche todo junio 2027 por UN día de concierto — bucket de mes contaminado (31/07/2026).",
-      "fecha": "31/07/2026"
-    },
-    {
-      "titulo": "🔎 Verificación en caliente del arreglo de los ADR + techo al nº de acciones (31/07/2026).",
-      "fecha": "31/07/2026"
-    },
-    {
-      "titulo": "🧯 Segunda tanda del parser de EDGAR + retrovisor honesto (31/07/2026, PR #1193).",
-      "fecha": "31/07/2026"
-    },
-    {
-      "titulo": "📉 Y el retrovisor dice que el modelo valor+calidad NO bate al mercado (31/07/2026).",
-      "fecha": "31/07/2026"
-    },
-    {
-      "titulo": "🏛️ Subastas: revisión de la cadena de ubicación — 8 fallos reales corregidos (31/07/2026).",
-      "fecha": "31/07/2026"
-    },
-    {
-      "titulo": "🏛️ Subastas: 3 fallos de la búsqueda por dirección + el Catastro corta por volumen (31/07/2026).",
-      "fecha": "31/07/2026"
-    },
-    {
-      "titulo": "🛡️ Pricing: tres centinelas para que el motor se queje solo (31/07/2026, rama `claude/pricing-check-31-07`).",
-      "fecha": "31/07/2026"
-    },
-    {
-      "titulo": "📉 Pricing 31/07: sistema SANO, pero agosto arranca a CERO (31/07/2026, rama `claude/pricing-check-31-07`).",
-      "fecha": "31/07/2026"
-    },
-    {
-      "titulo": "🚨 Fundamentales del radar de trading iban 2 años atrasados y MEZCLADOS (31/07/2026).",
-      "fecha": "31/07/2026"
-    },
-    {
-      "titulo": "⚖️ Subastas: 3 defectos del lector registral + «nota simple viva» (31/07/2026).",
-      "fecha": "31/07/2026"
-    },
-    {
-      "titulo": "💰 Subastas: el «valor de mercado» dejaba de fabricar chollos falsos (30/07/2026, PR #1183).",
-      "fecha": "30/07/2026"
-    },
-    {
-      "titulo": "🔍 Subastas: el documento registral se lee ENTERO y «se adquiere libre» hay que ganárselo (30/07/2026, PR #1182).",
-      "fecha": "30/07/2026"
-    },
-    {
-      "titulo": "🔎 Portales privados de subastas: sondeo técnico, SIN implementar (30/07/2026).",
-      "fecha": "30/07/2026"
-    },
-    {
-      "titulo": "🕳️ Barrido del monorepo: afirmar ausencias no comprobadas (30/07/2026, misma rama).",
-      "fecha": "30/07/2026"
-    },
-    {
-      "titulo": "📎 Subastas: «sin documentos adjuntos» era MENTIRA (30/07/2026, rama `claude/documentos-adjuntos-o95xl1`).",
-      "fecha": "30/07/2026"
+      "titulo": "🗓️ Rotación mensual: julio archivado (01/08/2026).",
+      "fecha": "01/08/2026"
     }
   ],
   "saludRepo": {

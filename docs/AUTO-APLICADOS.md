@@ -13,6 +13,20 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-08-01** · `docs/CONTEXTO-SESIONES.md` + `docs/memoria/2026-07.md` · rotación mensual
+  (321 entradas de julio archivadas con `scripts/rotar-memoria.mjs`; la entrada `### 💓 El
+  latido de facturas...` (formato heading, no `- **`) no la reconoció el script y se movió a
+  mano) · julio ya es mes cerrado, el archivo vivo debe quedar solo con agosto · commit de esta
+  auditoría.
+- **2026-08-01** · `docs/CONTEXTO-SESIONES.md` (antes de rotar) · corregido el estado de PR
+  #1194 (latido de facturas): la nota decía "pendiente de merge" y ya está mergeado (01/08
+  07:40) · dato que no se había comprobado desde el merge · commit de esta auditoría.
+- **2026-08-01** · heartbeat de crons (Supabase, 14 huellas) · 12/14 ✅; 2 ⛔ MUDO por umbral
+  (`limpiadoras/auto-sessions` 168,6h, `updates/sync` 165,8h) confirmados **falso positivo**
+  vía Vercel runtime logs (`GET .../auto-sessions` y `GET .../updates/sync` → 200 a las 05:00
+  UTC de hoy) · mismo patrón idempotente documentado desde el 02/07 (huecos legítimos sin
+  reservas/sesiones nuevas, no una caída) · no se toca el umbral (regla: solo se ajusta en
+  crons semanales/mensuales, éstos son diarios) · commit de esta auditoría.
 - **2026-07-31** · `docs/CONTEXTO-SESIONES.md` · añadida entrada de estado sobre el spec+plan
   de login con huella (WebAuthn/passkey) en plataforma (commit `6244118`, 29/07) · era un
   diseño aprobado por Alberto, sin implementar, que no quedó anotado como pendiente en la

@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-01T07:41:01Z",
-  "sha": "9f1ba1e70921d64adfac3a5b91c450b97c5968db",
+  "generadoEn": "2026-08-01T10:03:57Z",
+  "sha": "a7fc6441a03253faa4d60a0880c23189c390ef21",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54762,7 +54762,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 30
+          "linea": 31
         },
         {
           "nombre": "fmt",
@@ -54770,7 +54770,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 31
+          "linea": 32
         },
         {
           "nombre": "GET",
@@ -54778,7 +54778,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 59,
+          "linea": 60,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -54787,7 +54787,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 63
+          "linea": 64
         }
       ],
       "tablas": [
@@ -54811,7 +54811,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "71f6a76cdde6"
+      "hash": "373dc735b827"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -65025,6 +65025,35 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "7754948ce03b"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pricing-lastminute.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-lastminute.ts — la palanca de URGENCIA que el motor daba por supuesta. POR QUÉ (01/08/2026). Tres comentarios de `apply/route.ts` dicen «cerca dejamos que el last-minute suavice»… y ese last-minute no existía: el motor nunca bajaba un precio por el hecho de que la fecha se acercara",
+      "exporta": [
+        "factorLastMinute"
+      ],
+      "funciones": [
+        {
+          "nombre": "NEUTRO",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "motivo: string, evaluado = false",
+          "retorno": "LastMinuteResult",
+          "linea": 53
+        },
+        {
+          "nombre": "factorLastMinute",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: LastMinuteInput, o: LastMinuteOpts = {}",
+          "retorno": "LastMinuteResult",
+          "linea": 55
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "492327365944"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-premio-mercado.ts",
@@ -87654,7 +87683,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2366,
-    "funciones": 6308
+    "archivos": 2367,
+    "funciones": 6310
   }
 }
