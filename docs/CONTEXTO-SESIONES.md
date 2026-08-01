@@ -33,8 +33,9 @@ factura **sin dejar rastro en ningún sitio** y la pasada se declaraba buena →
 Ahora se cuentan (`noLeidas`), se encolan en Gmail `Facturas/PDF-pendiente` (sin `$Procesada`, para que la skill
 las reprocese) y el parte del latido lo dice (helper puro `resumen-escaneo.ts` + 6 tests). De paso
 `marcarProcesado`/`etiquetarPendiente` reciben el buzón real: los UID de IMAP son POR BUZÓN y desde
-`Facturas/Proveedor` el marcado se perdía en silencio. **Pendiente:** `subastas-enriquecer` da 504 a diario
-en el mismo minuto (mismo mal, sin tocar). Verificado: tsc 0 · 717 tests · build OK. PR #1201.
+`Facturas/Proveedor` el marcado se perdía en silencio. El 504 de `subastas-enriquecer` del mismo minuto era
+del 31/07 y ya lo tapó #1191 (`maxDuration` 300): hoy devuelve 200 y el corpus está al día (0 sin enriquecer,
+última 06:16). Verificado: tsc 0 · 717 tests · build OK. PR #1201.
 
 ### 💓 El latido de facturas no faltaba: la pasada moría en 504 antes de escribirlo (31/07/2026)
 Aviso «🧾 Escaneo de facturas: sin ninguna señal registrada» el mismo día de estrenar el vigía (#1184).
