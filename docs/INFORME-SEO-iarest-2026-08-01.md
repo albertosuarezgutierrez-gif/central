@@ -95,16 +95,74 @@ oportunidades con datos suficientes)»*, que **parece funcionamiento normal** y 
 `create_article` (agente) y el cron `blog-seo` son las dos únicas vías de contenido nuevo, y las dos llevan
 paradas. 8 artículos publicados hace dos meses no sostienen un crecimiento orgánico.
 
-### 4.4 Dato NO comprobado ⚠️
+### 4.4 El agente no llega ni a llamar a la IA 🔴
 
-**No he podido verificar si `SEO_AGENT_ENABLED` está a `'true'` en Vercel** (vive en las env vars del
-proyecto, no en el repo). Si no lo está, el agente devuelve `{ok:false, msg:'SEO_AGENT_ENABLED != true'}` en
-el primer `if` y ni siquiera llega a consultar GSC. Sería una causa **adicional**, no alternativa: aunque
-estuviera activo, 4.1 y 4.2 lo dejarían igualmente sin actuar.
+La IA del monorepo **funciona** — OpenRouter sirve a ia-rest a diario. Registro de `ai_usos` (BD compartida
+`wswbehlcuxqxyinousql`), últimos 30 días:
 
-Tampoco he podido consultar Search Console ni GA4 directamente desde esta sesión (requieren el
-`GOOGLE_OAUTH_REFRESH_TOKEN` de Vercel), así que **no sé cuántas impresiones reales tiene el sitio ni si está
-indexado**. Es lo primero que hay que mirar.
+| app / endpoint | proveedor | ok | nº | última |
+|---|---|---|---|---|
+| `ia-rest` / `search` | openrouter | ✅ | 25 | 01/08/2026 04:00 |
+| `ia-rest` / `chat` | openrouter | ✅ | 251 | 31/07/2026 08:02 |
+| `ia-rest` / `director` | openrouter | ✅ | 275 | 29/07/2026 08:00 |
+
+Pero el endpoint **`tools` de la pasarela — la única vía de IA del agente SEO (`callAITools`) — tiene CERO
+registros en toda la historia de la tabla.** No pocos: ninguno, de ninguna app, nunca.
+
+Como la pasarela sí registra el `chat` y el `search` de ia-rest con el mismo `AI_GATEWAY_SECRET`, si
+`callAITools` se hubiera ejecutado alguna vez habría fila (de éxito **o de error** — `registrarUso` se llama
+en ambos caminos). No la hay → **el agente SEO nunca alcanza la llamada de IA**.
+
+Encaja con el kill switch: `agenteHabilitado()` se evalúa **antes** de tocar GSC y antes de la IA, así que
+con `SEO_AGENT_ENABLED != true` el agente sale limpio y sin dejar rastro. La hipótesis alternativa (que el
+cron no dispare) produce exactamente el mismo observable; desde fuera de Vercel no se pueden distinguir,
+pero ambas significan lo mismo: **no corre**.
+
+### 4.5 Problemas de IA reales, tapados por el fallback 🟠
+
+- **Gemini a 429 permanente** (cuota agotada): 20 fallos en 14 días, el último el 01/08 a las 04:00. Cada
+  `callAISearch` quema un intento fallido antes de caer a OpenRouter.
+- **29 timeouts de OpenRouter** en 14 días (aborta a 25 s) y un *breaker abierto* el 31/07.
+
+No rompen nada hoy porque la cadena de fallback aguanta, pero son latencia y coste por una key muerta.
+
+### 4.6 Datos NO comprobados ⚠️
+
+- **`SEO_AGENT_ENABLED`**: vive en las env vars de Vercel, no en el repo. No verificado (ver 4.4: la
+  evidencia de `ai_usos` lo señala con fuerza, pero no lo demuestra).
+- **Search Console y GA4**: requieren el `GOOGLE_OAUTH_REFRESH_TOKEN` de Vercel. **No sé cuántas impresiones
+  reales tiene el sitio ni si está indexado.** Sigue siendo lo primero que hay que mirar.
+
+---
+
+## 4-bis. Hallazgos al inspeccionar la web en vivo (01/08/2026)
+
+Fetch real de `https://www.iarest.es/` → **HTTP 200**, HTML servido en servidor (no shell JS).
+
+**El on-page de la home está bien**, y esto reordena las prioridades del informe:
+
+| Elemento | Estado |
+|---|---|
+| `<title>` | ✅ «Software de Gestión para Restaurantes, Catering y Espacios de Eventos \| ia.rest» |
+| `<meta description>` | ✅ presente, 149 caracteres |
+| `<link canonical>` | ✅ `https://www.iarest.es` |
+| `og:title` / `og:description` | ✅ ambos |
+| `<meta robots>` | ✅ `index, follow` |
+| JSON-LD | ✅ 8 bloques (`Organization`, `WebSite`+`SearchAction`, `SoftwareApplication`+`Offer`…) |
+| Encabezados | ✅ 1 `<h1>`, 7 `<h2>` |
+| GA4 | ✅ tag `G-EN2YQLRLEX` presente |
+
+**Implicación:** el agente SEO reescribiendo metadatos no iba a mover la aguja aunque funcionase — el
+on-page ya está resuelto. El cuello de botella es **autoridad, indexación y demanda**, no etiquetas.
+
+Dos defectos concretos detectados de paso:
+
+1. **`solicitarIndexacion()` es casi con seguridad un no-op.** La Indexing API de Google solo soporta
+   oficialmente `JobPosting` y `BroadcastEvent`; para páginas normales ignora los `URL_UPDATED`. El agente
+   cree que está pidiendo indexación y no la está pidiendo. La vía real es el sitemap en Search Console.
+2. **El precio del prompt está desfasado.** El `SYSTEM` del agente dice «59€/mes»; la web dice «Desde
+   89€/mes». Si el agente llegara a escribir copy, publicaría un precio falso. Corregir antes de ampliarle
+   el alcance.
 
 ---
 
@@ -127,10 +185,32 @@ indexado**. Es lo primero que hay que mirar.
 | 3 | **Añadir los defaults de SEO** de esas rutas a `SEO_DEFAULTS` | `src/lib/seo/targets.ts` | Hoy solo está `/restaurantes`; sin defaults el agente no ve el «estado actual» |
 | 4 | **Bajar `SEO_MIN_IMPR`** a 3–5 mientras no haya volumen | Vercel env | Desbloquea el candado del punto 4.2 |
 | 5 | **Reactivar la producción de contenido**: revisar por qué `blog-seo` no escribe desde el 25/05 | `api/cron/blog-seo` | Sin contenido nuevo no hay crecimiento orgánico |
-| 6 | **Cambiar el aviso de Telegram**: que «sin cambios» N pasadas seguidas escale a alerta | `api/cron/seo-agent` | Hoy el silencio del agente es indistinguible del buen funcionamiento |
+| 6 | **Cambiar el aviso de Telegram**: que «sin cambios» N pasadas seguidas escale a alerta (patrón `agente_latidos`, PR #1184) | `api/cron/seo-agent` | Hoy el silencio del agente es indistinguible del buen funcionamiento |
+| 7 | **Corregir el precio del `SYSTEM`** (59€ → 89€) y quitar o marcar `solicitarIndexacion()` | `api/cron/seo-agent` | Evita publicar un precio falso y una falsa sensación de estar indexando |
+| 8 | **Renovar o retirar la key de Gemini** (429 permanente) | Vercel env | Latencia y coste por un proveedor muerto en la cadena |
 
 > Nota de método: los puntos 2–4 son cambios de configuración/alcance, reversibles y trazados en
 > `seo_cambios`. El punto 1 es el único que exige acceso a Vercel/Google y debe ir primero.
+
+---
+
+## 6-bis. Lo que NO va a arreglar el agente (aunque lo arreglemos)
+
+El on-page ya está bien (§4-bis). Por tanto el agente, incluso desbloqueado y con alcance total, tiene un
+techo bajo. Los frenos reales al tráfico, por orden:
+
+1. **Autoridad de dominio ≈ 0.** No hay en todo el sistema **ninguna** acción orientada a conseguir enlaces
+   entrantes. 8 artículos generados por IA en una sola tanda y sin backlinks es el perfil exacto que el
+   *Helpful Content* de Google descarta.
+2. **Las keywords elegidas son head terms imposibles.** «TPV restaurante», «software TPV bares España»:
+   Agora, ICG, Numier y Glop llevan años y pagan Ads. Un dominio nuevo no entra ahí en meses. Donde sí se
+   puede: long-tail y local — «TPV por voz Sevilla», «comanda por voz sin comisión», «alternativa a X».
+3. **VeriFactu 2027 es LA oportunidad regulatoria** y está infraexplotada: la obligación se aplazó a 2027
+   (RD-ley 15/2025), la demanda de búsqueda va a crecer, y la competencia aún no ha consolidado ese
+   contenido. Hoy hay **un** artículo.
+4. **El SEO no es la palanca de este trimestre.** Es un canal a 6–12 meses. El Lead Hunter / CRM de ia-rest
+   (prospección, WhatsApp, emails) ya corre a diario y es el que puede traer clientes ahora. Si la pregunta
+   de fondo es «no entran clientes», la respuesta no está en el agente SEO.
 
 ---
 
