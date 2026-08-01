@@ -405,7 +405,7 @@ function ResumenDocumental({ s, d }: { s: Subasta; d?: Documental | null }) {
       {/* El PDF que resuelve la duda, a un toque: decirle «pide la certificación
           registral» teniéndola enlazada aquí mismo es mandarlo al Registro para
           nada. Botón de 44 px (regla táctil del repo). */}
-      {titular.estado === 'publicadas_sin_leer' && titular.documento?.url && (
+      {titular.estado === 'publicadas_sin_extraer' && titular.documento?.url && (
         <p style={{ margin: '4px 0 0' }}>
           <a
             href={titular.documento.url}
