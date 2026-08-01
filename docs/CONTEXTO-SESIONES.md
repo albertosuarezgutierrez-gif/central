@@ -24,6 +24,24 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 📅 Smoobu SÍ da la fecha real de reserva — y eso INVIERTE el diagnóstico de octubre (01/08/2026)
+El 31/07 se dio por imposible reconstruir la curva de anticipación desde `incomes` porque `createdAt`
+es la fecha de la importación masiva. Cierto de esa columna — pero la **API de Smoobu publica
+`created-at`** (kebab-case, como `guest-name`) y lo trae **también para el histórico**. Verificado por
+`pg_net` desde Supabase, sin sacar la key de la BD. Nueva columna **`incomes.reserved_at`**
+(migración aplicada) + backfill: **1.843 de 1.984 reservas (93%) ya con fecha real, desde 2020**.
+**🔴 Lo que cambia:** la antelación medida desde `rate_snapshots` era una mediana GLOBAL por piso, y
+Semana Santa + Feria la disparaban. Con el histórico REAL de **octubre** (6 años, muestra 46-67 por
+piso): **House 34 días · Busto 18 · Dúplex 17 · Luxury 16** — frente a los 108/57/32/7 globales.
+O sea: **«Busto va tarde en octubre» era FALSO** (yo lo dije el 31/07). Busto vende octubre con ~18
+días de mediana, así que 7/31 a dos meses vista es su comportamiento NORMAL. **Octubre no va mal.**
+Y la palanca de last-minute con la mediana global habría empezado a descontar el precio de Busto
+**tres meses antes** de que octubre se venda — regalando margen en el mejor mes del año. Corregido:
+`apply/route.ts` mide la antelación **por piso Y por mes** desde `reserved_at`; sin muestra de ese mes
+la palanca se queda quieta. Sigue APAGADA en los 4 (`lastminute_k=0`), así que no llegó a hacer daño.
+Endpoint `/api/sivra/incomes/backfill-reserved-at` (idempotente, con presupuesto de tiempo) para
+rellenar lo que falte. **Regla:** la antelación depende del MES tanto como del piso.
+
 ### 🎪 De dónde salen los eventos de Sevilla: auditoría y arreglo completo (01/08/2026)
 Pregunta de Alberto («¿de dónde saca los eventos, funciona?»). Tres fuentes: calendario a mano
 (`lib/pricing-calendar.ts`), Ticketmaster y búsqueda web, combinadas por `MAX()`. **Agujeros:**
