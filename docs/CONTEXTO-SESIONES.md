@@ -24,6 +24,24 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🔴 La comisión de Booking se descontaba DOS VECES — 17.723€ en 2026 (01/08/2026)
+Auditoría a fondo del precio dinámico pedida por Alberto. El hallazgo más caro NO es del motor:
+`incomes` tiene un **trigger** (`incomes_compute_net`) que calcula `amount = amount_gross × (1 −
+`portal_rates.commission_pct`)`; para BOOKING la tasa es **19,72% y es CORRECTA** (15% + 1,3% de
+servicio de pagos, +21% de IVA, verificada contra factura). El fallo estaba en `smoobu-sync.ts`, que
+aplicaba **ese mismo factor antes de escribir** → Smoobu 244,86€ → app 196,57€ → trigger 157,81€.
+Confirmado por cuatro vías antes de tocar nada: desglose de la extranet (Alberto mandó captura), 14
+de 15 pagos del banco casan al céntimo con `amount_gross`, agregados banco vs `amount` (+20% Dúplex,
++9% Kutxa) y la ausencia total de cargos de comisión en el banco. Saneado el histórico
+(`amount_gross` recuperado dividiendo por 0,8028; el trigger recalcula el neto): la reserva de
+prueba queda 244,86€/196,57€ **idéntica a la extranet** y 2026 pasa de 72.151,40€ a **89.874,62€**.
+Afecta a P&L, break-even y **base del IRPF**; el motor de precios no (lee `amount_gross`).
+**Retirada una sospecha mía:** el `channel_markup` de 1,16 SÍ llega al escaparate (122 × 1,16 con
+−10% móvil y −18% Genius = 104,44€ frente a los 105,43€ reales). No había infravaloración del 14%.
+Además: latido para el **guardián de precios**, que era el único agente sin vigilante, y retirada la
+ventana de 3 días del aviso —se combinaba con el dedup y silenciaba una alerta PARA SIEMPRE (había 5
+abiertas sin avisar, dos ALTAS sobre Luxury bajo mercado del 22 y 25 de julio).
+
 ### 🔴 El bucket de mercado por MES era inalcanzable por diseño (01/08/2026)
 Alberto mandó una reserva de Luxury (6-8 nov, Booking) preguntando si estaba bien. La reserva sí; el
 precio no. El motor había bajado esas noches **152€ → 122€** a las 14:30 y a las 18:43 entró la

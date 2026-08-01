@@ -7,7 +7,27 @@ import { getSmoobuKey } from '@/lib/smoobu'
 import { PORTAL_MAP } from '@/lib/portales'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 
-const BOOKING_NET_FACTOR = 0.8028
+// 🚨 AQUÍ NO SE DESCUENTA COMISIÓN. Lo hace la BD (01/08/2026).
+//
+// La tabla `incomes` tiene un trigger BEFORE INSERT/UPDATE —`incomes_compute_net`, función
+// `compute_income_net()`— que hace DOS cosas: copia a `amount_gross` el valor que llegue en
+// `amount` y luego calcula `amount = amount_gross × (1 − commission_pct/100)` leyendo la tasa de
+// la tabla `portal_rates`. Para BOOKING esa tasa es **19,72%**, y es CORRECTA: 15% de comisión +
+// 1,3% de servicio de pagos, todo con el 21% de IVA encima (verificado contra la factura de marzo
+// de 2026, según la propia descripción de la fila).
+//
+// Lo que estaba mal era que este sync aplicaba ESE MISMO 0,8028 antes de escribir, así que el
+// descuento se aplicaba dos veces: Smoobu daba 244,86€ → la app escribía 196,57€ → el trigger
+// tomaba eso por el bruto y dejaba `amount` en 157,81€. Un 20% de ingreso desaparecido en cada
+// reserva de Booking, y con `amount_gross` guardando un neto disfrazado de bruto.
+//
+// Contrastado con el desglose real de la extranet (Luxury, 6-8 nov 2026): precio total 244,86€,
+// comisión 36,73€ + 3,18€ de servicio de pagos, +21% de IVA = 48,29€ → neto 196,57€. Es
+// exactamente `amount_gross`, que confirma la tasa y confirma el doble conteo.
+//
+// Escribiendo el precio de Smoobu TAL CUAL, el trigger deja `amount_gross` = 244,86 (bruto de
+// verdad, como dice su nombre) y `amount` = 196,57 (neto de verdad). Si algún día cambia la
+// comisión, se toca `portal_rates` — nunca esto.
 
 function parseDate(s?: string): Date | null {
   if (!s) return null
@@ -71,7 +91,8 @@ export async function runSync(days: number, maxPages = 20, arrFrom?: string, arr
     const co = parseDate(b.departure)
     const amtGross = typeof b.price === 'string' ? parseFloat(b.price) : (b.price || 0)
     const portal_tmp = PORTAL_MAP[b.channel?.name || ''] || 'OTRO'
-    const amt = portal_tmp === 'BOOKING' ? Math.round(amtGross * BOOKING_NET_FACTOR * 100) / 100 : amtGross
+    // `amount` = `amount_gross` para TODOS los portales: lo que publica Smoobu ya es el neto.
+    const amt = amtGross
     const portal = portal_tmp
     const isCancel = b.type === 'cancellation'
 
