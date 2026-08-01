@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-01T20:30:01Z",
-  "sha": "e4e1a7dba6e01e7d1b689ef8066cc8093c09a1f5",
+  "generadoEn": "2026-08-01T20:57:00Z",
+  "sha": "72267c7308d0fc99feba102b4f56fdbed705c7d5",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -50590,7 +50590,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 55
+          "linea": 58
         }
       ],
       "tablas": [
@@ -50601,7 +50601,7 @@
         "pms_connections"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "31645c4833e1"
+      "hash": "3f811a364c60"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -54624,7 +54624,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<Map<number, string[]>>",
-          "linea": 43,
+          "linea": 55,
           "resumen": "🚨 El barrido busca por el AFORO REAL de cada piso, NO con \"4 personas\" para todos (bug hasta el 31/07/2026: guardaba los MISMOS comps de 4 plazas para los 4 pisos con `guests=4` fijo, así que House —"
         },
         {
@@ -54633,7 +54633,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<",
-          "linea": 57,
+          "linea": 69,
           "resumen": "Fechas de evento de las DOS fuentes que conoce el motor: el calendario del repo y lo que descubren los crons (Ticketmaster / búsqueda web). Si la tabla falla NO se cae la pasada: se barre la base mens"
         },
         {
@@ -54642,7 +54642,7 @@
           "exportada": false,
           "params": "query: string",
           "retorno": "Promise<string>",
-          "linea": 80
+          "linea": 92
         },
         {
           "nombre": "extractPrices",
@@ -54650,7 +54650,7 @@
           "exportada": false,
           "params": "snippets: string, checkin: string, checkout: string",
           "retorno": "Promise<any[]>",
-          "linea": 94
+          "linea": 106
         },
         {
           "nombre": "GET",
@@ -54658,7 +54658,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 108
+          "linea": 120
         }
       ],
       "tablas": [
@@ -54669,7 +54669,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/sweep",
-      "hash": "86019ec641c9"
+      "hash": "e4b36f02176f"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pl-mensual/route.ts",
@@ -54968,7 +54968,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 62
+          "linea": 63
         }
       ],
       "tablas": [
@@ -54996,7 +54996,7 @@
         "ult"
       ],
       "rutaApi": "/api/sivra/pricing/guard",
-      "hash": "2c7fe3b64bfd"
+      "hash": "c509415ec93f"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/historial/route.ts",
@@ -62880,7 +62880,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "49fcb727c1ee"
+      "hash": "c6f34bbdee61"
     },
     {
       "ruta": "apps/plataforma/lib/norma43.ts",
@@ -64893,7 +64893,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "Date",
-          "linea": 55
+          "linea": 66
         },
         {
           "nombre": "fmt",
@@ -64901,7 +64901,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 58
+          "linea": 69
         },
         {
           "nombre": "sumarDias",
@@ -64909,7 +64909,7 @@
           "exportada": false,
           "params": "iso: string, n: number",
           "retorno": "string",
-          "linea": 61
+          "linea": 72
         },
         {
           "nombre": "diasEntre",
@@ -64917,16 +64917,16 @@
           "exportada": false,
           "params": "desdeIso: string, hastaIso: string",
           "retorno": "number",
-          "linea": 64
+          "linea": 75
         },
         {
           "nombre": "findeDelMes",
           "kind": "function",
           "exportada": true,
-          "params": "hoyIso: string, m: number",
+          "params": "hoyIso: string, m: number, orden = 0",
           "retorno": "string",
-          "linea": 69,
-          "resumen": "Primer viernes del mes a `m` meses vista de `hoy`."
+          "linea": 98,
+          "resumen": "Fecha de muestra nº `orden` del mes a `m` meses vista. `orden` 0 = primer VIERNES (el que se ha barrido siempre; se mantiene para no mover la serie histórica). 🚨 POR QUÉ HAY MÁS DE UNA (01/08/2026, c"
         },
         {
           "nombre": "picosDeEvento",
@@ -64934,7 +64934,7 @@
           "exportada": true,
           "params": "eventos: EventoFecha[], factorMinimo = 1.15",
           "retorno": "EventoFecha[]",
-          "linea": 81,
+          "linea": 117,
           "resumen": "Agrupa fechas de evento CONTIGUAS en bloques y devuelve, de cada bloque, la de mayor factor (empate → la primera). La Feria entera gasta una sola ventana."
         },
         {
@@ -64943,13 +64943,13 @@
           "exportada": true,
           "params": "hoyIso: string, eventos: EventoFecha[], opts: VentanasOpts = {},",
           "retorno": "Ventana[]",
-          "linea": 110,
+          "linea": 146,
           "resumen": "Ventanas a barrer en una pasada. La base mensual va SIEMPRE (es la línea de temporada); las de evento se añaden por cercanía hasta el tope, sin repetir una fecha que ya cubre la base."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fb85896bae72"
+      "hash": "3164bde4860c"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pilot-track.ts",
@@ -65350,7 +65350,7 @@
           "exportada": false,
           "params": "s?: string",
           "retorno": "Date | null",
-          "linea": 12
+          "linea": 32
         },
         {
           "nombre": "nights",
@@ -65358,7 +65358,7 @@
           "exportada": false,
           "params": "ci: Date | null, co: Date | null",
           "retorno": "number",
-          "linea": 18
+          "linea": 38
         },
         {
           "nombre": "fetchPage",
@@ -65366,7 +65366,7 @@
           "exportada": false,
           "params": "p: number, from: string, apiKey: string, arrFrom?: string, arrTo?: string",
           "retorno": null,
-          "linea": 22
+          "linea": 42
         },
         {
           "nombre": "runSync",
@@ -65374,7 +65374,7 @@
           "exportada": true,
           "params": "days: number, maxPages = 20, arrFrom?: string, arrTo?: string",
           "retorno": null,
-          "linea": 37
+          "linea": 57
         }
       ],
       "tablas": [
@@ -65382,7 +65382,7 @@
         "properties"
       ],
       "rutaApi": null,
-      "hash": "199f3ab5b5df"
+      "hash": "8d4329a8cb87"
     },
     {
       "ruta": "apps/plataforma/lib/smoobu.ts",
