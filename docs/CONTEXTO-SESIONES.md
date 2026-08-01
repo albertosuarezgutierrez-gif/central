@@ -27,9 +27,9 @@
 - **⚕️ Check 4 del health-check reescrito: latido del sync, no última reserva (01/08/2026, rama
   `claude/health-check-2026-07-30-vlv4c7`).** Feedback de Alberto: la sequía de reservas (25/07→01/08,
   sync verificado sano por logs 200) se pintaba como 🔴 — «que especifique el fallo, ya que no es un
-  fallo». Nueva tabla `sync_latidos` (migración `2026-08-01_sync_latidos.sql`, aplicada+semilla);
-  `runSync` la refresca en cada pasada buena (best-effort). Check 4: 🔴 solo si el latido lleva >26h
-  (sync averiado de verdad); sin reservas nuevas → línea ✅ informativa «temporada floja, no es un fallo».
+  fallo». `runSync` registra latido en **`agente_latidos`** (`smoobu_sync`, patrón #1184: intento al
+  empezar + ok al terminar; semilla aplicada). Check 4: 🔴 solo si `ultimo_ok_at` lleva >26h (sync
+  averiado de verdad); sin reservas nuevas → línea ✅ informativa «temporada floja, no es un fallo».
 
 ### 📐 El mercado de House se leía de pisos de OTRO tamaño (01/08/2026)
 Alberto: «House Sevillana aún está en PriceLabs como dúplex». Cierto fuera y también DENTRO: los 30

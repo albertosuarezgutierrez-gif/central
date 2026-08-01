@@ -17,8 +17,8 @@
 ## Entradas pendientes de procesar (lo más reciente arriba)
 - **2026-08-01 · health-check (sesión interactiva, continuación 30/07)** · hizo: verificado por logs
   Vercel que el sync Smoobu corre (200 el 31/07 y 01/08) y que el 🔴 del Check 4 era sequía de reservas,
-  no avería; a petición de Alberto, Check 4 reescrito sobre latido real (`sync_latidos`, refrescado por
-  `runSync`) — 🔴 solo con sync parado >26h, sequía → ✅ informativo; dudas: —; fallos: —;
+  no avería; a petición de Alberto, Check 4 reescrito sobre latido real (`agente_latidos.smoobu_sync`,
+  registrado por `runSync`) — 🔴 solo con sync parado >26h, sequía → ✅ informativo; dudas: —; fallos: —;
   PRs/commits: rama `claude/health-check-2026-07-30-vlv4c7` (2º PR).
 - **2026-08-01 · rrhh-compliance-calendar** · hizo: pasada mensual sobre `docs/ROADMAP-rrhh.md`;
   9 ítems 🔴 obligatorios pendientes (fichaje RD 8/2019, geolocalización, TSA, art.28 RGPD, canal

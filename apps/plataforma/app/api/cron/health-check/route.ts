@@ -67,15 +67,15 @@ export async function GET(req: NextRequest) {
     if (ratio < 0.7) fallos.push(`🔴 Cuadre OTA: banco ${eur(Number(totalBanco))} vs incomes ${eur(Number(totalInc))} (ratio ${ratio.toFixed(2)} < 0.70)`)
     else ok.push(`✅ Cuadre OTA: banco/incomes ratio ${ratio.toFixed(2)}`)
 
-    // Check 4: salud del SYNC de Smoobu — por LATIDO, no por la última reserva. El latido
-    // (sync_latidos.clave='smoobu') se refresca en cada runSync que termina bien (job diario
+    // Check 4: salud del SYNC de Smoobu — por LATIDO (agente_latidos.'smoobu_sync'), no por la
+    // última reserva. runSync registra intento al empezar y pasada buena al terminar (job diario
     // de las 05:00 o webhook), haya o no reservas; MAX(createdAt) de incomes solo mide cuándo
     // entró la última reserva NUEVA, y una racha sin reservas (sequía 25/07→01/08) NO es un
     // fallo del sync — feedback de Alberto 01/08/2026: no pintarla de 🔴, decir qué es.
     const [latidoSmoobu, ultimoIncome] = await Promise.all([
-      prisma.$queryRaw<Array<{ ultimo: Date }>>(Prisma.sql`
-        SELECT ultimo FROM sync_latidos WHERE clave = 'smoobu'
-      `).catch(() => [] as Array<{ ultimo: Date }>),
+      prisma.$queryRaw<Array<{ ultimo_at: Date | null; ultimo_ok_at: Date | null }>>(Prisma.sql`
+        SELECT ultimo_at, ultimo_ok_at FROM agente_latidos WHERE agente = 'smoobu_sync'
+      `).catch(() => [] as Array<{ ultimo_at: Date | null; ultimo_ok_at: Date | null }>),
       prisma.$queryRaw<Array<{ ultima: Date }>>(Prisma.sql`
         SELECT MAX("createdAt") as ultima FROM incomes
       `),
@@ -86,18 +86,21 @@ export async function GET(req: NextRequest) {
     const notaReserva = diasSinReserva === null ? ''
       : diasSinReserva > 2 ? ` — sin reservas nuevas desde hace ${diasSinReserva}d (temporada floja, no es un fallo)`
       : ` — última reserva nueva hace ${diasSinReserva}d`
-    const horasSinLatido = latidoSmoobu[0]?.ultimo
-      ? (Date.now() - new Date(latidoSmoobu[0].ultimo).getTime()) / 3_600_000
+    const horasSinLatidoOk = latidoSmoobu[0]?.ultimo_ok_at
+      ? (Date.now() - new Date(latidoSmoobu[0].ultimo_ok_at).getTime()) / 3_600_000
       : null
-    if (horasSinLatido === null) {
-      // Sin fila de latido (tabla/semilla sin aplicar): no se puede distinguir → criterio antiguo.
-      if ((diasSinReserva ?? 999) > 2) fallos.push(`🔴 Smoobu sync: sin latido registrado y sin reservas nuevas desde hace ${diasSinReserva ?? '?'}d (aplica 2026-08-01_sync_latidos.sql)`)
-      else ok.push('✅ Smoobu sync: sin latido aún, pero con reservas recientes')
-    } else if (horasSinLatido > 26) {
-      // El job es diario: >26h sin latido = el sync NO está corriendo (o muere antes de acabar).
-      fallos.push(`🔴 Smoobu sync AVERIADO: sin corrida completa desde hace ${(horasSinLatido / 24).toFixed(1)}d (revisa el job updates/sync del dispatcher)${notaReserva}`)
+    if (horasSinLatidoOk === null) {
+      // Sin pasada buena registrada (el sync aún no corrió con el código nuevo, o muere siempre):
+      // distinguir «no se dispara» de «se dispara y no termina» (landmine 31/07/2026).
+      const intento = latidoSmoobu[0]?.ultimo_at
+      if ((diasSinReserva ?? 999) <= 2) ok.push('✅ Smoobu sync: sin latido aún, pero con reservas recientes')
+      else if (intento) fallos.push(`🔴 Smoobu sync AVERIADO: se dispara (último intento ${new Date(intento).toISOString().slice(0, 16)}Z) pero nunca termina una pasada${notaReserva}`)
+      else fallos.push(`🔴 Smoobu sync: sin ningún latido registrado y sin reservas nuevas desde hace ${diasSinReserva ?? '?'}d (¿el job updates/sync no se dispara?)`)
+    } else if (horasSinLatidoOk > 26) {
+      // El job es diario: >26h sin pasada buena = el sync NO está corriendo (o muere a medias).
+      fallos.push(`🔴 Smoobu sync AVERIADO: sin pasada completa desde hace ${(horasSinLatidoOk / 24).toFixed(1)}d (revisa el job updates/sync del dispatcher)${notaReserva}`)
     } else {
-      ok.push(`✅ Smoobu sync: activo (latido hace ${Math.round(horasSinLatido)}h)${notaReserva}`)
+      ok.push(`✅ Smoobu sync: activo (latido hace ${Math.round(horasSinLatidoOk)}h)${notaReserva}`)
     }
 
     // Check 5: Incomes con amount NULL
