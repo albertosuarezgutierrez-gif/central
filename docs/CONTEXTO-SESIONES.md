@@ -24,6 +24,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 📐 El mercado de House se leía de pisos de OTRO tamaño (01/08/2026)
+Alberto: «House Sevillana aún está en PriceLabs como dúplex». Cierto fuera y también DENTRO: los 30
+comparables vivos de una casa de **12 plazas** eran de apartamentos de **8** (media 314€). El motor
+no mentía —normaliza con `pricing_factor_aforo` desde el 31/07— pero su ancla estaba **extrapolada
+(x1,56), no medida**: 403€ frente a los 621-694€ de los últimos comps de 12 plazas reales. De ahí
+salía mi propuesta de bajar House a 330-350€: **retirada**. Dos arreglos: el guardián compara #4/#5
+contra el mercado NORMALIZADO (iba en crudo → en el único piso donde importaba medía un 36% barato y
+no podía disparar) y **centinela #9 `comps_otro_aforo`** (puro + 8 tests; umbral x1,35 para que
+Luxury 5-plazas-con-comps-de-4 no haga ruido). El barrido diario de #1203 repone los comps buenos.
+
 ### 🏠 Un piso puede cambiar de PRODUCTO: `historico_desde` + Gemini fuera (01/08/2026)
 Dato de Alberto: **House Sevillana estuvo alquilada como DOS pisos turísticos independientes** hasta
 que se decidió alquilarla entera (6 habitaciones, 12 personas). El corte se ve solísimo en BD:

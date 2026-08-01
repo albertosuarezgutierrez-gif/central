@@ -6,6 +6,7 @@ import { tgAlert } from "@/lib/telegram"
 import { decidirSubMercado, decidirReservaBaja } from "@/lib/sivra/pricing-guardia"
 import {
   decidirEventoSinRespaldo, decidirEventoNoCatalogado, decidirPrecioPorPlaza,
+  decidirCompsDeOtroAforo,
 } from "@/lib/sivra/pricing-centinelas"
 import { eventFactor } from "@/lib/pricing-calendar"
 
@@ -35,6 +36,13 @@ export const maxDuration = 60
 //      el calendario con las fechas de OTRA semana y nadie lo vio. Ahora el mercado lo desmiente solo.
 //   #8 Mercado disparado SIN evento catalogado (31/07): el espejo del #7 — busca lo que NO sabemos
 //      (septiembre 2026, con la Bienal dentro, no tenía un solo evento en ninguna de las dos fuentes).
+//   #9 Comps de OTRO aforo (01/08): el mercado de un piso leído de pisos de otro tamaño. Lo levantó
+//      Alberto ("House Sevillana aún está como dúplex"): los 30 comps vivos de una casa de 12 plazas
+//      eran apartamentos de 8. El ancla no era falsa, era EXTRAPOLADA — y nada lo decía.
+//
+// ⚠️ #4 y #5 comparan contra el mercado NORMALIZADO por aforo (`pricing_factor_aforo`), igual que el
+// motor. Iban sin normalizar hasta el 01/08/2026, así que en el único piso donde importaba —House,
+// 12 plazas con comps de 8— medían contra un mercado un 36% más barato y no podían disparar.
 // Crea alertas en pricing_alerts (dedup: no recrea mientras el mismo aviso siga abierto) y manda UN
 // Telegram con lo nuevo sin avisar (avisado_at).
 //
@@ -112,14 +120,19 @@ export async function GET(req: NextRequest) {
   for (const { property_id } of enabled) {
     const rows = await prisma.$queryRaw<{ matched: number; sub: number; avg_live: number; avg_p50: number }[]>(Prisma.sql`
       WITH mkt AS (
-        SELECT checkin_date,
-               percentile_cont(0.5) WITHIN GROUP (ORDER BY price_night) AS p50,
+        -- price_night NORMALIZADO al aforo del piso, igual que hace el motor en apply/route.ts.
+        -- Sin esto el guardian comparaba el precio vivo de una casa de 12 plazas contra comps de 8
+        -- (01/08/2026: p50 de 314€ en vez de ~490€), asi que House salia "por encima de mercado"
+        -- justo cuando estaba por debajo: el centinela de sub-mercado no podia disparar nunca.
+        SELECT m.checkin_date,
+               percentile_cont(0.5) WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests)) AS p50,
                COUNT(*) AS n
-        FROM market_rates
-        WHERE scenario = ${property_id}
-          AND search_date >= CURRENT_DATE - INTERVAL '21 days'
-          AND price_night > 0
-        GROUP BY checkin_date
+        FROM market_rates m
+        LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
+        WHERE m.scenario = ${property_id}
+          AND m.search_date >= CURRENT_DATE - INTERVAL '21 days'
+          AND m.price_night > 0
+        GROUP BY m.checkin_date
         HAVING COUNT(*) >= 8
       ),
       live AS (
@@ -151,23 +164,27 @@ export async function GET(req: NextRequest) {
   const nuevasReservas = await prisma.$queryRaw<{
     property_id: string; guest: string; checkin: string; nights: number; adr: number; p50: number; comps: number; date_specific: boolean
   }[]>(Prisma.sql`
+    -- Los dos p50 van NORMALIZADOS por aforo (misma razon que en #4): el ADR de una reserva se
+    -- compara contra el mercado del piso que se reservo, no contra el de uno mas pequeno.
     WITH mkt_blend AS (
-      SELECT scenario,
-             percentile_cont(0.5) WITHIN GROUP (ORDER BY price_night) AS p50,
+      SELECT m.scenario,
+             percentile_cont(0.5) WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests)) AS p50,
              COUNT(*) AS comps
-      FROM market_rates
-      WHERE search_date >= CURRENT_DATE - INTERVAL '21 days'
-        AND price_night > 0 AND scenario LIKE 'prop_%'
-      GROUP BY scenario
+      FROM market_rates m
+      LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
+      WHERE m.search_date >= CURRENT_DATE - INTERVAL '21 days'
+        AND m.price_night > 0 AND m.scenario LIKE 'prop_%'
+      GROUP BY m.scenario
     ),
     mkt_date AS (
-      SELECT scenario, checkin_date,
-             percentile_cont(0.5) WITHIN GROUP (ORDER BY price_night) AS p50,
+      SELECT m.scenario, m.checkin_date,
+             percentile_cont(0.5) WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests)) AS p50,
              COUNT(*) AS comps
-      FROM market_rates
-      WHERE search_date >= CURRENT_DATE - INTERVAL '21 days'
-        AND price_night > 0 AND scenario LIKE 'prop_%'
-      GROUP BY scenario, checkin_date
+      FROM market_rates m
+      LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
+      WHERE m.search_date >= CURRENT_DATE - INTERVAL '21 days'
+        AND m.price_night > 0 AND m.scenario LIKE 'prop_%'
+      GROUP BY m.scenario, m.checkin_date
       HAVING COUNT(*) >= 8
     )
     SELECT i."propertyId" AS property_id, COALESCE(i."guestName", '') AS guest,
@@ -227,6 +244,42 @@ export async function GET(req: NextRequest) {
       sueloEv: decidirPrecioPorPlaza({ precio: Number(p.min_price ?? 0), plazas: p.plazas }),
     }))
     .filter(p => p.vivoEv.alerta || p.sueloEv.alerta)
+
+  // #9 Comps de OTRO aforo (01/08/2026). Los dos arreglos de arriba —barrido por aforo real y
+  // normalización— hacen lo correcto y ninguno avisa de que TODOS los comps de un piso sean de otro
+  // tamaño: el ancla deja de estar medida y pasa a estar extrapolada, sin que se note. Se mira SOLO
+  // la búsqueda más reciente de cada piso, que es la que manda en el motor.
+  const aforoComps = await prisma.$queryRaw<{
+    property_id: string; plazas: number | null; guests: number; n: number
+  }[]>(Prisma.sql`
+    WITH latest AS (
+      SELECT scenario, MAX(search_date) AS sd
+      FROM market_rates
+      WHERE scenario LIKE 'prop_%' AND price_night > 0
+      GROUP BY scenario
+    )
+    SELECT m.scenario AS property_id, z.max_guests::int AS plazas,
+           m.guests::int AS guests, COUNT(*)::int AS n
+    FROM market_rates m
+    JOIN latest l ON l.scenario = m.scenario AND l.sd = m.search_date
+    LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
+    WHERE m.price_night > 0
+    GROUP BY m.scenario, z.max_guests, m.guests
+  `).catch(() => [])
+
+  const compsPorPiso = new Map<string, { plazas: number | null; comps: { plazas: number; n: number }[] }>()
+  for (const r of aforoComps) {
+    const e = compsPorPiso.get(r.property_id) ?? { plazas: r.plazas, comps: [] }
+    e.comps.push({ plazas: Number(r.guests), n: Number(r.n) })
+    compsPorPiso.set(r.property_id, e)
+  }
+  const aforoHits = [...compsPorPiso.entries()]
+    .map(([property_id, e]) => ({
+      property_id,
+      plazas: e.plazas,
+      ev: decidirCompsDeOtroAforo({ plazasPiso: e.plazas, comps: e.comps }),
+    }))
+    .filter(a => a.ev.alerta)
 
   // #7/#8 Calendario contra mercado. El p50 de la fecha y el del mes se calculan SOBRE LOS MISMOS
   // pisos-escenario (el JOIN restringe el mes a los escenarios que barrieron esa fecha): si un día
@@ -401,6 +454,14 @@ export async function GET(req: NextRequest) {
       if (ok) created++
     }
   }
+  for (const a of aforoHits) {
+    const ok = await pushAlert({
+      tipo: "comps_otro_aforo", prioridad: "alta", property_id: a.property_id,
+      titulo: `${PROP_NAMES[a.property_id] ?? a.property_id}: su mercado se está leyendo de pisos de otro tamaño`,
+      detalle: `${a.ev.motivo} Mientras siga así, NO bajes el precio de este piso con el dato de mercado: lanza el barrido (/api/sivra/mercado/sweep) y vuelve a mirarlo.`,
+    })
+    if (ok) created++
+  }
   for (const e of sinRespaldo) {
     const ok = await pushAlert({
       tipo: "evento_sin_respaldo", prioridad: "media", property_id: "_calendario",
@@ -466,6 +527,7 @@ export async function GET(req: NextRequest) {
     sub_mercado: subHits.length,
     reservas_bajas: reservasBajas.length,
     por_plaza: plazaHits.length,
+    comps_otro_aforo: aforoHits.length,
     // `fechas_evaluadas` es el denominador honesto de #7/#8: si sale bajo, el barrido de mercado
     // cubre pocas fechas y el silencio de los centinelas NO significa que el calendario esté bien.
     fechas_evaluadas: eventosIlegibles ? 0 : mercadoDia.length,
