@@ -15,6 +15,14 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-01 · fiscal-novedades** · hizo: pasada mensual — contrastadas contra AEAT/BOE y BOJA
+  las cifras vigiladas de `IMPORTES_POR_ANIO` (2025/2026): mínimo contribuyente 5.550€, maternidad
+  1.200€/1.000€ guardería, familia numerosa estatal 1.200€/2.400€, Andalucía nacimiento (sin límite
+  de renta, Ley 8/2025) y familia numerosa autonómica 200€/400€ con límite 25.000€ individual — todo
+  sin cambios respecto a lo ya reflejado (última revisión 01/07/2026). Sin novedad legislativa BOE/
+  BOJA de julio-agosto 2026 que afecte a estos campos. dudas: —; fallos: — (AEAT
+  `sede.agenciatributaria.gob.es` devolvió 403 al fetch directo, contrastado igualmente por búsqueda
+  web y fuentes secundarias fiables); PRs/commits: — (sin cambios, no procede PR).
 - **2026-07-31 · pricing-agente (check-in programado del cutover)** · hizo: verificado que el sync de
   Smoobu NO está roto (cron 05:01 → 200; `incomes` parado desde 25/07 es sequía real, corroborada por
   `available` de Smoobu) y que el motor tarifica en mercado (Busto 81€ vs p50 80€). Documentada en
