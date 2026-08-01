@@ -97,8 +97,14 @@ plausibles y FALSAS: así salió un «ADR de agosto de 102€» que casi lleva a
   Luxury 4/31, con los precios publicados a **2-4× el ADR realizado de octubre 2024-25** (Busto 307€ vs 77-86€ ·
   Dúplex 194€ vs 90-100€ · Luxury 212€ vs 98-100€ · House 867€ vs 423-499€). House sí ha colocado sus 6 noches
   a **709€**, su mejor ADR de octubre, así que el precio alto no es absurdo — el problema es el volumen.
-- **El corpus aún no tiene comps del aforo real:** el sweep arreglado (#1186) es **semanal (dom 03:00 UTC)**;
-  hasta la pasada del 02/08 House solo tenía 20 comps de 12 plazas del 09/06 frente a 136 de 8 plazas.
+- **🔴 El corpus AÚN NO tiene comps del aforo real, y eso invalida cualquier juicio de precio sobre House**
+  (confirmado 01/08/2026, lo levantó Alberto: «House Sevillana aún está en PriceLabs como dúplex»). El sweep
+  arreglado (#1186) entró el 31/07 pero era **semanal (dom 03:00 UTC)**, así que **no ha corrido ni una vez**
+  con el arreglo: los 30 comps VIVOS de House son de 8 plazas (media 314€), metidos a mano por el `/ingest` de
+  la auditoría del 22-29/07. El motor los normaliza (×1,56 → 403€) y no miente, pero ese ancla está
+  **EXTRAPOLADA, no medida** — los últimos comps de 12 plazas de verdad (09/06) iban a 621-694€.
+  **Consecuencia directa: la propuesta de bajar House a 330-350€ salió de ahí y queda RETIRADA.** Desde #1203
+  el sweep es DIARIO, así que se repone solo; hasta entonces, no muevas el precio de House con el dato de mercado.
 
 ### 📉 Qué hace PriceLabs (medido, 01/08/2026) — sirve de DATOS, no de modelo
 Idea de Alberto: «¿por qué no estudias cómo lo hace PriceLabs?». Se puede, porque `rate_snapshots` lleva
@@ -123,7 +129,7 @@ bueno es `available`.
 Los tres fallos de ese día tenían la misma forma: **un dato metido a ojo que nadie volvió a mirar**, y que el
 motor usó como verdad durante meses porque NO TENÍA FORMA DE QUEJARSE. La respuesta no es «revisar más», es que
 el guardián (`/api/sivra/pricing/guard`, cron 07:30) compare lo que hacemos contra el mercado real. Lógica pura
-y testeada en **`lib/sivra/pricing-centinelas.ts`** (14/14), cableada en el route como chequeos #6/#7/#8:
+y testeada en **`lib/sivra/pricing-centinelas.ts`** (21/21), cableada en el route como chequeos #6/#7/#8/#9:
 - **#6 `precio_por_plaza` / `suelo_por_plaza`** — el € por plaza EFECTIVO (tras canal ×0,76) del precio vivo más
   barato y del suelo. Umbral 18€/plaza. **Solo pisos de ≥6 plazas**, y no es un tecnicismo: en un piso pequeño
   las plazas son en buena parte sofás-cama (Luxury: 5 plazas en 2 dormitorios), así que el reparto no significa
@@ -144,7 +150,20 @@ y testeada en **`lib/sivra/pricing-centinelas.ts`** (14/14), cableada en el rout
   sobrevalorada). Los cuatro pisos pasan el €/plaza. **Ojo al denominador:** la respuesta devuelve
   `fechas_evaluadas` (21 el 31/07) — si es baja, el barrido cubre pocas fechas y el SILENCIO de #7/#8 **no
   significa que el calendario esté bien**. Ampliar el barrido de mercado ensancha estos centinelas.
-- Los tres comparten la regla del repo: sin muestra devuelven `evaluado:false`, **nunca un «todo bien» que en
+- **#9 `comps_otro_aforo` (01/08/2026)** — avisa cuando los comparables VIVOS de un piso son de otro tamaño, o
+  sea cuando el ancla de mercado ha dejado de ser una medición y es una extrapolación. Nació del caso House
+  (12 plazas medidas con comps de 8). Umbral **holgado a propósito (×1,35)**: a ×1,25 saltaría también Luxury
+  (5 plazas con comps de 4 = ×1,28), y esa diferencia de UNA plaza es ruido de cómo cada anfitrión cuenta los
+  sofás-cama — un canal que avisa de eso cada semana se acaba ignorando (lección del 19/07). El aviso dice
+  explícitamente **«no bajes el precio con este dato, lanza el barrido»**: la respuesta correcta es medir, no
+  tarificar. Verificado contra producción: salta House y deja fuera a Busto, Dúplex y Luxury.
+- **🚨 #4 y #5 iban SIN normalizar por aforo hasta el 01/08/2026 — un vigilante que no podía disparar.** La
+  normalización de #1186 se puso en el motor (`apply`) pero NO en el guardián, así que sub-mercado y
+  reserva-barata comparaban el precio vivo contra comps EN CRUDO. En el único piso donde la diferencia importa
+  (House) eso es un mercado un 36% más barato: la casa salía «por encima de mercado» justo cuando estaba por
+  debajo. **Regla que deja esto:** cuando el motor gane una corrección de datos, comprueba si el guardián que
+  lo vigila necesita la MISMA — si no, se queda midiendo con la regla vieja y su silencio no vale nada.
+- Todos comparten la regla del repo: sin muestra devuelven `evaluado:false`, **nunca un «todo bien» que en
   realidad significa «no lo he mirado»**.
 
 - **Zona** poblada (`pricing_piso_zona`): 4 pisos, CP 41003 (Bustos Tavera / Casco Antiguo).
