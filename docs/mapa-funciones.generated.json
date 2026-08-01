@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-01T10:03:57Z",
-  "sha": "a7fc6441a03253faa4d60a0880c23189c390ef21",
+  "generadoEn": "2026-08-01T12:25:22Z",
+  "sha": "f3053f16bd2cd79013e5342297ab88f226276609",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -50599,7 +50599,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 45
+          "linea": 55
         }
       ],
       "tablas": [
@@ -50610,7 +50610,7 @@
         "pms_connections"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "d140730fd807"
+      "hash": "31645c4833e1"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -51064,6 +51064,7 @@
         }
       ],
       "tablas": [
+        "ai_usos",
         "cuentas",
         "cuentas_bancarias",
         "gastos",
@@ -51073,7 +51074,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": "/api/cron/health-check",
-      "hash": "59dd330d20f4"
+      "hash": "b95eaa7b296a"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/ia-director-refresh/route.ts",
@@ -52814,21 +52815,12 @@
       ],
       "funciones": [
         {
-          "nombre": "impacto",
-          "kind": "function",
-          "exportada": false,
-          "params": "aforo: number",
-          "retorno": "number",
-          "linea": 31,
-          "resumen": "Aforo → factor de premium (acotado a 2.5, el techo del motor)."
-        },
-        {
           "nombre": "aforoEvento",
           "kind": "function",
           "exportada": false,
           "params": "venue: string | null, tmSeat: number",
           "retorno": "number",
-          "linea": 60,
+          "linea": 56,
           "resumen": "Aforo de un evento: 1º el mapa por recinto (lo fiable en Sevilla), 2º lo que traiga TM si viene, 3º un default conservador."
         },
         {
@@ -52837,7 +52829,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 71
+          "linea": 67
         }
       ],
       "tablas": [
@@ -52846,7 +52838,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/eventos/sync",
-      "hash": "a9f4acb0957c"
+      "hash": "ac095fdb2d22"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/eventos/websearch/route.ts",
@@ -52856,21 +52848,30 @@
       ],
       "funciones": [
         {
-          "nombre": "impacto",
-          "kind": "function",
-          "exportada": false,
-          "params": "aforo: number",
-          "retorno": "number",
-          "linea": 27,
-          "resumen": "Aforo → factor de premium (acotado a 2.5, el techo del motor). Idéntico a /eventos/sync."
-        },
-        {
           "nombre": "GET",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 38
+          "linea": 48
+        },
+        {
+          "nombre": "buscarPrevistos",
+          "kind": "function",
+          "exportada": false,
+          "params": "desde: string, hasta: string, yaResumen: string",
+          "retorno": "Promise<",
+          "linea": 160,
+          "resumen": "nunca lanza (es una mejora, no puede tumbar el descubrimiento normal)."
+        },
+        {
+          "nombre": "avisarPrevistos",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<void>",
+          "linea": 237,
+          "resumen": "Avisa UNA vez por evento previsto (dedupe por `avisado_at`). Alberto es quien confirma o descarta."
         }
       ],
       "tablas": [
@@ -52879,7 +52880,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/eventos/websearch",
-      "hash": "0028be535413"
+      "hash": "354894d27dec"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/agent/resumen-mensual/route.ts",
@@ -53154,6 +53155,37 @@
       ],
       "rutaApi": "/api/sivra/income",
       "hash": "4ea47ad41459"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/sivra/incomes/backfill-reserved-at/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "mesesEntre",
+          "kind": "function",
+          "exportada": false,
+          "params": "desde: string, hasta: string",
+          "retorno": "",
+          "linea": 44
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 60
+        }
+      ],
+      "tablas": [
+        "incomes",
+        "next"
+      ],
+      "rutaApi": "/api/sivra/incomes/backfill-reserved-at",
+      "hash": "994c42c28ece"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/incomes/route.ts",
@@ -54596,30 +54628,22 @@
       ],
       "funciones": [
         {
-          "nombre": "fmt",
-          "kind": "arrow",
-          "exportada": false,
-          "params": "d: Date",
-          "retorno": null,
-          "linea": 22
-        },
-        {
           "nombre": "pisosPorAforo",
           "kind": "function",
           "exportada": false,
           "params": "",
           "retorno": "Promise<Map<number, string[]>>",
-          "linea": 29,
+          "linea": 43,
           "resumen": "🚨 El barrido busca por el AFORO REAL de cada piso, NO con \"4 personas\" para todos (bug hasta el 31/07/2026: guardaba los MISMOS comps de 4 plazas para los 4 pisos con `guests=4` fijo, así que House —"
         },
         {
-          "nombre": "weekendInMonth",
+          "nombre": "fechasDeEvento",
           "kind": "function",
           "exportada": false,
-          "params": "m: number",
-          "retorno": "",
-          "linea": 41,
-          "resumen": "Primer viernes→domingo (2 noches) del mes a `m` meses vista."
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 57,
+          "resumen": "Fechas de evento de las DOS fuentes que conoce el motor: el calendario del repo y lo que descubren los crons (Ticketmaster / búsqueda web). Si la tabla falla NO se cae la pasada: se barre la base mens"
         },
         {
           "nombre": "serperSearch",
@@ -54627,7 +54651,7 @@
           "exportada": false,
           "params": "query: string",
           "retorno": "Promise<string>",
-          "linea": 51
+          "linea": 80
         },
         {
           "nombre": "extractPrices",
@@ -54635,7 +54659,7 @@
           "exportada": false,
           "params": "snippets: string, checkin: string, checkout: string",
           "retorno": "Promise<any[]>",
-          "linea": 65
+          "linea": 94
         },
         {
           "nombre": "GET",
@@ -54643,17 +54667,18 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 79
+          "linea": 108
         }
       ],
       "tablas": [
         "market_rates",
         "next",
+        "pricing_eventos_auto",
         "pricing_piso_zona",
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/sweep",
-      "hash": "28f95f175059"
+      "hash": "86019ec641c9"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pl-mensual/route.ts",
@@ -54762,7 +54787,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 31
+          "linea": 32
         },
         {
           "nombre": "fmt",
@@ -54770,7 +54795,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 32
+          "linea": 33
         },
         {
           "nombre": "GET",
@@ -54778,7 +54803,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 60,
+          "linea": 61,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -54787,7 +54812,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 64
+          "linea": 65
         }
       ],
       "tablas": [
@@ -54811,7 +54836,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "373dc735b827"
+      "hash": "e96cc180e464"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -54952,7 +54977,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 54
+          "linea": 62
         }
       ],
       "tablas": [
@@ -54960,6 +54985,7 @@
         "base",
         "incomes",
         "last_applied",
+        "latest",
         "live",
         "market_rates",
         "mkt",
@@ -54979,7 +55005,7 @@
         "ult"
       ],
       "rutaApi": "/api/sivra/pricing/guard",
-      "hash": "4f1777b9cbf8"
+      "hash": "2c7fe3b64bfd"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/historial/route.ts",
@@ -60168,7 +60194,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 82,
+          "linea": 92,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -60177,7 +60203,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 112,
+          "linea": 122,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -60186,7 +60212,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 134
+          "linea": 144
         },
         {
           "nombre": "ventanaMinutos",
@@ -60194,7 +60220,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 142,
+          "linea": 152,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -60203,13 +60229,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 154,
+          "linea": 164,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9714f5c336b4"
+      "hash": "a9b7cdfb324b"
     },
     {
       "ruta": "apps/plataforma/lib/deducibilidad.ts",
@@ -62863,7 +62889,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cfb5b20ba69d"
+      "hash": "49fcb727c1ee"
     },
     {
       "ruta": "apps/plataforma/lib/norma43.ts",
@@ -64600,6 +64626,78 @@
       "hash": "ebf35fd6901b"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/eventos-estado.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/eventos-estado.ts — qué puede hacer un evento según lo seguro que sea. POR QUÉ (01/08/2026, idea de Alberto: «ver de qué forma podríamos revisar noticias e intentar adelantarnos a las fechas — ejemplo, final de Copa del Rey»). El descubrimiento automático solo veía el PRESENTE: Ticketmaste",
+      "exporta": [
+        "normalizarEstado",
+        "efectoDeEvento",
+        "combinarEventosDeFecha"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizarEstado",
+          "kind": "function",
+          "exportada": true,
+          "params": "v?: string | null",
+          "retorno": "EstadoEvento",
+          "linea": 74
+        },
+        {
+          "nombre": "efectoDeEvento",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EventoBruto, o: EfectoOpts = {}",
+          "retorno": "EfectoEvento",
+          "linea": 84
+        },
+        {
+          "nombre": "combinarEventosDeFecha",
+          "kind": "function",
+          "exportada": true,
+          "params": "eventos: EventoBruto[], o: EfectoOpts = {}",
+          "retorno": "EfectoEvento",
+          "linea": 131,
+          "resumen": "Combina TODOS los eventos de una misma fecha (pueden ser varios: Ticketmaster, búsqueda web y la mano de Alberto sobre el mismo concierto). Manda el mayor de cada cosa por separado — un previsto no pu"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "03ad2ef6fba7"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/eventos-impacto.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/eventos-impacto.ts — cuánto sube el precio un evento descubierto automáticamente. POR QUÉ (01/08/2026). Esta escala vivía DUPLICADA y palabra por palabra en los dos crons de descubrimiento (`eventos/sync` de Ticketmaster y `eventos/websearch`), con un comentario que decía «idéntico a /even",
+      "exporta": [
+        "clasificarTipo",
+        "impactoEvento"
+      ],
+      "funciones": [
+        {
+          "nombre": "clasificarTipo",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto?: string | null",
+          "retorno": "TipoEvento",
+          "linea": 34,
+          "resumen": "Normaliza el `tipo` que traen las fuentes (Ticketmaster o la IA), que es texto libre."
+        },
+        {
+          "nombre": "impactoEvento",
+          "kind": "function",
+          "exportada": true,
+          "params": "aforo: number, tipo?: string | null",
+          "retorno": "number",
+          "linea": 64,
+          "resumen": "Multiplicador de precio para un evento, por aforo y tipo. La curva general (conciertos, festivales, lo que no sabemos clasificar) llega a 2.20 en aforo de estadio: por debajo del 2.5 del calendario a "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ea3b0a1b1b2e"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/facturas-control.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -64789,6 +64887,80 @@
       "hash": "06373f83d9d7"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/mercado-ventanas.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/mercado-ventanas.ts — QUÉ fechas barre el mercado, y por qué. POR QUÉ (01/08/2026). El barrido mensual (`mercado/sweep`) miraba el PRIMER VIERNES de cada mes y nada más. Ocho fechas al año y media, todas elegidas por el calendario gregoriano: el barrido nunca veía la Feria, ni la Semana Sa",
+      "exporta": [
+        "findeDelMes",
+        "picosDeEvento",
+        "ventanasDelBarrido"
+      ],
+      "funciones": [
+        {
+          "nombre": "aFecha",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "Date",
+          "linea": 55
+        },
+        {
+          "nombre": "fmt",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": "string",
+          "linea": 58
+        },
+        {
+          "nombre": "sumarDias",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string, n: number",
+          "retorno": "string",
+          "linea": 61
+        },
+        {
+          "nombre": "diasEntre",
+          "kind": "function",
+          "exportada": false,
+          "params": "desdeIso: string, hastaIso: string",
+          "retorno": "number",
+          "linea": 64
+        },
+        {
+          "nombre": "findeDelMes",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoyIso: string, m: number",
+          "retorno": "string",
+          "linea": 69,
+          "resumen": "Primer viernes del mes a `m` meses vista de `hoy`."
+        },
+        {
+          "nombre": "picosDeEvento",
+          "kind": "function",
+          "exportada": true,
+          "params": "eventos: EventoFecha[], factorMinimo = 1.15",
+          "retorno": "EventoFecha[]",
+          "linea": 81,
+          "resumen": "Agrupa fechas de evento CONTIGUAS en bloques y devuelve, de cada bloque, la de mayor factor (empate → la primera). La Feria entera gasta una sola ventana."
+        },
+        {
+          "nombre": "ventanasDelBarrido",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoyIso: string, eventos: EventoFecha[], opts: VentanasOpts = {},",
+          "retorno": "Ventana[]",
+          "linea": 110,
+          "resumen": "Ventanas a barrer en una pasada. La base mensual va SIEMPRE (es la línea de temporada); las de evento se añaden por cercanía hasta el tope, sin repetir una fecha que ya cubre la base."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fb85896bae72"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/pilot-track.ts",
       "ambito": "apps/plataforma",
       "resumen": "Lógica PURA del agente de seguimiento del piloto (sin DB ni red → testeable por inspección). El endpoint /api/sivra/pricing/pilot-track aporta los datos; aquí solo se decide el veredicto.",
@@ -64902,7 +65074,9 @@
       "exporta": [
         "decidirEventoSinRespaldo",
         "decidirEventoNoCatalogado",
-        "decidirPrecioPorPlaza"
+        "decidirPrecioPorPlaza",
+        "factorAforo",
+        "decidirCompsDeOtroAforo"
       ],
       "funciones": [
         {
@@ -64938,11 +65112,29 @@
           "retorno": "Veredicto",
           "linea": 163,
           "resumen": "⚠️ Solo aplica a pisos GRANDES, y no es un tecnicismo: en un apartamento pequeño las \"plazas\" son en buena parte sofás-cama (Luxury son 5 plazas en 2 dormitorios), así que dividir por ellas da un núme"
+        },
+        {
+          "nombre": "factorAforo",
+          "kind": "function",
+          "exportada": true,
+          "params": "plazasPiso: number, plazasComp: number",
+          "retorno": "number",
+          "linea": 234,
+          "resumen": "Mismo cálculo que la función SQL `pricing_factor_aforo` (exponente 1,1 y recorte a [0,6 · 2,5]). Está duplicado a propósito: el centinela tiene que poder decir EXACTAMENTE cuánto está extrapolando el "
+        },
+        {
+          "nombre": "decidirCompsDeOtroAforo",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: CompsDeOtroAforoInput, o: CompsDeOtroAforoOpts = {},",
+          "retorno": "Veredicto",
+          "linea": 244,
+          "resumen": "⚠️ EL UMBRAL ES HOLGADO A PROPÓSITO (1,35). Con 1,25 saltaría también Luxury Busto, que son 5 plazas medidas con comps de 4 (factor 1,28): esa diferencia de UNA plaza es ruido de cómo cada anfitrión c"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b8549ffbeac7"
+      "hash": "53f220a5dc2d"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-engine.ts",
@@ -65040,7 +65232,7 @@
           "exportada": false,
           "params": "motivo: string, evaluado = false",
           "retorno": "LastMinuteResult",
-          "linea": 53
+          "linea": 71
         },
         {
           "nombre": "factorLastMinute",
@@ -65048,12 +65240,12 @@
           "exportada": true,
           "params": "i: LastMinuteInput, o: LastMinuteOpts = {}",
           "retorno": "LastMinuteResult",
-          "linea": 55
+          "linea": 73
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "492327365944"
+      "hash": "7cd4dba450cd"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-premio-mercado.ts",
@@ -65199,7 +65391,7 @@
         "properties"
       ],
       "rutaApi": null,
-      "hash": "55432670fd34"
+      "hash": "10a0f028b021"
     },
     {
       "ruta": "apps/plataforma/lib/smoobu.ts",
@@ -68425,13 +68617,46 @@
       ],
       "funciones": [
         {
+          "nombre": "geminiEnPausa",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 47
+        },
+        {
+          "nombre": "anotarFalloGemini",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "void",
+          "linea": 50
+        },
+        {
+          "nombre": "anotarExitoGemini",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "void",
+          "linea": 56
+        },
+        {
+          "nombre": "geminiActivo",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 76,
+          "resumen": "¿Se debe intentar Gemini? APAGADO por defecto desde el 01/08/2026 (ver cabecera: la key llevaba 548 llamadas sin un solo éxito). Poner `GEMINI_WEBSEARCH=1` lo reactiva cuando haya cuota."
+        },
+        {
           "nombre": "busquedaConfigurada",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": "boolean",
-          "linea": 31,
-          "resumen": "¿Hay ALGUNA vía de búsqueda configurada? (para que los callers gateen su no-op)."
+          "linea": 84,
+          "resumen": "¿Hay ALGUNA vía de búsqueda configurada? (para que los callers gateen su no-op). Con Gemini apagado por defecto, esto es en la práctica «hay OPENROUTER_API_KEY»."
         },
         {
           "nombre": "buscarWeb",
@@ -68439,13 +68664,13 @@
           "exportada": true,
           "params": "system: string, user: string, opts: BuscarWebOpts",
           "retorno": "Promise<BuscarWebResult>",
-          "linea": 40,
+          "linea": 93,
           "resumen": "Búsqueda web con síntesis. Lanza solo si TODAS las vías fallan (el caller decide qué hacer). Gemini primero (gratis); si falla o no hay key, OpenRouter con el plugin `web` (de pago, gateado por el pre"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2328ac0f1e83"
+      "hash": "c6af6a234551"
     },
     {
       "ruta": "apps/plataforma/middleware.ts",
@@ -87683,7 +87908,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2367,
-    "funciones": 6310
+    "archivos": 2371,
+    "funciones": 6329
   }
 }

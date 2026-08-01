@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-01T09:41:33Z",
+  "generadoEn": "2026-08-01T12:25:22Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -641,7 +641,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 33
+        "evidencias": 34
       },
       "rrhh": {
         "estado": "usado",
@@ -3298,6 +3298,7 @@
       "/api/sivra/fiscal",
       "/api/sivra/income",
       "/api/sivra/incomes",
+      "/api/sivra/incomes/backfill-reserved-at",
       "/api/sivra/inversion",
       "/api/sivra/inversion/analyze",
       "/api/sivra/limpiadoras/alerta-ventana",
@@ -4335,7 +4336,7 @@
     "packages": 36,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1153,
+    "apis": 1154,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
