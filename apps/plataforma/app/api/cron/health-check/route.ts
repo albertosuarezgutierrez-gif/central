@@ -251,6 +251,40 @@ export async function GET(req: NextRequest) {
       catch (e) { fallos.push(`🔴 Página rota: ${nombre} → ${e instanceof Error ? e.message : String(e)}`) }
     }
 
+    // Check 12: proveedor de IA MUERTO — el que falla SIEMPRE y nadie echa de menos.
+    //
+    // Caso fundacional (01/08/2026): `GEMINI_API_KEY` acumulaba **548 llamadas y 0 éxitos** desde el
+    // 16/06 —en search, chat, eventos, empresas y contable, con tres modelos distintos— y no saltó
+    // nada en mes y medio. La cadena de fallback funcionó tan bien que convirtió una credencial
+    // muerta en un peaje invisible: cada llamada pagaba el intento fallido (y su timeout) antes de
+    // caer al camino de pago. Una cadena de respaldo sana enmascara la avería del eslabón; por eso
+    // hay que mirar el eslabón, no el resultado final.
+    //
+    // ⚠️ La ventana es de 30 DÍAS y el umbral de 10 llamadas — calibrado contra el caso real, no a
+    // ojo. La primera versión miraba 7 días con umbral 20 y NO habría cazado nada: Gemini hace ~12
+    // llamadas por semana (los crons que lo usan son diarios, no de tráfico), así que jamás habría
+    // llegado a 20 y el check habría dado verde mientras el proveedor llevaba mes y medio muerto.
+    // Un vigilante que no puede disparar es peor que no tenerlo, porque tranquiliza.
+    const proveedoresMuertos = await prisma.$queryRaw<
+      { proveedor: string; llamadas: bigint; dias: number; ultimo_error: string | null }[]
+    >`
+      SELECT proveedor,
+             COUNT(*) AS llamadas,
+             COUNT(DISTINCT creada_at::date)::int AS dias,
+             MAX(left(COALESCE(error, ''), 140)) AS ultimo_error
+      FROM ai_usos
+      WHERE creada_at > now() - interval '30 days' AND proveedor IS NOT NULL
+      GROUP BY proveedor
+      HAVING COUNT(*) >= 10 AND COUNT(*) FILTER (WHERE ok) = 0`
+    for (const p of proveedoresMuertos) {
+      fallos.push(
+        `🔴 IA «${p.proveedor}»: ${Number(p.llamadas)} llamadas en ${p.dias} días distintos y ` +
+        `NINGUNA correcta. La cadena de fallback lo tapa, así que todo "funciona" mientras se paga ` +
+        `el camino de pago Y el intento fallido de este. Último error: ${p.ultimo_error ?? 'sin detalle'}`,
+      )
+    }
+    if (!proveedoresMuertos.length) ok.push('✅ Ningún proveedor de IA muerto')
+
   } catch (err) {
     fallos.push(`🔴 Error ejecutando health check: ${err instanceof Error ? err.message : String(err)}`)
   }

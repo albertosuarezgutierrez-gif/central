@@ -54,7 +54,7 @@ export async function runSync(days: number, maxPages = 20, arrFrom?: string, arr
   `)
   const byName = new Map(props.map(p => [p.name.toLowerCase().trim(), p.id]))
 
-  const cnt = { new: 0, modified: 0, cancelled: 0, skipped: 0 }
+  const cnt = { new: 0, modified: 0, cancelled: 0, skipped: 0, reservedAt: 0 }
   const logs: any[] = []
 
   for (const b of all) {
@@ -91,12 +91,19 @@ export async function runSync(days: number, maxPages = 20, arrFrom?: string, arr
 
     if (!ci || !pid) { cnt.skipped++; continue }
 
+    // Fecha REAL en que se hizo la reserva. Smoobu la publica como `created-at` (kebab-case, como
+    // `guest-name` o `is-blocked-booking`) y la trae también para el histórico. Es el dato que
+    // permite medir la antelación de verdad: `incomes.createdAt` es, en casi todo el histórico, la
+    // fecha de la importación masiva. Ver `prisma/sql/2026-08-01_incomes_reserved_at.sql`.
+    const reservedAt = parseDate(b['created-at'])?.toISOString() ?? null
+
     if (ex.length === 0) {
       await prisma.$executeRaw(Prisma.sql`
-        INSERT INTO incomes ("propertyId", date, amount, portal, "reservationId", "guestName", "checkIn", "checkOut", nights)
+        INSERT INTO incomes ("propertyId", date, amount, portal, "reservationId", "guestName", "checkIn", "checkOut", nights, reserved_at)
         VALUES (${pid}, ${ci.toISOString()}::timestamptz, ${amt}, ${portal}::"Portal",
                 ${rid}, ${b['guest-name'] || null}, ${ci.toISOString()}::timestamptz,
-                ${co?.toISOString() || null}::timestamptz, ${nights(ci, co)})
+                ${co?.toISOString() || null}::timestamptz, ${nights(ci, co)},
+                ${reservedAt}::timestamptz)
       `)
       cnt.new++
     } else {
@@ -107,10 +114,20 @@ export async function runSync(days: number, maxPages = 20, arrFrom?: string, arr
         await prisma.$executeRaw(Prisma.sql`
           UPDATE incomes SET amount=${amt}, "checkIn"=${ci.toISOString()}::timestamptz,
             "checkOut"=${co?.toISOString() || null}::timestamptz, nights=${nights(ci, co)},
-            portal=${portal}::"Portal"
+            portal=${portal}::"Portal",
+            reserved_at = COALESCE(${reservedAt}::timestamptz, reserved_at)
           WHERE "reservationId" = ${rid}
         `)
         cnt.modified++
+      } else if (reservedAt) {
+        // La fila no cambió de importe ni de fechas, pero puede que le falte `reserved_at` (todas
+        // las anteriores al 01/08/2026 lo tienen NULL). Rellenarlo aquí hace que el sync diario
+        // vaya completando el histórico solo, sin depender de que el backfill llegue a todo.
+        const rellenadas = await prisma.$executeRaw(Prisma.sql`
+          UPDATE incomes SET reserved_at = ${reservedAt}::timestamptz
+          WHERE "reservationId" = ${rid} AND reserved_at IS NULL`)
+        if (rellenadas > 0) cnt.reservedAt++
+        cnt.skipped++
       } else cnt.skipped++
     }
   }
@@ -126,7 +143,8 @@ export async function runSync(days: number, maxPages = 20, arrFrom?: string, arr
 
   return {
     success: true,
-    message: `${cnt.new} nuevas, ${cnt.modified} modificadas, ${cnt.cancelled} canceladas`,
+    message: `${cnt.new} nuevas, ${cnt.modified} modificadas, ${cnt.cancelled} canceladas` +
+      (cnt.reservedAt ? `, ${cnt.reservedAt} con fecha de reserva rellenada` : ''),
     ...cnt, total: all.length, since: from,
   }
 }
