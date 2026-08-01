@@ -24,6 +24,13 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### ⚠️ PENDIENTE de Alberto: Luxury ¿motor activo o congelado hasta 01/09? (01/08/2026)
+Dos decisiones del mismo día se contradicen: esta sesión activó el motor de Luxury con su OK explícito
+(«Sí, activar ya», 08:52Z, `apply_enabled=true`, suelo 72€) y otra sesión anotó «Luxury sigue congelado
+hasta el 01/09 (decisión de Alberto)». **Estado real en BD: ACTIVO** — el `apply-auto` mueve precios de
+Luxury desde su próxima pasada. Alberto dijo «hablamos otra sesión mejor»: la próxima sesión que toque
+pricing debe pedirle que lo zanje y corregir aquí la línea que quede obsoleta.
+
 ### 💸 PriceLabs: baja ejecutada en Busto+Luxury; Luxury reactivado en el motor propio (01/08/2026)
 Alberto confirmó que **Busto Reform y Luxury ya están dados de baja de PriceLabs** (Dúplex/House siguen
 en PL por decisión suya, transición en dos fases). El informe de decisión (BD 31/07) encontró a **Luxury
