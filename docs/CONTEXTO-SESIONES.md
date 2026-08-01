@@ -24,6 +24,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 Cuota de la Seguridad Social (RETA) de julio salía ❌ NO DEDUCIBLE (01/08/2026, rama
+  `claude/seguridad-social-deducibilidad-kgmyjq`).** Alberto preguntó por el cargo de BBVA de 388,95€.
+  **Causa:** regla aprendida **`CUOTA → personal`** en `banca_destino_reglas` (18/07/2026, seguramente de
+  la hipoteca «CUOTA PTMO» o la cuota de comunidad). Las reglas se aplican por SUBSTRING y con PRIORIDAD
+  sobre `lib/destino.ts`, que ya manda la RETA de BBVA a `seguros`+`cuota_autonomos` (deducible, Art.
+  30.2.1ª LIRPF) — 3er caso del landmine "TRANSF" (PR #840). **Fix:** `CUOTA/CUOTAS/IMPUESTO(S)/COTIZACION/
+  PTMO/PRESTAMO` a `CLAVE_GENERICA` + los tokens de ≤3 letras (DE, LA…) dejan de valer como "específicos"
+  en `claveReglaValida`; SQL `2026-08-01_fix_regla_cuota_generica.sql` (aplicado: regla borrada, movimiento
+  a `seguros`). Tests 29/29.
+
 - **⏰ Subasta vencida seguía en «🎯 Mi radar» (01/08/2026, rama `claude/expired-auction-visible-eoow4t`).**
   Alberto con captura: `SUB-JA-2026-263723` cerró el 31/07 18:13 y al día siguiente seguía con botones de
   pujar. **Causa:** NINGÚN camino de lectura del radar filtraba por fecha — la bandeja se limpiaba solo con
