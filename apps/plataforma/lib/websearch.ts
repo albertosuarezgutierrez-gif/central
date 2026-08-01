@@ -3,9 +3,20 @@
 //
 // Por qué existe: el grounding de Gemini (gratis) lleva rachas largas de 429 y todo lo que
 // dependía de él en exclusiva se quedaba mudo (el cron de eventos por websearch llevaba
-// semanas sin aportar filas). Cadena: Gemini google_search (GRATIS) → plugin `web` de
-// OpenRouter (DE PAGO, ~0,02€/llamada con 5 resultados; respeta el presupuesto diario de la
-// pasarela). Ambos intentos quedan en `ai_usos` (endpoint del caller) — mismo auditor que el chat.
+// semanas sin aportar filas). El respaldo es el plugin `web` de OpenRouter (DE PAGO, ~0,02€/llamada
+// con 5 resultados; respeta el presupuesto diario de la pasarela). Ambos intentos quedan en
+// `ai_usos` (endpoint del caller) — mismo auditor que el chat.
+//
+// 🚨 ORDEN INVERTIDO EL 01/08/2026 — OPENROUTER ES EL PRIMARIO, GEMINI NO SE INTENTA.
+// Hallazgo: `GEMINI_API_KEY` acumulaba **548 llamadas y CERO éxitos desde el 16/06**, en todos los
+// endpoints (search, chat, eventos, empresas, contable) y con los tres modelos que se han ido
+// probando. No era una racha de 429 por uso: es una key sin cuota. Y el fallback funcionaba tan bien
+// que lo tapó mes y medio — pagando OpenRouter en todas las llamadas Y, encima, pagando antes el
+// intento fallido de Gemini con su timeout.
+//
+// Decisión de Alberto: «usa OpenRouter, que tienes todo». Así que Gemini pasa a estar APAGADO por
+// defecto y solo se intenta si se pone `GEMINI_WEBSEARCH=1` — el código se conserva entero para
+// cuando haya una key con cuota, pero deja de ser un peaje silencioso en el camino crítico.
 
 import { geminiSearch, openrouterSearchEx } from '@central/core-ai'
 import { registrarUso, estimarTokens, costeEur, dentroDePresupuestoDiario } from '@/lib/ai-gateway'
@@ -58,9 +69,20 @@ export type BuscarWebOpts = {
 
 export type BuscarWebResult = { text: string; proveedor: 'gemini' | 'openrouter'; modelo: string }
 
-/** ¿Hay ALGUNA vía de búsqueda configurada? (para que los callers gateen su no-op). */
+/**
+ * ¿Se debe intentar Gemini? APAGADO por defecto desde el 01/08/2026 (ver cabecera: la key llevaba
+ * 548 llamadas sin un solo éxito). Poner `GEMINI_WEBSEARCH=1` lo reactiva cuando haya cuota.
+ */
+function geminiActivo(): boolean {
+  return process.env.GEMINI_WEBSEARCH === '1' && Boolean(process.env.GEMINI_API_KEY)
+}
+
+/**
+ * ¿Hay ALGUNA vía de búsqueda configurada? (para que los callers gateen su no-op).
+ * Con Gemini apagado por defecto, esto es en la práctica «hay OPENROUTER_API_KEY».
+ */
 export function busquedaConfigurada(): boolean {
-  return Boolean(process.env.GEMINI_API_KEY || process.env.OPENROUTER_API_KEY)
+  return Boolean(geminiActivo() || process.env.OPENROUTER_API_KEY)
 }
 
 /**
@@ -72,7 +94,7 @@ export async function buscarWeb(system: string, user: string, opts: BuscarWebOpt
   const { app, endpoint, maxTokens = 1500, timeoutMs = 40_000 } = opts
   const errores: string[] = []
 
-  const geminiKey = process.env.GEMINI_API_KEY
+  const geminiKey = geminiActivo() ? process.env.GEMINI_API_KEY : undefined
   if (geminiKey && geminiEnPausa()) {
     errores.push('gemini: breaker abierto (fallos seguidos)')
   } else if (geminiKey) {

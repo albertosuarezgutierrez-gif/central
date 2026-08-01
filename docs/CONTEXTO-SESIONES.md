@@ -24,6 +24,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🏠 Un piso puede cambiar de PRODUCTO: `historico_desde` + Gemini fuera (01/08/2026)
+Dato de Alberto: **House Sevillana estuvo alquilada como DOS pisos turísticos independientes** hasta
+que se decidió alquilarla entera (6 habitaciones, 12 personas). El corte se ve solísimo en BD:
+**ADR 112/99/129/166 (2020-23) → 473/418/446 (2024-26)**, ticket medio 519€ → 1.171€. Ese salto ya
+causó el error de proponer bajarla a 285€ (promediando las dos etapas salía «ADR de agosto 102€»), y
+estaba envenenando también la antelación que alimenta la palanca de last-minute: la mediana de
+octubre de House salía de 51 reservas, 30 de ellas de cuando era otro negocio. Nueva columna
+**`pricing_settings.historico_desde`** (migración aplicada; House = 2024-01-01, el resto NULL = «no ha
+cambiado») y el motor la respeta al medir la antelación. Efecto: House octubre **34 → 26 días**
+(muestra 20). **Regla:** al analizar el histórico de un piso, comprobar antes si sigue siendo el
+mismo producto — el número que sale de mezclar épocas es plausible y nada delata el fallo.
+**Gemini APAGADO** (decisión de Alberto: «usa OpenRouter, que tienes todo»). La key llevaba 548
+llamadas y 0 éxitos desde el 16/06 y el fallback la tapaba pagando el intento fallido antes de cada
+llamada. Ahora OpenRouter es el primario y Gemini solo se intenta con `GEMINI_WEBSEARCH=1`.
+
 ### 📅 Smoobu SÍ da la fecha real de reserva — y eso INVIERTE el diagnóstico de octubre (01/08/2026)
 El 31/07 se dio por imposible reconstruir la curva de anticipación desde `incomes` porque `createdAt`
 es la fecha de la importación masiva. Cierto de esa columna — pero la **API de Smoobu publica

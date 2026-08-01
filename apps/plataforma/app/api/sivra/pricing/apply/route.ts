@@ -233,20 +233,28 @@ export async function POST(req: NextRequest) {
   // histórico es la fecha de la importación masiva) y `rate_snapshots` solo cubre desde mayo-2026,
   // así que no tiene un octubre entero que enseñar. Se agrupa por MES DEL AÑO (no por año concreto)
   // para juntar octubres de varios años y llegar a muestra.
+  //
+  // 🚨 Y se respeta `pricing_settings.historico_desde`: un piso puede haber cambiado de PRODUCTO, y
+  // entonces su histórico anterior no lo describe. House Sevillana estuvo alquilada como dos pisos
+  // independientes hasta 2024, cuando pasó a casa entera de 12 plazas — el ADR salta de 166€ a 473€.
+  // Sin este filtro, la mediana de octubre de House salía de 51 reservas de las que 30 eran de
+  // cuando era otro negocio. Es el mismo veneno que ya hizo proponer bajarle el precio a 285€.
   // OJO: SQL dentro de un template literal de TS — aqui NO se pueden usar backticks ni $ { }.
   const antelacionRows = await prisma.$queryRaw<{
     property_id: string; mes: number; mediana: number; muestra: number
   }[]>(Prisma.sql`
-    SELECT "propertyId" AS property_id,
-           EXTRACT(MONTH FROM "checkIn")::int AS mes,
+    SELECT i."propertyId" AS property_id,
+           EXTRACT(MONTH FROM i."checkIn")::int AS mes,
            percentile_cont(0.5) WITHIN GROUP (
-             ORDER BY ("checkIn"::date - reserved_at::date)
+             ORDER BY (i."checkIn"::date - i.reserved_at::date)
            )::int AS mediana,
            COUNT(*)::int AS muestra
-    FROM incomes
-    WHERE reserved_at IS NOT NULL
-      AND "checkIn" IS NOT NULL
-      AND "checkIn"::date >= reserved_at::date
+    FROM incomes i
+    LEFT JOIN pricing_settings ps ON ps.property_id = i."propertyId"
+    WHERE i.reserved_at IS NOT NULL
+      AND i."checkIn" IS NOT NULL
+      AND i."checkIn"::date >= i.reserved_at::date
+      AND (ps.historico_desde IS NULL OR i."checkIn"::date >= ps.historico_desde)
     GROUP BY 1, 2
   `).catch(() => [])
   const antelacion = new Map(
