@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-01T20:30:01Z",
-  "sha": "e4e1a7dba6e01e7d1b689ef8066cc8093c09a1f5",
+  "generadoEn": "2026-08-01T21:08:20Z",
+  "sha": "ac54e8e2166a82906b4927b8936dc183d8e9c558",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47577,7 +47577,7 @@
           "exportada": false,
           "params": "{ dedupeKey }: { dedupeKey: string }",
           "retorno": null,
-          "linea": 491,
+          "linea": 513,
           "resumen": "«Nota simple viva»: la certificación que adjunta el juzgado es de hace años y las cargas se mueven. Aquí se sube una nota simple recién pedida al registro y el agente dice QUÉ HA CAMBIADO — es lo únic"
         },
         {
@@ -47586,7 +47586,7 @@
           "exportada": false,
           "params": "{ s, o, acciones, extra, doc }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null }",
           "retorno": null,
-          "linea": 581
+          "linea": 603
         },
         {
           "nombre": "SubastasClient",
@@ -47594,14 +47594,14 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Inicial | null }",
           "retorno": null,
-          "linea": 752
+          "linea": 774
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "f41ca545e9fe"
+      "hash": "ce9081e1b4a5"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -50590,7 +50590,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 55
+          "linea": 58
         }
       ],
       "tablas": [
@@ -50601,7 +50601,7 @@
         "pms_connections"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "31645c4833e1"
+      "hash": "3f811a364c60"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -54624,7 +54624,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<Map<number, string[]>>",
-          "linea": 43,
+          "linea": 55,
           "resumen": "🚨 El barrido busca por el AFORO REAL de cada piso, NO con \"4 personas\" para todos (bug hasta el 31/07/2026: guardaba los MISMOS comps de 4 plazas para los 4 pisos con `guests=4` fijo, así que House —"
         },
         {
@@ -54633,7 +54633,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<",
-          "linea": 57,
+          "linea": 69,
           "resumen": "Fechas de evento de las DOS fuentes que conoce el motor: el calendario del repo y lo que descubren los crons (Ticketmaster / búsqueda web). Si la tabla falla NO se cae la pasada: se barre la base mens"
         },
         {
@@ -54642,7 +54642,7 @@
           "exportada": false,
           "params": "query: string",
           "retorno": "Promise<string>",
-          "linea": 80
+          "linea": 92
         },
         {
           "nombre": "extractPrices",
@@ -54650,7 +54650,7 @@
           "exportada": false,
           "params": "snippets: string, checkin: string, checkout: string",
           "retorno": "Promise<any[]>",
-          "linea": 94
+          "linea": 106
         },
         {
           "nombre": "GET",
@@ -54658,7 +54658,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 108
+          "linea": 120
         }
       ],
       "tablas": [
@@ -54669,7 +54669,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/sweep",
-      "hash": "86019ec641c9"
+      "hash": "e4b36f02176f"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pl-mensual/route.ts",
@@ -54968,7 +54968,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 62
+          "linea": 63
         }
       ],
       "tablas": [
@@ -54996,7 +54996,7 @@
         "ult"
       ],
       "rutaApi": "/api/sivra/pricing/guard",
-      "hash": "2c7fe3b64bfd"
+      "hash": "c509415ec93f"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/historial/route.ts",
@@ -62880,7 +62880,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "49fcb727c1ee"
+      "hash": "c6f34bbdee61"
     },
     {
       "ruta": "apps/plataforma/lib/norma43.ts",
@@ -64893,7 +64893,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "Date",
-          "linea": 55
+          "linea": 66
         },
         {
           "nombre": "fmt",
@@ -64901,7 +64901,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 58
+          "linea": 69
         },
         {
           "nombre": "sumarDias",
@@ -64909,7 +64909,7 @@
           "exportada": false,
           "params": "iso: string, n: number",
           "retorno": "string",
-          "linea": 61
+          "linea": 72
         },
         {
           "nombre": "diasEntre",
@@ -64917,16 +64917,16 @@
           "exportada": false,
           "params": "desdeIso: string, hastaIso: string",
           "retorno": "number",
-          "linea": 64
+          "linea": 75
         },
         {
           "nombre": "findeDelMes",
           "kind": "function",
           "exportada": true,
-          "params": "hoyIso: string, m: number",
+          "params": "hoyIso: string, m: number, orden = 0",
           "retorno": "string",
-          "linea": 69,
-          "resumen": "Primer viernes del mes a `m` meses vista de `hoy`."
+          "linea": 98,
+          "resumen": "Fecha de muestra nº `orden` del mes a `m` meses vista. `orden` 0 = primer VIERNES (el que se ha barrido siempre; se mantiene para no mover la serie histórica). 🚨 POR QUÉ HAY MÁS DE UNA (01/08/2026, c"
         },
         {
           "nombre": "picosDeEvento",
@@ -64934,7 +64934,7 @@
           "exportada": true,
           "params": "eventos: EventoFecha[], factorMinimo = 1.15",
           "retorno": "EventoFecha[]",
-          "linea": 81,
+          "linea": 117,
           "resumen": "Agrupa fechas de evento CONTIGUAS en bloques y devuelve, de cada bloque, la de mayor factor (empate → la primera). La Feria entera gasta una sola ventana."
         },
         {
@@ -64943,13 +64943,13 @@
           "exportada": true,
           "params": "hoyIso: string, eventos: EventoFecha[], opts: VentanasOpts = {},",
           "retorno": "Ventana[]",
-          "linea": 110,
+          "linea": 146,
           "resumen": "Ventanas a barrer en una pasada. La base mensual va SIEMPRE (es la línea de temporada); las de evento se añaden por cercanía hasta el tope, sin repetir una fecha que ya cubre la base."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fb85896bae72"
+      "hash": "3164bde4860c"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pilot-track.ts",
@@ -65350,7 +65350,7 @@
           "exportada": false,
           "params": "s?: string",
           "retorno": "Date | null",
-          "linea": 12
+          "linea": 32
         },
         {
           "nombre": "nights",
@@ -65358,7 +65358,7 @@
           "exportada": false,
           "params": "ci: Date | null, co: Date | null",
           "retorno": "number",
-          "linea": 18
+          "linea": 38
         },
         {
           "nombre": "fetchPage",
@@ -65366,7 +65366,7 @@
           "exportada": false,
           "params": "p: number, from: string, apiKey: string, arrFrom?: string, arrTo?: string",
           "retorno": null,
-          "linea": 22
+          "linea": 42
         },
         {
           "nombre": "runSync",
@@ -65374,7 +65374,7 @@
           "exportada": true,
           "params": "days: number, maxPages = 20, arrFrom?: string, arrTo?: string",
           "retorno": null,
-          "linea": 37
+          "linea": 57
         }
       ],
       "tablas": [
@@ -65382,7 +65382,7 @@
         "properties"
       ],
       "rutaApi": null,
-      "hash": "199f3ab5b5df"
+      "hash": "8d4329a8cb87"
     },
     {
       "ruta": "apps/plataforma/lib/smoobu.ts",
@@ -65702,7 +65702,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "2d62a4165c3c"
+      "hash": "b7c26409097e"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/consulta-juzgado.ts",
@@ -65771,7 +65771,7 @@
           "exportada": false,
           "params": "url: string, ms = 30000",
           "retorno": "Promise<Response>",
-          "linea": 62
+          "linea": 63
         },
         {
           "nombre": "textoDePdf",
@@ -65779,7 +65779,7 @@
           "exportada": false,
           "params": "buf: Buffer",
           "retorno": "Promise<string>",
-          "linea": 72
+          "linea": 73
         },
         {
           "nombre": "procesarDocumentosDeFicha",
@@ -65787,7 +65787,7 @@
           "exportada": true,
           "params": "identificador: string, opts: { leerCargas?: boolean } = {},",
           "retorno": "Promise<ResultadoFicha>",
-          "linea": 106,
+          "linea": 109,
           "resumen": "Procesa TODOS los documentos de UNA ficha: señales del edicto + cuadro de cargas. `leerCargas: false` se queda en las señales por regex (gratis), para las subastas que no han pasado el gate de rentabi"
         },
         {
@@ -65796,7 +65796,7 @@
           "exportada": true,
           "params": "f: { flip_apto: boolean | null margen_flip_pct: number | null es_playa: boolean | null descuento_estimado: number | null }",
           "retorno": "boolean",
-          "linea": 198,
+          "linea": 218,
           "resumen": "¿Merece esta subasta el análisis profundo (que cuesta llamadas de IA)? El embudo de Alberto: primero rentabilidad, y solo si cuadra, documentación. Entra si es un flip viable, si es de la costa de Hue"
         },
         {
@@ -65805,7 +65805,7 @@
           "exportada": true,
           "params": "max = 10",
           "retorno": "Promise<",
-          "linea": 214,
+          "linea": 234,
           "resumen": "Pasada sobre las subastas vivas: lee los documentos de las que no están al día con la versión actual del lector. Best-effort: un fallo de descarga deja la fila como está y se reintenta mañana."
         },
         {
@@ -65814,7 +65814,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 299,
+          "linea": 321,
           "resumen": "· sin los resultados no hay calibración (la memoria del agente). Así que se borra la BANDEJA de avisos (`subastas_radar`, efímera por diseño) y se marca la subasta como archivada. El histórico se qued"
         }
       ],
@@ -65823,7 +65823,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "67db85dd25bb"
+      "hash": "790e6db75fa0"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/enriquecer.ts",
@@ -84438,15 +84438,15 @@
           "nombre": "analisisDocumental",
           "kind": "function",
           "exportada": true,
-          "params": "s: SubastaInmueble, notasEdicto: string | null | undefined, documentos?: Array<{ legible?: boolean | null }> | null,",
+          "params": "s: SubastaInmueble, notasEdicto: string | null | undefined, documentos?: AdjuntoFicha[] | null, /** `false` en las fuentes sin ficha documental (Junta): ahí no hay nada que revisar. */ publicaAdjuntos = true,",
           "retorno": "AnalisisDocumental",
-          "linea": 33,
+          "linea": 34,
           "resumen": "Checklist documental. `notasEdicto` son las líneas que el enriquecedor ya extrajo de los documentos de la ficha (`notasDeEdicto`): NULL = documentos aún no procesados; '' = procesados sin hallazgos."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "07992036257d"
+      "hash": "77b9b9f6f26b"
     },
     {
       "ruta": "packages/module-subastas/src/aviso.ts",
@@ -84616,7 +84616,10 @@
         "fusionarCargas",
         "consensoCuadros",
         "compararCuadros",
-        "resumirCargas"
+        "resumirCargas",
+        "esDocumentoDeCargas",
+        "estadoCargas",
+        "titularCargas"
       ],
       "funciones": [
         {
@@ -84625,7 +84628,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 126
+          "linea": 127
         },
         {
           "nombre": "normalizarCuadroCargas",
@@ -84633,7 +84636,7 @@
           "exportada": true,
           "params": "bruto: unknown, fuente: FuenteCargas",
           "retorno": "CuadroCargas",
-          "linea": 140,
+          "linea": 141,
           "resumen": "Normaliza el JSON del lector a un `CuadroCargas` de confianza. Defensivo a propósito: un LLM puede devolver un tipo inventado, un importe con formato español, o cargas a medias — nada de eso debe lanz"
         },
         {
@@ -84642,7 +84645,7 @@
           "exportada": true,
           "params": "c: Carga",
           "retorno": "boolean",
-          "linea": 216,
+          "linea": 217,
           "resumen": "¿Esta «carga» es en realidad la fórmula con la que el registro CIERRA la certificación? Caso real (30/07/2026): «SIN MÁS CARGAS, salvo AFECCIONES FISCALES vigentes» entraba en la lista como una carga "
         },
         {
@@ -84651,7 +84654,7 @@
           "exportada": true,
           "params": "cuadro: CuadroCargas, hoy?: Date",
           "retorno": "CargasSubsistentes",
-          "linea": 244,
+          "linea": 245,
           "resumen": "QUÉ HEREDA EL ADJUDICATARIO. Determinista, porque de esto sale la puja máxima. Reglas (LEC): · Ejecución HIPOTECARIA directa: la hipoteca que se ejecuta se cancela y las cargas POSTERIORES se purgan ("
         },
         {
@@ -84660,7 +84663,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 348
+          "linea": 349
         },
         {
           "nombre": "mismoAcreedorQueEjecutante",
@@ -84668,7 +84671,7 @@
           "exportada": true,
           "params": "cargas: Carga[], ejecutante: string | null | undefined",
           "retorno": "boolean",
-          "linea": 366,
+          "linea": 367,
           "resumen": "¿El ejecutante es también el acreedor de una carga ANTERIOR que subsiste? Es el matiz que decide si el caso «hipoteca anterior en embargo» es una ruina o solo un trámite: cuando coinciden, el crédito "
         },
         {
@@ -84677,7 +84680,7 @@
           "exportada": true,
           "params": "c: Carga",
           "retorno": "string | null",
-          "linea": 385,
+          "linea": 386,
           "resumen": "Letra con la que el registro identifica una anotación preventiva («anotación letra C»). Es el identificador REGISTRAL del asiento: no cambia de un documento a otro, a diferencia del importe, que cada "
         },
         {
@@ -84686,7 +84689,7 @@
           "exportada": false,
           "params": "s: string | null",
           "retorno": null,
-          "linea": 390
+          "linea": 391
         },
         {
           "nombre": "identidadCarga",
@@ -84694,7 +84697,7 @@
           "exportada": true,
           "params": "c: Carga",
           "retorno": "string",
-          "linea": 397,
+          "linea": 398,
           "resumen": "Identidad del ASIENTO, para reconocer la misma carga leída en documentos distintos. Por orden de fiabilidad: la letra de la anotación, la fecha con el titular y, si no hay nada de eso, la firma antigu"
         },
         {
@@ -84703,7 +84706,7 @@
           "exportada": false,
           "params": "a: RangoCarga, b: RangoCarga",
           "retorno": "RangoCarga",
-          "linea": 406,
+          "linea": 407,
           "resumen": "El rango que MÁS cuesta de los dos: subsistir es más caro que purgarse."
         },
         {
@@ -84712,7 +84715,7 @@
           "exportada": true,
           "params": "cargas: Carga[]",
           "retorno": "",
-          "linea": 427,
+          "linea": 428,
           "resumen": "Fusiona las cargas leídas en VARIOS documentos de la misma finca (edicto, certificación, informe de valoración…) dejando UNA fila por asiento. 🚨 El caso que la motiva (30/07/2026): la certificación c"
         },
         {
@@ -84721,7 +84724,7 @@
           "exportada": false,
           "params": "c: Carga",
           "retorno": "string",
-          "linea": 465
+          "linea": 466
         },
         {
           "nombre": "emparejarLecturas",
@@ -84729,7 +84732,7 @@
           "exportada": false,
           "params": "a: Carga[], b: Carga[]",
           "retorno": "Map<Carga, Carga>",
-          "linea": 477,
+          "linea": 478,
           "resumen": "Empareja las cargas de dos lecturas del MISMO documento. Primero por identidad registral (la letra de la anotación, la fecha…) y solo después, entre las que quedan sueltas, por tipo+rango — que es lo "
         },
         {
@@ -84738,7 +84741,7 @@
           "exportada": true,
           "params": "a: CuadroCargas, b: CuadroCargas",
           "retorno": "",
-          "linea": 506,
+          "linea": 507,
           "resumen": "Consenso entre DOS lecturas independientes del mismo documento. Alberto pidió que la IA extraiga las cifras; esta es la red que evita que un dígito mal leído se propague a una puja. Se emparejan las c"
         },
         {
@@ -84747,7 +84750,7 @@
           "exportada": true,
           "params": "anterior: CuadroCargas, nuevo: CuadroCargas",
           "retorno": "CambioCargas[]",
-          "linea": 576,
+          "linea": 577,
           "resumen": "Compara el cuadro que se leyó de la certificación del BOE con uno NUEVO (una nota simple recién pedida al registro, por ejemplo). Hace falta porque la certificación que el juzgado adjunta a la ficha s"
         },
         {
@@ -84756,13 +84759,39 @@
           "exportada": true,
           "params": "cuadro: CuadroCargas, subsistentes: CargasSubsistentes",
           "retorno": "string",
-          "linea": 626,
+          "linea": 627,
           "resumen": "Resumen legible del cuadro para la ficha y el aviso de Telegram."
+        },
+        {
+          "nombre": "esDocumentoDeCargas",
+          "kind": "function",
+          "exportada": true,
+          "params": "titulo: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 694,
+          "resumen": "¿El título de un adjunto de la ficha promete el cuadro de cargas? Los juzgados titulan a mano y con erratas: en el corpus vivo conviven «CERTIFICACIÓN DE CARGAS», «CERTIFICCION DE DOMINOS Y CARGAS», «"
+        },
+        {
+          "nombre": "estadoCargas",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaEstadoCargas",
+          "retorno": "",
+          "linea": 743,
+          "resumen": "Estado de las cargas + el documento que hay que abrir, si lo hay. Conservador por diseño: `cargas > 0` manda sobre todo lo demás (si alguna vez hubo una lectura con cargas, no se degrada a «no se sabe"
+        },
+        {
+          "nombre": "titularCargas",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaEstadoCargas",
+          "retorno": "TitularCargas",
+          "linea": 780
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9f8cac615857"
+      "hash": "52936a76d667"
     },
     {
       "ruta": "packages/module-subastas/src/catastro.ts",
@@ -87900,6 +87929,6 @@
   ],
   "resumen": {
     "archivos": 2371,
-    "funciones": 6328
+    "funciones": 6331
   }
 }

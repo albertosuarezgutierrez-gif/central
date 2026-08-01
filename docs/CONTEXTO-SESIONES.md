@@ -30,7 +30,53 @@
   `/admin/empresa` pero no en `/admin/cuenta`, donde se pintaba el id crudo. Ahora vive una sola vez en
   `apps/rrhh/lib/categorias-empresa.ts` (módulo puro, importable desde `'use client'`) con `periodo`
   `ninguno|anual|mensual` que decide qué campos de fecha pide el formulario — `mensual` y `seguro_social`
-  piden año+mes. Categoría desconocida ya no desaparece de la lista: se agrupa por su id. Tests + typecheck OK.
+  piden año+mes. Categoría desconocida ya no desaparece de la lista: se agrupa por su id. De paso, arreglado el
+  desbordamiento horizontal de `/admin/empresa` y `/admin/cuenta` en móvil (verificado en Chromium a 320 px).
+  Tests + typecheck + build OK; PR #1212.
+
+- **⚖️ «Cargas no publicadas» con la certificación publicada y enlazada (01/08/2026, rama
+  `claude/carga-no-recogida-analizada-vjkwc9`).** Alberto con captura: `SUB-JA-2026-264478` tenía en el BOE
+  su «certificación de dominio y cargas», el cron la había listado y descargado (`documentos_leidos=1`), y la
+  ficha remataba con «Cargas no publicadas: pide la certificación registral». **Causa:** el gate de
+  rentabilidad `mereceAnalisisProfundo` (salida = tasación → 0% descuento, flip −30,6%) bloqueaba la lectura
+  IA, así que `cargas_conocidas` se quedaba en `false` — y `false` se pintaba como «el BOE no lo publica».
+  **Fix:** `estadoCargas`/`titularCargas` en `module-subastas/cargas.ts` (5 estados, testeados) usados por la
+  ficha y por `analisisDocumental`, con enlace directo al PDF; y el gate de rentabilidad deja de ser gate de
+  lectura: si la ficha publica documento de cargas se lee igual (`LECTOR_VERSION` 4→5, cargas primero en la
+  cola de descarga). 14 vivas, solo 3 pasaban el gate.
+
+### 🔴 La comisión de Booking se descontaba DOS VECES — 17.723€ en 2026 (01/08/2026)
+Auditoría a fondo del precio dinámico pedida por Alberto. El hallazgo más caro NO es del motor:
+`incomes` tiene un **trigger** (`incomes_compute_net`) que calcula `amount = amount_gross × (1 −
+`portal_rates.commission_pct`)`; para BOOKING la tasa es **19,72% y es CORRECTA** (15% + 1,3% de
+servicio de pagos, +21% de IVA, verificada contra factura). El fallo estaba en `smoobu-sync.ts`, que
+aplicaba **ese mismo factor antes de escribir** → Smoobu 244,86€ → app 196,57€ → trigger 157,81€.
+Confirmado por cuatro vías antes de tocar nada: desglose de la extranet (Alberto mandó captura), 14
+de 15 pagos del banco casan al céntimo con `amount_gross`, agregados banco vs `amount` (+20% Dúplex,
++9% Kutxa) y la ausencia total de cargos de comisión en el banco. Saneado el histórico
+(`amount_gross` recuperado dividiendo por 0,8028; el trigger recalcula el neto): la reserva de
+prueba queda 244,86€/196,57€ **idéntica a la extranet** y 2026 pasa de 72.151,40€ a **89.874,62€**.
+Afecta a P&L, break-even y **base del IRPF**; el motor de precios no (lee `amount_gross`).
+**Retirada una sospecha mía:** el `channel_markup` de 1,16 SÍ llega al escaparate (122 × 1,16 con
+−10% móvil y −18% Genius = 104,44€ frente a los 105,43€ reales). No había infravaloración del 14%.
+Además: latido para el **guardián de precios**, que era el único agente sin vigilante, y retirada la
+ventana de 3 días del aviso —se combinaba con el dedup y silenciaba una alerta PARA SIEMPRE (había 5
+abiertas sin avisar, dos ALTAS sobre Luxury bajo mercado del 22 y 25 de julio).
+
+### 🔴 El bucket de mercado por MES era inalcanzable por diseño (01/08/2026)
+Alberto mandó una reserva de Luxury (6-8 nov, Booking) preguntando si estaba bien. La reserva sí; el
+precio no. El motor había bajado esas noches **152€ → 122€** a las 14:30 y a las 18:43 entró la
+reserva, con comparables de ESE viernes entre **123€ y 212€** (mediana 169€ a 4 plazas). Causa: el
+bucket mensual exige comps de **3 fechas distintas** (`MIN_FECHAS_MES`) y el barrido solo visitaba
+**una por mes** — o sea, inalcanzable por definición. Medido por piso y mes: House sin bucket de
+octubre en adelante, Luxury sin el de noviembre, Dúplex igual. Sin bucket se cae al **ancla global**,
+que sale del último barrido y va dominada por las fechas cercanas (agosto), más baratas.
+**Fix:** 3 fechas de muestra por mes (viernes + sábado + martes, replicando la composición de los
+meses que sí funcionaban), plan ordenado por rondas (temporada → eventos → profundidad) y
+**presupuesto de tiempo** en el barrido, que ahora publica `truncado`/`base_completa` y baja el
+latido a `ok:false` solo si no llegó a cubrir la temporada. Una muestra que cae en día de evento se
+corre una semana: el bucket mensual EXCLUYE las fechas de evento, así que ahí no sumaría.
+De paso, corregido en el hilo: `amount_gross` de `incomes` es lo que paga el huésped, **no** el neto.
 
 - **⏰ Subasta vencida seguía en «🎯 Mi radar» (01/08/2026, rama `claude/expired-auction-visible-eoow4t`).**
   Alberto con captura: `SUB-JA-2026-263723` cerró el 31/07 18:13 y al día siguiente seguía con botones de

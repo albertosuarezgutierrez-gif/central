@@ -35,11 +35,22 @@ export type Ventana = {
   motivo: 'mes' | 'evento'
   /** nombre del evento, cuando lo hay (para el informe de la pasada) */
   etiqueta?: string
+  /**
+   * Prioridad de la ventana (0 = lo primero que hay que barrer). El barrido tiene presupuesto de
+   * tiempo, así que el ORDEN es parte del contrato: si la pasada se corta, lo que sobrevive tiene
+   * que ser lo importante. Ver la nota del reparto por rondas en `ventanasDelBarrido`.
+   */
+  ronda: number
 }
 
 export type VentanasOpts = {
   /** meses vista de la base mensual */
   mesesBase?: number
+  /**
+   * Fechas de muestra por mes. Por debajo de 3 el motor NO puede usar el bucket mensual
+   * (`MIN_FECHAS_MES` en `pricing/apply`) y ese mes se tarifica con el ancla global.
+   */
+  fechasPorMes?: number
   /** cuántas ventanas de evento como mucho (cada una cuesta 1 búsqueda por aforo distinto) */
   maxEventos?: number
   /** a partir de qué factor una fecha cuenta como evento */
@@ -65,12 +76,37 @@ function diasEntre(desdeIso: string, hastaIso: string): number {
   return Math.round((aFecha(hastaIso).getTime() - aFecha(desdeIso).getTime()) / DIA_MS)
 }
 
-/** Primer viernes del mes a `m` meses vista de `hoy`. */
-export function findeDelMes(hoyIso: string, m: number): string {
+/**
+ * Fecha de muestra nº `orden` del mes a `m` meses vista. `orden` 0 = primer VIERNES (el que se ha
+ * barrido siempre; se mantiene para no mover la serie histórica).
+ *
+ * 🚨 POR QUÉ HAY MÁS DE UNA (01/08/2026, caso Luxury 6-nov). El motor descarta el bucket de mercado
+ * de un mes si no tiene comps de al menos `MIN_FECHAS_MES` (3) fechas DISTINTAS — y con una sola
+ * ventana mensual eso era inalcanzable por definición. Medido ese día, por piso y mes: House tenía
+ * 1 fecha en oct, nov y dic; Luxury 1 en noviembre; el Dúplex 1 en oct, nov y dic. O sea que la
+ * mayoría de los meses caían al ANCLA GLOBAL —construida con el último barrido, dominado por las
+ * fechas cercanas y más baratas— en vez de con su propio mercado. Consecuencia real: el motor bajó
+ * el viernes 6-nov de Luxury a 122€ de base y esa noche se vendió cuatro horas después, con
+ * comparables de ESE día entre 123€ y 212€.
+ *
+ * La mezcla de días NO es cosmética: el bucket del mes se aplica a TODOS los días de ese mes, así
+ * que tiene que parecerse al mes, no a su mejor viernes. Se replica la composición que ya tenían
+ * los meses que sí funcionaban (agosto y septiembre: ~2/3 fin de semana, 1/3 entre semana):
+ *   orden 0 → primer viernes · orden 1 → segundo sábado · orden 2 → segundo martes.
+ * Con solo findes el bucket sobrevaloraría el mes entero; con solo entre semana, lo hundiría.
+ */
+export function findeDelMes(hoyIso: string, m: number, orden = 0): string {
   const d = aFecha(hoyIso)
   d.setUTCDate(1)
   d.setUTCMonth(d.getUTCMonth() + m)
-  while (d.getUTCDay() !== 5) d.setUTCDate(d.getUTCDate() + 1)
+  // [día de la semana buscado, cuántas veces hay que encontrarlo]
+  const patron: [number, number][] = [[5, 1], [6, 2], [2, 2]]
+  const [diaSemana, ocurrencia] = patron[orden] ?? patron[0]
+  let vistas = 0
+  while (true) {
+    if (d.getUTCDay() === diaSemana) { vistas++; if (vistas === ocurrencia) break }
+    d.setUTCDate(d.getUTCDate() + 1)
+  }
   return fmt(d)
 }
 
@@ -118,37 +154,65 @@ export function ventanasDelBarrido(
   const noches = opts.noches ?? 2
   const horizonteDias = opts.horizonteDias ?? 365
 
-  const ventanas: Ventana[] = []
+  const fechasPorMes = Math.max(1, opts.fechasPorMes ?? 3)
+
   const vistas = new Set<string>()
-
-  for (let m = 1; m <= mesesBase; m++) {
-    const checkin = findeDelMes(hoyIso, m)
-    if (vistas.has(checkin)) continue
-    vistas.add(checkin)
-    ventanas.push({ checkin, checkout: sumarDias(checkin, noches), motivo: 'mes' })
+  // Una lista por RONDA. El orden final las concatena, y ese orden ES el contrato con el barrido:
+  //   ronda 0 → una fecha de CADA mes (la línea de temporada; sin esto no hay pasada que valga)
+  //   ronda 1 → las fechas de EVENTO (lo que el motor va a tarificar caro, hay que poder verificarlo)
+  //   ronda 2+ → 2ª y 3ª fecha de cada mes, que son las que hacen ELEGIBLE el bucket mensual
+  // Así, si el presupuesto de tiempo corta la pasada, se pierde profundidad de bucket —recuperable
+  // mañana— y nunca la temporada ni los eventos.
+  // 🚨 Una fecha de muestra NO puede caer en día de evento. El bucket mensual del motor EXCLUYE las
+  // fechas de evento a propósito (si no, la Feria arrastraría la mediana de todo abril), así que una
+  // muestra que coincide con un evento no suma al bucket: el mes se quedaría otra vez corto de
+  // fechas y volvería al ancla global — justo lo que esto viene a arreglar. Cuando choca, la muestra
+  // se corre una semana (mismo día de la semana, para no cambiar la composición finde/entre semana).
+  const fechasEvento = new Set(
+    eventos.filter(e => Number(e.factor) >= factorMinimo).map(e => e.fecha),
+  )
+  const muestraDelMes = (m: number, orden: number): string => {
+    let f = findeDelMes(hoyIso, m, orden)
+    for (let intentos = 0; intentos < 3 && fechasEvento.has(f); intentos++) f = sumarDias(f, 7)
+    return f
   }
 
-  if (maxEventos <= 0) return ventanas
-
-  const candidatos = picosDeEvento(eventos, factorMinimo)
-    .filter(e => {
-      const d = diasEntre(hoyIso, e.fecha)
-      return d >= 0 && d <= horizonteDias
-    })
-    // Lo más cercano primero: es lo que ya se está vendiendo.
-    .sort((a, b) => a.fecha.localeCompare(b.fecha))
-
-  for (const e of candidatos) {
-    if (ventanas.filter(v => v.motivo === 'evento').length >= maxEventos) break
-    if (vistas.has(e.fecha)) continue
-    vistas.add(e.fecha)
-    ventanas.push({
-      checkin: e.fecha,
-      checkout: sumarDias(e.fecha, noches),
-      motivo: 'evento',
-      etiqueta: e.nombre,
-    })
+  const rondasBase: Ventana[][] = []
+  for (let orden = 0; orden < fechasPorMes; orden++) {
+    const ronda: Ventana[] = []
+    for (let m = 1; m <= mesesBase; m++) {
+      const checkin = muestraDelMes(m, orden)
+      if (vistas.has(checkin)) continue
+      vistas.add(checkin)
+      ronda.push({ checkin, checkout: sumarDias(checkin, noches), motivo: 'mes', ronda: 0 })
+    }
+    rondasBase.push(ronda)
   }
 
-  return ventanas
+  const eventoVentanas: Ventana[] = []
+  if (maxEventos > 0) {
+    const candidatos = picosDeEvento(eventos, factorMinimo)
+      .filter(e => {
+        const d = diasEntre(hoyIso, e.fecha)
+        return d >= 0 && d <= horizonteDias
+      })
+      // Lo más cercano primero: es lo que ya se está vendiendo.
+      .sort((a, b) => a.fecha.localeCompare(b.fecha))
+
+    for (const e of candidatos) {
+      if (eventoVentanas.length >= maxEventos) break
+      if (vistas.has(e.fecha)) continue
+      vistas.add(e.fecha)
+      eventoVentanas.push({
+        checkin: e.fecha,
+        checkout: sumarDias(e.fecha, noches),
+        motivo: 'evento',
+        etiqueta: e.nombre,
+        ronda: 1,
+      })
+    }
+  }
+
+  const ordenadas = [rondasBase[0] ?? [], eventoVentanas, ...rondasBase.slice(1)]
+  return ordenadas.flatMap((lista, i) => lista.map(v => ({ ...v, ronda: i })))
 }

@@ -163,4 +163,18 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'bien»). Causa típica: SERPER_API_KEY agotada o la pasarela de IA sin presupuesto para la ' +
       'extracción. Huella: agente_latidos.sivra_mercado_sweep.',
   },
+  {
+    id: 'sivra_pricing_guard',
+    etiqueta: '🛡️ Guardián de precios (diario 07:30)',
+    // Cron diario → 30 h deja pasar una pasada saltada sin dar la lata.
+    maxHoras: 30,
+    nota:
+      'La red de seguridad del pricing está muda. Es el que compara lo que cobramos contra el ' +
+      'mercado real y el que caza precios revertidos, reservas por debajo de mercado, eventos mal ' +
+      'fechados y comparables del aforo equivocado. Hasta el 01/08/2026 era el ÚNICO agente sin ' +
+      'vigilante: si dejaba de correr, su silencio se leía como «no hay nada que avisar» — y no hay ' +
+      'nada más caro que una red de seguridad que calla porque está rota. Si el detalle dice ' +
+      '«pricing_eventos_auto ILEGIBLE», corrió pero con los centinelas de evento apagados. ' +
+      'Huella: agente_latidos.sivra_pricing_guard.',
+  },
 ]

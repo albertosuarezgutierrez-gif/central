@@ -22,6 +22,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 
 import { caducidadDelCuadro } from './caducidad.ts'
+import { norm } from './parsing.ts'
 
 /**
  * Confianza mínima de la lectura para poder afirmar que una finca se adquiere
@@ -663,4 +664,137 @@ export function resumirCargas(cuadro: CuadroCargas, subsistentes: CargasSubsiste
   }
 
   return [...lineas, ...cuadro.notas.map((n) => `· ${n}`), ...subsistentes.avisos].join('\n')
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// ¿QUÉ SABEMOS de las cargas de esta subasta? — tres estados, no dos.
+//
+// 🚨 Caso real (SUB-JA-2026-264478, queja de Alberto el 01/08/2026): el BOE
+// publicaba la «certificación de dominio y cargas», el cron la había listado y
+// hasta descargado… y la ficha decía «Cargas no publicadas: pide la
+// certificación registral antes de pujar». Estaba publicada. Lo que no se había
+// hecho era LEERLA (no pasó el gate de rentabilidad, ver `documentos.ts`).
+//
+// `cargas_conocidas = false` significa «no lo hemos leído», y eso NO es lo mismo
+// que «el BOE no lo publica»: el primero se arregla abriendo un PDF que ya
+// tenemos enlazado, y el segundo obliga a ir al Registro. Colapsarlos manda a
+// Alberto al sitio equivocado — exactamente la regla del `CLAUDE.md` sobre el
+// NULL de enriquecimiento, aplicada al dato del que depende la puja.
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * ¿El título de un adjunto de la ficha promete el cuadro de cargas?
+ *
+ * Los juzgados titulan a mano y con erratas: en el corpus vivo conviven
+ * «CERTIFICACIÓN DE CARGAS», «CERTIFICCION DE DOMINOS Y CARGAS», «CERTIFICADO
+ * DOMINIO Y CARGAS FINCA 27488 Y 27490» y «CESIÓN DEL CRÉDITO Y NOTA SIMPLE».
+ * Por eso se busca la PALABRA CLAVE («carga», «nota simple», «dominio» junto a
+ * certificación) y no un título canónico que no existe.
+ */
+export function esDocumentoDeCargas(titulo: string | null | undefined): boolean {
+  const t = norm(titulo ?? '')
+  if (!t) return false
+  return (
+    /\bcargas?\b/.test(t) ||
+    /\bnota\s+simple\b/.test(t) ||
+    /\bcertific\w*\s+(de\s+|del\s+)?(dominio|registral)/.test(t)
+  )
+}
+
+/**
+ * Lo que se puede AFIRMAR sobre las cargas:
+ *  · `subsisten`            — leídas: hay cargas anteriores que se suman al precio.
+ *  · `sin_cargas`           — leídas: no subsiste ninguna.
+ *  · `publicadas_sin_leer`  — la ficha publica el documento y aún no se ha analizado.
+ *  · `no_publicadas`        — ficha revisada: no hay documento de cargas que abrir.
+ *  · `sin_revisar`          — ni siquiera se ha mirado la ficha todavía.
+ */
+export type EstadoCargas =
+  | 'subsisten'
+  | 'sin_cargas'
+  | 'publicadas_sin_leer'
+  | 'no_publicadas'
+  | 'sin_revisar'
+
+/** Adjunto de la ficha, en lo mínimo que necesita esta decisión. */
+export interface AdjuntoFicha {
+  titulo?: string | null
+  url?: string | null
+  legible?: boolean | null
+}
+
+export interface EntradaEstadoCargas {
+  cargas?: number | null
+  cargasConocidas?: boolean | null
+  /** `null`/`undefined` = la ficha AÚN no se ha revisado. `[]` = revisada, sin adjuntos. */
+  documentos?: AdjuntoFicha[] | null
+  /** `false` para las fuentes sin ficha documental (los lotes de la Junta). */
+  publicaAdjuntos?: boolean
+}
+
+/**
+ * Estado de las cargas + el documento que hay que abrir, si lo hay.
+ *
+ * Conservador por diseño: `cargas > 0` manda sobre todo lo demás (si alguna vez
+ * hubo una lectura con cargas, no se degrada a «no se sabe» porque otra pasada
+ * dejara el flag atrás), y la ausencia de cargas solo se afirma con
+ * `cargasConocidas === true` — un `null` nunca se lee como «finca limpia».
+ */
+export function estadoCargas(e: EntradaEstadoCargas): {
+  estado: EstadoCargas
+  documento: AdjuntoFicha | null
+} {
+  const docs = e.documentos ?? null
+  const documento = docs?.find((d) => esDocumentoDeCargas(d.titulo)) ?? null
+
+  if ((e.cargas ?? 0) > 0) return { estado: 'subsisten', documento }
+  if (e.cargasConocidas === true) return { estado: 'sin_cargas', documento }
+
+  // No se sabe. Lo útil es decir POR QUÉ, porque cada porqué manda a un sitio
+  // distinto: abrir el PDF que ya tenemos, esperar al cron, o ir al Registro.
+  if (documento) return { estado: 'publicadas_sin_leer', documento }
+  if (docs == null) {
+    return { estado: e.publicaAdjuntos === false ? 'no_publicadas' : 'sin_revisar', documento: null }
+  }
+  return { estado: 'no_publicadas', documento: null }
+}
+
+/**
+ * Titular de CARGAS para la ficha: emoji, frase y —si lo hay— el documento que
+ * Alberto tiene que abrir. Vive aquí (módulo puro y testeado) y no incrustado en
+ * el JSX porque es la frase sobre la que se decide si se puja: si miente, se
+ * puja a ciegas.
+ *
+ * `importe` solo viene informado en `subsisten`; quien pinta le da el formato de
+ * euros de su app (aquí no se decide la presentación del dinero).
+ */
+export interface TitularCargas {
+  estado: EstadoCargas
+  emoji: '🔴' | '🟠' | '🟢'
+  texto: string
+  /** El PDF que resuelve la duda, cuando la ficha lo publica. */
+  documento: AdjuntoFicha | null
+  importe: number | null
+}
+
+export function titularCargas(e: EntradaEstadoCargas): TitularCargas {
+  const { estado, documento } = estadoCargas(e)
+  const base = { estado, documento, importe: null as number | null }
+
+  switch (estado) {
+    case 'subsisten':
+      return { ...base, emoji: '🔴', texto: 'Cargas anteriores que SUBSISTEN y se suman al precio:', importe: e.cargas ?? null }
+    case 'sin_cargas':
+      return { ...base, emoji: '🟢', texto: 'Sin cargas anteriores subsistentes publicadas.' }
+    case 'publicadas_sin_leer':
+      return {
+        ...base,
+        emoji: '🟠',
+        texto: `El BOE SÍ publica «${(documento?.titulo ?? 'certificación de cargas').trim()}», pero todavía no se ha analizado: ábrela antes de pujar.`,
+      }
+    case 'sin_revisar':
+      return { ...base, emoji: '🟠', texto: 'Cargas sin comprobar: la ficha del BOE todavía no se ha revisado.' }
+    default:
+      return { ...base, emoji: '🟠', texto: 'Cargas no publicadas: pide la certificación registral antes de pujar.' }
+  }
 }
