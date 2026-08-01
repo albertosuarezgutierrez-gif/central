@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-01T21:08:20Z",
-  "sha": "ac54e8e2166a82906b4927b8936dc183d8e9c558",
+  "generadoEn": "2026-08-01T21:22:13Z",
+  "sha": "4fe8a5b3eb75f310621291be01d606550ab15c18",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -68744,14 +68744,14 @@
           "exportada": true,
           "params": "{ convenio, analisis, analisisFecha, branding }: { convenio: { codigo: string; nombre: string } analisis: Analisis | null analisisFecha: string | null branding: Branding }",
           "retorno": null,
-          "linea": 18
+          "linea": 10
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "ee684dd87e6d"
+      "hash": "ce9390006c08"
     },
     {
       "ruta": "apps/rrhh/app/admin/cuenta/page.tsx",
@@ -68945,14 +68945,14 @@
           "exportada": true,
           "params": "{ branding }: { branding: Branding }",
           "retorno": null,
-          "linea": 18
+          "linea": 9
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "4505311597a7"
+      "hash": "5731b8cd3f17"
     },
     {
       "ruta": "apps/rrhh/app/admin/empresa/page.tsx",
@@ -71003,7 +71003,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d6d69d4ddcba"
+      "hash": "2d5ec771cbd3"
     },
     {
       "ruta": "apps/rrhh/components/AsistentePanel.tsx",
@@ -71514,6 +71514,75 @@
       "hash": "470077b5af8b"
     },
     {
+      "ruta": "apps/rrhh/lib/categorias-empresa.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Categorías de la documentación de EMPRESA (no del trabajador). Módulo puro (sin prisma ni storage) para poder importarlo también desde componentes 'use client' — antes cada pantalla tenía su propia copia de la lista y se desincronizaban (p. ej. 'contrato' existía en /admin/empresa pero no en /admin/",
+      "exporta": [
+        "categoriaDe",
+        "periodoDe",
+        "pideAnio",
+        "pideMes",
+        "etiquetaCategoria",
+        "sufijoPeriodo"
+      ],
+      "funciones": [
+        {
+          "nombre": "categoriaDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "CategoriaEmpresa | undefined",
+          "linea": 27
+        },
+        {
+          "nombre": "periodoDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "Periodo",
+          "linea": 33,
+          "resumen": "Periodicidad de una categoría. Una categoría desconocida (documento antiguo de una categoría ya retirada) no pide fechas, pero tampoco se oculta."
+        },
+        {
+          "nombre": "pideAnio",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "boolean",
+          "linea": 37
+        },
+        {
+          "nombre": "pideMes",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "boolean",
+          "linea": 41
+        },
+        {
+          "nombre": "etiquetaCategoria",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "string",
+          "linea": 47,
+          "resumen": "Etiqueta legible; si el id no está en la lista se devuelve tal cual (mejor un id crudo visible que ocultar un documento que sí existe)."
+        },
+        {
+          "nombre": "sufijoPeriodo",
+          "kind": "function",
+          "exportada": true,
+          "params": "anio: number | null, mes: number | null",
+          "retorno": "string",
+          "linea": 52,
+          "resumen": "Sufijo de periodo para mostrar junto a la categoría: \"2026/03\", \"2026\" o ''."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2bcb08731694"
+    },
+    {
       "ruta": "apps/rrhh/lib/certificado-firma.tsx",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -71919,7 +71988,7 @@
           "exportada": true,
           "params": "empresaId: string",
           "retorno": "Promise<DocEmpresa[]>",
-          "linea": 18
+          "linea": 14
         },
         {
           "nombre": "subirDocumentoEmpresa",
@@ -71927,7 +71996,7 @@
           "exportada": true,
           "params": "empresaId: string, usuarioId: string, { categoria, nombre, anio, mes }: { categoria: string; nombre: string; anio?: number; mes?: number }, file: { bytes: ArrayBuffer; contentType: string; ext: string }",
           "retorno": "Promise<DocEmpresa>",
-          "linea": 26
+          "linea": 22
         },
         {
           "nombre": "borrarDocumentoEmpresa",
@@ -71935,7 +72004,7 @@
           "exportada": true,
           "params": "empresaId: string, docId: string",
           "retorno": "Promise<void>",
-          "linea": 41
+          "linea": 37
         },
         {
           "nombre": "urlDocumentoEmpresa",
@@ -71943,14 +72012,14 @@
           "exportada": true,
           "params": "path: string",
           "retorno": "Promise<string | null>",
-          "linea": 47
+          "linea": 43
         }
       ],
       "tablas": [
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "c8192343c32a"
+      "hash": "6446222da008"
     },
     {
       "ruta": "apps/rrhh/lib/empresa.ts",
@@ -87928,7 +87997,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2371,
-    "funciones": 6331
+    "archivos": 2372,
+    "funciones": 6337
   }
 }

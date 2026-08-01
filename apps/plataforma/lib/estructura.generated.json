@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-01T20:30:01Z",
+  "generadoEn": "2026-08-01T21:22:13Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3968,6 +3968,10 @@
     }
   ],
   "novedades": [
+    {
+      "titulo": "📂 RRHH: categoría «Documentación mensual» en documentos de empresa (01/08/2026, rama `claude/programa-rrhh-m25fwd`).",
+      "fecha": "01/08/2026"
+    },
     {
       "titulo": "⏰ Subasta vencida seguía en «🎯 Mi radar» (01/08/2026, rama `claude/expired-auction-visible-eoow4t`).",
       "fecha": "01/08/2026"
