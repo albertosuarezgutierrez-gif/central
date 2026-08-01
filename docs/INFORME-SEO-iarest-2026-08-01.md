@@ -214,6 +214,67 @@ techo bajo. Los frenos reales al tráfico, por orden:
 
 ---
 
+## 6-ter. Lo IMPLEMENTADO en este PR (01/08/2026)
+
+Decisión de Alberto: **ia.rest no publica precio.** El único camino de conversión es el **formulario
+de contacto** y el **WhatsApp directo** (`wa.me/34637349990`).
+
+### A. El precio sale de toda la superficie pública
+
+| Sitio | Qué llevaba | Qué queda |
+|---|---|---|
+| `layout.tsx` | meta/OG/Twitter «Desde 59 €/mes», **3 `Offer` con `price` en JSON-LD**, FAQ con la tarifa desglosada, keyword `tpv desde 59 euros` | Sin `offers`; FAQ remite a presupuesto por formulario/WhatsApp |
+| `page.tsx` (home) | meta/OG/Twitter «Desde 89 €/mes», calculadora de precio (JS + sección), comparativa con «ia.rest 139 €/mes», contador «59 €» | Todo eliminado (no ocultado: **borrado del DOM**) |
+| `/hosteleria` | meta/OG, `Offer price 59`, FAQ «59€/mes… 99€/mes», strip oculto | Limpio |
+| `/catering` · `/espacios` | metas, strips, sección de precio completa con ejemplo 59€+20€=79€ | Limpio (las cifras del **evento del cliente** se mantienen: son la demo del producto, no nuestra tarifa) |
+| `/tapas-bar` · `/grupo-multilocal` · `/restaurante-indio` · `/restaurante-mediterraneo` | rejilla «59€/mes · +20€ · +15€» | Rejilla de valor: «Sin comisión · Sin permanencia · Presupuesto a medida» |
+| 4 artículos del blog | tarifa en cuerpo, CTA y tabla comparativa | Modelo sin cifra; en la comparativa con la competencia nuestra fila pasa a «Consultar» |
+
+> Criterio aplicado: se borra **la tarifa de ia.rest**. Se mantienen los precios de **terceros**
+> (competencia, hardware Android ~180 €, router ~120 €) y las cifras del **negocio del cliente** en las
+> demos de catering — no son nuestro precio y sostienen el argumento.
+>
+> Las secciones de precio que estaban en `display:none` se han **eliminado**, no re-ocultado: un bloque
+> oculto sigue en el HTML y Google lo lee.
+
+### B. CTA unificado
+
+Las 4 landings que solo tenían `mailto:` pasan a **WhatsApp** como CTA principal (con mensaje
+preescrito por vertical y `data-ga="click_whatsapp"`) y **formulario** (`/#contacto`) como secundario.
+El email se mantiene solo donde es obligatorio (texto RGPD y pie).
+
+### C. El agente SEO, desbloqueado
+
+1. **Allowlist ampliada** — de `['/restaurantes','/restaurantes/*']` a la home, `/comanda-por-voz` y
+   las 8 landings de sector (`src/lib/seo/targets.ts`).
+2. **`SEO_DEFAULTS` para las 11 rutas**, sin una sola cifra de precio.
+3. **Regla inviolable en el `SYSTEM`**: nunca publicar precio de ia.rest — ni en title, ni en
+   description, ni en bloque, ni en artículo, ni en JSON-LD. Ante keyword de precio, cubre la
+   intención sin cifra y remata en formulario/WhatsApp. Elimina de paso el «59€/mes» obsoleto.
+4. **`solicitarIndexacion()` eliminado** (§4-bis.1) y documentado por qué, para que nadie lo restaure.
+5. **El silencio pasa a ser alerta**: si no aplica NADA en 21 días, el Telegram deja de decir «sin
+   cambios» y avisa de que hay que revisar indexación y umbral.
+
+### D. Verificación ejecutada
+
+- `npx tsc --noEmit` → **0 errores**.
+- `npx next build` → **build completo correcto** (todas las rutas generadas).
+- `npx tsx scripts/seo/test-guardrails.ts` → **14/14 checks OK**.
+
+### E. Lo que sigue pendiente y NO puedo tocar desde aquí
+
+Vive en las env vars de Vercel, no en el repo:
+
+- **`SEO_AGENT_ENABLED`** — hay que ponerlo a `true` o el agente sigue saliendo en el primer `if`.
+- **`SEO_MIN_IMPR`** — bajarlo a 3–5 mientras no haya volumen (hoy 30, inalcanzable).
+- **Key de Gemini** — en 429 permanente (§4.5).
+
+Y una decisión de producto que este PR **no** toca: `/registro` sigue existiendo como alta
+self-service con Stripe. Si la venta pasa a ser 100 % conversada, hay que decidir si esa puerta se
+cierra o se deja como acceso para clientes ya cerrados.
+
+---
+
 ## 7. Referencias de código
 
 ```

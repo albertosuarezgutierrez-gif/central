@@ -230,7 +230,7 @@ export default function ArticuloTpvVoz() {
               <tbody>
                 {[
                   ['Voz nativa', '✅ Sí', '❌ No', '❌ No', '❌ No'],
-                  ['Precio base/mes', '59€', '99,99€', 'Consultar', '~80€'],
+                  ['Precio base/mes', 'Consultar', '99,99€', 'Consultar', '~80€'],
                   ['Comisión transacción', '0%', 'Consultar', 'Consultar', 'Consultar'],
                   ['KDS cocina incluido', '✅ Sí', '✅ Sí', '✅ Sí', '✅ Sí'],
                   ['VeriFactu incluido', '✅ Sí', 'Extra', 'Extra', 'Extra'],
@@ -264,14 +264,15 @@ export default function ArticuloTpvVoz() {
           </h2>
           <p style={{ fontSize: 15, lineHeight: 1.75, color: C.ink2, marginBottom: 16 }}>
             El precio de un TPV por voz varía según el número de usuarios y funcionalidades.
-            En ia.rest el modelo es simple y sin sorpresas:
+            En ia.rest el modelo es simple y sin sorpresas — pagas una cuota mensual fija por lo
+            que de verdad usas, y nunca un porcentaje de tus ventas:
           </p>
           <div style={{ display: 'grid', gap: 10, marginBottom: 20 }}>
             {[
-              { label: 'Base', price: '59€/mes', desc: '1 local, usuarios ilimitados en modo básico, KDS y VeriFactu incluidos' },
-              { label: '+Usuario (2-6)', price: '+20€/usuario', desc: 'Camareros, cocina y jefe de sala adicionales' },
-              { label: '+Usuario (7+)', price: '+15€/usuario', desc: 'Descuento por volumen a partir del séptimo usuario' },
-              { label: 'QR en mesa', price: '+12€/mesa/mes', desc: 'Pedido y cobro desde el móvil del cliente' },
+              { label: 'Base', price: 'Cuota fija', desc: '1 local, usuarios ilimitados en modo básico, KDS y VeriFactu incluidos' },
+              { label: 'Usuarios', price: 'Por usuario activo', desc: 'Camareros, cocina y jefe de sala adicionales, con descuento por volumen' },
+              { label: 'QR en mesa', price: 'Opcional', desc: 'Pedido y cobro desde el móvil del cliente' },
+              { label: 'Comisión', price: '0%', desc: 'Nunca un porcentaje sobre tus ventas' },
             ].map((item) => (
               <div key={item.label} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
