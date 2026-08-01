@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-01T12:35:55Z",
-  "sha": "e38038792e794fa4a852b22c2ffbe1cdebdfeffe",
+  "generadoEn": "2026-08-01T17:43:11Z",
+  "sha": "50e3851f8158fbf73d3dd55808b4914f7b37db63",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47920,7 +47920,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a400c83590a4"
+      "hash": "5e3d4eb622c8"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -87298,8 +87298,8 @@
           "exportada": true,
           "params": "t: Tesis, precioDespues: number",
           "retorno": "Resultado",
-          "linea": 6,
-          "resumen": "Puntúa una tesis contra un precio POSTERIOR (walk-forward: precioDespues es de después de precioRef)."
+          "linea": 12,
+          "resumen": "Puntúa una tesis contra un precio POSTERIOR (walk-forward: precioDespues es de después de precioRef). `retorno` es el retorno de SEGUIR la tesis, no el movimiento bruto del precio: una bajista que aci"
         },
         {
           "nombre": "ajustesDeStats",
@@ -87307,7 +87307,7 @@
           "exportada": true,
           "params": "stats: Record<string, StatsEstrategia>, minN = 20",
           "retorno": "Record<string, number>",
-          "linea": 22,
+          "linea": 29,
           "resumen": "Traduce el rendimiento histórico por estrategia en un DELTA de confianza (el bucle de aprendizaje). Guarda de muestra: por debajo de `minN` resultados NO ajusta (no aprender de ruido, como el Director"
         },
         {
@@ -87316,12 +87316,12 @@
           "exportada": true,
           "params": "resultados: Resultado[]",
           "retorno": "Record<string, StatsEstrategia>",
-          "linea": 34
+          "linea": 41
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f04e48728d07"
+      "hash": "a409d59e57dd"
     },
     {
       "ruta": "packages/module-trading/src/screener.ts",
