@@ -41,6 +41,14 @@ export interface EntradaAviso {
   documentosLeidos: boolean
   /** Días hasta el cierre; `null` si no hay fecha. */
   diasParaCierre: number | null
+  /**
+   * Su plazo YA ha vencido. Va aparte de `diasParaCierre` a propósito: ese campo
+   * se calcula redondeando hacia arriba, así que una subasta cerrada hace unas
+   * horas vale 0 días — indistinguible de «cierra hoy mismo», que es el caso que
+   * dispara el aviso urgente sin verificar. Con la fecha pasada no hay aviso que
+   * dar: ya no se puede pujar.
+   */
+  cerrada?: boolean
   /** Puntos del análisis documental, para saber QUÉ es lo raro. */
   claves?: string[]
 }
@@ -61,6 +69,9 @@ const GRAVES = new Set(['proindiviso'])
 
 export function decidirAviso(e: EntradaAviso): ResultadoAviso {
   const no = (motivo: string): ResultadoAviso => ({ decision: 'silenciar', motivo, sinVerificar: false })
+
+  // Lo primero de todo: si el plazo pasó, no hay decisión que tomar.
+  if (e.cerrada) return no('La subasta ya ha cerrado')
 
   if (!e.rentable) return no('No pasa el filtro de rentabilidad')
 

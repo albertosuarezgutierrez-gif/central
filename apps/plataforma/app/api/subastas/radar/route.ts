@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { requireEmpresaId } from '@/lib/tenant'
+import { RADAR_CON_CORPUS, RADAR_VIGENTE } from '@/lib/subastas-radar'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,20 +17,26 @@ export async function GET(req: NextRequest) {
   }
 
   const soloNuevos = new URL(req.url).searchParams.get('no_vistos') === '1'
-  const filtro = soloNuevos ? Prisma.sql`AND visto = false` : Prisma.empty
+  const filtro = soloNuevos ? Prisma.sql`AND r.visto = false` : Prisma.empty
 
+  // `RADAR_VIGENTE` deja fuera lo ya cerrado: la bandeja es de cosas que aún
+  // se pueden pujar, no un histórico (para eso está el corpus).
   const anuncios = await prisma.$queryRaw<any[]>(Prisma.sql`
-    SELECT id, dedupe_key, subasta, puntuacion, motivos, avisos, coste_total, descuento,
-           visto, descartado, fecha_fin, created_at
-    FROM subastas_radar
-    WHERE cuenta_id = ${cuentaId}::uuid AND descartado = false ${filtro}
-    ORDER BY puntuacion DESC NULLS LAST, created_at DESC
+    SELECT r.id, r.dedupe_key, r.subasta, r.puntuacion, r.motivos, r.avisos, r.coste_total,
+           r.descuento, r.visto, r.descartado, COALESCE(s.fecha_fin, r.fecha_fin) AS fecha_fin,
+           r.created_at
+    ${RADAR_CON_CORPUS}
+    WHERE r.cuenta_id = ${cuentaId}::uuid AND ${RADAR_VIGENTE} ${filtro}
+    ORDER BY r.puntuacion DESC NULLS LAST, r.created_at DESC
     LIMIT 200
   `)
 
+  // El contador va por el MISMO filtro: un badge que cuenta subastas cerradas
+  // manda a Alberto a una bandeja donde no hay nada que hacer.
   const noVistos = await prisma.$queryRaw<{ n: number }[]>(Prisma.sql`
-    SELECT COUNT(*)::int AS n FROM subastas_radar
-    WHERE cuenta_id = ${cuentaId}::uuid AND visto = false AND descartado = false
+    SELECT COUNT(*)::int AS n
+    ${RADAR_CON_CORPUS}
+    WHERE r.cuenta_id = ${cuentaId}::uuid AND r.visto = false AND ${RADAR_VIGENTE}
   `)
 
   return NextResponse.json({ anuncios, no_vistos: noVistos[0]?.n ?? 0 })

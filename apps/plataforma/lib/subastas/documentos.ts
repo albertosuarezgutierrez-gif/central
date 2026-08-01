@@ -308,12 +308,17 @@ export async function archivarPasadas(): Promise<{ archivadas: number; radarLimp
   `)
 
   // La bandeja de avisos de lo ya cerrado: eso sí se borra, no sirve de nada.
+  // SIN día de gracia (01/08/2026): con `now() - 1 day` una subasta que cerraba
+  // a las 18:13 seguía en la bandeja hasta la pasada del día SIGUIENTE, así que
+  // Alberto la veía «viva» al día siguiente de vencer. Aun así esto es solo la
+  // recogida de basura: quien garantiza que no se pinte es `RADAR_VIGENTE` en la
+  // lectura — un `DELETE` diario no puede ser lo único que evite decir algo falso.
   const radarLimpiado = await prisma.$executeRaw(Prisma.sql`
     DELETE FROM subastas_radar r
     USING subastas s
     WHERE s.dedupe_key = r.dedupe_key
       AND s.fecha_fin IS NOT NULL
-      AND s.fecha_fin < now() - interval '1 day'
+      AND s.fecha_fin < now()
   `)
 
   return { archivadas: Number(archivadas), radarLimpiado: Number(radarLimpiado) }
