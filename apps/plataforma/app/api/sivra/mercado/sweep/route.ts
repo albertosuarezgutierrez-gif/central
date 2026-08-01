@@ -35,6 +35,18 @@ const MONTHS_AHEAD = 8
 // duración real de la pasada: `maxDuration` es 300 s.
 const MAX_VENTANAS_EVENTO = Number(process.env.SIVRA_SWEEP_MAX_EVENTOS ?? 6)
 
+// Fechas de muestra por mes. 🚨 Por debajo de 3 el motor NO puede usar el bucket de mercado de ese
+// mes (`MIN_FECHAS_MES` en `pricing/apply`) y lo tarifica con el ancla global — que sale del último
+// barrido y está dominada por las fechas cercanas, más baratas. Con 1 sola ventana mensual, que es
+// como estuvo hasta el 01/08/2026, ese umbral era inalcanzable POR DISEÑO: medido ese día, House no
+// tenía bucket de octubre en adelante y Luxury no tenía el de noviembre — y el viernes 6-nov de
+// Luxury se vendió a 122€ de base con comparables de ese mismo día entre 123€ y 212€.
+//
+// La cobertura se ACUMULA entre pasadas: `market_rates` guarda una fila por (fecha, comp, día de
+// búsqueda) y el motor mira 120 días atrás, así que lo que una pasada no llega a barrer por
+// presupuesto lo aporta la del día siguiente. Por eso truncar aquí es barato y morir en 504 no.
+const FECHAS_POR_MES = Number(process.env.SIVRA_SWEEP_FECHAS_MES ?? 3)
+
 // 🚨 El barrido busca por el AFORO REAL de cada piso, NO con "4 personas" para todos (bug hasta el
 // 31/07/2026: guardaba los MISMOS comps de 4 plazas para los 4 pisos con `guests=4` fijo, así que
 // House —12 plazas— se comparaba con apartamentos de 4 y salía a mitad de precio). Los pisos que
@@ -130,9 +142,24 @@ export async function GET(req: NextRequest) {
   const plan = ventanasDelBarrido(new Date().toISOString().slice(0, 10), eventos, {
     mesesBase: MONTHS_AHEAD,
     maxEventos: MAX_VENTANAS_EVENTO,
+    fechasPorMes: FECHAS_POR_MES,
   })
 
-  for (const { checkin, checkout, motivo, etiqueta } of plan) {
+  // ⏱️ Presupuesto de tiempo EXPLÍCITO. Con 3 fechas por mes el plan pasa de ~14 ventanas a ~30, y
+  // cada una cuesta 1 búsqueda + 1 extracción POR AFORO (hoy 4): subir `maxDuration` solo movería la
+  // pared. Lo que garantiza que la pasada VUELVE —y deja dicho por dónde iba— es cortar a tiempo.
+  // Misma lección que el 504 de `facturas-scan` del 31/07/2026. El plan viene ordenado por rondas,
+  // así que lo que se cae al final es profundidad de bucket, nunca la temporada ni los eventos.
+  const deadline = Date.now() + 240_000
+  let truncado = 0
+  let rondaBaseCompleta = true
+
+  for (const { checkin, checkout, motivo, etiqueta, ronda } of plan) {
+    if (Date.now() > deadline) {
+      truncado++
+      if (ronda === 0) rondaBaseCompleta = false
+      continue
+    }
     for (const [aforo, pisos] of porAforo) {
       try {
         const snippets = await serperSearch(
@@ -168,14 +195,20 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Huella para el vigía: una pasada que no trae NI UN comp es un fallo, aunque no lance.
+  // Huella para el vigía: una pasada que no trae NI UN comp es un fallo, aunque no lance. Y una que
+  // se queda sin tiempo ANTES de cubrir la línea de temporada tampoco es una pasada buena: se ha
+  // medido medio calendario, y eso no es haberlo medido (misma regla que el listado IMAP truncado).
+  // Perder solo profundidad de bucket sí es aceptable — mañana se recupera.
   const conComps = ventanas.filter(v => v.comps > 0).length
-  const ok = errors.length === 0 && conComps > 0
+  const ok = errors.length === 0 && conComps > 0 && rondaBaseCompleta
   const eventosBarridos = plan.filter(v => v.motivo === 'evento').length
   await registrarLatido('sivra_mercado_sweep', ok, [
     `${upserted} comps en ${ventanas.length} ventanas (${eventosBarridos} de evento)`,
+    truncado ? `${truncado} ventanas sin tiempo${rondaBaseCompleta ? ' (solo profundidad de bucket)' : ' INCLUIDA la base mensual'}` : '',
     errors.length ? `${errors.length} fallos: ${errors[0]}` : '',
   ].filter(Boolean).join(' · ')).catch(() => {})
 
-  return NextResponse.json({ ok, upserted, ventanas, eventosBarridos, errors })
+  // `truncado` NO es un error: es «me quedé sin tiempo». Se publica para que no haya que deducirlo
+  // del número de ventanas, que es justo la clase de silencio que esconde los problemas.
+  return NextResponse.json({ ok, upserted, ventanas, eventosBarridos, truncado, base_completa: rondaBaseCompleta, errors })
 }

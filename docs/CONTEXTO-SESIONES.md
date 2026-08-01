@@ -24,6 +24,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🔴 El bucket de mercado por MES era inalcanzable por diseño (01/08/2026)
+Alberto mandó una reserva de Luxury (6-8 nov, Booking) preguntando si estaba bien. La reserva sí; el
+precio no. El motor había bajado esas noches **152€ → 122€** a las 14:30 y a las 18:43 entró la
+reserva, con comparables de ESE viernes entre **123€ y 212€** (mediana 169€ a 4 plazas). Causa: el
+bucket mensual exige comps de **3 fechas distintas** (`MIN_FECHAS_MES`) y el barrido solo visitaba
+**una por mes** — o sea, inalcanzable por definición. Medido por piso y mes: House sin bucket de
+octubre en adelante, Luxury sin el de noviembre, Dúplex igual. Sin bucket se cae al **ancla global**,
+que sale del último barrido y va dominada por las fechas cercanas (agosto), más baratas.
+**Fix:** 3 fechas de muestra por mes (viernes + sábado + martes, replicando la composición de los
+meses que sí funcionaban), plan ordenado por rondas (temporada → eventos → profundidad) y
+**presupuesto de tiempo** en el barrido, que ahora publica `truncado`/`base_completa` y baja el
+latido a `ok:false` solo si no llegó a cubrir la temporada. Una muestra que cae en día de evento se
+corre una semana: el bucket mensual EXCLUYE las fechas de evento, así que ahí no sumaría.
+De paso, corregido en el hilo: `amount_gross` de `incomes` es lo que paga el huésped, **no** el neto.
+
 - **⚕️ Check 4 del health-check reescrito: latido del sync, no última reserva (01/08/2026, rama
   `claude/health-check-2026-07-30-vlv4c7`).** Feedback de Alberto: la sequía de reservas (25/07→01/08,
   sync verificado sano por logs 200) se pintaba como 🔴 — «que especifique el fallo, ya que no es un
