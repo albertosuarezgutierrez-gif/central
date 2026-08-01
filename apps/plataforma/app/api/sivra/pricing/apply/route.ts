@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
 import { eventFactor, seasonalFloorFactor, PRICING_HORIZON_DAYS, EVENTS } from "@/lib/pricing-calendar"
+import { factorLastMinute } from "@/lib/sivra/pricing-lastminute"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { getSmoobuKey } from "@/lib/smoobu"
 import { tgSend } from "@central/core-telegram"
@@ -94,7 +95,7 @@ export async function POST(req: NextRequest) {
     property_id: string; recommended_guest: number; med_guest_global: number; floor_guest: number; ceil_guest: number
     channel_markup: number; max_change_pct: number; min_price: number | null; max_price: number | null
     sample_n: number; market_age_days: number; events_enabled: boolean; gap_discount_pct: number
-    flight_demand_k: number; seasonal_floor_k: number
+    flight_demand_k: number; seasonal_floor_k: number; lastminute_k: number
   }[]>(Prisma.sql`
     WITH latest AS (
       SELECT scenario, MAX(search_date) sd FROM market_rates
@@ -137,7 +138,8 @@ export async function POST(req: NextRequest) {
       COALESCE(s.events_enabled, true) AS events_enabled,
       COALESCE(s.gap_discount_pct, 0)::float8 AS gap_discount_pct,
       COALESCE(s.flight_demand_k, 0)::float8 AS flight_demand_k,
-      COALESCE(s.seasonal_floor_k, 0)::float8 AS seasonal_floor_k
+      COALESCE(s.seasonal_floor_k, 0)::float8 AS seasonal_floor_k,
+      COALESCE(s.lastminute_k, 0)::float8 AS lastminute_k
     FROM mkt
     JOIN pricing_settings s ON s.property_id = mkt.scenario
     LEFT JOIN occ ON occ.scenario = mkt.scenario
@@ -180,6 +182,32 @@ export async function POST(req: NextRequest) {
   //     de un mismo día son un día, no un mes. Sin esto, un barrido que solo cubra un evento sin
   //     catalogar volvería a contaminar el bucket por la puerta de atrás.
   // OJO: SQL dentro de un template literal de TS — aqui NO se pueden usar backticks ni $ { }.
+  // ─── Antelación REAL de venta de cada piso (01/08/2026) ──────────────────────────────────
+  // Es la referencia de la palanca de urgencia: cuándo se vende de verdad cada piso. NO se
+  // configura a ojo, se MIDE. `incomes` no sirve —el createdAt de las reservas viejas es la fecha
+  // de la importación masiva, no la de la reserva—, pero `rate_snapshots` sí: llevamos una foto
+  // diaria de la disponibilidad, y cada transición de libre a ocupado entre dos snapshots es una
+  // reserva entrando, con su antelación exacta.
+  //
+  // Medido el 01/08/2026: Busto 108 días · Luxury 57 · House 32 · Dúplex 7. Esa dispersión es la
+  // razón de que un umbral único no sirva: a 60 días vista Busto va tardísimo y Dúplex ni ha
+  // empezado su ventana de venta.
+  // OJO: SQL dentro de un template literal de TS — aqui NO se pueden usar backticks ni $ { }.
+  const antelacionRows = await prisma.$queryRaw<{ property_id: string; mediana: number; muestra: number }[]>(Prisma.sql`
+    WITH s AS (
+      SELECT property_id, rate_date, snapshot_date, available,
+             LAG(available) OVER (PARTITION BY property_id, rate_date ORDER BY snapshot_date) AS prev
+      FROM rate_snapshots
+    )
+    SELECT property_id,
+           percentile_cont(0.5) WITHIN GROUP (ORDER BY (rate_date - snapshot_date))::int AS mediana,
+           COUNT(*)::int AS muestra
+    FROM s
+    WHERE prev = 1 AND available = 0 AND rate_date >= snapshot_date
+    GROUP BY property_id
+  `).catch(() => [])
+  const antelacion = new Map(antelacionRows.map(a => [a.property_id, { mediana: Number(a.mediana), muestra: Number(a.muestra) }]))
+
   const MIN_BUCKET = 3
   const MIN_FECHAS_MES = 3
   const FACTOR_EVENTO_EXCLUIR = 1.15
@@ -488,6 +516,22 @@ export async function POST(req: NextRequest) {
         const nextBooked = plRates[nextD] && !plRates[nextD].available
         if (prevBooked && nextBooked) target = Math.round(target * (1 - Number(r.gap_discount_pct)))
       }
+      // ⏳ URGENCIA (last-minute). Va AQUÍ a propósito: solo propone bajar el objetivo, y todo lo
+      // que viene después —el raíl de ±%/día, el suelo de coste, el estacional y el techo— sigue
+      // mandando. Inerte con lastminute_k=0 y en las noches de evento. La referencia de "cuándo
+      // toca" es la antelación MEDIDA del piso, no un umbral inventado (ver pricing-lastminute.ts).
+      const ant = antelacion.get(r.property_id)
+      const lm = factorLastMinute(
+        {
+          diasVista: daysOut,
+          antelacionMediana: ant?.mediana ?? null,
+          muestra: ant?.muestra ?? 0,
+          factorEvento: evFactor,
+        },
+        { k: Number(r.lastminute_k) },
+      )
+      if (lm.factor < 1) target = Math.round(target * lm.factor)
+
       if (old != null) {
         // Ancla del raíl = precio de AYER (ref24), no el de la pasada anterior de HOY: así el
         // tope ±max_change_pct es por DÍA aunque el cron corra 3 veces al día. Sin histórico
@@ -605,6 +649,11 @@ export async function POST(req: NextRequest) {
       meses_con_mercado: mesProp ? [...mesProp.entries()].filter(([, v]) => v.n >= MIN_BUCKET && v.fechas >= MIN_FECHAS_MES).map(([k]) => k) : [],
       meses_calientes: [...(velocidad.get(r.property_id)?.entries() ?? [])].filter(([, n]) => n >= 2).map(([k, n]) => `${k}:${n}`),
       bounds: { floor_base: floorBaseGlobal, ceil_base: ceilBaseGlobal, min: r.min_price, max: r.max_price },
+      // Antelación MEDIDA del piso: sin ella la palanca de urgencia queda inerte, así que conviene
+      // que salga en la auditoría para poder distinguir "no hacía falta bajar" de "no lo sé".
+      antelacion_mediana: antelacion.get(r.property_id)?.mediana ?? null,
+      antelacion_muestra: antelacion.get(r.property_id)?.muestra ?? 0,
+      lastminute_k: Number(r.lastminute_k),
       dates_con_cambio: ops.length, written, sample: audit.slice(0, 3),
     })
   }
