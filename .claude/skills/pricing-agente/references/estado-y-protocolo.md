@@ -106,6 +106,28 @@ plausibles y FALSAS: así salió un «ADR de agosto de 102€» que casi lleva a
   **Consecuencia directa: la propuesta de bajar House a 330-350€ salió de ahí y queda RETIRADA.** Desde #1203
   el sweep es DIARIO, así que se repone solo; hasta entonces, no muevas el precio de House con el dato de mercado.
 
+### 🔴 El bucket mensual solo cuenta con 3 fechas distintas — y el barrido daba 1 (01/08/2026)
+Caso que lo destapó: reserva de Luxury para el **viernes 6-nov**, entrada a las 18:43 después de que
+el motor bajara esa noche **152€ → 122€** a las 14:30. Comparables de ESE día: **123-212€**, mediana
+169€ a 4 plazas. No fue Booking: los descuentos (Genius ~19%) muerden sobre la base que le demos.
+- **Por qué bajó:** `apply/route.ts` descarta el bucket de mercado de un mes si no tiene comps de
+  **3 fechas distintas** (`MIN_FECHAS_MES`) — y el barrido visitaba **una sola fecha por mes**, así
+  que el umbral era inalcanzable POR DISEÑO. Sin bucket, el día se tarifica con el **ancla global**,
+  que sale del último barrido y va dominada por las fechas cercanas y baratas.
+- **Cobertura real medida ese día (fechas distintas por piso y mes):** House 3/2/1/1/1 (ago→dic),
+  Luxury 6/4/4/**1**/2, Dúplex 4/2/1/1/1, Busto 7/3/2/3/3. O sea: **House se tarificaba con el ancla
+  global de octubre en adelante**, encima con el ancla extrapolada desde comps de 8 plazas.
+- **Y el premio por fecha no lo rescata:** exige ≥1,5× la base normal y aquí salía 1,38×.
+- **Fix:** `fechasPorMes` (default 3, env `SIVRA_SWEEP_FECHAS_MES`) — viernes + sábado + martes, que
+  replica la composición de los meses que sí funcionaban (~2/3 finde). **La mezcla importa:** el
+  bucket se aplica a TODOS los días del mes, así que solo-findes lo sobrevalora y solo-entresemana lo
+  hunde. Una muestra que cae en día de evento **se corre una semana** (el bucket excluye las fechas de
+  evento a propósito, así que ahí no sumaría — el bug se habría reproducido solo).
+- **Plan por RONDAS + presupuesto de tiempo:** temporada (1 fecha/mes) → eventos → profundidad. Si el
+  barrido se queda sin tiempo pierde profundidad, nunca temporada ni eventos, y lo **publica**
+  (`truncado`, `base_completa`); el latido solo baja a `ok:false` si no cubrió la temporada. La
+  cobertura se ACUMULA entre días (el motor mira 120 días de `search_date`), así que truncar es barato.
+
 ### 📉 Qué hace PriceLabs (medido, 01/08/2026) — sirve de DATOS, no de modelo
 Idea de Alberto: «¿por qué no estudias cómo lo hace PriceLabs?». Se puede, porque `rate_snapshots` lleva
 fotografiando sus decisiones a diario desde mayo. Lo que hace, por días de antelación (mayo-julio 2026):
