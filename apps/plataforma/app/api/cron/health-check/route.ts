@@ -237,21 +237,27 @@ export async function GET(req: NextRequest) {
     // caer al camino de pago. Una cadena de respaldo sana enmascara la avería del eslabón; por eso
     // hay que mirar el eslabón, no el resultado final.
     //
-    // Umbral deliberadamente alto (≥20 llamadas, 0 éxitos, 7 días) para no confundir «apagado a
-    // propósito» —que no genera filas— con «configurado y roto», que es lo caro.
+    // ⚠️ La ventana es de 30 DÍAS y el umbral de 10 llamadas — calibrado contra el caso real, no a
+    // ojo. La primera versión miraba 7 días con umbral 20 y NO habría cazado nada: Gemini hace ~12
+    // llamadas por semana (los crons que lo usan son diarios, no de tráfico), así que jamás habría
+    // llegado a 20 y el check habría dado verde mientras el proveedor llevaba mes y medio muerto.
+    // Un vigilante que no puede disparar es peor que no tenerlo, porque tranquiliza.
     const proveedoresMuertos = await prisma.$queryRaw<
-      { proveedor: string; llamadas: bigint; ultimo_error: string | null }[]
+      { proveedor: string; llamadas: bigint; dias: number; ultimo_error: string | null }[]
     >`
-      SELECT proveedor, COUNT(*) AS llamadas, MAX(left(COALESCE(error, ''), 140)) AS ultimo_error
+      SELECT proveedor,
+             COUNT(*) AS llamadas,
+             COUNT(DISTINCT creada_at::date)::int AS dias,
+             MAX(left(COALESCE(error, ''), 140)) AS ultimo_error
       FROM ai_usos
-      WHERE creada_at > now() - interval '7 days' AND proveedor IS NOT NULL
+      WHERE creada_at > now() - interval '30 days' AND proveedor IS NOT NULL
       GROUP BY proveedor
-      HAVING COUNT(*) >= 20 AND COUNT(*) FILTER (WHERE ok) = 0`
+      HAVING COUNT(*) >= 10 AND COUNT(*) FILTER (WHERE ok) = 0`
     for (const p of proveedoresMuertos) {
       fallos.push(
-        `🔴 IA «${p.proveedor}»: ${Number(p.llamadas)} llamadas en 7 días y NINGUNA correcta. ` +
-        `La cadena de fallback lo tapa, así que todo "funciona" mientras se paga el camino de pago ` +
-        `y el intento fallido de este. Último error: ${p.ultimo_error ?? 'sin detalle'}`,
+        `🔴 IA «${p.proveedor}»: ${Number(p.llamadas)} llamadas en ${p.dias} días distintos y ` +
+        `NINGUNA correcta. La cadena de fallback lo tapa, así que todo "funciona" mientras se paga ` +
+        `el camino de pago Y el intento fallido de este. Último error: ${p.ultimo_error ?? 'sin detalle'}`,
       )
     }
     if (!proveedoresMuertos.length) ok.push('✅ Ningún proveedor de IA muerto')

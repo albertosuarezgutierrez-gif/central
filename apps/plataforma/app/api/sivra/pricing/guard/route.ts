@@ -268,14 +268,29 @@ export async function GET(req: NextRequest) {
   // NO CATALOGADAS todas las fechas de evento del calendario automático — un aluvión de falsos
   // positivos indistinguible de un hallazgo real. Antes se tragaba con un mapa vacío; ahora se anota
   // y los dos centinelas de evento se desactivan en esta pasada en vez de mentir.
+  // Se traen los dos estados por separado porque los dos centinelas necesitan cosas distintas:
+  //   · #7 «evento sin respaldo de mercado» pregunta «este precio alto, ¿lo sostiene el mercado?» →
+  //     solo tiene sentido sobre CONFIRMADOS, que son los únicos que mueven el precio.
+  //   · #8 «el mercado sube y no sabemos por qué» pregunta «¿conocemos esta fecha?» → un PREVISTO
+  //     cuenta como conocida. Sin esto, las noches de la Bienal (previstas) saldrían como «evento no
+  //     catalogado» en cuanto el mercado subiera — avisando de algo que ya está en la tabla.
   let eventosIlegibles = false
-  const autoEvRows = await prisma.$queryRaw<{ rate_date: string; factor: number }[]>(Prisma.sql`
-    SELECT rate_date::text AS rate_date, MAX(factor)::float8 AS factor
+  const autoEvRows = await prisma.$queryRaw<{ rate_date: string; factor: number; estado: string }[]>(Prisma.sql`
+    SELECT rate_date::text AS rate_date, MAX(factor)::float8 AS factor, estado
     FROM pricing_eventos_auto
-    WHERE rate_date >= CURRENT_DATE AND estado = 'confirmado'
-    GROUP BY rate_date
+    WHERE rate_date >= CURRENT_DATE AND estado <> 'descartado'
+    GROUP BY rate_date, estado
   `).catch(() => { eventosIlegibles = true; return [] })
-  const autoEv = new Map(autoEvRows.map(r => [r.rate_date, Number(r.factor)]))
+
+  /** factor de los CONFIRMADOS: lo que de verdad mueve el precio (centinela #7) */
+  const autoEv = new Map<string, number>()
+  /** factor de CUALQUIER estado vivo: «esta fecha la conocemos» (centinela #8) */
+  const autoEvConocido = new Map<string, number>()
+  for (const r of autoEvRows) {
+    const f = Number(r.factor)
+    if (r.estado === 'confirmado') autoEv.set(r.rate_date, Math.max(autoEv.get(r.rate_date) ?? 1, f))
+    autoEvConocido.set(r.rate_date, Math.max(autoEvConocido.get(r.rate_date) ?? 1, f))
+  }
 
   type EventoHit = { fecha: string; factor: number; p50Fecha: number; p50Mes: number; motivo: string }
   const sinRespaldo: EventoHit[] = []
@@ -284,18 +299,22 @@ export async function GET(req: NextRequest) {
   // veredicto con datos a medias vale menos que ninguno. `fechas_evaluadas` sale a 0 en la respuesta,
   // que es lo honesto — el denominador dice cuántas se miraron de verdad.
   for (const d of eventosIlegibles ? [] : mercadoDia) {
-    const factor = Math.max(eventFactor(d.fecha), autoEv.get(d.fecha) ?? 1)
-    const entrada = {
-      factorEvento: factor,
+    const base = {
       p50Fecha: Number(d.p50_fecha),
       p50Mes: Number(d.p50_mes),
       compsFecha: Number(d.comps),
     }
-    const hit = { fecha: d.fecha, factor, p50Fecha: entrada.p50Fecha, p50Mes: entrada.p50Mes }
-    const a = decidirEventoSinRespaldo(entrada)
-    if (a.alerta) sinRespaldo.push({ ...hit, motivo: a.motivo })
-    const b = decidirEventoNoCatalogado(entrada)
-    if (b.alerta) noCatalogados.push({ ...hit, motivo: b.motivo })
+    // #7: solo lo confirmado (es lo único que sube el precio y por tanto lo único que hay que
+    // justificar contra el mercado).
+    const factor = Math.max(eventFactor(d.fecha), autoEv.get(d.fecha) ?? 1)
+    const a = decidirEventoSinRespaldo({ ...base, factorEvento: factor })
+    if (a.alerta) sinRespaldo.push({ fecha: d.fecha, factor, ...base, motivo: a.motivo })
+
+    // #8: cuenta TODO lo vivo — previstos incluidos. La pregunta es «¿conocemos esta fecha?», y un
+    // previsto ya está catalogado aunque todavía no tarifique.
+    const factorConocido = Math.max(eventFactor(d.fecha), autoEvConocido.get(d.fecha) ?? 1)
+    const b = decidirEventoNoCatalogado({ ...base, factorEvento: factorConocido })
+    if (b.alerta) noCatalogados.push({ fecha: d.fecha, factor: factorConocido, ...base, motivo: b.motivo })
   }
 
   // Inserta alerta si no hay ya una IGUAL sin resolver (sin límite de tiempo). Antes la ventana era

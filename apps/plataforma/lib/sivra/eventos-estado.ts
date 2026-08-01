@@ -24,6 +24,20 @@
 // El camino completo de un previsto: la prensa lo propone → protege suelo + entra en el barrido de
 // mercado + avisa a Alberto → cuando el mercado sube (o Ticketmaster lo publica) pasa a confirmado y
 // ya sí tarifica. Si era falso, Alberto lo descarta y no se vuelve a proponer.
+//
+// ⚠️ ALCANCE REAL DE LA PROTECCIÓN DE SUELO — medido, no supuesto (01/08/2026).
+// El factor de suelo que sale de aquí pasa DESPUÉS por `seasonalFloorFactor`, que lo vuelve a
+// amortiguar a la mitad y lo compara con el suelo estacional del mes. Encadenados los dos
+// amortiguadores, un previsto solo mueve el suelo en los meses de temporada BAJA:
+//
+//   Bienal, 12/09/2026, factor 1.25 → suelo del previsto 1,125 → eventFloor 1,0625
+//   … pero FLOOR_SEASONAL de septiembre ya es 1,25, así que el suelo final NO cambia. Inerte.
+//
+// No es un defecto: en temporada alta el suelo estacional ya hace ese trabajo, y donde una sorpresa
+// duele de verdad es en un mes flojo (enero, febrero, julio, agosto, noviembre tienen FLOOR_SEASONAL
+// 1,00). Ahí sí levanta el suelo. Pero conviene saberlo antes de esperar un efecto que no llega: si
+// un previsto de temporada alta tuviera que mover el precio, hay que CONFIRMARLO, no subirle la
+// confianza.
 
 export type EstadoEvento = 'confirmado' | 'previsto' | 'descartado'
 
