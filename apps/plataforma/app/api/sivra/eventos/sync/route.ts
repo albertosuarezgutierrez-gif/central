@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
 import { isCronAuthorized } from "@/lib/cron-auth"
 import { PRICING_HORIZON_DAYS } from "@/lib/pricing-calendar"
+import { impactoEvento } from "@/lib/sivra/eventos-impacto"
+import { registrarLatido } from "@/lib/monitoring/latido-escribir"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -27,15 +29,9 @@ const TM_API = "https://app.ticketmaster.com/discovery/v2/events.json"
 const LATLONG = "37.3935,-5.9866"
 const RADIUS_KM = 25
 
-// Aforo → factor de premium (acotado a 2.5, el techo del motor).
-function impacto(aforo: number): number {
-  let f = 1.08
-  if (aforo > 20000) f = 1.60
-  else if (aforo > 10000) f = 1.40
-  else if (aforo > 5000) f = 1.25
-  else if (aforo > 1000) f = 1.15
-  return Math.min(f, 2.5)
-}
+// El factor por aforo vive en `lib/sivra/eventos-impacto.ts` (puro y testeado). Estaba duplicado
+// aquí y en /eventos/websearch con un techo real de 1.60 —el 2.5 escrito era inalcanzable— y sin
+// distinguir un partido de liga de un concierto del mismo aforo. Ver el porqué en ese fichero.
 
 // Aforo por RECINTO de Sevilla. La Discovery API de Ticketmaster casi nunca trae la
 // capacidad (`accessibility.seatCount` son plazas de movilidad reducida; los venues no
@@ -75,8 +71,14 @@ export async function GET(req: NextRequest) {
 
   const key = process.env.TICKETMASTER_API_KEY
   if (!key) {
+    // `ok:false`: un cron sin configurar está MUDO. Devolver 200 {ok:true} es lo que mantuvo esto
+    // callado en junio y julio de 2026 sin que saltara ningún vigía.
+    await registrarLatido(
+      'sivra_eventos', false,
+      'Ticketmaster sin configurar (falta TICKETMASTER_API_KEY)',
+    ).catch(() => {})
     return NextResponse.json({
-      ok: true, configured: false,
+      ok: false, configured: false,
       message: "TICKETMASTER_API_KEY no configurada en plataforma — auto-eventos inactivo (cópiala del proyecto ia-rest).",
     })
   }
@@ -122,14 +124,21 @@ export async function GET(req: NextRequest) {
         const tipo = seg.includes("sport") ? "deportes" : (seg || "concierto")
         try {
           await prisma.$executeRaw(Prisma.sql`
-            INSERT INTO pricing_eventos_auto (rate_date, nombre, fuente, tipo, aforo, factor, venue, raw, updated_at)
+            INSERT INTO pricing_eventos_auto (rate_date, nombre, fuente, tipo, aforo, factor, venue, raw, estado, updated_at)
             VALUES (${rateDate}::date, ${String(ev.name)}, 'ticketmaster', ${tipo},
-              ${aforo}::int, ${impacto(aforo)}::numeric, ${venue}, ${JSON.stringify({ id: ev.id, url: ev.url })}::jsonb, now())
+              ${aforo}::int, ${impactoEvento(aforo, tipo)}::numeric, ${venue}, ${JSON.stringify({ id: ev.id, url: ev.url })}::jsonb,
+              'confirmado', now())
             ON CONFLICT (fuente, nombre, rate_date) DO UPDATE
-              SET aforo = EXCLUDED.aforo, factor = EXCLUDED.factor, venue = EXCLUDED.venue, updated_at = now()
+              SET aforo = EXCLUDED.aforo, factor = EXCLUDED.factor, venue = EXCLUDED.venue,
+                  estado = 'confirmado', updated_at = now()
           `)
           upserted++
-        } catch { /* dup / fila inválida */ }
+        } catch (e) {
+          // Antes esto era `catch { /* dup / fila invalida */ }`: si el indice unico que sostiene el
+          // ON CONFLICT desapareciera, TODOS los inserts fallarian y la pasada diria `upserted: 0`
+          // sin un solo mensaje. Un fallo de BD tiene que verse.
+          errors.push(`insert ${rateDate}: ${String(e).slice(0, 100)}`)
+        }
       }
 
       const pageCount = data.page?.totalPages ?? 1
@@ -139,6 +148,14 @@ export async function GET(req: NextRequest) {
   } catch (e) {
     errors.push(String(e).slice(0, 120))
   }
+
+  // Que Ticketmaster no traiga eventos nuevos es NORMAL (ya estan todos); lo que no es normal es
+  // que no haya visto ni uno o que la API falle.
+  const ok = errors.length === 0 && vistos > 0
+  await registrarLatido(
+    'sivra_eventos', ok,
+    `ticketmaster: ${vistos} vistos / ${upserted} guardados` + (errors.length ? ` · ${errors[0]}` : ''),
+  ).catch(() => {})
 
   return NextResponse.json({ ok: errors.length === 0, configured: true, vistos, upserted, sinFecha, errors })
 }
