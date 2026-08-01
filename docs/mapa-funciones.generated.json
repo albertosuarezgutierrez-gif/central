@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-01T07:31:52Z",
-  "sha": "2346be62ddbf3ed9d84bbbfdd4a568bbdb9dc763",
+  "generadoEn": "2026-08-01T07:41:01Z",
+  "sha": "9f1ba1e70921d64adfac3a5b91c450b97c5968db",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -50599,7 +50599,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 41
+          "linea": 45
         }
       ],
       "tablas": [
@@ -50610,7 +50610,7 @@
         "pms_connections"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "c9cb41108ec1"
+      "hash": "d140730fd807"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -51029,7 +51029,7 @@
           "exportada": false,
           "params": "req: Request",
           "retorno": "boolean",
-          "linea": 14
+          "linea": 26
         },
         {
           "nombre": "GET",
@@ -51037,7 +51037,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 21
+          "linea": 33
         }
       ],
       "tablas": [
@@ -51045,7 +51045,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/facturas-scan",
-      "hash": "94e00073d8f7"
+      "hash": "b76f745b2aab"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/health-check/route.ts",
@@ -56912,6 +56912,7 @@
       "ambito": "apps/plataforma",
       "resumen": "Lectura de Gmail por IMAP para el agente de facturas. Credenciales: GMAIL_USER / GMAIL_APP_PASSWORD (app password, soporta IMAP).",
       "exporta": [
+        "listarCandidatosConLimite",
         "listarCandidatos",
         "marcarProcesado"
       ],
@@ -56925,13 +56926,22 @@
           "linea": 24
         },
         {
+          "nombre": "listarCandidatosConLimite",
+          "kind": "function",
+          "exportada": true,
+          "params": "opts: { desde: Date; etiqueta?: string; deadline?: number },",
+          "retorno": "Promise<ListadoCandidatos>",
+          "linea": 45,
+          "resumen": "Lista correos candidatos a factura desde `desde` (Date). Si `etiqueta` existe como buzón en Gmail, se usa esa; si no, INBOX. 🚨 `deadline` (epoch ms) acota el listado: bajar y parsear el `source` comp"
+        },
+        {
           "nombre": "listarCandidatos",
           "kind": "function",
           "exportada": true,
           "params": "opts: { desde: Date; etiqueta?: string }",
           "retorno": "Promise<CorreoCandidato[]>",
-          "linea": 33,
-          "resumen": "Lista correos candidatos a factura desde `desde` (Date). Si `etiqueta` existe como buzón en Gmail, se usa esa; si no, INBOX."
+          "linea": 92,
+          "resumen": "Variante sin presupuesto (compatibilidad con los llamadores que no lo acotan)."
         },
         {
           "nombre": "marcarProcesado",
@@ -56939,13 +56949,13 @@
           "exportada": true,
           "params": "uid: number, etiqueta = 'Facturas/Procesada'",
           "retorno": "Promise<void>",
-          "linea": 76,
+          "linea": 97,
           "resumen": "Marca un correo como procesado: keyword IMAP + copia a la etiqueta si existe."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d6e8c02a9a83"
+      "hash": "1ad966ee1130"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/imputar.ts",
@@ -57039,9 +57049,10 @@
           "nombre": "escanearNuevasFacturas",
           "kind": "function",
           "exportada": true,
-          "params": "cuentaId: string",
+          "params": "cuentaId: string, opts: { deadline?: number } = {},",
           "retorno": "Promise<ResultadoEscaneo>",
-          "linea": 35
+          "linea": 46,
+          "resumen": "@param opts.deadline epoch ms en el que el escaneo debe estar de vuelta. Sin él el trabajo es ilimitado y la función acaba muriendo por `maxDuration` — que es justo como se perdía el latido antes del "
         },
         {
           "nombre": "notificarFactura",
@@ -57049,7 +57060,7 @@
           "exportada": false,
           "params": "facturaId: string, proveedor: string, importe: number, fechaVenc: string | null, cuentaId: string,",
           "retorno": "Promise<void>",
-          "linea": 123
+          "linea": 156
         },
         {
           "nombre": "aprobarPago",
@@ -57057,7 +57068,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string, debtorIban: string,",
           "retorno": "Promise<",
-          "linea": 179
+          "linea": 212
         },
         {
           "nombre": "aplazarPago",
@@ -57065,7 +57076,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string, dias = 7",
           "retorno": "Promise<boolean>",
-          "linea": 240
+          "linea": 273
         },
         {
           "nombre": "rechazarFactura",
@@ -57073,7 +57084,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 256
+          "linea": 289
         },
         {
           "nombre": "verificarPagosPendientes",
@@ -57081,7 +57092,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<number>",
-          "linea": 270
+          "linea": 303
         },
         {
           "nombre": "conciliarConBanco",
@@ -57089,7 +57100,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<number>",
-          "linea": 299
+          "linea": 332
         },
         {
           "nombre": "pagarTodo",
@@ -57097,7 +57108,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<",
-          "linea": 338
+          "linea": 371
         },
         {
           "nombre": "resumenSemanal",
@@ -57105,7 +57116,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 354
+          "linea": 387
         },
         {
           "nombre": "alertarFacturasAusentes",
@@ -57113,7 +57124,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<number>",
-          "linea": 383
+          "linea": 416
         },
         {
           "nombre": "proponerVinculoReserva",
@@ -57121,7 +57132,7 @@
           "exportada": false,
           "params": "facturaId: string, proveedor: string, fechaFactura: string | null,",
           "retorno": "Promise<void>",
-          "linea": 416
+          "linea": 449
         },
         {
           "nombre": "actualizarMensajeTg",
@@ -57129,7 +57140,7 @@
           "exportada": false,
           "params": "msgId: number | null, texto: string",
           "retorno": "Promise<void>",
-          "linea": 447
+          "linea": 480
         }
       ],
       "tablas": [
@@ -57142,7 +57153,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "fc6040fc2fad"
+      "hash": "0d48c69e1565"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/procesar.ts",
@@ -62844,14 +62855,15 @@
           "nombre": "evaluarLatido",
           "kind": "function",
           "exportada": true,
-          "params": "params: { ahora: Date ultimo: Date | null maxHoras: number }",
+          "params": "params: { ahora: Date ultimo: Date | null maxHoras: number ultimoIntento?: Date | null detalle?: string | null }",
           "retorno": "EvalLatido",
-          "linea": 23
+          "linea": 37,
+          "resumen": "⚠️ «No ha latido» son DOS averías distintas y hay que decir cuál (lección del 31/07/2026): el escaneo de facturas corría cada día y moría en 504 antes de escribir su huella, y el aviso decía «sin ning"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c16221c01ba3"
+      "hash": "cfb5b20ba69d"
     },
     {
       "ruta": "apps/plataforma/lib/norma43.ts",
@@ -87643,6 +87655,6 @@
   ],
   "resumen": {
     "archivos": 2366,
-    "funciones": 6307
+    "funciones": 6308
   }
 }
