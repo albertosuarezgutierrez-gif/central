@@ -91,7 +91,7 @@ export async function runSync(days: number, maxPages = 20, arrFrom?: string, arr
     const co = parseDate(b.departure)
     const amtGross = typeof b.price === 'string' ? parseFloat(b.price) : (b.price || 0)
     const portal_tmp = PORTAL_MAP[b.channel?.name || ''] || 'OTRO'
-    // `amount` = `amount_gross` para TODOS los portales: lo que publica Smoobu ya es el neto.
+    // El precio de Smoobu se escribe TAL CUAL (es el bruto). El neto lo pone el trigger. Ver arriba.
     const amt = amtGross
     const portal = portal_tmp
     const isCancel = b.type === 'cancellation'
@@ -104,7 +104,7 @@ export async function runSync(days: number, maxPages = 20, arrFrom?: string, arr
     }
 
     const ex = await prisma.$queryRaw<any[]>(Prisma.sql`
-      SELECT id, "propertyId", "guestName", portal, amount, "checkIn", "checkOut"
+      SELECT id, "propertyId", "guestName", portal, amount, amount_gross, "checkIn", "checkOut"
       FROM incomes WHERE "reservationId" = ${rid} LIMIT 1
     `)
 
@@ -136,7 +136,10 @@ export async function runSync(days: number, maxPages = 20, arrFrom?: string, arr
       cnt.new++
     } else {
       const row = ex[0]
-      const changed = Math.abs(row.amount - amt) > 0.01 ||
+      // Se compara contra `amount_gross`, NO contra `amount`: `amt` es el precio BRUTO de Smoobu y
+      // `amount` es el NETO que calcula el trigger. Compararlos daría siempre distinto y esta pasada
+      // reescribiría TODAS las reservas cada vez (churn permanente y `modificadas` sin significado).
+      const changed = Math.abs((row.amount_gross ?? row.amount) - amt) > 0.01 ||
         row.checkIn?.toISOString().slice(0, 10) !== ci?.toISOString().slice(0, 10)
       if (changed) {
         await prisma.$executeRaw(Prisma.sql`
