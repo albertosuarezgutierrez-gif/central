@@ -15,6 +15,11 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-01 · rrhh-compliance-calendar** · hizo: pasada mensual sobre `docs/ROADMAP-rrhh.md`;
+  9 ítems 🔴 obligatorios pendientes (fichaje RD 8/2019, geolocalización, TSA, art.28 RGPD, canal
+  denuncias Ley 2/2023, informe ITSS, Modelo 145, alerta NIE, borrado RGPD automatizado — PRL ya
+  marcado ✅ hecho); aviso Telegram enviado (canal 200 en preflight). dudas: —; fallos: —;
+  PRs/commits: commit directo a `main` (solo doc).
 - **2026-07-31 · pricing-agente (check-in programado del cutover)** · hizo: verificado que el sync de
   Smoobu NO está roto (cron 05:01 → 200; `incomes` parado desde 25/07 es sequía real, corroborada por
   `available` de Smoobu) y que el motor tarifica en mercado (Busto 81€ vs p50 80€). Documentada en
