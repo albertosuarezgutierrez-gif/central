@@ -24,6 +24,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⏰ Subasta vencida seguía en «🎯 Mi radar» (01/08/2026, rama `claude/expired-auction-visible-eoow4t`).**
+  Alberto con captura: `SUB-JA-2026-263723` cerró el 31/07 18:13 y al día siguiente seguía con botones de
+  pujar. **Causa:** NINGÚN camino de lectura del radar filtraba por fecha — la bandeja se limpiaba solo con
+  el `DELETE` diario de `archivarPasadas` (06:15 UTC) y encima con `now() - 1 day` de gracia → visible entre
+  14 y 38 h tras cerrar (y para siempre si el cron falla). **Fix:** filtros CANÓNICOS `SUBASTA_VIGENTE` /
+  `RADAR_VIGENTE` + `RADAR_CON_CORPUS` en `lib/subastas-radar.ts`, aplicados a SSR, `/api/subastas/radar`
+  (lista y badge), `/api/subastas`, `/api/subastas/mapa` y el cron de avisos; borrado sin día de gracia.
+  De regalo: `decidirAviso` ganó `cerrada` (con `Math.ceil`, vencida hace horas = 0 días = «urgentísima» →
+  sonaba en Telegram) y el aviso ya lee `valor_orientativo` (no se seleccionaba: la guarda nunca saltaba).
+
 - **🔍 Auditoría del agente SEO de iarest.es: NUNCA ha aplicado un cambio (01/08/2026, rama
   `claude/iarest-seo-agent-2v61fi`).** Alberto: «la web no tiene visitas, ¿qué hace el agente SEO?».
   Evidencia BD prod (`efncqyvhniaxsirhdxaa`): `seo_cambios`/`seo_articulos`/`seo_overrides`/

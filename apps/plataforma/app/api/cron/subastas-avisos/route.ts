@@ -10,6 +10,7 @@ import { prisma } from '@/lib/db'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { eur } from '@/lib/dinero'
 import { decidirAviso, esEmpresaInmobiliaria } from '@central/module-subastas'
+import { RADAR_CON_CORPUS, RADAR_VIGENTE } from '@/lib/subastas-radar'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -59,16 +60,20 @@ export async function GET(req: NextRequest) {
 
   try {
     const pendientes = await prisma.$queryRaw<any[]>(Prisma.sql`
-      SELECT r.id, r.cuenta_id, r.dedupe_key, r.subasta, r.puntuacion, r.coste_total, r.descuento, r.fecha_fin,
+      SELECT r.id, r.cuenta_id, r.dedupe_key, r.subasta, r.puntuacion, r.coste_total, r.descuento,
+             COALESCE(s.fecha_fin, r.fecha_fin) AS fecha_fin,
+             -- 🚨 Sin esta columna, p.valor_orientativo llegaba SIEMPRE undefined y
+             -- la guarda de decidirAviso (no interrumpir con una rentabilidad
+             -- calculada sobre la mediana de todo el municipio) nunca se disparaba.
+             s.valor_orientativo,
              -- Cargas ya leídas de los documentos: lo que hereda el adjudicatario
              -- es la diferencia entre un chollo y una ruina, así que va EN el aviso,
              -- no escondido en la ficha.
              s.cargas AS cargas_subsistentes, s.cargas_fuente, s.semaforo, s.identificador,
              s.cargas_conocidas, s.lector_version, s.analisis, s.flip_apto, s.margen_flip_pct, s.es_playa
-      FROM subastas_radar r
-      LEFT JOIN subastas s ON s.dedupe_key = r.dedupe_key
+      ${RADAR_CON_CORPUS}
       WHERE r.avisado_at IS NULL
-        AND r.descartado = false
+        AND ${RADAR_VIGENTE}
         AND r.created_at >= now() - make_interval(days => ${DIAS_FRESCURA}::int)
       ORDER BY r.puntuacion DESC NULLS LAST, r.created_at DESC
     `)
@@ -92,9 +97,13 @@ export async function GET(req: NextRequest) {
     // sin sonar; lo que todavía no se ha leído ESPERA a la pasada del lector (y
     // sigue pendiente de aviso), salvo que esté a punto de cerrar.
     const decisiones = pendientes.map((p) => {
-      const dias = p.fecha_fin
-        ? Math.ceil((new Date(p.fecha_fin).getTime() - Date.now()) / 86_400_000)
-        : null
+      const fin = p.fecha_fin ? new Date(p.fecha_fin).getTime() : null
+      const dias = fin == null ? null : Math.ceil((fin - Date.now()) / 86_400_000)
+      // El SQL ya deja fuera lo cerrado; esto es el segundo cerrojo. `dias` NO
+      // sirve para detectarlo: `Math.ceil` de unas horas negativas da 0, que es
+      // justo el valor que `decidirAviso` lee como «urgentísima, avisa aunque no
+      // esté verificada» — una subasta vencida se colaría como la más urgente.
+      const cerrada = fin != null && fin < Date.now()
       const claves = Array.isArray(p.analisis) ? p.analisis.map((x: any) => x?.clave).filter(Boolean) : []
       return {
         p,
@@ -109,6 +118,7 @@ export async function GET(req: NextRequest) {
           cargasConocidas: p.cargas_conocidas ?? false,
           documentosLeidos: (p.lector_version ?? 0) > 0,
           diasParaCierre: dias,
+          cerrada,
           claves,
         }),
       }
