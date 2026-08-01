@@ -24,6 +24,20 @@ export const maxDuration = 300
 //
 // Es IDEMPOTENTE y solo rellena huecos (`reserved_at IS NULL`), así que se puede relanzar sin
 // miedo. Pensado para dispararse a mano una vez; a partir de ahí el sync diario mantiene el dato.
+//
+// 🚨 EL TECHO ES ~93%, Y NO ES UN FALLO DE ESTE ENDPOINT (verificado 01/08/2026). Tras el backfill
+// quedan 130 reservas de mayo-noviembre de 2022 sin fecha, y la primera explicación —«son meses con
+// más de 100 reservas, falta paginar»— resultó FALSA al comprobarla: Smoobu devuelve 35 reservas de
+// agosto de 2022 en UNA sola página mientras `incomes` tiene 64 de ese mes. Pidiendo una de las que
+// faltan por su id directo (`GET /api/reservations/<id>`) la respuesta es **404 Entity not found**:
+// Smoobu ya no las tiene. Sus ids (26,5M-28,4M) caen dentro del rango de las que sí devuelve
+// (18,9M-30,8M), así que son reservas legítimas de esa época que su lado ha purgado — probablemente
+// cancelaciones antiguas, que `showCancellation=1` solo recupera mientras Smoobu las conserve.
+//
+// Consecuencia práctica: `reserved_at` NULL tiene DOS causas distintas y conviene no confundirlas —
+// «aún no traída» (se arregla relanzando esto) y «Smoobu ya no la tiene» (no se arregla nunca). Si
+// alguien vuelve a ver ese 7% y le pica, que empiece por pedir un id suelto antes de montar
+// paginación: es la comprobación que descarta el diagnóstico equivocado en un minuto.
 
 const PAGE_SIZE = 100
 

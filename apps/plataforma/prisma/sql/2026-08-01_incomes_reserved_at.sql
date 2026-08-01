@@ -28,6 +28,12 @@
 -- `reserved_at` queda NULL en las filas históricas hasta que pase el backfill, y eso es correcto:
 -- NULL aquí significa «todavía no lo hemos traído de Smoobu», no «se reservó el mismo día». Todo lo
 -- que consuma esta columna debe distinguir las dos cosas.
+--
+-- Cobertura REAL tras el backfill del 01/08/2026: **1.852 de 1.984 (93,3%)**. Las 130 que faltan son
+-- de mayo-noviembre de 2022 y NO se pueden recuperar: pedidas a Smoobu por su id directo responden
+-- **404 Entity not found**, o sea que su lado ya las purgó (cancelaciones antiguas, previsiblemente).
+-- Así que el NULL de esta columna tiene dos causas y no conviene mezclarlas: «aún no traída» se
+-- arregla relanzando el backfill; «Smoobu ya no la tiene» no se arregla nunca. 93% es el techo.
 ALTER TABLE incomes
   ADD COLUMN IF NOT EXISTS reserved_at timestamptz;
 
