@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { escanearNuevasFacturas, verificarPagosPendientes, conciliarConBanco, alertarFacturasAusentes } from '@/lib/agente-facturas/pagos'
 import { resolverCuentaBuzon } from '@/lib/agente-facturas/cuenta-buzon'
+import { detalleEscaneo } from '@/lib/agente-facturas/resumen-escaneo'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 
 export const dynamic = 'force-dynamic'
@@ -63,6 +64,7 @@ export async function GET(req: Request) {
   let escaneoOk: boolean | null = null
   let escaneoError: string | null = null
   let pendientes = 0
+  let noLeidas = 0
   if (cuentaBuzon) {
     try {
       const r = await escanearNuevasFacturas(cuentaBuzon, { deadline: t0 + PRESUPUESTO_ESCANEO_MS })
@@ -70,6 +72,7 @@ export async function GET(req: Request) {
       escaneoOk = r.ok
       escaneoError = r.error
       pendientes = r.pendientes
+      noLeidas = r.noLeidas
     } catch (e: any) {
       escaneoOk = false
       escaneoError = String(e?.message ?? e).slice(0, 200)
@@ -85,10 +88,7 @@ export async function GET(req: Request) {
   await registrarLatido(
     'facturas_gmail',
     escaneoOk === true,
-    escaneoOk
-      ? `${totalNuevas} factura(s) nueva(s)` +
-        (pendientes > 0 ? ` · ${pendientes} correo(s) sin mirar por presupuesto de tiempo` : '')
-      : escaneoError,
+    detalleEscaneo({ nuevas: totalNuevas, ok: escaneoOk === true, error: escaneoError, pendientes, noLeidas }),
   )
 
   // Los pasos de abajo solo arrancan si queda presupuesto: agotarlo aquí devolvería
@@ -109,10 +109,11 @@ export async function GET(req: Request) {
   }
 
   // `escaneo` va aparte de `nuevas`: un 0 con `escaneo:false` no es «no había
-  // facturas», es «no se pudo mirar el buzón».
+  // facturas», es «no se pudo mirar el buzón»; y un 0 con `noLeidas>0` es «sí
+  // había, pero el adjunto no se dejó leer» (encoladas en Facturas/PDF-pendiente).
   return NextResponse.json({
     ok: true,
-    escaneo: { ok: escaneoOk, error: escaneoError, pendientes },
+    escaneo: { ok: escaneoOk, error: escaneoError, pendientes, noLeidas },
     truncado,
     ms: Date.now() - t0,
     nuevas: totalNuevas, confirmados: totalConfirmados, conciliados: totalConciliados, alertas: totalAlertas,

@@ -6,7 +6,8 @@
 import { prisma } from '@/lib/db'
 import { eur } from '@/lib/dinero'
 import { Prisma } from '@prisma/client'
-import { listarCandidatosConLimite, marcarProcesado, type ListadoCandidatos } from './gmail'
+import { listarCandidatosConLimite, marcarProcesado, etiquetarPendiente, type ListadoCandidatos } from './gmail'
+import type { ResultadoEscaneo } from './resumen-escaneo'
 import { aiExtractInvoice } from '@/lib/ai-client'
 import { tgSend, tgSendButtons, tgEditMessage } from '@central/core-telegram'
 import { iniciarPago, estadoPago, disponiblePis } from '@/lib/enablebanking'
@@ -20,23 +21,15 @@ const ETIQUETA_GMAIL = 'Facturas/Proveedor'
 
 /**
  * 🚨 `nuevas: 0` NO significa «no había facturas»: puede ser «no se pudo mirar»
- * (IMAP caído, app-password rotada, etiqueta de Gmail renombrada). Antes ambos
- * casos devolvían el mismo `0` y aguas abajo el chat afirmaba «no tienes
- * facturas de proveedor pendientes 🎉» sin que nada lo desmintiera. Por eso el
- * resultado lleva `ok`: quien llame debe registrarlo como latido y avisar.
+ * (IMAP caído, app-password rotada, etiqueta de Gmail renombrada) o «se miró y el
+ * adjunto no se dejó leer». Antes todos esos casos devolvían el mismo `0` y aguas
+ * abajo el chat afirmaba «no tienes facturas de proveedor pendientes 🎉» sin que
+ * nada lo desmintiera. Por eso el resultado lleva `ok` y `noLeidas`: quien llame
+ * debe registrarlo como latido y avisar.
+ *
+ * El contrato vive en `./resumen-escaneo` (módulo puro) junto al texto del parte.
  */
-export interface ResultadoEscaneo {
-  nuevas: number
-  /** `false` = la pasada NO se pudo completar; `nuevas` no es una conclusión. */
-  ok: boolean
-  error: string | null
-  /**
-   * Correos que quedaron SIN mirar al agotarse el presupuesto de tiempo. Se retoman
-   * en la pasada siguiente (el dedupe por `gmail_uid` hace la pasada idempotente),
-   * pero si esto no baja de cero nunca, hay un atasco que contar.
-   */
-  pendientes: number
-}
+export type { ResultadoEscaneo }
 
 /**
  * @param opts.deadline epoch ms en el que el escaneo debe estar de vuelta. Sin él
@@ -59,7 +52,7 @@ export async function escanearNuevasFacturas(
     listado = await listarCandidatosConLimite({ desde, etiqueta: ETIQUETA_GMAIL, deadline: deadlineListado })
   } catch (e: any) {
     // El buzón no se ha podido leer: se dice, no se disfraza de «0 facturas».
-    return { nuevas: 0, ok: false, error: String(e?.message ?? e).slice(0, 200), pendientes: 0 }
+    return { nuevas: 0, ok: false, error: String(e?.message ?? e).slice(0, 200), pendientes: 0, noLeidas: 0 }
   }
   const correos = listado.correos
 
@@ -70,6 +63,7 @@ export async function escanearNuevasFacturas(
     ? `el listado del buzón no cupo en el presupuesto de tiempo (${correos.length} correo(s) leídos de la ventana de 7 días)`
     : null
   let pendientes = 0
+  let noLeidas = 0
 
   for (let i = 0; i < correos.length; i++) {
     if (deadline && Date.now() > deadline) {
@@ -104,7 +98,18 @@ export async function escanearNuevasFacturas(
 
     const proveedor = (datos.proveedor as string | null) || correo.from.split('<')[0].trim() || 'Proveedor desconocido'
     const importe = typeof datos.total === 'number' ? datos.total : null
-    if (!importe || importe <= 0) continue
+    if (!importe || importe <= 0) {
+      // 🚨 Aquí SÍ había una factura: llegó con adjunto y se miró, pero de él no
+      // salió importe (PDF escaneado, extracción vacía, la IA caída — el 01/08/2026
+      // fueron Groq devolviendo JSON truncado y NIM agotando su timeout). Antes se
+      // hacía `continue` a secas: la factura desaparecía sin dejar rastro EN NINGÚN
+      // sitio, la pasada se declaraba buena y el agente contable seguía diciendo «no
+      // tienes facturas pendientes» mientras el IVA soportado salía corto.
+      // Se cuenta y se encola en Gmail para que la pasada de la skill la lea a mano.
+      noLeidas++
+      await etiquetarPendiente(correo.uid, listado.buzon).catch(() => {})
+      continue
+    }
 
     const ivaPct = typeof datos.iva_porcentaje === 'number' ? datos.iva_porcentaje : 21
     const base = importe / (1 + ivaPct / 100)
@@ -142,7 +147,7 @@ export async function escanearNuevasFacturas(
     if (!facturaId) continue
     nuevas++
 
-    await marcarProcesado(correo.uid, ETIQUETA_GMAIL).catch(() => {})
+    await marcarProcesado(correo.uid, ETIQUETA_GMAIL, listado.buzon).catch(() => {})
 
     // Notificar por Telegram con botones de acción
     await notificarFactura(facturaId, proveedor, importe, fechaVenc, cuentaId)
@@ -150,7 +155,7 @@ export async function escanearNuevasFacturas(
     await proponerVinculoReserva(facturaId, proveedor, fechaFactura).catch(() => {})
   }
 
-  return { nuevas, ok, error, pendientes }
+  return { nuevas, ok, error, pendientes, noLeidas }
 }
 
 async function notificarFactura(

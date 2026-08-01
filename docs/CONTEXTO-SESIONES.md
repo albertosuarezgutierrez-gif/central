@@ -24,6 +24,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🧾 El aviso de facturas era de ANTES del arreglo — y la factura ilegible que se tiraba sin rastro (01/08/2026)
+El latido «sin ninguna señal» de las 07:45 era cierto pero viejo: **#1194 se mergeó a las 07:44** y la pasada
+de las 06:15 corrió con el deploy anterior (504 otra vez, `dep=dpl_BUs5…`). Nada roto nuevo — tabla, permisos
+(`prisma_plataforma` con BYPASSRLS) y job del manifiesto, comprobados. Lo que SÍ seguía abierto: si la
+extracción no daba importe (hoy Groq con JSON truncado y NIM agotando su timeout), el `continue` tiraba la
+factura **sin dejar rastro en ningún sitio** y la pasada se declaraba buena → «0 facturas nuevas» mentía igual.
+Ahora se cuentan (`noLeidas`), se encolan en Gmail `Facturas/PDF-pendiente` (sin `$Procesada`, para que la skill
+las reprocese) y el parte del latido lo dice (helper puro `resumen-escaneo.ts` + 6 tests). De paso
+`marcarProcesado`/`etiquetarPendiente` reciben el buzón real: los UID de IMAP son POR BUZÓN y desde
+`Facturas/Proveedor` el marcado se perdía en silencio. **Pendiente:** `subastas-enriquecer` da 504 a diario
+en el mismo minuto (mismo mal, sin tocar). Verificado: tsc 0 · 717 tests · build OK.
+
 ### 💓 El latido de facturas no faltaba: la pasada moría en 504 antes de escribirlo (31/07/2026)
 Aviso «🧾 Escaneo de facturas: sin ninguna señal registrada» el mismo día de estrenar el vigía (#1184).
 No era IMAP ni la app-password: `facturas-scan` corre a diario y **muere en 504 a los 60 s** (3 de sus

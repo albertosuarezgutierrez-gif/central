@@ -32,7 +32,17 @@ export interface ListadoCandidatos {
   correos: CorreoCandidato[]
   /** `true` = el listado se cortó por presupuesto de tiempo: NO se ha visto el buzón entero. */
   truncado: boolean
+  /**
+   * Buzón del que salieron los UIDs. 🚨 Los UID de IMAP son POR BUZÓN: etiquetar
+   * después con el buzón equivocado no da error, simplemente no encuentra el
+   * mensaje y la etiqueta no se pone (silencio). Quien vaya a marcar un correo
+   * tiene que decir de qué buzón lo sacó.
+   */
+  buzon: string
 }
+
+/** Cola de «llegó, pero no se pudo leer». La lee el Paso 0 de la skill `facturas-correo`. */
+export const ETIQUETA_PDF_PENDIENTE = 'Facturas/PDF-pendiente'
 
 // Lista correos candidatos a factura desde `desde` (Date). Si `etiqueta` existe
 // como buzón en Gmail, se usa esa; si no, INBOX.
@@ -48,17 +58,17 @@ export async function listarCandidatosConLimite(
   const client = nuevoCliente()
   const out: CorreoCandidato[] = []
   let truncado = false
+  let buzonUsado = 'INBOX'
   await client.connect()
   try {
-    let buzon = 'INBOX'
     if (opts.etiqueta) {
       try {
         const boxes = await client.list()
         const match = boxes.find((b) => b.path === opts.etiqueta || b.name === opts.etiqueta)
-        if (match) buzon = match.path
+        if (match) buzonUsado = match.path
       } catch { /* usa INBOX */ }
     }
-    const lock = await client.getMailboxLock(buzon)
+    const lock = await client.getMailboxLock(buzonUsado)
     try {
       for await (const msg of client.fetch({ since: opts.desde }, { uid: true, source: true })) {
         if (opts.deadline && Date.now() > opts.deadline) { truncado = true; break }
@@ -85,7 +95,7 @@ export async function listarCandidatosConLimite(
   } finally {
     await client.logout().catch(() => {})
   }
-  return { correos: out, truncado }
+  return { correos: out, truncado, buzon: buzonUsado }
 }
 
 /** Variante sin presupuesto (compatibilidad con los llamadores que no lo acotan). */
@@ -94,14 +104,54 @@ export async function listarCandidatos(opts: { desde: Date; etiqueta?: string })
 }
 
 // Marca un correo como procesado: keyword IMAP + copia a la etiqueta si existe.
-export async function marcarProcesado(uid: number, etiqueta = 'Facturas/Procesada'): Promise<void> {
+// `buzon` es el que devolvió el listado: si el candidato salió de `Facturas/Proveedor`,
+// su UID NO existe en INBOX y el marcado se perdía sin decir nada.
+export async function marcarProcesado(
+  uid: number,
+  etiqueta = 'Facturas/Procesada',
+  buzon = 'INBOX',
+): Promise<void> {
   const client = nuevoCliente()
   await client.connect()
   try {
-    const lock = await client.getMailboxLock('INBOX')
+    const lock = await client.getMailboxLock(buzon)
     try {
       await client.messageFlagsAdd({ uid: String(uid) }, ['\\Seen', '$Procesada'], { uid: true }).catch(() => {})
       await client.messageCopy({ uid: String(uid) }, etiqueta, { uid: true }).catch(() => {})
+    } finally {
+      lock.release()
+    }
+  } finally {
+    await client.logout().catch(() => {})
+  }
+}
+
+/**
+ * Deja el correo en la cola de «llegó una factura y NO se pudo leer».
+ *
+ * 🚨 Deliberadamente NO pone `\Seen` ni `$Procesada` (a diferencia de
+ * `marcarProcesado`): un hilo con `Facturas/PDF-pendiente` marcado además como
+ * procesado quedaría fuera de la query base de la skill y no se reprocesaría
+ * jamás. Aquí solo se encola para que alguien lo lea a mano.
+ */
+export async function etiquetarPendiente(
+  uid: number,
+  buzon = 'INBOX',
+  etiqueta = ETIQUETA_PDF_PENDIENTE,
+): Promise<void> {
+  const client = nuevoCliente()
+  await client.connect()
+  try {
+    const lock = await client.getMailboxLock(buzon)
+    try {
+      try {
+        await client.messageCopy({ uid: String(uid) }, etiqueta, { uid: true })
+      } catch {
+        // La etiqueta puede no existir todavía. Se crea y se reintenta UNA vez:
+        // si tampoco, se pierde el encolado pero el contador `noLeidas` lo cuenta.
+        await client.mailboxCreate(etiqueta).catch(() => {})
+        await client.messageCopy({ uid: String(uid) }, etiqueta, { uid: true }).catch(() => {})
+      }
     } finally {
       lock.release()
     }
