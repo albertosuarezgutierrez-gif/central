@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-02T02:33:54Z",
+  "generadoEn": "2026-08-02T07:14:47Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3968,6 +3968,14 @@
     }
   ],
   "novedades": [
+    {
+      "titulo": "🧹 «Haz tu todo»: vulns 12→3, 0 críticas (02/08/2026, rama `claude/audit-vulnerabilities-02-08-m7lwtf`).",
+      "fecha": "02/08/2026"
+    },
+    {
+      "titulo": "✅ Reparación auditoría 02/08 cerrada (02/08/2026, rama `claude/audit-vulnerabilities-02-08-m7lwtf`).",
+      "fecha": "02/08/2026"
+    },
     {
       "titulo": "🛡️ Auditoría PROFUNDA semanal (02/08/2026).",
       "fecha": "02/08/2026"

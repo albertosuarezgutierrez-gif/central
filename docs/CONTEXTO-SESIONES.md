@@ -33,6 +33,22 @@
   resuelto). Embeddings de la caché semántica siguen con la key (best-effort). Nada que poner en Vercel:
   el default apagado ES el estado deseado. Pendiente: si algún día hay key con cuota, activar los 2 gates.
 
+- **🧹 «Haz tu todo»: vulns 12→3, 0 críticas (02/08/2026, rama `claude/audit-vulnerabilities-02-08-m7lwtf`).**
+  Los bumps aparcados eran seguros al mirarlos de cerca: nodemailer 8→9 en sivra (el call site es un stub
+  comentado; peer de @auth/core opcional), fast-xml-parser 4→5.10.1 (v5 = solo empaquetado ESM, API idéntica),
+  sharp 0.35.3 + override, imapflow ^1.6.5 (ya sin dep nodemailer) + mailparser 3.9.14 (mata linkify-it),
+  overrides postcss ≥8.5.18 y uuid ≥11.1.1 (CJS verificado en node-ical). Quedan solo xlsx ×2 (sin parche npm,
+  no explotable) y file-type (parche ESM-only rompería jimp). Verificado: typecheck 4 apps afectadas, tests
+  raíz + 769/769 plataforma, smoke tests de runtime (fxp/sharp/uuid). PR #1218 ampliado con los bumps.
+
+- **✅ Reparación auditoría 02/08 cerrada (02/08/2026, rama `claude/audit-vulnerabilities-02-08-m7lwtf`).**
+  Alberto: «repara». Las dos verificaciones pendientes del PR #1215 ya estaban resueltas por los checks del
+  propio PR: builds reales de Vercel **8/8 en verde** (la que faltaba antes de producción) y las 4 apps
+  «desaparecidas» (rrhh/transporte/alquiler/almacen) **SÍ existen en el mismo team** — el conector Vercel MCP
+  tiene acceso por-proyecto (403 en esas 4), no hay gap de despliegue. **PR #1215 mergeado** (squash `783b2fb`):
+  46→12 vulns, 0 críticas. Pendiente opcional de Alberto: ampliar acceso del conector a los 4 proyectos;
+  valorar nodemailer 8→9 y fast-xml-parser 4→5 con smoke test. Informe actualizado en `docs/AUDITORIA-2026-08.md`.
+
 - **🧾 Cuota de la Seguridad Social (RETA) de julio salía ❌ NO DEDUCIBLE (01/08/2026, rama
   `claude/seguridad-social-deducibilidad-kgmyjq`).** Alberto preguntó por el cargo de BBVA de 388,95€.
   **Causa:** regla aprendida **`CUOTA → personal`** en `banca_destino_reglas` (18/07/2026, seguramente de
