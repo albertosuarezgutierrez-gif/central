@@ -5,7 +5,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { requireEmpresaId } from '@/lib/tenant'
 import { evaluarOportunidad } from '@central/module-subastas'
-import { COLS_SUBASTA, filaASubasta } from '@/lib/subastas-radar'
+import { COLS_SUBASTA, filaASubasta, SUBASTA_VIGENTE } from '@/lib/subastas-radar'
 import { paramsCoste } from '@/lib/subastas/params-coste'
 import { caducidadDeFila } from '@/lib/subastas/caducidad-fila'
 
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
   if (provincia && provincia !== 'all') cond.push(Prisma.sql`provincia = ${provincia}`)
   // «En plazo» excluye también lo archivado: las pasadas se conservan en la
   // base como histórico (reaparición + calibración) pero no salen en la lista.
-  if (enPlazo) cond.push(Prisma.sql`archivada_at IS NULL AND (fecha_fin IS NULL OR fecha_fin >= now())`)
+  if (enPlazo) cond.push(SUBASTA_VIGENTE)
   if (precioMax) {
     const p = Number(precioMax)
     if (Number.isFinite(p)) cond.push(Prisma.sql`(valor_subasta IS NULL OR valor_subasta <= ${p})`)

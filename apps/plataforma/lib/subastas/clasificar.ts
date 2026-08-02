@@ -37,7 +37,15 @@ export async function clasificarSubastas(max = 400): Promise<{ revisadas: number
     // El listado de adjuntos va al análisis para que «procesado sin hallazgos»
     // no se confunda con «no se ha leído nada» (ficha sin adjuntos o todos
     // escaneados): sin él, el semáforo podía salir 🟢 sin abrir un documento.
-    const analisis = analisisDocumental(s, f.notas_edicto ?? null, Array.isArray(f.documentos) ? f.documentos : null)
+    // `publicaAdjuntos` por fuente: en los lotes de la Junta un `documentos`
+    // NULL no está pendiente de nada (no hay ficha documental que revisar), y
+    // prometer una pasada que nunca llegará es otra forma de mentir.
+    const analisis = analisisDocumental(
+      s,
+      f.notas_edicto ?? null,
+      Array.isArray(f.documentos) ? f.documentos : null,
+      (f.fuente ?? 'boe') === 'boe',
+    )
     // Techo de puja para un 25% de descuento REAL — el mismo que pinta la ficha.
     // Se CONGELA aquí: cuando la subasta concluya, esta fila deja de entrar en la
     // consulta de arriba (ya tiene semáforo y la fecha pasó), así que el número

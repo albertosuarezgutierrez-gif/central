@@ -138,4 +138,43 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'mirar, no porque no las haya — y el IVA soportado del trimestre saldrá corto. ' +
       'Huella: agente_latidos.facturas_gmail.',
   },
+  {
+    id: 'sivra_eventos',
+    etiqueta: '🎪 Descubrimiento de eventos de Sevilla (Ticketmaster + búsqueda web, diario)',
+    // Diarios (04:00 y 05:00) → 30 h deja pasar un día saltado sin dar la lata.
+    maxHoras: 30,
+    nota:
+      'Nadie está descubriendo qué pasa en Sevilla, y el motor tarifica 365 días vista. Los dos crons ' +
+      'responden 200 {ok:true} CUANDO NO ESTÁN CONFIGURADOS (sin TICKETMASTER_API_KEY o sin ' +
+      'GEMINI_API_KEY/OPENROUTER_API_KEY), así que «verde» nunca ha significado «está buscando»: ya ' +
+      'estuvieron mudos en junio y julio de 2026 sin que saltara nada. Mira el detalle del latido — ' +
+      'dice cuál de las dos vías falló — y luego los logs de eventos/sync y eventos/websearch. ' +
+      'Mientras esté así, una fecha con un pelotazo se vende a precio de martes normal. ' +
+      'Huella: agente_latidos.sivra_eventos.',
+  },
+  {
+    id: 'sivra_mercado_sweep',
+    etiqueta: '🔎 Barrido de mercado por temporada (diario 03:00)',
+    maxHoras: 30,
+    nota:
+      'El corpus de comparables se está quedando viejo. Sin mercado fresco el motor cae al bucket ' +
+      'global (bajo) y los precios se deslizan hacia el suelo justo en los meses buenos; además los ' +
+      'centinelas de evento se quedan sin muestra y dejan de vigilar (evaluado:false NO es «todo ' +
+      'bien»). Causa típica: SERPER_API_KEY agotada o la pasarela de IA sin presupuesto para la ' +
+      'extracción. Huella: agente_latidos.sivra_mercado_sweep.',
+  },
+  {
+    id: 'sivra_pricing_guard',
+    etiqueta: '🛡️ Guardián de precios (diario 07:30)',
+    // Cron diario → 30 h deja pasar una pasada saltada sin dar la lata.
+    maxHoras: 30,
+    nota:
+      'La red de seguridad del pricing está muda. Es el que compara lo que cobramos contra el ' +
+      'mercado real y el que caza precios revertidos, reservas por debajo de mercado, eventos mal ' +
+      'fechados y comparables del aforo equivocado. Hasta el 01/08/2026 era el ÚNICO agente sin ' +
+      'vigilante: si dejaba de correr, su silencio se leía como «no hay nada que avisar» — y no hay ' +
+      'nada más caro que una red de seguridad que calla porque está rota. Si el detalle dice ' +
+      '«pricing_eventos_auto ILEGIBLE», corrió pero con los centinelas de evento apagados. ' +
+      'Huella: agente_latidos.sivra_pricing_guard.',
+  },
 ]

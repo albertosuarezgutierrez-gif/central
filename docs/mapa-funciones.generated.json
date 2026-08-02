@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-01T10:03:57Z",
-  "sha": "a7fc6441a03253faa4d60a0880c23189c390ef21",
+  "generadoEn": "2026-08-01T21:22:13Z",
+  "sha": "4fe8a5b3eb75f310621291be01d606550ab15c18",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -7779,20 +7779,12 @@
           "linea": 19
         },
         {
-          "nombre": "solicitarIndexacion",
-          "kind": "function",
-          "exportada": false,
-          "params": "path: string",
-          "retorno": null,
-          "linea": 27
-        },
-        {
           "nombre": "fn",
           "kind": "arrow",
           "exportada": false,
           "params": "name: string, description: string, parameters: any",
           "retorno": null,
-          "linea": 50,
+          "linea": 58,
           "resumen": "Tools en formato OpenAI (NVIDIA NIM, function-calling). web_search es custom, respaldada por Gemini."
         },
         {
@@ -7801,12 +7793,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 62
+          "linea": 70
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/seo-agent",
-      "hash": "84ef145a1cdc"
+      "hash": "5a958bdf3925"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cuenta-nominal/route.ts",
@@ -19553,7 +19545,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0a6e499c54fe"
+      "hash": "aae52c145332"
     },
     {
       "ruta": "apps/ia-rest/src/app/blog/comanda-por-voz-como-funciona/page.tsx",
@@ -19653,7 +19645,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4172dfd63c4c"
+      "hash": "0f0f5ac2ff04"
     },
     {
       "ruta": "apps/ia-rest/src/app/blog/tpv-restaurante/page.tsx",
@@ -19693,7 +19685,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "99709339304e"
+      "hash": "b03b6b39e545"
     },
     {
       "ruta": "apps/ia-rest/src/app/blog/verifactu-restaurantes-guia-2026/page.tsx",
@@ -19713,7 +19705,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f10df2753c83"
+      "hash": "35fcaf0b9dbd"
     },
     {
       "ruta": "apps/ia-rest/src/app/carta/[code]/CartaPublicClient.tsx",
@@ -19854,7 +19846,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2521cb1a7920"
+      "hash": "1b5a87713c4e"
     },
     {
       "ruta": "apps/ia-rest/src/app/central/page.tsx",
@@ -20454,7 +20446,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "22621f1ed0e5"
+      "hash": "15020ac0000f"
     },
     {
       "ruta": "apps/ia-rest/src/app/estado/page.tsx",
@@ -20656,7 +20648,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d0f958386316"
+      "hash": "ff24201023c7"
     },
     {
       "ruta": "apps/ia-rest/src/app/hosteleria/page.tsx",
@@ -20678,7 +20670,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "11dc1169059d"
+      "hash": "48f11f035ed2"
     },
     {
       "ruta": "apps/ia-rest/src/app/hub/page.tsx",
@@ -21042,12 +21034,12 @@
           "exportada": true,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 187
+          "linea": 180
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fedd36642394"
+      "hash": "034ca172bd4b"
     },
     {
       "ruta": "apps/ia-rest/src/app/login/page.tsx",
@@ -22255,7 +22247,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "10f9449b752a"
+      "hash": "ef9aebb0c871"
     },
     {
       "ruta": "apps/ia-rest/src/app/portal-eventos/page.tsx",
@@ -23521,7 +23513,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "99070fdc5112"
+      "hash": "1d05ba6b1b8a"
     },
     {
       "ruta": "apps/ia-rest/src/app/restaurante-mediterraneo/page.tsx",
@@ -23557,7 +23549,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b499a9fc8e86"
+      "hash": "b2a58545d762"
     },
     {
       "ruta": "apps/ia-rest/src/app/restaurantes/[ciudad]/page.tsx",
@@ -24000,7 +23992,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b018c5f44d5e"
+      "hash": "105f99918894"
     },
     {
       "ruta": "apps/ia-rest/src/app/terminos/page.tsx",
@@ -31020,7 +31012,7 @@
           "exportada": true,
           "params": "ruta: string",
           "retorno": null,
-          "linea": 17,
+          "linea": 78,
           "resumen": "Devuelve el SEO efectivo (default + override) y los bloques de una ruta."
         },
         {
@@ -31029,13 +31021,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 30,
+          "linea": 91,
           "resumen": "Inventario para la tool list_seo_targets."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8981dad4e2a0"
+      "hash": "6649725c3433"
     },
     {
       "ruta": "apps/ia-rest/src/lib/sepa.ts",
@@ -47498,11 +47490,10 @@
       "tablas": [
         "next",
         "subastas",
-        "subastas_criterios",
-        "subastas_radar"
+        "subastas_criterios"
       ],
       "rutaApi": null,
-      "hash": "7bad8787d08e"
+      "hash": "1a7114537d39"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/subastas/SubastasClient.tsx",
@@ -47586,7 +47577,7 @@
           "exportada": false,
           "params": "{ dedupeKey }: { dedupeKey: string }",
           "retorno": null,
-          "linea": 491,
+          "linea": 513,
           "resumen": "«Nota simple viva»: la certificación que adjunta el juzgado es de hace años y las cargas se mueven. Aquí se sube una nota simple recién pedida al registro y el agente dice QUÉ HA CAMBIADO — es lo únic"
         },
         {
@@ -47595,7 +47586,7 @@
           "exportada": false,
           "params": "{ s, o, acciones, extra, doc }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null }",
           "retorno": null,
-          "linea": 581
+          "linea": 603
         },
         {
           "nombre": "SubastasClient",
@@ -47603,14 +47594,14 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Inicial | null }",
           "retorno": null,
-          "linea": 752
+          "linea": 774
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "f41ca545e9fe"
+      "hash": "ce9081e1b4a5"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -47920,7 +47911,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a400c83590a4"
+      "hash": "5e3d4eb622c8"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -50599,7 +50590,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 45
+          "linea": 58
         }
       ],
       "tablas": [
@@ -50610,7 +50601,7 @@
         "pms_connections"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "d140730fd807"
+      "hash": "3f811a364c60"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -51064,6 +51055,8 @@
         }
       ],
       "tablas": [
+        "agente_latidos",
+        "ai_usos",
         "cuentas",
         "cuentas_bancarias",
         "gastos",
@@ -51073,7 +51066,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": "/api/cron/health-check",
-      "hash": "59dd330d20f4"
+      "hash": "18189772fe51"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/ia-director-refresh/route.ts",
@@ -51261,7 +51254,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<number>",
-          "linea": 27,
+          "linea": 28,
           "resumen": "Señal ANTICIPADA: promotoras/inmobiliarias en concurso de acreedores en las provincias vigiladas. Sus inmuebles suelen acabar en subasta o liquidación meses después — enterarse hoy da ventaja. Ventana"
         },
         {
@@ -51270,7 +51263,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 53
+          "linea": 54
         },
         {
           "nombre": "GET",
@@ -51278,18 +51271,17 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 57
+          "linea": 58
         }
       ],
       "tablas": [
         "borme_eventos",
         "next",
-        "subastas",
         "subastas_criterios",
         "subastas_radar"
       ],
       "rutaApi": "/api/cron/subastas-avisos",
-      "hash": "cf1b639490dd"
+      "hash": "77edc52dcfff"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-cierre/route.ts",
@@ -52814,21 +52806,12 @@
       ],
       "funciones": [
         {
-          "nombre": "impacto",
-          "kind": "function",
-          "exportada": false,
-          "params": "aforo: number",
-          "retorno": "number",
-          "linea": 31,
-          "resumen": "Aforo → factor de premium (acotado a 2.5, el techo del motor)."
-        },
-        {
           "nombre": "aforoEvento",
           "kind": "function",
           "exportada": false,
           "params": "venue: string | null, tmSeat: number",
           "retorno": "number",
-          "linea": 60,
+          "linea": 56,
           "resumen": "Aforo de un evento: 1º el mapa por recinto (lo fiable en Sevilla), 2º lo que traiga TM si viene, 3º un default conservador."
         },
         {
@@ -52837,7 +52820,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 71
+          "linea": 67
         }
       ],
       "tablas": [
@@ -52846,7 +52829,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/eventos/sync",
-      "hash": "a9f4acb0957c"
+      "hash": "ac095fdb2d22"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/eventos/websearch/route.ts",
@@ -52856,21 +52839,30 @@
       ],
       "funciones": [
         {
-          "nombre": "impacto",
-          "kind": "function",
-          "exportada": false,
-          "params": "aforo: number",
-          "retorno": "number",
-          "linea": 27,
-          "resumen": "Aforo → factor de premium (acotado a 2.5, el techo del motor). Idéntico a /eventos/sync."
-        },
-        {
           "nombre": "GET",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 38
+          "linea": 48
+        },
+        {
+          "nombre": "buscarPrevistos",
+          "kind": "function",
+          "exportada": false,
+          "params": "desde: string, hasta: string, yaResumen: string",
+          "retorno": "Promise<",
+          "linea": 160,
+          "resumen": "nunca lanza (es una mejora, no puede tumbar el descubrimiento normal)."
+        },
+        {
+          "nombre": "avisarPrevistos",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<void>",
+          "linea": 237,
+          "resumen": "Avisa UNA vez por evento previsto (dedupe por `avisado_at`). Alberto es quien confirma o descarta."
         }
       ],
       "tablas": [
@@ -52879,7 +52871,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/eventos/websearch",
-      "hash": "0028be535413"
+      "hash": "354894d27dec"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/agent/resumen-mensual/route.ts",
@@ -53154,6 +53146,37 @@
       ],
       "rutaApi": "/api/sivra/income",
       "hash": "4ea47ad41459"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/sivra/incomes/backfill-reserved-at/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "mesesEntre",
+          "kind": "function",
+          "exportada": false,
+          "params": "desde: string, hasta: string",
+          "retorno": "",
+          "linea": 44
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 60
+        }
+      ],
+      "tablas": [
+        "incomes",
+        "next"
+      ],
+      "rutaApi": "/api/sivra/incomes/backfill-reserved-at",
+      "hash": "994c42c28ece"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/incomes/route.ts",
@@ -54596,30 +54619,22 @@
       ],
       "funciones": [
         {
-          "nombre": "fmt",
-          "kind": "arrow",
-          "exportada": false,
-          "params": "d: Date",
-          "retorno": null,
-          "linea": 22
-        },
-        {
           "nombre": "pisosPorAforo",
           "kind": "function",
           "exportada": false,
           "params": "",
           "retorno": "Promise<Map<number, string[]>>",
-          "linea": 29,
+          "linea": 55,
           "resumen": "🚨 El barrido busca por el AFORO REAL de cada piso, NO con \"4 personas\" para todos (bug hasta el 31/07/2026: guardaba los MISMOS comps de 4 plazas para los 4 pisos con `guests=4` fijo, así que House —"
         },
         {
-          "nombre": "weekendInMonth",
+          "nombre": "fechasDeEvento",
           "kind": "function",
           "exportada": false,
-          "params": "m: number",
-          "retorno": "",
-          "linea": 41,
-          "resumen": "Primer viernes→domingo (2 noches) del mes a `m` meses vista."
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 69,
+          "resumen": "Fechas de evento de las DOS fuentes que conoce el motor: el calendario del repo y lo que descubren los crons (Ticketmaster / búsqueda web). Si la tabla falla NO se cae la pasada: se barre la base mens"
         },
         {
           "nombre": "serperSearch",
@@ -54627,7 +54642,7 @@
           "exportada": false,
           "params": "query: string",
           "retorno": "Promise<string>",
-          "linea": 51
+          "linea": 92
         },
         {
           "nombre": "extractPrices",
@@ -54635,7 +54650,7 @@
           "exportada": false,
           "params": "snippets: string, checkin: string, checkout: string",
           "retorno": "Promise<any[]>",
-          "linea": 65
+          "linea": 106
         },
         {
           "nombre": "GET",
@@ -54643,17 +54658,18 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 79
+          "linea": 120
         }
       ],
       "tablas": [
         "market_rates",
         "next",
+        "pricing_eventos_auto",
         "pricing_piso_zona",
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/sweep",
-      "hash": "28f95f175059"
+      "hash": "e4b36f02176f"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pl-mensual/route.ts",
@@ -54762,7 +54778,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 31
+          "linea": 32
         },
         {
           "nombre": "fmt",
@@ -54770,7 +54786,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 32
+          "linea": 33
         },
         {
           "nombre": "GET",
@@ -54778,7 +54794,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 60,
+          "linea": 61,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -54787,7 +54803,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 64
+          "linea": 65
         }
       ],
       "tablas": [
@@ -54811,7 +54827,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "373dc735b827"
+      "hash": "e96cc180e464"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -54952,7 +54968,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 54
+          "linea": 63
         }
       ],
       "tablas": [
@@ -54960,6 +54976,7 @@
         "base",
         "incomes",
         "last_applied",
+        "latest",
         "live",
         "market_rates",
         "mkt",
@@ -54979,7 +54996,7 @@
         "ult"
       ],
       "rutaApi": "/api/sivra/pricing/guard",
-      "hash": "4f1777b9cbf8"
+      "hash": "c509415ec93f"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/historial/route.ts",
@@ -55509,7 +55526,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 16
+          "linea": 17
         }
       ],
       "tablas": [
@@ -55518,7 +55535,7 @@
         "subastas_radar"
       ],
       "rutaApi": "/api/subastas/mapa",
-      "hash": "ac914749bc83"
+      "hash": "bf0d1730f090"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/nota-simple/route.ts",
@@ -55594,7 +55611,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 10
+          "linea": 11
         },
         {
           "nombre": "POST",
@@ -55602,7 +55619,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 38
+          "linea": 45
         }
       ],
       "tablas": [
@@ -55610,7 +55627,7 @@
         "subastas_radar"
       ],
       "rutaApi": "/api/subastas/radar",
-      "hash": "a4bcd8adfeea"
+      "hash": "ccc26a0f83c4"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/route.ts",
@@ -55635,7 +55652,7 @@
         "subastas_criterios"
       ],
       "rutaApi": "/api/subastas",
-      "hash": "9ba39c9b5754"
+      "hash": "02f7fef1b743"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/seguidas/route.ts",
@@ -60168,7 +60185,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 82,
+          "linea": 92,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -60177,7 +60194,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 112,
+          "linea": 122,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -60186,7 +60203,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 134
+          "linea": 144
         },
         {
           "nombre": "ventanaMinutos",
@@ -60194,7 +60211,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 142,
+          "linea": 152,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -60203,13 +60220,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 154,
+          "linea": 164,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9714f5c336b4"
+      "hash": "a9b7cdfb324b"
     },
     {
       "ruta": "apps/plataforma/lib/deducibilidad.ts",
@@ -62863,7 +62880,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cfb5b20ba69d"
+      "hash": "c6f34bbdee61"
     },
     {
       "ruta": "apps/plataforma/lib/norma43.ts",
@@ -64600,6 +64617,78 @@
       "hash": "ebf35fd6901b"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/eventos-estado.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/eventos-estado.ts — qué puede hacer un evento según lo seguro que sea. POR QUÉ (01/08/2026, idea de Alberto: «ver de qué forma podríamos revisar noticias e intentar adelantarnos a las fechas — ejemplo, final de Copa del Rey»). El descubrimiento automático solo veía el PRESENTE: Ticketmaste",
+      "exporta": [
+        "normalizarEstado",
+        "efectoDeEvento",
+        "combinarEventosDeFecha"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizarEstado",
+          "kind": "function",
+          "exportada": true,
+          "params": "v?: string | null",
+          "retorno": "EstadoEvento",
+          "linea": 74
+        },
+        {
+          "nombre": "efectoDeEvento",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EventoBruto, o: EfectoOpts = {}",
+          "retorno": "EfectoEvento",
+          "linea": 84
+        },
+        {
+          "nombre": "combinarEventosDeFecha",
+          "kind": "function",
+          "exportada": true,
+          "params": "eventos: EventoBruto[], o: EfectoOpts = {}",
+          "retorno": "EfectoEvento",
+          "linea": 131,
+          "resumen": "Combina TODOS los eventos de una misma fecha (pueden ser varios: Ticketmaster, búsqueda web y la mano de Alberto sobre el mismo concierto). Manda el mayor de cada cosa por separado — un previsto no pu"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "03ad2ef6fba7"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/eventos-impacto.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/eventos-impacto.ts — cuánto sube el precio un evento descubierto automáticamente. POR QUÉ (01/08/2026). Esta escala vivía DUPLICADA y palabra por palabra en los dos crons de descubrimiento (`eventos/sync` de Ticketmaster y `eventos/websearch`), con un comentario que decía «idéntico a /even",
+      "exporta": [
+        "clasificarTipo",
+        "impactoEvento"
+      ],
+      "funciones": [
+        {
+          "nombre": "clasificarTipo",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto?: string | null",
+          "retorno": "TipoEvento",
+          "linea": 34,
+          "resumen": "Normaliza el `tipo` que traen las fuentes (Ticketmaster o la IA), que es texto libre."
+        },
+        {
+          "nombre": "impactoEvento",
+          "kind": "function",
+          "exportada": true,
+          "params": "aforo: number, tipo?: string | null",
+          "retorno": "number",
+          "linea": 64,
+          "resumen": "Multiplicador de precio para un evento, por aforo y tipo. La curva general (conciertos, festivales, lo que no sabemos clasificar) llega a 2.20 en aforo de estadio: por debajo del 2.5 del calendario a "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ea3b0a1b1b2e"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/facturas-control.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -64789,6 +64878,80 @@
       "hash": "06373f83d9d7"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/mercado-ventanas.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/mercado-ventanas.ts — QUÉ fechas barre el mercado, y por qué. POR QUÉ (01/08/2026). El barrido mensual (`mercado/sweep`) miraba el PRIMER VIERNES de cada mes y nada más. Ocho fechas al año y media, todas elegidas por el calendario gregoriano: el barrido nunca veía la Feria, ni la Semana Sa",
+      "exporta": [
+        "findeDelMes",
+        "picosDeEvento",
+        "ventanasDelBarrido"
+      ],
+      "funciones": [
+        {
+          "nombre": "aFecha",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "Date",
+          "linea": 66
+        },
+        {
+          "nombre": "fmt",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": "string",
+          "linea": 69
+        },
+        {
+          "nombre": "sumarDias",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string, n: number",
+          "retorno": "string",
+          "linea": 72
+        },
+        {
+          "nombre": "diasEntre",
+          "kind": "function",
+          "exportada": false,
+          "params": "desdeIso: string, hastaIso: string",
+          "retorno": "number",
+          "linea": 75
+        },
+        {
+          "nombre": "findeDelMes",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoyIso: string, m: number, orden = 0",
+          "retorno": "string",
+          "linea": 98,
+          "resumen": "Fecha de muestra nº `orden` del mes a `m` meses vista. `orden` 0 = primer VIERNES (el que se ha barrido siempre; se mantiene para no mover la serie histórica). 🚨 POR QUÉ HAY MÁS DE UNA (01/08/2026, c"
+        },
+        {
+          "nombre": "picosDeEvento",
+          "kind": "function",
+          "exportada": true,
+          "params": "eventos: EventoFecha[], factorMinimo = 1.15",
+          "retorno": "EventoFecha[]",
+          "linea": 117,
+          "resumen": "Agrupa fechas de evento CONTIGUAS en bloques y devuelve, de cada bloque, la de mayor factor (empate → la primera). La Feria entera gasta una sola ventana."
+        },
+        {
+          "nombre": "ventanasDelBarrido",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoyIso: string, eventos: EventoFecha[], opts: VentanasOpts = {},",
+          "retorno": "Ventana[]",
+          "linea": 146,
+          "resumen": "Ventanas a barrer en una pasada. La base mensual va SIEMPRE (es la línea de temporada); las de evento se añaden por cercanía hasta el tope, sin repetir una fecha que ya cubre la base."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3164bde4860c"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/pilot-track.ts",
       "ambito": "apps/plataforma",
       "resumen": "Lógica PURA del agente de seguimiento del piloto (sin DB ni red → testeable por inspección). El endpoint /api/sivra/pricing/pilot-track aporta los datos; aquí solo se decide el veredicto.",
@@ -64902,7 +65065,9 @@
       "exporta": [
         "decidirEventoSinRespaldo",
         "decidirEventoNoCatalogado",
-        "decidirPrecioPorPlaza"
+        "decidirPrecioPorPlaza",
+        "factorAforo",
+        "decidirCompsDeOtroAforo"
       ],
       "funciones": [
         {
@@ -64938,11 +65103,29 @@
           "retorno": "Veredicto",
           "linea": 163,
           "resumen": "⚠️ Solo aplica a pisos GRANDES, y no es un tecnicismo: en un apartamento pequeño las \"plazas\" son en buena parte sofás-cama (Luxury son 5 plazas en 2 dormitorios), así que dividir por ellas da un núme"
+        },
+        {
+          "nombre": "factorAforo",
+          "kind": "function",
+          "exportada": true,
+          "params": "plazasPiso: number, plazasComp: number",
+          "retorno": "number",
+          "linea": 234,
+          "resumen": "Mismo cálculo que la función SQL `pricing_factor_aforo` (exponente 1,1 y recorte a [0,6 · 2,5]). Está duplicado a propósito: el centinela tiene que poder decir EXACTAMENTE cuánto está extrapolando el "
+        },
+        {
+          "nombre": "decidirCompsDeOtroAforo",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: CompsDeOtroAforoInput, o: CompsDeOtroAforoOpts = {},",
+          "retorno": "Veredicto",
+          "linea": 244,
+          "resumen": "⚠️ EL UMBRAL ES HOLGADO A PROPÓSITO (1,35). Con 1,25 saltaría también Luxury Busto, que son 5 plazas medidas con comps de 4 (factor 1,28): esa diferencia de UNA plaza es ruido de cómo cada anfitrión c"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b8549ffbeac7"
+      "hash": "53f220a5dc2d"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-engine.ts",
@@ -65040,7 +65223,7 @@
           "exportada": false,
           "params": "motivo: string, evaluado = false",
           "retorno": "LastMinuteResult",
-          "linea": 53
+          "linea": 71
         },
         {
           "nombre": "factorLastMinute",
@@ -65048,12 +65231,12 @@
           "exportada": true,
           "params": "i: LastMinuteInput, o: LastMinuteOpts = {}",
           "retorno": "LastMinuteResult",
-          "linea": 55
+          "linea": 73
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "492327365944"
+      "hash": "7cd4dba450cd"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-premio-mercado.ts",
@@ -65167,7 +65350,7 @@
           "exportada": false,
           "params": "s?: string",
           "retorno": "Date | null",
-          "linea": 11
+          "linea": 32
         },
         {
           "nombre": "nights",
@@ -65175,7 +65358,7 @@
           "exportada": false,
           "params": "ci: Date | null, co: Date | null",
           "retorno": "number",
-          "linea": 17
+          "linea": 38
         },
         {
           "nombre": "fetchPage",
@@ -65183,7 +65366,7 @@
           "exportada": false,
           "params": "p: number, from: string, apiKey: string, arrFrom?: string, arrTo?: string",
           "retorno": null,
-          "linea": 21
+          "linea": 42
         },
         {
           "nombre": "runSync",
@@ -65191,7 +65374,7 @@
           "exportada": true,
           "params": "days: number, maxPages = 20, arrFrom?: string, arrTo?: string",
           "retorno": null,
-          "linea": 36
+          "linea": 57
         }
       ],
       "tablas": [
@@ -65199,7 +65382,7 @@
         "properties"
       ],
       "rutaApi": null,
-      "hash": "55432670fd34"
+      "hash": "8d4329a8cb87"
     },
     {
       "ruta": "apps/plataforma/lib/smoobu.ts",
@@ -65305,7 +65488,7 @@
           "exportada": true,
           "params": "f: any",
           "retorno": "SubastaInmueble",
-          "linea": 54,
+          "linea": 96,
           "resumen": "Fila cruda de `subastas` → el tipo del módulo."
         },
         {
@@ -65314,7 +65497,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<FilaCriterios[]>",
-          "linea": 124,
+          "linea": 166,
           "resumen": "Cuentas con el radar activo y sus criterios."
         },
         {
@@ -65323,7 +65506,7 @@
           "exportada": true,
           "params": "limite = 500",
           "retorno": "Promise<SubastaInmueble[]>",
-          "linea": 150,
+          "linea": 192,
           "resumen": "Subastas candidatas: en plazo (o sin fecha conocida) y recientes. No se rebarre todo el histórico en cada pasada."
         },
         {
@@ -65332,7 +65515,7 @@
           "exportada": true,
           "params": "cuentaId: string, criterios: CriteriosSubasta, corpus: SubastaInmueble[], params: ParamsCoste = {},",
           "retorno": "Promise<number>",
-          "linea": 173,
+          "linea": 213,
           "resumen": "Casa el corpus con los criterios de una cuenta e inserta lo nuevo. El upsert REFRESCA el snapshot y las cifras: el radar corre a las 06:30, DESPUÉS del enriquecimiento (06:15) y del valor de mercado ("
         },
         {
@@ -65341,7 +65524,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 246,
+          "linea": 286,
           "resumen": "Pasada completa: descarga el corpus UNA vez y lo empareja con cada cuenta."
         }
       ],
@@ -65353,7 +65536,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "7784dbe04057"
+      "hash": "11f8e2f66e2c"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/boe.ts",
@@ -65519,7 +65702,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "2d62a4165c3c"
+      "hash": "b7c26409097e"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/consulta-juzgado.ts",
@@ -65588,7 +65771,7 @@
           "exportada": false,
           "params": "url: string, ms = 30000",
           "retorno": "Promise<Response>",
-          "linea": 62
+          "linea": 63
         },
         {
           "nombre": "textoDePdf",
@@ -65596,7 +65779,7 @@
           "exportada": false,
           "params": "buf: Buffer",
           "retorno": "Promise<string>",
-          "linea": 72
+          "linea": 73
         },
         {
           "nombre": "procesarDocumentosDeFicha",
@@ -65604,7 +65787,7 @@
           "exportada": true,
           "params": "identificador: string, opts: { leerCargas?: boolean } = {},",
           "retorno": "Promise<ResultadoFicha>",
-          "linea": 106,
+          "linea": 109,
           "resumen": "Procesa TODOS los documentos de UNA ficha: señales del edicto + cuadro de cargas. `leerCargas: false` se queda en las señales por regex (gratis), para las subastas que no han pasado el gate de rentabi"
         },
         {
@@ -65613,7 +65796,7 @@
           "exportada": true,
           "params": "f: { flip_apto: boolean | null margen_flip_pct: number | null es_playa: boolean | null descuento_estimado: number | null }",
           "retorno": "boolean",
-          "linea": 198,
+          "linea": 218,
           "resumen": "¿Merece esta subasta el análisis profundo (que cuesta llamadas de IA)? El embudo de Alberto: primero rentabilidad, y solo si cuadra, documentación. Entra si es un flip viable, si es de la costa de Hue"
         },
         {
@@ -65622,7 +65805,7 @@
           "exportada": true,
           "params": "max = 10",
           "retorno": "Promise<",
-          "linea": 214,
+          "linea": 234,
           "resumen": "Pasada sobre las subastas vivas: lee los documentos de las que no están al día con la versión actual del lector. Best-effort: un fallo de descarga deja la fila como está y se reintenta mañana."
         },
         {
@@ -65631,7 +65814,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 299,
+          "linea": 321,
           "resumen": "· sin los resultados no hay calibración (la memoria del agente). Así que se borra la BANDEJA de avisos (`subastas_radar`, efímera por diseño) y se marca la subasta como archivada. El histórico se qued"
         }
       ],
@@ -65640,7 +65823,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "d233ac41ef8e"
+      "hash": "790e6db75fa0"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/enriquecer.ts",
@@ -68425,13 +68608,46 @@
       ],
       "funciones": [
         {
+          "nombre": "geminiEnPausa",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 47
+        },
+        {
+          "nombre": "anotarFalloGemini",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "void",
+          "linea": 50
+        },
+        {
+          "nombre": "anotarExitoGemini",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "void",
+          "linea": 56
+        },
+        {
+          "nombre": "geminiActivo",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 76,
+          "resumen": "¿Se debe intentar Gemini? APAGADO por defecto desde el 01/08/2026 (ver cabecera: la key llevaba 548 llamadas sin un solo éxito). Poner `GEMINI_WEBSEARCH=1` lo reactiva cuando haya cuota."
+        },
+        {
           "nombre": "busquedaConfigurada",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": "boolean",
-          "linea": 31,
-          "resumen": "¿Hay ALGUNA vía de búsqueda configurada? (para que los callers gateen su no-op)."
+          "linea": 84,
+          "resumen": "¿Hay ALGUNA vía de búsqueda configurada? (para que los callers gateen su no-op). Con Gemini apagado por defecto, esto es en la práctica «hay OPENROUTER_API_KEY»."
         },
         {
           "nombre": "buscarWeb",
@@ -68439,13 +68655,13 @@
           "exportada": true,
           "params": "system: string, user: string, opts: BuscarWebOpts",
           "retorno": "Promise<BuscarWebResult>",
-          "linea": 40,
+          "linea": 93,
           "resumen": "Búsqueda web con síntesis. Lanza solo si TODAS las vías fallan (el caller decide qué hacer). Gemini primero (gratis); si falla o no hay key, OpenRouter con el plugin `web` (de pago, gateado por el pre"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2328ac0f1e83"
+      "hash": "c6af6a234551"
     },
     {
       "ruta": "apps/plataforma/middleware.ts",
@@ -68528,14 +68744,14 @@
           "exportada": true,
           "params": "{ convenio, analisis, analisisFecha, branding }: { convenio: { codigo: string; nombre: string } analisis: Analisis | null analisisFecha: string | null branding: Branding }",
           "retorno": null,
-          "linea": 18
+          "linea": 10
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "ee684dd87e6d"
+      "hash": "ce9390006c08"
     },
     {
       "ruta": "apps/rrhh/app/admin/cuenta/page.tsx",
@@ -68729,14 +68945,14 @@
           "exportada": true,
           "params": "{ branding }: { branding: Branding }",
           "retorno": null,
-          "linea": 18
+          "linea": 9
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "4505311597a7"
+      "hash": "5731b8cd3f17"
     },
     {
       "ruta": "apps/rrhh/app/admin/empresa/page.tsx",
@@ -70787,7 +71003,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d6d69d4ddcba"
+      "hash": "2d5ec771cbd3"
     },
     {
       "ruta": "apps/rrhh/components/AsistentePanel.tsx",
@@ -71298,6 +71514,75 @@
       "hash": "470077b5af8b"
     },
     {
+      "ruta": "apps/rrhh/lib/categorias-empresa.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Categorías de la documentación de EMPRESA (no del trabajador). Módulo puro (sin prisma ni storage) para poder importarlo también desde componentes 'use client' — antes cada pantalla tenía su propia copia de la lista y se desincronizaban (p. ej. 'contrato' existía en /admin/empresa pero no en /admin/",
+      "exporta": [
+        "categoriaDe",
+        "periodoDe",
+        "pideAnio",
+        "pideMes",
+        "etiquetaCategoria",
+        "sufijoPeriodo"
+      ],
+      "funciones": [
+        {
+          "nombre": "categoriaDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "CategoriaEmpresa | undefined",
+          "linea": 27
+        },
+        {
+          "nombre": "periodoDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "Periodo",
+          "linea": 33,
+          "resumen": "Periodicidad de una categoría. Una categoría desconocida (documento antiguo de una categoría ya retirada) no pide fechas, pero tampoco se oculta."
+        },
+        {
+          "nombre": "pideAnio",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "boolean",
+          "linea": 37
+        },
+        {
+          "nombre": "pideMes",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "boolean",
+          "linea": 41
+        },
+        {
+          "nombre": "etiquetaCategoria",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "string",
+          "linea": 47,
+          "resumen": "Etiqueta legible; si el id no está en la lista se devuelve tal cual (mejor un id crudo visible que ocultar un documento que sí existe)."
+        },
+        {
+          "nombre": "sufijoPeriodo",
+          "kind": "function",
+          "exportada": true,
+          "params": "anio: number | null, mes: number | null",
+          "retorno": "string",
+          "linea": 52,
+          "resumen": "Sufijo de periodo para mostrar junto a la categoría: \"2026/03\", \"2026\" o ''."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2bcb08731694"
+    },
+    {
       "ruta": "apps/rrhh/lib/certificado-firma.tsx",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -71703,7 +71988,7 @@
           "exportada": true,
           "params": "empresaId: string",
           "retorno": "Promise<DocEmpresa[]>",
-          "linea": 18
+          "linea": 14
         },
         {
           "nombre": "subirDocumentoEmpresa",
@@ -71711,7 +71996,7 @@
           "exportada": true,
           "params": "empresaId: string, usuarioId: string, { categoria, nombre, anio, mes }: { categoria: string; nombre: string; anio?: number; mes?: number }, file: { bytes: ArrayBuffer; contentType: string; ext: string }",
           "retorno": "Promise<DocEmpresa>",
-          "linea": 26
+          "linea": 22
         },
         {
           "nombre": "borrarDocumentoEmpresa",
@@ -71719,7 +72004,7 @@
           "exportada": true,
           "params": "empresaId: string, docId: string",
           "retorno": "Promise<void>",
-          "linea": 41
+          "linea": 37
         },
         {
           "nombre": "urlDocumentoEmpresa",
@@ -71727,14 +72012,14 @@
           "exportada": true,
           "params": "path: string",
           "retorno": "Promise<string | null>",
-          "linea": 47
+          "linea": 43
         }
       ],
       "tablas": [
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "c8192343c32a"
+      "hash": "6446222da008"
     },
     {
       "ruta": "apps/rrhh/lib/empresa.ts",
@@ -84222,15 +84507,15 @@
           "nombre": "analisisDocumental",
           "kind": "function",
           "exportada": true,
-          "params": "s: SubastaInmueble, notasEdicto: string | null | undefined, documentos?: Array<{ legible?: boolean | null }> | null,",
+          "params": "s: SubastaInmueble, notasEdicto: string | null | undefined, documentos?: AdjuntoFicha[] | null, /** `false` en las fuentes sin ficha documental (Junta): ahí no hay nada que revisar. */ publicaAdjuntos = true,",
           "retorno": "AnalisisDocumental",
-          "linea": 33,
+          "linea": 34,
           "resumen": "Checklist documental. `notasEdicto` son las líneas que el enriquecedor ya extrajo de los documentos de la ficha (`notasDeEdicto`): NULL = documentos aún no procesados; '' = procesados sin hallazgos."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "07992036257d"
+      "hash": "77b9b9f6f26b"
     },
     {
       "ruta": "packages/module-subastas/src/aviso.ts",
@@ -84246,12 +84531,12 @@
           "exportada": true,
           "params": "e: EntradaAviso",
           "retorno": "ResultadoAviso",
-          "linea": 62
+          "linea": 70
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6003f95dd673"
+      "hash": "f64dbd229287"
     },
     {
       "ruta": "packages/module-subastas/src/caducidad.ts",
@@ -84400,7 +84685,10 @@
         "fusionarCargas",
         "consensoCuadros",
         "compararCuadros",
-        "resumirCargas"
+        "resumirCargas",
+        "esDocumentoDeCargas",
+        "estadoCargas",
+        "titularCargas"
       ],
       "funciones": [
         {
@@ -84409,7 +84697,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 126
+          "linea": 127
         },
         {
           "nombre": "normalizarCuadroCargas",
@@ -84417,7 +84705,7 @@
           "exportada": true,
           "params": "bruto: unknown, fuente: FuenteCargas",
           "retorno": "CuadroCargas",
-          "linea": 140,
+          "linea": 141,
           "resumen": "Normaliza el JSON del lector a un `CuadroCargas` de confianza. Defensivo a propósito: un LLM puede devolver un tipo inventado, un importe con formato español, o cargas a medias — nada de eso debe lanz"
         },
         {
@@ -84426,7 +84714,7 @@
           "exportada": true,
           "params": "c: Carga",
           "retorno": "boolean",
-          "linea": 216,
+          "linea": 217,
           "resumen": "¿Esta «carga» es en realidad la fórmula con la que el registro CIERRA la certificación? Caso real (30/07/2026): «SIN MÁS CARGAS, salvo AFECCIONES FISCALES vigentes» entraba en la lista como una carga "
         },
         {
@@ -84435,7 +84723,7 @@
           "exportada": true,
           "params": "cuadro: CuadroCargas, hoy?: Date",
           "retorno": "CargasSubsistentes",
-          "linea": 244,
+          "linea": 245,
           "resumen": "QUÉ HEREDA EL ADJUDICATARIO. Determinista, porque de esto sale la puja máxima. Reglas (LEC): · Ejecución HIPOTECARIA directa: la hipoteca que se ejecuta se cancela y las cargas POSTERIORES se purgan ("
         },
         {
@@ -84444,7 +84732,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 348
+          "linea": 349
         },
         {
           "nombre": "mismoAcreedorQueEjecutante",
@@ -84452,7 +84740,7 @@
           "exportada": true,
           "params": "cargas: Carga[], ejecutante: string | null | undefined",
           "retorno": "boolean",
-          "linea": 366,
+          "linea": 367,
           "resumen": "¿El ejecutante es también el acreedor de una carga ANTERIOR que subsiste? Es el matiz que decide si el caso «hipoteca anterior en embargo» es una ruina o solo un trámite: cuando coinciden, el crédito "
         },
         {
@@ -84461,7 +84749,7 @@
           "exportada": true,
           "params": "c: Carga",
           "retorno": "string | null",
-          "linea": 385,
+          "linea": 386,
           "resumen": "Letra con la que el registro identifica una anotación preventiva («anotación letra C»). Es el identificador REGISTRAL del asiento: no cambia de un documento a otro, a diferencia del importe, que cada "
         },
         {
@@ -84470,7 +84758,7 @@
           "exportada": false,
           "params": "s: string | null",
           "retorno": null,
-          "linea": 390
+          "linea": 391
         },
         {
           "nombre": "identidadCarga",
@@ -84478,7 +84766,7 @@
           "exportada": true,
           "params": "c: Carga",
           "retorno": "string",
-          "linea": 397,
+          "linea": 398,
           "resumen": "Identidad del ASIENTO, para reconocer la misma carga leída en documentos distintos. Por orden de fiabilidad: la letra de la anotación, la fecha con el titular y, si no hay nada de eso, la firma antigu"
         },
         {
@@ -84487,7 +84775,7 @@
           "exportada": false,
           "params": "a: RangoCarga, b: RangoCarga",
           "retorno": "RangoCarga",
-          "linea": 406,
+          "linea": 407,
           "resumen": "El rango que MÁS cuesta de los dos: subsistir es más caro que purgarse."
         },
         {
@@ -84496,7 +84784,7 @@
           "exportada": true,
           "params": "cargas: Carga[]",
           "retorno": "",
-          "linea": 427,
+          "linea": 428,
           "resumen": "Fusiona las cargas leídas en VARIOS documentos de la misma finca (edicto, certificación, informe de valoración…) dejando UNA fila por asiento. 🚨 El caso que la motiva (30/07/2026): la certificación c"
         },
         {
@@ -84505,7 +84793,7 @@
           "exportada": false,
           "params": "c: Carga",
           "retorno": "string",
-          "linea": 465
+          "linea": 466
         },
         {
           "nombre": "emparejarLecturas",
@@ -84513,7 +84801,7 @@
           "exportada": false,
           "params": "a: Carga[], b: Carga[]",
           "retorno": "Map<Carga, Carga>",
-          "linea": 477,
+          "linea": 478,
           "resumen": "Empareja las cargas de dos lecturas del MISMO documento. Primero por identidad registral (la letra de la anotación, la fecha…) y solo después, entre las que quedan sueltas, por tipo+rango — que es lo "
         },
         {
@@ -84522,7 +84810,7 @@
           "exportada": true,
           "params": "a: CuadroCargas, b: CuadroCargas",
           "retorno": "",
-          "linea": 506,
+          "linea": 507,
           "resumen": "Consenso entre DOS lecturas independientes del mismo documento. Alberto pidió que la IA extraiga las cifras; esta es la red que evita que un dígito mal leído se propague a una puja. Se emparejan las c"
         },
         {
@@ -84531,7 +84819,7 @@
           "exportada": true,
           "params": "anterior: CuadroCargas, nuevo: CuadroCargas",
           "retorno": "CambioCargas[]",
-          "linea": 576,
+          "linea": 577,
           "resumen": "Compara el cuadro que se leyó de la certificación del BOE con uno NUEVO (una nota simple recién pedida al registro, por ejemplo). Hace falta porque la certificación que el juzgado adjunta a la ficha s"
         },
         {
@@ -84540,13 +84828,39 @@
           "exportada": true,
           "params": "cuadro: CuadroCargas, subsistentes: CargasSubsistentes",
           "retorno": "string",
-          "linea": 626,
+          "linea": 627,
           "resumen": "Resumen legible del cuadro para la ficha y el aviso de Telegram."
+        },
+        {
+          "nombre": "esDocumentoDeCargas",
+          "kind": "function",
+          "exportada": true,
+          "params": "titulo: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 694,
+          "resumen": "¿El título de un adjunto de la ficha promete el cuadro de cargas? Los juzgados titulan a mano y con erratas: en el corpus vivo conviven «CERTIFICACIÓN DE CARGAS», «CERTIFICCION DE DOMINOS Y CARGAS», «"
+        },
+        {
+          "nombre": "estadoCargas",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaEstadoCargas",
+          "retorno": "",
+          "linea": 743,
+          "resumen": "Estado de las cargas + el documento que hay que abrir, si lo hay. Conservador por diseño: `cargas > 0` manda sobre todo lo demás (si alguna vez hubo una lectura con cargas, no se degrada a «no se sabe"
+        },
+        {
+          "nombre": "titularCargas",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaEstadoCargas",
+          "retorno": "TitularCargas",
+          "linea": 780
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9f8cac615857"
+      "hash": "52936a76d667"
     },
     {
       "ruta": "packages/module-subastas/src/catastro.ts",
@@ -87072,8 +87386,8 @@
           "exportada": true,
           "params": "t: Tesis, precioDespues: number",
           "retorno": "Resultado",
-          "linea": 6,
-          "resumen": "Puntúa una tesis contra un precio POSTERIOR (walk-forward: precioDespues es de después de precioRef)."
+          "linea": 12,
+          "resumen": "Puntúa una tesis contra un precio POSTERIOR (walk-forward: precioDespues es de después de precioRef). `retorno` es el retorno de SEGUIR la tesis, no el movimiento bruto del precio: una bajista que aci"
         },
         {
           "nombre": "ajustesDeStats",
@@ -87081,7 +87395,7 @@
           "exportada": true,
           "params": "stats: Record<string, StatsEstrategia>, minN = 20",
           "retorno": "Record<string, number>",
-          "linea": 22,
+          "linea": 29,
           "resumen": "Traduce el rendimiento histórico por estrategia en un DELTA de confianza (el bucle de aprendizaje). Guarda de muestra: por debajo de `minN` resultados NO ajusta (no aprender de ruido, como el Director"
         },
         {
@@ -87090,12 +87404,12 @@
           "exportada": true,
           "params": "resultados: Resultado[]",
           "retorno": "Record<string, StatsEstrategia>",
-          "linea": 34
+          "linea": 41
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f04e48728d07"
+      "hash": "a409d59e57dd"
     },
     {
       "ruta": "packages/module-trading/src/screener.ts",
@@ -87683,7 +87997,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2367,
-    "funciones": 6310
+    "archivos": 2372,
+    "funciones": 6337
   }
 }

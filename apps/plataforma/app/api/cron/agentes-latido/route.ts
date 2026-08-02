@@ -40,6 +40,19 @@ const PROBES: Record<string, Prisma.Sql> = {
   facturas_gmail: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'facturas_gmail'`,
+  // Eventos: NO se puede vigilar `pricing_eventos_auto.updated_at` — esa tabla solo crece cuando
+  // aparece un evento NUEVO, así que una semana sin conciertos anunciados sería indistinguible de
+  // los dos crons muertos (que es como estuvieron junio y julio de 2026 sin que nadie lo viera).
+  // La huella es la de la PASADA: el cron la escribe corra o no corra el descubrimiento.
+  sivra_eventos: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'sivra_eventos'`,
+  sivra_mercado_sweep: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'sivra_mercado_sweep'`,
+  sivra_pricing_guard: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'sivra_pricing_guard'`,
 }
 
 async function handler(req: NextRequest) {
@@ -54,7 +67,13 @@ async function handler(req: NextRequest) {
 
   for (const ag of AGENTES_VIGILADOS) {
     const probe = PROBES[ag.id]
-    if (!probe) continue
+    if (!probe) {
+      // Un agente declarado en AGENTES_VIGILADOS sin sonda NO se salta en silencio: eso sería un
+      // vigilante que no vigila y que además nadie echa de menos. Va al bloque de «sin poder
+      // comprobar», que el Telegram muestra aparte de las alertas.
+      sondasRotas.push(`${ag.etiqueta}: declarado como vigilado pero sin sonda en PROBES`)
+      continue
+    }
     try {
       const rows = await prisma.$queryRaw<
         Array<{ ultimo: Date | null; ultimo_intento?: Date | null; detalle?: string | null }>

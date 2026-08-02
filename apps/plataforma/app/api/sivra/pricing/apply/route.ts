@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
 import { eventFactor, seasonalFloorFactor, PRICING_HORIZON_DAYS, EVENTS } from "@/lib/pricing-calendar"
+import { combinarEventosDeFecha, type EventoBruto } from "@/lib/sivra/eventos-estado"
 import { factorLastMinute } from "@/lib/sivra/pricing-lastminute"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { getSmoobuKey } from "@/lib/smoobu"
@@ -155,11 +156,38 @@ export async function POST(req: NextRequest) {
   const end = new Date(today); end.setDate(end.getDate() + days)
   const startDate = fmt(today), endDate = fmt(end)
 
-  const autoEvRows = await prisma.$queryRaw<{ rate_date: string; factor: number }[]>(Prisma.sql`
-    SELECT rate_date::text AS rate_date, MAX(factor)::float8 AS factor
-    FROM pricing_eventos_auto WHERE rate_date >= CURRENT_DATE GROUP BY rate_date
-  `).catch(() => [])
-  const autoEv = new Map(autoEvRows.map(r => [r.rate_date, Number(r.factor)]))
+  // Eventos descubiertos (Ticketmaster / búsqueda web / prensa / mano de Alberto). Se traen SIN
+  // agregar por fecha porque el efecto depende del `estado` de cada fila: un 'previsto' —una noticia
+  // de prensa sobre algo que aún no tiene entradas— protege el suelo pero NO mueve el precio. Un
+  // MAX(factor) plano mezclaría las dos cosas y una previsión inflaría el precio objetivo. Toda esa
+  // lógica vive en el helper puro `lib/sivra/eventos-estado.ts`.
+  //
+  // 🚨 El `.catch()` NO devuelve un mapa vacío y ya está. Un fallo de esta consulta significaría
+  // tarificar la Feria como un martes de febrero, y hasta el 01/08/2026 eso pasaba respondiendo
+  // `ok:true` sin una palabra. Ahora se marca y sale en la respuesta y en el aviso.
+  let eventosIlegibles = false
+  const autoEvRows = await prisma.$queryRaw<{
+    rate_date: string; factor: number; estado: string | null; confianza: number | null
+  }[]>(Prisma.sql`
+    SELECT rate_date::text AS rate_date, factor::float8 AS factor, estado, confianza::float8 AS confianza
+    FROM pricing_eventos_auto WHERE rate_date >= CURRENT_DATE
+  `).catch(() => { eventosIlegibles = true; return [] })
+
+  const porFecha = new Map<string, EventoBruto[]>()
+  for (const r of autoEvRows) {
+    const lista = porFecha.get(r.rate_date) ?? []
+    lista.push({ estado: r.estado, factor: Number(r.factor), confianza: r.confianza })
+    porFecha.set(r.rate_date, lista)
+  }
+  /** factor que puede mover el PRECIO: solo eventos confirmados */
+  const autoEv = new Map<string, number>()
+  /** factor que protege el SUELO: confirmados + la parte prudente de los previstos */
+  const autoEvSuelo = new Map<string, number>()
+  for (const [fecha, lista] of porFecha) {
+    const ef = combinarEventosDeFecha(lista)
+    if (ef.factorPrecio > 1) autoEv.set(fecha, ef.factorPrecio)
+    if (ef.factorSuelo > 1) autoEvSuelo.set(fecha, ef.factorSuelo)
+  }
 
   // Señal de demanda por vuelos a SVQ (Fase 3). Solo influye si flight_demand_k>0 por piso.
   const flightRows = await prisma.$queryRaw<{ rate_date: string; demand_index: number }[]>(Prisma.sql`
@@ -184,29 +212,61 @@ export async function POST(req: NextRequest) {
   // OJO: SQL dentro de un template literal de TS — aqui NO se pueden usar backticks ni $ { }.
   // ─── Antelación REAL de venta de cada piso (01/08/2026) ──────────────────────────────────
   // Es la referencia de la palanca de urgencia: cuándo se vende de verdad cada piso. NO se
-  // configura a ojo, se MIDE. `incomes` no sirve —el createdAt de las reservas viejas es la fecha
-  // de la importación masiva, no la de la reserva—, pero `rate_snapshots` sí: llevamos una foto
-  // diaria de la disponibilidad, y cada transición de libre a ocupado entre dos snapshots es una
-  // reserva entrando, con su antelación exacta.
+  // configura a ojo, se MIDE — y se mide POR PISO Y POR MES DE ENTRADA, no en global.
   //
-  // Medido el 01/08/2026: Busto 108 días · Luxury 57 · House 32 · Dúplex 7. Esa dispersión es la
-  // razón de que un umbral único no sirva: a 60 días vista Busto va tardísimo y Dúplex ni ha
-  // empezado su ventana de venta.
+  // 🚨 Corregido el 01/08/2026, el mismo día que se estrenó. La primera versión sacaba una mediana
+  // GLOBAL por piso de `rate_snapshots` (transiciones de libre a ocupado). El problema es que esa
+  // mediana mezcla todo el calendario, y Semana Santa y Feria —que se reservan con medio año de
+  // antelación— la disparan. Contra el histórico REAL de Smoobu (`incomes.reserved_at`, el campo
+  // created-at de su API) la diferencia resultó ser de un orden de magnitud en el mes que importaba:
+  //
+  //     piso              global (snapshots)   octubre 2024   octubre 2025
+  //     Busto Reform            108 días            13              3
+  //     Luxury Busto             57                 17             11
+  //     House Sevillana          32                 24             39
+  //     Duplex Center             7                 11             11
+  //
+  // Con la global, Busto habría empezado a descontar el precio de octubre tres meses antes de que
+  // octubre se venda — regalando margen en el mejor mes del año por una urgencia inventada.
+  //
+  // Fuente: `incomes.reserved_at`, que es la fecha REAL de la reserva. `createdAt` NO sirve (en el
+  // histórico es la fecha de la importación masiva) y `rate_snapshots` solo cubre desde mayo-2026,
+  // así que no tiene un octubre entero que enseñar. Se agrupa por MES DEL AÑO (no por año concreto)
+  // para juntar octubres de varios años y llegar a muestra.
+  //
+  // 🚨 Y se respeta `pricing_settings.historico_desde`: un piso puede haber cambiado de PRODUCTO, y
+  // entonces su histórico anterior no lo describe. House Sevillana estuvo alquilada como dos pisos
+  // independientes hasta 2024, cuando pasó a casa entera de 12 plazas — el ADR salta de 166€ a 473€.
+  // Sin este filtro, la mediana de octubre de House salía de 51 reservas de las que 30 eran de
+  // cuando era otro negocio. Es el mismo veneno que ya hizo proponer bajarle el precio a 285€.
   // OJO: SQL dentro de un template literal de TS — aqui NO se pueden usar backticks ni $ { }.
-  const antelacionRows = await prisma.$queryRaw<{ property_id: string; mediana: number; muestra: number }[]>(Prisma.sql`
-    WITH s AS (
-      SELECT property_id, rate_date, snapshot_date, available,
-             LAG(available) OVER (PARTITION BY property_id, rate_date ORDER BY snapshot_date) AS prev
-      FROM rate_snapshots
-    )
-    SELECT property_id,
-           percentile_cont(0.5) WITHIN GROUP (ORDER BY (rate_date - snapshot_date))::int AS mediana,
+  const antelacionRows = await prisma.$queryRaw<{
+    property_id: string; mes: number; mediana: number; muestra: number
+  }[]>(Prisma.sql`
+    SELECT i."propertyId" AS property_id,
+           EXTRACT(MONTH FROM i."checkIn")::int AS mes,
+           percentile_cont(0.5) WITHIN GROUP (
+             ORDER BY (i."checkIn"::date - i.reserved_at::date)
+           )::int AS mediana,
            COUNT(*)::int AS muestra
-    FROM s
-    WHERE prev = 1 AND available = 0 AND rate_date >= snapshot_date
-    GROUP BY property_id
+    FROM incomes i
+    LEFT JOIN pricing_settings ps ON ps.property_id = i."propertyId"
+    WHERE i.reserved_at IS NOT NULL
+      AND i."checkIn" IS NOT NULL
+      AND i."checkIn"::date >= i.reserved_at::date
+      AND (ps.historico_desde IS NULL OR i."checkIn"::date >= ps.historico_desde)
+    GROUP BY 1, 2
   `).catch(() => [])
-  const antelacion = new Map(antelacionRows.map(a => [a.property_id, { mediana: Number(a.mediana), muestra: Number(a.muestra) }]))
+  const antelacion = new Map(
+    antelacionRows.map(a => [
+      `${a.property_id}|${a.mes}`,
+      { mediana: Number(a.mediana), muestra: Number(a.muestra) },
+    ]),
+  )
+  /** Antelación del piso para el MES de esa fecha. Sin datos de ese mes devuelve null: la palanca
+   *  se queda quieta, que es lo correcto — una urgencia inventada cuesta margen real. */
+  const antelacionDe = (propertyId: string, fechaIso: string) =>
+    antelacion.get(`${propertyId}|${Number(fechaIso.slice(5, 7))}`) ?? null
 
   const MIN_BUCKET = 3
   const MIN_FECHAS_MES = 3
@@ -520,7 +580,9 @@ export async function POST(req: NextRequest) {
       // que viene después —el raíl de ±%/día, el suelo de coste, el estacional y el techo— sigue
       // mandando. Inerte con lastminute_k=0 y en las noches de evento. La referencia de "cuándo
       // toca" es la antelación MEDIDA del piso, no un umbral inventado (ver pricing-lastminute.ts).
-      const ant = antelacion.get(r.property_id)
+      // Antelación del piso PARA EL MES de esta fecha (ver el bloque de la consulta, arriba): la
+      // global mezclaba Feria con noviembre y disparaba la urgencia meses antes de tiempo.
+      const ant = antelacionDe(r.property_id, date)
       const lm = factorLastMinute(
         {
           diasVista: daysOut,
@@ -548,7 +610,14 @@ export async function POST(req: NextRequest) {
         // El suelo mira los eventos de AMBAS fuentes (calendario + `pricing_eventos_auto`), igual que
         // el precio: si no, un evento que solo conoce la tabla (Karol G) subía el objetivo pero dejaba
         // el suelo de un día normal.
-        const evParaSuelo = r.events_enabled ? (autoEv.get(date) ?? 1) : 1
+        //
+        // Y usa `autoEvSuelo`, no `autoEv`: aquí SÍ entran los eventos PREVISTOS (los que la prensa da
+        // por hechos pero aún no tienen entradas — la final de Copa, un congreso recién anunciado).
+        // Es la única puerta por la que se les deja pasar, y es deliberado: proteger el suelo de una
+        // fecha que al final no era nada cuesta unas noches sin vender baratas; NO protegerla y que sí
+        // fuera la final significa haberla vendido a precio de sábado corriente, y eso no se recupera.
+        // El razonamiento completo está en `lib/sivra/eventos-estado.ts`.
+        const evParaSuelo = r.events_enabled ? (autoEvSuelo.get(date) ?? 1) : 1
         const factor = 1 + (seasonalFloorFactor(date, evParaSuelo) - 1) * Number(r.seasonal_floor_k)
         let sf = Math.round(r.min_price * factor)
         if (r.max_price != null) sf = Math.min(sf, r.max_price)
@@ -649,10 +718,15 @@ export async function POST(req: NextRequest) {
       meses_con_mercado: mesProp ? [...mesProp.entries()].filter(([, v]) => v.n >= MIN_BUCKET && v.fechas >= MIN_FECHAS_MES).map(([k]) => k) : [],
       meses_calientes: [...(velocidad.get(r.property_id)?.entries() ?? [])].filter(([, n]) => n >= 2).map(([k, n]) => `${k}:${n}`),
       bounds: { floor_base: floorBaseGlobal, ceil_base: ceilBaseGlobal, min: r.min_price, max: r.max_price },
-      // Antelación MEDIDA del piso: sin ella la palanca de urgencia queda inerte, así que conviene
-      // que salga en la auditoría para poder distinguir "no hacía falta bajar" de "no lo sé".
-      antelacion_mediana: antelacion.get(r.property_id)?.mediana ?? null,
-      antelacion_muestra: antelacion.get(r.property_id)?.muestra ?? 0,
+      // Antelación MEDIDA del piso POR MES (mes → días de mediana). Sin ella la palanca de urgencia
+      // queda inerte, así que conviene verla para distinguir «no hacía falta bajar» de «no lo sé».
+      // Va por mes y no en un solo número porque ahí estaba el fallo que se corrigió el 01/08/2026:
+      // la mediana global de Busto sale 108 días y la de su octubre, 3.
+      antelacion_por_mes: Object.fromEntries(
+        antelacionRows
+          .filter(a => a.property_id === r.property_id)
+          .map(a => [a.mes, { mediana: Number(a.mediana), muestra: Number(a.muestra) }]),
+      ),
       lastminute_k: Number(r.lastminute_k),
       dates_con_cambio: ops.length, written, sample: audit.slice(0, 3),
     })
@@ -668,5 +742,25 @@ export async function POST(req: NextRequest) {
     } catch { /* no crítico */ }
   }
 
-  return NextResponse.json({ ok: true, dryRun, paused, days, properties: recs.length, results, pl_avisos: plAvisos.length })
+  // 🚨 Si no se pudieron leer los eventos, esta pasada tarificó Semana Santa como un martes de
+  // febrero. Hasta el 01/08/2026 eso salía como `ok:true` y nadie se enteraba nunca: el `.catch`
+  // devolvía un mapa vacío, que es indistinguible de «no hay eventos». Ahora la pasada se declara
+  // degradada Y avisa, porque es de las averías más caras que puede tener el motor.
+  if (eventosIlegibles) {
+    try {
+      await tgSend(
+        "🚨 *Pricing: la tabla de eventos no se pudo leer*\n\n" +
+        "La pasada ha tarificado SIN eventos: si hay Feria, Semana Santa o un concierto grande en la " +
+        "ventana, esas noches se han calculado como días normales. Los precios aplicados en esta " +
+        "pasada NO son de fiar para fechas de evento.\n\n" +
+        "Revisa `pricing_eventos_auto` en Supabase y vuelve a lanzar el motor.",
+      )
+    } catch { /* el aviso es best-effort; el flag de la respuesta manda */ }
+  }
+
+  return NextResponse.json({
+    ok: !eventosIlegibles,
+    degradado: eventosIlegibles ? "pricing_eventos_auto ilegible: tarificado SIN eventos" : undefined,
+    dryRun, paused, days, properties: recs.length, results, pl_avisos: plAvisos.length,
+  })
 }

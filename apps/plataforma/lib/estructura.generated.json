@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-01T09:41:33Z",
+  "generadoEn": "2026-08-02T02:33:54Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -641,7 +641,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 33
+        "evidencias": 34
       },
       "rrhh": {
         "estado": "usado",
@@ -3298,6 +3298,7 @@
       "/api/sivra/fiscal",
       "/api/sivra/income",
       "/api/sivra/incomes",
+      "/api/sivra/incomes/backfill-reserved-at",
       "/api/sivra/inversion",
       "/api/sivra/inversion/analyze",
       "/api/sivra/limpiadoras/alerta-ventana",
@@ -3968,6 +3969,22 @@
   ],
   "novedades": [
     {
+      "titulo": "🛡️ Auditoría PROFUNDA semanal (02/08/2026).",
+      "fecha": "02/08/2026"
+    },
+    {
+      "titulo": "📂 RRHH: categoría «Documentación mensual» en documentos de empresa (01/08/2026, rama `claude/programa-rrhh-m25fwd`).",
+      "fecha": "01/08/2026"
+    },
+    {
+      "titulo": "⏰ Subasta vencida seguía en «🎯 Mi radar» (01/08/2026, rama `claude/expired-auction-visible-eoow4t`).",
+      "fecha": "01/08/2026"
+    },
+    {
+      "titulo": "📈 Trading: el panel de estrategias por fin discrimina + limpieza de huérfanas (01/08/2026).",
+      "fecha": "01/08/2026"
+    },
+    {
       "titulo": "🗓️ Rotación mensual: julio archivado (01/08/2026).",
       "fecha": "01/08/2026"
     }
@@ -4335,7 +4352,7 @@
     "packages": 36,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1153,
+    "apis": 1154,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
