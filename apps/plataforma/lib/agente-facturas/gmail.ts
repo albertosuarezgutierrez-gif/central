@@ -32,6 +32,13 @@ export interface ListadoCandidatos {
   correos: CorreoCandidato[]
   /** `true` = el listado se cortó por presupuesto de tiempo: NO se ha visto el buzón entero. */
   truncado: boolean
+  /**
+   * Buzón del que salieron estos UID. 🚨 Los UID de IMAP son **por buzón**: marcar o
+   * etiquetar un mensaje contra un buzón distinto del que lo listó no encuentra nada
+   * y **no lanza error** — la operación se pierde en silencio. Quien vaya a tocar
+   * estos correos después tiene que decir de dónde salieron.
+   */
+  buzon: string
 }
 
 // Lista correos candidatos a factura desde `desde` (Date). Si `etiqueta` existe
@@ -48,9 +55,9 @@ export async function listarCandidatosConLimite(
   const client = nuevoCliente()
   const out: CorreoCandidato[] = []
   let truncado = false
+  let buzon = 'INBOX'
   await client.connect()
   try {
-    let buzon = 'INBOX'
     if (opts.etiqueta) {
       try {
         const boxes = await client.list()
@@ -85,7 +92,7 @@ export async function listarCandidatosConLimite(
   } finally {
     await client.logout().catch(() => {})
   }
-  return { correos: out, truncado }
+  return { correos: out, truncado, buzon }
 }
 
 /** Variante sin presupuesto (compatibilidad con los llamadores que no lo acotan). */
@@ -99,12 +106,16 @@ export async function listarCandidatos(opts: { desde: Date; etiqueta?: string })
  * al contenedor, así que un fallo de extracción deja rastro consultable en el buzón
  * en vez de evaporarse (el mismo patrón que `Facturas/PDF-pendiente` de la skill).
  * Best-effort: si la etiqueta no existe o IMAP falla, no rompe la pasada.
+ *
+ * `buzon` DEBE ser el que devolvió el listado (`ListadoCandidatos.buzon`): los UID
+ * son por buzón, así que con el buzón equivocado esta llamada no encuentra el
+ * mensaje y la cola se queda vacía sin que nada falle.
  */
-export async function etiquetarCorreo(uid: number, etiqueta: string): Promise<void> {
+export async function etiquetarCorreo(uid: number, etiqueta: string, buzon = 'INBOX'): Promise<void> {
   const client = nuevoCliente()
   await client.connect()
   try {
-    const lock = await client.getMailboxLock('INBOX')
+    const lock = await client.getMailboxLock(buzon)
     try {
       await client.messageCopy({ uid: String(uid) }, etiqueta, { uid: true }).catch(() => {})
     } finally {
@@ -116,11 +127,18 @@ export async function etiquetarCorreo(uid: number, etiqueta: string): Promise<vo
 }
 
 // Marca un correo como procesado: keyword IMAP + copia a la etiqueta si existe.
-export async function marcarProcesado(uid: number, etiqueta = 'Facturas/Procesada'): Promise<void> {
+// `buzon` = el que devolvió el listado (ver `etiquetarCorreo`): con el buzón
+// equivocado ni el flag ni la copia encuentran el mensaje, y ninguna de las dos
+// operaciones lanza — el correo se reprocesaría cada día en silencio.
+export async function marcarProcesado(
+  uid: number,
+  etiqueta = 'Facturas/Procesada',
+  buzon = 'INBOX',
+): Promise<void> {
   const client = nuevoCliente()
   await client.connect()
   try {
-    const lock = await client.getMailboxLock('INBOX')
+    const lock = await client.getMailboxLock(buzon)
     try {
       await client.messageFlagsAdd({ uid: String(uid) }, ['\\Seen', '$Procesada'], { uid: true }).catch(() => {})
       await client.messageCopy({ uid: String(uid) }, etiqueta, { uid: true }).catch(() => {})
