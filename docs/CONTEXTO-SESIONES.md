@@ -32,6 +32,16 @@
   46→12 vulns, 0 críticas. Pendiente opcional de Alberto: ampliar acceso del conector a los 4 proyectos;
   valorar nodemailer 8→9 y fast-xml-parser 4→5 con smoke test. Informe actualizado en `docs/AUDITORIA-2026-08.md`.
 
+- **🧾 Cuota de la Seguridad Social (RETA) de julio salía ❌ NO DEDUCIBLE (01/08/2026, rama
+  `claude/seguridad-social-deducibilidad-kgmyjq`).** Alberto preguntó por el cargo de BBVA de 388,95€.
+  **Causa:** regla aprendida **`CUOTA → personal`** en `banca_destino_reglas` (18/07/2026, seguramente de
+  la hipoteca «CUOTA PTMO» o la cuota de comunidad). Las reglas se aplican por SUBSTRING y con PRIORIDAD
+  sobre `lib/destino.ts`, que ya manda la RETA de BBVA a `seguros`+`cuota_autonomos` (deducible, Art.
+  30.2.1ª LIRPF) — 3er caso del landmine "TRANSF" (PR #840). **Fix:** `CUOTA/CUOTAS/IMPUESTO(S)/COTIZACION/
+  PTMO/PRESTAMO` a `CLAVE_GENERICA` + los tokens de ≤3 letras (DE, LA…) dejan de valer como "específicos"
+  en `claveReglaValida`; SQL `2026-08-01_fix_regla_cuota_generica.sql` (aplicado: regla borrada, movimiento
+  a `seguros`). Tests 29/29.
+
 - **🛡️ Auditoría PROFUNDA semanal (02/08/2026).** `auditoria-central` entera: lockfile OK, radiografía OK,
   guardián 26/26, typecheck limpio en las 8 apps (7 con Prisma + ia-rest), `pnpm test` 0 fallos, heartbeat
   14/14 crons ✅. `pnpm audit` había subido a 46 vulns (**3 críticas**, 17 high) desde las 16 (0 críticas) de
