@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-02T07:43:18Z",
-  "sha": "a36d6565bac7a90cb527a009779d465c77f454e3",
+  "generadoEn": "2026-08-02T07:58:45Z",
+  "sha": "f446a1c18c3f3e4d982225abcbcf29c62aa34ab6",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -50788,7 +50788,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/cron/concursos-ingesta",
-      "hash": "2b7a33e4a33f"
+      "hash": "47c94b25a9b0"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/concursos-radar/route.ts",
@@ -50812,7 +50812,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/concursos-radar",
-      "hash": "d38b4a91e321"
+      "hash": "0140009f7dfd"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/contable-proactivo/route.ts",
@@ -50972,7 +50972,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/facturas-conciliar-gmail",
-      "hash": "c5e45961adee"
+      "hash": "c136b6665148"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/facturas-resumen-semanal/route.ts",
