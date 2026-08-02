@@ -13,6 +13,16 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-08-02 (2ª pasada — revisión pedida por Alberto)** · rama `claude/revision-conversaciones-memorias-9hq32s` ·
+  4 reconciliaciones de texto: **(1)** `.claude/skills/buscador-ia/SKILL.md` + `docs/BUSCADOR-IA.md` — la cadena
+  seguía pintando Gemini como eslabón vivo y con id `gemini-2.5-flash`; el código manda: apagado por defecto
+  (gates `GEMINI_TEXTO=1`/`GEMINI_WEBSEARCH=1`, PR #1220) y alias `gemini-flash-latest`. **(2)**
+  `.claude/skills/facturas-correo/SKILL.md` — añadida la etiqueta `Facturas/Extraccion-fallida` y la regla
+  «fallo técnico ≠ no era factura» del PR #1219. **(3)** `docs/CONTEXTO-SESIONES.md` — borrada la entrada `###`
+  del 31/07 duplicada (ya archivada a mano en `docs/memoria/2026-07.md`; su «a revisar» quedó verificado hoy).
+  **(4)** `.claude/commands/auditoria-diaria.md` — umbral heartbeat de `psd2-sync` 30→54h: la huella es «hay
+  movimientos nuevos», y un finde sin cargos daba ⛔ con el cron vivo (verificado 200 a las 06:01 en logs Vercel).
+
 - **2026-08-02** · `.claude/skills/auditoria-central/SKILL.md` · corregidos varios datos stale del
   intro y checklist: contador de apps (4→8, incluye rrhh/transporte/alquiler/almacen), contador de
   packages (16→38), apps con Prisma para typecheck (6→7, faltaba almacen), y la afirmación de que
