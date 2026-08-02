@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔎 Revisión mensual ia.rest Tech & Stack (02/08/2026, sesión de investigación).** Resultado: TODO
+  verde, sin acciones. Groq `whisper-large-v3-turbo` vivo ($0.04/h, es el destino de migración de
+  distil-whisper); NIM sin retiradas que nos toquen; Supabase ambos proyectos ya en PG17 (EOL PG14 no
+  aplica); Next.js con programa de seguridad MENSUAL desde julio (9 CVEs parcheados 21/07, cubiertos por
+  `^16.2.12` + install sin lockfile congelado). ASR premium (AssemblyAI Universal-3.5, 4.9% WER
+  multilingüe) mejora a Whisper pero a ~9× el precio → seguir con Groq salvo quejas reales. OJO: el
+  prompt del evento de calendario aún dice «Haiku como fallback» — Anthropic se retiró el 17/06; la
+  cadena real es OpenRouter→NIM→Groq→Gemini→Kimi. Conviene actualizar el texto del evento.
+
 - **⏱️ Crons con timeout 60s → 300s (02/08/2026, rama `claude/audit-30-07-hv2njr`).** Cierre del hallazgo
   del check-in post-dispatcher (PR #1165): 5 crons morían por «Task timed out after 60 seconds» (504,
   logs Vercel 3 días: `concursos-ingesta` ×12 — TODAS sus pasadas —, `concursos-radar` ×3,
