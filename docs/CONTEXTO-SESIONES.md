@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 💹 MCP Financial Datasets evaluado — decisión: NO contratar (02/08/2026)
+Alberto conectó el MCP `Datos_financieros` (financialdatasets.ai) y pidió valorarlo para trading.
+Probado en sesión: la cuenta va por créditos y está a $0 — TODO endpoint de datos (hasta precio AAPL)
+responde «add more credits»; solo el catálogo del screener es gratis (trae FCF yield/ROIC/PEG + insiders/
+institucionales/guidance). Decisión de Alberto: no gastar — precios ya los da IBKR gratis, fundamentales
+los cubre el parser EDGAR propio (endurecido tras PR #1189), y lo nuevo (insiders/guidance) es CONTEXTO
+nunca filtro por preregistro. Reconsiderar solo si EDGAR vuelve a fallar (~49$/mes vs mantenimiento) o
+si se activa el tramo gratis 100 req/día (entonces: contexto en la pasada diaria, coste cero). Sin código.
+
 ### 🔍 Revisión de memorias/skills/agentes (02/08/2026, pedida por Alberto)
 Reconciliación post-auditorías de hoy. Heartbeat 14/14 en verde REAL: el ⛔ de `psd2-sync` (31h) era falsa
 alarma de finde — cron 200 a las 06:01 en logs Vercel; umbral 30→54h en `auditoria-diaria.md`. Drift corregido
