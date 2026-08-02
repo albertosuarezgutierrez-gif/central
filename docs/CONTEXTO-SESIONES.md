@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔌 Gemini FUERA de todas las cadenas por defecto — «usa OpenRouter» (02/08/2026, rama
+  `claude/gemini-quota-fallback-issue-fyhghm`).** El Check 12 seguía rojo (544 llamadas/30d, 0 éxitos, 429
+  de cuota). Tras el corte de websearch del 01/08 quedaban 2 vías vivas: el eslabón Gemini de `aiComplete`
+  (`core-ai/client.ts`) y el último intento de `lib/pasarela.ts` — ambas gateadas tras **`GEMINI_TEXTO=1`**
+  (apagadas sin la env), + el fallback directo de `callAISearch` de ia-rest tras `GEMINI_WEBSEARCH=1`.
+  El Check 12 ahora exige llamada en <3 días (sin eso repetiría 30 días la alerta de un problema ya
+  resuelto). Embeddings de la caché semántica siguen con la key (best-effort). Nada que poner en Vercel:
+  el default apagado ES el estado deseado. Pendiente: si algún día hay key con cuota, activar los 2 gates.
+
 - **🧾 Cuota de la Seguridad Social (RETA) de julio salía ❌ NO DEDUCIBLE (01/08/2026, rama
   `claude/seguridad-social-deducibilidad-kgmyjq`).** Alberto preguntó por el cargo de BBVA de 388,95€.
   **Causa:** regla aprendida **`CUOTA → personal`** en `banca_destino_reglas` (18/07/2026, seguramente de

@@ -268,6 +268,13 @@ export async function GET(req: NextRequest) {
     // llamadas por semana (los crons que lo usan son diarios, no de tráfico), así que jamás habría
     // llegado a 20 y el check habría dado verde mientras el proveedor llevaba mes y medio muerto.
     // Un vigilante que no puede disparar es peor que no tenerlo, porque tranquiliza.
+    //
+    // ⚠️ Además el proveedor tiene que seguir RECIBIENDO llamadas (última < 3 días): la alerta
+    // denuncia un peaje que se sigue pagando. Cuando el eslabón ya se desenchufó del código (caso
+    // Gemini, 02/08/2026) las filas rojas históricas permanecen 30 días en la ventana y sin esta
+    // condición el check repetiría la misma alerta cada día sobre un problema ya resuelto — ruido
+    // que entrena a ignorar el canal. Un proveedor muerto con cadencia semanal sigue disparando:
+    // cada pasada suya renueva los 3 días.
     const proveedoresMuertos = await prisma.$queryRaw<
       { proveedor: string; llamadas: bigint; dias: number; ultimo_error: string | null }[]
     >`
@@ -278,7 +285,8 @@ export async function GET(req: NextRequest) {
       FROM ai_usos
       WHERE creada_at > now() - interval '30 days' AND proveedor IS NOT NULL
       GROUP BY proveedor
-      HAVING COUNT(*) >= 10 AND COUNT(*) FILTER (WHERE ok) = 0`
+      HAVING COUNT(*) >= 10 AND COUNT(*) FILTER (WHERE ok) = 0
+         AND MAX(creada_at) > now() - interval '3 days'`
     for (const p of proveedoresMuertos) {
       fallos.push(
         `🔴 IA «${p.proveedor}»: ${Number(p.llamadas)} llamadas en ${p.dias} días distintos y ` +
