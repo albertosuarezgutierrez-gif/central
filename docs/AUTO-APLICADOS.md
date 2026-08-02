@@ -13,6 +13,19 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-08-02** · `.claude/skills/auditoria-central/SKILL.md` · corregidos varios datos stale del
+  intro y checklist: contador de apps (4→8, incluye rrhh/transporte/alquiler/almacen), contador de
+  packages (16→38), apps con Prisma para typecheck (6→7, faltaba almacen), y la afirmación de que
+  ia-rest ya vive en el schema `iarest` de la BD compartida — en realidad sigue en su proyecto
+  Supabase standalone `efncqyvhniaxsirhdxaa`, la migración está diseñada pero pendiente (ya lo
+  documentaba correctamente `ia-rest-maestro`, "Split-brain de BD") · confirmado por MCP Supabase
+  (`information_schema.schemata` del proyecto `efncqyvhniaxsirhdxaa` no tiene schema `iarest`) al
+  ejecutar la auditoría profunda semanal · commit de esta auditoría.
+- **2026-08-02** · `docs/CONTEXTO-SESIONES.md` · entrada nueva resumiendo la auditoría profunda
+  semanal (typecheck/tests/heartbeat OK, 46→12 vulns de `pnpm audit` tras el PR de bumps, drift de
+  doc corregido, hallazgo Vercel sin confirmar) · registro del trabajo de esta pasada · commit de
+  esta auditoría.
+
 - **2026-08-02** · `docs/CONTEXTO-SESIONES.md` · la entrada del latido de facturas seguía diciendo
   «PR #1194 pendiente de merge» — el PR se mergeó el 01/08 a las 07:40 UTC (commit `9f1ba1e`), la
   corrección de la auditoría del 01/08 se perdió porque el merge (mismo minuto, rama vieja) volvió a
