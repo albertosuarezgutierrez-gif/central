@@ -7,7 +7,7 @@ import { isCronAuthorized } from '@/lib/cron-auth'
 import type { CriteriosRadar } from '@central/module-concursos'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 300
 
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
