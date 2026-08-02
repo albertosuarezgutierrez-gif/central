@@ -24,6 +24,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 📬 Los UID de IMAP son POR BUZÓN: el marcado de correos se perdía en silencio (02/08/2026)
+Cerrado **#1201 sin mergear** (decisión de Alberto): nació para contar los correos ilegibles, pero mientras
+estuvo abierto se mergeó **#1219**, que hace lo mismo y mejor (separa fallo técnico de «leído y no era
+factura», cosa que #1201 no hacía). De él se rescata SOLO una pieza que #1219 no traía: `marcarProcesado` y
+`etiquetarCorreo` bloqueaban **INBOX** aunque el listado hubiera leído de `Facturas/Proveedor` → el UID no
+existe ahí, no se encuentra el mensaje y **ninguna de las dos lanza**. Efecto: la cola
+`Facturas/Extraccion-fallida` de #1219 —único sitio donde queda constancia de un ilegible— podía no
+etiquetarse nunca, y un correo ya procesado se reintentaba a diario. `ListadoCandidatos` devuelve ahora su
+`buzon` y ambas funciones lo reciben (default INBOX = sin cambio de comportamiento); mismo arreglo en el
+escaneo de gastos de sivra (`GMAIL_FACTURAS_LABEL`). **Lección:** al listar de un buzón que no es INBOX,
+el buzón forma parte de la identidad del mensaje. Verificado: tsc 0 · 775 tests · build OK.
+
 ### 🧾 Verificado el latido de facturas — y el «0 facturas nuevas» seguía mintiendo un nivel más abajo (02/08/2026)
 La pasada de hoy confirma el fix de #1194: cron **200** (no 504), 81 s (habría muerto con el techo viejo de
 60 s) y `agente_latidos.facturas_gmail` con `ok=true`, sin `pendientes` → sin atasco. Pero los logs
