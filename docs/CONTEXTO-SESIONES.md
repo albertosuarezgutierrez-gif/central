@@ -24,6 +24,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🔎 El «0 comps» del barrido de mercado eran 44 búsquedas VACÍAS (02/08/2026)
+Diagnosticado el `ok=false` de `sivra_mercado_sweep` (lo que la entrada de abajo dejaba para el 09/08).
+No es Serper agotada ni la IA: la consulta con `site:booking.com` devuelve `organic: []` desde finales de
+julio — los 41 prompts que llegaron a la pasarela pesaban 149-278 tokens (el scraper diario, que sí trae
+comps, mueve 576-933). La IA contestaba `{"apartments":[]}` porque no le daban nada. Fix: `serperSearch`
+cuenta resultados y usa `answerBox`/`sitelinks`; `extractPrices` separa «no supe leer» de «leído sin
+precios»; 2ª consulta abierta acotada (`SIVRA_SWEEP_MAX_ABIERTAS`); parte y `ok` desde el helper puro
+`lib/sivra/resumen-sweep.ts` (con guardia `sinSenalDeTemporada`: comps planos en todas las fechas = corpus
+que miente). Verificado: tsc 0 · 788 tests · build OK. **Pendiente: mirar el latido del 03/08 03:00** —
+dirá si la consulta abierta rescata el barrido o si hay que buscar otra fuente de comps por fecha.
+
 ### 🔍 Revisión de memorias/skills/agentes (02/08/2026, pedida por Alberto)
 Reconciliación post-auditorías de hoy. Heartbeat 14/14 en verde REAL: el ⛔ de `psd2-sync` (31h) era falsa
 alarma de finde — cron 200 a las 06:01 en logs Vercel; umbral 30→54h en `auditoria-diaria.md`. Drift corregido

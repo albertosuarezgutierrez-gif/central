@@ -576,6 +576,22 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
   deja de reintentarse solo y se queda en la etiqueta para revisión a mano — no se promete un reintento
   eterno. Al añadir un descarte nuevo en un agente, la pregunta es siempre la misma: ¿esto es «he mirado
   y no hay» o «no he podido mirar»? Si es lo segundo, tiene que contarse y dejar cola.
+- **🚨 «0 comps» del barrido de mercado eran 44 búsquedas VACÍAS (02/08/2026).** Primera pasada vigilada
+  de `sivra_mercado_sweep`: `0 comps en 44 ventanas`, latido en rojo, sin un solo error. No era el mercado
+  ni la IA: **Serper devolvía `organic: []`** para la consulta con el operador `site:booking.com` (los 41
+  prompts que llegaron a la pasarela pesaban 149-278 tokens contando la respuesta, contra los 576-933 del
+  scraper diario `mercado/cron`, que sí trae comps con una consulta abierta). Con la búsqueda vacía la IA
+  responde `{"apartments":[]}` —correctamente— y el `catch { return [] }` de la extracción remataba: un
+  «no he podido mirar» servido como «no hay mercado». Fixes: (a) `serperSearch` devuelve **cuántos
+  resultados** trajo y aprovecha `answerBox`+`sitelinks` como el cron diario; (b) `extractPrices` separa
+  `'sin_leer'` (fallo técnico) de leído-sin-precios; (c) **segunda consulta ABIERTA** (sin `site:`) cuando
+  la primera vuelve vacía, acotada por `SIVRA_SWEEP_MAX_ABIERTAS` (default 20) porque cada intento es una
+  búsqueda de pago; (d) el parte y el `ok` salen del helper PURO **`lib/sivra/resumen-sweep.ts`**
+  (`detalleBarrido`/`barridoFiable`, testeado). ⚠️ **La consulta abierta trae mercado pero puede no
+  distinguir la fecha**, y un corpus plano etiquetado con fechas futuras es una temporada inventada: por
+  eso `sinSenalDeTemporada` marca la pasada como NO fiable si todas las fechas de un aforo acaban con los
+  mismos comps al mismo precio (≥3 fechas). Sin comps propios de la fecha el motor cae al ancla global,
+  que está dominada por las fechas cercanas y más baratas.
 - **🚨 LANDMINE — la huella se escribe DENTRO del trabajo que vigila: si la función muere, no hay
   huella (31/07/2026).** El mismo día de estrenar el vigía saltó «🧾 Escaneo de facturas: sin ninguna
   señal registrada» y la nota mandaba a mirar IMAP/app-password. No era eso: `facturas-scan` corría
