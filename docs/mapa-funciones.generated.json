@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-02T14:18:11Z",
-  "sha": "562a635cc48ae2ff9f8cb38bc996aa8edd731455",
+  "generadoEn": "2026-08-02T15:38:53Z",
+  "sha": "0481360b78ce19dd196a130dcf1b2d9521668417",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -52913,7 +52913,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/expenses/agent/scan",
-      "hash": "f167183e6ae7"
+      "hash": "db024fd31b7b"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/fijos/generar/route.ts",
@@ -56949,7 +56949,7 @@
           "exportada": true,
           "params": "opts: { desde: Date; etiqueta?: string; deadline?: number },",
           "retorno": "Promise<ListadoCandidatos>",
-          "linea": 45,
+          "linea": 52,
           "resumen": "Lista correos candidatos a factura desde `desde` (Date). Si `etiqueta` existe como buzón en Gmail, se usa esa; si no, INBOX. 🚨 `deadline` (epoch ms) acota el listado: bajar y parsear el `source` comp"
         },
         {
@@ -56958,31 +56958,31 @@
           "exportada": true,
           "params": "opts: { desde: Date; etiqueta?: string }",
           "retorno": "Promise<CorreoCandidato[]>",
-          "linea": 92,
+          "linea": 99,
           "resumen": "Variante sin presupuesto (compatibilidad con los llamadores que no lo acotan)."
         },
         {
           "nombre": "etiquetarCorreo",
           "kind": "function",
           "exportada": true,
-          "params": "uid: number, etiqueta: string",
+          "params": "uid: number, etiqueta: string, buzon = 'INBOX'",
           "retorno": "Promise<void>",
-          "linea": 103,
+          "linea": 114,
           "resumen": "Copia el correo a una etiqueta de Gmail SIN marcarlo como visto ni procesado. Se usa para encolar lo que no se pudo leer: la etiqueta sobrevive a la sesión y al contenedor, así que un fallo de extracc"
         },
         {
           "nombre": "marcarProcesado",
           "kind": "function",
           "exportada": true,
-          "params": "uid: number, etiqueta = 'Facturas/Procesada'",
+          "params": "uid: number, etiqueta = 'Facturas/Procesada', buzon = 'INBOX',",
           "retorno": "Promise<void>",
-          "linea": 119,
-          "resumen": "Marca un correo como procesado: keyword IMAP + copia a la etiqueta si existe."
+          "linea": 133,
+          "resumen": "Marca un correo como procesado: keyword IMAP + copia a la etiqueta si existe. `buzon` = el que devolvió el listado (ver `etiquetarCorreo`): con el buzón equivocado ni el flag ni la copia encuentran el"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d54a6903c718"
+      "hash": "7e072737d8a9"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/imputar.ts",
@@ -57180,7 +57180,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "6fcc23c07bfd"
+      "hash": "ae1b494bd115"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/procesar.ts",
