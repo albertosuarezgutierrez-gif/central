@@ -49,3 +49,54 @@ Telegram (frugalidad, regla del paso 6.4) — solo la reconciliación de texto d
 commiteada a `main` en esta misma pasada.
 
 *Actualización por Claude Code (auditoría diaria automática) · 2026-08-01*
+
+# Actualización 2026-08-02 — auditoría diaria (ligera)
+
+Rango: 10 commits sustanciales desde la última auditoría (01/08/2026 09:40 UTC, pasada ligera) —
+RRHH categoría documental (#1212), subastas «cargas no publicadas» (#1213), auditoría de precio
+dinámico sivra (#1209, bucket de mes + comisión Booking duplicada), subasta vencida en el radar
+(#1210), ia-rest quita el precio de la web + agente SEO (#1208), trading (#1206), health-check
+(#1205), pricing eventos previstos (#1203) y palanca de urgencia + House cambió de categoría en
+2024 (#1202). Checks estructurales baratos (SALTA typecheck/tests pesados, son de la pasada
+profunda semanal).
+
+## ✅ Reconciliación memoria/skills — 2 huecos, corregidos (carril 1)
+Las sesiones del rango siguen auto-documentándose muy bien (todos los PRs tocan
+`docs/CONTEXTO-SESIONES.md` en el mismo commit del fix). Dos huecos encontrados:
+1. La entrada del latido de facturas seguía diciendo **«PR #1194 pendiente de merge»**. El PR ya
+   se mergeó el 01/08 07:40 UTC — la corrección de la auditoría de ayer se hizo pero el merge de
+   la propia PR (mismo minuto, rama vieja) la volvió a pisar. Corregido con el estado real:
+   mergeado, primera pasada del cron con el fix hoy 02/08 06:15 UTC (`agente_latidos` sin fila
+   `facturas_gmail` a las 02:00 UTC es lo esperado, no un fallo — el cron es diario y solo ha
+   corrido una vez desde el merge, con el código viejo).
+2. `apps/plataforma/CLAUDE.md` (sección Subastas) no mencionaba los fixes #1210 (subasta vencida
+   en el radar) ni #1213 (`estadoCargas`/`titularCargas`, 5 estados) — el resto de la sección
+   documenta cada PR de subastas y estos dos se quedaron fuera. Añadidos.
+
+`docs/SKILLS.md` verificado contra `.claude/skills/` (31) y `.claude/commands/` (3): sin huérfanos
+ni faltantes. Ninguna skill nueva en el rango → sin drift en la tabla de rutas del triaje de
+correo (`lib/correo/rutas.ts`). `docs/FUENTES-DE-VERDAD.md` sin filas nuevas que añadir (ninguna
+vertical/skill nueva en el rango).
+
+## ✅ Manuales de usuario — nada que tocar
+RRHH #1212 ya actualizó `apps/rrhh/public/manual.html` en el mismo PR. ia-rest #1208 (quitar precio
+de la web) toca el sitio de marketing público, no el POS (`/edge`, `/kds`, `/owner`) — no aplica a
+`help-prompts.ts`/`manual.html`, que documentan la operativa del restaurante, no la landing.
+
+## ✅ Heartbeat de crons (14 huellas) — 14/14 ✅
+Sin crons mudos. `psd2-sync` 20,0h · `rates/snapshot` 19,0h · `mercado/cron in-app` 18,8h ·
+`pricing/pilot-track` 16,8h · `pricing/apply-auto` 7,3h · `updates/sync` 7,3h ·
+`limpiadoras/auto-sessions` 7,2h · `trading-universo` 1,7h · `concursos-ingesta` 1,5h ·
+`correo-triaje` 0,0h · `AGENTE pricing` 90,6h · `trading forward-paper` 136,1h ·
+`trading-ranking` 137,0h · `ia-director-refresh` 141,0h. Todos dentro de umbral.
+
+## ✅ Integridad estructural — sin hallazgos
+Lockfile presente, 8 apps (`ia-rest`, `sivra`, `ialimp`, `plataforma`, `rrhh`, `transporte`,
+`alquiler`, `almacen`) con `ignoreCommand` obligatorio en su `vercel.json`.
+
+## ✅ Sin hallazgos de carril 2
+Sin código roto, sin infra que tocar, sin crons genuinamente mudos. No se abre PR ni se manda
+Telegram (frugalidad, regla del paso 6.4) — solo la reconciliación de texto de carril 1, ya
+commiteada a `main` en esta misma pasada.
+
+*Actualización por Claude Code (auditoría diaria automática) · 2026-08-02*

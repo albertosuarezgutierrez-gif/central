@@ -34,6 +34,75 @@
   en `claveReglaValida`; SQL `2026-08-01_fix_regla_cuota_generica.sql` (aplicado: regla borrada, movimiento
   a `seguros`). Tests 29/29.
 
+- **🛡️ Auditoría PROFUNDA semanal (02/08/2026).** `auditoria-central` entera: lockfile OK, radiografía OK,
+  guardián 26/26, typecheck limpio en las 8 apps (7 con Prisma + ia-rest), `pnpm test` 0 fallos, heartbeat
+  14/14 crons ✅. `pnpm audit` había subido a 46 vulns (**3 críticas**, 17 high) desde las 16 (0 críticas) de
+  la pasada de julio — next-auth 5.0.0-beta.31 en sivra (2 críticas Auth.js: fail-open de checks de auth +
+  bypass homógrafo de email) y next desactualizado en ia-rest/todas las demás apps. Arreglado en el acto
+  (bump de parche, sin roturas — typecheck+tests+build sanity OK): next-auth→beta.32, next→16.2.12 (ia-rest)
+  /15.5.22 (resto), override de `axios`→≥1.18.0. Quedan 12 vulns (0 críticas, 7 high transitivas — xlsx/
+  nodemailer/sharp/postcss-en-next/linkify-it, documentadas, ver PR). Drift de doc encontrado y corregido
+  (carril 1): `auditoria-central/SKILL.md` seguía describiendo ia-rest en schema `iarest` compartido y
+  contaba solo 4-6 apps — la vertical vive en su proyecto Supabase standalone `efncqyvhniaxsirhdxaa` (la
+  migración al compartido sigue pendiente, como ya documentaba `ia-rest-maestro`). Hallazgo sin confirmar
+  (carril 2, no autoafirmado): Vercel MCP solo lista 6 proyectos del team `pisos-turisticos-projects`
+  (falta rrhh/transporte/alquiler/almacen) — puede ser otro team fuera de alcance del conector, pendiente
+  de que Alberto lo mire a mano. PR draft con los bumps de deps + informe.
+
+- **📂 RRHH: categoría «Documentación mensual» en documentos de empresa (01/08/2026, rama `claude/programa-rrhh-m25fwd`).**
+  Petición de Pilar (Mariscos González) por WhatsApp sobre el desplegable de `/admin/empresa`. La lista de
+  categorías estaba **triplicada** (lib + los dos clientes) y ya había drift: `contrato` existía en
+  `/admin/empresa` pero no en `/admin/cuenta`, donde se pintaba el id crudo. Ahora vive una sola vez en
+  `apps/rrhh/lib/categorias-empresa.ts` (módulo puro, importable desde `'use client'`) con `periodo`
+  `ninguno|anual|mensual` que decide qué campos de fecha pide el formulario — `mensual` y `seguro_social`
+  piden año+mes. Categoría desconocida ya no desaparece de la lista: se agrupa por su id. De paso, arreglado el
+  desbordamiento horizontal de `/admin/empresa` y `/admin/cuenta` en móvil (verificado en Chromium a 320 px).
+  Tests + typecheck + build OK; PR #1212.
+
+- **⚖️ «Cargas no publicadas» con la certificación publicada y enlazada (01/08/2026, rama
+  `claude/carga-no-recogida-analizada-vjkwc9`).** Alberto con captura: `SUB-JA-2026-264478` tenía en el BOE
+  su «certificación de dominio y cargas», el cron la había listado y descargado (`documentos_leidos=1`), y la
+  ficha remataba con «Cargas no publicadas: pide la certificación registral». **Causa:** el gate de
+  rentabilidad `mereceAnalisisProfundo` (salida = tasación → 0% descuento, flip −30,6%) bloqueaba la lectura
+  IA, así que `cargas_conocidas` se quedaba en `false` — y `false` se pintaba como «el BOE no lo publica».
+  **Fix:** `estadoCargas`/`titularCargas` en `module-subastas/cargas.ts` (5 estados, testeados) usados por la
+  ficha y por `analisisDocumental`, con enlace directo al PDF; y el gate de rentabilidad deja de ser gate de
+  lectura: si la ficha publica documento de cargas se lee igual (`LECTOR_VERSION` 4→5, cargas primero en la
+  cola de descarga). 14 vivas, solo 3 pasaban el gate.
+
+### 🔴 La comisión de Booking se descontaba DOS VECES — 17.723€ en 2026 (01/08/2026)
+Auditoría a fondo del precio dinámico pedida por Alberto. El hallazgo más caro NO es del motor:
+`incomes` tiene un **trigger** (`incomes_compute_net`) que calcula `amount = amount_gross × (1 −
+`portal_rates.commission_pct`)`; para BOOKING la tasa es **19,72% y es CORRECTA** (15% + 1,3% de
+servicio de pagos, +21% de IVA, verificada contra factura). El fallo estaba en `smoobu-sync.ts`, que
+aplicaba **ese mismo factor antes de escribir** → Smoobu 244,86€ → app 196,57€ → trigger 157,81€.
+Confirmado por cuatro vías antes de tocar nada: desglose de la extranet (Alberto mandó captura), 14
+de 15 pagos del banco casan al céntimo con `amount_gross`, agregados banco vs `amount` (+20% Dúplex,
++9% Kutxa) y la ausencia total de cargos de comisión en el banco. Saneado el histórico
+(`amount_gross` recuperado dividiendo por 0,8028; el trigger recalcula el neto): la reserva de
+prueba queda 244,86€/196,57€ **idéntica a la extranet** y 2026 pasa de 72.151,40€ a **89.874,62€**.
+Afecta a P&L, break-even y **base del IRPF**; el motor de precios no (lee `amount_gross`).
+**Retirada una sospecha mía:** el `channel_markup` de 1,16 SÍ llega al escaparate (122 × 1,16 con
+−10% móvil y −18% Genius = 104,44€ frente a los 105,43€ reales). No había infravaloración del 14%.
+Además: latido para el **guardián de precios**, que era el único agente sin vigilante, y retirada la
+ventana de 3 días del aviso —se combinaba con el dedup y silenciaba una alerta PARA SIEMPRE (había 5
+abiertas sin avisar, dos ALTAS sobre Luxury bajo mercado del 22 y 25 de julio).
+
+### 🔴 El bucket de mercado por MES era inalcanzable por diseño (01/08/2026)
+Alberto mandó una reserva de Luxury (6-8 nov, Booking) preguntando si estaba bien. La reserva sí; el
+precio no. El motor había bajado esas noches **152€ → 122€** a las 14:30 y a las 18:43 entró la
+reserva, con comparables de ESE viernes entre **123€ y 212€** (mediana 169€ a 4 plazas). Causa: el
+bucket mensual exige comps de **3 fechas distintas** (`MIN_FECHAS_MES`) y el barrido solo visitaba
+**una por mes** — o sea, inalcanzable por definición. Medido por piso y mes: House sin bucket de
+octubre en adelante, Luxury sin el de noviembre, Dúplex igual. Sin bucket se cae al **ancla global**,
+que sale del último barrido y va dominada por las fechas cercanas (agosto), más baratas.
+**Fix:** 3 fechas de muestra por mes (viernes + sábado + martes, replicando la composición de los
+meses que sí funcionaban), plan ordenado por rondas (temporada → eventos → profundidad) y
+**presupuesto de tiempo** en el barrido, que ahora publica `truncado`/`base_completa` y baja el
+latido a `ok:false` solo si no llegó a cubrir la temporada. Una muestra que cae en día de evento se
+corre una semana: el bucket mensual EXCLUYE las fechas de evento, así que ahí no sumaría.
+De paso, corregido en el hilo: `amount_gross` de `incomes` es lo que paga el huésped, **no** el neto.
+
 - **⏰ Subasta vencida seguía en «🎯 Mi radar» (01/08/2026, rama `claude/expired-auction-visible-eoow4t`).**
   Alberto con captura: `SUB-JA-2026-263723` cerró el 31/07 18:13 y al día siguiente seguía con botones de
   pujar. **Causa:** NINGÚN camino de lectura del radar filtraba por fecha — la bandeja se limpiaba solo con
@@ -186,9 +255,12 @@ nunca a `registrarLatido`, que estaba al final. Fix: `maxDuration` 60→300 **+ 
 (deadline en el escaneo y en el listado IMAP, que devuelve `truncado`), **latido de intento al empezar**
 y el definitivo justo tras el escaneo, y `evaluarLatido` con `ultimo_at`+`detalle` para separar «no se
 dispara» de «se dispara y no termina». Verificado: tsc 0 · 702 tests · build OK · upsert probado en BD.
-**01/08:** el PR sigue SIN mergear y la pasada de las 06:15 volvió a dar 504 (`agente_latidos` sigue vacía,
-ninguna factura nueva desde el 31/07) — los logs añaden el porqué: los reintentos de `aiExtractInvoice`
-(NIM timeout, Groq JSON truncado) son los que se comen los 60 s. PR #1194 pendiente de merge.
+**01/08:** la pasada de las 06:15 (previa al merge) volvió a dar 504 (`agente_latidos` sigue vacía, ninguna
+factura nueva desde el 31/07) — los logs añaden el porqué: los reintentos de `aiExtractInvoice` (NIM timeout,
+Groq JSON truncado) son los que se comen los 60 s. **PR #1194 mergeado 01/08 07:40 UTC.** `agente_latidos`
+sigue sin fila `facturas_gmail` a las 02:00 UTC del 02/08 — normal, el cron (`06:15 * * * *`) solo ha corrido
+una vez desde el merge (01/08 06:15, con el código viejo); primera pasada con el fix: 02/08 06:15 UTC, a
+revisar en la próxima auditoría.
 
 - **🗓️ Rotación mensual: julio archivado (01/08/2026).** `node scripts/rotar-memoria.mjs` movió las 321
   entradas de julio a `docs/memoria/2026-07.md` (auditoría diaria). Nota para la próxima pasada: el script

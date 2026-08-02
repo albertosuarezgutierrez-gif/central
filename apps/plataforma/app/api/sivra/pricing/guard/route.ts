@@ -9,6 +9,7 @@ import {
   decidirCompsDeOtroAforo,
 } from "@/lib/sivra/pricing-centinelas"
 import { eventFactor } from "@/lib/pricing-calendar"
+import { registrarLatido } from "@/lib/monitoring/latido-escribir"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -484,6 +485,16 @@ export async function GET(req: NextRequest) {
   // ── AVISO A ALBERTO POR TELEGRAM ──────────────────────────────────────────────
   // Manda UN mensaje con las alertas alta/media aún NO avisadas (cubre también las que crea
   // mercado/cron, p.ej. precio_bajo). Se marca `avisado_at` para no repetir el mismo aviso.
+  //
+  // 🚨 SIN VENTANA DE TIEMPO, y no es un descuido (01/08/2026). Antes esto exigía además
+  // `created_at >= now() - INTERVAL '3 days'`, y esa condición se combinaba fatal con el dedup de
+  // `pushAlert` (que NO recrea un aviso mientras siga abierto): una alerta que no se enviara en sus
+  // primeros 3 días —una pasada perdida, un fallo de Telegram— se quedaba abierta PARA SIEMPRE sin
+  // avisar nunca, porque nunca volvía a tener un `created_at` fresco. Cazado en la auditoría: 5
+  // alertas abiertas con `avisado_at` NULL, dos de prioridad ALTA sobre Luxury por debajo de
+  // mercado (22 y 25 de julio) que Alberto no llegó a ver — y eran exactamente el problema que
+  // acabó costando la reserva del 6 de noviembre.
+  // `avisado_at` ya es el antirrepetición; la ventana solo añadía una forma de perder avisos.
   let avisadas = 0
   try {
     const pend = await prisma.$queryRaw<{
@@ -493,7 +504,6 @@ export async function GET(req: NextRequest) {
       FROM pricing_alerts
       WHERE resuelta = false AND avisado_at IS NULL
         AND prioridad IN ('alta', 'media')
-        AND created_at >= now() - INTERVAL '3 days'
       ORDER BY (prioridad = 'alta') DESC, created_at DESC
       LIMIT 12`)
     if (pend.length > 0) {
@@ -516,6 +526,18 @@ export async function GET(req: NextRequest) {
   } catch (e) {
     console.error("[sivra/pricing/guard] aviso Telegram:", e)
   }
+
+  // 💓 Huella para el vigía. El guardián es la red de seguridad de TODO el pricing y hasta hoy era
+  // el único agente sin vigilante: si dejaba de correr, su silencio era indistinguible de un «no hay
+  // nada que avisar». Se registra al final a propósito —lo que importa es que la pasada COMPLETÓ— y
+  // una tabla de eventos ilegible cuenta como pasada mala: con los centinelas #7/#8 apagados, media
+  // vigilancia no es vigilancia.
+  await registrarLatido('sivra_pricing_guard', !eventosIlegibles, [
+    `${reversions.length + floorHits.length + subHits.length + reservasBajas.length + plazaHits.length + aforoHits.length} hallazgos`,
+    `${created} alertas nuevas, ${avisadas} avisadas`,
+    `${mercadoDia.length} fechas con mercado evaluable`,
+    eventosIlegibles ? 'pricing_eventos_auto ILEGIBLE: #7 y #8 sin evaluar' : '',
+  ].filter(Boolean).join(' · ')).catch(() => {})
 
   return NextResponse.json({
     ok: !eventosIlegibles,
