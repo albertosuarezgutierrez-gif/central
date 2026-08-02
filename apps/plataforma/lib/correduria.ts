@@ -111,6 +111,12 @@ const CLAVE_GENERICA = new Set([
   'MOVIMIENTO', 'MOVIMIENTOS', 'DOMICILIACION', 'SEPA', 'TARJETA', 'TARJ', 'TOTAL',
   'VARIOS', 'OTROS', 'OTRO', 'GASTO', 'GASTOS', 'MODA', 'RESTAURANTE', 'RESTAURANTES',
   'RECIBIDA', 'RECIBIDO', 'REALIZADA', 'REALIZADO', 'FAVOR', 'EUROS', 'BIZUM',
+  // "CUOTA"/"IMPUESTO" describen la NATURALEZA del cargo, no quién lo cobra: los usan la hipoteca
+  // ("CUOTA PTMO"), la comunidad ("CUOTA COMUNIDAD"), el club ("CUOTA ALTA APLAZADA") y la RETA
+  // ("ADEUDO DE CUOTA DE LA SEGURIDAD SOCIAL // PAGO DE IMPUESTO"). Una regla "CUOTA → personal"
+  // aprendida de la hipoteca secuestraba la cuota de autónomos de BBVA (deducible) — incidente
+  // 01/08/2026, mismo patrón que "TRANSF".
+  'CUOTA', 'CUOTAS', 'IMPUESTO', 'IMPUESTOS', 'COTIZACION', 'PTMO', 'PRESTAMO',
 ])
 
 // ¿Es SEGURA esta clave para aprender una regla clave→destino (que se aplica por substring)? Rechaza
@@ -126,8 +132,11 @@ export function claveReglaValida(clave: string | null | undefined): boolean {
   // Solo dígitos/símbolos: admisible únicamente si es un código largo (≥6 dígitos), específico de verdad.
   if (!tieneLetra) return norm.replace(/\D/g, '').length >= 6
   // Debe quedar al menos un token que NO sea genérico ni relleno (si no, es un cajón de sastre).
+  // Los tokens de ≤3 caracteres NO cuentan como "específicos": son conectores del castellano
+  // (DE, DEL, LA, EL, Y…) que dejaban colar claves como "PAGO DE IMPUESTO" — y una clave de <4
+  // caracteres ya se rechaza por sí sola arriba, así que tampoco puede serlo dentro de una frase.
   const toks = norm.split(/[^A-ZÁÉÍÓÚÑ0-9/]+/).filter(Boolean)
-  return toks.some(t => !CLAVE_GENERICA.has(t) && !FILLER_COMERCIO.has(t))
+  return toks.some(t => t.length >= 4 && !CLAVE_GENERICA.has(t) && !FILLER_COMERCIO.has(t))
 }
 
 export type MotivoSeguros = 'nombre' | 'descarte'

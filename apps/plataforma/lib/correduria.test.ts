@@ -6,7 +6,10 @@ import { detectarCompania, motivoSeguros, companiaLabel, claveReferencia, claveR
 
 test('claveReglaValida rechaza claves genéricas/trampa y acepta comercios/códigos específicos', () => {
   // Trampa: substrings genéricos que colisionan con casi cualquier concepto del banco.
-  for (const mala of ['TRANSF', 'TOTAL', 'RECEIPT', 'MODA', 'RESTAURANTES', 'TRANSFERENCIA RECIBIDA', 'PAGO', 'SALDO', 'ABC']) {
+  // 'CUOTA' describe la naturaleza del cargo (hipoteca, comunidad, club, RETA), no el comercio:
+  // aprendida de la hipoteca secuestraba la cuota de autónomos de BBVA (deducible).
+  for (const mala of ['TRANSF', 'TOTAL', 'RECEIPT', 'MODA', 'RESTAURANTES', 'TRANSFERENCIA RECIBIDA', 'PAGO', 'SALDO', 'ABC',
+    'CUOTA', 'IMPUESTO', 'CUOTA PTMO', 'PAGO DE IMPUESTO']) {
     assert.equal(claveReglaValida(mala), false, `debería rechazar "${mala}"`)
   }
   // Específicas y seguras: comercios, códigos de agente, DNI.
