@@ -100,3 +100,113 @@ Telegram (frugalidad, regla del paso 6.4) — solo la reconciliación de texto d
 commiteada a `main` en esta misma pasada.
 
 *Actualización por Claude Code (auditoría diaria automática) · 2026-08-02*
+
+# Actualización 2026-08-02 — auditoría PROFUNDA (semanal, `--profunda`)
+
+`auditoria-central` entera: integridad estructural, typecheck de las 8 apps, tests, seguridad
+multi-tenant + Supabase advisors, deps, infra real por MCP, coherencia de docs.
+
+## ✅ Integridad estructural
+`pnpm install --frozen-lockfile` en sync. `node scripts/auditar-estructura.mjs --check` al día.
+`pnpm test:guardia` 26/26 (incluye el guardián de scope viejo `@iarest/` y el de secretos con
+fallback literal). `transpilePackages` vs deps `@central/*` verificado app por app (8/8): sin
+faltantes ni sobrantes.
+
+## ✅ Typecheck — 8/8 apps limpias
+`prisma generate` + `tsc --noEmit` secuencial (mismo orden, mismo `@prisma/client` compartido) en
+ialimp, sivra, plataforma, rrhh, transporte, alquiler, almacen — **0 errores**. `tsc --noEmit` en
+ia-rest (sin Prisma) — **0 errores**.
+
+## ✅ Tests — 0 fallos
+`pnpm test` (guardián + tests de packages + vitest de rrhh/core-firma/module-rrhh/module-documental/
+module-chat/module-transporte/core-identity) — todo verde, sin regresiones tras los bumps de deps.
+
+## 🔴→✅ Seguridad de dependencias — 46 vulns (3 críticas) arregladas a 12 (0 críticas)
+`pnpm audit --prod` salió con **46 vulnerabilidades: 3 críticas, 17 high, 26 moderadas** — subida
+fuerte desde las 16 (0 críticas) de la auditoría de julio. Las 3 críticas y buena parte de las high
+eran next-auth/Next.js:
+
+- **next-auth 5.0.0-beta.31 (sivra) → 2 CRÍTICAS Auth.js**: "Configuration errors can cause
+  existence-based auth checks to fail open" y "Email normalizer validates before Unicode
+  normalization" (bypass homógrafo `@`). Sivra usa Credentials (sin OAuth), pero la primera es
+  agnóstica al provider. Parche disponible en beta.32 (sin cambios de API). **Aplicado**: bump a
+  `^5.0.0-beta.32`.
+- **next desactualizado en las 8 apps**: ia-rest en 16.2.7 (patch <16.2.11, disclosure de Server
+  Function endpoints + SSRF en rewrites/Server Actions + middleware bypass, varias HIGH); el resto
+  en 15.5.19 (patch <15.5.21, mismo DoS/disclosure). **Aplicado**: bump de parche a `^16.2.12`
+  (ia-rest) y `^15.5.22` (ialimp/sivra/plataforma/rrhh/transporte/alquiler/almacen).
+- **axios vía `msedge-tts`/`node-ical`**: el override existente en `package.json` raíz
+  (`>=1.16.0`, de una auditoría anterior) se había quedado corto — las nuevas advisories exigen
+  `>=1.18.0`. **Aplicado**: bump del override; `pnpm -r why axios` confirma una sola versión
+  resuelta (1.19.0) en todo el workspace.
+
+Verificado tras cada bump: `pnpm install`, typecheck de las 8 apps (0 errores), `pnpm test` +
+`pnpm test:guardia` (0 fallos), `pnpm audit` re-ejecutado. Resultado: **46 → 22 → 12 vulns**, cero
+críticas restantes. Todos los bumps son de parche (sin cambios de API). **Cerrado (02/08, sesión
+«repara»)**: los builds reales de Vercel de las 8 apps salieron en verde sobre el commit del PR
+(checks «Vercel – *» todos en success) → **PR #1215 mergeado a `main`** (squash `783b2fb`).
+
+### Vulns restantes — 2ª pasada («haz tu todo», 02/08): 12 → 3 (0 críticas)
+La sesión de cierre revisó una a una las 12 documentadas; casi todas tenían arreglo seguro:
+
+| Paquete | Resolución |
+|---|---|
+| `nodemailer` (sivra directo) | ✅ Bump 8→9.0.3. **El call site real es un stub** (`app/api/mensajes/auto-reply/route.ts:13` — el transporter está comentado, `sendEmail` solo hace `console.log`), así que no había nada que romper. El peer warning de `@auth/core` es cosmético: su peer de nodemailer es **opcional** y sivra solo usa el provider `Credentials`. |
+| `nodemailer` (transitivo vía `imapflow`/`mailparser`) | ✅ `imapflow` ^1.6.5 en sivra+plataforma (1.6.x **eliminó la dep de nodemailer**) y `mailparser` refrescado a 3.9.14 (usa nodemailer 9.0.3). |
+| `fast-xml-parser` (plataforma) | ✅ Bump 4→5.10.1. El changelog de v5 declara «no change in the functionality, syntax, APIs, options» (solo empaquetado ESM/CJS); el código ya usa la sintaxis v4 (`removeNSPrefix` etc.). Verificado con smoke test de runtime + los 769 tests de plataforma (BORME/BOE/CODICE con fixtures reales). |
+| `sharp` (plataforma directo + vía `next` en almacen) | ✅ Bump 0.35.3 + override raíz `sharp >=0.35.0`. Smoke test de runtime del binario nativo (composición JPEG q82, la operación exacta del lector registral) OK; el build de Vercel del PR es la validación final del binario. |
+| `linkify-it` (vía `mailparser`) | ✅ Cayó sola con el refresco de `mailparser` a 3.9.14. |
+| `postcss` (vía `next`, almacen) | ✅ Override raíz `postcss >=8.5.18` (mismo major 8, API congelada; next pinnaba 8.4.31). |
+| `uuid` (vía `node-ical`, ialimp) | ✅ Override raíz `uuid >=11.1.1` (resuelve 14.0.1). Verificado en el propio contexto de `node-ical` que `require('uuid').v4` sigue funcionando en CJS. |
+| `xlsx` | 🟡 QUEDA (high ×2, **sin parche en npm**). No explotable: ialimp solo ESCRIBE xlsx, nunca parsea entrada de terceros. |
+| `file-type` (vía `jimp`, ialimp) | 🟡 QUEDA (moderate). El parche exige ≥21.3.1, que es **ESM-only** — el override rompería el `require` CJS de jimp en runtime. Bucle infinito en parser ASF; jimp solo procesa imágenes propias. |
+
+**Resultado final: 3 vulns (2 high `xlsx` sin parche + 1 moderate `file-type`), 0 críticas** — el
+suelo alcanzable sin cambiar de librería (`xlsx`→`exceljs` y `jimp`→`sharp` serían migraciones, no bumps).
+
+## ✅ Seguridad multi-tenant + Supabase advisors
+Sin hallazgos nuevos de cruce entre tenants. Supabase advisors (`get_advisors`, ambos proyectos):
+- **BD compartida `wswbehlcuxqxyinousql`**: 465 lints — 292 INFO (`rls_enabled_no_policy`, ya
+  conocido), 154 WARN (`security_definer_function_executable` anon+authenticated, patrón esperado
+  de las funciones RPC), 16 `rls_policy_always_true`, 2 `extension_in_public`, 1
+  `function_search_path_mutable`. Sin ERROR.
+- **ia-rest standalone `efncqyvhniaxsirhdxaa`**: 343 lints — **47 ERROR `security_definer_view`**,
+  ya documentado como preexistente desde `AUDITORIA-2026-07.md` (M24); sin cambio desde entonces.
+  113 WARN `function_search_path_mutable`, 126 WARN de funciones SECURITY DEFINER
+  anon+authenticated, 23 `rls_policy_always_true`, resto ruido conocido del patrón anon-key.
+
+Ninguno de los dos requiere acción nueva en esta pasada — son hallazgos ya llevados a auditorías
+anteriores sin plan de arreglo (harding de las 47 vistas queda pendiente, gran radio).
+
+## ✅ Heartbeat de crons — 14/14 ✅
+Sin crons mudos (detalle en la pasada ligera del mismo día).
+
+## 🟡→✅ Infra Vercel — resuelto: las 4 apps SÍ existen; el gap era del conector MCP
+`list_projects` (team `pisos-turisticos-projects`) devuelve solo **6** proyectos (`plataforma`,
+`ia-rest`, `ialimp`, `sivra`, `house-sevillana-landing`, `ialimp-landing`), pero los checks del
+propio PR #1215 confirmaron que **`central-rrhh`, `transporte`, `alquiler` y `almacen` viven en el
+MISMO team** y desplegaron su preview en verde (project IDs visibles en el comentario del bot de
+Vercel). `list_deployments` sobre esos 4 proyectos devuelve `403 Forbidden` → **el conector Vercel
+MCP tiene acceso concedido por-proyecto, no al team entero**. No hay gap de despliegue. Acción
+manual opcional de Alberto: ampliar el acceso del conector a esos 4 proyectos para que las próximas
+auditorías los cubran por MCP (mientras tanto, los checks de Vercel en los PRs sirven de evidencia).
+
+## ✅ Coherencia de docs — 1 drift corregido (carril 1)
+`.claude/skills/auditoria-central/SKILL.md` describía una arquitectura vieja: contaba 4 apps y 16
+packages (hoy son 8 y 38), decía que las apps con Prisma para typecheck eran "6, no solo 3" cuando
+ya son 7 (falta almacen), y afirmaba que ia-rest vive en el schema `iarest` de la BD compartida —
+confirmado por MCP que su proyecto standalone `efncqyvhniaxsirhdxaa` no tiene ese schema; sigue
+siendo `public`, la migración está diseñada pero pendiente (correctamente documentado en
+`ia-rest-maestro`, sección "Split-brain de BD"). Corregido en el propio archivo (carril 1).
+
+## Checklist de acciones manuales de Alberto (esta pasada)
+1. ~~Vercel: confirmar team de `rrhh`/`transporte`/`alquiler`/`almacen`~~ → **resuelto**: mismo
+   team; opcional ampliar el acceso por-proyecto del conector MCP a esos 4.
+2. ~~Revisar y mergear el PR draft de bumps~~ → **hecho**: PR #1215 mergeado (`783b2fb`) tras
+   verificar los 8 builds de Vercel en verde. Rollback: revertir el PR, no hay migración de datos
+   de por medio.
+3. **Opcional, sin urgencia**: valorar nodemailer 8→9 (sivra) y fast-xml-parser 4→5 (plataforma)
+   con una prueba manual — quedan fuera de esta pasada por ser saltos de major sin poder probarlos
+   en vivo.
+
+*Actualización por Claude Code (auditoría profunda semanal automática) · 2026-08-02*
