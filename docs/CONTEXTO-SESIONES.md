@@ -33,6 +33,26 @@
   (endpoint `sonda`) — histórico de cuándo murió una key. Gemini solo se sondea si sus gates están
   activos. `maxDuration` del health-check 60→120.
 
+### 🧾 Verificado el latido de facturas — y el «0 facturas nuevas» seguía mintiendo un nivel más abajo (02/08/2026)
+La pasada de hoy confirma el fix de #1194: cron **200** (no 504), 81 s (habría muerto con el techo viejo de
+60 s) y `agente_latidos.facturas_gmail` con `ok=true`, sin `pendientes` → sin atasco. Pero los logs
+enseñaban la extracción IA fallando (NIM timeout, Groq JSON truncado) mientras el parte decía «0 facturas
+nuevas»: `escanearNuevasFacturas` descartaba los ilegibles con un `continue` mudo — ni nuevas, ni
+pendientes, ni rastro. Fix: `aiExtractInvoiceDetallado` separa fallo `'tecnico'` (no se ha leído) de
+`'sin_datos'` (leído, no era factura); los técnicos cuentan como `sinLeer`, se etiquetan en Gmail
+(`Facturas/Extraccion-fallida`) y salen con ⚠️ en el latido (`resumen-escaneo.ts`, puro y testeado).
+Límite asumido: ventana de 7 días, un correo que falle 7 días seguidos queda para revisión a mano.
+
+- **⏱️ Crons con timeout 60s → 300s (02/08/2026, rama `claude/audit-30-07-hv2njr`).** Cierre del hallazgo
+  del check-in post-dispatcher (PR #1165): 5 crons morían por «Task timed out after 60 seconds» (504,
+  logs Vercel 3 días: `concursos-ingesta` ×12 — TODAS sus pasadas —, `concursos-radar` ×3,
+  `facturas-conciliar-gmail` ×3, `facturas-scan` ×2, `subastas-enriquecer` ×2; preexistente al dispatcher).
+  Fix: `maxDuration` 60→300 en `concursos-ingesta`/`concursos-radar`/`facturas-conciliar-gmail`
+  (`facturas-scan` y `subastas-enriquecer` ya estaban a 300 en main vía PR #1194, mismo diagnóstico).
+  El 504 suelto de `/api/ai/chat` NO es cron — sin tocar.
+  De paso verificado el 🟡 de la auditoría 30/07: `incomes` volvió a escribir el 01/08 (falsa alarma de
+  temporada baja) y `psd2-sync` escribe a diario tras el dispatcher. Verificado: tsc 0, 769/769 tests.
+
 - **🔌 Gemini FUERA de todas las cadenas por defecto — «usa OpenRouter» (02/08/2026, rama
   `claude/gemini-quota-fallback-issue-fyhghm`).** El Check 12 seguía rojo (544 llamadas/30d, 0 éxitos, 429
   de cuota). Tras el corte de websearch del 01/08 quedaban 2 vías vivas: el eslabón Gemini de `aiComplete`

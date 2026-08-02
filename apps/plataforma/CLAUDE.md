@@ -562,6 +562,20 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
   nadie — ver el landmine en `apps/ialimp/CLAUDE.md`) y además avisa si hay `sync_error`, porque el sync
   marca la fecha aunque la pasada haya fallado. Es infraestructura del SaaS de Alberto, **no** el backlog
   operativo de Vanessa (eso sigue vetado, ver Check 6 retirado).
+- **🚨 «0 facturas nuevas» tapaba los correos que la IA no supo leer (02/08/2026).** Con el latido ya
+  arreglado, la primera pasada buena reportó «0 factura(s) nueva(s)» **con la extracción por IA fallando
+  en los logs** (NIM timeout, Groq JSON truncado). El motivo: `escanearNuevasFacturas` descartaba con un
+  `if (!importe) continue` mudo, así que un correo ilegible no contaba como nueva, ni como pendiente, ni
+  dejaba rastro — el mismo «no lo sé» disfrazado de «no hay», un nivel por debajo del latido. Fix:
+  **`aiExtractInvoiceDetallado`** (en `lib/ai-client.ts`) distingue **`'tecnico'`** (ningún modelo
+  respondió → NO se ha leído) de **`'sin_datos'`** (respondió y no era factura → SÍ se ha leído); solo el
+  primero cuenta como `sinLeer`, se etiqueta en Gmail (**`Facturas/Extraccion-fallida`**, cola persistente
+  que sobrevive al contenedor) y sale con ⚠️ en el parte del latido vía el helper PURO
+  `lib/agente-facturas/resumen-escaneo.ts` (`detalleEscaneo`/`recuentoFiable`, testeado). ⚠️ Límite
+  asumido y documentado: la ventana del escaneo es de 7 días, así que un correo que falle 7 días seguidos
+  deja de reintentarse solo y se queda en la etiqueta para revisión a mano — no se promete un reintento
+  eterno. Al añadir un descarte nuevo en un agente, la pregunta es siempre la misma: ¿esto es «he mirado
+  y no hay» o «no he podido mirar»? Si es lo segundo, tiene que contarse y dejar cola.
 - **🚨 LANDMINE — la huella se escribe DENTRO del trabajo que vigila: si la función muere, no hay
   huella (31/07/2026).** El mismo día de estrenar el vigía saltó «🧾 Escaneo de facturas: sin ninguna
   señal registrada» y la nota mandaba a mirar IMAP/app-password. No era eso: `facturas-scan` corría

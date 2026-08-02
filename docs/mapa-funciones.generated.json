@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-02T07:43:18Z",
-  "sha": "a36d6565bac7a90cb527a009779d465c77f454e3",
+  "generadoEn": "2026-08-02T08:59:44Z",
+  "sha": "949819f1c23da92f42cdb591bbb424087a0680fc",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -50788,7 +50788,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/cron/concursos-ingesta",
-      "hash": "2b7a33e4a33f"
+      "hash": "47c94b25a9b0"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/concursos-radar/route.ts",
@@ -50812,7 +50812,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/concursos-radar",
-      "hash": "d38b4a91e321"
+      "hash": "0140009f7dfd"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/contable-proactivo/route.ts",
@@ -50972,7 +50972,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/facturas-conciliar-gmail",
-      "hash": "c5e45961adee"
+      "hash": "c136b6665148"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/facturas-resumen-semanal/route.ts",
@@ -51020,7 +51020,7 @@
           "exportada": false,
           "params": "req: Request",
           "retorno": "boolean",
-          "linea": 26
+          "linea": 27
         },
         {
           "nombre": "GET",
@@ -51028,7 +51028,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 33
+          "linea": 34
         }
       ],
       "tablas": [
@@ -51036,7 +51036,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/facturas-scan",
-      "hash": "b76f745b2aab"
+      "hash": "94e2b82c32a6"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/health-check/route.ts",
@@ -56931,6 +56931,7 @@
       "exporta": [
         "listarCandidatosConLimite",
         "listarCandidatos",
+        "etiquetarCorreo",
         "marcarProcesado"
       ],
       "funciones": [
@@ -56961,18 +56962,27 @@
           "resumen": "Variante sin presupuesto (compatibilidad con los llamadores que no lo acotan)."
         },
         {
+          "nombre": "etiquetarCorreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "uid: number, etiqueta: string",
+          "retorno": "Promise<void>",
+          "linea": 103,
+          "resumen": "Copia el correo a una etiqueta de Gmail SIN marcarlo como visto ni procesado. Se usa para encolar lo que no se pudo leer: la etiqueta sobrevive a la sesión y al contenedor, así que un fallo de extracc"
+        },
+        {
           "nombre": "marcarProcesado",
           "kind": "function",
           "exportada": true,
           "params": "uid: number, etiqueta = 'Facturas/Procesada'",
           "retorno": "Promise<void>",
-          "linea": 97,
+          "linea": 119,
           "resumen": "Marca un correo como procesado: keyword IMAP + copia a la etiqueta si existe."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1ad966ee1130"
+      "hash": "d54a6903c718"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/imputar.ts",
@@ -57068,7 +57078,7 @@
           "exportada": true,
           "params": "cuentaId: string, opts: { deadline?: number } = {},",
           "retorno": "Promise<ResultadoEscaneo>",
-          "linea": 46,
+          "linea": 62,
           "resumen": "@param opts.deadline epoch ms en el que el escaneo debe estar de vuelta. Sin él el trabajo es ilimitado y la función acaba muriendo por `maxDuration` — que es justo como se perdía el latido antes del "
         },
         {
@@ -57077,7 +57087,7 @@
           "exportada": false,
           "params": "facturaId: string, proveedor: string, importe: number, fechaVenc: string | null, cuentaId: string,",
           "retorno": "Promise<void>",
-          "linea": 156
+          "linea": 192
         },
         {
           "nombre": "aprobarPago",
@@ -57085,7 +57095,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string, debtorIban: string,",
           "retorno": "Promise<",
-          "linea": 212
+          "linea": 248
         },
         {
           "nombre": "aplazarPago",
@@ -57093,7 +57103,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string, dias = 7",
           "retorno": "Promise<boolean>",
-          "linea": 273
+          "linea": 309
         },
         {
           "nombre": "rechazarFactura",
@@ -57101,7 +57111,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 289
+          "linea": 325
         },
         {
           "nombre": "verificarPagosPendientes",
@@ -57109,7 +57119,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<number>",
-          "linea": 303
+          "linea": 339
         },
         {
           "nombre": "conciliarConBanco",
@@ -57117,7 +57127,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<number>",
-          "linea": 332
+          "linea": 368
         },
         {
           "nombre": "pagarTodo",
@@ -57125,7 +57135,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<",
-          "linea": 371
+          "linea": 407
         },
         {
           "nombre": "resumenSemanal",
@@ -57133,7 +57143,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 387
+          "linea": 423
         },
         {
           "nombre": "alertarFacturasAusentes",
@@ -57141,7 +57151,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<number>",
-          "linea": 416
+          "linea": 452
         },
         {
           "nombre": "proponerVinculoReserva",
@@ -57149,7 +57159,7 @@
           "exportada": false,
           "params": "facturaId: string, proveedor: string, fechaFactura: string | null,",
           "retorno": "Promise<void>",
-          "linea": 449
+          "linea": 485
         },
         {
           "nombre": "actualizarMensajeTg",
@@ -57157,7 +57167,7 @@
           "exportada": false,
           "params": "msgId: number | null, texto: string",
           "retorno": "Promise<void>",
-          "linea": 480
+          "linea": 516
         }
       ],
       "tablas": [
@@ -57170,7 +57180,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "0d48c69e1565"
+      "hash": "6fcc23c07bfd"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/procesar.ts",
@@ -57222,6 +57232,46 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "a77bd7ccd16c"
+    },
+    {
+      "ruta": "apps/plataforma/lib/agente-facturas/resumen-escaneo.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Parte de una pasada del escaneo de facturas — el texto que acaba en `agente_latidos.detalle` y, cuando el vigía avisa, en el Telegram de Alberto. 🚨 Por qué existe: «0 factura(s) nueva(s)» era la MISMA frase para dos cosas distintas (02/08/2026). El escaneo descartaba en silencio los correos cuya ex",
+      "exporta": [
+        "detalleEscaneo",
+        "recuentoFiable"
+      ],
+      "funciones": [
+        {
+          "nombre": "plural",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number, sing: string, plur: string",
+          "retorno": null,
+          "linea": 24
+        },
+        {
+          "nombre": "detalleEscaneo",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: ConteoEscaneo",
+          "retorno": "string",
+          "linea": 30,
+          "resumen": "Devuelve el parte legible de la pasada. Si algo quedó sin leer, el parte lo dice DELANTE y con aviso: es lo que impide leer el «0 nuevas» como «no hay facturas»."
+        },
+        {
+          "nombre": "recuentoFiable",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: ConteoEscaneo",
+          "retorno": "boolean",
+          "linea": 55,
+          "resumen": "¿Se puede afirmar «no hay facturas nuevas» a partir de esta pasada? Solo si de verdad se miró todo: nada sin leer y nada sin mirar. Lo consumen el parte y cualquier pantalla que quiera hablar en nombr"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "54f1c7d30323"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/resumen-mensual.ts",
@@ -57416,6 +57466,7 @@
         "aiComplete",
         "aiVision",
         "aiTranscribe",
+        "aiExtractInvoiceDetallado",
         "aiExtractInvoice"
       ],
       "funciones": [
@@ -57473,18 +57524,27 @@
           "resumen": "Extracción por Groq (rápido, mismo Llama-70b). Lanza si no hay GROQ_API_KEY o Groq falla."
         },
         {
+          "nombre": "aiExtractInvoiceDetallado",
+          "kind": "function",
+          "exportada": true,
+          "params": "input: { text?: string imageBase64?: string mimeType?: string }",
+          "retorno": "Promise<ResultadoExtraccion>",
+          "linea": 229,
+          "resumen": "Igual que `aiExtractInvoice`, pero dice POR QUÉ no hay datos cuando no los hay. PDF (texto) → Groq (rápido) → NVIDIA NIM (respaldo) — el 1er JSON válido gana. Imagen → NVIDIA NIM visión (llama-3.2-90b"
+        },
+        {
           "nombre": "aiExtractInvoice",
           "kind": "function",
           "exportada": true,
           "params": "input: { text?: string imageBase64?: string mimeType?: string }",
           "retorno": "Promise<Record<string, any>>",
-          "linea": 213,
-          "resumen": "Extrae datos estructurados de una factura. Devuelve {} si NINGÚN modelo logra leerla (el llamador lo trata como \"no legible\" y avisa, en vez de tragárselo en silencio). PDF (texto) → Groq (rápido) → N"
+          "linea": 294,
+          "resumen": "Extrae datos estructurados de una factura. Devuelve {} si NINGÚN modelo logra leerla. ⚠️ Este `{}` NO distingue «no era una factura» de «no se pudo leer»: si esa diferencia importa (y para contabilida"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2740e3d314dd"
+      "hash": "13a1883e44b5"
     },
     {
       "ruta": "apps/plataforma/lib/ai-gateway.ts",
@@ -87997,7 +88057,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2372,
-    "funciones": 6337
+    "archivos": 2373,
+    "funciones": 6342
   }
 }
