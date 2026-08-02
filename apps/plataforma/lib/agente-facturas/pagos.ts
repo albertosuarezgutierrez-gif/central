@@ -134,7 +134,7 @@ export async function escanearNuevasFacturas(
       sinLeer++
       // La etiqueta sobrevive al contenedor: el correo queda encolado y visible en
       // Gmail aunque nadie mire el latido. Best-effort, nunca tumba la pasada.
-      await etiquetarCorreo(correo.uid, ETIQUETA_SIN_LEER).catch(() => {})
+      await etiquetarCorreo(correo.uid, ETIQUETA_SIN_LEER, listado.buzon).catch(() => {})
       continue
     }
 
@@ -178,7 +178,7 @@ export async function escanearNuevasFacturas(
     if (!facturaId) continue
     nuevas++
 
-    await marcarProcesado(correo.uid, ETIQUETA_GMAIL).catch(() => {})
+    await marcarProcesado(correo.uid, ETIQUETA_GMAIL, listado.buzon).catch(() => {})
 
     // Notificar por Telegram con botones de acción
     await notificarFactura(facturaId, proveedor, importe, fechaVenc, cuentaId)
