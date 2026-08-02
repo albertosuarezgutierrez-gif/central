@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📡 Sonda ACTIVA de proveedores IA — «que no vuelva a pasar y si pasa, enterarnos rápido»
+  (02/08/2026, rama `claude/gemini-quota-fallback-issue-fyhghm`, 2ª tanda tras mergear #1220).**
+  El Check 12 es forense (necesita ~1 semana de fallos orgánicos); ahora el health-check diario hace
+  además un **ping real de 5 tokens a CADA proveedor configurado** (`lib/monitoring/sonda-ia.ts`,
+  misma key y modelo que producción, en paralelo, coste ≈0) → **Check 13** avisa por Telegram el
+  MISMO día si un eslabón no responde, haya tráfico o no. Cada ping queda en `ai_usos`
+  (endpoint `sonda`) — histórico de cuándo murió una key. Gemini solo se sondea si sus gates están
+  activos. `maxDuration` del health-check 60→120.
+
 - **🔎 Revisión mensual ia.rest Tech & Stack (02/08/2026, sesión de investigación).** Resultado: TODO
   verde, sin acciones. Groq `whisper-large-v3-turbo` vivo ($0.04/h, es el destino de migración de
   distil-whisper); NIM sin retiradas que nos toquen; Supabase ambos proyectos ya en PG17 (EOL PG14 no
