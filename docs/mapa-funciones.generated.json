@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-02T06:51:20Z",
-  "sha": "3121b405940c41ca852d2f1e972473df03a81df5",
+  "generadoEn": "2026-08-02T07:43:18Z",
+  "sha": "a36d6565bac7a90cb527a009779d465c77f454e3",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -28327,7 +28327,7 @@
           "exportada": true,
           "params": "system: string, messages: NimToolMessage[], tools: unknown[], maxTokens = 1024,",
           "retorno": "Promise<NimToolResult>",
-          "linea": 265,
+          "linea": 269,
           "resumen": "la ruta ejecuta las herramientas y reenvía los resultados como mensajes `role:'tool'`."
         },
         {
@@ -28336,7 +28336,7 @@
           "exportada": true,
           "params": "prompt: string, opts: Omit<GatewayVideoOpts, 'timeoutMs'> = {},",
           "retorno": "Promise<string>",
-          "linea": 297,
+          "linea": 301,
           "resumen": "Generación de vídeo IA a través de la pasarela central. FAL_API_KEY vive solo en plataforma; ia-rest solo necesita AI_GATEWAY_URL + AI_GATEWAY_SECRET."
         },
         {
@@ -28345,13 +28345,13 @@
           "exportada": true,
           "params": "system: string, images: ImageInput[], userText: string, maxTokens = 2000, timeoutMs = 30_000, // Legacy: antaño evitaba el fallback de PAGO a Anthropic (retirado el 17/06/2026). // Ya NO bloquea nada — se conserva por compatibilidad de firm",
           "retorno": "Promise<string>",
-          "linea": 309,
+          "linea": 313,
           "resumen": "Llamada visión: NVIDIA gratis → Anthropic fallback"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fd17c5015a41"
+      "hash": "ca72aba7307d"
     },
     {
       "ruta": "apps/ia-rest/src/lib/ai-video.ts",
@@ -51066,7 +51066,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": "/api/cron/health-check",
-      "hash": "18189772fe51"
+      "hash": "10b79999cce4"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/ia-director-refresh/route.ts",
@@ -57484,7 +57484,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "527873a391ff"
+      "hash": "2740e3d314dd"
     },
     {
       "ruta": "apps/plataforma/lib/ai-gateway.ts",
@@ -63017,13 +63017,13 @@
           "exportada": true,
           "params": "messages: NimChatMessage[], opts: ChatDirectorOpts",
           "retorno": "Promise<ChatDirectorResult>",
-          "linea": 50,
+          "linea": 56,
           "resumen": "Un turno de texto por la pasarela con el Agente Director. Devuelve el texto y el modelo servido. Lanza solo si TODO el cascada falla (el route HTTP lo traduce a 502)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d4ef5f4e1461"
+      "hash": "7fb1c52514e3"
     },
     {
       "ruta": "apps/plataforma/lib/personas.ts",
@@ -79736,7 +79736,7 @@
           "exportada": false,
           "params": "model?: string",
           "retorno": "NimConfig",
-          "linea": 31
+          "linea": 39
         },
         {
           "nombre": "groqEnvConfig",
@@ -79744,7 +79744,7 @@
           "exportada": false,
           "params": "",
           "retorno": "GroqConfig | null",
-          "linea": 40,
+          "linea": 48,
           "resumen": "Config Groq de fallback desde el entorno. Devuelve null si no hay GROQ_API_KEY (el fallback queda inactivo sin romper nada). NO reutiliza el `model` de NIM (ids distintos): usa el modelo Groq propio ("
         },
         {
@@ -79753,8 +79753,8 @@
           "exportada": false,
           "params": "",
           "retorno": "GeminiConfig | null",
-          "linea": 49,
-          "resumen": "Config Gemini de fallback GRATIS desde el entorno. null si no hay GEMINI_API_KEY (inactivo, no rompe). La key ya suele estar puesta para la búsqueda web, así que este fallback se activa solo. Usa chat"
+          "linea": 57,
+          "resumen": "Config Gemini de fallback desde el entorno. APAGADO por defecto (ver cabecera: la key lleva meses sin cuota y el eslabón solo pagaba timeouts): requiere `GEMINI_TEXTO=1` ADEMÁS de GEMINI_API_KEY. Usa "
         },
         {
           "nombre": "moonshotEnvConfig",
@@ -79762,7 +79762,7 @@
           "exportada": false,
           "params": "",
           "retorno": "MoonshotConfig | null",
-          "linea": 57,
+          "linea": 65,
           "resumen": "Config Moonshot/Kimi de ÚLTIMO fallback (de pago) desde el entorno. null si no hay MOONSHOT_API_KEY (queda inactivo sin romper nada). Modelo override: MOONSHOT_MODEL."
         },
         {
@@ -79771,7 +79771,7 @@
           "exportada": false,
           "params": "",
           "retorno": "OpenRouterConfig | null",
-          "linea": 67,
+          "linea": 75,
           "resumen": "Config OpenRouter PRIMARIO desde el entorno. null si no hay OPENROUTER_API_KEY (queda inactivo y la cadena arranca en NIM como siempre → rollout por proyecto poniendo la env). OPENROUTER_MODEL = model"
         },
         {
@@ -79780,8 +79780,8 @@
           "exportada": true,
           "params": "promptOrMessages: string | NimChatMessage[], options: { system?: string maxTokens?: number temperature?: number timeoutMs?: number model?: string /** La PASARELA lo pone a true cuando ya intentó/bloqueó OpenRouter (presupuesto): evita reint",
           "retorno": "Promise<string>",
-          "linea": 91,
-          "resumen": "Completion de texto: OpenRouter (agregador, si hay key) → NVIDIA NIM (gratis) → Groq (gratis) → Gemini (gratis) → Kimi (de pago). Cada eslabón se activa solo si está su API key. Acepta string (prompt)"
+          "linea": 99,
+          "resumen": "Completion de texto: OpenRouter (agregador, si hay key) → NVIDIA NIM (gratis) → Groq (gratis) → [Gemini, solo con GEMINI_TEXTO=1] → Kimi (de pago). Cada eslabón se activa solo si está su API key. Acep"
         },
         {
           "nombre": "aiTools",
@@ -79789,13 +79789,13 @@
           "exportada": true,
           "params": "messages: NimToolMessage[], tools: unknown[], options: { system?: string; maxTokens?: number; model?: string; skipOpenRouter?: boolean } = {},",
           "retorno": "Promise<NimToolResult>",
-          "linea": 172,
+          "linea": 180,
           "resumen": "Function-calling: OpenRouter (si hay key) → NVIDIA NIM (gratis) → Groq (gratis) de fallback. Lee `OPENROUTER_API_KEY`/`NVIDIA_API_KEY`/`GROQ_API_KEY` del entorno. Wrapper usado por la pasarela central"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "14d1dd6fe220"
+      "hash": "df274c56b302"
     },
     {
       "ruta": "packages/core-ai/src/embeddings.ts",
