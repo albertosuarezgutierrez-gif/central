@@ -230,9 +230,12 @@ nunca a `registrarLatido`, que estaba al final. Fix: `maxDuration` 60→300 **+ 
 (deadline en el escaneo y en el listado IMAP, que devuelve `truncado`), **latido de intento al empezar**
 y el definitivo justo tras el escaneo, y `evaluarLatido` con `ultimo_at`+`detalle` para separar «no se
 dispara» de «se dispara y no termina». Verificado: tsc 0 · 702 tests · build OK · upsert probado en BD.
-**01/08:** el PR sigue SIN mergear y la pasada de las 06:15 volvió a dar 504 (`agente_latidos` sigue vacía,
-ninguna factura nueva desde el 31/07) — los logs añaden el porqué: los reintentos de `aiExtractInvoice`
-(NIM timeout, Groq JSON truncado) son los que se comen los 60 s. PR #1194 pendiente de merge.
+**01/08:** la pasada de las 06:15 (previa al merge) volvió a dar 504 (`agente_latidos` sigue vacía, ninguna
+factura nueva desde el 31/07) — los logs añaden el porqué: los reintentos de `aiExtractInvoice` (NIM timeout,
+Groq JSON truncado) son los que se comen los 60 s. **PR #1194 mergeado 01/08 07:40 UTC.** `agente_latidos`
+sigue sin fila `facturas_gmail` a las 02:00 UTC del 02/08 — normal, el cron (`06:15 * * * *`) solo ha corrido
+una vez desde el merge (01/08 06:15, con el código viejo); primera pasada con el fix: 02/08 06:15 UTC, a
+revisar en la próxima auditoría.
 
 - **🗓️ Rotación mensual: julio archivado (01/08/2026).** `node scripts/rotar-memoria.mjs` movió las 321
   entradas de julio a `docs/memoria/2026-07.md` (auditoría diaria). Nota para la próxima pasada: el script

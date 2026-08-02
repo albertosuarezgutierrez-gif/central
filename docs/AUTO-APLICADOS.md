@@ -13,6 +13,17 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-08-02** · `docs/CONTEXTO-SESIONES.md` · la entrada del latido de facturas seguía diciendo
+  «PR #1194 pendiente de merge» — el PR se mergeó el 01/08 a las 07:40 UTC (commit `9f1ba1e`), la
+  corrección de la auditoría del 01/08 se perdió porque el merge (mismo minuto, rama vieja) volvió a
+  traer el párrafo stale. Corregido: estado real es «mergeado, primera pasada del cron con el fix es
+  hoy 02/08 06:15 UTC» (`agente_latidos` sin fila `facturas_gmail` todavía, esperado) · commit de esta
+  auditoría.
+- **2026-08-02** · `apps/plataforma/CLAUDE.md` (sección Subastas) · añadidos los fixes #1210 (subasta
+  vencida seguía en el radar — filtros `SUBASTA_VIGENTE`/`RADAR_VIGENTE`) y #1213 (`estadoCargas`/
+  `titularCargas`, 5 estados, «cargas no publicadas» ya no se confundía con «sin leer») · faltaban
+  desde el 01/08, el resto de la sección Subastas documenta cada PR y estos dos no se habían anotado
+  · commit de esta auditoría.
 - **2026-08-01** · `docs/CONTEXTO-SESIONES.md` + `docs/memoria/2026-07.md` · rotación mensual
   (321 entradas de julio archivadas con `scripts/rotar-memoria.mjs`; la entrada `### 💓 El
   latido de facturas...` (formato heading, no `- **`) no la reconoció el script y se movió a
