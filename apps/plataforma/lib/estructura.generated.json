@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-02T07:58:45Z",
+  "generadoEn": "2026-08-02T13:06:55Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3968,6 +3968,10 @@
     }
   ],
   "novedades": [
+    {
+      "titulo": "🔎 Revisión mensual ia.rest Tech & Stack (02/08/2026, sesión de investigación).",
+      "fecha": "02/08/2026"
+    },
     {
       "titulo": "⏱️ Crons con timeout 60s → 300s (02/08/2026, rama `claude/audit-30-07-hv2njr`).",
       "fecha": "02/08/2026"
