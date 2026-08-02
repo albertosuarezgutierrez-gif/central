@@ -15,6 +15,15 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-02 · facturas-correo** · hizo: Paso 0 sano (Vía B al día, última copia 01/08, dias_caido=1;
+  sin backlog en `PDF-pendiente`/`Revisar`; `agente_salud` actualizado ok=true); 2 candidatos nuevos desde
+  el último pase: parking Islantilla/Isla Cristina de Pilar (cuenta propia, vacaciones) → `personal`, no
+  archivado, `Facturas/Procesada`; pedido Amazon roborock 247,92€ a nombre de Alberto entregado en
+  "Costa Ballena (Rota), Cádiz" (dirección sin match en ninguna vertical/propiedad conocida) →
+  `Facturas/Revisar`, sin archivar ni conciliar. Root de Drive `FACTURAS Apartamentos/2026` revisado: los
+  PDF sueltos ya están cubiertos por avisos previos en `_DUPLICADOS_BORRAR` (nada nuevo). Sin backfill de
+  banco esta pasada (nada deducible confirmado). dudas: Amazon roborock — ¿es de un piso en Rota o compra
+  personal?; fallos: —; PRs/commits: commit directo a `main` (solo doc + label Gmail + `agente_salud`).
 - **2026-08-01 · health-check (sesión interactiva, continuación 30/07)** · hizo: verificado por logs
   Vercel que el sync Smoobu corre (200 el 31/07 y 01/08) y que el 🔴 del Check 4 era sequía de reservas,
   no avería; a petición de Alberto, Check 4 reescrito sobre latido real (`agente_latidos.smoobu_sync`,

@@ -24,6 +24,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 facturas-correo (02/08/2026).** Pasada diaria: Vía B sana (dias_caido=1), sin backlog. 2
+  candidatos: parking de Pilar (Islantilla/Isla Cristina, cuenta propia) → personal; pedido Amazon
+  roborock 247,92€ entregado en "Costa Ballena (Rota), Cádiz" (sin match con ninguna propiedad
+  conocida) → `Facturas/Revisar`, pendiente de que Alberto diga si es de un piso o personal. Detalle
+  en `docs/AGENTES-BITACORA.md`.
+
 - **🛡️ Auditoría PROFUNDA semanal (02/08/2026).** `auditoria-central` entera: lockfile OK, radiografía OK,
   guardián 26/26, typecheck limpio en las 8 apps (7 con Prisma + ia-rest), `pnpm test` 0 fallos, heartbeat
   14/14 crons ✅. `pnpm audit` había subido a 46 vulns (**3 críticas**, 17 high) desde las 16 (0 críticas) de
