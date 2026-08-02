@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-01T21:22:13Z",
+  "generadoEn": "2026-08-02T02:33:54Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3968,6 +3968,10 @@
     }
   ],
   "novedades": [
+    {
+      "titulo": "🛡️ Auditoría PROFUNDA semanal (02/08/2026).",
+      "fecha": "02/08/2026"
+    },
     {
       "titulo": "📂 RRHH: categoría «Documentación mensual» en documentos de empresa (01/08/2026, rama `claude/programa-rrhh-m25fwd`).",
       "fecha": "01/08/2026"
