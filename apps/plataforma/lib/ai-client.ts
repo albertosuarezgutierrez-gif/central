@@ -39,7 +39,7 @@ function nimConfig(): NimConfig {
  * OpenRouter y el Agente Director. Ahora enruta por `chatConDirector` (la pasarela):
  * con `OPENROUTER_API_KEY` el Director elige el mejor modelo por petición (+ fallback
  * nativo entre modelos); sin ella cae a la cadena clásica GRATIS de siempre
- * (NIM → Groq → Gemini → Kimi). Degrada, nunca muere; lanza solo si TODO falla.
+ * (NIM → Groq → Kimi; Gemini apagado por defecto). Degrada, nunca muere; lanza solo si TODO falla.
  * (Auditoría de enrutado 2026-07 — PR-A: rescatar las ~10 rutas que bypaseaban.)
  */
 export async function aiComplete(

@@ -29,10 +29,12 @@ vive en cada app:
   caché semántica de la pasarela. Primer proveedor de embeddings del monorepo.
 - `aiComplete(promptOrMessages, opts)` / `aiTools(messages, tools, opts)` — wrappers de
   **alto nivel** que leen el entorno y ya aplican la política de fallback de TEXTO:
-  **OpenRouter (si hay `OPENROUTER_API_KEY`) → NIM → Groq → Gemini → Kimi**. Sin la key de
-  OpenRouter la cadena es exactamente la clásica. Con `model` pinneado (id de NIM) el primario
-  sigue siendo NIM y OpenRouter pasa a fallback. `opts.skipOpenRouter` lo desactiva por
-  llamada (lo usa la pasarela, que gestiona OpenRouter con Director + presupuesto). Envs:
+  **OpenRouter (si hay `OPENROUTER_API_KEY`) → NIM → Groq → Kimi**. El eslabón Gemini está
+  **APAGADO por defecto desde el 02/08/2026** (key sin cuota: 544 llamadas/30 días y 0 éxitos;
+  decisión de Alberto «usa OpenRouter») — se reactiva con `GEMINI_TEXTO=1` + `GEMINI_API_KEY`.
+  Sin la key de OpenRouter la cadena es exactamente la clásica. Con `model` pinneado (id de NIM)
+  el primario sigue siendo NIM y OpenRouter pasa a fallback. `opts.skipOpenRouter` lo desactiva
+  por llamada (lo usa la pasarela, que gestiona OpenRouter con Director + presupuesto). Envs:
   `OPENROUTER_API_KEY`/`OPENROUTER_MODEL`/`OPENROUTER_FALLBACK_MODELS` (csv), `GROQ_BRAIN_MODEL`, etc.
 - Tipos: `ImageInput`, `NimConfig`, `GroqConfig`, `GeminiConfig`, `OpenRouterConfig`,
   `GeminiEmbedConfig` (+ tipos `Nim*` reutilizados por `groq*`/`openrouter*`).
