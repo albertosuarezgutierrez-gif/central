@@ -10,7 +10,12 @@
 > mejor cuenta como hallazgo). Sigue habiendo salvaguarda: convertir un eslabón HOY gratis y vivo en
 > uno de pago nunca es un PR mecánico, va por Telegram con el precio explícito para que decida Alberto.
 
-## Modelos cableados en la cadena `aiComplete` (OpenRouter → NIM → Groq → Gemini → Kimi)
+## Modelos cableados en la cadena `aiComplete` (OpenRouter → NIM → Groq → [Gemini, gateado] → Kimi)
+
+> ⚠️ **02/08/2026 (PR #1220):** el eslabón Gemini está **apagado por defecto** — 544 llamadas/30d
+> con 0 éxitos (429 de cuota). Requiere `GEMINI_TEXTO=1` además de la key (ídem el último intento
+> de `lib/pasarela.ts`; el websearch de ia-rest va tras `GEMINI_WEBSEARCH=1`). Sigue en la tabla
+> como watch de catálogo por si se reactiva.
 
 > **09/07/2026 — OpenRouter cableado como PRIMARIO** (si hay `OPENROUTER_API_KEY`): agregador con
 > Agente Director en la pasarela de plataforma + fallback nativo entre modelos. Su catálogo lo

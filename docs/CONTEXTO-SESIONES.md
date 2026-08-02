@@ -24,6 +24,35 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🔍 Revisión de memorias/skills/agentes (02/08/2026, pedida por Alberto)
+Reconciliación post-auditorías de hoy. Heartbeat 14/14 en verde REAL: el ⛔ de `psd2-sync` (31h) era falsa
+alarma de finde — cron 200 a las 06:01 en logs Vercel; umbral 30→54h en `auditoria-diaria.md`. Drift corregido
+(carril 1): `buscador-ia`+`docs/BUSCADOR-IA.md` no recogían Gemini apagado por defecto (#1220) ni el alias
+`gemini-flash-latest`; `facturas-correo` sin la etiqueta `Facturas/Extraccion-fallida` (#1219); borrado el
+duplicado `###` del 31/07 (ya archivado en `memoria/2026-07.md`). `docs/SKILLS.md` y `perfil-fiscal` al día.
+Ojo: 1ª pasada del sweep semanal (#1186) con latido `ok=false` («0 comps en 44 ventanas, 19 sin tiempo») —
+revisar el domingo 09/08. Sin Telegram en este entorno (sin `ALERTA_TOKEN`). Rama `claude/revision-conversaciones-memorias-9hq32s`.
+
+- **📡 Sonda ACTIVA de proveedores IA — «que no vuelva a pasar y si pasa, enterarnos rápido»
+  (02/08/2026, rama `claude/gemini-quota-fallback-issue-fyhghm`, 2ª tanda tras mergear #1220).**
+  El Check 12 es forense (necesita ~1 semana de fallos orgánicos); ahora el health-check diario hace
+  además un **ping real de 5 tokens a CADA proveedor configurado** (`lib/monitoring/sonda-ia.ts`,
+  misma key y modelo que producción, en paralelo, coste ≈0) → **Check 13** avisa por Telegram el
+  MISMO día si un eslabón no responde, haya tráfico o no. Cada ping queda en `ai_usos`
+  (endpoint `sonda`) — histórico de cuándo murió una key. Gemini solo se sondea si sus gates están
+  activos. `maxDuration` del health-check 60→120.
+
+- **🔎 Revisión mensual ia.rest Tech & Stack (02/08/2026, sesión de investigación).** Resultado: TODO
+  verde, sin acciones. Groq `whisper-large-v3-turbo` vivo ($0.04/h, es el destino de migración de
+  distil-whisper); NIM sin retiradas que nos toquen; Supabase ambos proyectos ya en PG17 (EOL PG14 no
+  aplica); Next.js con programa de seguridad MENSUAL desde julio (9 CVEs parcheados 21/07, cubiertos por
+  `^16.2.12` + install sin lockfile congelado). ASR premium (AssemblyAI Universal-3.5, 4.9% WER
+  multilingüe) mejora a Whisper pero a ~9× el precio → seguir con Groq salvo quejas reales. El prompt
+  del evento de calendario decía «Haiku como fallback» (Anthropic se retiró el 17/06) — YA CORREGIDO:
+  la serie recurrente ahora apunta a la cadena real (OpenRouter→NIM→Groq→Gemini→Kimi) y a `client.ts`.
+  Pendiente que arrastra: confirmar `CONTABLE_MODEL` (`deepseek-ai/deepseek-v3`) con `NVIDIA_API_KEY`
+  a mano (esta sesión no la tenía).
+
 ### 📬 Los UID de IMAP son POR BUZÓN: el marcado de correos se perdía en silencio (02/08/2026)
 Cerrado **#1201 sin mergear** (decisión de Alberto): nació para contar los correos ilegibles, pero mientras
 estuvo abierto se mergeó **#1219**, que hace lo mismo y mejor (separa fallo técnico de «leído y no era
@@ -304,25 +333,8 @@ GPS. **Y PriceLabs NO hace last-minute:** House pasa de 460€ a 23 días a 428�
 el 70% de las noches vacías; Busto ni baja, sube (94€→105€). Sirve como fuente de datos, no como modelo a
 copiar. Luxury sigue congelado hasta el 01/09 (decisión de Alberto).
 
-### 💓 El latido de facturas no faltaba: la pasada moría en 504 antes de escribirlo (31/07/2026)
-Aviso «🧾 Escaneo de facturas: sin ninguna señal registrada» el mismo día de estrenar el vigía (#1184).
-No era IMAP ni la app-password: `facturas-scan` corre a diario y **muere en 504 a los 60 s** (3 de sus
-últimas 4 pasadas), a mitad del escaneo — ese 06:16 ya había insertado IONOS y Punto y Coma — sin llegar
-nunca a `registrarLatido`, que estaba al final. Fix: `maxDuration` 60→300 **+ presupuesto de tiempo**
-(deadline en el escaneo y en el listado IMAP, que devuelve `truncado`), **latido de intento al empezar**
-y el definitivo justo tras el escaneo, y `evaluarLatido` con `ultimo_at`+`detalle` para separar «no se
-dispara» de «se dispara y no termina». Verificado: tsc 0 · 702 tests · build OK · upsert probado en BD.
-**01/08:** la pasada de las 06:15 (previa al merge) volvió a dar 504 (`agente_latidos` sigue vacía, ninguna
-factura nueva desde el 31/07) — los logs añaden el porqué: los reintentos de `aiExtractInvoice` (NIM timeout,
-Groq JSON truncado) son los que se comen los 60 s. **PR #1194 mergeado 01/08 07:40 UTC.** `agente_latidos`
-sigue sin fila `facturas_gmail` a las 02:00 UTC del 02/08 — normal, el cron (`06:15 * * * *`) solo ha corrido
-una vez desde el merge (01/08 06:15, con el código viejo); primera pasada con el fix: 02/08 06:15 UTC, a
-revisar en la próxima auditoría.
-
 - **🗓️ Rotación mensual: julio archivado (01/08/2026).** `node scripts/rotar-memoria.mjs` movió las 321
   entradas de julio a `docs/memoria/2026-07.md` (auditoría diaria). Nota para la próxima pasada: el script
   solo reconoce entradas que empiezan por `- **`; una entrada con formato `### ` no se archivó sola y hubo
   que moverla a mano — si vuelve a pasar, vale la pena normalizar el formato de cabecera o enseñarle al
   script el patrón `### `.
-
-
