@@ -29,9 +29,11 @@
   distil-whisper); NIM sin retiradas que nos toquen; Supabase ambos proyectos ya en PG17 (EOL PG14 no
   aplica); Next.js con programa de seguridad MENSUAL desde julio (9 CVEs parcheados 21/07, cubiertos por
   `^16.2.12` + install sin lockfile congelado). ASR premium (AssemblyAI Universal-3.5, 4.9% WER
-  multilingüe) mejora a Whisper pero a ~9× el precio → seguir con Groq salvo quejas reales. OJO: el
-  prompt del evento de calendario aún dice «Haiku como fallback» — Anthropic se retiró el 17/06; la
-  cadena real es OpenRouter→NIM→Groq→Gemini→Kimi. Conviene actualizar el texto del evento.
+  multilingüe) mejora a Whisper pero a ~9× el precio → seguir con Groq salvo quejas reales. El prompt
+  del evento de calendario decía «Haiku como fallback» (Anthropic se retiró el 17/06) — YA CORREGIDO:
+  la serie recurrente ahora apunta a la cadena real (OpenRouter→NIM→Groq→Gemini→Kimi) y a `client.ts`.
+  Pendiente que arrastra: confirmar `CONTABLE_MODEL` (`deepseek-ai/deepseek-v3`) con `NVIDIA_API_KEY`
+  a mano (esta sesión no la tenía).
 
 - **⏱️ Crons con timeout 60s → 300s (02/08/2026, rama `claude/audit-30-07-hv2njr`).** Cierre del hallazgo
   del check-in post-dispatcher (PR #1165): 5 crons morían por «Task timed out after 60 seconds» (504,
