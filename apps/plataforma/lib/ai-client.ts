@@ -205,31 +205,63 @@ async function extraerConGroq(user: string): Promise<string> {
 }
 
 /**
- * Extrae datos estructurados de una factura. Devuelve {} si NINGÚN modelo logra leerla
- * (el llamador lo trata como "no legible" y avisa, en vez de tragárselo en silencio).
+ * Por qué una extracción se quedó sin datos. **Los dos casos NO son lo mismo** y
+ * confundirlos es lo que hacía que el escaneo de facturas dijera «0 facturas nuevas»
+ * cuando en realidad había correos que no supo leer (02/08/2026):
+ *   · `'sin_datos'` — algún modelo respondió y ahí no había factura (un boletín, un
+ *     PDF de publicidad). SÍ se ha mirado: descartarlo es una conclusión legítima.
+ *   · `'tecnico'`   — NINGÚN modelo respondió (timeout, JSON truncado, API caída).
+ *     NO se ha mirado: el llamador debe encolarlo, no darlo por revisado.
+ */
+export type FalloExtraccion = 'tecnico' | 'sin_datos'
+
+export interface ResultadoExtraccion {
+  datos: Record<string, any>
+  /** `null` = se extrajeron datos. Ver `FalloExtraccion` para los dos «sin datos». */
+  fallo: FalloExtraccion | null
+}
+
+/**
+ * Igual que `aiExtractInvoice`, pero dice POR QUÉ no hay datos cuando no los hay.
  * PDF (texto)   → Groq (rápido) → NVIDIA NIM (respaldo)   — el 1er JSON válido gana.
  * Imagen        → NVIDIA NIM visión (llama-3.2-90b).
  */
-export async function aiExtractInvoice(input: {
+export async function aiExtractInvoiceDetallado(input: {
   text?:        string
   imageBase64?: string
   mimeType?:    string
-}): Promise<Record<string, any>> {
+}): Promise<ResultadoExtraccion> {
   // ── Imagen: modelo visión ────────────────────────────────────────────
   if (input.imageBase64 && input.mimeType) {
     const images = [{ data: input.imageBase64, mediaType: input.mimeType }]
-    const txt = await nimVision(nimConfig(), INVOICE_SYSTEM, images, 'Extrae los datos de esta factura en JSON:', 512, { signal: AbortSignal.timeout(30_000) })
+    let txt: string
+    try {
+      txt = await nimVision(nimConfig(), INVOICE_SYSTEM, images, 'Extrae los datos de esta factura en JSON:', 512, { signal: AbortSignal.timeout(30_000) })
+    } catch (e) {
+      console.warn('[extraer] visión falló:', String(e).slice(0, 140))
+      return { datos: {}, fallo: 'tecnico' }
+    }
     const clean = txt.replace(/```json|```/g, '').trim()
-    try { return JSON.parse(clean) } catch { return {} }
+    try {
+      const obj = JSON.parse(clean)
+      const conDatos = obj && typeof obj === 'object' && Object.keys(obj).length > 0
+      return { datos: conDatos ? obj : {}, fallo: conDatos ? null : 'sin_datos' }
+    } catch {
+      // Respondió, pero con algo que no es JSON: no hemos leído la factura.
+      return { datos: {}, fallo: 'tecnico' }
+    }
   }
 
   // ── Texto (PDF extraído): Groq → NIM ───────────────────────────────────
   // La extracción era la ÚNICA llamada IA de la app SIN cadena de respaldo: si NIM devolvía
   // algo no-JSON o se colgaba (mismo mal que tumbó el triaje, PR #745), la factura quedaba
   // vacía → 'error' mudo. Ahora Groq va primero (segundos) y NIM de respaldo; el primer JSON
-  // válido y no vacío gana. Si ambos fallan → {} y el llamador avisa.
+  // válido y no vacío gana.
   if (input.text) {
     const user = `Factura:\n${input.text.slice(0, 4000)}`
+    // Distingue «ninguna vía llegó a contestar» (técnico) de «contestaron y venía
+    // vacío» (sin_datos): sin esta bandera, ambos acababan en el mismo `{}`.
+    let algunaRespondio = false
     for (const via of ['groq', 'nim'] as const) {
       try {
         const raw = via === 'groq'
@@ -240,13 +272,29 @@ export async function aiExtractInvoice(input: {
               { maxTokens: 512, temperature: 0.1, signal: AbortSignal.timeout(20_000) },
             )
         const obj = JSON.parse(raw.replace(/```json|```/g, '').trim())
-        if (obj && typeof obj === 'object' && Object.keys(obj).length > 0) return obj
+        if (obj && typeof obj === 'object') {
+          algunaRespondio = true
+          if (Object.keys(obj).length > 0) return { datos: obj, fallo: null }
+        }
       } catch (e) {
         console.warn(`[extraer] extracción ${via} falló:`, String(e).slice(0, 140))
       }
     }
-    return {}
+    return { datos: {}, fallo: algunaRespondio ? 'sin_datos' : 'tecnico' }
   }
 
-  return {}
+  return { datos: {}, fallo: 'sin_datos' }
+}
+
+/**
+ * Extrae datos estructurados de una factura. Devuelve {} si NINGÚN modelo logra leerla.
+ * ⚠️ Este `{}` NO distingue «no era una factura» de «no se pudo leer»: si esa diferencia
+ * importa (y para contabilidad importa), usa `aiExtractInvoiceDetallado`.
+ */
+export async function aiExtractInvoice(input: {
+  text?:        string
+  imageBase64?: string
+  mimeType?:    string
+}): Promise<Record<string, any>> {
+  return (await aiExtractInvoiceDetallado(input)).datos
 }

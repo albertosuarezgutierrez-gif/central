@@ -24,6 +24,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🧾 Verificado el latido de facturas — y el «0 facturas nuevas» seguía mintiendo un nivel más abajo (02/08/2026)
+La pasada de hoy confirma el fix de #1194: cron **200** (no 504), 81 s (habría muerto con el techo viejo de
+60 s) y `agente_latidos.facturas_gmail` con `ok=true`, sin `pendientes` → sin atasco. Pero los logs
+enseñaban la extracción IA fallando (NIM timeout, Groq JSON truncado) mientras el parte decía «0 facturas
+nuevas»: `escanearNuevasFacturas` descartaba los ilegibles con un `continue` mudo — ni nuevas, ni
+pendientes, ni rastro. Fix: `aiExtractInvoiceDetallado` separa fallo `'tecnico'` (no se ha leído) de
+`'sin_datos'` (leído, no era factura); los técnicos cuentan como `sinLeer`, se etiquetan en Gmail
+(`Facturas/Extraccion-fallida`) y salen con ⚠️ en el latido (`resumen-escaneo.ts`, puro y testeado).
+Límite asumido: ventana de 7 días, un correo que falle 7 días seguidos queda para revisión a mano.
+
 - **🛡️ Auditoría PROFUNDA semanal (02/08/2026).** `auditoria-central` entera: lockfile OK, radiografía OK,
   guardián 26/26, typecheck limpio en las 8 apps (7 con Prisma + ia-rest), `pnpm test` 0 fallos, heartbeat
   14/14 crons ✅. `pnpm audit` había subido a 46 vulns (**3 críticas**, 17 high) desde las 16 (0 críticas) de

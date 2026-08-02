@@ -6,8 +6,8 @@
 import { prisma } from '@/lib/db'
 import { eur } from '@/lib/dinero'
 import { Prisma } from '@prisma/client'
-import { listarCandidatosConLimite, marcarProcesado, type ListadoCandidatos } from './gmail'
-import { aiExtractInvoice } from '@/lib/ai-client'
+import { listarCandidatosConLimite, marcarProcesado, etiquetarCorreo, type ListadoCandidatos } from './gmail'
+import { aiExtractInvoiceDetallado, type FalloExtraccion } from '@/lib/ai-client'
 import { tgSend, tgSendButtons, tgEditMessage } from '@central/core-telegram'
 import { iniciarPago, estadoPago, disponiblePis } from '@/lib/enablebanking'
 import type { EstadoPagoEB } from '@/lib/enablebanking'
@@ -15,6 +15,13 @@ import { baseUrl } from '@/lib/base-url'
 import type { FacturaProveedor } from '@central/module-pagos'
 
 const ETIQUETA_GMAIL = 'Facturas/Proveedor'
+/**
+ * Cola persistente de lo que no se pudo leer. ⚠️ Límite conocido y asumido: el
+ * escaneo mira una ventana de 7 días, así que un correo que falle 7 días seguidos
+ * deja de reintentarse solo y se queda AQUÍ para revisión a mano — la etiqueta no
+ * promete un reintento eterno.
+ */
+const ETIQUETA_SIN_LEER = 'Facturas/Extraccion-fallida'
 
 // ── Escaneo de Gmail → OCR → BD → Telegram ───────────────────────────────────
 
@@ -36,6 +43,15 @@ export interface ResultadoEscaneo {
    * pero si esto no baja de cero nunca, hay un atasco que contar.
    */
   pendientes: number
+  /**
+   * 🚨 Candidatos que NO se pudieron leer (la extracción por IA no respondió, o el PDF
+   * no se dejó abrir). Antes se descartaban en silencio con un `continue`, así que
+   * «0 facturas nuevas» significaba indistintamente «no había» o «había y no supe
+   * leerlas». Van etiquetados en Gmail (`Facturas/Extraccion-fallida`) para reintentar.
+   */
+  sinLeer: number
+  /** Candidatos leídos y descartados con criterio (no eran factura). Informativo. */
+  descartados: number
 }
 
 /**
@@ -59,7 +75,7 @@ export async function escanearNuevasFacturas(
     listado = await listarCandidatosConLimite({ desde, etiqueta: ETIQUETA_GMAIL, deadline: deadlineListado })
   } catch (e: any) {
     // El buzón no se ha podido leer: se dice, no se disfraza de «0 facturas».
-    return { nuevas: 0, ok: false, error: String(e?.message ?? e).slice(0, 200), pendientes: 0 }
+    return { nuevas: 0, ok: false, error: String(e?.message ?? e).slice(0, 200), pendientes: 0, sinLeer: 0, descartados: 0 }
   }
   const correos = listado.correos
 
@@ -70,6 +86,8 @@ export async function escanearNuevasFacturas(
     ? `el listado del buzón no cupo en el presupuesto de tiempo (${correos.length} correo(s) leídos de la ventana de 7 días)`
     : null
   let pendientes = 0
+  let sinLeer = 0
+  let descartados = 0
 
   for (let i = 0; i < correos.length; i++) {
     if (deadline && Date.now() > deadline) {
@@ -88,23 +106,41 @@ export async function escanearNuevasFacturas(
     )
     if (yaExiste.length > 0) continue
 
+    // 🚨 Tres desenlaces DISTINTOS, no dos: con datos / leído y no era factura /
+    // no se pudo leer. El tercero es el que antes desaparecía en un `continue` mudo.
     let datos: Record<string, any> = {}
+    let fallo: FalloExtraccion | null = null
     try {
       if (adjunto.mime === 'application/pdf') {
         const pdfParse: any = await import('pdf-parse/lib/pdf-parse.js')
         const parsed = await (pdfParse.default ?? pdfParse)(adjunto.buffer)
-        datos = await aiExtractInvoice({ text: parsed.text })
+        ;({ datos, fallo } = await aiExtractInvoiceDetallado({ text: parsed.text }))
       } else if (adjunto.mime.startsWith('image/')) {
         const b64 = adjunto.buffer.toString('base64')
-        datos = await aiExtractInvoice({ imageBase64: b64, mimeType: adjunto.mime })
+        ;({ datos, fallo } = await aiExtractInvoiceDetallado({ imageBase64: b64, mimeType: adjunto.mime }))
+      } else {
+        // Adjunto de un tipo que ni se intenta: leído y descartado, no es un fallo.
+        fallo = 'sin_datos'
       }
-    } catch {
+    } catch (e) {
+      // El PDF no se dejó abrir (cifrado, escaneado sin texto, corrupto): tampoco
+      // se ha leído. No es «no era una factura».
+      console.warn('[facturas] adjunto ilegible:', String(e).slice(0, 140))
       datos = {}
+      fallo = 'tecnico'
+    }
+
+    if (fallo === 'tecnico') {
+      sinLeer++
+      // La etiqueta sobrevive al contenedor: el correo queda encolado y visible en
+      // Gmail aunque nadie mire el latido. Best-effort, nunca tumba la pasada.
+      await etiquetarCorreo(correo.uid, ETIQUETA_SIN_LEER).catch(() => {})
+      continue
     }
 
     const proveedor = (datos.proveedor as string | null) || correo.from.split('<')[0].trim() || 'Proveedor desconocido'
     const importe = typeof datos.total === 'number' ? datos.total : null
-    if (!importe || importe <= 0) continue
+    if (!importe || importe <= 0) { descartados++; continue }
 
     const ivaPct = typeof datos.iva_porcentaje === 'number' ? datos.iva_porcentaje : 21
     const base = importe / (1 + ivaPct / 100)
@@ -150,7 +186,7 @@ export async function escanearNuevasFacturas(
     await proponerVinculoReserva(facturaId, proveedor, fechaFactura).catch(() => {})
   }
 
-  return { nuevas, ok, error, pendientes }
+  return { nuevas, ok, error, pendientes, sinLeer, descartados }
 }
 
 async function notificarFactura(
