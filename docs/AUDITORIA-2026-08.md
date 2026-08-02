@@ -146,20 +146,23 @@ críticas restantes. Todos los bumps son de parche (sin cambios de API). **Cerra
 «repara»)**: los builds reales de Vercel de las 8 apps salieron en verde sobre el commit del PR
 (checks «Vercel – *» todos en success) → **PR #1215 mergeado a `main`** (squash `783b2fb`).
 
-### Vulns restantes (12) — de menor riesgo, documentadas para no re-investigar cada vez
-| Paquete | Severidad | Dónde | Explotabilidad |
-|---|---|---|---|
-| `xlsx` | high ×2 | ialimp (export) | **No explotable**: ialimp solo ESCRIBE xlsx, nunca parsea entrada de terceros (documentado ya en auditorías previas) |
-| `nodemailer` | high | sivra (`^8.0.7` directo) | Parche exige salto de major (8→9, ya usado por `core-email`); riesgo de romper el envío de correo sin poder probarlo en vivo — no se toca sin revisión manual |
-| `sharp` | high | plataforma (`^0.34.5`) | Parche `>=0.35.0`; rebuild de binario nativo — riesgo de build en Vercel, se documenta en vez de arriesgar sin build real |
-| `fast-xml-parser` | moderate | plataforma (`^4.5.0`) | Parche exige salto de major (4→5); usado para datos externos (posible parsing bancario/XML) — riesgo de romper sin poder probarlo en vivo |
-| `postcss` (vía `next`) | high+moderate | almacen | Bundlado dentro de `next` — solo se usa en build-time, sin CSS de terceros; riesgo real bajo |
-| `linkify-it` (vía `mailparser`) | high | plataforma | Transitiva de un paquete que no ha bumpeado su propia dep; forzar override arriesga romper el autolink de `mailparser` sin poder probarlo |
-| `file-type`, `uuid` | moderate | ialimp (vía `jimp`/`node-ical`) | Transitivas de menor severidad, sin CVE crítico conocido |
+### Vulns restantes — 2ª pasada («haz tu todo», 02/08): 12 → 3 (0 críticas)
+La sesión de cierre revisó una a una las 12 documentadas; casi todas tenían arreglo seguro:
 
-**Acción manual recomendada para Alberto** (fuera de esta pasada, gran radio / requiere smoke test
-en vivo): revisar nodemailer 8→9 en sivra (envío de emails a huéspedes) y fast-xml-parser 4→5 en
-plataforma (parsing bancario/XML) con una prueba manual antes de mergear cada bump por separado.
+| Paquete | Resolución |
+|---|---|
+| `nodemailer` (sivra directo) | ✅ Bump 8→9.0.3. **El call site real es un stub** (`app/api/mensajes/auto-reply/route.ts:13` — el transporter está comentado, `sendEmail` solo hace `console.log`), así que no había nada que romper. El peer warning de `@auth/core` es cosmético: su peer de nodemailer es **opcional** y sivra solo usa el provider `Credentials`. |
+| `nodemailer` (transitivo vía `imapflow`/`mailparser`) | ✅ `imapflow` ^1.6.5 en sivra+plataforma (1.6.x **eliminó la dep de nodemailer**) y `mailparser` refrescado a 3.9.14 (usa nodemailer 9.0.3). |
+| `fast-xml-parser` (plataforma) | ✅ Bump 4→5.10.1. El changelog de v5 declara «no change in the functionality, syntax, APIs, options» (solo empaquetado ESM/CJS); el código ya usa la sintaxis v4 (`removeNSPrefix` etc.). Verificado con smoke test de runtime + los 769 tests de plataforma (BORME/BOE/CODICE con fixtures reales). |
+| `sharp` (plataforma directo + vía `next` en almacen) | ✅ Bump 0.35.3 + override raíz `sharp >=0.35.0`. Smoke test de runtime del binario nativo (composición JPEG q82, la operación exacta del lector registral) OK; el build de Vercel del PR es la validación final del binario. |
+| `linkify-it` (vía `mailparser`) | ✅ Cayó sola con el refresco de `mailparser` a 3.9.14. |
+| `postcss` (vía `next`, almacen) | ✅ Override raíz `postcss >=8.5.18` (mismo major 8, API congelada; next pinnaba 8.4.31). |
+| `uuid` (vía `node-ical`, ialimp) | ✅ Override raíz `uuid >=11.1.1` (resuelve 14.0.1). Verificado en el propio contexto de `node-ical` que `require('uuid').v4` sigue funcionando en CJS. |
+| `xlsx` | 🟡 QUEDA (high ×2, **sin parche en npm**). No explotable: ialimp solo ESCRIBE xlsx, nunca parsea entrada de terceros. |
+| `file-type` (vía `jimp`, ialimp) | 🟡 QUEDA (moderate). El parche exige ≥21.3.1, que es **ESM-only** — el override rompería el `require` CJS de jimp en runtime. Bucle infinito en parser ASF; jimp solo procesa imágenes propias. |
+
+**Resultado final: 3 vulns (2 high `xlsx` sin parche + 1 moderate `file-type`), 0 críticas** — el
+suelo alcanzable sin cambiar de librería (`xlsx`→`exceljs` y `jimp`→`sharp` serían migraciones, no bumps).
 
 ## ✅ Seguridad multi-tenant + Supabase advisors
 Sin hallazgos nuevos de cruce entre tenants. Supabase advisors (`get_advisors`, ambos proyectos):
