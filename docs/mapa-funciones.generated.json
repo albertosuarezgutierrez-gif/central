@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-02T08:59:44Z",
-  "sha": "949819f1c23da92f42cdb591bbb424087a0680fc",
+  "generadoEn": "2026-08-02T14:18:11Z",
+  "sha": "562a635cc48ae2ff9f8cb38bc996aa8edd731455",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -51051,7 +51051,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 15
+          "linea": 18
         }
       ],
       "tablas": [
@@ -51066,7 +51066,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": "/api/cron/health-check",
-      "hash": "10b79999cce4"
+      "hash": "e611d740dc9b"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/ia-director-refresh/route.ts",
@@ -62941,6 +62941,37 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c6f34bbdee61"
+    },
+    {
+      "ruta": "apps/plataforma/lib/monitoring/sonda-ia.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Sonda ACTIVA de los proveedores de IA — un «ping» real y minúsculo a cada eslabón, cada día. Por qué existe (02/08/2026): la GEMINI_API_KEY estuvo MES Y MEDIO muerta (429 de cuota en el 100% de las llamadas) sin que saltara nada, porque la cadena de fallback recuperaba siempre y el único vigilante (",
+      "exporta": [
+        "sondearProveedoresIA"
+      ],
+      "funciones": [
+        {
+          "nombre": "sondasConfiguradas",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Sonda[]",
+          "linea": 33,
+          "resumen": "Mismos defaults de modelo que la cadena real (client.ts de core-ai / pasarela). Si allí se cambia un default, actualizarlo aquí — la sonda debe probar lo que la app usa de verdad."
+        },
+        {
+          "nombre": "sondearProveedoresIA",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<SondaIA[]>",
+          "linea": 78,
+          "resumen": "Sondea todos los proveedores configurados en paralelo. NUNCA lanza: cada resultado lleva su ok/error y el registro en `ai_usos` es best-effort (un fallo del registro no tumba la sonda)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "498cc63ef08c"
     },
     {
       "ruta": "apps/plataforma/lib/norma43.ts",
@@ -88057,7 +88088,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2373,
-    "funciones": 6342
+    "archivos": 2374,
+    "funciones": 6344
   }
 }
