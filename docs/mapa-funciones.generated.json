@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-01T21:22:13Z",
-  "sha": "4fe8a5b3eb75f310621291be01d606550ab15c18",
+  "generadoEn": "2026-08-02T06:51:20Z",
+  "sha": "3121b405940c41ca852d2f1e972473df03a81df5",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -59789,7 +59789,7 @@
           "exportada": true,
           "params": "clave: string | null | undefined",
           "retorno": "boolean",
-          "linea": 121,
+          "linea": 127,
           "resumen": "¿Es SEGURA esta clave para aprender una regla clave→destino (que se aplica por substring)? Rechaza las trampa: demasiado cortas, sin ninguna letra útil, números cortos, o compuestas SOLO de términos g"
         },
         {
@@ -59798,13 +59798,13 @@
           "exportada": true,
           "params": "banco: string | null, concepto: string | null, contraparte: string | null",
           "retorno": "MotivoSeguros",
-          "linea": 139,
+          "linea": 148,
           "resumen": "Explica POR QUÉ un ABONO en BBVA quedó como 'seguros': porque el concepto trae el nombre de una aseguradora / liquidación de comisiones ('nombre' → alta confianza), o porque cayó por el fallback de de"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1a60cd6bdab5"
+      "hash": "18617fc354aa"
     },
     {
       "ruta": "apps/plataforma/lib/correo/clasificador.ts",
