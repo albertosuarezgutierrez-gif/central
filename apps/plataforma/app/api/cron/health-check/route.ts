@@ -8,9 +8,12 @@ import { getResumenFinanciero } from '@/lib/finanzas'
 import { calcularEstadoDeclaracion } from '@/lib/comparativa-declaracion'
 import { facturasMensualesFaltantes } from '@/lib/sivra/facturas-mensuales'
 import { eur } from '@/lib/dinero'
+import { sondearProveedoresIA } from '@/lib/monitoring/sonda-ia'
 import type { NextRequest } from 'next/server'
 
-export const maxDuration = 60
+// 120 y no 60: la sonda de proveedores (Check 13) añade hasta ~12 s de pings en paralelo y el
+// resto de checks ya rondaban el techo. El dispatcher tolera hasta 280 s por job.
+export const maxDuration = 120
 
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -295,6 +298,29 @@ export async function GET(req: NextRequest) {
       )
     }
     if (!proveedoresMuertos.length) ok.push('✅ Ningún proveedor de IA muerto')
+
+    // Check 13: sonda ACTIVA de proveedores de IA — no espera al tráfico.
+    //
+    // El Check 12 es forense: solo dispara cuando el tráfico orgánico ya acumuló ≥10 fallos
+    // (~una semana con la cadencia real de los crons), y así fue como Gemini estuvo mes y medio
+    // muerto sin que nadie lo viera. Esta sonda hace un ping real y minúsculo a CADA proveedor
+    // configurado (misma key y mismo modelo que producción) y canta el eslabón caído el MISMO
+    // día, haya tráfico o no. Detalle y coste (despreciable) en lib/monitoring/sonda-ia.ts.
+    const sonda = await sondearProveedoresIA()
+    for (const s of sonda.filter((s) => !s.ok)) {
+      fallos.push(
+        `🔴 Sonda IA «${s.proveedor}» (${s.modelo}) NO responde: ${s.error ?? 'sin detalle'}. ` +
+        `El tráfico real no lo notará (la cadena de fallback lo tapa), pero cada llamada está ` +
+        `pagando este intento muerto — revisar key/cuota hoy.`,
+      )
+    }
+    const sondaOk = sonda.filter((s) => s.ok)
+    if (sondaOk.length === sonda.length && sonda.length > 0) {
+      ok.push(`✅ Sonda IA: ${sonda.length} proveedores responden (${sonda.map((s) => s.proveedor).join(', ')})`)
+    } else if (sonda.length === 0) {
+      // Cero proveedores configurados no es «todo bien»: es que la sonda no pudo mirar nada.
+      fallos.push('🔴 Sonda IA: ningún proveedor configurado (¿envs de IA ausentes en este entorno?)')
+    }
 
   } catch (err) {
     fallos.push(`🔴 Error ejecutando health check: ${err instanceof Error ? err.message : String(err)}`)

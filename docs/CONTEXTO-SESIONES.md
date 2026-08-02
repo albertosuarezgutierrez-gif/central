@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📡 Sonda ACTIVA de proveedores IA — «que no vuelva a pasar y si pasa, enterarnos rápido»
+  (02/08/2026, rama `claude/gemini-quota-fallback-issue-fyhghm`, 2ª tanda tras mergear #1220).**
+  El Check 12 es forense (necesita ~1 semana de fallos orgánicos); ahora el health-check diario hace
+  además un **ping real de 5 tokens a CADA proveedor configurado** (`lib/monitoring/sonda-ia.ts`,
+  misma key y modelo que producción, en paralelo, coste ≈0) → **Check 13** avisa por Telegram el
+  MISMO día si un eslabón no responde, haya tráfico o no. Cada ping queda en `ai_usos`
+  (endpoint `sonda`) — histórico de cuándo murió una key. Gemini solo se sondea si sus gates están
+  activos. `maxDuration` del health-check 60→120.
+
 - **🔌 Gemini FUERA de todas las cadenas por defecto — «usa OpenRouter» (02/08/2026, rama
   `claude/gemini-quota-fallback-issue-fyhghm`).** El Check 12 seguía rojo (544 llamadas/30d, 0 éxitos, 429
   de cuota). Tras el corte de websearch del 01/08 quedaban 2 vías vivas: el eslabón Gemini de `aiComplete`
