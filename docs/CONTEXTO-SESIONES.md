@@ -24,6 +24,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🎓 `agentes-entrenador`, pasada semanal (02/08/2026).** Rango 29/07→02/08, 6 entradas de bitácora
+  diagnosticadas: sin patrones repetidos (2+) sin resolver — Check 4 del health-check y la trampa
+  `price_ours` de pricing-agente ya se habían corregido/documentado por las propias sesiones. Sin
+  pendientes en `FEEDBACK-AGENTES.md`. Cero acciones de carril 1/2 esta pasada (bitácora podada, sin
+  PR ni Telegram). Backlog de PRs abiertos: 24 (bajó de 31 el 29/07, más antiguo #728 03/07) — no ha
+  crecido, sin re-escalar. **Canal de aviso en 401** (`ALERTA_TOKEN` de este entorno desincronizado
+  de Vercel `plataforma`) — avisado por push nativo, sin contenido perdido (no hubo acciones).
+
 - **🛡️ Auditoría PROFUNDA semanal (02/08/2026).** `auditoria-central` entera: lockfile OK, radiografía OK,
   guardián 26/26, typecheck limpio en las 8 apps (7 con Prisma + ia-rest), `pnpm test` 0 fallos, heartbeat
   14/14 crons ✅. `pnpm audit` había subido a 46 vulns (**3 críticas**, 17 high) desde las 16 (0 críticas) de

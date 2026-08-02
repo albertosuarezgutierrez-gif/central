@@ -15,60 +15,19 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
-- **2026-08-01 · health-check (sesión interactiva, continuación 30/07)** · hizo: verificado por logs
-  Vercel que el sync Smoobu corre (200 el 31/07 y 01/08) y que el 🔴 del Check 4 era sequía de reservas,
-  no avería; a petición de Alberto, Check 4 reescrito sobre latido real (`agente_latidos.smoobu_sync`,
-  registrado por `runSync`) — 🔴 solo con sync parado >26h, sequía → ✅ informativo; dudas: —; fallos: —;
-  PRs/commits: rama `claude/health-check-2026-07-30-vlv4c7` (2º PR).
-- **2026-08-01 · rrhh-compliance-calendar** · hizo: pasada mensual sobre `docs/ROADMAP-rrhh.md`;
-  9 ítems 🔴 obligatorios pendientes (fichaje RD 8/2019, geolocalización, TSA, art.28 RGPD, canal
-  denuncias Ley 2/2023, informe ITSS, Modelo 145, alerta NIE, borrado RGPD automatizado — PRL ya
-  marcado ✅ hecho); aviso Telegram enviado (canal 200 en preflight). dudas: —; fallos: —;
-  PRs/commits: commit directo a `main` (solo doc).
-- **2026-07-31 · pricing-agente (check-in programado del cutover)** · hizo: verificado que el sync de
-  Smoobu NO está roto (cron 05:01 → 200; `incomes` parado desde 25/07 es sequía real, corroborada por
-  `available` de Smoobu) y que el motor tarifica en mercado (Busto 81€ vs p50 80€). Documentada en
-  `references/ciclo.md` la trampa `price_ours` (fórmula legacy congelada) que ya ha provocado DOS falsas
-  alarmas — la del 27/07 y una mía hoy, detectada antes de reportarla. Aprendizaje escrito en
-  `pricing_aprendizaje` (ALL/2026-08). dudas: por qué Luxury liberó 1-12 agosto sin reserva en `incomes`
-  (¿bloqueo manual?); fallos: — (hallazgo comercial: agosto arranca a 0/31 en tres pisos, escalado a
-  Alberto); PRs/commits: rama `claude/pricing-check-31-07`.
-- **2026-07-30 · pricing-agente (auditoría pre-cutover, sesión interactiva)** · hizo: auditoría de
-  preparación 100% dinámico (BD + crons + raíles + evidencia piloto) — sin bloqueantes; actualizada la
-  doc de skill (suelos 65/72 del 28/07) y programado re-check del apply-auto de hoy; dudas: aforo Luxury
-  4 vs 5 camas pendiente de Alberto; fallos: `incomes` sin insertar desde 25/07 (esperado hasta el sync
-  de mañana 05:00 UTC post-dispatcher); PRs/commits: rama `claude/dynamic-pricing-audit-4cbdxv`.
-- **2026-07-30 · health-check (sesión interactiva, skill psd2-health-check)** · hizo: resueltos los 2 🔴
-  del health-check — duplicado PSD2 por drift del concepto (`Nº`→`N`, guarda nueva en `lib/psd2.ts` +
-  saneo SQL aplicado) y Smoobu stale (causa: crons mudos pre-dispatcher #1165; sync a `?days=7`);
-  dudas: el Check 4 mide "última reserva nueva", no salud del sync (`incomes` sin `updatedAt`) — puede
-  dar falsos 🔴 en rachas sin reservas; fallos: —; PRs/commits: rama `claude/health-check-2026-07-30-vlv4c7`.
-- **2026-07-29 · agentes-entrenador** · hizo: pasada a petición de Alberto ("repara todo") tras
-  descubrir que 2 pasadas semanales previas (26/07 PR #1090, 27/07 PR #1108) y varios PRs de otros
-  agentes se habían quedado **cerrados sin mergear** en un barrido manual de Alberto (73→31 PR
-  abiertos en minutos) — cerrar sin mergear perdió contenido real, no solo ruido. Verificado uno a
-  uno contra `main` qué sobrevivió y qué no: **ya estaba** (llegó por otras sesiones) el filtro
-  `origen='psd2'` de `psd2-health-check`, el aviso Telegram tras 2 ciclos bloqueados de
-  `pricing-agente`, el recordatorio de auto-informe de `facturas-correo`, y el caso de prueba
-  numérico de `auditoria-central`. **Se había perdido y se ha reaplicado en esta pasada:** (1) queries
-  de `ialimp-client-health` (PR #1084 cerrado 29/07 sin mergear) seguían señalando tablas inexistentes
-  (`reservas`/`facturas`) — confirmado con Supabase que aún no existen, reaplicado el fix real
-  (`pms_connections`+`cleaning_sessions`, `facturas_clientes`); (2) limpieza de 4 deps muertas
-  (`date-fns`/`clsx`/`lucide-react` de ia-rest, `nodemailer` de rrhh — PR #748 cerrado 29/07, aún
-  presentes y sin uso real hoy, verificado por grep) — reaplicada + lockfile regenerado + `tsc` 0 en
-  ambas apps; (3) doc de `GITHUB_TOKEN` en `apps/sivra/CLAUDE.md` (PR #765 cerrado 29/07, env var
-  aún ausente del doc y el código sigue exigiéndola) — reaplicado. Regla del `SKILL.md` propio
-  (backlog de PRs) tampoco había sobrevivido → reaplicada con nota nueva sobre este mismo incidente
-  (cerrar ≠ resuelto). Limpieza del propio backlog: cerrados 10 PR docs-only ya superados (verificado
-  contenido factual ya capturado o resuelto en `main` antes de cerrar, no a ciegas) + reabierto y
-  actualizado #1108. Diagnóstico de los pendientes 27-28/07 (ver abajo): sin acción de prompt en
-  ninguno (buscador-ia/pricing-agente ya se habían resuelto solos; el guardián `avisado_at` de
-  pricing-agente se mergeó minutos antes de esta pasada, PR #1118). **Aviso para seguimiento de
-  Alberto (no es acción de prompt):** `pricing_decisiones` sigue vacía desde el 05/07 pese a que el
-  fix de middleware (27/07) ya está en producción — verificar que el ciclo semanal del lunes
-  produce decisiones reales. dudas: —; fallos: el patrón "PR cerrado sin mergear = trabajo perdido en
-  silencio" ya es la 2ª vez que golpea a este mismo agente (antes fue "PR abierto sin mergear");
-  PRs/commits: PR de esta pasada (reabre y sustituye #1108).
+- **2026-08-02 · agentes-entrenador** · hizo: pasada semanal (rango 29/07→02/08, 6 entradas de
+  bitácora previas). Diagnóstico por agente: sin patrones repetidos (2+) sin resolver — el Check 4
+  del health-check ya se reescribió sobre latido real por sesión interactiva (30/07, PR #1192,
+  mergeado); la trampa `rate_snapshots.price_ours` de `pricing-agente` ya quedó documentada en
+  `references/ciclo.md` tras su 2ª falsa alarma (31/07), verificado que el aviso sigue presente;
+  `rrhh-compliance-calendar` y `pricing-agente` (check-in 31/07, auditoría pre-cutover 30/07) sin
+  incidencias que tocar prompt. Revisión transversal: regla de backlog del propio `SKILL.md`
+  (guardada el 29/07) sigue presente, verificada. Backlog de PRs abiertos `claude/*`: **24** (bajó de
+  31 el 29/07 — no ha crecido, no se re-escala), el más antiguo #728 (03/07, 30 días). Sin pendientes
+  en `FEEDBACK-AGENTES.md`. Ninguna acción de carril 1 ni carril 2 esta pasada. dudas: —; fallos:
+  preflight del canal de aviso dio **401** (`ALERTA_TOKEN` de este entorno desincronizado del de
+  Vercel `plataforma`) — sin contenido que avisar esta pasada (cero acciones), pero el canal seguía
+  mudo; avisado por push nativo `🔇 SIN TELEGRAM (401):`; PRs/commits: —.
 <!-- Los agentes insertan aquí. Ejemplo:
 - **2026-07-05 · facturas-correo** · hizo: 12 correos revisados, 3 facturas archivadas en
   Drive, 2 conciliadas con banca; dudas: recibo de Endesa sin CIF visible (a "Para tu
@@ -76,6 +35,16 @@
 -->
 
 ## Última poda
+
+2026-08-02 · pasada semanal · 6 entradas procesadas y podadas (health-check 30/07 sesión interactiva +
+health-check continuación 01/08 + rrhh-compliance-calendar 01/08 + pricing-agente auditoría pre-cutover
+30/07 + pricing-agente check-in 31/07 + auto-informe del entrenador 29/07). Diagnóstico: sin patrones
+repetidos sin resolver — Check 4 del health-check y la trampa `price_ours` de pricing-agente ya se
+habían corregido/documentado por las propias sesiones antes de esta pasada, verificado que sobrevivió
+en `main`/`references`. Sin acción de carril 1 ni carril 2. Backlog de PRs abiertos: 24, bajó de 31
+(29/07) — no ha crecido, sin re-escalar. Canal de aviso en 401 (`ALERTA_TOKEN` de este entorno
+desincronizado); sin contenido que perder porque no hubo acciones esta pasada. Auto-informe de esta
+pasada añadido como entrada pendiente para la siguiente.
 
 2026-07-29 · pasada a petición de Alberto ("repara todo") · 6 entradas procesadas y podadas
 (auto-informe del entrenador del 26/07 + buscador-ia 27/07 + pricing-agente 27/07 ×3 + pricing-agente
