@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 💹 MCP Financial Datasets evaluado — decisión: NO contratar (02/08/2026)
+Alberto conectó el MCP `Datos_financieros` (financialdatasets.ai) y pidió valorarlo para trading.
+Probado en sesión: la cuenta va por créditos y está a $0 — TODO endpoint de datos (hasta precio AAPL)
+responde «add more credits»; solo el catálogo del screener es gratis (trae FCF yield/ROIC/PEG + insiders/
+institucionales/guidance). Decisión de Alberto: no gastar — precios ya los da IBKR gratis, fundamentales
+los cubre el parser EDGAR propio (endurecido tras PR #1189), y lo nuevo (insiders/guidance) es CONTEXTO
+nunca filtro por preregistro. Reconsiderar solo si EDGAR vuelve a fallar (~49$/mes vs mantenimiento) o
+si se activa el tramo gratis 100 req/día (entonces: contexto en la pasada diaria, coste cero). Sin código.
+
 ### 🔎 El «0 comps» del barrido de mercado eran 44 búsquedas VACÍAS (02/08/2026)
 Diagnosticado el `ok=false` de `sivra_mercado_sweep` (lo que la entrada de abajo dejaba para el 09/08).
 No es Serper agotada ni la IA: la consulta con `site:booking.com` devuelve `organic: []` desde finales de
