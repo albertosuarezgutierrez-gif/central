@@ -31,7 +31,10 @@ y el último commit de main era el de la auditoría `[skip ci]`, que `vercel-ign
 La env quedaba en Vercel pero nunca en runtime. Fix (PR): el redeploy pasa
 `projectSettings.commandForIgnoringBuildStep: ''` (un redeploy explícito construye siempre) + sonda de
 ~15 s que reporta CANCELED/ERROR como fallo real; el endpoint solo dice `redeployed` si TODOS los
-proyectos salieron (antes un fallo parcial se tapaba). Pendiente: re-guardar el token tras mergear.
+proyectos salieron (antes un fallo parcial se tapaba). El PR #1236 (mergeado) tocó también apps/sivra,
+así que el merge reconstruyó sivra Y plataforma con la env ya guardada — verificado READY en producción;
+no hace falta re-guardar el token. El override del redeploy queda pendiente de estrenarse en la próxima
+edición real desde el panel (la sonda avisará si no funciona).
 Los 10 ilegibles de hoy eran **Groq 429** (rate limit de `gpt-oss-120b`) + **NIM timeout**: los dos
 únicos eslabones, porque `aiExtractInvoiceDetallado` llamaba a los proveedores a pelo **saltándose la
 pasarela**. Ahora usa `chatConDirector` (`endpoint='extraer-factura'`): Director eligiendo modelo,
