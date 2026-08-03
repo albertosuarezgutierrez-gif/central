@@ -24,6 +24,13 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 📨 Leads ia-rest: fuera aviso Telegram, email en frío 100% automático (03/08/2026)
+Alberto pidió (a raíz del ping «Lead listo: MICE Catering») quitar los avisos Telegram de leads y
+que el agente mande los emails solo con Resend. `lead-onboarding` ya no manda Telegram y marca
+`envio_aprobado=true`; `crm-envio-auto` pasa a ACTIVO POR DEFECTO (opt-out `ENVIO_AUTO_ACTIVO='0'`,
+antes exigía `='1'`). Salvaguardas intactas: horario L-V 9-19, tope diario 30, dedup, bajas RGPD.
+Resultado de envíos → resumen diario por email (tgAlert canal `resumen`). Build ia-rest verde. PR #1233.
+
 ### 🧾 El fix de #1219 funciona… y prometía una cola de Gmail que no existía (03/08/2026)
 Verificación de la pasada 06:15: cron **200**, latido `ok=true` y el parte nuevo ya dice la verdad —
 «1 factura nueva · ⚠️ **10 correos sin poder leer** · 1 descartado». Ese 10 es justo lo que antes se
