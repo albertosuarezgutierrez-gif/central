@@ -15,6 +15,16 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-03 · buscador-ia** · hizo: watch de deprecación sobre los 4 eslabones cableados
+  (NIM/Groq/Gemini/Kimi) — los 4 vivos por WebSearch (WebFetch directo a los catálogos dio 403 de
+  proxy); descubrimiento sin novedad que desplace la cadena (`z-ai/glm-5.2` sigue en seguimiento, sin
+  key para mini-eval); doc `docs/BUSCADOR-IA.md` actualizado. dudas: `CONTABLE_MODEL`
+  (`deepseek-ai/deepseek-v3`) sigue sin confirmar 2 pasadas seguidas por falta de key/bloqueo de
+  proxy; fallos: preflight del canal Telegram dio **401** (`ALERTA_TOKEN` de este
+  entorno/prompt desincronizado del valor vivo en Vercel — ver `docs/AVISOS-AGENTES.md`), aviso
+  enviado por push nativo (`🔇 SIN TELEGRAM (401)`) en su lugar, sin novedades de modelo que
+  requirieran Telegram de todos modos; PRs/commits: commit directo a `main` (solo doc, sin cambios
+  de código).
 - **2026-08-01 · health-check (sesión interactiva, continuación 30/07)** · hizo: verificado por logs
   Vercel que el sync Smoobu corre (200 el 31/07 y 01/08) y que el 🔴 del Check 4 era sequía de reservas,
   no avería; a petición de Alberto, Check 4 reescrito sobre latido real (`agente_latidos.smoobu_sync`,

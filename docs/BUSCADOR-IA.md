@@ -23,17 +23,17 @@
 > `ia_director_prompt`) — FUERA del scope de este agente. La cadena directa de abajo sigue siendo
 > la red de seguridad cuando OpenRouter entero falla, y sigue siendo lo que este agente vigila.
 
-| Eslabón | id por defecto | Env (key / override) | Coste | Estado (comprobado 2026-07-27) |
+| Eslabón | id por defecto | Env (key / override) | Coste | Estado (comprobado 2026-08-03) |
 |---|---|---|---|---|
 | OpenRouter (primario pasarela — lo vigila SU cron, no este agente) | `deepseek/deepseek-chat` | `OPENROUTER_API_KEY` / `OPENROUTER_MODEL` | según modelo (tope 1€/día) | fuera de scope (cron `ia-director-refresh`) |
-| NVIDIA NIM (primario cadena directa) | `meta/llama-3.3-70b-instruct` | `NVIDIA_API_KEY` | gratis | ✅ **VIVO** — sigue en [build.nvidia.com](https://build.nvidia.com/meta/llama-3_3-70b-instruct), sin aviso de retirada (solo la serie 3.1 se ha ido deprecando, no la 3.3) |
-| Groq (fallback 1) | `openai/gpt-oss-120b` | `GROQ_API_KEY` / `GROQ_BRAIN_MODEL` | gratis (rate-limited) | ✅ **VIVO** — Groq lo usa activamente como destino de migración de OTROS modelos que deprecia (ver [console.groq.com/docs/deprecations](https://console.groq.com/docs/deprecations)), señal de que se queda |
-| Gemini (fallback 2 + grounding) | `gemini-flash-latest` | `GEMINI_API_KEY` / `GEMINI_BRAIN_MODEL` | gratis | ✅ **VIVO — el alias rodante funcionó tal como se diseñó**: Google soltó Gemini 3.5 Flash GA y `gemini-flash-latest` ya apunta ahí solo, sin tocar código. Free tier confirmado para Flash/Flash-Lite (Pro salió del free tier en abril/2026); RPM/TPM de Flash incluso subieron. Nada que hacer. |
-| Kimi/Moonshot (fallback 3) | `kimi-k2.6` | `MOONSHOT_API_KEY` / `MOONSHOT_MODEL` | de pago | ✅ **VIVO** — sigue en el catálogo oficial ([platform.kimi.ai/docs/models](https://platform.kimi.ai/docs/models)) como tier de valor ($0.95/$4.00); los discontinuados del 25/05 eran otros ids (`kimi-k2-0905-preview` y similares), no el `k2.6` |
+| NVIDIA NIM (primario cadena directa) | `meta/llama-3.3-70b-instruct` | `NVIDIA_API_KEY` | gratis | ✅ **VIVO** — sigue activo en el catálogo NIM/NGC; ningún aviso de retirada (solo 3.0/3.1 se han ido deprecando hacia 3.3, que sigue siendo el destino de migración) |
+| Groq (fallback 1) | `openai/gpt-oss-120b` | `GROQ_API_KEY` / `GROQ_BRAIN_MODEL` | gratis (rate-limited) | ✅ **VIVO** — sigue siendo el destino de migración de Groq para OTROS modelos deprecados: `llama-3.1-8b-instant`/`llama-3.3-70b-versatile` (17/06), `llama-4-maverick` (20/02), `kimi-k2-instruct-0905` (23/03) todos migran hacia `gpt-oss-120b`/`gpt-oss-20b` ([console.groq.com/docs/deprecations](https://console.groq.com/docs/deprecations)) |
+| Gemini (fallback 2 + grounding, APAGADO por defecto) | `gemini-flash-latest` | `GEMINI_API_KEY` / `GEMINI_BRAIN_MODEL` | gratis | ✅ **VIVO** (alias rodante sin incidencias) — ⚠️ pero ojo: `gemini-2.5-flash` (el modelo que resolvía el alias hasta hace poco) tiene shutdown confirmado el **16/10/2026**, migración a `gemini-3.5-flash`; como es alias (`-latest`), no debería requerir tocar código, pero conviene reconfirmar cerca de esa fecha que el alias sigue resolviendo. Sigue gateado tras `GEMINI_TEXTO=1` (ver PR #1220), así que no es prioridad mientras el eslabón esté apagado. |
+| Kimi/Moonshot (fallback 3) | `kimi-k2.6` | `MOONSHOT_API_KEY` / `MOONSHOT_MODEL` | de pago | ✅ **VIVO** — Moonshot lanzó **K3** (julio/2026) como nuevo flagship, pero `kimi-k2.6` sigue en catálogo/pricing oficial como opción de valor ($0.60–0.95 in / $2.50–4.00 out por M según fuente). Sin aviso de retirada. |
 
 **Consumidores con modelo propio:**
 - `AGENTE_HUESPED_MODEL` — **vacío por defecto** (usa el 70B de la cadena). *(Antes `meta/llama-3.1-405b-instruct`, RETIRADO de NIM → causó "IA no disponible"; ver abajo.)*
-- `CONTABLE_MODEL` — default `deepseek-ai/deepseek-v3` (NIM). ⚠️ **sin confirmar en esta pasada**: el catálogo NIM que se ve ahora mismo muestra `deepseek-v3.1`, `deepseek-v3.1-terminus`, `deepseek-v3.2` y `deepseek-v4-pro`, pero no encontré confirmación (ni positiva ni de retirada) de la página del id plano `deepseek-ai/deepseek-v3` — WebFetch directo a NIM da 403 (bloqueo de proxy) y no hay key en esta sesión para probarlo por `curl`. No hay evidencia de que esté roto (NIM suele conservar ids antiguos), así que NO se marca como hallazgo crítico, pero convendría que alguien con `NVIDIA_API_KEY` a mano lo compruebe con una llamada real.
+- `CONTABLE_MODEL` — default `deepseek-ai/deepseek-v3` (NIM). ⚠️ **2ª pasada seguida sin confirmar**: el catálogo NIM muestra activamente `deepseek-v3.1`, `deepseek-v3.1-terminus`, `deepseek-v3.2` y (nuevo desde esta pasada) `deepseek-v4-flash`/`deepseek-v4-pro`, pero sigue sin aparecer una página propia para el id plano `deepseek-ai/deepseek-v3` en las búsquedas (WebFetch directo a NIM sigue dando 403 por proxy, sin key en sesión para `curl`). Dos pasadas sin evidencia de rotura tampoco es evidencia de que siga vivo — si alguien con `NVIDIA_API_KEY` puede probarlo por `curl` en la próxima pasada, cierra la duda de una vez.
 
 ## Catálogos a comprobar cada pasada
 - NVIDIA NIM — https://build.nvidia.com/models
@@ -49,6 +49,20 @@
 | MiMo-V2.5 / MiMo-V2.5-Pro (Xiaomi) | Vía OpenRouter (de pago, $0,14/$0,28 por M el estándar) o self-host (pesos MIT, HF) | `xiaomi/mimo-v2.5[-pro]` | **NO gratis por API** (sí pesos abiertos MIT si alguien lo autoalojara) | Motivo del interés: subiendo mucho en el ranking de uso de OpenRouter (top 1 por tokens esta semana, +12%) — Alberto preguntó por él directamente | Sin mini-eval (no hay eslabón gratis al que engancharlo). Pro empata con Kimi K2.6 en el índice de Artificial Analysis. Fuera del scope de esta cadena directa mientras no haya un endpoint gratis — el catálogo de OpenRouter en sí lo vigila su propio cron (`ia-director-refresh`), no este agente. |
 
 ## Bitácora de hallazgos (lo más reciente arriba)
+
+- **2026-08-03 · pasada limpia — los 4 eslabones VIVOS, canal Telegram MUDO (401).** Watch de
+  deprecación (Paso 1): NIM `meta/llama-3.3-70b-instruct`, Groq `openai/gpt-oss-120b`, Gemini
+  `gemini-flash-latest`, Kimi `kimi-k2.6` — los 4 confirmados vivos por WebSearch (WebFetch directo a
+  los 4 catálogos dio 403 de proxy en esta sesión, se resolvió por búsqueda). Único aviso a vigilar:
+  Gemini 2.5 Flash (lo que resolvía el alias hasta ahora) tiene shutdown confirmado 16/10/2026 →
+  `gemini-3.5-flash`; el eslabón sigue apagado por defecto (`GEMINI_TEXTO`) así que no urge. Sigue sin
+  confirmarse `CONTABLE_MODEL` (`deepseek-ai/deepseek-v3`, sin key en sesión — 2ª pasada seguida).
+  Descubrimiento (Paso 2): nada nuevo que desplace a la cadena — `z-ai/glm-5.2` sigue como candidato
+  fuerte en seguimiento (confirmado top open-weight otra vez, gratis en NIM, 40 RPM), aún sin mini-eval
+  en vivo por falta de `NVIDIA_API_KEY` en esta sesión. **Hallazgo del propio preflight**: el canal de
+  Telegram de esta rutina dio `401` (`causa: "el token no coincide..."`) — el `ALERTA_TOKEN` de este
+  entorno/prompt está desincronizado del valor vivo en Vercel. Sin hallazgos críticos de modelo →
+  sin PR; el 401 se avisa por push nativo (`🔇 SIN TELEGRAM (401)`) y queda anotado aquí.
 
 - **2026-07-27 · pasada limpia — los 4 eslabones de la cadena directa VIVOS.** Primera vez desde que
   existe el agente que no hay ningún id roto: NIM `meta/llama-3.3-70b-instruct`, Groq
