@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-03T10:36:32Z",
-  "sha": "f7f25215044009bf6499acfe1b7ce9f6a21e829c",
+  "generadoEn": "2026-08-03T11:33:44Z",
+  "sha": "7c2868a55135760c8ce25db0529e27fbdc221bae",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -65488,7 +65488,7 @@
           "exportada": true,
           "params": "raw: string",
           "retorno": null,
-          "linea": 48
+          "linea": 58
         },
         {
           "nombre": "escJs",
@@ -65496,7 +65496,16 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "string",
-          "linea": 56
+          "linea": 66
+        },
+        {
+          "nombre": "escSegunEstilo",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "q: string, s: string",
+          "retorno": "string",
+          "linea": 69,
+          "resumen": "Escapa el texto SOLO si el tag usa comillas escapadas (q = '\\\\\"'); con comillas normales va tal cual."
         },
         {
           "nombre": "applySeoReplacements",
@@ -65504,12 +65513,12 @@
           "exportada": true,
           "params": "raw: string, title: string, description: string, ogDescription: string",
           "retorno": "string",
-          "linea": 58
+          "linea": 71
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d0b340caa47e"
+      "hash": "500a660bd8b1"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/smoobu-sync.ts",
@@ -78676,7 +78685,7 @@
           "exportada": true,
           "params": "raw: string",
           "retorno": null,
-          "linea": 34
+          "linea": 44
         },
         {
           "nombre": "escJs",
@@ -78684,7 +78693,16 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "string",
-          "linea": 42
+          "linea": 52
+        },
+        {
+          "nombre": "escSegunEstilo",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "q: string, s: string",
+          "retorno": "string",
+          "linea": 55,
+          "resumen": "Escapa el texto SOLO si el tag usa comillas escapadas (q = '\\\\\"'); con comillas normales va tal cual."
         },
         {
           "nombre": "applySeoReplacements",
@@ -78692,13 +78710,13 @@
           "exportada": true,
           "params": "raw: string, title: string, description: string, ogDescription: string, schemaJson?: string,",
           "retorno": "string",
-          "linea": 49,
-          "resumen": "Reescribe title/description/og en la landing. Si se pasa `schemaJson` Y la landing ya contiene un bloque ld+json, lo reemplaza; si no existe el bloque, NO inserta nada (la landing es un string con com"
+          "linea": 62,
+          "resumen": "Reescribe title/description/og en la landing. Si se pasa `schemaJson` Y la landing ya contiene un bloque ld+json, reemplaza el PRIMERO (LodgingBusiness); si no existe el bloque, NO inserta nada."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a7f0c2ba9c12"
+      "hash": "15a59cb8be66"
     },
     {
       "ruta": "apps/sivra/lib/smoobu.ts",
@@ -88173,6 +88191,6 @@
   ],
   "resumen": {
     "archivos": 2376,
-    "funciones": 6350
+    "funciones": 6352
   }
 }
