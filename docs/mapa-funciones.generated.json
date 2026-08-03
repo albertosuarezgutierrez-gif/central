@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-03T05:32:22Z",
-  "sha": "1654e18398a882a9ea6bb4d141767596e1248aae",
+  "generadoEn": "2026-08-03T08:03:44Z",
+  "sha": "b19f5acc5c0fd63e268812ef7f5f5b382a2f29e7",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -51036,7 +51036,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/facturas-scan",
-      "hash": "94e2b82c32a6"
+      "hash": "b00e52424dfe"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/health-check/route.ts",
@@ -56985,8 +56985,8 @@
           "kind": "function",
           "exportada": true,
           "params": "uid: number, etiqueta: string, buzon = 'INBOX'",
-          "retorno": "Promise<void>",
-          "linea": 114,
+          "retorno": "Promise<boolean>",
+          "linea": 122,
           "resumen": "Copia el correo a una etiqueta de Gmail SIN marcarlo como visto ni procesado. Se usa para encolar lo que no se pudo leer: la etiqueta sobrevive a la sesión y al contenedor, así que un fallo de extracc"
         },
         {
@@ -56995,13 +56995,13 @@
           "exportada": true,
           "params": "uid: number, etiqueta = 'Facturas/Procesada', buzon = 'INBOX',",
           "retorno": "Promise<void>",
-          "linea": 133,
+          "linea": 145,
           "resumen": "Marca un correo como procesado: keyword IMAP + copia a la etiqueta si existe. `buzon` = el que devolvió el listado (ver `etiquetarCorreo`): con el buzón equivocado ni el flag ni la copia encuentran el"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7e072737d8a9"
+      "hash": "74c9684348ca"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/imputar.ts",
@@ -57097,7 +57097,7 @@
           "exportada": true,
           "params": "cuentaId: string, opts: { deadline?: number } = {},",
           "retorno": "Promise<ResultadoEscaneo>",
-          "linea": 62,
+          "linea": 68,
           "resumen": "@param opts.deadline epoch ms en el que el escaneo debe estar de vuelta. Sin él el trabajo es ilimitado y la función acaba muriendo por `maxDuration` — que es justo como se perdía el latido antes del "
         },
         {
@@ -57106,7 +57106,7 @@
           "exportada": false,
           "params": "facturaId: string, proveedor: string, importe: number, fechaVenc: string | null, cuentaId: string,",
           "retorno": "Promise<void>",
-          "linea": 192
+          "linea": 201
         },
         {
           "nombre": "aprobarPago",
@@ -57114,7 +57114,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string, debtorIban: string,",
           "retorno": "Promise<",
-          "linea": 248
+          "linea": 257
         },
         {
           "nombre": "aplazarPago",
@@ -57122,7 +57122,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string, dias = 7",
           "retorno": "Promise<boolean>",
-          "linea": 309
+          "linea": 318
         },
         {
           "nombre": "rechazarFactura",
@@ -57130,7 +57130,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 325
+          "linea": 334
         },
         {
           "nombre": "verificarPagosPendientes",
@@ -57138,7 +57138,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<number>",
-          "linea": 339
+          "linea": 348
         },
         {
           "nombre": "conciliarConBanco",
@@ -57146,7 +57146,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<number>",
-          "linea": 368
+          "linea": 377
         },
         {
           "nombre": "pagarTodo",
@@ -57154,7 +57154,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<",
-          "linea": 407
+          "linea": 416
         },
         {
           "nombre": "resumenSemanal",
@@ -57162,7 +57162,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 423
+          "linea": 432
         },
         {
           "nombre": "alertarFacturasAusentes",
@@ -57170,7 +57170,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<number>",
-          "linea": 452
+          "linea": 461
         },
         {
           "nombre": "proponerVinculoReserva",
@@ -57178,7 +57178,7 @@
           "exportada": false,
           "params": "facturaId: string, proveedor: string, fechaFactura: string | null,",
           "retorno": "Promise<void>",
-          "linea": 485
+          "linea": 494
         },
         {
           "nombre": "actualizarMensajeTg",
@@ -57186,7 +57186,7 @@
           "exportada": false,
           "params": "msgId: number | null, texto: string",
           "retorno": "Promise<void>",
-          "linea": 516
+          "linea": 525
         }
       ],
       "tablas": [
@@ -57199,7 +57199,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "ae1b494bd115"
+      "hash": "38b0a798e53e"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/procesar.ts",
@@ -57267,7 +57267,7 @@
           "exportada": false,
           "params": "n: number, sing: string, plur: string",
           "retorno": null,
-          "linea": 24
+          "linea": 35
         },
         {
           "nombre": "detalleEscaneo",
@@ -57275,7 +57275,7 @@
           "exportada": true,
           "params": "c: ConteoEscaneo",
           "retorno": "string",
-          "linea": 30,
+          "linea": 41,
           "resumen": "Devuelve el parte legible de la pasada. Si algo quedó sin leer, el parte lo dice DELANTE y con aviso: es lo que impide leer el «0 nuevas» como «no hay facturas»."
         },
         {
@@ -57284,13 +57284,13 @@
           "exportada": true,
           "params": "c: ConteoEscaneo",
           "retorno": "boolean",
-          "linea": 55,
+          "linea": 74,
           "resumen": "¿Se puede afirmar «no hay facturas nuevas» a partir de esta pasada? Solo si de verdad se miró todo: nada sin leer y nada sin mirar. Lo consumen el parte y cualquier pantalla que quiera hablar en nombr"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "54f1c7d30323"
+      "hash": "e3da05364283"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/resumen-mensual.ts",

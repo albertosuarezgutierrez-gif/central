@@ -63,7 +63,7 @@ export async function GET(req: Request) {
   // afirmaba «no tienes facturas pendientes 🎉» indefinidamente.
   let escaneoOk: boolean | null = null
   let escaneoError: string | null = null
-  const conteo: ConteoEscaneo = { nuevas: 0, sinLeer: 0, descartados: 0, pendientes: 0 }
+  const conteo: ConteoEscaneo = { nuevas: 0, sinLeer: 0, descartados: 0, pendientes: 0, encolados: 0 }
   if (cuentaBuzon) {
     try {
       const r = await escanearNuevasFacturas(cuentaBuzon, { deadline: t0 + PRESUPUESTO_ESCANEO_MS })
@@ -72,6 +72,7 @@ export async function GET(req: Request) {
       escaneoError = r.error
       Object.assign(conteo, {
         nuevas: r.nuevas, sinLeer: r.sinLeer, descartados: r.descartados, pendientes: r.pendientes,
+        encolados: r.encolados,
       })
     } catch (e: any) {
       escaneoOk = false

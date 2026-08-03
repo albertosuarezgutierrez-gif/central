@@ -52,6 +52,12 @@ export interface ResultadoEscaneo {
   sinLeer: number
   /** Candidatos leídos y descartados con criterio (no eran factura). Informativo. */
   descartados: number
+  /**
+   * De los `sinLeer`, cuántos se pudieron encolar de verdad en Gmail. Si es menor
+   * que `sinLeer`, la etiqueta no existe o IMAP la rechazó: esos correos NO están
+   * en ninguna cola y solo constan aquí.
+   */
+  encolados: number
 }
 
 /**
@@ -75,7 +81,7 @@ export async function escanearNuevasFacturas(
     listado = await listarCandidatosConLimite({ desde, etiqueta: ETIQUETA_GMAIL, deadline: deadlineListado })
   } catch (e: any) {
     // El buzón no se ha podido leer: se dice, no se disfraza de «0 facturas».
-    return { nuevas: 0, ok: false, error: String(e?.message ?? e).slice(0, 200), pendientes: 0, sinLeer: 0, descartados: 0 }
+    return { nuevas: 0, ok: false, error: String(e?.message ?? e).slice(0, 200), pendientes: 0, sinLeer: 0, descartados: 0, encolados: 0 }
   }
   const correos = listado.correos
 
@@ -88,6 +94,7 @@ export async function escanearNuevasFacturas(
   let pendientes = 0
   let sinLeer = 0
   let descartados = 0
+  let encolados = 0
 
   for (let i = 0; i < correos.length; i++) {
     if (deadline && Date.now() > deadline) {
@@ -133,8 +140,10 @@ export async function escanearNuevasFacturas(
     if (fallo === 'tecnico') {
       sinLeer++
       // La etiqueta sobrevive al contenedor: el correo queda encolado y visible en
-      // Gmail aunque nadie mire el latido. Best-effort, nunca tumba la pasada.
-      await etiquetarCorreo(correo.uid, ETIQUETA_SIN_LEER, listado.buzon).catch(() => {})
+      // Gmail aunque nadie mire el latido. Best-effort (nunca tumba la pasada), pero
+      // se CUENTA si de verdad se encoló: decir «etiquetado para reintentar» sin
+      // comprobarlo es la misma mentira que este agente vino a quitar.
+      if (await etiquetarCorreo(correo.uid, ETIQUETA_SIN_LEER, listado.buzon).catch(() => false)) encolados++
       continue
     }
 
@@ -186,7 +195,7 @@ export async function escanearNuevasFacturas(
     await proponerVinculoReserva(facturaId, proveedor, fechaFactura).catch(() => {})
   }
 
-  return { nuevas, ok, error, pendientes, sinLeer, descartados }
+  return { nuevas, ok, error, pendientes, sinLeer, descartados, encolados }
 }
 
 async function notificarFactura(
