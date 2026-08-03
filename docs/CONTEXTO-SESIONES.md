@@ -31,7 +31,18 @@ devolvió 200 en 222 ms con `content` vacío (gpt-oss-120b es razonador y `maxTo
 razonamiento); NIM abortó a los 12 s cuando producción espera 30 y su media real es ~26 s (167 éxitos
 /30d, último 02/08). Fix en `lib/monitoring/sonda-ia.ts`: `maxTokens` 5→300 y timeout 12→30 s.
 Observado de paso: `registral` usa `google/gemini-2.5-flash` vía NIM con 404 intermitente (~50% hoy)
-— vigilar si persiste. PR draft en rama `claude/health-check-ai-probes-xl69g7`.
+— vigilar si persiste. PR #1232 (mergeado).
+
+### 🧾 El fix de #1219 funciona… y prometía una cola de Gmail que no existía (03/08/2026)
+Verificación de la pasada 06:15: cron **200**, latido `ok=true` y el parte nuevo ya dice la verdad —
+«1 factura nueva · ⚠️ **10 correos sin poder leer** · 1 descartado». Ese 10 es justo lo que antes se
+tiraba en silencio (causa en logs: **Groq 429 rate limit** en `gpt-oss-120b` + NIM timeout). PERO el
+parte añadía «etiquetados en Gmail para reintentar» y la etiqueta **`Facturas/Extraccion-fallida` no
+existía**: `messageCopy` fallaba y el `.catch(() => {})` se lo tragaba → cero encolados y una promesa
+falsa en el mismo sitio donde se arreglaba otra. Etiqueta creada a mano (Label_16) y arreglo de código:
+`etiquetarCorreo` devuelve booleano, se cuenta `encolados` y el parte solo promete cola para los que de
+verdad entraron (🔴 explícito si no). Verificado: tsc 0 · 791 tests · build OK. **Pendiente: los 10
+ilegibles siguen sin leerse** — el cuello es la cuota de Groq, no el escaneo.
 
 ### 💹 MCP Financial Datasets evaluado — decisión: NO contratar (02/08/2026)
 Alberto conectó el MCP `Datos_financieros` (financialdatasets.ai) y pidió valorarlo para trading.
