@@ -11,8 +11,9 @@ import { eur } from '@/lib/dinero'
 import { sondearProveedoresIA } from '@/lib/monitoring/sonda-ia'
 import type { NextRequest } from 'next/server'
 
-// 120 y no 60: la sonda de proveedores (Check 13) añade hasta ~12 s de pings en paralelo y el
-// resto de checks ya rondaban el techo. El dispatcher tolera hasta 280 s por job.
+// 120 y no 60: la sonda de proveedores (Check 13) añade hasta ~30 s de pings en paralelo (mismo
+// timeout que el tráfico real — NIM gratis responde en ~26 s de media) y el resto de checks ya
+// rondaban el techo. El dispatcher tolera hasta 280 s por job.
 export const maxDuration = 120
 
 export async function GET(req: NextRequest) {

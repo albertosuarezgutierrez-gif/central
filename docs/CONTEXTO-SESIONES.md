@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### ⚕️ Health-check 03/08: los 3 rojos de IA eran ruido, no averías (03/08/2026)
+Gemini (Check 12) = residuo pre-gate: última llamada real 01/08 04:00; la guarda de 3 días lo apaga
+sola el 04/08. NIM y Groq = **falsos positivos de la primera pasada de la sonda (Check 13)**: Groq
+devolvió 200 en 222 ms con `content` vacío (gpt-oss-120b es razonador y `maxTokens:5` se iba en
+razonamiento); NIM abortó a los 12 s cuando producción espera 30 y su media real es ~26 s (167 éxitos
+/30d, último 02/08). Fix en `lib/monitoring/sonda-ia.ts`: `maxTokens` 5→300 y timeout 12→30 s.
+Observado de paso: `registral` usa `google/gemini-2.5-flash` vía NIM con 404 intermitente (~50% hoy)
+— vigilar si persiste. PR #1232 (mergeado).
+
 ### 📨 Leads ia-rest: fuera aviso Telegram, email en frío 100% automático (03/08/2026)
 Alberto pidió (a raíz del ping «Lead listo: MICE Catering») quitar los avisos Telegram de leads y
 que el agente mande los emails solo con Resend. `lead-onboarding` ya no manda Telegram y marca

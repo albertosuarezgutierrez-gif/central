@@ -21,7 +21,11 @@ import { nimChat, groqChat, moonshotChat, openrouterChat, geminiChat } from '@ce
 import type { NimChatMessage } from '@central/core-ai'
 import { registrarUso } from '@/lib/ai-gateway'
 
-const TIMEOUT_MS = Number(process.env.SONDA_IA_TIMEOUT_MS ?? 12_000)
+// 30 s = el MISMO timeout que el tráfico real (`aiComplete` usa timeoutMs 30_000). Una sonda más
+// estricta que producción denuncia averías que producción no sufre: el 03/08 el ping a NIM abortó
+// a los 12 s mientras el tráfico real del día anterior completaba en ~26 s de media (tier gratis
+// con cola) — falso positivo en la primera pasada de la sonda.
+const TIMEOUT_MS = Number(process.env.SONDA_IA_TIMEOUT_MS ?? 30_000)
 const PING: NimChatMessage[] = [{ role: 'user', content: 'ping' }]
 
 export type SondaIA = { proveedor: string; modelo: string; ok: boolean; ms: number; error?: string }
@@ -32,7 +36,12 @@ type Sonda = { proveedor: string; modelo: string; llamar: (signal: AbortSignal) 
 // cambia un default, actualizarlo aquí — la sonda debe probar lo que la app usa de verdad.
 function sondasConfiguradas(): Sonda[] {
   const lista: Sonda[] = []
-  const opts = { maxTokens: 5, temperature: 0 }
+  // maxTokens 300 y no 5: es un TECHO, no un objetivo — un modelo normal responde "pong" y gasta
+  // lo mismo con cualquiera de los dos valores. Pero los modelos RAZONADORES (gpt-oss-120b en
+  // Groq) consumen el presupuesto en razonamiento antes de emitir contenido: con 5 el `content`
+  // volvía vacío en 222 ms (HTTP 200) y la sonda cantaba «respuesta vacía» con el proveedor sano
+  // (falso positivo del 03/08, primera pasada).
+  const opts = { maxTokens: 300, temperature: 0 }
 
   const nimKey = process.env.NVIDIA_API_KEY
   if (nimKey) {
