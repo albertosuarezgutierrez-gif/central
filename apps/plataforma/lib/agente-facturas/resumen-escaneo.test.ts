@@ -23,6 +23,26 @@ test('lo que no se pudo leer sale con aviso y desmiente el recuento', () => {
   assert.equal(recuentoFiable({ ...vacio, sinLeer: 2 }), false)
 })
 
+// 03/08/2026: el parte prometió 10 correos «etiquetados en Gmail» con la etiqueta
+// sin crear. Solo se promete la cola de los que de verdad entraron en ella.
+test('sin encolar ninguno: el parte NO promete cola, avisa de que falta la etiqueta', () => {
+  const d = detalleEscaneo({ ...vacio, sinLeer: 10, encolados: 0 })
+  assert.match(d, /NINGUNO se ha podido etiquetar/)
+  assert.match(d, /Facturas\/Extraccion-fallida/)
+  assert.doesNotMatch(d, /^.*\(extracción fallida; etiquetados en Gmail para reintentar\)/)
+})
+
+test('encolado parcial: dice cuántos entraron y cuántos no', () => {
+  const d = detalleEscaneo({ ...vacio, sinLeer: 5, encolados: 3 })
+  assert.match(d, /3 etiquetados para reintentar/)
+  assert.match(d, /🔴 2 SIN encolar/)
+})
+
+test('todos encolados (o sin dato): se mantiene el parte de siempre', () => {
+  assert.match(detalleEscaneo({ ...vacio, sinLeer: 2, encolados: 2 }), /etiquetados en Gmail para reintentar/)
+  assert.match(detalleEscaneo({ ...vacio, sinLeer: 2 }), /etiquetados en Gmail para reintentar/)
+})
+
 test('descartado leído NO es lo mismo que sin leer: no lleva aviso', () => {
   const d = detalleEscaneo({ ...vacio, descartados: 3 })
   assert.match(d, /3 descartados \(leídos, no eran factura\)/)
