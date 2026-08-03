@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-03T08:10:09Z",
-  "sha": "0ac519e6c811006ffd07a81bc1c59bf38d7d49d1",
+  "generadoEn": "2026-08-03T09:49:58Z",
+  "sha": "7b47095f67254f87c4f66d9ee3eb6cbd00300d5e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -57202,6 +57202,28 @@
       "hash": "38b0a798e53e"
     },
     {
+      "ruta": "apps/plataforma/lib/agente-facturas/parsear-json-ia.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Parseo de la respuesta JSON de un modelo de lenguaje. 🚨 Por qué es un módulo aparte y testeado: el `JSON.parse` directo sobre la respuesta cruda era una de las dos causas de que 10 facturas se quedaran sin leer el 03/08/2026 («SyntaxError: Unterminated string in JSON at position 322»). Los modelos ",
+      "exporta": [
+        "parsearJsonIa"
+      ],
+      "funciones": [
+        {
+          "nombre": "parsearJsonIa",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string | null | undefined",
+          "retorno": "JsonIa",
+          "linea": 24,
+          "resumen": "Saca el primer objeto JSON de una respuesta de modelo, tolerando adornos. NO inventa nada: si no hay objeto legible devuelve `{ datos: {}, ok: false }` y el llamador debe tratarlo como «no se ha podid"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e73783c7eda4"
+    },
+    {
       "ruta": "apps/plataforma/lib/agente-facturas/procesar.ts",
       "ambito": "apps/plataforma",
       "resumen": "Procesa UNA factura ya extraída: huella → regla → decisión → dedup → imputa. Compartido por el cron `scan` y el `backfill` (DRY).",
@@ -57495,7 +57517,7 @@
           "exportada": false,
           "params": "",
           "retorno": "NimConfig",
-          "linea": 28
+          "linea": 29
         },
         {
           "nombre": "aiComplete",
@@ -57503,7 +57525,7 @@
           "exportada": true,
           "params": "messages: { role: string; content: string }[], opts: { timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 45,
+          "linea": 46,
           "resumen": "Completion de texto (system+user…). Mismo contrato de siempre: recibe mensajes {role,content} y devuelve el texto. Antes iba DIRECTO a NVIDIA NIM con modelo pinneado (Llama 3.3-70b), saltándose OpenRo"
         },
         {
@@ -57512,7 +57534,7 @@
           "exportada": true,
           "params": "system: string, images: ImageInput[], userText: string, opts: { maxTokens?: number; model?: string; timeoutMs?: number; endpoint?: string /** `true` = varias imágenes en la MISMA llamada: exige modelo multimodal y * NO cae a NIM, que solo a",
           "retorno": "Promise<string>",
-          "linea": 73,
+          "linea": 74,
           "resumen": "VISIÓN / OCR con el modelo que decida la app. Un solo punto de entrada para leer imágenes desde plataforma (certificaciones registrales escaneadas, tickets, fotos de facturas). Enrutado: si hay `OPENR"
         },
         {
@@ -57521,26 +57543,8 @@
           "exportada": true,
           "params": "audio: Buffer, fileName: string, mimeType?: string, opts: { timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 156,
+          "linea": 157,
           "resumen": "Transcribe voz → texto (STT) con Groq Whisper (`whisper-large-v3`, gratis). Usa GROQ_API_KEY (la misma del fallback de texto). Devuelve '' si no reconoce nada. Para las notas de voz del agente de cont"
-        },
-        {
-          "nombre": "conTimeout",
-          "kind": "function",
-          "exportada": false,
-          "params": "p: Promise<T>, ms: number",
-          "retorno": "Promise<T>",
-          "linea": 193,
-          "resumen": "Corta una llamada colgada (Groq no acepta `signal`, y NIM se ha colgado antes)."
-        },
-        {
-          "nombre": "extraerConGroq",
-          "kind": "function",
-          "exportada": false,
-          "params": "user: string",
-          "retorno": "Promise<string>",
-          "linea": 201,
-          "resumen": "Extracción por Groq (rápido, mismo Llama-70b). Lanza si no hay GROQ_API_KEY o Groq falla."
         },
         {
           "nombre": "aiExtractInvoiceDetallado",
@@ -57548,7 +57552,7 @@
           "exportada": true,
           "params": "input: { text?: string imageBase64?: string mimeType?: string }",
           "retorno": "Promise<ResultadoExtraccion>",
-          "linea": 229,
+          "linea": 216,
           "resumen": "Igual que `aiExtractInvoice`, pero dice POR QUÉ no hay datos cuando no los hay. PDF (texto) → Groq (rápido) → NVIDIA NIM (respaldo) — el 1er JSON válido gana. Imagen → NVIDIA NIM visión (llama-3.2-90b"
         },
         {
@@ -57563,7 +57567,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "13a1883e44b5"
+      "hash": "14b60b757140"
     },
     {
       "ruta": "apps/plataforma/lib/ai-gateway.ts",
@@ -88168,7 +88172,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2375,
-    "funciones": 6351
+    "archivos": 2376,
+    "funciones": 6350
   }
 }
