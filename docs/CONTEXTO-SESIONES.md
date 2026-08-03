@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🎸 Bienal de Flamenco 2026 dada de alta en el pricing (03/08/2026)
+Reserva Booking del Dúplex (25-28 sep, 478,88€ brutos = 159,63€/noche, 53 días de antelación con mediana 7)
+destapó que la Bienal (fechas oficiales **9 sep – 3 oct**, labienal.com) no estaba en NINGUNA fuente de
+eventos (el hueco «septiembre = 0 eventos» del 31/07). Mercado real de ese finde por aforo (Booking MCP):
+p50/noche 258€ (4pl) · 269€ (2pl) · 429€ (5pl) · **984€ (12pl)** — ~1,5× el finde 18-20 (162€ a 4pl).
+Hecho: Bienal en `pricing-calendar.ts` (plataforma+sivra, 1,25/1,30/1,40), 60 comps de 4 findes en
+`market_rates` (upsert idéntico al ingest), aprendizaje en `pricing_aprendizaje` (`ALL/bienal_flamenco_2026`),
+hueco cerrado en la skill. PR draft rama `claude/duplex-dynamic-pricing-435igu`.
+
 ### 🔎 SEO housesevillana: push manual + el agente solo actualizaba el <title> (03/08/2026)
 El PAT de Alberto no tiene `contents:write` sobre `house-sevillana-landing` → el botón SEO falló el push
 (403); pendiente de que Alberto suba el permiso del token en GitHub. Mientras: actualización SEO aplicada

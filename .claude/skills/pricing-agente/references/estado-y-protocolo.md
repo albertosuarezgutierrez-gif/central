@@ -58,10 +58,12 @@ el fallo era doble y sistémico:
   acepta el factor de `pricing_eventos_auto` y el motor le pasa el mismo que usa para el precio. Antes solo leía
   el calendario, así que los 3 días de **Karol G** (factor 2,5, solo en la tabla) tenían el suelo de un junio
   cualquiera: subían de precio pero podían deslizarse al mínimo si sus comps caducaban.
-- **🕳️ HUECOS DE EVENTOS vivos (calendario + tabla, próximos 12 meses):** **septiembre 2026 = CERO eventos en
-  ambas fuentes** pese a ser mes alto (`SEASONAL` 1,40) y con ventas reales de House a 449-847€/noche — ahí cae
-  la **Bienal de Flamenco** (años pares), pendiente de confirmar fechas con Alberto. Julio 2027 también vacío
-  (límite del horizonte). Agosto 2026 solo tiene el Sevilla-Rayo. El resto de meses está cubierto.
+- **🕳️ HUECOS DE EVENTOS vivos (calendario + tabla, próximos 12 meses):** ~~septiembre 2026 = CERO eventos~~
+  **→ CERRADO 03/08/2026: la Bienal de Flamenco 2026 (fechas OFICIALES 9 sep – 3 oct, labienal.com) está en el
+  calendario** (1,25 laborables / 1,30 dom / 1,40 vie-sáb) tras la reserva del Dúplex 25-28 sep a 159,63€/noche
+  bruto con el mercado de ese finde a p50 258€ (4pl) / 984€ (12pl) — comps de 4 findes de Bienal cargados en
+  `market_rates` (barrido de sesión 03/08). Julio 2027 sigue vacío (límite del horizonte). Agosto 2026 solo
+  tiene el Sevilla-Rayo. El resto de meses está cubierto.
 - **Horizonte vs calendario:** `PRICING_HORIZON_DAYS`=365 y el calendario acaba el **2027-05-02** → may-jul 2027
   se tarifica sin eventos de calendario (solo lo que traiga la tabla). El watchdog de `pilot-track` avisa.
 - **Costes por noche (recalculados con datos vivos; detalle en `pricing_aprendizaje/ALL/costes_por_noche_31_07_2026`):**
