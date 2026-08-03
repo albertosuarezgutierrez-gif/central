@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-03T08:08:54Z",
-  "sha": "02e56457d4b813021003073c0672b68505675b85",
+  "generadoEn": "2026-08-03T08:10:09Z",
+  "sha": "0ac519e6c811006ffd07a81bc1c59bf38d7d49d1",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -51051,7 +51051,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 18
+          "linea": 19
         }
       ],
       "tablas": [
@@ -51066,7 +51066,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": "/api/cron/health-check",
-      "hash": "e611d740dc9b"
+      "hash": "8689559e96c6"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/ia-director-refresh/route.ts",
@@ -62975,7 +62975,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Sonda[]",
-          "linea": 33,
+          "linea": 37,
           "resumen": "Mismos defaults de modelo que la cadena real (client.ts de core-ai / pasarela). Si allí se cambia un default, actualizarlo aquí — la sonda debe probar lo que la app usa de verdad."
         },
         {
@@ -62984,13 +62984,13 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<SondaIA[]>",
-          "linea": 78,
+          "linea": 87,
           "resumen": "Sondea todos los proveedores configurados en paralelo. NUNCA lanza: cada resultado lleva su ok/error y el registro en `ai_usos` es best-effort (un fallo del registro no tumba la sonda)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "498cc63ef08c"
+      "hash": "52b4549098d2"
     },
     {
       "ruta": "apps/plataforma/lib/norma43.ts",
