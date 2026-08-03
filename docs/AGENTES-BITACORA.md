@@ -15,6 +15,12 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-03 · pricing-agente (ciclo semanal completo, los 4 pisos)** · hizo: mercado real por
+  aforo REAL para los 4 pisos (Booking, 9 fechas busto + 6 fechas clave luxury/duplex/house),
+  primera vez con House a 12 plazas reales (ya no proxy 8p) — comps escritos: busto=90 duplex=60
+  house=58 luxury=59, ninguno a 0; 27 propuestas dry-run vía `aplicar-propuesta` (ALERTA_TOKEN,
+  circuit-breaker OK); aprendizaje escrito (3 filas `pricing_aprendizaje`); Telegram enviado (200).
+  dudas: —; fallos: —; PRs/commits: rama `claude/sharp-wozniak-nf44l1` (solo memoria, sin código).
 - **2026-08-01 · health-check (sesión interactiva, continuación 30/07)** · hizo: verificado por logs
   Vercel que el sync Smoobu corre (200 el 31/07 y 01/08) y que el 🔴 del Check 4 era sequía de reservas,
   no avería; a petición de Alberto, Check 4 reescrito sobre latido real (`agente_latidos.smoobu_sync`,

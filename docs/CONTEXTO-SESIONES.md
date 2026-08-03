@@ -22,6 +22,15 @@
 
 ---
 
+## (03/08/2026) Ciclo semanal pricing-agente — los 4 pisos, House ya con aforo 12p real
+Estudiados mercado por zona/aforo de los 4 pisos (no solo los en vivo): 9 fechas busto + 6 clave
+(ago/oct/dic/feb/SS-25mar/Feria-17abr real) para luxury/duplex/house. Hito: Booking admite
+`number_of_adults` hasta 20 → House ya se mide a 12 plazas REALES, no proxy 8p (p50 ago 298€, SS
+1.329€, Feria 969€, por debajo de lo extrapolado antes). Comps escritos hoy: busto=90 duplex=60
+house=58 luxury=59 (ninguno a 0). 27 propuestas dry-run vía `aplicar-propuesta`, circuit-breaker
+OK. Señal: SS 26-mar en busto/luxury pasó a reservada a los precios de hace una semana. Duplex/House
+siguen en dry-run (`apply_enabled=false`), pendiente OK explícito de Alberto para activarlos.
+
 ## 📌 Estado actual (lo más reciente arriba)
 
 ### 💹 MCP Financial Datasets evaluado — decisión: NO contratar (02/08/2026)
