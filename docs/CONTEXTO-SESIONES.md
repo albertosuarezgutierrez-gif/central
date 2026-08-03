@@ -24,6 +24,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🤖 La extracción de facturas pasa por OpenRouter (03/08/2026, decisión de Alberto)
+Los 10 ilegibles de hoy eran **Groq 429** (rate limit de `gpt-oss-120b`) + **NIM timeout**: los dos
+únicos eslabones, porque `aiExtractInvoiceDetallado` llamaba a los proveedores a pelo **saltándose la
+pasarela**. Ahora usa `chatConDirector` (`endpoint='extraer-factura'`): Director eligiendo modelo,
+reintento con modelo seguro, cadena GRATIS de respaldo, presupuesto diario respetado (si se agota
+degrada, no gasta) y **coste visible en `ai_usos`** — antes leer facturas no aparecía en el panel.
+De paso, el parseo sale a `lib/agente-facturas/parsear-json-ia.ts` (puro, 9 tests): tolera ```json y
+prosa alrededor (adornos, no fallos), pero un JSON **truncado NO se repara** —un importe a medias es
+peor que ninguno— y un **array** se declara ilegible en vez de coger «la primera de N». Verificado:
+tsc 0 · 800 tests · build OK. **Pendiente: la pasada del 04/08 dirá si `sinLeer` baja de 10.**
+
 ### ⚕️ Health-check 03/08: los 3 rojos de IA eran ruido, no averías (03/08/2026)
 Gemini (Check 12) = residuo pre-gate: última llamada real 01/08 04:00; la guarda de 3 días lo apaga
 sola el 04/08. NIM y Groq = **falsos positivos de la primera pasada de la sonda (Check 13)**: Groq
