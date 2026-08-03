@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-03T08:03:44Z",
-  "sha": "b19f5acc5c0fd63e268812ef7f5f5b382a2f29e7",
+  "generadoEn": "2026-08-03T08:08:54Z",
+  "sha": "02e56457d4b813021003073c0672b68505675b85",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -7116,7 +7116,7 @@
           "exportada": false,
           "params": "d = new Date()",
           "retorno": "boolean",
-          "linea": 27,
+          "linea": 28,
           "resumen": "Horario laboral España: L-V 9:00-19:00 (evita enviar en frío de noche o en finde)."
         },
         {
@@ -7125,7 +7125,7 @@
           "exportada": false,
           "params": "texto: string, unsubUrl: string",
           "retorno": "string",
-          "linea": 38,
+          "linea": 39,
           "resumen": "Texto plano del borrador → HTML con la identidad de ia.rest + enlace de baja (RGPD)."
         },
         {
@@ -7134,7 +7134,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 58
+          "linea": 59
         }
       ],
       "tablas": [
@@ -7142,7 +7142,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/crm-envio-auto",
-      "hash": "6ad7483804a6"
+      "hash": "2a40b292c3dc"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/crm-followup-sevilla/route.ts",
@@ -7529,7 +7529,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/lead-onboarding",
-      "hash": "a62357adc537"
+      "hash": "e4db1bc9a66d"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/mantenimiento-espacios/route.ts",
