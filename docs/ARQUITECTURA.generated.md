@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-02T13:06:55Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-03T10:20:28Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -226,4 +226,5 @@
 - (01/08/2026) ⏰ Subasta vencida seguía en «🎯 Mi radar» (01/08/2026, rama `claude/expired-auction-visible-eoow4t`).
 - (01/08/2026) 📈 Trading: el panel de estrategias por fin discrimina + limpieza de huérfanas (01/08/2026).
 - (01/08/2026) 🗓️ Rotación mensual: julio archivado (01/08/2026).
+- (03/08/2026) 📊 Facturas Booking.com julio 2026 verificadas vs banco (03/08/2026).
 
