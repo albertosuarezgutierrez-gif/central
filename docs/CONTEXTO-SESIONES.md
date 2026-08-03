@@ -24,7 +24,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-### 🤖 La extracción de facturas pasa por OpenRouter (03/08/2026, decisión de Alberto)
+### 🔑 El redeploy del panel de secretos se cancelaba en silencio (03/08/2026)
+Alberto guardó `GITHUB_TOKEN` en `/operador/secretos` y el panel dijo «✅ redeploy lanzado» — pero los
+redeploys de sivra y plataforma salieron **CANCELED**: `redeployProjectProduction` usa `withLatestCommit`
+y el último commit de main era el de la auditoría `[skip ci]`, que `vercel-ignore-build.mjs` salta SIEMPRE.
+La env quedaba en Vercel pero nunca en runtime. Fix (PR): el redeploy pasa
+`projectSettings.commandForIgnoringBuildStep: ''` (un redeploy explícito construye siempre) + sonda de
+~15 s que reporta CANCELED/ERROR como fallo real; el endpoint solo dice `redeployed` si TODOS los
+proyectos salieron (antes un fallo parcial se tapaba). Pendiente: re-guardar el token tras mergear.
 Los 10 ilegibles de hoy eran **Groq 429** (rate limit de `gpt-oss-120b`) + **NIM timeout**: los dos
 únicos eslabones, porque `aiExtractInvoiceDetallado` llamaba a los proveedores a pelo **saltándose la
 pasarela**. Ahora usa `chatConDirector` (`endpoint='extraer-factura'`): Director eligiendo modelo,

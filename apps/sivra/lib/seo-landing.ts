@@ -6,7 +6,7 @@ const LANDING_API = 'https://api.github.com/repos/albertosuarezgutierrez-gif/hou
 
 export function githubToken(): string {
   const t = process.env.GITHUB_TOKEN
-  if (!t) throw new Error('Falta GITHUB_TOKEN en el entorno de sivra (necesario para leer y commitear la landing de housesevillana).')
+  if (!t) throw new Error('Falta GITHUB_TOKEN en el entorno de sivra (necesario para leer y commitear la landing de housesevillana). Se configura desde el panel /operador/secretos de plataforma (escribe en sivra + plataforma y redespliega).')
   return t
 }
 
