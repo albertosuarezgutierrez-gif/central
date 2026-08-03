@@ -3,10 +3,11 @@
  * Plataforma ES la pasarela central, por lo que llama directamente a @central/core-ai
  * sin necesidad de enrutar por HTTP. NVIDIA_API_KEY en Vercel env.
  */
-import { nimChat, nimVision, groqText, groqTranscribe, openrouterVisionEx, type NimConfig, type NimChatMessage, type ImageInput } from '@central/core-ai'
+import { nimVision, groqTranscribe, openrouterVisionEx, type NimConfig, type NimChatMessage, type ImageInput } from '@central/core-ai'
 import { chatConDirector } from '@/lib/pasarela'
 import { openrouterConfigPasarela } from '@/lib/ia-director'
 import { registrarUso, estimarTokens, costeEur } from '@/lib/ai-gateway'
+import { parsearJsonIa } from '@/lib/agente-facturas/parsear-json-ia'
 
 const NVIDIA_TEXT  = 'meta/llama-3.3-70b-instruct'
 const NVIDIA_VISION = 'meta/llama-3.2-90b-vision-instruct'
@@ -189,20 +190,6 @@ importe RETENIDO en positivo (p.ej. 57.63) e "irpf_porcentaje" (p.ej. 19); norma
 total = base_imponible + iva - irpf. Si no hay retención, irpf=0 e irpf_porcentaje=0.
 Si no encuentras un campo, pon null. Solo JSON, sin texto adicional.`
 
-// Corta una llamada colgada (Groq no acepta `signal`, y NIM se ha colgado antes).
-function conTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([
-    p,
-    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('ia-timeout')), ms)),
-  ])
-}
-
-// Extracción por Groq (rápido, mismo Llama-70b). Lanza si no hay GROQ_API_KEY o Groq falla.
-async function extraerConGroq(user: string): Promise<string> {
-  const key = process.env.GROQ_API_KEY
-  if (!key) throw new Error('sin GROQ_API_KEY')
-  return conTimeout(groqText({ apiKey: key }, INVOICE_SYSTEM, user, 512), 15_000)
-}
 
 /**
  * Por qué una extracción se quedó sin datos. **Los dos casos NO son lo mismo** y
@@ -252,35 +239,48 @@ export async function aiExtractInvoiceDetallado(input: {
     }
   }
 
-  // ── Texto (PDF extraído): Groq → NIM ───────────────────────────────────
-  // La extracción era la ÚNICA llamada IA de la app SIN cadena de respaldo: si NIM devolvía
-  // algo no-JSON o se colgaba (mismo mal que tumbó el triaje, PR #745), la factura quedaba
-  // vacía → 'error' mudo. Ahora Groq va primero (segundos) y NIM de respaldo; el primer JSON
-  // válido y no vacío gana.
+  // ── Texto (PDF extraído): pasarela (OpenRouter + Director) → cadena gratis ──
+  //
+  // 🚨 Antes iba DIRECTO a Groq → NIM, saltándose la pasarela. El 03/08/2026 eso
+  // dejó 10 facturas sin leer en una sola pasada: Groq devolvía `429` de rate
+  // limit en `gpt-oss-120b` y NIM se agotaba por timeout — los dos únicos
+  // eslabones que había. Decisión de Alberto: pasarla por OpenRouter.
+  //
+  // `chatConDirector` no es solo «otro proveedor»: trae el Director eligiendo
+  // modelo, reintento con modelo seguro, la cadena GRATIS (NIM → Groq → …) de
+  // respaldo si OpenRouter falla o no está configurado, respeto del presupuesto
+  // diario (si se agota, degrada a la cadena gratis en vez de gastar), y registro
+  // en `ai_usos` con `endpoint='extraer-factura'` → lo que cuesta leer las
+  // facturas se ve en el panel de gasto de IA en vez de ser invisible.
   if (input.text) {
     const user = `Factura:\n${input.text.slice(0, 4000)}`
-    // Distingue «ninguna vía llegó a contestar» (técnico) de «contestaron y venía
-    // vacío» (sin_datos): sin esta bandera, ambos acababan en el mismo `{}`.
-    let algunaRespondio = false
-    for (const via of ['groq', 'nim'] as const) {
-      try {
-        const raw = via === 'groq'
-          ? await extraerConGroq(user)
-          : await nimChat(
-              { apiKey: nimConfig().apiKey, textModel: NVIDIA_TEXT },
-              [{ role: 'system', content: INVOICE_SYSTEM }, { role: 'user', content: user }],
-              { maxTokens: 512, temperature: 0.1, signal: AbortSignal.timeout(20_000) },
-            )
-        const obj = JSON.parse(raw.replace(/```json|```/g, '').trim())
-        if (obj && typeof obj === 'object') {
-          algunaRespondio = true
-          if (Object.keys(obj).length > 0) return { datos: obj, fallo: null }
-        }
-      } catch (e) {
-        console.warn(`[extraer] extracción ${via} falló:`, String(e).slice(0, 140))
-      }
+    let raw: string
+    try {
+      const res = await chatConDirector([{ role: 'user', content: user }], {
+        app: 'plataforma',
+        endpoint: 'extraer-factura',
+        system: INVOICE_SYSTEM,
+        maxTokens: 512,
+        temperature: 0.1, // JSON determinista
+        timeoutMs: 25_000,
+      })
+      raw = res.text
+    } catch (e) {
+      // Ni OpenRouter ni la cadena gratis contestaron: NO se ha leído la factura.
+      console.warn('[extraer] la pasarela no devolvió nada:', String(e).slice(0, 140))
+      return { datos: {}, fallo: 'tecnico' }
     }
-    return { datos: {}, fallo: algunaRespondio ? 'sin_datos' : 'tecnico' }
+
+    // Un JSON envuelto en ```…``` o con prosa alrededor SÍ es una lectura buena;
+    // uno truncado NO se repara (un importe a medias es peor que ninguno).
+    const { datos, ok } = parsearJsonIa(raw)
+    if (!ok) {
+      console.warn('[extraer] respuesta no parseable:', raw.slice(0, 140))
+      return { datos: {}, fallo: 'tecnico' }
+    }
+    return Object.keys(datos).length > 0
+      ? { datos, fallo: null }
+      : { datos: {}, fallo: 'sin_datos' }
   }
 
   return { datos: {}, fallo: 'sin_datos' }
