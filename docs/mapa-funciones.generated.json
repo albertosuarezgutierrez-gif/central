@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-03T11:33:44Z",
-  "sha": "7c2868a55135760c8ce25db0529e27fbdc221bae",
+  "generadoEn": "2026-08-03T11:50:55Z",
+  "sha": "5955f3ca7d5f67402cd5866c0b49e4f00e69e588",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -63206,7 +63206,7 @@
           "exportada": true,
           "params": "base: number, dateStr: string",
           "retorno": "number",
-          "linea": 71,
+          "linea": 82,
           "resumen": "⚠️ LEGACY / NO ES EL PRECIO REAL (hallazgo 27/07/2026, ver docs/CONTEXTO-SESIONES.md): esta fórmula estática (base fija × estacional × día-semana) es de ANTES de que existiera el motor anclado al merc"
         },
         {
@@ -63215,7 +63215,7 @@
           "exportada": true,
           "params": "dateStr: string",
           "retorno": "number",
-          "linea": 82,
+          "linea": 93,
           "resumen": "Factor RELATIVO de evento para el motor anclado al mercado: sólo sube en fechas con evento declarado (Semana Santa/Feria/…); el resto de estacionalidad/día ya la refleja el mercado. Honra el calendari"
         },
         {
@@ -63224,13 +63224,13 @@
           "exportada": true,
           "params": "dateStr: string, evExterno = 1",
           "retorno": "number",
-          "linea": 109,
+          "linea": 120,
           "resumen": "Suelo estacional relativo a min_price para una fecha. En fechas de evento sube con el evento (mitad del factor, acotado a ×2.0) para que Semana Santa/Feria no puedan venderse a suelo. Devuelve 1.0 (si"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "444544ec59ec"
+      "hash": "6ac76e040fac"
     },
     {
       "ruta": "apps/plataforma/lib/programador.ts",
@@ -78494,7 +78494,7 @@
           "exportada": true,
           "params": "base: number, dateStr: string",
           "retorno": "number",
-          "linea": 61,
+          "linea": 68,
           "resumen": "Multiplicador absoluto sobre una base (uso del snapshot \"shadow\": price_ours)."
         },
         {
@@ -78503,13 +78503,13 @@
           "exportada": true,
           "params": "dateStr: string",
           "retorno": "number",
-          "linea": 72,
+          "linea": 79,
           "resumen": "Factor RELATIVO de evento para el motor anclado al mercado: sólo sube en fechas con evento declarado (Semana Santa/Feria/…); el resto de estacionalidad/día ya la refleja el mercado. Honra el calendari"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "04100bc53201"
+      "hash": "ef10f65ce975"
     },
     {
       "ruta": "apps/sivra/lib/pricing-engine.ts",
