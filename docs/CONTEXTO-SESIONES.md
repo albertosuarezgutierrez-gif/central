@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🔎 SEO housesevillana: push manual + el agente solo actualizaba el <title> (03/08/2026)
+El PAT de Alberto no tiene `contents:write` sobre `house-sevillana-landing` → el botón SEO falló el push
+(403); pendiente de que Alberto suba el permiso del token en GitHub. Mientras: actualización SEO aplicada
+A MANO al repo de la landing (title con marca+USP parking, description 157c, og:title; propuesta registrada
+en `seo_proposals`). Al mirarlo se vio que las regex de `seo-landing.ts` (sivra Y plataforma) esperaban
+comillas escapadas `\"` y el `app/route.ts` real lleva comillas normales: description/og NUNCA se
+actualizaban, solo el `<title>`, en silencio. Fix con backreference de estilo + 5 tests nuevos (validado
+contra el fichero real). PR de esta rama.
+
 ### 🔑 El redeploy del panel de secretos se cancelaba en silencio (03/08/2026)
 Alberto guardó `GITHUB_TOKEN` en `/operador/secretos` y el panel dijo «✅ redeploy lanzado» — pero los
 redeploys de sivra y plataforma salieron **CANCELED**: `redeployProjectProduction` usa `withLatestCommit`
