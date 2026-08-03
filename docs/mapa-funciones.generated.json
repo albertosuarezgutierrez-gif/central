@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-02T15:38:53Z",
-  "sha": "0481360b78ce19dd196a130dcf1b2d9521668417",
+  "generadoEn": "2026-08-03T05:32:22Z",
+  "sha": "1654e18398a882a9ea6bb4d141767596e1248aae",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54624,7 +54624,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<Map<number, string[]>>",
-          "linea": 55,
+          "linea": 61,
           "resumen": "🚨 El barrido busca por el AFORO REAL de cada piso, NO con \"4 personas\" para todos (bug hasta el 31/07/2026: guardaba los MISMOS comps de 4 plazas para los 4 pisos con `guests=4` fijo, así que House —"
         },
         {
@@ -54633,7 +54633,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<",
-          "linea": 69,
+          "linea": 75,
           "resumen": "Fechas de evento de las DOS fuentes que conoce el motor: el calendario del repo y lo que descubren los crons (Ticketmaster / búsqueda web). Si la tabla falla NO se cae la pasada: se barre la base mens"
         },
         {
@@ -54641,16 +54641,35 @@
           "kind": "function",
           "exportada": false,
           "params": "query: string",
-          "retorno": "Promise<string>",
-          "linea": 92
+          "retorno": "Promise<",
+          "linea": 104,
+          "resumen": "🚨 Devuelve TAMBIÉN cuántos resultados trajo la búsqueda. Sin ese número, un `organic: []` (Google no encontró nada) y un buzón de resultados lleno de anuncios sin precio acaban en el mismo string vac"
         },
         {
           "nombre": "extractPrices",
           "kind": "function",
           "exportada": false,
-          "params": "snippets: string, checkin: string, checkout: string",
-          "retorno": "Promise<any[]>",
-          "linea": 106
+          "params": "snippets: string, checkin: string, checkout: string,",
+          "retorno": "Promise<",
+          "linea": 130,
+          "resumen": "`estado` separa «la IA leyó y no había precios» (ausencia real) de «la IA no pudo leer» (fallo técnico: ningún modelo respondió o el JSON vino roto). Antes ambos caían en el mismo `[]`."
+        },
+        {
+          "nombre": "consultasDeVentana",
+          "kind": "function",
+          "exportada": false,
+          "params": "checkin: string, checkout: string, aforo: number",
+          "retorno": null,
+          "linea": 156,
+          "resumen": "Dos consultas por ventana, en este orden y por este motivo: 1. `site:booking.com` + fechas → es la que da comparables ATADOS A LA FECHA (el 22/07/2026 el corpus salía con nombres y medianas distintas "
+        },
+        {
+          "nombre": "mediana",
+          "kind": "function",
+          "exportada": false,
+          "params": "valores: number[]",
+          "retorno": "number | null",
+          "linea": 163
         },
         {
           "nombre": "GET",
@@ -54658,7 +54677,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 120
+          "linea": 170
         }
       ],
       "tablas": [
@@ -54669,7 +54688,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/sweep",
-      "hash": "e4b36f02176f"
+      "hash": "14857f01f566"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pl-mensual/route.ts",
@@ -62940,7 +62959,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c6f34bbdee61"
+      "hash": "9b686ae0e46f"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/sonda-ia.ts",
@@ -65350,6 +65369,67 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c6e4079eff25"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/resumen-sweep.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/resumen-sweep.ts — el parte del barrido de mercado, y por qué necesita uno. POR QUÉ (02/08/2026). La primera pasada vigilada del barrido (`mercado/sweep`) reportó «0 comps en 44 ventanas» y ahí se acababa la historia. Ese 0 podía significar dos cosas OPUESTAS y el código no sabía cuál: · «",
+      "exporta": [
+        "contarPorEstado",
+        "cegadasEnBase",
+        "sinSenalDeTemporada",
+        "barridoFiable",
+        "detalleBarrido"
+      ],
+      "funciones": [
+        {
+          "nombre": "contarPorEstado",
+          "kind": "function",
+          "exportada": true,
+          "params": "ventanas: VentanaMedida[]",
+          "retorno": "Record<EstadoVentana, number>",
+          "linea": 56
+        },
+        {
+          "nombre": "cegadasEnBase",
+          "kind": "function",
+          "exportada": true,
+          "params": "ventanas: VentanaMedida[]",
+          "retorno": "number",
+          "linea": 67,
+          "resumen": "Ventanas de la RONDA BASE que se quedaron ciegas (ni resultados ni lectura). Es el número que decide si la pasada vale: la ronda base es la línea de temporada, y un mes ciego ahí es un mes que el moto"
+        },
+        {
+          "nombre": "sinSenalDeTemporada",
+          "kind": "function",
+          "exportada": true,
+          "params": "ventanas: VentanaMedida[]",
+          "retorno": "boolean",
+          "linea": 79,
+          "resumen": "`true` cuando el barrido trajo EXACTAMENTE los mismos comparables al mismo precio para todas las fechas de un aforo (con 3 fechas o más). Entonces no se ha medido la temporada: se ha fotografiado el m"
+        },
+        {
+          "nombre": "barridoFiable",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResumenBarrido",
+          "retorno": "boolean",
+          "linea": 102,
+          "resumen": "¿Se puede afirmar que esta pasada ha medido el mercado? Conservador a propósito: ante la duda, NO (un latido verde de mentira es peor que uno rojo de más)."
+        },
+        {
+          "nombre": "detalleBarrido",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResumenBarrido",
+          "retorno": "string",
+          "linea": 112,
+          "resumen": "Parte para el latido (y para el Telegram del vigía). Lo que NO se pudo mirar va primero."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "00c4297914fc"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/seo-landing.ts",
@@ -88088,7 +88168,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2374,
-    "funciones": 6344
+    "archivos": 2375,
+    "funciones": 6351
   }
 }
