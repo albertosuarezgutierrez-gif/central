@@ -18,6 +18,8 @@ import { isVercelAdminConfigured, upsertProjectEnv, redeployProjectProduction, V
 import { prisma } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
+// La verificación del redeploy sondea el estado del deployment hasta ~15 s por proyecto.
+export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
   const admin = await getAdmin().catch(() => null)
@@ -73,6 +75,8 @@ export async function POST(req: NextRequest) {
   }
 
   // Redeploy automático de todos los proyectos destino (best-effort).
+  // `redeployed` solo es true si TODOS salieron: un fallo parcial (p. ej. un proyecto
+  // cancelado por el Ignored Build Step y el otro construido) debe verse, no taparse.
   const redeployResults = await Promise.all(
     allProjects.map((p) => {
       const pid = VERCEL_PROJECT_IDS[p]
@@ -81,8 +85,13 @@ export async function POST(req: NextRequest) {
       )
     }),
   )
-  const redeployed = redeployResults.some((r) => r.ok)
-  const redeployError = redeployed ? undefined : redeployResults.map((r) => r.error).filter(Boolean).join('; ')
+  const redeployed = redeployResults.every((r) => r.ok)
+  const redeployError = redeployed
+    ? undefined
+    : redeployResults
+        .map((r, i) => (r.ok ? null : `${allProjects[i]}: ${r.error || 'fallo'}`))
+        .filter(Boolean)
+        .join('; ')
 
   // Write-only: confirmamos el cambio, NO devolvemos el valor.
   return NextResponse.json({
