@@ -24,7 +24,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-### 💹 MCP Financial Datasets evaluado — decisión: NO contratar (02/08/2026)
+### 📨 Leads ia-rest: fuera aviso Telegram, email en frío 100% automático (03/08/2026)
+Alberto pidió (a raíz del ping «Lead listo: MICE Catering») quitar los avisos Telegram de leads y
+que el agente mande los emails solo con Resend. `lead-onboarding` ya no manda Telegram y marca
+`envio_aprobado=true`; `crm-envio-auto` pasa a ACTIVO POR DEFECTO (opt-out `ENVIO_AUTO_ACTIVO='0'`,
+antes exigía `='1'`). Salvaguardas intactas: horario L-V 9-19, tope diario 30, dedup, bajas RGPD.
+Resultado de envíos → resumen diario por email (tgAlert canal `resumen`). Build ia-rest verde.
 Alberto conectó el MCP `Datos_financieros` (financialdatasets.ai) y pidió valorarlo para trading.
 Probado en sesión: la cuenta va por créditos y está a $0 — TODO endpoint de datos (hasta precio AAPL)
 responde «add more credits»; solo el catálogo del screener es gratis (trae FCF yield/ROIC/PEG + insiders/
