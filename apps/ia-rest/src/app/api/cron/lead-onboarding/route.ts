@@ -190,6 +190,10 @@ ${anguloVertical}
     email_asunto: emailData.asunto,
     whatsapp_draft: waDraft,
     estado_pipeline: 'propuesta_lista',
+    // Auto-aprobación (Alberto, 03/08/2026): sin aviso Telegram ni botón de aprobar —
+    // el cron crm-envio-auto (Resend) envía el email solo, con sus salvaguardas
+    // (horario laboral, tope diario, dedup por dirección, bajas RGPD).
+    envio_aprobado: true,
     research_at: new Date().toISOString(),
     eventos: [...eventos, {
       tipo: '🔍',
@@ -210,48 +214,7 @@ ${anguloVertical}
     throw new Error(`update leads falló: ${updErr.message}`)
   }
 
-  // 5. Telegram
-  const tgToken = process.env.TELEGRAM_BOT_TOKEN
-  const chat_id = process.env.TELEGRAM_CHAT_ID
-  if (tgToken && chat_id) {
-    const ratingTexto = estudio.rating_google ? ` · ⭐${estudio.rating_google} (${estudio.num_resenas} reseñas)` : ''
-    await fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id,
-        parse_mode: 'HTML',
-        text: [
-          `🆕 <b>Lead listo: ${empresa}</b>`,
-          ``,
-          `📋 ${resumenNegocio.substring(0, 160)}`,
-          estudio.direccion ? `📍 ${estudio.direccion}` : null,
-          `💰 MRR estimado: <b>${estudio.mrr_estimado}€/mes</b>${ratingTexto}`,
-          `📦 Módulos clave: ${modulosCriticos.join(', ')}`,
-          `⭐ Puntuación: ${estudio.puntuacion_lead}/100`,
-          ``,
-          `📧 Email: <i>${emailData.asunto}</i>`,
-          `📱 WhatsApp: listo para copiar`,
-          `🔗 <a href="${propuestaUrl}">Ver propuesta →</a>`,
-        ].filter(Boolean).join('\n'),
-        reply_markup: {
-          inline_keyboard: [
-            [
-              { text: '📱 Ver WhatsApp', callback_data: `ver_whatsapp:${lead.id}` },
-              ...(lead.email
-                ? [{ text: '📨 Enviar email', callback_data: `enviar_email:${lead.id}` }]
-                : [{ text: '✏️ CRM', url: 'https://www.iarest.es/super' }]
-              ),
-            ],
-            [
-              { text: '🔗 Ver propuesta', url: propuestaUrl },
-              { text: '🔄 Regenerar', callback_data: `propuesta_ok:${lead.id}` },
-            ]
-          ]
-        }
-      }),
-    }).catch(console.error)
-  }
-
+  // Sin aviso Telegram (Alberto, 03/08/2026): el lead queda visible en /super y el
+  // email lo envía crm-envio-auto; el resultado del envío llega en el resumen diario.
   return { slug, propuestaUrl }
 }

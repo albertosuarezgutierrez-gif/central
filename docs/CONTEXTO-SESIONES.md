@@ -35,6 +35,22 @@ prosa alrededor (adornos, no fallos), pero un JSON **truncado NO se repara** —
 peor que ninguno— y un **array** se declara ilegible en vez de coger «la primera de N». Verificado:
 tsc 0 · 800 tests · build OK. **Pendiente: la pasada del 04/08 dirá si `sinLeer` baja de 10.**
 
+### ⚕️ Health-check 03/08: los 3 rojos de IA eran ruido, no averías (03/08/2026)
+Gemini (Check 12) = residuo pre-gate: última llamada real 01/08 04:00; la guarda de 3 días lo apaga
+sola el 04/08. NIM y Groq = **falsos positivos de la primera pasada de la sonda (Check 13)**: Groq
+devolvió 200 en 222 ms con `content` vacío (gpt-oss-120b es razonador y `maxTokens:5` se iba en
+razonamiento); NIM abortó a los 12 s cuando producción espera 30 y su media real es ~26 s (167 éxitos
+/30d, último 02/08). Fix en `lib/monitoring/sonda-ia.ts`: `maxTokens` 5→300 y timeout 12→30 s.
+Observado de paso: `registral` usa `google/gemini-2.5-flash` vía NIM con 404 intermitente (~50% hoy)
+— vigilar si persiste. PR #1232 (mergeado).
+
+### 📨 Leads ia-rest: fuera aviso Telegram, email en frío 100% automático (03/08/2026)
+Alberto pidió (a raíz del ping «Lead listo: MICE Catering») quitar los avisos Telegram de leads y
+que el agente mande los emails solo con Resend. `lead-onboarding` ya no manda Telegram y marca
+`envio_aprobado=true`; `crm-envio-auto` pasa a ACTIVO POR DEFECTO (opt-out `ENVIO_AUTO_ACTIVO='0'`,
+antes exigía `='1'`). Salvaguardas intactas: horario L-V 9-19, tope diario 30, dedup, bajas RGPD.
+Resultado de envíos → resumen diario por email (tgAlert canal `resumen`). Build ia-rest verde. PR #1233.
+
 ### 🧾 El fix de #1219 funciona… y prometía una cola de Gmail que no existía (03/08/2026)
 Verificación de la pasada 06:15: cron **200**, latido `ok=true` y el parte nuevo ya dice la verdad —
 «1 factura nueva · ⚠️ **10 correos sin poder leer** · 1 descartado». Ese 10 es justo lo que antes se
