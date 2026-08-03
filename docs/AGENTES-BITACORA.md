@@ -15,6 +15,15 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-03 · facturas-correo** · hizo: Paso 0 sano (Vía B 2 días, dentro de umbral; `PDF-pendiente`
+  vacío); 0 candidatos nuevos en Gmail (2d); detectada subida manual nueva en la raíz de Drive —
+  factura SIQUE julio (nº 2025/333, 780,10€, Luxury+Bustos Reforma+Duplex+Casa Socorro) — creada
+  carpeta `08-Agosto-2026`, archivada como `2026-08-01_siquebrilla_780.10.pdf`, aviso de duplicado
+  del original en `_DUPLICADOS_BORRAR`; sin cargo bancario aún (pendiente de conciliar, esperado en
+  1-3 días). Sigue en cola sin resolver: hilo Amazon roborock (`Facturas/Revisar`, 2 días) — envío a
+  Costa Ballena (Rota, Cádiz), dirección que no corresponde a ningún piso conocido del grupo → para
+  decisión de Alberto (¿personal o negocio?). dudas: destino del roborock; fallos: —;
+  PRs/commits: rama `claude/inspiring-gauss-lqottb`.
 - **2026-08-01 · health-check (sesión interactiva, continuación 30/07)** · hizo: verificado por logs
   Vercel que el sync Smoobu corre (200 el 31/07 y 01/08) y que el 🔴 del Check 4 era sequía de reservas,
   no avería; a petición de Alberto, Check 4 reescrito sobre latido real (`agente_latidos.smoobu_sync`,

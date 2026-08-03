@@ -24,6 +24,13 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🧾 Pasada facturas-correo (03/08/2026)
+Vía B sana (2 días). Archivada factura nueva SIQUE julio (780,10€, nº 2025/333) desde subida manual en
+raíz de Drive → creada carpeta `08-Agosto-2026`, pendiente de conciliar contra banco (aún no entra el
+cargo). Sigue sin resolver el hilo Amazon del roborock (`Facturas/Revisar`, 2 días) — envío a Costa
+Ballena (Rota, Cádiz), no es dirección de ningún piso del grupo; para decisión de Alberto. Detalle en
+`docs/AGENTES-BITACORA.md`.
+
 ### 💹 MCP Financial Datasets evaluado — decisión: NO contratar (02/08/2026)
 Alberto conectó el MCP `Datos_financieros` (financialdatasets.ai) y pidió valorarlo para trading.
 Probado en sesión: la cuenta va por créditos y está a $0 — TODO endpoint de datos (hasta precio AAPL)
