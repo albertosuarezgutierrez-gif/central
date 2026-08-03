@@ -105,19 +105,31 @@ export async function listarCandidatos(opts: { desde: Date; etiqueta?: string })
  * Se usa para encolar lo que no se pudo leer: la etiqueta sobrevive a la sesión y
  * al contenedor, así que un fallo de extracción deja rastro consultable en el buzón
  * en vez de evaporarse (el mismo patrón que `Facturas/PDF-pendiente` de la skill).
- * Best-effort: si la etiqueta no existe o IMAP falla, no rompe la pasada.
+ * Best-effort: si la etiqueta no existe o IMAP falla, no rompe la pasada — pero
+ * **devuelve `false`**, y quien llame NO puede decir que lo encoló.
+ *
+ * 🚨 Por qué devuelve booleano (03/08/2026): la etiqueta de destino tiene que
+ * existir en Gmail; `messageCopy` contra un buzón inexistente falla, y con el
+ * `catch` mudo que había aquí el fallo desaparecía. Ese día el parte del latido
+ * dijo «10 correos … etiquetados en Gmail para reintentar» cuando la etiqueta
+ * `Facturas/Extraccion-fallida` **no se había creado todavía**: cero encolados y
+ * una promesa falsa en el sitio exacto donde se estaba arreglando otra.
  *
  * `buzon` DEBE ser el que devolvió el listado (`ListadoCandidatos.buzon`): los UID
  * son por buzón, así que con el buzón equivocado esta llamada no encuentra el
  * mensaje y la cola se queda vacía sin que nada falle.
  */
-export async function etiquetarCorreo(uid: number, etiqueta: string, buzon = 'INBOX'): Promise<void> {
+export async function etiquetarCorreo(uid: number, etiqueta: string, buzon = 'INBOX'): Promise<boolean> {
   const client = nuevoCliente()
   await client.connect()
   try {
     const lock = await client.getMailboxLock(buzon)
     try {
-      await client.messageCopy({ uid: String(uid) }, etiqueta, { uid: true }).catch(() => {})
+      await client.messageCopy({ uid: String(uid) }, etiqueta, { uid: true })
+      return true
+    } catch (e) {
+      console.warn(`[facturas] no se pudo etiquetar uid ${uid} en "${etiqueta}":`, String(e).slice(0, 140))
+      return false
     } finally {
       lock.release()
     }

@@ -24,6 +24,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🧾 El fix de #1219 funciona… y prometía una cola de Gmail que no existía (03/08/2026)
+Verificación de la pasada 06:15: cron **200**, latido `ok=true` y el parte nuevo ya dice la verdad —
+«1 factura nueva · ⚠️ **10 correos sin poder leer** · 1 descartado». Ese 10 es justo lo que antes se
+tiraba en silencio (causa en logs: **Groq 429 rate limit** en `gpt-oss-120b` + NIM timeout). PERO el
+parte añadía «etiquetados en Gmail para reintentar» y la etiqueta **`Facturas/Extraccion-fallida` no
+existía**: `messageCopy` fallaba y el `.catch(() => {})` se lo tragaba → cero encolados y una promesa
+falsa en el mismo sitio donde se arreglaba otra. Etiqueta creada a mano (Label_16) y arreglo de código:
+`etiquetarCorreo` devuelve booleano, se cuenta `encolados` y el parte solo promete cola para los que de
+verdad entraron (🔴 explícito si no). Verificado: tsc 0 · 791 tests · build OK. **Pendiente: los 10
+ilegibles siguen sin leerse** — el cuello es la cuota de Groq, no el escaneo.
+
 ### 💹 MCP Financial Datasets evaluado — decisión: NO contratar (02/08/2026)
 Alberto conectó el MCP `Datos_financieros` (financialdatasets.ai) y pidió valorarlo para trading.
 Probado en sesión: la cuenta va por créditos y está a $0 — TODO endpoint de datos (hasta precio AAPL)
