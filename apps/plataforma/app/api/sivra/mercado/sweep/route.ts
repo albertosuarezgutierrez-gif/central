@@ -6,6 +6,7 @@ import { Prisma } from "@prisma/client"
 import { EVENTS } from "@/lib/pricing-calendar"
 import { ventanasDelBarrido, type EventoFecha } from "@/lib/sivra/mercado-ventanas"
 import { registrarLatido } from "@/lib/monitoring/latido-escribir"
+import { barridoFiable, detalleBarrido, type EstadoVentana, type VentanaMedida } from "@/lib/sivra/resumen-sweep"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -46,6 +47,11 @@ const MAX_VENTANAS_EVENTO = Number(process.env.SIVRA_SWEEP_MAX_EVENTOS ?? 6)
 // búsqueda) y el motor mira 120 días atrás, así que lo que una pasada no llega a barrer por
 // presupuesto lo aporta la del día siguiente. Por eso truncar aquí es barato y morir en 504 no.
 const FECHAS_POR_MES = Number(process.env.SIVRA_SWEEP_FECHAS_MES ?? 3)
+
+// Tope de consultas ABIERTAS (el reintento sin `site:booking.com`) por pasada. Cada una es una
+// búsqueda Serper de pago extra, así que se acota: con el tope agotado la ventana se queda en
+// `sin_resultados` — que es la verdad — en vez de gastar de más en silencio.
+const MAX_CONSULTA_ABIERTA = Number(process.env.SIVRA_SWEEP_MAX_ABIERTAS ?? 20)
 
 // 🚨 El barrido busca por el AFORO REAL de cada piso, NO con "4 personas" para todos (bug hasta el
 // 31/07/2026: guardaba los MISMOS comps de 4 plazas para los 4 pisos con `guests=4` fijo, así que
@@ -89,7 +95,13 @@ async function fechasDeEvento(): Promise<{ eventos: EventoFecha[]; tablaOk: bool
   }
 }
 
-async function serperSearch(query: string): Promise<string> {
+// 🚨 Devuelve TAMBIÉN cuántos resultados trajo la búsqueda. Sin ese número, un `organic: []`
+// (Google no encontró nada) y un buzón de resultados lleno de anuncios sin precio acaban en el
+// mismo string vacío → la IA responde `{"apartments":[]}` y la pasada dice «0 comps» como si
+// hubiera mirado el mercado. Es el fallo del 02/08/2026: 44 búsquedas vacías se leyeron como
+// «no hay mercado» (los prompts pesaban 149-278 tokens contra los 576-933 del scraper diario
+// que sí trae comps). Ver `lib/sivra/resumen-sweep.ts`.
+async function serperSearch(query: string): Promise<{ texto: string; resultados: number }> {
   const key = process.env.SERPER_API_KEY
   if (!key) throw new Error("SERPER_API_KEY no configurada")
   const res = await fetch("https://google.serper.dev/search", {
@@ -100,21 +112,59 @@ async function serperSearch(query: string): Promise<string> {
   })
   if (!res.ok) throw new Error(`Serper ${res.status}`)
   const data = await res.json()
-  return (data.organic || []).slice(0, 8).map((r: any) => `${r.title} | ${r.snippet || ""}`).join("\n")
+  // Mismo aprovechamiento que `mercado/cron`, que es el que sí extrae comps a diario: el precio
+  // suele venir en el answerBox o en los sitelinks, no en el snippet principal.
+  const partes: string[] = []
+  if (data.answerBox?.answer) partes.push(`Destacado: ${data.answerBox.answer}`)
+  if (data.answerBox?.snippet) partes.push(`Fragmento destacado: ${data.answerBox.snippet}`)
+  const organic: any[] = data.organic || []
+  for (const r of organic.slice(0, 10)) {
+    const sitelinks = (r.sitelinks || []).map((s: any) => s.snippet || "").filter(Boolean).join(" | ")
+    partes.push(`${r.title} | ${r.snippet || ""}${sitelinks ? " | " + sitelinks : ""}`)
+  }
+  return { texto: partes.join("\n"), resultados: organic.length + (data.answerBox ? 1 : 0) }
 }
 
-async function extractPrices(snippets: string, checkin: string, checkout: string): Promise<any[]> {
+// `estado` separa «la IA leyó y no había precios» (ausencia real) de «la IA no pudo leer» (fallo
+// técnico: ningún modelo respondió o el JSON vino roto). Antes ambos caían en el mismo `[]`.
+async function extractPrices(
+  snippets: string, checkin: string, checkout: string,
+): Promise<{ apartments: any[]; estado: 'ok' | 'sin_leer' }> {
   const system = `Eres experto en turismo en Sevilla. Extrae precios de apartamentos de resultados de búsqueda.
 Devuelve SOLO JSON sin markdown:
 {"apartments":[{"name":"nombre","price_night":precio_numerico,"score":puntuacion_0_10,"location":"zona"}]}
-Solo apartamentos con precio numérico claro. Si no hay, {"apartments":[]}.`
+Reglas: extrae cualquier cifra que parezca precio por noche (€, EUR, "por noche", "la noche"). Si hay un rango usa el extremo inferior. Si el precio parece total de la estancia y hay fechas, divídelo entre las noches. Si no hay ninguna cifra monetaria, {"apartments":[]}.`
   const prompt = `Portal: booking | Check-in: ${checkin} | Check-out: ${checkout}\nResultados:\n${snippets}\nExtrae apartamentos con precio/noche en euros. SOLO JSON.`
   try {
     const txt = (await chatConDirector([{ role: "user", content: prompt }], { app: "plataforma", endpoint: "mercado-sweep", system, maxTokens: 600, temperature: 0.1 })).text
     const clean = txt.replace(/```json|```/g, "").trim()
     const s = clean.indexOf("{"); const e = clean.lastIndexOf("}")
-    return JSON.parse(clean.slice(s, e + 1)).apartments ?? []
-  } catch { return [] }
+    return { apartments: JSON.parse(clean.slice(s, e + 1)).apartments ?? [], estado: 'ok' }
+  } catch (e) {
+    console.error('[mercado/sweep] extracción ilegible:', e)
+    return { apartments: [], estado: 'sin_leer' }
+  }
+}
+
+// Dos consultas por ventana, en este orden y por este motivo:
+//   1. `site:booking.com` + fechas → es la que da comparables ATADOS A LA FECHA (el 22/07/2026 el
+//      corpus salía con nombres y medianas distintas por mes: 127€ en diciembre, 214€ en mayo).
+//   2. abierta (sin el operador `site:`) → red de seguridad para cuando la 1 vuelve vacía, que es
+//      lo que pasa desde finales de julio. Trae mercado, pero puede no distinguir la fecha: por eso
+//      el parte avisa si todas las fechas acaban con los mismos comps al mismo precio
+//      (`sinSenalDeTemporada`) en vez de dar por buena una temporada inventada.
+function consultasDeVentana(checkin: string, checkout: string, aforo: number) {
+  return [
+    { via: 'booking' as const, q: `apartamentos turísticos Sevilla centro ${checkin} ${checkout} ${aforo} personas site:booking.com precio noche` },
+    { via: 'abierta' as const, q: `apartamentos turísticos Sevilla centro para ${aforo} personas ${checkin} precio por noche euros booking` },
+  ]
+}
+
+function mediana(valores: number[]): number | null {
+  if (!valores.length) return null
+  const orden = [...valores].sort((a, b) => a - b)
+  const m = Math.floor(orden.length / 2)
+  return orden.length % 2 ? orden[m] : Math.round((orden[m - 1] + orden[m]) / 2)
 }
 
 export async function GET(req: NextRequest) {
@@ -128,7 +178,7 @@ export async function GET(req: NextRequest) {
   }
 
   let upserted = 0
-  const ventanas: { checkin: string; aforo: number; comps: number; motivo: string; etiqueta?: string }[] = []
+  const ventanas: (VentanaMedida & { motivo: string; etiqueta?: string; via?: string })[] = []
   const errors: string[] = []
 
   const porAforo = await pisosPorAforo()
@@ -153,6 +203,7 @@ export async function GET(req: NextRequest) {
   const deadline = Date.now() + 240_000
   let truncado = 0
   let rondaBaseCompleta = true
+  let reintentosAbiertos = 0
 
   for (const { checkin, checkout, motivo, etiqueta, ronda } of plan) {
     if (Date.now() > deadline) {
@@ -162,11 +213,28 @@ export async function GET(req: NextRequest) {
     }
     for (const [aforo, pisos] of porAforo) {
       try {
-        const snippets = await serperSearch(
-          `apartamentos turísticos Sevilla centro ${checkin} ${checkout} ${aforo} personas site:booking.com precio noche`
-        )
-        const comps = await extractPrices(snippets, checkin, checkout)
+        // Se prueba la consulta atada a la fecha y, solo si vuelve vacía, la abierta (con tope,
+        // que cada intento extra es una búsqueda Serper de pago).
+        let comps: any[] = []
+        let estado: EstadoVentana = 'sin_resultados'
+        let via: string | undefined
+        for (const consulta of consultasDeVentana(checkin, checkout, aforo)) {
+          if (consulta.via === 'abierta') {
+            if (reintentosAbiertos >= MAX_CONSULTA_ABIERTA) break
+            reintentosAbiertos++
+          }
+          const { texto, resultados } = await serperSearch(consulta.q)
+          if (!resultados) { estado = 'sin_resultados'; continue }
+          const ext = await extractPrices(texto, checkin, checkout)
+          if (ext.estado === 'sin_leer') { estado = 'sin_leer'; continue }
+          if (!ext.apartments.length) { estado = 'sin_precios'; continue }
+          comps = ext.apartments; estado = 'comps'; via = consulta.via
+          break
+        }
+
         let n = 0
+        const nombres: string[] = []
+        const precios: number[] = []
         for (const apt of comps) {
           const night = Number(apt?.price_night)
           if (!apt?.name || !Number.isFinite(night) || night <= 0) continue
@@ -184,31 +252,41 @@ export async function GET(req: NextRequest) {
                   ${score}::numeric, 0, ${String(apt.location || "")}, 'EUR')
                 ON CONFLICT (search_date, portal, scenario, comp_name, checkin_date) DO UPDATE
                 SET price_night=EXCLUDED.price_night, guests=EXCLUDED.guests, score=EXCLUDED.score, created_at=NOW()`)
-              upserted++; if (scenario === pisos[0]) n++
+              upserted++
+              if (scenario === pisos[0]) { n++; nombres.push(String(apt.name)); precios.push(Math.round(night)) }
             } catch { /* dup */ }
           }
         }
-        ventanas.push({ checkin, aforo, comps: n, motivo, etiqueta })
+        ventanas.push({
+          checkin, aforo, ronda, motivo, etiqueta, via,
+          comps: n, nombres, mediana: mediana(precios),
+          // Si la extracción devolvió apartamentos pero ninguno traía precio usable, se ha leído y
+          // no había cifra: es una ausencia REAL, no un hueco de medición.
+          estado: n > 0 ? 'comps' : estado === 'comps' ? 'sin_precios' : estado,
+        })
       } catch (e) {
         errors.push(`${checkin} (${aforo}p): ${String(e).slice(0, 80)}`)
       }
     }
   }
 
-  // Huella para el vigía: una pasada que no trae NI UN comp es un fallo, aunque no lance. Y una que
-  // se queda sin tiempo ANTES de cubrir la línea de temporada tampoco es una pasada buena: se ha
-  // medido medio calendario, y eso no es haberlo medido (misma regla que el listado IMAP truncado).
-  // Perder solo profundidad de bucket sí es aceptable — mañana se recupera.
-  const conComps = ventanas.filter(v => v.comps > 0).length
-  const ok = errors.length === 0 && conComps > 0 && rondaBaseCompleta
+  // Huella para el vigía. Qué cuenta como pasada BUENA lo decide el helper puro `resumen-sweep.ts`:
+  // no basta con volver sin excepciones — hay que haber MEDIDO. Una búsqueda vacía, una extracción
+  // ilegible o un corpus idéntico en todas las fechas son «no lo sé», y un «no lo sé» pintado de
+  // verde deja al motor tarificando con el ancla global sin que nadie se entere.
   const eventosBarridos = plan.filter(v => v.motivo === 'evento').length
-  await registrarLatido('sivra_mercado_sweep', ok, [
-    `${upserted} comps en ${ventanas.length} ventanas (${eventosBarridos} de evento)`,
-    truncado ? `${truncado} ventanas sin tiempo${rondaBaseCompleta ? ' (solo profundidad de bucket)' : ' INCLUIDA la base mensual'}` : '',
-    errors.length ? `${errors.length} fallos: ${errors[0]}` : '',
-  ].filter(Boolean).join(' · ')).catch(() => {})
+  const resumen = {
+    comps: upserted, ventanas, eventos: eventosBarridos,
+    truncadas: truncado, baseCompleta: rondaBaseCompleta, errores: errors,
+  }
+  const ok = barridoFiable(resumen)
+  await registrarLatido('sivra_mercado_sweep', ok, detalleBarrido(resumen)).catch(() => {})
 
   // `truncado` NO es un error: es «me quedé sin tiempo». Se publica para que no haya que deducirlo
   // del número de ventanas, que es justo la clase de silencio que esconde los problemas.
-  return NextResponse.json({ ok, upserted, ventanas, eventosBarridos, truncado, base_completa: rondaBaseCompleta, errors })
+  return NextResponse.json({
+    ok, upserted, ventanas, eventosBarridos, truncado,
+    base_completa: rondaBaseCompleta, detalle: detalleBarrido(resumen),
+    consultas_abiertas: reintentosAbiertos, errors,
+  })
 }

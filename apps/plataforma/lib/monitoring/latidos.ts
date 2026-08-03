@@ -160,8 +160,12 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'El corpus de comparables se está quedando viejo. Sin mercado fresco el motor cae al bucket ' +
       'global (bajo) y los precios se deslizan hacia el suelo justo en los meses buenos; además los ' +
       'centinelas de evento se quedan sin muestra y dejan de vigilar (evaluado:false NO es «todo ' +
-      'bien»). Causa típica: SERPER_API_KEY agotada o la pasarela de IA sin presupuesto para la ' +
-      'extracción. Huella: agente_latidos.sivra_mercado_sweep.',
+      'bien»). EL DETALLE DICE QUÉ MITAD FALLÓ, léelo antes de tocar nada: «búsquedas sin ' +
+      'resultados» = Serper no devuelve nada para la consulta (agotada, o la consulta ya no casa ' +
+      'con nada — pasó el 02/08/2026 con el operador site:booking.com); «que la IA no supo leer» = ' +
+      'la pasarela; «el corpus NO refleja temporada» = sí hay comps, pero son los mismos para todas ' +
+      'las fechas, así que la línea de temporada es falsa. Un «0 comps» a secas NO es «no hay ' +
+      'mercado». Huella: agente_latidos.sivra_mercado_sweep.',
   },
   {
     id: 'sivra_pricing_guard',
