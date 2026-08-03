@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-03T09:49:58Z",
-  "sha": "7b47095f67254f87c4f66d9ee3eb6cbd00300d5e",
+  "generadoEn": "2026-08-03T10:36:32Z",
+  "sha": "f7f25215044009bf6499acfe1b7ce9f6a21e829c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -52460,7 +52460,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 22
+          "linea": 24
         }
       ],
       "tablas": [
@@ -52468,7 +52468,7 @@
         "secrets_audit"
       ],
       "rutaApi": "/api/operador/secretos/set",
-      "hash": "beae4494887c"
+      "hash": "677e30f9c539"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/conciliar-booking/route.ts",
@@ -68729,7 +68729,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9cee4c3fbfd9"
+      "hash": "0aa61a25593a"
     },
     {
       "ruta": "apps/plataforma/lib/vigilantes-tarjeta.ts",
@@ -78698,7 +78698,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8c8bcdead0e9"
+      "hash": "a7f0c2ba9c12"
     },
     {
       "ruta": "apps/sivra/lib/smoobu.ts",
