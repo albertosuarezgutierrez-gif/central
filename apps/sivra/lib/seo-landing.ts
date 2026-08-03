@@ -31,33 +31,47 @@ export async function pushToGitHub(content: string, sha: string, message: string
   if (!res.ok) throw new Error(`GitHub push failed (${res.status}): ${await res.text()}`)
 }
 
+// 🚨 Las regex aceptan los DOS estilos de comilla del app/route.ts de la landing: comillas
+// NORMALES (") — el fichero real lleva el HTML en un template literal sin escapar — y
+// escapadas (\"), el estilo antiguo para el que se escribieron. La backreference \2 fija el
+// estilo encontrado por tag. Sin la tolerancia, description/og:* no casaban con la landing
+// actual y el agente actualizaba SOLO el <title> en silencio (detectado 03/08/2026). Si esto
+// cambia, replicar en apps/plataforma/lib/sivra/seo-landing.ts (misma pareja de siempre).
+const RE_DESC     = /(<meta name=(\\?")description\2 content=\2)(.*?)\2/
+const RE_OG_TITLE = /(<meta property=(\\?")og:title\2 content=\2)(.*?)\2/
+const RE_OG_DESC  = /(<meta property=(\\?")og:description\2 content=\2)(.*?)\2/
+
 export function extractSeoParams(raw: string) {
   return {
-    title:         raw.match(/<title>([^<]+)<\/title>/)?.[1]                                    ?? '',
-    description:   raw.match(/<meta name=\\"description\\" content=\\"([^\\"]+)\\"/)?.[1]       ?? '',
-    ogDescription: raw.match(/<meta property=\\"og:description\\" content=\\"([^\\"]+)\\"/)?.[1] ?? '',
+    title:         raw.match(/<title>([^<]+)<\/title>/)?.[1] ?? '',
+    description:   raw.match(RE_DESC)?.[3]    ?? '',
+    ogDescription: raw.match(RE_OG_DESC)?.[3] ?? '',
   }
 }
 
 export function escJs(s: string): string { return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"') }
 
+/** Escapa el texto SOLO si el tag usa comillas escapadas (q = '\\"'); con comillas normales va tal cual. */
+const escSegunEstilo = (q: string, s: string): string => (q.length > 1 ? escJs(s) : s)
+
 /**
  * Reescribe title/description/og en la landing. Si se pasa `schemaJson` Y la landing ya
- * contiene un bloque ld+json, lo reemplaza; si no existe el bloque, NO inserta nada
- * (la landing es un string con comillas escapadas en un repo externo no inspeccionable).
+ * contiene un bloque ld+json, reemplaza el PRIMERO (LodgingBusiness); si no existe el
+ * bloque, NO inserta nada.
  */
 export function applySeoReplacements(
   raw: string, title: string, description: string, ogDescription: string, schemaJson?: string,
 ): string {
   let out = raw
     .replace(/<title>[^<]*<\/title>/, `<title>${title}<\/title>`)
-    .replace(/<meta name=\\"description\\" content=\\"[^\\"]*\\"/, `<meta name=\\"description\\" content=\\"${escJs(description)}\\"`)
-    .replace(/<meta property=\\"og:title\\" content=\\"[^\\"]*\\"/, `<meta property=\\"og:title\\" content=\\"${escJs(title)}\\"`)
-    .replace(/<meta property=\\"og:description\\" content=\\"[^\\"]*\\"/, `<meta property=\\"og:description\\" content=\\"${escJs(ogDescription)}\\"`)
+    .replace(RE_DESC,     (_m, pre: string, q: string) => `${pre}${escSegunEstilo(q, description)}${q}`)
+    .replace(RE_OG_TITLE, (_m, pre: string, q: string) => `${pre}${escSegunEstilo(q, title)}${q}`)
+    .replace(RE_OG_DESC,  (_m, pre: string, q: string) => `${pre}${escSegunEstilo(q, ogDescription)}${q}`)
   if (schemaJson) {
-    const ldRe = /<script type=\\"application\/ld\+json\\">[\s\S]*?<\/script>/
+    const ldRe = /<script type=(\\?")application\/ld\+json\1>[\s\S]*?<\/script>/
     if (ldRe.test(out)) {
-      out = out.replace(ldRe, `<script type=\\"application\/ld+json\\">${escJs(schemaJson)}<\/script>`)
+      out = out.replace(ldRe, (_m, q: string) =>
+        `<script type=${q}application/ld+json${q}>${escSegunEstilo(q, schemaJson)}<\/script>`)
     }
   }
   return out
