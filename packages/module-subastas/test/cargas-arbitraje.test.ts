@@ -129,3 +129,58 @@ test('una fecha increíblemente antigua no se usa para dar por caducada una anot
   assert.equal(e.estado, 'fecha_implausible')
   assert.match(e.nota ?? '', /se cuenta ENTERA/)
 })
+
+// ── SUB-JA-2026-264269, Belmonte de Miranda (auditado el 04/08/2026) ─────────
+// La MISMA hipoteca, en dos documentos de la misma ficha, con la fecha escrita
+// de dos formas: la certificación registral en LETRA («diecisiete de agosto de
+// dos mil nueve») y el informe de valoración en cifras («17 de agosto de
+// 2009»). Al no entender la primera, las dos lecturas no compartían ninguna
+// fecha, no se fusionaban y los 44.850,00€ se contaban dos veces: la ficha
+// pasó a decir que se heredan 93.300,00€ en vez de 48.450,00€.
+
+const hipotecaEnLetra = carga({
+  tipo: 'hipoteca', rango: 'anterior', importe: 44850,
+  fecha: 'diecisiete de agosto de dos mil nueve',
+  acreedor: 'CAJA DE AHORROS DE ASTURIAS',
+  documento: 'CERTIFICCION DE DOMINOS Y CARGAS',
+})
+const hipotecaEnCifras = carga({
+  tipo: 'hipoteca', rango: 'anterior', importe: 44850,
+  fecha: '17 de agosto de 2009',
+  acreedor: 'CAJA DE AHORROS DE ASTURIAS',
+  documento: 'VALORACION UNMUEBLE',
+})
+
+test('la misma fecha escrita en letra y en cifras es el mismo asiento', () => {
+  assert.equal(fusionarCargas([hipotecaEnLetra, hipotecaEnCifras]).cargas.length, 1)
+  assert.equal(fusionarCargas([hipotecaEnCifras, hipotecaEnLetra]).cargas.length, 1)
+})
+
+test('la regresión de Belmonte: 48.450,00€ heredados, no 93.300,00€', () => {
+  const embargoAnterior = carga({
+    tipo: 'embargo', rango: 'anterior', importe: 3600,
+    fecha: 'veintinueve de enero de dos mil dieciocho',
+    acreedor: 'JUZGADO DE PRIMERA INSTANCIA DE GIJÓN, 4',
+    documento: 'CERTIFICCION DE DOMINOS Y CARGAS',
+  })
+  const laQueEjecuta = carga({
+    tipo: 'embargo', rango: 'la_que_ejecuta', importe: 7016.54,
+    fecha: 'veinticuatro de agosto de dos mil veinte',
+    acreedor: 'LIBERBANK S.A., C.I.F.: A86201993',
+    documento: 'CERTIFICCION DE DOMINOS Y CARGAS',
+  })
+  const { cargas } = fusionarCargas([hipotecaEnLetra, embargoAnterior, laQueEjecuta, hipotecaEnCifras])
+  const cuadro: CuadroCargas = {
+    cargas, notas: [], fuente: 'ocr_ia', confianza: 0.9,
+    procedimiento: 'embargo', sinMasCargas: false,
+  }
+  // Ejecución por embargo: las anteriores subsisten (hipoteca + embargo letra C).
+  assert.equal(cargasQueSubsisten(cuadro).importe, 48450)
+})
+
+test('un día suelto sin mes no inventa una fecha', () => {
+  // «de fecha nueve» no es una fecha: sin mes no hay asiento que emparejar.
+  const a = carga({ tipo: 'embargo', fecha: 'nueve', acreedor: 'X' })
+  const b = carga({ tipo: 'embargo', fecha: '09/01/2020', acreedor: 'X' })
+  assert.equal(fusionarCargas([a, b]).cargas.length, 2)
+})

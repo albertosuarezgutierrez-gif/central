@@ -23,6 +23,7 @@
 
 import { caducidadDelCuadro } from './caducidad.ts'
 import { norm, parseImporteEs } from './parsing.ts'
+import { numeroAlFinal, palabrasANumero } from './numeros-es.ts'
 
 /**
  * Confianza mínima de la lectura para poder afirmar que una finca se adquiere
@@ -464,6 +465,28 @@ function fechasDeAsiento(c: Carga): Set<string> {
     const mes = MESES_ES.indexOf(norm(m[2]))
     if (mes < 0) continue
     const f = iso(+m[3], mes + 1, +m[1])
+    if (f) out.add(f)
+  }
+
+  // Fechas EN LETRA: «diecisiete de agosto de dos mil nueve».
+  //
+  // Así las escriben las certificaciones registrales, mientras que un informe
+  // de valoración de la misma finca pone «17 de agosto de 2009». Si solo se
+  // entiende una de las dos formas, las dos lecturas del MISMO asiento no
+  // comparten ninguna fecha y `mismoAsiento` las da por distintas: la hipoteca
+  // se cuenta dos veces. Caso real (SUB-JA-2026-264269, Belmonte): 44.850,00€
+  // duplicados llevaron lo heredado a 93.300,00€ en vez de 48.450,00€.
+  const RE_LETRA = new RegExp(
+    String.raw`((?:[a-z]+\s+){0,3}[a-z]+)\s+de\s+(${MESES_ES.join('|')})\s+de\s+((?:[a-z]+\s+){0,3}[a-z]+)`,
+    'g',
+  )
+  for (const m of norm(texto).matchAll(RE_LETRA)) {
+    // El día es la cola del prefijo («anotación de fecha diecisiete»), el año
+    // la cabeza del sufijo («dos mil nueve, expedida por…»).
+    const dia = numeroAlFinal(m[1])
+    const anio = palabrasANumero(m[3])
+    if (dia == null || anio == null) continue
+    const f = iso(anio, MESES_ES.indexOf(m[2]) + 1, dia)
     if (f) out.add(f)
   }
   return out

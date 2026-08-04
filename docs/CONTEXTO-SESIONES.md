@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⚖️ La misma hipoteca contada dos veces por escribir la fecha en LETRA (04/08/2026,
+  rama `claude/carga-no-recogida-analizada-vjkwc9`).** Con #1250 ya en producción, Punta Umbría quedó bien
+  (🟠 «sin cuantificar», adiós al 43.200,00€), pero Belmonte (`SUB-JA-2026-264269`) SUBIÓ de 48.450,00€ a
+  **93.300,00€**: la certificación registral fecha la hipoteca de Caja de Ahorros de Asturias como
+  «diecisiete de agosto de dos mil nueve» y el informe de valoración como «17 de agosto de 2009».
+  `fechasDeAsiento` solo entendía dígitos → las dos lecturas no compartían fecha, `mismoAsiento` las daba
+  por distintas y los 44.850,00€ se sumaban dos veces. Ahora reconoce las fechas en letra reusando
+  `palabrasANumero`/`numeroAlFinal`. `LECTOR_VERSION` 7→8. Tests 400 módulo / 846 plataforma.
+
 - **⚖️ La cifra vieja de cargas sobrevivía a la lectura que la desmentía (04/08/2026,
   rama `claude/carga-no-recogida-analizada-vjkwc9`).** Con #1249 ya mergeado, la relectura de Punta Umbría
   (`SUB-JA-2026-264600`) dedujo bien el asiento duplicado y su texto pasó a «Cargas subsistentes sin
