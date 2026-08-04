@@ -24,6 +24,24 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📊 Velas + volumen: medido, y la tesis del rebote en la media larga REFUTADA (04/08/2026).** Idea de
+  Alberto tras su ORCL. Estudio punto-en-el-tiempo sobre 1.300 velas mensuales de 7 large caps US
+  (2008-2026), midiendo el exceso sobre la deriva de CADA valor. Resultado incómodo: tocar la EMA100
+  mensual y cerrar encima da **−11,9% a 6 meses y −23,3% a 12** (n=51, solo 8 de 40 ganan a un año) —
+  es el aviso de que el valor devolvió años de tendencia, no un soporte; AAPL no la tocó ni una vez en
+  12 años. Las figuras de vela solas (martillo/envolvente/cuerpo grande) ≈ 0. Lo ÚNICO con señal:
+  **caída ≥25% del máximo de 12 barras + volumen ≥1,5×** (+18,5% de exceso a 12 meses, n=34). Nuevo
+  `lib/trading/velas.ts` (puro, 13 tests, tres estados null/false/true) recolectado en el retrovisor
+  sobre las ~800 del universo; NO toca ranking. Pre-registrado como **H8**. PR #<pendiente>.
+
+- **🔎 Verificación en caliente del arreglo de los ADR + techo al nº de acciones (31/07/2026).** Sin esperar
+  al cron: bajados por `pg_net` los companyfacts de los 5 peores del radar y pasados por el parser ya
+  mergeado. NMR (30.061.813 mil M$ de capitalización), PAC, LTM, BSAC y BCH → los 5 salen `emisorExtranjero`
+  y capitalización **NULL**. Ojo con LTM: presenta en DÓLARES, así que solo lo caza la regla del 20-F —
+  la de divisa no habría bastado. Hallazgo nuevo: el nº de acciones también viene inflado por el propio
+  emisor (Nomura ×1e6, PAC ×1000) y `accionesPlausibles` solo miraba hacia abajo → techo en 1e13, que caza
+  a Nomura sin tocar a los que sí tienen 1e11 acciones de verdad (LATAM, Santander Chile). PAC no es
+  separable y se queda. Hoy lo tapa el gate del ADR; la guarda es para cuando `acciones` se use para otra cosa.
 ### 🔐 Trial Tuya IoT Core renovado — cerraduras OK de nuevo (04/08/2026)
 Los PINs del teclado de Socorro fallaban por `Tuya 28841002: IoT Core service subscription has expired`
 (NO por el corte de luz; la «Sonda» no enlaza nada, solo lee por cloud). Alberto renovó el trial en

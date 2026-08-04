@@ -80,6 +80,44 @@ primer dato forward — la cohorte 2 y el radar empiezan a medir el 20/07/2026).
 - **Datos:** `trading_cohetes_track` (curva) + `trading_cohetes_rebalanceo` (libro). NO se auto-modifica
   el criterio de selección; cualquier cambio de reglas lo decide Alberto con este forward.
 
+## H8 — Capitulación (caída + volumen) SÍ; rebote en la media larga NO · firmada 2026-08-04
+- **Origen:** idea de Alberto («las velas mensuales y semanales con volumen son muy buenas señales»),
+  a raíz de su tesis sobre ORCL («rebotó en la EMA de 100 mensual»).
+- **Estudio previo (04/08/2026):** 1.300 velas MENSUALES de 7 large caps US (AAPL, ORCL, INTC, BA,
+  DIS, NKE, PFE), 2008-2026, punto-en-el-tiempo, midiendo el **exceso sobre la deriva del propio
+  valor** (si no, una señal que solo salta en valores en caída sale mal aunque acierte). Resultados:
+  - **Rebote en la media larga = REFUTADO, y con daño.** Tocar la EMA100 mensual y cerrar encima:
+    **−11,9%** de exceso a 6 meses y **−23,3%** a 12 (n=51), solo **8 de 40** casos en positivo a un
+    año, batacazos >15% en el 59% (base 35%). Filtrar por «tendencia viva» lo EMPEORA (−16,8%). AAPL
+    —el mejor valor de la muestra— no tocó su EMA100 mensual ni una vez en 12 años: los toques los
+    ponen INTC, BA, DIS y NKE. **Acción: NO se implementa** (`lib/trading/velas.ts` lo deja fuera a
+    propósito y lo documenta, para que nadie lo «añada» más adelante creyendo que faltaba).
+  - **Figuras de vela solas = sin señal.** Martillo −3,0% de exceso a 6m (n=105), envolvente alcista
+    −0,3% (n=75), vela verde de cuerpo grande −0,6% (n=279). Tampoco se implementan.
+  - **Lo único con señal: caída + volumen.** Cotizar ≥25% bajo el máximo de 12 barras: +6,6% a 6m
+    (n=165). Con volumen ≥1,5× la media: **+6,9% a 6m y +18,5% a 12m, 74% en positivo** (n=34). El
+    volumen alto POR ARRIBA (sobre la media larga) daba −8,8%: no confirma rupturas, marca suelos.
+- **Caveats firmados (la muestra NO autoriza a cablear nada):** 7 valores, todos large caps vivas hoy
+  (**sesgo de supervivencia**, mitigado a medias metiendo 4 en declive a propósito); un solo régimen;
+  n de 8 a 34 en las combinaciones ganadoras; y el tramo **semanal se midió sobre UN símbolo** (ORCL,
+  584 barras) — confirma que las figuras ≈ 0 pero no generaliza.
+- **Hipótesis nula:** la señal de capitulación (`senalCapitulacion`: caída ≥25% del máximo de las 12
+  barras anteriores **Y** volumen ≥1,5× la media de esas 12) NO aporta exceso de retorno sobre el
+  universo cuando se mide punto-en-el-tiempo con la metodología del resto del pre-registro.
+- **Recolección (ya desplegada):** `factoresEnFecha` guarda `capitulacionMes/caidaMes/volRelMes` y
+  `capitulacionSem/caidaSem/volRelSem` en `trading_backtest.datos.porFecha` sobre las ~800 del
+  universo. Tres estados: `null` = no se puede saber (serie corta o fuente sin volumen), `false` =
+  mirado y no salta, `true` = salta. **Hoy no toca ranking, pesos ni cestas.**
+- **Condición de cableado** (sobre ≥300 observaciones con señal en ≥100 símbolos distintos, para que
+  no la decidan cuatro valores):
+  1. mediana de `ret91` con señal − mediana del resto del universo **≥ +2 pp**, Y
+  2. la tasa de caídas >15% de las observaciones con señal no empeora **más de 10 pp** frente al resto.
+  Si se cumple (1) pero no (2), NO entra al blend: se queda como **contexto** (aviso en la ficha del
+  valor), coherente con la regla de que medias y volumen son contexto y nunca filtro.
+  Si no se cumple (1), se retiran los campos y se anota aquí el resultado.
+- **Evaluación:** cuando `trading_backtest` complete un ciclo entero con el código nuevo (todas las
+  filas con `actualizado_en` posterior al despliegue) — criterio de estado, no de calendario, por la
+  lección del despliegue del 31/07: contar por fecha esperada da falsos «ya está».
 ## 📦 Archivo — pre-registro original de la cohorte 1 (tabla `trading_forward_paper`, retirada 01/08/2026)
 La primera cohorte se pre-registró el 18/07/2026 en una tabla ad-hoc (`trading_forward_paper`, con
 `trading_forward_paper_marca` para marcas interinas) que quedó huérfana cuando el forward pasó a
