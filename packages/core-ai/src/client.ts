@@ -5,10 +5,18 @@
 // Política de fallback de TEXTO (compartida por todas las verticales que usan este
 // wrapper, incluida la PASARELA de plataforma, cuyas rutas /api/ai/chat y /api/ai/tools
 // llaman aquí): OpenRouter (agregador con fallback nativo entre modelos, si hay key) →
-// NIM → Groq (mismo Llama 3.3 70B, gratis, otra infra) → Gemini (GRATIS, otra infra
-// distinta) → Kimi/Moonshot (de pago, último recurso). Cada eslabón queda inactivo si
-// no está su API key, sin romper nada: sin OPENROUTER_API_KEY la cadena es EXACTAMENTE
-// la de siempre. Objetivo: que "IA no disponible" sea casi imposible.
+// NIM → Groq (mismo Llama 3.3 70B, gratis, otra infra) → [Gemini, APAGADO por defecto]
+// → Kimi/Moonshot (de pago, último recurso). Cada eslabón queda inactivo si no está su
+// API key, sin romper nada: sin OPENROUTER_API_KEY la cadena es EXACTAMENTE la de
+// siempre. Objetivo: que "IA no disponible" sea casi imposible.
+//
+// 🚨 GEMINI APAGADO POR DEFECTO (02/08/2026). Hallazgo del health-check (Check 12):
+// `GEMINI_API_KEY` acumulaba 544 llamadas en 30 días y CERO éxitos (429 de cuota en todos
+// los endpoints y modelos) — no es una racha, es una key sin cuota. El eslabón no salvaba
+// nada y cada caída de NIM+Groq pagaba además su timeout antes de llegar a Kimi/OpenRouter.
+// Decisión de Alberto: «usa OpenRouter». El código se conserva entero; se reactiva con
+// `GEMINI_TEXTO=1` cuando haya una key con cuota (mismo patrón que `GEMINI_WEBSEARCH` en
+// `apps/plataforma/lib/websearch.ts`).
 
 import { nimChat, nimChatTools } from './nim'
 import { groqChat, groqChatTools } from './groq'
@@ -43,12 +51,12 @@ function groqEnvConfig(): GroqConfig | null {
   return { apiKey, textModel: process.env.GROQ_BRAIN_MODEL ?? DEFAULT_GROQ_MODEL }
 }
 
-// Config Gemini de fallback GRATIS desde el entorno. null si no hay GEMINI_API_KEY (inactivo, no
-// rompe). La key ya suele estar puesta para la búsqueda web, así que este fallback se activa solo.
-// Usa chat de texto SIN grounding (geminiChat). Modelo override: GEMINI_BRAIN_MODEL.
+// Config Gemini de fallback desde el entorno. APAGADO por defecto (ver cabecera: la key lleva
+// meses sin cuota y el eslabón solo pagaba timeouts): requiere `GEMINI_TEXTO=1` ADEMÁS de
+// GEMINI_API_KEY. Usa chat de texto SIN grounding (geminiChat). Modelo override: GEMINI_BRAIN_MODEL.
 function geminiEnvConfig(): GeminiConfig | null {
   const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) return null
+  if (process.env.GEMINI_TEXTO !== '1' || !apiKey) return null
   return { apiKey, model: process.env.GEMINI_BRAIN_MODEL ?? DEFAULT_GEMINI_MODEL }
 }
 
@@ -81,7 +89,7 @@ function openrouterEnvConfig(): OpenRouterConfig | null {
 
 /**
  * Completion de texto: OpenRouter (agregador, si hay key) → NVIDIA NIM (gratis) → Groq (gratis)
- * → Gemini (gratis) → Kimi (de pago). Cada eslabón se activa solo si está su API key.
+ * → [Gemini, solo con GEMINI_TEXTO=1] → Kimi (de pago). Cada eslabón se activa solo si está su API key.
  * Acepta string (prompt) o array de mensajes.
  *
  * OJO con `options.model`: es un id de NIM (p. ej. `deepseek-ai/deepseek-v3`), NO un slug de
@@ -130,15 +138,15 @@ export async function aiComplete(
     } else {
       console.warn('[aiComplete] fallback Groq inactivo: falta GROQ_API_KEY')
     }
-    // Fallback 2: Gemini GRATIS (otra infra distinta). Sin grounding; la key suele estar ya puesta,
-    // así que este eslabón se activa solo y es el que evita "IA no disponible" sin coste alguno.
+    // Fallback 2: Gemini, APAGADO por defecto (key sin cuota, ver cabecera). Solo entra con
+    // GEMINI_TEXTO=1 + GEMINI_API_KEY.
     const gemini = geminiEnvConfig()
     if (gemini) {
       try {
         return await geminiChat(gemini, messages, { system, maxTokens, temperature, timeoutMs })
       } catch (eGem) { console.warn(`[aiComplete] fallback Gemini falló: ${msg(eGem)}`) }
     } else {
-      console.warn('[aiComplete] fallback Gemini inactivo: falta GEMINI_API_KEY')
+      console.warn('[aiComplete] fallback Gemini inactivo (requiere GEMINI_TEXTO=1 + GEMINI_API_KEY)')
     }
     // Fallback 3: OpenRouter si NO se probó como primario (caller con modelo NIM pinneado).
     // Usa SU modelo por defecto: en un escenario de fallo total, una respuesta de otro modelo

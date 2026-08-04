@@ -7,6 +7,7 @@ import { Prisma } from '@prisma/client'
 import { escanearNuevasFacturas, verificarPagosPendientes, conciliarConBanco, alertarFacturasAusentes } from '@/lib/agente-facturas/pagos'
 import { resolverCuentaBuzon } from '@/lib/agente-facturas/cuenta-buzon'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
+import { detalleEscaneo, recuentoFiable, type ConteoEscaneo } from '@/lib/agente-facturas/resumen-escaneo'
 
 export const dynamic = 'force-dynamic'
 // 🚨 60 s no daban: el 31/07/2026 esta ruta llevaba 3 de sus últimas 4 pasadas en 504
@@ -62,14 +63,17 @@ export async function GET(req: Request) {
   // afirmaba «no tienes facturas pendientes 🎉» indefinidamente.
   let escaneoOk: boolean | null = null
   let escaneoError: string | null = null
-  let pendientes = 0
+  const conteo: ConteoEscaneo = { nuevas: 0, sinLeer: 0, descartados: 0, pendientes: 0, encolados: 0 }
   if (cuentaBuzon) {
     try {
       const r = await escanearNuevasFacturas(cuentaBuzon, { deadline: t0 + PRESUPUESTO_ESCANEO_MS })
       totalNuevas += r.nuevas
       escaneoOk = r.ok
       escaneoError = r.error
-      pendientes = r.pendientes
+      Object.assign(conteo, {
+        nuevas: r.nuevas, sinLeer: r.sinLeer, descartados: r.descartados, pendientes: r.pendientes,
+        encolados: r.encolados,
+      })
     } catch (e: any) {
       escaneoOk = false
       escaneoError = String(e?.message ?? e).slice(0, 200)
@@ -85,10 +89,7 @@ export async function GET(req: Request) {
   await registrarLatido(
     'facturas_gmail',
     escaneoOk === true,
-    escaneoOk
-      ? `${totalNuevas} factura(s) nueva(s)` +
-        (pendientes > 0 ? ` · ${pendientes} correo(s) sin mirar por presupuesto de tiempo` : '')
-      : escaneoError,
+    escaneoOk ? detalleEscaneo(conteo) : escaneoError,
   )
 
   // Los pasos de abajo solo arrancan si queda presupuesto: agotarlo aquí devolvería
@@ -109,10 +110,18 @@ export async function GET(req: Request) {
   }
 
   // `escaneo` va aparte de `nuevas`: un 0 con `escaneo:false` no es «no había
-  // facturas», es «no se pudo mirar el buzón».
+  // facturas», es «no se pudo mirar el buzón». Y `recuentoFiable` dice si el
+  // `nuevas` de esta pasada se puede leer como conclusión o solo como «lo que dio
+  // tiempo a ver»: con correos sin leer, un 0 no autoriza a decir que no hay nada.
   return NextResponse.json({
     ok: true,
-    escaneo: { ok: escaneoOk, error: escaneoError, pendientes },
+    escaneo: {
+      ok: escaneoOk,
+      error: escaneoError,
+      ...conteo,
+      recuentoFiable: escaneoOk === true && recuentoFiable(conteo),
+      detalle: escaneoOk ? detalleEscaneo(conteo) : escaneoError,
+    },
     truncado,
     ms: Date.now() - t0,
     nuevas: totalNuevas, confirmados: totalConfirmados, conciliados: totalConciliados, alertas: totalAlertas,

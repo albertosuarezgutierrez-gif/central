@@ -85,9 +85,9 @@ En local, NextAuth v5 necesita además `AUTH_TRUST_HOST=true`.
 > **🔑 `GITHUB_TOKEN` — obligatoria para el agente SEO:** `lib/seo-landing.ts` la necesita para leer
 > y commitear la landing de `house-sevillana-landing` (repo externo) vía GitHub Contents API. Es un
 > PAT de GitHub con `contents:write` sobre ese repo — el **mismo valor** que ya usa el botón manual en
-> `plataforma`. Sin ella, el cron semanal `/api/seo-refresh` da **500**. Ponerla en las envs del
-> proyecto Vercel `sivra` (verificar si sigue pendiente — detectado el 06/07/2026, sin confirmación
-> posterior de que se haya puesto).
+> `plataforma`. Sin ella, el cron semanal `/api/seo-refresh` da **500**. **PUESTA el 03/08/2026** desde
+> el panel `/operador/secretos` de plataforma (entrada editable con write-through a los proyectos Vercel
+> `sivra` + `plataforma`); si hay que rotarla, se rota desde ese panel, no a mano en Vercel.
 
 > **🔑 Smoobu key — fuente única (14/06/2026):** la API key de Smoobu se lee ahora de la **BD**
 > (`pms_connections.smoobu_api_key`, la fila de Alberto, tabla propiedad de ialimp) vía

@@ -8,9 +8,13 @@ import { getResumenFinanciero } from '@/lib/finanzas'
 import { calcularEstadoDeclaracion } from '@/lib/comparativa-declaracion'
 import { facturasMensualesFaltantes } from '@/lib/sivra/facturas-mensuales'
 import { eur } from '@/lib/dinero'
+import { sondearProveedoresIA } from '@/lib/monitoring/sonda-ia'
 import type { NextRequest } from 'next/server'
 
-export const maxDuration = 60
+// 120 y no 60: la sonda de proveedores (Check 13) añade hasta ~30 s de pings en paralelo (mismo
+// timeout que el tráfico real — NIM gratis responde en ~26 s de media) y el resto de checks ya
+// rondaban el techo. El dispatcher tolera hasta 280 s por job.
+export const maxDuration = 120
 
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -268,6 +272,13 @@ export async function GET(req: NextRequest) {
     // llamadas por semana (los crons que lo usan son diarios, no de tráfico), así que jamás habría
     // llegado a 20 y el check habría dado verde mientras el proveedor llevaba mes y medio muerto.
     // Un vigilante que no puede disparar es peor que no tenerlo, porque tranquiliza.
+    //
+    // ⚠️ Además el proveedor tiene que seguir RECIBIENDO llamadas (última < 3 días): la alerta
+    // denuncia un peaje que se sigue pagando. Cuando el eslabón ya se desenchufó del código (caso
+    // Gemini, 02/08/2026) las filas rojas históricas permanecen 30 días en la ventana y sin esta
+    // condición el check repetiría la misma alerta cada día sobre un problema ya resuelto — ruido
+    // que entrena a ignorar el canal. Un proveedor muerto con cadencia semanal sigue disparando:
+    // cada pasada suya renueva los 3 días.
     const proveedoresMuertos = await prisma.$queryRaw<
       { proveedor: string; llamadas: bigint; dias: number; ultimo_error: string | null }[]
     >`
@@ -278,7 +289,8 @@ export async function GET(req: NextRequest) {
       FROM ai_usos
       WHERE creada_at > now() - interval '30 days' AND proveedor IS NOT NULL
       GROUP BY proveedor
-      HAVING COUNT(*) >= 10 AND COUNT(*) FILTER (WHERE ok) = 0`
+      HAVING COUNT(*) >= 10 AND COUNT(*) FILTER (WHERE ok) = 0
+         AND MAX(creada_at) > now() - interval '3 days'`
     for (const p of proveedoresMuertos) {
       fallos.push(
         `🔴 IA «${p.proveedor}»: ${Number(p.llamadas)} llamadas en ${p.dias} días distintos y ` +
@@ -287,6 +299,29 @@ export async function GET(req: NextRequest) {
       )
     }
     if (!proveedoresMuertos.length) ok.push('✅ Ningún proveedor de IA muerto')
+
+    // Check 13: sonda ACTIVA de proveedores de IA — no espera al tráfico.
+    //
+    // El Check 12 es forense: solo dispara cuando el tráfico orgánico ya acumuló ≥10 fallos
+    // (~una semana con la cadencia real de los crons), y así fue como Gemini estuvo mes y medio
+    // muerto sin que nadie lo viera. Esta sonda hace un ping real y minúsculo a CADA proveedor
+    // configurado (misma key y mismo modelo que producción) y canta el eslabón caído el MISMO
+    // día, haya tráfico o no. Detalle y coste (despreciable) en lib/monitoring/sonda-ia.ts.
+    const sonda = await sondearProveedoresIA()
+    for (const s of sonda.filter((s) => !s.ok)) {
+      fallos.push(
+        `🔴 Sonda IA «${s.proveedor}» (${s.modelo}) NO responde: ${s.error ?? 'sin detalle'}. ` +
+        `El tráfico real no lo notará (la cadena de fallback lo tapa), pero cada llamada está ` +
+        `pagando este intento muerto — revisar key/cuota hoy.`,
+      )
+    }
+    const sondaOk = sonda.filter((s) => s.ok)
+    if (sondaOk.length === sonda.length && sonda.length > 0) {
+      ok.push(`✅ Sonda IA: ${sonda.length} proveedores responden (${sonda.map((s) => s.proveedor).join(', ')})`)
+    } else if (sonda.length === 0) {
+      // Cero proveedores configurados no es «todo bien»: es que la sonda no pudo mirar nada.
+      fallos.push('🔴 Sonda IA: ningún proveedor configurado (¿envs de IA ausentes en este entorno?)')
+    }
 
   } catch (err) {
     fallos.push(`🔴 Error ejecutando health check: ${err instanceof Error ? err.message : String(err)}`)

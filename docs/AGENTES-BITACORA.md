@@ -15,6 +15,12 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-03 · pricing-agente (sesión interactiva, pregunta de Alberto por una reserva)** · hizo:
+  auditada reserva Dúplex 25-28 sep (159,63€/noche bruto, infrapreciada: mercado del finde p50 258€ a
+  4pl), Bienal de Flamenco 2026 (9 sep–3 oct oficial) dada de alta en `pricing-calendar.ts`
+  (plataforma+sivra), 60 comps de 4 findes ingestados en `market_rates` (Booking MCP, upsert del
+  ingest), aprendizaje en `pricing_aprendizaje`; dudas: el pico ×1,5 del finde 25-27 vs 18-20 no está
+  atribuido a un acto concreto de la Bienal; fallos: —; PRs/commits: rama `claude/duplex-dynamic-pricing-435igu`.
 - **2026-08-01 · health-check (sesión interactiva, continuación 30/07)** · hizo: verificado por logs
   Vercel que el sync Smoobu corre (200 el 31/07 y 01/08) y que el 🔴 del Check 4 era sequía de reservas,
   no avería; a petición de Alberto, Check 4 reescrito sobre latido real (`agente_latidos.smoobu_sync`,

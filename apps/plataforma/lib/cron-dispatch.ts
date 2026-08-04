@@ -18,6 +18,12 @@ export const CRON_JOBS: CronJob[] = [
   { path: '/api/cron/trading-watchdog', schedule: '30 6 * * 2-6' },
   { path: '/api/cron/trading-cohetes-rebalanceo', schedule: '30 9 * * 1' },
   { path: '/api/cron/trading-cohetes-track', schedule: '0 7 * * 2-6' },
+  // 🚨 El retrovisor (trading_backtest) se quedó SIN cron: la ruta existía pero no estaba en este
+  // manifiesto, así que la tabla llevaba congelada desde el 19/07/2026 mientras la pantalla seguía
+  // pintando sus cifras como si fueran de hoy. Es la medición punto-en-el-tiempo de la que dependen
+  // las hipótesis del pre-registro (H4 en su día, H8 ahora), y sin ella nunca se resolverían.
+  // 40 símbolos por pasada, cada 2 h → el ciclo del universo (~1.000 filas) tarda ~2 días.
+  { path: '/api/cron/trading-backtest', schedule: '10 */2 * * *' },
   { path: '/api/cron/agentes-latido', schedule: '45 7 * * *' },
   { path: '/api/cron/paper-tracker', schedule: '0 10 * * 1' },
   { path: '/api/cron/resumen-mensual', schedule: '0 8 1 * *' },

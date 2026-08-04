@@ -5,16 +5,12 @@ import RadarExplorador, { type FilaExplorador } from './RadarExplorador'
 import CarteraEstudio from './CarteraEstudio'
 import CarteraCohetes, { type CarteraCohetesData } from './CarteraCohetes'
 import AnalisisSimbolo from './AnalisisSimbolo'
+import { COHORTES_PAPER } from '@/lib/trading/paper-cartera'
 
 // Contenido del «Laboratorio de inversión», extraído de page.tsx para poder reutilizarlo tal cual en la
 // vista de invitado (/invitado/trading, solo lectura vía token — ver lib/trading-acceso.ts). Es 100%
 // lectura (no hay ninguna acción que escriba), así que no necesita distinguir sesión de invitado por dentro.
 
-// Precio de acción (USD) en formato español: 345.42 → "345,42". El helper eur() es SOLO para € (la
-// cuenta/NAV); las cotizaciones de acciones USA van en dólares y no deben llevar el símbolo €.
-function p2(n: number): string {
-  return (Number.isFinite(n) ? n : 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
 function pct(n: number): string {
   return `${n >= 0 ? '+' : ''}${(n * 100).toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`
 }
@@ -59,10 +55,9 @@ const th: React.CSSProperties = { textAlign: 'left', padding: '8px 10px', color:
 const td: React.CSSProperties = { padding: '8px 10px', borderBottom: '1px solid var(--border)', fontSize: 14, whiteSpace: 'nowrap' }
 
 export default async function TradingDashboard({ carteraCohetes }: { carteraCohetes: CarteraCohetesData | null }) {
-  const [posiciones, tesis, stats, watchlist, track, radar, universoFilas] = await Promise.all([
+  const [posiciones, tesis, watchlist, track, radar, universoFilas] = await Promise.all([
     safe(prisma.tradingPaperPosicion.findMany({ orderBy: { abiertaEn: 'desc' } }), []),
     safe(prisma.tradingTesis.findMany({ orderBy: [{ fecha: 'desc' }, { confianza: 'desc' }], take: 40, include: { resultado: true } }), []),
-    safe(prisma.tradingEstrategiaStats.findMany({ orderBy: { n: 'desc' } }), []),
     safe(prisma.tradingWatchlist.findMany({ where: { activo: true }, orderBy: [{ capa: 'asc' }, { simbolo: 'asc' }] }), []),
     safe(prisma.tradingPaperTrack.findMany({ orderBy: [{ cohorte: 'asc' }, { fecha: 'asc' }] }), []),
     safe(prisma.tradingRanking.findFirst({ orderBy: { fecha: 'desc' } }), null),
@@ -97,11 +92,23 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
     }
   })
 
-  // Forward paper: agrupa los snapshots persistidos por cohorte (más antigua primero).
-  const cohortesPaper = [...new Set(track.map(t => t.cohorte))].map(cohorte => {
-    const filas = track.filter(t => t.cohorte === cohorte)
-    return { cohorte, filas, ultima: filas[filas.length - 1] }
-  })
+  // Forward paper: agrupa los snapshots por cohorte y FUSIONA las que comparten la MISMA cesta.
+  // Dos cohortes con los mismos valores no son dos pruebas independientes: son la misma cesta medida
+  // desde dos fechas. Pintarlas como dos tarjetas con cifras idénticas se lee como doble confirmación
+  // (pasó con 2026-07-18.v1 y 2026-07-20.v1: los mismos 8 valores, dos días de diferencia). Se queda la
+  // más ANTIGUA —la que lleva más recorrido— y las otras fechas de arranque se citan al lado.
+  const cestaDe = (version: string) => {
+    const c = COHORTES_PAPER.find(x => x.version === version)
+    return c ? [...c.simbolos].sort().join(',') : version
+  }
+  const porCesta = new Map<string, { cohorte: string; alias: string[]; filas: typeof track }>()
+  for (const cohorte of [...new Set(track.map(t => t.cohorte))].sort()) {
+    const clave = cestaDe(cohorte)
+    const ya = porCesta.get(clave)
+    if (ya) ya.alias.push(cohorte)
+    else porCesta.set(clave, { cohorte, alias: [], filas: track.filter(t => t.cohorte === cohorte) })
+  }
+  const cohortesPaper = [...porCesta.values()].map(g => ({ ...g, ultima: g.filas[g.filas.length - 1] }))
 
   const ultimaPasada = tesis[0]?.fecha
   const vacio = posiciones.length === 0 && tesis.length === 0 && watchlist.length === 0
@@ -132,7 +139,7 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12 }}>
-            {cohortesPaper.map(({ cohorte, filas, ultima }) => {
+            {cohortesPaper.map(({ cohorte, alias, filas, ultima }) => {
               const bateMed = ultima.retornoMediana != null && ultima.retornoMediana > ultima.retornoBench
               return (
                 <div key={cohorte} style={card}>
@@ -140,6 +147,11 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
                     <strong style={{ fontSize: 14 }}>{cohorte}</strong>
                     <span style={{ color: 'var(--muted)', fontSize: 12 }}>{ultima.dias} días · {filas.length} snapshot{filas.length === 1 ? '' : 's'}</span>
                   </div>
+                  {alias.length > 0 && (
+                    <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 2 }}>
+                      Misma cesta que {alias.join(', ')} — es UNA prueba, no {alias.length + 1}.
+                    </div>
+                  )}
                   <div style={{ margin: '10px 0' }}><CurvaForward serie={filas.map(f => ({ m: f.retornoMediana, b: f.retornoBench }))} /></div>
                   <div style={{ fontSize: 14, lineHeight: 1.7 }}>
                     <div>Cesta (MEDIANA): <strong style={{ color: bateMed ? 'var(--positive)' : 'var(--negative)' }}>{pctN(ultima.retornoMediana)}</strong> {bateMed ? '✅' : '⚠️'} <span style={{ color: 'var(--muted)' }}>vs SPY {pct(ultima.retornoBench)}</span></div>
@@ -233,53 +245,17 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
       {/* (El grid de contadores «Pulso» se retiró el 20/07/2026 — petición de Alberto de página más
           simple y corta: eran 4 números sin acción posible; el detalle vive en sus secciones.) */}
 
-      {/* Posiciones */}
-      {posiciones.length > 0 && (
-        <section style={{ marginBottom: 22 }}>
-          <h2 style={{ fontSize: 17, marginBottom: 8 }}>💼 Cartera simulada <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>(precios en USD)</span></h2>
-          <div style={{ ...card, padding: 0, overflowX: 'auto' }}>
-            <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 520 }}>
-              <thead><tr><th style={th}>Símbolo</th><th style={th}>Cantidad</th><th style={th}>Entrada</th><th style={th}>Stop</th><th style={th}>Abierta</th></tr></thead>
-              <tbody>
-                {posiciones.map(p => (
-                  <tr key={p.id}>
-                    <td style={{ ...td, fontWeight: 700 }}>{p.simbolo}</td>
-                    <td style={td}>{p.cantidad}</td>
-                    <td style={td}>{p2(p.precioEntrada)}</td>
-                    <td style={{ ...td, color: 'var(--negative)' }}>{p2(p.stop)}</td>
-                    <td style={{ ...td, color: 'var(--muted)' }}>{fechaCorta(p.abiertaEn)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
+      {/* (💼 «Cartera simulada» RETIRADA el 04/08/2026 — petición de Alberto «quítame el ruido que no me
+          da números reales»: la tabla listaba entrada/stop/cantidad de posiciones del torneo en paper
+          SIN ningún resultado (ni precio actual, ni P&L, ni cierre), así que no medía nada — era una
+          lista de intenciones con pinta de cartera. Lo que sí mide de verdad es el 🧪 Forward paper de
+          arriba (cesta congelada vs SPY). Las posiciones siguen en BD `trading_posiciones`.) */}
 
-      {/* Rendimiento por estrategia — PLEGADO (secundario; página corta, petición de Alberto 20/07) */}
-      {stats.length > 0 && (
-        <details style={{ marginBottom: 22 }}>
-          <summary style={{ fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 8 }}>📊 Rendimiento por estrategia <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>(walk-forward, fuera de muestra)</span></summary>
-          <div style={{ ...card, padding: 0, overflowX: 'auto' }}>
-            <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 520 }}>
-              {/* «Retorno medio» = retorno de SEGUIR la señal (bajista gana si cae; neutral = fuera de mercado, 0),
-    no el movimiento bruto del precio — ver puntuarTesis en @central/module-trading. */}
-              <thead><tr><th style={th}>Estrategia</th><th style={th}>Régimen</th><th style={th}>Aciertos</th><th style={th}>Retorno medio (siguiendo la señal)</th><th style={th}>Muestra</th></tr></thead>
-              <tbody>
-                {stats.map(e => (
-                  <tr key={e.id}>
-                    <td style={{ ...td, fontWeight: 600 }}>{e.estrategia}</td>
-                    <td style={{ ...td, color: 'var(--muted)' }}>{e.regimen}</td>
-                    <td style={td}>{(e.hitRate * 100).toFixed(0)}%</td>
-                    <td style={{ ...td, color: e.retornoMedio >= 0 ? 'var(--positive)' : 'var(--negative)' }}>{pct(e.retornoMedio)}</td>
-                    <td style={{ ...td, color: 'var(--muted)' }}>{e.n}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </details>
-      )}
+      {/* (📊 «Rendimiento por estrategia» RETIRADA el 04/08/2026 — misma petición. Su «retorno medio»
+          NO era dinero: es el retorno HIPOTÉTICO de seguir cada señal del torneo interno (la bajista
+          "gana" si el valor cae, la neutral cuenta 0), medido sobre las señales que el propio agente
+          generó. Un número que sube sin que nadie compre nada, y que se leía como rentabilidad. Los
+          datos siguen en BD `trading_estrategia_stats` si hace falta auditarlos.) */}
 
       {/* 💡 Ideas de COMPRA — SOLO compras REALES (petición de Alberto 20/07: «aquí solo interesan las de
           comprar»; auditoría 21/07: `operada`=la señal ganadora del torneo que pasó las barreras y el agente
