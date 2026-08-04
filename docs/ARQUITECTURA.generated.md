@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-04T21:48:07Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-04T21:50:40Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -217,6 +217,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (01/08/2026) 🧾 facturas-correo (01/08/2026, trigger diario).
 - (04/08/2026) 🧹 Laboratorio de inversión: quitado el ruido + el retrovisor llevaba 16 días muerto (04/08/2026).
 - (04/08/2026) 📊 Velas + volumen: medido, y la tesis del rebote en la media larga REFUTADA (04/08/2026).
 - (31/07/2026) 🔎 Verificación en caliente del arreglo de los ADR + techo al nº de acciones (31/07/2026).
@@ -226,5 +227,4 @@
 - (02/08/2026) ✅ Reparación auditoría 02/08 cerrada (02/08/2026, rama `claude/audit-vulnerabilities-02-08-m7lwtf`).
 - (02/08/2026) 🛡️ Auditoría PROFUNDA semanal (02/08/2026).
 - (01/08/2026) 📂 RRHH: categoría «Documentación mensual» en documentos de empresa (01/08/2026, rama `claude/programa-rrhh-m25fwd`).
-- (01/08/2026) ⚖️ Auditoría de las 37 subastas vivas tras el fix de cargas: dos mentiras más (01/08/2026).
 

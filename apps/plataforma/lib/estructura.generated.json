@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-04T21:48:07Z",
+  "generadoEn": "2026-08-04T21:50:40Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3969,6 +3969,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧾 facturas-correo (01/08/2026, trigger diario).",
+      "fecha": "01/08/2026"
+    },
+    {
       "titulo": "🧹 Laboratorio de inversión: quitado el ruido + el retrovisor llevaba 16 días muerto (04/08/2026).",
       "fecha": "04/08/2026"
     },
@@ -4023,10 +4027,6 @@
     {
       "titulo": "📊 Facturas Booking.com julio 2026 verificadas vs banco (03/08/2026).",
       "fecha": "03/08/2026"
-    },
-    {
-      "titulo": "🕳️ Barrido del monorepo: afirmar ausencias no comprobadas (30/07/2026, misma rama).",
-      "fecha": "30/07/2026"
     }
   ],
   "saludRepo": {
