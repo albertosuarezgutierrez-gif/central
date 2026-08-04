@@ -55,7 +55,7 @@ const MAX_BYTES_DOC = 20 * 1024 * 1024
  * arregla el punto 2 de arriba — sin esto, mejorar el prompt no rescata nada de
  * lo ya (mal) leído.
  */
-export const LECTOR_VERSION = 6
+export const LECTOR_VERSION = 7
 
 /** Documentos que NO merecen una llamada de IA: no contienen cargas. */
 const RUIDO = /^(justificante|minuta|honorarios|tasa|pago|aranceles?)\b/i
@@ -293,7 +293,13 @@ export async function procesarDocumentos(max = 10): Promise<{
           -- Solo se escriben las cargas cuando de verdad se han leído: una pasada
           -- sin análisis profundo NO puede borrar lo que ya se sabía.
           cargas_detalle = COALESCE(${hayCargas ? JSON.stringify(r.cuadro) : null}::jsonb, cargas_detalle),
-          cargas = COALESCE(${hayCargas ? subsistentes.importe : null}, cargas),
+          -- OJO: aquí NO vale COALESCE. Cuando la lectura SÍ se hizo y concluye
+          -- «subsisten cargas pero no se pueden cuantificar», el importe es null a
+          -- propósito, y un COALESCE lo rellenaría con la CIFRA VIEJA: la ficha
+          -- diría «hereda 43.200,00€» justo encima de «cargas subsistentes sin
+          -- cuantificar». Se pisa siempre que se hayan leído cargas — quedarse en
+          -- null es «no lo sé» (🟠), que es el estado honesto, no «no hay».
+          cargas = CASE WHEN ${hayCargas} THEN ${subsistentes.importe}::numeric ELSE cargas END,
           cargas_texto = COALESCE(${hayCargas ? resumirCargas(r.cuadro, subsistentes) : null}, cargas_texto),
           cargas_conocidas = (COALESCE(cargas_conocidas, false) OR ${hayCargas}),
           cargas_fuente = COALESCE(${hayCargas ? r.cuadro.fuente : null}, cargas_fuente),

@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⚖️ La cifra vieja de cargas sobrevivía a la lectura que la desmentía (04/08/2026,
+  rama `claude/carga-no-recogida-analizada-vjkwc9`).** Con #1249 ya mergeado, la relectura de Punta Umbría
+  (`SUB-JA-2026-264600`) dedujo bien el asiento duplicado y su texto pasó a «Cargas subsistentes sin
+  cuantificar»… pero la ficha seguía titulando **43.200,00€ heredados**: el UPDATE de `documentos.ts` escribía
+  `cargas = COALESCE(nuevo, cargas)`, y cuando `cargasQueSubsisten` devuelve `importe: null` a propósito
+  («subsisten pero no se pueden cuantificar») el COALESCE resucitaba el número de la pasada anterior. Ahora
+  se pisa con `CASE WHEN hayCargas` — null = 🟠 «no lo sé», el estado honesto. `LECTOR_VERSION` 6→7 para
+  limpiar el corpus; guardián `lib/subastas/documentos-escritura.test.ts`. Tests 846 plataforma / 397 módulo.
+
 - **⚖️ 43.200,00€ de cargas heredadas que no existían: el mismo asiento contado dos veces (04/08/2026,
   rama `claude/carga-no-recogida-analizada-vjkwc9`).** Tras mergear #1213/#1214 y releer el corpus, Punta
   Umbría (`SUB-JA-2026-264600`) pasó de 🟢 a 🔴 43.200,00€ — y la cifra era FALSA. La certificación cita
