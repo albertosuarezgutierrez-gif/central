@@ -24,6 +24,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 👁️ La rama de VISIÓN de las facturas también pasa por la pasarela (04/08/2026)
+Verificada la pasada de hoy tras #1234: la mitad de TEXTO funciona (12 llamadas, **0 errores**,
+0,0076€, `gemini-2.5-flash`) y las facturas nuevas suben **1 → 5**. Pero quedaron **9 sin leer** sin
+rastro en `ai_usos`: la rama de IMAGEN se quedó fuera de #1234 y llamaba a `nimVision` a pelo —un
+intento, sin suplente, sin coste visible y con `JSON.parse` crudo que tomaba unas vallas ```json por
+avería. Ahora usa `aiVision` (OpenRouter multimodal → NIM) + `parsearJsonIa`. Dos arreglos más:
+`maxTokens` 512 → **1500** (los modelos del Director razonan y ese gasto cuenta contra el mismo tope
+→ JSON cortado = «no leído», la lección de la sonda del 03/08), y un PDF **escaneado** (capa de texto
+vacía) pasa de `sin_datos` a `tecnico`: se encolaba como «leído y descartado» sin que nadie lo mirara.
+Al abrir la cola se ve que 8 de los 9 NO son facturas (cartas de MAPFRE, extractos de ParkingLibre);
+la real es DIGI 76€. `aiVision` no pasa por el gate de presupuesto diario (era ya así). PR #1237.
+
 ### 🎸 Bienal de Flamenco 2026 dada de alta en el pricing (03/08/2026)
 Reserva Booking del Dúplex (25-28 sep, 478,88€ brutos = 159,63€/noche, 53 días de antelación con mediana 7)
 destapó que la Bienal (fechas oficiales **9 sep – 3 oct**, labienal.com) no estaba en NINGUNA fuente de
