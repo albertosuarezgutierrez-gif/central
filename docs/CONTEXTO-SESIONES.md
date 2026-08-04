@@ -63,6 +63,15 @@ Caduca ~04/02/2027: trigger one-shot `Recordatorio renovar trial Tuya IoT Core` 
 Truco de verificación reutilizable: el proxy del contenedor bloquea Vercel → sonda vía `pg_net` desde
 la Supabase compartida (`net.http_post/get` + `net._http_response`) con cuenta temporal (borrada). Sin código.
 
+### ⚕️ Sonda NIM: la key está VIVA — el veredicto separa lento de muerto (04/08/2026)
+Investigado el 🔴 «NIM no responde, revisar key/cuota»: la key funciona (93 llamadas reales OK en 7
+días, 40 chat OK la víspera, mismo modelo). Es la cola del tier gratis (p50 24,6 s / p90 27,5 s)
+rozando el timeout de 30 s → un ping suelto cae ~1 de cada 4 con el proveedor sano. Fix (rama
+`claude/sonda-nim-timeout-1fcduq`): la sonda reintenta 1 vez SOLO ante timeout (errores HTTP no) y
+el Check 13 emite veredicto con helper puro `lib/monitoring/sonda-veredicto.ts` (testeado): 🟠
+«degradado» si el tráfico real de 48 h completa, 🔴 «revisar key» solo si nada lo desmiente.
+Sigue pendiente el suplente de `meta/llama-3.3-70b-instruct` (pasada de `buscador-ia`).
+
 ### ⚕️ Verificación #1232: groq y gemini cerrados; NIM es DEGRADACIÓN real (04/08/2026)
 Sonda de hoy 07:01 con el fix: **groq verde** (458 ms — el maxTokens 300 arregló el falso «respuesta
 vacía») y **gemini fuera del Check 12** (0 llamadas en la ventana de 3 días, la guarda lo apagó sola).
