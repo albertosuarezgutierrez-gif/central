@@ -118,6 +118,19 @@ primer dato forward — la cohorte 2 y el radar empiezan a medir el 20/07/2026).
 - **Evaluación:** cuando `trading_backtest` complete un ciclo entero con el código nuevo (todas las
   filas con `actualizado_en` posterior al despliegue) — criterio de estado, no de calendario, por la
   lección del despliegue del 31/07: contar por fecha esperada da falsos «ya está».
+- **Enmienda 2 (04/08/2026, 22:30) — el tramo SEMANAL ya no es un solo símbolo.** IBKR dejó de
+  rechazar y se añadieron DIS e INTC: **3 símbolos, 1.594 observaciones semanales** (ventana de 52
+  semanas = el mismo año que las 12 barras del mensual). La señal **se reproduce en el otro marco**:
+  capitulación (caída ≥25% + volumen ≥1,5×) da **+5,6% de exceso a 6 meses y +14,2% a 12** (n=87),
+  contra +6,9%/+18,5% del mensual. Y se repite el matiz que decide el diseño: **volumen alto SIN
+  caída (−0,7% a 6m, −4,3% a 12m)** no paga — el volumen marca suelos, no rupturas. Por valor,
+  2 de 3 en positivo (DIS +16,8% sobre una deriva de +0,3%; INTC +6,8% sobre +1,7%; ORCL −1,2%
+  sobre +8,0%). **Lo que este n=87 NO es:** 87 episodios independientes. Con ventana móvil semanal,
+  las observaciones contiguas son casi el mismo suceso visto siete días después, así que el tamaño
+  efectivo son unos pocos episodios por valor — **no vale más que el n=34 del mensual, vale como
+  CORROBORACIÓN en otro marco**. Igual que allí, el precio es más batacazos: 46% de caídas >15%
+  frente al 31% de la base. No cambia la condición de cableado: sigue decidiendo el retrovisor sobre
+  el universo entero.
 - **⚠️ Enmienda del mismo día (04/08/2026), antes de que corriera nada:** al revisar la pantalla se
   descubrió que **el retrovisor no tenía cron**. `/api/cron/trading-backtest` existía como ruta pero no
   estaba en `CRON_JOBS`, así que `trading_backtest` llevaba **congelada desde el 19/07/2026** y la
