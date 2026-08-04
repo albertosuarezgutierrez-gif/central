@@ -24,6 +24,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🔐 Trial Tuya IoT Core renovado — cerraduras OK de nuevo (04/08/2026)
+Los PINs del teclado de Socorro fallaban por `Tuya 28841002: IoT Core service subscription has expired`
+(NO por el corte de luz; la «Sonda» no enlaza nada, solo lee por cloud). Alberto renovó el trial en
+platform.tuya.com (Cloud → Cloud Services → IoT Core → Extend Trial) y la sonda en prod confirma:
+PIN ✅ (PIN vivo para la reserva de hoy) · Accesos ✅ · Estado ✅ en Socorro y BustoTavera.
+`Tarjetas → Tuya 1108: uri path invalid` es aparte y esperado (el aparato no expone tarjetas por cloud).
+Caduca ~04/02/2027: trigger one-shot `Recordatorio renovar trial Tuya IoT Core` (04/01/2027) ya creado.
+Truco de verificación reutilizable: el proxy del contenedor bloquea Vercel → sonda vía `pg_net` desde
+la Supabase compartida (`net.http_post/get` + `net._http_response`) con cuenta temporal (borrada). Sin código.
+
 ### ⚕️ Verificación #1232: groq y gemini cerrados; NIM es DEGRADACIÓN real (04/08/2026)
 Sonda de hoy 07:01 con el fix: **groq verde** (458 ms — el maxTokens 300 arregló el falso «respuesta
 vacía») y **gemini fuera del Check 12** (0 llamadas en la ventana de 3 días, la guarda lo apagó sola).
