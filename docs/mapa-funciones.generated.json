@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-04T22:05:34Z",
-  "sha": "da8ad847303b8ee9956eb99dabf35a03b1c2ab5e",
+  "generadoEn": "2026-08-04T22:09:34Z",
+  "sha": "4ada356fd51a256a14606cbcfd0ff125bbbb072c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -80078,6 +80078,36 @@
       "hash": "6fa6e350233f"
     },
     {
+      "ruta": "packages/core-ai/src/cerebras.ts",
+      "ambito": "packages/core-ai",
+      "resumen": "Cliente Cerebras (endpoint OpenAI-compatible), identity-agnostic. Espejo de `groq.ts`: la config (apiKey, modelo, baseUrl) la inyecta la app consumidora — el paquete NUNCA lee process.env ni secretos. ¿Por qué Cerebras? Infraestructura (WSE) DISTINTA de NIM/Groq/Gemini — un 4º proveedor gratis indep",
+      "exporta": [
+        "cerebrasChat"
+      ],
+      "funciones": [
+        {
+          "nombre": "requireKey",
+          "kind": "function",
+          "exportada": false,
+          "params": "config: CerebrasConfig",
+          "retorno": "string",
+          "linea": 25
+        },
+        {
+          "nombre": "cerebrasChat",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: CerebrasConfig, messages: NimChatMessage[], opts: { system?: string; model?: string; maxTokens?: number; temperature?: number; signal?: AbortSignal } = {},",
+          "retorno": "Promise<string>",
+          "linea": 34,
+          "resumen": "Llamada de texto multi-turno a Cerebras (array de mensajes estilo OpenAI). Espejo de `groqChat`. `opts.system` se antepone como mensaje de sistema."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e8b6e1dc5b3f"
+    },
+    {
       "ruta": "packages/core-ai/src/clean-json.ts",
       "ambito": "packages/core-ai",
       "resumen": "Limpia el JSON que devuelven los modelos para que `JSON.parse` no falle: 1) quita el markdown (```json … ```) que algunos añaden alrededor, y 2) recorta la PROSA que otros añaden ANTES o DESPUÉS del objeto — el modelo del Director devolvía a veces `{\"modelo\":\"x\"}\\nExplicación…`, que reventaba `JSON.",
@@ -80132,7 +80162,7 @@
           "exportada": false,
           "params": "model?: string",
           "retorno": "NimConfig",
-          "linea": 39
+          "linea": 43
         },
         {
           "nombre": "groqEnvConfig",
@@ -80140,8 +80170,17 @@
           "exportada": false,
           "params": "",
           "retorno": "GroqConfig | null",
-          "linea": 48,
+          "linea": 52,
           "resumen": "Config Groq de fallback desde el entorno. Devuelve null si no hay GROQ_API_KEY (el fallback queda inactivo sin romper nada). NO reutiliza el `model` de NIM (ids distintos): usa el modelo Groq propio ("
+        },
+        {
+          "nombre": "cerebrasEnvConfig",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "CerebrasConfig | null",
+          "linea": 62,
+          "resumen": "Config Cerebras de fallback GRATIS desde el entorno (4º proveedor, infra WSE distinta de NIM/Groq: sube la resiliencia frente a un apagón simultáneo como el del 06/07/2026). null si no hay CEREBRAS_AP"
         },
         {
           "nombre": "geminiEnvConfig",
@@ -80149,7 +80188,7 @@
           "exportada": false,
           "params": "",
           "retorno": "GeminiConfig | null",
-          "linea": 57,
+          "linea": 71,
           "resumen": "Config Gemini de fallback desde el entorno. APAGADO por defecto (ver cabecera: la key lleva meses sin cuota y el eslabón solo pagaba timeouts): requiere `GEMINI_TEXTO=1` ADEMÁS de GEMINI_API_KEY. Usa "
         },
         {
@@ -80158,7 +80197,7 @@
           "exportada": false,
           "params": "",
           "retorno": "MoonshotConfig | null",
-          "linea": 65,
+          "linea": 79,
           "resumen": "Config Moonshot/Kimi de ÚLTIMO fallback (de pago) desde el entorno. null si no hay MOONSHOT_API_KEY (queda inactivo sin romper nada). Modelo override: MOONSHOT_MODEL."
         },
         {
@@ -80167,7 +80206,7 @@
           "exportada": false,
           "params": "",
           "retorno": "OpenRouterConfig | null",
-          "linea": 75,
+          "linea": 89,
           "resumen": "Config OpenRouter PRIMARIO desde el entorno. null si no hay OPENROUTER_API_KEY (queda inactivo y la cadena arranca en NIM como siempre → rollout por proyecto poniendo la env). OPENROUTER_MODEL = model"
         },
         {
@@ -80176,8 +80215,8 @@
           "exportada": true,
           "params": "promptOrMessages: string | NimChatMessage[], options: { system?: string maxTokens?: number temperature?: number timeoutMs?: number model?: string /** La PASARELA lo pone a true cuando ya intentó/bloqueó OpenRouter (presupuesto): evita reint",
           "retorno": "Promise<string>",
-          "linea": 99,
-          "resumen": "Completion de texto: OpenRouter (agregador, si hay key) → NVIDIA NIM (gratis) → Groq (gratis) → [Gemini, solo con GEMINI_TEXTO=1] → Kimi (de pago). Cada eslabón se activa solo si está su API key. Acep"
+          "linea": 113,
+          "resumen": "Completion de texto: OpenRouter (agregador, si hay key) → NVIDIA NIM (gratis) → Groq (gratis) → Cerebras (gratis) → [Gemini, solo con GEMINI_TEXTO=1] → Kimi (de pago). Cada eslabón se activa solo si e"
         },
         {
           "nombre": "aiTools",
@@ -80185,13 +80224,13 @@
           "exportada": true,
           "params": "messages: NimToolMessage[], tools: unknown[], options: { system?: string; maxTokens?: number; model?: string; skipOpenRouter?: boolean } = {},",
           "retorno": "Promise<NimToolResult>",
-          "linea": 180,
+          "linea": 204,
           "resumen": "Function-calling: OpenRouter (si hay key) → NVIDIA NIM (gratis) → Groq (gratis) de fallback. Lee `OPENROUTER_API_KEY`/`NVIDIA_API_KEY`/`GROQ_API_KEY` del entorno. Wrapper usado por la pasarela central"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "df274c56b302"
+      "hash": "978c204de02c"
     },
     {
       "ruta": "packages/core-ai/src/embeddings.ts",
@@ -88459,7 +88498,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2382,
-    "funciones": 6373
+    "archivos": 2383,
+    "funciones": 6376
   }
 }
