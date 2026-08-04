@@ -36,6 +36,15 @@ vacía) pasa de `sin_datos` a `tecnico`: se encolaba como «leído y descartado�
 Al abrir la cola se ve que 8 de los 9 NO son facturas (cartas de MAPFRE, extractos de ParkingLibre);
 la real es DIGI 76€. `aiVision` no pasa por el gate de presupuesto diario (era ya así). PR #1243.
 
+### 🔎 El barrido de mercado ya trae comps: la consulta buena era la ABIERTA (04/08/2026)
+Primera pasada con #1227 en producción: **52 comps en 20 ventanas** (antes 0) y medianas distintas por
+fecha en el Dúplex —305€ oct · 199€ dic · 104€ ene— o sea que SÍ distingue temporada. Pero el parte nuevo
+delató el resto: «⚠️ 100 búsquedas sin resultados · 12 de la ronda base ciegas». Las 20 ventanas con datos
+son EXACTAMENTE el tope de consultas abiertas: 20 de 20 aciertos con la abierta contra 0 de 100 con
+`site:booking.com`. Fix: se invierte el orden — la abierta pasa a primaria y la de `site:` queda de
+refuerzo acotado (`SIVRA_SWEEP_MAX_REFUERZO`, antes `..._MAX_ABIERTAS`). Sin coste extra: hoy eran 140
+búsquedas, ahora 120 + hasta 20. Verificado: tsc 0 · 805 tests · build OK. **Pendiente: latido del 05/08.**
+
 ### 🎸 Bienal de Flamenco 2026 dada de alta en el pricing (03/08/2026)
 Reserva Booking del Dúplex (25-28 sep, 478,88€ brutos = 159,63€/noche, 53 días de antelación con mediana 7)
 destapó que la Bienal (fechas oficiales **9 sep – 3 oct**, labienal.com) no estaba en NINGUNA fuente de

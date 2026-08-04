@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-03T11:50:55Z",
-  "sha": "5955f3ca7d5f67402cd5866c0b49e4f00e69e588",
+  "generadoEn": "2026-08-04T07:04:40Z",
+  "sha": "6c4e46f78342c4e8427dccaf3e565e53c63d0b7d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54660,8 +54660,8 @@
           "exportada": false,
           "params": "checkin: string, checkout: string, aforo: number",
           "retorno": null,
-          "linea": 156,
-          "resumen": "Dos consultas por ventana, en este orden y por este motivo: 1. `site:booking.com` + fechas → es la que da comparables ATADOS A LA FECHA (el 22/07/2026 el corpus salía con nombres y medianas distintas "
+          "linea": 162,
+          "resumen": "Dos consultas por ventana, en este orden y por este motivo: 1. ABIERTA (sin el operador `site:`) → es la que trae mercado. Medido en producción el 04/08/2026, primera pasada con el arreglo de #1227: d"
         },
         {
           "nombre": "mediana",
@@ -54669,7 +54669,7 @@
           "exportada": false,
           "params": "valores: number[]",
           "retorno": "number | null",
-          "linea": 163
+          "linea": 169
         },
         {
           "nombre": "GET",
@@ -54677,7 +54677,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 170
+          "linea": 176
         }
       ],
       "tablas": [
@@ -54688,7 +54688,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/sweep",
-      "hash": "14857f01f566"
+      "hash": "f72b4e66c806"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pl-mensual/route.ts",
