@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-04T07:04:40Z",
-  "sha": "6c4e46f78342c4e8427dccaf3e565e53c63d0b7d",
+  "generadoEn": "2026-08-04T07:16:59Z",
+  "sha": "a94e617878cd62968e93aafa995f4387a4fe049f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -57517,7 +57517,7 @@
           "exportada": false,
           "params": "",
           "retorno": "NimConfig",
-          "linea": 29
+          "linea": 38
         },
         {
           "nombre": "aiComplete",
@@ -57525,7 +57525,7 @@
           "exportada": true,
           "params": "messages: { role: string; content: string }[], opts: { timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 46,
+          "linea": 55,
           "resumen": "Completion de texto (system+user…). Mismo contrato de siempre: recibe mensajes {role,content} y devuelve el texto. Antes iba DIRECTO a NVIDIA NIM con modelo pinneado (Llama 3.3-70b), saltándose OpenRo"
         },
         {
@@ -57534,7 +57534,7 @@
           "exportada": true,
           "params": "system: string, images: ImageInput[], userText: string, opts: { maxTokens?: number; model?: string; timeoutMs?: number; endpoint?: string /** `true` = varias imágenes en la MISMA llamada: exige modelo multimodal y * NO cae a NIM, que solo a",
           "retorno": "Promise<string>",
-          "linea": 74,
+          "linea": 83,
           "resumen": "VISIÓN / OCR con el modelo que decida la app. Un solo punto de entrada para leer imágenes desde plataforma (certificaciones registrales escaneadas, tickets, fotos de facturas). Enrutado: si hay `OPENR"
         },
         {
@@ -57543,7 +57543,7 @@
           "exportada": true,
           "params": "audio: Buffer, fileName: string, mimeType?: string, opts: { timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 157,
+          "linea": 166,
           "resumen": "Transcribe voz → texto (STT) con Groq Whisper (`whisper-large-v3`, gratis). Usa GROQ_API_KEY (la misma del fallback de texto). Devuelve '' si no reconoce nada. Para las notas de voz del agente de cont"
         },
         {
@@ -57552,8 +57552,8 @@
           "exportada": true,
           "params": "input: { text?: string imageBase64?: string mimeType?: string }",
           "retorno": "Promise<ResultadoExtraccion>",
-          "linea": 216,
-          "resumen": "Igual que `aiExtractInvoice`, pero dice POR QUÉ no hay datos cuando no los hay. PDF (texto) → Groq (rápido) → NVIDIA NIM (respaldo) — el 1er JSON válido gana. Imagen → NVIDIA NIM visión (llama-3.2-90b"
+          "linea": 238,
+          "resumen": "Igual que `aiExtractInvoice`, pero dice POR QUÉ no hay datos cuando no los hay. PDF (texto) → pasarela de texto (Director/OpenRouter → cadena gratis). Imagen → pasarela de visión (`aiVision`: OpenRout"
         },
         {
           "nombre": "aiExtractInvoice",
@@ -57561,13 +57561,13 @@
           "exportada": true,
           "params": "input: { text?: string imageBase64?: string mimeType?: string }",
           "retorno": "Promise<Record<string, any>>",
-          "linea": 294,
+          "linea": 332,
           "resumen": "Extrae datos estructurados de una factura. Devuelve {} si NINGÚN modelo logra leerla. ⚠️ Este `{}` NO distingue «no era una factura» de «no se pudo leer»: si esa diferencia importa (y para contabilida"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "14b60b757140"
+      "hash": "0fd78969a596"
     },
     {
       "ruta": "apps/plataforma/lib/ai-gateway.ts",
