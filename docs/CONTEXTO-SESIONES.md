@@ -24,6 +24,92 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 facturas-correo (01/08/2026, trigger diario).** Vía B sana, sin backlog. Archivada la factura
+  de la lavandería Giraldillo AFV-11808 (72,60€, deducible); pago aún pendiente, sin conciliar. **Hallazgo
+  colateral:** el cron `facturas-scan` (`apps/plataforma/lib/agente-facturas/drive.ts`) archiva TODO lo que
+  procesa en `ALBERTO 2026 PERSONAL (SEGUROS)/<mes>` en vez del árbol de negocio — mismo patrón que Castuera
+  (10/07, aviso aún sin borrar). No es un bug de esta skill (yo re-archivo bien y aviso en
+  `_DUPLICADOS_BORRAR`), pero conviene revisar la resolución de carpeta de ese cron algún día. Detalle en
+  `docs/AGENTES-BITACORA.md`.
+
+- **🧹 Laboratorio de inversión: quitado el ruido + el retrovisor llevaba 16 días muerto (04/08/2026).**
+  Alberto: «no entiendo la pantalla, quítame lo que no me dé números reales». Hallazgo gordo al auditarla:
+  **`/api/cron/trading-backtest` NO estaba en `CRON_JOBS`** — la ruta existía, nadie la disparaba, y
+  `trading_backtest` estaba congelada desde el 19/07 mientras la UI pintaba sus cifras como vigentes; eso
+  además hacía INCUMPLIBLE el criterio de evaluación de H8 firmado horas antes (enmienda anotada en el
+  pre-registro). Job añadido `10 */2 * * *`. Retiradas de `/trading`: **💼 Cartera simulada** (entrada/stop
+  sin ningún resultado — intenciones con pinta de cartera) y **📊 Rendimiento por estrategia** (retorno
+  HIPOTÉTICO de seguir señales del torneo interno, la bajista «gana» si cae). Las dos cohortes forward se
+  **fusionan cuando comparten cesta**: 2026-07-18.v1 y 2026-07-20.v1 son los MISMOS 8 valores y se pintaban
+  como dos confirmaciones. Evidencia forward REAL a día de hoy: 1 cesta, 16 días, 2 snapshots. PR #1247.
+
+- **📊 Velas + volumen: medido, y la tesis del rebote en la media larga REFUTADA (04/08/2026).** Idea de
+  Alberto tras su ORCL. Estudio punto-en-el-tiempo sobre 1.300 velas mensuales de 7 large caps US
+  (2008-2026), midiendo el exceso sobre la deriva de CADA valor. Resultado incómodo: tocar la EMA100
+  mensual y cerrar encima da **−11,9% a 6 meses y −23,3% a 12** (n=51, solo 8 de 40 ganan a un año) —
+  es el aviso de que el valor devolvió años de tendencia, no un soporte; AAPL no la tocó ni una vez en
+  12 años. Las figuras de vela solas (martillo/envolvente/cuerpo grande) ≈ 0. Lo ÚNICO con señal:
+  **caída ≥25% del máximo de 12 barras + volumen ≥1,5×** (+18,5% de exceso a 12 meses, n=34). Nuevo
+  `lib/trading/velas.ts` (puro, 13 tests, tres estados null/false/true) recolectado en el retrovisor
+  sobre las ~800 del universo; NO toca ranking. Pre-registrado como **H8**. PR #1247.
+
+- **🔎 Verificación en caliente del arreglo de los ADR + techo al nº de acciones (31/07/2026).** Sin esperar
+  al cron: bajados por `pg_net` los companyfacts de los 5 peores del radar y pasados por el parser ya
+  mergeado. NMR (30.061.813 mil M$ de capitalización), PAC, LTM, BSAC y BCH → los 5 salen `emisorExtranjero`
+  y capitalización **NULL**. Ojo con LTM: presenta en DÓLARES, así que solo lo caza la regla del 20-F —
+  la de divisa no habría bastado. Hallazgo nuevo: el nº de acciones también viene inflado por el propio
+  emisor (Nomura ×1e6, PAC ×1000) y `accionesPlausibles` solo miraba hacia abajo → techo en 1e13, que caza
+  a Nomura sin tocar a los que sí tienen 1e11 acciones de verdad (LATAM, Santander Chile). PAC no es
+  separable y se queda. Hoy lo tapa el gate del ADR; la guarda es para cuando `acciones` se use para otra cosa.
+### 🔐 Trial Tuya IoT Core renovado — cerraduras OK de nuevo (04/08/2026)
+Los PINs del teclado de Socorro fallaban por `Tuya 28841002: IoT Core service subscription has expired`
+(NO por el corte de luz; la «Sonda» no enlaza nada, solo lee por cloud). Alberto renovó el trial en
+platform.tuya.com (Cloud → Cloud Services → IoT Core → Extend Trial) y la sonda en prod confirma:
+PIN ✅ (PIN vivo para la reserva de hoy) · Accesos ✅ · Estado ✅ en Socorro y BustoTavera.
+`Tarjetas → Tuya 1108: uri path invalid` es aparte y esperado (el aparato no expone tarjetas por cloud).
+Caduca ~04/02/2027: trigger one-shot `Recordatorio renovar trial Tuya IoT Core` (04/01/2027) ya creado.
+Truco de verificación reutilizable: el proxy del contenedor bloquea Vercel → sonda vía `pg_net` desde
+la Supabase compartida (`net.http_post/get` + `net._http_response`) con cuenta temporal (borrada). Sin código.
+
+### ⚕️ Sonda NIM: la key está VIVA — el veredicto separa lento de muerto (04/08/2026)
+Investigado el 🔴 «NIM no responde, revisar key/cuota»: la key funciona (93 llamadas reales OK en 7
+días, 40 chat OK la víspera, mismo modelo). Es la cola del tier gratis (p50 24,6 s / p90 27,5 s)
+rozando el timeout de 30 s → un ping suelto cae ~1 de cada 4 con el proveedor sano. Fix (rama
+`claude/sonda-nim-timeout-1fcduq`): la sonda reintenta 1 vez SOLO ante timeout (errores HTTP no) y
+el Check 13 emite veredicto con helper puro `lib/monitoring/sonda-veredicto.ts` (testeado): 🟠
+«degradado» si el tráfico real de 48 h completa, 🔴 «revisar key» solo si nada lo desmiente.
+Sigue pendiente el suplente de `meta/llama-3.3-70b-instruct` (pasada de `buscador-ia`).
+
+### ⚕️ Verificación #1232: groq y gemini cerrados; NIM es DEGRADACIÓN real (04/08/2026)
+Sonda de hoy 07:01 con el fix: **groq verde** (458 ms — el maxTokens 300 arregló el falso «respuesta
+vacía») y **gemini fuera del Check 12** (0 llamadas en la ventana de 3 días, la guarda lo apagó sola).
+**NIM sigue rojo** y ya NO es calibración: timeout con los 30 s completos, y el tráfico real del 03/08
+ya sufría **12/52 timeouts (23%)** con ese mismo margen. No es key muerta ni modelo retirado (el error
+es timeout, no 404): el tier gratis de NIM va con cola degradada. El fallback (OpenRouter/Groq) cubre
+producción. Candidato a pasada de `buscador-ia`: valorar suplente para `meta/llama-3.3-70b-instruct`.
+Sigue en observación: `registral` → `google/gemini-2.5-flash` vía NIM con 404 intermitentes (~50%).
+
+### 👁️ La rama de VISIÓN de las facturas también pasa por la pasarela (04/08/2026)
+Verificada la pasada de hoy tras #1234: la mitad de TEXTO funciona (12 llamadas, **0 errores**,
+0,0076€, `gemini-2.5-flash`) y las facturas nuevas suben **1 → 5**. Pero quedaron **9 sin leer** sin
+rastro en `ai_usos`: la rama de IMAGEN se quedó fuera de #1234 y llamaba a `nimVision` a pelo —un
+intento, sin suplente, sin coste visible y con `JSON.parse` crudo que tomaba unas vallas ```json por
+avería. Ahora usa `aiVision` (OpenRouter multimodal → NIM) + `parsearJsonIa`. Dos arreglos más:
+`maxTokens` 512 → **1500** (los modelos del Director razonan y ese gasto cuenta contra el mismo tope
+→ JSON cortado = «no leído», la lección de la sonda del 03/08), y un PDF **escaneado** (capa de texto
+vacía) pasa de `sin_datos` a `tecnico`: se encolaba como «leído y descartado» sin que nadie lo mirara.
+Al abrir la cola se ve que 8 de los 9 NO son facturas (cartas de MAPFRE, extractos de ParkingLibre);
+la real es DIGI 76€. `aiVision` no pasa por el gate de presupuesto diario (era ya así). PR #1243.
+
+### 🔎 El barrido de mercado ya trae comps: la consulta buena era la ABIERTA (04/08/2026)
+Primera pasada con #1227 en producción: **52 comps en 20 ventanas** (antes 0) y medianas distintas por
+fecha en el Dúplex —305€ oct · 199€ dic · 104€ ene— o sea que SÍ distingue temporada. Pero el parte nuevo
+delató el resto: «⚠️ 100 búsquedas sin resultados · 12 de la ronda base ciegas». Las 20 ventanas con datos
+son EXACTAMENTE el tope de consultas abiertas: 20 de 20 aciertos con la abierta contra 0 de 100 con
+`site:booking.com`. Fix: se invierte el orden — la abierta pasa a primaria y la de `site:` queda de
+refuerzo acotado (`SIVRA_SWEEP_MAX_REFUERZO`, antes `..._MAX_ABIERTAS`). Sin coste extra: hoy eran 140
+búsquedas, ahora 120 + hasta 20. Verificado: tsc 0 · 805 tests · build OK. **Pendiente: latido del 05/08.**
+
 ### 🎸 Bienal de Flamenco 2026 dada de alta en el pricing (03/08/2026)
 Reserva Booking del Dúplex (25-28 sep, 478,88€ brutos = 159,63€/noche, 53 días de antelación con mediana 7)
 destapó que la Bienal (fechas oficiales **9 sep – 3 oct**, labienal.com) no estaba en NINGUNA fuente de
@@ -274,6 +360,17 @@ meses que sí funcionaban), plan ordenado por rondas (temporada → eventos → 
 latido a `ok:false` solo si no llegó a cubrir la temporada. Una muestra que cae en día de evento se
 corre una semana: el bucket mensual EXCLUYE las fechas de evento, así que ahí no sumaría.
 De paso, corregido en el hilo: `amount_gross` de `incomes` es lo que paga el huésped, **no** el neto.
+
+- **⚖️ Auditoría de las 37 subastas vivas tras el fix de cargas: dos mentiras más (01/08/2026).**
+  Al repasar el corpus con el titular nuevo (PR #1213) salieron dos huecos de la MISMA familia:
+  (1) **3 de las 14 del BOE tenían `cargas_conocidas=true` con `cargas=NULL`** —el campo Cargas de la ficha
+  habla de cargas pero nadie ha cuantificado el importe que subsiste— y se pintaban **🟢 «Sin cargas
+  anteriores subsistentes»**: afirmar la ausencia sin el dato, el bug original con el signo cambiado.
+  Estado nuevo `sin_cuantificar` 🟠; el 🟢 exige ahora que la cifra EXISTA (un 0 leído sí vale).
+  (2) `publicadas_sin_leer` afirmaba «no se ha analizado» también cuando SÍ se analizó y la lectura salió
+  vacía (264706, que pasaba el gate por playa) → renombrado a `publicadas_sin_extraer`, texto «NO tenemos su
+  cuadro de cargas». Además `analisisDocumental` ya no tiene copia propia del texto: llama a `titularCargas`
+  (la ficha y el desplegable llegaron a decir cosas distintas de la misma subasta).
 
 - **⏰ Subasta vencida seguía en «🎯 Mi radar» (01/08/2026, rama `claude/expired-auction-visible-eoow4t`).**
   Alberto con captura: `SUB-JA-2026-263723` cerró el 31/07 18:13 y al día siguiente seguía con botones de

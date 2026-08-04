@@ -26,6 +26,15 @@ const NVIDIA_VISION = 'meta/llama-3.2-90b-vision-instruct'
  */
 const VISION_MULTIPAGINA = process.env.OPENROUTER_VISION_MODEL || 'openai/gpt-5.6-luna'
 
+/**
+ * Mismo modelo para la lectura de UNA imagen cuando el llamador necesita que
+ * OpenRouter sea el camino primario (con NIM de suplente) en vez de irse directo
+ * a NIM. `aiVision` exige un modelo multimodal EXPLÍCITO para llamar a OpenRouter
+ * —mandar imágenes al modelo de texto por defecto devuelve 404— y sin
+ * `OPENROUTER_VISION_MODEL` puesta no hay ninguno, así que se nombra aquí.
+ */
+const VISION_UNA_PAGINA = VISION_MULTIPAGINA
+
 function nimConfig(): NimConfig {
   const apiKey = process.env.NVIDIA_API_KEY
   if (!apiKey) throw new Error('NVIDIA_API_KEY no configurada en Vercel')
@@ -202,6 +211,19 @@ Si no encuentras un campo, pon null. Solo JSON, sin texto adicional.`
  */
 export type FalloExtraccion = 'tecnico' | 'sin_datos'
 
+/**
+ * Tope de salida de la extracción, común a texto y visión.
+ *
+ * 🚨 NO bajarlo a la altura del JSON esperado (~250 tokens). Los modelos que
+ * sirve el Director RAZONAN antes de escribir y esos tokens cuentan contra el
+ * mismo tope: con 512 la respuesta se cortaba a mitad y `parsearJsonIa` la
+ * declaraba ilegible —correctamente, un importe truncado es peor que ninguno—,
+ * así que un modelo que SÍ había leído la factura acababa contado como «no se
+ * ha podido leer». Misma lección que la sonda de IA el 03/08/2026, donde
+ * `maxTokens: 5` se iba entero en el razonamiento de gpt-oss-120b.
+ */
+const INVOICE_MAX_TOKENS = 1500
+
 export interface ResultadoExtraccion {
   datos: Record<string, any>
   /** `null` = se extrajeron datos. Ver `FalloExtraccion` para los dos «sin datos». */
@@ -210,33 +232,44 @@ export interface ResultadoExtraccion {
 
 /**
  * Igual que `aiExtractInvoice`, pero dice POR QUÉ no hay datos cuando no los hay.
- * PDF (texto)   → Groq (rápido) → NVIDIA NIM (respaldo)   — el 1er JSON válido gana.
- * Imagen        → NVIDIA NIM visión (llama-3.2-90b).
+ * PDF (texto) → pasarela de texto (Director/OpenRouter → cadena gratis).
+ * Imagen      → pasarela de visión (`aiVision`: OpenRouter multimodal → NIM).
  */
 export async function aiExtractInvoiceDetallado(input: {
   text?:        string
   imageBase64?: string
   mimeType?:    string
 }): Promise<ResultadoExtraccion> {
-  // ── Imagen: modelo visión ────────────────────────────────────────────
+  // ── Imagen: pasarela de VISIÓN ───────────────────────────────────────
+  //
+  // 🚨 Esta rama se quedó fuera del arreglo del 03/08/2026 (PR #1234), que solo
+  // llevó la de TEXTO a la pasarela. Consecuencia medida el 04/08: la extracción
+  // por texto pasó a 0 errores y 5 facturas nuevas, pero quedaron 9 correos «sin
+  // poder leer» de los que NO había ni rastro en `ai_usos` — porque esta rama
+  // llamaba a `nimVision` a pelo: un solo intento, sin suplente, sin coste
+  // visible y con un `JSON.parse` crudo que trataba unas vallas ```json como
+  // fallo técnico. Ahora usa `aiVision` (OpenRouter multimodal → NIM de
+  // suplente, registro en `ai_usos`) y el MISMO parseo tolerante que el texto.
   if (input.imageBase64 && input.mimeType) {
     const images = [{ data: input.imageBase64, mediaType: input.mimeType }]
     let txt: string
     try {
-      txt = await nimVision(nimConfig(), INVOICE_SYSTEM, images, 'Extrae los datos de esta factura en JSON:', 512, { signal: AbortSignal.timeout(30_000) })
+      txt = await aiVision(INVOICE_SYSTEM, images, 'Extrae los datos de esta factura en JSON:', {
+        endpoint: 'extraer-factura',
+        model: VISION_UNA_PAGINA,
+        maxTokens: INVOICE_MAX_TOKENS,
+        timeoutMs: 45_000,
+      })
     } catch (e) {
       console.warn('[extraer] visión falló:', String(e).slice(0, 140))
       return { datos: {}, fallo: 'tecnico' }
     }
-    const clean = txt.replace(/```json|```/g, '').trim()
-    try {
-      const obj = JSON.parse(clean)
-      const conDatos = obj && typeof obj === 'object' && Object.keys(obj).length > 0
-      return { datos: conDatos ? obj : {}, fallo: conDatos ? null : 'sin_datos' }
-    } catch {
-      // Respondió, pero con algo que no es JSON: no hemos leído la factura.
+    const { datos, ok } = parsearJsonIa(txt)
+    if (!ok) {
+      console.warn('[extraer] visión: respuesta no parseable:', txt.slice(0, 140))
       return { datos: {}, fallo: 'tecnico' }
     }
+    return Object.keys(datos).length > 0 ? { datos, fallo: null } : { datos: {}, fallo: 'sin_datos' }
   }
 
   // ── Texto (PDF extraído): pasarela (OpenRouter + Director) → cadena gratis ──
@@ -260,7 +293,7 @@ export async function aiExtractInvoiceDetallado(input: {
         app: 'plataforma',
         endpoint: 'extraer-factura',
         system: INVOICE_SYSTEM,
-        maxTokens: 512,
+        maxTokens: INVOICE_MAX_TOKENS,
         temperature: 0.1, // JSON determinista
         timeoutMs: 25_000,
       })
@@ -283,7 +316,12 @@ export async function aiExtractInvoiceDetallado(input: {
       : { datos: {}, fallo: 'sin_datos' }
   }
 
-  return { datos: {}, fallo: 'sin_datos' }
+  // Ni texto ni imagen: NADIE ha mirado nada. El caso real es un PDF ESCANEADO,
+  // cuya capa de texto sale vacía de `pdf-parse` y llega aquí como `text: ''`.
+  // Devolver `sin_datos` lo contaba como «leído y descartado» —una factura en
+  // papel escaneada desaparecía como si se hubiera comprobado que no lo era—,
+  // así que es `tecnico`: se encola en Gmail y sale en el parte.
+  return { datos: {}, fallo: 'tecnico' }
 }
 
 /**

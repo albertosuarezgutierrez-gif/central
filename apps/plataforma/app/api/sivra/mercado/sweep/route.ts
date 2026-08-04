@@ -48,10 +48,10 @@ const MAX_VENTANAS_EVENTO = Number(process.env.SIVRA_SWEEP_MAX_EVENTOS ?? 6)
 // presupuesto lo aporta la del día siguiente. Por eso truncar aquí es barato y morir en 504 no.
 const FECHAS_POR_MES = Number(process.env.SIVRA_SWEEP_FECHAS_MES ?? 3)
 
-// Tope de consultas ABIERTAS (el reintento sin `site:booking.com`) por pasada. Cada una es una
-// búsqueda Serper de pago extra, así que se acota: con el tope agotado la ventana se queda en
-// `sin_resultados` — que es la verdad — en vez de gastar de más en silencio.
-const MAX_CONSULTA_ABIERTA = Number(process.env.SIVRA_SWEEP_MAX_ABIERTAS ?? 20)
+// Tope de consultas de REFUERZO (la segunda, `site:booking.com`) por pasada. Cada una es una
+// búsqueda Serper de pago extra, así que se acota: con el tope agotado la ventana se queda con lo
+// que dijo la primera — que es la verdad — en vez de gastar de más en silencio.
+const MAX_CONSULTA_REFUERZO = Number(process.env.SIVRA_SWEEP_MAX_REFUERZO ?? 20)
 
 // 🚨 El barrido busca por el AFORO REAL de cada piso, NO con "4 personas" para todos (bug hasta el
 // 31/07/2026: guardaba los MISMOS comps de 4 plazas para los 4 pisos con `guests=4` fijo, así que
@@ -147,16 +147,22 @@ Reglas: extrae cualquier cifra que parezca precio por noche (€, EUR, "por noch
 }
 
 // Dos consultas por ventana, en este orden y por este motivo:
-//   1. `site:booking.com` + fechas → es la que da comparables ATADOS A LA FECHA (el 22/07/2026 el
-//      corpus salía con nombres y medianas distintas por mes: 127€ en diciembre, 214€ en mayo).
-//   2. abierta (sin el operador `site:`) → red de seguridad para cuando la 1 vuelve vacía, que es
-//      lo que pasa desde finales de julio. Trae mercado, pero puede no distinguir la fecha: por eso
-//      el parte avisa si todas las fechas acaban con los mismos comps al mismo precio
-//      (`sinSenalDeTemporada`) en vez de dar por buena una temporada inventada.
+//   1. ABIERTA (sin el operador `site:`) → es la que trae mercado. Medido en producción el
+//      04/08/2026, primera pasada con el arreglo de #1227: de 120 ventanas, las 20 que llegaron a
+//      lanzarla trajeron comps y las 100 que se quedaron solo con la de `site:` volvieron VACÍAS.
+//      Veinte de veinte contra cero de cien: el operador `site:booking.com` ya no devuelve
+//      `organic` para estas consultas, así que ponerlo primero era gastar una búsqueda de pago en
+//      un tiro perdido y dejar ciega la ventana cuando se acababa el cupo de la otra.
+//      Y sí distingue la fecha, que era la duda al escribirla: ese mismo día el Dúplex salió con
+//      medianas de 305€ (oct) · 199€ (dic) · 104€ (ene) y comparables distintos en cada una.
+//   2. `site:booking.com` + fechas → queda como REFUERZO acotado para las ventanas que la abierta
+//      no resuelve. Fue la consulta original y llegó a funcionar (22/07/2026: 127€ en diciembre,
+//      214€ en mayo), así que se conserva por si Google vuelve a indexar así; si sigue muda, lo
+//      único que cuesta es el cupo de `SIVRA_SWEEP_MAX_REFUERZO`.
 function consultasDeVentana(checkin: string, checkout: string, aforo: number) {
   return [
-    { via: 'booking' as const, q: `apartamentos turísticos Sevilla centro ${checkin} ${checkout} ${aforo} personas site:booking.com precio noche` },
     { via: 'abierta' as const, q: `apartamentos turísticos Sevilla centro para ${aforo} personas ${checkin} precio por noche euros booking` },
+    { via: 'booking' as const, q: `apartamentos turísticos Sevilla centro ${checkin} ${checkout} ${aforo} personas site:booking.com precio noche` },
   ]
 }
 
@@ -203,7 +209,7 @@ export async function GET(req: NextRequest) {
   const deadline = Date.now() + 240_000
   let truncado = 0
   let rondaBaseCompleta = true
-  let reintentosAbiertos = 0
+  let refuerzos = 0
 
   for (const { checkin, checkout, motivo, etiqueta, ronda } of plan) {
     if (Date.now() > deadline) {
@@ -213,15 +219,15 @@ export async function GET(req: NextRequest) {
     }
     for (const [aforo, pisos] of porAforo) {
       try {
-        // Se prueba la consulta atada a la fecha y, solo si vuelve vacía, la abierta (con tope,
-        // que cada intento extra es una búsqueda Serper de pago).
+        // Se prueba la consulta abierta y, solo si vuelve vacía, la de `site:` (con tope, que cada
+        // intento extra es una búsqueda Serper de pago).
         let comps: any[] = []
         let estado: EstadoVentana = 'sin_resultados'
         let via: string | undefined
         for (const consulta of consultasDeVentana(checkin, checkout, aforo)) {
-          if (consulta.via === 'abierta') {
-            if (reintentosAbiertos >= MAX_CONSULTA_ABIERTA) break
-            reintentosAbiertos++
+          if (consulta.via === 'booking') {
+            if (refuerzos >= MAX_CONSULTA_REFUERZO) break
+            refuerzos++
           }
           const { texto, resultados } = await serperSearch(consulta.q)
           if (!resultados) { estado = 'sin_resultados'; continue }
@@ -287,6 +293,6 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     ok, upserted, ventanas, eventosBarridos, truncado,
     base_completa: rondaBaseCompleta, detalle: detalleBarrido(resumen),
-    consultas_abiertas: reintentosAbiertos, errors,
+    consultas_refuerzo: refuerzos, errors,
   })
 }

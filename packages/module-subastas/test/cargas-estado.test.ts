@@ -17,10 +17,11 @@ const CERT = doc('certificación de dominio y cargas', true)
 
 test('certificación publicada y sin analizar NO se dice «no publicadas»', () => {
   const t = titularCargas({ cargas: null, cargasConocidas: false, documentos: [CERT] })
-  assert.equal(t.estado, 'publicadas_sin_leer')
+  assert.equal(t.estado, 'publicadas_sin_extraer')
   assert.equal(t.emoji, '🟠')
   assert.ok(!/no publicadas/i.test(t.texto), `no debe negar la publicación: ${t.texto}`)
   assert.match(t.texto, /publica/i)
+  assert.match(t.texto, /NO tenemos su cuadro de cargas/)
   // Y lo importante: da el enlace, en vez de mandar al Registro.
   assert.equal(t.documento?.url, CERT.url)
 })
@@ -35,7 +36,7 @@ test('los juzgados titulan con erratas y aun así se reconoce el documento', () 
   ]) {
     assert.equal(
       titularCargas({ cargasConocidas: false, documentos: [doc(titulo)] }).estado,
-      'publicadas_sin_leer',
+      'publicadas_sin_extraer',
       titulo,
     )
   }
@@ -79,4 +80,47 @@ test('las cargas leídas mandan sobre todo lo demás', () => {
   assert.equal(t.estado, 'subsisten')
   assert.equal(t.emoji, '🔴')
   assert.equal(t.importe, 44850)
+})
+
+// ── «Conocidas» ≠ «cuantificadas» ────────────────────────────────────────────
+// Auditoría del corpus vivo (01/08/2026): 3 de las 14 subastas del BOE tenían
+// `cargas_conocidas = true` y `cargas = NULL` —el campo Cargas de la ficha habla
+// de cargas, pero nadie ha determinado el importe que subsiste— y la ficha las
+// pintaba 🟢 «Sin cargas anteriores subsistentes». Es la misma mentira que
+// motivó todo esto, con el signo cambiado: afirmar la ausencia sin el dato.
+
+test('cargas conocidas SIN importe no son «finca limpia»', () => {
+  const t = titularCargas({ cargas: null, cargasConocidas: true, documentos: [doc('EDICTO')] })
+  assert.equal(t.estado, 'sin_cuantificar')
+  assert.equal(t.emoji, '🟠')
+  assert.match(t.texto, /sin cuantificar/i)
+  assert.ok(!/sin cargas/i.test(t.texto), `no puede leerse como finca limpia: ${t.texto}`)
+})
+
+test('con el documento a mano, el aviso lleva a abrirlo', () => {
+  const t = titularCargas({ cargas: null, cargasConocidas: true, documentos: [CERT] })
+  assert.equal(t.estado, 'sin_cuantificar')
+  assert.equal(t.documento?.url, CERT.url)
+  assert.match(t.texto, /abre/i)
+})
+
+test('el 🟢 exige que la cifra EXISTA — un 0 leído sí vale', () => {
+  const t = titularCargas({ cargas: 0, cargasConocidas: true, documentos: [CERT] })
+  assert.equal(t.estado, 'sin_cargas')
+  assert.equal(t.emoji, '🟢')
+  assert.match(t.texto, /cuantificado/i)
+})
+
+test('el titular del punto de análisis y el de la ficha son EL MISMO', async () => {
+  const { analisisDocumental } = await import('../src/analisis.ts')
+  for (const s of [
+    { cargas: 44850, cargasConocidas: true },
+    { cargas: null, cargasConocidas: true },
+    { cargas: 0, cargasConocidas: true },
+    { cargas: null, cargasConocidas: false },
+  ] as const) {
+    const docs = [CERT]
+    const punto = analisisDocumental({ ...s } as any, '', docs).puntos.find((p) => p.clave === 'cargas')
+    assert.equal(punto?.detalle, titularCargas({ ...s, documentos: docs }).texto)
+  }
 })
