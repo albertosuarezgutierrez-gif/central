@@ -6,6 +6,7 @@ import { conciliar, mapeaPropiedadAlquiler } from './conciliar'
 import { getRegla, existeDuplicado, insertarGasto, reforzarRegla, log, type DatosGasto } from './imputar'
 import { esBooking, parseBooking, bookingFingerprint } from './booking'
 import { esPresupuesto } from './clasificar'
+import { evaluaReceptor, nifProveedorEsNuestro, type Titular } from './receptor'
 import type { FacturaExtraida } from './extraer'
 
 // Decide cómo tratar un documento ya extraído: Booking (por establecimiento),
@@ -35,7 +36,7 @@ export interface DriveRef {
   nombre?: string | null
 }
 
-export type Decision = 'auto' | 'bandeja' | 'duplicado' | 'error' | 'omitido'
+export type Decision = 'auto' | 'bandeja' | 'duplicado' | 'error' | 'omitido' | 'ajena'
 
 export interface ProcesarResult {
   decision: Decision
@@ -44,22 +45,44 @@ export interface ProcesarResult {
   total: number
   proveedor: string | null
   motivo?: string
+  /** A nombre de quién venía, cuando se descarta por ser de un tercero. */
+  receptor?: string | null
 }
 
 export async function procesarFactura(
   data: FacturaExtraida,
-  ctx: { fuente: string; drive?: DriveRef; propiedadPorDefecto?: string | null; esPresupuesto?: boolean; fingerprintOverride?: string; esBooking?: boolean },
+  ctx: { fuente: string; drive?: DriveRef; propiedadPorDefecto?: string | null; esPresupuesto?: boolean; fingerprintOverride?: string; esBooking?: boolean; titulares?: Titular[] },
 ): Promise<ProcesarResult> {
   const total = Number(data.total ?? 0)
   const proveedor = data.proveedor ?? null
+  const titulares = ctx.titulares ?? []
+
+  // Si el "NIF del proveedor" es en realidad uno de los NUESTROS, el extractor confundió emisor
+  // y receptor. No sirve para la huella: la usarían TODOS los proveedores a la vez, ninguno
+  // aprendería regla y el dedup dejaría de distinguirlos. Se ignora y se cae al nombre.
+  const nifEmisorFiable = !nifProveedorEsNuestro(data.nif_proveedor, titulares)
   // Huella: la del override (p.ej. Booking por establecimiento) o la calculada.
-  const fp = ctx.fingerprintOverride || fingerprint({ nif_proveedor: data.nif_proveedor, proveedor, concepto: data.concepto })
+  const fp = ctx.fingerprintOverride || fingerprint({
+    nif_proveedor: nifEmisorFiable ? data.nif_proveedor : null,
+    proveedor,
+    concepto: data.concepto,
+  })
 
   // Presupuesto/cotización: no es un gasto → se omite (no se inserta para que no
   // tape a la factura real del mismo importe).
   if (ctx.esPresupuesto) {
     await log({ fuente: ctx.fuente, fingerprint: fp, decision: 'omitido', motivo: 'Presupuesto/cotización, no factura', payload: { total } })
     return { decision: 'omitido', fingerprint: fp, total, proveedor, motivo: 'Presupuesto/cotización' }
+  }
+
+  // Factura de un TERCERO (llega al Gmail de Alberto por un reenvío, pero está a nombre de otro):
+  // ni se imputa ni ensucia la bandeja. Se registra en el log y el scan lo canta por Telegram —
+  // decisión de Alberto (31/07/2026): "ignorar, pero avisar". Solo descarta con identificación
+  // positiva por NIF; ante la duda `evaluaReceptor` devuelve 'desconocido' y la factura sigue.
+  const dictamen = evaluaReceptor(data, titulares)
+  if (dictamen.veredicto === 'ajeno') {
+    await log({ fuente: ctx.fuente, fingerprint: fp, decision: 'ajena', motivo: dictamen.motivo, payload: { total, receptor: dictamen.receptor } })
+    return { decision: 'ajena', fingerprint: fp, total, proveedor, motivo: dictamen.motivo, receptor: dictamen.receptor }
   }
 
   if (!data.fecha || !(total > 0)) {
@@ -103,7 +126,9 @@ export async function procesarFactura(
   const datos: DatosGasto = {
     fecha: data.fecha,
     proveedor,
-    nif_proveedor: data.nif_proveedor ?? null,
+    // Si no es fiable (es un NIF nuestro), no se guarda: al aprobar desde la bandeja se
+    // recalcula la huella a partir de este campo y volveríamos a envenenar la regla.
+    nif_proveedor: nifEmisorFiable ? data.nif_proveedor ?? null : null,
     numero_factura: data.numero_factura ?? null,
     concepto: data.concepto ?? null,
     categoria,
