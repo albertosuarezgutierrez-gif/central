@@ -286,7 +286,11 @@ export async function callAISearch(
     }
   }
 
-  const geminiKey = process.env.GEMINI_API_KEY
+  // Gemini directo APAGADO por defecto (02/08/2026): la key lleva meses con 429 de cuota
+  // permanente (Check 12 del health-check de plataforma) y este intento solo pagaba un timeout
+  // antes de caer a callAI. Reactivar con GEMINI_WEBSEARCH=1 cuando haya key con cuota (mismo
+  // gate que lib/websearch.ts de plataforma).
+  const geminiKey = process.env.GEMINI_WEBSEARCH === '1' ? process.env.GEMINI_API_KEY : undefined
 
   if (geminiKey) {
     try {

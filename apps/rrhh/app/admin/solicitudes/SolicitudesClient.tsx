@@ -7,7 +7,7 @@ type S = { id: string; tipo: string; fecha_inicio: string | null; fecha_fin: str
 
 const COLOR: Record<string, string> = { solicitada: 'text-ink-3', aprobada: 'text-ok', rechazada: 'text-alert' }
 
-export default function SolicitudesClient({ inicial, logoUrl, nombreEmpresa, colorPrimario }: { inicial: S[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null }) {
+export default function SolicitudesClient({ inicial, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { inicial: S[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
   const [lista, setLista] = useState<S[]>(inicial)
   const [aviso, setAviso] = useState<string | null>(null)
   async function recargar() { const r = await fetch('/api/admin/solicitudes'); if (r.ok) setLista((await r.json()).solicitudes) }
@@ -21,7 +21,7 @@ export default function SolicitudesClient({ inicial, logoUrl, nombreEmpresa, col
   }
   const rango = (s: S) => [s.fecha_inicio, s.fecha_fin].filter(Boolean).map(f => f!.slice(0, 10)).join(' → ')
   return (
-    <AdminShell activo="solicitudes" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario}>
+    <AdminShell activo="solicitudes" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario} tieneFichaje={tieneFichaje}>
       <h1 className="text-2xl">Solicitudes</h1>
       {aviso && (
         <div className="mt-2 rounded-[10px] border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">

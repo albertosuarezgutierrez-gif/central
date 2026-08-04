@@ -448,3 +448,48 @@ reservas NUEVAS.
 **Medir (seguimiento 27/07):** ratio bruto/listado de reservas ≥7 noches — antes 0,65; objetivo
 ≥0,76 en los tres primeros (esperado teórico ≈0,76; House ≈0,69). Vigilar que el volumen de reservas
 largas no caiga en House. La lección vive en `pricing_aprendizaje` (busto, temporada `canal_booking`).
+
+## 13. 🕳️ LANDMINE — el fallback global HUNDE las noches de evento sin comps del mes (15/07/2026, caso Karol G)
+
+**Qué pasó:** la reserva de Andrea Salvatierra (Airbnb, Luxury, 11-13 jun 2027 = **finde Karol G ×3
+en La Cartuja**, factor 2,5) entró a ~343€/noche bruto cuando el mercado real de ese finde estaba en
+**p50 ≈ 930€/noche** (Booking, 4 pax, centro). Junio 2027 no tenía comps → el bucket **global**
+(dominado por temporada media/baja) fijó una base hundida (`base_target` ≈112) y el motor bajó la
+noche de evento **788→283 en 5 pasadas** (13-15/07). El factor 2,5 no salvó nada: multiplica la base
+hundida (112×2,5 ≈ 280). Misma familia que la lección de Busto abril'27, ahora con evento encima.
+
+**Regla implementada (apply de plataforma, aprobada por Alberto 15/07):** con **evento factor ≥2 y
+SIN mercado del mes** (fallback global), el precio **NUNCA baja** — se congela el precio actual hasta
+tener comps del mes (subir sí se permite; el techo `max_price` del propietario sigue mandando).
+
+**Además:** el tope ±20% del raíl es **por pasada, no por día natural** — con 3 pasadas/día del cron
+(08:30/14:30/20:30) el freno real es ~−49%/día. Pendiente decidir si se dedupea por fecha natural.
+
+**Corrección de datos (15/07):** 10 comps 4pax (escenario luxury) + 10 comps 2pax (escenario busto)
+del finde 11-13 jun 2027 ingestados vía `/api/sivra/mercado/ingest`. Lección en `pricing_aprendizaje`
+id 35. Recordatorio operativo: reponer comps de may-jul 2027 en próximos ciclos del agente.
+
+## 14. Prior estacional auto-aprendido + tripwire PriceLabs (17/07/2026, OK de Alberto)
+
+**Problema de fondo (pregunta de Alberto: "¿el agente no lo sabe con las variables que tenemos?"):**
+no lo sabía — el motor tarifica solo con comps actuales de `market_rates`; el histórico (`incomes`
+desde 2020, ADR y ocupación por mes) no entraba en la pasada diaria. Así se coló octubre a 161€.
+
+**Fix 1 — prior estacional (apply de plataforma):** índice por piso y mes calculado en la propia
+pasada desde `incomes` (6 años): `idx = (ADR_mes/ADR_medio) × clamp(noches_mes/noches_media, 0,85-1,25)`,
+clamp final 0,7-1,6, mínimo 30 noches de muestra. Octubre destaca en NOCHES más que en ADR
+(históricamente también se vendió barato) — por eso el ADR solo no bastaba. Uso como **SUELO**:
+sin bucket del mes sustituye al global plano (`base × idx`); con bucket, red de seguridad
+(`base × idx × 0,9`) solo si `idx ≥ 1,15`. Nunca techo; los raíles (±%/pasada, min/max) siguen.
+
+**Fix 2 — tripwire PriceLabs:** mientras PL siga conectado (hasta ~ago-2026), cada pasada EN VIVO
+compara lo escrito con el último `rate_snapshots.price_pricelabs` (≤14 días): si escribe <70% de PL,
+aviso Telegram agregado (las tres minas — jun-27, Feria-27, oct-26 — empezaron deshaciendo precios
+altos de PL). Al desconectar PL el tripwire calla solo (sin datos frescos).
+
+**Fix 3 — velocidad de conversión por mes (mismo día, OK de Alberto):** si un mes futuro acumula
+**≥2 reservas entradas en los últimos 7 días** (`incomes.createdAt`), su objetivo sube +10%
+(+20% desde 4 reservas), sin pasar del techo de mercado del mes (`ceilD`). Se recalcula desde el
+mercado en cada pasada (no compone) y la ventana de 7 días vacía el boost sola cuando la demanda
+para. Es la señal que habría cazado octubre-26 sin intervención de Alberto: 2 reservas en 4 días
+a precio corto. Visible en la respuesta del apply como `meses_calientes`.

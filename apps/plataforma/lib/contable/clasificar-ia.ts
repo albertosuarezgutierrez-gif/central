@@ -33,6 +33,7 @@ Elige UN tipo:
 - {"tipo":"concepto","signo":"gasto|ingreso","terminos":["<palabra>"],"etiqueta":"...","anio":<n>,"mes":opcional} — un proveedor/comercio concreto por nombre.
 - {"tipo":"tramo_fiscal","anio":<n>} — posición fiscal / tramo IRPF.
 - {"tipo":"facturas_pendientes"} — facturas de proveedor sin pagar.
+- {"tipo":"extracto_drive","anio":<n>,"mes":<1-12 opcional>,"pan4":"<4 dígitos opcional>"} — pedir el PDF de un extracto de tarjeta ya archivado ("enséñame/pásame el extracto de junio", "el extracto de la ****0302 de mayo").
 
 Reglas:
 - CONTEXTO: si la pregunta es elíptica o de seguimiento ("¿y gastos?", "¿y en junio?", "¿y el resultado?", "¿y Luxury?", "¿y del Dúplex?"), HEREDA del último turno lo que NO cambie (piso/negocio, año, mes, signo) y cambia SOLO lo que la nueva pregunta indica. Ej.: si el turno previo fue "ingresos de Socorro este mes" y ahora pregunta "¿y gastos?", devuelve el MISMO piso y mes con modo "gasto".

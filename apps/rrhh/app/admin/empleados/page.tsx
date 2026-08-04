@@ -10,7 +10,7 @@ export default async function Page() {
   try { ({ empresa_id, usuario_id } = await getSesion()) } catch (e) { if (e instanceof AuthError) redirect('/login'); throw e }
   const [empleados, usuarioRows, branding] = await Promise.all([
     prisma.$queryRaw<any[]>(Prisma.sql`
-      SELECT id, nombre, apellidos, dni, nss, email, puesto, estado, acceso_token
+      SELECT id, nombre, apellidos, dni, nss, email, puesto, estado, acceso_token, fecha_reconocimiento_medico
       FROM rrhh.empleados WHERE empresa_id = ${empresa_id}::uuid
       ORDER BY COALESCE(apellidos, nombre) ASC, nombre ASC`),
     prisma.$queryRaw<any[]>(Prisma.sql`SELECT nombre FROM rrhh.usuarios_rrhh WHERE id = ${usuario_id}::uuid`),
@@ -23,6 +23,7 @@ export default async function Page() {
       nombreEmpresa={branding.nombre}
       logoUrl={branding.logo_url}
       colorPrimario={branding.color_primario}
+      tieneFichaje={branding.tiene_fichaje}
     />
   )
 }

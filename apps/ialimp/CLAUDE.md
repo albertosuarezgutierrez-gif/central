@@ -35,6 +35,24 @@ Next.js `^15.5` · React 19 · Prisma `^5.22` · **JWT (jose + bcryptjs, SIN Nex
 - **Controlar qué está "Ready" en producción = panel de Vercel** (`vercel.com/.../ialimp`, filtro *Production*): muestra el deploy *Current* en vivo y los *rollback candidates* para volver atrás en 1 clic. GitHub/PR = el *qué cambió*; Vercel = el *qué está publicado*. (Conviene activar avisos de deploy a Slack/email en Settings → Notifications.)
 - Cada PR mergeado a `main` = un deploy de producción. Solo `main` despliega a producción.
 
+## 🚨 LANDMINE — `pms_connections.ultimo_sync` NO la escribe nadie (30/07/2026)
+La tabla tiene **dos** columnas de fecha de sincronización y solo una está viva: `/api/pms/sync` escribe
+**`last_sync_at`**, mientras que `ultimo_sync` (la que declara `schema.prisma` y la que leía el dashboard)
+está a **NULL en producción desde siempre**. Efecto: la fecha del último sync no se mostraba nunca y en el
+panel solo quedaba el chip verde «● Activo», que además salía de `activa` + `sync_error IS NULL` — y
+«no consta error» incluye «lleva tres semanas sin ejecutarse». Con la sincronización muerta, `cleaning_sessions`
+deja de recibir reservas y **todo lo que cuelga de ella miente en la misma dirección**: la app de la limpiadora
+dice «Sin limpiezas este día», el briefing dice «sin sesiones programadas» y el panel se queda tan ancho.
+- El estado real se calcula con el helper PURO **`lib/pms-estado.ts`** (`estadoSync`/`esSyncSano`, testeado):
+  inactiva · sin sincronizar nunca · desactualizada hace X · con errores · activa hace X. Verde SOLO con dato
+  fresco (<3 h) y sin errores. **Al leer el estado del PMS, usa este helper — nunca `activa` a pelo.**
+- **Vigilante externo:** el cron `agentes-latido` de `apps/plataforma` avisa por **Telegram** si `last_sync_at`
+  pasa de 6 h o si hay `sync_error` (registro en `apps/plataforma/lib/monitoring/latidos.ts`, id `ialimp_pms`).
+  Es el aviso de infraestructura del SaaS (para Alberto), NO el backlog operativo de Vanessa — ese sigue
+  fuera del Telegram de Alberto, ver la nota del Check 6 retirado en el CLAUDE.md de plataforma.
+- Si algún día se limpia la deuda: borrar `ultimo_sync` del schema y de la BD, no "arreglarla" escribiendo
+  en las dos.
+
 ## Multi-tenant (CRÍTICO — frontera de seguridad)
 - **Scoping por `empresa_id` en TODA query y route.** Nunca consultes ni asignes datos sin filtrar por empresa. Una fuga entre empresas es un fallo grave de RGPD.
 - Middleware: 401 a `/api/*` no público sin cookie `ialimp_session`. Eximidos: `/api/auth`, `/api/pms`, `/api/leads`, `/api/propietario`, `/api/cotizador`, `/api/catastro`, `/l`, `/api/l`.
@@ -49,7 +67,14 @@ Next.js `^15.5` · React 19 · Prisma `^5.22` · **JWT (jose + bcryptjs, SIN Nex
 - **Responsive (FIJO — toda UI nueva o modificada):** la app se usa en **móvil y ordenador**, así que **todo debe adaptarse a la pantalla**. Reglas: anchos **fluidos** (`%`, `fr`, `flex` + `flexWrap:'wrap'`), `maxWidth` con `width:'100%'` en contenedores y tarjetas; **nunca anchos fijos en px** que desborden (si hace falta tope, usar `maxWidth`/`minWidth` con `flex`). Listas/cabeceras que no quepan → `flexWrap:'wrap'` u `overflowX:'auto'`. **Modales SIEMPRE** con `maxHeight:'90vh'` + `overflowY:'auto'` (para que en pantallas bajas se pueda llegar a los botones). Rejillas de formulario con `1fr 1fr` (fluidas) o `repeat(auto-fit,minmax(…,1fr))` para que colapsen a 1 columna en lo más estrecho. No se usan media queries (estilos inline): conseguir la adaptación con estas técnicas.
 
 ## Base de datos (Supabase `wswbehlcuxqxyinousql`, COMPARTIDA con SIVRA)
-- `$queryRaw` **SIEMPRE** con `Prisma.sql` (nunca interpolar strings). Los **casts van en el SQL** (`${v}::uuid`, `${v}::date`), **nunca concatenados al valor del parámetro** (`${v + '::uuid'}` manda el texto `"…::uuid"` y rompe con `42804 COALESCE types text and uuid cannot be matched`).
+- `$queryRaw` **SIEMPRE** con `Prisma.sql` (nunca interpolar strings). Los **casts van en el SQL** (`${v}::uuid`, `${v}::date`), **nunca concatenados al valor del parámetro** (`${v + '::uuid'}` manda el texto `"…::uuid"` y rompe con `42804 COALESCE types text and uuid cannot be matched`). **Misma landmine con listas `IN (...)`:** `Prisma.join(ids)` manda cada elemento como parámetro `text` sin tipo — si la columna es `uuid`, castea CADA elemento: `Prisma.join(ids.map(id => Prisma.sql\`${id}::uuid\`))` (si no, `42883 operator does not exist: uuid = text`; le pasó al cron `/api/cron/impagos` un mes entero en silencio hasta el 26/07/2026).
+- **Rol `prisma_ialimp` acotado a least-privilege (26/07/2026):** antes tenía DML sobre las 254 tablas de
+  `public` (residuo del alta inicial, igual que todos los `prisma_*` — cualquier vertical filtrada daba
+  acceso a la banca de Alberto). Ahora solo `SELECT, INSERT, UPDATE, DELETE` en las ~78 tablas propias del
+  dominio ialimp (limpiadoras, clientes, facturación, mailing, repartidor, RR.HH. de limpiadora…) + `SELECT`
+  en las 8 vistas de solo lectura (`v_contab_*`, `agenda_dia`, `sesiones_limpiadora`…) + `SELECT` en `cuentas`
+  (login). **Si una tabla nueva por SQL crudo empieza a dar `permission denied` en producción, dale GRANT
+  explícito a `prisma_ialimp`** (Supabase MCP como `postgres`) — ya no hereda acceso a todo por defecto.
 - **Tipos reales de `cleaning_sessions`:** `hora_inicio` es **TEXT** (no `time`) → **nunca** castear `::time` (un `COALESCE(${v}::time, hora_inicio)` rompe con `42804 time vs text`). Al editar una sesión por PATCH, hacer **un `UPDATE` por campo y solo si viene en el body** (en vez de un COALESCE de todas las columnas) para no chocar tipos ni pisar lo no enviado.
 - `schema.prisma` solo declara `empresas` y `pms_connections`; el resto de tablas (`limpiadoras`, `cleaning_sessions`, `clientes`, `propiedades`, `facturas_*`, etc.) se gestionan por **SQL crudo**.
 - `cliente` = entidad facturable (`tipo_persona` ∈ particular/autonomo/empresa); datos fiscales en `clientes`. `cliente_contactos`: N por cliente, `principal` exclusivo. Las columnas jsonb `telefonos`/`emails` fueron ELIMINADAS.

@@ -56,3 +56,9 @@ export {
   alertasVencimiento,
   ajusteInventario,
 } from './stock'
+
+export type { StockCelda, EstadoTraspaso } from './transferencias'
+export { iniciarTraspaso, confirmarRecepcion, cancelarTraspaso } from './transferencias'
+
+export type { CeldaEvento } from './eventos'
+export { reservar, cancelarReserva, entregar, devolver, enPropiedad, solapa } from './eventos'

@@ -11,7 +11,7 @@ import { tgSend } from '@central/core-telegram'
 import { eur } from '@/lib/dinero'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60 // IMAP + OCR es lento; el lote se acota en el propio agente.
+export const maxDuration = 300 // IMAP + OCR es lento; con 60s moría a diario por timeout (504, ago-2026).
 
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET

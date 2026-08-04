@@ -4,7 +4,7 @@ import { detectLang, detectCategory } from './reglas'
 import { decidir, type Decision } from './decidir'
 import { recomendar } from './recomendar'
 import { enviarAlHuesped } from './enviar'
-import { proponerPorTelegram } from './telegram-msg'
+import { proponerPorTelegram, avisarAutoEnviado } from './telegram-msg'
 import { logMensaje, registrarGap, autoPermitido } from './aprender'
 import { claveDedup, claimMensaje, liberarMensaje } from './idempotencia'
 import { esEcoPropio } from './atribucion'
@@ -67,6 +67,24 @@ export async function procesarMensajeHuesped(
     }
   }
 
+  // Anti-propuesta DUPLICADA del MISMO mensaje. El webhook (tiempo real) y el sondeo (cron) derivan el
+  // id del mensaje de endpoints DISTINTOS de Smoobu (/api/reservations/{id}/messages vs /api/threads),
+  // así que generan claves de dedup distintas y AMBOS superan el reclamo atómico → dos borradores en
+  // Telegram para la misma pregunta. Como solo hay UNA fila pendiente por reserva (PK booking_id),
+  // Alberto envía uno y el botón del OTRO queda muerto ("Ya no está disponible"). Si YA hay una
+  // propuesta pendiente para esta reserva sobre esta MISMA pregunta, no creamos otra. El disparo
+  // MANUAL se exime a propósito (sirve para re-proponer). El reclamo atómico de abajo sigue cubriendo
+  // la carrera del MISMO id; esta guarda cubre la de ids distintos para el mismo mensaje.
+  if (!esManual) {
+    try {
+      const norm = (s: string) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ')
+      const yaPend = await prisma.$queryRaw<{ pregunta: string | null }[]>(Prisma.sql`
+        SELECT pregunta FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId} LIMIT 1
+      `)
+      if (yaPend[0] && norm(yaPend[0].pregunta || '') === norm(pregunta)) return { accion: 'ya_propuesto' }
+    } catch { /* best-effort: si la consulta falla, seguimos el flujo normal */ }
+  }
+
   // Idempotencia: clave por id de Smoobu o, si no llega (p.ej. el webhook no lo trae), por
   // reserva+contenido. RECLAMO ATÓMICO al entrar: si no lo reclamamos nosotros, ya se atendió →
   // fuera. Evita las propuestas/auto-envíos duplicados del MISMO mensaje en cada sondeo/webhook.
@@ -96,14 +114,25 @@ export async function procesarMensajeHuesped(
     }
 
     // 3) ¿Auto-envío (Fase 2) o propuesta por Telegram (Fase 1 / sensible)?
-    // Un cierre de conversación (requiere_respuesta=false) nunca se auto-envía: se propone para que
-    // Alberto decida enviar de cortesía o descartar (🚫 No responder).
-    const puedeAuto = !dec.needs_human && dec.requiere_respuesta !== false && !!dec.reply && await autoPermitido(dec.categoria, dec.confidence)
+    // Guardas comunes: nunca se auto-envía nada que requiera ojo humano (sensible / negativo / dato
+    // inventado / escalado IA) ni sin borrador ni con sentimiento negativo.
+    const guardasOk = !dec.needs_human && !!dec.reply && dec.sentimiento !== 'negativo'
+    // (a) CORTESÍA de fin de estancia (despedidas / agradecimientos / cierres puros): respuestas
+    //     "siempre iguales" y de riesgo mínimo → se auto-envían SIN depender del contador de
+    //     graduación por categoría. Decisión de Alberto (26/07/2026): "este tipo de mensajes puede
+    //     mandarse ya automáticamente". Antes un cierre (requiere_respuesta=false) NUNCA se auto-enviaba.
+    // (b) Categoría básica ya GRADUADA (5 aprobaciones sin corregir) con respuesta que sí se requiere.
+    const autoCortesia = guardasOk && dec.es_cortesia === true
+    const autoGraduado = guardasOk && dec.requiere_respuesta !== false && await autoPermitido(dec.categoria, dec.confidence)
+    const puedeAuto = autoCortesia || autoGraduado
     if (puedeAuto) {
       const ok = await enviarAlHuesped(ctx.reservationId, dec.reply)
       await logMensaje({ bookingId, propertyId: ctx.propertyId, categoria: dec.categoria, pregunta, respuesta: dec.reply, fuente: dec.fuente, confidence: dec.confidence, sentimiento: dec.sentimiento, needs_human: false, auto_sent: ok, edited: false })
       // Si el envío falló, liberamos el reclamo para reintentar en el próximo sondeo.
       if (!ok) await liberarMensaje(dedupKey)
+      // Copia informativa a Telegram de lo que se ha enviado solo (Alberto no tiene que hacer nada).
+      // Solo si de verdad se envió; best-effort, no bloquea ni rompe el flujo.
+      else await avisarAutoEnviado(ctx, pregunta, dec)
       return { accion: ok ? 'auto_enviado' : 'fallo_envio' }
     }
 

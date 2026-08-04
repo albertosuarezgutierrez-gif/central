@@ -1,6 +1,6 @@
 ---
 name: agentes-entrenador
-description: Agente PROGRAMADO semanal que mejora los prompts de los agentes del monorepo por RENDIMIENTO (qué hicieron de verdad, qué falló, qué corrigió Alberto) y por CALIDAD transversal (contradicciones/redundancias entre skills). NO vigila frescura factual (eso es de /auditoria-diaria). Lee docs/AGENTES-BITACORA.md, docs/FEEDBACK-AGENTES.md, git/PRs de la semana y BD (solo lectura). Entrega cambios de comportamiento SIEMPRE por PR draft + aviso Telegram; solo lo factual trivial directo a main. Úsala cuando Alberto pida "revisa/mejora los prompts de los agentes" o cuando la dispare su trigger semanal (domingo). Sin secretos, solo nombres de variable.
+description: Agente PROGRAMADO semanal (domingo) que mejora los prompts de los agentes por RENDIMIENTO y calidad transversal. NO vigila frescura factual (eso es /auditoria-diaria). Cambios de comportamiento SIEMPRE por PR draft + Telegram; nunca se auto-modifica. Úsala si Alberto pide "revisa/mejora los prompts de los agentes" o al disparo semanal. Sin secretos.
 ---
 
 # agentes-entrenador — mejora semanal de los prompts de los agentes
@@ -15,8 +15,8 @@ description: Agente PROGRAMADO semanal que mejora los prompts de los agentes del
 >
 > **MCPs que necesita:** GitHub (PRs de la semana + abrir PR draft) y Supabase (solo
 > lectura). Para el aviso Telegram: `POST {PLATAFORMA_URL}/api/internal/alerta` con Bearer
-> `CRON_SECRET` (mismo patrón que psd2-health-check; si faltan, el aviso se omite y el
-> resto sigue).
+> `ALERTA_TOKEN` (token estrecho; el endpoint acepta también el viejo `CRON_SECRET` por compat.
+> Mismo patrón que psd2-health-check; si faltan, el aviso se omite y el resto sigue).
 
 ## Guardarraíles anti-loop (léelos ANTES de tocar nada — son la razón de ser del diseño)
 
@@ -88,6 +88,17 @@ description: Agente PROGRAMADO semanal que mejora los prompts de los agentes del
    - Añade TU PROPIA entrada de auto-informe en la bitácora (el entrenador también es un
      agente programado y se evalúa igual — pero recuerda el guardarraíl 1: sus mejoras las
      propone en PR, nunca se las auto-aplica).
+   - **Backlog de PRs sin mergear — cuéntalo y nómbralo si crece.** Cuenta con
+     `list_pull_requests` (state=open) cuántos PR `claude/*` llevan 2+ semanas abiertos (la
+     mayoría son docs-only de auto-informes: facturas-correo, auditoría, este mismo agente).
+     Si el total ha CRECIDO frente a la última pasada, no repitas el hallazgo como "nota
+     transversal sin acción" otra vez — nombra en el aviso el PR más antiguo (nº + fecha de
+     apertura) y el total actual. Detectado por primera vez el 26/07/2026 (≥11 PR); escaló a
+     73 (29/07) pese a 2 avisos previos hasta que Alberto cerró en bloque ~40 PR sin
+     mergear (29/07) — un PR **cerrado sin mergear no es un PR resuelto**: si su contenido
+     era una skill/regla real (no un snapshot de bitácora ya superado), verifica que
+     sobrevivió en `main` antes de darlo por hecho; si no, reaplícalo tú mismo en esta
+     pasada en vez de asumir que "cerrado" == "ya está".
    - Anota la pasada en `docs/CONTEXTO-SESIONES.md` (entrada nueva arriba).
 
 ## Reglas
@@ -107,3 +118,16 @@ description: Agente PROGRAMADO semanal que mejora los prompts de los agentes del
   evidencia esta semana") en vez de rellenar con impresiones.
 - Multi-tenant BD: cualquier query con scope (`cuenta_id`/`empresa_id`) lo respeta;
   solo lectura SIEMPRE.
+
+## Canal de aviso — protocolo común
+
+**Preflight AL ARRANCAR** (no al final, cuando ya tengas algo que contar):
+`GET {PLATAFORMA_URL}/api/internal/alerta` con `Authorization: Bearer {ALERTA_TOKEN}`.
+
+- `200` → el canal está vivo, sigue con tu pasada.
+- `401` → el canal está **mudo** (el token de ESTE entorno no coincide con el de Vercel `plataforma`;
+  hay un entorno por rutina y se desincronizan de uno en uno). El cuerpo trae `causa` y `remedio`.
+  Entonces, según `docs/AVISOS-AGENTES.md`: avisa por el **push nativo** de la sesión empezando por
+  `🔇 SIN TELEGRAM (401):` y deja el aviso **entero** en `docs/AGENTES-BITACORA.md` (`fallos:`).
+
+Nunca te inventes el token, nunca uses `CRON_SECRET` en el prompt, y **nunca falles en silencio**.

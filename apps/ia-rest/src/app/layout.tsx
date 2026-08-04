@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     template: '%s · ia.rest',
   },
   description:
-    'Software TPV con IA para restaurantes y bares en España. Comanda por voz en menos de 0,5 segundos. VeriFactu homologado, KDS, cobro con tarjeta y Bizum. Desde 59 €/mes. Sin comisiones. 14 días gratis.',
+    'Software TPV con IA para restaurantes y bares en España. Comanda por voz en menos de 0,5 segundos. VeriFactu homologado, KDS, cobro con tarjeta y Bizum. Sin comisiones por transacción. Pide presupuesto sin compromiso.',
   keywords: [
     'tpv hosteleria','tpv restaurante','tpv bar','software tpv hosteleria españa',
     'tpv voz restaurante','tpv comandas por voz','tpv inteligencia artificial hosteleria',
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     'tpv sin instalacion','alta tpv sin instalador','tpv autoservicio',
     'tpv varios locales','tpv multilocal hosteleria','gestión varios restaurantes',
     'migrar tpv numier','alternativa numier','alternativa revo xef',
-    'tpv bares españa','tpv desde 59 euros','kit digital hosteleria',
+    'tpv bares españa','presupuesto tpv hosteleria','kit digital hosteleria',
   ],
   authors: [{ name: 'ia.rest', url: BASE_URL }],
   creator: 'ia.rest',
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
     siteName: 'ia.rest',
     title: 'ia.rest · TPV por Voz para Hostelería | VeriFactu incluido',
     description:
-      'El camarero habla. Cocina ya tiene el ticket. TPV con IA para restaurantes y bares en España. VeriFactu, KDS, Bizum y Stripe. Desde 59 €/mes por local, sin comisiones.',
+      'El camarero habla. Cocina ya tiene el ticket. TPV con IA para restaurantes y bares en España. VeriFactu, KDS, Bizum y Stripe. Sin comisiones por transacción.',
     images: [{
       url: '/og-image.jpg', width: 1200, height: 630,
       alt: 'ia.rest · TPV por Voz para Hostelería en España', type: 'image/jpeg',
@@ -63,7 +63,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     site: '@ia_rest',
     title: 'ia.rest · TPV por Voz para Hostelería | VeriFactu incluido',
-    description: 'El camarero habla. Cocina ya tiene el ticket. TPV con IA para hostelería española. Desde 59 €/mes por local, sin comisiones.',
+    description: 'El camarero habla. Cocina ya tiene el ticket. TPV con IA para hostelería española. Sin comisiones por transacción.',
     images: ['/og-image.jpg'],
   },
   manifest: '/manifest.json',
@@ -126,17 +126,10 @@ const jsonLdApp = {
   inLanguage: 'es-ES',
   softwareVersion: '1.0',
   datePublished: '2026-01-01',
-  offers: [
-    { '@type': 'Offer', name: '1 usuario · 59 €/mes', price: '59', priceCurrency: 'EUR', url: `${BASE_URL}/registro`,
-      description: 'Local base con 1 usuario activo (camarero, cocina o jefe de sala). KDS, VeriFactu y Bizum incluidos.',
-      priceSpecification: { '@type': 'UnitPriceSpecification', price: '59', priceCurrency: 'EUR', billingDuration: 'P1M' } },
-    { '@type': 'Offer', name: '3 usuarios · 99 €/mes', price: '99', priceCurrency: 'EUR', url: `${BASE_URL}/registro`,
-      description: 'Local con 3 usuarios activos. Ideal para restaurante con sala y cocina.',
-      priceSpecification: { '@type': 'UnitPriceSpecification', price: '99', priceCurrency: 'EUR', billingDuration: 'P1M' } },
-    { '@type': 'Offer', name: '6 usuarios · 159 €/mes', price: '159', priceCurrency: 'EUR', url: `${BASE_URL}/registro`,
-      description: 'Local con 6 usuarios activos. Para casas grandes con varios salones o terraza.',
-      priceSpecification: { '@type': 'UnitPriceSpecification', price: '159', priceCurrency: 'EUR', billingDuration: 'P1M' } },
-  ],
+  // SIN bloque `offers`: el precio de ia.rest NO se publica. La tarifa se cierra en la
+  // conversación (formulario de contacto o WhatsApp), así que no hay Offer que declarar —
+  // un Offer sin `price` no aporta nada y uno con precio contradiría a la web.
+
   featureList: [
     'Comandas por voz con IA (Whisper + Claude)',
     'VeriFactu homologado SHA-256 — incluido en todos los perfiles',
@@ -172,7 +165,7 @@ const jsonLdFaq = {
     { '@type': 'Question', name: '¿Puedo financiar ia.rest con el Kit Digital?',
       acceptedAnswer: { '@type': 'Answer', text: 'Sí. ia.rest es compatible con las subvenciones Kit Digital del Gobierno de España para digitalización de pymes y autónomos.' } },
     { '@type': 'Question', name: '¿Cómo funciona el precio de ia.rest?',
-      acceptedAnswer: { '@type': 'Answer', text: 'ia.rest usa tarificación por usuario activo: 59 €/mes por el local más 20 €/mes por cada usuario adicional (camarero, cocina o jefe de sala). A partir del séptimo usuario el precio baja a 15 €/mes. Un bar con 1 usuario paga 59 €/mes. Un restaurante con 6 usuarios paga 159 €/mes. Sin comisiones por cobro.' } },
+      acceptedAnswer: { '@type': 'Answer', text: 'El precio se ajusta a cada local: cuota mensual fija según el tamaño del negocio y los usuarios activos, siempre sin comisión por transacción. Escríbenos por el formulario de contacto o por WhatsApp y te pasamos el presupuesto cerrado, sin compromiso.' } },
     { '@type': 'Question', name: '¿Hay comisión por cada pago con tarjeta o Bizum?',
       acceptedAnswer: { '@type': 'Answer', text: 'No. ia.rest no cobra comisión por transacción. Pagas la cuota mensual fija. Cero porcentaje sobre tus ventas.' } },
     { '@type': 'Question', name: '¿Puedo migrar desde mi TPV actual?',

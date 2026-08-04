@@ -115,6 +115,9 @@ export type ResumenFinanciero = {
     tramoPrevioTipo: number | null
     tipoEfectivo: number
     reduccionConjunta: number
+    // Ingresos EXENTOS de IRPF (p.ej. prestación por paternidad, Art. 7.h): cobrados de verdad pero
+    // fuera de la base imponible. Se expone para explicar en pantalla por qué la base < caja.
+    exento: number
     trimestres: { q: number; ingresos: number; gastosDeducibles: number; resultado: number; ivaSoportado: number }[]
     retencionesAcumuladas: number
   }
@@ -132,29 +135,12 @@ export type ResumenFinanciero = {
 
 // ── Control de gastos (deducibilidad por bucket) ─────────────────────────────
 // Bucket fiscal derivado del `destino` del movimiento. No es una columna nueva: la
-// deducibilidad ya está modelada en `movimientos_bancarios.destino`.
-export type GastoBucket = 'negocio' | 'renta' | 'no_deducible' | 'traspaso'
-
-export const BUCKET_LABEL: Record<GastoBucket, string> = {
-  negocio: '🏢 Actividad económica',
-  renta: '🏖️ Renta / pisos',
-  no_deducible: '👨‍👩‍👧 No deducible',
-  traspaso: '🔁 Traspaso interno',
-}
-
-export const BUCKET_DEDUCIBLE: Record<GastoBucket, boolean> = {
-  negocio: true, renta: true, no_deducible: false, traspaso: false,
-}
-
-export function bucketDeDestino(destino: string | null): GastoBucket {
-  switch (destino) {
-    case 'seguros': return 'negocio'
-    case 'turistico_pisos':
-    case 'turistico_duplex': return 'renta'
-    case 'traspaso_interno': return 'traspaso'
-    default: return 'no_deducible'   // personal / null / actividad_pilar (Pilar tiene su página)
-  }
-}
+// deducibilidad ya está modelada en `movimientos_bancarios.destino`. La lógica vive en
+// el módulo PURO `lib/deducibilidad.ts` (fuente única, compartida con el cliente); aquí
+// se importa (uso interno en getGastosControl) y se re-exporta para no romper a los
+// consumidores que la importan desde `@/lib/finanzas`.
+import { BUCKET_LABEL, BUCKET_DEDUCIBLE, bucketDeDestino, type GastoBucket } from './deducibilidad'
+export { BUCKET_LABEL, BUCKET_DEDUCIBLE, bucketDeDestino, type GastoBucket }
 
 export type DeduccionCuotaTipo = 'mecenazgo' | 'guarderia' | 'deportiva_and'
 
@@ -239,34 +225,27 @@ export type GastosControl = {
 const RETENCION_SEGUROS = 0.15
 const REDUCCION_CONJUNTA = 3400
 
-const TRAMOS_IRPF = [
-  { desde: 0, hasta: 12450, tipo: 0.19 },
-  { desde: 12450, hasta: 20200, tipo: 0.24 },
-  { desde: 20200, hasta: 35200, tipo: 0.30 },
-  { desde: 35200, hasta: 60000, tipo: 0.37 },
-  { desde: 60000, hasta: 300000, tipo: 0.45 },
-  { desde: 300000, hasta: null, tipo: 0.47 },
-]
+// Los tramos IRPF ya NO se hardcodean aquí: la FUENTE ÚNICA es `IMPORTES_POR_ANIO[year].tramos`
+// (en fiscal-deducciones.ts, vigilada por la skill `fiscal-novedades`). `calcularTramos` los recibe.
+type Tramo = { desde: number; hasta: number | null; tipo: number }
 
-function calcularTramos(base: number) {
+function calcularTramos(base: number, tramos: Tramo[]) {
   const basePos = Math.max(0, base)
-  const resultado = TRAMOS_IRPF.map(t => {
+  const resultado = tramos.map(t => {
     const desde = t.desde
     const hasta = t.hasta ?? Infinity
     const aplicado = Math.max(0, Math.min(basePos, hasta) - desde)
     return { desde: t.desde, hasta: t.hasta, tipo: t.tipo, importe: aplicado * t.tipo }
   })
-  const tramoActualIdx = TRAMOS_IRPF.findLastIndex(t => basePos >= t.desde)
-  const tramoActual = TRAMOS_IRPF[tramoActualIdx] ?? TRAMOS_IRPF[0]
-  const siguienteTramo = TRAMOS_IRPF.find(t => t.desde > basePos)
+  const tramoActualIdx = tramos.findLastIndex(t => basePos >= t.desde)
+  const tramoActual = tramos[tramoActualIdx] ?? tramos[0]
+  const siguienteTramo = tramos.find(t => t.desde > basePos)
   const margenHastaProximoTramo = siguienteTramo ? siguienteTramo.desde - basePos : null
   const margenHastaTramoPrevio = basePos - tramoActual.desde
-  const tramoPrevio = tramoActualIdx > 0 ? TRAMOS_IRPF[tramoActualIdx - 1] : null
+  const tramoPrevio = tramoActualIdx > 0 ? tramos[tramoActualIdx - 1] : null
   const ahorroBajarTramo = tramoPrevio && margenHastaTramoPrevio > 0
     ? margenHastaTramoPrevio * (tramoActual.tipo - tramoPrevio.tipo)
     : null
-  const cuotaTotal = resultado.reduce((s, t) => s + t.importe, 0)
-  const tipoEfectivo = basePos > 0 ? cuotaTotal / basePos : 0
   return {
     tramosIRPF: resultado,
     tramoActual: { desde: tramoActual.desde, hasta: tramoActual.hasta, tipo: tramoActual.tipo },
@@ -274,7 +253,6 @@ function calcularTramos(base: number) {
     margenHastaTramoPrevio,
     ahorroBajarTramo,
     tramoPrevioTipo: tramoPrevio?.tipo ?? null,
-    tipoEfectivo,
   }
 }
 
@@ -595,7 +573,7 @@ export async function getResumenFinanciero(
   // Fiscal
   const baseImponibleBruta = ingresosBrutos - corrGas + pisosTotal.ingresos - pisosTotal.gastos
   const baseImponible = Math.max(0, baseImponibleBruta - REDUCCION_CONJUNTA)
-  const { tramosIRPF, tramoActual, margenHastaProximoTramo, margenHastaTramoPrevio, ahorroBajarTramo, tramoPrevioTipo, tipoEfectivo } = calcularTramos(baseImponible)
+  const { tramosIRPF, tramoActual, margenHastaProximoTramo, margenHastaTramoPrevio, ahorroBajarTramo, tramoPrevioTipo } = calcularTramos(baseImponible, importesDe(year).tramos)
 
   // Trimestres (fiscal — siempre año completo para el bloque fiscal)
   // Incluye IVA soportado de facturas_proveedor pagadas en cada trimestre.
@@ -638,6 +616,11 @@ export async function getResumenFinanciero(
 
   // Deducciones fiscales (perfil familiar → cuota → resultado)
   const deducciones = await getDeducciones(cuentaId, year, baseImponible, retencionesEstimadas)
+
+  // Tipo efectivo REAL = cuota íntegra (ya con el método español tarifa(base)−tarifa(mínimo), es decir
+  // descontado el mínimo personal y familiar) / base imponible. Antes se calculaba aplicando la tarifa
+  // a TODA la base sin restar el mínimo → salía bastante más alto que el real (engañoso en pantalla).
+  const tipoEfectivo = baseImponible > 0 ? deducciones.resultado.cuotaIntegra / baseImponible : 0
 
   // Recientes por destino
   const corrRecientes = recientesAll.filter(r => r.destino === 'seguros').slice(0, 8).map(mapReciente)
@@ -752,6 +735,7 @@ export async function getResumenFinanciero(
       tramoPrevioTipo,
       tipoEfectivo,
       reduccionConjunta: REDUCCION_CONJUNTA,
+      exento: corrExento,
       trimestres,
       retencionesAcumuladas: retencionesEstimadas,
     },
@@ -933,6 +917,7 @@ export type ResumenPilar = {
   quarter: number
   yearsDisponibles: number[]
   tieneExtracto: boolean
+  notas: string[]
 }
 
 const RETENCION_AUTONOMO = 0.15
@@ -953,9 +938,10 @@ export async function getResumenPilar(cuentaId: string, year: number, quarter = 
       id: string; fecha_operacion: Date | null; importe: unknown
       concepto: string | null; concepto_normalizado: string | null
       contraparte: string | null; subcategoria: string | null; destino_confirmado: boolean
+      comentario: string | null
     }>>`
       SELECT mb.id, mb.fecha_operacion, mb.importe, mb.concepto, mb.concepto_normalizado,
-             mb.contraparte, mb.subcategoria, mb.destino_confirmado
+             mb.contraparte, mb.subcategoria, mb.destino_confirmado, mb.comentario
       FROM movimientos_bancarios mb
       JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
       WHERE cb.cuenta_id = ${cuentaId}::uuid
@@ -1056,6 +1042,11 @@ export async function getResumenPilar(cuentaId: string, year: number, quarter = 
 
   const yearsDisponibles = yearsRows.map(r => r.anio)
 
+  // Avisos manuales dejados en `comentario` al cargar un movimiento a mano (p.ej. una
+  // factura estimada a partir del neto cobrado en banco, sin el desglose real). Se
+  // deduplican para no repetir el mismo aviso por cada factura idéntica.
+  const notas = [...new Set(movRows.map(r => r.comentario).filter((c): c is string => !!c))]
+
   return {
     cobros,
     gastosProfesionales,
@@ -1071,6 +1062,7 @@ export async function getResumenPilar(cuentaId: string, year: number, quarter = 
     quarter,
     yearsDisponibles: yearsDisponibles.length ? yearsDisponibles : [year],
     tieneExtracto: movRows.length > 0,
+    notas,
   }
 }
 

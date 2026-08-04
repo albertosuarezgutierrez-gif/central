@@ -4,7 +4,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { modelosPermitidos, type CatalogoModelo } from './director-modelos.ts'
+import { modelosPermitidos, modeloPorTag, type CatalogoModelo } from './director-modelos.ts'
 
 const CAT: CatalogoModelo[] = [
   { id: 'deepseek/deepseek-chat', precio_out: 0.85, contexto: 64_000, tags: ['barato'] },
@@ -62,4 +62,25 @@ test('un filtro que vaciaría el conjunto se ignora (los previos mandan)', () =>
 
 test('catálogo vacío → vacío (sin romper)', () => {
   assert.deepEqual(modelosPermitidos([], { ratioPresupuesto: 1 }), [])
+})
+
+// modeloPorTag — elección por categoría del ejecutor/planificador (sin hop al decisor).
+const CAT_TAGS: CatalogoModelo[] = [
+  { id: 'qwen/qwen-2.5-coder-32b-instruct', precio_out: 0.2, tags: ['codigo', 'logica'] },
+  { id: 'anthropic/claude-opus-4.1', precio_out: 75, tags: ['plan', 'codigo', 'logica'] },
+  { id: 'meta-llama/llama-3.3-70b-instruct', precio_out: 0.25, tags: ['general', 'barato'] },
+]
+
+test('modeloPorTag → el modelo etiquetado con la categoría', () => {
+  assert.equal(modeloPorTag(CAT_TAGS, 'codigo')?.id, 'qwen/qwen-2.5-coder-32b-instruct')
+  assert.equal(modeloPorTag(CAT_TAGS, 'plan')?.id, 'anthropic/claude-opus-4.1')
+})
+
+test('modeloPorTag → null si la categoría no está en el catálogo', () => {
+  assert.equal(modeloPorTag(CAT_TAGS, 'vision'), null)
+  assert.equal(modeloPorTag([], 'codigo'), null)
+})
+
+test('modeloPorTag → tolera modelos sin tags', () => {
+  assert.equal(modeloPorTag([{ id: 'x/y' }], 'codigo'), null)
 })

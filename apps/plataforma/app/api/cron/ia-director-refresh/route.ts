@@ -36,6 +36,15 @@ const PREFERIDOS: Record<string, { tags: string[]; lista: string[] }> = {
     tags: ['codigo', 'logica'],
     lista: ['qwen/qwen-2.5-coder-32b-instruct', 'deepseek/deepseek-chat', 'anthropic/claude-sonnet-4.5'],
   },
+  plan: {
+    // PLANIFICADOR caro del "caro planifica / barato ejecuta": Claude alto ORGANIZA la tarea de
+    // desarrollo (qué tocar, con qué instrucción por archivo) y luego el coder barato (categoría
+    // `codigo`) la ejecuta. Del más capaz al suplente; el cron se queda con el primero VIVO en el
+    // catálogo de OpenRouter. Tiene techo de precio PROPIO (DIRECTOR_PLAN_PRECIO_OUT) para que
+    // Opus/lo más alto no quede capado por el techo global DIRECTOR_MAX_PRECIO_OUT.
+    tags: ['plan', 'codigo', 'logica'],
+    lista: ['anthropic/claude-opus-4.1', 'anthropic/claude-sonnet-4.5', 'anthropic/claude-3.7-sonnet'],
+  },
   redaccion: {
     tags: ['redaccion', 'vision'],
     lista: ['anthropic/claude-sonnet-4.5', 'anthropic/claude-3.7-sonnet', 'anthropic/claude-3.5-sonnet'],
@@ -48,14 +57,34 @@ const PREFERIDOS: Record<string, { tags: string[]; lista: string[] }> = {
     tags: ['general', 'barato'],
     lista: ['meta-llama/llama-3.3-70b-instruct', 'meta-llama/llama-3.1-70b-instruct', 'mistralai/mistral-small-3.1-24b-instruct'],
   },
+  registral: {
+    // LECTURA DE DOCUMENTOS ESCANEADOS (certificaciones de cargas del BOE, notas
+    // simples, edictos fotocopiados). Exige entrada de IMAGEN — `requiereImagen`
+    // más abajo descarta al que no la acepte, porque un modelo de solo texto
+    // aquí no falla: devuelve un cuadro de cargas vacío y parece que la finca
+    // está limpia. Preferencia por capacidad de OCR sobre precio: de estas
+    // cifras sale la puja máxima, y equivocarse cuesta decenas de miles de €.
+    tags: ['registral', 'vision', 'documentos'],
+    lista: [
+      'google/gemini-2.5-flash',
+      'google/gemini-2.5-pro',
+      'anthropic/claude-sonnet-4.5',
+      'qwen/qwen2.5-vl-72b-instruct',
+    ],
+  },
 }
+
+/** Categorías que NO pueden servirse con un modelo de solo texto. */
+const REQUIERE_IMAGEN = new Set(['registral'])
 
 const CRITERIOS: Record<string, string> = {
   logica: 'Lógica, datos, cifras, clasificación, SQL',
   codigo: 'Programación: leer/editar código, arreglar bugs, refactors',
+  plan: 'Planificar una tarea de desarrollo (organizar, decidir qué archivos tocar y con qué instrucción)',
   redaccion: 'Redacción humana cuidada (emails a clientes, textos comerciales) o visión',
   contexto: 'Contexto masivo (documentos largos) o multimodal',
   general: 'Todo lo demás (chat corto, resúmenes, extracción simple)',
+  registral: 'Leer documentos ESCANEADOS con cifras (certificaciones de cargas, notas simples): OCR fiable de fotocopias',
 }
 
 // USD por millón de tokens desde el pricing de OpenRouter (viene en USD por token, string).
@@ -98,8 +127,11 @@ export async function GET(req: NextRequest) {
            COALESCE(avg(coste_eur), 0)::float AS coste
     FROM ai_usos
     WHERE endpoint <> 'director' AND proveedor = 'openrouter' AND modelo IS NOT NULL
-      AND creada_at >= now() - make_interval(days => ${dias})
-    GROUP BY split_part(modelo, ':', 1)`.catch(() => [] as Array<{ modelo: string; llamadas: bigint; err: number; ms: number; coste: number }>)
+      AND creada_at >= now() - make_interval(days => ${dias}::int)
+    GROUP BY split_part(modelo, ':', 1)`.catch((e) => {
+      console.error('[ia-director-refresh] perf query falló:', e)
+      return [] as Array<{ modelo: string; llamadas: bigint; err: number; ms: number; coste: number }>
+    })
   const stats = new Map(perf.map(p => [p.modelo, {
     llamadas: Number(p.llamadas), err: Number(p.err), ms: Math.round(Number(p.ms)), coste: Number(p.coste),
   }]))
@@ -107,13 +139,25 @@ export async function GET(req: NextRequest) {
 
   // 2) Elección determinista por categoría (primer preferido vivo, bajo el techo de precio y NO penalizado).
   const techoOut = Number(process.env.DIRECTOR_MAX_PRECIO_OUT ?? 20) // USD/M de salida
+  // La categoría `plan` (planificador Claude alto) tiene techo PROPIO más alto: sin él, Opus/lo más
+  // alto quedaría capado por el techo global (su salida supera 20 USD/M). Default generoso: 100.
+  const techoPlan = Number(process.env.DIRECTOR_PLAN_PRECIO_OUT ?? 100)
   const porCategoria: Record<string, string> = {}
   const caidos: string[] = []
   const penalizados: string[] = []
   for (const [cat, def] of Object.entries(PREFERIDOS)) {
+    const techoCat = cat === 'plan' ? techoPlan : techoOut
     const elegido = def.lista.find(id => {
       const m = vivos.get(id)
-      return m && (porMillon(m.pricing?.completion) ?? 0) <= techoOut && !malos.has(id)
+      if (!m || (porMillon(m.pricing?.completion) ?? 0) > techoCat || malos.has(id)) return false
+      // Las categorías multimodales no admiten un modelo de solo texto: leería
+      // vacío y el resultado (una finca «sin cargas») sería peor que un error.
+      if (REQUIERE_IMAGEN.has(cat)) {
+        const modalidades = m.architecture?.input_modalities ?? []
+        // Si OpenRouter no informa la modalidad, se acepta: la lista ya está curada.
+        if (modalidades.length && !modalidades.includes('image')) return false
+      }
+      return true
     })
     if (!elegido) continue
     porCategoria[cat] = elegido
@@ -181,7 +225,7 @@ export async function GET(req: NextRequest) {
       ON CONFLICT (fecha, modelo) DO UPDATE SET
         llamadas = EXCLUDED.llamadas, error_rate = EXCLUDED.error_rate, ms_medio = EXCLUDED.ms_medio,
         coste_medio_eur = EXCLUDED.coste_medio_eur, ventana_dias = EXCLUDED.ventana_dias, penalizado = EXCLUDED.penalizado`
-      .catch(() => {})
+      .catch((e) => console.error(`[ia-director-refresh] snapshot aprendizaje falló para ${id}:`, e))
   }
 
   // 4) Vigilancia de créditos (requiere key; si no hay, se salta sin fallar).

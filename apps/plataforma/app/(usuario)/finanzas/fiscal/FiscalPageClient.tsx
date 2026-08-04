@@ -2,7 +2,8 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useTransition, type CSSProperties } from 'react'
 import type { ResumenFinanciero } from '@/lib/finanzas'
-import { eur } from '@/lib/dinero'
+import { eur, eurSinDecimales } from '@/lib/dinero'
+import ConsejoFiscalBox from '../ConsejoFiscalBox'
 
 type Props = { initialData: ResumenFinanciero | null; initialComparativa: EstadoDeclaracion | null; year: number; quarter: number }
 
@@ -80,9 +81,19 @@ function SituacionFamiliarForm({ ded, onClose, onSaved }: { ded: ResumenFinancie
           <h2 style={{ fontSize: '16px', fontWeight: 700, margin: 0 }}>⚙️ Mi situación familiar y fiscal</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'var(--muted)' }}>×</button>
         </div>
+        <style>{`
+          @media (max-width: 520px) {
+            /* Móvil: la fila del hijo se apila (evita que 'Nombre' se comprima a 0 tras la
+               fecha 130px + %disc 70px). Nombre a ancho completo arriba; fecha/%/✕ debajo. */
+            .fiscal-hijo-row { display: flex !important; flex-wrap: wrap !important; gap: 6px !important; align-items: center !important; }
+            .fiscal-hijo-row > input:first-child { flex: 1 1 100% !important; min-width: 0 !important; }
+            .fiscal-hijo-row > input[type="date"] { flex: 1 1 130px !important; min-width: 0 !important; }
+            .fiscal-hijo-row > input[type="number"] { flex: 1 1 70px !important; min-width: 0 !important; }
+          }
+        `}</style>
         <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '8px' }}>Hijos / descendientes</div>
         {hijos.map((h, i) => (
-          <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 130px 70px auto', gap: '6px', marginBottom: '6px', alignItems: 'center' }}>
+          <div key={i} className="fiscal-hijo-row" style={{ display: 'grid', gridTemplateColumns: '1fr 130px 70px auto', gap: '6px', marginBottom: '6px', alignItems: 'center' }}>
             <input style={inputStyle} placeholder="Nombre" value={h.nombre} onChange={e => setHijos(hs => hs.map((x, j) => j === i ? { ...x, nombre: e.target.value } : x))} />
             <input style={inputStyle} type="date" value={h.fechaNacimiento} onChange={e => setHijos(hs => hs.map((x, j) => j === i ? { ...x, fechaNacimiento: e.target.value } : x))} />
             <input style={inputStyle} type="number" placeholder="% disc." value={h.gradoDiscapacidad} onChange={e => setHijos(hs => hs.map((x, j) => j === i ? { ...x, gradoDiscapacidad: Number(e.target.value) } : x))} />
@@ -211,6 +222,11 @@ export default function FiscalPageClient({ initialData, initialComparativa, year
                 <div style={{ fontSize: '11px', padding: '6px 8px', background: 'var(--primary-light)', borderRadius: '4px', color: 'var(--muted)', marginTop: '4px' }}>
                   Retenciones ya pagadas (correduría 15%): <strong style={{ color: 'var(--text)' }}>{fmt(d.fiscal.retencionesAcumuladas)}</strong>
                 </div>
+                {(d.fiscal.exento ?? 0) > 0 && (
+                  <div style={{ fontSize: '11px', padding: '6px 8px', background: '#e6fffa', borderRadius: '4px', color: '#234e52', marginTop: '6px' }}>
+                    🕊️ Ingresos exentos (no tributan): <strong>{fmt(d.fiscal.exento)}</strong> — cobrados de verdad pero FUERA de la base imponible (p.ej. prestación por paternidad, Art. 7.h LIRPF). Por eso la base es menor que el dinero cobrado.
+                  </div>
+                )}
                 {(d.amortizables?.total ?? 0) > 0 && (
                   <div style={{ fontSize: '11px', padding: '6px 8px', background: '#e9d8fd', borderRadius: '4px', color: '#553c9a', marginTop: '6px' }}>
                     📦 Amortizables: <strong>{fmt(d.amortizables.total)}</strong> — NO deducidos este año; se amortizan en varios años
@@ -290,6 +306,9 @@ export default function FiscalPageClient({ initialData, initialComparativa, year
                         <span style={{ fontSize: '18px', fontWeight: 800, color: r.resultado <= 0 ? '#22543d' : '#742a2a' }}>{fmt(Math.abs(r.resultado))}</span>
                       </div>
                       <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '6px' }}>♻️ reembolsable · 🌅 Andalucía</div>
+                      {r.deducciones.some(dd => dd.clave === 'maternidad') && (
+                        <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '4px' }}>ℹ️ La maternidad se prorratea por meses en el año de nacimiento, pero no está topada por las cotizaciones de la madre ese periodo — orientativa; el borrador AEAT manda.</div>
+                      )}
                     </>
                   )
                 })()}
@@ -400,6 +419,7 @@ function DeclaracionBlock({ year, initial, initialYear }: { year: number; initia
         <div style={{ fontSize: '12px', color: 'var(--muted)', textAlign: 'center', padding: '16px' }}>Calculando…</div>
       ) : (
         <>
+          <ConsejoFiscalBox estado={estado} />
           <div className="fiscal-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <MomentoCard titulo="📍 Hoy" sub={`Con lo devengado hasta ahora (base ${fmt(estado.bases.hoy)})`} c={estado.hoy} />
             <MomentoCard titulo="🔮 Fin de año (estimación)" sub={`+ ${fmt(estado.bases.deltaFuturo)} de reservas futuras y recurrentes → base ${fmt(estado.bases.finAnio)}`} c={estado.finAnio} />
@@ -407,7 +427,7 @@ function DeclaracionBlock({ year, initial, initialYear }: { year: number; initia
 
           {/* Palanca de gasto: cuánto ahorra meter más gasto deducible antes del 31/12 */}
           <div style={{ marginTop: '12px', fontSize: '12px', padding: '10px 12px', background: '#c6f6d5', borderRadius: '6px', color: '#22543d', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <div>💡 <strong>Cada 1.000 € más de gasto deducible ⇒ ~{estado.palanca.ahorroPorMilGasto} € menos de cuota</strong> (tramo marginal proyectado: {(estado.palanca.tipoMarginal * 100).toFixed(0)}%). No hay salto de golpe al cambiar de tramo: solo el exceso tributa al tipo alto.</div>
+            <div>💡 <strong>Cada 1.000€ más de gasto deducible ⇒ ~{eurSinDecimales(estado.palanca.ahorroPorMilGasto)} menos de cuota</strong> (tramo marginal proyectado: {(estado.palanca.tipoMarginal * 100).toFixed(0)}%). No hay salto de golpe al cambiar de tramo: solo el exceso tributa al tipo alto.</div>
             {estado.palanca.gastoParaBajarTramo !== null && estado.palanca.tipoPrevio !== null && estado.palanca.gastoParaBajarTramo > 0 && (
               <div>🎯 Para que la base proyectada baje al tramo del {(estado.palanca.tipoPrevio * 100).toFixed(0)}%: <strong>{fmt(estado.palanca.gastoParaBajarTramo)}</strong> de gasto antes del 31/12 ({estado.mesesRestantes} meses restantes) → ahorro ~<strong>{fmt(estado.palanca.ahorroBajarTramo ?? 0)}</strong>.</div>
             )}

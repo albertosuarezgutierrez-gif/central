@@ -1,12 +1,6 @@
 // supabase/functions/daily-briefing/index.ts
-// v2 — Resumen diario con cadena de fallback IA → Telegram
+// v2 — Resumen diario IA → Telegram (pasarela Director de plataforma; NVIDIA NIM de fallback)
 // Cron: 0 7 * * * (9:00h Madrid verano / UTC+2)
-//
-// Cadena de proveedores (todos OpenAI-compatible): NVIDIA NIM (gratis) → OpenRouter
-// (agregador, fallback nativo entre modelos) → Groq (gratis, otra infra). Cada eslabón
-// queda inactivo si no está su API key. Motivo: NIM devuelve 503/timeout con cierta
-// frecuencia y hasta ahora el briefing no tenía red — un único fallo dejaba el resumen
-// sin generar (incidente NVIDIA 503/timeout del 13/07/2026).
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -32,81 +26,61 @@ Top platos: [lista]
 Personal activo: N
 [⚠️ Alertas si las hay]`
 
-interface ProveedorIA {
-  nombre: string
-  url: string
-  apiKey?: string
-  model: string
-  atribucion?: boolean // OpenRouter recomienda cabeceras HTTP-Referer/X-Title
-}
+// Genera la narrativa del briefing con doble red:
+//   1) PRIMARIO — pasarela IA de plataforma (endpoint /api/ai/chat): el Agente Director elige
+//      modelo por petición y detrás tiene la cadena completa OpenRouter → NIM → Groq → Gemini →
+//      Kimi + control de presupuesto + auditoría de coste. Una sola fuente de verdad para IA.
+//   2) FALLBACK — NVIDIA NIM directo (comportamiento histórico) por si la pasarela no está
+//      configurada o plataforma está caída: así el briefing no depende de un único servicio.
+// Este edge function es Deno standalone en el proyecto Supabase de ia-rest y NO puede importar
+// `@central/core-ai` (paquete pnpm de las apps Next.js) — por eso habla con la pasarela por HTTP.
+async function generarNarrativa(contexto: string): Promise<{ texto: string; via: string }> {
+  const user = `Genera el briefing:\n${contexto}`
 
-// Cadena de proveedores OpenAI-compatible, en orden de preferencia. Cada uno solo entra en
-// juego si tiene su API key (así el rollout es poner la env, sin tocar código). Los ids/envs
-// espejan la política de `packages/core-ai/src/client.ts` (OpenRouter → NIM → Groq).
-function proveedoresIA(): ProveedorIA[] {
-  return [
-    {
-      nombre: 'NVIDIA NIM',
-      url: 'https://integrate.api.nvidia.com/v1/chat/completions',
-      apiKey: Deno.env.get('NVIDIA_API_KEY'),
-      model: 'meta/llama-3.3-70b-instruct',
-    },
-    {
-      nombre: 'OpenRouter',
-      url: 'https://openrouter.ai/api/v1/chat/completions',
-      apiKey: Deno.env.get('OPENROUTER_API_KEY'),
-      model: Deno.env.get('OPENROUTER_MODEL') || 'deepseek/deepseek-chat',
-      atribucion: true,
-    },
-    {
-      nombre: 'Groq',
-      url: 'https://api.groq.com/openai/v1/chat/completions',
-      apiKey: Deno.env.get('GROQ_API_KEY'),
-      model: Deno.env.get('GROQ_BRAIN_MODEL') || 'openai/gpt-oss-120b',
-    },
-  ].filter((p) => !!p.apiKey)
-}
-
-// Genera la narrativa recorriendo la cadena de proveedores: el primero que responda gana.
-// Timeout por proveedor (20s) para que un NIM colgado no bloquee el cron — pasa al siguiente.
-// Devuelve también qué proveedor lo generó (para el pie del mensaje de Telegram).
-async function generarNarrativa(contexto: string): Promise<{ texto: string; proveedor: string }> {
-  const messages = [
-    { role: 'system', content: SYSTEM_BRIEFING },
-    { role: 'user', content: `Genera el briefing:\n${contexto}` },
-  ]
-  const proveedores = proveedoresIA()
-  if (!proveedores.length) {
-    throw new Error('Sin proveedores IA configurados (NVIDIA_API_KEY / OPENROUTER_API_KEY / GROQ_API_KEY)')
-  }
-
-  const errores: string[] = []
-  for (const p of proveedores) {
+  // 1) Pasarela de plataforma (Agente Director)
+  const pasarelaUrl = Deno.env.get('PLATAFORMA_URL')
+  const gatewaySecret = Deno.env.get('AI_GATEWAY_SECRET')
+  if (pasarelaUrl && gatewaySecret) {
     try {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${p.apiKey}`,
-      }
-      if (p.atribucion) {
-        headers['HTTP-Referer'] = 'https://iarest.es'
-        headers['X-Title'] = 'ia.rest daily-briefing'
-      }
-      const res = await fetch(p.url, {
+      const res = await fetch(`${pasarelaUrl.replace(/\/$/, '')}/api/ai/chat`, {
         method: 'POST',
-        headers,
-        body: JSON.stringify({ model: p.model, max_tokens: 600, temperature: 0.4, messages }),
-        signal: AbortSignal.timeout(20_000),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${gatewaySecret}` },
+        body: JSON.stringify({
+          app: 'ia-rest-briefing',
+          system: SYSTEM_BRIEFING,
+          messages: [{ role: 'user', content: user }],
+          maxTokens: 600,
+          timeoutMs: 30_000,
+        }),
+        signal: AbortSignal.timeout(35_000),
       })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json()
-      const texto = data.choices?.[0]?.message?.content
-      if (!texto) throw new Error('respuesta vacía')
-      return { texto, proveedor: p.nombre }
-    } catch (e) {
-      errores.push(`${p.nombre}: ${e instanceof Error ? e.message : String(e)}`)
-    }
+      if (res.ok) {
+        const data = await res.json()
+        if (data?.text) return { texto: data.text, via: `Director${data?.modelo ? ` · ${data.modelo}` : ''}` }
+      }
+      // res no-ok (429 presupuesto / 502 IA no disponible) → cae a NVIDIA directo
+    } catch { /* pasarela inalcanzable → NVIDIA directo */ }
   }
-  throw new Error(`Todos los proveedores IA fallaron — ${errores.join(' · ')}`)
+
+  // 2) Fallback: NVIDIA NIM directo (última red de seguridad)
+  const nvidia = Deno.env.get('NVIDIA_API_KEY')
+  if (!nvidia) throw new Error('Sin pasarela IA (PLATAFORMA_URL/AI_GATEWAY_SECRET) ni NVIDIA_API_KEY configuradas')
+  const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${nvidia}` },
+    body: JSON.stringify({
+      model: 'meta/llama-3.3-70b-instruct',
+      max_tokens: 600,
+      temperature: 0.4,
+      messages: [
+        { role: 'system', content: SYSTEM_BRIEFING },
+        { role: 'user', content: user },
+      ],
+    }),
+  })
+  if (!res.ok) throw new Error(`NVIDIA ${res.status}`)
+  const data = await res.json()
+  return { texto: data.choices?.[0]?.message?.content ?? 'Sin resumen disponible.', via: 'NVIDIA NIM directo' }
 }
 
 async function getMetricas(supabase: ReturnType<typeof createClient>, restauranteId: string) {
@@ -182,12 +156,12 @@ serve(async (req) => {
       contexto += '\n'
     }
 
-    const { texto: narrativa, proveedor } = await generarNarrativa(contexto)
+    const { texto: narrativa, via } = await generarNarrativa(contexto)
     await sendTelegram(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID,
-      `📊 <b>Briefing ia.rest — ${fecha}</b>\n\n${narrativa}\n\n<i>🤖 ${proveedor} · ia.rest</i>`)
+      `📊 <b>Briefing ia.rest — ${fecha}</b>\n\n${narrativa}\n\n<i>🤖 ${via} · ia.rest</i>`)
 
     await supabase.from('sistema_config').upsert(
-      { clave: 'daily_briefing_last_run', valor: new Date().toISOString(), descripcion: 'Última ejecución resumen diario (NIM → OpenRouter → Groq)' },
+      { clave: 'daily_briefing_last_run', valor: new Date().toISOString(), descripcion: 'Última ejecución resumen diario IA (pasarela Director + fallback NIM)' },
       { onConflict: 'clave' }
     )
 

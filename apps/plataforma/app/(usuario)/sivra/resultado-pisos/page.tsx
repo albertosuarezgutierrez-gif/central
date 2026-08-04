@@ -4,6 +4,7 @@ import { eur } from '@/lib/dinero'
 
 interface PLGastosPiso {
   lavanderia: number
+  limpieza: number
   alquiler: number
   suministros: number
   comunidad: number
@@ -62,6 +63,7 @@ export default function ResultadoPisosPage() {
     (acc, p) => ({
       ingresos:    acc.ingresos    + p.ingresos,
       lavanderia:  acc.lavanderia  + p.gastos.lavanderia,
+      limpieza:    acc.limpieza    + (p.gastos.limpieza ?? 0),
       alquiler:    acc.alquiler    + p.gastos.alquiler,
       suministros: acc.suministros + p.gastos.suministros,
       comunidad:   acc.comunidad   + p.gastos.comunidad,
@@ -69,7 +71,7 @@ export default function ResultadoPisosPage() {
       totalGastos: acc.totalGastos + p.gastos.total,
       resultado:   acc.resultado   + p.resultado,
     }),
-    { ingresos: 0, lavanderia: 0, alquiler: 0, suministros: 0, comunidad: 0, otros: 0, totalGastos: 0, resultado: 0 }
+    { ingresos: 0, lavanderia: 0, limpieza: 0, alquiler: 0, suministros: 0, comunidad: 0, otros: 0, totalGastos: 0, resultado: 0 }
   )
 
   const [mesLabel] = (() => {
@@ -129,6 +131,7 @@ export default function ResultadoPisosPage() {
                   <Th>Reservas</Th>
                   <Th>Ingresos</Th>
                   <Th>Lavandería</Th>
+                  <Th>Limpieza</Th>
                   <Th>Alquiler</Th>
                   <Th>Suministros</Th>
                   <Th>Comunidad</Th>
@@ -151,6 +154,9 @@ export default function ResultadoPisosPage() {
                     <td style={tdR}>{fmtDec(p.ingresos)}</td>
                     <td style={{ ...tdR, color: p.gastos.lavanderia > 0 ? 'inherit' : 'var(--muted)' }}>
                       {p.gastos.lavanderia > 0 ? fmtDec(p.gastos.lavanderia) : '—'}
+                    </td>
+                    <td style={{ ...tdR, color: (p.gastos.limpieza ?? 0) > 0 ? 'inherit' : 'var(--muted)' }}>
+                      {(p.gastos.limpieza ?? 0) > 0 ? fmtDec(p.gastos.limpieza) : '—'}
                     </td>
                     <td style={{ ...tdR, color: p.gastos.alquiler > 0 ? 'inherit' : 'var(--muted)' }}>
                       {p.gastos.alquiler > 0 ? fmtDec(p.gastos.alquiler) : '—'}
@@ -183,6 +189,7 @@ export default function ResultadoPisosPage() {
                     <td style={tdR}>—</td>
                     <td style={tdR}>{fmtDec(totales.ingresos)}</td>
                     <td style={tdR}>{totales.lavanderia > 0 ? fmtDec(totales.lavanderia) : '—'}</td>
+                    <td style={tdR}>{totales.limpieza > 0 ? fmtDec(totales.limpieza) : '—'}</td>
                     <td style={tdR}>{totales.alquiler > 0 ? fmtDec(totales.alquiler) : '—'}</td>
                     <td style={tdR}>{totales.suministros > 0 ? fmtDec(totales.suministros) : '—'}</td>
                     <td style={tdR}>{totales.comunidad > 0 ? fmtDec(totales.comunidad) : '—'}</td>
@@ -207,8 +214,10 @@ export default function ResultadoPisosPage() {
           </div>
 
           <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 16 }}>
-            Lavandería (El Giraldillo) repartida por capacidad × reservas. Costes directos desde tabla de gastos.
-            Los gastos sin asignar a piso (EMASESA, PriceLabs, etc.) no están incluidos aún.
+            Lavandería (El Giraldillo) repartida por capacidad × reservas. Limpieza (Sique Brilla) repartida por
+            salidas × tarifa por piso (Busto 20€ · Dúplex 25€ · Luxury 28€ · House 90€). Ambas por CAJA del mes
+            (si un mes se pagan dos facturas, salen las dos). Costes directos desde tabla de gastos.
+            Los gastos sin asignar a piso (EMASESA, etc.) no están incluidos aún.
           </p>
         </>
       )}

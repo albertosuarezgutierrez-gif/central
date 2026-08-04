@@ -290,10 +290,10 @@ function FichaView({ c, biblioteca, ocrAplicado }:{ c:any; biblioteca:Biblioteca
       <div style={{ marginTop:10, border:`1px solid ${C.border}`, borderRadius:10, padding:12 }}>
         <strong style={{ fontSize:14 }}>Oferta económica</strong>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, margin:'8px 0' }}>
-          <input placeholder="Costes directos (€)" value={oferta.directos} onChange={setO('directos')} />
-          <input placeholder="Costes indirectos (€)" value={oferta.indirectos} onChange={setO('indirectos')} />
-          <input placeholder="Margen objetivo (%)" value={oferta.margen_objetivo_pct} onChange={setO('margen_objetivo_pct')} />
-          <input placeholder="Tu oferta (€)" value={oferta.oferta} onChange={setO('oferta')} />
+          <input placeholder="Costes directos (€)" value={oferta.directos} onChange={setO('directos')} style={{ minWidth:0 }} />
+          <input placeholder="Costes indirectos (€)" value={oferta.indirectos} onChange={setO('indirectos')} style={{ minWidth:0 }} />
+          <input placeholder="Margen objetivo (%)" value={oferta.margen_objetivo_pct} onChange={setO('margen_objetivo_pct')} style={{ minWidth:0 }} />
+          <input placeholder="Tu oferta (€)" value={oferta.oferta} onChange={setO('oferta')} style={{ minWidth:0 }} />
         </div>
         <div style={{ fontSize:13, color:C.muted }}>Precio mínimo rentable: <strong>{fmtEur(minRent)}</strong></div>
         {evalOferta && (
@@ -401,10 +401,10 @@ function RadarPanel() {
     <div style={{ border:`1px solid ${C.border}`, borderRadius:12, padding:14, marginBottom:14 }}>
       <strong style={{ fontSize:15 }}>📡 Radar de oportunidades{noVistos>0 && <span style={{ marginLeft:8, background:'#b91c1c', color:'#fff', borderRadius:999, padding:'1px 8px', fontSize:12 }}>{noVistos} nuevas</span>}</strong>
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, margin:'10px 0' }}>
-        <input placeholder="CPV de interés (coma)" value={cpvStr} onChange={e=>setCrit({...crit, cpv:e.target.value})} />
-        <input placeholder="Palabras clave (coma)" value={kwStr} onChange={e=>setCrit({...crit, palabras_clave:e.target.value})} />
-        <input placeholder="Presupuesto mín (€)" value={crit.presupuesto_min} onChange={e=>setCrit({...crit, presupuesto_min:e.target.value})} />
-        <input placeholder="Presupuesto máx (€)" value={crit.presupuesto_max} onChange={e=>setCrit({...crit, presupuesto_max:e.target.value})} />
+        <input placeholder="CPV de interés (coma)" value={cpvStr} onChange={e=>setCrit({...crit, cpv:e.target.value})} style={{ minWidth:0 }} />
+        <input placeholder="Palabras clave (coma)" value={kwStr} onChange={e=>setCrit({...crit, palabras_clave:e.target.value})} style={{ minWidth:0 }} />
+        <input placeholder="Presupuesto mín (€)" value={crit.presupuesto_min} onChange={e=>setCrit({...crit, presupuesto_min:e.target.value})} style={{ minWidth:0 }} />
+        <input placeholder="Presupuesto máx (€)" value={crit.presupuesto_max} onChange={e=>setCrit({...crit, presupuesto_max:e.target.value})} style={{ minWidth:0 }} />
       </div>
       <label style={{ display:'flex', gap:6, alignItems:'center', fontSize:13 }}>
         <input type="checkbox" checked={!!crit.activo} onChange={e=>setCrit({...crit, activo:e.target.checked})} /> Radar activo (revisa PLACSP cada 6 h)
@@ -581,15 +581,15 @@ function BuscadorPanel() {
         {COMUNIDADES.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
       </select>
       <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:8, margin:'10px 0' }}>
-        <input placeholder="Buscar por texto (objeto)…" value={f.q} onChange={e=>setF({...f,q:e.target.value})} onKeyDown={e=>{ if(e.key==='Enter') buscar(); }} />
-        <input placeholder="CPV (coma, por prefijo)" value={f.cpv} onChange={e=>setF({...f,cpv:e.target.value})} />
-        <select value={f.provincia} onChange={e=>setF({...f,provincia:e.target.value})} style={{ fontFamily:FONT, fontSize:13, padding:'6px 8px', borderRadius:8, border:`1px solid ${C.border}`, background:'#fff' }}>
+        <input placeholder="Buscar por texto (objeto)…" value={f.q} onChange={e=>setF({...f,q:e.target.value})} onKeyDown={e=>{ if(e.key==='Enter') buscar(); }} style={{ minWidth:0 }} />
+        <input placeholder="CPV (coma, por prefijo)" value={f.cpv} onChange={e=>setF({...f,cpv:e.target.value})} style={{ minWidth:0 }} />
+        <select value={f.provincia} onChange={e=>setF({...f,provincia:e.target.value})} style={{ fontFamily:FONT, fontSize:13, padding:'6px 8px', borderRadius:8, border:`1px solid ${C.border}`, background:'#fff', minWidth:0 }}>
           <option value="">{f.ccaa ? 'Toda la comunidad' : 'Todas las provincias'}</option>
           {(f.ccaa ? provinciasDeComunidad(f.ccaa) : COMUNIDADES.flatMap((c:any)=>c.provincias)).map((p:string) => <option key={p} value={p}>{p}</option>)}
         </select>
-        <div style={{ display:'flex', gap:6 }}>
-          <input placeholder="€ mín" value={f.presupuesto_min} onChange={e=>setF({...f,presupuesto_min:e.target.value})} style={{ width:'50%' }} />
-          <input placeholder="€ máx" value={f.presupuesto_max} onChange={e=>setF({...f,presupuesto_max:e.target.value})} style={{ width:'50%' }} />
+        <div style={{ display:'flex', gap:6, minWidth:0 }}>
+          <input placeholder="€ mín" value={f.presupuesto_min} onChange={e=>setF({...f,presupuesto_min:e.target.value})} style={{ width:'50%', minWidth:0 }} />
+          <input placeholder="€ máx" value={f.presupuesto_max} onChange={e=>setF({...f,presupuesto_max:e.target.value})} style={{ width:'50%', minWidth:0 }} />
         </div>
       </div>
       <div style={{ display:'flex', gap:14, alignItems:'center', flexWrap:'wrap', fontSize:13 }}>

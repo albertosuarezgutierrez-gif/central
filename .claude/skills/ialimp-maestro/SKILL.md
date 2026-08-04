@@ -1,11 +1,9 @@
 ---
 name: ialimp-maestro
 description: >
-  Router de contexto de la vertical IALIMP (SaaS multi-tenant de limpiezas de pisos
-  turísticos; `app.ialimp.es`, cliente piloto Sique Brilla EN VIVO). NO duplica los docs:
-  dice qué existe, dónde vive y qué NO romper antes de tocar nada. USAR SIEMPRE que Alberto
-  pida cualquier cosa de ialimp: app de limpiadora (`/l`), portal del propietario, facturación,
-  white-label por empresa, landing `ialimp.es`, contabilidad, Smoobu/iCal,
+  Router de contexto de la vertical IALIMP (SaaS multi-tenant de limpiezas; `app.ialimp.es`,
+  piloto Sique Brilla EN VIVO). USAR SIEMPRE que Alberto pida algo de ialimp: app de limpiadora
+  (`/l`), portal del propietario, facturación, white-label, landing, contabilidad, Smoobu/iCal,
   o arquitectura/despliegue. Sin secretos: solo nombres de variable.
 ---
 

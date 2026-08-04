@@ -1,28 +1,19 @@
 'use client'
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
+import { periodoLabel, MESES, type Periodo } from './periodo'
 
 // Selector de intervalo COMPARTIDO de la sección finanzas: Mes / Trimestre / Año / Rango libre.
 // La URL es la fuente de estado (?year=&quarter= o ?desde=&hasta=); el server component re-renderiza
 // con los datos del nuevo periodo. Extraído del selector de /finanzas/gastos (patrón de referencia)
 // para que la Radiografía y el resto de pantallas usen UNA sola implementación.
+// Los helpers puros (periodoLabel/MESES/Periodo) viven en ./periodo (SIN 'use client') para que los
+// server components puedan usarlos. Se re-exporta SOLO el tipo por compatibilidad; el server que
+// necesite periodoLabel() debe importarlo de './periodo' (importar la función de este módulo cliente
+// vuelve a romper con "call client function from the server").
+export type { Periodo } from './periodo'
 
-export type Periodo = { year: number; quarter: number; desde: string; hasta: string }
 type PeriodoMode = 'trimestre' | 'mes' | 'rango'
-
-const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
-
-export function periodoLabel(p: Periodo): string {
-  if (p.desde && p.hasta) {
-    // Si el rango es exactamente un mes natural, etiquétalo como mes.
-    const m = Number(p.desde.slice(5, 7))
-    const esMesEntero = p.desde.slice(8) === '01' &&
-      p.hasta === `${p.desde.slice(0, 7)}-${String(new Date(Number(p.desde.slice(0, 4)), m, 0).getDate()).padStart(2, '0')}`
-    if (esMesEntero) return `${MESES[m - 1]} ${p.desde.slice(0, 4)}`
-    return `${p.desde} → ${p.hasta}`
-  }
-  return p.quarter === 0 ? `Año ${p.year}` : `Q${p.quarter} ${p.year}`
-}
 
 export default function IntervaloSelector({ basePath, periodo }: { basePath: string; periodo: Periodo }) {
   const router = useRouter()

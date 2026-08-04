@@ -629,6 +629,11 @@ function LimpiadoarasApp() {
   const [sesiones,   setSesiones]  = useState<any[]>([])
   const [sesionMap,  setSesionMap] = useState<Record<string, any>>({})
   const [loading,    setLoading]   = useState(true)
+  // Una lista vacía POR ERROR no es «hoy no te toca nada». Sin este estado, un
+  // 500 o un corte de red pintaba «Sin limpiezas este día · ¡Descansa!»: un
+  // mensaje que no solo informa mal, ORDENA no trabajar, y el piso se queda
+  // sin limpiar. Hay que poder decir «no lo sé» y ofrecer reintentar.
+  const [error,      setError]     = useState(false)
   const [fecha,      setFecha]     = useState(new Date().toISOString().split('T')[0])
   const [limpiadora, setLimpiadora] = useState<any>(null)
 
@@ -643,18 +648,26 @@ function LimpiadoarasApp() {
 
   async function cargarDia(d: string) {
     setLoading(true)
+    setError(false)
     try {
       const r = await fetch(`/api/l/sesiones?date=${d}`)
       if (r.status === 401) { router.replace('/l/login'); return }
+      // Un 500 devuelve `{error:…}`: sin este guard, `data.sesiones || []`
+      // convertía el fallo en «no tienes limpiezas».
+      if (!r.ok) throw new Error(`HTTP ${r.status}`)
       const data = await r.json()
-      const lista = data.sesiones || []
+      if (!Array.isArray(data?.sesiones)) throw new Error('respuesta inesperada')
+      const lista = data.sesiones
       setSesiones(lista)
       setSesionMap(prev => {
         const m = { ...prev }
         lista.forEach((s: any) => { m[s.id] = s })
         return m
       })
-    } catch {}
+    } catch {
+      setSesiones([])
+      setError(true)
+    }
     setLoading(false)
   }
 
@@ -751,7 +764,26 @@ function LimpiadoarasApp() {
               Cargando...
             </div>
           )}
-          {!loading && sesiones.length === 0 && (
+          {!loading && error && (
+            <div className="l-empty">
+              <div className="l-empty-icon">⚠️</div>
+              <div className="l-empty-title">No hemos podido cargar tu día</div>
+              <div style={{ marginBottom: 16 }}>
+                <strong>No significa que no tengas limpiezas.</strong> No hemos podido conectar con el servidor.
+                Comprueba la cobertura y vuelve a intentarlo; si sigue fallando, avisa a tu responsable.
+              </div>
+              <button
+                onClick={() => cargarDia(fecha)}
+                style={{
+                  minHeight: 44, padding: '0 24px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                  background: 'var(--brand-primary)', color: '#fff', fontWeight: 700, fontSize: 15,
+                }}
+              >
+                Reintentar
+              </button>
+            </div>
+          )}
+          {!loading && !error && sesiones.length === 0 && (
             <div className="l-empty">
               <div className="l-empty-icon">☀️</div>
               <div className="l-empty-title">Sin limpiezas este día</div>

@@ -30,6 +30,10 @@ export type Intencion =
   | { tipo: 'por_destino'; anio: number }
   | { tipo: 'facturas_pendientes' }
   | { tipo: 'tramo_fiscal'; anio: number }
+  // Recuperar el PDF de un extracto de tarjeta ya archivado en Drive ("enséñame el extracto de junio
+  // de la ****0302"). El enlace se guardó al importarlo (contable_memoria clave extracto_tarjeta:*).
+  // `mes` opcional (si no, lista los que haya); `pan4` opcional (últimos 4 de la tarjeta).
+  | { tipo: 'extracto_drive'; anio: number; mes?: number; pan4?: string }
 
 export type Hoy = { anio: number; mes: number }
 
@@ -125,6 +129,32 @@ const STOP_CONCEPTO = new Set<string>([
   'reserva', 'reservas', 'noche', 'noches', 'ocupacion', 'ocupación', 'huesped', 'huéspedes', 'huespedes', 'numero', 'número',
 ])
 
+// Últimos 4 dígitos de la tarjeta si la pregunta los nombra ("****0302", "termina en 0302",
+// "la 0302"). Ignora los años (20xx) para no confundir "de 2026" con un PAN. null si no hay.
+function detectarPan4(t: string): string | undefined {
+  const enmascarado = t.match(/\*{2,}\s?(\d{4})/)          // ****0302
+  if (enmascarado) return enmascarado[1]
+  const termina = t.match(/(?:termina|acaba|acabada|terminada|acaba)\s+en\s+(\d{4})/)
+  if (termina) return termina[1]
+  for (const m of t.matchAll(/\b(\d{4})\b/g)) {              // "la 0302" / "tarjeta 0302"
+    if (!/^20\d{2}$/.test(m[1])) return m[1]                 // descarta años
+  }
+  return undefined
+}
+
+// ¿Es una petición de RECUPERAR un extracto ya archivado ("enséñame/pásame el extracto de junio")?
+// Va ANTES de la guarda de dinero (no es un "cuánto"). NO se dispara al SUBIR un PDF (eso es un
+// documento, no un texto). Requiere la palabra "extracto" + un verbo de consulta. Puro/testeable.
+const RE_CONSULTA_EXTRACTO = /(ens[eé][ñn]a|mu[eé]stra|ver el|quiero ver|d[aá]me|dame|p[aá]same|pasame|env[ií]a|manda|m[aá]ndame|abre|link|enlace|recup|consult|busca)/
+export function detectarConsultaExtracto(t: string, hoy: Hoy): Intencion | null {
+  if (!/extracto/.test(t)) return null
+  if (!RE_CONSULTA_EXTRACTO.test(t)) return null
+  // "súbeme/adjunto el extracto" es carga, no consulta: no lo interceptamos como recuperación.
+  if (/(sub[eí]|subir|adjunt|te paso el pdf|te mando el pdf)/.test(t)) return null
+  const mesInfo = detectarMes(t, hoy)
+  return { tipo: 'extracto_drive', anio: mesInfo?.anio ?? anioDe(t, hoy), mes: mesInfo?.mes, pan4: detectarPan4(t) }
+}
+
 function anioDe(t: string, hoy: Hoy): number {
   const m = t.match(/\b(20\d{2})\b/)
   if (m) return Number(m[1])
@@ -211,14 +241,32 @@ export function entidadesResiduales(textoRaw: string, extras: SinonimoDestino[] 
   return fuera
 }
 
+// Preguntas de CONSEJO / recomendación / cómo-hacer: son ABIERTAS → las contesta el LLM libre, NUNCA
+// el router determinista NI el clasificador-IA (que si no capturan "reducir"/"ahorrar" como un falso
+// "concepto" y devuelven "No encuentro cargos de reducir"). Bug real 17/07/2026. Se compara SIN acentos
+// (recomiéndame/sugiéreme). OJO: NO incluir "cómo va" (eso es P&L de un piso). La consumen tanto
+// `detectarIntencion` como el orquestador (`cerebro.ts`) antes de invocar al clasificador IA.
+export function esConsejo(textoRaw: string): boolean {
+  const t = (textoRaw || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  return /(consej|aconsej|recomien|recomend|sugier|sugerenc|\btips?\b|ideas?\s+para|como\s+(?:puedo|podria|reducir|bajar|recortar|ahorr|gastar\s+menos|mejorar|optimizar)|ayudame\s+a)/.test(t)
+}
+
 export function detectarIntencion(textoRaw: string, hoy: Hoy, extras: SinonimoDestino[] = []): Intencion | null {
   const t = (textoRaw || '').toLowerCase().trim()
   if (!t) return null
+
+  // Consejo/recomendación → al LLM libre (ver esConsejo). Va lo PRIMERO: nunca es consulta estructurada.
+  if (esConsejo(t)) return null
 
   // Facturas de proveedor pendientes (no depende de "cuánto").
   if (/factur/.test(t) && /(pendient|falta|sin pagar|por pagar|sin conciliar|me faltan)/.test(t)) {
     return { tipo: 'facturas_pendientes' }
   }
+
+  // Recuperar un extracto de tarjeta archivado en Drive ("enséñame el extracto de junio de la
+  // ****0302"). No es una consulta de dinero → va ANTES de la guarda de "cuánto".
+  const extractoDrive = detectarConsultaExtracto(t, hoy)
+  if (extractoDrive) return extractoDrive
 
   // Posición fiscal IRPF ("¿en qué tramo estamos?", "mi tipo marginal", "base imponible"). No
   // depende de "cuánto"; por eso va ANTES de la guarda de dinero. No secuestra órdenes de acción.
@@ -352,6 +400,10 @@ export function intencionDesdeJSON(obj: unknown, hoy: Hoy): Intencion | null {
   switch (tipo) {
     case 'facturas_pendientes': return { tipo: 'facturas_pendientes' }
     case 'tramo_fiscal': return { tipo: 'tramo_fiscal', anio }
+    case 'extracto_drive': {
+      const pan4 = typeof o.pan4 === 'string' && /^\d{4}$/.test(o.pan4) ? o.pan4 : undefined
+      return { tipo: 'extracto_drive', anio, mes, pan4 }
+    }
     case 'por_destino': return { tipo: 'por_destino', anio }
     case 'pisos_rentabilidad': return { tipo: 'pisos_rentabilidad', anio, mes }
     case 'negocio_resultado': {

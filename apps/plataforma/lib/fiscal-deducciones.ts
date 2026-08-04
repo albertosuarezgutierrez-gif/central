@@ -28,6 +28,10 @@ export type ImportesAnio = {
   andaluciaNacimiento: number
   andaluciaFamiliaNumerosaGeneral: number
   andaluciaFamiliaNumerosaEspecial: number
+  // Límite de renta de la deducción autonómica por FAMILIA NUMEROSA (suma de bases general+ahorro):
+  // individual e conjunta. La deducción por NACIMIENTO ya NO tiene límite (Ley 8/2025).
+  andaluciaFamiliaNumerosaLimiteIndividual: number
+  andaluciaFamiliaNumerosaLimiteConjunta: number
   // ── Tarifa IRPF (escala estatal + autonómica combinada, aproximada) ──
   tramos: { desde: number; hasta: number | null; tipo: number }[]
 }
@@ -52,6 +56,8 @@ export const IMPORTES_POR_ANIO: Record<number, ImportesAnio> = {
     andaluciaNacimiento: 200,
     andaluciaFamiliaNumerosaGeneral: 200,
     andaluciaFamiliaNumerosaEspecial: 400,
+    andaluciaFamiliaNumerosaLimiteIndividual: 25000,
+    andaluciaFamiliaNumerosaLimiteConjunta: 30000,
     tramos: [
       { desde: 0, hasta: 12450, tipo: 0.19 },
       { desde: 12450, hasta: 20200, tipo: 0.24 },
@@ -84,6 +90,8 @@ export const IMPORTES_POR_ANIO: Record<number, ImportesAnio> = {
     andaluciaNacimiento: 200,
     andaluciaFamiliaNumerosaGeneral: 200,
     andaluciaFamiliaNumerosaEspecial: 400,
+    andaluciaFamiliaNumerosaLimiteIndividual: 25000,
+    andaluciaFamiliaNumerosaLimiteConjunta: 30000,
     tramos: [
       { desde: 0, hasta: 12450, tipo: 0.19 },
       { desde: 12450, hasta: 20200, tipo: 0.24 },
@@ -201,27 +209,39 @@ export function minimoPersonalYFamiliar(
   return min
 }
 
-/** Deducciones de cuota: estatales (maternidad, familia numerosa) + Andalucía + donativos. */
+/**
+ * Deducciones de cuota: estatales (maternidad, familia numerosa) + Andalucía + donativos.
+ * `baseParaLimites` = base imponible (suma general+ahorro) para las deducciones autonómicas con
+ * límite de renta; si es `undefined` no se aplica el límite (compat con llamadas antiguas/tests).
+ */
 export function calcularDeducciones(
   perfil: PerfilFiscal,
   descendientes: Descendiente[],
   anio: number,
   imp: ImportesAnio = importesDe(anio),
+  baseParaLimites?: number,
 ): LineaDeduccion[] {
   const lineas: LineaDeduccion[] = []
   const menores3 = descendientes.filter(h => esMenor3(h.fechaNacimiento, anio))
 
-  // Maternidad (madre con actividad): €1.200/año por hijo < 3 + incremento guardería.
-  // CAVEAT (conocido, sin corregir): NO se prorratea por mes de nacimiento. En el AÑO de
-  // nacimiento la deducción es proporcional a los meses desde el nacimiento (un hijo nacido en
-  // nov. da ~2/12 ≈ €200, no €1.200) y está topada por las cotizaciones de la madre ese periodo.
-  // Por eso esta cifra puede SOBREESTIMAR el año del nacimiento → es orientativa; el dato fino sale
-  // del borrador AEAT. Ver skill `perfil-fiscal`. (Mejora pendiente: prorrateo mensual.)
+  // Maternidad (madre con actividad): €1.200/año (€100/mes) por hijo < 3 + incremento guardería.
+  // PRORRATEO por mes: en el AÑO de nacimiento solo cuentan los meses desde el nacimiento (un hijo
+  // nacido en nov. da 2/12 ≈ €200, no €1.200). Los hijos nacidos en años anteriores (y aún < 3) dan
+  // el año completo. ⚠️ Sigue SIN topar por las cotizaciones de la madre ese periodo (dato que no
+  // tenemos aquí) → puede sobreestimar si la madre cotizó poco; es orientativo (borrador AEAT manda).
   if (perfil.conyugeTrabaja && menores3.length > 0) {
+    const importeMaternidad = Math.round(
+      menores3.reduce((s, h) => {
+        const nacEsteAnio = anioNacimiento(h.fechaNacimiento) === anio
+        // getMonth() 0-11 → meses con derecho en el año de nacimiento = de su mes a diciembre.
+        const meses = nacEsteAnio ? 12 - new Date(h.fechaNacimiento).getMonth() : 12
+        return s + imp.maternidadPorHijo * (meses / 12)
+      }, 0),
+    )
     lineas.push({
       clave: 'maternidad', ambito: 'estatal', reembolsable: true,
       concepto: `Deducción por maternidad (${menores3.length} hijo/s < 3)`,
-      importe: menores3.length * imp.maternidadPorHijo,
+      importe: importeMaternidad,
     })
     if (perfil.gastoGuarderiaAnual > 0) {
       lineas.push({
@@ -241,22 +261,33 @@ export function calcularDeducciones(
 
   // Autonómicas Andalucía.
   if (perfil.comunidadAutonoma === 'andalucia') {
+    // Nacimiento/adopción: SOLO el año del nacimiento; SIN límite de renta (Ley 8/2025 lo eliminó).
     const nacidos = descendientes.filter(h => anioNacimiento(h.fechaNacimiento) === anio)
     if (nacidos.length > 0) {
       lineas.push({ clave: 'and_nacimiento', ambito: 'andalucia', reembolsable: false, concepto: `Andalucía: nacimiento/adopción (${nacidos.length})`, importe: nacidos.length * imp.andaluciaNacimiento })
     }
-    if (perfil.familiaNumerosa === 'general') {
-      lineas.push({ clave: 'and_fn', ambito: 'andalucia', reembolsable: false, concepto: 'Andalucía: familia numerosa (general)', importe: imp.andaluciaFamiliaNumerosaGeneral })
-    } else if (perfil.familiaNumerosa === 'especial') {
-      lineas.push({ clave: 'and_fn', ambito: 'andalucia', reembolsable: false, concepto: 'Andalucía: familia numerosa (especial)', importe: imp.andaluciaFamiliaNumerosaEspecial })
+    // Familia numerosa autonómica: SÍ tiene límite de renta (suma de bases ≤ 25.000 individual /
+    // 30.000 conjunta). Solo se aplica si conocemos la base y NO supera el límite.
+    const limiteFN = perfil.declaracionConjunta ? imp.andaluciaFamiliaNumerosaLimiteConjunta : imp.andaluciaFamiliaNumerosaLimiteIndividual
+    const dentroLimiteFN = baseParaLimites === undefined || baseParaLimites <= limiteFN
+    if (dentroLimiteFN) {
+      if (perfil.familiaNumerosa === 'general') {
+        lineas.push({ clave: 'and_fn', ambito: 'andalucia', reembolsable: false, concepto: 'Andalucía: familia numerosa (general)', importe: imp.andaluciaFamiliaNumerosaGeneral })
+      } else if (perfil.familiaNumerosa === 'especial') {
+        lineas.push({ clave: 'and_fn', ambito: 'andalucia', reembolsable: false, concepto: 'Andalucía: familia numerosa (especial)', importe: imp.andaluciaFamiliaNumerosaEspecial })
+      }
     }
   }
 
-  // Donativos / mecenazgo (Ley 49/2002): 80 % primeros €150, 40 % resto.
+  // Donativos / mecenazgo (Ley 49/2002): 80 % primeros €150, 40 % resto. Base de deducción topada
+  // al 10 % de la base liquidable (si la conocemos): el exceso donado no genera deducción ese año.
   if (perfil.donativosAnual > 0) {
-    const d = perfil.donativosAnual
+    const topeBase = baseParaLimites !== undefined ? Math.max(0, baseParaLimites * 0.1) : Infinity
+    const d = Math.min(perfil.donativosAnual, topeBase)
     const importe = Math.round(Math.min(d, 150) * 0.8 + Math.max(0, d - 150) * 0.4)
-    lineas.push({ clave: 'donativos', ambito: 'estatal', reembolsable: false, concepto: 'Deducción por donativos/mecenazgo (Ley 49/2002)', importe })
+    if (importe > 0) {
+      lineas.push({ clave: 'donativos', ambito: 'estatal', reembolsable: false, concepto: 'Deducción por donativos/mecenazgo (Ley 49/2002)', importe })
+    }
   }
 
   // Deducción deportiva Andalucía (D.A.1ª Ley 7/2021): 15 % sobre base máx. €100.
@@ -287,7 +318,7 @@ export function calcularResultadoFiscal(
   // Método español: cuota = tarifa(base) − tarifa(mínimo).
   const cuotaIntegra = Math.max(0, cuotaTarifa(baseLiquidable, imp.tramos) - cuotaTarifa(minimo, imp.tramos))
 
-  const deducciones = calcularDeducciones(perfil, descendientes, anio, imp)
+  const deducciones = calcularDeducciones(perfil, descendientes, anio, imp, baseLiquidable)
   const noReembolsables = deducciones.filter(d => !d.reembolsable).reduce((s, d) => s + d.importe, 0)
   const reembolsables = deducciones.filter(d => d.reembolsable).reduce((s, d) => s + d.importe, 0)
 
@@ -395,7 +426,7 @@ export function compararDeclaracion(
   const retAlberto = Math.max(0, retencionesTitular)
   const minConjunto = minimoPersonalYFamiliar(perfil, descendientes, anio, imp)
   const cuotaConjunta = Math.max(0, cuotaTarifa(baseConjunta, imp.tramos) - cuotaTarifa(minConjunto, imp.tramos))
-  const deduccionesConj = calcularDeducciones(perfil, descendientes, anio, imp)
+  const deduccionesConj = calcularDeducciones(perfil, descendientes, anio, imp, baseConjunta)
   const dedNoReemb = deduccionesConj.filter(d => !d.reembolsable).reduce((s, d) => s + d.importe, 0)
   const dedReemb = deduccionesConj.filter(d => d.reembolsable).reduce((s, d) => s + d.importe, 0)
   const cuotaLiqConjunta = Math.max(0, cuotaConjunta - dedNoReemb)
@@ -405,7 +436,7 @@ export function compararDeclaracion(
   const perfilSep: PerfilFiscal = { ...perfil, declaracionConjunta: false }
   const minAlb = minimoPersonalYFamiliar(perfilSep, descendientes, anio, imp)
   const cuotaAlb = Math.max(0, cuotaTarifa(Math.max(0, baseTitular), imp.tramos) - cuotaTarifa(minAlb, imp.tramos))
-  const dedAlb = calcularDeducciones(perfilSep, descendientes, anio, imp)
+  const dedAlb = calcularDeducciones(perfilSep, descendientes, anio, imp, Math.max(0, baseTitular))
   const dedAlbNoReemb = dedAlb.filter(d => !d.reembolsable).reduce((s, d) => s + d.importe, 0)
   const dedAlbReemb = dedAlb.filter(d => d.reembolsable).reduce((s, d) => s + d.importe, 0)
   const cuotaLiqAlb = Math.max(0, cuotaAlb - dedAlbNoReemb)

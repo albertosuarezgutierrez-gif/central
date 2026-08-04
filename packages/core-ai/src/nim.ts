@@ -3,6 +3,7 @@
 // paquete NUNCA lee process.env ni secretos.
 
 import type { ImageInput, NimConfig } from './types'
+import { fetchAI } from './http.ts'
 
 const DEFAULT_BASE_URL = 'https://integrate.api.nvidia.com/v1/chat/completions'
 const DEFAULT_TEXT_MODEL = 'meta/llama-3.3-70b-instruct'
@@ -21,7 +22,7 @@ export async function nimText(
   maxTokens = 600,
 ): Promise<string> {
   const key = requireKey(config)
-  const res = await fetch(config.baseUrl ?? DEFAULT_BASE_URL, {
+  const res = await fetchAI(config.baseUrl ?? DEFAULT_BASE_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
     body: JSON.stringify({
@@ -34,8 +35,7 @@ export async function nimText(
       temperature: 0.2,
       stream: false,
     }),
-  })
-  if (!res.ok) throw new Error(`NVIDIA HTTP ${res.status}: ${(await res.text()).substring(0, 150)}`)
+  }, { provider: 'NVIDIA' })
   const data = await res.json()
   const text = data?.choices?.[0]?.message?.content
   if (!text) throw new Error('NVIDIA: respuesta vacía')
@@ -72,7 +72,7 @@ export async function nimChat(
     ...(opts.system ? [{ role: 'system' as const, content: opts.system }] : []),
     ...messages,
   ]
-  const res = await fetch(config.baseUrl ?? DEFAULT_BASE_URL, {
+  const res = await fetchAI(config.baseUrl ?? DEFAULT_BASE_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
     body: JSON.stringify({
@@ -82,9 +82,7 @@ export async function nimChat(
       temperature: opts.temperature ?? 0.3,
       stream: false,
     }),
-    signal: opts.signal,
-  })
-  if (!res.ok) throw new Error(`NVIDIA HTTP ${res.status}: ${(await res.text()).substring(0, 150)}`)
+  }, { provider: 'NVIDIA', signal: opts.signal })
   const data = await res.json()
   const text = data?.choices?.[0]?.message?.content
   if (!text) throw new Error('NVIDIA: respuesta vacía')
@@ -129,7 +127,7 @@ export async function nimChatTools(
     ...(opts.system ? [{ role: 'system' as const, content: opts.system }] : []),
     ...messages,
   ]
-  const res = await fetch(config.baseUrl ?? DEFAULT_BASE_URL, {
+  const res = await fetchAI(config.baseUrl ?? DEFAULT_BASE_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
     body: JSON.stringify({
@@ -140,9 +138,7 @@ export async function nimChatTools(
       temperature: opts.temperature ?? 0.3,
       stream: false,
     }),
-    signal: opts.signal,
-  })
-  if (!res.ok) throw new Error(`NVIDIA-Tools HTTP ${res.status}: ${(await res.text()).substring(0, 150)}`)
+  }, { provider: 'NVIDIA-Tools', signal: opts.signal })
   const data = await res.json()
   const msg = data?.choices?.[0]?.message
   if (!msg) throw new Error('NVIDIA-Tools: respuesta vacía')
@@ -175,7 +171,7 @@ export async function nimVision(
   if (system) messages.push({ role: 'system', content: system })
   messages.push({ role: 'user', content: [...imageContent, { type: 'text', text: userText }] })
 
-  const res = await fetch(config.baseUrl ?? DEFAULT_BASE_URL, {
+  const res = await fetchAI(config.baseUrl ?? DEFAULT_BASE_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
     body: JSON.stringify({
@@ -185,9 +181,7 @@ export async function nimVision(
       temperature: opts.temperature ?? 0.1,
       stream: false,
     }),
-    signal: opts.signal,
-  })
-  if (!res.ok) throw new Error(`NVIDIA-Vision HTTP ${res.status}: ${(await res.text()).substring(0, 150)}`)
+  }, { provider: 'NVIDIA-Vision', signal: opts.signal })
   const data = await res.json()
   const text = data?.choices?.[0]?.message?.content
   if (!text) throw new Error('NVIDIA-Vision: respuesta vacía')

@@ -64,7 +64,7 @@ export default function Page() {
         En 2026 el cambio más relevante no es una nueva pantalla táctil — es la voz. Los sistemas TPV por voz permiten al camarero dictar la comanda mientras camina hacia la siguiente mesa. Sin tocar nada. Sin errores de transcripción. La comanda llega a cocina en segundos.
       </p>
       <p style={s.p}>
-        No es ciencia ficción: ya está funcionando en bares y restaurantes en España a 59€/mes, sin comisión por venta y sin contrato de permanencia.
+        No es ciencia ficción: ya está funcionando en bares y restaurantes en España con cuota mensual fija, sin comisión por venta y sin contrato de permanencia.
       </p>
 
       <h2 style={s.h2}>Checklist antes de firmar</h2>
@@ -87,7 +87,7 @@ export default function Page() {
           ia.rest: TPV por voz para hostelería española
         </p>
         <p style={{ fontSize: 15, marginBottom: 20, color: 'rgba(255,255,255,0.85)' }}>
-          59€/mes · Sin comisión · Sin permanencia · 14 días gratis
+          Sin comisión · Sin permanencia · 14 días gratis
         </p>
         <a href="https://www.iarest.es" style={{ color: '#fff', textDecoration: 'underline', fontSize: 16 }}>
           Pruébalo en tu restaurante →

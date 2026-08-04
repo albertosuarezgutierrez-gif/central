@@ -2,6 +2,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { eur } from '@/lib/dinero'
+import { deducibleDeMovimiento } from '@/lib/deducibilidad'
 
 type SociedadOpt = { id: string; nombre: string }
 
@@ -33,6 +34,74 @@ export function OcultarCuentaBtn({ id, oculta }: { id: string; oculta: boolean }
     >
       {oculta ? '👁️' : '🙈'}
     </button>
+  )
+}
+
+// Barra de acciones consolidada: un botón principal «➕ Añadir» (importar extracto / conectar banco)
+// y un desplegable «⋯ Más» (subir factura, conciliar, re-analizar, exportar, revisar correo). Antes
+// eran 7 botones apilados que en móvil se comían la primera pantalla entera. Reutiliza los botones
+// existentes tal cual (mantienen sus modales y su lógica): aquí solo cambia el CONTENEDOR.
+export function AccionesBanca({ anadir, mas }: { anadir: React.ReactNode; mas: React.ReactNode }) {
+  const [abierto, setAbierto] = useState<null | 'anadir' | 'mas'>(null)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    function fuera(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setAbierto(null)
+    }
+    document.addEventListener('click', fuera)
+    return () => document.removeEventListener('click', fuera)
+  }, [])
+  return (
+    <div ref={ref} style={{ display: 'flex', gap: '10px', position: 'relative' }}>
+      <div style={{ position: 'relative' }}>
+        <button type="button" aria-expanded={abierto === 'anadir'}
+          onClick={() => setAbierto(a => (a === 'anadir' ? null : 'anadir'))} style={btn}>➕ Añadir</button>
+        {abierto === 'anadir' && (
+          <div style={menuPanel} onClick={() => setAbierto(null)}>{anadir}</div>
+        )}
+      </div>
+      <div style={{ position: 'relative' }}>
+        <button type="button" aria-expanded={abierto === 'mas'}
+          onClick={() => setAbierto(a => (a === 'mas' ? null : 'mas'))} style={ghost}>⋯ Más</button>
+        {abierto === 'mas' && (
+          <div style={{ ...menuPanel, left: 'auto', right: 0 }} onClick={() => setAbierto(null)}>{mas}</div>
+        )}
+      </div>
+    </div>
+  )
+}
+const menuPanel: React.CSSProperties = {
+  position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 30,
+  background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px',
+  boxShadow: 'var(--shadow)', padding: '8px', minWidth: '230px', maxWidth: '86vw',
+  display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'stretch',
+}
+
+// Ancla al libro de movimientos (que ya va siempre visible más abajo, es "lo que más se usa" —
+// ver comentario en page.tsx). El botón lleva directo al selector de cuenta, donde las cuentas
+// sincronizadas por PSD2 llevan el badge 🔄.
+export function MovimientosBtn() {
+  return (
+    <a href="#libro-movimientos" style={{ ...ghost, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
+      📄 Movimientos
+    </a>
+  )
+}
+
+// Envoltorio plegable para agrupar los paneles secundarios (IA / herramientas) y que no tapen los
+// movimientos. Cerrado por defecto y con MONTAJE PEREZOSO: los hijos no se renderizan (ni disparan
+// sus fetch bajo demanda) hasta que se abre. Sigue la regla de rendimiento del monorepo.
+export function Plegable({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+  const [abierto, setAbierto] = useState(false)
+  return (
+    <section style={{ marginBottom: '32px' }}>
+      <button type="button" onClick={() => setAbierto(a => !a)}
+        style={{ ...ghost, width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span>{titulo}</span>
+        <span style={{ color: 'var(--muted)' }}>{abierto ? '▲' : '▼'}</span>
+      </button>
+      {abierto && <div style={{ marginTop: '16px' }}>{children}</div>}
+    </section>
   )
 }
 
@@ -295,21 +364,24 @@ const input: React.CSSProperties = { border: '1px solid var(--border)', borderRa
 const cancel: React.CSSProperties = { background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 14px', fontSize: '14px', cursor: 'pointer', color: 'var(--text)' }
 const submitBtn: React.CSSProperties = { background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }
 
-// Bandeja "Por revisar": la IA dudó de la categoría; el dueño la asigna con un desplegable.
-export function RevisarBandeja({ movimientos, categorias }: {
+// Bandeja "Por revisar": lo que de verdad estaba en duda es el NEGOCIO del gasto (¿deducible de
+// la correduría, del Dúplex/pisos, o personal?) — no la categoría contable, que para una compra
+// con tarjeta es obvia ('tarjeta'). El dueño responde con un toque; /api/banca/destino confirma,
+// limpia el flag y APRENDE la regla del comercio (se aplica a iguales pasados y futuros).
+export function RevisarBandeja({ movimientos, destinoLabel }: {
   movimientos: Array<{ id: string; fecha: string | null; concepto: string; importe: number }>
-  categorias: Array<{ value: string; label: string }>
+  destinoLabel: Record<string, string>
 }) {
   const router = useRouter()
   const [pendientes, setPendientes] = useState(movimientos)
   const [guardando, setGuardando] = useState<string | null>(null)
 
-  async function asignar(id: string, categoria: string) {
-    if (!categoria) return
+  async function asignar(id: string, destino: string) {
+    if (!destino) return
     setGuardando(id)
-    const res = await fetch('/api/banca/revisar', {
+    const res = await fetch('/api/banca/destino', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ movimientoId: id, categoria }),
+      body: JSON.stringify({ id, destino }),
     })
     setGuardando(null)
     if (res.ok) {
@@ -319,33 +391,44 @@ export function RevisarBandeja({ movimientos, categorias }: {
   }
 
   if (pendientes.length === 0) return null
+  const btn: React.CSSProperties = {
+    border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg)',
+    color: 'var(--text)', padding: '10px 12px', minHeight: '44px', fontSize: '13px',
+    fontWeight: 600, cursor: 'pointer', flexShrink: 0,
+  }
   return (
     <section style={{ marginBottom: '32px' }}>
       <style>{`
         @media (max-width: 768px) {
           /* Card apilada en móvil (sin scroll horizontal): concepto a ancho completo arriba,
-             fecha + importe en una línea, desplegable de categoría a ancho completo abajo. */
+             fecha + importe en una línea, botones de negocio a ancho completo abajo. */
           .banca-revisar-row { flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
           .banca-revisar-concepto { order: -1; flex: 1 1 100% !important; white-space: normal !important; overflow: visible !important; }
           .banca-revisar-fecha { width: auto !important; }
           .banca-revisar-importe { width: auto !important; margin-left: auto; }
-          .banca-revisar-select { flex: 0 0 100% !important; width: 100% !important; }
-          .banca-movs-row { min-width: 480px; }
-          .banca-movs-outer { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+          .banca-revisar-acciones { order: 1; flex: 0 0 100% !important; }
+          .banca-revisar-acciones button { flex: 1 1 auto; }
         }
       `}</style>
-      <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>🏷️ Gastos por revisar · categoría ({pendientes.length})</h2>
-      <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>La IA no tuvo clara la <strong>categoría contable</strong> de estos gastos. Asígnasela tú con un clic. (El <em>negocio</em> de los ingresos dudosos se asigna arriba, en «Ingresos por revisar».)</p>
+      <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>🏷️ Gastos por revisar · ¿de qué negocio? ({pendientes.length})</h2>
+      <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>La IA no tuvo claro a quién pertenecen estos gastos: ¿deducible del negocio o personal? Un toque lo resuelve y <strong>aprende la regla del comercio</strong>. (Los ingresos dudosos se asignan arriba, en «Ingresos por revisar».)</p>
       <div style={{ background: 'var(--surface)', border: '1px solid #f59e0b66', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
         {pendientes.map((m, i) => (
           <div key={m.id} className="banca-revisar-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
             <div className="banca-revisar-fecha" style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
             <div className="banca-revisar-concepto" style={{ flex: 1, minWidth: 0, fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</div>
             <div className="banca-revisar-importe" style={{ fontSize: '14px', fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
-            <select className="banca-revisar-select" defaultValue="" disabled={guardando === m.id} onChange={e => asignar(m.id, e.target.value)} style={{ ...input, flexShrink: 0, width: '152px' }}>
-              <option value="" disabled>{guardando === m.id ? 'Guardando…' : 'Categoría…'}</option>
-              {categorias.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-            </select>
+            <div className="banca-revisar-acciones" style={{ display: 'flex', gap: '8px', flexShrink: 0, alignItems: 'center' }}>
+              <button style={btn} disabled={guardando === m.id} onClick={() => asignar(m.id, 'seguros')}>🛡️ Correduría</button>
+              <button style={btn} disabled={guardando === m.id} onClick={() => asignar(m.id, 'personal')}>👨‍👩‍👧 Personal</button>
+              <select defaultValue="" disabled={guardando === m.id} onChange={e => asignar(m.id, e.target.value)}
+                style={{ ...input, minHeight: '44px', flexShrink: 0, width: '96px', fontSize: '13px' }}>
+                <option value="" disabled>{guardando === m.id ? 'Guardando…' : 'Otro…'}</option>
+                {DESTINOS_RECLASIF.filter(d => d !== 'seguros' && d !== 'personal').map(d => (
+                  <option key={d} value={d}>{destinoLabel[d] || d}</option>
+                ))}
+              </select>
+            </div>
           </div>
         ))}
       </div>
@@ -358,9 +441,9 @@ export function ExportarBtn() {
   return <a href="/api/banca/export" style={{ ...ghost, textDecoration: 'none', display: 'inline-block' }}>📥 Exportar (CSV)</a>
 }
 
-type DupMov = { id: string; fecha: string | null; concepto: string; importe: number; conciliado: boolean; origen?: string }
+type DupMov = { id: string; fecha: string | null; concepto: string; importe: number; conciliado: boolean; origen?: string; cuentaLabel?: string }
 type DupGrupoUI = { clave: string; confianza: 'alta' | 'baja'; importe: number; superaUmbral: boolean; movimientos: DupMov[] }
-type DupResueltoUI = { id: string; fecha: string | null; concepto: string; importe: number; estado: 'ignorado' | 'confirmado' }
+type DupResueltoUI = { id: string; fecha: string | null; concepto: string; importe: number; estado: 'ignorado' | 'confirmado'; cuentaLabel?: string }
 
 // Bandeja "Posibles cargos duplicados": pares sospechosos de cobro doble. El dueño los resuelve
 // con un clic ("Es normal" / "Es un cobro doble"); la decisión persiste. Plegable de "ya
@@ -395,7 +478,7 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
     setBusy(null)
     if (r.ok) {
       setPend(p => p.filter(x => x.clave !== g.clave))
-      setRes(prev => [...g.movimientos.map(m => ({ id: m.id, fecha: m.fecha, concepto: m.concepto, importe: m.importe, estado })), ...prev])
+      setRes(prev => [...g.movimientos.map(m => ({ id: m.id, fecha: m.fecha, concepto: m.concepto, importe: m.importe, estado, cuentaLabel: m.cuentaLabel })), ...prev])
       router.refresh()
     }
   }
@@ -430,6 +513,7 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
                 <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px', padding: '3px 0' }}>
                   <span style={{ color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</span>
                   <span style={{ flex: 1, minWidth: 0, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}{m.conciliado ? ' 🔗' : ''}</span>
+                  {m.cuentaLabel && <span title="Banco / cuenta donde está este cargo" style={{ fontSize: '10px', color: 'var(--text)', background: 'var(--primary-light)', borderRadius: '4px', padding: '1px 6px', flexShrink: 0, fontWeight: 600, whiteSpace: 'nowrap' }}>🏦 {m.cuentaLabel}</span>}
                   {m.origen && <span style={{ fontSize: '10px', color: 'var(--muted)', background: 'var(--border)', borderRadius: '4px', padding: '1px 5px', flexShrink: 0, fontWeight: 500 }}>{m.origen}</span>}
                   <span style={{ fontWeight: 700, color: '#dc2626', width: '92px', textAlign: 'right', flexShrink: 0 }}>{eur(m.importe)}</span>
                 </div>
@@ -456,6 +540,7 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
                 <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)', fontSize: '13px' }}>
                   <span style={{ color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</span>
                   <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</span>
+                  {m.cuentaLabel && <span title="Banco / cuenta" style={{ fontSize: '10px', color: 'var(--text)', background: 'var(--primary-light)', borderRadius: '4px', padding: '1px 6px', flexShrink: 0, fontWeight: 600, whiteSpace: 'nowrap' }}>🏦 {m.cuentaLabel}</span>}
                   <span style={{ fontSize: '11px', color: 'var(--muted)', flexShrink: 0 }}>{m.estado === 'confirmado' ? 'cobro doble' : 'normal'}</span>
                   <span style={{ fontWeight: 700, color: '#dc2626', width: '80px', textAlign: 'right', flexShrink: 0 }}>{eur(m.importe)}</span>
                   <button disabled={busy === m.id} onClick={() => reactivar(m.id)} style={{ ...dupGhost, fontSize: '12px', flexShrink: 0 }}>Reactivar</button>
@@ -513,26 +598,39 @@ export function RevisarCorreoBtn() {
 type MovLedgerUI = {
   id: string; fecha: string | null; concepto: string; contraparte: string | null
   importe: number; destino: string | null; categoria: string | null; banco: string | null
-  cuentaBancariaId: string; conciliado: boolean; requiereRevision: boolean
+  cuentaBancariaId: string; conciliado: boolean; requiereRevision: boolean; amortizable: boolean
 }
 // Destinos que acepta /api/banca/destino (sin actividad_pilar, que es de las cuentas de Pilar).
 const DESTINOS_RECLASIF = ['turistico_pisos', 'turistico_duplex', 'seguros', 'traspaso_interno', 'personal'] as const
+// El endpoint /api/finanzas/gastos/sugerir razona en BUCKETS de deducibilidad; el libro reclasifica
+// por DESTINO. Este mapa traduce la sugerencia de la IA al destino que aplica el `<select>`.
+const BUCKET_A_DESTINO: Record<string, string> = {
+  negocio: 'seguros',
+  renta: 'turistico_pisos',
+  no_deducible: 'personal',
+}
+type SugFila = { destino: string; motivo: string } | 'cargando' | 'error'
 
-export function MovimientosTabla({ cuentas, destinoLabel, initial }: {
-  cuentas: { id: string; label: string }[]
+export function MovimientosTabla({ cuentas, destinoLabel, initial, periodo }: {
+  cuentas: { id: string; label: string; sincronizada?: boolean }[]
   destinoLabel: Record<string, string>
   initial: { movimientos: MovLedgerUI[]; total: number; hayMas: boolean }
+  // Rango por defecto (mes en curso): el SSR `initial` ya viene acotado a él y los filtros
+  // arrancan con estas fechas. "Limpiar" las vacía → se ve TODO el histórico.
+  periodo?: { desde: string; hasta: string }
 }) {
   const PAGE = 50
   const [cuenta, setCuenta] = useState('')
-  const [desde, setDesde] = useState('')
-  const [hasta, setHasta] = useState('')
+  const [desde, setDesde] = useState(periodo?.desde ?? '')
+  const [hasta, setHasta] = useState(periodo?.hasta ?? '')
   const [signo, setSigno] = useState<'todos' | 'ingreso' | 'gasto'>('todos')
   const [q, setQ] = useState('')
   const [movs, setMovs] = useState<MovLedgerUI[]>(initial.movimientos)
   const [total, setTotal] = useState(initial.total)
   const [hayMas, setHayMas] = useState(initial.hayMas)
   const [loading, setLoading] = useState(false)
+  const [sugs, setSugs] = useState<Record<string, SugFila>>({})
+  const [detalle, setDetalle] = useState<MovLedgerUI | null>(null)
   const primera = useRef(true)
 
   function params(offset: number): string {
@@ -573,6 +671,35 @@ export function MovimientosTabla({ cuentas, destinoLabel, initial }: {
     }).catch(() => {})
   }
 
+  // 🤖 Sugerir el negocio de un cargo con la IA (bajo demanda, por fila). Reutiliza el endpoint del
+  // triaje de gastos (bucket + motivo, prompt de deducibilidad afinado) y traduce bucket → destino.
+  // Solo SUGIERE: Alberto aplica con «Aplicar» (que reclasifica y aprende regla, igual que el select).
+  async function sugerir(id: string) {
+    setSugs(prev => ({ ...prev, [id]: 'cargando' }))
+    try {
+      const res = await fetch('/api/finanzas/gastos/sugerir', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      if (!res.ok) throw new Error('no ok')
+      const data = await res.json() as { bucket?: string; motivo?: string }
+      const destino = BUCKET_A_DESTINO[data.bucket || '']
+      if (!destino) throw new Error('sin destino')
+      setSugs(prev => ({ ...prev, [id]: { destino, motivo: (data.motivo || '').trim() } }))
+    } catch {
+      setSugs(prev => ({ ...prev, [id]: 'error' }))
+    }
+  }
+
+  function aplicarSugerencia(id: string, destino: string) {
+    reclasificar(id, destino)
+    setSugs(prev => { const n = { ...prev }; delete n[id]; return n })
+  }
+
+  function descartarSugerencia(id: string) {
+    setSugs(prev => { const n = { ...prev }; delete n[id]; return n })
+  }
+
   const sumaCargados = movs.reduce((s, m) => s + m.importe, 0)
 
   return (
@@ -589,7 +716,9 @@ export function MovimientosTabla({ cuentas, destinoLabel, initial }: {
         {cuentas.length > 1 && (
           <select value={cuenta} onChange={e => setCuenta(e.target.value)} style={{ ...input, flexShrink: 0 }}>
             <option value="">Todas las cuentas</option>
-            {cuentas.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+            {cuentas.map(c => (
+              <option key={c.id} value={c.id}>{c.sincronizada ? '🔄 ' : ''}{c.label}</option>
+            ))}
           </select>
         )}
         <select value={signo} onChange={e => setSigno(e.target.value as typeof signo)} style={{ ...input, flexShrink: 0 }}>
@@ -608,34 +737,81 @@ export function MovimientosTabla({ cuentas, destinoLabel, initial }: {
             style={{ ...ghost, padding: '8px 12px', fontSize: '13px' }}>Limpiar</button>
         )}
       </div>
+      <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '10px', display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
+        <span><span style={{ color: 'var(--positive)' }}>✅</span> Deducible</span>
+        <span><span style={{ color: 'var(--negative)' }}>❌</span> No deducible</span>
+        <span>🔁 Traspaso</span>
+        <span><sup style={{ fontSize: '9px' }}>A</sup> Amortizable (se reparte por años)</span>
+        <span>🔗 Con factura</span>
+        {cuentas.some(c => c.sincronizada) && <span>🔄 Cuenta sincronizada (PSD2)</span>}
+        <span style={{ color: 'var(--primary)' }}>👆 Toca un movimiento para ver/editar</span>
+      </div>
       <div className="banca-movs-outer">
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', opacity: loading ? 0.6 : 1, transition: 'opacity .15s' }}>
         {movs.length === 0 ? (
           <div style={{ padding: '24px', textAlign: 'center', color: 'var(--muted)', fontSize: '14px' }}>
             {loading ? 'Cargando…' : 'Sin movimientos que coincidan.'}
           </div>
-        ) : movs.map((m, i) => (
-          <div key={m.id} className="banca-movs-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
-            <div style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        ) : movs.map((m, i) => {
+          // Badge de deducibilidad IRPF, derivado del negocio (`destino`) que puso la IA/agente.
+          // Sólo en gastos: los ingresos no llevan badge (deducible/no es concepto de gasto).
+          const ded = deducibleDeMovimiento(m.destino, m.importe)
+          const sug = sugs[m.id]
+          return (
+          <div key={m.id} style={{ borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
+          <div className="banca-movs-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px' }}>
+            <div className="banca-mov-fecha" style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
+            <div className="banca-mov-concepto" onClick={() => setDetalle(m)} title="Ver ficha del movimiento" style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}>
+              <div className="banca-mov-concepto-txt" style={{ fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {m.requiereRevision && <span title="Pendiente de revisar">🔎 </span>}{m.concepto}
               </div>
               <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{m.banco || ''}</div>
             </div>
-            <select value={DESTINOS_RECLASIF.includes(m.destino as typeof DESTINOS_RECLASIF[number]) ? m.destino! : ''}
+            {m.importe < 0 && (
+              <button className="banca-mov-sug" onClick={() => sugerir(m.id)} disabled={sug === 'cargando'}
+                title="Pídele a la IA que sugiera el negocio de este cargo"
+                style={{ ...ghost, padding: '5px 8px', fontSize: '13px', flexShrink: 0, cursor: sug === 'cargando' ? 'default' : 'pointer', opacity: sug === 'cargando' ? 0.5 : 1 }}>🤖</button>
+            )}
+            <select className="banca-mov-select" value={DESTINOS_RECLASIF.includes(m.destino as typeof DESTINOS_RECLASIF[number]) ? m.destino! : ''}
               onChange={e => reclasificar(m.id, e.target.value)}
               title="Reclasificar el negocio de este movimiento"
               style={{ ...input, padding: '5px 6px', fontSize: '12px', flexShrink: 0, maxWidth: '150px' }}>
               <option value="" disabled>{m.destino ? (destinoLabel[m.destino] || m.destino) : 'Sin negocio'}</option>
               {DESTINOS_RECLASIF.map(d => <option key={d} value={d}>{destinoLabel[d] || d}</option>)}
             </select>
+            <div className="banca-movs-ded" style={{ fontSize: '13px', flexShrink: 0, width: '22px', textAlign: 'center' }}
+              title={ded.kind === 'ingreso' ? 'Ingreso' : ded.kind === 'gasto' && m.amortizable ? `${ded.label} · bien amortizable (se reparte por años)` : ded.label}>
+              {ded.kind === 'ingreso' ? '' : (
+                <span style={{ color: ded.color }}>{ded.icon}{ded.kind === 'gasto' && ded.deducible && m.amortizable ? <sup style={{ fontSize: '9px' }}>A</sup> : null}</span>
+              )}
+            </div>
             <div style={{ fontSize: '13px', flexShrink: 0, width: '18px', textAlign: 'center' }} title={m.conciliado ? 'Conciliado con factura' : 'Sin conciliar'}>
               {m.conciliado ? '🔗' : ''}
             </div>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
+            <div className="banca-mov-amt" style={{ fontSize: '14px', fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
           </div>
-        ))}
+          {sug && (
+            <div style={{ padding: '0 16px 12px 16px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              {sug === 'cargando' ? (
+                <span style={{ color: 'var(--muted)' }}>🤖 Pensando…</span>
+              ) : sug === 'error' ? (
+                <span style={{ color: 'var(--muted)' }}>🤖 No he podido sugerir ahora mismo. Inténtalo de nuevo.</span>
+              ) : (
+                <>
+                  <span style={{ color: 'var(--text)' }}>
+                    🤖 Parece <strong>{destinoLabel[sug.destino] || sug.destino}</strong>{sug.motivo ? ` · ${sug.motivo}` : ''}
+                  </span>
+                  <button onClick={() => aplicarSugerencia(m.id, sug.destino)}
+                    style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', background: 'var(--primary)', color: '#fff', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>Aplicar</button>
+                  <button onClick={() => descartarSugerencia(m.id)}
+                    style={{ ...ghost, padding: '4px 8px', fontSize: '12px', cursor: 'pointer' }}>Descartar</button>
+                </>
+              )}
+            </div>
+          )}
+          </div>
+          )
+        })}
         {hayMas && (
           <button onClick={() => cargar(movs.length, true)} disabled={loading}
             style={{ display: 'block', width: '100%', padding: '12px', border: 'none', borderTop: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--primary)', fontSize: '13px', fontWeight: 600, cursor: loading ? 'default' : 'pointer' }}>
@@ -644,6 +820,70 @@ export function MovimientosTabla({ cuentas, destinoLabel, initial }: {
         )}
       </div>
       </div>
+
+      {/* Ficha de movimiento (bottom sheet) — se abre al TOCAR el concepto de una fila. Reutiliza los
+          mismos handlers de reclasificar/sugerir; deriva el mov actual de `movs` para reflejar cambios. */}
+      {(() => {
+        const md = detalle ? (movs.find(m => m.id === detalle.id) ?? detalle) : null
+        if (!md) return null
+        const ded = deducibleDeMovimiento(md.destino, md.importe)
+        const sug = sugs[md.id]
+        const destinoSel = DESTINOS_RECLASIF.includes(md.destino as typeof DESTINOS_RECLASIF[number]) ? md.destino! : ''
+        return (
+          <>
+            <div onClick={() => setDetalle(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,17,30,.45)', zIndex: 60 }} />
+            <div role="dialog" aria-modal="true" style={{
+              position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 61, margin: '0 auto', maxWidth: 560,
+              background: 'var(--surface)', borderRadius: '20px 20px 0 0', padding: '8px 20px 24px',
+              boxShadow: '0 -10px 40px -12px rgba(20,22,45,.4)', maxHeight: '85vh', overflowY: 'auto',
+            }}>
+              <div style={{ width: 38, height: 4, borderRadius: 999, background: 'var(--border)', margin: '8px auto 16px' }} />
+              <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-.02em', color: md.importe >= 0 ? 'var(--positive)' : 'var(--negative)' }}>{eur(md.importe)}</div>
+              <div style={{ fontWeight: 700, fontSize: 16, marginTop: 2 }}>{md.concepto}</div>
+              <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>
+                {md.fecha || '—'}{md.banco ? ` · ${md.banco}` : ''}{md.contraparte ? ` · ${md.contraparte}` : ''}
+              </div>
+              <div style={{ marginTop: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '11px 0', borderTop: '1px solid var(--border)', fontSize: 13.5 }}>
+                  <span style={{ color: 'var(--muted)' }}>Negocio</span>
+                  <select value={destinoSel} onChange={e => reclasificar(md.id, e.target.value)}
+                    style={{ ...input, padding: '6px 8px', fontSize: 13, maxWidth: 200 }}>
+                    <option value="" disabled>{md.destino ? (destinoLabel[md.destino] || md.destino) : 'Sin negocio'}</option>
+                    {DESTINOS_RECLASIF.map(d => <option key={d} value={d}>{destinoLabel[d] || d}</option>)}
+                  </select>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '11px 0', borderTop: '1px solid var(--border)', fontSize: 13.5 }}>
+                  <span style={{ color: 'var(--muted)' }}>¿Deducible?</span>
+                  <span style={{ fontWeight: 700, color: ded.kind === 'ingreso' ? 'var(--muted)' : ded.color }}>
+                    {ded.kind === 'ingreso' ? 'Ingreso' : `${ded.icon} ${ded.label}`}
+                    {ded.kind === 'gasto' && ded.deducible && md.amortizable ? ' · amortizable' : ''}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '11px 0', borderTop: '1px solid var(--border)', fontSize: 13.5 }}>
+                  <span style={{ color: 'var(--muted)' }}>Factura</span>
+                  <span style={{ fontWeight: 700 }}>{md.conciliado ? '🔗 Conciliada' : 'Sin conciliar'}</span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 9, marginTop: 16 }}>
+                {md.importe < 0 && (
+                  <button onClick={() => sugerir(md.id)} disabled={sug === 'cargando'} style={{ ...ghost, flex: 1 }}>
+                    {sug === 'cargando' ? '🤖 Pensando…' : '🤖 ¿Qué es?'}
+                  </button>
+                )}
+                <button onClick={() => setDetalle(null)} style={{ ...btn, flex: 1 }}>Hecho</button>
+              </div>
+              {sug && sug !== 'cargando' && sug !== 'error' && (
+                <div style={{ marginTop: 12, fontSize: 13, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span>🤖 Parece <strong>{destinoLabel[sug.destino] || sug.destino}</strong>{sug.motivo ? ` · ${sug.motivo}` : ''}</span>
+                  <button onClick={() => aplicarSugerencia(md.id, sug.destino)}
+                    style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: 'var(--primary)', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Aplicar</button>
+                </div>
+              )}
+              {sug === 'error' && <div style={{ marginTop: 12, fontSize: 13, color: 'var(--muted)' }}>🤖 No he podido sugerir ahora mismo. Inténtalo de nuevo.</div>}
+            </div>
+          </>
+        )
+      })()}
     </section>
   )
 }
@@ -668,6 +908,20 @@ export function IngresosPorRevisar({ ingresos, destinoLabel }: {
 
   return (
     <section style={{ marginBottom: '32px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          /* Card apilada en móvil (sin scroll horizontal): concepto a ancho completo arriba,
+             fecha + importe en una línea, desplegable de negocio a ancho completo abajo.
+             Sin esto, la fecha + el select "Asignar negocio…" + el importe (todos de ancho fijo)
+             no caben en 320px y el desplegable tapaba el concepto. */
+          .banca-ingr-row { flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
+          .banca-ingr-concepto { order: -1; flex: 1 1 100% !important; }
+          .banca-ingr-concepto > div:first-child { white-space: normal !important; overflow: visible !important; }
+          .banca-ingr-fecha { width: auto !important; }
+          .banca-ingr-importe { width: auto !important; margin-left: auto; }
+          .banca-ingr-select { order: 1; flex: 0 0 100% !important; max-width: none !important; width: 100% !important; }
+        }
+      `}</style>
       <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>🔎 Ingresos por revisar</h2>
       <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '12px' }}>
         Abonos entrantes cuyo negocio no está confirmado. Asígnales el negocio para que cuadren en el P&amp;L.
@@ -675,18 +929,18 @@ export function IngresosPorRevisar({ ingresos, destinoLabel }: {
       <div className="banca-movs-outer">
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
         {items.map((m, i) => (
-          <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
-            <div style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
+          <div key={m.id} className="banca-ingr-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
+            <div className="banca-ingr-fecha" style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
+            <div className="banca-ingr-concepto" style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</div>
               <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{m.banco || ''}</div>
             </div>
-            <select defaultValue="" onChange={e => e.target.value && asignar(m.id, e.target.value)}
+            <select className="banca-ingr-select" defaultValue="" onChange={e => e.target.value && asignar(m.id, e.target.value)}
               style={{ ...input, padding: '5px 6px', fontSize: '12px', flexShrink: 0, maxWidth: '160px' }}>
               <option value="" disabled>Asignar negocio…</option>
               {DESTINOS_RECLASIF.map(d => <option key={d} value={d}>{destinoLabel[d] || d}</option>)}
             </select>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: '#16a34a', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
+            <div className="banca-ingr-importe" style={{ fontSize: '14px', fontWeight: 700, color: '#16a34a', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
           </div>
         ))}
       </div>

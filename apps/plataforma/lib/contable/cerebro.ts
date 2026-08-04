@@ -6,7 +6,7 @@ import { extraerAprendizajes, extraerAcciones, stripThink, type Aprendizaje } fr
 import { validarAccion, resumenAccion } from './acciones-tipos'
 import { guardarInsight, logTurno, getSinonimosNegocio, guardarSinonimoNegocio, getHistorial } from './memoria'
 import { guardarAcciones, type AccionPropuesta } from './acciones'
-import { detectarIntencion, entidadesResiduales } from './intencion'
+import { detectarIntencion, entidadesResiduales, esConsejo } from './intencion'
 import { clasificarIntencionIA, verificarIntencionIA } from './clasificar-ia'
 import { responderDirecto } from './respuestas-directas'
 
@@ -17,8 +17,14 @@ Tienes visión de TODO su contexto en el bloque que te paso: sus sociedades y ne
 Conocimiento del negocio de Alberto (tenlo en cuenta al clasificar/explicar):
 - Ingresos de PISOS turísticos: llegan de las OTAs. Alias que verás en los conceptos → todos son ingreso de pisos (destino turistico_pisos, salvo el Dúplex que es turistico_duplex): "BOOKING.COM"/"LIQ. OP. Nº" (Booking), "TRAVELSCAPE" (= Expedia), "AGODA", "EXPEDIA", "STRIPE".
 - CORREDURÍA (seguros) = SIEMPRE la cuenta BBVA. Las comisiones/liquidaciones de compañías (Generali, Caser, Occident, Asisa…) y los códigos de agente ("SALDO. M00171", "M1454", "LIQ.COMISIONES", "-FRA-COMIS", "REMSALDO", "PD005") son destino=seguros. Un recibo de aseguradora en Kutxa es seguro PROPIO (coche/hogar) → personal.
+- En la cuenta BBVA conviven correduría (seguros) + Dúplex (turistico_duplex) + algún envío personal. El ÚNICO piso turístico que cobra en BBVA es el Dúplex (los otros 3 cobran en Kutxa = turistico_pisos). Los cobros OTA del Dúplex anteriores a ~mar-2026 llegan como "Transferencia recibida" SIN el marcador "LIQ. OP. Nº" → si un abono de BBVA sin identificar cuadra por fecha/agregado con reservas del Dúplex es turistico_duplex (NO turistico_pisos). Ojo: Booking agrupa varias reservas por pago, así que un abono ≠ una reserva; verifica por agregado mensual. Micro-abonos de 0,01€ (verificación de cuenta) y envíos de particulares (p.ej. Pilar) → personal, no ingreso.
 - "PAGO RECIBO 466…" (y "TARJ.CRDTO", "PAGO DE TARJETA") = liquidación mensual de la tarjeta = TRASPASO INTERNO, NO es ingreso ni gasto real (el gasto real ya está detallado en el extracto de la tarjeta). Nunca lo cuentes como ingreso/gasto.
 - PRESTACIONES EXENTAS de IRPF (subcategoria='exento', p.ej. la prestación por nacimiento y cuidado del menor / paternidad de Alberto como autónomo, Art. 7.h LIRPF): se COBRAN en la correduría pero NO tributan → NO cuentan en la base imponible ni en el pago fraccionado. Si te preguntan por el rendimiento gravable de la correduría, excluye lo exento; si preguntan por lo cobrado (caja), inclúyelo.
+
+CONSEJOS DE AHORRO (si te piden reducir/optimizar/recortar gasto o "consejos", "recomendaciones", "tips"):
+- Básate SOLO en el bloque "En qué gastas de verdad" (gasto REAL por categoría) y en el resumen por destino. Ahí está tu muestra de gasto.
+- La lista "Movimientos" es SOLO para proponer ACCIONES de reclasificación sobre un #ref concreto — NO es una muestra representativa de su gasto: mezcla ingresos, traspasos y movimientos por revisar. NUNCA la uses para aconsejar ni para decir "tu mayor gasto es X".
+- NUNCA propongas reducir un TRASPASO INTERNO ni una liquidación/pago de tarjeta (no son gasto real, solo mueven dinero entre sus cuentas), ni un INGRESO. Una "comisión" de cientos/miles de € casi siempre es un traspaso mal etiquetado: no aconsejes sobre ella, sugiere revisar su clasificación.
 
 Puedes:
 1. RESPONDER preguntas sobre sus cuentas, negocios y fiscalidad usando SOLO el contexto que te doy. No inventes cifras; si algo no está en el contexto, dilo.
@@ -73,7 +79,8 @@ export async function responder(
   //    Busto"), la IA la clasifica a una INTENCIÓN estructurada y el SQL la ejecuta (cifra EXACTA, sin
   //    inventar). Menos incidencias con frases nuevas; y APRENDE el vocabulario para la próxima vez.
   //    Solo se dispara en preguntas de datos (no en charla libre) para no añadir latencia de balde.
-  if (/(cu[aá]nt|gast|ingres|cobr|balance|resumen|saldo|factur|tramo|irpf|marginal|\btotal\b|llevo|desglose|resultado|beneficio|rentab|c[oó]mo va)/i.test(mensaje)) {
+  if (!esConsejo(mensaje)
+      && /(cu[aá]nt|gast|ingres|cobr|balance|resumen|saldo|factur|tramo|irpf|marginal|\btotal\b|llevo|desglose|resultado|beneficio|rentab|c[oó]mo va)/i.test(mensaje)) {
     // Historial de la conversación para resolver seguimientos elípticos ("¿y gastos?", "¿y en junio?").
     // `getHistorial` ya incluye el turno actual (recién logueado): lo quitamos para pasar SOLO lo previo.
     const historial = (await getHistorial(cuentaId).catch(() => [])).slice(0, -1)
@@ -99,7 +106,12 @@ export async function responder(
     }
   }
 
-  const { texto: ctx, candidatos } = await construirContexto(cuentaId).catch(() => ({ texto: '(no se pudo leer el contexto)', candidatos: [] as any[] }))
+  // Las preguntas de consejo/ahorro reciben un dataset de gasto REAL por categoría ("En qué gastas de
+  // verdad") para que el modelo aconseje sobre gasto verdadero y no sobre la lista de "por revisar"
+  // (que mezcla ingresos, traspasos y movimientos mal clasificados — origen del "reduce comisiones"
+  // cuando en realidad era una liquidación de tarjeta).
+  const { texto: ctx, candidatos } = await construirContexto(cuentaId, { paraConsejo: esConsejo(mensaje) })
+    .catch(() => ({ texto: '(no se pudo leer el contexto)', candidatos: [] as any[] }))
 
   const prompt = `${ctx}\n\n# Mensaje de Alberto\n${mensaje}\n\n# Tu respuesta`
   // 12s: aiComplete encadena NIM → Groq → Kimi con este timeout CADA UNO, así el peor caso sigue

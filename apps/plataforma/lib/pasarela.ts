@@ -5,14 +5,20 @@
 //
 // Camino primario: OpenRouter con el Director eligiendo modelo (+ fallback nativo entre modelos).
 // Si OpenRouter falla o está bloqueado por presupuesto diario → cadena clásica GRATIS de siempre
-// (NIM → Groq → Gemini → Kimi) y Gemini con búsqueda como último intento. Degrada, nunca muere.
-// El control de presupuesto MENSUAL (429) y la autenticación siguen siendo del route HTTP.
+// (NIM → Groq → Kimi). Degrada, nunca muere. El control de presupuesto MENSUAL (429) y la
+// autenticación siguen siendo del route HTTP.
+//
+// 🚨 GEMINI FUERA DE LA CADENA POR DEFECTO (02/08/2026): la key lleva desde el 16/06 sin un solo
+// éxito (429 de cuota — 544 llamadas fallidas en 30 días, Check 12 del health-check) y el último
+// intento con `geminiSearch` de aquí solo añadía un timeout de pago y filas rojas en `ai_usos`.
+// Decisión de Alberto: «usa OpenRouter». Se reactiva con `GEMINI_TEXTO=1` cuando haya una key con
+// cuota (mismo patrón que `GEMINI_WEBSEARCH` en `lib/websearch.ts`).
 
 import { aiComplete, geminiSearch, openrouterChatEx, type NimChatMessage } from '@central/core-ai'
 import {
   registrarUso, estimarTokens, costeEur, costePorUso, dentroDePresupuestoDiario,
 } from '@/lib/ai-gateway'
-import { elegirModelo, openrouterConfigPasarela } from '@/lib/ia-director'
+import { elegirModelo, elegirPorCategoria, openrouterConfigPasarela } from '@/lib/ia-director'
 import { cacheActiva, buscarCache, guardarCache } from '@/lib/ia-cache'
 
 export type ChatDirectorOpts = {
@@ -29,6 +35,9 @@ export type ChatDirectorOpts = {
   modelo?: string
   /** Modelo preferido SOLO para la cadena clásica; NO salta el Director (para migrar agentes). */
   modeloClasico?: string
+  /** Categoría del catálogo a servir SIN hop al decisor (p. ej. 'codigo' para el ejecutor de
+   *  código). El caller ya sabe qué necesita → se elige por tag, más barato y determinista. */
+  categoria?: string
   /** Atribución de coste al cliente final (refacturación). */
   clienteRef?: string | null
   /** Datos sensibles: proveedores no-training + preferencia de modelos UE en el Director. */
@@ -69,12 +78,20 @@ export async function chatConDirector(messages: NimChatMessage[], opts: ChatDire
       openrouterBloqueado = true
       await registrarUso({ app, endpoint, proveedor: 'openrouter', modelo: null, ok: false, ms: 0, error: presupuesto.motivo, clienteRef })
     } else {
-      const dec = await elegirModelo(messages, { system, app, clienteRef, eu: opts.eu })
+      // Con `categoria` el caller ya sabe qué modelo del catálogo quiere (p. ej. el ejecutor de
+      // código pide el coder barato) → elección determinista por tag, sin hop al decisor.
+      const dec = opts.categoria
+        ? await elegirPorCategoria(opts.categoria, { app })
+        : await elegirModelo(messages, { system, app, clienteRef, eu: opts.eu })
       const t0 = Date.now()
       try {
         const res = await openrouterChatEx(or, messages, {
           system, maxTokens, temperature,
-          models: [dec.model, ...dec.fallbacks],
+          // OpenRouter rechaza con 400 un `models` de más de 3 elementos. En modo activo el
+          // catálogo puede dar hasta 3 suplentes → [decidido, ...3] = 4 y la petición primaria
+          // fallaba SIEMPRE (recuperaba con el modelo seguro, pero anulaba la ruta del Director
+          // y ensuciaba ai_usos). Se limita a los 3 que acepta: primario + 2 mejores suplentes.
+          models: [dec.model, ...dec.fallbacks].slice(0, 3),
           privacidad: opts.privado === true,
           cacheSystem: opts.cacheSystem === true,
           signal: AbortSignal.timeout(timeoutMs),
@@ -132,10 +149,10 @@ export async function chatConDirector(messages: NimChatMessage[], opts: ChatDire
     return { text, modelo: modeloCadena ?? null }
   } catch (e) {
     const msg = e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 200) : 'error'
-    console.warn('[ai-gateway] chat NIM falló, intento Gemini:', msg)
-    // Fallback de proveedor DENTRO de la pasarela: NIM → Gemini (si hay key). Así las verticales
-    // no necesitan ninguna key de proveedor propia.
-    const geminiKey = process.env.GEMINI_API_KEY
+    console.warn('[ai-gateway] chat: cadena clásica falló:', msg)
+    // Último intento con Gemini SOLO si está reactivado a mano (GEMINI_TEXTO=1, ver cabecera):
+    // con la key sin cuota este eslabón era puro peaje.
+    const geminiKey = process.env.GEMINI_TEXTO === '1' ? process.env.GEMINI_API_KEY : undefined
     if (geminiKey) {
       const t1 = Date.now()
       try {

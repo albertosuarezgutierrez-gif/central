@@ -87,8 +87,9 @@ export default function SecretosClient({ secrets }: { secrets: SecretEntry[] }) 
         background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e',
         borderRadius: 10, padding: '10px 14px', fontSize: 13, marginBottom: 20, lineHeight: 1.5,
       }}>
-        🛡️ Este panel <b>nunca muestra valores</b>. Las claves marcadas <b>editable</b> (solo API externas)
-        se pueden <b>sobrescribir</b> en Vercel desde aquí, con tu contraseña de operador como 2º factor
+        🛡️ Este panel <b>nunca muestra valores</b>. Las claves marcadas <b>editable</b> (API externas y
+        el token de rutinas <code>ALERTA_TOKEN</code>) se pueden <b>sobrescribir</b> en Vercel desde
+        aquí, con tu contraseña de operador como 2º factor
         (escritura ciega: se guarda, no se lee) y <b>redeploy automático</b> del proyecto (no entras a Vercel).
         El resto —firma de sesión, logins, hashes— se cambia en Vercel, Bitwarden o su servicio. Las
         contraseñas de usuarios viven como hash en la BD y no se ven nunca.

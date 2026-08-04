@@ -21,7 +21,7 @@ export default function RegisterPage() {
       body: JSON.stringify({ nombre, email, password }),
     })
     if (res.ok) {
-      router.push('/dashboard')
+      router.push('/banca')
     } else {
       const data = await res.json().catch(() => ({}))
       setError(data.error || 'Error al registrarse')
