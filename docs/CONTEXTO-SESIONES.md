@@ -24,6 +24,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 facturas-correo (01/08/2026, trigger diario).** Vía B sana, sin backlog. Archivada la factura
+  de la lavandería Giraldillo AFV-11808 (72,60€, deducible); pago aún pendiente, sin conciliar. **Hallazgo
+  colateral:** el cron `facturas-scan` (`apps/plataforma/lib/agente-facturas/drive.ts`) archiva TODO lo que
+  procesa en `ALBERTO 2026 PERSONAL (SEGUROS)/<mes>` en vez del árbol de negocio — mismo patrón que Castuera
+  (10/07, aviso aún sin borrar). No es un bug de esta skill (yo re-archivo bien y aviso en
+  `_DUPLICADOS_BORRAR`), pero conviene revisar la resolución de carpeta de ese cron algún día. Detalle en
+  `docs/AGENTES-BITACORA.md`.
+
 - **🧹 Laboratorio de inversión: quitado el ruido + el retrovisor llevaba 16 días muerto (04/08/2026).**
   Alberto: «no entiendo la pantalla, quítame lo que no me dé números reales». Hallazgo gordo al auditarla:
   **`/api/cron/trading-backtest` NO estaba en `CRON_JOBS`** — la ruta existía, nadie la disparaba, y
