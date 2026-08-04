@@ -8,9 +8,13 @@ import { getResumenFinanciero } from '@/lib/finanzas'
 import { calcularEstadoDeclaracion } from '@/lib/comparativa-declaracion'
 import { facturasMensualesFaltantes } from '@/lib/sivra/facturas-mensuales'
 import { eur } from '@/lib/dinero'
+import { sondearProveedoresIA } from '@/lib/monitoring/sonda-ia'
 import type { NextRequest } from 'next/server'
 
-export const maxDuration = 60
+// 120 y no 60: la sonda de proveedores (Check 13) añade hasta ~30 s de pings en paralelo (mismo
+// timeout que el tráfico real — NIM gratis responde en ~26 s de media) y el resto de checks ya
+// rondaban el techo. El dispatcher tolera hasta 280 s por job.
+export const maxDuration = 120
 
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -67,15 +71,41 @@ export async function GET(req: NextRequest) {
     if (ratio < 0.7) fallos.push(`🔴 Cuadre OTA: banco ${eur(Number(totalBanco))} vs incomes ${eur(Number(totalInc))} (ratio ${ratio.toFixed(2)} < 0.70)`)
     else ok.push(`✅ Cuadre OTA: banco/incomes ratio ${ratio.toFixed(2)}`)
 
-    // Check 4: Sync reciente de incomes (Smoobu)
-    const ultimoSync = await prisma.$queryRaw<Array<{ ultima: Date }>>(Prisma.sql`
-      SELECT MAX("createdAt") as ultima FROM incomes
-    `)
-    const diasDesdeSync = ultimoSync[0]?.ultima
-      ? Math.floor((Date.now() - new Date(ultimoSync[0].ultima).getTime()) / 86400000)
-      : 999
-    if (diasDesdeSync > 2) fallos.push(`🔴 Smoobu sync: último registro hace ${diasDesdeSync} días`)
-    else ok.push(`✅ Smoobu sync: activo (hace ${diasDesdeSync}d)`)
+    // Check 4: salud del SYNC de Smoobu — por LATIDO (agente_latidos.'smoobu_sync'), no por la
+    // última reserva. runSync registra intento al empezar y pasada buena al terminar (job diario
+    // de las 05:00 o webhook), haya o no reservas; MAX(createdAt) de incomes solo mide cuándo
+    // entró la última reserva NUEVA, y una racha sin reservas (sequía 25/07→01/08) NO es un
+    // fallo del sync — feedback de Alberto 01/08/2026: no pintarla de 🔴, decir qué es.
+    const [latidoSmoobu, ultimoIncome] = await Promise.all([
+      prisma.$queryRaw<Array<{ ultimo_at: Date | null; ultimo_ok_at: Date | null }>>(Prisma.sql`
+        SELECT ultimo_at, ultimo_ok_at FROM agente_latidos WHERE agente = 'smoobu_sync'
+      `).catch(() => [] as Array<{ ultimo_at: Date | null; ultimo_ok_at: Date | null }>),
+      prisma.$queryRaw<Array<{ ultima: Date }>>(Prisma.sql`
+        SELECT MAX("createdAt") as ultima FROM incomes
+      `),
+    ])
+    const diasSinReserva = ultimoIncome[0]?.ultima
+      ? Math.floor((Date.now() - new Date(ultimoIncome[0].ultima).getTime()) / 86400000)
+      : null
+    const notaReserva = diasSinReserva === null ? ''
+      : diasSinReserva > 2 ? ` — sin reservas nuevas desde hace ${diasSinReserva}d (temporada floja, no es un fallo)`
+      : ` — última reserva nueva hace ${diasSinReserva}d`
+    const horasSinLatidoOk = latidoSmoobu[0]?.ultimo_ok_at
+      ? (Date.now() - new Date(latidoSmoobu[0].ultimo_ok_at).getTime()) / 3_600_000
+      : null
+    if (horasSinLatidoOk === null) {
+      // Sin pasada buena registrada (el sync aún no corrió con el código nuevo, o muere siempre):
+      // distinguir «no se dispara» de «se dispara y no termina» (landmine 31/07/2026).
+      const intento = latidoSmoobu[0]?.ultimo_at
+      if ((diasSinReserva ?? 999) <= 2) ok.push('✅ Smoobu sync: sin latido aún, pero con reservas recientes')
+      else if (intento) fallos.push(`🔴 Smoobu sync AVERIADO: se dispara (último intento ${new Date(intento).toISOString().slice(0, 16)}Z) pero nunca termina una pasada${notaReserva}`)
+      else fallos.push(`🔴 Smoobu sync: sin ningún latido registrado y sin reservas nuevas desde hace ${diasSinReserva ?? '?'}d (¿el job updates/sync no se dispara?)`)
+    } else if (horasSinLatidoOk > 26) {
+      // El job es diario: >26h sin pasada buena = el sync NO está corriendo (o muere a medias).
+      fallos.push(`🔴 Smoobu sync AVERIADO: sin pasada completa desde hace ${(horasSinLatidoOk / 24).toFixed(1)}d (revisa el job updates/sync del dispatcher)${notaReserva}`)
+    } else {
+      ok.push(`✅ Smoobu sync: activo (latido hace ${Math.round(horasSinLatidoOk)}h)${notaReserva}`)
+    }
 
     // Check 5: Incomes con amount NULL
     const nullAmt = await prisma.$queryRaw<Array<{ n: bigint }>>(Prisma.sql`
@@ -226,6 +256,71 @@ export async function GET(req: NextRequest) {
     for (const [nombre, fn] of smoke) {
       try { await fn(); ok.push(`✅ Smoke ${nombre}`) }
       catch (e) { fallos.push(`🔴 Página rota: ${nombre} → ${e instanceof Error ? e.message : String(e)}`) }
+    }
+
+    // Check 12: proveedor de IA MUERTO — el que falla SIEMPRE y nadie echa de menos.
+    //
+    // Caso fundacional (01/08/2026): `GEMINI_API_KEY` acumulaba **548 llamadas y 0 éxitos** desde el
+    // 16/06 —en search, chat, eventos, empresas y contable, con tres modelos distintos— y no saltó
+    // nada en mes y medio. La cadena de fallback funcionó tan bien que convirtió una credencial
+    // muerta en un peaje invisible: cada llamada pagaba el intento fallido (y su timeout) antes de
+    // caer al camino de pago. Una cadena de respaldo sana enmascara la avería del eslabón; por eso
+    // hay que mirar el eslabón, no el resultado final.
+    //
+    // ⚠️ La ventana es de 30 DÍAS y el umbral de 10 llamadas — calibrado contra el caso real, no a
+    // ojo. La primera versión miraba 7 días con umbral 20 y NO habría cazado nada: Gemini hace ~12
+    // llamadas por semana (los crons que lo usan son diarios, no de tráfico), así que jamás habría
+    // llegado a 20 y el check habría dado verde mientras el proveedor llevaba mes y medio muerto.
+    // Un vigilante que no puede disparar es peor que no tenerlo, porque tranquiliza.
+    //
+    // ⚠️ Además el proveedor tiene que seguir RECIBIENDO llamadas (última < 3 días): la alerta
+    // denuncia un peaje que se sigue pagando. Cuando el eslabón ya se desenchufó del código (caso
+    // Gemini, 02/08/2026) las filas rojas históricas permanecen 30 días en la ventana y sin esta
+    // condición el check repetiría la misma alerta cada día sobre un problema ya resuelto — ruido
+    // que entrena a ignorar el canal. Un proveedor muerto con cadencia semanal sigue disparando:
+    // cada pasada suya renueva los 3 días.
+    const proveedoresMuertos = await prisma.$queryRaw<
+      { proveedor: string; llamadas: bigint; dias: number; ultimo_error: string | null }[]
+    >`
+      SELECT proveedor,
+             COUNT(*) AS llamadas,
+             COUNT(DISTINCT creada_at::date)::int AS dias,
+             MAX(left(COALESCE(error, ''), 140)) AS ultimo_error
+      FROM ai_usos
+      WHERE creada_at > now() - interval '30 days' AND proveedor IS NOT NULL
+      GROUP BY proveedor
+      HAVING COUNT(*) >= 10 AND COUNT(*) FILTER (WHERE ok) = 0
+         AND MAX(creada_at) > now() - interval '3 days'`
+    for (const p of proveedoresMuertos) {
+      fallos.push(
+        `🔴 IA «${p.proveedor}»: ${Number(p.llamadas)} llamadas en ${p.dias} días distintos y ` +
+        `NINGUNA correcta. La cadena de fallback lo tapa, así que todo "funciona" mientras se paga ` +
+        `el camino de pago Y el intento fallido de este. Último error: ${p.ultimo_error ?? 'sin detalle'}`,
+      )
+    }
+    if (!proveedoresMuertos.length) ok.push('✅ Ningún proveedor de IA muerto')
+
+    // Check 13: sonda ACTIVA de proveedores de IA — no espera al tráfico.
+    //
+    // El Check 12 es forense: solo dispara cuando el tráfico orgánico ya acumuló ≥10 fallos
+    // (~una semana con la cadencia real de los crons), y así fue como Gemini estuvo mes y medio
+    // muerto sin que nadie lo viera. Esta sonda hace un ping real y minúsculo a CADA proveedor
+    // configurado (misma key y mismo modelo que producción) y canta el eslabón caído el MISMO
+    // día, haya tráfico o no. Detalle y coste (despreciable) en lib/monitoring/sonda-ia.ts.
+    const sonda = await sondearProveedoresIA()
+    for (const s of sonda.filter((s) => !s.ok)) {
+      fallos.push(
+        `🔴 Sonda IA «${s.proveedor}» (${s.modelo}) NO responde: ${s.error ?? 'sin detalle'}. ` +
+        `El tráfico real no lo notará (la cadena de fallback lo tapa), pero cada llamada está ` +
+        `pagando este intento muerto — revisar key/cuota hoy.`,
+      )
+    }
+    const sondaOk = sonda.filter((s) => s.ok)
+    if (sondaOk.length === sonda.length && sonda.length > 0) {
+      ok.push(`✅ Sonda IA: ${sonda.length} proveedores responden (${sonda.map((s) => s.proveedor).join(', ')})`)
+    } else if (sonda.length === 0) {
+      // Cero proveedores configurados no es «todo bien»: es que la sonda no pudo mirar nada.
+      fallos.push('🔴 Sonda IA: ningún proveedor configurado (¿envs de IA ausentes en este entorno?)')
     }
 
   } catch (err) {

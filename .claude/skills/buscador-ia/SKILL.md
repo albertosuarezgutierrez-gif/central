@@ -29,7 +29,11 @@ completa e idempotente. El estado entre ejecuciones vive en **`docs/BUSCADOR-IA.
 
 ## Fuente de verdad de qué está cableado
 La cadena de fallback vive en **`packages/core-ai/src/client.ts`** (`aiComplete`: **OpenRouter
-(si hay key) → NIM → Groq → Gemini → Kimi**). Los ids por defecto y sus envs de override:
+(si hay key) → NIM → Groq → [Gemini, gateado] → Kimi**). ⚠️ **El eslabón Gemini está APAGADO por
+defecto desde el 02/08/2026 (PR #1220):** 544 llamadas/30d con 0 éxitos (429 de cuota) — requiere
+`GEMINI_TEXTO=1` además de la key (mismo gate en `lib/pasarela.ts` de plataforma; el websearch de
+ia-rest va tras `GEMINI_WEBSEARCH=1`). Si algún día hay key con cuota, se reactivan los gates.
+Los ids por defecto y sus envs de override:
 - **OpenRouter** `deepseek/deepseek-chat` — env `OPENROUTER_API_KEY` (primario de la PASARELA
   con Agente Director; overrides `OPENROUTER_MODEL`/`OPENROUTER_FALLBACK_MODELS`).
   ⚠️ **Delimitación (09/07/2026):** el catálogo/prompt del Director lo mantiene SOLO el cron
@@ -40,7 +44,8 @@ La cadena de fallback vive en **`packages/core-ai/src/client.ts`** (`aiComplete`
   preferencia del cron (`PREFERIDOS` en su route.ts) si descubre algo mejor.
 - **NIM** `meta/llama-3.3-70b-instruct` — env `NVIDIA_API_KEY` (primario de la cadena directa, gratis).
 - **Groq** `openai/gpt-oss-120b` — env `GROQ_API_KEY`, override `GROQ_BRAIN_MODEL`.
-- **Gemini** `gemini-2.5-flash` (chat sin grounding) — env `GEMINI_API_KEY`, override `GEMINI_BRAIN_MODEL`.
+- **Gemini** `gemini-flash-latest` (alias rodante; `gemini-2.5-flash` da 404 desde 09/07/2026) —
+  envs `GEMINI_API_KEY` **+ `GEMINI_TEXTO=1`** (apagado por defecto), override `GEMINI_BRAIN_MODEL`.
 - **Kimi/Moonshot** `kimi-k2.6` — env `MOONSHOT_API_KEY` (de pago, último recurso), override `MOONSHOT_MODEL`.
 - Consumidores con modelo propio: `AGENTE_HUESPED_MODEL` (vacío = usa el 70B por defecto),
   `CONTABLE_MODEL` (default `deepseek-ai/deepseek-v3` por NIM).

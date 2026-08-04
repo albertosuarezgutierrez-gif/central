@@ -114,39 +114,8 @@ export default function HomePage() {
     ;(window as any).enviar = enviar
     document.addEventListener("keydown", (e) => { if (e.key === "Enter") enviar() })
 
-    // Pricing calc
-    let users = 1, mesas = 0
-    function calcPrice(u: number, m: number) {
-      let total = 59
-      const parts = ["59€ base"]
-      if (u >= 2) { const u26 = Math.min(u - 1, 5); total += u26 * 20; if (u26 > 0) parts.push(`+${u26}×20€`) }
-      if (u > 6) { const u7 = u - 6; total += u7 * 15; parts.push(`+${u7}×15€`) }
-      if (m > 0) { total += m * 12; parts.push(`+${m}×12€ QR`) }
-      return { total, breakdown: parts.join(" · ") }
-    }
-    function updateCalc() {
-      const { total, breakdown } = calcPrice(users, mesas)
-      const annual = Math.round(total * 12 * 0.82)
-      const pr = document.getElementById("priceResult")
-      const aa = document.getElementById("annualAmt")
-      const pb = document.getElementById("priceBreakdown")
-      const ul = document.getElementById("uLabel")
-      const isGrupo = users >= 10
-      if (pr) pr.innerHTML = isGrupo
-        ? `<span style="font-family:'Inter Tight',sans-serif;font-size:32px;font-weight:400;letter-spacing:-1px">Consultar</span>`
-        : `${total} <span style="font-size:18px;color:var(--ink3);font-family:'Inter Tight',sans-serif">€/mes</span>`
-      if (aa) aa.textContent = isGrupo ? "precio a medida para grupos" : `${annual} €/año`
-      if (pb) pb.textContent = isGrupo ? "Precio personalizado para grupos y cadenas" : breakdown
-      if (ul) ul.innerHTML = users === 1 ? "usuario incluido<br>en el precio base" : users <= 6 ? `usuarios · <span style="color:var(--ink2)">+20€ c/u</span>` : `usuarios · <span style="color:var(--ink2)">7+ a 15€ c/u</span>`
-      const uc = document.getElementById("uCount")
-      const mc = document.getElementById("mCount")
-      if (uc) uc.textContent = String(users)
-      if (mc) mc.textContent = String(mesas)
-    }
-    document.getElementById("uPlus")?.addEventListener("click", () => { if (users < 20) { users++; updateCalc() } })
-    document.getElementById("uMinus")?.addEventListener("click", () => { if (users > 1) { users--; updateCalc() } })
-    document.getElementById("mPlus")?.addEventListener("click", () => { mesas++; updateCalc() })
-    document.getElementById("mMinus")?.addEventListener("click", () => { if (mesas > 0) { mesas--; updateCalc() } })
+    // La calculadora de precio se eliminó (01/08/2026): ia.rest NO publica tarifa.
+    // El precio se cierra en la conversación — formulario de contacto o WhatsApp.
 
     // GA4: clics en CTA (data-ga="nombre_evento")
     const gaEvent = (name: string, params: Record<string, any> = {}) => {
@@ -200,10 +169,10 @@ export default function HomePage() {
       </Suspense>
 
       <title>Software de Gestión para Restaurantes, Catering y Espacios de Eventos | ia.rest</title>
-      <meta name="description" content="ia.rest gestiona restaurantes, catering y espacios de eventos. Comandas por voz, KDS, APPCC, VeriFactu y portal cliente. Sin comisión. Desde 89€/mes." />
+      <meta name="description" content="ia.rest gestiona restaurantes, catering y espacios de eventos. Comandas por voz, KDS, APPCC, VeriFactu y portal cliente. Sin comisión por transacción. Pide presupuesto sin compromiso." />
       <meta name="robots" content="index, follow" />
       <meta property="og:title" content="Software para Restaurantes, Catering y Espacios de Eventos | ia.rest" />
-      <meta property="og:description" content="Gestión completa para hostelería: restaurantes, catering y espacios de eventos. Voz, KDS, APPCC, VeriFactu y portal cliente. Sin comisión. Desde 89€/mes." />
+      <meta property="og:description" content="Gestión completa para hostelería: restaurantes, catering y espacios de eventos. Voz, KDS, APPCC, VeriFactu y portal cliente. Sin comisión por transacción." />
       <meta property="og:url" content="https://www.iarest.es" />
       <meta property="og:type" content="website" />
       <meta property="og:image" content="https://www.iarest.es/og-image.jpg" />
@@ -212,8 +181,8 @@ export default function HomePage() {
       <meta property="og:site_name" content="ia.rest" />
       <meta property="og:locale" content="es_ES" />
       <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:title" content="TPV por Voz para Bares - ia.rest | Sin Comisión 89€/mes" />
-      <meta name="twitter:description" content="Gestión completa para hostelería: voz, KDS, almacén, eventos, bodas y catering integrado. Sin comisión. 89€/mes." />
+      <meta name="twitter:title" content="TPV por Voz para Bares - ia.rest | Sin comisión por transacción" />
+      <meta name="twitter:description" content="Gestión completa para hostelería: voz, KDS, almacén, eventos, bodas y catering integrado. Sin comisión por transacción." />
       <meta name="twitter:image" content="https://www.iarest.es/og-image.jpg" />
       <style dangerouslySetInnerHTML={{ __html: `:root {
   --bg: #14110E;
@@ -555,10 +524,7 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
       <div style="font-family:'Newsreader',serif;font-size:36px;font-weight:200;color:var(--red);letter-spacing:-1px;line-height:1">+<span style="color:var(--ink)">cada</span></div>
       <div style="font-size:10px;color:var(--ink3);font-weight:500;letter-spacing:.1em;text-transform:uppercase;margin-top:4px">Punto de margen<br>que recuperas</div>
     </div>
-    <div style="text-align:center;display:none">
-      <div style="font-family:'Newsreader',serif;font-size:36px;font-weight:200;color:var(--ink);letter-spacing:-1px;line-height:1">59<span style="color:var(--red)">€</span></div>
-      <div style="font-size:10px;color:var(--ink3);font-weight:500;letter-spacing:.1em;text-transform:uppercase;margin-top:4px">Al mes · Sin<br>comisión</div>
-    </div>
+    <!-- Contador de cuota mensual eliminado (01/08/2026): ia.rest no publica tarifa. -->
   </div>
 </section>
 
@@ -631,32 +597,7 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
   </div>
 </section>
 
-<!-- ELIMINA — OCULTO -->
-<section class="elimina" id="elimina" style="display:none">
-  <div class="w">
-    <div class="elimina-grid">
-      <div class="fi">
-        <div class="s-label">Lo que eliminas</div>
-        <h2>No es un gasto.<br>Es una <i>consolidación.</i></h2>
-        <p style="margin-top:20px;font-size:16px;color:var(--ink3);font-weight:300;line-height:1.75">Sustituye todo el stack de herramientas que ya pagas por separado. Un sistema, una factura, cero comisiones.</p>
-      </div>
-      <div class="fi d1">
-        <div class="cost-rows">
-          <div class="cost-row"><span>TPV tradicional</span><span>~90 €/mes</span></div>
-          <div class="cost-row"><span>Gestión delivery (Deliverect…)</span><span>~49 €/mes</span></div>
-          <div class="cost-row"><span>Software de almacén</span><span>~40 €/mes</span></div>
-          <div class="cost-row"><span>VeriFactu externo</span><span>~30 €/mes</span></div>
-          <div class="cost-row"><span>Exportación contable + portal asesoría</span><span>~80 €/mes</span></div>
-        </div>
-        <div class="cost-total">
-          <div class="ct-l"><strong>ia.rest · 5 usuarios</strong>todo incluido · sin comisión</div>
-          <div class="ct-r">139<small> €/mes</small></div>
-        </div>
-        <div class="save-note">Ahorras ~150 €/mes desde el día 1</div>
-      </div>
-    </div>
-  </div>
-</section>
+<!-- Comparativa de COSTES eliminada (01/08/2026): incluía la cuota mensual de ia.rest. -->
 
 <!-- CAPABILITIES -->
 <section class="cap" id="capacidades">
@@ -734,59 +675,7 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
   </div>
 </section>
 
-<section id="precios" style="background:var(--bg2);padding:100px 48px;display:none">
-  <div class="w">
-    <div class="fi" style="text-align:center;margin-bottom:52px">
-      <div class="s-label" style="justify-content:center;display:flex">Precio</div>
-      <h2>Simple.<br><i>Sin sorpresas.</i></h2>
-      <p style="margin-top:16px;font-size:16px;color:var(--ink3);font-weight:300">Sin planes fijos. Sin permanencia. Sin comisión sobre ventas.</p>
-    </div>
-    <div class="fi d1" style="max-width:560px;margin:0 auto;background:var(--bg);border:1px solid var(--border2);border-radius:16px;overflow:hidden">
-
-      <!-- CALCULADORA -->
-      <div style="padding:32px 36px;border-bottom:1px solid var(--border)">
-        <div style="font-size:11px;color:var(--ink3);font-weight:600;letter-spacing:.12em;text-transform:uppercase;margin-bottom:20px">Calcula tu precio</div>
-        <div style="font-size:12px;color:var(--ink3);margin-bottom:8px">Usuarios (camarero, cocina, sala, contable, RRHH…)</div>
-        <div style="display:flex;align-items:center;gap:16px;margin-bottom:4px">
-          <button id="uMinus" style="width:36px;height:36px;border-radius:8px;border:1px solid var(--border2);background:none;color:var(--ink);font-size:18px;cursor:pointer;transition:border-color .2s" onmouseenter="this.style.borderColor='rgba(246,241,231,.3)'" onmouseleave="this.style.borderColor='var(--border2)'">−</button>
-          <span id="uCount" style="font-family:'Newsreader',serif;font-size:48px;color:var(--ink);font-weight:200;letter-spacing:-2px;min-width:48px;text-align:center">1</span>
-          <button id="uPlus" style="width:36px;height:36px;border-radius:8px;border:1px solid var(--border2);background:none;color:var(--ink);font-size:18px;cursor:pointer;transition:border-color .2s" onmouseenter="this.style.borderColor='rgba(246,241,231,.3)'" onmouseleave="this.style.borderColor='var(--border2)'">+</button>
-          <span id="uLabel" style="font-size:12px;color:var(--ink3);line-height:1.4">usuario incluido<br>en el precio base</span>
-        </div>
-        <div style="margin-top:20px;font-size:12px;color:var(--ink3)">Mesas con QR (add-on opcional)</div>
-        <div style="display:flex;align-items:center;gap:16px;margin-top:8px">
-          <button id="mMinus" style="width:36px;height:36px;border-radius:8px;border:1px solid var(--border2);background:none;color:var(--ink);font-size:18px;cursor:pointer" onclick="">−</button>
-          <span id="mCount" style="font-family:'Newsreader',serif;font-size:48px;color:var(--ink);font-weight:200;letter-spacing:-2px;min-width:48px;text-align:center">0</span>
-          <button id="mPlus" style="width:36px;height:36px;border-radius:8px;border:1px solid var(--border2);background:none;color:var(--ink);font-size:18px;cursor:pointer">+</button>
-          <span style="font-size:12px;color:var(--ink3)">+12 €/mesa/mes</span>
-        </div>
-      </div>
-
-      <!-- RESULTADO -->
-      <div style="padding:28px 36px;background:rgba(217,68,43,0.05);border-bottom:1px solid rgba(217,68,43,.15)">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <div style="font-size:12px;color:var(--ink3);margin-bottom:4px">Total mensual</div>
-            <div id="priceResult" style="font-family:'Newsreader',serif;font-size:64px;color:var(--ink);letter-spacing:-3px;font-weight:200;line-height:1">59 <span style="font-size:18px;color:var(--ink3);font-family:'Inter Tight',sans-serif">€/mes</span></div>
-          </div>
-          <div style="text-align:right">
-            <div id="annualPrice" style="font-size:13px;color:var(--green);font-weight:500">−18% anual</div>
-            <div id="annualAmt" style="font-family:'Newsreader',serif;font-size:22px;color:var(--ink3);letter-spacing:-0.5px">580 €/año</div>
-          </div>
-        </div>
-        <div id="priceBreakdown" style="margin-top:12px;font-size:12px;color:var(--ink3);line-height:1.7">59€ base</div>
-      </div>
-
-      <!-- NOTAS -->
-      <div style="padding:20px 36px;display:flex;gap:8px;flex-wrap:wrap">
-        <span style="font-size:11px;color:var(--ink3);padding:5px 11px;border:1px solid var(--border);border-radius:20px">Trial 14 días</span>
-        <span style="font-size:11px;color:var(--ink3);padding:5px 11px;border:1px solid var(--border);border-radius:20px">Sin permanencia</span>
-        <span style="font-size:11px;color:var(--ink3);padding:5px 11px;border:1px solid var(--border);border-radius:20px">Todo incluido</span>
-        <span style="font-size:11px;color:var(--ink3);padding:5px 11px;border:1px solid var(--border);border-radius:20px">Sin comisión</span>
-      </div>
-    </div>
-  </div>
-</section>
+<!-- Sección de PRECIO eliminada (01/08/2026): ia.rest no publica tarifa. Conversión = formulario #contacto + WhatsApp. -->
 
 <!-- FORM -->
 <section class="form-section" id="contacto" style="background:var(--bg2)">

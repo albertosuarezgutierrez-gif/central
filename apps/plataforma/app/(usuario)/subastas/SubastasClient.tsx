@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { eur } from '@/lib/dinero'
 import { estadoDocumentacion, resumenDocumentos, type DocumentoAdjunto } from '@/lib/subastas/resumen-docs'
-import { direccionCatastro, esDireccionPostal, urlFichaCatastro, urlGoogleMaps, urlStreetView } from '@central/module-subastas'
+import { direccionCatastro, esDireccionPostal, titularCargas, urlFichaCatastro, urlGoogleMaps, urlStreetView } from '@central/module-subastas'
 import MapaSubastas from './MapaSubastas'
 
 const PAGE = 50
@@ -377,19 +377,22 @@ function ResumenDocumental({ s, d }: { s: Subasta; d?: Documental | null }) {
   const sinRevisar = estadoDocumentacion(docs, publicaAdjuntos) === 'sin_revisar'
   const puntos = d?.analisis ?? []
   const cargasTexto = (s.cargasTexto ?? '').trim()
-  const conCargas = s.cargas != null && s.cargas > 0
-  const noPublicadas = s.cargasConocidas === false
 
-  if (!conCargas && !noPublicadas && !cargasTexto && notas.length === 0 && !docs?.length && puntos.length === 0) {
+  // Titular: qué pasa con las cargas, sin abrir nada. Cinco estados, no tres —
+  // «no lo hemos leído» y «el BOE no lo publica» mandan a sitios distintos.
+  const titular = titularCargas({
+    cargas: s.cargas,
+    cargasConocidas: s.cargasConocidas,
+    documentos: docs,
+    publicaAdjuntos,
+  })
+
+  // Solo se calla cuando no hay NADA que decir: cargas leídas y sin nada que
+  // subsista. Un «no se sabe» siempre se pinta (antes `cargasConocidas`
+  // `undefined` caía en el 🟢 y la ficha afirmaba que no había cargas).
+  if (titular.estado === 'sin_cargas' && !cargasTexto && notas.length === 0 && !docs?.length && puntos.length === 0) {
     return null
   }
-
-  // Titular: qué pasa con las cargas, sin abrir nada.
-  const titular = conCargas
-    ? { emoji: '🔴', texto: `Cargas anteriores que SUBSISTEN y se suman al precio: ${eur(s.cargas as number)}` }
-    : noPublicadas
-      ? { emoji: '🟠', texto: 'Cargas no publicadas: pide la certificación registral antes de pujar.' }
-      : { emoji: '🟢', texto: 'Sin cargas anteriores subsistentes publicadas.' }
 
   const resumenDocs = resumenDocumentos(docs, publicaAdjuntos)
 
@@ -397,7 +400,26 @@ function ResumenDocumental({ s, d }: { s: Subasta; d?: Documental | null }) {
     <div style={{ marginTop: 10 }}>
       <p style={{ margin: 0, fontSize: 13, color: 'var(--text)' }}>
         ⚖️ {titular.emoji} {titular.texto}
+        {titular.importe != null && <strong> {eur(titular.importe)}</strong>}
       </p>
+      {/* El PDF que resuelve la duda, a un toque: decirle «pide la certificación
+          registral» teniéndola enlazada aquí mismo es mandarlo al Registro para
+          nada. Botón de 44 px (regla táctil del repo). */}
+      {titular.estado === 'publicadas_sin_leer' && titular.documento?.url && (
+        <p style={{ margin: '4px 0 0' }}>
+          <a
+            href={titular.documento.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 44,
+              fontSize: 13, color: 'var(--primary)', textDecoration: 'underline',
+            }}
+          >
+            📄 Abrir la certificación de cargas del BOE
+          </a>
+        </p>
+      )}
       {/* La cifra de arriba es la CONSERVADORA. Esta línea es una hipótesis a
           confirmar, nunca un descuento: por eso va debajo y sin sustituirla. */}
       {d?.caducidad && (

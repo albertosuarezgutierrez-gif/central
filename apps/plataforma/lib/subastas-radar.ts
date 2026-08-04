@@ -50,6 +50,48 @@ export const COLS_SUBASTA = Prisma.raw(
     'cargas_detalle, cargas_fuente, documentos_leidos, lector_version, valor_orientativo',
 )
 
+/**
+ * Filtro CANÓNICO del corpus VISIBLE: lo que todavía puede pujarse.
+ *
+ * `fecha_fin IS NULL` = plazo no publicado (los lotes de adquisición directa de
+ * la Junta no lo tienen), NO «caducada»: se sigue viendo. Sin alias de tabla —
+ * para `FROM subastas` a secas.
+ *
+ * 🚨 Toda lectura que pinte una subasta como pujable DEBE llevarlo. La bandeja
+ * de avisos tiene el suyo (`RADAR_VIGENTE`), que además mira el corpus vivo.
+ */
+export const SUBASTA_VIGENTE = Prisma.sql`archivada_at IS NULL AND (fecha_fin IS NULL OR fecha_fin >= now())`
+
+/**
+ * `FROM` canónico de la bandeja de avisos: la fila del radar con su subasta del
+ * corpus al lado. `LEFT JOIN` (no `JOIN`) porque el corpus puede podarse y el
+ * radar guarda un snapshot propio; `subastas.dedupe_key` es único, así que el
+ * join no multiplica filas.
+ */
+export const RADAR_CON_CORPUS = Prisma.sql`FROM subastas_radar r LEFT JOIN subastas s ON s.dedupe_key = r.dedupe_key`
+
+/**
+ * Filtro CANÓNICO de la bandeja `subastas_radar`: lo que sigue VIVO para esta
+ * cuenta. Asume los alias de `RADAR_CON_CORPUS` (`r` bandeja, `s` corpus).
+ *
+ * 🚨 LANDMINE (01/08/2026): antes NINGÚN camino de lectura del radar miraba la
+ * fecha — la bandeja se limpiaba SOLO con el `DELETE` diario de `archivarPasadas`
+ * (06:15 UTC) y encima con un día de gracia, así que una subasta cerrada seguía
+ * en «🎯 Mi radar» con sus botones de pujar entre 14 y 38 horas después de su
+ * cierre (y para siempre si el cron fallaba). Depender de un batch para no
+ * afirmar algo falso es lo mismo que no comprobarlo: el filtro va en la LECTURA
+ * y el `DELETE` queda solo como recogida de basura.
+ *
+ * La fecha VIVA del corpus manda sobre la del snapshot (el BOE aplaza cierres, y
+ * un snapshot viejo puede tenerla a NULL); si la subasta ya no está en el corpus,
+ * manda el snapshot.
+ */
+export const RADAR_VIGENTE = Prisma.sql`
+  r.descartado = false
+  AND s.archivada_at IS NULL
+  AND (COALESCE(s.fecha_fin, r.fecha_fin) IS NULL OR COALESCE(s.fecha_fin, r.fecha_fin) >= now())
+`
+
 /** Fila cruda de `subastas` → el tipo del módulo. */
 export function filaASubasta(f: any): SubastaInmueble {
   const num = (v: any): number | null => (v == null ? null : Number(v))
@@ -150,9 +192,7 @@ export async function cuentasConRadar(): Promise<FilaCriterios[]> {
 export async function corpusVigente(limite = 500): Promise<SubastaInmueble[]> {
   const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT ${COLS_SUBASTA} FROM subastas
-    WHERE es_inmueble = true
-      AND (fecha_fin IS NULL OR fecha_fin >= now())
-      AND archivada_at IS NULL
+    WHERE es_inmueble = true AND ${SUBASTA_VIGENTE}
     ORDER BY actualizado_en DESC
     LIMIT ${limite}
   `)

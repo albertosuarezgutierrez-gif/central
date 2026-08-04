@@ -3,13 +3,20 @@ import type { Tesis, Estrategia } from './types.ts'
 export type Resultado = { estrategia: Estrategia; acierto: boolean; retorno: number }
 
 // Puntúa una tesis contra un precio POSTERIOR (walk-forward: precioDespues es de después de precioRef).
+// `retorno` es el retorno de SEGUIR la tesis, no el movimiento bruto del precio: una bajista que
+// acierta una caída del 5% anota +5% (no −5%), y una neutral está fuera del mercado (0). Antes se
+// devolvía el movimiento bruto para las tres direcciones → como cada pasada crea una tesis POR
+// estrategia sobre el mismo símbolo/ventana, las cuatro estrategias empataban en retornoMedio por
+// construcción y ajustesDeStats penalizaba a una estrategia porque el MERCADO cayó, no porque
+// se equivocara (arreglado 01/08/2026; el movimiento bruto sigue derivable de precioRef/precioDespues).
 export function puntuarTesis(t: Tesis, precioDespues: number): Resultado {
-  const retorno = (precioDespues - t.precioRef) / t.precioRef
+  const movimiento = (precioDespues - t.precioRef) / t.precioRef
   const subio = precioDespues > t.precioRef
   const acierto =
     (t.direccion === 'alcista' && subio) ||
     (t.direccion === 'bajista' && !subio) ||
-    (t.direccion === 'neutral' && Math.abs(retorno) < 0.02)
+    (t.direccion === 'neutral' && Math.abs(movimiento) < 0.02)
+  const retorno = t.direccion === 'bajista' ? -movimiento : t.direccion === 'neutral' ? 0 : movimiento
   return { estrategia: t.estrategia, acierto, retorno }
 }
 

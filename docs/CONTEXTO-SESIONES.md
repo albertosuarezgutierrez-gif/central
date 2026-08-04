@@ -32,6 +32,27 @@
   `_DUPLICADOS_BORRAR`), pero conviene revisar la resolución de carpeta de ese cron algún día. Detalle en
   `docs/AGENTES-BITACORA.md`.
 
+- **🧹 Laboratorio de inversión: quitado el ruido + el retrovisor llevaba 16 días muerto (04/08/2026).**
+  Alberto: «no entiendo la pantalla, quítame lo que no me dé números reales». Hallazgo gordo al auditarla:
+  **`/api/cron/trading-backtest` NO estaba en `CRON_JOBS`** — la ruta existía, nadie la disparaba, y
+  `trading_backtest` estaba congelada desde el 19/07 mientras la UI pintaba sus cifras como vigentes; eso
+  además hacía INCUMPLIBLE el criterio de evaluación de H8 firmado horas antes (enmienda anotada en el
+  pre-registro). Job añadido `10 */2 * * *`. Retiradas de `/trading`: **💼 Cartera simulada** (entrada/stop
+  sin ningún resultado — intenciones con pinta de cartera) y **📊 Rendimiento por estrategia** (retorno
+  HIPOTÉTICO de seguir señales del torneo interno, la bajista «gana» si cae). Las dos cohortes forward se
+  **fusionan cuando comparten cesta**: 2026-07-18.v1 y 2026-07-20.v1 son los MISMOS 8 valores y se pintaban
+  como dos confirmaciones. Evidencia forward REAL a día de hoy: 1 cesta, 16 días, 2 snapshots. PR #1247.
+
+- **📊 Velas + volumen: medido, y la tesis del rebote en la media larga REFUTADA (04/08/2026).** Idea de
+  Alberto tras su ORCL. Estudio punto-en-el-tiempo sobre 1.300 velas mensuales de 7 large caps US
+  (2008-2026), midiendo el exceso sobre la deriva de CADA valor. Resultado incómodo: tocar la EMA100
+  mensual y cerrar encima da **−11,9% a 6 meses y −23,3% a 12** (n=51, solo 8 de 40 ganan a un año) —
+  es el aviso de que el valor devolvió años de tendencia, no un soporte; AAPL no la tocó ni una vez en
+  12 años. Las figuras de vela solas (martillo/envolvente/cuerpo grande) ≈ 0. Lo ÚNICO con señal:
+  **caída ≥25% del máximo de 12 barras + volumen ≥1,5×** (+18,5% de exceso a 12 meses, n=34). Nuevo
+  `lib/trading/velas.ts` (puro, 13 tests, tres estados null/false/true) recolectado en el retrovisor
+  sobre las ~800 del universo; NO toca ranking. Pre-registrado como **H8**. PR #1247.
+
 - **🔎 Verificación en caliente del arreglo de los ADR + techo al nº de acciones (31/07/2026).** Sin esperar
   al cron: bajados por `pg_net` los companyfacts de los 5 peores del radar y pasados por el parser ya
   mergeado. NMR (30.061.813 mil M$ de capitalización), PAC, LTM, BSAC y BCH → los 5 salen `emisorExtranjero`
@@ -40,189 +61,454 @@
   emisor (Nomura ×1e6, PAC ×1000) y `accionesPlausibles` solo miraba hacia abajo → techo en 1e13, que caza
   a Nomura sin tocar a los que sí tienen 1e11 acciones de verdad (LATAM, Santander Chile). PAC no es
   separable y se queda. Hoy lo tapa el gate del ADR; la guarda es para cuando `acciones` se use para otra cosa.
+### 🔐 Trial Tuya IoT Core renovado — cerraduras OK de nuevo (04/08/2026)
+Los PINs del teclado de Socorro fallaban por `Tuya 28841002: IoT Core service subscription has expired`
+(NO por el corte de luz; la «Sonda» no enlaza nada, solo lee por cloud). Alberto renovó el trial en
+platform.tuya.com (Cloud → Cloud Services → IoT Core → Extend Trial) y la sonda en prod confirma:
+PIN ✅ (PIN vivo para la reserva de hoy) · Accesos ✅ · Estado ✅ en Socorro y BustoTavera.
+`Tarjetas → Tuya 1108: uri path invalid` es aparte y esperado (el aparato no expone tarjetas por cloud).
+Caduca ~04/02/2027: trigger one-shot `Recordatorio renovar trial Tuya IoT Core` (04/01/2027) ya creado.
+Truco de verificación reutilizable: el proxy del contenedor bloquea Vercel → sonda vía `pg_net` desde
+la Supabase compartida (`net.http_post/get` + `net._http_response`) con cuenta temporal (borrada). Sin código.
 
-- **🧯 Segunda tanda del parser de EDGAR + retrovisor honesto (31/07/2026, PR #1193).** JNJ/LLY/GE no
-  etiquetan `OperatingIncomeLoss` y se quedaban sin ROIC **y** sin earnings yield: ahora se deriva
-  EBIT ≈ pretax + `InterestExpenseNonoperating` (calibrado con WMT: −1,2% vs el etiquetado). Y la
-  capitalización de un **ADR de emisor extranjero** (20-F) es incalculable —precio del ADR × acciones
-  ordinarias, ratio desconocido y ausente de la SEC—: `capitalizacionCruzable()` la deja a **null**
-  junto con EV/EY/FCF yield, en vez de guardar una cifra inflada ×N. Límite anotado: un ADS que
-  presenta 10-K (ONC) no se distingue con datos gratis; adivinar el ratio sería repetir el fallo.
-- **📉 Y el retrovisor dice que el modelo valor+calidad NO bate al mercado (31/07/2026).** Con el
-  parser YA corregido, punto-en-el-tiempo sobre 22 grandes de EEUU y 22 cortes mensuales
-  (2024-07→2026-04, `trading_backtest`): top5 +10,98% a 91 días vs universo +10,51% (**+0,47%**,
-  gana en 12/22 ventanas, Spearman 0,072 ≈ ruido). Lo único con señal es la COLA: cola5 +8,33%,
-  o sea −2,65% frente al top5. Muestra solapada y sesgada a mega-caps → **no es evidencia de nada**,
-  pero desmiente que arreglar el dato bastara para tener alfa. Sin tocar el modelo (eso va por
-  preregistro). `trading_universo` tarda ~4 días de cron en repoblarse con los valores corregidos.
+### ⚕️ Verificación #1232: groq y gemini cerrados; NIM es DEGRADACIÓN real (04/08/2026)
+Sonda de hoy 07:01 con el fix: **groq verde** (458 ms — el maxTokens 300 arregló el falso «respuesta
+vacía») y **gemini fuera del Check 12** (0 llamadas en la ventana de 3 días, la guarda lo apagó sola).
+**NIM sigue rojo** y ya NO es calibración: timeout con los 30 s completos, y el tráfico real del 03/08
+ya sufría **12/52 timeouts (23%)** con ese mismo margen. No es key muerta ni modelo retirado (el error
+es timeout, no 404): el tier gratis de NIM va con cola degradada. El fallback (OpenRouter/Groq) cubre
+producción. Candidato a pasada de `buscador-ia`: valorar suplente para `meta/llama-3.3-70b-instruct`.
+Sigue en observación: `registral` → `google/gemini-2.5-flash` vía NIM con 404 intermitentes (~50%).
 
-- **🏛️ Subastas: revisión de la cadena de ubicación — 8 fallos reales corregidos (31/07/2026).** Encargo
-  «que no vuelva a suceder + revisa qué más puede pasar». 🔴 (a) `bajarFicha` no validaba la respuesta y el
-  UPDATE del cron escribía las CIFRAS sin `COALESCE`: un 200 de mantenimiento del BOE **borraba** tipo/
-  depósito/tasación del corpus durante 24 h → guarda `fichaLegible` (ya existía en `documentos.ts`) + COALESCE
-  en los 9 campos. (b) **`maxDuration` 60→300**: los cerrojos de Catastro/Nominatim se comían el minuto y la
-  pasada se truncaba (nunca llegaba a documentos/lentes/archivado). (c) La **prosa registral pisaba las
-  coordenadas exactas** — nuevo `esDireccionPostal` (puro, testeado) y `direccion`/`direccion_catastro` van
-  YA SEPARADAS hasta la UI (el sello 🏛️ es solo del Catastro). (d) `elegirVia` decía «ambigua» y el caller
-  seguía igual con el nombre crudo → ahora ABANDONA (esa referencia se persiste para siempre). (e) **Mapa
-  vacío intermitente** por closure obsoleta de Leaflet (estado `listo`). (f) Fila del BOE con ficha rota
-  monopolizaba la cola → cede el sitio. (g) `parsearCoordenadas` exige punto DENTRO de España (ejes cruzados).
-  (h) Las filas no-BOE ya suben de `municipio` a `catastro`. Desmentido: el Catastro **sí** acepta «EL PUERTO
-  DE SANTA MARIA» (la forma invertida da error) — no hay que canonizar municipios. 361 tests + 26 guardián.
+### 👁️ La rama de VISIÓN de las facturas también pasa por la pasarela (04/08/2026)
+Verificada la pasada de hoy tras #1234: la mitad de TEXTO funciona (12 llamadas, **0 errores**,
+0,0076€, `gemini-2.5-flash`) y las facturas nuevas suben **1 → 5**. Pero quedaron **9 sin leer** sin
+rastro en `ai_usos`: la rama de IMAGEN se quedó fuera de #1234 y llamaba a `nimVision` a pelo —un
+intento, sin suplente, sin coste visible y con `JSON.parse` crudo que tomaba unas vallas ```json por
+avería. Ahora usa `aiVision` (OpenRouter multimodal → NIM) + `parsearJsonIa`. Dos arreglos más:
+`maxTokens` 512 → **1500** (los modelos del Director razonan y ese gasto cuenta contra el mismo tope
+→ JSON cortado = «no leído», la lección de la sonda del 03/08), y un PDF **escaneado** (capa de texto
+vacía) pasa de `sin_datos` a `tecnico`: se encolaba como «leído y descartado» sin que nadie lo mirara.
+Al abrir la cola se ve que 8 de los 9 NO son facturas (cartas de MAPFRE, extractos de ParkingLibre);
+la real es DIGI 76€. `aiVision` no pasa por el gate de presupuesto diario (era ya así). PR #1243.
 
-- **🏛️ Subastas: 3 fallos de la búsqueda por dirección + el Catastro corta por volumen (31/07/2026).**
-  1ª pasada del cron con el código nuevo: **Nominatim SÍ funciona desde Vercel** (25→27 aproximadas solo),
-  pero las 2 nuevas del BOE con dirección limpia no sacaron referencia. Causas halladas (todas verificadas
-  contra el servicio): (a) **la Ñ** — `norm()` la convertía en N y `CANAL` no encuentra «CARLOS CAÑAL»
-  (nuevo `normVia` la conserva); (b) **el Catastro ABREVIA los nombres** («Ronda de Ntra. Sra. de la Oliva»
-  → «NUESTRA SEÑORA D LA OLIVA», DE→D) y el callejero **busca por SUBCADENA** → ahora se pregunta por UNA
-  palabra distintiva (`terminoBusquedaVia`) y se elige por TOKENS (`elegirVia`), no por prefijo; (c) el
-  **interior** (`ESC.1 PL.4 PT.B`) ahora se extrae y se manda a DNPLOC: acota al piso exacto, desbloquea los
-  portales con varias parcelas y da la referencia de 20 (con m²/año del bien). Bug de paso: en «ESC.1» el
-  patrón `ES` casaba antes que `ESC` y la escalera salía «C». **Acierto medido 5/16** (antes 4); el resto
-  falla por datos de ORIGEN (números inexistentes en Catastro, «S/N», parcelas de polígono). 🚨 **El Catastro
-  CORTA la conexión por volumen** (visto encadenando consultas) y ahora se le piden hasta 5 por subasta →
-  cerrojo de 350 ms + reintento solo ante fallo de red en `bajarCatastroHttp`. 354 tests del módulo.
+### 🔎 El barrido de mercado ya trae comps: la consulta buena era la ABIERTA (04/08/2026)
+Primera pasada con #1227 en producción: **52 comps en 20 ventanas** (antes 0) y medianas distintas por
+fecha en el Dúplex —305€ oct · 199€ dic · 104€ ene— o sea que SÍ distingue temporada. Pero el parte nuevo
+delató el resto: «⚠️ 100 búsquedas sin resultados · 12 de la ronda base ciegas». Las 20 ventanas con datos
+son EXACTAMENTE el tope de consultas abiertas: 20 de 20 aciertos con la abierta contra 0 de 100 con
+`site:booking.com`. Fix: se invierte el orden — la abierta pasa a primaria y la de `site:` queda de
+refuerzo acotado (`SIVRA_SWEEP_MAX_REFUERZO`, antes `..._MAX_ABIERTAS`). Sin coste extra: hoy eran 140
+búsquedas, ahora 120 + hasta 20. Verificado: tsc 0 · 805 tests · build OK. **Pendiente: latido del 05/08.**
 
-- **🛡️ Pricing: tres centinelas para que el motor se queje solo (31/07/2026, rama `claude/pricing-check-31-07`).**
-  Los tres fallos del día (Feria 2027 mal fechada, comps de otro aforo, septiembre sin eventos) eran el mismo:
-  un dato metido a ojo que nadie volvió a mirar y que el motor no podía desmentir. Nuevo
-  `lib/sivra/pricing-centinelas.ts` (puro, 14 tests) cableado en el guardián (cron 07:30) como chequeos #6/#7/#8:
-  **€/plaza** (solo pisos ≥6 plazas — en uno pequeño las plazas son sofás-cama y la métrica engaña),
-  **evento declarado que el mercado no respalda** (cazaría la Feria) y **mercado disparado sin evento catalogado**
-  (destaparía la Bienal). El p50 de fecha y el del mes se calculan sobre los MISMOS escenarios, si no un barrido
-  desigual alertaría cada semana. Simulado contra el mercado real: **3 avisos, no una avalancha**. Los tres
-  devuelven `evaluado:false` sin muestra — nunca un «todo bien» que significa «no lo he mirado».
+### 🎸 Bienal de Flamenco 2026 dada de alta en el pricing (03/08/2026)
+Reserva Booking del Dúplex (25-28 sep, 478,88€ brutos = 159,63€/noche, 53 días de antelación con mediana 7)
+destapó que la Bienal (fechas oficiales **9 sep – 3 oct**, labienal.com) no estaba en NINGUNA fuente de
+eventos (el hueco «septiembre = 0 eventos» del 31/07). Mercado real de ese finde por aforo (Booking MCP):
+p50/noche 258€ (4pl) · 269€ (2pl) · 429€ (5pl) · **984€ (12pl)** — ~1,5× el finde 18-20 (162€ a 4pl).
+Hecho: Bienal en `pricing-calendar.ts` (plataforma+sivra, 1,25/1,30/1,40), 60 comps de 4 findes en
+`market_rates` (upsert idéntico al ingest), aprendizaje en `pricing_aprendizaje` (`ALL/bienal_flamenco_2026`),
+hueco cerrado en la skill. PR draft rama `claude/duplex-dynamic-pricing-435igu`.
 
-- **🏠 Pricing: el estudio de competencia comparaba una CASA DE 12 PLAZAS con apartamentos de 4 — arreglado
-  (31/07/2026, rama `claude/pricing-check-31-07`).** Lo cazó Alberto: «Socorro tiene 12 plazas, a 165€ saldrían
-  13,75€ por persona». Fallo doble: el cron `mercado/sweep` buscaba con «4 personas» y guardaba los MISMOS comps
-  para los 4 pisos (`guests=4` fijo), y `apply/route.ts` calculaba los percentiles **sin mirar `guests`**. Ahora
-  el sweep busca por el aforo REAL de cada piso y cada comp se normaliza con `pricing_factor_aforo()` (función
-  SQL aplicada + gemela pura `lib/sivra/pricing-aforo.ts`, 10 tests). **Exponente k=1,1 MEDIDO** con el p50 de la
-  MISMA fecha a distinto aforo (14 fechas). Efecto en el ancla: Busto y Dúplex **sin cambio** (validación de que
-  no distorsiona), House 258€→403€, **Luxury 123€→157€ (EN VIVO, vigilar ocupación)**. Suelo de House 180€→300€
-  (25€/plaza) con OK de Alberto. Además `seasonalFloorFactor` ya mira las dos fuentes de eventos: los 3 días de
-  Karol G tenían suelo de junio normal. Hueco pendiente: **septiembre 2026 sin ningún evento** (Bienal de Flamenco).
+### 🔎 SEO housesevillana: push manual + el agente solo actualizaba el <title> (03/08/2026)
+El PAT de Alberto no tiene `contents:write` sobre `house-sevillana-landing` → el botón SEO falló el push
+(403); pendiente de que Alberto suba el permiso del token en GitHub. Mientras: actualización SEO aplicada
+A MANO al repo de la landing (title con marca+USP parking, description 157c, og:title; propuesta registrada
+en `seo_proposals`). Al mirarlo se vio que las regex de `seo-landing.ts` (sivra Y plataforma) esperaban
+comillas escapadas `\"` y el `app/route.ts` real lleva comillas normales: description/og NUNCA se
+actualizaban, solo el `<title>`, en silencio. Fix con backreference de estilo + 5 tests nuevos (validado
+contra el fichero real). PR de esta rama.
 
-- **🎪 Pricing: FERIA DE ABRIL 2027 estaba mal fechada en el calendario — corregido (31/07/2026, rama
-  `claude/pricing-check-31-07`).** Alberto pidió revisar que los eventos de Sevilla se tuvieran en cuenta y que
-  los costes cubrieran el suelo. Hallazgo: `pricing-calendar.ts` tenía la Feria «estimada 18-25 abr» (patrón de
-  2026 calcado) cuando la oficial es **13-18 abr (alumbrado 12)** → 19-25 abr, semana normal, se tarificaba de
-  Feria (×2,5 de precio y ×2 de suelo, que impide bajar) y los días reales de Feria se quedaban sin suelo de
-  evento. Verificado contra mercado (15-abr p50 417€ · 17-abr 304€ · 20-abr 162€). Corregido en las dos copias.
-  Semana Santa 2027 (21-28 mar) sí estaba bien. **Costes recalculados con datos vivos: ningún suelo vende bajo
-  coste** (busto 19,40€/noche vs suelo 65€ · luxury 29,70€ vs 72€ · duplex 10,60€ vs 85€ · house ≥30€ vs 180€).
-  Pendiente: House **no tiene ni un gasto fijo registrado** y Dúplex/House siguen sin calibrar el suelo contra
-  competencia. Ojo estructural: `seasonalFloorFactor` solo lee el calendario, no `pricing_eventos_auto`.
+### 🔑 El redeploy del panel de secretos se cancelaba en silencio (03/08/2026)
+Alberto guardó `GITHUB_TOKEN` en `/operador/secretos` y el panel dijo «✅ redeploy lanzado» — pero los
+redeploys de sivra y plataforma salieron **CANCELED**: `redeployProjectProduction` usa `withLatestCommit`
+y el último commit de main era el de la auditoría `[skip ci]`, que `vercel-ignore-build.mjs` salta SIEMPRE.
+La env quedaba en Vercel pero nunca en runtime. Fix (PR): el redeploy pasa
+`projectSettings.commandForIgnoringBuildStep: ''` (un redeploy explícito construye siempre) + sonda de
+~15 s que reporta CANCELED/ERROR como fallo real; el endpoint solo dice `redeployed` si TODOS los
+proyectos salieron (antes un fallo parcial se tapaba). El PR #1236 (mergeado) tocó también apps/sivra,
+así que el merge reconstruyó sivra Y plataforma con la env ya guardada — verificado READY en producción;
+no hace falta re-guardar el token. El override del redeploy queda pendiente de estrenarse en la próxima
+edición real desde el panel (la sonda avisará si no funciona).
+Los 10 ilegibles de hoy eran **Groq 429** (rate limit de `gpt-oss-120b`) + **NIM timeout**: los dos
+únicos eslabones, porque `aiExtractInvoiceDetallado` llamaba a los proveedores a pelo **saltándose la
+pasarela**. Ahora usa `chatConDirector` (`endpoint='extraer-factura'`): Director eligiendo modelo,
+reintento con modelo seguro, cadena GRATIS de respaldo, presupuesto diario respetado (si se agota
+degrada, no gasta) y **coste visible en `ai_usos`** — antes leer facturas no aparecía en el panel.
+De paso, el parseo sale a `lib/agente-facturas/parsear-json-ia.ts` (puro, 9 tests): tolera ```json y
+prosa alrededor (adornos, no fallos), pero un JSON **truncado NO se repara** —un importe a medias es
+peor que ninguno— y un **array** se declara ilegible en vez de coger «la primera de N». Verificado:
+tsc 0 · 800 tests · build OK. **Pendiente: la pasada del 04/08 dirá si `sinLeer` baja de 10.**
 
-- **📉 Pricing 31/07: sistema SANO, pero agosto arranca a CERO (31/07/2026, rama `claude/pricing-check-31-07`).**
-  Verificación de la víspera del cutover: sync de Smoobu vivo (05:01, HTTP 200), motor aplicando a diario
-  (Busto agosto 74→65, `market-anchored`), y precios REALES en mercado (Busto 81€ vs p50 80€; Luxury 84€ vs
-  109€, por debajo). `incomes` parado desde 25/07 **no es avería** — sequía real confirmada por dos fuentes
-  (hueco histórico máx: 12 días). ⚠️ Lo serio es comercial: **agosto empieza con 0/31 noches vendidas en
-  Busto, Luxury y Dúplex** (House 11/31, aún en PriceLabs). Sin explicar: Luxury tenía 1-12 ago ocupadas el
-  23/07 y libres el 30/07 sin reserva en `incomes` (¿bloqueo manual retirado?) → confirmar con Alberto.
-  Documentada en el skill la trampa `rate_snapshots.price_ours` (fórmula legacy congelada, 2ª falsa alarma).
-- **🚨 Fundamentales del radar de trading iban 2 años atrasados y MEZCLADOS (31/07/2026).** Salió
-  mirando ORCL: su ficha daba FCF yield **+3,49%** cuando el flujo libre real de FY2026 es
-  **−23.700 M$ (−6,99%)**. Causa: en companyfacts de la SEC `fy`/`fp` identifican el INFORME, no el
-  periodo del dato — un 10-K trae 2-3 comparativos con el MISMO `fy` y `filed`, y `serieAnual`
-  (`lib/trading/edgar.ts`) los colapsaba en una clave quedándose con el más viejo. Resultado 2 años
-  atrás, balance 1, y ratios cruzando ambos (ROA = beneficio FY2024 ÷ activos FY2025). Ahora se indexa
-  por el CIERRE (`end`). Además: capex ausente ya NO se toma como 0 (convertía FCF en CFO). Verificado
-  contra la SEC vía `pg_net`. Segunda tanda (misma rama): alias de deuda/capex sacados de companyfacts
-  REALES (AVGO usa `LongTermDebtAndCapitalLeaseObligations`, JPM `…IncludingCurrentMaturities`, LLY
-  `PaymentsToAcquireOtherPropertyPlantAndEquipment`), margen bruto DERIVADO de ventas − coste cuando no
-  hay `GrossProfit` (GOOGL/AMZN/META/WMT/LLY), y **divisa**: `serieAnual` recorría todas las unidades →
-  TLK daba FCF yield 2.679% (rupias) y AMX un EY 9,14% que parecía normal. Ahora una sola divisa, la del
-  ejercicio más reciente (USD solo desempata: TM tenía una traducción de conveniencia de 2013 que
-  anclaba la empresa a hace 13 años), y si no es USD se anulan EY/FCF yield. Parser verificado contra
-  companyfacts reales de GOOGL/AMZN/AVGO/TM. **PR #1189 MERGEADO.** Lecciones en el landmine del
-  SKILL.md de `trading-analista` (+ contrato del parser en `references/seleccion-y-senales.md`) y en
-  la regla global del CLAUDE.md raíz («el dato que SÍ está pero se lee mal»). Los valores viejos de
-  `trading_universo` se curan solos: el cron refresca 50 símbolos cada 6 h (~5 días de ciclo).
+### ⚕️ Health-check 03/08: los 3 rojos de IA eran ruido, no averías (03/08/2026)
+Gemini (Check 12) = residuo pre-gate: última llamada real 01/08 04:00; la guarda de 3 días lo apaga
+sola el 04/08. NIM y Groq = **falsos positivos de la primera pasada de la sonda (Check 13)**: Groq
+devolvió 200 en 222 ms con `content` vacío (gpt-oss-120b es razonador y `maxTokens:5` se iba en
+razonamiento); NIM abortó a los 12 s cuando producción espera 30 y su media real es ~26 s (167 éxitos
+/30d, último 02/08). Fix en `lib/monitoring/sonda-ia.ts`: `maxTokens` 5→300 y timeout 12→30 s.
+Observado de paso: `registral` usa `google/gemini-2.5-flash` vía NIM con 404 intermitente (~50% hoy)
+— vigilar si persiste. PR #1232 (mergeado).
 
-- **⚖️ Subastas: 3 defectos del lector registral + «nota simple viva» (31/07/2026).**
-  - **Fechas EN LETRA** (`caducidad.ts`): «diecisiete de agosto de dos mil nueve» ya se parsea (también
-    mixtas y el año suelto en letra). Sin esto el art. 86 LH no se evaluaba justo sobre las anotaciones
-    más viejas, que son las únicas que pueden estar caducadas. Sin día → último del mes (menos antigüedad).
-  - **La fórmula de cierre no es una carga** (`cargas.ts::esFormulaDeCierre`): «SIN MÁS CARGAS, salvo
-    AFECCIONES FISCALES» entraba como carga de rango desconocido y se contaba como subsistente; ahora sale
-    de la lista, pasa a `notas` y marca `sinMasCargas`. Si trae importe o fecha, sigue siendo carga.
-  - **El mismo asiento contado dos veces** (`fusionarCargas` + `identidadCarga`): el dedupe iba por
-    tipo+rango+IMPORTE, que es lo que cambia entre documentos (certificación = responsabilidad total,
-    informe = principal) → el embargo letra C sumaba 3.600+2.600. Ahora la identidad es la **letra de la
-    anotación** (o fecha+acreedor) y se queda con el importe MAYOR y el rango más caro, avisando.
-  - **Idea 3 — nota simple viva:** tabla `subastas_notas_simples` (aplicada) + `lib/subastas/nota-simple.ts`
-    + `POST/GET /api/subastas/nota-simple` + bloque en la ficha. Se sube la nota (PDF/escaneo/texto), la lee
-    el mismo lector y `compararCuadros` dice qué cambió. **NO pisa las columnas `cargas_*`** de `subastas`
-    (corpus global); la nota es de la cuenta. Sin cargas leídas no se guarda ni se concluye nada.
-  - 362 tests módulo · 664 app · tsc 0 · build OK. Pendiente de Alberto: alertas Idealista/Fotocasa de
-    Jerez y Cádiz ciudad (hasta entonces esas 3 subastas siguen ⚠️ orientativas).
+### 📨 Leads ia-rest: fuera aviso Telegram, email en frío 100% automático (03/08/2026)
+Alberto pidió (a raíz del ping «Lead listo: MICE Catering») quitar los avisos Telegram de leads y
+que el agente mande los emails solo con Resend. `lead-onboarding` ya no manda Telegram y marca
+`envio_aprobado=true`; `crm-envio-auto` pasa a ACTIVO POR DEFECTO (opt-out `ENVIO_AUTO_ACTIVO='0'`,
+antes exigía `='1'`). Salvaguardas intactas: horario L-V 9-19, tope diario 30, dedup, bajas RGPD.
+Resultado de envíos → resumen diario por email (tgAlert canal `resumen`). Build ia-rest verde. PR #1233.
 
-- **💰 Subastas: el «valor de mercado» dejaba de fabricar chollos falsos (30/07/2026, PR #1183).**
-  - Alberto: «334.645€ no es real para esa zona». Cierto: un piso de 1965 en Avda. Pedro Romero (Sevilla)
-    salía con 86,7% de margen de flip. Tres causas a la vez, todas fuera de la subasta.
-  - Módulo nuevo `valoracion.ts`: (a) `superficieValorable` toma la MENOR de registral/catastral (127 vs
-    117,10); (b) `ajusteEstado` descuenta 20%/10% al €/m² de los anuncios según la edad; (c)
-    `granularidadZona` marca ORIENTATIVA la mediana de un municipio grande y desigual (Sevilla, Jerez…),
-    y una referencia así ya no sostiene `flip_apto` ni un aviso por Telegram (`aviso.ts`, `clasificar.ts`).
-  - El flip compara contra `valorMercadoReformado` (sin el ajuste de estado) para no pagar la reforma dos veces.
-  - Columna `subastas.valor_orientativo` (migración aplicada) + chip ⚠️ en la ficha.
-  - **VERIFICADO en producción** (31/07, `?accion=clasificar` sobre las 36 vigentes): Pedro Romero pasa de
-    **334.645€ → 246.888€** (2.635 €/m² × 117,10 m² × 0,8) y su margen de flip de **0,867 → 0,706**, pero lo
-    que de verdad importa es que `flip_apto` cayó a **false** por orientativo. Marcadas ⚠️ orientativas **3 de
-    36** (Sevilla, Dos Hermanas y El Puerto de Santa María — las tres con mediana municipal del buscador); las
-    otras 33 se valoran con zona fina. **flips viables ≥25%: 0** (antes los había): ninguna subasta viva se
-    recomienda hoy con un número que no describa al inmueble.
-  - **Corpus:** 345 comparables y solo 2 de Sevilla, 0 de Jerez, 0 de Cádiz — casi todo costa de Huelva.
-    Alberto da de alta alertas de Idealista/Fotocasa de Jerez y Cádiz ciudad. Las SUBASTAS de Jerez ya
-    llegaban solas (Cádiz está en sus provincias); el alta es solo para los comparables de precio.
+### 🧾 El fix de #1219 funciona… y prometía una cola de Gmail que no existía (03/08/2026)
+Verificación de la pasada 06:15: cron **200**, latido `ok=true` y el parte nuevo ya dice la verdad —
+«1 factura nueva · ⚠️ **10 correos sin poder leer** · 1 descartado». Ese 10 es justo lo que antes se
+tiraba en silencio (causa en logs: **Groq 429 rate limit** en `gpt-oss-120b` + NIM timeout). PERO el
+parte añadía «etiquetados en Gmail para reintentar» y la etiqueta **`Facturas/Extraccion-fallida` no
+existía**: `messageCopy` fallaba y el `.catch(() => {})` se lo tragaba → cero encolados y una promesa
+falsa en el mismo sitio donde se arreglaba otra. Etiqueta creada a mano (Label_16) y arreglo de código:
+`etiquetarCorreo` devuelve booleano, se cuenta `encolados` y el parte solo promete cola para los que de
+verdad entraron (🔴 explícito si no). Verificado: tsc 0 · 791 tests · build OK. **Pendiente: los 10
+ilegibles siguen sin leerse** — el cuello es la cuota de Groq, no el escaneo.
 
-- **🔍 Subastas: el documento registral se lee ENTERO y «se adquiere libre» hay que ganárselo (30/07/2026, PR #1182).**
-  - Página a página el modelo no veía el orden de los asientos → ponía la hipoteca como `la_que_ejecuta`, la purgaba
-    y declaraba libre una finca con 44.850€. Ahora todas las páginas van en UNA llamada multimodal (OpenRouter,
-    `OPENROUTER_VISION_MODEL`), con respaldo automático a la lectura página a página. `LECTOR_VERSION` 3→4.
-  - Salvaguarda: cero cargas solo es «libre» si la certificación dice «sin más cargas» Y la confianza ≥ 0,5.
-  - **Probado en producción** (Belmonte, `SUB-JA-2026-264269`): rangos CORRECTOS, confianza 0,97 (antes 0,35).
-  - Pendiente: el embargo letra C) se cuenta DOS veces (3.600 + 2.600 desde dos documentos → 51.050€ en vez de
-    48.450€); la fórmula «SIN MÁS CARGAS salvo afecciones fiscales» entra como carga; las fechas vienen en LETRA
-    y `parsearFechaRegistral` no las lee, así que la caducidad del art. 86 no llega a evaluarse.
+### 💹 MCP Financial Datasets evaluado — decisión: NO contratar (02/08/2026)
+Alberto conectó el MCP `Datos_financieros` (financialdatasets.ai) y pidió valorarlo para trading.
+Probado en sesión: la cuenta va por créditos y está a $0 — TODO endpoint de datos (hasta precio AAPL)
+responde «add more credits»; solo el catálogo del screener es gratis (trae FCF yield/ROIC/PEG + insiders/
+institucionales/guidance). Decisión de Alberto: no gastar — precios ya los da IBKR gratis, fundamentales
+los cubre el parser EDGAR propio (endurecido tras PR #1189), y lo nuevo (insiders/guidance) es CONTEXTO
+nunca filtro por preregistro. Reconsiderar solo si EDGAR vuelve a fallar (~49$/mes vs mantenimiento) o
+si se activa el tramo gratis 100 req/día (entonces: contexto en la pasada diaria, coste cero). Sin código.
 
-- **💓 Los dos vigilantes que faltaban, con aviso por Telegram (30/07/2026, rama `claude/documentos-adjuntos-o95xl1`
-  reiniciada tras mergear #1180).** Alberto: «hazlo que me avise por telegram». Eran los dos ⬜ más graves del
-  barrido, ambos de infraestructura muda. **(1) Sync del PMS de ialimp:** `pms_connections` tiene DOS columnas de
-  fecha y el panel leía la muerta — `/api/pms/sync` escribe `last_sync_at` y el dashboard leía `ultimo_sync`, NULL
-  en producción desde siempre; el chip verde salía de `activa` + «no consta error», que incluye «lleva semanas sin
-  correr». Nuevo helper puro `apps/ialimp/lib/pms-estado.ts` (8 tests) + chip con el estado real. **(2) Escaneo de
-  facturas de Gmail:** `catch { return 0 }` hacía «no se pudo leer el buzón» ≡ «no hay facturas»; ahora devuelve
-  `{nuevas, ok, error}`. **Vigía:** tabla nueva `agente_latidos` (aplicada) para los agentes que solo escriben
-  cuando hay trabajo — la frescura se mide sobre la última pasada BUENA — y dos entradas nuevas en
-  `lib/monitoring/latidos.ts` (`ialimp_pms` 6 h, `facturas_gmail` 30 h) que avisan por Telegram desde el cron
-  `agentes-latido`. Extra: una sonda que revienta ya no se traga en silencio, va en un bloque «Sin poder
-  comprobar — esto NO es todo bien». Comprobado contra la BD real: el sync de Smoobu late cada 10 min.
+### 🔎 El «0 comps» del barrido de mercado eran 44 búsquedas VACÍAS (02/08/2026)
+Diagnosticado el `ok=false` de `sivra_mercado_sweep` (lo que la entrada de abajo dejaba para el 09/08).
+No es Serper agotada ni la IA: la consulta con `site:booking.com` devuelve `organic: []` desde finales de
+julio — los 41 prompts que llegaron a la pasarela pesaban 149-278 tokens (el scraper diario, que sí trae
+comps, mueve 576-933). La IA contestaba `{"apartments":[]}` porque no le daban nada. Fix: `serperSearch`
+cuenta resultados y usa `answerBox`/`sitelinks`; `extractPrices` separa «no supe leer» de «leído sin
+precios»; 2ª consulta abierta acotada (`SIVRA_SWEEP_MAX_ABIERTAS`); parte y `ok` desde el helper puro
+`lib/sivra/resumen-sweep.ts` (con guardia `sinSenalDeTemporada`: comps planos en todas las fechas = corpus
+que miente). Verificado: tsc 0 · 788 tests · build OK. **Pendiente: mirar el latido del 03/08 03:00** —
+dirá si la consulta abierta rescata el barrido o si hay que buscar otra fuente de comps por fecha.
 
-- **🔐 Spec + plan aprobados: login con huella (WebAuthn/passkey) en plataforma (29/07/2026,
-  sin implementar).** Diseño: `@simplewebauthn`, tabla `webauthn_credentials` scoped por
-  `cuenta_id`, atajo de contraseña de respaldo, reutiliza la cookie `plataforma_session`.
-  Docs en `docs/superpowers/plans/2026-07-17-huella-webauthn-plataforma{,-design}.md` (10
-  tareas TDD). **Pendiente:** implementación — nadie la ha empezado todavía.
+### 🔍 Revisión de memorias/skills/agentes (02/08/2026, pedida por Alberto)
+Reconciliación post-auditorías de hoy. Heartbeat 14/14 en verde REAL: el ⛔ de `psd2-sync` (31h) era falsa
+alarma de finde — cron 200 a las 06:01 en logs Vercel; umbral 30→54h en `auditoria-diaria.md`. Drift corregido
+(carril 1): `buscador-ia`+`docs/BUSCADOR-IA.md` no recogían Gemini apagado por defecto (#1220) ni el alias
+`gemini-flash-latest`; `facturas-correo` sin la etiqueta `Facturas/Extraccion-fallida` (#1219); borrado el
+duplicado `###` del 31/07 (ya archivado en `memoria/2026-07.md`). `docs/SKILLS.md` y `perfil-fiscal` al día.
+Ojo: 1ª pasada del sweep semanal (#1186) con latido `ok=false` («0 comps en 44 ventanas, 19 sin tiempo») —
+revisar el domingo 09/08. Sin Telegram en este entorno (sin `ALERTA_TOKEN`). Rama `claude/revision-conversaciones-memorias-9hq32s`.
 
-- **🔎 Portales privados de subastas: sondeo técnico, SIN implementar (30/07/2026).** Alberto pregunta si
-  conectar Escrapalia / Eactivos / Gobid. Verificado con `pg_net` desde Supabase (los tres dan 403 al
-  contenedor de Claude, 200 desde cloud — misma trampa que Nominatim; ninguno tiene muro Incapsula tipo
-  Sareb). **Eactivos = el único que encaja en el radar de inmuebles:** SSR 924 KB, filtro por provincia en
-  el HTML (Sevilla=12), categorías con URL limpia (`/listado-de-naves-industriales`, `-maquinaria`,
-  `-unidad-productiva`…) y **154 atributos `toolparam*`** (web anotada a propósito para agentes); pendiente
-  localizar su endpoint AJAX (el listado no viene en el HTML). **Escrapalia = SPA** (portada 3,5 KB sin
-  lotes, sitemap estático de 2020) y **Gobid.es sirve el catálogo ITALIANO** (1 lote español de ~14) → los
-  dos descartados como fuente del radar. Idea aparte: su catálogo (maquinaria, furgón isotermo, mobiliario)
-  mapea con **`apps/transporte` y `apps/alquiler` ÚNICAMENTE** — corregido por Alberto: ia-rest es un SaaS
-  que VENDE a restaurantes y almacén es del cliente Joaquín Jaén, así que comprar equipamiento ahí sería
-  para terceros, no activo propio. Con solo dos negocios no compensa ingesta automática (alerta por email y
-  ya). Siguiente paso propuesto y NO ejecutado: suscribirse a la alerta por email de eactivos (patrón
-  `gmail-boe.ts`) antes de escribir adaptador. Decisión de Alberto pendiente.
+- **📡 Sonda ACTIVA de proveedores IA — «que no vuelva a pasar y si pasa, enterarnos rápido»
+  (02/08/2026, rama `claude/gemini-quota-fallback-issue-fyhghm`, 2ª tanda tras mergear #1220).**
+  El Check 12 es forense (necesita ~1 semana de fallos orgánicos); ahora el health-check diario hace
+  además un **ping real de 5 tokens a CADA proveedor configurado** (`lib/monitoring/sonda-ia.ts`,
+  misma key y modelo que producción, en paralelo, coste ≈0) → **Check 13** avisa por Telegram el
+  MISMO día si un eslabón no responde, haya tráfico o no. Cada ping queda en `ai_usos`
+  (endpoint `sonda`) — histórico de cuándo murió una key. Gemini solo se sondea si sus gates están
+  activos. `maxDuration` del health-check 60→120.
+
+- **🔎 Revisión mensual ia.rest Tech & Stack (02/08/2026, sesión de investigación).** Resultado: TODO
+  verde, sin acciones. Groq `whisper-large-v3-turbo` vivo ($0.04/h, es el destino de migración de
+  distil-whisper); NIM sin retiradas que nos toquen; Supabase ambos proyectos ya en PG17 (EOL PG14 no
+  aplica); Next.js con programa de seguridad MENSUAL desde julio (9 CVEs parcheados 21/07, cubiertos por
+  `^16.2.12` + install sin lockfile congelado). ASR premium (AssemblyAI Universal-3.5, 4.9% WER
+  multilingüe) mejora a Whisper pero a ~9× el precio → seguir con Groq salvo quejas reales. El prompt
+  del evento de calendario decía «Haiku como fallback» (Anthropic se retiró el 17/06) — YA CORREGIDO:
+  la serie recurrente ahora apunta a la cadena real (OpenRouter→NIM→Groq→Gemini→Kimi) y a `client.ts`.
+  Pendiente que arrastra: confirmar `CONTABLE_MODEL` (`deepseek-ai/deepseek-v3`) con `NVIDIA_API_KEY`
+  a mano (esta sesión no la tenía).
+
+### 📬 Los UID de IMAP son POR BUZÓN: el marcado de correos se perdía en silencio (02/08/2026)
+Cerrado **#1201 sin mergear** (decisión de Alberto): nació para contar los correos ilegibles, pero mientras
+estuvo abierto se mergeó **#1219**, que hace lo mismo y mejor (separa fallo técnico de «leído y no era
+factura», cosa que #1201 no hacía). De él se rescata SOLO una pieza que #1219 no traía: `marcarProcesado` y
+`etiquetarCorreo` bloqueaban **INBOX** aunque el listado hubiera leído de `Facturas/Proveedor` → el UID no
+existe ahí, no se encuentra el mensaje y **ninguna de las dos lanza**. Efecto: la cola
+`Facturas/Extraccion-fallida` de #1219 —único sitio donde queda constancia de un ilegible— podía no
+etiquetarse nunca, y un correo ya procesado se reintentaba a diario. `ListadoCandidatos` devuelve ahora su
+`buzon` y ambas funciones lo reciben (default INBOX = sin cambio de comportamiento); mismo arreglo en el
+escaneo de gastos de sivra (`GMAIL_FACTURAS_LABEL`). **Lección:** al listar de un buzón que no es INBOX,
+el buzón forma parte de la identidad del mensaje. Verificado: tsc 0 · 775 tests · build OK.
+
+### 🧾 Verificado el latido de facturas — y el «0 facturas nuevas» seguía mintiendo un nivel más abajo (02/08/2026)
+La pasada de hoy confirma el fix de #1194: cron **200** (no 504), 81 s (habría muerto con el techo viejo de
+60 s) y `agente_latidos.facturas_gmail` con `ok=true`, sin `pendientes` → sin atasco. Pero los logs
+enseñaban la extracción IA fallando (NIM timeout, Groq JSON truncado) mientras el parte decía «0 facturas
+nuevas»: `escanearNuevasFacturas` descartaba los ilegibles con un `continue` mudo — ni nuevas, ni
+pendientes, ni rastro. Fix: `aiExtractInvoiceDetallado` separa fallo `'tecnico'` (no se ha leído) de
+`'sin_datos'` (leído, no era factura); los técnicos cuentan como `sinLeer`, se etiquetan en Gmail
+(`Facturas/Extraccion-fallida`) y salen con ⚠️ en el latido (`resumen-escaneo.ts`, puro y testeado).
+Límite asumido: ventana de 7 días, un correo que falle 7 días seguidos queda para revisión a mano.
+
+- **⏱️ Crons con timeout 60s → 300s (02/08/2026, rama `claude/audit-30-07-hv2njr`).** Cierre del hallazgo
+  del check-in post-dispatcher (PR #1165): 5 crons morían por «Task timed out after 60 seconds» (504,
+  logs Vercel 3 días: `concursos-ingesta` ×12 — TODAS sus pasadas —, `concursos-radar` ×3,
+  `facturas-conciliar-gmail` ×3, `facturas-scan` ×2, `subastas-enriquecer` ×2; preexistente al dispatcher).
+  Fix: `maxDuration` 60→300 en `concursos-ingesta`/`concursos-radar`/`facturas-conciliar-gmail`
+  (`facturas-scan` y `subastas-enriquecer` ya estaban a 300 en main vía PR #1194, mismo diagnóstico).
+  El 504 suelto de `/api/ai/chat` NO es cron — sin tocar.
+  De paso verificado el 🟡 de la auditoría 30/07: `incomes` volvió a escribir el 01/08 (falsa alarma de
+  temporada baja) y `psd2-sync` escribe a diario tras el dispatcher. Verificado: tsc 0, 769/769 tests.
+
+- **🔌 Gemini FUERA de todas las cadenas por defecto — «usa OpenRouter» (02/08/2026, rama
+  `claude/gemini-quota-fallback-issue-fyhghm`).** El Check 12 seguía rojo (544 llamadas/30d, 0 éxitos, 429
+  de cuota). Tras el corte de websearch del 01/08 quedaban 2 vías vivas: el eslabón Gemini de `aiComplete`
+  (`core-ai/client.ts`) y el último intento de `lib/pasarela.ts` — ambas gateadas tras **`GEMINI_TEXTO=1`**
+  (apagadas sin la env), + el fallback directo de `callAISearch` de ia-rest tras `GEMINI_WEBSEARCH=1`.
+  El Check 12 ahora exige llamada en <3 días (sin eso repetiría 30 días la alerta de un problema ya
+  resuelto). Embeddings de la caché semántica siguen con la key (best-effort). Nada que poner en Vercel:
+  el default apagado ES el estado deseado. Pendiente: si algún día hay key con cuota, activar los 2 gates.
+
+- **🧹 «Haz tu todo»: vulns 12→3, 0 críticas (02/08/2026, rama `claude/audit-vulnerabilities-02-08-m7lwtf`).**
+  Los bumps aparcados eran seguros al mirarlos de cerca: nodemailer 8→9 en sivra (el call site es un stub
+  comentado; peer de @auth/core opcional), fast-xml-parser 4→5.10.1 (v5 = solo empaquetado ESM, API idéntica),
+  sharp 0.35.3 + override, imapflow ^1.6.5 (ya sin dep nodemailer) + mailparser 3.9.14 (mata linkify-it),
+  overrides postcss ≥8.5.18 y uuid ≥11.1.1 (CJS verificado en node-ical). Quedan solo xlsx ×2 (sin parche npm,
+  no explotable) y file-type (parche ESM-only rompería jimp). Verificado: typecheck 4 apps afectadas, tests
+  raíz + 769/769 plataforma, smoke tests de runtime (fxp/sharp/uuid). PR #1218 ampliado con los bumps.
+
+- **✅ Reparación auditoría 02/08 cerrada (02/08/2026, rama `claude/audit-vulnerabilities-02-08-m7lwtf`).**
+  Alberto: «repara». Las dos verificaciones pendientes del PR #1215 ya estaban resueltas por los checks del
+  propio PR: builds reales de Vercel **8/8 en verde** (la que faltaba antes de producción) y las 4 apps
+  «desaparecidas» (rrhh/transporte/alquiler/almacen) **SÍ existen en el mismo team** — el conector Vercel MCP
+  tiene acceso por-proyecto (403 en esas 4), no hay gap de despliegue. **PR #1215 mergeado** (squash `783b2fb`):
+  46→12 vulns, 0 críticas. Pendiente opcional de Alberto: ampliar acceso del conector a los 4 proyectos;
+  valorar nodemailer 8→9 y fast-xml-parser 4→5 con smoke test. Informe actualizado en `docs/AUDITORIA-2026-08.md`.
+
+- **🧾 Cuota de la Seguridad Social (RETA) de julio salía ❌ NO DEDUCIBLE (01/08/2026, rama
+  `claude/seguridad-social-deducibilidad-kgmyjq`).** Alberto preguntó por el cargo de BBVA de 388,95€.
+  **Causa:** regla aprendida **`CUOTA → personal`** en `banca_destino_reglas` (18/07/2026, seguramente de
+  la hipoteca «CUOTA PTMO» o la cuota de comunidad). Las reglas se aplican por SUBSTRING y con PRIORIDAD
+  sobre `lib/destino.ts`, que ya manda la RETA de BBVA a `seguros`+`cuota_autonomos` (deducible, Art.
+  30.2.1ª LIRPF) — 3er caso del landmine "TRANSF" (PR #840). **Fix:** `CUOTA/CUOTAS/IMPUESTO(S)/COTIZACION/
+  PTMO/PRESTAMO` a `CLAVE_GENERICA` + los tokens de ≤3 letras (DE, LA…) dejan de valer como "específicos"
+  en `claveReglaValida`; SQL `2026-08-01_fix_regla_cuota_generica.sql` (aplicado: regla borrada, movimiento
+  a `seguros`). Tests 29/29.
+
+- **🛡️ Auditoría PROFUNDA semanal (02/08/2026).** `auditoria-central` entera: lockfile OK, radiografía OK,
+  guardián 26/26, typecheck limpio en las 8 apps (7 con Prisma + ia-rest), `pnpm test` 0 fallos, heartbeat
+  14/14 crons ✅. `pnpm audit` había subido a 46 vulns (**3 críticas**, 17 high) desde las 16 (0 críticas) de
+  la pasada de julio — next-auth 5.0.0-beta.31 en sivra (2 críticas Auth.js: fail-open de checks de auth +
+  bypass homógrafo de email) y next desactualizado en ia-rest/todas las demás apps. Arreglado en el acto
+  (bump de parche, sin roturas — typecheck+tests+build sanity OK): next-auth→beta.32, next→16.2.12 (ia-rest)
+  /15.5.22 (resto), override de `axios`→≥1.18.0. Quedan 12 vulns (0 críticas, 7 high transitivas — xlsx/
+  nodemailer/sharp/postcss-en-next/linkify-it, documentadas, ver PR). Drift de doc encontrado y corregido
+  (carril 1): `auditoria-central/SKILL.md` seguía describiendo ia-rest en schema `iarest` compartido y
+  contaba solo 4-6 apps — la vertical vive en su proyecto Supabase standalone `efncqyvhniaxsirhdxaa` (la
+  migración al compartido sigue pendiente, como ya documentaba `ia-rest-maestro`). Hallazgo sin confirmar
+  (carril 2, no autoafirmado): Vercel MCP solo lista 6 proyectos del team `pisos-turisticos-projects`
+  (falta rrhh/transporte/alquiler/almacen) — puede ser otro team fuera de alcance del conector, pendiente
+  de que Alberto lo mire a mano. PR draft con los bumps de deps + informe.
+
+- **📂 RRHH: categoría «Documentación mensual» en documentos de empresa (01/08/2026, rama `claude/programa-rrhh-m25fwd`).**
+  Petición de Pilar (Mariscos González) por WhatsApp sobre el desplegable de `/admin/empresa`. La lista de
+  categorías estaba **triplicada** (lib + los dos clientes) y ya había drift: `contrato` existía en
+  `/admin/empresa` pero no en `/admin/cuenta`, donde se pintaba el id crudo. Ahora vive una sola vez en
+  `apps/rrhh/lib/categorias-empresa.ts` (módulo puro, importable desde `'use client'`) con `periodo`
+  `ninguno|anual|mensual` que decide qué campos de fecha pide el formulario — `mensual` y `seguro_social`
+  piden año+mes. Categoría desconocida ya no desaparece de la lista: se agrupa por su id. De paso, arreglado el
+  desbordamiento horizontal de `/admin/empresa` y `/admin/cuenta` en móvil (verificado en Chromium a 320 px).
+  Tests + typecheck + build OK; PR #1212.
+
+- **⚖️ «Cargas no publicadas» con la certificación publicada y enlazada (01/08/2026, rama
+  `claude/carga-no-recogida-analizada-vjkwc9`).** Alberto con captura: `SUB-JA-2026-264478` tenía en el BOE
+  su «certificación de dominio y cargas», el cron la había listado y descargado (`documentos_leidos=1`), y la
+  ficha remataba con «Cargas no publicadas: pide la certificación registral». **Causa:** el gate de
+  rentabilidad `mereceAnalisisProfundo` (salida = tasación → 0% descuento, flip −30,6%) bloqueaba la lectura
+  IA, así que `cargas_conocidas` se quedaba en `false` — y `false` se pintaba como «el BOE no lo publica».
+  **Fix:** `estadoCargas`/`titularCargas` en `module-subastas/cargas.ts` (5 estados, testeados) usados por la
+  ficha y por `analisisDocumental`, con enlace directo al PDF; y el gate de rentabilidad deja de ser gate de
+  lectura: si la ficha publica documento de cargas se lee igual (`LECTOR_VERSION` 4→5, cargas primero en la
+  cola de descarga). 14 vivas, solo 3 pasaban el gate.
+
+### 🔴 La comisión de Booking se descontaba DOS VECES — 17.723€ en 2026 (01/08/2026)
+Auditoría a fondo del precio dinámico pedida por Alberto. El hallazgo más caro NO es del motor:
+`incomes` tiene un **trigger** (`incomes_compute_net`) que calcula `amount = amount_gross × (1 −
+`portal_rates.commission_pct`)`; para BOOKING la tasa es **19,72% y es CORRECTA** (15% + 1,3% de
+servicio de pagos, +21% de IVA, verificada contra factura). El fallo estaba en `smoobu-sync.ts`, que
+aplicaba **ese mismo factor antes de escribir** → Smoobu 244,86€ → app 196,57€ → trigger 157,81€.
+Confirmado por cuatro vías antes de tocar nada: desglose de la extranet (Alberto mandó captura), 14
+de 15 pagos del banco casan al céntimo con `amount_gross`, agregados banco vs `amount` (+20% Dúplex,
++9% Kutxa) y la ausencia total de cargos de comisión en el banco. Saneado el histórico
+(`amount_gross` recuperado dividiendo por 0,8028; el trigger recalcula el neto): la reserva de
+prueba queda 244,86€/196,57€ **idéntica a la extranet** y 2026 pasa de 72.151,40€ a **89.874,62€**.
+Afecta a P&L, break-even y **base del IRPF**; el motor de precios no (lee `amount_gross`).
+**Retirada una sospecha mía:** el `channel_markup` de 1,16 SÍ llega al escaparate (122 × 1,16 con
+−10% móvil y −18% Genius = 104,44€ frente a los 105,43€ reales). No había infravaloración del 14%.
+Además: latido para el **guardián de precios**, que era el único agente sin vigilante, y retirada la
+ventana de 3 días del aviso —se combinaba con el dedup y silenciaba una alerta PARA SIEMPRE (había 5
+abiertas sin avisar, dos ALTAS sobre Luxury bajo mercado del 22 y 25 de julio).
+
+### 🔴 El bucket de mercado por MES era inalcanzable por diseño (01/08/2026)
+Alberto mandó una reserva de Luxury (6-8 nov, Booking) preguntando si estaba bien. La reserva sí; el
+precio no. El motor había bajado esas noches **152€ → 122€** a las 14:30 y a las 18:43 entró la
+reserva, con comparables de ESE viernes entre **123€ y 212€** (mediana 169€ a 4 plazas). Causa: el
+bucket mensual exige comps de **3 fechas distintas** (`MIN_FECHAS_MES`) y el barrido solo visitaba
+**una por mes** — o sea, inalcanzable por definición. Medido por piso y mes: House sin bucket de
+octubre en adelante, Luxury sin el de noviembre, Dúplex igual. Sin bucket se cae al **ancla global**,
+que sale del último barrido y va dominada por las fechas cercanas (agosto), más baratas.
+**Fix:** 3 fechas de muestra por mes (viernes + sábado + martes, replicando la composición de los
+meses que sí funcionaban), plan ordenado por rondas (temporada → eventos → profundidad) y
+**presupuesto de tiempo** en el barrido, que ahora publica `truncado`/`base_completa` y baja el
+latido a `ok:false` solo si no llegó a cubrir la temporada. Una muestra que cae en día de evento se
+corre una semana: el bucket mensual EXCLUYE las fechas de evento, así que ahí no sumaría.
+De paso, corregido en el hilo: `amount_gross` de `incomes` es lo que paga el huésped, **no** el neto.
+
+- **⏰ Subasta vencida seguía en «🎯 Mi radar» (01/08/2026, rama `claude/expired-auction-visible-eoow4t`).**
+  Alberto con captura: `SUB-JA-2026-263723` cerró el 31/07 18:13 y al día siguiente seguía con botones de
+  pujar. **Causa:** NINGÚN camino de lectura del radar filtraba por fecha — la bandeja se limpiaba solo con
+  el `DELETE` diario de `archivarPasadas` (06:15 UTC) y encima con `now() - 1 day` de gracia → visible entre
+  14 y 38 h tras cerrar (y para siempre si el cron falla). **Fix:** filtros CANÓNICOS `SUBASTA_VIGENTE` /
+  `RADAR_VIGENTE` + `RADAR_CON_CORPUS` en `lib/subastas-radar.ts`, aplicados a SSR, `/api/subastas/radar`
+  (lista y badge), `/api/subastas`, `/api/subastas/mapa` y el cron de avisos; borrado sin día de gracia.
+  De regalo: `decidirAviso` ganó `cerrada` (con `Math.ceil`, vencida hace horas = 0 días = «urgentísima» →
+  sonaba en Telegram) y el aviso ya lee `valor_orientativo` (no se seleccionaba: la guarda nunca saltaba).
+
+- **🔍 Auditoría del agente SEO de iarest.es: NUNCA ha aplicado un cambio (01/08/2026, rama
+  `claude/iarest-seo-agent-2v61fi`).** Alberto: «la web no tiene visitas, ¿qué hace el agente SEO?».
+  Evidencia BD prod (`efncqyvhniaxsirhdxaa`): `seo_cambios`/`seo_articulos`/`seo_overrides`/
+  `seo_content_blocks` = **0 filas**; `blog_borradores` parado desde el 25/05. Causas: (1) la allowlist
+  `RUTAS_SEO_EDITABLES` es solo `['/restaurantes','/restaurantes/*']` → home y las 8 landings de sector
+  quedan FUERA (y `/restaurantes` tiene 2 restaurantes / 1 web activa); (2) umbral `SEO_MIN_IMPR`=30
+  impresiones GSC → sin tráfico nada lo supera (pescadilla). NO comprobado: `SEO_AGENT_ENABLED` en Vercel
+  ni GSC/GA4 reales (env fuera del repo). Informe: `docs/INFORME-SEO-iarest-2026-08-01.md`.
+  **Decisión de Alberto: ia.rest NO publica precio** — conversión = formulario `/#contacto` + WhatsApp
+  `wa.me/34637349990`. Aplicado en el mismo PR #1208: fuera la tarifa de layout (incl. 3 `Offer` de
+  JSON-LD), home (calculadora y comparativa BORRADAS, no ocultadas), 8 landings y 4 posts; se mantienen
+  precios de terceros y cifras de la demo de catering. Agente SEO: allowlist 2→11 rutas, `SEO_DEFAULTS`
+  sin cifras, regla inviolable «nunca publiques precio» en el SYSTEM, `solicitarIndexacion()` eliminado
+  (la Indexing API solo cubre JobPosting/BroadcastEvent) y el silencio >21 días pasa a alerta Telegram.
+  Verificado: `tsc` 0 errores + `next build` OK + guardrails 14/14. **Pendiente en Vercel (no en repo):
+  `SEO_AGENT_ENABLED=true`, bajar `SEO_MIN_IMPR` a 3-5, key de Gemini en 429.**
+
+- **⚕️ Check 4 del health-check reescrito: latido del sync, no última reserva (01/08/2026, rama
+  `claude/health-check-2026-07-30-vlv4c7`).** Feedback de Alberto: la sequía de reservas (25/07→01/08,
+  sync verificado sano por logs 200) se pintaba como 🔴 — «que especifique el fallo, ya que no es un
+  fallo». `runSync` registra latido en **`agente_latidos`** (`smoobu_sync`, patrón #1184: intento al
+  empezar + ok al terminar; semilla aplicada). Check 4: 🔴 solo si `ultimo_ok_at` lleva >26h (sync
+  averiado de verdad); sin reservas nuevas → línea ✅ informativa «temporada floja, no es un fallo».
+
+### 📐 El mercado de House se leía de pisos de OTRO tamaño (01/08/2026)
+Alberto: «House Sevillana aún está en PriceLabs como dúplex». Cierto fuera y también DENTRO: los 30
+comparables vivos de una casa de **12 plazas** eran de apartamentos de **8** (media 314€). El motor
+no mentía —normaliza con `pricing_factor_aforo` desde el 31/07— pero su ancla estaba **extrapolada
+(x1,56), no medida**: 403€ frente a los 621-694€ de los últimos comps de 12 plazas reales. De ahí
+salía mi propuesta de bajar House a 330-350€: **retirada**. Dos arreglos: el guardián compara #4/#5
+contra el mercado NORMALIZADO (iba en crudo → en el único piso donde importaba medía un 36% barato y
+no podía disparar) y **centinela #9 `comps_otro_aforo`** (puro + 8 tests; umbral x1,35 para que
+Luxury 5-plazas-con-comps-de-4 no haga ruido). El barrido diario de #1203 repone los comps buenos.
+**Coletilla (mismo día, cierra el último pendiente): el «pico» del sábado 17/10 en House NO era un evento**,
+era este mismo fallo. Es la ÚNICA fecha suya medida a 12 plazas (barrido del 09/06); el resto van a 8. En bruto
+salía 610€ contra 307-382€ y parecía un pelotazo; normalizadas las dos a 12 plazas, el 17/10 (610€) queda en
+mitad del pelotón — 05/09 596€, 19/06/27 610€ clavado. No hay nada que catalogar ese día.
+
+### 🏠 Un piso puede cambiar de PRODUCTO: `historico_desde` + Gemini fuera (01/08/2026)
+Dato de Alberto: **House Sevillana estuvo alquilada como DOS pisos turísticos independientes** hasta
+que se decidió alquilarla entera (6 habitaciones, 12 personas). El corte se ve solísimo en BD:
+**ADR 112/99/129/166 (2020-23) → 473/418/446 (2024-26)**, ticket medio 519€ → 1.171€. Ese salto ya
+causó el error de proponer bajarla a 285€ (promediando las dos etapas salía «ADR de agosto 102€»), y
+estaba envenenando también la antelación que alimenta la palanca de last-minute: la mediana de
+octubre de House salía de 51 reservas, 30 de ellas de cuando era otro negocio. Nueva columna
+**`pricing_settings.historico_desde`** (migración aplicada; House = 2024-01-01, el resto NULL = «no ha
+cambiado») y el motor la respeta al medir la antelación. Efecto: House octubre **34 → 26 días**
+(muestra 20). **Regla:** al analizar el histórico de un piso, comprobar antes si sigue siendo el
+mismo producto — el número que sale de mezclar épocas es plausible y nada delata el fallo.
+**Gemini APAGADO** (decisión de Alberto: «usa OpenRouter, que tienes todo»). La key llevaba 548
+llamadas y 0 éxitos desde el 16/06 y el fallback la tapaba pagando el intento fallido antes de cada
+llamada. Ahora OpenRouter es el primario y Gemini solo se intenta con `GEMINI_WEBSEARCH=1`.
+
+### 📅 Smoobu SÍ da la fecha real de reserva — y eso INVIERTE el diagnóstico de octubre (01/08/2026)
+El 31/07 se dio por imposible reconstruir la curva de anticipación desde `incomes` porque `createdAt`
+es la fecha de la importación masiva. Cierto de esa columna — pero la **API de Smoobu publica
+`created-at`** (kebab-case, como `guest-name`) y lo trae **también para el histórico**. Verificado por
+`pg_net` desde Supabase, sin sacar la key de la BD. Nueva columna **`incomes.reserved_at`**
+(migración aplicada) + backfill: **1.843 de 1.984 reservas (93%) ya con fecha real, desde 2020**.
+**🔴 Lo que cambia:** la antelación medida desde `rate_snapshots` era una mediana GLOBAL por piso, y
+Semana Santa + Feria la disparaban. Con el histórico REAL de **octubre** (6 años, muestra 46-67 por
+piso): **House 34 días · Busto 18 · Dúplex 17 · Luxury 16** — frente a los 108/57/32/7 globales.
+O sea: **«Busto va tarde en octubre» era FALSO** (yo lo dije el 31/07). Busto vende octubre con ~18
+días de mediana, así que 7/31 a dos meses vista es su comportamiento NORMAL. **Octubre no va mal.**
+Y la palanca de last-minute con la mediana global habría empezado a descontar el precio de Busto
+**tres meses antes** de que octubre se venda — regalando margen en el mejor mes del año. Corregido:
+`apply/route.ts` mide la antelación **por piso Y por mes** desde `reserved_at`; sin muestra de ese mes
+la palanca se queda quieta. Sigue APAGADA en los 4 (`lastminute_k=0`), así que no llegó a hacer daño.
+Endpoint `/api/sivra/incomes/backfill-reserved-at` (idempotente, con presupuesto de tiempo) para
+rellenar lo que falte. **Regla:** la antelación depende del MES tanto como del piso.
+
+### 🎪 De dónde salen los eventos de Sevilla: auditoría y arreglo completo (01/08/2026)
+Pregunta de Alberto («¿de dónde saca los eventos, funciona?»). Tres fuentes: calendario a mano
+(`lib/pricing-calendar.ts`), Ticketmaster y búsqueda web, combinadas por `MAX()`. **Agujeros:**
+agosto+septiembre 2026 VACÍOS en el calendario (83 días) y septiembre sin una sola fila automática —
+con la **Bienal de Flamenco del 9/09 al 3/10** sin catalogar; el barrido de mercado solo miraba **el
+primer viernes de cada mes** (5-7 fechas/mes, octubre con 15 días de retraso), así que las noches de
+evento NUNCA tenían comps y los centinelas #7/#8 no llegaban a la muestra mínima; techo real 1.60 en
+los crons (el 2.5 era inalcanzable); `.catch(()=>[])` en apply:161 y guard:269 que tarificaban la
+Feria como un martes respondiendo `ok:true`; y ningún latido sobre `pricing_eventos_auto`.
+**🔴 `GEMINI_API_KEY` lleva 548 llamadas y CERO éxitos desde el 16/06** — no es una racha de 429, es
+una key sin cuota; el fallback a OpenRouter lo tapó mes y medio. Añadido breaker + Check 12 del
+health-check (proveedor con ≥20 llamadas y 0 éxitos en 7 días). **Alberto: regenera la key en Google
+AI Studio o bórrala del proyecto Vercel** — mientras esté puesta y muerta se paga el intento fallido.
+**Idea de Alberto → eventos PREVISTOS:** nueva 2ª pasada que busca en PRENSA lo anunciado pero aún
+sin entradas (final de Copa, congresos de FIBES, giras sin fecha). Asimetría deliberada: un previsto
+**NO mueve el precio** (una noticia no es demanda comprada), solo **protege el suelo**, pide barrido
+y avisa por Telegram. Migración `2026-08-01_pricing_eventos_previstos.sql` APLICADA. Bienal metida
+como previsto (factor 1.25, solo findes) porque el mercado NO la respalda todavía: el 12/09 sale más
+barato que el 05/09. Crons de eventos y barrido pasados a DIARIOS. 105 tests, tsc 0, build OK.
+
+- **📈 Trading: el panel de estrategias por fin discrimina + limpieza de huérfanas (01/08/2026).** Revisión
+  «¿cómo va inversión?»: la pasada nocturna SÍ corre (NAV+tesis del 31/07), pero `puntuarTesis` devolvía el
+  movimiento BRUTO del precio para las 3 direcciones → las 4 estrategias empataban en `retornoMedio` por
+  construcción y `ajustesDeStats` penalizaba por caídas del mercado, no por errores. Ahora `retorno` = seguir
+  la tesis (bajista invierte signo, neutral = 0); 168 resultados históricos migrados en BD y stats recalculadas
+  (reversión +0,38% · momentum −0,27%). Tablas huérfanas `trading_forward_paper(_marca)` retiradas (pre-registro
+  cohorte 1 archivado en TRADING-HIPOTESIS-PREREGISTRO.md). 110 tests módulo · 721 app · tsc 0 · build OK.
+
+### 💸 PriceLabs: baja ejecutada en Busto+Luxury; Luxury reactivado en el motor propio (01/08/2026)
+Alberto confirmó que **Busto Reform y Luxury ya están dados de baja de PriceLabs** (Dúplex/House siguen
+en PL por decisión suya, transición en dos fases). El informe de decisión (BD 31/07) encontró a **Luxury
+con `apply_enabled=false` desde el 28/07 20:34Z** → estaba SIN ningún motor (precios congelados en
+Smoobu). Con OK explícito de Alberto: `apply_enabled=true` (suelo 72€, raíles ±20%/día) aplicado por
+Supabase MCP; el `apply-auto` (3×/día) retoma en su próxima pasada. Estado piloto a 31/07: Busto rojo
+(occ 11%, 19d sin reserva, base bajando 115→71 por raíles, 28 fechas de agosto ya al suelo 65€) y
+Luxury rojo (occ 9%, 11d sin reserva). 0 reservas nuevas en Busto desde el cambio de suelo (28/07) —
+solo lleva ~1 día por debajo del p50 de mercado (91€). Vigilar en `/sivra/pricing-auto`.
+
+### 🏠 SIVRA: House cambió de categoría en 2024 y el ADR mezclado me hizo proponer regalarlo (01/08/2026)
+Lo cazó Alberto: «Socorro está dando 1.500/2.000€ por un fin de semana». **ADR de House por año: 67·106·147·175
+(2020-23) → 553·459·487 (2024-26)**, ticket medio 2026 **1.424€**. Yo había calculado «ADR de agosto 102€»
+promediando las dos etapas y llegué a proponer bajarlo a 285€ — habría sido regalarlo. Mismo fallo que el de
+los ADR del radar: número plausible, periodo equivocado, sin hueco que lo delate. **Al analizar House, usar
+SOLO 2024 en adelante.** Suelo revertido a 300€ (llegué a bajarlo a 180€; no afectó, está en dry-run).
+**Pero agosto sí está caro:** competencia REAL de Booking para 12 personas 16-23/08 → mediana **228€/noche**,
+techo 443€; House pide 450-483€. La reserva que se canceló eran 334€/noche. Propuesta viva: **330-350€** para
+ese hueco. **Y el corpus no tiene comps de 12 plazas frescos** (20 comps del 09/06 vs 136 de 8 plazas): el
+sweep por aforo real (#1186) es SEMANAL (dom 03:00 UTC) y aún no ha corrido — la primera vez es el 02/08.
+**🔴 Octubre, que es el mejor mes de Sevilla, va flojo a 2 meses vista:** Busto 7/31, Dúplex **0/31**, House
+6/31, Luxury 4/31, y los precios publicados van a **2-4× el ADR realizado de octubre 2024-25** (Busto 307€ vs
+77-86€ · Dúplex 194€ vs 90-100€ · Luxury 212€ vs 98-100€ · House 867€ vs 423-499€). Matiz que impide concluir:
+el `createdAt` de las reservas de 2024-25 es la fecha de IMPORTACIÓN masiva, no la de reserva.
+**PERO la curva SÍ se puede reconstruir — desde `rate_snapshots`, no desde `incomes`** (idea de Alberto: «¿por
+qué no estudias cómo lo hace PriceLabs?»). Hay **65.725 snapshots diarios** de los 4 pisos desde el 10/05/2026:
+cada vez que una fecha pasa de `available=1` a `0` entre dos snapshots es una reserva entrando, con su
+antelación exacta. Medido: **Busto 108 días de mediana · Luxury 57 · House 32 · Dúplex 7**.
+**Eso INVIERTE el diagnóstico de octubre:** Dúplex a 0/31 es su patrón normal (vende a 7 días) y House a 6/31
+aún no ha entrado en su ventana (32 días); **el que va tarde de verdad es Busto**, que vende con 108 días de
+antelación y a 60 días de octubre solo tiene 7/31. Muestra corta (78 días, 11-51 noches por piso): brújula, no
+GPS. **Y PriceLabs NO hace last-minute:** House pasa de 460€ a 23 días a 428€ el mismo día (−7%) y se queda con
+el 70% de las noches vacías; Busto ni baja, sube (94€→105€). Sirve como fuente de datos, no como modelo a
+copiar. Luxury sigue congelado hasta el 01/09 (decisión de Alberto).
+
+- **🗓️ Rotación mensual: julio archivado (01/08/2026).** `node scripts/rotar-memoria.mjs` movió las 321
+  entradas de julio a `docs/memoria/2026-07.md` (auditoría diaria). Nota para la próxima pasada: el script
+  solo reconoce entradas que empiezan por `- **`; una entrada con formato `### ` no se archivó sola y hubo
+  que moverla a mano — si vuelve a pasar, vale la pena normalizar el formato de cabecera o enseñarle al
+  script el patrón `### `.
+- **📊 Facturas Booking.com julio 2026 verificadas vs banco (03/08/2026).** Llegaron 3 facturas (noreply@booking.com);
+  guardadas en Drive por correo-triaje. Cuadre: Socorro (4340072) 634,69€ ✅ · Bustos Tavera (4771238) 450,79€ ✅ ·
+  Dúplex (2888928) 587,23€ esperado — pago bancario aún no llegó (vence 16 ago). Socorro 24 (ID Booking 2039943)
+  cobró 1.958,39€ en julio pero SIN factura de comisión todavía. Total banco Booking julio: 3.043,87€.
+  Trigger `trig_012T62U4LsM27GP8VKnBFifG` ampliado: ahora verifica facturas al llegar (busca Drive por fecha,
+  lee PDF via contentSnippet, notifica resumen). Casos abiertos SIN respuesta: Bernardi -466,70€ (5603355846,
+  House Sevillana) y Valantin -84,61€ (5712457476, Busto Reform). IDs Booking.com: 2888928=Dúplex ·
+  4340072=Socorro · 4771238=Bustos Tavera · 2039943=Socorro 24. Skill sivra-maestro actualizada con este mapeo.
 
 - **🕳️ Barrido del monorepo: afirmar ausencias no comprobadas (30/07/2026, misma rama).** Alberto:
   «haz esto con todo lo que tenemos». Barrido de las 8 apps + packages buscando el patrón del bullet

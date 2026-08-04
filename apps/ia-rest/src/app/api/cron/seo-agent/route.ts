@@ -3,7 +3,7 @@ export const maxDuration = 60
 
 import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
-import { getGscData, getGa4Data, getOAuthToken } from '@/lib/seo/gsc-ga4'
+import { getGscData, getGa4Data } from '@/lib/seo/gsc-ga4'
 import {
   upsertOverride, upsertBlock, insertArticulo, registrarCambio, cambiosRecientes, getOverride, getArticulo,
 } from '@/lib/seo/store'
@@ -24,19 +24,27 @@ async function telegram(msg: string) {
   })
 }
 
-async function solicitarIndexacion(path: string) {
-  try {
-    const token = await getOAuthToken()
-    await fetch('https://indexing.googleapis.com/v3/urlNotifications:publish', {
-      method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: `https://www.iarest.es${path}`, type: 'URL_UPDATED' }),
-    })
-  } catch { /* no crítico */ }
-}
+// ⚠️ La Indexing API de Google solo soporta oficialmente `JobPosting` y `BroadcastEvent`: para una
+// página normal ignora el `URL_UPDATED`. Llamarla daba una falsa sensación de "ya he pedido
+// indexación" cuando no se estaba pidiendo nada. El re-rastreo real llega por el sitemap
+// (`/sitemap.xml`, ya enviado en Search Console), que se regenera cada hora.
+// Se deja documentado, y NO se llama, para que nadie lo "restaure" pensando que funcionaba.
 
 const SYSTEM = `Eres el Agente SEO AUTÓNOMO de ia.rest. Analizas datos reales de Google Search Console y GA4 y aplicas mejoras de SEO TÚ MISMO mediante las herramientas de escritura.
 
-PRODUCTO: ia.rest, Voice POS hostelería española. www.iarest.es. 59€/mes, sin comisión. Competencia: SmartBar (99,99€), Agora, ICG.
+PRODUCTO: ia.rest, Voice POS hostelería española. www.iarest.es. Sin comisión por transacción.
+Competencia: SmartBar, Agora, ICG, Numier.
+
+🚨 REGLA INVIOLABLE — NUNCA PUBLIQUES UN PRECIO DE ia.rest.
+La tarifa NO se publica: no la escribas en un title, ni en una description, ni en un bloque de
+contenido, ni en un artículo, ni en JSON-LD (nada de Offer/price/priceSpecification). Si la keyword
+es de precio ("cuánto cuesta un TPV", "precio TPV bar"), cubre la INTENCIÓN sin dar cifra: explica el
+modelo (cuota mensual fija por usuario activo, 0% de comisión sobre ventas, sin permanencia) y remata
+llevando al formulario de contacto (/#contacto) o al WhatsApp. Puedes citar precios PÚBLICOS DE LA
+COMPETENCIA y costes de hardware de terceros, nunca los nuestros.
+
+CONVERSIÓN: el único camino es el formulario de contacto (/#contacto) y el WhatsApp directo. No
+inventes otros CTA ni prometas alta self-service.
 
 METODOLOGÍA:
 1. Pide get_gsc_data (queries y pages) y get_ga4_data (pages) antes de decidir.
@@ -89,7 +97,6 @@ export async function GET(req: NextRequest) {
     await registrarCambio({ run_id: runId, ruta, tipo: tipo as any, valor_antes: antes, valor_despues: descripcion, motivo })
     aplicados++
     resumen.push(`• [${tipo}] ${ruta}: ${motivo}`)
-    await solicitarIndexacion(ruta)
     return `OK: aplicado a ${ruta}`
   }
 
@@ -137,11 +144,19 @@ export async function GET(req: NextRequest) {
       break
     }
 
-    await telegram(
-      aplicados
-        ? `🤖 <b>Agente SEO — ${aplicados} cambio(s)</b>\n\n${resumen.join('\n')}\n\nRevertir en /super → SEO`
-        : `🤖 <b>Agente SEO</b>: sin cambios esta pasada (sin oportunidades con datos suficientes).`
-    )
+    // Un agente callado NO es un agente sano: entre junio y agosto de 2026 este mandó "sin cambios"
+    // en cada pasada mientras `seo_cambios` seguía a 0 filas, y ese silencio se leyó como normalidad.
+    // A partir de 3 semanas sin aplicar NADA el aviso deja de ser informativo y pasa a ser alerta.
+    let mensaje: string
+    if (aplicados) {
+      mensaje = `🤖 <b>Agente SEO — ${aplicados} cambio(s)</b>\n\n${resumen.join('\n')}\n\nRevertir en /super → SEO`
+    } else {
+      const ultimas3Semanas = await cambiosRecientes(21)
+      mensaje = ultimas3Semanas.length
+        ? `🤖 <b>Agente SEO</b>: sin cambios esta pasada (sin oportunidades con datos suficientes).`
+        : `⚠️ <b>Agente SEO — 3 semanas sin aplicar NADA</b>\n\nNi un cambio en 21 días. Esto no es «no había oportunidades»: revisa que GSC devuelve datos (¿está el sitio indexado?) y que el umbral SEO_MIN_IMPR (${minImpresiones(process.env as any)} impresiones) no está dejando fuera todo el tráfico real.`
+    }
+    await telegram(mensaje)
     return NextResponse.json({ ok: true, run_id: runId, aplicados, resumen })
   } catch (err: any) {
     await telegram(`❌ Agente SEO error: ${err.message}`)

@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-31T08:51:48Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-03T10:20:28Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 8 apps · 36 packages · 23 capacidades · 31 skills · 1153 rutas API.
+**Resumen:** 8 apps · 36 packages · 23 capacidades · 31 skills · 1154 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -31,7 +31,7 @@
 - **Módulos que usa:** core-ai, core-email, core-identity, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-subastas, module-trading
 - **Capacidades:** Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
 - **Tablas (88):** agente_latidos, agente_salud, ai_usos, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_reglas, correo_cursor, correo_reglas, correo_triaje, cron_dispatch_cursor, cuentas_bancarias, domotica_acceso_pin, domotica_dispositivos…
-- **Rutas API:** 276
+- **Rutas API:** 277
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -217,14 +217,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (31/07/2026) 🔎 Verificación en caliente del arreglo de los ADR + techo al nº de acciones (31/07/2026).
-- (31/07/2026) 🧯 Segunda tanda del parser de EDGAR + retrovisor honesto (31/07/2026, PR #1193).
-- (31/07/2026) 📉 Y el retrovisor dice que el modelo valor+calidad NO bate al mercado (31/07/2026).
-- (31/07/2026) 🏛️ Subastas: revisión de la cadena de ubicación — 8 fallos reales corregidos (31/07/2026).
-- (31/07/2026) 🏛️ Subastas: 3 fallos de la búsqueda por dirección + el Catastro corta por volumen (31/07/2026).
-- (31/07/2026) 🛡️ Pricing: tres centinelas para que el motor se queje solo (31/07/2026, rama `claude/pricing-check-31-07`).
-- (31/07/2026) 📉 Pricing 31/07: sistema SANO, pero agosto arranca a CERO (31/07/2026, rama `claude/pricing-check-31-07`).
-- (31/07/2026) 🚨 Fundamentales del radar de trading iban 2 años atrasados y MEZCLADOS (31/07/2026).
-- (31/07/2026) ⚖️ Subastas: 3 defectos del lector registral + «nota simple viva» (31/07/2026).
-- (30/07/2026) 💰 Subastas: el «valor de mercado» dejaba de fabricar chollos falsos (30/07/2026, PR #1183).
+- (02/08/2026) 🔎 Revisión mensual ia.rest Tech & Stack (02/08/2026, sesión de investigación).
+- (02/08/2026) ⏱️ Crons con timeout 60s → 300s (02/08/2026, rama `claude/audit-30-07-hv2njr`).
+- (02/08/2026) 🧹 «Haz tu todo»: vulns 12→3, 0 críticas (02/08/2026, rama `claude/audit-vulnerabilities-02-08-m7lwtf`).
+- (02/08/2026) ✅ Reparación auditoría 02/08 cerrada (02/08/2026, rama `claude/audit-vulnerabilities-02-08-m7lwtf`).
+- (02/08/2026) 🛡️ Auditoría PROFUNDA semanal (02/08/2026).
+- (01/08/2026) 📂 RRHH: categoría «Documentación mensual» en documentos de empresa (01/08/2026, rama `claude/programa-rrhh-m25fwd`).
+- (01/08/2026) ⏰ Subasta vencida seguía en «🎯 Mi radar» (01/08/2026, rama `claude/expired-auction-visible-eoow4t`).
+- (01/08/2026) 📈 Trading: el panel de estrategias por fin discrimina + limpieza de huérfanas (01/08/2026).
+- (01/08/2026) 🗓️ Rotación mensual: julio archivado (01/08/2026).
+- (03/08/2026) 📊 Facturas Booking.com julio 2026 verificadas vs banco (03/08/2026).
 

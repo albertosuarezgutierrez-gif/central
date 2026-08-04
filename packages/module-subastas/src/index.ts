@@ -153,9 +153,12 @@ export {
   esFormulaDeCierre,
   resumirCargas,
   compararCuadros,
+  esDocumentoDeCargas,
+  estadoCargas,
+  titularCargas,
   CONFIANZA_MINIMA_LIBRE,
 } from './cargas.ts'
-export type { Carga, CuadroCargas, CargasSubsistentes, TipoCarga, RangoCarga, FuenteCargas, ValoracionPactada, CambioCargas } from './cargas.ts'
+export type { Carga, CuadroCargas, CargasSubsistentes, TipoCarga, RangoCarga, FuenteCargas, ValoracionPactada, CambioCargas, EstadoCargas, AdjuntoFicha, EntradaEstadoCargas, TitularCargas } from './cargas.ts'
 export { PROMPT_LECTOR_REGISTRAL, extraerJson } from './cargas-prompt.ts'
 // Caducidad de las anotaciones de embargo (art. 86 LH): la carga fantasma que
 // infla el coste. Marca y cuantifica el escenario alternativo; nunca descuenta.
