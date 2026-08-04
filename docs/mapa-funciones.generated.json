@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-04T22:22:42Z",
-  "sha": "2ea3edc15cc8bfc7f8f32d9da4e1df8283751cb4",
+  "generadoEn": "2026-08-04T22:29:46Z",
+  "sha": "a641f93fd53ea56e24d2e8648ad8a424a237e4ab",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -66139,7 +66139,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 327,
+          "linea": 333,
           "resumen": "· sin los resultados no hay calibración (la memoria del agente). Así que se borra la BANDEJA de avisos (`subastas_radar`, efímera por diseño) y se marca la subasta como archivada. El histórico se qued"
         }
       ],
@@ -66148,7 +66148,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "804f0efb8a52"
+      "hash": "21bfd866d599"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/enriquecer.ts",
