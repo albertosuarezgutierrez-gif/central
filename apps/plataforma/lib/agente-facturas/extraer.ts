@@ -7,6 +7,9 @@ export interface FacturaExtraida {
   fecha?: string | null
   proveedor?: string | null
   nif_proveedor?: string | null
+  /** Destinatario de la factura: sirve para descartar las que son de terceros (ver receptor.ts). */
+  cliente?: string | null
+  nif_cliente?: string | null
   concepto?: string | null
   numero_factura?: string | null
   base_imponible?: number | null

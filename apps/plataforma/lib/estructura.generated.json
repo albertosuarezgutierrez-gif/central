@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-04T21:50:40Z",
+  "generadoEn": "2026-08-04T22:05:34Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -327,7 +327,7 @@
       },
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "ialimp": {
         "estado": "usado",
@@ -3969,6 +3969,14 @@
   ],
   "novedades": [
     {
+      "titulo": "🚪 Reglas de VENTA por fin medibles — H9 (04/08/2026, noche).",
+      "fecha": "04/08/2026"
+    },
+    {
+      "titulo": "🧾 Agente de facturas: ahora mira A NOMBRE DE QUIÉN viene la factura (31/07/2026).",
+      "fecha": "31/07/2026"
+    },
+    {
       "titulo": "🧾 facturas-correo (01/08/2026, trigger diario).",
       "fecha": "01/08/2026"
     },
@@ -4019,14 +4027,6 @@
     {
       "titulo": "📈 Trading: el panel de estrategias por fin discrimina + limpieza de huérfanas (01/08/2026).",
       "fecha": "01/08/2026"
-    },
-    {
-      "titulo": "🗓️ Rotación mensual: julio archivado (01/08/2026).",
-      "fecha": "01/08/2026"
-    },
-    {
-      "titulo": "📊 Facturas Booking.com julio 2026 verificadas vs banco (03/08/2026).",
-      "fecha": "03/08/2026"
     }
   ],
   "saludRepo": {
