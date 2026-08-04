@@ -15,6 +15,22 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-04 · facturas-correo** · hizo: pasada diaria completa. Preflight canal `/api/internal/alerta`
+  → 200. Paso 0: Vía B sana (`_buzon_pdf` copió el 03/08, `dias_caido=1`); `agente_salud.facturas-extraccion-pdf`
+  actualizado `ok=true`. Cola `Facturas/PDF-pendiente` vacía; `Facturas/Revisar` tiene 1 hilo (Amazon
+  roborock QV 35A, 247,92€, envío a "Costa Ballena (rota), Cádiz" — dirección que no casa con ningún piso
+  ni vivienda habitual conocidos, sigue pendiente de que Alberto diga destino, 3 días en cola). Sin
+  candidatos nuevos en Gmail (ventana 2d) ni en `_subir_aqui`/raíz de FACTURAS 2026 (el único fichero
+  suelto nuevo, `FACTURA JULIO SOCORRO.pdf` — factura SIQUE julio 780,10€ —, ya lo había archivado y
+  puesto en papelera una pasada previa el 03/08; su cargo bancario aún no ha entrado, normal en SIQUE
+  1-3 días). Papelera `_DUPLICADOS_BORRAR`: ≥10 avisos, verificados por muestreo (9 de los más recientes)
+  contra `get_file_metadata` — ninguno es zombi, Alberto no ha borrado nada desde la última pasada; no se
+  creó ningún aviso nuevo. Recordatorio (no nuevo, ya documentado el 01/08 en el aviso Giraldillo): el cron
+  `facturas-scan` (`lib/agente-facturas/drive.ts`) sigue resolviendo la carpeta destino de CUALQUIER
+  factura hacia `ALBERTO 2026 PERSONAL (SEGUROS)/<MES>` en vez del árbol de negocio — sigue sin
+  corregirse, pendiente de revisión de código (fuera del alcance de esta skill). dudas: destino del pedido
+  Amazon roborock (¿piso o personal? no hay piso conocido en Costa Ballena/Cádiz); fallos: —.
+  PRs/commits: (memoria únicamente, sin cambios de código).
 - **2026-07-28 · facturas-correo** · hizo: pasada diaria completa. Paso 0: health-check de Vía B —
   última copia a `_buzon_pdf` del 24/07 (4 días), pero verificado que no hay candidatos sin copiar
   (`newer_than:3d has:attachment filename:pdf -label:PDF-guardado` da 0) → el hueco es por ausencia de

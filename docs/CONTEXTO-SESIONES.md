@@ -16,6 +16,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📬 facturas-correo — pasada diaria 04/08/2026, sin novedades.** Vía B sana (1 día), sin correos ni
+  subidas manuales nuevas. Pendiente de decisión de Alberto: pedido Amazon roborock QV 35A (247,92€)
+  enviado a "Costa Ballena, Cádiz" — dirección que no casa con ningún piso/vivienda conocidos, 3 días en
+  `Facturas/Revisar`. Recordatorio (no nuevo): el cron `facturas-scan` sigue misarchivando facturas en
+  el árbol PERSONAL (SEGUROS) en vez del de negocio (aviso Giraldillo 01/08, aún sin corregir en código).
+  Detalle en `docs/AGENTES-BITACORA.md`.
 - **✂️ Regla global «Estilo de respuesta» en CLAUDE.md raíz (23/07/2026).** A petición de Alberto (respuestas
   demasiado extensas): nueva regla global permanente que pide respuestas sintéticas y directas en el chat
   (resultado primero, sin recapitular ni narrar cada paso; extenderse solo si Alberto lo pide). NO aplica a
