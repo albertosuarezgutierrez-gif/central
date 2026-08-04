@@ -4155,6 +4155,24 @@ copiar. Luxury sigue congelado hasta el 01/09 (decisión de Alberto).
   - **Pendiente de sesión anterior**: pregunta a Pilar sobre qué plantillas de "Generar documento
     legal" quiere conservar (3 opciones mostradas, esperando respuesta).
 
+- **🛟 Fallback OpenRouter en el `daily-briefing` + `ai-client.callAI/callAITools` de ia-rest
+  (13/07/2026, rama `claude/ia-rest-nvidia-timeout-suhkiw`).** El monitor avisó `⚠️ daily-briefing
+  error / NVIDIA 503` y `❌ NIM falló y sin fallback Groq disponible: NVIDIA timeout` — dos rutas de
+  ia-rest que caían cuando NIM daba 503/timeout y no había red. Alberto: "tenemos openrouter".
+  - **Edge Function `daily-briefing/index.ts`:** tenía CERO fallback (llamaba a NVIDIA directo y
+    lanzaba `NVIDIA ${status}`). Ahora recorre una cadena de proveedores OpenAI-compatible
+    **NVIDIA NIM → OpenRouter → Groq** (`proveedoresIA()` filtra por API key presente; timeout 20s
+    por proveedor con `AbortSignal.timeout` para que un NIM colgado pase al siguiente). El pie de
+    Telegram muestra el proveedor real que generó el briefing.
+  - **`apps/ia-rest/src/lib/ai-client.ts`:** `callAI` y `callAITools` tenían solo NIM→Groq. Añadido
+    OpenRouter como ÚLTIMA red (helper `openrouterConfig()`/`openrouterTextFallback()`, delega en
+    `@central/core-ai::openrouterChat`/`openrouterChatTools`). Se activa solo con `OPENROUTER_API_KEY`
+    puesta — sin la env el camino de siempre no cambia. Envs override: `OPENROUTER_MODEL`,
+    `OPENROUTER_FALLBACK_MODELS`, `OPENROUTER_REFERER`, `OPENROUTER_TITLE`.
+  - **Pendiente de Alberto:** poner `OPENROUTER_API_KEY` en el proyecto Vercel de ia-rest y en los
+    secrets de la Edge Function (Supabase) para ACTIVAR la red — el código ya está listo e inactivo
+    hasta entonces. Verificado: `tsc --noEmit` limpio, eslint sin errores nuevos.
+
 - **🔎 Búsqueda web de la pasarela con FALLBACK OpenRouter (13/07/2026):** el grounding de Gemini
   (gratis) llevaba rachas de 429 que tenían MUDO el cron `eventos/websearch` (LaLiga/ferias/congresos/
   festivos para el pricing) y degradaban `/api/ai/search` y `seo-refresh`. Nuevo
