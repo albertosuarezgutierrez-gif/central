@@ -54,6 +54,16 @@ export type FactoresFecha = {
   // la SMA30 del gráfico SEMANAL y de la SMA12 del MENSUAL (la media "anual")? null = serie corta.
   sobreSmaSem?: boolean | null
   sobreSmaMes?: boolean | null
+  // Vela + volumen (hipótesis H8 del pre-registro, 04/08/2026): capitulación = caída ≥25% del máximo
+  // de las 12 barras anteriores CON volumen ≥1,5× su media. Se RECOLECTA en los dos marcos para
+  // medir su spread punto-en-el-tiempo sobre el universo entero; NO toca ranking ni cestas hasta que
+  // H8 se resuelva. `null` = no se puede saber (serie corta o fuente sin volumen), NO «no salta».
+  capitulacionMes?: boolean | null
+  caidaMes?: number | null
+  volRelMes?: number | null
+  capitulacionSem?: boolean | null
+  caidaSem?: number | null
+  volRelSem?: number | null
 }
 
 // Remuestrea una serie diaria al cierre de cada PERIODO ('sem' = semana ISO aprox por lunes,
