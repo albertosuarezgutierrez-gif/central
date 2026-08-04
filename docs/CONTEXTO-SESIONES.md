@@ -353,6 +353,17 @@ latido a `ok:false` solo si no llegó a cubrir la temporada. Una muestra que cae
 corre una semana: el bucket mensual EXCLUYE las fechas de evento, así que ahí no sumaría.
 De paso, corregido en el hilo: `amount_gross` de `incomes` es lo que paga el huésped, **no** el neto.
 
+- **⚖️ Auditoría de las 37 subastas vivas tras el fix de cargas: dos mentiras más (01/08/2026).**
+  Al repasar el corpus con el titular nuevo (PR #1213) salieron dos huecos de la MISMA familia:
+  (1) **3 de las 14 del BOE tenían `cargas_conocidas=true` con `cargas=NULL`** —el campo Cargas de la ficha
+  habla de cargas pero nadie ha cuantificado el importe que subsiste— y se pintaban **🟢 «Sin cargas
+  anteriores subsistentes»**: afirmar la ausencia sin el dato, el bug original con el signo cambiado.
+  Estado nuevo `sin_cuantificar` 🟠; el 🟢 exige ahora que la cifra EXISTA (un 0 leído sí vale).
+  (2) `publicadas_sin_leer` afirmaba «no se ha analizado» también cuando SÍ se analizó y la lectura salió
+  vacía (264706, que pasaba el gate por playa) → renombrado a `publicadas_sin_extraer`, texto «NO tenemos su
+  cuadro de cargas». Además `analisisDocumental` ya no tiene copia propia del texto: llama a `titularCargas`
+  (la ficha y el desplegable llegaron a decir cosas distintas de la misma subasta).
+
 - **⏰ Subasta vencida seguía en «🎯 Mi radar» (01/08/2026, rama `claude/expired-auction-visible-eoow4t`).**
   Alberto con captura: `SUB-JA-2026-263723` cerró el 31/07 18:13 y al día siguiente seguía con botones de
   pujar. **Causa:** NINGÚN camino de lectura del radar filtraba por fecha — la bandeja se limpiaba solo con
