@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-04T22:09:34Z",
-  "sha": "4ada356fd51a256a14606cbcfd0ff125bbbb072c",
+  "generadoEn": "2026-08-04T22:14:01Z",
+  "sha": "c034e5bd5a7871ee12ade641fc2c351945aea3bd",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -28247,7 +28247,7 @@
           "exportada": false,
           "params": "",
           "retorno": "NimConfig",
-          "linea": 84,
+          "linea": 85,
           "resumen": "Config NIM desde el entorno de ESTA app (el paquete core-ai no lee process.env)."
         },
         {
@@ -28256,8 +28256,17 @@
           "exportada": false,
           "params": "",
           "retorno": "GroqConfig | null",
-          "linea": 92,
+          "linea": 93,
           "resumen": "Config Groq (fallback de texto). `GROQ_API_KEY` ya existe en producción (la usa el EAR/Whisper). Devuelve null si no está configurada, para no romper si el operador no la define."
+        },
+        {
+          "nombre": "openrouterConfig",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "OpenRouterConfig | null",
+          "linea": 102,
+          "resumen": "Config OpenRouter (agregador con fallback NATIVO entre proveedores) — ÚLTIMA red cuando NIM y Groq caen a la vez (los 3 gratis directos pueden apagarse simultáneamente). Devuelve null si no hay OPENRO"
         },
         {
           "nombre": "gatewayCfg",
@@ -28265,7 +28274,7 @@
           "exportada": false,
           "params": "",
           "retorno": "GatewayConfig | null",
-          "linea": 101
+          "linea": 120
         },
         {
           "nombre": "nvidiaText",
@@ -28273,7 +28282,7 @@
           "exportada": false,
           "params": "system: string, user: string, maxTokens = 600, model?: string",
           "retorno": "Promise<string>",
-          "linea": 110,
+          "linea": 129,
           "resumen": "── NVIDIA: llamada texto (delega en @central/core-ai) ──────────────────────── `model` permite forzar un modelo concreto por llamada (p. ej. el 8B rápido para tareas con presupuesto de tiempo ajustado"
         },
         {
@@ -28282,7 +28291,7 @@
           "exportada": false,
           "params": "system: string, images: ImageInput[], userText: string, maxTokens = 2000",
           "retorno": "Promise<string>",
-          "linea": 116,
+          "linea": 135,
           "resumen": "── NVIDIA: llamada visión (multi-imagen, delega en @central/core-ai) ─────────"
         },
         {
@@ -28291,7 +28300,7 @@
           "exportada": false,
           "params": "system: string, images: ImageInput[], userText: string, maxTokens = 2000",
           "retorno": "Promise<string>",
-          "linea": 123,
+          "linea": 142,
           "resumen": "── Gemini: visión/OCR de calidad (delega en @central/core-ai) ──────────────── Gemini Flash lee mucho mejor que NIM y acepta imágenes grandes (NIM cae a ~180 KB inline). Es el camino preferido para OC"
         },
         {
@@ -28300,8 +28309,17 @@
           "exportada": false,
           "params": "system: string, user: string, maxTokens = 600",
           "retorno": "Promise<string | null>",
-          "linea": 131,
+          "linea": 150,
           "resumen": "── Groq: llamada texto de FALLBACK (delega en @central/core-ai) ────────────── Mismo modelo Llama 3.3 70B que NIM, servido gratis por Groq desde otra infra."
+        },
+        {
+          "nombre": "openrouterTextFallback",
+          "kind": "function",
+          "exportada": false,
+          "params": "system: string, user: string, maxTokens = 600",
+          "retorno": "Promise<string | null>",
+          "linea": 159,
+          "resumen": "── OpenRouter: llamada texto de ÚLTIMO fallback (delega en @central/core-ai) ── Agregador: una key da acceso a decenas de proveedores con fallback nativo entre modelos, así que sobrevive a un apagón s"
         },
         {
           "nombre": "callAI",
@@ -28309,7 +28327,7 @@
           "exportada": true,
           "params": "system: string, userOrMessages: string | { role: 'user' | 'assistant'; content: string }[], maxTokens = 600, timeoutMs = 15_000, // Default NIM puro: la cuenta de Anthropic (fallback) está SIN SALDO, así que caer // a ella solo da \"credit b",
           "retorno": "Promise<string>",
-          "linea": 148,
+          "linea": 176,
           "resumen": "Llamada texto: NVIDIA gratis → Anthropic fallback Acepta historial de conversación para soporte multi-turno (soporte, chat)"
         },
         {
@@ -28318,7 +28336,7 @@
           "exportada": true,
           "params": "system: string, user: string, maxTokens = 1500, timeoutMs = 45_000",
           "retorno": "Promise<string>",
-          "linea": 229,
+          "linea": 273,
           "resumen": "Llamada con búsqueda web: Gemini Flash + Google Search grounding Usar SOLO para agentes que necesitan datos reales de internet (Lead Hunter, research) Fallback a callAI() si Gemini no disponible o fal"
         },
         {
@@ -28327,7 +28345,7 @@
           "exportada": true,
           "params": "system: string, messages: NimToolMessage[], tools: unknown[], maxTokens = 1024,",
           "retorno": "Promise<NimToolResult>",
-          "linea": 269,
+          "linea": 313,
           "resumen": "la ruta ejecuta las herramientas y reenvía los resultados como mensajes `role:'tool'`."
         },
         {
@@ -28336,7 +28354,7 @@
           "exportada": true,
           "params": "prompt: string, opts: Omit<GatewayVideoOpts, 'timeoutMs'> = {},",
           "retorno": "Promise<string>",
-          "linea": 301,
+          "linea": 355,
           "resumen": "Generación de vídeo IA a través de la pasarela central. FAL_API_KEY vive solo en plataforma; ia-rest solo necesita AI_GATEWAY_URL + AI_GATEWAY_SECRET."
         },
         {
@@ -28345,13 +28363,13 @@
           "exportada": true,
           "params": "system: string, images: ImageInput[], userText: string, maxTokens = 2000, timeoutMs = 30_000, // Legacy: antaño evitaba el fallback de PAGO a Anthropic (retirado el 17/06/2026). // Ya NO bloquea nada — se conserva por compatibilidad de firm",
           "retorno": "Promise<string>",
-          "linea": 313,
+          "linea": 367,
           "resumen": "Llamada visión: NVIDIA gratis → Anthropic fallback"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ca72aba7307d"
+      "hash": "813422fd9aa0"
     },
     {
       "ruta": "apps/ia-rest/src/lib/ai-video.ts",
@@ -66103,7 +66121,7 @@
           "exportada": true,
           "params": "f: { flip_apto: boolean | null margen_flip_pct: number | null es_playa: boolean | null descuento_estimado: number | null }",
           "retorno": "boolean",
-          "linea": 218,
+          "linea": 224,
           "resumen": "¿Merece esta subasta el análisis profundo (que cuesta llamadas de IA)? El embudo de Alberto: primero rentabilidad, y solo si cuadra, documentación. Entra si es un flip viable, si es de la costa de Hue"
         },
         {
@@ -66112,7 +66130,7 @@
           "exportada": true,
           "params": "max = 10",
           "retorno": "Promise<",
-          "linea": 234,
+          "linea": 240,
           "resumen": "Pasada sobre las subastas vivas: lee los documentos de las que no están al día con la versión actual del lector. Best-effort: un fallo de descarga deja la fila como está y se reintenta mañana."
         },
         {
@@ -66121,7 +66139,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 321,
+          "linea": 327,
           "resumen": "· sin los resultados no hay calibración (la memoria del agente). Así que se borra la BANDEJA de avisos (`subastas_radar`, efímera por diseño) y se marca la subasta como archivada. El histórico se qued"
         }
       ],
@@ -66130,7 +66148,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "790e6db75fa0"
+      "hash": "804f0efb8a52"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/enriquecer.ts",
@@ -85055,7 +85073,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "",
-          "linea": 75,
+          "linea": 86,
           "resumen": "Fecha registral tolerante: el lector devuelve el campo tal cual lo escribe el registro, que rara vez es ISO («15 de agosto de 2020», «12/03/2015», «2009»). Cuando solo hay año se toma el **31 de dicie"
         },
         {
@@ -85064,7 +85082,7 @@
           "exportada": false,
           "params": "texto: string",
           "retorno": "string",
-          "linea": 110,
+          "linea": 121,
           "resumen": "Texto sin puntuación ni acentos: `palabrasANumero` corta en cuanto ve «nueve,»."
         },
         {
@@ -85073,7 +85091,7 @@
           "exportada": false,
           "params": "texto: string",
           "retorno": "",
-          "linea": 119,
+          "linea": 130,
           "resumen": "Fecha con el mes escrito con su nombre y el día y/o el año en letra. Devuelve `null` en cuanto algo no cuadre: una fecha a medias es peor que ninguna, porque el art. 86 LH se calcula sobre ella."
         },
         {
@@ -85082,7 +85100,7 @@
           "exportada": false,
           "params": "texto: string",
           "retorno": "number | null",
-          "linea": 140,
+          "linea": 151,
           "resumen": "Año escrito con palabras («año dos mil nueve»), sin mes que lo acompañe."
         },
         {
@@ -85091,7 +85109,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": "number | null",
-          "linea": 150,
+          "linea": 161,
           "resumen": "Último número del fragmento, en cifra («el 17») o en letra («diecisiete»)."
         },
         {
@@ -85100,7 +85118,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": "number | null",
-          "linea": 157,
+          "linea": 168,
           "resumen": "Primer número del fragmento, en cifra («2009 ante…») o en letra («dos mil nueve»)."
         },
         {
@@ -85109,7 +85127,7 @@
           "exportada": false,
           "params": "anio: number, mes: number",
           "retorno": "number",
-          "linea": 163
+          "linea": 174
         },
         {
           "nombre": "fechaValida",
@@ -85117,7 +85135,7 @@
           "exportada": false,
           "params": "anio: number, mes: number, dia: number, exacta: boolean",
           "retorno": "",
-          "linea": 172
+          "linea": 183
         },
         {
           "nombre": "estadoCaducidad",
@@ -85125,7 +85143,7 @@
           "exportada": true,
           "params": "c: Carga, hoy: Date",
           "retorno": "Caducidad",
-          "linea": 184,
+          "linea": 195,
           "resumen": "Estado de caducidad de UNA carga. `hoy` se pasa siempre desde fuera: el módulo es puro y determinista, y así los tests no dependen de la fecha en que se ejecuten."
         },
         {
@@ -85134,7 +85152,7 @@
           "exportada": true,
           "params": "subsistentes: Carga[], hoy: Date",
           "retorno": "CaducidadCuadro",
-          "linea": 257,
+          "linea": 283,
           "resumen": "Reparte las cargas SUBSISTENTES entre las que están firmes y las que podrían haber caducado, sin decidir por el usuario. Nunca toca el importe conservador: quien llama decide si enseña el escenario al"
         },
         {
@@ -85143,12 +85161,12 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 282
+          "linea": 308
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d9860a0ca565"
+      "hash": "856bc519e0d0"
     },
     {
       "ruta": "packages/module-subastas/src/cargas-prompt.ts",
@@ -85183,6 +85201,7 @@
         "mismoAcreedorQueEjecutante",
         "letraAnotacion",
         "identidadCarga",
+        "autoridadDocumental",
         "fusionarCargas",
         "consensoCuadros",
         "compararCuadros",
@@ -85198,15 +85217,15 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 127
+          "linea": 134
         },
         {
           "nombre": "normalizarCuadroCargas",
           "kind": "function",
           "exportada": true,
-          "params": "bruto: unknown, fuente: FuenteCargas",
+          "params": "bruto: unknown, fuente: FuenteCargas, /** Título del documento leído, para poder arbitrar rangos contradictorios. */ documento?: string | null,",
           "retorno": "CuadroCargas",
-          "linea": 141,
+          "linea": 148,
           "resumen": "Normaliza el JSON del lector a un `CuadroCargas` de confianza. Defensivo a propósito: un LLM puede devolver un tipo inventado, un importe con formato español, o cargas a medias — nada de eso debe lanz"
         },
         {
@@ -85215,7 +85234,7 @@
           "exportada": true,
           "params": "c: Carga",
           "retorno": "boolean",
-          "linea": 217,
+          "linea": 236,
           "resumen": "¿Esta «carga» es en realidad la fórmula con la que el registro CIERRA la certificación? Caso real (30/07/2026): «SIN MÁS CARGAS, salvo AFECCIONES FISCALES vigentes» entraba en la lista como una carga "
         },
         {
@@ -85224,7 +85243,7 @@
           "exportada": true,
           "params": "cuadro: CuadroCargas, hoy?: Date",
           "retorno": "CargasSubsistentes",
-          "linea": 245,
+          "linea": 264,
           "resumen": "QUÉ HEREDA EL ADJUDICATARIO. Determinista, porque de esto sale la puja máxima. Reglas (LEC): · Ejecución HIPOTECARIA directa: la hipoteca que se ejecuta se cancela y las cargas POSTERIORES se purgan ("
         },
         {
@@ -85233,7 +85252,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 349
+          "linea": 368
         },
         {
           "nombre": "mismoAcreedorQueEjecutante",
@@ -85241,7 +85260,7 @@
           "exportada": true,
           "params": "cargas: Carga[], ejecutante: string | null | undefined",
           "retorno": "boolean",
-          "linea": 367,
+          "linea": 386,
           "resumen": "¿El ejecutante es también el acreedor de una carga ANTERIOR que subsiste? Es el matiz que decide si el caso «hipoteca anterior en embargo» es una ruina o solo un trámite: cuando coinciden, el crédito "
         },
         {
@@ -85250,7 +85269,7 @@
           "exportada": true,
           "params": "c: Carga",
           "retorno": "string | null",
-          "linea": 386,
+          "linea": 405,
           "resumen": "Letra con la que el registro identifica una anotación preventiva («anotación letra C»). Es el identificador REGISTRAL del asiento: no cambia de un documento a otro, a diferencia del importe, que cada "
         },
         {
@@ -85259,7 +85278,7 @@
           "exportada": false,
           "params": "s: string | null",
           "retorno": null,
-          "linea": 391
+          "linea": 410
         },
         {
           "nombre": "identidadCarga",
@@ -85267,7 +85286,7 @@
           "exportada": true,
           "params": "c: Carga",
           "retorno": "string",
-          "linea": 398,
+          "linea": 417,
           "resumen": "Identidad del ASIENTO, para reconocer la misma carga leída en documentos distintos. Por orden de fiabilidad: la letra de la anotación, la fecha con el titular y, si no hay nada de eso, la firma antigu"
         },
         {
@@ -85276,8 +85295,44 @@
           "exportada": false,
           "params": "a: RangoCarga, b: RangoCarga",
           "retorno": "RangoCarga",
-          "linea": 407,
+          "linea": 426,
           "resumen": "El rango que MÁS cuesta de los dos: subsistir es más caro que purgarse."
+        },
+        {
+          "nombre": "autoridadDocumental",
+          "kind": "function",
+          "exportada": true,
+          "params": "titulo: string | null | undefined",
+          "retorno": "0 | 1 | 2",
+          "linea": 441,
+          "resumen": "Cuánto vale la palabra de un documento cuando dos se contradicen en el RANGO. 2 = **certificación de dominio y cargas**. Es el documento que el registrador expide PARA esta ejecución y el único que nu"
+        },
+        {
+          "nombre": "fechasDeAsiento",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: Carga",
+          "retorno": "Set<string>",
+          "linea": 451,
+          "resumen": "Las fechas que cita un asiento, en ISO. Una carga tiene varias a propósito: la de INSCRIPCIÓN y la de la ESCRITURA que la causó son distintas."
+        },
+        {
+          "nombre": "principalDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: Carga",
+          "retorno": "number | null",
+          "linea": 482,
+          "resumen": "El PRINCIPAL que garantiza la carga. Es la cifra que NO cambia de un documento a otro: la certificación añade intereses y costas para dar la responsabilidad total, pero el principal es el mismo. Sirve"
+        },
+        {
+          "nombre": "mismoAsiento",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: Carga, b: Carga",
+          "retorno": "boolean",
+          "linea": 509,
+          "resumen": "¿Son estas dos lecturas EL MISMO asiento registral? 🚨 El caso que lo motiva (SUB-JA-2026-264600, Punta Umbría, auditado el 04/08/2026): la certificación citaba las hipotecas por su fecha de INSCRIPCI"
         },
         {
           "nombre": "fusionarCargas",
@@ -85285,8 +85340,17 @@
           "exportada": true,
           "params": "cargas: Carga[]",
           "retorno": "",
-          "linea": 428,
+          "linea": 545,
           "resumen": "Fusiona las cargas leídas en VARIOS documentos de la misma finca (edicto, certificación, informe de valoración…) dejando UNA fila por asiento. 🚨 El caso que la motiva (30/07/2026): la certificación c"
+        },
+        {
+          "nombre": "arbitrarRango",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: Carga, b: Carga, avisos: string[]",
+          "retorno": "RangoCarga",
+          "linea": 594,
+          "resumen": "Rango cuando dos documentos discrepan. Antes se cogía siempre el MÁS CARO, que es lo correcto cuando ninguno de los dos sabe más que el otro. Pero no es el caso: el orden de los asientos lo establece "
         },
         {
           "nombre": "describir",
@@ -85294,7 +85358,7 @@
           "exportada": false,
           "params": "c: Carga",
           "retorno": "string",
-          "linea": 466
+          "linea": 614
         },
         {
           "nombre": "emparejarLecturas",
@@ -85302,7 +85366,7 @@
           "exportada": false,
           "params": "a: Carga[], b: Carga[]",
           "retorno": "Map<Carga, Carga>",
-          "linea": 478,
+          "linea": 626,
           "resumen": "Empareja las cargas de dos lecturas del MISMO documento. Primero por identidad registral (la letra de la anotación, la fecha…) y solo después, entre las que quedan sueltas, por tipo+rango — que es lo "
         },
         {
@@ -85311,7 +85375,7 @@
           "exportada": true,
           "params": "a: CuadroCargas, b: CuadroCargas",
           "retorno": "",
-          "linea": 507,
+          "linea": 655,
           "resumen": "Consenso entre DOS lecturas independientes del mismo documento. Alberto pidió que la IA extraiga las cifras; esta es la red que evita que un dígito mal leído se propague a una puja. Se emparejan las c"
         },
         {
@@ -85320,7 +85384,7 @@
           "exportada": true,
           "params": "anterior: CuadroCargas, nuevo: CuadroCargas",
           "retorno": "CambioCargas[]",
-          "linea": 577,
+          "linea": 725,
           "resumen": "Compara el cuadro que se leyó de la certificación del BOE con uno NUEVO (una nota simple recién pedida al registro, por ejemplo). Hace falta porque la certificación que el juzgado adjunta a la ficha s"
         },
         {
@@ -85329,7 +85393,7 @@
           "exportada": true,
           "params": "cuadro: CuadroCargas, subsistentes: CargasSubsistentes",
           "retorno": "string",
-          "linea": 627,
+          "linea": 775,
           "resumen": "Resumen legible del cuadro para la ficha y el aviso de Telegram."
         },
         {
@@ -85338,7 +85402,7 @@
           "exportada": true,
           "params": "titulo: string | null | undefined",
           "retorno": "boolean",
-          "linea": 694,
+          "linea": 842,
           "resumen": "¿El título de un adjunto de la ficha promete el cuadro de cargas? Los juzgados titulan a mano y con erratas: en el corpus vivo conviven «CERTIFICACIÓN DE CARGAS», «CERTIFICCION DE DOMINOS Y CARGAS», «"
         },
         {
@@ -85347,7 +85411,7 @@
           "exportada": true,
           "params": "e: EntradaEstadoCargas",
           "retorno": "",
-          "linea": 745,
+          "linea": 893,
           "resumen": "Estado de las cargas + el documento que hay que abrir, si lo hay. Conservador por diseño: `cargas > 0` manda sobre todo lo demás (si alguna vez hubo una lectura con cargas, no se degrada a «no se sabe"
         },
         {
@@ -85356,12 +85420,12 @@
           "exportada": true,
           "params": "e: EntradaEstadoCargas",
           "retorno": "TitularCargas",
-          "linea": 793
+          "linea": 941
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cd7c28bac6bb"
+      "hash": "7eb6e06faf97"
     },
     {
       "ruta": "packages/module-subastas/src/catastro.ts",
@@ -88499,6 +88563,6 @@
   ],
   "resumen": {
     "archivos": 2383,
-    "funciones": 6376
+    "funciones": 6383
   }
 }
