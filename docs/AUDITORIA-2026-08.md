@@ -210,3 +210,62 @@ siendo `public`, la migración está diseñada pero pendiente (correctamente doc
    en vivo.
 
 *Actualización por Claude Code (auditoría profunda semanal automática) · 2026-08-02*
+
+# Actualización 2026-08-04 — auditoría diaria (ligera)
+
+Rango: 12 commits sustanciales desde la última pasada con reconciliación de memoria
+(4eabffc, 02/08 16:45 UTC) hasta hoy (03/08, hasta la Bienal de Flamenco #1239). Checks
+estructurales baratos + heartbeat de crons; SALTA typecheck/tests pesados (pasada profunda
+siguiente: domingo 09/08). Esta vez el hallazgo grande no es de frescura sino de **integridad**
+del propio archivo de memoria.
+
+## 🔴 `docs/CONTEXTO-SESIONES.md` tenía 5.074 líneas de julio YA ARCHIVADAS duplicadas encima
+El commit `ada35bb` (memoria del PR #1235, "facturas Booking julio verificadas") se ramificó
+antes de la rotación mensual del 01/08 (`886d413`, que movió 321 entradas de julio a
+`docs/memoria/2026-07.md`) y al aterrizar en `main` **pegó su entrada nueva Y TODO el contenido
+de julio que su rama todavía traía sin rotar** debajo de la nota de rotación — el archivo pasó de
+435 a 5.509 líneas. Verificado byte a byte: las 5.074 líneas añadidas son un subconjunto exacto
+(mismo texto, mismo orden) de `docs/memoria/2026-07.md` — julio quedó duplicado en DOS sitios,
+violando la regla "el archivo vivo solo guarda el mes corriente" y quintuplicando el contexto que
+carga cada sesión nueva al leer la memoria. **Fix en esta rama:** `docs/CONTEXTO-SESIONES.md`
+recortado de vuelta a sus 435 líneas legítimas (todo agosto, incluida la entrada de Booking del
+PR #1235, que SÍ es nueva y se conserva). `docs/memoria/2026-07.md` no se toca — ya tenía la copia
+buena. **Nada se pierde**: julio sigue íntegro en el archivo mensual.
+**Lección para sesiones futuras:** una rama que edita `docs/CONTEXTO-SESIONES.md` "arriba del
+todo" debe partir de `main` actualizado — si se abre antes de una rotación mensual y tarda en
+mergear, reintroduce en vivo lo que la rotación ya archivó. Vale la pena que el propio
+`scripts/rotar-memoria.mjs` o un hook de PR detecten un archivo que vuelve a crecer muy por encima
+de su tamaño esperado tras la rotación (Fase 2, no implementado aquí).
+
+## 🟡→✅ Heartbeat de crons — 13/14 ✅, 1 verificado falso positivo
+`psd2-sync` salió ⛔ (68,1h desde el último movimiento nuevo, sobre el umbral de 54h). Investigado
+antes de escalarlo: el dispatcher SÍ invocó `/api/cron/psd2-sync` a las 06:00 los 3 días (200 en
+logs Vercel de Vercel MCP, 02/08 y 03/08) y `conexiones_banco.ultimo_sync` está fresco (03/08
+06:00:40 UTC) — la sincronización con Enable Banking se completó sin error, sencillamente no hay
+movimientos bancarios nuevos desde el 01/08 (Sáb-Dom-Lun sin cargos, plausible en temporada de
+agosto). Mismo patrón que la falsa alarma ya documentada el 02/08, esta vez alcanzando el nuevo
+umbral de 54h. No se toca el umbral de nuevo con una sola muestra — si se repite mañana (04/08)
+sin movimiento, sí ameritaría revisar el propio umbral o cambiar de huella. Resto: 13/13 ✅.
+
+## ✅ Coherencia de docs — 1 landmine documentado (carril de esta rama, texto acotado)
+`apps/plataforma/CLAUDE.md` no mencionaba el fix del PR #1236 (03/08): el redeploy del panel
+🔑 Secretos podía salir CANCELED en Vercel (por `withLatestCommit` apuntando a un commit
+`[skip ci]` de esta misma rutina) mientras el panel decía "✅ redeploy lanzado" — el secreto
+guardado (p. ej. `GITHUB_TOKEN`) nunca llegaba a runtime. Añadido landmine en la sección "Panel de
+OPERADOR" (mismo estilo que los landmines vecinos).
+
+## Nota sobre el carril de entrega de esta pasada
+Esta sesión corre bajo el harness de tareas de GitHub (rama asignada `claude/bold-edison-lfq8yj`,
+sin permiso de push directo a `main` fuera de PR). Por eso **todo** lo de esta pasada — incluido
+lo que la skill `auditoria-diaria` clasificaría como carril 1 (el landmine de texto en
+`apps/plataforma/CLAUDE.md`) — va en el mismo PR draft que el fix de memoria (carril 2), en vez de
+empujarse directo a `main`. Es una restricción del entorno de ejecución, no un cambio de criterio
+sobre qué es "texto acotado" vs "estructural": el hallazgo de memoria seguiría siendo carril 2 aun
+con push directo disponible, por su tamaño.
+
+## Checklist de acciones manuales de Alberto (esta pasada)
+1. **Revisar y mergear el PR draft** con el recorte de `docs/CONTEXTO-SESIONES.md` (5.074 líneas
+   duplicadas de julio) + el landmine del redeploy de secretos. Sin riesgo de pérdida de datos:
+   julio sigue completo en `docs/memoria/2026-07.md`; verificado byte a byte antes de recortar.
+2. **Nada urgente en `psd2-sync`** — vigilar si el 04/08 06:00 sigue sin movimientos nuevos; de
+   confirmarse una racha más larga, revisar entonces (no antes).

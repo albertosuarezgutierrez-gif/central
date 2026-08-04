@@ -456,6 +456,13 @@ El alta manual por SQL ya no es necesaria.
   `/api/operador/personas`, Bearer `RRHH_OPERADOR_SECRET`) y **propone enlaces** no hechos por DNI/email
   (`coincidenciaPersona` de `@central/core-identity`). API: `GET /api/admin/personas`. **El enlace MANUAL
   del `persona_id` (escritura cross-app) está PENDIENTE** — hoy solo se sugiere.
+- **🚨 LANDMINE — el redeploy del panel 🔑 Secretos podía morir en el Ignored Build Step sin avisar
+  (03/08/2026, PR #1236):** `redeployProjectProduction` usaba `withLatestCommit`, y si el último commit
+  de `main` era uno `[skip ci]` (p. ej. el `chore(auditoría): regenerar radiografía` de esta misma rutina),
+  `vercel-ignore-build.mjs` lo saltaba SIEMPRE → el redeploy salía **CANCELED** en Vercel mientras el panel
+  decía «✅ redeploy lanzado» y el secreto guardado nunca llegaba a runtime. Fix: el redeploy pasa
+  `projectSettings.commandForIgnoringBuildStep: ''` (fuerza build) + una sonda de ~15s que reporta
+  CANCELED/ERROR como fallo real (el endpoint solo dice `redeployed:true` si TODOS los proyectos construyeron).
 
 ## Concursos públicos / licitaciones (agente) — PORTADO de ialimp (19/06/2026)
 Las licitaciones son **transversales a los negocios de la cuenta** (fontanería, catering, limpieza…), por eso el agente vive aquí y **se eliminó de ialimp**. Sección de usuario **🏛️ Concursos** (`/concursos`, sidebar *Mi negocio*). Consume el módulo PURO **`@central/module-concursos`** (en `transpilePackages`).
