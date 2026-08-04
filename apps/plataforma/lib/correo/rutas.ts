@@ -25,7 +25,8 @@ export interface RutaCorreo {
 export const ETIQUETAS_INTOCABLES = ['IA', 'inmobiliaria']
 
 // Umbral de confianza: por debajo, la IA no decide → 'dudoso' (default seguro, no se toca el correo).
-export const CONFIANZA_MINIMA = 0.6
+// 0.5 (no 0.6): Llama/NIM tiende a dar confianzas moderadas; con 0.6 casi todo caía a 'dudoso'.
+export const CONFIANZA_MINIMA = 0.5
 
 // Auto-aprendizaje (mejora 4): si la IA clasifica el mismo remitente igual N veces con confianza ≥X,
 // se inserta la regla en correo_reglas (creado_por='auto').

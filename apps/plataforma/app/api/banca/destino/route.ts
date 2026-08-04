@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import type { Destino } from '@/lib/destino'
-import { claveReferencia, claveComercio } from '@/lib/correduria'
+import { claveReferencia, claveComercio, claveReglaValida } from '@/lib/correduria'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,9 +29,12 @@ export async function POST(req: NextRequest) {
   `
   if (!rows.length) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
 
-  // Al moverlo fuera de seguros lo damos por confirmado (decisión manual del dueño).
+  // Al moverlo fuera de seguros lo damos por confirmado (decisión manual del dueño). Se LIMPIA
+  // `requiere_revision`: un destino confirmado ya está clasificado, así que dejar el flag lo
+  // convertía en un zombie que seguía saliendo en la bandeja «Gastos por revisar» (mismo saneo
+  // que aplicó /api/banca/confirmar el 2026-07-10; este endpoint era el último que lo olvidaba).
   await prisma.$executeRaw`
-    UPDATE movimientos_bancarios SET destino = ${destino}, destino_confirmado = true, compania_seguros = NULL WHERE id = ${id}::uuid
+    UPDATE movimientos_bancarios SET destino = ${destino}, destino_confirmado = true, requiere_revision = false, compania_seguros = NULL WHERE id = ${id}::uuid
   `
 
   // APRENDIZAJE: si el concepto trae un código de referencia (DNI de la pensión, código de
@@ -43,8 +46,11 @@ export async function POST(req: NextRequest) {
   // Aprende por código de referencia (M1454, DNI…) o, si no hay, por nombre de COMERCIO
   // (PETROPRIX, IONOS, NETFLIX…) → reclasificar una vez se aplica a todos los iguales (pasados y
   // futuros). La regla se reaplica por substring del concepto.
+  // Guardia contra reglas-trampa: solo aprende si la clave es específica (no un genérico tipo
+  // "TRANSF"/"TOTAL" que colisionaría por substring con media contabilidad). Si no, se aplica solo
+  // al movimiento concreto (ya actualizado arriba) sin crear regla.
   const clave = claveReferencia(rows[0].concepto) ?? claveComercio(rows[0].concepto)
-  if (clave) {
+  if (clave && claveReglaValida(clave)) {
     await prisma.$executeRaw`
       INSERT INTO banca_destino_reglas (cuenta_id, clave, destino)
       VALUES (${session.id}::uuid, ${clave}, ${destino})
@@ -52,7 +58,7 @@ export async function POST(req: NextRequest) {
     `
     await prisma.$executeRaw`
       UPDATE movimientos_bancarios mb
-      SET destino = ${destino}, destino_confirmado = true,
+      SET destino = ${destino}, destino_confirmado = true, requiere_revision = false,
           compania_seguros = CASE WHEN ${destino} = 'seguros' THEN compania_seguros ELSE NULL END
       FROM cuentas_bancarias cb
       WHERE cb.id = mb.cuenta_bancaria_id

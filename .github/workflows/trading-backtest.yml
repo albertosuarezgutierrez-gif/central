@@ -1,0 +1,46 @@
+# Recolección MANUAL del RETROVISOR del radar (backtest punto-en-el-tiempo, SOLO paper): dispara
+# /api/cron/trading-backtest por lotes hasta cubrir el universo (+SPY) y, opcionalmente, la lupa
+# de gurús. Puntual, no programado. NO solapar con trading-warmup (ambos pegan a la SEC).
+# Requiere secrets de repo: PLATAFORMA_URL, CRON_SECRET (los mismos que trading-warmup.yml).
+name: trading-backtest
+
+on:
+  workflow_dispatch:
+    inputs:
+      lotes:
+        description: 'Nº de lotes de 40 símbolos a recolectar (14 ≈ universo completo; 0 = ninguno)'
+        default: '14'
+      gurus:
+        description: 'Recoger también la lupa de gurús al final (si/no)'
+        default: 'si'
+
+jobs:
+  recolectar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Recolectar backtest por lotes
+        env:
+          PLATAFORMA_URL: ${{ secrets.PLATAFORMA_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$PLATAFORMA_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::error::Faltan secrets PLATAFORMA_URL y/o CRON_SECRET"; exit 1
+          fi
+          LOTES='${{ inputs.lotes }}'
+          for i in $(seq 1 "${LOTES:-0}"); do
+            echo "— Lote $i/$LOTES —"
+            curl -sS -m 330 -X POST "$PLATAFORMA_URL/api/cron/trading-backtest?accion=lote" \
+              -H "Authorization: Bearer $CRON_SECRET" || echo "(lote $i falló, sigo)"
+            echo ""
+            sleep 5
+          done
+
+      - name: Lupa de gurús (opcional)
+        if: ${{ inputs.gurus == 'si' }}
+        env:
+          PLATAFORMA_URL: ${{ secrets.PLATAFORMA_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -sS -m 330 -X POST "$PLATAFORMA_URL/api/cron/trading-backtest?accion=gurus" \
+            -H "Authorization: Bearer $CRON_SECRET"

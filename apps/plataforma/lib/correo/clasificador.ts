@@ -5,10 +5,12 @@
 // (default seguro: no se toca el correo). Auto-aprende reglas cuando la IA repite decisión.
 import { prisma } from '@/lib/db'
 import { aiComplete } from '@/lib/ai-client'
+import { groqText } from '@central/core-ai'
 import {
   CATEGORIAS_IA, CONFIANZA_MINIMA, descripcionParaPrompt,
   AUTO_APRENDER_VECES, AUTO_APRENDER_CONFIANZA,
 } from './rutas'
+import { clasificarPorKeyword } from './keywords'
 import type { CorreoNuevo } from './imap'
 
 export interface Clasificacion {
@@ -41,6 +43,37 @@ function parseFecha(v: unknown): Date | null {
   return isNaN(d.getTime()) ? null : d
 }
 
+// Normaliza la categoría que devuelve el modelo a una de CATEGORIAS_IA (o '' si no encaja).
+// Tolera mayúsculas, puntuación y texto extra ("Contabilidad", "contabilidad.", "contabilidad (factura)").
+function normalizarCategoria(raw: unknown): string {
+  const s = String(raw ?? '').trim().toLowerCase().replace(/[.\s]+$/, '')
+  if (!s) return ''
+  return CATEGORIAS_IA.find(c => s === c || s.startsWith(c)) ?? ''
+}
+
+// Corta una llamada colgada a la IA para que no agote el tiempo de la función (dejaría el cursor sin avanzar).
+function conTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('ia-timeout')), ms)),
+  ])
+}
+
+// Llama a la IA para clasificar. Groq PRIMERO (mismo Llama-70b pero en segundos, no ~25s como NIM,
+// que agotaba el tiempo de la función y hacía caer todo a 'dudoso'); NIM como respaldo si no hay
+// GROQ_API_KEY o Groq falla. Lanza si ambos fallan (el llamador lo trata como 'dudoso').
+async function llamarIA(system: string, user: string): Promise<string> {
+  const groqKey = process.env.GROQ_API_KEY
+  if (groqKey) {
+    try {
+      return await conTimeout(groqText({ apiKey: groqKey }, system, user, 400), 15_000)
+    } catch (e) {
+      console.warn('[triaje/clasif] Groq falló, pruebo NIM:', String(e).slice(0, 120))
+    }
+  }
+  return conTimeout(aiComplete([{ role: 'system', content: system }, { role: 'user', content: user }]), 20_000)
+}
+
 export async function clasificar(correo: CorreoNuevo): Promise<Clasificacion> {
   // (1) Regla explícita (semilla VIP o auto-aprendida).
   const regla = await reglaDe(correo.from)
@@ -53,8 +86,17 @@ export async function clasificar(correo: CorreoNuevo): Promise<Clasificacion> {
     return { categoria: 'codigos-verificacion', confianza: 1, via: 'regla', resumen: correo.subject.slice(0, 140), accionSugerida: null, fechaLimite: null }
   }
 
-  // (3) IA.
-  const prompt = [
+  // (2.5) Keyword determinista (0 tokens): remitentes/asuntos INEQUÍVOCOS (procesadores de pago,
+  // plataformas de reserva, aseguradoras, marketing conocido). No depende de que la IA responda, así
+  // que rescata lo que antes caía a 'dudoso' con la pasarela saturada. Alta precisión; si no aplica,
+  // decide la IA. Se registra como 'regla' (no gasta IA) y NO auto-aprende (ya es determinista).
+  const kw = clasificarPorKeyword(correo.from, correo.subject)
+  if (kw) {
+    return { categoria: kw.categoria, confianza: 1, via: 'regla', resumen: correo.subject.slice(0, 140), accionSugerida: null, fechaLimite: null }
+  }
+
+  // (3) IA. system = instrucciones + categorías; user = el correo (más rápido y limpio para Groq/NIM).
+  const system = [
     'Eres el triaje del buzón de correo de Alberto. Clasifica el correo en UNA sola categoría.',
     '',
     'Categorías:',
@@ -63,30 +105,43 @@ export async function clasificar(correo: CorreoNuevo): Promise<Clasificacion> {
     'Marca "seguridad-sospechosa" si el correo simula ser de un banco/entidad/servicio y pide',
     'credenciales, mete prisa o parece suplantación/phishing. Si no encaja con claridad, usa "dudoso".',
     '',
-    `Remitente: ${correo.fromRaw}`,
-    `Asunto: ${correo.subject}`,
-    `Cuerpo (extracto): ${correo.extracto}`,
-    '',
     'Responde SOLO con JSON, sin markdown:',
     '{"categoria":"...","confianza":0.0-1.0,"resumen":"una línea en español",',
     ' "accion":"qué debe hacer Alberto, o null","fecha_limite":"YYYY-MM-DD o null"}',
   ].join('\n')
+  const user = [
+    `Remitente: ${correo.fromRaw}`,
+    `Asunto: ${correo.subject}`,
+    `Cuerpo (extracto): ${correo.extracto}`,
+  ].join('\n')
 
   try {
-    const raw = await aiComplete([{ role: 'user', content: prompt }])
+    const raw = await llamarIA(system, user)
     const match = raw.match(/\{[\s\S]*\}/)
     if (!match) throw new Error('no json')
     const p = JSON.parse(match[0]) as Record<string, unknown>
-    const categoria = String(p.categoria || '')
-    const confianza = Math.max(0, Math.min(1, Number(p.confianza) || 0))
-    if (!CATEGORIAS_IA.includes(categoria) || categoria === 'dudoso' || confianza < CONFIANZA_MINIMA) {
-      return { categoria: 'dudoso', confianza, via: 'ia', resumen: String(p.resumen || correo.subject).slice(0, 140), accionSugerida: null, fechaLimite: null }
+    const categoria = normalizarCategoria(p.categoria)      // canónica, o '' si no la reconoce
+    let confianza = Number(p.confianza)
+    const resumen = String(p.resumen || correo.subject).slice(0, 140)
+    // Diagnóstico temporal (quitar cuando esté validado): qué categoría/confianza devuelve el modelo.
+    console.log('[triaje/clasif]', JSON.stringify({ from: correo.from, catRaw: p.categoria, cat: categoria, conf: p.confianza }))
+
+    // El modelo no dio una categoría reconocible → dudoso (default seguro).
+    if (!categoria || categoria === 'dudoso') {
+      return { categoria: 'dudoso', confianza: isFinite(confianza) ? confianza : 0, via: 'ia', resumen, accionSugerida: null, fechaLimite: null }
+    }
+    // Categoría VÁLIDA: si el modelo no da una confianza usable, confiamos en la categoría (0.7);
+    // solo la degradamos a dudoso si el propio modelo la marca por debajo del umbral.
+    if (!isFinite(confianza)) confianza = 0.7
+    confianza = Math.max(0, Math.min(1, confianza))
+    if (confianza < CONFIANZA_MINIMA) {
+      return { categoria: 'dudoso', confianza, via: 'ia', resumen, accionSugerida: null, fechaLimite: null }
     }
     return {
       categoria,
       confianza,
       via: 'ia',
-      resumen: String(p.resumen || correo.subject).slice(0, 140),
+      resumen,
       accionSugerida: p.accion && p.accion !== 'null' ? String(p.accion).slice(0, 200) : null,
       fechaLimite: parseFecha(p.fecha_limite),
     }

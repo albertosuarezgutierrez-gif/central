@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "node scripts/fetch-fonts.mjs && prisma generate && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --test lib/*.test.ts"
   },
   "dependencies": {
     "@central/core-ai": "workspace:*",
@@ -32,7 +33,7 @@
     "fast-xml-parser": "^5.8.0",
     "jimp": "^0.22.12",
     "jose": "^5.9.3",
-    "next": "^15.5.18",
+    "next": "^15.5.22",
     "node-ical": "^0.19.0",
     "nodemailer": "^9.0.1",
     "pdf-lib": "^1.17.1",

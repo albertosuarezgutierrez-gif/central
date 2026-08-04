@@ -1,12 +1,17 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-03T17:04:28Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-04T21:50:40Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 7 apps · 34 packages · 23 capacidades · 25 skills · 1041 rutas API.
+**Resumen:** 8 apps · 36 packages · 23 capacidades · 31 skills · 1154 rutas API.
 
 ## Apps (verticales)
+### almacen
+- **Módulos que usa:** core-identity, module-materiales
+- **Capacidades:** Eventos / catering / BEO, Almacén / stock / ASN
+- **Tablas (12):** almacen_comentarios, almacen_empleados, almacen_espacios, almacen_evento_lineas, almacen_eventos, almacen_familias, almacen_inventario_lineas, almacen_inventarios, almacen_materiales, almacen_movimientos, almacen_stock, almacen_transferencias
+- **Rutas API:** 21
 ### alquiler
 - **Módulos que usa:** core-identity, module-alquiler
 - **Capacidades:** Almacén / stock / ASN
@@ -15,23 +20,23 @@
 ### ia-rest
 - **Módulos que usa:** core-ai, core-fiscal, core-payments, core-push, core-receipts, module-asn, module-contabilidad, module-crm, module-feedback, module-flota, module-horario, module-materiales, module-organizador-trabajo, module-presupuestos, module-proveedores, module-trazabilidad
 - **Capacidades:** TPV / comanda, KDS (cocina), Eventos / catering / BEO, Reservas, QR / portal cliente, Feedback / propinas, Agenda / auto-asignación, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Contabilidad, Facturación / VeriFactu, Hardware bridge, Escáner / OCR, Notificaciones (push), Asistente / copiloto IA
-- **Tablas (82):** arqueos_caja_empleado, beo_eventos, camareros, clientes_fiscales, cobro_config, comanda_items, comandas, config_horario, config_tienda, contract_acceptances, documentos_escaneados, facturas_cliente, feedback_visita, formularios_demo_recibidos, iarest.checklist_ejecuciones, iarest.checklist_plantillas, iarest.produccion_tareas, iarest.produccion_tiempos_estandar, iarest.recibos_digitales, incidencias_sistema, inventario_menaje, inventario_menaje_evento, leads, leads_eventos, leads_unsubscribes, leads_web_tracking, manual_voz_novedades, marchar_log, marketing_consentimientos, materiales…
-- **Rutas API:** 493
+- **Tablas (83):** arqueos_caja_empleado, avisos_operador, beo_eventos, camareros, clientes_fiscales, cobro_config, comanda_items, comandas, config_horario, config_tienda, contract_acceptances, documentos_escaneados, facturas_cliente, feedback_visita, formularios_demo_recibidos, iarest.checklist_ejecuciones, iarest.checklist_plantillas, iarest.produccion_tareas, iarest.produccion_tiempos_estandar, iarest.recibos_digitales, incidencias_sistema, inventario_menaje, inventario_menaje_evento, leads, leads_eventos, leads_unsubscribes, leads_web_tracking, manual_voz_novedades, marchar_log, marketing_consentimientos…
+- **Rutas API:** 494
 ### ialimp
 - **Módulos que usa:** core-ai, core-email, core-firma, core-fiscal, core-identity, core-payments, core-push, core-receipts, core-storage, module-contabilidad, module-crm, module-documental, module-materiales, module-proveedores, module-rrhh
 - **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, CRM / leads / cotizador, RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Contabilidad, Facturación / VeriFactu, Escáner / OCR, Informes, Notificaciones (push), Asistente / copiloto IA
 - **Tablas (33):** apuntes_recurrentes, auth_rate_limit, biblioteca_documentos, catalogo_tarifas, cliente_auth_tokens, cliente_consentimientos, concursos, concursos_licitaciones, concursos_perfil_empresa, concursos_radar_anuncios, concursos_seguidos, cuentas, documentos_contables, documentos_limpiadora, firma_otps_limpiadora, firmas_limpiadora, ingresos_manuales, mailing_campanas, mailing_envios, mailing_eventos, mailing_pasos, mailing_prospectos, negocios, partes_trabajo, protocolo_fotos, protocolo_items, protocolos, recordatorios_impagos, repartidor_checklist_plantillas, repartidor_parada_items…
-- **Rutas API:** 197
-### plataforma _(matriz)_
-- **Módulos que usa:** core-ai, core-email, core-identity, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos
-- **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
-- **Tablas (38):** ai_usos, banca_destino_reglas, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_log, contable_memoria, correduria_reglas, correo_cursor, correo_reglas, correo_triaje, cuentas_bancarias, domotica_dispositivos, domotica_log, facturas_proveedor, mensajes_aprendizaje, mensajes_auto_config, mensajes_guia_cache, mensajes_guia_gaps, mensajes_log, mensajes_pendientes_tg…
 - **Rutas API:** 198
+### plataforma _(matriz)_
+- **Módulos que usa:** core-ai, core-email, core-identity, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-subastas, module-trading
+- **Capacidades:** Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
+- **Tablas (88):** agente_latidos, agente_salud, ai_usos, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_reglas, correo_cursor, correo_reglas, correo_triaje, cron_dispatch_cursor, cuentas_bancarias, domotica_acceso_pin, domotica_dispositivos…
+- **Rutas API:** 277
 ### rrhh
-- **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
+- **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
 - **Tablas (12):** rrhh.contratos_laborales, rrhh.documentos, rrhh.empleados, rrhh.empresas, rrhh.firma_otps, rrhh.firmas, rrhh.incidencias_mes, rrhh.mensajes, rrhh.nominas, rrhh.push_subscriptions, rrhh.solicitudes, rrhh.usuarios_rrhh
-- **Rutas API:** 47
+- **Rutas API:** 58
 ### sivra
 - **Módulos que usa:** core-ai, core-email, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Eventos / catering / BEO, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
@@ -57,7 +62,7 @@
   - Lo usan: ia-rest, ialimp
   - Depende de: —
 - **core-identity** (core) → `@central/core-identity`
-  - Lo usan: alquiler, ialimp, plataforma, rrhh, transporte
+  - Lo usan: almacen, alquiler, ialimp, plataforma, rrhh, transporte
   - Depende de: —
 - **core-payments** (core) → `@central/core-payments`
   - Lo usan: ia-rest, ialimp
@@ -72,7 +77,7 @@
   - Lo usan: ialimp, rrhh, sivra
   - Depende de: —
 - **core-telegram** (core) → `@central/core-telegram`
-  - Lo usan: plataforma
+  - Lo usan: plataforma, rrhh
   - Depende de: —
 - **module-agenda** (module) → `@central/module-agenda`
   - Lo usan: —
@@ -117,7 +122,7 @@
   - Lo usan: plataforma
   - Depende de: module-flota, module-materiales
 - **module-materiales** (module) → `@central/module-materiales`
-  - Lo usan: ia-rest, ialimp, sivra
+  - Lo usan: almacen, ia-rest, ialimp, sivra
   - Depende de: —
 - **module-nominas** (module) → `@central/module-nominas`
   - Lo usan: rrhh
@@ -140,6 +145,12 @@
 - **module-rrhh** (module) → `@central/module-rrhh`
   - Lo usan: ialimp, rrhh
   - Depende de: core-firma, module-documental
+- **module-subastas** (module) → `@central/module-subastas`
+  - Lo usan: plataforma
+  - Depende de: module-concursos
+- **module-trading** (module) → `@central/module-trading`
+  - Lo usan: plataforma
+  - Depende de: —
 - **module-transporte** (module) → `@central/module-transporte`
   - Lo usan: transporte
   - Depende de: module-encargo, module-flota, module-intercompany
@@ -148,19 +159,24 @@
   - Depende de: —
 
 ## Skills del proyecto
-- **agentes-entrenador** — Agente PROGRAMADO semanal que mejora los prompts de los agentes del monorepo por RENDIMIENTO (qué hicieron de verdad, qué falló, qué corrigió Alberto) y por CALIDAD transversal (contradicciones/redundancias entre skills). NO vigila frescura factual (eso es de /auditoria-diaria). Lee docs/AGENTES-BITACORA.md, docs/FEEDBACK-AGENTES.md, git/PRs de la semana y BD (solo lectura). Entrega cambios de comportamiento SIEMPRE por PR draft + aviso Telegram; solo lo factual trivial directo a main. Úsala cuando Alberto pida "revisa/mejora los prompts de los agentes" o cuando la dispare su trigger semanal (domingo). Sin secretos, solo nombres de variable.
+- **adobe-diseno** — >
+- **agentes-entrenador** — Agente PROGRAMADO semanal (domingo) que mejora los prompts de los agentes por RENDIMIENTO y calidad transversal. NO vigila frescura factual (eso es /auditoria-diaria). Cambios de comportamiento SIEMPRE por PR draft + Telegram; nunca se auto-modifica. Úsala si Alberto pide "revisa/mejora los prompts de los agentes" o al disparo semanal. Sin secretos.
 - **alquiler-maestro** — >
 - **auditoria-central** — Auditoría CON CONTEXTO del monorepo `central` (casa de marcas). Úsala tras renames de scope, migraciones de BD, reestructuras de packages/apps, o antes de un corte de infraestructura — cuando Alberto pregunte "¿se ha roto algo?", "haz una auditoría", "revisa que todo está bien" o pida pruebas/testeo del proyecto. NO es un checklist genérico: aprovecha la matriz de consumo, la BD compartida multi-tenant y la infra real (Supabase/Vercel por MCP).
 - **brainstorming** — "You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation."
+- **buscador-ia** — Agente PROGRAMADO semanal que vigila los LLMs de la cadena de fallback de `@central/core-ai` por CALIDAD/PRECIO — watch de deprecación de los modelos cableados (NIM, Groq, Gemini, Kimi), descubrimiento de candidatos y mini-eval. Estado en docs/BUSCADOR-IA.md; Telegram + PR draft solo para swaps seguros. Úsala si Alberto pide "revisa las novedades de IA / si hay una IA mejor" o al disparo semanal. Sin secretos.
 - **central-maestro** — >
-- **correo-triaje** — Router de contexto del AGENTE DE TRIAJE DE CORREO de Alberto. A diferencia de otros agentes programados, NO corre como sesión Claude sino como CRON de Vercel en apps/plataforma (cada ~10 min): lee lo nuevo del Gmail por IMAP, clasifica cada correo con la pasarela IA, y actúa — ruido a Triaje/Ruido+archivado, contabilidad etiquetada como buzón puente de facturas-correo, personal/huéspedes/leads con aviso Telegram inmediato, phishing marcado con cautela. Úsala cuando Alberto pida "revisa/ajusta el triaje de correo", quiera añadir una categoría o remitente, o cuando /auditoria-diaria reconcilie la tabla de rutas. NO duplica el código: dice qué existe, dónde vive y cómo extenderlo. Sin secretos.
+- **code-map** — Úsala al EMPEZAR cualquier tarea de CÓDIGO cuando haya que localizar QUÉ archivo/función maneja algo, ANTES de Grep/Read a ciegas — consulta la tabla Supabase `mapa_arquitectura` (índice de firmas del repo) para acotar candidatos a coste ~0 y leer SOLO esos. No reemplaza a Grep/Read: los enfoca. Sin tabla o sin candidatos, método clásico.
+- **correo-triaje** — Router de contexto del agente de TRIAJE DE CORREO — cron de Vercel en apps/plataforma cada ~10 min (NO sesión Claude) que lee Gmail por IMAP, clasifica y actúa (etiquetas, archivado, aviso Telegram). Úsala si Alberto pide "revisa/ajusta el triaje de correo", añadir categoría/remitente, o cuando /auditoria-diaria reconcilie la tabla de rutas. Sin secretos.
+- **delegar-codigo** — Úsala cuando una tarea tenga código MECÁNICO o VOLUMINOSO (renames masivos, mismo patrón en N archivos, boilerplate, migraciones planas) — Claude planifica y REVISA, y delega la escritura a un coder barato vía `/api/ai/ejecutar` de plataforma (OpenRouter, categoría `codigo`). NO para lógica sutil ni cambios de 1-2 archivos. Complementa a `code-map`.
 - **facturas-correo** — Agente PROGRAMADO que revisa el Gmail de Alberto buscando facturas/justificantes de gasto, los clasifica (personal vs negocio deducible), archiva en Google Drive los deducibles y los concilia con los movimientos bancarios de plataforma. Úsala cuando Alberto pida "revisa mis correos/facturas", o cuando la dispare el trigger diario de Claude Code web. NO es un proceso 24/7: se despierta, hace una pasada sobre lo nuevo y deja un resumen.
-- **fiscal-novedades** — Agente PROGRAMADO que vigila cambios en las deducciones del IRPF (estatales en el BOE y autonómicas de Andalucía en el BOJA/AEAT) y los contrasta con los importes que usa el módulo /finanzas de plataforma (IMPORTES_POR_ANIO en apps/plataforma/lib/fiscal-deducciones.ts). Cuando un importe cambia, abre un PR draft que actualiza la constante e inserta una fila en fiscal_novedades para que la app avise EN PANTALLA si el cambio beneficia a Alberto. Úsala cuando Alberto pida "revisa si han cambiado las deducciones" o cuando la dispare su trigger (mensual + antes de la campaña de renta). NO se cuelga del agente de concursos (ese sondea PLACSP por CPV).
-- **github-vigia** — Agente PROGRAMADO que vigila el ecosistema GitHub/OSS que le interesa al monorepo. Tres patas en una pasada mensual — (1) releases de la lista curada de repos vigilados en docs/VIGIA-OSS.md (VROOM, OSRM, openrouteservice, Leaflet, Traccar, web-push…), (2) descubrimiento de herramientas/repos nuevos por vertical, y (3) dependencias npm desactualizadas o con CVE. Actualiza docs/VIGIA-OSS.md (estado entre ejecuciones), avisa por Telegram si algo merece ojo humano y abre PR draft solo para bumps pequeños y seguros. Úsala cuando Alberto pida "revisa las novedades de GitHub / del ecosistema" o cuando la dispare su trigger mensual (día 15). Sin secretos: solo nombres de variable.
+- **fiscal-novedades** — Agente PROGRAMADO (mensual + pre-renta) que vigila cambios en deducciones IRPF (BOE estatal, BOJA/AEAT Andalucía) y los contrasta con IMPORTES_POR_ANIO de apps/plataforma/lib/fiscal-deducciones.ts; si cambian, PR draft + fila en fiscal_novedades para aviso en pantalla. Úsala si Alberto pide "revisa si han cambiado las deducciones".
+- **github-vigia** — Agente PROGRAMADO mensual (día 15) que vigila el ecosistema GitHub/OSS — releases de los repos curados en docs/VIGIA-OSS.md, descubrimiento por vertical, y deps npm desactualizadas o con CVE. Actualiza docs/VIGIA-OSS.md, Telegram + PR draft solo para bumps seguros. Úsala si Alberto pide "revisa las novedades de GitHub / del ecosistema". Sin secretos.
 - **ia-rest-maestro** — >
 - **ialimp-client-health** — Monitorización semanal de la salud de la cuenta de Sique Brilla (único cliente en producción de ialimp). Comprueba PMS sync, programaciones sin asignar, impagos activos y errores recientes. Genera un resumen de viernes para cerrar la semana operativa. Úsala en la rutina semanal o cuando Alberto quiera un pulso rápido del cliente. Sin secretos: solo nombres de variable.
 - **ialimp-maestro** — >
-- **perfil-fiscal** — Router de contexto FISCAL y PATRIMONIAL de Alberto (persona física) + la sociedad Punto y Coma SL. Úsalo SIEMPRE que Alberto pida algo de su renta/IRPF, declaración, gastos deducibles, qué piso tributa dónde, su asesoría, o cuando trabajes con `facturas-correo`, `fiscal-novedades` o el módulo `/finanzas`. NO duplica los datos personales (esos viven en la BD `fiscal_perfil`/`fiscal_descendientes`); aquí está la ESTRUCTURA: qué entidad declara qué, las reglas de gasto y los caveats. Sin cifras ni datos sensibles.
+- **marca-cliente** — Alta/intake de la identidad corporativa de un cliente/tenant y aplicación 100% a su app — convierte su marca real (logo, web, fotos) en un objeto `Marca` de `@central/brand` y lo enchufa dejando la UI IDÉNTICA a su marca. Úsala con cliente nuevo, rebrand, o si Alberto pide "adáptalo a la imagen corporativa de X". Complementa `adobe-diseno` y Adobe Fonts.
+- **perfil-fiscal** — Router de contexto FISCAL y PATRIMONIAL de Alberto (persona física) + Punto y Coma SL. Úsalo SIEMPRE que Alberto pida algo de su renta/IRPF, declaración, gastos deducibles, qué piso tributa dónde, o su asesoría, y al trabajar con `facturas-correo`, `fiscal-novedades` o el módulo `/finanzas`. Sin cifras ni datos sensibles.
 - **plataforma-maestro** — >
 - **pricing-agente** — >
 - **psd2-health-check** — Guardián de la sincronización bancaria (Enable Banking / PSD2). Verifica que los movimientos bancarios llegan frescos (< 48h) a `movimientos_bancarios`. Si la última importación es antigua o hay una caída >50% en volumen, alerta por Telegram y anota en CONTEXTO-SESIONES.md. Úsala en la rutina semanal de salud financiera o cuando Alberto sospeche que el sync está roto. Sin secretos: solo nombres de variable.
@@ -169,6 +185,7 @@
 - **rrhh-compliance-calendar** — Recordatorio mensual de obligaciones legales pendientes de implementar en la vertical RRHH (Portal del Empleado). Lee el roadmap, filtra los ítems 🔴 obligatorios no completados y genera un informe de plazos. Úsala el primer día de cada mes o cuando Alberto quiera un pulso del estado de compliance de RRHH.
 - **sivra-maestro** — >
 - **systematic-debugging** — Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes
+- **trading-analista** — Pasada diaria del agente de inversión sobre Interactive Brokers (Fase 1, SOLO paper). Lee cartera + watchlist, tira precios (IBKR) y fundamentales (FMP) por MCP, llama a /api/trading/analizar y /api/trading/puntuar de plataforma, y resume por Telegram. NUNCA ejecuta órdenes reales.
 - **transporte-maestro** — >
 - **using-superpowers** — Use when starting any conversation - establishes how to find and use skills, requiring Skill tool invocation before ANY response including clarifying questions
 - **verification-before-completion** — Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always
@@ -176,38 +193,38 @@
 
 ## Avisos de arquitectura
 - 🔴 **Almacén / stock / ASN**: duplicada en alquiler (debería usar `module-materiales`).
-- ⚠️ **TPV / comanda**: en ia-rest; falta en alquiler, ialimp, rrhh, sivra, transporte.
-- ⚠️ **KDS (cocina)**: en ia-rest; falta en alquiler, ialimp, rrhh, sivra, transporte.
-- ⚠️ **Eventos / catering / BEO**: en ia-rest, sivra; falta en alquiler, ialimp, rrhh, transporte.
-- ⚠️ **Reservas**: en ia-rest; falta en alquiler, ialimp, rrhh, sivra, transporte.
-- ⚠️ **QR / portal cliente**: en ia-rest; falta en alquiler, ialimp, rrhh, sivra, transporte.
-- ⚠️ **Feedback / propinas**: en ia-rest; falta en alquiler, ialimp, rrhh, sivra, transporte.
-- ⚠️ **Equipo limpiadoras**: en ialimp, sivra; falta en alquiler, ia-rest, rrhh, transporte.
-- ⚠️ **Agenda / auto-asignación**: en ia-rest, ialimp, sivra; falta en alquiler, rrhh, transporte.
-- ⚠️ **Pricing dinámico**: en sivra; falta en alquiler, ia-rest, ialimp, rrhh, transporte.
-- ⚠️ **Mercado / ingest**: en sivra; falta en alquiler, ia-rest, ialimp, rrhh, transporte.
-- ⚠️ **CRM / leads / cotizador**: en ia-rest, ialimp; falta en alquiler, rrhh, sivra, transporte.
-- ⚠️ **Marketing (blog/IG/SEO)**: en ia-rest, sivra; falta en alquiler, ialimp, rrhh, transporte.
-- ⚠️ **RRHH / equipo**: en ia-rest, ialimp; falta en alquiler, rrhh, sivra, transporte.
-- ⚠️ **Almacén / stock / ASN**: en alquiler, ia-rest, ialimp, sivra; falta en rrhh, transporte.
-- ⚠️ **Proveedores / compras**: en ia-rest, ialimp, sivra; falta en alquiler, rrhh, transporte.
-- ⚠️ **Contabilidad**: en ia-rest, ialimp; falta en alquiler, rrhh, sivra, transporte.
-- ⚠️ **Facturación / VeriFactu**: en ia-rest, ialimp; falta en alquiler, rrhh, sivra, transporte.
-- ⚠️ **Hardware bridge**: en ia-rest; falta en alquiler, ialimp, rrhh, sivra, transporte.
-- ⚠️ **Escáner / OCR**: en ia-rest, ialimp; falta en alquiler, rrhh, sivra, transporte.
-- ⚠️ **Informes**: en ialimp; falta en alquiler, ia-rest, rrhh, sivra, transporte.
-- ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en alquiler, sivra, transporte.
-- ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
+- ⚠️ **TPV / comanda**: en ia-rest; falta en almacen, alquiler, ialimp, rrhh, sivra, transporte.
+- ⚠️ **KDS (cocina)**: en ia-rest; falta en almacen, alquiler, ialimp, rrhh, sivra, transporte.
+- ⚠️ **Eventos / catering / BEO**: en almacen, ia-rest, sivra; falta en alquiler, ialimp, rrhh, transporte.
+- ⚠️ **Reservas**: en ia-rest; falta en almacen, alquiler, ialimp, rrhh, sivra, transporte.
+- ⚠️ **QR / portal cliente**: en ia-rest; falta en almacen, alquiler, ialimp, rrhh, sivra, transporte.
+- ⚠️ **Feedback / propinas**: en ia-rest; falta en almacen, alquiler, ialimp, rrhh, sivra, transporte.
+- ⚠️ **Equipo limpiadoras**: en ialimp, sivra; falta en almacen, alquiler, ia-rest, rrhh, transporte.
+- ⚠️ **Agenda / auto-asignación**: en ia-rest, ialimp, sivra; falta en almacen, alquiler, rrhh, transporte.
+- ⚠️ **Pricing dinámico**: en sivra; falta en almacen, alquiler, ia-rest, ialimp, rrhh, transporte.
+- ⚠️ **Mercado / ingest**: en sivra; falta en almacen, alquiler, ia-rest, ialimp, rrhh, transporte.
+- ⚠️ **CRM / leads / cotizador**: en ia-rest, ialimp; falta en almacen, alquiler, rrhh, sivra, transporte.
+- ⚠️ **Marketing (blog/IG/SEO)**: en ia-rest, sivra; falta en almacen, alquiler, ialimp, rrhh, transporte.
+- ⚠️ **RRHH / equipo**: en ia-rest, ialimp; falta en almacen, alquiler, rrhh, sivra, transporte.
+- ⚠️ **Almacén / stock / ASN**: en almacen, alquiler, ia-rest, ialimp, sivra; falta en rrhh, transporte.
+- ⚠️ **Proveedores / compras**: en ia-rest, ialimp, sivra; falta en almacen, alquiler, rrhh, transporte.
+- ⚠️ **Contabilidad**: en ia-rest, ialimp; falta en almacen, alquiler, rrhh, sivra, transporte.
+- ⚠️ **Facturación / VeriFactu**: en ia-rest, ialimp; falta en almacen, alquiler, rrhh, sivra, transporte.
+- ⚠️ **Hardware bridge**: en ia-rest; falta en almacen, alquiler, ialimp, rrhh, sivra, transporte.
+- ⚠️ **Escáner / OCR**: en ia-rest, ialimp; falta en almacen, alquiler, rrhh, sivra, transporte.
+- ⚠️ **Informes**: en ialimp; falta en almacen, alquiler, ia-rest, rrhh, sivra, transporte.
+- ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en almacen, alquiler, sivra, transporte.
+- ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (03/07/2026) 🛡️ core-ai: reintentos ante rate-limit (429) en los proveedores IA (03/07/2026, rama `claude/api-rate-limit-errors-ovyrch`, PR nuevo).
-- (03/07/2026) 🆕 plataforma: Agente de contabilidad conversacional — FASE 1 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`, PR #726).
-- (03/07/2026) ✅ plataforma: repaso «haz todo» de los 🔴/🟡 del auto-informe 01/07 (03/07/2026, rama `claude/tax-declaration-projection-ewsd4a`, PR nuevo).
-- 🔴 plataforma: auditoría 03/07 — 2 bugs de prod por DRIFT de esquema BD↔código (rama `claude/tax-declaration-projection-ewsd4a`, PR nuevo).
-- (03/07/2026) ⚡ plataforma: «🧾 Mi declaración» (/finanzas/fiscal) ya no se cuelga en «Calculando…» (03/07/2026, PR #721 MERGEADO a main).
-- (01/07/2026) ✅ rrhh: nueva empresa + documentos empresa + fichaje geolocalización (01/07/2026, PR #645 verde, pendiente merge).
-- (01/07/2026) ✅ rrhh: contador vacaciones, calendario admin, notificaciones y quitar columna Puesto (01/07/2026, PRs #637 y #643 mergeados).
-- (01/07/2026) 🐛 plataforma: fix duplicados cross-cuenta tarjeta↔corriente (01/07/2026, PR en curso).
-- (01/07/2026) ✅ plataforma: motor de categorización IA de gastos — MERGEADO a main (01/07/2026, PR #639 squash-merged).
-- (01/07/2026) 🏷️ plataforma: motor de categorización IA de gastos — implementado (01/07/2026, PR #639 verde, pendiente merge).
+- (01/08/2026) 🧾 facturas-correo (01/08/2026, trigger diario).
+- (04/08/2026) 🧹 Laboratorio de inversión: quitado el ruido + el retrovisor llevaba 16 días muerto (04/08/2026).
+- (04/08/2026) 📊 Velas + volumen: medido, y la tesis del rebote en la media larga REFUTADA (04/08/2026).
+- (31/07/2026) 🔎 Verificación en caliente del arreglo de los ADR + techo al nº de acciones (31/07/2026).
+- (02/08/2026) 🔎 Revisión mensual ia.rest Tech & Stack (02/08/2026, sesión de investigación).
+- (02/08/2026) ⏱️ Crons con timeout 60s → 300s (02/08/2026, rama `claude/audit-30-07-hv2njr`).
+- (02/08/2026) 🧹 «Haz tu todo»: vulns 12→3, 0 críticas (02/08/2026, rama `claude/audit-vulnerabilities-02-08-m7lwtf`).
+- (02/08/2026) ✅ Reparación auditoría 02/08 cerrada (02/08/2026, rama `claude/audit-vulnerabilities-02-08-m7lwtf`).
+- (02/08/2026) 🛡️ Auditoría PROFUNDA semanal (02/08/2026).
+- (01/08/2026) 📂 RRHH: categoría «Documentación mensual» en documentos de empresa (01/08/2026, rama `claude/programa-rrhh-m25fwd`).
 

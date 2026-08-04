@@ -1,15 +1,15 @@
 // Cron diario del agente de facturas: lee Gmail + Drive, imputa/encola y avisa.
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
-import { listarCandidatos, marcarProcesado } from '@/lib/agente-facturas/gmail'
+import { listarCandidatosConLimite, marcarProcesado } from '@/lib/agente-facturas/gmail'
 import { listNuevos, getContenido, archivar, subir } from '@/lib/agente-facturas/drive'
 import { extraerDesdeBuffer } from '@/lib/agente-facturas/extraer'
 import { procesarFactura, clasificarDocumento, type ProcesarResult } from '@/lib/agente-facturas/procesar'
 import { recurrentesQueFaltan } from '@/lib/agente-facturas/anomalias'
-import { avisaBandeja, avisaSinAdjunto, avisaRecurrentesQueFaltan, resumen, type PendienteAviso } from '@/lib/agente-facturas/avisos'
+import { avisaBandeja, avisaSinAdjunto, avisaSinDrive, avisaNoLegibles, avisaRecurrentesQueFaltan, resumen, type PendienteAviso } from '@/lib/agente-facturas/avisos'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 300
 
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
@@ -17,6 +17,19 @@ export async function GET(req: NextRequest) {
   const stats = { auto: 0, bandeja: 0, duplicados: 0, omitidos: 0, errores: 0 }
   const pendientes: PendienteAviso[] = []
   const sinAdjunto: { from: string; subject: string }[] = []
+  const sinDrive: { nombre: string; from?: string; esBooking?: boolean }[] = []
+  const noLegibles: { nombre: string; from?: string }[] = []
+
+  // Ventana de Gmail: 36h por defecto (cron diario). Override manual `?horas=N` (1..240) para
+  // recuperar facturas que se salieron de la ventana (p.ej. las que se perdieron mientras el
+  // scan estaba caído): `?horas=96`. El cron no pasa el parámetro → sigue en 36h.
+  const horas = Math.min(Math.max(Number(new URL(req.url).searchParams.get('horas')) || 36, 1), 240)
+
+  // Presupuesto de tiempo: cada factura hace OCR (IA lenta) + subida a Drive. Con la función
+  // limitada a 300s, paramos a los 250s y dejamos los restantes para la pasada siguiente (Gmail:
+  // no se marcan procesados → se re-cogen; Drive: siguen en la raíz). Evita el 504 que la mataba.
+  const t0 = Date.now()
+  const agotado = () => Date.now() - t0 > 250_000
 
   const acumula = (r: ProcesarResult, proveedorFallback?: string) => {
     if (r.decision === 'auto') stats.auto++
@@ -26,12 +39,15 @@ export async function GET(req: NextRequest) {
     else { stats.bandeja++; pendientes.push({ proveedor: r.proveedor || proveedorFallback || null, total: r.total, motivo: r.motivo }) }
   }
 
-  // ── 1) Gmail: candidatos de las últimas 36h ──────────────────────────────────
+  // ── 1) Gmail: candidatos de la ventana (36h por defecto, override `?horas=`) ──
   try {
-    const desde = new Date(Date.now() - 36 * 3600_000)
+    const desde = new Date(Date.now() - horas * 3600_000)
     const etiqueta = process.env.GMAIL_FACTURAS_LABEL || undefined
-    const correos = await listarCandidatos({ desde, etiqueta })
+    // `buzon` viaja hasta `marcarProcesado`: los UID de IMAP son por buzón, y con
+    // `GMAIL_FACTURAS_LABEL` puesta el marcado contra INBOX no encontraba nada.
+    const { correos, buzon } = await listarCandidatosConLimite({ desde, etiqueta })
     for (const c of correos) {
+      if (agotado()) break
       if (c.sinAdjunto) { sinAdjunto.push({ from: c.from, subject: c.subject }); continue }
       let imputadoAlguno = false
       for (const adj of c.adjuntos) {
@@ -39,10 +55,26 @@ export async function GET(req: NextRequest) {
           const { data, texto } = await extraerDesdeBuffer(adj.buffer, adj.mime, adj.nombre)
           const doc = clasificarDocumento(data, texto || '', adj.nombre)
           const fecha = doc.factura.fecha || c.fecha
-          const drive = doc.archivar ? await subir(adj.buffer, adj.nombre, adj.mime, fecha).catch(() => null) : null
+          // Extracción vacía (ni total, ni proveedor, ni NIF) = PDF ilegible (imagen escaneada
+          // o la IA no lo leyó tras Groq+NIM). Lo avisamos en vez de dejar un 'error' mudo.
+          if (doc.factura.total == null && doc.factura.proveedor == null && doc.factura.nif_proveedor == null) {
+            noLegibles.push({ nombre: adj.nombre, from: c.from })
+          }
+          // La subida ya reintenta transitorios (drive.ts); si aun así falla, imputamos el gasto
+          // pero registramos que su PDF no llegó a Drive para avisar (crítico en Booking).
+          let drive = null
+          if (doc.archivar) {
+            try {
+              drive = await subir(adj.buffer, adj.nombre, adj.mime, fecha)
+            } catch (e) {
+              sinDrive.push({ nombre: adj.nombre, from: c.from, esBooking: doc.esBooking })
+              console.error('[scan] subida Drive falló (email):', e)
+            }
+          }
           const r = await procesarFactura({ ...doc.factura, fecha }, {
             fuente: 'agente-email', drive: drive || undefined,
             esPresupuesto: doc.esPresupuesto, fingerprintOverride: doc.fingerprintOverride,
+            esBooking: doc.esBooking,
           })
           acumula(r, c.from)
           if (r.decision !== 'error') imputadoAlguno = true
@@ -51,7 +83,7 @@ export async function GET(req: NextRequest) {
           console.error('[scan] adjunto email error:', e)
         }
       }
-      if (imputadoAlguno) await marcarProcesado(c.uid).catch(() => {})
+      if (imputadoAlguno) await marcarProcesado(c.uid, undefined, buzon).catch(() => {})
     }
   } catch (e) {
     console.error('[scan] Gmail error:', e)
@@ -61,6 +93,7 @@ export async function GET(req: NextRequest) {
   try {
     const files = await listNuevos()
     for (const f of files) {
+      if (agotado()) break
       try {
         const { buffer, mimeType, nombre } = await getContenido(f.id)
         const { data, texto } = await extraerDesdeBuffer(buffer, mimeType, nombre)
@@ -74,6 +107,7 @@ export async function GET(req: NextRequest) {
           fuente: 'agente-drive', drive: { url, carpeta, nombre },
           propiedadPorDefecto: doc.esBooking ? undefined : 'prop_personal',
           esPresupuesto: doc.esPresupuesto, fingerprintOverride: doc.fingerprintOverride,
+          esBooking: doc.esBooking,
         })
         acumula(r)
       } catch (e) {
@@ -90,6 +124,8 @@ export async function GET(req: NextRequest) {
     const now = new Date()
     const faltan = await recurrentesQueFaltan(now.getFullYear(), now.getMonth() + 1)
     await avisaSinAdjunto(sinAdjunto)
+    await avisaSinDrive(sinDrive)
+    await avisaNoLegibles(noLegibles)
     await avisaBandeja(pendientes)
     await avisaRecurrentesQueFaltan(faltan)
     await resumen({ fuente: 'diario', ...stats })
@@ -97,5 +133,5 @@ export async function GET(req: NextRequest) {
     console.error('[scan] avisos error:', e)
   }
 
-  return NextResponse.json({ ok: true, stats, pendientes: pendientes.length, sinAdjunto: sinAdjunto.length })
+  return NextResponse.json({ ok: true, horas, stats, pendientes: pendientes.length, sinAdjunto: sinAdjunto.length, sinDrive: sinDrive.length, noLegibles: noLegibles.length })
 }

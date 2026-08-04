@@ -2,16 +2,16 @@
 // Espejo de `nim.ts`: la config (apiKey, modelo, baseUrl) la inyecta la app
 // consumidora — el paquete NUNCA lee process.env ni secretos.
 //
-// ¿Por qué Groq? Sirve `llama-3.3-70b-versatile` GRATIS — el MISMO modelo que
-// NVIDIA NIM usa por defecto. Por eso es el fallback de texto ideal: misma
-// familia de modelo (cero re-tuning de prompts), otra infraestructura. La
-// POLÍTICA de fallback (NIM → Groq) vive en cada app.
+// ¿Por qué Groq? Sirve modelos abiertos GRATIS (rate-limited) sobre su LPU —
+// infraestructura DISTINTA de NIM, ideal como fallback de texto. Default
+// `openai/gpt-oss-120b` (el anterior `llama-3.3-70b-versatile` quedó DEPRECADO
+// en Groq el 17/06/2026). La POLÍTICA de fallback (NIM → Groq) vive en cada app.
 
 import type { NimChatMessage, NimToolMessage, NimToolResult } from './nim'
 import { fetchAI } from './http.ts'
 
 const DEFAULT_BASE_URL = 'https://api.groq.com/openai/v1/chat/completions'
-const DEFAULT_TEXT_MODEL = 'llama-3.3-70b-versatile'
+const DEFAULT_TEXT_MODEL = 'openai/gpt-oss-120b'
 
 /**
  * Configuración para el cliente Groq.
@@ -23,7 +23,7 @@ const DEFAULT_TEXT_MODEL = 'llama-3.3-70b-versatile'
 export interface GroqConfig {
   apiKey: string
   baseUrl?: string    // default: endpoint OpenAI-compatible de Groq
-  textModel?: string  // default: llama-3.3-70b-versatile
+  textModel?: string  // default: openai/gpt-oss-120b
 }
 
 function requireKey(config: GroqConfig): string {

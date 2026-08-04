@@ -10,7 +10,11 @@ name: Auditoría de estructura
 
 on:
   push:
-    branches: ['**']
+    # Solo main: en ramas de feature no se commitea la radiografía (ver más abajo),
+    # así que ejecutarlo ahí solo gastaría minutos de Actions sin efecto. Al mergear
+    # a main se regenera igual. Antes era ['**'] y cada push a cualquier rama generaba
+    # un commit-bot que reconstruía todos los proyectos Vercel (coste de build).
+    branches: [main]
     paths:
       - 'apps/**'
       - 'packages/**'
@@ -45,16 +49,61 @@ jobs:
       - name: Regenerar radiografía
         run: node scripts/auditar-estructura.mjs
 
+      # SOLO en main: la radiografía se commitea de vuelta únicamente en la rama principal.
+      # En ramas de feature ese commit-bot generaba un push extra que reconstruía TODOS los
+      # proyectos Vercel del monorepo (amplificaba la factura de Build CPU Minutes). Además,
+      # el propio `ignoreCommand` (scripts/vercel-ignore-build.mjs) ya salta en Vercel los
+      # commits con [skip ci]; esta guarda evita incluso generarlos fuera de main.
       - name: Commitear si cambió
+        if: github.ref_name == 'main'
         run: |
-          FILES="apps/plataforma/lib/estructura.generated.json docs/ARQUITECTURA.generated.md"
+          FILES="apps/plataforma/lib/estructura.generated.json docs/ARQUITECTURA.generated.md docs/mapa-funciones.generated.json"
           if [ -n "$(git status --porcelain $FILES)" ]; then
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git add $FILES
             git commit -m 'chore(auditoría): regenerar radiografía de estructura [skip ci]'
             git push origin HEAD:${{ github.ref_name }}
-            echo "Radiografía (JSON + markdown) actualizada y commiteada."
+            echo "Radiografía (JSON + markdown + mapa de funciones) actualizada y commiteada."
           else
             echo "Radiografía ya al día — sin cambios."
           fi
+
+      # Inyecta el índice de funciones en Supabase (tabla mapa_arquitectura) para el Director de
+      # código. SOLO desde main: la tabla es estado global único → las ramas de feature no la pisan.
+      # No mete DATABASE_URL en CI: llama al puerto interno con CRON_SECRET (mismo patrón que las
+      # rutinas Claude → /api/internal/alerta). Se omite silenciosamente si faltan los secrets.
+      - name: Inyectar mapa de funciones en Supabase
+        if: github.ref_name == 'main'
+        env:
+          PLATAFORMA_URL: ${{ secrets.PLATAFORMA_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$PLATAFORMA_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "PLATAFORMA_URL/CRON_SECRET no configurados — se omite la inyección."
+            exit 0
+          fi
+          # Reintentos con backoff: cuando este push a main ADEMÁS redespliega plataforma, el
+          # endpoint puede tardar en estar vivo → 404 transitorio. Reintentamos ~2.5 min. Un 401
+          # (CRON_SECRET no coincide con Vercel) NO se reintenta: esperar no lo arregla.
+          code=000
+          for intento in 1 2 3 4 5 6; do
+            code=$(curl -sS -o /tmp/mapa-resp.json -w '%{http_code}' \
+              -X POST "$PLATAFORMA_URL/api/internal/mapa-arquitectura" \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              -H 'Content-Type: application/json' \
+              --data-binary @docs/mapa-funciones.generated.json || echo 000)
+            echo "Intento $intento → HTTP $code"
+            [ "$code" = "200" ] && break
+            head -c 200 /tmp/mapa-resp.json 2>/dev/null || true; echo
+            if [ "$code" = "401" ]; then
+              echo "401: el CRON_SECRET de GitHub no coincide con el de Vercel — no reintento."
+              break
+            fi
+            if [ "$intento" -lt 6 ]; then
+              echo "No-200 (deploy de prod puede estar en curso). Reintento en $((intento*15))s…"
+              sleep $((intento*15))
+            fi
+          done
+          [ "$code" = "200" ] || { echo "Inyección del mapa falló tras los reintentos (HTTP $code)"; exit 1; }
+          echo "Inyección OK (HTTP 200)."

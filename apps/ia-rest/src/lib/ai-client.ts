@@ -78,7 +78,7 @@ export type { ImageInput }
 const TEXT_MODEL_NVIDIA   = process.env.NVIDIA_BRAIN_MODEL      ?? 'meta/llama-3.3-70b-instruct'
 const VISION_MODEL_NVIDIA = process.env.NVIDIA_VISION_MODEL     ?? 'meta/llama-3.2-11b-vision-instruct'
 // Fallback de texto GRATIS: Groq sirve el MISMO Llama 3.3 70B que NIM, en otra infra.
-const TEXT_MODEL_GROQ     = process.env.GROQ_BRAIN_MODEL        ?? 'llama-3.3-70b-versatile'
+const TEXT_MODEL_GROQ     = process.env.GROQ_BRAIN_MODEL        ?? 'openai/gpt-oss-120b'
 
 // Config NIM desde el entorno de ESTA app (el paquete core-ai no lee process.env).
 function nimConfig(): NimConfig {
@@ -242,7 +242,11 @@ export async function callAISearch(
     }
   }
 
-  const geminiKey = process.env.GEMINI_API_KEY
+  // Gemini directo APAGADO por defecto (02/08/2026): la key lleva meses con 429 de cuota
+  // permanente (Check 12 del health-check de plataforma) y este intento solo pagaba un timeout
+  // antes de caer a callAI. Reactivar con GEMINI_WEBSEARCH=1 cuando haya key con cuota (mismo
+  // gate que lib/websearch.ts de plataforma).
+  const geminiKey = process.env.GEMINI_WEBSEARCH === '1' ? process.env.GEMINI_API_KEY : undefined
 
   if (geminiKey) {
     try {

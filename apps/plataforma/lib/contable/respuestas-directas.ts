@@ -1,0 +1,326 @@
+// apps/plataforma/lib/contable/respuestas-directas.ts
+// Responde por SQL las intenciones detectadas por intencion.ts, SIN LLM. Todo scoped por cuenta_id
+// (multi-tenant) y excluyendo duplicados (`duplicado_estado <> 'ignorado'`, el landmine del doble
+// conteo). OJO: la columna de fecha es `fecha_operacion`, NO `fecha`. Devuelve el texto ya listo,
+// o null si NO puede responder con confianza (→ el cerebro cae al LLM).
+import { prisma } from '@/lib/db'
+import { Prisma } from '@prisma/client'
+import { getResumenFinanciero } from '@/lib/finanzas'
+import { getResumenSivra } from '@/lib/financiero'
+import { NOMBRE_MES, PISOS_LABEL, type Intencion } from './intencion'
+import { getEnlacesExtracto } from './memoria'
+import { clavesDeSubcategoria } from '@/lib/subcategoria-keywords'
+import { eur } from '@/lib/dinero'
+
+// "2026-06" → "junio de 2026" (para rotular los extractos archivados de forma legible).
+function etiquetaMesIso(mesIso: string): string {
+  const [y, m] = mesIso.split('-')
+  const n = Number(m)
+  return n >= 1 && n <= 12 ? `${NOMBRE_MES[n]} de ${y}` : mesIso
+}
+
+// Euros enteros con separador de miles y € pegado (12450 → "12.450€"), sin decimales — para las cifras
+// grandes de base imponible del tramo fiscal. El resto de importes usan eur() de lib/dinero (formato
+// español con decimales: 2.162,49€). NUNCA "€${x.toFixed(2)}" ni el € separado por un espacio.
+const e0 = (n: number) => `${Math.round(n || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')}€`
+
+const DESTINO_LABEL: Record<string, string> = {
+  turistico_pisos: 'Pisos turísticos', turistico_duplex: 'Dúplex/Villasís',
+  seguros: 'Correduría (seguros)', personal: 'Personal', traspaso_interno: 'Traspaso interno',
+}
+
+// Suma de movimientos (gasto = importe<0, ingreso = importe>0) con condiciones extra opcionales.
+async function suma(
+  cuentaId: string, signo: 'gasto' | 'ingreso', extra: Prisma.Sql,
+): Promise<{ total: number; n: number } | null> {
+  const cond = signo === 'gasto' ? Prisma.sql`mb.importe < 0` : Prisma.sql`mb.importe > 0`
+  const rows = await prisma.$queryRaw<{ total: number; n: bigint }[]>(Prisma.sql`
+    SELECT coalesce(sum(abs(mb.importe)), 0)::float8 AS total, count(*)::bigint AS n
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND (mb.duplicado_estado IS NULL OR mb.duplicado_estado <> 'ignorado')
+      AND ${cond}
+      ${extra}`).catch(() => null)
+  if (!rows) return null
+  return { total: Number(rows[0]?.total || 0), n: Number(rows[0]?.n || 0) }
+}
+
+export async function responderDirecto(cuentaId: string, intn: Intencion): Promise<string | null> {
+  const palabra = (s: 'gasto' | 'ingreso') => (s === 'gasto' ? 'gastado' : 'ingresado')
+
+  if (intn.tipo === 'movimientos_mes') {
+    const r = await suma(cuentaId, intn.signo, Prisma.sql`
+      AND EXTRACT(year FROM mb.fecha_operacion) = ${intn.anio}
+      AND EXTRACT(month FROM mb.fecha_operacion) = ${intn.mes}`)
+    if (!r) return null
+    const per = `${NOMBRE_MES[intn.mes]} de ${intn.anio}`
+    return r.n === 0
+      ? `No veo ${intn.signo === 'gasto' ? 'gastos' : 'ingresos'} en ${per}.`
+      : `En ${per} llevas ${eur(r.total)} ${palabra(intn.signo)} (${r.n} movimiento${r.n === 1 ? '' : 's'}).`
+  }
+
+  if (intn.tipo === 'movimientos_anio') {
+    const r = await suma(cuentaId, intn.signo, Prisma.sql`AND EXTRACT(year FROM mb.fecha_operacion) = ${intn.anio}`)
+    if (!r) return null
+    return r.n === 0
+      ? `No veo ${intn.signo === 'gasto' ? 'gastos' : 'ingresos'} en ${intn.anio}.`
+      : `En ${intn.anio} llevas ${eur(r.total)} ${palabra(intn.signo)} (${r.n} movimiento${r.n === 1 ? '' : 's'}).`
+  }
+
+  // Gasto de CONSUMO por subcategoría (super, bares, gasolina…). Fuente: la columna `subcategoria`
+  // (mismo eje que la pestaña Categorías) O las palabras clave del diccionario (así acierta aunque el
+  // movimiento aún esté sin auto-clasificar). SOLO personal (no negocio) — es análisis de consumo.
+  if (intn.tipo === 'subcategoria') {
+    const texto = Prisma.sql`(coalesce(mb.concepto_normalizado,'') || ' ' || coalesce(mb.concepto,'') || ' ' || coalesce(mb.contraparte,''))`
+    const claves = clavesDeSubcategoria(intn.subcategoria)
+    const kw = claves.length
+      ? Prisma.join(claves.map(c => Prisma.sql`${texto} ILIKE ${'%' + c + '%'}`), ' OR ')
+      : Prisma.sql`false`
+    const mesCond = intn.mes ? Prisma.sql`AND EXTRACT(month FROM mb.fecha_operacion) = ${intn.mes}` : Prisma.empty
+    const r = await suma(cuentaId, 'gasto', Prisma.sql`
+      AND coalesce(mb.destino, 'personal') = 'personal'
+      AND (mb.subcategoria = ${intn.subcategoria} OR (${kw}))
+      AND EXTRACT(year FROM mb.fecha_operacion) = ${intn.anio}
+      ${mesCond}`)
+    if (!r) return null
+    const per = intn.mes ? `${NOMBRE_MES[intn.mes]} de ${intn.anio}` : `${intn.anio}`
+    return r.n === 0
+      ? `No veo gasto en ${intn.etiqueta} en ${per}.`
+      : `En ${intn.etiqueta} llevas ${eur(r.total)} gastado en ${per} (${r.n} movimiento${r.n === 1 ? '' : 's'}).`
+  }
+
+  // Gasto/ingreso de un SEGMENTO de negocio (correduría=seguros, pisos=turistico_*): se suma por la
+  // columna `destino` (mismo eje que la pestaña Gastos y que `por_destino`, pero para UN segmento).
+  if (intn.tipo === 'gasto_destino') {
+    const mesCond = intn.mes ? Prisma.sql`AND EXTRACT(month FROM mb.fecha_operacion) = ${intn.mes}` : Prisma.empty
+    const r = await suma(cuentaId, intn.signo, Prisma.sql`
+      AND coalesce(mb.destino, 'personal') IN (${Prisma.join(intn.destinos)})
+      AND EXTRACT(year FROM mb.fecha_operacion) = ${intn.anio}
+      ${mesCond}`)
+    if (!r) return null
+    const per = intn.mes ? `${NOMBRE_MES[intn.mes]} de ${intn.anio}` : `${intn.anio}`
+    return r.n === 0
+      ? `No veo ${intn.signo === 'gasto' ? 'gastos' : 'ingresos'} de ${intn.etiqueta} en ${per}.`
+      : `En ${intn.etiqueta} llevas ${eur(r.total)} ${palabra(intn.signo)} en ${per} (${r.n} movimiento${r.n === 1 ? '' : 's'}).`
+  }
+
+  // P&L de un PISO turístico concreto. INGRESO ← tabla `incomes` (por reserva; NETO `amount`); GASTO ←
+  // tabla `gastos` (SIVRA; columna `total`, filtrada por `propiedad`) — las MISMAS fuentes que pintan
+  // las cards del dashboard por negocio. RESULTADO = ingreso − gasto. El banco NO sirve aquí: agrega
+  // todos los pisos en `turistico_pisos` sin separar por piso. `modo` elige la cara.
+  if (intn.tipo === 'piso') {
+    const per = intn.mes ? `${NOMBRE_MES[intn.mes]} de ${intn.anio}` : `${intn.anio}`
+
+    // Ingreso de un mes concreto (por check-in `date`). Devuelve total + nº de reservas.
+    const ingresoMes = async () => {
+      const rows = await prisma.$queryRaw<{ total: number; n: bigint }[]>(Prisma.sql`
+        SELECT coalesce(sum(amount), 0)::float8 AS total, count(*)::bigint AS n
+        FROM incomes
+        WHERE "propertyId" = ${intn.propertyId}
+          AND EXTRACT(year FROM date) = ${intn.anio}
+          AND EXTRACT(month FROM date) = ${intn.mes}`).catch(() => null)
+      return rows ? { total: Number(rows[0]?.total || 0), n: Number(rows[0]?.n || 0) } : null
+    }
+    // Gasto de un mes concreto (SIVRA `gastos`, por `fecha`). Devuelve total + nº de apuntes.
+    const gastoMes = async () => {
+      const rows = await prisma.$queryRaw<{ total: number; n: bigint }[]>(Prisma.sql`
+        SELECT coalesce(sum(total), 0)::float8 AS total, count(*)::bigint AS n
+        FROM gastos
+        WHERE propiedad = ${intn.propertyId}
+          AND EXTRACT(year FROM fecha) = ${intn.anio}
+          AND EXTRACT(month FROM fecha) = ${intn.mes}`).catch(() => null)
+      return rows ? { total: Number(rows[0]?.total || 0), n: Number(rows[0]?.n || 0) } : null
+    }
+
+    // ---- INGRESO ----
+    if (intn.modo === 'ingreso') {
+      if (intn.mes) {
+        const r = await ingresoMes()
+        if (!r) return null
+        return r.n === 0
+          ? `No veo ingresos de ${intn.etiqueta} en ${per}.`
+          : `En ${intn.etiqueta} ingresaste ${eur(r.total)} en ${per} (${r.n} reserva${r.n === 1 ? '' : 's'}).`
+      }
+      // Año: getResumenSivra (idéntico al dashboard). `ingresosHoy` = reservas ya cerradas; `ingresosYtd`
+      // = año completo con futuras. Añadimos nº de reservas cerradas y la proyección si hay cola futura.
+      const r = await getResumenSivra(intn.anio, intn.propertyId).catch(() => null)
+      if (!r || !r.disponible) return null
+      const realizado = r.ingresosHoy ?? r.ingresosYtd
+      const proy = r.ingresosYtd
+      const nrows = await prisma.$queryRaw<{ n: bigint }[]>(Prisma.sql`
+        SELECT count(*)::bigint AS n
+        FROM incomes
+        WHERE "propertyId" = ${intn.propertyId}
+          AND EXTRACT(year FROM date) = ${intn.anio}
+          AND (("checkOut" IS NOT NULL AND "checkOut"::date <= CURRENT_DATE)
+               OR ("checkOut" IS NULL AND date::date <= CURRENT_DATE))`).catch(() => null)
+      const n = nrows ? Number(nrows[0]?.n || 0) : 0
+      const reservas = n ? ` (${n} reserva${n === 1 ? '' : 's'})` : ''
+      const cola = proy > realizado + 0.5 ? ` · proyección con reservas futuras: ${eur(proy)}` : ''
+      return `${intn.etiqueta} lleva ${eur(realizado)} ingresado en ${intn.anio}${reservas}${cola}.`
+    }
+
+    // ---- GASTO ----
+    if (intn.modo === 'gasto') {
+      if (intn.mes) {
+        const r = await gastoMes()
+        if (!r) return null
+        return r.n === 0
+          ? `No veo gastos de ${intn.etiqueta} en ${per}.`
+          : `En ${intn.etiqueta} gastaste ${eur(r.total)} en ${per} (${r.n} apunte${r.n === 1 ? '' : 's'}).`
+      }
+      // Año: getResumenSivra.gastosYtd (misma card del dashboard).
+      const r = await getResumenSivra(intn.anio, intn.propertyId).catch(() => null)
+      if (!r || !r.disponible) return null
+      return `${intn.etiqueta} lleva ${eur(r.gastosYtd)} de gasto en ${intn.anio}.`
+    }
+
+    // ---- RESULTADO (ingreso − gasto) ----
+    if (intn.mes) {
+      const [ing, gas] = await Promise.all([ingresoMes(), gastoMes()])
+      if (!ing || !gas) return null
+      const resultado = ing.total - gas.total
+      return `${intn.etiqueta} en ${per}: ${eur(ing.total)} de ingreso − ${eur(gas.total)} de gasto = ${eur(resultado)} de resultado.`
+    }
+    const r = await getResumenSivra(intn.anio, intn.propertyId).catch(() => null)
+    if (!r || !r.disponible) return null
+    return `${intn.etiqueta} en ${intn.anio}: ${eur(r.ingresosYtd)} de ingreso − ${eur(r.gastosYtd)} de gasto = ${eur(r.resultadoYtd)} de resultado.`
+  }
+
+  // RENTABILIDAD de TODOS los pisos: desglose por piso de ingreso (`incomes`) − gasto (`gastos`), las
+  // MISMAS fuentes que el dashboard. El banco NO sirve (agrega los pisos en `turistico_pisos`). Dice
+  // cuáles están en positivo y cuáles en rojo — la pregunta "¿son rentables los pisos este mes?".
+  if (intn.tipo === 'pisos_rentabilidad') {
+    const per = intn.mes ? `${NOMBRE_MES[intn.mes]} de ${intn.anio}` : `${intn.anio}`
+    const mesIng = intn.mes ? Prisma.sql`AND EXTRACT(month FROM date) = ${intn.mes}` : Prisma.empty
+    const mesGas = intn.mes ? Prisma.sql`AND EXTRACT(month FROM fecha) = ${intn.mes}` : Prisma.empty
+    const [ing, gas] = await Promise.all([
+      prisma.$queryRaw<{ propertyId: string; total: number }[]>(Prisma.sql`
+        SELECT "propertyId", coalesce(sum(amount), 0)::float8 AS total FROM incomes
+        WHERE EXTRACT(year FROM date) = ${intn.anio} ${mesIng} GROUP BY "propertyId"`).catch(() => null),
+      prisma.$queryRaw<{ propiedad: string; total: number }[]>(Prisma.sql`
+        SELECT propiedad, coalesce(sum(total), 0)::float8 AS total FROM gastos
+        WHERE EXTRACT(year FROM fecha) = ${intn.anio} ${mesGas} GROUP BY propiedad`).catch(() => null),
+    ])
+    if (!ing || !gas) return null
+    const ingM = new Map(ing.map(r => [r.propertyId, Number(r.total)]))
+    const gasM = new Map(gas.map(r => [r.propiedad, Number(r.total)]))
+    // Solo los 4 pisos conocidos, ordenados por resultado (los rentables arriba, los rojos abajo).
+    const filas = Object.entries(PISOS_LABEL)
+      .map(([pid, label]) => ({ label, res: (ingM.get(pid) || 0) - (gasM.get(pid) || 0) }))
+      .sort((a, b) => b.res - a.res)
+    const rentables = filas.filter(f => f.res > 0).length
+    const total = filas.reduce((s, f) => s + f.res, 0)
+    const lineas = filas.map(f => `• ${f.label}: ${eur(f.res)} ${f.res > 0 ? '✅' : '⚠️'}`)
+    return `Rentabilidad de los pisos en ${per} (ingreso − gasto):\n${lineas.join('\n')}\n${rentables} de ${filas.length} en positivo · resultado conjunto ${eur(total)}.`
+  }
+
+  // RESULTADO (ingreso − gasto) de un negocio de caja bancaria (correduría=`seguros`): suma los abonos
+  // y los cargos de esos `destino` y los resta. Misma fuente que la pestaña Gastos/`gasto_destino`, pero
+  // dando la CARA COMPLETA (comisiones − gastos) en vez de solo un signo — el fix de "¿es rentable la
+  // correduría?", que antes caía en `gasto_destino gasto` (solo el gasto). Los pisos NO entran aquí.
+  if (intn.tipo === 'negocio_resultado') {
+    const mesCond = intn.mes ? Prisma.sql`AND EXTRACT(month FROM mb.fecha_operacion) = ${intn.mes}` : Prisma.empty
+    const cond = Prisma.sql`
+      AND coalesce(mb.destino, 'personal') IN (${Prisma.join(intn.destinos)})
+      AND EXTRACT(year FROM mb.fecha_operacion) = ${intn.anio}
+      ${mesCond}`
+    const [ing, gas] = await Promise.all([
+      suma(cuentaId, 'ingreso', cond),
+      suma(cuentaId, 'gasto', cond),
+    ])
+    if (!ing || !gas) return null
+    const per = intn.mes ? `${NOMBRE_MES[intn.mes]} de ${intn.anio}` : `${intn.anio}`
+    if (ing.n === 0 && gas.n === 0) return `No veo movimientos de ${intn.etiqueta} en ${per}.`
+    const resultado = ing.total - gas.total
+    return `${intn.etiqueta} en ${per}: ${eur(ing.total)} de ingreso − ${eur(gas.total)} de gasto = ${eur(resultado)} de resultado ${resultado >= 0 ? '✅' : '⚠️'}.`
+  }
+
+  if (intn.tipo === 'concepto') {
+    const likes = intn.terminos.map(term =>
+      Prisma.sql`(coalesce(mb.concepto_normalizado,'') || ' ' || coalesce(mb.concepto,'') || ' ' || coalesce(mb.contraparte,'')) ILIKE ${'%' + term + '%'}`)
+    const mesCond = intn.mes ? Prisma.sql`AND EXTRACT(month FROM mb.fecha_operacion) = ${intn.mes}` : Prisma.empty
+    // Concepto acotado por NEGOCIO ("comunidad del dúplex"): filtra por `destino` además del ILIKE, y
+    // el rótulo compone concepto + segmento ("En comunidad del Dúplex llevas…"). Sin negocio → como antes.
+    const destCond = intn.destinos && intn.destinos.length
+      ? Prisma.sql`AND coalesce(mb.destino, 'personal') IN (${Prisma.join(intn.destinos)})`
+      : Prisma.empty
+    const r = await suma(cuentaId, intn.signo, Prisma.sql`
+      AND EXTRACT(year FROM mb.fecha_operacion) = ${intn.anio}
+      ${mesCond}
+      ${destCond}
+      AND (${Prisma.join(likes, ' OR ')})`)
+    if (!r) return null
+    const per = intn.mes ? `${NOMBRE_MES[intn.mes]} de ${intn.anio}` : `${intn.anio}`
+    const etq = intn.destinoEtiqueta ? `${intn.etiqueta} ${intn.destinoEtiqueta}` : intn.etiqueta
+    return r.n === 0
+      ? `No encuentro cargos de ${etq} en ${per}. (Puede que estén con otro nombre — dímelo y lo afino.)`
+      : `En ${etq} llevas ${eur(r.total)} ${palabra(intn.signo)} en ${per} (${r.n} cargo${r.n === 1 ? '' : 's'}).`
+  }
+
+  if (intn.tipo === 'por_destino') {
+    const rows = await prisma.$queryRaw<{ destino: string; gastos: number; ingresos: number }[]>(Prisma.sql`
+      SELECT coalesce(mb.destino, 'personal') AS destino,
+             sum(CASE WHEN mb.importe < 0 THEN -mb.importe ELSE 0 END)::float8 AS gastos,
+             sum(CASE WHEN mb.importe > 0 THEN  mb.importe ELSE 0 END)::float8 AS ingresos
+      FROM movimientos_bancarios mb
+      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      WHERE cb.cuenta_id = ${cuentaId}::uuid
+        AND (mb.duplicado_estado IS NULL OR mb.duplicado_estado <> 'ignorado')
+        AND EXTRACT(year FROM mb.fecha_operacion) = ${intn.anio}
+      GROUP BY 1 ORDER BY 2 DESC`).catch(() => null)
+    if (!rows) return null
+    if (!rows.length) return `No veo movimientos en ${intn.anio}.`
+    const lineas = rows.map(x => `• ${DESTINO_LABEL[x.destino] || x.destino}: ${eur(x.gastos)} gasto · ${eur(x.ingresos)} ingreso`)
+    return `Desglose ${intn.anio} por destino:\n${lineas.join('\n')}`
+  }
+
+  // Extracto de tarjeta archivado en Drive: devuelve el/los enlace(s) guardados al importarlo. Si se
+  // pidió un mes/tarjeta concretos y no hay, invita a subirlo por el 📎; sin filtro, lista lo que haya.
+  if (intn.tipo === 'extracto_drive') {
+    const mesIso = intn.mes ? `${intn.anio}-${String(intn.mes).padStart(2, '0')}` : undefined
+    const enlaces = await getEnlacesExtracto(cuentaId, { pan4: intn.pan4, mes: mesIso }).catch(() => [])
+    if (!enlaces.length) {
+      const tarj = intn.pan4 ? ` de la ****${intn.pan4}` : ''
+      return intn.mes
+        ? `No tengo archivado el extracto${tarj} de ${NOMBRE_MES[intn.mes]} de ${intn.anio}. Súbelo por el 📎 del chat y lo archivo en Drive.`
+        : `Aún no tengo extractos de tarjeta${tarj} archivados. Súbelos por el 📎 del chat (el PDF "Movimientos de tarjeta") y los guardo aquí para consultarlos.`
+    }
+    if (enlaces.length === 1) {
+      const e = enlaces[0]
+      return `📁 Extracto de la ****${e.pan4} de ${etiquetaMesIso(e.mes)}:\n${e.url}`
+    }
+    const lineas = enlaces.slice(0, 12).map(e => `• ****${e.pan4} · ${etiquetaMesIso(e.mes)}: ${e.url}`)
+    return `📁 Extractos de tarjeta archivados:\n${lineas.join('\n')}`
+  }
+
+  if (intn.tipo === 'facturas_pendientes') {
+    const rows = await prisma.$queryRaw<{ proveedor: string; importe: number; estado: string }[]>(Prisma.sql`
+      SELECT proveedor, importe::float8 AS importe, estado
+      FROM facturas_proveedor
+      WHERE cuenta_id = ${cuentaId}::uuid AND estado NOT IN ('pagada', 'rechazada')
+      ORDER BY fecha_factura DESC NULLS LAST LIMIT 15`).catch(() => null)
+    if (!rows) return null
+    if (!rows.length) return 'No tienes facturas de proveedor pendientes 🎉'
+    const total = rows.reduce((s, x) => s + Math.abs(Number(x.importe) || 0), 0)
+    const lineas = rows.map(x => `• ${x.proveedor} · ${eur(Math.abs(Number(x.importe) || 0))} · ${x.estado}`)
+    return `Tienes ${rows.length} factura${rows.length === 1 ? '' : 's'} de proveedor sin cerrar (${eur(total)}):\n${lineas.join('\n')}`
+  }
+
+  if (intn.tipo === 'tramo_fiscal') {
+    // Mismo cálculo que /finanzas (tramos IRPF sobre la base imponible estimada del año).
+    const resumen = await getResumenFinanciero(cuentaId, intn.anio).catch(() => null)
+    const f = resumen?.fiscal
+    if (!f || !f.tramoActual) return null
+    const pct = (x: number) => `${Math.round((x || 0) * 100)}%`
+    const ta = f.tramoActual
+    const rango = ta.hasta != null ? `de ${e0(ta.desde)} a ${e0(ta.hasta)}` : `a partir de ${e0(ta.desde)}`
+    const margen = f.margenHastaProximoTramo != null
+      ? ` Te faltan ${e0(f.margenHastaProximoTramo)} de base para saltar al siguiente tramo.`
+      : ' Ya estás en el tramo más alto.'
+    return `Ahora mismo tu tramo marginal de IRPF es el **${pct(ta.tipo)}** (${rango}), con una base imponible estimada de ${e0(f.baseImponibleEstimada)} para ${intn.anio} y un tipo medio efectivo del ${pct(f.tipoEfectivo)}.${margen}\n\n(Estimación con lo declarado en la app hasta hoy; el detalle está en 💶 Finanzas.)`
+  }
+
+  return null
+}

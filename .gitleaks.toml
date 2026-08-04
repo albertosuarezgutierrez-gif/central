@@ -19,4 +19,8 @@ regexes = [
   # pms_connections (BD); pendiente de revocar en Smoobu. Allowlisted para que el
   # escaneo no falle por el historial — NO volver a usarla.
   '''vqOXOSDtA7p80Fp~\.ezOXPn_zPYq99gC''',
+  # Fixture de test de cripto Tuya (NO es un secreto real): clave AES-256 de 32 chars
+  # que vivió en tuya-cifrado.test.ts (commit del PR de domótica). El código actual la
+  # construye por repetición; se allowlista el literal por el historial del PR.
+  '''0123456789abcdef0123456789abcdef''',
 ]

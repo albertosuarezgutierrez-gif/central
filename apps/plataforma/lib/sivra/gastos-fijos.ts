@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { fingerprint as huella } from './fingerprint'
+import { eur } from '@/lib/dinero'
 
 export interface GastoFijo {
   id: string
@@ -94,7 +95,7 @@ export async function generarGastosFijos(year: number, month: number, opts: { co
     const fp = huellaFijo(f)
     if (await existeEnMes(fp, year, month)) { res.existentes++; continue }
     const fecha = fechaDelMes(year, month, f.dia_mes)
-    res.detalle.push(`${fecha} · ${f.propiedad ?? '—'} · ${f.concepto} · ${f.total}€`)
+    res.detalle.push(`${fecha} · ${f.propiedad ?? '—'} · ${f.concepto} · ${eur(f.total)}`)
     if (commit) {
       const raw = JSON.stringify({ origen: 'gasto-fijo', gasto_fijo_id: f.id })
       await prisma.$executeRaw(Prisma.sql`

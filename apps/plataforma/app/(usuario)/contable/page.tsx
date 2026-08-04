@@ -6,11 +6,12 @@ const SUGERENCIAS = [
   '¿Cuánto llevo gastado en luz este año?',
   '¿Qué facturas de proveedor tengo pendientes?',
   '¿Cómo van mis gastos de pisos vs correduría?',
-  'Recuerda: meto todo el gasto en el año, no amortices de oficio',
+  'Clasifica el recibo de Endesa como pisos',
 ]
 
 type Guardado = { clave: string; insight: string }
-type Msg = { rol: 'tu' | 'agente'; texto: string; guardados?: Guardado[] }
+type Accion = { id: string; tipo: string; resumen: string; estado?: 'pendiente' | 'ejecutada' | 'descartada' | 'error'; mensaje?: string }
+type Msg = { rol: 'tu' | 'agente'; texto: string; guardados?: Guardado[]; acciones?: Accion[]; feedback?: 'enviado' }
 
 const card: React.CSSProperties = {
   background: 'var(--surface)', border: '1px solid var(--border)',
@@ -22,8 +23,18 @@ export default function ContablePage() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }) }, [msgs, loading])
+
+  const pintarRespuesta = useCallback((data: any) => {
+    setMsgs(m => [...m, {
+      rol: 'agente',
+      texto: data?.respuesta || data?.error || 'Sin respuesta.',
+      guardados: data?.guardados || [],
+      acciones: (data?.acciones || []).map((a: any) => ({ ...a, estado: 'pendiente' as const })),
+    }])
+  }, [])
 
   const enviar = useCallback(async (texto: string) => {
     const mensaje = texto.trim()
@@ -37,13 +48,79 @@ export default function ContablePage() {
         body: JSON.stringify({ mensaje }),
       })
       const data = await r.json().catch(() => ({}))
-      setMsgs(m => [...m, { rol: 'agente', texto: data?.respuesta || data?.error || 'Sin respuesta.', guardados: data?.guardados || [] }])
+      pintarRespuesta(data)
     } catch {
       setMsgs(m => [...m, { rol: 'agente', texto: 'No se pudo conectar con el agente.' }])
     } finally {
       setLoading(false)
     }
-  }, [loading])
+  }, [loading, pintarRespuesta])
+
+  const subirDocumento = useCallback(async (file: File) => {
+    if (!file || loading) return
+    if (file.size > 8_000_000) {
+      setMsgs(m => [...m, { rol: 'agente', texto: 'El archivo pesa más de 8 MB. Súbelo más ligero.' }])
+      return
+    }
+    // Leer como base64 (data URL → quitamos el prefijo "data:...;base64,").
+    const base64: string = await new Promise<string>((resolve, reject) => {
+      const rd = new FileReader()
+      rd.onload = () => resolve(String(rd.result || '').split(',')[1] || '')
+      rd.onerror = () => reject(new Error('read'))
+      rd.readAsDataURL(file)
+    }).catch(() => '')
+    if (!base64) { setMsgs(m => [...m, { rol: 'agente', texto: 'No pude leer el archivo.' }]); return }
+
+    setMsgs(m => [...m, { rol: 'tu', texto: `📎 ${file.name}` }])
+    setLoading(true)
+    try {
+      const r = await fetch('/api/contable/chat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adjunto: { base64, mimeType: file.type || 'application/octet-stream', fileName: file.name } }),
+      })
+      const data = await r.json().catch(() => ({}))
+      pintarRespuesta(data)
+    } catch {
+      setMsgs(m => [...m, { rol: 'agente', texto: 'No se pudo subir el documento.' }])
+    } finally {
+      setLoading(false)
+    }
+  }, [loading, pintarRespuesta])
+
+  const resolverAccion = useCallback(async (msgIdx: number, accId: string, op: 'ejecutar' | 'descartar') => {
+    setMsgs(m => m.map((msg, i) => i !== msgIdx ? msg : {
+      ...msg, acciones: msg.acciones?.map(a => a.id === accId ? { ...a, estado: op === 'descartar' ? 'descartada' : a.estado, mensaje: '…' } : a),
+    }))
+    try {
+      const r = await fetch('/api/contable/accion', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(op === 'descartar' ? { accionId: accId, op: 'descartar' } : { accionId: accId }),
+      })
+      const data = await r.json().catch(() => ({}))
+      setMsgs(m => m.map((msg, i) => i !== msgIdx ? msg : {
+        ...msg, acciones: msg.acciones?.map(a => a.id === accId ? { ...a, estado: data?.estado || 'error', mensaje: data?.mensaje } : a),
+      }))
+    } catch {
+      setMsgs(m => m.map((msg, i) => i !== msgIdx ? msg : {
+        ...msg, acciones: msg.acciones?.map(a => a.id === accId ? { ...a, estado: 'error', mensaje: 'Error de red' } : a),
+      }))
+    }
+  }, [])
+
+  // 👎: marca una respuesta del agente como mala. Coge la PREGUNTA (el turno 'tu' anterior) y la
+  // respuesta, y las registra en contable_feedback para alimentar el bucle de mejora. Optimista.
+  const marcarMalo = useCallback(async (msgIdx: number) => {
+    setMsgs(m => {
+      const respuesta = m[msgIdx]?.texto || ''
+      let pregunta = ''
+      for (let j = msgIdx - 1; j >= 0; j--) { if (m[j].rol === 'tu') { pregunta = m[j].texto; break } }
+      fetch('/api/contable/feedback', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pregunta, respuesta }),
+      }).catch(() => {})
+      return m.map((msg, i) => i === msgIdx ? { ...msg, feedback: 'enviado' as const } : msg)
+    })
+  }, [])
 
   return (
     <main style={{ maxWidth: 820, margin: '0 auto', padding: '28px 20px', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 8px)' }}>
@@ -52,8 +129,8 @@ export default function ContablePage() {
         <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>Agente de contabilidad</h1>
       </div>
       <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 0, marginBottom: 14 }}>
-        Pregúntale por tus gastos, ingresos y facturas, o cuéntale un criterio para que lo recuerde
-        (“meto todo el gasto en el año”). De momento solo informa; clasificar y conciliar llegan pronto.
+        Pregúntale por tus finanzas, dale criterios que recuerde, pídele que clasifique un cargo, o
+        súbele un ticket/factura con 📎 (te propone la acción y la confirmas tú).
       </p>
 
       <div ref={scrollRef} style={{ ...card, flex: 1, overflowY: 'auto', padding: 16, marginBottom: 12 }}>
@@ -83,6 +160,33 @@ export default function ContablePage() {
                   {m.guardados.map(g => <div key={g.clave}>✓ Recordado ({g.clave}): “{g.insight}”</div>)}
                 </div>
               )}
+              {m.acciones && m.acciones.length > 0 && (
+                <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {m.acciones.map(a => (
+                    <div key={a.id} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '9px 11px', background: 'var(--surface)', color: 'var(--text)' }}>
+                      <div style={{ fontSize: 13 }}>⚙️ {a.resumen}</div>
+                      {a.estado === 'pendiente' ? (
+                        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                          <button onClick={() => resolverAccion(i, a.id, 'ejecutar')} style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Confirmar</button>
+                          <button onClick={() => resolverAccion(i, a.id, 'descartar')} style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text)', fontSize: 13, cursor: 'pointer' }}>Descartar</button>
+                        </div>
+                      ) : (
+                        <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: a.estado === 'ejecutada' ? '#16a34a' : a.estado === 'descartada' ? 'var(--muted)' : '#dc2626' }}>
+                          {a.estado === 'ejecutada' ? '✓ Hecho' : a.estado === 'descartada' ? 'Descartada' : `⚠️ ${a.mensaje || 'Error'}`}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {m.rol === 'agente' && (
+                <div style={{ marginTop: 8 }}>
+                  {m.feedback === 'enviado'
+                    ? <span style={{ fontSize: 11, color: 'var(--muted)' }}>Gracias, lo reviso 🙌</span>
+                    : <button onClick={() => marcarMalo(i)} title="Marcar como respuesta incorrecta" aria-label="Respuesta incorrecta"
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--muted)', padding: '2px 4px', opacity: 0.7 }}>👎</button>}
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -90,9 +194,16 @@ export default function ContablePage() {
       </div>
 
       <form onSubmit={e => { e.preventDefault(); enviar(input) }} style={{ display: 'flex', gap: 8 }}>
+        <input ref={fileRef} type="file" accept="image/*,application/pdf" style={{ display: 'none' }}
+          onChange={e => { const f = e.target.files?.[0]; if (f) subirDocumento(f); e.target.value = '' }} />
+        <button type="button" onClick={() => fileRef.current?.click()} disabled={loading} title="Subir ticket o factura (foto o PDF)"
+          aria-label="Subir ticket o factura" style={{
+            flexShrink: 0, width: 44, height: 44, borderRadius: 10, border: '1px solid var(--border)',
+            background: 'var(--surface)', color: 'var(--text)', fontSize: 18, cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1,
+          }}>📎</button>
         <input value={input} onChange={e => setInput(e.target.value)} placeholder="Escribe a tu agente de contabilidad…"
           disabled={loading} style={{
-            flex: 1, padding: '11px 14px', borderRadius: 10, border: '1px solid var(--border)',
+            flex: 1, minWidth: 0, padding: '11px 14px', borderRadius: 10, border: '1px solid var(--border)',
             background: 'var(--surface)', color: 'var(--text)', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box',
           }} />
         <button type="submit" disabled={loading || !input.trim()} style={{

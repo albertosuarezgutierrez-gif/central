@@ -1,10 +1,15 @@
 name: Tests & Typecheck
 
 # Casa de marcas: el CI histórico (ci.yml) solo cubría apps/ia-rest. Este workflow
-# añade (1) la suite de tests de los packages compartidos + el guardián de regresión,
+# añade (1) la suite de tests de los packages compartidos + el guardián de regresión
+# + los tests unitarios COLOCADOS de cada app (plataforma/ialimp/almacen/ia-rest tienen
+# ya su script `test` → `pnpm test` los recoge vía `pnpm -r run test`),
 # y (2) el typecheck del RESTO de verticales (sivra, plataforma, ia-rest), que el
 # build de cada app NO valida (varias apps llevan `typescript.ignoreBuildErrors`).
 # Ver docs/AUDITORIA-2026-06.md.
+# NOTA: para que un test nuevo de una app CORRA en CI debe caer en el glob del script
+# `test` de esa app (ialimp → lib/*.test.ts · almacen → test/*.test.ts ·
+# ia-rest → src/lib/*.test.ts + test/*.test.ts · plataforma → node --test, auto-descubre).
 
 on:
   push:
@@ -48,7 +53,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        app: [ia-rest, ialimp, sivra, plataforma, rrhh, transporte, alquiler]
+        app: [ia-rest, ialimp, sivra, plataforma, rrhh, transporte, alquiler, almacen]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

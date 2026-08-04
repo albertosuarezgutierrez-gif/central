@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 import { isCronAuthorized } from "@/lib/cron-auth"
-import { aiComplete } from "@central/core-ai"
+import { chatConDirector } from "@/lib/pasarela"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
 
 export const dynamic = "force-dynamic"
 
-const OUR_PRICES: Record<string, { label: string; normal: number; corpus: number }> = {
-  prop_house_sevillana: { label: "House Sevillana", normal: 314, corpus: 570 },
-  prop_duplex_center:   { label: "Duplex Center",   normal: 121, corpus: 200 },
-  prop_luxury_busto:    { label: "Luxury Busto",    normal: 150, corpus: 235 },
-  prop_busto_reform:    { label: "Busto Reform",    normal: 80,  corpus: 132 },
+const PROP_LABELS: Record<string, string> = {
+  prop_house_sevillana: "House Sevillana",
+  prop_duplex_center:   "Duplex Center",
+  prop_luxury_busto:    "Luxury Busto",
+  prop_busto_reform:    "Busto Reform",
 }
 
 // ── Serper.dev → búsqueda real en Google ─────────────────────────────────────
@@ -50,7 +50,7 @@ ${snippets}
 Extrae apartamentos con precios estimados por noche en euros. Si ves rangos como "80-120€" usa 80. SOLO JSON.`
 
   try {
-    const txt   = await aiComplete([{ role: "user", content: prompt }], { system, maxTokens: 600, temperature: 0.1 })
+    const txt   = (await chatConDirector([{ role: "user", content: prompt }], { app: "plataforma", endpoint: "mercado-cron", system, maxTokens: 600, temperature: 0.1 })).text
     const clean = txt.replace(/```json|```/g, "").trim()
     const s = clean.indexOf("{"); const e = clean.lastIndexOf("}")
     return JSON.parse(clean.slice(s, e + 1)).apartments ?? []
@@ -73,7 +73,7 @@ async function searchPortal(portal: string, checkin: string, checkout: string): 
   }
 }
 
-async function generateAlerts(scenario: string) {
+async function generateAlerts(scenario: string, checkin: string) {
   const alerts: any[] = []
   const today = new Date().toISOString().split("T")[0]
 
@@ -88,8 +88,19 @@ async function generateAlerts(scenario: string) {
   const mktAvg = mktRows[0]?.avg_market ? Number(mktRows[0].avg_market) : null
   if (!mktAvg) return alerts
 
-  for (const [propId, prop] of Object.entries(OUR_PRICES)) {
-    const ourPrice = scenario === "corpus" ? prop.corpus : prop.normal
+  // Precio REAL vigente por piso para la fecha comparada (fix 19/07/2026: antes comparaba contra
+  // constantes hardcodeadas de junio, desconectadas del motor dinámico → alertas falsas: Busto
+  // "80€" cuando el motor real ya tenía 156€ aplicado con el suelo de 115€ respetado).
+  const liveRows = await prisma.$queryRaw<{ property_id: string; price: number }[]>(Prisma.sql`
+    SELECT DISTINCT ON (property_id) property_id, new_price AS price
+    FROM pricing_applied
+    WHERE dry_run = false AND rate_date = ${checkin}::date
+    ORDER BY property_id, applied_at DESC`)
+  const livePrice = new Map(liveRows.map(r => [r.property_id, Number(r.price)]))
+
+  for (const [propId, label] of Object.entries(PROP_LABELS)) {
+    const ourPrice = livePrice.get(propId)
+    if (ourPrice == null) continue // sin precio real aplicado para esa fecha: no hay con qué comparar
     const diffPct  = ((ourPrice - mktAvg) / mktAvg) * 100
 
     if (diffPct < -15) {
@@ -99,7 +110,7 @@ async function generateAlerts(scenario: string) {
         AND created_at >= CURRENT_DATE - INTERVAL '7 days' LIMIT 1`)
       if (!ex.length) alerts.push({
         tipo: "precio_bajo", prioridad: diffPct < -30 ? "alta" : "media", property_id: propId,
-        titulo: `${prop.label}: precio ${Math.abs(Math.round(diffPct))}% por debajo del mercado`,
+        titulo: `${label}: precio ${Math.abs(Math.round(diffPct))}% por debajo del mercado`,
         detalle: `Tarifa (${ourPrice}€/noche) muy por debajo del promedio de mercado (${Math.round(mktAvg)}€). Considera subir el precio base.`,
         dato_actual: ourPrice, dato_mercado: Math.round(mktAvg), diferencia_pct: Math.round(diffPct), scenario, fecha_ref: today,
       })
@@ -111,7 +122,7 @@ async function generateAlerts(scenario: string) {
         AND created_at >= CURRENT_DATE - INTERVAL '7 days' LIMIT 1`)
       if (!ex.length) alerts.push({
         tipo: "precio_alto", prioridad: "baja", property_id: propId,
-        titulo: `${prop.label}: precio muy por encima del mercado`,
+        titulo: `${label}: precio muy por encima del mercado`,
         detalle: `Tarifa (${ourPrice}€) supera en ${Math.round(diffPct)}% la media (${Math.round(mktAvg)}€). Verifica ocupación.`,
         dato_actual: ourPrice, dato_mercado: Math.round(mktAvg), diferencia_pct: Math.round(diffPct), scenario, fecha_ref: today,
       })
@@ -175,7 +186,7 @@ export async function GET(req: NextRequest) {
     summary[portal] = inserted
   }
 
-  const alerts = await generateAlerts("normal")
+  const alerts = await generateAlerts("normal", checkin)
   let alertsCreated = 0
   for (const alert of alerts) {
     try {

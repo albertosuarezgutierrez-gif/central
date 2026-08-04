@@ -1,21 +1,18 @@
-import { NextRequest } from "next/server"
-import { POST as applyPost } from "../apply/route"
-import { PRICING_HORIZON_DAYS } from "@/lib/pricing-calendar"
+import { NextResponse } from "next/server"
 
 export const dynamic = "force-dynamic"
-export const maxDuration = 300
 
-// GET /api/pricing/apply-auto  (cron diario)
-// Aplicación automática: invoca /api/pricing/apply con dryRun=false reenviando la cabecera de
-// autorización del cron (CRON_SECRET). El motor sigue respetando la pausa global, la guardia de
-// confianza y apply_enabled por piso. Endpoint dedicado para no depender de query-strings en el
-// cron path de Vercel.
-export async function GET(req: NextRequest) {
-  const url = new URL(req.url)
-  url.searchParams.set("dryRun", "false")
-  // Tarifica toda la ventana de pricing (365d), no solo los 14d por defecto, para fijar precio en
-  // fechas lejanas (larga antelación / eventos). Sigue siendo Busto-only vía apply_enabled.
-  if (!url.searchParams.has("days")) url.searchParams.set("days", String(PRICING_HORIZON_DAYS))
-  const forged = new NextRequest(url, { headers: req.headers })
-  return applyPost(forged)
+// ⛔ RETIRADO (auditoría pricing 18/07/2026, R5 — docs/AUDITORIA-PRICING-2026-07.md).
+// El cron real vive en plataforma (/api/sivra/pricing/apply-auto, vercel.json de plataforma).
+// Esta copia invocaba el motor viejo de esta app con dryRun=false — ver el stub de ../apply.
+export async function GET() {
+  return NextResponse.json(
+    {
+      error: "retirado",
+      detail:
+        "Cron migrado a plataforma el 17/06/2026 y stub retirado el 18/07/2026. " +
+        "Usa /api/sivra/pricing/apply-auto en plataforma-ten-flame.vercel.app.",
+    },
+    { status: 410 },
+  )
 }

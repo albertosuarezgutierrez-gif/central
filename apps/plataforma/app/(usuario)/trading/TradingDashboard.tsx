@@ -1,0 +1,324 @@
+import { prisma } from '@/lib/db'
+import { etiquetaCalidad, rankearUniverso, type EmpresaUniverso } from '@central/module-trading'
+import OnboardingBanner from './OnboardingBanner'
+import RadarExplorador, { type FilaExplorador } from './RadarExplorador'
+import CarteraEstudio from './CarteraEstudio'
+import CarteraCohetes, { type CarteraCohetesData } from './CarteraCohetes'
+import AnalisisSimbolo from './AnalisisSimbolo'
+import { COHORTES_PAPER } from '@/lib/trading/paper-cartera'
+
+// Contenido del «Laboratorio de inversión», extraído de page.tsx para poder reutilizarlo tal cual en la
+// vista de invitado (/invitado/trading, solo lectura vía token — ver lib/trading-acceso.ts). Es 100%
+// lectura (no hay ninguna acción que escriba), así que no necesita distinguir sesión de invitado por dentro.
+
+function pct(n: number): string {
+  return `${n >= 0 ? '+' : ''}${(n * 100).toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`
+}
+function pctN(n: number | null | undefined): string {
+  return n == null ? '—' : pct(n)
+}
+function pct0N(n: number | null | undefined): string {
+  return n == null ? '—' : `${(n * 100).toFixed(0)}%`
+}
+
+// Mini-curva del forward (SVG puro, sin dependencias): línea de la cesta (MEDIANA) vs el SPY a lo largo de
+// los snapshots persistidos. La mediana es la métrica de decisión (un outlier no la mueve).
+function CurvaForward({ serie }: { serie: { m: number | null; b: number }[] }) {
+  const pts = serie.filter(p => p.m != null) as { m: number; b: number }[]
+  if (pts.length < 2) return <span style={{ color: 'var(--muted)', fontSize: 12 }}>acumulando puntos (curva desde el 2º snapshot)…</span>
+  const W = 280, H = 56, P = 5
+  const ys = pts.flatMap(p => [p.m, p.b])
+  const lo = Math.min(...ys), hi = Math.max(...ys)
+  const span = hi - lo || 1
+  const x = (i: number) => P + (i * (W - 2 * P)) / (pts.length - 1)
+  const y = (v: number) => H - P - ((v - lo) / span) * (H - 2 * P)
+  const path = (sel: (p: { m: number; b: number }) => number) => pts.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(sel(p)).toFixed(1)}`).join(' ')
+  return (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ maxWidth: '100%' }} role="img" aria-label="Curva cesta vs SPY">
+      <path d={path(p => p.b)} fill="none" stroke="var(--muted)" strokeWidth={1.5} strokeDasharray="3 3" />
+      <path d={path(p => p.m)} fill="none" stroke="var(--brand)" strokeWidth={2} />
+    </svg>
+  )
+}
+function fechaCorta(d: Date): string {
+  return new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+async function safe<T>(p: Promise<T>, fallback: T): Promise<T> {
+  try { return await p } catch { return fallback }
+}
+
+const CAPA_LABEL: Record<string, string> = { A: 'A · ancla', B: 'B · conocido', C: 'C · cantera' }
+const DIR_COLOR: Record<string, string> = { alcista: 'var(--positive)', bajista: 'var(--negative)', neutral: 'var(--muted)' }
+
+const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 16 }
+const th: React.CSSProperties = { textAlign: 'left', padding: '8px 10px', color: 'var(--muted)', fontWeight: 600, fontSize: 13, borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }
+const td: React.CSSProperties = { padding: '8px 10px', borderBottom: '1px solid var(--border)', fontSize: 14, whiteSpace: 'nowrap' }
+
+export default async function TradingDashboard({ carteraCohetes }: { carteraCohetes: CarteraCohetesData | null }) {
+  const [posiciones, tesis, watchlist, track, radar, universoFilas] = await Promise.all([
+    safe(prisma.tradingPaperPosicion.findMany({ orderBy: { abiertaEn: 'desc' } }), []),
+    safe(prisma.tradingTesis.findMany({ orderBy: [{ fecha: 'desc' }, { confianza: 'desc' }], take: 40, include: { resultado: true } }), []),
+    safe(prisma.tradingWatchlist.findMany({ where: { activo: true }, orderBy: [{ capa: 'asc' }, { simbolo: 'asc' }] }), []),
+    safe(prisma.tradingPaperTrack.findMany({ orderBy: [{ cohorte: 'asc' }, { fecha: 'asc' }] }), []),
+    safe(prisma.tradingRanking.findFirst({ orderBy: { fecha: 'desc' } }), null),
+    safe(prisma.tradingUniverso.findMany({
+      select: { simbolo: true, nombre: true, piotroski: true, roic: true, earningsYield: true, fcfYield: true, momentum: true, mktCap: true, actualizadoEn: true },
+    }), []),
+  ])
+
+  // Ranking+explorador UNIFICADOS (petición de Alberto 20/07: dos tablas eran la misma información):
+  // el score del blend se calcula para TODO el universo elegible con el MISMO rankearUniverso del cron,
+  // y la tabla única se ordena por él por defecto — las primeras filas SON el top del radar. El guruScore
+  // solo se conoce para el top-20 del snapshot (para el resto 0, aproximación documentada).
+  const limiteFresco = new Date(Date.now() - 14 * 86_400_000)
+  const badges = new Map(((radar?.entries as unknown as { simbolo: string; guru: boolean; tecnico: 'si' | 'esperar' | null; volumen?: 'acumulacion' | 'distribucion' | 'neutral' | null }[] | null) ?? []).map(e => [e.simbolo, e]))
+  const empresasUniverso: EmpresaUniverso[] = universoFilas.map(f => ({
+    simbolo: f.simbolo, nombre: f.nombre ?? undefined,
+    piotroski: f.piotroski, roic: f.roic, earningsYield: f.earningsYield, fcfYield: f.fcfYield,
+    momentum: f.momentum, mktCap: f.mktCap, guruScore: badges.get(f.simbolo)?.guru ? 1 : 0,
+    datosFrescos: f.actualizadoEn > limiteFresco,
+  }))
+  const scorePorSimbolo = new Map(rankearUniverso(empresasUniverso, { top: empresasUniverso.length }).items.map(i => [i.simbolo, i.score]))
+  const universoExplorador: FilaExplorador[] = universoFilas.map(f => {
+    const b = badges.get(f.simbolo)
+    return {
+      simbolo: f.simbolo, nombre: f.nombre, score: scorePorSimbolo.get(f.simbolo) ?? null,
+      piotroski: f.piotroski, roic: f.roic, ey: f.earningsYield, momentum: f.momentum, mktCap: f.mktCap,
+      etiqueta: etiquetaCalidad({
+        simbolo: f.simbolo, piotroski: f.piotroski, roic: f.roic, earningsYield: f.earningsYield,
+        momentum: f.momentum, mktCap: f.mktCap, guruScore: b?.guru ? 1 : 0, datosFrescos: f.actualizadoEn > limiteFresco,
+      }),
+      guru: b?.guru ?? false, tecnico: b?.tecnico ?? null, volumen: b?.volumen ?? null,
+    }
+  })
+
+  // Forward paper: agrupa los snapshots por cohorte y FUSIONA las que comparten la MISMA cesta.
+  // Dos cohortes con los mismos valores no son dos pruebas independientes: son la misma cesta medida
+  // desde dos fechas. Pintarlas como dos tarjetas con cifras idénticas se lee como doble confirmación
+  // (pasó con 2026-07-18.v1 y 2026-07-20.v1: los mismos 8 valores, dos días de diferencia). Se queda la
+  // más ANTIGUA —la que lleva más recorrido— y las otras fechas de arranque se citan al lado.
+  const cestaDe = (version: string) => {
+    const c = COHORTES_PAPER.find(x => x.version === version)
+    return c ? [...c.simbolos].sort().join(',') : version
+  }
+  const porCesta = new Map<string, { cohorte: string; alias: string[]; filas: typeof track }>()
+  for (const cohorte of [...new Set(track.map(t => t.cohorte))].sort()) {
+    const clave = cestaDe(cohorte)
+    const ya = porCesta.get(clave)
+    if (ya) ya.alias.push(cohorte)
+    else porCesta.set(clave, { cohorte, alias: [], filas: track.filter(t => t.cohorte === cohorte) })
+  }
+  const cohortesPaper = [...porCesta.values()].map(g => ({ ...g, ultima: g.filas[g.filas.length - 1] }))
+
+  const ultimaPasada = tesis[0]?.fecha
+  const vacio = posiciones.length === 0 && tesis.length === 0 && watchlist.length === 0
+
+  return (
+    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '16px' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 10, marginBottom: 4 }}>
+        <h1 style={{ margin: 0, fontSize: 24 }}>📈 Laboratorio de inversión</h1>
+        <span style={{ background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid var(--border)', borderRadius: 999, padding: '2px 10px', fontSize: 12, fontWeight: 700 }}>SOLO SIMULADO · PAPER</span>
+      </div>
+      <p style={{ color: 'var(--muted)', marginTop: 4, marginBottom: 18, fontSize: 14 }}>
+        El agente estudia el mercado y opera <strong>en simulación</strong>. No toca tu cuenta real de Interactive Brokers.
+        {ultimaPasada ? <> Última pasada: <strong>{fechaCorta(ultimaPasada)}</strong>.</> : null}
+      </p>
+
+      <OnboardingBanner />
+
+      {/* 🔍 Buscador de análisis por acción (determinista, mismos ojos del radar) */}
+      <AnalisisSimbolo />
+
+      {/* Forward paper — la prueba limpia (sin look-ahead) que decide el paso a dinero real */}
+      <section style={{ marginBottom: 22 }}>
+        <h2 style={{ fontSize: 17, marginBottom: 8 }}>🧪 Forward paper <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>(cesta gurús∩calidad congelada vs SPY · MEDIANA decide)</span></h2>
+        <CarteraEstudio />
+        {cohortesPaper.length === 0 ? (
+          <div style={{ ...card, color: 'var(--muted)', fontSize: 14 }}>
+            El seguimiento arranca con el <strong>cron semanal</strong> (lunes 10:00): cada snapshot mide la cesta congelada frente al SPY y se guarda aquí para dibujar la curva. Aún sin puntos — vuelve tras el primer lunes.
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12 }}>
+            {cohortesPaper.map(({ cohorte, alias, filas, ultima }) => {
+              const bateMed = ultima.retornoMediana != null && ultima.retornoMediana > ultima.retornoBench
+              return (
+                <div key={cohorte} style={card}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+                    <strong style={{ fontSize: 14 }}>{cohorte}</strong>
+                    <span style={{ color: 'var(--muted)', fontSize: 12 }}>{ultima.dias} días · {filas.length} snapshot{filas.length === 1 ? '' : 's'}</span>
+                  </div>
+                  {alias.length > 0 && (
+                    <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 2 }}>
+                      Misma cesta que {alias.join(', ')} — es UNA prueba, no {alias.length + 1}.
+                    </div>
+                  )}
+                  <div style={{ margin: '10px 0' }}><CurvaForward serie={filas.map(f => ({ m: f.retornoMediana, b: f.retornoBench }))} /></div>
+                  <div style={{ fontSize: 14, lineHeight: 1.7 }}>
+                    <div>Cesta (MEDIANA): <strong style={{ color: bateMed ? 'var(--positive)' : 'var(--negative)' }}>{pctN(ultima.retornoMediana)}</strong> {bateMed ? '✅' : '⚠️'} <span style={{ color: 'var(--muted)' }}>vs SPY {pct(ultima.retornoBench)}</span></div>
+                    <div style={{ color: 'var(--muted)' }}>Baten al SPY: {ultima.baten}/{ultima.n} · media {pct(ultima.retornoCesta)}</div>
+                    <div style={{ color: 'var(--muted)' }}>Riesgo — caída máx {pctN(ultima.maxDrawdown)} · vol {pct0N(ultima.volAnual)} · TE {pct0N(ultima.trackingError)}</div>
+                    {ultima.medianaBase != null && (
+                      <div style={{ color: 'var(--muted)' }}>Filtro calidad: base {pct(ultima.medianaBase)} → aporta <strong style={{ color: (ultima.retornoMediana ?? 0) - ultima.medianaBase > 0 ? 'var(--positive)' : 'var(--negative)' }}>{pctN(ultima.retornoMediana != null ? ultima.retornoMediana - ultima.medianaBase : null)}</strong></div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+        <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
+          Sin look-ahead: las cestas se congelan ANTES de medir. No es veredicto hasta acumular semanas/meses; si la mediana bate al SPY sostenida, entre cohortes y ajustada a riesgo → recién ahí la conversación de dinero real.
+        </p>
+      </section>
+
+      {/* 🚀 Cartera cohetes — bolsillo APARTE (lotería, paper): rota semanal a los cohetes confirmados y
+          se valora a diario vs SPY + curva del núcleo. SOLO estudio, nunca entra en cohortes/núcleo. */}
+      <CarteraCohetes data={carteraCohetes} />
+
+      {/* Radar del mercado — ranking semanal del universo S&P 500 (caché trading_universo) */}
+      <section style={{ marginBottom: 22 }}>
+        <h2 style={{ fontSize: 17, marginBottom: 8 }}>🌎 Radar del mercado <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>(S&P 500 · la selección elige el QUÉ, 📈 confirma el CUÁNDO)</span></h2>
+        {!radar ? (
+          <div style={{ ...card, color: 'var(--muted)', fontSize: 14 }}>
+            El radar rankea las ~500 mayores de EEUU cada lunes (calidad + valor + momentum + gurús). Aún sin snapshot — la caché de fundamentales se está llenando; primer ranking el próximo lunes.
+          </div>
+        ) : (() => {
+          type Entry = { simbolo: string; nombre?: string; score: number; piotroski?: number | null; roic?: number | null; guru: boolean; etiqueta: 'fuerte' | 'media' | 'debil'; tecnico: 'si' | 'esperar' | null }
+          type Track = { evals: { fecha: string; dias: number; mediana: number | null; retornoBench: number; baten: number; n: number }[]; ventanas: number; bateVentanas: number; cohetes?: { evals: unknown[]; ventanas: number; bateVentanas: number } }
+          type CoheteUi = { simbolo: string; nombre: string | null; momentum: number | null; piotroski: number | null; roic: number | null; sobreSmaSem: boolean | null; sobreSmaMes: boolean | null; confirmado: boolean; mesesCotizando?: number | null }
+          const entries = (radar.entries as unknown as Entry[]) ?? []
+          const cohetes = (radar.cohetes as unknown as CoheteUi[] | null) ?? []
+          const track = radar.trackRecord as unknown as Track | null
+          const salud = radar.salud as unknown as { total: number; frescas: number; errores: number } | null
+          const ETIQ = { fuerte: '🟢 fuerte', media: '🟡 media', debil: '⚪ débil' }
+          return (
+            <>
+              {/* La tabla del ranking vive UNIFICADA en el explorador de abajo (orden por score del
+                  modelo por defecto) — aquí solo el satélite 🚀 y el pie con snapshot/track/salud. */}
+              {cohetes.length > 0 && (
+                <div style={{ ...card, marginTop: 10 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>🚀 Caza-cohetes <span style={{ color: 'var(--muted)', fontSize: 12, fontWeight: 400 }}>(satélite LOTERÍA — momentum alto + calidad mala; aparte del núcleo, nunca entra en cohortes)</span></div>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 560 }}>
+                      <thead><tr><th style={th}>Empresa</th><th style={th}>Momentum</th><th style={th}>Piotroski</th><th style={th}>ROIC</th><th style={th}>Medias (sem/mes)</th></tr></thead>
+                      <tbody>
+                        {cohetes.map(c => (
+                          <tr key={c.simbolo}>
+                            <td style={{ ...td, fontWeight: 700 }}>{c.simbolo} <span style={{ color: 'var(--muted)', fontWeight: 400 }}>— {c.nombre ?? '¿?'}</span>{c.mesesCotizando != null ? <span style={{ color: 'var(--warning)', fontSize: 12, marginLeft: 6 }}>🆕 ~{c.mesesCotizando}m en bolsa</span> : null}</td>
+                            <td style={td}>{c.momentum != null ? `+${(c.momentum * 100).toFixed(0)}%` : '—'}</td>
+                            <td style={td}>{c.piotroski ?? '—'}</td>
+                            <td style={td}>{c.roic != null ? `${(c.roic * 100).toFixed(0)}%` : '—'}</td>
+                            <td style={td}>{c.confirmado ? '✅ sobre SMA30sem + SMA12mes' : `${c.sobreSmaSem === true ? '✓' : c.sobreSmaSem === false ? '✗' : '?'} / ${c.sobreSmaMes === true ? '✓' : c.sobreSmaMes === false ? '✗' : '?'}`}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {track?.cohetes ? (
+                    <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
+                      Track 🚀: {track.cohetes.ventanas > 0 ? `${track.cohetes.bateVentanas}/${track.cohetes.ventanas} ventanas baten al SPY` : 'acumulando historial'}
+                    </div>
+                  ) : null}
+                </div>
+              )}
+              <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
+                Snapshot del {fechaCorta(radar.fecha)} · universo {radar.universoTotal} ({radar.conDatos} con datos)
+                {salud ? <> · salud: {salud.frescas}/{salud.total} frescos, {salud.errores} con error</> : null}
+                {track && track.evals.length > 0
+                  ? <> · track record: {track.bateVentanas}/{track.ventanas} ventanas baten al SPY ({track.evals.map(ev => `${Math.round(ev.dias / 7)}sem ${pct(ev.mediana ?? 0)} vs ${pct(ev.retornoBench)}`).join(' · ')})</>
+                  : <> · track record: acumulando historial</>}
+              </p>
+            </>
+          )
+        })()}
+        {universoExplorador.length > 0 && <RadarExplorador filas={universoExplorador} />}
+      </section>
+
+      {vacio && (
+        <div style={{ ...card, textAlign: 'center', color: 'var(--muted)' }}>
+          <div style={{ fontSize: 40, marginBottom: 8 }}>🌱</div>
+          <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>Aún no hay pasadas registradas</div>
+          <div style={{ fontSize: 14 }}>Cuando el agente haga su primera pasada nocturna (temas → cantera → torneo paper) verás aquí sus ideas, la cartera simulada y el rendimiento por estrategia.</div>
+        </div>
+      )}
+
+      {/* (El grid de contadores «Pulso» se retiró el 20/07/2026 — petición de Alberto de página más
+          simple y corta: eran 4 números sin acción posible; el detalle vive en sus secciones.) */}
+
+      {/* (💼 «Cartera simulada» RETIRADA el 04/08/2026 — petición de Alberto «quítame el ruido que no me
+          da números reales»: la tabla listaba entrada/stop/cantidad de posiciones del torneo en paper
+          SIN ningún resultado (ni precio actual, ni P&L, ni cierre), así que no medía nada — era una
+          lista de intenciones con pinta de cartera. Lo que sí mide de verdad es el 🧪 Forward paper de
+          arriba (cesta congelada vs SPY). Las posiciones siguen en BD `trading_posiciones`.) */}
+
+      {/* (📊 «Rendimiento por estrategia» RETIRADA el 04/08/2026 — misma petición. Su «retorno medio»
+          NO era dinero: es el retorno HIPOTÉTICO de seguir cada señal del torneo interno (la bajista
+          "gana" si el valor cae, la neutral cuenta 0), medido sobre las señales que el propio agente
+          generó. Un número que sube sin que nadie compre nada, y que se leía como rentabilidad. Los
+          datos siguen en BD `trading_estrategia_stats` si hace falta auditarlos.) */}
+
+      {/* 💡 Ideas de COMPRA — SOLO compras REALES (petición de Alberto 20/07: «aquí solo interesan las de
+          comprar»; auditoría 21/07: `operada`=la señal ganadora del torneo que pasó las barreras y el agente
+          compró en paper). Antes se listaba TODA señal alcista en bruto → salían nombres cuyo torneo ganó
+          bajista o que las barreras vetaron, contradiciendo la tarjeta «Analiza una acción». El histórico
+          completo (bajistas/neutrales/no operadas) sigue en BD (trading_tesis). */}
+      {(() => {
+        const compras = tesis.filter(t => t.direccion === 'alcista' && t.operada).slice(0, 8)
+        const hayAlcistas = tesis.some(t => t.direccion === 'alcista')
+        // Sin compras reales y sin ningún histórico alcista → nada que contar (el onboarding cubre el vacío).
+        if (!compras.length && !hayAlcistas) return null
+        // Hay señales alcistas pero el agente NO ha comprado ninguna (torneo ganado por otra dirección o
+        // barreras que vetaron): estado honesto en vez de listar señales que no se compraron.
+        if (!compras.length) {
+          return (
+            <section style={{ marginBottom: 22 }}>
+              <h2 style={{ fontSize: 17, marginBottom: 8 }}>💡 Ideas de compra del agente</h2>
+              <div style={{ ...card, color: 'var(--muted)', fontSize: 14 }}>
+                El agente aún no ha abierto ninguna compra en paper. Hubo señales alcistas sueltas, pero no ganaron
+                el torneo de su valor o las barreras de riesgo las vetaron, así que no se compraron. Las señales en
+                bruto (incl. bajistas/neutrales) quedan en el histórico.
+              </div>
+            </section>
+          )
+        }
+        const subtitulo = compras.length === 1 ? 'la más reciente' : `las ${compras.length} más recientes`
+        return (
+          <section style={{ marginBottom: 22 }}>
+            <h2 style={{ fontSize: 17, marginBottom: 8 }}>💡 Ideas de compra del agente <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>({subtitulo})</span></h2>
+            <div style={{ ...card, padding: 0, overflowX: 'auto' }}>
+              <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 520 }}>
+                <thead><tr><th style={th}>Fecha</th><th style={th}>Símbolo</th><th style={th}>Estrategia</th><th style={th}>Confianza</th><th style={th}>Resultado</th></tr></thead>
+                <tbody>
+                  {compras.map(t => (
+                    <tr key={t.id}>
+                      <td style={{ ...td, color: 'var(--muted)' }}>{fechaCorta(t.fecha)}</td>
+                      <td style={{ ...td, fontWeight: 700 }}>{t.simbolo}</td>
+                      <td style={td}>{t.estrategia}</td>
+                      <td style={td}>{t.confianza}</td>
+                      <td style={td}>{t.resultado ? <span style={{ color: t.resultado.acierto ? 'var(--positive)' : 'var(--negative)' }}>{t.resultado.acierto ? '✓' : '✗'} {pct(t.resultado.retorno)}</span> : <span style={{ color: 'var(--muted)' }}>pendiente</span>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>Solo compras REALES en paper: la señal que ganó el torneo de su valor y pasó las barreras de riesgo. El resultado se rellena a posteriori (walk-forward). El histórico completo (señales en bruto, incl. bajistas/neutrales) queda guardado.</p>
+          </section>
+        )
+      })()}
+
+      {/* Watchlist — PLEGADA (secundaria) */}
+      {watchlist.length > 0 && (
+        <details style={{ marginBottom: 22 }}>
+          <summary style={{ fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 8 }}>👀 Watchlist ({watchlist.length})</summary>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {watchlist.map(w => (
+              <span key={w.id} title={CAPA_LABEL[w.capa] ?? w.capa} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999, padding: '4px 12px', fontSize: 13 }}>
+                <strong>{w.simbolo}</strong> <span style={{ color: 'var(--muted)', fontSize: 11 }}>{w.capa}</span>
+              </span>
+            ))}
+          </div>
+        </details>
+      )}
+    </div>
+  )
+}

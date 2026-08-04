@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grupo Joaquín Jaén — Todo tu grupo en una pantalla</title>
+<style>
+  :root{
+    --paper:#F3F4F1; --panel:#FFFFFF; --panel-2:#ECEEE9;
+    --ink:#17201B; --ink-soft:#495449; --ink-faint:#7C857E;
+    --line:#D9DCD4; --line-strong:#C4C9BF;
+    --brand:#0F3D2E; --brand-2:#17513C; --brand-ink:#EAF3EE;
+    --accent:#A8781F; --accent-2:#B4832A; --accent-soft:#EBDCB6;
+    --ok:#2E7D57; --warn:#B4791A; --crit:#AE3E2E;
+    --ok-bg:#E4EFE8; --warn-bg:#F3E9D3; --crit-bg:#F1DFDA;
+    --serif:Georgia,'Iowan Old Style','Times New Roman',serif;
+    --sans:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,'SF Mono','Cascadia Code',Menlo,Consolas,monospace;
+    --shadow:0 1px 2px rgba(20,32,25,.06),0 8px 24px rgba(20,32,25,.07);
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --paper:#0E1512; --panel:#16201B; --panel-2:#1C2822;
+      --ink:#E9E6DC; --ink-soft:#AEB6AC; --ink-faint:#7E887E;
+      --line:#2A362F; --line-strong:#38453C;
+      --brand:#14513A; --brand-2:#1C6349; --brand-ink:#EAF3EE;
+      --accent:#D8A64C; --accent-2:#E0B25E; --accent-soft:#3A2F16;
+      --ok:#54AC7E; --warn:#D6A03A; --crit:#D86956;
+      --ok-bg:#16261E; --warn-bg:#2A2413; --crit-bg:#2C1B17;
+      --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"]{
+    --paper:#F3F4F1; --panel:#FFFFFF; --panel-2:#ECEEE9;
+    --ink:#17201B; --ink-soft:#495449; --ink-faint:#7C857E;
+    --line:#D9DCD4; --line-strong:#C4C9BF;
+    --brand:#0F3D2E; --brand-2:#17513C; --brand-ink:#EAF3EE;
+    --accent:#A8781F; --accent-2:#B4832A; --accent-soft:#EBDCB6;
+    --ok:#2E7D57; --warn:#B4791A; --crit:#AE3E2E;
+    --ok-bg:#E4EFE8; --warn-bg:#F3E9D3; --crit-bg:#F1DFDA;
+    --shadow:0 1px 2px rgba(20,32,25,.06),0 8px 24px rgba(20,32,25,.07);
+  }
+  :root[data-theme="dark"]{
+    --paper:#0E1512; --panel:#16201B; --panel-2:#1C2822;
+    --ink:#E9E6DC; --ink-soft:#AEB6AC; --ink-faint:#7E887E;
+    --line:#2A362F; --line-strong:#38453C;
+    --brand:#14513A; --brand-2:#1C6349; --brand-ink:#EAF3EE;
+    --accent:#D8A64C; --accent-2:#E0B25E; --accent-soft:#3A2F16;
+    --ok:#54AC7E; --warn:#D6A03A; --crit:#D86956;
+    --ok-bg:#16261E; --warn-bg:#2A2413; --crit-bg:#2C1B17;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(130% 90% at 100% -10%, color-mix(in oklab, var(--brand) 9%, transparent), transparent 60%),
+      var(--paper);
+    color:var(--ink); font-family:var(--sans);
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    padding:clamp(10px,3vw,40px) 0 96px;
+  }
+  .deck{display:flex; flex-direction:column; align-items:center; gap:clamp(14px,3.2vh,30px);}
+
+  .slide{
+    position:relative;
+    width:min(94vw, calc(90vh * 16/9));
+    aspect-ratio:16/9;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    box-shadow:var(--shadow);
+    overflow:hidden;
+    container-type:size;
+    scroll-snap-align:center;
+  }
+  .pad{position:absolute; inset:0; padding:6cqh 6.5cqh 5cqh; display:flex; flex-direction:column;}
+
+  /* brand mark */
+  .brandchip{display:inline-flex; align-items:center; gap:1.4cqh; background:rgba(255,255,255,.94);
+    border:1px solid rgba(15,61,46,.14); border-radius:9px; padding:1.4cqh 2cqh; box-shadow:0 1px 3px rgba(20,32,25,.12);}
+  .brandchip img{height:3.4cqh; width:auto; display:block}
+  .brandchip .tl{font-size:1.5cqh; letter-spacing:.16em; text-transform:uppercase; color:#0F3D2E; font-weight:700; opacity:.75}
+
+  .eyebrow{font-size:2.05cqh; letter-spacing:.22em; text-transform:uppercase;
+    color:var(--ink-faint); font-weight:600; display:flex; align-items:center; gap:1.2cqh;}
+  .eyebrow .dot{width:1.1cqh;height:1.1cqh;border-radius:50%;background:var(--accent);}
+  :root[data-theme="dark"] .eyebrow b{color:var(--accent-2)}
+  @media (prefers-color-scheme:dark){.eyebrow b{color:var(--accent-2)}}
+  :root[data-theme="light"] .eyebrow b{color:var(--brand)}
+  .eyebrow b{color:var(--brand);font-weight:700}
+
+  h1,h2{font-family:var(--serif); font-weight:700; text-wrap:balance; margin:0; line-height:1.04; letter-spacing:-.01em;}
+  h1{font-size:8.4cqh}
+  h2{font-size:5.3cqh; margin-top:.4cqh}
+  .lede{font-size:3cqh; line-height:1.42; color:var(--ink-soft); max-width:54ch; text-wrap:pretty;}
+  p{margin:0}
+  .num{font-family:var(--mono); font-variant-numeric:tabular-nums; letter-spacing:-.02em;}
+  .accent{color:var(--accent)}
+  .titleblock{margin-bottom:3cqh}
+  .flex{display:flex}
+  .rule{height:.55cqh;width:16cqh;background:var(--accent);border-radius:2px;}
+
+  .footer{position:absolute; left:6.5cqh; right:6.5cqh; bottom:3cqh;
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:1.85cqh; color:var(--ink-faint); border-top:1px solid var(--line); padding-top:1.6cqh;}
+  .footer .fmark{display:flex; align-items:center; gap:1.2cqh}
+  .footer .fmark img{height:2.5cqh;width:auto;opacity:.9}
+  :root[data-theme="dark"] .footer .fmark img{filter:brightness(0) invert(1) opacity(.85)}
+  @media (prefers-color-scheme:dark){.footer .fmark img{filter:brightness(0) invert(1) opacity(.85)}}
+  :root[data-theme="light"] .footer .fmark img{filter:none}
+  .footer .num{color:var(--ink-soft)}
+
+  /* chips */
+  .chip{display:inline-flex; align-items:center; gap:.7cqh; font-size:1.8cqh; font-weight:600;
+    padding:.7cqh 1.4cqh; border-radius:999px; border:1px solid var(--line-strong); color:var(--ink-soft); background:var(--panel-2);}
+  .chip .d{width:1cqh;height:1cqh;border-radius:50%;background:var(--ink-faint)}
+  .chip.ok{color:var(--ok);background:var(--ok-bg);border-color:color-mix(in oklab,var(--ok) 35%,var(--line))}
+  .chip.ok .d{background:var(--ok)}
+  .chip.warn{color:var(--warn);background:var(--warn-bg);border-color:color-mix(in oklab,var(--warn) 35%,var(--line))}
+  .chip.warn .d{background:var(--warn)}
+  .chip.motor{color:var(--accent);background:var(--accent-soft);border-color:color-mix(in oklab,var(--accent) 35%,var(--line))}
+  .chip.motor .d{background:var(--accent)}
+
+  .cards{display:grid; gap:2cqh; flex:1}
+  .card{background:var(--panel-2); border:1px solid var(--line); border-radius:11px; padding:2.6cqh 2.8cqh; display:flex; flex-direction:column; gap:1cqh;}
+  .card h3{margin:0; font-size:2.45cqh; font-weight:700; letter-spacing:-.01em}
+  .card p{font-size:2.05cqh; color:var(--ink-soft); line-height:1.38}
+  .k{font-size:1.95cqh;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.12em;font-weight:600}
+
+  .stats{display:flex; gap:2.2cqh; margin-top:auto}
+  .stat{flex:1; background:var(--panel-2); border:1px solid var(--line); border-radius:11px; padding:2.2cqh 2.4cqh;}
+  :root[data-theme="dark"] .stat .v{color:var(--accent-2)}
+  @media (prefers-color-scheme:dark){.stat .v{color:var(--accent-2)}}
+  :root[data-theme="light"] .stat .v{color:var(--brand)}
+  .stat .v{font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:5cqh; font-weight:600; letter-spacing:-.03em; color:var(--brand)}
+  .stat .l{font-size:1.9cqh; color:var(--ink-soft); margin-top:.5cqh; line-height:1.3}
+
+  .flow{display:flex; align-items:stretch; gap:1.2cqh; margin-top:1.4cqh}
+  .step{flex:1; background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:2.1cqh 1.7cqh; display:flex; flex-direction:column; gap:.8cqh}
+  .step .n{font-family:var(--mono); font-size:1.85cqh; color:var(--accent); font-weight:700}
+  .step h4{margin:0; font-size:2.2cqh; font-weight:700}
+  .step p{font-size:1.75cqh; color:var(--ink-soft); line-height:1.32}
+  .arrow{align-self:center; color:var(--ink-faint); font-size:2.8cqh; flex:0 0 auto}
+
+  .split{display:grid; grid-template-columns:1fr 1fr; gap:3.6cqh; flex:1; align-items:start}
+  ul.feat{list-style:none;margin:1cqh 0 0;padding:0;display:flex;flex-direction:column;gap:1.4cqh}
+  ul.feat li{position:relative;padding-left:3.2cqh;font-size:2.15cqh;color:var(--ink-soft);line-height:1.38}
+  ul.feat li::before{content:"";position:absolute;left:0;top:.8cqh;width:1.3cqh;height:1.3cqh;border-radius:3px;background:var(--brand);transform:rotate(45deg)}
+  :root[data-theme="dark"] ul.feat li::before{background:var(--accent)}
+  @media (prefers-color-scheme:dark){ul.feat li::before{background:var(--accent)}}
+  :root[data-theme="light"] ul.feat li::before{background:var(--brand)}
+  ul.feat li b{color:var(--ink)}
+
+  /* holding map */
+  .map{flex:1; display:flex; flex-direction:column; gap:1.5cqh; justify-content:center}
+  .central{align-self:center; text-align:center; background:var(--brand); color:var(--brand-ink);
+    border-radius:11px; padding:1.8cqh 3.6cqh; box-shadow:var(--shadow)}
+  .central .k{color:color-mix(in oklab,var(--brand-ink) 72%,transparent)}
+  .central h3{font-family:var(--serif);font-size:3cqh;margin:.2cqh 0 .3cqh}
+  .central p{font-size:1.8cqh;color:color-mix(in oklab,var(--brand-ink) 82%,transparent)}
+  .nodes{display:grid;grid-template-columns:repeat(5,1fr);gap:1.4cqh}
+  .node{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:1.6cqh 1.4cqh;display:flex;flex-direction:column;gap:.8cqh;min-height:12.5cqh}
+  .node h4{margin:0;font-size:2cqh;font-weight:700;line-height:1.1}
+  .node small{font-size:1.55cqh;color:var(--ink-faint);line-height:1.2}
+  .node .st{margin-top:auto;font-size:1.5cqh;font-weight:700;display:inline-flex;align-items:center;gap:.6cqh;color:var(--ink-soft)}
+  .node .st .d{width:.9cqh;height:.9cqh;border-radius:50%;background:var(--ink-faint)}
+  .node.ok .st{color:var(--ok)} .node.ok .st .d{background:var(--ok)}
+  .node.warn .st{color:var(--warn)} .node.warn .st .d{background:var(--warn)}
+  .node.motor .st{color:var(--accent)} .node.motor .st .d{background:var(--accent)}
+  .ic{display:flex;justify-content:center;gap:1.6cqh;flex-wrap:wrap}
+  .ic .tag{font-size:1.7cqh;font-weight:600;color:var(--ink-soft);background:var(--panel-2);border:1px dashed var(--accent);border-radius:999px;padding:.6cqh 1.4cqh}
+  .ic .tag .num{color:var(--accent)}
+  .layer{display:flex;justify-content:center;gap:1.2cqh;flex-wrap:wrap}
+  .layer .lz{font-size:1.7cqh;font-weight:600;color:var(--brand-ink);background:var(--brand-2);border-radius:8px;padding:.9cqh 1.6cqh}
+  :root[data-theme="dark"] .layer .lz{color:var(--brand-ink)}
+  .console{align-self:center;text-align:center;background:var(--panel-2);border:1.5px solid var(--accent);border-radius:11px;padding:1.4cqh 3cqh}
+  .console .k{color:var(--accent)}
+  .console h3{font-family:var(--serif);font-size:2.6cqh;margin:.2cqh 0 0}
+  .mlabel{align-self:center;font-size:1.7cqh;color:var(--ink-faint);letter-spacing:.03em}
+
+  /* waterfall */
+  .wf{flex:1;display:flex;flex-direction:column;justify-content:center;gap:2.4cqh}
+  .bar-row{display:grid;grid-template-columns:20cqh 1fr auto;align-items:center;gap:2.2cqh}
+  .bar-row .lbl{font-size:2.1cqh;color:var(--ink-soft);font-weight:600}
+  .bar-track{height:5cqh;background:var(--panel-2);border-radius:7px;overflow:hidden;position:relative;border:1px solid var(--line)}
+  .bar-fill{height:100%;border-radius:6px}
+  .bar-row .amt{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:2.8cqh;font-weight:600;letter-spacing:-.02em;min-width:12ch;text-align:right}
+  .b-brand{background:linear-gradient(90deg,var(--brand),var(--brand-2))}
+  .b-crit{background:repeating-linear-gradient(45deg,var(--crit),var(--crit) 6px,color-mix(in oklab,var(--crit) 70%,#000) 6px,color-mix(in oklab,var(--crit) 70%,#000) 12px)}
+  .b-real{background:linear-gradient(90deg,var(--accent),var(--accent-2))}
+  .wf .note{font-size:2.1cqh;color:var(--ink-soft);text-align:center;line-height:1.4}
+  .wf .note b{color:var(--ink)}
+  .unchanged{align-self:center;display:inline-flex;align-items:center;gap:1.4cqh;background:var(--ok-bg);color:var(--ok);border:1px solid color-mix(in oklab,var(--ok) 30%,var(--line));border-radius:999px;padding:1cqh 2.4cqh;font-size:2.1cqh;font-weight:600}
+  .unchanged .num{font-size:2.5cqh}
+
+  /* phases */
+  .phases{display:grid;grid-template-columns:repeat(4,1fr);gap:1.8cqh;flex:1;align-items:stretch;margin-top:1cqh}
+  .phase{background:var(--panel-2);border:1px solid var(--line);border-radius:11px;padding:2.4cqh 2.2cqh;display:flex;flex-direction:column;gap:1.1cqh;position:relative;overflow:hidden}
+  .phase::before{content:"";position:absolute;left:0;top:0;bottom:0;width:.9cqh;background:var(--brand)}
+  :root[data-theme="dark"] .phase::before{background:var(--accent)}
+  @media (prefers-color-scheme:dark){.phase::before{background:var(--accent)}}
+  :root[data-theme="light"] .phase::before{background:var(--brand)}
+  .phase .p-n{font-family:var(--mono);font-size:2cqh;color:var(--accent);font-weight:700;letter-spacing:.05em}
+  .phase h4{margin:0;font-size:2.2cqh;font-weight:700;line-height:1.12}
+  .phase p{font-size:1.8cqh;color:var(--ink-soft);line-height:1.34}
+  .phase .tag{margin-top:auto;font-size:1.65cqh;font-weight:700;color:var(--ok)}
+  .phase .tag.soon{color:var(--ink-faint)}
+
+  /* cta / grids */
+  .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:2cqh}
+  .g4{display:grid;grid-template-columns:repeat(2,1fr);gap:1.8cqh;flex:1;align-content:center}
+  .cta .c{background:var(--panel-2);border:1px solid var(--line);border-radius:11px;padding:2.6cqh;display:flex;flex-direction:column;gap:1cqh}
+  .cta .c .p-n{font-family:var(--mono);color:var(--accent);font-weight:700;font-size:2cqh}
+  .cta .c h4{margin:0;font-size:2.2cqh}
+  .cta .c p{font-size:1.9cqh;color:var(--ink-soft);line-height:1.36}
+  .banner{margin-top:2.6cqh;background:var(--brand);color:var(--brand-ink);border-radius:12px;padding:2.4cqh 3.2cqh;display:flex;align-items:center;gap:2.2cqh}
+  .banner .num{color:var(--accent-2)}
+  .banner b{font-family:var(--serif);font-size:2.8cqh;font-weight:700}
+  .banner span{font-size:2cqh;color:color-mix(in oklab,var(--brand-ink) 85%,transparent)}
+
+  /* agent grid item */
+  .agent{background:var(--panel-2);border:1px solid var(--line);border-radius:11px;padding:2.2cqh 2.4cqh;display:flex;flex-direction:column;gap:.8cqh}
+  .agent h4{margin:0;font-size:2.2cqh;font-weight:700;display:flex;align-items:center;gap:1.2cqh}
+  .agent h4 .pill{font-size:1.5cqh;font-weight:700;color:var(--ok);background:var(--ok-bg);border-radius:999px;padding:.4cqh 1.1cqh}
+  .agent p{font-size:1.9cqh;color:var(--ink-soft);line-height:1.36}
+
+  /* tech badges */
+  .badges{display:flex;flex-wrap:wrap;gap:1.2cqh;margin-top:2.4cqh}
+  .badges .b{font-size:1.8cqh;font-weight:600;color:var(--ink-soft);background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:.9cqh 1.6cqh}
+  .badges .b b{color:var(--ink)}
+
+  /* cover */
+  .cover .pad{justify-content:center}
+  .cover h1{font-size:9.2cqh;max-width:20ch}
+  .cover .lede{font-size:3.2cqh;margin-top:2.6cqh;max-width:46ch}
+  .cover .kicker{margin-top:4cqh;display:flex;gap:2cqh;flex-wrap:wrap}
+  .cover .brandrow{display:flex;align-items:center;gap:2.4cqh;margin-bottom:3.4cqh}
+
+  /* divider */
+  .divider{background:linear-gradient(135deg,var(--brand),var(--brand-2))}
+  .divider .pad{justify-content:center}
+  .divider .eyebrow{color:color-mix(in oklab,var(--brand-ink) 70%,transparent)}
+  .divider .eyebrow .dot{background:var(--accent-2)}
+  .divider h2{color:var(--brand-ink);font-size:6.4cqh}
+  .divider .lede{color:color-mix(in oklab,var(--brand-ink) 88%,transparent);max-width:50ch;margin-top:2cqh}
+  .divider .rule{background:var(--accent-2);margin-bottom:3cqh}
+  .divider .chips{display:flex;gap:1.4cqh;flex-wrap:wrap;margin-top:3.4cqh}
+  .divider .chips .z{font-size:2cqh;font-weight:600;color:var(--brand-ink);background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:.9cqh 1.8cqh}
+  .divider .footer{color:color-mix(in oklab,var(--brand-ink) 65%,transparent);border-top-color:rgba(255,255,255,.18)}
+  .divider .footer .num{color:color-mix(in oklab,var(--brand-ink) 80%,transparent)}
+  .divider .footer .fmark img{filter:brightness(0) invert(1) opacity(.9)}
+
+  /* toolbar */
+  .toolbar{position:fixed;right:16px;bottom:16px;display:flex;gap:8px;z-index:20}
+  .toolbar button{font:600 13px/1 var(--sans);color:var(--ink);background:var(--panel);border:1px solid var(--line-strong);
+    border-radius:9px;padding:9px 12px;cursor:pointer;box-shadow:var(--shadow)}
+  .toolbar button:hover{border-color:var(--accent)}
+  .counter{position:fixed;left:16px;bottom:16px;z-index:20;font:600 12px/1 var(--mono);color:var(--ink-soft);
+    background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;box-shadow:var(--shadow)}
+  button:focus-visible,.slide:focus-visible{outline:2.5px solid var(--accent);outline-offset:3px}
+
+  @media (max-width:640px){
+    .slide{width:96vw}
+    .stats{flex-wrap:wrap}.stat{min-width:40%}
+    .flow{flex-direction:column}.flow .arrow{transform:rotate(90deg)}
+    .g3,.phases,.nodes{grid-template-columns:1fr 1fr}
+    .split{grid-template-columns:1fr}
+  }
+  @media print{
+    @page{size:1280px 720px;margin:0}
+    body{padding:0;background:#fff}
+    .deck{gap:0}
+    .toolbar,.counter{display:none}
+    .slide{width:1280px;height:720px;aspect-ratio:auto;border-radius:0;border:none;box-shadow:none;break-after:page;page-break-after:always}
+  }
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+
+<!-- logo asset -->
+</head>
+<body>
+<div hidden id="logosrc" data-uri="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4gPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB3aWR0aD0iMjA1cHgiIGhlaWdodD0icHgiIHZpZXdCb3g9IjAgMCAyMDUgMzkiIHZlcnNpb249IjEuMSI+PGRlZnM+PGNsaXBQYXRoIGlkPSJjbGlwMSI+PHBhdGggZD0iTSA2NCAwLjgwMDc4MSBMIDY5IDAuODAwNzgxIEwgNjkgNiBMIDY0IDYgWiBNIDY0IDAuODAwNzgxICI+PC9wYXRoPjwvY2xpcFBhdGg+PGNsaXBQYXRoIGlkPSJjbGlwMiI+PHBhdGggZD0iTSA3NCAwLjgwMDc4MSBMIDgwIDAuODAwNzgxIEwgODAgNiBMIDc0IDYgWiBNIDc0IDAuODAwNzgxICI+PC9wYXRoPjwvY2xpcFBhdGg+PGNsaXBQYXRoIGlkPSJjbGlwMyI+PHBhdGggZD0iTSA4NSAwLjgwMDc4MSBMIDkwIDAuODAwNzgxIEwgOTAgNiBMIDg1IDYgWiBNIDg1IDAuODAwNzgxICI+PC9wYXRoPjwvY2xpcFBhdGg+PGNsaXBQYXRoIGlkPSJjbGlwNCI+PHBhdGggZD0iTSA5NiAwLjgwMDc4MSBMIDEwMCAwLjgwMDc4MSBMIDEwMCA2IEwgOTYgNiBaIE0gOTYgMC44MDA3ODEgIj48L3BhdGg+PC9jbGlwUGF0aD48Y2xpcFBhdGggaWQ9ImNsaXA1Ij48cGF0aCBkPSJNIDEwNiAwLjgwMDc4MSBMIDExMSAwLjgwMDc4MSBMIDExMSA2IEwgMTA2IDYgWiBNIDEwNiAwLjgwMDc4MSAiPjwvcGF0aD48L2NsaXBQYXRoPjxjbGlwUGF0aCBpZD0iY2xpcDYiPjxwYXRoIGQ9Ik0gMTE3IDAuODAwNzgxIEwgMTE5IDAuODAwNzgxIEwgMTE5IDYgTCAxMTcgNiBaIE0gMTE3IDAuODAwNzgxICI+PC9wYXRoPjwvY2xpcFBhdGg+PGNsaXBQYXRoIGlkPSJjbGlwNyI+PHBhdGggZD0iTSAxMjUgMC44MDA3ODEgTCAxMzAgMC44MDA3ODEgTCAxMzAgNiBMIDEyNSA2IFogTSAxMjUgMC44MDA3ODEgIj48L3BhdGg+PC9jbGlwUGF0aD48Y2xpcFBhdGggaWQ9ImNsaXA4Ij48cGF0aCBkPSJNIDEzNiAwLjgwMDc4MSBMIDE0MSAwLjgwMDc4MSBMIDE0MSA2IEwgMTM2IDYgWiBNIDEzNiAwLjgwMDc4MSAiPjwvcGF0aD48L2NsaXBQYXRoPjwvZGVmcz48ZyBpZD0ic3VyZmFjZTEiPjxwYXRoIHN0eWxlPSIgc3Ryb2tlOm5vbmU7ZmlsbC1ydWxlOm5vbnplcm87ZmlsbDpyZ2IoMC43ODQzMTQlLDI3Ljg0MzEzNyUsMjMuMTM3MjU1JSk7ZmlsbC1vcGFjaXR5OjE7IiBkPSJNIDIuNjAxNTYyIDI5LjYwMTU2MiBDIDIuNjAxNTYyIDMzIDQuMzAwNzgxIDMzLjgwMDc4MSA1LjYwMTU2MiAzMy44MDA3ODEgQyA4IDMzLjgwMDc4MSA5LjEwMTU2MiAzMi4xMDE1NjIgOS4xMDE1NjIgMjkuNSBMIDkuMTAxNTYyIDE1LjEwMTU2MiBMIDYgMTUuMTAxNTYyIEMgMy44OTg0MzggMTUuMTAxNTYyIDEuMzAwNzgxIDE2LjUgMS4zMDA3ODEgMTguMzAwNzgxIEwgMSAxOC4zMDA3ODEgTCAxLjY5OTIxOSAxNC4zOTg0MzggTCAxMS42OTkyMTkgMTQuMzk4NDM4IEwgMTEuNjk5MjE5IDI3LjYwMTU2MiBDIDExLjY5OTIxOSAzMiA5LjgwMDc4MSAzNC4zMDA3ODEgNS42OTkyMTkgMzQuMzAwNzgxIEMgMi4xMDE1NjIgMzQuMzAwNzgxIDAuMzk4NDM4IDMyLjMwMDc4MSAwLjEwMTU2MiAzMC41IFogTSAyLjYwMTU2MiAyOS42MDE1NjIgIj48L3BhdGg+PHBhdGggc3R5bGU9IiBzdHJva2U6bm9uZTtmaWxsLXJ1bGU6bm9uemVybztmaWxsOnJnYigwLjc4NDMxNCUsMjcuODQzMTM3JSwyMy4xMzcyNTUlKTtmaWxsLW9wYWNpdHk6MTsiIGQ9Ik0gMTUuMzAwNzgxIDI0LjE5OTIxOSBDIDE1LjMwMDc4MSAxOS4xOTkyMTkgMTguNjk5MjE5IDE0LjEwMTU2MiAyNS42OTkyMTkgMTQuMTAxNTYyIEMgMzIuODAwNzgxIDE0LjEwMTU2MiAzNi4zOTg0MzggMTkuMTAxNTYyIDM2LjM5ODQzOCAyNC4xMDE1NjIgQyAzNi4zOTg0MzggMjkuMTk5MjE5IDMyLjgwMDc4MSAzNC4zMDA3ODEgMjUuNjk5MjE5IDM0LjMwMDc4MSBDIDE4LjgwMDc4MSAzNC4zMDA3ODEgMTUuMzAwNzgxIDI5LjMwMDc4MSAxNS4zMDA3ODEgMjQuMTk5MjE5IE0gMjYuNjk5MjE5IDMzLjM5ODQzOCBDIDM4LjUgMzMuMzk4NDM4IDM1LjE5OTIxOSAxNSAyNC41IDE1IEMgMTMuNjk5MjE5IDE1IDE2LjMwMDc4MSAzMy4zOTg0MzggMjYuNjk5MjE5IDMzLjM5ODQzOCAiPjwvcGF0aD48cGF0aCBzdHlsZT0iIHN0cm9rZTpub25lO2ZpbGwtcnVsZTpub256ZXJvO2ZpbGw6cmdiKDAuNzg0MzE0JSwyNy44NDMxMzclLDIzLjEzNzI1NSUpO2ZpbGwtb3BhY2l0eToxOyIgZD0iTSA0Mi4zOTg0MzggMzQgTCAzNi4zOTg0MzggMzQgTCAzNi4zOTg0MzggMzMuODAwNzgxIEMgMzguMTk5MjE5IDMzLjgwMDc4MSAzOSAzMi4xMDE1NjIgNDEgMjcuODk4NDM4IEwgNDcuMTk5MjE5IDE0LjM5ODQzOCBMIDQ3LjgwMDc4MSAxNC4zOTg0MzggTCA1NS4xOTkyMTkgMzEuNjk5MjE5IEwgNTUuNjAxNTYyIDMyLjYwMTU2MiBDIDU1Ljg5ODQzOCAzMy4zMDA3ODEgNTYuNjAxNTYyIDMzLjY5OTIxOSA1Ny4zMDA3ODEgMzMuNjk5MjE5IEwgNTcuMzAwNzgxIDM0IEwgNTEgMzQgTCA1MSAzMy42OTkyMTkgTCA1MS4xMDE1NjIgMzMuNjk5MjE5IEMgNTIuMTk5MjE5IDMzLjY5OTIxOSA1Mi42MDE1NjIgMzMuMTAxNTYyIDUyLjE5OTIxOSAzMiBMIDUyLjEwMTU2MiAzMS44MDA3ODEgTCA1MiAzMS42OTkyMTkgTCA1MC4zOTg0MzggMjcuNjk5MjE5IEwgNDEuNjk5MjE5IDI3LjY5OTIxOSBMIDQxLjEwMTU2MiAyOSBDIDQwLjEwMTU2MiAzMS4xMDE1NjIgMzkuNjk5MjE5IDMzLjgwMDc4MSA0Mi4zOTg0MzggMzMuODAwNzgxIFogTSA0MiAyNy4xMDE1NjIgTCA1MC4xOTkyMTkgMjcuMTAxNTYyIEwgNDYuMzk4NDM4IDE3LjY5OTIxOSBaIE0gNDIgMjcuMTAxNTYyICI+PC9wYXRoPjxwYXRoIHN0eWxlPSIgc3Ryb2tlOm5vbmU7ZmlsbC1ydWxlOm5vbnplcm87ZmlsbDpyZ2IoMC43ODQzMTQlLDI3Ljg0MzEzNyUsMjMuMTM3MjU1JSk7ZmlsbC1vcGFjaXR5OjE7IiBkPSJNIDU3LjYwMTU2MiAyNC4xOTkyMTkgQyA1Ny42MDE1NjIgMTkuMTk5MjE5IDYxIDE0LjEwMTU2MiA2OCAxNC4xMDE1NjIgQyA3NS4xMDE1NjIgMTQuMTAxNTYyIDc4LjY5OTIxOSAxOS4xMDE1NjIgNzguNjk5MjE5IDI0LjEwMTU2MiBDIDc4LjY5OTIxOSAyOC4zMDA3ODEgNzYuMTk5MjE5IDMyLjUgNzEuMzk4NDM4IDMzLjgwMDc4MSBMIDY5LjMwMDc4MSAzNS4zMDA3ODEgQyA3NS4zMDA3ODEgMzMuMzAwNzgxIDgxLjUgMzYuMTk5MjE5IDg2LjEwMTU2MiAzNi4xOTkyMTkgQyA5MC4zMDA3ODEgMzYuMTk5MjE5IDkyLjE5OTIxOSAzMy41IDkyLjE5OTIxOSAzMSBDIDkxLjEwMTU2MiAzMS42OTkyMTkgODkuODk4NDM4IDMyIDg4LjgwMDc4MSAzMiBDIDg0LjM5ODQzOCAzMiA4MS42OTkyMTkgMjkuNjAxNTYyIDgxLjY5OTIxOSAyNC4zMDA3ODEgTCA4MS42OTkyMTkgMTcuNSBDIDgxLjY5OTIxOSAxNS42OTkyMTkgODEgMTQuNSA4MCAxNC41IEwgNzkuODk4NDM4IDE0LjUgTCA3OS44OTg0MzggMTQuMzk4NDM4IEwgODYgMTQuMzk4NDM4IEwgODYgMTQuNSBMIDg1Ljg5ODQzOCAxNC41IEMgODQuODk4NDM4IDE0LjUgODQuMTk5MjE5IDE1LjYwMTU2MiA4NC4xOTkyMTkgMTcuMzAwNzgxIEwgODQuMTk5MjE5IDI1LjgwMDc4MSBDIDg0LjE5OTIxOSAyNi41IDg0LjMwMDc4MSAyNy4xMDE1NjIgODQuMzk4NDM4IDI3LjYwMTU2MiBDIDg1LjMwMDc4MSAyNi42MDE1NjIgODYuNSAyNi4xMDE1NjIgODguMTk5MjE5IDI2LjEwMTU2MiBDIDkwLjYwMTU2MiAyNi4xMDE1NjIgOTIuMTk5MjE5IDI3LjgwMDc4MSA5Mi42MDE1NjIgMjkuODk4NDM4IEMgOTMuODk4NDM4IDI4LjgwMDc4MSA5NC44MDA3ODEgMjcgOTQuODAwNzgxIDI0LjMwMDc4MSBMIDk0LjgwMDc4MSAxOS4zOTg0MzggQyA5NC44MDA3ODEgMTYuNjk5MjE5IDkzLjY5OTIxOSAxNC42MDE1NjIgOTEuMzAwNzgxIDE0LjYwMTU2MiBMIDkxLjMwMDc4MSAxNC4zMDA3ODEgTCA5Ny4xOTkyMTkgMTQuMzAwNzgxIEwgOTcuMTk5MjE5IDE0LjM5ODQzOCBMIDk3LjEwMTU2MiAxNC4zOTg0MzggQyA5Ni4xMDE1NjIgMTQuMzk4NDM4IDk1LjM5ODQzOCAxNi44MDA3ODEgOTUuMzk4NDM4IDE4LjUgTCA5NS4zOTg0MzggMjQuMTk5MjE5IEMgOTUuMzk4NDM4IDI3LjE5OTIxOSA5NC4xOTkyMTkgMjkuMzAwNzgxIDkyLjYwMTU2MiAzMC41IEMgOTIuODk4NDM4IDMzLjg5ODQzOCA5MC4zMDA3ODEgMzggODMuMzk4NDM4IDM4IEMgNzguMTAxNTYyIDM4IDcxLjgwMDc4MSAzNC42OTkyMTkgNjYuNSAzNyBMIDY2LjMwMDc4MSAzNi42MDE1NjIgTCA2OS44OTg0MzggMzMuODk4NDM4IEMgNjkuMzAwNzgxIDM0IDY4LjYwMTU2MiAzNC4xMDE1NjIgNjcuODk4NDM4IDM0LjEwMTU2MiBDIDYxLjEwMTU2MiAzNC4zMDA3ODEgNTcuNjAxNTYyIDI5LjMwMDc4MSA1Ny42MDE1NjIgMjQuMTk5MjE5IE0gNjguODk4NDM4IDMzLjM5ODQzOCBDIDgwLjY5OTIxOSAzMy4zOTg0MzggNzcuMzk4NDM4IDE1IDY2LjY5OTIxOSAxNSBDIDU2IDE1IDU4LjUgMzMuMzk4NDM4IDY4Ljg5ODQzOCAzMy4zOTg0MzggTSA4NC42MDE1NjIgMjguMTk5MjE5IEMgODUuODk4NDM4IDMxLjMwMDc4MSA4OS41IDMyLjEwMTU2MiA5MiAzMC4zOTg0MzggQyA5MS42OTkyMTkgMjguNSA5MC4zOTg0MzggMjYuODk4NDM4IDg4LjEwMTU2MiAyNi44OTg0MzggQyA4Ni42MDE1NjIgMjYuODAwNzgxIDg1LjM5ODQzOCAyNy4zMDA3ODEgODQuNjAxNTYyIDI4LjE5OTIxOSAiPjwvcGF0aD48cGF0aCBzdHlsZT0iIHN0cm9rZTpub25lO2ZpbGwtcnVsZTpub256ZXJvO2ZpbGw6cmdiKDAuNzg0MzE0JSwyNy44NDMxMzclLDIzLjEzNzI1NSUpO2ZpbGwtb3BhY2l0eToxOyIgZD0iTSAxMDQuNjk5MjE5IDMzLjg5ODQzOCBMIDEwNC42OTkyMTkgMzQgTCA5OC41IDM0IEwgOTguNSAzMy44OTg0MzggTCA5OC42MDE1NjIgMzMuODk4NDM4IEMgOTkuNjAxNTYyIDMzLjg5ODQzOCAxMDAuMzAwNzgxIDMyLjY5OTIxOSAxMDAuMzAwNzgxIDMwLjg5ODQzOCBMIDEwMC4zMDA3ODEgMTcuNjAxNTYyIEMgMTAwLjMwMDc4MSAxNS44MDA3ODEgOTkuNjAxNTYyIDE0LjYwMTU2MiA5OC42MDE1NjIgMTQuNjAxNTYyIEwgOTguNSAxNC42MDE1NjIgTCA5OC41IDE0LjUgTCAxMDQuNjk5MjE5IDE0LjUgTCAxMDQuNjk5MjE5IDE0LjYwMTU2MiBMIDEwNC42MDE1NjIgMTQuNjAxNTYyIEMgMTAzLjYwMTU2MiAxNC42MDE1NjIgMTAyLjg5ODQzOCAxNS42OTkyMTkgMTAyLjg5ODQzOCAxNy4zOTg0MzggTCAxMDIuODk4NDM4IDMwLjg5ODQzOCBDIDEwMi44OTg0MzggMzIuNjk5MjE5IDEwMy41IDMzLjg5ODQzOCAxMDQuNjk5MjE5IDMzLjg5ODQzOCBaIE0gMTAzLjEwMTU2MiAxMC41IEMgMTAzLjUgMTAuMTk5MjE5IDEwNCAxMC4xOTkyMTkgMTA0LjMwMDc4MSAxMC42OTkyMTkgQyAxMDQuNjAxNTYyIDExLjE5OTIxOSAxMDQuNSAxMS42MDE1NjIgMTA0IDExLjgwMDc4MSBMIDEwMC4xOTkyMTkgMTMuMTAxNTYyIEwgMTAwLjEwMTU2MiAxMi44OTg0MzggWiBNIDEwMy4xMDE1NjIgMTAuNSAiPjwvcGF0aD48cGF0aCBzdHlsZT0iIHN0cm9rZTpub25lO2ZpbGwtcnVsZTpub256ZXJvO2ZpbGw6cmdiKDAuNzg0MzE0JSwyNy44NDMxMzclLDIzLjEzNzI1NSUpO2ZpbGwtb3BhY2l0eToxOyIgZD0iTSAxMjIgMTkgTCAxMjIgMzMuMTk5MjE5IEwgMTIyLjEwMTU2MiAzNCBMIDEyMS4zOTg0MzggMzQgTCAxMDguMzAwNzgxIDE2LjYwMTU2MiBMIDEwOC4zMDA3ODEgMjkgQyAxMDguMzAwNzgxIDMxLjY5OTIxOSAxMDkuMzk4NDM4IDMzLjgwMDc4MSAxMTEuODAwNzgxIDMzLjgwMDc4MSBMIDExMS44MDA3ODEgMzQuMTAxNTYyIEwgMTA1Ljg5ODQzOCAzNC4xMDE1NjIgTCAxMDUuODk4NDM4IDM0IEwgMTA2IDM0IEMgMTA3IDM0IDEwNy42OTkyMTkgMzEuMzk4NDM4IDEwNy42OTkyMTkgMjkuNjAxNTYyIEwgMTA3LjY5OTIxOSAxNy42MDE1NjIgQyAxMDcuNjk5MjE5IDE1LjgwMDc4MSAxMDcgMTQuNjAxNTYyIDEwNiAxNC42MDE1NjIgTCAxMDUuODk4NDM4IDE0LjYwMTU2MiBMIDEwNS44OTg0MzggMTQuNSBMIDEwOS44OTg0MzggMTQuNSBMIDEyMS4zOTg0MzggMjkuODk4NDM4IEwgMTIxLjM5ODQzOCAxOS41IEMgMTIxLjM5ODQzOCAxNi44MDA3ODEgMTIwLjMwMDc4MSAxNC42OTkyMTkgMTE3Ljg5ODQzOCAxNC42OTkyMTkgTCAxMTcuODk4NDM4IDE0LjM5ODQzOCBMIDEyMy44MDA3ODEgMTQuMzk4NDM4IEwgMTIzLjgwMDc4MSAxNC41IEwgMTIzLjY5OTIxOSAxNC41IEMgMTIyLjY5OTIxOSAxNC42MDE1NjIgMTIyIDE3LjE5OTIxOSAxMjIgMTkgIj48L3BhdGg+PHBhdGggc3R5bGU9IiBzdHJva2U6bm9uZTtmaWxsLXJ1bGU6bm9uemVybztmaWxsOnJnYigwLjc4NDMxNCUsMjcuODQzMTM3JSwyMy4xMzcyNTUlKTtmaWxsLW9wYWNpdHk6MTsiIGQ9Ik0gMTM4LjEwMTU2MiAyOS42MDE1NjIgQyAxMzguMTAxNTYyIDMzIDEzOS44MDA3ODEgMzMuODAwNzgxIDE0MS4xMDE1NjIgMzMuODAwNzgxIEMgMTQzLjUgMzMuODAwNzgxIDE0NC42MDE1NjIgMzIuMTAxNTYyIDE0NC42MDE1NjIgMjkuNSBMIDE0NC42MDE1NjIgMTUuMTAxNTYyIEwgMTQxLjYwMTU2MiAxNS4xMDE1NjIgQyAxMzkuNSAxNS4xMDE1NjIgMTM2Ljg5ODQzOCAxNi41IDEzNi44OTg0MzggMTguMzAwNzgxIEwgMTM2LjUgMTguMzAwNzgxIEwgMTM3LjE5OTIxOSAxNC4zOTg0MzggTCAxNDcuMTk5MjE5IDE0LjM5ODQzOCBMIDE0Ny4xOTkyMTkgMjcuNjAxNTYyIEMgMTQ3LjE5OTIxOSAzMiAxNDUuMzAwNzgxIDM0LjMwMDc4MSAxNDEuMTk5MjE5IDM0LjMwMDc4MSBDIDEzNy42MDE1NjIgMzQuMzAwNzgxIDEzNS44OTg0MzggMzIuMzAwNzgxIDEzNS42MDE1NjIgMzAuNSBaIE0gMTM4LjEwMTU2MiAyOS42MDE1NjIgIj48L3BhdGg+PHBhdGggc3R5bGU9IiBzdHJva2U6bm9uZTtmaWxsLXJ1bGU6bm9uemVybztmaWxsOnJnYigwLjc4NDMxNCUsMjcuODQzMTM3JSwyMy4xMzcyNTUlKTtmaWxsLW9wYWNpdHk6MTsiIGQ9Ik0gMTU0LjM5ODQzOCAzNCBMIDE0OC4zOTg0MzggMzQgTCAxNDguMzk4NDM4IDMzLjgwMDc4MSBDIDE1MC4xOTkyMTkgMzMuODAwNzgxIDE1MSAzMi4xMDE1NjIgMTUzIDI3Ljg5ODQzOCBMIDE1OS4xOTkyMTkgMTQuMzk4NDM4IEwgMTU5LjgwMDc4MSAxNC4zOTg0MzggTCAxNjcuMTk5MjE5IDMxLjY5OTIxOSBMIDE2Ny42MDE1NjIgMzIuNjAxNTYyIEMgMTY3Ljg5ODQzOCAzMy4zMDA3ODEgMTY4LjYwMTU2MiAzMy42OTkyMTkgMTY5LjMwMDc4MSAzMy42OTkyMTkgTCAxNjkuMzAwNzgxIDM0IEwgMTYzIDM0IEwgMTYzIDMzLjY5OTIxOSBMIDE2My4xMDE1NjIgMzMuNjk5MjE5IEMgMTY0LjE5OTIxOSAzMy42OTkyMTkgMTY0LjYwMTU2MiAzMy4xMDE1NjIgMTY0LjE5OTIxOSAzMiBMIDE2NC4xMDE1NjIgMzEuODAwNzgxIEwgMTY0IDMxLjUgTCAxNjIuMzk4NDM4IDI3LjUgTCAxNTMuNjk5MjE5IDI3LjUgTCAxNTMuMTAxNTYyIDI4LjgwMDc4MSBDIDE1Mi4xMDE1NjIgMzAuODk4NDM4IDE1MS42OTkyMTkgMzMuNjAxNTYyIDE1NC4zOTg0MzggMzMuNjAxNTYyIFogTSAxNTQgMjcuMTAxNTYyIEwgMTYyLjE5OTIxOSAyNy4xMDE1NjIgTCAxNTguMzk4NDM4IDE3LjY5OTIxOSBaIE0gMTU0IDI3LjEwMTU2MiAiPjwvcGF0aD48cGF0aCBzdHlsZT0iIHN0cm9rZTpub25lO2ZpbGwtcnVsZTpub256ZXJvO2ZpbGw6cmdiKDAuNzg0MzE0JSwyNy44NDMxMzclLDIzLjEzNzI1NSUpO2ZpbGwtb3BhY2l0eToxOyIgZD0iTSAxODIuNjk5MjE5IDIxLjEwMTU2MiBMIDE4MyAyMS4xMDE1NjIgTCAxODMgMjcuMTAxNTYyIEwgMTgyLjY5OTIxOSAyNy4xMDE1NjIgQyAxODEuNjk5MjE5IDI1IDE4MSAyNC4zOTg0MzggMTc5LjY5OTIxOSAyNC4zOTg0MzggTCAxNzQuODk4NDM4IDI0LjM5ODQzOCBMIDE3NC44OTg0MzggMzMuMzk4NDM4IEwgMTc5IDMzLjM5ODQzOCBDIDE4MS4zOTg0MzggMzMuMzk4NDM4IDE4My44MDA3ODEgMzEuODk4NDM4IDE4NS4xOTkyMTkgMjkuNjk5MjE5IEwgMTg1LjUgMjkuNjk5MjE5IEwgMTg0LjYwMTU2MiAzNCBMIDE3MC41IDM0IEwgMTcwLjUgMzMuODk4NDM4IEwgMTcwLjYwMTU2MiAzMy44OTg0MzggQyAxNzEuNjAxNTYyIDMzLjg5ODQzOCAxNzIuMzAwNzgxIDMyLjY5OTIxOSAxNzIuMzAwNzgxIDMwLjg5ODQzOCBMIDE3Mi4zMDA3ODEgMTcuNjAxNTYyIEMgMTcyLjMwMDc4MSAxNS44MDA3ODEgMTcxLjYwMTU2MiAxNC42MDE1NjIgMTcwLjYwMTU2MiAxNC42MDE1NjIgTCAxNzAuNSAxNC42MDE1NjIgTCAxNzAuNSAxNC41IEwgMTgzLjg5ODQzOCAxNC41IEwgMTg0LjgwMDc4MSAxOC44MDA3ODEgTCAxODQuNSAxOC44MDA3ODEgQyAxODMuMTAxNTYyIDE2LjYwMTU2MiAxODAuNjk5MjE5IDE1LjEwMTU2MiAxNzguMzAwNzgxIDE1LjEwMTU2MiBMIDE3NC44OTg0MzggMTUuMTAxNTYyIEwgMTc0Ljg5ODQzOCAyMy44MDA3ODEgTCAxNzkuNjk5MjE5IDIzLjgwMDc4MSBDIDE4MSAyMy44MDA3ODEgMTgxLjY5OTIxOSAyMy4xOTkyMTkgMTgyLjY5OTIxOSAyMS4xMDE1NjIgTSAxNzkuODk4NDM4IDkuODAwNzgxIEMgMTgwLjMwMDc4MSA5LjUgMTgwLjgwMDc4MSA5LjUgMTgxLjEwMTU2MiAxMCBDIDE4MS4zOTg0MzggMTAuNSAxODEuMzAwNzgxIDEwLjg5ODQzOCAxODAuODAwNzgxIDExLjEwMTU2MiBMIDE3NyAxMi4zOTg0MzggTCAxNzYuODk4NDM4IDEyLjE5OTIxOSBaIE0gMTc5Ljg5ODQzOCA5LjgwMDc4MSAiPjwvcGF0aD48cGF0aCBzdHlsZT0iIHN0cm9rZTpub25lO2ZpbGwtcnVsZTpub256ZXJvO2ZpbGw6cmdiKDAuNzg0MzE0JSwyNy44NDMxMzclLDIzLjEzNzI1NSUpO2ZpbGwtb3BhY2l0eToxOyIgZD0iTSAyMDMuMTk5MjE5IDE5IEwgMjAzLjE5OTIxOSAzMy4xOTkyMTkgTCAyMDMuMzAwNzgxIDM0IEwgMjAyLjYwMTU2MiAzNCBMIDE4OS41IDE2LjYwMTU2MiBMIDE4OS41IDI5IEMgMTg5LjUgMzEuNjk5MjE5IDE5MC42MDE1NjIgMzMuODAwNzgxIDE5MyAzMy44MDA3ODEgTCAxOTMgMzQuMTAxNTYyIEwgMTg3LjEwMTU2MiAzNC4xMDE1NjIgTCAxODcuMTAxNTYyIDM0IEwgMTg3LjE5OTIxOSAzNCBDIDE4OC4xOTkyMTkgMzQgMTg4Ljg5ODQzOCAzMS4zOTg0MzggMTg4Ljg5ODQzOCAyOS42MDE1NjIgTCAxODguODk4NDM4IDE3LjYwMTU2MiBDIDE4OC44OTg0MzggMTUuODAwNzgxIDE4OC4xOTkyMTkgMTQuNjAxNTYyIDE4Ny4xOTkyMTkgMTQuNjAxNTYyIEwgMTg3LjEwMTU2MiAxNC42MDE1NjIgTCAxODcuMTAxNTYyIDE0LjUgTCAxOTEuMTAxNTYyIDE0LjUgTCAyMDIuNjAxNTYyIDI5Ljg5ODQzOCBMIDIwMi42MDE1NjIgMTkuNSBDIDIwMi42MDE1NjIgMTYuODAwNzgxIDIwMS41IDE0LjY5OTIxOSAxOTkuMTAxNTYyIDE0LjY5OTIxOSBMIDE5OS4xMDE1NjIgMTQuMzk4NDM4IEwgMjA1IDE0LjM5ODQzOCBMIDIwNSAxNC41IEwgMjA0Ljg5ODQzOCAxNC41IEMgMjAzLjg5ODQzOCAxNC42MDE1NjIgMjAzLjE5OTIxOSAxNy4xOTkyMTkgMjAzLjE5OTIxOSAxOSAiPjwvcGF0aD48ZyBjbGlwLXBhdGg9InVybCgjY2xpcDEpIiBjbGlwLXJ1bGU9Im5vbnplcm8iPjxwYXRoIHN0eWxlPSIgc3Ryb2tlOm5vbmU7ZmlsbC1ydWxlOm5vbnplcm87ZmlsbDpyZ2IoNjEuOTYwNzg0JSw1MC41ODgyMzUlLDMyLjE1Njg2MyUpO2ZpbGwtb3BhY2l0eToxOyIgZD0iTSA2Ny44OTg0MzggMy4zOTg0MzggTCA2OC42OTkyMTkgMy4zOTg0MzggQyA2OC41IDQuNjAxNTYyIDY3LjUgNS4xOTkyMTkgNjYuMzk4NDM4IDUuMTk5MjE5IEMgNjUuMTk5MjE5IDUuMTk5MjE5IDY0LjEwMTU2MiA0LjYwMTU2MiA2NC4xMDE1NjIgMyBDIDY0LjEwMTU2MiAxLjM5ODQzOCA2NS4zMDA3ODEgMC44MDA3ODEgNjYuMzk4NDM4IDAuODAwNzgxIEMgNjcuNSAwLjgwMDc4MSA2OC41IDEuMzk4NDM4IDY4LjY5OTIxOSAyLjYwMTU2MiBMIDY3Ljg5ODQzOCAyLjYwMTU2MiBDIDY3LjgwMDc4MSAyIDY3LjM5ODQzOCAxLjUgNjYuMzk4NDM4IDEuNSBDIDY1LjM5ODQzOCAxLjUgNjQuODAwNzgxIDIuMTAxNTYyIDY0LjgwMDc4MSAzLjEwMTU2MiBDIDY0LjgwMDc4MSA0LjEwMTU2MiA2NS4zMDA3ODEgNC42OTkyMTkgNjYuMzk4NDM4IDQuNjk5MjE5IEMgNjcuMzk4NDM4IDQuNjAxNTYyIDY3LjgwMDc4MSA0IDY3Ljg5ODQzOCAzLjM5ODQzOCAiPjwvcGF0aD48L2c+PGcgY2xpcC1wYXRoPSJ1cmwoI2NsaXAyKSIgY2xpcC1ydWxlPSJub256ZXJvIj48cGF0aCBzdHlsZT0iIHN0cm9rZTpub25lO2ZpbGwtcnVsZTpub256ZXJvO2ZpbGw6cmdiKDYxLjk2MDc4NCUsNTAuNTg4MjM1JSwzMi4xNTY4NjMlKTtmaWxsLW9wYWNpdHk6MTsiIGQ9Ik0gNzguNSA0LjE5OTIxOSBMIDc2IDQuMTk5MjE5IEwgNzUuNjAxNTYyIDUuMTAxNTYyIEwgNzQuODAwNzgxIDUuMTAxNTYyIEwgNzYuODAwNzgxIDAuODk4NDM4IEwgNzcuODAwNzgxIDAuODk4NDM4IEwgNzkuODAwNzgxIDUuMTAxNTYyIEwgNzkgNS4xMDE1NjIgWiBNIDc4LjE5OTIxOSAzLjUgTCA3Ny4zMDA3ODEgMS4zOTg0MzggTCA3Ni4zOTg0MzggMy41IFogTSA3OC4xOTkyMTkgMy41ICI+PC9wYXRoPjwvZz48ZyBjbGlwLXBhdGg9InVybCgjY2xpcDMpIiBjbGlwLXJ1bGU9Im5vbnplcm8iPjxwYXRoIHN0eWxlPSIgc3Ryb2tlOm5vbmU7ZmlsbC1ydWxlOm5vbnplcm87ZmlsbDpyZ2IoNjEuOTYwNzg0JSw1MC41ODgyMzUlLDMyLjE1Njg2MyUpO2ZpbGwtb3BhY2l0eToxOyIgZD0iTSA4OS4xOTkyMTkgMS41IEwgODcuNjAxNTYyIDEuNSBMIDg3LjYwMTU2MiA1LjEwMTU2MiBMIDg2LjgwMDc4MSA1LjEwMTU2MiBMIDg2LjgwMDc4MSAxLjUgTCA4NS4xOTkyMTkgMS41IEwgODUuMTk5MjE5IDAuODk4NDM4IEwgODkuMTk5MjE5IDAuODk4NDM4IFogTSA4OS4xOTkyMTkgMS41ICI+PC9wYXRoPjwvZz48ZyBjbGlwLXBhdGg9InVybCgjY2xpcDQpIiBjbGlwLXJ1bGU9Im5vbnplcm8iPjxwYXRoIHN0eWxlPSIgc3Ryb2tlOm5vbmU7ZmlsbC1ydWxlOm5vbnplcm87ZmlsbDpyZ2IoNjEuOTYwNzg0JSw1MC41ODgyMzUlLDMyLjE1Njg2MyUpO2ZpbGwtb3BhY2l0eToxOyIgZD0iTSA5OS41IDUuMTAxNTYyIEwgOTYgNS4xMDE1NjIgTCA5NiAwLjg5ODQzOCBMIDk5LjUgMC44OTg0MzggTCA5OS41IDEuNSBMIDk2LjY5OTIxOSAxLjUgTCA5Ni42OTkyMTkgMi42MDE1NjIgTCA5OS4zMDA3ODEgMi42MDE1NjIgTCA5OS4zMDA3ODEgMy4zMDA3ODEgTCA5Ni42OTkyMTkgMy4zMDA3ODEgTCA5Ni42OTkyMTkgNC41IEwgOTkuNSA0LjUgWiBNIDk5LjUgNS4xMDE1NjIgIj48L3BhdGg+PC9nPjxnIGNsaXAtcGF0aD0idXJsKCNjbGlwNSkiIGNsaXAtcnVsZT0ibm9uemVybyI+PHBhdGggc3R5bGU9IiBzdHJva2U6bm9uZTtmaWxsLXJ1bGU6bm9uemVybztmaWxsOnJnYig2MS45NjA3ODQlLDUwLjU4ODIzNSUsMzIuMTU2ODYzJSk7ZmlsbC1vcGFjaXR5OjE7IiBkPSJNIDEwOS44MDA3ODEgNS4xMDE1NjIgTCAxMDguODk4NDM4IDMuNjAxNTYyIEMgMTA4Ljg5ODQzOCAzLjYwMTU2MiAxMDguODAwNzgxIDMuNjAxNTYyIDEwOC44MDA3ODEgMy42MDE1NjIgTCAxMDcuMTk5MjE5IDMuNjAxNTYyIEwgMTA3LjE5OTIxOSA1LjEwMTU2MiBMIDEwNi41IDUuMTAxNTYyIEwgMTA2LjUgMC44OTg0MzggTCAxMDkuMTAxNTYyIDAuODk4NDM4IEMgMTEwLjE5OTIxOSAwLjg5ODQzOCAxMTAuNjAxNTYyIDEuNSAxMTAuNjAxNTYyIDIuMzAwNzgxIEMgMTEwLjYwMTU2MiAyLjg5ODQzOCAxMTAuMzAwNzgxIDMuMzAwNzgxIDEwOS42OTkyMTkgMy41IEwgMTEwLjY5OTIxOSA1LjEwMTU2MiBaIE0gMTA3LjEwMTU2MiAzIEwgMTA4LjgwMDc4MSAzIEMgMTA5LjM5ODQzOCAzIDEwOS42OTkyMTkgMi42OTkyMTkgMTA5LjY5OTIxOSAyLjE5OTIxOSBDIDEwOS42OTkyMTkgMS42OTkyMTkgMTA5LjM5ODQzOCAxLjUgMTA4LjgwMDc4MSAxLjUgTCAxMDcuMTAxNTYyIDEuNSBaIE0gMTA3LjEwMTU2MiAzICI+PC9wYXRoPjwvZz48ZyBjbGlwLXBhdGg9InVybCgjY2xpcDYpIiBjbGlwLXJ1bGU9Im5vbnplcm8iPjxwYXRoIHN0eWxlPSIgc3Ryb2tlOm5vbmU7ZmlsbC1ydWxlOm5vbnplcm87ZmlsbDpyZ2IoNjEuOTYwNzg0JSw1MC41ODgyMzUlLDMyLjE1Njg2MyUpO2ZpbGwtb3BhY2l0eToxOyIgZD0iTSAxMTcuMzk4NDM4IDAuODk4NDM4IEwgMTE4LjEwMTU2MiAwLjg5ODQzOCBMIDExOC4xMDE1NjIgNS4xMDE1NjIgTCAxMTcuMzk4NDM4IDUuMTAxNTYyIFogTSAxMTcuMzk4NDM4IDAuODk4NDM4ICI+PC9wYXRoPjwvZz48ZyBjbGlwLXBhdGg9InVybCgjY2xpcDcpIiBjbGlwLXJ1bGU9Im5vbnplcm8iPjxwYXRoIHN0eWxlPSIgc3Ryb2tlOm5vbmU7ZmlsbC1ydWxlOm5vbnplcm87ZmlsbDpyZ2IoNjEuOTYwNzg0JSw1MC41ODgyMzUlLDMyLjE1Njg2MyUpO2ZpbGwtb3BhY2l0eToxOyIgZD0iTSAxMjkuMzk4NDM4IDAuODk4NDM4IEwgMTI5LjM5ODQzOCA1LjEwMTU2MiBMIDEyOC41IDUuMTAxNTYyIEwgMTI1Ljg5ODQzOCAxLjgwMDc4MSBMIDEyNS44OTg0MzggNS4xMDE1NjIgTCAxMjUuMTk5MjE5IDUuMTAxNTYyIEwgMTI1LjE5OTIxOSAwLjg5ODQzOCBMIDEyNi4xMDE1NjIgMC44OTg0MzggTCAxMjguNjAxNTYyIDQuMTk5MjE5IEwgMTI4LjYwMTU2MiAwLjg5ODQzOCBaIE0gMTI5LjM5ODQzOCAwLjg5ODQzOCAiPjwvcGF0aD48L2c+PGcgY2xpcC1wYXRoPSJ1cmwoI2NsaXA4KSIgY2xpcC1ydWxlPSJub256ZXJvIj48cGF0aCBzdHlsZT0iIHN0cm9rZTpub25lO2ZpbGwtcnVsZTpub256ZXJvO2ZpbGw6cmdiKDYxLjk2MDc4NCUsNTAuNTg4MjM1JSwzMi4xNTY4NjMlKTtmaWxsLW9wYWNpdHk6MTsiIGQ9Ik0gMTM4LjY5OTIxOSA1LjE5OTIxOSBDIDEzNy4zMDA3ODEgNS4xOTkyMTkgMTM2LjE5OTIxOSA0LjUgMTM2LjE5OTIxOSAzIEMgMTM2LjE5OTIxOSAxLjUgMTM3LjM5ODQzOCAwLjgwMDc4MSAxMzguNjAxNTYyIDAuODAwNzgxIEMgMTM5LjY5OTIxOSAwLjgwMDc4MSAxNDAuNSAxLjMwMDc4MSAxNDAuODAwNzgxIDIuMTk5MjE5IEwgMTQwIDIuMTk5MjE5IEMgMTM5LjgwMDc4MSAxLjgwMDc4MSAxMzkuMzk4NDM4IDEuMzk4NDM4IDEzOC42MDE1NjIgMS4zOTg0MzggQyAxMzcuNjAxNTYyIDEuMzk4NDM4IDEzNyAyLjEwMTU2MiAxMzcgMyBDIDEzNyAzLjg5ODQzOCAxMzcuNjk5MjE5IDQuNjAxNTYyIDEzOC42OTkyMTkgNC42MDE1NjIgQyAxMzkuODAwNzgxIDQuNjAxNTYyIDE0MC4xMDE1NjIgNCAxNDAuMTk5MjE5IDMuMzk4NDM4IEwgMTM4LjY5OTIxOSAzLjM5ODQzOCBMIDEzOC42OTkyMTkgMi44MDA3ODEgTCAxNDAuODk4NDM4IDIuODAwNzgxIEMgMTQxIDQuMzAwNzgxIDE0MC4xOTkyMTkgNS4xOTkyMTkgMTM4LjY5OTIxOSA1LjE5OTIxOSAiPjwvcGF0aD48L2c+PC9nPjwvc3ZnPiA="></div>
+
+<div class="deck" id="deck">
+
+  <!-- 1 · COVER -->
+  <section class="slide cover" tabindex="-1">
+    <div class="pad">
+      <div class="brandrow"><span class="brandchip"><img alt="Joaquín Jaén" data-logo><span class="tl">Catering</span></span></div>
+      <div class="eyebrow"><span class="dot"></span> Propuesta para el grupo</div>
+      <div class="rule" style="margin:2.4cqh 0 3cqh"></div>
+      <h1>Todo tu grupo,<br>en una sola pantalla.</h1>
+      <p class="lede">Un único sistema para tus cinco negocios y todo lo que va con ellos — empezando por donde de verdad se gana o se pierde dinero: <b style="color:var(--ink)">la venta</b>.</p>
+      <div class="kicker">
+        <span class="chip ok"><span class="d"></span> Casi todo, ya construido</span>
+        <span class="chip motor"><span class="d"></span> Demo con la forma de tu grupo</span>
+      </div>
+      <div class="footer">
+        <span class="fmark"><img alt="" data-logo> · ia-rest · Central</span>
+        <span class="num">Reunión de presentación · 2026</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · THESIS -->
+  <section class="slide" tabindex="-1">
+    <div class="pad">
+      <div class="eyebrow"><span class="dot"></span> El punto de partida</div>
+      <div class="titleblock"><h2>No tienes programas sueltos.<br>Tienes <span class="accent">un holding</span>.</h2></div>
+      <p class="lede">Cinco negocios que comparten una cocina central y se facturan entre ellos, más el back-office que los sostiene (personas, dinero, licitaciones). Ningún ERP genérico entiende eso.</p>
+      <div class="stats">
+        <div class="stat"><div class="v num">5</div><div class="l">negocios bajo el mismo grupo</div></div>
+        <div class="stat"><div class="v num">1</div><div class="l">cocina central que abastece a varios</div></div>
+        <div class="stat"><div class="v num">1</div><div class="l">cuadro de mando para verlo todo</div></div>
+      </div>
+      <div class="footer"><span class="fmark"><img alt="" data-logo></span><span class="num">02</span></div>
+    </div>
+  </section>
+
+  <!-- 3 · HOLDING MAP -->
+  <section class="slide" tabindex="-1">
+    <div class="pad">
+      <div class="eyebrow"><span class="dot"></span> El mapa de tu grupo</div>
+      <div class="map">
+        <div class="central"><div class="k">Activo central</div><h3>Cocina central</h3><p>Abastece al restaurante y al catering — el “reloj” del grupo</p></div>
+        <div class="mlabel">abastece ↓ · cada negocio con su propio coste</div>
+        <div class="nodes">
+          <div class="node ok"><h4>Restaurante</h4><small>POS · VeriFactu</small><span class="st"><span class="d"></span>En producción</span></div>
+          <div class="node ok"><h4>Catering &amp; Eventos</h4><small>Cocina · comercial</small><span class="st"><span class="d"></span>En producción</span></div>
+          <div class="node warn"><h4>Haciendas</h4><small>Espacios · calendario</small><span class="st"><span class="d"></span>Piezas vivas</span></div>
+          <div class="node motor"><h4>Alquiler material</h4><small>Interno + terceros</small><span class="st"><span class="d"></span>Motor listo</span></div>
+          <div class="node ok"><h4>Transporte</h4><small>Flota · GPS</small><span class="st"><span class="d"></span>Desplegado</span></div>
+        </div>
+        <div class="ic">
+          <span class="tag">Flota → Catering · <span class="num">40.000 €</span></span>
+          <span class="tag">Materiales → Eventos · <span class="num">20.000 €</span></span>
+          <span class="tag">Cocina → Restaurante</span>
+        </div>
+        <div class="mlabel">y por debajo, lo que va con TODO el grupo ↓</div>
+        <div class="layer">
+          <span class="lz">RR.HH. / Portal empleado</span>
+          <span class="lz">Contabilidad + banca</span>
+          <span class="lz">Concursos públicos</span>
+          <span class="lz">Agentes IA</span>
+        </div>
+        <div class="console"><div class="k">Todo sube a ↓</div><h3>Cuadro de mando único del holding</h3></div>
+      </div>
+      <div class="footer" style="position:static;margin-top:1.2cqh"><span class="fmark"><img alt="" data-logo></span><span class="num">03</span></div>
+    </div>
+  </section>
+
+  <!-- 4 · VENTA -->
+  <section class="slide" tabindex="-1">
+    <div class="pad">
+      <div class="eyebrow"><span class="dot"></span> Empieza por lo que más te importa</div>
+      <div class="titleblock"><h2>La <span class="accent">venta</span>, sin papeles y con margen al instante</h2></div>
+      <p class="lede">Tus cinco comerciales dejan las hojas sueltas. Cada evento entra en el sistema y sabes si ganas dinero <b style="color:var(--ink)">antes</b> de decir que sí — no tres días antes del banquete.</p>
+      <div class="flow">
+        <div class="step"><span class="n">01</span><h4>Lead</h4><p>Entra al pipeline, no a un cuaderno</p></div>
+        <span class="arrow">→</span>
+        <div class="step"><span class="n">02</span><h4>Presupuesto</h4><p>Con el margen real, al momento</p></div>
+        <span class="arrow">→</span>
+        <div class="step"><span class="n">03</span><h4>Contrato</h4><p>Firma digital por enlace</p></div>
+        <span class="arrow">→</span>
+        <div class="step"><span class="n">04</span><h4>Señal</h4><p>Cobrada; comisión calculada</p></div>
+      </div>
+      <div class="footer"><span class="fmark"><img alt="" data-logo> · Comercial / CRM</span><span class="num">04</span></div>
+    </div>
+  </section>
+
+  <!-- 5 · CATERING -->
+  <section class="slide" tabindex="-1">
+    <div class="pad">
+      <div class="eyebrow"><span class="dot"></span> Tu pata más completa <b>· en producción</b></div>
+      <div class="titleblock"><h2>Catering &amp; Eventos, de la ficha al plato</h2></div>
+      <div class="split">
+        <div>
+          <div class="k">En cocina</div>
+          <ul class="feat">
+            <li><b>Escandallo que escala solo</b> al nº de comensales del evento</li>
+            <li><b>Recepción por foto</b>: lote, temperatura, caducidad y EAN</li>
+            <li><b>Dietas y alérgenos</b> con hoja imprimible por sala (APPCC) — la crítica de Carmen, resuelta</li>
+          </ul>
+        </div>
+        <div>
+          <div class="k">En el evento</div>
+          <ul class="feat">
+            <li><b>Menaje y kits</b> calculados por comensales</li>
+            <li><b>Proveedores con portal</b> propio</li>
+            <li><b>Rentabilidad por evento</b>, no por intuición</li>
+          </ul>
+          <div class="chip motor" style="margin-top:2cqh"><span class="d"></span> Demo sembrada: “Boda Familia Pérez”</div>
+        </div>
+      </div>
+      <div class="footer"><span class="fmark"><img alt="" data-logo> · Cocina central + comercial</span><span class="num">05</span></div>
+    </div>
+  </section>
+
+  <!-- 6 · TRANSPORTE -->
+  <section class="slide" tabindex="-1">
+    <div class="pad">
+      <div class="eyebrow"><span class="dot"></span> Otra pata, ya con pantallas <b>· desplegada</b></div>
+      <div class="titleblock"><h2>Transporte y flota bajo control</h2></div>
+      <p class="lede">Tus vehículos, sus papeles y lo que factura cada uno — a terceros y también a tus propias empresas, con GPS en vivo.</p>
+      <div class="stats">
+        <div class="stat"><div class="v num">2</div><div class="l">vehículos: frigorífico + furgón</div></div>
+        <div class="stat"><div class="v"><span style="color:var(--warn)">1</span> · <span style="color:var(--crit)">1</span></div><div class="l">ITV: una por caducar, una caducada</div></div>
+        <div class="stat"><div class="v num">2.050 €</div><div class="l">servicios a terceros</div></div>
+        <div class="stat"><div class="v num">40.000 €</div><div class="l">interno flota → catering</div></div>
+      </div>
+      <p class="lede" style="font-size:2.1cqh;margin-top:2.2cqh">Semáforo documental de ITV, seguro y permisos con avisos de caducidad · rentabilidad por vehículo · GPS en vivo.</p>
+      <div class="footer"><span class="fmark"><img alt="" data-logo> · Vertical Transporte</span><span class="num">06</span></div>
+    </div>
+  </section>
+
+  <!-- 7 · ALQUILER -->
+  <section class="slide" tabindex="-1">
+    <div class="pad">
+      <div class="eyebrow"><span class="dot"></span> Tu material también da ingresos <b>· motor listo</b></div>
+      <div class="titleblock"><h2>Alquiler de materiales, dentro y fuera del grupo</h2></div>
+      <p class="lede">Sillas, mesas, mantelería, vajilla, carpas… lo que alquilas a terceros y lo que te alquilas a ti mismo, con su fianza y su disponibilidad por fechas.</p>
+      <div class="stats">
+        <div class="stat"><div class="v num">5</div><div class="l">materiales en catálogo</div></div>
+        <div class="stat"><div class="v num">3.900 €</div><div class="l">alquileres a terceros</div></div>
+        <div class="stat"><div class="v num">20.000 €</div><div class="l">interno materiales → eventos</div></div>
+        <div class="stat"><div class="v num">500 €</div><div class="l">fianzas retenidas</div></div>
+      </div>
+      <p class="lede" style="font-size:2.1cqh;margin-top:2.2cqh">Tarifa por día · fianza · reserva → entrega → devolución · recargo por retraso · disponibilidad a fecha. El motor está hecho; falta su pantalla propia.</p>
+      <div class="footer"><span class="fmark"><img alt="" data-logo> · Módulo alquiler</span><span class="num">07</span></div>
+    </div>
+  </section>
+
+  <!-- 8 · RESTAURANTE + HACIENDAS -->
+  <section class="slide" tabindex="-1">
+    <div class="pad">
+      <div class="eyebrow"><span class="dot"></span> Las dos patas restantes</div>
+      <div class="titleblock"><h2>Restaurante maduro, haciendas sin empezar de cero</h2></div>
+      <div class="split">
+        <div class="card">
+          <div class="flex" style="justify-content:space-between;align-items:center"><h3>Restaurante</h3><span class="chip ok"><span class="d"></span>En producción</span></div>
+          <p>ia-rest (Voice POS): comandas por voz, mesas, TPV, KDS y facturación <b>VeriFactu/AEAT</b>. Un producto ya maduro y en la calle.</p>
+        </div>
+        <div class="card">
+          <div class="flex" style="justify-content:space-between;align-items:center"><h3>Haciendas</h3><span class="chip warn"><span class="d"></span>A medias</span></div>
+          <p>Gestión de espacios con aforo, calendario y reserva. Se completa <b>reutilizando piezas nuestras ya vivas</b> (inmueble/calendario + limpieza), sin desarrollo nuevo grande.</p>
+        </div>
+      </div>
+      <div class="footer"><span class="fmark"><img alt="" data-logo></span><span class="num">08</span></div>
+    </div>
+  </section>
+
+  <!-- 9 · DIVIDER -->
+  <section class="slide divider" tabindex="-1">
+    <div class="pad">
+      <div class="eyebrow"><span class="dot"></span> Segunda parte</div>
+      <div class="rule" style="margin:2.4cqh 0 3cqh"></div>
+      <h2>Y lo que va con<br>todo el grupo.</h2>
+      <p class="lede">Los cinco negocios se apoyan en un back-office común, ya construido: tu gente, tu dinero y hasta un canal de ingresos que la mayoría no ve.</p>
+      <div class="chips">
+        <span class="z">Personas &amp; nóminas</span>
+        <span class="z">Contabilidad &amp; banca</span>
+        <span class="z">Concursos públicos</span>
+        <span class="z">Agentes que trabajan solos</span>
+      </div>
+      <div class="footer"><span class="fmark"><img alt="" data-logo></span><span class="num">09</span></div>
+    </div>
+  </section>
+
+  <!-- 10 · RRHH -->
+  <section class="slide" tabindex="-1">
+    <div class="pad">
+      <div class="eyebrow"><span class="dot"></span> Tu gente <b>· en producción</b></div>
+      <div class="titleblock"><h2>RR.HH. y Portal del Empleado</h2></div>
+      <div class="split">
+        <div>
+          <div class="k">Para dirección</div>
+          <ul class="feat">
+            <li><b>Fichaje con GPS por evento</b>: el extra ficha al llegar al sitio y el sistema detecta el centro (registro de jornada legal)</li>
+            <li><b>Nóminas</b> con el epígrafe de catering de eventos ya resuelto; horas extra y pluses del evento liquidados</li>
+            <li><b>Contratos con firma digital</b> (eIDAS) y verificación pública por QR, como VeriFactu</li>
+          </ul>
+        </div>
+        <div>
+          <div class="k">Para el empleado</div>
+          <ul class="feat">
+            <li>Sus <b>nóminas y documentos</b> siempre a mano</li>
+            <li><b>Vacaciones y ausencias</b> que pide desde el móvil</li>
+            <li><b>Asistente IA</b> que responde dudas del convenio de hostelería</li>
+          </ul>
+          <div class="chip ok" style="margin-top:2cqh"><span class="d"></span> Bolsa de fijos + extras en un mismo portal</div>
+        </div>
+      </div>
+      <div class="footer"><span class="fmark"><img alt="" data-logo> · iarrhh</span><span class="num">10</span></div>
+    </div>
+  </section>
+
+  <!-- 11 · CONTABILIDAD -->
+  <section class="slide" tabindex="-1">
+    <div class="pad">
+      <div class="eyebrow"><span class="dot"></span> Tu dinero <b>· en producción</b></div>
+      <div class="titleblock"><h2>Contabilidad, banca y tu copiloto financiero</h2></div>
+      <div class="split">
+        <div>
+          <ul class="feat">
+            <li><b>Banca conectada</b>: importa los movimientos de todos tus bancos <b>cada día, solo</b> (PSD2)</li>
+            <li><b>Facturas de proveedor por foto/PDF</b> (OCR) → pago por SEPA → conciliado con el banco</li>
+            <li><b>Gastos y deducibilidad</b> que aprenden tus reglas; resultado por sociedad y negocio</li>
+            <li><b>Export para la gestoría</b> en un clic</li>
+          </ul>
+        </div>
+        <div class="card" style="justify-content:center">
+          <div class="k">Copiloto financiero (IA)</div>
+          <h3>Le hablas, te responde</h3>
+          <p>Por <b>voz o Telegram</b>: “¿cuánto llevo gastado en pescado este trimestre?”, “¿qué facturas quedan por pagar?”. Contesta con <b>tus números reales</b> y te avisa cada semana. Nunca inventa cifras.</p>
+        </div>
+      </div>
+      <div class="footer"><span class="fmark"><img alt="" data-logo> · Plataforma · /finanzas</span><span class="num">11</span></div>
+    </div>
+  </section>
+
+  <!-- 12 · CONCURSOS -->
+  <section class="slide" tabindex="-1">
+    <div class="pad">
+      <div class="eyebrow"><span class="dot"></span> Un canal de ingresos que casi nadie explota</div>
+      <div class="titleblock"><h2>Concursos públicos, vigilados por ti <span class="accent">solo</span></h2></div>
+      <p class="lede">Comedores escolares, hospitales, residencias, eventos institucionales. El sistema <b style="color:var(--ink)">sondea la contratación pública (PLACSP) cada 6 horas</b> y te avisa de lo que encaja con tu grupo.</p>
+      <div class="g3" style="margin-top:1cqh">
+        <div class="card"><div class="k">Filtra por lo tuyo</div><p>Por tu código <b>CPV 55</b> (catering/hostelería) y <b>15</b> (alimentación) — solo lo que de verdad puedes ganar.</p></div>
+        <div class="card"><div class="k">Te avisa a tiempo</div><p>Digest diario de lo nuevo y <b>recordatorio</b> cuando un concurso que sigues cierra en ≤3 días.</p></div>
+        <div class="card"><div class="k">Decide sin perder tiempo</div><p>Lee el pliego y da <b>ficha + semáforo Go/No-Go</b> (solvencia, plazo, aval) antes de que te pongas.</p></div>
+      </div>
+      <div class="footer"><span class="fmark"><img alt="" data-logo> · Radar de licitaciones</span><span class="num">12</span></div>
+    </div>
+  </section>
+
+  <!-- 13 · AGENTES -->
+  <section class="slide" tabindex="-1">
+    <div class="pad">
+      <div class="eyebrow"><span class="dot"></span> Tu back-office trabaja solo — tú solo confirmas</div>
+      <div class="titleblock"><h2>Agentes que trabajan mientras tú vendes</h2></div>
+      <div class="g4">
+        <div class="agent"><h4>Vigilancia fiscal</h4><p>Vigila el BOE y el boletín andaluz y te avisa en pantalla cuando cambia una deducción <b>a tu favor</b>.</p></div>
+        <div class="agent"><h4>Pago de proveedores</h4><p>Del correo al pago: lee la factura, tú confirmas, se paga por SEPA y queda conciliada.</p></div>
+        <div class="agent"><h4>Recepción de correo</h4><p>Filtra el ruido, enruta las facturas y te avisa al instante de un <b>lead</b> o de un intento de phishing.</p></div>
+        <div class="agent"><h4>Control de facturas</h4><p>Matriz por proveedor y mes: qué está en regla, qué está en plazo y qué falta por llegar.</p></div>
+      </div>
+      <div class="footer"><span class="fmark"><img alt="" data-logo></span><span class="num">13</span></div>
+    </div>
+  </section>
+
+  <!-- 14 · INTERCOMPANY -->
+  <section class="slide" tabindex="-1">
+    <div class="pad">
+      <div class="eyebrow"><span class="dot"></span> El diferencial — lo que un ERP no te da</div>
+      <div class="titleblock"><h2>Tu grupo, con lo interno ya descontado</h2></div>
+      <div class="wf">
+        <div class="bar-row"><span class="lbl">Bruto sumado</span><div class="bar-track"><div class="bar-fill b-brand" style="width:100%"></div></div><span class="amt">770.000 €</span></div>
+        <div class="bar-row"><span class="lbl">Operaciones internas</span><div class="bar-track"><div class="bar-fill b-crit" style="width:7.8%"></div></div><span class="amt" style="color:var(--crit)">− 60.000 €</span></div>
+        <div class="bar-row"><span class="lbl"><b style="color:var(--ink)">Consolidado real</b></span><div class="bar-track"><div class="bar-fill b-real" style="width:92.2%"></div></div><span class="amt accent">710.000 €</span></div>
+        <div class="unchanged">Resultado del grupo, intacto: <span class="num">225.000 €</span></div>
+        <p class="note">40.000 € de flota→catering + 20.000 € de materiales→eventos. Un ERP de caja los cuenta <b>dos veces</b> e infla tu grupo. Nosotros sabemos que ese ingreso viene de tu propia empresa, lo <b>eliminamos</b>, y te damos el número <b>real</b>.</p>
+      </div>
+      <div class="footer"><span class="fmark"><img alt="" data-logo> · Consolidado intercompany</span><span class="num">14</span></div>
+    </div>
+  </section>
+
+  <!-- 15 · WHY US -->
+  <section class="slide" tabindex="-1">
+    <div class="pad">
+      <div class="eyebrow"><span class="dot"></span> Por qué esto y no un ERP</div>
+      <div class="titleblock"><h2>Ya hecho, modular y creciendo contigo</h2></div>
+      <div class="g3">
+        <div class="card"><div class="k">Punto 1</div><h3>Casi todo ya funciona</h3><p>Catering, cocina, comercial, compras, RR.HH., transporte y el consolidado del grupo ya están en producción. No compras una promesa: lo ves hoy.</p></div>
+        <div class="card"><div class="k">Punto 2</div><h3>Se ajusta a tu grupo</h3><p>No es un traje rígido: se adapta a cómo trabajas tú y sigue creciendo. Cada mejora del producto te llega sin rehacer nada.</p></div>
+        <div class="card"><div class="k">Punto 3</div><h3>Un solo equipo detrás</h3><p>Un único interlocutor para los cinco negocios y todo el back-office. Ajustamos lo que haga falta, pegados a tu operativa.</p></div>
+      </div>
+      <div class="badges">
+        <span class="b"><b>IA</b> con respaldo en cadena + voz</span>
+        <span class="b"><b>Firma</b> electrónica eIDAS</span>
+        <span class="b"><b>VeriFactu</b> / AEAT en el TPV</span>
+        <span class="b"><b>Telegram</b> &amp; push para avisos</span>
+        <span class="b"><b>GPS</b> en vivo de flota</span>
+      </div>
+      <div class="footer"><span class="fmark"><img alt="" data-logo></span><span class="num">15</span></div>
+    </div>
+  </section>
+
+  <!-- 16 · PHASES -->
+  <section class="slide" tabindex="-1">
+    <div class="pad">
+      <div class="eyebrow"><span class="dot"></span> Cómo arrancamos — por fases, sin frenar tu operación</div>
+      <div class="titleblock"><h2>Un piloto que da la foto del grupo desde el primer mes</h2></div>
+      <div class="phases">
+        <div class="phase"><span class="p-n">Paso 1</span><h4>Cocina → Catering + CRM</h4><p>Tu día a día comercial y de eventos, sobre lo que ya funciona.</p><span class="tag">Ya funciona</span></div>
+        <div class="phase"><span class="p-n">Paso 2</span><h4>Grupo + RR.HH.</h4><p>El consolidado con tus sociedades y el portal del empleado con tu plantilla.</p><span class="tag">Ya vivo</span></div>
+        <div class="phase"><span class="p-n">Paso 3</span><h4>Alquiler + concursos</h4><p>La app de alquiler sobre el motor hecho y el radar de licitaciones activado.</p><span class="tag soon">Siguiente</span></div>
+        <div class="phase"><span class="p-n">Paso 4</span><h4>Transporte + haciendas</h4><p>Flota con tus datos y haciendas reutilizando piezas vivas.</p><span class="tag soon">Después</span></div>
+      </div>
+      <div class="footer"><span class="fmark"><img alt="" data-logo> · Cada paso aprovecha lo ya construido</span><span class="num">16</span></div>
+    </div>
+  </section>
+
+  <!-- 17 · CLOSE -->
+  <section class="slide" tabindex="-1">
+    <div class="pad">
+      <div class="eyebrow"><span class="dot"></span> Próximos pasos</div>
+      <div class="titleblock"><h2>Tres cosas y ponemos <span class="accent">tu grupo</span> en marcha</h2></div>
+      <div class="cta g3">
+        <div class="c"><span class="p-n">01</span><h4>Tus sociedades reales</h4><p>Confirmamos cuántos CIF hay y qué negocio cuelga de cada uno.</p></div>
+        <div class="c"><span class="p-n">02</span><h4>Tu dolor nº 1</h4><p>Elegimos por dónde arranca el piloto: margen, mermas, papeleo o caos logístico.</p></div>
+        <div class="c"><span class="p-n">03</span><h4>Demo con tus datos</h4><p>Fijamos fecha para verlo con los números de tu grupo, no de ejemplo.</p></div>
+      </div>
+      <div class="banner">
+        <b>La demo ya está lista</b>
+        <span>con la forma de tu grupo — catering, transporte, alquiler y el consolidado que descuenta los <span class="num">60.000 €</span> internos.</span>
+      </div>
+      <div class="footer"><span class="fmark"><img alt="" data-logo> · Alberto Suárez · ia-rest</span><span class="num">17</span></div>
+    </div>
+  </section>
+
+</div>
+
+<div class="counter" id="counter">01 / 17</div>
+<div class="toolbar">
+  <button id="themeBtn" type="button" aria-label="Cambiar tema">Tema</button>
+  <button id="printBtn" type="button" aria-label="Imprimir o guardar en PDF">Imprimir / PDF</button>
+</div>
+
+<script>
+  // hydrate logo <img data-logo> from the embedded data URI
+  var uri=document.getElementById('logosrc').getAttribute('data-uri');
+  document.querySelectorAll('img[data-logo]').forEach(function(i){i.src=uri;});
+
+  var slides=[].slice.call(document.querySelectorAll('.slide'));
+  var counter=document.getElementById('counter');
+  var cur=0;
+  var io=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){ if(e.isIntersecting){
+      cur=slides.indexOf(e.target);
+      counter.textContent=String(cur+1).padStart(2,'0')+' / '+String(slides.length).padStart(2,'0');
+    }});
+  },{threshold:.55});
+  slides.forEach(function(s){io.observe(s);});
+
+  function go(i){cur=Math.max(0,Math.min(slides.length-1,i));slides[cur].scrollIntoView({behavior:'smooth',block:'center'});}
+  addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();go(cur+1);}
+    if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();go(cur-1);}
+  });
+  document.getElementById('printBtn').onclick=function(){print();};
+  var root=document.documentElement;
+  document.getElementById('themeBtn').onclick=function(){
+    var t=root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+    root.setAttribute('data-theme',t==='dark'?'light':'dark');
+  };
+</script>
+</body>
+</html>

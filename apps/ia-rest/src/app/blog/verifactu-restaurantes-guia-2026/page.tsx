@@ -238,7 +238,7 @@ export default function ArticuloVerifactu() {
             ia.rest incluye VeriFactu en todos los planes
           </p>
           <p style={{ fontSize: 13, color: '#D8CDB6', margin: '0 0 20px' }}>
-            Desde 59 €/mes. Sin comisiones. 14 días gratis sin tarjeta.
+            Cuota mensual fija. Sin comisiones. 14 días gratis sin tarjeta.
           </p>
           <a href="/registro" style={{
             display: 'inline-block', background: '#D9442B', color: '#F6F1E7',

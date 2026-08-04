@@ -196,7 +196,7 @@ export interface TicketCuentaParams {
 export function generarTicketCuenta(p: TicketCuentaParams): string {
   const lines: string[] = []
   const SEP = '────────────────────────────────────────'
-  const formatNum = (n: number) => n.toFixed(2).replace('.', ',') + ' €'
+  const formatNum = (n: number) => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' }) + '€'
   const dt = new Date(p.fecha)
   const fechaStr = dt.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
   const horaStr  = dt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })

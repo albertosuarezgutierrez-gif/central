@@ -3,6 +3,7 @@
 // Todo el filtrado es por `cuentaId` (la cuenta de la sesión) — scope multi-tenant del holding.
 import {
   alertasDocumentos,
+  vehiculosSinDocumentar,
   rentabilidadVehiculo,
   type Vehiculo,
   type Porte,
@@ -353,6 +354,8 @@ export async function listServicios(cuentaId: string): Promise<ServicioTransport
 export interface DashboardData {
   vehiculos: Vehiculo[]
   alertas: ReturnType<typeof alertasDocumentos>
+  /** Vehículos sin ITV o sin seguro REGISTRADOS: hueco de datos, no «en regla». */
+  sinDocumentar: ReturnType<typeof vehiculosSinDocumentar>
   rentabilidad: Array<{ vehiculo: Vehiculo; rent: ReturnType<typeof rentabilidadVehiculo> }>
   servicios: ServicioTransporte[]
   resumen: ReturnType<typeof resumenServicios>
@@ -386,6 +389,7 @@ export async function getDashboard(cuentaId: string): Promise<DashboardData> {
   return {
     vehiculos,
     alertas: alertasDocumentos(documentos, hoyISO),
+    sinDocumentar: vehiculosSinDocumentar(vehiculos, documentos),
     rentabilidad,
     servicios,
     resumen: resumenServicios(servicios),

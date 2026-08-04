@@ -16,9 +16,10 @@ export async function POST() {
     const devices = await tuyaListDevices()
     for (const d of devices) {
       await prisma.$executeRaw`
-        INSERT INTO domotica_dispositivos (nombre, tuya_device_id)
-        VALUES (${d.name || d.id}, ${d.id})
-        ON CONFLICT (tuya_device_id) DO NOTHING`
+        INSERT INTO domotica_dispositivos (nombre, tuya_device_id, categoria)
+        VALUES (${d.name || d.id}, ${d.id}, ${d.category || null})
+        ON CONFLICT (tuya_device_id)
+        DO UPDATE SET categoria = COALESCE(EXCLUDED.categoria, domotica_dispositivos.categoria)`
     }
 
     // Apartamentos de Smoobu para vincular piso → reservas (best effort).

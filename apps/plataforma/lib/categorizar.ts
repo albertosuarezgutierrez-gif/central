@@ -8,33 +8,12 @@
 
 import { aiComplete, cleanJSON } from '@central/core-ai'
 import { prisma } from './db'
+import { clasificarPorKeywords } from './subcategoria-keywords'
+import { CATEGORIAS, pgcDe, categorizarPorReglas, type Categoria } from './categoria-reglas'
 
-// Taxonomía cerrada de categorías (la IA debe elegir una de estas).
-export const CATEGORIAS = [
-  'nomina', 'proveedor', 'impuestos', 'suministros', 'alquiler',
-  'comision_bancaria', 'cobro_cliente', 'transferencia', 'tarjeta',
-  'prestamo', 'seguro', 'otros',
-] as const
-export type Categoria = typeof CATEGORIAS[number]
-
-// Etiqueta visible (con emoji) por categoría. Compartida por /banca y el dashboard.
-export const CATEGORIA_LABEL: Record<Categoria, string> = {
-  nomina: '👤 Nómina', proveedor: '📦 Proveedor', impuestos: '🏛️ Impuestos',
-  suministros: '💡 Suministros', alquiler: '🏠 Alquiler', comision_bancaria: '🏦 Comisión',
-  cobro_cliente: '💰 Cobro cliente', transferencia: '🔁 Transferencia', tarjeta: '💳 Tarjeta',
-  prestamo: '📉 Préstamo', seguro: '🛡️ Seguro', otros: '• Otros',
-}
-
-// Mapa categoría → cuenta PGC orientativa (Plan General Contable español).
-const PGC: Record<Categoria, string> = {
-  nomina: '640', proveedor: '600', impuestos: '475', suministros: '628',
-  alquiler: '621', comision_bancaria: '626', cobro_cliente: '700',
-  transferencia: '572', tarjeta: '572', prestamo: '170', seguro: '625', otros: '629',
-}
-
-function pgcDe(cat: string): string {
-  return (CATEGORIAS as readonly string[]).includes(cat) ? PGC[cat as Categoria] : PGC.otros
-}
+// La taxonomía, etiquetas, mapa PGC y reglas deterministas viven en lib/categoria-reglas.ts
+// (módulo PURO, testeable con `node --test`). Se reexportan para no romper imports existentes.
+export { CATEGORIAS, CATEGORIA_LABEL, pgcDe, categorizarPorReglas, type Categoria } from './categoria-reglas'
 
 export type MovParaCategorizar = { id: string; concepto: string | null; contraparte: string | null; importe: number }
 export type Categorizacion = { id: string; categoria: Categoria; conceptoNormalizado: string; categoriaPgc: string; requiereRevision: boolean }
@@ -90,6 +69,8 @@ cobro_cliente o transferencia. Responde SOLO un array JSON:
 // lib/destino.ts; se reexporta aquí para no romper los imports existentes desde '@/lib/categorizar'.
 export { clasificarDestino, DESTINO_LABEL, type Destino } from './destino'
 import { clasificarDestinoDetalle, type Destino, type DestinoDetalle } from './destino'
+import { claveReglaValida } from './correduria'
+import { refAdeudoSepa, esAnulacionAdeudoSepa, casarDevolucionSepa } from './devoluciones-sepa'
 
 // Detección determinista de deducciones de cuota IRPF (no de base, sino de cuota directa).
 // mecenazgo: Ley 49/2002 (donaciones a fundaciones) — 80% primeros €150, 40% resto.
@@ -112,28 +93,6 @@ export function detectarDeduccionCuotaTipo(
   if (has('GYM DUO', 'GYM SOCIO', 'CUOTA GYM', 'CUOTA GIMNASIO', 'PISCINA MUNICIPAL',
     'CLUB DEPORTIVO', 'POLIDEPORTIVO', 'INSTALACION DEPORTIVA', 'CUOTA PADEL', 'CUOTA TENIS',
     'CUOTA NATACION', 'CUOTA NATACIÓN')) return 'deportiva_and'
-  return null
-}
-
-// Reglas deterministas: categoriza por palabras clave del concepto/contraparte SIN IA.
-// Cubre la mayoría de movimientos al instante (y sin gastar el cupo gratuito de NIM). Lo
-// que no encaje devuelve null → va a la IA. Orden: de lo más específico a lo más genérico.
-function categorizarPorReglas(concepto: string | null, contraparte: string | null, importe: number): Categoria | null {
-  const t = `${concepto ?? ''} ${contraparte ?? ''}`.toUpperCase()
-  const has = (...ks: string[]) => ks.some(k => t.includes(k))
-
-  if (has('SEGURO', 'GENERALI', 'MAPFRE', ' AXA', 'ALLIANZ', 'MUTUA', 'ZURICH', 'REALE', 'CASER', 'LINEA DIRECTA', 'PELAYO')) return 'seguro'
-  if (has('NOMINA', 'NÓMINA', 'PAGA EXTRA', 'SALARIO', 'PAGO DE NOMINA')) return 'nomina'
-  if (has('AEAT', 'AGENCIA TRIBUTARIA', 'HACIENDA', 'IMPUEST', 'IRPF', 'TRIBUTARI', 'RECAUDACION', 'RECAUDACIÓN', 'AYUNTAMIEN', ' IBI ', 'CONTRIBUCION', 'PLUSVALIA', 'TGSS', 'SEGURIDAD SOCIAL', 'TESOR. GRAL', 'TESORERIA GENERAL', 'MODELO 3', 'TASA ')) return 'impuestos'
-  if (has('PRESTAMO', 'PRÉSTAMO', 'AMORTIZAC', 'CUOTA PREST', 'HIPOTECA', 'FINANCIAC', 'LEASING')) return 'prestamo'
-  if (has('COMISION', 'COMISIÓN', 'COMIS.', 'MANTENIMIENTO CUENTA', 'CUOTA TARJETA', 'GASTOS ADMIN')) return 'comision_bancaria'
-  if (has('ALQUILER', 'ARRENDAMIENT', 'RENTA MENSUAL')) return 'alquiler'
-  if (has('ENDESA', 'IBERDROLA', 'NATURGY', 'REPSOL', 'MOVISTAR', 'VODAFONE', 'ORANGE', 'FINETWORK', 'TELEFONICA', 'JAZZTEL', 'MASMOVIL', 'EMASESA', 'CANAL ISABEL', 'GAS NATURAL', 'SUMINISTRO', 'ELECTRIC', 'FACTURA DE AGUA', 'FACTURA LUZ', 'FACTURA GAS')) return 'suministros'
-  if (has('BIZUM')) return importe >= 0 ? 'cobro_cliente' : 'transferencia'
-  if (has('TRANSFERENCIA', 'TRASPASO', 'ABONO POR TRANSF', 'TRANSF ')) return importe >= 0 ? 'cobro_cliente' : 'transferencia'
-  if (has('PAGO RECIBO 466', 'TARJ.CRDTO', 'TARJ CRDTO')) return 'transferencia'   // liquidación de tarjeta
-  if (has('TARJETA', 'TARJ.', 'COMPRA EN', 'PAGO EN ', 'PAGO TARJETA', 'COMERCIO')) return 'tarjeta'
-  if (has('RECIBO', 'ADEUDO', 'SEPA', 'DOMICILIAC', 'CUOTA ')) return 'proveedor'
   return null
 }
 
@@ -160,6 +119,18 @@ async function guardarCategoria(
   return Number(res)
 }
 
+// Subcategoría de GASTO PERSONAL a fijar en la ingesta. Prioridad: la regla del dueño / vía Pilar
+// (dSub) manda; si no, para gasto personal se intenta la keyword determinista (instantánea, gratis).
+// Devuelve undefined si no hay nada seguro → el movimiento queda sin subcategoría y lo recoge el
+// barrido diario con IA. Nunca pisa una subcategoría ya fijada (guardarCategoria hace COALESCE).
+function subcategoriaIngesta(
+  destino: Destino, importe: number, concepto: string | null, contraparte: string | null, dSub?: string,
+): string | undefined {
+  if (dSub) return dSub
+  if (destino === 'personal' && importe < 0) return clasificarPorKeywords(concepto, contraparte) ?? undefined
+  return undefined
+}
+
 type MovPend = { id: string; concepto: string | null; contraparte: string | null; importe: unknown; banco: string | null; destino: string | null; destino_confirmado: boolean | null; titular: string | null }
 
 export async function analizarMovimientos(cuentaId: string, limite = 400): Promise<{ categorizados: number }> {
@@ -183,7 +154,9 @@ export async function analizarMovimientos(cuentaId: string, limite = 400): Promi
   `
   const reglas = reglasRows
     .map(r => ({ clave: (r.clave || '').toUpperCase(), destino: r.destino as Destino, deduccionCuotaTipo: r.deduccion_cuota_tipo }))
-    .filter(r => r.clave.length >= 3)
+    // Ignora reglas-trampa (claves genéricas tipo "TRANSF"/"TOTAL" que colisionan por substring con
+    // casi cualquier concepto) aunque hayan quedado en BD de importaciones antiguas.
+    .filter(r => claveReglaValida(r.clave))
     .sort((a, b) => b.clave.length - a.clave.length)
   // GUARDA: las reglas NO se aplican a cuentas del cónyuge (sus movimientos son actividad_pilar).
   const reglaPara = (concepto: string | null, titular: string | null): { destino: Destino; deduccionCuotaTipo: string | null } | null => {
@@ -217,17 +190,19 @@ export async function analizarMovimientos(cuentaId: string, limite = 400): Promi
     const { det: d, deduccionCuotaTipo } = destinoDe.get(p.id) ?? { det: FALLBACK, deduccionCuotaTipo: null }
     const cat = categorizarPorReglas(p.concepto, p.contraparte, Number(p.importe))
     if (cat) {
+      const sub = subcategoriaIngesta(d.destino, Number(p.importe), p.concepto, p.contraparte, d.subcategoria)
       n += await guardarCategoria(cuentaId, p.id, {
         id: p.id, categoria: cat,
         conceptoNormalizado: (p.concepto || p.contraparte || '').slice(0, 80),
         categoriaPgc: pgcDe(cat), requiereRevision: d.revisar,
-      }, d.destino, d.subcategoria, d.confirmado, deduccionCuotaTipo)
+      }, d.destino, sub, d.confirmado, deduccionCuotaTipo)
     } else {
       paraIA.push(p)
     }
   }
 
   // 2) IA solo para lo ambiguo, en sub-lotes, persistiendo lote a lote.
+  const movById = new Map(paraIA.map(p => [p.id, p]))
   for (let i = 0; i < paraIA.length; i += TAM_LOTE_IA) {
     const trozo = paraIA.slice(i, i + TAM_LOTE_IA)
     const cats = await categorizarLote(
@@ -235,10 +210,61 @@ export async function analizarMovimientos(cuentaId: string, limite = 400): Promi
     )
     for (const c of cats) {
       const { det: d, deduccionCuotaTipo } = destinoDe.get(c.id) ?? { det: FALLBACK, deduccionCuotaTipo: null }
-      n += await guardarCategoria(cuentaId, c.id, { ...c, requiereRevision: c.requiereRevision || d.revisar }, d.destino, d.subcategoria, d.confirmado, deduccionCuotaTipo)
+      const p = movById.get(c.id)
+      const sub = subcategoriaIngesta(d.destino, p ? Number(p.importe) : 0, p?.concepto ?? null, p?.contraparte ?? null, d.subcategoria)
+      n += await guardarCategoria(cuentaId, c.id, { ...c, requiereRevision: c.requiereRevision || d.revisar }, d.destino, sub, d.confirmado, deduccionCuotaTipo)
     }
   }
+  // 3) Cuadra los recibos SEPA devueltos (cargo + su anulación con la misma referencia): así el par
+  //    netea a 0 en el negocio correcto y sale de las bandejas «por revisar». Best-effort.
+  await casarDevolucionesSepa(cuentaId).catch(() => ({ pareadas: 0 }))
   return { categorizados: n }
+}
+
+// Empareja las DEVOLUCIONES de adeudos SEPA (recibos domiciliados devueltos) con su cargo original
+// por la referencia común "N <ref>": copia al abono de anulación el destino del cargo y da AMBOS por
+// confirmados (requiere_revision=false), para que se anulen en el P&L y salgan de «por revisar».
+// Idempotente (solo toca abonos sin confirmar) y scoped por cuenta. No aplica a cuentas del cónyuge.
+export async function casarDevolucionesSepa(cuentaId: string): Promise<{ pareadas: number }> {
+  const abonos = await prisma.$queryRaw<Array<{ id: string; concepto: string | null; importe: unknown }>>`
+    SELECT mb.id, mb.concepto, mb.importe
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND cb.titular IS DISTINCT FROM 'conyuge'
+      AND mb.importe > 0
+      AND COALESCE(mb.destino_confirmado, false) = false
+      AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'
+      AND mb.concepto ILIKE '%ANULACION%ADEUDO%'
+  `
+  let pareadas = 0
+  for (const a of abonos) {
+    const ref = refAdeudoSepa(a.concepto)
+    if (!ref || !esAnulacionAdeudoSepa(a.concepto)) continue
+    const cargos = await prisma.$queryRaw<Array<{ id: string; concepto: string | null; importe: unknown; destino: string | null }>>`
+      SELECT mb.id, mb.concepto, mb.importe, mb.destino
+      FROM movimientos_bancarios mb
+      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      WHERE cb.cuenta_id = ${cuentaId}::uuid
+        AND mb.importe < 0
+        AND mb.destino IS NOT NULL
+        AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'
+        AND mb.concepto ILIKE ${`%N ${ref}%`}
+    `
+    const cand = cargos.map(c => ({ id: c.id, importe: Number(c.importe), ref: refAdeudoSepa(c.concepto), destino: c.destino }))
+    const match = casarDevolucionSepa({ importe: Number(a.importe), ref }, cand)
+    if (!match) continue
+    // El abono de anulación hereda el destino del cargo y se confirma (se anulan). El cargo también
+    // se confirma: la devolución lo cuadra → deja de ser «por revisar».
+    await prisma.$executeRaw`
+      UPDATE movimientos_bancarios SET destino = ${match.destino}, destino_confirmado = true, requiere_revision = false
+      WHERE id = ${a.id}::uuid`
+    await prisma.$executeRaw`
+      UPDATE movimientos_bancarios SET destino_confirmado = true, requiere_revision = false
+      WHERE id = ${match.id}::uuid`
+    pareadas++
+  }
+  return { pareadas }
 }
 
 // Asignación MANUAL de categoría por el dueño (resuelve un "por revisar"). Valida la

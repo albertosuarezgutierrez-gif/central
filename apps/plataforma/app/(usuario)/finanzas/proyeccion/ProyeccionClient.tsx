@@ -1,9 +1,11 @@
 'use client'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect, useTransition } from 'react'
+import { eur } from '@/lib/dinero'
+import { importesDe } from '@/lib/fiscal-deducciones'
 
 function fmt(n: number) {
-  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
+  return eur(n)
 }
 function fmtMes(mes: string) {
   const [, m] = mes.split('-')
@@ -11,26 +13,22 @@ function fmtMes(mes: string) {
   return names[(parseInt(m) - 1)] ?? mes
 }
 
-const TRAMOS_IRPF = [
-  { desde: 0, hasta: 12450, tipo: 0.19 },
-  { desde: 12450, hasta: 20200, tipo: 0.24 },
-  { desde: 20200, hasta: 35200, tipo: 0.30 },
-  { desde: 35200, hasta: 60000, tipo: 0.37 },
-  { desde: 60000, hasta: 300000, tipo: 0.45 },
-  { desde: 300000, hasta: null, tipo: 0.47 },
-]
+// Los tramos NO se hardcodean aquí: fuente única = IMPORTES_POR_ANIO[year] (fiscal-deducciones.ts,
+// módulo puro importable en cliente; lo vigila la skill `fiscal-novedades`). El simulador recalcula en
+// vivo, por eso el cálculo sigue en cliente pero parametrizado por los tramos del año.
+type TramoRaw = { desde: number; hasta: number | null; tipo: number }
 
-function calcularTramos(base: number) {
+function calcularTramos(base: number, tramos: TramoRaw[]) {
   const basePos = Math.max(0, base)
-  const tramosIRPF = TRAMOS_IRPF.map(t => {
+  const tramosIRPF = tramos.map(t => {
     const hasta = t.hasta ?? Infinity
     const aplicado = Math.max(0, Math.min(basePos, hasta) - t.desde)
     return { ...t, importe: aplicado * t.tipo }
   })
   const cuotaTotal = tramosIRPF.reduce((s, t) => s + t.importe, 0)
-  const tramoIdx = TRAMOS_IRPF.findLastIndex(t => basePos >= t.desde)
-  const tramoActual = TRAMOS_IRPF[tramoIdx] ?? TRAMOS_IRPF[0]
-  const siguiente = TRAMOS_IRPF.find(t => t.desde > basePos)
+  const tramoIdx = tramos.findLastIndex(t => basePos >= t.desde)
+  const tramoActual = tramos[tramoIdx] ?? tramos[0]
+  const siguiente = tramos.find(t => t.desde > basePos)
   return {
     tramosIRPF,
     tramoActual,
@@ -91,10 +89,11 @@ export default function ProyeccionClient({ year: initYear }: { year: number }) {
     startTransition(() => router.push(`/finanzas/proyeccion?year=${y}`, { scroll: false }))
   }
 
-  // Base proyectada + simulador
+  // Base proyectada + simulador. Tramos del año en curso (fuente única IMPORTES_POR_ANIO).
+  const tramosAnio = importesDe(year).tramos
   const baseProyectada = data ? data.baseProyectada + ingresoExtra : 0
-  const calculo = data ? calcularTramos(baseProyectada) : null
-  const calculoSinExtra = data ? calcularTramos(data.baseProyectada) : null
+  const calculo = data ? calcularTramos(baseProyectada, tramosAnio) : null
+  const calculoSinExtra = data ? calcularTramos(data.baseProyectada, tramosAnio) : null
 
   const diferenciaCuota = calculo && calculoSinExtra
     ? calculo.cuotaTotal - calculoSinExtra.cuotaTotal
@@ -166,7 +165,7 @@ export default function ProyeccionClient({ year: initYear }: { year: number }) {
               <div>
                 <div style={{ fontSize: '13px', fontWeight: 700, color: '#742a2a' }}>Cerca del siguiente tramo</div>
                 <div style={{ fontSize: '12px', color: '#742a2a' }}>
-                  Te quedan <strong>{fmt(calculo.margenHastaProximoTramo)}</strong> para entrar al {TRAMOS_IRPF.find(t => t.desde > baseProyectada) ? `${(TRAMOS_IRPF.find(t => t.desde > baseProyectada)!.tipo * 100).toFixed(0)}%` : 'siguiente tramo'}.
+                  Te quedan <strong>{fmt(calculo.margenHastaProximoTramo)}</strong> para entrar al {tramosAnio.find(t => t.desde > baseProyectada) ? `${(tramosAnio.find(t => t.desde > baseProyectada)!.tipo * 100).toFixed(0)}%` : 'siguiente tramo'}.
                   Considera aplazar ingresos al año siguiente.
                 </div>
               </div>

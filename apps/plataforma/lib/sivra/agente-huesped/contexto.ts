@@ -4,7 +4,7 @@ import { Prisma } from '@prisma/client'
 import { smoobuFetch } from '@/lib/smoobu'
 import { getGuiaPiso } from './guia'
 import { horarioPiso } from './horarios'
-import { nocheAnteriorLibre, restarDias } from './disponibilidad'
+import { nocheAnteriorLibre, restarDias, entradaMismoDiaLibre, sumarDias } from './disponibilidad'
 import { setEnviados, corregirAtribucion, atribuirEmisor } from './atribucion'
 import { bloqueParking } from './parking'
 import { bloqueEquipaje } from './equipaje'
@@ -25,6 +25,9 @@ export type Contexto = {
   horaCheckIn: string     // hora oficial de entrada de la reserva (p.ej. "15:00")
   horaCheckOut: string    // hora oficial de salida de la reserva (p.ej. "11:00")
   earlyCheckinPosible: boolean  // ¿está LIBRE la noche anterior? (gratis solo si nadie duerme la víspera)
+  earlyCheckinChequeado: boolean  // ¿pudimos comprobarlo en Smoobu? (false = fetch falló / sin datos → NO afirmar disponibilidad)
+  lateCheckoutPosible: boolean   // ¿está LIBRE el día de la salida (nadie más entra ese mismo día)?
+  lateCheckoutChequeado: boolean // ¿pudimos comprobarlo en Smoobu? (false = fetch falló → NO afirmar disponibilidad)
   lat: number | null
   lng: number | null
   zona: string
@@ -104,15 +107,41 @@ export async function construirContexto(bookingId: string, lang: string): Promis
   // ¿Se puede confirmar early check-in (gratis)? Solo si la NOCHE ANTERIOR a la llegada está libre
   // (nadie duerme la víspera; ojo a una reserva que SALE el mismo día). Consultamos las reservas del
   // piso en una ventana hasta la llegada y lo resolvemos con la función pura `nocheAnteriorLibre`.
+  // OJO: si el fetch/parseo FALLA devolvemos `null` (no `[]`). Un `[]` significaría "no hay reservas
+  // en la ventana" → víspera libre, y `nocheAnteriorLibre([])` diría true. Confundir un fallo de red
+  // con "libre" haría CONFIRMAR una entrada anticipada que no pudimos verificar. Por eso `chequeado`
+  // solo pasa a true cuando de verdad tenemos respuesta de Smoobu.
   const arrivalDate = String(reserva?.arrival || '').trim()
   let earlyCheckinPosible = false
+  let earlyCheckinChequeado = false
   if (apartmentId && arrivalDate) {
     const desde = restarDias(arrivalDate, 30) || arrivalDate
-    const estancias: any[] = await smoobuFetch(
+    const estancias: any[] | null = await smoobuFetch(
       `/api/reservations?apartments[]=${apartmentId}&from=${desde}&to=${arrivalDate}&showCancellation=false&pageSize=100`,
       { cache: 'no-store' },
-    ).then(r => r.json()).then(d => (Array.isArray(d?.bookings) ? d.bookings : Array.isArray(d?.data) ? d.data : [])).catch(() => [])
-    earlyCheckinPosible = nocheAnteriorLibre(arrivalDate, estancias, bookingId)
+    ).then(r => r.json()).then(d => (Array.isArray(d?.bookings) ? d.bookings : Array.isArray(d?.data) ? d.data : [])).catch(() => null)
+    if (estancias !== null) {
+      earlyCheckinChequeado = true
+      earlyCheckinPosible = nocheAnteriorLibre(arrivalDate, estancias, bookingId)
+    }
+  }
+
+  // ¿Se puede confirmar late check-out? Solo si NADIE entra el mismo día de la salida (si entra, el
+  // piso necesita turnover: limpieza + la siguiente entrada). Mismo criterio conservador que el early
+  // check-in: si el fetch falla, `chequeado=false` y NUNCA se afirma disponibilidad sin verificarla.
+  const departureDate = String(reserva?.departure || '').trim()
+  let lateCheckoutPosible = false
+  let lateCheckoutChequeado = false
+  if (apartmentId && departureDate) {
+    const hasta = sumarDias(departureDate, 2) || departureDate
+    const estanciasSalida: any[] | null = await smoobuFetch(
+      `/api/reservations?apartments[]=${apartmentId}&from=${departureDate}&to=${hasta}&showCancellation=false&pageSize=100`,
+      { cache: 'no-store' },
+    ).then(r => r.json()).then(d => (Array.isArray(d?.bookings) ? d.bookings : Array.isArray(d?.data) ? d.data : [])).catch(() => null)
+    if (estanciasSalida !== null) {
+      lateCheckoutChequeado = true
+      lateCheckoutPosible = entradaMismoDiaLibre(departureDate, estanciasSalida, bookingId)
+    }
   }
 
   const direccion = [apt?.location?.street, apt?.location?.zip, apt?.location?.city]
@@ -140,7 +169,8 @@ export async function construirContexto(bookingId: string, lang: string): Promis
     portal: reserva?.channel?.name || reserva?.type || 'directo',
     checkIn: reserva?.arrival || '',
     checkOut: reserva?.departure || '',
-    horaCheckIn, horaCheckOut, earlyCheckinPosible,
+    horaCheckIn, horaCheckOut, earlyCheckinPosible, earlyCheckinChequeado,
+    lateCheckoutPosible, lateCheckoutChequeado,
     lat: apt?.location?.latitude ?? null, lng: apt?.location?.longitude ?? null,
     zona: [apt?.location?.city, apt?.location?.country].filter(Boolean).join(', ') || 'Sevilla, España',
     direccion, ficha, guia, historial, enviados, aprendizajes,

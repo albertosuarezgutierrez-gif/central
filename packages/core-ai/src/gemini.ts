@@ -7,10 +7,13 @@ import { fetchAI } from './http.ts'
 
 export interface GeminiConfig {
   apiKey: string
-  model?: string   // default: gemini-2.0-flash
+  model?: string   // default: gemini-flash-latest
 }
 
-const DEFAULT_GEMINI_MODEL = 'gemini-2.0-flash'
+// Google retiró `gemini-2.5-flash` de la API directa el 09/07/2026 (404 "no longer available",
+// antes de la fecha oficial 16/10) → usamos el alias rodante `gemini-flash-latest`, que Google
+// mantiene apuntado al Flash GA vigente (hoy Gemini 3.5 Flash) y no se rompe al retirar versiones.
+const DEFAULT_GEMINI_MODEL = 'gemini-flash-latest'
 
 export async function geminiSearch(
   config: GeminiConfig,
@@ -41,6 +44,56 @@ export async function geminiSearch(
     new Promise<never>((_, r) => setTimeout(() => r(new Error('Gemini timeout')), timeoutMs)),
   ])
 
+  const data = await res.json()
+  const text = data?.candidates?.[0]?.content?.parts?.find((p: { text?: string }) => p.text)?.text
+  if (!text) throw new Error('Gemini: respuesta vacía')
+  return text
+}
+
+/**
+ * Chat de TEXTO con Gemini Flash, SIN grounding (sin google_search). Espejo funcional de
+ * `groqChat`/`moonshotChat` para usarlo como fallback GRATIS en la cadena de `aiComplete`
+ * (la POLÍTICA vive en `client.ts`). Convierte los mensajes al formato de Gemini: el rol
+ * `assistant` pasa a `model`, y los mensajes de sistema (más `opts.system`) van a
+ * `system_instruction`. Adaptador PURO: la app inyecta la config.
+ */
+export async function geminiChat(
+  config: GeminiConfig,
+  messages: { role: string; content: string }[],
+  opts: { system?: string; maxTokens?: number; temperature?: number; timeoutMs?: number } = {},
+): Promise<string> {
+  if (!config.apiKey) throw new Error('Gemini: apiKey requerida')
+  const maxTokens = opts.maxTokens ?? 800
+  const timeoutMs = opts.timeoutMs ?? 30_000
+  const model = config.model ?? DEFAULT_GEMINI_MODEL
+
+  const sysParts = [
+    ...(opts.system ? [opts.system] : []),
+    ...messages.filter(m => m.role === 'system').map(m => m.content),
+  ]
+  const contents = messages
+    .filter(m => m.role !== 'system')
+    .map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }))
+
+  const body: Record<string, unknown> = {
+    contents,
+    generationConfig: { maxOutputTokens: maxTokens, temperature: opts.temperature ?? 0.3 },
+  }
+  if (sysParts.length) body.system_instruction = { parts: [{ text: sysParts.join('\n\n') }] }
+
+  const res = await Promise.race([
+    fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${config.apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      },
+    ),
+    new Promise<never>((_, r) => setTimeout(() => r(new Error('Gemini timeout')), timeoutMs)),
+  ])
+
+  if (!res.ok) throw new Error(`Gemini HTTP ${res.status}: ${(await res.text()).substring(0, 150)}`)
   const data = await res.json()
   const text = data?.candidates?.[0]?.content?.parts?.find((p: { text?: string }) => p.text)?.text
   if (!text) throw new Error('Gemini: respuesta vacía')

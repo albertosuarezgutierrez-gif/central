@@ -4,7 +4,7 @@ import AdminShell from '@/components/AdminShell'
 
 type Obra = { id: string; nombre: string; direccion: string | null; lat: number | null; lng: number | null; radio_m: number; activa: boolean }
 
-export default function ObrasClient({ inicial, logoUrl, nombreEmpresa, colorPrimario }: { inicial: Obra[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null }) {
+export default function ObrasClient({ inicial, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { inicial: Obra[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
   const [lista, setLista] = useState<Obra[]>(inicial)
   const [nueva, setNueva] = useState({ nombre: '', direccion: '', lat: '', lng: '', radio_m: '200' })
   const [editId, setEditId] = useState<string | null>(null)
@@ -35,7 +35,8 @@ export default function ObrasClient({ inicial, logoUrl, nombreEmpresa, colorPrim
     const body = { nombre: edit.nombre, direccion: edit.direccion || null, lat: edit.lat ? parseFloat(edit.lat) : null, lng: edit.lng ? parseFloat(edit.lng) : null, radio_m: parseInt(edit.radio_m) || 200 }
     const r = await fetch(`/api/admin/obras/${id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
     setBusy(false)
-    if (r.ok) { setEditId(null); await recargar() } else alert((await r.json()).error ?? 'Error')
+    if (r.ok) { setEditId(null); await recargar() }
+    else setErr((await r.json().catch(() => ({}))).error ?? 'Error al guardar')
   }
 
   async function toggleActiva(o: Obra) {
@@ -51,7 +52,7 @@ export default function ObrasClient({ inicial, logoUrl, nombreEmpresa, colorPrim
   }
 
   return (
-    <AdminShell activo="obras" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario}>
+    <AdminShell activo="obras" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario} tieneFichaje={tieneFichaje}>
       <h1 className="mb-4 text-2xl">Obras / centros de trabajo</h1>
 
       <form onSubmit={crear} className="mb-4 rounded-card border border-line bg-card p-3">
@@ -108,8 +109,8 @@ export default function ObrasClient({ inicial, logoUrl, nombreEmpresa, colorPrim
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex gap-1">
-                        <button onClick={() => abrirEdicion(o)} className="px-2 py-0.5 text-xs">✏️</button>
-                        <button onClick={() => borrar(o)} className="bg-paper-2 text-alert px-2 py-0.5 text-xs">🗑️</button>
+                        <button onClick={() => abrirEdicion(o)} className="px-2 py-1.5 text-xs min-h-[36px]">✏️</button>
+                        <button onClick={() => borrar(o)} className="bg-paper-2 text-alert px-2 py-1.5 text-xs min-h-[36px]">🗑️</button>
                       </div>
                     </td>
                   </>

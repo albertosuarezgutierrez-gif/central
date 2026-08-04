@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { eur } from '@/lib/dinero'
 
 // Espejo de los tipos de lib/finanzas.ts (sin importar el módulo de servidor en el cliente).
 type Bucket = 'negocio' | 'renta' | 'no_deducible' | 'traspaso'
@@ -29,7 +30,7 @@ type GastosControl = {
 type Sugerencia = { bucket: Bucket; amortizable: boolean; motivo: string; deduccionCuotaTipo?: DeduccionCuotaTipo | null }
 
 function fmt(n: number) {
-  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
+  return eur(n)
 }
 
 // Destinos a los que se puede mover un cargo (con el destino concreto que persiste).
@@ -481,9 +482,9 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
             ].filter(k => k.total > 0).map(k => (
               <div key={k.tipo} style={{ background: 'white', borderRadius: 8, padding: '8px 10px', border: '1px solid #9ae6b4' }}>
                 <div style={{ fontSize: 12, color: '#276749', fontWeight: 600 }}>{DEDUCCION_CUOTA_LABEL[k.tipo]}</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: '#276749' }}>−{k.cuota}€ en cuota</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#276749' }}>−{eur(k.cuota)} en cuota</div>
                 <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                  gastado {fmt(k.total)} · límite base {DEDUCCION_CUOTA_LIMITE[k.tipo]}€
+                  gastado {fmt(k.total)} · límite base {eur(DEDUCCION_CUOTA_LIMITE[k.tipo])}
                   {k.total > DEDUCCION_CUOTA_LIMITE[k.tipo] && <span style={{ color: '#ea580c' }}> · excede límite</span>}
                 </div>
               </div>

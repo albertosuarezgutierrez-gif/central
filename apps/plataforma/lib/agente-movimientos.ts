@@ -2,6 +2,8 @@ import { prisma } from '@/lib/db'
 import { tgSend, tgSendButtons } from '@central/core-telegram'
 import { aiComplete } from '@/lib/ai-client'
 import { detectarDeduccionCuotaTipo } from '@/lib/categorizar'
+import { claveReglaValida } from '@/lib/correduria'
+import { eur } from '@/lib/dinero'
 
 export const PROP_LABELS: Record<string, string> = {
   prop_house_sevillana: 'House Sevillana',
@@ -128,12 +130,12 @@ const DEST_LABEL: Record<string, string> = {
 export async function enviarMensajeDudoso(mov: MovDudoso, sugerencia: Sugerencia): Promise<void> {
   const concepto = (mov.concepto ?? 'Sin concepto').slice(0, 40).toUpperCase()
   const fecha = mov.fecha.slice(0, 10)
-  const importe = Math.abs(mov.importe).toFixed(2)
+  const importe = Math.abs(mov.importe)
 
   if (sugerencia.confianza >= 0.8) {
     const destLabel = DEST_LABEL[sugerencia.destino] ?? sugerencia.destino
     await tgSendButtons(
-      `❓ <b>${concepto}</b> · ${fecha} · -${importe}€\n\n🤖 ${sugerencia.explicacion}`,
+      `❓ <b>${concepto}</b> · ${fecha} · -${eur(importe)}\n\n🤖 ${sugerencia.explicacion}`,
       [[
         { texto: `✅ Sí, ${destLabel}`, callback: `mov_confirmar_ia:${mov.id}:${sugerencia.destino}` },
         { texto: '✏️ Cambiar', callback: `mov_cambiar:${mov.id}` },
@@ -142,7 +144,7 @@ export async function enviarMensajeDudoso(mov: MovDudoso, sugerencia: Sugerencia
     )
   } else {
     await tgSendButtons(
-      `❓ <b>${concepto}</b> · ${fecha} · -${importe}€`,
+      `❓ <b>${concepto}</b> · ${fecha} · -${eur(importe)}`,
       [[
         { texto: '✅ Pisos — deducible',       callback: `mov_pisos:${mov.id}` },
         { texto: '✅ Correduría — deducible',   callback: `mov_correduria:${mov.id}` },
@@ -161,7 +163,9 @@ export async function aprenderReglaMovimiento(
   destino: string,
 ): Promise<void> {
   const clave = limpiarConcepto(concepto)
-  if (clave.length < 4) return
+  // Guardia contra reglas-trampa: no aprender claves genéricas (TRANSF/TOTAL/…) que colisionarían
+  // por substring con casi cualquier concepto del banco.
+  if (!claveReglaValida(clave)) return
   await prisma.$executeRaw`
     INSERT INTO banca_destino_reglas (cuenta_id, clave, destino)
     VALUES (${cuentaId}::uuid, ${clave}, ${destino})
@@ -215,13 +219,13 @@ export async function getMovimientosPersonalesConPotencialCuota(
 export async function enviarMensajeCuotaDeduccion(mov: MovPersonal): Promise<void> {
   const tipo = detectarDeduccionCuotaTipo(mov.concepto, mov.contraparte)
   const concepto = (mov.concepto ?? 'Sin concepto').slice(0, 40).toUpperCase()
-  const importe = Math.abs(mov.importe).toFixed(2)
+  const importe = Math.abs(mov.importe)
   const fecha = mov.fecha.slice(0, 10)
 
   if (tipo) {
     const tipoLabel = CUOTA_LABEL[tipo] ?? tipo
     await tgSendButtons(
-      `💡 <b>${concepto}</b> · ${fecha} · -${importe}€\n\n¿Es una deducción de cuota IRPF?\n🤖 Parece: <b>${tipoLabel}</b>`,
+      `💡 <b>${concepto}</b> · ${fecha} · -${eur(importe)}\n\n¿Es una deducción de cuota IRPF?\n🤖 Parece: <b>${tipoLabel}</b>`,
       [[
         { texto: `✅ ${tipoLabel}`, callback: `deduccion_${tipo}:${mov.id}` },
         { texto: '🚫 No, es personal', callback: `deduccion_ninguna:${mov.id}` },
@@ -230,7 +234,7 @@ export async function enviarMensajeCuotaDeduccion(mov: MovPersonal): Promise<voi
     ).catch(() => {})
   } else {
     await tgSendButtons(
-      `💡 <b>${concepto}</b> · ${fecha} · -${importe}€\n\n¿Tiene deducción de cuota IRPF?`,
+      `💡 <b>${concepto}</b> · ${fecha} · -${eur(importe)}\n\n¿Tiene deducción de cuota IRPF?`,
       [[
         { texto: '🏛️ Mecenazgo', callback: `deduccion_mecenazgo:${mov.id}` },
         { texto: '👶 Guardería', callback: `deduccion_guarderia:${mov.id}` },
@@ -267,7 +271,7 @@ export async function enviarResumenCuotaDeducciones(cuentaId: string, year: numb
     if (r.tipo === 'mecenazgo') cuota = Math.round(Math.min(total, 150) * 0.8 + Math.max(0, total - 150) * 0.4)
     else if (r.tipo === 'guarderia') cuota = Math.min(total, 1000)
     else if (r.tipo === 'deportiva_and') cuota = Math.round(Math.min(total, 100) * 0.15)
-    return `• ${label}: ${total.toFixed(2)}€ gastado → <b>−${cuota}€ en cuota</b> (${count} mov.)`
+    return `• ${label}: ${eur(total)} gastado → <b>−${eur(cuota)} en cuota</b> (${count} mov.)`
   })
 
   await tgSend(`📊 <b>Deducciones de cuota IRPF ${year}</b>\n\n${lineas.join('\n')}`).catch(() => {})

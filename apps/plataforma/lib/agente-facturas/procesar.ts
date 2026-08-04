@@ -48,7 +48,7 @@ export interface ProcesarResult {
 
 export async function procesarFactura(
   data: FacturaExtraida,
-  ctx: { fuente: string; drive?: DriveRef; propiedadPorDefecto?: string | null; esPresupuesto?: boolean; fingerprintOverride?: string },
+  ctx: { fuente: string; drive?: DriveRef; propiedadPorDefecto?: string | null; esPresupuesto?: boolean; fingerprintOverride?: string; esBooking?: boolean },
 ): Promise<ProcesarResult> {
   const total = Number(data.total ?? 0)
   const proveedor = data.proveedor ?? null
@@ -89,6 +89,15 @@ export async function procesarFactura(
   if (decision === 'auto' && !conc.ok && (data.base_imponible != null || data.irpf != null)) {
     decision = 'bandeja'
     motivo = `Descuadre: base+IVA−IRPF=${conc.esperado} ≠ total ${total}`
+  }
+
+  // Booking: la liquidación NUNCA se auto-imputa en silencio. Trae varias reservas, comisiones
+  // e IVA en un mismo PDF (no cuadra con la conciliación simple de arriba, que se salta al no
+  // haber base/IRPF) → siempre a la bandeja para que Alberto/el contable confirme que cuadra con
+  // el ingreso real. Decisión de Alberto: "auto-confirma si cuadra exacto; Booking → toque".
+  if (ctx.esBooking && decision === 'auto') {
+    decision = 'bandeja'
+    motivo = 'Booking: confirma la liquidación (revisa el PDF en Drive)'
   }
 
   const datos: DatosGasto = {

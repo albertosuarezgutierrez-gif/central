@@ -11,6 +11,8 @@ export const CARPETAS_RRHH: ConfigCarpeta[] = [
   { id: 'contratos', etiqueta: 'Contratos', titularPuedeSubir: false, titularPuedeVer: true },
   { id: 'nominas', etiqueta: 'Nóminas', titularPuedeSubir: false, titularPuedeVer: true },
   { id: 'partes_medicos', etiqueta: 'Partes médicos', titularPuedeSubir: true, titularPuedeVer: true },
+  { id: 'formacion', etiqueta: 'Formación', titularPuedeSubir: false, titularPuedeVer: true },
+  { id: 'prevencion_riesgos', etiqueta: 'Prevención de riesgos', titularPuedeSubir: false, titularPuedeVer: true },
   { id: 'otros', etiqueta: 'Otros', titularPuedeSubir: false, titularPuedeVer: true },
 ]
 

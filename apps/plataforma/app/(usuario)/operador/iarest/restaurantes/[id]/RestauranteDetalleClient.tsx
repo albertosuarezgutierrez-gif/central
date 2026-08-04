@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { eur } from '@/lib/dinero'
 
 type Restaurante = {
   id: string
@@ -27,9 +28,6 @@ type Stats = {
   facturas: number
   ultima_comanda: string | null
 }
-
-const eur = (n: number) =>
-  new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(n)
 
 const fecha = (s: string | null) =>
   s ? new Date(s).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'

@@ -18,16 +18,30 @@
  */
 
 // ── CONFIGURACIÓN ──────────────────────────────────────────────────────────────
-// Carpeta "ALBERTO 2026 PERSONAL (SEGUROS)" de Drive (ya es del año 2026, con
-// subcarpetas por mes en MAYÚSCULAS: ENERO, FEBRERO… → se respeta esa estructura).
-const ROOT_FOLDER_ID = "1pyW0_QNOCYuD_0az13sP7MpDyhhNVXt7";
-const SUBFOLDER_BY_YEAR = false;  // la carpeta raíz ya es la del año
-const SUBFOLDER_BY_MONTH = true;  // archiva en ENERO/FEBRERO/… como ya las tienes
+// Carpeta "FACTURAS Apartamentos / 2026" de Drive (misma raíz que usa la skill
+// Claude `facturas-correo` — ver docs/DRIVE-ESTRUCTURA.md; el fileId NO cambia
+// aunque la carpeta se reanide). Subcarpetas por mes "NN-MesNombre-2026", el
+// mismo formato que ya usa esa skill (p.ej. "07-Julio-2026").
+//
+// 🚨 CORREGIDO 01/08/2026: apuntaba a "ALBERTO 2026 PERSONAL (SEGUROS)"
+// (1pyW0_QNOCYuD_0az13sP7MpDyhhNVXt7) — TODA factura de negocio que procesaba
+// el cron `facturas-scan` (apps/plataforma/lib/agente-facturas) se archivaba en
+// el árbol personal en vez del de negocio (detectado con Castuera 10/07 y de
+// nuevo con Giraldillo/ParkingLibre 01/08; avisos en la papelera Drive
+// `_DUPLICADOS_BORRAR`). Repuntado a la raíz de negocio.
+const ROOT_FOLDER_ID = "1M7PwjU3MSJ7zb83rhlXzTx1O2RlTad3O";
 
 const MONTH_NAMES = [
-  "ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO",
-  "JULIO","AGOSTO","SEPTIEMBRE","OCTUBRE","NOVIEMBRE","DICIEMBRE"
+  "Enero","Febrero","Marzo","Abril","Mayo","Junio",
+  "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"
 ];
+
+// Carpetas de mes ya creadas con una grafía distinta a la estándar de arriba
+// (histórico) — hay que seguir usando el nombre exacto para no crear una
+// carpeta duplicada. Clave "YYYY-MM".
+const MONTH_FOLDER_OVERRIDES = {
+  "2026-05": "05-MAYO-2026",
+};
 
 function json_(obj) {
   const output = ContentService.createTextOutput();
@@ -107,13 +121,22 @@ function doArchive_(data) {
 }
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────────
+function nombreCarpetaMes_(d) {
+  const anio = d.getFullYear();
+  const mesIdx = d.getMonth(); // 0-11
+  const mesNum = String(mesIdx + 1).padStart(2, "0");
+  const clave = anio + "-" + mesNum;
+  if (MONTH_FOLDER_OVERRIDES[clave]) return MONTH_FOLDER_OVERRIDES[clave];
+  return mesNum + "-" + MONTH_NAMES[mesIdx] + "-" + anio;
+}
+
 function carpetaDestino_(fecha) {
+  // ROOT_FOLDER_ID YA es la carpeta del año 2026 (no hace falta subcarpeta de año).
   let target = DriveApp.getFolderById(ROOT_FOLDER_ID);
   if (fecha) {
     const d = new Date(fecha);
     if (!isNaN(d.getTime())) {
-      if (SUBFOLDER_BY_YEAR)  target = getOrCreateSubfolder_(target, d.getFullYear().toString());
-      if (SUBFOLDER_BY_MONTH) target = getOrCreateSubfolder_(target, MONTH_NAMES[d.getMonth()]);
+      target = getOrCreateSubfolder_(target, nombreCarpetaMes_(d));
     }
   }
   return target;

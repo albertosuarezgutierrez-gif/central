@@ -53,10 +53,6 @@ if [ -z "$GROQ_API_KEY" ]; then
   read -rp "GROQ_API_KEY (https://console.groq.com/keys): " GROQ_API_KEY
 fi
 
-if [ -z "$ANTHROPIC_API_KEY" ]; then
-  read -rp "ANTHROPIC_API_KEY (https://console.anthropic.com/api-keys): " ANTHROPIC_API_KEY
-fi
-
 if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
   read -rp "SUPABASE_SERVICE_ROLE_KEY (Supabase → Settings → API): " SUPABASE_SERVICE_ROLE_KEY
 fi
@@ -69,13 +65,19 @@ if [ -z "$VAPID_PRIVATE" ]; then
   read -rsp "VAPID_PRIVATE (clave privada Web Push): " VAPID_PRIVATE; echo
 fi
 
-# Supabase URLs (públicas, no secret)
+# Supabase URLs (públicas, no secret).
+# OJO: la URL apunta al proyecto VIVO actual (efncqyvhniaxsirhdxaa). La migración
+# decidida al compartido (wswbehlcuxqxyinousql/schema iarest) cambia esto en la
+# "Etapa D" del plan — NO tocar aquí hasta el flip, o este script fliparía prod.
 SUPABASE_URL="${SUPABASE_URL:-https://efncqyvhniaxsirhdxaa.supabase.co}"
-SUPABASE_ANON="${SUPABASE_ANON:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmbmNxeXZobmlheHNpcmhkeGFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6MjAwMDAwMDAwMH0.placeholder}"
+# El ANON key es público pero NO se hardcodea (antes había un placeholder que subía
+# una key inválida a Vercel). Pásalo por env SUPABASE_ANON o se pide por teclado.
+if [ -z "$SUPABASE_ANON" ]; then
+  read -rp "SUPABASE_ANON (anon key pública, Supabase → Settings → API): " SUPABASE_ANON
+fi
 
 echo "Subiendo variables..."
 upsert_env "GROQ_API_KEY"                    "$GROQ_API_KEY"
-upsert_env "ANTHROPIC_API_KEY"               "$ANTHROPIC_API_KEY"
 upsert_env "SUPABASE_SERVICE_ROLE_KEY"       "$SUPABASE_SERVICE_ROLE_KEY"
 upsert_env "NEXT_PUBLIC_VAPID_PUBLIC_KEY"    "$VAPID_PUBLIC"
 upsert_env "VAPID_PRIVATE_KEY"               "$VAPID_PRIVATE"

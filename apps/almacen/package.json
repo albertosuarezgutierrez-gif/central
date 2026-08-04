@@ -1,0 +1,33 @@
+{
+  "name": "almacen",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "node --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@central/brand": "workspace:*",
+    "@central/core-identity": "workspace:*",
+    "@central/module-materiales": "workspace:*",
+    "@prisma/client": "^5.22.0",
+    "bcryptjs": "^2.4.3",
+    "jose": "^5.9.3",
+    "next": "^15.5.22",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "^16.2.6",
+    "prisma": "^5.22.0",
+    "typescript": "^5"
+  }
+}

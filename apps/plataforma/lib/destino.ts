@@ -23,11 +23,16 @@ const RE_TITULAR = /SUAREZ.*GUTIERREZ|GUTIERREZ.*SUAREZ|ALBERTO SUAREZ/i
 // Exportadas para que lib/correduria.ts pueda explicar POR QUÉ un movimiento es de seguros
 // (casó por nombre de aseguradora vs. cayó por descarte en BBVA). No duplicar estas regex.
 export const RE_SEGUROS = /\b(GENERALI|ALLIANZ|MAPFRE|CASER|AXA|ZURICH|REALE|MUTUA|LINEA DIRECTA|SANITAS|ADESLAS|SEGURCAIXA|DKV|ASISA|CATALANA OCCIDENTE|OCCIDENT|LIBERTY|HELVETIA|PLUS ULTRA|SANTALUCIA|OCASO|PELAYO|VERTI|GENESIS|FENIX|DIVINA PASTORA|FIATC|SEGUROS BILBAO|NATIONALE|VIDACAIXA|ANTARES|ARAG|ASEFA|PREVENTIVA|SURNE|QUALITAS|SEGURO|SEGUROS)\b/i
-const RE_PISOS = /\b(BOOKING|EXPEDIA|TRAVELSCAPE|AGODA|AIRBNB|STRIPE|HOTELBEDS|HOMETOGO|RENTALIA|VRBO|HOLIDU|SMOOBU|PRICELABS|DYNAPRICE|HOMEEXCHANG|IONOS|IKEA|LEROY|BRICO|FERRETER|D CULTO|DCULTO|SIQUE|EMASESA|ENDESA|DIGI|DIMITRI)\b/i
+// TotalEnergies = comercializadora de luz/gas de los pisos/Dúplex. El banco lo rotula distinto según
+// la vía: BBVA (Dúplex) "... N <ref> TE ELECTRICIDAD Y GAS ESPANA SA"; Kutxa (pisos) "RECIBO Total Gas
+// Y Elect ..." / "ABONO TOTALENERGIES ELECTRICIDA". Sin estos marcadores, en BBVA caía al cajón
+// 'seguros' por descarte (mal: es suministro del Dúplex, no correduría). "TE ELECTRICIDAD" es lo
+// bastante específico para no chocar con otros conceptos (no basta un "TE" suelto).
+const RE_PISOS = /\b(BOOKING|EXPEDIA|TRAVELSCAPE|AGODA|AIRBNB|STRIPE|HOTELBEDS|HOMETOGO|RENTALIA|VRBO|HOLIDU|SMOOBU|PRICELABS|DYNAPRICE|HOMEEXCHANG|IONOS|IKEA|LEROY|BRICO|FERRETER|D CULTO|DCULTO|SIQUE|EMASESA|ENDESA|DIGI|DIMITRI|TOTALENERGIES|TE ELECTRICIDAD|TOTAL GAS Y ELECT)\b/i
 // Gastos propios del Dúplex (en la cuenta BBVA): comunidad, luz, internet, agua, IBI/ayto + reservas + mobiliario.
 // El "Dúplex" (= Duplex Center) es el MISMO piso que Alberto llama "Villasís": Pasaje Villasís 1 /
 // Pasaje Francisco Molina 4 (dos accesos). Tributa en el IRPF personal de Alberto. Ver skill `perfil-fiscal`.
-const RE_DUPLEX = /\b(COMUNIDAD|PASAJE FRANCISCO|FRANCISCO MOLINA|VILLASIS|VILLAS[IÍ]S|ENDESA|FINETWORK|EMASESA|IBERDROLA|NATURGY|MOVISTAR|VODAFONE|ORANGE|DIGI|AYUNTAMIENTO|AYTO|IKEA|LEROY|BRICO|FERRETER|SMOOBU|PRICELABS|BOOKING|EXPEDIA|TRAVELSCAPE|AGODA|AIRBNB|STRIPE)\b/i
+const RE_DUPLEX = /\b(COMUNIDAD|PASAJE FRANCISCO|FRANCISCO MOLINA|VILLASIS|VILLAS[IÍ]S|ENDESA|FINETWORK|EMASESA|IBERDROLA|NATURGY|MOVISTAR|VODAFONE|ORANGE|DIGI|AYUNTAMIENTO|AYTO|IKEA|LEROY|BRICO|FERRETER|SMOOBU|PRICELABS|BOOKING|EXPEDIA|TRAVELSCAPE|AGODA|AIRBNB|STRIPE|TOTALENERGIES|TE ELECTRICIDAD|TOTAL GAS Y ELECT)\b/i
 // Liquidaciones de comisiones de la correduría (lo que cobra Alberto de las compañías/plataforma
 // de seguros): "LIQ.COMISIONES 2026MM", "LIQUIDACION DE COMISIONES", "COMISIONES MAYO", el código
 // de agente "G.65792 LIQ ... GENERALI", "-FRA-COMIS-AAAAMMDD" y "LIQ. OP. Nº ...".
@@ -39,10 +44,21 @@ export const RE_COMISIONES = /LIQ\.?\s*COMIS|LIQUIDACI[OÓ]N\s+(DE\s+)?COMIS|COM
 const RE_PERSONAL_IN = /\bPENSI[OÓ]N\b|INGRESO POR N[OÓ]MINA|\bRECIBIDO:/i
 // Abonos de la correduría que NO traen la palabra "comisión" ni el nombre de la aseguradora, sino el
 // código de liquidación del agente: "PD005 SALDO AGENTE" (Caser), "...REMSALDO..." (Aegon),
-// "LIQ. SALDO CUENTA" (AXA), "PAGO SALDO CTA" (Generali). Sin esto caerían a Dúplex por descarte.
-const RE_LIQUID_SEGUROS = /SALDO AGENTE|REMSALDO|SALDO CUENTA|PAGO SALDO CTA|\bPD005\b/i
+// "LIQ. SALDO CUENTA" (AXA), "PAGO SALDO CTA" (Generali), y los códigos de agente que identifican a la
+// compañía pagadora: "SALDO. M00171" / bare "M00171" (Occident), "M1454" (Asisa), "SALDO. 8/92361"
+// (Occident). Sin esto caerían a personal+revisar por descarte y desaparecían de la correduría.
+// (Mantener sincronizado con lib/correduria.ts::detectarCompania, que reconoce estos mismos códigos.)
+const RE_LIQUID_SEGUROS = /SALDO AGENTE|REMSALDO|SALDO CUENTA|PAGO SALDO CTA|\bPD005\b|SALDO\.\s*[A-Z0-9]|\bM\d{4,}\b|\b\d\/\d{4,}\b/i
 
 const RE_TGSS = /TGSS|TESORERÍA\s+GENERAL|TESORERIA\s+GENERAL|SEGURIDAD\s+SOCIAL|T\.?G\.?S\.?S/i
+
+// Software / infraestructura PROFESIONAL (hosting, IA, cloud, repos) que Alberto paga con la cuenta de
+// la correduría (BBVA): son herramientas de su actividad → gasto deducible del negocio. Se marcan con
+// subcategoría 'informatica' para distinguirlos de las pólizas/comisiones de seguros, y se auto-confirman
+// (no van a «por revisar» cada mes). NARROW a propósito: solo proveedores claramente profesionales; el
+// ocio (Netflix/Spotify/Disney…) NO entra aquí y sigue su camino normal a personal. OJO: NO incluir
+// STRIPE (es cobro de Booking de los pisos, ya en RE_PISOS) ni AMAZON a secas (compras = ocio).
+const RE_SOFTWARE = /\b(VERCEL|ANTHROPIC|OPENAI|OPENROUTER|GITHUB|CLOUDFLARE|SUPABASE|DIGITALOCEAN|NETLIFY|HETZNER|VULTR|LINODE|MONGODB|GOOGLE CLOUD|AMAZON WEB SERVICES|AWS)\b/i
 
 // Resultado detallado: el negocio + si el movimiento es AMBIGUO y conviene que el dueño lo
 // confirme (`revisar`). `confirmado` marca una clasificación TAN determinista que no necesita
@@ -75,7 +91,7 @@ export function clasificarDestinoDetalle(
   // Bizum (de Alberto) = SIEMPRE personal, entre o salga y sea cual sea el banco. Sin esto, un Bizum
   // ENVIADO desde BBVA caía a 'seguros' por descarte (los cargos de BBVA que no son del Dúplex). Va
   // tras el bloque de cónyuge (a Pilar un Bizum sí puede ser cobro de cliente → actividad_pilar).
-  if (/\bBIZUM\b/i.test(txt)) return { destino: 'personal', revisar: false, confirmado: true }
+  if (/\bBIZUM\b/i.test(txt)) return { destino: 'personal', revisar: false, confirmado: true, subcategoria: 'bizum' }
 
   // Energía XXI (comercializadora regulada de Endesa) = luz de la VIVIENDA HABITUAL Monte Carmelo 68
   // → SIEMPRE personal, NO deducible (confirmado por Alberto, 02/07/2026). No confundir con la luz de
@@ -108,6 +124,9 @@ export function clasificarDestinoDetalle(
   if (RE_TITULAR.test(contraparte ?? '')) return { destino: 'traspaso_interno', revisar: false }
   // Cuota de autónomos (RETA) en BBVA: actividad de correduría, deducible (Art. 30.2.1ª LIRPF).
   if (esBBVA && RE_TGSS.test(txt)) return { destino: 'seguros', revisar: false, subcategoria: 'cuota_autonomos' }
+  // Software/infra profesional en BBVA (Vercel/Anthropic/OpenAI/GitHub/cloud…): herramienta de la
+  // correduría, deducible → seguros con subcategoría 'informatica', auto-confirmado (no «por revisar»).
+  if (esBBVA && RE_SOFTWARE.test(txt)) return { destino: 'seguros', revisar: false, confirmado: true, subcategoria: 'informatica' }
   // La correduría (seguros) es SIEMPRE BBVA: ahí, lo que casa el Dúplex es del Dúplex (confianza alta);
   // lo demás cae a 'seguros' POR DESCARTE → conjetura que ADEMÁS se contaría como gasto deducible de la
   // correduría, así que se marca `revisar` para que el dueño la confirme (correduría / Dúplex / personal).

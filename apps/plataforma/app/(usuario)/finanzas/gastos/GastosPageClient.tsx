@@ -2,9 +2,10 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect, useCallback, useTransition } from 'react'
 import GastosTab from '../GastosTab'
+import { eur } from '@/lib/dinero'
 
 function fmt(n: number) {
-  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
+  return eur(n)
 }
 
 type Props = {

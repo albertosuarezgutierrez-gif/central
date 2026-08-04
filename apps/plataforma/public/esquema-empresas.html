@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Esquema — Detección de empresas en dificultad financiera</title>
+<style>
+  :root {
+    --bg: #f4f6f6; --surface: #ffffff; --surface-2: #eef1f1; --ink: #141b1b;
+    --ink-soft: #445150; --ink-faint: #6c7877; --line: #d7dedd; --line-strong: #b9c4c3;
+    --gold: #a76f1f; --gold-bg: #f6ecd8; --distress: #b1402f; --distress-bg: #f6e2dd;
+    --healthy: #2f7355; --healthy-bg: #dceee6; --growth: #226a6b; --growth-bg: #d8ebeb;
+    --paid: #a76f1f; --radius: 10px; --maxw: 1080px;
+    --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1514; --surface: #161e1d; --surface-2: #1c2625; --ink: #e8edec;
+      --ink-soft: #a7b3b2; --ink-faint: #7c8887; --line: #2a3634; --line-strong: #3a4846;
+      --gold: #d6a44e; --gold-bg: #2c2313; --distress: #e0776a; --distress-bg: #2e1a16;
+      --healthy: #5cae87; --healthy-bg: #16271f; --growth: #4fa3a4; --growth-bg: #16271f;
+      --paid: #d6a44e;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 40px 20px 64px; }
+  header { margin-bottom: 40px; }
+  .eyebrow { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); font-weight: 650; margin: 0 0 10px; }
+  h1 { font-size: clamp(24px, 4.4vw, 36px); line-height: 1.12; margin: 0 0 12px; letter-spacing: -.015em; text-wrap: balance; font-weight: 720; }
+  .lede { font-size: clamp(15px, 2vw, 17px); color: var(--ink-soft); max-width: 62ch; margin: 0; }
+  h2 { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint); font-weight: 650; margin: 0 0 16px; display: flex; align-items: baseline; gap: 10px; }
+  h2 .num { font-variant-numeric: tabular-nums; color: var(--gold); font-size: 12px; border: 1px solid var(--line-strong); border-radius: 20px; padding: 1px 9px; }
+  section { margin-top: 44px; }
+  .funnel { display: grid; gap: 14px; }
+  .stage { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; display: grid; grid-template-columns: 44px 1fr auto; gap: 16px; align-items: start; }
+  .stage .badge { width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center; font-weight: 720; font-size: 17px; font-variant-numeric: tabular-nums; background: var(--surface-2); color: var(--ink); border: 1px solid var(--line-strong); }
+  .stage.macro .badge { background: var(--growth-bg); color: var(--growth); border-color: transparent; }
+  .stage.criba .badge { background: var(--distress-bg); color: var(--distress); border-color: transparent; }
+  .stage.deep .badge { background: var(--gold-bg); color: var(--gold); border-color: transparent; }
+  .stage h3 { margin: 2px 0 4px; font-size: 16px; font-weight: 680; letter-spacing: -.01em; }
+  .stage p { margin: 0; color: var(--ink-soft); font-size: 14px; }
+  .stage .meta { margin-top: 9px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .cost { align-self: center; white-space: nowrap; font-size: 12px; font-weight: 650; padding: 5px 11px; border-radius: 20px; letter-spacing: .02em; }
+  .cost.free { background: var(--healthy-bg); color: var(--healthy); }
+  .cost.paid { background: var(--gold-bg); color: var(--paid); }
+  .chip { font-size: 12px; padding: 3px 9px; border-radius: 6px; background: var(--surface-2); color: var(--ink-soft); border: 1px solid var(--line); }
+  .arrow { text-align: center; color: var(--line-strong); font-size: 18px; line-height: 1; margin: -6px 0; }
+  .quadwrap { display: grid; grid-template-columns: 26px 1fr; gap: 10px; }
+  .yaxis { writing-mode: vertical-rl; transform: rotate(180deg); text-align: center; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); align-self: center; }
+  .quad-inner { display: grid; gap: 10px; }
+  .quad { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .cell { border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; background: var(--surface); min-height: 116px; display: flex; flex-direction: column; gap: 6px; }
+  .cell.hunt { background: var(--gold-bg); border-color: var(--gold); }
+  .cell .tag { font-size: 12px; font-weight: 700; letter-spacing: .02em; display: flex; align-items: center; gap: 7px; }
+  .cell.hunt .tag { color: var(--gold); }
+  .cell.decline .tag { color: var(--distress); }
+  .cell.neutral .tag, .cell.ignore .tag { color: var(--ink-faint); }
+  .cell .desc { font-size: 13px; color: var(--ink-soft); }
+  .cell .who { margin-top: auto; font-size: 12px; color: var(--ink-faint); font-style: italic; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .dot.hunt { background: var(--gold); }
+  .dot.decline { background: var(--distress); }
+  .dot.mut { background: var(--line-strong); }
+  .xaxis { grid-column: 2; text-align: center; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); margin-top: 4px; }
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 560px; }
+  th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  thead th { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); font-weight: 650; background: var(--surface-2); }
+  tbody tr:last-child td { border-bottom: none; }
+  td .src { font-weight: 650; color: var(--ink); }
+  .pill { font-size: 11px; font-weight: 650; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
+  .pill.free { background: var(--healthy-bg); color: var(--healthy); }
+  .pill.paid { background: var(--gold-bg); color: var(--paid); }
+  .pill.opt { background: var(--surface-2); color: var(--ink-faint); border: 1px solid var(--line); }
+  .agent { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
+  .turns { display: grid; gap: 12px; }
+  .turn { display: grid; grid-template-columns: 96px 1fr; gap: 14px; align-items: start; }
+  .turn .lvl { font-size: 11px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; padding: 5px 0; color: var(--ink-faint); }
+  .turn .say { background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 13px; font-size: 14px; color: var(--ink); }
+  .turn .say .did { display: block; margin-top: 5px; font-size: 12.5px; color: var(--ink-faint); }
+  .turn.t1 .lvl { color: var(--growth); }
+  .turn.t2 .lvl { color: var(--distress); }
+  .turn.t3 .lvl { color: var(--gold); }
+  .tables { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .tbl { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .tbl .name { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; font-weight: 600; padding: 9px 12px; background: var(--surface-2); color: var(--ink); border-bottom: 1px solid var(--line); }
+  .tbl ul { margin: 0; padding: 8px 12px 10px 12px; list-style: none; display: grid; gap: 3px; }
+  .tbl li { font-size: 12px; color: var(--ink-soft); }
+  .foot { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--ink-faint); display: flex; flex-wrap: wrap; gap: 6px 18px; }
+  .foot b { color: var(--ink-soft); font-weight: 650; }
+  @media (max-width: 620px) {
+    .stage { grid-template-columns: 40px 1fr; }
+    .cost { grid-column: 2; justify-self: start; margin-top: 4px; }
+    .turn { grid-template-columns: 1fr; gap: 5px; }
+    .turn .lvl { padding: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Central · Inteligencia de datos · Herramienta interna</p>
+    <h1>Detección y análisis de empresas en dificultad financiera</h1>
+    <p class="lede">Un embudo de tres etapas que va de lo macro a lo micro: primero <b>dónde cazar</b> (sector), luego <b>a quién</b> (empresa) y por último <b>a fondo</b> (balance). Las fuentes gratis criban; la API de pago solo enriquece la lista corta.</p>
+  </header>
+  <section>
+    <h2><span class="num">A</span> El embudo</h2>
+    <div class="funnel">
+      <div class="stage macro">
+        <div class="badge">0</div>
+        <div>
+          <h3>Radar de sectores <span style="font-weight:500;color:var(--ink-faint)">· macro</span></h3>
+          <p>Ordena los CNAE por interés: cruza crecimiento del sector con concentración de empresas tocadas. Elige el terreno de caza antes de mirar ninguna empresa.</p>
+          <div class="meta"><span class="chip">INE — crecimiento</span><span class="chip">Central de Balances BdE — rentabilidad</span><span class="chip">BORME — concursos por sector</span></div>
+        </div>
+        <span class="cost free">Gratis</span>
+      </div>
+      <div class="arrow">↓</div>
+      <div class="stage criba">
+        <div class="badge">1</div>
+        <div>
+          <h3>Cribado de empresas <span style="font-weight:500;color:var(--ink-faint)">· amplitud</span></h3>
+          <p>Dentro del sector elegido, barre empresas y puntúa cada una (0–100) con motivo legible. Filtros seleccionables: facturación, geografía, forma jurídica.</p>
+          <div class="meta"><span class="chip">Fondos propios negativos</span><span class="chip">Pérdidas recurrentes</span><span class="chip">Concurso / ampliaciones</span><span class="chip">Facturación 0,5–2 M€</span></div>
+        </div>
+        <span class="cost free">Gratis</span>
+      </div>
+      <div class="arrow">↓</div>
+      <div class="stage deep">
+        <div class="badge">2</div>
+        <div>
+          <h3>Análisis a fondo <span style="font-weight:500;color:var(--ink-faint)">· profundidad</span></h3>
+          <p>Solo sobre la lista corta (~50–200): baja el balance completo y razona sobre él. El coste se controla porque la lista ya está filtrada.</p>
+          <div class="meta"><span class="chip">API eInforma / Iberinform</span><span class="chip">Balance completo + scoring de riesgo</span><span class="chip">Tope de gasto mensual</span></div>
+        </div>
+        <span class="cost paid">De pago · metered</span>
+      </div>
+    </div>
+  </section>
+  <section>
+    <h2><span class="num">B</span> El mapa de sectores</h2>
+    <div class="quadwrap">
+      <div class="yaxis">Dificultad de las empresas →</div>
+      <div class="quad-inner">
+        <div class="quad">
+          <div class="cell hunt"><span class="tag"><span class="dot hunt"></span>Zona caza</span><span class="desc">Sector al alza + cola de empresas tocadas.</span><span class="who">Comprar / reconducir</span></div>
+          <div class="cell decline"><span class="tag"><span class="dot decline"></span>Sector en declive</span><span class="desc">Sector cae + muchas empresas mal.</span><span class="who">Barato pero arriesgado</span></div>
+          <div class="cell neutral"><span class="tag"><span class="dot mut"></span>Sano sin ganga</span><span class="desc">Sector crece + empresas sanas.</span><span class="who">Poco que rascar</span></div>
+          <div class="cell ignore"><span class="tag"><span class="dot mut"></span>Ignorar</span><span class="desc">Sector cae + empresas sanas.</span><span class="who">Nada aquí</span></div>
+        </div>
+        <div class="xaxis">Crecimiento del sector →</div>
+      </div>
+    </div>
+    <p style="font-size:13px;color:var(--ink-faint);margin:12px 0 0;max-width:64ch">Pesos configurables: puedes priorizar el crecimiento del sector o la cantidad de empresas tocadas, moviendo el foco entre «turnaround en sector sano» y «gangas en sector en crisis».</p>
+  </section>
+  <section>
+    <h2><span class="num">C</span> Capas de datos</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Capa</th><th>Fuente</th><th>Qué aporta</th><th>Coste</th></tr></thead>
+        <tbody>
+          <tr><td>Tendencia de sector</td><td><span class="src">INE</span><br><span style="color:var(--ink-faint);font-size:12px">ICNE · IASS · IPI · DIRCE</span></td><td>Crecimiento/decrecimiento de actividad y altas-bajas de empresas por sector</td><td><span class="pill free">Gratis</span></td></tr>
+          <tr><td>Benchmark de sector</td><td><span class="src">Central de Balances BdE</span></td><td>Ratios medianos por CNAE: rentabilidad, margen, endeudamiento</td><td><span class="pill free">Gratis</span></td></tr>
+          <tr><td>Señal de problema</td><td><span class="src">BORME</span><br><span style="color:var(--ink-faint);font-size:12px">boe.es/borme</span></td><td>Concursos, disoluciones, ceses, ampliaciones de capital</td><td><span class="pill free">Gratis</span></td></tr>
+          <tr><td>Enriquecimiento</td><td><span class="src">API eInforma / Iberinform</span></td><td>Balance completo + scoring de riesgo, por empresa</td><td><span class="pill paid">De pago</span></td></tr>
+          <tr><td>Cribado masivo</td><td><span class="src">SABI · Bureau van Dijk</span></td><td>Filtrado masivo de balances por CNAE + facturación + ratios</td><td><span class="pill opt">Opcional · fase 3</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section>
+    <h2><span class="num">D</span> El agente, de macro a micro</h2>
+    <div class="agent">
+      <div class="turns">
+        <div class="turn t1"><span class="lvl">Sector</span><div class="say">«¿Qué sectores están interesantes ahora mismo en Andalucía?»<span class="did">→ devuelve el ranking/mapa de sectores (Etapa 0)</span></div></div>
+        <div class="turn t2"><span class="lvl">Empresa</span><div class="say">«Del sector construcción, sácame las tocadas de menos de 2 M€.»<span class="did">→ lista rankeada con su porqué (Etapa 1)</span></div></div>
+        <div class="turn t3"><span class="lvl">A fondo</span><div class="say">«Analiza la número 3.»<span class="did">→ baja el balance por API y razona sobre él (Etapa 2)</span></div></div>
+      </div>
+      <p style="font-size:12.5px;color:var(--ink-faint);margin:16px 0 0">Memoria en la base de datos, chat efímero — mismo patrón que el pricing-agente. Corre sobre <b style="color:var(--ink-soft);font-weight:650">@central/core-ai</b>, Telegram y Supabase.</p>
+    </div>
+  </section>
+  <section>
+    <h2><span class="num">E</span> Modelo de datos</h2>
+    <div class="tables">
+      <div class="tbl"><div class="name">empresas_objetivo</div><ul><li>CIF · nombre</li><li>CNAE · provincia</li><li>facturación est.</li></ul></div>
+      <div class="tbl"><div class="name">senales</div><ul><li>tipo · fuente</li><li>fecha · payload</li><li>histórico</li></ul></div>
+      <div class="tbl"><div class="name">tendencias_sector</div><ul><li>crecimiento</li><li>tasa de concurso</li><li>por CNAE/periodo</li></ul></div>
+      <div class="tbl"><div class="name">benchmarks_sector</div><ul><li>ratios medianos</li><li>por CNAE/año</li></ul></div>
+      <div class="tbl"><div class="name">scores_sector</div><ul><li>score de sector</li><li>posición en mapa</li></ul></div>
+      <div class="tbl"><div class="name">scores</div><ul><li>score 0–100</li><li>desglose + motivo</li></ul></div>
+      <div class="tbl"><div class="name">enriquecimientos</div><ul><li>balance completo</li><li>coste registrado</li></ul></div>
+    </div>
+  </section>
+  <div class="foot">
+    <span><b>Fases:</b> F1 gratis (valida la hipótesis)</span>
+    <span>→ F2 agente + API metered</span>
+    <span>→ F3 SABI, solo si hace falta</span>
+    <span><b>Fuera de alcance:</b> SaaS a terceros · outreach automático</span>
+  </div>
+</div>
+</body>
+</html>

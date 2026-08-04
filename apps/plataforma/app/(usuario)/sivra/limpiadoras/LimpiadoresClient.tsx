@@ -1,6 +1,7 @@
 'use client'
 import { TabChecklists, TabInformes, TabFacturacion } from './extra-tabs'
 import { useState, useEffect, useCallback } from 'react'
+import { eur } from '@/lib/dinero'
 
 // ─── Constantes ────────────────────────────────────────────────
 const PROPS = [
@@ -619,7 +620,7 @@ function TabProveedores() {
                     <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{p.nombre}</div>
                     <div style={{ fontSize: 11, color: 'var(--muted)' }}>{p.proveedor_nombre || 'Sin proveedor'} · {p.unidad}{p.referencia ? ` · Ref: ${p.referencia}` : ''}</div>
                   </div>
-                  {p.precio_unitario && <div style={{ fontWeight: 700, fontSize: 14, color: '#1B4332' }}>{Number(p.precio_unitario).toFixed(2)} €</div>}
+                  {p.precio_unitario && <div style={{ fontWeight: 700, fontSize: 14, color: '#1B4332' }}>{eur(Number(p.precio_unitario))}</div>}
                 </div>
               ))}
             </div>
@@ -743,7 +744,7 @@ function TabLenceria() {
                     {item.talla && <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 6 }}>{item.talla}</span>}
                     {bajoBajo && <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: '#c2410c' }}>⚠️ Stock bajo</span>}
                   </div>
-                  <div style={{ display: 'flex', gap: 12, fontSize: 12, alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: 12, fontSize: 12, alignItems: 'center', flexWrap: 'wrap' }}>
                     <div>
                       <span style={{ color: 'var(--muted)' }}>Disp: </span>
                       <input type="number" value={item.cantidad_disponible} min={0}
@@ -966,6 +967,12 @@ export default function LimpiadoresClient() {
           .limp-factura-grid { grid-template-columns: 1fr !important; }
           .limp-tarifa-grid { grid-template-columns: 1fr !important; }
           .limp-hide-xs { display: none !important; }
+          /* Disponibilidad: el grid de 5 columnas fijas (día · check · inicio · fin · horas)
+             no cabe en ≤320px (los 2 inputs 'time' no bajan de su min-content) → scroll
+             horizontal de la página. Pasa a flex-wrap: día a lo ancho arriba, el resto envuelve. */
+          .limp-disp-row { display: flex !important; flex-wrap: wrap !important; align-items: center !important; gap: 6px 8px !important; }
+          .limp-disp-row > span { flex: 1 0 100% !important; }
+          .limp-disp-row input[type="time"] { flex: 1 1 90px !important; min-width: 0 !important; }
         }
       `}</style>
       <div style={{ fontFamily: '-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif', minHeight: '100vh', background: 'var(--surface)' }}>

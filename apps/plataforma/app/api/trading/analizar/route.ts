@@ -1,0 +1,95 @@
+import { NextResponse, type NextRequest } from 'next/server'
+import { isRoutineAuthorized } from '@/lib/cron-auth'
+import { prisma } from '@/lib/db'
+import { tgSend } from '@/lib/telegram'
+import { mensajeCompraPaper } from '@/lib/trading-notify'
+import {
+  indicadoresDe, torneo, dimensionar, abrir,
+  superaConcentracion, superaLimiteOps, earningsInminente, bajoTendencia, factorFlojo, regimenMercado, ajustesDeStats, rvol, confirmaVolumen,
+} from '@central/module-trading'
+import type { Vela, Fundamentales } from '@central/module-trading'
+
+type Entrada = { simbolo: string; velas: Vela[]; fundamentales?: Fundamentales; opsRecientes?: number; factorScore?: number }
+
+export async function POST(req: NextRequest) {
+  if (!isRoutineAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
+  const { fecha, nav, simbolos, indice, minFactorScore } = (await req.json()) as { fecha: string; nav: number; simbolos: Entrada[]; indice?: { cierres: number[] }; minFactorScore?: number }
+  if (!fecha || !nav || !Array.isArray(simbolos)) return NextResponse.json({ error: 'payload inválido' }, { status: 400 })
+
+  // Régimen de mercado (SPY): si está risk-off (SPY<SMA200), no se abre ningún largo nuevo. Degrada a
+  // risk-on si no se pasa el índice.
+  const riskOn = indice?.cierres ? regimenMercado(indice.cierres).riskOn : true
+  // Ops recientes REALES por nombre (últimos 30 días): antes llegaba 0 siempre y la barrera era inerte.
+  const desde = new Date(new Date(fecha).getTime() - 30 * 86_400_000)
+  const ordenesRecientes = await prisma.tradingPaperOrden.findMany({ where: { fecha: { gte: desde } }, select: { simbolo: true } })
+  const opsPorNombre = new Map<string, number>()
+  for (const o of ordenesRecientes) opsPorNombre.set(o.simbolo, (opsPorNombre.get(o.simbolo) ?? 0) + 1)
+
+  // Bucle de aprendizaje: modula la confianza de cada estrategia por su rendimiento real acumulado.
+  // Solo ajusta con muestra suficiente (ajustesDeStats guarda por minN); sin historial no toca nada.
+  const statsRows = await prisma.tradingEstrategiaStats.findMany({ where: { regimen: 'todos' } })
+  const ajustes = ajustesDeStats(Object.fromEntries(statsRows.map(r => [r.estrategia, { hitRate: r.hitRate, retornoMedio: r.retornoMedio, n: r.n }])))
+
+  const ideas: Array<{ simbolo: string; estrategia: string; direccion: string; confianza: number; operada: boolean; motivo?: string; rvol?: number | null; volConfirma?: string; factorScore?: number }> = []
+
+  for (const s of simbolos) {
+    if (!s.velas?.length) continue
+    const ind = indicadoresDe(s.velas)
+    const precioRef = s.velas[s.velas.length - 1].cierre
+    const volumenRel = rvol(s.velas.map(v => v.volumen))   // volumen de hoy vs su media
+    const señales = torneo(ind, s.fundamentales ?? {}, fecha, ajustes)
+
+    // Persistir todas las señales como tesis.
+    await prisma.tradingTesis.createMany({
+      data: señales.map(se => ({
+        simbolo: s.simbolo, fecha: new Date(fecha), estrategia: se.estrategia,
+        direccion: se.direccion, confianza: se.confianza, horizonteDias: 10,
+        precioRef, indicadores: ind as object, rationale: se.rationale,
+      })),
+    })
+
+    // Ganadora = mayor confianza entre las no-neutrales.
+    const ganadora = [...señales].filter(x => x.direccion !== 'neutral').sort((a, b) => b.confianza - a.confianza)[0]
+    if (!ganadora || ganadora.direccion !== 'alcista') { ideas.push({ simbolo: s.simbolo, estrategia: ganadora?.estrategia ?? 'ninguna', direccion: ganadora?.direccion ?? 'neutral', confianza: ganadora?.confianza ?? 0, operada: false, rvol: volumenRel, volConfirma: confirmaVolumen(ganadora?.direccion ?? 'neutral', volumenRel) }); continue }
+
+    // Barreras de riesgo.
+    const cantidad = dimensionar(nav, precioRef, precioRef - 2 * (ind.atr14 ?? precioRef * 0.02), 0.01)
+    const valorPos = cantidad * precioRef
+    let motivo: string | undefined
+    if (!riskOn) motivo = 'régimen bajista (SPY<SMA200)'
+    // SELECCIÓN filtra al TIMING (Fase B): un nombre fundamentalmente flojo vs sus pares no se compra
+    // aunque el gráfico dé señal. Degrada si el agente no aporta factorScore/minFactorScore.
+    else if (factorFlojo(s.factorScore, minFactorScore)) motivo = `factor flojo (${s.factorScore?.toFixed(2)} < ${minFactorScore})`
+    else if (cantidad <= 0) motivo = 'sizing 0'
+    else if (superaConcentracion(valorPos, nav)) motivo = 'excede concentración 20%'
+    else if (superaLimiteOps(s.opsRecientes ?? opsPorNombre.get(s.simbolo) ?? 0)) motivo = 'límite de ops por nombre'
+    else if (earningsInminente(s.fundamentales?.proximoEarnings, fecha)) motivo = 'earnings inminente (≤3d)'
+    else if (bajoTendencia(precioRef, ind.sma50)) motivo = 'bajo SMA50 (tendencia de fondo bajista)'
+
+    if (!motivo) {
+      const pos = abrir(s.simbolo, cantidad, precioRef, ind.atr14 ?? precioRef * 0.02, fecha)
+      await prisma.tradingPaperOrden.create({ data: { simbolo: s.simbolo, lado: 'BUY', cantidad, precio: precioRef, fecha: new Date(fecha), motivo: `${ganadora.estrategia} conf ${ganadora.confianza}` } })
+      // Marca la tesis GANADORA (recién insertada arriba) como comprada de verdad: es la única fila
+      // (simbolo,fecha,estrategia) de esta pasada, así que el updateMany impacta exactamente esa señal.
+      // El panel «Ideas de compra del agente» filtra por `operada` → no muestra señales que el agente no compró.
+      await prisma.tradingTesis.updateMany({
+        where: { simbolo: s.simbolo, fecha: new Date(fecha), estrategia: ganadora.estrategia, direccion: 'alcista' },
+        data: { operada: true },
+      })
+      const yaAbierta = await prisma.tradingPaperPosicion.findUnique({ where: { simbolo: s.simbolo } })
+      await prisma.tradingPaperPosicion.upsert({
+        where: { simbolo: s.simbolo },
+        create: { simbolo: s.simbolo, cantidad, precioEntrada: precioRef, stop: pos.stop, abiertaEn: new Date(fecha) },
+        update: {},   // no promediar: si ya existe, no se toca
+      })
+      // Aviso inmediato por Telegram SOLO en aperturas nuevas (no si ya existía la posición). Best-effort.
+      if (!yaAbierta) {
+        await tgSend(mensajeCompraPaper(fecha, { simbolo: s.simbolo, cantidad, precio: precioRef, estrategia: ganadora.estrategia, confianza: ganadora.confianza, stop: pos.stop, pctNav: valorPos / nav })).catch(() => {})
+      }
+    }
+    ideas.push({ simbolo: s.simbolo, estrategia: ganadora.estrategia, direccion: ganadora.direccion, confianza: ganadora.confianza, operada: !motivo, motivo, rvol: volumenRel, volConfirma: confirmaVolumen(ganadora.direccion, volumenRel), factorScore: s.factorScore })
+  }
+
+  ideas.sort((a, b) => b.confianza - a.confianza)
+  return NextResponse.json({ fecha, top: ideas.slice(0, 5), total: ideas.length })
+}

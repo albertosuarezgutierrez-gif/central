@@ -67,15 +67,17 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(data, { status })
     }
 
-    // Arrancar un job nuevo
+    // Arrancar un job nuevo. ?engine=veo3-fast (default en la EF) | kling
     const tipo = sp.get('tipo') || 'restaurante'
     const prompt = sp.get('prompt') || PROMPTS[tipo] || PROMPTS['restaurante']
-    const { status, data } = await llamarEF({ action: 'start', prompt })
+    const engine = sp.get('engine') || undefined
+    const { status, data } = await llamarEF({ action: 'start', prompt, engine })
     if (status !== 200) return NextResponse.json(data, { status })
     return NextResponse.json({
       ok: true,
       jobId: data.requestId,
       modelo: data.modelo,
+      engine: data.engine,
       tipo,
       prompt,
       consultar: urlConsulta(data),
@@ -94,6 +96,7 @@ export async function POST(req: NextRequest) {
     prompt?: string
     imageUrl?: string
     resolution?: '480p' | '720p' | '1080p'
+    engine?: 'veo3-fast' | 'kling'
     jobId?: string
     statusUrl?: string
     responseUrl?: string
@@ -117,12 +120,14 @@ export async function POST(req: NextRequest) {
       prompt,
       imageUrl: body.imageUrl,
       resolution: body.resolution,
+      engine: body.engine,
     })
     if (status !== 200) return NextResponse.json(data, { status })
     return NextResponse.json({
       ok: true,
       jobId: data.requestId,
       modelo: data.modelo,
+      engine: data.engine,
       tipo,
       prompt,
       consultar: urlConsulta(data),

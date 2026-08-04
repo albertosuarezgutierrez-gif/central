@@ -1,5 +1,6 @@
 import { prisma } from './db'
 import { tgSend } from '@central/core-telegram'
+import { eur } from './dinero'
 
 const EMOJI: Record<string, string> = {
   supermercado: '🛒', restaurante_bar: '🍺', gasolina: '⛽',
@@ -55,7 +56,7 @@ export async function enviarResumenSemanal(): Promise<void> {
     const emoji = EMOJI[r.subcategoria] ?? '•'
     const cat = r.subcategoria.replace(/_/g, ' ')
     const label = (cat.charAt(0).toUpperCase() + cat.slice(1)).padEnd(18)
-    return `${emoji} ${label} €${Number(r.total).toFixed(2)}`
+    return `${emoji} ${label} ${eur(Number(r.total))}`
   })
 
   const msg = [
@@ -63,8 +64,8 @@ export async function enviarResumenSemanal(): Promise<void> {
     '',
     ...lineas,
     '',
-    `💶 Total gastos:   €${totalGastos.toFixed(2)}`,
-    `💰 Total ingresos: €${totalIngresos.toFixed(2)}`,
+    `💶 Total gastos:   ${eur(totalGastos)}`,
+    `💰 Total ingresos: ${eur(totalIngresos)}`,
   ].join('\n')
 
   await tgSend(msg)
