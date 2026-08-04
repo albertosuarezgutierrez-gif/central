@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-31T08:51:48Z",
+  "generadoEn": "2026-08-03T10:20:28Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -335,7 +335,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 28
+        "evidencias": 29
       },
       "rrhh": {
         "estado": "usado",
@@ -641,7 +641,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 33
+        "evidencias": 34
       },
       "rrhh": {
         "estado": "usado",
@@ -3298,6 +3298,7 @@
       "/api/sivra/fiscal",
       "/api/sivra/income",
       "/api/sivra/incomes",
+      "/api/sivra/incomes/backfill-reserved-at",
       "/api/sivra/inversion",
       "/api/sivra/inversion/analyze",
       "/api/sivra/limpiadoras/alerta-ventana",
@@ -3968,52 +3969,44 @@
   ],
   "novedades": [
     {
-      "titulo": "🔎 Verificación en caliente del arreglo de los ADR + techo al nº de acciones (31/07/2026).",
-      "fecha": "31/07/2026"
+      "titulo": "🔎 Revisión mensual ia.rest Tech & Stack (02/08/2026, sesión de investigación).",
+      "fecha": "02/08/2026"
     },
     {
-      "titulo": "🧯 Segunda tanda del parser de EDGAR + retrovisor honesto (31/07/2026, PR #1193).",
-      "fecha": "31/07/2026"
+      "titulo": "⏱️ Crons con timeout 60s → 300s (02/08/2026, rama `claude/audit-30-07-hv2njr`).",
+      "fecha": "02/08/2026"
     },
     {
-      "titulo": "📉 Y el retrovisor dice que el modelo valor+calidad NO bate al mercado (31/07/2026).",
-      "fecha": "31/07/2026"
+      "titulo": "🧹 «Haz tu todo»: vulns 12→3, 0 críticas (02/08/2026, rama `claude/audit-vulnerabilities-02-08-m7lwtf`).",
+      "fecha": "02/08/2026"
     },
     {
-      "titulo": "🏛️ Subastas: revisión de la cadena de ubicación — 8 fallos reales corregidos (31/07/2026).",
-      "fecha": "31/07/2026"
+      "titulo": "✅ Reparación auditoría 02/08 cerrada (02/08/2026, rama `claude/audit-vulnerabilities-02-08-m7lwtf`).",
+      "fecha": "02/08/2026"
     },
     {
-      "titulo": "🏛️ Subastas: 3 fallos de la búsqueda por dirección + el Catastro corta por volumen (31/07/2026).",
-      "fecha": "31/07/2026"
+      "titulo": "🛡️ Auditoría PROFUNDA semanal (02/08/2026).",
+      "fecha": "02/08/2026"
     },
     {
-      "titulo": "🛡️ Pricing: tres centinelas para que el motor se queje solo (31/07/2026, rama `claude/pricing-check-31-07`).",
-      "fecha": "31/07/2026"
+      "titulo": "📂 RRHH: categoría «Documentación mensual» en documentos de empresa (01/08/2026, rama `claude/programa-rrhh-m25fwd`).",
+      "fecha": "01/08/2026"
     },
     {
-      "titulo": "📉 Pricing 31/07: sistema SANO, pero agosto arranca a CERO (31/07/2026, rama `claude/pricing-check-31-07`).",
-      "fecha": "31/07/2026"
+      "titulo": "⏰ Subasta vencida seguía en «🎯 Mi radar» (01/08/2026, rama `claude/expired-auction-visible-eoow4t`).",
+      "fecha": "01/08/2026"
     },
     {
-      "titulo": "🚨 Fundamentales del radar de trading iban 2 años atrasados y MEZCLADOS (31/07/2026).",
-      "fecha": "31/07/2026"
+      "titulo": "📈 Trading: el panel de estrategias por fin discrimina + limpieza de huérfanas (01/08/2026).",
+      "fecha": "01/08/2026"
     },
     {
-      "titulo": "⚖️ Subastas: 3 defectos del lector registral + «nota simple viva» (31/07/2026).",
-      "fecha": "31/07/2026"
+      "titulo": "🗓️ Rotación mensual: julio archivado (01/08/2026).",
+      "fecha": "01/08/2026"
     },
     {
-      "titulo": "💰 Subastas: el «valor de mercado» dejaba de fabricar chollos falsos (30/07/2026, PR #1183).",
-      "fecha": "30/07/2026"
-    },
-    {
-      "titulo": "🔍 Subastas: el documento registral se lee ENTERO y «se adquiere libre» hay que ganárselo (30/07/2026, PR #1182).",
-      "fecha": "30/07/2026"
-    },
-    {
-      "titulo": "🔎 Portales privados de subastas: sondeo técnico, SIN implementar (30/07/2026).",
-      "fecha": "30/07/2026"
+      "titulo": "📊 Facturas Booking.com julio 2026 verificadas vs banco (03/08/2026).",
+      "fecha": "03/08/2026"
     },
     {
       "titulo": "🕳️ Barrido del monorepo: afirmar ausencias no comprobadas (30/07/2026, misma rama).",
@@ -4025,6 +4018,14 @@
     },
     {
       "titulo": "⚖️ Subastas — 3 partidas que faltaban en el coste real (30/07/2026, misma rama/PR #1176).",
+      "fecha": "30/07/2026"
+    },
+    {
+      "titulo": "🏠 Subastas/chollos — API OFICIAL de Idealista preparada y DORMIDA (30/07/2026, PR #1168).",
+      "fecha": "30/07/2026"
+    },
+    {
+      "titulo": "💶 Auditoría pricing dinámico pre-cutover (30/07/2026, rama `claude/dynamic-pricing-audit-4cbdxv`).",
       "fecha": "30/07/2026"
     }
   ],
@@ -4391,7 +4392,7 @@
     "packages": 36,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1153,
+    "apis": 1154,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

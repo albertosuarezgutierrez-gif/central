@@ -43,8 +43,24 @@ test('puntuarTesis falla si alcista y el precio bajó', () => {
   assert.equal(puntuarTesis(tesis(), 95).acierto, false)
 })
 
-test('bajista acierta si el precio bajó', () => {
-  assert.equal(puntuarTesis(tesis({ direccion: 'bajista' }), 95).acierto, true)
+test('bajista acierta si el precio bajó y su retorno es el de SEGUIR la tesis (positivo)', () => {
+  const r = puntuarTesis(tesis({ direccion: 'bajista' }), 95)
+  assert.equal(r.acierto, true)
+  assert.ok(Math.abs(r.retorno - 0.05) < 1e-9)   // ganó un 5%, no perdió
+})
+
+test('bajista que falla (el precio subió) anota retorno negativo', () => {
+  const r = puntuarTesis(tesis({ direccion: 'bajista' }), 110)
+  assert.equal(r.acierto, false)
+  assert.ok(Math.abs(r.retorno - -0.1) < 1e-9)
+})
+
+test('neutral está fuera del mercado: retorno 0 suba o baje el precio', () => {
+  assert.equal(puntuarTesis(tesis({ direccion: 'neutral' }), 95).retorno, 0)
+  assert.equal(puntuarTesis(tesis({ direccion: 'neutral' }), 130).retorno, 0)
+  // el acierto sigue midiendo el movimiento bruto (<2% = acertó la lateralidad)
+  assert.equal(puntuarTesis(tesis({ direccion: 'neutral' }), 101).acierto, true)
+  assert.equal(puntuarTesis(tesis({ direccion: 'neutral' }), 130).acierto, false)
 })
 
 test('agregarStats calcula hit-rate por estrategia', () => {

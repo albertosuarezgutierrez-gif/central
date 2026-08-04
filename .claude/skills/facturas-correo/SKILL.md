@@ -27,6 +27,11 @@ Flujo: Paso 0 (salud+backlog) → 1/1-bis (candidatos Gmail + subidas manuales D
   (lección del corte 23/06→12/07/2026). Forma actual y permanente (orden de Alberto 18/07/2026):
   `newer_than:3d has:attachment filename:pdf -label:PDF-guardado`. Mapfre-comisiones NO se
   captura por Vía B (PDF cifrado, por diseño).
+- **Fallo técnico de extracción ≠ «no era factura» (02/08/2026, PR #1219):** si la IA no pudo LEER
+  un correo (NIM timeout, JSON truncado), el cron lo cuenta como `sinLeer`, lo etiqueta
+  `Facturas/Extraccion-fallida` y sale con ⚠️ en el latido (`resumen-escaneo.ts`) — no se afirma
+  «0 facturas nuevas» sin haberlos leído. Ventana de escaneo 7 días: lo que falle 7 días seguidos
+  queda para revisión a mano.
 - **Etiqueta `Facturas/Procesada` (Label_11): nombre real en femenino** — usa la existente, no
   crees `Procesado`. NUNCA la pongas en hilos con `PDF-pendiente`/`Revisar` (quedarían
   excluidos de la query base y no se reprocesarían jamás).

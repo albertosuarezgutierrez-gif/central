@@ -95,7 +95,10 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
      UNION ALL SELECT 'pricing/pilot-track',      'pricing_pilot_tracking', max(created_at),     36 FROM pricing_pilot_tracking
      UNION ALL SELECT 'limpiadoras/auto-sessions','cleaning_sessions',      max(created_at),     36 FROM cleaning_sessions
      UNION ALL SELECT 'concursos-ingesta',        'concursos_licitaciones', max(actualizado_en), 12 FROM concursos_licitaciones
-     UNION ALL SELECT 'psd2-sync',                'movimientos_bancarios',  max(created_at),     30 FROM movimientos_bancarios
+     -- psd2: la huella es «hay movimientos NUEVOS», no «el cron corrió» — un finde sin cargos la
+     -- deja quieta >30h con el cron vivo (falsa alarma 02/08/2026: cron 200 a las 06:01 y ⛔ igual).
+     -- 54h cubre el finde; el guardián dedicado (psd2-health-check, <48h) sigue siendo el fino.
+     UNION ALL SELECT 'psd2-sync',                'movimientos_bancarios',  max(created_at),     54 FROM movimientos_bancarios
      UNION ALL SELECT 'correo-triaje',            'correo_cursor',          max(updated_at),      2 FROM correo_cursor
      -- AGENTES (sesiones Claude programadas) + crons de trading. Umbrales por cadencia real:
      -- diario→~30h, cada-6h→12h, SEMANAL→~192h (8 días). OJO: la huella tiene que ser la del

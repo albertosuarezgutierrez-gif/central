@@ -16,6 +16,17 @@ export const EVENTS: Record<string, number> = {
   "2026-06-06":1.40,"2026-06-12":1.40,"2026-06-13":1.60,"2026-06-14":1.60,
   "2026-06-19":1.60,"2026-06-20":1.60,"2026-06-21":1.30,"2026-06-26":1.40,
   "2026-07-03":1.40,"2026-07-16":1.50,"2026-07-18":1.30,
+  // --- Bienal de Flamenco 2026: fechas OFICIALES 9 sep – 3 oct (labienal.com, XXIV edición) ---
+  // Añadida 03/08/2026: septiembre estaba a CERO eventos en ambas fuentes pese a ser mes alto, y una
+  // reserva del Dúplex (25-28 sep, en plena Bienal) entró a 160€/noche bruto con 53 días de antelación
+  // (la mediana del Dúplex es 7). Festival de ~4 semanas: demanda repartida, pico en vie/sáb — factores
+  // moderados (1.25 laborables / 1.40 vie-sáb), no de Feria; el premio de mercado por fecha captura los
+  // picos reales cuando lleguen comps de esas fechas.
+  "2026-09-09":1.25,"2026-09-10":1.25,"2026-09-11":1.40,"2026-09-12":1.40,"2026-09-13":1.30,
+  "2026-09-14":1.25,"2026-09-15":1.25,"2026-09-16":1.25,"2026-09-17":1.25,"2026-09-18":1.40,
+  "2026-09-19":1.40,"2026-09-20":1.30,"2026-09-21":1.25,"2026-09-22":1.25,"2026-09-23":1.25,
+  "2026-09-24":1.25,"2026-09-25":1.40,"2026-09-26":1.40,"2026-09-27":1.30,"2026-09-28":1.25,
+  "2026-09-29":1.25,"2026-09-30":1.25,"2026-10-01":1.25,"2026-10-02":1.40,"2026-10-03":1.40,
   "2026-11-16":1.40,"2026-11-17":1.40,"2026-11-18":1.40,"2026-11-19":1.40,
   "2026-11-20":1.40,"2026-11-21":1.35,"2026-11-22":1.30,
   // --- Festivos nacionales / puentes recurrentes (Sevilla) — estimados por demanda observada ---

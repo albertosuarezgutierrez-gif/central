@@ -7,13 +7,9 @@ export type DocEmpresa = {
   storage_path: string; mime_type: string | null; anio: number | null; mes: number | null; subido_at: string
 }
 
-export const CATEGORIAS = [
-  { id: 'cif', label: 'CIF' },
-  { id: 'escritura', label: 'Escritura' },
-  { id: 'seguro_social', label: 'Seguro Social (TC2)' },
-  { id: 'poliza', label: 'Póliza de seguro' },
-  { id: 'otro', label: 'Otro' },
-] as const
+// La lista vive en un módulo puro para que también la usen los componentes cliente.
+export { CATEGORIAS, MESES, etiquetaCategoria, periodoDe, pideAnio, pideMes } from '@/lib/categorias-empresa'
+export type { CategoriaEmpresa, Periodo } from '@/lib/categorias-empresa'
 
 export async function listarDocumentosEmpresa(empresaId: string): Promise<DocEmpresa[]> {
   const rows = await prisma.$queryRaw<DocEmpresa[]>(Prisma.sql`

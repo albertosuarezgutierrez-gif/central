@@ -13,6 +13,54 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-08-02 (2ª pasada — revisión pedida por Alberto)** · rama `claude/revision-conversaciones-memorias-9hq32s` ·
+  4 reconciliaciones de texto: **(1)** `.claude/skills/buscador-ia/SKILL.md` + `docs/BUSCADOR-IA.md` — la cadena
+  seguía pintando Gemini como eslabón vivo y con id `gemini-2.5-flash`; el código manda: apagado por defecto
+  (gates `GEMINI_TEXTO=1`/`GEMINI_WEBSEARCH=1`, PR #1220) y alias `gemini-flash-latest`. **(2)**
+  `.claude/skills/facturas-correo/SKILL.md` — añadida la etiqueta `Facturas/Extraccion-fallida` y la regla
+  «fallo técnico ≠ no era factura» del PR #1219. **(3)** `docs/CONTEXTO-SESIONES.md` — borrada la entrada `###`
+  del 31/07 duplicada (ya archivada a mano en `docs/memoria/2026-07.md`; su «a revisar» quedó verificado hoy).
+  **(4)** `.claude/commands/auditoria-diaria.md` — umbral heartbeat de `psd2-sync` 30→54h: la huella es «hay
+  movimientos nuevos», y un finde sin cargos daba ⛔ con el cron vivo (verificado 200 a las 06:01 en logs Vercel).
+
+- **2026-08-02** · `.claude/skills/auditoria-central/SKILL.md` · corregidos varios datos stale del
+  intro y checklist: contador de apps (4→8, incluye rrhh/transporte/alquiler/almacen), contador de
+  packages (16→38), apps con Prisma para typecheck (6→7, faltaba almacen), y la afirmación de que
+  ia-rest ya vive en el schema `iarest` de la BD compartida — en realidad sigue en su proyecto
+  Supabase standalone `efncqyvhniaxsirhdxaa`, la migración está diseñada pero pendiente (ya lo
+  documentaba correctamente `ia-rest-maestro`, "Split-brain de BD") · confirmado por MCP Supabase
+  (`information_schema.schemata` del proyecto `efncqyvhniaxsirhdxaa` no tiene schema `iarest`) al
+  ejecutar la auditoría profunda semanal · commit de esta auditoría.
+- **2026-08-02** · `docs/CONTEXTO-SESIONES.md` · entrada nueva resumiendo la auditoría profunda
+  semanal (typecheck/tests/heartbeat OK, 46→12 vulns de `pnpm audit` tras el PR de bumps, drift de
+  doc corregido, hallazgo Vercel sin confirmar) · registro del trabajo de esta pasada · commit de
+  esta auditoría.
+
+- **2026-08-02** · `docs/CONTEXTO-SESIONES.md` · la entrada del latido de facturas seguía diciendo
+  «PR #1194 pendiente de merge» — el PR se mergeó el 01/08 a las 07:40 UTC (commit `9f1ba1e`), la
+  corrección de la auditoría del 01/08 se perdió porque el merge (mismo minuto, rama vieja) volvió a
+  traer el párrafo stale. Corregido: estado real es «mergeado, primera pasada del cron con el fix es
+  hoy 02/08 06:15 UTC» (`agente_latidos` sin fila `facturas_gmail` todavía, esperado) · commit de esta
+  auditoría.
+- **2026-08-02** · `apps/plataforma/CLAUDE.md` (sección Subastas) · añadidos los fixes #1210 (subasta
+  vencida seguía en el radar — filtros `SUBASTA_VIGENTE`/`RADAR_VIGENTE`) y #1213 (`estadoCargas`/
+  `titularCargas`, 5 estados, «cargas no publicadas» ya no se confundía con «sin leer») · faltaban
+  desde el 01/08, el resto de la sección Subastas documenta cada PR y estos dos no se habían anotado
+  · commit de esta auditoría.
+- **2026-08-01** · `docs/CONTEXTO-SESIONES.md` + `docs/memoria/2026-07.md` · rotación mensual
+  (321 entradas de julio archivadas con `scripts/rotar-memoria.mjs`; la entrada `### 💓 El
+  latido de facturas...` (formato heading, no `- **`) no la reconoció el script y se movió a
+  mano) · julio ya es mes cerrado, el archivo vivo debe quedar solo con agosto · commit de esta
+  auditoría.
+- **2026-08-01** · `docs/CONTEXTO-SESIONES.md` (antes de rotar) · corregido el estado de PR
+  #1194 (latido de facturas): la nota decía "pendiente de merge" y ya está mergeado (01/08
+  07:40) · dato que no se había comprobado desde el merge · commit de esta auditoría.
+- **2026-08-01** · heartbeat de crons (Supabase, 14 huellas) · 12/14 ✅; 2 ⛔ MUDO por umbral
+  (`limpiadoras/auto-sessions` 168,6h, `updates/sync` 165,8h) confirmados **falso positivo**
+  vía Vercel runtime logs (`GET .../auto-sessions` y `GET .../updates/sync` → 200 a las 05:00
+  UTC de hoy) · mismo patrón idempotente documentado desde el 02/07 (huecos legítimos sin
+  reservas/sesiones nuevas, no una caída) · no se toca el umbral (regla: solo se ajusta en
+  crons semanales/mensuales, éstos son diarios) · commit de esta auditoría.
 - **2026-07-31** · `docs/CONTEXTO-SESIONES.md` · añadida entrada de estado sobre el spec+plan
   de login con huella (WebAuthn/passkey) en plataforma (commit `6244118`, 29/07) · era un
   diseño aprobado por Alberto, sin implementar, que no quedó anotado como pendiente en la

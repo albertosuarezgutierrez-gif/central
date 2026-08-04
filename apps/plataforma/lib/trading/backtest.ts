@@ -1,7 +1,8 @@
 import { prisma } from '@/lib/db'
 import { agregarConviccion, piotroskiFScore, momentum12_1 } from '@central/module-trading'
 import { recortarFactsHasta, extraerFundamentales, companyfactsCrudo, capitalizacionCruzable, CONCEPTOS_FUNDAMENTALES, type CompanyFacts } from './edgar'
-import { puntosDiarios, type PuntoPrecio } from './precios-stooq'
+import { puntosDiariosVol, type PuntoVol } from './precios-stooq'
+import { barrasPeriodicas, senalCapitulacion } from './velas'
 import { movimientosGestorDataroma, GESTORES_DEFECTO } from './dataroma'
 import { fechasSnapshot, precioEn, retornoForward, sumarDias, cierresPeriodicos, sobreSma, type FactoresFecha } from './backtest-puro'
 
@@ -16,7 +17,7 @@ const hoyIso = () => new Date().toISOString().slice(0, 10)
 
 // Factores conocidos EN `fecha` + retornos forward. `cf` ya viene adelgazado a los conceptos usados.
 // (Vive aquí y no en backtest-puro por sus imports locales de runtime; sus piezas sí están testeadas.)
-export function factoresEnFecha(cf: CompanyFacts | null, puntos: PuntoPrecio[], fecha: string): FactoresFecha {
+export function factoresEnFecha(cf: CompanyFacts | null, puntos: PuntoVol[], fecha: string): FactoresFecha {
   const precio = precioEn(puntos, fecha)
   const cierresHasta = puntos.filter(p => p.fecha <= fecha).map(p => p.cierre)
   const momentum = momentum12_1(cierresHasta)
@@ -38,6 +39,14 @@ export function factoresEnFecha(cf: CompanyFacts | null, puntos: PuntoPrecio[], 
       fcfy = cfo != null && cfo !== 0 && mktCap && f.capex != null ? (cfo - f.capex) / mktCap : null
     }
   }
+  // Vela + volumen (H8). Ventanas equivalentes en cada marco: 12 barras mensuales = un año, y 52
+  // semanales = ese mismo año. El estudio previo se hizo en MENSUAL; el semanal se recolecta porque
+  // allí solo se pudo medir un símbolo y la muestra no daba para concluir nada.
+  // `.slice(1)`: la serie se descarga desde una fecha arbitraria, así que la PRIMERA barra siempre es
+  // un periodo a medias — su volumen sale corto y bajaría la media, inflando el volumen relativo de
+  // las barras que la tengan dentro de la ventana (falsos positivos en los snapshots más antiguos).
+  const mes = senalCapitulacion(barrasPeriodicas(puntos, fecha, 'mes').slice(1), { ventana: 12 })
+  const sem = senalCapitulacion(barrasPeriodicas(puntos, fecha, 'sem').slice(1), { ventana: 52 })
   return {
     piotroski, roic, ey, momentum, fcfy, precio,
     ret28: retornoForward(puntos, fecha, 28),
@@ -45,6 +54,8 @@ export function factoresEnFecha(cf: CompanyFacts | null, puntos: PuntoPrecio[], 
     ret91: retornoForward(puntos, fecha, 91),
     sobreSmaSem: sobreSma(cierresPeriodicos(puntos, fecha, 'sem'), 30),
     sobreSmaMes: sobreSma(cierresPeriodicos(puntos, fecha, 'mes'), 12),
+    capitulacionMes: mes.activa, caidaMes: mes.caida, volRelMes: mes.volRel,
+    capitulacionSem: sem.activa, caidaSem: sem.caida, volRelSem: sem.volRel,
   }
 }
 
@@ -64,7 +75,9 @@ export async function refrescarLoteBacktest(lote = 40): Promise<{ sembradas: num
 
   const hoy = hoyIso()
   const fechas = fechasSnapshot(hoy)
-  const desde = sumarDias(fechas[0] ?? hoy, -500)   // margen para momentum 12-1 y SMA12 mensual del primer snapshot
+  // Margen para momentum 12-1, SMA12 mensual y las ventanas de H8 (12 barras mensuales / 52 semanales
+  // + la barra parcial que se descarta) en el PRIMER snapshot: 500 días dan ~16 meses / ~71 semanas.
+  const desde = sumarDias(fechas[0] ?? hoy, -500)
 
   const filas = await prisma.tradingBacktest.findMany({
     where: { simbolo: { not: '_GURUS_' } },
@@ -78,7 +91,7 @@ export async function refrescarLoteBacktest(lote = 40): Promise<{ sembradas: num
       const crudo = fila.cik ? await companyfactsCrudo(fila.cik) : null
       // Adelgazar UNA vez a los conceptos usados; el recorte por fecha (×~22) va sobre el delgado.
       const cf = crudo ? recortarFactsHasta(crudo as CompanyFacts, '9999-12-31', CONCEPTOS_FUNDAMENTALES) : null
-      const puntos = await puntosDiarios(fila.simbolo, desde, hoy)
+      const puntos = await puntosDiariosVol(fila.simbolo, desde, hoy)
       const ok = puntos.length >= 50
       const porFecha = ok ? Object.fromEntries(fechas.map(f => [f, factoresEnFecha(cf, puntos, f)])) : null
       if (ok) conDatos++

@@ -78,3 +78,21 @@ test('sin fecha de cierre no se considera urgente', () => {
   const r = decidirAviso(base({ documentosLeidos: false, cargasConocidas: false, diasParaCierre: null }))
   assert.equal(r.decision, 'esperar')
 })
+
+test('subasta ya cerrada → nunca avisa, aunque sea impecable', () => {
+  const r = decidirAviso(base({ cerrada: true }))
+  assert.equal(r.decision, 'silenciar')
+  assert.ok(r.motivo.includes('ya ha cerrado'))
+})
+
+test('cerrada hace unas horas: `diasParaCierre` 0 no basta, manda `cerrada`', () => {
+  // `Math.ceil` de unas horas negativas da 0, el mismo valor que «cierra hoy».
+  // Sin el flag, una subasta vencida y SIN documentación leída se colaba por la
+  // vía urgente y sonaba en el Telegram como la más apremiante de todas.
+  const vencida = base({ cerrada: true, diasParaCierre: 0, documentosLeidos: false, cargasConocidas: false })
+  assert.equal(decidirAviso(vencida).decision, 'silenciar')
+  // La misma entrada, todavía viva, sí avisa (marcada como sin verificar).
+  const viva = decidirAviso({ ...vencida, cerrada: false })
+  assert.equal(viva.decision, 'avisar')
+  assert.equal(viva.sinVerificar, true)
+})

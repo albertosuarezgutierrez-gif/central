@@ -7,8 +7,16 @@
 //
 // 🚨 Si la consulta falla devolvemos lista VACÍA, y con lista vacía `evaluaReceptor` dictamina
 // 'desconocido' para todo: un fallo de BD hace que NO se descarte nada, nunca lo contrario.
+//
+// 🚨 Multi-tenant: las sociedades se leen SOLO de la cuenta dueña del buzón (misma resolución que
+// `facturas-scan`: env `FACTURAS_CUENTA_ID` → cuenta cuyo email == `GMAIL_USER` → la única real).
+// Sin ese filtro, los titulares de OTRO tenant valdrían como propios y una factura ajena pasaría
+// por «nuestra» — el fallo que este módulo viene a evitar, y encima cruzando cuentas. Si no se
+// puede determinar la cuenta, se lee sin filtro: es la lista más amplia, o sea la que MENOS
+// descarta (mismo criterio conservador que el resto del módulo).
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
+import { resolverCuentaBuzon } from './cuenta-buzon'
 import type { Titular } from './receptor'
 
 export async function cargarTitulares(): Promise<Titular[]> {
@@ -20,9 +28,18 @@ export async function cargarTitulares(): Promise<Titular[]> {
   }
 
   try {
-    const rows = await prisma.$queryRaw<{ nombre: string; cif: string | null }[]>(Prisma.sql`
-      SELECT nombre, cif FROM sociedades
-    `)
+    const cuentas = await prisma.$queryRaw<{ id: string; email: string | null; nombre: string }[]>(
+      Prisma.sql`SELECT id, email, nombre FROM cuentas`,
+    )
+    const cuentaId = resolverCuentaBuzon(
+      cuentas.map((c) => ({ id: c.id, email: c.email, esDemo: /\[seed-demo\]/i.test(c.nombre) })),
+      { facturaCuentaId: process.env.FACTURAS_CUENTA_ID, gmailUser: process.env.GMAIL_USER },
+    )
+    const rows = await prisma.$queryRaw<{ nombre: string; cif: string | null }[]>(
+      cuentaId
+        ? Prisma.sql`SELECT nombre, cif FROM sociedades WHERE cuenta_id = ${cuentaId}`
+        : Prisma.sql`SELECT nombre, cif FROM sociedades`,
+    )
     for (const r of rows) out.push({ nif: r.cif, nombre: r.nombre })
   } catch (e) {
     console.error('[titulares] no se pudieron leer las sociedades:', e)

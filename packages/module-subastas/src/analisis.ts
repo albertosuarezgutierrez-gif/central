@@ -11,6 +11,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 
 import type { SubastaInmueble } from './types.ts'
+import { estadoCargas, type AdjuntoFicha } from './cargas.ts'
 
 export type Nivel = 'verde' | 'ambar' | 'rojo'
 
@@ -33,7 +34,9 @@ export interface AnalisisDocumental {
 export function analisisDocumental(
   s: SubastaInmueble,
   notasEdicto: string | null | undefined,
-  documentos?: Array<{ legible?: boolean | null }> | null,
+  documentos?: AdjuntoFicha[] | null,
+  /** `false` en las fuentes sin ficha documental (Junta): ahí no hay nada que revisar. */
+  publicaAdjuntos = true,
 ): AnalisisDocumental {
   const puntos: PuntoAnalisis[] = []
   const notas = notasEdicto ?? null
@@ -52,12 +55,25 @@ export function analisisDocumental(
   }
 
   // ── Cargas anteriores (las que NO se cancelan con la adjudicación) ────────
-  if (!(s.cargasConocidas ?? false)) {
-    puntos.push({ clave: 'cargas', nivel: 'ambar', detalle: 'Cargas no publicadas: pedir certificación registral antes de pujar.' })
-  } else if ((s.cargas ?? 0) > 0) {
+  // Cinco estados y no dos: «no lo hemos leído» manda a abrir un PDF que ya
+  // tenemos enlazado, y «el BOE no lo publica» manda al Registro. Decir lo
+  // segundo cuando pasa lo primero le costó a Alberto una ficha entera el
+  // 01/08/2026 (SUB-JA-2026-264478, con su certificación publicada y sin leer).
+  const cargas = estadoCargas({ cargas: s.cargas, cargasConocidas: s.cargasConocidas, documentos, publicaAdjuntos })
+  if (cargas.estado === 'subsisten') {
     puntos.push({ clave: 'cargas', nivel: 'rojo', detalle: 'Hay cargas anteriores que subsisten y se suman al precio.' })
-  } else {
+  } else if (cargas.estado === 'sin_cargas') {
     puntos.push({ clave: 'cargas', nivel: 'verde', detalle: 'Sin cargas anteriores subsistentes publicadas.' })
+  } else if (cargas.estado === 'publicadas_sin_leer') {
+    puntos.push({
+      clave: 'cargas',
+      nivel: 'ambar',
+      detalle: `El BOE SÍ publica «${(cargas.documento?.titulo ?? 'certificación de cargas').trim()}», pero aún no se ha analizado: ábrela antes de pujar.`,
+    })
+  } else if (cargas.estado === 'sin_revisar') {
+    puntos.push({ clave: 'cargas', nivel: 'ambar', detalle: 'Cargas sin comprobar: la ficha del BOE todavía no se ha revisado.' })
+  } else {
+    puntos.push({ clave: 'cargas', nivel: 'ambar', detalle: 'Cargas no publicadas: pedir certificación registral antes de pujar.' })
   }
 
   // ── Proindiviso: se compra un problema, no un inmueble ────────────────────

@@ -1,7 +1,7 @@
 // Cron diario del agente de facturas: lee Gmail + Drive, imputa/encola y avisa.
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
-import { listarCandidatos, marcarProcesado } from '@/lib/agente-facturas/gmail'
+import { listarCandidatosConLimite, marcarProcesado } from '@/lib/agente-facturas/gmail'
 import { listNuevos, getContenido, archivar, subir } from '@/lib/agente-facturas/drive'
 import { extraerDesdeBuffer } from '@/lib/agente-facturas/extraer'
 import { procesarFactura, clasificarDocumento, type ProcesarResult } from '@/lib/agente-facturas/procesar'
@@ -50,7 +50,9 @@ export async function GET(req: NextRequest) {
   try {
     const desde = new Date(Date.now() - horas * 3600_000)
     const etiqueta = process.env.GMAIL_FACTURAS_LABEL || undefined
-    const correos = await listarCandidatos({ desde, etiqueta })
+    // `buzon` viaja hasta `marcarProcesado`: los UID de IMAP son por buzón, y con
+    // `GMAIL_FACTURAS_LABEL` puesta el marcado contra INBOX no encontraba nada.
+    const { correos, buzon } = await listarCandidatosConLimite({ desde, etiqueta })
     for (const c of correos) {
       if (agotado()) break
       if (c.sinAdjunto) { sinAdjunto.push({ from: c.from, subject: c.subject }); continue }
@@ -88,7 +90,7 @@ export async function GET(req: NextRequest) {
           console.error('[scan] adjunto email error:', e)
         }
       }
-      if (imputadoAlguno) await marcarProcesado(c.uid).catch(() => {})
+      if (imputadoAlguno) await marcarProcesado(c.uid, undefined, buzon).catch(() => {})
     }
   } catch (e) {
     console.error('[scan] Gmail error:', e)

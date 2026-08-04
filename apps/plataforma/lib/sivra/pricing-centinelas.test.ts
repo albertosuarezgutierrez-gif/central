@@ -4,6 +4,8 @@ import {
   decidirEventoSinRespaldo,
   decidirEventoNoCatalogado,
   decidirPrecioPorPlaza,
+  decidirCompsDeOtroAforo,
+  factorAforo,
 } from './pricing-centinelas.ts'
 
 // ─── 1. Evento declarado que el mercado no respalda ──────────────────────────────────────────
@@ -112,4 +114,57 @@ test('el ratio de canal se puede afinar (la venta directa no paga comision)', ()
   const directa = decidirPrecioPorPlaza({ precio: 280, plazas: 12, ratioCanal: 1 })
   assert.equal(canal.alerta, true)
   assert.equal(directa.alerta, false)
+})
+
+// ─── 4. comparables de otro aforo ───────────────────────────────────────────────────────────
+
+test('factorAforo replica la funcion SQL pricing_factor_aforo', () => {
+  // Valores medidos contra Postgres el 01/08/2026 (SELECT pricing_factor_aforo(...)).
+  assert.equal(factorAforo(12, 12), 1)
+  assert.equal(factorAforo(2, 2), 1)
+  assert.ok(Math.abs(factorAforo(12, 8) - 1.5620696159886159) < 1e-9)
+  assert.ok(Math.abs(factorAforo(5, 4) - 1.2782064782044662) < 1e-9)
+  // Recortes: ni regala ni multiplica sin freno.
+  assert.equal(factorAforo(12, 1), 2.5)
+  assert.equal(factorAforo(1, 12), 0.6)
+})
+
+test('el caso House: casa de 12 plazas medida con comps de 8 (01/08/2026)', () => {
+  const v = decidirCompsDeOtroAforo({ plazasPiso: 12, comps: [{ plazas: 8, n: 30 }] })
+  assert.equal(v.alerta, true)
+  assert.equal(v.evaluado, true)
+  assert.match(v.motivo, /EXTRAPOLADO x1\.56/)
+})
+
+test('una plaza de diferencia NO avisa: es ruido de como se cuentan los sofas-cama', () => {
+  // Luxury Busto: 5 plazas medidas con comps de 4 → x1,28, por debajo del umbral de 1,35.
+  const v = decidirCompsDeOtroAforo({ plazasPiso: 5, comps: [{ plazas: 4, n: 30 }] })
+  assert.equal(v.alerta, false)
+  assert.equal(v.evaluado, true)
+})
+
+test('con comps del propio aforo en mayoria, el ancla esta medida', () => {
+  const v = decidirCompsDeOtroAforo({ plazasPiso: 12, comps: [{ plazas: 12, n: 20 }, { plazas: 8, n: 10 }] })
+  assert.equal(v.alerta, false)
+  assert.equal(v.evaluado, true)
+  assert.match(v.motivo, /medida/)
+})
+
+test('manda el aforo DOMINANTE, no el primero de la lista', () => {
+  // 2 comps de 12 y 28 de 8: la cuota propia (6%) no llega, y quien fija la extrapolacion es el 8.
+  const v = decidirCompsDeOtroAforo({ plazasPiso: 12, comps: [{ plazas: 12, n: 2 }, { plazas: 8, n: 28 }] })
+  assert.equal(v.alerta, true)
+  assert.match(v.motivo, /de 8 plazas/)
+})
+
+test('sin muestra o sin aforo NO se opina (regla 1 del modulo)', () => {
+  assert.equal(decidirCompsDeOtroAforo({ plazasPiso: 12, comps: [{ plazas: 8, n: 3 }] }).evaluado, false)
+  assert.equal(decidirCompsDeOtroAforo({ plazasPiso: null, comps: [{ plazas: 8, n: 30 }] }).evaluado, false)
+  assert.equal(decidirCompsDeOtroAforo({ plazasPiso: 12, comps: [] }).evaluado, false)
+})
+
+test('comps MAS GRANDES que el piso tambien avisan (la extrapolacion va en los dos sentidos)', () => {
+  // Un apartamento de 4 medido con casas de 10: factor 0,43 → recortado a 0,6, desvio 1,67.
+  const v = decidirCompsDeOtroAforo({ plazasPiso: 4, comps: [{ plazas: 10, n: 20 }] })
+  assert.equal(v.alerta, true)
 })

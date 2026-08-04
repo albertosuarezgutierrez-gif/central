@@ -5,8 +5,14 @@
 //
 // Camino primario: OpenRouter con el Director eligiendo modelo (+ fallback nativo entre modelos).
 // Si OpenRouter falla o está bloqueado por presupuesto diario → cadena clásica GRATIS de siempre
-// (NIM → Groq → Gemini → Kimi) y Gemini con búsqueda como último intento. Degrada, nunca muere.
-// El control de presupuesto MENSUAL (429) y la autenticación siguen siendo del route HTTP.
+// (NIM → Groq → Kimi). Degrada, nunca muere. El control de presupuesto MENSUAL (429) y la
+// autenticación siguen siendo del route HTTP.
+//
+// 🚨 GEMINI FUERA DE LA CADENA POR DEFECTO (02/08/2026): la key lleva desde el 16/06 sin un solo
+// éxito (429 de cuota — 544 llamadas fallidas en 30 días, Check 12 del health-check) y el último
+// intento con `geminiSearch` de aquí solo añadía un timeout de pago y filas rojas en `ai_usos`.
+// Decisión de Alberto: «usa OpenRouter». Se reactiva con `GEMINI_TEXTO=1` cuando haya una key con
+// cuota (mismo patrón que `GEMINI_WEBSEARCH` en `lib/websearch.ts`).
 
 import { aiComplete, geminiSearch, openrouterChatEx, type NimChatMessage } from '@central/core-ai'
 import {
@@ -143,10 +149,10 @@ export async function chatConDirector(messages: NimChatMessage[], opts: ChatDire
     return { text, modelo: modeloCadena ?? null }
   } catch (e) {
     const msg = e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 200) : 'error'
-    console.warn('[ai-gateway] chat NIM falló, intento Gemini:', msg)
-    // Fallback de proveedor DENTRO de la pasarela: NIM → Gemini (si hay key). Así las verticales
-    // no necesitan ninguna key de proveedor propia.
-    const geminiKey = process.env.GEMINI_API_KEY
+    console.warn('[ai-gateway] chat: cadena clásica falló:', msg)
+    // Último intento con Gemini SOLO si está reactivado a mano (GEMINI_TEXTO=1, ver cabecera):
+    // con la key sin cuota este eslabón era puro peaje.
+    const geminiKey = process.env.GEMINI_TEXTO === '1' ? process.env.GEMINI_API_KEY : undefined
     if (geminiKey) {
       const t1 = Date.now()
       try {

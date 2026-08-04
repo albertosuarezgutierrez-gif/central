@@ -58,7 +58,7 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
 | `EB_PIS_ENABLED` | `true` activa el flujo Enable Banking PIS. Dejar vacío/omitido para usar el fallback SEPA XML pain.001. **Pendiente confirmar tier gratuito Enable Banking.** |
 | `EB_DEBTOR_IBAN` | IBAN de Kutxabank desde el que se debitan los pagos PIS. |
 | `NVIDIA_API_KEY` | LLM primario de la pasarela de IA (`/api/ai/*`) y de concursos (NIM, gratis). |
-| `GEMINI_API_KEY` | Búsqueda web + **fallback de texto GRATIS** de `aiComplete` (cadena NIM → Groq → **Gemini** → Kimi; `geminiChat`, sin grounding) y de la pasarela (`/api/ai/chat`). Se activa solo con la key ya presente → evita "IA no disponible" sin coste. Override de modelo: `GEMINI_BRAIN_MODEL`. **Búsqueda web (13/07/2026):** toda la búsqueda (endpoint `/api/ai/search`, cron `eventos/websearch`, `seo-refresh`) va por **`lib/websearch.ts::buscarWeb`** — Gemini grounding (gratis) primero y, si está en racha de 429, el **plugin `web` de OpenRouter** como suplente de pago (~0,02€/llamada, respeta el presupuesto diario; tarifa override `AI_PRECIO_WEBPLUGIN_EUR`). Ambos intentos en `ai_usos`. |
+| `GEMINI_API_KEY` | **🚨 GEMINI APAGADO POR DEFECTO EN TODO (01-02/08/2026)** — la key lleva desde el 16/06 con **429 de cuota permanente** (544 llamadas/30 días, 0 éxitos; Check 12 del health-check) y solo pagaba timeouts antes de caer a OpenRouter. Decisión de Alberto: «usa OpenRouter». Dos gates para reactivar cuando haya key con cuota: **`GEMINI_WEBSEARCH=1`** reengancha el grounding como primario en `lib/websearch.ts::buscarWeb` (si no, la búsqueda — `/api/ai/search`, cron `eventos/websearch`, `seo-refresh` — va directa al **plugin `web` de OpenRouter**, ~0,02€/llamada, respeta presupuesto diario, tarifa override `AI_PRECIO_WEBPLUGIN_EUR`); **`GEMINI_TEXTO=1`** reengancha el eslabón de texto en la cadena clásica de `aiComplete` (`@central/core-ai`) y el último intento de `lib/pasarela.ts`. La key sigue usada por los embeddings de la caché semántica (`IA_CACHE_SEMANTICA`, best-effort). Override de modelo texto: `GEMINI_BRAIN_MODEL`. |
 | `GROQ_API_KEY` | **Fallback de texto gratis de la pasarela** (NIM → **Groq** `openai/gpt-oss-120b`, gratis rate-limited) en `aiComplete`/`aiTools`. Sin ella el fallback queda inactivo (no rompe). Override de modelo: `GROQ_BRAIN_MODEL`. |
 | `MOONSHOT_API_KEY` | **Último fallback de texto** (… → **Kimi**/Moonshot, de pago) en `aiComplete`. Sin ella queda inactivo (no rompe). Opcionales: `MOONSHOT_MODEL` (default `kimi-k2.6`), `MOONSHOT_BASE_URL` (usa `.cn` si aplica). |
 | `OPENROUTER_API_KEY` | **Camino PRIMARIO de la pasarela** (09/07/2026): agregador OpenRouter con el **Agente Director** eligiendo modelo por petición + fallback nativo entre modelos. Sin ella todo queda como antes (cadena gratis NIM→Groq→Gemini→Kimi). Opcionales: `OPENROUTER_MODEL` (default `deepseek/deepseek-chat`), `OPENROUTER_FALLBACK_MODELS` (csv de suplentes), `OPENROUTER_BASE_URL`, `OPENROUTER_REFERER`/`OPENROUTER_TITLE` (atribución). |
@@ -511,6 +511,20 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
   ficha documental (Junta) pasan `publicaAdjuntos=false` para no quedar «pendientes» para siempre. Regla
   general: **no afirmes una ausencia con un dato que aún no has mirado** — al añadir una columna de
   enriquecimiento, la UI debe distinguir «no lo sé todavía» de «no hay».
+- **⏰ Subasta vencida seguía «viva» en el radar (01/08/2026):** ningún camino de LECTURA filtraba por fecha —
+  solo el DELETE diario de `archivarPasadas` (06:15 UTC, con 1 día de gracia) limpiaba la bandeja, así que una
+  subasta cerrada seguía pintándose pujable 14-38h (o para siempre si el cron fallaba). Filtros canónicos
+  **`SUBASTA_VIGENTE`/`RADAR_VIGENTE`/`RADAR_CON_CORPUS`** en `lib/subastas-radar.ts`, aplicados a la SSR de
+  `/subastas`, `GET /api/subastas/{radar,mapa}` y el cron `subastas-avisos`; `archivarPasadas` borra sin gracia.
+  De regalo: `decidirAviso` gana `cerrada` (evita que «cerró hace horas» suene como «cierra hoy, urgentísimo»)
+  y el aviso vuelve a leer `valor_orientativo` (no se seleccionaba, la guarda de rentabilidad nunca saltaba).
+- **⚖️ «Cargas no publicadas» ya no se confunde con «sin leer todavía» (01/08/2026):** `cargas_conocidas`
+  colapsaba dos cosas distintas en el mismo `false` — el BOE no publica cargas vs. sí las publica pero el
+  lector aún no las abrió. Nuevos **`estadoCargas`/`titularCargas`** (5 estados: subsisten/sin_cargas/
+  publicadas_sin_leer/no_publicadas/sin_revisar) en `module-subastas/cargas.ts`, consumidos por la ficha y por
+  `analisisDocumental`. El gate de rentabilidad `mereceAnalisisProfundo` dejó de bloquear también la LECTURA
+  de cargas: si la ficha publica el documento se lee igual aunque el flip no compense. `LECTOR_VERSION` 4→5
+  (relee lo ya procesado), documentos de cargas se descargan primero en la cola.
 - **🔎 Referencia catastral POR DIRECCIÓN — idea de Alberto (30/07/2026):** el BOE publica la dirección casi siempre pero la referencia catastral solo a veces (5 de 34 vigentes), y sin referencia no hay punto exacto. Cadena nueva en `lib/subastas/enriquecer.ts`: `paramsDnploc()` (módulo) saca sigla+vía+número del texto registral → **`resolverNombreVia()`** consulta el callejero (`ConsultaVia`, busca por prefijo) porque **`Consulta_DNPLOC` exige el nombre EXACTO y el Catastro archiva los artículos al final** («Avenida de Madrid» → **«MADRID DE»**) → **`buscarRefPorDireccion()`** (`Consulta_DNPLOC`) devuelve los inmuebles del portal → si todos comparten parcela, esa es la referencia (`parcelaUnica`; si mezcla parcelas la dirección era ambigua y se devuelve `null` en vez de adivinar) → `Consulta_CPMRC` da el punto exacto. **Acierto real medido: 4 de 16** direcciones del corpus; los fallos son por datos de ORIGEN imprecisos (parcelas de polígono, «S/N», direcciones antiguas, locales sin portal propio), no por el parser — verificado a mano que ni «MADRID» ni «MADRID DE» tienen el nº 78 en Catastro. Degrada al centroide del municipio, nunca rompe. ⚠️ **Trampa del parser (costó 10 de 16 fallos):** NO cortar la dirección por la primera coma — en español el número del portal va justo DETRÁS («CALLE ALPECHÍN, 41»). ⚠️ **Los DATOS del bien (m²/año/uso) exigen la referencia de 20:** con la de parcela (14) `Consulta_DNPRC` devuelve el LISTADO del edificio sin bloque `<bico>` y el parseo sale vacío, así que un portal con varios pisos da ubicación exacta pero no datos del piso concreto (no se sabe cuál se subasta).
 - **El enriquecimiento ya no reintenta fichas del BOE para fuentes que no las tienen (30/07/2026):** las filas con `fuente <> 'boe'` (23 lotes de la Junta) entraban en `bajarFicha`, fallaban SIEMPRE y —al ir primeras por `ORDER BY enriquecida_at NULLS FIRST`— **monopolizaban la cola sin enriquecerse nunca**. Ahora esas filas hacen solo su geocodificación y marcan `enriquecida_at`. Al añadir una fuente nueva sin ficha en el Portal, cae en esta rama sola.
 - **Aviso Telegram por subasta** (no agregado si ≤10/día) con botones `subr_seguir`/`subr_descartar` (prefijo `subr_` en el webhook) — seguir = alta idempotente en `subastas_seguidas`; descartar registra la decisión (base de un aprendizaje futuro, aún no implementado).
@@ -548,6 +562,51 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
   nadie — ver el landmine en `apps/ialimp/CLAUDE.md`) y además avisa si hay `sync_error`, porque el sync
   marca la fecha aunque la pasada haya fallado. Es infraestructura del SaaS de Alberto, **no** el backlog
   operativo de Vanessa (eso sigue vetado, ver Check 6 retirado).
+- **🚨 «0 facturas nuevas» tapaba los correos que la IA no supo leer (02/08/2026).** Con el latido ya
+  arreglado, la primera pasada buena reportó «0 factura(s) nueva(s)» **con la extracción por IA fallando
+  en los logs** (NIM timeout, Groq JSON truncado). El motivo: `escanearNuevasFacturas` descartaba con un
+  `if (!importe) continue` mudo, así que un correo ilegible no contaba como nueva, ni como pendiente, ni
+  dejaba rastro — el mismo «no lo sé» disfrazado de «no hay», un nivel por debajo del latido. Fix:
+  **`aiExtractInvoiceDetallado`** (en `lib/ai-client.ts`) distingue **`'tecnico'`** (ningún modelo
+  respondió → NO se ha leído) de **`'sin_datos'`** (respondió y no era factura → SÍ se ha leído); solo el
+  primero cuenta como `sinLeer`, se etiqueta en Gmail (**`Facturas/Extraccion-fallida`**, cola persistente
+  que sobrevive al contenedor) y sale con ⚠️ en el parte del latido vía el helper PURO
+  `lib/agente-facturas/resumen-escaneo.ts` (`detalleEscaneo`/`recuentoFiable`, testeado). ⚠️ Límite
+  asumido y documentado: la ventana del escaneo es de 7 días, así que un correo que falle 7 días seguidos
+  deja de reintentarse solo y se queda en la etiqueta para revisión a mano — no se promete un reintento
+  eterno. Al añadir un descarte nuevo en un agente, la pregunta es siempre la misma: ¿esto es «he mirado
+  y no hay» o «no he podido mirar»? Si es lo segundo, tiene que contarse y dejar cola.
+- **🚨 «0 comps» del barrido de mercado eran 44 búsquedas VACÍAS (02/08/2026).** Primera pasada vigilada
+  de `sivra_mercado_sweep`: `0 comps en 44 ventanas`, latido en rojo, sin un solo error. No era el mercado
+  ni la IA: **Serper devolvía `organic: []`** para la consulta con el operador `site:booking.com` (los 41
+  prompts que llegaron a la pasarela pesaban 149-278 tokens contando la respuesta, contra los 576-933 del
+  scraper diario `mercado/cron`, que sí trae comps con una consulta abierta). Con la búsqueda vacía la IA
+  responde `{"apartments":[]}` —correctamente— y el `catch { return [] }` de la extracción remataba: un
+  «no he podido mirar» servido como «no hay mercado». Fixes: (a) `serperSearch` devuelve **cuántos
+  resultados** trajo y aprovecha `answerBox`+`sitelinks` como el cron diario; (b) `extractPrices` separa
+  `'sin_leer'` (fallo técnico) de leído-sin-precios; (c) **segunda consulta ABIERTA** (sin `site:`) cuando
+  la primera vuelve vacía, acotada por `SIVRA_SWEEP_MAX_ABIERTAS` (default 20) porque cada intento es una
+  búsqueda de pago; (d) el parte y el `ok` salen del helper PURO **`lib/sivra/resumen-sweep.ts`**
+  (`detalleBarrido`/`barridoFiable`, testeado). ⚠️ **La consulta abierta trae mercado pero puede no
+  distinguir la fecha**, y un corpus plano etiquetado con fechas futuras es una temporada inventada: por
+  eso `sinSenalDeTemporada` marca la pasada como NO fiable si todas las fechas de un aforo acaban con los
+  mismos comps al mismo precio (≥3 fechas). Sin comps propios de la fecha el motor cae al ancla global,
+  que está dominada por las fechas cercanas y más baratas.
+- **🚨 LANDMINE — la huella se escribe DENTRO del trabajo que vigila: si la función muere, no hay
+  huella (31/07/2026).** El mismo día de estrenar el vigía saltó «🧾 Escaneo de facturas: sin ninguna
+  señal registrada» y la nota mandaba a mirar IMAP/app-password. No era eso: `facturas-scan` corría
+  todos los días y **moría en 504** («Task timed out after 60 seconds», 3 de sus últimas 4 pasadas)
+  a mitad del escaneo — con facturas ya insertadas (IONOS y Punto y Coma ese 06:16) pero sin llegar
+  jamás a `registrarLatido`, que estaba al final. Tres arreglos, aplicables a cualquier agente nuevo:
+  (a) **`maxDuration` 60 → 300** y **presupuesto de tiempo explícito** (`escanearNuevasFacturas(…, {deadline})`
+  y `listarCandidatosConLimite`, que corta el listado IMAP): subir el techo solo mueve la pared, el
+  presupuesto es lo que garantiza que la pasada VUELVE; (b) **latido de INTENTO al empezar** (`ok=false`,
+  no toca `ultimo_ok_at`) + **latido definitivo justo después del escaneo**, nunca al final de la ruta —
+  la huella del buzón no puede depender de que la conciliación bancaria posterior termine; (c) `evaluarLatido`
+  recibe también `ultimo_at` y `detalle` para **distinguir «no se dispara» de «se dispara y no termina»**
+  (antes ambas eran el mismo «sin ninguna señal» y mandaban a buscar al sitio equivocado). Un listado IMAP
+  truncado devuelve `ok:false`: se ha visto MEDIO buzón, y eso no es haberlo mirado. Los `pendientes`
+  van en el `detalle` (se retoman en la pasada siguiente, dedupe por `gmail_uid`).
 - **Una sonda que revienta ya NO se traga en silencio**: va en un bloque aparte del Telegram, «Sin poder
   comprobar — esto NO es "todo bien"». Un vigía averiado que calla es un parte de buena salud falso.
 

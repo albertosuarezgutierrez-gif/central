@@ -37,6 +37,19 @@
 | Estado vivo del proyecto | `docs/CONTEXTO-SESIONES.md` (entradas de arriba) |
 | Estructura del monorepo | `MATRIZ.md` |
 
+## Mapeo de IDs Booking.com ↔ propertyId Smoobu (verificado 03/08/2026)
+| ID Booking.com | Nombre en factura | propertyId Smoobu | Banco |
+|---|---|---|---|
+| 2888928 | Dúplex center | `prop_duplex_center` | BBVA ****1175 |
+| 4340072 | Socorro | pendiente confirmar (`prop_house_sevillana`?) | Kutxa ****0855 |
+| 4771238 | Bustos Tavera | pendiente confirmar (`prop_busto_reform` o `prop_luxury_busto`) | Kutxa ****0855 |
+| 2039943 | Socorro 24 | pendiente confirmar (`prop_house_sevillana`?) | Kutxa ****0855 |
+
+⚠️ `PISOS_TURISTICOS` en `conciliacion-booking.ts` lista solo 3 IDs internos (sin `prop_duplex_center` que va por BBVA);
+revisar si falta `prop_socorro_24` o si 2039943 es `prop_house_sevillana` con listado propio.
+Las facturas de comisión de Booking llegan a primeros de mes para el mes anterior;
+el agente de monitorización (`trig_012T62U4LsM27GP8VKnBFifG`, 3x/día) las detecta automáticamente en Drive.
+
 ## Agente de mensajería con huéspedes (Fase 1 — propone, Alberto aprueba)
 Vive en **`apps/plataforma/lib/sivra/agente-huesped/*`** (NO en sivra). Responde mensajes de huéspedes de
 Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/sivra/mensajes/auto-reply`

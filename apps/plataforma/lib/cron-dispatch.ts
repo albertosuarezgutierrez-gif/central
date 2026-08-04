@@ -18,6 +18,12 @@ export const CRON_JOBS: CronJob[] = [
   { path: '/api/cron/trading-watchdog', schedule: '30 6 * * 2-6' },
   { path: '/api/cron/trading-cohetes-rebalanceo', schedule: '30 9 * * 1' },
   { path: '/api/cron/trading-cohetes-track', schedule: '0 7 * * 2-6' },
+  // 🚨 El retrovisor (trading_backtest) se quedó SIN cron: la ruta existía pero no estaba en este
+  // manifiesto, así que la tabla llevaba congelada desde el 19/07/2026 mientras la pantalla seguía
+  // pintando sus cifras como si fueran de hoy. Es la medición punto-en-el-tiempo de la que dependen
+  // las hipótesis del pre-registro (H4 en su día, H8 ahora), y sin ella nunca se resolverían.
+  // 40 símbolos por pasada, cada 2 h → el ciclo del universo (~1.000 filas) tarda ~2 días.
+  { path: '/api/cron/trading-backtest', schedule: '10 */2 * * *' },
   { path: '/api/cron/agentes-latido', schedule: '45 7 * * *' },
   { path: '/api/cron/paper-tracker', schedule: '0 10 * * 1' },
   { path: '/api/cron/resumen-mensual', schedule: '0 8 1 * *' },
@@ -39,7 +45,12 @@ export const CRON_JOBS: CronJob[] = [
   { path: '/api/cron/psd2-sync', schedule: '0 6 * * *' },
   { path: '/api/sivra/expenses/fijos/generar', schedule: '0 6 1 * *' },
   { path: '/api/sivra/mercado/cron', schedule: '15 7 * * *' },
-  { path: '/api/sivra/mercado/sweep', schedule: '0 3 * * 0' },
+  // DIARIO desde el 01/08/2026 (era semanal, domingos): con una pasada a la semana el corpus tenía
+  // 5-7 fechas POR MES —octubre, el mejor mes de Sevilla, con el último barrido de hacía 15 días— y
+  // los centinelas de evento no llegaban nunca a la muestra mínima. El barrido es idempotente
+  // (`ON CONFLICT` por search_date) y ahora incluye las fechas de evento, así que repetirlo a diario
+  // refresca lo que se está vendiendo en vez de fotografiar el mismo finde cada siete días.
+  { path: '/api/sivra/mercado/sweep', schedule: '0 3 * * *' },
   { path: '/api/sivra/pricing/guard', schedule: '30 7 * * *' },
   { path: '/api/sivra/pricing/experiments/check-results', schedule: '0 8 * * *' },
   { path: '/api/sivra/pricing/experiments/digest', schedule: '0 9 * * 1' },
@@ -59,8 +70,13 @@ export const CRON_JOBS: CronJob[] = [
   { path: '/api/sivra/resumen-semanal', schedule: '0 9 * * 1' },
   { path: '/api/sivra/expenses/agent/scan', schedule: '0 6 * * *' },
   { path: '/api/sivra/expenses/agent/resumen-mensual', schedule: '0 9 1 * *' },
-  { path: '/api/sivra/eventos/sync', schedule: '0 4 * * 1' },
-  { path: '/api/sivra/eventos/websearch', schedule: '0 5 * * 1' },
+  // DIARIOS desde el 01/08/2026 (eran semanales, lunes). Un evento que se anuncia el martes tardaba
+  // hasta 6 días en llegar al motor, y si el dispatcher se saltaba ESE lunes (el catch-up solo cubre
+  // 15 min) se perdía la semana entera en silencio. Ambos hacen upsert idempotente y solo escriben
+  // cuando encuentran algo nuevo, así que repetirlos es barato: el de Ticketmaster no cuesta tokens y
+  // el de búsqueda web va contra el presupuesto diario de la pasarela como cualquier otra llamada.
+  { path: '/api/sivra/eventos/sync', schedule: '0 4 * * *' },
+  { path: '/api/sivra/eventos/websearch', schedule: '0 5 * * *' },
   { path: '/api/cron/cima-liq', schedule: '30 7 * * *' },
   { path: '/api/cron/facturas-scan', schedule: '15 6 * * *' },
   { path: '/api/cron/facturas-resumen-semanal', schedule: '15 9 * * 1' },

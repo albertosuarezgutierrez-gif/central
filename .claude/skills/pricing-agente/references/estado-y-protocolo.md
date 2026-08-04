@@ -58,10 +58,12 @@ el fallo era doble y sistémico:
   acepta el factor de `pricing_eventos_auto` y el motor le pasa el mismo que usa para el precio. Antes solo leía
   el calendario, así que los 3 días de **Karol G** (factor 2,5, solo en la tabla) tenían el suelo de un junio
   cualquiera: subían de precio pero podían deslizarse al mínimo si sus comps caducaban.
-- **🕳️ HUECOS DE EVENTOS vivos (calendario + tabla, próximos 12 meses):** **septiembre 2026 = CERO eventos en
-  ambas fuentes** pese a ser mes alto (`SEASONAL` 1,40) y con ventas reales de House a 449-847€/noche — ahí cae
-  la **Bienal de Flamenco** (años pares), pendiente de confirmar fechas con Alberto. Julio 2027 también vacío
-  (límite del horizonte). Agosto 2026 solo tiene el Sevilla-Rayo. El resto de meses está cubierto.
+- **🕳️ HUECOS DE EVENTOS vivos (calendario + tabla, próximos 12 meses):** ~~septiembre 2026 = CERO eventos~~
+  **→ CERRADO 03/08/2026: la Bienal de Flamenco 2026 (fechas OFICIALES 9 sep – 3 oct, labienal.com) está en el
+  calendario** (1,25 laborables / 1,30 dom / 1,40 vie-sáb) tras la reserva del Dúplex 25-28 sep a 159,63€/noche
+  bruto con el mercado de ese finde a p50 258€ (4pl) / 984€ (12pl) — comps de 4 findes de Bienal cargados en
+  `market_rates` (barrido de sesión 03/08). Julio 2027 sigue vacío (límite del horizonte). Agosto 2026 solo
+  tiene el Sevilla-Rayo. El resto de meses está cubierto.
 - **Horizonte vs calendario:** `PRICING_HORIZON_DAYS`=365 y el calendario acaba el **2027-05-02** → may-jul 2027
   se tarifica sin eventos de calendario (solo lo que traiga la tabla). El watchdog de `pilot-track` avisa.
 - **Costes por noche (recalculados con datos vivos; detalle en `pricing_aprendizaje/ALL/costes_por_noche_31_07_2026`):**
@@ -71,11 +73,87 @@ el fallo era doble y sistémico:
   coste está infravalorado) y Dúplex/House **no tienen calibración de suelo contra competencia** (la de Busto y
   Luxury es del 28/07). Recuerda que el suelo protege el LISTADO, no el efectivo (canal ≈0,76× a ≥7 noches).
 
+### 🚨 House cambió de categoría en 2024 — NO promedies su histórico entero (01/08/2026)
+ADR de House por año: **67 · 106 · 147 · 175** (2020-23) → **553 · 459 · 487** (2024-26). Ticket medio 2026:
+**1.424€** por reserva (fines de semana de 2 noches a 2.257-2.882€). Promediar las dos etapas da cifras
+plausibles y FALSAS: así salió un «ADR de agosto de 102€» que casi lleva a bajar House a 285€ — regalarlo.
+**Regla: al analizar House usa SOLO desde 2024.** Es el mismo fallo que el de los ADR del radar de trading
+(número creíble, periodo equivocado, sin hueco que lo delate); aquí lo cazó Alberto, no el sistema.
+- **Pero el precio de AGOSTO sí está alto** — no es contradicción, es estacionalidad: el ADR de 487€ sale de
+  abril, mayo, septiembre, octubre y diciembre. Competencia real de Booking (12 personas, 16-23/08/2026):
+  mediana **228€/noche**, techo 443€ (Luxury Palace, 9,6); House pide 450-483€, por encima del techo. La
+  reserva cancelada de esas fechas eran **334€/noche**. Desde 2024, House no vende agosto (1 y 7 noches).
+- **Suelo PLANO = error de diseño.** El ADR de House va de ~230€ en agosto a >500€ en octubre. Un `min_price`
+  único no puede servir a los dos. Pendiente: calibrar el suelo por temporada con la serie 2024+.
+- **⚠️ La curva de anticipación NO sale de `incomes`, sale de `rate_snapshots`.** El `createdAt` de las reservas
+  de 2024-25 es la fecha de la IMPORTACIÓN masiva (junio 2026), no la de la reserva: cualquier «vamos
+  tarde/normal» calculado con esa columna es inventado. **Pero sí se puede medir de verdad** con los 65.725
+  snapshots diarios (4 pisos, desde el 10/05/2026): cada transición de `available` 1→0 entre dos snapshots es
+  una reserva entrando, y `rate_date - snapshot_date` es su antelación. Consulta de referencia: `LAG(available)
+  OVER (PARTITION BY property_id, rate_date ORDER BY snapshot_date)`.
+  **Antelación mediana medida (01/08/2026): Busto 108 días · Luxury 57 · House 32 · Dúplex 7.**
+  Sin esto, la ocupación a X días no se puede interpretar: Dúplex a 0/31 en octubre parece alarmante y es su
+  patrón normal, y Busto a 7/31 parece el mejor cuando es el que va tarde. Muestra corta (78 días, 11-51
+  noches/piso) → brújula, no GPS; se afina sola cada día.
+- **🔴 Octubre 2026 (el mejor mes de Sevilla) a 2 meses vista:** Busto 7/31 · Dúplex **0/31** · House 6/31 ·
+  Luxury 4/31, con los precios publicados a **2-4× el ADR realizado de octubre 2024-25** (Busto 307€ vs 77-86€ ·
+  Dúplex 194€ vs 90-100€ · Luxury 212€ vs 98-100€ · House 867€ vs 423-499€). House sí ha colocado sus 6 noches
+  a **709€**, su mejor ADR de octubre, así que el precio alto no es absurdo — el problema es el volumen.
+- **🔴 El corpus AÚN NO tiene comps del aforo real, y eso invalida cualquier juicio de precio sobre House**
+  (confirmado 01/08/2026, lo levantó Alberto: «House Sevillana aún está en PriceLabs como dúplex»). El sweep
+  arreglado (#1186) entró el 31/07 pero era **semanal (dom 03:00 UTC)**, así que **no ha corrido ni una vez**
+  con el arreglo: los 30 comps VIVOS de House son de 8 plazas (media 314€), metidos a mano por el `/ingest` de
+  la auditoría del 22-29/07. El motor los normaliza (×1,56 → 403€) y no miente, pero ese ancla está
+  **EXTRAPOLADA, no medida** — los últimos comps de 12 plazas de verdad (09/06) iban a 621-694€.
+  **Consecuencia directa: la propuesta de bajar House a 330-350€ salió de ahí y queda RETIRADA.** Desde #1203
+  el sweep es DIARIO, así que se repone solo; hasta entonces, no muevas el precio de House con el dato de mercado.
+
+### 🔴 El bucket mensual solo cuenta con 3 fechas distintas — y el barrido daba 1 (01/08/2026)
+Caso que lo destapó: reserva de Luxury para el **viernes 6-nov**, entrada a las 18:43 después de que
+el motor bajara esa noche **152€ → 122€** a las 14:30. Comparables de ESE día: **123-212€**, mediana
+169€ a 4 plazas. No fue Booking: los descuentos (Genius ~19%) muerden sobre la base que le demos.
+- **Por qué bajó:** `apply/route.ts` descarta el bucket de mercado de un mes si no tiene comps de
+  **3 fechas distintas** (`MIN_FECHAS_MES`) — y el barrido visitaba **una sola fecha por mes**, así
+  que el umbral era inalcanzable POR DISEÑO. Sin bucket, el día se tarifica con el **ancla global**,
+  que sale del último barrido y va dominada por las fechas cercanas y baratas.
+- **Cobertura real medida ese día (fechas distintas por piso y mes):** House 3/2/1/1/1 (ago→dic),
+  Luxury 6/4/4/**1**/2, Dúplex 4/2/1/1/1, Busto 7/3/2/3/3. O sea: **House se tarificaba con el ancla
+  global de octubre en adelante**, encima con el ancla extrapolada desde comps de 8 plazas.
+- **Y el premio por fecha no lo rescata:** exige ≥1,5× la base normal y aquí salía 1,38×.
+- **Fix:** `fechasPorMes` (default 3, env `SIVRA_SWEEP_FECHAS_MES`) — viernes + sábado + martes, que
+  replica la composición de los meses que sí funcionaban (~2/3 finde). **La mezcla importa:** el
+  bucket se aplica a TODOS los días del mes, así que solo-findes lo sobrevalora y solo-entresemana lo
+  hunde. Una muestra que cae en día de evento **se corre una semana** (el bucket excluye las fechas de
+  evento a propósito, así que ahí no sumaría — el bug se habría reproducido solo).
+- **Plan por RONDAS + presupuesto de tiempo:** temporada (1 fecha/mes) → eventos → profundidad. Si el
+  barrido se queda sin tiempo pierde profundidad, nunca temporada ni eventos, y lo **publica**
+  (`truncado`, `base_completa`); el latido solo baja a `ok:false` si no cubrió la temporada. La
+  cobertura se ACUMULA entre días (el motor mira 120 días de `search_date`), así que truncar es barato.
+
+### 📉 Qué hace PriceLabs (medido, 01/08/2026) — sirve de DATOS, no de modelo
+Idea de Alberto: «¿por qué no estudias cómo lo hace PriceLabs?». Se puede, porque `rate_snapshots` lleva
+fotografiando sus decisiones a diario desde mayo. Lo que hace, por días de antelación (mayo-julio 2026):
+
+| Días antes | House | ocupado | Busto | ocupado |
+|---|---|---|---|---|
+| 23 | 460€ | 10% | 94€ | 24% |
+| 14 | 453€ | 13% | 98€ | 23% |
+| 7 | 446€ | 19% | 104€ | 45% |
+| 0 | 428€ | 30% | 105€ | 47% |
+
+**PriceLabs NO hace last-minute:** House baja un −7% en tres semanas y se queda con el 70% de las noches
+vacías; Busto ni baja, sube. Ese «aguantar el precio» explica agosto a cero y octubre a 2-4× el ADR realizado.
+**No copiar su política**; sí explotar su historial (ver la curva de anticipación arriba). Pendiente de
+implementar: que el motor baje de verdad cuando una fecha se acerca sin venderse, calibrado con la antelación
+mediana por piso — que es justo lo que PriceLabs no hace.
+⚠️ `rate_snapshots.was_booked` está casi vacía (5.139 de 65.725 filas): **NO usarla como etiqueta**; el proxy
+bueno es `available`.
+
 ### 🛡️ Centinelas del guardián (31/07/2026) — el sistema se contrasta solo contra el mercado
 Los tres fallos de ese día tenían la misma forma: **un dato metido a ojo que nadie volvió a mirar**, y que el
 motor usó como verdad durante meses porque NO TENÍA FORMA DE QUEJARSE. La respuesta no es «revisar más», es que
 el guardián (`/api/sivra/pricing/guard`, cron 07:30) compare lo que hacemos contra el mercado real. Lógica pura
-y testeada en **`lib/sivra/pricing-centinelas.ts`** (14/14), cableada en el route como chequeos #6/#7/#8:
+y testeada en **`lib/sivra/pricing-centinelas.ts`** (21/21), cableada en el route como chequeos #6/#7/#8/#9:
 - **#6 `precio_por_plaza` / `suelo_por_plaza`** — el € por plaza EFECTIVO (tras canal ×0,76) del precio vivo más
   barato y del suelo. Umbral 18€/plaza. **Solo pisos de ≥6 plazas**, y no es un tecnicismo: en un piso pequeño
   las plazas son en buena parte sofás-cama (Luxury: 5 plazas en 2 dormitorios), así que el reparto no significa
@@ -96,7 +174,20 @@ y testeada en **`lib/sivra/pricing-centinelas.ts`** (14/14), cableada en el rout
   sobrevalorada). Los cuatro pisos pasan el €/plaza. **Ojo al denominador:** la respuesta devuelve
   `fechas_evaluadas` (21 el 31/07) — si es baja, el barrido cubre pocas fechas y el SILENCIO de #7/#8 **no
   significa que el calendario esté bien**. Ampliar el barrido de mercado ensancha estos centinelas.
-- Los tres comparten la regla del repo: sin muestra devuelven `evaluado:false`, **nunca un «todo bien» que en
+- **#9 `comps_otro_aforo` (01/08/2026)** — avisa cuando los comparables VIVOS de un piso son de otro tamaño, o
+  sea cuando el ancla de mercado ha dejado de ser una medición y es una extrapolación. Nació del caso House
+  (12 plazas medidas con comps de 8). Umbral **holgado a propósito (×1,35)**: a ×1,25 saltaría también Luxury
+  (5 plazas con comps de 4 = ×1,28), y esa diferencia de UNA plaza es ruido de cómo cada anfitrión cuenta los
+  sofás-cama — un canal que avisa de eso cada semana se acaba ignorando (lección del 19/07). El aviso dice
+  explícitamente **«no bajes el precio con este dato, lanza el barrido»**: la respuesta correcta es medir, no
+  tarificar. Verificado contra producción: salta House y deja fuera a Busto, Dúplex y Luxury.
+- **🚨 #4 y #5 iban SIN normalizar por aforo hasta el 01/08/2026 — un vigilante que no podía disparar.** La
+  normalización de #1186 se puso en el motor (`apply`) pero NO en el guardián, así que sub-mercado y
+  reserva-barata comparaban el precio vivo contra comps EN CRUDO. En el único piso donde la diferencia importa
+  (House) eso es un mercado un 36% más barato: la casa salía «por encima de mercado» justo cuando estaba por
+  debajo. **Regla que deja esto:** cuando el motor gane una corrección de datos, comprueba si el guardián que
+  lo vigila necesita la MISMA — si no, se queda midiendo con la regla vieja y su silencio no vale nada.
+- Todos comparten la regla del repo: sin muestra devuelven `evaluado:false`, **nunca un «todo bien» que en
   realidad significa «no lo he mirado»**.
 
 - **Zona** poblada (`pricing_piso_zona`): 4 pisos, CP 41003 (Bustos Tavera / Casco Antiguo).
