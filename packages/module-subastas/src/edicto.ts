@@ -35,6 +35,31 @@ export interface DatosEdicto {
   viviendaHabitual: 'si' | 'no' | 'no_consta' | null
   /** La ejecución va contra una herencia yacente (titular fallecido). */
   herenciaYacente: boolean
+  /** Certificación registral: «NO hay cargas registradas» en procedencia. */
+  sinCargasProcedencia: boolean
+  /** Certificación: no existen asientos de titulares POSTERIORES a la hipoteca. */
+  sinTitularesPosteriores: boolean
+  /** Certificación: hay anotación de EMBARGO (administrativo o judicial). */
+  anotacionEmbargo: boolean
+}
+
+/**
+ * ¿El HTML recibido es DE VERDAD la ficha de esa subasta?
+ *
+ * 🚨 Sin esta comprobación, cualquier respuesta 200 que no sea la ficha (página
+ * de error del Portal, muro de un WAF, mantenimiento) produce `enlacesDocumentos
+ * → []`, que se persiste como «esta subasta no publica documentos» — y la cola
+ * del cron no vuelve a mirarla nunca. Es la MISMA mentira que motivó todo esto,
+ * pero grabada en la BD en vez de pintada en pantalla.
+ *
+ * Las fichas reales siempre traen los enlaces de sus pestañas
+ * (`detalleSubasta.php?idSub=<id>&ver=N`), tengan o no adjuntos — verificado el
+ * 30/07/2026 contra fichas vivas CON documentos y SIN ellos.
+ */
+export function fichaLegible(html: string, identificador: string): boolean {
+  if (!html || !identificador) return false
+  const id = identificador.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`detalleSubasta\\.php\\?idSub=${id}(&amp;|&)ver=`, 'i').test(html)
 }
 
 /** Enlaces a documentos de una ficha del portal (HTML de cualquier pestaña). */
@@ -70,6 +95,14 @@ export function datosDeEdicto(texto: string): DatosEdicto {
           : 'si'
       : null,
     herenciaYacente: /HERENCIA YACENTE/i.test(t),
+    // Señales de la CERTIFICACIÓN DE DOMINIO Y CARGAS (los dos formatos vistos
+    // en fixtures reales: la del Registro 16 en prosa y la del 11 tabulada).
+    // OJO: pdf-parse extrae estos PDFs con las palabras PEGADAS
+    // («CARGASPROCEDENCIA NOhaycargasregistradas») — verificado en producción
+    // el 29/07/2026 — así que el separador entre palabras es \s* (opcional).
+    sinCargasProcedencia: /CARGAS\s*PROCEDENCIA\s*NO\s*hay\s*cargas\s*registradas/i.test(t),
+    sinTitularesPosteriores: /no\s*existir\s*asientos\s*vigentes\s*de\s*titulares\s*de\s*derechos\s*inscritos\s*con\s*posterioridad/i.test(t),
+    anotacionEmbargo: /Texto\s*literal:\s*EL\s*EMBARGO\s*a\s*favor\s*de/i.test(t) || /Tipo\s*anotaci[oó]n:\s*Embargo/i.test(t),
   }
 }
 
@@ -81,5 +114,8 @@ export function notasDeEdicto(d: DatosEdicto): string[] {
   if (d.viviendaHabitual === 'si') notas.push('⚠️ El edicto declara que ES la vivienda habitual del demandado')
   if (d.viviendaHabitual === 'no_consta') notas.push('Vivienda habitual del demandado: no consta')
   if (d.posesionNoConsta) notas.push('El edicto no concreta la situación posesoria')
+  if (d.sinCargasProcedencia) notas.push('Certificación: sin cargas de procedencia registradas')
+  if (d.sinTitularesPosteriores) notas.push('Certificación: sin acreedores posteriores a la hipoteca que se ejecuta')
+  if (d.anotacionEmbargo) notas.push('⚠️ Certificación: anotación de EMBARGO — revisar importe, vigencia y si es posterior (se cancelaría)')
   return notas
 }

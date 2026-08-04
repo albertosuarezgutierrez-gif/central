@@ -1148,3 +1148,31 @@ empresas) — con este fix vuelve a correr en la próxima pasada diaria (08:30).
 - CI: `tsc --noEmit` 8/8 apps limpio (de la pasada profunda), `pnpm -r run test` 19/19 paquetes verdes.
 
 *Actualización por Claude Code · a petición de Alberto ("resuelve como veas mejor") · 2026-07-26 (2)*
+
+# Actualización 2026-07-31 — auditoría diaria (ligera)
+
+Rango: 50 commits desde la última auditoría (26/07/2026, pasada profunda) hasta hoy, casi todos
+del módulo Subastas (cargas registrales, mapa, documentación, caducidad de embargos, costa de
+Cádiz) + consolidación de los 60 crons de plataforma en un dispatcher único (PR #1165) + varios
+fixes de banca/pricing. Checks estructurales baratos (SALTA typecheck/tests pesados, son de la
+pasada profunda semanal).
+
+## ✅ Reconciliación memoria/skills — sin drift material
+Las sesiones del rango se auto-documentaron con mucho detalle en `docs/CONTEXTO-SESIONES.md`
+(prácticamente 1:1 con los commits, incluida la migración del cron dispatcher, ya reflejada en
+`apps/plataforma/CLAUDE.md`). `docs/SKILLS.md` sigue listando las 31 skills + 3 comandos reales
+de `.claude/skills`/`.claude/commands`, sin huérfanos. Único hueco encontrado: el spec+plan de
+login con huella (WebAuthn, commit `6244118`, 29/07) no estaba anotado como pendiente — añadido
+a la memoria (ver `docs/AUTO-APLICADOS.md`).
+
+## ✅ Heartbeat de crons (14 huellas) — 12/14 ✅, 2 falsos positivos investigados
+`limpiadoras/auto-sessions` y `updates/sync` (Smoobu) salieron ⛔ MUDO por umbral (137h y 134h);
+ambos confirmados en verde por Vercel runtime logs (200 diario) — son crons idempotentes con
+huecos legítimos sin reservas/sesiones nuevas, no una caída. Detalle en `docs/AUTO-APLICADOS.md`
+(entrada 31/07) para que la próxima pasada no los re-investigue desde cero.
+
+## ✅ Sin hallazgos de carril 2
+Sin código roto, sin infra que tocar, sin crons genuinamente mudos. No se abre PR ni se manda
+Telegram (frugalidad, regla del paso 6.4).
+
+*Actualización por Claude Code (auditoría diaria automática) · 2026-07-31*

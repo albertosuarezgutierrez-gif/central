@@ -37,6 +37,15 @@ export async function GET(req: NextRequest) {
       `Proyección a 30 días:     ${fmtEur(p30.proyectado)}  (entran ${fmtEur(p30.entradas)}, salen ${fmtEur(p30.salidas)})`,
       '',
       `Según tus movimientos recurrentes, el saldo proyectado baja de ${fmtEur(UMBRAL)}.`,
+      // Sin esta línea, un saldo al que le faltan cuentas se lee como cifra
+      // firme y puede disparar una alarma de tesorería que no existe.
+      ...(tes.cuentasSinSaldo > 0
+        ? [
+            '',
+            `⚠️ OJO: ${tes.cuentasSinSaldo} cuenta(s) no han devuelto saldo, así que la cifra de arriba es un MÍNIMO`,
+            '   y esta alarma puede ser falsa. Revisa la sincronización bancaria antes de actuar.',
+          ]
+        : []),
     ].join('\n')
     await enviarAvisoEmail([cuenta.email], asunto, cuerpo)
     avisados += 1

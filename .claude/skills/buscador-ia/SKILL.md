@@ -1,6 +1,6 @@
 ---
 name: buscador-ia
-description: Agente PROGRAMADO SEMANAL que vigila el ecosistema de LLMs que alimentan la cadena de fallback del monorepo (`@central/core-ai`). Criterio de selección = MEJOR RELACIÓN CALIDAD/PRECIO, no "gratis a toda costa" (un candidato de pago barato que rinda claramente mejor sí cuenta). Tres patas en una pasada — (1) WATCH DE DEPRECACIÓN de los modelos que están REALMENTE cableados (NIM llama-3.3-70b, Groq, Gemini, Kimi) para cazar retiradas de catálogo ANTES de que rompan producción (como el `meta/llama-3.1-405b-instruct` que NVIDIA retiró y dejó "IA no disponible" a un huésped), (2) DESCUBRIMIENTO de modelos/proveedores nuevos (gratis o de pago barato) que merezca meter en la cadena, y (3) MINI-EVAL de los candidatos con 2 prompts fijos. Actualiza `docs/BUSCADOR-IA.md` (estado entre ejecuciones), avisa por Telegram si algo merece ojo humano y abre PR draft solo para cambios pequeños y seguros (swap de id de modelo muerto, plumbing de un proveedor nuevo). Úsala cuando Alberto pida "revisa las novedades de IA / si hay una IA mejor que meter" o cuando la dispare su trigger semanal. Sin secretos: solo nombres de variable.
+description: Agente PROGRAMADO semanal que vigila los LLMs de la cadena de fallback de `@central/core-ai` por CALIDAD/PRECIO — watch de deprecación de los modelos cableados (NIM, Groq, Gemini, Kimi), descubrimiento de candidatos y mini-eval. Estado en docs/BUSCADOR-IA.md; Telegram + PR draft solo para swaps seguros. Úsala si Alberto pide "revisa las novedades de IA / si hay una IA mejor" o al disparo semanal. Sin secretos.
 ---
 
 # Vigía de LLMs — deprecación, descubrimiento y mini-eval
@@ -29,7 +29,11 @@ completa e idempotente. El estado entre ejecuciones vive en **`docs/BUSCADOR-IA.
 
 ## Fuente de verdad de qué está cableado
 La cadena de fallback vive en **`packages/core-ai/src/client.ts`** (`aiComplete`: **OpenRouter
-(si hay key) → NIM → Groq → Gemini → Kimi**). Los ids por defecto y sus envs de override:
+(si hay key) → NIM → Groq → [Gemini, gateado] → Kimi**). ⚠️ **El eslabón Gemini está APAGADO por
+defecto desde el 02/08/2026 (PR #1220):** 544 llamadas/30d con 0 éxitos (429 de cuota) — requiere
+`GEMINI_TEXTO=1` además de la key (mismo gate en `lib/pasarela.ts` de plataforma; el websearch de
+ia-rest va tras `GEMINI_WEBSEARCH=1`). Si algún día hay key con cuota, se reactivan los gates.
+Los ids por defecto y sus envs de override:
 - **OpenRouter** `deepseek/deepseek-chat` — env `OPENROUTER_API_KEY` (primario de la PASARELA
   con Agente Director; overrides `OPENROUTER_MODEL`/`OPENROUTER_FALLBACK_MODELS`).
   ⚠️ **Delimitación (09/07/2026):** el catálogo/prompt del Director lo mantiene SOLO el cron
@@ -40,7 +44,8 @@ La cadena de fallback vive en **`packages/core-ai/src/client.ts`** (`aiComplete`
   preferencia del cron (`PREFERIDOS` en su route.ts) si descubre algo mejor.
 - **NIM** `meta/llama-3.3-70b-instruct` — env `NVIDIA_API_KEY` (primario de la cadena directa, gratis).
 - **Groq** `openai/gpt-oss-120b` — env `GROQ_API_KEY`, override `GROQ_BRAIN_MODEL`.
-- **Gemini** `gemini-2.5-flash` (chat sin grounding) — env `GEMINI_API_KEY`, override `GEMINI_BRAIN_MODEL`.
+- **Gemini** `gemini-flash-latest` (alias rodante; `gemini-2.5-flash` da 404 desde 09/07/2026) —
+  envs `GEMINI_API_KEY` **+ `GEMINI_TEXTO=1`** (apagado por defecto), override `GEMINI_BRAIN_MODEL`.
 - **Kimi/Moonshot** `kimi-k2.6` — env `MOONSHOT_API_KEY` (de pago, último recurso), override `MOONSHOT_MODEL`.
 - Consumidores con modelo propio: `AGENTE_HUESPED_MODEL` (vacío = usa el 70B por defecto),
   `CONTABLE_MODEL` (default `deepseek-ai/deepseek-v3` por NIM).

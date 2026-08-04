@@ -16,6 +16,17 @@ export const EVENTS: Record<string, number> = {
   "2026-06-06":1.40,"2026-06-12":1.40,"2026-06-13":1.60,"2026-06-14":1.60,
   "2026-06-19":1.60,"2026-06-20":1.60,"2026-06-21":1.30,"2026-06-26":1.40,
   "2026-07-03":1.40,"2026-07-16":1.50,"2026-07-18":1.30,
+  // --- Bienal de Flamenco 2026: fechas OFICIALES 9 sep – 3 oct (labienal.com, XXIV edición) ---
+  // Añadida 03/08/2026: septiembre estaba a CERO eventos en ambas fuentes pese a ser mes alto, y una
+  // reserva del Dúplex (25-28 sep, en plena Bienal) entró a 160€/noche bruto con 53 días de antelación
+  // (la mediana del Dúplex es 7). Festival de ~4 semanas: demanda repartida, pico en vie/sáb — factores
+  // moderados (1.25 laborables / 1.40 vie-sáb), no de Feria; el premio de mercado por fecha captura los
+  // picos reales cuando lleguen comps de esas fechas.
+  "2026-09-09":1.25,"2026-09-10":1.25,"2026-09-11":1.40,"2026-09-12":1.40,"2026-09-13":1.30,
+  "2026-09-14":1.25,"2026-09-15":1.25,"2026-09-16":1.25,"2026-09-17":1.25,"2026-09-18":1.40,
+  "2026-09-19":1.40,"2026-09-20":1.30,"2026-09-21":1.25,"2026-09-22":1.25,"2026-09-23":1.25,
+  "2026-09-24":1.25,"2026-09-25":1.40,"2026-09-26":1.40,"2026-09-27":1.30,"2026-09-28":1.25,
+  "2026-09-29":1.25,"2026-09-30":1.25,"2026-10-01":1.25,"2026-10-02":1.40,"2026-10-03":1.40,
   "2026-11-16":1.40,"2026-11-17":1.40,"2026-11-18":1.40,"2026-11-19":1.40,
   "2026-11-20":1.40,"2026-11-21":1.35,"2026-11-22":1.30,
   // --- Festivos nacionales / puentes recurrentes (Sevilla) — estimados por demanda observada ---
@@ -34,9 +45,14 @@ export const EVENTS: Record<string, number> = {
   // Semana Santa 2027 (Domingo de Resurrección 28-mar): la Madrugá (25-26 mar) es el pico.
   "2027-03-21":2.20,"2027-03-22":2.30,"2027-03-23":2.40,"2027-03-24":2.50,
   "2027-03-25":3.00,"2027-03-26":3.20,"2027-03-27":2.80,"2027-03-28":2.50,
-  // Feria de Abril 2027 (~2 semanas tras Semana Santa): estimada 18-25 abr.
-  "2027-04-18":2.50,"2027-04-19":2.60,"2027-04-20":2.80,"2027-04-21":3.00,
-  "2027-04-22":3.20,"2027-04-23":3.20,"2027-04-24":3.00,"2027-04-25":2.60,
+  // Feria de Abril 2027: fechas OFICIALES 13-18 abr (alumbrado la noche del lunes 12).
+  // ⚠️ CORREGIDO 31/07/2026: estaban estimadas "18-25 abr" (~1 semana TARDE, calcadas del patrón de
+  // 2026). Doble daño: (a) 19-25 abr —semana normal— se tarificaba de Feria (hasta ×2,5 de precio Y
+  // ×2 de SUELO, que impide bajar) y (b) los días de Feria REAL no tenían suelo de evento, así que
+  // podían caer al suelo base si el mercado no llegaba fresco. Verificado con mercado real: 15-abr
+  // p50 417€ y 17-abr 304€ (Feria) frente a 20-abr 162€ (fecha normal que el calendario inflaba ×2,8).
+  "2027-04-12":2.50,"2027-04-13":2.60,"2027-04-14":2.80,"2027-04-15":3.00,
+  "2027-04-16":3.20,"2027-04-17":3.20,"2027-04-18":2.60,
   // Puente de mayo 2027 (1-may sáb) + Cruces de Mayo
   "2027-04-30":1.30,"2027-05-01":1.45,"2027-05-02":1.40,
 }
@@ -94,9 +110,16 @@ export const FLOOR_SEASONAL = [1.00, 1.00, 1.25, 1.30, 1.30, 1.15, 1.00, 1.00, 1
 // Suelo estacional relativo a min_price para una fecha. En fechas de evento sube con el evento
 // (mitad del factor, acotado a ×2.0) para que Semana Santa/Feria no puedan venderse a suelo.
 // Devuelve 1.0 (sin efecto) en temporada baja sin evento.
-export function seasonalFloorFactor(dateStr: string): number {
+//
+// `evExterno` = factor de evento que NO vive en este calendario, sino en `pricing_eventos_auto` (lo
+// que descubren Ticketmaster y la búsqueda web). Sin él, un concierto que solo conoce la tabla subía
+// el precio objetivo pero NO protegía el suelo (hallazgo 31/07/2026: los 3 días de Karol G en La
+// Cartuja —el pelotazo del año, factor 2,5— tenían el suelo de un junio cualquiera, así que si sus
+// comps caducaban el precio podía deslizarse hasta el mínimo). El motor pasa aquí el mismo factor
+// que usa para el precio.
+export function seasonalFloorFactor(dateStr: string, evExterno = 1): number {
   const mon = new Date(dateStr + "T00:00:00").getMonth()
-  const ev = EVENTS[dateStr]
-  const eventFloor = ev ? Math.min(1 + (ev - 1) * 0.5, 2.0) : 1.0
+  const ev = Math.max(EVENTS[dateStr] ?? 0, Number(evExterno) || 0)
+  const eventFloor = ev > 1 ? Math.min(1 + (ev - 1) * 0.5, 2.0) : 1.0
   return Math.max(1.0, FLOOR_SEASONAL[mon] ?? 1.0, eventFloor)
 }

@@ -9,7 +9,8 @@ import { tgSend, tgSendButtons } from '@central/core-telegram'
 import { prisma } from '@/lib/db'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { eur } from '@/lib/dinero'
-import { esEmpresaInmobiliaria } from '@central/module-subastas'
+import { decidirAviso, esEmpresaInmobiliaria } from '@central/module-subastas'
+import { RADAR_CON_CORPUS, RADAR_VIGENTE } from '@/lib/subastas-radar'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -59,12 +60,22 @@ export async function GET(req: NextRequest) {
 
   try {
     const pendientes = await prisma.$queryRaw<any[]>(Prisma.sql`
-      SELECT id, cuenta_id, dedupe_key, subasta, puntuacion, coste_total, descuento, fecha_fin
-      FROM subastas_radar
-      WHERE avisado_at IS NULL
-        AND descartado = false
-        AND created_at >= now() - make_interval(days => ${DIAS_FRESCURA}::int)
-      ORDER BY puntuacion DESC NULLS LAST, created_at DESC
+      SELECT r.id, r.cuenta_id, r.dedupe_key, r.subasta, r.puntuacion, r.coste_total, r.descuento,
+             COALESCE(s.fecha_fin, r.fecha_fin) AS fecha_fin,
+             -- 🚨 Sin esta columna, p.valor_orientativo llegaba SIEMPRE undefined y
+             -- la guarda de decidirAviso (no interrumpir con una rentabilidad
+             -- calculada sobre la mediana de todo el municipio) nunca se disparaba.
+             s.valor_orientativo,
+             -- Cargas ya leídas de los documentos: lo que hereda el adjudicatario
+             -- es la diferencia entre un chollo y una ruina, así que va EN el aviso,
+             -- no escondido en la ficha.
+             s.cargas AS cargas_subsistentes, s.cargas_fuente, s.semaforo, s.identificador,
+             s.cargas_conocidas, s.lector_version, s.analisis, s.flip_apto, s.margen_flip_pct, s.es_playa
+      ${RADAR_CON_CORPUS}
+      WHERE r.avisado_at IS NULL
+        AND ${RADAR_VIGENTE}
+        AND r.created_at >= now() - make_interval(days => ${DIAS_FRESCURA}::int)
+      ORDER BY r.puntuacion DESC NULLS LAST, r.created_at DESC
     `)
 
     if (!pendientes.length) {
@@ -81,7 +92,43 @@ export async function GET(req: NextRequest) {
     // diario real es de 0-4, así que no es ruido, y la decisión de Alberto
     // queda registrada (el descarte alimenta el aprendizaje). Si un día llega
     // una avalancha, el resto va agregado como antes.
-    for (const p of pendientes.slice(0, MAX_EN_MENSAJE)) {
+    // Política de Alberto (30/07/2026): solo interrumpen las RENTABLES y LIMPIAS.
+    // Lo que hereda cargas, está ocupado o es un proindiviso se queda en /subastas
+    // sin sonar; lo que todavía no se ha leído ESPERA a la pasada del lector (y
+    // sigue pendiente de aviso), salvo que esté a punto de cerrar.
+    const decisiones = pendientes.map((p) => {
+      const fin = p.fecha_fin ? new Date(p.fecha_fin).getTime() : null
+      const dias = fin == null ? null : Math.ceil((fin - Date.now()) / 86_400_000)
+      // El SQL ya deja fuera lo cerrado; esto es el segundo cerrojo. `dias` NO
+      // sirve para detectarlo: `Math.ceil` de unas horas negativas da 0, que es
+      // justo el valor que `decidirAviso` lee como «urgentísima, avisa aunque no
+      // esté verificada» — una subasta vencida se colaría como la más urgente.
+      const cerrada = fin != null && fin < Date.now()
+      const claves = Array.isArray(p.analisis) ? p.analisis.map((x: any) => x?.clave).filter(Boolean) : []
+      return {
+        p,
+        d: decidirAviso({
+          // Rentabilidad: el radar ya casó criterios, y las lentes marcan flip/playa.
+          rentable: true,
+          // …pero «rentable» se calculó contra un valor de mercado que a veces
+          // es la mediana de una ciudad entera. Eso no basta para interrumpir.
+          valorOrientativo: p.valor_orientativo === true,
+          semaforo: p.semaforo ?? null,
+          cargasSubsistentes: p.cargas_subsistentes == null ? null : Number(p.cargas_subsistentes),
+          cargasConocidas: p.cargas_conocidas ?? false,
+          documentosLeidos: (p.lector_version ?? 0) > 0,
+          diasParaCierre: dias,
+          cerrada,
+          claves,
+        }),
+      }
+    })
+
+    const aAvisar = decisiones.filter((x) => x.d.decision === 'avisar')
+    const silenciadas = decisiones.filter((x) => x.d.decision === 'silenciar')
+    const esperando = decisiones.filter((x) => x.d.decision === 'esperar')
+
+    for (const { p, d } of aAvisar.slice(0, MAX_EN_MENSAJE)) {
       const s = p.subasta ?? {}
       const punt = p.puntuacion == null ? 'sin datos para puntuar' : `${p.puntuacion}/100`
       const coste = p.coste_total == null ? null : eur(Number(p.coste_total))
@@ -93,25 +140,77 @@ export async function GET(req: NextRequest) {
         .filter(Boolean)
         .join(' · ')
       if (pie) lineas.push(`<i>${escapar(pie)}</i>`)
+
+      // Cargas que hereda quien se lo adjudique, leídas de la certificación. Es
+      // el dato que convierte un «descuento del 55%» en una pérdida, así que se
+      // dice en el aviso y con su procedencia (OCR o texto).
+      const subsistentes = p.cargas_subsistentes == null ? null : Number(p.cargas_subsistentes)
+      if (subsistentes != null && subsistentes > 0) {
+        const via = p.cargas_fuente === 'ocr_ia' ? ' (leído del escaneo por IA)' : ''
+        lineas.push(`🚨 <b>Hereda cargas por ${escapar(eur(subsistentes))}</b>${via} — súmalas al coste`)
+      } else if (subsistentes === 0) {
+        lineas.push('✅ Sin cargas subsistentes según la certificación')
+      }
+      // Honestidad sobre lo que se ha comprobado: si el plazo obligó a avisar sin
+      // haber leído la documentación, se dice en el propio mensaje.
+      if (d.sinVerificar) lineas.push('⏳ <b>Documentación SIN verificar</b> — cierra pronto y avisa igualmente')
       if (s.url) lineas.push(escapar(s.url))
 
-      await tgSendButtons(lineas.join('\n'), [[
-        { texto: '👀 Seguir', callback: `subr:seguir:${p.id}` },
-        { texto: '🚫 Descartar', callback: `subr:desc:${p.id}` },
-      ]]).catch(() => {})
+      // Tercer botón: el «siguiente paso» que pidió Alberto (30/07/2026). En vez
+      // de tener que abrir el portal y buscar a quién preguntar, el agente redacta
+      // la consulta al juzgado con las dudas concretas de ESTA subasta.
+      await tgSendButtons(lineas.join('\n'), [
+        [
+          { texto: '👀 Seguir', callback: `subr:seguir:${p.id}` },
+          { texto: '🚫 Descartar', callback: `subr:desc:${p.id}` },
+        ],
+        [{ texto: '📝 Preparar consulta al juzgado', callback: `subn:consulta:${p.id}` }],
+      ]).catch(() => {})
     }
-    if (pendientes.length > MAX_EN_MENSAJE) {
-      await tgSend(`⚖️ …y ${pendientes.length - MAX_EN_MENSAJE} subastas más en /subastas`, { html: true }).catch(() => {})
+    if (aAvisar.length > MAX_EN_MENSAJE) {
+      await tgSend(`⚖️ …y ${aAvisar.length - MAX_EN_MENSAJE} subastas limpias más en /subastas`, { html: true }).catch(() => {})
+    }
+    // Las descartadas NO se enumeran una a una (sería el ruido que se quiere
+    // evitar), pero se dice cuántas y por qué en una línea: si el filtro se pasa
+    // de estricto, se nota enseguida.
+    if (silenciadas.length) {
+      const motivos = [...new Set(silenciadas.map((x) => x.d.motivo))].slice(0, 3)
+      await tgSend(
+        `🔇 ${silenciadas.length} ${silenciadas.length === 1 ? 'subasta' : 'subastas'} no ${silenciadas.length === 1 ? 'pasa' : 'pasan'} el filtro de «rentable y limpia» (${motivos.join('; ')}). Están en /subastas.`,
+        { html: true },
+      ).catch(() => {})
     }
 
-    await prisma.$executeRaw(Prisma.sql`
-      UPDATE subastas_radar SET avisado_at = now()
-      WHERE id = ANY(${pendientes.map((p) => p.id)}::uuid[])
-    `)
+    // Solo se marcan como avisadas las que de verdad han sonado o se han
+    // descartado: las que ESPERAN al lector deben volver a evaluarse mañana, ya
+    // con su documentación leída. Marcarlas aquí las perdería para siempre.
+    const cerradas = [...aAvisar, ...silenciadas].map((x) => x.p.id)
+    if (cerradas.length) {
+      await prisma.$executeRaw(Prisma.sql`
+        UPDATE subastas_radar SET avisado_at = now()
+        WHERE id = ANY(${cerradas}::uuid[])
+      `)
+    }
 
     const antesala = await avisarAntesalaConcursal().catch(() => 0)
 
-    return NextResponse.json({ ok: true, avisados: pendientes.length, antesala })
+    // La misma finca que vuelve más barata tras quedar desierta: no pasa por el
+    // filtro de «nuevas del radar» porque no es nueva, es una segunda vuelta.
+    const { avisarReapariciones } = await import('@/lib/subastas/reapariciones')
+    const reapariciones = await avisarReapariciones().catch((e) => {
+      console.error('[subastas-avisos] reapariciones', e)
+      return { detectadas: 0, avisadas: 0 }
+    })
+
+    return NextResponse.json({
+      ok: true,
+      avisados: aAvisar.length,
+      silenciados: silenciadas.length,
+      // Vuelven mañana, ya con la documentación leída.
+      esperandoLector: esperando.length,
+      antesala,
+      reapariciones,
+    })
   } catch (e: any) {
     console.error('[subastas-avisos]', e)
     return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })

@@ -58,7 +58,7 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
 | `EB_PIS_ENABLED` | `true` activa el flujo Enable Banking PIS. Dejar vacío/omitido para usar el fallback SEPA XML pain.001. **Pendiente confirmar tier gratuito Enable Banking.** |
 | `EB_DEBTOR_IBAN` | IBAN de Kutxabank desde el que se debitan los pagos PIS. |
 | `NVIDIA_API_KEY` | LLM primario de la pasarela de IA (`/api/ai/*`) y de concursos (NIM, gratis). |
-| `GEMINI_API_KEY` | Búsqueda web + **fallback de texto GRATIS** de `aiComplete` (cadena NIM → Groq → **Gemini** → Kimi; `geminiChat`, sin grounding) y de la pasarela (`/api/ai/chat`). Se activa solo con la key ya presente → evita "IA no disponible" sin coste. Override de modelo: `GEMINI_BRAIN_MODEL`. **Búsqueda web (13/07/2026):** toda la búsqueda (endpoint `/api/ai/search`, cron `eventos/websearch`, `seo-refresh`) va por **`lib/websearch.ts::buscarWeb`** — Gemini grounding (gratis) primero y, si está en racha de 429, el **plugin `web` de OpenRouter** como suplente de pago (~0,02€/llamada, respeta el presupuesto diario; tarifa override `AI_PRECIO_WEBPLUGIN_EUR`). Ambos intentos en `ai_usos`. |
+| `GEMINI_API_KEY` | **🚨 GEMINI APAGADO POR DEFECTO EN TODO (01-02/08/2026)** — la key lleva desde el 16/06 con **429 de cuota permanente** (544 llamadas/30 días, 0 éxitos; Check 12 del health-check) y solo pagaba timeouts antes de caer a OpenRouter. Decisión de Alberto: «usa OpenRouter». Dos gates para reactivar cuando haya key con cuota: **`GEMINI_WEBSEARCH=1`** reengancha el grounding como primario en `lib/websearch.ts::buscarWeb` (si no, la búsqueda — `/api/ai/search`, cron `eventos/websearch`, `seo-refresh` — va directa al **plugin `web` de OpenRouter**, ~0,02€/llamada, respeta presupuesto diario, tarifa override `AI_PRECIO_WEBPLUGIN_EUR`); **`GEMINI_TEXTO=1`** reengancha el eslabón de texto en la cadena clásica de `aiComplete` (`@central/core-ai`) y el último intento de `lib/pasarela.ts`. La key sigue usada por los embeddings de la caché semántica (`IA_CACHE_SEMANTICA`, best-effort). Override de modelo texto: `GEMINI_BRAIN_MODEL`. |
 | `GROQ_API_KEY` | **Fallback de texto gratis de la pasarela** (NIM → **Groq** `openai/gpt-oss-120b`, gratis rate-limited) en `aiComplete`/`aiTools`. Sin ella el fallback queda inactivo (no rompe). Override de modelo: `GROQ_BRAIN_MODEL`. |
 | `MOONSHOT_API_KEY` | **Último fallback de texto** (… → **Kimi**/Moonshot, de pago) en `aiComplete`. Sin ella queda inactivo (no rompe). Opcionales: `MOONSHOT_MODEL` (default `kimi-k2.6`), `MOONSHOT_BASE_URL` (usa `.cn` si aplica). |
 | `OPENROUTER_API_KEY` | **Camino PRIMARIO de la pasarela** (09/07/2026): agregador OpenRouter con el **Agente Director** eligiendo modelo por petición + fallback nativo entre modelos. Sin ella todo queda como antes (cadena gratis NIM→Groq→Gemini→Kimi). Opcionales: `OPENROUTER_MODEL` (default `deepseek/deepseek-chat`), `OPENROUTER_FALLBACK_MODELS` (csv de suplentes), `OPENROUTER_BASE_URL`, `OPENROUTER_REFERER`/`OPENROUTER_TITLE` (atribución). |
@@ -75,6 +75,7 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
 | `CRON_SECRET` | **Llave maestra** que autentica los crons de Vercel y las llamadas servidor→servidor. **NO ponerla en prompts de rutinas** (ver `ALERTA_TOKEN`). El endpoint `/api/internal/alerta` la sigue aceptando solo por compatibilidad. |
 | `ALERTA_TOKEN` | Token **dedicado** de bajo privilegio: SOLO abre `/api/internal/alerta` (aviso Telegram de las rutinas de Claude Code). Es el que va en el prompt de las rutinas — si se filtra, solo permite mandar un Telegram. Si no está definido, el endpoint acepta `CRON_SECRET` (compat). |
 | `EINFORMA_CLIENT_ID` / `EINFORMA_CLIENT_SECRET` | **PENDIENTE (Alberto contrata eInforma).** Credenciales OAuth2 client_credentials de la API de eInforma para el **enriquecimiento de «Empresas en dificultad»** (`lib/empresas-einforma.ts`: informe financiero → patrimonio neto, EBITDA, fondo de maniobra, deuda, CNAE, facturación, incidencias RAI/ASNEF). Sin ellas el enriquecimiento degrada con aviso «pendiente de contratar», no rompe. Opcional `EINFORMA_BASE_URL` (default `https://api.einforma.com`). ⚠️ Al activar, CONFIRMAR las rutas/campos del payload marcados en `empresas-einforma.ts` contra la doc/sandbox. |
+| `IDEALISTA_API_KEY` / `IDEALISTA_API_SECRET` | **PENDIENTE (Idealista debe aprobar el alta — solicitada el 30/07/2026).** Credenciales OAuth2 client_credentials de la **API oficial de Idealista** (developers.idealista.com, tramo gratuito ~100 búsquedas/mes) para la ingesta directa de comparables por zona vigilada (`lib/subastas/idealista-api.ts`, paso del cron `subastas-mercado`). Sin ellas la ingesta API queda **inerte** (el corpus sigue nutriéndose de las alertas de correo). Editables desde el god-panel → 🔑 Secretos. Presupuesto vigilado en la tabla `idealista_api_usos` (margen mensual 15, caché 30 días/zona). |
 | `EMPRESAS_ENRIQUECER_TOPE_MENSUAL_EUR` | Tope de gasto mensual € del enriquecimiento de empresas (default `50`; `0` = sin límite). Se compara contra la suma del ledger `empresas_enriquecimiento_coste` del mes. `EMPRESAS_ENRIQUECER_COSTE_EUR` = coste estimado por empresa (default `12`, ~precio del informe financiero en pack). |
 | _(Acceso invitado «Empresas»)_ | **NO es una env.** El token de acceso invitado (Pablo prueba el módulo sin cuenta) vive en la **tabla BD `empresas_acceso_token`** (fila única `id=1`, `token`/`activo`), para poder **rotarlo/revocarlo sin redeploy** (el conector de Vercel no deja escribir envs desde las sesiones de Claude). Enlace: `…/invitado/empresas?token=<valor>` → la página lo canjea en `/api/empresas/invitado` (fija cookie httpOnly `empresas_invitado`) → `lib/empresas-acceso.ts::accesoEmpresas` valida la cookie contra la BD (runtime Node; el middleware edge solo enruta por presencia de cookie). Acepta sesión O token en `/api/empresas/*` **salvo enriquecimiento (POST) e ingesta-manual, que son SOLO sesión**. El invitado no ve «Enriquecer» ni «Actualizar BORME». **Revocar/rotar:** `UPDATE empresas_acceso_token SET token='…'` o `activo=false` (por Supabase MCP). |
 | _(Acceso invitado «Laboratorio de inversión» — 20/07/2026)_ | **NO es una env**, mismo patrón que el de Empresas. Token en la tabla BD **`trading_acceso_token`** (fila única `id=1`, `prisma/sql/2026-07-20_trading_acceso_token.sql`). Enlace: `…/invitado/trading?token=<valor>` → lo canjea `/api/trading/invitado` (fija cookie httpOnly `trading_invitado`, 30 días) → `lib/trading-acceso.ts::accesoTrading` valida contra la BD. `/trading` es 100% LECTURA (sin ninguna acción que escriba), así que la vista de invitado reutiliza tal cual `app/(usuario)/trading/TradingDashboard.tsx` (extraído de `page.tsx` para no duplicar) — el invitado ve exactamente lo mismo que Alberto, sin acceso al resto de la plataforma (banca, fiscal, etc. — fuera del grupo `(usuario)`, sin sidebar). `/invitado/*` y `/api/trading/*` ya estaban exentos del gate de sesión en `middleware.ts` (no requirió tocarlo). **Revocar/rotar:** `UPDATE trading_acceso_token SET token='…'` o `activo=false` (por Supabase MCP). |
@@ -91,6 +92,23 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
 
 ## Root Directory en Vercel
 `apps/plataforma` — install `npx --yes pnpm@10.33.0 install --no-frozen-lockfile`.
+
+## ⏰ Crons — dispatcher único (30/07/2026)
+**Vercel Pro admite 40 crons/proyecto y este llegó a 60 → el scheduler omitía disparos en silencio**
+(29/07/2026: `psd2-sync` de las 06:00 sin log alguno; auditoría PR #1162). Desde entonces `vercel.json`
+declara **UN solo cron**: `/api/cron/dispatch` cada minuto.
+- **Fuente de verdad de qué corre y cuándo: `lib/cron-dispatch.ts` (`CRON_JOBS`, horarios UTC).**
+  🚨 Un cron nuevo se añade AHÍ, **nunca** a `vercel.json` (volvería a acercarnos al límite). Las menciones
+  históricas "cron X en `vercel.json`" de este doc y de las skills se leen ahora como "job X en el manifiesto".
+- El dispatcher (`app/api/cron/dispatch/route.ts`) dispara los jobs del minuto por HTTP con
+  `Authorization: Bearer CRON_SECRET` — el MISMO header que adjuntaba Vercel, así que los handlers
+  (`isCronAuthorized`) y el pass-through del middleware funcionan sin cambios.
+- **Catch-up:** cursor `cron_dispatch_cursor` (fila única; `prisma/sql/2026-07-30_cron_dispatch_cursor.sql`,
+  aplicada) — si el scheduler se salta un minuto, la pasada siguiente procesa la ventana pendiente (tope
+  15 min) y un claim `FOR UPDATE` evita el doble disparo. Sin la tabla degrada al minuto actual.
+- Envs: base URL = `VERCEL_PROJECT_PRODUCTION_URL` (auto de Vercel); override opcional `CRON_DISPATCH_BASE_URL`.
+- Trade-off asumido: el dispatcher es un punto único — si muere, TODOS los crons enmudecen. Red de
+  seguridad: el heartbeat de `/auditoria-diaria` (paso 2-bis) lo cazaría en la primera pasada (frescura en BD).
 
 ## Estado (15/06/2026) — PANEL UNIFICADO (PR #249 MERGED)
 - [x] Tablas `cuentas/sociedades/negocios` aplicadas en Supabase.
@@ -270,6 +288,20 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
   (fila única + regla por comercio); `listarPorRevisar` filtra `destino_confirmado=false`; backfill idempotente
   `2026-07-15_limpiar_requiere_revision_destino.sql` (aplicado). Verificado con `next build` OK. Al añadir un
   camino nuevo que confirme destino (Telegram, agente contable, endpoint…), replica el invariante (a)+(b).
+- [x] **🏷️ Compra de tarjeta nunca cae en palabra-trampa + bandeja «Gastos por revisar» pregunta el
+  NEGOCIO (30/07/2026):** un pago en el restaurante "LA HACIENDA GOLF" caía a `categoria='impuestos'`
+  porque `categorizarPorReglas` usaba `'HACIENDA'` a secas y la regla de compra con tarjeta iba DESPUÉS
+  de las reglas de comercio (el nombre del comercio puede contener cualquier trampa: 'BAR LA MUTUA'…).
+  Fix: reglas extraídas a **`lib/categoria-reglas.ts`** (módulo PURO, testeado con `node --test`;
+  `categorizar.ts` reexporta) — la liquidación de tarjeta y la COMPRA con tarjeta se detectan PRIMERO
+  (compra → siempre `tarjeta`; el consumo vive en `subcategoria` y la deducibilidad en `destino`) y
+  `'HACIENDA'` suelto se retiró (solo frases del fisco: AEAT/HACIENDA PUBLICA/TRIBUT HACIENDA…, misma
+  lección que `subcategoria-keywords` del 07/07). Además la **RevisarBandeja de `/banca` ya no pide la
+  categoría contable** (taxonomía PGC que descolocaba a Alberto — "no es nada de estas categorías"):
+  pregunta lo realmente dudoso, el **negocio**, con botones 🛡️ Correduría / 👨‍👩‍👧 Personal + «Otro…»
+  (Dúplex/Pisos/Traspaso) contra `/api/banca/destino` (confirma, limpia flag e aprende regla del
+  comercio — invariante PR #906). `/api/banca/revisar` (asignar categoría) queda vivo pero sin UI.
+  Backfill `prisma/sql/2026-07-30_categoria_compra_tarjeta.sql` (aplicado: 3 filas → `tarjeta`).
 - [x] **Health-check: Check 6 (alertas) RETIRADO (11/07/2026):** contaba filas de la tabla `alertas` (de **IALIMP**, operativa de limpiezas de Sique Brilla) con >30 días **sin filtrar por empresa** → metía el backlog de Vanessa al Telegram de Alberto (saltó con `🟡 152 alertas`). Esas alertas no son de plataforma; ialimp ya las gestiona (panel 🔔 + cron semanal `alertas-pendientes` que avisa a `empresas.email`). **No reintroducir ningún conteo de `alertas` en el health-check de plataforma** (es de otro tenant). Raíz del atasco: el log `asignacion_auto` de ialimp se insertaba sin leer y no se purgaba (corregido en ese repo). Diseño: `docs/superpowers/specs/2026-07-11-health-check-alertas-limpiezas-design.md`.
 - [x] **Fiscal — «Mi declaración» ya no se cuelga en «Calculando…» (03/07/2026, PR #721 mergeado):**
   La IA salió del camino crítico: `/api/finanzas/comparativa` ya NO llama al LLM (antes `enriquecerConIA`
@@ -440,7 +472,62 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
 - **API:** `app/api/subastas/{criterios,radar,seguidas,route,oferta}`. **Crons** (`vercel.json`): `subastas-ingesta`, `subastas-radar`, `subastas-cierre`, `subastas-mercado`, `subastas-enriquecer`, `subastas-avisos`.
 - **Coste real:** ficha del BOE + valor de mercado (comparables) + valor Catastro + tesorería del depósito (`lib/subastas/{tesoreria,mercado,enriquecer}.ts`).
 - **Yield con datos PROPIOS (28/07/2026):** `lib/subastas/rendimiento.ts` usa la mediana real de los 4 pisos turísticos del grupo (`incomes` + `properties.bedrooms`) para estimar el retorno de un inmueble en subasta, siempre con caveat de que asume rendimiento similar.
+- **Lentes + filtros (29/07/2026):** el embudo de Alberto es «primero rentabilidad; si cuadra, análisis
+  profundo de que la documentación sea clara». Módulo puro: `flip.ts` (margen comprar-reformar-vender con
+  reforma por baremo €/m² según edad del Catastro), `playa.ts` (🏖️ costa de Huelva, SIN tope de precio) y
+  `analisis.ts` (🚦 semáforo documental determinista: posesión/cargas/proindiviso/herencia/valoración/RC).
+  App: `lib/subastas/clasificar.ts` rellena `subastas.{es_playa,margen_flip(_pct),flip_apto,semaforo,analisis}`
+  al final del cron `subastas-enriquecer`; filtros server-side en `GET /api/subastas` (tipo_bien —🅿️ garaje
+  incluido—, playa, m², €/m², sin ocupadas, margen flip, semáforo, municipio) + barra de filtros en la pestaña
+  Todas (paginación real contra la API). El radar mete lo de playa AUNQUE no case con los criterios y etiqueta
+  🔨 los flips ≥25%.
+- **Fotocasa como 2ª fuente de comparables (29/07/2026):** la nota antigua «las alertas de Fotocasa no traen
+  detalle» era FALSA para las alertas actuales — sí traen precio/tipo/dirección/habs/m²/enlace por anuncio
+  (verificado contra correos reales; parser `fotocasa.ts` del módulo con fixtures reales). Además la FICHA del
+  anuncio embebe `clientAlias/clientName/clientTypeId` → `enriquecerAnunciantesFotocasa` etiqueta **👤
+  particular** (negociación directa) en `mercado_comparables.{anunciante,es_particular}` (migración
+  `2026-07-29_mercado_fotocasa.sql`). Chollos y Telegram muestran el 👤.
 - **Puja máxima:** bisección sobre `calcularCoste` para hallar la puja que deja un descuento real objetivo (hereda toda la lógica fiscal, incluida la base imponible por valor de referencia).
+- **🗺️ Mapa nacional + enlace a Google Maps (30/07/2026):** pestaña **🗺️ Mapa** (`app/(usuario)/subastas/MapaSubastas.tsx`, Leaflet+OSM por CDN igual que `/operador/flota-mapa`, **montaje perezoso** — el script solo se carga al abrir la pestaña) sobre `GET /api/subastas/mapa`, y botón **📍 Google Maps** en cada ficha (`urlGoogleMaps` del módulo: coordenadas > dirección > municipio; con SOLO provincia NO se enlaza — un pin en mitad de "Sevilla" engaña). **DOS precisiones, siempre declaradas** en `subastas.geo_precision` (migración `2026-07-30_subastas_geo.sql`, aplicada — columnas `lat`/`lon`/`geo_precision`): `'catastro'` = parcela exacta por el servicio LIBRE `Consulta_CPMRC` (⚠️ `<xcen>` es la LONGITUD y `<ycen>` la LATITUD; acepta la ref. de **14** caracteres, con la de 20 del bien responde error) · `'municipio'` = centroide por Nominatim/OSM cuando NO hay referencia catastral (solo 5 de 34 vigentes la traían el 30/07 → sin este escalón el mapa mostraría el 15% del corpus). El mapa pinta los aproximados **en hueco** (`fillOpacity` 0.15 + dashArray) y los abre en un anillo determinista de ~300 m para que los del mismo municipio sean clicables; el pie de mapa separa exactos/aproximados/sin ubicar. Geocodifica el cron `subastas-enriquecer` (solo mientras `lat IS NULL`: las coordenadas no cambian). **🚨 Nominatim exige ≤1 req/s y lo hace cumplir BLOQUEANDO LA IP** (que sería la de Vercel, compartida con todo lo demás): NO basta con que el cron vaya en serie — las filas que solo se geocodifican no pagan ninguna otra latencia y saldrían seguidas. Hay un **cerrojo de módulo** en `lib/subastas/enriquecer.ts` (`esperarTurnoNominatim`, 1,1 s, reserva el turno ANTES de dormir para que dos llamadas concurrentes se encolen en vez de salir juntas) + **presupuesto de 25 s** de geocodificación por pasada (el `maxDuration` es 60 s y `?max=40` se lo comería). Matiz importante: `enriquecida_at` se deja NULL **solo cuando no se llegó a intentar** por falta de presupuesto; si se intentó y Nominatim no resolvió el municipio (p. ej. «LA M1 DE LA UE-1 DEL PP-G3 DE GUILLENA») se marca igual — dejarlo NULL lo devolvería al principio de la cola en cada pasada, que es justo el bug del bullet siguiente. Verificado el 30/07/2026 que el servicio responde 200 desde infraestructura cloud (probado con `pg_net` desde Supabase; el 403 del contenedor de Claude es de su proxy, no del servicio).
+- **🏛️ Ubicación EXACTA + datos del Catastro EN LA FICHA (30/07/2026, 2ª iteración):** la queja «la ubicación es muy mala» NO era del punto (era el oficial del Catastro) sino de que **la dirección no se pintaba en ningún sitio** —vivía solo en BD— y de que el enlace usaba `query=lat,lon`, que en Google deja un **pin anónimo** en mitad de la manzana, sin portal ni Street View. Tres cambios: (a) **`direccionCatastro()`** (módulo, puro) trocea el `ldt` denso del Catastro — `AV PEDRO ROMERO (DE) 2 Es:1 Pl:07 Pt:B 41007 SEVILLA` → `{postal:'AV PEDRO ROMERO 2, 41007 SEVILLA', escalera:'1', planta:'07', puerta:'B'}`, quitando los artículos entre paréntesis que ningún buscador reconoce; (b) la ficha y el popup del mapa muestran dirección + planta/puerta + **m² catastrales, año de construcción y uso** (datos que ya se guardaban y no se veían); (c) **🚨 `urlGoogleMaps` prioriza la DIRECCIÓN sobre las coordenadas** — cambio deliberado, con test que lo fija: las coordenadas quedan de respaldo y para `urlStreetView`. Botones nuevos: 👁️ Ver la calle (Street View — la única «visita» posible en las subastas sin acceso al interior) y 🏛️ Catastro (`urlFichaCatastro`, ficha pública con plano).
+- **⚖️ Resumen de CARGAS y documentación en la ficha, en TODAS las pestañas (30/07/2026):** el semáforo
+  documental y las notas del edicto se pintaban SOLO en la pestaña «Todas» (iban en su prop `extra`), así que
+  📡 Radar —la que Alberto mira— salía muda aunque la fila tuviera semáforo, 4 notas y certificación registral.
+  Ahora `ResumenDocumental` vive DENTRO de `FichaSubasta` (no en el `extra` de una pestaña): titular de cargas
+  SIEMPRE visible (🔴 importe que subsiste / 🟠 no publicadas / 🟢 sin cargas anteriores) + `<details>` cerrado
+  con el semáforo, el **texto oficial de cargas** (`cargas_texto`, que nunca se había pintado), las notas del
+  edicto y los **documentos adjuntos enlazados**. El radar recibe esos campos del corpus VIVO (`docs` en
+  `page.tsx`), no del snapshot. Nueva columna **`subastas.documentos`** (jsonb,
+  `prisma/sql/2026-07-30_subastas_documentos.sql`, aplicada): `procesarDocumentosDeFicha` guarda el listado
+  ENTERO de adjuntos con `legible` (`false` = escaneado sin capa de texto → la ficha dice «léelo a mano»;
+  `null` = no se intentó por el tope de 3 descargas/pasada) aunque solo lea los 3 primeros. La cola del cron
+  pasa a `(notas_edicto IS NULL OR documentos IS NULL)` para rellenar las ya procesadas.
+  **🚨 LANDMINE — `documentos` NULL ≠ `[]` (30/07/2026):** la columna nació después que las filas, así que
+  todo el corpus vivo la tuvo a NULL hasta la primera pasada del cron (06:15 UTC). La ficha pintaba ese NULL
+  como lista vacía y afirmaba «sin documentos adjuntos» en subastas que publicaban edicto Y certificación de
+  cargas — justo el dato que decide si se puja. El titular sale ahora del helper PURO
+  **`lib/subastas/resumen-docs.ts`** (`estadoDocumentacion`/`resumenDocumentos`, testeado): **NULL = «adjuntos
+  sin revisar»** (con aviso de abrir la ficha oficial), **`[]` = «sin documentos adjuntos»**. Las fuentes sin
+  ficha documental (Junta) pasan `publicaAdjuntos=false` para no quedar «pendientes» para siempre. Regla
+  general: **no afirmes una ausencia con un dato que aún no has mirado** — al añadir una columna de
+  enriquecimiento, la UI debe distinguir «no lo sé todavía» de «no hay».
+- **⏰ Subasta vencida seguía «viva» en el radar (01/08/2026):** ningún camino de LECTURA filtraba por fecha —
+  solo el DELETE diario de `archivarPasadas` (06:15 UTC, con 1 día de gracia) limpiaba la bandeja, así que una
+  subasta cerrada seguía pintándose pujable 14-38h (o para siempre si el cron fallaba). Filtros canónicos
+  **`SUBASTA_VIGENTE`/`RADAR_VIGENTE`/`RADAR_CON_CORPUS`** en `lib/subastas-radar.ts`, aplicados a la SSR de
+  `/subastas`, `GET /api/subastas/{radar,mapa}` y el cron `subastas-avisos`; `archivarPasadas` borra sin gracia.
+  De regalo: `decidirAviso` gana `cerrada` (evita que «cerró hace horas» suene como «cierra hoy, urgentísimo»)
+  y el aviso vuelve a leer `valor_orientativo` (no se seleccionaba, la guarda de rentabilidad nunca saltaba).
+- **⚖️ «Cargas no publicadas» ya no se confunde con «sin leer todavía» (01/08/2026):** `cargas_conocidas`
+  colapsaba dos cosas distintas en el mismo `false` — el BOE no publica cargas vs. sí las publica pero el
+  lector aún no las abrió. Nuevos **`estadoCargas`/`titularCargas`** (6 estados: subsisten/sin_cargas/
+  **sin_cuantificar**/publicadas_sin_extraer/no_publicadas/sin_revisar) en `module-subastas/cargas.ts`,
+  consumidos por la ficha y por
+  `analisisDocumental`. El gate de rentabilidad `mereceAnalisisProfundo` dejó de bloquear también la LECTURA
+  de cargas: si la ficha publica el documento se lee igual aunque el flip no compense. `LECTOR_VERSION` 4→5
+  (relee lo ya procesado), documentos de cargas se descargan primero en la cola.
+- **🔎 Referencia catastral POR DIRECCIÓN — idea de Alberto (30/07/2026):** el BOE publica la dirección casi siempre pero la referencia catastral solo a veces (5 de 34 vigentes), y sin referencia no hay punto exacto. Cadena nueva en `lib/subastas/enriquecer.ts`: `paramsDnploc()` (módulo) saca sigla+vía+número del texto registral → **`resolverNombreVia()`** consulta el callejero (`ConsultaVia`, busca por prefijo) porque **`Consulta_DNPLOC` exige el nombre EXACTO y el Catastro archiva los artículos al final** («Avenida de Madrid» → **«MADRID DE»**) → **`buscarRefPorDireccion()`** (`Consulta_DNPLOC`) devuelve los inmuebles del portal → si todos comparten parcela, esa es la referencia (`parcelaUnica`; si mezcla parcelas la dirección era ambigua y se devuelve `null` en vez de adivinar) → `Consulta_CPMRC` da el punto exacto. **Acierto real medido: 4 de 16** direcciones del corpus; los fallos son por datos de ORIGEN imprecisos (parcelas de polígono, «S/N», direcciones antiguas, locales sin portal propio), no por el parser — verificado a mano que ni «MADRID» ni «MADRID DE» tienen el nº 78 en Catastro. Degrada al centroide del municipio, nunca rompe. ⚠️ **Trampa del parser (costó 10 de 16 fallos):** NO cortar la dirección por la primera coma — en español el número del portal va justo DETRÁS («CALLE ALPECHÍN, 41»). ⚠️ **Los DATOS del bien (m²/año/uso) exigen la referencia de 20:** con la de parcela (14) `Consulta_DNPRC` devuelve el LISTADO del edificio sin bloque `<bico>` y el parseo sale vacío, así que un portal con varios pisos da ubicación exacta pero no datos del piso concreto (no se sabe cuál se subasta).
+- **El enriquecimiento ya no reintenta fichas del BOE para fuentes que no las tienen (30/07/2026):** las filas con `fuente <> 'boe'` (23 lotes de la Junta) entraban en `bajarFicha`, fallaban SIEMPRE y —al ir primeras por `ORDER BY enriquecida_at NULLS FIRST`— **monopolizaban la cola sin enriquecerse nunca**. Ahora esas filas hacen solo su geocodificación y marcan `enriquecida_at`. Al añadir una fuente nueva sin ficha en el Portal, cae en esta rama sola.
 - **Aviso Telegram por subasta** (no agregado si ≤10/día) con botones `subr_seguir`/`subr_descartar` (prefijo `subr_` en el webhook) — seguir = alta idempotente en `subastas_seguidas`; descartar registra la decisión (base de un aprendizaje futuro, aún no implementado).
 - **Captura de resultados** (`capturarResultados` en `enriquecer.ts`, cron `subastas-enriquecer`): re-consulta subastas concluidas y guarda `resultado`/`importe_adjudicacion`. El parser es defensivo (si no reconoce el marcado de "concluida", loguea y deja NULL) — pendiente de validar contra una conclusión real.
 - **Antesala concursal:** cruza el corpus BORME (empresas en concurso) contra promotoras/inmobiliarias de las provincias de los criterios de Alberto y avisa por Telegram.
@@ -460,6 +547,69 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
   · **INE €/m² → PENDIENTE de diseño** (la API JSON Tempus responde; es fuente de VALORACIÓN, no de subastas).
   ⚠️ TEMPORAL mientras dure la fase: endpoint puente `/api/subastas/fase3-debug` (token en BD
   `subastas_debug_token`, hosts oficiales cerrados, en PUBLIC del middleware) — eliminarlo al cerrar Fase 3.
+
+## 💓 Latidos de agentes — el vigía que avisa por Telegram (ampliado 30/07/2026)
+`lib/monitoring/latidos.ts` (registro + `evaluarLatido` puro) + cron `agentes-latido` (07:45 UTC) →
+**Telegram**. Regla de oro: solo se vigilan huellas que se refrescan en CADA pasada del agente.
+- **Huella para los agentes que solo escriben "cuando hay trabajo": tabla `agente_latidos`**
+  (`prisma/sql/2026-07-30_agente_latidos.sql`, **aplicada**; `agente` PK, `ultimo_at` = último intento,
+  `ultimo_ok_at` = última pasada BUENA, `ok`, `detalle`). Se escribe con `lib/monitoring/latido-escribir.ts::registrarLatido`.
+  La frescura se mide sobre **`ultimo_ok_at`**, así que un agente que corre y falla siempre también salta.
+  Estrenada por el **escaneo de facturas de Gmail** (`facturas-scan`), que antes no tenía NINGÚN vigilante
+  porque `facturas_proveedor` solo crece si llega una factura. `escanearNuevasFacturas` devuelve ahora
+  `{nuevas, ok, error}`: un `nuevas:0` con `ok:false` es «no se pudo mirar el buzón», no «no hay facturas»
+  (antes el chat contestaba «No tienes facturas de proveedor pendientes 🎉» con el IMAP caído).
+- **`ialimp_pms`**: vigila `pms_connections.last_sync_at` (la columna VIVA; `ultimo_sync` no la escribe
+  nadie — ver el landmine en `apps/ialimp/CLAUDE.md`) y además avisa si hay `sync_error`, porque el sync
+  marca la fecha aunque la pasada haya fallado. Es infraestructura del SaaS de Alberto, **no** el backlog
+  operativo de Vanessa (eso sigue vetado, ver Check 6 retirado).
+- **🚨 «0 facturas nuevas» tapaba los correos que la IA no supo leer (02/08/2026).** Con el latido ya
+  arreglado, la primera pasada buena reportó «0 factura(s) nueva(s)» **con la extracción por IA fallando
+  en los logs** (NIM timeout, Groq JSON truncado). El motivo: `escanearNuevasFacturas` descartaba con un
+  `if (!importe) continue` mudo, así que un correo ilegible no contaba como nueva, ni como pendiente, ni
+  dejaba rastro — el mismo «no lo sé» disfrazado de «no hay», un nivel por debajo del latido. Fix:
+  **`aiExtractInvoiceDetallado`** (en `lib/ai-client.ts`) distingue **`'tecnico'`** (ningún modelo
+  respondió → NO se ha leído) de **`'sin_datos'`** (respondió y no era factura → SÍ se ha leído); solo el
+  primero cuenta como `sinLeer`, se etiqueta en Gmail (**`Facturas/Extraccion-fallida`**, cola persistente
+  que sobrevive al contenedor) y sale con ⚠️ en el parte del latido vía el helper PURO
+  `lib/agente-facturas/resumen-escaneo.ts` (`detalleEscaneo`/`recuentoFiable`, testeado). ⚠️ Límite
+  asumido y documentado: la ventana del escaneo es de 7 días, así que un correo que falle 7 días seguidos
+  deja de reintentarse solo y se queda en la etiqueta para revisión a mano — no se promete un reintento
+  eterno. Al añadir un descarte nuevo en un agente, la pregunta es siempre la misma: ¿esto es «he mirado
+  y no hay» o «no he podido mirar»? Si es lo segundo, tiene que contarse y dejar cola.
+- **🚨 «0 comps» del barrido de mercado eran 44 búsquedas VACÍAS (02/08/2026).** Primera pasada vigilada
+  de `sivra_mercado_sweep`: `0 comps en 44 ventanas`, latido en rojo, sin un solo error. No era el mercado
+  ni la IA: **Serper devolvía `organic: []`** para la consulta con el operador `site:booking.com` (los 41
+  prompts que llegaron a la pasarela pesaban 149-278 tokens contando la respuesta, contra los 576-933 del
+  scraper diario `mercado/cron`, que sí trae comps con una consulta abierta). Con la búsqueda vacía la IA
+  responde `{"apartments":[]}` —correctamente— y el `catch { return [] }` de la extracción remataba: un
+  «no he podido mirar» servido como «no hay mercado». Fixes: (a) `serperSearch` devuelve **cuántos
+  resultados** trajo y aprovecha `answerBox`+`sitelinks` como el cron diario; (b) `extractPrices` separa
+  `'sin_leer'` (fallo técnico) de leído-sin-precios; (c) **segunda consulta ABIERTA** (sin `site:`) cuando
+  la primera vuelve vacía, acotada por `SIVRA_SWEEP_MAX_ABIERTAS` (default 20) porque cada intento es una
+  búsqueda de pago; (d) el parte y el `ok` salen del helper PURO **`lib/sivra/resumen-sweep.ts`**
+  (`detalleBarrido`/`barridoFiable`, testeado). ⚠️ **La consulta abierta trae mercado pero puede no
+  distinguir la fecha**, y un corpus plano etiquetado con fechas futuras es una temporada inventada: por
+  eso `sinSenalDeTemporada` marca la pasada como NO fiable si todas las fechas de un aforo acaban con los
+  mismos comps al mismo precio (≥3 fechas). Sin comps propios de la fecha el motor cae al ancla global,
+  que está dominada por las fechas cercanas y más baratas.
+- **🚨 LANDMINE — la huella se escribe DENTRO del trabajo que vigila: si la función muere, no hay
+  huella (31/07/2026).** El mismo día de estrenar el vigía saltó «🧾 Escaneo de facturas: sin ninguna
+  señal registrada» y la nota mandaba a mirar IMAP/app-password. No era eso: `facturas-scan` corría
+  todos los días y **moría en 504** («Task timed out after 60 seconds», 3 de sus últimas 4 pasadas)
+  a mitad del escaneo — con facturas ya insertadas (IONOS y Punto y Coma ese 06:16) pero sin llegar
+  jamás a `registrarLatido`, que estaba al final. Tres arreglos, aplicables a cualquier agente nuevo:
+  (a) **`maxDuration` 60 → 300** y **presupuesto de tiempo explícito** (`escanearNuevasFacturas(…, {deadline})`
+  y `listarCandidatosConLimite`, que corta el listado IMAP): subir el techo solo mueve la pared, el
+  presupuesto es lo que garantiza que la pasada VUELVE; (b) **latido de INTENTO al empezar** (`ok=false`,
+  no toca `ultimo_ok_at`) + **latido definitivo justo después del escaneo**, nunca al final de la ruta —
+  la huella del buzón no puede depender de que la conciliación bancaria posterior termine; (c) `evaluarLatido`
+  recibe también `ultimo_at` y `detalle` para **distinguir «no se dispara» de «se dispara y no termina»**
+  (antes ambas eran el mismo «sin ninguna señal» y mandaban a buscar al sitio equivocado). Un listado IMAP
+  truncado devuelve `ok:false`: se ha visto MEDIO buzón, y eso no es haberlo mirado. Los `pendientes`
+  van en el `detalle` (se retoman en la pasada siguiente, dedupe por `gmail_uid`).
+- **Una sonda que revienta ya NO se traga en silencio**: va en un bloque aparte del Telegram, «Sin poder
+  comprobar — esto NO es "todo bien"». Un vigía averiado que calla es un parte de buena salud falso.
 
 ## Reglas
 - Multi-tenant: SIEMPRE filtrar por `cuenta_id` en todas las queries.

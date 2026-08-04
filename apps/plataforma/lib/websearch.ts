@@ -3,9 +3,20 @@
 //
 // Por qué existe: el grounding de Gemini (gratis) lleva rachas largas de 429 y todo lo que
 // dependía de él en exclusiva se quedaba mudo (el cron de eventos por websearch llevaba
-// semanas sin aportar filas). Cadena: Gemini google_search (GRATIS) → plugin `web` de
-// OpenRouter (DE PAGO, ~0,02€/llamada con 5 resultados; respeta el presupuesto diario de la
-// pasarela). Ambos intentos quedan en `ai_usos` (endpoint del caller) — mismo auditor que el chat.
+// semanas sin aportar filas). El respaldo es el plugin `web` de OpenRouter (DE PAGO, ~0,02€/llamada
+// con 5 resultados; respeta el presupuesto diario de la pasarela). Ambos intentos quedan en
+// `ai_usos` (endpoint del caller) — mismo auditor que el chat.
+//
+// 🚨 ORDEN INVERTIDO EL 01/08/2026 — OPENROUTER ES EL PRIMARIO, GEMINI NO SE INTENTA.
+// Hallazgo: `GEMINI_API_KEY` acumulaba **548 llamadas y CERO éxitos desde el 16/06**, en todos los
+// endpoints (search, chat, eventos, empresas, contable) y con los tres modelos que se han ido
+// probando. No era una racha de 429 por uso: es una key sin cuota. Y el fallback funcionaba tan bien
+// que lo tapó mes y medio — pagando OpenRouter en todas las llamadas Y, encima, pagando antes el
+// intento fallido de Gemini con su timeout.
+//
+// Decisión de Alberto: «usa OpenRouter, que tienes todo». Así que Gemini pasa a estar APAGADO por
+// defecto y solo se intenta si se pone `GEMINI_WEBSEARCH=1` — el código se conserva entero para
+// cuando haya una key con cuota, pero deja de ser un peaje silencioso en el camino crítico.
 
 import { geminiSearch, openrouterSearchEx } from '@central/core-ai'
 import { registrarUso, estimarTokens, costeEur, dentroDePresupuestoDiario } from '@/lib/ai-gateway'
@@ -15,6 +26,37 @@ import { openrouterConfigPasarela } from '@/lib/ia-director'
 // Se suma al coste por tokens del modelo. Override por env si OpenRouter cambia el precio.
 const WEB_RESULTS = 5
 const PLUGIN_EUR = Number(process.env.AI_PRECIO_WEBPLUGIN_EUR ?? 0.018)
+
+// ─── Breaker de Gemini ──────────────────────────────────────────────────────────────────────
+// Hallazgo del 01/08/2026: `GEMINI_API_KEY` llevaba **548 llamadas y CERO éxitos** desde el 16/06,
+// en todos los endpoints y con los tres modelos que se han ido probando. No era una racha de 429 por
+// uso: es una key sin cuota (proyecto de Google Cloud sin facturación ni free tier habilitado, o la
+// Generative Language API sin activar). El fallback la tapaba tan bien que nadie lo vio en mes y
+// medio — pagando OpenRouter en todas las búsquedas y, encima, pagando ANTES el intento fallido.
+//
+// Este breaker no arregla la key (eso es una acción fuera del código): evita seguir pagando el
+// peaje. Tras `GEMINI_BREAKER_FALLOS` fallos SEGUIDOS se salta Gemini durante
+// `GEMINI_BREAKER_PAUSA_MIN` minutos y se va directo a OpenRouter. Mismo patrón que el breaker del
+// Director (`lib/ia-director.ts`). En memoria del proceso: en serverless se reinicia con cada
+// instancia fría, y está bien — es un atajo de coste, no un estado que debamos persistir.
+const BREAKER_FALLOS = Number(process.env.GEMINI_BREAKER_FALLOS ?? 3)
+const BREAKER_PAUSA_MS = Number(process.env.GEMINI_BREAKER_PAUSA_MIN ?? 15) * 60_000
+let geminiFallosSeguidos = 0
+let geminiPausadoHasta = 0
+
+function geminiEnPausa(): boolean {
+  return BREAKER_FALLOS > 0 && geminiPausadoHasta > Date.now()
+}
+function anotarFalloGemini(): void {
+  geminiFallosSeguidos++
+  if (BREAKER_FALLOS > 0 && geminiFallosSeguidos >= BREAKER_FALLOS) {
+    geminiPausadoHasta = Date.now() + BREAKER_PAUSA_MS
+  }
+}
+function anotarExitoGemini(): void {
+  geminiFallosSeguidos = 0
+  geminiPausadoHasta = 0
+}
 
 export type BuscarWebOpts = {
   /** App que llama (atribución en ai_usos). */
@@ -27,9 +69,20 @@ export type BuscarWebOpts = {
 
 export type BuscarWebResult = { text: string; proveedor: 'gemini' | 'openrouter'; modelo: string }
 
-/** ¿Hay ALGUNA vía de búsqueda configurada? (para que los callers gateen su no-op). */
+/**
+ * ¿Se debe intentar Gemini? APAGADO por defecto desde el 01/08/2026 (ver cabecera: la key llevaba
+ * 548 llamadas sin un solo éxito). Poner `GEMINI_WEBSEARCH=1` lo reactiva cuando haya cuota.
+ */
+function geminiActivo(): boolean {
+  return process.env.GEMINI_WEBSEARCH === '1' && Boolean(process.env.GEMINI_API_KEY)
+}
+
+/**
+ * ¿Hay ALGUNA vía de búsqueda configurada? (para que los callers gateen su no-op).
+ * Con Gemini apagado por defecto, esto es en la práctica «hay OPENROUTER_API_KEY».
+ */
 export function busquedaConfigurada(): boolean {
-  return Boolean(process.env.GEMINI_API_KEY || process.env.OPENROUTER_API_KEY)
+  return Boolean(geminiActivo() || process.env.OPENROUTER_API_KEY)
 }
 
 /**
@@ -41,16 +94,24 @@ export async function buscarWeb(system: string, user: string, opts: BuscarWebOpt
   const { app, endpoint, maxTokens = 1500, timeoutMs = 40_000 } = opts
   const errores: string[] = []
 
-  const geminiKey = process.env.GEMINI_API_KEY
-  if (geminiKey) {
+  const geminiKey = geminiActivo() ? process.env.GEMINI_API_KEY : undefined
+  if (geminiKey && geminiEnPausa()) {
+    errores.push('gemini: breaker abierto (fallos seguidos)')
+  } else if (geminiKey) {
     const t0 = Date.now()
     try {
       const text = await geminiSearch({ apiKey: geminiKey }, system, user, { maxTokens, timeoutMs })
+      anotarExitoGemini()
       const tokens = estimarTokens(system, user, text)
       await registrarUso({ app, endpoint, proveedor: 'gemini', modelo: 'gemini-flash-latest', ok: true, ms: Date.now() - t0, tokens, costeEur: costeEur('gemini', tokens) })
       return { text, proveedor: 'gemini', modelo: 'gemini-flash-latest' }
     } catch (e) {
-      const msg = e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 200) : 'error'
+      anotarFalloGemini()
+      // 400 caracteres, no 200: el 429 de Google mete el `quotaId` y el `quotaMetric` en `details`,
+      // que es lo que dice CUÁL de las cuotas se agotó (la del modelo, la del grounding, la del
+      // proyecto). Con el corte anterior el mensaje se quedaba justo en «please check your plan and
+      // billing details» y no había forma de saber qué mirar sin reproducirlo a mano.
+      const msg = e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 400) : 'error'
       errores.push(`gemini: ${msg}`)
       await registrarUso({ app, endpoint, proveedor: 'gemini', modelo: 'gemini-flash-latest', ok: false, ms: Date.now() - t0, error: msg })
       console.warn('[websearch] Gemini falló, intento OpenRouter web:', msg)

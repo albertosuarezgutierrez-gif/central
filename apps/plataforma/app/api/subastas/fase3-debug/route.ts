@@ -14,9 +14,11 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { ingerirJunta } from '@/lib/subastas/junta'
 import { procesarDocumentos } from '@/lib/subastas/documentos'
+import { clasificarSubastas } from '@/lib/subastas/clasificar'
+import { aplicarReferenciaMercado, chollosVigentes, enriquecerAnunciantesFotocasa, ingerirComparables, leerIndiceINE, pulsoMercado, referenciaZonasFotocasa, refrescarIndiceINE } from '@/lib/subastas/mercado'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 300
 
 const HOSTS_PERMITIDOS = new Set([
   'www.boe.es', 'boe.es',
@@ -55,7 +57,142 @@ export async function GET(req: NextRequest) {
   }
   if (sp.get('accion') === 'documentos') {
     try {
-      return NextResponse.json({ ok: true, ...(await procesarDocumentos()) })
+      const max = Math.min(Math.max(parseInt(sp.get('max') || '10', 10) || 10, 1), 40)
+      return NextResponse.json({ ok: true, ...(await procesarDocumentos(max)) })
+    } catch (e: any) {
+      return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
+    }
+  }
+  // Lectura registral de UNA ficha, devolviendo el cuadro de cargas SIN escribir en
+  // BD: es la forma de validar el prompt del lector contra una certificación real
+  // (escaneada incluida) antes de soltarlo sobre el corpus.
+  if (sp.get('accion') === 'cargas') {
+    const idSub = sp.get('id') ?? ''
+    if (!idSub) return NextResponse.json({ error: 'falta ?id=' }, { status: 400 })
+    try {
+      const { procesarDocumentosDeFicha } = await import('@/lib/subastas/documentos')
+      const { cargasQueSubsisten, resumirCargas } = await import('@central/module-subastas')
+      const r = await procesarDocumentosDeFicha(idSub, { leerCargas: true })
+      const subsistentes = cargasQueSubsisten(r.cuadro, new Date())
+      return NextResponse.json({
+        ok: true,
+        leidos: r.leidos,
+        detalle: r.detalle,
+        notas: r.notas,
+        cuadro: r.cuadro,
+        subsistentes,
+        resumen: resumirCargas(r.cuadro, subsistentes),
+      })
+    } catch (e: any) {
+      return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
+    }
+  }
+  // Diagnóstico de UNA ficha: qué texto extrae pdf-parse de cada documento
+  // (las señales de la certificación no salían en prod pese a pasar los tests
+  // con fixtures de unpdf — hay que ver el texto REAL que ve el parser).
+  if (sp.get('accion') === 'doc') {
+    const idSub = sp.get('id') ?? ''
+    if (!idSub) return NextResponse.json({ error: 'falta ?id=' }, { status: 400 })
+    const claves = (sp.get('buscar') ?? 'asientos vigentes,CARGAS,EMBARGO,anotaci').split(',')
+    try {
+      const { enlacesDocumentos } = await import('@central/module-subastas')
+      const html = await (
+        await fetch(`https://subastas.boe.es/detalleSubasta.php?idSub=${encodeURIComponent(idSub)}`, {
+          headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(20000), cache: 'no-store',
+        })
+      ).text()
+      const docs = enlacesDocumentos(html)
+      const salida = []
+      for (const doc of docs.slice(0, 3)) {
+        try {
+          const r = await fetch(doc.url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(25000), cache: 'no-store' })
+          const buf = Buffer.from(await r.arrayBuffer())
+          const mod: any = await import('pdf-parse/lib/pdf-parse.js')
+          const pdfParse = mod.default ?? mod
+          const texto = String((await pdfParse(buf).catch((e: any) => ({ text: `[pdf-parse ERROR] ${e?.message}` }))).text ?? '')
+          const plano = texto.replace(/\s+/g, ' ')
+          const ventanas: Record<string, string[]> = {}
+          for (const c of claves) {
+            const re = new RegExp(c.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
+            const encontradas: string[] = []
+            let m: RegExpExecArray | null
+            while ((m = re.exec(plano)) && encontradas.length < 3) {
+              encontradas.push(plano.slice(Math.max(0, m.index - 120), m.index + 180))
+            }
+            ventanas[c.trim()] = encontradas
+          }
+          salida.push({ titulo: doc.titulo, bytes: buf.length, chars: plano.trim().length, inicio: plano.slice(0, 300), ventanas })
+        } catch (e: any) {
+          salida.push({ titulo: doc.titulo, error: e?.message ?? String(e) })
+        }
+      }
+      return NextResponse.json({ ok: true, docs: salida })
+    } catch (e: any) {
+      return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
+    }
+  }
+  if (sp.get('accion') === 'clasificar') {
+    try {
+      return NextResponse.json({ ok: true, ...(await clasificarSubastas()) })
+    } catch (e: any) {
+      return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
+    }
+  }
+  // Solo el paso de anunciantes (rápido): la ingesta IMAP completa tarda
+  // minutos y para probar el 👤 particular no hace falta repetirla.
+  if (sp.get('accion') === 'anunciantes') {
+    try {
+      return NextResponse.json({ ok: true, ...(await enriquecerAnunciantesFotocasa(10)) })
+    } catch (e: any) {
+      return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
+    }
+  }
+  // IPV del INE + pulso de enfriamiento (prueba E2E de la señal de recesión).
+  if (sp.get('accion') === 'indice') {
+    try {
+      const refresco = await refrescarIndiceINE()
+      const indice = await leerIndiceINE()
+      const pulso = await pulsoMercado()
+      return NextResponse.json({ ok: true, refresco, indice, pulso })
+    } catch (e: any) {
+      return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
+    }
+  }
+  // Chollos con la mediana del buscador (fuente por chollo, prueba E2E).
+  if (sp.get('accion') === 'chollos') {
+    try {
+      const chollos = await chollosVigentes()
+      return NextResponse.json({
+        ok: true,
+        total: chollos.length,
+        porFuente: chollos.reduce((acc: Record<string, number>, c) => {
+          acc[c.fuente] = (acc[c.fuente] ?? 0) + 1
+          return acc
+        }, {}),
+        primeros: chollos.slice(0, 5).map((c) => ({
+          titulo: c.comparable.titulo, zona: c.zona, fuente: c.fuente,
+          muestra: c.muestra, descuento: Math.round(c.descuento * 100),
+        })),
+      })
+    } catch (e: any) {
+      return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
+    }
+  }
+  // Solo zonas + aplicación de referencia (rápido, sin IMAP).
+  if (sp.get('accion') === 'zonas') {
+    try {
+      const zonas = await referenciaZonasFotocasa(parseInt(sp.get('max') || '6', 10) || 6)
+      const aplicacion = await aplicarReferenciaMercado()
+      return NextResponse.json({ ok: true, zonas, aplicacion })
+    } catch (e: any) {
+      return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
+    }
+  }
+  if (sp.get('accion') === 'mercado') {
+    try {
+      const ingesta = await ingerirComparables(7, 60)
+      const anunciantes = await enriquecerAnunciantesFotocasa()
+      return NextResponse.json({ ok: true, ingesta, anunciantes })
     } catch (e: any) {
       return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
     }

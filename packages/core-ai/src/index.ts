@@ -3,6 +3,8 @@
 // app). La POLÍTICA (fallback, timeouts, selección de modelo) vive en cada app.
 
 export { cleanJSON } from './clean-json'
+export { fetchAI, AiHttpError, isRateLimitError } from './http'
+export type { AiRetryOptions } from './http'
 export { nimText, nimChat, nimVision, nimChatTools } from './nim'
 export type { NimChatMessage, NimChatOptions, NimToolMessage, NimToolCall, NimToolResult } from './nim'
 export { groqText, groqChat, groqChatTools } from './groq'
@@ -11,7 +13,7 @@ export { groqTranscribe } from './stt'
 export type { GroqSttConfig, AudioInput } from './stt'
 export { moonshotChat } from './moonshot'
 export type { MoonshotConfig } from './moonshot'
-export { openrouterChat, openrouterChatEx, openrouterChatTools, openrouterSearchEx } from './openrouter'
+export { openrouterChat, openrouterChatEx, openrouterChatTools, openrouterSearchEx, openrouterVision, openrouterVisionEx } from './openrouter'
 export type { OpenRouterConfig, OpenRouterChatOptions, OpenRouterChatResult, OpenRouterUsage } from './openrouter'
 export { geminiEmbed } from './embeddings'
 export type { GeminiEmbedConfig } from './embeddings'
