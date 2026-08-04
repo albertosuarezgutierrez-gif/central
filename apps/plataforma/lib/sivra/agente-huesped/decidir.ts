@@ -49,6 +49,13 @@ const LANG_NAME: Record<string, string> = { es: 'español', en: 'English', fr: '
 // como vivo en NIM: si está puesto, se intenta primero y, si falla, se reintenta con el 70B.
 const MODELO_HUESPED = process.env.AGENTE_HUESPED_MODEL || ''
 
+// Timeout por proveedor de la cadena de IA (NIM→Groq→Gemini→Kimi). Más corto que el default (30s)
+// de la pasarela: cuando NIM se cuelga (causa real de los "IA no disponible" a Mirian y Julien —
+// `The operation was aborted due to timeout` en logs), no queremos esperar 30s antes de caer al
+// siguiente eslabón. 15s deja de sobra para una respuesta sana (500 tokens de Llama 70B tardan
+// ~3-10s) y hace el failover a Groq/Gemini mucho más ágil. La ventana del webhook es 300s.
+const HUESPED_TIMEOUT_MS = 15_000
+
 // Cierre de conversación que no pide nada (no requiere respuesta obligatoria; se propone igual
 // como cortesía). Solo cuando el mensaje es ÍNTEGRAMENTE una fórmula de cortesía/cierre.
 const RE_CIERRE = /^(?:muchas\s+)?(?:gracias|graciass+|ok+|vale|perfecto|genial|estupendo|de acuerdo|entendido|recibido|buenas noches|buen día|hasta (?:luego|mañana|pronto)|thanks?|thank you|thx|great|perfect|cheers|merci|grazie|danke)[\s!.,😊👍🙏❤️]*$/i
@@ -97,7 +104,7 @@ MENSAJE DEL HUÉSPED: ${pregunta}
 
 BORRADOR: ${reply}`
   try {
-    const out = await aiComplete([{ role: 'user' as const, content: user }], { system, maxTokens: 4, temperature: 0 })
+    const out = await aiComplete([{ role: 'user' as const, content: user }], { system, maxTokens: 4, temperature: 0, timeoutMs: HUESPED_TIMEOUT_MS })
     return /escalar/i.test(out || '')
   } catch {
     return false
@@ -161,6 +168,16 @@ export async function decidir(ctx: Contexto, pregunta: string, categoria: string
           : `LATE CHECK-OUT: ahora mismo no hay ninguna entrada programada para el día de su salida, así que EN PRINCIPIO SÍ va a ser posible salir más tarde de las ${salida}. Pero como pueden entrar reservas de última hora, NO se lo prometas en firme todavía: dile que en principio no hay problema y que se lo confirmáis definitivamente el mismo día de la salida.`
         : `LATE CHECK-OUT: ese mismo día entra otro huésped al piso, así que NO va a ser posible alargar la salida más allá de las ${salida} (hace falta limpiarlo y prepararlo para la siguiente entrada). Explícaselo con amabilidad y, como alternativa, ofrécele la consigna de equipaje del bloque CONSIGNAS de la ficha para que pueda dejar las maletas y seguir disfrutando de la ciudad hasta la hora que necesite.`
 
+  // Petición de reseña (28/07/2026, decisión de Alberto): el rating es el freno comercial nº1
+  // (Busto 6,9 vs comps 8,3-9,2). SOLO en despedidas/cierres del día de salida o post-estancia
+  // — nunca en mitad de la estancia ni en mensajes con carga negativa (needs_human/sentimiento
+  // negativo no llegan aquí como cortesía auto-enviable; las guardas comunes del orquestador
+  // siguen aplicando). Sin incentivos ni condicionarla a que sea positiva (política de las OTAs).
+  const pideResena = (esPostEstancia || esDiaSalida) && (esCierre(pregunta) || esDespedida(pregunta))
+  const resenaBlock = pideResena
+    ? `\nRESEÑA: el huésped se está despidiendo. Cierra tu respuesta con UNA sola frase amable y nada insistente invitándole a dejar una reseña de su estancia en ${ctx.portal || 'la plataforma donde reservó'} — a un alojamiento pequeño le ayuda muchísimo. No ofrezcas nada a cambio, no pidas que sea positiva y no lo conviertas en un párrafo comercial.`
+    : ''
+
   const system = `Eres el asistente de atención al huésped de ${ctx.property} (alquiler turístico en ${ctx.zona}).
 Huésped: ${ctx.guestName} · llegada ${ctx.checkIn} · salida ${ctx.checkOut} · canal ${ctx.portal}.${horario}
 Responde SIEMPRE en ${LANG_NAME[ctx.lang] || 'English'} con un tono cálido, cercano y natural, como una persona real escribiendo a mano (no un folleto ni una plantilla). Saluda al huésped por su nombre.
@@ -177,6 +194,7 @@ ${ctx.guia ? `\nGUÍA DEL HUÉSPED:\n${ctx.guia}` : ''}
 ${aprend ? `EJEMPLOS DE RESPUESTAS APROBADAS POR EL ANFITRIÓN (imítalos en tono y criterio):\n${aprend}\n` : ''}
 ${earlyBlock}
 ${lateBlock}
+${resenaBlock}
 
 Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Nada de comillas, ni JSON, ni notas, ni "Respuesta:" — solo el texto del mensaje.`
 
@@ -194,13 +212,13 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
     let raw = ''
     if (MODELO_HUESPED) {
       try {
-        raw = await aiComplete(mensajes, { system, maxTokens: 500, model: MODELO_HUESPED })
+        raw = await aiComplete(mensajes, { system, maxTokens: 500, model: MODELO_HUESPED, timeoutMs: HUESPED_TIMEOUT_MS })
       } catch (e1: any) {
         console.error('[decidir] modelo fuerte falló, reintento con default:', e1?.message)
-        raw = await aiComplete(mensajes, { system, maxTokens: 500 })
+        raw = await aiComplete(mensajes, { system, maxTokens: 500, timeoutMs: HUESPED_TIMEOUT_MS })
       }
     } else {
-      raw = await aiComplete(mensajes, { system, maxTokens: 500 })
+      raw = await aiComplete(mensajes, { system, maxTokens: 500, timeoutMs: HUESPED_TIMEOUT_MS })
     }
     reply = limpiarReply(raw || '')
   } catch (e: any) {

@@ -4,7 +4,7 @@ import path from 'path'
 const monorepoRoot = path.join(__dirname, '..', '..')
 
 const nextConfig: NextConfig = {
-  transpilePackages: ['@central/core-ai', '@central/core-email', '@central/core-telegram', '@central/core-identity', '@central/module-concursos', '@central/module-contabilidad', '@central/module-intercompany', '@central/module-pagos', '@central/module-trading'],
+  transpilePackages: ['@central/core-ai', '@central/core-email', '@central/core-telegram', '@central/core-identity', '@central/module-concursos', '@central/module-contabilidad', '@central/module-intercompany', '@central/module-pagos', '@central/module-subastas', '@central/module-trading'],
   serverExternalPackages: ['pdf-parse'],
   outputFileTracingRoot: monorepoRoot,
   eslint: { ignoreDuringBuilds: true },

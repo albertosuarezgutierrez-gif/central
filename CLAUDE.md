@@ -47,8 +47,11 @@
 
 ## Memoria entre sesiones (entorno efímero)
 El contenedor cloud se borra al acabar la sesión: lo único que persiste es lo commiteado.
-Al terminar, actualiza `docs/CONTEXTO-SESIONES.md` (entrada nueva arriba). El hook `Stop`
-(`.claude/hooks/persist-memoria.sh`) lo commitea y empuja.
+Al terminar, actualiza `docs/CONTEXTO-SESIONES.md` (entrada nueva arriba, **máx ~8 líneas**,
+fecha `(dd/mm/aaaa)` en la primera línea — el detalle vive en el PR, no aquí). El hook `Stop`
+(`.claude/hooks/persist-memoria.sh`) lo commitea y empuja. El archivo vivo solo guarda el mes
+corriente; los meses cerrados se rotan a `docs/memoria/AAAA-MM.md` (`scripts/rotar-memoria.mjs`,
+lo dispara la auditoría a primeros de mes). Historia antigua → leer `docs/memoria/`.
 
 Salvaguardas para no perder información:
 - **Guardián de cierre** (`persist-memoria.sh`): si la sesión hizo commits que tocan algo
@@ -71,6 +74,55 @@ Salvaguardas para no perder información:
 - **Límite conocido:** una sesión de **solo charla** (decisión importante pero sin commit)
   no dispara el guardián — no hay "trabajo" detectable. Si una conversación produce una
   decisión, anótala a mano en `CONTEXTO-SESIONES.md`.
+
+## Estilo de respuesta — regla global permanente
+**Responde de forma sintética y directa.** Ve al grano: da el resultado o la respuesta primero, sin resúmenes largos, sin repetir el contexto que Alberto ya conoce, sin recapitular lo que acabas de hacer. Nada de listas exhaustivas de opciones que no vas a seguir ni de narrar cada paso. Si hace falta explicar un porqué, hazlo en una o dos frases. Extiéndete SOLO cuando Alberto lo pida explícitamente ("dame el detalle", "explícame", etc.). Esto NO aplica al código, comentarios ni mensajes de commit/PR (esos siguen sus propias reglas).
+
+## Dato que NO hay ≠ dato que NO se ha mirado — regla global permanente
+**Nunca afirmes una ausencia con un dato que todavía no se ha comprobado.** En este monorepo casi
+todas las pantallas viven sobre columnas de **enriquecimiento asíncrono** (las rellena un cron, un
+agente o un servicio externo: Catastro, BOE, Gmail, Drive, Smoobu, banca PSD2, IA, portales
+inmobiliarios…). En esas columnas **`NULL` significa «todavía no se sabe»**, y el corpus SIEMPRE es
+más viejo que la columna: el día que se añade, TODAS las filas la tienen a NULL.
+
+Colapsar ese NULL con `?? []`, `?? 0`, `|| 0`, `?? false` o `COALESCE(x,0)` y luego pintarlo como
+«sin documentos adjuntos», «no hay facturas pendientes», «0 €», «sin incidencias» o un semáforo 🟢
+convierte un «no lo sé» en una afirmación falsa — y son justo las afirmaciones sobre las que Alberto
+decide. Caso fundacional (30/07/2026, PR #1180): la ficha de una subasta decía «sin documentos
+adjuntos» mientras el BOE publicaba su edicto Y su certificación de cargas; 8 de las 11 subastas
+vivas mentían igual.
+
+Qué hacer:
+- **Tres estados, no dos:** `null` = «sin revisar / pendiente» · `[]`/`0` = «revisado, no hay» ·
+  con contenido = el dato. La UI debe poder decir las tres cosas, y el estado «pendiente» dice al
+  usuario dónde mirar mientras tanto (la ficha oficial, el portal del banco…).
+- **Ante la duda, el estado conservador**, nunca el que tranquiliza: un semáforo se pone 🟠/«no
+  publicado» cuando falta el dato, jamás 🟢. `cargasConocidas: f.cargas_conocidas ?? false` de
+  `lib/subastas-radar.ts` es el patrón correcto (NULL → «cargas no publicadas», que pide la
+  certificación).
+- **Si la fuente NUNCA va a traer ese dato** (p. ej. los lotes de la Junta no tienen ficha con
+  adjuntos), dilo como ausencia definitiva y no como «pendiente»: prometer una pasada que no va a
+  llegar es la otra forma de mentir. Patrón: el flag `publicaAdjuntos` de `lib/subastas/resumen-docs.ts`.
+- **Un `catch` que devuelve `[]`/`{total:0}` no autoriza a afirmar que no hay nada** aguas abajo:
+  un fallo de red o de sincronización debe degradar visiblemente, no aparecer como «todo en orden».
+  Vale doble para health-checks, alertas y avisos de Telegram: un check que se pone verde porque la
+  consulta no devolvió nada es el fallo más caro que hay.
+- La lógica del titular va en un **helper puro y testeado** (referencia:
+  `apps/plataforma/lib/subastas/resumen-docs.ts` + su `.test.ts`), no incrustada en el JSX.
+
+**Hermano de esta regla: el dato que SÍ está pero se lee mal.** Un `NULL` colapsado a 0 y un dato
+leído del año o de la divisa equivocados producen la misma mentira, y el segundo es peor porque **no
+hay hueco que delate el fallo**: sale un número plausible. Caso fundacional (31/07/2026, PR #1189):
+el radar de trading daba a ORCL un flujo de caja libre de **+3,49%** cuando la empresa quemaba
+**−23.700 M$ (−6,99%)** — los campos `fy`/`fp` de la SEC identifican el INFORME, no el periodo del
+dato, y encima se mezclaban divisas (yenes contra una capitalización en dólares). Al parsear una
+fuente externa: **la clave de un dato es su periodo y su unidad, no la etiqueta del documento que lo
+publica**; ante varias unidades/monedas, elige UNA explícitamente y propágala; y valida el parser
+**contra un documento real de la fuente**, no solo contra fixtures — los fixtures se escriben con la
+misma suposición equivocada que el código y por eso los tests pasaban.
+
+Al añadir una columna de enriquecimiento nueva, esto es parte del PR, no un apaño posterior. Si un
+cambio toca una pantalla que ya viola la regla, corrígela en el mismo PR.
 
 ## Responsive — regla global permanente
 **Toda UI nueva o modificada en CUALQUIER vertical o app del monorepo DEBE funcionar en móvil.** Revisar en pantallas ≥320 px antes de dar un cambio por hecho. Tablas → scroll horizontal o cards apiladas; sidebars → colapsables o drawer; modales → ancho al 95 vw; botones → mínimo 44 px táctil. No basta con que "quepa" — tiene que ser usable. Si un cambio toca un componente con problemas responsive conocidos, aprovecha para corregirlos en el mismo PR.

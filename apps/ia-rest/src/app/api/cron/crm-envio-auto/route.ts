@@ -4,8 +4,9 @@
 // que la tabla `leads` de ia.rest ya tiene: `envio_aprobado`, `envio_programado_at`,
 // `email_draft`, `email_asunto`, `propuesta_enviada_at`.
 //
-// SEGURO POR DEFECTO (doble cerrojo, no envía nada salvo activación explícita):
-//   1) Interruptor maestro: solo actúa si `ENVIO_AUTO_ACTIVO === '1'`.
+// ACTIVO POR DEFECTO desde 03/08/2026 (Alberto: los leads investigados se envían solos,
+// sin aprobación por Telegram — lead-onboarding los marca `envio_aprobado = true`):
+//   1) Interruptor maestro: `ENVIO_AUTO_ACTIVO = '0'` lo apaga sin desplegar.
 //   2) Aprobación por lead: solo envía a leads con `envio_aprobado = true`.
 // Además: solo en horario laboral (L-V 9-19 Madrid), con tope diario y respetando bajas.
 
@@ -60,9 +61,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 
-  // Cerrojo 1 — interruptor maestro. Sin esta env el cron es inerte (no envía nada).
-  if (process.env.ENVIO_AUTO_ACTIVO !== '1') {
-    return NextResponse.json({ ok: true, enviados: 0, motivo: 'ENVIO_AUTO_ACTIVO != 1 (desactivado)' })
+  // Cerrojo 1 — interruptor maestro (opt-out): activo salvo apagado explícito.
+  if (process.env.ENVIO_AUTO_ACTIVO === '0') {
+    return NextResponse.json({ ok: true, enviados: 0, motivo: 'ENVIO_AUTO_ACTIVO = 0 (desactivado)' })
   }
   if (!enHorarioLaboralMadrid()) {
     return NextResponse.json({ ok: true, enviados: 0, motivo: 'fuera de horario laboral (L-V 9-19 Madrid)' })

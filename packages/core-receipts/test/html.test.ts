@@ -37,8 +37,17 @@ test('escapa HTML en campos de texto (anti-XSS)', () => {
   assert.ok(html.includes('&lt;script&gt;'))
 })
 
-test('falla cerrado si el total no cuadra con lo renderizado', () => {
-  // total imposible de formatear en la salida (no aparece) → FiscalIntegrityError
-  const bad = { ...DOC, fiscal: { ...DOC.fiscal, total: 999999 } }
+test('falla cerrado si un campo fiscal no aparece verbatim en lo renderizado', () => {
+  // Un número de factura con caracteres que se escapan en HTML no aparece literal → FiscalIntegrityError.
+  // (Antes se forzaba con total 999999, pero ahora formatFiscalNumber agrupa igual que eur() y sí aparece.)
+  const bad = { ...DOC, fiscal: { ...DOC.fiscal, numero: 'F-2026-<0001>' } }
   assert.throws(() => renderInvoiceHtml(bad, BRAND_DEFAULT), FiscalIntegrityError)
+})
+
+test('no lanza con importes ≥ 1000 (regresión M20: miles agrupados cuadran con eur())', () => {
+  const grande = { ...DOC, fiscal: { ...DOC.fiscal, base: 1000, iva: 210, total: 1210 } }
+  let html = ''
+  assert.doesNotThrow(() => { html = renderInvoiceHtml(grande, BRAND_DEFAULT) })
+  assert.ok(html.includes('1.000,00'), 'la base agrupada debe aparecer')
+  assert.ok(html.includes('1.210,00'), 'el total agrupado debe aparecer')
 })

@@ -10,6 +10,7 @@
 // texto corto, no para prompts largos.
 
 import type { NimChatMessage } from './nim'
+import { fetchAI } from './http.ts'
 
 const DEFAULT_BASE_URL = 'https://api.cerebras.ai/v1/chat/completions'
 const DEFAULT_TEXT_MODEL = 'gpt-oss-120b'
@@ -40,7 +41,7 @@ export async function cerebrasChat(
     ...(opts.system ? [{ role: 'system' as const, content: opts.system }] : []),
     ...messages,
   ]
-  const res = await fetch(config.baseUrl ?? DEFAULT_BASE_URL, {
+  const res = await fetchAI(config.baseUrl ?? DEFAULT_BASE_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
     body: JSON.stringify({
@@ -50,9 +51,7 @@ export async function cerebrasChat(
       temperature: opts.temperature ?? 0.3,
       stream: false,
     }),
-    signal: opts.signal,
-  })
-  if (!res.ok) throw new Error(`Cerebras HTTP ${res.status}: ${(await res.text()).substring(0, 150)}`)
+  }, { provider: 'Cerebras', signal: opts.signal })
   const data = await res.json()
   const text = data?.choices?.[0]?.message?.content
   if (!text) throw new Error('Cerebras: respuesta vacía')

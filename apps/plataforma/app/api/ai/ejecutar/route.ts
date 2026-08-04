@@ -4,7 +4,11 @@ import { chatConDirector } from '@/lib/pasarela'
 import { validarReescritura } from '@/lib/reescritura-guardia'
 import type { NimChatMessage } from '@central/core-ai'
 
-export const maxDuration = 60
+// 150s: la guardia puede encadenar DOS llamadas LLM (barato + escalado a Opus si la
+// guardia rechaza la primera), cada una con timeoutMs:55_000 más abajo — 60s se quedaba
+// corto y Vercel mataba la función a mitad del escalado (FUNCTION_INVOCATION_TIMEOUT,
+// visto en vivo el 29/07/2026: /api/ai/ejecutar sin responder tras exactamente 60s).
+export const maxDuration = 150
 export const dynamic = 'force-dynamic'
 
 // EJECUTOR de código — el 3er rol del "caro planifica / barato ejecuta". Dado UN archivo + una

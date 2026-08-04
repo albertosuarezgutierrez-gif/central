@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/session"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
-import { eventFactor, seasonalFloorFactor, PRICING_HORIZON_DAYS } from "@/lib/pricing-calendar"
+import { eventFactor, seasonalFloorFactor, PRICING_HORIZON_DAYS, EVENTS } from "@/lib/pricing-calendar"
+import { combinarEventosDeFecha, type EventoBruto } from "@/lib/sivra/eventos-estado"
+import { factorLastMinute } from "@/lib/sivra/pricing-lastminute"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { getSmoobuKey } from "@/lib/smoobu"
 import { tgSend } from "@central/core-telegram"
@@ -94,22 +96,27 @@ export async function POST(req: NextRequest) {
     property_id: string; recommended_guest: number; med_guest_global: number; floor_guest: number; ceil_guest: number
     channel_markup: number; max_change_pct: number; min_price: number | null; max_price: number | null
     sample_n: number; market_age_days: number; events_enabled: boolean; gap_discount_pct: number
-    flight_demand_k: number; seasonal_floor_k: number
+    flight_demand_k: number; seasonal_floor_k: number; lastminute_k: number
   }[]>(Prisma.sql`
     WITH latest AS (
       SELECT scenario, MAX(search_date) sd FROM market_rates
       WHERE scenario LIKE 'prop_%' AND price_night > 0 GROUP BY scenario
     ),
+    -- Cada comparable se NORMALIZA al aforo del piso (pricing_factor_aforo) antes de entrar en el
+    -- percentil. Sin esto, una casa de 12 plazas se tarificaba contra apartamentos de 4-8 y salia
+    -- a mitad de precio (hallazgo 31/07/2026). Con comps del mismo aforo el factor es 1: no cambia nada.
+    -- OJO: esta consulta va en un template literal de TS, aqui NO se pueden usar backticks ni $ { }.
     mkt AS (
       SELECT m.scenario,
-        percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY m.price_night)::numeric med,
-        percentile_cont(s.floor_pctl)  WITHIN GROUP (ORDER BY m.price_night)::numeric flo,
-        percentile_cont(s.ceil_pctl)   WITHIN GROUP (ORDER BY m.price_night)::numeric cei,
+        percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))::numeric med,
+        percentile_cont(s.floor_pctl)  WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))::numeric flo,
+        percentile_cont(s.ceil_pctl)   WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))::numeric cei,
         percentile_cont(0.5) WITHIN GROUP (ORDER BY m.score)::numeric mkt_score,
         COUNT(*)::int AS sample_n,
         (CURRENT_DATE - MAX(l.sd))::int AS market_age_days
       FROM market_rates m JOIN latest l ON l.scenario = m.scenario AND l.sd = m.search_date
       JOIN pricing_settings s ON s.property_id = m.scenario
+      LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
       WHERE m.price_night > 0
       GROUP BY m.scenario, s.target_pctl, s.floor_pctl, s.ceil_pctl
     ),
@@ -132,7 +139,8 @@ export async function POST(req: NextRequest) {
       COALESCE(s.events_enabled, true) AS events_enabled,
       COALESCE(s.gap_discount_pct, 0)::float8 AS gap_discount_pct,
       COALESCE(s.flight_demand_k, 0)::float8 AS flight_demand_k,
-      COALESCE(s.seasonal_floor_k, 0)::float8 AS seasonal_floor_k
+      COALESCE(s.seasonal_floor_k, 0)::float8 AS seasonal_floor_k,
+      COALESCE(s.lastminute_k, 0)::float8 AS lastminute_k
     FROM mkt
     JOIN pricing_settings s ON s.property_id = mkt.scenario
     LEFT JOIN occ ON occ.scenario = mkt.scenario
@@ -148,11 +156,38 @@ export async function POST(req: NextRequest) {
   const end = new Date(today); end.setDate(end.getDate() + days)
   const startDate = fmt(today), endDate = fmt(end)
 
-  const autoEvRows = await prisma.$queryRaw<{ rate_date: string; factor: number }[]>(Prisma.sql`
-    SELECT rate_date::text AS rate_date, MAX(factor)::float8 AS factor
-    FROM pricing_eventos_auto WHERE rate_date >= CURRENT_DATE GROUP BY rate_date
-  `).catch(() => [])
-  const autoEv = new Map(autoEvRows.map(r => [r.rate_date, Number(r.factor)]))
+  // Eventos descubiertos (Ticketmaster / búsqueda web / prensa / mano de Alberto). Se traen SIN
+  // agregar por fecha porque el efecto depende del `estado` de cada fila: un 'previsto' —una noticia
+  // de prensa sobre algo que aún no tiene entradas— protege el suelo pero NO mueve el precio. Un
+  // MAX(factor) plano mezclaría las dos cosas y una previsión inflaría el precio objetivo. Toda esa
+  // lógica vive en el helper puro `lib/sivra/eventos-estado.ts`.
+  //
+  // 🚨 El `.catch()` NO devuelve un mapa vacío y ya está. Un fallo de esta consulta significaría
+  // tarificar la Feria como un martes de febrero, y hasta el 01/08/2026 eso pasaba respondiendo
+  // `ok:true` sin una palabra. Ahora se marca y sale en la respuesta y en el aviso.
+  let eventosIlegibles = false
+  const autoEvRows = await prisma.$queryRaw<{
+    rate_date: string; factor: number; estado: string | null; confianza: number | null
+  }[]>(Prisma.sql`
+    SELECT rate_date::text AS rate_date, factor::float8 AS factor, estado, confianza::float8 AS confianza
+    FROM pricing_eventos_auto WHERE rate_date >= CURRENT_DATE
+  `).catch(() => { eventosIlegibles = true; return [] })
+
+  const porFecha = new Map<string, EventoBruto[]>()
+  for (const r of autoEvRows) {
+    const lista = porFecha.get(r.rate_date) ?? []
+    lista.push({ estado: r.estado, factor: Number(r.factor), confianza: r.confianza })
+    porFecha.set(r.rate_date, lista)
+  }
+  /** factor que puede mover el PRECIO: solo eventos confirmados */
+  const autoEv = new Map<string, number>()
+  /** factor que protege el SUELO: confirmados + la parte prudente de los previstos */
+  const autoEvSuelo = new Map<string, number>()
+  for (const [fecha, lista] of porFecha) {
+    const ef = combinarEventosDeFecha(lista)
+    if (ef.factorPrecio > 1) autoEv.set(fecha, ef.factorPrecio)
+    if (ef.factorSuelo > 1) autoEvSuelo.set(fecha, ef.factorSuelo)
+  }
 
   // Señal de demanda por vuelos a SVQ (Fase 3). Solo influye si flight_demand_k>0 por piso.
   const flightRows = await prisma.$queryRaw<{ rate_date: string; demand_index: number }[]>(Prisma.sql`
@@ -161,31 +196,124 @@ export async function POST(req: NextRequest) {
   `).catch(() => [])
   const flightIdx = new Map(flightRows.map(r => [r.rate_date, Number(r.demand_index)]))
 
-  const MIN_BUCKET = 3
-  const mesRows = await prisma.$queryRaw<{
-    property_id: string; ym: string; med_guest: number; flo_guest: number; cei_guest: number; n: number
+  // ─── Bucket por MES = precio de una noche NORMAL de ese mes ──────────────────────────────
+  // 🚨 El bucket del mes NO puede incluir las noches de evento (31/07/2026). Luxury acabó a 841€ las 28
+  // noches de junio de 2027 —168€ por plaza en un piso de 5— porque su ÚNICA muestra de mercado de ese
+  // mes eran 10 comps del día 11, la noche de Karol G (p50 931€). El motor tomaba ese p50 como "junio
+  // normal" y se lo aplicaba a todo el mes; para contrastar, el 18 de junio el mercado va a 109€. El
+  // premio del evento NO se pierde: lo aplican el bucket por FECHA EXACTA y el factor de evento, que
+  // corren aparte. Aquí solo queremos el suelo de referencia del mes.
+  //
+  // Dos guardas, porque cada una tapa un agujero distinto:
+  //   · Se EXCLUYEN las fechas con evento conocido (calendario del repo + `pricing_eventos_auto`).
+  //   · Se exige muestra de varias FECHAS distintas (MIN_FECHAS_MES), no solo muchos comps: 10 anuncios
+  //     de un mismo día son un día, no un mes. Sin esto, un barrido que solo cubra un evento sin
+  //     catalogar volvería a contaminar el bucket por la puerta de atrás.
+  // OJO: SQL dentro de un template literal de TS — aqui NO se pueden usar backticks ni $ { }.
+  // ─── Antelación REAL de venta de cada piso (01/08/2026) ──────────────────────────────────
+  // Es la referencia de la palanca de urgencia: cuándo se vende de verdad cada piso. NO se
+  // configura a ojo, se MIDE — y se mide POR PISO Y POR MES DE ENTRADA, no en global.
+  //
+  // 🚨 Corregido el 01/08/2026, el mismo día que se estrenó. La primera versión sacaba una mediana
+  // GLOBAL por piso de `rate_snapshots` (transiciones de libre a ocupado). El problema es que esa
+  // mediana mezcla todo el calendario, y Semana Santa y Feria —que se reservan con medio año de
+  // antelación— la disparan. Contra el histórico REAL de Smoobu (`incomes.reserved_at`, el campo
+  // created-at de su API) la diferencia resultó ser de un orden de magnitud en el mes que importaba:
+  //
+  //     piso              global (snapshots)   octubre 2024   octubre 2025
+  //     Busto Reform            108 días            13              3
+  //     Luxury Busto             57                 17             11
+  //     House Sevillana          32                 24             39
+  //     Duplex Center             7                 11             11
+  //
+  // Con la global, Busto habría empezado a descontar el precio de octubre tres meses antes de que
+  // octubre se venda — regalando margen en el mejor mes del año por una urgencia inventada.
+  //
+  // Fuente: `incomes.reserved_at`, que es la fecha REAL de la reserva. `createdAt` NO sirve (en el
+  // histórico es la fecha de la importación masiva) y `rate_snapshots` solo cubre desde mayo-2026,
+  // así que no tiene un octubre entero que enseñar. Se agrupa por MES DEL AÑO (no por año concreto)
+  // para juntar octubres de varios años y llegar a muestra.
+  //
+  // 🚨 Y se respeta `pricing_settings.historico_desde`: un piso puede haber cambiado de PRODUCTO, y
+  // entonces su histórico anterior no lo describe. House Sevillana estuvo alquilada como dos pisos
+  // independientes hasta 2024, cuando pasó a casa entera de 12 plazas — el ADR salta de 166€ a 473€.
+  // Sin este filtro, la mediana de octubre de House salía de 51 reservas de las que 30 eran de
+  // cuando era otro negocio. Es el mismo veneno que ya hizo proponer bajarle el precio a 285€.
+  // OJO: SQL dentro de un template literal de TS — aqui NO se pueden usar backticks ni $ { }.
+  const antelacionRows = await prisma.$queryRaw<{
+    property_id: string; mes: number; mediana: number; muestra: number
   }[]>(Prisma.sql`
-    WITH recent AS (
+    SELECT i."propertyId" AS property_id,
+           EXTRACT(MONTH FROM i."checkIn")::int AS mes,
+           percentile_cont(0.5) WITHIN GROUP (
+             ORDER BY (i."checkIn"::date - i.reserved_at::date)
+           )::int AS mediana,
+           COUNT(*)::int AS muestra
+    FROM incomes i
+    LEFT JOIN pricing_settings ps ON ps.property_id = i."propertyId"
+    WHERE i.reserved_at IS NOT NULL
+      AND i."checkIn" IS NOT NULL
+      AND i."checkIn"::date >= i.reserved_at::date
+      AND (ps.historico_desde IS NULL OR i."checkIn"::date >= ps.historico_desde)
+    GROUP BY 1, 2
+  `).catch(() => [])
+  const antelacion = new Map(
+    antelacionRows.map(a => [
+      `${a.property_id}|${a.mes}`,
+      { mediana: Number(a.mediana), muestra: Number(a.muestra) },
+    ]),
+  )
+  /** Antelación del piso para el MES de esa fecha. Sin datos de ese mes devuelve null: la palanca
+   *  se queda quieta, que es lo correcto — una urgencia inventada cuesta margen real. */
+  const antelacionDe = (propertyId: string, fechaIso: string) =>
+    antelacion.get(`${propertyId}|${Number(fechaIso.slice(5, 7))}`) ?? null
+
+  const MIN_BUCKET = 3
+  const MIN_FECHAS_MES = 3
+  const FACTOR_EVENTO_EXCLUIR = 1.15
+  // Las fechas del calendario del repo van como params ESCALARES en un VALUES, no como array: los
+  // arrays de Prisma ya fallaron una vez contra el pooler de Supabase (landmine del acotado de código).
+  const fechasEventoCalendario = Object.entries(EVENTS)
+    .filter(([, f]) => Number(f) >= FACTOR_EVENTO_EXCLUIR)
+    .map(([d]) => d)
+  const eventosCalendarioSql = fechasEventoCalendario.length
+    ? Prisma.sql`UNION SELECT d::date FROM (VALUES ${Prisma.join(fechasEventoCalendario.map(d => Prisma.sql`(${d})`))}) AS t(d)`
+    : Prisma.empty
+  const mesRows = await prisma.$queryRaw<{
+    property_id: string; ym: string; med_guest: number; flo_guest: number; cei_guest: number
+    n: number; fechas: number
+  }[]>(Prisma.sql`
+    WITH eventos AS (
+      SELECT DISTINCT rate_date FROM pricing_eventos_auto WHERE factor >= ${FACTOR_EVENTO_EXCLUIR}
+      ${eventosCalendarioSql}
+    ),
+    recent AS (
+      -- price_night NORMALIZADO al aforo del piso (ver pricing_factor_aforo); con comps del mismo
+      -- aforo el factor es 1. Sin esto los buckets de un piso grande salian a precio de apartamento.
       SELECT DISTINCT ON (m.scenario, m.checkin_date, m.comp_name)
-        m.scenario, m.checkin_date, m.price_night
+        m.scenario, m.checkin_date,
+        m.price_night * pricing_factor_aforo(z.max_guests, m.guests) AS price_night
       FROM market_rates m
+      LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
       WHERE m.price_night > 0 AND m.scenario LIKE 'prop_%'
         AND m.checkin_date >= CURRENT_DATE
         AND m.search_date >= CURRENT_DATE - 120
+        AND m.checkin_date NOT IN (SELECT rate_date FROM eventos)
       ORDER BY m.scenario, m.checkin_date, m.comp_name, m.search_date DESC
     )
     SELECT r.scenario AS property_id, to_char(r.checkin_date, 'YYYY-MM') AS ym,
       ROUND(percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY r.price_night))::int AS med_guest,
       ROUND(percentile_cont(s.floor_pctl)  WITHIN GROUP (ORDER BY r.price_night))::int AS flo_guest,
       ROUND(percentile_cont(s.ceil_pctl)   WITHIN GROUP (ORDER BY r.price_night))::int AS cei_guest,
-      COUNT(*)::int AS n
+      COUNT(*)::int AS n,
+      COUNT(DISTINCT r.checkin_date)::int AS fechas
     FROM recent r JOIN pricing_settings s ON s.property_id = r.scenario
     GROUP BY r.scenario, to_char(r.checkin_date, 'YYYY-MM'), s.target_pctl, s.floor_pctl, s.ceil_pctl
   `).catch(() => [])
-  const mes = new Map<string, Map<string, { med: number; flo: number; cei: number; n: number }>>()
+  const mes = new Map<string, Map<string, { med: number; flo: number; cei: number; n: number; fechas: number }>>()
   for (const m of mesRows) {
     if (!mes.has(m.property_id)) mes.set(m.property_id, new Map())
-    mes.get(m.property_id)!.set(m.ym, { med: m.med_guest, flo: m.flo_guest, cei: m.cei_guest, n: m.n })
+    mes.get(m.property_id)!.set(m.ym, { med: m.med_guest, flo: m.flo_guest, cei: m.cei_guest, n: m.n, fechas: m.fechas })
   }
 
   // ─── Idea #4: mercado por FECHA EXACTA (resolución por día en noches de evento) ─────────
@@ -196,9 +324,13 @@ export async function POST(req: NextRequest) {
   const MIN_FECHA_BUCKET = 3
   const fechaRows = await prisma.$queryRaw<{ property_id: string; rate_date: string; med_guest: number; n: number }[]>(Prisma.sql`
     WITH recent AS (
+      -- price_night NORMALIZADO al aforo del piso (ver pricing_factor_aforo); con comps del mismo
+      -- aforo el factor es 1. Sin esto los buckets de un piso grande salian a precio de apartamento.
       SELECT DISTINCT ON (m.scenario, m.checkin_date, m.comp_name)
-        m.scenario, m.checkin_date, m.price_night
+        m.scenario, m.checkin_date,
+        m.price_night * pricing_factor_aforo(z.max_guests, m.guests) AS price_night
       FROM market_rates m
+      LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
       WHERE m.price_night > 0 AND m.scenario LIKE 'prop_%'
         AND m.checkin_date >= CURRENT_DATE
         AND m.search_date >= CURRENT_DATE - 120
@@ -357,7 +489,9 @@ export async function POST(req: NextRequest) {
       const old = info.price != null ? Math.round(info.price) : null
       const ym = date.slice(0, 7)
       const mb = mesProp?.get(ym)
-      const useMonth = !!mb && mb.n >= MIN_BUCKET
+      // El bucket del mes solo vale si hay comps SUFICIENTES y de VARIAS fechas: 10 anuncios del mismo
+      // dia describen ese dia, no el mes (lección de junio 2027, ver la nota de la consulta).
+      const useMonth = !!mb && mb.n >= MIN_BUCKET && mb.fechas >= MIN_FECHAS_MES
       const baseD = useMonth ? Math.round((mb!.med * dqFactor) / markup) : baseTargetGlobal
       const floorD = useMonth ? Math.round(mb!.flo / markup) : floorBaseGlobal
       const ceilD = useMonth ? Math.round(mb!.cei / markup) : ceilBaseGlobal
@@ -442,6 +576,24 @@ export async function POST(req: NextRequest) {
         const nextBooked = plRates[nextD] && !plRates[nextD].available
         if (prevBooked && nextBooked) target = Math.round(target * (1 - Number(r.gap_discount_pct)))
       }
+      // ⏳ URGENCIA (last-minute). Va AQUÍ a propósito: solo propone bajar el objetivo, y todo lo
+      // que viene después —el raíl de ±%/día, el suelo de coste, el estacional y el techo— sigue
+      // mandando. Inerte con lastminute_k=0 y en las noches de evento. La referencia de "cuándo
+      // toca" es la antelación MEDIDA del piso, no un umbral inventado (ver pricing-lastminute.ts).
+      // Antelación del piso PARA EL MES de esta fecha (ver el bloque de la consulta, arriba): la
+      // global mezclaba Feria con noviembre y disparaba la urgencia meses antes de tiempo.
+      const ant = antelacionDe(r.property_id, date)
+      const lm = factorLastMinute(
+        {
+          diasVista: daysOut,
+          antelacionMediana: ant?.mediana ?? null,
+          muestra: ant?.muestra ?? 0,
+          factorEvento: evFactor,
+        },
+        { k: Number(r.lastminute_k) },
+      )
+      if (lm.factor < 1) target = Math.round(target * lm.factor)
+
       if (old != null) {
         // Ancla del raíl = precio de AYER (ref24), no el de la pasada anterior de HOY: así el
         // tope ±max_change_pct es por DÍA aunque el cron corra 3 veces al día. Sin histórico
@@ -455,7 +607,18 @@ export async function POST(req: NextRequest) {
       // Suelo estacional: impide que una fecha de temporada alta (primavera/Navidad/eventos) se
       // deslice al suelo base cuando el mercado de ese mes caduca. Inerte si seasonal_floor_k=0.
       if (Number(r.seasonal_floor_k) > 0 && r.min_price != null) {
-        const factor = 1 + (seasonalFloorFactor(date) - 1) * Number(r.seasonal_floor_k)
+        // El suelo mira los eventos de AMBAS fuentes (calendario + `pricing_eventos_auto`), igual que
+        // el precio: si no, un evento que solo conoce la tabla (Karol G) subía el objetivo pero dejaba
+        // el suelo de un día normal.
+        //
+        // Y usa `autoEvSuelo`, no `autoEv`: aquí SÍ entran los eventos PREVISTOS (los que la prensa da
+        // por hechos pero aún no tienen entradas — la final de Copa, un congreso recién anunciado).
+        // Es la única puerta por la que se les deja pasar, y es deliberado: proteger el suelo de una
+        // fecha que al final no era nada cuesta unas noches sin vender baratas; NO protegerla y que sí
+        // fuera la final significa haberla vendido a precio de sábado corriente, y eso no se recupera.
+        // El razonamiento completo está en `lib/sivra/eventos-estado.ts`.
+        const evParaSuelo = r.events_enabled ? (autoEvSuelo.get(date) ?? 1) : 1
+        const factor = 1 + (seasonalFloorFactor(date, evParaSuelo) - 1) * Number(r.seasonal_floor_k)
         let sf = Math.round(r.min_price * factor)
         if (r.max_price != null) sf = Math.min(sf, r.max_price)
         target = Math.max(target, sf)
@@ -552,9 +715,19 @@ export async function POST(req: NextRequest) {
     results.push({
       property: r.property_id,
       recommended_guest: r.recommended_guest, base_target: baseTargetGlobal,
-      meses_con_mercado: mesProp ? [...mesProp.entries()].filter(([, v]) => v.n >= MIN_BUCKET).map(([k]) => k) : [],
+      meses_con_mercado: mesProp ? [...mesProp.entries()].filter(([, v]) => v.n >= MIN_BUCKET && v.fechas >= MIN_FECHAS_MES).map(([k]) => k) : [],
       meses_calientes: [...(velocidad.get(r.property_id)?.entries() ?? [])].filter(([, n]) => n >= 2).map(([k, n]) => `${k}:${n}`),
       bounds: { floor_base: floorBaseGlobal, ceil_base: ceilBaseGlobal, min: r.min_price, max: r.max_price },
+      // Antelación MEDIDA del piso POR MES (mes → días de mediana). Sin ella la palanca de urgencia
+      // queda inerte, así que conviene verla para distinguir «no hacía falta bajar» de «no lo sé».
+      // Va por mes y no en un solo número porque ahí estaba el fallo que se corrigió el 01/08/2026:
+      // la mediana global de Busto sale 108 días y la de su octubre, 3.
+      antelacion_por_mes: Object.fromEntries(
+        antelacionRows
+          .filter(a => a.property_id === r.property_id)
+          .map(a => [a.mes, { mediana: Number(a.mediana), muestra: Number(a.muestra) }]),
+      ),
+      lastminute_k: Number(r.lastminute_k),
       dates_con_cambio: ops.length, written, sample: audit.slice(0, 3),
     })
   }
@@ -569,5 +742,25 @@ export async function POST(req: NextRequest) {
     } catch { /* no crítico */ }
   }
 
-  return NextResponse.json({ ok: true, dryRun, paused, days, properties: recs.length, results, pl_avisos: plAvisos.length })
+  // 🚨 Si no se pudieron leer los eventos, esta pasada tarificó Semana Santa como un martes de
+  // febrero. Hasta el 01/08/2026 eso salía como `ok:true` y nadie se enteraba nunca: el `.catch`
+  // devolvía un mapa vacío, que es indistinguible de «no hay eventos». Ahora la pasada se declara
+  // degradada Y avisa, porque es de las averías más caras que puede tener el motor.
+  if (eventosIlegibles) {
+    try {
+      await tgSend(
+        "🚨 *Pricing: la tabla de eventos no se pudo leer*\n\n" +
+        "La pasada ha tarificado SIN eventos: si hay Feria, Semana Santa o un concierto grande en la " +
+        "ventana, esas noches se han calculado como días normales. Los precios aplicados en esta " +
+        "pasada NO son de fiar para fechas de evento.\n\n" +
+        "Revisa `pricing_eventos_auto` en Supabase y vuelve a lanzar el motor.",
+      )
+    } catch { /* el aviso es best-effort; el flag de la respuesta manda */ }
+  }
+
+  return NextResponse.json({
+    ok: !eventosIlegibles,
+    degradado: eventosIlegibles ? "pricing_eventos_auto ilegible: tarificado SIN eventos" : undefined,
+    dryRun, paused, days, properties: recs.length, results, pl_avisos: plAvisos.length,
+  })
 }

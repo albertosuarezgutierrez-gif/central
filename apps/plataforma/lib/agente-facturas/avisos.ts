@@ -52,6 +52,18 @@ export async function avisaNoLegibles(items: { nombre: string; from?: string }[]
   )
 }
 
+// Aviso: facturas a nombre de un TERCERO (llegan por reenvíos de hilos ajenos). No se imputan
+// ni van a la bandeja, pero se cantan: si el agente se equivoca leyendo el destinatario, Alberto
+// tiene que poder verlo aquí en vez de descubrir el gasto perdido meses después.
+export async function avisaAjenas(items: { proveedor: string | null; total: number; receptor?: string | null }[]): Promise<void> {
+  if (items.length === 0) return
+  const lineas = items.slice(0, 8).map((i) => `• ${i.proveedor || 'desconocido'} · ${eur(i.total)} → ${i.receptor || 'otro titular'}`)
+  await tgAlert(
+    `🙅 ${items.length} factura(s) de terceros ignoradas (no están a tu nombre):\n${lineas.join('\n')}\n\nSi alguna SÍ es tuya, dímelo y la recupero.`,
+    'aviso',
+  )
+}
+
 // Aviso: facturas recurrentes que no han llegado este mes.
 export async function avisaRecurrentesQueFaltan(faltan: ReglaFaltante[]): Promise<void> {
   if (faltan.length === 0) return
@@ -65,15 +77,17 @@ export interface ResumenStats {
   bandeja: number
   duplicados: number
   omitidos?: number
+  ajenas?: number
   errores: number
   alquileres?: number
 }
 
 export async function resumen(s: ResumenStats): Promise<void> {
   const omit = s.omitidos ? ` · ${s.omitidos} presupuestos omitidos` : ''
+  const ajen = s.ajenas ? ` · ${s.ajenas} de terceros` : ''
   const extra = s.alquileres != null ? ` · alquileres ${s.alquileres}` : ''
   await tgAlert(
-    `✅ Agente (${s.fuente}): ${s.auto} imputadas · ${s.bandeja} a bandeja · ${s.duplicados} duplicadas${omit} · ${s.errores} errores${extra}`,
+    `✅ Agente (${s.fuente}): ${s.auto} imputadas · ${s.bandeja} a bandeja · ${s.duplicados} duplicadas${omit}${ajen} · ${s.errores} errores${extra}`,
     'resuelto',
   )
 }

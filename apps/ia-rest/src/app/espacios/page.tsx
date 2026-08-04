@@ -105,10 +105,10 @@ export default function EspaciosPage() {
     <>
       <LandingClickTracker />
       <title>Software para Fincas y Espacios de Eventos | ia.rest</title>
-      <meta name="description" content="ia.rest gestiona automáticamente las solicitudes de bodas.net. Respuestas automáticas, calendario, contratos digitales y VeriFactu. Desde 59€/mes." />
+      <meta name="description" content="ia.rest gestiona automáticamente las solicitudes de bodas.net. Respuestas automáticas, calendario, contratos digitales y VeriFactu. Pide presupuesto sin compromiso." />
       <link rel="canonical" href="https://www.iarest.es/espacios" />
       <meta property="og:title" content="Software para Fincas y Espacios de Eventos | ia.rest" />
-      <meta property="og:description" content="ia.rest gestiona automáticamente las solicitudes de bodas.net. Respuestas automáticas, calendario, contratos digitales y VeriFactu. Desde 59€/mes." />
+      <meta property="og:description" content="ia.rest gestiona automáticamente las solicitudes de bodas.net. Respuestas automáticas, calendario, contratos digitales y VeriFactu. Pide presupuesto sin compromiso." />
       <meta property="og:url" content="https://www.iarest.es/espacios" />
       <meta property="og:type" content="website" />
       <meta property="og:image" content="https://www.iarest.es/og-espacios.jpg" />
@@ -116,7 +116,7 @@ export default function EspaciosPage() {
       <meta property="og:site_name" content="ia.rest" />
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content="Software para Fincas y Espacios de Eventos | ia.rest" />
-      <meta name="twitter:description" content="ia.rest gestiona automáticamente las solicitudes de bodas.net. Respuestas automáticas, calendario, contratos digitales y VeriFactu. Desde 59€/mes." />
+      <meta name="twitter:description" content="ia.rest gestiona automáticamente las solicitudes de bodas.net. Respuestas automáticas, calendario, contratos digitales y VeriFactu. Pide presupuesto sin compromiso." />
       <meta name="twitter:image" content="https://www.iarest.es/og-espacios.jpg" />
       <style dangerouslySetInnerHTML={{ __html: `/* ═══════════════════════════════════════
    DESIGN TOKENS — ia.rest corporativo
@@ -394,10 +394,6 @@ footer { background: var(--dark); border-top: 1px solid var(--rule); padding: 36
         </div>
         <div class="hero-stats">
           <div class="stat">
-            <div class="stat-num">59<span>€</span></div>
-            <div class="stat-label">Desde / mes</div>
-          </div>
-          <div class="stat">
             <div class="stat-num">0<span>%</span></div>
             <div class="stat-label">Comisión por evento</div>
           </div>
@@ -547,44 +543,7 @@ footer { background: var(--dark); border-top: 1px solid var(--rule); padding: 36
   </div>
 </section>
 
-<!-- PRICING -->
-<section class="pricing" id="pricing" style="display:none">
-  <div class="max-w">
-    <div class="sl">Precio</div>
-    <div class="pricing-inner">
-      <div>
-        <h2 class="st">Simple.<br>Por personas,<br>no por eventos.</h2>
-        <p class="ssub">Pagas por las personas de tu equipo que usan ia.rest. Sin comisión por evento, sin sorpresas al final del mes.</p>
-        <br>
-        <p style="font-size:14px;color:var(--ink3);line-height:1.7">Si lo gestionas tú solo: <strong style="color:var(--paper)">59€/mes</strong>. Si tienes una persona de apoyo: <strong style="color:var(--paper)">79€/mes</strong>. Así de fácil.</p>
-        <br>
-        <a href="#contacto" class="btn-primary" style="display:inline-block">Empezar prueba gratuita</a>
-      </div>
-      <div>
-        <div class="price-card">
-          <div class="price-desde">Precio mensual</div>
-          <div class="price-num"><sup>€</sup>59<sub>/mes</sub></div>
-          <div class="price-detail">+ 20€ por cada persona adicional del equipo</div>
-          <ul class="price-items">
-            <li><span class="c">✓</span> Solicitudes y respuestas automáticas</li>
-            <li><span class="c">✓</span> Calendario de disponibilidad</li>
-            <li><span class="c">✓</span> Presupuestos y contratos digitales</li>
-            <li><span class="c">✓</span> Portal cliente incluido</li>
-            <li><span class="c">✓</span> VeriFactu — facturación legal</li>
-            <li><span class="c">✓</span> Soporte y onboarding incluidos</li>
-            <li><span class="c">✓</span> 14 días de prueba gratuita</li>
-          </ul>
-          <div class="price-ejemplo">
-            <div class="pe-label">Ejemplo — Finca con 2 personas</div>
-            <div class="pe-row"><span>Base</span><span>59€</span></div>
-            <div class="pe-row"><span>1 persona adicional</span><span>+ 20€</span></div>
-            <div class="pe-total"><span>Total</span><strong>79€/mes</strong></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+<!-- Sección de PRECIO eliminada (01/08/2026): ia.rest no publica tarifa. Conversión = formulario #contacto + WhatsApp. -->
 
 <!-- FAQ -->
 <section class="faq" id="faq">
@@ -598,7 +557,7 @@ footer { background: var(--dark); border-top: 1px solid var(--rule); padding: 36
       </div>
       <div class="faq-item">
         <div class="faq-q" role="button" tabindex="0">¿Qué pasa si solo gestiono el espacio yo solo? <span class="arr">↓</span></div>
-        <div class="faq-a">Perfectamente. Si eres tú el único que usa ia.rest el precio es de 59€/mes, sin más. Sin usuarios adicionales que no necesitas.</div>
+        <div class="faq-a">Perfectamente. Pagas solo por las personas que de verdad usan ia.rest: si eres tú solo, la cuota es la mínima. Escríbenos por WhatsApp o por el formulario y te decimos el precio exacto de tu caso.</div>
       </div>
       <div class="faq-item">
         <div class="faq-q" role="button" tabindex="0">¿El cliente tiene que instalar alguna app para firmar el contrato? <span class="arr">↓</span></div>

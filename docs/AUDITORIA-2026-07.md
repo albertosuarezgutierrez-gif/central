@@ -1051,3 +1051,128 @@ Verificado por Supabase MCP (`get_advisors` + SQL directo sobre grants), solo le
 - Reconciliación de memoria (ia-rest #1076 + conteo MATRIZ.md) ya en `main` (carril 1, commit `688dc19`).
 
 *Actualización por Claude Code · auditoría PROFUNDA semanal · 2026-07-26*
+
+---
+
+# Actualización 2026-07-26 (2) — resolución de los hallazgos, a petición de Alberto ("resuelve como veas mejor")
+
+Con luz verde de Alberto para resolver lo que se pudiera sin esperar a que lo revisara PR a PR. Todo
+verificado antes de aplicar; nada de infraestructura se tocó a ciegas.
+
+## ✅ Grants `prisma_*` acotados a least-privilege (el hallazgo 🔴 más grave)
+Confirmado el problema: los 6 roles `prisma_transporte/alquiler/almacen/ialimp/plataforma/sivra` tenían
+**grants idénticos sobre las 254 tablas** de `public` (1778 privilegios cada uno = 7 tipos × 254 tablas),
+todos `rolbypassrls=true` — una credencial filtrada de CUALQUIER vertical, por pequeña que fuera, daba
+acceso a TODA la BD compartida, incluida la banca personal de Alberto.
+
+**Metodología:** un agente mapeó qué tablas usa de verdad cada app (`prisma/schema.prisma` + grep de
+`$queryRaw`/`$executeRaw`); **reverifiqué yo mismo cada lista con grep directo** contra el código (no me
+fié solo del resumen del agente, esto iba a producción) y contra el catálogo real de Postgres
+(`information_schema.tables`, tipos de columna, sequences). Aplicado con `REVOKE ALL ... FROM <rol>` +
+`GRANT` preciso, verificado con `has_table_privilege()` (positivo en lo que necesita, negativo en banca/
+otras verticales) — sin usar `SET ROLE` (el `postgres` de Supabase no es superuser de verdad y no tiene
+el privilegio `SET` sobre esos roles, solo `INHERIT`). **No se usó rama de Supabase** (tiene coste real
+en €/hora): los grants son instantáneos y trivialmente reversibles (re-`GRANT ALL` con el mismo alcance
+de antes), así que se probó en caliente con las funciones de metadata antes de dar por bueno cada rol.
+Después de aplicar, comprobado `get_runtime_errors`/`get_runtime_logs` de Vercel (ialimp, el único de los
+4 visible con el token de esta sesión) sobre los ~30 min siguientes: **0 errores nuevos** (el único 500
+del periodo es un bug preexistente de tipos, no de permisos — ver más abajo).
+
+**Acotados (4 de 6):**
+- `prisma_transporte` → `flota_*`/`transporte_*` propias + `SELECT` en `cuentas`. Sin `sociedades`/
+  `negocios` (son UUID opacos en el código, nunca se leen ni se muestran).
+- `prisma_alquiler` → `alquiler_*` propias + `SELECT` en `cuentas`.
+- `prisma_almacen` → `almacen_*` propias + `SELECT` en `cuentas`. `negocios` (declarado en
+  `schema.prisma` para la Fase 2 multi-almacén) queda FUERA — cero usos reales hoy.
+- `prisma_ialimp` → sus ~78 tablas propias (limpiadoras/clientes/facturación/mailing/repartidor/RRHH de
+  limpiadora…) + 8 vistas de solo lectura (`v_contab_*`, `agenda_dia`…) + `SELECT` en `cuentas`. Amplio
+  pero AUTO-CONTENIDO en su propio dominio — antes tenía acceso también a banca/fiscal/trading/las otras
+  3 verticales, que nunca toca.
+
+**Dejados sin tocar, con motivo (2 de 6):**
+- `prisma_plataforma` — confirmado por grep que su anchura (~146 tablas) es uso REAL de consolidador
+  (banca, holding, fiscal, sivra, ialimp, transporte -solo lectura de flota-, trading, concursos, correo,
+  IA propia). Acotarlo rompería la función del propio rol.
+- `prisma_sivra` — **DECIDIDO por Alberto (26/07/2026): NO tocar.** `apps/sivra` no es solo la web
+  pública que dice su propio `CLAUDE.md`: sigue teniendo ~50 rutas API vivas (compilan y son alcanzables)
+  que tocan ~20+ tablas que se solapan con `ialimp` (limpiadoras, cleaning_sessions, checklist_*,
+  pms_connections…), código heredado de cuando sivra gestionaba las limpiezas antes de que se creara
+  ialimp. Se preguntó si borrar ese código legacy para poder acotar el rol con confianza — **respuesta de
+  Alberto: "ialimp no borres nada, Vanessa creo que lo está usando"**. Decisión final: `prisma_sivra` se
+  queda con el acceso ancho que ya tenía (igual que antes de esta auditoría); no se toca nada de
+  `apps/sivra` ni de `apps/ialimp`. Cerrado, sin acción pendiente.
+
+**Documentado en cada `CLAUDE.md` afectado** (transporte, alquiler, ialimp; almacen en `MATRIZ.md` por no
+tener `CLAUDE.md` propio todavía) con el aviso de que una tabla nueva necesita GRANT explícito — ya no
+se hereda acceso a todo por defecto.
+
+## ✅ RLS "USING(true)" (16) + vistas sin `security_invoker` (47) en el schema `iarest` — decisión: sin acción
+Confirmado que ambos hallazgos viven enteramente en el schema `iarest` (clon del DDL de ia-rest en la BD
+compartida). Verificado que **NO son un bug nuevo sino el mismo patrón arquitectónico YA aceptado** en
+todo el repo (`Reglas: multi-tenant SIEMPRE por `cuenta_id` en código, RLS no es el mecanismo de
+aislamiento` — el mismo motivo por el que las ~180 tablas con RLS+0-policies de la auditoría de julio se
+dejaron como estaban). Cambiar esto significaría rediseñar la autorización de ia-rest, que además apenas
+usa este schema en producción (ver abajo) — fuera de alcance de una pasada de permisos, y es un trabajo
+que naturalmente cae dentro de la migración pendiente de ia-rest a la BD compartida
+(`docs/PLAN-consolidacion-BD-holding.md`).
+
+**Corregido de paso (hallazgo menor):** la doc decía que `iarest.*` era "un clon vacío" — verificado que
+NO lo es del todo: 38 de 252 tablas tienen filas (un módulo de prospección/growth — `leads`,
+`leads_web_tracking`, `prospeccion_apify_runs` — que sí escribe ahí). El núcleo POS (pedidos/cobros) sigue
+vacío y ia-rest sigue sirviendo su producción desde su silo propio (`efncqyvhniaxsirhdxaa`). Corregido en
+`apps/plataforma/CLAUDE.md`.
+
+## ✅ CI: `almacen` en la matriz de typecheck + tests de `plataforma`/`almacen` wireados
+Ver PR #1093 (sustituye a los duplicados obsoletos #917/#936, cerrados). 611/611 tests de `plataforma` y
+2/2 de `almacen` verificados antes de wirearlos; `pnpm -r run test` desde la raíz confirma 19/19 paquetes
+verdes tras el cambio.
+
+## ✅ Bug real encontrado de rebote (no buscado, aparece al revisar logs) — cron `impagos` de ialimp
+Al comprobar los runtime logs de Vercel tras el cambio de grants, apareció un 500 en
+`/api/cron/impagos` — **NO relacionado con los grants** (confirmado: el error es `42883 operator does
+not exist: uuid = text`, existe desde el **16/06/2026**, mucho antes del cambio de hoy). Causa: la 2ª
+query de `route.ts` mandaba los ids de factura como parámetro `text` sin cast dentro de un `IN (...)`
+contra una columna `uuid` — exactamente la landmine que el propio `CLAUDE.md` de ialimp ya documenta
+para otros casos, pero no se había aplicado aquí. Fix de una línea:
+`Prisma.join(ids.map(id => Prisma.sql\`${id}::uuid\`))`. **Reproducido y verificado el fix con SQL
+directo** (`PREPARE`/`EXECUTE` simulando el binding de parámetro que hace Prisma): el patrón viejo
+reproduce el error exacto, el nuevo no. `tsc --noEmit` limpio. El cron de recordatorios de impagos
+llevaba **más de un mes fallando en silencio** (sin recordatorios a clientes morosos ni resumen a las
+empresas) — con este fix vuelve a correr en la próxima pasada diaria (08:30).
+
+## Verificación
+- Grants: `has_table_privilege()` antes/después por rol, positivo en lo necesario y negativo en lo que
+  no debía tener. `get_runtime_errors`/`get_runtime_logs` (Vercel, ialimp) sin errores nuevos tras aplicar.
+- Fix impagos: reproducido el error exacto con `PREPARE`/`EXECUTE` contra la BD real, confirmado que el
+  fix lo resuelve; `tsc --noEmit` en `apps/ialimp` → 0 errores.
+- CI: `tsc --noEmit` 8/8 apps limpio (de la pasada profunda), `pnpm -r run test` 19/19 paquetes verdes.
+
+*Actualización por Claude Code · a petición de Alberto ("resuelve como veas mejor") · 2026-07-26 (2)*
+
+# Actualización 2026-07-31 — auditoría diaria (ligera)
+
+Rango: 50 commits desde la última auditoría (26/07/2026, pasada profunda) hasta hoy, casi todos
+del módulo Subastas (cargas registrales, mapa, documentación, caducidad de embargos, costa de
+Cádiz) + consolidación de los 60 crons de plataforma en un dispatcher único (PR #1165) + varios
+fixes de banca/pricing. Checks estructurales baratos (SALTA typecheck/tests pesados, son de la
+pasada profunda semanal).
+
+## ✅ Reconciliación memoria/skills — sin drift material
+Las sesiones del rango se auto-documentaron con mucho detalle en `docs/CONTEXTO-SESIONES.md`
+(prácticamente 1:1 con los commits, incluida la migración del cron dispatcher, ya reflejada en
+`apps/plataforma/CLAUDE.md`). `docs/SKILLS.md` sigue listando las 31 skills + 3 comandos reales
+de `.claude/skills`/`.claude/commands`, sin huérfanos. Único hueco encontrado: el spec+plan de
+login con huella (WebAuthn, commit `6244118`, 29/07) no estaba anotado como pendiente — añadido
+a la memoria (ver `docs/AUTO-APLICADOS.md`).
+
+## ✅ Heartbeat de crons (14 huellas) — 12/14 ✅, 2 falsos positivos investigados
+`limpiadoras/auto-sessions` y `updates/sync` (Smoobu) salieron ⛔ MUDO por umbral (137h y 134h);
+ambos confirmados en verde por Vercel runtime logs (200 diario) — son crons idempotentes con
+huecos legítimos sin reservas/sesiones nuevas, no una caída. Detalle en `docs/AUTO-APLICADOS.md`
+(entrada 31/07) para que la próxima pasada no los re-investigue desde cero.
+
+## ✅ Sin hallazgos de carril 2
+Sin código roto, sin infra que tocar, sin crons genuinamente mudos. No se abre PR ni se manda
+Telegram (frugalidad, regla del paso 6.4).
+
+*Actualización por Claude Code (auditoría diaria automática) · 2026-07-31*

@@ -5,11 +5,19 @@
 // Política de fallback de TEXTO (compartida por todas las verticales que usan este
 // wrapper, incluida la PASARELA de plataforma, cuyas rutas /api/ai/chat y /api/ai/tools
 // llaman aquí): OpenRouter (agregador con fallback nativo entre modelos, si hay key) →
-// NIM → Groq (gratis, otra infra) → Cerebras (gratis, infra WSE independiente) → Gemini
-// (GRATIS, otra infra distinta) → Kimi/Moonshot (de pago, último recurso). Cada eslabón
-// queda inactivo si no está su API key, sin romper nada: sin OPENROUTER_API_KEY/
-// CEREBRAS_API_KEY la cadena es EXACTAMENTE la de siempre. Objetivo: que "IA no
-// disponible" sea casi imposible.
+// NIM → Groq (mismo Llama 3.3 70B, gratis, otra infra) → Cerebras (gratis, infra WSE
+// independiente) → [Gemini, APAGADO por defecto]
+// → Kimi/Moonshot (de pago, último recurso). Cada eslabón queda inactivo si no está su
+// API key, sin romper nada: sin OPENROUTER_API_KEY la cadena es EXACTAMENTE la de
+// siempre. Objetivo: que "IA no disponible" sea casi imposible.
+//
+// 🚨 GEMINI APAGADO POR DEFECTO (02/08/2026). Hallazgo del health-check (Check 12):
+// `GEMINI_API_KEY` acumulaba 544 llamadas en 30 días y CERO éxitos (429 de cuota en todos
+// los endpoints y modelos) — no es una racha, es una key sin cuota. El eslabón no salvaba
+// nada y cada caída de NIM+Groq pagaba además su timeout antes de llegar a Kimi/OpenRouter.
+// Decisión de Alberto: «usa OpenRouter». El código se conserva entero; se reactiva con
+// `GEMINI_TEXTO=1` cuando haya una key con cuota (mismo patrón que `GEMINI_WEBSEARCH` en
+// `apps/plataforma/lib/websearch.ts`).
 
 import { nimChat, nimChatTools } from './nim'
 import { groqChat, groqChatTools } from './groq'
@@ -47,21 +55,22 @@ function groqEnvConfig(): GroqConfig | null {
   return { apiKey, textModel: process.env.GROQ_BRAIN_MODEL ?? DEFAULT_GROQ_MODEL }
 }
 
-// Config Cerebras de fallback GRATIS desde el entorno (4º proveedor independiente,
-// infra WSE distinta de NIM/Groq). null si no hay CEREBRAS_API_KEY (inactivo, no rompe).
-// Modelo override: CEREBRAS_MODEL. Tier gratis con contexto limitado a 8192 tokens.
+// Config Cerebras de fallback GRATIS desde el entorno (4º proveedor, infra WSE distinta de
+// NIM/Groq: sube la resiliencia frente a un apagón simultáneo como el del 06/07/2026). null si
+// no hay CEREBRAS_API_KEY → eslabón inactivo, sin romper nada. Modelo override: CEREBRAS_MODEL.
+// OJO: el tier gratis limita el contexto a 8192 tokens — backstop de texto corto, no de prompts largos.
 function cerebrasEnvConfig(): CerebrasConfig | null {
   const apiKey = process.env.CEREBRAS_API_KEY
   if (!apiKey) return null
   return { apiKey, textModel: process.env.CEREBRAS_MODEL ?? DEFAULT_CEREBRAS_MODEL }
 }
 
-// Config Gemini de fallback GRATIS desde el entorno. null si no hay GEMINI_API_KEY (inactivo, no
-// rompe). La key ya suele estar puesta para la búsqueda web, así que este fallback se activa solo.
-// Usa chat de texto SIN grounding (geminiChat). Modelo override: GEMINI_BRAIN_MODEL.
+// Config Gemini de fallback desde el entorno. APAGADO por defecto (ver cabecera: la key lleva
+// meses sin cuota y el eslabón solo pagaba timeouts): requiere `GEMINI_TEXTO=1` ADEMÁS de
+// GEMINI_API_KEY. Usa chat de texto SIN grounding (geminiChat). Modelo override: GEMINI_BRAIN_MODEL.
 function geminiEnvConfig(): GeminiConfig | null {
   const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) return null
+  if (process.env.GEMINI_TEXTO !== '1' || !apiKey) return null
   return { apiKey, model: process.env.GEMINI_BRAIN_MODEL ?? DEFAULT_GEMINI_MODEL }
 }
 
@@ -94,7 +103,7 @@ function openrouterEnvConfig(): OpenRouterConfig | null {
 
 /**
  * Completion de texto: OpenRouter (agregador, si hay key) → NVIDIA NIM (gratis) → Groq (gratis)
- * → Cerebras (gratis) → Gemini (gratis) → Kimi (de pago). Cada eslabón se activa solo si está su API key.
+ * → Cerebras (gratis) → [Gemini, solo con GEMINI_TEXTO=1] → Kimi (de pago). Cada eslabón se activa solo si está su API key.
  * Acepta string (prompt) o array de mensajes.
  *
  * OJO con `options.model`: es un id de NIM (p. ej. `deepseek-ai/deepseek-v3`), NO un slug de
@@ -118,52 +127,69 @@ export async function aiComplete(
     ? [{ role: 'user', content: promptOrMessages }]
     : promptOrMessages
   const sig = () => (timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined)
+  const msg = (e: unknown) => (e instanceof Error ? e.message : String(e))
   // Primario: OpenRouter (solo sin modelo NIM pinneado — ids incompatibles). Su fallback nativo
   // `models` ya prueba varios modelos dentro de la misma petición; si aun así falla, cadena directa.
   const openrouter = options.skipOpenRouter ? null : openrouterEnvConfig()
   if (openrouter && !model) {
     try {
       return await openrouterChat(openrouter, messages, { system, maxTokens, temperature, signal: sig() })
-    } catch { /* cae a la cadena directa NIM → Groq → Cerebras → Gemini → Kimi */ }
+    } catch (eOr) { console.warn(`[aiComplete] OpenRouter (primario) falló: ${msg(eOr)}; probando cadena directa`) }
   }
   try {
     return await nimChat(envConfig(model), messages, { system, maxTokens, temperature, signal: sig() })
   } catch (eNim) {
+    // Los fallbacks NO deben fallar en SILENCIO: si todos caen, "IA no disponible" era un misterio
+    // (p.ej. NIM con timeout + Gemini con 429) porque estos catch tragaban el error. Cada eslabón
+    // deja rastro en logs — qué proveedor falló y por qué, o si estaba inactivo por falta de key.
+    console.warn(`[aiComplete] NIM falló (${msg(eNim)}); probando fallbacks`)
     // Fallback 1: Groq GRATIS (mismo Llama 3.3 70B). Señal nueva (la de NIM pudo abortar).
     const groq = groqEnvConfig()
     if (groq) {
       try {
         return await groqChat(groq, messages, { system, maxTokens, temperature, signal: sig() })
-      } catch { /* cae a Cerebras */ }
+      } catch (eGroq) { console.warn(`[aiComplete] fallback Groq falló: ${msg(eGroq)}`) }
+    } else {
+      console.warn('[aiComplete] fallback Groq inactivo: falta GROQ_API_KEY')
     }
-    // Fallback 2: Cerebras GRATIS (infra WSE, otra distinta de NIM/Groq). Mismo modelo
-    // gpt-oss-120b que Groq pero hardware/cuenta independientes — sube la resiliencia
-    // frente a un apagón simultáneo de proveedores (incidente 06/07/2026).
+    // Fallback 2: Cerebras GRATIS. Mismo modelo `gpt-oss-120b` que Groq pero hardware y cuenta
+    // independientes, así que un apagón de Groq no lo arrastra. Inactivo sin CEREBRAS_API_KEY.
     const cerebras = cerebrasEnvConfig()
     if (cerebras) {
       try {
         return await cerebrasChat(cerebras, messages, { system, maxTokens, temperature, signal: sig() })
-      } catch { /* cae a Gemini */ }
+      } catch (eCer) { console.warn(`[aiComplete] fallback Cerebras falló: ${msg(eCer)}`) }
+    } else {
+      console.warn('[aiComplete] fallback Cerebras inactivo: falta CEREBRAS_API_KEY')
     }
-    // Fallback 3: Gemini GRATIS (otra infra distinta). Sin grounding; la key suele estar ya puesta,
-    // así que este eslabón se activa solo y es el que evita "IA no disponible" sin coste alguno.
+    // Fallback 3: Gemini, APAGADO por defecto (key sin cuota, ver cabecera). Solo entra con
+    // GEMINI_TEXTO=1 + GEMINI_API_KEY.
     const gemini = geminiEnvConfig()
     if (gemini) {
       try {
         return await geminiChat(gemini, messages, { system, maxTokens, temperature, timeoutMs })
-      } catch { /* cae a Kimi */ }
+      } catch (eGem) { console.warn(`[aiComplete] fallback Gemini falló: ${msg(eGem)}`) }
+    } else {
+      console.warn('[aiComplete] fallback Gemini inactivo (requiere GEMINI_TEXTO=1 + GEMINI_API_KEY)')
     }
     // Fallback 4: OpenRouter si NO se probó como primario (caller con modelo NIM pinneado).
     // Usa SU modelo por defecto: en un escenario de fallo total, una respuesta de otro modelo
-    // vale más que "IA no disponible" (misma filosofía que el salto a Groq/Cerebras/Gemini).
+    // vale más que "IA no disponible" (misma filosofía que el salto a Groq/Gemini).
     if (openrouter && model) {
       try {
         return await openrouterChat(openrouter, messages, { system, maxTokens, temperature, signal: sig() })
-      } catch { /* cae a Kimi */ }
+      } catch (eOr2) { console.warn(`[aiComplete] OpenRouter (fallback) falló: ${msg(eOr2)}`) }
     }
     // Fallback 5: Moonshot/Kimi (de pago, último recurso) → capacidad extra cuando todo lo demás falla.
     const kimi = moonshotEnvConfig()
-    if (kimi) return await moonshotChat(kimi, messages, { system, maxTokens, temperature, signal: sig() })
+    if (kimi) {
+      try {
+        return await moonshotChat(kimi, messages, { system, maxTokens, temperature, signal: sig() })
+      } catch (eKimi) { console.warn(`[aiComplete] fallback Kimi falló: ${msg(eKimi)}`) }
+    } else {
+      console.warn('[aiComplete] fallback Kimi inactivo: falta MOONSHOT_API_KEY')
+    }
+    console.error(`[aiComplete] TODOS los proveedores fallaron. Origen: ${msg(eNim)}`)
     throw eNim
   }
 }

@@ -52,11 +52,18 @@ export function evaluatePilot(i: PilotInput): PilotVerdict {
 
   if (i.daysSinceBooking >= i.threshold) {
     // Diagnóstico (#4): distinguir "estamos caros" de "no hay demanda en general".
-    const diagnosis = overMarket
-      ? `Sin reservas ${i.daysSinceBooking}d y por encima del mercado (huésped ${guestPrice}€ > p50 ${i.marketP50Guest}€).`
-      : `Sin reservas ${i.daysSinceBooking}d pero NO estamos caros (huésped ${
-          guestPrice ?? "?"
-        }€ ≤ mercado). Probable demanda baja general en esas fechas.`
+    // 🚨 Y AMBAS de "no lo sé": sin p50 de mercado (el snapshot no trajo
+    // comparables o no ha corrido) NO se puede concluir "NO estamos caros" —
+    // ese veredicto hace que no se baje el precio, y el piso sigue vacío
+    // porque sí estaba caro. Se delataba solo imprimiendo "(huésped ?€ ≤ mercado)".
+    const sinMercado = guestPrice == null || i.marketP50Guest == null
+    const diagnosis = sinMercado
+      ? `Sin reservas ${i.daysSinceBooking}d. NO se puede saber si el precio está por encima del mercado: falta ${
+          i.marketP50Guest == null ? "el p50 de la zona (snapshot de mercado sin datos)" : "el precio base actual"
+        }. Revisa a mano antes de descartar que sea precio.`
+      : overMarket
+        ? `Sin reservas ${i.daysSinceBooking}d y por encima del mercado (huésped ${guestPrice}€ > p50 ${i.marketP50Guest}€).`
+        : `Sin reservas ${i.daysSinceBooking}d pero NO estamos caros (huésped ${guestPrice}€ ≤ p50 ${i.marketP50Guest}€). Probable demanda baja general en esas fechas.`
 
     // Propuesta (#6, solo PROPONE): usa el precio del MOTOR compartido (recommend), NO una fórmula
     // aparte. Solo si el mercado es de confianza y el recomendado baja respecto al actual.

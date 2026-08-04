@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db'
 import { getSaldoConsolidado, listarMovimientosLedger, listarIngresosPorRevisar, listarPorRevisar, getDuplicadosSospechosos, getDuplicadosResueltos, getEvolucionMensual, fmtEur } from '@/lib/banca'
 import { getResumenFinanciero } from '@/lib/finanzas'
 import { getPLMensual } from '@/lib/sivra/pl-mensual'
-import { DESTINO_LABEL, CATEGORIA_LABEL } from '@/lib/categorizar'
+import { DESTINO_LABEL } from '@/lib/categorizar'
 import { getTesoreria } from '@/lib/tesoreria'
 import { getBrokerSaldos } from '@/lib/broker'
 import { eur } from '@/lib/dinero'
@@ -27,8 +27,6 @@ import { AccionesBanca, Plegable, ImportarExtractoBtn, ReanalizarBtn, ConciliarB
 
 export const dynamic = 'force-dynamic'
 
-// Etiqueta visible por categoría IA (Fase 2). Compartida desde lib/categorizar.
-const CAT_LABEL = CATEGORIA_LABEL
 
 // /banca = Inicio unificado con control 💶 Dinero | 🏢 Negocios (SegTabs, por navegación → carga
 // perezosa: cada pestaña computa SOLO sus datos). Dinero (por defecto): resumen negocio+personal
@@ -312,7 +310,7 @@ export default async function BancaPage({ searchParams }: {
         {/* Posibles cargos duplicados — el dueño los resuelve */}
         <DuplicadosBandeja grupos={duplicados} resueltos={dupResueltos} />
 
-        {/* Por revisar (IA dudó) — el dueño asigna categoría */}
+        {/* Por revisar (IA dudó del NEGOCIO) — el dueño lo asigna con un toque y aprende regla */}
         {porRevisar.length > 0 && (
           <RevisarBandeja
             movimientos={porRevisar.map(m => ({
@@ -321,7 +319,7 @@ export default async function BancaPage({ searchParams }: {
               concepto: m.conceptoNormalizado || m.concepto || m.contraparte || 'Movimiento',
               importe: m.importe,
             }))}
-            categorias={Object.entries(CAT_LABEL).map(([value, label]) => ({ value, label }))}
+            destinoLabel={DESTINO_LABEL}
           />
         )}
 

@@ -15,6 +15,79 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-01 · facturas-correo (trigger diario)** · hizo: Vía B sana (dias_caido=0, `agente_salud`
+  actualizado), sin backlog en `PDF-pendiente`/`Revisar`. 2 candidatos: Giraldillo AFV-11808 (72,60€,
+  lavandería, deducible `turistico_pisos`) archivado en Drive con nombre normalizado, conciliación
+  bancaria pendiente (factura sigue "PENDIENTE" de pago, sin cargo aún) — y ParkingLibre (extracto a
+  0,00€, sin gasto real, sin archivar). Ambos hilos `Facturas/Procesada`. **Hallazgo:** el cron de
+  producción `facturas-scan` (`apps/plataforma/lib/agente-facturas/drive.ts`) sigue archivando TODO lo
+  que procesa (Giraldillo y ParkingLibre de hoy incl.) en `ALBERTO 2026 PERSONAL (SEGUROS)/<mes>` en vez
+  de la estructura de negocio — mismo patrón ya visto con Castuera el 10/07 (aviso aún sin borrar);
+  registrado nuevo aviso en `_DUPLICADOS_BORRAR` para Giraldillo. dudas: —; fallos: — (la mis-ubicación
+  del cron no es de esta skill, pero convendría revisar `DRIVE_SCRIPT_URL`/resolución de carpeta);
+  PRs/commits: rama `claude/inspiring-gauss-us1b8v`.
+
+- **2026-08-03 · pricing-agente (sesión interactiva, pregunta de Alberto por una reserva)** · hizo:
+  auditada reserva Dúplex 25-28 sep (159,63€/noche bruto, infrapreciada: mercado del finde p50 258€ a
+  4pl), Bienal de Flamenco 2026 (9 sep–3 oct oficial) dada de alta en `pricing-calendar.ts`
+  (plataforma+sivra), 60 comps de 4 findes ingestados en `market_rates` (Booking MCP, upsert del
+  ingest), aprendizaje en `pricing_aprendizaje`; dudas: el pico ×1,5 del finde 25-27 vs 18-20 no está
+  atribuido a un acto concreto de la Bienal; fallos: —; PRs/commits: rama `claude/duplex-dynamic-pricing-435igu`.
+- **2026-08-01 · health-check (sesión interactiva, continuación 30/07)** · hizo: verificado por logs
+  Vercel que el sync Smoobu corre (200 el 31/07 y 01/08) y que el 🔴 del Check 4 era sequía de reservas,
+  no avería; a petición de Alberto, Check 4 reescrito sobre latido real (`agente_latidos.smoobu_sync`,
+  registrado por `runSync`) — 🔴 solo con sync parado >26h, sequía → ✅ informativo; dudas: —; fallos: —;
+  PRs/commits: rama `claude/health-check-2026-07-30-vlv4c7` (2º PR).
+- **2026-08-01 · rrhh-compliance-calendar** · hizo: pasada mensual sobre `docs/ROADMAP-rrhh.md`;
+  9 ítems 🔴 obligatorios pendientes (fichaje RD 8/2019, geolocalización, TSA, art.28 RGPD, canal
+  denuncias Ley 2/2023, informe ITSS, Modelo 145, alerta NIE, borrado RGPD automatizado — PRL ya
+  marcado ✅ hecho); aviso Telegram enviado (canal 200 en preflight). dudas: —; fallos: —;
+  PRs/commits: commit directo a `main` (solo doc).
+- **2026-07-31 · pricing-agente (check-in programado del cutover)** · hizo: verificado que el sync de
+  Smoobu NO está roto (cron 05:01 → 200; `incomes` parado desde 25/07 es sequía real, corroborada por
+  `available` de Smoobu) y que el motor tarifica en mercado (Busto 81€ vs p50 80€). Documentada en
+  `references/ciclo.md` la trampa `price_ours` (fórmula legacy congelada) que ya ha provocado DOS falsas
+  alarmas — la del 27/07 y una mía hoy, detectada antes de reportarla. Aprendizaje escrito en
+  `pricing_aprendizaje` (ALL/2026-08). dudas: por qué Luxury liberó 1-12 agosto sin reserva en `incomes`
+  (¿bloqueo manual?); fallos: — (hallazgo comercial: agosto arranca a 0/31 en tres pisos, escalado a
+  Alberto); PRs/commits: rama `claude/pricing-check-31-07`.
+- **2026-07-30 · pricing-agente (auditoría pre-cutover, sesión interactiva)** · hizo: auditoría de
+  preparación 100% dinámico (BD + crons + raíles + evidencia piloto) — sin bloqueantes; actualizada la
+  doc de skill (suelos 65/72 del 28/07) y programado re-check del apply-auto de hoy; dudas: aforo Luxury
+  4 vs 5 camas pendiente de Alberto; fallos: `incomes` sin insertar desde 25/07 (esperado hasta el sync
+  de mañana 05:00 UTC post-dispatcher); PRs/commits: rama `claude/dynamic-pricing-audit-4cbdxv`.
+- **2026-07-30 · health-check (sesión interactiva, skill psd2-health-check)** · hizo: resueltos los 2 🔴
+  del health-check — duplicado PSD2 por drift del concepto (`Nº`→`N`, guarda nueva en `lib/psd2.ts` +
+  saneo SQL aplicado) y Smoobu stale (causa: crons mudos pre-dispatcher #1165; sync a `?days=7`);
+  dudas: el Check 4 mide "última reserva nueva", no salud del sync (`incomes` sin `updatedAt`) — puede
+  dar falsos 🔴 en rachas sin reservas; fallos: —; PRs/commits: rama `claude/health-check-2026-07-30-vlv4c7`.
+- **2026-07-29 · agentes-entrenador** · hizo: pasada a petición de Alberto ("repara todo") tras
+  descubrir que 2 pasadas semanales previas (26/07 PR #1090, 27/07 PR #1108) y varios PRs de otros
+  agentes se habían quedado **cerrados sin mergear** en un barrido manual de Alberto (73→31 PR
+  abiertos en minutos) — cerrar sin mergear perdió contenido real, no solo ruido. Verificado uno a
+  uno contra `main` qué sobrevivió y qué no: **ya estaba** (llegó por otras sesiones) el filtro
+  `origen='psd2'` de `psd2-health-check`, el aviso Telegram tras 2 ciclos bloqueados de
+  `pricing-agente`, el recordatorio de auto-informe de `facturas-correo`, y el caso de prueba
+  numérico de `auditoria-central`. **Se había perdido y se ha reaplicado en esta pasada:** (1) queries
+  de `ialimp-client-health` (PR #1084 cerrado 29/07 sin mergear) seguían señalando tablas inexistentes
+  (`reservas`/`facturas`) — confirmado con Supabase que aún no existen, reaplicado el fix real
+  (`pms_connections`+`cleaning_sessions`, `facturas_clientes`); (2) limpieza de 4 deps muertas
+  (`date-fns`/`clsx`/`lucide-react` de ia-rest, `nodemailer` de rrhh — PR #748 cerrado 29/07, aún
+  presentes y sin uso real hoy, verificado por grep) — reaplicada + lockfile regenerado + `tsc` 0 en
+  ambas apps; (3) doc de `GITHUB_TOKEN` en `apps/sivra/CLAUDE.md` (PR #765 cerrado 29/07, env var
+  aún ausente del doc y el código sigue exigiéndola) — reaplicado. Regla del `SKILL.md` propio
+  (backlog de PRs) tampoco había sobrevivido → reaplicada con nota nueva sobre este mismo incidente
+  (cerrar ≠ resuelto). Limpieza del propio backlog: cerrados 10 PR docs-only ya superados (verificado
+  contenido factual ya capturado o resuelto en `main` antes de cerrar, no a ciegas) + reabierto y
+  actualizado #1108. Diagnóstico de los pendientes 27-28/07 (ver abajo): sin acción de prompt en
+  ninguno (buscador-ia/pricing-agente ya se habían resuelto solos; el guardián `avisado_at` de
+  pricing-agente se mergeó minutos antes de esta pasada, PR #1118). **Aviso para seguimiento de
+  Alberto (no es acción de prompt):** `pricing_decisiones` sigue vacía desde el 05/07 pese a que el
+  fix de middleware (27/07) ya está en producción — verificar que el ciclo semanal del lunes
+  produce decisiones reales. dudas: —; fallos: el patrón "PR cerrado sin mergear = trabajo perdido en
+  silencio" ya es la 2ª vez que golpea a este mismo agente (antes fue "PR abierto sin mergear");
+  PRs/commits: PR de esta pasada (reabre y sustituye #1108).
+
 - **2026-07-27 · buscador-ia** · hizo: watch de deprecación de los 4 eslabones cableados de la
   cadena directa (NIM, Groq, Gemini, Kimi) — todos VIVOS, ninguno con retirada anunciada; descarte
   de un hilo de 404 intermitentes en el alias Gemini por ser anterior al swap del 12/07 y a la GA
@@ -74,13 +147,17 @@
 
 ## Última poda
 
-2026-07-26 · pasada semanal (rango real 03/07→26/07, retomando el intento del 19/07 que quedó sin
-mergear en PR #1008) · 10 entradas de agentes procesadas (pricing-agente ×5, auditoria-central-pricing
-×2, facturas-correo ×3) + 1 auto-informe previo del entrenador (03/07) podados · 4 acciones (carril 2,
-todas en la misma PR de esta pasada por restricción de rama única de la sesión): regla de escalado por
-Telegram en `pricing-agente` (bloqueo repetido de CRON_SECRET), refuerzo del auto-informe obligatorio en
-`facturas-correo` (3ª vez que se pierde), filtro `origen='psd2'` en `psd2-health-check` (falsa alarma
-22/07), y la regla de caso de prueba numérico en `auditoria-central` (reaplicada de #1008, que sigue sin
-mergear). Sin acción: `ialimp-client-health` (fix ya en PR #1084 sin mergear) y `agente-huésped`
-(feedback 04/07 ya resuelto, marcado procesado). Auto-informe de esta pasada añadido como entrada
-pendiente para la siguiente.
+2026-07-29 · pasada a petición de Alberto ("repara todo") · 6 entradas procesadas y podadas
+(auto-informe del entrenador del 26/07 + buscador-ia 27/07 + pricing-agente 27/07 ×3 + pricing-agente
+28/07 + facturas-correo 28/07). Causa raíz de esta pasada: Alberto cerró en bloque ~40 PR sin mergear
+(73→31), incl. 2 pasadas propias del entrenador (#1090, #1108) y varios de otros agentes — verificado
+uno a uno qué contenido sobrevivió a `main` por otras vías y qué se había perdido de verdad. Reaplicado
+lo perdido: fix de esquema real en `ialimp-client-health` (PR #1084), limpieza de 4 deps muertas
+(PR #748), doc `GITHUB_TOKEN` de sivra (PR #765), regla de backlog de PRs del propio `SKILL.md`
+(PR #1108, ampliada con la lección de "cerrado ≠ resuelto"). Ya estaba en `main` por otras sesiones
+(sin re-aplicar): escalado Telegram de `pricing-agente`, recordatorio de auto-informe de
+`facturas-correo`, filtro `origen='psd2'`, caso de prueba numérico de `auditoria-central`. Sin acción
+de prompt en los agentes: `buscador-ia`/`pricing-agente` (27-28/07) ya resueltos en sus propias
+sesiones. Limpieza del backlog de PRs: 10 cerrados (contenido verificado ya capturado/resuelto en
+`main`), #1108 reabierto y actualizado. Auto-informe de esta pasada añadido como entrada pendiente
+para la siguiente.

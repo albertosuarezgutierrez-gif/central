@@ -8,6 +8,12 @@ import { getSmoobuKey } from '@/lib/smoobu'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
+// ⚠️ `price_pricelabs` = el precio REAL vivo en Smoobu (GET /rates), lo haya escrito quien lo haya
+// escrito (nuestro motor u otra cosa) — pese al nombre, es la columna a leer para saber "qué precio
+// tiene ahora mismo el piso". `price_ours` = una fórmula estática LEGACY (`calcOurs`, base fija ×
+// estacional × día-semana) de antes del motor real anclado al mercado — es un "shadow" histórico que
+// NADIE debería confundir con el precio vivo (causó una falsa alarma el 27/07/2026: ver calcOurs en
+// pricing-calendar.ts). Para diagnosticar pricing en vivo, usa price_pricelabs o pricing_applied.
 const PROPS = [
   { smoobuId: '352007', propId: 'prop_house_sevillana', base: 380 },
   { smoobuId: '352418', propId: 'prop_busto_reform', base: 175 },
