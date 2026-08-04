@@ -34,7 +34,7 @@ avería. Ahora usa `aiVision` (OpenRouter multimodal → NIM) + `parsearJsonIa`.
 → JSON cortado = «no leído», la lección de la sonda del 03/08), y un PDF **escaneado** (capa de texto
 vacía) pasa de `sin_datos` a `tecnico`: se encolaba como «leído y descartado» sin que nadie lo mirara.
 Al abrir la cola se ve que 8 de los 9 NO son facturas (cartas de MAPFRE, extractos de ParkingLibre);
-la real es DIGI 76€. `aiVision` no pasa por el gate de presupuesto diario (era ya así). PR #1237.
+la real es DIGI 76€. `aiVision` no pasa por el gate de presupuesto diario (era ya así). PR #1243.
 
 ### 🎸 Bienal de Flamenco 2026 dada de alta en el pricing (03/08/2026)
 Reserva Booking del Dúplex (25-28 sep, 478,88€ brutos = 159,63€/noche, 53 días de antelación con mediana 7)
