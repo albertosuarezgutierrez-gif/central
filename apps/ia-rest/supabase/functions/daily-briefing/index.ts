@@ -1,5 +1,5 @@
 // supabase/functions/daily-briefing/index.ts
-// v1 — Resumen diario NIM → Telegram
+// v2 — Resumen diario IA → Telegram (pasarela Director de plataforma; NVIDIA NIM de fallback)
 // Cron: 0 7 * * * (9:00h Madrid verano / UTC+2)
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
@@ -18,32 +18,69 @@ async function sendTelegram(token: string, chatId: string, text: string) {
   })
 }
 
-async function generarNarrativa(apiKey: string, contexto: string): Promise<string> {
-  const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model: 'meta/llama-3.3-70b-instruct',
-      max_tokens: 600,
-      temperature: 0.4,
-      messages: [
-        {
-          role: 'system',
-          content: `Eres el asistente de negocio de ia.rest. Redacta un briefing diario conciso para el dueño de un restaurante en español. Tono: cálido, directo, hostelero. Sin asteriscos, sin markdown. Máximo 5 líneas por restaurante.
+const SYSTEM_BRIEFING = `Eres el asistente de negocio de ia.rest. Redacta un briefing diario conciso para el dueño de un restaurante en español. Tono: cálido, directo, hostelero. Sin asteriscos, sin markdown. Máximo 5 líneas por restaurante.
 Formato:
 🍽️ [NOMBRE]
 Ayer: X comandas · Y€ · ticket medio Z€
 Top platos: [lista]
 Personal activo: N
-[⚠️ Alertas si las hay]`,
-        },
-        { role: 'user', content: `Genera el briefing:\n${contexto}` },
+[⚠️ Alertas si las hay]`
+
+// Genera la narrativa del briefing con doble red:
+//   1) PRIMARIO — pasarela IA de plataforma (endpoint /api/ai/chat): el Agente Director elige
+//      modelo por petición y detrás tiene la cadena completa OpenRouter → NIM → Groq → Gemini →
+//      Kimi + control de presupuesto + auditoría de coste. Una sola fuente de verdad para IA.
+//   2) FALLBACK — NVIDIA NIM directo (comportamiento histórico) por si la pasarela no está
+//      configurada o plataforma está caída: así el briefing no depende de un único servicio.
+// Este edge function es Deno standalone en el proyecto Supabase de ia-rest y NO puede importar
+// `@central/core-ai` (paquete pnpm de las apps Next.js) — por eso habla con la pasarela por HTTP.
+async function generarNarrativa(contexto: string): Promise<{ texto: string; via: string }> {
+  const user = `Genera el briefing:\n${contexto}`
+
+  // 1) Pasarela de plataforma (Agente Director)
+  const pasarelaUrl = Deno.env.get('PLATAFORMA_URL')
+  const gatewaySecret = Deno.env.get('AI_GATEWAY_SECRET')
+  if (pasarelaUrl && gatewaySecret) {
+    try {
+      const res = await fetch(`${pasarelaUrl.replace(/\/$/, '')}/api/ai/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${gatewaySecret}` },
+        body: JSON.stringify({
+          app: 'ia-rest-briefing',
+          system: SYSTEM_BRIEFING,
+          messages: [{ role: 'user', content: user }],
+          maxTokens: 600,
+          timeoutMs: 30_000,
+        }),
+        signal: AbortSignal.timeout(35_000),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data?.text) return { texto: data.text, via: `Director${data?.modelo ? ` · ${data.modelo}` : ''}` }
+      }
+      // res no-ok (429 presupuesto / 502 IA no disponible) → cae a NVIDIA directo
+    } catch { /* pasarela inalcanzable → NVIDIA directo */ }
+  }
+
+  // 2) Fallback: NVIDIA NIM directo (última red de seguridad)
+  const nvidia = Deno.env.get('NVIDIA_API_KEY')
+  if (!nvidia) throw new Error('Sin pasarela IA (PLATAFORMA_URL/AI_GATEWAY_SECRET) ni NVIDIA_API_KEY configuradas')
+  const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${nvidia}` },
+    body: JSON.stringify({
+      model: 'meta/llama-3.3-70b-instruct',
+      max_tokens: 600,
+      temperature: 0.4,
+      messages: [
+        { role: 'system', content: SYSTEM_BRIEFING },
+        { role: 'user', content: user },
       ],
     }),
   })
   if (!res.ok) throw new Error(`NVIDIA ${res.status}`)
   const data = await res.json()
-  return data.choices?.[0]?.message?.content ?? 'Sin resumen disponible.'
+  return { texto: data.choices?.[0]?.message?.content ?? 'Sin resumen disponible.', via: 'NVIDIA NIM directo' }
 }
 
 async function getMetricas(supabase: ReturnType<typeof createClient>, restauranteId: string) {
@@ -96,7 +133,6 @@ serve(async (req) => {
 
   try {
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
-    const NVIDIA_API_KEY    = Deno.env.get('NVIDIA_API_KEY')!
     const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN')!
     const TELEGRAM_CHAT_ID   = Deno.env.get('TELEGRAM_CHAT_ID')!
 
@@ -120,12 +156,12 @@ serve(async (req) => {
       contexto += '\n'
     }
 
-    const narrativa = await generarNarrativa(NVIDIA_API_KEY, contexto)
+    const { texto: narrativa, via } = await generarNarrativa(contexto)
     await sendTelegram(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID,
-      `📊 <b>Briefing ia.rest — ${fecha}</b>\n\n${narrativa}\n\n<i>🤖 NVIDIA NIM · ia.rest</i>`)
+      `📊 <b>Briefing ia.rest — ${fecha}</b>\n\n${narrativa}\n\n<i>🤖 ${via} · ia.rest</i>`)
 
     await supabase.from('sistema_config').upsert(
-      { clave: 'daily_briefing_last_run', valor: new Date().toISOString(), descripcion: 'Última ejecución resumen diario NIM' },
+      { clave: 'daily_briefing_last_run', valor: new Date().toISOString(), descripcion: 'Última ejecución resumen diario IA (pasarela Director + fallback NIM)' },
       { onConflict: 'clave' }
     )
 
