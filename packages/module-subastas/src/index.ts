@@ -154,6 +154,7 @@ export {
   resumirCargas,
   compararCuadros,
   esDocumentoDeCargas,
+  autoridadDocumental,
   estadoCargas,
   titularCargas,
   CONFIANZA_MINIMA_LIBRE,
@@ -162,7 +163,7 @@ export type { Carga, CuadroCargas, CargasSubsistentes, TipoCarga, RangoCarga, Fu
 export { PROMPT_LECTOR_REGISTRAL, extraerJson } from './cargas-prompt.ts'
 // Caducidad de las anotaciones de embargo (art. 86 LH): la carga fantasma que
 // infla el coste. Marca y cuantifica el escenario alternativo; nunca descuenta.
-export { estadoCaducidad, caducidadDelCuadro, parsearFechaRegistral, ANIOS_CADUCIDAD_ANOTACION, MESES_MARGEN } from './caducidad.ts'
+export { estadoCaducidad, caducidadDelCuadro, parsearFechaRegistral, ANIOS_CADUCIDAD_ANOTACION, MESES_MARGEN, ANIOS_FECHA_IMPLAUSIBLE } from './caducidad.ts'
 export type { Caducidad, EstadoCaducidad, CaducidadCuadro } from './caducidad.ts'
 
 // Rescate de PDFs escaneados (certificaciones fotocopiadas → imágenes legibles)

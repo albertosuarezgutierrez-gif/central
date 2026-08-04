@@ -24,6 +24,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⚖️ 43.200,00€ de cargas heredadas que no existían: el mismo asiento contado dos veces (04/08/2026,
+  rama `claude/carga-no-recogida-analizada-vjkwc9`).** Tras mergear #1213/#1214 y releer el corpus, Punta
+  Umbría (`SUB-JA-2026-264600`) pasó de 🟢 a 🔴 43.200,00€ — y la cifra era FALSA. La certificación cita
+  las hipotecas por su fecha de INSCRIPCIÓN (10/02/2009, 29/04/2011) y las declara POSTERIORES; la nota
+  simple cita las MISMAS por la fecha de la ESCRITURA (30/12/2008, 24/03/2011) y la IA las etiquetó
+  «anterior». Ni `identidadCarga` las emparejaba ni había árbitro de rango → 4 hipotecas donde hay 2, y
+  `rangoConservador` («el más caro») las hacía subsistir en una ejecución hipotecaria directa.
+  **Fix:** `mismoAsiento` empareja por fecha COMPARTIDA (la certificación cita las dos) con el principal
+  de contraste; `Carga.documento` + `autoridadDocumental` (certificación 2 > nota simple 1 > resto 0) y
+  el rango lo fija el documento de más autoridad. Además `fecha` ya no se trunca a 40 caracteres —
+  «veintinueve de enero de dos mil dieciocho» son 41, se leía el año como 2000 y una anotación de 2018
+  salía «de hace 26,5 años» y posible caducada (el lado BARATO) — y una antigüedad >40 años pasa a
+  `fecha_implausible`: se cuenta entera. `LECTOR_VERSION` 5→6 para releer el corpus. PR #1215.
+
 - **🧾 facturas-correo (01/08/2026, trigger diario).** Vía B sana, sin backlog. Archivada la factura
   de la lavandería Giraldillo AFV-11808 (72,60€, deducible); pago aún pendiente, sin conciliar. **Hallazgo
   colateral:** el cron `facturas-scan` (`apps/plataforma/lib/agente-facturas/drive.ts`) archiva TODO lo que
