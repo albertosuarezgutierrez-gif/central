@@ -36,6 +36,13 @@
   - Fila nueva en `sociedades`: PUNTO Y COMA GESTION, S.L. (B90446683) — sin ella DIGI salía «ajena».
   - **Pendiente:** PDF escaneado sin capa de texto se descarta (`extraer.ts` no cae a visión); 24 adjuntos
     ilegibles en la pasada del 31/07. Y no hay destino para gastos de la correduría en `negocios`.
+- **🧾 facturas-correo (01/08/2026, trigger diario).** Vía B sana, sin backlog. Archivada la factura
+  de la lavandería Giraldillo AFV-11808 (72,60€, deducible); pago aún pendiente, sin conciliar. **Hallazgo
+  colateral:** el cron `facturas-scan` (`apps/plataforma/lib/agente-facturas/drive.ts`) archiva TODO lo que
+  procesa en `ALBERTO 2026 PERSONAL (SEGUROS)/<mes>` en vez del árbol de negocio — mismo patrón que Castuera
+  (10/07, aviso aún sin borrar). No es un bug de esta skill (yo re-archivo bien y aviso en
+  `_DUPLICADOS_BORRAR`), pero conviene revisar la resolución de carpeta de ese cron algún día. Detalle en
+  `docs/AGENTES-BITACORA.md`.
 
 - **🧹 Laboratorio de inversión: quitado el ruido + el retrovisor llevaba 16 días muerto (04/08/2026).**
   Alberto: «no entiendo la pantalla, quítame lo que no me dé números reales». Hallazgo gordo al auditarla:
@@ -75,6 +82,15 @@ PIN ✅ (PIN vivo para la reserva de hoy) · Accesos ✅ · Estado ✅ en Socorr
 Caduca ~04/02/2027: trigger one-shot `Recordatorio renovar trial Tuya IoT Core` (04/01/2027) ya creado.
 Truco de verificación reutilizable: el proxy del contenedor bloquea Vercel → sonda vía `pg_net` desde
 la Supabase compartida (`net.http_post/get` + `net._http_response`) con cuenta temporal (borrada). Sin código.
+
+### ⚕️ Sonda NIM: la key está VIVA — el veredicto separa lento de muerto (04/08/2026)
+Investigado el 🔴 «NIM no responde, revisar key/cuota»: la key funciona (93 llamadas reales OK en 7
+días, 40 chat OK la víspera, mismo modelo). Es la cola del tier gratis (p50 24,6 s / p90 27,5 s)
+rozando el timeout de 30 s → un ping suelto cae ~1 de cada 4 con el proveedor sano. Fix (rama
+`claude/sonda-nim-timeout-1fcduq`): la sonda reintenta 1 vez SOLO ante timeout (errores HTTP no) y
+el Check 13 emite veredicto con helper puro `lib/monitoring/sonda-veredicto.ts` (testeado): 🟠
+«degradado» si el tráfico real de 48 h completa, 🔴 «revisar key» solo si nada lo desmiente.
+Sigue pendiente el suplente de `meta/llama-3.3-70b-instruct` (pasada de `buscador-ia`).
 
 ### ⚕️ Verificación #1232: groq y gemini cerrados; NIM es DEGRADACIÓN real (04/08/2026)
 Sonda de hoy 07:01 con el fix: **groq verde** (458 ms — el maxTokens 300 arregló el falso «respuesta
@@ -356,6 +372,17 @@ meses que sí funcionaban), plan ordenado por rondas (temporada → eventos → 
 latido a `ok:false` solo si no llegó a cubrir la temporada. Una muestra que cae en día de evento se
 corre una semana: el bucket mensual EXCLUYE las fechas de evento, así que ahí no sumaría.
 De paso, corregido en el hilo: `amount_gross` de `incomes` es lo que paga el huésped, **no** el neto.
+
+- **⚖️ Auditoría de las 37 subastas vivas tras el fix de cargas: dos mentiras más (01/08/2026).**
+  Al repasar el corpus con el titular nuevo (PR #1213) salieron dos huecos de la MISMA familia:
+  (1) **3 de las 14 del BOE tenían `cargas_conocidas=true` con `cargas=NULL`** —el campo Cargas de la ficha
+  habla de cargas pero nadie ha cuantificado el importe que subsiste— y se pintaban **🟢 «Sin cargas
+  anteriores subsistentes»**: afirmar la ausencia sin el dato, el bug original con el signo cambiado.
+  Estado nuevo `sin_cuantificar` 🟠; el 🟢 exige ahora que la cifra EXISTA (un 0 leído sí vale).
+  (2) `publicadas_sin_leer` afirmaba «no se ha analizado» también cuando SÍ se analizó y la lectura salió
+  vacía (264706, que pasaba el gate por playa) → renombrado a `publicadas_sin_extraer`, texto «NO tenemos su
+  cuadro de cargas». Además `analisisDocumental` ya no tiene copia propia del texto: llama a `titularCargas`
+  (la ficha y el desplegable llegaron a decir cosas distintas de la misma subasta).
 
 - **⏰ Subasta vencida seguía en «🎯 Mi radar» (01/08/2026, rama `claude/expired-auction-visible-eoow4t`).**
   Alberto con captura: `SUB-JA-2026-263723` cerró el 31/07 18:13 y al día siguiente seguía con botones de

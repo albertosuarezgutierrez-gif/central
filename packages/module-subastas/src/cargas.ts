@@ -703,16 +703,18 @@ export function esDocumentoDeCargas(titulo: string | null | undefined): boolean 
 
 /**
  * Lo que se puede AFIRMAR sobre las cargas:
- *  · `subsisten`            — leídas: hay cargas anteriores que se suman al precio.
- *  · `sin_cargas`           — leídas: no subsiste ninguna.
- *  · `publicadas_sin_leer`  — la ficha publica el documento y aún no se ha analizado.
- *  · `no_publicadas`        — ficha revisada: no hay documento de cargas que abrir.
- *  · `sin_revisar`          — ni siquiera se ha mirado la ficha todavía.
+ *  · `subsisten`              — leídas y cuantificadas: hay cargas que se suman al precio.
+ *  · `sin_cargas`             — leídas y cuantificadas: no subsiste ninguna (un 0 leído vale).
+ *  · `sin_cuantificar`        — consta que hay cargas, pero nadie ha determinado el importe.
+ *  · `publicadas_sin_extraer` — la ficha publica el documento y no tenemos su cuadro de cargas.
+ *  · `no_publicadas`          — ficha revisada: no hay documento de cargas que abrir.
+ *  · `sin_revisar`            — ni siquiera se ha mirado la ficha todavía.
  */
 export type EstadoCargas =
   | 'subsisten'
   | 'sin_cargas'
-  | 'publicadas_sin_leer'
+  | 'sin_cuantificar'
+  | 'publicadas_sin_extraer'
   | 'no_publicadas'
   | 'sin_revisar'
 
@@ -748,11 +750,22 @@ export function estadoCargas(e: EntradaEstadoCargas): {
   const documento = docs?.find((d) => esDocumentoDeCargas(d.titulo)) ?? null
 
   if ((e.cargas ?? 0) > 0) return { estado: 'subsisten', documento }
-  if (e.cargasConocidas === true) return { estado: 'sin_cargas', documento }
+
+  // 🚨 «Conocidas» ≠ «cuantificadas». `cargas_conocidas` se pone a true en cuanto
+  // ALGO habla de cargas —el campo Cargas de la ficha del BOE trae texto, o una
+  // lectura devolvió cuadro—, pero el IMPORTE que subsiste puede seguir sin
+  // determinarse (`cargasQueSubsisten` devuelve `importe: null` cuando no se
+  // puede afirmar). Sin importe no se puede decir «finca limpia»: el 🟢 exige
+  // que la cifra EXISTA, aunque sea 0. Auditado el 01/08/2026 sobre el corpus
+  // vivo: 3 de las 14 subastas del BOE estaban en este hueco y pintaban 🟢 «Sin
+  // cargas anteriores subsistentes» sin que nadie hubiera cuantificado nada.
+  if (e.cargasConocidas === true) {
+    return { estado: e.cargas == null ? 'sin_cuantificar' : 'sin_cargas', documento }
+  }
 
   // No se sabe. Lo útil es decir POR QUÉ, porque cada porqué manda a un sitio
   // distinto: abrir el PDF que ya tenemos, esperar al cron, o ir al Registro.
-  if (documento) return { estado: 'publicadas_sin_leer', documento }
+  if (documento) return { estado: 'publicadas_sin_extraer', documento }
   if (docs == null) {
     return { estado: e.publicaAdjuntos === false ? 'no_publicadas' : 'sin_revisar', documento: null }
   }
@@ -785,12 +798,24 @@ export function titularCargas(e: EntradaEstadoCargas): TitularCargas {
     case 'subsisten':
       return { ...base, emoji: '🔴', texto: 'Cargas anteriores que SUBSISTEN y se suman al precio:', importe: e.cargas ?? null }
     case 'sin_cargas':
-      return { ...base, emoji: '🟢', texto: 'Sin cargas anteriores subsistentes publicadas.' }
-    case 'publicadas_sin_leer':
+      return { ...base, emoji: '🟢', texto: 'Sin cargas anteriores subsistentes: leído y cuantificado.' }
+    case 'sin_cuantificar':
       return {
         ...base,
         emoji: '🟠',
-        texto: `El BOE SÍ publica «${(documento?.titulo ?? 'certificación de cargas').trim()}», pero todavía no se ha analizado: ábrela antes de pujar.`,
+        texto: documento
+          ? `Constan cargas pero SIN cuantificar: abre «${(documento.titulo ?? 'la certificación').trim()}» y súmalas al precio antes de pujar.`
+          : 'Constan cargas pero SIN cuantificar: pide la certificación registral y súmalas al precio antes de pujar.',
+      }
+    // Deliberadamente NO afirma «no se ha analizado»: cubre tanto la ficha que
+    // aún no ha pasado por el lector como la que pasó y no soltó cuadro (escaneo
+    // ilegible, lectura vacía). Lo único cierto en los dos casos —y lo único que
+    // Alberto necesita— es que el cuadro no lo tenemos y el PDF está ahí.
+    case 'publicadas_sin_extraer':
+      return {
+        ...base,
+        emoji: '🟠',
+        texto: `El BOE SÍ publica «${(documento?.titulo ?? 'certificación de cargas').trim()}» pero NO tenemos su cuadro de cargas: ábrela antes de pujar.`,
       }
     case 'sin_revisar':
       return { ...base, emoji: '🟠', texto: 'Cargas sin comprobar: la ficha del BOE todavía no se ha revisado.' }
