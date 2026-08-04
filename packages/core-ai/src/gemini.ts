@@ -3,6 +3,7 @@
 // error si falla; la POLÍTICA de fallback (p. ej. a NIM) la decide la app.
 
 import type { ImageInput } from './types'
+import { fetchAI } from './http.ts'
 
 export interface GeminiConfig {
   apiKey: string
@@ -26,7 +27,7 @@ export async function geminiSearch(
   const model = config.model ?? DEFAULT_GEMINI_MODEL
 
   const res = await Promise.race([
-    fetch(
+    fetchAI(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${config.apiKey}`,
       {
         method: 'POST',
@@ -38,11 +39,11 @@ export async function geminiSearch(
           generationConfig: { maxOutputTokens: maxTokens, temperature: 0.2 },
         }),
       },
+      { provider: 'Gemini' },
     ),
     new Promise<never>((_, r) => setTimeout(() => r(new Error('Gemini timeout')), timeoutMs)),
   ])
 
-  if (!res.ok) throw new Error(`Gemini HTTP ${res.status}: ${(await res.text()).substring(0, 150)}`)
   const data = await res.json()
   const text = data?.candidates?.[0]?.content?.parts?.find((p: { text?: string }) => p.text)?.text
   if (!text) throw new Error('Gemini: respuesta vacía')
@@ -123,7 +124,7 @@ export async function geminiVision(
   ]
 
   const res = await Promise.race([
-    doFetch(
+    fetchAI(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${config.apiKey}`,
       {
         method: 'POST',
@@ -134,11 +135,11 @@ export async function geminiVision(
           generationConfig: { maxOutputTokens: maxTokens, temperature: 0.1 },
         }),
       },
+      { provider: 'Gemini-Vision', fetchImpl: doFetch },
     ),
     new Promise<never>((_, r) => setTimeout(() => r(new Error('Gemini-Vision timeout')), timeoutMs)),
   ])
 
-  if (!res.ok) throw new Error(`Gemini-Vision HTTP ${res.status}: ${(await res.text()).substring(0, 150)}`)
   const data = await res.json()
   const text = data?.candidates?.[0]?.content?.parts?.find((p: { text?: string }) => p.text)?.text
   if (!text) throw new Error('Gemini-Vision: respuesta vacía')

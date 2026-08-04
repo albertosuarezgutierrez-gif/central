@@ -5494,6 +5494,13 @@ copiar. Luxury sigue congelado hasta el 01/09 (decisión de Alberto).
     ya existe, `conciliado`/`factura_ref` ya existen). Fase 4 (Telegram + proactividad + onboarding) y voz
     (backlog) quedan pendientes en el spec.
 
+- **🛡️ core-ai: reintentos ante rate-limit (429) en los proveedores IA (03/07/2026, rama `claude/api-rate-limit-errors-ovyrch`, PR nuevo).**
+  - **Disparador**: ráfagas de `HTTP 429` en las «Últimas llamadas» de ia-rest — Groq (`llama-3.3-70b-versatile`, límite org `on_demand`) y Gemini (cuota) tumbaban la llamada al primer intento, sin reintento ni respeto de `Retry-After`.
+  - **Fix**: nuevo helper puro **`packages/core-ai/src/http.ts` → `fetchAI()`** que reintenta 429/5xx con backoff exponencial + jitter, **respeta `Retry-After`** y, si el proveedor pide esperar más que el tope (`maxRetryAfterMs`, default 5 s → p. ej. cuota diaria), **se rinde de inmediato para que la app caiga al siguiente proveedor** (la política de fallback NIM→Groq→Gemini sigue en cada app). Lanza `AiHttpError` tipado (`status`/`provider`/`retryAfterMs`/`isRateLimit`) conservando el formato de mensaje `"<Proveedor> HTTP <status>: <body>"` (retrocompat de logs/pasarela). Export `isRateLimitError()`.
+  - **Integrado** en los 3 adaptadores (`nim.ts`, `groq.ts`, `gemini.ts`) — texto, multi-turno, tools y visión. `ai-client.ts` de ia-rest **sin cambios de firma**: la resiliencia es transparente. Beneficia a todas las verticales (core-ai es compartido).
+  - **Tests**: `test/http.test.ts` (8 casos: retry 429, Retry-After segundos, bail si Retry-After>tope, agota reintentos, 400 no-retry, 503 retry, error de red) + los de gemini-vision siguen verdes. `fetch`/`sleep` inyectables (puro, sin `process.env`). Convención de imports `.ts` (como core-receipts; `allowImportingTsExtensions` en `tsconfig.base.json`).
+  - **Detalle**: import `./http.ts` con extensión porque son imports de VALOR (los antiguos eran `import type`, que se elide y no necesitaba extensión bajo `node --test`).
+
 - **🆕 plataforma: Agente de contabilidad conversacional — FASE 1 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`, PR #726).**
   - Idea de Alberto: «hablar con mi agente de contabilidad, meterle IA, que aprenda mi rutina». Diseño = capa conversacional + memoria SOBRE la maquinaria contable existente (no reescribe nada).
   - **Spec** `docs/superpowers/specs/2026-07-03-agente-contabilidad-conversacional-design.md` + **plan** `docs/superpowers/plans/2026-07-03-agente-contable-fase1.md` (4 fases; esta entrega la Fase 1).
