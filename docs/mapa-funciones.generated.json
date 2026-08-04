@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-04T21:43:06Z",
-  "sha": "e7bf06256ddd626d6da96afacacb8831ec04e7f1",
+  "generadoEn": "2026-08-04T21:48:07Z",
+  "sha": "1fc141bc7a74cdf348d4dfdd45a3ffebd86015cd",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47601,7 +47601,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "ce9081e1b4a5"
+      "hash": "983d6595addb"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -84797,7 +84797,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "77b9b9f6f26b"
+      "hash": "899b2d205487"
     },
     {
       "ruta": "packages/module-subastas/src/aviso.ts",
@@ -85128,7 +85128,7 @@
           "exportada": true,
           "params": "e: EntradaEstadoCargas",
           "retorno": "",
-          "linea": 743,
+          "linea": 745,
           "resumen": "Estado de las cargas + el documento que hay que abrir, si lo hay. Conservador por diseño: `cargas > 0` manda sobre todo lo demás (si alguna vez hubo una lectura con cargas, no se degrada a «no se sabe"
         },
         {
@@ -85137,12 +85137,12 @@
           "exportada": true,
           "params": "e: EntradaEstadoCargas",
           "retorno": "TitularCargas",
-          "linea": 780
+          "linea": 793
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "52936a76d667"
+      "hash": "cd7c28bac6bb"
     },
     {
       "ruta": "packages/module-subastas/src/catastro.ts",
