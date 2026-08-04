@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-04T22:14:01Z",
-  "sha": "c034e5bd5a7871ee12ade641fc2c351945aea3bd",
+  "generadoEn": "2026-08-04T22:22:42Z",
+  "sha": "2ea3edc15cc8bfc7f8f32d9da4e1df8283751cb4",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -33403,7 +33403,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b24947c7fc24"
+      "hash": "0c48418e2a92"
     },
     {
       "ruta": "apps/ialimp/app/admin/repartidores/page.tsx",
