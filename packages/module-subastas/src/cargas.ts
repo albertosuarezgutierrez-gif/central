@@ -22,7 +22,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 
 import { caducidadDelCuadro } from './caducidad.ts'
-import { norm } from './parsing.ts'
+import { norm, parseImporteEs } from './parsing.ts'
 
 /**
  * Confianza mínima de la lectura para poder afirmar que una finca se adquiere
@@ -66,6 +66,13 @@ export interface Carga {
   cancelada: boolean
   /** Cita literal del documento: la evidencia de dónde sale cada cifra. */
   literal: string | null
+  /**
+   * Título del documento de la ficha del que salió esta lectura. Es lo que
+   * permite arbitrar cuando dos documentos se contradicen: la CERTIFICACIÓN de
+   * dominio y cargas es la que establece el orden registral, y una nota simple
+   * o un edicto solo lo describen. Ver `autoridadDocumental`.
+   */
+  documento?: string | null
 }
 
 /**
@@ -138,7 +145,12 @@ const RANGOS: RangoCarga[] = ['anterior', 'posterior', 'la_que_ejecuta', 'descon
  * español, o cargas a medias — nada de eso debe lanzar, porque el pipeline es
  * best-effort y una ficha ilegible no puede tumbar la pasada del cron.
  */
-export function normalizarCuadroCargas(bruto: unknown, fuente: FuenteCargas): CuadroCargas {
+export function normalizarCuadroCargas(
+  bruto: unknown,
+  fuente: FuenteCargas,
+  /** Título del documento leído, para poder arbitrar rangos contradictorios. */
+  documento?: string | null,
+): CuadroCargas {
   const o = (bruto ?? {}) as Record<string, unknown>
   const lista = Array.isArray(o.cargas) ? o.cargas : []
 
@@ -150,10 +162,17 @@ export function normalizarCuadroCargas(bruto: unknown, fuente: FuenteCargas): Cu
       tipo: (TIPOS as string[]).includes(tipo) ? (tipo as TipoCarga) : 'otra',
       acreedor: typeof x.acreedor === 'string' && x.acreedor.trim() ? x.acreedor.trim().slice(0, 200) : null,
       importe: NUM(x.importe),
-      fecha: typeof x.fecha === 'string' && x.fecha.trim() ? x.fecha.trim().slice(0, 40) : null,
+      // 🚨 El tope era 40 y el registro escribe las fechas EN LETRA: «veintinueve
+      // de enero de dos mil dieciocho» son 41 caracteres, así que se guardaba
+      // «…dos mil diecioch» y `palabrasANumero` leía el año como 2000. En
+      // SUB-JA-2026-264269 esa anotación de 2018 salía como «de hace 26,5 años»
+      // y, peor, como POSIBLE CADUCADA — que es el lado barato: rebajaba de
+      // 48.450,00€ a 44.850,00€ lo que se hereda (auditado el 04/08/2026).
+      fecha: typeof x.fecha === 'string' && x.fecha.trim() ? x.fecha.trim().slice(0, 120) : null,
       rango: (RANGOS as string[]).includes(rango) ? (rango as RangoCarga) : 'desconocido',
       cancelada: x.cancelada === true,
       literal: typeof x.literal === 'string' && x.literal.trim() ? x.literal.trim().slice(0, 600) : null,
+      documento: documento ?? null,
     }
   })
 
@@ -410,6 +429,104 @@ function rangoConservador(a: RangoCarga, b: RangoCarga): RangoCarga {
 }
 
 /**
+ * Cuánto vale la palabra de un documento cuando dos se contradicen en el RANGO.
+ *
+ * 2 = **certificación de dominio y cargas**. Es el documento que el registrador
+ *     expide PARA esta ejecución y el único que numera los asientos: el rango
+ *     sale de ahí y de ningún otro sitio.
+ * 1 = **nota simple**. Describe la finca, pero suele citar las cargas por la
+ *     fecha de la ESCRITURA y sin el número de inscripción.
+ * 0 = edicto, informe de valoración, escritura de cesión…
+ */
+export function autoridadDocumental(titulo: string | null | undefined): 0 | 1 | 2 {
+  const t = norm(titulo ?? '')
+  if (!t) return 0
+  if (/certific\w*/.test(t) && /(dominio|carga|registral)/.test(t)) return 2
+  if (/\bnota\s+simple\b/.test(t)) return 1
+  return 0
+}
+
+/** Las fechas que cita un asiento, en ISO. Una carga tiene varias a propósito:
+ *  la de INSCRIPCIÓN y la de la ESCRITURA que la causó son distintas. */
+function fechasDeAsiento(c: Carga): Set<string> {
+  const texto = `${c.fecha ?? ''} ${c.literal ?? ''}`
+  const out = new Set<string>()
+  const iso = (a: number, m: number, d: number) =>
+    a >= 1900 && a <= 2100 && m >= 1 && m <= 12 && d >= 1 && d <= 31
+      ? `${a}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+      : null
+
+  for (const m of texto.matchAll(/\b(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})\b/g)) {
+    const f = iso(+m[3], +m[2], +m[1])
+    if (f) out.add(f)
+  }
+  for (const m of texto.matchAll(/\b(\d{1,2})\s+de\s+([a-záéíóúñ]+)\s+de\s+(\d{4})\b/gi)) {
+    const mes = MESES_ES.indexOf(norm(m[2]))
+    if (mes < 0) continue
+    const f = iso(+m[3], mes + 1, +m[1])
+    if (f) out.add(f)
+  }
+  return out
+}
+
+const MESES_ES = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+]
+
+/**
+ * El PRINCIPAL que garantiza la carga. Es la cifra que NO cambia de un documento
+ * a otro: la certificación añade intereses y costas para dar la responsabilidad
+ * total, pero el principal es el mismo. Sirve de contraste al emparejar.
+ */
+function principalDe(c: Carga): number | null {
+  const t = c.literal ?? ''
+  const etiquetado = /\bprincipal(?:\s+de)?\s*:?\s*([\d][\d.,]*)/i.exec(t)
+  if (etiquetado) return parseImporteEs(etiquetado[1])
+  const entreParentesis = /responder\s+de\s+[^()]*\(\s*([\d][\d.,]*)\s*€/i.exec(t)
+  if (entreParentesis) return parseImporteEs(entreParentesis[1])
+  return null
+}
+
+/**
+ * ¿Son estas dos lecturas EL MISMO asiento registral?
+ *
+ * 🚨 El caso que lo motiva (SUB-JA-2026-264600, Punta Umbría, auditado el
+ * 04/08/2026): la certificación citaba las hipotecas por su fecha de
+ * INSCRIPCIÓN (10/02/2009, 29/04/2011) y la nota simple las mismas dos por la
+ * fecha de la ESCRITURA (30/12/2008, 24/03/2011), con el acreedor escrito
+ * distinto («CAIXA D'ESTALVIS CATALUNYA» / «CAIXA D'ESTALVIS DE CATALUNYA, HOY
+ * BBVA»). `identidadCarga` no las emparejaba, así que la finca acababa con
+ * CUATRO hipotecas donde hay dos — y encima con los rangos cruzados: las dos
+ * copias de la nota simple venían como «anterior» y se sumaban 43.200,00€ de
+ * cargas heredadas en una ejecución hipotecaria donde la propia certificación
+ * dice que son POSTERIORES y se purgan.
+ *
+ * El puente es la fecha: la certificación cita las DOS (inscripción y «Fecha
+ * documento»), así que basta con que compartan una. El principal se usa de
+ * contraste — si ambos lo declaran y no coinciden, son asientos distintos.
+ */
+function mismoAsiento(a: Carga, b: Carga): boolean {
+  if (a.tipo !== b.tipo) return false
+
+  // La letra de la anotación es el identificador registral: si ambas la traen,
+  // decide sin apelación en los dos sentidos.
+  const la = letraAnotacion(a)
+  const lb = letraAnotacion(b)
+  if (la && lb) return la === lb
+
+  if (identidadCarga(a) === identidadCarga(b)) return true
+
+  const fa = fechasDeAsiento(a)
+  if (![...fechasDeAsiento(b)].some((f) => fa.has(f))) return false
+
+  const pa = principalDe(a)
+  const pb = principalDe(b)
+  if (pa != null && pb != null && Math.abs(pa - pb) > Math.max(pa, pb) * 0.01) return false
+  return true
+}
+
+/**
  * Fusiona las cargas leídas en VARIOS documentos de la misma finca (edicto,
  * certificación, informe de valoración…) dejando UNA fila por asiento.
  *
@@ -427,15 +544,15 @@ function rangoConservador(a: RangoCarga, b: RangoCarga): RangoCarga {
  */
 export function fusionarCargas(cargas: Carga[]): { cargas: Carga[]; avisos: string[] } {
   const avisos: string[] = []
-  const porIdentidad = new Map<string, Carga>()
+  const grupos: Carga[] = []
 
   for (const c of cargas) {
-    const k = identidadCarga(c)
-    const previa = porIdentidad.get(k)
-    if (!previa) {
-      porIdentidad.set(k, c)
+    const i = grupos.findIndex((g) => mismoAsiento(g, c))
+    if (i < 0) {
+      grupos.push(c)
       continue
     }
+    const previa = grupos[i]
 
     if (previa.importe != null && c.importe != null && Math.abs(previa.importe - c.importe) > Math.max(previa.importe, c.importe) * 0.01) {
       avisos.push(
@@ -443,24 +560,55 @@ export function fusionarCargas(cargas: Carga[]): { cargas: Carga[]; avisos: stri
           'se cuenta el MAYOR, que suele ser la responsabilidad total (principal + intereses + costas) frente al principal a secas. Confirmar en la certificación.',
       )
     }
-    if (previa.rango !== c.rango) {
-      avisos.push(`${describir(c)} consta con rango distinto según el documento (${previa.rango} y ${c.rango}): se cuenta el más caro.`)
-    }
 
-    porIdentidad.set(k, {
+    grupos[i] = {
       ...previa,
       importe: previa.importe == null ? c.importe : c.importe == null ? previa.importe : Math.max(previa.importe, c.importe),
-      rango: rangoConservador(previa.rango, c.rango),
+      rango: arbitrarRango(previa, c, avisos),
       // Cancelada solo si TODOS los documentos lo dicen: uno que no lo mencione
       // no basta para dar por cancelada una carga.
       cancelada: previa.cancelada && c.cancelada,
       acreedor: previa.acreedor ?? c.acreedor,
       fecha: previa.fecha ?? c.fecha,
       literal: previa.literal ?? c.literal,
-    })
+      // Se conserva el documento de MÁS autoridad: es el que explica el rango.
+      documento: autoridadDocumental(c.documento) > autoridadDocumental(previa.documento) ? c.documento : previa.documento,
+    }
   }
 
-  return { cargas: [...porIdentidad.values()], avisos }
+  return { cargas: grupos, avisos }
+}
+
+/**
+ * Rango cuando dos documentos discrepan.
+ *
+ * Antes se cogía siempre el MÁS CARO, que es lo correcto cuando ninguno de los
+ * dos sabe más que el otro. Pero no es el caso: el orden de los asientos lo
+ * establece la CERTIFICACIÓN, que los numera; una nota simple los cita sueltos y
+ * el modelo tiene que adivinar el rango. Coger «el más caro» convertía en
+ * heredadas dos hipotecas que la certificación declara posteriores y purgadas
+ * (Punta Umbría, 43.200,00€ de coste inventado).
+ *
+ * Cuando la autoridad empata se vuelve a lo conservador: sin árbitro, caro.
+ */
+function arbitrarRango(a: Carga, b: Carga, avisos: string[]): RangoCarga {
+  if (a.rango === b.rango) return a.rango
+
+  const aa = autoridadDocumental(a.documento)
+  const ab = autoridadDocumental(b.documento)
+  if (aa === ab) {
+    avisos.push(`${describir(b)} consta con rango distinto según el documento (${a.rango} y ${b.rango}): se cuenta el más caro.`)
+    return rangoConservador(a.rango, b.rango)
+  }
+
+  const manda = aa > ab ? a : b
+  const otro = aa > ab ? b : a
+  avisos.push(
+    `${describir(b)} consta como ${otro.rango} en «${otro.documento ?? 'otro documento'}» y como ${manda.rango} en ` +
+      `«${manda.documento ?? 'la certificación'}»: manda este último, que es el que numera los asientos y fija el orden registral. ` +
+      'Compruébalo en la certificación antes de pujar.',
+  )
+  return manda.rango
 }
 
 function describir(c: Carga): string {

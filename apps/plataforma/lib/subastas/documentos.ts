@@ -55,7 +55,7 @@ const MAX_BYTES_DOC = 20 * 1024 * 1024
  * arregla el punto 2 de arriba — sin esto, mejorar el prompt no rescata nada de
  * lo ya (mal) leído.
  */
-export const LECTOR_VERSION = 5
+export const LECTOR_VERSION = 6
 
 /** Documentos que NO merecen una llamada de IA: no contienen cargas. */
 const RUIDO = /^(justificante|minuta|honorarios|tasa|pago|aranceles?)\b/i
@@ -181,7 +181,13 @@ export async function procesarDocumentosDeFicha(
         leidos++
       }
 
-      lecturas.push(lectura)
+      // De qué documento sale cada carga: sin esto `fusionarCargas` no puede
+      // arbitrar cuando la certificación y una nota simple se contradicen en el
+      // RANGO, y coger «el más caro» inventa cargas heredadas (Punta Umbría).
+      lecturas.push({
+        ...lectura,
+        cuadro: { ...lectura.cuadro, cargas: lectura.cuadro.cargas.map((c) => ({ ...c, documento: doc.titulo })) },
+      })
       detalle.push({
         titulo: doc.titulo,
         via: lectura.via,
