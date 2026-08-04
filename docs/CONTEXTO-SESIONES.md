@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### ⚕️ Verificación #1232: groq y gemini cerrados; NIM es DEGRADACIÓN real (04/08/2026)
+Sonda de hoy 07:01 con el fix: **groq verde** (458 ms — el maxTokens 300 arregló el falso «respuesta
+vacía») y **gemini fuera del Check 12** (0 llamadas en la ventana de 3 días, la guarda lo apagó sola).
+**NIM sigue rojo** y ya NO es calibración: timeout con los 30 s completos, y el tráfico real del 03/08
+ya sufría **12/52 timeouts (23%)** con ese mismo margen. No es key muerta ni modelo retirado (el error
+es timeout, no 404): el tier gratis de NIM va con cola degradada. El fallback (OpenRouter/Groq) cubre
+producción. Candidato a pasada de `buscador-ia`: valorar suplente para `meta/llama-3.3-70b-instruct`.
+Sigue en observación: `registral` → `google/gemini-2.5-flash` vía NIM con 404 intermitentes (~50%).
+
 ### 👁️ La rama de VISIÓN de las facturas también pasa por la pasarela (04/08/2026)
 Verificada la pasada de hoy tras #1234: la mitad de TEXTO funciona (12 llamadas, **0 errores**,
 0,0076€, `gemini-2.5-flash`) y las facturas nuevas suben **1 → 5**. Pero quedaron **9 sin leer** sin
