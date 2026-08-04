@@ -9,9 +9,9 @@ const HORAS_SEMANA_MAX = 40
 // Vercel Cron: 30 20 * * * (cada día a las 20:30 UTC ≈ 22:30 hora española)
 // Detecta empleados que han superado 9 h en la jornada de hoy o 40 h esta semana ISO.
 export async function GET(req: Request) {
-  if (req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET || ''}`) {
-    const ua = req.headers.get('user-agent') ?? ''
-    if (!ua.includes('vercel-cron')) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const secret = process.env.CRON_SECRET
+  if (!secret || req.headers.get('authorization') !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   // Empleados con más de HORAS_DIA_MAX horas hoy (cerradas)

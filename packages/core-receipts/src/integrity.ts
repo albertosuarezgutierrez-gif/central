@@ -7,9 +7,11 @@ export class FiscalIntegrityError extends Error {
   }
 }
 
-// Formatea un número fiscal tal y como aparece en el documento: coma decimal, 2 decimales.
+// Formatea un número fiscal tal y como aparece en el documento: miles con punto, coma decimal,
+// 2 decimales. DEBE agrupar igual que eur() del renderer HTML (que usa toLocaleString es-ES), o el
+// chequeo de integridad fallaría para importes ≥ 1000 (la cifra agrupada no sería substring de la salida).
 export function formatFiscalNumber(n: number): string {
-  return n.toFixed(2).replace('.', ',')
+  return n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' })
 }
 
 /**

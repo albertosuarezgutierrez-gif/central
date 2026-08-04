@@ -4,8 +4,9 @@ import { prisma } from '@/lib/db'
 import { getSaldoConsolidado, listarMovimientosLedger, listarIngresosPorRevisar, listarPorRevisar, getDuplicadosSospechosos, getDuplicadosResueltos, getEvolucionMensual, fmtEur } from '@/lib/banca'
 import { getResumenFinanciero } from '@/lib/finanzas'
 import { getPLMensual } from '@/lib/sivra/pl-mensual'
-import { DESTINO_LABEL, CATEGORIA_LABEL } from '@/lib/categorizar'
+import { DESTINO_LABEL } from '@/lib/categorizar'
 import { getTesoreria } from '@/lib/tesoreria'
+import { getBrokerSaldos } from '@/lib/broker'
 import { eur } from '@/lib/dinero'
 import IntervaloSelector from '../finanzas/IntervaloSelector'
 import { periodoLabel, type Periodo } from '../finanzas/periodo'
@@ -20,13 +21,12 @@ import TicketsSuper from './TicketsSuper'
 import SegTabs from './SegTabs'
 import NegociosResumen from './NegociosResumen'
 import FiscalResumen from './FiscalResumen'
+import CategoriasTab from '../finanzas/CategoriasTab'
 import { calcularEstadoDeclaracion } from '@/lib/comparativa-declaracion'
-import { AccionesBanca, Plegable, ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja, ExportarBtn, MovimientosTabla, DuplicadosBandeja, RevisarCorreoBtn, OcultarCuentaBtn, ReglasAprendidas, IngresosPorRevisar } from './BancaClient'
+import { AccionesBanca, Plegable, ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja, ExportarBtn, MovimientosTabla, MovimientosBtn, DuplicadosBandeja, RevisarCorreoBtn, OcultarCuentaBtn, ReglasAprendidas, IngresosPorRevisar } from './BancaClient'
 
 export const dynamic = 'force-dynamic'
 
-// Etiqueta visible por categoría IA (Fase 2). Compartida desde lib/categorizar.
-const CAT_LABEL = CATEGORIA_LABEL
 
 // /banca = Inicio unificado con control 💶 Dinero | 🏢 Negocios (SegTabs, por navegación → carga
 // perezosa: cada pestaña computa SOLO sus datos). Dinero (por defecto): resumen negocio+personal
@@ -43,8 +43,11 @@ export default async function BancaPage({ searchParams }: {
   if (!session) redirect('/login')
 
   const params = await searchParams
-  const tab: 'dinero' | 'negocios' | 'fiscal' =
-    params.tab === 'negocios' ? 'negocios' : params.tab === 'fiscal' ? 'fiscal' : 'dinero'
+  const tab: 'dinero' | 'negocios' | 'fiscal' | 'personal' =
+    params.tab === 'negocios' ? 'negocios'
+      : params.tab === 'fiscal' ? 'fiscal'
+      : params.tab === 'personal' ? 'personal'
+      : 'dinero'
 
   // 🏢 Segmento NEGOCIOS (holding) — carga PEREZOSA: solo se computa cuando la pestaña está activa,
   // así /banca (Dinero, por defecto) NO paga el coste del holding en cada visita.
@@ -72,6 +75,20 @@ export default async function BancaPage({ searchParams }: {
         <MiniChatContable periodoLabel={`${anioFiscal}`} />
         <div style={{ margin: '8px 0 20px' }}><SegTabs active="fiscal" /></div>
         <FiscalResumen fiscal={resumenAnual?.fiscal ?? null} declaracion={declaracion} year={anioFiscal} />
+      </main>
+    )
+  }
+
+  // 🏠 Segmento PERSONAL (en qué se gasta el día a día) — carga PEREZOSA. Reutiliza tal cual
+  // `CategoriasTab` (la pestaña "En qué gasto" de /finanzas): dona + tabla por subcategoría + drill-down
+  // por comercio/movimiento + alertas de presupuesto. El componente gestiona su propio filtro de fechas
+  // (mes actual por defecto), así que aquí solo hace falta pasarle el año en curso.
+  if (tab === 'personal') {
+    return (
+      <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
+        <MiniChatContable periodoLabel={`${new Date().getFullYear()}`} />
+        <div style={{ margin: '8px 0 20px' }}><SegTabs active="personal" /></div>
+        <CategoriasTab year={new Date().getFullYear()} month={0} />
       </main>
     )
   }
@@ -118,7 +135,7 @@ export default async function BancaPage({ searchParams }: {
   const esMesUnico = !!desde && desde.slice(0, 7) === hasta.slice(0, 7)
   const mesPL = (desde || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`).slice(0, 7)
 
-  const [sociedades, saldo, ledger, ingresosRevisar, tesoreria, porRevisar, duplicados, dupResueltos, resumen, plPisos, evolucion] = await Promise.all([
+  const [sociedades, saldo, ledger, ingresosRevisar, tesoreria, porRevisar, duplicados, dupResueltos, resumen, plPisos, evolucion, brokerSaldos] = await Promise.all([
     prisma.sociedad.findMany({ where: { cuentaId: session.id }, orderBy: { createdAt: 'asc' }, select: { id: true, nombre: true } }),
     getSaldoConsolidado(session.id),
     listarMovimientosLedger(session.id, { desde: desde || undefined, hasta: hasta || undefined }, 50, 0),
@@ -130,7 +147,14 @@ export default async function BancaPage({ searchParams }: {
     safe(getResumenFinanciero(session.id, year, quarter, desde || undefined, hasta || undefined), null),
     esMesUnico ? safe(getPLMensual(mesPL), null) : null,
     safe(getEvolucionMensual(session.id, 12), []),
+    safe(getBrokerSaldos(session.id), []),
   ])
+
+  // El saldo del bróker (IBKR, refrescado por el agente `trading-analista`) suma al total del grupo
+  // y se pinta como una tarjeta más junto a las bancarias.
+  const brokerTotal = brokerSaldos.reduce((acc, b) => acc + b.saldo, 0)
+  const totalGrupo = saldo.total + brokerTotal
+  const hayCuentas = saldo.cuentas.length > 0 || brokerSaldos.length > 0
 
   return (
     <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
@@ -162,25 +186,28 @@ export default async function BancaPage({ searchParams }: {
         <div className="banca-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '24px' }}>
           <div>
             <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 500 }}>Saldo total del grupo</div>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: saldo.total >= 0 ? '#16a34a' : '#dc2626' }}>{fmtEur(saldo.total)}</div>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: totalGrupo >= 0 ? '#16a34a' : '#dc2626' }}>{fmtEur(totalGrupo)}</div>
           </div>
-          <AccionesBanca
-            anadir={<>
-              <ImportarExtractoBtn sociedades={sociedades} />
-              <ConectarBancoBtn sociedades={sociedades} />
-            </>}
-            mas={<>
-              {saldo.cuentas.length > 0 && <ReanalizarBtn />}
-              {saldo.cuentas.length > 0 && <ConciliarBtn />}
-              {saldo.cuentas.length > 0 && <SubirFacturaBtn />}
-              {saldo.cuentas.length > 0 && <ExportarBtn />}
-              <RevisarCorreoBtn />
-            </>}
-          />
+          <div className="banca-acciones" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            {saldo.cuentas.length > 0 && <MovimientosBtn />}
+            <AccionesBanca
+              anadir={<>
+                <ImportarExtractoBtn sociedades={sociedades} />
+                <ConectarBancoBtn sociedades={sociedades} />
+              </>}
+              mas={<>
+                {saldo.cuentas.length > 0 && <ReanalizarBtn />}
+                {saldo.cuentas.length > 0 && <ConciliarBtn />}
+                {saldo.cuentas.length > 0 && <SubirFacturaBtn />}
+                {saldo.cuentas.length > 0 && <ExportarBtn />}
+                <RevisarCorreoBtn />
+              </>}
+            />
+          </div>
         </div>
 
         {/* Cuentas por sociedad */}
-        {saldo.cuentas.length === 0 ? (
+        {!hayCuentas ? (
           <div style={{
             background: 'var(--surface)', border: '1px dashed var(--border)',
             borderRadius: 'var(--radius)', padding: '40px 24px', textAlign: 'center', color: 'var(--muted)',
@@ -198,11 +225,26 @@ export default async function BancaPage({ searchParams }: {
                     <OcultarCuentaBtn id={c.id} oculta={false} />
                   </div>
                   <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600 }}>{c.sociedadNombre}</div>
-                  <div style={{ fontWeight: 700, fontSize: '15px', marginTop: '2px' }}>{c.banco || 'Banco'} {c.ibanMascara || ''}</div>
+                  <div style={{ fontWeight: 700, fontSize: '15px', marginTop: '2px' }}>
+                    {c.banco || 'Banco'} {c.ibanMascara || ''}
+                    {c.sincronizada && <span title="Sincronizada automáticamente (PSD2)" style={{ marginLeft: '6px', fontSize: '12px' }}>🔄</span>}
+                  </div>
                   <div style={{ fontSize: '22px', fontWeight: 800, marginTop: '10px', color: (c.saldoActual ?? 0) >= 0 ? '#16a34a' : '#dc2626' }}>
                     {c.saldoActual == null ? '—' : fmtEur(c.saldoActual)}
                   </div>
                   {c.saldoFecha && <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>a {c.saldoFecha}</div>}
+                </div>
+              ))}
+              {/* Bróker (Interactive Brokers): una tarjeta más, igual que las bancarias. La refresca el
+                  agente `trading-analista` a diario (la app no habla con IBKR). */}
+              {brokerSaldos.map(b => (
+                <div key={`broker-${b.broker}`} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '18px', boxShadow: 'var(--shadow)', position: 'relative' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600 }}>📈 Inversión</div>
+                  <div style={{ fontWeight: 700, fontSize: '15px', marginTop: '2px' }}>{b.broker}</div>
+                  <div style={{ fontSize: '22px', fontWeight: 800, marginTop: '10px', color: b.saldo >= 0 ? '#16a34a' : '#dc2626' }}>
+                    {fmtEur(b.saldo)}
+                  </div>
+                  {b.actualizado && <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>a {b.actualizado}</div>}
                 </div>
               ))}
             </div>
@@ -268,7 +310,7 @@ export default async function BancaPage({ searchParams }: {
         {/* Posibles cargos duplicados — el dueño los resuelve */}
         <DuplicadosBandeja grupos={duplicados} resueltos={dupResueltos} />
 
-        {/* Por revisar (IA dudó) — el dueño asigna categoría */}
+        {/* Por revisar (IA dudó del NEGOCIO) — el dueño lo asigna con un toque y aprende regla */}
         {porRevisar.length > 0 && (
           <RevisarBandeja
             movimientos={porRevisar.map(m => ({
@@ -277,7 +319,7 @@ export default async function BancaPage({ searchParams }: {
               concepto: m.conceptoNormalizado || m.concepto || m.contraparte || 'Movimiento',
               importe: m.importe,
             }))}
-            categorias={Object.entries(CAT_LABEL).map(([value, label]) => ({ value, label }))}
+            destinoLabel={DESTINO_LABEL}
           />
         )}
 
@@ -289,15 +331,18 @@ export default async function BancaPage({ searchParams }: {
         {/* Libro COMPLETO de movimientos: por defecto el periodo elegido; filtros (cuenta, fechas,
             signo, texto) + badge deducible por fila + paginación de servidor. "Limpiar" = ver todo. */}
         {saldo.cuentas.length > 0 && (
-          <MovimientosTabla
-            destinoLabel={DESTINO_LABEL}
-            cuentas={saldo.cuentas.filter(c => !c.oculta).map(c => ({
-              id: c.id,
-              label: `${c.banco || 'Banco'} ${c.ibanMascara || ''}`.trim(),
-            }))}
-            initial={ledger}
-            periodo={{ desde, hasta }}
-          />
+          <div id="libro-movimientos" style={{ scrollMarginTop: '20px' }}>
+            <MovimientosTabla
+              destinoLabel={DESTINO_LABEL}
+              cuentas={saldo.cuentas.filter(c => !c.oculta).map(c => ({
+                id: c.id,
+                label: `${c.banco || 'Banco'} ${c.ibanMascara || ''}`.trim(),
+                sincronizada: c.sincronizada,
+              }))}
+              initial={ledger}
+              periodo={{ desde, hasta }}
+            />
+          </div>
         )}
 
         {/* ── Análisis y herramientas IA — PLEGADO por defecto (montaje perezoso) ────────────────

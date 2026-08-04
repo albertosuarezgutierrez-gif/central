@@ -19,9 +19,9 @@ const fiscal: FiscalFields = {
   qrData: 'https://prewww2.aeat.es/QR?nif=B00000000',
 }
 
-test('formatFiscalNumber usa coma decimal y 2 decimales', () => {
+test('formatFiscalNumber agrupa miles con punto, coma decimal y 2 decimales', () => {
   assert.equal(formatFiscalNumber(11), '11,00')
-  assert.equal(formatFiscalNumber(1234.5), '1234,50')
+  assert.equal(formatFiscalNumber(1234.5), '1.234,50')
 })
 
 test('pasa cuando todos los campos fiscales están en la salida', () => {

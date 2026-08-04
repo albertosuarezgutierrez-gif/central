@@ -6,28 +6,102 @@
 import { prisma } from '@/lib/db'
 import { eur } from '@/lib/dinero'
 import { Prisma } from '@prisma/client'
-import { listarCandidatos, marcarProcesado } from './gmail'
-import { aiExtractInvoice } from '@/lib/ai-client'
+import { listarCandidatosConLimite, marcarProcesado, etiquetarCorreo, type ListadoCandidatos } from './gmail'
+import { aiExtractInvoiceDetallado, type FalloExtraccion } from '@/lib/ai-client'
 import { tgSend, tgSendButtons, tgEditMessage } from '@central/core-telegram'
 import { iniciarPago, estadoPago, disponiblePis } from '@/lib/enablebanking'
 import type { EstadoPagoEB } from '@/lib/enablebanking'
+import { baseUrl } from '@/lib/base-url'
 import type { FacturaProveedor } from '@central/module-pagos'
 
 const ETIQUETA_GMAIL = 'Facturas/Proveedor'
+/**
+ * Cola persistente de lo que no se pudo leer. ⚠️ Límite conocido y asumido: el
+ * escaneo mira una ventana de 7 días, así que un correo que falle 7 días seguidos
+ * deja de reintentarse solo y se queda AQUÍ para revisión a mano — la etiqueta no
+ * promete un reintento eterno.
+ */
+const ETIQUETA_SIN_LEER = 'Facturas/Extraccion-fallida'
 
 // ── Escaneo de Gmail → OCR → BD → Telegram ───────────────────────────────────
 
-export async function escanearNuevasFacturas(cuentaId: string): Promise<number> {
+/**
+ * 🚨 `nuevas: 0` NO significa «no había facturas»: puede ser «no se pudo mirar»
+ * (IMAP caído, app-password rotada, etiqueta de Gmail renombrada). Antes ambos
+ * casos devolvían el mismo `0` y aguas abajo el chat afirmaba «no tienes
+ * facturas de proveedor pendientes 🎉» sin que nada lo desmintiera. Por eso el
+ * resultado lleva `ok`: quien llame debe registrarlo como latido y avisar.
+ */
+export interface ResultadoEscaneo {
+  nuevas: number
+  /** `false` = la pasada NO se pudo completar; `nuevas` no es una conclusión. */
+  ok: boolean
+  error: string | null
+  /**
+   * Correos que quedaron SIN mirar al agotarse el presupuesto de tiempo. Se retoman
+   * en la pasada siguiente (el dedupe por `gmail_uid` hace la pasada idempotente),
+   * pero si esto no baja de cero nunca, hay un atasco que contar.
+   */
+  pendientes: number
+  /**
+   * 🚨 Candidatos que NO se pudieron leer (la extracción por IA no respondió, o el PDF
+   * no se dejó abrir). Antes se descartaban en silencio con un `continue`, así que
+   * «0 facturas nuevas» significaba indistintamente «no había» o «había y no supe
+   * leerlas». Van etiquetados en Gmail (`Facturas/Extraccion-fallida`) para reintentar.
+   */
+  sinLeer: number
+  /** Candidatos leídos y descartados con criterio (no eran factura). Informativo. */
+  descartados: number
+  /**
+   * De los `sinLeer`, cuántos se pudieron encolar de verdad en Gmail. Si es menor
+   * que `sinLeer`, la etiqueta no existe o IMAP la rechazó: esos correos NO están
+   * en ninguna cola y solo constan aquí.
+   */
+  encolados: number
+}
+
+/**
+ * @param opts.deadline epoch ms en el que el escaneo debe estar de vuelta. Sin él
+ *   el trabajo es ilimitado y la función acaba muriendo por `maxDuration` — que es
+ *   justo como se perdía el latido antes del 31/07/2026.
+ */
+export async function escanearNuevasFacturas(
+  cuentaId: string,
+  opts: { deadline?: number } = {},
+): Promise<ResultadoEscaneo> {
   let nuevas = 0
   const desde = new Date(Date.now() - 7 * 24 * 3600 * 1000) // últimos 7 días
-  let correos: Awaited<ReturnType<typeof listarCandidatos>> = []
-  try {
-    correos = await listarCandidatos({ desde, etiqueta: ETIQUETA_GMAIL })
-  } catch {
-    return 0
-  }
+  const { deadline } = opts
+  // El listado se lleva como mucho el 60% del presupuesto: si se lo comiera entero,
+  // no quedaría tiempo para procesar ni una factura de las que acaba de encontrar.
+  const deadlineListado = deadline ? Date.now() + (deadline - Date.now()) * 0.6 : undefined
 
-  for (const correo of correos) {
+  let listado: ListadoCandidatos
+  try {
+    listado = await listarCandidatosConLimite({ desde, etiqueta: ETIQUETA_GMAIL, deadline: deadlineListado })
+  } catch (e: any) {
+    // El buzón no se ha podido leer: se dice, no se disfraza de «0 facturas».
+    return { nuevas: 0, ok: false, error: String(e?.message ?? e).slice(0, 200), pendientes: 0, sinLeer: 0, descartados: 0, encolados: 0 }
+  }
+  const correos = listado.correos
+
+  // Se procesa igualmente lo que sí se listó (trabajo aprovechado), pero la pasada
+  // NO se declara buena: no se ha llegado a ver el buzón entero.
+  const ok = !listado.truncado
+  const error: string | null = listado.truncado
+    ? `el listado del buzón no cupo en el presupuesto de tiempo (${correos.length} correo(s) leídos de la ventana de 7 días)`
+    : null
+  let pendientes = 0
+  let sinLeer = 0
+  let descartados = 0
+  let encolados = 0
+
+  for (let i = 0; i < correos.length; i++) {
+    if (deadline && Date.now() > deadline) {
+      pendientes = correos.length - i
+      break
+    }
+    const correo = correos[i]
     if (correo.sinAdjunto) continue
 
     const adjunto = correo.adjuntos[0]
@@ -39,23 +113,43 @@ export async function escanearNuevasFacturas(cuentaId: string): Promise<number> 
     )
     if (yaExiste.length > 0) continue
 
+    // 🚨 Tres desenlaces DISTINTOS, no dos: con datos / leído y no era factura /
+    // no se pudo leer. El tercero es el que antes desaparecía en un `continue` mudo.
     let datos: Record<string, any> = {}
+    let fallo: FalloExtraccion | null = null
     try {
       if (adjunto.mime === 'application/pdf') {
         const pdfParse: any = await import('pdf-parse/lib/pdf-parse.js')
         const parsed = await (pdfParse.default ?? pdfParse)(adjunto.buffer)
-        datos = await aiExtractInvoice({ text: parsed.text })
+        ;({ datos, fallo } = await aiExtractInvoiceDetallado({ text: parsed.text }))
       } else if (adjunto.mime.startsWith('image/')) {
         const b64 = adjunto.buffer.toString('base64')
-        datos = await aiExtractInvoice({ imageBase64: b64, mimeType: adjunto.mime })
+        ;({ datos, fallo } = await aiExtractInvoiceDetallado({ imageBase64: b64, mimeType: adjunto.mime }))
+      } else {
+        // Adjunto de un tipo que ni se intenta: leído y descartado, no es un fallo.
+        fallo = 'sin_datos'
       }
-    } catch {
+    } catch (e) {
+      // El PDF no se dejó abrir (cifrado, escaneado sin texto, corrupto): tampoco
+      // se ha leído. No es «no era una factura».
+      console.warn('[facturas] adjunto ilegible:', String(e).slice(0, 140))
       datos = {}
+      fallo = 'tecnico'
+    }
+
+    if (fallo === 'tecnico') {
+      sinLeer++
+      // La etiqueta sobrevive al contenedor: el correo queda encolado y visible en
+      // Gmail aunque nadie mire el latido. Best-effort (nunca tumba la pasada), pero
+      // se CUENTA si de verdad se encoló: decir «etiquetado para reintentar» sin
+      // comprobarlo es la misma mentira que este agente vino a quitar.
+      if (await etiquetarCorreo(correo.uid, ETIQUETA_SIN_LEER, listado.buzon).catch(() => false)) encolados++
+      continue
     }
 
     const proveedor = (datos.proveedor as string | null) || correo.from.split('<')[0].trim() || 'Proveedor desconocido'
     const importe = typeof datos.total === 'number' ? datos.total : null
-    if (!importe || importe <= 0) continue
+    if (!importe || importe <= 0) { descartados++; continue }
 
     const ivaPct = typeof datos.iva_porcentaje === 'number' ? datos.iva_porcentaje : 21
     const base = importe / (1 + ivaPct / 100)
@@ -93,7 +187,7 @@ export async function escanearNuevasFacturas(cuentaId: string): Promise<number> 
     if (!facturaId) continue
     nuevas++
 
-    await marcarProcesado(correo.uid, ETIQUETA_GMAIL).catch(() => {})
+    await marcarProcesado(correo.uid, ETIQUETA_GMAIL, listado.buzon).catch(() => {})
 
     // Notificar por Telegram con botones de acción
     await notificarFactura(facturaId, proveedor, importe, fechaVenc, cuentaId)
@@ -101,7 +195,7 @@ export async function escanearNuevasFacturas(cuentaId: string): Promise<number> 
     await proponerVinculoReserva(facturaId, proveedor, fechaFactura).catch(() => {})
   }
 
-  return nuevas
+  return { nuevas, ok, error, pendientes, sinLeer, descartados, encolados }
 }
 
 async function notificarFactura(
@@ -177,7 +271,7 @@ export async function aprobarPago(
   await prisma.$executeRaw(Prisma.sql`UPDATE facturas_proveedor SET estado = 'aprobada' WHERE id = ${facturaId}::uuid`)
 
   if (disponiblePis() && factura.iban_proveedor) {
-    const redirectUrl = `${process.env.NEXTAUTH_URL ?? process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'}/api/banca/pago/callback?facturaId=${facturaId}`
+    const redirectUrl = `${baseUrl()}/api/banca/pago/callback?facturaId=${facturaId}`
     try {
       const pago = await iniciarPago({
         debtorIban,

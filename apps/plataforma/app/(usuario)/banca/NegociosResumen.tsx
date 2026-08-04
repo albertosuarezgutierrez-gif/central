@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'
 import { getResumenNegocio, manualFinanciero, fmtEur, type ResumenFinanciero } from '@/lib/financiero'
 import { getConsolidadoIntercompany, type ResultadoConsolidado } from '@/lib/intercompany'
 import { getAlertas, type Alertas } from '@/lib/banca'
-import { getResumenPilar, type TrimPilar } from '@/lib/finanzas'
+import { getResumenPilar, getResumenFinanciero, type TrimPilar } from '@/lib/finanzas'
 import { NuevaSociedadBtn, NuevoNegocioBtn, EliminarSociedadBtn, EliminarNegocioBtn, EditarSociedadBtn, EditarNegocioBtn } from '../dashboard/GestionSociedad'
 
 // Vista NEGOCIOS del Inicio unificado (segmento «Negocios» de /banca): la foto del holding —
@@ -62,10 +62,14 @@ export default async function NegociosResumen({ cuentaId, nombre }: { cuentaId: 
   })
   const sociedades = await safe(sociedadesQuery, [] as Awaited<typeof sociedadesQuery>)
 
-  const [alertas, gastosSinClasificar, aviso130] = await Promise.all([
+  const [alertas, gastosSinClasificar, aviso130, resumenAnual] = await Promise.all([
     safe(getAlertas(cuentaId), { porRevisar: 0, sinJustificante: 0, duplicados: 0, duplicadosDetalle: [], facturasFaltantes: 0, cobrosPendientes: 0, cobrosPendientesEur: 0, cobrosDetalle: [] }),
     safe(getGastosSinClasificar(cuentaId, anio), { total: 0, importe: 0 }),
     safe(getAvisoModelo130(cuentaId, anio), null as TrimPilar | null),
+    // Correduría: no es un negocio en la tabla `negocios` (comprobado — 0 filas), es un flujo derivado
+    // de `movimientos_bancarios.destino='seguros'` (siempre BBVA). Se reutiliza `getResumenFinanciero`
+    // (fuente ÚNICA de este cálculo, con sus reglas de exención/retención) en vez de sumar por SQL aparte.
+    safe(getResumenFinanciero(cuentaId, anio, 0), null as Awaited<ReturnType<typeof getResumenFinanciero>> | null),
   ])
 
   const negociosConFinanciero = await Promise.all(
@@ -182,7 +186,51 @@ export default async function NegociosResumen({ cuentaId, nombre }: { cuentaId: 
           </div>
         </section>
       ))}
+
+      {/* Correduría de seguros: actividad profesional real (comisiones BBVA), pero NO vive en la
+          tabla `negocios` (es persona física, no una sociedad/CIF) — se pinta aparte con el mismo
+          patrón de tarjeta, enlazando a la matriz por compañía en /correduria. */}
+      {resumenAnual && resumenAnual.correduria.ingresosBrutos > 0 && (
+        <section style={{ marginBottom: '32px' }}>
+          <h2 style={{ fontSize: '17px', fontWeight: 700, marginBottom: '16px' }}>Actividad profesional</h2>
+          <div className="neg-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+            <CorreduriaCard correduria={resumenAnual.correduria} anio={anio} />
+          </div>
+        </section>
+      )}
     </div>
+  )
+}
+
+function CorreduriaCard({ correduria, anio }: {
+  correduria: Awaited<ReturnType<typeof getResumenFinanciero>>['correduria']
+  anio: number
+}) {
+  return (
+    <Link
+      href="/correduria"
+      style={{
+        display: 'block',
+        background: 'var(--surface)', border: '1px solid var(--border)',
+        borderRadius: 'var(--radius)', padding: '20px',
+        boxShadow: 'var(--shadow)', textDecoration: 'none',
+      }}
+    >
+      <div style={{ fontSize: '13px', color: 'var(--primary)', fontWeight: 600, marginBottom: '4px' }}>🧾 Correduría de seguros</div>
+      <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '2px' }}>Comisiones de correduría</div>
+      <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '16px' }}>BBVA ↗</div>
+      <div style={{ borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
+        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+          <FinStat label={`Ingresos ${anio}`} value={fmtEur(correduria.ingresosBrutos)} />
+          <FinStat label={`Gastos ${anio}`} value={fmtEur(correduria.gastosDeducibles)} />
+          <FinStat
+            label="Resultado"
+            value={fmtEur(correduria.resultado)}
+            color={correduria.resultado >= 0 ? '#16a34a' : '#dc2626'}
+          />
+        </div>
+      </div>
+    </Link>
   )
 }
 

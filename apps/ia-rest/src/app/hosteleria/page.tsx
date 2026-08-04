@@ -76,10 +76,10 @@ export default function HosteleriaPage() {
   return (
     <>
       <title>Software TPV para Hostelería en España | ia.rest</title>
-      <meta name="description" content="ia.rest gestiona cualquier negocio de hostelería: bar, restaurante, chiringuito, feria y food truck. Comandas por voz, KDS, VeriFactu y almacén. Desde 59€/mes." />
+      <meta name="description" content="ia.rest gestiona cualquier negocio de hostelería: bar, restaurante, chiringuito, feria y food truck. Comandas por voz, KDS, VeriFactu y almacén. Sin comisión por transacción. Pide presupuesto sin compromiso." />
       <meta name="robots" content="index, follow" />
       <meta property="og:title" content="Software TPV para Hostelería | ia.rest" />
-      <meta property="og:description" content="Bar, restaurante, chiringuito, feria, food truck. Si sirves, ia.rest lo gestiona. Voz, KDS y VeriFactu desde 59€/mes." />
+      <meta property="og:description" content="Bar, restaurante, chiringuito, feria, food truck. Si sirves, ia.rest lo gestiona. Voz, KDS y VeriFactu, sin comisión por transacción." />
       <meta property="og:url" content="https://www.iarest.es/hosteleria" />
       <meta property="og:type" content="website" />
       <meta property="og:image" content="https://www.iarest.es/og-hosteleria.jpg" />
@@ -93,11 +93,11 @@ export default function HosteleriaPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org",
         "@graph": [
-          { "@type": "SoftwareApplication", "@id": "https://www.iarest.es/#tpv-hosteleria", "name": "ia.rest — TPV para Hostelería", "url": "https://www.iarest.es/hosteleria", "applicationCategory": "BusinessApplication", "operatingSystem": "Web, Android", "description": "TPV por voz para bar, restaurante, chiringuito, feria y food truck. KDS, almacén, VeriFactu y sin comisión.", "offers": { "@type": "Offer", "price": "59", "priceCurrency": "EUR" }, "provider": { "@type": "Organization", "name": "ia.rest", "url": "https://www.iarest.es", "telephone": "+34637349990", "email": "hola@iarest.es" } },
+          { "@type": "SoftwareApplication", "@id": "https://www.iarest.es/#tpv-hosteleria", "name": "ia.rest — TPV para Hostelería", "url": "https://www.iarest.es/hosteleria", "applicationCategory": "BusinessApplication", "operatingSystem": "Web, Android", "description": "TPV por voz para bar, restaurante, chiringuito, feria y food truck. KDS, almacén, VeriFactu y sin comisión.", "provider": { "@type": "Organization", "name": "ia.rest", "url": "https://www.iarest.es", "telephone": "+34637349990", "email": "hola@iarest.es" } },
           { "@type": "FAQPage", "mainEntity": [
             { "@type": "Question", "name": "¿ia.rest funciona para chiringuitos y ferias?", "acceptedAnswer": { "@type": "Answer", "text": "Sí. Funciona desde el móvil, sin hardware fijo, con modo offline para conexiones inestables. Setup en menos de una hora." } },
             { "@type": "Question", "name": "¿Incluye VeriFactu?", "acceptedAnswer": { "@type": "Answer", "text": "Sí. Incluido en todos los planes sin coste adicional. Obligatorio para hostelería desde 2026." } },
-            { "@type": "Question", "name": "¿Cuánto cuesta para un bar?", "acceptedAnswer": { "@type": "Answer", "text": "59€/mes si lo gestionas solo. Con un camarero y cocina, 99€/mes. Sin comisión por ventas." } }
+            { "@type": "Question", "name": "¿Cuánto cuesta para un bar?", "acceptedAnswer": { "@type": "Answer", "text": "Cuota mensual fija ajustada al tamaño del bar y a los usuarios activos, siempre sin comisión por ventas. Escríbenos por WhatsApp o por el formulario de contacto y te pasamos el presupuesto cerrado, sin compromiso." } }
           ]},
           { "@type": "BreadcrumbList", "itemListElement": [
             { "@type": "ListItem", "position": 1, "name": "ia.rest", "item": "https://www.iarest.es" },
@@ -271,10 +271,6 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
 
 <!-- STRIP — OCULTO -->
 <div class="strip" style="display:none">
-  <div class="strip-item">
-    <span class="strip-num">59<b>€</b></span>
-    <span class="strip-lbl">Desde / mes</span>
-  </div>
   <div class="strip-item">
     <span class="strip-num">0<b>%</b></span>
     <span class="strip-lbl">Comisión</span>

@@ -1,5 +1,5 @@
 // lib/sivra/agente-huesped/telegram-msg.ts — propuesta por Telegram + estado pendiente.
-import { tgSendButtons, tgEditMessage, escapeHtml, type Boton } from '@central/core-telegram'
+import { tgSend, tgSendButtons, tgEditMessage, escapeHtml, type Boton } from '@central/core-telegram'
 import { aiComplete } from '@central/core-ai'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
@@ -7,6 +7,33 @@ import type { Decision } from './decidir'
 import type { Contexto } from './contexto'
 
 const EMOJI = (urgente: boolean) => (urgente ? '🔴' : '💬')
+
+// Traduce al español de España (para que Alberto entienda de un vistazo). Best-effort: si falla, ''.
+async function traducirEs(txt: string): Promise<string> {
+  if (!txt) return ''
+  try {
+    return (await aiComplete([{ role: 'user', content: txt }], { system: 'Traduce al español de España. Devuelve SOLO la traducción, sin comillas ni explicaciones.', maxTokens: 300 })).trim()
+  } catch { return '' }
+}
+
+// Copia INFORMATIVA (sin botones) de una respuesta que el agente ya envió SOLO (categoría graduada).
+// Alberto NO tiene que hacer nada: es solo para que vea lo que se está mandando en automático.
+// Si el huésped escribe en otro idioma, se traduce pregunta + respuesta al español (línea 🔁).
+export async function avisarAutoEnviado(ctx: Contexto, pregunta: string, dec: Decision): Promise<void> {
+  let preguntaEs = ''
+  let respuestaEs = ''
+  if (ctx.lang !== 'es') {
+    ;[preguntaEs, respuestaEs] = await Promise.all([traducirEs(pregunta), traducirEs(dec.reply || '')])
+  }
+  const idiomaNota = ctx.lang !== 'es' ? ` <i>(en ${ctx.lang.toUpperCase()})</i>` : ''
+  const cuerpo = `🤖 <b>Respuesta automática</b> · <b>${escapeHtml(ctx.property)}</b> · ${escapeHtml(ctx.guestName)} (reserva ${ctx.bookingId})` +
+    `\n\n<b>Huésped:</b> ${escapeHtml(pregunta)}` +
+    (preguntaEs ? `\n<i>🔁 ${escapeHtml(preguntaEs)}</i>` : '') +
+    `\n\n<b>Enviado${idiomaNota}:</b>\n${escapeHtml(dec.reply || '')}` +
+    (respuestaEs ? `\n<i>🔁 ${escapeHtml(respuestaEs)}</i>` : '') +
+    `\n\n<i>ℹ️ Solo para tu información — enviado sin tu intervención (categoría «${escapeHtml(dec.categoria)}»).</i>`
+  await tgSend(cuerpo).catch(() => {})
+}
 // Categorías básicas que pueden graduarse a auto-respuesta (no sensibles).
 const GRADUABLES = new Set(['wifi', 'acceso', 'checkin', 'checkout', 'parking', 'equipaje', 'normas', 'contacto', 'faq'])
 

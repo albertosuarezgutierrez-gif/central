@@ -6,6 +6,7 @@
 // su OPENROUTER_API_KEY; el paquete NUNCA lee process.env. La POLÍTICA de fallback
 // (OpenRouter → NIM → Groq → Gemini → Kimi) vive en `client.ts`.
 import type { NimChatMessage, NimToolMessage, NimToolResult } from './nim'
+import type { ImageInput } from './types'
 
 const DEFAULT_BASE_URL = 'https://openrouter.ai/api/v1/chat/completions'
 // Slug estable y barato (alias mantenido por DeepSeek en OpenRouter). El catálogo vivo lo
@@ -130,6 +131,67 @@ export async function openrouterChatEx(
   const text = data?.choices?.[0]?.message?.content
   if (!text) throw new Error('OpenRouter: respuesta vacía')
   return { text, model: data?.model ?? 'desconocido', usage: data?.usage }
+}
+
+/**
+ * VISIÓN (multi-imagen) por OpenRouter. Espejo de `nimVision`, pero con el
+ * agregador delante: así la app puede elegir CUALQUIER modelo multimodal del
+ * catálogo (Gemini, Qwen-VL, Llama-Vision, Pixtral…) y aprovechar el fallback
+ * nativo `models: [...]` cuando el primero está saturado.
+ *
+ * Existe porque `openrouterChatEx` recibe `NimChatMessage[]`, cuyo `content` es
+ * `string`: no admite el array multiparte que exige el formato de imágenes. En
+ * vez de relajar ese tipo (lo usan todas las rutas de texto), la visión tiene su
+ * propia entrada.
+ *
+ * Devuelve el modelo REAL usado y el `usage`, para que el auditor de la pasarela
+ * registre el coste exacto — una lectura de 10 páginas escaneadas no es gratis.
+ */
+export async function openrouterVisionEx(
+  config: OpenRouterConfig,
+  system: string,
+  images: ImageInput[],
+  userText: string,
+  opts: OpenRouterChatOptions = {},
+): Promise<OpenRouterChatResult> {
+  const key = requireKey(config)
+  const doFetch = opts.fetchImpl ?? fetch
+
+  const contenido = [
+    ...images.map((img) => ({
+      type: 'image_url' as const,
+      image_url: { url: `data:${img.mediaType};base64,${img.data}` },
+    })),
+    { type: 'text' as const, text: userText },
+  ]
+
+  const msgs: unknown[] = []
+  if (system) msgs.push({ role: 'system', content: system })
+  msgs.push({ role: 'user', content: contenido })
+
+  const res = await doFetch(config.baseUrl ?? DEFAULT_BASE_URL, {
+    method: 'POST',
+    headers: headers(config, key),
+    // Temperatura baja por defecto: esto es transcripción/extracción, no redacción.
+    body: JSON.stringify(buildBody(config, msgs, { temperature: 0.1, maxTokens: 2000, ...opts })),
+    signal: opts.signal,
+  })
+  if (!res.ok) throw new Error(`OpenRouter-Vision HTTP ${res.status}: ${(await res.text()).substring(0, 150)}`)
+  const data = await res.json()
+  const text = data?.choices?.[0]?.message?.content
+  if (!text) throw new Error('OpenRouter-Vision: respuesta vacía')
+  return { text, model: data?.model ?? 'desconocido', usage: data?.usage }
+}
+
+/** Atajo de `openrouterVisionEx` que devuelve solo el texto. */
+export async function openrouterVision(
+  config: OpenRouterConfig,
+  system: string,
+  images: ImageInput[],
+  userText: string,
+  opts: OpenRouterChatOptions = {},
+): Promise<string> {
+  return (await openrouterVisionEx(config, system, images, userText, opts)).text
 }
 
 /** Llamada de chat a OpenRouter. Devuelve el contenido del primer choice. Espejo de `moonshotChat`. */

@@ -1,6 +1,6 @@
 ---
 name: code-map
-description: Úsala al EMPEZAR cualquier tarea de CÓDIGO en el monorepo `central` cuando haya que localizar QUÉ archivo o función maneja algo (arreglar un bug, tocar una feature, "¿dónde está X?"), ANTES de hacer Grep/Read a ciegas. Consulta la tabla Supabase `mapa_arquitectura` (índice de firmas de todo el repo, poblado por scripts/auditar-estructura.mjs) para acotar a coste ~0 tokens los archivos candidatos, y así leer SOLO esos en vez de barrer medio repositorio. Es el gemelo "lado sesión" del endpoint `/api/ai/codigo` (Director de código). NO reemplaza a Grep/Read: los enfoca. Si la tabla no está disponible o no devuelve candidatos, degrada al método clásico.
+description: Úsala al EMPEZAR cualquier tarea de CÓDIGO cuando haya que localizar QUÉ archivo/función maneja algo, ANTES de Grep/Read a ciegas — consulta la tabla Supabase `mapa_arquitectura` (índice de firmas del repo) para acotar candidatos a coste ~0 y leer SOLO esos. No reemplaza a Grep/Read: los enfoca. Sin tabla o sin candidatos, método clásico.
 ---
 
 # code-map — acota archivos antes de leer (ahorro de tokens)

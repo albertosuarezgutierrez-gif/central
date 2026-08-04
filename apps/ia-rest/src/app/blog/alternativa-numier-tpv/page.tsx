@@ -111,7 +111,7 @@ export default function ArticuloCambiarTPV() {
             borderRadius: 4, padding: '20px 24px', margin: '24px 0',
           }}>
             <p style={{ margin: 0, fontSize: 15, color: '#1A1714', lineHeight: 1.7 }}>
-              <strong>VeriFactu incluido en todos los planes.</strong> Hash SHA-256 encadenado, QR AEAT, facturación electrónica homologada desde 59 €/mes por local. Sin módulos adicionales, sin costes ocultos.
+              <strong>VeriFactu incluido en todos los planes.</strong> Hash SHA-256 encadenado, QR AEAT, facturación electrónica homologada incluida en la cuota, sin módulos adicionales ni costes ocultos.
             </p>
           </div>
 

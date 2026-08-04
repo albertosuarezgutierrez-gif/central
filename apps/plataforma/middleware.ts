@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { COOKIE_NAME, verifySessionToken } from './lib/auth'
+import { esRutaDeRutina } from './lib/rutas-rutina'
 
 // El área de OPERADOR (/admin) gestiona su propia auth (cookie plataforma_admin,
 // validada en los route handlers vía getAdmin) → se exime del gate de cuenta.
@@ -10,10 +11,32 @@ import { COOKIE_NAME, verifySessionToken } from './lib/auth'
 // servicio externo, que no sigue redirects, los toma como fallo: el botón de Telegram se cuelga).
 // `/api/internal/alerta` acepta su token DEDICADO (ALERTA_TOKEN) además del CRON_SECRET, así que
 // no puede depender del pass-through de CRON_SECRET de abajo → se exime aquí y su handler revalida
-// (isAlertaTokenAuthorized || isCronAuthorized). Solo esa ruta; mapa-arquitectura sigue gateado.
+// (isAlertaTokenAuthorized || isCronAuthorized). Mismo motivo para las 2 rutas del agente de pricing
+// (`/api/sivra/mercado/ingest`, `/api/sivra/pricing/aplicar-propuesta`): la rutina de Claude Code solo
+// lleva `ALERTA_TOKEN`, no el `CRON_SECRET` maestro (por diseño, ver `lib/cron-auth.ts`) — sin esta
+// exención el gate las redirige 307→/login ANTES de que sus propios `isRoutineAuthorized`/auth
+// escalonada corran, dejando el ciclo semanal del agente bloqueado pese a que los handlers ya están
+// preparados para recibir el token de bajo privilegio (bug real, detectado 27/07/2026: 3 ciclos
+// seguidos de "Paso 4/Paso 2 bloqueado" con la causa real sin diagnosticar). No amplía privilegio:
+// cada handler revalida su propio secreto/token igual que `/api/internal/alerta`.
+//
+// Desde el 27/07/2026 hay ADEMÁS un pass-through por `ALERTA_TOKEN` acotado a `RUTAS_RUTINA` (abajo),
+// para que añadir un endpoint de rutina no dependa de acordarse de tocar esta lista — es lo que falló
+// con las 2 rutas de pricing. Los dos mecanismos conviven a propósito:
+//   · `/api/internal/alerta` DEBE seguir en PUBLIC: una llamada con token MALO tiene que LLEGAR al
+//     handler para recibir el 401 accionable y disparar el aviso de token desincronizado. Si dependiera
+//     del token, un token roto daría 307 → /login y el fallo volvería a ser mudo (justo el incidente).
+//   · Las 2 de pricing están en ambos sitios. Se dejan en PUBLIC porque acaban de desbloquear el agente
+//     en vivo y no se toca eso en el mismo PR; sacarlas de aquí (quedándose solo con el pass-through
+//     por token, que es MÁS estrecho: exige el token para siquiera alcanzar el handler) es un
+//     endurecimiento pendiente, seguro de hacer cuando el ciclo semanal confirme que va fino.
 const PUBLIC = ['/login', '/register', '/api/auth', '/admin', '/api/admin', '/api/cron', '/api/ai', '/api/trading',
   '/api/sivra/mensajes/telegram-webhook', '/api/sivra/mensajes/webhook',
-  '/api/banca/pago/callback', '/api/internal/alerta']
+  '/api/banca/pago/callback', '/api/internal/alerta',
+  '/api/sivra/mercado/ingest', '/api/sivra/pricing/aplicar-propuesta',
+  // TEMPORAL Fase 3 subastas: puente de exploración de fuentes (auth por token
+  // en BD `subastas_debug_token`, hosts oficiales cerrados). Se retira al cerrar la fase.
+  '/api/subastas/fase3-debug']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
@@ -43,6 +66,18 @@ export async function middleware(req: NextRequest) {
     const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
     const qs = req.nextUrl.searchParams.get('secret')
     if (bearer === cronSecret || qs === cronSecret) return NextResponse.next()
+  }
+
+  // Rutinas de Claude Code: llegan con el token DEDICADO de bajo privilegio (`ALERTA_TOKEN`),
+  // no con la llave maestra ni con cookie de sesión. Sin esta excepción, un handler abierto con
+  // `isRoutineAuthorized` es igualmente inalcanzable (307 → /login antes de correr) — que es lo
+  // que tuvo al agente de pricing bloqueado 3 ciclos. Se limita a `RUTAS_RUTINA` (fuente única,
+  // verificada por `test/regression-rutas-rutina.test.ts`): el token NO abre el resto de la app.
+  // Header-only, igual que en el handler: nunca por `?secret=` (se filtra por logs/Referer).
+  const alertaToken = process.env.ALERTA_TOKEN
+  if (alertaToken && esRutaDeRutina(pathname)) {
+    const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
+    if (bearer === alertaToken) return NextResponse.next()
   }
 
   const token = req.cookies.get(COOKIE_NAME)?.value

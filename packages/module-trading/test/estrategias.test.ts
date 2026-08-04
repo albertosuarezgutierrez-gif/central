@@ -3,12 +3,23 @@ import assert from 'node:assert/strict'
 import { evaluarMomentum, evaluarReversion, evaluarValor, evaluarCatalizador, torneo } from '../src/estrategias.ts'
 import type { Indicadores, Fundamentales } from '../src/types.ts'
 
-const alcista: Indicadores = { sma20: 110, sma50: 100, ema12: 111, ema26: 105, rsi14: 60, macd: 2, macdSignal: 1, atr14: 3 }
+const alcista: Indicadores = { sma20: 110, sma50: 100, ema12: 111, ema26: 105, rsi14: 60, macd: 2, macdSignal: 1, atr14: 3, adx14: 22 }
 
-test('momentum es alcista cuando ema12>ema26 y macd>signal', () => {
+test('momentum es alcista cuando ema12>ema26 y macd>signal Y hay tendencia (ADX≥20)', () => {
   const s = evaluarMomentum(alcista)
   assert.equal(s.direccion, 'alcista')
   assert.ok(s.confianza > 50)
+})
+
+test('momentum NO opera con cruce alcista pero ADX<20 (ruido lateral) — el gate del backtest', () => {
+  const s = evaluarMomentum({ ...alcista, adx14: 15 })
+  assert.equal(s.direccion, 'neutral')
+  assert.ok(s.rationale.includes('sin tendencia'))
+})
+
+test('momentum NO opera sin ADX (serie corta): abstiene en vez de dar señal a ciegas', () => {
+  const s = evaluarMomentum({ ...alcista, adx14: undefined })
+  assert.equal(s.direccion, 'neutral')
 })
 
 test('reversion es alcista con rsi bajo (sobreventa) en rango (ADX flojo/ausente)', () => {

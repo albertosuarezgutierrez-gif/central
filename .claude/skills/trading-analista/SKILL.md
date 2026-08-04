@@ -3,82 +3,76 @@ name: trading-analista
 description: Pasada diaria del agente de inversión sobre Interactive Brokers (Fase 1, SOLO paper). Lee cartera + watchlist, tira precios (IBKR) y fundamentales (FMP) por MCP, llama a /api/trading/analizar y /api/trading/puntuar de plataforma, y resume por Telegram. NUNCA ejecuta órdenes reales.
 ---
 
-# Trading-analista (Fase 1 · paper)
+# Trading-analista (Fase 1 · paper) — router
 
-## Regla de oro
-NO ejecutar NINGUNA orden real en IBKR. Solo lectura (get_account_*, get_price_history,
-get_price_snapshot, get_watchlist) y llamadas a los endpoints de plataforma. La operativa es 100%
-simulada en BD. Esta invariante protege todo lo demás: si dudas, no operas.
+## Qué hace la pasada diaria
+Lee el NAV de IBKR (`get_account_summary`) y lo empuja a `/api/trading/saldo`; carga la
+watchlist activa, baja velas diarias por símbolo (IBKR) y fundamentales (FMP best-effort);
+llama a `POST /api/trading/analizar` (torneo + barreras + aperturas paper) y a
+`POST /api/trading/puntuar` (walk-forward + stops paper); resume por Telegram (importes
+en formato español) y, los lunes, comenta el radar/satélite 🚀 del snapshot semanal.
+Detalle paso a paso en `references/pasada-diaria.md`.
 
-## Pasada (orden exacto)
-1. Leer NAV: `get_account_summary` → `net_liquidation` (EUR).
-2. Cargar la watchlist activa (tabla `trading_watchlist`, capas A/B/C; ver spec). En Fase 1 la lista
-   inicial se siembra con `apps/plataforma/prisma/sql/trading_watchlist_seed.sql`.
-3. Por símbolo: `get_price_history` (diario, ~120 velas) → mapear a `Vela[]`
-   (`{ fecha, apertura, alto, bajo, cierre, volumen }`); si FMP está conectado, traer
-   PER/deuda/margen/próximo earnings → `Fundamentales`.
-4. `POST {PLATAFORMA_URL}/api/trading/analizar` con `{ fecha, nav, simbolos: [...] }`
-   (Bearer `CRON_SECRET`). Devuelve el `top` de ideas.
-5. `POST {PLATAFORMA_URL}/api/trading/puntuar` con `{ hoy, precios }` (snapshot de cada símbolo con
-   posición/tesis viva). Puntúa walk-forward, actualiza stats y aplica stops paper.
-6. Enviar por Telegram el resumen (usa `resumenPasada(...)` de `apps/plataforma/lib/trading-notify.ts`
-   o deja que plataforma lo mande): top ideas + pulso de la cartera paper. Importes en formato español.
+## 🚨 No romper / crítico
+- **Regla de oro: NO ejecutar NINGUNA orden real en IBKR.** Solo lectura (`get_account_*`,
+  `get_price_history`, `get_price_snapshot`, `get_watchlist`) y endpoints de plataforma.
+  Operativa 100% simulada en BD. Si dudas, no operas. Aplica también a la cartera de
+  estudio (30.000€ SIMULADOS) y a la cartera cohetes: cero órdenes reales, siempre.
+- **Autonomía = DESCUBRIR, no ejecutar.** La cantera decide qué estudiar; todo sigue en paper.
+- **Puerta a Fase 2:** no proponer ejecución real hasta rentabilidad sostenida y fuera de
+  muestra en `trading_estrategia_stats`. Esa decisión es de Alberto.
+- **Prohibido** pasar cohetes a cohortes o tocar pesos del blend por tu cuenta. **Todo cambio
+  del modelo pasa por `docs/TRADING-HIPOTESIS-PREREGISTRO.md`** (condiciones firmadas antes de
+  ver los datos). El criterio cohetes NO se auto-modifica (H7).
+- **📰 Noticias, 🌅 premarket, 🧑‍💼 insiders, 📊 volumen, medias móviles = CONTEXTO, nunca
+  filtro:** jamás cambian ranking, pesos ni cestas; ninguna cifra de noticia entra en BD/modelo.
+- **Congelar cohortes = AÑADIR entrada a `COHORTES_PAPER`, nunca editar una existente** (no
+  romper el out-of-sample). No cambiar pesos del blend por el retrovisor: solo si el FORWARD
+  lo confirma.
+- **🚨 LANDMINE — los fundamentales de EDGAR mienten en silencio si el parser se despista
+  (31/07/2026, PR #1189).** Salió mirando ORCL: la ficha daba **FCF yield +3,49%** cuando el flujo
+  libre real de FY2026 era **−23.700 M$ (−6,99%)**. Cuatro fallos, todos del mismo tipo — el dato
+  malo era *creíble*, así que ninguna guarda saltó. Las tres reglas que NO se pueden volver a romper
+  en `lib/trading/edgar.ts`:
+  1. **`fy`/`fp` identifican el INFORME, no el periodo del dato** (ese lo dan `start`/`end`). Un 10-K
+     trae 2-3 comparativos con el MISMO `fy` y `filed`. Indexar por `fy` se quedaba con el más viejo
+     → resultado 2 años atrasado, balance 1, y ratios cruzando ambos. **Se indexa por `end`.**
+  2. **Una sola divisa por empresa.** Recorrer todas las unidades mezclaba yenes/rupias/pesos con una
+     capitalización en dólares (TLK: FCF yield 2.679%; AMX: EY 9,14% que parecía normal). Gana la
+     divisa con el ejercicio más reciente, USD solo desempata (Toyota arrastra una traducción de
+     conveniencia de 2013). Si no es USD → EY y FCF yield a **null**; los ratios internos sí valen.
+  3. **Dato ausente = `null`, jamás 0.** Capex ausente dejaba FCF ≡ CFO; deuda ausente dejaba el EV
+     sin deuda. Los alias de concepto se amplían **mirando companyfacts reales**, no adivinando
+     nombres (AVGO cambió de `LongTermDebtNoncurrent` a `…AndCapitalLeaseObligations` tras FY2021).
+  **Cómo verificar sin credenciales:** el sandbox de las sesiones no alcanza `data.sec.gov` (403 del
+  proxy), pero **`pg_net` desde Supabase sí** — `net.http_get` a `companyconcept`/`companyfacts` con
+  el User-Agent de contacto y luego SQL sobre `net._http_response`. Y antes de dar por bueno un
+  cambio del parser, **córrelo contra companyfacts reales**, no solo contra los fixtures: la
+  regresión de la divisa (Toyota anclada a 2013) los tests sintéticos no la veían.
+- **Cambiar cómo PUNTÚA el modelo ≠ arreglar el dato que entra.** Que el Piotroski siga siendo sobre
+  9 aunque una señal sea incalculable es una decisión del MODELO → preregistro
+  (`docs/TRADING-HIPOTESIS-PREREGISTRO.md`). Hacer que esa señal sea calculable para más empresas es
+  un arreglo de DATOS y va por PR normal. No confundir los dos carriles.
+- **Secretos:** usa `ALERTA_TOKEN` (bajo privilegio), nunca `CRON_SECRET` en el prompt del
+  trigger, nunca inventes el token, nunca literales — por env.
+- **Preflight al ARRANCAR:** `GET /api/internal/alerta` (Bearer `ALERTA_TOKEN`). Con `401`,
+  protocolo `docs/AVISOS-AGENTES.md` (push nativo `🔇 SIN TELEGRAM (401):` + bitácora).
+  **Nunca falles en silencio.**
+- **UNA sola Rutina** ejecuta esta pasada — no recrear una segunda; si detectas dos, deja una y avisa.
+- **Panel `/trading`:** ideas de compra = solo `alcista AND operada=true`; NO volver a listar
+  señales sin operar. No re-añadir las secciones eliminadas de la página simplificada.
+- Auth de `/api/trading/analisis-simbolo`: `accesoTrading` o token de rutina — NO volver a
+  `isTradingLecturaAutorizado` ahí.
 
-## Descubrimiento autónomo / cantera (capa C) — el agente busca solo dónde invertir
-Además de la watchlist fija (A+B), el agente **explora el mercado por su cuenta** y propone valores
-nuevos para estudiar (siempre en paper). Fases de una pasada de descubrimiento:
-1. **Explora temas con IBKR** (`search_investment_topics` → `get_theme_details`): sectores/tendencias
-   (Nuclear, Quantum, Defensa, Robótica…) → empresas centrales con `contract_id`. Cada una nace con
-   `fuentes: ['tema:<nombre>']`.
-2. **Enriquecer con FMP** (plan FREE, host `/stable`): `POST {PLATAFORMA_URL}/api/trading/fmp` con
-   `{ simbolos: [...] }` (Bearer `CRON_SECRET`) — pásale los símbolos que sacaste de los TEMAS de IBKR y los
-   enriquece con la **cotización gratis** (`/stable/quote`): precio, **posición en el rango de 52 semanas**
-   (`posRango52`, proxy libre de "por debajo de valor": 0 = pegado a mínimos anuales = barata) y **tendencia**
-   por medias 50/200. Devuelve `Candidato[]` con `fuentes:['fmp:quote']`. ⚠️ **El screener por parámetros
-   NO está en el plan Free** (`/api/v3` es legacy muerto; `/stable/company-screener` es de pago): si mandas
-   `{ criterios }` el endpoint responde `total:0` con nota. Los fundamentales (PER/PB/DCF) se piden best-effort
-   y degradan a vacío si el plan no los cubre. Requiere `FMP_API_KEY` + `FMP_API_VER=stable` en Vercel
-   plataforma (sin key → `disponible:false`, la cantera cae a solo temas+volumen). Alternativa: el agente
-   llama a `/stable/quote` por WebFetch con su propia key.
-3. Por candidato, con IBKR: `get_price_history` → **rvol** (volumen hoy vs media) y
-   `get_price_snapshot` (`historical_vol`) → **`volAnual`** (volatilidad anualizada, el RIESGO del
-   nombre). Un pico de volumen añade `fuentes: ['volumen']`.
-4. `POST {PLATAFORMA_URL}/api/trading/descubrir` con `{ candidatos: [...], criterios: { maxVolAnual, rvolMin, maxPosRango52, perMax, descuentoMinVsValor } }`
-   (en Free, `maxPosRango52` p.ej. 0.5 es el filtro de "barata" utilizable; `perMax`/`descuentoMinVsValor` solo si el plan trae fundamentales)
-   (Bearer `CRON_SECRET`). Funde por símbolo (coincidir en varias fuentes = mejor lead), **descarta la
-   lotería** (por defecto `maxVolAnual: 0.8` — la lección de la cartera real: los nombres de vol 90%+
-   AI/growth fueron los que más daño hicieron) y ordena por score. Devuelve la `seleccion`.
-5. Los seleccionados entran al **mismo `/api/trading/analizar`** (torneo + barreras + paper) igual que
-   la watchlist. El overlay de **volumen** (rvol + confirmación) viaja en la respuesta de `/analizar`
-   y marca las señales con volumen flojo como dudosas.
-
-> **Autonomía = DESCUBRIR, no ejecutar.** El agente decide SOLO qué estudiar (temas, screener, volumen),
-> pero la operativa sigue siendo 100% paper hasta la puerta de rentabilidad. Nunca órdenes reales.
-
-## Señales y barreras (lo que refina el torneo)
-- **ADX (fuerza de tendencia)** — `indicadoresDe` calcula `adx14` (Wilder, ≥25 = tendencia fuerte). La
-  **reversión NO fadea una tendencia fuerte**: RSI en sobreventa + ADX≥25 = cuchillo cayendo → señal neutral,
-  no compra (la lección de ISRG). El momentum sube/baja confianza según ADX confirme.
-- **Guarda de earnings** — `/api/trading/analizar` **veta abrir un largo si los resultados caen dentro de 3
-  días** (`earningsInminente`): el gap puede saltarse el stop. Puebla `fundamentales.proximoEarnings` desde FMP
-  (`fmpProximoEarnings`, best-effort) para que actúe; sin fecha, no veta (degrada).
-- **Fuerza relativa vs índice** — `fuerzaRelativa(cierresActivo, cierresSPY)` (baja SPY de IBKR): en un mercado
-  que cae, prefiere lo que aguanta mejor. Úsala para ordenar la cantera.
-- **Rotación sectorial** — `rankearSectores([{nombre, cierres}])` ordena los sectores por momentum; baja de IBKR
-  los ETFs sectoriales (XLK tech, XLE energía, XLF banca, XLV salud, XLI industria, XLU utilities, XLY consumo,
-  XLP básico, XLB materiales, XLRE inmobiliario, XLC comunicación) y pásalos como `cierres`. `inclinacionSector(sectorDelCandidato, ranking)`
-  devuelve +1 (líder), −1 (rezagado en negativo) o 0 → súmalo al score de la cantera: "barata **Y** en un sector
-  que sube" > "solo barata". El sector del candidato viene del tema IBKR o del `sector` de FMP.
-
-`/api/trading/screener` sigue disponible para el filtrado simple de una lista ya montada; `/descubrir`
-es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
-
-## Fuentes / envs (solo nombres)
-- MCP: Interactive Brokers (debe estar ENCENDIDO en el chat/sesión del agente), FMP (opcional Fase 1,
-  necesario para la cantera y para la estrategia `valor`).
-- Endpoints: `PLATAFORMA_URL` + `CRON_SECRET` (nunca literal en el prompt del trigger — pásalo por env).
-- Telegram: bot único del monorepo (`@central/core-telegram`).
-
-## Puerta a Fase 2
-No proponer ejecución real hasta que `trading_estrategia_stats` muestre rentabilidad sostenida y FUERA
-DE MUESTRA (walk-forward). Esa decisión es de Alberto y tendrá su propio spec. Hasta entonces: solo paper.
+## Índice de references/ — lee SOLO el archivo que necesite la tarea
+- **`references/pasada-diaria.md`** — la pasada nocturna normal: orden exacto de los 7 pasos
+  (NAV→saldo, watchlist, velas, analizar, puntuar, Telegram, radar de los lunes) y las reglas
+  del panel `/trading`. Léelo al ejecutar la pasada diaria del trigger.
+- **`references/seleccion-y-senales.md`** — descubrimiento/cantera (capa C), señales y barreras
+  del torneo (ADX, SMA50, earnings, régimen), backtest honesto, selección por factores Fase B
+  (endpoints `/factores`, `/gurus`, `/fundamentales`, `/insiders`, `/seleccion`, `/validar-oos`)
+  y RVOL. Léelo para explorar candidatos nuevos, tocar señales o validar selección.
+- **`references/infra-forward-radar.md`** — fuentes/envs y auth de endpoints, rutina única +
+  watchdog, forward paper (cohortes, curva, riesgo, atribución), radar del universo EEUU
+  (crons, ranking, retrovisor, satélite 🚀, cartera cohetes), puerta a Fase 2 y protocolo del
+  canal de aviso. Léelo para infra/auth, crons, el forward paper o si algo falla (401, mudo).
