@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-03T10:20:28Z",
+  "generadoEn": "2026-08-04T21:43:06Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3969,6 +3969,18 @@
   ],
   "novedades": [
     {
+      "titulo": "🧹 Laboratorio de inversión: quitado el ruido + el retrovisor llevaba 16 días muerto (04/08/2026).",
+      "fecha": "04/08/2026"
+    },
+    {
+      "titulo": "📊 Velas + volumen: medido, y la tesis del rebote en la media larga REFUTADA (04/08/2026).",
+      "fecha": "04/08/2026"
+    },
+    {
+      "titulo": "🔎 Verificación en caliente del arreglo de los ADR + techo al nº de acciones (31/07/2026).",
+      "fecha": "31/07/2026"
+    },
+    {
       "titulo": "🔎 Revisión mensual ia.rest Tech & Stack (02/08/2026, sesión de investigación).",
       "fecha": "02/08/2026"
     },
@@ -4014,18 +4026,6 @@
     },
     {
       "titulo": "📎 Subastas: «sin documentos adjuntos» era MENTIRA (30/07/2026, rama `claude/documentos-adjuntos-o95xl1`).",
-      "fecha": "30/07/2026"
-    },
-    {
-      "titulo": "⚖️ Subastas — 3 partidas que faltaban en el coste real (30/07/2026, misma rama/PR #1176).",
-      "fecha": "30/07/2026"
-    },
-    {
-      "titulo": "🏠 Subastas/chollos — API OFICIAL de Idealista preparada y DORMIDA (30/07/2026, PR #1168).",
-      "fecha": "30/07/2026"
-    },
-    {
-      "titulo": "💶 Auditoría pricing dinámico pre-cutover (30/07/2026, rama `claude/dynamic-pricing-audit-4cbdxv`).",
       "fecha": "30/07/2026"
     }
   ],

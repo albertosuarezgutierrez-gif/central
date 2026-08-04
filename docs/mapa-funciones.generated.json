@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-04T07:16:59Z",
-  "sha": "a94e617878cd62968e93aafa995f4387a4fe049f",
+  "generadoEn": "2026-08-04T21:43:06Z",
+  "sha": "e7bf06256ddd626d6da96afacacb8831ec04e7f1",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47843,21 +47843,12 @@
       ],
       "funciones": [
         {
-          "nombre": "p2",
-          "kind": "function",
-          "exportada": false,
-          "params": "n: number",
-          "retorno": "string",
-          "linea": 15,
-          "resumen": "Precio de acción (USD) en formato español: 345.42 → \"345,42\". El helper eur() es SOLO para € (la cuenta/NAV); las cotizaciones de acciones USA van en dólares y no deben llevar el símbolo €."
-        },
-        {
           "nombre": "pct",
           "kind": "function",
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 18
+          "linea": 14
         },
         {
           "nombre": "pctN",
@@ -47865,7 +47856,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 21
+          "linea": 17
         },
         {
           "nombre": "pct0N",
@@ -47873,7 +47864,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 24
+          "linea": 20
         },
         {
           "nombre": "CurvaForward",
@@ -47881,7 +47872,7 @@
           "exportada": false,
           "params": "{ serie }: { serie: { m: number | null; b: number }[] }",
           "retorno": null,
-          "linea": 30,
+          "linea": 26,
           "resumen": "Mini-curva del forward (SVG puro, sin dependencias): línea de la cesta (MEDIANA) vs el SPY a lo largo de los snapshots persistidos. La mediana es la métrica de decisión (un outlier no la mueve)."
         },
         {
@@ -47890,7 +47881,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 47
+          "linea": 43
         },
         {
           "nombre": "safe",
@@ -47898,7 +47889,7 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: T",
           "retorno": "Promise<T>",
-          "linea": 50
+          "linea": 46
         },
         {
           "nombre": "TradingDashboard",
@@ -47906,12 +47897,12 @@
           "exportada": true,
           "params": "{ carteraCohetes }: { carteraCohetes: CarteraCohetesData | null }",
           "retorno": null,
-          "linea": 61
+          "linea": 57
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5e3d4eb622c8"
+      "hash": "e9e3dc329233"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -51051,7 +51042,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 19
+          "linea": 21
         }
       ],
       "tablas": [
@@ -51066,7 +51057,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": "/api/cron/health-check",
-      "hash": "8689559e96c6"
+      "hash": "613f89d3e275"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/ia-director-refresh/route.ts",
@@ -60268,7 +60259,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 92,
+          "linea": 98,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -60277,7 +60268,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 122,
+          "linea": 128,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -60286,7 +60277,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 144
+          "linea": 150
         },
         {
           "nombre": "ventanaMinutos",
@@ -60294,7 +60285,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 152,
+          "linea": 158,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -60303,13 +60294,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 164,
+          "linea": 170,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a9b7cdfb324b"
+      "hash": "14bbdd27b5f8"
     },
     {
       "ruta": "apps/plataforma/lib/deducibilidad.ts",
@@ -62979,8 +62970,16 @@
           "exportada": false,
           "params": "",
           "retorno": "Sonda[]",
-          "linea": 37,
+          "linea": 38,
           "resumen": "Mismos defaults de modelo que la cadena real (client.ts de core-ai / pasarela). Si allí se cambia un default, actualizarlo aquí — la sonda debe probar lo que la app usa de verdad."
+        },
+        {
+          "nombre": "intentarPing",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: Sonda",
+          "retorno": "Promise<",
+          "linea": 84
         },
         {
           "nombre": "sondearProveedoresIA",
@@ -62988,13 +62987,52 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<SondaIA[]>",
-          "linea": 87,
-          "resumen": "Sondea todos los proveedores configurados en paralelo. NUNCA lanza: cada resultado lleva su ok/error y el registro en `ai_usos` es best-effort (un fallo del registro no tumba la sonda)."
+          "linea": 111,
+          "resumen": "Sondea todos los proveedores configurados en paralelo. NUNCA lanza: cada resultado lleva su ok/error y el registro en `ai_usos` es best-effort (un fallo del registro no tumba la sonda). Un TIMEOUT se "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "52b4549098d2"
+      "hash": "3b2cbb4231a0"
+    },
+    {
+      "ruta": "apps/plataforma/lib/monitoring/sonda-veredicto.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Veredicto de la sonda de proveedores de IA (Check 13) — módulo PURO, testeado con node --test. Por qué existe (04/08/2026): la sonda pintó NIM como «NO responde … revisar key/cuota» por UN timeout, mientras `ai_usos` tenía 40 llamadas reales OK de la víspera con la MISMA key y el MISMO modelo (p50 ~",
+      "exporta": [
+        "esErrorDeTimeout",
+        "veredictoSonda"
+      ],
+      "funciones": [
+        {
+          "nombre": "esErrorDeTimeout",
+          "kind": "function",
+          "exportada": true,
+          "params": "error?: string",
+          "retorno": "boolean",
+          "linea": 35,
+          "resumen": "Un timeout/abort es ambiguo (¿muerto o solo lento?); un HTTP 4xx/5xx es determinista."
+        },
+        {
+          "nombre": "seg",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "ms: number",
+          "retorno": null,
+          "linea": 39
+        },
+        {
+          "nombre": "veredictoSonda",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SondaResultado, trafico: TraficoRealProveedor | undefined, timeoutMs: number,",
+          "retorno": "",
+          "linea": 41
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e74c2c47ab69"
     },
     {
       "ruta": "apps/plataforma/lib/norma43.ts",
@@ -67343,7 +67381,7 @@
           "exportada": true,
           "params": "puntos: PuntoPrecio[], hasta: string, periodo: 'sem' | 'mes'",
           "retorno": "number[]",
-          "linea": 61,
+          "linea": 71,
           "resumen": "Remuestrea una serie diaria al cierre de cada PERIODO ('sem' = semana ISO aprox por lunes, 'mes' = mes natural), hasta `hasta` inclusive. El cierre del periodo = último cierre diario en él."
         },
         {
@@ -67352,7 +67390,7 @@
           "exportada": true,
           "params": "cierres: number[], n: number",
           "retorno": "number | null",
-          "linea": 80,
+          "linea": 90,
           "resumen": "SMA del ÚLTIMO punto de la serie (media de los n últimos cierres). null si no hay n puntos."
         },
         {
@@ -67361,13 +67399,13 @@
           "exportada": true,
           "params": "cierres: number[], n: number",
           "retorno": "boolean | null",
-          "linea": 88,
+          "linea": 98,
           "resumen": "¿Último cierre por encima de su SMA n en ese marco temporal? null si la serie no da para la media."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ee60ad8a5115"
+      "hash": "363e021c95a7"
     },
     {
       "ruta": "apps/plataforma/lib/trading/backtest.ts",
@@ -67384,7 +67422,7 @@
           "exportada": false,
           "params": "ms: number",
           "retorno": null,
-          "linea": 14
+          "linea": 15
         },
         {
           "nombre": "hoyIso",
@@ -67392,15 +67430,15 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 15
+          "linea": 16
         },
         {
           "nombre": "factoresEnFecha",
           "kind": "function",
           "exportada": true,
-          "params": "cf: CompanyFacts | null, puntos: PuntoPrecio[], fecha: string",
+          "params": "cf: CompanyFacts | null, puntos: PuntoVol[], fecha: string",
           "retorno": "FactoresFecha",
-          "linea": 19,
+          "linea": 20,
           "resumen": "Factores conocidos EN `fecha` + retornos forward. `cf` ya viene adelgazado a los conceptos usados. (Vive aquí y no en backtest-puro por sus imports locales de runtime; sus piezas sí están testeadas.)"
         },
         {
@@ -67409,7 +67447,7 @@
           "exportada": true,
           "params": "lote = 40",
           "retorno": "Promise<",
-          "linea": 53,
+          "linea": 64,
           "resumen": "Recolecta el siguiente lote: siembra desde trading_universo (+SPY como benchmark) y rellena las filas más rancias. Mismo patrón/ritmo que refrescarLoteUniverso (~4 símbolos/s contra SEC)."
         },
         {
@@ -67418,13 +67456,13 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 108,
+          "linea": 121,
           "resumen": "La LUPA de gurús: convicciones ACTUALES de Dataroma cruzadas con los factores actuales de la caché del radar — la materia prima para responder \"¿por qué se posicionan en esas empresas?\". Se guarda en "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6727c987a10d"
+      "hash": "2694cd220495"
     },
     {
       "ruta": "apps/plataforma/lib/trading/buscar-simbolo.ts",
@@ -68637,6 +68675,57 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "a8c119d750ea"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/velas.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "barrasPeriodicas",
+        "caidaDesdeMaximo",
+        "volumenRelativo",
+        "senalCapitulacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "barrasPeriodicas",
+          "kind": "function",
+          "exportada": true,
+          "params": "puntos: PuntoVol[], hasta: string, periodo: 'sem' | 'mes'",
+          "retorno": "Barra[]",
+          "linea": 39,
+          "resumen": "Remuestrea la serie diaria a barras de periodo, hasta `hasta` inclusive. Hermana con volumen de `cierresPeriodicos` de backtest-puro.ts (misma definición de semana: lunes ISO)."
+        },
+        {
+          "nombre": "caidaDesdeMaximo",
+          "kind": "function",
+          "exportada": true,
+          "params": "barras: Barra[], ventana = 12",
+          "retorno": "number | null",
+          "linea": 68,
+          "resumen": "Caída del cierre de la ÚLTIMA barra respecto al máximo de las `ventana` barras ANTERIORES (la actual excluida: incluirla haría que un valor en máximos nunca pudiera dar 0). Negativo = por debajo del m"
+        },
+        {
+          "nombre": "volumenRelativo",
+          "kind": "function",
+          "exportada": true,
+          "params": "barras: Barra[], ventana = 12",
+          "retorno": "number | null",
+          "linea": 80,
+          "resumen": "Volumen de la última barra contra la media de las `ventana` anteriores. null si falta el volumen de la barra actual o no hay suficientes barras previas CON volumen (fuente incompleta ≠ volumen 0)."
+        },
+        {
+          "nombre": "senalCapitulacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "barras: Barra[], { ventana = 12, caidaMin = CAIDA_MIN, volMin = VOL_MIN }: { ventana?: number; caidaMin?: number; volMin?: number } = {},",
+          "retorno": "SenalCapitulacion",
+          "linea": 109,
+          "resumen": "Señal medida como la única con exceso positivo en el estudio: caída fuerte CON volumen. NO decide nada: se recolecta en el retrovisor (H8) antes de tocar ranking o cestas."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "17678fb6463d"
     },
     {
       "ruta": "apps/plataforma/lib/trading/volumen.ts",
@@ -88190,7 +88279,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2376,
-    "funciones": 6352
+    "archivos": 2378,
+    "funciones": 6359
   }
 }
