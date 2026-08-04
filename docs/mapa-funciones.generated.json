@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-04T21:59:02Z",
-  "sha": "d945183ba7d4fa73c284d3bfcaf1458f6ea0c0f6",
+  "generadoEn": "2026-08-04T22:04:25Z",
+  "sha": "913ca7664a389c78b445ad59bb5401157f11eb1c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -31641,7 +31641,7 @@
     {
       "ruta": "apps/ia-rest/supabase/functions/daily-briefing/index.ts",
       "ambito": "apps/ia-rest",
-      "resumen": "supabase/functions/daily-briefing/index.ts v1 — Resumen diario NIM → Telegram Cron: 0 7 * * * (9:00h Madrid verano / UTC+2)",
+      "resumen": "supabase/functions/daily-briefing/index.ts v2 — Resumen diario IA → Telegram (pasarela Director de plataforma; NVIDIA NIM de fallback) Cron: 0 7 * * * (9:00h Madrid verano / UTC+2)",
       "exporta": [],
       "funciones": [
         {
@@ -31656,9 +31656,10 @@
           "nombre": "generarNarrativa",
           "kind": "function",
           "exportada": false,
-          "params": "apiKey: string, contexto: string",
-          "retorno": "Promise<string>",
-          "linea": 21
+          "params": "contexto: string",
+          "retorno": "Promise<",
+          "linea": 37,
+          "resumen": "Genera la narrativa del briefing con doble red: 1) PRIMARIO — pasarela IA de plataforma (endpoint /api/ai/chat): el Agente Director elige modelo por petición y detrás tiene la cadena completa OpenRout"
         },
         {
           "nombre": "getMetricas",
@@ -31666,14 +31667,14 @@
           "exportada": false,
           "params": "supabase: ReturnType<typeof createClient>, restauranteId: string",
           "retorno": null,
-          "linea": 49
+          "linea": 86
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "9e35110717ff"
+      "hash": "a38dc42f907e"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/eventos-entorno/index.ts",
@@ -80319,7 +80320,7 @@
           "exportada": true,
           "params": "config: GeminiConfig, system: string, user: string, opts: { maxTokens?: number; timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 17
+          "linea": 18
         },
         {
           "nombre": "geminiChat",
@@ -80327,7 +80328,7 @@
           "exportada": true,
           "params": "config: GeminiConfig, messages: { role: string; content: string }[], opts: { system?: string; maxTokens?: number; temperature?: number; timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 59,
+          "linea": 60,
           "resumen": "Chat de TEXTO con Gemini Flash, SIN grounding (sin google_search). Espejo funcional de `groqChat`/`moonshotChat` para usarlo como fallback GRATIS en la cadena de `aiComplete` (la POLÍTICA vive en `cli"
         },
         {
@@ -80336,13 +80337,13 @@
           "exportada": true,
           "params": "config: GeminiConfig, system: string, images: ImageInput[], userText: string, opts: { maxTokens?: number; timeoutMs?: number; fetchImpl?: typeof fetch } = {},",
           "retorno": "Promise<string>",
-          "linea": 107,
+          "linea": 108,
           "resumen": "Visión/OCR con Gemini Flash. Acepta imágenes grandes (muy por encima del tope inline de ~180 KB de NIM). Adaptador PURO: la política de fallback la decide la app. `fetchImpl` permite inyectar fetch en"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "622dbaf76420"
+      "hash": "f8883e74a493"
     },
     {
       "ruta": "packages/core-ai/src/groq.ts",
@@ -80360,7 +80361,7 @@
           "exportada": false,
           "params": "config: GroqConfig",
           "retorno": "string",
-          "linea": 28
+          "linea": 29
         },
         {
           "nombre": "groqText",
@@ -80368,7 +80369,7 @@
           "exportada": true,
           "params": "config: GroqConfig, system: string, user: string, maxTokens = 600,",
           "retorno": "Promise<string>",
-          "linea": 34,
+          "linea": 35,
           "resumen": "Llamada de texto a Groq. Devuelve el contenido del primer choice. Espejo de `nimText`."
         },
         {
@@ -80386,13 +80387,79 @@
           "exportada": true,
           "params": "config: GroqConfig, messages: NimToolMessage[], tools: unknown[], opts: { system?: string; model?: string; maxTokens?: number; temperature?: number; signal?: AbortSignal } = {},",
           "retorno": "Promise<NimToolResult>",
-          "linea": 101,
+          "linea": 99,
           "resumen": "Function-calling con Groq (endpoint OpenAI-compatible). Espejo de `nimChatTools`: mismas firmas y tipos (`NimToolMessage`/`NimToolResult`) para ser drop-in. `tools` en formato OpenAI; devuelve el mens"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e129c5e168da"
+      "hash": "c27ddc3f0599"
+    },
+    {
+      "ruta": "packages/core-ai/src/http.ts",
+      "ambito": "packages/core-ai",
+      "resumen": "Helper HTTP con reintentos para los adaptadores de proveedor IA (identity-agnostic). Centraliza el manejo de límites de tasa (429) y errores transitorios de servidor (5xx) que antes tumbaban una llamada al primer intento. Los proveedores gratuitos que usamos (NVIDIA NIM, Groq, Gemini) devuelven 429 ",
+      "exporta": [
+        "isRateLimitError",
+        "fetchAI"
+      ],
+      "funciones": [
+        {
+          "nombre": "isRateLimitError",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: unknown",
+          "retorno": "boolean",
+          "linea": 44,
+          "resumen": "¿El error viene de un límite de tasa (429) de un proveedor IA?"
+        },
+        {
+          "nombre": "defaultSleep",
+          "kind": "function",
+          "exportada": false,
+          "params": "ms: number, signal?: AbortSignal",
+          "retorno": "Promise<void>",
+          "linea": 75
+        },
+        {
+          "nombre": "parseRetryAfter",
+          "kind": "function",
+          "exportada": false,
+          "params": "res: Response, now: () => number",
+          "retorno": "number | null",
+          "linea": 91,
+          "resumen": "Parsea `Retry-After` (delta-segundos o fecha HTTP) → ms, o null si ausente/ilegible."
+        },
+        {
+          "nombre": "computeBackoff",
+          "kind": "function",
+          "exportada": false,
+          "params": "attempt: number, base: number, max: number, jitter: () => number",
+          "retorno": "number",
+          "linea": 102,
+          "resumen": "Backoff exponencial con \"equal jitter\": mitad fija + mitad aleatoria, con tope."
+        },
+        {
+          "nombre": "safeText",
+          "kind": "function",
+          "exportada": false,
+          "params": "res: Response",
+          "retorno": "Promise<string>",
+          "linea": 107
+        },
+        {
+          "nombre": "fetchAI",
+          "kind": "function",
+          "exportada": true,
+          "params": "url: string, init: RequestInit, opts: AiRetryOptions = {},",
+          "retorno": "Promise<Response>",
+          "linea": 120,
+          "resumen": "`fetch` con reintentos para proveedores IA. Devuelve la `Response` OK; si el estado no es reintentable o se agotan los reintentos, lanza `AiHttpError`. Errores de red (fetch rechaza) también se reinte"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "994a83aa6b7a"
     },
     {
       "ruta": "packages/core-ai/src/moonshot.ts",
@@ -80441,7 +80508,7 @@
           "exportada": false,
           "params": "config: NimConfig",
           "retorno": "string",
-          "linea": 11
+          "linea": 12
         },
         {
           "nombre": "nimText",
@@ -80449,7 +80516,7 @@
           "exportada": true,
           "params": "config: NimConfig, system: string, user: string, maxTokens = 600,",
           "retorno": "Promise<string>",
-          "linea": 17,
+          "linea": 18,
           "resumen": "Llamada de texto a NVIDIA NIM. Devuelve el contenido del primer choice."
         },
         {
@@ -80467,7 +80534,7 @@
           "exportada": true,
           "params": "config: NimConfig, messages: NimToolMessage[], tools: unknown[], opts: { system?: string; model?: string; maxTokens?: number; temperature?: number; signal?: AbortSignal } = {},",
           "retorno": "Promise<NimToolResult>",
-          "linea": 121,
+          "linea": 119,
           "resumen": "Function-calling con NVIDIA NIM (endpoint OpenAI-compatible). Pasa `tools` (formato OpenAI: `{type:'function', function:{name, description, parameters}}`) y devuelve el mensaje del modelo con `content"
         },
         {
@@ -80476,13 +80543,13 @@
           "exportada": true,
           "params": "config: NimConfig, system: string, images: ImageInput[], userText: string, maxTokens = 2000, opts: { temperature?: number; signal?: AbortSignal } = {},",
           "retorno": "Promise<string>",
-          "linea": 160,
+          "linea": 156,
           "resumen": "Llamada de visión (multi-imagen) a NVIDIA NIM. Formato image_url base64. `opts.temperature` permite afinar el determinismo (p. ej. OCR de facturas usa 0.05); por defecto 0.1. `opts.signal` permite can"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d39cd4b96a06"
+      "hash": "fd5cdbed02f4"
     },
     {
       "ruta": "packages/core-ai/src/openrouter.ts",
@@ -88363,7 +88430,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2380,
-    "funciones": 6365
+    "archivos": 2381,
+    "funciones": 6371
   }
 }
