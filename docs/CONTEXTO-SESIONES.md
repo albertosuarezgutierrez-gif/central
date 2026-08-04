@@ -24,6 +24,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 Agente de facturas: ahora mira A NOMBRE DE QUIÉN viene la factura (31/07/2026).**
+  - Disparador: la bandeja pidió revisar una obra de 2.420,59€ de LUANSA que era del tejado de la
+    **Hacienda El Triunfo** (factura a «El Triunfo CB», CIF E26631895) — ajena a Alberto. Entró porque el
+    abogado la mandó a MAPFRE como prueba y el hilo se le reenvió. Descartada de `gastos` a mano.
+  - `receptor.ts` (puro + 10 tests): tres estados `nuestro`/`ajeno`/`desconocido`. Solo descarta con
+    NIF identificado que NO casa con los titulares; el nombre solo confirma, nunca descarta. Titulares =
+    `sociedades` + env `FACTURAS_TITULARES_NIF`. Decisión de Alberto: **ignorar + avisar** por Telegram.
+  - Bug arreglado de paso: en IONOS el extractor guardaba el NIF de Alberto como CIF del proveedor →
+    envenenaba la huella (ningún proveedor aprendía regla). El prompt ya pide emisor y receptor por separado.
+  - Fila nueva en `sociedades`: PUNTO Y COMA GESTION, S.L. (B90446683) — sin ella DIGI salía «ajena».
+  - **Pendiente:** PDF escaneado sin capa de texto se descarta (`extraer.ts` no cae a visión); 24 adjuntos
+    ilegibles en la pasada del 31/07. Y no hay destino para gastos de la correduría en `negocios`.
 - **🧾 facturas-correo (01/08/2026, trigger diario).** Vía B sana, sin backlog. Archivada la factura
   de la lavandería Giraldillo AFV-11808 (72,60€, deducible); pago aún pendiente, sin conciliar. **Hallazgo
   colateral:** el cron `facturas-scan` (`apps/plataforma/lib/agente-facturas/drive.ts`) archiva TODO lo que
