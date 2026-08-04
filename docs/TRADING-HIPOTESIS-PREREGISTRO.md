@@ -139,6 +139,37 @@ primer dato forward — la cohorte 2 y el radar empiezan a medir el 20/07/2026).
   Job añadido (`10 */2 * * *`, ~2 días de ciclo). La lección es la de siempre en este repo: una tabla
   que no se refresca no dice «no hay señal», dice «no se ha medido» — y la pantalla la pintaba como si
   fuera de hoy.
+## H9 — Reglas de SALIDA contra la salida por tiempo · firmada 2026-08-04
+- **Origen:** Alberto — «vender igual de importante, hay que buscar solución». Es el hueco real del
+  sistema: TODO lo medido hasta hoy sale por TIEMPO (28/56/91 días) y ninguna regla de venta tiene
+  ni una observación. Las cestas paper se congelan a propósito (son instrumento de medida) y los
+  cohetes rotan semanal por reglas fijas — nada de eso mide si un stop AYUDA o ESTORBA.
+- **Hipótesis nula:** ninguna regla de salida mejora a la salida por tiempo (91 días) sobre el
+  universo, medida punto-en-el-tiempo.
+- **Recolección (misma máquina que H8, cron `trading-backtest`):** `simularSalidas` (módulo puro
+  `lib/trading/salidas.ts`, 10 tests) guarda por snapshot el retorno de la MISMA entrada bajo tres
+  reglas — **stop fijo −10%**, **stop fijo −20%** y **trailing −15%** — con los mismos criterios de
+  entrada/horizonte que `ret91` (comparación manzana-con-manzana). Si una regla no salta, su retorno
+  ES el del horizonte: no vender también es una decisión y se contabiliza.
+- **Caveats firmados:**
+  - Solo hay CIERRES diarios: un stop que en la realidad saltaría a media sesión aquí salta en el
+    primer cierre que lo perfora, y se «vende» a ese cierre. Eso INFRAVALORA el nº de disparos y
+    captura el hueco a la baja (abrir un −30% ejecuta el stop del −10% a −30%, como un stop de
+    mercado real). Es la simulación conservadora.
+  - La literatura clásica dice que los stops en acciones sueltas suelen AYUDAR en estrategias de
+    momentum y ESTORBAR en las de reversión (matan justo las entradas que compran caídas). Por eso,
+    si H8 (capitulación) llegara a cablearse como entrada, su regla de salida se evaluaría APARTE —
+    un resultado agregado del universo no autoriza a ponerle stop a la capitulación.
+  - Mismo régimen único (alcista 2024-26) que el resto del retrovisor; se re-mide con H6 si gira.
+- **Condición de cableado** (sobre ≥5.000 observaciones con `ret91` y las tres salidas):
+  1. una regla recorta la tasa de resultados ≤ −15% en **≥5 pp** frente a la salida por tiempo SIN
+     empeorar la mediana en más de 1 pp (perfil freno), **o**
+  2. mejora la mediana en **≥2 pp** sin subir la tasa de batacazos (perfil retorno).
+  Si se cumple, entra como política de salida del PAPER (nunca de órdenes reales por sí sola) vía PR;
+  si no, se anota el resultado y la salida por tiempo queda validada como la mejor disponible.
+- **Evaluación:** por estado de la tabla — ciclo completo con los campos `salidaStop10/20/Trail15`
+  presentes (no por fecha de calendario; lección del cron muerto del 19/07).
+
 ## 📦 Archivo — pre-registro original de la cohorte 1 (tabla `trading_forward_paper`, retirada 01/08/2026)
 La primera cohorte se pre-registró el 18/07/2026 en una tabla ad-hoc (`trading_forward_paper`, con
 `trading_forward_paper_marca` para marcas interinas) que quedó huérfana cuando el forward pasó a

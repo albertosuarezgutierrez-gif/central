@@ -3,6 +3,7 @@ import { agregarConviccion, piotroskiFScore, momentum12_1 } from '@central/modul
 import { recortarFactsHasta, extraerFundamentales, companyfactsCrudo, capitalizacionCruzable, CONCEPTOS_FUNDAMENTALES, type CompanyFacts } from './edgar'
 import { puntosDiariosVol, type PuntoVol } from './precios-stooq'
 import { barrasPeriodicas, senalCapitulacion } from './velas'
+import { simularSalidas } from './salidas'
 import { movimientosGestorDataroma, GESTORES_DEFECTO } from './dataroma'
 import { fechasSnapshot, precioEn, retornoForward, sumarDias, cierresPeriodicos, sobreSma, type FactoresFecha } from './backtest-puro'
 
@@ -56,6 +57,8 @@ export function factoresEnFecha(cf: CompanyFacts | null, puntos: PuntoVol[], fec
     sobreSmaMes: sobreSma(cierresPeriodicos(puntos, fecha, 'mes'), 12),
     capitulacionMes: mes.activa, caidaMes: mes.caida, volRelMes: mes.volRel,
     capitulacionSem: sem.activa, caidaSem: sem.caida, volRelSem: sem.volRel,
+    // Reglas de salida simuladas sobre la MISMA ventana de 91 días que ret91 (H9).
+    ...simularSalidas(puntos, fecha),
   }
 }
 

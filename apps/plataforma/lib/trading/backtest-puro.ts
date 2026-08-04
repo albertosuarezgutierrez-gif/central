@@ -64,6 +64,12 @@ export type FactoresFecha = {
   capitulacionSem?: boolean | null
   caidaSem?: number | null
   volRelSem?: number | null
+  // Reglas de SALIDA simuladas (hipótesis H9, 04/08/2026): retorno de la MISMA entrada bajo stop
+  // fijo −10%, stop fijo −20% y trailing −15% sobre cierres diarios, para comparar contra `ret91`
+  // (la salida por tiempo). Se RECOLECTAN; ninguna decide nada hasta que H9 se resuelva.
+  salidaStop10?: number | null
+  salidaStop20?: number | null
+  salidaTrail15?: number | null
 }
 
 // Remuestrea una serie diaria al cierre de cada PERIODO ('sem' = semana ISO aprox por lunes,
