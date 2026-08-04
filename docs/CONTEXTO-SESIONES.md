@@ -24,6 +24,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 👁️ La rama de VISIÓN de las facturas también pasa por la pasarela (04/08/2026)
+Verificada la pasada de hoy tras #1234: la mitad de TEXTO funciona (12 llamadas, **0 errores**,
+0,0076€, `gemini-2.5-flash`) y las facturas nuevas suben **1 → 5**. Pero quedaron **9 sin leer** sin
+rastro en `ai_usos`: la rama de IMAGEN se quedó fuera de #1234 y llamaba a `nimVision` a pelo —un
+intento, sin suplente, sin coste visible y con `JSON.parse` crudo que tomaba unas vallas ```json por
+avería. Ahora usa `aiVision` (OpenRouter multimodal → NIM) + `parsearJsonIa`. Dos arreglos más:
+`maxTokens` 512 → **1500** (los modelos del Director razonan y ese gasto cuenta contra el mismo tope
+→ JSON cortado = «no leído», la lección de la sonda del 03/08), y un PDF **escaneado** (capa de texto
+vacía) pasa de `sin_datos` a `tecnico`: se encolaba como «leído y descartado» sin que nadie lo mirara.
+Al abrir la cola se ve que 8 de los 9 NO son facturas (cartas de MAPFRE, extractos de ParkingLibre);
+la real es DIGI 76€. `aiVision` no pasa por el gate de presupuesto diario (era ya así). PR #1243.
+
 ### 🔎 El barrido de mercado ya trae comps: la consulta buena era la ABIERTA (04/08/2026)
 Primera pasada con #1227 en producción: **52 comps en 20 ventanas** (antes 0) y medianas distintas por
 fecha en el Dúplex —305€ oct · 199€ dic · 104€ ene— o sea que SÍ distingue temporada. Pero el parte nuevo
