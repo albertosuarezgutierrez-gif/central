@@ -33,6 +33,18 @@
   +2 pp de mediana). Caveat firmado: stops suelen ayudar al momentum y matar la reversión — si H8 se
   cablea, su salida se evalúa aparte. PR #1248.
 
+- **🧾 Agente de facturas: ahora mira A NOMBRE DE QUIÉN viene la factura (31/07/2026).**
+  - Disparador: la bandeja pidió revisar una obra de 2.420,59€ de LUANSA que era del tejado de la
+    **Hacienda El Triunfo** (factura a «El Triunfo CB», CIF E26631895) — ajena a Alberto. Entró porque el
+    abogado la mandó a MAPFRE como prueba y el hilo se le reenvió. Descartada de `gastos` a mano.
+  - `receptor.ts` (puro + 10 tests): tres estados `nuestro`/`ajeno`/`desconocido`. Solo descarta con
+    NIF identificado que NO casa con los titulares; el nombre solo confirma, nunca descarta. Titulares =
+    `sociedades` + env `FACTURAS_TITULARES_NIF`. Decisión de Alberto: **ignorar + avisar** por Telegram.
+  - Bug arreglado de paso: en IONOS el extractor guardaba el NIF de Alberto como CIF del proveedor →
+    envenenaba la huella (ningún proveedor aprendía regla). El prompt ya pide emisor y receptor por separado.
+  - Fila nueva en `sociedades`: PUNTO Y COMA GESTION, S.L. (B90446683) — sin ella DIGI salía «ajena».
+  - **Pendiente:** PDF escaneado sin capa de texto se descarta (`extraer.ts` no cae a visión); 24 adjuntos
+    ilegibles en la pasada del 31/07. Y no hay destino para gastos de la correduría en `negocios`.
 - **🧾 facturas-correo (01/08/2026, trigger diario).** Vía B sana, sin backlog. Archivada la factura
   de la lavandería Giraldillo AFV-11808 (72,60€, deducible); pago aún pendiente, sin conciliar. **Hallazgo
   colateral:** el cron `facturas-scan` (`apps/plataforma/lib/agente-facturas/drive.ts`) archiva TODO lo que
@@ -3035,6 +3047,22 @@ copiar. Luxury sigue congelado hasta el 01/09 (decisión de Alberto).
   + `FMP_API_VER=stable` en Vercel plataforma; trigger nocturno (sesión Claude con IBKR ON); idea nº1 (backtest
   vs `get_account_trades` reales) cuando IBKR esté en vivo. IBKR MCP se desconectó a media sesión.
 
+- **🧠 daily-briefing de ia.rest ya no muere por un 503 de NVIDIA (18/07/2026, rama `claude/daily-briefing-nvidia-503-5htfc8`).**
+  Aviso de Alberto: `⚠️ daily-briefing error / NVIDIA 503`. Causa: el edge function de Supabase
+  `apps/ia-rest/supabase/functions/daily-briefing/index.ts` llamaba a NVIDIA **a pelo, sin fallback**
+  (`if (!res.ok) throw new Error('NVIDIA ' + status)`), así que un 503 transitorio de NVIDIA (saturación)
+  tumbaba todo el briefing. No podía usar la cadena `@central/core-ai` porque es Deno standalone en OTRO
+  proyecto Supabase (`efncqyvhniaxsirhdxaa`), no importa los `packages/*`. **Fix (idea de Alberto):**
+  `generarNarrativa` ahora llama PRIMERO a la **pasarela IA de plataforma** (`POST {PLATAFORMA_URL}/api/ai/chat`,
+  Bearer `AI_GATEWAY_SECRET`, `app:'ia-rest-briefing'`) → el **Agente Director** elige modelo + cadena completa
+  OpenRouter→NIM→Groq→Gemini→Kimi + presupuesto + auditoría; y deja **NVIDIA NIM directo como último fallback**
+  (comportamiento histórico) para no convertir plataforma en un nuevo punto único de fallo. El pie del Telegram
+  muestra la vía real (`🤖 Director · <modelo>` / `🤖 NVIDIA NIM directo`). **PENDIENTE de Alberto (no lo puedo
+  hacer yo):** poner en los **secrets del edge function del proyecto Supabase de ia-rest** las envs
+  `PLATAFORMA_URL` (p. ej. `https://plataforma-ten-flame.vercel.app`) y `AI_GATEWAY_SECRET` (mismo valor que en
+  Vercel `plataforma`), y **redeployar el function** (`supabase functions deploy daily-briefing`). Sin esas envs,
+  el briefing sigue funcionando por el fallback NVIDIA directo (igual que hoy, pero sin la red del Director).
+
 - **📈 Trading-analista: ADX + guarda de earnings + fuerza relativa (18/07/2026, rama nueva desde main tras
   mergear #974).** Alberto: "¿qué más indicadores/API nos interesan?". Añadido a `@central/module-trading`
   (puro, 46 tests): **`adx`** (fuerza de tendencia Wilder → `Indicadores.adx14`) — la **reversión ya no fadea
@@ -5490,6 +5518,13 @@ copiar. Luxury sigue congelado hasta el 01/09 (decisión de Alberto).
     `documentos-tipos.ts` (interpretar/resumen/ref) testeado (9 tests). **Sin migración** (`contable_accion`
     ya existe, `conciliado`/`factura_ref` ya existen). Fase 4 (Telegram + proactividad + onboarding) y voz
     (backlog) quedan pendientes en el spec.
+
+- **🛡️ core-ai: reintentos ante rate-limit (429) en los proveedores IA (03/07/2026, rama `claude/api-rate-limit-errors-ovyrch`, PR nuevo).**
+  - **Disparador**: ráfagas de `HTTP 429` en las «Últimas llamadas» de ia-rest — Groq (`llama-3.3-70b-versatile`, límite org `on_demand`) y Gemini (cuota) tumbaban la llamada al primer intento, sin reintento ni respeto de `Retry-After`.
+  - **Fix**: nuevo helper puro **`packages/core-ai/src/http.ts` → `fetchAI()`** que reintenta 429/5xx con backoff exponencial + jitter, **respeta `Retry-After`** y, si el proveedor pide esperar más que el tope (`maxRetryAfterMs`, default 5 s → p. ej. cuota diaria), **se rinde de inmediato para que la app caiga al siguiente proveedor** (la política de fallback NIM→Groq→Gemini sigue en cada app). Lanza `AiHttpError` tipado (`status`/`provider`/`retryAfterMs`/`isRateLimit`) conservando el formato de mensaje `"<Proveedor> HTTP <status>: <body>"` (retrocompat de logs/pasarela). Export `isRateLimitError()`.
+  - **Integrado** en los 3 adaptadores (`nim.ts`, `groq.ts`, `gemini.ts`) — texto, multi-turno, tools y visión. `ai-client.ts` de ia-rest **sin cambios de firma**: la resiliencia es transparente. Beneficia a todas las verticales (core-ai es compartido).
+  - **Tests**: `test/http.test.ts` (8 casos: retry 429, Retry-After segundos, bail si Retry-After>tope, agota reintentos, 400 no-retry, 503 retry, error de red) + los de gemini-vision siguen verdes. `fetch`/`sleep` inyectables (puro, sin `process.env`). Convención de imports `.ts` (como core-receipts; `allowImportingTsExtensions` en `tsconfig.base.json`).
+  - **Detalle**: import `./http.ts` con extensión porque son imports de VALOR (los antiguos eran `import type`, que se elide y no necesitaba extensión bajo `node --test`).
 
 - **🆕 plataforma: Agente de contabilidad conversacional — FASE 1 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`, PR #726).**
   - Idea de Alberto: «hablar con mi agente de contabilidad, meterle IA, que aprenda mi rutina». Diseño = capa conversacional + memoria SOBRE la maquinaria contable existente (no reescribe nada).

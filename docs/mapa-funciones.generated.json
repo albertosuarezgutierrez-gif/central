@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-04T21:48:07Z",
-  "sha": "1fc141bc7a74cdf348d4dfdd45a3ffebd86015cd",
+  "generadoEn": "2026-08-04T21:59:02Z",
+  "sha": "d945183ba7d4fa73c284d3bfcaf1458f6ea0c0f6",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -52899,12 +52899,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 14
+          "linea": 15
         }
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/expenses/agent/scan",
-      "hash": "db024fd31b7b"
+      "hash": "04fa9bf53afb"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/fijos/generar/route.ts",
@@ -56463,6 +56463,7 @@
         "avisaSinAdjunto",
         "avisaSinDrive",
         "avisaNoLegibles",
+        "avisaAjenas",
         "avisaRecurrentesQueFaltan",
         "resumen"
       ],
@@ -56512,12 +56513,21 @@
           "resumen": "Aviso: llegó un adjunto que parece factura pero NO se pudo leer (PDF escaneado/imagen, o la IA no extrajo nada tras Groq+NIM). Antes se perdía como un 'error' mudo; ahora se reclama."
         },
         {
+          "nombre": "avisaAjenas",
+          "kind": "function",
+          "exportada": true,
+          "params": "items: { proveedor: string | null; total: number; receptor?: string | null }[]",
+          "retorno": "Promise<void>",
+          "linea": 58,
+          "resumen": "Aviso: facturas a nombre de un TERCERO (llegan por reenvíos de hilos ajenos). No se imputan ni van a la bandeja, pero se cantan: si el agente se equivoca leyendo el destinatario, Alberto tiene que pod"
+        },
+        {
           "nombre": "avisaRecurrentesQueFaltan",
           "kind": "function",
           "exportada": true,
           "params": "faltan: ReglaFaltante[]",
           "retorno": "Promise<void>",
-          "linea": 56,
+          "linea": 68,
           "resumen": "Aviso: facturas recurrentes que no han llegado este mes."
         },
         {
@@ -56526,12 +56536,12 @@
           "exportada": true,
           "params": "s: ResumenStats",
           "retorno": "Promise<void>",
-          "linea": 72
+          "linea": 85
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f100a2876207"
+      "hash": "3f9a80c7ed04"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/booking.ts",
@@ -56784,12 +56794,12 @@
           "exportada": true,
           "params": "buffer: Buffer, mimeType: string, fileName = '',",
           "retorno": "Promise<",
-          "linea": 21
+          "linea": 24
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "eefa594148f7"
+      "hash": "c64bf5fcc282"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/fingerprint.ts",
@@ -57229,20 +57239,70 @@
           "exportada": true,
           "params": "data: FacturaExtraida, texto: string, etiqueta = ''",
           "retorno": "DocClasificado",
-          "linea": 21
+          "linea": 22
         },
         {
           "nombre": "procesarFactura",
           "kind": "function",
           "exportada": true,
-          "params": "data: FacturaExtraida, ctx: { fuente: string; drive?: DriveRef; propiedadPorDefecto?: string | null; esPresupuesto?: boolean; fingerprintOverride?: string; esBooking?: boolean },",
+          "params": "data: FacturaExtraida, ctx: { fuente: string; drive?: DriveRef; propiedadPorDefecto?: string | null; esPresupuesto?: boolean; fingerprintOverride?: string; esBooking?: boolean; titulares?: Titular[] },",
           "retorno": "Promise<ProcesarResult>",
-          "linea": 49
+          "linea": 52
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0b330e479070"
+      "hash": "45a8951c19a8"
+    },
+    {
+      "ruta": "apps/plataforma/lib/agente-facturas/receptor.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "¿A nombre de QUIÉN viene la factura? El agente solo miraba al emisor (proveedor, NIF, importe) y daba por hecho que todo lo que llega al Gmail de Alberto es gasto suyo. No lo es: terceros le reenvían hilos con facturas ajenas adjuntas (caso fundacional 31/07/2026: la obra del tejado de la Hacienda E",
+      "exporta": [
+        "normalizaNifReceptor",
+        "normalizaNombreReceptor",
+        "evaluaReceptor",
+        "nifProveedorEsNuestro"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizaNifReceptor",
+          "kind": "function",
+          "exportada": true,
+          "params": "s?: string | null",
+          "retorno": "string",
+          "linea": 34
+        },
+        {
+          "nombre": "normalizaNombreReceptor",
+          "kind": "function",
+          "exportada": true,
+          "params": "s?: string | null",
+          "retorno": "string",
+          "linea": 45
+        },
+        {
+          "nombre": "evaluaReceptor",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: Receptor & { nif_proveedor?: string | null }, titulares: Titular[],",
+          "retorno": "DictamenReceptor",
+          "linea": 71,
+          "resumen": "Dictamina si la factura está a nombre de uno de los titulares del usuario. - Por NIF: es el criterio fuerte. Si el receptor trae NIF y tenemos NIFs con los que comparar, coincidencia → 'nuestro'; no-c"
+        },
+        {
+          "nombre": "nifProveedorEsNuestro",
+          "kind": "function",
+          "exportada": true,
+          "params": "nifProveedor: string | null | undefined, titulares: Titular[]",
+          "retorno": "boolean",
+          "linea": 109,
+          "resumen": "¿El \"NIF del proveedor\" es en realidad el NUESTRO? Pasa cuando el extractor coge el NIF del cliente creyendo que es el del emisor (caso IONOS 29/07/2026: guardó el NIF de Alberto como CIF de IONOS). I"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3a59c3b708a2"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/reglas.ts",
@@ -57340,6 +57400,30 @@
       ],
       "rutaApi": null,
       "hash": "71c22b9b3ba1"
+    },
+    {
+      "ruta": "apps/plataforma/lib/agente-facturas/titulares.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Titulares del usuario: a nombre de quién PUEDEN estar sus facturas. Es la lista contra la que `receptor.ts` decide si una factura es suya o de un tercero. Fuente de verdad: las `sociedades` de la cuenta (la persona física es una sociedad más, con su NIF). `FACTURAS_TITULARES_NIF` permite añadir NIFs",
+      "exporta": [
+        "cargarTitulares"
+      ],
+      "funciones": [
+        {
+          "nombre": "cargarTitulares",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Titular[]>",
+          "linea": 22
+        }
+      ],
+      "tablas": [
+        "cuentas",
+        "sociedades"
+      ],
+      "rutaApi": null,
+      "hash": "f03160b69921"
     },
     {
       "ruta": "apps/plataforma/lib/agente-movimientos.ts",
@@ -57543,7 +57627,7 @@
           "exportada": true,
           "params": "input: { text?: string imageBase64?: string mimeType?: string }",
           "retorno": "Promise<ResultadoExtraccion>",
-          "linea": 238,
+          "linea": 245,
           "resumen": "Igual que `aiExtractInvoice`, pero dice POR QUÉ no hay datos cuando no los hay. PDF (texto) → pasarela de texto (Director/OpenRouter → cadena gratis). Imagen → pasarela de visión (`aiVision`: OpenRout"
         },
         {
@@ -57552,13 +57636,13 @@
           "exportada": true,
           "params": "input: { text?: string imageBase64?: string mimeType?: string }",
           "retorno": "Promise<Record<string, any>>",
-          "linea": 332,
+          "linea": 339,
           "resumen": "Extrae datos estructurados de una factura. Devuelve {} si NINGÚN modelo logra leerla. ⚠️ Este `{}` NO distingue «no era una factura» de «no se pudo leer»: si esa diferencia importa (y para contabilida"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0fd78969a596"
+      "hash": "a0cea5640830"
     },
     {
       "ruta": "apps/plataforma/lib/ai-gateway.ts",
@@ -88279,7 +88363,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2378,
-    "funciones": 6359
+    "archivos": 2380,
+    "funciones": 6365
   }
 }
