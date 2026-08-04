@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🚪 Reglas de VENTA por fin medibles — H9 (04/08/2026, noche).** Alberto: «vender igual de importante,
+  hay que buscar solución». Todo salía por tiempo (28/56/91d); cero observaciones de reglas de salida.
+  Nuevo `lib/trading/salidas.ts` (puro, 10 tests): `simularSalidas` = retorno de la misma entrada bajo
+  stop fijo −10%, stop fijo −20% y trailing −15% sobre cierres, mismos criterios de entrada/horizonte
+  que ret91. Recolectado en `factoresEnFecha` (cron `trading-backtest`, el resucitado hoy). NO decide
+  nada: pre-registrado como **H9** (freno: −5 pp de batacazos sin ceder >1 pp de mediana · o retorno:
+  +2 pp de mediana). Caveat firmado: stops suelen ayudar al momentum y matar la reversión — si H8 se
+  cablea, su salida se evalúa aparte. PR #1248.
+
 - **🧾 Agente de facturas: ahora mira A NOMBRE DE QUIÉN viene la factura (31/07/2026).**
   - Disparador: la bandeja pidió revisar una obra de 2.420,59€ de LUANSA que era del tejado de la
     **Hacienda El Triunfo** (factura a «El Triunfo CB», CIF E26631895) — ajena a Alberto. Entró porque el
