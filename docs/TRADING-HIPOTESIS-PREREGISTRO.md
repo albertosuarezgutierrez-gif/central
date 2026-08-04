@@ -118,6 +118,14 @@ primer dato forward — la cohorte 2 y el radar empiezan a medir el 20/07/2026).
 - **Evaluación:** cuando `trading_backtest` complete un ciclo entero con el código nuevo (todas las
   filas con `actualizado_en` posterior al despliegue) — criterio de estado, no de calendario, por la
   lección del despliegue del 31/07: contar por fecha esperada da falsos «ya está».
+- **⚠️ Enmienda del mismo día (04/08/2026), antes de que corriera nada:** al revisar la pantalla se
+  descubrió que **el retrovisor no tenía cron**. `/api/cron/trading-backtest` existía como ruta pero no
+  estaba en `CRON_JOBS`, así que `trading_backtest` llevaba **congelada desde el 19/07/2026** y la
+  condición de evaluación de arriba era INCUMPLIBLE: se firmó una medición sobre una tabla que no
+  alimentaba nadie (y H4 se había resuelto en su día con esa tabla aún viva, de ahí que no se notara).
+  Job añadido (`10 */2 * * *`, ~2 días de ciclo). La lección es la de siempre en este repo: una tabla
+  que no se refresca no dice «no hay señal», dice «no se ha medido» — y la pantalla la pintaba como si
+  fuera de hoy.
 ## 📦 Archivo — pre-registro original de la cohorte 1 (tabla `trading_forward_paper`, retirada 01/08/2026)
 La primera cohorte se pre-registró el 18/07/2026 en una tabla ad-hoc (`trading_forward_paper`, con
 `trading_forward_paper_marca` para marcas interinas) que quedó huérfana cuando el forward pasó a

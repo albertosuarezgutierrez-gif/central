@@ -24,6 +24,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧹 Laboratorio de inversión: quitado el ruido + el retrovisor llevaba 16 días muerto (04/08/2026).**
+  Alberto: «no entiendo la pantalla, quítame lo que no me dé números reales». Hallazgo gordo al auditarla:
+  **`/api/cron/trading-backtest` NO estaba en `CRON_JOBS`** — la ruta existía, nadie la disparaba, y
+  `trading_backtest` estaba congelada desde el 19/07 mientras la UI pintaba sus cifras como vigentes; eso
+  además hacía INCUMPLIBLE el criterio de evaluación de H8 firmado horas antes (enmienda anotada en el
+  pre-registro). Job añadido `10 */2 * * *`. Retiradas de `/trading`: **💼 Cartera simulada** (entrada/stop
+  sin ningún resultado — intenciones con pinta de cartera) y **📊 Rendimiento por estrategia** (retorno
+  HIPOTÉTICO de seguir señales del torneo interno, la bajista «gana» si cae). Las dos cohortes forward se
+  **fusionan cuando comparten cesta**: 2026-07-18.v1 y 2026-07-20.v1 son los MISMOS 8 valores y se pintaban
+  como dos confirmaciones. Evidencia forward REAL a día de hoy: 1 cesta, 16 días, 2 snapshots. PR #1247.
+
 - **📊 Velas + volumen: medido, y la tesis del rebote en la media larga REFUTADA (04/08/2026).** Idea de
   Alberto tras su ORCL. Estudio punto-en-el-tiempo sobre 1.300 velas mensuales de 7 large caps US
   (2008-2026), midiendo el exceso sobre la deriva de CADA valor. Resultado incómodo: tocar la EMA100
