@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🚪 Reglas de VENTA por fin medibles — H9 (04/08/2026, noche).** Alberto: «vender igual de importante,
+  hay que buscar solución». Todo salía por tiempo (28/56/91d); cero observaciones de reglas de salida.
+  Nuevo `lib/trading/salidas.ts` (puro, 10 tests): `simularSalidas` = retorno de la misma entrada bajo
+  stop fijo −10%, stop fijo −20% y trailing −15% sobre cierres, mismos criterios de entrada/horizonte
+  que ret91. Recolectado en `factoresEnFecha` (cron `trading-backtest`, el resucitado hoy). NO decide
+  nada: pre-registrado como **H9** (freno: −5 pp de batacazos sin ceder >1 pp de mediana · o retorno:
+  +2 pp de mediana). Caveat firmado: stops suelen ayudar al momentum y matar la reversión — si H8 se
+  cablea, su salida se evalúa aparte. PR #<pendiente>.
+
 - **🧾 facturas-correo (01/08/2026, trigger diario).** Vía B sana, sin backlog. Archivada la factura
   de la lavandería Giraldillo AFV-11808 (72,60€, deducible); pago aún pendiente, sin conciliar. **Hallazgo
   colateral:** el cron `facturas-scan` (`apps/plataforma/lib/agente-facturas/drive.ts`) archiva TODO lo que
