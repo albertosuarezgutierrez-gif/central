@@ -32,7 +32,7 @@
   12 años. Las figuras de vela solas (martillo/envolvente/cuerpo grande) ≈ 0. Lo ÚNICO con señal:
   **caída ≥25% del máximo de 12 barras + volumen ≥1,5×** (+18,5% de exceso a 12 meses, n=34). Nuevo
   `lib/trading/velas.ts` (puro, 13 tests, tres estados null/false/true) recolectado en el retrovisor
-  sobre las ~800 del universo; NO toca ranking. Pre-registrado como **H8**. PR #<pendiente>.
+  sobre las ~800 del universo; NO toca ranking. Pre-registrado como **H8**. PR #1247.
 
 - **🔎 Verificación en caliente del arreglo de los ADR + techo al nº de acciones (31/07/2026).** Sin esperar
   al cron: bajados por `pg_net` los companyfacts de los 5 peores del radar y pasados por el parser ya
