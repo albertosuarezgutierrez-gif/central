@@ -520,8 +520,9 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
   y el aviso vuelve a leer `valor_orientativo` (no se seleccionaba, la guarda de rentabilidad nunca saltaba).
 - **⚖️ «Cargas no publicadas» ya no se confunde con «sin leer todavía» (01/08/2026):** `cargas_conocidas`
   colapsaba dos cosas distintas en el mismo `false` — el BOE no publica cargas vs. sí las publica pero el
-  lector aún no las abrió. Nuevos **`estadoCargas`/`titularCargas`** (5 estados: subsisten/sin_cargas/
-  publicadas_sin_leer/no_publicadas/sin_revisar) en `module-subastas/cargas.ts`, consumidos por la ficha y por
+  lector aún no las abrió. Nuevos **`estadoCargas`/`titularCargas`** (6 estados: subsisten/sin_cargas/
+  **sin_cuantificar**/publicadas_sin_extraer/no_publicadas/sin_revisar) en `module-subastas/cargas.ts`,
+  consumidos por la ficha y por
   `analisisDocumental`. El gate de rentabilidad `mereceAnalisisProfundo` dejó de bloquear también la LECTURA
   de cargas: si la ficha publica el documento se lee igual aunque el flip no compense. `LECTOR_VERSION` 4→5
   (relee lo ya procesado), documentos de cargas se descargan primero en la cola.

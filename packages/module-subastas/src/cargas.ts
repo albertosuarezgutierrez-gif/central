@@ -703,11 +703,12 @@ export function esDocumentoDeCargas(titulo: string | null | undefined): boolean 
 
 /**
  * Lo que se puede AFIRMAR sobre las cargas:
- *  · `subsisten`            — leídas: hay cargas anteriores que se suman al precio.
- *  · `sin_cargas`           — leídas: no subsiste ninguna.
- *  · `publicadas_sin_leer`  — la ficha publica el documento y aún no se ha analizado.
- *  · `no_publicadas`        — ficha revisada: no hay documento de cargas que abrir.
- *  · `sin_revisar`          — ni siquiera se ha mirado la ficha todavía.
+ *  · `subsisten`              — leídas y cuantificadas: hay cargas que se suman al precio.
+ *  · `sin_cargas`             — leídas y cuantificadas: no subsiste ninguna (un 0 leído vale).
+ *  · `sin_cuantificar`        — consta que hay cargas, pero nadie ha determinado el importe.
+ *  · `publicadas_sin_extraer` — la ficha publica el documento y no tenemos su cuadro de cargas.
+ *  · `no_publicadas`          — ficha revisada: no hay documento de cargas que abrir.
+ *  · `sin_revisar`            — ni siquiera se ha mirado la ficha todavía.
  */
 export type EstadoCargas =
   | 'subsisten'
