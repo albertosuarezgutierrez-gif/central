@@ -31,7 +31,7 @@
   que ret91. Recolectado en `factoresEnFecha` (cron `trading-backtest`, el resucitado hoy). NO decide
   nada: pre-registrado como **H9** (freno: −5 pp de batacazos sin ceder >1 pp de mediana · o retorno:
   +2 pp de mediana). Caveat firmado: stops suelen ayudar al momentum y matar la reversión — si H8 se
-  cablea, su salida se evalúa aparte. PR #<pendiente>.
+  cablea, su salida se evalúa aparte. PR #1248.
 
 - **🧾 facturas-correo (01/08/2026, trigger diario).** Vía B sana, sin backlog. Archivada la factura
   de la lavandería Giraldillo AFV-11808 (72,60€, deducible); pago aún pendiente, sin conciliar. **Hallazgo
