@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-04T22:04:25Z",
-  "sha": "913ca7664a389c78b445ad59bb5401157f11eb1c",
+  "generadoEn": "2026-08-04T22:05:34Z",
+  "sha": "da8ad847303b8ee9956eb99dabf35a03b1c2ab5e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -67466,7 +67466,7 @@
           "exportada": true,
           "params": "puntos: PuntoPrecio[], hasta: string, periodo: 'sem' | 'mes'",
           "retorno": "number[]",
-          "linea": 71,
+          "linea": 77,
           "resumen": "Remuestrea una serie diaria al cierre de cada PERIODO ('sem' = semana ISO aprox por lunes, 'mes' = mes natural), hasta `hasta` inclusive. El cierre del periodo = último cierre diario en él."
         },
         {
@@ -67475,7 +67475,7 @@
           "exportada": true,
           "params": "cierres: number[], n: number",
           "retorno": "number | null",
-          "linea": 90,
+          "linea": 96,
           "resumen": "SMA del ÚLTIMO punto de la serie (media de los n últimos cierres). null si no hay n puntos."
         },
         {
@@ -67484,13 +67484,13 @@
           "exportada": true,
           "params": "cierres: number[], n: number",
           "retorno": "boolean | null",
-          "linea": 98,
+          "linea": 104,
           "resumen": "¿Último cierre por encima de su SMA n en ese marco temporal? null si la serie no da para la media."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "363e021c95a7"
+      "hash": "272f9a3cc171"
     },
     {
       "ruta": "apps/plataforma/lib/trading/backtest.ts",
@@ -67507,7 +67507,7 @@
           "exportada": false,
           "params": "ms: number",
           "retorno": null,
-          "linea": 15
+          "linea": 16
         },
         {
           "nombre": "hoyIso",
@@ -67515,7 +67515,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 16
+          "linea": 17
         },
         {
           "nombre": "factoresEnFecha",
@@ -67523,7 +67523,7 @@
           "exportada": true,
           "params": "cf: CompanyFacts | null, puntos: PuntoVol[], fecha: string",
           "retorno": "FactoresFecha",
-          "linea": 20,
+          "linea": 21,
           "resumen": "Factores conocidos EN `fecha` + retornos forward. `cf` ya viene adelgazado a los conceptos usados. (Vive aquí y no en backtest-puro por sus imports locales de runtime; sus piezas sí están testeadas.)"
         },
         {
@@ -67532,7 +67532,7 @@
           "exportada": true,
           "params": "lote = 40",
           "retorno": "Promise<",
-          "linea": 64,
+          "linea": 67,
           "resumen": "Recolecta el siguiente lote: siembra desde trading_universo (+SPY como benchmark) y rellena las filas más rancias. Mismo patrón/ritmo que refrescarLoteUniverso (~4 símbolos/s contra SEC)."
         },
         {
@@ -67541,13 +67541,13 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 121,
+          "linea": 124,
           "resumen": "La LUPA de gurús: convicciones ACTUALES de Dataroma cruzadas con los factores actuales de la caché del radar — la materia prima para responder \"¿por qué se posicionan en esas empresas?\". Se guarda en "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2694cd220495"
+      "hash": "f0f5e274a438"
     },
     {
       "ruta": "apps/plataforma/lib/trading/buscar-simbolo.ts",
@@ -68705,6 +68705,35 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c012425a91be"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/salidas.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "simularSalidas"
+      ],
+      "funciones": [
+        {
+          "nombre": "sumarDias",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "fecha: string, n: number",
+          "retorno": null,
+          "linea": 30
+        },
+        {
+          "nombre": "simularSalidas",
+          "kind": "function",
+          "exportada": true,
+          "params": "puntos: PuntoPrecio[], fecha: string, dias = 91",
+          "retorno": "SalidasSimuladas",
+          "linea": 38,
+          "resumen": "Simula las tres salidas para una entrada en `fecha` con horizonte de `dias`. La entrada es el último cierre ≤ fecha y el cierre del horizonte es el PRIMER cierre ≥ fecha+dias — los mismos criterios ex"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5f929af40f4a"
     },
     {
       "ruta": "apps/plataforma/lib/trading/universo.ts",
@@ -88430,7 +88459,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2381,
-    "funciones": 6371
+    "archivos": 2382,
+    "funciones": 6373
   }
 }

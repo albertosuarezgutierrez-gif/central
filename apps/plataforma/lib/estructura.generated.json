@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-04T22:04:25Z",
+  "generadoEn": "2026-08-04T22:05:34Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3969,6 +3969,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🚪 Reglas de VENTA por fin medibles — H9 (04/08/2026, noche).",
+      "fecha": "04/08/2026"
+    },
+    {
       "titulo": "🧾 Agente de facturas: ahora mira A NOMBRE DE QUIÉN viene la factura (31/07/2026).",
       "fecha": "31/07/2026"
     },
@@ -4022,10 +4026,6 @@
     },
     {
       "titulo": "📈 Trading: el panel de estrategias por fin discrimina + limpieza de huérfanas (01/08/2026).",
-      "fecha": "01/08/2026"
-    },
-    {
-      "titulo": "🗓️ Rotación mensual: julio archivado (01/08/2026).",
       "fecha": "01/08/2026"
     }
   ],
