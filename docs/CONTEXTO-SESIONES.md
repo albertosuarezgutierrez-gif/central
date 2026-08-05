@@ -24,6 +24,13 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📈 STX (Seagate) alta en `trading_watchlist` capa C (05/08/2026, sin commit — cambio solo en BD).**
+  Alberto la vio con momentum (weekly en consolidación tras +290%) y preguntó por qué el agente no la
+  tenía: estaba en el radar (#8-12 del top-20, «fuerte», técnico «esperar») pero la watchlist seguía
+  siendo la siembra manual A/B — la cantera C no había promocionado nada aún. Insertada por Supabase MCP;
+  entra en la pasada nocturna desde el 06/08. Análisis a demanda (endpoint `analisis-simbolo` vía pg_net):
+  RSI 51, bajo SMA50, acumulación por volumen, insiders 47 ventas/0 compras, «sufre» en caídas del SPY.
+
 - **📈 Trading: pasada idempotente + 🪜 semáforo de la escalera real (05/08/2026, PR #1271).** El 04/08 la
   pasada corrió ~5 veces (5 BUY idénticas, 288 tesis donde tocaban 52) → «posición ya abierta» es barrera
   ANTES de escribir, únicos en BD, saneo aplicado. Decisión de Alberto: **la escalera la suben las SEÑALES,
