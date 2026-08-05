@@ -12,6 +12,7 @@ import { bajarCatastro, bajarCoordenadas, bajarFicha, buscarRefPorDireccion, cap
 import { paramsDnploc, provinciaCanonica, type CoordenadasCatastro } from '@central/module-subastas'
 import { archivarPasadas, procesarDocumentos } from '@/lib/subastas/documentos'
 import { clasificarSubastas } from '@/lib/subastas/clasificar'
+import { reextraerDatosDeTexto } from '@/lib/subastas/reextraer'
 
 export const dynamic = 'force-dynamic'
 // 🚨 300 s, no 60: la pasada espacia a propósito sus llamadas a servicios
@@ -236,6 +237,14 @@ export async function GET(req: NextRequest) {
       return { revisadas: 0, conHallazgos: 0, conCargas: 0, analizadas: 0 }
     })
 
+    // Datos que ya estaban en el TEXTO y no se habían sabido leer. Va ANTES de
+    // las lentes a propósito: sin superficie no hay valor de mercado y el margen
+    // de flip sale null, que es como estaban 12 de 17 subastas vivas.
+    const reextraidos = await reextraerDatosDeTexto().catch((e) => {
+      console.error('[subastas-enriquecer] reextraer', e)
+      return { revisadas: 0, completadas: 0, conSuperficie: 0 }
+    })
+
     // Lentes (flip / playa / semáforo): determinista y barato, al final para
     // que vea la fila ya enriquecida.
     const lentes = await clasificarSubastas().catch((e) => {
@@ -251,7 +260,7 @@ export async function GET(req: NextRequest) {
       return { archivadas: 0, radarLimpiado: 0 }
     })
 
-    return NextResponse.json({ ok: true, procesadas: pendientes.length, enriquecidas: ok, fallos, ...resultados, documentos, lentes, archivado })
+    return NextResponse.json({ ok: true, procesadas: pendientes.length, enriquecidas: ok, fallos, ...resultados, documentos, reextraidos, lentes, archivado })
   } catch (e: any) {
     console.error('[subastas-enriquecer]', e)
     return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })

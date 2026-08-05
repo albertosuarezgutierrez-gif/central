@@ -15,6 +15,7 @@ import { prisma } from '@/lib/db'
 import { ingerirJunta } from '@/lib/subastas/junta'
 import { procesarDocumentos } from '@/lib/subastas/documentos'
 import { clasificarSubastas } from '@/lib/subastas/clasificar'
+import { reextraerDatosDeTexto } from '@/lib/subastas/reextraer'
 import { aplicarReferenciaMercado, chollosVigentes, enriquecerAnunciantesFotocasa, ingerirComparables, leerIndiceINE, pulsoMercado, referenciaZonasFotocasa, refrescarIndiceINE } from '@/lib/subastas/mercado'
 
 export const dynamic = 'force-dynamic'
@@ -127,6 +128,15 @@ export async function GET(req: NextRequest) {
         }
       }
       return NextResponse.json({ ok: true, docs: salida })
+    } catch (e: any) {
+      return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
+    }
+  }
+  // Re-extracción del texto registral (sin red): rellena los huecos que el
+  // extractor no supo leer cuando la subasta se ingirió.
+  if (sp.get('accion') === 'reextraer') {
+    try {
+      return NextResponse.json({ ok: true, ...(await reextraerDatosDeTexto(Number(sp.get('max') ?? 60))) })
     } catch (e: any) {
       return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
     }

@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📐 Sin superficie no hay rentabilidad: 12 de 17 subastas vivas sin margen calculable (05/08/2026).**
+  Alberto propuso el embudo «primero las muy rentables, luego el escrito al juzgado» y el paso 1 no se podía
+  cumplir: solo 4 de 17 tenían `margen_flip_pct`. Causa: `superficieM2` exigía «X metros CON Y decímetros» y
+  la fórmula registral usa también COMA («setenta y siete metros, diecinueve decímetros») y mezcla cifra con
+  letra («105 metros, 5 decimetros»). Reescrito a `superficiesM2` (todas las medidas + qué mide cada una) con
+  prioridad construida > útil > sin etiqueta > **parcela** — en una unifamiliar la parcela se cita ANTES y
+  quedarse con la primera valora el inmueble por el solar. Nuevo paso `reextraerDatosDeTexto` en el cron: el
+  extractor solo corría en la INGESTA, así que mejorarlo no rescataba nada del corpus vivo. Tests 411/851.
+
 - **⚖️ El dato que decide Belmonte estaba guardado y no lo leía nadie: la nota marginal (04/08/2026,
   rama `claude/carga-no-recogida-analizada-vjkwc9`).** Auditando `cargas_detalle` a mano tras la relectura,
   el literal de la anotación letra D (LIBERBANK, la que ejecuta) dice: «Se hace constar por nota al margen,

@@ -49,7 +49,8 @@ export type { DocumentoFicha, DatosEdicto } from './edicto.ts'
 // dirección, finca, dormitorios…) — la materia prima para filtrar de verdad
 export { extraerDatos, tipoBien, direccion, fincaRegistral, registroPropiedad, dormitorios, banos, planta, cuotaParticipacion } from './extraccion.ts'
 export type { DatosDescripcion, TipoBien } from './extraccion.ts'
-export { superficieM2, palabrasANumero, numeroAlFinal } from './numeros-es.ts'
+export { superficieM2, superficiesM2, palabrasANumero, numeroAlFinal } from './numeros-es.ts'
+export type { MedidaSuperficie, ClaseSuperficie } from './numeros-es.ts'
 
 // Municipio → provincia (las descripciones del BOE citan municipios, no provincias)
 // + enlaces externos con la mejor ubicación disponible (mapa, calle, Catastro)

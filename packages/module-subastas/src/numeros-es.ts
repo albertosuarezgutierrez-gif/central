@@ -88,35 +88,133 @@ export function numeroAlFinal(texto: string): number | null {
 }
 
 /**
- * Superficie en m² desde texto registral. Acepta las dos formas que usa el BOE:
- * cifra («605 m2», «115,66 metros cuadrados») y letra («ciento quince metros
- * con sesenta y seis decimetros cuadrados»).
+ * Qué mide una superficie encontrada en el texto. Importa porque una misma
+ * finca cita varias y NO valen lo mismo: en una unifamiliar, la parcela y lo
+ * construido son cifras distintas, y el valor de mercado se calcula sobre lo
+ * construido. Quedarse con «la primera que aparezca» infravalora el inmueble.
+ */
+export type ClaseSuperficie = 'construida' | 'util' | 'parcela' | 'sin_etiqueta'
+
+export interface MedidaSuperficie {
+  m2: number
+  clase: ClaseSuperficie
+}
+
+/** De más a menos representativa del valor del inmueble. */
+const PRIORIDAD: ClaseSuperficie[] = ['construida', 'util', 'sin_etiqueta', 'parcela']
+
+/** Qué mide, a partir de las palabras que preceden a la cifra. */
+function claseDeContexto(previo: string): ClaseSuperficie {
+  // «superficio construida» (errata real del BOE) entra por `construid\w*`.
+  if (/\bconstruid\w*|\bedificad\w*/.test(previo)) return 'construida'
+  if (/\butil\b/.test(previo)) return 'util'
+  if (/\bparcela\b|\bsolar\b|\bterreno\b|\bsuelo\b/.test(previo)) return 'parcela'
+  return 'sin_etiqueta'
+}
+
+// Una medida = [número] metros [, / y / con [decimales] decímetros] cuadrados.
+// El número, y también los decímetros, pueden venir en CIFRA o en LETRA — el
+// BOE mezcla las dos formas en el mismo párrafo («105 metros, 5 decimetros»).
+// El separador es lo que rompía antes: la fórmula registral usa tanto «con»
+// como una simple COMA, y solo se contemplaba «con».
+// El grupo en letra va GREEDY y ancho a propósito: se traga las palabras
+// previas («superficie construida de setenta y siete») y es `colaNumerica`
+// quien se queda con la cola que de verdad es un número.
+const NUM = String.raw`(?:\d[\d.]*(?:,\d+)?|[a-z]+(?:\s+[a-z]+){0,7})`
+// Las fronteras \b de «metros» son imprescindibles: sin ellas el grupo greedy
+// se traga «…y siete deci» y casa el «metros» que va DENTRO de «decimetros»,
+// perdiendo los decimales y devolviendo null.
+const RE_MEDIDA = new RegExp(
+  String.raw`(${NUM})\s*\bmetros?\b\s*(?:(?:,|\by\b|\bcon\b)\s*(${NUM})\s*\bdecimetros?\b\s*)?cuadrados?`,
+  'g',
+)
+// «605 m2» / «115,66 m²»: la unidad ya dice que es cuadrado, no hace falta más.
+const RE_ABREV = /(\d[\d.]*(?:,\d+)?)\s*m(?:2|²)\b/g
+
+/**
+ * La cola numérica de una frase, leyendo desde el FINAL.
  *
- * Los decímetros cuadrados van como decimales: 66 dm² = 0,66 m² en la notación
- * registral («ciento quince metros con sesenta y seis decímetros»).
+ * No vale `numeroAlFinal` aquí: ese devuelve la PRIMERA secuencia numérica que
+ * encuentra, y en «tiene una superficie construida de setenta y siete metros»
+ * la primera es «una» → 1. La cifra que acompaña a «metros» es siempre la que
+ * está pegada a la unidad, así que se lee hacia atrás y se para en la primera
+ * palabra que no sea número.
+ */
+function colaNumerica(texto: string): number | null {
+  const palabras = norm(texto).split(/[\s-]+/).filter(Boolean)
+  let i = palabras.length
+  while (i > 0) {
+    const p = palabras[i - 1]
+    // «y» encadena («cuarenta y siete») pero no cuenta como número por sí sola.
+    if (p !== 'y' && palabrasANumero(p) == null) break
+    i--
+  }
+  const cola = palabras.slice(i).filter((p) => p !== 'y')
+  return cola.length ? palabrasANumero(cola.join(' ')) : null
+}
+
+function aNumero(s: string): number | null {
+  const t = s.trim()
+  if (!t) return null
+  if (/^\d/.test(t)) {
+    const n = Number(t.replace(/\./g, '').replace(',', '.'))
+    return Number.isFinite(n) ? n : null
+  }
+  return colaNumerica(t)
+}
+
+/**
+ * TODAS las superficies que cita un texto registral, con lo que mide cada una.
+ * Se expone aparte de `superficieM2` porque saber que una finca tiene 105 m² de
+ * parcela y 140 m² construidos es información distinta de «tiene 140 m²».
+ */
+export function superficiesM2(texto: string | null | undefined): MedidaSuperficie[] {
+  if (!texto) return []
+  const t = norm(texto)
+  const out: MedidaSuperficie[] = []
+
+  const anotar = (m2: number | null, hasta: number, dentro = '') => {
+    if (m2 == null || !(m2 > 0)) return
+    // El contexto se corta en la frase anterior: sin esto, un «construida» de
+    // dos oraciones más arriba etiquetaría mal la medida siguiente. Y se le
+    // suma lo capturado por el propio grupo del número, porque al ir greedy se
+    // traga justo las palabras que dicen qué se mide («superficie construida
+    // de setenta y siete» → el «construida» está DENTRO de la captura).
+    const trozo = t.slice(Math.max(0, hasta - 120), hasta)
+    const frase = trozo.slice(Math.max(trozo.lastIndexOf('.'), trozo.lastIndexOf(';')) + 1)
+    out.push({ m2: redondear(m2), clase: claseDeContexto(`${frase} ${dentro}`) })
+  }
+
+  for (const m of t.matchAll(RE_MEDIDA)) {
+    const enteros = aNumero(m[1])
+    if (enteros == null) continue
+    const dec = m[2] ? aNumero(m[2]) : null
+    // Los decímetros cuadrados son centésimas de m²: 66 dm² = 0,66 m².
+    anotar(dec != null ? enteros + dec / 100 : enteros, m.index ?? 0, m[1])
+  }
+  for (const m of t.matchAll(RE_ABREV)) anotar(aNumero(m[1]), m.index ?? 0)
+
+  return out
+}
+
+/**
+ * Superficie en m² desde texto registral. Acepta las formas que usa el BOE:
+ * cifra («605 m2», «115,66 metros cuadrados»), letra («ciento quince metros con
+ * sesenta y seis decimetros cuadrados») y las mixtas con coma («105 metros, 5
+ * decimetros cuadrados», «setenta y siete metros, diecinueve decimetros»).
+ *
+ * Cuando el texto cita varias, devuelve la que mejor representa el valor del
+ * inmueble: construida > útil > sin etiquetar > parcela.
  */
 export function superficieM2(texto: string | null | undefined): number | null {
-  if (!texto) return null
-  const t = norm(texto)
-
-  // Forma numérica: «605 m2», «115,66 m²», «1.250 metros cuadrados»
-  const cifra = t.match(/(\d[\d.]*(?:,\d+)?)\s*(?:m2|m²|metros?\s+cuadrados?)/)
-  if (cifra) {
-    const n = Number(cifra[1].replace(/\./g, '').replace(',', '.'))
-    if (Number.isFinite(n) && n > 0) return redondear(n)
+  const medidas = superficiesM2(texto)
+  if (!medidas.length) return null
+  for (const clase of PRIORIDAD) {
+    // Entre varias de la misma clase manda la mayor: las descripciones desglosan
+    // estancias («cocina de ocho metros cuadrados») y el total es el techo.
+    const deClase = medidas.filter((m) => m.clase === clase)
+    if (deClase.length) return Math.max(...deClase.map((m) => m.m2))
   }
-
-  // Forma en letra, con decímetros opcionales.
-  const letra = t.match(
-    /superficie\s+(?:util\s+|construida\s+|total\s+construida\s+)?(?:de\s+)?([a-z\s]+?)\s+metros?(?:\s+con\s+([a-z\s]+?)\s+decimetros?)?\s+cuadrados?/,
-  )
-  if (letra) {
-    const enteros = palabrasANumero(letra[1])
-    if (enteros == null) return null
-    const dec = letra[2] ? palabrasANumero(letra[2]) : null
-    return redondear(dec != null ? enteros + dec / 100 : enteros)
-  }
-
   return null
 }
 
