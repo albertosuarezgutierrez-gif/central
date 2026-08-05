@@ -170,6 +170,31 @@ primer dato forward — la cohorte 2 y el radar empiezan a medir el 20/07/2026).
 - **Evaluación:** por estado de la tabla — ciclo completo con los campos `salidaStop10/20/Trail15`
   presentes (no por fecha de calendario; lección del cron muerto del 19/07).
 
+## 💶 Plan de despliegue de capital REAL — escalera de tramos · firmada 2026-08-05
+- **Origen:** Alberto — «¿ves viable adelantar la inversión con dinero real? […] poco a poco, no de
+  golpe» + «lo que veas mejor y me avisas». Se firma ANTES de que haya dinero de por medio para que
+  dentro de unos meses no tiente saltarse un escalón porque "va bien".
+- **Premisa honesta:** meter dinero real en tramos NO acelera la validación estadística (eso ya lo
+  mide el paper gratis). Lo que compra es fontanería real (comisiones, spreads, cambio EUR→USD,
+  ejecución) y calibrar la disciplina con pérdidas de verdad. Con esa expectativa se despliega.
+- **Escalera (cash de referencia: ~33.400€ en IBKR a 04/08/2026):**
+  1. **Tramo 1 — 1.000€ (~3%).** Requisito: señal viva del agente — top del ranking con momentum
+     positivo Y calidad (ROIC>0), o capitulación H8 fresca (≤2 barras mensuales). NUNCA un gap
+     perseguido sin señal. 1-2 posiciones. Objetivo: medir fricción, no ganar.
+  2. **Tramo 2 — +2.000€ (total ~9%).** Requisitos: la cesta paper más vieja cumple 4 meses
+     batiendo a su banco de referencia en mediana, Y el tramo 1 no reveló fricción anómala
+     (coste round-trip >2% o ejecuciones malas).
+  3. **Tramo 3 — +3.000€ (total ~18%).** Requisito: los criterios originales de dinero real
+     (3 cestas distintas, la más vieja ≥6 meses, batiendo ajustado a riesgo) — la fecha estimada
+     ene-feb 2027 NO se adelanta; solo se adelanta el aprendizaje.
+- **Techo hasta validación: ~6.000€ (18% del cash).** El resto no entra hasta cumplir el tramo 3.
+  Cada tramo es una decisión SEPARADA de Alberto; nada se promedia "porque toca".
+- **Congelador (H6):** si SPY cierra un mes por debajo de su media de 10 meses, la escalera se
+  congela donde esté — ni tramos nuevos ni ampliaciones hasta re-medir el régimen.
+- **Reglas inviolables:** el agente decide QUÉ y CUÁNDO con sus números; la orden la ejecuta
+  SIEMPRE Alberto a mano (el agente jamás opera en IBKR). Salidas: por tiempo (91d) mientras H9
+  no resuelva; si H9 cablea una regla, se aplica la que gane — sin improvisar stops sobre la marcha.
+
 ## 📦 Archivo — pre-registro original de la cohorte 1 (tabla `trading_forward_paper`, retirada 01/08/2026)
 La primera cohorte se pre-registró el 18/07/2026 en una tabla ad-hoc (`trading_forward_paper`, con
 `trading_forward_paper_marca` para marcas interinas) que quedó huérfana cuando el forward pasó a
