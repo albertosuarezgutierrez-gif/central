@@ -11,6 +11,7 @@ import { redactarDesdeIdea } from '@/lib/sivra/agente-huesped/redactar'
 import type { ContextoRedaccion } from '@/lib/sivra/agente-huesped/redactar'
 import { aprobarPago, aplazarPago, rechazarFactura, pagarTodo, resumenSemanal } from '@/lib/agente-facturas/pagos'
 import { getMovParaCallback, aprenderReglaMovimiento, enviarMensajeDudoso, sugerirDestinoConContexto, PROP_LABELS } from '@/lib/agente-movimientos'
+import { simboloValido } from '@/lib/trading/cantera'
 import { getCuentaTelegram, resolverAccionTg, manejarTextoLibreTg, manejarDocumentoTg, manejarVozTg, descargarTelegram, adjuntoDeMensaje, vozDeMensaje, arrancarOnboarding, esComandoContable } from '@/lib/contable/telegram'
 
 export const dynamic = 'force-dynamic'
@@ -121,6 +122,31 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true })
       }
       await tgAnswerCallback(cb.id)
+      return NextResponse.json({ ok: true })
+    }
+    // ── 🌱 Cantera del radar (watchlist capa C) ──────────────────────────────
+    // Propuesta del digest de los lunes (radar.ts 7-bis): ✅ = alta en trading_watchlist (capa C,
+    // SOLO paper — cero órdenes reales); ❌ = se registra y no se vuelve a proponer.
+    if (prefix === 'wlc') {
+      const simbolo = args[0] || ''
+      if (!simboloValido(simbolo)) { await tgAnswerCallback(cb.id, 'Símbolo no válido'); return NextResponse.json({ ok: true }) }
+      const decision = action === 'alta' ? 'alta' : 'rechazada'
+      if (decision === 'alta') {
+        await prisma.$executeRaw`
+          INSERT INTO trading_watchlist (simbolo, capa) VALUES (${simbolo}, 'C')
+          ON CONFLICT (simbolo) DO NOTHING`.catch(() => {})
+      }
+      await prisma.$executeRaw`
+        UPDATE trading_cantera SET decision = ${decision}, decidido_at = now()
+        WHERE simbolo = ${simbolo}`.catch(() => {})
+      await tgAnswerCallback(cb.id, decision === 'alta' ? `${simbolo} en capa C — entra esta noche` : 'Vale — no se vuelve a proponer')
+      if (cb.message?.message_id) {
+        const original: string = cb.message.text || `🌱 Cantera: ${simbolo}`
+        await tgEditMessage(cb.message.message_id,
+          `${escapeHtml(original)}\n\n${decision === 'alta'
+            ? `✅ <b>Alta en capa C.</b> ${simbolo} entra en la pasada nocturna (SOLO paper).`
+            : `❌ <b>Descartado.</b> No se volverá a proponer.`}`)
+      }
       return NextResponse.json({ ok: true })
     }
     // ── Agente de pagos a proveedores ────────────────────────────────────────

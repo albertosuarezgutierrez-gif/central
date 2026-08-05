@@ -1,4 +1,4 @@
-import { tgSend } from '@central/core-telegram'
+import { tgSend, tgSendButtons } from '@central/core-telegram'
 import { prisma } from '@/lib/db'
 import {
   rankearUniverso, diffRanking, snapshotsParaEvaluar, resumenTrackRecord,
@@ -13,6 +13,7 @@ import { transaccionesFiling } from './form4'
 import { acumulacionDistribucion, type VeredictoVolumen } from './volumen'
 import { anomaliasUniverso, camposEnvenenados } from './calidad-datos'
 import { correlacionMediaCesta, etiquetaConcentracion } from './concentracion'
+import { candidatosCantera, CANTERA_MAX_PROPUESTAS, type SnapshotTop } from './cantera'
 
 // RANKING SEMANAL del radar (Fase 1): lee la caché (cero llamadas a la SEC), rankea, confirma el
 // timing del top-20 con técnico ligero (SMA50+RSI sobre cierres), cruza gurús, evalúa el track
@@ -262,5 +263,38 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
     '<i>La selección elige el QUÉ (calidad+gurús); 📈 solo confirma el CUÁNDO. 📊↑/↓ = picos de volumen comprando/vendiendo (huella de fondos entrando/saliendo; info, no filtra). SOLO paper.</i>',
   ]
   await tgSend(lineas.join('\n')).catch(() => {})
+
+  // 7-bis) 🌱 Cantera capa C: los valores SOSTENIDOS ≥2 lunes seguidos en el top-10 se proponen por
+  // Telegram con botones (el alta la decide Alberto — callback `wlc_` en el webhook). Es descubrimiento,
+  // no cambia ranking/pesos/cestas. Best-effort: si algo falla aquí, el digest ya salió y no se rompe.
+  try {
+    const snaps: SnapshotTop[] = [
+      ...previos.map(p => ({
+        fecha: p.fecha.toISOString().slice(0, 10),
+        top: (p.entries as unknown as EntryRadar[]).slice(0, 10).map(e => e.simbolo),
+      })),
+      { fecha: hoy, top: entries.slice(0, 10).map(e => e.simbolo) },
+    ]
+    const wl = await prisma.tradingWatchlist.findMany({ select: { simbolo: true } })
+    const propuestas = await prisma.tradingCantera.findMany({ select: { simbolo: true } })
+    const candidatos = candidatosCantera(snaps, new Set(wl.map(w => w.simbolo)), new Set(propuestas.map(p => p.simbolo)))
+      .slice(0, CANTERA_MAX_PROPUESTAS)
+    for (const c of candidatos) {
+      await prisma.tradingCantera.upsert({
+        where: { simbolo: c.simbolo },
+        create: { simbolo: c.simbolo, semanasSeguidas: c.semanas },
+        update: { semanasSeguidas: c.semanas },
+      })
+      const e = entries.find(x => x.simbolo === c.simbolo)
+      await tgSendButtons(
+        `🌱 <b>Cantera</b>: <b>${c.simbolo}</b>${e?.nombre ? ` — ${e.nombre}` : ''} lleva <b>${c.semanas} lunes seguidos</b> en el top-10 del radar (${e ? ETIQ[e.etiqueta] : '—'}${e?.tecnico === 'si' ? ' · 📈 técnico ok' : ''}).\n¿Alta en la watchlist (capa C) para el análisis nocturno? SOLO paper.`,
+        [[
+          { texto: '✅ Alta en capa C', callback: `wlc_alta:${c.simbolo}` },
+          { texto: '❌ No', callback: `wlc_no:${c.simbolo}` },
+        ]],
+      )
+    }
+  } catch { /* la cantera nunca tumba el radar */ }
+
   return { ok: true, enviado: true, top: entries.length }
 }

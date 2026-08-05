@@ -24,6 +24,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🌱 Cantera capa C automática + alertas/altas de trading (05/08/2026, 2ª sesión).** El radar de los
+  lunes propone ahora por Telegram (botones `wlc_alta`/`wlc_no`) los valores ≥2 lunes seguidos en su
+  top-10 (`lib/trading/cantera.ts` puro+testeado, tabla `trading_cantera` aplicada; máx 3 propuestas,
+  un ❌ no se re-pregunta) — la cantera llevaba muerta desde la siembra. Altas manuales de Alberto:
+  STX+SNDK+WDC en capa C, y alerta IBKR de ruptura STX ≥865$ (solo aviso, cero órdenes). OJO: SNDK y
+  WDC presentaron resultados el 05/08 tras cierre — el trío de almacenamiento repreciará. Earnings por
+  MCP: IBKR no lo expone y FMP está sin créditos ($0) — las fechas salen del estimador EDGAR o de web.
+
 - **📈 STX (Seagate) alta en `trading_watchlist` capa C (05/08/2026, sin commit — cambio solo en BD).**
   Alberto la vio con momentum (weekly en consolidación tras +290%) y preguntó por qué el agente no la
   tenía: estaba en el radar (#8-12 del top-20, «fuerte», técnico «esperar») pero la watchlist seguía
