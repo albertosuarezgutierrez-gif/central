@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-05T09:01:52Z",
-  "sha": "2c5c5c5b02e86152daa6850cd3948f5b3e7c9688",
+  "generadoEn": "2026-08-05T09:16:36Z",
+  "sha": "8fb31ab8e1d975f1699f07f2fcf91857f63469df",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -86172,7 +86172,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "TipoBien",
-          "linea": 72
+          "linea": 86
         },
         {
           "nombre": "direccion",
@@ -86180,7 +86180,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "string | null",
-          "linea": 84,
+          "linea": 106,
           "resumen": "Dirección: se busca el patrón registral «sita/o en …» o una vía explícita (calle, avenida, plaza…). Se corta en el primer punto para no arrastrar media descripción."
         },
         {
@@ -86189,7 +86189,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string | null",
-          "linea": 99
+          "linea": 121
         },
         {
           "nombre": "fincaRegistral",
@@ -86197,7 +86197,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "string | null",
-          "linea": 105,
+          "linea": 127,
           "resumen": "Número de finca registral: «finca registral 9670», «Registral 25.143», «FINCA 24.482»."
         },
         {
@@ -86206,7 +86206,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "string | null",
-          "linea": 118,
+          "linea": 140,
           "resumen": "Registro de la Propiedad al que pertenece la finca. `r?egistro` a propósito: el BOE publica «egistro de la Propìedad» (errata real vista en la alerta de Dos Hermanas del 24/07/2026)."
         },
         {
@@ -86215,7 +86215,7 @@
           "exportada": false,
           "params": "texto: string, sustantivos: string",
           "retorno": "number | null",
-          "linea": 127,
+          "linea": 149,
           "resumen": "Cuenta habitaciones escritas en cifra o en letra («tres dormitorios»)."
         },
         {
@@ -86224,7 +86224,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "number | null",
-          "linea": 140
+          "linea": 162
         },
         {
           "nombre": "banos",
@@ -86232,7 +86232,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "number | null",
-          "linea": 144
+          "linea": 166
         },
         {
           "nombre": "planta",
@@ -86240,7 +86240,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "string | null",
-          "linea": 149,
+          "linea": 171,
           "resumen": "Planta del inmueble, tal cual la nombra el registro."
         },
         {
@@ -86249,7 +86249,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "number | null",
-          "linea": 165,
+          "linea": 187,
           "resumen": "Cuota de participación en la propiedad horizontal, en %. «tres enteros, ocho centésimas de otro por ciento» → 3,08 %."
         },
         {
@@ -86258,13 +86258,13 @@
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "DatosDescripcion",
-          "linea": 189,
+          "linea": 211,
           "resumen": "Pasada completa sobre una descripción registral."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b3169f6bb9ef"
+      "hash": "7a207b7f00fd"
     },
     {
       "ruta": "packages/module-subastas/src/ficha-boe.ts",

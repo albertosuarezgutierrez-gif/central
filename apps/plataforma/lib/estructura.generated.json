@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-05T09:01:52Z",
+  "generadoEn": "2026-08-05T09:16:36Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3970,6 +3970,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🏠 Una casa dejaba de ser casa por su plaza de aparcamiento — y el paso 1 no tiene candidatas (05/08/2026).",
+      "fecha": "05/08/2026"
+    },
+    {
       "titulo": "📐 Sin superficie no hay rentabilidad: 12 de 17 subastas vivas sin margen calculable (05/08/2026).",
       "fecha": "05/08/2026"
     },
@@ -4023,10 +4027,6 @@
     },
     {
       "titulo": "✅ Reparación auditoría 02/08 cerrada (02/08/2026, rama `claude/audit-vulnerabilities-02-08-m7lwtf`).",
-      "fecha": "02/08/2026"
-    },
-    {
-      "titulo": "🛡️ Auditoría PROFUNDA semanal (02/08/2026).",
       "fecha": "02/08/2026"
     }
   ],
