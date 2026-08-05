@@ -99,6 +99,30 @@ export async function POST(req: NextRequest) {
   const cb = body.callback_query
   if (cb) {
     const { prefix, action, args } = parseCallback(cb.data || '')
+    // ── Propuestas de trading (tramo real de la escalera) ────────────────────
+    // El ✅ es un botón URL (abre la pestaña AI Instructions de IBKR — el envío final SIEMPRE lo
+    // pulsa Alberto en su app; ningún callback ejecuta órdenes). Aquí solo llega el ❌: registrar el
+    // rechazo para que la sesión de trading borre la instrucción en su siguiente check-in (este
+    // servidor no tiene acceso a IBKR — la instrucción caduca sola aunque nadie la borre).
+    if (prefix === 'trd') {
+      if (action === 'no') {
+        const instrId = args[0] || ''
+        await prisma.$executeRaw`
+          INSERT INTO trading_propuestas (instruccion_id, estado, decidido_en)
+          VALUES (${instrId}, 'rechazada', now())
+          ON CONFLICT (instruccion_id)
+          DO UPDATE SET estado = 'rechazada', decidido_en = now()`.catch(() => {})
+        await tgAnswerCallback(cb.id, 'Vale — descartada, no se ejecutará')
+        const original: string = cb.message?.text || '💡 Propuesta'
+        if (cb.message?.message_id) {
+          await tgEditMessage(cb.message.message_id,
+            `${escapeHtml(original)}\n\n❌ <b>Descartada.</b> No se ejecutará; la instrucción de IBKR caduca sola.`)
+        }
+        return NextResponse.json({ ok: true })
+      }
+      await tgAnswerCallback(cb.id)
+      return NextResponse.json({ ok: true })
+    }
     // ── Agente de pagos a proveedores ────────────────────────────────────────
     if (prefix === 'pago') {
       // Acciones con args[0] = cuentaId (no facturaId)

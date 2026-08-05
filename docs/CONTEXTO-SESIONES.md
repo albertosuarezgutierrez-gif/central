@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔘 Botones ✅/❌ en las propuestas de trading por Telegram (05/08/2026).** Alberto: «lo más rápido
+  y fácil para mí». `/api/internal/alerta` acepta `botones` opcionales validados por
+  `lib/alerta-botones.ts` (puro, 5 tests): URLs solo https y callbacks SOLO `trd_*` — un ALERTA_TOKEN
+  filtrado no puede fabricar botones `pago_`/`mov_`. Webhook: `trd_no:<instrId>` marca `rechazada` en la
+  tabla nueva `trading_propuestas` (migración aplicada; el server no toca IBKR — la sesión borra la
+  instrucción en su check-in) y edita el mensaje. El ✅ es botón URL a la pestaña AI Instructions (el
+  envío final SIEMPRE es de Alberto — candado del broker). Autonomía total: solo vía OAuth/Web API,
+  descartada hasta validar la escalera. Verificado: tsc 0 · 725 tests · build 0. PR #TBD.
+
 ### 🚨 Landmine trading-analista: get_price_history en paralelo desordena símbolos (04/08/2026)
 Pasada diaria (paper): al pedir los 13 `get_price_history` de IBKR en un solo mensaje paralelo y
 transcribir por POSICIÓN, los resultados llegaron en orden de FINALIZACIÓN, no de invocación →
