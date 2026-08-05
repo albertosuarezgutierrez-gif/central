@@ -77,16 +77,23 @@ export async function reextraerDatosDeTexto(max = 60): Promise<ResultadoReextrac
     const n = await prisma.$executeRaw(Prisma.sql`
       UPDATE subastas SET
         superficie = COALESCE(superficie, ${d.superficie ?? null}),
-        -- OJO: aquí NO vale COALESCE, al revés que en el resto. La columna
-        -- tipo_bien tiene UNA sola fuente —esta misma descripción— así que un
-        -- COALESCE no protege el trabajo de nadie: solo congela para siempre la
-        -- lectura de la versión vieja del extractor. La unifamiliar de Alcalá
-        -- del Río (SUB-JA-2026-264398) siguió marcada "garaje" en BD después de
-        -- arreglar tipoBien (PR #1265), y esa columna es la que filtra
-        -- GET /api/subastas y pinta el mapa: la casa quedaba invisible al
-        -- filtrar por vivienda. Se re-deriva siempre que el texto dé un tipo.
-        -- Mismo razonamiento que el CASE de cargas en documentos.ts (#1250).
-        tipo_bien = COALESCE(${d.tipoBien ?? null}, tipo_bien),
+        -- tipo_bien se RE-DERIVA, pero solo cuando el texto dice algo.
+        --
+        -- Se re-deriva porque si no, el arreglo del parser nunca llega al
+        -- corpus: la unifamiliar de Alcalá del Río (SUB-JA-2026-264398) siguió
+        -- marcada "garaje" en BD después de arreglar tipoBien (PR #1265), y esa
+        -- columna es la que filtra GET /api/subastas y pinta el mapa, así que la
+        -- casa quedaba invisible al filtrar por vivienda.
+        --
+        -- Y el NULLIF de "otro" es la otra mitad, que costó una regresión en
+        -- producción: "otro" NO es un tipo, es el «no lo he sabido leer» de
+        -- tipoBien. La descripción persistida de muchas fichas es un marcador
+        -- ("DESCRIPCIÓN QUE CONSTA EN LA CERTIFICACIÓN DE CARGAS…"), mientras
+        -- que el tipo guardado puede venir del texto RICO de la ficha, que la
+        -- ingesta sí ve (s.datos en subastas-ingesta.ts) y aquí ya no está.
+        -- Sin el NULLIF, ese marcador degradó Punta Umbría de vivienda a otro.
+        -- Regla de la casa: un «no lo sé» jamás pisa un dato que sí se sabe.
+        tipo_bien = COALESCE(NULLIF(${d.tipoBien ?? null}, 'otro'), tipo_bien),
         direccion = COALESCE(direccion, ${d.direccion ?? null}),
         finca_registral = COALESCE(finca_registral, ${d.fincaRegistral ?? null}),
         registro_propiedad = COALESCE(registro_propiedad, ${d.registroPropiedad ?? null}),
@@ -101,8 +108,10 @@ export async function reextraerDatosDeTexto(max = 60): Promise<ResultadoReextrac
         -- guardián —y no la cola— el que hace idempotente la re-extracción.
         AND (
           (superficie IS NULL AND ${d.superficie ?? null}::numeric IS NOT NULL)
-          -- tipo_bien se COMPARA, no se mira si está vacío: se re-deriva.
-          OR (${d.tipoBien ?? null}::text IS NOT NULL AND tipo_bien IS DISTINCT FROM ${d.tipoBien ?? null}::text)
+          -- tipo_bien se COMPARA, no se mira si está vacío: se re-deriva. Y con
+          -- el mismo NULLIF que el SET, para que un "otro" no cuente como cambio.
+          OR (NULLIF(${d.tipoBien ?? null}::text, 'otro') IS NOT NULL
+              AND tipo_bien IS DISTINCT FROM ${d.tipoBien ?? null}::text)
           OR (direccion IS NULL AND ${d.direccion ?? null}::text IS NOT NULL)
           OR (finca_registral IS NULL AND ${d.fincaRegistral ?? null}::text IS NOT NULL)
           OR (registro_propiedad IS NULL AND ${d.registroPropiedad ?? null}::text IS NOT NULL)

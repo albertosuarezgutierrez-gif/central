@@ -15,12 +15,17 @@ import { fileURLToPath } from 'node:url'
  *
  * - Las columnas que también rellenan la ficha del BOE o el Catastro van con
  *   `COALESCE(columna, nuevo)`: solo tapan huecos.
- * - `tipo_bien` NO, y es deliberado: su única fuente es la descripción que esta
- *   misma función acaba de parsear. Un COALESCE ahí no protege a nadie —
- *   perpetúa la lectura de la versión vieja del extractor. Pasó de verdad: tras
- *   arreglar `tipoBien` (PR #1265), la unifamiliar de Alcalá del Río siguió
- *   marcada `garaje` en BD por la plaza de aparcamiento de su descripción, y esa
- *   columna es la que filtra `GET /api/subastas` y pinta el mapa.
+ * - `tipo_bien` NO, y es deliberado: si conserva lo guardado, el arreglo del
+ *   parser nunca llega al corpus. Pasó de verdad — tras arreglar `tipoBien`
+ *   (PR #1265) la unifamiliar de Alcalá del Río siguió marcada `garaje` en BD
+ *   por la plaza de aparcamiento de su descripción, y esa columna es la que
+ *   filtra `GET /api/subastas` y pinta el mapa.
+ * - Pero `'otro'` no puede pisar: **no es un tipo, es el «no lo he sabido leer»
+ *   de `tipoBien`**. También pasó de verdad, en la pasada siguiente: la
+ *   descripción persistida de Punta Umbría es un marcador («DESCRIPCIÓN QUE
+ *   CONSTA EN LA CERTIFICACIÓN DE CARGAS…»), su tipo venía del texto rico de la
+ *   ficha que solo ve la ingesta, y la re-derivación lo degradó de `vivienda` a
+ *   `otro`. Los dos tests de abajo sujetan las dos mitades a la vez.
  */
 const FUENTE = readFileSync(fileURLToPath(new URL('./reextraer.ts', import.meta.url)), 'utf8')
 
@@ -33,9 +38,22 @@ test('tipo_bien se re-deriva (el nuevo valor manda sobre el guardado)', () => {
   // COALESCE(nuevo, viejo): el valor recién leído va PRIMERO.
   assert.match(
     linea!,
-    /COALESCE\(\$\{d\.tipoBien[^)]*\}, tipo_bien\)/,
+    /COALESCE\(NULLIF\(\$\{d\.tipoBien[^)]*\}[^)]*\), tipo_bien\)/,
     'tipo_bien debe re-derivarse del texto, no conservar la lectura del extractor viejo',
   )
+})
+
+test('«otro» no pisa: es un «no lo sé», no un tipo', () => {
+  const linea = lineaDe('tipo_bien')
+  assert.match(
+    linea!,
+    /NULLIF\([^)]*, 'otro'\)/,
+    "sin el NULLIF de 'otro', una descripción-marcador degrada el tipo que vino del texto rico de la ficha",
+  )
+  // Y el guardián del WHERE tiene que filtrar igual, o la fila se reescribiría
+  // cada pasada creyendo que 'otro' es un cambio.
+  const guardia = FUENTE.slice(FUENTE.indexOf('WHERE dedupe_key'))
+  assert.match(guardia, /NULLIF\(\$\{d\.tipoBien[^)]*\}::text, 'otro'\)/)
 })
 
 test('las columnas con otra fuente posible solo tapan huecos', () => {
