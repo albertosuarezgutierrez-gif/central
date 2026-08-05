@@ -14,6 +14,7 @@ import { acumulacionDistribucion, type VeredictoVolumen } from './volumen'
 import { anomaliasUniverso, camposEnvenenados } from './calidad-datos'
 import { correlacionMediaCesta, etiquetaConcentracion } from './concentracion'
 import { candidatosCantera, CANTERA_MAX_PROPUESTAS, type SnapshotTop } from './cantera'
+import { proximaFechaEarningsYahoo } from './earnings-yahoo'
 
 // RANKING SEMANAL del radar (Fase 1): lee la caché (cero llamadas a la SEC), rankea, confirma el
 // timing del top-20 con técnico ligero (SMA50+RSI sobre cierres), cruza gurús, evalúa el track
@@ -158,17 +159,24 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
   const simbolosDigest = [...new Set([...entries.slice(0, 10).map(e => e.simbolo), ...cohetes.map(c => c.simbolo)])]
   const eventos: Array<{ simbolo: string; fecha: string; etiquetas: string[] }> = []
   const insiders: Array<{ simbolo: string; compras: number; ventas: number; usdCompras: number }> = []
-  const resultadosProximos: Array<{ simbolo: string; fecha: string }> = []
+  const resultadosProximos: Array<{ simbolo: string; fecha: string; exacta?: boolean }> = []
+  const VENTANA_RESULTADOS = haceDias(-10)   // próximos 10 días (misma ventana que el estimador EDGAR)
   for (const s of simbolosDigest) {
+    // 📅 Fecha de resultados: Yahoo primero (exacta/prevista, ver earnings-yahoo.ts); EDGAR de respaldo.
+    const earningsYahoo = await proximaFechaEarningsYahoo(s, hoy)
+    if (earningsYahoo && earningsYahoo.fecha <= VENTANA_RESULTADOS)
+      resultadosProximos.push({ simbolo: s, fecha: earningsYahoo.fecha, exacta: earningsYahoo.confirmada })
     const cik = cikPor.get(s)
     if (!cik) continue
     const subs = await submissionsCik(cik).catch(() => null)
     if (!subs) continue
     for (const ev of extraerEventos8K(subs, haceDias(7)))
       eventos.push({ simbolo: s, fecha: ev.fecha, etiquetas: ev.etiquetas })
-    // 📅 Semana de resultados ESTIMADA por el patrón de 10-Q/10-K del año pasado (mismo JSON, sin fetch extra).
-    const informe = estimarProximoInforme(subs, hoy)
-    if (informe) resultadosProximos.push({ simbolo: s, fecha: informe })
+    // 📅 Respaldo EDGAR: semana ESTIMADA por el patrón de 10-Q/10-K del año pasado (mismo JSON, sin fetch extra).
+    if (!earningsYahoo) {
+      const informe = estimarProximoInforme(subs, hoy)
+      if (informe) resultadosProximos.push({ simbolo: s, fecha: informe })
+    }
     let compras = 0; let ventas = 0; let usdCompras = 0
     const cikCorto = cik.replace(/^0+/, '') || '0'
     for (const f of extraerFilingsForm4(subs, haceDias(7)).slice(0, 3)) {
@@ -242,7 +250,7 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
       `🛡️ Datos sospechosos NEUTRALIZADOS (no puntúan ese factor esta semana): ${anomalias.slice(0, 5).map(a => `<b>${a.simbolo}</b> ${a.campo} (${a.motivo})`).join(' · ')}${anomalias.length > 5 ? ` · +${anomalias.length - 5} más` : ''}`,
     ] : []),
     ...(resultadosProximos.length ? [
-      `📅 Resultados PRONTO (estimado por el patrón del año pasado): ${resultadosProximos.slice(0, 8).map(r => `<b>${r.simbolo}</b> ~${r.fecha.slice(5)}`).join(' · ')}`,
+      `📅 Resultados PRONTO (sin ~ = fecha confirmada; ~ = prevista/estimada): ${resultadosProximos.slice(0, 8).map(r => `<b>${r.simbolo}</b> ${r.exacta ? '' : '~'}${r.fecha.slice(5)}`).join(' · ')}`,
     ] : []),
     ...(eventos.length ? [
       `📰 Eventos 8-K (7 días, SEC — contexto, no filtran): ${eventos.slice(0, 8).map(e => `<b>${e.simbolo}</b> ${e.etiquetas.join(' + ')} (${e.fecha.slice(5)})`).join(' · ')}${eventos.length > 8 ? ` · +${eventos.length - 8} más` : ''}`,

@@ -24,6 +24,13 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📅 Fechas de earnings EXACTAS por Yahoo en trading (05/08/2026, 3ª tanda).** Nueva fuente
+  `lib/trading/earnings-yahoo.ts`: quoteSummary/calendarEvents con sesión cookie+crumb (keyless;
+  verificada desde cloud vía pg_net — STX 27/10 confirmada). La consumen la ficha «Analiza una acción»
+  (`proximoInformeFuente`: confirmada/prevista/estimada) y la línea 📅 del digest del radar (sin ~ =
+  confirmada). EDGAR (+365d) queda de RESPALDO. IBKR no expone earnings por MCP; FMP sin créditos.
+  Parser validado contra respuesta real (fixture en test). PRs #1272/#1273 mergeados antes en la sesión.
+
 - **🌱 Cantera capa C automática + alertas/altas de trading (05/08/2026, 2ª sesión).** El radar de los
   lunes propone ahora por Telegram (botones `wlc_alta`/`wlc_no`) los valores ≥2 lunes seguidos en su
   top-10 (`lib/trading/cantera.ts` puro+testeado, tabla `trading_cantera` aplicada; máx 3 propuestas,

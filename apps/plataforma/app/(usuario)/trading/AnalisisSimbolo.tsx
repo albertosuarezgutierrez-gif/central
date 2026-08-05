@@ -18,6 +18,7 @@ type Analisis = {
   eventos8K: Array<{ fecha: string; etiquetas: string[] }>
   insiders: { compras: number; ventas: number; usdCompras: number } | null
   proximoInforme: string | null
+  proximoInformeFuente: 'confirmada' | 'prevista' | 'estimada' | null
 }
 
 const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 16 }
@@ -112,7 +113,11 @@ export default function AnalisisSimbolo() {
           <div style={fila}><span style={etiq}>Fuerza en caídas</span><span>{a.fuerza ? <>{FUERZA[a.fuerza.veredicto]} <span style={{ color: 'var(--muted)', fontSize: 12 }}>({a.fuerza.diasCaida} días malos del SPY: acción {pct(a.fuerza.medianaAccion)} vs SPY {pct(a.fuerza.medianaBench)}, verde el {(a.fuerza.pctVerdes * 100).toFixed(0)}%)</span></> : '—'}</span></div>
           <div style={fila}><span style={etiq}>📰 8-K (30 días)</span><span>{a.eventos8K.length ? a.eventos8K.map(e => `${e.etiquetas.join(' + ')} (${e.fecha.slice(5)})`).join(' · ') : 'sin eventos materiales'}</span></div>
           <div style={fila}><span style={etiq}>🧑‍💼 Insiders (30 días)</span><span>{a.insiders ? `${a.insiders.compras} compra${a.insiders.compras !== 1 ? 's' : ''}${a.insiders.usdCompras > 0 ? ` ~${Math.round(a.insiders.usdCompras / 1000)} k$` : ''} / ${a.insiders.ventas} venta${a.insiders.ventas !== 1 ? 's' : ''}` : 'sin operaciones de mercado abierto'}</span></div>
-          <div style={fila}><span style={etiq}>📅 Resultados</span><span>{a.proximoInforme ? `pronto — ~${a.proximoInforme} (estimado por el patrón del año pasado)` : 'sin informe estimado en los próximos 10 días'}</span></div>
+          <div style={fila}><span style={etiq}>📅 Resultados</span><span>{a.proximoInforme
+            ? a.proximoInformeFuente === 'confirmada' ? `${a.proximoInforme} (fecha confirmada por la empresa)`
+              : a.proximoInformeFuente === 'prevista' ? `~${a.proximoInforme} (previsión de Yahoo, sin confirmar)`
+                : `~${a.proximoInforme} (estimado por el patrón del año pasado)`
+            : 'sin fecha próxima conocida'}</span></div>
           <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
             Todo determinista (SEC + precios públicos), mismas reglas que el radar: la selección elige el QUÉ, el técnico el CUÁNDO; volumen/fuerza/noticias = contexto. SOLO estudio — nada se opera.
           </div>
