@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-05T09:16:36Z",
-  "sha": "8fb31ab8e1d975f1699f07f2fcf91857f63469df",
+  "generadoEn": "2026-08-05T09:30:10Z",
+  "sha": "e8ed65801a6ff4e0280c0d4caf7ca45777ef5e4d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -66843,15 +66843,15 @@
           "exportada": true,
           "params": "max = 60",
           "retorno": "Promise<ResultadoReextraccion>",
-          "linea": 45,
-          "resumen": "Vuelve a extraer del texto los datos que falten en las subastas VIGENTES. La cola son las filas con algún hueco extraíble, no «las no procesadas»: no hay marca de versión de extractor porque no hace f"
+          "linea": 53,
+          "resumen": "Vuelve a extraer del texto los datos que falten en las subastas VIGENTES. La cola son TODAS las vigentes con descripción, no solo las que tienen un hueco: desde que `tipo_bien` se re-deriva, una fila "
         }
       ],
       "tablas": [
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "19316acc8461"
+      "hash": "e70fb8fcd7fa"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/rendimiento.ts",
