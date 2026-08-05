@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-05T06:35:01Z",
+  "generadoEn": "2026-08-05T07:23:40Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3969,6 +3969,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔌 Circuito de propuestas de órdenes IBKR probado END-TO-END (05/08/2026).",
+      "fecha": "05/08/2026"
+    },
+    {
       "titulo": "💶 Escalera de dinero real firmada en el pre-registro (05/08/2026).",
       "fecha": "05/08/2026"
     },
@@ -4022,10 +4026,6 @@
     },
     {
       "titulo": "⚖️ Auditoría de las 37 subastas vivas tras el fix de cargas: dos mentiras más (01/08/2026).",
-      "fecha": "01/08/2026"
-    },
-    {
-      "titulo": "⏰ Subasta vencida seguía en «🎯 Mi radar» (01/08/2026, rama `claude/expired-auction-visible-eoow4t`).",
       "fecha": "01/08/2026"
     }
   ],
