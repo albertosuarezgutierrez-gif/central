@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-05T16:30:40Z",
+  "generadoEn": "2026-08-05T18:03:02Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3774,6 +3774,7 @@
       "trading_paper_orden",
       "trading_paper_posicion",
       "trading_paper_track",
+      "trading_pasadas",
       "trading_propuestas",
       "trading_ranking",
       "trading_tesis",
@@ -3969,6 +3970,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📈 Trading: pasada idempotente + 🪜 semáforo de la escalera real (05/08/2026, PR #1271).",
+      "fecha": "05/08/2026"
+    },
+    {
       "titulo": "📱 El libro de `/banca` en móvil ya dice A QUÉ negocio va cada gasto deducible (05/08/2026).",
       "fecha": "05/08/2026"
     },
@@ -4023,10 +4028,6 @@
     {
       "titulo": "📊 Velas + volumen: medido, y la tesis del rebote en la media larga REFUTADA (04/08/2026).",
       "fecha": "04/08/2026"
-    },
-    {
-      "titulo": "🔎 Verificación en caliente del arreglo de los ADR + techo al nº de acciones (31/07/2026).",
-      "fecha": "31/07/2026"
     }
   ],
   "saludRepo": {

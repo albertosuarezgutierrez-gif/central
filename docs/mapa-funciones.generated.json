@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-05T16:30:40Z",
-  "sha": "681124b30d8dd4fa8f8a323692b0ba7301dd8f6d",
+  "generadoEn": "2026-08-05T18:03:02Z",
+  "sha": "322c38707ec6d49e11ab9b672da00985daaa2be6",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47826,7 +47826,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 14
+          "linea": 15
         },
         {
           "nombre": "pctN",
@@ -47834,7 +47834,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 17
+          "linea": 18
         },
         {
           "nombre": "pct0N",
@@ -47842,7 +47842,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 20
+          "linea": 21
         },
         {
           "nombre": "CurvaForward",
@@ -47850,7 +47850,7 @@
           "exportada": false,
           "params": "{ serie }: { serie: { m: number | null; b: number }[] }",
           "retorno": null,
-          "linea": 26,
+          "linea": 27,
           "resumen": "Mini-curva del forward (SVG puro, sin dependencias): línea de la cesta (MEDIANA) vs el SPY a lo largo de los snapshots persistidos. La mediana es la métrica de decisión (un outlier no la mueve)."
         },
         {
@@ -47859,7 +47859,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 43
+          "linea": 44
         },
         {
           "nombre": "safe",
@@ -47867,7 +47867,7 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: T",
           "retorno": "Promise<T>",
-          "linea": 46
+          "linea": 47
         },
         {
           "nombre": "TradingDashboard",
@@ -47875,12 +47875,12 @@
           "exportada": true,
           "params": "{ carteraCohetes }: { carteraCohetes: CarteraCohetesData | null }",
           "retorno": null,
-          "linea": 57
+          "linea": 58
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e9e3dc329233"
+      "hash": "90880ac4287a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -55731,10 +55731,12 @@
         }
       ],
       "tablas": [
-        "next"
+        "next",
+        "set",
+        "trading_pasadas"
       ],
       "rutaApi": "/api/trading/analizar",
-      "hash": "3fe2b3a58804"
+      "hash": "2fe3d761f00b"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/cartera-estudio/route.ts",
@@ -55955,7 +55957,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/trading/puntuar",
-      "hash": "a31d0497e3dc"
+      "hash": "c49cf3c05a91"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/saldo/route.ts",
@@ -68471,13 +68473,13 @@
           "exportada": true,
           "params": "cohorte?: string",
           "retorno": null,
-          "linea": 194,
+          "linea": 233,
           "resumen": "Lee la CURVA persistida de una cohorte (o de todas), de más antigua a más reciente. Best-effort."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5614e6f8ed95"
+      "hash": "3f28ba06523e"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-stooq.ts",
@@ -68718,6 +68720,54 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "907df8ada956"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/puerta-fase2.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "🪜 Escalera de dinero real — evaluación PURA y determinista de los requisitos FIRMADOS en docs/TRADING-HIPOTESIS-PREREGISTRO.md («💶 Plan de despliegue de capital REAL — escalera de tramos», firmada 2026-08-05). Este módulo NO inventa criterios: operacionaliza los firmados (la operacionalización exa",
+      "exporta": [
+        "emparejarOps",
+        "evaluarEscalera"
+      ],
+      "funciones": [
+        {
+          "nombre": "emparejarOps",
+          "kind": "function",
+          "exportada": true,
+          "params": "ordenes: OrdenPaper[]",
+          "retorno": "",
+          "linea": 47,
+          "resumen": "Empareja órdenes paper BUY→SELL por símbolo (la SELL cierra la última BUY previa sin consumir) y devuelve las operaciones CERRADAS con su retorno. Informativo (walk-forward del sistema de señales)."
+        },
+        {
+          "nombre": "pctTxt",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: number",
+          "retorno": "string",
+          "linea": 64
+        },
+        {
+          "nombre": "meses",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "dias: number",
+          "retorno": "string",
+          "linea": 65
+        },
+        {
+          "nombre": "evaluarEscalera",
+          "kind": "function",
+          "exportada": true,
+          "params": "cohortes: CohorteEscalera[]",
+          "retorno": "EstadoEscalera",
+          "linea": 69,
+          "resumen": "Evalúa la escalera. `cohortes` deben venir YA deduplicadas por cesta (dos versiones con los mismos valores son UNA prueba, no dos — misma regla que el dashboard y el digest)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "debb6899e0b3"
     },
     {
       "ruta": "apps/plataforma/lib/trading/radar.ts",
@@ -88672,7 +88722,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2384,
-    "funciones": 6393
+    "archivos": 2385,
+    "funciones": 6397
   }
 }
