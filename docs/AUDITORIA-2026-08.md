@@ -1,5 +1,60 @@
 # Auditoría diaria — agosto 2026
 
+# Actualización 2026-08-05 — auditoría diaria (ligera)
+
+Rango: 4 commits sustanciales desde la última auditoría (7b7afb4, 04/08/2026 22:10 UTC) —
+tres fixes de subastas ya reconciliados en memoria en el propio commit (#1249/#1250/#1251,
+cargas/fechas en letra) y un fix mecánico de ialimp (#1139, formato de dinero) mergeado por
+el orquestador Fase 2 sin sesión que lo anotara. Checks estructurales baratos (lockfile sin
+cambios de deps, radiografía ya fresca por el propio CI). Heartbeat de 14 huellas: **14/14 ✅**,
+sin crons mudos.
+
+## 🔴 `scripts/rotar-memoria.mjs` puede archivar entradas del mes ACTUAL bajo el mes equivocado
+Al intentar la rotación mensual de julio (3 entradas pendientes, incluida una duplicada — ver
+abajo) el `--dry-run`/run real habría archivado en `docs/memoria/2026-07.md` **11 entradas reales
+de hoy/ayer (03–04/08/2026)**: «🔐 Trial Tuya IoT Core renovado», «⚕️ Sonda NIM…», «⚕️ Verificación
+#1232…», «👁️ La rama de VISIÓN de las facturas…», «🔎 El barrido de mercado…», «🎸 Bienal de
+Flamenco 2026…», «🔎 SEO housesevillana…», «🔑 El redeploy del panel de secretos…», «⚕️
+Health-check 03/08…», «📨 Leads ia-rest…», «🧾 El fix de #1219…». **Revertido antes de escribir
+nada** (no se ejecutó el commit de esa rotación). Dos causas distintas, ambas en
+`ruta:scripts/rotar-memoria.mjs`:
+1. **`scripts/rotar-memoria.mjs:12,37,48`** — una "entrada" solo empieza con `- **`; las 11 de
+   arriba usan `### Título (fecha)` (otro formato, ya usado alguna vez antes — la auditoría del
+   01/08 dejó constancia de un caso suelto igual, `docs/AUDITORIA-2026-08.md` línea ~23 de
+   entonces). El parser las trata como continuación de la última `- **` de arriba y **heredan SU
+   fecha** en vez de la propia.
+2. **`scripts/rotar-memoria.mjs:65`** — la fecha se busca solo en `entrada[0]` (línea 1 de la
+   cabecera). Cuando el título en negrita es largo y la fecha envuelve a la línea 2 (caso real
+   hoy: `- **📡 Sonda ACTIVA de proveedores IA — «que no vuelva a pasar…»\n  (02/08/2026, …).**`),
+   el regex no la encuentra y hereda de arriba igual — esto NO depende de usar `###`, le puede
+   pasar a cualquier entrada `- **` bien formada con un título largo.
+**No se ha tocado el script** (cambio de código, gran radio para tocarlo sin pruebas exhaustivas
+contra la memoria real). Recomendación para Alberto: o bien (a) el script busca la fecha en las
+2-3 primeras líneas de la entrada y trata `### ` como boundary equivalente a `- **`, o (b) se
+declara `### ` no válido en `CONTEXTO-SESIONES.md` (actualizar la cabecera del archivo que dice
+"cada entrada, máx ~8 líneas" para prohibirlo explícitamente) y se reformatean a mano las 11
+entradas sueltas de agosto antes de que julio se cierre y alguien vuelva a lanzar la rotación.
+**Mientras no se arregle: no ejecutar `node scripts/rotar-memoria.mjs` a ciegas** — revisar
+siempre el `--dry-run` contra fechas reales antes de dejarlo escribir.
+
+## ✅ Reconciliación memoria — un hueco (carril 1, ya aplicado)
+PR #1139 (ialimp: precio de plan sin formato español) se mergeó vía el orquestador Fase 2 (coder
+barato) sin que ninguna sesión Claude lo anotara en `docs/CONTEXTO-SESIONES.md` — entrada añadida.
+De paso, un bloque duplicado palabra por palabra («Verificación en caliente del arreglo de los
+ADR», 31/07) que ya vivía en `docs/memoria/2026-07.md` desde la rotación del 04/08 seguía también
+en el vivo — borrado. `docs/FUENTES-DE-VERDAD.md`: `packages/module-subastas` no tenía fila pese a
+3 PRs en 24h — añadido a la fila de `plataforma-maestro`. Detalle en `docs/AUTO-APLICADOS.md`.
+
+## ✅ Heartbeat de crons (14 huellas) — 14/14 ✅
+Sin hallazgos, sin crons mudos.
+
+## ✅ Manuales de usuario — nada que tocar
+Los cambios del rango son correcciones internas (lectura de cargas/fechas en subastas, formato de
+un precio en ialimp), no features nuevas visibles. Ningún archivo de
+`apps/ia-rest/src/components/help/**` ni `apps/ia-rest/public/manual*.html` necesitaba tocarse.
+
+---
+
 # Actualización 2026-08-01 — auditoría diaria (ligera)
 
 Rango: 12 commits sustanciales desde la última auditoría (31/07/2026 02:07 UTC, pasada ligera)
