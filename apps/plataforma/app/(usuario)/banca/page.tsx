@@ -172,6 +172,7 @@ export default async function BancaPage({ searchParams }: {
             .banca-mov-concepto { flex: 1 1 100% !important; order: -1; }
             .banca-mov-concepto-txt { white-space: normal !important; overflow: visible !important; text-overflow: clip !important; }
             .banca-mov-select, .banca-mov-sug { display: none !important; }
+            .banca-mov-destino-chip { display: inline-block !important; }
             .banca-mov-fecha { width: auto !important; }
             .banca-mov-amt { margin-left: auto; }
           }

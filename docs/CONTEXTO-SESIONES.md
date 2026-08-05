@@ -24,6 +24,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📱 El libro de `/banca` en móvil ya dice A QUÉ negocio va cada gasto deducible (05/08/2026).**
+  Captura de Alberto: la fila apilada de móvil oculta el `<select>` de negocio, así que un ✅ deducible
+  no decía dónde estaba asignado. Chip `banca-mov-destino-chip` junto al ✅ con el `DESTINO_LABEL`
+  (🛡️ correduría / 🏖️ pisos / 🏠 Dúplex), visible solo ≤768px (en escritorio el select ya lo muestra).
+  `BancaClient.tsx` + media query de `banca/page.tsx`. `tsc` 0. PR de la rama `claude/deductible-expense-info-lmirph`.
+
 - **🏠 Una casa dejaba de ser casa por su plaza de aparcamiento — y el paso 1 no tiene candidatas (05/08/2026).**
   Mergeado #1264 y lanzada la re-extracción en prod: 2 subastas ganan superficie (77,19 y 140,06 m², exactamente
   las previstas) y el margen sube de 4 a **7 de 40** vivas. El cuello de botella se movió a `precio_m2_mercado`
