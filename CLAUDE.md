@@ -121,6 +121,19 @@ publica**; ante varias unidades/monedas, elige UNA explícitamente y propágala;
 **contra un documento real de la fuente**, no solo contra fixtures — los fixtures se escriben con la
 misma suposición equivocada que el código y por eso los tests pasaban.
 
+**Tercer hermano: el «no lo sé» DISFRAZADO DE VALOR.** `NULL` al menos se ve; un valor centinela
+—`'otro'`, `'desconocido'`, `'N/A'`, `'sin clasificar'`— es un «no lo he sabido leer» vestido de dato,
+y por eso **se cuela por todas las guardas basadas en NULL** (`COALESCE`, `IS NULL`, `??`). Caso
+fundacional (05/08/2026, PRs #1266→#1268): al re-derivar `subastas.tipo_bien` de la descripción, las
+fichas cuyo texto persistido es un marcador («DESCRIPCIÓN QUE CONSTA EN LA CERTIFICACIÓN DE CARGAS…»)
+devolvían `'otro'`, y ese `'otro'` **pisó** el `'vivienda'` que venía de una fuente mejor. El
+`COALESCE(nuevo, viejo)` no protegía nada porque el nuevo no era NULL: era basura con forma de dato.
+Qué hacer: cuando un extractor tenga un valor de «cajón», **anúlalo explícitamente antes de escribir**
+(`COALESCE(NULLIF(nuevo,'otro'), viejo)`) y trátalo como NULL en toda guarda. Y la lección de método
+que lo destapó: antes de decidir que una columna **se puede re-derivar**, no basta con buscar *quién la
+escribe* — hay que mirar **de dónde sale el valor en cada escritura**; aquí la fuente rica vivía en un
+campo intermedio (`s.datos` de la ingesta) que aguas abajo ya no existía.
+
 Al añadir una columna de enriquecimiento nueva, esto es parte del PR, no un apaño posterior. Si un
 cambio toca una pantalla que ya viola la regla, corrígela en el mismo PR.
 
