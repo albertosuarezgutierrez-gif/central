@@ -34,7 +34,7 @@
   el «…plaza de aparcamiento en superficie» del final de su descripción — y `evaluarFlip` descarta lo que no es
   vivienda, o sea que la casa quedaba fuera de la lente de rentabilidad por un elemento accesorio. Ahora manda
   **quién aparece antes** en el texto (la descripción registral nombra el bien primero y deja linderos y anejos
-  al final) y la lista solo desempata; «plaza de garaje en edificio» sigue saliendo garaje. Tests 417/859. PR #1266.
+  al final) y la lista solo desempata; «plaza de garaje en edificio» sigue saliendo garaje. Tests 417/859. PR #1265.
 
 - **📐 Sin superficie no hay rentabilidad: 12 de 17 subastas vivas sin margen calculable (05/08/2026).**
   Alberto propuso el embudo «primero las muy rentables, luego el escrito al juzgado» y el paso 1 no se podía
