@@ -34,7 +34,10 @@
   re-derivando (Alcalá del Río mantiene su `vivienda`) pero un «no lo he sabido leer» nunca pisa un dato sabido.
   Dato de prod restaurado a mano. Lección: al re-derivar una columna, comprobar **todas** las escrituras, no solo
   las que mencionan la columna — la fuente rica puede estar en un campo intermedio que ya no existe aguas abajo.
-  Tests 863 (2 guardianes sujetan las dos mitades). PR #1268.
+  Tests 863 (2 guardianes sujetan las dos mitades). PR #1268. **Verificado en prod:** dos pasadas seguidas de
+  `reextraer` → 0 escrituras; Alcalá del Río y Punta Umbría en `vivienda`, Jerez sigue `garaje` (ahí el garaje SÍ
+  es el bien). Regla generalizada al CLAUDE.md raíz («tercer hermano»: el «no lo sé» disfrazado de valor centinela
+  se cuela por toda guarda basada en NULL) y landmine en la skill `plataforma-maestro`.
 
 - **🔁 El arreglo del parser no llegaba a la BD: `tipo_bien` se re-deriva (05/08/2026).** Verificando #1265 en
   producción: el margen ya salía bien (la lente flip recalcula el tipo en vivo desde el texto), pero la COLUMNA
