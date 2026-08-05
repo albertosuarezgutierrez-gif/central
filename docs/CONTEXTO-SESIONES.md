@@ -24,6 +24,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 📎 El agente leía el LOGO del correo, no la factura (05/08/2026)
+#1243 funcionó (sinLeer 9→**0**, descartados 2→**11**, visión ya en `ai_usos`: 16 llamadas
+`gpt-5.6-luna`, 0 errores, 0,0056€ el día). Pero la factura de DIGI (76€) seguía sin entrar, y
+Alberto avisó de que **sí adjunta el PDF**. Cierto: el correo trae **12 adjuntos** — 11 imágenes
+`cid:` del HTML (`header.png`, `logo-Mi-DIGI.png`, iconos de redes…) y el PDF **el último**; y
+`pagos.ts` cogía `adjuntos[0]`, o sea un banner publicitario. Como el banner se lee perfectamente,
+el correo salía «descartado: leído, no era factura» — una comprobación que nunca se hizo. Fix:
+módulo PURO `lib/agente-facturas/elegir-adjuntos.ts` (7 tests, con el caso real de DIGI) que ordena
+adjunto-real > PDF > nombre-de-factura > decorativo, `mailparser.related` marca los `inline`, y el
+escaneo prueba hasta 3 adjuntos parando en el primero con importe. Además `quitarEtiqueta()` VACÍA
+`Facturas/Extraccion-fallida` de lo ya resuelto: la cola solo crecía y acabó afirmando «fallida» de
+correos ya leídos. tsc 0 · 812 tests · guardia 26/26 · build OK. PR #1246.
+
 ### 👁️ La rama de VISIÓN de las facturas también pasa por la pasarela (04/08/2026)
 Verificada la pasada de hoy tras #1234: la mitad de TEXTO funciona (12 llamadas, **0 errores**,
 0,0076€, `gemini-2.5-flash`) y las facturas nuevas suben **1 → 5**. Pero quedaron **9 sin leer** sin
