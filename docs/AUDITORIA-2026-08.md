@@ -9,33 +9,34 @@ el orquestador Fase 2 sin sesión que lo anotara. Checks estructurales baratos (
 cambios de deps, radiografía ya fresca por el propio CI). Heartbeat de 14 huellas: **14/14 ✅**,
 sin crons mudos.
 
-## 🔴 `scripts/rotar-memoria.mjs` puede archivar entradas del mes ACTUAL bajo el mes equivocado
+## 🔴→✅ `scripts/rotar-memoria.mjs` archivaba entradas del mes ACTUAL bajo el mes equivocado — arreglado
 Al intentar la rotación mensual de julio (3 entradas pendientes, incluida una duplicada — ver
 abajo) el `--dry-run`/run real habría archivado en `docs/memoria/2026-07.md` **11 entradas reales
 de hoy/ayer (03–04/08/2026)**: «🔐 Trial Tuya IoT Core renovado», «⚕️ Sonda NIM…», «⚕️ Verificación
 #1232…», «👁️ La rama de VISIÓN de las facturas…», «🔎 El barrido de mercado…», «🎸 Bienal de
 Flamenco 2026…», «🔎 SEO housesevillana…», «🔑 El redeploy del panel de secretos…», «⚕️
 Health-check 03/08…», «📨 Leads ia-rest…», «🧾 El fix de #1219…». **Revertido antes de escribir
-nada** (no se ejecutó el commit de esa rotación). Dos causas distintas, ambas en
-`ruta:scripts/rotar-memoria.mjs`:
-1. **`scripts/rotar-memoria.mjs:12,37,48`** — una "entrada" solo empieza con `- **`; las 11 de
-   arriba usan `### Título (fecha)` (otro formato, ya usado alguna vez antes — la auditoría del
-   01/08 dejó constancia de un caso suelto igual, `docs/AUDITORIA-2026-08.md` línea ~23 de
-   entonces). El parser las trata como continuación de la última `- **` de arriba y **heredan SU
+nada** (no se ejecutó el commit de esa rotación mala). Dos causas distintas, ambas en
+`scripts/rotar-memoria.mjs`:
+1. Una "entrada" solo empezaba con `- **`; las 11 de arriba usan `### Título (fecha)` (otro
+   formato, ya usado alguna vez antes — la auditoría del 01/08 dejó constancia de un caso suelto
+   igual). El parser las trataba como continuación de la última `- **` de arriba y **heredaban SU
    fecha** en vez de la propia.
-2. **`scripts/rotar-memoria.mjs:65`** — la fecha se busca solo en `entrada[0]` (línea 1 de la
-   cabecera). Cuando el título en negrita es largo y la fecha envuelve a la línea 2 (caso real
-   hoy: `- **📡 Sonda ACTIVA de proveedores IA — «que no vuelva a pasar…»\n  (02/08/2026, …).**`),
-   el regex no la encuentra y hereda de arriba igual — esto NO depende de usar `###`, le puede
-   pasar a cualquier entrada `- **` bien formada con un título largo.
-**No se ha tocado el script** (cambio de código, gran radio para tocarlo sin pruebas exhaustivas
-contra la memoria real). Recomendación para Alberto: o bien (a) el script busca la fecha en las
-2-3 primeras líneas de la entrada y trata `### ` como boundary equivalente a `- **`, o (b) se
-declara `### ` no válido en `CONTEXTO-SESIONES.md` (actualizar la cabecera del archivo que dice
-"cada entrada, máx ~8 líneas" para prohibirlo explícitamente) y se reformatean a mano las 11
-entradas sueltas de agosto antes de que julio se cierre y alguien vuelva a lanzar la rotación.
-**Mientras no se arregle: no ejecutar `node scripts/rotar-memoria.mjs` a ciegas** — revisar
-siempre el `--dry-run` contra fechas reales antes de dejarlo escribir.
+2. La fecha se buscaba solo en `entrada[0]` (línea 1 de la cabecera). Cuando el título en negrita
+   es largo y la fecha envuelve a la línea 2 (caso real de hoy: `- **📡 Sonda ACTIVA de
+   proveedores IA — «que no vuelva a pasar…»\n  (02/08/2026, …).**`), el regex no la encontraba y
+   heredaba de arriba igual — esto no dependía de usar `###`, le podía pasar a cualquier entrada
+   `- **` bien formada con un título largo.
+
+**Arreglado (a petición de Alberto).** `esInicioEntrada()` ahora reconoce `- **` y `### ` como
+límite de entrada equivalentes; `textoFechaDe()` busca la fecha en la negrita COMPLETA (hasta el
+`**` de cierre, spanee la línea que spanee) para `- **`, y en la línea 1 para `### ` (no llevan
+negrita). Verificado contra la memoria real: `--dry-run` antes del fix → 26 entradas, 11 mal
+clasificadas; después del fix → **50 entradas, clasificación correcta** (las 24 `### ` de agosto
+se quedan vivas, solo la 1 entrada real de julio pendiente se archiva). Ejecutada la rotación real:
+`docs/memoria/2026-07.md` recibe esa entrada y una segunda pasada de `--dry-run` da **0 a
+archivar** (idempotente). Sin tests automatizados nuevos — `scripts/*.mjs` no tiene arnés de test
+en este repo; la verificación es contra el corpus real, que es el caso que rompía el bug.
 
 ## ✅ Reconciliación memoria — un hueco (carril 1, ya aplicado)
 PR #1139 (ialimp: precio de plan sin formato español) se mergeó vía el orquestador Fase 2 (coder

@@ -70,18 +70,6 @@
   +2 pp de mediana). Caveat firmado: stops suelen ayudar al momentum y matar la reversión — si H8 se
   cablea, su salida se evalúa aparte. PR #1248.
 
-- **🧾 Agente de facturas: ahora mira A NOMBRE DE QUIÉN viene la factura (31/07/2026).**
-  - Disparador: la bandeja pidió revisar una obra de 2.420,59€ de LUANSA que era del tejado de la
-    **Hacienda El Triunfo** (factura a «El Triunfo CB», CIF E26631895) — ajena a Alberto. Entró porque el
-    abogado la mandó a MAPFRE como prueba y el hilo se le reenvió. Descartada de `gastos` a mano.
-  - `receptor.ts` (puro + 10 tests): tres estados `nuestro`/`ajeno`/`desconocido`. Solo descarta con
-    NIF identificado que NO casa con los titulares; el nombre solo confirma, nunca descarta. Titulares =
-    `sociedades` + env `FACTURAS_TITULARES_NIF`. Decisión de Alberto: **ignorar + avisar** por Telegram.
-  - Bug arreglado de paso: en IONOS el extractor guardaba el NIF de Alberto como CIF del proveedor →
-    envenenaba la huella (ningún proveedor aprendía regla). El prompt ya pide emisor y receptor por separado.
-  - Fila nueva en `sociedades`: PUNTO Y COMA GESTION, S.L. (B90446683) — sin ella DIGI salía «ajena».
-  - **Pendiente:** PDF escaneado sin capa de texto se descarta (`extraer.ts` no cae a visión); 24 adjuntos
-    ilegibles en la pasada del 31/07. Y no hay destino para gastos de la correduría en `negocios`.
 - **🧾 facturas-correo (01/08/2026, trigger diario).** Vía B sana, sin backlog. Archivada la factura
   de la lavandería Giraldillo AFV-11808 (72,60€, deducible); pago aún pendiente, sin conciliar. **Hallazgo
   colateral:** el cron `facturas-scan` (`apps/plataforma/lib/agente-facturas/drive.ts`) archiva TODO lo que
@@ -571,6 +559,7 @@ copiar. Luxury sigue congelado hasta el 01/09 (decisión de Alberto).
   solo reconoce entradas que empiezan por `- **`; una entrada con formato `### ` no se archivó sola y hubo
   que moverla a mano — si vuelve a pasar, vale la pena normalizar el formato de cabecera o enseñarle al
   script el patrón `### `.
+
 - **📊 Facturas Booking.com julio 2026 verificadas vs banco (03/08/2026).** Llegaron 3 facturas (noreply@booking.com);
   guardadas en Drive por correo-triaje. Cuadre: Socorro (4340072) 634,69€ ✅ · Bustos Tavera (4771238) 450,79€ ✅ ·
   Dúplex (2888928) 587,23€ esperado — pago bancario aún no llegó (vence 16 ago). Socorro 24 (ID Booking 2039943)
@@ -579,4 +568,3 @@ copiar. Luxury sigue congelado hasta el 01/09 (decisión de Alberto).
   lee PDF via contentSnippet, notifica resumen). Casos abiertos SIN respuesta: Bernardi -466,70€ (5603355846,
   House Sevillana) y Valantin -84,61€ (5712457476, Busto Reform). IDs Booking.com: 2888928=Dúplex ·
   4340072=Socorro · 4771238=Bustos Tavera · 2039943=Socorro 24. Skill sivra-maestro actualizada con este mapeo.
-
