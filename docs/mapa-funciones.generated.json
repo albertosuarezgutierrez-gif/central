@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-05T18:03:02Z",
-  "sha": "322c38707ec6d49e11ab9b672da00985daaa2be6",
+  "generadoEn": "2026-08-05T20:48:42Z",
+  "sha": "1a651e4bfc75340d44aa2d12ddd815dca5659021",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54315,7 +54315,7 @@
           "exportada": false,
           "params": "bookingId: string, pend: Pendiente",
           "retorno": "Promise<ContextoRedaccion>",
-          "linea": 28
+          "linea": 29
         },
         {
           "nombre": "getPendiente",
@@ -54323,7 +54323,7 @@
           "exportada": false,
           "params": "bookingId: string",
           "retorno": "Promise<Pendiente | null>",
-          "linea": 55
+          "linea": 56
         },
         {
           "nombre": "POST",
@@ -54331,7 +54331,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 60
+          "linea": 61
         }
       ],
       "tablas": [
@@ -54351,10 +54351,12 @@
         "subastas_descartes",
         "subastas_radar",
         "subastas_seguidas",
-        "trading_propuestas"
+        "trading_cantera",
+        "trading_propuestas",
+        "trading_watchlist"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "b00a4935b822"
+      "hash": "276715ee64a9"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -67679,6 +67681,38 @@
       "hash": "1d781cbf552a"
     },
     {
+      "ruta": "apps/plataforma/lib/trading/cantera.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "🌱 Cantera (capa C) — puente radar → watchlist. El radar semanal detecta los valores SOSTENIDOS en su top-10 y los PROPONE por Telegram con botones ✅/❌; solo el ✅ de Alberto da el alta en `trading_watchlist` (capa C). Es DESCUBRIMIENTO, no cambio del modelo: no toca ranking, pesos ni cestas, así que",
+      "exporta": [
+        "candidatosCantera",
+        "simboloValido"
+      ],
+      "funciones": [
+        {
+          "nombre": "candidatosCantera",
+          "kind": "function",
+          "exportada": true,
+          "params": "snapshots: SnapshotTop[], enWatchlist: Set<string>, yaPropuestos: Set<string>, semanasMin: number = CANTERA_SEMANAS_MIN,",
+          "retorno": "CandidatoCantera[]",
+          "linea": 20,
+          "resumen": "Candidatos a capa C: símbolos presentes en el top de los ÚLTIMOS `semanasMin` snapshots consecutivos (incluido el más reciente), que no estén ya en la watchlist ni tengan propuesta previa (pendiente o"
+        },
+        {
+          "nombre": "simboloValido",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "boolean",
+          "linea": 39,
+          "resumen": "Guarda del callback de Telegram: un símbolo de ticker plausible, nada más."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b2f3cee8a7d6"
+    },
+    {
       "ruta": "apps/plataforma/lib/trading/cartera-cohetes-io.ts",
       "ambito": "apps/plataforma",
       "resumen": "IO de la CARTERA COHETES (paper, rotatoria). Lee los cohetes confirmados del último trading_ranking, rebalancea semanalmente y valora a diario contra el SPY con precios gratis (Stooq→Yahoo). La valoración pura vive en @central/module-trading::carteraCohetes. SOLO estudio — cero órdenes reales.",
@@ -68782,7 +68816,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 21
+          "linea": 22
         },
         {
           "nombre": "haceDias",
@@ -68790,7 +68824,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 22
+          "linea": 23
         },
         {
           "nombre": "pct",
@@ -68798,7 +68832,7 @@
           "exportada": false,
           "params": "x: number | null | undefined",
           "retorno": null,
-          "linea": 23
+          "linea": 24
         },
         {
           "nombre": "mediana",
@@ -68806,7 +68840,7 @@
           "exportada": false,
           "params": "xs: number[]",
           "retorno": "number | null",
-          "linea": 24
+          "linea": 25
         },
         {
           "nombre": "generarRadarSemanal",
@@ -68814,12 +68848,12 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 55
+          "linea": 56
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c012425a91be"
+      "hash": "45245797d05c"
     },
     {
       "ruta": "apps/plataforma/lib/trading/salidas.ts",
@@ -88722,7 +88756,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2385,
-    "funciones": 6397
+    "archivos": 2386,
+    "funciones": 6399
   }
 }

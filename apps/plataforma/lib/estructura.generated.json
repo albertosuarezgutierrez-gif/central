@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-05T20:36:05Z",
+  "generadoEn": "2026-08-05T20:48:42Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3768,6 +3768,7 @@
       "tickets_lineas",
       "trading_acceso_token",
       "trading_backtest",
+      "trading_cantera",
       "trading_cohetes_rebalanceo",
       "trading_cohetes_track",
       "trading_estrategia_stats",
@@ -3970,6 +3971,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🌱 Cantera capa C automática + alertas/altas de trading (05/08/2026, 2ª sesión).",
+      "fecha": "05/08/2026"
+    },
+    {
       "titulo": "📈 STX (Seagate) alta en `trading_watchlist` capa C (05/08/2026, sin commit — cambio solo en BD).",
       "fecha": "05/08/2026"
     },
@@ -4024,10 +4029,6 @@
     {
       "titulo": "🧾 facturas-correo (01/08/2026, trigger diario).",
       "fecha": "01/08/2026"
-    },
-    {
-      "titulo": "🧹 Laboratorio de inversión: quitado el ruido + el retrovisor llevaba 16 días muerto (04/08/2026).",
-      "fecha": "04/08/2026"
     }
   ],
   "saludRepo": {
