@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-05T21:09:07Z",
-  "sha": "de63d731825ff9403f070a2da449dccf7ce36138",
+  "generadoEn": "2026-08-05T21:28:43Z",
+  "sha": "9c49bf13c7026b8f36de83b17522999e04eab62a",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -55738,7 +55738,7 @@
         "trading_pasadas"
       ],
       "rutaApi": "/api/trading/analizar",
-      "hash": "80b98f7ecb72"
+      "hash": "1c575f7a4623"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/cartera-estudio/route.ts",
@@ -68014,10 +68014,12 @@
     {
       "ruta": "apps/plataforma/lib/trading/earnings-yahoo.ts",
       "ambito": "apps/plataforma",
-      "resumen": "📅 Fecha del próximo informe de resultados por Yahoo Finance (quoteSummary/calendarEvents). Da la fecha EXACTA anunciada por la empresa (isEarningsDateEstimate=false) o la prevista por Yahoo — mejor que el estimador EDGAR (+365d del filing del año pasado), que queda de RESPALDO. Yahoo exige desde 20",
+      "resumen": "📅💼 Fecha del próximo informe Y fundamentales de mercado por Yahoo Finance (quoteSummary). Sustituye a FMP (sin créditos desde hace meses — sus llamadas fallaban SIEMPRE y la estrategia «valor» y la barrera de earnings del torneo degradaban en silencio). Da la fecha EXACTA anunciada por la empresa ",
       "exporta": [
         "parseCalendarEvents",
         "lineaEarningsProximos",
+        "parseQuoteSummary",
+        "datosYahoo",
         "proximaFechaEarningsYahoo"
       ],
       "funciones": [
@@ -68027,7 +68029,7 @@
           "exportada": true,
           "params": "json: unknown, hoy: string",
           "retorno": "FechaEarnings | null",
-          "linea": 15,
+          "linea": 22,
           "resumen": "Parse puro de quoteSummary/calendarEvents. `earningsDate` trae 1 entrada (fecha concreta) o 2 (rango estimado — se toma la primera). Una fecha ya pasada no es \"próximo informe\" → null."
         },
         {
@@ -68036,8 +68038,17 @@
           "exportada": true,
           "params": "fechas: Array<{ simbolo: string; earnings: FechaEarnings | null }>, hoy: string, diasMax = 2,",
           "retorno": "string | null",
-          "linea": 30,
+          "linea": 37,
           "resumen": "Línea 📅 del aviso nocturno: valores con resultados en ≤`diasMax` días. null = sin nada que avisar. El digest del radar es semanal (lunes) y los earnings caen entre semana — este aviso los caza a diar"
+        },
+        {
+          "nombre": "parseQuoteSummary",
+          "kind": "function",
+          "exportada": true,
+          "params": "json: unknown, hoy: string",
+          "retorno": "DatosYahoo | null",
+          "linea": 55,
+          "resumen": "Parse puro del quoteSummary completo: calendario + fundamentales de summaryDetail / financialData / defaultKeyStatistics. Cada campo {raw,fmt} se lee por `raw`."
         },
         {
           "nombre": "sesionYahoo",
@@ -68045,7 +68056,16 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<",
-          "linea": 48
+          "linea": 77
+        },
+        {
+          "nombre": "datosYahoo",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string, hoy: string",
+          "retorno": "Promise<DatosYahoo | null>",
+          "linea": 96,
+          "resumen": "Calendario + fundamentales de un ticker de EEUU en UNA llamada (o null si Yahoo falla)."
         },
         {
           "nombre": "proximaFechaEarningsYahoo",
@@ -68053,13 +68073,13 @@
           "exportada": true,
           "params": "simbolo: string, hoy: string",
           "retorno": "Promise<FechaEarnings | null>",
-          "linea": 67,
+          "linea": 115,
           "resumen": "Próxima fecha de resultados de un ticker de EEUU (o null si Yahoo no la da / falla)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "412a20c61a9c"
+      "hash": "d39ffbdb1735"
     },
     {
       "ruta": "apps/plataforma/lib/trading/edgar.ts",
@@ -88817,6 +88837,6 @@
   ],
   "resumen": {
     "archivos": 2387,
-    "funciones": 6404
+    "funciones": 6406
   }
 }
