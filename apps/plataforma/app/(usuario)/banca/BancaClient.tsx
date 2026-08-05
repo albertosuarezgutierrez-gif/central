@@ -785,6 +785,15 @@ export function MovimientosTabla({ cuentas, destinoLabel, initial, periodo }: {
                 <span style={{ color: ded.color }}>{ded.icon}{ded.kind === 'gasto' && ded.deducible && m.amortizable ? <sup style={{ fontSize: '9px' }}>A</sup> : null}</span>
               )}
             </div>
+            {/* En móvil el select de negocio va oculto (la fila apilada lo esconde), así que un gasto
+                deducible no decía A QUÉ negocio está asignado. Este chip lo dice; solo visible ≤768px
+                (en escritorio el select ya lo muestra y sería un duplicado). */}
+            {ded.kind === 'gasto' && ded.deducible && m.destino && (
+              <span className="banca-mov-destino-chip" title="Negocio al que está asignado este gasto deducible"
+                style={{ display: 'none', fontSize: '11px', fontWeight: 600, color: 'var(--positive)', flexShrink: 1, minWidth: 0, maxWidth: '45vw', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {destinoLabel[m.destino] || m.destino}
+              </span>
+            )}
             <div style={{ fontSize: '13px', flexShrink: 0, width: '18px', textAlign: 'center' }} title={m.conciliado ? 'Conciliado con factura' : 'Sin conciliar'}>
               {m.conciliado ? '🔗' : ''}
             </div>
