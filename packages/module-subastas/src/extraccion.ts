@@ -55,7 +55,21 @@ export interface DatosDescripcion {
   cuotaParticipacion: number | null
 }
 
-// El orden importa: «plaza de garaje en edificio» es garaje, no edificio.
+// Manda QUIÉN APARECE ANTES en el texto, y el orden de esta lista solo desempata.
+//
+// La descripción registral nombra el bien en la primera frase y deja para el
+// final lo accesorio y los linderos, así que la posición es la señal fiable de
+// qué se subasta. Con el orden fijo que había, una regla de más arriba ganaba
+// aunque su palabra estuviera al final: la unifamiliar de Alcalá del Río
+// (SUB-JA-2026-264398) salía «garaje» porque su descripción termina diciendo
+// «…donde se ubica una plaza de aparcamiento en superficie». Y eso no era
+// cosmético — `evaluarFlip` descarta lo que no es vivienda, así que la casa
+// quedaba fuera de la lente de rentabilidad por su plaza de aparcamiento.
+// Misma familia que el resto de reglas de la casa: la etiqueta de un elemento
+// accesorio no puede decidir qué es el bien.
+//
+// El caso que motivó el orden antiguo sigue saliendo bien por posición:
+// «plaza de garaje en edificio» cita el garaje primero.
 const REGLAS_TIPO: Array<[RegExp, TipoBien]> = [
   [/\bgaraje|aparcamiento|plaza de estacionamiento/, 'garaje'],
   [/\btrastero/, 'trastero'],
@@ -72,8 +86,16 @@ const REGLAS_TIPO: Array<[RegExp, TipoBien]> = [
 export function tipoBien(texto: string | null | undefined): TipoBien {
   const t = norm(texto ?? '')
   if (!t) return 'otro'
-  for (const [re, tipo] of REGLAS_TIPO) if (re.test(t)) return tipo
-  return 'otro'
+
+  let mejor: { pos: number; tipo: TipoBien } | null = null
+  for (const [re, tipo] of REGLAS_TIPO) {
+    const m = re.exec(t)
+    if (!m) continue
+    // Estrictamente menor: a igualdad de posición gana la regla de más arriba,
+    // que es el desempate que ya había.
+    if (mejor == null || m.index < mejor.pos) mejor = { pos: m.index, tipo }
+  }
+  return mejor?.tipo ?? 'otro'
 }
 
 /**
