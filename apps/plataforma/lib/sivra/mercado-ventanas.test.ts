@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { ventanasDelBarrido, picosDeEvento, findeDelMes } from './mercado-ventanas.ts'
+import { ventanasDelBarrido, picosDeEvento, findeDelMes, consultasDeVentana, mesEnTexto } from './mercado-ventanas.ts'
 
 const HOY = '2026-08-01' // sábado
 
@@ -174,4 +174,27 @@ test('una muestra que cae en dia de evento se corre una semana', () => {
   assert.ok(base.includes('2026-09-19'), 'la muestra del segundo sabado se corre al siguiente')
   // Y el evento SI se barre, por su propia ventana.
   assert.deepEqual(v.filter(x => x.motivo === 'evento').map(x => x.checkin), ['2026-09-12'])
+})
+
+// ─── consultas de cada ventana: abierta → mes en texto (solo base) → site: ─────────────────
+
+test('ventana de BASE: abierta primero, mes en texto de refuerzo, site: al final', () => {
+  const c = consultasDeVentana('2026-11-13', '2026-11-15', 4, 'mes')
+  assert.deepEqual(c.map(x => x.via), ['abierta', 'mes', 'booking'])
+  assert.ok(c[0].q.includes('2026-11-13'), 'la abierta lleva la fecha exacta')
+  assert.ok(c[1].q.includes('noviembre 2026'), 'el refuerzo pregunta por el mes en texto')
+  assert.ok(!c[1].q.includes('2026-11-13'), 'sin el token de fecha que dejó ciega la ventana')
+  assert.ok(c[2].q.includes('site:booking.com'))
+})
+
+test('ventana de EVENTO: sin refuerzo por mes — el comp de un evento es de SU fecha', () => {
+  // La mediana del mes diluiría el premio de la Feria: para un evento, mejor ciega que mentirosa.
+  const c = consultasDeVentana('2027-04-16', '2027-04-18', 12, 'evento')
+  assert.deepEqual(c.map(x => x.via), ['abierta', 'booking'])
+})
+
+test('mesEnTexto habla español y respeta el año', () => {
+  assert.equal(mesEnTexto('2026-11-06'), 'noviembre 2026')
+  assert.equal(mesEnTexto('2027-01-08'), 'enero 2027')
+  assert.equal(mesEnTexto('2027-12-31'), 'diciembre 2027')
 })

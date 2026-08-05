@@ -20,15 +20,16 @@
 import { nimChat, groqChat, moonshotChat, openrouterChat, geminiChat } from '@central/core-ai'
 import type { NimChatMessage } from '@central/core-ai'
 import { registrarUso } from '@/lib/ai-gateway'
+import { esErrorDeTimeout } from './sonda-veredicto'
 
 // 30 s = el MISMO timeout que el tráfico real (`aiComplete` usa timeoutMs 30_000). Una sonda más
 // estricta que producción denuncia averías que producción no sufre: el 03/08 el ping a NIM abortó
 // a los 12 s mientras el tráfico real del día anterior completaba en ~26 s de media (tier gratis
 // con cola) — falso positivo en la primera pasada de la sonda.
-const TIMEOUT_MS = Number(process.env.SONDA_IA_TIMEOUT_MS ?? 30_000)
+export const TIMEOUT_MS = Number(process.env.SONDA_IA_TIMEOUT_MS ?? 30_000)
 const PING: NimChatMessage[] = [{ role: 'user', content: 'ping' }]
 
-export type SondaIA = { proveedor: string; modelo: string; ok: boolean; ms: number; error?: string }
+export type SondaIA = { proveedor: string; modelo: string; ok: boolean; ms: number; error?: string; reintentos?: number }
 
 type Sonda = { proveedor: string; modelo: string; llamar: (signal: AbortSignal) => Promise<string> }
 
@@ -80,25 +81,40 @@ function sondasConfiguradas(): Sonda[] {
   return lista
 }
 
+async function intentarPing(s: Sonda): Promise<{ ok: boolean; ms: number; error?: string }> {
+  const t0 = Date.now()
+  try {
+    await s.llamar(AbortSignal.timeout(TIMEOUT_MS))
+    const ms = Date.now() - t0
+    await registrarUso({ app: 'plataforma', endpoint: 'sonda', proveedor: s.proveedor, modelo: s.modelo, ok: true, ms, tokens: 10, costeEur: 0 }).catch(() => {})
+    return { ok: true, ms }
+  } catch (e) {
+    const ms = Date.now() - t0
+    // 300 chars: los 429 de cuota traen el detalle de QUÉ cuota se agotó al final del body
+    // (lección del corte anterior: con 150 chars el mensaje se quedaba en «check your plan»).
+    const error = (e instanceof Error ? `${e.name}: ${e.message}` : String(e)).slice(0, 300)
+    await registrarUso({ app: 'plataforma', endpoint: 'sonda', proveedor: s.proveedor, modelo: s.modelo, ok: false, ms, error }).catch(() => {})
+    return { ok: false, ms, error }
+  }
+}
+
 /**
  * Sondea todos los proveedores configurados en paralelo. NUNCA lanza: cada resultado lleva su
  * ok/error y el registro en `ai_usos` es best-effort (un fallo del registro no tumba la sonda).
+ *
+ * Un TIMEOUT se reintenta UNA vez (04/08/2026): el tráfico real de NIM completa con p50 ~25 s
+ * contra el timeout de 30 s (tier gratis con cola), así que un ping suelto tiene ~1 de cada 4
+ * de caer en la cola con el proveedor SANO — una key muerta, en cambio, falla las dos veces.
+ * Los errores HTTP (401/404/429…) son deterministas y NO se reintentan. Ambos intentos quedan
+ * en `ai_usos`. El veredicto (lento vs muerto) lo pone el health-check con `veredictoSonda`.
  */
 export async function sondearProveedoresIA(): Promise<SondaIA[]> {
   return Promise.all(sondasConfiguradas().map(async (s): Promise<SondaIA> => {
-    const t0 = Date.now()
-    try {
-      await s.llamar(AbortSignal.timeout(TIMEOUT_MS))
-      const ms = Date.now() - t0
-      await registrarUso({ app: 'plataforma', endpoint: 'sonda', proveedor: s.proveedor, modelo: s.modelo, ok: true, ms, tokens: 10, costeEur: 0 }).catch(() => {})
-      return { proveedor: s.proveedor, modelo: s.modelo, ok: true, ms }
-    } catch (e) {
-      const ms = Date.now() - t0
-      // 300 chars: los 429 de cuota traen el detalle de QUÉ cuota se agotó al final del body
-      // (lección del corte anterior: con 150 chars el mensaje se quedaba en «check your plan»).
-      const error = (e instanceof Error ? `${e.name}: ${e.message}` : String(e)).slice(0, 300)
-      await registrarUso({ app: 'plataforma', endpoint: 'sonda', proveedor: s.proveedor, modelo: s.modelo, ok: false, ms, error }).catch(() => {})
-      return { proveedor: s.proveedor, modelo: s.modelo, ok: false, ms, error }
+    const primero = await intentarPing(s)
+    if (primero.ok || !esErrorDeTimeout(primero.error)) {
+      return { proveedor: s.proveedor, modelo: s.modelo, ...primero }
     }
+    const segundo = await intentarPing(s)
+    return { proveedor: s.proveedor, modelo: s.modelo, ...segundo, reintentos: 1 }
   }))
 }

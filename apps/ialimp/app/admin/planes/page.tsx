@@ -92,13 +92,13 @@ export default function PlanesPage() {
                 <p style={{ fontSize:12, color: C.muted, marginBottom:16 }}>{plan.desc}</p>
                 <div style={{ display:'flex', alignItems:'baseline', gap:4 }}>
                   <span style={{ fontSize:36, fontWeight:800, color: C.text }}>
-                    {plan.precio === 0 ? 'Gratis' : `€${annual ? Math.round(plan.precio * 0.8) : plan.precio}`}
+                    {plan.precio === 0 ? 'Gratis' : `${(annual ? Math.round(plan.precio * 0.8) : plan.precio).toLocaleString('es-ES')}€`}
                   </span>
                   {plan.precio > 0 && <span style={{ fontSize:13, color: C.muted }}>/mes</span>}
                 </div>
                 {plan.precio > 0 && annual && (
                   <div style={{ fontSize:11, color: C.ok, marginTop:2 }}>
-                    Facturado anual · ahorro €{Math.round(plan.precio * 0.2 * 12)}/año
+                    Facturado anual · ahorro {Math.round(plan.precio * 0.2 * 12).toLocaleString('es-ES')}€/año
                   </div>
                 )}
               </div>
