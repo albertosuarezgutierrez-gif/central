@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-05T20:48:42Z",
-  "sha": "1a651e4bfc75340d44aa2d12ddd815dca5659021",
+  "generadoEn": "2026-08-05T20:56:43Z",
+  "sha": "88aa3e7e8a33ebcd70870cdb309b7c5acf58ab89",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47622,7 +47622,7 @@
           "exportada": false,
           "params": "x: number | null | undefined, dec = 1",
           "retorno": null,
-          "linea": 28
+          "linea": 29
         },
         {
           "nombre": "mm$",
@@ -47630,7 +47630,7 @@
           "exportada": false,
           "params": "n: number | null",
           "retorno": null,
-          "linea": 29
+          "linea": 30
         },
         {
           "nombre": "AnalisisSimbolo",
@@ -47638,12 +47638,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 42
+          "linea": 43
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3a1ecadca40a"
+      "hash": "74b75241e5ff"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/trading/CarteraCohetes.tsx",
@@ -67419,7 +67419,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 39
+          "linea": 43
         },
         {
           "nombre": "haceDias",
@@ -67427,7 +67427,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 40
+          "linea": 44
         },
         {
           "nombre": "analizarConsulta",
@@ -67435,7 +67435,7 @@
           "exportada": true,
           "params": "q: string",
           "retorno": "Promise<ResultadoConsulta>",
-          "linea": 52,
+          "linea": 56,
           "resumen": "ninguno pero con pinta de ticker → intento solo-precio (Yahoo cubre cualquier ticker de EEUU)."
         },
         {
@@ -67444,7 +67444,7 @@
           "exportada": true,
           "params": "simboloRaw: string",
           "retorno": "Promise<AnalisisSimbolo | null>",
-          "linea": 69,
+          "linea": 73,
           "resumen": "Compat (skill/agente): análisis directo de un ticker ya resuelto."
         },
         {
@@ -67453,12 +67453,12 @@
           "exportada": false,
           "params": "simbolo: string, filas: FilaUniverso[]",
           "retorno": "Promise<AnalisisSimbolo | null>",
-          "linea": 77
+          "linea": 81
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0143ee413a2c"
+      "hash": "843618d03823"
     },
     {
       "ruta": "apps/plataforma/lib/trading/auth.ts",
@@ -68000,6 +68000,46 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "98daf0f21e6f"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/earnings-yahoo.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "📅 Fecha del próximo informe de resultados por Yahoo Finance (quoteSummary/calendarEvents). Da la fecha EXACTA anunciada por la empresa (isEarningsDateEstimate=false) o la prevista por Yahoo — mejor que el estimador EDGAR (+365d del filing del año pasado), que queda de RESPALDO. Yahoo exige desde 20",
+      "exporta": [
+        "parseCalendarEvents",
+        "proximaFechaEarningsYahoo"
+      ],
+      "funciones": [
+        {
+          "nombre": "parseCalendarEvents",
+          "kind": "function",
+          "exportada": true,
+          "params": "json: unknown, hoy: string",
+          "retorno": "FechaEarnings | null",
+          "linea": 15,
+          "resumen": "Parse puro de quoteSummary/calendarEvents. `earningsDate` trae 1 entrada (fecha concreta) o 2 (rango estimado — se toma la primera). Una fecha ya pasada no es \"próximo informe\" → null."
+        },
+        {
+          "nombre": "sesionYahoo",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 29
+        },
+        {
+          "nombre": "proximaFechaEarningsYahoo",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string, hoy: string",
+          "retorno": "Promise<FechaEarnings | null>",
+          "linea": 48,
+          "resumen": "Próxima fecha de resultados de un ticker de EEUU (o null si Yahoo no la da / falla)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "91d4c45585e7"
     },
     {
       "ruta": "apps/plataforma/lib/trading/edgar.ts",
@@ -68816,7 +68856,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 22
+          "linea": 23
         },
         {
           "nombre": "haceDias",
@@ -68824,7 +68864,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 23
+          "linea": 24
         },
         {
           "nombre": "pct",
@@ -68832,7 +68872,7 @@
           "exportada": false,
           "params": "x: number | null | undefined",
           "retorno": null,
-          "linea": 24
+          "linea": 25
         },
         {
           "nombre": "mediana",
@@ -68840,7 +68880,7 @@
           "exportada": false,
           "params": "xs: number[]",
           "retorno": "number | null",
-          "linea": 25
+          "linea": 26
         },
         {
           "nombre": "generarRadarSemanal",
@@ -68848,12 +68888,12 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 56
+          "linea": 57
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "45245797d05c"
+      "hash": "87789638430c"
     },
     {
       "ruta": "apps/plataforma/lib/trading/salidas.ts",
@@ -88756,7 +88796,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2386,
-    "funciones": 6399
+    "archivos": 2387,
+    "funciones": 6402
   }
 }
