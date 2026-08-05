@@ -16,7 +16,10 @@
 //
 // GET  = preflight: la rutina comprueba SU token AL ARRANCAR (`{ok:true}`), no al final, cuando ya
 //        tiene algo que contar y descubrir el fallo no le sirve de nada. Ver `docs/AVISOS-AGENTES.md`.
-// POST { text: string, html?: boolean } = mandar el aviso.
+// POST { text: string, html?: boolean, botones?: BotonAlerta[][] } = mandar el aviso. Los botones son
+//        opcionales y RESTRINGIDOS (`lib/alerta-botones.ts`: URLs https o callbacks `trd_*` — un token
+//        de bajo privilegio no puede fabricar botones de pago/movimientos); si no validan, el aviso
+//        sale SIN botones con `botonesDescartados:true` (avisar sin teclado gana a no avisar).
 //
 // ── POR QUÉ ESTE ENDPOINT SE CHIVA DE SUS PROPIOS 401 (incidente 26-27/07/2026) ──
 // El fallo de este camino es AUTO-ANULANTE: el canal que se rompe ES el canal de aviso, así que
@@ -29,7 +32,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isAlertaTokenAuthorized, isCronAuthorized } from '@/lib/cron-auth'
 import { rutinaDeToken } from '@/lib/rutina-tokens'
-import { tgSend } from '@central/core-telegram'
+import { validarBotones } from '@/lib/alerta-botones'
+import { tgSend, tgSendButtons } from '@central/core-telegram'
 
 export const dynamic = 'force-dynamic'
 
@@ -121,6 +125,15 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null)
   if (!body?.text || typeof body.text !== 'string') {
     return NextResponse.json({ error: 'text requerido' }, { status: 400 })
+  }
+  if (body.botones !== undefined) {
+    const filas = validarBotones(body.botones)
+    if (filas) {
+      const messageId = await tgSendButtons(body.text, filas)
+      return NextResponse.json({ ok: true, messageId })
+    }
+    const messageId = await tgSend(body.text, { html: body.html !== false })
+    return NextResponse.json({ ok: true, messageId, botonesDescartados: true })
   }
   const messageId = await tgSend(body.text, { html: body.html !== false })
   return NextResponse.json({ ok: true, messageId })
