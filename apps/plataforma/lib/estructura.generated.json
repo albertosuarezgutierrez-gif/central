@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-05T09:42:56Z",
+  "generadoEn": "2026-08-05T10:47:32Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2526,7 +2526,6 @@
       "/api/cron/crm-lead-hunter-sevilla",
       "/api/cron/crm-recordatorio-dia2",
       "/api/cron/crm-recordatorios",
-      "/api/cron/crm-whatsapp-sevilla",
       "/api/cron/eventos-entorno",
       "/api/cron/feedback-visita",
       "/api/cron/instagram",
@@ -3970,6 +3969,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📲→📧 El agente de venta de ia-rest trabaja SOLO (05/08/2026).",
+      "fecha": "05/08/2026"
+    },
+    {
       "titulo": "🚨 «otro» NO es un tipo, es un «no lo sé» — regresión en prod y su arreglo (05/08/2026).",
       "fecha": "05/08/2026"
     },
@@ -4023,10 +4026,6 @@
     },
     {
       "titulo": "🔎 Revisión mensual ia.rest Tech & Stack (02/08/2026, sesión de investigación).",
-      "fecha": "02/08/2026"
-    },
-    {
-      "titulo": "⏱️ Crons con timeout 60s → 300s (02/08/2026, rama `claude/audit-30-07-hv2njr`).",
       "fecha": "02/08/2026"
     }
   ],
@@ -4393,7 +4392,7 @@
     "packages": 36,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1154,
+    "apis": 1153,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

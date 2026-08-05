@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-05T09:42:56Z",
-  "sha": "ecc38388745aef3a413b6ea10601995d9931a297",
+  "generadoEn": "2026-08-05T10:47:32Z",
+  "sha": "1b2f11655503e4194715ee1ffd19e6b2315ed90f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -7080,7 +7080,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/cron/crm-emails-catering",
-      "hash": "3365da68107d"
+      "hash": "c73f8582e6e5"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/crm-emails-restaurantes/route.ts",
@@ -7100,7 +7100,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/cron/crm-emails-restaurantes",
-      "hash": "4b654aed8f4f"
+      "hash": "2560cfcc3001"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/crm-envio-auto/route.ts",
@@ -7142,7 +7142,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/crm-envio-auto",
-      "hash": "2a40b292c3dc"
+      "hash": "14bcbd9f4306"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/crm-followup-sevilla/route.ts",
@@ -7157,7 +7157,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 14
+          "linea": 13
         }
       ],
       "tablas": [
@@ -7165,7 +7165,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/crm-followup-sevilla",
-      "hash": "d7298eee2c8e"
+      "hash": "82a158bb6320"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/crm-lead-hunter-sevilla/route.ts",
@@ -7185,7 +7185,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/cron/crm-lead-hunter-sevilla",
-      "hash": "60d5fc880537"
+      "hash": "bc6115cfa511"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/crm-recordatorio-dia2/route.ts",
@@ -7231,28 +7231,6 @@
       ],
       "rutaApi": "/api/cron/crm-recordatorios",
       "hash": "da468dd9b4ef"
-    },
-    {
-      "ruta": "apps/ia-rest/src/app/api/cron/crm-whatsapp-sevilla/route.ts",
-      "ambito": "apps/ia-rest",
-      "exporta": [
-        "GET"
-      ],
-      "funciones": [
-        {
-          "nombre": "GET",
-          "kind": "function",
-          "exportada": true,
-          "params": "req: NextRequest",
-          "retorno": null,
-          "linea": 11
-        }
-      ],
-      "tablas": [
-        "next"
-      ],
-      "rutaApi": "/api/cron/crm-whatsapp-sevilla",
-      "hash": "c2b7afbba5fc"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/eventos-entorno/route.ts",
@@ -29433,9 +29411,7 @@
         "construirEmail",
         "construirSeguimiento",
         "normalizarTelefonoEs",
-        "esMovilEs",
-        "construirInstagram",
-        "construirWhatsApp"
+        "construirInstagram"
       ],
       "funciones": [
         {
@@ -29486,17 +29462,8 @@
           "exportada": true,
           "params": "telefono?: string | null",
           "retorno": "string | null",
-          "linea": 99,
-          "resumen": "Normaliza un MÓVIL español a formato internacional para wa.me (solo dígitos, prefijo 34). Solo móviles (empiezan por 6 o 7): un fijo no recibe WhatsApp → devuelve null."
-        },
-        {
-          "nombre": "esMovilEs",
-          "kind": "function",
-          "exportada": true,
-          "params": "telefono?: string | null",
-          "retorno": "boolean",
-          "linea": 109,
-          "resumen": "¿El teléfono es un móvil español (apto para WhatsApp)?"
+          "linea": 102,
+          "resumen": "Normaliza un MÓVIL español a formato internacional para wa.me (solo dígitos, prefijo 34). Solo móviles (empiezan por 6 o 7): un fijo no recibe WhatsApp → devuelve null. Lo usan pipeline-comercial y el"
         },
         {
           "nombre": "construirInstagram",
@@ -29504,21 +29471,13 @@
           "exportada": true,
           "params": "lead: LeadVenta & { web?: string | null }",
           "retorno": "",
-          "linea": 115,
+          "linea": 113,
           "resumen": "Mensaje + enlace para DM de Instagram (envío MANUAL desde la cuenta, sin API). El enlace abre su perfil si lo conocemos (web de IG) o, si no, una búsqueda."
-        },
-        {
-          "nombre": "construirWhatsApp",
-          "kind": "function",
-          "exportada": true,
-          "params": "lead: LeadVenta, telefono: string",
-          "retorno": "",
-          "linea": 131
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6dfbbe4b839f"
+      "hash": "09ea423741c7"
     },
     {
       "ruta": "apps/ia-rest/src/lib/diagnostics.ts",
@@ -30090,7 +30049,7 @@
           "exportada": false,
           "params": "s: unknown",
           "retorno": null,
-          "linea": 18
+          "linea": 22
         },
         {
           "nombre": "normEmail",
@@ -30098,7 +30057,7 @@
           "exportada": true,
           "params": "e: unknown",
           "retorno": null,
-          "linea": 21,
+          "linea": 25,
           "resumen": "Normaliza un email para comparar por DIRECCIÓN (minúsculas, sin espacios)."
         },
         {
@@ -30107,7 +30066,7 @@
           "exportada": true,
           "params": "supabase: SupabaseSrv, emails: unknown[]",
           "retorno": "Promise<Set<string>>",
-          "linea": 30,
+          "linea": 34,
           "resumen": "Dedup POR DIRECCIÓN DE EMAIL (no por lead.id): dado un conjunto de emails candidatos, devuelve las direcciones que YA recibieron el email frío en ALGUNA fila de lead que las comparta. Cierra el hueco "
         },
         {
@@ -30116,7 +30075,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 65,
+          "linea": 69,
           "resumen": "Envío automático activo por defecto; CRM_ENVIO_AUTO='0' vuelve al modo propuesta."
         },
         {
@@ -30125,7 +30084,7 @@
           "exportada": true,
           "params": "html: string",
           "retorno": "string",
-          "linea": 68,
+          "linea": 72,
           "resumen": "Versión texto plano del email (para previsualizarlo en Telegram)."
         },
         {
@@ -30134,7 +30093,7 @@
           "exportada": false,
           "params": "supabase: SupabaseSrv, lead: LeadEmail",
           "retorno": "Promise<void>",
-          "linea": 85,
+          "linea": 89,
           "resumen": "Envía el email frío de presentación (plantilla tipo por vertical) y actualiza tracking (propuesto → enviado_dia1) y lead (nuevo → contactado). Lanza si falla el envío: el tracking queda en 'propuesto'"
         },
         {
@@ -30143,7 +30102,7 @@
           "exportada": true,
           "params": "supabase: SupabaseSrv, limite = 3",
           "retorno": "Promise<",
-          "linea": 108
+          "linea": 112
         },
         {
           "nombre": "proponerEmailsVertical",
@@ -30151,7 +30110,7 @@
           "exportada": true,
           "params": "supabase: SupabaseSrv, vertical: 'franquicia' | 'catering' | 'eventos' | 'restaurante', limite = 20",
           "retorno": "Promise<",
-          "linea": 226
+          "linea": 220
         },
         {
           "nombre": "proponerEmailsFranquicia",
@@ -30159,7 +30118,7 @@
           "exportada": true,
           "params": "supabase: SupabaseSrv, limite = 20",
           "retorno": null,
-          "linea": 344,
+          "linea": 334,
           "resumen": "Wrapper de compatibilidad: franquicias (lo usa /api/super/lead-hunter-franquicia)."
         },
         {
@@ -30168,7 +30127,7 @@
           "exportada": true,
           "params": "supabase: SupabaseSrv, vertical: 'catering' | 'eventos' = 'catering', limite = 15",
           "retorno": "Promise<",
-          "linea": 353,
+          "linea": 343,
           "resumen": "── INSTAGRAM (Sevilla) ──────────────────────────────────────────────────── Propone DMs de Instagram (envío MANUAL) a leads de Sevilla de un vertical (catering / eventos): por cada uno, mensaje a Tele"
         },
         {
@@ -30177,13 +30136,13 @@
           "exportada": true,
           "params": "supabase: SupabaseSrv, limite = 30",
           "retorno": "Promise<",
-          "linea": 416,
+          "linea": 406,
           "resumen": "── REENVIAR PENDIENTES ──────────────────────────────────────────────────── Re-emite mensajes de Telegram (con botón Enviar) para las propuestas que siguen en 'propuesto' (p.ej. quedaron sin enviar). "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b1725089fba9"
+      "hash": "5c537520fb68"
     },
     {
       "ruta": "apps/ia-rest/src/lib/negocio.ts",
@@ -88713,7 +88672,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2385,
-    "funciones": 6396
+    "archivos": 2384,
+    "funciones": 6393
   }
 }
