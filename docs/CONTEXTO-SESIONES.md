@@ -30,7 +30,7 @@
   entrada, órdenes SIEMPRE manuales de Alberto). No adelanta la validación (ene-feb 2027): adelanta
   fontanería y disciplina. Contexto previo: PYPL capituló de libro en feb/2026 (−37,8% + 3,3× vol,
   señal H8) y ya pagó +26,7% — hoy sería perseguir el gap. Pendiente: cuando el retrovisor cierre su
-  primer ciclo con H8+H9 (~2 días), foto completa a Alberto con propuesta de tramo 1. PR #TBD.
+  primer ciclo con H8+H9 (~2 días), foto completa a Alberto con propuesta de tramo 1. PR #1256.
 
 - **⚖️ La misma hipoteca contada dos veces por escribir la fecha en LETRA (04/08/2026,
   rama `claude/carga-no-recogida-analizada-vjkwc9`).** Con #1250 ya en producción, Punta Umbría quedó bien
