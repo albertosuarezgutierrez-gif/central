@@ -118,6 +118,9 @@ model TradingCantera {
   propuestoAt     DateTime  @default(now()) @map("propuesto_at") @db.Timestamptz(6)
   decision        String? // NULL pendiente | 'alta' | 'rechazada'
   decididoAt      DateTime? @map("decidido_at") @db.Timestamptz(6)
+  bajaPropuestaAt DateTime? @map("baja_propuesta_at") @db.Timestamptz(6)
+  bajaDecision    String? // NULL pendiente | 'baja' | 'mantener'
+  bajaDecididaAt  DateTime? @map("baja_decidida_at") @db.Timestamptz(6)
 
   @@map("trading_cantera")
 }

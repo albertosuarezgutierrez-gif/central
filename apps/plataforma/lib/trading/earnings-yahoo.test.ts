@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { parseCalendarEvents } from './earnings-yahoo.ts'
+import { parseCalendarEvents, lineaEarningsProximos } from './earnings-yahoo.ts'
 
 // Fixture REAL: respuesta de quoteSummary/calendarEvents para STX el 05/08/2026 (recortada a lo usado).
 const fixtureStx = {
@@ -38,6 +38,22 @@ test('flag ausente → NO se afirma confirmada (el «no lo sé» no se disfraza 
 
 test('fecha ya pasada (Yahoo sin refrescar tras el informe) → null, no un "próximo" falso', () => {
   assert.equal(parseCalendarEvents(fixtureStx, '2026-11-01'), null)
+})
+
+test('lineaEarningsProximos: solo ≤2 días, con HOY/mañana y marca de sin confirmar', () => {
+  const linea = lineaEarningsProximos([
+    { simbolo: 'SNDK', earnings: { fecha: '2026-08-05', confirmada: true } },
+    { simbolo: 'WDC', earnings: { fecha: '2026-08-06', confirmada: false } },
+    { simbolo: 'STX', earnings: { fecha: '2026-10-27', confirmada: true } },   // lejano → fuera
+    { simbolo: 'AAA', earnings: { fecha: '2026-08-01', confirmada: true } },   // pasado → fuera
+    { simbolo: 'BBB', earnings: null },
+  ], '2026-08-05')
+  assert.equal(linea, '📅 Resultados en la watchlist: <b>SNDK</b> HOY · <b>WDC</b> mañana (sin confirmar) — ojo al gap.')
+})
+
+test('lineaEarningsProximos: sin nada en ventana → null (no manda mensaje vacío)', () => {
+  assert.equal(lineaEarningsProximos([{ simbolo: 'STX', earnings: { fecha: '2026-10-27', confirmada: true } }], '2026-08-05'), null)
+  assert.equal(lineaEarningsProximos([], '2026-08-05'), null)
 })
 
 test('respuestas rotas/vacías → null sin lanzar', () => {

@@ -24,6 +24,25 @@ export function parseCalendarEvents(json: unknown, hoy: string): FechaEarnings |
   return { fecha, confirmada: earnings?.isEarningsDateEstimate === false }
 }
 
+/** Línea 📅 del aviso nocturno: valores con resultados en ≤`diasMax` días. null = sin nada que avisar.
+ *  El digest del radar es semanal (lunes) y los earnings caen entre semana — este aviso los caza a
+ *  diario. Contexto para Alberto, jamás filtro (la barrera del torneo va aparte, en /analizar). */
+export function lineaEarningsProximos(
+  fechas: Array<{ simbolo: string; earnings: FechaEarnings | null }>,
+  hoy: string,
+  diasMax = 2,
+): string | null {
+  const partes: string[] = []
+  for (const f of fechas) {
+    if (!f.earnings) continue
+    const dias = Math.round((Date.parse(f.earnings.fecha) - Date.parse(hoy)) / 86_400_000)
+    if (dias < 0 || dias > diasMax) continue
+    const cuando = dias === 0 ? 'HOY' : dias === 1 ? 'mañana' : `en ${dias} días (${f.earnings.fecha.slice(5)})`
+    partes.push(`<b>${f.simbolo}</b> ${cuando}${f.earnings.confirmada ? '' : ' (sin confirmar)'}`)
+  }
+  return partes.length ? `📅 Resultados en la watchlist: ${partes.join(' · ')} — ojo al gap.` : null
+}
+
 let sesion: { cookie: string; crumb: string } | null = null
 
 async function sesionYahoo(): Promise<{ cookie: string; crumb: string } | null> {

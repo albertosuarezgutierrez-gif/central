@@ -8,6 +8,7 @@ import {
   superaConcentracion, superaLimiteOps, earningsInminente, bajoTendencia, factorFlojo, regimenMercado, ajustesDeStats, rvol, confirmaVolumen,
 } from '@central/module-trading'
 import type { Vela, Fundamentales } from '@central/module-trading'
+import { proximaFechaEarningsYahoo, lineaEarningsProximos, type FechaEarnings } from '@/lib/trading/earnings-yahoo'
 
 type Entrada = { simbolo: string; velas: Vela[]; fundamentales?: Fundamentales; opsRecientes?: number; factorScore?: number }
 
@@ -41,6 +42,24 @@ export async function POST(req: NextRequest) {
   // Solo ajusta con muestra suficiente (ajustesDeStats guarda por minN); sin historial no toca nada.
   const statsRows = await prisma.tradingEstrategiaStats.findMany({ where: { regimen: 'todos' } })
   const ajustes = ajustesDeStats(Object.fromEntries(statsRows.map(r => [r.estrategia, { hitRate: r.hitRate, retornoMedio: r.retornoMedio, n: r.n }])))
+
+  // 📅 Fecha de resultados por Yahoo para los símbolos que llegan SIN ella: activa la barrera
+  // `earningsInminente` (≤3d) y la estrategia catalizador, que con FMP sin créditos recibían siempre
+  // la fecha vacía y degradaban a «no vetar» en silencio (la pasada del 05/08 podía abrir paper en
+  // SNDK/WDC la noche de sus resultados sin saberlo). Best-effort: si Yahoo falla, queda como estaba.
+  const fechasEarnings: Array<{ simbolo: string; earnings: FechaEarnings | null }> = await Promise.all(
+    simbolos.map(async s => ({
+      simbolo: s.simbolo,
+      earnings: s.fundamentales?.proximoEarnings
+        ? { fecha: s.fundamentales.proximoEarnings, confirmada: false }   // la fecha de FMP no dice si la anunció la empresa
+        : await proximaFechaEarningsYahoo(s.simbolo, fecha),
+    })),
+  )
+  const earningsPor = new Map(fechasEarnings.map(f => [f.simbolo, f.earnings]))
+  for (const s of simbolos) {
+    const e = earningsPor.get(s.simbolo)
+    if (e && !s.fundamentales?.proximoEarnings) s.fundamentales = { ...(s.fundamentales ?? {}), proximoEarnings: e.fecha }
+  }
 
   const ideas: Array<{ simbolo: string; estrategia: string; direccion: string; confianza: number; operada: boolean; motivo?: string; rvol?: number | null; volConfirma?: string; factorScore?: number }> = []
 
@@ -115,6 +134,11 @@ export async function POST(req: NextRequest) {
     }
     ideas.push({ simbolo: s.simbolo, estrategia: ganadora.estrategia, direccion: ganadora.direccion, confianza: ganadora.confianza, operada: !motivo, motivo, rvol: volumenRel, volConfirma: confirmaVolumen(ganadora.direccion, volumenRel), factorScore: s.factorScore })
   }
+
+  // 📅 Aviso diario de resultados inminentes en la watchlist (el digest del radar es semanal y los
+  // earnings caen entre semana). Contexto para Alberto — el veto ya lo aplicó la barrera de arriba.
+  const lineaEarnings = lineaEarningsProximos(fechasEarnings, fecha)
+  if (lineaEarnings) await tgSend(lineaEarnings).catch(() => {})
 
   ideas.sort((a, b) => b.confianza - a.confianza)
   return NextResponse.json({ fecha, top: ideas.slice(0, 5), total: ideas.length })

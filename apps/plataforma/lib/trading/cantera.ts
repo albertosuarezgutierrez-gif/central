@@ -35,6 +35,30 @@ export function candidatosCantera(
   return out
 }
 
+/** Semanas seguidas FUERA del top del radar para proponer la baja de un capa C. */
+export const CANTERA_SEMANAS_FUERA = 4
+
+/**
+ * Espejo de la cantera: capa C que lleva `semanasFuera` snapshots consecutivos (los últimos)
+ * SIN aparecer en el top del radar → candidata a baja (por Telegram, decide Alberto).
+ * Requiere historial suficiente: con menos snapshots que `semanasFuera`, no propone nada.
+ */
+export function bajasCantera(
+  snapshots: SnapshotTop[],
+  capaC: Set<string>,
+  yaPropuestas: Set<string>,
+  semanasFuera: number = CANTERA_SEMANAS_FUERA,
+): CandidatoCantera[] {
+  if (snapshots.length < semanasFuera) return []
+  const ultimos = snapshots.slice(-semanasFuera)
+  const out: CandidatoCantera[] = []
+  for (const simbolo of capaC) {
+    if (yaPropuestas.has(simbolo)) continue
+    if (ultimos.every(s => !s.top.includes(simbolo))) out.push({ simbolo, semanas: semanasFuera })
+  }
+  return out
+}
+
 /** Guarda del callback de Telegram: un símbolo de ticker plausible, nada más. */
 export function simboloValido(s: string): boolean {
   return /^[A-Z0-9.\-]{1,10}$/.test(s)
