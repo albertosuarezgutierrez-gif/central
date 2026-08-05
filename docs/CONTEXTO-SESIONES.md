@@ -34,7 +34,7 @@
   re-derivando (Alcalá del Río mantiene su `vivienda`) pero un «no lo he sabido leer» nunca pisa un dato sabido.
   Dato de prod restaurado a mano. Lección: al re-derivar una columna, comprobar **todas** las escrituras, no solo
   las que mencionan la columna — la fuente rica puede estar en un campo intermedio que ya no existe aguas abajo.
-  Tests 863 (2 guardianes sujetan las dos mitades). PR #1267.
+  Tests 863 (2 guardianes sujetan las dos mitades). PR #1268.
 
 - **🔁 El arreglo del parser no llegaba a la BD: `tipo_bien` se re-deriva (05/08/2026).** Verificando #1265 en
   producción: el margen ya salía bien (la lente flip recalcula el tipo en vivo desde el texto), pero la COLUMNA
