@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-05T20:56:43Z",
-  "sha": "88aa3e7e8a33ebcd70870cdb309b7c5acf58ab89",
+  "generadoEn": "2026-08-05T21:09:07Z",
+  "sha": "de63d731825ff9403f070a2da449dccf7ce36138",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54356,7 +54356,7 @@
         "trading_watchlist"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "276715ee64a9"
+      "hash": "17a866702dd8"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -55729,7 +55729,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 14
+          "linea": 15
         }
       ],
       "tablas": [
@@ -55738,7 +55738,7 @@
         "trading_pasadas"
       ],
       "rutaApi": "/api/trading/analizar",
-      "hash": "2fe3d761f00b"
+      "hash": "80b98f7ecb72"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/cartera-estudio/route.ts",
@@ -67686,6 +67686,7 @@
       "resumen": "🌱 Cantera (capa C) — puente radar → watchlist. El radar semanal detecta los valores SOSTENIDOS en su top-10 y los PROPONE por Telegram con botones ✅/❌; solo el ✅ de Alberto da el alta en `trading_watchlist` (capa C). Es DESCUBRIMIENTO, no cambio del modelo: no toca ranking, pesos ni cestas, así que",
       "exporta": [
         "candidatosCantera",
+        "bajasCantera",
         "simboloValido"
       ],
       "funciones": [
@@ -67699,18 +67700,27 @@
           "resumen": "Candidatos a capa C: símbolos presentes en el top de los ÚLTIMOS `semanasMin` snapshots consecutivos (incluido el más reciente), que no estén ya en la watchlist ni tengan propuesta previa (pendiente o"
         },
         {
+          "nombre": "bajasCantera",
+          "kind": "function",
+          "exportada": true,
+          "params": "snapshots: SnapshotTop[], capaC: Set<string>, yaPropuestas: Set<string>, semanasFuera: number = CANTERA_SEMANAS_FUERA,",
+          "retorno": "CandidatoCantera[]",
+          "linea": 46,
+          "resumen": "Espejo de la cantera: capa C que lleva `semanasFuera` snapshots consecutivos (los últimos) SIN aparecer en el top del radar → candidata a baja (por Telegram, decide Alberto). Requiere historial sufici"
+        },
+        {
           "nombre": "simboloValido",
           "kind": "function",
           "exportada": true,
           "params": "s: string",
           "retorno": "boolean",
-          "linea": 39,
+          "linea": 63,
           "resumen": "Guarda del callback de Telegram: un símbolo de ticker plausible, nada más."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b2f3cee8a7d6"
+      "hash": "e16559dd5ebe"
     },
     {
       "ruta": "apps/plataforma/lib/trading/cartera-cohetes-io.ts",
@@ -68007,6 +68017,7 @@
       "resumen": "📅 Fecha del próximo informe de resultados por Yahoo Finance (quoteSummary/calendarEvents). Da la fecha EXACTA anunciada por la empresa (isEarningsDateEstimate=false) o la prevista por Yahoo — mejor que el estimador EDGAR (+365d del filing del año pasado), que queda de RESPALDO. Yahoo exige desde 20",
       "exporta": [
         "parseCalendarEvents",
+        "lineaEarningsProximos",
         "proximaFechaEarningsYahoo"
       ],
       "funciones": [
@@ -68020,12 +68031,21 @@
           "resumen": "Parse puro de quoteSummary/calendarEvents. `earningsDate` trae 1 entrada (fecha concreta) o 2 (rango estimado — se toma la primera). Una fecha ya pasada no es \"próximo informe\" → null."
         },
         {
+          "nombre": "lineaEarningsProximos",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechas: Array<{ simbolo: string; earnings: FechaEarnings | null }>, hoy: string, diasMax = 2,",
+          "retorno": "string | null",
+          "linea": 30,
+          "resumen": "Línea 📅 del aviso nocturno: valores con resultados en ≤`diasMax` días. null = sin nada que avisar. El digest del radar es semanal (lunes) y los earnings caen entre semana — este aviso los caza a diar"
+        },
+        {
           "nombre": "sesionYahoo",
           "kind": "function",
           "exportada": false,
           "params": "",
           "retorno": "Promise<",
-          "linea": 29
+          "linea": 48
         },
         {
           "nombre": "proximaFechaEarningsYahoo",
@@ -68033,13 +68053,13 @@
           "exportada": true,
           "params": "simbolo: string, hoy: string",
           "retorno": "Promise<FechaEarnings | null>",
-          "linea": 48,
+          "linea": 67,
           "resumen": "Próxima fecha de resultados de un ticker de EEUU (o null si Yahoo no la da / falla)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "91d4c45585e7"
+      "hash": "412a20c61a9c"
     },
     {
       "ruta": "apps/plataforma/lib/trading/edgar.ts",
@@ -68893,7 +68913,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "87789638430c"
+      "hash": "3aa97ad84f46"
     },
     {
       "ruta": "apps/plataforma/lib/trading/salidas.ts",
@@ -88797,6 +88817,6 @@
   ],
   "resumen": {
     "archivos": 2387,
-    "funciones": 6402
+    "funciones": 6404
   }
 }
