@@ -24,6 +24,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🔎 El barrido ya ve mercado, pero no le cabía el calendario (05/08/2026)
+Pasada con #1241: **6 búsquedas vacías (eran 100)** — la consulta abierta era la buena. Pero al dejar
+de volver vacías, cada ventana paga su extracción IA y en los 240 s solo entraron **28 de 120**
+ventanas, ni siquiera la ronda base (32) → 6 meses sin medir y `ok=false` correcto. Fix: los 4 aforos
+de una misma fecha se miden **en paralelo** (son independientes; techo natural de 4 peticiones).
+Segundo hallazgo, más feo: 204€ era la mediana de 6 ventanas, 104€ de 5 y 261€ de 3 —entre fechas y
+aforos distintos, con muestras de 1-5 comps— y `sinSenalDeTemporada` no lo cazaba. Nuevos
+`clonRatio`/`corpusClonado` (≥50% de medianas repetidas en otra fecha ⇒ no fiable) y aviso de
+muestras <3 comps. Verificado: tsc 0 · 851 tests · build OK. **Pendiente: latido del 06/08.**
+
 - **⚖️ La misma hipoteca contada dos veces por escribir la fecha en LETRA (04/08/2026,
   rama `claude/carga-no-recogida-analizada-vjkwc9`).** Con #1250 ya en producción, Punta Umbría quedó bien
   (🟠 «sin cuantificar», adiós al 43.200,00€), pero Belmonte (`SUB-JA-2026-264269`) SUBIÓ de 48.450,00€ a

@@ -217,7 +217,14 @@ export async function GET(req: NextRequest) {
       if (ronda === 0) rondaBaseCompleta = false
       continue
     }
-    for (const [aforo, pisos] of porAforo) {
+    // 🚨 Los aforos de una MISMA fecha se miden EN PARALELO (05/08/2026). En serie no cabía el
+    // calendario: en cuanto la consulta abierta empezó a devolver resultados, cada ventana pasó a
+    // pagar su extracción por IA y en los 240 s solo entraron 28 de las 120 ventanas — ni siquiera
+    // la ronda base (8 meses × 4 aforos = 32), así que 6 meses se quedaron sin medir y el latido
+    // salió (correctamente) en rojo. Las 4 búsquedas de una fecha son independientes entre sí, así
+    // que van juntas: el paralelismo está acotado al nº de aforos distintos (hoy 4), que es un
+    // techo natural y bajo — ni Serper ni la pasarela ven más de 4 peticiones a la vez.
+    await Promise.all([...porAforo].map(async ([aforo, pisos]) => {
       try {
         // Se prueba la consulta abierta y, solo si vuelve vacía, la de `site:` (con tope, que cada
         // intento extra es una búsqueda Serper de pago).
@@ -273,7 +280,7 @@ export async function GET(req: NextRequest) {
       } catch (e) {
         errors.push(`${checkin} (${aforo}p): ${String(e).slice(0, 80)}`)
       }
-    }
+    }))
   }
 
   // Huella para el vigía. Qué cuenta como pasada BUENA lo decide el helper puro `resumen-sweep.ts`:
