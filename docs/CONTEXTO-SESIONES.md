@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🔎 Barrido de mercado: aforos en paralelo + refuerzo por mes en texto (05/08/2026)
+Pasada 03:00 con #1241: la abierta SÍ trae mercado (62 comps) pero el latido sigue rojo por DOS causas
+nuevas: (1) el Director sirvió deepseek/llama (4,4-13 s/extracción vs 880 ms de gemini-flash el 04/08) y
+los 240 s solo dieron para 7/30 ventanas — base incompleta; (2) la ventana de noviembre entera (4 aforos,
+8 búsquedas) volvió `organic:[]` mientras feb/mar 2027 traían comps: el token de fecha ISO es lotería.
+Fixes: los 4 aforos de cada ventana en paralelo (misma factura, pared ÷4) y consulta de refuerzo «mes en
+texto» SOLO para ventanas de base (un evento exige comps de SU fecha), bajo el cupo `MAX_REFUERZO`.
+`consultasDeVentana` movida a `mercado-ventanas.ts` (testeada). tsc 0 · 808 tests · build OK. **Verificar latido 06/08.**
+
 ### ⚕️ Verificación #1232: groq y gemini cerrados; NIM es DEGRADACIÓN real (04/08/2026)
 Sonda de hoy 07:01 con el fix: **groq verde** (458 ms — el maxTokens 300 arregló el falso «respuesta
 vacía») y **gemini fuera del Check 12** (0 llamadas en la ventana de 3 días, la guarda lo apagó sola).
