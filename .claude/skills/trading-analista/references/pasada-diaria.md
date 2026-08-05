@@ -15,7 +15,10 @@ simulada en BD. Esta invariante protege todo lo demás: si dudas, no operas.
    inicial se siembra con `apps/plataforma/prisma/sql/trading_watchlist_seed.sql`.
 3. Por símbolo: `get_price_history` (diario, ~120 velas) → mapear a `Vela[]`
    (`{ fecha, apertura, alto, bajo, cierre, volumen }`); si FMP está conectado, traer
-   PER/deuda/margen/próximo earnings → `Fundamentales`.
+   PER/deuda/margen/próximo earnings → `Fundamentales`. **Desde el 05/08/2026 FMP es OPCIONAL
+   (lleva meses sin créditos, $0): `/api/trading/analizar` rellena por su cuenta lo que falte
+   —PER/PB/deuda-EBITDA/margen y fecha de earnings— desde Yahoo (`lib/trading/earnings-yahoo.ts`),
+   así que NO trates un fallo de FMP como bloqueo ni lo esperes.** Lo que sí aportes nunca se pisa.
    **🚨 LANDMINE (04/08/2026) — NUNCA lances los `get_price_history` de los 13 símbolos en un
    único mensaje paralelo y des por hecho que el resultado N-ésimo corresponde a la llamada
    N-ésima.** Los `<result>` de tool calls paralelas NO garantizan devolver en el mismo orden

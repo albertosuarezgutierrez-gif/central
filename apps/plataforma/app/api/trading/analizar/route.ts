@@ -8,7 +8,7 @@ import {
   superaConcentracion, superaLimiteOps, earningsInminente, bajoTendencia, factorFlojo, regimenMercado, ajustesDeStats, rvol, confirmaVolumen,
 } from '@central/module-trading'
 import type { Vela, Fundamentales } from '@central/module-trading'
-import { proximaFechaEarningsYahoo, lineaEarningsProximos, type FechaEarnings } from '@/lib/trading/earnings-yahoo'
+import { datosYahoo, lineaEarningsProximos, type FechaEarnings } from '@/lib/trading/earnings-yahoo'
 
 type Entrada = { simbolo: string; velas: Vela[]; fundamentales?: Fundamentales; opsRecientes?: number; factorScore?: number }
 
@@ -43,22 +43,32 @@ export async function POST(req: NextRequest) {
   const statsRows = await prisma.tradingEstrategiaStats.findMany({ where: { regimen: 'todos' } })
   const ajustes = ajustesDeStats(Object.fromEntries(statsRows.map(r => [r.estrategia, { hitRate: r.hitRate, retornoMedio: r.retornoMedio, n: r.n }])))
 
-  // 📅 Fecha de resultados por Yahoo para los símbolos que llegan SIN ella: activa la barrera
-  // `earningsInminente` (≤3d) y la estrategia catalizador, que con FMP sin créditos recibían siempre
-  // la fecha vacía y degradaban a «no vetar» en silencio (la pasada del 05/08 podía abrir paper en
-  // SNDK/WDC la noche de sus resultados sin saberlo). Best-effort: si Yahoo falla, queda como estaba.
-  const fechasEarnings: Array<{ simbolo: string; earnings: FechaEarnings | null }> = await Promise.all(
-    simbolos.map(async s => ({
+  // 📅💼 Fundamentales de Yahoo para lo que el payload NO traiga: fecha de earnings (activa la
+  // barrera `earningsInminente` ≤3d y la estrategia catalizador) y PER/PB/deuda-EBITDA/margen
+  // (reactiva la estrategia «valor», que sin fundamentales queda neutral). Con FMP sin créditos
+  // TODO esto llegaba vacío y las tres degradaban a no-actuar en silencio (la pasada del 05/08
+  // podía abrir paper en SNDK/WDC la noche de sus resultados sin saberlo). Lo que el agente sí
+  // aporte (FMP u otra fuente) NUNCA se pisa. Best-effort: si Yahoo falla, queda como estaba.
+  const datosPorSimbolo = await Promise.all(simbolos.map(async s => ({ simbolo: s.simbolo, datos: await datosYahoo(s.simbolo, fecha) })))
+  const datosPor = new Map(datosPorSimbolo.map(d => [d.simbolo, d.datos]))
+  const fechasEarnings: Array<{ simbolo: string; earnings: FechaEarnings | null }> = []
+  for (const s of simbolos) {
+    const d = datosPor.get(s.simbolo)
+    fechasEarnings.push({
       simbolo: s.simbolo,
       earnings: s.fundamentales?.proximoEarnings
         ? { fecha: s.fundamentales.proximoEarnings, confirmada: false }   // la fecha de FMP no dice si la anunció la empresa
-        : await proximaFechaEarningsYahoo(s.simbolo, fecha),
-    })),
-  )
-  const earningsPor = new Map(fechasEarnings.map(f => [f.simbolo, f.earnings]))
-  for (const s of simbolos) {
-    const e = earningsPor.get(s.simbolo)
-    if (e && !s.fundamentales?.proximoEarnings) s.fundamentales = { ...(s.fundamentales ?? {}), proximoEarnings: e.fecha }
+        : d?.earnings ?? null,
+    })
+    if (!d) continue
+    s.fundamentales = {
+      ...(s.fundamentales ?? {}),
+      per: s.fundamentales?.per ?? d.per,
+      pb: s.fundamentales?.pb ?? d.pb,
+      deudaEbitda: s.fundamentales?.deudaEbitda ?? d.deudaEbitda,
+      margenNeto: s.fundamentales?.margenNeto ?? d.margenNeto,
+      proximoEarnings: s.fundamentales?.proximoEarnings ?? d.earnings?.fecha,
+    }
   }
 
   const ideas: Array<{ simbolo: string; estrategia: string; direccion: string; confianza: number; operada: boolean; motivo?: string; rvol?: number | null; volConfirma?: string; factorScore?: number }> = []

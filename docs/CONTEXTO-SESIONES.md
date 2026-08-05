@@ -31,7 +31,11 @@
   la watchlist presenta en ≤2 días (`lineaEarningsProximos`, puro). Radar: espejo de BAJA de capa C
   (≥4 lunes fuera del top-20 → botones 🍂 `wlc_baja`/`wlc_mantener`; «mantener» caduca a 30d; columnas
   `baja_*` en `trading_cantera`, aplicadas) + línea ⚖️ de concentración de la watchlist B+C en el
-  digest. Pendiente decidir FMP: recargar créditos o retirarlo de la pasada (hoy calla al fallar).
+  digest. **FMP queda REDUNDANTE (5ª tanda):** `datosYahoo` trae también PER/PB/deuda-EBITDA/margen
+  (misma llamada quoteSummary, validado con respuesta real de STX) y `/analizar` los inyecta si el
+  payload no los trae → la estrategia «valor» (muerta por `sin fundamentales`) vuelve a competir.
+  No recargar créditos FMP; la skill de la pasada ya lo marca opcional. Solo el DCF (valorRazonable,
+  descubrimiento) sigue sin fuente — degradable.
 
 - **📅 Fechas de earnings EXACTAS por Yahoo en trading (05/08/2026, 3ª tanda).** Nueva fuente
   `lib/trading/earnings-yahoo.ts`: quoteSummary/calendarEvents con sesión cookie+crumb (keyless;

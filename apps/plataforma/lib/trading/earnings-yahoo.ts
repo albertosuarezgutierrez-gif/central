@@ -1,11 +1,18 @@
-// 📅 Fecha del próximo informe de resultados por Yahoo Finance (quoteSummary/calendarEvents).
-// Da la fecha EXACTA anunciada por la empresa (isEarningsDateEstimate=false) o la prevista por
-// Yahoo — mejor que el estimador EDGAR (+365d del filing del año pasado), que queda de RESPALDO.
+// 📅💼 Fecha del próximo informe Y fundamentales de mercado por Yahoo Finance (quoteSummary).
+// Sustituye a FMP (sin créditos desde hace meses — sus llamadas fallaban SIEMPRE y la estrategia
+// «valor» y la barrera de earnings del torneo degradaban en silencio). Da la fecha EXACTA anunciada
+// por la empresa (isEarningsDateEstimate=false) o la prevista por Yahoo — el estimador EDGAR
+// (+365d del filing del año pasado) queda de RESPALDO — más PER/PB/deuda-EBITDA/margen del día.
 // Yahoo exige desde 2023 una sesión cookie (A3 de fc.yahoo.com) + crumb; se abre una por proceso
-// y se renueva sola si caduca (un 401 la invalida y se reintenta una vez). Verificado contra la
-// respuesta real de STX el 05/08/2026 (fixture en el test). Best-effort: nunca lanza — null.
+// y se renueva sola si caduca (un 401 la invalida y se reintenta una vez). Verificado contra las
+// respuestas reales de STX del 05/08/2026 (fixtures en el test). Best-effort: nunca lanza — null.
 
 export type FechaEarnings = { fecha: string; confirmada: boolean }
+// Campos ausentes = undefined, jamás 0 (regla NULL≠dato): un EBITDA negativo deja deudaEbitda fuera.
+export type DatosYahoo = {
+  earnings: FechaEarnings | null
+  per?: number; pb?: number; deudaEbitda?: number; margenNeto?: number
+}
 
 const UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36'
 const TIMEOUT_MS = 8_000
@@ -43,6 +50,28 @@ export function lineaEarningsProximos(
   return partes.length ? `📅 Resultados en la watchlist: ${partes.join(' · ')} — ojo al gap.` : null
 }
 
+/** Parse puro del quoteSummary completo: calendario + fundamentales de summaryDetail /
+ *  financialData / defaultKeyStatistics. Cada campo {raw,fmt} se lee por `raw`. */
+export function parseQuoteSummary(json: unknown, hoy: string): DatosYahoo | null {
+  const r = (json as {
+    quoteSummary?: { result?: Array<Record<string, Record<string, unknown> | undefined>> }
+  } | null)?.quoteSummary?.result?.[0]
+  if (!r) return null
+  const raw = (x: unknown): number | undefined => {
+    const v = (x as { raw?: unknown } | null | undefined)?.raw
+    return typeof v === 'number' && Number.isFinite(v) ? v : undefined
+  }
+  const totalDebt = raw(r.financialData?.totalDebt)
+  const ebitda = raw(r.financialData?.ebitda)
+  return {
+    earnings: parseCalendarEvents(json, hoy),
+    per: raw(r.summaryDetail?.trailingPE),
+    pb: raw(r.defaultKeyStatistics?.priceToBook),
+    deudaEbitda: totalDebt !== undefined && ebitda !== undefined && ebitda > 0 ? totalDebt / ebitda : undefined,
+    margenNeto: raw(r.financialData?.profitMargins),
+  }
+}
+
 let sesion: { cookie: string; crumb: string } | null = null
 
 async function sesionYahoo(): Promise<{ cookie: string; crumb: string } | null> {
@@ -63,21 +92,26 @@ async function sesionYahoo(): Promise<{ cookie: string; crumb: string } | null> 
   } catch { return null }
 }
 
-/** Próxima fecha de resultados de un ticker de EEUU (o null si Yahoo no la da / falla). */
-export async function proximaFechaEarningsYahoo(simbolo: string, hoy: string): Promise<FechaEarnings | null> {
+/** Calendario + fundamentales de un ticker de EEUU en UNA llamada (o null si Yahoo falla). */
+export async function datosYahoo(simbolo: string, hoy: string): Promise<DatosYahoo | null> {
   for (let intento = 0; intento < 2; intento++) {
     const s = await sesionYahoo()
     if (!s) return null
     try {
       const url = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(simbolo)}` +
-        `?modules=calendarEvents&crumb=${encodeURIComponent(s.crumb)}`
+        `?modules=calendarEvents,summaryDetail,financialData,defaultKeyStatistics&crumb=${encodeURIComponent(s.crumb)}`
       const res = await fetch(url, {
         headers: { 'User-Agent': UA, Cookie: s.cookie }, signal: AbortSignal.timeout(TIMEOUT_MS),
       })
       if (res.status === 401 || res.status === 403) { sesion = null; continue }   // sesión caducada → renovar 1 vez
       if (!res.ok) return null
-      return parseCalendarEvents(await res.json(), hoy)
+      return parseQuoteSummary(await res.json(), hoy)
     } catch { return null }
   }
   return null
+}
+
+/** Próxima fecha de resultados de un ticker de EEUU (o null si Yahoo no la da / falla). */
+export async function proximaFechaEarningsYahoo(simbolo: string, hoy: string): Promise<FechaEarnings | null> {
+  return (await datosYahoo(simbolo, hoy))?.earnings ?? null
 }
