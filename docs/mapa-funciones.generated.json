@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-05T07:11:55Z",
-  "sha": "b59af713dc378e98cd1c0457df6e28b000ce603a",
+  "generadoEn": "2026-08-05T07:47:52Z",
+  "sha": "02138fe801410ce4a37fd6fdbe3bece19ea38f24",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -52328,7 +52328,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": "Promise<Diagnostico>",
-          "linea": 39,
+          "linea": 43,
           "resumen": "Autoriza y, si no, dice EN CUÁL de las formas ha fallado (sin revelar ningún valor)."
         },
         {
@@ -52337,7 +52337,7 @@
           "exportada": false,
           "params": "req: NextRequest, causa: string",
           "retorno": null,
-          "linea": 85
+          "linea": 89
         },
         {
           "nombre": "GET",
@@ -52345,7 +52345,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 102,
+          "linea": 106,
           "resumen": "Preflight: la rutina valida su token al arrancar, no cuando ya tiene algo que contar."
         },
         {
@@ -52354,12 +52354,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 112
+          "linea": 116
         }
       ],
       "tablas": [],
       "rutaApi": "/api/internal/alerta",
-      "hash": "8f85ebd20a9b"
+      "hash": "8f96b9ce86ab"
     },
     {
       "ruta": "apps/plataforma/app/api/internal/mapa-arquitectura/route.ts",
@@ -54391,10 +54391,11 @@
         "subastas_criterios",
         "subastas_descartes",
         "subastas_radar",
-        "subastas_seguidas"
+        "subastas_seguidas",
+        "trading_propuestas"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "753d43093d97"
+      "hash": "b00a4935b822"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -57801,6 +57802,28 @@
       ],
       "rutaApi": null,
       "hash": "8712a3f67f68"
+    },
+    {
+      "ruta": "apps/plataforma/lib/alerta-botones.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Validación de los botones opcionales de /api/internal/alerta — módulo PURO (sin @/, sin Prisma). Por qué es restrictivo: ese endpoint lo abren tokens de BAJO privilegio (ALERTA_TOKEN / `rutina_tokens`), pensados para que filtrarlos solo permita \"mandar un Telegram\". Si un token filtrado pudiera adju",
+      "exporta": [
+        "validarBotones"
+      ],
+      "funciones": [
+        {
+          "nombre": "validarBotones",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "BotonAlerta[][] | null",
+          "linea": 15,
+          "resumen": "Devuelve los botones saneados, o null si el payload no es válido (el aviso sale SIN botones)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6359d74a55fa"
     },
     {
       "ruta": "apps/plataforma/lib/alertas-categoria.ts",
@@ -88620,7 +88643,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2383,
-    "funciones": 6389
+    "archivos": 2384,
+    "funciones": 6390
   }
 }

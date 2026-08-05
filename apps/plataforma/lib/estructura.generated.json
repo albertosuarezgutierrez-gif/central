@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-05T07:23:40Z",
+  "generadoEn": "2026-08-05T07:47:52Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3775,6 +3775,7 @@
       "trading_paper_orden",
       "trading_paper_posicion",
       "trading_paper_track",
+      "trading_propuestas",
       "trading_ranking",
       "trading_tesis",
       "trading_tesis_resultado",
@@ -3969,6 +3970,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔘 Botones ✅/❌ en las propuestas de trading por Telegram (05/08/2026).",
+      "fecha": "05/08/2026"
+    },
+    {
       "titulo": "🔌 Circuito de propuestas de órdenes IBKR probado END-TO-END (05/08/2026).",
       "fecha": "05/08/2026"
     },
@@ -4022,10 +4027,6 @@
     },
     {
       "titulo": "📂 RRHH: categoría «Documentación mensual» en documentos de empresa (01/08/2026, rama `claude/programa-rrhh-m25fwd`).",
-      "fecha": "01/08/2026"
-    },
-    {
-      "titulo": "⚖️ Auditoría de las 37 subastas vivas tras el fix de cargas: dos mentiras más (01/08/2026).",
       "fecha": "01/08/2026"
     }
   ],
