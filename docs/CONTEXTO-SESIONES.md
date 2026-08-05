@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🛡️ La barrera de earnings del torneo vuelve a ver + higiene de cantera (05/08/2026, 4ª tanda).**
+  Hallazgo: `earningsInminente` (veto ≤3d) y la estrategia catalizador dependían de `proximoEarnings`
+  de FMP (sin créditos) → llegaba siempre vacío y degradaban a «no vetar» EN SILENCIO. Fix:
+  `/api/trading/analizar` inyecta la fecha Yahoo cuando falta, y manda aviso 📅 diario si un valor de
+  la watchlist presenta en ≤2 días (`lineaEarningsProximos`, puro). Radar: espejo de BAJA de capa C
+  (≥4 lunes fuera del top-20 → botones 🍂 `wlc_baja`/`wlc_mantener`; «mantener» caduca a 30d; columnas
+  `baja_*` en `trading_cantera`, aplicadas) + línea ⚖️ de concentración de la watchlist B+C en el
+  digest. Pendiente decidir FMP: recargar créditos o retirarlo de la pasada (hoy calla al fallar).
+
 - **📅 Fechas de earnings EXACTAS por Yahoo en trading (05/08/2026, 3ª tanda).** Nueva fuente
   `lib/trading/earnings-yahoo.ts`: quoteSummary/calendarEvents con sesión cookie+crumb (keyless;
   verificada desde cloud vía pg_net — STX 27/10 confirmada). La consumen la ficha «Analiza una acción»

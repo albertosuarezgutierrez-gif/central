@@ -130,6 +130,24 @@ export async function POST(req: NextRequest) {
     if (prefix === 'wlc') {
       const simbolo = args[0] || ''
       if (!simboloValido(simbolo)) { await tgAnswerCallback(cb.id, 'Símbolo no válido'); return NextResponse.json({ ok: true }) }
+      // Espejo de BAJA (🍂): quitar de capa C (activo=false, conserva histórico) o mantener.
+      if (action === 'baja' || action === 'mantener') {
+        if (action === 'baja') {
+          await prisma.$executeRaw`
+            UPDATE trading_watchlist SET activo = false WHERE simbolo = ${simbolo} AND capa = 'C'`.catch(() => {})
+        }
+        await prisma.$executeRaw`
+          UPDATE trading_cantera SET baja_decision = ${action === 'baja' ? 'baja' : 'mantener'}, baja_decidida_at = now()
+          WHERE simbolo = ${simbolo}`.catch(() => {})
+        await tgAnswerCallback(cb.id, action === 'baja' ? `${simbolo} fuera de la watchlist` : 'Vale — se mantiene')
+        if (cb.message?.message_id) {
+          await tgEditMessage(cb.message.message_id,
+            `${escapeHtml(cb.message.text || `🍂 Cantera: ${simbolo}`)}\n\n${action === 'baja'
+              ? `🗑️ <b>Fuera de capa C.</b> ${simbolo} deja de analizarse cada noche.`
+              : `✋ <b>Se mantiene.</b> Si vuelve a pasar un mes fuera del top-20, se re-preguntará.`}`)
+        }
+        return NextResponse.json({ ok: true })
+      }
       const decision = action === 'alta' ? 'alta' : 'rechazada'
       if (decision === 'alta') {
         await prisma.$executeRaw`
