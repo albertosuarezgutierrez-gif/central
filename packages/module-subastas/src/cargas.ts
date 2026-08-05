@@ -341,6 +341,22 @@ export function cargasQueSubsisten(cuadro: CuadroCargas, hoy?: Date): CargasSubs
     )
   }
 
+  // …y el matiz que decide si ese patrón es una ruina o un trámite. Va justo
+  // detrás del aviso anterior a propósito: lo que responde es su pregunta.
+  const vinculo = vinculoConCargaAnterior(cuadro.cargas)
+  if (vinculo && subsisten.includes(vinculo.carga)) {
+    const quien = `${vinculo.carga.tipo} anterior${vinculo.carga.acreedor ? ` de ${vinculo.carga.acreedor}` : ''}` +
+      `${vinculo.carga.importe != null ? ` (${formatearEur(vinculo.carga.importe)})` : ''}`
+    avisos.push(
+      vinculo.motivo === 'nota_marginal'
+        ? `🔎 El asiento que se ejecuta declara POR NOTA AL MARGEN su relación con la inscripción ${vinculo.asiento}, que es la ${quien}: ` +
+          'lo que se ejecuta sería el crédito garantizado por ella, y entonces se cancelaría al cobrar en vez de heredarse. ' +
+          'Lo afirma el registro, no una deducción nuestra — pero NO es automático: confírmalo con el juzgado antes de pujar. Hasta entonces, cuenta con la cifra alta.'
+        : `🔎 El acreedor del asiento que se ejecuta coincide con el de la ${quien}: ` +
+          'puede que se esté ejecutando el crédito garantizado por esa carga, en cuyo caso se cancelaría al cobrar. Confírmalo con el juzgado antes de pujar.',
+    )
+  }
+
   if (!cuadro.sinMasCargas) {
     avisos.push('La certificación no cierra con la fórmula «sin más cargas»: puede faltar información registral.')
   }
@@ -384,6 +400,69 @@ function formatearEur(n: number): string {
  * así que en el caso real de Belmonte devuelve `false` — que es lo correcto: no
  * se puede AFIRMAR que sean el mismo acreedor, hay que preguntarlo al juzgado.
  */
+/**
+ * La nota marginal que ata el asiento ejecutado a una carga ANTERIOR.
+ *
+ * El caso real (SUB-JA-2026-264269, Belmonte, 04/08/2026). La finca arrastra una
+ * hipoteca «anterior» de 44.850,00€ a favor de CAJA DE AHORROS DE ASTURIAS y se
+ * subasta por la anotación letra D de LIBERBANK: 48.450,00€ heredados sobre una
+ * salida de 19.329,00€, o sea descartada. Pero el literal de esa anotación
+ * termina diciendo:
+ *
+ *   «Se hace constar por nota al margen, su relación con la inscripción de
+ *    hipoteca 2ª, en trámites del procedimiento de ejecución ordinario.»
+ *
+ * …y la inscripción 2ª ES esa hipoteca. El registro está diciendo que el crédito
+ * que se ejecuta es el garantizado por ella — con lo que se cancelaría al cobrar
+ * y no se hereda casi nada. El dato estaba guardado y no lo leía nadie.
+ *
+ * Por qué no bastaba `mismoAcreedorQueEjecutante`: compara los acreedores contra
+ * la AUTORIDAD (el juzgado), donde el ejecutante no aparece; y aunque se le
+ * pasara, «CAJA DE AHORROS DE ASTURIAS» y «LIBERBANK S.A.» no casan por texto
+ * (son la misma entidad tras la absorción, pero afirmarlo sería adivinar). La
+ * nota marginal no adivina nada: es el registro quien afirma el vínculo.
+ *
+ * Nunca descuenta del importe — igual que la caducidad, marca y manda preguntar.
+ */
+export type VinculoEjecutante = {
+  /** La carga anterior con la que el asiento ejecutado declara relación. */
+  carga: Carga
+  /** Asiento citado por la nota marginal («2ª»), si el vínculo viene de ahí. */
+  asiento: string | null
+  /** De dónde sale la afirmación. La nota marginal es del registro; el acreedor, nuestro. */
+  motivo: 'nota_marginal' | 'mismo_acreedor'
+}
+
+/** «…nota al margen, su relación con la inscripción de hipoteca 2ª…» → `{tipo:'inscripcion', numero:'2'}`. */
+function asientoDeNotaMarginal(literal: string | null | undefined): { tipo: string; numero: string } | null {
+  const t = norm(literal ?? '')
+  if (!t) return null
+  const m = /nota\s+al\s+margen[^.]{0,150}?relacion\s+con\s+(?:la|el)\s+(inscripcion|anotacion)(?:\s+de\s+[a-z]+)?\s+(\d{1,3})/.exec(t)
+  return m ? { tipo: m[1], numero: m[2] } : null
+}
+
+export function vinculoConCargaAnterior(cargas: Carga[]): VinculoEjecutante | null {
+  const ejecuta = cargas.find((c) => c.rango === 'la_que_ejecuta' && !c.cancelada)
+  if (!ejecuta) return null
+  const anteriores = cargas.filter((c) => c.rango === 'anterior' && !c.cancelada)
+  if (!anteriores.length) return null
+
+  const asiento = asientoDeNotaMarginal(ejecuta.literal)
+  if (asiento) {
+    // El asiento se cita en el literal de la carga anterior («Inscripción 2ª de
+    // fecha…»). Se exige el MISMO tipo de asiento: la inscripción 2 y la
+    // anotación 2 son cosas distintas.
+    const cita = new RegExp(`\\b${asiento.tipo}\\s+${asiento.numero}\\b`)
+    const carga = anteriores.find((c) => cita.test(norm(c.literal ?? '')))
+    if (carga) return { carga, asiento: `${asiento.numero}ª`, motivo: 'nota_marginal' }
+  }
+
+  // Sin nota marginal, queda el nombre del acreedor de la carga que ejecuta —
+  // que es donde consta el ejecutante, no en la autoridad.
+  const porAcreedor = anteriores.find((c) => mismoAcreedorQueEjecutante([c], ejecuta.acreedor))
+  return porAcreedor ? { carga: porAcreedor, asiento: null, motivo: 'mismo_acreedor' } : null
+}
+
 export function mismoAcreedorQueEjecutante(cargas: Carga[], ejecutante: string | null | undefined): boolean {
   const e = (ejecutante ?? '').toLowerCase().replace(/[^a-záéíóúñ0-9 ]/g, ' ').replace(/\b(s\s?a|s\s?l|sau|slu|banco|caja|de|la|el|los|las|y)\b/g, ' ').trim()
   if (e.length < 4) return false

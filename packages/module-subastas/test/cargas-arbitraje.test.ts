@@ -5,6 +5,7 @@ import {
   cargasQueSubsisten,
   fusionarCargas,
   normalizarCuadroCargas,
+  vinculoConCargaAnterior,
   type Carga,
   type CuadroCargas,
 } from '../src/cargas.ts'
@@ -183,4 +184,64 @@ test('un día suelto sin mes no inventa una fecha', () => {
   const a = carga({ tipo: 'embargo', fecha: 'nueve', acreedor: 'X' })
   const b = carga({ tipo: 'embargo', fecha: '09/01/2020', acreedor: 'X' })
   assert.equal(fusionarCargas([a, b]).cargas.length, 2)
+})
+
+// ── El vínculo que decide si la hipoteca anterior es ruina o trámite ─────────
+// SUB-JA-2026-264269 otra vez, ahora por el literal de la anotación letra D:
+// el registro dice por nota marginal que el asiento que se ejecuta se relaciona
+// con la inscripción 2ª — que es la hipoteca «anterior» de 44.850,00€. O sea que
+// lo ejecutado es el crédito que ella garantiza, y se cancelaría al cobrar en
+// vez de heredarse. Sin leer esa nota, la subasta (salida 19.329,00€) se
+// descarta por un coste que probablemente no existe.
+
+const hipotecaInscripcion2 = carga({
+  tipo: 'hipoteca', rango: 'anterior', importe: 44850, acreedor: 'CAJA DE AHORROS DE ASTURIAS',
+  literal: 'HIPOTECA a favor de CAJA DE AHORROS DE ASTURIAS por un principal de 30.000,00 euros, de 2.100,00 euros ' +
+    'de intereses ordinarios, de 7.650,00 euros de intereses de demora, de 4.500,00 euros de costas y gastos y de ' +
+    '600,00 euros de otros gastos. [...] Inscripción 2ª de fecha diecisiete de agosto de dos mil nueve.',
+})
+const anotacionLetraD = carga({
+  tipo: 'embargo', rango: 'la_que_ejecuta', importe: 7016.54, acreedor: 'LIBERBANK S.A.',
+  literal: 'ANOTACION PREVENTIVA DE EMBARGO a favor de LIBERBANK S.A., C.I.F.: A86201993, para responder de ' +
+    '5.397,34 € de principal; 1.619,20 € para intereses, costas y gastos; según autos/expediente nº 33/2020, en el ' +
+    'procedimiento de Ejecución De Títulos Judiciales seguido en el/la Juzgado De Primera Instancia E Instrucción ' +
+    'Numero 1 De Valdes, de fecha treinta y uno de julio de dos mil veinte. Anotado con la letra D) de fecha ' +
+    'veinticuatro de agosto de dos mil veinte. Se hace constar por nota al margen, su relación con la inscripción ' +
+    'de hipoteca 2ª, en trámites del procedimiento de ejecución ordinario.',
+})
+
+test('la nota marginal ata el asiento ejecutado a la hipoteca anterior', () => {
+  const v = vinculoConCargaAnterior([hipotecaInscripcion2, anotacionLetraD])
+  assert.ok(v, 'la nota marginal cita la inscripción 2ª, que es la hipoteca anterior')
+  assert.equal(v!.motivo, 'nota_marginal')
+  assert.equal(v!.asiento, '2ª')
+  assert.equal(v!.carga.importe, 44850)
+})
+
+test('el aviso del vínculo sale en el resumen, y el importe NO se descuenta', () => {
+  const cuadro: CuadroCargas = {
+    cargas: [hipotecaInscripcion2, anotacionLetraD], notas: [], fuente: 'ocr_ia', confianza: 0.97,
+    procedimiento: 'embargo', sinMasCargas: true,
+  }
+  const r = cargasQueSubsisten(cuadro)
+  assert.equal(r.importe, 44850, 'marcar el vínculo no descuenta: eso lo decide el juzgado')
+  assert.ok(r.avisos.some((a) => a.includes('NOTA AL MARGEN') && a.includes('inscripción 2ª')))
+})
+
+test('sin nota marginal no se inventa el vínculo por nombres que no casan', () => {
+  const sinNota = carga({ ...anotacionLetraD, literal: 'ANOTACION PREVENTIVA DE EMBARGO a favor de LIBERBANK S.A. Anotado con la letra D).' })
+  // «CAJA DE AHORROS DE ASTURIAS» y «LIBERBANK S.A.» son la misma entidad tras
+  // la absorción, pero el texto no lo dice: afirmarlo sería adivinar.
+  assert.equal(vinculoConCargaAnterior([hipotecaInscripcion2, sinNota]), null)
+})
+
+test('la nota marginal que apunta a otro asiento no engancha la carga equivocada', () => {
+  const otraInscripcion = carga({ ...anotacionLetraD, literal: anotacionLetraD.literal!.replace('hipoteca 2ª', 'hipoteca 5ª') })
+  assert.equal(vinculoConCargaAnterior([hipotecaInscripcion2, otraInscripcion]), null)
+})
+
+test('el acreedor del asiento ejecutado sí engancha cuando el nombre coincide', () => {
+  const mismaCaja = carga({ ...anotacionLetraD, acreedor: 'CAJA DE AHORROS DE ASTURIAS', literal: 'ANOTACION PREVENTIVA DE EMBARGO. Anotado con la letra D).' })
+  const v = vinculoConCargaAnterior([hipotecaInscripcion2, mismaCaja])
+  assert.equal(v?.motivo, 'mismo_acreedor')
 })
