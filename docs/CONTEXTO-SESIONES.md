@@ -31,8 +31,17 @@ aplica ahora un **peaje de obra determinista**: si el descuento supera el umbral
 título confiesa obra (`pareceRuina`), el chollo solo sobrevive si tras sumar `RECONSTRUIR_EUR_M2`
 (1.100€/m², demolición+obra nueva) sigue ≥20% bajo la mediana — con `descuentoNeto` visible en UI y
 Telegram. Los que no aguantan la obra se excluyen (antes salían con ⚠️). Tests 402/402 módulo +
-851/851 plataforma, `tsc` 0, `next build` OK. Rama `claude/casas-derruidas-rentabilidad-9kbdpv`.
+851/851 plataforma, `tsc` 0, `next build` OK. Rama `claude/casas-derruidas-rentabilidad-9kbdpv` (PR #1259).
 
+- **⚖️ El dato que decide Belmonte estaba guardado y no lo leía nadie: la nota marginal (04/08/2026,
+  rama `claude/carga-no-recogida-analizada-vjkwc9`).** Auditando `cargas_detalle` a mano tras la relectura,
+  el literal de la anotación letra D (LIBERBANK, la que ejecuta) dice: «Se hace constar por nota al margen,
+  su relación con la inscripción de hipoteca 2ª» — y la inscripción 2ª ES la hipoteca «anterior» de
+  44.850,00€ de CAJA DE AHORROS DE ASTURIAS (Cajastur → Liberbank). O sea que lo ejecutado es el crédito que
+  ella garantiza y se cancelaría al cobrar. `mismoAcreedorQueEjecutante` no lo cazaba porque compara con la
+  AUTORIDAD (el juzgado), no con el acreedor de la carga `la_que_ejecuta`. Nuevo `vinculoConCargaAnterior`
+  (nota marginal primero, acreedor después); nunca descuenta, avisa. `LECTOR_VERSION` 8→9.
+>>>>>>> origin/main
 ### 🔎 El barrido ya ve mercado, pero no le cabía el calendario (05/08/2026)
 Pasada con #1241: **6 búsquedas vacías (eran 100)** — la consulta abierta era la buena. Pero al dejar
 de volver vacías, cada ventana paga su extracción IA y en los 240 s solo entraron **28 de 120**

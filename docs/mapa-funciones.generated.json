@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-05T06:35:44Z",
-  "sha": "7fe07dd8e9d9c3c8636a27d41db5e0dc7c97868a",
+  "generadoEn": "2026-08-05T06:49:52Z",
+  "sha": "bc3ded1d5b9f8eea1c6c932877b9b327ca3cbb5c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -66178,7 +66178,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "5048fb2af218"
+      "hash": "2af8fd771ab4"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/enriquecer.ts",
@@ -85228,6 +85228,7 @@
         "normalizarCuadroCargas",
         "esFormulaDeCierre",
         "cargasQueSubsisten",
+        "vinculoConCargaAnterior",
         "mismoAcreedorQueEjecutante",
         "letraAnotacion",
         "identidadCarga",
@@ -85282,7 +85283,24 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 369
+          "linea": 385
+        },
+        {
+          "nombre": "asientoDeNotaMarginal",
+          "kind": "function",
+          "exportada": false,
+          "params": "literal: string | null | undefined",
+          "retorno": "",
+          "linea": 437,
+          "resumen": "«…nota al margen, su relación con la inscripción de hipoteca 2ª…» → `{tipo:'inscripcion', numero:'2'}`."
+        },
+        {
+          "nombre": "vinculoConCargaAnterior",
+          "kind": "function",
+          "exportada": true,
+          "params": "cargas: Carga[]",
+          "retorno": "VinculoEjecutante | null",
+          "linea": 444
         },
         {
           "nombre": "mismoAcreedorQueEjecutante",
@@ -85290,8 +85308,7 @@
           "exportada": true,
           "params": "cargas: Carga[], ejecutante: string | null | undefined",
           "retorno": "boolean",
-          "linea": 387,
-          "resumen": "¿El ejecutante es también el acreedor de una carga ANTERIOR que subsiste? Es el matiz que decide si el caso «hipoteca anterior en embargo» es una ruina o solo un trámite: cuando coinciden, el crédito "
+          "linea": 466
         },
         {
           "nombre": "letraAnotacion",
@@ -85299,7 +85316,7 @@
           "exportada": true,
           "params": "c: Carga",
           "retorno": "string | null",
-          "linea": 406,
+          "linea": 485,
           "resumen": "Letra con la que el registro identifica una anotación preventiva («anotación letra C»). Es el identificador REGISTRAL del asiento: no cambia de un documento a otro, a diferencia del importe, que cada "
         },
         {
@@ -85308,7 +85325,7 @@
           "exportada": false,
           "params": "s: string | null",
           "retorno": null,
-          "linea": 411
+          "linea": 490
         },
         {
           "nombre": "identidadCarga",
@@ -85316,7 +85333,7 @@
           "exportada": true,
           "params": "c: Carga",
           "retorno": "string",
-          "linea": 418,
+          "linea": 497,
           "resumen": "Identidad del ASIENTO, para reconocer la misma carga leída en documentos distintos. Por orden de fiabilidad: la letra de la anotación, la fecha con el titular y, si no hay nada de eso, la firma antigu"
         },
         {
@@ -85325,7 +85342,7 @@
           "exportada": false,
           "params": "a: RangoCarga, b: RangoCarga",
           "retorno": "RangoCarga",
-          "linea": 427,
+          "linea": 506,
           "resumen": "El rango que MÁS cuesta de los dos: subsistir es más caro que purgarse."
         },
         {
@@ -85334,7 +85351,7 @@
           "exportada": true,
           "params": "titulo: string | null | undefined",
           "retorno": "0 | 1 | 2",
-          "linea": 442,
+          "linea": 521,
           "resumen": "Cuánto vale la palabra de un documento cuando dos se contradicen en el RANGO. 2 = **certificación de dominio y cargas**. Es el documento que el registrador expide PARA esta ejecución y el único que nu"
         },
         {
@@ -85343,7 +85360,7 @@
           "exportada": false,
           "params": "c: Carga",
           "retorno": "Set<string>",
-          "linea": 452,
+          "linea": 531,
           "resumen": "Las fechas que cita un asiento, en ISO. Una carga tiene varias a propósito: la de INSCRIPCIÓN y la de la ESCRITURA que la causó son distintas."
         },
         {
@@ -85352,7 +85369,7 @@
           "exportada": false,
           "params": "c: Carga",
           "retorno": "number | null",
-          "linea": 505,
+          "linea": 584,
           "resumen": "El PRINCIPAL que garantiza la carga. Es la cifra que NO cambia de un documento a otro: la certificación añade intereses y costas para dar la responsabilidad total, pero el principal es el mismo. Sirve"
         },
         {
@@ -85361,7 +85378,7 @@
           "exportada": false,
           "params": "a: Carga, b: Carga",
           "retorno": "boolean",
-          "linea": 532,
+          "linea": 611,
           "resumen": "¿Son estas dos lecturas EL MISMO asiento registral? 🚨 El caso que lo motiva (SUB-JA-2026-264600, Punta Umbría, auditado el 04/08/2026): la certificación citaba las hipotecas por su fecha de INSCRIPCI"
         },
         {
@@ -85370,7 +85387,7 @@
           "exportada": true,
           "params": "cargas: Carga[]",
           "retorno": "",
-          "linea": 568,
+          "linea": 647,
           "resumen": "Fusiona las cargas leídas en VARIOS documentos de la misma finca (edicto, certificación, informe de valoración…) dejando UNA fila por asiento. 🚨 El caso que la motiva (30/07/2026): la certificación c"
         },
         {
@@ -85379,7 +85396,7 @@
           "exportada": false,
           "params": "a: Carga, b: Carga, avisos: string[]",
           "retorno": "RangoCarga",
-          "linea": 617,
+          "linea": 696,
           "resumen": "Rango cuando dos documentos discrepan. Antes se cogía siempre el MÁS CARO, que es lo correcto cuando ninguno de los dos sabe más que el otro. Pero no es el caso: el orden de los asientos lo establece "
         },
         {
@@ -85388,7 +85405,7 @@
           "exportada": false,
           "params": "c: Carga",
           "retorno": "string",
-          "linea": 637
+          "linea": 716
         },
         {
           "nombre": "emparejarLecturas",
@@ -85396,7 +85413,7 @@
           "exportada": false,
           "params": "a: Carga[], b: Carga[]",
           "retorno": "Map<Carga, Carga>",
-          "linea": 649,
+          "linea": 728,
           "resumen": "Empareja las cargas de dos lecturas del MISMO documento. Primero por identidad registral (la letra de la anotación, la fecha…) y solo después, entre las que quedan sueltas, por tipo+rango — que es lo "
         },
         {
@@ -85405,7 +85422,7 @@
           "exportada": true,
           "params": "a: CuadroCargas, b: CuadroCargas",
           "retorno": "",
-          "linea": 678,
+          "linea": 757,
           "resumen": "Consenso entre DOS lecturas independientes del mismo documento. Alberto pidió que la IA extraiga las cifras; esta es la red que evita que un dígito mal leído se propague a una puja. Se emparejan las c"
         },
         {
@@ -85414,7 +85431,7 @@
           "exportada": true,
           "params": "anterior: CuadroCargas, nuevo: CuadroCargas",
           "retorno": "CambioCargas[]",
-          "linea": 748,
+          "linea": 827,
           "resumen": "Compara el cuadro que se leyó de la certificación del BOE con uno NUEVO (una nota simple recién pedida al registro, por ejemplo). Hace falta porque la certificación que el juzgado adjunta a la ficha s"
         },
         {
@@ -85423,7 +85440,7 @@
           "exportada": true,
           "params": "cuadro: CuadroCargas, subsistentes: CargasSubsistentes",
           "retorno": "string",
-          "linea": 798,
+          "linea": 877,
           "resumen": "Resumen legible del cuadro para la ficha y el aviso de Telegram."
         },
         {
@@ -85432,7 +85449,7 @@
           "exportada": true,
           "params": "titulo: string | null | undefined",
           "retorno": "boolean",
-          "linea": 865,
+          "linea": 944,
           "resumen": "¿El título de un adjunto de la ficha promete el cuadro de cargas? Los juzgados titulan a mano y con erratas: en el corpus vivo conviven «CERTIFICACIÓN DE CARGAS», «CERTIFICCION DE DOMINOS Y CARGAS», «"
         },
         {
@@ -85441,7 +85458,7 @@
           "exportada": true,
           "params": "e: EntradaEstadoCargas",
           "retorno": "",
-          "linea": 916,
+          "linea": 995,
           "resumen": "Estado de las cargas + el documento que hay que abrir, si lo hay. Conservador por diseño: `cargas > 0` manda sobre todo lo demás (si alguna vez hubo una lectura con cargas, no se degrada a «no se sabe"
         },
         {
@@ -85450,12 +85467,12 @@
           "exportada": true,
           "params": "e: EntradaEstadoCargas",
           "retorno": "TitularCargas",
-          "linea": 964
+          "linea": 1043
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e1eeaa5c17a4"
+      "hash": "903a3aa15c06"
     },
     {
       "ruta": "packages/module-subastas/src/catastro.ts",
@@ -88593,6 +88610,6 @@
   ],
   "resumen": {
     "archivos": 2383,
-    "funciones": 6386
+    "funciones": 6388
   }
 }

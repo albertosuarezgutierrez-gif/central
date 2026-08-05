@@ -146,6 +146,7 @@ export {
   normalizarCuadroCargas,
   cargasQueSubsisten,
   mismoAcreedorQueEjecutante,
+  vinculoConCargaAnterior,
   consensoCuadros,
   fusionarCargas,
   identidadCarga,
@@ -159,6 +160,7 @@ export {
   titularCargas,
   CONFIANZA_MINIMA_LIBRE,
 } from './cargas.ts'
+export type { VinculoEjecutante } from './cargas.ts'
 export type { Carga, CuadroCargas, CargasSubsistentes, TipoCarga, RangoCarga, FuenteCargas, ValoracionPactada, CambioCargas, EstadoCargas, AdjuntoFicha, EntradaEstadoCargas, TitularCargas } from './cargas.ts'
 export { PROMPT_LECTOR_REGISTRAL, extraerJson } from './cargas-prompt.ts'
 // Caducidad de las anotaciones de embargo (art. 86 LH): la carga fantasma que
