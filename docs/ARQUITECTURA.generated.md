@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-05T06:35:01Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-05T07:23:40Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -217,6 +217,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (05/08/2026) 🔌 Circuito de propuestas de órdenes IBKR probado END-TO-END (05/08/2026).
 - (05/08/2026) 💶 Escalera de dinero real firmada en el pre-registro (05/08/2026).
 - (04/08/2026) 🚪 Reglas de VENTA por fin medibles — H9 (04/08/2026, noche).
 - (31/07/2026) 🧾 Agente de facturas: ahora mira A NOMBRE DE QUIÉN viene la factura (31/07/2026).
@@ -226,5 +227,4 @@
 - (31/07/2026) 🔎 Verificación en caliente del arreglo de los ADR + techo al nº de acciones (31/07/2026).
 - (02/08/2026) 🔎 Revisión mensual ia.rest Tech & Stack (02/08/2026, sesión de investigación).
 - (02/08/2026) ⏱️ Crons con timeout 60s → 300s (02/08/2026, rama `claude/audit-30-07-hv2njr`).
-- (02/08/2026) 🧹 «Haz tu todo»: vulns 12→3, 0 críticas (02/08/2026, rama `claude/audit-vulnerabilities-02-08-m7lwtf`).
 
