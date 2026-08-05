@@ -112,6 +112,16 @@ model TradingWatchlist {
   @@map("trading_watchlist")
 }
 
+model TradingCantera {
+  simbolo         String    @id
+  semanasSeguidas Int?      @map("semanas_seguidas")
+  propuestoAt     DateTime  @default(now()) @map("propuesto_at") @db.Timestamptz(6)
+  decision        String? // NULL pendiente | 'alta' | 'rechazada'
+  decididoAt      DateTime? @map("decidido_at") @db.Timestamptz(6)
+
+  @@map("trading_cantera")
+}
+
 model TradingTesis {
   id            String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   simbolo       String
