@@ -24,6 +24,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🚨 Landmine trading-analista: get_price_history en paralelo desordena símbolos (04/08/2026)
+Pasada diaria (paper): al pedir los 13 `get_price_history` de IBKR en un solo mensaje paralelo y
+transcribir por POSICIÓN, los resultados llegaron en orden de FINALIZACIÓN, no de invocación →
+histórico de NFLX y PLTR intercambiado (+ una vela recortada a mano) → `/api/trading/analizar`
+reventó en prod con `PrismaClientValidationError` (visto en Vercel runtime errors). Sin impacto
+real: solo paper, ninguna posición se abrió con datos corruptos. Fix: re-pedidas una a una y
+verificada longitud de arrays antes de usar; protocolo documentado como landmine en
+`.claude/skills/trading-analista/references/pasada-diaria.md` (paso 3): etiquetar por
+`contract_id`/símbolo al guardar, nunca acumular N respuestas paralelas para transcribir al final.
+
 - **🔌 Circuito de propuestas de órdenes IBKR probado END-TO-END (05/08/2026).** Flujo validado con
   Alberto: el agente crea la orden como «instrucción» vía MCP IBKR (`create_order_instruction` — NO es
   orden viva; candado del broker) → aparece en la pestaña *AI Instructions* de su app con Reject/Submit
