@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📲→📧 El agente de venta de ia-rest trabaja SOLO (05/08/2026).** Alberto (a raíz del aviso «WhatsApp
+  listo: C&C EVENTS»): el agente manda el email él mismo y sin notificar nada. Retirado el carril WhatsApp
+  de frío (`crm-whatsapp-sevilla`, exigía un toque manual por lead; cron y ruta borrados) — esos leads van
+  ahora por el email frío automático (quitada la exclusión de móviles en `enviarEmailsSevilla`; backlog: 28
+  leads con marca whatsapp y email sin contactar). Silenciados los resúmenes Telegram 'info' de los carriles
+  de frío (lead-hunter, verticales, followup, envio-auto); los ERRORES siguen avisando. Auditado en prod:
+  C&C ya recibió día 1 (03/08) + día 2 (04/08) por el carril catering; el dedup impide repetirle. OJO: los
+  datos vivos del CRM están en la BD COMPARTIDA schema `iarest` (AGENTS.md de ia-rest aún dice silo). PR abajo.
+
 - **🚨 «otro» NO es un tipo, es un «no lo sé» — regresión en prod y su arreglo (05/08/2026).** La re-derivación
   de #1266 se apoyaba en una premisa FALSA que escribí una entrada más abajo: «`tipo_bien` tiene una sola
   fuente». No la tiene — la ingesta usa `s.datos ?? extraerDatos(...)` y ese `s.datos` viene del texto RICO de la
