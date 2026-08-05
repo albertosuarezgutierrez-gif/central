@@ -43,6 +43,49 @@ export type Ventana = {
   ronda: number
 }
 
+export type ConsultaVentana = {
+  via: 'abierta' | 'mes' | 'booking'
+  q: string
+}
+
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto',
+  'septiembre', 'octubre', 'noviembre', 'diciembre']
+
+/** «2026-11-13» → «noviembre 2026» (para la consulta de refuerzo por mes). */
+export function mesEnTexto(iso: string): string {
+  return `${MESES[Number(iso.slice(5, 7)) - 1]} ${iso.slice(0, 4)}`
+}
+
+/**
+ * Consultas de una ventana, en orden de intento (la siguiente solo se lanza si la anterior no
+ * resuelve, y a partir de la segunda pagan el cupo de refuerzo):
+ *   1. ABIERTA con la fecha ISO → es la que trae mercado (04/08/2026: 20 de 20 aciertos contra
+ *      0 de 100 del operador `site:`) Y distingue la fecha (medianas 305€ oct · 199€ dic · 104€ ene
+ *      ese mismo día). Pero el token de fecha es una LOTERÍA por fecha concreta: el 05/08/2026 la
+ *      ventana de noviembre entera volvió con `organic: []` en los 4 aforos (8 búsquedas contando
+ *      refuerzos) mientras feb y mar de 2027 —más lejanas— traían comps. No es distancia ni cuota:
+ *      para ESA fecha Google no casa nada.
+ *   2. MES EN TEXTO («noviembre 2026») — SOLO para ventanas de base. La línea de temporada es
+ *      mensual (el motor agrega por bucket de mes), así que un comparable «de noviembre» es
+ *      exactamente lo que ese bucket necesita cuando la fecha exacta no casa. Para una ventana de
+ *      EVENTO sería mentir: el comp de un evento tiene que ser de SU fecha (la mediana del mes
+ *      diluiría el premio de la Feria), así que ahí no se ofrece.
+ *   3. `site:booking.com` + fechas → la consulta original. Muda desde el 02/08/2026 (0 de 106 en
+ *      dos pasadas); se conserva por si Google vuelve a indexar así.
+ */
+export function consultasDeVentana(
+  checkin: string, checkout: string, aforo: number, motivo: 'mes' | 'evento',
+): ConsultaVentana[] {
+  const consultas: ConsultaVentana[] = [
+    { via: 'abierta', q: `apartamentos turísticos Sevilla centro para ${aforo} personas ${checkin} precio por noche euros booking` },
+  ]
+  if (motivo !== 'evento') {
+    consultas.push({ via: 'mes', q: `apartamentos turísticos Sevilla centro para ${aforo} personas ${mesEnTexto(checkin)} precio por noche euros booking` })
+  }
+  consultas.push({ via: 'booking', q: `apartamentos turísticos Sevilla centro ${checkin} ${checkout} ${aforo} personas site:booking.com precio noche` })
+  return consultas
+}
+
 export type VentanasOpts = {
   /** meses vista de la base mensual */
   mesesBase?: number
