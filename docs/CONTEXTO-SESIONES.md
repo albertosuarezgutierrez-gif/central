@@ -24,6 +24,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔌 Circuito de propuestas de órdenes IBKR probado END-TO-END (05/08/2026).** Flujo validado con
+  Alberto: el agente crea la orden como «instrucción» vía MCP IBKR (`create_order_instruction` — NO es
+  orden viva; candado del broker) → aparece en la pestaña *AI Instructions* de su app con Reject/Submit
+  (probado con 1×PYPL límite 50$, instrucción #100) → aviso Telegram vía `/api/internal/alerta` con token
+  propio en `rutina_tokens` (rutina `trading-propuestas`; el contenedor no llega a vercel.app → se llamó
+  por pg_net desde Supabase) → detección en solo-lectura OK. Descartada la integración OAuth/API (no
+  compensa a escala tramo 1). Retrovisor vivo: 200 filas post-merge, 191 con H8+H9. PR #1256 mergeado.
+
 - **⚖️ El dato que decide Belmonte estaba guardado y no lo leía nadie: la nota marginal (04/08/2026,
   rama `claude/carga-no-recogida-analizada-vjkwc9`).** Auditando `cargas_detalle` a mano tras la relectura,
   el literal de la anotación letra D (LIBERBANK, la que ejecuta) dice: «Se hace constar por nota al margen,
