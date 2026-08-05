@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-05T09:30:10Z",
-  "sha": "e8ed65801a6ff4e0280c0d4caf7ca45777ef5e4d",
+  "generadoEn": "2026-08-05T09:42:56Z",
+  "sha": "ecc38388745aef3a413b6ea10601995d9931a297",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -66851,7 +66851,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "e70fb8fcd7fa"
+      "hash": "19621b91c1d1"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/rendimiento.ts",

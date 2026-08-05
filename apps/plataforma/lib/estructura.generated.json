@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-05T09:30:10Z",
+  "generadoEn": "2026-08-05T09:42:56Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3970,6 +3970,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🚨 «otro» NO es un tipo, es un «no lo sé» — regresión en prod y su arreglo (05/08/2026).",
+      "fecha": "05/08/2026"
+    },
+    {
       "titulo": "🔁 El arreglo del parser no llegaba a la BD: `tipo_bien` se re-deriva (05/08/2026).",
       "fecha": "05/08/2026"
     },
@@ -4023,10 +4027,6 @@
     },
     {
       "titulo": "⏱️ Crons con timeout 60s → 300s (02/08/2026, rama `claude/audit-30-07-hv2njr`).",
-      "fecha": "02/08/2026"
-    },
-    {
-      "titulo": "🧹 «Haz tu todo»: vulns 12→3, 0 críticas (02/08/2026, rama `claude/audit-vulnerabilities-02-08-m7lwtf`).",
       "fecha": "02/08/2026"
     }
   ],
