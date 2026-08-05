@@ -42,6 +42,15 @@ export const MESES_MARGEN = 6
 /** Huellas de una prórroga en el texto del registro. Basta una para NO concluir. */
 const RE_PRORROGA = /pr[oó]rrog|prorrogad|renovad[ao]\s+la\s+anotaci/i
 
+/**
+ * Antigüedad a partir de la cual la fecha deja de ser creíble. Una anotación
+ * preventiva de embargo de hace más de 40 años no llega VIVA a la certificación
+ * de una subasta de hoy: lo que hay detrás es casi siempre un error de lectura.
+ * Y creerse esa fecha empuja al lado BARATO —la marca como posible caducada y
+ * enseña un coste menor—, que es justo la dirección prohibida en este módulo.
+ */
+export const ANIOS_FECHA_IMPLAUSIBLE = 40
+
 export type EstadoCaducidad =
   /** No es una anotación preventiva: el art. 86 LH no le aplica. */
   | 'no_aplica'
@@ -53,6 +62,8 @@ export type EstadoCaducidad =
   | 'prorrogada'
   /** Sin fecha legible: no se puede calcular nada. */
   | 'sin_fecha'
+  /** La fecha se ha leído, pero es tan antigua que no es creíble: no se concluye. */
+  | 'fecha_implausible'
 
 export interface Caducidad {
   estado: EstadoCaducidad
@@ -200,6 +211,21 @@ export function estadoCaducidad(c: Carga, hoy: Date): Caducidad {
 
   const aniosDesde = Math.round(((hoy.getTime() - parsed.fecha.getTime()) / 31_557_600_000) * 10) / 10
   const limite = ANIOS_CADUCIDAD_ANOTACION + MESES_MARGEN / 12
+
+  // Fecha leída pero increíble: no se concluye NADA, y se dice por qué. Caso
+  // real (04/08/2026): «veintinueve de enero de dos mil dieciocho» llegaba
+  // truncado a «…dos mil diecioch», el año se leyó como 2000 y la anotación de
+  // 2018 salía «de hace 26,5 años» y marcada como posible caducada.
+  if (aniosDesde > ANIOS_FECHA_IMPLAUSIBLE) {
+    return {
+      estado: 'fecha_implausible',
+      aniosDesde,
+      fechaExacta: parsed.exacta,
+      nota:
+        `La fecha leída de la anotación de embargo daría ${anios(aniosDesde)} de antigüedad, que no es creíble en una ` +
+        'certificación vigente: se trata como fecha ilegible y la carga se cuenta ENTERA. Confirma la fecha en el documento.',
+    }
+  }
 
   if (aniosDesde < limite) {
     return {

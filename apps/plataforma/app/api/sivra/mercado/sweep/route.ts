@@ -202,14 +202,14 @@ export async function GET(req: NextRequest) {
       if (ronda === 0) rondaBaseCompleta = false
       continue
     }
-    // 🚨 Los aforos de una ventana se miden EN PARALELO (05/08/2026). En serie, el coste de pared
-    // de una ventana es la SUMA de sus 4 cadenas búsqueda+extracción, y la extracción depende del
-    // modelo que sirva el Director esa noche: la pasada del 04/08 la hizo gemini-flash a ~880 ms y
-    // la del 05/08 le tocó deepseek/llama a 4,4-13 s — misma pasarela, 0 errores, y solo dieron
-    // tiempo 7 ventanas de 30 (la ronda base quedó incompleta, que invalida la pasada entera). Los
-    // aforos son búsquedas independientes, así que la ventana pasa a costar lo que su cadena más
-    // lenta; el nº de búsquedas y extracciones (lo que se paga) no cambia.
-    await Promise.all(Array.from(porAforo, async ([aforo, pisos]) => {
+    // 🚨 Los aforos de una MISMA fecha se miden EN PARALELO (05/08/2026). En serie no cabía el
+    // calendario: en cuanto la consulta abierta empezó a devolver resultados, cada ventana pasó a
+    // pagar su extracción por IA y en los 240 s solo entraron 28 de las 120 ventanas — ni siquiera
+    // la ronda base (8 meses × 4 aforos = 32), así que 6 meses se quedaron sin medir y el latido
+    // salió (correctamente) en rojo. Las 4 búsquedas de una fecha son independientes entre sí, así
+    // que van juntas: el paralelismo está acotado al nº de aforos distintos (hoy 4), que es un
+    // techo natural y bajo — ni Serper ni la pasarela ven más de 4 peticiones a la vez.
+    await Promise.all([...porAforo].map(async ([aforo, pisos]) => {
       try {
         // Se prueba la consulta abierta y, solo si vuelve vacía, las de refuerzo (con tope, que
         // cada intento extra es una búsqueda Serper de pago).
