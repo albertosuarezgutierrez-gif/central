@@ -214,6 +214,29 @@ export const CHOLLO_DESCUENTO_MIN = 0.2
  */
 export const CHOLLO_DESCUENTO_SOSPECHOSO = 0.5
 
+/**
+ * €/m² de LEVANTAR una casa vendida a precio de derribo (demolición + obra
+ * nueva). No es la reforma integral de `flip.ts` (700€/m², estructura en pie):
+ * en una derruida no hay estructura aprovechable y la obra parte de cero.
+ *
+ * Caso fundacional (05/08/2026, Idealista 111790643): casa en Llanes a
+ * 541€/m² — un ~70% "de descuento" que en realidad era una casa derruida.
+ * Nadie vende un 50%+ por debajo del mercado con la casa en pie: un descuento
+ * así ES la declaración de que el edificio no vale nada y se paga el suelo.
+ */
+export const RECONSTRUIR_EUR_M2 = 1100
+
+/**
+ * ¿El propio anuncio confiesa que hay obra por delante? Los correos de alerta
+ * no traen la descripción, pero el título a veces sí lo dice («Casa a reformar
+ * en…»). OJO: «reformado/rehabilitada/restaurada» es lo CONTRARIO (ya hecha) —
+ * los patrones exigen el infinitivo/sustantivo exactos.
+ */
+export function pareceRuina(titulo: string): boolean {
+  const t = norm(titulo)
+  return /\b(?:a|para|sin|que|entera para) reformar\b|\bruinas?\b|\bderruid\w*|\brehabilitar\b|\bderribos?\b|\bdemoler\b|\brestaurar\b/.test(t)
+}
+
 export interface Chollo {
   comparable: Comparable
   /** Zona con la que se ha comparado (la fina si tuvo muestra; si no, el municipio). */
@@ -224,6 +247,12 @@ export interface Chollo {
   /** 1 − precioM2/mediana. */
   descuento: number
   sospechoso: boolean
+  /**
+   * Descuento que quedaría tras pagar levantar la casa (`RECONSTRUIR_EUR_M2`).
+   * Solo se calcula cuando el anuncio huele a obra (descuento de derribo o
+   * título que la confiesa); `null` = anuncio con pinta habitable, sin peaje.
+   */
+  descuentoNeto: number | null
   /** De dónde sale la mediana: el buscador del portal (muestra grande) o las alertas. */
   fuente: 'portal' | 'alertas'
 }
@@ -294,15 +323,25 @@ export function detectarChollos(
       if (!ref) continue
       const descuento = 1 - c.precioM2 / ref.precioM2
       if (descuento >= minDescuento) {
-        out.push({
-          comparable: c,
-          zona: z,
-          precioM2Zona: ref.precioM2,
-          muestra: ref.muestra,
-          descuento,
-          sospechoso: descuento > CHOLLO_DESCUENTO_SOSPECHOSO,
-          fuente,
-        })
+        // Peaje de obra: un descuento de derribo (> sospechoso) o un título que
+        // confiesa la reforma significan que ese precio NO compra una vivienda,
+        // compra una obra. El chollo solo lo es si, pagando levantarla, sigue
+        // quedando por debajo de la zona — si no, es una ruina a precio justo
+        // de suelo y NO se enseña (caso Llanes 111790643, 05/08/2026).
+        const conObra = descuento > CHOLLO_DESCUENTO_SOSPECHOSO || pareceRuina(c.titulo)
+        const descuentoNeto = conObra ? 1 - (c.precioM2 + RECONSTRUIR_EUR_M2) / ref.precioM2 : null
+        if (descuentoNeto == null || descuentoNeto >= minDescuento) {
+          out.push({
+            comparable: c,
+            zona: z,
+            precioM2Zona: ref.precioM2,
+            muestra: ref.muestra,
+            descuento,
+            sospechoso: descuento > CHOLLO_DESCUENTO_SOSPECHOSO,
+            descuentoNeto,
+            fuente,
+          })
+        }
       }
       break // la primera zona con muestra decide; la amplia solo es red de la fina
     }

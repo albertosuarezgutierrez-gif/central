@@ -18,7 +18,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
-import { CHOLLO_DESCUENTO_MIN, datosFichaFotocasa, detectarChollos, estimarAntiguedad, MIN_MUESTRA_ZONA, parsearAlertaFotocasa, parsearAlertaIdealista, precioM2Zona, slugDistritoFotocasa, slugNucleoPlaya, slugZonaFotocasa, velocidadZona, type Chollo, type Comparable, type VelocidadZona, type ZonaPortal, type ZonaPortalRef } from '@central/module-subastas'
+import { CHOLLO_DESCUENTO_MIN, datosFichaFotocasa, detectarChollos, estimarAntiguedad, MIN_MUESTRA_ZONA, parsearAlertaFotocasa, parsearAlertaIdealista, precioM2Zona, RECONSTRUIR_EUR_M2, slugDistritoFotocasa, slugNucleoPlaya, slugZonaFotocasa, velocidadZona, type Chollo, type Comparable, type VelocidadZona, type ZonaPortal, type ZonaPortalRef } from '@central/module-subastas'
 import { leerAlertas } from '@/lib/subastas/gmail-boe'
 import { tgSend } from '@central/core-telegram'
 import { eur } from '@/lib/dinero'
@@ -546,7 +546,16 @@ export async function avisarChollos(): Promise<{ chollos: number; avisados: numb
       lineas.push(`  ⏳ En venta desde hace ~${Math.round(ch.antiguedadDias / 30)} meses (estimado por el nº de anuncio)`)
     }
     if (c.esParticular) lineas.push('  👤 Anuncio de PARTICULAR — negociación directa, sin comisión de agencia')
-    if (ch.sospechoso) lineas.push('  <i>Descuento anormalmente alto: verificar el anuncio antes de ilusionarse.</i>')
+    // Los descuentos de derribo que no aguantan la obra ya no llegan aquí
+    // (los filtra `detectarChollos`); si uno trae neto es que AUN levantando
+    // la casa sigue barato — se dice, con el supuesto por delante.
+    if (ch.descuentoNeto != null) {
+      lineas.push(
+        `  🔨 Huele a obra: aun pagando levantarla (~${RECONSTRUIR_EUR_M2}€/m²) quedaría un ` +
+          `${(ch.descuentoNeto * 100).toFixed(0)}% por debajo de la zona`,
+      )
+    }
+    if (ch.sospechoso) lineas.push('  <i>Descuento anormalmente alto: verificar el estado real antes de ilusionarse.</i>')
     if (c.url) lineas.push(`  ${escaparHtml(c.url)}`)
   }
   if (nuevos.length > 6) lineas.push('', `…y ${nuevos.length - 6} más en /subastas`)

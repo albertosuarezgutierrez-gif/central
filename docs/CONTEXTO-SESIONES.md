@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🔨 Las casas derruidas dejan de salir como chollos (05/08/2026)
+Alberto confirmó con un caso real (Idealista 111790643, Llanes: 99.000€, 541€/m², −68%) que los
+descuentos «de derribo» son casas a levantar, no chollos. `detectarChollos` (módulo `comparables.ts`)
+aplica ahora un **peaje de obra determinista**: si el descuento supera el umbral sospechoso (50%) o el
+título confiesa obra (`pareceRuina`), el chollo solo sobrevive si tras sumar `RECONSTRUIR_EUR_M2`
+(1.100€/m², demolición+obra nueva) sigue ≥20% bajo la mediana — con `descuentoNeto` visible en UI y
+Telegram. Los que no aguantan la obra se excluyen (antes salían con ⚠️). Tests 402/402 módulo +
+851/851 plataforma, `tsc` 0, `next build` OK. Rama `claude/casas-derruidas-rentabilidad-9kbdpv`.
+
 ### 🔎 El barrido ya ve mercado, pero no le cabía el calendario (05/08/2026)
 Pasada con #1241: **6 búsquedas vacías (eran 100)** — la consulta abierta era la buena. Pero al dejar
 de volver vacías, cada ventana paga su extracción IA y en los 240 s solo entraron **28 de 120**
