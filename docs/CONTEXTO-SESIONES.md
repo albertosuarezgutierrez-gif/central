@@ -24,6 +24,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 facturas-correo (05/08/2026, trigger diario) — el escaneo de correo destapó una venta de
+  3,3M€ colada como "gasto".** Vía B sana, sin backlog. Re-archivadas 3 facturas Booking mal ubicadas
+  por el cron `facturas-scan` (mismo bug de siempre). **Hallazgo gordo:** el cron metió en `gastos`
+  como si fueran facturas de Alberto: 2 extractos de Allianz sobre la póliza impagada de UN CLIENTE
+  (importes que no casan con el documento — probable alucinación de la extracción) y el "Documento de
+  Reserva" de Ariste Investments para comprarle a **San Luis 9 CB** (comunidad de la que Punto y Coma
+  podría ser copropietaria) el edificio de Calle San Luis 9 por **3.300.000€**, con una señal de
+  **33.000€ pagadera en 2 días hábiles desde el 31/07** (plazo ya vencido o al filo). Ninguna de las
+  4 filas es gasto deducible — avisado a Alberto por Telegram. Detalle en `docs/AGENTES-BITACORA.md`.
+
 - **⚖️ La misma hipoteca contada dos veces por escribir la fecha en LETRA (04/08/2026,
   rama `claude/carga-no-recogida-analizada-vjkwc9`).** Con #1250 ya en producción, Punta Umbría quedó bien
   (🟠 «sin cuantificar», adiós al 43.200,00€), pero Belmonte (`SUB-JA-2026-264269`) SUBIÓ de 48.450,00€ a

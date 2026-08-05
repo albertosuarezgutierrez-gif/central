@@ -15,6 +15,24 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-05 · facturas-correo (trigger diario)** · hizo: Vía B sana (dias_caido=1, `agente_salud`
+  actualizado), `PDF-pendiente` vacío. Re-archivadas 3 facturas Booking (comisión julio, 110,74+155,94+167,01€,
+  `turistico_pisos`) de "ALBERTO 2026 PERSONAL (SEGUROS)/AGOSTO" a `08-Agosto-2026` — mismo bug del cron
+  `facturas-scan` visto el 01/08 y 10/07; avisos en `_DUPLICADOS_BORRAR`. **Metí la pata con DIGI**: intenté
+  re-archivarla sin comprobar antes si ya estaba archivada — ya lo estaba (30/07, `07-Julio-2026` canónica,
+  conciliada) y además la copié a una carpeta `07-Julio-2026` DUPLICADA (no canónica, sin limpiar desde 07/07)
+  → dejé nota de corrección en `_DUPLICADOS_BORRAR` anulando mi propio aviso erróneo. **2 hallazgos fuera
+  de Gmail, en `gastos` (cron `facturas-scan`):** (1) 2 facturas "Allianz" (301,70€ y 291,73€) son en
+  realidad extractos de cuenta de MEDIADOR sobre pólizas de UN CLIENTE (Jaenes Amarillo), no gasto de
+  Alberto — importes que ni siquiera casan con ninguna cifra del documento (parecen inventados por la
+  extracción); (2) documento "Reserva San Luis 9" (Ariste Investments, compra del edificio San Luis 9 por
+  3.300.000€, reserva de 33.000€ pagadera en 2 días hábiles desde el 31/07) generó 2 filas de "gasto" de
+  3,3M€ y 33.000€ — es una operación de venta de un inmueble (San Luis 9 CB, del que Alberto podría ser
+  copropietario vía Punto y Coma), no un gasto deducible; el 33.000€ tenía plazo de pago ~03-04/08. Avisado
+  a Alberto por Telegram — ninguna de las 4 filas debe contarse como gasto. dudas: si Alberto es
+  copropietario de San Luis 9 CB y qué hacer con el plazo de la reserva (probablemente ya vencido); fallos:
+  mi propio error de duplicar DIGI sin comprobar primero si ya estaba archivada (corregido en la misma
+  pasada); PRs/commits: rama `claude/inspiring-gauss-gza44r`.
 - **2026-08-01 · facturas-correo (trigger diario)** · hizo: Vía B sana (dias_caido=0, `agente_salud`
   actualizado), sin backlog en `PDF-pendiente`/`Revisar`. 2 candidatos: Giraldillo AFV-11808 (72,60€,
   lavandería, deducible `turistico_pisos`) archivado en Drive con nombre normalizado, conciliación
