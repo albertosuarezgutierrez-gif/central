@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-04T22:05:34Z",
+  "generadoEn": "2026-08-05T06:35:01Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3969,6 +3969,10 @@
   ],
   "novedades": [
     {
+      "titulo": "💶 Escalera de dinero real firmada en el pre-registro (05/08/2026).",
+      "fecha": "05/08/2026"
+    },
+    {
       "titulo": "🚪 Reglas de VENTA por fin medibles — H9 (04/08/2026, noche).",
       "fecha": "04/08/2026"
     },
@@ -4022,10 +4026,6 @@
     },
     {
       "titulo": "⏰ Subasta vencida seguía en «🎯 Mi radar» (01/08/2026, rama `claude/expired-auction-visible-eoow4t`).",
-      "fecha": "01/08/2026"
-    },
-    {
-      "titulo": "📈 Trading: el panel de estrategias por fin discrimina + limpieza de huérfanas (01/08/2026).",
       "fecha": "01/08/2026"
     }
   ],
