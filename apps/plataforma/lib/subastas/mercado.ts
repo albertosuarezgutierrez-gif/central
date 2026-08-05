@@ -81,10 +81,10 @@ export async function ingerirComparables(dias = 30, maxCorreos = 150): Promise<{
 export async function upsertComparable(a: Comparable, vistoEn: Date): Promise<number> {
   const r = await prisma.$executeRaw(Prisma.sql`
     INSERT INTO mercado_comparables
-      (portal, ref_anuncio, titulo, tipo, zona, precio, precio_inicial, superficie, habitaciones, precio_m2, url, visto_en)
+      (portal, ref_anuncio, titulo, tipo, zona, precio, precio_inicial, superficie, habitaciones, precio_m2, url, a_reformar, visto_en)
     VALUES (
       ${a.portal}, ${a.refAnuncio}, ${a.titulo}, ${a.tipo}, ${a.zona}, ${a.precio}, ${a.precio},
-      ${a.superficie}, ${a.habitaciones}, ${a.precioM2}, ${a.url}, ${vistoEn}
+      ${a.superficie}, ${a.habitaciones}, ${a.precioM2}, ${a.url}, ${a.aReformar ?? null}, ${vistoEn}
     )
     ON CONFLICT (portal, ref_anuncio) DO UPDATE SET
       titulo = EXCLUDED.titulo,
@@ -105,6 +105,9 @@ export async function upsertComparable(a: Comparable, vistoEn: Date): Promise<nu
       superficie = COALESCE(EXCLUDED.superficie, mercado_comparables.superficie),
       habitaciones = COALESCE(EXCLUDED.habitaciones, mercado_comparables.habitaciones),
       precio_m2 = COALESCE(EXCLUDED.precio_m2, mercado_comparables.precio_m2),
+      -- El estado solo lo trae la API: un correo posterior (que no lo sabe) no
+      -- debe borrar lo que la API ya declaró.
+      a_reformar = COALESCE(EXCLUDED.a_reformar, mercado_comparables.a_reformar),
       visto_en = GREATEST(EXCLUDED.visto_en, mercado_comparables.visto_en)
     -- Solo actualiza una observación IGUAL O MÁS NUEVA que lo ya visto: en un
     -- backfill (?dias=60) los correos no llegan en orden y, sin esta guarda,
@@ -348,7 +351,7 @@ export async function comparablesVigentes(meses = MESES_VIGENCIA): Promise<Compa
   const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT portal, ref_anuncio, titulo, tipo, zona, precio, superficie, habitaciones, precio_m2, url,
            precio_inicial, precio_anterior, bajadas, ultima_bajada_at, created_at, visto_en,
-           anunciante, es_particular
+           anunciante, es_particular, a_reformar
     FROM mercado_comparables
     WHERE precio_m2 IS NOT NULL
       AND visto_en >= now() - make_interval(months => ${meses}::int)
@@ -374,6 +377,7 @@ export async function comparablesVigentes(meses = MESES_VIGENCIA): Promise<Compa
     ultimaVez: f.visto_en ? new Date(f.visto_en).toISOString() : null,
     anunciante: f.anunciante ?? null,
     esParticular: f.es_particular ?? null,
+    aReformar: f.a_reformar ?? null,
   }))
 }
 
@@ -546,6 +550,7 @@ export async function avisarChollos(): Promise<{ chollos: number; avisados: numb
       lineas.push(`  ⏳ En venta desde hace ~${Math.round(ch.antiguedadDias / 30)} meses (estimado por el nº de anuncio)`)
     }
     if (c.esParticular) lineas.push('  👤 Anuncio de PARTICULAR — negociación directa, sin comisión de agencia')
+    if (c.aReformar) lineas.push('  🔨 El propio anuncio se declara «a reformar»')
     // Los descuentos de derribo que no aguantan la obra ya no llegan aquí
     // (los filtra `detectarChollos`); si uno trae neto es que AUN levantando
     // la casa sigue barato — se dice, con el supuesto por delante.

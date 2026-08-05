@@ -271,6 +271,24 @@ test('un título que confiesa la reforma paga el peaje aunque el descuento sea m
   assert.ok(!detectarChollos(corpus).some((c) => c.comparable.refAnuncio === 'ref1'))
 })
 
+test('un anuncio que la API declara «a reformar» paga el peaje aunque el título calle', () => {
+  // Mismos números que el caso del título («a reformar» a −30%), pero el dato
+  // viene del `status: renew` de la API oficial — el título no dice nada.
+  const corpus: Comparable[] = [
+    ...muestra([1950, 2000, 2100], 'Ayamonte'),
+    { portal: 'idealista', refAnuncio: 'api1', titulo: 'Vivienda en Ayamonte',
+      tipo: 'vivienda', zona: 'Ayamonte', precio: 140000, superficie: 100,
+      habitaciones: null, precioM2: 1400, url: null, aReformar: true },
+  ]
+  assert.ok(!detectarChollos(corpus).some((c) => c.comparable.refAnuncio === 'api1'))
+  // `aReformar: false` (buen estado declarado) NO paga peaje: chollo normal.
+  const buenEstado = corpus.map((c) =>
+    c.refAnuncio === 'api1' ? { ...c, aReformar: false } : c)
+  const ch = detectarChollos(buenEstado).find((c) => c.comparable.refAnuncio === 'api1')
+  assert.ok(ch)
+  assert.equal(ch!.descuentoNeto, null)
+})
+
 test('pareceRuina: la obra pendiente sí, la obra ya hecha no', () => {
   assert.equal(pareceRuina('Casa a reformar en Lepe'), true)
   assert.equal(pareceRuina('Casa en ruinas en Cartaya'), true)

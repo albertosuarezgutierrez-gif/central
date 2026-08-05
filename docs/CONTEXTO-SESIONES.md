@@ -30,8 +30,11 @@ descuentos «de derribo» son casas a levantar, no chollos. `detectarChollos` (m
 aplica ahora un **peaje de obra determinista**: si el descuento supera el umbral sospechoso (50%) o el
 título confiesa obra (`pareceRuina`), el chollo solo sobrevive si tras sumar `RECONSTRUIR_EUR_M2`
 (1.100€/m², demolición+obra nueva) sigue ≥20% bajo la mediana — con `descuentoNeto` visible en UI y
-Telegram. Los que no aguantan la obra se excluyen (antes salían con ⚠️). Tests 402/402 módulo +
-851/851 plataforma, `tsc` 0, `next build` OK. Rama `claude/casas-derruidas-rentabilidad-9kbdpv` (PR #1259).
+Telegram. Los que no aguantan la obra se excluyen (antes salían con ⚠️). Además el agente ya «lee el
+anuncio» por la vía legítima: `Comparable.aReformar` desde el `status` de la API oficial de Idealista
+(`renew`; columna `mercado_comparables.a_reformar`, aplicada) — el scraping de la ficha sigue vetado
+(Idealista bloquea datacenter). Fotocasa: estado de la ficha PENDIENTE de validar contra ficha real.
+Tests 409/409 módulo + 851/851 plataforma, `tsc` 0, build OK. PR #1259.
 
 - **⚖️ El dato que decide Belmonte estaba guardado y no lo leía nadie: la nota marginal (04/08/2026,
   rama `claude/carga-no-recogida-analizada-vjkwc9`).** Auditando `cargas_detalle` a mano tras la relectura,

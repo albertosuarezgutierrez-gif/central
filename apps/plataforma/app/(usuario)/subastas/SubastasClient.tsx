@@ -148,6 +148,7 @@ interface Chollo {
     vistoDesde?: string | null
     anunciante?: string | null
     esParticular?: boolean | null
+    aReformar?: boolean | null
   }
   zona: string
   precioM2Zona: number
@@ -1127,6 +1128,11 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                   </p>
                 )}
                 <LineaRendimiento r={ch.rendimiento} dormitorios={ch.comparable.habitaciones} />
+                {ch.comparable.aReformar && (
+                  <p style={{ margin: '4px 0 0', color: 'var(--warning, #b45309)', fontSize: 12 }}>
+                    🔨 El propio anuncio se declara «a reformar»
+                  </p>
+                )}
                 {ch.descuentoNeto != null && (
                   <p style={{ margin: '4px 0 0', color: 'var(--warning, #b45309)', fontSize: 12 }}>
                     🔨 Huele a obra (descuento de derribo): aun pagando levantarla (~1.100€/m²) quedaría un{' '}

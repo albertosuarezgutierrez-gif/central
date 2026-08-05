@@ -55,6 +55,12 @@ export interface Comparable {
   anunciante?: string | null
   /** true = anuncio de particular (negociación directa, sin agencia). */
   esParticular?: boolean | null
+  /**
+   * El PROPIO anuncio declara que hay obra («a reformar»). Hoy solo lo trae la
+   * API oficial de Idealista (`status: 'renew'`); el correo de alerta no lo
+   * dice. `null`/ausente = no se sabe — que es lo normal, no un «no».
+   */
+  aReformar?: boolean | null
 }
 
 function texto(html: string): string {
@@ -328,7 +334,7 @@ export function detectarChollos(
         // compra una obra. El chollo solo lo es si, pagando levantarla, sigue
         // quedando por debajo de la zona — si no, es una ruina a precio justo
         // de suelo y NO se enseña (caso Llanes 111790643, 05/08/2026).
-        const conObra = descuento > CHOLLO_DESCUENTO_SOSPECHOSO || pareceRuina(c.titulo)
+        const conObra = descuento > CHOLLO_DESCUENTO_SOSPECHOSO || pareceRuina(c.titulo) || c.aReformar === true
         const descuentoNeto = conObra ? 1 - (c.precioM2 + RECONSTRUIR_EUR_M2) / ref.precioM2 : null
         if (descuentoNeto == null || descuentoNeto >= minDescuento) {
           out.push({
