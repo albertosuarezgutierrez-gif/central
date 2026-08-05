@@ -32,6 +32,16 @@
   por pg_net desde Supabase) → detección en solo-lectura OK. Descartada la integración OAuth/API (no
   compensa a escala tramo 1). Retrovisor vivo: 200 filas post-merge, 191 con H8+H9. PR #1256 mergeado.
 
+### 🔎 Barrido: refuerzo por «mes en texto» para las fechas que Google no casa (PR #1253, 05/08/2026)
+Diagnóstico en paralelo con #1255 (que ya mergeó los aforos en paralelo — al fusionar se quedó su
+versión): el hallazgo propio de este PR es que la ventana de NOVIEMBRE entera (4 aforos, 8 búsquedas)
+volvió `organic:[]` mientras feb/mar 2027 traían comps — el token de fecha ISO es lotería POR FECHA, no
+distancia ni cuota. Fix: consulta de refuerzo con el MES EN TEXTO («noviembre 2026») SOLO para ventanas
+de base (un evento exige comps de SU fecha; el bucket del motor es mensual), bajo el mismo cupo
+`SIVRA_SWEEP_MAX_REFUERZO`. `consultasDeVentana` movida a `mercado-ventanas.ts` (pura, 3 tests).
+**Verificar latido 06/08** (send_later armado).
+
+
 - **⚖️ El dato que decide Belmonte estaba guardado y no lo leía nadie: la nota marginal (04/08/2026,
   rama `claude/carga-no-recogida-analizada-vjkwc9`).** Auditando `cargas_detalle` a mano tras la relectura,
   el literal de la anotación letra D (LIBERBANK, la que ejecuta) dice: «Se hace constar por nota al margen,
