@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-05T20:48:42Z",
+  "generadoEn": "2026-08-05T20:56:43Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3971,6 +3971,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📅 Fechas de earnings EXACTAS por Yahoo en trading (05/08/2026, 3ª tanda).",
+      "fecha": "05/08/2026"
+    },
+    {
       "titulo": "🌱 Cantera capa C automática + alertas/altas de trading (05/08/2026, 2ª sesión).",
       "fecha": "05/08/2026"
     },
@@ -4025,10 +4029,6 @@
     {
       "titulo": "🧾 Agente de facturas: ahora mira A NOMBRE DE QUIÉN viene la factura (31/07/2026).",
       "fecha": "31/07/2026"
-    },
-    {
-      "titulo": "🧾 facturas-correo (01/08/2026, trigger diario).",
-      "fecha": "01/08/2026"
     }
   ],
   "saludRepo": {
