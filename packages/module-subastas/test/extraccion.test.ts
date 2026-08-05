@@ -79,6 +79,26 @@ test('el tipo de bien prioriza lo específico sobre lo genérico', () => {
   assert.equal(extraerDatos('Nave industrial').tipoBien, 'nave')
 })
 
+// Literal real de SUB-JA-2026-264398 (Alcalá del Río). La casa salía «garaje»
+// por la plaza de aparcamiento que su descripción menciona al final, y
+// `evaluarFlip` descarta lo que no es vivienda: la unifamiliar quedaba fuera de
+// la lente de rentabilidad por un elemento accesorio.
+test('una vivienda con plaza de aparcamiento sigue siendo vivienda', () => {
+  const texto =
+    'URBANA: VIVIENDA UNIFAMILIAR DIECINUEVE ya terminada. Ubicada en la parcela ' +
+    'diecinueve de la manzana RU-1, sita en C/ Dolores Ibarruri Nº 19 de Alcalá del Rio. ' +
+    'Esta vivienda dispone de un jardín en el resto de la parcela no ocupada por la ' +
+    'construcción, donde se ubica una plaza de aparcamiento en superficie.'
+  assert.equal(extraerDatos(texto).tipoBien, 'vivienda')
+  assert.equal(extraerDatos('Vivienda unifamiliar adosada, con garaje en planta baja').tipoBien, 'vivienda')
+})
+
+test('lo accesorio solo gana cuando es lo que se subasta (va primero)', () => {
+  // El caso que motivaba el orden fijo antiguo: aquí el garaje ES el bien.
+  assert.equal(extraerDatos('Plaza de aparcamiento nº 56 del conjunto de edificación').tipoBien, 'garaje')
+  assert.equal(extraerDatos('Trastero número 4 del edificio de viviendas sito en calle Real').tipoBien, 'trastero')
+})
+
 // ── Superficie: las formas que el BOE escribe de verdad (auditado 05/08/2026) ─
 // De 17 subastas vivas solo 5 tenían superficie. Dos de las que faltaban SÍ la
 // publicaban en el texto y no se extraía, porque la fórmula registral separa

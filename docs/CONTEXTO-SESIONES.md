@@ -24,6 +24,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏠 Una casa dejaba de ser casa por su plaza de aparcamiento — y el paso 1 no tiene candidatas (05/08/2026).**
+  Mergeado #1264 y lanzada la re-extracción en prod: 2 subastas ganan superficie (77,19 y 140,06 m², exactamente
+  las previstas) y el margen sube de 4 a **7 de 40** vivas. El cuello de botella se movió a `precio_m2_mercado`
+  (el corpus de comparables es casi todo costa de Huelva); `accion=zonas` lo resolvió por buscador Fotocasa.
+  **Resultado honesto: 0 subastas con margen ≥25%.** La única positiva es Dos Hermanas (+20,6%) y es ocupada,
+  🔴 y con €/m² de municipio entero. Al revisar salió un fallo de la misma familia: `tipoBien` resolvía por
+  orden fijo de reglas, así que la unifamiliar de Alcalá del Río (`SUB-JA-2026-264398`) salía **`garaje`** por
+  el «…plaza de aparcamiento en superficie» del final de su descripción — y `evaluarFlip` descarta lo que no es
+  vivienda, o sea que la casa quedaba fuera de la lente de rentabilidad por un elemento accesorio. Ahora manda
+  **quién aparece antes** en el texto (la descripción registral nombra el bien primero y deja linderos y anejos
+  al final) y la lista solo desempata; «plaza de garaje en edificio» sigue saliendo garaje. Tests 417/859. PR #1266.
+
 - **📐 Sin superficie no hay rentabilidad: 12 de 17 subastas vivas sin margen calculable (05/08/2026).**
   Alberto propuso el embudo «primero las muy rentables, luego el escrito al juzgado» y el paso 1 no se podía
   cumplir: solo 4 de 17 tenían `margen_flip_pct`. Causa: `superficieM2` exigía «X metros CON Y decímetros» y
