@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-05T10:47:32Z",
+  "generadoEn": "2026-08-05T16:30:40Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3969,6 +3969,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📱 El libro de `/banca` en móvil ya dice A QUÉ negocio va cada gasto deducible (05/08/2026).",
+      "fecha": "05/08/2026"
+    },
+    {
       "titulo": "📲→📧 El agente de venta de ia-rest trabaja SOLO (05/08/2026).",
       "fecha": "05/08/2026"
     },
@@ -4023,10 +4027,6 @@
     {
       "titulo": "🔎 Verificación en caliente del arreglo de los ADR + techo al nº de acciones (31/07/2026).",
       "fecha": "31/07/2026"
-    },
-    {
-      "titulo": "🔎 Revisión mensual ia.rest Tech & Stack (02/08/2026, sesión de investigación).",
-      "fecha": "02/08/2026"
     }
   ],
   "saludRepo": {

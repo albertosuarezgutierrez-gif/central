@@ -33,6 +33,12 @@
   señal→día sig. (`precio_dia_siguiente`, lo rellena /puntuar), contador `trading_pasadas` (avisa si la
   pasada corre 2×), `motivo_bloqueo` en tesis (vetadas agrupadas en /trading). Curva EUR ya existía.
 
+- **📱 El libro de `/banca` en móvil ya dice A QUÉ negocio va cada gasto deducible (05/08/2026).**
+  Captura de Alberto: la fila apilada de móvil oculta el `<select>` de negocio, así que un ✅ deducible
+  no decía dónde estaba asignado. Chip `banca-mov-destino-chip` junto al ✅ con el `DESTINO_LABEL`
+  (🛡️ correduría / 🏖️ pisos / 🏠 Dúplex), visible solo ≤768px (en escritorio el select ya lo muestra).
+  `BancaClient.tsx` + media query de `banca/page.tsx`. `tsc` 0. PR de la rama `claude/deductible-expense-info-lmirph`.
+
 - **📲→📧 El agente de venta de ia-rest trabaja SOLO (05/08/2026).** Alberto (a raíz del aviso «WhatsApp
   listo: C&C EVENTS»): el agente manda el email él mismo y sin notificar nada. Retirado el carril WhatsApp
   de frío (`crm-whatsapp-sevilla`, exigía un toque manual por lead; cron y ruta borrados) — esos leads van
