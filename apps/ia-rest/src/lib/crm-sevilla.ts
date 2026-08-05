@@ -96,6 +96,9 @@ export function construirSeguimiento(
 
 // Normaliza un MÓVIL español a formato internacional para wa.me (solo dígitos, prefijo 34).
 // Solo móviles (empiezan por 6 o 7): un fijo no recibe WhatsApp → devuelve null.
+// Lo usan pipeline-comercial y el webhook de Telegram para los botones wa.me de
+// leads ACTIVOS. El contacto en frío ya no usa WhatsApp (carril retirado 05/08/2026:
+// exigía un toque manual por lead; ahora esos leads reciben el email frío automático).
 export function normalizarTelefonoEs(telefono?: string | null): string | null {
   if (!telefono) return null
   let d = telefono.replace(/\D/g, '')
@@ -103,11 +106,6 @@ export function normalizarTelefonoEs(telefono?: string | null): string | null {
   else if (d.startsWith('34') && d.length === 11) d = d.slice(2)
   if (d.length === 9 && /^[67]/.test(d)) return `34${d}`
   return null // no parece un MÓVIL español válido
-}
-
-// ¿El teléfono es un móvil español (apto para WhatsApp)?
-export function esMovilEs(telefono?: string | null): boolean {
-  return normalizarTelefonoEs(telefono) !== null
 }
 
 // Mensaje + enlace para DM de Instagram (envío MANUAL desde la cuenta, sin API).
@@ -126,21 +124,5 @@ export function construirInstagram(
   const link = web.includes('instagram.com')
     ? (lead.web as string)
     : `https://www.google.com/search?q=${encodeURIComponent(`${lead.nombre || ''} Sevilla instagram`)}`
-  return { texto, link }
-}
-export function construirWhatsApp(lead: LeadVenta, telefono: string): { texto: string; link: string } | null {
-  const intl = normalizarTelefonoEs(telefono)
-  if (!intl) return null
-  const vertical = detectarVertical(lead.tipo_negocio)
-  const cfg = CFG[vertical]
-  const texto =
-    vertical === 'catering'
-      ? `Hola, soy Alberto de ia.rest. Trabajáis catering en Sevilla y montamos algo que calcula el coste y el margen real de cada evento al instante. ¿Te viene bien que te lo enseñe en 5 min? ${cfg.txt}`
-      : vertical === 'eventos'
-      ? `Hola, soy Alberto de ia.rest. Para fincas/haciendas de eventos juntamos calendario, solicitudes (bodas.net), presupuestos y contratos en un sitio. ¿5 min para que te lo enseñe? ${cfg.txt}`
-      : vertical === 'franquicia'
-      ? `Hola, soy Alberto de ia.rest. Para una red de locales unificamos la operativa (TPV por voz + IA), con panel central de ventas y margen por local y VeriFactu en toda la red. ¿15 min para enseñároslo? ${cfg.txt}`
-      : `Hola, soy Alberto de ia.rest. Ayudamos a hostelería de Sevilla a ganar margen con comandas por voz e IA. ¿Te viene bien que te lo enseñe en 5 min? ${cfg.txt}`
-  const link = `https://wa.me/${intl}?text=${encodeURIComponent(texto)}`
   return { texto, link }
 }

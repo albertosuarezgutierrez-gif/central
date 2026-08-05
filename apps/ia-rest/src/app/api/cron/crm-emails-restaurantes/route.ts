@@ -11,8 +11,8 @@ export async function GET(req: NextRequest) {
   }
   const supabase = createServerClient()
   // Hasta 15 presentaciones de restaurantes/bares (España) por día laborable.
-  // Envío automático con el mensaje tipo genérico (CRM_ENVIO_AUTO='0' = modo
-  // aprobación). Parte del volumen total de ~40/día elegido por Alberto.
+  // Envío automático y silencioso — solo avisan los errores (CRM_ENVIO_AUTO='0'
+  // = modo aprobación). Parte del volumen total de ~40/día elegido por Alberto.
   const result = await proponerEmailsVertical(supabase, 'restaurante', 15)
   return NextResponse.json({ ...result, timestamp: new Date().toISOString() }, { status: result.ok ? 200 : 500 })
 }

@@ -10,10 +10,15 @@
 // en la descripción, en la fórmula registral con coma que el extractor no
 // reconocía («setenta y siete metros, diecinueve decímetros cuadrados»).
 //
-// Es un paso barato y sin red: relee la descripción que ya está en la BD. Y es
-// CONSERVADOR por construcción — solo rellena columnas que están a NULL, nunca
-// pisa un dato existente. Si una pasada del extractor empeorase, no puede
-// borrar lo que otra fuente (la ficha, el Catastro) ya había averiguado.
+// Es un paso barato y sin red: relee la descripción que ya está en la BD.
+//
+// CONSERVADOR con lo que comparte fuente, RE-DERIVADO con lo que no. Las
+// columnas que otra fuente (la ficha del BOE, el Catastro) también rellena solo
+// se tocan si están a NULL: si una pasada del extractor empeorase, no puede
+// borrar lo que otro averiguó. `tipo_bien` es la excepción y va aparte, porque
+// su ÚNICA fuente es este texto — ahí un COALESCE no protege el trabajo de
+// nadie, solo congela la lectura de la versión vieja del parser (ver el
+// comentario en el UPDATE).
 // ────────────────────────────────────────────────────────────────────────────
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
@@ -35,12 +40,15 @@ export interface ResultadoReextraccion {
 /**
  * Vuelve a extraer del texto los datos que falten en las subastas VIGENTES.
  *
- * La cola son las filas con algún hueco extraíble, no «las no procesadas»: no
- * hay marca de versión de extractor porque no hace falta — al rellenar solo
- * NULLs, la pasada es idempotente y la fila deja de aparecer en cuanto se
- * completa. Lo que nunca esté en el texto (la mayoría de las descripciones del
- * BOE son una línea) seguirá saliendo, y eso es correcto: es un hueco real, no
- * un pendiente. El tope evita que una pasada se alargue por el tamaño del corpus.
+ * La cola son TODAS las vigentes con descripción, no solo las que tienen un
+ * hueco: desde que `tipo_bien` se re-deriva, una fila sin huecos puede seguir
+ * teniendo un valor que el parser de hoy leería distinto, y filtrarla por
+ * «le falta algo» la dejaría con la lectura vieja para siempre. Puede hacerse
+ * así porque el paso es CPU pura sobre texto que ya está en la BD —ni red ni
+ * IA— y quien evita las escrituras repetidas es el guardián del `WHERE`, no la
+ * cola. Lo que nunca esté en el texto (la mayoría de las descripciones del BOE
+ * son una línea) seguirá sin rellenarse, y eso es correcto: es un hueco real,
+ * no un pendiente. El tope acota la pasada si el corpus crece mucho.
  */
 export async function reextraerDatosDeTexto(max = 60): Promise<ResultadoReextraccion> {
   const filas = await prisma.$queryRaw<FilaTexto[]>(Prisma.sql`
@@ -50,11 +58,6 @@ export async function reextraerDatosDeTexto(max = 60): Promise<ResultadoReextrac
       AND es_inmueble = true
       AND descripcion IS NOT NULL
       AND (fecha_fin IS NULL OR fecha_fin >= now())
-      AND (
-        superficie IS NULL OR tipo_bien IS NULL OR direccion IS NULL
-        OR finca_registral IS NULL OR registro_propiedad IS NULL
-        OR dormitorios IS NULL OR banos IS NULL OR planta IS NULL
-      )
     ORDER BY fecha_fin ASC NULLS LAST
     LIMIT ${max}
   `)
@@ -66,7 +69,7 @@ export async function reextraerDatosDeTexto(max = 60): Promise<ResultadoReextrac
     const d = extraerDatos(f.descripcion ?? '')
     // Sin nada nuevo que aportar, ni se toca la fila (así `actualizado_en` sigue
     // significando «algo cambió» y no «el cron pasó por aquí»).
-    const algo = d.superficie != null || d.tipoBien != null || d.direccion != null ||
+    const algo: boolean = d.superficie != null || d.tipoBien != null || d.direccion != null ||
       d.fincaRegistral != null || d.registroPropiedad != null ||
       d.dormitorios != null || d.banos != null || d.planta != null
     if (!algo) continue
@@ -74,7 +77,23 @@ export async function reextraerDatosDeTexto(max = 60): Promise<ResultadoReextrac
     const n = await prisma.$executeRaw(Prisma.sql`
       UPDATE subastas SET
         superficie = COALESCE(superficie, ${d.superficie ?? null}),
-        tipo_bien = COALESCE(tipo_bien, ${d.tipoBien ?? null}),
+        -- tipo_bien se RE-DERIVA, pero solo cuando el texto dice algo.
+        --
+        -- Se re-deriva porque si no, el arreglo del parser nunca llega al
+        -- corpus: la unifamiliar de Alcalá del Río (SUB-JA-2026-264398) siguió
+        -- marcada "garaje" en BD después de arreglar tipoBien (PR #1265), y esa
+        -- columna es la que filtra GET /api/subastas y pinta el mapa, así que la
+        -- casa quedaba invisible al filtrar por vivienda.
+        --
+        -- Y el NULLIF de "otro" es la otra mitad, que costó una regresión en
+        -- producción: "otro" NO es un tipo, es el «no lo he sabido leer» de
+        -- tipoBien. La descripción persistida de muchas fichas es un marcador
+        -- ("DESCRIPCIÓN QUE CONSTA EN LA CERTIFICACIÓN DE CARGAS…"), mientras
+        -- que el tipo guardado puede venir del texto RICO de la ficha, que la
+        -- ingesta sí ve (s.datos en subastas-ingesta.ts) y aquí ya no está.
+        -- Sin el NULLIF, ese marcador degradó Punta Umbría de vivienda a otro.
+        -- Regla de la casa: un «no lo sé» jamás pisa un dato que sí se sabe.
+        tipo_bien = COALESCE(NULLIF(${d.tipoBien ?? null}, 'otro'), tipo_bien),
         direccion = COALESCE(direccion, ${d.direccion ?? null}),
         finca_registral = COALESCE(finca_registral, ${d.fincaRegistral ?? null}),
         registro_propiedad = COALESCE(registro_propiedad, ${d.registroPropiedad ?? null}),
@@ -84,11 +103,15 @@ export async function reextraerDatosDeTexto(max = 60): Promise<ResultadoReextrac
         cuota_participacion = COALESCE(cuota_participacion, ${d.cuotaParticipacion ?? null}),
         actualizado_en = now()
       WHERE dedupe_key = ${f.dedupe_key}
-        -- Solo si de verdad hay un hueco que este dato tapa: sin esto la
-        -- pasada reescribiría las mismas filas cada día sin cambiar nada.
+        -- Solo si de verdad hay algo que cambiar: sin esto la pasada
+        -- reescribiría las mismas filas cada día sin cambiar nada. Es este
+        -- guardián —y no la cola— el que hace idempotente la re-extracción.
         AND (
           (superficie IS NULL AND ${d.superficie ?? null}::numeric IS NOT NULL)
-          OR (tipo_bien IS NULL AND ${d.tipoBien ?? null}::text IS NOT NULL)
+          -- tipo_bien se COMPARA, no se mira si está vacío: se re-deriva. Y con
+          -- el mismo NULLIF que el SET, para que un "otro" no cuente como cambio.
+          OR (NULLIF(${d.tipoBien ?? null}::text, 'otro') IS NOT NULL
+              AND tipo_bien IS DISTINCT FROM ${d.tipoBien ?? null}::text)
           OR (direccion IS NULL AND ${d.direccion ?? null}::text IS NOT NULL)
           OR (finca_registral IS NULL AND ${d.fincaRegistral ?? null}::text IS NOT NULL)
           OR (registro_propiedad IS NULL AND ${d.registroPropiedad ?? null}::text IS NOT NULL)

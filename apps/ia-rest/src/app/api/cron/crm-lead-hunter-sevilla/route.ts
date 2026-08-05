@@ -10,8 +10,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
   const supabase = createServerClient()
-  // Hasta 12 propuestas de email NO-móvil por día laborable (cron 10:00 España). Ya no
-  // se auto-envía: se PROPONE en Telegram y Alberto aprueba. El botón manual prepara 20.
+  // Hasta 12 emails fríos de Sevilla por día laborable (cron 10:00 España), envío
+  // automático y silencioso — solo avisan los errores. Incluye también a los leads
+  // con móvil (el carril WhatsApp manual se retiró el 05/08/2026).
   const result = await enviarEmailsSevilla(supabase, 12)
   return NextResponse.json({ ...result, timestamp: new Date().toISOString() }, { status: result.ok ? 200 : 500 })
 }

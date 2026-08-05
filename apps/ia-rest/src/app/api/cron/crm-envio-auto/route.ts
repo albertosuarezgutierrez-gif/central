@@ -165,11 +165,13 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  if (enviados > 0 || errores.length) {
+  // Solo se avisa por Telegram si hubo ERRORES (decisión 05/08/2026: el agente
+  // trabaja solo — los envíos correctos no notifican, un fallo sí debe verse).
+  if (errores.length) {
     await tgAlert(
-      `📨 Envío automático ia.rest: ${enviados} enviado${enviados !== 1 ? 's' : ''}` +
-      `${errores.length ? ` · ${errores.length} con error` : ''} (quedan ${restantes - enviados} hoy).`,
-      errores.length ? 'aviso' : 'info'
+      `📨 Envío automático ia.rest: ${errores.length} con error` +
+      `${enviados ? ` (${enviados} sí salieron)` : ''} — primeros: ${errores.slice(0, 3).join(' · ')}`,
+      'aviso'
     )
   }
   return NextResponse.json({ ok: true, enviados, errores: errores.slice(0, 5), restantesHoy: restantes - enviados })

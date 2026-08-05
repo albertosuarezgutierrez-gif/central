@@ -4,7 +4,6 @@ export const maxDuration = 60
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import jwt from 'jsonwebtoken'
-import { tgAlert } from '@/lib/telegram'
 import { construirSeguimiento } from '@/lib/crm-sevilla'
 import { crmSecret } from '@/lib/crm-secret'
 
@@ -79,8 +78,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  if (enviados > 0) {
-    await tgAlert(`📧 CRM seguimiento (día ${DIAS_ESPERA}+) Sevilla: ${enviados} emails de recordatorio enviados.`, 'info')
-  }
+  // Sin resumen Telegram (decisión 05/08/2026: el agente trabaja solo).
+  if (enviados > 0) console.log(`[followup] ${enviados} emails de seguimiento enviados`)
   return NextResponse.json({ ok: true, enviados })
 }
