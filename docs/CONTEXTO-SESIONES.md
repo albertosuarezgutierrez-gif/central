@@ -24,14 +24,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **📈 Trading: `/analizar` y `/puntuar` ya son idempotentes + revisión Fase 2 (05/08/2026).** La pasada
-  del 04/08 corrió ~5 veces y dejó 5 BUY idénticas (MSFT) y 288 tesis donde tocaban 52 → «posición ya
-  abierta» es ahora barrera ANTES de escribir, `createMany+skipDuplicates` y únicos en BD
-  (`trading_tesis(simbolo,fecha,estrategia)`, `trading_paper_orden(simbolo,lado,fecha)`); saneo aplicado
-  (`2026-08-05_trading_dedupe_ordenes_tesis.sql`). Revisión con datos reales: forward paper 2 cohortes ×
-  2 semanas (mediana +2% vs SPY +1%) — aún NO valida dinero real. Propuesta a Alberto (pendiente de su OK):
-  puerta = 3 cohortes ≥90d batiendo 2/3 + ≥20 ops cerradas con expectativa positiva → decisión ~nov-2026;
-  entrada por tramos 25%→50%→100% del NAV (33.400,93€), ~1/8 por señal. PR abajo.
+- **📈 Trading: pasada idempotente + 🪜 semáforo de la escalera real (05/08/2026, PR #1271).** El 04/08 la
+  pasada corrió ~5 veces (5 BUY idénticas, 288 tesis donde tocaban 52) → «posición ya abierta» es barrera
+  ANTES de escribir, únicos en BD, saneo aplicado. Decisión de Alberto: **la escalera la suben las SEÑALES,
+  no el calendario** (sin fecha objetivo; enmienda firmada en TRADING-HIPOTESIS-PREREGISTRO.md). Nuevo
+  `lib/trading/puerta-fase2.ts` (`evaluarEscalera`, puro+testeado) implementa la escalera YA firmada
+  (1.000€→+2.000€→+3.000€, techo 6.000€) en `/trading` y el digest semanal. Extras: deslizamiento
+  señal→día sig. (`precio_dia_siguiente`, lo rellena /puntuar), contador `trading_pasadas` (avisa si la
+  pasada corre 2×), `motivo_bloqueo` en tesis (vetadas agrupadas en /trading). Curva EUR ya existía.
 
 - **📲→📧 El agente de venta de ia-rest trabaja SOLO (05/08/2026).** Alberto (a raíz del aviso «WhatsApp
   listo: C&C EVENTS»): el agente manda el email él mismo y sin notificar nada. Retirado el carril WhatsApp

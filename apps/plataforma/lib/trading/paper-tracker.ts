@@ -174,6 +174,45 @@ export async function enviarPaperTracker(): Promise<{ enviado: boolean; medidas:
     }
   }
 
+  // 🪜 Escalera de dinero real (firmada en TRADING-HIPOTESIS-PREREGISTRO.md, 05/08/2026): la suben
+  // las señales, NO el calendario (Alberto). Cada tramo es una decisión SEPARADA suya; esto solo mide.
+  {
+    const { evaluarEscalera, emparejarOps } = await import('./puerta-fase2')
+    // Dedupe por cesta: dos versiones con los MISMOS valores son UNA prueba (misma regla que /trading).
+    const vistas = new Set<string>()
+    const cohortesEscalera = medidas.filter(m => {
+      const c = COHORTES_PAPER.find(x => x.version === m.cohorte)
+      const clave = c ? [...c.simbolos].sort().join(',') : m.cohorte
+      if (vistas.has(clave)) return false
+      vistas.add(clave)
+      return true
+    }).map(m => ({
+      cohorte: m.cohorte, dias: m.diasTranscurridos,
+      alphaMediana: m.medianaCesta != null && m.resultado ? m.medianaCesta - m.resultado.retornoBench : null,
+      maxDrawdown: m.riesgo?.maxDrawdown ?? null, maxDrawdownBench: m.riesgo?.maxDrawdownBench ?? null,
+    }))
+    const escalera = evaluarEscalera(cohortesEscalera)
+    lineas.push('', `🪜 <b>Escalera de dinero real — escalón alcanzable: Tramo ${escalera.alcanzable}</b> <i>(la suben las señales, no el calendario)</i>`)
+    for (const t of escalera.tramos) lineas.push(`${t.ok ? '✅' : '⬜'} ${t.titulo} — ${t.detalle}`)
+    if (escalera.alcanzable >= 2) lineas.push('<b>Un tramo nuevo cumple sus requisitos medibles. La decisión (y la orden) es SIEMPRE de Alberto.</b>')
+
+    // Deslizamiento señal→día siguiente (proxy de ejecución real): media de las BUY con dato. Alimenta
+    // el requisito de «fricción sin anomalías» del tramo 2. Walk-forward de señales: ops cerradas.
+    const ordenes = await prisma.tradingPaperOrden.findMany().catch(() => [])
+    const desliz = ordenes
+      .filter(o => o.lado === 'BUY' && o.precioDiaSiguiente != null && o.precio > 0)
+      .map(o => (o.precioDiaSiguiente! - o.precio) / o.precio)
+    if (desliz.length) {
+      const media = desliz.reduce((s, x) => s + x, 0) / desliz.length
+      lineas.push(`Deslizamiento señal→día sig.: ${pct(media)} de media (n=${desliz.length})`)
+    }
+    const ops = emparejarOps(ordenes.map(o => ({ simbolo: o.simbolo, lado: o.lado, precio: o.precio, fecha: o.fecha.toISOString().slice(0, 10) })))
+    if (ops.length) {
+      const mediaOps = ops.reduce((s, o) => s + o.retorno, 0) / ops.length
+      lineas.push(`Ops cerradas del sistema de señales: ${ops.length} · retorno medio ${pct(mediaOps)}`)
+    }
+  }
+
   // Nota de madurez: la cohorte más joven manda (aún no hay veredicto hasta acumular semanas).
   const masJoven = Math.min(...medidas.map(m => m.diasTranscurridos))
   lineas.push('', masJoven < 21

@@ -195,6 +195,24 @@ primer dato forward — la cohorte 2 y el radar empiezan a medir el 20/07/2026).
   SIEMPRE Alberto a mano (el agente jamás opera en IBKR). Salidas: por tiempo (91d) mientras H9
   no resuelva; si H9 cablea una regla, se aplica la que gane — sin improvisar stops sobre la marcha.
 
+## 🪜 Enmienda a la escalera de tramos — operacionalización medible + «sin fecha» · firmada 2026-08-05 (tarde)
+- **Origen:** Alberto, misma fecha: «la fase se cumple siempre y cuando se den TODAS las señales; si
+  no, no se da. Lo mismo hay señal en mes y medio o no la hay hasta dentro de cuatro meses — mejor
+  así, no una fecha concreta». Refuerza la nota del tramo 3 («la fecha NO se adelanta»): **ninguna
+  fecha del plan es objetivo ni tope — son estimaciones; mandan los requisitos.** No es comprar por
+  comprar: sin señal viva no se despliega ni el tramo 1.
+- **Operacionalización (para poder medirla en código, sin cambiar los requisitos firmados):**
+  · Tramo 2 «4 meses batiendo» = cesta más vieja ≥120 días con alpha por MEDIANA > 0 a fecha de corte.
+  · Tramo 3 «batiendo ajustado a riesgo» = mediana>SPY en ≥2/3 de las cestas distintas Y drawdown de
+    la cesta más vieja ≤1,5× el del SPY. «6 meses» = ≥180 días. «Distintas» = composiciones distintas
+    (dos versiones con la misma cesta son UNA prueba).
+  · La «fricción sin anomalías» del tramo 2 se mide con los trades REALES del tramo 1 (round-trip
+    ≤2%); como proxy previo, la columna `precio_dia_siguiente` de `trading_paper_orden` mide el coste
+    señal→ejecución del día siguiente.
+- **Implementación (no cambia el modelo):** helper puro `apps/plataforma/lib/trading/puerta-fase2.ts`
+  (`evaluarEscalera`, testeado) pintado en `/trading` (🪜) y en el digest semanal del paper-tracker.
+  El semáforo solo MIDE; cada tramo sigue siendo una decisión separada de Alberto.
+
 ## 📦 Archivo — pre-registro original de la cohorte 1 (tabla `trading_forward_paper`, retirada 01/08/2026)
 La primera cohorte se pre-registró el 18/07/2026 en una tabla ad-hoc (`trading_forward_paper`, con
 `trading_forward_paper_marca` para marcas interinas) que quedó huérfana cuando el forward pasó a

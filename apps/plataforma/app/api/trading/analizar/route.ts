@@ -16,6 +16,18 @@ export async function POST(req: NextRequest) {
   const { fecha, nav, simbolos, indice, minFactorScore } = (await req.json()) as { fecha: string; nav: number; simbolos: Entrada[]; indice?: { cierres: number[] }; minFactorScore?: number }
   if (!fecha || !nav || !Array.isArray(simbolos)) return NextResponse.json({ error: 'payload inválido' }, { status: 400 })
 
+  // Contador de pasadas del día: los únicos anti-duplicado hacen INVISIBLE un reintento en los datos,
+  // así que se cuenta aquí y se avisa UNA vez (al llegar a 2) si la rutina corre repetida. Best-effort.
+  try {
+    const [p] = await prisma.$queryRaw<{ analizar: number }[]>`
+      INSERT INTO trading_pasadas (fecha, analizar) VALUES (${new Date(fecha)}, 1)
+      ON CONFLICT (fecha) DO UPDATE SET analizar = trading_pasadas.analizar + 1
+      RETURNING analizar`
+    if (p?.analizar === 2) {
+      await tgSend(`⚠️ <b>Trading:</b> la pasada de ${fecha} ha corrido 2 veces (reintento de la rutina). Los únicos evitan duplicados, pero conviene mirar por qué se repite.`).catch(() => {})
+    }
+  } catch (e) { console.warn('[trading/analizar] contador de pasadas falló (no bloquea):', e) }
+
   // Régimen de mercado (SPY): si está risk-off (SPY<SMA200), no se abre ningún largo nuevo. Degrada a
   // risk-on si no se pasa el índice.
   const riskOn = indice?.cierres ? regimenMercado(indice.cierres).riskOn : true
@@ -73,6 +85,14 @@ export async function POST(req: NextRequest) {
     else if (superaLimiteOps(s.opsRecientes ?? opsPorNombre.get(s.simbolo) ?? 0)) motivo = 'límite de ops por nombre'
     else if (earningsInminente(s.fundamentales?.proximoEarnings, fecha)) motivo = 'earnings inminente (≤3d)'
     else if (bajoTendencia(precioRef, ind.sma50)) motivo = 'bajo SMA50 (tendencia de fondo bajista)'
+
+    // Señal ganadora alcista VETADA: se persiste el porqué en su tesis (lo pinta /trading agrupado).
+    if (motivo) {
+      await prisma.tradingTesis.updateMany({
+        where: { simbolo: s.simbolo, fecha: new Date(fecha), estrategia: ganadora.estrategia, direccion: 'alcista' },
+        data: { motivoBloqueo: motivo },
+      })
+    }
 
     if (!motivo) {
       const pos = abrir(s.simbolo, cantidad, precioRef, ind.atr14 ?? precioRef * 0.02, fecha)

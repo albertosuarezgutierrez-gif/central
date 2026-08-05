@@ -128,6 +128,9 @@ model TradingTesis {
   // abrir. Sirve para que el panel «Ideas de compra del agente» muestre SOLO compras reales, no señales
   // técnicas en bruto (que incluían nombres cuyo torneo ganó bajista o que las barreras vetaron).
   operada       Boolean                @default(false)
+  // Si la señal GANADORA alcista NO se compró, aquí queda el porqué («posición ya abierta», «bajo SMA50»,
+  // «earnings inminente»…). NULL = no aplica (no ganó el torneo, o sí se compró). Lo pinta /trading.
+  motivoBloqueo String?                @map("motivo_bloqueo")
   createdAt     DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
   resultado     TradingTesisResultado?
 
@@ -159,12 +162,26 @@ model TradingPaperOrden {
   precio    Float
   fecha     DateTime @db.Date
   motivo    String
+  // Deslizamiento (proxy): precio del día SIGUIENTE a la señal (lo rellena /puntuar). En real no se
+  // ejecuta al cierre de la señal sino al día siguiente — esta columna mide cuánto cuesta esa espera,
+  // la única incógnita que el paper no medía. NULL = aún sin dato (no 0).
+  precioDiaSiguiente Float? @map("precio_dia_siguiente")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   // Una orden por símbolo+lado+día: los reintentos de la pasada nocturna no duplican el libro
   // (04/08/2026: 5 BUY idénticas de MSFT). Los endpoints escriben con createMany+skipDuplicates.
   @@unique([simbolo, lado, fecha])
   @@map("trading_paper_orden")
+}
+
+// Contador de ejecuciones de la pasada nocturna por día. La idempotencia (únicos de órdenes/tesis)
+// hace INVISIBLE un reintento en los datos, así que sin este contador nadie se enteraría de que la
+// rutina corrió 5 veces (04/08/2026). /analizar incrementa y avisa por Telegram al llegar a 2.
+model TradingPasada {
+  fecha    DateTime @id @db.Date
+  analizar Int      @default(0)
+
+  @@map("trading_pasadas")
 }
 
 model TradingPaperPosicion {
