@@ -39,13 +39,16 @@ export async function POST(req: NextRequest) {
     const volumenRel = rvol(s.velas.map(v => v.volumen))   // volumen de hoy vs su media
     const señales = torneo(ind, s.fundamentales ?? {}, fecha, ajustes)
 
-    // Persistir todas las señales como tesis.
+    // Persistir todas las señales como tesis. skipDuplicates + único (simbolo,fecha,estrategia):
+    // si la pasada se reintenta el mismo día, no duplica filas (el 04/08 corrió 5 veces y dejó
+    // 288 tesis donde tocaban 52 — habría inflado el n del walk-forward).
     await prisma.tradingTesis.createMany({
       data: señales.map(se => ({
         simbolo: s.simbolo, fecha: new Date(fecha), estrategia: se.estrategia,
         direccion: se.direccion, confianza: se.confianza, horizonteDias: 10,
         precioRef, indicadores: ind as object, rationale: se.rationale,
       })),
+      skipDuplicates: true,
     })
 
     // Ganadora = mayor confianza entre las no-neutrales.
@@ -55,8 +58,13 @@ export async function POST(req: NextRequest) {
     // Barreras de riesgo.
     const cantidad = dimensionar(nav, precioRef, precioRef - 2 * (ind.atr14 ?? precioRef * 0.02), 0.01)
     const valorPos = cantidad * precioRef
+    // Posición ya abierta = barrera, ANTES de registrar nada: un reintento de la misma pasada (o una
+    // señal repetida en días siguientes) no debe crear otra orden BUY (el 04/08 quedaron 5 idénticas,
+    // y cada duplicada inflaba opsPorNombre para la barrera de límite de ops).
+    const yaAbierta = await prisma.tradingPaperPosicion.findUnique({ where: { simbolo: s.simbolo } })
     let motivo: string | undefined
-    if (!riskOn) motivo = 'régimen bajista (SPY<SMA200)'
+    if (yaAbierta) motivo = 'posición ya abierta'
+    else if (!riskOn) motivo = 'régimen bajista (SPY<SMA200)'
     // SELECCIÓN filtra al TIMING (Fase B): un nombre fundamentalmente flojo vs sus pares no se compra
     // aunque el gráfico dé señal. Degrada si el agente no aporta factorScore/minFactorScore.
     else if (factorFlojo(s.factorScore, minFactorScore)) motivo = `factor flojo (${s.factorScore?.toFixed(2)} < ${minFactorScore})`
@@ -68,7 +76,8 @@ export async function POST(req: NextRequest) {
 
     if (!motivo) {
       const pos = abrir(s.simbolo, cantidad, precioRef, ind.atr14 ?? precioRef * 0.02, fecha)
-      await prisma.tradingPaperOrden.create({ data: { simbolo: s.simbolo, lado: 'BUY', cantidad, precio: precioRef, fecha: new Date(fecha), motivo: `${ganadora.estrategia} conf ${ganadora.confianza}` } })
+      // createMany+skipDuplicates y no create: con el único (simbolo,lado,fecha) un reintento no revienta ni duplica.
+      await prisma.tradingPaperOrden.createMany({ data: [{ simbolo: s.simbolo, lado: 'BUY', cantidad, precio: precioRef, fecha: new Date(fecha), motivo: `${ganadora.estrategia} conf ${ganadora.confianza}` }], skipDuplicates: true })
       // Marca la tesis GANADORA (recién insertada arriba) como comprada de verdad: es la única fila
       // (simbolo,fecha,estrategia) de esta pasada, así que el updateMany impacta exactamente esa señal.
       // El panel «Ideas de compra del agente» filtra por `operada` → no muestra señales que el agente no compró.
@@ -76,16 +85,13 @@ export async function POST(req: NextRequest) {
         where: { simbolo: s.simbolo, fecha: new Date(fecha), estrategia: ganadora.estrategia, direccion: 'alcista' },
         data: { operada: true },
       })
-      const yaAbierta = await prisma.tradingPaperPosicion.findUnique({ where: { simbolo: s.simbolo } })
       await prisma.tradingPaperPosicion.upsert({
         where: { simbolo: s.simbolo },
         create: { simbolo: s.simbolo, cantidad, precioEntrada: precioRef, stop: pos.stop, abiertaEn: new Date(fecha) },
         update: {},   // no promediar: si ya existe, no se toca
       })
-      // Aviso inmediato por Telegram SOLO en aperturas nuevas (no si ya existía la posición). Best-effort.
-      if (!yaAbierta) {
-        await tgSend(mensajeCompraPaper(fecha, { simbolo: s.simbolo, cantidad, precio: precioRef, estrategia: ganadora.estrategia, confianza: ganadora.confianza, stop: pos.stop, pctNav: valorPos / nav })).catch(() => {})
-      }
+      // Aviso inmediato por Telegram (aquí la posición es siempre nueva: `yaAbierta` es barrera arriba). Best-effort.
+      await tgSend(mensajeCompraPaper(fecha, { simbolo: s.simbolo, cantidad, precio: precioRef, estrategia: ganadora.estrategia, confianza: ganadora.confianza, stop: pos.stop, pctNav: valorPos / nav })).catch(() => {})
     }
     ideas.push({ simbolo: s.simbolo, estrategia: ganadora.estrategia, direccion: ganadora.direccion, confianza: ganadora.confianza, operada: !motivo, motivo, rvol: volumenRel, volConfirma: confirmaVolumen(ganadora.direccion, volumenRel), factorScore: s.factorScore })
   }

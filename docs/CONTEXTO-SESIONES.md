@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📈 Trading: `/analizar` y `/puntuar` ya son idempotentes + revisión Fase 2 (05/08/2026).** La pasada
+  del 04/08 corrió ~5 veces y dejó 5 BUY idénticas (MSFT) y 288 tesis donde tocaban 52 → «posición ya
+  abierta» es ahora barrera ANTES de escribir, `createMany+skipDuplicates` y únicos en BD
+  (`trading_tesis(simbolo,fecha,estrategia)`, `trading_paper_orden(simbolo,lado,fecha)`); saneo aplicado
+  (`2026-08-05_trading_dedupe_ordenes_tesis.sql`). Revisión con datos reales: forward paper 2 cohortes ×
+  2 semanas (mediana +2% vs SPY +1%) — aún NO valida dinero real. Propuesta a Alberto (pendiente de su OK):
+  puerta = 3 cohortes ≥90d batiendo 2/3 + ≥20 ops cerradas con expectativa positiva → decisión ~nov-2026;
+  entrada por tramos 25%→50%→100% del NAV (33.400,93€), ~1/8 por señal. PR abajo.
+
 - **📲→📧 El agente de venta de ia-rest trabaja SOLO (05/08/2026).** Alberto (a raíz del aviso «WhatsApp
   listo: C&C EVENTS»): el agente manda el email él mismo y sin notificar nada. Retirado el carril WhatsApp
   de frío (`crm-whatsapp-sevilla`, exigía un toque manual por lead; cron y ruta borrados) — esos leads van
