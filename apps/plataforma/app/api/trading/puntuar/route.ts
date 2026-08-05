@@ -32,6 +32,21 @@ export async function POST(req: NextRequest) {
     })
   }
 
+  // 2-bis) Deslizamiento (proxy): a las órdenes de días ANTERIORES sin dato se les apunta el precio de
+  // hoy si es su primer día hábil siguiente. En real no se ejecuta al cierre de la señal — esta columna
+  // mide cuánto cuesta esa espera, y decidirá si el tramo 1 real replica al paper. Best-effort.
+  try {
+    const sinDato = await prisma.tradingPaperOrden.findMany({ where: { precioDiaSiguiente: null, fecha: { lt: new Date(hoy) } } })
+    for (const o of sinDato) {
+      const precio = precios[o.simbolo]
+      // Solo el PRIMER precio tras la señal (≤5 días naturales cubre fines de semana/festivos): más tarde
+      // ya no mide deslizamiento sino deriva, y mejor NULL («no lo sé») que un dato con otro significado.
+      const diasDesde = (new Date(hoy).getTime() - new Date(o.fecha).getTime()) / 86_400_000
+      if (precio === undefined || diasDesde > 5) continue
+      await prisma.tradingPaperOrden.update({ where: { id: o.id }, data: { precioDiaSiguiente: precio } })
+    }
+  } catch (e) { console.warn('[trading/puntuar] deslizamiento falló (no bloquea):', e) }
+
   // 3) Stops sobre posiciones paper.
   const posiciones = await prisma.tradingPaperPosicion.findMany()
   let cerradas = 0
@@ -40,7 +55,8 @@ export async function POST(req: NextRequest) {
     if (precio === undefined) continue
     if (aplicarStop({ simbolo: p.simbolo, cantidad: p.cantidad, precioEntrada: p.precioEntrada, stop: p.stop, abiertaEn: String(p.abiertaEn) }, precio)) {
       const o = cerrar({ simbolo: p.simbolo, cantidad: p.cantidad, precioEntrada: p.precioEntrada, stop: p.stop, abiertaEn: String(p.abiertaEn) }, precio, hoy, 'stop')
-      await prisma.tradingPaperOrden.create({ data: { simbolo: o.simbolo, lado: 'SELL', cantidad: o.cantidad, precio: o.precio, fecha: new Date(hoy), motivo: o.motivo } })
+      // createMany+skipDuplicates: con el único (simbolo,lado,fecha) un reintento de la pasada no duplica ni revienta.
+      await prisma.tradingPaperOrden.createMany({ data: [{ simbolo: o.simbolo, lado: 'SELL', cantidad: o.cantidad, precio: o.precio, fecha: new Date(hoy), motivo: o.motivo }], skipDuplicates: true })
       await prisma.tradingPaperPosicion.delete({ where: { simbolo: p.simbolo } })
       cerradas++
     }

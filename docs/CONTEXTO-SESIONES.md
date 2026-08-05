@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📈 Trading: pasada idempotente + 🪜 semáforo de la escalera real (05/08/2026, PR #1271).** El 04/08 la
+  pasada corrió ~5 veces (5 BUY idénticas, 288 tesis donde tocaban 52) → «posición ya abierta» es barrera
+  ANTES de escribir, únicos en BD, saneo aplicado. Decisión de Alberto: **la escalera la suben las SEÑALES,
+  no el calendario** (sin fecha objetivo; enmienda firmada en TRADING-HIPOTESIS-PREREGISTRO.md). Nuevo
+  `lib/trading/puerta-fase2.ts` (`evaluarEscalera`, puro+testeado) implementa la escalera YA firmada
+  (1.000€→+2.000€→+3.000€, techo 6.000€) en `/trading` y el digest semanal. Extras: deslizamiento
+  señal→día sig. (`precio_dia_siguiente`, lo rellena /puntuar), contador `trading_pasadas` (avisa si la
+  pasada corre 2×), `motivo_bloqueo` en tesis (vetadas agrupadas en /trading). Curva EUR ya existía.
+
 - **📱 El libro de `/banca` en móvil ya dice A QUÉ negocio va cada gasto deducible (05/08/2026).**
   Captura de Alberto: la fila apilada de móvil oculta el `<select>` de negocio, así que un ✅ deducible
   no decía dónde estaba asignado. Chip `banca-mov-destino-chip` junto al ✅ con el `DESTINO_LABEL`

@@ -6,6 +6,7 @@ import CarteraEstudio from './CarteraEstudio'
 import CarteraCohetes, { type CarteraCohetesData } from './CarteraCohetes'
 import AnalisisSimbolo from './AnalisisSimbolo'
 import { COHORTES_PAPER } from '@/lib/trading/paper-cartera'
+import { evaluarEscalera, emparejarOps } from '@/lib/trading/puerta-fase2'
 
 // Contenido del «Laboratorio de inversión», extraído de page.tsx para poder reutilizarlo tal cual en la
 // vista de invitado (/invitado/trading, solo lectura vía token — ver lib/trading-acceso.ts). Es 100%
@@ -55,7 +56,7 @@ const th: React.CSSProperties = { textAlign: 'left', padding: '8px 10px', color:
 const td: React.CSSProperties = { padding: '8px 10px', borderBottom: '1px solid var(--border)', fontSize: 14, whiteSpace: 'nowrap' }
 
 export default async function TradingDashboard({ carteraCohetes }: { carteraCohetes: CarteraCohetesData | null }) {
-  const [posiciones, tesis, watchlist, track, radar, universoFilas] = await Promise.all([
+  const [posiciones, tesis, watchlist, track, radar, universoFilas, ordenes] = await Promise.all([
     safe(prisma.tradingPaperPosicion.findMany({ orderBy: { abiertaEn: 'desc' } }), []),
     safe(prisma.tradingTesis.findMany({ orderBy: [{ fecha: 'desc' }, { confianza: 'desc' }], take: 40, include: { resultado: true } }), []),
     safe(prisma.tradingWatchlist.findMany({ where: { activo: true }, orderBy: [{ capa: 'asc' }, { simbolo: 'asc' }] }), []),
@@ -64,6 +65,7 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
     safe(prisma.tradingUniverso.findMany({
       select: { simbolo: true, nombre: true, piotroski: true, roic: true, earningsYield: true, fcfYield: true, momentum: true, mktCap: true, actualizadoEn: true },
     }), []),
+    safe(prisma.tradingPaperOrden.findMany(), []),
   ])
 
   // Ranking+explorador UNIFICADOS (petición de Alberto 20/07: dos tablas eran la misma información):
@@ -109,6 +111,28 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
     else porCesta.set(clave, { cohorte, alias: [], filas: track.filter(t => t.cohorte === cohorte) })
   }
   const cohortesPaper = [...porCesta.values()].map(g => ({ ...g, ultima: g.filas[g.filas.length - 1] }))
+
+  // 🪜 Escalera de dinero real (firmada en TRADING-HIPOTESIS-PREREGISTRO.md): evaluada sobre las
+  // cohortes DEDUPLICADAS por cesta (mismo helper que el digest semanal). SIN fecha objetivo.
+  const escalera = evaluarEscalera(
+    cohortesPaper.map(({ cohorte, ultima }) => ({
+      cohorte, dias: ultima.dias,
+      alphaMediana: ultima.retornoMediana != null ? ultima.retornoMediana - ultima.retornoBench : null,
+      maxDrawdown: ultima.maxDrawdown, maxDrawdownBench: ultima.maxDrawdownBench,
+    })),
+  )
+  const opsCerradas = emparejarOps(ordenes.map(o => ({ simbolo: o.simbolo, lado: o.lado, precio: o.precio, fecha: o.fecha.toISOString().slice(0, 10) })))
+  const deslizBuys = ordenes.filter(o => o.lado === 'BUY' && o.precioDiaSiguiente != null && o.precio > 0)
+  const deslizMedio = deslizBuys.length ? deslizBuys.reduce((s, o) => s + (o.precioDiaSiguiente! - o.precio) / o.precio, 0) / deslizBuys.length : null
+
+  // Señales alcistas GANADORAS que las barreras vetaron (últimos 14 días), agrupadas por motivo.
+  const limite14d = new Date(Date.now() - 14 * 86_400_000)
+  const vetadasPorMotivo = new Map<string, string[]>()
+  for (const t of tesis.filter(t => t.motivoBloqueo && !t.operada && t.fecha >= limite14d)) {
+    const lista = vetadasPorMotivo.get(t.motivoBloqueo!) ?? []
+    if (!lista.includes(t.simbolo)) lista.push(t.simbolo)
+    vetadasPorMotivo.set(t.motivoBloqueo!, lista)
+  }
 
   const ultimaPasada = tesis[0]?.fecha
   const vacio = posiciones.length === 0 && tesis.length === 0 && watchlist.length === 0
@@ -169,6 +193,29 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
         <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
           Sin look-ahead: las cestas se congelan ANTES de medir. No es veredicto hasta acumular semanas/meses; si la mediana bate al SPY sostenida, entre cohortes y ajustada a riesgo → recién ahí la conversación de dinero real.
         </p>
+
+        {/* 🪜 Escalera de dinero real — requisitos FIRMADOS en docs/TRADING-HIPOTESIS-PREREGISTRO.md
+            («escalera de tramos», 05/08/2026). SIN fecha objetivo: la suben las señales, no el
+            calendario (Alberto, 05/08/2026). Cada tramo es una decisión SEPARADA de Alberto y la
+            orden la ejecuta SIEMPRE él a mano — el agente jamás opera en IBKR. */}
+        <div style={{ ...card, marginTop: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+            <strong style={{ fontSize: 15 }}>🪜 Escalera de dinero real — escalón alcanzable: <span style={{ color: escalera.alcanzable === 3 ? 'var(--positive)' : escalera.alcanzable === 2 ? 'var(--warning)' : 'var(--text)' }}>Tramo {escalera.alcanzable}</span></strong>
+            <span style={{ color: 'var(--muted)', fontSize: 12 }}>la suben las señales, no el calendario — sin fecha objetivo · techo 6.000€ hasta validar</span>
+          </div>
+          <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 13, lineHeight: 1.8 }}>
+            {escalera.tramos.map(t => (
+              <li key={t.tramo} style={{ color: t.ok ? 'var(--text)' : 'var(--muted)' }}>
+                {t.ok ? '✅' : '⬜'} <strong>{t.titulo}</strong> — <span style={{ color: 'var(--muted)' }}>{t.detalle}</span>
+              </li>
+            ))}
+          </ul>
+          <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+            {deslizMedio != null ? <>Deslizamiento señal→día sig.: <strong>{pct(deslizMedio)}</strong> (n={deslizBuys.length}) · </> : null}
+            Ops cerradas del sistema de señales: <strong>{opsCerradas.length}</strong>{opsCerradas.length ? <> · retorno medio <strong>{pct(opsCerradas.reduce((s, o) => s + o.retorno, 0) / opsCerradas.length)}</strong></> : null}.
+            Cada tramo es una decisión separada de Alberto; el agente jamás ejecuta órdenes reales. Congelador H6: si SPY cierra un mes bajo su media de 10 meses, la escalera se congela.
+          </p>
+        </div>
       </section>
 
       {/* 🚀 Cartera cohetes — bolsillo APARTE (lotería, paper): rota semanal a los cohetes confirmados y
@@ -277,6 +324,13 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
                 El agente aún no ha abierto ninguna compra en paper. Hubo señales alcistas sueltas, pero no ganaron
                 el torneo de su valor o las barreras de riesgo las vetaron, así que no se compraron. Las señales en
                 bruto (incl. bajistas/neutrales) quedan en el histórico.
+                {vetadasPorMotivo.size > 0 && (
+                  <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 13, lineHeight: 1.7 }}>
+                    {[...vetadasPorMotivo.entries()].map(([motivo, simbolos]) => (
+                      <li key={motivo}><strong style={{ color: 'var(--text)' }}>{simbolos.join(', ')}</strong> — {motivo}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </section>
           )
@@ -302,6 +356,16 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
               </table>
             </div>
             <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>Solo compras REALES en paper: la señal que ganó el torneo de su valor y pasó las barreras de riesgo. El resultado se rellena a posteriori (walk-forward). El histórico completo (señales en bruto, incl. bajistas/neutrales) queda guardado.</p>
+            {vetadasPorMotivo.size > 0 && (
+              <details style={{ marginTop: 8 }}>
+                <summary style={{ fontSize: 13, color: 'var(--muted)', cursor: 'pointer' }}>🚧 Señales ganadoras vetadas por las barreras (últimos 14 días)</summary>
+                <ul style={{ margin: '6px 0 0', paddingLeft: 18, fontSize: 13, lineHeight: 1.7, color: 'var(--muted)' }}>
+                  {[...vetadasPorMotivo.entries()].map(([motivo, simbolos]) => (
+                    <li key={motivo}><strong style={{ color: 'var(--text)' }}>{simbolos.join(', ')}</strong> — {motivo}</li>
+                  ))}
+                </ul>
+              </details>
+            )}
           </section>
         )
       })()}
