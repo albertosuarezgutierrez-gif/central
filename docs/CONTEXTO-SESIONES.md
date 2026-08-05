@@ -35,7 +35,7 @@ módulo PURO `lib/agente-facturas/elegir-adjuntos.ts` (7 tests, con el caso real
 adjunto-real > PDF > nombre-de-factura > decorativo, `mailparser.related` marca los `inline`, y el
 escaneo prueba hasta 3 adjuntos parando en el primero con importe. Además `quitarEtiqueta()` VACÍA
 `Facturas/Extraccion-fallida` de lo ya resuelto: la cola solo crecía y acabó afirmando «fallida» de
-correos ya leídos. tsc 0 · 812 tests · guardia 26/26 · build OK. PR #1246.
+correos ya leídos. tsc 0 · 812 tests · guardia 26/26 · build OK. PR #1257.
 
 ### 👁️ La rama de VISIÓN de las facturas también pasa por la pasarela (04/08/2026)
 Verificada la pasada de hoy tras #1234: la mitad de TEXTO funciona (12 llamadas, **0 errores**,
