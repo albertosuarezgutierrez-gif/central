@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-05T10:47:32Z",
-  "sha": "1b2f11655503e4194715ee1ffd19e6b2315ed90f",
+  "generadoEn": "2026-08-05T16:30:40Z",
+  "sha": "681124b30d8dd4fa8f8a323692b0ba7301dd8f6d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -43819,7 +43819,7 @@
           "exportada": true,
           "params": "{ ingresos, destinoLabel }: { ingresos: MovLedgerUI[] destinoLabel: Record<string, string> }",
           "retorno": null,
-          "linea": 894,
+          "linea": 903,
           "resumen": "Bandeja de INGRESOS por revisar: abonos cuyo negocio está sin confirmar. Antes no aparecían en ningún sitio accionable (la revisión de gastos es solo importe<0). Aquí el dueño les asigna el negocio (d"
         },
         {
@@ -43828,7 +43828,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 959
+          "linea": 968
         }
       ],
       "tablas": [
@@ -43836,7 +43836,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "798dcf6dbb7b"
+      "hash": "65b9580475e6"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/BenchmarkPisos.tsx",
@@ -44084,7 +44084,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "99d78d2e13fb"
+      "hash": "c8bbcac3b43b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",

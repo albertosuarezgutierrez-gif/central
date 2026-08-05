@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-05T10:47:32Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-05T16:30:40Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -217,6 +217,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (05/08/2026) 📱 El libro de `/banca` en móvil ya dice A QUÉ negocio va cada gasto deducible (05/08/2026).
 - (05/08/2026) 📲→📧 El agente de venta de ia-rest trabaja SOLO (05/08/2026).
 - (05/08/2026) 🚨 «otro» NO es un tipo, es un «no lo sé» — regresión en prod y su arreglo (05/08/2026).
 - (05/08/2026) 🔁 El arreglo del parser no llegaba a la BD: `tipo_bien` se re-deriva (05/08/2026).
@@ -226,5 +227,4 @@
 - (05/08/2026) 🔌 Circuito de propuestas de órdenes IBKR probado END-TO-END (05/08/2026).
 - (05/08/2026) 💶 Escalera de dinero real firmada en el pre-registro (05/08/2026).
 - (04/08/2026) 🚪 Reglas de VENTA por fin medibles — H9 (04/08/2026, noche).
-- (31/07/2026) 🧾 Agente de facturas: ahora mira A NOMBRE DE QUIÉN viene la factura (31/07/2026).
 
