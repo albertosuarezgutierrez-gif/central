@@ -24,6 +24,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔁 El arreglo del parser no llegaba a la BD: `tipo_bien` se re-deriva (05/08/2026).** Verificando #1265 en
+  producción: el margen ya salía bien (la lente flip recalcula el tipo en vivo desde el texto), pero la COLUMNA
+  `subastas.tipo_bien` seguía diciendo `garaje` para la unifamiliar de Alcalá del Río — y es esa columna la que
+  filtra `GET /api/subastas` y pinta el mapa, así que la casa seguía invisible al filtrar por vivienda. Causa:
+  `reextraerDatosDeTexto` protege TODAS las columnas con `COALESCE(columna, nuevo)`, correcto para las que
+  también rellenan la ficha o el Catastro, **equivocado para `tipo_bien`, cuya única fuente es ese mismo texto**:
+  ahí el COALESCE no protege el trabajo de nadie, solo congela la lectura del extractor viejo. Ahora se re-deriva
+  (`COALESCE(nuevo, columna)`), la cola deja de exigir «le falta algo» (una fila sin huecos también puede tener
+  un tipo mal leído) y la idempotencia la da solo el guardián del `WHERE`. Guardián nuevo
+  `reextraer-escritura.test.ts`, hermano del de `documentos.ts`. Tests 862. PR #1266.
+
 - **🏠 Una casa dejaba de ser casa por su plaza de aparcamiento — y el paso 1 no tiene candidatas (05/08/2026).**
   Mergeado #1264 y lanzada la re-extracción en prod: 2 subastas ganan superficie (77,19 y 140,06 m², exactamente
   las previstas) y el margen sube de 4 a **7 de 40** vivas. El cuello de botella se movió a `precio_m2_mercado`
