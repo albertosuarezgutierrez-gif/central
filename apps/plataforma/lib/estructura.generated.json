@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-05T18:03:02Z",
+  "generadoEn": "2026-08-05T20:36:05Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3970,6 +3970,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📈 STX (Seagate) alta en `trading_watchlist` capa C (05/08/2026, sin commit — cambio solo en BD).",
+      "fecha": "05/08/2026"
+    },
+    {
       "titulo": "📈 Trading: pasada idempotente + 🪜 semáforo de la escalera real (05/08/2026, PR #1271).",
       "fecha": "05/08/2026"
     },
@@ -4023,10 +4027,6 @@
     },
     {
       "titulo": "🧹 Laboratorio de inversión: quitado el ruido + el retrovisor llevaba 16 días muerto (04/08/2026).",
-      "fecha": "04/08/2026"
-    },
-    {
-      "titulo": "📊 Velas + volumen: medido, y la tesis del rebote en la media larga REFUTADA (04/08/2026).",
       "fecha": "04/08/2026"
     }
   ],
