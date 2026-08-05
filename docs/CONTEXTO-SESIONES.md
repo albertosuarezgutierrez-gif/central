@@ -24,6 +24,11 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💶 ialimp: precio de plan y ahorro anual sin formato español (05/08/2026, auditoría diaria, PR #1139).**
+  Mergeado por el orquestador Fase 2 (coder barato) sin sesión que lo anotara. `apps/ialimp/app/admin/planes/page.tsx`
+  pintaba `€25` en vez de `25€` — la regla global de dinero exige el € DETRÁS del número. Corregido con
+  `.toLocaleString('es-ES')` en precio y ahorro anual.
+
 - **⚖️ La misma hipoteca contada dos veces por escribir la fecha en LETRA (04/08/2026,
   rama `claude/carga-no-recogida-analizada-vjkwc9`).** Con #1250 ya en producción, Punta Umbría quedó bien
   (🟠 «sin cuantificar», adiós al 43.200,00€), pero Belmonte (`SUB-JA-2026-264269`) SUBIÓ de 48.450,00€ a
@@ -106,14 +111,6 @@
   `lib/trading/velas.ts` (puro, 13 tests, tres estados null/false/true) recolectado en el retrovisor
   sobre las ~800 del universo; NO toca ranking. Pre-registrado como **H8**. PR #1247.
 
-- **🔎 Verificación en caliente del arreglo de los ADR + techo al nº de acciones (31/07/2026).** Sin esperar
-  al cron: bajados por `pg_net` los companyfacts de los 5 peores del radar y pasados por el parser ya
-  mergeado. NMR (30.061.813 mil M$ de capitalización), PAC, LTM, BSAC y BCH → los 5 salen `emisorExtranjero`
-  y capitalización **NULL**. Ojo con LTM: presenta en DÓLARES, así que solo lo caza la regla del 20-F —
-  la de divisa no habría bastado. Hallazgo nuevo: el nº de acciones también viene inflado por el propio
-  emisor (Nomura ×1e6, PAC ×1000) y `accionesPlausibles` solo miraba hacia abajo → techo en 1e13, que caza
-  a Nomura sin tocar a los que sí tienen 1e11 acciones de verdad (LATAM, Santander Chile). PAC no es
-  separable y se queda. Hoy lo tapa el gate del ADR; la guarda es para cuando `acciones` se use para otra cosa.
 ### 🔐 Trial Tuya IoT Core renovado — cerraduras OK de nuevo (04/08/2026)
 Los PINs del teclado de Socorro fallaban por `Tuya 28841002: IoT Core service subscription has expired`
 (NO por el corte de luz; la «Sonda» no enlaza nada, solo lee por cloud). Alberto renovó el trial en

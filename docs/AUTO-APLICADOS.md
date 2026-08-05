@@ -13,6 +13,19 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-08-05 (auditoría ligera diaria)** · `docs/CONTEXTO-SESIONES.md` · dos cambios: **(1)** borrado
+  el bloque «Verificación en caliente del arreglo de los ADR» (31/07) que estaba duplicado palabra por
+  palabra — ya vivía archivado en `docs/memoria/2026-07.md` desde la rotación del 04/08, se había quedado
+  también en el vivo. **(2)** añadida entrada para PR #1139 (ialimp: formato español del precio de plan),
+  mergeado por el orquestador Fase 2 sin ninguna sesión que lo anotara. · `docs/FUENTES-DE-VERDAD.md` ·
+  añadido `packages/module-subastas/**` a la fila de `plataforma-maestro` (3 PRs en 24 h sobre ese
+  paquete — #1249/#1250/#1251 — y no tenía fila). SHA: (se completa tras el commit).
+  **⚠️ No se ejecutó `scripts/rotar-memoria.mjs`** pese a que el vivo tenía 3 entradas de julio
+  pendientes de rotar: el script está roto para entradas con formato `### Título (fecha)` en vez de
+  `- **Título (fecha).**` — las trata como continuación de la entrada `- **` anterior y heredan SU fecha.
+  Con el vivo actual esto habría archivado **11 entradas reales de 03–04/08/2026** (hoy/ayer) dentro de
+  `docs/memoria/2026-07.md`. Detalle y propuesta de fix en el informe del PR de esta auditoría.
+
 - **2026-08-02 (2ª pasada — revisión pedida por Alberto)** · rama `claude/revision-conversaciones-memorias-9hq32s` ·
   4 reconciliaciones de texto: **(1)** `.claude/skills/buscador-ia/SKILL.md` + `docs/BUSCADOR-IA.md` — la cadena
   seguía pintando Gemini como eslabón vivo y con id `gemini-2.5-flash`; el código manda: apagado por defecto

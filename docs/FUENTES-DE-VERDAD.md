@@ -23,7 +23,7 @@
 | skill `ia-rest-maestro` | `apps/ia-rest/**` (rutas, Edge Functions, `supabase/`, `src/**`) |
 | skill `sivra-maestro` | `apps/sivra/**` (web pública), `apps/plataforma/lib/sivra/**` + `apps/plataforma/app/api/sivra/**` (gestión interna: agente huésped, pricing, mensajería — vive en plataforma, no en `apps/sivra`) |
 | skill `ialimp-maestro` | `apps/ialimp/**` |
-| skill `plataforma-maestro` | `apps/plataforma/**` (incluye crons sivra migrados, `/operador/*`, `/finanzas`, banca) |
+| skill `plataforma-maestro` | `apps/plataforma/**` (incluye crons sivra migrados, `/operador/*`, `/finanzas`, banca), `packages/module-subastas/**` (radar de subastas, lo consume `apps/plataforma/lib/subastas/**`) |
 | skill `perfil-fiscal` | `apps/plataforma/lib/fiscal-deducciones.ts`, `apps/plataforma/lib/finanzas.ts`, `/finanzas` |
 | `apps/ia-rest/CLAUDE.md` | `apps/ia-rest/**` |
 | `apps/sivra/CLAUDE.md` | `apps/sivra/**` |
