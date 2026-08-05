@@ -24,6 +24,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💶 Escalera de dinero real firmada en el pre-registro (05/08/2026).** Alberto quiere adelantar
+  dinero real «poco a poco, si el agente lo ve»: firmado plan de tramos (1.000€ → +2.000€ → +3.000€,
+  techo 6.000€/18% del cash hasta validación, congelador H6, señal viva del agente como requisito de
+  entrada, órdenes SIEMPRE manuales de Alberto). No adelanta la validación (ene-feb 2027): adelanta
+  fontanería y disciplina. Contexto previo: PYPL capituló de libro en feb/2026 (−37,8% + 3,3× vol,
+  señal H8) y ya pagó +26,7% — hoy sería perseguir el gap. Pendiente: cuando el retrovisor cierre su
+  primer ciclo con H8+H9 (~2 días), foto completa a Alberto con propuesta de tramo 1. PR #TBD.
+
 - **⚖️ La misma hipoteca contada dos veces por escribir la fecha en LETRA (04/08/2026,
   rama `claude/carga-no-recogida-analizada-vjkwc9`).** Con #1250 ya en producción, Punta Umbría quedó bien
   (🟠 «sin cuantificar», adiós al 43.200,00€), pero Belmonte (`SUB-JA-2026-264269`) SUBIÓ de 48.450,00€ a
