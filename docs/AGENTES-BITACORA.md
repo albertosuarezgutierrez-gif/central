@@ -15,6 +15,12 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-05 · psd2-health-check** · hizo: preflight canal alerta OK (200); consulta frescura
+  `movimientos_bancarios WHERE origen='psd2'` → último movimiento 05/08/2026 (hoy), mov_30d=68 vs
+  mov_30d_prev=71 (sin caída >50%) → **✅ OK**, sin anomalía, sin aviso Telegram. dudas: —; fallos: la
+  consulta SQL de la skill usa columna `fecha` que no existe en la tabla (es `fecha_operacion`) —
+  drift de esquema, corregido ad-hoc en esta pasada pero el `.md` de la skill sigue con el nombre
+  viejo. PRs/commits: este commit (solo bitácora).
 - **2026-08-01 · facturas-correo (trigger diario)** · hizo: Vía B sana (dias_caido=0, `agente_salud`
   actualizado), sin backlog en `PDF-pendiente`/`Revisar`. 2 candidatos: Giraldillo AFV-11808 (72,60€,
   lavandería, deducible `turistico_pisos`) archivado en Drive con nombre normalizado, conciliación
