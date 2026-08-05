@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-04T22:45:06Z",
-  "sha": "6616e6cd5089379baf8d21e7c895dc64dfabd840",
+  "generadoEn": "2026-08-05T06:35:44Z",
+  "sha": "7fe07dd8e9d9c3c8636a27d41db5e0dc7c97868a",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54698,7 +54698,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/sweep",
-      "hash": "f72b4e66c806"
+      "hash": "0df9ce665901"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pl-mensual/route.ts",
@@ -65523,6 +65523,9 @@
         "contarPorEstado",
         "cegadasEnBase",
         "sinSenalDeTemporada",
+        "muestrasPobres",
+        "clonRatio",
+        "corpusClonado",
         "barridoFiable",
         "detalleBarrido"
       ],
@@ -65554,12 +65557,39 @@
           "resumen": "`true` cuando el barrido trajo EXACTAMENTE los mismos comparables al mismo precio para todas las fechas de un aforo (con 3 fechas o más). Entonces no se ha medido la temporada: se ha fotografiado el m"
         },
         {
+          "nombre": "muestrasPobres",
+          "kind": "function",
+          "exportada": true,
+          "params": "ventanas: VentanaMedida[]",
+          "retorno": "number",
+          "linea": 102,
+          "resumen": "Ventanas que trajeron comps pero tan pocos que su mediana no significa nada."
+        },
+        {
+          "nombre": "clonRatio",
+          "kind": "function",
+          "exportada": true,
+          "params": "ventanas: VentanaMedida[]",
+          "retorno": "number",
+          "linea": 117,
+          "resumen": "Proporción de ventanas cuya mediana se REPITE en otra FECHA distinta (0..1). 🚨 Por qué mira entre fechas Y entre aforos (05/08/2026). `sinSenalDeTemporada` solo caza el caso extremo —mismos nombres y"
+        },
+        {
+          "nombre": "corpusClonado",
+          "kind": "function",
+          "exportada": true,
+          "params": "ventanas: VentanaMedida[]",
+          "retorno": "boolean",
+          "linea": 131,
+          "resumen": "`true` cuando la mitad o más de las medianas están clonadas entre fechas distintas y hay variedad suficiente (≥3 fechas) como para que eso NO sea lo esperable. Marca el corpus como no fiable: hay cifr"
+        },
+        {
           "nombre": "barridoFiable",
           "kind": "function",
           "exportada": true,
           "params": "r: ResumenBarrido",
           "retorno": "boolean",
-          "linea": 102,
+          "linea": 140,
           "resumen": "¿Se puede afirmar que esta pasada ha medido el mercado? Conservador a propósito: ante la duda, NO (un latido verde de mentira es peor que uno rojo de más)."
         },
         {
@@ -65568,13 +65598,13 @@
           "exportada": true,
           "params": "r: ResumenBarrido",
           "retorno": "string",
-          "linea": 112,
+          "linea": 151,
           "resumen": "Parte para el latido (y para el Telegram del vigía). Lo que NO se pudo mirar va primero."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "00c4297914fc"
+      "hash": "03638e0e08b0"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/seo-landing.ts",
@@ -88563,6 +88593,6 @@
   ],
   "resumen": {
     "archivos": 2383,
-    "funciones": 6383
+    "funciones": 6386
   }
 }
