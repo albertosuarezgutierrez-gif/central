@@ -33,6 +33,8 @@ export interface AnuncioIdealistaApi {
   municipality?: string | null
   province?: string | null
   url?: string | null
+  /** Estado del anuncio según el portal: 'good' | 'renew' (a reformar) | 'newdevelopment'. */
+  status?: string | null
 }
 
 /** Respuesta de `POST /3.5/es/search` (solo los campos que se usan). */
@@ -112,6 +114,10 @@ export function comparablesDesdeApiIdealista(respuesta: RespuestaIdealistaApi): 
       habitaciones: a.rooms != null && Number(a.rooms) > 0 ? Number(a.rooms) : null,
       precioM2: m2Portal != null ? Math.round(m2Portal) : superficie ? Math.round(precio / superficie) : null,
       url: (a.url ?? '').trim() || `https://www.idealista.com/inmueble/${ref}/`,
+      // El estado que la alerta de correo NO trae: 'renew' = el propio anuncio
+      // se declara a reformar (peaje de obra en `detectarChollos` aunque el
+      // descuento sea moderado). Sin `status` → null, nunca «buen estado».
+      aReformar: a.status == null || !String(a.status).trim() ? null : norm(a.status) === 'renew',
     })
   }
   return out

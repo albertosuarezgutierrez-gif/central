@@ -148,12 +148,15 @@ interface Chollo {
     vistoDesde?: string | null
     anunciante?: string | null
     esParticular?: boolean | null
+    aReformar?: boolean | null
   }
   zona: string
   precioM2Zona: number
   muestra: number
   descuento: number
   sospechoso: boolean
+  /** Descuento tras pagar levantar la casa (solo anuncios con pinta de obra). */
+  descuentoNeto?: number | null
   fuente?: 'portal' | 'alertas'
   antiguedadDias?: number | null
   antiguedadCapada?: boolean
@@ -1125,9 +1128,20 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                   </p>
                 )}
                 <LineaRendimiento r={ch.rendimiento} dormitorios={ch.comparable.habitaciones} />
+                {ch.comparable.aReformar && (
+                  <p style={{ margin: '4px 0 0', color: 'var(--warning, #b45309)', fontSize: 12 }}>
+                    🔨 El propio anuncio se declara «a reformar»
+                  </p>
+                )}
+                {ch.descuentoNeto != null && (
+                  <p style={{ margin: '4px 0 0', color: 'var(--warning, #b45309)', fontSize: 12 }}>
+                    🔨 Huele a obra (descuento de derribo): aun pagando levantarla (~1.100€/m²) quedaría un{' '}
+                    −{(ch.descuentoNeto * 100).toFixed(0)}% neto frente a la zona
+                  </p>
+                )}
                 {ch.sospechoso && (
                   <p style={{ margin: '4px 0 0', color: 'var(--warning, #b45309)', fontSize: 12 }}>
-                    Descuento anormalmente alto: suele ser un error del anuncio o una reforma integral. Verifícalo.
+                    Descuento anormalmente alto: verifica el estado real del inmueble en el anuncio.
                   </p>
                 )}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>

@@ -3,7 +3,7 @@
 // `<mj-raw>` tal cual los manda el portal). `node --test`.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { detectarChollos, esAlertaIdealista, estimarAntiguedad, parsearAlertaIdealista, precioM2Zona, velocidadZona, zonasDeComparable } from '../src/comparables.ts'
+import { detectarChollos, esAlertaIdealista, estimarAntiguedad, pareceRuina, parsearAlertaIdealista, precioM2Zona, velocidadZona, zonasDeComparable } from '../src/comparables.ts'
 import type { ObservacionRef } from '../src/comparables.ts'
 import type { Comparable } from '../src/comparables.ts'
 
@@ -190,6 +190,7 @@ test('chollos en el corpus real: los dos de Islantilla Golf, y solo esos', () =>
   assert.equal(top.muestra, 6)
   assert.equal(Math.round(top.descuento * 1000), 367)
   assert.equal(top.sospechoso, false)
+  assert.equal(top.descuentoNeto, null) // pinta habitable: sin peaje de obra
 })
 
 test('el chollo se EXCLUYE de su propia mediana (si no, se auto-oculta)', () => {
@@ -212,16 +213,91 @@ test('zona con muestra insuficiente: sin chollo aunque el precio sea bajo', () =
   assert.ok(!refs.includes('112056868'))
 })
 
-test('un descuento absurdo se marca sospechoso, no se oculta', () => {
+// ── Peaje de obra: las casas derruidas no son chollos (05/08/2026) ───────────
+// Nadie vende un 50%+ por debajo del mercado con la casa en pie: ese descuento
+// ES la confesión de que se paga el suelo. El chollo solo sobrevive si, tras
+// pagar levantar la casa (RECONSTRUIR_EUR_M2), sigue quedando bajo la mediana.
+
+test('un descuento de derribo que no aguanta la obra ya NO se enseña', () => {
+  // Antes salía con ⚠️; Alberto confirmó con un caso real que estos anuncios
+  // son casas derruidas. 900€/m² en zona a 2.409 → neto tras obra 17% < 20%.
   const conError: Comparable[] = [
     ...CORPUS_REAL,
     { portal: 'idealista', refAnuncio: 'err1', titulo: 'Chalet en Islantilla Golf, Islantilla',
       tipo: 'vivienda', zona: 'Islantilla Golf, Islantilla', precio: 90000, superficie: 100,
       habitaciones: null, precioM2: 900, url: null },
   ]
-  const chollo = detectarChollos(conError).find((c) => c.comparable.refAnuncio === 'err1')
-  assert.ok(chollo)
-  assert.equal(chollo!.sospechoso, true)
+  assert.ok(!detectarChollos(conError).some((c) => c.comparable.refAnuncio === 'err1'))
+})
+
+test('la casa derruida de Llanes (caso real 111790643) NO sale como chollo', () => {
+  // Idealista 111790643: 99.000€, 148 m² → 541€/m² en una zona a ~1.700€/m².
+  // Un −68% que era una casa a levantar entera: con la obra encima
+  // (541+1.100 = 1.641€/m²) queda a precio de mercado — no hay chollo.
+  const corpus: Comparable[] = [
+    ...muestra([1600, 1700, 1900], 'Llanes'),
+    { portal: 'idealista', refAnuncio: '111790643',
+      titulo: 'Casa o chalet independiente en Calle Parres, Celorio-Poó-Parres, Llanes',
+      tipo: 'vivienda', zona: 'Calle Parres, Celorio-Poó-Parres, Llanes',
+      precio: 99000, superficie: 148, habitaciones: 3, precioM2: 541, url: null },
+  ]
+  assert.ok(!detectarChollos(corpus).some((c) => c.comparable.refAnuncio === '111790643'))
+})
+
+test('una ruina que AUN pagando la obra sigue barata sí se enseña, con su neto', () => {
+  // 500€/m² en zona a 3.400: neto 1−(500+1.100)/3.400 = 52,9% — comprar y
+  // levantar sigue saliendo a la mitad del mercado. Eso SÍ es oportunidad.
+  const corpus: Comparable[] = [
+    ...muestra([3300, 3400, 3600], 'Sotogrande'),
+    { portal: 'idealista', refAnuncio: 'r1', titulo: 'Casa o chalet independiente en Sotogrande',
+      tipo: 'vivienda', zona: 'Sotogrande', precio: 100000, superficie: 200,
+      habitaciones: null, precioM2: 500, url: null },
+  ]
+  const ch = detectarChollos(corpus).find((c) => c.comparable.refAnuncio === 'r1')
+  assert.ok(ch)
+  assert.equal(ch!.sospechoso, true)
+  assert.equal(Math.round(ch!.descuentoNeto! * 1000), 529)
+})
+
+test('un título que confiesa la reforma paga el peaje aunque el descuento sea moderado', () => {
+  // −30% pasaría como chollo normal, pero el anuncio dice «a reformar»:
+  // con la obra encima queda por ENCIMA de la mediana → fuera.
+  const corpus: Comparable[] = [
+    ...muestra([1950, 2000, 2100], 'Ayamonte'),
+    { portal: 'idealista', refAnuncio: 'ref1', titulo: 'Casa a reformar en Ayamonte',
+      tipo: 'vivienda', zona: 'Ayamonte', precio: 140000, superficie: 100,
+      habitaciones: null, precioM2: 1400, url: null },
+  ]
+  assert.ok(!detectarChollos(corpus).some((c) => c.comparable.refAnuncio === 'ref1'))
+})
+
+test('un anuncio que la API declara «a reformar» paga el peaje aunque el título calle', () => {
+  // Mismos números que el caso del título («a reformar» a −30%), pero el dato
+  // viene del `status: renew` de la API oficial — el título no dice nada.
+  const corpus: Comparable[] = [
+    ...muestra([1950, 2000, 2100], 'Ayamonte'),
+    { portal: 'idealista', refAnuncio: 'api1', titulo: 'Vivienda en Ayamonte',
+      tipo: 'vivienda', zona: 'Ayamonte', precio: 140000, superficie: 100,
+      habitaciones: null, precioM2: 1400, url: null, aReformar: true },
+  ]
+  assert.ok(!detectarChollos(corpus).some((c) => c.comparable.refAnuncio === 'api1'))
+  // `aReformar: false` (buen estado declarado) NO paga peaje: chollo normal.
+  const buenEstado = corpus.map((c) =>
+    c.refAnuncio === 'api1' ? { ...c, aReformar: false } : c)
+  const ch = detectarChollos(buenEstado).find((c) => c.comparable.refAnuncio === 'api1')
+  assert.ok(ch)
+  assert.equal(ch!.descuentoNeto, null)
+})
+
+test('pareceRuina: la obra pendiente sí, la obra ya hecha no', () => {
+  assert.equal(pareceRuina('Casa a reformar en Lepe'), true)
+  assert.equal(pareceRuina('Casa en ruinas en Cartaya'), true)
+  assert.equal(pareceRuina('Casa derruida en Llanes'), true)
+  assert.equal(pareceRuina('Chalet para rehabilitar en Vejer de la Frontera'), true)
+  assert.equal(pareceRuina('Casa para demoler con solar en Rota'), true)
+  assert.equal(pareceRuina('Piso reformado en Punta Umbría'), false)
+  assert.equal(pareceRuina('Casa rehabilitada en Conil'), false)
+  assert.equal(pareceRuina('Chalet restaurado en Chipiona'), false)
 })
 
 test('mediana del BUSCADOR del portal: manda sobre la de alertas y rescata zonas sin muestra', () => {

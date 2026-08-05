@@ -24,6 +24,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🔨 Las casas derruidas dejan de salir como chollos (05/08/2026)
+Alberto confirmó con un caso real (Idealista 111790643, Llanes: 99.000€, 541€/m², −68%) que los
+descuentos «de derribo» son casas a levantar, no chollos. `detectarChollos` (módulo `comparables.ts`)
+aplica ahora un **peaje de obra determinista**: si el descuento supera el umbral sospechoso (50%) o el
+título confiesa obra (`pareceRuina`), el chollo solo sobrevive si tras sumar `RECONSTRUIR_EUR_M2`
+(1.100€/m², demolición+obra nueva) sigue ≥20% bajo la mediana — con `descuentoNeto` visible en UI y
+Telegram. Los que no aguantan la obra se excluyen (antes salían con ⚠️). Además el agente ya «lee el
+anuncio» por la vía legítima: `Comparable.aReformar` desde el `status` de la API oficial de Idealista
+(`renew`; columna `mercado_comparables.a_reformar`, aplicada) — el scraping de la ficha sigue vetado
+(Idealista bloquea datacenter). Fotocasa: estado de la ficha PENDIENTE de validar contra ficha real.
+Tests 409/409 módulo + 851/851 plataforma, `tsc` 0, build OK. PR #1259.
+
 - **🔘 Botones ✅/❌ en las propuestas de trading por Telegram (05/08/2026).** Alberto: «lo más rápido
   y fácil para mí». `/api/internal/alerta` acepta `botones` opcionales validados por
   `lib/alerta-botones.ts` (puro, 5 tests): URLs solo https y callbacks SOLO `trd_*` — un ALERTA_TOKEN
@@ -60,7 +72,6 @@ de base (un evento exige comps de SU fecha; el bucket del motor es mensual), baj
 `SIVRA_SWEEP_MAX_REFUERZO`. `consultasDeVentana` movida a `mercado-ventanas.ts` (pura, 3 tests).
 **Verificar latido 06/08** (send_later armado).
 
-
 - **⚖️ El dato que decide Belmonte estaba guardado y no lo leía nadie: la nota marginal (04/08/2026,
   rama `claude/carga-no-recogida-analizada-vjkwc9`).** Auditando `cargas_detalle` a mano tras la relectura,
   el literal de la anotación letra D (LIBERBANK, la que ejecuta) dice: «Se hace constar por nota al margen,
@@ -69,6 +80,7 @@ de base (un evento exige comps de SU fecha; el bucket del motor es mensual), baj
   ella garantiza y se cancelaría al cobrar. `mismoAcreedorQueEjecutante` no lo cazaba porque compara con la
   AUTORIDAD (el juzgado), no con el acreedor de la carga `la_que_ejecuta`. Nuevo `vinculoConCargaAnterior`
   (nota marginal primero, acreedor después); nunca descuenta, avisa. `LECTOR_VERSION` 8→9.
+
 ### 🔎 El barrido ya ve mercado, pero no le cabía el calendario (05/08/2026)
 Pasada con #1241: **6 búsquedas vacías (eran 100)** — la consulta abierta era la buena. Pero al dejar
 de volver vacías, cada ventana paga su extracción IA y en los 240 s solo entraron **28 de 120**
