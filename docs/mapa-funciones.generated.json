@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-05T08:16:34Z",
-  "sha": "df426833cbdf869a1924aa4af39ada719716534e",
+  "generadoEn": "2026-08-05T09:01:52Z",
+  "sha": "2c5c5c5b02e86152daa6850cd3948f5b3e7c9688",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -51341,7 +51341,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 27
+          "linea": 28
         }
       ],
       "tablas": [
@@ -51349,7 +51349,7 @@
         "subastas"
       ],
       "rutaApi": "/api/cron/subastas-enriquecer",
-      "hash": "858d7a664696"
+      "hash": "f922552f4da2"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-ingesta/route.ts",
@@ -55523,7 +55523,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 35
+          "linea": 36
         }
       ],
       "tablas": [
@@ -55531,7 +55531,7 @@
         "subastas_debug_token"
       ],
       "rutaApi": "/api/subastas/fase3-debug",
-      "hash": "20901d3c7834"
+      "hash": "74411264ca6b"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/mapa/route.ts",
@@ -66828,6 +66828,30 @@
       ],
       "rutaApi": null,
       "hash": "858df753d3a5"
+    },
+    {
+      "ruta": "apps/plataforma/lib/subastas/reextraer.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Re-extracción de los datos que viven en el TEXTO registral. Por qué existe (05/08/2026). `extraerDatos` solo se ejecutaba en la INGESTA, al dar de alta la subasta. Así que cuando el extractor mejora, el corpus vivo no se en",
+      "exporta": [
+        "reextraerDatosDeTexto"
+      ],
+      "funciones": [
+        {
+          "nombre": "reextraerDatosDeTexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "max = 60",
+          "retorno": "Promise<ResultadoReextraccion>",
+          "linea": 45,
+          "resumen": "Vuelve a extraer del texto los datos que falten en las subastas VIGENTES. La cola son las filas con algún hueco extraíble, no «las no procesadas»: no hay marca de versión de extractor porque no hace f"
+        }
+      ],
+      "tablas": [
+        "subastas"
+      ],
+      "rutaApi": null,
+      "hash": "19316acc8461"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/rendimiento.ts",
@@ -86670,6 +86694,7 @@
       "exporta": [
         "palabrasANumero",
         "numeroAlFinal",
+        "superficiesM2",
         "superficieM2"
       ],
       "funciones": [
@@ -86692,13 +86717,48 @@
           "resumen": "Número formado por la ÚLTIMA secuencia de palabras numéricas de la frase. Necesario porque las capturas de texto libre arrastran ruido por delante («es de tres» → 3): `palabrasANumero` se detiene en l"
         },
         {
+          "nombre": "claseDeContexto",
+          "kind": "function",
+          "exportada": false,
+          "params": "previo: string",
+          "retorno": "ClaseSuperficie",
+          "linea": 107,
+          "resumen": "Qué mide, a partir de las palabras que preceden a la cifra."
+        },
+        {
+          "nombre": "colaNumerica",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string",
+          "retorno": "number | null",
+          "linea": 143,
+          "resumen": "La cola numérica de una frase, leyendo desde el FINAL. No vale `numeroAlFinal` aquí: ese devuelve la PRIMERA secuencia numérica que encuentra, y en «tiene una superficie construida de setenta y siete "
+        },
+        {
+          "nombre": "aNumero",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "number | null",
+          "linea": 156
+        },
+        {
+          "nombre": "superficiesM2",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined",
+          "retorno": "MedidaSuperficie[]",
+          "linea": 171,
+          "resumen": "TODAS las superficies que cita un texto registral, con lo que mide cada una. Se expone aparte de `superficieM2` porque saber que una finca tiene 105 m² de parcela y 140 m² construidos es información d"
+        },
+        {
           "nombre": "superficieM2",
           "kind": "function",
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "number | null",
-          "linea": 98,
-          "resumen": "Superficie en m² desde texto registral. Acepta las dos formas que usa el BOE: cifra («605 m2», «115,66 metros cuadrados») y letra («ciento quince metros con sesenta y seis decimetros cuadrados»). Los "
+          "linea": 209,
+          "resumen": "Superficie en m² desde texto registral. Acepta las formas que usa el BOE: cifra («605 m2», «115,66 metros cuadrados»), letra («ciento quince metros con sesenta y seis decimetros cuadrados») y las mixt"
         },
         {
           "nombre": "redondear",
@@ -86706,12 +86766,12 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "number",
-          "linea": 123
+          "linea": 221
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7cd2883fdd78"
+      "hash": "62c72313a7d1"
     },
     {
       "ruta": "packages/module-subastas/src/parsing.ts",
@@ -88653,7 +88713,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2384,
-    "funciones": 6391
+    "archivos": 2385,
+    "funciones": 6396
   }
 }

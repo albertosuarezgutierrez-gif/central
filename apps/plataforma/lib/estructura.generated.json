@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-05T07:47:52Z",
+  "generadoEn": "2026-08-05T09:01:52Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1423,7 +1423,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 27
+        "evidencias": 28
       },
       "rrhh": {
         "estado": "no",
@@ -3970,6 +3970,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📐 Sin superficie no hay rentabilidad: 12 de 17 subastas vivas sin margen calculable (05/08/2026).",
+      "fecha": "05/08/2026"
+    },
+    {
       "titulo": "🔘 Botones ✅/❌ en las propuestas de trading por Telegram (05/08/2026).",
       "fecha": "05/08/2026"
     },
@@ -4024,10 +4028,6 @@
     {
       "titulo": "🛡️ Auditoría PROFUNDA semanal (02/08/2026).",
       "fecha": "02/08/2026"
-    },
-    {
-      "titulo": "📂 RRHH: categoría «Documentación mensual» en documentos de empresa (01/08/2026, rama `claude/programa-rrhh-m25fwd`).",
-      "fecha": "01/08/2026"
     }
   ],
   "saludRepo": {
