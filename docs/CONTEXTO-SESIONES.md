@@ -36,6 +36,42 @@ anuncio» por la vía legítima: `Comparable.aReformar` desde el `status` de la 
 (Idealista bloquea datacenter). Fotocasa: estado de la ficha PENDIENTE de validar contra ficha real.
 Tests 409/409 módulo + 851/851 plataforma, `tsc` 0, build OK. PR #1259.
 
+- **🔘 Botones ✅/❌ en las propuestas de trading por Telegram (05/08/2026).** Alberto: «lo más rápido
+  y fácil para mí». `/api/internal/alerta` acepta `botones` opcionales validados por
+  `lib/alerta-botones.ts` (puro, 5 tests): URLs solo https y callbacks SOLO `trd_*` — un ALERTA_TOKEN
+  filtrado no puede fabricar botones `pago_`/`mov_`. Webhook: `trd_no:<instrId>` marca `rechazada` en la
+  tabla nueva `trading_propuestas` (migración aplicada; el server no toca IBKR — la sesión borra la
+  instrucción en su check-in) y edita el mensaje. El ✅ es botón URL a la pestaña AI Instructions (el
+  envío final SIEMPRE es de Alberto — candado del broker). Autonomía total: solo vía OAuth/Web API,
+  descartada hasta validar la escalera. Verificado: tsc 0 · 725 tests · build 0. PR #1263.
+
+### 🚨 Landmine trading-analista: get_price_history en paralelo desordena símbolos (04/08/2026)
+Pasada diaria (paper): al pedir los 13 `get_price_history` de IBKR en un solo mensaje paralelo y
+transcribir por POSICIÓN, los resultados llegaron en orden de FINALIZACIÓN, no de invocación →
+histórico de NFLX y PLTR intercambiado (+ una vela recortada a mano) → `/api/trading/analizar`
+reventó en prod con `PrismaClientValidationError` (visto en Vercel runtime errors). Sin impacto
+real: solo paper, ninguna posición se abrió con datos corruptos. Fix: re-pedidas una a una y
+verificada longitud de arrays antes de usar; protocolo documentado como landmine en
+`.claude/skills/trading-analista/references/pasada-diaria.md` (paso 3): etiquetar por
+`contract_id`/símbolo al guardar, nunca acumular N respuestas paralelas para transcribir al final.
+
+- **🔌 Circuito de propuestas de órdenes IBKR probado END-TO-END (05/08/2026).** Flujo validado con
+  Alberto: el agente crea la orden como «instrucción» vía MCP IBKR (`create_order_instruction` — NO es
+  orden viva; candado del broker) → aparece en la pestaña *AI Instructions* de su app con Reject/Submit
+  (probado con 1×PYPL límite 50$, instrucción #100) → aviso Telegram vía `/api/internal/alerta` con token
+  propio en `rutina_tokens` (rutina `trading-propuestas`; el contenedor no llega a vercel.app → se llamó
+  por pg_net desde Supabase) → detección en solo-lectura OK. Descartada la integración OAuth/API (no
+  compensa a escala tramo 1). Retrovisor vivo: 200 filas post-merge, 191 con H8+H9. PR #1256 mergeado.
+
+### 🔎 Barrido: refuerzo por «mes en texto» para las fechas que Google no casa (PR #1253, 05/08/2026)
+Diagnóstico en paralelo con #1255 (que ya mergeó los aforos en paralelo — al fusionar se quedó su
+versión): el hallazgo propio de este PR es que la ventana de NOVIEMBRE entera (4 aforos, 8 búsquedas)
+volvió `organic:[]` mientras feb/mar 2027 traían comps — el token de fecha ISO es lotería POR FECHA, no
+distancia ni cuota. Fix: consulta de refuerzo con el MES EN TEXTO («noviembre 2026») SOLO para ventanas
+de base (un evento exige comps de SU fecha; el bucket del motor es mensual), bajo el mismo cupo
+`SIVRA_SWEEP_MAX_REFUERZO`. `consultasDeVentana` movida a `mercado-ventanas.ts` (pura, 3 tests).
+**Verificar latido 06/08** (send_later armado).
+
 - **⚖️ El dato que decide Belmonte estaba guardado y no lo leía nadie: la nota marginal (04/08/2026,
   rama `claude/carga-no-recogida-analizada-vjkwc9`).** Auditando `cargas_detalle` a mano tras la relectura,
   el literal de la anotación letra D (LIBERBANK, la que ejecuta) dice: «Se hace constar por nota al margen,
@@ -44,7 +80,7 @@ Tests 409/409 módulo + 851/851 plataforma, `tsc` 0, build OK. PR #1259.
   ella garantiza y se cancelaría al cobrar. `mismoAcreedorQueEjecutante` no lo cazaba porque compara con la
   AUTORIDAD (el juzgado), no con el acreedor de la carga `la_que_ejecuta`. Nuevo `vinculoConCargaAnterior`
   (nota marginal primero, acreedor después); nunca descuenta, avisa. `LECTOR_VERSION` 8→9.
->>>>>>> origin/main
+
 ### 🔎 El barrido ya ve mercado, pero no le cabía el calendario (05/08/2026)
 Pasada con #1241: **6 búsquedas vacías (eran 100)** — la consulta abierta era la buena. Pero al dejar
 de volver vacías, cada ventana paga su extracción IA y en los 240 s solo entraron **28 de 120**

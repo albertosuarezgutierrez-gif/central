@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-05T06:49:52Z",
-  "sha": "bc3ded1d5b9f8eea1c6c932877b9b327ca3cbb5c",
+  "generadoEn": "2026-08-05T07:47:52Z",
+  "sha": "02138fe801410ce4a37fd6fdbe3bece19ea38f24",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -52328,7 +52328,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": "Promise<Diagnostico>",
-          "linea": 39,
+          "linea": 43,
           "resumen": "Autoriza y, si no, dice EN CUÁL de las formas ha fallado (sin revelar ningún valor)."
         },
         {
@@ -52337,7 +52337,7 @@
           "exportada": false,
           "params": "req: NextRequest, causa: string",
           "retorno": null,
-          "linea": 85
+          "linea": 89
         },
         {
           "nombre": "GET",
@@ -52345,7 +52345,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 102,
+          "linea": 106,
           "resumen": "Preflight: la rutina valida su token al arrancar, no cuando ya tiene algo que contar."
         },
         {
@@ -52354,12 +52354,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 112
+          "linea": 116
         }
       ],
       "tablas": [],
       "rutaApi": "/api/internal/alerta",
-      "hash": "8f85ebd20a9b"
+      "hash": "8f96b9ce86ab"
     },
     {
       "ruta": "apps/plataforma/app/api/internal/mapa-arquitectura/route.ts",
@@ -54391,10 +54391,11 @@
         "subastas_criterios",
         "subastas_descartes",
         "subastas_radar",
-        "subastas_seguidas"
+        "subastas_seguidas",
+        "trading_propuestas"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "753d43093d97"
+      "hash": "b00a4935b822"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -54634,7 +54635,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<Map<number, string[]>>",
-          "linea": 61,
+          "linea": 62,
           "resumen": "🚨 El barrido busca por el AFORO REAL de cada piso, NO con \"4 personas\" para todos (bug hasta el 31/07/2026: guardaba los MISMOS comps de 4 plazas para los 4 pisos con `guests=4` fijo, así que House —"
         },
         {
@@ -54643,7 +54644,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<",
-          "linea": 75,
+          "linea": 76,
           "resumen": "Fechas de evento de las DOS fuentes que conoce el motor: el calendario del repo y lo que descubren los crons (Ticketmaster / búsqueda web). Si la tabla falla NO se cae la pasada: se barre la base mens"
         },
         {
@@ -54652,7 +54653,7 @@
           "exportada": false,
           "params": "query: string",
           "retorno": "Promise<",
-          "linea": 104,
+          "linea": 105,
           "resumen": "🚨 Devuelve TAMBIÉN cuántos resultados trajo la búsqueda. Sin ese número, un `organic: []` (Google no encontró nada) y un buzón de resultados lleno de anuncios sin precio acaban en el mismo string vac"
         },
         {
@@ -54661,17 +54662,8 @@
           "exportada": false,
           "params": "snippets: string, checkin: string, checkout: string,",
           "retorno": "Promise<",
-          "linea": 130,
+          "linea": 131,
           "resumen": "`estado` separa «la IA leyó y no había precios» (ausencia real) de «la IA no pudo leer» (fallo técnico: ningún modelo respondió o el JSON vino roto). Antes ambos caían en el mismo `[]`."
-        },
-        {
-          "nombre": "consultasDeVentana",
-          "kind": "function",
-          "exportada": false,
-          "params": "checkin: string, checkout: string, aforo: number",
-          "retorno": null,
-          "linea": 162,
-          "resumen": "Dos consultas por ventana, en este orden y por este motivo: 1. ABIERTA (sin el operador `site:`) → es la que trae mercado. Medido en producción el 04/08/2026, primera pasada con el arreglo de #1227: d"
         },
         {
           "nombre": "mediana",
@@ -54679,7 +54671,7 @@
           "exportada": false,
           "params": "valores: number[]",
           "retorno": "number | null",
-          "linea": 169
+          "linea": 154
         },
         {
           "nombre": "GET",
@@ -54687,7 +54679,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 176
+          "linea": 161
         }
       ],
       "tablas": [
@@ -54698,7 +54690,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/sweep",
-      "hash": "0df9ce665901"
+      "hash": "1cec29c40a7c"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pl-mensual/route.ts",
@@ -57810,6 +57802,28 @@
       ],
       "rutaApi": null,
       "hash": "8712a3f67f68"
+    },
+    {
+      "ruta": "apps/plataforma/lib/alerta-botones.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Validación de los botones opcionales de /api/internal/alerta — módulo PURO (sin @/, sin Prisma). Por qué es restrictivo: ese endpoint lo abren tokens de BAJO privilegio (ALERTA_TOKEN / `rutina_tokens`), pensados para que filtrarlos solo permita \"mandar un Telegram\". Si un token filtrado pudiera adju",
+      "exporta": [
+        "validarBotones"
+      ],
+      "funciones": [
+        {
+          "nombre": "validarBotones",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "BotonAlerta[][] | null",
+          "linea": 15,
+          "resumen": "Devuelve los botones saneados, o null si el payload no es válido (el aviso sale SIN botones)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6359d74a55fa"
     },
     {
       "ruta": "apps/plataforma/lib/alertas-categoria.ts",
@@ -65137,18 +65151,38 @@
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/mercado-ventanas.ts — QUÉ fechas barre el mercado, y por qué. POR QUÉ (01/08/2026). El barrido mensual (`mercado/sweep`) miraba el PRIMER VIERNES de cada mes y nada más. Ocho fechas al año y media, todas elegidas por el calendario gregoriano: el barrido nunca veía la Feria, ni la Semana Sa",
       "exporta": [
+        "mesEnTexto",
+        "consultasDeVentana",
         "findeDelMes",
         "picosDeEvento",
         "ventanasDelBarrido"
       ],
       "funciones": [
         {
+          "nombre": "mesEnTexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 55,
+          "resumen": "«2026-11-13» → «noviembre 2026» (para la consulta de refuerzo por mes)."
+        },
+        {
+          "nombre": "consultasDeVentana",
+          "kind": "function",
+          "exportada": true,
+          "params": "checkin: string, checkout: string, aforo: number, motivo: 'mes' | 'evento',",
+          "retorno": "ConsultaVentana[]",
+          "linea": 76,
+          "resumen": "Consultas de una ventana, en orden de intento (la siguiente solo se lanza si la anterior no resuelve, y a partir de la segunda pagan el cupo de refuerzo): 1. ABIERTA con la fecha ISO → es la que trae "
+        },
+        {
           "nombre": "aFecha",
           "kind": "function",
           "exportada": false,
           "params": "iso: string",
           "retorno": "Date",
-          "linea": 66
+          "linea": 109
         },
         {
           "nombre": "fmt",
@@ -65156,7 +65190,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 69
+          "linea": 112
         },
         {
           "nombre": "sumarDias",
@@ -65164,7 +65198,7 @@
           "exportada": false,
           "params": "iso: string, n: number",
           "retorno": "string",
-          "linea": 72
+          "linea": 115
         },
         {
           "nombre": "diasEntre",
@@ -65172,7 +65206,7 @@
           "exportada": false,
           "params": "desdeIso: string, hastaIso: string",
           "retorno": "number",
-          "linea": 75
+          "linea": 118
         },
         {
           "nombre": "findeDelMes",
@@ -65180,7 +65214,7 @@
           "exportada": true,
           "params": "hoyIso: string, m: number, orden = 0",
           "retorno": "string",
-          "linea": 98,
+          "linea": 141,
           "resumen": "Fecha de muestra nº `orden` del mes a `m` meses vista. `orden` 0 = primer VIERNES (el que se ha barrido siempre; se mantiene para no mover la serie histórica). 🚨 POR QUÉ HAY MÁS DE UNA (01/08/2026, c"
         },
         {
@@ -65189,7 +65223,7 @@
           "exportada": true,
           "params": "eventos: EventoFecha[], factorMinimo = 1.15",
           "retorno": "EventoFecha[]",
-          "linea": 117,
+          "linea": 160,
           "resumen": "Agrupa fechas de evento CONTIGUAS en bloques y devuelve, de cada bloque, la de mayor factor (empate → la primera). La Feria entera gasta una sola ventana."
         },
         {
@@ -65198,13 +65232,13 @@
           "exportada": true,
           "params": "hoyIso: string, eventos: EventoFecha[], opts: VentanasOpts = {},",
           "retorno": "Ventana[]",
-          "linea": 146,
+          "linea": 189,
           "resumen": "Ventanas a barrer en una pasada. La base mensual va SIEMPRE (es la línea de temporada); las de evento se añaden por cercanía hasta el tope, sin repetir una fecha que ya cubre la base."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3164bde4860c"
+      "hash": "116d2348de69"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pilot-track.ts",
@@ -88609,7 +88643,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2383,
-    "funciones": 6388
+    "archivos": 2384,
+    "funciones": 6390
   }
 }
