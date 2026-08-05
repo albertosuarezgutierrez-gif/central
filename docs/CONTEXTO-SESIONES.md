@@ -24,13 +24,26 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🚨 «otro» NO es un tipo, es un «no lo sé» — regresión en prod y su arreglo (05/08/2026).** La re-derivación
+  de #1266 se apoyaba en una premisa FALSA que escribí una entrada más abajo: «`tipo_bien` tiene una sola
+  fuente». No la tiene — la ingesta usa `s.datos ?? extraerDatos(...)` y ese `s.datos` viene del texto RICO de la
+  ficha, que NO es el que se persiste en `descripcion`. En muchas fichas lo persistido es un marcador
+  («DESCRIPCIÓN QUE CONSTA EN LA CERTIFICACIÓN DE CARGAS…»), del que `tipoBien` solo puede sacar `otro`. Primera
+  pasada en producción: Punta Umbría (`SUB-JA-2026-264600`) degradada de **`vivienda` a `otro`**. Fix:
+  `COALESCE(NULLIF(nuevo,'otro'), tipo_bien)` en el SET y el mismo NULLIF en el guardián del WHERE — se sigue
+  re-derivando (Alcalá del Río mantiene su `vivienda`) pero un «no lo he sabido leer» nunca pisa un dato sabido.
+  Dato de prod restaurado a mano. Lección: al re-derivar una columna, comprobar **todas** las escrituras, no solo
+  las que mencionan la columna — la fuente rica puede estar en un campo intermedio que ya no existe aguas abajo.
+  Tests 863 (2 guardianes sujetan las dos mitades). PR #1267.
+
 - **🔁 El arreglo del parser no llegaba a la BD: `tipo_bien` se re-deriva (05/08/2026).** Verificando #1265 en
   producción: el margen ya salía bien (la lente flip recalcula el tipo en vivo desde el texto), pero la COLUMNA
   `subastas.tipo_bien` seguía diciendo `garaje` para la unifamiliar de Alcalá del Río — y es esa columna la que
   filtra `GET /api/subastas` y pinta el mapa, así que la casa seguía invisible al filtrar por vivienda. Causa:
   `reextraerDatosDeTexto` protege TODAS las columnas con `COALESCE(columna, nuevo)`, correcto para las que
-  también rellenan la ficha o el Catastro, **equivocado para `tipo_bien`, cuya única fuente es ese mismo texto**:
-  ahí el COALESCE no protege el trabajo de nadie, solo congela la lectura del extractor viejo. Ahora se re-deriva
+  también rellenan la ficha o el Catastro, equivocado para `tipo_bien` porque congela la lectura del extractor
+  viejo. (⚠️ Esta entrada decía «cuya única fuente es ese mismo texto»: **es falso**, ver la entrada de arriba —
+  costó una regresión.) Ahora se re-deriva
   (`COALESCE(nuevo, columna)`), la cola deja de exigir «le falta algo» (una fila sin huecos también puede tener
   un tipo mal leído) y la idempotencia la da solo el guardián del `WHERE`. Guardián nuevo
   `reextraer-escritura.test.ts`, hermano del de `documentos.ts`. Tests 862. PR #1266.
