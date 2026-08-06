@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🌙 El agente de huéspedes ya no rechaza llegadas de madrugada (06/08/2026).** A Daniela (Luxury Busto,
+  pedía entrar a la 1:00-2:00) el agente le AUTO-ENVIÓ que «no podemos atender llegadas entre la 1:00 y las
+  2:00» + sugerencia de hotel: se lo inventó porque la política de llegadas tardías no estaba en NINGUNA
+  fuente y dedujo una hora de cierre a partir de la de entrada. Nuevo `lib/sivra/agente-huesped/llegada.ts`
+  (puro, 10 tests): la entrada es autónoma → **no hay hora límite**, y lo que se avisa es que la **atención
+  es 09:00–21:00** (que lleve resueltas las instrucciones de acceso antes). `bloqueLlegada()` va en la
+  **ficha** (guardrail-safe) + bloque de prompt en pre-llegada/día-llegada vía `esLlegadaFueraDeHorario()`.
+  Lección: si una política no está escrita en la ficha, el modelo la inventa plausible y se auto-envía.
+
 - **🛡️ La barrera de earnings del torneo vuelve a ver + higiene de cantera (05/08/2026, 4ª tanda).**
   Hallazgo: `earningsInminente` (veto ≤3d) y la estrategia catalizador dependían de `proximoEarnings`
   de FMP (sin créditos) → llegaba siempre vacío y degradaban a «no vetar» EN SILENCIO. Fix:
