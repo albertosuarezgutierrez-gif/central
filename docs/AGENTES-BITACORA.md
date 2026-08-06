@@ -23,9 +23,11 @@
   lavandería Luxury/Bustos Reforma/Duplex/Casa Socorro, subida manual duplicada 2×) conciliada contra banco
   (estaba mal clasificada `personal`, corregida a `turistico_pisos`) — 2ª copia duplicada registrada en
   `_DUPLICADOS_BORRAR`; auto-verificación de 15 avisos antiguos de la papelera: ninguno zombi, todos
-  siguen pendientes de borrado manual. dudas: —; fallos: —. **Para tu decisión (Alberto):** Roborock
-  Aspirador (Amazon, 247,92€) se envía a Costa Ballena (Rota, Cádiz) — no es ningún piso turístico de
-  Sevilla ni Monte Carmelo, ¿personal o negocio? etiqueta `Facturas/Revisar`, 5 días pendiente.
+  siguen pendientes de borrado manual. Roborock Aspirador (Amazon, 247,92€, envío a Costa Ballena/Rota,
+  Cádiz) confirmado por Alberto en la misma sesión como gasto deducible de House Sevillana → archivado en
+  Drive (sin PDF adjunto en el pedido, guardado el cuerpo del pedido como justificante), `Facturas/Revisar`
+  quitada, `Facturas/Procesada` puesta; conciliación bancaria pendiente (el cargo -247,92€ aún no aparece
+  en `movimientos_bancarios`, a recoger en la próxima pasada). dudas: —; fallos: —.
   PRs/commits: rama `claude/inspiring-gauss-r0kbtf`.
 - **2026-08-01 · facturas-correo (trigger diario)** · hizo: Vía B sana (dias_caido=0, `agente_salud`
   actualizado), sin backlog en `PDF-pendiente`/`Revisar`. 2 candidatos: Giraldillo AFV-11808 (72,60€,
