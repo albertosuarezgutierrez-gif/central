@@ -104,6 +104,15 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
 - **`horarios.ts` (fuente de verdad de horas):** Smoobu graba la hora de check-in POR RESERVA y queda
   desfasada → override por piso: **todos 15:00 salvo Busto Reform 13:00; salida 11:00**. Fallback a Smoobu
   si el piso no está en la tabla. Mantener esta tabla cuando cambien horarios.
+- **Llegada tardía (`llegada.ts` — 06/08/2026):** la entrada es AUTÓNOMA → **no hay hora LÍMITE**: a partir
+  de la hora oficial se puede llegar a cualquier hora, madrugada incluida. Lo que sí se avisa es que la
+  **atención al huésped es 09:00–21:00** (`HORARIO_ATENCION`): quien llegue fuera de ese horario debe tener
+  resueltas y a mano sus instrucciones de acceso antes de las 21:00. `bloqueLlegada()` va en la **`ficha`**
+  (guardrail-safe, como parking/equipaje) y `esLlegadaFueraDeHorario()` (detector puro: horas del texto +
+  marcadores nocturnos) activa un bloque extra del prompt en pre-llegada/día-llegada. **Por qué existe:** a
+  Daniela (Luxury Busto) el agente le AUTO-ENVIÓ que «no podemos atender llegadas entre la 1:00 y las 2:00»
+  y que se buscara un hotel la primera noche — se lo inventó porque la política de llegadas tardías no
+  estaba en ninguna fuente y dedujo una hora de cierre inexistente a partir de la de entrada.
 - **Early check-in (`disponibilidad.ts`):** es **GRATIS** pero SOLO si la **noche anterior está libre**
   (`nocheAnteriorLibre`; ojo a una reserva que sale el MISMO día → víspera ocupada). `contexto.ts` lo
   consulta en Smoobu (`earlyCheckinPosible`) y `decidir.ts` lo inyecta **SOLO en fase pre-llegada**
