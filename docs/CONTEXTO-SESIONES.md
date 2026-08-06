@@ -24,6 +24,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🏨 Mercado real por fecha: rutina de Booking → `market_rates` (06/08/2026, fase 1)
+Aprobado por Alberto. Piezas: columna **`market_rates.fuente`** (`serper`|`booking_mcp`|`manual`,
+default conservador `serper`; los 3 caminos ponían `portal='booking'` y el motor no filtra por portal),
+**`GET /api/sivra/mercado/plan`** (ventanas más urgentes, reusa `ventanasDelBarrido`), helper puro
+`lib/sivra/mercado-cobertura.ts` (13 tests), `ingest` con `fuente` validada, **`POST /api/internal/latido`**
+(huella para RUTINAS, allowlist) y latido `sivra_mercado_booking` + skill `mercado-booking` (diaria, 12
+ventanas de 96, acumula). **Probado con datos REALES:** 4-sep aforo 4 → 10 comps, p50 **129€** vs **171€**
+de Serper (+33%: es plano Y ALTO). tsc 0 · 900 tests · build OK. **Fase 2 (NO antes de 3 fechas/mes
+booking): retirar el sweep + neutralizar filas serper.** Spec: `docs/superpowers/specs/2026-08-06-mercado-booking-design.md`.
+
 ### 🔎 Barrido de mercado: la MECÁNICA quedó arreglada; lo que falta es la FUENTE (06/08/2026)
 Pasada 03:00 con #1253+#1255: plan COMPLETO (120/120 ventanas, base entera, 339 comps, noviembre
 rescatado por el refuerzo de mes, extracciones 1,1 s). El rojo restante es la guarda de medianas

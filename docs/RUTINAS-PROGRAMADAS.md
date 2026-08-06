@@ -116,6 +116,17 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Qué hace** | Lee `docs/ROADMAP-rrhh.md`, filtra ítems 🔴 obligatorios no completados y genera un informe de plazos legales (RD 8/2019 fichaje, RGPD art.28, canal denuncias, etc.). Mantiene visibilidad sobre obligaciones con riesgo de multa. |
 | **Verificar** | El chat muestra el informe de compliance con la lista de ítems 🔴 pendientes. |
 
+### 8-bis. Mercado real por fecha (SIVRA / Booking) — *activa*
+| | |
+|---|---|
+| **Cuándo** | Diaria, **05:00 CEST** (03:00 UTC + 2h: después del barrido, para que se vea qué le falta) |
+| **Prompt** | `Ejecuta la skill mercado-booking` |
+| **MCPs / envs** | **Booking.com** (obligatorio) · `PLATAFORMA_URL` + `ALERTA_TOKEN` en la env de la rutina (**NUNCA** `CRON_SECRET`). Sin esas dos envs no puede ni pedir el plan ni escribir: el latido saldría en rojo. |
+| **Qué hace** | Pide a `GET /api/sivra/mercado/plan?max=12` las ventanas (fecha × aforo) con el corpus fiable más viejo, las mide con el conector de Booking (`number_of_adults` = aforo real del piso), y escribe los comparables en `market_rates` por `POST /api/sivra/mercado/ingest` con **`fuente:"booking_mcp"`**. Cierra con `POST /api/internal/latido` (`sivra_mercado_booking`). |
+| **Por qué existe** | Es la **única** fuente que distingue temporada. El barrido por búsqueda web da precios de anuncio SIN fecha: medido el 06/08/2026 para el Dúplex el 4-sep, Serper decía p50 **171€** y el mercado real era **129€** (−33%), con los mismos comps repitiendo precio en agosto, noviembre y marzo. Ver `docs/superpowers/specs/2026-08-06-mercado-booking-design.md`. |
+| **Verificar** | `SELECT checkin_date, guests, count(*) FROM market_rates WHERE fuente='booking_mcp' AND search_date >= CURRENT_DATE - 1 GROUP BY 1,2` + fila `sivra_mercado_booking` en `agente_latidos` con `ok=true`. |
+| **Pendiente (fase 2)** | Cuando haya ≥3 fechas por mes con `fuente='booking_mcp'`: retirar `mercado/sweep` de `CRON_JOBS`, neutralizar las filas `serper` de fechas lejanas y quitar su latido. **No antes**: el bucket mensual del motor exige 3 fechas y hoy las aporta Serper. |
+
 ### 9. Vigía GitHub/OSS — *pendiente de trigger*
 | | |
 |---|---|
