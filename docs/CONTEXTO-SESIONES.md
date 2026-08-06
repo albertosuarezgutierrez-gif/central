@@ -24,6 +24,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🚨 La barra EN CURSO hundía el volumen: H8 era indetectable y lo decía como «no salta» (06/08/2026).**
+  Auditando el retrovisor a mitad de ciclo: `volRelMes` medio 0,62 (debe rondar 1,0) y 47% de las
+  observaciones por debajo de 0,2. Causa: `barrasPeriodicas` corta en la fecha del snapshot → su última
+  barra era el mes EN CURSO; el precio de una barra a medias es real, pero el **volumen es acumulativo**
+  (día 1 = 1 sesión de 21). Prueba: día 1 en sábado/domingo → mediana 1,02 (sin cotización, última barra
+  = mes cerrado); en día hábil → 0,047 ≈ 1/21. Solo 263 capitulaciones frente a 2.008 caídas ≥25%, y se
+  guardaba `capitulacionMes:false` = «mirado y no salta» cuando era «no se puede saber». Fix:
+  `barrasCerradas`/`claveDePeriodo` en `velas.ts` (6 tests). **El primer ciclo queda ANULADO para H8**
+  (Enmienda 3 del pre-registro); H9 intacta (trabaja sobre cierres diarios). tsc 0 · 730 tests · build 0.
+  PR #1283.
+
 ### ⏱️ El cron de mercado moría a los 300s JUSTO antes de avisar chollos (06/08/2026)
 Seguimiento post-merge del peaje de obra (#1259): «0 chollos avisados hoy» **no era** «no hay chollos» —
 `/api/cron/subastas-mercado` devolvió **504 a las 06:20:43** («Task timed out after 300 seconds») y nunca
@@ -183,7 +194,6 @@ anuncio» por la vía legítima: `Comparable.aReformar` desde el `status` de la 
 (`renew`; columna `mercado_comparables.a_reformar`, aplicada) — el scraping de la ficha sigue vetado
 (Idealista bloquea datacenter). Fotocasa: estado de la ficha PENDIENTE de validar contra ficha real.
 Tests 409/409 módulo + 851/851 plataforma, `tsc` 0, build OK. PR #1259.
-
 - **🔘 Botones ✅/❌ en las propuestas de trading por Telegram (05/08/2026).** Alberto: «lo más rápido
   y fácil para mí». `/api/internal/alerta` acepta `botones` opcionales validados por
   `lib/alerta-botones.ts` (puro, 5 tests): URLs solo https y callbacks SOLO `trd_*` — un ALERTA_TOKEN
