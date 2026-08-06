@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-06T12:53:55Z",
-  "sha": "be8b58219ada6018e884bc4dc64bd2154ed1d27b",
+  "generadoEn": "2026-08-06T12:59:31Z",
+  "sha": "40a270a55d507113c9643d6e544df6a68c1090c9",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -56822,6 +56822,36 @@
       "hash": "e954e4804691"
     },
     {
+      "ruta": "apps/plataforma/lib/agente-facturas/elegir-adjuntos.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Qué adjunto de un correo es la factura. 🚨 Por qué existe este módulo (05/08/2026): el agente cogía `adjuntos[0]` y se quedaba con él. El aviso de factura de DIGI trae **12 adjuntos**: 11 imágenes incrustadas del HTML (`header.png`, `logo-Mi-DIGI.png`, `icon_calendar.png`, iconos de redes…) y el PDF",
+      "exporta": [
+        "ordenarAdjuntosFactura"
+      ],
+      "funciones": [
+        {
+          "nombre": "ordenarAdjuntosFactura",
+          "kind": "function",
+          "exportada": true,
+          "params": "adjuntos: T[]",
+          "retorno": "T[]",
+          "linea": 40,
+          "resumen": "4. nombre decorativo (logo/header/icon…) al final. Estable: a igualdad de puntuación se respeta el orden original del correo."
+        },
+        {
+          "nombre": "puntuar",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: AdjuntoCandidato",
+          "retorno": "number",
+          "linea": 47
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7213eff989a1"
+    },
+    {
       "ruta": "apps/plataforma/lib/agente-facturas/extraer.ts",
       "ambito": "apps/plataforma",
       "resumen": "Extracción de factura desde un buffer (PDF o imagen), reutilizable por el agente (scan/backfill) sin pasar por el endpoint HTTP. Replica el pipeline de app/api/expenses/parse-invoice/route.ts.",
@@ -56992,6 +57022,7 @@
       "exporta": [
         "listarCandidatosConLimite",
         "listarCandidatos",
+        "quitarEtiqueta",
         "etiquetarCorreo",
         "marcarProcesado"
       ],
@@ -57002,7 +57033,7 @@
           "exportada": false,
           "params": "",
           "retorno": "ImapFlow",
-          "linea": 24
+          "linea": 36
         },
         {
           "nombre": "listarCandidatosConLimite",
@@ -57010,7 +57041,7 @@
           "exportada": true,
           "params": "opts: { desde: Date; etiqueta?: string; deadline?: number },",
           "retorno": "Promise<ListadoCandidatos>",
-          "linea": 52,
+          "linea": 64,
           "resumen": "Lista correos candidatos a factura desde `desde` (Date). Si `etiqueta` existe como buzón en Gmail, se usa esa; si no, INBOX. 🚨 `deadline` (epoch ms) acota el listado: bajar y parsear el `source` comp"
         },
         {
@@ -57019,8 +57050,17 @@
           "exportada": true,
           "params": "opts: { desde: Date; etiqueta?: string }",
           "retorno": "Promise<CorreoCandidato[]>",
-          "linea": 99,
+          "linea": 120,
           "resumen": "Variante sin presupuesto (compatibilidad con los llamadores que no lo acotan)."
+        },
+        {
+          "nombre": "quitarEtiqueta",
+          "kind": "function",
+          "exportada": true,
+          "params": "messageIds: string[], etiqueta: string",
+          "retorno": "Promise<number>",
+          "linea": 158,
+          "resumen": "Quita una etiqueta a los correos indicados por `Message-ID`, en UNA sola sesión. 🚨 Por qué hace falta (05/08/2026): la cola `Facturas/Extraccion-fallida` solo crecía. Un correo que un día no se pudo "
         },
         {
           "nombre": "etiquetarCorreo",
@@ -57028,8 +57068,7 @@
           "exportada": true,
           "params": "uid: number, etiqueta: string, buzon = 'INBOX'",
           "retorno": "Promise<boolean>",
-          "linea": 122,
-          "resumen": "Copia el correo a una etiqueta de Gmail SIN marcarlo como visto ni procesado. Se usa para encolar lo que no se pudo leer: la etiqueta sobrevive a la sesión y al contenedor, así que un fallo de extracc"
+          "linea": 192
         },
         {
           "nombre": "marcarProcesado",
@@ -57037,13 +57076,13 @@
           "exportada": true,
           "params": "uid: number, etiqueta = 'Facturas/Procesada', buzon = 'INBOX',",
           "retorno": "Promise<void>",
-          "linea": 145,
+          "linea": 215,
           "resumen": "Marca un correo como procesado: keyword IMAP + copia a la etiqueta si existe. `buzon` = el que devolvió el listado (ver `etiquetarCorreo`): con el buzón equivocado ni el flag ni la copia encuentran el"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "74c9684348ca"
+      "hash": "43ddec119184"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/imputar.ts",
@@ -57139,7 +57178,7 @@
           "exportada": true,
           "params": "cuentaId: string, opts: { deadline?: number } = {},",
           "retorno": "Promise<ResultadoEscaneo>",
-          "linea": 68,
+          "linea": 78,
           "resumen": "@param opts.deadline epoch ms en el que el escaneo debe estar de vuelta. Sin él el trabajo es ilimitado y la función acaba muriendo por `maxDuration` — que es justo como se perdía el latido antes del "
         },
         {
@@ -57148,7 +57187,7 @@
           "exportada": false,
           "params": "facturaId: string, proveedor: string, importe: number, fechaVenc: string | null, cuentaId: string,",
           "retorno": "Promise<void>",
-          "linea": 201
+          "linea": 242
         },
         {
           "nombre": "aprobarPago",
@@ -57156,7 +57195,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string, debtorIban: string,",
           "retorno": "Promise<",
-          "linea": 257
+          "linea": 298
         },
         {
           "nombre": "aplazarPago",
@@ -57164,7 +57203,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string, dias = 7",
           "retorno": "Promise<boolean>",
-          "linea": 318
+          "linea": 359
         },
         {
           "nombre": "rechazarFactura",
@@ -57172,7 +57211,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 334
+          "linea": 375
         },
         {
           "nombre": "verificarPagosPendientes",
@@ -57180,7 +57219,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<number>",
-          "linea": 348
+          "linea": 389
         },
         {
           "nombre": "conciliarConBanco",
@@ -57188,7 +57227,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<number>",
-          "linea": 377
+          "linea": 418
         },
         {
           "nombre": "pagarTodo",
@@ -57196,7 +57235,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<",
-          "linea": 416
+          "linea": 457
         },
         {
           "nombre": "resumenSemanal",
@@ -57204,7 +57243,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 432
+          "linea": 473
         },
         {
           "nombre": "alertarFacturasAusentes",
@@ -57212,7 +57251,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<number>",
-          "linea": 461
+          "linea": 502
         },
         {
           "nombre": "proponerVinculoReserva",
@@ -57220,7 +57259,7 @@
           "exportada": false,
           "params": "facturaId: string, proveedor: string, fechaFactura: string | null,",
           "retorno": "Promise<void>",
-          "linea": 494
+          "linea": 535
         },
         {
           "nombre": "actualizarMensajeTg",
@@ -57228,7 +57267,7 @@
           "exportada": false,
           "params": "msgId: number | null, texto: string",
           "retorno": "Promise<void>",
-          "linea": 525
+          "linea": 566
         }
       ],
       "tablas": [
@@ -57241,7 +57280,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "38b0a798e53e"
+      "hash": "14544178c424"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/parsear-json-ia.ts",
@@ -89115,7 +89154,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2394,
-    "funciones": 6426
+    "archivos": 2395,
+    "funciones": 6429
   }
 }
