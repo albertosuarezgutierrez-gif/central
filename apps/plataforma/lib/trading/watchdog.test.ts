@@ -37,3 +37,17 @@ test('seEsperaRefresco: mar-sáb sí, dom y lun no', () => {
   assert.equal(seEsperaRefresco(new Date('2026-07-26T06:30:00Z')), false) // domingo
   assert.equal(seEsperaRefresco(new Date('2026-07-27T06:30:00Z')), false) // lunes
 })
+
+test('el «nunca» nombra la huella que falta, no siempre el NAV', () => {
+  // Sin `huella` sigue hablando del NAV (compatibilidad con el tramo 1).
+  assert.match(evaluarWatchdog({ ahora, ultimoRefresco: null }).motivo, /NAV de IBKR/)
+  // Con `huella`, el aviso manda a mirar la tabla CORRECTA: decirle «broker_saldos vacío» a
+  // Alberto cuando lo que falta es el cierre de /puntuar es mandarlo al sitio equivocado.
+  const r = evaluarWatchdog({
+    ahora, ultimoRefresco: null,
+    huella: 'ni una sola pasada buena de /puntuar (agente_latidos.trading_puntuar)',
+  })
+  assert.equal(r.alerta, true)
+  assert.match(r.motivo, /trading_puntuar/)
+  assert.doesNotMatch(r.motivo, /broker_saldos/)
+})

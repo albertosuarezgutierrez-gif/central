@@ -24,6 +24,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🐕 3er tramo del watchdog de trading + 2 crons rotos desde el 30/07 (06/08/2026).** La pasada del
+  06/08 dejó NAV y 64 tesis pero NUNCA llamó a `/puntuar`: ni stops ni walk-forward, y el watchdog lo
+  habría dado por bueno (solo miraba NAV+tesis). `/puntuar` no escribe NADA sin tesis vencidas ni
+  stops, así que su huella es un latido explícito (`agente_latidos.trading_puntuar`, patrón de
+  facturas-scan) y el watchdog gana tramo 3. `evaluarWatchdog` acepta `huella` — el «nunca» decía
+  siempre «broker_saldos vacío» y mandaba a mirar la tabla equivocada. Crons arreglados y validados
+  contra BD real: `concursos-cierre` (falta `::int`, Prisma manda bigint a `make_interval`) y
+  `sivra/pricing/resumen-diario` (la columna es `applied_at`, no `created_at` — llevaba una semana
+  callando **173 cambios de precio/día**). Verificado: 888 tests, tsc 0, build 0.
+
 - **🚨 La barra EN CURSO hundía el volumen: H8 era indetectable y lo decía como «no salta» (06/08/2026).**
   Auditando el retrovisor a mitad de ciclo: `volRelMes` medio 0,62 (debe rondar 1,0) y 47% de las
   observaciones por debajo de 0,2. Causa: `barrasPeriodicas` corta en la fecha del snapshot → su última
