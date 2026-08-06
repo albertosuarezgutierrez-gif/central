@@ -2,6 +2,10 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   barridoFiable,
+  clonRatio,
+  corpusClonado,
+  muestrasPobres,
+  MIN_COMPS_VENTANA,
   cegadasEnBase,
   detalleBarrido,
   sinSenalDeTemporada,
@@ -126,4 +130,67 @@ test('un error suelto invalida la pasada y aparece en el parte', () => {
   const r = base({ comps: 9, ventanas: [ventana({ comps: 9 })], errores: ['2026-09-04 (4p): Serper 429'] })
   assert.match(detalleBarrido(r), /1 fallos: 2026-09-04 \(4p\): Serper 429/)
   assert.equal(barridoFiable(r), false)
+})
+
+// ── Calidad del corpus, no solo su presencia (05/08/2026) ───────────────────
+// La pasada del 05/08 trajo 62 comps repartidos en 22 ventanas y `sinSenalDeTemporada`
+// no saltó, pero 204€ era la mediana de SEIS ventanas distintas, 104€ de cinco y 261€ de
+// tres — entre fechas y aforos que no tienen por qué parecerse, con muestras de 1 a 5
+// comps. Eso no es un mercado plano: es la consulta abierta devolviendo los mismos
+// anuncios genéricos de Sevilla para todo.
+
+test('medianas clonadas entre fechas distintas invalidan el corpus', () => {
+  const vs = [
+    ventana({ checkin: '2026-09-04', aforo: 2, nombres: ['A'], mediana: 204, comps: 4 }),
+    ventana({ checkin: '2026-10-02', aforo: 4, nombres: ['B'], mediana: 204, comps: 4 }),
+    ventana({ checkin: '2026-11-06', aforo: 12, nombres: ['C'], mediana: 204, comps: 4 }),
+  ]
+  assert.equal(clonRatio(vs), 1)
+  assert.equal(corpusClonado(vs), true)
+  const r = base({ comps: 12, ventanas: vs })
+  assert.match(detalleBarrido(r), /100% de las medianas se repiten en otra fecha/)
+  assert.equal(barridoFiable(r), false)
+})
+
+test('un mercado que SÍ varía por fecha pasa la guardia', () => {
+  const vs = [
+    ventana({ checkin: '2026-09-04', mediana: 204, comps: 4 }),
+    ventana({ checkin: '2026-10-02', mediana: 305, comps: 5 }),
+    ventana({ checkin: '2026-11-06', mediana: 133, comps: 4 }),
+  ]
+  assert.equal(corpusClonado(vs), false)
+  assert.equal(barridoFiable(base({ comps: 13, ventanas: vs })), true)
+})
+
+test('que dos ventanas de la MISMA fecha compartan mediana no cuenta como clon', () => {
+  // Dos aforos de la misma fecha pueden coincidir por azar: eso no dice nada del corpus.
+  const vs = [
+    ventana({ checkin: '2026-09-04', aforo: 2, mediana: 204, comps: 4 }),
+    ventana({ checkin: '2026-09-04', aforo: 4, mediana: 204, comps: 4 }),
+    ventana({ checkin: '2026-10-02', aforo: 2, mediana: 133, comps: 4 }),
+    ventana({ checkin: '2026-11-06', aforo: 2, mediana: 305, comps: 4 }),
+  ]
+  assert.equal(clonRatio(vs), 0)
+  assert.equal(corpusClonado(vs), false)
+})
+
+test('con menos de 3 fechas no se juzga el clonado', () => {
+  const vs = [
+    ventana({ checkin: '2026-09-04', mediana: 204, comps: 4 }),
+    ventana({ checkin: '2026-10-02', mediana: 204, comps: 4 }),
+  ]
+  assert.equal(corpusClonado(vs), false)
+})
+
+test('las muestras de 1-2 comps se cantan: su mediana no describe un mercado', () => {
+  const r = base({
+    comps: 6,
+    ventanas: [
+      ventana({ checkin: '2026-09-04', mediana: 104, comps: 1 }),
+      ventana({ checkin: '2026-10-02', mediana: 305, comps: 2 }),
+      ventana({ checkin: '2026-11-06', mediana: 133, comps: 3 }),
+    ],
+  })
+  assert.equal(muestrasPobres(r.ventanas), 2)
+  assert.match(detalleBarrido(r), /2 ventanas con menos de 3 comps \(mediana poco fiable\)/)
 })

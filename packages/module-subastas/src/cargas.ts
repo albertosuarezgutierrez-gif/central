@@ -22,7 +22,8 @@
 // ────────────────────────────────────────────────────────────────────────────
 
 import { caducidadDelCuadro } from './caducidad.ts'
-import { norm } from './parsing.ts'
+import { norm, parseImporteEs } from './parsing.ts'
+import { numeroAlFinal, palabrasANumero } from './numeros-es.ts'
 
 /**
  * Confianza mínima de la lectura para poder afirmar que una finca se adquiere
@@ -66,6 +67,13 @@ export interface Carga {
   cancelada: boolean
   /** Cita literal del documento: la evidencia de dónde sale cada cifra. */
   literal: string | null
+  /**
+   * Título del documento de la ficha del que salió esta lectura. Es lo que
+   * permite arbitrar cuando dos documentos se contradicen: la CERTIFICACIÓN de
+   * dominio y cargas es la que establece el orden registral, y una nota simple
+   * o un edicto solo lo describen. Ver `autoridadDocumental`.
+   */
+  documento?: string | null
 }
 
 /**
@@ -138,7 +146,12 @@ const RANGOS: RangoCarga[] = ['anterior', 'posterior', 'la_que_ejecuta', 'descon
  * español, o cargas a medias — nada de eso debe lanzar, porque el pipeline es
  * best-effort y una ficha ilegible no puede tumbar la pasada del cron.
  */
-export function normalizarCuadroCargas(bruto: unknown, fuente: FuenteCargas): CuadroCargas {
+export function normalizarCuadroCargas(
+  bruto: unknown,
+  fuente: FuenteCargas,
+  /** Título del documento leído, para poder arbitrar rangos contradictorios. */
+  documento?: string | null,
+): CuadroCargas {
   const o = (bruto ?? {}) as Record<string, unknown>
   const lista = Array.isArray(o.cargas) ? o.cargas : []
 
@@ -150,10 +163,17 @@ export function normalizarCuadroCargas(bruto: unknown, fuente: FuenteCargas): Cu
       tipo: (TIPOS as string[]).includes(tipo) ? (tipo as TipoCarga) : 'otra',
       acreedor: typeof x.acreedor === 'string' && x.acreedor.trim() ? x.acreedor.trim().slice(0, 200) : null,
       importe: NUM(x.importe),
-      fecha: typeof x.fecha === 'string' && x.fecha.trim() ? x.fecha.trim().slice(0, 40) : null,
+      // 🚨 El tope era 40 y el registro escribe las fechas EN LETRA: «veintinueve
+      // de enero de dos mil dieciocho» son 41 caracteres, así que se guardaba
+      // «…dos mil diecioch» y `palabrasANumero` leía el año como 2000. En
+      // SUB-JA-2026-264269 esa anotación de 2018 salía como «de hace 26,5 años»
+      // y, peor, como POSIBLE CADUCADA — que es el lado barato: rebajaba de
+      // 48.450,00€ a 44.850,00€ lo que se hereda (auditado el 04/08/2026).
+      fecha: typeof x.fecha === 'string' && x.fecha.trim() ? x.fecha.trim().slice(0, 120) : null,
       rango: (RANGOS as string[]).includes(rango) ? (rango as RangoCarga) : 'desconocido',
       cancelada: x.cancelada === true,
       literal: typeof x.literal === 'string' && x.literal.trim() ? x.literal.trim().slice(0, 600) : null,
+      documento: documento ?? null,
     }
   })
 
@@ -321,6 +341,22 @@ export function cargasQueSubsisten(cuadro: CuadroCargas, hoy?: Date): CargasSubs
     )
   }
 
+  // …y el matiz que decide si ese patrón es una ruina o un trámite. Va justo
+  // detrás del aviso anterior a propósito: lo que responde es su pregunta.
+  const vinculo = vinculoConCargaAnterior(cuadro.cargas)
+  if (vinculo && subsisten.includes(vinculo.carga)) {
+    const quien = `${vinculo.carga.tipo} anterior${vinculo.carga.acreedor ? ` de ${vinculo.carga.acreedor}` : ''}` +
+      `${vinculo.carga.importe != null ? ` (${formatearEur(vinculo.carga.importe)})` : ''}`
+    avisos.push(
+      vinculo.motivo === 'nota_marginal'
+        ? `🔎 El asiento que se ejecuta declara POR NOTA AL MARGEN su relación con la inscripción ${vinculo.asiento}, que es la ${quien}: ` +
+          'lo que se ejecuta sería el crédito garantizado por ella, y entonces se cancelaría al cobrar en vez de heredarse. ' +
+          'Lo afirma el registro, no una deducción nuestra — pero NO es automático: confírmalo con el juzgado antes de pujar. Hasta entonces, cuenta con la cifra alta.'
+        : `🔎 El acreedor del asiento que se ejecuta coincide con el de la ${quien}: ` +
+          'puede que se esté ejecutando el crédito garantizado por esa carga, en cuyo caso se cancelaría al cobrar. Confírmalo con el juzgado antes de pujar.',
+    )
+  }
+
   if (!cuadro.sinMasCargas) {
     avisos.push('La certificación no cierra con la fórmula «sin más cargas»: puede faltar información registral.')
   }
@@ -364,6 +400,69 @@ function formatearEur(n: number): string {
  * así que en el caso real de Belmonte devuelve `false` — que es lo correcto: no
  * se puede AFIRMAR que sean el mismo acreedor, hay que preguntarlo al juzgado.
  */
+/**
+ * La nota marginal que ata el asiento ejecutado a una carga ANTERIOR.
+ *
+ * El caso real (SUB-JA-2026-264269, Belmonte, 04/08/2026). La finca arrastra una
+ * hipoteca «anterior» de 44.850,00€ a favor de CAJA DE AHORROS DE ASTURIAS y se
+ * subasta por la anotación letra D de LIBERBANK: 48.450,00€ heredados sobre una
+ * salida de 19.329,00€, o sea descartada. Pero el literal de esa anotación
+ * termina diciendo:
+ *
+ *   «Se hace constar por nota al margen, su relación con la inscripción de
+ *    hipoteca 2ª, en trámites del procedimiento de ejecución ordinario.»
+ *
+ * …y la inscripción 2ª ES esa hipoteca. El registro está diciendo que el crédito
+ * que se ejecuta es el garantizado por ella — con lo que se cancelaría al cobrar
+ * y no se hereda casi nada. El dato estaba guardado y no lo leía nadie.
+ *
+ * Por qué no bastaba `mismoAcreedorQueEjecutante`: compara los acreedores contra
+ * la AUTORIDAD (el juzgado), donde el ejecutante no aparece; y aunque se le
+ * pasara, «CAJA DE AHORROS DE ASTURIAS» y «LIBERBANK S.A.» no casan por texto
+ * (son la misma entidad tras la absorción, pero afirmarlo sería adivinar). La
+ * nota marginal no adivina nada: es el registro quien afirma el vínculo.
+ *
+ * Nunca descuenta del importe — igual que la caducidad, marca y manda preguntar.
+ */
+export type VinculoEjecutante = {
+  /** La carga anterior con la que el asiento ejecutado declara relación. */
+  carga: Carga
+  /** Asiento citado por la nota marginal («2ª»), si el vínculo viene de ahí. */
+  asiento: string | null
+  /** De dónde sale la afirmación. La nota marginal es del registro; el acreedor, nuestro. */
+  motivo: 'nota_marginal' | 'mismo_acreedor'
+}
+
+/** «…nota al margen, su relación con la inscripción de hipoteca 2ª…» → `{tipo:'inscripcion', numero:'2'}`. */
+function asientoDeNotaMarginal(literal: string | null | undefined): { tipo: string; numero: string } | null {
+  const t = norm(literal ?? '')
+  if (!t) return null
+  const m = /nota\s+al\s+margen[^.]{0,150}?relacion\s+con\s+(?:la|el)\s+(inscripcion|anotacion)(?:\s+de\s+[a-z]+)?\s+(\d{1,3})/.exec(t)
+  return m ? { tipo: m[1], numero: m[2] } : null
+}
+
+export function vinculoConCargaAnterior(cargas: Carga[]): VinculoEjecutante | null {
+  const ejecuta = cargas.find((c) => c.rango === 'la_que_ejecuta' && !c.cancelada)
+  if (!ejecuta) return null
+  const anteriores = cargas.filter((c) => c.rango === 'anterior' && !c.cancelada)
+  if (!anteriores.length) return null
+
+  const asiento = asientoDeNotaMarginal(ejecuta.literal)
+  if (asiento) {
+    // El asiento se cita en el literal de la carga anterior («Inscripción 2ª de
+    // fecha…»). Se exige el MISMO tipo de asiento: la inscripción 2 y la
+    // anotación 2 son cosas distintas.
+    const cita = new RegExp(`\\b${asiento.tipo}\\s+${asiento.numero}\\b`)
+    const carga = anteriores.find((c) => cita.test(norm(c.literal ?? '')))
+    if (carga) return { carga, asiento: `${asiento.numero}ª`, motivo: 'nota_marginal' }
+  }
+
+  // Sin nota marginal, queda el nombre del acreedor de la carga que ejecuta —
+  // que es donde consta el ejecutante, no en la autoridad.
+  const porAcreedor = anteriores.find((c) => mismoAcreedorQueEjecutante([c], ejecuta.acreedor))
+  return porAcreedor ? { carga: porAcreedor, asiento: null, motivo: 'mismo_acreedor' } : null
+}
+
 export function mismoAcreedorQueEjecutante(cargas: Carga[], ejecutante: string | null | undefined): boolean {
   const e = (ejecutante ?? '').toLowerCase().replace(/[^a-záéíóúñ0-9 ]/g, ' ').replace(/\b(s\s?a|s\s?l|sau|slu|banco|caja|de|la|el|los|las|y)\b/g, ' ').trim()
   if (e.length < 4) return false
@@ -410,6 +509,126 @@ function rangoConservador(a: RangoCarga, b: RangoCarga): RangoCarga {
 }
 
 /**
+ * Cuánto vale la palabra de un documento cuando dos se contradicen en el RANGO.
+ *
+ * 2 = **certificación de dominio y cargas**. Es el documento que el registrador
+ *     expide PARA esta ejecución y el único que numera los asientos: el rango
+ *     sale de ahí y de ningún otro sitio.
+ * 1 = **nota simple**. Describe la finca, pero suele citar las cargas por la
+ *     fecha de la ESCRITURA y sin el número de inscripción.
+ * 0 = edicto, informe de valoración, escritura de cesión…
+ */
+export function autoridadDocumental(titulo: string | null | undefined): 0 | 1 | 2 {
+  const t = norm(titulo ?? '')
+  if (!t) return 0
+  if (/certific\w*/.test(t) && /(dominio|carga|registral)/.test(t)) return 2
+  if (/\bnota\s+simple\b/.test(t)) return 1
+  return 0
+}
+
+/** Las fechas que cita un asiento, en ISO. Una carga tiene varias a propósito:
+ *  la de INSCRIPCIÓN y la de la ESCRITURA que la causó son distintas. */
+function fechasDeAsiento(c: Carga): Set<string> {
+  const texto = `${c.fecha ?? ''} ${c.literal ?? ''}`
+  const out = new Set<string>()
+  const iso = (a: number, m: number, d: number) =>
+    a >= 1900 && a <= 2100 && m >= 1 && m <= 12 && d >= 1 && d <= 31
+      ? `${a}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+      : null
+
+  for (const m of texto.matchAll(/\b(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})\b/g)) {
+    const f = iso(+m[3], +m[2], +m[1])
+    if (f) out.add(f)
+  }
+  for (const m of texto.matchAll(/\b(\d{1,2})\s+de\s+([a-záéíóúñ]+)\s+de\s+(\d{4})\b/gi)) {
+    const mes = MESES_ES.indexOf(norm(m[2]))
+    if (mes < 0) continue
+    const f = iso(+m[3], mes + 1, +m[1])
+    if (f) out.add(f)
+  }
+
+  // Fechas EN LETRA: «diecisiete de agosto de dos mil nueve».
+  //
+  // Así las escriben las certificaciones registrales, mientras que un informe
+  // de valoración de la misma finca pone «17 de agosto de 2009». Si solo se
+  // entiende una de las dos formas, las dos lecturas del MISMO asiento no
+  // comparten ninguna fecha y `mismoAsiento` las da por distintas: la hipoteca
+  // se cuenta dos veces. Caso real (SUB-JA-2026-264269, Belmonte): 44.850,00€
+  // duplicados llevaron lo heredado a 93.300,00€ en vez de 48.450,00€.
+  const RE_LETRA = new RegExp(
+    String.raw`((?:[a-z]+\s+){0,3}[a-z]+)\s+de\s+(${MESES_ES.join('|')})\s+de\s+((?:[a-z]+\s+){0,3}[a-z]+)`,
+    'g',
+  )
+  for (const m of norm(texto).matchAll(RE_LETRA)) {
+    // El día es la cola del prefijo («anotación de fecha diecisiete»), el año
+    // la cabeza del sufijo («dos mil nueve, expedida por…»).
+    const dia = numeroAlFinal(m[1])
+    const anio = palabrasANumero(m[3])
+    if (dia == null || anio == null) continue
+    const f = iso(anio, MESES_ES.indexOf(m[2]) + 1, dia)
+    if (f) out.add(f)
+  }
+  return out
+}
+
+const MESES_ES = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+]
+
+/**
+ * El PRINCIPAL que garantiza la carga. Es la cifra que NO cambia de un documento
+ * a otro: la certificación añade intereses y costas para dar la responsabilidad
+ * total, pero el principal es el mismo. Sirve de contraste al emparejar.
+ */
+function principalDe(c: Carga): number | null {
+  const t = c.literal ?? ''
+  const etiquetado = /\bprincipal(?:\s+de)?\s*:?\s*([\d][\d.,]*)/i.exec(t)
+  if (etiquetado) return parseImporteEs(etiquetado[1])
+  const entreParentesis = /responder\s+de\s+[^()]*\(\s*([\d][\d.,]*)\s*€/i.exec(t)
+  if (entreParentesis) return parseImporteEs(entreParentesis[1])
+  return null
+}
+
+/**
+ * ¿Son estas dos lecturas EL MISMO asiento registral?
+ *
+ * 🚨 El caso que lo motiva (SUB-JA-2026-264600, Punta Umbría, auditado el
+ * 04/08/2026): la certificación citaba las hipotecas por su fecha de
+ * INSCRIPCIÓN (10/02/2009, 29/04/2011) y la nota simple las mismas dos por la
+ * fecha de la ESCRITURA (30/12/2008, 24/03/2011), con el acreedor escrito
+ * distinto («CAIXA D'ESTALVIS CATALUNYA» / «CAIXA D'ESTALVIS DE CATALUNYA, HOY
+ * BBVA»). `identidadCarga` no las emparejaba, así que la finca acababa con
+ * CUATRO hipotecas donde hay dos — y encima con los rangos cruzados: las dos
+ * copias de la nota simple venían como «anterior» y se sumaban 43.200,00€ de
+ * cargas heredadas en una ejecución hipotecaria donde la propia certificación
+ * dice que son POSTERIORES y se purgan.
+ *
+ * El puente es la fecha: la certificación cita las DOS (inscripción y «Fecha
+ * documento»), así que basta con que compartan una. El principal se usa de
+ * contraste — si ambos lo declaran y no coinciden, son asientos distintos.
+ */
+function mismoAsiento(a: Carga, b: Carga): boolean {
+  if (a.tipo !== b.tipo) return false
+
+  // La letra de la anotación es el identificador registral: si ambas la traen,
+  // decide sin apelación en los dos sentidos.
+  const la = letraAnotacion(a)
+  const lb = letraAnotacion(b)
+  if (la && lb) return la === lb
+
+  if (identidadCarga(a) === identidadCarga(b)) return true
+
+  const fa = fechasDeAsiento(a)
+  if (![...fechasDeAsiento(b)].some((f) => fa.has(f))) return false
+
+  const pa = principalDe(a)
+  const pb = principalDe(b)
+  if (pa != null && pb != null && Math.abs(pa - pb) > Math.max(pa, pb) * 0.01) return false
+  return true
+}
+
+/**
  * Fusiona las cargas leídas en VARIOS documentos de la misma finca (edicto,
  * certificación, informe de valoración…) dejando UNA fila por asiento.
  *
@@ -427,15 +646,15 @@ function rangoConservador(a: RangoCarga, b: RangoCarga): RangoCarga {
  */
 export function fusionarCargas(cargas: Carga[]): { cargas: Carga[]; avisos: string[] } {
   const avisos: string[] = []
-  const porIdentidad = new Map<string, Carga>()
+  const grupos: Carga[] = []
 
   for (const c of cargas) {
-    const k = identidadCarga(c)
-    const previa = porIdentidad.get(k)
-    if (!previa) {
-      porIdentidad.set(k, c)
+    const i = grupos.findIndex((g) => mismoAsiento(g, c))
+    if (i < 0) {
+      grupos.push(c)
       continue
     }
+    const previa = grupos[i]
 
     if (previa.importe != null && c.importe != null && Math.abs(previa.importe - c.importe) > Math.max(previa.importe, c.importe) * 0.01) {
       avisos.push(
@@ -443,24 +662,55 @@ export function fusionarCargas(cargas: Carga[]): { cargas: Carga[]; avisos: stri
           'se cuenta el MAYOR, que suele ser la responsabilidad total (principal + intereses + costas) frente al principal a secas. Confirmar en la certificación.',
       )
     }
-    if (previa.rango !== c.rango) {
-      avisos.push(`${describir(c)} consta con rango distinto según el documento (${previa.rango} y ${c.rango}): se cuenta el más caro.`)
-    }
 
-    porIdentidad.set(k, {
+    grupos[i] = {
       ...previa,
       importe: previa.importe == null ? c.importe : c.importe == null ? previa.importe : Math.max(previa.importe, c.importe),
-      rango: rangoConservador(previa.rango, c.rango),
+      rango: arbitrarRango(previa, c, avisos),
       // Cancelada solo si TODOS los documentos lo dicen: uno que no lo mencione
       // no basta para dar por cancelada una carga.
       cancelada: previa.cancelada && c.cancelada,
       acreedor: previa.acreedor ?? c.acreedor,
       fecha: previa.fecha ?? c.fecha,
       literal: previa.literal ?? c.literal,
-    })
+      // Se conserva el documento de MÁS autoridad: es el que explica el rango.
+      documento: autoridadDocumental(c.documento) > autoridadDocumental(previa.documento) ? c.documento : previa.documento,
+    }
   }
 
-  return { cargas: [...porIdentidad.values()], avisos }
+  return { cargas: grupos, avisos }
+}
+
+/**
+ * Rango cuando dos documentos discrepan.
+ *
+ * Antes se cogía siempre el MÁS CARO, que es lo correcto cuando ninguno de los
+ * dos sabe más que el otro. Pero no es el caso: el orden de los asientos lo
+ * establece la CERTIFICACIÓN, que los numera; una nota simple los cita sueltos y
+ * el modelo tiene que adivinar el rango. Coger «el más caro» convertía en
+ * heredadas dos hipotecas que la certificación declara posteriores y purgadas
+ * (Punta Umbría, 43.200,00€ de coste inventado).
+ *
+ * Cuando la autoridad empata se vuelve a lo conservador: sin árbitro, caro.
+ */
+function arbitrarRango(a: Carga, b: Carga, avisos: string[]): RangoCarga {
+  if (a.rango === b.rango) return a.rango
+
+  const aa = autoridadDocumental(a.documento)
+  const ab = autoridadDocumental(b.documento)
+  if (aa === ab) {
+    avisos.push(`${describir(b)} consta con rango distinto según el documento (${a.rango} y ${b.rango}): se cuenta el más caro.`)
+    return rangoConservador(a.rango, b.rango)
+  }
+
+  const manda = aa > ab ? a : b
+  const otro = aa > ab ? b : a
+  avisos.push(
+    `${describir(b)} consta como ${otro.rango} en «${otro.documento ?? 'otro documento'}» y como ${manda.rango} en ` +
+      `«${manda.documento ?? 'la certificación'}»: manda este último, que es el que numera los asientos y fija el orden registral. ` +
+      'Compruébalo en la certificación antes de pujar.',
+  )
+  return manda.rango
 }
 
 function describir(c: Carga): string {
@@ -703,16 +953,18 @@ export function esDocumentoDeCargas(titulo: string | null | undefined): boolean 
 
 /**
  * Lo que se puede AFIRMAR sobre las cargas:
- *  · `subsisten`            — leídas: hay cargas anteriores que se suman al precio.
- *  · `sin_cargas`           — leídas: no subsiste ninguna.
- *  · `publicadas_sin_leer`  — la ficha publica el documento y aún no se ha analizado.
- *  · `no_publicadas`        — ficha revisada: no hay documento de cargas que abrir.
- *  · `sin_revisar`          — ni siquiera se ha mirado la ficha todavía.
+ *  · `subsisten`              — leídas y cuantificadas: hay cargas que se suman al precio.
+ *  · `sin_cargas`             — leídas y cuantificadas: no subsiste ninguna (un 0 leído vale).
+ *  · `sin_cuantificar`        — consta que hay cargas, pero nadie ha determinado el importe.
+ *  · `publicadas_sin_extraer` — la ficha publica el documento y no tenemos su cuadro de cargas.
+ *  · `no_publicadas`          — ficha revisada: no hay documento de cargas que abrir.
+ *  · `sin_revisar`            — ni siquiera se ha mirado la ficha todavía.
  */
 export type EstadoCargas =
   | 'subsisten'
   | 'sin_cargas'
-  | 'publicadas_sin_leer'
+  | 'sin_cuantificar'
+  | 'publicadas_sin_extraer'
   | 'no_publicadas'
   | 'sin_revisar'
 
@@ -748,11 +1000,22 @@ export function estadoCargas(e: EntradaEstadoCargas): {
   const documento = docs?.find((d) => esDocumentoDeCargas(d.titulo)) ?? null
 
   if ((e.cargas ?? 0) > 0) return { estado: 'subsisten', documento }
-  if (e.cargasConocidas === true) return { estado: 'sin_cargas', documento }
+
+  // 🚨 «Conocidas» ≠ «cuantificadas». `cargas_conocidas` se pone a true en cuanto
+  // ALGO habla de cargas —el campo Cargas de la ficha del BOE trae texto, o una
+  // lectura devolvió cuadro—, pero el IMPORTE que subsiste puede seguir sin
+  // determinarse (`cargasQueSubsisten` devuelve `importe: null` cuando no se
+  // puede afirmar). Sin importe no se puede decir «finca limpia»: el 🟢 exige
+  // que la cifra EXISTA, aunque sea 0. Auditado el 01/08/2026 sobre el corpus
+  // vivo: 3 de las 14 subastas del BOE estaban en este hueco y pintaban 🟢 «Sin
+  // cargas anteriores subsistentes» sin que nadie hubiera cuantificado nada.
+  if (e.cargasConocidas === true) {
+    return { estado: e.cargas == null ? 'sin_cuantificar' : 'sin_cargas', documento }
+  }
 
   // No se sabe. Lo útil es decir POR QUÉ, porque cada porqué manda a un sitio
   // distinto: abrir el PDF que ya tenemos, esperar al cron, o ir al Registro.
-  if (documento) return { estado: 'publicadas_sin_leer', documento }
+  if (documento) return { estado: 'publicadas_sin_extraer', documento }
   if (docs == null) {
     return { estado: e.publicaAdjuntos === false ? 'no_publicadas' : 'sin_revisar', documento: null }
   }
@@ -785,12 +1048,24 @@ export function titularCargas(e: EntradaEstadoCargas): TitularCargas {
     case 'subsisten':
       return { ...base, emoji: '🔴', texto: 'Cargas anteriores que SUBSISTEN y se suman al precio:', importe: e.cargas ?? null }
     case 'sin_cargas':
-      return { ...base, emoji: '🟢', texto: 'Sin cargas anteriores subsistentes publicadas.' }
-    case 'publicadas_sin_leer':
+      return { ...base, emoji: '🟢', texto: 'Sin cargas anteriores subsistentes: leído y cuantificado.' }
+    case 'sin_cuantificar':
       return {
         ...base,
         emoji: '🟠',
-        texto: `El BOE SÍ publica «${(documento?.titulo ?? 'certificación de cargas').trim()}», pero todavía no se ha analizado: ábrela antes de pujar.`,
+        texto: documento
+          ? `Constan cargas pero SIN cuantificar: abre «${(documento.titulo ?? 'la certificación').trim()}» y súmalas al precio antes de pujar.`
+          : 'Constan cargas pero SIN cuantificar: pide la certificación registral y súmalas al precio antes de pujar.',
+      }
+    // Deliberadamente NO afirma «no se ha analizado»: cubre tanto la ficha que
+    // aún no ha pasado por el lector como la que pasó y no soltó cuadro (escaneo
+    // ilegible, lectura vacía). Lo único cierto en los dos casos —y lo único que
+    // Alberto necesita— es que el cuadro no lo tenemos y el PDF está ahí.
+    case 'publicadas_sin_extraer':
+      return {
+        ...base,
+        emoji: '🟠',
+        texto: `El BOE SÍ publica «${(documento?.titulo ?? 'certificación de cargas').trim()}» pero NO tenemos su cuadro de cargas: ábrela antes de pujar.`,
       }
     case 'sin_revisar':
       return { ...base, emoji: '🟠', texto: 'Cargas sin comprobar: la ficha del BOE todavía no se ha revisado.' }

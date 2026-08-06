@@ -139,6 +139,19 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'Huella: agente_latidos.facturas_gmail.',
   },
   {
+    id: 'subastas_mercado',
+    etiqueta: '🏘️ Mercado de subastas: comparables y chollos (cron diario 06:20)',
+    // Diario → 30 h, igual que el resto de diarios: tolera un día saltado.
+    maxHoras: 30,
+    nota:
+      'La pasada no llega a avisar. Es el fallo del 06/08/2026: el handler murió con un 504 a los ' +
+      '300 s JUSTO antes de `avisarChollos` (los pasos de red del portal se comían el presupuesto), ' +
+      'así que ese día hubo cero avisos sin un solo error a la vista — y «hoy no hay chollos» era en ' +
+      'realidad «hoy no se ha podido mirar». Mira los logs de /api/cron/subastas-mercado: si es 504, ' +
+      'el portal va lento y el presupuesto está cortando de más (revisa `presupuesto-mercado.ts`); si ' +
+      'es IMAP, las alertas de Idealista/Fotocasa no se están leyendo. Huella: agente_latidos.subastas_mercado.',
+  },
+  {
     id: 'sivra_eventos',
     etiqueta: '🎪 Descubrimiento de eventos de Sevilla (Ticketmaster + búsqueda web, diario)',
     // Diarios (04:00 y 05:00) → 30 h deja pasar un día saltado sin dar la lata.
@@ -166,6 +179,23 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'la pasarela; «el corpus NO refleja temporada» = sí hay comps, pero son los mismos para todas ' +
       'las fechas, así que la línea de temporada es falsa. Un «0 comps» a secas NO es «no hay ' +
       'mercado». Huella: agente_latidos.sivra_mercado_sweep.',
+  },
+  {
+    id: 'sivra_mercado_booking',
+    etiqueta: '🏨 Mercado real por fecha (rutina Booking, diaria)',
+    // Diaria → 30 h deja pasar una pasada saltada sin dar la lata. La cobertura se ACUMULA (el
+    // motor mira 120 días atrás), así que un día perdido no rompe nada; una semana perdida sí.
+    maxHoras: 30,
+    nota:
+      'Es la ÚNICA fuente que mide el precio de una fecha CONCRETA: el barrido por búsqueda web da ' +
+      'precios de anuncio sin fecha (el mismo comparable a 305€ en agosto, noviembre y marzo — ' +
+      'medido el 06/08/2026), y con eso el motor tarifica un mes entero con el precio de hoy. Si ' +
+      'esta rutina calla, la línea de temporada deja de refrescarse y en 120 días el corpus fiable ' +
+      'se vacía solo. EL DETALLE DICE QUÉ FALLÓ: «sin respuesta del conector» = Booking no contestó ' +
+      '(NO es «no hay mercado»); «sin precio utilizable» = contestó sin cifra. Revisa en claude.ai → ' +
+      'Rutinas que la rutina corre, que tiene el conector de Booking.com adjunto y que su env lleva ' +
+      'PLATAFORMA_URL + ALERTA_TOKEN (sin ellos no puede ni pedir el plan ni escribir). ' +
+      'Huella: agente_latidos.sivra_mercado_booking.',
   },
   {
     id: 'sivra_pricing_guard',

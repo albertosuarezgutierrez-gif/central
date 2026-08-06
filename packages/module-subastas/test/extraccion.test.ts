@@ -4,7 +4,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { extraerDatos } from '../src/extraccion.ts'
-import { palabrasANumero, superficieM2 } from '../src/numeros-es.ts'
+import { palabrasANumero, superficieM2, superficiesM2 } from '../src/numeros-es.ts'
 import { parsearAlertaBoe } from '../src/email-boe.ts'
 import { CORREOS_REALES } from './fixtures-reales.ts'
 
@@ -77,4 +77,74 @@ test('el tipo de bien prioriza lo específico sobre lo genérico', () => {
   assert.equal(extraerDatos('Finca rústica de olivar en secano').tipoBien, 'finca_rustica')
   assert.equal(extraerDatos('Local comercial en planta baja').tipoBien, 'local')
   assert.equal(extraerDatos('Nave industrial').tipoBien, 'nave')
+})
+
+// Literal real de SUB-JA-2026-264398 (Alcalá del Río). La casa salía «garaje»
+// por la plaza de aparcamiento que su descripción menciona al final, y
+// `evaluarFlip` descarta lo que no es vivienda: la unifamiliar quedaba fuera de
+// la lente de rentabilidad por un elemento accesorio.
+test('una vivienda con plaza de aparcamiento sigue siendo vivienda', () => {
+  const texto =
+    'URBANA: VIVIENDA UNIFAMILIAR DIECINUEVE ya terminada. Ubicada en la parcela ' +
+    'diecinueve de la manzana RU-1, sita en C/ Dolores Ibarruri Nº 19 de Alcalá del Rio. ' +
+    'Esta vivienda dispone de un jardín en el resto de la parcela no ocupada por la ' +
+    'construcción, donde se ubica una plaza de aparcamiento en superficie.'
+  assert.equal(extraerDatos(texto).tipoBien, 'vivienda')
+  assert.equal(extraerDatos('Vivienda unifamiliar adosada, con garaje en planta baja').tipoBien, 'vivienda')
+})
+
+test('lo accesorio solo gana cuando es lo que se subasta (va primero)', () => {
+  // El caso que motivaba el orden fijo antiguo: aquí el garaje ES el bien.
+  assert.equal(extraerDatos('Plaza de aparcamiento nº 56 del conjunto de edificación').tipoBien, 'garaje')
+  assert.equal(extraerDatos('Trastero número 4 del edificio de viviendas sito en calle Real').tipoBien, 'trastero')
+})
+
+// ── Superficie: las formas que el BOE escribe de verdad (auditado 05/08/2026) ─
+// De 17 subastas vivas solo 5 tenían superficie. Dos de las que faltaban SÍ la
+// publicaban en el texto y no se extraía, porque la fórmula registral separa
+// metros y decímetros con una COMA y solo se aceptaba «con».
+
+test('la fórmula registral con COMA en vez de «con»', () => {
+  // SUB-JA-2026-264811, Sevilla. Antes devolvía null y la subasta se quedaba
+  // sin margen de flip por «falta de datos» teniéndolos delante.
+  assert.equal(
+    superficieM2('Tiene una superficie construida de setenta y siete metros, diecinueve decímetros cuadrados. Linda por la derecha con el piso letra C.'),
+    77.19,
+  )
+})
+
+test('cifras y letra mezcladas en la misma medida', () => {
+  // SUB-JA-2026-264398, Alcalá del Río: «105 metros, 5 decimetros cuadrados».
+  assert.equal(superficieM2('La superficie de la parcela es aproximadamente de 105 metros, 5 decimetros cuadrados.'), 105.05)
+  assert.equal(superficieM2('catorce metros y cuarenta y siete decímetros cuadrados'), 14.47)
+})
+
+test('con varias superficies manda la CONSTRUIDA, no la primera que aparece', () => {
+  // El caso caro: en una unifamiliar la parcela se cita ANTES que lo construido.
+  // Quedarse con la primera valora el inmueble por el solar.
+  const texto = 'VIVIENDA UNIFAMILIAR. La superficie de la parcela es aproximandamente de 105 metros, 5 decimetros cuadrados. ' +
+    'Lavivienda tiene una superficio construida aproximada de 140 metros, 6 decimetros cuadrados. ' +
+    'Dispone de un solarum de catorce metros y cuarenta y siete decímetros cuadrados.'
+  assert.equal(superficieM2(texto), 140.06)
+  const medidas = superficiesM2(texto)
+  assert.deepEqual(
+    medidas.map((m) => [m.m2, m.clase]),
+    [[105.05, 'parcela'], [140.06, 'construida'], [14.47, 'sin_etiqueta']],
+  )
+})
+
+test('la errata «superficio construida» del BOE sigue contando como construida', () => {
+  assert.equal(superficiesM2('superficio construida aproximada de 140 metros, 6 decimetros cuadrados')[0].clase, 'construida')
+})
+
+test('entre medidas de la misma clase se queda con la mayor (el total, no una estancia)', () => {
+  assert.equal(
+    superficieM2('Superficie construida de 90 metros cuadrados. La cocina tiene una superficie construida de 8 metros cuadrados.'),
+    90,
+  )
+})
+
+test('sin superficie en el texto sigue devolviendo null, no un cero', () => {
+  assert.equal(superficieM2('Vivienda en Sevilla, sita en C/ PACO GANDIA 26'), null)
+  assert.deepEqual(superficiesM2('Vivienda en Sevilla'), [])
 })

@@ -8,13 +8,15 @@ import { getResumenFinanciero } from '@/lib/finanzas'
 import { calcularEstadoDeclaracion } from '@/lib/comparativa-declaracion'
 import { facturasMensualesFaltantes } from '@/lib/sivra/facturas-mensuales'
 import { eur } from '@/lib/dinero'
-import { sondearProveedoresIA } from '@/lib/monitoring/sonda-ia'
+import { sondearProveedoresIA, TIMEOUT_MS as SONDA_TIMEOUT_MS } from '@/lib/monitoring/sonda-ia'
+import { veredictoSonda } from '@/lib/monitoring/sonda-veredicto'
+import type { TraficoRealProveedor } from '@/lib/monitoring/sonda-veredicto'
 import type { NextRequest } from 'next/server'
 
-// 120 y no 60: la sonda de proveedores (Check 13) añade hasta ~30 s de pings en paralelo (mismo
-// timeout que el tráfico real — NIM gratis responde en ~26 s de media) y el resto de checks ya
-// rondaban el techo. El dispatcher tolera hasta 280 s por job.
-export const maxDuration = 120
+// 180 y no 60: la sonda de proveedores (Check 13) añade hasta ~60 s de pings (timeout de 30 s ×2
+// intentos si el primero expira — mismo timeout que el tráfico real; NIM gratis responde en ~26 s
+// de media) y el resto de checks ya rondaban el techo. El dispatcher tolera hasta 280 s por job.
+export const maxDuration = 180
 
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -307,20 +309,37 @@ export async function GET(req: NextRequest) {
     // muerto sin que nadie lo viera. Esta sonda hace un ping real y minúsculo a CADA proveedor
     // configurado (misma key y mismo modelo que producción) y canta el eslabón caído el MISMO
     // día, haya tráfico o no. Detalle y coste (despreciable) en lib/monitoring/sonda-ia.ts.
+    //
+    // El veredicto separa LENTO de MUERTO (04/08/2026): un timeout de la sonda con tráfico real
+    // completando el mismo día (caso NIM: p50 ~25 s contra timeout de 30 s, tier gratis con cola)
+    // es 🟠 «degradado», no 🔴 «revisar key/cuota» — la primera versión mandó a revisar una key
+    // que la víspera llevaba 40 llamadas reales OK. Ventana de 48 h porque el check corre a las
+    // ~07:00 UTC y el tráfico del día anterior puede superar las 24 h; si el proveedor muere de
+    // verdad, la ventana se vacía sola y el 🟠 escala a 🔴 en pasadas siguientes.
     const sonda = await sondearProveedoresIA()
-    for (const s of sonda.filter((s) => !s.ok)) {
-      fallos.push(
-        `🔴 Sonda IA «${s.proveedor}» (${s.modelo}) NO responde: ${s.error ?? 'sin detalle'}. ` +
-        `El tráfico real no lo notará (la cadena de fallback lo tapa), pero cada llamada está ` +
-        `pagando este intento muerto — revisar key/cuota hoy.`,
-      )
+    const sospechosos = sonda.filter((s) => !s.ok || (s.reintentos ?? 0) > 0)
+    const traficoReal = new Map<string, TraficoRealProveedor>()
+    if (sospechosos.length > 0) {
+      const filas = await prisma.$queryRaw<Array<{ proveedor: string; exitos: number; p50: number | null }>>`
+        SELECT proveedor,
+               COUNT(*) FILTER (WHERE ok)::int AS exitos,
+               (percentile_cont(0.5) WITHIN GROUP (ORDER BY ms) FILTER (WHERE ok))::float AS p50
+        FROM ai_usos
+        WHERE creada_at > now() - interval '48 hours' AND endpoint <> 'sonda'
+          AND proveedor IN (${Prisma.join(sospechosos.map((s) => s.proveedor))})
+        GROUP BY proveedor`
+      for (const f of filas) traficoReal.set(f.proveedor, { exitos: f.exitos, p50Ms: f.p50, ventanaHoras: 48 })
     }
-    const sondaOk = sonda.filter((s) => s.ok)
-    if (sondaOk.length === sonda.length && sonda.length > 0) {
-      ok.push(`✅ Sonda IA: ${sonda.length} proveedores responden (${sonda.map((s) => s.proveedor).join(', ')})`)
-    } else if (sonda.length === 0) {
+    for (const s of sospechosos) {
+      fallos.push(veredictoSonda(s, traficoReal.get(s.proveedor), SONDA_TIMEOUT_MS).linea)
+    }
+    if (sonda.length === 0) {
       // Cero proveedores configurados no es «todo bien»: es que la sonda no pudo mirar nada.
       fallos.push('🔴 Sonda IA: ningún proveedor configurado (¿envs de IA ausentes en este entorno?)')
+    } else if (sospechosos.length === 0) {
+      ok.push(`✅ Sonda IA: ${sonda.length} proveedores responden (${sonda.map((s) => s.proveedor).join(', ')})`)
+    } else if (sonda.length > sospechosos.length) {
+      ok.push(`✅ Sonda IA: ${sonda.length - sospechosos.length} de ${sonda.length} proveedores responden a la primera`)
     }
 
   } catch (err) {

@@ -6,6 +6,10 @@ import { isRoutineAuthorized } from "@/lib/cron-auth"
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
 
+// Fuentes que este endpoint acepta declarar. `serper` NO está: ese camino lo escribe el barrido
+// automático, no una ingesta externa — permitirlo aquí solo serviría para etiquetar mal.
+const FUENTES_INGESTA = ["booking_mcp", "manual"]
+
 // POST /api/sivra/mercado/ingest
 // Ingesta de comparables de mercado REALES (Booking, Trivago, Expedia…) obtenidos
 // por un conector externo o un agente, sin depender del scraping de Google (Serper).
@@ -49,6 +53,19 @@ export async function POST(req: NextRequest) {
   const currency = String(body.currency ?? "EUR")
   const apartments: any[] = Array.isArray(body.apartments) ? body.apartments : []
 
+  // 🚨 `fuente` marca DE DÓNDE sale el precio, y es lo único que distingue un comparable medido
+  // para ESA fecha de uno scrapeado de un anuncio sin fecha (los dos llegan con portal='booking').
+  // Ver `prisma/sql/2026-08-06_market_rates_fuente.sql`. Default `booking_mcp` porque quien llama
+  // aquí es la rutina del conector; un valor desconocido se RECHAZA en vez de colarse como fiable
+  // (un centinela que acepta cualquier etiqueta no vigila nada).
+  const fuente = String(body.fuente ?? "booking_mcp")
+  if (!FUENTES_INGESTA.includes(fuente)) {
+    return NextResponse.json(
+      { error: `fuente inválida: ${fuente}. Válidas: ${FUENTES_INGESTA.join(", ")}` },
+      { status: 400 },
+    )
+  }
+
   if (!portal || !scenario || !checkin || !checkout) {
     return NextResponse.json({ error: "Faltan campos: portal, scenario, checkin, checkout" }, { status: 400 })
   }
@@ -72,20 +89,24 @@ export async function POST(req: NextRequest) {
       await prisma.$executeRaw(Prisma.sql`
         INSERT INTO market_rates
           (search_date, checkin_date, checkout_date, guests, portal, scenario,
-           comp_name, price_night, price_total, score, review_count, location, currency)
+           comp_name, price_night, price_total, score, review_count, location, currency, fuente)
         VALUES (CURRENT_DATE, ${checkin}::date, ${checkout}::date, ${guests},
           ${String(portal)}, ${String(scenario)}, ${String(name)},
           ${Math.round(night)}::integer, ${Math.round(total)}::integer,
-          ${score}::numeric, ${reviews}::integer, ${location}, ${currency})
+          ${score}::numeric, ${reviews}::integer, ${location}, ${currency}, ${fuente})
         ON CONFLICT (search_date, portal, scenario, comp_name, checkin_date) DO UPDATE
         SET price_night=EXCLUDED.price_night, price_total=EXCLUDED.price_total,
             score=EXCLUDED.score, review_count=EXCLUDED.review_count,
-            location=EXCLUDED.location, created_at=NOW()`)
+            location=EXCLUDED.location, created_at=NOW(),
+            -- La fuente MEJOR gana el desempate: si el barrido ya había escrito este comparable
+            -- hoy con un precio de anuncio, la medición real de la fecha lo sustituye y además
+            -- se queda marcada como fiable. Al revés no puede pasar (el sweep no llama aquí).
+            fuente=EXCLUDED.fuente`)
       inserted++
     } catch (e) {
       skipped.push(`${name}: ${String(e).slice(0, 80)}`)
     }
   }
 
-  return NextResponse.json({ ok: true, portal, scenario, checkin, checkout, inserted, skipped })
+  return NextResponse.json({ ok: true, portal, fuente, scenario, checkin, checkout, inserted, skipped })
 }

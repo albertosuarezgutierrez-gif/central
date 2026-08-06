@@ -124,6 +124,16 @@
 ## Puerta a Fase 2
 No proponer ejecución real hasta que `trading_estrategia_stats` muestre rentabilidad sostenida y FUERA
 DE MUESTRA (walk-forward). Esa decisión es de Alberto y tendrá su propio spec. Hasta entonces: solo paper.
+- **🪜 Escalera de tramos FIRMADA** (05/08/2026, `docs/TRADING-HIPOTESIS-PREREGISTRO.md` §«Plan de
+  despliegue de capital REAL» + enmienda de operacionalización): 1.000€ → +2.000€ → +3.000€, techo
+  6.000€ hasta validar. **SIN fecha objetivo: la suben las señales, no el calendario** (Alberto). El
+  semáforo vive en `lib/trading/puerta-fase2.ts::evaluarEscalera` (puro, testeado), se pinta en
+  `/trading` (🪜) y en el digest semanal del paper-tracker. No inventar criterios nuevos ni fechas.
+- **Anti-duplicados (05/08/2026):** `/analizar` y `/puntuar` son idempotentes (únicos
+  `trading_tesis(simbolo,fecha,estrategia)` y `trading_paper_orden(simbolo,lado,fecha)`; «posición ya
+  abierta» es barrera y deja `motivo_bloqueo`). `trading_pasadas` cuenta ejecuciones/día y avisa por
+  Telegram si la pasada corre 2 veces. `trading_paper_orden.precio_dia_siguiente` = deslizamiento
+  (lo rellena `/puntuar`); NULL = sin dato, no 0.
 
 ## Canal de aviso — protocolo común
 

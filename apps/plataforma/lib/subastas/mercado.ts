@@ -18,8 +18,9 @@
 // ────────────────────────────────────────────────────────────────────────────
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
-import { CHOLLO_DESCUENTO_MIN, datosFichaFotocasa, detectarChollos, estimarAntiguedad, MIN_MUESTRA_ZONA, parsearAlertaFotocasa, parsearAlertaIdealista, precioM2Zona, slugDistritoFotocasa, slugNucleoPlaya, slugZonaFotocasa, velocidadZona, type Chollo, type Comparable, type VelocidadZona, type ZonaPortal, type ZonaPortalRef } from '@central/module-subastas'
+import { CHOLLO_DESCUENTO_MIN, datosFichaFotocasa, detectarChollos, estimarAntiguedad, MIN_MUESTRA_ZONA, parsearAlertaFotocasa, parsearAlertaIdealista, precioM2Zona, RECONSTRUIR_EUR_M2, slugDistritoFotocasa, slugNucleoPlaya, slugZonaFotocasa, velocidadZona, type Chollo, type Comparable, type VelocidadZona, type ZonaPortal, type ZonaPortalRef } from '@central/module-subastas'
 import { leerAlertas } from '@/lib/subastas/gmail-boe'
+import { COSTE_PETICION_PORTAL_MS, motivoCorte, quedaTiempo } from '@/lib/subastas/presupuesto-mercado'
 import { tgSend } from '@central/core-telegram'
 import { eur } from '@/lib/dinero'
 
@@ -81,10 +82,10 @@ export async function ingerirComparables(dias = 30, maxCorreos = 150): Promise<{
 export async function upsertComparable(a: Comparable, vistoEn: Date): Promise<number> {
   const r = await prisma.$executeRaw(Prisma.sql`
     INSERT INTO mercado_comparables
-      (portal, ref_anuncio, titulo, tipo, zona, precio, precio_inicial, superficie, habitaciones, precio_m2, url, visto_en)
+      (portal, ref_anuncio, titulo, tipo, zona, precio, precio_inicial, superficie, habitaciones, precio_m2, url, a_reformar, visto_en)
     VALUES (
       ${a.portal}, ${a.refAnuncio}, ${a.titulo}, ${a.tipo}, ${a.zona}, ${a.precio}, ${a.precio},
-      ${a.superficie}, ${a.habitaciones}, ${a.precioM2}, ${a.url}, ${vistoEn}
+      ${a.superficie}, ${a.habitaciones}, ${a.precioM2}, ${a.url}, ${a.aReformar ?? null}, ${vistoEn}
     )
     ON CONFLICT (portal, ref_anuncio) DO UPDATE SET
       titulo = EXCLUDED.titulo,
@@ -105,6 +106,9 @@ export async function upsertComparable(a: Comparable, vistoEn: Date): Promise<nu
       superficie = COALESCE(EXCLUDED.superficie, mercado_comparables.superficie),
       habitaciones = COALESCE(EXCLUDED.habitaciones, mercado_comparables.habitaciones),
       precio_m2 = COALESCE(EXCLUDED.precio_m2, mercado_comparables.precio_m2),
+      -- El estado solo lo trae la API: un correo posterior (que no lo sabe) no
+      -- debe borrar lo que la API ya declaró.
+      a_reformar = COALESCE(EXCLUDED.a_reformar, mercado_comparables.a_reformar),
       visto_en = GREATEST(EXCLUDED.visto_en, mercado_comparables.visto_en)
     -- Solo actualiza una observación IGUAL O MÁS NUEVA que lo ya visto: en un
     -- backfill (?dias=60) los correos no llegan en orden y, sin esta guarda,
@@ -129,7 +133,10 @@ export async function upsertComparable(a: Comparable, vistoEn: Date): Promise<nu
  */
 const PROXY_FICHA_FOTOCASA = 'https://wswbehlcuxqxyinousql.supabase.co/functions/v1/ficha-fotocasa'
 
-export async function enriquecerAnunciantesFotocasa(max = 8): Promise<{ revisados: number; particulares: number; fallos: string[] }> {
+export async function enriquecerAnunciantesFotocasa(
+  max = 8,
+  deadline?: number,
+): Promise<{ revisados: number; particulares: number; fallos: string[]; corte: string | null }> {
   const filas = await prisma.$queryRaw<Array<{ ref_anuncio: string; url: string }>>(Prisma.sql`
     SELECT ref_anuncio, url FROM mercado_comparables
     WHERE portal = 'fotocasa' AND anunciante_visto_at IS NULL AND url IS NOT NULL
@@ -140,10 +147,19 @@ export async function enriquecerAnunciantesFotocasa(max = 8): Promise<{ revisado
 
   let revisados = 0
   let particulares = 0
+  let cortado = false
+  let vistas = 0
   // Cada fallo se anota LEGIBLE en la respuesta (el cron lo enseña): un 0 en
   // silencio ya costó dos ciclos de depuración el 29/07/2026.
   const fallos: string[] = []
   for (const f of filas) {
+    // Presupuesto de tiempo: cada ficha puede tardar hasta 30 s, así que se
+    // comprueba que quepa ENTERA antes de empezarla (incidente 06/08/2026).
+    if (deadline != null && !quedaTiempo(deadline, Date.now(), COSTE_PETICION_PORTAL_MS)) {
+      cortado = true
+      break
+    }
+    vistas++
     try {
       const r = await fetch(`${PROXY_FICHA_FOTOCASA}?url=${encodeURIComponent(f.url)}`, {
         // La edge function se ejecuta en la región del LLAMANTE: desde Vercel
@@ -190,7 +206,7 @@ export async function enriquecerAnunciantesFotocasa(max = 8): Promise<{ revisado
       if (fallos.length >= 2) break
     }
   }
-  return { revisados, particulares, fallos }
+  return { revisados, particulares, fallos, corte: motivoCorte(cortado, `${vistas} ficha(s)`, filas.length - vistas) }
 }
 
 // ── Referencia €/m² por zona (buscador de Fotocasa) ─────────────────────────
@@ -264,7 +280,10 @@ async function consultarZona(slug: string, etiqueta: string, fallos: string[]): 
   `).catch((e) => console.error('[mercado] hist', slug, e))
 }
 
-export async function referenciaZonasFotocasa(max = 6): Promise<{ zonasConsultadas: number; subastasConZona: number; fallos: string[] }> {
+export async function referenciaZonasFotocasa(
+  max = 6,
+  deadline?: number,
+): Promise<{ zonasConsultadas: number; subastasConZona: number; fallos: string[]; corte: string | null }> {
   const vivas = await prisma.$queryRaw<Array<{ dedupe_key: string; municipio: string | null; codigo_postal: string | null; descripcion: string | null }>>(Prisma.sql`
     SELECT dedupe_key, municipio, codigo_postal, descripcion FROM subastas
     WHERE es_inmueble = true AND municipio IS NOT NULL
@@ -298,7 +317,17 @@ export async function referenciaZonasFotocasa(max = 6): Promise<{ zonasConsultad
 
   const fallos: string[] = []
   let zonasConsultadas = 0
-  for (const p of pendientes.slice(0, max)) {
+  let cortado = false
+  const cola = pendientes.slice(0, max)
+  let vistas = 0
+  for (const p of cola) {
+    // Igual que las fichas: una consulta de zona puede agotar sus 30 s, así que
+    // solo se empieza si cabe entera dentro del presupuesto (06/08/2026).
+    if (deadline != null && !quedaTiempo(deadline, Date.now(), COSTE_PETICION_PORTAL_MS)) {
+      cortado = true
+      break
+    }
+    vistas++
     try {
       await consultarZona(p.slug, p.etiqueta, fallos)
       zonasConsultadas++
@@ -333,7 +362,12 @@ export async function referenciaZonasFotocasa(max = 6): Promise<{ zonasConsultad
     `)
     pintadas++
   }
-  return { zonasConsultadas, subastasConZona: pintadas, fallos }
+  return {
+    zonasConsultadas,
+    subastasConZona: pintadas,
+    fallos,
+    corte: motivoCorte(cortado, `${vistas} zona(s)`, cola.length - vistas),
+  }
 }
 
 /**
@@ -348,7 +382,7 @@ export async function comparablesVigentes(meses = MESES_VIGENCIA): Promise<Compa
   const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT portal, ref_anuncio, titulo, tipo, zona, precio, superficie, habitaciones, precio_m2, url,
            precio_inicial, precio_anterior, bajadas, ultima_bajada_at, created_at, visto_en,
-           anunciante, es_particular
+           anunciante, es_particular, a_reformar
     FROM mercado_comparables
     WHERE precio_m2 IS NOT NULL
       AND visto_en >= now() - make_interval(months => ${meses}::int)
@@ -374,6 +408,7 @@ export async function comparablesVigentes(meses = MESES_VIGENCIA): Promise<Compa
     ultimaVez: f.visto_en ? new Date(f.visto_en).toISOString() : null,
     anunciante: f.anunciante ?? null,
     esParticular: f.es_particular ?? null,
+    aReformar: f.a_reformar ?? null,
   }))
 }
 
@@ -546,7 +581,17 @@ export async function avisarChollos(): Promise<{ chollos: number; avisados: numb
       lineas.push(`  ⏳ En venta desde hace ~${Math.round(ch.antiguedadDias / 30)} meses (estimado por el nº de anuncio)`)
     }
     if (c.esParticular) lineas.push('  👤 Anuncio de PARTICULAR — negociación directa, sin comisión de agencia')
-    if (ch.sospechoso) lineas.push('  <i>Descuento anormalmente alto: verificar el anuncio antes de ilusionarse.</i>')
+    if (c.aReformar) lineas.push('  🔨 El propio anuncio se declara «a reformar»')
+    // Los descuentos de derribo que no aguantan la obra ya no llegan aquí
+    // (los filtra `detectarChollos`); si uno trae neto es que AUN levantando
+    // la casa sigue barato — se dice, con el supuesto por delante.
+    if (ch.descuentoNeto != null) {
+      lineas.push(
+        `  🔨 Huele a obra: aun pagando levantarla (~${RECONSTRUIR_EUR_M2}€/m²) quedaría un ` +
+          `${(ch.descuentoNeto * 100).toFixed(0)}% por debajo de la zona`,
+      )
+    }
+    if (ch.sospechoso) lineas.push('  <i>Descuento anormalmente alto: verificar el estado real antes de ilusionarse.</i>')
     if (c.url) lineas.push(`  ${escaparHtml(c.url)}`)
   }
   if (nuevos.length > 6) lineas.push('', `…y ${nuevos.length - 6} más en /subastas`)

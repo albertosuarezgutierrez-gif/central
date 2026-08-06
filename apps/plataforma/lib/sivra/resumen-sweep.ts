@@ -95,6 +95,44 @@ export function sinSenalDeTemporada(ventanas: VentanaMedida[]): boolean {
   return evaluados > 0
 }
 
+/** Comps por ventana por debajo de los cuales la mediana no describe un mercado, describe ruido. */
+export const MIN_COMPS_VENTANA = 3
+
+/** Ventanas que trajeron comps pero tan pocos que su mediana no significa nada. */
+export function muestrasPobres(ventanas: VentanaMedida[]): number {
+  return ventanas.filter(v => v.estado === 'comps' && v.comps > 0 && v.comps < MIN_COMPS_VENTANA).length
+}
+
+/**
+ * Proporción de ventanas cuya mediana se REPITE en otra FECHA distinta (0..1).
+ *
+ * 🚨 Por qué mira entre fechas Y entre aforos (05/08/2026). `sinSenalDeTemporada` solo caza el
+ * caso extremo —mismos nombres y mismo precio dentro de un aforo—, y el corpus real se coló por
+ * debajo: en la pasada de ese día, 204€ salía como mediana en 6 ventanas distintas, 104€ en 5 y
+ * 261€ en 3, repartidas entre fechas y aforos que no tienen por qué parecerse, con muestras de 1
+ * a 5 comps. Eso no es un mercado plano: es la consulta abierta devolviendo el mismo puñado de
+ * anuncios genéricos de Sevilla y la IA extrayendo los mismos números una y otra vez. Un aforo de
+ * 2 plazas y otro de 12 no cuestan lo mismo, y septiembre no cuesta lo que enero.
+ */
+export function clonRatio(ventanas: VentanaMedida[]): number {
+  const conDato = ventanas.filter(v => v.estado === 'comps' && v.mediana != null)
+  if (conDato.length < 3) return 0
+  const clonadas = conDato.filter(v =>
+    conDato.some(o => o !== v && o.mediana === v.mediana && o.checkin !== v.checkin),
+  ).length
+  return clonadas / conDato.length
+}
+
+/**
+ * `true` cuando la mitad o más de las medianas están clonadas entre fechas distintas y hay
+ * variedad suficiente (≥3 fechas) como para que eso NO sea lo esperable. Marca el corpus como no
+ * fiable: hay cifras, pero describen el mercado de hoy, no el de cada fecha.
+ */
+export function corpusClonado(ventanas: VentanaMedida[]): boolean {
+  const fechas = new Set(ventanas.filter(v => v.estado === 'comps').map(v => v.checkin))
+  return fechas.size >= 3 && clonRatio(ventanas) >= 0.5
+}
+
 /**
  * ¿Se puede afirmar que esta pasada ha medido el mercado? Conservador a propósito: ante la duda,
  * NO (un latido verde de mentira es peor que uno rojo de más).
@@ -105,6 +143,7 @@ export function barridoFiable(r: ResumenBarrido): boolean {
   if (cegadasEnBase(r.ventanas) > 0) return false
   if (contarPorEstado(r.ventanas).comps === 0) return false
   if (sinSenalDeTemporada(r.ventanas)) return false
+  if (corpusClonado(r.ventanas)) return false
   return true
 }
 
@@ -127,7 +166,14 @@ export function detalleBarrido(r: ResumenBarrido): string {
   if (ciegasBase) partes.push(`⚠️ ${ciegasBase} de la ronda base ciegas: la línea de temporada tiene huecos`)
   if (sinSenalDeTemporada(r.ventanas)) {
     partes.push('⚠️ mismos comps y mismo precio en todas las fechas: el corpus NO refleja temporada')
+  } else if (corpusClonado(r.ventanas)) {
+    partes.push(
+      `⚠️ ${Math.round(clonRatio(r.ventanas) * 100)}% de las medianas se repiten en otra fecha: ` +
+      'el corpus describe el mercado de HOY, no el de cada fecha',
+    )
   }
+  const pobres = muestrasPobres(r.ventanas)
+  if (pobres) partes.push(`${pobres} ventanas con menos de ${MIN_COMPS_VENTANA} comps (mediana poco fiable)`)
   if (c.sin_precios) partes.push(`${c.sin_precios} sin precios (leídas, no traían cifra)`)
   if (r.truncadas) {
     partes.push(

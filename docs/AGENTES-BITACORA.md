@@ -15,6 +15,24 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-05 · psd2-health-check** · hizo: preflight canal alerta OK (200); consulta frescura
+  `movimientos_bancarios WHERE origen='psd2'` → último movimiento 05/08/2026 (hoy), mov_30d=68 vs
+  mov_30d_prev=71 (sin caída >50%) → **✅ OK**, sin anomalía, sin aviso Telegram. dudas: —; fallos: la
+  consulta SQL de la skill usa columna `fecha` que no existe en la tabla (es `fecha_operacion`) —
+  drift de esquema, corregido ad-hoc en esta pasada pero el `.md` de la skill sigue con el nombre
+  viejo. PRs/commits: este commit (solo bitácora).
+- **2026-08-01 · facturas-correo (trigger diario)** · hizo: Vía B sana (dias_caido=0, `agente_salud`
+  actualizado), sin backlog en `PDF-pendiente`/`Revisar`. 2 candidatos: Giraldillo AFV-11808 (72,60€,
+  lavandería, deducible `turistico_pisos`) archivado en Drive con nombre normalizado, conciliación
+  bancaria pendiente (factura sigue "PENDIENTE" de pago, sin cargo aún) — y ParkingLibre (extracto a
+  0,00€, sin gasto real, sin archivar). Ambos hilos `Facturas/Procesada`. **Hallazgo:** el cron de
+  producción `facturas-scan` (`apps/plataforma/lib/agente-facturas/drive.ts`) sigue archivando TODO lo
+  que procesa (Giraldillo y ParkingLibre de hoy incl.) en `ALBERTO 2026 PERSONAL (SEGUROS)/<mes>` en vez
+  de la estructura de negocio — mismo patrón ya visto con Castuera el 10/07 (aviso aún sin borrar);
+  registrado nuevo aviso en `_DUPLICADOS_BORRAR` para Giraldillo. dudas: —; fallos: — (la mis-ubicación
+  del cron no es de esta skill, pero convendría revisar `DRIVE_SCRIPT_URL`/resolución de carpeta);
+  PRs/commits: rama `claude/inspiring-gauss-us1b8v`.
+
 - **2026-08-03 · pricing-agente (sesión interactiva, pregunta de Alberto por una reserva)** · hizo:
   auditada reserva Dúplex 25-28 sep (159,63€/noche bruto, infrapreciada: mercado del finde p50 258€ a
   4pl), Bienal de Flamenco 2026 (9 sep–3 oct oficial) dada de alta en `pricing-calendar.ts`
@@ -75,6 +93,58 @@
   produce decisiones reales. dudas: —; fallos: el patrón "PR cerrado sin mergear = trabajo perdido en
   silencio" ya es la 2ª vez que golpea a este mismo agente (antes fue "PR abierto sin mergear");
   PRs/commits: PR de esta pasada (reabre y sustituye #1108).
+
+- **2026-07-27 · buscador-ia** · hizo: watch de deprecación de los 4 eslabones cableados de la
+  cadena directa (NIM, Groq, Gemini, Kimi) — todos VIVOS, ninguno con retirada anunciada; descarte
+  de un hilo de 404 intermitentes en el alias Gemini por ser anterior al swap del 12/07 y a la GA
+  de Gemini 3.5 Flash de julio. Descubrimiento: Cerebras como 4º proveedor gratis independiente
+  (infra WSE, 1M tok/día, mismo modelo `gpt-oss-120b` que Groq) — plumbing añadido
+  (`packages/core-ai/src/cerebras.ts` + eslabón en `client.ts`, gateado por `CEREBRAS_API_KEY`,
+  inactivo sin la key) vía PR draft `claude/youthful-gates-ntyg6c`; Mistral anotado como candidato
+  secundario sin plumbing (rate limits no publicados, "solo evaluación" según el propio proveedor).
+  Doc `docs/BUSCADOR-IA.md` actualizado. dudas: —; fallos: (1) no se pudo `tsc`/build en el
+  contenedor — sin `node_modules` instalados, igual que otras pasadas anteriores; (2) **el aviso
+  Telegram falló** (`POST /api/internal/alerta` → `401 No autorizado`) — mismo síntoma ya detectado
+  por `agentes-entrenador` el 26/07 (`ALERTA_TOKEN` no coincide o falta en Vercel prod); avisado por
+  push en su lugar. **Pendiente de Alberto:** revisar `ALERTA_TOKEN` en Vercel plataforma — sigue
+  mudo para todos los agentes programados. PRs/commits: PR draft #1098 (`claude/youthful-gates-ntyg6c`).
+- **2026-07-26 · agentes-entrenador** · hizo: pasada semanal (rango real 03/07→26/07 — el intento previo del
+  19/07 quedó en un PR draft sin mergear, `claude/entrenador-auditoria-central-2026-07-19` #1008, así que la
+  poda de main nunca se aplicó; esta pasada la retoma y la completa). Evidencia de 24 entradas de bitácora
+  (repartidas en 11 PRs abiertos sin mergear + main) más `docs/FEEDBACK-AGENTES.md`. Diagnóstico por agente:
+  **pricing-agente** — bloqueo REPETIDO (20/07 y 22/07) del Paso 4 (`aplicar-propuesta` dryRun) por falta de
+  `CRON_SECRET` en la sesión programada, quedando solo como «pendiente» silencioso en la bitácora dos
+  semanas seguidas → añadida regla de escalado por Telegram tras 2 ciclos bloqueados (`SKILL.md`); el doble
+  conteo de evento del 18/07 ya tenía su lección capturada (ver abajo, reaplicada de #1008 que seguía sin
+  mergear). **facturas-correo** — patrón repetido 3ª vez (11/07, 12/07, 24/07) de sesiones que procesan
+  correo real sin dejar entrada aquí → reforzado en Paso 0 que la entrada es obligatoria aunque la sesión
+  sea ad-hoc o se corte a medias. **psd2-health-check** — falsa alarma 22/07 por no filtrar `origen='psd2'`
+  (mezclaba el feed real con importaciones manuales) → añadido el filtro + nota explicativa. **auditoria-
+  central** — reaplicada la regla de caso de prueba numérico para cambios de fórmula de pricing (ya
+  redactada en el PR #1008 sin mergear; se repite aquí para no depender de que Alberto rescate ese PR).
+  **ialimp-client-health** — esquema real ≠ el asumido en el SKILL.md (tablas `reservas`/`facturas`
+  inexistentes) ya autocorregido por la propia sesión en PR #1084 (abierto, sin mergear) — sin acción
+  adicional, solo señalado para que se mergee. **agente-huésped** — feedback del 04/07 y la regla «nos
+  vemos» del 25/07 ya resueltas en `decidir.ts` en sus propias tandas (PRs #1088 y anterior, ambos
+  mergeados) → feedback marcado procesado. **buscador-ia** — pasada 20/07 sana, WebFetch 403 puntual
+  (resuelto con WebSearch) sin repetirse aún, sin acción. Sin evidencia suficiente para juzgar
+  `trading-analista`, `github-vigia`, `fiscal-novedades`, `rrhh-compliance-calendar`, `correo-triaje` en
+  este rango (no dejan entrada en esta bitácora — actividad real la hay, ver `CONTEXTO-SESIONES.md`, pero
+  no en el formato que consume este agente). **Hallazgo transversal (no accionado, para que Alberto
+  decida):** hay ≥11 PRs `claude/*` abiertos sin mergear solo con cambios de `docs/AGENTES-BITACORA.md` u
+  otros docs de auto-informe — mientras sigan abiertos, la poda de este agente no "cuadra" con main y cada
+  pasada tiene que ir a buscar la evidencia PR a PR en vez de solo leer el archivo. dudas: —; fallos: (1)
+  el intento del 19/07 (rama `claude/upbeat-shannon-5j9re4`/PR #1008) hizo el trabajo pero nunca se
+  mergeó — posible causa: el carril 2 abre PR pero nadie lo revisa si no hay aviso Telegram que aterrice
+  o si el aviso se pierde; (2) **el propio aviso Telegram de ESTA pasada falló** —
+  `POST {PLATAFORMA_URL}/api/internal/alerta` con el `ALERTA_TOKEN` de la sesión devolvió `401 No
+  autorizado` (token no coincide con el `ALERTA_TOKEN`/`CRON_SECRET` real en Vercel prod, o la env no
+  está puesta) — mismo síntoma que el bloqueo de `pricing-agente` por secreto ausente/incorrecto en
+  sesión programada. Avisado a Alberto por el canal nativo de la rutina (push) en su lugar; **pendiente
+  de Alberto:** verificar que `ALERTA_TOKEN` en Vercel plataforma coincide con el que reciben las
+  sesiones programadas — si este endpoint falla en silencio, TODOS los avisos Telegram de agentes
+  (`psd2-health-check`, `pricing-agente`, `facturas-correo`…) están mudos ahora mismo; PRs/commits: esta
+  rama (`claude/upbeat-shannon-934ce5`, PR #1090)
 <!-- Los agentes insertan aquí. Ejemplo:
 - **2026-07-05 · facturas-correo** · hizo: 12 correos revisados, 3 facturas archivadas en
   Drive, 2 conciliadas con banca; dudas: recibo de Endesa sin CIF visible (a "Para tu

@@ -15,7 +15,31 @@ simulada en BD. Esta invariante protege todo lo demás: si dudas, no operas.
    inicial se siembra con `apps/plataforma/prisma/sql/trading_watchlist_seed.sql`.
 3. Por símbolo: `get_price_history` (diario, ~120 velas) → mapear a `Vela[]`
    (`{ fecha, apertura, alto, bajo, cierre, volumen }`); si FMP está conectado, traer
-   PER/deuda/margen/próximo earnings → `Fundamentales`.
+   PER/deuda/margen/próximo earnings → `Fundamentales`. **Desde el 05/08/2026 FMP es OPCIONAL
+   (lleva meses sin créditos, $0): `/api/trading/analizar` rellena por su cuenta lo que falte
+   —PER/PB/deuda-EBITDA/margen y fecha de earnings— desde Yahoo (`lib/trading/earnings-yahoo.ts`),
+   así que NO trates un fallo de FMP como bloqueo ni lo esperes.** Lo que sí aportes nunca se pisa.
+   **🚨 LANDMINE (04/08/2026) — NUNCA lances los `get_price_history` de los 13 símbolos en un
+   único mensaje paralelo y des por hecho que el resultado N-ésimo corresponde a la llamada
+   N-ésima.** Los `<result>` de tool calls paralelas NO garantizan devolver en el mismo orden
+   en que se invocaron (llegan en orden de FINALIZACIÓN). La primera vez que se corrió esta
+   pasada a mano se pidieron los 13 en paralelo y se transcribieron por posición → el histórico
+   de NFLX y PLTR se intercambió (mismo bug two veces: un array además salió con una vela de
+   menos por un corte manual), y la mezcla llegó hasta `/api/trading/analizar`, que reventó con
+   `PrismaClientValidationError` (`precioRef` undefined, todos los indicadores `NaN`) — visible
+   en `mcp__Vercel__get_runtime_errors` del proyecto `plataforma`. **Protocolo obligatorio:**
+   (a) pide cada `get_price_history` **etiquetado por `contract_id`** y guarda el JSON con el
+   nombre del símbolo INMEDIATAMENTE tras recibir esa respuesta concreta — nunca acumules N
+   respuestas paralelas para transcribirlas todas al final; (b) si por rapidez SÍ lanzas varias
+   en paralelo, verifica cada bloque de resultado contra el `contract_id`/símbolo que pediste
+   antes de guardarlo (los precios de compañías distintas no se parecen, es una comprobación
+   barata); (c) antes de construir el payload de `/analizar`, valida que `time`/`open`/`close`/
+   `high`/`low`/`volumen` tengan la MISMA longitud para cada símbolo — un array corto por una
+   vela desalinea el resto y `precioRef`/`indicadoresDe` salen `undefined`/`NaN` en silencio
+   (Prisma es quien finalmente lo caza, pero entonces ya reventó la pasada completa, no solo
+   el símbolo malo). Esto es lectura pura de IBKR (no rompe la regla de oro), pero un payload
+   corrupto SÍ puede llegar a abrir una posición paper con precioRef basura — por eso es
+   bloqueante, no cosmético.
 4. `POST {PLATAFORMA_URL}/api/trading/analizar` con `{ fecha, nav, simbolos: [...] }`
    (Bearer `ALERTA_TOKEN`). Devuelve el `top` de ideas.
 5. `POST {PLATAFORMA_URL}/api/trading/puntuar` con `{ hoy, precios }` (snapshot de cada símbolo con

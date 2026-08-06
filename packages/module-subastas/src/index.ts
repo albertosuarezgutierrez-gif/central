@@ -49,7 +49,8 @@ export type { DocumentoFicha, DatosEdicto } from './edicto.ts'
 // dirección, finca, dormitorios…) — la materia prima para filtrar de verdad
 export { extraerDatos, tipoBien, direccion, fincaRegistral, registroPropiedad, dormitorios, banos, planta, cuotaParticipacion } from './extraccion.ts'
 export type { DatosDescripcion, TipoBien } from './extraccion.ts'
-export { superficieM2, palabrasANumero, numeroAlFinal } from './numeros-es.ts'
+export { superficieM2, superficiesM2, palabrasANumero, numeroAlFinal } from './numeros-es.ts'
+export type { MedidaSuperficie, ClaseSuperficie } from './numeros-es.ts'
 
 // Municipio → provincia (las descripciones del BOE citan municipios, no provincias)
 // + enlaces externos con la mejor ubicación disponible (mapa, calle, Catastro)
@@ -80,7 +81,7 @@ export { parsearAlertaIdealista, esAlertaIdealista, precioM2Zona, velocidadZona,
 export type { Comparable } from './comparables.ts'
 // Chollos de venta directa: el mismo corpus de anuncios, mirado al revés —
 // ¿qué anuncio está muy por debajo de la mediana €/m² de su zona?
-export { detectarChollos, zonasDeComparable, estimarAntiguedad, CHOLLO_DESCUENTO_MIN, CHOLLO_DESCUENTO_SOSPECHOSO } from './comparables.ts'
+export { detectarChollos, zonasDeComparable, estimarAntiguedad, pareceRuina, CHOLLO_DESCUENTO_MIN, CHOLLO_DESCUENTO_SOSPECHOSO, RECONSTRUIR_EUR_M2 } from './comparables.ts'
 export type { Chollo, ObservacionRef, VelocidadZona, ZonaPortalRef } from './comparables.ts'
 // Calibración con RESULTADOS reales: a qué % del tipo se adjudica de verdad
 export { calibracionAdjudicaciones, calibracionPorCargas, calibracionPuja, MIN_MUESTRA_CALIBRACION, MIN_MUESTRA_PUJA } from './adjudicaciones.ts'
@@ -146,6 +147,7 @@ export {
   normalizarCuadroCargas,
   cargasQueSubsisten,
   mismoAcreedorQueEjecutante,
+  vinculoConCargaAnterior,
   consensoCuadros,
   fusionarCargas,
   identidadCarga,
@@ -154,15 +156,17 @@ export {
   resumirCargas,
   compararCuadros,
   esDocumentoDeCargas,
+  autoridadDocumental,
   estadoCargas,
   titularCargas,
   CONFIANZA_MINIMA_LIBRE,
 } from './cargas.ts'
+export type { VinculoEjecutante } from './cargas.ts'
 export type { Carga, CuadroCargas, CargasSubsistentes, TipoCarga, RangoCarga, FuenteCargas, ValoracionPactada, CambioCargas, EstadoCargas, AdjuntoFicha, EntradaEstadoCargas, TitularCargas } from './cargas.ts'
 export { PROMPT_LECTOR_REGISTRAL, extraerJson } from './cargas-prompt.ts'
 // Caducidad de las anotaciones de embargo (art. 86 LH): la carga fantasma que
 // infla el coste. Marca y cuantifica el escenario alternativo; nunca descuenta.
-export { estadoCaducidad, caducidadDelCuadro, parsearFechaRegistral, ANIOS_CADUCIDAD_ANOTACION, MESES_MARGEN } from './caducidad.ts'
+export { estadoCaducidad, caducidadDelCuadro, parsearFechaRegistral, ANIOS_CADUCIDAD_ANOTACION, MESES_MARGEN, ANIOS_FECHA_IMPLAUSIBLE } from './caducidad.ts'
 export type { Caducidad, EstadoCaducidad, CaducidadCuadro } from './caducidad.ts'
 
 // Rescate de PDFs escaneados (certificaciones fotocopiadas → imágenes legibles)

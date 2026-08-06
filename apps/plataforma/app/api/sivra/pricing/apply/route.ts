@@ -6,6 +6,7 @@ import { eventFactor, seasonalFloorFactor, PRICING_HORIZON_DAYS, EVENTS } from "
 import { combinarEventosDeFecha, type EventoBruto } from "@/lib/sivra/eventos-estado"
 import { factorLastMinute } from "@/lib/sivra/pricing-lastminute"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
+import { aplicarPrior, indicesPrior, type IndicePrior, type MesHistorico } from "@/lib/sivra/prior-estacional"
 import { getSmoobuKey } from "@/lib/smoobu"
 import { tgSend } from "@central/core-telegram"
 import { eur } from "@/lib/dinero"
@@ -298,6 +299,12 @@ export async function POST(req: NextRequest) {
       WHERE m.price_night > 0 AND m.scenario LIKE 'prop_%'
         AND m.checkin_date >= CURRENT_DATE
         AND m.search_date >= CURRENT_DATE - 120
+        -- 🚨 Fuera las pasadas cuyo corpus NO distingue la fecha (06/08/2026): el barrido llegó a
+        -- cubrir el calendario entero pero devolvía los MISMOS precios para fechas distintas (117
+        -- ventanas, 22 medianas, 93% repetidas). Meterlas aquí es fabricar estacionalidad: el
+        -- bucket de noviembre saldría igual que el de abril y el motor lo aplicaría como si fuera
+        -- mercado medido. Sin ellas se cae al ancla global, que es peor pero honesto.
+        AND NOT m.corpus_clonado
         AND m.checkin_date NOT IN (SELECT rate_date FROM eventos)
       ORDER BY m.scenario, m.checkin_date, m.comp_name, m.search_date DESC
     )
@@ -334,6 +341,7 @@ export async function POST(req: NextRequest) {
       WHERE m.price_night > 0 AND m.scenario LIKE 'prop_%'
         AND m.checkin_date >= CURRENT_DATE
         AND m.search_date >= CURRENT_DATE - 120
+        AND NOT m.corpus_clonado   -- mismo motivo que en el bucket del mes
       ORDER BY m.scenario, m.checkin_date, m.comp_name, m.search_date DESC
     )
     SELECT r.scenario AS property_id, r.checkin_date::text AS rate_date,
@@ -362,26 +370,16 @@ export async function POST(req: NextRequest) {
     WHERE nights > 0 AND amount_gross > 0 AND "checkIn" >= CURRENT_DATE - INTERVAL '6 years'
     GROUP BY 1, 2
   `).catch(() => [])
-  const priorIdx = new Map<string, number[]>()
+  // El cálculo vive en `lib/sivra/prior-estacional.ts` (puro y testeado) porque la regla NO es
+  // simétrica: se sube con ADR × ocupación, pero se BAJA solo con ADR. Ver su cabecera.
+  const priorIdx = new Map<string, IndicePrior[]>()
   {
-    const porPiso = new Map<string, { m: number; adr: number; nights: number }[]>()
+    const porPiso = new Map<string, MesHistorico[]>()
     for (const row of priorRows) {
       if (!porPiso.has(row.pid)) porPiso.set(row.pid, [])
-      porPiso.get(row.pid)!.push(row)
+      porPiso.get(row.pid)!.push({ mes: row.m, adr: row.adr, nights: row.nights })
     }
-    for (const [pid, rows] of porPiso) {
-      const totalNoches = rows.reduce((s, x) => s + x.nights, 0)
-      const adrMedio = rows.reduce((s, x) => s + x.adr * x.nights, 0) / (totalNoches || 1)
-      const nochesMedia = totalNoches / (rows.length || 1)
-      const idx = Array(12).fill(1) as number[]
-      for (const x of rows) {
-        if (x.nights < 30 || adrMedio <= 0) continue // sin muestra suficiente no hay prior
-        const adrIdx = x.adr / adrMedio
-        const occIdx = clamp(x.nights / (nochesMedia || 1), 0.85, 1.25)
-        idx[x.m - 1] = clamp(adrIdx * occIdx, 0.7, 1.6)
-      }
-      priorIdx.set(pid, idx)
-    }
+    for (const [pid, rows] of porPiso) priorIdx.set(pid, indicesPrior(rows))
   }
 
   // ─── Velocidad de conversión por mes (17/07/2026, OK de Alberto) ───────────────────────
@@ -546,16 +544,15 @@ export async function POST(req: NextRequest) {
           if (premio > target) { target = premio; eventTarget = Math.max(eventTarget, premio) }
         }
       }
-      // Prior estacional (histórico propio): SUELO del objetivo en meses históricamente
-      // fuertes. Sin bucket del mes sustituye al global plano; con bucket actúa solo como
-      // red (×0,9) si el índice es claramente alto — el mercado fresco sigue mandando.
-      const pIdx = priorIdx.get(r.property_id)?.[Number(ym.slice(5, 7)) - 1] ?? 1
-      if (pIdx > 1) {
-        const priorFloor = !useMonth
-          ? Math.round(baseTargetGlobal * pIdx)
-          : (pIdx >= 1.15 ? Math.round(baseTargetGlobal * pIdx * 0.9) : 0)
-        if (priorFloor > target) target = priorFloor
-      }
+      // Prior estacional (histórico propio). SUELO en los meses fuertes y —desde el 06/08/2026,
+      // decisión de Alberto— TECHO en los flojos: «a la baja sí, pero sin regalar precio». La
+      // bajada solo mira el ADR, nunca las noches vendidas: en julio y sobre todo agosto Sevilla
+      // está vacía y es NORMAL que no haya reservas — bajar por eso regala margen sin traer a
+      // nadie. Y nunca perfora el suelo del piso. Reglas y tests en `lib/sivra/prior-estacional.ts`.
+      const pIdx = priorIdx.get(r.property_id)?.[Number(ym.slice(5, 7)) - 1] ?? { alza: 1, baja: 1 }
+      target = aplicarPrior({
+        target, indice: pIdx, anclaGlobal: baseTargetGlobal, floor: floorD, hayBucketMes: useMonth,
+      })
       // Velocidad de conversión: +10% con ≥2 reservas del mes en 7 días (+20% desde 4), sin
       // pasar del techo de mercado del mes. Se recalcula desde el mercado en cada pasada (no
       // compone) y el raíl ±% por pasada sigue limitando el movimiento.

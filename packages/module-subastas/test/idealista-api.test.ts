@@ -74,6 +74,19 @@ test('mapea la respuesta de la API al mismo Comparable que los correos', () => {
   assert.equal(garaje.zona, 'Sevilla') // «Sevilla, Sevilla» se pliega a una
 })
 
+test('status de la API → aReformar: renew sí, good no, ausente «no se sabe»', () => {
+  const [renew, good, sinStatus] = comparablesDesdeApiIdealista({
+    elementList: [
+      { propertyCode: 1, price: 90000, propertyType: 'flat', status: 'renew' },
+      { propertyCode: 2, price: 90000, propertyType: 'flat', status: 'good' },
+      { propertyCode: 3, price: 90000, propertyType: 'flat' },
+    ],
+  })
+  assert.equal(renew.aReformar, true)
+  assert.equal(good.aReformar, false)
+  assert.equal(sinStatus.aReformar, null) // no se sabe ≠ buen estado
+})
+
 test('descarta anuncios sin ref o con precio no creíble', () => {
   const out = comparablesDesdeApiIdealista({
     elementList: [

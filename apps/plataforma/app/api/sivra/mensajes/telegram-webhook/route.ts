@@ -11,6 +11,7 @@ import { redactarDesdeIdea } from '@/lib/sivra/agente-huesped/redactar'
 import type { ContextoRedaccion } from '@/lib/sivra/agente-huesped/redactar'
 import { aprobarPago, aplazarPago, rechazarFactura, pagarTodo, resumenSemanal } from '@/lib/agente-facturas/pagos'
 import { getMovParaCallback, aprenderReglaMovimiento, enviarMensajeDudoso, sugerirDestinoConContexto, PROP_LABELS } from '@/lib/agente-movimientos'
+import { simboloValido } from '@/lib/trading/cantera'
 import { getCuentaTelegram, resolverAccionTg, manejarTextoLibreTg, manejarDocumentoTg, manejarVozTg, descargarTelegram, adjuntoDeMensaje, vozDeMensaje, arrancarOnboarding, esComandoContable } from '@/lib/contable/telegram'
 
 export const dynamic = 'force-dynamic'
@@ -99,6 +100,73 @@ export async function POST(req: NextRequest) {
   const cb = body.callback_query
   if (cb) {
     const { prefix, action, args } = parseCallback(cb.data || '')
+    // ── Propuestas de trading (tramo real de la escalera) ────────────────────
+    // El ✅ es un botón URL (abre la pestaña AI Instructions de IBKR — el envío final SIEMPRE lo
+    // pulsa Alberto en su app; ningún callback ejecuta órdenes). Aquí solo llega el ❌: registrar el
+    // rechazo para que la sesión de trading borre la instrucción en su siguiente check-in (este
+    // servidor no tiene acceso a IBKR — la instrucción caduca sola aunque nadie la borre).
+    if (prefix === 'trd') {
+      if (action === 'no') {
+        const instrId = args[0] || ''
+        await prisma.$executeRaw`
+          INSERT INTO trading_propuestas (instruccion_id, estado, decidido_en)
+          VALUES (${instrId}, 'rechazada', now())
+          ON CONFLICT (instruccion_id)
+          DO UPDATE SET estado = 'rechazada', decidido_en = now()`.catch(() => {})
+        await tgAnswerCallback(cb.id, 'Vale — descartada, no se ejecutará')
+        const original: string = cb.message?.text || '💡 Propuesta'
+        if (cb.message?.message_id) {
+          await tgEditMessage(cb.message.message_id,
+            `${escapeHtml(original)}\n\n❌ <b>Descartada.</b> No se ejecutará; la instrucción de IBKR caduca sola.`)
+        }
+        return NextResponse.json({ ok: true })
+      }
+      await tgAnswerCallback(cb.id)
+      return NextResponse.json({ ok: true })
+    }
+    // ── 🌱 Cantera del radar (watchlist capa C) ──────────────────────────────
+    // Propuesta del digest de los lunes (radar.ts 7-bis): ✅ = alta en trading_watchlist (capa C,
+    // SOLO paper — cero órdenes reales); ❌ = se registra y no se vuelve a proponer.
+    if (prefix === 'wlc') {
+      const simbolo = args[0] || ''
+      if (!simboloValido(simbolo)) { await tgAnswerCallback(cb.id, 'Símbolo no válido'); return NextResponse.json({ ok: true }) }
+      // Espejo de BAJA (🍂): quitar de capa C (activo=false, conserva histórico) o mantener.
+      if (action === 'baja' || action === 'mantener') {
+        if (action === 'baja') {
+          await prisma.$executeRaw`
+            UPDATE trading_watchlist SET activo = false WHERE simbolo = ${simbolo} AND capa = 'C'`.catch(() => {})
+        }
+        await prisma.$executeRaw`
+          UPDATE trading_cantera SET baja_decision = ${action === 'baja' ? 'baja' : 'mantener'}, baja_decidida_at = now()
+          WHERE simbolo = ${simbolo}`.catch(() => {})
+        await tgAnswerCallback(cb.id, action === 'baja' ? `${simbolo} fuera de la watchlist` : 'Vale — se mantiene')
+        if (cb.message?.message_id) {
+          await tgEditMessage(cb.message.message_id,
+            `${escapeHtml(cb.message.text || `🍂 Cantera: ${simbolo}`)}\n\n${action === 'baja'
+              ? `🗑️ <b>Fuera de capa C.</b> ${simbolo} deja de analizarse cada noche.`
+              : `✋ <b>Se mantiene.</b> Si vuelve a pasar un mes fuera del top-20, se re-preguntará.`}`)
+        }
+        return NextResponse.json({ ok: true })
+      }
+      const decision = action === 'alta' ? 'alta' : 'rechazada'
+      if (decision === 'alta') {
+        await prisma.$executeRaw`
+          INSERT INTO trading_watchlist (simbolo, capa) VALUES (${simbolo}, 'C')
+          ON CONFLICT (simbolo) DO NOTHING`.catch(() => {})
+      }
+      await prisma.$executeRaw`
+        UPDATE trading_cantera SET decision = ${decision}, decidido_at = now()
+        WHERE simbolo = ${simbolo}`.catch(() => {})
+      await tgAnswerCallback(cb.id, decision === 'alta' ? `${simbolo} en capa C — entra esta noche` : 'Vale — no se vuelve a proponer')
+      if (cb.message?.message_id) {
+        const original: string = cb.message.text || `🌱 Cantera: ${simbolo}`
+        await tgEditMessage(cb.message.message_id,
+          `${escapeHtml(original)}\n\n${decision === 'alta'
+            ? `✅ <b>Alta en capa C.</b> ${simbolo} entra en la pasada nocturna (SOLO paper).`
+            : `❌ <b>Descartado.</b> No se volverá a proponer.`}`)
+      }
+      return NextResponse.json({ ok: true })
+    }
     // ── Agente de pagos a proveedores ────────────────────────────────────────
     if (prefix === 'pago') {
       // Acciones con args[0] = cuentaId (no facturaId)

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { isRoutineAuthorized } from '@/lib/cron-auth'
 import { prisma } from '@/lib/db'
+import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { puntuarTesis, agregarStats, aplicarStop, cerrar } from '@central/module-trading'
 import type { Tesis } from '@central/module-trading'
 
@@ -32,6 +33,21 @@ export async function POST(req: NextRequest) {
     })
   }
 
+  // 2-bis) Deslizamiento (proxy): a las órdenes de días ANTERIORES sin dato se les apunta el precio de
+  // hoy si es su primer día hábil siguiente. En real no se ejecuta al cierre de la señal — esta columna
+  // mide cuánto cuesta esa espera, y decidirá si el tramo 1 real replica al paper. Best-effort.
+  try {
+    const sinDato = await prisma.tradingPaperOrden.findMany({ where: { precioDiaSiguiente: null, fecha: { lt: new Date(hoy) } } })
+    for (const o of sinDato) {
+      const precio = precios[o.simbolo]
+      // Solo el PRIMER precio tras la señal (≤5 días naturales cubre fines de semana/festivos): más tarde
+      // ya no mide deslizamiento sino deriva, y mejor NULL («no lo sé») que un dato con otro significado.
+      const diasDesde = (new Date(hoy).getTime() - new Date(o.fecha).getTime()) / 86_400_000
+      if (precio === undefined || diasDesde > 5) continue
+      await prisma.tradingPaperOrden.update({ where: { id: o.id }, data: { precioDiaSiguiente: precio } })
+    }
+  } catch (e) { console.warn('[trading/puntuar] deslizamiento falló (no bloquea):', e) }
+
   // 3) Stops sobre posiciones paper.
   const posiciones = await prisma.tradingPaperPosicion.findMany()
   let cerradas = 0
@@ -40,11 +56,24 @@ export async function POST(req: NextRequest) {
     if (precio === undefined) continue
     if (aplicarStop({ simbolo: p.simbolo, cantidad: p.cantidad, precioEntrada: p.precioEntrada, stop: p.stop, abiertaEn: String(p.abiertaEn) }, precio)) {
       const o = cerrar({ simbolo: p.simbolo, cantidad: p.cantidad, precioEntrada: p.precioEntrada, stop: p.stop, abiertaEn: String(p.abiertaEn) }, precio, hoy, 'stop')
-      await prisma.tradingPaperOrden.create({ data: { simbolo: o.simbolo, lado: 'SELL', cantidad: o.cantidad, precio: o.precio, fecha: new Date(hoy), motivo: o.motivo } })
+      // createMany+skipDuplicates: con el único (simbolo,lado,fecha) un reintento de la pasada no duplica ni revienta.
+      await prisma.tradingPaperOrden.createMany({ data: [{ simbolo: o.simbolo, lado: 'SELL', cantidad: o.cantidad, precio: o.precio, fecha: new Date(hoy), motivo: o.motivo }], skipDuplicates: true })
       await prisma.tradingPaperPosicion.delete({ where: { simbolo: p.simbolo } })
       cerradas++
     }
   }
+
+  // 4) Huella de que la pasada llegó HASTA EL FINAL. Este endpoint es el ÚLTIMO paso de la rutina y,
+  // cuando no hay tesis vencidas ni stops que aplicar, no escribe NADA en BD — así que su silencio era
+  // indistinguible de no haberse ejecutado. Pasó el 06/08/2026: `/analizar` dejó sus 64 tesis y el
+  // watchdog dio por buena la noche, pero `/puntuar` nunca corrió y ni los stops ni el walk-forward se
+  // actualizaron. La huella se escribe SIEMPRE (haya trabajo o no) y es la que mira el 3er tramo del
+  // watchdog. Best-effort: no rompe la respuesta si la tabla no está.
+  await registrarLatido(
+    'trading_puntuar',
+    true,
+    `${puntuadas} tesis puntuadas · ${cerradas} stop(s) · ${Object.keys(stats).length} estrategias`,
+  )
 
   return NextResponse.json({ puntuadas, cerradas, estrategias: Object.keys(stats).length })
 }
