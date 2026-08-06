@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-06T12:28:31Z",
+  "generadoEn": "2026-08-06T12:48:07Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1867,7 +1867,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 7
+        "evidencias": 8
       },
       "rrhh": {
         "presente": false,
@@ -3269,6 +3269,7 @@
       "/api/finanzas/proyeccion",
       "/api/finanzas/tarjeta",
       "/api/internal/alerta",
+      "/api/internal/latido",
       "/api/internal/mapa-arquitectura",
       "/api/negocios",
       "/api/negocios/[id]",
@@ -3330,6 +3331,7 @@
       "/api/sivra/mercado/cron",
       "/api/sivra/mercado/flights",
       "/api/sivra/mercado/ingest",
+      "/api/sivra/mercado/plan",
       "/api/sivra/mercado/search",
       "/api/sivra/mercado/stats",
       "/api/sivra/mercado/sweep",
@@ -3899,6 +3901,11 @@
       "description": "Alta/intake de la identidad corporativa de un cliente/tenant y aplicación 100% a su app — convierte su marca real (logo, web, fotos) en un objeto `Marca` de `@central/brand` y lo enchufa dejando la UI IDÉNTICA a su marca. Úsala con cliente nuevo, rebrand, o si Alberto pide \"adáptalo a la imagen corporativa de X\". Complementa `adobe-diseno` y Adobe Fonts."
     },
     {
+      "id": "mercado-booking",
+      "name": "mercado-booking",
+      "description": "Rutina PROGRAMADA diaria que mide el precio REAL por fecha y aforo con el conector de Booking.com y lo escribe en market_rates (fuente booking_mcp) — la única fuente de SIVRA que distingue temporada. Úsala al disparo diario o si Alberto pide \"mide el mercado de verdad\" / \"refresca los comparables por fecha\". Sin secretos: solo nombres de variable."
+    },
+    {
       "id": "perfil-fiscal",
       "name": "perfil-fiscal",
       "description": "Router de contexto FISCAL y PATRIMONIAL de Alberto (persona física) + Punto y Coma SL. Úsalo SIEMPRE que Alberto pida algo de su renta/IRPF, declaración, gastos deducibles, qué piso tributa dónde, o su asesoría, y al trabajar con `facturas-correo`, `fiscal-novedades` o el módulo `/finanzas`. Sin cifras ni datos sensibles."
@@ -4393,8 +4400,8 @@
     "verticales": 8,
     "packages": 36,
     "capacidades": 23,
-    "skills": 31,
-    "apis": 1153,
+    "skills": 32,
+    "apis": 1155,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
