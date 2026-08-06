@@ -47,6 +47,14 @@ const PROBES: Record<string, Prisma.Sql> = {
   sivra_eventos: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'sivra_eventos'`,
+  // Subastas/mercado: la huella es la de la PASADA que llega a avisar. NO vale
+  // mirar `mercado_comparables` (solo crece si el portal manda alertas nuevas)
+  // ni `chollo_avisado_at` (cada anuncio avisa UNA vez en su vida): con esas dos
+  // huellas, un cron muerto y un día tranquilo son idénticos — que es justo como
+  // pasó desapercibido el 504 del 06/08/2026.
+  subastas_mercado: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'subastas_mercado'`,
   sivra_mercado_sweep: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'sivra_mercado_sweep'`,

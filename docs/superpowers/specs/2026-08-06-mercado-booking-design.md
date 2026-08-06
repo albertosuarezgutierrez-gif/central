@@ -62,10 +62,24 @@ que el plan entero se cubre en 3-4 pasadas y luego se auto-refresca por antigüe
 tiene 3 fechas de Serper y 1 de Booking: si se neutralizara Serper ahora, el bucket dejaría de ser
 elegible y el motor caería al ancla global. La fase 2 no se ejecuta antes de comprobarlo por mes.
 
+**Actualización tras #1282 (mismo día, otro carril):** la columna `market_rates.corpus_clonado` y los
+dos filtros `AND NOT m.corpus_clonado` de `pricing/apply` **ya adelantan el punto 2 para las pasadas
+NUEVAS**: el sweep marca su propia pasada cuando la guardia de medianas clonadas salta, así que desde
+el 05/08 sus filas (401 filas / 30 fechas) no entran en el bucket por mes ni en el de fecha exacta.
+Lo que sigue pendiente en la fase 2, comprobado en BD el 06/08:
+- **1.466 filas `serper` anteriores al 05/08 (55 fechas) siguen sin marcar** y sí alimentan el bucket
+  mensual (su ventana es de 120 días de `search_date`, no de 7). Son las que hay que neutralizar.
+- **El ancla global NO se filtra a propósito** (decisión de #1282: ahí el mercado de hoy es el dato
+  correcto), así que retirar el sweep del `CRON_JOBS` sigue dejando el ancla sin fuente diaria mientras
+  Booking no cubra el calendario. El gate de ≥3 fechas/mes con `fuente='booking_mcp'` se mantiene tal cual.
+
 ## Lo que queda fuera (YAGNI)
 
 - **Filtrar por `fuente` en el motor.** Tocar las 3 consultas de `pricing/apply` es más riesgo que
-  neutralizar las filas malas en la fase 2, y el resultado es el mismo.
+  neutralizar las filas malas en la fase 2, y el resultado es el mismo. *(Superado en parte por #1282:
+  el motor sí filtra ya por `corpus_clonado` en los buckets por mes y por fecha — pero por «pasada que
+  la guardia declaró clonada», no por `fuente`. Las dos columnas conviven: `corpus_clonado` es el
+  veredicto de una pasada, `fuente` es la procedencia de la fila.)*
 - **Otros portales** (Expedia, Trivago): el conector de Booking ya cubre el mercado de referencia de
   los 4 pisos. Añadir fuentes multiplica ventanas sin mejorar la señal de temporada.
 - **Que la rutina decida precios.** Eso es del agente de pricing, por los raíles de

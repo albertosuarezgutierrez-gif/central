@@ -618,6 +618,12 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
   **⚠️ NO apagues el sweep de Serper todavía:** hoy TODO el corpus `prop_*` sale de él (el cron
   diario escribe `scenario='normal'`) y el motor tiene `MAX_MARKET_AGE_DAYS = 7` + bucket mensual con
   ≥3 fechas — apagarlo antes de que Booking acumule 3 fechas/mes deja el pricing ciego en una semana.
+  **`fuente` NO es `corpus_clonado`** (columna hermana de #1282, mismo día): `corpus_clonado` es el
+  veredicto de UNA pasada (la guardia de medianas clonadas la marcó) y ya excluye a las pasadas del
+  sweep del 05/08 en adelante de los buckets por mes y por fecha; `fuente` es la PROCEDENCIA de la
+  fila y es lo que mide cobertura fiable. Siguen sin marcar las ~1.466 filas `serper` anteriores al
+  05/08 (55 fechas), que sí alimentan el bucket mensual (ventana de 120 días de `search_date`), y el
+  ancla global no se filtra por ninguna de las dos a propósito.
   Diseño y gate completos: `docs/superpowers/specs/2026-08-06-mercado-booking-design.md`.
 - **🚨 LANDMINE — la huella se escribe DENTRO del trabajo que vigila: si la función muere, no hay
   huella (31/07/2026).** El mismo día de estrenar el vigía saltó «🧾 Escaneo de facturas: sin ninguna

@@ -118,6 +118,29 @@ primer dato forward — la cohorte 2 y el radar empiezan a medir el 20/07/2026).
 - **Evaluación:** cuando `trading_backtest` complete un ciclo entero con el código nuevo (todas las
   filas con `actualizado_en` posterior al despliegue) — criterio de estado, no de calendario, por la
   lección del despliegue del 31/07: contar por fecha esperada da falsos «ya está».
+- **🚨 Enmienda 3 (06/08/2026) — el primer ciclo NO cuenta: la barra en curso hundía el volumen.**
+  Auditando el ciclo a mitad (720/1012 filas) apareció un `volRelMes` medio de **0,62** cuando por
+  construcción debe rondar 1,0, y **6.649 de 14.072 observaciones (47%) por debajo de 0,2** — un
+  volumen mensual del 20% de su media no existe en datos reales. Causa: `barrasPeriodicas` corta la
+  serie en la fecha del snapshot, así que su ÚLTIMA barra era el mes **EN CURSO**, con solo los días
+  transcurridos; el precio de una barra a medias es el precio real, pero el **volumen es acumulativo**
+  y el día 1 lleva 1 sesión de ~21. Prueba concluyente por día de la semana del snapshot (día 1 de
+  cada mes): sábado/domingo → mediana **1,02-1,04** (sin cotización, la última barra ya era el mes
+  anterior CERRADO); martes/viernes → **0,047-0,049** ≈ 1/21. Mismo código, mismo corpus, dos
+  resultados según el calendario.
+  **Efecto sobre H8:** con el umbral en ≥1,5× la capitulación mensual era indetectable en ~2 de cada
+  3 snapshots — solo 263 señales frente a 2.008 caídas ≥25%. Y lo que se guardaba era
+  `capitulacionMes:false`, que por la regla de la casa significa «lo he mirado y no salta» cuando la
+  verdad era «esta barra está a medias, no se puede saber»: un `false` que miente, exactamente el
+  patrón fundacional del CLAUDE.md. El semanal sufría menos (4% de observaciones absurdas) porque una
+  semana a medias conserva varios días.
+  **Corrección:** nueva `barrasCerradas` en `velas.ts` (con `claveDePeriodo`) descarta el periodo en
+  curso; la señal se mide sobre la última barra CERRADA, que además es como se hizo el estudio
+  original (velas mensuales completas). 6 tests nuevos fijan el comportamiento, incluido el caso que
+  lo destapó. **Las observaciones recolectadas antes de este arreglo quedan ANULADAS para H8** (el
+  campo de volumen y la señal son inservibles); el reloj de evaluación se reinicia con el ciclo
+  siguiente al despliegue del fix. H9 (salidas) NO está afectada: `simularSalidas` trabaja sobre
+  cierres diarios, sin barras periódicas.
 - **Enmienda 2 (04/08/2026, 22:30) — el tramo SEMANAL ya no es un solo símbolo.** IBKR dejó de
   rechazar y se añadieron DIS e INTC: **3 símbolos, 1.594 observaciones semanales** (ventana de 52
   semanas = el mismo año que las 12 barras del mensual). La señal **se reproduce en el otro marco**:
