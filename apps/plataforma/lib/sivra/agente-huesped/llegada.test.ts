@@ -1,7 +1,7 @@
 // node --test — módulo puro de llegada tardía / horario de atención.
 import test from 'node:test'
 import assert from 'node:assert'
-import { horasDeTexto, fueraDeHorarioAtencion, esLlegadaFueraDeHorario, bloqueLlegada, HORARIO_ATENCION } from './llegada'
+import { horasDeTexto, fueraDeHorarioAtencion, esLlegadaFueraDeHorario, bloqueLlegada, HORARIO_ATENCION } from './llegada.ts'
 
 test('horasDeTexto lee rangos HH:MM', () => {
   assert.deepEqual(horasDeTexto("I'd like to request check-in at 01:00 - 02:00"), [1, 2])
