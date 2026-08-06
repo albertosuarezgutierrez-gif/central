@@ -2,7 +2,7 @@ import { prisma } from '@/lib/db'
 import { agregarConviccion, piotroskiFScore, momentum12_1 } from '@central/module-trading'
 import { recortarFactsHasta, extraerFundamentales, companyfactsCrudo, capitalizacionCruzable, CONCEPTOS_FUNDAMENTALES, type CompanyFacts } from './edgar'
 import { puntosDiariosVol, type PuntoVol } from './precios-stooq'
-import { barrasPeriodicas, senalCapitulacion } from './velas'
+import { barrasCerradas, senalCapitulacion } from './velas'
 import { simularSalidas } from './salidas'
 import { movimientosGestorDataroma, GESTORES_DEFECTO } from './dataroma'
 import { fechasSnapshot, precioEn, retornoForward, sumarDias, cierresPeriodicos, sobreSma, type FactoresFecha } from './backtest-puro'
@@ -43,11 +43,16 @@ export function factoresEnFecha(cf: CompanyFacts | null, puntos: PuntoVol[], fec
   // Vela + volumen (H8). Ventanas equivalentes en cada marco: 12 barras mensuales = un año, y 52
   // semanales = ese mismo año. El estudio previo se hizo en MENSUAL; el semanal se recolecta porque
   // allí solo se pudo medir un símbolo y la muestra no daba para concluir nada.
-  // `.slice(1)`: la serie se descarga desde una fecha arbitraria, así que la PRIMERA barra siempre es
-  // un periodo a medias — su volumen sale corto y bajaría la media, inflando el volumen relativo de
-  // las barras que la tengan dentro de la ventana (falsos positivos en los snapshots más antiguos).
-  const mes = senalCapitulacion(barrasPeriodicas(puntos, fecha, 'mes').slice(1), { ventana: 12 })
-  const sem = senalCapitulacion(barrasPeriodicas(puntos, fecha, 'sem').slice(1), { ventana: 52 })
+  // Las DOS barras a medias hay que quitarlas, cada una por su motivo:
+  //  · `barrasCerradas` descarta la ÚLTIMA (el periodo EN CURSO en la fecha del snapshot): su volumen
+  //    lleva solo los días transcurridos y hundía el volumen relativo — landmine del 06/08/2026,
+  //    documentada en velas.ts. Sin esto la capitulación era indetectable en 2 de cada 3 snapshots.
+  //  · `.slice(1)` descarta la PRIMERA: la serie se descarga desde una fecha arbitraria, así que ese
+  //    periodo también viene a medias — su volumen corto bajaría la media e inflaría el volumen
+  //    relativo de las barras que lo tengan dentro de la ventana (falsos positivos en los snapshots
+  //    más antiguos).
+  const mes = senalCapitulacion(barrasCerradas(puntos, fecha, 'mes').slice(1), { ventana: 12 })
+  const sem = senalCapitulacion(barrasCerradas(puntos, fecha, 'sem').slice(1), { ventana: 52 })
   return {
     piotroski, roic, ey, momentum, fcfy, precio,
     ret28: retornoForward(puntos, fecha, 28),

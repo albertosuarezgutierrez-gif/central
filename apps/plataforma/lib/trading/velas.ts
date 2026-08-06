@@ -34,6 +34,16 @@ export type Barra = {
   volumen: number | null // suma del periodo; null si NINGÚN día trajo volumen
 }
 
+// Clave de periodo de una fecha suelta: 'YYYY-MM' (mes) o 'YYYY-MM-DD' del lunes ISO (semana).
+// Misma definición que usa `barrasPeriodicas` para agrupar — se extrae para poder preguntar «¿la
+// última barra pertenece al periodo que AÚN está corriendo?» sin duplicar la regla de la semana.
+export function claveDePeriodo(fecha: string, periodo: 'sem' | 'mes'): string {
+  if (periodo === 'mes') return fecha.slice(0, 7)
+  const d = new Date(`${fecha}T00:00:00Z`)
+  const lunes = new Date(d.getTime() - ((d.getUTCDay() + 6) % 7) * 86_400_000)
+  return lunes.toISOString().slice(0, 10)
+}
+
 // Remuestrea la serie diaria a barras de periodo, hasta `hasta` inclusive. Hermana con volumen de
 // `cierresPeriodicos` de backtest-puro.ts (misma definición de semana: lunes ISO).
 export function barrasPeriodicas(puntos: PuntoVol[], hasta: string, periodo: 'sem' | 'mes'): Barra[] {
@@ -60,6 +70,27 @@ export function barrasPeriodicas(puntos: PuntoVol[], hasta: string, periodo: 'se
     }
   }
   return out
+}
+
+// Barras hasta `hasta` DESCARTANDO la del periodo que aún está corriendo. Úsala SIEMPRE para medir
+// señales de vela: `barrasPeriodicas` corta la serie en la fecha del snapshot, así que su última
+// barra es el mes/semana EN CURSO, con solo los días transcurridos dentro.
+//
+// 🚨 LANDMINE (06/08/2026) — por qué existe esta función. El precio de una barra a medias es el
+// precio real (el último cierre), pero el VOLUMEN es ACUMULATIVO: el día 1 del mes lleva 1 sesión de
+// las ~21 que tendrá. Medir ese volumen contra la media de 12 meses COMPLETOS da ~1/21 = 0,05, y la
+// capitulación (que exige ≥1,5×) se vuelve indetectable. Se vio en producción: los snapshots cuyo
+// día 1 caía en día hábil daban volRelMes mediana 0,047-0,07, y los que caían en sábado/domingo
+// —sin cotización, así que la última barra ERA el mes anterior cerrado— daban 1,02-1,04. La misma
+// serie, el mismo código, dos resultados según el calendario: la firma de una barra truncada.
+// Lo grave no era el número sino lo que se guardaba: `capitulacionMes:false` = «lo he mirado y no
+// salta», cuando la verdad era «esta barra está a medias, no se puede saber». Un `false` que miente.
+// Además reproduce el estudio original, que midió sobre velas mensuales COMPLETAS.
+export function barrasCerradas(puntos: PuntoVol[], hasta: string, periodo: 'sem' | 'mes'): Barra[] {
+  const barras = barrasPeriodicas(puntos, hasta, periodo)
+  const ultima = barras[barras.length - 1]
+  if (ultima && ultima.clave === claveDePeriodo(hasta, periodo)) barras.pop()
+  return barras
 }
 
 // Caída del cierre de la ÚLTIMA barra respecto al máximo de las `ventana` barras ANTERIORES (la
