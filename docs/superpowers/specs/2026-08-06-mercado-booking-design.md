@@ -73,6 +73,12 @@ Lo que sigue pendiente en la fase 2, comprobado en BD el 06/08:
   correcto), así que retirar el sweep del `CRON_JOBS` sigue dejando el ancla sin fuente diaria mientras
   Booking no cubra el calendario. El gate de ≥3 fechas/mes con `fuente='booking_mcp'` se mantiene tal cual.
 
+**Alcanzabilidad (cazado por el guardián, no por mí):** las dos rutas nuevas usan
+`isRoutineAuthorized`, así que TIENEN que estar en `apps/plataforma/lib/rutas-rutina.ts`
+(`RUTAS_RUTINA`) o el middleware las redirige 307 → /login **antes** de que el handler corra y la
+rutina falla muda — el incidente del 26-27/07 otra vez. `test/regression-rutas-rutina.test.ts` lo
+bloqueó en CI; ambas están declaradas.
+
 ## Lo que queda fuera (YAGNI)
 
 - **Filtrar por `fuente` en el motor.** Tocar las 3 consultas de `pricing/apply` es más riesgo que

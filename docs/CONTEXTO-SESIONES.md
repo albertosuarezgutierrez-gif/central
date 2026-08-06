@@ -31,7 +31,10 @@ por mes y por fecha) · `fuente` = procedencia de la fila (mide cobertura fiable
 Comprobado en BD: quedan **1.466 filas `serper` de antes del 05/08 (55 fechas) sin marcar** y sí
 alimentan el bucket mensual (ventana de 120 días), y el ancla global no se filtra por ninguna de las
 dos a propósito → **el gate de la fase 2 (≥3 fechas/mes con `booking_mcp`) sigue vigente tal cual**.
-Anotado en el spec y en el landmine de `apps/plataforma/CLAUDE.md`. tsc 0 · 934 tests · build OK.
+Anotado en el spec y en el landmine de `apps/plataforma/CLAUDE.md`. **De paso el guardián de rutas de
+rutina (#1230) cazó un fallo real de la fase 1:** `mercado/plan` y `internal/latido` aceptaban el token
+pero NO estaban en `RUTAS_RUTINA`, así que el middleware las habría redirigido 307 → /login y la rutina
+habría fallado muda. Añadidas. tsc 0 · 934+26 tests · build OK.
 
 ### 🏨 Mercado real por fecha: rutina de Booking → `market_rates` (06/08/2026, fase 1)
 Aprobado por Alberto. Piezas: columna **`market_rates.fuente`** (`serper`|`booking_mcp`|`manual`,
