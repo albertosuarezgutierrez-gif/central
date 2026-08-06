@@ -24,6 +24,11 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💶 Formato de dinero en la página de planes de ialimp (05/08/2026, orquestador Fase 2, PR #1139).**
+  `apps/ialimp/app/admin/planes/page.tsx` mostraba precio y ahorro anual estilo dólar (`€25`); corregido
+  a formato español (`25€`, `toLocaleString('es-ES')`) para cumplir la regla global del `CLAUDE.md` raíz.
+  Fix mecánico de coder barato + repaso; sin PR propio en memoria hasta esta auditoría.
+
 - **🛡️ La barrera de earnings del torneo vuelve a ver + higiene de cantera (05/08/2026, 4ª tanda).**
   Hallazgo: `earningsInminente` (veto ≤3d) y la estrategia catalizador dependían de `proximoEarnings`
   de FMP (sin créditos) → llegaba siempre vacío y degradaban a «no vetar» EN SILENCIO. Fix:

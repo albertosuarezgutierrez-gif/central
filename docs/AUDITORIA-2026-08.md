@@ -269,3 +269,57 @@ con push directo disponible, por su tamaño.
    julio sigue completo en `docs/memoria/2026-07.md`; verificado byte a byte antes de recortar.
 2. **Nada urgente en `psd2-sync`** — vigilar si el 04/08 06:00 sigue sin movimientos nuevos; de
    confirmarse una racha más larga, revisar entonces (no antes).
+
+# Actualización 2026-08-06 — auditoría diaria (ligera)
+
+Rango: 25 commits sustanciales desde la última pasada con reconciliación de memoria (merge
+`7b7afb4`, PR #1240, 04/08 22:10 UTC) hasta hoy — día muy productivo del 05/08 (26 PRs: cadena de
+subastas «tipo de bien se re-deriva»/«otro no pisa el dato», barrera de earnings + cantera + Yahoo
+fundamentales en trading, agente de venta de ia-rest ahora 100% email frío, chip de negocio móvil
+en `/banca`, fix de formato de dinero en ialimp). Checks estructurales baratos + heartbeat de
+crons (SALTA typecheck/tests pesados, son de la pasada profunda semanal — próxima domingo 09/08).
+
+## ✅ Reconciliación memoria/skills — 1 hueco, corregido (carril 1)
+De los 25 commits del rango, 24 ya estaban auto-documentados en `docs/CONTEXTO-SESIONES.md` (las
+sesiones de trading/subastas siguen anotándose muy bien). Único hueco: **PR #1139** (`ialimp:
+formato español del dinero en la página de planes`, fix mecánico del orquestador Fase 2 en
+`apps/ialimp/app/admin/planes/page.tsx`) no tenía entrada — añadida. `docs/SKILLS.md` verificado
+contra `.claude/skills/` (31) y `.claude/commands/` (3): sin huérfanos ni faltantes. Ninguna skill
+nueva en el rango → sin drift en la tabla de rutas del triaje de correo (`lib/correo/rutas.ts`).
+`docs/FUENTES-DE-VERDAD.md`: los paths tocados (trading, subastas, banca) ya caen bajo mapeos
+existentes (`trading-analista`, `plataforma-maestro`) y esas sesiones se auto-documentan solas —
+sin filas nuevas que añadir.
+
+## ✅ Manuales de usuario — nada que tocar
+Ningún archivo de `apps/ia-rest/src/app/**` ni `apps/ia-rest/public/**` cambió en el rango (los
+cambios de UI del rango son internos: `apps/ialimp/app/admin/planes`, `apps/plataforma/app/
+(usuario)/{banca,subastas,trading}` — todos paneles de gestión sin sistema de manuales). Sin gap.
+
+## ✅ Heartbeat de crons (14 huellas) — 13/14 ✅, 1 falso positivo verificado
+`updates/sync` salió ⛔ MUDO (57,2h desde la última fila nueva en `incomes`, sobre el umbral de
+36h). Investigado antes de escalarlo: Vercel runtime logs confirman `GET /api/sivra/updates/sync
+200` a las 05:00:29 UTC del 05/08 (`dep=dpl_DjgxcriPNm33CzGr17gQBTv24PTT`, `branch=main`) — el cron
+corrió bien, es idempotente (solo inserta cuando Smoobu trae reservas/modificaciones nuevas) y
+lleva sin actividad real desde el 03/08. Mismo patrón documentado repetidamente desde el 02/07 (ver
+`docs/AUTO-APLICADOS.md` y las pasadas del 08-01/08-02); no se toca el umbral. Resto: 13/13 ✅.
+
+## ✅ Integridad estructural — sin hallazgos
+Lockfile presente, y las 8 apps (`ia-rest`, `sivra`, `ialimp`, `plataforma`, `rrhh`, `transporte`,
+`alquiler`, `almacen`) tienen el `ignoreCommand` obligatorio en su `vercel.json`.
+
+## Nota sobre el carril de entrega de esta pasada
+Misma restricción que la pasada del 04/08: esta sesión corre bajo el harness de tareas de GitHub
+(rama asignada `claude/bold-edison-sv8k3z`, sin permiso de push directo a `main` fuera de PR). El
+único hallazgo de esta pasada (la entrada de memoria de PR #1139) es carril 1 por criterio — texto
+acotado — pero va en este mismo PR por la restricción del entorno, no por cambio de criterio.
+
+## ✅ Sin hallazgos de carril 2 reales
+Sin código roto, sin infra que tocar, sin crons genuinamente mudos (el único ⛔ fue falso positivo
+verificado). Por la regla de frugalidad no se manda Telegram — no hay nada 🔴/🟡 ni un cron mudo de
+verdad, solo el housekeeping de memoria que el entorno obliga a mandar por PR.
+
+## Checklist de acciones manuales de Alberto (esta pasada)
+1. **Revisar y mergear el PR draft** con la entrada de memoria de PR #1139 (sin riesgo, solo texto).
+2. Nada urgente — `updates/sync` es el mismo falso positivo conocido, no requiere acción.
+
+*Actualización por Claude Code (auditoría diaria automática) · 2026-08-06*
