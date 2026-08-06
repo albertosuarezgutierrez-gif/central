@@ -196,7 +196,7 @@ volvió `organic:[]` mientras feb/mar 2027 traían comps — el token de fecha I
 distancia ni cuota. Fix: consulta de refuerzo con el MES EN TEXTO («noviembre 2026») SOLO para ventanas
 de base (un evento exige comps de SU fecha; el bucket del motor es mensual), bajo el mismo cupo
 `SIVRA_SWEEP_MAX_REFUERZO`. `consultasDeVentana` movida a `mercado-ventanas.ts` (pura, 3 tests).
-**Verificar latido 06/08** (send_later armado).
+**Verificar latido 06/08** (send_later armado; rutina PENDIENTE de alta manual).
 
 - **⚖️ El dato que decide Belmonte estaba guardado y no lo leía nadie: la nota marginal (04/08/2026,
   rama `claude/carga-no-recogida-analizada-vjkwc9`).** Auditando `cargas_detalle` a mano tras la relectura,
