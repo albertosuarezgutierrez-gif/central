@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-06T12:48:07Z",
-  "sha": "cff1cdfbb24bc2817d530af191d8919d7405fb7c",
+  "generadoEn": "2026-08-06T12:53:55Z",
+  "sha": "be8b58219ada6018e884bc4dc64bd2154ed1d27b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -22226,6 +22226,26 @@
       ],
       "rutaApi": null,
       "hash": "ef9aebb0c871"
+    },
+    {
+      "ruta": "apps/ia-rest/src/app/partner/teya/page.tsx",
+      "ambito": "apps/ia-rest",
+      "exporta": [
+        "TeyaPartnerPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "TeyaPartnerPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 5
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "93737b9b6e52"
     },
     {
       "ruta": "apps/ia-rest/src/app/portal-eventos/page.tsx",
@@ -89095,7 +89115,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2393,
-    "funciones": 6425
+    "archivos": 2394,
+    "funciones": 6426
   }
 }
