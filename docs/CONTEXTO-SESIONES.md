@@ -24,6 +24,37 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🔀 `fuente` y `corpus_clonado` son columnas HERMANAS, no la misma (06/08/2026)
+Al mergear main en la rama de la fase 1 apareció #1282, del mismo día y otro carril. No se pisan:
+`corpus_clonado` = veredicto de UNA pasada (ya excluye al sweep del 05/08 en adelante de los buckets
+por mes y por fecha) · `fuente` = procedencia de la fila (mide cobertura fiable, `FUENTES_FIABLES`).
+Comprobado en BD: quedan **1.466 filas `serper` de antes del 05/08 (55 fechas) sin marcar** y sí
+alimentan el bucket mensual (ventana de 120 días), y el ancla global no se filtra por ninguna de las
+dos a propósito → **el gate de la fase 2 (≥3 fechas/mes con `booking_mcp`) sigue vigente tal cual**.
+Anotado en el spec y en el landmine de `apps/plataforma/CLAUDE.md`. **De paso el guardián de rutas de
+rutina (#1230) cazó un fallo real de la fase 1:** `mercado/plan` y `internal/latido` aceptaban el token
+pero NO estaban en `RUTAS_RUTINA`, así que el middleware las habría redirigido 307 → /login y la rutina
+habría fallado muda. Añadidas. tsc 0 · 934+26 tests · build OK.
+
+### 🏨 Mercado real por fecha: rutina de Booking → `market_rates` (06/08/2026, fase 1)
+Aprobado por Alberto. Piezas: columna **`market_rates.fuente`** (`serper`|`booking_mcp`|`manual`,
+default conservador `serper`; los 3 caminos ponían `portal='booking'` y el motor no filtra por portal),
+**`GET /api/sivra/mercado/plan`** (ventanas más urgentes, reusa `ventanasDelBarrido`), helper puro
+`lib/sivra/mercado-cobertura.ts` (13 tests), `ingest` con `fuente` validada, **`POST /api/internal/latido`**
+(huella para RUTINAS, allowlist) y latido `sivra_mercado_booking` + skill `mercado-booking` (diaria, 12
+ventanas de 96, acumula). **Probado con datos REALES:** 4-sep aforo 4 → 10 comps, p50 **129€** vs **171€**
+de Serper (+33%: es plano Y ALTO). tsc 0 · 900 tests · build OK. **Fase 2 (NO antes de 3 fechas/mes
+booking): retirar el sweep + neutralizar filas serper.** Spec: `docs/superpowers/specs/2026-08-06-mercado-booking-design.md`.
+
+### 🔎 Barrido de mercado: la MECÁNICA quedó arreglada; lo que falta es la FUENTE (06/08/2026)
+Pasada 03:00 con #1253+#1255: plan COMPLETO (120/120 ventanas, base entera, 339 comps, noviembre
+rescatado por el refuerzo de mes, extracciones 1,1 s). El rojo restante es la guarda de medianas
+clonadas, y TIENE RAZÓN — verificado contra `market_rates`: cada comp lleva precio CONSTANTE en todas
+las fechas (Vincci ≈305€, Smartr ≈93€, Genteel ≈259€ en ago/nov/mar); los snippets de Serper NO llevan
+fecha, la «temporada» del 04/08 era ruido de muestreo. Validado con Booking MCP: mismas propiedades a
+~160€/noche (nov) vs ~650€ (Feria) → fuente correcta. **Decisión PENDIENTE de Alberto:** rutina Claude
+programada con Booking MCP → `market_rates` (patrón Bienal 03/08). NO ablandar la guarda: el rojo diario
+de `sivra_mercado_sweep` es verídico hasta cambiar la fuente. Serper sigue valiendo para el ancla global.
 - **🐕 3er tramo del watchdog de trading + 2 crons rotos desde el 30/07 (06/08/2026).** La pasada del
   06/08 dejó NAV y 64 tesis pero NUNCA llamó a `/puntuar`: ni stops ni walk-forward, y el watchdog lo
   habría dado por bueno (solo miraba NAV+tesis). `/puntuar` no escribe NADA sin tesis vencidas ni
@@ -238,7 +269,7 @@ volvió `organic:[]` mientras feb/mar 2027 traían comps — el token de fecha I
 distancia ni cuota. Fix: consulta de refuerzo con el MES EN TEXTO («noviembre 2026») SOLO para ventanas
 de base (un evento exige comps de SU fecha; el bucket del motor es mensual), bajo el mismo cupo
 `SIVRA_SWEEP_MAX_REFUERZO`. `consultasDeVentana` movida a `mercado-ventanas.ts` (pura, 3 tests).
-**Verificar latido 06/08** (send_later armado).
+**Verificar latido 06/08** (send_later armado; rutina PENDIENTE de alta manual).
 
 - **⚖️ El dato que decide Belmonte estaba guardado y no lo leía nadie: la nota marginal (04/08/2026,
   rama `claude/carga-no-recogida-analizada-vjkwc9`).** Auditando `cargas_detalle` a mano tras la relectura,
