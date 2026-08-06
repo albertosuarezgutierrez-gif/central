@@ -24,6 +24,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🔎 Barrido de mercado: la MECÁNICA quedó arreglada; lo que falta es la FUENTE (06/08/2026)
+Pasada 03:00 con #1253+#1255: plan COMPLETO (120/120 ventanas, base entera, 339 comps, noviembre
+rescatado por el refuerzo de mes, extracciones 1,1 s). El rojo restante es la guarda de medianas
+clonadas, y TIENE RAZÓN — verificado contra `market_rates`: cada comp lleva precio CONSTANTE en todas
+las fechas (Vincci ≈305€, Smartr ≈93€, Genteel ≈259€ en ago/nov/mar); los snippets de Serper NO llevan
+fecha, la «temporada» del 04/08 era ruido de muestreo. Validado con Booking MCP: mismas propiedades a
+~160€/noche (nov) vs ~650€ (Feria) → fuente correcta. **Decisión PENDIENTE de Alberto:** rutina Claude
+programada con Booking MCP → `market_rates` (patrón Bienal 03/08). NO ablandar la guarda: el rojo diario
+de `sivra_mercado_sweep` es verídico hasta cambiar la fuente. Serper sigue valiendo para el ancla global.
+
 - **🛡️ La barrera de earnings del torneo vuelve a ver + higiene de cantera (05/08/2026, 4ª tanda).**
   Hallazgo: `earningsInminente` (veto ≤3d) y la estrategia catalizador dependían de `proximoEarnings`
   de FMP (sin créditos) → llegaba siempre vacío y degradaban a «no vetar» EN SILENCIO. Fix:
