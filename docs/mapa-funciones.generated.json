@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-06T07:54:07Z",
-  "sha": "420a56f9881a490d68a7b43469c6e2eb1b5747aa",
+  "generadoEn": "2026-08-06T08:37:12Z",
+  "sha": "e9d325653ea7cee76cb2444ff1879b968bb609d8",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54651,7 +54651,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/sweep",
-      "hash": "1cec29c40a7c"
+      "hash": "c1496046768f"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pl-mensual/route.ts",
@@ -54760,7 +54760,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 32
+          "linea": 33
         },
         {
           "nombre": "fmt",
@@ -54768,7 +54768,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 33
+          "linea": 34
         },
         {
           "nombre": "GET",
@@ -54776,7 +54776,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 61,
+          "linea": 62,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -54785,7 +54785,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 65
+          "linea": 66
         }
       ],
       "tablas": [
@@ -54809,7 +54809,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "e96cc180e464"
+      "hash": "d6168770edbc"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -65563,6 +65563,46 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c6e4079eff25"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/prior-estacional.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Prior estacional del pricing: qué dice MI propio histórico (`incomes`) sobre cada mes. Módulo PURO (sin BD ni `@/`), testeable con `node --test`. Lo consume `pricing/apply`. 🚨 LA ASIMETRÍA ES EL MÓDULO (06/08/2026). Subir y bajar NO se deciden con el mismo índice: · Para SUBIR vale el índice comple",
+      "exporta": [
+        "indicesPrior",
+        "aplicarPrior"
+      ],
+      "funciones": [
+        {
+          "nombre": "clamp",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: number, min: number, max: number",
+          "retorno": null,
+          "linea": 47
+        },
+        {
+          "nombre": "indicesPrior",
+          "kind": "function",
+          "exportada": true,
+          "params": "rows: MesHistorico[]",
+          "retorno": "IndicePrior[]",
+          "linea": 53,
+          "resumen": "Índices por mes (array de 12, posición 0 = enero) a partir del histórico de un piso. Un mes sin muestra suficiente queda en `{ alza: 1, baja: 1 }`: ni sube ni baja."
+        },
+        {
+          "nombre": "aplicarPrior",
+          "kind": "function",
+          "exportada": true,
+          "params": "params: { target: number indice: IndicePrior anclaGlobal: number floor: number hayBucketMes: boolean }",
+          "retorno": "number",
+          "linea": 86,
+          "resumen": "Objetivo corregido por el prior. Devuelve el `target` nuevo (o el mismo si no toca). - Al alza actúa como SUELO, igual que antes: sin bucket del mes sustituye al global plano; con bucket solo si el ín"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "cb436c13ce68"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/resumen-sweep.ts",
@@ -88888,7 +88928,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2388,
-    "funciones": 6410
+    "archivos": 2389,
+    "funciones": 6413
   }
 }
