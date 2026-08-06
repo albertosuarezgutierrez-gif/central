@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { isRoutineAuthorized } from '@/lib/cron-auth'
 import { prisma } from '@/lib/db'
+import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { puntuarTesis, agregarStats, aplicarStop, cerrar } from '@central/module-trading'
 import type { Tesis } from '@central/module-trading'
 
@@ -61,6 +62,18 @@ export async function POST(req: NextRequest) {
       cerradas++
     }
   }
+
+  // 4) Huella de que la pasada llegó HASTA EL FINAL. Este endpoint es el ÚLTIMO paso de la rutina y,
+  // cuando no hay tesis vencidas ni stops que aplicar, no escribe NADA en BD — así que su silencio era
+  // indistinguible de no haberse ejecutado. Pasó el 06/08/2026: `/analizar` dejó sus 64 tesis y el
+  // watchdog dio por buena la noche, pero `/puntuar` nunca corrió y ni los stops ni el walk-forward se
+  // actualizaron. La huella se escribe SIEMPRE (haya trabajo o no) y es la que mira el 3er tramo del
+  // watchdog. Best-effort: no rompe la respuesta si la tabla no está.
+  await registrarLatido(
+    'trading_puntuar',
+    true,
+    `${puntuadas} tesis puntuadas · ${cerradas} stop(s) · ${Object.keys(stats).length} estrategias`,
+  )
 
   return NextResponse.json({ puntuadas, cerradas, estrategias: Object.keys(stats).length })
 }

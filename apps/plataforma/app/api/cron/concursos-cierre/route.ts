@@ -27,7 +27,10 @@ export async function GET(req: NextRequest) {
     WHERE s.estado IN ('interesado', 'preparando')
       AND s.fin_presentacion IS NOT NULL
       AND s.fin_presentacion >= current_date
-      AND s.fin_presentacion <= current_date + make_interval(days => ${DIAS_AVISO})
+      -- ::int OBLIGATORIO: Prisma manda los números de JS como bigint y make_interval solo acepta int
+      -- → 42883 «function make_interval(days => bigint) does not exist» y el cron moría en 500 a diario
+      -- (desde el 30/07/2026). El resto de llamadas del repo ya llevaban el cast; esta se quedó fuera.
+      AND s.fin_presentacion <= current_date + make_interval(days => ${DIAS_AVISO}::int)
       AND s.recordatorio_cierre_at IS NULL
     ORDER BY s.empresa_id, s.fin_presentacion ASC
   `)
