@@ -24,6 +24,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### ⏱️ El cron de mercado moría a los 300s JUSTO antes de avisar chollos (06/08/2026)
+Seguimiento post-merge del peaje de obra (#1259): «0 chollos avisados hoy» **no era** «no hay chollos» —
+`/api/cron/subastas-mercado` devolvió **504 a las 06:20:43** («Task timed out after 300 seconds») y nunca
+llegó a `avisarChollos`. No es regresión del peaje (lógica pura, ms): los 2 pasos de red pueden gastar 420s
+solos (8 fichas + 6 zonas × 30s de timeout) y **los avisos van al final**; el 05/08 ya se salvó por 15s
+(285s). Fix con la doctrina del repo («subir el techo mueve la pared; el presupuesto hace que la pasada
+VUELVA»): helper puro `lib/subastas/presupuesto-mercado.ts` (6 tests) — los pasos de red se cortan en un
+deadline **reservando 70s para el tramo que avisa**, y no se arranca una petición que no quepa ENTERA (el
+fallo exacto). Además **latido `subastas_mercado`** (intento al empezar + definitivo tras avisar) y su
+sonda: nadie se enteró del 504 porque este cron no tenía vigía. Verificado: tsc 0 · 903 tests · build OK.
+
 - **🌙 El agente de huéspedes ya no rechaza llegadas de madrugada (06/08/2026).** A Daniela (Luxury Busto,
   pedía entrar a la 1:00-2:00) el agente le AUTO-ENVIÓ que «no podemos atender llegadas entre la 1:00 y las
   2:00» + sugerencia de hotel: se lo inventó porque la política de llegadas tardías no estaba en NINGUNA

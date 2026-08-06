@@ -20,6 +20,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { CHOLLO_DESCUENTO_MIN, datosFichaFotocasa, detectarChollos, estimarAntiguedad, MIN_MUESTRA_ZONA, parsearAlertaFotocasa, parsearAlertaIdealista, precioM2Zona, RECONSTRUIR_EUR_M2, slugDistritoFotocasa, slugNucleoPlaya, slugZonaFotocasa, velocidadZona, type Chollo, type Comparable, type VelocidadZona, type ZonaPortal, type ZonaPortalRef } from '@central/module-subastas'
 import { leerAlertas } from '@/lib/subastas/gmail-boe'
+import { COSTE_PETICION_PORTAL_MS, motivoCorte, quedaTiempo } from '@/lib/subastas/presupuesto-mercado'
 import { tgSend } from '@central/core-telegram'
 import { eur } from '@/lib/dinero'
 
@@ -132,7 +133,10 @@ export async function upsertComparable(a: Comparable, vistoEn: Date): Promise<nu
  */
 const PROXY_FICHA_FOTOCASA = 'https://wswbehlcuxqxyinousql.supabase.co/functions/v1/ficha-fotocasa'
 
-export async function enriquecerAnunciantesFotocasa(max = 8): Promise<{ revisados: number; particulares: number; fallos: string[] }> {
+export async function enriquecerAnunciantesFotocasa(
+  max = 8,
+  deadline?: number,
+): Promise<{ revisados: number; particulares: number; fallos: string[]; corte: string | null }> {
   const filas = await prisma.$queryRaw<Array<{ ref_anuncio: string; url: string }>>(Prisma.sql`
     SELECT ref_anuncio, url FROM mercado_comparables
     WHERE portal = 'fotocasa' AND anunciante_visto_at IS NULL AND url IS NOT NULL
@@ -143,10 +147,19 @@ export async function enriquecerAnunciantesFotocasa(max = 8): Promise<{ revisado
 
   let revisados = 0
   let particulares = 0
+  let cortado = false
+  let vistas = 0
   // Cada fallo se anota LEGIBLE en la respuesta (el cron lo enseña): un 0 en
   // silencio ya costó dos ciclos de depuración el 29/07/2026.
   const fallos: string[] = []
   for (const f of filas) {
+    // Presupuesto de tiempo: cada ficha puede tardar hasta 30 s, así que se
+    // comprueba que quepa ENTERA antes de empezarla (incidente 06/08/2026).
+    if (deadline != null && !quedaTiempo(deadline, Date.now(), COSTE_PETICION_PORTAL_MS)) {
+      cortado = true
+      break
+    }
+    vistas++
     try {
       const r = await fetch(`${PROXY_FICHA_FOTOCASA}?url=${encodeURIComponent(f.url)}`, {
         // La edge function se ejecuta en la región del LLAMANTE: desde Vercel
@@ -193,7 +206,7 @@ export async function enriquecerAnunciantesFotocasa(max = 8): Promise<{ revisado
       if (fallos.length >= 2) break
     }
   }
-  return { revisados, particulares, fallos }
+  return { revisados, particulares, fallos, corte: motivoCorte(cortado, `${vistas} ficha(s)`, filas.length - vistas) }
 }
 
 // ── Referencia €/m² por zona (buscador de Fotocasa) ─────────────────────────
@@ -267,7 +280,10 @@ async function consultarZona(slug: string, etiqueta: string, fallos: string[]): 
   `).catch((e) => console.error('[mercado] hist', slug, e))
 }
 
-export async function referenciaZonasFotocasa(max = 6): Promise<{ zonasConsultadas: number; subastasConZona: number; fallos: string[] }> {
+export async function referenciaZonasFotocasa(
+  max = 6,
+  deadline?: number,
+): Promise<{ zonasConsultadas: number; subastasConZona: number; fallos: string[]; corte: string | null }> {
   const vivas = await prisma.$queryRaw<Array<{ dedupe_key: string; municipio: string | null; codigo_postal: string | null; descripcion: string | null }>>(Prisma.sql`
     SELECT dedupe_key, municipio, codigo_postal, descripcion FROM subastas
     WHERE es_inmueble = true AND municipio IS NOT NULL
@@ -301,7 +317,17 @@ export async function referenciaZonasFotocasa(max = 6): Promise<{ zonasConsultad
 
   const fallos: string[] = []
   let zonasConsultadas = 0
-  for (const p of pendientes.slice(0, max)) {
+  let cortado = false
+  const cola = pendientes.slice(0, max)
+  let vistas = 0
+  for (const p of cola) {
+    // Igual que las fichas: una consulta de zona puede agotar sus 30 s, así que
+    // solo se empieza si cabe entera dentro del presupuesto (06/08/2026).
+    if (deadline != null && !quedaTiempo(deadline, Date.now(), COSTE_PETICION_PORTAL_MS)) {
+      cortado = true
+      break
+    }
+    vistas++
     try {
       await consultarZona(p.slug, p.etiqueta, fallos)
       zonasConsultadas++
@@ -336,7 +362,12 @@ export async function referenciaZonasFotocasa(max = 6): Promise<{ zonasConsultad
     `)
     pintadas++
   }
-  return { zonasConsultadas, subastasConZona: pintadas, fallos }
+  return {
+    zonasConsultadas,
+    subastasConZona: pintadas,
+    fallos,
+    corte: motivoCorte(cortado, `${vistas} zona(s)`, cola.length - vistas),
+  }
 }
 
 /**
