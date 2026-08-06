@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-06T09:22:54Z",
-  "sha": "1bb9b84f7861edc4a55e7314c9db1a09214fff3b",
+  "generadoEn": "2026-08-06T09:32:39Z",
+  "sha": "5d1e86b633bdfae0910cc7d455a11fb9e770c7a8",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -67735,7 +67735,7 @@
           "exportada": true,
           "params": "lote = 40",
           "retorno": "Promise<",
-          "linea": 67,
+          "linea": 72,
           "resumen": "Recolecta el siguiente lote: siembra desde trading_universo (+SPY como benchmark) y rellena las filas más rancias. Mismo patrón/ritmo que refrescarLoteUniverso (~4 símbolos/s contra SEC)."
         },
         {
@@ -67744,13 +67744,13 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 124,
+          "linea": 129,
           "resumen": "La LUPA de gurús: convicciones ACTUALES de Dataroma cruzadas con los factores actuales de la caché del radar — la materia prima para responder \"¿por qué se posicionan en esas empresas?\". Se guarda en "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f0f5e274a438"
+      "hash": "69221ac43395"
     },
     {
       "ruta": "apps/plataforma/lib/trading/buscar-simbolo.ts",
@@ -69157,20 +69157,40 @@
       "ruta": "apps/plataforma/lib/trading/velas.ts",
       "ambito": "apps/plataforma",
       "exporta": [
+        "claveDePeriodo",
         "barrasPeriodicas",
+        "barrasCerradas",
         "caidaDesdeMaximo",
         "volumenRelativo",
         "senalCapitulacion"
       ],
       "funciones": [
         {
+          "nombre": "claveDePeriodo",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string, periodo: 'sem' | 'mes'",
+          "retorno": "string",
+          "linea": 40,
+          "resumen": "Clave de periodo de una fecha suelta: 'YYYY-MM' (mes) o 'YYYY-MM-DD' del lunes ISO (semana). Misma definición que usa `barrasPeriodicas` para agrupar — se extrae para poder preguntar «¿la última barra"
+        },
+        {
           "nombre": "barrasPeriodicas",
           "kind": "function",
           "exportada": true,
           "params": "puntos: PuntoVol[], hasta: string, periodo: 'sem' | 'mes'",
           "retorno": "Barra[]",
-          "linea": 39,
+          "linea": 49,
           "resumen": "Remuestrea la serie diaria a barras de periodo, hasta `hasta` inclusive. Hermana con volumen de `cierresPeriodicos` de backtest-puro.ts (misma definición de semana: lunes ISO)."
+        },
+        {
+          "nombre": "barrasCerradas",
+          "kind": "function",
+          "exportada": true,
+          "params": "puntos: PuntoVol[], hasta: string, periodo: 'sem' | 'mes'",
+          "retorno": "Barra[]",
+          "linea": 89,
+          "resumen": "Barras hasta `hasta` DESCARTANDO la del periodo que aún está corriendo. Úsala SIEMPRE para medir señales de vela: `barrasPeriodicas` corta la serie en la fecha del snapshot, así que su última barra es"
         },
         {
           "nombre": "caidaDesdeMaximo",
@@ -69178,7 +69198,7 @@
           "exportada": true,
           "params": "barras: Barra[], ventana = 12",
           "retorno": "number | null",
-          "linea": 68,
+          "linea": 99,
           "resumen": "Caída del cierre de la ÚLTIMA barra respecto al máximo de las `ventana` barras ANTERIORES (la actual excluida: incluirla haría que un valor en máximos nunca pudiera dar 0). Negativo = por debajo del m"
         },
         {
@@ -69187,7 +69207,7 @@
           "exportada": true,
           "params": "barras: Barra[], ventana = 12",
           "retorno": "number | null",
-          "linea": 80,
+          "linea": 111,
           "resumen": "Volumen de la última barra contra la media de las `ventana` anteriores. null si falta el volumen de la barra actual o no hay suficientes barras previas CON volumen (fuente incompleta ≠ volumen 0)."
         },
         {
@@ -69196,13 +69216,13 @@
           "exportada": true,
           "params": "barras: Barra[], { ventana = 12, caidaMin = CAIDA_MIN, volMin = VOL_MIN }: { ventana?: number; caidaMin?: number; volMin?: number } = {},",
           "retorno": "SenalCapitulacion",
-          "linea": 109,
+          "linea": 140,
           "resumen": "Señal medida como la única con exceso positivo en el estudio: caída fuerte CON volumen. NO decide nada: se recolecta en el retrovisor (H8) antes de tocar ranking o cestas."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "17678fb6463d"
+      "hash": "e5722a90c196"
     },
     {
       "ruta": "apps/plataforma/lib/trading/volumen.ts",
@@ -88971,6 +88991,6 @@
   ],
   "resumen": {
     "archivos": 2390,
-    "funciones": 6416
+    "funciones": 6418
   }
 }
