@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-06T08:37:12Z",
-  "sha": "e9d325653ea7cee76cb2444ff1879b968bb609d8",
+  "generadoEn": "2026-08-06T09:22:54Z",
+  "sha": "1bb9b84f7861edc4a55e7314c9db1a09214fff3b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -50559,7 +50559,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 58
+          "linea": 66
         }
       ],
       "tablas": [
@@ -50570,7 +50570,7 @@
         "pms_connections"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "3f811a364c60"
+      "hash": "3f0490ce4009"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -51345,12 +51345,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 21
+          "linea": 23
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/subastas-mercado",
-      "hash": "e609d96402c4"
+      "hash": "f3f1d5af788c"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-radar/route.ts",
@@ -63034,7 +63034,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9b686ae0e46f"
+      "hash": "f38278be1581"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/sonda-ia.ts",
@@ -66611,7 +66611,7 @@
           "exportada": true,
           "params": "dias = 30, maxCorreos = 150",
           "retorno": "Promise<",
-          "linea": 41,
+          "linea": 42,
           "resumen": "Ingesta de comparables desde las alertas de Idealista del correo. El mismo anuncio se repite en correos sucesivos mientras sigue vivo, de ahí el `ON CONFLICT (portal, ref_anuncio)`: se actualiza el pr"
         },
         {
@@ -66620,16 +66620,16 @@
           "exportada": true,
           "params": "a: Comparable, vistoEn: Date",
           "retorno": "Promise<number>",
-          "linea": 81,
+          "linea": 82,
           "resumen": "Upsert de UN comparable en `mercado_comparables` — la puerta única del corpus, compartida por las alertas de correo y la API oficial de Idealista (`lib/subastas/idealista-api.ts`): mismo dedupe `(port"
         },
         {
           "nombre": "enriquecerAnunciantesFotocasa",
           "kind": "function",
           "exportada": true,
-          "params": "max = 8",
+          "params": "max = 8, deadline?: number,",
           "retorno": "Promise<",
-          "linea": 135
+          "linea": 136
         },
         {
           "nombre": "consultarZona",
@@ -66637,16 +66637,16 @@
           "exportada": false,
           "params": "slug: string, etiqueta: string, fallos: string[]",
           "retorno": "Promise<void>",
-          "linea": 209,
+          "linea": 222,
           "resumen": "Consulta una zona en el puente y la cachea; aprende CP→distrito de los anuncios."
         },
         {
           "nombre": "referenciaZonasFotocasa",
           "kind": "function",
           "exportada": true,
-          "params": "max = 6",
+          "params": "max = 6, deadline?: number,",
           "retorno": "Promise<",
-          "linea": 270
+          "linea": 283
         },
         {
           "nombre": "comparablesVigentes",
@@ -66654,7 +66654,7 @@
           "exportada": true,
           "params": "meses = MESES_VIGENCIA",
           "retorno": "Promise<Comparable[]>",
-          "linea": 350,
+          "linea": 381,
           "resumen": "Comparables vigentes, ya en el tipo del módulo. Se cargan en memoria a propósito: la mediana por zona vive en el módulo puro (probada) y el filtro de zona es insensible a acentos, algo que en Postgres"
         },
         {
@@ -66663,7 +66663,7 @@
           "exportada": true,
           "params": "f: { municipio?: string | null busqueda_origen?: string | null provincia?: string | null }",
           "retorno": "string[]",
-          "linea": 392,
+          "linea": 423,
           "resumen": "Zonas por las que buscar el €/m² de una subasta, de la más específica a la más amplia. La primera que reúna muestra suficiente gana. `busqueda_origen` es el nombre de la búsqueda guardada del BOE («PU"
         },
         {
@@ -66672,7 +66672,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 407,
+          "linea": 438,
           "resumen": "Calcula y persiste el €/m² de mercado en las subastas que lo necesitan. Solo toca las que NO tienen tasación ni valor de referencia: donde hay una tasación real, los comparables no pintan nada (y el s"
         },
         {
@@ -66681,7 +66681,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<CholloSeguido[]>",
-          "linea": 487,
+          "linea": 518,
           "resumen": "Chollos vigentes + antigüedad estimada. La calibración del ritmo de refs usa `created_at` (primera vez que NOSOTROS vimos cada ref): para los anuncios que van ENTRANDO al corpus con los correos diario"
         },
         {
@@ -66690,7 +66690,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 521,
+          "linea": 552,
           "resumen": "Aviso Telegram de los chollos NUEVOS (una sola vez por anuncio). La mediana de zona se mueve a diario y un anuncio podría entrar y salir del umbral: `chollo_avisado_at` fija que cada anuncio avisa UNA"
         },
         {
@@ -66699,7 +66699,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 581
+          "linea": 612
         },
         {
           "nombre": "refrescarIndiceINE",
@@ -66707,7 +66707,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 609,
+          "linea": 640,
           "resumen": "Refresca la caché del IPV si está caducada. Best-effort (el cron lo llama)."
         },
         {
@@ -66716,7 +66716,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<IndicesVivienda | null>",
-          "linea": 643,
+          "linea": 674,
           "resumen": "Lee el IPV cacheado (sin red). Campos a null si aún no se han capturado."
         },
         {
@@ -66725,7 +66725,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<PulsoMercado | null>",
-          "linea": 674
+          "linea": 705
         },
         {
           "nombre": "avisarBajadas",
@@ -66733,7 +66733,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 701,
+          "linea": 732,
           "resumen": "Aviso Telegram de las BAJADAS DE PRECIO nuevas en las zonas vigiladas. Una bajada es señal aunque el anuncio no llegue a chollo: el vendedor ya ha cedido una vez y es el candidato natural a una oferta"
         }
       ],
@@ -66747,7 +66747,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "20487cb5628b"
+      "hash": "6e2e7e4ea27b"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/nota-simple.ts",
@@ -66850,6 +66850,48 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "a816fce0fa2c"
+    },
+    {
+      "ruta": "apps/plataforma/lib/subastas/presupuesto-mercado.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Reparto del tiempo del cron `subastas-mercado`. PURO y testeado. POR QUÉ EXISTE (incidente 06/08/2026): el handler encadena 8 pasos en serie y los dos de enriquecimiento pueden comerse, ELLOS SOLOS, más que todo el presupue",
+      "exporta": [
+        "deadlineEnriquecimiento",
+        "quedaTiempo",
+        "motivoCorte"
+      ],
+      "funciones": [
+        {
+          "nombre": "deadlineEnriquecimiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "inicio: number, totalMs: number = PRESUPUESTO_TOTAL_MS, reservaMs: number = RESERVA_AVISOS_MS,",
+          "retorno": "number",
+          "linea": 41,
+          "resumen": "Instante límite (epoch ms) hasta el que pueden estirarse los pasos de enriquecimiento por red. A partir de ahí el handler sigue con el tramo final."
+        },
+        {
+          "nombre": "quedaTiempo",
+          "kind": "function",
+          "exportada": true,
+          "params": "deadline: number, ahora: number, margenMs = 0",
+          "retorno": "boolean",
+          "linea": 58,
+          "resumen": "¿Cabe otra iteración de red antes del `deadline`? `margenMs` es lo que se estima que tarda UNA iteración: sin él, un bucle arranca una petición de 30 s a falta de 2 s del límite y se pasa igual — que "
+        },
+        {
+          "nombre": "motivoCorte",
+          "kind": "function",
+          "exportada": true,
+          "params": "cortado: boolean, hechos: string, pendientes: number",
+          "retorno": "string | null",
+          "linea": 73,
+          "resumen": "Parte legible de por qué se cortó una fase, para el detalle del latido y la respuesta del cron. `null` cuando la fase terminó su cola entera. Se dice SIEMPRE que se cortó, aunque no haya fallado nada:"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3bf29330838a"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/reapariciones.ts",
@@ -88928,7 +88970,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2389,
-    "funciones": 6413
+    "archivos": 2390,
+    "funciones": 6416
   }
 }
