@@ -34,12 +34,17 @@ export function evaluarWatchdog(params: {
   ahora: Date
   ultimoRefresco: Date | null
   maxHoras?: number
+  /** Qué huella se está mirando, para que el «nunca» diga la VERDAD. Por defecto, el NAV — pero el
+   *  mismo evaluador vigila ya las tesis y el cierre de /puntuar, y decirles «nunca se ha refrescado
+   *  el NAV (broker_saldos vacío)» manda a Alberto a mirar la tabla equivocada. */
+  huella?: string
 }): EvalWatchdog {
   const { ahora, ultimoRefresco } = params
   const maxHoras = params.maxHoras ?? MAX_HORAS_SIN_REFRESCO
+  const huella = params.huella ?? 'el NAV de IBKR (broker_saldos vacío)'
 
   if (!ultimoRefresco) {
-    return { alerta: true, horas: null, motivo: 'nunca se ha refrescado el NAV de IBKR (broker_saldos vacío)' }
+    return { alerta: true, horas: null, motivo: `nunca se ha registrado ${huella}` }
   }
   const horas = (ahora.getTime() - ultimoRefresco.getTime()) / 3_600_000
   if (horas > maxHoras) {

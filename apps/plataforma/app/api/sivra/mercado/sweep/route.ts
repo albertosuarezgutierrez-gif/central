@@ -6,7 +6,7 @@ import { Prisma } from "@prisma/client"
 import { EVENTS } from "@/lib/pricing-calendar"
 import { ventanasDelBarrido, consultasDeVentana, type EventoFecha } from "@/lib/sivra/mercado-ventanas"
 import { registrarLatido } from "@/lib/monitoring/latido-escribir"
-import { barridoFiable, detalleBarrido, type EstadoVentana, type VentanaMedida } from "@/lib/sivra/resumen-sweep"
+import { barridoFiable, corpusClonado, detalleBarrido, type EstadoVentana, type VentanaMedida } from "@/lib/sivra/resumen-sweep"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -280,11 +280,25 @@ export async function GET(req: NextRequest) {
   const ok = barridoFiable(resumen)
   await registrarLatido('sivra_mercado_sweep', ok, detalleBarrido(resumen)).catch(() => {})
 
+  // 🚨 El latido avisa a un HUMANO; esto FRENA AL MOTOR (06/08/2026). Cuando la guardia dice que
+  // el corpus no distingue la fecha —los mismos precios repartidos entre fechas distintas—, sus
+  // filas se marcan para que el bucket de temporada de `pricing/apply` no las use. Sin esto, la
+  // pasada de hoy metía 339 comps con 22 medianas para 30 fechas y el motor tarificaba una
+  // estacionalidad inventada mientras el parte decía, correctamente, que no se fiaba.
+  // Se marca DESPUÉS de insertar (el veredicto necesita la pasada entera) y solo la `search_date`
+  // de hoy: las históricas no se tocan.
+  const clonado = corpusClonado(ventanas)
+  if (clonado) {
+    await prisma.$executeRaw(Prisma.sql`
+      UPDATE market_rates SET corpus_clonado = true WHERE search_date = CURRENT_DATE
+    `).catch((e) => { errors.push(`marcar corpus clonado: ${String(e).slice(0, 60)}`) })
+  }
+
   // `truncado` NO es un error: es «me quedé sin tiempo». Se publica para que no haya que deducirlo
   // del número de ventanas, que es justo la clase de silencio que esconde los problemas.
   return NextResponse.json({
     ok, upserted, ventanas, eventosBarridos, truncado,
-    base_completa: rondaBaseCompleta, detalle: detalleBarrido(resumen),
+    base_completa: rondaBaseCompleta, corpus_clonado: clonado, detalle: detalleBarrido(resumen),
     consultas_refuerzo: refuerzos, errors,
   })
 }

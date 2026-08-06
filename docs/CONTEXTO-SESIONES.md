@@ -26,8 +26,103 @@
 
 - **📬 Pasada diaria facturas-correo (06/08/2026).** Vía B sana. Backlog `Extraccion-fallida` limpiado
   (8→0, ninguno era factura real pendiente). Factura SIQUE BRILLA 780,10€ (lavandería 4 pisos) conciliada
-  y reclasificada `personal`→`turistico_pisos`. Pendiente de decisión de Alberto: Roborock Amazon 247,92€
-  enviado a Costa Ballena (Rota, Cádiz) — ¿personal o negocio? Detalle en `docs/AGENTES-BITACORA.md`.
+  y reclasificada `personal`→`turistico_pisos`. Roborock Amazon 247,92€ (Costa Ballena, Rota) confirmado
+  por Alberto como deducible House Sevillana, archivado; conciliación bancaria pendiente. Detalle en
+  `docs/AGENTES-BITACORA.md`.
+
+### 🔀 `fuente` y `corpus_clonado` son columnas HERMANAS, no la misma (06/08/2026)
+Al mergear main en la rama de la fase 1 apareció #1282, del mismo día y otro carril. No se pisan:
+`corpus_clonado` = veredicto de UNA pasada (ya excluye al sweep del 05/08 en adelante de los buckets
+por mes y por fecha) · `fuente` = procedencia de la fila (mide cobertura fiable, `FUENTES_FIABLES`).
+Comprobado en BD: quedan **1.466 filas `serper` de antes del 05/08 (55 fechas) sin marcar** y sí
+alimentan el bucket mensual (ventana de 120 días), y el ancla global no se filtra por ninguna de las
+dos a propósito → **el gate de la fase 2 (≥3 fechas/mes con `booking_mcp`) sigue vigente tal cual**.
+Anotado en el spec y en el landmine de `apps/plataforma/CLAUDE.md`. **De paso el guardián de rutas de
+rutina (#1230) cazó un fallo real de la fase 1:** `mercado/plan` y `internal/latido` aceptaban el token
+pero NO estaban en `RUTAS_RUTINA`, así que el middleware las habría redirigido 307 → /login y la rutina
+habría fallado muda. Añadidas. tsc 0 · 934+26 tests · build OK.
+
+### 🏨 Mercado real por fecha: rutina de Booking → `market_rates` (06/08/2026, fase 1)
+Aprobado por Alberto. Piezas: columna **`market_rates.fuente`** (`serper`|`booking_mcp`|`manual`,
+default conservador `serper`; los 3 caminos ponían `portal='booking'` y el motor no filtra por portal),
+**`GET /api/sivra/mercado/plan`** (ventanas más urgentes, reusa `ventanasDelBarrido`), helper puro
+`lib/sivra/mercado-cobertura.ts` (13 tests), `ingest` con `fuente` validada, **`POST /api/internal/latido`**
+(huella para RUTINAS, allowlist) y latido `sivra_mercado_booking` + skill `mercado-booking` (diaria, 12
+ventanas de 96, acumula). **Probado con datos REALES:** 4-sep aforo 4 → 10 comps, p50 **129€** vs **171€**
+de Serper (+33%: es plano Y ALTO). tsc 0 · 900 tests · build OK. **Fase 2 (NO antes de 3 fechas/mes
+booking): retirar el sweep + neutralizar filas serper.** Spec: `docs/superpowers/specs/2026-08-06-mercado-booking-design.md`.
+
+### 🔎 Barrido de mercado: la MECÁNICA quedó arreglada; lo que falta es la FUENTE (06/08/2026)
+Pasada 03:00 con #1253+#1255: plan COMPLETO (120/120 ventanas, base entera, 339 comps, noviembre
+rescatado por el refuerzo de mes, extracciones 1,1 s). El rojo restante es la guarda de medianas
+clonadas, y TIENE RAZÓN — verificado contra `market_rates`: cada comp lleva precio CONSTANTE en todas
+las fechas (Vincci ≈305€, Smartr ≈93€, Genteel ≈259€ en ago/nov/mar); los snippets de Serper NO llevan
+fecha, la «temporada» del 04/08 era ruido de muestreo. Validado con Booking MCP: mismas propiedades a
+~160€/noche (nov) vs ~650€ (Feria) → fuente correcta. **Decisión PENDIENTE de Alberto:** rutina Claude
+programada con Booking MCP → `market_rates` (patrón Bienal 03/08). NO ablandar la guarda: el rojo diario
+de `sivra_mercado_sweep` es verídico hasta cambiar la fuente. Serper sigue valiendo para el ancla global.
+- **🐕 3er tramo del watchdog de trading + 2 crons rotos desde el 30/07 (06/08/2026).** La pasada del
+  06/08 dejó NAV y 64 tesis pero NUNCA llamó a `/puntuar`: ni stops ni walk-forward, y el watchdog lo
+  habría dado por bueno (solo miraba NAV+tesis). `/puntuar` no escribe NADA sin tesis vencidas ni
+  stops, así que su huella es un latido explícito (`agente_latidos.trading_puntuar`, patrón de
+  facturas-scan) y el watchdog gana tramo 3. `evaluarWatchdog` acepta `huella` — el «nunca» decía
+  siempre «broker_saldos vacío» y mandaba a mirar la tabla equivocada. Crons arreglados y validados
+  contra BD real: `concursos-cierre` (falta `::int`, Prisma manda bigint a `make_interval`) y
+  `sivra/pricing/resumen-diario` (la columna es `applied_at`, no `created_at` — llevaba una semana
+  callando **173 cambios de precio/día**). Verificado: 888 tests, tsc 0, build 0.
+
+- **🚨 La barra EN CURSO hundía el volumen: H8 era indetectable y lo decía como «no salta» (06/08/2026).**
+  Auditando el retrovisor a mitad de ciclo: `volRelMes` medio 0,62 (debe rondar 1,0) y 47% de las
+  observaciones por debajo de 0,2. Causa: `barrasPeriodicas` corta en la fecha del snapshot → su última
+  barra era el mes EN CURSO; el precio de una barra a medias es real, pero el **volumen es acumulativo**
+  (día 1 = 1 sesión de 21). Prueba: día 1 en sábado/domingo → mediana 1,02 (sin cotización, última barra
+  = mes cerrado); en día hábil → 0,047 ≈ 1/21. Solo 263 capitulaciones frente a 2.008 caídas ≥25%, y se
+  guardaba `capitulacionMes:false` = «mirado y no salta» cuando era «no se puede saber». Fix:
+  `barrasCerradas`/`claveDePeriodo` en `velas.ts` (6 tests). **El primer ciclo queda ANULADO para H8**
+  (Enmienda 3 del pre-registro); H9 intacta (trabaja sobre cierres diarios). tsc 0 · 730 tests · build 0.
+  PR #1283.
+
+### ⏱️ El cron de mercado moría a los 300s JUSTO antes de avisar chollos (06/08/2026)
+Seguimiento post-merge del peaje de obra (#1259): «0 chollos avisados hoy» **no era** «no hay chollos» —
+`/api/cron/subastas-mercado` devolvió **504 a las 06:20:43** («Task timed out after 300 seconds») y nunca
+llegó a `avisarChollos`. No es regresión del peaje (lógica pura, ms): los 2 pasos de red pueden gastar 420s
+solos (8 fichas + 6 zonas × 30s de timeout) y **los avisos van al final**; el 05/08 ya se salvó por 15s
+(285s). Fix con la doctrina del repo («subir el techo mueve la pared; el presupuesto hace que la pasada
+VUELVA»): helper puro `lib/subastas/presupuesto-mercado.ts` (6 tests) — los pasos de red se cortan en un
+deadline **reservando 70s para el tramo que avisa**, y no se arranca una petición que no quepa ENTERA (el
+fallo exacto). Además **latido `subastas_mercado`** (intento al empezar + definitivo tras avisar) y su
+sonda: nadie se enteró del 504 porque este cron no tenía vigía. Verificado: tsc 0 · 903 tests · build OK.
+
+### 📉 El prior estacional ya corrige a la baja — sin regalar precio (06/08/2026)
+Decisión de Alberto: «a la baja sí, pero que no se regale precio; Sevilla en julio y sobre todo
+agosto está vacía, es normal que no haya reservas». Clave del diseño: la BAJADA solo mira el **ADR**,
+nunca las noches vendidas — un agosto vacío no es señal de precio alto, así que bajar por eso regala
+margen sin traer a nadie. La SUBIDA sigue usando ADR × ocupación (octubre destaca por llenar, no por
+precio). Tope de bajada −15% (el ADR de agosto pediría −23%), solo cuando NO hay bucket de mercado
+del mes, y nunca por debajo del suelo del piso. Extraído a `lib/sivra/prior-estacional.ts` (puro,
+13 tests). Verificado: tsc 0 · 910 tests · build OK.
+
+### 🛑 El corpus de mercado clonado ya no llega al motor (06/08/2026)
+Con #1255 el barrido cubre el calendario entero (120/120 ventanas, 339 comps) pero la guardia nueva
+dictó sentencia: **93% de las medianas repetidas en otra fecha** — 117 ventanas con solo **22 medianas
+distintas** para 30 fechas. Los snippets de Google NO dan mercado por fecha; devuelven el mismo puñado
+de anuncios genéricos de Sevilla se pida la fecha que se pida. El latido ya lo cantaba, pero eso avisa
+a un humano y **no frenaba al motor**: esas 339 filas entraban en el bucket de temporada. Fix: columna
+`market_rates.corpus_clonado` (migración aplicada + backfill de 05 y 06/08), el sweep marca su propia
+pasada cuando la guardia salta, y los buckets por MES y por FECHA de `pricing/apply` la excluyen —
+quedan 1.363 comps limpios de 52 fechas. El ancla global NO se filtra a propósito: ahí el mercado de
+hoy es el dato correcto. **Corrección a lo que propuse:** la «curva de estacionalidad propia desde
+incomes» YA EXISTE (`priorIdx` en `apply/route.ts`, ADR×ocupación por piso y mes). No se duplica.
+Verificado: tsc 0 · 897 tests · build OK.
+
+- **🌙 El agente de huéspedes ya no rechaza llegadas de madrugada (06/08/2026).** A Daniela (Luxury Busto,
+  pedía entrar a la 1:00-2:00) el agente le AUTO-ENVIÓ que «no podemos atender llegadas entre la 1:00 y las
+  2:00» + sugerencia de hotel: se lo inventó porque la política de llegadas tardías no estaba en NINGUNA
+  fuente y dedujo una hora de cierre a partir de la de entrada. Nuevo `lib/sivra/agente-huesped/llegada.ts`
+  (puro, 10 tests): la entrada es autónoma → **no hay hora límite**, y lo que se avisa es que la **atención
+  es 09:00–21:00** (que lleve resueltas las instrucciones de acceso antes). `bloqueLlegada()` va en la
+  **ficha** (guardrail-safe) + bloque de prompt en pre-llegada/día-llegada vía `esLlegadaFueraDeHorario()`.
+  Lección: si una política no está escrita en la ficha, el modelo la inventa plausible y se auto-envía.
 
 - **🛡️ La barrera de earnings del torneo vuelve a ver + higiene de cantera (05/08/2026, 4ª tanda).**
   Hallazgo: `earningsInminente` (veto ≤3d) y la estrategia catalizador dependían de `proximoEarnings`
@@ -146,7 +241,6 @@ anuncio» por la vía legítima: `Comparable.aReformar` desde el `status` de la 
 (`renew`; columna `mercado_comparables.a_reformar`, aplicada) — el scraping de la ficha sigue vetado
 (Idealista bloquea datacenter). Fotocasa: estado de la ficha PENDIENTE de validar contra ficha real.
 Tests 409/409 módulo + 851/851 plataforma, `tsc` 0, build OK. PR #1259.
-
 - **🔘 Botones ✅/❌ en las propuestas de trading por Telegram (05/08/2026).** Alberto: «lo más rápido
   y fácil para mí». `/api/internal/alerta` acepta `botones` opcionales validados por
   `lib/alerta-botones.ts` (puro, 5 tests): URLs solo https y callbacks SOLO `trd_*` — un ALERTA_TOKEN
@@ -181,7 +275,7 @@ volvió `organic:[]` mientras feb/mar 2027 traían comps — el token de fecha I
 distancia ni cuota. Fix: consulta de refuerzo con el MES EN TEXTO («noviembre 2026») SOLO para ventanas
 de base (un evento exige comps de SU fecha; el bucket del motor es mensual), bajo el mismo cupo
 `SIVRA_SWEEP_MAX_REFUERZO`. `consultasDeVentana` movida a `mercado-ventanas.ts` (pura, 3 tests).
-**Verificar latido 06/08** (send_later armado).
+**Verificar latido 06/08** (send_later armado; rutina PENDIENTE de alta manual).
 
 - **⚖️ El dato que decide Belmonte estaba guardado y no lo leía nadie: la nota marginal (04/08/2026,
   rama `claude/carga-no-recogida-analizada-vjkwc9`).** Auditando `cargas_detalle` a mano tras la relectura,

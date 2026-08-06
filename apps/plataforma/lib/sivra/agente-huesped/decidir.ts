@@ -19,6 +19,7 @@ import { esSensible } from './sensibilidad'
 import { hiloComoMensajes } from './hilo'
 import { faseReserva, aplicaEarlyCheckin } from './fases'
 import { esSolicitudLateCheckout, esDespedida } from './reglas'
+import { esLlegadaFueraDeHorario, HORARIO_ATENCION } from './llegada'
 
 export type Decision = {
   reply: string
@@ -116,7 +117,7 @@ export async function decidir(ctx: Contexto, pregunta: string, categoria: string
   const aprend = ctx.aprendizajes.map(a => `P: ${a.pregunta_norm}\nR: ${a.respuesta_final}`).join('\n\n')
 
   const horario = (ctx.horaCheckIn || ctx.horaCheckOut)
-    ? `\nHORARIO OFICIAL (dato exacto de la reserva — úsalo SIEMPRE para preguntas de hora de entrada/salida, NO seas vago): entrada a partir de las ${ctx.horaCheckIn || '—'}, salida (check-out) hasta las ${ctx.horaCheckOut || '—'}.`
+    ? `\nHORARIO OFICIAL (dato exacto de la reserva — úsalo SIEMPRE para preguntas de hora de entrada/salida, NO seas vago): entrada a partir de las ${ctx.horaCheckIn || '—'}, salida (check-out) hasta las ${ctx.horaCheckOut || '—'}. La entrada NO tiene hora LÍMITE: "a partir de las ${ctx.horaCheckIn || '—'}" significa que se puede llegar a cualquier hora posterior, incluida la madrugada (ver LLEGADA TARDÍA en la INFORMACIÓN).`
     : ''
 
   // Fase temporal: pre-llegada / día de llegada / en-estancia / post-estancia (fecha Madrid, zona
@@ -168,6 +169,15 @@ export async function decidir(ctx: Contexto, pregunta: string, categoria: string
           : `LATE CHECK-OUT: ahora mismo no hay ninguna entrada programada para el día de su salida, así que EN PRINCIPIO SÍ va a ser posible salir más tarde de las ${salida}. Pero como pueden entrar reservas de última hora, NO se lo prometas en firme todavía: dile que en principio no hay problema y que se lo confirmáis definitivamente el mismo día de la salida.`
         : `LATE CHECK-OUT: ese mismo día entra otro huésped al piso, así que NO va a ser posible alargar la salida más allá de las ${salida} (hace falta limpiarlo y prepararlo para la siguiente entrada). Explícaselo con amabilidad y, como alternativa, ofrécele la consigna de equipaje del bloque CONSIGNAS de la ficha para que pueda dejar las maletas y seguir disfrutando de la ciudad hasta la hora que necesite.`
 
+  // Llegada tardía: el huésped anuncia (o pregunta por) una llegada fuera de nuestro horario de
+  // atención. NO es un caso de disponibilidad —el acceso es autónomo y no hay hora límite— sino de
+  // expectativas: confirmarle que puede llegar a esa hora y avisarle de que a partir de las 21:00 no
+  // hay nadie contestando, así que debe llevarse las instrucciones de acceso resueltas. Solo antes de
+  // entrar (pre-llegada / día de llegada): en-estancia el huésped ya tiene el acceso resuelto.
+  const llegadaBlock = (aplicaEarlyCheckin(fase) && esLlegadaFueraDeHorario(pregunta))
+    ? `LLEGADA TARDÍA: el huésped llega fuera de nuestro horario de atención (${HORARIO_ATENCION.desde}–${HORARIO_ATENCION.hasta}). Su llegada NO es ningún problema y así se lo tienes que decir SIN condiciones: la entrada es autónoma y no hay hora límite, entra él solo a la hora que llegue. PROHIBIDO decirle que no se le puede atender a esa hora, pedirle que cambie su viaje o mencionarle un hotel u otro alojamiento. Confírmale la llegada y añade UNA advertencia útil: que como solo respondemos mensajes de ${HORARIO_ATENCION.desde} a ${HORARIO_ATENCION.hasta}, revise y tenga a mano sus instrucciones de acceso antes de las ${HORARIO_ATENCION.hasta} y nos escriba cualquier duda mientras estemos operativos, porque a esas horas no podremos ayudarle.`
+    : ''
+
   // Petición de reseña (28/07/2026, decisión de Alberto): el rating es el freno comercial nº1
   // (Busto 6,9 vs comps 8,3-9,2). SOLO en despedidas/cierres del día de salida o post-estancia
   // — nunca en mitad de la estancia ni en mensajes con carga negativa (needs_human/sentimiento
@@ -194,6 +204,7 @@ ${ctx.guia ? `\nGUÍA DEL HUÉSPED:\n${ctx.guia}` : ''}
 ${aprend ? `EJEMPLOS DE RESPUESTAS APROBADAS POR EL ANFITRIÓN (imítalos en tono y criterio):\n${aprend}\n` : ''}
 ${earlyBlock}
 ${lateBlock}
+${llegadaBlock}
 ${resenaBlock}
 
 Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Nada de comillas, ni JSON, ni notas, ni "Respuesta:" — solo el texto del mensaje.`

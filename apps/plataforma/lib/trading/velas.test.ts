@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { barrasPeriodicas, caidaDesdeMaximo, volumenRelativo, senalCapitulacion } from './velas.ts'
+import { barrasPeriodicas, barrasCerradas, claveDePeriodo, caidaDesdeMaximo, volumenRelativo, senalCapitulacion } from './velas.ts'
 import type { PuntoVol } from './precios-stooq.ts'
 
 const p = (fecha: string, cierre: number, volumen: number | null = 1000): PuntoVol => ({ fecha, cierre, volumen })
@@ -129,4 +129,83 @@ test('senalCapitulacion sin volumen en la serie NO afirma «no hay señal»: dev
   assert.equal(s.activa, null)
   assert.ok(s.caida !== null)      // la caída SÍ se conoce
   assert.equal(s.volRel, null)     // el volumen no
+})
+
+// ── Barra EN CURSO: la landmine del 06/08/2026 ────────────────────────────────
+// Descubierta en producción: el volumen relativo mensual daba mediana 0,047 cuando el día 1 del
+// snapshot caía en día hábil, y 1,02 cuando caía en sábado/domingo. Misma serie, mismo código: la
+// diferencia era que en finde no hay cotización y la última barra ya era el mes anterior CERRADO.
+
+test('claveDePeriodo agrupa igual que barrasPeriodicas (mes y semana ISO)', () => {
+  assert.equal(claveDePeriodo('2026-04-01', 'mes'), '2026-04')
+  // 2026-04-01 es miércoles → su semana ISO empieza el lunes 2026-03-30.
+  assert.equal(claveDePeriodo('2026-04-01', 'sem'), '2026-03-30')
+  assert.equal(claveDePeriodo('2026-03-30', 'sem'), '2026-03-30')  // el propio lunes
+  assert.equal(claveDePeriodo('2026-04-05', 'sem'), '2026-03-30')  // domingo = fin de ESA semana ISO
+})
+
+test('barrasCerradas descarta el mes EN CURSO; barrasPeriodicas lo dejaba entrar', () => {
+  const puntos = [
+    p('2026-02-10', 100, 1000), p('2026-02-20', 100, 1000),   // febrero completo: 2000
+    p('2026-03-10', 100, 1000), p('2026-03-20', 100, 1000),   // marzo completo: 2000
+    p('2026-04-01', 90, 90),                                  // 1 día de abril: 90
+  ]
+  const conEnCurso = barrasPeriodicas(puntos, '2026-04-01', 'mes')
+  assert.equal(conEnCurso[conEnCurso.length - 1].clave, '2026-04')
+  assert.equal(conEnCurso[conEnCurso.length - 1].volumen, 90)    // el mes a medias
+
+  const cerradas = barrasCerradas(puntos, '2026-04-01', 'mes')
+  assert.equal(cerradas.length, conEnCurso.length - 1)
+  assert.equal(cerradas[cerradas.length - 1].clave, '2026-03')
+  assert.equal(cerradas[cerradas.length - 1].volumen, 2000)      // mes completo
+})
+
+test('barrasCerradas NO descarta nada si el último periodo ya está cerrado (día 1 en finde)', () => {
+  const puntos = [
+    p('2026-02-10', 100, 1000),
+    p('2026-02-27', 100, 1000),   // viernes: último día hábil de febrero
+  ]
+  // 2026-03-01 cae en domingo → no hay cotización, la última barra ES febrero cerrado.
+  const cerradas = barrasCerradas(puntos, '2026-03-01', 'mes')
+  assert.equal(cerradas.length, 1)
+  assert.equal(cerradas[0].clave, '2026-02')
+})
+
+test('el volumen relativo deja de hundirse: la barra truncada daba ~1/21, la cerrada da ~1', () => {
+  // 13 meses completos de 2.000 (dos sesiones de 1.000) + un mes en curso con UNA sesión de 1.000.
+  // Hacen falta 13 cerradas porque `volumenRelativo` mide la actual contra las 12 ANTERIORES.
+  const puntos: PuntoVol[] = []
+  for (let i = 0; i < 13; i++) {
+    const total = 2025 * 12 + i
+    const ym = `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, '0')}`
+    puntos.push(p(`${ym}-10`, 100, 1000), p(`${ym}-20`, 100, 1000))
+  }
+  puntos.push(p('2026-02-02', 100, 1000))  // 1 sola sesión del mes en curso
+
+  const roto = volumenRelativo(barrasPeriodicas(puntos, '2026-02-02', 'mes'))
+  assert.ok(roto !== null && roto < 0.6, `barra en curso: ${roto} (media sesión contra meses enteros)`)
+  const sano = volumenRelativo(barrasCerradas(puntos, '2026-02-02', 'mes'))
+  assert.equal(sano, 1)  // último mes CERRADO (2.000) contra la media de los 11 anteriores (2.000)
+})
+
+test('capitulación real: con la barra en curso NO salta, con la cerrada SÍ', () => {
+  // 12 meses planos a 100 con volumen 2.000, y un mes de capitulación (cierra a 70, volumen 6.000).
+  const puntos: PuntoVol[] = []
+  for (let i = 0; i < 12; i++) {
+    const total = 2025 * 12 + i
+    const ym = `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, '0')}`
+    puntos.push(p(`${ym}-10`, 100, 1000), p(`${ym}-20`, 100, 1000))
+  }
+  puntos.push(p('2026-01-10', 70, 3000), p('2026-01-20', 70, 3000))  // enero: capitulación clara
+  puntos.push(p('2026-02-02', 71, 120))                              // febrero: 1 sesión floja
+
+  // Snapshot del 2026-02-02 (lunes hábil): con la barra en curso, la señal mira febrero a medias.
+  const conEnCurso = senalCapitulacion(barrasPeriodicas(puntos, '2026-02-02', 'mes'))
+  assert.equal(conEnCurso.activa, false)
+  assert.equal(conEnCurso.motivo, 'sin-volumen')   // «mirado y no salta» — pero era una barra a medias
+
+  const cerrada = senalCapitulacion(barrasCerradas(puntos, '2026-02-02', 'mes'))
+  assert.equal(cerrada.activa, true)               // enero cerrado: −30% con 3× de volumen
+  assert.ok(cerrada.caida !== null && cerrada.caida <= -0.25)
+  assert.ok(cerrada.volRel !== null && cerrada.volRel >= 1.5)
 })

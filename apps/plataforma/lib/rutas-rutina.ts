@@ -30,6 +30,12 @@ export const RUTAS_RUTINA: string[] = [
   // ambos con sus propias guardas dentro del handler (pausa, suelo, tope, dryRun).
   '/api/sivra/mercado/ingest',
   '/api/sivra/pricing/aplicar-propuesta',
+  // Mercado por fecha con el conector de Booking (skill `mercado-booking`): pedir las ventanas
+  // a medir (LECTURA, no toca nada) y dejar la huella de la pasada. El latido lleva allowlist de
+  // agentes dentro del handler, así que el token no puede inventar agentes ni pisar la huella de
+  // un cron. Ninguno de los dos mueve dinero ni expone datos personales.
+  '/api/sivra/mercado/plan',
+  '/api/internal/latido',
 ]
 
 /** ¿La ruta está declarada como alcanzable por una rutina? (prefijo, como `PUBLIC`). */

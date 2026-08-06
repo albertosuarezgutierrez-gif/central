@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-05T21:28:43Z",
-  "sha": "9c49bf13c7026b8f36de83b17522999e04eab62a",
+  "generadoEn": "2026-08-06T12:48:07Z",
+  "sha": "cff1cdfbb24bc2817d530af191d8919d7405fb7c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -50559,7 +50559,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 58
+          "linea": 71
         }
       ],
       "tablas": [
@@ -50570,7 +50570,7 @@
         "pms_connections"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "3f811a364c60"
+      "hash": "abc8c7c53dad"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -50737,7 +50737,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/concursos-cierre",
-      "hash": "6b98b7008de6"
+      "hash": "7e238c4871a7"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/concursos-ingesta/route.ts",
@@ -51345,12 +51345,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 21
+          "linea": 23
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/subastas-mercado",
-      "hash": "e609d96402c4"
+      "hash": "f3f1d5af788c"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-radar/route.ts",
@@ -51492,15 +51492,16 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 21
+          "linea": 26
         }
       ],
       "tablas": [
+        "agente_latidos",
         "next",
         "trading_tesis"
       ],
       "rutaApi": "/api/cron/trading-watchdog",
-      "hash": "8973a4519735"
+      "hash": "dd66b0f1d59b"
     },
     {
       "ruta": "apps/plataforma/app/api/empresas/agente/route.ts",
@@ -52319,6 +52320,26 @@
       "tablas": [],
       "rutaApi": "/api/internal/alerta",
       "hash": "8f96b9ce86ab"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/internal/latido/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 23
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/internal/latido",
+      "hash": "cdfd4410aebf"
     },
     {
       "ruta": "apps/plataforma/app/api/internal/mapa-arquitectura/route.ts",
@@ -54484,7 +54505,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 39,
+          "linea": 43,
           "resumen": "\"portal\": \"booking\", // booking | trivago | expedia | tripadvisor | ... \"scenario\": \"prop_busto_reform\", // prop_<id> para comparables por piso, o normal/corpus \"checkin\": \"2026-06-13\", \"checkout\": \"2"
         }
       ],
@@ -54494,7 +54515,33 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/ingest",
-      "hash": "c6ad0403b9bf"
+      "hash": "09a952ac94c4"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/sivra/mercado/plan/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 26,
+          "resumen": "GET /api/sivra/mercado/plan?max=12 QUÉ ventanas (fecha × aforo) debe medir la rutina de Booking en ESTA pasada, ya ordenadas por urgencia. Es el contrato entre el plan de fechas (que vive en el código"
+        }
+      ],
+      "tablas": [
+        "market_rates",
+        "next",
+        "pricing_eventos_auto",
+        "pricing_piso_zona"
+      ],
+      "rutaApi": "/api/sivra/mercado/plan",
+      "hash": "de1b4d595b70"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/search/route.ts",
@@ -54651,7 +54698,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/sweep",
-      "hash": "1cec29c40a7c"
+      "hash": "c1496046768f"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pl-mensual/route.ts",
@@ -54760,7 +54807,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 32
+          "linea": 33
         },
         {
           "nombre": "fmt",
@@ -54768,7 +54815,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 33
+          "linea": 34
         },
         {
           "nombre": "GET",
@@ -54776,7 +54823,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 61,
+          "linea": 62,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -54785,7 +54832,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 65
+          "linea": 66
         }
       ],
       "tablas": [
@@ -54809,7 +54856,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "e96cc180e464"
+      "hash": "d6168770edbc"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -55159,7 +55206,7 @@
         "pricing_applied"
       ],
       "rutaApi": "/api/sivra/pricing/resumen-diario",
-      "hash": "aa9234910266"
+      "hash": "a1ae0d8aba09"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/settings/route.ts",
@@ -55954,12 +56001,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 7
+          "linea": 8
         }
       ],
       "tablas": [],
       "rutaApi": "/api/trading/puntuar",
-      "hash": "c49cf3c05a91"
+      "hash": "0545ef9b0b4f"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/saldo/route.ts",
@@ -63034,7 +63081,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9b686ae0e46f"
+      "hash": "855cb6693903"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/sonda-ia.ts",
@@ -63692,13 +63739,13 @@
           "exportada": true,
           "params": "pathname: string",
           "retorno": "boolean",
-          "linea": 36,
+          "linea": 42,
           "resumen": "¿La ruta está declarada como alcanzable por una rutina? (prefijo, como `PUBLIC`)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b5afb335ca4d"
+      "hash": "c93963c242aa"
     },
     {
       "ruta": "apps/plataforma/lib/rutina-tokens.ts",
@@ -63919,7 +63966,7 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 42
+          "linea": 43
         },
         {
           "nombre": "toPropertyId",
@@ -63927,7 +63974,7 @@
           "exportada": true,
           "params": "_apartmentId: unknown, apartmentName: string",
           "retorno": "string",
-          "linea": 47,
+          "linea": 48,
           "resumen": "Mapea apartmentId/nombre de Smoobu → property_id interno (prop_*)."
         },
         {
@@ -63936,7 +63983,7 @@
           "exportada": true,
           "params": "bookingId: string, lang: string",
           "retorno": "Promise<Contexto | null>",
-          "linea": 56
+          "linea": 57
         }
       ],
       "tablas": [
@@ -63944,7 +63991,7 @@
         "mensajes_log"
       ],
       "rutaApi": null,
-      "hash": "675ff651bd77"
+      "hash": "73197079cfbf"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/decidir.ts",
@@ -63960,7 +64007,7 @@
           "exportada": false,
           "params": "text: string",
           "retorno": "boolean",
-          "linea": 63
+          "linea": 64
         },
         {
           "nombre": "sentimientoDe",
@@ -63968,7 +64015,7 @@
           "exportada": false,
           "params": "pregunta: string",
           "retorno": "Decision['sentimiento']",
-          "linea": 67
+          "linea": 68
         },
         {
           "nombre": "limpiarReply",
@@ -63976,7 +64023,7 @@
           "exportada": false,
           "params": "raw: string",
           "retorno": "string",
-          "linea": 75,
+          "linea": 76,
           "resumen": "Limpia adornos por si el modelo, pese a pedírsele texto plano, envuelve la respuesta en JSON, comillas o un prefijo tipo \"Respuesta:\"."
         },
         {
@@ -63985,7 +64032,7 @@
           "exportada": false,
           "params": "ctx: Contexto, pregunta: string, reply: string",
           "retorno": "Promise<boolean>",
-          "linea": 93,
+          "linea": 94,
           "resumen": "Control de calidad: ¿la respuesta resuelve bien lo que pide el huésped o hay que escalar a Alberto? UNA sola palabra (ESCALAR/OK) — mucho más fiable que un JSON. Si la llamada falla, NO escala por sí "
         },
         {
@@ -63994,12 +64041,12 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, categoria: string",
           "retorno": "Promise<Decision>",
-          "linea": 114
+          "linea": 115
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "afe55c4de52c"
+      "hash": "df350cb8c1c5"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/disponibilidad.ts",
@@ -64357,6 +64404,58 @@
       ],
       "rutaApi": null,
       "hash": "fae9468b9c3e"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/agente-huesped/llegada.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/agente-huesped/llegada.ts — política de LLEGADA TARDÍA + horario de atención. Caso fundacional (06/08/2026): a Daniela (Luxury Busto), que pedía entrar entre la 1:00 y las 2:00 de la madrugada, el agente respondió —y AUTO-ENVIÓ— que «no podemos atender llegadas entre la 1:00 y las 2:00» y ",
+      "exporta": [
+        "bloqueLlegada",
+        "fueraDeHorarioAtencion",
+        "horasDeTexto",
+        "esLlegadaFueraDeHorario"
+      ],
+      "funciones": [
+        {
+          "nombre": "bloqueLlegada",
+          "kind": "function",
+          "exportada": true,
+          "params": "horaCheckIn = '15:00'",
+          "retorno": "string",
+          "linea": 23,
+          "resumen": "Bloque que se añade a la `ficha` del piso. El agente lo usará SOLO si el huésped pregunta por la hora de llegada o anuncia una llegada tardía (REGLA DE ORO: no añadir información no pedida)."
+        },
+        {
+          "nombre": "fueraDeHorarioAtencion",
+          "kind": "function",
+          "exportada": true,
+          "params": "h: number",
+          "retorno": "boolean",
+          "linea": 33,
+          "resumen": "¿La hora `h` (0-23) cae fuera de nuestro horario de atención (09:00–21:00)?"
+        },
+        {
+          "nombre": "horasDeTexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "text: string",
+          "retorno": "number[]",
+          "linea": 39,
+          "resumen": "Horas mencionadas en un texto, normalizadas a 0-23. Conservador a propósito: solo reconoce formas inequívocas de hora (12:30 · 1am · a las 2 · 23h), nunca un número suelto (\"somos 2 personas\")."
+        },
+        {
+          "nombre": "esLlegadaFueraDeHorario",
+          "kind": "function",
+          "exportada": true,
+          "params": "text: string",
+          "retorno": "boolean",
+          "linea": 83,
+          "resumen": "¿El huésped anuncia/pregunta por una llegada FUERA de nuestro horario de atención (09:00–21:00)? Exige señal de llegada + (hora fuera de horario O marcador nocturno explícito): así una pregunta normal"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fe1e460e8f72"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/orquestador.ts",
@@ -65110,6 +65209,64 @@
       "hash": "06373f83d9d7"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/mercado-cobertura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/mercado-cobertura.ts — QUÉ ventanas pide medir la rutina de Booking, y en qué orden. POR QUÉ (06/08/2026). El barrido por búsqueda web quedó mecánicamente perfecto (120/120 ventanas el 06/08) y aun así NO mide temporada: los precios que devuelven los snippets son de anuncio y vienen SIN fe",
+      "exporta": [
+        "ventanasQuePedir",
+        "detalleIngesta",
+        "ingestaFiable"
+      ],
+      "funciones": [
+        {
+          "nombre": "diasEntre",
+          "kind": "function",
+          "exportada": false,
+          "params": "desdeIso: string, hastaIso: string",
+          "retorno": "number",
+          "linea": 62
+        },
+        {
+          "nombre": "clave",
+          "kind": "function",
+          "exportada": false,
+          "params": "checkin: string, aforo: number",
+          "retorno": "string",
+          "linea": 68
+        },
+        {
+          "nombre": "ventanasQuePedir",
+          "kind": "function",
+          "exportada": true,
+          "params": "plan: Ventana[], aforos: Map<number, string[]>, cobertura: CoberturaVentana[], hoyIso: string, max = 12,",
+          "retorno": "VentanaPedida[]",
+          "linea": 87,
+          "resumen": "Cruza el plan de ventanas (fechas) con los aforos de los pisos y la cobertura fiable ya medida, y devuelve las `max` que más falta hacen. Orden de urgencia, y el porqué de cada nivel: 1. **Nunca medid"
+        },
+        {
+          "nombre": "detalleIngesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: { ventanas: number comps: number sinRespuesta: number sinPrecio: number errores: string[] }",
+          "retorno": "string",
+          "linea": 139,
+          "resumen": "Parte de la pasada para el latido. Igual que en el barrido por búsqueda, **lo que NO se pudo medir va primero**: una ventana que el conector no contestó es «no lo sé», no «no hay mercado», y confundir"
+        },
+        {
+          "nombre": "ingestaFiable",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: { ventanas: number comps: number sinRespuesta: number errores: string[] }",
+          "retorno": "boolean",
+          "linea": 162,
+          "resumen": "¿Vale la pasada? Conservador igual que `barridoFiable`: hace falta haber MEDIDO algo y que la mayoría de lo intentado haya respondido. Una pasada que pide 12 ventanas y solo contesta 1 no es «poco mer"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4aa3c50284b6"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/mercado-ventanas.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/mercado-ventanas.ts — QUÉ fechas barre el mercado, y por qué. POR QUÉ (01/08/2026). El barrido mensual (`mercado/sweep`) miraba el PRIMER VIERNES de cada mes y nada más. Ocho fechas al año y media, todas elegidas por el calendario gregoriano: el barrido nunca veía la Feria, ni la Semana Sa",
@@ -65511,6 +65668,46 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c6e4079eff25"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/prior-estacional.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Prior estacional del pricing: qué dice MI propio histórico (`incomes`) sobre cada mes. Módulo PURO (sin BD ni `@/`), testeable con `node --test`. Lo consume `pricing/apply`. 🚨 LA ASIMETRÍA ES EL MÓDULO (06/08/2026). Subir y bajar NO se deciden con el mismo índice: · Para SUBIR vale el índice comple",
+      "exporta": [
+        "indicesPrior",
+        "aplicarPrior"
+      ],
+      "funciones": [
+        {
+          "nombre": "clamp",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: number, min: number, max: number",
+          "retorno": null,
+          "linea": 47
+        },
+        {
+          "nombre": "indicesPrior",
+          "kind": "function",
+          "exportada": true,
+          "params": "rows: MesHistorico[]",
+          "retorno": "IndicePrior[]",
+          "linea": 53,
+          "resumen": "Índices por mes (array de 12, posición 0 = enero) a partir del histórico de un piso. Un mes sin muestra suficiente queda en `{ alza: 1, baja: 1 }`: ni sube ni baja."
+        },
+        {
+          "nombre": "aplicarPrior",
+          "kind": "function",
+          "exportada": true,
+          "params": "params: { target: number indice: IndicePrior anclaGlobal: number floor: number hayBucketMes: boolean }",
+          "retorno": "number",
+          "linea": 86,
+          "resumen": "Objetivo corregido por el prior. Devuelve el `target` nuevo (o el mismo si no toca). - Al alza actúa como SUELO, igual que antes: sin bucket del mes sustituye al global plano; con bucket solo si el ín"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "cb436c13ce68"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/resumen-sweep.ts",
@@ -66519,7 +66716,7 @@
           "exportada": true,
           "params": "dias = 30, maxCorreos = 150",
           "retorno": "Promise<",
-          "linea": 41,
+          "linea": 42,
           "resumen": "Ingesta de comparables desde las alertas de Idealista del correo. El mismo anuncio se repite en correos sucesivos mientras sigue vivo, de ahí el `ON CONFLICT (portal, ref_anuncio)`: se actualiza el pr"
         },
         {
@@ -66528,16 +66725,16 @@
           "exportada": true,
           "params": "a: Comparable, vistoEn: Date",
           "retorno": "Promise<number>",
-          "linea": 81,
+          "linea": 82,
           "resumen": "Upsert de UN comparable en `mercado_comparables` — la puerta única del corpus, compartida por las alertas de correo y la API oficial de Idealista (`lib/subastas/idealista-api.ts`): mismo dedupe `(port"
         },
         {
           "nombre": "enriquecerAnunciantesFotocasa",
           "kind": "function",
           "exportada": true,
-          "params": "max = 8",
+          "params": "max = 8, deadline?: number,",
           "retorno": "Promise<",
-          "linea": 135
+          "linea": 136
         },
         {
           "nombre": "consultarZona",
@@ -66545,16 +66742,16 @@
           "exportada": false,
           "params": "slug: string, etiqueta: string, fallos: string[]",
           "retorno": "Promise<void>",
-          "linea": 209,
+          "linea": 222,
           "resumen": "Consulta una zona en el puente y la cachea; aprende CP→distrito de los anuncios."
         },
         {
           "nombre": "referenciaZonasFotocasa",
           "kind": "function",
           "exportada": true,
-          "params": "max = 6",
+          "params": "max = 6, deadline?: number,",
           "retorno": "Promise<",
-          "linea": 270
+          "linea": 283
         },
         {
           "nombre": "comparablesVigentes",
@@ -66562,7 +66759,7 @@
           "exportada": true,
           "params": "meses = MESES_VIGENCIA",
           "retorno": "Promise<Comparable[]>",
-          "linea": 350,
+          "linea": 381,
           "resumen": "Comparables vigentes, ya en el tipo del módulo. Se cargan en memoria a propósito: la mediana por zona vive en el módulo puro (probada) y el filtro de zona es insensible a acentos, algo que en Postgres"
         },
         {
@@ -66571,7 +66768,7 @@
           "exportada": true,
           "params": "f: { municipio?: string | null busqueda_origen?: string | null provincia?: string | null }",
           "retorno": "string[]",
-          "linea": 392,
+          "linea": 423,
           "resumen": "Zonas por las que buscar el €/m² de una subasta, de la más específica a la más amplia. La primera que reúna muestra suficiente gana. `busqueda_origen` es el nombre de la búsqueda guardada del BOE («PU"
         },
         {
@@ -66580,7 +66777,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 407,
+          "linea": 438,
           "resumen": "Calcula y persiste el €/m² de mercado en las subastas que lo necesitan. Solo toca las que NO tienen tasación ni valor de referencia: donde hay una tasación real, los comparables no pintan nada (y el s"
         },
         {
@@ -66589,7 +66786,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<CholloSeguido[]>",
-          "linea": 487,
+          "linea": 518,
           "resumen": "Chollos vigentes + antigüedad estimada. La calibración del ritmo de refs usa `created_at` (primera vez que NOSOTROS vimos cada ref): para los anuncios que van ENTRANDO al corpus con los correos diario"
         },
         {
@@ -66598,7 +66795,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 521,
+          "linea": 552,
           "resumen": "Aviso Telegram de los chollos NUEVOS (una sola vez por anuncio). La mediana de zona se mueve a diario y un anuncio podría entrar y salir del umbral: `chollo_avisado_at` fija que cada anuncio avisa UNA"
         },
         {
@@ -66607,7 +66804,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 581
+          "linea": 612
         },
         {
           "nombre": "refrescarIndiceINE",
@@ -66615,7 +66812,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 609,
+          "linea": 640,
           "resumen": "Refresca la caché del IPV si está caducada. Best-effort (el cron lo llama)."
         },
         {
@@ -66624,7 +66821,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<IndicesVivienda | null>",
-          "linea": 643,
+          "linea": 674,
           "resumen": "Lee el IPV cacheado (sin red). Campos a null si aún no se han capturado."
         },
         {
@@ -66633,7 +66830,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<PulsoMercado | null>",
-          "linea": 674
+          "linea": 705
         },
         {
           "nombre": "avisarBajadas",
@@ -66641,7 +66838,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 701,
+          "linea": 732,
           "resumen": "Aviso Telegram de las BAJADAS DE PRECIO nuevas en las zonas vigiladas. Una bajada es señal aunque el anuncio no llegue a chollo: el vendedor ya ha cedido una vez y es el candidato natural a una oferta"
         }
       ],
@@ -66655,7 +66852,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "20487cb5628b"
+      "hash": "6e2e7e4ea27b"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/nota-simple.ts",
@@ -66758,6 +66955,48 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "a816fce0fa2c"
+    },
+    {
+      "ruta": "apps/plataforma/lib/subastas/presupuesto-mercado.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Reparto del tiempo del cron `subastas-mercado`. PURO y testeado. POR QUÉ EXISTE (incidente 06/08/2026): el handler encadena 8 pasos en serie y los dos de enriquecimiento pueden comerse, ELLOS SOLOS, más que todo el presupue",
+      "exporta": [
+        "deadlineEnriquecimiento",
+        "quedaTiempo",
+        "motivoCorte"
+      ],
+      "funciones": [
+        {
+          "nombre": "deadlineEnriquecimiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "inicio: number, totalMs: number = PRESUPUESTO_TOTAL_MS, reservaMs: number = RESERVA_AVISOS_MS,",
+          "retorno": "number",
+          "linea": 41,
+          "resumen": "Instante límite (epoch ms) hasta el que pueden estirarse los pasos de enriquecimiento por red. A partir de ahí el handler sigue con el tramo final."
+        },
+        {
+          "nombre": "quedaTiempo",
+          "kind": "function",
+          "exportada": true,
+          "params": "deadline: number, ahora: number, margenMs = 0",
+          "retorno": "boolean",
+          "linea": 58,
+          "resumen": "¿Cabe otra iteración de red antes del `deadline`? `margenMs` es lo que se estima que tarda UNA iteración: sin él, un bucle arranca una petición de 30 s a falta de 2 s del límite y se pasa igual — que "
+        },
+        {
+          "nombre": "motivoCorte",
+          "kind": "function",
+          "exportada": true,
+          "params": "cortado: boolean, hechos: string, pendientes: number",
+          "retorno": "string | null",
+          "linea": 73,
+          "resumen": "Parte legible de por qué se cortó una fase, para el detalle del latido y la respuesta del cron. `null` cuando la fase terminó su cola entera. Se dice SIEMPRE que se cortó, aunque no haya fallado nada:"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3bf29330838a"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/reapariciones.ts",
@@ -67601,7 +67840,7 @@
           "exportada": true,
           "params": "lote = 40",
           "retorno": "Promise<",
-          "linea": 67,
+          "linea": 72,
           "resumen": "Recolecta el siguiente lote: siembra desde trading_universo (+SPY como benchmark) y rellena las filas más rancias. Mismo patrón/ritmo que refrescarLoteUniverso (~4 símbolos/s contra SEC)."
         },
         {
@@ -67610,13 +67849,13 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 124,
+          "linea": 129,
           "resumen": "La LUPA de gurús: convicciones ACTUALES de Dataroma cruzadas con los factores actuales de la caché del radar — la materia prima para responder \"¿por qué se posicionan en esas empresas?\". Se guarda en "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f0f5e274a438"
+      "hash": "69221ac43395"
     },
     {
       "ruta": "apps/plataforma/lib/trading/buscar-simbolo.ts",
@@ -69023,20 +69262,40 @@
       "ruta": "apps/plataforma/lib/trading/velas.ts",
       "ambito": "apps/plataforma",
       "exporta": [
+        "claveDePeriodo",
         "barrasPeriodicas",
+        "barrasCerradas",
         "caidaDesdeMaximo",
         "volumenRelativo",
         "senalCapitulacion"
       ],
       "funciones": [
         {
+          "nombre": "claveDePeriodo",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string, periodo: 'sem' | 'mes'",
+          "retorno": "string",
+          "linea": 40,
+          "resumen": "Clave de periodo de una fecha suelta: 'YYYY-MM' (mes) o 'YYYY-MM-DD' del lunes ISO (semana). Misma definición que usa `barrasPeriodicas` para agrupar — se extrae para poder preguntar «¿la última barra"
+        },
+        {
           "nombre": "barrasPeriodicas",
           "kind": "function",
           "exportada": true,
           "params": "puntos: PuntoVol[], hasta: string, periodo: 'sem' | 'mes'",
           "retorno": "Barra[]",
-          "linea": 39,
+          "linea": 49,
           "resumen": "Remuestrea la serie diaria a barras de periodo, hasta `hasta` inclusive. Hermana con volumen de `cierresPeriodicos` de backtest-puro.ts (misma definición de semana: lunes ISO)."
+        },
+        {
+          "nombre": "barrasCerradas",
+          "kind": "function",
+          "exportada": true,
+          "params": "puntos: PuntoVol[], hasta: string, periodo: 'sem' | 'mes'",
+          "retorno": "Barra[]",
+          "linea": 89,
+          "resumen": "Barras hasta `hasta` DESCARTANDO la del periodo que aún está corriendo. Úsala SIEMPRE para medir señales de vela: `barrasPeriodicas` corta la serie en la fecha del snapshot, así que su última barra es"
         },
         {
           "nombre": "caidaDesdeMaximo",
@@ -69044,7 +69303,7 @@
           "exportada": true,
           "params": "barras: Barra[], ventana = 12",
           "retorno": "number | null",
-          "linea": 68,
+          "linea": 99,
           "resumen": "Caída del cierre de la ÚLTIMA barra respecto al máximo de las `ventana` barras ANTERIORES (la actual excluida: incluirla haría que un valor en máximos nunca pudiera dar 0). Negativo = por debajo del m"
         },
         {
@@ -69053,7 +69312,7 @@
           "exportada": true,
           "params": "barras: Barra[], ventana = 12",
           "retorno": "number | null",
-          "linea": 80,
+          "linea": 111,
           "resumen": "Volumen de la última barra contra la media de las `ventana` anteriores. null si falta el volumen de la barra actual o no hay suficientes barras previas CON volumen (fuente incompleta ≠ volumen 0)."
         },
         {
@@ -69062,13 +69321,13 @@
           "exportada": true,
           "params": "barras: Barra[], { ventana = 12, caidaMin = CAIDA_MIN, volMin = VOL_MIN }: { ventana?: number; caidaMin?: number; volMin?: number } = {},",
           "retorno": "SenalCapitulacion",
-          "linea": 109,
+          "linea": 140,
           "resumen": "Señal medida como la única con exceso positivo en el estudio: caída fuerte CON volumen. NO decide nada: se recolecta en el retrovisor (H8) antes de tocar ranking o cestas."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "17678fb6463d"
+      "hash": "e5722a90c196"
     },
     {
       "ruta": "apps/plataforma/lib/trading/volumen.ts",
@@ -69114,14 +69373,14 @@
           "nombre": "evaluarWatchdog",
           "kind": "function",
           "exportada": true,
-          "params": "params: { ahora: Date ultimoRefresco: Date | null maxHoras?: number }",
+          "params": "params: { ahora: Date ultimoRefresco: Date | null maxHoras?: number /** Qué huella se está mirando, para que el «nunca» diga la VERDAD. Por defecto, el NAV — pero el * mismo evaluador vigila ya las tesis y el cierre de /puntuar, y decirles ",
           "retorno": "EvalWatchdog",
           "linea": 33
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "55a1070f6456"
+      "hash": "9ae63f3b1901"
     },
     {
       "ruta": "apps/plataforma/lib/vercel-env.ts",
@@ -88836,7 +89095,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2387,
-    "funciones": 6406
+    "archivos": 2393,
+    "funciones": 6425
   }
 }
