@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-06T09:32:39Z",
-  "sha": "5d1e86b633bdfae0910cc7d455a11fb9e770c7a8",
+  "generadoEn": "2026-08-06T12:28:31Z",
+  "sha": "778aa67235a6124845e19eb461c367bdbad9d8b2",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -50737,7 +50737,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/concursos-cierre",
-      "hash": "6b98b7008de6"
+      "hash": "7e238c4871a7"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/concursos-ingesta/route.ts",
@@ -51492,15 +51492,16 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 21
+          "linea": 26
         }
       ],
       "tablas": [
+        "agente_latidos",
         "next",
         "trading_tesis"
       ],
       "rutaApi": "/api/cron/trading-watchdog",
-      "hash": "8973a4519735"
+      "hash": "dd66b0f1d59b"
     },
     {
       "ruta": "apps/plataforma/app/api/empresas/agente/route.ts",
@@ -55159,7 +55160,7 @@
         "pricing_applied"
       ],
       "rutaApi": "/api/sivra/pricing/resumen-diario",
-      "hash": "aa9234910266"
+      "hash": "a1ae0d8aba09"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/settings/route.ts",
@@ -55954,12 +55955,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 7
+          "linea": 8
         }
       ],
       "tablas": [],
       "rutaApi": "/api/trading/puntuar",
-      "hash": "c49cf3c05a91"
+      "hash": "0545ef9b0b4f"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/saldo/route.ts",
@@ -69268,14 +69269,14 @@
           "nombre": "evaluarWatchdog",
           "kind": "function",
           "exportada": true,
-          "params": "params: { ahora: Date ultimoRefresco: Date | null maxHoras?: number }",
+          "params": "params: { ahora: Date ultimoRefresco: Date | null maxHoras?: number /** Qué huella se está mirando, para que el «nunca» diga la VERDAD. Por defecto, el NAV — pero el * mismo evaluador vigila ya las tesis y el cierre de /puntuar, y decirles ",
           "retorno": "EvalWatchdog",
           "linea": 33
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "55a1070f6456"
+      "hash": "9ae63f3b1901"
     },
     {
       "ruta": "apps/plataforma/lib/vercel-env.ts",
