@@ -24,6 +24,28 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 📉 El prior estacional ya corrige a la baja — sin regalar precio (06/08/2026)
+Decisión de Alberto: «a la baja sí, pero que no se regale precio; Sevilla en julio y sobre todo
+agosto está vacía, es normal que no haya reservas». Clave del diseño: la BAJADA solo mira el **ADR**,
+nunca las noches vendidas — un agosto vacío no es señal de precio alto, así que bajar por eso regala
+margen sin traer a nadie. La SUBIDA sigue usando ADR × ocupación (octubre destaca por llenar, no por
+precio). Tope de bajada −15% (el ADR de agosto pediría −23%), solo cuando NO hay bucket de mercado
+del mes, y nunca por debajo del suelo del piso. Extraído a `lib/sivra/prior-estacional.ts` (puro,
+13 tests). Verificado: tsc 0 · 910 tests · build OK.
+
+### 🛑 El corpus de mercado clonado ya no llega al motor (06/08/2026)
+Con #1255 el barrido cubre el calendario entero (120/120 ventanas, 339 comps) pero la guardia nueva
+dictó sentencia: **93% de las medianas repetidas en otra fecha** — 117 ventanas con solo **22 medianas
+distintas** para 30 fechas. Los snippets de Google NO dan mercado por fecha; devuelven el mismo puñado
+de anuncios genéricos de Sevilla se pida la fecha que se pida. El latido ya lo cantaba, pero eso avisa
+a un humano y **no frenaba al motor**: esas 339 filas entraban en el bucket de temporada. Fix: columna
+`market_rates.corpus_clonado` (migración aplicada + backfill de 05 y 06/08), el sweep marca su propia
+pasada cuando la guardia salta, y los buckets por MES y por FECHA de `pricing/apply` la excluyen —
+quedan 1.363 comps limpios de 52 fechas. El ancla global NO se filtra a propósito: ahí el mercado de
+hoy es el dato correcto. **Corrección a lo que propuse:** la «curva de estacionalidad propia desde
+incomes» YA EXISTE (`priorIdx` en `apply/route.ts`, ADR×ocupación por piso y mes). No se duplica.
+Verificado: tsc 0 · 897 tests · build OK.
+
 - **🌙 El agente de huéspedes ya no rechaza llegadas de madrugada (06/08/2026).** A Daniela (Luxury Busto,
   pedía entrar a la 1:00-2:00) el agente le AUTO-ENVIÓ que «no podemos atender llegadas entre la 1:00 y las
   2:00» + sugerencia de hotel: se lo inventó porque la política de llegadas tardías no estaba en NINGUNA
