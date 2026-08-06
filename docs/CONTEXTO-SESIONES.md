@@ -33,7 +33,7 @@
   guardaba `capitulacionMes:false` = «mirado y no salta» cuando era «no se puede saber». Fix:
   `barrasCerradas`/`claveDePeriodo` en `velas.ts` (6 tests). **El primer ciclo queda ANULADO para H8**
   (Enmienda 3 del pre-registro); H9 intacta (trabaja sobre cierres diarios). tsc 0 · 730 tests · build 0.
-  PR #TBD.
+  PR #1283.
 
 ### ⏱️ El cron de mercado moría a los 300s JUSTO antes de avisar chollos (06/08/2026)
 Seguimiento post-merge del peaje de obra (#1259): «0 chollos avisados hoy» **no era** «no hay chollos» —
