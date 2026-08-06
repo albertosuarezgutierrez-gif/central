@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-05T21:28:43Z",
-  "sha": "9c49bf13c7026b8f36de83b17522999e04eab62a",
+  "generadoEn": "2026-08-06T07:54:07Z",
+  "sha": "420a56f9881a490d68a7b43469c6e2eb1b5747aa",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -63919,7 +63919,7 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 42
+          "linea": 43
         },
         {
           "nombre": "toPropertyId",
@@ -63927,7 +63927,7 @@
           "exportada": true,
           "params": "_apartmentId: unknown, apartmentName: string",
           "retorno": "string",
-          "linea": 47,
+          "linea": 48,
           "resumen": "Mapea apartmentId/nombre de Smoobu → property_id interno (prop_*)."
         },
         {
@@ -63936,7 +63936,7 @@
           "exportada": true,
           "params": "bookingId: string, lang: string",
           "retorno": "Promise<Contexto | null>",
-          "linea": 56
+          "linea": 57
         }
       ],
       "tablas": [
@@ -63944,7 +63944,7 @@
         "mensajes_log"
       ],
       "rutaApi": null,
-      "hash": "675ff651bd77"
+      "hash": "73197079cfbf"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/decidir.ts",
@@ -63960,7 +63960,7 @@
           "exportada": false,
           "params": "text: string",
           "retorno": "boolean",
-          "linea": 63
+          "linea": 64
         },
         {
           "nombre": "sentimientoDe",
@@ -63968,7 +63968,7 @@
           "exportada": false,
           "params": "pregunta: string",
           "retorno": "Decision['sentimiento']",
-          "linea": 67
+          "linea": 68
         },
         {
           "nombre": "limpiarReply",
@@ -63976,7 +63976,7 @@
           "exportada": false,
           "params": "raw: string",
           "retorno": "string",
-          "linea": 75,
+          "linea": 76,
           "resumen": "Limpia adornos por si el modelo, pese a pedírsele texto plano, envuelve la respuesta en JSON, comillas o un prefijo tipo \"Respuesta:\"."
         },
         {
@@ -63985,7 +63985,7 @@
           "exportada": false,
           "params": "ctx: Contexto, pregunta: string, reply: string",
           "retorno": "Promise<boolean>",
-          "linea": 93,
+          "linea": 94,
           "resumen": "Control de calidad: ¿la respuesta resuelve bien lo que pide el huésped o hay que escalar a Alberto? UNA sola palabra (ESCALAR/OK) — mucho más fiable que un JSON. Si la llamada falla, NO escala por sí "
         },
         {
@@ -63994,12 +63994,12 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, categoria: string",
           "retorno": "Promise<Decision>",
-          "linea": 114
+          "linea": 115
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "afe55c4de52c"
+      "hash": "df350cb8c1c5"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/disponibilidad.ts",
@@ -64357,6 +64357,58 @@
       ],
       "rutaApi": null,
       "hash": "fae9468b9c3e"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/agente-huesped/llegada.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/agente-huesped/llegada.ts — política de LLEGADA TARDÍA + horario de atención. Caso fundacional (06/08/2026): a Daniela (Luxury Busto), que pedía entrar entre la 1:00 y las 2:00 de la madrugada, el agente respondió —y AUTO-ENVIÓ— que «no podemos atender llegadas entre la 1:00 y las 2:00» y ",
+      "exporta": [
+        "bloqueLlegada",
+        "fueraDeHorarioAtencion",
+        "horasDeTexto",
+        "esLlegadaFueraDeHorario"
+      ],
+      "funciones": [
+        {
+          "nombre": "bloqueLlegada",
+          "kind": "function",
+          "exportada": true,
+          "params": "horaCheckIn = '15:00'",
+          "retorno": "string",
+          "linea": 23,
+          "resumen": "Bloque que se añade a la `ficha` del piso. El agente lo usará SOLO si el huésped pregunta por la hora de llegada o anuncia una llegada tardía (REGLA DE ORO: no añadir información no pedida)."
+        },
+        {
+          "nombre": "fueraDeHorarioAtencion",
+          "kind": "function",
+          "exportada": true,
+          "params": "h: number",
+          "retorno": "boolean",
+          "linea": 33,
+          "resumen": "¿La hora `h` (0-23) cae fuera de nuestro horario de atención (09:00–21:00)?"
+        },
+        {
+          "nombre": "horasDeTexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "text: string",
+          "retorno": "number[]",
+          "linea": 39,
+          "resumen": "Horas mencionadas en un texto, normalizadas a 0-23. Conservador a propósito: solo reconoce formas inequívocas de hora (12:30 · 1am · a las 2 · 23h), nunca un número suelto (\"somos 2 personas\")."
+        },
+        {
+          "nombre": "esLlegadaFueraDeHorario",
+          "kind": "function",
+          "exportada": true,
+          "params": "text: string",
+          "retorno": "boolean",
+          "linea": 83,
+          "resumen": "¿El huésped anuncia/pregunta por una llegada FUERA de nuestro horario de atención (09:00–21:00)? Exige señal de llegada + (hora fuera de horario O marcador nocturno explícito): así una pregunta normal"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fe1e460e8f72"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/orquestador.ts",
@@ -88836,7 +88888,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2387,
-    "funciones": 6406
+    "archivos": 2388,
+    "funciones": 6410
   }
 }

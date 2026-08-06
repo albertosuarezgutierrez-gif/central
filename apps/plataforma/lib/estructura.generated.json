@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-05T21:09:07Z",
+  "generadoEn": "2026-08-06T07:54:07Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3971,6 +3971,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🌙 El agente de huéspedes ya no rechaza llegadas de madrugada (06/08/2026).",
+      "fecha": "06/08/2026"
+    },
+    {
       "titulo": "🛡️ La barrera de earnings del torneo vuelve a ver + higiene de cantera (05/08/2026, 4ª tanda).",
       "fecha": "05/08/2026"
     },
@@ -4025,10 +4029,6 @@
     {
       "titulo": "💶 Escalera de dinero real firmada en el pre-registro (05/08/2026).",
       "fecha": "05/08/2026"
-    },
-    {
-      "titulo": "🚪 Reglas de VENTA por fin medibles — H9 (04/08/2026, noche).",
-      "fecha": "04/08/2026"
     }
   ],
   "saludRepo": {
