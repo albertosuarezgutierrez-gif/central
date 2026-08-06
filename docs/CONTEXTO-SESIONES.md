@@ -24,6 +24,11 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📬 Pasada diaria facturas-correo (06/08/2026).** Vía B sana. Backlog `Extraccion-fallida` limpiado
+  (8→0, ninguno era factura real pendiente). Factura SIQUE BRILLA 780,10€ (lavandería 4 pisos) conciliada
+  y reclasificada `personal`→`turistico_pisos`. Pendiente de decisión de Alberto: Roborock Amazon 247,92€
+  enviado a Costa Ballena (Rota, Cádiz) — ¿personal o negocio? Detalle en `docs/AGENTES-BITACORA.md`.
+
 - **🛡️ La barrera de earnings del torneo vuelve a ver + higiene de cantera (05/08/2026, 4ª tanda).**
   Hallazgo: `earningsInminente` (veto ≤3d) y la estrategia catalizador dependían de `proximoEarnings`
   de FMP (sin créditos) → llegaba siempre vacío y degradaban a «no vetar» EN SILENCIO. Fix:

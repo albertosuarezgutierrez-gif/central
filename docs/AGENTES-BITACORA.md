@@ -15,6 +15,18 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-06 · facturas-correo (trigger diario)** · hizo: Vía B sana (`dias_caido=1`, `agente_salud`
+  actualizado); backlog `Extraccion-fallida` limpiado (8→0: 1 DIGI ya archivada/conciliada, 2 Parkinglibre
+  sin gasto real o personal, 5 correspondencia Mapfre — ninguno era factura pendiente real, solo residuo
+  de etiqueta); 4 candidatos nuevos de Gmail (Amazon tinte+leche infantil = personal, Booking pregunta de
+  huésped, expediente propio) sin acción, marcados `Procesada`; factura SIQUE BRILLA nº 2025/333 (780,10€,
+  lavandería Luxury/Bustos Reforma/Duplex/Casa Socorro, subida manual duplicada 2×) conciliada contra banco
+  (estaba mal clasificada `personal`, corregida a `turistico_pisos`) — 2ª copia duplicada registrada en
+  `_DUPLICADOS_BORRAR`; auto-verificación de 15 avisos antiguos de la papelera: ninguno zombi, todos
+  siguen pendientes de borrado manual. dudas: —; fallos: —. **Para tu decisión (Alberto):** Roborock
+  Aspirador (Amazon, 247,92€) se envía a Costa Ballena (Rota, Cádiz) — no es ningún piso turístico de
+  Sevilla ni Monte Carmelo, ¿personal o negocio? etiqueta `Facturas/Revisar`, 5 días pendiente.
+  PRs/commits: rama `claude/inspiring-gauss-r0kbtf`.
 - **2026-08-01 · facturas-correo (trigger diario)** · hizo: Vía B sana (dias_caido=0, `agente_salud`
   actualizado), sin backlog en `PDF-pendiente`/`Revisar`. 2 candidatos: Giraldillo AFV-11808 (72,60€,
   lavandería, deducible `turistico_pisos`) archivado en Drive con nombre normalizado, conciliación
