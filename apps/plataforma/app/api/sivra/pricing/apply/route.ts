@@ -298,6 +298,12 @@ export async function POST(req: NextRequest) {
       WHERE m.price_night > 0 AND m.scenario LIKE 'prop_%'
         AND m.checkin_date >= CURRENT_DATE
         AND m.search_date >= CURRENT_DATE - 120
+        -- 🚨 Fuera las pasadas cuyo corpus NO distingue la fecha (06/08/2026): el barrido llegó a
+        -- cubrir el calendario entero pero devolvía los MISMOS precios para fechas distintas (117
+        -- ventanas, 22 medianas, 93% repetidas). Meterlas aquí es fabricar estacionalidad: el
+        -- bucket de noviembre saldría igual que el de abril y el motor lo aplicaría como si fuera
+        -- mercado medido. Sin ellas se cae al ancla global, que es peor pero honesto.
+        AND NOT m.corpus_clonado
         AND m.checkin_date NOT IN (SELECT rate_date FROM eventos)
       ORDER BY m.scenario, m.checkin_date, m.comp_name, m.search_date DESC
     )
@@ -334,6 +340,7 @@ export async function POST(req: NextRequest) {
       WHERE m.price_night > 0 AND m.scenario LIKE 'prop_%'
         AND m.checkin_date >= CURRENT_DATE
         AND m.search_date >= CURRENT_DATE - 120
+        AND NOT m.corpus_clonado   -- mismo motivo que en el bucket del mes
       ORDER BY m.scenario, m.checkin_date, m.comp_name, m.search_date DESC
     )
     SELECT r.scenario AS property_id, r.checkin_date::text AS rate_date,
