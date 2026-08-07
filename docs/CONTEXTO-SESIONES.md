@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🐕 El watchdog de trading avisó de una pasada que SÍ corrió (07/08/2026)
+«NAV 21 h sin refrescar» era FALSO: el NAV llevaba 10 h (20:16 UTC) y `/puntuar` 9,9 h — la pasada
+del 06/08 corrió entera. Dos fallos: (1) el tramo 2 medía `max(trading_tesis.created_at)`, tabla
+IDEMPOTENTE desde #1271 (único `(simbolo,fecha,estrategia)` + `skipDuplicates`), así que la 2ª
+pasada del mismo día (repaso manual a las 09:34) no insertó nada y el reloj se quedó clavado en la
+primera; (2) el motivo de los TRES tramos llevaba «el NAV de IBKR» cableado → el aviso mandaba a
+mirar IBKR y la rutina. Fix: latido explícito `trading_analizar` (como `/puntuar`) + `GREATEST` con
+las tesis de respaldo, y `etiqueta` por tramo en `evaluarWatchdog`. PR #1290.
+
 ### 💓 El latido del barrido deja de estar rojo para siempre (07/08/2026)
 Segunda pasada con #1282 vivo: la guardia volvió a saltar (174 comps, 19 fechas, **17 precios
 distintos**) → confirmado ESTRUCTURAL, no era cosa del día. Los snippets de Google no distinguen

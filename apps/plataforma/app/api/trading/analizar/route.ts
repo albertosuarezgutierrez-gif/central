@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { isRoutineAuthorized } from '@/lib/cron-auth'
 import { prisma } from '@/lib/db'
 import { tgSend } from '@/lib/telegram'
+import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { mensajeCompraPaper } from '@/lib/trading-notify'
 import {
   indicadoresDe, torneo, dimensionar, abrir,
@@ -149,6 +150,19 @@ export async function POST(req: NextRequest) {
   // earnings caen entre semana). Contexto para Alberto — el veto ya lo aplicó la barrera de arriba.
   const lineaEarnings = lineaEarningsProximos(fechasEarnings, fecha)
   if (lineaEarnings) await tgSend(lineaEarnings).catch(() => {})
+
+  // 💓 Huella de que el ANÁLISIS corrió. No puede ser `max(trading_tesis.created_at)`: con el único
+  // (simbolo,fecha,estrategia) + skipDuplicates de arriba, una segunda pasada del MISMO día no inserta
+  // ni una fila, así que el reloj de la tabla se queda clavado en la primera. Pasó el 06/08/2026 —
+  // `/analizar` corrió a las 09:34 UTC (repaso manual) y otra vez esa noche; la nocturna fue un no-op
+  // en datos y a la mañana siguiente el watchdog vio «21 h sin tesis» y avisó de una pasada que SÍ
+  // había corrido entera. Igual que `/puntuar`: la huella se escribe siempre, haya filas nuevas o no.
+  // Best-effort (no rompe la respuesta si la tabla no está).
+  await registrarLatido(
+    'trading_analizar',
+    true,
+    `${ideas.length} símbolo(s) analizados · ${ideas.filter(i => i.operada).length} operado(s) en paper`,
+  )
 
   ideas.sort((a, b) => b.confianza - a.confianza)
   return NextResponse.json({ fecha, top: ideas.slice(0, 5), total: ideas.length })
