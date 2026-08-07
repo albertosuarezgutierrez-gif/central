@@ -36,6 +36,124 @@ parte y en la BD. De paso, el UPDATE del sweep ya solo marca SUS filas (`scenari
 `WHERE search_date = CURRENT_DATE` a secas se llevaba por delante los comps del scraper diario
 —16 en producción, ya recuperados—, que es justo la fuente que sí mide temporada. tsc 0 · 914 tests.
 
+- **🧹 Atasco de PRs de rutinas resuelto: 6 PRs cerrados en una pasada (07/08/2026).** La auditoría
+  del 07/08 (#1285, mergeada con el fix de `rotar-memoria.mjs` + 17 tests) dejó 4 PRs de solo-texto
+  atascados 1-3 días y en conflicto. Resueltos: #1252 y #1277 CERRADOS (su contenido de valor ya
+  estaba en `main` vía #1285 — verificado archivo a archivo), pero sus **informes de auditoría del
+  05/08 y 06/08 rescatados** aquí en `docs/AUDITORIA-2026-08.md` + `docs/AUTO-APLICADOS.md` para no
+  dejar huecos en el histórico. #1254, #1279 y #1286 (auto-informes `facturas-correo` 05, 06 y 07/08)
+  CERRADOS con su bitácora rescatada en `docs/AGENTES-BITACORA.md`. Queda pendiente la decisión de
+  fondo: dar push directo a `main` a las rutinas de solo-texto, o revisar los PR drafts a diario.
+
+### 📎 Pasada diaria facturas-correo (07/08/2026)
+Vía B sana (dias_caido=2), sin backlog en `PDF-pendiente`/`Revisar`. 2 candidatos revisados: aviso
+de próximo cargo PriceLabs (49,97 USD, 08/08, aún sin PDF — pendiente de la factura real) y factura
+de impuestos propia de Stripe para la cuenta ia.rest (fuera de alcance, no es compra de Alberto).
+Nada que archivar/conciliar hoy. Detalle en `docs/AGENTES-BITACORA.md`.
+
+- **📬 Pasada diaria facturas-correo (06/08/2026).** Vía B sana. Backlog `Extraccion-fallida` limpiado
+  (8→0, ninguno era factura real pendiente). Factura SIQUE BRILLA 780,10€ (lavandería 4 pisos) conciliada
+  y reclasificada `personal`→`turistico_pisos`. Roborock Amazon 247,92€ (Costa Ballena, Rota) confirmado
+  por Alberto como deducible House Sevillana, archivado; conciliación bancaria pendiente. Detalle en
+  `docs/AGENTES-BITACORA.md`.
+
+- **🧾 facturas-correo (05/08/2026, trigger diario) — el escaneo de correo destapó una venta de
+  3,3M€ colada como "gasto".** Vía B sana, sin backlog. Re-archivadas 3 facturas Booking mal ubicadas
+  por el cron `facturas-scan` (mismo bug de siempre). **Hallazgo gordo:** el cron metió en `gastos`
+  como si fueran facturas de Alberto: 2 extractos de Allianz sobre la póliza impagada de UN CLIENTE
+  (importes que no casan con el documento — probable alucinación de la extracción) y el "Documento de
+  Reserva" de Ariste Investments para comprarle a **San Luis 9 CB** (comunidad de la que Punto y Coma
+  podría ser copropietaria) el edificio de Calle San Luis 9 por **3.300.000€**, con una señal de
+  **33.000€ pagadera en 2 días hábiles desde el 31/07** (plazo ya vencido o al filo). Ninguna de las
+  4 filas es gasto deducible — avisado a Alberto por Telegram. Detalle en `docs/AGENTES-BITACORA.md`.
+
+- **🤝 Landing privada de partnership Teya (06/08/2026, auditoría diaria, PR #771).** One-pager
+  `noindex` en `/partner/teya` (`apps/ia-rest`) para la reunión con Federico Muratore: PosLink +
+  All-In-One, diferenciadores VeriFactu/voz frente a Teya. Sin lógica de producto ni tests —
+  página estática de marketing, no requiere entrada en los manuales de usuario.
+
+- **💶 ialimp: precio de plan y ahorro anual sin formato español (auditoría diaria, PR #1139).**
+  Mergeado por el orquestador Fase 2 (coder barato) sin sesión que lo anotara.
+  `apps/ialimp/app/admin/planes/page.tsx` pintaba `€25` en vez de `25€` — la regla global de
+  dinero exige el € DETRÁS del número. Corregido con `.toLocaleString('es-ES')` en precio y ahorro.
+
+### 📎 El agente leía el LOGO del correo, no la factura (05/08/2026)
+#1243 funcionó (sinLeer 9→**0**, descartados 2→**11**, visión ya en `ai_usos`: 16 llamadas
+`gpt-5.6-luna`, 0 errores, 0,0056€ el día). Pero la factura de DIGI (76€) seguía sin entrar, y
+Alberto avisó de que **sí adjunta el PDF**. Cierto: el correo trae **12 adjuntos** — 11 imágenes
+`cid:` del HTML (`header.png`, `logo-Mi-DIGI.png`, iconos de redes…) y el PDF **el último**; y
+`pagos.ts` cogía `adjuntos[0]`, o sea un banner publicitario. Como el banner se lee perfectamente,
+el correo salía «descartado: leído, no era factura» — una comprobación que nunca se hizo. Fix:
+módulo PURO `lib/agente-facturas/elegir-adjuntos.ts` (7 tests, con el caso real de DIGI) que ordena
+adjunto-real > PDF > nombre-de-factura > decorativo, `mailparser.related` marca los `inline`, y el
+escaneo prueba hasta 3 adjuntos parando en el primero con importe. Además `quitarEtiqueta()` VACÍA
+`Facturas/Extraccion-fallida` de lo ya resuelto: la cola solo crecía y acabó afirmando «fallida» de
+correos ya leídos. tsc 0 · 812 tests · guardia 26/26 · build OK. PR #1257.
+
+### 🔀 `fuente` y `corpus_clonado` son columnas HERMANAS, no la misma (06/08/2026)
+Al mergear main en la rama de la fase 1 apareció #1282, del mismo día y otro carril. No se pisan:
+`corpus_clonado` = veredicto de UNA pasada (ya excluye al sweep del 05/08 en adelante de los buckets
+por mes y por fecha) · `fuente` = procedencia de la fila (mide cobertura fiable, `FUENTES_FIABLES`).
+Comprobado en BD: quedan **1.466 filas `serper` de antes del 05/08 (55 fechas) sin marcar** y sí
+alimentan el bucket mensual (ventana de 120 días), y el ancla global no se filtra por ninguna de las
+dos a propósito → **el gate de la fase 2 (≥3 fechas/mes con `booking_mcp`) sigue vigente tal cual**.
+Anotado en el spec y en el landmine de `apps/plataforma/CLAUDE.md`. **De paso el guardián de rutas de
+rutina (#1230) cazó un fallo real de la fase 1:** `mercado/plan` y `internal/latido` aceptaban el token
+pero NO estaban en `RUTAS_RUTINA`, así que el middleware las habría redirigido 307 → /login y la rutina
+habría fallado muda. Añadidas. tsc 0 · 934+26 tests · build OK.
+
+### 🏨 Mercado real por fecha: rutina de Booking → `market_rates` (06/08/2026, fase 1)
+Aprobado por Alberto. Piezas: columna **`market_rates.fuente`** (`serper`|`booking_mcp`|`manual`,
+default conservador `serper`; los 3 caminos ponían `portal='booking'` y el motor no filtra por portal),
+**`GET /api/sivra/mercado/plan`** (ventanas más urgentes, reusa `ventanasDelBarrido`), helper puro
+`lib/sivra/mercado-cobertura.ts` (13 tests), `ingest` con `fuente` validada, **`POST /api/internal/latido`**
+(huella para RUTINAS, allowlist) y latido `sivra_mercado_booking` + skill `mercado-booking` (diaria, 12
+ventanas de 96, acumula). **Probado con datos REALES:** 4-sep aforo 4 → 10 comps, p50 **129€** vs **171€**
+de Serper (+33%: es plano Y ALTO). tsc 0 · 900 tests · build OK. **Fase 2 (NO antes de 3 fechas/mes
+booking): retirar el sweep + neutralizar filas serper.** Spec: `docs/superpowers/specs/2026-08-06-mercado-booking-design.md`.
+
+### 🔎 Barrido de mercado: la MECÁNICA quedó arreglada; lo que falta es la FUENTE (06/08/2026)
+Pasada 03:00 con #1253+#1255: plan COMPLETO (120/120 ventanas, base entera, 339 comps, noviembre
+rescatado por el refuerzo de mes, extracciones 1,1 s). El rojo restante es la guarda de medianas
+clonadas, y TIENE RAZÓN — verificado contra `market_rates`: cada comp lleva precio CONSTANTE en todas
+las fechas (Vincci ≈305€, Smartr ≈93€, Genteel ≈259€ en ago/nov/mar); los snippets de Serper NO llevan
+fecha, la «temporada» del 04/08 era ruido de muestreo. Validado con Booking MCP: mismas propiedades a
+~160€/noche (nov) vs ~650€ (Feria) → fuente correcta. **Decisión PENDIENTE de Alberto:** rutina Claude
+programada con Booking MCP → `market_rates` (patrón Bienal 03/08). NO ablandar la guarda: el rojo diario
+de `sivra_mercado_sweep` es verídico hasta cambiar la fuente. Serper sigue valiendo para el ancla global.
+
+- **🐕 3er tramo del watchdog de trading + 2 crons rotos desde el 30/07 (06/08/2026).** La pasada del
+  06/08 dejó NAV y 64 tesis pero NUNCA llamó a `/puntuar`: ni stops ni walk-forward, y el watchdog lo
+  habría dado por bueno (solo miraba NAV+tesis). `/puntuar` no escribe NADA sin tesis vencidas ni
+  stops, así que su huella es un latido explícito (`agente_latidos.trading_puntuar`, patrón de
+  facturas-scan) y el watchdog gana tramo 3. `evaluarWatchdog` acepta `huella` — el «nunca» decía
+  siempre «broker_saldos vacío» y mandaba a mirar la tabla equivocada. Crons arreglados y validados
+  contra BD real: `concursos-cierre` (falta `::int`, Prisma manda bigint a `make_interval`) y
+  `sivra/pricing/resumen-diario` (la columna es `applied_at`, no `created_at` — llevaba una semana
+  callando **173 cambios de precio/día**). Verificado: 888 tests, tsc 0, build 0.
+
+- **🚨 La barra EN CURSO hundía el volumen: H8 era indetectable y lo decía como «no salta» (06/08/2026).**
+  Auditando el retrovisor a mitad de ciclo: `volRelMes` medio 0,62 (debe rondar 1,0) y 47% de las
+  observaciones por debajo de 0,2. Causa: `barrasPeriodicas` corta en la fecha del snapshot → su última
+  barra era el mes EN CURSO; el precio de una barra a medias es real, pero el **volumen es acumulativo**
+  (día 1 = 1 sesión de 21). Prueba: día 1 en sábado/domingo → mediana 1,02 (sin cotización, última barra
+  = mes cerrado); en día hábil → 0,047 ≈ 1/21. Solo 263 capitulaciones frente a 2.008 caídas ≥25%, y se
+  guardaba `capitulacionMes:false` = «mirado y no salta» cuando era «no se puede saber». Fix:
+  `barrasCerradas`/`claveDePeriodo` en `velas.ts` (6 tests). **El primer ciclo queda ANULADO para H8**
+  (Enmienda 3 del pre-registro); H9 intacta (trabaja sobre cierres diarios). tsc 0 · 730 tests · build 0.
+  PR #1283.
+
+### ⏱️ El cron de mercado moría a los 300s JUSTO antes de avisar chollos (06/08/2026)
+Seguimiento post-merge del peaje de obra (#1259): «0 chollos avisados hoy» **no era** «no hay chollos» —
+`/api/cron/subastas-mercado` devolvió **504 a las 06:20:43** («Task timed out after 300 seconds») y nunca
+llegó a `avisarChollos`. No es regresión del peaje (lógica pura, ms): los 2 pasos de red pueden gastar 420s
+solos (8 fichas + 6 zonas × 30s de timeout) y **los avisos van al final**; el 05/08 ya se salvó por 15s
+(285s). Fix con la doctrina del repo («subir el techo mueve la pared; el presupuesto hace que la pasada
+VUELVA»): helper puro `lib/subastas/presupuesto-mercado.ts` (6 tests) — los pasos de red se cortan en un
+deadline **reservando 70s para el tramo que avisa**, y no se arranca una petición que no quepa ENTERA (el
+fallo exacto). Además **latido `subastas_mercado`** (intento al empezar + definitivo tras avisar) y su
+sonda: nadie se enteró del 504 porque este cron no tenía vigía. Verificado: tsc 0 · 903 tests · build OK.
+
 ### 📉 El prior estacional ya corrige a la baja — sin regalar precio (06/08/2026)
 Decisión de Alberto: «a la baja sí, pero que no se regale precio; Sevilla en julio y sobre todo
 agosto está vacía, es normal que no haya reservas». Clave del diseño: la BAJADA solo mira el **ADR**,
@@ -173,6 +291,7 @@ Verificado: tsc 0 · 897 tests · build OK.
   prioridad construida > útil > sin etiqueta > **parcela** — en una unifamiliar la parcela se cita ANTES y
   quedarse con la primera valora el inmueble por el solar. Nuevo paso `reextraerDatosDeTexto` en el cron: el
   extractor solo corría en la INGESTA, así que mejorarlo no rescataba nada del corpus vivo. Tests 411/851.
+
 ### 🔨 Las casas derruidas dejan de salir como chollos (05/08/2026)
 Alberto confirmó con un caso real (Idealista 111790643, Llanes: 99.000€, 541€/m², −68%) que los
 descuentos «de derribo» son casas a levantar, no chollos. `detectarChollos` (módulo `comparables.ts`)
@@ -219,7 +338,7 @@ volvió `organic:[]` mientras feb/mar 2027 traían comps — el token de fecha I
 distancia ni cuota. Fix: consulta de refuerzo con el MES EN TEXTO («noviembre 2026») SOLO para ventanas
 de base (un evento exige comps de SU fecha; el bucket del motor es mensual), bajo el mismo cupo
 `SIVRA_SWEEP_MAX_REFUERZO`. `consultasDeVentana` movida a `mercado-ventanas.ts` (pura, 3 tests).
-**Verificar latido 06/08** (send_later armado).
+**Verificar latido 06/08** (send_later armado; rutina PENDIENTE de alta manual).
 
 - **⚖️ El dato que decide Belmonte estaba guardado y no lo leía nadie: la nota marginal (04/08/2026,
   rama `claude/carga-no-recogida-analizada-vjkwc9`).** Auditando `cargas_detalle` a mano tras la relectura,
@@ -289,18 +408,6 @@ muestras <3 comps. Verificado: tsc 0 · 851 tests · build OK. **Pendiente: lati
   +2 pp de mediana). Caveat firmado: stops suelen ayudar al momentum y matar la reversión — si H8 se
   cablea, su salida se evalúa aparte. PR #1248.
 
-- **🧾 Agente de facturas: ahora mira A NOMBRE DE QUIÉN viene la factura (31/07/2026).**
-  - Disparador: la bandeja pidió revisar una obra de 2.420,59€ de LUANSA que era del tejado de la
-    **Hacienda El Triunfo** (factura a «El Triunfo CB», CIF E26631895) — ajena a Alberto. Entró porque el
-    abogado la mandó a MAPFRE como prueba y el hilo se le reenvió. Descartada de `gastos` a mano.
-  - `receptor.ts` (puro + 10 tests): tres estados `nuestro`/`ajeno`/`desconocido`. Solo descarta con
-    NIF identificado que NO casa con los titulares; el nombre solo confirma, nunca descarta. Titulares =
-    `sociedades` + env `FACTURAS_TITULARES_NIF`. Decisión de Alberto: **ignorar + avisar** por Telegram.
-  - Bug arreglado de paso: en IONOS el extractor guardaba el NIF de Alberto como CIF del proveedor →
-    envenenaba la huella (ningún proveedor aprendía regla). El prompt ya pide emisor y receptor por separado.
-  - Fila nueva en `sociedades`: PUNTO Y COMA GESTION, S.L. (B90446683) — sin ella DIGI salía «ajena».
-  - **Pendiente:** PDF escaneado sin capa de texto se descarta (`extraer.ts` no cae a visión); 24 adjuntos
-    ilegibles en la pasada del 31/07. Y no hay destino para gastos de la correduría en `negocios`.
 - **🧾 facturas-correo (01/08/2026, trigger diario).** Vía B sana, sin backlog. Archivada la factura
   de la lavandería Giraldillo AFV-11808 (72,60€, deducible); pago aún pendiente, sin conciliar. **Hallazgo
   colateral:** el cron `facturas-scan` (`apps/plataforma/lib/agente-facturas/drive.ts`) archiva TODO lo que
@@ -330,14 +437,6 @@ muestras <3 comps. Verificado: tsc 0 · 851 tests · build OK. **Pendiente: lati
   `lib/trading/velas.ts` (puro, 13 tests, tres estados null/false/true) recolectado en el retrovisor
   sobre las ~800 del universo; NO toca ranking. Pre-registrado como **H8**. PR #1247.
 
-- **🔎 Verificación en caliente del arreglo de los ADR + techo al nº de acciones (31/07/2026).** Sin esperar
-  al cron: bajados por `pg_net` los companyfacts de los 5 peores del radar y pasados por el parser ya
-  mergeado. NMR (30.061.813 mil M$ de capitalización), PAC, LTM, BSAC y BCH → los 5 salen `emisorExtranjero`
-  y capitalización **NULL**. Ojo con LTM: presenta en DÓLARES, así que solo lo caza la regla del 20-F —
-  la de divisa no habría bastado. Hallazgo nuevo: el nº de acciones también viene inflado por el propio
-  emisor (Nomura ×1e6, PAC ×1000) y `accionesPlausibles` solo miraba hacia abajo → techo en 1e13, que caza
-  a Nomura sin tocar a los que sí tienen 1e11 acciones de verdad (LATAM, Santander Chile). PAC no es
-  separable y se queda. Hoy lo tapa el gate del ADR; la guarda es para cuando `acciones` se use para otra cosa.
 ### 🔐 Trial Tuya IoT Core renovado — cerraduras OK de nuevo (04/08/2026)
 Los PINs del teclado de Socorro fallaban por `Tuya 28841002: IoT Core service subscription has expired`
 (NO por el corte de luz; la «Sonda» no enlaza nada, solo lee por cloud). Alberto renovó el trial en
@@ -798,6 +897,7 @@ copiar. Luxury sigue congelado hasta el 01/09 (decisión de Alberto).
   solo reconoce entradas que empiezan por `- **`; una entrada con formato `### ` no se archivó sola y hubo
   que moverla a mano — si vuelve a pasar, vale la pena normalizar el formato de cabecera o enseñarle al
   script el patrón `### `.
+
 - **📊 Facturas Booking.com julio 2026 verificadas vs banco (03/08/2026).** Llegaron 3 facturas (noreply@booking.com);
   guardadas en Drive por correo-triaje. Cuadre: Socorro (4340072) 634,69€ ✅ · Bustos Tavera (4771238) 450,79€ ✅ ·
   Dúplex (2888928) 587,23€ esperado — pago bancario aún no llegó (vence 16 ago). Socorro 24 (ID Booking 2039943)
@@ -806,4 +906,3 @@ copiar. Luxury sigue congelado hasta el 01/09 (decisión de Alberto).
   lee PDF via contentSnippet, notifica resumen). Casos abiertos SIN respuesta: Bernardi -466,70€ (5603355846,
   House Sevillana) y Valantin -84,61€ (5712457476, Busto Reform). IDs Booking.com: 2888928=Dúplex ·
   4340072=Socorro · 4771238=Bustos Tavera · 2039943=Socorro 24. Skill sivra-maestro actualizada con este mapeo.
-

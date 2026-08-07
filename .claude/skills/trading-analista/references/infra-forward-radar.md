@@ -22,10 +22,16 @@
   el allowlist de red, usa `ALERTA_TOKEN`). Hubo una duplicada («Agente inversión») que se BORRÓ — no recrear
   una segunda rutina que cargue esta skill (toda la inteligencia ya está aquí; un prompt largo en el trigger
   solo se queda caduco). Si detectas dos, deja una y avisa.
-- **🐕 Watchdog** — cron `/api/cron/trading-watchdog` (`30 6 * * 2-6`, mar-sáb 08:30 CEST) comprueba que el
-  NAV de IBKR en `broker_saldos` se refrescó "anoche" (umbral 18 h) y, si no, avisa por Telegram (rutina
-  borrada/pausada · IBKR caído · `ALERTA_TOKEN` 401 sin redeploy). Lógica pura en `apps/plataforma/lib/trading/
-  watchdog.ts` (`evaluarWatchdog`/`seEsperaRefresco`). Es la red que caza que esta pasada deje de correr.
+- **🐕 Watchdog, 3 tramos (06/08/2026)** — cron `/api/cron/trading-watchdog` (`30 6 * * 2-6`, mar-sáb
+  08:30 CEST) comprueba que la pasada nocturna dejó "anoche" sus TRES huellas: 1) el NAV de IBKR en
+  `broker_saldos` (lectura del bróker), 2) las tesis en `trading_tesis` (análisis, `/analizar`), y 3) el
+  latido `trading_puntuar` en `agente_latidos` (cierre, `/puntuar` — no escribe tabla de negocio si no hay
+  tesis vencidas ni stops, por eso necesita un latido explícito). Vigilar solo el NAV dejaba un hueco: si
+  IBKR da el saldo pero `/analizar` o `/puntuar` petan a medias, el watchdog callaba con el fallo tapado
+  (caso real 06/08: NAV+64 tesis pero `/puntuar` nunca se llamó → stops y walk-forward congelados en
+  silencio). Si falta cualquiera de las tres, avisa por Telegram (rutina borrada/pausada · IBKR caído ·
+  `ALERTA_TOKEN` 401 sin redeploy). Lógica pura en `apps/plataforma/lib/trading/watchdog.ts`
+  (`evaluarWatchdog`/`seEsperaRefresco`). Es la red que caza que esta pasada deje de correr.
 
 ## Forward paper (la prueba limpia que decide el dinero real)
 - **`GET/POST {PLATAFORMA_URL}/api/trading/paper`** (Bearer `ALERTA_TOKEN` o sesión superadmin): mide el

@@ -18,7 +18,10 @@ antiguo dashboard a **`banca/NegociosResumen.tsx`** (server component autoconten
 login/register y de ~15 `redirect('/dashboard')` de operador). Aterrizajes (`app/page.tsx`/login/register/
 CommandPalette) → `/banca`. **Sidebar:** una sola entrada **🏠 Inicio** (`UserSidebar.tsx`, fusiona
 Resumen+Banca). **Ficha de movimiento (PR2):** tocar el concepto de una fila del libro (`MovimientosTabla`,
-`BancaClient.tsx`) abre un bottom-sheet (negocio/deducible/factura + 🤖 ¿Qué es?). **Conmutador PEREZOSO por
+`BancaClient.tsx`) abre un bottom-sheet (negocio/deducible/factura + 🤖 ¿Qué es?). **Chip de negocio en
+móvil (05/08/2026, PR #1267):** la fila apilada de `/banca` en ≤768px ocultaba el select de negocio, así
+que un gasto ✅ deducible no decía a qué negocio estaba asignado (correduría/pisos/Dúplex) — chip con el
+`DESTINO_LABEL` junto al badge ✅, solo en móvil (en escritorio el select ya lo muestra). **Conmutador PEREZOSO por
 navegación** (`banca/SegTabs.tsx`, dos `next/link` con prefetch): `page.tsx` ramifica por `?tab` → cada
 pestaña computa SOLO sus datos (Dinero no toca el holding y viceversa; sin render-both). Trade-off: cambiar
 de pestaña es navegación (no conserva los filtros del libro). ⚠️ La sección de abajo describe el estado
@@ -63,5 +66,5 @@ los tokens en oscuro. **plataforma NO usa Tailwind** (CSS vars) — este sistema
 copy-paste; sivra/ialimp/rrhh/ia-rest sí tienen Tailwind y ahí Tremor entraría literal. Adopción por
 goteo: traer el patrón cuando una pantalla lo necesite, no migrar todo de golpe.
 
-<!-- verificado: 2026-07-29 -->
+<!-- verificado: 2026-08-07 -->
 

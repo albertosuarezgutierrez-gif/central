@@ -23,7 +23,7 @@
 | skill `ia-rest-maestro` | `apps/ia-rest/**` (rutas, Edge Functions, `supabase/`, `src/**`) |
 | skill `sivra-maestro` | `apps/sivra/**` (web pública), `apps/plataforma/lib/sivra/**` + `apps/plataforma/app/api/sivra/**` (gestión interna: agente huésped, pricing, mensajería — vive en plataforma, no en `apps/sivra`) |
 | skill `ialimp-maestro` | `apps/ialimp/**` |
-| skill `plataforma-maestro` | `apps/plataforma/**` (incluye crons sivra migrados, `/operador/*`, `/finanzas`, banca) |
+| skill `plataforma-maestro` | `apps/plataforma/**` (incluye crons sivra migrados, `/operador/*`, `/finanzas`, banca), `packages/module-subastas/**` (radar de subastas, lo consume `apps/plataforma/lib/subastas/**`) |
 | skill `perfil-fiscal` | `apps/plataforma/lib/fiscal-deducciones.ts`, `apps/plataforma/lib/finanzas.ts`, `/finanzas` |
 | `apps/ia-rest/CLAUDE.md` | `apps/ia-rest/**` |
 | `apps/sivra/CLAUDE.md` | `apps/sivra/**` |
@@ -40,6 +40,7 @@
 | skill `correo-triaje` | `apps/plataforma/lib/correo/**` (rutas, imap, clasificador, huespedes, triaje), `apps/plataforma/app/api/cron/correo-*`, tablas `correo_triaje`/`correo_cursor`/`correo_reglas`, `.claude/skills/facturas-correo/SKILL.md` (etiqueta puente `Triaje/Contabilidad`) |
 | `docs/DRIVE-ESTRUCTURA.md` (estructura `CENTRAL/` + IDs de carpetas Drive) | `.claude/skills/facturas-correo/SKILL.md` (IDs de carpetas de Drive), `scripts/drive/**`, Apps Scripts que escriben en Drive (`Facturas a Drive`) |
 | skill `pricing-agente` | `apps/sivra/**` pricing / `apps/plataforma/**` pricing, raíles Paso 4 |
+| skill `mercado-booking` | `apps/plataforma/lib/sivra/mercado-cobertura.ts`, `apps/plataforma/app/api/sivra/mercado/{plan,ingest}/**`, `apps/plataforma/app/api/internal/latido/**`, `apps/plataforma/prisma/sql/2026-08-06_market_rates_fuente.sql`, `docs/superpowers/specs/2026-08-06-mercado-booking-design.md` |
 | skill `buscador-ia` | `packages/core-ai/src/{client,openrouter,gateway}.ts`, `apps/plataforma/lib/ia-director.ts`, `docs/BUSCADOR-IA.md` |
 | Índice de arquitectura + Director de código (`docs/DIRECTOR-CODIGO.md`, skills `code-map`/`delegar-codigo`) | `scripts/auditar-estructura.mjs`, `docs/mapa-funciones.generated.json`, `apps/plataforma/prisma/sql/2026-07-10_mapa_arquitectura.sql`, `apps/plataforma/app/api/internal/mapa-arquitectura/**`, `apps/plataforma/lib/ia-director-codigo.ts`, `apps/plataforma/lib/programador.ts`, `apps/plataforma/app/api/ai/{codigo,ejecutar,programar}/**`, `scripts/ai-ejecutar.mjs`, `scripts/ai-programar.mjs`, `.github/workflows/ai-programar.yml`, `.claude/skills/{code-map,delegar-codigo}/SKILL.md`, tabla `mapa_arquitectura`, `.github/workflows/auditoria.yml` |
 | `packages/core-telegram` (uso) | `apps/plataforma/app/api/sivra/mensajes/**`, cualquier `lib/telegram.ts` |

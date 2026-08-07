@@ -601,6 +601,30 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
   eso `sinSenalDeTemporada` marca la pasada como NO fiable si todas las fechas de un aforo acaban con los
   mismos comps al mismo precio (≥3 fechas). Sin comps propios de la fecha el motor cae al ancla global,
   que está dominada por las fechas cercanas y más baratas.
+- **🏨 `sivra_mercado_booking` — la huella de una RUTINA, no de un cron (06/08/2026).** El corpus por
+  fecha lo mide ahora una rutina diaria de Claude con el conector de Booking (skill `mercado-booking`),
+  porque a un conector se le pregunta desde una sesión. Para que el vigía la vea igual que a los crons
+  hay un puerto nuevo **`POST /api/internal/latido`** (auth de rutina, **allowlist de agentes** — el
+  token viaja en prompts, así que no puede inventar agentes ni tocar la huella de un cron).
+  **🚨 LANDMINE — `market_rates.fuente` (migración `2026-08-06_market_rates_fuente.sql`, aplicada):**
+  los TRES caminos que escriben el corpus por piso ponían `portal='booking'` y eran indistinguibles
+  (barrido Serper · ingesta por conector · carga a mano). El motor (`pricing/apply`) **no filtra por
+  portal**: los mezcla en el mismo percentil. Medido ese día para el Dúplex el 4-sep, Serper daba
+  **p50 171€** (bucket del mes, elegible) contra **129€** reales de Booking: +33%, y los mismos comps
+  repetían precio en agosto, noviembre y marzo — los snippets de búsqueda traen precios de ANUNCIO,
+  sin fecha. `fuente` (`serper`|`booking_mcp`|`manual`, **default `serper`** = lectura conservadora)
+  es lo que permite medir cobertura fiable (`FUENTES_FIABLES` de `lib/sivra/mercado-cobertura.ts`
+  excluye Serper) y, en la fase 2, retirarlo sin adivinar por heurística de fechas.
+  **⚠️ NO apagues el sweep de Serper todavía:** hoy TODO el corpus `prop_*` sale de él (el cron
+  diario escribe `scenario='normal'`) y el motor tiene `MAX_MARKET_AGE_DAYS = 7` + bucket mensual con
+  ≥3 fechas — apagarlo antes de que Booking acumule 3 fechas/mes deja el pricing ciego en una semana.
+  **`fuente` NO es `corpus_clonado`** (columna hermana de #1282, mismo día): `corpus_clonado` es el
+  veredicto de UNA pasada (la guardia de medianas clonadas la marcó) y ya excluye a las pasadas del
+  sweep del 05/08 en adelante de los buckets por mes y por fecha; `fuente` es la PROCEDENCIA de la
+  fila y es lo que mide cobertura fiable. Siguen sin marcar las ~1.466 filas `serper` anteriores al
+  05/08 (55 fechas), que sí alimentan el bucket mensual (ventana de 120 días de `search_date`), y el
+  ancla global no se filtra por ninguna de las dos a propósito.
+  Diseño y gate completos: `docs/superpowers/specs/2026-08-06-mercado-booking-design.md`.
 - **🚨 LANDMINE — la huella se escribe DENTRO del trabajo que vigila: si la función muere, no hay
   huella (31/07/2026).** El mismo día de estrenar el vigía saltó «🧾 Escaneo de facturas: sin ninguna
   señal registrada» y la nota mandaba a mirar IMAP/app-password. No era eso: `facturas-scan` corría

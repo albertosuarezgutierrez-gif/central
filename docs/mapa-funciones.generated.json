@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-06T08:37:12Z",
-  "sha": "e9d325653ea7cee76cb2444ff1879b968bb609d8",
+  "generadoEn": "2026-08-06T12:59:31Z",
+  "sha": "40a270a55d507113c9643d6e544df6a68c1090c9",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -22226,6 +22226,26 @@
       ],
       "rutaApi": null,
       "hash": "ef9aebb0c871"
+    },
+    {
+      "ruta": "apps/ia-rest/src/app/partner/teya/page.tsx",
+      "ambito": "apps/ia-rest",
+      "exporta": [
+        "TeyaPartnerPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "TeyaPartnerPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 5
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "93737b9b6e52"
     },
     {
       "ruta": "apps/ia-rest/src/app/portal-eventos/page.tsx",
@@ -50559,7 +50579,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 58
+          "linea": 71
         }
       ],
       "tablas": [
@@ -50570,7 +50590,7 @@
         "pms_connections"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "3f811a364c60"
+      "hash": "abc8c7c53dad"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -50737,7 +50757,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/concursos-cierre",
-      "hash": "6b98b7008de6"
+      "hash": "7e238c4871a7"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/concursos-ingesta/route.ts",
@@ -51345,12 +51365,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 21
+          "linea": 23
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/subastas-mercado",
-      "hash": "e609d96402c4"
+      "hash": "f3f1d5af788c"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-radar/route.ts",
@@ -51492,15 +51512,16 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 21
+          "linea": 26
         }
       ],
       "tablas": [
+        "agente_latidos",
         "next",
         "trading_tesis"
       ],
       "rutaApi": "/api/cron/trading-watchdog",
-      "hash": "8973a4519735"
+      "hash": "dd66b0f1d59b"
     },
     {
       "ruta": "apps/plataforma/app/api/empresas/agente/route.ts",
@@ -52319,6 +52340,26 @@
       "tablas": [],
       "rutaApi": "/api/internal/alerta",
       "hash": "8f96b9ce86ab"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/internal/latido/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 23
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/internal/latido",
+      "hash": "cdfd4410aebf"
     },
     {
       "ruta": "apps/plataforma/app/api/internal/mapa-arquitectura/route.ts",
@@ -54484,7 +54525,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 39,
+          "linea": 43,
           "resumen": "\"portal\": \"booking\", // booking | trivago | expedia | tripadvisor | ... \"scenario\": \"prop_busto_reform\", // prop_<id> para comparables por piso, o normal/corpus \"checkin\": \"2026-06-13\", \"checkout\": \"2"
         }
       ],
@@ -54494,7 +54535,33 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/ingest",
-      "hash": "c6ad0403b9bf"
+      "hash": "09a952ac94c4"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/sivra/mercado/plan/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 26,
+          "resumen": "GET /api/sivra/mercado/plan?max=12 QUÉ ventanas (fecha × aforo) debe medir la rutina de Booking en ESTA pasada, ya ordenadas por urgencia. Es el contrato entre el plan de fechas (que vive en el código"
+        }
+      ],
+      "tablas": [
+        "market_rates",
+        "next",
+        "pricing_eventos_auto",
+        "pricing_piso_zona"
+      ],
+      "rutaApi": "/api/sivra/mercado/plan",
+      "hash": "de1b4d595b70"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/search/route.ts",
@@ -55159,7 +55226,7 @@
         "pricing_applied"
       ],
       "rutaApi": "/api/sivra/pricing/resumen-diario",
-      "hash": "aa9234910266"
+      "hash": "a1ae0d8aba09"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/settings/route.ts",
@@ -55954,12 +56021,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 7
+          "linea": 8
         }
       ],
       "tablas": [],
       "rutaApi": "/api/trading/puntuar",
-      "hash": "c49cf3c05a91"
+      "hash": "0545ef9b0b4f"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/saldo/route.ts",
@@ -56755,6 +56822,36 @@
       "hash": "e954e4804691"
     },
     {
+      "ruta": "apps/plataforma/lib/agente-facturas/elegir-adjuntos.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Qué adjunto de un correo es la factura. 🚨 Por qué existe este módulo (05/08/2026): el agente cogía `adjuntos[0]` y se quedaba con él. El aviso de factura de DIGI trae **12 adjuntos**: 11 imágenes incrustadas del HTML (`header.png`, `logo-Mi-DIGI.png`, `icon_calendar.png`, iconos de redes…) y el PDF",
+      "exporta": [
+        "ordenarAdjuntosFactura"
+      ],
+      "funciones": [
+        {
+          "nombre": "ordenarAdjuntosFactura",
+          "kind": "function",
+          "exportada": true,
+          "params": "adjuntos: T[]",
+          "retorno": "T[]",
+          "linea": 40,
+          "resumen": "4. nombre decorativo (logo/header/icon…) al final. Estable: a igualdad de puntuación se respeta el orden original del correo."
+        },
+        {
+          "nombre": "puntuar",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: AdjuntoCandidato",
+          "retorno": "number",
+          "linea": 47
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7213eff989a1"
+    },
+    {
       "ruta": "apps/plataforma/lib/agente-facturas/extraer.ts",
       "ambito": "apps/plataforma",
       "resumen": "Extracción de factura desde un buffer (PDF o imagen), reutilizable por el agente (scan/backfill) sin pasar por el endpoint HTTP. Replica el pipeline de app/api/expenses/parse-invoice/route.ts.",
@@ -56925,6 +57022,7 @@
       "exporta": [
         "listarCandidatosConLimite",
         "listarCandidatos",
+        "quitarEtiqueta",
         "etiquetarCorreo",
         "marcarProcesado"
       ],
@@ -56935,7 +57033,7 @@
           "exportada": false,
           "params": "",
           "retorno": "ImapFlow",
-          "linea": 24
+          "linea": 36
         },
         {
           "nombre": "listarCandidatosConLimite",
@@ -56943,7 +57041,7 @@
           "exportada": true,
           "params": "opts: { desde: Date; etiqueta?: string; deadline?: number },",
           "retorno": "Promise<ListadoCandidatos>",
-          "linea": 52,
+          "linea": 64,
           "resumen": "Lista correos candidatos a factura desde `desde` (Date). Si `etiqueta` existe como buzón en Gmail, se usa esa; si no, INBOX. 🚨 `deadline` (epoch ms) acota el listado: bajar y parsear el `source` comp"
         },
         {
@@ -56952,8 +57050,17 @@
           "exportada": true,
           "params": "opts: { desde: Date; etiqueta?: string }",
           "retorno": "Promise<CorreoCandidato[]>",
-          "linea": 99,
+          "linea": 120,
           "resumen": "Variante sin presupuesto (compatibilidad con los llamadores que no lo acotan)."
+        },
+        {
+          "nombre": "quitarEtiqueta",
+          "kind": "function",
+          "exportada": true,
+          "params": "messageIds: string[], etiqueta: string",
+          "retorno": "Promise<number>",
+          "linea": 158,
+          "resumen": "Quita una etiqueta a los correos indicados por `Message-ID`, en UNA sola sesión. 🚨 Por qué hace falta (05/08/2026): la cola `Facturas/Extraccion-fallida` solo crecía. Un correo que un día no se pudo "
         },
         {
           "nombre": "etiquetarCorreo",
@@ -56961,8 +57068,7 @@
           "exportada": true,
           "params": "uid: number, etiqueta: string, buzon = 'INBOX'",
           "retorno": "Promise<boolean>",
-          "linea": 122,
-          "resumen": "Copia el correo a una etiqueta de Gmail SIN marcarlo como visto ni procesado. Se usa para encolar lo que no se pudo leer: la etiqueta sobrevive a la sesión y al contenedor, así que un fallo de extracc"
+          "linea": 192
         },
         {
           "nombre": "marcarProcesado",
@@ -56970,13 +57076,13 @@
           "exportada": true,
           "params": "uid: number, etiqueta = 'Facturas/Procesada', buzon = 'INBOX',",
           "retorno": "Promise<void>",
-          "linea": 145,
+          "linea": 215,
           "resumen": "Marca un correo como procesado: keyword IMAP + copia a la etiqueta si existe. `buzon` = el que devolvió el listado (ver `etiquetarCorreo`): con el buzón equivocado ni el flag ni la copia encuentran el"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "74c9684348ca"
+      "hash": "43ddec119184"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/imputar.ts",
@@ -57072,7 +57178,7 @@
           "exportada": true,
           "params": "cuentaId: string, opts: { deadline?: number } = {},",
           "retorno": "Promise<ResultadoEscaneo>",
-          "linea": 68,
+          "linea": 78,
           "resumen": "@param opts.deadline epoch ms en el que el escaneo debe estar de vuelta. Sin él el trabajo es ilimitado y la función acaba muriendo por `maxDuration` — que es justo como se perdía el latido antes del "
         },
         {
@@ -57081,7 +57187,7 @@
           "exportada": false,
           "params": "facturaId: string, proveedor: string, importe: number, fechaVenc: string | null, cuentaId: string,",
           "retorno": "Promise<void>",
-          "linea": 201
+          "linea": 242
         },
         {
           "nombre": "aprobarPago",
@@ -57089,7 +57195,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string, debtorIban: string,",
           "retorno": "Promise<",
-          "linea": 257
+          "linea": 298
         },
         {
           "nombre": "aplazarPago",
@@ -57097,7 +57203,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string, dias = 7",
           "retorno": "Promise<boolean>",
-          "linea": 318
+          "linea": 359
         },
         {
           "nombre": "rechazarFactura",
@@ -57105,7 +57211,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 334
+          "linea": 375
         },
         {
           "nombre": "verificarPagosPendientes",
@@ -57113,7 +57219,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<number>",
-          "linea": 348
+          "linea": 389
         },
         {
           "nombre": "conciliarConBanco",
@@ -57121,7 +57227,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<number>",
-          "linea": 377
+          "linea": 418
         },
         {
           "nombre": "pagarTodo",
@@ -57129,7 +57235,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<",
-          "linea": 416
+          "linea": 457
         },
         {
           "nombre": "resumenSemanal",
@@ -57137,7 +57243,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 432
+          "linea": 473
         },
         {
           "nombre": "alertarFacturasAusentes",
@@ -57145,7 +57251,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<number>",
-          "linea": 461
+          "linea": 502
         },
         {
           "nombre": "proponerVinculoReserva",
@@ -57153,7 +57259,7 @@
           "exportada": false,
           "params": "facturaId: string, proveedor: string, fechaFactura: string | null,",
           "retorno": "Promise<void>",
-          "linea": 494
+          "linea": 535
         },
         {
           "nombre": "actualizarMensajeTg",
@@ -57161,7 +57267,7 @@
           "exportada": false,
           "params": "msgId: number | null, texto: string",
           "retorno": "Promise<void>",
-          "linea": 525
+          "linea": 566
         }
       ],
       "tablas": [
@@ -57174,7 +57280,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "38b0a798e53e"
+      "hash": "14544178c424"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/parsear-json-ia.ts",
@@ -63034,7 +63140,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9b686ae0e46f"
+      "hash": "855cb6693903"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/sonda-ia.ts",
@@ -63692,13 +63798,13 @@
           "exportada": true,
           "params": "pathname: string",
           "retorno": "boolean",
-          "linea": 36,
+          "linea": 42,
           "resumen": "¿La ruta está declarada como alcanzable por una rutina? (prefijo, como `PUBLIC`)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b5afb335ca4d"
+      "hash": "c93963c242aa"
     },
     {
       "ruta": "apps/plataforma/lib/rutina-tokens.ts",
@@ -65162,6 +65268,64 @@
       "hash": "06373f83d9d7"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/mercado-cobertura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/mercado-cobertura.ts — QUÉ ventanas pide medir la rutina de Booking, y en qué orden. POR QUÉ (06/08/2026). El barrido por búsqueda web quedó mecánicamente perfecto (120/120 ventanas el 06/08) y aun así NO mide temporada: los precios que devuelven los snippets son de anuncio y vienen SIN fe",
+      "exporta": [
+        "ventanasQuePedir",
+        "detalleIngesta",
+        "ingestaFiable"
+      ],
+      "funciones": [
+        {
+          "nombre": "diasEntre",
+          "kind": "function",
+          "exportada": false,
+          "params": "desdeIso: string, hastaIso: string",
+          "retorno": "number",
+          "linea": 62
+        },
+        {
+          "nombre": "clave",
+          "kind": "function",
+          "exportada": false,
+          "params": "checkin: string, aforo: number",
+          "retorno": "string",
+          "linea": 68
+        },
+        {
+          "nombre": "ventanasQuePedir",
+          "kind": "function",
+          "exportada": true,
+          "params": "plan: Ventana[], aforos: Map<number, string[]>, cobertura: CoberturaVentana[], hoyIso: string, max = 12,",
+          "retorno": "VentanaPedida[]",
+          "linea": 87,
+          "resumen": "Cruza el plan de ventanas (fechas) con los aforos de los pisos y la cobertura fiable ya medida, y devuelve las `max` que más falta hacen. Orden de urgencia, y el porqué de cada nivel: 1. **Nunca medid"
+        },
+        {
+          "nombre": "detalleIngesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: { ventanas: number comps: number sinRespuesta: number sinPrecio: number errores: string[] }",
+          "retorno": "string",
+          "linea": 139,
+          "resumen": "Parte de la pasada para el latido. Igual que en el barrido por búsqueda, **lo que NO se pudo medir va primero**: una ventana que el conector no contestó es «no lo sé», no «no hay mercado», y confundir"
+        },
+        {
+          "nombre": "ingestaFiable",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: { ventanas: number comps: number sinRespuesta: number errores: string[] }",
+          "retorno": "boolean",
+          "linea": 162,
+          "resumen": "¿Vale la pasada? Conservador igual que `barridoFiable`: hace falta haber MEDIDO algo y que la mayoría de lo intentado haya respondido. Una pasada que pide 12 ventanas y solo contesta 1 no es «poco mer"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4aa3c50284b6"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/mercado-ventanas.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/mercado-ventanas.ts — QUÉ fechas barre el mercado, y por qué. POR QUÉ (01/08/2026). El barrido mensual (`mercado/sweep`) miraba el PRIMER VIERNES de cada mes y nada más. Ocho fechas al año y media, todas elegidas por el calendario gregoriano: el barrido nunca veía la Feria, ni la Semana Sa",
@@ -66611,7 +66775,7 @@
           "exportada": true,
           "params": "dias = 30, maxCorreos = 150",
           "retorno": "Promise<",
-          "linea": 41,
+          "linea": 42,
           "resumen": "Ingesta de comparables desde las alertas de Idealista del correo. El mismo anuncio se repite en correos sucesivos mientras sigue vivo, de ahí el `ON CONFLICT (portal, ref_anuncio)`: se actualiza el pr"
         },
         {
@@ -66620,16 +66784,16 @@
           "exportada": true,
           "params": "a: Comparable, vistoEn: Date",
           "retorno": "Promise<number>",
-          "linea": 81,
+          "linea": 82,
           "resumen": "Upsert de UN comparable en `mercado_comparables` — la puerta única del corpus, compartida por las alertas de correo y la API oficial de Idealista (`lib/subastas/idealista-api.ts`): mismo dedupe `(port"
         },
         {
           "nombre": "enriquecerAnunciantesFotocasa",
           "kind": "function",
           "exportada": true,
-          "params": "max = 8",
+          "params": "max = 8, deadline?: number,",
           "retorno": "Promise<",
-          "linea": 135
+          "linea": 136
         },
         {
           "nombre": "consultarZona",
@@ -66637,16 +66801,16 @@
           "exportada": false,
           "params": "slug: string, etiqueta: string, fallos: string[]",
           "retorno": "Promise<void>",
-          "linea": 209,
+          "linea": 222,
           "resumen": "Consulta una zona en el puente y la cachea; aprende CP→distrito de los anuncios."
         },
         {
           "nombre": "referenciaZonasFotocasa",
           "kind": "function",
           "exportada": true,
-          "params": "max = 6",
+          "params": "max = 6, deadline?: number,",
           "retorno": "Promise<",
-          "linea": 270
+          "linea": 283
         },
         {
           "nombre": "comparablesVigentes",
@@ -66654,7 +66818,7 @@
           "exportada": true,
           "params": "meses = MESES_VIGENCIA",
           "retorno": "Promise<Comparable[]>",
-          "linea": 350,
+          "linea": 381,
           "resumen": "Comparables vigentes, ya en el tipo del módulo. Se cargan en memoria a propósito: la mediana por zona vive en el módulo puro (probada) y el filtro de zona es insensible a acentos, algo que en Postgres"
         },
         {
@@ -66663,7 +66827,7 @@
           "exportada": true,
           "params": "f: { municipio?: string | null busqueda_origen?: string | null provincia?: string | null }",
           "retorno": "string[]",
-          "linea": 392,
+          "linea": 423,
           "resumen": "Zonas por las que buscar el €/m² de una subasta, de la más específica a la más amplia. La primera que reúna muestra suficiente gana. `busqueda_origen` es el nombre de la búsqueda guardada del BOE («PU"
         },
         {
@@ -66672,7 +66836,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 407,
+          "linea": 438,
           "resumen": "Calcula y persiste el €/m² de mercado en las subastas que lo necesitan. Solo toca las que NO tienen tasación ni valor de referencia: donde hay una tasación real, los comparables no pintan nada (y el s"
         },
         {
@@ -66681,7 +66845,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<CholloSeguido[]>",
-          "linea": 487,
+          "linea": 518,
           "resumen": "Chollos vigentes + antigüedad estimada. La calibración del ritmo de refs usa `created_at` (primera vez que NOSOTROS vimos cada ref): para los anuncios que van ENTRANDO al corpus con los correos diario"
         },
         {
@@ -66690,7 +66854,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 521,
+          "linea": 552,
           "resumen": "Aviso Telegram de los chollos NUEVOS (una sola vez por anuncio). La mediana de zona se mueve a diario y un anuncio podría entrar y salir del umbral: `chollo_avisado_at` fija que cada anuncio avisa UNA"
         },
         {
@@ -66699,7 +66863,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 581
+          "linea": 612
         },
         {
           "nombre": "refrescarIndiceINE",
@@ -66707,7 +66871,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 609,
+          "linea": 640,
           "resumen": "Refresca la caché del IPV si está caducada. Best-effort (el cron lo llama)."
         },
         {
@@ -66716,7 +66880,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<IndicesVivienda | null>",
-          "linea": 643,
+          "linea": 674,
           "resumen": "Lee el IPV cacheado (sin red). Campos a null si aún no se han capturado."
         },
         {
@@ -66725,7 +66889,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<PulsoMercado | null>",
-          "linea": 674
+          "linea": 705
         },
         {
           "nombre": "avisarBajadas",
@@ -66733,7 +66897,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 701,
+          "linea": 732,
           "resumen": "Aviso Telegram de las BAJADAS DE PRECIO nuevas en las zonas vigiladas. Una bajada es señal aunque el anuncio no llegue a chollo: el vendedor ya ha cedido una vez y es el candidato natural a una oferta"
         }
       ],
@@ -66747,7 +66911,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "20487cb5628b"
+      "hash": "6e2e7e4ea27b"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/nota-simple.ts",
@@ -66850,6 +67014,48 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "a816fce0fa2c"
+    },
+    {
+      "ruta": "apps/plataforma/lib/subastas/presupuesto-mercado.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Reparto del tiempo del cron `subastas-mercado`. PURO y testeado. POR QUÉ EXISTE (incidente 06/08/2026): el handler encadena 8 pasos en serie y los dos de enriquecimiento pueden comerse, ELLOS SOLOS, más que todo el presupue",
+      "exporta": [
+        "deadlineEnriquecimiento",
+        "quedaTiempo",
+        "motivoCorte"
+      ],
+      "funciones": [
+        {
+          "nombre": "deadlineEnriquecimiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "inicio: number, totalMs: number = PRESUPUESTO_TOTAL_MS, reservaMs: number = RESERVA_AVISOS_MS,",
+          "retorno": "number",
+          "linea": 41,
+          "resumen": "Instante límite (epoch ms) hasta el que pueden estirarse los pasos de enriquecimiento por red. A partir de ahí el handler sigue con el tramo final."
+        },
+        {
+          "nombre": "quedaTiempo",
+          "kind": "function",
+          "exportada": true,
+          "params": "deadline: number, ahora: number, margenMs = 0",
+          "retorno": "boolean",
+          "linea": 58,
+          "resumen": "¿Cabe otra iteración de red antes del `deadline`? `margenMs` es lo que se estima que tarda UNA iteración: sin él, un bucle arranca una petición de 30 s a falta de 2 s del límite y se pasa igual — que "
+        },
+        {
+          "nombre": "motivoCorte",
+          "kind": "function",
+          "exportada": true,
+          "params": "cortado: boolean, hechos: string, pendientes: number",
+          "retorno": "string | null",
+          "linea": 73,
+          "resumen": "Parte legible de por qué se cortó una fase, para el detalle del latido y la respuesta del cron. `null` cuando la fase terminó su cola entera. Se dice SIEMPRE que se cortó, aunque no haya fallado nada:"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3bf29330838a"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/reapariciones.ts",
@@ -67693,7 +67899,7 @@
           "exportada": true,
           "params": "lote = 40",
           "retorno": "Promise<",
-          "linea": 67,
+          "linea": 72,
           "resumen": "Recolecta el siguiente lote: siembra desde trading_universo (+SPY como benchmark) y rellena las filas más rancias. Mismo patrón/ritmo que refrescarLoteUniverso (~4 símbolos/s contra SEC)."
         },
         {
@@ -67702,13 +67908,13 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 124,
+          "linea": 129,
           "resumen": "La LUPA de gurús: convicciones ACTUALES de Dataroma cruzadas con los factores actuales de la caché del radar — la materia prima para responder \"¿por qué se posicionan en esas empresas?\". Se guarda en "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f0f5e274a438"
+      "hash": "69221ac43395"
     },
     {
       "ruta": "apps/plataforma/lib/trading/buscar-simbolo.ts",
@@ -69115,20 +69321,40 @@
       "ruta": "apps/plataforma/lib/trading/velas.ts",
       "ambito": "apps/plataforma",
       "exporta": [
+        "claveDePeriodo",
         "barrasPeriodicas",
+        "barrasCerradas",
         "caidaDesdeMaximo",
         "volumenRelativo",
         "senalCapitulacion"
       ],
       "funciones": [
         {
+          "nombre": "claveDePeriodo",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string, periodo: 'sem' | 'mes'",
+          "retorno": "string",
+          "linea": 40,
+          "resumen": "Clave de periodo de una fecha suelta: 'YYYY-MM' (mes) o 'YYYY-MM-DD' del lunes ISO (semana). Misma definición que usa `barrasPeriodicas` para agrupar — se extrae para poder preguntar «¿la última barra"
+        },
+        {
           "nombre": "barrasPeriodicas",
           "kind": "function",
           "exportada": true,
           "params": "puntos: PuntoVol[], hasta: string, periodo: 'sem' | 'mes'",
           "retorno": "Barra[]",
-          "linea": 39,
+          "linea": 49,
           "resumen": "Remuestrea la serie diaria a barras de periodo, hasta `hasta` inclusive. Hermana con volumen de `cierresPeriodicos` de backtest-puro.ts (misma definición de semana: lunes ISO)."
+        },
+        {
+          "nombre": "barrasCerradas",
+          "kind": "function",
+          "exportada": true,
+          "params": "puntos: PuntoVol[], hasta: string, periodo: 'sem' | 'mes'",
+          "retorno": "Barra[]",
+          "linea": 89,
+          "resumen": "Barras hasta `hasta` DESCARTANDO la del periodo que aún está corriendo. Úsala SIEMPRE para medir señales de vela: `barrasPeriodicas` corta la serie en la fecha del snapshot, así que su última barra es"
         },
         {
           "nombre": "caidaDesdeMaximo",
@@ -69136,7 +69362,7 @@
           "exportada": true,
           "params": "barras: Barra[], ventana = 12",
           "retorno": "number | null",
-          "linea": 68,
+          "linea": 99,
           "resumen": "Caída del cierre de la ÚLTIMA barra respecto al máximo de las `ventana` barras ANTERIORES (la actual excluida: incluirla haría que un valor en máximos nunca pudiera dar 0). Negativo = por debajo del m"
         },
         {
@@ -69145,7 +69371,7 @@
           "exportada": true,
           "params": "barras: Barra[], ventana = 12",
           "retorno": "number | null",
-          "linea": 80,
+          "linea": 111,
           "resumen": "Volumen de la última barra contra la media de las `ventana` anteriores. null si falta el volumen de la barra actual o no hay suficientes barras previas CON volumen (fuente incompleta ≠ volumen 0)."
         },
         {
@@ -69154,13 +69380,13 @@
           "exportada": true,
           "params": "barras: Barra[], { ventana = 12, caidaMin = CAIDA_MIN, volMin = VOL_MIN }: { ventana?: number; caidaMin?: number; volMin?: number } = {},",
           "retorno": "SenalCapitulacion",
-          "linea": 109,
+          "linea": 140,
           "resumen": "Señal medida como la única con exceso positivo en el estudio: caída fuerte CON volumen. NO decide nada: se recolecta en el retrovisor (H8) antes de tocar ranking o cestas."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "17678fb6463d"
+      "hash": "e5722a90c196"
     },
     {
       "ruta": "apps/plataforma/lib/trading/volumen.ts",
@@ -69206,14 +69432,14 @@
           "nombre": "evaluarWatchdog",
           "kind": "function",
           "exportada": true,
-          "params": "params: { ahora: Date ultimoRefresco: Date | null maxHoras?: number }",
+          "params": "params: { ahora: Date ultimoRefresco: Date | null maxHoras?: number /** Qué huella se está mirando, para que el «nunca» diga la VERDAD. Por defecto, el NAV — pero el * mismo evaluador vigila ya las tesis y el cierre de /puntuar, y decirles ",
           "retorno": "EvalWatchdog",
           "linea": 33
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "55a1070f6456"
+      "hash": "9ae63f3b1901"
     },
     {
       "ruta": "apps/plataforma/lib/vercel-env.ts",
@@ -88928,7 +89154,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2389,
-    "funciones": 6413
+    "archivos": 2395,
+    "funciones": 6429
   }
 }

@@ -15,6 +15,54 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-07 · facturas-correo (trigger diario)** · hizo: Vía B sana (dias_caido=2, última copia
+  05/08 en `_buzon_pdf` — Stripe/Anthropic, Allianz, Parte Sevilla; `agente_salud` actualizado), sin
+  backlog en `PDF-pendiente`/`Revisar`, papelera `_DUPLICADOS_BORRAR` sin novedad (la 2ª copia de
+  FACTURA JULIO SOCORRO ya estaba avisada 03/08 y 06/08). 2 candidatos Gmail: aviso PriceLabs de
+  próximo cargo 49,97 USD (08/08, sin PDF aún — se archivará/conciliará cuando llegue la factura real
+  por Vía B) y factura de impuestos de Stripe para la cuenta ia.rest (VAT propio de Stripe, no es
+  compra de Alberto → fuera de alcance de esta skill); ambos `Facturas/Procesada`. `Luz pendiente 2026`
+  revisada: mismos 6 hilos TotalEnergies (abr-jun) ya documentados como contratos viejos de la SL, no
+  conciliables aquí — sin cambios. dudas: —; fallos: —; PRs/commits: PR #1286 (cerrado en conflicto,
+  bitácora rescatada en la pasada de resolución del 07/08).
+- **2026-08-06 · facturas-correo (trigger diario)** · hizo: Vía B sana (`dias_caido=1`, `agente_salud`
+  actualizado); backlog `Extraccion-fallida` limpiado (8→0: 1 DIGI ya archivada/conciliada, 2 Parkinglibre
+  sin gasto real o personal, 5 correspondencia Mapfre — ninguno era factura pendiente real, solo residuo
+  de etiqueta); 4 candidatos nuevos de Gmail (Amazon tinte+leche infantil = personal, Booking pregunta de
+  huésped, expediente propio) sin acción, marcados `Procesada`; factura SIQUE BRILLA nº 2025/333 (780,10€,
+  lavandería Luxury/Bustos Reforma/Duplex/Casa Socorro, subida manual duplicada 2×) conciliada contra banco
+  (estaba mal clasificada `personal`, corregida a `turistico_pisos`) — 2ª copia duplicada registrada en
+  `_DUPLICADOS_BORRAR`; auto-verificación de 15 avisos antiguos de la papelera: ninguno zombi, todos
+  siguen pendientes de borrado manual. Roborock Aspirador (Amazon, 247,92€, envío a Costa Ballena/Rota,
+  Cádiz) confirmado por Alberto en la misma sesión como gasto deducible de House Sevillana → archivado en
+  Drive (sin PDF adjunto en el pedido, guardado el cuerpo del pedido como justificante), `Facturas/Revisar`
+  quitada, `Facturas/Procesada` puesta; conciliación bancaria pendiente (el cargo -247,92€ aún no aparece
+  en `movimientos_bancarios`, a recoger en la próxima pasada). dudas: —; fallos: —.
+  PRs/commits: PR #1279 (cerrado en conflicto, bitácora rescatada en la pasada de resolución del 07/08).
+- **2026-08-05 · psd2-health-check** · hizo: preflight canal alerta OK (200); consulta frescura
+  `movimientos_bancarios WHERE origen='psd2'` → último movimiento 05/08/2026 (hoy), mov_30d=68 vs
+  mov_30d_prev=71 (sin caída >50%) → **✅ OK**, sin anomalía, sin aviso Telegram. dudas: —; fallos: la
+  consulta SQL de la skill usa columna `fecha` que no existe en la tabla (es `fecha_operacion`) —
+  drift de esquema, corregido ad-hoc en esta pasada pero el `.md` de la skill sigue con el nombre
+  viejo. PRs/commits: este commit (solo bitácora).
+- **2026-08-05 · facturas-correo (trigger diario)** · hizo: Vía B sana (dias_caido=1, `agente_salud`
+  actualizado), `PDF-pendiente` vacío. Re-archivadas 3 facturas Booking (comisión julio, 110,74+155,94+167,01€,
+  `turistico_pisos`) de "ALBERTO 2026 PERSONAL (SEGUROS)/AGOSTO" a `08-Agosto-2026` — mismo bug del cron
+  `facturas-scan` visto el 01/08 y 10/07; avisos en `_DUPLICADOS_BORRAR`. **Metí la pata con DIGI**: intenté
+  re-archivarla sin comprobar antes si ya estaba archivada — ya lo estaba (30/07, `07-Julio-2026` canónica,
+  conciliada) y además la copié a una carpeta `07-Julio-2026` DUPLICADA (no canónica, sin limpiar desde 07/07)
+  → dejé nota de corrección en `_DUPLICADOS_BORRAR` anulando mi propio aviso erróneo. **2 hallazgos fuera
+  de Gmail, en `gastos` (cron `facturas-scan`):** (1) 2 facturas "Allianz" (301,70€ y 291,73€) son en
+  realidad extractos de cuenta de MEDIADOR sobre pólizas de UN CLIENTE (Jaenes Amarillo), no gasto de
+  Alberto — importes que ni siquiera casan con ninguna cifra del documento (parecen inventados por la
+  extracción); (2) documento "Reserva San Luis 9" (Ariste Investments, compra del edificio San Luis 9 por
+  3.300.000€, reserva de 33.000€ pagadera en 2 días hábiles desde el 31/07) generó 2 filas de "gasto" de
+  3,3M€ y 33.000€ — es una operación de venta de un inmueble (San Luis 9 CB, del que Alberto podría ser
+  copropietario vía Punto y Coma), no un gasto deducible; el 33.000€ tenía plazo de pago ~03-04/08. Avisado
+  a Alberto por Telegram — ninguna de las 4 filas debe contarse como gasto. dudas: si Alberto es
+  copropietario de San Luis 9 CB y qué hacer con el plazo de la reserva (probablemente ya vencido); fallos:
+  mi propio error de duplicar DIGI sin comprobar primero si ya estaba archivada (corregido en la misma
+  pasada); PRs/commits: PR #1254 (cerrado en conflicto, bitácora rescatada en la pasada de resolución del 07/08).
 - **2026-08-01 · facturas-correo (trigger diario)** · hizo: Vía B sana (dias_caido=0, `agente_salud`
   actualizado), sin backlog en `PDF-pendiente`/`Revisar`. 2 candidatos: Giraldillo AFV-11808 (72,60€,
   lavandería, deducible `turistico_pisos`) archivado en Drive con nombre normalizado, conciliación
