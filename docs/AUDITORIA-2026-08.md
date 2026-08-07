@@ -1,5 +1,115 @@
 # Auditoría diaria — agosto 2026
 
+# Actualización 2026-08-07 — auditoría diaria (ligera)
+
+Rango: 50 commits desde la última reconciliación real en `main` (023fb05, 04/08 22:45 UTC) hasta
+hoy (02fa696, 06/08 12:59 UTC) — 3 días de trabajo intenso (subastas, trading, mercado-booking
+fase 1, facturas, CRM ia-rest) sin que ninguna pasada de auditoría llegara a mergearse.
+
+## 🔴 Hallazgo principal: 4 PRs de rutinas (solo memoria/docs) llevan 1-3 días sin mergear y ya están en conflicto
+Esta sesión, igual que las de 04/08–06/08, corre bajo el harness de tareas de GitHub sin permiso de
+push directo a `main` — así que el carril 1 (texto acotado → directo a `main`) lleva **varios días
+sin poder ejercerse de verdad**, y cada pasada termina en un PR draft que Alberto no ha mergeado
+todavía. Resultado: **4 PRs abiertos, todos `mergeable_state: dirty`** (ya no aplican limpio sobre
+`main`, que ha seguido avanzando):
+- **#1252** (auditoría 05/08) — trae el fix real de `scripts/rotar-memoria.mjs` (ver abajo) + la
+  entrada de memoria de PR #1139. **Su contenido de valor ya está incorporado en esta rama** (fix
+  portado + tests + entrada de memoria reescrita contra el `main` actual) — recomendado CERRAR sin
+  mergear una vez esta rama entre.
+- **#1277** (auditoría 06/08) — mismo hallazgo de PR #1139, redundante con #1252 y con esta pasada.
+  Recomendado CERRAR.
+- **#1254** (facturas-correo 05/08) y **#1279** (facturas-correo 06/08) — auto-informes de la
+  rutina `facturas-correo` (re-archivado en Drive, conciliación bancaria, hallazgos de gastos
+  fantasma ya avisados por Telegram en su momento). El trabajo real (Gmail/Drive/Supabase) **ya se
+  hizo e hizo efecto** — solo faltan sus líneas de bitácora en el repo. Esta auditoría NO reproduce
+  ese trabajo (fuera de alcance de `/auditoria-diaria`); recomendado que Alberto las revise y
+  mergee tal cual (son solo texto) o las cierre si ya no interesa el rastro.
+**Acción de fondo sugerida:** si las sesiones de rutina van a seguir sin push directo a `main`, el
+carril 1 de `/auditoria-diaria` es papel mojado en la práctica — vale la pena que Alberto decida
+entre (a) revisar/mergear estos PRs con más frecuencia, o (b) conceder push directo a `main` a las
+rutinas de solo-texto (memoria/bitácora), que es justo el riesgo bajo que el carril 1 asume.
+
+## 🔴→✅ `scripts/rotar-memoria.mjs`: dos bugs de fecha, uno ya conocido (PR #1252) y uno nuevo
+El bug de PR #1252 (entradas `### ` heredaban la fecha de la `- **` anterior; fechas envueltas a la
+línea 2 se perdían) seguía sin arreglar en `main` porque ese PR nunca mergeó. Portado aquí
+(`esInicioEntrada`/`textoFechaDe`/`trocear`/`clasificar` puros + `scripts/rotar-memoria.test.mjs`,
+16 tests) y verificado contra el corpus real.
+
+Al hacer el `--dry-run` post-fix apareció un **segundo bug**, no cubierto por el fix anterior: una
+entrada cuyo TÍTULO cita una fecha anterior antes de su fecha real —
+`- **🐕 3er tramo del watchdog... desde el 30/07 (06/08/2026).**` — se archivaba en JULIO porque
+`textoFechaDe` cogía la PRIMERA fecha de la negrita (`30/07`) en vez de la última (`06/08/2026`, la
+real). Fix: `clasificar` ahora usa la ÚLTIMA coincidencia de fecha dentro del texto de cabecera, no
+la primera (la convención de Alberto pone la fecha real justo antes del cierre `**`/fin de línea).
+Nuevo test de regresión con el caso real. **17/17 tests OK.** Verificado con `--dry-run` antes/después:
+sin el segundo fix se habrían archivado mal 3 entradas (1 de ellas de agosto); con él, exactamente
+2 entradas de julio legítimas. Rotación real ejecutada, segunda pasada `--dry-run` da 0 (idempotente).
+
+## ✅ Reconciliación de memoria — 2 huecos (PR #1139 ialimp, PR #771 Teya landing)
+`docs/CONTEXTO-SESIONES.md`: añadidas las 2 entradas que faltaban — PR #1139 (ialimp: formato
+español del precio de plan, mergeado por el orquestador Fase 2 sin sesión que lo anotara, ya
+detectado por el PR #1252 nunca mergeado) y PR #771 (landing privada de partnership Teya en
+ia-rest, `noindex`, sin lógica ni tests — no requiere entrada en manuales). Resto del rango de 50
+commits ya estaba bien reflejado en memoria (subastas, trading, mercado-booking, facturas, CRM —
+verificado por un agente de investigación dedicado).
+
+## ✅ Skills-maestro — 1 contradicción corregida
+`.claude/skills/trading-analista/references/infra-forward-radar.md`: describía el watchdog de
+trading vigilando SOLO el NAV de IBKR. El código (PR #1284, 06/08) le añadió un 3er tramo
+(`trading_tesis` + latido `trading_puntuar`) tras un caso real donde NAV+tesis quedaron pero
+`/puntuar` nunca se llamó y el watchdog lo habría dado por bueno. Doc corregido con el resumen de
+los 3 tramos.
+
+## ✅ `docs/FUENTES-DE-VERDAD.md` — 2 filas añadidas
+Fila de `plataforma-maestro` sin `packages/module-subastas/**` (3 PRs en 3 días sobre ese paquete
+sin fila asociada, mismo hallazgo del PR #1252 nunca mergeado) — añadida. Skill `mercado-booking`
+(creada 06/08) sin fila propia — añadida.
+
+## ✅ Sello de frescura refrescado — 1 doc
+`.claude/skills/plataforma-maestro/references/ui-inicio-dashboard.md` (`verificado: 2026-07-29`)
+describía `/banca`+`BancaClient.tsx` justo antes de que el PR #1267 (05/08) le añadiera el chip de
+negocio en móvil — añadida la línea + sello refrescado a `2026-08-07`.
+
+## ✅ Heartbeat de crons — 14/14 ✅ (2 falsos positivos ya documentados, verificados de nuevo)
+`updates/sync` (Smoobu) MUDO por umbral (81,2h sin fila en `incomes`) — verificado por
+`agente_latidos.smoobu_sync`: `ok:true`, última pasada buena hace 21,1h, "0 nuevas, 0 modificadas"
+— el sync corre a diario, sencillamente no hay reservas nuevas (temporada). `limpiadoras/auto-sessions`
+MUDO por umbral (50,1h) — verificado: 5 inserciones en los últimos 9 días, patrón normal ya
+documentado desde el 02/07 (cron idempotente, huecos de días son la norma). Ninguno requiere acción.
+
+## ✅ Integridad estructural — sin hallazgos
+Sin cambios de `package.json`/`pnpm-lock.yaml` en el rango (nada que reconciliar). `transpilePackages`
+de las 8 apps coherente con lo que cada una importa. Radiografía de estructura ya fresca (regenerada
+por el propio CI en el último commit del rango).
+
+## ✅ Manuales de usuario — sin gap
+CRM cold-email de ia-rest (#1270) es un cron 100% automático sin toggle ni acción de usuario — no
+necesita entrada en `help-prompts.ts`. Landing Teya (#771) es una página de marketing privada sin
+rol de usuario asociado. Sin cambios en `apps/ia-rest/src/components/help/**` ni `public/manual*.html`.
+
+## ✅ Correo triaje — sin drift
+Ningún dominio de este rango (subastas, trading, pricing) produce correo por el triaje genérico;
+subastas usa su propio lector IMAP dedicado por diseño. `rutas.ts` sin cambios necesarios.
+
+## Nota sobre el carril de entrega de esta pasada
+Misma restricción que 04-06/08: sesión bajo harness de GitHub, sin push directo a `main`. Todo lo
+de esta pasada (incluido lo que sería carril 1 por criterio: las 2 entradas de memoria, el drift de
+skills, las filas de `FUENTES-DE-VERDAD.md`, el sello refrescado) va en este PR en vez de directo a
+`main`.
+
+## Checklist de acciones manuales de Alberto
+1. **Revisar y mergear este PR** — incluye el fix real de `scripts/rotar-memoria.mjs` (bug de
+   fechas que llevaba 2 días activo en `main`), texto de memoria/skills, y el hallazgo de arriba.
+2. **Cerrar #1252 y #1277** una vez esta rama mergee (contenido incorporado; evita conflictos
+   residuales).
+3. **Revisar y mergear (o cerrar) #1254 y #1279** — auto-informes de `facturas-correo`, solo texto,
+   el trabajo real ya se hizo.
+4. **Decidir sobre el carril 1**: con push directo a `main` bloqueado 4 días seguidos, valorar dar
+   permiso de push directo a las rutinas de solo-texto o revisar los PR drafts con más frecuencia.
+5. Nada urgente en los 2 falsos positivos del heartbeat — patrón ya conocido.
+
+---
+
 # Actualización 2026-08-01 — auditoría diaria (ligera)
 
 Rango: 12 commits sustanciales desde la última auditoría (31/07/2026 02:07 UTC, pasada ligera)
