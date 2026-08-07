@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-06T12:59:31Z",
-  "sha": "40a270a55d507113c9643d6e544df6a68c1090c9",
+  "generadoEn": "2026-08-07T07:05:27Z",
+  "sha": "2ab1bdcce5af1e6307c8139e1de018fcacfb23ca",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54718,7 +54718,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/sweep",
-      "hash": "c1496046768f"
+      "hash": "37b20b5982f5"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pl-mensual/route.ts",
@@ -65779,6 +65779,7 @@
         "muestrasPobres",
         "clonRatio",
         "corpusClonado",
+        "midioTemporada",
         "barridoFiable",
         "detalleBarrido"
       ],
@@ -65837,13 +65838,22 @@
           "resumen": "`true` cuando la mitad o más de las medianas están clonadas entre fechas distintas y hay variedad suficiente (≥3 fechas) como para que eso NO sea lo esperable. Marca el corpus como no fiable: hay cifr"
         },
         {
+          "nombre": "midioTemporada",
+          "kind": "function",
+          "exportada": true,
+          "params": "ventanas: VentanaMedida[]",
+          "retorno": "boolean",
+          "linea": 142,
+          "resumen": "¿Sirve este corpus para la LÍNEA DE TEMPORADA (los buckets por mes y por fecha del motor)? Es la pregunta que responde la columna `market_rates.corpus_clonado`, y es DISTINTA de si la pasada salió bie"
+        },
+        {
           "nombre": "barridoFiable",
           "kind": "function",
           "exportada": true,
           "params": "r: ResumenBarrido",
           "retorno": "boolean",
-          "linea": 140,
-          "resumen": "¿Se puede afirmar que esta pasada ha medido el mercado? Conservador a propósito: ante la duda, NO (un latido verde de mentira es peor que uno rojo de más)."
+          "linea": 171,
+          "resumen": "¿Se pudo MIRAR el mercado en esta pasada? Conservador a propósito: ante la duda, NO (un latido verde de mentira es peor que uno rojo de más). 🚨 QUÉ **NO** ENTRA AQUÍ, Y POR QUÉ (07/08/2026). Hasta ho"
         },
         {
           "nombre": "detalleBarrido",
@@ -65851,13 +65861,13 @@
           "exportada": true,
           "params": "r: ResumenBarrido",
           "retorno": "string",
-          "linea": 151,
+          "linea": 180,
           "resumen": "Parte para el latido (y para el Telegram del vigía). Lo que NO se pudo mirar va primero."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "03638e0e08b0"
+      "hash": "0e6335fb96cb"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/seo-landing.ts",
@@ -89155,6 +89165,6 @@
   ],
   "resumen": {
     "archivos": 2395,
-    "funciones": 6429
+    "funciones": 6430
   }
 }
