@@ -24,6 +24,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🤝 Landing privada de partnership Teya (06/08/2026, auditoría diaria, PR #771).** One-pager
+  `noindex` en `/partner/teya` (`apps/ia-rest`) para la reunión con Federico Muratore: PosLink +
+  All-In-One, diferenciadores VeriFactu/voz frente a Teya. Sin lógica de producto ni tests —
+  página estática de marketing, no requiere entrada en los manuales de usuario.
+
+- **💶 ialimp: precio de plan y ahorro anual sin formato español (auditoría diaria, PR #1139).**
+  Mergeado por el orquestador Fase 2 (coder barato) sin sesión que lo anotara.
+  `apps/ialimp/app/admin/planes/page.tsx` pintaba `€25` en vez de `25€` — la regla global de
+  dinero exige el € DETRÁS del número. Corregido con `.toLocaleString('es-ES')` en precio y ahorro.
+
 ### 📎 El agente leía el LOGO del correo, no la factura (05/08/2026)
 #1243 funcionó (sinLeer 9→**0**, descartados 2→**11**, visión ya en `ai_usos`: 16 llamadas
 `gpt-5.6-luna`, 0 errores, 0,0056€ el día). Pero la factura de DIGI (76€) seguía sin entrar, y
@@ -68,6 +78,7 @@ fecha, la «temporada» del 04/08 era ruido de muestreo. Validado con Booking MC
 ~160€/noche (nov) vs ~650€ (Feria) → fuente correcta. **Decisión PENDIENTE de Alberto:** rutina Claude
 programada con Booking MCP → `market_rates` (patrón Bienal 03/08). NO ablandar la guarda: el rojo diario
 de `sivra_mercado_sweep` es verídico hasta cambiar la fuente. Serper sigue valiendo para el ancla global.
+
 - **🐕 3er tramo del watchdog de trading + 2 crons rotos desde el 30/07 (06/08/2026).** La pasada del
   06/08 dejó NAV y 64 tesis pero NUNCA llamó a `/puntuar`: ni stops ni walk-forward, y el watchdog lo
   habría dado por bueno (solo miraba NAV+tesis). `/puntuar` no escribe NADA sin tesis vencidas ni
@@ -237,6 +248,7 @@ Verificado: tsc 0 · 897 tests · build OK.
   prioridad construida > útil > sin etiqueta > **parcela** — en una unifamiliar la parcela se cita ANTES y
   quedarse con la primera valora el inmueble por el solar. Nuevo paso `reextraerDatosDeTexto` en el cron: el
   extractor solo corría en la INGESTA, así que mejorarlo no rescataba nada del corpus vivo. Tests 411/851.
+
 ### 🔨 Las casas derruidas dejan de salir como chollos (05/08/2026)
 Alberto confirmó con un caso real (Idealista 111790643, Llanes: 99.000€, 541€/m², −68%) que los
 descuentos «de derribo» son casas a levantar, no chollos. `detectarChollos` (módulo `comparables.ts`)
@@ -248,6 +260,7 @@ anuncio» por la vía legítima: `Comparable.aReformar` desde el `status` de la 
 (`renew`; columna `mercado_comparables.a_reformar`, aplicada) — el scraping de la ficha sigue vetado
 (Idealista bloquea datacenter). Fotocasa: estado de la ficha PENDIENTE de validar contra ficha real.
 Tests 409/409 módulo + 851/851 plataforma, `tsc` 0, build OK. PR #1259.
+
 - **🔘 Botones ✅/❌ en las propuestas de trading por Telegram (05/08/2026).** Alberto: «lo más rápido
   y fácil para mí». `/api/internal/alerta` acepta `botones` opcionales validados por
   `lib/alerta-botones.ts` (puro, 5 tests): URLs solo https y callbacks SOLO `trd_*` — un ALERTA_TOKEN
@@ -352,18 +365,6 @@ muestras <3 comps. Verificado: tsc 0 · 851 tests · build OK. **Pendiente: lati
   +2 pp de mediana). Caveat firmado: stops suelen ayudar al momentum y matar la reversión — si H8 se
   cablea, su salida se evalúa aparte. PR #1248.
 
-- **🧾 Agente de facturas: ahora mira A NOMBRE DE QUIÉN viene la factura (31/07/2026).**
-  - Disparador: la bandeja pidió revisar una obra de 2.420,59€ de LUANSA que era del tejado de la
-    **Hacienda El Triunfo** (factura a «El Triunfo CB», CIF E26631895) — ajena a Alberto. Entró porque el
-    abogado la mandó a MAPFRE como prueba y el hilo se le reenvió. Descartada de `gastos` a mano.
-  - `receptor.ts` (puro + 10 tests): tres estados `nuestro`/`ajeno`/`desconocido`. Solo descarta con
-    NIF identificado que NO casa con los titulares; el nombre solo confirma, nunca descarta. Titulares =
-    `sociedades` + env `FACTURAS_TITULARES_NIF`. Decisión de Alberto: **ignorar + avisar** por Telegram.
-  - Bug arreglado de paso: en IONOS el extractor guardaba el NIF de Alberto como CIF del proveedor →
-    envenenaba la huella (ningún proveedor aprendía regla). El prompt ya pide emisor y receptor por separado.
-  - Fila nueva en `sociedades`: PUNTO Y COMA GESTION, S.L. (B90446683) — sin ella DIGI salía «ajena».
-  - **Pendiente:** PDF escaneado sin capa de texto se descarta (`extraer.ts` no cae a visión); 24 adjuntos
-    ilegibles en la pasada del 31/07. Y no hay destino para gastos de la correduría en `negocios`.
 - **🧾 facturas-correo (01/08/2026, trigger diario).** Vía B sana, sin backlog. Archivada la factura
   de la lavandería Giraldillo AFV-11808 (72,60€, deducible); pago aún pendiente, sin conciliar. **Hallazgo
   colateral:** el cron `facturas-scan` (`apps/plataforma/lib/agente-facturas/drive.ts`) archiva TODO lo que
@@ -393,14 +394,6 @@ muestras <3 comps. Verificado: tsc 0 · 851 tests · build OK. **Pendiente: lati
   `lib/trading/velas.ts` (puro, 13 tests, tres estados null/false/true) recolectado en el retrovisor
   sobre las ~800 del universo; NO toca ranking. Pre-registrado como **H8**. PR #1247.
 
-- **🔎 Verificación en caliente del arreglo de los ADR + techo al nº de acciones (31/07/2026).** Sin esperar
-  al cron: bajados por `pg_net` los companyfacts de los 5 peores del radar y pasados por el parser ya
-  mergeado. NMR (30.061.813 mil M$ de capitalización), PAC, LTM, BSAC y BCH → los 5 salen `emisorExtranjero`
-  y capitalización **NULL**. Ojo con LTM: presenta en DÓLARES, así que solo lo caza la regla del 20-F —
-  la de divisa no habría bastado. Hallazgo nuevo: el nº de acciones también viene inflado por el propio
-  emisor (Nomura ×1e6, PAC ×1000) y `accionesPlausibles` solo miraba hacia abajo → techo en 1e13, que caza
-  a Nomura sin tocar a los que sí tienen 1e11 acciones de verdad (LATAM, Santander Chile). PAC no es
-  separable y se queda. Hoy lo tapa el gate del ADR; la guarda es para cuando `acciones` se use para otra cosa.
 ### 🔐 Trial Tuya IoT Core renovado — cerraduras OK de nuevo (04/08/2026)
 Los PINs del teclado de Socorro fallaban por `Tuya 28841002: IoT Core service subscription has expired`
 (NO por el corte de luz; la «Sonda» no enlaza nada, solo lee por cloud). Alberto renovó el trial en
@@ -861,6 +854,7 @@ copiar. Luxury sigue congelado hasta el 01/09 (decisión de Alberto).
   solo reconoce entradas que empiezan por `- **`; una entrada con formato `### ` no se archivó sola y hubo
   que moverla a mano — si vuelve a pasar, vale la pena normalizar el formato de cabecera o enseñarle al
   script el patrón `### `.
+
 - **📊 Facturas Booking.com julio 2026 verificadas vs banco (03/08/2026).** Llegaron 3 facturas (noreply@booking.com);
   guardadas en Drive por correo-triaje. Cuadre: Socorro (4340072) 634,69€ ✅ · Bustos Tavera (4771238) 450,79€ ✅ ·
   Dúplex (2888928) 587,23€ esperado — pago bancario aún no llegó (vence 16 ago). Socorro 24 (ID Booking 2039943)
@@ -869,4 +863,3 @@ copiar. Luxury sigue congelado hasta el 01/09 (decisión de Alberto).
   lee PDF via contentSnippet, notifica resumen). Casos abiertos SIN respuesta: Bernardi -466,70€ (5603355846,
   House Sevillana) y Valantin -84,61€ (5712457476, Busto Reform). IDs Booking.com: 2888928=Dúplex ·
   4340072=Socorro · 4771238=Bustos Tavera · 2039943=Socorro 24. Skill sivra-maestro actualizada con este mapeo.
-
