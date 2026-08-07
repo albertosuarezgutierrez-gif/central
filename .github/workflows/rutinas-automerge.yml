@@ -1,0 +1,177 @@
+name: Auto-merge de PRs de rutinas (solo registro)
+
+# EL PROBLEMA QUE RESUELVE (07/08/2026, ver docs/AUDITORIA-2026-08.md)
+# El "carril 1" de /auditoria-diaria asume que la rutina puede empujar texto DIRECTO a `main`.
+# En la práctica las rutinas corren bajo el harness de tareas de GitHub, que les asigna una rama
+# y les prohíbe tocar `main` → cada pasada acaba en un PR draft que nadie mergea. Los PRs
+# envejecen, `main` avanza, y a los 1-3 días están todos en conflicto: el 07/08 había CINCO
+# (#1252, #1254, #1277, #1279, #1286) y hubo que rescatar su texto a mano.
+#
+# La solución NO es dar permisos de push (el bloqueo es del harness, no de GitHub): es que el
+# repo cierre el círculo solo. Este workflow mergea los PRs de rutina que tocan ÚNICAMENTE
+# ficheros de REGISTRO, en cuanto su CI está en verde.
+#
+# LA LÍNEA QUE SEPARA LO QUE SE AUTO-MERGEA DE LO QUE NO
+# Se auto-mergea lo que solo **cuenta lo que pasó** (memoria, bitácoras, informes de auditoría):
+# equivocarse ahí deja un párrafo mal escrito, y git guarda el histórico.
+# NO se auto-mergea lo que **le dice a un agente qué hacer** — `.claude/**`, `CLAUDE.md`,
+# `AGENTS.md`, `docs/SKILLS.md`, `docs/FUENTES-DE-VERDAD.md`, `docs/RUTINAS-PROGRAMADAS.md` — ni
+# código, ni infra, ni workflows. Un agente que se auto-modifica las instrucciones sin que nadie
+# lo mire es exactamente el fallo que no queremos. Esos siguen siendo carril 2 (PR + tu ojo).
+# El filtro es por RUTA, no por etiqueta: una etiqueta se le puede poner a un PR que toca código,
+# una lista de rutas no miente.
+#
+# CÓMO PARARLO
+# - Puntual: pon la etiqueta `no-automerge` al PR.
+# - Del todo: deshabilita este workflow en Actions (o borra el fichero).
+
+on:
+  # Cuando termina la CI de un PR (es el disparo que hace que el merge sea rápido).
+  check_suite:
+    types: [completed]
+  # Alta / actualización de un PR. `pull_request_target` corre con el workflow de `main` y con
+  # token de escritura; es seguro porque este job NUNCA hace checkout ni ejecuta código del PR:
+  # solo llama a la API de GitHub.
+  pull_request_target:
+    types: [opened, reopened, ready_for_review, synchronize]
+  # Red de seguridad: los eventos de arriba se pierden a veces, y un PR que quedó en conflicto
+  # necesita que alguien reintente el update-branch más tarde.
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+  statuses: read
+
+# Nunca dos pasadas a la vez: mergear en paralelo genera conflictos entre los propios PRs.
+concurrency:
+  group: rutinas-automerge
+  cancel-in-progress: false
+
+jobs:
+  automerge:
+    name: Mergear PRs de registro en verde
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Revisar PRs abiertos
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          OWNER: ${{ github.repository_owner }}
+          # Margen de quietud: no se toca un PR cuyo último commit es más nuevo que esto.
+          # La sesión que abre el PR sigue viva un rato y su hook `Stop` (persist-memoria.sh)
+          # aún puede empujar la entrada de memoria — mergear antes se la comería.
+          QUIETUD_MIN: '20'
+        run: |
+          set -euo pipefail
+
+          # Solo ficheros que REGISTRAN lo que pasó. Ver la cabecera para el porqué de la línea.
+          es_registro() {
+            case "$1" in
+              docs/CONTEXTO-SESIONES.md) return 0 ;;
+              docs/AGENTES-BITACORA.md)  return 0 ;;
+              docs/AUTO-APLICADOS.md)    return 0 ;;
+              docs/AUDITORIA-*.md)       return 0 ;;
+              docs/memoria/*.md)         return 0 ;;
+              *)                         return 1 ;;
+            esac
+          }
+
+          prs=$(gh pr list --repo "$REPO" --state open --limit 50 --json number --jq '.[].number')
+          if [ -z "$prs" ]; then echo "Sin PRs abiertos."; exit 0; fi
+
+          ahora=$(date -u +%s)
+
+          for n in $prs; do
+            echo "::group::PR #$n"
+            datos=$(gh pr view "$n" --repo "$REPO" \
+              --json number,author,headRefName,headRefOid,isDraft,mergeable,labels,files,statusCheckRollup)
+
+            autor=$(jq -r '.author.login' <<<"$datos")
+            rama=$(jq -r '.headRefName' <<<"$datos")
+
+            # 1. Solo PRs de las rutinas del propio dueño del repo. Nada de forks ni de terceros.
+            if [ "$autor" != "$OWNER" ]; then echo "autor $autor ≠ $OWNER — se salta."; echo "::endgroup::"; continue; fi
+            case "$rama" in claude/*) ;; *) echo "rama $rama no es de rutina — se salta."; echo "::endgroup::"; continue ;; esac
+
+            # 2. Freno de mano manual.
+            if jq -e '.labels[] | select(.name == "no-automerge")' <<<"$datos" >/dev/null; then
+              echo "etiqueta no-automerge — se salta."; echo "::endgroup::"; continue
+            fi
+
+            # 3. TODOS los ficheros tocados tienen que ser de registro. Uno solo fuera → carril 2.
+            ficheros=$(jq -r '.files[].path' <<<"$datos")
+            if [ -z "$ficheros" ]; then echo "sin ficheros (¿API incompleta?) — se salta."; echo "::endgroup::"; continue; fi
+            fuera=0
+            while IFS= read -r f; do
+              if ! es_registro "$f"; then echo "  fuera de la lista: $f"; fuera=1; fi
+            done <<<"$ficheros"
+            if [ "$fuera" = "1" ]; then echo "toca algo que no es registro — necesita revisión humana."; echo "::endgroup::"; continue; fi
+
+            # 4. Margen de quietud (ver env QUIETUD_MIN).
+            sha=$(jq -r '.headRefOid' <<<"$datos")
+            fecha=$(gh api "repos/$REPO/commits/$sha" --jq '.commit.committer.date' 2>/dev/null || echo '')
+            if [ -z "$fecha" ]; then echo "no se pudo leer la fecha del commit — se salta."; echo "::endgroup::"; continue; fi
+            edad_min=$(( (ahora - $(date -u -d "$fecha" +%s)) / 60 ))
+            if [ "$edad_min" -lt "$QUIETUD_MIN" ]; then
+              echo "último commit hace ${edad_min} min (< $QUIETUD_MIN) — se espera a la próxima pasada."
+              echo "::endgroup::"; continue
+            fi
+
+            # 5. Conflictos: se intenta traer `main` a la rama. Si ni así, avisa UNA vez y sigue.
+            mergeable=$(jq -r '.mergeable' <<<"$datos")
+            if [ "$mergeable" = "CONFLICTING" ]; then
+              echo "en conflicto — intento update-branch."
+              if gh api -X PUT "repos/$REPO/pulls/$n/update-branch" >/dev/null 2>&1; then
+                echo "rama actualizada; se mergea en la próxima pasada (CI tiene que rehacerse)."
+              else
+                marca="<!-- automerge-conflicto -->"
+                if ! gh pr view "$n" --repo "$REPO" --json comments --jq '.comments[].body' | grep -qF "$marca"; then
+                  printf '%s\n' \
+                    "$marca" \
+                    "Este PR solo toca ficheros de registro, así que el auto-merge de rutinas intentó" \
+                    "mergearlo — pero **está en conflicto con \`main\` y no se resuelve solo**. Hay que" \
+                    "rehacerlo a mano, o cerrarlo rescatando su texto contra el \`main\` actual." \
+                    "" \
+                    "No volveré a avisar de este PR." \
+                    "" \
+                    "---" \
+                    "_Generated by [Claude Code](https://claude.ai/code)_" > /tmp/aviso-conflicto.md
+                  gh pr comment "$n" --repo "$REPO" --body-file /tmp/aviso-conflicto.md
+                fi
+              fi
+              echo "::endgroup::"; continue
+            fi
+            if [ "$mergeable" != "MERGEABLE" ]; then
+              echo "mergeable=$mergeable (GitHub aún lo está calculando) — próxima pasada."
+              echo "::endgroup::"; continue
+            fi
+
+            # 6. CI: TODO en verde y al menos un check. Un PR sin checks no se mergea solo —
+            #    "no hay checks" no es lo mismo que "los checks pasaron" (ver la regla del
+            #    CLAUDE.md raíz: dato que no hay ≠ dato que no se ha mirado).
+            #    No se mira `__typename`: un check en curso no tiene ni `conclusion` ni `state`
+            #    en verde, así que basta con exigir uno de los dos (sirve para CheckRun y para
+            #    StatusContext, que es como llegan los estados de Vercel).
+            total=$(jq '[.statusCheckRollup[]?] | length' <<<"$datos")
+            verdes=$(jq '[.statusCheckRollup[]? | select(
+                       ((.conclusion // "") | ascii_upcase | . == "SUCCESS" or . == "NEUTRAL" or . == "SKIPPED")
+                    or ((.state // "") | ascii_upcase | . == "SUCCESS")
+                   )] | length' <<<"$datos")
+            if [ "$total" -eq 0 ]; then echo "sin checks — no se mergea a ciegas."; echo "::endgroup::"; continue; fi
+            if [ "$verdes" -ne "$total" ]; then echo "CI $verdes/$total — pendiente o en rojo, se espera."; echo "::endgroup::"; continue; fi
+
+            # 7. Adelante. Sale de draft y mergea en squash.
+            #    La rama NO se borra a propósito: si la sesión que abrió el PR sigue viva, su
+            #    hook `Stop` todavía puede querer empujar ahí.
+            echo "✅ solo registro + CI $verdes/$total en verde → mergeando."
+            if [ "$(jq -r '.isDraft' <<<"$datos")" = "true" ]; then
+              gh pr ready "$n" --repo "$REPO"
+            fi
+            gh pr merge "$n" --repo "$REPO" --squash
+            echo "::endgroup::"
+          done

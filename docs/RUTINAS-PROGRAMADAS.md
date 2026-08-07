@@ -7,6 +7,27 @@
 > El contenedor es efímero: una rutina NO puede leer las conversaciones de otras sesiones.
 > Reconcilia lo que quedó **commiteado** (memoria/skills/docs) contra el código e infra reales.
 
+## Cómo llega el texto a `main` (léelo antes de tocar una rutina)
+La suposición original era que una rutina puede **empujar texto directo a `main`** (el "carril 1").
+En la práctica **no puede**: corre bajo el harness de tareas de GitHub, que le asigna una rama y le
+prohíbe tocar `main`. Del 04 al 07/08/2026 eso dejó **cinco PRs de rutinas muertos en conflicto**
+(#1252, #1254, #1277, #1279, #1286) y hubo que rescatar su texto a mano.
+
+Desde el 07/08/2026 el repo cierra el círculo solo con
+**`.github/workflows/rutinas-automerge.yml`**:
+
+| | |
+|---|---|
+| **Qué mergea** | PRs de rama `claude/*`, del dueño del repo, cuyo diff toca **SOLO ficheros de registro**: `docs/CONTEXTO-SESIONES.md`, `docs/AGENTES-BITACORA.md`, `docs/AUTO-APLICADOS.md`, `docs/AUDITORIA-*.md`, `docs/memoria/*.md`. |
+| **Qué NO mergea (a propósito)** | Todo lo que **le dice a un agente qué hacer**: `.claude/**`, `CLAUDE.md`, `AGENTS.md`, `docs/SKILLS.md`, `docs/FUENTES-DE-VERDAD.md`, este mismo fichero. Y por supuesto código, infra y workflows. Un agente que se reescribe las instrucciones sin que nadie mire es justo el fallo que no queremos: eso sigue siendo carril 2. |
+| **Condiciones** | CI **entera en verde** (y al menos un check — "sin checks" no es "checks OK"), sin conflicto, y el último commit con **≥20 min** de antigüedad (para no comerse el push del hook `Stop` de la sesión que aún está viva). |
+| **Cuándo corre** | Al terminar la CI de un PR, al abrirse/actualizarse un PR, y **cada hora** como red de seguridad (los eventos se pierden a veces y los conflictos aparecen después). |
+| **Si hay conflicto** | Intenta traer `main` a la rama solo. Si no puede, deja **un** comentario en el PR y para — ahí ya hace falta mano humana. |
+| **Cómo pararlo** | Etiqueta `no-automerge` en el PR (puntual), o deshabilitar el workflow en Actions (del todo). |
+
+**Consecuencia para quien escribe una rutina:** separa siempre en **dos PRs** cuando toques ambas
+cosas. El de registro se mergea solo y no envejece; el que cambia comportamiento espera a Alberto.
+
 ## Cómo se crea un trigger (1 vez, manual de Alberto)
 1. Entra en `claude.ai/code` → **Rutinas** → **Nueva rutina**.
 2. Repo: `central`. Rama: la que prefieras (la rutina abre su propio PR draft).
@@ -24,7 +45,7 @@
 | **Prompt** | `Ejecuta /auditoria-diaria` |
 | **MCPs / envs** | Supabase + Vercel (lectura). **GitHub es nativo** al vincular el repo — ya cubre lectura + abrir el PR + push a `main`. Para el aviso, `PLATAFORMA_URL` + `ALERTA_TOKEN` en la env de la rutina (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos — ver "Arquitectura de notificaciones Telegram" abajo; si faltan, el aviso se omite). |
 | **Qué hace** | Reconcilia `CONTEXTO-SESIONES.md` + skills-maestro + `CLAUDE.md` + `docs/SKILLS.md` contra el código real + checks baratos (lockfile, estructura, drift) + **heartbeat de crons** (paso 2-bis: detecta crons mudos por falta de filas frescas en BD). SALTA typecheck/tests pesados. |
-| **Resultado (dos carriles)** | **Carril 1:** los arreglos de **texto** (memoria/skills/docs/manuales) se **auto-aplican a `main`** (sin PR) y se anotan en `docs/AUTO-APLICADOS.md`. **Carril 2:** lo "raro" (código, infra, crons mudos, gran radio) → **PR draft** `claude/auditoria-diaria-<fecha>` + **aviso Telegram** con botón-URL al PR. **Sin nada** → sin push, sin PR, sin aviso. |
+| **Resultado (dos carriles)** | **Carril 1:** los arreglos de **texto** (memoria/skills/docs/manuales) se **auto-aplican a `main`** (sin PR) y se anotan en `docs/AUTO-APLICADOS.md`. Si el entorno no deja empujar a `main` → PR propio SOLO con ficheros de registro, que **se mergea solo** (ver "Cómo llega el texto a `main`" abajo). **Carril 2:** lo "raro" (código, infra, crons mudos, gran radio) → **PR draft** `claude/auditoria-diaria-<fecha>` + **aviso Telegram** con botón-URL al PR. **Sin nada** → sin push, sin PR, sin aviso. |
 
 Es la **red de seguridad** del guardián de cierre (`.claude/hooks/persist-memoria.sh`):
 caza lo que las sesiones del día no anotaron a mano.
