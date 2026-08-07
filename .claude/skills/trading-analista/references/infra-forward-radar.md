@@ -32,7 +32,7 @@
   silencio). Si falta cualquiera de las tres, avisa por Telegram (rutina borrada/pausada · IBKR caído ·
   `ALERTA_TOKEN` 401 sin redeploy). Lógica pura en `apps/plataforma/lib/trading/watchdog.ts`
   (`evaluarWatchdog`/`seEsperaRefresco`). Es la red que caza que esta pasada deje de correr.
-  - **🚨 LANDMINE — una tabla IDEMPOTENTE no sirve de huella de frescura (07/08/2026, PR #1290).** El
+  - **🚨 LANDMINE — una tabla IDEMPOTENTE no sirve de huella de frescura (07/08/2026, PR #1291).** El
     tramo 2 medía `max(trading_tesis.created_at)`, pero desde #1271 esa tabla tiene único
     `(simbolo,fecha,estrategia)` + `skipDuplicates`: la SEGUNDA pasada del mismo día no inserta ni una
     fila y el reloj se queda clavado en la PRIMERA. El 06/08 `/analizar` corrió a las 09:34 UTC (repaso

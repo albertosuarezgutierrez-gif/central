@@ -31,7 +31,7 @@ IDEMPOTENTE desde #1271 (único `(simbolo,fecha,estrategia)` + `skipDuplicates`)
 pasada del mismo día (repaso manual a las 09:34) no insertó nada y el reloj se quedó clavado en la
 primera; (2) el motivo de los TRES tramos llevaba «el NAV de IBKR» cableado → el aviso mandaba a
 mirar IBKR y la rutina. Fix: latido explícito `trading_analizar` (como `/puntuar`) + `GREATEST` con
-las tesis de respaldo, y `etiqueta` por tramo en `evaluarWatchdog`. PR #1290.
+las tesis de respaldo, y `etiqueta` por tramo en `evaluarWatchdog`. PR #1291.
 
 ### 💓 El latido del barrido deja de estar rojo para siempre (07/08/2026)
 Segunda pasada con #1282 vivo: la guardia volvió a saltar (174 comps, 19 fechas, **17 precios
