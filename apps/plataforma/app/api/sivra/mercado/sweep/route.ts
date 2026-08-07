@@ -6,7 +6,7 @@ import { Prisma } from "@prisma/client"
 import { EVENTS } from "@/lib/pricing-calendar"
 import { ventanasDelBarrido, consultasDeVentana, type EventoFecha } from "@/lib/sivra/mercado-ventanas"
 import { registrarLatido } from "@/lib/monitoring/latido-escribir"
-import { barridoFiable, corpusClonado, detalleBarrido, type EstadoVentana, type VentanaMedida } from "@/lib/sivra/resumen-sweep"
+import { barridoFiable, midioTemporada, detalleBarrido, type EstadoVentana, type VentanaMedida } from "@/lib/sivra/resumen-sweep"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -287,10 +287,21 @@ export async function GET(req: NextRequest) {
   // estacionalidad inventada mientras el parte decía, correctamente, que no se fiaba.
   // Se marca DESPUÉS de insertar (el veredicto necesita la pasada entera) y solo la `search_date`
   // de hoy: las históricas no se tocan.
-  const clonado = corpusClonado(ventanas)
-  if (clonado) {
+  //
+  // 🚨 Y SOLO LAS FILAS DE ESTE BARRIDO (07/08/2026). El `WHERE search_date = CURRENT_DATE` a secas
+  // arrastraba también las del scraper diario (`mercado/cron`, `scenario='normal'`), que barre UNA
+  // fecha por pasada y por eso NO puede clonar nada: es justo la fuente que sí mide temporada. En
+  // producción se llevó por delante 16 comps buenos. El barrido escribe con `scenario` = id de piso,
+  // así que se acota a los suyos.
+  const clonado = !midioTemporada(ventanas)
+  const mios = [...new Set([...porAforo.values()].flat())]
+  if (clonado && mios.length) {
+    // `IN (...)` con `Prisma.join` y no `= ANY($1::text[])`: los arrays de Prisma han dado guerra
+    // por el pooler en este repo (landmine del acotado de `mapa_arquitectura`), y aquí no compensa
+    // arriesgarse — son 4 valores.
     await prisma.$executeRaw(Prisma.sql`
-      UPDATE market_rates SET corpus_clonado = true WHERE search_date = CURRENT_DATE
+      UPDATE market_rates SET corpus_clonado = true
+      WHERE search_date = CURRENT_DATE AND scenario IN (${Prisma.join(mios)})
     `).catch((e) => { errors.push(`marcar corpus clonado: ${String(e).slice(0, 60)}`) })
   }
 
