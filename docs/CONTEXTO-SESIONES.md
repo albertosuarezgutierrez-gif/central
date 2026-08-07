@@ -24,6 +24,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 💓 El latido del barrido deja de estar rojo para siempre (07/08/2026)
+Segunda pasada con #1282 vivo: la guardia volvió a saltar (174 comps, 19 fechas, **17 precios
+distintos**) → confirmado ESTRUCTURAL, no era cosa del día. Los snippets de Google no distinguen
+la fecha, así que `ultimo_ok_at` no se iba a poner verde nunca — y un vigía eternamente rojo
+entrena a ignorarlo justo para el día que Serper se caiga de verdad. Se separan los dos veredictos:
+`barridoFiable` = «¿se pudo mirar?» (lo que el agente controla → enciende el latido) y el nuevo
+`midioTemporada` = «¿el dato distingue la fecha?» (lo que la fuente permite → marca
+`corpus_clonado` y frena al motor, que es la protección real). El «no lo sé» sigue entero en el
+parte y en la BD. De paso, el UPDATE del sweep ya solo marca SUS filas (`scenario` = `prop_*`): el
+`WHERE search_date = CURRENT_DATE` a secas se llevaba por delante los comps del scraper diario
+—16 en producción, ya recuperados—, que es justo la fuente que sí mide temporada. tsc 0 · 914 tests.
+
 ### 📉 El prior estacional ya corrige a la baja — sin regalar precio (06/08/2026)
 Decisión de Alberto: «a la baja sí, pero que no se regale precio; Sevilla en julio y sobre todo
 agosto está vacía, es normal que no haya reservas». Clave del diseño: la BAJADA solo mira el **ADR**,
