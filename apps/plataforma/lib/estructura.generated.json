@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-07T06:50:12Z",
+  "generadoEn": "2026-08-07T07:15:27Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3982,6 +3982,10 @@
       "fecha": "07/08/2026"
     },
     {
+      "titulo": "🤖 El carril 1 ya no depende de que la rutina pueda empujar a `main` (07/08/2026).",
+      "fecha": "07/08/2026"
+    },
+    {
       "titulo": "📬 Pasada diaria facturas-correo (06/08/2026).",
       "fecha": "06/08/2026"
     },
@@ -4031,10 +4035,6 @@
     },
     {
       "titulo": "📲→📧 El agente de venta de ia-rest trabaja SOLO (05/08/2026).",
-      "fecha": "05/08/2026"
-    },
-    {
-      "titulo": "🚨 «otro» NO es un tipo, es un «no lo sé» — regresión en prod y su arreglo (05/08/2026).",
       "fecha": "05/08/2026"
     }
   ],

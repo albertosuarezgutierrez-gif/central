@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-07T06:50:12Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-07T07:15:27Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -219,6 +219,7 @@
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - (07/08/2026) 🧹 Atasco de PRs de rutinas resuelto: 6 PRs cerrados en una pasada (07/08/2026).
+- (07/08/2026) 🤖 El carril 1 ya no depende de que la rutina pueda empujar a `main` (07/08/2026).
 - (06/08/2026) 📬 Pasada diaria facturas-correo (06/08/2026).
 - (06/08/2026) 🤝 Landing privada de partnership Teya (06/08/2026, auditoría diaria, PR #771).
 - 💶 ialimp: precio de plan y ahorro anual sin formato español (auditoría diaria, PR #1139).
@@ -227,5 +228,4 @@
 - (06/08/2026) 🌙 El agente de huéspedes ya no rechaza llegadas de madrugada (06/08/2026).
 - (05/08/2026) 🛡️ La barrera de earnings del torneo vuelve a ver + higiene de cantera (05/08/2026, 4ª tanda).
 - (05/08/2026) 📅 Fechas de earnings EXACTAS por Yahoo en trading (05/08/2026, 3ª tanda).
-- (05/08/2026) 🌱 Cantera capa C automática + alertas/altas de trading (05/08/2026, 2ª sesión).
 
