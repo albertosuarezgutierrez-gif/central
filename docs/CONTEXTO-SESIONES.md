@@ -24,6 +24,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 Factura 47/2026 Jaime Salas (electricidad Socorro 24) archivada (07/08/2026).** 278,30€
+  (base 230 + IVA 48,30), reparación de avería en CGP + cuadro eléctrico → `turistico_pisos` /
+  `prop_house_sevillana`. En Drive `08-Agosto-2026` + fila en `facturas_drive`. **Conciliación
+  pendiente**: Alberto la pagó por transferencia hoy y el cargo aún no está en el feed PSD2 (último
+  movimiento 06/08) — recogerlo en la próxima pasada de `facturas-correo` con `propiedad_id`.
+  Dos límites del entorno anotados: `script.google.com` (Apps Script de Drive) está **bloqueado por
+  la política de red** (403 en CONNECT) y el MCP de Drive no traga un PDF de 563 KB → se archivó una
+  copia rasterizada 200 dpi 1-bit (11 KB, legible, sin capa de texto).
 - **🧹 Atasco de PRs de rutinas resuelto: 6 PRs cerrados en una pasada (07/08/2026).** La auditoría
   del 07/08 (#1285, mergeada con el fix de `rotar-memoria.mjs` + 17 tests) dejó 4 PRs de solo-texto
   atascados 1-3 días y en conflicto. Resueltos: #1252 y #1277 CERRADOS (su contenido de valor ya
