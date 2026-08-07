@@ -24,6 +24,37 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧹 Atasco de PRs de rutinas resuelto: 6 PRs cerrados en una pasada (07/08/2026).** La auditoría
+  del 07/08 (#1285, mergeada con el fix de `rotar-memoria.mjs` + 17 tests) dejó 4 PRs de solo-texto
+  atascados 1-3 días y en conflicto. Resueltos: #1252 y #1277 CERRADOS (su contenido de valor ya
+  estaba en `main` vía #1285 — verificado archivo a archivo), pero sus **informes de auditoría del
+  05/08 y 06/08 rescatados** aquí en `docs/AUDITORIA-2026-08.md` + `docs/AUTO-APLICADOS.md` para no
+  dejar huecos en el histórico. #1254, #1279 y #1286 (auto-informes `facturas-correo` 05, 06 y 07/08)
+  CERRADOS con su bitácora rescatada en `docs/AGENTES-BITACORA.md`. Queda pendiente la decisión de
+  fondo: dar push directo a `main` a las rutinas de solo-texto, o revisar los PR drafts a diario.
+
+### 📎 Pasada diaria facturas-correo (07/08/2026)
+Vía B sana (dias_caido=2), sin backlog en `PDF-pendiente`/`Revisar`. 2 candidatos revisados: aviso
+de próximo cargo PriceLabs (49,97 USD, 08/08, aún sin PDF — pendiente de la factura real) y factura
+de impuestos propia de Stripe para la cuenta ia.rest (fuera de alcance, no es compra de Alberto).
+Nada que archivar/conciliar hoy. Detalle en `docs/AGENTES-BITACORA.md`.
+
+- **📬 Pasada diaria facturas-correo (06/08/2026).** Vía B sana. Backlog `Extraccion-fallida` limpiado
+  (8→0, ninguno era factura real pendiente). Factura SIQUE BRILLA 780,10€ (lavandería 4 pisos) conciliada
+  y reclasificada `personal`→`turistico_pisos`. Roborock Amazon 247,92€ (Costa Ballena, Rota) confirmado
+  por Alberto como deducible House Sevillana, archivado; conciliación bancaria pendiente. Detalle en
+  `docs/AGENTES-BITACORA.md`.
+
+- **🧾 facturas-correo (05/08/2026, trigger diario) — el escaneo de correo destapó una venta de
+  3,3M€ colada como "gasto".** Vía B sana, sin backlog. Re-archivadas 3 facturas Booking mal ubicadas
+  por el cron `facturas-scan` (mismo bug de siempre). **Hallazgo gordo:** el cron metió en `gastos`
+  como si fueran facturas de Alberto: 2 extractos de Allianz sobre la póliza impagada de UN CLIENTE
+  (importes que no casan con el documento — probable alucinación de la extracción) y el "Documento de
+  Reserva" de Ariste Investments para comprarle a **San Luis 9 CB** (comunidad de la que Punto y Coma
+  podría ser copropietaria) el edificio de Calle San Luis 9 por **3.300.000€**, con una señal de
+  **33.000€ pagadera en 2 días hábiles desde el 31/07** (plazo ya vencido o al filo). Ninguna de las
+  4 filas es gasto deducible — avisado a Alberto por Telegram. Detalle en `docs/AGENTES-BITACORA.md`.
+
 - **🤝 Landing privada de partnership Teya (06/08/2026, auditoría diaria, PR #771).** One-pager
   `noindex` en `/partner/teya` (`apps/ia-rest`) para la reunión con Federico Muratore: PosLink +
   All-In-One, diferenciadores VeriFactu/voz frente a Teya. Sin lógica de producto ni tests —

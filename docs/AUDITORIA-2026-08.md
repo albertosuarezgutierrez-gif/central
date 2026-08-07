@@ -108,6 +108,15 @@ skills, las filas de `FUENTES-DE-VERDAD.md`, el sello refrescado) va en este PR 
    permiso de push directo a las rutinas de solo-texto o revisar los PR drafts con más frecuencia.
 5. Nada urgente en los 2 falsos positivos del heartbeat — patrón ya conocido.
 
+## ✅ Resolución del atasco (07/08/2026, misma jornada)
+Puntos 1-3 ejecutados: **#1285 mergeado** (fix + 17 tests ya en `main`); **#1252 y #1277 cerrados**
+tras verificar archivo a archivo que su contenido de valor está en `main`, con sus informes de
+auditoría del 05/08 y 06/08 **rescatados al final de este mismo documento** para no dejar huecos en
+el histórico; **#1254, #1279 y #1286** (este último abierto después de esta pasada, mismo atasco)
+cerrados con su bitácora rescatada en `docs/AGENTES-BITACORA.md`. **El punto 4 sigue abierto — es
+decisión de Alberto**, y es la causa raíz: mientras las rutinas no puedan empujar texto a `main`,
+cada pasada seguirá generando un PR que envejece hasta el conflicto.
+
 ---
 
 # Actualización 2026-08-01 — auditoría diaria (ligera)
@@ -379,3 +388,76 @@ con push directo disponible, por su tamaño.
    julio sigue completo en `docs/memoria/2026-07.md`; verificado byte a byte antes de recortar.
 2. **Nada urgente en `psd2-sync`** — vigilar si el 04/08 06:00 sigue sin movimientos nuevos; de
    confirmarse una racha más larga, revisar entonces (no antes).
+
+# Actualización 2026-08-05 — auditoría diaria (ligera)
+
+> **Nota (07/08/2026):** informe rescatado del PR #1252, que nunca llegó a mergearse y se cerró en
+> conflicto. Los cambios que describe SÍ están en `main`, pero llegaron el 07/08 por el PR #1285
+> (auditoría del 07/08), no el 05/08 — de ahí que no haya fila en `docs/AUTO-APLICADOS.md`: nada de
+> esto se auto-aplicó por carril 1, todo entró por PR.
+
+Rango: 4 commits sustanciales desde la última auditoría (7b7afb4, 04/08/2026 22:10 UTC) —
+tres fixes de subastas ya reconciliados en memoria en el propio commit (#1249/#1250/#1251,
+cargas/fechas en letra) y un fix mecánico de ialimp (#1139, formato de dinero) mergeado por
+el orquestador Fase 2 sin sesión que lo anotara. Checks estructurales baratos (lockfile sin
+cambios de deps, radiografía ya fresca por el propio CI). Heartbeat de 14 huellas: **14/14 ✅**,
+sin crons mudos.
+
+## 🔴→✅ `scripts/rotar-memoria.mjs` archivaba entradas del mes ACTUAL bajo el mes equivocado
+Al intentar la rotación mensual de julio el `--dry-run` habría archivado en `docs/memoria/2026-07.md`
+**11 entradas reales de 03–04/08/2026**. **Revertido antes de escribir nada.** Dos causas distintas,
+ambas en `scripts/rotar-memoria.mjs`:
+1. Una "entrada" solo empezaba con `- **`; 11 de las del vivo usan `### Título (fecha)`. El parser
+   las trataba como continuación de la última `- **` de arriba y **heredaban SU fecha**.
+2. La fecha se buscaba solo en `entrada[0]` (línea 1). Cuando el título en negrita es largo y la
+   fecha envuelve a la línea 2, el regex no la encontraba y heredaba de arriba igual — no dependía
+   de usar `###`, le podía pasar a cualquier entrada `- **` con título largo.
+
+Fix propuesto en este informe y **finalmente aplicado en el PR #1285** (07/08) junto con un tercer
+bug de fechas descubierto entonces y `scripts/rotar-memoria.test.mjs` (17 tests).
+
+## ✅ Reconciliación memoria — un hueco
+PR #1139 (ialimp: precio de plan sin formato español) se mergeó vía el orquestador Fase 2 sin que
+ninguna sesión Claude lo anotara en `docs/CONTEXTO-SESIONES.md` — entrada añadida (finalmente por
+#1285). De paso, un bloque duplicado palabra por palabra («Verificación en caliente del arreglo de
+los ADR», 31/07) que ya vivía en `docs/memoria/2026-07.md` seguía también en el vivo — borrado.
+`docs/FUENTES-DE-VERDAD.md`: `packages/module-subastas` no tenía fila pese a 3 PRs en 24h — añadida.
+
+## ✅ Heartbeat de crons (14 huellas) — 14/14 ✅
+Sin hallazgos, sin crons mudos.
+
+## ✅ Manuales de usuario — nada que tocar
+Los cambios del rango son correcciones internas (lectura de cargas/fechas en subastas, formato de
+un precio en ialimp), no features nuevas visibles.
+
+---
+
+# Actualización 2026-08-06 — auditoría diaria (ligera)
+
+> **Nota (07/08/2026):** informe rescatado del PR #1277, cerrado en conflicto sin mergear. Su único
+> hallazgo (la entrada de memoria de PR #1139) era el mismo que el de #1252 y ya está en `main` vía #1285.
+
+Rango: 25 commits sustanciales desde la última pasada con reconciliación de memoria (merge
+`7b7afb4`, PR #1240, 04/08 22:10 UTC) — día muy productivo del 05/08 (26 PRs: cadena de subastas
+«tipo de bien se re-deriva»/«otro no pisa el dato», barrera de earnings + cantera + Yahoo
+fundamentales en trading, agente de venta de ia-rest ahora 100% email frío, chip de negocio móvil
+en `/banca`, fix de formato de dinero en ialimp).
+
+## ✅ Reconciliación memoria/skills — 1 hueco
+De los 25 commits del rango, 24 ya estaban auto-documentados en `docs/CONTEXTO-SESIONES.md`. Único
+hueco: **PR #1139** (`ialimp: formato español del dinero en la página de planes`). `docs/SKILLS.md`
+verificado contra `.claude/skills/` (31) y `.claude/commands/` (3): sin huérfanos ni faltantes.
+Ninguna skill nueva en el rango → sin drift en la tabla de rutas del triaje (`lib/correo/rutas.ts`).
+
+## ✅ Manuales de usuario — nada que tocar
+Ningún archivo de `apps/ia-rest/src/app/**` ni `apps/ia-rest/public/**` cambió en el rango.
+
+## ✅ Heartbeat de crons (14 huellas) — 13/14 ✅, 1 falso positivo verificado
+`updates/sync` salió ⛔ MUDO (57,2h sin filas nuevas en `incomes`, umbral 36h). Investigado antes de
+escalarlo: los runtime logs de Vercel confirman `GET /api/sivra/updates/sync 200` a las 05:00:29 UTC
+del 05/08 — el cron corrió bien, es idempotente (solo inserta cuando Smoobu trae reservas nuevas) y
+lleva sin actividad real desde el 03/08. Mismo patrón documentado desde el 02/07; no se toca el umbral.
+
+## ✅ Integridad estructural — sin hallazgos
+Lockfile presente, y las 8 apps (`ia-rest`, `sivra`, `ialimp`, `plataforma`, `rrhh`, `transporte`,
+`alquiler`, `almacen`) tienen el `ignoreCommand` obligatorio en su `vercel.json`.
