@@ -40,10 +40,20 @@ parte y en la BD. De paso, el UPDATE del sweep ya solo marca SUS filas (`scenari
   del 07/08 (#1285, mergeada con el fix de `rotar-memoria.mjs` + 17 tests) dejó 4 PRs de solo-texto
   atascados 1-3 días y en conflicto. Resueltos: #1252 y #1277 CERRADOS (su contenido de valor ya
   estaba en `main` vía #1285 — verificado archivo a archivo), pero sus **informes de auditoría del
-  05/08 y 06/08 rescatados** aquí en `docs/AUDITORIA-2026-08.md` + `docs/AUTO-APLICADOS.md` para no
-  dejar huecos en el histórico. #1254, #1279 y #1286 (auto-informes `facturas-correo` 05, 06 y 07/08)
-  CERRADOS con su bitácora rescatada en `docs/AGENTES-BITACORA.md`. Queda pendiente la decisión de
-  fondo: dar push directo a `main` a las rutinas de solo-texto, o revisar los PR drafts a diario.
+  05/08 y 06/08 rescatados** aquí en `docs/AUDITORIA-2026-08.md` para no dejar huecos en el
+  histórico. #1254, #1279 y #1286 (auto-informes `facturas-correo` 05, 06 y 07/08) CERRADOS con su
+  bitácora rescatada en `docs/AGENTES-BITACORA.md`. La causa raíz se ataja en la entrada de abajo.
+
+- **🤖 El carril 1 ya no depende de que la rutina pueda empujar a `main` (07/08/2026).** Decisión de
+  Alberto: que lo resuelva el repo, no un permiso. `.github/workflows/rutinas-automerge.yml` mergea
+  solo los PRs de rama `claude/*` cuyo diff toca **exclusivamente ficheros de REGISTRO**
+  (`CONTEXTO-SESIONES`, `AGENTES-BITACORA`, `AUTO-APLICADOS`, `AUDITORIA-*`, `memoria/*`), con CI
+  entera en verde, sin conflicto y con ≥20 min desde el último commit (para no comerse el push del
+  hook `Stop`). **Deja fuera a propósito lo que cambia el COMPORTAMIENTO de un agente** (`.claude/**`,
+  `CLAUDE.md`, `SKILLS.md`, `FUENTES-DE-VERDAD.md`): eso sigue necesitando tu ojo. Filtro por RUTA,
+  no por etiqueta — una etiqueta se le puede poner a un PR que toca código, una lista de rutas no.
+  Freno: etiqueta `no-automerge`, o deshabilitar el workflow. Contrato actualizado en
+  `/auditoria-diaria` y `docs/RUTINAS-PROGRAMADAS.md`.
 
 ### 📎 Pasada diaria facturas-correo (07/08/2026)
 Vía B sana (dias_caido=2), sin backlog en `PDF-pendiente`/`Revisar`. 2 candidatos revisados: aviso
