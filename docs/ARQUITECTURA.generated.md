@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-06T12:48:07Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-07T06:41:20Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -218,6 +218,8 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (06/08/2026) 🤝 Landing privada de partnership Teya (06/08/2026, auditoría diaria, PR #771).
+- 💶 ialimp: precio de plan y ahorro anual sin formato español (auditoría diaria, PR #1139).
 - (06/08/2026) 🐕 3er tramo del watchdog de trading + 2 crons rotos desde el 30/07 (06/08/2026).
 - (06/08/2026) 🚨 La barra EN CURSO hundía el volumen: H8 era indetectable y lo decía como «no salta» (06/08/2026).
 - (06/08/2026) 🌙 El agente de huéspedes ya no rechaza llegadas de madrugada (06/08/2026).
@@ -226,6 +228,4 @@
 - (05/08/2026) 🌱 Cantera capa C automática + alertas/altas de trading (05/08/2026, 2ª sesión).
 - (05/08/2026) 📈 STX (Seagate) alta en `trading_watchlist` capa C (05/08/2026, sin commit — cambio solo en BD).
 - (05/08/2026) 📈 Trading: pasada idempotente + 🪜 semáforo de la escalera real (05/08/2026, PR #1271).
-- (05/08/2026) 📱 El libro de `/banca` en móvil ya dice A QUÉ negocio va cada gasto deducible (05/08/2026).
-- (05/08/2026) 📲→📧 El agente de venta de ia-rest trabaja SOLO (05/08/2026).
 

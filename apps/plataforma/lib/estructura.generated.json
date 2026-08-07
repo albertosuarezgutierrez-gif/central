@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-06T12:48:07Z",
+  "generadoEn": "2026-08-07T06:41:20Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3978,6 +3978,14 @@
   ],
   "novedades": [
     {
+      "titulo": "🤝 Landing privada de partnership Teya (06/08/2026, auditoría diaria, PR #771).",
+      "fecha": "06/08/2026"
+    },
+    {
+      "titulo": "💶 ialimp: precio de plan y ahorro anual sin formato español (auditoría diaria, PR #1139).",
+      "fecha": ""
+    },
+    {
       "titulo": "🐕 3er tramo del watchdog de trading + 2 crons rotos desde el 30/07 (06/08/2026).",
       "fecha": "06/08/2026"
     },
@@ -4027,14 +4035,6 @@
     },
     {
       "titulo": "🏠 Una casa dejaba de ser casa por su plaza de aparcamiento — y el paso 1 no tiene candidatas (05/08/2026).",
-      "fecha": "05/08/2026"
-    },
-    {
-      "titulo": "📐 Sin superficie no hay rentabilidad: 12 de 17 subastas vivas sin margen calculable (05/08/2026).",
-      "fecha": "05/08/2026"
-    },
-    {
-      "titulo": "🔘 Botones ✅/❌ en las propuestas de trading por Telegram (05/08/2026).",
       "fecha": "05/08/2026"
     }
   ],
