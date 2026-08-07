@@ -24,6 +24,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 📎 Pasada diaria facturas-correo (07/08/2026)
+Vía B sana (dias_caido=2), sin backlog en `PDF-pendiente`/`Revisar`. 2 candidatos revisados: aviso
+de próximo cargo PriceLabs (49,97 USD, 08/08, aún sin PDF — pendiente de la factura real) y factura
+de impuestos propia de Stripe para la cuenta ia.rest (fuera de alcance, no es compra de Alberto).
+Nada que archivar/conciliar hoy. Detalle en `docs/AGENTES-BITACORA.md`.
+
 ### 📎 El agente leía el LOGO del correo, no la factura (05/08/2026)
 #1243 funcionó (sinLeer 9→**0**, descartados 2→**11**, visión ya en `ai_usos`: 16 llamadas
 `gpt-5.6-luna`, 0 errores, 0,0056€ el día). Pero la factura de DIGI (76€) seguía sin entrar, y

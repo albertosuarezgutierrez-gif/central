@@ -15,6 +15,15 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-07 · facturas-correo (trigger diario)** · hizo: Vía B sana (dias_caido=2, última copia
+  05/08 en `_buzon_pdf` — Stripe/Anthropic, Allianz, Parte Sevilla; `agente_salud` actualizado), sin
+  backlog en `PDF-pendiente`/`Revisar`, papelera `_DUPLICADOS_BORRAR` sin novedad (la 2ª copia de
+  FACTURA JULIO SOCORRO ya estaba avisada 03/08 y 06/08). 2 candidatos Gmail: aviso PriceLabs de
+  próximo cargo 49,97 USD (08/08, sin PDF aún — se archivará/conciliará cuando llegue la factura real
+  por Vía B) y factura de impuestos de Stripe para la cuenta ia.rest (VAT propio de Stripe, no es
+  compra de Alberto → fuera de alcance de esta skill); ambos `Facturas/Procesada`. `Luz pendiente 2026`
+  revisada: mismos 6 hilos TotalEnergies (abr-jun) ya documentados como contratos viejos de la SL, no
+  conciliables aquí — sin cambios. dudas: —; fallos: —; PRs/commits: este commit (solo bitácora).
 - **2026-08-05 · psd2-health-check** · hizo: preflight canal alerta OK (200); consulta frescura
   `movimientos_bancarios WHERE origen='psd2'` → último movimiento 05/08/2026 (hoy), mov_30d=68 vs
   mov_30d_prev=71 (sin caída >50%) → **✅ OK**, sin anomalía, sin aviso Telegram. dudas: —; fallos: la
