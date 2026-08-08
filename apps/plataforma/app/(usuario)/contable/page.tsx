@@ -194,10 +194,10 @@ export default function ContablePage() {
       </div>
 
       <form onSubmit={e => { e.preventDefault(); enviar(input) }} style={{ display: 'flex', gap: 8 }}>
-        <input ref={fileRef} type="file" accept="image/*,application/pdf" style={{ display: 'none' }}
+        <input ref={fileRef} type="file" accept="image/*,application/pdf,.xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style={{ display: 'none' }}
           onChange={e => { const f = e.target.files?.[0]; if (f) subirDocumento(f); e.target.value = '' }} />
-        <button type="button" onClick={() => fileRef.current?.click()} disabled={loading} title="Subir ticket o factura (foto o PDF)"
-          aria-label="Subir ticket o factura" style={{
+        <button type="button" onClick={() => fileRef.current?.click()} disabled={loading} title="Subir ticket, factura o extracto de tarjeta (foto, PDF o Excel)"
+          aria-label="Subir ticket, factura o extracto" style={{
             flexShrink: 0, width: 44, height: 44, borderRadius: 10, border: '1px solid var(--border)',
             background: 'var(--surface)', color: 'var(--text)', fontSize: 18, cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1,
           }}>📎</button>

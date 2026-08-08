@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireSession } from '@/lib/session'
 import { responder } from '@/lib/contable/cerebro'
 import { procesarDocumento } from '@/lib/contable/documentos'
-import { resumenDocumento, accionConciliar } from '@/lib/contable/documentos-tipos'
+import { resumenDocumento, accionConciliar, matchDeCruce } from '@/lib/contable/documentos-tipos'
 import { guardarAcciones } from '@/lib/contable/acciones'
 import { logTurno } from '@/lib/contable/memoria'
 
@@ -51,8 +51,8 @@ export async function POST(req: NextRequest) {
         await logTurno(session.id, 'web', 'assistant', doc.resumen)
         return NextResponse.json({ respuesta: doc.resumen, guardados: [], acciones: [] })
       }
-      const respuesta = resumenDocumento(doc.factura, doc.match)
-      const prop = accionConciliar(doc.factura, doc.match)
+      const respuesta = resumenDocumento(doc.factura, doc.cruce)
+      const prop = accionConciliar(doc.factura, matchDeCruce(doc.cruce))
       const acciones = prop ? await guardarAcciones(session.id, [prop]) : []
       await logTurno(session.id, 'web', 'assistant', respuesta)
       return NextResponse.json({ respuesta, guardados: [], acciones })

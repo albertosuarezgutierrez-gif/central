@@ -20,6 +20,91 @@ Fecha Tarjeta Concepto Situación Importe
 1/4
 Kutxabank, S.A., Gran Vía, 30-32, Bilbao, C.I.F. A95653077`
 
+// 🚨 Texto REAL extraído con pdf-parse del «Movimientos de tarjeta» que Kutxabank genera hoy
+// (08/08/2026): va TODO pegado — sin espacio entre la fecha, el número enmascarado, el concepto y el
+// importe. El fixture de arriba (con espacios) es el que hizo creer que el parser funcionaba
+// mientras devolvía CERO movimientos con el documento de verdad. No sustituir este por uno "limpio".
+const TEXTO_REAL = `Tipo:visa dualNúmero:4662032019750300
+Movimientos de tarjeta
+07/08/2026
+18:24
+FechaTarjetaConceptoSituaciónImporte
+01/07/2026******20197503002.698,22 €PAGO RECIBO 4662032019750300
+01/07/2026******201975030035,00 €DEVOLUCION CIRCULO MERCANTIL
+01/07/2026******2019750300COMPRA EN ZAPATERIA CERRAJERIA-8,00 €
+03/07/2026******2019750300COMPRA EN DIA SEVILLA 2260-0,99 €
+03/07/2026******2019750300COMPRA EN MERCADONA COLMENA SEVILLA-187,67 €
+1/3
+Kutxabank, S.A., Gran Vía, 30-32, Bilbao, C.I.F. A95653077`
+
+test('PDF REAL (todo pegado): saca los 5 movimientos con su importe y su concepto', () => {
+  const [ex] = parseTarjetaPdfTexto(TEXTO_REAL)
+  assert.equal(ex.movimientos.length, 5)
+  assert.equal(ex.ccc, 'TARJETA-KUTXA-0300')
+  const [recibo, devolucion, zapateria, dia, mercadona] = ex.movimientos
+  // El importe del abono va PEGADO al número de tarjeta: `...201975030035,00 €`
+  assert.deepEqual([devolucion.importe, devolucion.concepto], [35, 'DEVOLUCION CIRCULO MERCANTIL'])
+  assert.deepEqual([recibo.importe, recibo.concepto], [2698.22, 'PAGO RECIBO 4662032019750300'])
+  assert.deepEqual([zapateria.importe, zapateria.concepto], [-8, 'COMPRA EN ZAPATERIA CERRAJERIA'])
+  // El concepto acaba en dígitos (`2260`) justo antes del importe negativo: no se los come.
+  assert.deepEqual([dia.importe, dia.concepto], [-0.99, 'COMPRA EN DIA SEVILLA 2260'])
+  assert.deepEqual([mercadona.importe, mercadona.concepto], [-187.67, 'COMPRA EN MERCADONA COLMENA SEVILLA'])
+  assert.equal(ex.fechaInicio, '2026-07-01')
+  assert.equal(ex.fechaFin, '2026-07-03')
+})
+
+test('PDF REAL: es extracto de tarjeta (antes se colaba como factura ilegible)', () => {
+  assert.equal(esExtractoTarjeta(TEXTO_REAL), true)
+})
+
+// 🚨 La OTRA tarjeta (…0302, la de Pilar) acaba en dígitos que NO son ceros, y ahí se vio que leer
+// el importe antes de recortar el nº de tarjeta se tragaba parte del PAN como grupo de millar:
+// `******20196503021.355,24 €` daba 21.355,24€ y `…201965030235,00 €` daba 235,00€. Un importe
+// inventado y verosímil no lo caza nadie aguas abajo, así que el nº de tarjeta se recorta PRIMERO.
+const TEXTO_0302 = `Tipo:visa dualNúmero:4662032019650302
+01/07/2026******20196503021.355,24 €PAGO RECIBO 4662032019650302
+01/07/2026******201965030235,00 €DEVOLUCION CIRCULO MERCANTIL
+02/07/2026******2019650302COMPRA EN DIA SEVILLA 2260-4,17 €`
+
+test('abono pegado al nº de tarjeta: el importe NO se lleva dígitos del PAN', () => {
+  const [ex] = parseTarjetaPdfTexto(TEXTO_0302)
+  assert.equal(ex.ccc, 'TARJETA-KUTXA-0302')
+  assert.deepEqual(ex.movimientos.map(m => m.importe), [1355.24, 35, -4.17])
+})
+
+test('sin línea inequívoca, el PAN de la cabecera delimita la tarjeta', () => {
+  const soloAbonos = TEXTO_0302.split('\n').filter(l => !l.includes('COMPRA EN')).join('\n')
+  const [ex] = parseTarjetaPdfTexto(soloAbonos)
+  assert.deepEqual(ex.movimientos.map(m => m.importe), [1355.24, 35])
+})
+
+// Sin cabecera y sin una sola línea de cargo no hay forma de saber dónde acaba el nº de tarjeta:
+// se descarta la línea. Inventar el importe es el peor de los dos males.
+test('sin PAN ni línea inequívoca → no se importa nada (no se adivina el importe)', () => {
+  assert.deepEqual(parseTarjetaPdfTexto('01/07/2026******201965030235,00 €DEVOLUCION Y'), [])
+})
+
+test('cuadre NO verificable si el extracto no trae ni una compra', () => {
+  const soloLiquidacion = parseTarjetaPdfTexto(`Número: 4662032019650302
+01/07/2026******2019650302COMPRA EN X-1,00 €
+02/07/2026******20196503021.355,24 €PAGO RECIBO 4662032019650302`)[0]
+  const sinCompras = { ...soloLiquidacion, movimientos: soloLiquidacion.movimientos.filter(m => m.importe > 0) }
+  const c = cuadrarExtractoTarjeta(sinCompras)
+  assert.equal(c.verificable, false)
+  assert.equal(c.cuadra, true)
+})
+
+// La liquidación del extracto real ABRE el mes (el 01/07 se paga lo gastado en junio), así que no
+// puede contrastarse con las compras de julio: no verificable, y por tanto nada de «⚠️ no cuadra».
+test('cuadre NO verificable cuando la liquidación paga el ciclo anterior', () => {
+  const [ex] = parseTarjetaPdfTexto(TEXTO_REAL)
+  const c = cuadrarExtractoTarjeta(ex)
+  assert.equal(c.verificable, false)
+  assert.equal(c.cuadra, true)          // no se afirma un descuadre que no se puede comprobar
+  assert.equal(c.diferencia, 0)
+  assert.equal(c.liquidacion, 2698.22)  // el dato se conserva para poder enseñarlo
+})
+
 test('parsea cargos, abonos y recibos con el importe delante o detrás', () => {
   const [ex] = parseTarjetaPdfTexto(TEXTO)
   assert.equal(ex.movimientos.length, 5)
@@ -86,6 +171,7 @@ test('esPagoReciboTarjeta reconoce la línea de liquidación', () => {
 test('cuadrarExtractoTarjeta: cuadra cuando Σcompras − Σdevoluciones = liquidación', () => {
   const [ex] = parseTarjetaPdfTexto(EXTRACTO)
   const c = cuadrarExtractoTarjeta(ex)
+  assert.equal(c.verificable, true)   // aquí la liquidación SÍ cierra el ciclo de estas compras
   assert.equal(c.cuadra, true)
   assert.equal(c.liquidacion, 292.39)
   assert.equal(Math.round(c.sumaCompras * 100) / 100, 327.39)
