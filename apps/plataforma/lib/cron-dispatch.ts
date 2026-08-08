@@ -22,8 +22,14 @@ export const CRON_JOBS: CronJob[] = [
   // manifiesto, así que la tabla llevaba congelada desde el 19/07/2026 mientras la pantalla seguía
   // pintando sus cifras como si fueran de hoy. Es la medición punto-en-el-tiempo de la que dependen
   // las hipótesis del pre-registro (H4 en su día, H8 ahora), y sin ella nunca se resolverían.
-  // 40 símbolos por pasada, cada 2 h → el ciclo del universo (~1.000 filas) tarda ~2 días.
-  { path: '/api/cron/trading-backtest', schedule: '10 */2 * * *' },
+  // ⏳ CADENCIA TEMPORAL cada 30 min (08/08/2026), NO el ritmo de crucero. Al pasar la ventana de 24 a
+  // 180 meses (`MESES_RETROVISOR`) hay que RECONSTRUIR las ~1.018 filas enteras, y cada símbolo hace
+  // ~8× más trabajo: con el presupuesto de 240 s entran ~20-30 símbolos por pasada, así que a 2 h el
+  // ciclo se iría a ~3,5 días. A 30 min baja a ~un día.
+  // 🔁 DEVOLVER a `10 */2 * * *` cuando el ciclo cierre (todas las filas con 178 snapshots): en
+  // régimen estacionario solo hay que refrescar rancidez y 2 h sobra. Si esto sigue en 30 min dentro
+  // de una semana, es que se olvidó — no que haga falta.
+  { path: '/api/cron/trading-backtest', schedule: '*/30 * * * *' },
   { path: '/api/cron/agentes-latido', schedule: '45 7 * * *' },
   { path: '/api/cron/paper-tracker', schedule: '0 10 * * 1' },
   { path: '/api/cron/resumen-mensual', schedule: '0 8 1 * *' },

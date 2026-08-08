@@ -24,6 +24,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🕰️ Retrovisor de 24 meses → 15 AÑOS (08/08/2026).** Decisión de Alberto tras ver que H8 invertía el
+  signo entre mitades y con 22 snapshots no había forma de saber cuál era el mundo. `MESES_RETROVISOR`
+  = 180 en `backtest-puro.ts`: de ~22 snapshots por símbolo a **178**, cubriendo 2011-2026 (euro, 2015-16,
+  Q4-2018, COVID, oso de 2022, ciclo actual). No toca factores, pesos ni umbrales — solo la ventana de
+  medición. **Firmado en el pre-registro ANTES de ver datos, con el caveat que manda: sesgo de
+  SUPERVIVENCIA** (el universo son los 1.018 de hoy) → el nivel absoluto queda inflado y no se usa; lo
+  válido es la comparación cruzada dentro de cada fecha, que es justo lo que miden H8/H9/factores.
+  Fundamentales solo desde ~2010 (mandato XBRL) → los factores se miden sobre menos años que el precio.
+  El lote lleva ahora **presupuesto de tiempo** (240 s de 300) porque cada símbolo hace ~8× más CPU, y el
+  cron va **temporalmente cada 30 min** para reconstruir en ~1 día — **devolver a `10 */2 * * *` al cerrar**.
+  Durante la reconstrucción el corpus está MEZCLADO: filtrar por `actualizado_en` en todo análisis.
+
 - **✅ H8 y H9 RESUELTAS sobre el corpus completo — ninguna se cablea (08/08/2026).** 1.018/1.018 símbolos,
   21.321 observaciones. **H9:** las tres reglas de salida fallan su propio criterio; stop −20% y trailing
   −15% EMPEORAN los batacazos (15,6% y 12,1% vs 10,4% sin regla) — la salida por TIEMPO queda validada,

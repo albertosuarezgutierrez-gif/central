@@ -9,9 +9,30 @@ export const VENTANAS_FORWARD = [28, 56, 91] as const
 export const sumarDias = (fecha: string, n: number) =>
   new Date(Date.parse(`${fecha}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10)
 
+// Ventana del retrovisor en MESES. 15 años (08/08/2026, subida desde 24 meses).
+//
+// POR QUÉ: con 24 meses el corpus cubría un solo régimen (el alcista 2024-26) y ese caveat aparecía
+// firmado en TODAS las hipótesis. El 08/08/2026 se vio lo que cuesta: H8 (capitulación) daba +2,34 pp
+// agregados —por encima de su umbral— pero **el signo se invertía entre mitades** (+6,85 pp en la
+// primera, −2,24 pp en la segunda), y con 22 snapshots no hay forma de saber cuál de las dos mitades
+// es el mundo y cuál la excepción. Más SÍMBOLOS no arregla eso; solo más HISTORIA. 180 meses cubren
+// 2011-2026: crisis del euro, selloff 2015-16, Q4-2018, COVID, el oso de 2022 y el ciclo actual.
+//
+// 🚨 SESGO DE SUPERVIVENCIA — leer antes de interpretar nada del tramo largo. El universo son los
+// 1.018 símbolos que existen HOY: las empresas que quebraron o fueron excluidas entre 2011 y 2026 no
+// están. A 22 meses eso apenas se notaba; a 15 años es severo y **el nivel absoluto de los retornos
+// del retrovisor queda inflado**. Lo que SÍ sigue siendo válido es la comparación CRUZADA dentro de
+// cada fecha (capitula vs no capitula, con regla de salida vs sin ella, quintil alto vs bajo): ambos
+// brazos sufren el mismo sesgo, así que la DIFERENCIA se mantiene interpretable. Traducido: este
+// corpus sirve para «¿la señal cambia de signo según el régimen?» y NO para «¿cuánto se gana?».
+//
+// Coste medido antes de subirlo (08/08/2026): 3.553 bytes por fila con 22 snapshots ≈ 162 B/snapshot
+// → ~29 KB por fila y ~30 MB de jsonb para el universo entero. Asumible.
+export const MESES_RETROVISOR = 180
+
 // Fechas de snapshot: día 1 de cada mes, desde hace `meses` hasta hace `margenDias` (para que la
 // ventana forward más larga quepa entera en la serie de precios).
-export function fechasSnapshot(hoy: string, meses = 24, margenDias = 98): string[] {
+export function fechasSnapshot(hoy: string, meses = MESES_RETROVISOR, margenDias = 98): string[] {
   const [y, m] = hoy.split('-').map(Number)
   const limite = sumarDias(hoy, -margenDias)
   const out: string[] = []
