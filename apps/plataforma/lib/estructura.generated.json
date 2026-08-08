@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-08T09:12:55Z",
+  "generadoEn": "2026-08-08T11:22:02Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3979,6 +3979,14 @@
   ],
   "novedades": [
     {
+      "titulo": "🔍 Auditoría diaria ligera (08/08/2026).",
+      "fecha": "08/08/2026"
+    },
+    {
+      "titulo": "📚 Las 6 trampas del extracto de tarjeta, en la doc que se lee (08/08/2026).",
+      "fecha": "08/08/2026"
+    },
+    {
       "titulo": "⏱️ «Sin respuesta.» sobre un extracto que SÍ había entrado (08/08/2026).",
       "fecha": "08/08/2026"
     },
@@ -4028,14 +4036,6 @@
     },
     {
       "titulo": "🤝 Landing privada de partnership Teya (06/08/2026, auditoría diaria, PR #771).",
-      "fecha": "06/08/2026"
-    },
-    {
-      "titulo": "💶 ialimp: precio de plan y ahorro anual sin formato español (auditoría diaria, PR #1139).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🐕 3er tramo del watchdog de trading + 2 crons rotos desde el 30/07 (06/08/2026).",
       "fecha": "06/08/2026"
     }
   ],
