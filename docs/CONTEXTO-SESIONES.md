@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔴→🟢 Latido rojo de `sivra_mercado_sweep` — diagnosticado: NO investigar de nuevo (08/08/2026).**
+  El `ok=false` de la pasada de hoy 03:04 UTC es código VIEJO: exigía cero ventanas ciegas en base y
+  saltó por 1 de 32 (lotería de fecha de Google, documentada). El fix (PR #1299, `mesesCiegosEnBase`
+  + ratio 25%) mergeó a las 11:28 UTC y **ya está en producción** (deploy `0fe9d9e`, 13:04 UTC).
+  Verificado localmente: con los números reales de hoy la lógica nueva da `ok=true` (tests 25/25).
+  Si la pasada del 09/08 03:00 UTC sigue roja, ESO sí es señal nueva. Las «6 búsquedas sin resultados»
+  son la lotería conocida (ya mitigada con consulta de mes); el precio por fecha real lo trae
+  `mercado-booking` (hoy verde, 120 comps).
+
 - **🔍 Rutinas de auditoría ampliadas (08/08/2026).** Revisión pedida por Alberto de la diaria/semanal:
   el heartbeat (paso 2-bis) pasa a leer `agente_latidos` como fuente preferida y saca de la SQL las 3
   huellas de actividad (`incomes`, `market_rates normal`, `cleaning_sessions`) que daban falso ⛔ cada
