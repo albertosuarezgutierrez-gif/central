@@ -19,7 +19,8 @@
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { CHOLLO_DESCUENTO_MIN, datosFichaFotocasa, detectarChollos, estimarAntiguedad, MIN_MUESTRA_ZONA, parsearAlertaFotocasa, parsearAlertaIdealista, precioM2Zona, RECONSTRUIR_EUR_M2, slugDistritoFotocasa, slugNucleoPlaya, slugZonaFotocasa, velocidadZona, type Chollo, type Comparable, type VelocidadZona, type ZonaPortal, type ZonaPortalRef } from '@central/module-subastas'
-import { leerAlertas } from '@/lib/subastas/gmail-boe'
+import { leerAlertasDesde } from '@/lib/subastas/gmail-boe'
+import { guardarCursor, leerCursor } from '@/lib/subastas/correo-cursor'
 import { COSTE_PETICION_PORTAL_MS, motivoCorte, quedaTiempo } from '@/lib/subastas/presupuesto-mercado'
 import { tgSend } from '@central/core-telegram'
 import { eur } from '@/lib/dinero'
@@ -33,44 +34,62 @@ const MESES_VIGENCIA = 12
 const MAX_COMPARABLES = 3000
 
 /**
- * Ingesta de comparables desde las alertas de Idealista del correo.
+ * Ingesta de comparables desde las alertas de Idealista y Fotocasa del correo.
  *
  * El mismo anuncio se repite en correos sucesivos mientras sigue vivo, de ahí
  * el `ON CONFLICT (portal, ref_anuncio)`: se actualiza el precio (los anuncios
  * bajan de precio) y la fecha en que se vio, sin duplicar la muestra.
+ *
+ * INCREMENTAL desde el 08/08/2026: cada portal recuerda hasta qué UID leyó
+ * (`subastas_correo_cursor`). Antes se pedían «los últimos 30 días, hasta 150
+ * por portal» EN CADA PASADA DIARIA, así que se reparseaban ~300 correos para
+ * encontrar los pocos nuevos — y esa relectura se comía el presupuesto de
+ * tiempo del cron entero (latido del 07/08: «cortado tras 0 ficha(s)»).
+ *
+ * `dias`/`maxCorreos` siguen mandando en la PRIMERA lectura de cada portal y en
+ * un backfill manual (`?dias=60`), que se fuerza borrando la fila del cursor.
  */
 export async function ingerirComparables(dias = 30, maxCorreos = 150): Promise<{
   correos: number
   anuncios: number
   upserts: number
+  /** Una línea por portal: cuántos correos y desde dónde se leyeron. */
+  lecturas: string[]
 }> {
-  // Un lote por portal, mismo upsert. Un fallo de lectura de un portal no debe
-  // tirar el otro: cada lectura es best-effort.
-  const lotes: Array<{ correos: Awaited<ReturnType<typeof leerAlertas>>; parser: (html: string) => Comparable[] }> = []
-  try {
-    lotes.push({ correos: await leerAlertas(dias, maxCorreos, REMITENTE_IDEALISTA), parser: parsearAlertaIdealista })
-  } catch (e) {
-    console.error('[mercado] idealista', e)
-  }
-  try {
-    lotes.push({ correos: await leerAlertas(dias, maxCorreos, REMITENTE_FOTOCASA), parser: parsearAlertaFotocasa })
-  } catch (e) {
-    console.error('[mercado] fotocasa', e)
-  }
+  const portales = [
+    { remitente: REMITENTE_IDEALISTA, parser: parsearAlertaIdealista },
+    { remitente: REMITENTE_FOTOCASA, parser: parsearAlertaFotocasa },
+  ]
 
   let nCorreos = 0
   let anuncios = 0
   let upserts = 0
-  for (const { correos, parser } of lotes) {
-    nCorreos += correos.length
-    for (const c of correos) {
-    for (const a of parser(c.html)) {
-      anuncios++
-      upserts += await upsertComparable(a, c.fecha)
-    }
+  const lecturas: string[] = []
+  // Un fallo de lectura de un portal no debe tirar el otro: cada portal es
+  // best-effort y su cursor es independiente.
+  for (const { remitente, parser } of portales) {
+    try {
+      const cursor = await leerCursor(remitente)
+      const lote = await leerAlertasDesde(remitente, cursor, { dias, max: maxCorreos })
+      nCorreos += lote.correos.length
+      for (const c of lote.correos) {
+        for (const a of parser(c.html)) {
+          anuncios++
+          upserts += await upsertComparable(a, c.fecha)
+        }
+      }
+      // El cursor se confirma SOLO tras ingerir el lote (at-least-once): si algo
+      // revienta a mitad, la pasada siguiente reprocesa esos correos —el upsert
+      // es idempotente— en vez de saltárselos en silencio.
+      await guardarCursor(remitente, lote.cursor)
+      lecturas.push(lote.detalle)
+    } catch (e) {
+      console.error('[mercado]', remitente, e)
+      // Un portal que no se ha podido leer NO es un portal sin novedades.
+      lecturas.push(`${remitente}: no se pudo leer (${String((e as Error)?.message ?? e).slice(0, 80)})`)
     }
   }
-  return { correos: nCorreos, anuncios, upserts }
+  return { correos: nCorreos, anuncios, upserts, lecturas }
 }
 
 /**

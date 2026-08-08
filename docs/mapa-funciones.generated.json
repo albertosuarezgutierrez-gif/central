@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-08T07:52:40Z",
-  "sha": "94487dfa980a6aed4c2b4eb646017cb66ef07e71",
+  "generadoEn": "2026-08-08T09:12:55Z",
+  "sha": "77f53e6f5a25edf6ae7267cd18177b5f3a2a2687",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -44477,7 +44477,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cc9577d7f108"
+      "hash": "4e95bea4beb1"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CorreduriaClient.tsx",
@@ -50480,7 +50480,7 @@
           "exportada": false,
           "params": "e: any",
           "retorno": "string",
-          "linea": 19,
+          "linea": 24,
           "resumen": "Traduce un error de la IA a un mensaje claro para Alberto. Los proveedores gratuitos (NIM/Groq/ Gemini) devuelven 429/quota cuando se saturan, y el cerebro puede abortar por timeout: en ambos casos NO"
         },
         {
@@ -50489,12 +50489,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 27
+          "linea": 32
         }
       ],
       "tablas": [],
       "rutaApi": "/api/contable/chat",
-      "hash": "8df2a51721b7"
+      "hash": "948718c6ba6d"
     },
     {
       "ruta": "apps/plataforma/app/api/contable/feedback/route.ts",
@@ -51370,7 +51370,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/cron/subastas-mercado",
-      "hash": "f3f1d5af788c"
+      "hash": "34b34b8f5ac7"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-radar/route.ts",
@@ -59309,33 +59309,92 @@
       "hash": "2cb5f0011851"
     },
     {
+      "ruta": "apps/plataforma/lib/contable/documento-clase.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "apps/plataforma/lib/contable/documento-clase.ts ¿Qué CLASE de documento me han subido? Módulo PURO (sin BD ni red, testeable con `node --test`). Motivo (fallo real del 07/08/2026, tres intentos seguidos): Alberto subió al chat el PDF «movimientos (1).pdf» —el listado de movimientos de su cuenta corr",
+      "exporta": [
+        "detectarListadoMovimientos"
+      ],
+      "funciones": [
+        {
+          "nombre": "iso",
+          "kind": "function",
+          "exportada": false,
+          "params": "dd: string, mm: string, aa: string",
+          "retorno": "string | null",
+          "linea": 41
+        },
+        {
+          "nombre": "detectarListadoMovimientos",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | undefined | null",
+          "retorno": "ListadoMovimientos | null",
+          "linea": 53,
+          "resumen": "¿El texto extraído de un PDF es un LISTADO de movimientos (extracto de cuenta, informe de movimientos, histórico) en vez de una factura suelta? Devuelve el recuento y el rango de fechas, o `null` si n"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "96fbcb1c4552"
+    },
+    {
       "ruta": "apps/plataforma/lib/contable/documentos-tipos.ts",
       "ambito": "apps/plataforma",
       "resumen": "apps/plataforma/lib/contable/documentos-tipos.ts Lógica PURA de interpretación de un documento extraído (ticket/factura) → factura estructurada o \"no lo he podido leer\". Sin BD ni alias '@/', así el test (node --test) la carga aislada (mismo motivo por el que parse.ts / formato.ts / acciones-tipos.t",
       "exporta": [
+        "fechaEs",
         "interpretarExtraccion",
         "resumenDocumento",
+        "matchDeCruce",
         "refFactura",
         "accionConciliar"
       ],
       "funciones": [
+        {
+          "nombre": "fechaEs",
+          "kind": "function",
+          "exportada": true,
+          "params": "iso: string | null | undefined",
+          "retorno": "string",
+          "linea": 66,
+          "resumen": "'YYYY-MM-DD' → 'DD/MM/YYYY' (lo que Alberto lee en su banco). Deja pasar lo que no reconozca."
+        },
+        {
+          "nombre": "textoCobertura",
+          "kind": "function",
+          "exportada": false,
+          "params": "cobertura: CoberturaBanco[]",
+          "retorno": "string",
+          "linea": 73,
+          "resumen": "«BBVA hasta el 07/08/2026 · Kutxabank hasta el 05/08/2026». Las cuentas sin un solo movimiento se omiten: no aportan nada al «hasta dónde he podido mirar»."
+        },
         {
           "nombre": "interpretarExtraccion",
           "kind": "function",
           "exportada": true,
           "params": "data: ExtraccionCruda, source: 'text' | 'vision' | 'none'",
           "retorno": "Interpretacion",
-          "linea": 33,
+          "linea": 81,
           "resumen": "Decide si la extracción es utilizable y normaliza la factura. Determinista, sin red."
         },
         {
           "nombre": "resumenDocumento",
           "kind": "function",
           "exportada": true,
-          "params": "f: FacturaDoc, match: MatchDoc",
+          "params": "f: FacturaDoc, cruce: CruceDoc",
           "retorno": "string",
-          "linea": 55,
+          "linea": 103,
           "resumen": "Texto legible para el chat tras leer el documento. Determinista."
+        },
+        {
+          "nombre": "matchDeCruce",
+          "kind": "function",
+          "exportada": true,
+          "params": "cruce: CruceDoc",
+          "retorno": "MatchDoc",
+          "linea": 142,
+          "resumen": "El movimiento sobre el que se puede PROPONER conciliar. Solo el cruce exacto y el que cae fuera de la ventana (ese se pregunta antes). Un cargo ya conciliado no se vuelve a proponer."
         },
         {
           "nombre": "refFactura",
@@ -59343,7 +59402,7 @@
           "exportada": true,
           "params": "f: FacturaDoc",
           "retorno": "string",
-          "linea": 64,
+          "linea": 150,
           "resumen": "Referencia corta que se guarda en factura_ref al conciliar. Determinista."
         },
         {
@@ -59352,12 +59411,12 @@
           "exportada": true,
           "params": "f: FacturaDoc, match: MatchDoc",
           "retorno": "PropuestaAccion | null",
-          "linea": 72
+          "linea": 158
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "26e8e50972ff"
+      "hash": "109b4d2bf3a9"
     },
     {
       "ruta": "apps/plataforma/lib/contable/documentos.ts",
@@ -59368,13 +59427,56 @@
       ],
       "funciones": [
         {
-          "nombre": "buscarMovimiento",
+          "nombre": "aCandidato",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "m: FilaMov",
+          "retorno": "MovCandidato",
+          "linea": 39
+        },
+        {
+          "nombre": "cargosDelImporte",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuentaId: string, f: FacturaDoc, dias: number",
+          "retorno": "Promise<FilaMov[]>",
+          "linea": 48,
+          "resumen": "Cargos del MISMO importe (al céntimo) dentro de una ventana de días. READ-ONLY: réplica de la SELECT de factura-ocr.ts::casarFactura pero SIN el UPDATE (aquí solo proponemos; el UPDATE lo hace accione"
+        },
+        {
+          "nombre": "coberturaExtractos",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuentaId: string",
+          "retorno": "Promise<CoberturaBanco[]>",
+          "linea": 67,
+          "resumen": "Hasta qué fecha llega el extracto de cada cuenta VIVA. Es lo que convierte un «no lo encuentro» en un «todavía no me ha llegado» (regla del CLAUDE.md: dato que no hay ≠ dato que no se ha mirado)."
+        },
+        {
+          "nombre": "diasEntre",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a: string, b: string",
+          "retorno": null,
+          "linea": 81
+        },
+        {
+          "nombre": "buscarCruce",
           "kind": "function",
           "exportada": false,
           "params": "cuentaId: string, f: FacturaDoc, tolDias = 7",
-          "retorno": "Promise<MatchDoc>",
-          "linea": 21,
-          "resumen": "Busca un movimiento sin conciliar que cuadre con la factura (gasto → cargo), al céntimo y ±tol días. READ-ONLY: réplica de la SELECT de factura-ocr.ts::casarFactura pero SIN el UPDATE (aquí solo propo"
+          "retorno": "Promise<CruceDoc>",
+          "linea": 85,
+          "resumen": "Cruza la factura contra los movimientos y devuelve CUÁL de los cinco desenlaces es (ver CruceDoc)."
+        },
+        {
+          "nombre": "procesarExcel",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuentaId: string, buffer: Buffer, mimeType: string, fileName: string,",
+          "retorno": "Promise<DocProcesado>",
+          "linea": 113,
+          "resumen": "Hoja de cálculo subida al chat: el lector de facturas no sabe abrirla (devolvería «no he podido leer el documento», que es falso). Hoy el Excel que Alberto sube es el MISMO listado de la tarjeta que e"
         },
         {
           "nombre": "procesarDocumento",
@@ -59382,7 +59484,7 @@
           "exportada": true,
           "params": "cuentaId: string, buffer: Buffer, mimeType: string, fileName = '',",
           "retorno": "Promise<DocProcesado>",
-          "linea": 39
+          "linea": 147
         }
       ],
       "tablas": [
@@ -59390,7 +59492,7 @@
         "movimientos_bancarios"
       ],
       "rutaApi": null,
-      "hash": "da2cac332e59"
+      "hash": "7ecbc8877b06"
     },
     {
       "ruta": "apps/plataforma/lib/contable/extracto-tarjeta.ts",
@@ -59406,7 +59508,7 @@
           "exportada": false,
           "params": "cuentaId: string, ccc: string,",
           "retorno": "Promise<",
-          "linea": 28,
+          "linea": 30,
           "resumen": "Resuelve la sociedad + titular de una tarjeta por su ccc (TARJETA-KUTXA-<últ.4>), reutilizando la cuenta bancaria que YA existe (ambas tarjetas están dadas de alta con su titular). Fallback a la prime"
         },
         {
@@ -59415,7 +59517,7 @@
           "exportada": false,
           "params": "cuentaBancariaIds: string[], desde: string, hasta: string,",
           "retorno": "Promise<",
-          "linea": 47,
+          "linea": 49,
           "resumen": "Empareja las devoluciones (abonos que no son PAGO RECIBO) con su compra original y les copia el destino para que se ANULEN en el cómputo por destino. Las que no casan → requiere_revision y un mensaje "
         },
         {
@@ -59424,16 +59526,15 @@
           "exportada": false,
           "params": "cuentaId: string, ids: string[], desde: string, hasta: string,",
           "retorno": "Promise<void>",
-          "linea": 122
+          "linea": 124
         },
         {
           "nombre": "procesarExtractoTarjeta",
           "kind": "function",
           "exportada": true,
-          "params": "cuentaId: string, buffer: Buffer, mimeType: string, fileName: string, texto: string,",
+          "params": "cuentaId: string, buffer: Buffer, mimeType: string, fileName: string, extractos: ExtractoN43[], origen: 'pdf' | 'xls' = 'pdf',",
           "retorno": "Promise<ResultadoExtractoTarjeta>",
-          "linea": 198,
-          "resumen": "Procesa un extracto de tarjeta subido al chat/Telegram. `texto` ya viene extraído del PDF."
+          "linea": 206
         }
       ],
       "tablas": [
@@ -59442,7 +59543,7 @@
         "sociedades"
       ],
       "rutaApi": null,
-      "hash": "7325330d2011"
+      "hash": "bb6dc5460d3e"
     },
     {
       "ruta": "apps/plataforma/lib/contable/formato.ts",
@@ -59775,6 +59876,38 @@
       "hash": "74ecb5215b4d"
     },
     {
+      "ruta": "apps/plataforma/lib/contable/presupuesto-extracto.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "apps/plataforma/lib/contable/presupuesto-extracto.ts Reparto del tiempo de la pasada que importa un extracto de tarjeta. Módulo PURO (testeable con `node --test`): solo decide QUÉ pasos caben en el tiempo que queda; no mide ni ejecuta nada. Motivo (08/08/2026, fallo real en producción): subir el PDF",
+      "exporta": [
+        "planificarPasos",
+        "lineaSaltados"
+      ],
+      "funciones": [
+        {
+          "nombre": "planificarPasos",
+          "kind": "function",
+          "exportada": true,
+          "params": "msRestantes: number",
+          "retorno": "PlanPasos",
+          "linea": 41,
+          "resumen": "Qué pasos opcionales caben en `msRestantes`. Un paso solo entra si, además de su coste, deja la reserva para responder. Se evalúan en orden de importancia, así que quedarse corto degrada de forma pred"
+        },
+        {
+          "nombre": "lineaSaltados",
+          "kind": "function",
+          "exportada": true,
+          "params": "saltados: PasoOpcional[]",
+          "retorno": "string",
+          "linea": 65,
+          "resumen": "Línea para el resumen del chat. '' si no se saltó nada."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "763c5fe8f635"
+    },
+    {
       "ruta": "apps/plataforma/lib/contable/proactivo.ts",
       "ambito": "apps/plataforma",
       "resumen": "apps/plataforma/lib/contable/proactivo.ts Proactividad del agente (spec §7): que te hable él primero. v1 = un resumen breve, y SOLO cuando hay algo que decir (nada de ruido). Lee counts scoped por cuenta_id y añade lo que sabe de la rutina (contable_memoria). Se dispara desde un cron ligero; reutili",
@@ -59931,7 +60064,7 @@
           "exportada": true,
           "params": "cuentaId: string, accion: 'ok' | 'no', accionId: string,",
           "retorno": "Promise<string>",
-          "linea": 68,
+          "linea": 70,
           "resumen": "Confirmar / descartar una acción propuesta desde Telegram (callback cont_ok / cont_no)."
         },
         {
@@ -59940,7 +60073,7 @@
           "exportada": true,
           "params": "fileId: string, mimeHint = '', nameHint = '',",
           "retorno": "Promise<",
-          "linea": 78,
+          "linea": 80,
           "resumen": "Descarga un fichero de Telegram por file_id (getFile → download del CDN de Telegram)."
         },
         {
@@ -59949,7 +60082,7 @@
           "exportada": true,
           "params": "msg: any",
           "retorno": "",
-          "linea": 106,
+          "linea": 108,
           "resumen": "Nota de voz / audio de un mensaje de Telegram (message.voice = .oga opus, message.audio = fichero)."
         },
         {
@@ -59958,7 +60091,7 @@
           "exportada": true,
           "params": "cuentaId: string, buffer: Buffer, fileName: string, mimeType: string,",
           "retorno": "Promise<void>",
-          "linea": 115,
+          "linea": 117,
           "resumen": "Transcribe una nota de voz (Groq Whisper) y la trata como si Alberto la hubiera escrito."
         },
         {
@@ -59967,7 +60100,7 @@
           "exportada": true,
           "params": "msg: any",
           "retorno": "",
-          "linea": 126,
+          "linea": 128,
           "resumen": "Extrae el file_id + pistas de mime/nombre de un mensaje de Telegram (foto o documento). null si no hay."
         },
         {
@@ -59976,7 +60109,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<void>",
-          "linea": 146,
+          "linea": 148,
           "resumen": "Onboarding (spec §8): mensaje guía. La memoria se construye después con lo que Alberto cuente (canal APRENDER del cerebro), sin sembrar datos sensibles a mano."
         },
         {
@@ -59985,7 +60118,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "boolean",
-          "linea": 151,
+          "linea": 153,
           "resumen": "¿Es un comando de arranque del agente contable? (/contable, \"empezar contable\"…)"
         }
       ],
@@ -59993,7 +60126,7 @@
         "cuentas"
       ],
       "rutaApi": null,
-      "hash": "621a0fe4e16f"
+      "hash": "8f807fe1f7cf"
     },
     {
       "ruta": "apps/plataforma/lib/correduria.ts",
@@ -61940,6 +62073,38 @@
       "hash": "ac2522d02d84"
     },
     {
+      "ruta": "apps/plataforma/lib/extracto-tarjeta-excel.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "apps/plataforma/lib/extracto-tarjeta-excel.ts El MISMO extracto de tarjeta que el PDF, pero descargado en Excel («Información de movimientos de tarjetas» de Kutxabank). Módulo PURO (sin BD ni red, testeable con `node --test`). El problema: el Excel NO trae el número de tarjeta en ninguna cabecera, a",
+      "exporta": [
+        "identificarTarjetaExcel",
+        "comoExtractoTarjeta"
+      ],
+      "funciones": [
+        {
+          "nombre": "identificarTarjetaExcel",
+          "kind": "function",
+          "exportada": true,
+          "params": "ex: ExtractoN43 | undefined | null",
+          "retorno": "TarjetaExcel | null",
+          "linea": 37,
+          "resumen": "¿Este Excel es un extracto de TARJETA y de cuál? `null` si no lo es o si no se puede identificar la tarjeta sin adivinar (sin línea de liquidación, o con varias tarjetas mezcladas)."
+        },
+        {
+          "nombre": "comoExtractoTarjeta",
+          "kind": "function",
+          "exportada": true,
+          "params": "ex: ExtractoN43, ccc: string",
+          "retorno": "ExtractoN43",
+          "linea": 69,
+          "resumen": "Deja el extracto del Excel EXACTAMENTE con la forma que produce el parser del PDF, listo para `importarExtracto`. 🚨 LANDMINE — el mismo mes en PDF y en Excel se DUPLICABA. El `dedupeHash` (lib/norma4"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b51a05d47cce"
+    },
+    {
       "ruta": "apps/plataforma/lib/extracto-tarjeta-pdf.ts",
       "ambito": "apps/plataforma",
       "resumen": "Importador del PDF de \"Movimientos de tarjeta\" de Kutxabank (visa dual). Produce el MISMO tipo `ExtractoN43` que Norma 43 / Excel, así la persistencia (lib/banca.ts) y el dedupe no cambian. El parseo del TEXTO es puro (testeable con `node --test`); la extracción PDF→texto usa pdf-parse en un wrapper",
@@ -61957,7 +62122,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "number | null",
-          "linea": 23,
+          "linea": 36,
           "resumen": "'1.234,56' / '-4,17' (formato es-ES) → número. null si no parsea."
         },
         {
@@ -61966,8 +62131,17 @@
           "exportada": false,
           "params": "d: string, m: string, y: string",
           "retorno": "string",
-          "linea": 29,
+          "linea": 42,
           "resumen": "'DD/MM/YYYY' → 'YYYY-MM-DD'."
+        },
+        {
+          "nombre": "digitosEnmascarados",
+          "kind": "function",
+          "exportada": false,
+          "params": "lineas: string[], pan: string | null",
+          "retorno": "string | null",
+          "linea": 70,
+          "resumen": "2. el PAN de la cabecera (`Número: 4662032019750300`): se prueba su sufijo más largo que encaje con los dígitos que siguen a los asteriscos. Si ninguna resuelve, se devuelve null y las líneas se DESCA"
         },
         {
           "nombre": "parseTarjetaPdfTexto",
@@ -61975,7 +62149,7 @@
           "exportada": true,
           "params": "texto: string, opts: { iban?: string; banco?: string } = {},",
           "retorno": "ExtractoN43[]",
-          "linea": 37
+          "linea": 84
         },
         {
           "nombre": "parseExtractoTarjetaPdf",
@@ -61983,7 +62157,7 @@
           "exportada": true,
           "params": "buf: Buffer, opts: { iban?: string; banco?: string } = {},",
           "retorno": "Promise<ExtractoN43[]>",
-          "linea": 89,
+          "linea": 144,
           "resumen": "Wrapper con red de E/S: PDF (Buffer) → texto → parseo puro. Import perezoso del implementador interno de pdf-parse (mismo patrón que lib/concursos.ts: la raíz del paquete tiene un index con efectos se"
         },
         {
@@ -61992,7 +62166,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "boolean",
-          "linea": 102,
+          "linea": 157,
           "resumen": "¿El texto de un PDF ya extraído parece un \"Movimientos de tarjeta\"? Reutiliza el propio parser: es extracto si detecta ≥3 líneas de movimiento con el formato `DD/MM/YYYY ******PAN …`. El umbral evita "
         },
         {
@@ -62001,7 +62175,7 @@
           "exportada": true,
           "params": "concepto: string | null | undefined",
           "retorno": "boolean",
-          "linea": 111,
+          "linea": 166,
           "resumen": "Línea de LIQUIDACIÓN de la tarjeta dentro del propio extracto: el abono \"PAGO RECIBO 4662…\" que paga el saldo del mes (espejo del cargo TARJ.CRDTO de la cuenta corriente). NO es una compra ni una devo"
         },
         {
@@ -62010,13 +62184,13 @@
           "exportada": true,
           "params": "ex: ExtractoN43, tol = 0.02",
           "retorno": "CuadreTarjeta",
-          "linea": 127,
+          "linea": 190,
           "resumen": "Comprueba la consistencia interna del extracto: la liquidación (PAGO RECIBO) debe igualar Σ compras − Σ devoluciones. Si no cuadra, faltan páginas / es el mes equivocado / PDF parcial. Puro/testeable."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b6af52e4970c"
+      "hash": "de82569be09b"
     },
     {
       "ruta": "apps/plataforma/lib/extracto-xls.ts",
@@ -66373,6 +66547,93 @@
       "hash": "d402220efec6"
     },
     {
+      "ruta": "apps/plataforma/lib/subastas/correo-cursor.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Persistencia del cursor incremental de alertas (tabla `subastas_correo_cursor`). La lógica de decisión es pura y vive en `correo-incremental.ts`; aquí solo BD.",
+      "exporta": [
+        "leerCursor",
+        "guardarCursor"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerCursor",
+          "kind": "function",
+          "exportada": true,
+          "params": "remitente: string",
+          "retorno": "Promise<CursorCorreo | null>",
+          "linea": 15,
+          "resumen": "Cursor guardado de un remitente, o `null` si no hay ninguno. Un fallo de BD también devuelve `null`, y eso es deliberado: sin cursor se bootstrapea por ventana de días — exactamente la conducta anteri"
+        },
+        {
+          "nombre": "guardarCursor",
+          "kind": "function",
+          "exportada": true,
+          "params": "remitente: string, cursor: CursorCorreo",
+          "retorno": "Promise<void>",
+          "linea": 36,
+          "resumen": "Guarda el cursor TRAS procesar el lote (at-least-once). Best-effort a propósito: si la escritura falla, la pasada siguiente releerá ese lote —trabajo repetido, no datos perdidos—. Lanzar aquí tiraría "
+        }
+      ],
+      "tablas": [
+        "set",
+        "subastas_correo_cursor"
+      ],
+      "rutaApi": null,
+      "hash": "60aebdb7d7bf"
+    },
+    {
+      "ruta": "apps/plataforma/lib/subastas/correo-incremental.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Lógica PURA del cursor incremental de las alertas de portales inmobiliarios. POR QUÉ EXISTE (auditoría del 08/08/2026): el cron `subastas-mercado` corre UNA vez al día y pedía «los correos de los últimos 30 días, hasta 150 ",
+      "exporta": [
+        "planificarLectura",
+        "uidsALeer",
+        "avanzarCursor",
+        "detalleLectura"
+      ],
+      "funciones": [
+        {
+          "nombre": "planificarLectura",
+          "kind": "function",
+          "exportada": true,
+          "params": "params: { cursor: CursorCorreo | null uidValidityActual: number dias: number ahora?: number }",
+          "retorno": "PlanLectura",
+          "linea": 45,
+          "resumen": "Decide cómo leer este remitente. `uidValidity` es la promesa de IMAP de que los UID siguen significando lo mismo. Si cambia (Gmail renumera el buzón), un `lastUid` viejo puede saltarse correos o traer"
+        },
+        {
+          "nombre": "uidsALeer",
+          "kind": "function",
+          "exportada": true,
+          "params": "uids: number[], plan: PlanLectura, max: number",
+          "retorno": "number[]",
+          "linea": 74,
+          "resumen": "Qué UID de los que devolvió la búsqueda se leen en esta pasada. 🚨 Landmine de IMAP (RFC 3501): el rango `N:*` SIEMPRE incluye el último mensaje del buzón, aunque su UID sea MENOR que N. Sin el filtro"
+        },
+        {
+          "nombre": "avanzarCursor",
+          "kind": "function",
+          "exportada": true,
+          "params": "anterior: CursorCorreo | null, procesados: number[], uidValidityActual: number,",
+          "retorno": "CursorCorreo",
+          "linea": 91,
+          "resumen": "Cursor a guardar TRAS procesar el lote (at-least-once: nunca antes). Con lote vacío el `lastUid` no retrocede — pero sí se apunta el `uidValidity` actual, para que un buzón renumerado no vuelva a boot"
+        },
+        {
+          "nombre": "detalleLectura",
+          "kind": "function",
+          "exportada": true,
+          "params": "remitente: string, plan: PlanLectura, leidos: number",
+          "retorno": "string",
+          "linea": 109,
+          "resumen": "Línea del parte por portal. El modo NO es un detalle interno: un `bootstrap` repetido día tras día significa que el cursor no se está guardando, y sin decirlo se vería igual que una ingesta sana (solo"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b0d0847c2c2d"
+    },
+    {
       "ruta": "apps/plataforma/lib/subastas/documentos.ts",
       "ambito": "apps/plataforma",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Documentos adjuntos a la ficha del BOE: descarga + lectura completa. Aquí va SOLO la red y la BD; el parseo y la lógica son puros (`@central/module-subastas`), y la lectura por IA vive en `lector-registral`. Qué hace por su",
@@ -66565,7 +66826,8 @@
       "ambito": "apps/plataforma",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Lector IMAP de las alertas del Portal de Subastas del BOE. Por qué NO se reutiliza `lib/correo/imap.ts`: aquel lector es incremental sobre INBOX y trunca el cuerpo a ~1500 caracteres para la IA del triaje. Aquí hace falta l",
       "exporta": [
-        "leerAlertas"
+        "leerAlertas",
+        "leerAlertasDesde"
       ],
       "funciones": [
         {
@@ -66574,7 +66836,7 @@
           "exportada": false,
           "params": "",
           "retorno": "ImapFlow",
-          "linea": 26
+          "linea": 27
         },
         {
           "nombre": "buzonTodos",
@@ -66582,8 +66844,17 @@
           "exportada": false,
           "params": "client: ImapFlow",
           "retorno": "Promise<string>",
-          "linea": 34,
+          "linea": 35,
           "resumen": "Nombre de la carpeta «Todos los mensajes», resuelto por specialUse (no por idioma)."
+        },
+        {
+          "nombre": "aAlerta",
+          "kind": "function",
+          "exportada": false,
+          "params": "source: Buffer, uid: number",
+          "retorno": "Promise<CorreoAlerta | null>",
+          "linea": 42,
+          "resumen": "Parseo de UN mensaje a `CorreoAlerta`. `null` si el cuerpo no se deja leer."
         },
         {
           "nombre": "leerAlertas",
@@ -66591,13 +66862,22 @@
           "exportada": true,
           "params": "dias = 7, max = 100, remitente = REMITENTE_BOE,",
           "retorno": "Promise<CorreoAlerta[]>",
-          "linea": 46,
+          "linea": 64,
           "resumen": "Descarga las alertas del BOE de los últimos `dias`. @param remitente permite apuntar el lector a otro emisor de alertas (Idealista, un servicer…) sin duplicar la conexión."
+        },
+        {
+          "nombre": "leerAlertasDesde",
+          "kind": "function",
+          "exportada": true,
+          "params": "remitente: string, cursor: CursorCorreo | null, opts: { dias?: number; max?: number } = {},",
+          "retorno": "Promise<LoteAlertas>",
+          "linea": 120,
+          "resumen": "Lectura INCREMENTAL de las alertas de un remitente: solo lo posterior al último UID procesado. Por qué convive con `leerAlertas` en vez de sustituirla: la ingesta del BOE (`lib/subastas-ingesta.ts`) r"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ae9e739861df"
+      "hash": "6d47b9f91f45"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/idealista-api.ts",
@@ -66785,8 +67065,8 @@
           "exportada": true,
           "params": "dias = 30, maxCorreos = 150",
           "retorno": "Promise<",
-          "linea": 42,
-          "resumen": "Ingesta de comparables desde las alertas de Idealista del correo. El mismo anuncio se repite en correos sucesivos mientras sigue vivo, de ahí el `ON CONFLICT (portal, ref_anuncio)`: se actualiza el pr"
+          "linea": 52,
+          "resumen": "Ingesta de comparables desde las alertas de Idealista y Fotocasa del correo. El mismo anuncio se repite en correos sucesivos mientras sigue vivo, de ahí el `ON CONFLICT (portal, ref_anuncio)`: se actu"
         },
         {
           "nombre": "upsertComparable",
@@ -66794,7 +67074,7 @@
           "exportada": true,
           "params": "a: Comparable, vistoEn: Date",
           "retorno": "Promise<number>",
-          "linea": 82,
+          "linea": 101,
           "resumen": "Upsert de UN comparable en `mercado_comparables` — la puerta única del corpus, compartida por las alertas de correo y la API oficial de Idealista (`lib/subastas/idealista-api.ts`): mismo dedupe `(port"
         },
         {
@@ -66803,7 +67083,7 @@
           "exportada": true,
           "params": "max = 8, deadline?: number,",
           "retorno": "Promise<",
-          "linea": 136
+          "linea": 155
         },
         {
           "nombre": "consultarZona",
@@ -66811,7 +67091,7 @@
           "exportada": false,
           "params": "slug: string, etiqueta: string, fallos: string[]",
           "retorno": "Promise<void>",
-          "linea": 222,
+          "linea": 241,
           "resumen": "Consulta una zona en el puente y la cachea; aprende CP→distrito de los anuncios."
         },
         {
@@ -66820,7 +67100,7 @@
           "exportada": true,
           "params": "max = 6, deadline?: number,",
           "retorno": "Promise<",
-          "linea": 283
+          "linea": 302
         },
         {
           "nombre": "comparablesVigentes",
@@ -66828,7 +67108,7 @@
           "exportada": true,
           "params": "meses = MESES_VIGENCIA",
           "retorno": "Promise<Comparable[]>",
-          "linea": 381,
+          "linea": 400,
           "resumen": "Comparables vigentes, ya en el tipo del módulo. Se cargan en memoria a propósito: la mediana por zona vive en el módulo puro (probada) y el filtro de zona es insensible a acentos, algo que en Postgres"
         },
         {
@@ -66837,7 +67117,7 @@
           "exportada": true,
           "params": "f: { municipio?: string | null busqueda_origen?: string | null provincia?: string | null }",
           "retorno": "string[]",
-          "linea": 423,
+          "linea": 442,
           "resumen": "Zonas por las que buscar el €/m² de una subasta, de la más específica a la más amplia. La primera que reúna muestra suficiente gana. `busqueda_origen` es el nombre de la búsqueda guardada del BOE («PU"
         },
         {
@@ -66846,7 +67126,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 438,
+          "linea": 457,
           "resumen": "Calcula y persiste el €/m² de mercado en las subastas que lo necesitan. Solo toca las que NO tienen tasación ni valor de referencia: donde hay una tasación real, los comparables no pintan nada (y el s"
         },
         {
@@ -66855,7 +67135,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<CholloSeguido[]>",
-          "linea": 518,
+          "linea": 537,
           "resumen": "Chollos vigentes + antigüedad estimada. La calibración del ritmo de refs usa `created_at` (primera vez que NOSOTROS vimos cada ref): para los anuncios que van ENTRANDO al corpus con los correos diario"
         },
         {
@@ -66864,7 +67144,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 552,
+          "linea": 571,
           "resumen": "Aviso Telegram de los chollos NUEVOS (una sola vez por anuncio). La mediana de zona se mueve a diario y un anuncio podría entrar y salir del umbral: `chollo_avisado_at` fija que cada anuncio avisa UNA"
         },
         {
@@ -66873,7 +67153,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 612
+          "linea": 631
         },
         {
           "nombre": "refrescarIndiceINE",
@@ -66881,7 +67161,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 640,
+          "linea": 659,
           "resumen": "Refresca la caché del IPV si está caducada. Best-effort (el cron lo llama)."
         },
         {
@@ -66890,7 +67170,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<IndicesVivienda | null>",
-          "linea": 674,
+          "linea": 693,
           "resumen": "Lee el IPV cacheado (sin red). Campos a null si aún no se han capturado."
         },
         {
@@ -66899,7 +67179,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<PulsoMercado | null>",
-          "linea": 705
+          "linea": 724
         },
         {
           "nombre": "avisarBajadas",
@@ -66907,7 +67187,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 732,
+          "linea": 751,
           "resumen": "Aviso Telegram de las BAJADAS DE PRECIO nuevas en las zonas vigiladas. Una bajada es señal aunque el anuncio no llegue a chollo: el vendedor ya ha cedido una vez y es el candidato natural a una oferta"
         }
       ],
@@ -66921,7 +67201,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "6e2e7e4ea27b"
+      "hash": "4a1453bc493e"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/nota-simple.ts",
@@ -89164,7 +89444,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2395,
-    "funciones": 6430
+    "archivos": 2400,
+    "funciones": 6453
   }
 }

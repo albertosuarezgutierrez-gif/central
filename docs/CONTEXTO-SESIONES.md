@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⏱️ «Sin respuesta.» sobre un extracto que SÍ había entrado (08/08/2026).** Primera subida real tras el
+  arreglo del parser: los 109 movimientos de julio entraron (742,92€, 109/109 hashes, Drive archivado) y la
+  función murió a los 60 s justo ANTES de contestar → en pantalla «Sin respuesta.» y un 👎. `maxDuration`
+  del chat 60→300 y, sobre todo, **presupuesto de tiempo** (`lib/contable/presupuesto-extracto.ts`, puro +
+  tests): los pasos opcionales (Telegram, vigilantes, Drive, Gmail) se sueltan de abajo arriba antes de
+  quedarse sin aire y **se dice cuál faltó**; la respuesta nunca se sacrifica. El cliente ya no llama
+  «Sin respuesta.» a un 504: dice que puede haber entrado y manda a mirarlo a /banca. Es el mismo landmine
+  de `facturas-scan` (31/07) en otra ruta: subir el techo solo mueve la pared. PR draft.
+
 - **💓 El latido del barrido de mercado llevaba rojo desde el día 1 por 1 ventana de 32 (08/08/2026).**
   `barridoFiable` exigía CERO ventanas ciegas en la ronda base (8 meses × 4 aforos) y el token de fecha
   de Google es lotería: hoy, 162 comps en 60 ventanas y rojo por **1**. Tercera vez que la misma guarda
@@ -49,6 +58,17 @@
   disparar la CI (los pushes con `GITHUB_TOKEN` no lanzan workflows) y lo dejaría atascado en «sin
   checks» para siempre.
 
+- **📬 Cursor incremental en las alertas de portales — el cron ya no relee 300 correos al día (08/08/2026).**
+  Pregunta de Alberto («¿estás revisando varias veces los mismos mails?»): sí, `subastas-mercado` pedía 30
+  días × 150 correos POR PORTAL en cada pasada diaria, y esa relectura se comía el presupuesto entero
+  (latido del 07/08: «cortado tras 0 ficha(s); 8 pendiente(s)»). Nuevo cursor por UID en
+  `subastas_correo_cursor` (tabla propia, NO `correo_cursor` — su `max(updated_at)` es el latido del
+  triaje y una fila diaria lo haría parecer fresco): lógica pura en `lib/subastas/correo-incremental.ts`
+  (11 tests: landmine `N:*` de IMAP, `uidvalidity` cambiado → bootstrap, lote ascendente para truncar sin
+  huecos), `leerAlertasDesde` en `gmail-boe.ts` (`leerAlertas` intacta para el BOE) y confirmación del
+  cursor SOLO tras ingerir (at-least-once). El modo de lectura va en el parte del latido. Migración
+  aplicada. PENDIENTE: verificar en la pasada del 09/08 que ficha(s)/zona(s) dejan de salir a 0.
+
 ### 🐕 El watchdog de trading avisó de una pasada que SÍ corrió (07/08/2026)
 «NAV 21 h sin refrescar» era FALSO: el NAV llevaba 10 h (20:16 UTC) y `/puntuar` 9,9 h — la pasada
 del 06/08 corrió entera. Dos fallos: (1) el tramo 2 medía `max(trading_tesis.created_at)`, tabla
@@ -57,12 +77,30 @@ pasada del mismo día (repaso manual a las 09:34) no insertó nada y el reloj se
 primera; (2) el motivo de los TRES tramos llevaba «el NAV de IBKR» cableado → el aviso mandaba a
 mirar IBKR y la rutina. Fix: latido explícito `trading_analizar` (como `/puntuar`) + `GREATEST` con
 las tesis de respaldo, y `etiqueta` por tramo en `evaluarWatchdog`. PR #1291.
-
 - **📎 Pasada diaria facturas-correo (08/08/2026).** Vía B sana (`dias_caido=1`), sin backlog en
   `PDF-pendiente`/`Revisar`. Día tranquilo: 0 candidatos nuevos en Gmail, 0 subidas manuales nuevas,
   0 duplicados nuevos (los 2 "FACTURA JULIO SOCORRO" de la raíz ya estaban avisados). Roborock
   -247,92€ (House Sevillana) sigue sin conciliar en banco. Nada que archivar/decidir hoy. Detalle en
   `docs/AGENTES-BITACORA.md`.
+
+- **💳 El parser del extracto de tarjeta llevaba meses devolviendo CERO con el PDF real (08/08/2026).**
+  Con el `movimientos (1).pdf` de Alberto en la mano: Kutxabank ya no separa los campos
+  (`01/07/2026******2019750300COMPRA EN…-8,00 €`) y `RE_LINEA` exigía `\s+` → 0 movimientos → el chat lo
+  trataba como factura ilegible. Se validó en su día contra un fixture escrito a mano con espacios, no
+  contra un PDF de verdad. Arreglado (importe primero, prefijo de tarjeta después) → **109 movimientos**,
+  y el Excel del mismo listado ya se puede subir al 📎 (`identificarTarjetaExcel` saca el PAN del
+  `PAGO RECIBO`). **Landmine:** sin normalizar `fechaValor`/saldo, subir PDF+Excel del mismo mes duplicaba
+  63 de 109 compras (~1.990€); ahora los 109 hashes coinciden, con test. El cuadre ya no grita «no cuadra»
+  cuando la liquidación paga el ciclo anterior (es lo normal). PR draft.
+
+- **🤖 El agente contable dejaba de responder «no encuentro el cargo» a lo que no había mirado (08/08/2026).**
+  Alberto: «el agente falla mucho» (captura). En `contable_log`: subió `movimientos (1).pdf` **3 veces**
+  y las 3 recibió «no distingo el importe» (es un LISTADO de movimientos, no una factura → detector puro
+  `lib/contable/documento-clase.ts`); y antes, dos facturas dadas por no pagadas cuando el extracto aún no
+  llegaba a su fecha (la de 780,10€ del 03/08 entró en BD el **06/08**, un día después de negarla). El cruce
+  pasa de sí/no a 5 estados (`CruceDoc`: match · ya_conciliado · fuera_de_ventana ±60d · **sin_cobertura** ·
+  sin_match), con la cobertura real por banco en el mensaje. De paso, el dinero del agente ya usa `eur()`.
+  Kutxabank va 1-3 días por detrás por diseño (no está roto). PR draft.
 
 - **🧪 Prueba en vivo del auto-merge de rutinas (07/08/2026).** Esta entrada se subió en un PR que
   toca **solo** `docs/CONTEXTO-SESIONES.md` para ejercitar el camino feliz de
@@ -80,6 +118,13 @@ las tesis de respaldo, y `etiqueta` por tramo en `evaluarWatchdog`. PR #1291.
   Dos límites del entorno anotados: `script.google.com` (Apps Script de Drive) está **bloqueado por
   la política de red** (403 en CONNECT) y el MCP de Drive no traga un PDF de 563 KB → se archivó una
   copia rasterizada 200 dpi 1-bit (11 KB, legible, sin capa de texto).
+
+- **🧪 Prueba en vivo del resolver de conflictos (08/08/2026).** Esta rama sale a propósito de un
+  `main` de AYER, así que choca de verdad con todo lo que entró después — es el caso real que dejó
+  #1290 veinticuatro horas abierto. Si este párrafo acaba en `main` **junto a** las entradas del
+  08/08 que ya estaban arriba (sin que nadie resuelva nada a mano), el resolver de #1297 funciona de
+  punta a punta: detecta la inserción pura por la base vacía de `diff3`, conserva las dos entradas
+  poniendo primero la de `main`, y empuja el merge. El commit de merge lo firma `github-actions[bot]`.
 
 ### 💓 El latido del barrido deja de estar rojo para siempre (07/08/2026)
 Segunda pasada con #1282 vivo: la guardia volvió a saltar (174 comps, 19 fechas, **17 precios
