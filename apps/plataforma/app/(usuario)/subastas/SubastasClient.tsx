@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { eur } from '@/lib/dinero'
 import { estadoDocumentacion, resumenDocumentos, type DocumentoAdjunto } from '@/lib/subastas/resumen-docs'
-import { direccionCatastro, esDireccionPostal, estadoPujaMinima, titularCargas, umbralesPuja, urlFichaCatastro, urlGoogleMaps, urlStreetView, type SubastaInmueble } from '@central/module-subastas'
+import { calcularCoste, direccionCatastro, esDireccionPostal, estadoPujaMinima, titularCargas, umbralesPuja, urlFichaCatastro, urlGoogleMaps, urlStreetView, viviendaHabitualDeNotas, type ParamsCoste, type SubastaInmueble } from '@central/module-subastas'
 import MapaSubastas from './MapaSubastas'
 
 const PAGE = 50
@@ -48,8 +48,15 @@ interface Subasta {
   tasacion?: number | null
   /** `0` = «Sin puja mínima» declarado · `null` = no publicada (tres estados). */
   pujaMinima?: number | null
+  /** Tramo entre pujas del portal (las pujas van alineadas desde la salida). */
+  tramos?: number | null
   /** Deuda del procedimiento: techo probable de la puja del ejecutante. */
   cantidadReclamada?: number | null
+  /** Mejor puja vista por el vigía de seguidas. `null` = no publicada. */
+  mejorPuja?: number | null
+  /** Valor de referencia del Catastro (base imponible del ITP si es mayor). */
+  valorReferencia?: number | null
+  ejecutado?: string | null
   situacionPosesoria?: string
   superficie?: number | null
   superficieOrigen?: 'catastro' | 'anuncio' | null
@@ -625,7 +632,7 @@ function NotaSimpleViva({ dedupeKey }: { dedupeKey: string }) {
  * alternativa (y como techo probable de la puja del banco). Toda la lógica
  * viene del helper puro `umbralesPuja` del módulo; aquí solo se pinta.
  */
-function UmbralesPujaFicha({ s }: { s: Subasta }) {
+function UmbralesPujaFicha({ s, notasEdicto }: { s: Subasta; notasEdicto?: string | null }) {
   const u = umbralesPuja({
     dedupeKey: s.dedupeKey,
     fuente: (s.fuente ?? 'boe') as SubastaInmueble['fuente'],
@@ -633,7 +640,9 @@ function UmbralesPujaFicha({ s }: { s: Subasta }) {
     valorSubasta: s.valorSubasta,
     cantidadReclamada: s.cantidadReclamada,
     pujaMinima: s.pujaMinima,
-  })
+    // Si el edicto declaró «vivienda habitual», el escenario de desierta
+    // (art. 671) deja de ser genérico. La señal viene de las notas persistidas.
+  }, { viviendaHabitual: viviendaHabitualDeNotas(notasEdicto) })
   // Venta directa / régimen especial sin deuda conocida: nada que pujar, nada que pintar.
   if (u.regimen == null && u.cantidadReclamada == null) return null
 
@@ -670,7 +679,100 @@ function UmbralesPujaFicha({ s }: { s: Subasta }) {
   )
 }
 
-function FichaSubasta({ s, o, acciones, extra, doc, escenarios }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null; escenarios?: EscenarioUI[] | null }) {
+/** El `Subasta` del cliente, como lo espera la lógica pura del módulo. */
+function aInmueble(s: Subasta): SubastaInmueble {
+  return {
+    dedupeKey: s.dedupeKey,
+    fuente: (s.fuente ?? 'boe') as SubastaInmueble['fuente'],
+    tipo: s.tipo as SubastaInmueble['tipo'],
+    provincia: s.provincia,
+    valorSubasta: s.valorSubasta,
+    tasacion: s.tasacion,
+    pujaMinima: s.pujaMinima,
+    cantidadReclamada: s.cantidadReclamada,
+    valorReferencia: s.valorReferencia,
+    cargas: s.cargas,
+    cargasTexto: s.cargasTexto,
+    cargasConocidas: s.cargasConocidas,
+    situacionPosesoria: (s.situacionPosesoria ?? 'desconocida') as SubastaInmueble['situacionPosesoria'],
+    ejecutado: (s.ejecutado ?? 'desconocido') as SubastaInmueble['ejecutado'],
+    tipoBien: s.tipoBien as SubastaInmueble['tipoBien'],
+    superficie: s.superficie,
+  }
+}
+
+/**
+ * «¿Y si pujo X?»: coste puerta abierta, descuento real y banda de aprobación
+ * de UNA puja concreta. Mismo motor que el resto de la ficha (`calcularCoste` +
+ * `umbralesPuja` del módulo, con la financiación declarada en ⚙️ Criterios):
+ * el simulador nunca puede contradecir al coste de arriba.
+ */
+function SimuladorPuja({ s, o, params }: { s: Subasta; o?: Oportunidad | null; params?: ParamsCoste }) {
+  const [texto, setTexto] = useState('')
+  if (s.valorSubasta == null || s.valorSubasta <= 0) return null
+
+  const puja = Number(texto.replace(/\./g, '').replace(',', '.'))
+  const valida = texto.trim() !== '' && Number.isFinite(puja) && puja > 0
+  const sm = aInmueble(s)
+  const c = valida ? calcularCoste(sm, puja, params ?? {}) : null
+  const u = valida ? umbralesPuja(sm) : null
+  const descuento = c && o?.valorMercado ? 1 - c.total / o.valorMercado : null
+  // Banda de aprobación de ESTA puja (no del techo calculado).
+  const directa = u?.umbrales.find((x) => x.clave === 'aprobacion_directa')
+  const suelo = u?.umbrales.find((x) => x.clave === 'suelo_laj')
+  const cubreDeuda = u?.cantidadReclamada != null && puja >= u.cantidadReclamada
+  const banda = !u || !directa ? null
+    : puja >= directa.importe ? '✅ Aprobación automática del remate'
+    : suelo && puja >= suelo.importe ? '🟡 Decide el LAJ (≥50% del tipo)'
+    : cubreDeuda ? '🟡 Cubre la deuda reclamada: aprobable aunque no llegue al 50%'
+    : '🔴 Por debajo del 50% y sin cubrir la deuda: aprobación discrecional'
+  const inadmisible = valida && s.pujaMinima != null && s.pujaMinima > 0 && puja < s.pujaMinima
+  const desalineada = valida && s.tramos != null && s.tramos > 0 && puja > s.valorSubasta &&
+    Math.abs((puja - s.valorSubasta) % s.tramos) > 0.01
+
+  return (
+    <details style={{ marginTop: 8 }}>
+      <summary style={{ cursor: 'pointer', minHeight: 32, display: 'flex', alignItems: 'center', color: 'var(--text)', fontSize: 13 }}>
+        🧮 ¿Y si pujo…?
+      </summary>
+      <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+        <input
+          inputMode="decimal" placeholder={`p. ej. ${Math.round(s.valorSubasta * 0.7).toLocaleString('es-ES')}`}
+          value={texto} onChange={(e) => setTexto(e.target.value)}
+          style={{ ...control, width: 160, minHeight: 44 }}
+        />
+        <span style={{ fontSize: 13, color: 'var(--muted)' }}>€ de puja</span>
+      </div>
+      {valida && c && (
+        <div style={{ marginTop: 8, fontSize: 13, color: 'var(--text)', lineHeight: 1.55 }}>
+          <div>
+            Coste puerta abierta: <strong>{eur(c.total)}</strong>
+            <span style={{ color: 'var(--muted)' }}> · {c.impuestoConcepto} sobre {eur(c.baseImponible)}</span>
+          </div>
+          {descuento != null && o?.valorMercado != null && (
+            <div>
+              Descuento real sobre {eur(o.valorMercado)}:{' '}
+              <strong style={{ color: descuento >= 0.25 ? 'var(--positive, #15803d)' : descuento >= 0 ? 'var(--text)' : 'var(--negative, #b91c1c)' }}>
+                {(descuento * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })}%
+              </strong>
+            </div>
+          )}
+          {banda && <div>{banda}</div>}
+          {inadmisible && (
+            <div style={{ color: 'var(--negative, #b91c1c)' }}>⚠️ Por debajo de la puja mínima ({eur(s.pujaMinima!)}): no la admiten.</div>
+          )}
+          {desalineada && (
+            <div style={{ color: 'var(--muted)', fontSize: 12 }}>
+              El portal puja por tramos de {eur(s.tramos!)} desde la salida: esta cifra se redondearía.
+            </div>
+          )}
+        </div>
+      )}
+    </details>
+  )
+}
+
+function FichaSubasta({ s, o, acciones, extra, doc, escenarios, params }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null; escenarios?: EscenarioUI[] | null; params?: ParamsCoste }) {
   const [abierto, setAbierto] = useState(false)
   const cierre = fecha(s.fechaFin)
   // Dirección oficial del Catastro troceada (planta/puerta aparte) y, con ella,
@@ -738,6 +840,13 @@ function FichaSubasta({ s, o, acciones, extra, doc, escenarios }: { s: Subasta; 
         {cierre && <span>⏰ cierra {cierre}</span>}
         {s.valorSubasta != null && <span>salida {eur(s.valorSubasta)}</span>}
         {s.tasacion != null && <span>tasación {eur(s.tasacion)}</span>}
+        {/* La puja en vivo que vio el vigía de seguidas (solo BOE, cerca del cierre). */}
+        {s.mejorPuja != null && (
+          <span style={{ color: 'var(--text)', fontWeight: 600 }}>
+            🔥 mejor puja {eur(s.mejorPuja)}
+            {s.valorSubasta != null && s.valorSubasta > 0 && ` (${Math.round((s.mejorPuja / s.valorSubasta) * 100)}% del tipo)`}
+          </span>
+        )}
         {s.situacionPosesoria === 'ocupada' && <span>⚠️ ocupada</span>}
       </div>
 
@@ -790,7 +899,10 @@ function FichaSubasta({ s, o, acciones, extra, doc, escenarios }: { s: Subasta; 
       )}
 
       {/* Deuda, puja mínima y umbrales legales de aprobación del remate. */}
-      <UmbralesPujaFicha s={s} />
+      <UmbralesPujaFicha s={s} notasEdicto={doc?.notasEdicto} />
+
+      {/* 🧮 ¿Y si pujo X? — todo con la lógica pura del módulo, sin red. */}
+      <SimuladorPuja s={s} o={o} params={params} />
 
       {/* Montaje perezoso: el detalle solo se renderiza al abrirlo. */}
       {o && (
@@ -868,6 +980,22 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
   )
   const [guardando, setGuardando] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
+  // La financiación declarada en ⚙️ Criterios, en el formato del módulo: el
+  // simulador de puja debe dar EL MISMO coste que la SSR, no uno sin puente.
+  // (crit guarda los % en unidades de UI; el módulo los quiere en tanto por uno.)
+  const paramsCoste = useMemo<ParamsCoste>(() => {
+    const pct = crit.financia_pct
+    const tipo = crit.financia_tipo_anual
+    if (pct == null || pct <= 0 || tipo == null || tipo <= 0) return {}
+    return {
+      financiacion: {
+        pctFinanciado: Math.min(1, pct / 100),
+        tipoAnual: tipo / 100,
+        ...(crit.financia_meses != null && crit.financia_meses > 0 ? { meses: crit.financia_meses } : {}),
+        ...(crit.financia_comision != null && crit.financia_comision > 0 ? { comisionApertura: crit.financia_comision / 100 } : {}),
+      },
+    }
+  }, [crit.financia_pct, crit.financia_tipo_anual, crit.financia_meses, crit.financia_comision])
   // Filtros de la pestaña Todas: server-side contra /api/subastas. La lista
   // local arranca con el SSR y se sustituye/expande con cada búsqueda.
   const [filtros, setFiltros] = useState<Filtros>(FILTROS_VACIOS)
@@ -1091,6 +1219,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                   s={r.subasta}
                   doc={r.doc}
                   escenarios={r.escenarios}
+                  params={paramsCoste}
                   o={{
                     puntuacion: r.puntuacion,
                     descuento: null,
@@ -1331,6 +1460,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                 o={r.oportunidad}
                 doc={{ semaforo: r.semaforo, analisis: r.analisis, notasEdicto: r.notasEdicto, documentos: r.documentos, caducidad: r.caducidad }}
                 escenarios={r.escenarios}
+                params={paramsCoste}
                 acciones={<button onClick={() => seguir(r.subasta)} style={boton()}>👀 Seguir</button>}
                 extra={
                   <>

@@ -106,6 +106,20 @@ export function datosDeEdicto(texto: string): DatosEdicto {
   }
 }
 
+/**
+ * Recupera la señal «vivienda habitual» desde las NOTAS persistidas
+ * (`subastas.notas_edicto` guarda las líneas de `notasDeEdicto`, no el
+ * `DatosEdicto` estructurado). Es el inverso de las tres líneas de abajo — el
+ * test de round-trip fija que no diverjan. `null` = el edicto no lo dijo.
+ */
+export function viviendaHabitualDeNotas(notas: string | null | undefined): DatosEdicto['viviendaHabitual'] {
+  if (!notas) return null
+  if (/ES la vivienda habitual/.test(notas)) return 'si'
+  if (/NO es la vivienda habitual/.test(notas)) return 'no'
+  if (/Vivienda habitual del demandado: no consta/.test(notas)) return 'no_consta'
+  return null
+}
+
 /** Los hallazgos, como líneas legibles para la ficha. `[]` = nada explícito. */
 export function notasDeEdicto(d: DatosEdicto): string[] {
   const notas: string[] = []
