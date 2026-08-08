@@ -19,12 +19,25 @@ const PROBES: Record<string, Prisma.Sql> = {
   // Pricing: manda el piso MÁS VIEJO, no el max global. Con max(), un solo piso fresco
   // (p.ej. luxury) tapaba que el Dúplex y House Sevillana llevaban 23 días sin estudiar
   // (555 h) → el monitor se callaba. La sonda por-piso (min de los max) delata al rezagado.
+  //
+  // 🚨 La huella dejó de ser `market_rates` (08/08/2026). Cuando se eligió, `scenario = 'prop_*'`
+  // solo lo escribía la Rutina semanal; hoy escriben ahí DOS procesos DIARIOS más —el barrido
+  // Serper de las 03:00 (`mercado/sweep`) y la rutina de Booking— así que la sonda salía verde
+  // aunque la Rutina llevara semanas sin correr. Es EXACTAMENTE la avería que esta sonda nació
+  // para cazar (21/07/2026: 16 días parada sin que saltara nada), reaparecida porque el espacio
+  // de nombres `prop_*` se volvió compartido y `market_rates.fuente` no distingue a la Rutina
+  // (escribe `booking_mcp`, igual que el conector diario).
+  //
+  // `pricing_decisiones` sí es suya en exclusiva: solo la escribe `pricing/aplicar-propuesta`, que
+  // solo se llama desde la Rutina (ver `lib/rutas-rutina.ts`; el cron diario `apply-auto` escribe
+  // en `pricing_applied`, otra tabla). Y sigue siendo por-piso: la Rutina decide sobre los 4 en
+  // cada ciclo (verificado 08/08/2026), así que un piso rezagado sigue delatando media pasada.
   pricing: Prisma.sql`
     SELECT min(ultimo) AS ultimo FROM (
-      SELECT p.piso, max(m.created_at) AS ultimo
+      SELECT p.piso, max(d.ciclo_at) AS ultimo
       FROM (VALUES ('prop_house_sevillana'), ('prop_busto_reform'),
                    ('prop_luxury_busto'), ('prop_duplex_center')) AS p(piso)
-      LEFT JOIN market_rates m ON m.scenario = p.piso
+      LEFT JOIN pricing_decisiones d ON d.property_id = p.piso
       GROUP BY p.piso
     ) t`,
   correo_triaje: Prisma.sql`SELECT max(updated_at) AS ultimo FROM correo_cursor`,

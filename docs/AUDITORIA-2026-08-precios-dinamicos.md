@@ -49,6 +49,16 @@ Fechas NO-evento con fuente fiable disponibles ahora mismo (umbral del motor: `M
 Filtrar el bucket a `booking_mcp` **hoy** dejaría 5 de 9 meses sin bucket → caerían al ancla global,
 que es peor. La advertencia del repo («no apagues Serper todavía») sigue vigente.
 
+### ✅ IMPLEMENTADO el mismo día (PR #1318, commit `977d7b2`)
+
+Se aplicó la preferencia condicional descrita abajo. Módulo puro `lib/sivra/pricing-bucket-fuente.ts`
+(`elegirBucket`, 8 tests, incluida la garantía de que la preferencia **nunca** deja un bucket vacío);
+los dos buckets de `pricing/apply` calculan el percentil dos veces (FILTER por `fuente`) y la
+respuesta declara `meses_bucket_fuente`. Verificado a mano contra la BD real, como exige la regla de
+`auditoria-central` para cambios de fórmula: **8 buckets cambian**, el resto idénticos —
+`house_sevillana` octubre **638 → 728 (+14%)**, `busto_reform` septiembre 129 → 103 (−20%),
+`luxury_busto` septiembre 178 → 144 (−19%), noviembre sin cambios en ningún piso.
+
 ### Acción recomendada — preferencia condicional, no filtro duro
 
 En `mesRows`/`fechaRows`: calcular el percentil **dos veces** (solo-fiable y mezcla) y usar el
@@ -62,7 +72,7 @@ hay que calcular a mano el precio esperado en 2-3 fechas conocidas y contrastarl
 
 ---
 
-## 🟡 F2 — El barrido Serper NUNCA ha tenido una pasada buena
+## 🟢 F2 — El barrido Serper NUNCA ha tenido una pasada buena (YA DIAGNOSTICADO, no era hallazgo nuevo)
 
 `agente_latidos`:
 
@@ -71,10 +81,13 @@ sivra_mercado_sweep   ok=false   ultimo_at=2026-08-08 03:04   ultimo_ok_at=NULL
   «162 comps en 60 ventanas (6 de evento) · ⚠️ 6 búsquedas sin resultados»
 ```
 
-`ultimo_ok_at` en NULL significa que **desde que existe el latido no ha habido ni una pasada que el
-propio agente considere fiable**. Y es justo la fuente que hoy domina el bucket (F1). Merece
-diagnóstico propio: o el criterio de `barridoFiable` es demasiado estricto, o el barrido lleva
-semanas entregando corpus que él mismo no se cree.
+⚠️ **Corrección de esta auditoría (misma fecha, 2ª pasada).** La primera versión pedía «diagnóstico
+propio». Era información vieja mía: el caso ya estaba diagnosticado y arreglado ese mismo día en
+**PR #1299** («el latido del barrido llevaba rojo desde el día 1 por 1 ventana de 32»), mergeado a
+las **11:27 UTC** — es decir, **después** de la pasada de las 03:04 que dejó el latido rojo. Por eso
+sigue en rojo: el rojo que se ve es de la última pasada ANTES del fix. La verificación toca en la
+pasada del **09/08 03:04 UTC**, tal y como dejó anotado el commit `41325bf`. No hay nada que
+diagnosticar; hay que mirar mañana.
 
 (`sivra_mercado_booking` sí está en verde: `ok=true`, `ultimo_ok_at` de hoy 12:59.)
 
@@ -98,6 +111,40 @@ había ventanas», con `recortadas: NaN`. Arreglado en **PR #1318** (parseo extr
 
 ---
 
+## 🔴 F5 — El vigía del agente de pricing llevaba desde el 06/08 en verde falso (2ª pasada, ARREGLADO)
+
+Hallado al reconciliar la cobertura de latidos. La sonda `pricing` de
+`app/api/cron/agentes-latido/route.ts` medía la frescura sobre `market_rates` con
+`scenario LIKE 'prop_%'`. Cuando se eligió esa huella (21/07/2026, tras los **16 días** en que la
+Rutina semanal estuvo parada sin que saltara nada) el espacio `prop_*` era **suyo en exclusiva**.
+Ya no:
+
+| Quién escribe `scenario = 'prop_*'` | Cadencia | Últimos días |
+|---|---|---|
+| Rutina semanal de pricing (conectores de viaje) | semanal | — |
+| Barrido Serper `mercado/sweep` | **diaria 03:00** | 03,04,05,06,07,08 ago |
+| Rutina diaria `mercado-booking` | **diaria** | desde 06/08 |
+
+Con dos escritores diarios en la misma huella, **la sonda sale verde aunque la Rutina lleve semanas
+muerta** — exactamente la avería que nació para cazar. Y no se arregla filtrando por
+`market_rates.fuente`: la Rutina escribe `booking_mcp`, igual que el conector diario.
+
+**Estado real de la Rutina** (medido por su huella limpia): último ciclo **03/08**, 5,4 días → viva y
+dentro de cadencia. El fallo era del vigilante, no del vigilado.
+
+**Arreglado en este PR:** la sonda pasa a `pricing_decisiones.ciclo_at` por piso (min de los max),
+que solo escribe `pricing/aplicar-propuesta` — llamado únicamente desde la Rutina (`lib/rutas-rutina.ts`);
+el cron diario `apply-auto` escribe en `pricing_applied`, otra tabla. Verificado que la Rutina decide
+sobre los **4 pisos** en cada ciclo, así que se conserva la propiedad de delatar medias pasadas.
+Mismo cambio en la SQL del heartbeat de `.claude/commands/auditoria-diaria.md`, que tenía la misma
+huella falsa.
+
+**Lección, por tercera vez:** una huella no es fiable *para siempre*; deja de serlo el día que otro
+proceso empieza a escribir en ella. Al añadir un escritor a una tabla vigilada, hay que preguntarse a
+qué sonda le acabas de quitar la vista.
+
+---
+
 ## 🟢 Lo que SÍ está bien (verificado, no asumido)
 
 - **Raíles de escritura** (`aplicar-propuesta`): suelo de coste (`min_price`), tope ±`max_change_pct`
@@ -111,8 +158,17 @@ había ventanas», con `recortadas: NaN`. Arreglado en **PR #1318** (parseo extr
   1.280€/noche contra 589€ reales. **Era un falso positivo mío, no un fallo del motor.** Queda aquí
   escrito porque una auditoría que solo publica lo que confirma no enseña dónde se equivoca.
 - **Normalización por aforo** (`pricing_factor_aforo`) presente en ambos buckets.
-- **Tests y compilación**: 1023/1023 en `apps/plataforma` (incluye 12 suites de pricing/mercado),
-  26/26 guardianes de la raíz, `tsc --noEmit` 0 errores, `next build` exit 0.
+- **Tests y compilación** (2ª pasada, 08/08 tarde): **1031/1031** en `apps/plataforma` (incluye 13
+  suites de pricing/mercado), **26/26** guardianes de la raíz, **53/53** de `packages/*` (vitest),
+  `tsc --noEmit` **0 errores en las 8 apps** (no solo plataforma), `next build` exit 0, lockfile en
+  sync, `ignoreCommand` presente en los 8 `vercel.json`, `transpilePackages` cuadra con las deps
+  `@central/*` en las 8.
+- **Advisors de Supabase** (compartida): 453 lints, **sin ERROR**; 296 INFO `rls_enabled_no_policy` y
+  154 WARN de funciones SECURITY DEFINER ejecutables (línea base conocida). Los **16
+  `rls_policy_always_true`** que reportaba `docs/AUDITORIA-2026-08.md` ya **no aparecen**.
+- **Resto de latidos y crons**: los 12 heartbeats de dominio en ✅ y 7 de los 8 `agente_latidos` en
+  verde (el 8º es F2, ya explicado). El auto-merge de PRs de rutinas está vivo (30 runs recientes,
+  el último a las 15:04 en verde).
 
 ---
 
@@ -121,9 +177,26 @@ había ventanas», con `recortadas: NaN`. Arreglado en **PR #1318** (parseo extr
 | # | Acción | Riesgo | Quién |
 |---|---|---|---|
 | 1 | Abrir `*.vercel.app` en la política de red del environment de Claude Code | nulo | Alberto |
-| 2 | Decidir sobre F1 (preferencia condicional de fuente en el bucket) | medio — cambio de fórmula, exige verificación a mano | Alberto decide, yo implemento |
-| 3 | Diagnosticar F2 (`sivra_mercado_sweep` sin ninguna pasada buena) | bajo | yo, si lo pides |
+| 2 | Mergear **PR #1318** (F1 + F5 + fallo mudo del plan) | medio — F1 es cambio de fórmula, ya verificado a mano contra la BD | Alberto |
+| 3 | Verificar el 09/08 que la pasada 03:04 del sweep deja `ultimo_ok_at` (F2, fix #1299 ya en prod) | bajo | rutina diaria |
 | 4 | Seguir acumulando cobertura Booking de dic→abr (depende de 1) | bajo | rutina diaria |
+| 5 | Revisar el pendiente que trae el PR **#1320**: `occ` en `apply/route.ts` no acota `rate_date` por arriba → una sola ocupación para los 365 días | medio | Alberto decide |
 
-**Nada de esto se ha aplicado a producción en esta auditoría** salvo el PR #1318, que es el arreglo
-del fallo mudo del endpoint y no toca la fórmula.
+**A producción no se ha aplicado nada directamente.** Todo va en el **PR #1318**: el arreglo del
+fallo mudo del endpoint (F4), la preferencia de fuente del bucket (F1, cambio de fórmula) y el
+arreglo del vigía enmascarado (F5).
+
+---
+
+## Nota de método — dos correcciones de esta misma auditoría
+
+Esta segunda pasada corrigió **dos afirmaciones mías** de la primera:
+
+1. **F2 no era un hallazgo**, era información vieja: ya estaba diagnosticado y arreglado en #1299 el
+   mismo día, horas antes de que yo lo escribiera.
+2. El apartado «lo que SÍ está bien» daba por buena una cobertura de latidos que **no lo estaba**
+   (F5): había mirado que los latidos estuvieran verdes, no si el verde significaba algo.
+
+Van escritas aquí a propósito. Las dos son la misma clase de error que persigue la regla «dato que
+NO hay ≠ dato que NO se ha mirado» de `CLAUDE.md`, aplicada esta vez a la auditoría misma: un verde
+sin comprobar de dónde sale es indistinguible de un verde de verdad.

@@ -24,6 +24,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🛡️ Auditoría profunda: el vigía del agente de pricing estaba en verde falso (08/08/2026)
+Pasada completa a petición de Alberto («prueba que todo funciona y está todo al día»). **Todo verde
+salvo un 🔴 nuevo:** la sonda `pricing` de `agentes-latido` medía sobre `market_rates prop_*`, huella
+que dejó de ser exclusiva de la Rutina semanal cuando el barrido Serper (diario 03:00) y la rutina
+`mercado-booking` (diaria desde el 06/08) empezaron a escribir ahí → **saldría verde con la Rutina
+muerta**, justo la avería de los 16 días del 21/07. Cambiada a `pricing_decisiones.ciclo_at` por piso
+(solo la escribe `aplicar-propuesta`, y solo la Rutina lo llama); misma corrección en la SQL de
+`/auditoria-diaria`. La Rutina está viva (último ciclo 03/08). Corregidas 2 afirmaciones mías: F2 ya
+estaba arreglado en #1299 y «latidos OK» no estaba comprobado. Todo en **PR #1318**.
+Verificado: 1031/1031 + 26/26 + 53/53, `tsc` 0 en las **8** apps, build 0, advisors sin ERROR.
+
 ### 🔎 Auditoría de precios dinámicos + fallo mudo en el plan (08/08/2026)
 Informe: `docs/AUDITORIA-2026-08-precios-dinamicos.md`. **No está al 100%.** 🔴 El bucket mensual de
 `pricing/apply` excluye `corpus_clonado` pero **no filtra por `fuente`**, así que mezcla los precios

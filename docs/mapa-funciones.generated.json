@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-08T14:33:48Z",
-  "sha": "11af0f448a2f83f0a3f84b69d96250c19310a138",
+  "generadoEn": "2026-08-08T15:11:29Z",
+  "sha": "977d7b29db20c848cd656a5c83b6b75c7ca92c24",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -50579,18 +50579,18 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 71
+          "linea": 84
         }
       ],
       "tablas": [
         "agente_latidos",
         "correo_cursor",
-        "market_rates",
         "next",
-        "pms_connections"
+        "pms_connections",
+        "pricing_decisiones"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "abc8c7c53dad"
+      "hash": "3d8de761bc6c"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -54561,7 +54561,7 @@
         "pricing_piso_zona"
       ],
       "rutaApi": "/api/sivra/mercado/plan",
-      "hash": "19150a795717"
+      "hash": "ddc6f899b38d"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/search/route.ts",
@@ -54828,7 +54828,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 33
+          "linea": 34
         },
         {
           "nombre": "fmt",
@@ -54836,7 +54836,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 34
+          "linea": 35
         },
         {
           "nombre": "GET",
@@ -54844,7 +54844,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 62,
+          "linea": 63,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -54853,7 +54853,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 66
+          "linea": 67
         }
       ],
       "tablas": [
@@ -54877,7 +54877,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "d6168770edbc"
+      "hash": "84478f71960d"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -63319,7 +63319,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "855cb6693903"
+      "hash": "8fee032f5606"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/sonda-ia.ts",
@@ -65451,6 +65451,7 @@
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/mercado-cobertura.ts — QUÉ ventanas pide medir la rutina de Booking, y en qué orden. POR QUÉ (06/08/2026). El barrido por búsqueda web quedó mecánicamente perfecto (120/120 ventanas el 06/08) y aun así NO mide temporada: los precios que devuelven los snippets son de anuncio y vienen SIN fe",
       "exporta": [
+        "parsearParametrosPlan",
         "planDeVentanas",
         "ventanasQuePedir",
         "detalleIngesta",
@@ -65458,12 +65459,21 @@
       ],
       "funciones": [
         {
+          "nombre": "parsearParametrosPlan",
+          "kind": "function",
+          "exportada": true,
+          "params": "qs: URLSearchParams,",
+          "retorno": "",
+          "linea": 113,
+          "resumen": "Lee los parámetros del plan (`max`, `rondas`, `desde`, `hasta`) de una query string. Vive AQUÍ y no en el route handler para poder testearlo: el handler necesita Prisma y el alias `@/`, así que su lóg"
+        },
+        {
           "nombre": "diasEntre",
           "kind": "function",
           "exportada": false,
           "params": "desdeIso: string, hastaIso: string",
           "retorno": "number",
-          "linea": 95
+          "linea": 161
         },
         {
           "nombre": "clave",
@@ -65471,7 +65481,7 @@
           "exportada": false,
           "params": "checkin: string, aforo: number",
           "retorno": "string",
-          "linea": 101
+          "linea": 167
         },
         {
           "nombre": "planDeVentanas",
@@ -65479,7 +65489,7 @@
           "exportada": true,
           "params": "plan: Ventana[], aforos: Map<number, string[]>, cobertura: CoberturaVentana[], hoyIso: string, max = 12, filtro: FiltroVentanas = {},",
           "retorno": "PlanPedido",
-          "linea": 123,
+          "linea": 189,
           "resumen": "Cruza el plan de ventanas (fechas) con los aforos de los pisos y la cobertura fiable ya medida, y devuelve las `max` que más falta hacen. Orden de urgencia, y el porqué de cada nivel: 1. **Nunca medid"
         },
         {
@@ -65488,7 +65498,7 @@
           "exportada": true,
           "params": "plan: Ventana[], aforos: Map<number, string[]>, cobertura: CoberturaVentana[], hoyIso: string, max = 12, filtro: FiltroVentanas = {},",
           "retorno": "VentanaPedida[]",
-          "linea": 182,
+          "linea": 248,
           "resumen": "Envoltura histórica: solo la lista. Nuevos usos, mejor `planDeVentanas` (declara el recorte)."
         },
         {
@@ -65497,7 +65507,7 @@
           "exportada": true,
           "params": "r: { ventanas: number comps: number sinRespuesta: number sinPrecio: number errores: string[] }",
           "retorno": "string",
-          "linea": 198,
+          "linea": 264,
           "resumen": "Parte de la pasada para el latido. Igual que en el barrido por búsqueda, **lo que NO se pudo medir va primero**: una ventana que el conector no contestó es «no lo sé», no «no hay mercado», y confundir"
         },
         {
@@ -65506,13 +65516,13 @@
           "exportada": true,
           "params": "r: { ventanas: number comps: number sinRespuesta: number errores: string[] }",
           "retorno": "boolean",
-          "linea": 221,
+          "linea": 287,
           "resumen": "¿Vale la pasada? Conservador igual que `barridoFiable`: hace falta haber MEDIDO algo y que la mayoría de lo intentado haya respondido. Una pasada que pide 12 ventanas y solo contesta 1 no es «poco mer"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ae9b2abf39db"
+      "hash": "6900e8c4d8ab"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/mercado-ventanas.ts",
@@ -65714,6 +65724,28 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "921158fc3d71"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pricing-bucket-fuente.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-bucket-fuente.ts — de QUÉ corpus sale el bucket de mercado del motor. POR QUÉ (09/08/2026, auditoría `docs/AUDITORIA-2026-08-precios-dinamicos.md`). El bucket de `pricing/apply` excluía `corpus_clonado` pero NO miraba `fuente`, así que mezclaba en el mismo percentil los precios de ",
+      "exporta": [
+        "elegirBucket"
+      ],
+      "funciones": [
+        {
+          "nombre": "elegirBucket",
+          "kind": "function",
+          "exportada": true,
+          "params": "fiable: Candidato<T>, mezcla: Candidato<T>, minN: number, minFechas = 0,",
+          "retorno": "EleccionBucket<T> | null",
+          "linea": 42,
+          "resumen": "· y el resultado dice de dónde sale, porque un objetivo que no declara su procedencia es indistinguible de uno medido. `minFechas` se omite en el bucket por FECHA EXACTA (ahí todas las filas son del m"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4b4b31b17913"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-centinelas.ts",
@@ -89539,7 +89571,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2401,
-    "funciones": 6461
+    "archivos": 2402,
+    "funciones": 6463
   }
 }
