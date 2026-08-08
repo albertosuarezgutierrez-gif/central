@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-08T08:39:34Z",
-  "sha": "1d886783274fbde4000c3e55d64a9a42bbd9ac59",
+  "generadoEn": "2026-08-08T09:11:13Z",
+  "sha": "80a5140772a58fea859cb2e90e4af4fc1a2643d5",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -51370,7 +51370,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/cron/subastas-mercado",
-      "hash": "f3f1d5af788c"
+      "hash": "34b34b8f5ac7"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-radar/route.ts",
@@ -66516,6 +66516,93 @@
       "hash": "d402220efec6"
     },
     {
+      "ruta": "apps/plataforma/lib/subastas/correo-cursor.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Persistencia del cursor incremental de alertas (tabla `subastas_correo_cursor`). La lógica de decisión es pura y vive en `correo-incremental.ts`; aquí solo BD.",
+      "exporta": [
+        "leerCursor",
+        "guardarCursor"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerCursor",
+          "kind": "function",
+          "exportada": true,
+          "params": "remitente: string",
+          "retorno": "Promise<CursorCorreo | null>",
+          "linea": 15,
+          "resumen": "Cursor guardado de un remitente, o `null` si no hay ninguno. Un fallo de BD también devuelve `null`, y eso es deliberado: sin cursor se bootstrapea por ventana de días — exactamente la conducta anteri"
+        },
+        {
+          "nombre": "guardarCursor",
+          "kind": "function",
+          "exportada": true,
+          "params": "remitente: string, cursor: CursorCorreo",
+          "retorno": "Promise<void>",
+          "linea": 36,
+          "resumen": "Guarda el cursor TRAS procesar el lote (at-least-once). Best-effort a propósito: si la escritura falla, la pasada siguiente releerá ese lote —trabajo repetido, no datos perdidos—. Lanzar aquí tiraría "
+        }
+      ],
+      "tablas": [
+        "set",
+        "subastas_correo_cursor"
+      ],
+      "rutaApi": null,
+      "hash": "60aebdb7d7bf"
+    },
+    {
+      "ruta": "apps/plataforma/lib/subastas/correo-incremental.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Lógica PURA del cursor incremental de las alertas de portales inmobiliarios. POR QUÉ EXISTE (auditoría del 08/08/2026): el cron `subastas-mercado` corre UNA vez al día y pedía «los correos de los últimos 30 días, hasta 150 ",
+      "exporta": [
+        "planificarLectura",
+        "uidsALeer",
+        "avanzarCursor",
+        "detalleLectura"
+      ],
+      "funciones": [
+        {
+          "nombre": "planificarLectura",
+          "kind": "function",
+          "exportada": true,
+          "params": "params: { cursor: CursorCorreo | null uidValidityActual: number dias: number ahora?: number }",
+          "retorno": "PlanLectura",
+          "linea": 45,
+          "resumen": "Decide cómo leer este remitente. `uidValidity` es la promesa de IMAP de que los UID siguen significando lo mismo. Si cambia (Gmail renumera el buzón), un `lastUid` viejo puede saltarse correos o traer"
+        },
+        {
+          "nombre": "uidsALeer",
+          "kind": "function",
+          "exportada": true,
+          "params": "uids: number[], plan: PlanLectura, max: number",
+          "retorno": "number[]",
+          "linea": 74,
+          "resumen": "Qué UID de los que devolvió la búsqueda se leen en esta pasada. 🚨 Landmine de IMAP (RFC 3501): el rango `N:*` SIEMPRE incluye el último mensaje del buzón, aunque su UID sea MENOR que N. Sin el filtro"
+        },
+        {
+          "nombre": "avanzarCursor",
+          "kind": "function",
+          "exportada": true,
+          "params": "anterior: CursorCorreo | null, procesados: number[], uidValidityActual: number,",
+          "retorno": "CursorCorreo",
+          "linea": 91,
+          "resumen": "Cursor a guardar TRAS procesar el lote (at-least-once: nunca antes). Con lote vacío el `lastUid` no retrocede — pero sí se apunta el `uidValidity` actual, para que un buzón renumerado no vuelva a boot"
+        },
+        {
+          "nombre": "detalleLectura",
+          "kind": "function",
+          "exportada": true,
+          "params": "remitente: string, plan: PlanLectura, leidos: number",
+          "retorno": "string",
+          "linea": 109,
+          "resumen": "Línea del parte por portal. El modo NO es un detalle interno: un `bootstrap` repetido día tras día significa que el cursor no se está guardando, y sin decirlo se vería igual que una ingesta sana (solo"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b0d0847c2c2d"
+    },
+    {
       "ruta": "apps/plataforma/lib/subastas/documentos.ts",
       "ambito": "apps/plataforma",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Documentos adjuntos a la ficha del BOE: descarga + lectura completa. Aquí va SOLO la red y la BD; el parseo y la lógica son puros (`@central/module-subastas`), y la lectura por IA vive en `lector-registral`. Qué hace por su",
@@ -66708,7 +66795,8 @@
       "ambito": "apps/plataforma",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Lector IMAP de las alertas del Portal de Subastas del BOE. Por qué NO se reutiliza `lib/correo/imap.ts`: aquel lector es incremental sobre INBOX y trunca el cuerpo a ~1500 caracteres para la IA del triaje. Aquí hace falta l",
       "exporta": [
-        "leerAlertas"
+        "leerAlertas",
+        "leerAlertasDesde"
       ],
       "funciones": [
         {
@@ -66717,7 +66805,7 @@
           "exportada": false,
           "params": "",
           "retorno": "ImapFlow",
-          "linea": 26
+          "linea": 27
         },
         {
           "nombre": "buzonTodos",
@@ -66725,8 +66813,17 @@
           "exportada": false,
           "params": "client: ImapFlow",
           "retorno": "Promise<string>",
-          "linea": 34,
+          "linea": 35,
           "resumen": "Nombre de la carpeta «Todos los mensajes», resuelto por specialUse (no por idioma)."
+        },
+        {
+          "nombre": "aAlerta",
+          "kind": "function",
+          "exportada": false,
+          "params": "source: Buffer, uid: number",
+          "retorno": "Promise<CorreoAlerta | null>",
+          "linea": 42,
+          "resumen": "Parseo de UN mensaje a `CorreoAlerta`. `null` si el cuerpo no se deja leer."
         },
         {
           "nombre": "leerAlertas",
@@ -66734,13 +66831,22 @@
           "exportada": true,
           "params": "dias = 7, max = 100, remitente = REMITENTE_BOE,",
           "retorno": "Promise<CorreoAlerta[]>",
-          "linea": 46,
+          "linea": 64,
           "resumen": "Descarga las alertas del BOE de los últimos `dias`. @param remitente permite apuntar el lector a otro emisor de alertas (Idealista, un servicer…) sin duplicar la conexión."
+        },
+        {
+          "nombre": "leerAlertasDesde",
+          "kind": "function",
+          "exportada": true,
+          "params": "remitente: string, cursor: CursorCorreo | null, opts: { dias?: number; max?: number } = {},",
+          "retorno": "Promise<LoteAlertas>",
+          "linea": 120,
+          "resumen": "Lectura INCREMENTAL de las alertas de un remitente: solo lo posterior al último UID procesado. Por qué convive con `leerAlertas` en vez de sustituirla: la ingesta del BOE (`lib/subastas-ingesta.ts`) r"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ae9e739861df"
+      "hash": "6d47b9f91f45"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/idealista-api.ts",
@@ -66928,8 +67034,8 @@
           "exportada": true,
           "params": "dias = 30, maxCorreos = 150",
           "retorno": "Promise<",
-          "linea": 42,
-          "resumen": "Ingesta de comparables desde las alertas de Idealista del correo. El mismo anuncio se repite en correos sucesivos mientras sigue vivo, de ahí el `ON CONFLICT (portal, ref_anuncio)`: se actualiza el pr"
+          "linea": 52,
+          "resumen": "Ingesta de comparables desde las alertas de Idealista y Fotocasa del correo. El mismo anuncio se repite en correos sucesivos mientras sigue vivo, de ahí el `ON CONFLICT (portal, ref_anuncio)`: se actu"
         },
         {
           "nombre": "upsertComparable",
@@ -66937,7 +67043,7 @@
           "exportada": true,
           "params": "a: Comparable, vistoEn: Date",
           "retorno": "Promise<number>",
-          "linea": 82,
+          "linea": 101,
           "resumen": "Upsert de UN comparable en `mercado_comparables` — la puerta única del corpus, compartida por las alertas de correo y la API oficial de Idealista (`lib/subastas/idealista-api.ts`): mismo dedupe `(port"
         },
         {
@@ -66946,7 +67052,7 @@
           "exportada": true,
           "params": "max = 8, deadline?: number,",
           "retorno": "Promise<",
-          "linea": 136
+          "linea": 155
         },
         {
           "nombre": "consultarZona",
@@ -66954,7 +67060,7 @@
           "exportada": false,
           "params": "slug: string, etiqueta: string, fallos: string[]",
           "retorno": "Promise<void>",
-          "linea": 222,
+          "linea": 241,
           "resumen": "Consulta una zona en el puente y la cachea; aprende CP→distrito de los anuncios."
         },
         {
@@ -66963,7 +67069,7 @@
           "exportada": true,
           "params": "max = 6, deadline?: number,",
           "retorno": "Promise<",
-          "linea": 283
+          "linea": 302
         },
         {
           "nombre": "comparablesVigentes",
@@ -66971,7 +67077,7 @@
           "exportada": true,
           "params": "meses = MESES_VIGENCIA",
           "retorno": "Promise<Comparable[]>",
-          "linea": 381,
+          "linea": 400,
           "resumen": "Comparables vigentes, ya en el tipo del módulo. Se cargan en memoria a propósito: la mediana por zona vive en el módulo puro (probada) y el filtro de zona es insensible a acentos, algo que en Postgres"
         },
         {
@@ -66980,7 +67086,7 @@
           "exportada": true,
           "params": "f: { municipio?: string | null busqueda_origen?: string | null provincia?: string | null }",
           "retorno": "string[]",
-          "linea": 423,
+          "linea": 442,
           "resumen": "Zonas por las que buscar el €/m² de una subasta, de la más específica a la más amplia. La primera que reúna muestra suficiente gana. `busqueda_origen` es el nombre de la búsqueda guardada del BOE («PU"
         },
         {
@@ -66989,7 +67095,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 438,
+          "linea": 457,
           "resumen": "Calcula y persiste el €/m² de mercado en las subastas que lo necesitan. Solo toca las que NO tienen tasación ni valor de referencia: donde hay una tasación real, los comparables no pintan nada (y el s"
         },
         {
@@ -66998,7 +67104,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<CholloSeguido[]>",
-          "linea": 518,
+          "linea": 537,
           "resumen": "Chollos vigentes + antigüedad estimada. La calibración del ritmo de refs usa `created_at` (primera vez que NOSOTROS vimos cada ref): para los anuncios que van ENTRANDO al corpus con los correos diario"
         },
         {
@@ -67007,7 +67113,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 552,
+          "linea": 571,
           "resumen": "Aviso Telegram de los chollos NUEVOS (una sola vez por anuncio). La mediana de zona se mueve a diario y un anuncio podría entrar y salir del umbral: `chollo_avisado_at` fija que cada anuncio avisa UNA"
         },
         {
@@ -67016,7 +67122,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 612
+          "linea": 631
         },
         {
           "nombre": "refrescarIndiceINE",
@@ -67024,7 +67130,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 640,
+          "linea": 659,
           "resumen": "Refresca la caché del IPV si está caducada. Best-effort (el cron lo llama)."
         },
         {
@@ -67033,7 +67139,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<IndicesVivienda | null>",
-          "linea": 674,
+          "linea": 693,
           "resumen": "Lee el IPV cacheado (sin red). Campos a null si aún no se han capturado."
         },
         {
@@ -67042,7 +67148,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<PulsoMercado | null>",
-          "linea": 705
+          "linea": 724
         },
         {
           "nombre": "avisarBajadas",
@@ -67050,7 +67156,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 732,
+          "linea": 751,
           "resumen": "Aviso Telegram de las BAJADAS DE PRECIO nuevas en las zonas vigiladas. Una bajada es señal aunque el anuncio no llegue a chollo: el vendedor ya ha cedido una vez y es el candidato natural a una oferta"
         }
       ],
@@ -67064,7 +67170,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "6e2e7e4ea27b"
+      "hash": "4a1453bc493e"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/nota-simple.ts",
@@ -89307,7 +89413,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2397,
-    "funciones": 6443
+    "archivos": 2399,
+    "funciones": 6451
   }
 }
