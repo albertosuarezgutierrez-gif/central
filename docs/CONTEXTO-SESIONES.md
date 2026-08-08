@@ -24,6 +24,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📎 Pasada diaria facturas-correo (08/08/2026).** Vía B sana (`dias_caido=1`), sin backlog en
+  `PDF-pendiente`/`Revisar`. Día tranquilo: 0 candidatos nuevos en Gmail, 0 subidas manuales nuevas,
+  0 duplicados nuevos (los 2 "FACTURA JULIO SOCORRO" de la raíz ya estaban avisados). Roborock
+  -247,92€ (House Sevillana) sigue sin conciliar en banco. Nada que archivar/decidir hoy. Detalle en
+  `docs/AGENTES-BITACORA.md`.
+
 - **🧪 Prueba en vivo del auto-merge de rutinas (07/08/2026).** Esta entrada se subió en un PR que
   toca **solo** `docs/CONTEXTO-SESIONES.md` para ejercitar el camino feliz de
   `.github/workflows/rutinas-automerge.yml` (#1289) — el camino de bloqueo ya estaba probado contra
