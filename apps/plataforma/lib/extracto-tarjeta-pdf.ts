@@ -8,6 +8,19 @@
 //   abono:  `01/07/2026 ******2019650302 1.355,24 €PAGO RECIBO 4662032019650302`
 // (en los abonos el importe va DELANTE del concepto y el € puede ir pegado al texto).
 //
+// 🚨 08/08/2026 — el PDF REAL de Kutxabank NO trae esos espacios: sale todo PEGADO,
+//   `01/07/2026******2019750300COMPRA EN ZAPATERIA CERRAJERIA-8,00 €`
+// y en los abonos el importe se pega al número de tarjeta (`******201975030035,00 €DEVOLUCION…`).
+// El parser exigía `\s+` entre la fecha y la tarjeta, así que devolvía CERO movimientos con el
+// documento real: el extracto de julio no se pudo importar y el agente, al recibirlo por el chat,
+// lo trataba como una factura ilegible («no distingo el importe») — Alberto lo subió tres veces.
+// Se validó contra un fixture escrito a mano con la separación que se SUPONÍA, no contra un PDF de
+// verdad, que es justo el fallo de método que avisa el CLAUDE.md. Ahora se admiten las dos formas y
+// el fixture de abajo es texto EXTRAÍDO de un PDF real.
+// Clave para separar los campos cuando va todo pegado: se localiza PRIMERO el importe (es el único
+// número anclado a `€`) y solo DESPUÉS se quita el prefijo de la tarjeta; al revés, el `\d+` del
+// número de tarjeta se comería los dígitos del importe del abono y la línea se perdía.
+//
 // Claves de diseño:
 // - `ccc` = `TARJETA-KUTXA-<últimos 4 del PAN>` → casa con la cuenta ya creada de la
 //   tarjeta (unique sociedad_id+iban en cuentas_bancarias), p. ej. `TARJETA-KUTXA-0302`.
@@ -30,8 +43,13 @@ function fechaIso(d: string, m: string, y: string): string {
   return `${y}-${m}-${d}`
 }
 
-const RE_LINEA = /^(\d{2})\/(\d{2})\/(\d{4})\s+\*+\d+\s+(.+)$/
+// Fecha al principio de la línea + el resto (con o sin espacio antes del nº de tarjeta enmascarado).
+const RE_LINEA = /^(\d{2})\/(\d{2})\/(\d{4})\s*(\*{2,}\d.*)$/
+// Importe: el ÚNICO número anclado al símbolo €. `\d{1,3}` + grupos de millar impide que se trague
+// los dígitos del nº de tarjeta pegado por delante (a lo sumo se cuela un cero a la izquierda).
 const RE_IMPORTE = /(-?\d{1,3}(?:\.\d{3})*,\d{2})\s*€/
+// Prefijo de tarjeta enmascarada al principio del resto: `******2019750300`.
+const RE_TARJETA_PREFIJO = /^\s*\*+\d*/
 const RE_PAN = /N[uú]mero:\s*(\d{15,19})/i
 
 export function parseTarjetaPdfTexto(
@@ -52,7 +70,12 @@ export function parseTarjetaPdfTexto(
     if (!imp) continue
     const importe = importeEs(imp[1])
     if (importe === null) continue
-    const concepto = resto.replace(imp[0], ' ').replace(/\s+/g, ' ').trim()
+    // Importe fuera PRIMERO (ver cabecera), y solo entonces el prefijo de la tarjeta.
+    const concepto = resto
+      .replace(imp[0], ' ')
+      .replace(RE_TARJETA_PREFIJO, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
     if (!concepto) continue
     const fecha = fechaIso(dd, mm, yyyy)
     if (!fechaMin || fecha < fechaMin) fechaMin = fecha
@@ -118,27 +141,41 @@ export interface CuadreTarjeta {
   sumaDevoluciones: number     // Σ importe de los abonos que NO son PAGO RECIBO (devoluciones)
   esperado: number             // sumaCompras − sumaDevoluciones (lo que debería liquidar la tarjeta)
   diferencia: number           // |liquidacion − esperado| (0 si no hay liquidación que contrastar)
-  cuadra: boolean              // true si cuadra dentro de tolerancia (o si no hay liquidación que verificar)
+  cuadra: boolean              // true si cuadra dentro de tolerancia (o si no hay nada que verificar)
+  /** false = este extracto NO permite comprobar el cuadre; no se puede afirmar ni ✅ ni ⚠️. */
+  verificable: boolean
 }
 
 // Comprueba la consistencia interna del extracto: la liquidación (PAGO RECIBO) debe igualar
 // Σ compras − Σ devoluciones. Si no cuadra, faltan páginas / es el mes equivocado / PDF parcial.
 // Puro/testeable. Si el extracto no trae la línea de liquidación, no se puede verificar → cuadra=true.
+//
+// 🚨 La liquidación paga el ciclo ANTERIOR: en el extracto real de Kutxabank el `PAGO RECIBO` es la
+// PRIMERA línea del mes (el 01/07 se cobra lo gastado en junio) y las compras del fichero son
+// POSTERIORES. Contrastar una contra otras daba un «⚠️ el desglose NO cuadra, ¿faltan páginas?» que
+// era falso en TODOS los extractos reales. Cuando la liquidación no puede corresponder a estas
+// compras (va antes de la primera), el cuadre se marca NO verificable en vez de gritar.
 export function cuadrarExtractoTarjeta(ex: ExtractoN43, tol = 0.02): CuadreTarjeta {
   let liquidacion: number | null = null
   let sumaCompras = 0
   let sumaDevoluciones = 0
+  let fechaLiquidacion: string | null = null
+  let primeraCompra: string | null = null
   for (const m of ex.movimientos) {
     if (esPagoReciboTarjeta(m.concepto)) {
       liquidacion = (liquidacion ?? 0) + Math.abs(m.importe)
+      if (!fechaLiquidacion || m.fechaOperacion < fechaLiquidacion) fechaLiquidacion = m.fechaOperacion
     } else if (m.importe < 0) {
       sumaCompras += Math.abs(m.importe)
+      if (!primeraCompra || m.fechaOperacion < primeraCompra) primeraCompra = m.fechaOperacion
     } else if (m.importe > 0) {
       sumaDevoluciones += m.importe
     }
   }
   const esperado = sumaCompras - sumaDevoluciones
-  const diferencia = liquidacion === null ? 0 : Math.abs(liquidacion - esperado)
-  const cuadra = liquidacion === null || diferencia < tol
-  return { liquidacion, sumaCompras, sumaDevoluciones, esperado, diferencia, cuadra }
+  const cicloAnterior = !!(fechaLiquidacion && primeraCompra && fechaLiquidacion <= primeraCompra)
+  const verificable = liquidacion !== null && !cicloAnterior
+  const diferencia = verificable ? Math.abs(liquidacion! - esperado) : 0
+  const cuadra = !verificable || diferencia < tol
+  return { liquidacion, sumaCompras, sumaDevoluciones, esperado, diferencia, cuadra, verificable }
 }

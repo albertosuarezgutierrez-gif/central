@@ -14,7 +14,9 @@
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { extraerDesdeBuffer } from '@/lib/agente-facturas/extraer'
-import { esExtractoTarjeta } from '@/lib/extracto-tarjeta-pdf'
+import { esExtractoTarjeta, parseTarjetaPdfTexto } from '@/lib/extracto-tarjeta-pdf'
+import { parseExtractoXls } from '@/lib/extracto-xls'
+import { identificarTarjetaExcel, comoExtractoTarjeta } from '@/lib/extracto-tarjeta-excel'
 import { interpretarExtraccion, fechaEs, type FacturaDoc, type CruceDoc, type CoberturaBanco, type MovCandidato } from './documentos-tipos'
 import { detectarListadoMovimientos } from './documento-clase'
 import { procesarExtractoTarjeta } from './extracto-tarjeta'
@@ -96,9 +98,48 @@ async function buscarCruce(cuentaId: string, f: FacturaDoc, tolDias = 7): Promis
   return ciega ? { estado: 'sin_cobertura', cobertura } : { estado: 'sin_match', cobertura }
 }
 
+const RE_EXCEL = /\.xlsx?$/i
+const MIME_EXCEL = /(excel|spreadsheet)/i
+
+// Hoja de cálculo subida al chat: el lector de facturas no sabe abrirla (devolvería «no he podido
+// leer el documento», que es falso). Hoy el Excel que Alberto sube es el MISMO listado de la tarjeta
+// que el PDF, y ese sí se puede importar entero.
+async function procesarExcel(
+  cuentaId: string, buffer: Buffer, mimeType: string, fileName: string,
+): Promise<DocProcesado> {
+  const extractos = parseExtractoXls(buffer)
+  const primero = extractos[0]
+  if (!primero || !primero.movimientos.length) {
+    return { ok: false, motivo: 'He abierto la hoja de cálculo pero no reconozco ninguna columna de movimientos (fecha, concepto, importe). Si es un extracto, súbelo en /banca → Importar.' }
+  }
+
+  const tarjeta = identificarTarjetaExcel(primero)
+  if (!tarjeta) {
+    // No es de tarjeta o no se puede saber a qué cuenta pertenece. NO se adivina: meter movimientos
+    // en la cuenta equivocada ensucia el P&L y el dedupe, y cuesta más deshacerlo que no importarlo.
+    const desde = primero.fechaInicio ? fechaEs(primero.fechaInicio) : ''
+    const hasta = primero.fechaFin ? fechaEs(primero.fechaFin) : ''
+    const rango = desde && hasta ? ` (del ${desde} al ${hasta})` : ''
+    return {
+      ok: false,
+      motivo: `Es un listado de ${primero.movimientos.length} movimientos${rango}, pero el fichero no dice de qué cuenta o tarjeta es, y no lo adivino. Impórtalo en /banca → Importar, que ahí eliges la cuenta.`,
+    }
+  }
+
+  return await procesarExtractoTarjeta(
+    cuentaId, buffer, mimeType, fileName, [comoExtractoTarjeta(primero, tarjeta.ccc)], 'xls',
+  )
+}
+
 export async function procesarDocumento(
   cuentaId: string, buffer: Buffer, mimeType: string, fileName = '',
 ): Promise<DocProcesado> {
+  if (RE_EXCEL.test(fileName) || MIME_EXCEL.test(mimeType)) {
+    return await procesarExcel(cuentaId, buffer, mimeType, fileName).catch(() => ({
+      ok: false as const, motivo: 'No pude leer la hoja de cálculo. ¿Es el Excel de movimientos que descarga el banco?',
+    }))
+  }
+
   let extraido
   try {
     extraido = await extraerDesdeBuffer(buffer, mimeType, fileName)
@@ -109,7 +150,7 @@ export async function procesarDocumento(
   // Un EXTRACTO de tarjeta (multilínea) no es una factura suelta: se desglosa e importa por su
   // propia vía (parser exacto → importarExtracto → categoría → devoluciones → cuadre → Drive).
   if (extraido.texto && esExtractoTarjeta(extraido.texto)) {
-    return await procesarExtractoTarjeta(cuentaId, buffer, mimeType, fileName, extraido.texto)
+    return await procesarExtractoTarjeta(cuentaId, buffer, mimeType, fileName, parseTarjetaPdfTexto(extraido.texto))
   }
 
   const interp = interpretarExtraccion(extraido.data, extraido.source)

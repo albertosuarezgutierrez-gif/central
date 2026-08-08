@@ -13,7 +13,8 @@ import { comercioDe } from '@/lib/comercio'
 import { eur } from '@/lib/dinero'
 import { subir } from '@/lib/agente-facturas/drive'
 import { conciliarFacturasDesdeGmail } from '@/lib/agente-facturas/conciliar-gmail'
-import { parseTarjetaPdfTexto, cuadrarExtractoTarjeta, esPagoReciboTarjeta } from '@/lib/extracto-tarjeta-pdf'
+import { cuadrarExtractoTarjeta, esPagoReciboTarjeta } from '@/lib/extracto-tarjeta-pdf'
+import type { ExtractoN43 } from '@/lib/norma43'
 import { casarDevolucion, type CompraCandidata } from '@/lib/devoluciones-tarjeta'
 import { esCargoFinanciero, dobleCobro, subioPrecio } from '@/lib/vigilantes-tarjeta'
 import { guardarEnlaceExtracto } from './memoria'
@@ -194,32 +195,38 @@ async function vigilantesTarjeta(
   if (bloques.length) await tgSend(`🔎 <b>Revisión de la tarjeta</b>\n\n${bloques.join('\n\n')}`).catch(() => {})
 }
 
-// Procesa un extracto de tarjeta subido al chat/Telegram. `texto` ya viene extraído del PDF.
+// Procesa un extracto de tarjeta subido al chat/Telegram. Los movimientos llegan YA parseados: del
+// PDF («Movimientos de tarjeta») o del Excel del mismo listado — el resto del flujo es idéntico, así
+// que no se duplica (`origen` solo distingue la procedencia en la fila y el nombre en Drive).
 export async function procesarExtractoTarjeta(
-  cuentaId: string, buffer: Buffer, mimeType: string, fileName: string, texto: string,
+  cuentaId: string, buffer: Buffer, mimeType: string, fileName: string,
+  extractos: ExtractoN43[], origen: 'pdf' | 'xls' = 'pdf',
 ): Promise<ResultadoExtractoTarjeta> {
-  const extractos = parseTarjetaPdfTexto(texto)
   if (!extractos.length || !extractos[0].movimientos.length) {
-    return { ok: false, motivo: 'Parece un extracto de tarjeta pero no pude leer los movimientos. ¿Es el PDF "Movimientos de tarjeta" de Kutxabank?' }
+    return { ok: false, motivo: 'Parece un extracto de tarjeta pero no pude leer los movimientos. ¿Es el PDF/Excel "Movimientos de tarjeta" de Kutxabank?' }
   }
 
   const st = await resolverSociedadTitular(cuentaId, extractos[0].ccc)
   if (!st) return { ok: false, motivo: 'No encuentro una sociedad donde dar de alta la tarjeta. Créala en /banca y reinténtalo.' }
 
-  const res = await importarExtracto(cuentaId, st.sociedadId, extractos, 'pdf', st.titular, 'tarjeta')
+  const res = await importarExtracto(cuentaId, st.sociedadId, extractos, origen, st.titular, 'tarjeta')
   await analizarMovimientos(cuentaId).catch(() => ({ categorizados: 0 }))
 
   const desde = res.fechaInicio || extractos[0].fechaInicio || new Date().toISOString().slice(0, 10)
   const hasta = res.fechaFin || extractos[0].fechaFin || desde
   const dev = await emparejarDevoluciones(res.cuentaBancariaIds, desde, hasta).catch(() => ({ casadas: 0, sinCasar: 0 }))
 
-  // Cuadre: la liquidación (PAGO RECIBO) debe igualar Σ compras − Σ devoluciones.
+  // Cuadre: la liquidación (PAGO RECIBO) debe igualar Σ compras − Σ devoluciones. Solo se afirma
+  // cuando el extracto lo permite: si su liquidación paga el ciclo ANTERIOR (lo normal en el PDF de
+  // Kutxabank, donde el PAGO RECIBO abre el mes), no hay nada que contrastar y no se dice nada.
   let cuadraTodo = true
+  let verificable = false
   let liquidacion: number | null = null
   let diferencia = 0
   for (const ex of extractos) {
     const c = cuadrarExtractoTarjeta(ex)
     if (c.liquidacion !== null) liquidacion = (liquidacion ?? 0) + c.liquidacion
+    if (c.verificable) verificable = true
     if (!c.cuadra) { cuadraTodo = false; diferencia += c.diferencia }
   }
 
@@ -237,7 +244,9 @@ export async function procesarExtractoTarjeta(
   // ("enséñame el extracto de junio de la ****0302") — Fase 3, extracto consultable.
   let driveUrl: string | undefined
   try {
-    const d = await subir(buffer, fileName || `extracto-tarjeta-${mes}.pdf`, mimeType || 'application/pdf', hasta)
+    const nombre = fileName || `extracto-tarjeta-${mes}.${origen === 'xls' ? 'xls' : 'pdf'}`
+    const tipo = mimeType || (origen === 'xls' ? 'application/vnd.ms-excel' : 'application/pdf')
+    const d = await subir(buffer, nombre, tipo, hasta)
     driveUrl = d?.url
     if (driveUrl && pan4) await guardarEnlaceExtracto(cuentaId, pan4, mes, driveUrl).catch(() => {})
   } catch { /* no romper el import si Drive falla */ }
@@ -259,11 +268,13 @@ export async function procesarExtractoTarjeta(
   const mascara = pan4 ? `****${pan4}` : extractos[0].ccc
   const cuadreLinea = liquidacion === null
     ? ''
-    : cuadraTodo
-      ? `✅ Cuadra con la liquidación de ${eur(liquidacion)}.`
-      : `⚠️ OJO: el desglose NO cuadra con la liquidación (faltan ${eur(diferencia)}). ¿Faltan páginas o es otro mes?`
+    : !verificable
+      ? `ℹ️ La liquidación de ${eur(liquidacion)} de este extracto paga el ciclo anterior, así que no la contrasto con estas compras.`
+      : cuadraTodo
+        ? `✅ Cuadra con la liquidación de ${eur(liquidacion)}.`
+        : `⚠️ OJO: el desglose NO cuadra con la liquidación (faltan ${eur(diferencia)}). ¿Faltan páginas o es otro mes?`
   // Descuadre = probablemente faltan páginas / mes equivocado: avisa también al móvil (Telegram).
-  if (liquidacion !== null && !cuadraTodo) {
+  if (verificable && !cuadraTodo) {
     await tgSend(`💳 <b>Extracto ${escapeHtml(mascara)}: el desglose NO cuadra</b>\nFaltan ${eur(diferencia)} respecto a la liquidación. Revisa si el PDF está completo o es el mes correcto.`).catch(() => {})
   }
   const devLinea = dev.casadas || dev.sinCasar
