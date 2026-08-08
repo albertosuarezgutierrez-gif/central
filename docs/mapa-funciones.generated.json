@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-08T15:17:40Z",
-  "sha": "fdd0b6d309725e960733fb3d798dad77e48d8502",
+  "generadoEn": "2026-08-08T16:28:23Z",
+  "sha": "2638a8f3b9d413b6b1d802179df291adf910b3dd",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47491,7 +47491,7 @@
         "subastas_criterios"
       ],
       "rutaApi": null,
-      "hash": "1a7114537d39"
+      "hash": "3758abf2fff6"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/subastas/SubastasClient.tsx",
@@ -47506,7 +47506,7 @@
           "exportada": false,
           "params": "activo = false",
           "retorno": "React.CSSProperties",
-          "linea": 189
+          "linea": 211
         },
         {
           "nombre": "fecha",
@@ -47514,7 +47514,7 @@
           "exportada": false,
           "params": "iso: string | null | undefined",
           "retorno": "string | null",
-          "linea": 196
+          "linea": 218
         },
         {
           "nombre": "Puntuacion",
@@ -47522,7 +47522,7 @@
           "exportada": false,
           "params": "{ v }: { v: number | null }",
           "retorno": null,
-          "linea": 210,
+          "linea": 232,
           "resumen": "Semáforo de la puntuación. `null` se pinta distinto a 0: no es lo mismo."
         },
         {
@@ -47531,7 +47531,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 218
+          "linea": 240
         },
         {
           "nombre": "PanelTesoreria",
@@ -47539,7 +47539,7 @@
           "exportada": false,
           "params": "{ t }: { t: Tesoreria }",
           "retorno": null,
-          "linea": 225,
+          "linea": 247,
           "resumen": "Dinero que hay que tener bloqueado para poder pujar. Lo que importa NO es la suma de depósitos sino el máximo simultáneo: los que no se solapan reutilizan el mismo dinero."
         },
         {
@@ -47548,7 +47548,7 @@
           "exportada": false,
           "params": "{ r, dormitorios }: { r: Rendimiento | null | undefined; dormitorios?: number | null }",
           "retorno": null,
-          "linea": 309,
+          "linea": 331,
           "resumen": "Yield turístico estimado con los pisos PROPIOS. Siempre con el caveat: los pisos de referencia son de Sevilla capital — fuera de ahí es extrapolación."
         },
         {
@@ -47557,7 +47557,7 @@
           "exportada": false,
           "params": "{ s, plantaAparte }: { s: Subasta; plantaAparte?: boolean }",
           "retorno": null,
-          "linea": 333,
+          "linea": 355,
           "resumen": "repetirla sería ruido."
         },
         {
@@ -47566,7 +47566,7 @@
           "exportada": false,
           "params": "{ s, d }: { s: Subasta; d?: Documental | null }",
           "retorno": null,
-          "linea": 370,
+          "linea": 392,
           "resumen": "Resumen de CARGAS + documentación de la subasta. Vive dentro de `FichaSubasta` a propósito: antes el semáforo y las notas del edicto solo se pintaban en la pestaña «Todas» (iban en su `extra`), así qu"
         },
         {
@@ -47575,16 +47575,43 @@
           "exportada": false,
           "params": "{ dedupeKey }: { dedupeKey: string }",
           "retorno": null,
-          "linea": 516,
+          "linea": 538,
           "resumen": "«Nota simple viva»: la certificación que adjunta el juzgado es de hace años y las cargas se mueven. Aquí se sube una nota simple recién pedida al registro y el agente dice QUÉ HA CAMBIADO — es lo únic"
+        },
+        {
+          "nombre": "UmbralesPujaFicha",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ s, notasEdicto }: { s: Subasta; notasEdicto?: string | null }",
+          "retorno": null,
+          "linea": 635,
+          "resumen": "Qué hay que pujar de verdad: deuda reclamada, puja mínima y los umbrales de APROBACIÓN del remate. Corrige la confusión de «hay que pujar el 70% de la deuda»: el 70% de la LEC es del VALOR DE SUBASTA,"
+        },
+        {
+          "nombre": "aInmueble",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: Subasta",
+          "retorno": "SubastaInmueble",
+          "linea": 683,
+          "resumen": "El `Subasta` del cliente, como lo espera la lógica pura del módulo."
+        },
+        {
+          "nombre": "SimuladorPuja",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ s, o, params }: { s: Subasta; o?: Oportunidad | null; params?: ParamsCoste }",
+          "retorno": null,
+          "linea": 710,
+          "resumen": "«¿Y si pujo X?»: coste puerta abierta, descuento real y banda de aprobación de UNA puja concreta. Mismo motor que el resto de la ficha (`calcularCoste` + `umbralesPuja` del módulo, con la financiación"
         },
         {
           "nombre": "FichaSubasta",
           "kind": "function",
           "exportada": false,
-          "params": "{ s, o, acciones, extra, doc }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null }",
+          "params": "{ s, o, acciones, extra, doc, escenarios, params }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null; escenarios?: EscenarioUI[] | null; params?: ParamsCoste }",
           "retorno": null,
-          "linea": 606
+          "linea": 775
         },
         {
           "nombre": "SubastasClient",
@@ -47592,14 +47619,14 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Inicial | null }",
           "retorno": null,
-          "linea": 777
+          "linea": 971
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "feb9b2acb6ef"
+      "hash": "fa061f6932c4"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -47900,7 +47927,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "90880ac4287a"
+      "hash": "ce92e7334be6"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -51270,7 +51297,7 @@
         "subastas_radar"
       ],
       "rutaApi": "/api/cron/subastas-avisos",
-      "hash": "77edc52dcfff"
+      "hash": "13c26d82a7ae"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-cierre/route.ts",
@@ -51281,12 +51308,29 @@
       ],
       "funciones": [
         {
+          "nombre": "vigilarPujasSeguidas",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 31,
+          "resumen": "Vigila la MEJOR PUJA en vivo de las seguidas que cierran pronto y avisa una sola vez cuando alguien puja por encima del techo (el declarado por Alberto en el seguimiento o, si no lo fijó, el calculado"
+        },
+        {
+          "nombre": "escapar",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 85
+        },
+        {
           "nombre": "GET",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 19
+          "linea": 89
         },
         {
           "nombre": "avisarUltimas24h",
@@ -51294,7 +51338,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<number>",
-          "linea": 99,
+          "linea": 176,
           "resumen": "Segundo recordatorio, URGENTE, en las últimas 24 h — con lo que hay que tener delante para decidir la puja: depósito, semáforo documental, las notas de la CERTIFICACIÓN registral y el €/m² de la zona "
         }
       ],
@@ -51304,7 +51348,7 @@
         "subastas_seguidas"
       ],
       "rutaApi": "/api/cron/subastas-cierre",
-      "hash": "a0321c23350f"
+      "hash": "626ae3445f13"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-enriquecer/route.ts",
@@ -55702,7 +55746,7 @@
         "subastas_criterios"
       ],
       "rutaApi": "/api/subastas",
-      "hash": "02f7fef1b743"
+      "hash": "c6aa5a2a2967"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/seguidas/route.ts",
@@ -55807,7 +55851,7 @@
         "trading_tesis"
       ],
       "rutaApi": "/api/trading/analizar",
-      "hash": "672817120a9b"
+      "hash": "28df1f4b1e0c"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/cartera-estudio/route.ts",
@@ -56031,7 +56075,7 @@
         "trading_tesis"
       ],
       "rutaApi": "/api/trading/puntuar",
-      "hash": "0c8c0a3128ff"
+      "hash": "bfd3d83a7fdd"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/saldo/route.ts",
@@ -66382,7 +66426,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<FilaCriterios[]>",
-          "linea": 166,
+          "linea": 168,
           "resumen": "Cuentas con el radar activo y sus criterios."
         },
         {
@@ -66391,7 +66435,7 @@
           "exportada": true,
           "params": "limite = 500",
           "retorno": "Promise<SubastaInmueble[]>",
-          "linea": 192,
+          "linea": 194,
           "resumen": "Subastas candidatas: en plazo (o sin fecha conocida) y recientes. No se rebarre todo el histórico en cada pasada."
         },
         {
@@ -66400,7 +66444,7 @@
           "exportada": true,
           "params": "cuentaId: string, criterios: CriteriosSubasta, corpus: SubastaInmueble[], params: ParamsCoste = {},",
           "retorno": "Promise<number>",
-          "linea": 213,
+          "linea": 215,
           "resumen": "Casa el corpus con los criterios de una cuenta e inserta lo nuevo. El upsert REFRESCA el snapshot y las cifras: el radar corre a las 06:30, DESPUÉS del enriquecimiento (06:15) y del valor de mercado ("
         },
         {
@@ -66409,7 +66453,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 286,
+          "linea": 288,
           "resumen": "Pasada completa: descarga el corpus UNA vez y lo empareja con cada cuenta."
         }
       ],
@@ -66421,7 +66465,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "11f8e2f66e2c"
+      "hash": "a0216df4e13b"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/boe.ts",
@@ -66587,7 +66631,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "b7c26409097e"
+      "hash": "7a99b9b69952"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/consulta-juzgado.ts",
@@ -66803,6 +66847,7 @@
       "resumen": "──────────────────────────────────────────────────────────────────────────── Enriquecimiento de una subasta: ficha del Portal del BOE + Catastro. Aquí va SOLO la red; el parseo es puro (`@central/module-subastas`). Notas de campo (probadas contra los servicios reales el 28/07/2026): · Ambos hosts re",
       "exporta": [
         "bajarFicha",
+        "mejorPujaViva",
         "bajarCatastro",
         "bajarCoordenadas",
         "resolverNombreVia",
@@ -66817,7 +66862,7 @@
           "exportada": false,
           "params": "url: string, ms = 20000",
           "retorno": "Promise<string>",
-          "linea": 41
+          "linea": 42
         },
         {
           "nombre": "turnoCatastro",
@@ -66825,7 +66870,7 @@
           "exportada": false,
           "params": "pausaExtra = 0",
           "retorno": "Promise<void>",
-          "linea": 71,
+          "linea": 72,
           "resumen": "Reserva el siguiente turno del cerrojo y espera a que llegue. `pausaExtra` añade un descanso contado DESDE AHORA (para el reintento: el servicio acaba de cortar y hay que darle aire, no basta con el e"
         },
         {
@@ -66834,7 +66879,7 @@
           "exportada": false,
           "params": "url: string",
           "retorno": "Promise<string>",
-          "linea": 78
+          "linea": 79
         },
         {
           "nombre": "bajarFicha",
@@ -66842,8 +66887,17 @@
           "exportada": true,
           "params": "identificador: string",
           "retorno": "Promise<FichaBoe>",
-          "linea": 107,
+          "linea": 108,
           "resumen": "Descarga y parsea las tres pestañas de la ficha de una subasta. 🚨 Un HTTP 200 que NO sea la ficha (mantenimiento del Portal, muro de un WAF, página de error) es lo más peligroso que puede pasar aquí:"
+        },
+        {
+          "nombre": "mejorPujaViva",
+          "kind": "function",
+          "exportada": true,
+          "params": "identificador: string",
+          "retorno": "Promise<number | null>",
+          "linea": 129,
+          "resumen": "`null` = la ficha no publica la puja, que NO es «sin pujas»."
         },
         {
           "nombre": "bajarCatastro",
@@ -66851,7 +66905,7 @@
           "exportada": true,
           "params": "refCatastral: string",
           "retorno": "Promise<DatosCatastro | null>",
-          "linea": 132,
+          "linea": 147,
           "resumen": "Consulta el Catastro por referencia catastral. `null` si no hay dato. ⚠️ Solo devuelve datos del BIEN (superficie, año, uso) con la referencia COMPLETA de 20 caracteres. Con la de parcela (14) el serv"
         },
         {
@@ -66860,7 +66914,7 @@
           "exportada": true,
           "params": "refCatastral: string",
           "retorno": "Promise<CoordenadasCatastro | null>",
-          "linea": 147,
+          "linea": 162,
           "resumen": "Coordenadas WGS84 por referencia catastral (`Consulta_CPMRC`, probado el 30/07/2026). El servicio trabaja a nivel de PARCELA: acepta los 14 primeros caracteres; con la referencia de 20 del bien concre"
         },
         {
@@ -66869,7 +66923,7 @@
           "exportada": true,
           "params": "provincia: string, municipio: string, sigla: string, calle: string,",
           "retorno": "Promise<",
-          "linea": 165,
+          "linea": 180,
           "resumen": "Nombre OFICIAL de la vía según el callejero del Catastro (`ConsultaVia`). Se pregunta por UNA PALABRA distintiva, no por el nombre entero: el servicio busca por subcadena y el Catastro reescribe los n"
         },
         {
@@ -66878,7 +66932,7 @@
           "exportada": true,
           "params": "p: ParamsDnploc & { provincia: string; municipio: string },",
           "retorno": "Promise<",
-          "linea": 193,
+          "linea": 208,
           "resumen": "DIRECCIÓN → referencia catastral (`Consulta_DNPLOC`, servicio libre; probado el 30/07/2026). Es lo que desbloquea la ubicación EXACTA de la mayor parte del corpus: el BOE publica la dirección del inmu"
         },
         {
@@ -66887,7 +66941,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<void>",
-          "linea": 261
+          "linea": 276
         },
         {
           "nombre": "geocodificarMunicipio",
@@ -66895,7 +66949,7 @@
           "exportada": true,
           "params": "municipio: string, provincia?: string | null,",
           "retorno": "Promise<CoordenadasCatastro | null>",
-          "linea": 279,
+          "linea": 294,
           "resumen": "Centro del municipio por Nominatim (OSM, gratis). Es el escalón APROXIMADO para las subastas sin referencia catastral (la mayoría del corpus): mejor un pin honesto en el centro del pueblo que un mapa "
         },
         {
@@ -66904,7 +66958,7 @@
           "exportada": true,
           "params": "max = 20",
           "retorno": "Promise<",
-          "linea": 311,
+          "linea": 326,
           "resumen": "el marcado de una CONCLUIDA aún no se ha podido ver, así que el parser (`resultadoDeFicha`) es defensivo — si no reconoce nada deja la fila pendiente y aquí se loguean las claves vistas para ajustar e"
         }
       ],
@@ -66912,7 +66966,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "7c7e5543742c"
+      "hash": "e53278ac7c68"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/gmail-boe.ts",
@@ -69314,6 +69368,8 @@
         "resumenDescartes",
         "contrastarFuentes",
         "resumenDivergencias",
+        "detectarSuplantaciones",
+        "resumenSuplantaciones",
         "saltoDeSaldo"
       ],
       "funciones": [
@@ -69354,18 +69410,44 @@
           "resumen": "Resumen de una línea. Cadena vacía si no hay divergencias — el consumidor no tiene que comprobarlo."
         },
         {
+          "nombre": "cerca",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: number, b: number, tol: number",
+          "retorno": "boolean",
+          "linea": 220
+        },
+        {
+          "nombre": "detectarSuplantaciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "precios: Record<string, number>, referencias: Record<string, number>, tol = CRUCE_TOLERANCIA,",
+          "retorno": "Suplantaciones",
+          "linea": 226,
+          "resumen": "Detecta precios que pertenecen a otro símbolo. `referencias` = mismo mapa que `filtrarPreciosAnomalos` (último `precio_ref` conocido ANTERIOR a la pasada, por símbolo)."
+        },
+        {
+          "nombre": "resumenSuplantaciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "suplantados: Suplantacion[]",
+          "retorno": "string",
+          "linea": 275,
+          "resumen": "Resumen de una línea. Cadena vacía si no hay nada — el consumidor no tiene que comprobarlo."
+        },
+        {
           "nombre": "saltoDeSaldo",
           "kind": "function",
           "exportada": true,
           "params": "nuevo: number, anterior: number | null, umbral = SALTO_NAV_AVISO",
           "retorno": "SaltoSaldo",
-          "linea": 185,
+          "linea": 301,
           "resumen": "`variacion` = (nuevo − anterior) / anterior. Sin anterior no hay nada que comparar (primer saldo): no se avisa, que es distinto de «no ha cambiado»."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "efb4edc9583b"
+      "hash": "852f7757da30"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-stooq.ts",
@@ -86858,6 +86940,7 @@
         "deposito",
         "calcularCoste",
         "pujaMaximaParaDescuento",
+        "escenariosCoste",
         "yieldTuristico"
       ],
       "funciones": [
@@ -86867,7 +86950,7 @@
           "exportada": true,
           "params": "valorSubasta: number | null | undefined, pct = PCT_DEPOSITO",
           "retorno": "number | null",
-          "linea": 47,
+          "linea": 50,
           "resumen": "Lo que hay que consignar para pujar en una subasta."
         },
         {
@@ -86876,7 +86959,7 @@
           "exportada": true,
           "params": "s: SubastaInmueble, remate?: number | null, params: ParamsCoste = {},",
           "retorno": "CosteAdquisicion",
-          "linea": 59,
+          "linea": 62,
           "resumen": "Calcula el coste puerta abierta. @param s la subasta ya normalizada @param remate precio de adjudicación a simular; por defecto el valor de subasta @param params parámetros de coste (por defecto, Anda"
         },
         {
@@ -86885,7 +86968,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "number",
-          "linea": 179
+          "linea": 203
         },
         {
           "nombre": "pct",
@@ -86893,7 +86976,7 @@
           "exportada": false,
           "params": "x: number",
           "retorno": "string",
-          "linea": 183
+          "linea": 207
         },
         {
           "nombre": "formatearEur",
@@ -86901,7 +86984,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 189,
+          "linea": 213,
           "resumen": "Formato español (2.162,49 €) para los avisos. La UI usa el helper `eur()` de la app; aquí se replica porque el módulo es puro y no importa nada de fuera."
         },
         {
@@ -86909,9 +86992,34 @@
           "kind": "function",
           "exportada": true,
           "params": "s: SubastaInmueble, valorMercado: number, descuentoObjetivo = 0.25, params: ParamsCoste = {},",
-          "retorno": "number | null",
-          "linea": 204,
+          "retorno": "PujaMaxima",
+          "linea": 243,
           "resumen": "Puja MÁXIMA para que la adquisición salga con al menos `descuentoObjetivo` de descuento real sobre `valorMercado` — con el coste puerta abierta entero dentro, no solo el remate. Se resuelve por bisecc"
+        },
+        {
+          "nombre": "pujaBiseccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: SubastaInmueble, valorMercado: number, descuentoObjetivo: number, params: ParamsCoste,",
+          "retorno": "number | null",
+          "linea": 252
+        },
+        {
+          "nombre": "valorarPuja",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: SubastaInmueble, importe: number | null",
+          "retorno": "PujaMaxima",
+          "linea": 277,
+          "resumen": "Contrasta un techo de puja contra la puja mínima y los umbrales legales."
+        },
+        {
+          "nombre": "escenariosCoste",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SubastaInmueble, params: ParamsCoste = {}, medianaProvincial?: { ratio: number; muestraRatio: number; provincia: string } | null,",
+          "retorno": "EscenarioCoste[]",
+          "linea": 333
         },
         {
           "nombre": "alinearATramo",
@@ -86919,7 +87027,7 @@
           "exportada": false,
           "params": "puja: number, s: SubastaInmueble",
           "retorno": "number",
-          "linea": 229,
+          "linea": 378,
           "resumen": "El portal solo acepta pujas en tramos desde el valor de salida: se alinea hacia abajo."
         },
         {
@@ -86928,13 +87036,13 @@
           "exportada": true,
           "params": "ingresoPorDormitorio: number, dormitorios: number, costeTotal: number,",
           "retorno": "YieldTuristico | null",
-          "linea": 252,
+          "linea": 401,
           "resumen": "Yield estimado POR DORMITORIO: `ingresoPorDormitorio` sale del histórico real de los pisos del usuario (€ netos/año por dormitorio). Es la métrica disponible con sus datos (sus pisos no tienen m² regi"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e869c26803b9"
+      "hash": "ad7d95bd8e93"
     },
     {
       "ruta": "packages/module-subastas/src/edicto.ts",
@@ -86944,6 +87052,7 @@
         "fichaLegible",
         "enlacesDocumentos",
         "datosDeEdicto",
+        "viviendaHabitualDeNotas",
         "notasDeEdicto"
       ],
       "funciones": [
@@ -86975,18 +87084,27 @@
           "resumen": "Señales explícitas del texto de un edicto. Nunca infiere: solo literales."
         },
         {
+          "nombre": "viviendaHabitualDeNotas",
+          "kind": "function",
+          "exportada": true,
+          "params": "notas: string | null | undefined",
+          "retorno": "DatosEdicto['viviendaHabitual']",
+          "linea": 115,
+          "resumen": "Recupera la señal «vivienda habitual» desde las NOTAS persistidas (`subastas.notas_edicto` guarda las líneas de `notasDeEdicto`, no el `DatosEdicto` estructurado). Es el inverso de las tres líneas de "
+        },
+        {
           "nombre": "notasDeEdicto",
           "kind": "function",
           "exportada": true,
           "params": "d: DatosEdicto",
           "retorno": "string[]",
-          "linea": 110,
+          "linea": 124,
           "resumen": "Los hallazgos, como líneas legibles para la ficha. `[]` = nada explícito."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "abccc6e224fe"
+      "hash": "af59e4195f5f"
     },
     {
       "ruta": "packages/module-subastas/src/email-boe.ts",
@@ -87208,7 +87326,8 @@
       "exporta": [
         "paresFicha",
         "parsearFichaBoe",
-        "resultadoDeFicha"
+        "resultadoDeFicha",
+        "mejorPujaDeFicha"
       ],
       "funciones": [
         {
@@ -87217,7 +87336,7 @@
           "exportada": true,
           "params": "html: string",
           "retorno": "Map<string, string>",
-          "linea": 62,
+          "linea": 66,
           "resumen": "Extrae los pares `<th>Etiqueta</th><td>Valor</td>` de una pestaña."
         },
         {
@@ -87226,7 +87345,7 @@
           "exportada": false,
           "params": "v: string | undefined",
           "retorno": "boolean",
-          "linea": 75,
+          "linea": 79,
           "resumen": "Centinelas textuales del portal que significan «no hay dato»."
         },
         {
@@ -87235,7 +87354,7 @@
           "exportada": false,
           "params": "m: Map<string, string>, ...claves: string[]",
           "retorno": "string | null",
-          "linea": 80
+          "linea": 84
         },
         {
           "nombre": "importe",
@@ -87243,7 +87362,7 @@
           "exportada": false,
           "params": "m: Map<string, string>, ...claves: string[]",
           "retorno": "number | null",
-          "linea": 93,
+          "linea": 97,
           "resumen": "Importe de la ficha. Devuelve `null` tanto si falta como si vale 0: el portal publica «Tasación 0,00 €» cuando no hay tasación, y tratarlo como cero produciría descuentos infinitos."
         },
         {
@@ -87252,7 +87371,7 @@
           "exportada": false,
           "params": "m: Map<string, string>, clave: string",
           "retorno": "string | null",
-          "linea": 101,
+          "linea": 105,
           "resumen": "Las fechas traen la ISO entre paréntesis: se prefiere por inequívoca."
         },
         {
@@ -87261,7 +87380,7 @@
           "exportada": true,
           "params": "htmlGeneral: string, htmlBien = '', htmlAutoridad = '',",
           "retorno": "FichaBoe",
-          "linea": 125,
+          "linea": 129,
           "resumen": "Parsea la ficha completa. Las tres pestañas son opcionales: con la general ya se obtienen las cifras, que es lo que desbloquea el scoring."
         },
         {
@@ -87270,7 +87389,7 @@
           "exportada": true,
           "params": "pares: Map<string, string>",
           "retorno": "ResultadoSubasta | null",
-          "linea": 205
+          "linea": 210
         },
         {
           "nombre": "texto2",
@@ -87278,12 +87397,21 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 235
+          "linea": 240
+        },
+        {
+          "nombre": "mejorPujaDeFicha",
+          "kind": "function",
+          "exportada": true,
+          "params": "pares: Map<string, string>",
+          "retorno": "number | null",
+          "linea": 253,
+          "resumen": "Mejor puja publicada por la ficha de una subasta EN CURSO (sin exigir estado, a diferencia de `resultadoDeFicha`). Sirve para vigilar las seguidas: si alguien ya puja por encima de nuestro techo, deja"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c3e39927fda1"
+      "hash": "6d43626ce867"
     },
     {
       "ruta": "packages/module-subastas/src/financiacion.ts",
@@ -87534,6 +87662,36 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "44609b5b9a0d"
+    },
+    {
+      "ruta": "packages/module-subastas/src/impuestos.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── ITP por comunidad autónoma. PURO. El coste puerta abierta aplicaba el 7% de Andalucía a TODO el corpus, y las alertas del BOE traen subastas de cualquier provincia: una vivienda en Asturias (ITP 8%) salía con el impuesto de",
+      "exporta": [
+        "itpGeneral"
+      ],
+      "funciones": [
+        {
+          "nombre": "normProvincia",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: string",
+          "retorno": "string",
+          "linea": 86
+        },
+        {
+          "nombre": "itpGeneral",
+          "kind": "function",
+          "exportada": true,
+          "params": "provincia: string | null | undefined",
+          "retorno": "ItpAutonomico | null",
+          "linea": 99,
+          "resumen": "Tipo GENERAL de ITP para la provincia del bien. `null` si la provincia no se reconoce — quien llama decide su default y lo declara (nunca se adivina)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "aa89b7879868"
     },
     {
       "ruta": "packages/module-subastas/src/junta.ts",
@@ -88140,6 +88298,53 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "1bcb81d1c16d"
+    },
+    {
+      "ruta": "packages/module-subastas/src/umbrales.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Umbrales legales de APROBACIÓN del remate. Puro: sin red, sin BD. La confusión que motiva este módulo: «hay que pujar el 70% de la deuda o no aceptan la puja». No — en la subasta judicial se puja sobre el VALOR DE SUBASTA (",
+      "exporta": [
+        "umbralesPuja",
+        "estadoPujaMinima"
+      ],
+      "funciones": [
+        {
+          "nombre": "eur",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "string",
+          "linea": 55
+        },
+        {
+          "nombre": "redondear",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "number",
+          "linea": 59
+        },
+        {
+          "nombre": "umbralesPuja",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SubastaInmueble, opts: OpcionesUmbrales = {}",
+          "retorno": "UmbralesPuja",
+          "linea": 77,
+          "resumen": "Umbrales de aprobación del remate para una subasta. Nunca lanza: sin datos devuelve umbrales vacíos con la nota que explica el hueco."
+        },
+        {
+          "nombre": "estadoPujaMinima",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: number | null | undefined",
+          "retorno": "EstadoPujaMinima",
+          "linea": 149
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "57d782cd287a"
     },
     {
       "ruta": "packages/module-subastas/src/valoracion-historica.ts",
@@ -89648,7 +89853,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2403,
-    "funciones": 6470
+    "archivos": 2405,
+    "funciones": 6490
   }
 }

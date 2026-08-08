@@ -9,17 +9,94 @@ import { isCronAuthorized } from '@/lib/cron-auth'
 import { eur } from '@/lib/dinero'
 import { deposito } from '@central/module-subastas'
 import { tesoreriaSubastas } from '@/lib/subastas/tesoreria'
+import { mejorPujaViva } from '@/lib/subastas/enriquecer'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 const DIAS_AVISO = 3
 const ESTADOS_ACTIVOS = ['interesado', 'analizando', 'pujando']
+/** Tope de fichas consultadas por pasada (una llamada al portal por seguida). */
+const MAX_VIGILADAS = 10
+
+/**
+ * Vigila la MEJOR PUJA en vivo de las seguidas que cierran pronto y avisa una
+ * sola vez cuando alguien puja por encima del techo (el declarado por Alberto
+ * en el seguimiento o, si no lo fijó, el calculado para ≥25% de descuento):
+ * a partir de ahí la subasta ya no es negocio y seguir mirándola es ruido.
+ *
+ * La ficha del portal no siempre publica la puja: un `null` NO borra el último
+ * valor visto (una puja solo puede subir) y no cuenta como «sin pujas».
+ */
+async function vigilarPujasSeguidas(): Promise<{ vigiladas: number; sobrepujas: number }> {
+  const seguidas = await prisma.$queryRaw<any[]>(Prisma.sql`
+    SELECT sg.id, sg.dedupe_key, sg.puja_maxima, sg.sobrepuja_avisada_at,
+           s.identificador, s.valor_subasta, s.puja_maxima_calc
+    FROM subastas_seguidas sg
+    JOIN subastas s ON s.dedupe_key = sg.dedupe_key
+    WHERE sg.estado = ANY(${ESTADOS_ACTIVOS}::text[])
+      AND s.fuente = 'boe' AND s.identificador IS NOT NULL
+      AND COALESCE(s.fecha_fin, sg.fecha_fin) >= now()
+      AND COALESCE(s.fecha_fin, sg.fecha_fin) <= now() + make_interval(days => ${DIAS_AVISO}::int)
+    ORDER BY COALESCE(s.fecha_fin, sg.fecha_fin) ASC
+    LIMIT ${MAX_VIGILADAS}
+  `)
+
+  let sobrepujas = 0
+  for (const sg of seguidas) {
+    let puja: number | null
+    try {
+      puja = await mejorPujaViva(sg.identificador)
+    } catch (e) {
+      // Ficha no legible ahora mismo: se reintenta en la pasada siguiente. No
+      // se toca la fila — un fallo de lectura no es un dato.
+      console.error('[subastas-cierre vigilar]', sg.identificador, e)
+      continue
+    }
+    await prisma.$executeRaw(Prisma.sql`
+      UPDATE subastas SET
+        mejor_puja = COALESCE(${puja}, mejor_puja),
+        mejor_puja_at = now(),
+        actualizado_en = now()
+      WHERE dedupe_key = ${sg.dedupe_key}
+    `)
+    if (puja == null) continue
+
+    const techo = sg.puja_maxima != null ? Number(sg.puja_maxima)
+      : sg.puja_maxima_calc != null ? Number(sg.puja_maxima_calc) : null
+    if (techo != null && puja > techo && sg.sobrepuja_avisada_at == null) {
+      const valor = sg.valor_subasta == null ? null : Number(sg.valor_subasta)
+      const pct = valor && valor > 0 ? ` (${Math.round((puja / valor) * 100)}% del tipo)` : ''
+      await tgSend(
+        `🔥 <b>${escapar(sg.identificador)}</b> — ya pujan <b>${escapar(eur(puja))}</b>${escapar(pct)}, ` +
+          `por encima de tu techo de ${escapar(eur(techo))}. A este precio deja de ser negocio: ` +
+          `puja solo si asumes menos descuento.`,
+        { html: true },
+      ).catch(() => {})
+      await prisma.$executeRaw(Prisma.sql`
+        UPDATE subastas_seguidas SET sobrepuja_avisada_at = now() WHERE id = ${sg.id}::uuid
+      `)
+      sobrepujas++
+    }
+  }
+  return { vigiladas: seguidas.length, sobrepujas }
+}
+
+function escapar(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
 
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   try {
+    // Antes de los recordatorios: refrescar la mejor puja de las que cierran
+    // pronto, para que los avisos de abajo hablen con el dato de HOY.
+    const vigilancia = await vigilarPujasSeguidas().catch((e) => {
+      console.error('[subastas-cierre] vigilancia', e)
+      return { vigiladas: 0, sobrepujas: 0 }
+    })
+
     const proximas = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT id, cuenta_id, dedupe_key, subasta, estado, fecha_fin, puja_maxima
       FROM subastas_seguidas
@@ -31,7 +108,7 @@ export async function GET(req: NextRequest) {
       ORDER BY fecha_fin ASC
     `)
 
-    if (!proximas.length) return NextResponse.json({ ok: true, avisados: 0, urgentes: await avisarUltimas24h() })
+    if (!proximas.length) return NextResponse.json({ ok: true, avisados: 0, urgentes: await avisarUltimas24h(), ...vigilancia })
 
     const lineas: string[] = [`⏰ <b>Subastas que cierran en ${DIAS_AVISO} días o menos</b>`, '']
 
@@ -83,7 +160,7 @@ export async function GET(req: NextRequest) {
     `)
 
     const urgentes = await avisarUltimas24h()
-    return NextResponse.json({ ok: true, avisados: proximas.length, urgentes })
+    return NextResponse.json({ ok: true, avisados: proximas.length, urgentes, ...vigilancia })
   } catch (e: any) {
     console.error('[subastas-cierre]', e)
     return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
@@ -100,7 +177,8 @@ async function avisarUltimas24h(): Promise<number> {
   const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT sg.id, sg.dedupe_key, sg.subasta, sg.fecha_fin, sg.puja_maxima,
            s.semaforo, s.notas_edicto, s.precio_m2_zona, s.zona_portal,
-           COALESCE(s.superficie_catastro, s.superficie) AS m2, s.valor_subasta
+           COALESCE(s.superficie_catastro, s.superficie) AS m2, s.valor_subasta,
+           s.mejor_puja, s.mejor_puja_at
     FROM subastas_seguidas sg
     LEFT JOIN subastas s ON s.dedupe_key = sg.dedupe_key
     WHERE sg.recordatorio_24h_at IS NULL
@@ -122,6 +200,12 @@ async function avisarUltimas24h(): Promise<number> {
     if (s.descripcion) lineas.push(`  ${String(s.descripcion).slice(0, 140)}`)
     lineas.push(`  Depósito: ${dep ? eur(dep) : 'sin valor de subasta publicado'}` +
       (f.puja_maxima != null ? ` · tu puja máx.: ${eur(Number(f.puja_maxima))}` : ''))
+    // La puja en vivo, si el portal la publica: es EL dato de la última hora.
+    if (f.mejor_puja != null) {
+      const valor = f.valor_subasta == null ? null : Number(f.valor_subasta)
+      const pct = valor && valor > 0 ? ` (${Math.round((Number(f.mejor_puja) / valor) * 100)}% del tipo)` : ''
+      lineas.push(`  🔥 Mejor puja vista: ${eur(Number(f.mejor_puja))}${pct}`)
+    }
     if (f.semaforo) lineas.push(`  ${SEMAFORO_EMOJI[f.semaforo] ?? ''} Semáforo documental: ${f.semaforo}`)
     // El €/m² al tipo frente al de la zona: la cifra que resume la oportunidad.
     const valor = f.valor_subasta == null ? null : Number(f.valor_subasta)

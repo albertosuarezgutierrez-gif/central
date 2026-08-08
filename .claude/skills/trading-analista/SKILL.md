@@ -42,6 +42,22 @@ Detalle paso a paso en `references/pasada-diaria.md`.
   salen MUCHAS divergencias, el dato a revisar es **a qué hora corrió la pasada**: con el mercado abierto
   IBKR da precio vivo y Stooq el cierre anterior, y mezclar intradía con cierres es el error de periodo
   de siempre.
+- **🔀 El fallo más caro NO es un precio absurdo: es un precio REAL de OTRA empresa (08/08/2026).**
+  Los `get_price_history` que pides en paralelo vuelven en orden de FINALIZACIÓN, y transcribirlos por
+  posición baraja los símbolos. Ha pasado TRES veces (verificado contra IBKR): `17/07` META←MSFT,
+  MSFT←SPOT, SPOT←NFLX, NFLX←LLY · `03/08` LLY←CVX, META←LLY · `04/08` NFLX←PLTR. Ningún umbral de
+  plausibilidad lo ve, porque el número es un cierre verdadero. Ahora lo veta `detectarSuplantaciones()`
+  (precio idéntico a otro de la misma pasada, o que cuadra con la referencia de otro y no con la suya) y
+  viaja en `suplantados` — **cántalo en el Telegram y arregla tu transcripción, no es un fallo del
+  servidor**. Guarda cada respuesta con el nombre de su símbolo NADA MÁS recibirla; nunca acumules
+  respuestas paralelas para transcribirlas al final. Hueco conocido: la PRIMERA pasada de un símbolo
+  (sin referencia) barajada sin duplicar a nadie solo la ve el contraste con la 2ª fuente.
+- **Una tesis anulada no existe** (`trading_tesis.anulado`, 28 filas del saneo del 08/08). Se construyó
+  con la serie de velas de otra empresa, así que su dirección y su confianza no hablan de ese símbolo:
+  ni se puntúa, ni sirve de referencia de precio, ni sale en el panel. **No propongas «recuperarlas»
+  poniéndoles el precio bueno** — eso fabricaría el veredicto de una señal que nunca se emitió. Distinto
+  es un RESULTADO cuyo `precio_despues` vino cambiado con la tesis sana: eso sí se re-puntúa con el
+  cierre real y se marca `precio_fuente='manual'` (24 filas LLY/META del 03/08).
 - **💰 Un salto del NAV >15% avisa por Telegram y NO se bloquea.** Puede ser un ingreso tuyo o una
   lectura rota, y el servidor no puede distinguirlos. Si el aviso salta y tú no has movido dinero, la
   lectura del NAV viene mal y con ella se dimensionan TODAS las compras.
