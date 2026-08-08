@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-08T16:50:30Z",
-  "sha": "23e24c8528705c90fc4c96fcaaacc82e9cb9f3ce",
+  "generadoEn": "2026-08-08T17:24:42Z",
+  "sha": "2fa1a18703dc476ece5397704c81fd6866998735",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47579,13 +47579,22 @@
           "resumen": "«Nota simple viva»: la certificación que adjunta el juzgado es de hace años y las cargas se mueven. Aquí se sube una nota simple recién pedida al registro y el agente dice QUÉ HA CAMBIADO — es lo únic"
         },
         {
+          "nombre": "Dato",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ etiqueta, sub, children }: { etiqueta: string; sub?: string; children: React.ReactNode }",
+          "retorno": null,
+          "linea": 633,
+          "resumen": "Par etiqueta→valor del bloque «💶 Los números»: etiqueta pequeña arriba, valor con peso debajo. La jerarquía la da la tipografía — antes todos los importes eran chips/líneas del mismo peso y se confun"
+        },
+        {
           "nombre": "UmbralesPujaFicha",
           "kind": "function",
           "exportada": false,
-          "params": "{ s, notasEdicto }: { s: Subasta; notasEdicto?: string | null }",
+          "params": "{ u }: { u: ReturnType<typeof umbralesPuja> }",
           "retorno": null,
-          "linea": 635,
-          "resumen": "Qué hay que pujar de verdad: deuda reclamada, puja mínima y los umbrales de APROBACIÓN del remate. Corrige la confusión de «hay que pujar el 70% de la deuda»: el 70% de la LEC es del VALOR DE SUBASTA,"
+          "linea": 651,
+          "resumen": "Umbrales de APROBACIÓN del remate. Corrige la confusión de «hay que pujar el 70% de la deuda»: el 70% de la LEC es del VALOR DE SUBASTA, y la deuda entra como vía alternativa (y como techo probable de"
         },
         {
           "nombre": "aInmueble",
@@ -47593,7 +47602,7 @@
           "exportada": false,
           "params": "s: Subasta",
           "retorno": "SubastaInmueble",
-          "linea": 683,
+          "linea": 667,
           "resumen": "El `Subasta` del cliente, como lo espera la lógica pura del módulo."
         },
         {
@@ -47602,7 +47611,7 @@
           "exportada": false,
           "params": "{ s, o, params }: { s: Subasta; o?: Oportunidad | null; params?: ParamsCoste }",
           "retorno": null,
-          "linea": 710,
+          "linea": 694,
           "resumen": "«¿Y si pujo X?»: coste puerta abierta, descuento real y banda de aprobación de UNA puja concreta. Mismo motor que el resto de la ficha (`calcularCoste` + `umbralesPuja` del módulo, con la financiación"
         },
         {
@@ -47611,7 +47620,7 @@
           "exportada": false,
           "params": "{ s, o, acciones, extra, doc, escenarios, params }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null; escenarios?: EscenarioUI[] | null; params?: ParamsCoste }",
           "retorno": null,
-          "linea": 775
+          "linea": 759
         },
         {
           "nombre": "SubastasClient",
@@ -47619,14 +47628,14 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Inicial | null }",
           "retorno": null,
-          "linea": 971
+          "linea": 1036
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "fa061f6932c4"
+      "hash": "9b6b0972e1eb"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -51297,7 +51306,7 @@
         "subastas_radar"
       ],
       "rutaApi": "/api/cron/subastas-avisos",
-      "hash": "13c26d82a7ae"
+      "hash": "c15d407d0434"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-cierre/route.ts",
@@ -51322,7 +51331,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 85
+          "linea": 93
         },
         {
           "nombre": "GET",
@@ -51330,7 +51339,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 89
+          "linea": 97
         },
         {
           "nombre": "avisarUltimas24h",
@@ -51338,7 +51347,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<number>",
-          "linea": 176,
+          "linea": 184,
           "resumen": "Segundo recordatorio, URGENTE, en las últimas 24 h — con lo que hay que tener delante para decidir la puja: depósito, semáforo documental, las notas de la CERTIFICACIÓN registral y el €/m² de la zona "
         }
       ],
@@ -51348,7 +51357,7 @@
         "subastas_seguidas"
       ],
       "rutaApi": "/api/cron/subastas-cierre",
-      "hash": "626ae3445f13"
+      "hash": "88b7f2bab948"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-enriquecer/route.ts",
@@ -66905,7 +66914,7 @@
           "exportada": true,
           "params": "refCatastral: string",
           "retorno": "Promise<DatosCatastro | null>",
-          "linea": 147,
+          "linea": 150,
           "resumen": "Consulta el Catastro por referencia catastral. `null` si no hay dato. ⚠️ Solo devuelve datos del BIEN (superficie, año, uso) con la referencia COMPLETA de 20 caracteres. Con la de parcela (14) el serv"
         },
         {
@@ -66914,7 +66923,7 @@
           "exportada": true,
           "params": "refCatastral: string",
           "retorno": "Promise<CoordenadasCatastro | null>",
-          "linea": 162,
+          "linea": 165,
           "resumen": "Coordenadas WGS84 por referencia catastral (`Consulta_CPMRC`, probado el 30/07/2026). El servicio trabaja a nivel de PARCELA: acepta los 14 primeros caracteres; con la referencia de 20 del bien concre"
         },
         {
@@ -66923,7 +66932,7 @@
           "exportada": true,
           "params": "provincia: string, municipio: string, sigla: string, calle: string,",
           "retorno": "Promise<",
-          "linea": 180,
+          "linea": 183,
           "resumen": "Nombre OFICIAL de la vía según el callejero del Catastro (`ConsultaVia`). Se pregunta por UNA PALABRA distintiva, no por el nombre entero: el servicio busca por subcadena y el Catastro reescribe los n"
         },
         {
@@ -66932,7 +66941,7 @@
           "exportada": true,
           "params": "p: ParamsDnploc & { provincia: string; municipio: string },",
           "retorno": "Promise<",
-          "linea": 208,
+          "linea": 211,
           "resumen": "DIRECCIÓN → referencia catastral (`Consulta_DNPLOC`, servicio libre; probado el 30/07/2026). Es lo que desbloquea la ubicación EXACTA de la mayor parte del corpus: el BOE publica la dirección del inmu"
         },
         {
@@ -66941,7 +66950,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<void>",
-          "linea": 276
+          "linea": 279
         },
         {
           "nombre": "geocodificarMunicipio",
@@ -66949,7 +66958,7 @@
           "exportada": true,
           "params": "municipio: string, provincia?: string | null,",
           "retorno": "Promise<CoordenadasCatastro | null>",
-          "linea": 294,
+          "linea": 297,
           "resumen": "Centro del municipio por Nominatim (OSM, gratis). Es el escalón APROXIMADO para las subastas sin referencia catastral (la mayoría del corpus): mejor un pin honesto en el centro del pueblo que un mapa "
         },
         {
@@ -66958,7 +66967,7 @@
           "exportada": true,
           "params": "max = 20",
           "retorno": "Promise<",
-          "linea": 326,
+          "linea": 329,
           "resumen": "el marcado de una CONCLUIDA aún no se ha podido ver, así que el parser (`resultadoDeFicha`) es defensivo — si no reconoce nada deja la fila pendiente y aquí se loguean las claves vistas para ajustar e"
         }
       ],
@@ -66966,7 +66975,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "e53278ac7c68"
+      "hash": "931778f1008b"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/gmail-boe.ts",
@@ -87677,7 +87686,7 @@
           "exportada": false,
           "params": "p: string",
           "retorno": "string",
-          "linea": 86
+          "linea": 87
         },
         {
           "nombre": "itpGeneral",
@@ -87685,13 +87694,13 @@
           "exportada": true,
           "params": "provincia: string | null | undefined",
           "retorno": "ItpAutonomico | null",
-          "linea": 99,
+          "linea": 100,
           "resumen": "Tipo GENERAL de ITP para la provincia del bien. `null` si la provincia no se reconoce — quien llama decide su default y lo declara (nunca se adivina)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "aa89b7879868"
+      "hash": "a6f92090a23f"
     },
     {
       "ruta": "packages/module-subastas/src/junta.ts",
@@ -89854,6 +89863,6 @@
   ],
   "resumen": {
     "archivos": 2405,
-    "funciones": 6490
+    "funciones": 6491
   }
 }
