@@ -148,6 +148,13 @@ model TradingTesis {
   // Si la señal GANADORA alcista NO se compró, aquí queda el porqué («posición ya abierta», «bajo SMA50»,
   // «earnings inminente»…). NULL = no aplica (no ganó el torneo, o sí se compró). Lo pinta /trading.
   motivoBloqueo String?                @map("motivo_bloqueo")
+  // `anulado` = esta tesis se construyó sobre un `precioRef` que resultó ser de OTRA empresa (los
+  // `get_price_history` paralelos de la sesión se barajaron). No es una tesis mal puntuada: es una
+  // señal sobre una compañía distinta con la etiqueta de esta, así que ni se puntúa, ni sirve de
+  // referencia de precio, ni sale en el panel. La fila NO se borra — es la cicatriz del incidente.
+  // Casos verificados contra IBKR: 17/07, 03/08 y 04/08 de 2026 (ver `lib/trading/precios-guardia.ts`).
+  anulado       Boolean                @default(false)
+  anuladoMotivo String?                @map("anulado_motivo")
   createdAt     DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
   resultado     TradingTesisResultado?
 
