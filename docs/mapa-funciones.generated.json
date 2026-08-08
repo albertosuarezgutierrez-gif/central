@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-08T14:33:48Z",
-  "sha": "11af0f448a2f83f0a3f84b69d96250c19310a138",
+  "generadoEn": "2026-08-08T14:44:42Z",
+  "sha": "440bf57f712329e69cd68226c8f9f2b45bff400f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -55797,7 +55797,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 17
+          "linea": 23
         }
       ],
       "tablas": [
@@ -55807,7 +55807,7 @@
         "trading_tesis"
       ],
       "rutaApi": "/api/trading/analizar",
-      "hash": "ad279d012fbd"
+      "hash": "672817120a9b"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/cartera-estudio/route.ts",
@@ -56023,7 +56023,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 10
+          "linea": 16
         }
       ],
       "tablas": [
@@ -56031,7 +56031,7 @@
         "trading_tesis"
       ],
       "rutaApi": "/api/trading/puntuar",
-      "hash": "eaa2e3f81edb"
+      "hash": "0c8c0a3128ff"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/saldo/route.ts",
@@ -56047,7 +56047,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 16
+          "linea": 19
         }
       ],
       "tablas": [
@@ -56055,7 +56055,7 @@
         "next"
       ],
       "rutaApi": "/api/trading/saldo",
-      "hash": "f992e31ebbff"
+      "hash": "980a9b0f2500"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/screener/route.ts",
@@ -69227,12 +69227,44 @@
       "hash": "3f28ba06523e"
     },
     {
+      "ruta": "apps/plataforma/lib/trading/precios-contraste.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "cierresDeContraste"
+      ],
+      "funciones": [
+        {
+          "nombre": "cierreDeContraste",
+          "kind": "function",
+          "exportada": false,
+          "params": "simbolo: string, hoy: string, maxDias: number",
+          "retorno": "Promise<number | null>",
+          "linea": 31,
+          "resumen": "Último cierre <= `hoy` y no más viejo que `maxDias`. null si la fuente no da nada utilizable."
+        },
+        {
+          "nombre": "cierresDeContraste",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolos: string[], hoy: string, opts: { presupuestoMs?: number; concurrencia?: number; maxDias?: number } = {},",
+          "retorno": "Promise<ResultadoContraste>",
+          "linea": 44
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6e8a831fffc3"
+    },
+    {
       "ruta": "apps/plataforma/lib/trading/precios-guardia.ts",
       "ambito": "apps/plataforma",
       "resumen": "Guardia de cordura de los precios que la pasada de trading manda a `/api/trading/puntuar`. 🚨 LANDMINE FUNDACIONAL (08/08/2026) — el track record se envenenó con UN dato. El 03/08 la pasada mandó `CVX = 590,17` cuando Chevron cerró a 193,18 (contrastado contra IBKR): un ×3,06. El endpoint cogía `pre",
       "exporta": [
         "filtrarPreciosAnomalos",
-        "resumenDescartes"
+        "resumenDescartes",
+        "contrastarFuentes",
+        "resumenDivergencias",
+        "saltoDeSaldo"
       ],
       "funciones": [
         {
@@ -69252,11 +69284,38 @@
           "retorno": "string",
           "linea": 84,
           "resumen": "Resumen de una línea para el latido y el aviso. Cadena vacía si no se descartó nada — así el que la consume no tiene que acordarse de comprobarlo."
+        },
+        {
+          "nombre": "contrastarFuentes",
+          "kind": "function",
+          "exportada": true,
+          "params": "precios: Record<string, number>, contraste: Record<string, number>, maxDesvio = DIVERGENCIA_MAX,",
+          "retorno": "Contraste",
+          "linea": 129,
+          "resumen": "Contrasta cada precio con el de la fuente independiente. Tres estados, igual que el resto: sin contraste → pasa sin juzgar · dentro de tolerancia → conforme · fuera → divergente (se cae)."
+        },
+        {
+          "nombre": "resumenDivergencias",
+          "kind": "function",
+          "exportada": true,
+          "params": "divergentes: Divergencia[]",
+          "retorno": "string",
+          "linea": 157,
+          "resumen": "Resumen de una línea. Cadena vacía si no hay divergencias — el consumidor no tiene que comprobarlo."
+        },
+        {
+          "nombre": "saltoDeSaldo",
+          "kind": "function",
+          "exportada": true,
+          "params": "nuevo: number, anterior: number | null, umbral = SALTO_NAV_AVISO",
+          "retorno": "SaltoSaldo",
+          "linea": 185,
+          "resumen": "`variacion` = (nuevo − anterior) / anterior. Sin anterior no hay nada que comparar (primer saldo): no se avisa, que es distinto de «no ha cambiado»."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "498ffda421eb"
+      "hash": "efb4edc9583b"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-stooq.ts",
@@ -89539,7 +89598,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2401,
-    "funciones": 6461
+    "archivos": 2402,
+    "funciones": 6466
   }
 }
