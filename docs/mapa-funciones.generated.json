@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-07T07:05:27Z",
-  "sha": "2ab1bdcce5af1e6307c8139e1de018fcacfb23ca",
+  "generadoEn": "2026-08-08T07:52:40Z",
+  "sha": "94487dfa980a6aed4c2b4eb646017cb66ef07e71",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -51512,7 +51512,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 26
+          "linea": 27
         }
       ],
       "tablas": [
@@ -51521,7 +51521,7 @@
         "trading_tesis"
       ],
       "rutaApi": "/api/cron/trading-watchdog",
-      "hash": "dd66b0f1d59b"
+      "hash": "068e4d6fb98f"
     },
     {
       "ruta": "apps/plataforma/app/api/empresas/agente/route.ts",
@@ -55796,7 +55796,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 15
+          "linea": 16
         }
       ],
       "tablas": [
@@ -55805,7 +55805,7 @@
         "trading_pasadas"
       ],
       "rutaApi": "/api/trading/analizar",
-      "hash": "1c575f7a4623"
+      "hash": "61b00d3a9896"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/cartera-estudio/route.ts",
@@ -69449,7 +69449,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9ae63f3b1901"
+      "hash": "f213bc404ac1"
     },
     {
       "ruta": "apps/plataforma/lib/vercel-env.ts",
