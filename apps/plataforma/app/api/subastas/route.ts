@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { requireEmpresaId } from '@/lib/tenant'
-import { evaluarOportunidad } from '@central/module-subastas'
+import { escenariosCoste, evaluarOportunidad, pujaMaximaParaDescuento } from '@central/module-subastas'
 import { COLS_SUBASTA, filaASubasta, SUBASTA_VIGENTE } from '@/lib/subastas-radar'
 import { paramsCoste } from '@/lib/subastas/params-coste'
 import { caducidadDeFila } from '@/lib/subastas/caducidad-fila'
@@ -93,9 +93,16 @@ export async function GET(req: NextRequest) {
     // refleja siempre el último enriquecimiento sin quedarse cacheada.
     const resultados = filas.map((f) => {
       const s = filaASubasta(f)
+      const oportunidad = evaluarOportunidad(s, null, params)
       return {
         subasta: s,
-        oportunidad: evaluarOportunidad(s, null, params),
+        oportunidad,
+        // Paridad con la SSR de la página: las páginas ≥2 de «Todas» pintaban
+        // la ficha sin puja máxima ni escenarios.
+        pujaMaxima: oportunidad.valorMercado
+          ? pujaMaximaParaDescuento(s, oportunidad.valorMercado, 0.25, params)
+          : null,
+        escenarios: escenariosCoste(s, params),
         notasEdicto: f.notas_edicto ?? null,
         tipoBien: f.tipo_bien ?? null,
         esPlaya: f.es_playa ?? false,

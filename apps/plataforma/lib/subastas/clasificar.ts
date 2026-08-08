@@ -52,7 +52,7 @@ export async function clasificarSubastas(max = 400): Promise<{ revisadas: number
     // que queda es el que teníamos ANTES del remate. Es lo único que permite
     // comprobar después si nuestro techo tenía algo que ver con el mercado.
     const pujaMaxima = oportunidad.valorMercado
-      ? pujaMaximaParaDescuento(s, oportunidad.valorMercado, 0.25)
+      ? pujaMaximaParaDescuento(s, oportunidad.valorMercado, 0.25).importe
       : null
 
     if (playa) enPlaya++

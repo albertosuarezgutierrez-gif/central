@@ -174,8 +174,14 @@ export { localizarJpegs, dimensionesJpeg, agruparBandas, pareceEscaneado } from 
 export type { ImagenEmbebida, DimensionesJpeg, BandaAgrupable } from './pdf-imagenes.ts'
 
 // Coste "puerta abierta"
-export { calcularCoste, deposito, pujaMaximaParaDescuento, yieldTuristico, PARAMS_ANDALUCIA, PCT_DEPOSITO, LANZAMIENTO_ESTIMADO } from './costes.ts'
-export type { YieldTuristico } from './costes.ts'
+export { calcularCoste, deposito, pujaMaximaParaDescuento, escenariosCoste, yieldTuristico, PARAMS_ANDALUCIA, PCT_DEPOSITO, LANZAMIENTO_ESTIMADO } from './costes.ts'
+export type { YieldTuristico, PujaMaxima, EscenarioCoste } from './costes.ts'
+
+// Umbrales legales de aprobación del remate (LEC 670/671, RGR): el 70% es del
+// VALOR DE SUBASTA, no de la deuda — y la deuda (cantidad reclamada) es la vía
+// alternativa de aprobación y el techo probable de la puja del ejecutante.
+export { umbralesPuja, estadoPujaMinima } from './umbrales.ts'
+export type { UmbralesPuja, UmbralPuja, RegimenSubasta, EstadoPujaMinima } from './umbrales.ts'
 
 // Tesorería del depósito: cuánto dinero hay que tener bloqueado A LA VEZ
 export { planTesoreria, DIAS_RETENCION_DEPOSITO } from './tesoreria.ts'

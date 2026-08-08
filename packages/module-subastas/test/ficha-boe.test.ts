@@ -26,9 +26,21 @@ test('cifras reales de la ficha', () => {
 test('EL CENTINELA QUE IMPORTA: «Tasación 0,00 €» es null, no cero', () => {
   // Si entrara como 0, el descuento dividiría por cero y saldría un chollo falso.
   assert.equal(ficha.tasacion, null)
-  // Los otros centinelas del portal: «Sin puja mínima», «Sin lotes».
-  assert.equal(ficha.pujaMinima, null)
+  // El otro centinela del portal: «Sin lotes».
   assert.equal(ficha.lotes, null)
+})
+
+test('«Sin puja mínima» es una DECLARACIÓN: 0 (revisado, no hay), no null', () => {
+  // La ficha real lo publica en texto: cualquier postura es admisible. El 0
+  // se distingue del null («no publicada») en toda la cadena aguas abajo.
+  assert.equal(ficha.pujaMinima, 0)
+})
+
+test('puja mínima: ausente → null, y «0,00 €» numérico → null (no es declaración)', () => {
+  const fila = (v: string) => `<tr><th>Puja mínima</th><td>${v}</td></tr>`
+  assert.equal(parsearFichaBoe('<table></table>').pujaMinima, null)
+  assert.equal(parsearFichaBoe(fila('0,00 €')).pujaMinima, null)
+  assert.equal(parsearFichaBoe(fila('12.000,00 €')).pujaMinima, 12000)
 })
 
 test('el depósito publicado ES el 5% del valor de subasta', () => {
