@@ -24,6 +24,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔍 Auditoría diaria ligera (08/08/2026).** Sin PRs de rutina atascados (el auto-merge de #1289/#1297
+  ya funciona: #1298 resuelto solo hoy). Heartbeat de crons 12/14 ✅, 2 falsos positivos ya conocidos
+  (`updates/sync` Smoobu sin reservas nuevas, `limpiadoras/auto-sessions` idempotente) verificados de
+  nuevo, sin acción. Un hallazgo real: `docs/RUTINAS-PROGRAMADAS.md` describía el watchdog de trading
+  con solo 2 tramos (NAV+tesis) cuando el PR #1291 (mergeado hoy) le añadió un 3er tramo (`/puntuar`,
+  latido `trading_puntuar`) — corregido. Resto (skills-maestro, `docs/SKILLS.md`, triaje de correo,
+  reglas fiscales, manuales) sin drift.
+
 - **⏱️ «Sin respuesta.» sobre un extracto que SÍ había entrado (08/08/2026).** Primera subida real tras el
   arreglo del parser: los 109 movimientos de julio entraron (742,92€, 109/109 hashes, Drive archivado) y la
   función murió a los 60 s justo ANTES de contestar → en pantalla «Sin respuesta.» y un 👎. `maxDuration`
