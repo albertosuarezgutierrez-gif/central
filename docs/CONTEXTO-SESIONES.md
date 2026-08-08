@@ -33,6 +33,14 @@ primera; (2) el motivo de los TRES tramos llevaba «el NAV de IBKR» cableado �
 mirar IBKR y la rutina. Fix: latido explícito `trading_analizar` (como `/puntuar`) + `GREATEST` con
 las tesis de respaldo, y `etiqueta` por tramo en `evaluarWatchdog`. PR #1291.
 
+- **🧪 Prueba en vivo del auto-merge de rutinas (07/08/2026).** Esta entrada se subió en un PR que
+  toca **solo** `docs/CONTEXTO-SESIONES.md` para ejercitar el camino feliz de
+  `.github/workflows/rutinas-automerge.yml` (#1289) — el camino de bloqueo ya estaba probado contra
+  #1055 y #755, que el workflow saltó por tocar código. Si este párrafo está en `main`, el
+  auto-merge funciona de punta a punta: rama `claude/*` + diff solo de registro + CI en verde +
+  margen de quietud ≥20 min → mergeado sin mano humana. A partir de aquí las rutinas ya no necesitan
+  push directo a `main` para que su memoria llegue: les basta con separar el PR de registro.
+
 ### 💓 El latido del barrido deja de estar rojo para siempre (07/08/2026)
 Segunda pasada con #1282 vivo: la guardia volvió a saltar (174 comps, 19 fechas, **17 precios
 distintos**) → confirmado ESTRUCTURAL, no era cosa del día. Los snippets de Google no distinguen
