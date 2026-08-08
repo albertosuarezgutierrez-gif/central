@@ -24,6 +24,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📬 Cursor incremental en las alertas de portales — el cron ya no relee 300 correos al día (08/08/2026).**
+  Pregunta de Alberto («¿estás revisando varias veces los mismos mails?»): sí, `subastas-mercado` pedía 30
+  días × 150 correos POR PORTAL en cada pasada diaria, y esa relectura se comía el presupuesto entero
+  (latido del 07/08: «cortado tras 0 ficha(s); 8 pendiente(s)»). Nuevo cursor por UID en
+  `subastas_correo_cursor` (tabla propia, NO `correo_cursor` — su `max(updated_at)` es el latido del
+  triaje y una fila diaria lo haría parecer fresco): lógica pura en `lib/subastas/correo-incremental.ts`
+  (11 tests: landmine `N:*` de IMAP, `uidvalidity` cambiado → bootstrap, lote ascendente para truncar sin
+  huecos), `leerAlertasDesde` en `gmail-boe.ts` (`leerAlertas` intacta para el BOE) y confirmación del
+  cursor SOLO tras ingerir (at-least-once). El modo de lectura va en el parte del latido. Migración
+  aplicada. PENDIENTE: verificar en la pasada del 09/08 que ficha(s)/zona(s) dejan de salir a 0.
+
 - **📎 Pasada diaria facturas-correo (08/08/2026).** Vía B sana (`dias_caido=1`), sin backlog en
   `PDF-pendiente`/`Revisar`. Día tranquilo: 0 candidatos nuevos en Gmail, 0 subidas manuales nuevas,
   0 duplicados nuevos (los 2 "FACTURA JULIO SOCORRO" de la raíz ya estaban avisados). Roborock
