@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-08T12:42:47Z",
-  "sha": "451a2c131dd83352f00791a4746022c89f0257d9",
+  "generadoEn": "2026-08-08T13:04:40Z",
+  "sha": "0fe9d9ec8a282bbc9c9f2de969057963a80fe027",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -60579,7 +60579,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 98,
+          "linea": 104,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -60588,7 +60588,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 128,
+          "linea": 134,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -60597,7 +60597,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 150
+          "linea": 156
         },
         {
           "nombre": "ventanaMinutos",
@@ -60605,7 +60605,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 158,
+          "linea": 164,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -60614,13 +60614,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 170,
+          "linea": 176,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "14bbdd27b5f8"
+      "hash": "5081e85a68e3"
     },
     {
       "ruta": "apps/plataforma/lib/deducibilidad.ts",
@@ -68123,9 +68123,9 @@
           "nombre": "fechasSnapshot",
           "kind": "function",
           "exportada": true,
-          "params": "hoy: string, meses = 24, margenDias = 98",
+          "params": "hoy: string, meses = MESES_RETROVISOR, margenDias = 98",
           "retorno": "string[]",
-          "linea": 14,
+          "linea": 35,
           "resumen": "Fechas de snapshot: día 1 de cada mes, desde hace `meses` hasta hace `margenDias` (para que la ventana forward más larga quepa entera en la serie de precios)."
         },
         {
@@ -68134,7 +68134,7 @@
           "exportada": true,
           "params": "puntos: PuntoPrecio[], fecha: string",
           "retorno": "number | null",
-          "linea": 27,
+          "linea": 48,
           "resumen": "Último cierre con fecha <= objetivo (los snapshots caen en festivos/fin de semana sin cotización)."
         },
         {
@@ -68143,7 +68143,7 @@
           "exportada": true,
           "params": "puntos: PuntoPrecio[], fecha: string, dias: number",
           "retorno": "number | null",
-          "linea": 37,
+          "linea": 58,
           "resumen": "Retorno desde `fecha` al primer cierre >= fecha+dias. null si la serie no llega o no hay base."
         },
         {
@@ -68152,7 +68152,7 @@
           "exportada": true,
           "params": "puntos: PuntoPrecio[], hasta: string, periodo: 'sem' | 'mes'",
           "retorno": "number[]",
-          "linea": 77,
+          "linea": 98,
           "resumen": "Remuestrea una serie diaria al cierre de cada PERIODO ('sem' = semana ISO aprox por lunes, 'mes' = mes natural), hasta `hasta` inclusive. El cierre del periodo = último cierre diario en él."
         },
         {
@@ -68161,7 +68161,7 @@
           "exportada": true,
           "params": "cierres: number[], n: number",
           "retorno": "number | null",
-          "linea": 96,
+          "linea": 117,
           "resumen": "SMA del ÚLTIMO punto de la serie (media de los n últimos cierres). null si no hay n puntos."
         },
         {
@@ -68170,13 +68170,13 @@
           "exportada": true,
           "params": "cierres: number[], n: number",
           "retorno": "boolean | null",
-          "linea": 104,
+          "linea": 125,
           "resumen": "¿Último cierre por encima de su SMA n en ese marco temporal? null si la serie no da para la media."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "272f9a3cc171"
+      "hash": "55d431aa0165"
     },
     {
       "ruta": "apps/plataforma/lib/trading/backtest.ts",
@@ -68216,9 +68216,9 @@
           "nombre": "refrescarLoteBacktest",
           "kind": "function",
           "exportada": true,
-          "params": "lote = 40",
+          "params": "lote = 40, presupuestoMs = PRESUPUESTO_MS",
           "retorno": "Promise<",
-          "linea": 72,
+          "linea": 81,
           "resumen": "Recolecta el siguiente lote: siembra desde trading_universo (+SPY como benchmark) y rellena las filas más rancias. Mismo patrón/ritmo que refrescarLoteUniverso (~4 símbolos/s contra SEC)."
         },
         {
@@ -68227,13 +68227,13 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 129,
+          "linea": 143,
           "resumen": "La LUPA de gurús: convicciones ACTUALES de Dataroma cruzadas con los factores actuales de la caché del radar — la materia prima para responder \"¿por qué se posicionan en esas empresas?\". Se guarda en "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "69221ac43395"
+      "hash": "b64d528c0e7a"
     },
     {
       "ruta": "apps/plataforma/lib/trading/buscar-simbolo.ts",
