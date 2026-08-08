@@ -8,6 +8,9 @@ import {
   muestrasPobres,
   MIN_COMPS_VENTANA,
   cegadasEnBase,
+  mesesCiegosEnBase,
+  ratioCegadasEnBase,
+  MAX_RATIO_BASE_CIEGA,
   detalleBarrido,
   sinSenalDeTemporada,
   type ResumenBarrido,
@@ -73,12 +76,14 @@ test('solo las ventanas de la ronda base cuentan como línea de temporada ciega'
   assert.equal(cegadasEnBase([...ventanas, ventana({ ronda: 0, estado: 'sin_leer', comps: 0 })]), 1)
 })
 
-test('un hueco en la ronda base invalida la pasada y lo dice', () => {
+test('un mes de la ronda base sin ver invalida la pasada y lo dice', () => {
   const r = base({
     comps: 6,
     ventanas: [ventana({ comps: 6 }), ventana({ checkin: '2026-10-02', estado: 'sin_resultados', comps: 0 })],
   })
   assert.match(detalleBarrido(r), /1 de la ronda base ciegas/)
+  assert.match(detalleBarrido(r), /sin NINGÚN aforo visto en 2026-10/)
+  assert.deepEqual(mesesCiegosEnBase(r.ventanas), ['2026-10'])
   assert.equal(barridoFiable(r), false)
 })
 
@@ -220,11 +225,65 @@ test('lo que SÍ apaga el latido sigue siendo lo que el agente controla', () => 
   // Mismo corpus clonado, pero con una avería encima: eso es un rojo legítimo.
   assert.equal(barridoFiable(base({ comps: 12, ventanas: vs, errores: ['Serper 429'] })), false)
   assert.equal(barridoFiable(base({ comps: 12, ventanas: vs, baseCompleta: false })), false)
-  assert.equal(
-    barridoFiable(base({ comps: 12, ventanas: [...vs, ventana({ ronda: 0, estado: 'sin_resultados', comps: 0 })] })),
-    false,
-    'una ventana ciega en la ronda base es «no se ha podido mirar»',
-  )
+  // 1 ciega de 4 base = 25%: se come un cuarto de la línea de temporada, eso ya no es lotería.
+  const conCiega = [...vs, ventana({ ronda: 0, estado: 'sin_resultados', comps: 0 })]
+  assert.equal(ratioCegadasEnBase(conCiega), MAX_RATIO_BASE_CIEGA)
+  assert.equal(barridoFiable(base({ comps: 12, ventanas: conCiega })), false)
+})
+
+// ── Tercera pasada: la guarda absoluta de ventanas ciegas (08/08/2026) ──────
+// Con el clon ya fuera del latido, el rojo seguía siendo permanente por «cero ventanas ciegas en la
+// ronda base». La ronda base son 32 ventanas (8 meses × 4 aforos) y el token de fecha de Google es
+// una lotería por fecha concreta: el 08/08 salieron 162 comps en 60 ventanas y rojo por 1 de 32.
+
+test('una ventana ciega suelta de la ronda base NO es una avería', () => {
+  // 8 meses × 4 aforos, con UNA sola ciega: es el caso real del 08/08/2026.
+  const vs: VentanaMedida[] = []
+  for (let mes = 9; mes <= 16; mes++) {
+    const checkin = mes <= 12 ? `2026-${String(mes).padStart(2, '0')}-04` : `2027-${String(mes - 12).padStart(2, '0')}-04`
+    for (const aforo of [2, 4, 5, 12]) {
+      vs.push(ventana({ checkin, aforo, mediana: 100 + mes * 7 + aforo, comps: 4 }))
+    }
+  }
+  vs[0] = ventana({ ...vs[0], estado: 'sin_resultados', comps: 0, nombres: [], mediana: null })
+
+  assert.equal(cegadasEnBase(vs), 1)
+  assert.deepEqual(mesesCiegosEnBase(vs), [], 'septiembre se vio por los otros 3 aforos')
+  const r = base({ comps: 162, ventanas: vs })
+  assert.equal(barridoFiable(r), true, 'la pasada midió: 1 hueco de 32 no la invalida')
+  // Pero se sigue diciendo: dejar de tratarlo como avería no es dejar de contarlo.
+  assert.match(detalleBarrido(r), /⚠️ 1 de la ronda base ciegas/)
+  assert.doesNotMatch(detalleBarrido(r), /sin NINGÚN aforo visto/)
+})
+
+test('un mes ciego en TODOS los aforos sí lo es: ese mes se tarifica a ciegas', () => {
+  const vs: VentanaMedida[] = []
+  for (const checkin of ['2026-09-04', '2026-10-02', '2026-11-06', '2026-12-04']) {
+    for (const aforo of [2, 4, 5, 12]) {
+      const ciega = checkin === '2026-11-06'
+      vs.push(ventana({
+        checkin, aforo, comps: ciega ? 0 : 4,
+        estado: ciega ? 'sin_resultados' : 'comps',
+        nombres: ciega ? [] : [`A${aforo}`], mediana: ciega ? null : 100 + aforo,
+      }))
+    }
+  }
+  assert.deepEqual(mesesCiegosEnBase(vs), ['2026-11'])
+  assert.equal(ratioCegadasEnBase(vs), 0.25)
+  assert.equal(barridoFiable(base({ comps: 48, ventanas: vs })), false)
+})
+
+test('las ciegas de las rondas de profundidad no cuentan para el latido', () => {
+  const vs = [
+    ventana({ checkin: '2026-09-04', comps: 4 }),
+    ventana({ checkin: '2026-10-02', mediana: 180, comps: 4 }),
+    ventana({ checkin: '2026-11-06', mediana: 95, comps: 4 }),
+    ventana({ checkin: '2026-09-12', ronda: 2, estado: 'sin_resultados', comps: 0 }),
+    ventana({ checkin: '2026-10-13', ronda: 2, estado: 'sin_leer', comps: 0 }),
+  ]
+  assert.equal(cegadasEnBase(vs), 0)
+  assert.equal(ratioCegadasEnBase(vs), 0)
+  assert.equal(barridoFiable(base({ comps: 12, ventanas: vs })), true)
 })
 
 test('el parte sigue cantando el clon aunque el latido esté verde', () => {

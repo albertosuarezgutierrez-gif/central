@@ -268,18 +268,6 @@ export async function GET(req: NextRequest) {
     }))
   }
 
-  // Huella para el vigía. Qué cuenta como pasada BUENA lo decide el helper puro `resumen-sweep.ts`:
-  // no basta con volver sin excepciones — hay que haber MEDIDO. Una búsqueda vacía, una extracción
-  // ilegible o un corpus idéntico en todas las fechas son «no lo sé», y un «no lo sé» pintado de
-  // verde deja al motor tarificando con el ancla global sin que nadie se entere.
-  const eventosBarridos = plan.filter(v => v.motivo === 'evento').length
-  const resumen = {
-    comps: upserted, ventanas, eventos: eventosBarridos,
-    truncadas: truncado, baseCompleta: rondaBaseCompleta, errores: errors,
-  }
-  const ok = barridoFiable(resumen)
-  await registrarLatido('sivra_mercado_sweep', ok, detalleBarrido(resumen)).catch(() => {})
-
   // 🚨 El latido avisa a un HUMANO; esto FRENA AL MOTOR (06/08/2026). Cuando la guardia dice que
   // el corpus no distingue la fecha —los mismos precios repartidos entre fechas distintas—, sus
   // filas se marcan para que el bucket de temporada de `pricing/apply` no las use. Sin esto, la
@@ -304,6 +292,24 @@ export async function GET(req: NextRequest) {
       WHERE search_date = CURRENT_DATE AND scenario IN (${Prisma.join(mios)})
     `).catch((e) => { errors.push(`marcar corpus clonado: ${String(e).slice(0, 60)}`) })
   }
+
+  // Huella para el vigía. Qué cuenta como pasada BUENA lo decide el helper puro `resumen-sweep.ts`:
+  // no basta con volver sin excepciones — hay que haber MEDIDO. Una búsqueda vacía o una extracción
+  // ilegible son «no lo sé», y un «no lo sé» pintado de verde deja al motor tarificando con el ancla
+  // global sin que nadie se entere. (Que el corpus no distinga la fecha NO apaga el latido: eso lo
+  // frena la marca `corpus_clonado` de arriba — ver la cabecera de `barridoFiable`.)
+  //
+  // 🚨 VA DESPUÉS DE MARCAR EL CORPUS a propósito (08/08/2026): si el UPDATE que protege al motor
+  // falla, el fallo tiene que entrar en el parte. Cuando el latido se escribía antes, ese error se
+  // añadía a `errors` cuando ya nadie lo iba a leer — el motor se comía el corpus clonado y el
+  // vigía decía verde. Es la misma clase de silencio que este módulo entero viene a cerrar.
+  const eventosBarridos = plan.filter(v => v.motivo === 'evento').length
+  const resumen = {
+    comps: upserted, ventanas, eventos: eventosBarridos,
+    truncadas: truncado, baseCompleta: rondaBaseCompleta, errores: errors,
+  }
+  const ok = barridoFiable(resumen)
+  await registrarLatido('sivra_mercado_sweep', ok, detalleBarrido(resumen)).catch(() => {})
 
   // `truncado` NO es un error: es «me quedé sin tiempo». Se publica para que no haya que deducirlo
   // del número de ventanas, que es justo la clase de silencio que esconde los problemas.

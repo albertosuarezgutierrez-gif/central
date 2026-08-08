@@ -60,13 +60,62 @@ export function contarPorEstado(ventanas: VentanaMedida[]): Record<EstadoVentana
 }
 
 /**
- * Ventanas de la RONDA BASE que se quedaron ciegas (ni resultados ni lectura). Es el número que
- * decide si la pasada vale: la ronda base es la línea de temporada, y un mes ciego ahí es un mes
- * que el motor va a tarificar con el ancla global sin que nadie lo sepa.
+ * Ventanas de la RONDA BASE que se quedaron ciegas (ni resultados ni lectura). La ronda base es la
+ * línea de temporada, así que una ventana ciega ahí es una fecha que el motor va a tarificar con el
+ * ancla global sin que nadie lo sepa. Se publica SIEMPRE en el parte, mande o no en el latido.
  */
 export function cegadasEnBase(ventanas: VentanaMedida[]): number {
-  return ventanas.filter(v => v.ronda === 0 && (v.estado === 'sin_resultados' || v.estado === 'sin_leer')).length
+  return ventanas.filter(v => esCiega(v) && v.ronda === 0).length
 }
+
+function esCiega(v: VentanaMedida): boolean {
+  return v.estado === 'sin_resultados' || v.estado === 'sin_leer'
+}
+
+/**
+ * MESES cuya ronda base se quedó ciega ENTERA (todos sus aforos), en formato `YYYY-MM`.
+ *
+ * 🚨 POR QUÉ NO VALE CONTAR VENTANAS SUELTAS (08/08/2026). El latido exigía CERO ventanas ciegas en
+ * la ronda base, y la ronda base son hoy 32 ventanas (8 meses × 4 aforos): basta con que Google no
+ * case UNA fecha para un solo aforo —lotería documentada en `mercado-ventanas.ts`— para que la
+ * pasada entera salga en rojo. Eso es exactamente lo que pasó: el 08/08 el barrido escribió 162
+ * comps en 60 ventanas y el vigía dijo rojo por **1 de 32**, con `ultimo_ok_at` en NULL desde el
+ * primer día. Es la misma trampa que ya se corrigió el 07/08 con el corpus clonado: un vigía
+ * eternamente rojo no vigila, entrena a ignorarlo.
+ *
+ * Lo que sí es una avería —y lo que este número mide— es que un MES entero se quede sin ver: ahí no
+ * hay ningún aforo con precio para ese mes, el bucket mensual del motor queda vacío y la
+ * estacionalidad de ese mes la pone el ancla global. Pasó de verdad el 05/08 con noviembre (los 4
+ * aforos con `organic: []`).
+ *
+ * Solo se juzgan los meses que esta pasada llegó a INTENTAR: lo que se quedó sin tiempo no está en
+ * `ventanas` y lo cuenta `baseCompleta`, que es otra pregunta.
+ */
+export function mesesCiegosEnBase(ventanas: VentanaMedida[]): string[] {
+  const porMes = new Map<string, VentanaMedida[]>()
+  for (const v of ventanas) {
+    if (v.ronda !== 0) continue
+    const mes = v.checkin.slice(0, 7)
+    porMes.set(mes, [...(porMes.get(mes) ?? []), v])
+  }
+  return [...porMes.entries()]
+    .filter(([, lista]) => lista.every(esCiega))
+    .map(([mes]) => mes)
+    .sort()
+}
+
+/**
+ * Proporción de la ronda base que se quedó ciega (0..1). Complementa a `mesesCiegosEnBase`: un
+ * goteo repartido entre muchos meses no deja ningún mes a oscuras, pero si se come un cuarto de la
+ * línea de temporada ya no es lotería de Google, es que la búsqueda va mal.
+ */
+export function ratioCegadasEnBase(ventanas: VentanaMedida[]): number {
+  const base = ventanas.filter(v => v.ronda === 0)
+  return base.length ? cegadasEnBase(ventanas) / base.length : 0
+}
+
+/** A partir de aquí, tanta ronda base ciega deja de ser ruido de la fuente y es avería. */
+export const MAX_RATIO_BASE_CIEGA = 0.25
 
 /**
  * `true` cuando el barrido trajo EXACTAMENTE los mismos comparables al mismo precio para todas
@@ -167,11 +216,21 @@ export function midioTemporada(ventanas: VentanaMedida[]): boolean {
  * BD y en los buckets que excluyen esas filas. Lo que se deja de hacer es confundirlo con una avería.
  * Quien mide de verdad la temporada es el scraper diario (`mercado/cron`), que barre UNA fecha por
  * pasada y la acumula: de ahí salen los comps limpios que sí alimentan los buckets.
+ *
+ * 🚨 SEGUNDA PASADA DE LA MISMA LECCIÓN (08/08/2026). Con el clon ya fuera, el rojo permanente se
+ * quedó igual por la otra guarda absoluta: «cero ventanas ciegas en la ronda base». Con 32 ventanas
+ * base (8 meses × 4 aforos) y un token de fecha que Google casa o no casa por pura lotería, esa
+ * condición no se cumple casi ningún día — el 08/08 fueron 162 comps en 60 ventanas y rojo por
+ * **1 de 32**. Ahora la línea la marcan `mesesCiegosEnBase` (un mes SIN NINGÚN aforo visto: ahí el
+ * bucket mensual se queda vacío de verdad) y `MAX_RATIO_BASE_CIEGA` (un goteo que se come un cuarto
+ * de la línea de temporada ya no es la fuente, es la búsqueda). Las ventanas ciegas sueltas siguen
+ * contándose y saliendo con ⚠️ en el parte: se deja de tratarlas como avería, no de decirlas.
  */
 export function barridoFiable(r: ResumenBarrido): boolean {
   if (r.errores.length) return false
   if (!r.baseCompleta) return false
-  if (cegadasEnBase(r.ventanas) > 0) return false
+  if (mesesCiegosEnBase(r.ventanas).length > 0) return false
+  if (ratioCegadasEnBase(r.ventanas) >= MAX_RATIO_BASE_CIEGA) return false
   if (contarPorEstado(r.ventanas).comps === 0) return false
   return true
 }
@@ -193,6 +252,15 @@ export function detalleBarrido(r: ResumenBarrido): string {
   }
   const ciegasBase = cegadasEnBase(r.ventanas)
   if (ciegasBase) partes.push(`⚠️ ${ciegasBase} de la ronda base ciegas: la línea de temporada tiene huecos`)
+  // Los meses ciegos ENTEROS van aparte y con nombre: es el único hueco accionable (ese mes se
+  // tarifica con el ancla global), y saberlo evita ir a buscar una avería donde solo hay lotería.
+  const mesesCiegos = mesesCiegosEnBase(r.ventanas)
+  if (mesesCiegos.length) {
+    partes.push(
+      `🚨 sin NINGÚN aforo visto en ${mesesCiegos.join(', ')}: ` +
+      'ese mes se tarifica con el ancla global, no con su mercado',
+    )
+  }
   if (sinSenalDeTemporada(r.ventanas)) {
     partes.push('⚠️ mismos comps y mismo precio en todas las fechas: el corpus NO refleja temporada')
   } else if (corpusClonado(r.ventanas)) {
