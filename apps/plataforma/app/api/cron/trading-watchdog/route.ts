@@ -6,6 +6,7 @@ import { isCronAuthorized } from '@/lib/cron-auth'
 import { tgSend } from '@central/core-telegram'
 import { eur } from '@/lib/dinero'
 import { evaluarWatchdog, seEsperaRefresco, diagnosticarPasada } from '@/lib/trading/watchdog'
+import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 
 // 🐕 Perro guardián de la pasada nocturna de trading (mar-sáb 06:30 UTC ≈ 08:30 CEST).
 // Comprueba que la rutina `trading-analista` dejó "anoche" sus TRES huellas:
@@ -106,6 +107,22 @@ async function handler(req: NextRequest) {
       `${fallos.join('\n')}\n${detalle}\n\n${cierre}`
     await tgSend(msg, { html: true })
   }
+
+  // 🐕 ¿Y quién vigila al vigilante? (08/08/2026). Este handler era el ÚNICO que comprobaba los tres
+  // tramos de la pasada de trading y NO dejaba huella de sí mismo: si dejaba de correr (dispatcher
+  // caído, 500 en el handler, cron retirado del manifiesto), su silencio era indistinguible de «los
+  // tres tramos frescos». Justo el fallo que este sistema existe para evitar, aplicado al vigía.
+  //
+  // La huella va DESPUÉS del aviso, no antes: lo que hay que poder afirmar es «la comprobación se
+  // hizo Y se avisó si tocaba», no «el handler arrancó». `ok:true` aunque haya fallos que reportar —
+  // encontrar problemas ES la pasada buena; lo que sería una pasada mala es no llegar hasta aquí.
+  await registrarLatido(
+    'trading_watchdog',
+    true,
+    fallos.length > 0
+      ? `${fallos.length} tramo(s) en alerta, avisado por Telegram`
+      : 'los 3 tramos frescos (NAV · /analizar · /puntuar)',
+  )
 
   return NextResponse.json({
     ok: true,

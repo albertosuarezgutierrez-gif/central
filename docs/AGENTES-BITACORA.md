@@ -25,7 +25,12 @@
   preflight `GET /api/internal/alerta` NO llegó a dar 401 ni 200: el proxy de egress corta el CONNECT
   con **403** contra `plataforma-ten-flame.vercel.app` (curl 56). No es el token: es la política de
   red del environment, que deja mudo TODO el raíl HTTP (plan/ingest/latido/alerta) para cualquier
-  sesión. Acción #1 de Alberto: abrir `*.vercel.app` en la allowlist. PRs/commits: #1318
+  sesión. Acción #1 de Alberto: abrir `*.vercel.app` en la allowlist. PRs/commits: **#1318 MERGEADO**
+  (`d45d20f`), tras dos rondas de conflicto con `main` (PRs de registro de otras sesiones) resueltas
+  conservando ambas entradas. Post-merge re-verificado sobre `main`: 1045/1045 · 26/26 · 53/53 ·
+  `tsc` 0 en las 8 apps · build 0, y la sonda `pricing` nueva ejecutada contra la BD real da
+  ✅ 130 h (umbral 192). Pendiente de mirar mañana: la pasada 03:04 del sweep, que debe dejar por fin
+  `ultimo_ok_at` tras el fix #1299.
 - **2026-08-08 · mercado-booking (2ª pasada MANUAL, desviación pedida por Alberto: solo rondas 2-3,
   sep→ene)** · hizo: 10 ventanas medidas y **100 comps** escritos con `fuente='booking_mcp'` —
   8-sep (2p **p50 105€** · 4p 110€ · 5p 134€ · 12p 386€), 14-nov (2p 128€ · 4p 160€ · 5p 189€ ·

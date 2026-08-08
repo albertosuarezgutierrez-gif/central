@@ -53,6 +53,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🐕 Decisión: `trading_puntuar` NO entra en AGENTES_VIGILADOS; el que faltaba era el vigía (08/08/2026)
+Alberto pidió meterlo; **no procede** y le dije que «nadie lo lee», que era FALSO: lo vigila
+`trading-watchdog` (tramo 3) y mejor, porque sabe qué días se espera pasada. Duplicarlo daría dos
+Telegram Y falsos positivos cada domingo/lunes (pasada L-V ~20:15 UTC → el lunes la última buena es
+la del viernes, ~59 h; hoy está a 43 h con `ok:true` y el watchdog calla, bien). **El hueco real:**
+ese watchdog es el único que cruza los 3 tramos, no dejaba huella propia y no lo vigilaba nadie — si
+moría, su silencio se leía como «todo fresco». Ahora escribe `agente_latidos.trading_watchdog` y entra
+en la lista con **80 h** (su cron `30 6 * * 2-6` deja un hueco legítimo sáb→mar de 72 h). PR #1322.
+
 ### 🛡️ Auditoría profunda: el vigía del agente de pricing estaba en verde falso (08/08/2026)
 Pasada completa a petición de Alberto («prueba que todo funciona y está todo al día»). **Todo verde
 salvo un 🔴 nuevo:** la sonda `pricing` de `agentes-latido` medía sobre `market_rates prop_*`, huella
@@ -61,8 +70,10 @@ que dejó de ser exclusiva de la Rutina semanal cuando el barrido Serper (diario
 muerta**, justo la avería de los 16 días del 21/07. Cambiada a `pricing_decisiones.ciclo_at` por piso
 (solo la escribe `aplicar-propuesta`, y solo la Rutina lo llama); misma corrección en la SQL de
 `/auditoria-diaria`. La Rutina está viva (último ciclo 03/08). Corregidas 2 afirmaciones mías: F2 ya
-estaba arreglado en #1299 y «latidos OK» no estaba comprobado. Todo en **PR #1318**.
-Verificado: 1031/1031 + 26/26 + 53/53, `tsc` 0 en las **8** apps, build 0, advisors sin ERROR.
+estaba arreglado en #1299 y «latidos OK» no estaba comprobado. **#1318 MERGEADO** (`d45d20f`) —
+lleva también F1 (el bucket prefiere el corpus medido: house-octubre 638→728) y el `?max=abc`.
+Re-verificado sobre `main` ya fusionado: 1045/1045 + 26/26 + 53/53, `tsc` 0 en las **8** apps,
+build 0, advisors sin ERROR, y la sonda nueva ejecutada contra la BD da ✅ (130 h < 192).
 
 ### 🔎 Auditoría de precios dinámicos + fallo mudo en el plan (08/08/2026)
 Informe: `docs/AUDITORIA-2026-08-precios-dinamicos.md`. **No está al 100%.** 🔴 El bucket mensual de
