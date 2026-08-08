@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-08T13:13:47Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-08T13:29:52Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -218,7 +218,9 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (08/08/2026) 🔍 Rutinas de auditoría ampliadas (08/08/2026).
 - (08/08/2026) 🕰️ Retrovisor de 24 meses → 15 AÑOS (08/08/2026).
+- (08/08/2026) ⚠️ mercado-booking: 2º disparo el mismo día, sin huella del 1º en `market_rates` (08/08/2026).
 - (08/08/2026) ✅ H8 y H9 RESUELTAS sobre el corpus completo — ninguna se cablea (08/08/2026).
 - (08/08/2026) 🧹 Auditoría del corpus re-recolectado + dos «no lo sé» que afirmaban (08/08/2026).
 - (08/08/2026) 📡 mercado-booking: primer disparo programado real (08/08/2026).
@@ -226,6 +228,4 @@
 - (08/08/2026) 🔍 Auditoría diaria ligera (08/08/2026).
 - (08/08/2026) 📚 Las 6 trampas del extracto de tarjeta, en la doc que se lee (08/08/2026).
 - (08/08/2026) ⏱️ «Sin respuesta.» sobre un extracto que SÍ había entrado (08/08/2026).
-- (08/08/2026) 💓 El latido del barrido de mercado llevaba rojo desde el día 1 por 1 ventana de 32 (08/08/2026).
-- (08/08/2026) 🤝 El auto-merge ya resuelve el conflicto que se repite todos los días (08/08/2026).
 
