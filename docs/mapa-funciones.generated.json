@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-08T09:12:55Z",
-  "sha": "77f53e6f5a25edf6ae7267cd18177b5f3a2a2687",
+  "generadoEn": "2026-08-08T11:28:12Z",
+  "sha": "cc138329f31ba905ced8e7fca822678239c54a0b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54715,10 +54715,11 @@
         "next",
         "pricing_eventos_auto",
         "pricing_piso_zona",
+        "que",
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/sweep",
-      "hash": "37b20b5982f5"
+      "hash": "6d2f0ecf0ce3"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pl-mensual/route.ts",
@@ -65949,6 +65950,8 @@
       "exporta": [
         "contarPorEstado",
         "cegadasEnBase",
+        "mesesCiegosEnBase",
+        "ratioCegadasEnBase",
         "sinSenalDeTemporada",
         "muestrasPobres",
         "clonRatio",
@@ -65973,7 +65976,33 @@
           "params": "ventanas: VentanaMedida[]",
           "retorno": "number",
           "linea": 67,
-          "resumen": "Ventanas de la RONDA BASE que se quedaron ciegas (ni resultados ni lectura). Es el número que decide si la pasada vale: la ronda base es la línea de temporada, y un mes ciego ahí es un mes que el moto"
+          "resumen": "Ventanas de la RONDA BASE que se quedaron ciegas (ni resultados ni lectura). La ronda base es la línea de temporada, así que una ventana ciega ahí es una fecha que el motor va a tarificar con el ancla"
+        },
+        {
+          "nombre": "esCiega",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: VentanaMedida",
+          "retorno": "boolean",
+          "linea": 71
+        },
+        {
+          "nombre": "mesesCiegosEnBase",
+          "kind": "function",
+          "exportada": true,
+          "params": "ventanas: VentanaMedida[]",
+          "retorno": "string[]",
+          "linea": 94,
+          "resumen": "MESES cuya ronda base se quedó ciega ENTERA (todos sus aforos), en formato `YYYY-MM`. 🚨 POR QUÉ NO VALE CONTAR VENTANAS SUELTAS (08/08/2026). El latido exigía CERO ventanas ciegas en la ronda base, y"
+        },
+        {
+          "nombre": "ratioCegadasEnBase",
+          "kind": "function",
+          "exportada": true,
+          "params": "ventanas: VentanaMedida[]",
+          "retorno": "number",
+          "linea": 112,
+          "resumen": "Proporción de la ronda base que se quedó ciega (0..1). Complementa a `mesesCiegosEnBase`: un goteo repartido entre muchos meses no deja ningún mes a oscuras, pero si se come un cuarto de la línea de t"
         },
         {
           "nombre": "sinSenalDeTemporada",
@@ -65981,7 +66010,7 @@
           "exportada": true,
           "params": "ventanas: VentanaMedida[]",
           "retorno": "boolean",
-          "linea": 79,
+          "linea": 128,
           "resumen": "`true` cuando el barrido trajo EXACTAMENTE los mismos comparables al mismo precio para todas las fechas de un aforo (con 3 fechas o más). Entonces no se ha medido la temporada: se ha fotografiado el m"
         },
         {
@@ -65990,7 +66019,7 @@
           "exportada": true,
           "params": "ventanas: VentanaMedida[]",
           "retorno": "number",
-          "linea": 102,
+          "linea": 151,
           "resumen": "Ventanas que trajeron comps pero tan pocos que su mediana no significa nada."
         },
         {
@@ -65999,7 +66028,7 @@
           "exportada": true,
           "params": "ventanas: VentanaMedida[]",
           "retorno": "number",
-          "linea": 117,
+          "linea": 166,
           "resumen": "Proporción de ventanas cuya mediana se REPITE en otra FECHA distinta (0..1). 🚨 Por qué mira entre fechas Y entre aforos (05/08/2026). `sinSenalDeTemporada` solo caza el caso extremo —mismos nombres y"
         },
         {
@@ -66008,7 +66037,7 @@
           "exportada": true,
           "params": "ventanas: VentanaMedida[]",
           "retorno": "boolean",
-          "linea": 131,
+          "linea": 180,
           "resumen": "`true` cuando la mitad o más de las medianas están clonadas entre fechas distintas y hay variedad suficiente (≥3 fechas) como para que eso NO sea lo esperable. Marca el corpus como no fiable: hay cifr"
         },
         {
@@ -66017,7 +66046,7 @@
           "exportada": true,
           "params": "ventanas: VentanaMedida[]",
           "retorno": "boolean",
-          "linea": 142,
+          "linea": 191,
           "resumen": "¿Sirve este corpus para la LÍNEA DE TEMPORADA (los buckets por mes y por fecha del motor)? Es la pregunta que responde la columna `market_rates.corpus_clonado`, y es DISTINTA de si la pasada salió bie"
         },
         {
@@ -66026,7 +66055,7 @@
           "exportada": true,
           "params": "r: ResumenBarrido",
           "retorno": "boolean",
-          "linea": 171,
+          "linea": 229,
           "resumen": "¿Se pudo MIRAR el mercado en esta pasada? Conservador a propósito: ante la duda, NO (un latido verde de mentira es peor que uno rojo de más). 🚨 QUÉ **NO** ENTRA AQUÍ, Y POR QUÉ (07/08/2026). Hasta ho"
         },
         {
@@ -66035,13 +66064,13 @@
           "exportada": true,
           "params": "r: ResumenBarrido",
           "retorno": "string",
-          "linea": 180,
+          "linea": 239,
           "resumen": "Parte para el latido (y para el Telegram del vigía). Lo que NO se pudo mirar va primero."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0e6335fb96cb"
+      "hash": "757a80ecf923"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/seo-landing.ts",
@@ -89445,6 +89474,6 @@
   ],
   "resumen": {
     "archivos": 2400,
-    "funciones": 6453
+    "funciones": 6456
   }
 }

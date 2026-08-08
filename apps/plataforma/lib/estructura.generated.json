@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-08T11:22:02Z",
+  "generadoEn": "2026-08-08T11:28:12Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3991,6 +3991,10 @@
       "fecha": "08/08/2026"
     },
     {
+      "titulo": "💓 El latido del barrido de mercado llevaba rojo desde el día 1 por 1 ventana de 32 (08/08/2026).",
+      "fecha": "08/08/2026"
+    },
+    {
       "titulo": "🤝 El auto-merge ya resuelve el conflicto que se repite todos los días (08/08/2026).",
       "fecha": "08/08/2026"
     },
@@ -4032,10 +4036,6 @@
     },
     {
       "titulo": "📬 Pasada diaria facturas-correo (06/08/2026).",
-      "fecha": "06/08/2026"
-    },
-    {
-      "titulo": "🤝 Landing privada de partnership Teya (06/08/2026, auditoría diaria, PR #771).",
       "fecha": "06/08/2026"
     }
   ],
