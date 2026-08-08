@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-08T13:04:40Z",
+  "generadoEn": "2026-08-08T13:13:47Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3995,6 +3995,10 @@
       "fecha": "08/08/2026"
     },
     {
+      "titulo": "📅 mercado-booking arranca como Rutina programada (08/08/2026).",
+      "fecha": "08/08/2026"
+    },
+    {
       "titulo": "🔍 Auditoría diaria ligera (08/08/2026).",
       "fecha": "08/08/2026"
     },
@@ -4032,10 +4036,6 @@
     },
     {
       "titulo": "🧪 Prueba en vivo del auto-merge de rutinas (07/08/2026).",
-      "fecha": "07/08/2026"
-    },
-    {
-      "titulo": "🧾 Factura 47/2026 Jaime Salas (electricidad Socorro 24) archivada (07/08/2026).",
       "fecha": "07/08/2026"
     }
   ],
