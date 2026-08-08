@@ -24,6 +24,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🛡️ Segundo par de ojos sobre el precio + procedencia del dato (08/08/2026).** Cierra el hueco que
+  dejaba la guardia del ×2 (#1315): un error del 10% pasaba limpio y movía el retorno 10 puntos.
+  `contrastarFuentes` (puro) compara cada precio con la fuente propia del servidor (Stooq→Yahoo,
+  tolerancia 2%) el MISMO día; `precios-contraste.ts` hace el acarreo con presupuesto y concurrencia
+  acotada — sin contraste NO se juzga, y un contraste a medias nunca bloquea la pasada. En `/analizar`
+  el símbolo divergente se salta entero y avisa por Telegram. Nuevas columnas **`precio_fuente`** en
+  `trading_tesis` y `trading_tesis_resultado` (default `sesion`; las 12 filas del saneo de CVX quedan
+  `manual`) — patrón `market_rates.fuente`, es lo que desbloquea la recuperación automática de
+  `/puntuar`. De regalo: **`/saldo` avisa si el NAV salta >15%** (no bloquea: puede ser un ingreso real,
+  pero con el NAV se dimensionan TODAS las compras). PR #1317. **Dos fallos propios cazados en la
+  auto-revisión antes de mergear:** la lectura del NAV anterior no filtraba por `cuenta_id` (regla
+  multi-tenant — habría comparado contra el saldo de otra cuenta) y `sinContraste` de `/puntuar` metía
+  los ~100 símbolos que nunca se quisieron contrastar, exagerando lo que no se sabe.
+
 ### 🏨 Filtro de ronda/fecha en el plan de mercado + 2ª pasada Booking (08/08/2026)
 `/api/sivra/mercado/plan` acepta **`?rondas=2,3&desde=&hasta=`**, aplicado ANTES del tope (filtrar
 en cliente no llega: el orden de urgencia pone las rondas de profundidad al final — con `?max=30` se

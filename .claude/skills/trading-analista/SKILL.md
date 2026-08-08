@@ -31,6 +31,20 @@ Detalle paso a paso en `references/pasada-diaria.md`.
   temporal en pérdida cerrada. **H8:** el agregado cruzaba el umbral (+2,34 pp) pero el signo se
   INVIERTE entre mitades (+6,85 pp en ago24-jul25, −2,24 pp en ago25-may26). `capitulacionMes/Sem`
   se siguen recolectando como CONTEXTO, igual que las noticias. Detalle en el pre-registro.
+- **🛡️ Los endpoints VETAN precios que no se creen — hay que CANTARLO en el resumen (08/08/2026).**
+  `/analizar` y `/puntuar` ya no se tragan `precios[simbolo]` a ciegas: cada precio pasa una guardia de
+  ×2 contra el último `precio_ref` y un CONTRASTE contra la fuente propia del servidor (Stooq/Yahoo,
+  tolerancia 2%). Lo que no cuadra se descarta y, en `/analizar`, el símbolo se salta ENTERO (sus velas
+  contaminan EMA/MACD/RSI/ADX). Las respuestas traen `vetados`, `descartados`, `divergentes` y
+  `contraste.sinJuzgar`: **si vienen con contenido, dilo en el Telegram**. Un símbolo que desaparece en
+  silencio es indistinguible de uno que hoy no dio señal — exactamente cómo el CVX de 590,17$ del 03/08
+  envenenó 12 resultados (momentum pasó de −0,40 pp a +7,18 pp de media) sin que nadie mirara. Si un día
+  salen MUCHAS divergencias, el dato a revisar es **a qué hora corrió la pasada**: con el mercado abierto
+  IBKR da precio vivo y Stooq el cierre anterior, y mezclar intradía con cierres es el error de periodo
+  de siempre.
+- **💰 Un salto del NAV >15% avisa por Telegram y NO se bloquea.** Puede ser un ingreso tuyo o una
+  lectura rota, y el servidor no puede distinguirlos. Si el aviso salta y tú no has movido dinero, la
+  lectura del NAV viene mal y con ella se dimensionan TODAS las compras.
 - **📰 Noticias, 🌅 premarket, 🧑‍💼 insiders, 📊 volumen, medias móviles = CONTEXTO, nunca
   filtro:** jamás cambian ranking, pesos ni cestas; ninguna cifra de noticia entra en BD/modelo.
 - **Congelar cohortes = AÑADIR entrada a `COHORTES_PAPER`, nunca editar una existente** (no

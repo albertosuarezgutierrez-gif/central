@@ -646,6 +646,23 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
   05/08 (55 fechas), que sí alimentan el bucket mensual (ventana de 120 días de `search_date`), y el
   ancla global no se filtra por ninguna de las dos a propósito.
   Diseño y gate completos: `docs/superpowers/specs/2026-08-06-mercado-booking-design.md`.
+- **🚨 LANDMINE — un precio que la app se cree sin contrastar envenena el track record (08/08/2026,
+  PRs #1315 y #1317).** `/api/trading/puntuar` cogía `precios[simbolo]` tal cual lo mandaba la sesión.
+  El 03/08 entró **`CVX = 590,17$`** con cierre real **193,18$** (contrastado contra IBKR): puntuó 12
+  tesis vencidas, tres a **+205 pp**, y como `trading_estrategia_stats` se recalcula sobre TODOS los
+  resultados y `ajustesDeStats` lo convierte en delta de confianza del torneo (activo con n=81), estuvo
+  cinco días inclinando decisiones — momentum pasó de **−0,40 pp a +7,18 pp** de media y «reversión
+  bajista» cambió de SIGNO. Dos filtros en cadena, los dos con tres estados (**sin con qué comparar NO
+  se juzga**): guardia del **×2** contra el último `precio_ref` *anterior a hoy* (nunca el de hoy: una
+  pasada envenenada lo está por las dos puntas) y **contraste con 2ª fuente** (Stooq→Yahoo, 2%, el mismo
+  cierre) — el ×2 solo caza lo escandaloso, un error del 10% pasa limpio y mueve el retorno 10 puntos.
+  Se aplica también en **`/analizar`, que es el ORIGEN**: ahí el símbolo se salta ENTERO, porque sus
+  velas alimentan `indicadoresDe` y contaminan EMA/MACD/RSI/ADX igual que el precio. Y en los **stops**:
+  un precio hundido cierra una posición paper que en el mercado real nunca saltó. Todo lo vetado viaja
+  en la respuesta y se canta por Telegram — un símbolo que desaparece en silencio es indistinguible de
+  uno que hoy no dio señal. Hermanas: `trading_*.precio_fuente` (procedencia, patrón `market_rates.fuente`),
+  `ventana_dias` = días reales y no el horizonte declarado, y el aviso de salto del NAV >15% en `/saldo`
+  (no bloquea: puede ser un ingreso real, pero con el NAV se dimensiona cada compra).
 - **🚨 LANDMINE — la huella se escribe DENTRO del trabajo que vigila: si la función muere, no hay
   huella (31/07/2026).** El mismo día de estrenar el vigía saltó «🧾 Escaneo de facturas: sin ninguna
   señal registrada» y la nota mandaba a mirar IMAP/app-password. No era eso: `facturas-scan` corría
