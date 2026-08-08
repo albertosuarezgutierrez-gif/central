@@ -49,8 +49,15 @@ export async function POST(req: NextRequest) {
     ...posicionesPrevias.map(p => p.simbolo),
   ])].filter(s => limpios[s] !== undefined)
   const contraste = await cierresDeContraste(aUsar, hoy, { presupuestoMs: 120_000 })
-  const { conformes, divergentes, sinContraste } = contrastarFuentes(limpios, contraste.cierres)
+  // El contraste se evalúa SOLO sobre los símbolos que se intentaron. Pasarle el mapa entero metería
+  // en `sinContraste` a los ~100 que nunca se quisieron contrastar, y el parte diría «sin 2ª fuente»
+  // de un trabajo que no se pidió: un recuento que exagera lo que no se sabe engaña igual que uno que
+  // lo esconde. Lo vetado se resta del mapa completo; el resto sigue igual que antes.
+  const aContrastar = Object.fromEntries(aUsar.map(s => [s, limpios[s]]))
+  const { divergentes, sinContraste } = contrastarFuentes(aContrastar, contraste.cierres)
   if (divergentes.length > 0) console.warn('[trading/puntuar]', resumenDivergencias(divergentes))
+  const vetados = new Set(divergentes.map(d => d.simbolo))
+  const conformes = Object.fromEntries(Object.entries(limpios).filter(([sim]) => !vetados.has(sim)))
 
   let puntuadas = 0
   for (const t of pendientes) {

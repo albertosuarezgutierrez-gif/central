@@ -45,10 +45,13 @@ export async function POST(req: NextRequest) {
   // dimensiona cada posición, así que un cero de más multiplica el tamaño de todas las compras. No se
   // puede rechazar —un salto puede ser un ingreso o una retirada REALES— pero tampoco tragarse en
   // silencio: se registra y se pregunta, porque solo Alberto distingue su ingreso de un error de lectura.
-  const anterior = await prisma.brokerSaldo.findFirst({
-    where: { broker: body.broker || 'Interactive Brokers' },
-    orderBy: { actualizadoEn: 'desc' },
-    select: { saldo: true, actualizadoEn: true },
+  // Se lee la MISMA fila que va a escribir `upsertBrokerSaldo` — misma normalización del nombre y,
+  // sobre todo, filtrada por `cuentaId` (regla multi-tenant): comparar contra el NAV de otra cuenta
+  // daría un salto inventado.
+  const brokerNombre = (body.broker || 'Interactive Brokers').trim()
+  const anterior = await prisma.brokerSaldo.findUnique({
+    where: { cuentaId_broker: { cuentaId, broker: brokerNombre } },
+    select: { saldo: true },
   }).catch(() => null)
   const { avisa, variacion } = saltoDeSaldo(saldo, anterior ? Number(anterior.saldo) : null)
 

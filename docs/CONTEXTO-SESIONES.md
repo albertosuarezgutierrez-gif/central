@@ -33,7 +33,10 @@
   `trading_tesis` y `trading_tesis_resultado` (default `sesion`; las 12 filas del saneo de CVX quedan
   `manual`) — patrón `market_rates.fuente`, es lo que desbloquea la recuperación automática de
   `/puntuar`. De regalo: **`/saldo` avisa si el NAV salta >15%** (no bloquea: puede ser un ingreso real,
-  pero con el NAV se dimensionan TODAS las compras). PR #1317.
+  pero con el NAV se dimensionan TODAS las compras). PR #1317. **Dos fallos propios cazados en la
+  auto-revisión antes de mergear:** la lectura del NAV anterior no filtraba por `cuenta_id` (regla
+  multi-tenant — habría comparado contra el saldo de otra cuenta) y `sinContraste` de `/puntuar` metía
+  los ~100 símbolos que nunca se quisieron contrastar, exagerando lo que no se sabe.
 
 - **🚨 Un precio falso envenenó el track record de trading (08/08/2026).** Al comprobar si el agente había
   dado alguna compra (no: 0 propuestas reales, 1 posición paper MSFT) salió que el 03/08 la pasada mandó

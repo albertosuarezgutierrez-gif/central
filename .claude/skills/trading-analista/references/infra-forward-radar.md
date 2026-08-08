@@ -166,6 +166,31 @@ DE MUESTRA (walk-forward). Esa decisión es de Alberto y tendrá su propio spec.
   Telegram si la pasada corre 2 veces. `trading_paper_orden.precio_dia_siguiente` = deslizamiento
   (lo rellena `/puntuar`); NULL = sin dato, no 0.
 
+- **🛡️ Higiene del precio en los endpoints (08/08/2026, PRs #1315 y #1317).** Ni `/analizar` ni
+  `/puntuar` se creen ya los precios que manda la sesión. Dos filtros en cadena, ambos con la regla de
+  tres estados (sin con qué comparar → NO se juzga y el precio pasa):
+  1. **Guardia del ×2** (`lib/trading/precios-guardia.ts::filtrarPreciosAnomalos`) contra el último
+     `precio_ref` ANTERIOR a hoy — nunca el de hoy, que vendría envenenado por las dos puntas.
+  2. **Contraste con 2ª fuente** (`contrastarFuentes` + `precios-contraste.ts`): el MISMO cierre pedido
+     a Stooq→Yahoo, tolerancia 2%, presupuesto de tiempo y concurrencia 8. El cierre de contraste se
+     descarta si es más viejo que 5 días (comparar con la semana pasada fabrica divergencias falsas).
+  En `/puntuar` se contrastan solo los símbolos que se van a usar; en `/analizar`, el universo, y el
+  símbolo divergente **se salta ENTERO** porque sus velas contaminan EMA/MACD/RSI/ADX. Las respuestas
+  traen `vetados`/`descartados`/`divergentes`/`contraste.sinJuzgar` y **hay que cantarlo en el Telegram**.
+  Origen: el 03/08 entró `CVX = 590,17$` (cierre real 193,18$), puntuó 12 tesis —tres a +205 pp— y movió
+  `trading_estrategia_stats`: momentum de **−0,40 pp a +7,18 pp** de media, con `ajustesDeStats` activo
+  (n=81) inclinando el torneo cinco días.
+- **`trading_tesis.precio_fuente` / `trading_tesis_resultado.precio_fuente`** (default `'sesion'`):
+  procedencia del precio, patrón `market_rates.fuente`. Un cierre de IBKR y uno de Stooq no son el mismo
+  dato. Es el requisito que faltaba para poder recuperar `/puntuar` sin la sesión (los `body.precios` son
+  cierres y el servidor tiene fuente propia; `/saldo` y `/analizar` NO son recuperables porque dependen
+  del NAV, que solo existe en el MCP de IBKR).
+- **`ventana_dias` = días REALES transcurridos**, no el horizonte declarado: si una pasada no corre o la
+  guardia difiere el scoring, etiquetar 13 días como 10 sería leer un dato bueno con el periodo malo.
+- **Salto del NAV >15% → aviso por Telegram, sin bloquear** (`/api/trading/saldo`). Puede ser un ingreso
+  real de Alberto o una lectura rota, y el servidor no puede distinguirlos; con el NAV se dimensiona cada
+  posición, así que la pregunta la contesta él.
+
 ## Canal de aviso — protocolo común
 
 **Preflight AL ARRANCAR** (no al final, cuando ya tengas algo que contar):
