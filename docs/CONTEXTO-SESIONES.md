@@ -32,6 +32,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🛑 MOTOR DE PRICING EN PAUSA — baja un 20% contra su propio mercado medido (08/08/2026).** Tras
+  mergear #1305 y activar los 4 pisos, la pasada real de las 14:30 UTC escribió en los 4 (Dúplex y House
+  por primera vez) pero **House-octubre bajó al TOPE del limitador (−20%)** en las fechas sin evento:
+  04-oct 639→511€, 05-oct 697→558€, 07-oct 673→538€ — cuando el corpus de Booking que acabamos de medir
+  dice **p50 638€** para octubre. Causa mecánica en `apply/route.ts`: `baseD = (mb.med × dqFactor)/markup`,
+  y `dqFactor` = demanda × calidad, **las dos en su suelo** (0,92 × 0,90 = 0,83) → 638×0,83 ≈ 529€. La
+  demanda va al suelo porque la ocupación que el motor lee de `rate_snapshots` es del **1-8%** en los 4
+  pisos. Puesto `pricing_config.paused = true` (reversible; degrada a dry-run) para que la pasada de las
+  20:30 no encadene otro −20%. **Pendiente de decisión de Alberto:** si esa ocupación es real, bajar es
+  correcto; si no lo es, el motor está regalando margen en el mejor mes del año. Y si se decide revertir,
+  el raíl es `/api/sivra/pricing/restore`.
+
 - **🛡️ Segundo par de ojos sobre el precio + procedencia del dato (08/08/2026).** Cierra el hueco que
   dejaba la guardia del ×2 (#1315): un error del 10% pasaba limpio y movía el retorno 10 puntos.
   `contrastarFuentes` (puro) compara cada precio con la fuente propia del servidor (Stooq→Yahoo,
