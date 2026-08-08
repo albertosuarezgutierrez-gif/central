@@ -52,6 +52,25 @@ las tesis de respaldo, y `etiqueta` por tramo en `evaluarWatchdog`. PR #1291.
   -247,92€ (House Sevillana) sigue sin conciliar en banco. Nada que archivar/decidir hoy. Detalle en
   `docs/AGENTES-BITACORA.md`.
 
+- **💳 El parser del extracto de tarjeta llevaba meses devolviendo CERO con el PDF real (08/08/2026).**
+  Con el `movimientos (1).pdf` de Alberto en la mano: Kutxabank ya no separa los campos
+  (`01/07/2026******2019750300COMPRA EN…-8,00 €`) y `RE_LINEA` exigía `\s+` → 0 movimientos → el chat lo
+  trataba como factura ilegible. Se validó en su día contra un fixture escrito a mano con espacios, no
+  contra un PDF de verdad. Arreglado (importe primero, prefijo de tarjeta después) → **109 movimientos**,
+  y el Excel del mismo listado ya se puede subir al 📎 (`identificarTarjetaExcel` saca el PAN del
+  `PAGO RECIBO`). **Landmine:** sin normalizar `fechaValor`/saldo, subir PDF+Excel del mismo mes duplicaba
+  63 de 109 compras (~1.990€); ahora los 109 hashes coinciden, con test. El cuadre ya no grita «no cuadra»
+  cuando la liquidación paga el ciclo anterior (es lo normal). PR draft.
+
+- **🤖 El agente contable dejaba de responder «no encuentro el cargo» a lo que no había mirado (08/08/2026).**
+  Alberto: «el agente falla mucho» (captura). En `contable_log`: subió `movimientos (1).pdf` **3 veces**
+  y las 3 recibió «no distingo el importe» (es un LISTADO de movimientos, no una factura → detector puro
+  `lib/contable/documento-clase.ts`); y antes, dos facturas dadas por no pagadas cuando el extracto aún no
+  llegaba a su fecha (la de 780,10€ del 03/08 entró en BD el **06/08**, un día después de negarla). El cruce
+  pasa de sí/no a 5 estados (`CruceDoc`: match · ya_conciliado · fuera_de_ventana ±60d · **sin_cobertura** ·
+  sin_match), con la cobertura real por banco en el mensaje. De paso, el dinero del agente ya usa `eur()`.
+  Kutxabank va 1-3 días por detrás por diseño (no está roto). PR draft.
+
 - **🧪 Prueba en vivo del auto-merge de rutinas (07/08/2026).** Esta entrada se subió en un PR que
   toca **solo** `docs/CONTEXTO-SESIONES.md` para ejercitar el camino feliz de
   `.github/workflows/rutinas-automerge.yml` (#1289) — el camino de bloqueo ya estaba probado contra
