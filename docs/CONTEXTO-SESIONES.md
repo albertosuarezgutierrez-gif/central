@@ -40,8 +40,10 @@ que dejó de ser exclusiva de la Rutina semanal cuando el barrido Serper (diario
 muerta**, justo la avería de los 16 días del 21/07. Cambiada a `pricing_decisiones.ciclo_at` por piso
 (solo la escribe `aplicar-propuesta`, y solo la Rutina lo llama); misma corrección en la SQL de
 `/auditoria-diaria`. La Rutina está viva (último ciclo 03/08). Corregidas 2 afirmaciones mías: F2 ya
-estaba arreglado en #1299 y «latidos OK» no estaba comprobado. Todo en **PR #1318**.
-Verificado: 1031/1031 + 26/26 + 53/53, `tsc` 0 en las **8** apps, build 0, advisors sin ERROR.
+estaba arreglado en #1299 y «latidos OK» no estaba comprobado. **#1318 MERGEADO** (`d45d20f`) —
+lleva también F1 (el bucket prefiere el corpus medido: house-octubre 638→728) y el `?max=abc`.
+Re-verificado sobre `main` ya fusionado: 1045/1045 + 26/26 + 53/53, `tsc` 0 en las **8** apps,
+build 0, advisors sin ERROR, y la sonda nueva ejecutada contra la BD da ✅ (130 h < 192).
 
 ### 🔎 Auditoría de precios dinámicos + fallo mudo en el plan (08/08/2026)
 Informe: `docs/AUDITORIA-2026-08-precios-dinamicos.md`. **No está al 100%.** 🔴 El bucket mensual de
