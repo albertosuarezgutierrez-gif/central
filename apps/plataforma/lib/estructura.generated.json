@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-08T13:29:52Z",
+  "generadoEn": "2026-08-08T14:20:27Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3979,6 +3979,14 @@
   ],
   "novedades": [
     {
+      "titulo": "🚨 Un precio falso envenenó el track record de trading (08/08/2026).",
+      "fecha": "08/08/2026"
+    },
+    {
+      "titulo": "🩺 El watchdog de trading ya distingue «no PUDO dispararse» (08/08/2026).",
+      "fecha": "08/08/2026"
+    },
+    {
       "titulo": "🔍 Rutinas de auditoría ampliadas (08/08/2026).",
       "fecha": "08/08/2026"
     },
@@ -4028,14 +4036,6 @@
     },
     {
       "titulo": "📬 Cursor incremental en las alertas de portales — el cron ya no relee 300 correos al día (08/08/2026).",
-      "fecha": "08/08/2026"
-    },
-    {
-      "titulo": "📎 Pasada diaria facturas-correo (08/08/2026).",
-      "fecha": "08/08/2026"
-    },
-    {
-      "titulo": "💳 El parser del extracto de tarjeta llevaba meses devolviendo CERO con el PDF real (08/08/2026).",
       "fecha": "08/08/2026"
     }
   ],

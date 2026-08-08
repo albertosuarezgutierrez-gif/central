@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-08T13:29:52Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-08T14:20:27Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -218,6 +218,8 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (08/08/2026) 🚨 Un precio falso envenenó el track record de trading (08/08/2026).
+- (08/08/2026) 🩺 El watchdog de trading ya distingue «no PUDO dispararse» (08/08/2026).
 - (08/08/2026) 🔍 Rutinas de auditoría ampliadas (08/08/2026).
 - (08/08/2026) 🕰️ Retrovisor de 24 meses → 15 AÑOS (08/08/2026).
 - (08/08/2026) ⚠️ mercado-booking: 2º disparo el mismo día, sin huella del 1º en `market_rates` (08/08/2026).
@@ -226,6 +228,4 @@
 - (08/08/2026) 📡 mercado-booking: primer disparo programado real (08/08/2026).
 - (08/08/2026) 📅 mercado-booking arranca como Rutina programada (08/08/2026).
 - (08/08/2026) 🔍 Auditoría diaria ligera (08/08/2026).
-- (08/08/2026) 📚 Las 6 trampas del extracto de tarjeta, en la doc que se lee (08/08/2026).
-- (08/08/2026) ⏱️ «Sin respuesta.» sobre un extracto que SÍ había entrado (08/08/2026).
 
