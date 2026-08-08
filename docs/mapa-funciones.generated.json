@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-08T17:24:42Z",
-  "sha": "2fa1a18703dc476ece5397704c81fd6866998735",
+  "generadoEn": "2026-08-08T19:39:56Z",
+  "sha": "cf929f03f7b71f5ac7b4e382c48726ced6a157d8",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -69424,7 +69424,7 @@
           "exportada": false,
           "params": "a: number, b: number, tol: number",
           "retorno": "boolean",
-          "linea": 220
+          "linea": 238
         },
         {
           "nombre": "detectarSuplantaciones",
@@ -69432,7 +69432,7 @@
           "exportada": true,
           "params": "precios: Record<string, number>, referencias: Record<string, number>, tol = CRUCE_TOLERANCIA,",
           "retorno": "Suplantaciones",
-          "linea": 226,
+          "linea": 244,
           "resumen": "Detecta precios que pertenecen a otro símbolo. `referencias` = mismo mapa que `filtrarPreciosAnomalos` (último `precio_ref` conocido ANTERIOR a la pasada, por símbolo)."
         },
         {
@@ -69441,7 +69441,7 @@
           "exportada": true,
           "params": "suplantados: Suplantacion[]",
           "retorno": "string",
-          "linea": 275,
+          "linea": 293,
           "resumen": "Resumen de una línea. Cadena vacía si no hay nada — el consumidor no tiene que comprobarlo."
         },
         {
@@ -69450,13 +69450,13 @@
           "exportada": true,
           "params": "nuevo: number, anterior: number | null, umbral = SALTO_NAV_AVISO",
           "retorno": "SaltoSaldo",
-          "linea": 301,
+          "linea": 319,
           "resumen": "`variacion` = (nuevo − anterior) / anterior. Sin anterior no hay nada que comparar (primer saldo): no se avisa, que es distinto de «no ha cambiado»."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "852f7757da30"
+      "hash": "32d64024bc5f"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-stooq.ts",
