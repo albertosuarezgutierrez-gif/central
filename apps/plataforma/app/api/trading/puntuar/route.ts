@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { puntuarTesis, agregarStats, aplicarStop, cerrar } from '@central/module-trading'
 import type { Tesis } from '@central/module-trading'
-import { filtrarPreciosAnomalos, resumenDescartes, contrastarFuentes, resumenDivergencias, DIAS_REFERENCIA_MAX } from '@/lib/trading/precios-guardia'
+import { filtrarPreciosAnomalos, resumenDescartes, detectarSuplantaciones, resumenSuplantaciones, contrastarFuentes, resumenDivergencias, DIAS_REFERENCIA_MAX } from '@/lib/trading/precios-guardia'
 import { cierresDeContraste } from '@/lib/trading/precios-contraste'
 
 // El contraste con la 2ª fuente sale a internet una vez por símbolo, así que la ruta necesita techo y
@@ -27,15 +27,24 @@ export async function POST(req: NextRequest) {
   const refFilas = await prisma.$queryRaw<Array<{ simbolo: string; precio: number }>>(
     Prisma.sql`SELECT DISTINCT ON (simbolo) simbolo, precio_ref AS precio
                FROM trading_tesis
-               WHERE fecha < ${hoy}::date AND fecha >= ${hoy}::date - ${DIAS_REFERENCIA_MAX}
+               WHERE fecha < ${hoy}::date AND fecha >= ${hoy}::date - ${DIAS_REFERENCIA_MAX} AND NOT anulado
                ORDER BY simbolo, fecha DESC`,
   )
   const referencias = Object.fromEntries(refFilas.map(f => [f.simbolo, f.precio]))
   const { limpios, descartados } = filtrarPreciosAnomalos(precios, referencias)
   if (descartados.length > 0) console.warn('[trading/puntuar]', resumenDescartes(descartados))
 
-  // 1) Puntuar tesis vencidas sin resultado.
-  const pendientes = await prisma.tradingTesis.findMany({ where: { resultado: null } })
+  // 0-ter) ¿ES SUYO ESTE PRECIO? La guardia de arriba pregunta si el número es creíble; esta, de quién
+  // es. Los `get_price_history` que la sesión pide en paralelo vuelven en orden de FINALIZACIÓN, y
+  // transcribirlos por posición produce cierres REALES bajo la etiqueta equivocada — ningún umbral de
+  // plausibilidad puede con eso. Verificado tres veces contra IBKR: 17/07, 03/08 y 04/08 de 2026.
+  const { limpios: propios, suplantados } = detectarSuplantaciones(limpios, referencias)
+  if (suplantados.length > 0) console.warn('[trading/puntuar]', resumenSuplantaciones(suplantados))
+
+  // 1) Puntuar tesis vencidas sin resultado. `anulado: false`: una tesis anulada se construyó sobre un
+  // precio que era de otra empresa, así que su dirección y su confianza no hablan de ESTE símbolo.
+  // Puntuarla no rescataría nada — inventaría un veredicto para una señal que nunca existió.
+  const pendientes = await prisma.tradingTesis.findMany({ where: { resultado: null, anulado: false } })
 
   // 0-bis) SEGUNDO PAR DE OJOS. La guardia de arriba solo caza el ×2; un error del 10% pasa limpio y
   // mueve el retorno de la tesis 10 puntos sin que nada chirríe. Se contrasta contra la fuente propia
@@ -47,17 +56,17 @@ export async function POST(req: NextRequest) {
       .filter(t => new Date(t.fecha).getTime() + t.horizonteDias * 86_400_000 <= hoyMs)
       .map(t => t.simbolo),
     ...posicionesPrevias.map(p => p.simbolo),
-  ])].filter(s => limpios[s] !== undefined)
+  ])].filter(s => propios[s] !== undefined)
   const contraste = await cierresDeContraste(aUsar, hoy, { presupuestoMs: 120_000 })
   // El contraste se evalúa SOLO sobre los símbolos que se intentaron. Pasarle el mapa entero metería
   // en `sinContraste` a los ~100 que nunca se quisieron contrastar, y el parte diría «sin 2ª fuente»
   // de un trabajo que no se pidió: un recuento que exagera lo que no se sabe engaña igual que uno que
   // lo esconde. Lo vetado se resta del mapa completo; el resto sigue igual que antes.
-  const aContrastar = Object.fromEntries(aUsar.map(s => [s, limpios[s]]))
+  const aContrastar = Object.fromEntries(aUsar.map(s => [s, propios[s]]))
   const { divergentes, sinContraste } = contrastarFuentes(aContrastar, contraste.cierres)
   if (divergentes.length > 0) console.warn('[trading/puntuar]', resumenDivergencias(divergentes))
   const vetados = new Set(divergentes.map(d => d.simbolo))
-  const conformes = Object.fromEntries(Object.entries(limpios).filter(([sim]) => !vetados.has(sim)))
+  const conformes = Object.fromEntries(Object.entries(propios).filter(([sim]) => !vetados.has(sim)))
 
   let puntuadas = 0
   for (const t of pendientes) {
@@ -77,7 +86,7 @@ export async function POST(req: NextRequest) {
   // 2) Recomputar stats por estrategia (régimen 'todos' en Fase 1; se refina con snapshot por tesis después).
   // Los resultados ANULADOS (puntuados con un precio que luego se demostró falso) quedan en la tabla como
   // registro pero NO cuentan: son «esto no lo sabemos», no un dato del track record.
-  const resultados = await prisma.tradingTesisResultado.findMany({ where: { anulado: false }, include: { tesis: true } })
+  const resultados = await prisma.tradingTesisResultado.findMany({ where: { anulado: false, tesis: { anulado: false } }, include: { tesis: true } })
   const stats = agregarStats(resultados.map(r => ({ estrategia: r.tesis.estrategia as Tesis['estrategia'], acierto: r.acierto, retorno: r.retorno })))
   for (const [est, s] of Object.entries(stats)) {
     await prisma.tradingEstrategiaStats.upsert({
@@ -125,7 +134,7 @@ export async function POST(req: NextRequest) {
   // watchdog dio por buena la noche, pero `/puntuar` nunca corrió y ni los stops ni el walk-forward se
   // actualizaron. La huella se escribe SIEMPRE (haya trabajo o no) y es la que mira el 3er tramo del
   // watchdog. Best-effort: no rompe la respuesta si la tabla no está.
-  const resumen = [resumenDescartes(descartados), resumenDivergencias(divergentes)].filter(Boolean).join(' · ')
+  const resumen = [resumenDescartes(descartados), resumenSuplantaciones(suplantados), resumenDivergencias(divergentes)].filter(Boolean).join(' · ')
   await registrarLatido(
     'trading_puntuar',
     true,
@@ -139,6 +148,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     puntuadas, cerradas, estrategias: Object.keys(stats).length,
     descartados,
+    suplantados,
     divergentes,
     contraste: { consultados: contraste.consultados, sinDato: contraste.sinDato, sinTiempo: contraste.sinTiempo, sinJuzgar: sinContraste },
   })

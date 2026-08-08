@@ -58,7 +58,10 @@ const td: React.CSSProperties = { padding: '8px 10px', borderBottom: '1px solid 
 export default async function TradingDashboard({ carteraCohetes }: { carteraCohetes: CarteraCohetesData | null }) {
   const [posiciones, tesis, watchlist, track, radar, universoFilas, ordenes] = await Promise.all([
     safe(prisma.tradingPaperPosicion.findMany({ orderBy: { abiertaEn: 'desc' } }), []),
-    safe(prisma.tradingTesis.findMany({ orderBy: [{ fecha: 'desc' }, { confianza: 'desc' }], take: 40, include: { resultado: true } }), []),
+    // `anulado: false`: las tesis anuladas se construyeron con el precio de otra empresa (17/07, 03/08
+    // y 04/08 de 2026). Pintarlas sería enseñar como idea del agente una señal que nunca fue de ese
+    // símbolo; siguen en BD como registro del incidente.
+    safe(prisma.tradingTesis.findMany({ where: { anulado: false }, orderBy: [{ fecha: 'desc' }, { confianza: 'desc' }], take: 40, include: { resultado: true } }), []),
     safe(prisma.tradingWatchlist.findMany({ where: { activo: true }, orderBy: [{ capa: 'asc' }, { simbolo: 'asc' }] }), []),
     safe(prisma.tradingPaperTrack.findMany({ orderBy: [{ cohorte: 'asc' }, { fecha: 'asc' }] }), []),
     safe(prisma.tradingRanking.findFirst({ orderBy: { fecha: 'desc' } }), null),

@@ -163,6 +163,122 @@ export function resumenDivergencias(divergentes: Divergencia[]): string {
 }
 
 // ---------------------------------------------------------------------------
+// SUPLANTACIÓN: el precio es real, pero es de OTRA empresa
+// ---------------------------------------------------------------------------
+//
+// 🚨 LANDMINE (08/08/2026, auditoría del corpus) — las dos guardias de arriba dan por hecho que el
+// precio que llega bajo la etiqueta `AAPL` intenta ser el de Apple, y solo discuten si el NÚMERO es
+// creíble. El fallo real que ha vivido este repo es otro y peor: el número es PERFECTAMENTE creíble
+// porque es un cierre de verdad — solo que de otra compañía. Verificado contra IBKR:
+//
+//   17/07/2026  META←MSFT (393,82) · MSFT←SPOT (478,14) · SPOT←NFLX (68,95) · NFLX←LLY (1179,11)
+//   03/08/2026  LLY←CVX (193,18) · META←LLY (1121,09)
+//   04/08/2026  NFLX←PLTR (162,61)
+//
+// El origen está fuera del servidor: la sesión pide los `get_price_history` de los ~13 símbolos en
+// paralelo y los resultados NO vuelven en el orden en que se pidieron, así que transcribirlos por
+// posición los baraja. El protocolo de la skill ya lo prohibía desde el 04/08 y aun así volvió a
+// pasar el mismo día — por eso esto no puede seguir siendo una regla de disciplina del que llama:
+// tiene que ser una comprobación del que recibe.
+//
+// Dos firmas distintas, porque el barajado se manifiesta de dos maneras:
+//
+//  1) DUPLICADO en la misma pasada. Si dos símbolos traen exactamente el mismo número, uno de los dos
+//     copió al otro (17/07: NFLX y LLY a 1179,11 — 04/08: NFLX y PLTR a 162,61). No hace falta
+//     histórico, y por eso es la ÚNICA que funciona en la primera pasada de un símbolo, que es
+//     justamente cuando no hay con qué comparar. Dos cierres reales al mismo céntimo el mismo día
+//     existen, pero son mucho más raros que este bug: se vetan los dos y mañana se recupera.
+//
+//  2) CRUCE contra las referencias. El precio no cuadra con lo que ese símbolo valía ayer, pero cuadra
+//     con lo que valía OTRO. Es la firma del 03/08 y la que sobrevive aunque los números no coincidan
+//     al céntimo (LLY se movió un 2,9% entre su referencia y el valor que acabó en META).
+//
+// Se exige que el símbolo TENGA referencia propia y que esa referencia discrepe: sin referencia no se
+// sabe, y no saber no autoriza a vetar (misma regla de tres estados que el resto del archivo). El
+// hueco que deja —símbolo estrenándose Y suplantado sin duplicar a nadie— lo cubre el contraste con
+// la 2ª fuente, que no depende de nada de esto.
+
+// Cercanía a partir de la cual se considera que un precio «es» el de otro símbolo. Tiene que ser más
+// ancha que un día de mercado: el valor suplantado es el cierre de HOY del culpable y la referencia
+// con la que se compara es su cierre de AYER, así que entre medias cabe su movimiento diario (el caso
+// META←LLY del 03/08 fue del 2,9% y con un umbral más fino se habría escapado).
+export const CRUCE_TOLERANCIA = 0.03
+
+export type Suplantacion = {
+  simbolo: string
+  precio: number
+  propia: number | null    // su propia referencia; null = no tenía (solo puede pasar en el caso duplicado)
+  culpable: string         // el símbolo del que parece venir el precio
+  motivo: string
+}
+
+export type Suplantaciones = {
+  limpios: Record<string, number>
+  suplantados: Suplantacion[]
+}
+
+function cerca(a: number, b: number, tol: number): boolean {
+  return b > 0 && Math.abs(a / b - 1) <= tol
+}
+
+// Detecta precios que pertenecen a otro símbolo. `referencias` = mismo mapa que `filtrarPreciosAnomalos`
+// (último `precio_ref` conocido ANTERIOR a la pasada, por símbolo).
+export function detectarSuplantaciones(
+  precios: Record<string, number>,
+  referencias: Record<string, number>,
+  tol = CRUCE_TOLERANCIA,
+): Suplantaciones {
+  const entradas = Object.entries(precios)
+  const sospechosos = new Map<string, Suplantacion>()
+
+  // 1) Duplicados exactos dentro de la propia pasada.
+  const porPrecio = new Map<number, string[]>()
+  for (const [simbolo, precio] of entradas) {
+    if (!Number.isFinite(precio)) continue
+    porPrecio.set(precio, [...(porPrecio.get(precio) ?? []), simbolo])
+  }
+  for (const [precio, simbolos] of porPrecio) {
+    if (simbolos.length < 2) continue
+    for (const simbolo of simbolos) {
+      const propia = referencias[simbolo]
+      sospechosos.set(simbolo, {
+        simbolo, precio,
+        propia: Number.isFinite(propia) ? propia : null,
+        culpable: simbolos.filter(s => s !== simbolo).join('+'),
+        motivo: `precio idéntico al de ${simbolos.filter(s => s !== simbolo).join(', ')} en la misma pasada`,
+      })
+    }
+  }
+
+  // 2) Cruce: cuadra con la referencia de otro y NO con la suya.
+  for (const [simbolo, precio] of entradas) {
+    if (sospechosos.has(simbolo) || !Number.isFinite(precio) || precio <= 0) continue
+    const propia = referencias[simbolo]
+    if (!Number.isFinite(propia) || !(propia > 0)) continue   // sin referencia propia no se juzga
+    if (cerca(precio, propia, tol)) continue                  // cuadra consigo mismo: nada que discutir
+    const culpable = Object.keys(referencias).find(
+      otro => otro !== simbolo && cerca(precio, referencias[otro], tol),
+    )
+    if (!culpable) continue
+    sospechosos.set(simbolo, {
+      simbolo, precio, propia, culpable,
+      motivo: `no cuadra con su referencia (${propia}) pero sí con la de ${culpable} (${referencias[culpable]})`,
+    })
+  }
+
+  const limpios: Record<string, number> = {}
+  for (const [simbolo, precio] of entradas) if (!sospechosos.has(simbolo)) limpios[simbolo] = precio
+  return { limpios, suplantados: [...sospechosos.values()] }
+}
+
+// Resumen de una línea. Cadena vacía si no hay nada — el consumidor no tiene que comprobarlo.
+export function resumenSuplantaciones(suplantados: Suplantacion[]): string {
+  if (suplantados.length === 0) return ''
+  const lista = suplantados.map(s => `${s.simbolo} ${s.precio} (${s.motivo})`).join(' · ')
+  return `${suplantados.length} precio(s) que parecen de otro símbolo: ${lista}`
+}
+
+// ---------------------------------------------------------------------------
 // El MISMO problema, un número distinto: el NAV
 // ---------------------------------------------------------------------------
 //

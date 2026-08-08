@@ -10,7 +10,7 @@ import {
 } from '@central/module-trading'
 import type { Vela, Fundamentales } from '@central/module-trading'
 import { datosYahoo, lineaEarningsProximos, type FechaEarnings } from '@/lib/trading/earnings-yahoo'
-import { filtrarPreciosAnomalos, resumenDescartes, contrastarFuentes, resumenDivergencias, DIAS_REFERENCIA_MAX } from '@/lib/trading/precios-guardia'
+import { filtrarPreciosAnomalos, resumenDescartes, detectarSuplantaciones, resumenSuplantaciones, contrastarFuentes, resumenDivergencias, DIAS_REFERENCIA_MAX } from '@/lib/trading/precios-guardia'
 import { cierresDeContraste } from '@/lib/trading/precios-contraste'
 
 type Entrada = { simbolo: string; velas: Vela[]; fundamentales?: Fundamentales; opsRecientes?: number; factorScore?: number }
@@ -88,23 +88,38 @@ export async function POST(req: NextRequest) {
   const cierresHoy = Object.fromEntries(
     simbolos.filter(s => s.velas?.length).map(s => [s.simbolo, s.velas[s.velas.length - 1].cierre]),
   )
+  // `anulado = false`: una tesis anulada lo está porque su `precio_ref` resultó ser de otra empresa.
+  // Usarla de referencia sería medir el precio de hoy contra la mentira de anteayer — la guardia
+  // validaría lo torcido y descartaría lo recto.
   const refFilas = await prisma.$queryRaw<Array<{ simbolo: string; precio: number }>>`
     SELECT DISTINCT ON (simbolo) simbolo, precio_ref AS precio
     FROM trading_tesis
-    WHERE fecha < ${fecha}::date AND fecha >= ${fecha}::date - ${DIAS_REFERENCIA_MAX}
+    WHERE fecha < ${fecha}::date AND fecha >= ${fecha}::date - ${DIAS_REFERENCIA_MAX} AND NOT anulado
     ORDER BY simbolo, fecha DESC`
-  const { limpios, descartados } = filtrarPreciosAnomalos(cierresHoy, Object.fromEntries(refFilas.map(f => [f.simbolo, f.precio])))
+  const referencias = Object.fromEntries(refFilas.map(f => [f.simbolo, f.precio]))
+  const { limpios, descartados } = filtrarPreciosAnomalos(cierresHoy, referencias)
+
+  // 0-ter) ¿ES SUYO ESTE PRECIO? Las dos guardias siguientes discuten si el número es creíble; esta
+  // pregunta de quién es. El barajado de los `get_price_history` paralelos produce cierres REALES bajo
+  // la etiqueta equivocada, y contra eso un umbral de plausibilidad no puede nada. Ver el detalle y los
+  // tres casos verificados en `lib/trading/precios-guardia.ts`.
+  const { limpios: propios, suplantados } = detectarSuplantaciones(limpios, referencias)
 
   // 0-bis) SEGUNDO PAR DE OJOS. El ×2 de arriba solo caza lo escandaloso; un error del 10% entra limpio
   // y contamina los indicadores del día igual de bien. Se pregunta el MISMO cierre a la fuente propia
   // del servidor (Stooq con respaldo Yahoo) y el que no cuadre se veta. Presupuesto acotado: los
   // símbolos que no dan tiempo salen «sin contraste», que deja pasar el precio — un contraste a medias
   // nunca puede bloquear la pasada entera.
-  const contraste = await cierresDeContraste(Object.keys(limpios), fecha, { presupuestoMs: 90_000 })
-  const { divergentes, sinContraste } = contrastarFuentes(limpios, contraste.cierres)
+  const contraste = await cierresDeContraste(Object.keys(propios), fecha, { presupuestoMs: 90_000 })
+  const { divergentes, sinContraste } = contrastarFuentes(propios, contraste.cierres)
 
-  const vetados = new Set([...descartados.map(d => d.simbolo), ...divergentes.map(d => d.simbolo)])
-  const aviso = [resumenDescartes(descartados), resumenDivergencias(divergentes)].filter(Boolean).join('\n')
+  const vetados = new Set([
+    ...descartados.map(d => d.simbolo),
+    ...suplantados.map(s => s.simbolo),
+    ...divergentes.map(d => d.simbolo),
+  ])
+  const aviso = [resumenDescartes(descartados), resumenSuplantaciones(suplantados), resumenDivergencias(divergentes)]
+    .filter(Boolean).join('\n')
   if (aviso) {
     console.warn('[trading/analizar]', aviso)
     // Se avisa SIEMPRE: un símbolo que desaparece del análisis en silencio es indistinguible de un
@@ -212,7 +227,7 @@ export async function POST(req: NextRequest) {
   // desaparece del análisis sin decirlo se confunde con uno que hoy no dio señal.
   return NextResponse.json({
     fecha, top: ideas.slice(0, 5), total: ideas.length,
-    vetados: [...vetados], descartados, divergentes,
+    vetados: [...vetados], descartados, suplantados, divergentes,
     contraste: { consultados: contraste.consultados, sinDato: contraste.sinDato, sinTiempo: contraste.sinTiempo, sinJuzgar: sinContraste },
   })
 }

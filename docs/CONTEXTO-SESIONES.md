@@ -22,6 +22,27 @@
 
 ---
 
+## 🧮 (08/08/2026) Subastas 2ª tanda: ITP por CCAA, puja en vivo, vivienda habitual y simulador
+- **ITP por CCAA** (`module-subastas/src/impuestos.ts`): `calcularCoste` deja de aplicar el 7% andaluz a
+  todo — la provincia elige el tipo general de su CCAA (Asturias 8%: Cancienes pasa de 94.248€ a 95.112€),
+  con aviso del tipo aplicado y de las escalas progresivas. `params.tipoItp` explícito sigue mandando.
+- **Vigía de pujas en vivo** en `subastas-cierre`: `mejorPujaViva()` (1 llamada/ficha, seguidas a ≤3 días)
+  → `subastas.mejor_puja(_at)` (migración `2026-08-08_subastas_mejor_puja.sql`, aplicada) + Telegram 🔥 una
+  sola vez si superan tu techo (`sobrepuja_avisada_at`). NULL nunca pisa un valor visto.
+- **Vivienda habitual** (ya se extraía del edicto): `viviendaHabitualDeNotas` (round-trip testeado) afina la
+  nota del art. 671 en umbrales/ficha. **Simulador «¿y si pujo X?»** en la ficha (módulo puro + financiación
+  de criterios; banda de aprobación, admisibilidad, tramos). Tests 443 módulo + 1045 app, tsc 0, build OK.
+
+## ⚖️ (08/08/2026) Subastas: deuda, puja mínima y umbrales LEC 670 en la ficha
+- Pregunta de Alberto («¿se puja por la deuda? ¿el 70%?»): la «salida» YA es el valor de puja (tipo del
+  BOE, no mercado); el 70% legal es del VALOR DE SUBASTA, no de la deuda (LEC 670). SUB-JA-* = judicial.
+- 3 huecos arreglados: `cantidad_reclamada` era campo muerto (ahora en ficha), `puja_minima` sin consumidor
+  (la puja máxima marca inadmisible/sin aprobación automática), y «Sin puja mínima» → centinela `0`
+  (≠ NULL no publicada; COALESCE-safe, backfill solo vía relectura 24h del cron).
+- Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
+  tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
+- Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
+
 ## 🧱 (08/08/2026) Bandeja «cargos duplicados» de /banca responsive en móvil — PR #1319
 - Captura de Alberto: en móvil las filas desbordaban (chips `flexShrink:0` + importe fuera de pantalla).
 - Fix CSS-only en `BancaClient.tsx::DuplicadosBandeja`: media query ≤768px, concepto a ancho completo,
@@ -80,6 +101,15 @@ Santa sí está catalogada). Arreglado de paso `?max=abc` → 0 ventanas en sile
   (`occ` en `apply/route.ts` no acota `rate_date` por arriba) y la aplica a todas las fechas — septiembre
   al 30% recibe el mismo factor de demanda mínimo (0,92) que marzo-2027 al 0%. Hoy no cambia el signo
   porque todo está flojo, pero la palanca de demanda está ciega a la estacionalidad de la propia venta.
+
+- **🔀 El precio era real… pero de otra empresa: saneo del corpus de trading (08/08/2026).** La auditoría
+  encontró que el fallo caro no es un precio absurdo sino un cierre VERDADERO bajo la etiqueta
+  equivocada: los `get_price_history` paralelos vuelven en orden de finalización y se transcribían por
+  posición. Verificado contra IBKR: `17/07` META←MSFT, MSFT←SPOT, SPOT←NFLX, NFLX←LLY · `03/08` LLY←CVX,
+  META←LLY · `04/08` NFLX←PLTR. Nuevo `detectarSuplantaciones()` (duplicado en la pasada + cruce contra
+  referencias, 3%) vetando en `/analizar` y `/puntuar`; `trading_tesis.anulado` con 28 tesis y 16
+  resultados anulados (una tesis sobre velas ajenas NO se re-puntúa: se anula) y 24 resultados LLY/META
+  re-puntuados con el cierre real. Stats: n 81→77, hit rate 0,296→0,312 (momentum). PR #1321.
 
 - **🛡️ Segundo par de ojos sobre el precio + procedencia del dato (08/08/2026).** Cierra el hueco que
   dejaba la guardia del ×2 (#1315): un error del 10% pasaba limpio y movía el retorno 10 puntos.

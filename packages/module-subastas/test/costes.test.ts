@@ -2,7 +2,7 @@
 // así que cada partida va cubierta. `node --test`.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { calcularCoste, deposito, LANZAMIENTO_ESTIMADO, pujaMaximaParaDescuento, yieldTuristico } from '../src/costes.ts'
+import { calcularCoste, deposito, escenariosCoste, LANZAMIENTO_ESTIMADO, pujaMaximaParaDescuento, yieldTuristico } from '../src/costes.ts'
 import type { SubastaInmueble } from '../src/types.ts'
 
 const base: SubastaInmueble = {
@@ -102,7 +102,7 @@ test('pujaMaximaParaDescuento: invierte el coste puerta abierta, no solo el rema
     valorSubasta: 100000, tramos: 2000, cargasConocidas: true, cargas: 0,
     situacionPosesoria: 'libre', ejecutado: 'fisica',
   }
-  const puja = pujaMaximaParaDescuento(s, 200000, 0.25)
+  const puja = pujaMaximaParaDescuento(s, 200000, 0.25).importe
   assert.ok(puja != null)
   // Con la puja devuelta, el descuento real es >= 25%…
   const con = calcularCoste(s, puja!)
@@ -120,7 +120,11 @@ test('pujaMaximaParaDescuento: si los costes fijos se comen el objetivo, null', 
     valorSubasta: 100000, cargasConocidas: true, cargas: 190000,
     situacionPosesoria: 'libre', ejecutado: 'fisica',
   }
-  assert.equal(pujaMaximaParaDescuento(s, 200000, 0.25), null)
+  const p = pujaMaximaParaDescuento(s, 200000, 0.25)
+  assert.equal(p.importe, null)
+  // Sin importe no hay nada que contrastar: los flags quedan en «no se sabe».
+  assert.equal(p.admisible, null)
+  assert.equal(p.aprobacionDirecta, null)
 })
 
 test('pujaMaximaParaDescuento: la base imponible por valor de referencia se respeta', () => {
@@ -131,9 +135,76 @@ test('pujaMaximaParaDescuento: la base imponible por valor de referencia se resp
     valorSubasta: 100000, cargasConocidas: true, cargas: 0,
     situacionPosesoria: 'libre', ejecutado: 'fisica',
   }
-  const sinVR = pujaMaximaParaDescuento(base, 200000, 0.25)!
-  const conVR = pujaMaximaParaDescuento({ ...base, valorReferencia: 180000 }, 200000, 0.25)!
+  const sinVR = pujaMaximaParaDescuento(base, 200000, 0.25).importe!
+  const conVR = pujaMaximaParaDescuento({ ...base, valorReferencia: 180000 }, 200000, 0.25).importe!
   assert.ok(conVR < sinVR)
+})
+
+test('pujaMaximaParaDescuento: tres estados de `admisible` frente a la puja mínima', () => {
+  const s: SubastaInmueble = {
+    dedupeKey: 'x', fuente: 'boe', tipo: 'judicial',
+    valorSubasta: 100000, cargasConocidas: true, cargas: 0,
+    situacionPosesoria: 'libre', ejecutado: 'fisica',
+  }
+  // Sin puja mínima publicada (null): no se sabe.
+  assert.equal(pujaMaximaParaDescuento(s, 200000, 0.25).admisible, null)
+  // «Sin puja mínima» declarado (0): cualquier postura es admisible.
+  assert.equal(pujaMaximaParaDescuento({ ...s, pujaMinima: 0 }, 200000, 0.25).admisible, true)
+  // Mínimo por encima del techo: inadmisible, con nota — y el importe NO se sube.
+  const p = pujaMaximaParaDescuento({ ...s, pujaMinima: 999999 }, 200000, 0.25)
+  assert.equal(p.admisible, false)
+  assert.ok(p.importe! < 999999)
+  assert.ok(p.notas.some((n) => n.includes('puja mínima')))
+})
+
+test('pujaMaximaParaDescuento: marca cuándo el remate no sería de aprobación automática', () => {
+  const s: SubastaInmueble = {
+    dedupeKey: 'x', fuente: 'boe', tipo: 'judicial',
+    valorSubasta: 100000, cargasConocidas: true, cargas: 0,
+    situacionPosesoria: 'libre', ejecutado: 'fisica',
+  }
+  // Mercado alto → el techo supera el 70% del tipo: aprobación directa.
+  assert.equal(pujaMaximaParaDescuento(s, 300000, 0.25).aprobacionDirecta, true)
+  // Mercado bajo → techo < 50% del tipo y sin deuda conocida: discrecional del LAJ.
+  const p = pujaMaximaParaDescuento(s, 60000, 0.25)
+  assert.equal(p.aprobacionDirecta, false)
+  assert.ok(p.notas.some((n) => n.includes('art. 670')))
+  assert.ok(p.notas.some((n) => n.includes('LAJ')))
+  // Venta directa: no hay umbrales que contrastar.
+  assert.equal(
+    pujaMaximaParaDescuento({ ...s, tipo: 'venta_adjudicado' }, 300000, 0.25).aprobacionDirecta,
+    null,
+  )
+})
+
+// ── Escenarios de coste informativos ─────────────────────────────────────────
+
+test('escenariosCoste: judicial simula el remate al 70% del tipo', () => {
+  const [e] = escenariosCoste(base)
+  assert.equal(e.origen, 'aprobacion_directa')
+  assert.equal(e.pct, 0.7)
+  assert.equal(e.remate, 70000)
+  assert.equal(e.total, calcularCoste(base, 70000).total)
+  // administrativa: el escenario es el 50% del tipo.
+  const [a] = escenariosCoste({ ...base, tipo: 'agencia_tributaria' })
+  assert.equal(a.pct, 0.5)
+  assert.equal(a.remate, 50000)
+})
+
+test('escenariosCoste: la mediana provincial solo entra con muestra suficiente', () => {
+  const mediana = { ratio: 0.62, muestraRatio: 4, provincia: 'Sevilla' }
+  const conMediana = escenariosCoste(base, {}, mediana)
+  assert.equal(conMediana.length, 2)
+  assert.equal(conMediana[1].origen, 'mediana_provincial')
+  assert.equal(conMediana[1].remate, 62000)
+  assert.ok(conMediana[1].etiqueta.includes('Sevilla'))
+  // Con 2 casos no hay calibración que valga.
+  assert.equal(escenariosCoste(base, {}, { ...mediana, muestraRatio: 2 }).length, 1)
+})
+
+test('escenariosCoste: sin tipo de salida o en venta directa no hay escenarios', () => {
+  assert.deepEqual(escenariosCoste({ ...base, valorSubasta: null }), [])
+  assert.deepEqual(escenariosCoste({ ...base, tipo: 'venta_adjudicado' }), [])
 })
 
 // ── Yield turístico por dormitorio ───────────────────────────────────────────
