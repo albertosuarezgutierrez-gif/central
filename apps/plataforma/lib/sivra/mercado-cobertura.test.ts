@@ -1,7 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  ventanasQuePedir, planDeVentanas, detalleIngesta, ingestaFiable, FUENTES_FIABLES,
+  ventanasQuePedir, planDeVentanas, parsearParametrosPlan, detalleIngesta, ingestaFiable,
+  FUENTES_FIABLES, MAX_VENTANAS_DEFECTO, MAX_VENTANAS_TECHO,
 } from './mercado-cobertura.ts'
 import { ventanasDelBarrido } from './mercado-ventanas.ts'
 
@@ -139,6 +140,91 @@ test('el recorte del tope se DECLARA (un truncado mudo se lee como «esto era to
 
   const holgado = planDeVentanas(plan, AFOROS, [], HOY, 100, { rondas: [2, 3] })
   assert.equal(holgado.recortadas, 0, 'sin recorte no se inventa aviso')
+})
+
+// ─── parseo de los parámetros del endpoint ─────────────────────────────────────────────────
+
+/** Atajo: `q('max=30&rondas=2,3')` → el resultado de parsear esa query. */
+const q = (s: string) => parsearParametrosPlan(new URLSearchParams(s))
+
+test('🚨 un `max` no numérico se RECHAZA (antes devolvía 0 ventanas en silencio)', () => {
+  // Caso fundacional: Number('abc')=NaN, Math.min(30,Math.max(1,NaN))=NaN y slice(0,NaN)=[] →
+  // la pasada no medía nada y lo reportaba como «no había ventanas», con recortadas:NaN.
+  for (const malo of ['abc', '', ' ', '3.5', 'NaN', 'Infinity', '2e', '1,2']) {
+    const r = q(`max=${encodeURIComponent(malo)}`)
+    assert.equal(r.ok, false, `max=${JSON.stringify(malo)} debería rechazarse`)
+  }
+})
+
+test('sin `max` se usa el defecto; con uno válido, ese', () => {
+  const sinMax = q('')
+  assert.ok(sinMax.ok && sinMax.valor.max === MAX_VENTANAS_DEFECTO)
+  const conMax = q('max=7')
+  assert.ok(conMax.ok && conMax.valor.max === 7)
+})
+
+test('un `max` fuera de rango se acota Y SE DICE', () => {
+  const alto = q(`max=100`)
+  assert.ok(alto.ok)
+  assert.equal(alto.valor.max, MAX_VENTANAS_TECHO)
+  assert.match(alto.avisos.join(' '), /acotado a 30/)
+
+  const bajo = q('max=0')
+  assert.ok(bajo.ok)
+  assert.equal(bajo.valor.max, 1)
+  assert.match(bajo.avisos.join(' '), /acotado a 1/)
+
+  // Dentro de rango no se inventa aviso.
+  const normal = q('max=12')
+  assert.ok(normal.ok && normal.avisos.length === 0)
+})
+
+test('rondas: se aceptan las válidas, se rechazan las que no', () => {
+  const bueno = q('rondas=2,3')
+  assert.ok(bueno.ok && JSON.stringify(bueno.valor.filtro.rondas) === '[2,3]')
+
+  const dup = q('rondas=2,2,3')
+  assert.ok(dup.ok && JSON.stringify(dup.valor.filtro.rondas) === '[2,3]', 'deduplica')
+
+  const espacios = q('rondas=2%2C%203')
+  assert.ok(espacios.ok && JSON.stringify(espacios.valor.filtro.rondas) === '[2,3]', 'tolera espacios')
+
+  for (const malo of ['dos', '2,dos', '-1', '2.5', '', ',', ' ']) {
+    assert.equal(q(`rondas=${encodeURIComponent(malo)}`).ok, false,
+      `rondas=${JSON.stringify(malo)} debería rechazarse`)
+  }
+})
+
+test('fechas: formato estricto YYYY-MM-DD y rango no invertido', () => {
+  const bueno = q('desde=2026-09-01&hasta=2027-01-31')
+  assert.ok(bueno.ok)
+  assert.equal(bueno.valor.filtro.desde, '2026-09-01')
+  assert.equal(bueno.valor.filtro.hasta, '2027-01-31')
+
+  for (const malo of ['01/09/2026', '2026-9-1', 'ayer', '2026-09-01T00:00:00Z', '']) {
+    assert.equal(q(`desde=${encodeURIComponent(malo)}`).ok, false,
+      `desde=${JSON.stringify(malo)} debería rechazarse`)
+  }
+
+  const invertido = q('desde=2027-01-31&hasta=2026-09-01')
+  assert.equal(invertido.ok, false, 'un rango invertido devolvería vacío en silencio')
+
+  // desde=hasta es un día concreto, perfectamente válido.
+  assert.equal(q('desde=2026-09-08&hasta=2026-09-08').ok, true)
+})
+
+test('sin parámetros no hay filtro (la pasada normal no cambia)', () => {
+  const r = q('')
+  assert.ok(r.ok)
+  assert.deepEqual(r.valor.filtro, {})
+  assert.deepEqual(r.avisos, [])
+})
+
+test('el error del parseo explica el formato esperado (va tal cual al 400)', () => {
+  const r = q('rondas=dos')
+  assert.ok(!r.ok)
+  assert.match(r.error, /rondas inválidas/)
+  assert.match(r.error, /2,3/, 'el mensaje enseña un ejemplo válido')
 })
 
 // ─── parte de la pasada ────────────────────────────────────────────────────────────────────
