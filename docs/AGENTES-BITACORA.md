@@ -15,6 +15,11 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-08 · ialimp-client-health (semanal)** · hizo: pasada de salud de Sique Brilla
+  (`empresa_id=05edacff-...a845`). PMS sync OK (Smoobu, `sync_error=null`, `last_sync_at` hoy
+  07:40 UTC, 21 `cleaning_sessions` en 24h/7d). Programaciones sin cubrir: 0. Impagos activos
+  en `facturas_clientes`: 0. Canal de alerta preflight 200 OK, sin aviso enviado (nada que
+  reportar). dudas: —; fallos: —; PRs/commits: este commit (solo bitácora, sin cambios de código).
 - **2026-08-08 · facturas-correo (trigger diario)** · hizo: Vía B sana (`dias_caido=1`, última copia
   07/08 en `_buzon_pdf` — PriceLabs; `agente_salud` sin cambios porque ya estaba en `ok=true`), sin
   backlog en `PDF-pendiente`/`Revisar` (ambas etiquetas a 0). 0 candidatos nuevos en Gmail
