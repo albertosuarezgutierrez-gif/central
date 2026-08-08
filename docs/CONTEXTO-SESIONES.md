@@ -24,6 +24,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🔎 Auditoría de precios dinámicos + fallo mudo en el plan (08/08/2026)
+Informe: `docs/AUDITORIA-2026-08-precios-dinamicos.md`. **No está al 100%.** 🔴 El bucket mensual de
+`pricing/apply` excluye `corpus_clonado` pero **no filtra por `fuente`**, así que mezcla los precios
+de anuncio de Serper con las mediciones de Booking: medido hoy, mueve el objetivo **+24% en sep** y
+**−13% en octubre** (justo a la baja en el mejor mes). No se arregla filtrando ya — Booking solo
+llega a ≥3 fechas en sep/oct/nov; dic→abr se quedarían sin bucket. Propuesta: preferencia
+condicional (usar solo-fiable cuando él mismo cumple el umbral) + declarar `bucket_fuente`.
+Pendiente de decisión de Alberto por ser cambio de fórmula.
+🟡 `sivra_mercado_sweep` tiene `ultimo_ok_at` **NULL**: ninguna pasada buena desde que existe el latido.
+🟢 Raíles OK (suelo, tope ±%/día, techo, circuit-breaker sobre la intención cruda); 1023/1023 tests,
+tsc 0, build 0. Falso positivo propio corregido en el informe (marzo-27 no está contaminado: Semana
+Santa sí está catalogada). Arreglado de paso `?max=abc` → 0 ventanas en silencio (**PR #1318**).
+
 ### 🏨 Filtro de ronda/fecha en el plan de mercado + 2ª pasada Booking (08/08/2026)
 `/api/sivra/mercado/plan` acepta **`?rondas=2,3&desde=&hasta=`**, aplicado ANTES del tope (filtrar
 en cliente no llega: el orden de urgencia pone las rondas de profundidad al final — con `?max=30` se
