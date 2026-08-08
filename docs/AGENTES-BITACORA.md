@@ -15,6 +15,16 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-08 · facturas-correo (trigger diario)** · hizo: Vía B sana (`dias_caido=1`, última copia
+  07/08 en `_buzon_pdf` — PriceLabs; `agente_salud` sin cambios porque ya estaba en `ok=true`), sin
+  backlog en `PDF-pendiente`/`Revisar` (ambas etiquetas a 0). 0 candidatos nuevos en Gmail
+  (`newer_than:2d` vacío) y 0 subidas manuales nuevas en `_subir_aqui`/raíz 2026 (los 2 "FACTURA JULIO
+  SOCORRO.pdf" sueltos de la raíz ya tenían aviso en `_DUPLICADOS_BORRAR` desde 03/08 y 06/08 — sin
+  duplicar). Papelera con 19 avisos pendientes de borrado manual, sin verificación de zombis hoy (ya
+  se hizo 06/08, nada cambió desde entonces). Roborock Amazon -247,92€ (House Sevillana, confirmado
+  06/08) SIGUE sin aparecer en `movimientos_bancarios` — conciliación pendiente, a recoger en próximas
+  pasadas. Booking dúplex 587,23€ aún no vence (16/08). dudas: —; fallos: —; PRs/commits: este commit
+  (solo bitácora/memoria, sin cambios de código).
 - **2026-08-07 · facturas-correo (a petición de Alberto, factura suelta)** · hizo: factura 47/2026 de
   **Jaime Salas Calderón** (instalaciones eléctricas, NIF 47010941-E) — reparación de avería en CGP +
   sustitución/conexión en cuadro eléctrico, base 230,00€ + IVA 21% 48,30€ = **278,30€**, fecha 06/08/2026,

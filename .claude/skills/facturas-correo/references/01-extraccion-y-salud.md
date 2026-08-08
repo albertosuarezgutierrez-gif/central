@@ -78,6 +78,28 @@ proveedores; esa allowlist quedó SUSTITUIDA por la forma amplia el 18/07).
 - **Vía A** (`gmail-adjuntos`) sigue **sin provisionar** — fallback opcional (ver `SETUP-adjuntos.md`).
 - **Mapfre-comisiones** no la captura Vía B (cifrada, por diseño) → se gestiona aparte (Portal Mediadores).
 
+### 📤 SUBIR un PDF a Drive cuando el fichero lo trae Alberto en la sesión (07/08/2026)
+Distinto de LEER: aquí el PDF ya lo tienes en disco (Alberto lo adjunta al chat) y hay que ARCHIVARLO.
+- **`script.google.com` está BLOQUEADO por la política de red de este entorno** (403 en el CONNECT del
+  proxy; se ve en `curl -sS "$HTTPS_PROXY/__agentproxy/status"` → `recentRelayFailures`). Es decir: el
+  camino de `lib/agente-facturas/drive.ts::subir` (Apps Script `action:'upload'`) **no es usable desde
+  una sesión de Claude** — solo desde Vercel. No pierdas tiempo con él: usa el **MCP de Google Drive**
+  (`create_file` con `base64Content` + `disableConversionToGoogleType:true`, `parentId` = carpeta del mes).
+- **Límite del MCP: el base64 va dentro de la llamada**, así que un PDF de cientos de KB no cabe.
+  Receta probada con la factura de Jaime Salas (563 KB, 5 fuentes CID incrustadas, sin imágenes):
+  renderizar con **`pypdfium2`** (`pip install pypdfium2 pillow`; el proxy sí deja pypi) a 200 dpi,
+  umbralizar a **1 bit** y guardar PDF con Pillow → **11 KB** con CCITT G4, texto perfectamente legible.
+  ```python
+  pdf = pdfium.PdfDocument(ruta); g = pdf[0].render(scale=200/72).to_pil().convert('L')
+  g.point(lambda p: 255 if p > 190 else 0, mode='1').save('salida.pdf', 'PDF', resolution=200)
+  ```
+  **Verifica SIEMPRE la copia leyéndola** (renderiza a PNG y míralo) antes de darla por archivada, y
+  **dilo en el resumen**: la copia es una imagen, **pierde la capa de texto**. Si el gestor necesita el
+  original vectorial, que Alberto lo suelte en `_subir_aqui`.
+- El texto para clasificar sácalo del PDF ORIGINAL (`pypdf`), no de la copia rasterizada. Ojo: la
+  `cryptography` del sistema viene rota (`_cffi_backend`) → `pip install --upgrade cffi cryptography`
+  antes de importar `pypdf`. `poppler-utils` NO se puede instalar (404 en el mirror de apt).
+
 ## Estado / idempotencia (clave — NO reprocesar)
 - Etiqueta de Gmail **`Facturas/Procesada`** (en el buzón real es `Label_11`). Al terminar con un
   correo, etiquétalo.
