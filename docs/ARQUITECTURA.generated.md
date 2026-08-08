@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-08T11:28:12Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-08T12:42:47Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -218,6 +218,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (08/08/2026) 🧹 Auditoría del corpus re-recolectado + dos «no lo sé» que afirmaban (08/08/2026).
 - (08/08/2026) 🔍 Auditoría diaria ligera (08/08/2026).
 - (08/08/2026) 📚 Las 6 trampas del extracto de tarjeta, en la doc que se lee (08/08/2026).
 - (08/08/2026) ⏱️ «Sin respuesta.» sobre un extracto que SÍ había entrado (08/08/2026).
@@ -227,5 +228,4 @@
 - (08/08/2026) 📎 Pasada diaria facturas-correo (08/08/2026).
 - (08/08/2026) 💳 El parser del extracto de tarjeta llevaba meses devolviendo CERO con el PDF real (08/08/2026).
 - (08/08/2026) 🤖 El agente contable dejaba de responder «no encuentro el cargo» a lo que no había mirado (08/08/2026).
-- (07/08/2026) 🧪 Prueba en vivo del auto-merge de rutinas (07/08/2026).
 

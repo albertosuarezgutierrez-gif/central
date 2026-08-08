@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-08T11:28:12Z",
-  "sha": "cc138329f31ba905ced8e7fca822678239c54a0b",
+  "generadoEn": "2026-08-08T12:42:47Z",
+  "sha": "451a2c131dd83352f00791a4746022c89f0257d9",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -69550,7 +69550,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3aa97ad84f46"
+      "hash": "2c3f52267166"
     },
     {
       "ruta": "apps/plataforma/lib/trading/salidas.ts",
@@ -69645,6 +69645,7 @@
         "barrasCerradas",
         "caidaDesdeMaximo",
         "volumenRelativo",
+        "serieDiscontinua",
         "senalCapitulacion"
       ],
       "funciones": [
@@ -69694,18 +69695,27 @@
           "resumen": "Volumen de la última barra contra la media de las `ventana` anteriores. null si falta el volumen de la barra actual o no hay suficientes barras previas CON volumen (fuente incompleta ≠ volumen 0)."
         },
         {
+          "nombre": "serieDiscontinua",
+          "kind": "function",
+          "exportada": true,
+          "params": "barras: Barra[], ventana = 12",
+          "retorno": "boolean",
+          "linea": 146,
+          "resumen": "¿Hay una costura (acción corporativa sin ajustar / reuso de ticker) en las últimas `ventana`+1 barras — las MISMAS que miran `caidaDesdeMaximo` y `volumenRelativo`? Puro, sin efectos."
+        },
+        {
           "nombre": "senalCapitulacion",
           "kind": "function",
           "exportada": true,
           "params": "barras: Barra[], { ventana = 12, caidaMin = CAIDA_MIN, volMin = VOL_MIN }: { ventana?: number; caidaMin?: number; volMin?: number } = {},",
           "retorno": "SenalCapitulacion",
-          "linea": 140,
+          "linea": 170,
           "resumen": "Señal medida como la única con exceso positivo en el estudio: caída fuerte CON volumen. NO decide nada: se recolecta en el retrovisor (H8) antes de tocar ranking o cestas."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e5722a90c196"
+      "hash": "ae2e60a127fd"
     },
     {
       "ruta": "apps/plataforma/lib/trading/volumen.ts",
@@ -89020,7 +89030,7 @@
           "exportada": true,
           "params": "e: EmpresaUniverso",
           "retorno": "'fuerte' | 'media' | 'debil'",
-          "linea": 42,
+          "linea": 43,
           "resumen": "Etiqueta de calidad POR PICK (idea A del spec). Regla determinista: débil = datos incompletos o rancios (no te fíes) · fuerte = calidad alta (Piotroski≥7, ROIC≥15%) + una confirmación (gurús comprando"
         },
         {
@@ -89029,8 +89039,8 @@
           "exportada": true,
           "params": "empresas: EmpresaUniverso[], opts: { top?: number } = {}",
           "retorno": "ResultadoRadar",
-          "linea": 52,
-          "resumen": "Rankea el universo con el modelo de factores. Solo son elegibles los nombres con el núcleo de calidad (piotroski + roic); el resto cuenta como \"sin datos\" (va a la línea de salud, no al ranking)."
+          "linea": 66,
+          "resumen": "Rankea el universo con el modelo de factores. Son elegibles los nombres con el núcleo de calidad (piotroski + roic) Y al menos un dato del pilar de VALOR; el resto cuenta como \"sin datos\" (va a la lín"
         },
         {
           "nombre": "diffRanking",
@@ -89038,7 +89048,7 @@
           "exportada": true,
           "params": "anterior: string[], actual: string[]",
           "retorno": "",
-          "linea": 79,
+          "linea": 96,
           "resumen": "Diff del top entre dos snapshots (para el digest y los futuros avisos por cambio material)."
         },
         {
@@ -89047,7 +89057,7 @@
           "exportada": false,
           "params": "d1: string, d2: string",
           "retorno": null,
-          "linea": 85
+          "linea": 102
         },
         {
           "nombre": "snapshotsParaEvaluar",
@@ -89055,7 +89065,7 @@
           "exportada": true,
           "params": "fechas: string[], hoy: string, objetivosDias: number[] = [28, 56, 91], toleranciaDias = 10,",
           "retorno": "string[]",
-          "linea": 89,
+          "linea": 106,
           "resumen": "Elige qué snapshots pasados evaluar: el más cercano a cada objetivo (~4/~8/~13 semanas) dentro de una tolerancia, sin repetir fechas. Determinista (el consumidor aporta \"hoy\")."
         },
         {
@@ -89064,13 +89074,13 @@
           "exportada": true,
           "params": "evals: EvaluacionSnapshot[]",
           "retorno": "",
-          "linea": 117,
+          "linea": 134,
           "resumen": "Agregado del track record (idea B del spec): cuántas ventanas baten al SPY por MEDIANA."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "795e42b80c4a"
+      "hash": "65bd839d9666"
     },
     {
       "ruta": "packages/module-trading/src/volumen.ts",
@@ -89474,6 +89484,6 @@
   ],
   "resumen": {
     "archivos": 2400,
-    "funciones": 6456
+    "funciones": 6457
   }
 }
