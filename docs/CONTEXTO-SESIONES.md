@@ -22,6 +22,17 @@
 
 ---
 
+## 💹 (08/08/2026) La palanca de DEMANDA del pricing miraba el año, no el mes — PR pendiente
+- `pricing/apply` promediaba la ocupación de los 365 días en UNA cifra por piso (1-8%, real) y la
+  aplicaba a TODAS las fechas → factor de demanda clavado en su suelo (0,92) todo el calendario.
+- Nuevo helper puro `lib/sivra/pricing-demanda.ts` (+12 tests): cruza la ocupación DEL MES con la
+  antelación REAL de venta del piso (`incomes.reserved_at`, ya medida). Dentro de la ventana de venta
+  la ocupación es dato; fuera es «aún no se vende» → NEUTRO (1), nunca el suelo. Asimétrico: fuera de
+  ventana solo puede SUBIR (un mes medio vendido a 10 meses vista sí es señal).
+- ⚠️ Efecto medido en prod: solo el **3,3%** de las noches cae dentro de ventana (medianas de 2-21 días)
+  → el resto pasa de ~0,93 a 1,00. Es un **+7,6% de media** en el ancla, acotado por el techo de mercado.
+- Pendientes ya declarados: buckets feb→jul-2027, 23-oct/27-nov sin catalogar, `seasonal_floor_k` 0 vs 1.
+
 ## 🧱 (08/08/2026) Bandeja «cargos duplicados» de /banca responsive en móvil — PR #1319
 - Captura de Alberto: en móvil las filas desbordaban (chips `flexShrink:0` + importe fuera de pantalla).
 - Fix CSS-only en `BancaClient.tsx::DuplicadosBandeja`: media query ≤768px, concepto a ancho completo,

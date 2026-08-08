@@ -7,6 +7,7 @@ import { combinarEventosDeFecha, type EventoBruto } from "@/lib/sivra/eventos-es
 import { factorLastMinute } from "@/lib/sivra/pricing-lastminute"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { aplicarPrior, indicesPrior, type IndicePrior, type MesHistorico } from "@/lib/sivra/prior-estacional"
+import { factorDemandaDeLaFecha, type FactorDemandaFecha } from "@/lib/sivra/pricing-demanda"
 import { getSmoobuKey } from "@/lib/smoobu"
 import { tgSend } from "@central/core-telegram"
 import { eur } from "@/lib/dinero"
@@ -97,6 +98,7 @@ export async function POST(req: NextRequest) {
     property_id: string; recommended_guest: number; med_guest_global: number; floor_guest: number; ceil_guest: number
     channel_markup: number; max_change_pct: number; min_price: number | null; max_price: number | null
     sample_n: number; market_age_days: number; events_enabled: boolean; gap_discount_pct: number
+    quality_factor: number; occupancy_global: number; demand_baseline: number; demand_k: number
     flight_demand_k: number; seasonal_floor_k: number; lastminute_k: number
   }[]>(Prisma.sql`
     WITH latest AS (
@@ -137,6 +139,15 @@ export async function POST(req: NextRequest) {
       s.max_change_pct::float8 AS max_change_pct,
       s.min_price, s.max_price,
       mkt.sample_n, mkt.market_age_days,
+      -- Piezas SUELTAS de la demanda y la calidad (08/08/2026). recommended_guest sigue igual —es el
+      -- ancla global y lo consumen pricing_resultados y el informe—, pero el factor de demanda se
+      -- RECALCULA por fecha en TS con la ocupación del MES (ver lib/sivra/pricing-demanda.ts), así que
+      -- hay que poder separarlo de la calidad en vez de heredar el producto de los dos.
+      -- (Sin comillas invertidas: esto vive dentro de un template literal de JS.)
+      GREATEST(LEAST(1 + (s.own_score - mkt.mkt_score) * s.quality_k, 1.10), 0.90)::float8 AS quality_factor,
+      COALESCE(occ.occupancy, 0.5)::float8 AS occupancy_global,
+      s.demand_baseline::float8 AS demand_baseline,
+      s.demand_k::float8 AS demand_k,
       COALESCE(s.events_enabled, true) AS events_enabled,
       COALESCE(s.gap_discount_pct, 0)::float8 AS gap_discount_pct,
       COALESCE(s.flight_demand_k, 0)::float8 AS flight_demand_k,
@@ -268,6 +279,25 @@ export async function POST(req: NextRequest) {
    *  se queda quieta, que es lo correcto — una urgencia inventada cuesta margen real. */
   const antelacionDe = (propertyId: string, fechaIso: string) =>
     antelacion.get(`${propertyId}|${Number(fechaIso.slice(5, 7))}`) ?? null
+
+  // ─── Ocupación POR MES (08/08/2026) ─────────────────────────────────────────────────────
+  // La `occ` de la consulta de arriba promedia los 365 días en UNA cifra por piso y se la aplica a
+  // todas las fechas: con los 4 pisos al 1-8% anual —cifra real, contrastada contra las reservas de
+  // Smoobu— septiembre al 30% recibía el mismo suelo de demanda que marzo de 2027 al 0%. Aquí se saca
+  // la ocupación de cada mes para que la palanca pueda mirar el mes que se está llenando.
+  // Ojo: esto NO se usa a pelo — un mes lejano está al 0% porque aún no se vende, y castigarlo sería
+  // convertir un «todavía no se sabe» en «no lo quiere nadie». Quien decide es `factorDemandaDeLaFecha`,
+  // que cruza esta ocupación con la antelación REAL de venta de más abajo.
+  const ocupacionMesRows = await prisma.$queryRaw<{ property_id: string; ym: string; occ: number }[]>(Prisma.sql`
+    SELECT property_id, to_char(rate_date, 'YYYY-MM') AS ym, (1 - AVG(available))::float8 AS occ
+    FROM rate_snapshots
+    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM rate_snapshots)
+      AND rate_date >= CURRENT_DATE AND available IS NOT NULL
+    GROUP BY property_id, to_char(rate_date, 'YYYY-MM')
+  `).catch(() => [])
+  const ocupacionMes = new Map<string, number>(
+    ocupacionMesRows.map(o => [`${o.property_id}|${o.ym}`, Number(o.occ)]),
+  )
 
   const MIN_BUCKET = 3
   const MIN_FECHAS_MES = 3
@@ -467,13 +497,17 @@ export async function POST(req: NextRequest) {
     }
 
     const markup = Number(r.channel_markup) > 1 ? Number(r.channel_markup) : 1.16
-    const dqFactor = r.med_guest_global > 0 ? r.recommended_guest / r.med_guest_global : 1
     const baseTargetGlobal = Math.round(r.recommended_guest / markup)
     const floorBaseGlobal = Math.round(r.floor_guest / markup)
     const ceilBaseGlobal = Math.round(r.ceil_guest / markup)
     const mesProp = mes.get(r.property_id)
     const fechaProp = fecha.get(r.property_id)
 
+    // De dónde salió el factor de demanda en cada fecha tarificada. Va al informe para poder
+    // distinguir «bajó porque el mes está flojo» de «no se tocó porque aún no se vende».
+    const demFuentes: Record<FactorDemandaFecha["fuente"], number> = {
+      mes: 0, "mes-anticipado": 0, global: 0, "neutro-fuera-de-ventana": 0,
+    }
     const ops: { dates: string[]; daily_price: number; min_length_of_stay?: number }[] = []
     const audit: { rate_date: string; old_price: number | null; new_price: number }[] = []
     const cur = new Date(today)
@@ -487,10 +521,27 @@ export async function POST(req: NextRequest) {
       const old = info.price != null ? Math.round(info.price) : null
       const ym = date.slice(0, 7)
       const mb = mesProp?.get(ym)
+      // Demanda de ESTA fecha: la ocupación de su mes, pero solo si ya entró en la ventana en la que
+      // este piso se vende de verdad (ver `pricing-demanda.ts`). Fuera de esa ventana el factor es
+      // neutro, no el suelo: un mes sin abrir no es un mes flojo.
+      const dem = factorDemandaDeLaFecha({
+        diasVista: daysOut,
+        ocupacionMes: ocupacionMes.get(`${r.property_id}|${ym}`) ?? null,
+        ocupacionGlobal: Number(r.occupancy_global),
+        antelacion: antelacionDe(r.property_id, date),
+        baseline: Number(r.demand_baseline),
+        k: Number(r.demand_k),
+      })
+      demFuentes[dem.fuente]++
+      const dqFactor = dem.factor * Number(r.quality_factor)
+      // El ANCLA GLOBAL también tiene que llevar la demanda de esta fecha, no la del año: si no, los
+      // meses sin bucket mensual (hoy feb→jul-2027) se quedarían con el suelo anual justo cuando aún no
+      // se venden — que es el caso que este cambio viene a arreglar. Misma fórmula, otra mediana.
+      const baseGlobalD = Math.round((r.med_guest_global * dqFactor) / markup)
       // El bucket del mes solo vale si hay comps SUFICIENTES y de VARIAS fechas: 10 anuncios del mismo
       // dia describen ese dia, no el mes (lección de junio 2027, ver la nota de la consulta).
       const useMonth = !!mb && mb.n >= MIN_BUCKET && mb.fechas >= MIN_FECHAS_MES
-      const baseD = useMonth ? Math.round((mb!.med * dqFactor) / markup) : baseTargetGlobal
+      const baseD = useMonth ? Math.round((mb!.med * dqFactor) / markup) : baseGlobalD
       const floorD = useMonth ? Math.round(mb!.flo / markup) : floorBaseGlobal
       const ceilD = useMonth ? Math.round(mb!.cei / markup) : ceilBaseGlobal
       const normalBase = baseD // "precio normal" del día (mes/global), referencia del outlier (idea #2)
@@ -523,7 +574,7 @@ export async function POST(req: NextRequest) {
           // En ambos casos compite por MAX con el target del mes (que tampoco se multiplica).
           const fb = fechaProp?.get(date)
           const useFecha = !!fb && fb.n >= MIN_FECHA_BUCKET
-          const globalEvent = Math.round(clamp(baseTargetGlobal, floorBaseGlobal, ceilBaseGlobal) * ev)
+          const globalEvent = Math.round(clamp(baseGlobalD, floorBaseGlobal, ceilBaseGlobal) * ev)
           const bestEvent = useFecha
             ? Math.max(globalEvent, Math.round((fb!.med * dqFactor) / markup))
             : globalEvent
@@ -551,7 +602,7 @@ export async function POST(req: NextRequest) {
       // nadie. Y nunca perfora el suelo del piso. Reglas y tests en `lib/sivra/prior-estacional.ts`.
       const pIdx = priorIdx.get(r.property_id)?.[Number(ym.slice(5, 7)) - 1] ?? { alza: 1, baja: 1 }
       target = aplicarPrior({
-        target, indice: pIdx, anclaGlobal: baseTargetGlobal, floor: floorD, hayBucketMes: useMonth,
+        target, indice: pIdx, anclaGlobal: baseGlobalD, floor: floorD, hayBucketMes: useMonth,
       })
       // Velocidad de conversión: +10% con ≥2 reservas del mes en 7 días (+20% desde 4), sin
       // pasar del techo de mercado del mes. Se recalcula desde el mercado en cada pasada (no
@@ -725,6 +776,18 @@ export async function POST(req: NextRequest) {
           .map(a => [a.mes, { mediana: Number(a.mediana), muestra: Number(a.muestra) }]),
       ),
       lastminute_k: Number(r.lastminute_k),
+      // Palanca de demanda: la ocupación global (la de siempre), la de cada mes con snapshot, y en
+      // cuántas fechas mandó cada una. `neutro-fuera-de-ventana` = fechas que aún no se venden, donde
+      // el 0% de ocupación NO es señal y el factor se queda en 1.
+      demanda: {
+        ocupacion_global: Number(r.occupancy_global),
+        fuentes: demFuentes,
+        ocupacion_por_mes: Object.fromEntries(
+          ocupacionMesRows
+            .filter(o => o.property_id === r.property_id)
+            .map(o => [o.ym, Number(Number(o.occ).toFixed(3))]),
+        ),
+      },
       dates_con_cambio: ops.length, written, sample: audit.slice(0, 3),
     })
   }
