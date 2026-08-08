@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔍 Rutinas de auditoría ampliadas (08/08/2026).** Revisión pedida por Alberto de la diaria/semanal:
+  el heartbeat (paso 2-bis) pasa a leer `agente_latidos` como fuente preferida y saca de la SQL las 3
+  huellas de actividad (`incomes`, `market_rates normal`, `cleaning_sessions`) que daban falso ⛔ cada
+  pasada desde el 02/07; añade huella de `mercado-booking` + reconciliación de cobertura contra
+  `CRON_JOBS`/`AGENTES_VIGILADOS`. Nuevo paso 2-ter: backlog de PRs `claude/*` (atascados/conflicto/
+  olvidados) + vigilar que `rutinas-automerge.yml` corre (lección PRs #1252-#1286). `auditoria-central`
+  gana el check de `ignoreCommand` en los 8 `vercel.json` (incidente ~600$). Corregido "4 apps"→8.
+  PR draft de la rama `claude/revision-rutinas-diarias-semanales-sviqer` — cambia comportamiento, carril 2.
+
 - **🕰️ Retrovisor de 24 meses → 15 AÑOS (08/08/2026).** Decisión de Alberto tras ver que H8 invertía el
   signo entre mitades y con 22 snapshots no había forma de saber cuál era el mundo. `MESES_RETROVISOR`
   = 180 en `backtest-puro.ts`: de ~22 snapshots por símbolo a **178**, cubriendo 2011-2026 (euro, 2015-16,
