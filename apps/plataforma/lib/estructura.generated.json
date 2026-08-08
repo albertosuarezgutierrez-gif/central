@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-08T07:45:42Z",
+  "generadoEn": "2026-08-08T08:12:57Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3978,6 +3978,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🤝 El auto-merge ya resuelve el conflicto que se repite todos los días (08/08/2026).",
+      "fecha": "08/08/2026"
+    },
+    {
       "titulo": "📎 Pasada diaria facturas-correo (08/08/2026).",
       "fecha": "08/08/2026"
     },
@@ -4031,10 +4035,6 @@
     },
     {
       "titulo": "🌱 Cantera capa C automática + alertas/altas de trading (05/08/2026, 2ª sesión).",
-      "fecha": "05/08/2026"
-    },
-    {
-      "titulo": "📈 STX (Seagate) alta en `trading_watchlist` capa C (05/08/2026, sin commit — cambio solo en BD).",
       "fecha": "05/08/2026"
     }
   ],
