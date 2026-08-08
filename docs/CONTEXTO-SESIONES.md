@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⏱️ «Sin respuesta.» sobre un extracto que SÍ había entrado (08/08/2026).** Primera subida real tras el
+  arreglo del parser: los 109 movimientos de julio entraron (742,92€, 109/109 hashes, Drive archivado) y la
+  función murió a los 60 s justo ANTES de contestar → en pantalla «Sin respuesta.» y un 👎. `maxDuration`
+  del chat 60→300 y, sobre todo, **presupuesto de tiempo** (`lib/contable/presupuesto-extracto.ts`, puro +
+  tests): los pasos opcionales (Telegram, vigilantes, Drive, Gmail) se sueltan de abajo arriba antes de
+  quedarse sin aire y **se dice cuál faltó**; la respuesta nunca se sacrifica. El cliente ya no llama
+  «Sin respuesta.» a un 504: dice que puede haber entrado y manda a mirarlo a /banca. Es el mismo landmine
+  de `facturas-scan` (31/07) en otra ruta: subir el techo solo mueve la pared. PR draft.
+
 - **🤝 El auto-merge ya resuelve el conflicto que se repite todos los días (08/08/2026).** El
   workflow de #1289 funcionó (probado: #1292 mergeado solo), pero se rendía ante los conflictos con
   UN comentario y luego callaba: #1290 acabó **24 h abierto**, resuelto a mano, y `main` lo rompió

@@ -7,7 +7,12 @@ import { resumenDocumento, accionConciliar, matchDeCruce } from '@/lib/contable/
 import { guardarAcciones } from '@/lib/contable/acciones'
 import { logTurno } from '@/lib/contable/memoria'
 
-export const maxDuration = 60
+// 300 s, no 60: con 60 la subida de un extracto de tarjeta hacía TODO el trabajo (importar 109
+// movimientos, categorizar, avisar por Telegram, archivar en Drive) y la función moría justo antes
+// de contestar → Alberto veía «Sin respuesta.» sobre un extracto que sí había entrado (08/08/2026).
+// Subir el techo solo mueve la pared: el que garantiza que la pasada VUELVE es el presupuesto de
+// tiempo de `procesarExtractoTarjeta`, que se salta los pasos opcionales antes de quedarse sin aire.
+export const maxDuration = 300
 export const dynamic = 'force-dynamic'
 
 // Tope defensivo del adjunto: ~8 MB de binario (base64 ≈ 4/3). Un ticket/factura entra de sobra.

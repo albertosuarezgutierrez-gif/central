@@ -78,10 +78,18 @@ export default function ContablePage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ adjunto: { base64, mimeType: file.type || 'application/octet-stream', fileName: file.name } }),
       })
-      const data = await r.json().catch(() => ({}))
-      pintarRespuesta(data)
+      const data = await r.json().catch(() => null)
+      // Sin cuerpo legible (504 del servidor, conexión cortada) NO es «el agente no ha dicho nada»:
+      // el documento puede haber entrado igual. El 08/08/2026 pasó exactamente eso — un extracto con
+      // 109 movimientos importado y archivado, y en pantalla «Sin respuesta.» Reimportar no duplica,
+      // así que lo honesto es decir dónde comprobarlo antes de volver a subirlo.
+      if (!data) {
+        setMsgs(m => [...m, { rol: 'agente', texto: 'Se me ha cortado la conexión antes de poder contestarte. Puede que el documento SÍ haya entrado: compruébalo en /banca antes de volver a subirlo (reimportarlo no duplica nada).' }])
+      } else {
+        pintarRespuesta(data)
+      }
     } catch {
-      setMsgs(m => [...m, { rol: 'agente', texto: 'No se pudo subir el documento.' }])
+      setMsgs(m => [...m, { rol: 'agente', texto: 'No se pudo subir el documento. Si era un extracto, míralo en /banca por si entró.' }])
     } finally {
       setLoading(false)
     }
