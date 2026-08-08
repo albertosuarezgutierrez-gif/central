@@ -149,12 +149,16 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Qué hace** | Lee `docs/ROADMAP-rrhh.md`, filtra ítems 🔴 obligatorios no completados y genera un informe de plazos legales (RD 8/2019 fichaje, RGPD art.28, canal denuncias, etc.). Mantiene visibilidad sobre obligaciones con riesgo de multa. |
 | **Verificar** | El chat muestra el informe de compliance con la lista de ítems 🔴 pendientes. |
 
-### 8-bis. Mercado real por fecha (SIVRA / Booking) — *PENDIENTE DE TRIGGER (alta manual de Alberto)*
-> ⚠️ El código está en producción y probado, pero **la rutina no existe todavía**: hay que crearla en
-> `claude.ai/code → Rutinas`. No se pudo crear por API — el parámetro de **conectores no está
-> disponible para esta organización**, y una rutina sin el conector de Booking no puede medir nada
-> (y sin `ALERTA_TOKEN` en su env, tampoco escribir). Mientras no exista, su latido dirá «sin ninguna
-> señal registrada», que es lo correcto: no está corriendo.
+### 8-bis. Mercado real por fecha (SIVRA / Booking) — *ACTIVA desde el 08/08/2026*
+> Creada a mano por Alberto («SIVRA mercado booking (diario)») tras dos meses de latido en «sin
+> ninguna señal registrada» — que era el diagnóstico correcto: no existía. **No se pudo crear por
+> API**: el parámetro de conectores no está disponible para esta organización, y sin el conector de
+> Booking la rutina no puede medir nada. Primera pasada real ese mismo día, disparada a mano:
+> **120 comps en 12 ventanas, todas con respuesta del conector, 0 fallos**, latido `ok=true`.
+>
+> 🚨 **Al crearla, el formulario traía 16 conectores heredados** (Interactive Brokers, Gmail, Resend,
+> Vercel…) para una rutina que solo escribe comparables. Se dejó **solo Booking.com** — ver el paso 4
+> de "Cómo se crea un trigger".
 
 | | |
 |---|---|
@@ -164,6 +168,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Qué hace** | Pide a `GET /api/sivra/mercado/plan?max=12` las ventanas (fecha × aforo) con el corpus fiable más viejo, las mide con el conector de Booking (`number_of_adults` = aforo real del piso), y escribe los comparables en `market_rates` por `POST /api/sivra/mercado/ingest` con **`fuente:"booking_mcp"`**. Cierra con `POST /api/internal/latido` (`sivra_mercado_booking`). |
 | **Por qué existe** | Es la **única** fuente que distingue temporada. El barrido por búsqueda web da precios de anuncio SIN fecha: medido el 06/08/2026 para el Dúplex el 4-sep, Serper decía p50 **171€** y el mercado real era **129€** (−33%), con los mismos comps repitiendo precio en agosto, noviembre y marzo. Ver `docs/superpowers/specs/2026-08-06-mercado-booking-design.md`. |
 | **Verificar** | `SELECT checkin_date, guests, count(*) FROM market_rates WHERE fuente='booking_mcp' AND search_date >= CURRENT_DATE - 1 GROUP BY 1,2` + fila `sivra_mercado_booking` en `agente_latidos` con `ok=true`. |
+| **Qué se vio en la 1ª pasada (08/08/2026)** | La temporada que Serper NUNCA pudo ver, medida sobre una fecha por mes: **House (12p)** 474€ sep · **856€ oct** · 604€ nov · 424€ dic · 368€ ene; **Luxury (5p)** 196/282/206/174; **Busto (2p)** 110/174/156/106/104. Octubre es el pico en los cuatro aforos. Para comparar: el corpus Serper le ponía a House **260€** — con precios de apartamento de 4 plazas. ⚠️ **El motor todavía NO usa esto para la línea de temporada**: el bucket mensual exige ≥3 fechas distintas del mes y de momento hay una por mes, así que estos comps solo alimentan el bucket por fecha exacta hasta la 3ª-4ª pasada. Cobertura tras la 1ª: 17 de 120 ventanas (12 de la rutina + 5 medidas a mano esa mañana). |
 | **Pendiente (fase 2)** | Cuando haya ≥3 fechas por mes con `fuente='booking_mcp'`: retirar `mercado/sweep` de `CRON_JOBS`, neutralizar las filas `serper` de fechas lejanas y quitar su latido. **No antes**: el bucket mensual del motor exige 3 fechas y hoy las aporta Serper. |
 
 ### 9. Vigía GitHub/OSS — *pendiente de trigger*
