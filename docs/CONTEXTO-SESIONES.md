@@ -94,6 +94,15 @@ del environment. Esta pasada midió 10 ventanas (100 comps `booking_mcp`) y las 
   gana el check de `ignoreCommand` en los 8 `vercel.json` (incidente ~600$). Corregido "4 apps"→8.
   PR draft de la rama `claude/revision-rutinas-diarias-semanales-sviqer` — cambia comportamiento, carril 2.
 
+- **💶 Precio dinámico SIVRA operativo en los 4 pisos (08/08/2026).** Medidas a mano 19 ventanas de
+  Booking (190 comps, `fuente=booking_mcp`): ago-2026→ene-2027 ya tiene **≥3 fechas sin evento por mes
+  y por piso**, que es lo que exige `MIN_FECHAS_MES` del bucket mensual — antes solo 9 de 24 buckets
+  eran elegibles y el resto se tarificaba con el ancla global. Con el corpus arreglado se activó
+  `apply_enabled` en Dúplex y House (ya lo tenían Busto y Luxury): los 4 pisos tarifican solos.
+  **Pendiente:** feb→jul-2027 siguen sin bucket (caen al ancla global + prior estacional, que es el
+  fallback de diseño, no una avería); la rutina diaria de Booking los va rellenando. **A vigilar:**
+  23-oct y 27-nov salieron muy por encima de su mes sin estar en el calendario de eventos.
+
 - **🕰️ Retrovisor de 24 meses → 15 AÑOS (08/08/2026).** Decisión de Alberto tras ver que H8 invertía el
   signo entre mitades y con 22 snapshots no había forma de saber cuál era el mundo. `MESES_RETROVISOR`
   = 180 en `backtest-puro.ts`: de ~22 snapshots por símbolo a **178**, cubriendo 2011-2026 (euro, 2015-16,
