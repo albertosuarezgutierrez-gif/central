@@ -44,7 +44,8 @@ const ITP_POR_CCAA: Record<string, Omit<ItpAutonomico, 'ccaa'> & { ccaa: string 
   navarra: { ccaa: 'Navarra', tipo: 0.06, progresivo: false },
   pais_vasco: { ccaa: 'País Vasco', tipo: 0.07, progresivo: false },
   la_rioja: { ccaa: 'La Rioja', tipo: 0.07, progresivo: false },
-  valenciana: { ccaa: 'C. Valenciana', tipo: 0.1, progresivo: true },
+  // Ley 5/2025 (en vigor 01/06/2026): general 10% → 9%, con 11% sobre 1M€.
+  valenciana: { ccaa: 'C. Valenciana', tipo: 0.09, progresivo: true },
   ceuta_melilla: { ccaa: 'Ceuta y Melilla', tipo: 0.06, progresivo: false },
 }
 
