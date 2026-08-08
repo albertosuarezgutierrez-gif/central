@@ -4,7 +4,10 @@ import { Prisma } from "@prisma/client"
 import { isRoutineAuthorized } from "@/lib/cron-auth"
 import { EVENTS } from "@/lib/pricing-calendar"
 import { ventanasDelBarrido, type EventoFecha } from "@/lib/sivra/mercado-ventanas"
-import { ventanasQuePedir, FUENTES_FIABLES, type CoberturaVentana } from "@/lib/sivra/mercado-cobertura"
+import {
+  planDeVentanas, FUENTES_FIABLES,
+  type CoberturaVentana, type FiltroVentanas,
+} from "@/lib/sivra/mercado-cobertura"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -28,9 +31,43 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "no autorizado" }, { status: 401 })
   }
 
-  const max = Math.min(30, Math.max(1, Number(new URL(req.url).searchParams.get("max") ?? 12)))
+  const qs = new URL(req.url).searchParams
+  const max = Math.min(30, Math.max(1, Number(qs.get("max") ?? 12)))
   const hoy = new Date().toISOString().slice(0, 10)
   const avisos: string[] = []
+
+  // Recorte OPCIONAL del plan para una pasada concreta (`?rondas=2,3&desde=…&hasta=…`). Se aplica
+  // ANTES del tope: filtrar después solo alcanzaría lo que el tope no se hubiera comido ya (ver la
+  // nota de `FiltroVentanas`). Un filtro MAL ESCRITO se rechaza en vez de ignorarse: un `rondas=dos`
+  // que silenciosamente mide el plan entero es peor que un error, porque la pasada parece la pedida.
+  const filtro: FiltroVentanas = {}
+  const rondasRaw = qs.get("rondas")
+  if (rondasRaw !== null) {
+    const partes = rondasRaw.split(",").map(s => s.trim()).filter(Boolean)
+    const rondas = partes.map(Number)
+    if (!partes.length || rondas.some(n => !Number.isInteger(n) || n < 0)) {
+      return NextResponse.json(
+        { error: `rondas inválidas: "${rondasRaw}". Formato: enteros ≥0 separados por coma (p. ej. 2,3)` },
+        { status: 400 },
+      )
+    }
+    filtro.rondas = [...new Set(rondas)]
+  }
+  const ISO = /^\d{4}-\d{2}-\d{2}$/
+  for (const clave of ["desde", "hasta"] as const) {
+    const v = qs.get(clave)
+    if (v === null) continue
+    if (!ISO.test(v)) {
+      return NextResponse.json({ error: `${clave} inválida: "${v}". Formato: YYYY-MM-DD` }, { status: 400 })
+    }
+    filtro[clave] = v
+  }
+  if (filtro.desde && filtro.hasta && filtro.desde > filtro.hasta) {
+    return NextResponse.json(
+      { error: `rango vacío: desde (${filtro.desde}) es posterior a hasta (${filtro.hasta})` },
+      { status: 400 },
+    )
+  }
 
   // Aforos REALES por piso: el comparable de una casa de 12 plazas no es el de un apartamento de 4
   // (bug del 31/07/2026). Los pisos que comparten aforo comparten consulta.
@@ -98,7 +135,14 @@ export async function GET(req: NextRequest) {
     avisos.push(`cobertura ilegible (${String(e).slice(0, 80)}): el plan sale como si nada estuviera medido`)
   }
 
-  const ventanas = ventanasQuePedir(plan, aforos, cobertura, hoy, max)
+  const { ventanas, candidatas, recortadas } = planDeVentanas(plan, aforos, cobertura, hoy, max, filtro)
+
+  // Un recorte MUDO se lee como «esto era todo lo que había». Se dice, para que el parte de la
+  // rutina pueda distinguir «cubierto» de «cubierto hasta donde cabía en la pasada».
+  if (recortadas > 0) {
+    avisos.push(`el tope (max=${max}) dejó fuera ${recortadas} ventanas que casaban el filtro: la pasada NO agota lo pedido`)
+  }
+  const hayFiltro = Boolean(filtro.rondas || filtro.desde || filtro.hasta)
 
   return NextResponse.json({
     ok: true,
@@ -106,6 +150,10 @@ export async function GET(req: NextRequest) {
     // Cuántas ventanas tiene el plan COMPLETO frente a las que se piden ahora: así la rutina puede
     // decir en su parte «voy por 12 de 96» en vez de dar a entender que ha cubierto todo.
     plan_total: plan.length * aforos.size,
+    // Con filtro, `plan_total` ya no es el denominador honesto de la pasada: `candidatas` sí.
+    filtro: hayFiltro ? filtro : null,
+    candidatas,
+    recortadas,
     pedidas: ventanas.length,
     sin_medir_nunca: ventanas.filter(v => v.diasSinMedir === null).length,
     ventanas,

@@ -57,6 +57,39 @@ export type VentanaPedida = {
   comps: number
 }
 
+/**
+ * Recorte del plan para una pasada CONCRETA. Nace de una petición manual (08/08/2026): «mide solo
+ * la 2ª y 3ª fecha de cada mes entre septiembre y enero», que es la profundidad de bucket — lo que
+ * hace ELEGIBLE el bucket mensual del motor (exige ≥3 fechas distintas del mes).
+ *
+ * 🚨 Por qué el filtro va AQUÍ y no en quien consume el plan. El orden de urgencia manda lo virgen
+ * primero y, entre vírgenes, la ronda baja antes que la alta (ver `ventanasQuePedir`), así que las
+ * rondas de profundidad son justo las últimas de la cola: filtrar DESPUÉS del tope deja pasar solo
+ * las que el tope no se comió ya. Medido con el corpus real del 08/08/2026: de las 40 ventanas de
+ * ronda 2-3 entre sep y ene, `?max=30` + filtro en cliente solo alcanzaba 18, y NINGUNA de ronda 3
+ * — sin que nada lo dijera. Filtrando antes del tope se piden las 30 que de verdad se querían.
+ */
+export type FiltroVentanas = {
+  /** solo estas rondas; vacío u omitido = todas. Reparto de rondas en `mercado-ventanas.ts`. */
+  rondas?: number[]
+  /** checkin >= desde (YYYY-MM-DD) */
+  desde?: string
+  /** checkin <= hasta (YYYY-MM-DD) */
+  hasta?: string
+}
+
+export type PlanPedido = {
+  /** las que hay que medir en esta pasada (ya ordenadas por urgencia y recortadas al tope) */
+  ventanas: VentanaPedida[]
+  /** cuántas casaban el filtro ANTES del tope */
+  candidatas: number
+  /**
+   * cuántas dejó fuera el tope. Va en el contrato a propósito: un recorte mudo se lee como
+   * «esto era todo lo que había», que es la misma mentira que un `?? []` sobre un dato sin mirar.
+   */
+  recortadas: number
+}
+
 const DIA_MS = 86_400_000
 
 function diasEntre(desdeIso: string, hastaIso: string): number {
@@ -83,19 +116,28 @@ function clave(checkin: string, aforo: number): string {
  *   3. A igualdad, **la fecha más cercana primero**: es la que ya se está vendiendo.
  *
  * `hoyIso` entra como parámetro (no `new Date()`) para que la función sea pura y testeable.
+ *
+ * `filtro` recorta el plan ANTES de aplicar el tope (ver `FiltroVentanas`); sin él se comporta
+ * exactamente como antes.
  */
-export function ventanasQuePedir(
+export function planDeVentanas(
   plan: Ventana[],
   aforos: Map<number, string[]>,
   cobertura: CoberturaVentana[],
   hoyIso: string,
   max = 12,
-): VentanaPedida[] {
+  filtro: FiltroVentanas = {},
+): PlanPedido {
   const porClave = new Map<string, CoberturaVentana>()
   for (const c of cobertura) porClave.set(clave(c.checkin, c.aforo), c)
 
+  const rondas = filtro.rondas?.length ? new Set(filtro.rondas) : null
+
   const pedidas: VentanaPedida[] = []
   for (const v of plan) {
+    if (rondas && !rondas.has(v.ronda)) continue
+    if (filtro.desde && v.checkin < filtro.desde) continue
+    if (filtro.hasta && v.checkin > filtro.hasta) continue
     for (const [aforo, pisos] of aforos) {
       if (!pisos.length) continue
       const c = porClave.get(clave(v.checkin, aforo))
@@ -128,7 +170,24 @@ export function ventanasQuePedir(
     return a.checkin.localeCompare(b.checkin)
   })
 
-  return pedidas.slice(0, Math.max(1, max))
+  const tope = Math.max(1, max)
+  return {
+    ventanas: pedidas.slice(0, tope),
+    candidatas: pedidas.length,
+    recortadas: Math.max(0, pedidas.length - tope),
+  }
+}
+
+/** Envoltura histórica: solo la lista. Nuevos usos, mejor `planDeVentanas` (declara el recorte). */
+export function ventanasQuePedir(
+  plan: Ventana[],
+  aforos: Map<number, string[]>,
+  cobertura: CoberturaVentana[],
+  hoyIso: string,
+  max = 12,
+  filtro: FiltroVentanas = {},
+): VentanaPedida[] {
+  return planDeVentanas(plan, aforos, cobertura, hoyIso, max, filtro).ventanas
 }
 
 /**

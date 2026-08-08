@@ -24,6 +24,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🏨 Filtro de ronda/fecha en el plan de mercado + 2ª pasada Booking (08/08/2026)
+`/api/sivra/mercado/plan` acepta **`?rondas=2,3&desde=&hasta=`**, aplicado ANTES del tope (filtrar
+en cliente no llega: el orden de urgencia pone las rondas de profundidad al final — con `?max=30` se
+alcanzaban 18 de 40 y ninguna de ronda 3). Respuesta nueva: `filtro`/`candidatas`/`recortadas` +
+aviso cuando el tope recorta. Filtro mal escrito → 400, nunca «mido todo». 6 tests nuevos; tsc 0,
+`next build` OK (fallan `fmp`/`edgar`, preexistentes, son de red).
+**🚨 Bloqueo de infra:** el proxy de egress da **403 al CONNECT contra `plataforma-ten-flame.vercel.app`**
+→ ninguna sesión puede usar el raíl HTTP (plan/ingest/latido) hasta que se abra la allowlist de red
+del environment. Esta pasada midió 10 ventanas (100 comps `booking_mcp`) y las escribió por SQL.
+**Tope real de una pasada ≈10-12 ventanas, no 30:** las respuestas del conector no caben en contexto.
 - **🚨 Un precio falso envenenó el track record de trading (08/08/2026).** Al comprobar si el agente había
   dado alguna compra (no: 0 propuestas reales, 1 posición paper MSFT) salió que el 03/08 la pasada mandó
   **CVX=590,17$** con cierre real **193,18$** (verificado en IBKR). `/puntuar` cogía `precios[simbolo]` sin

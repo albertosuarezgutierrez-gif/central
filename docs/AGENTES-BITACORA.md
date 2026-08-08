@@ -15,6 +15,25 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-08 · mercado-booking (2ª pasada MANUAL, desviación pedida por Alberto: solo rondas 2-3,
+  sep→ene)** · hizo: 10 ventanas medidas y **100 comps** escritos con `fuente='booking_mcp'` —
+  8-sep (2p **p50 105€** · 4p 110€ · 5p 134€ · 12p 386€), 14-nov (2p 128€ · 4p 160€ · 5p 189€ ·
+  12p **486€**), 10-nov (4p 113€ · 5p 131€). El contraste finde/entre semana sale limpio: 4p pasa de
+  160€ el sábado 14-nov a 113€ el martes 10-nov (−29%), que es justo lo que las rondas 2-3 vienen a
+  medir. dudas: latido `sivra_mercado_booking` NO escrito — **corregido al mergear `main`**: el motivo
+  que se dio (que la Rutina no se dispara) era FALSO, la Rutina corrió hoy 3 veces y dejó su `ok:true`;
+  el motivo bueno es el contrario — la huella de hoy ya es de la Rutina y una pasada manual no debe
+  pisarla. fallos: (1) el
+  raíl HTTP está **inalcanzable desde el contenedor** — el proxy de egress da 403 al CONNECT contra
+  `plataforma-ten-flame.vercel.app`, así que no hubo `/plan` ni `/ingest` ni `/latido`: el plan se
+  reprodujo con los helpers puros contra datos reales de la BD y los comps se escribieron por SQL
+  replicando el upsert de `/ingest`; (2) solo 10 de las 30 ventanas pedidas — 30 respuestas del
+  conector no caben en el contexto de una sesión (**el tope real está en ~10-12, no en 30**); las 20
+  restantes NO se midieron, que no es «no hay mercado»; (3) **era la Rutina diaria escribiendo a la vez**
+  en `market_rates` (ventanas de las 13:04-13:17 UTC; identificada al mergear `main`: commits `fba3fbb`,
+  `c45f564`, `f9a3fe6` — 3 disparos el mismo día) — sep y nov quedan
+  ELEGIBLES para el bucket mensual en los 4 aforos, pero el mérito es compartido, no de esta pasada
+  sola. dic-26 y ene-27 siguen cortos (2 y 1 fechas). PRs/commits: PR de `claude/mercado-booking-ronda-filter-ssg8cj`.
 - **2026-08-08 · mercado-booking (2º disparo programado del mismo día)** · hizo: pidió el plan y
   recibió **las mismas 12 ventanas "nunca medidas"** que ya reportó como medidas el disparo de las
   12:28 UTC de hoy (mismo `checkin/checkout/aforo`, `ronda:1`, `comps:0`) — es decir, cuando este
