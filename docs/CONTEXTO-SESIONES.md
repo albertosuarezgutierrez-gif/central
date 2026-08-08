@@ -37,6 +37,17 @@
   disparar la CI (los pushes con `GITHUB_TOKEN` no lanzan workflows) y lo dejaría atascado en «sin
   checks» para siempre.
 
+- **📬 Cursor incremental en las alertas de portales — el cron ya no relee 300 correos al día (08/08/2026).**
+  Pregunta de Alberto («¿estás revisando varias veces los mismos mails?»): sí, `subastas-mercado` pedía 30
+  días × 150 correos POR PORTAL en cada pasada diaria, y esa relectura se comía el presupuesto entero
+  (latido del 07/08: «cortado tras 0 ficha(s); 8 pendiente(s)»). Nuevo cursor por UID en
+  `subastas_correo_cursor` (tabla propia, NO `correo_cursor` — su `max(updated_at)` es el latido del
+  triaje y una fila diaria lo haría parecer fresco): lógica pura en `lib/subastas/correo-incremental.ts`
+  (11 tests: landmine `N:*` de IMAP, `uidvalidity` cambiado → bootstrap, lote ascendente para truncar sin
+  huecos), `leerAlertasDesde` en `gmail-boe.ts` (`leerAlertas` intacta para el BOE) y confirmación del
+  cursor SOLO tras ingerir (at-least-once). El modo de lectura va en el parte del latido. Migración
+  aplicada. PENDIENTE: verificar en la pasada del 09/08 que ficha(s)/zona(s) dejan de salir a 0.
+
 ### 🐕 El watchdog de trading avisó de una pasada que SÍ corrió (07/08/2026)
 «NAV 21 h sin refrescar» era FALSO: el NAV llevaba 10 h (20:16 UTC) y `/puntuar` 9,9 h — la pasada
 del 06/08 corrió entera. Dos fallos: (1) el tramo 2 medía `max(trading_tesis.created_at)`, tabla
@@ -45,7 +56,6 @@ pasada del mismo día (repaso manual a las 09:34) no insertó nada y el reloj se
 primera; (2) el motivo de los TRES tramos llevaba «el NAV de IBKR» cableado → el aviso mandaba a
 mirar IBKR y la rutina. Fix: latido explícito `trading_analizar` (como `/puntuar`) + `GREATEST` con
 las tesis de respaldo, y `etiqueta` por tramo en `evaluarWatchdog`. PR #1291.
-
 - **📎 Pasada diaria facturas-correo (08/08/2026).** Vía B sana (`dias_caido=1`), sin backlog en
   `PDF-pendiente`/`Revisar`. Día tranquilo: 0 candidatos nuevos en Gmail, 0 subidas manuales nuevas,
   0 duplicados nuevos (los 2 "FACTURA JULIO SOCORRO" de la raíz ya estaban avisados). Roborock
