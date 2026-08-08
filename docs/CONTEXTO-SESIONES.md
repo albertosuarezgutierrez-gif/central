@@ -69,6 +69,13 @@ las tesis de respaldo, y `etiqueta` por tramo en `evaluarWatchdog`. PR #1291.
   la política de red** (403 en CONNECT) y el MCP de Drive no traga un PDF de 563 KB → se archivó una
   copia rasterizada 200 dpi 1-bit (11 KB, legible, sin capa de texto).
 
+- **🧪 Prueba en vivo del resolver de conflictos (08/08/2026).** Esta rama sale a propósito de un
+  `main` de AYER, así que choca de verdad con todo lo que entró después — es el caso real que dejó
+  #1290 veinticuatro horas abierto. Si este párrafo acaba en `main` **junto a** las entradas del
+  08/08 que ya estaban arriba (sin que nadie resuelva nada a mano), el resolver de #1297 funciona de
+  punta a punta: detecta la inserción pura por la base vacía de `diff3`, conserva las dos entradas
+  poniendo primero la de `main`, y empuja el merge. El commit de merge lo firma `github-actions[bot]`.
+
 ### 💓 El latido del barrido deja de estar rojo para siempre (07/08/2026)
 Segunda pasada con #1282 vivo: la guardia volvió a saltar (174 comps, 19 fechas, **17 precios
 distintos**) → confirmado ESTRUCTURAL, no era cosa del día. Los snippets de Google no distinguen
