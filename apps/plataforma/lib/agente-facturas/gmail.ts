@@ -10,6 +10,12 @@ export interface Adjunto {
   nombre: string
   mime: string
   buffer: Buffer
+  /**
+   * `true` = imagen incrustada en el HTML del correo (`<img src="cid:…">`), no un
+   * documento que el remitente quisiera adjuntar. Son los logos, banners y iconos
+   * de redes de los correos maquetados.
+   */
+  inline: boolean
 }
 
 export interface CorreoCandidato {
@@ -19,6 +25,12 @@ export interface CorreoCandidato {
   fecha: string // YYYY-MM-DD
   adjuntos: Adjunto[]
   sinAdjunto: boolean // parece factura pero sin adjunto válido
+  /**
+   * Cabecera `Message-ID`. Es la ÚNICA identidad del correo que vale entre buzones:
+   * los UID de IMAP son por buzón, así que para quitar una etiqueta hay que volver a
+   * localizarlo dentro del buzón de esa etiqueta. `null` si el correo no la trae.
+   */
+  messageId: string | null
 }
 
 function nuevoCliente(): ImapFlow {
@@ -70,9 +82,17 @@ export async function listarCandidatosConLimite(
       for await (const msg of client.fetch({ since: opts.desde }, { uid: true, source: true })) {
         if (opts.deadline && Date.now() > opts.deadline) { truncado = true; break }
         const parsed = await simpleParser(msg.source as Buffer)
+        // `related` de mailparser = la parte va referenciada por `cid:` desde el HTML
+        // (logos, banners, iconos). Se conservan —una foto pegada en el cuerpo puede
+        // ser un ticket— pero marcadas, para que no compitan con el PDF de la factura.
         const adjuntos: Adjunto[] = (parsed.attachments || [])
           .filter((a) => ATTACH_OK.test(a.contentType || ''))
-          .map((a) => ({ nombre: a.filename || 'adjunto', mime: a.contentType || 'application/octet-stream', buffer: a.content as Buffer }))
+          .map((a) => ({
+            nombre: a.filename || 'adjunto',
+            mime: a.contentType || 'application/octet-stream',
+            buffer: a.content as Buffer,
+            inline: a.related === true || (a.contentDisposition === 'inline' && !!a.cid),
+          }))
         const asunto = parsed.subject || ''
         const cuerpo = `${asunto} ${parsed.text || ''}`
         const pareceFactura = INVOICE_KEYWORDS.test(cuerpo)
@@ -84,6 +104,7 @@ export async function listarCandidatosConLimite(
           fecha: (parsed.date || new Date()).toISOString().slice(0, 10),
           adjuntos,
           sinAdjunto: adjuntos.length === 0 && pareceFactura,
+          messageId: parsed.messageId || null,
         })
       }
     } finally {
@@ -119,6 +140,55 @@ export async function listarCandidatos(opts: { desde: Date; etiqueta?: string })
  * son por buzón, así que con el buzón equivocado esta llamada no encuentra el
  * mensaje y la cola se queda vacía sin que nada falle.
  */
+/**
+ * Quita una etiqueta a los correos indicados por `Message-ID`, en UNA sola sesión.
+ *
+ * 🚨 Por qué hace falta (05/08/2026): la cola `Facturas/Extraccion-fallida` solo
+ * crecía. Un correo que un día no se pudo leer y al siguiente SÍ se leyó seguía
+ * etiquetado como «extracción fallida» para siempre, así que la cola acababa
+ * afirmando lo contrario de la verdad — la misma clase de mentira que el agente
+ * vino a quitar, pero al revés.
+ *
+ * En Gmail-sobre-IMAP «quitar etiqueta» = borrar el mensaje DEL BUZÓN de la
+ * etiqueta (no va a la Papelera: el mensaje sigue en Todos y en INBOX). Y como los
+ * UID son por buzón, hay que volver a buscarlo ahí por `Message-ID`.
+ *
+ * Best-effort: devuelve cuántos quitó y nunca lanza.
+ */
+export async function quitarEtiqueta(messageIds: string[], etiqueta: string): Promise<number> {
+  const ids = messageIds.filter(Boolean)
+  if (ids.length === 0) return 0
+  let quitados = 0
+  let client: ImapFlow | null = null
+  try {
+    client = nuevoCliente()
+    await client.connect()
+    const boxes = await client.list()
+    const match = boxes.find((b) => b.path === etiqueta || b.name === etiqueta)
+    if (!match) return 0 // la etiqueta no existe: nada que quitar
+    const lock = await client.getMailboxLock(match.path)
+    try {
+      for (const messageId of ids) {
+        try {
+          const encontrados = await client.search({ header: { 'message-id': messageId } }, { uid: true })
+          if (!encontrados || encontrados.length === 0) continue
+          await client.messageDelete(encontrados, { uid: true })
+          quitados++
+        } catch (e) {
+          console.warn(`[facturas] no se pudo quitar "${etiqueta}" de ${messageId}:`, String(e).slice(0, 120))
+        }
+      }
+    } finally {
+      lock.release()
+    }
+  } catch (e) {
+    console.warn('[facturas] limpieza de etiqueta no disponible:', String(e).slice(0, 140))
+  } finally {
+    await client?.logout().catch(() => {})
+  }
+  return quitados
+}
+
 export async function etiquetarCorreo(uid: number, etiqueta: string, buzon = 'INBOX'): Promise<boolean> {
   const client = nuevoCliente()
   await client.connect()

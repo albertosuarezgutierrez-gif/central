@@ -58,6 +58,11 @@ const PROBES: Record<string, Prisma.Sql> = {
   sivra_mercado_sweep: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'sivra_mercado_sweep'`,
+  // Mercado por fecha: lo escribe una RUTINA de Claude (no un cron) por POST /api/internal/latido.
+  // Misma huella y misma lectura que los crons — el vigía no distingue quién late, solo si late.
+  sivra_mercado_booking: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'sivra_mercado_booking'`,
   sivra_pricing_guard: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'sivra_pricing_guard'`,

@@ -37,3 +37,30 @@ test('seEsperaRefresco: mar-sáb sí, dom y lun no', () => {
   assert.equal(seEsperaRefresco(new Date('2026-07-26T06:30:00Z')), false) // domingo
   assert.equal(seEsperaRefresco(new Date('2026-07-27T06:30:00Z')), false) // lunes
 })
+
+test('el aviso de huella VIEJA nombra su tramo, no siempre el NAV', () => {
+  // El 07/08/2026 el aviso salió como «Análisis/tesis: el NAV de IBKR lleva 21.0 h sin refrescarse»
+  // con el NAV fresco de 10 h: el texto del tramo 1 estaba cableado en el motivo de los tres. Mandaba
+  // a mirar IBKR y la rutina cuando el que no se había movido era el análisis.
+  const viejo = new Date('2026-07-19T20:16:00Z')
+  const r = evaluarWatchdog({ ahora, ultimoRefresco: viejo, etiqueta: 'el análisis de la pasada (/analizar)' })
+  assert.equal(r.alerta, true)
+  assert.match(r.motivo, /\/analizar/)
+  assert.doesNotMatch(r.motivo, /NAV/)
+  // Sin `etiqueta` sigue hablando del NAV (tramo 1 intacto).
+  assert.match(evaluarWatchdog({ ahora, ultimoRefresco: viejo }).motivo, /NAV de IBKR/)
+})
+
+test('el «nunca» nombra la huella que falta, no siempre el NAV', () => {
+  // Sin `huella` sigue hablando del NAV (compatibilidad con el tramo 1).
+  assert.match(evaluarWatchdog({ ahora, ultimoRefresco: null }).motivo, /NAV de IBKR/)
+  // Con `huella`, el aviso manda a mirar la tabla CORRECTA: decirle «broker_saldos vacío» a
+  // Alberto cuando lo que falta es el cierre de /puntuar es mandarlo al sitio equivocado.
+  const r = evaluarWatchdog({
+    ahora, ultimoRefresco: null,
+    huella: 'ni una sola pasada buena de /puntuar (agente_latidos.trading_puntuar)',
+  })
+  assert.equal(r.alerta, true)
+  assert.match(r.motivo, /trading_puntuar/)
+  assert.doesNotMatch(r.motivo, /broker_saldos/)
+})

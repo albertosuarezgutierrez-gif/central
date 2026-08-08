@@ -91,6 +91,10 @@ export async function GET(req: NextRequest) {
       'subastas_mercado',
       true,
       `${ingesta.anuncios} anuncio(s), ${chollos.avisados} chollo(s) avisado(s), ${bajadas.bajadas} bajada(s) en ${segundos}s` +
+        // Cómo leyó cada portal: un «primera lectura» repetido día tras día
+        // significa que el cursor no se está guardando, y sin decirlo se vería
+        // igual que una ingesta sana (solo que lenta y sin tiempo para fichas).
+        (ingesta.lecturas.length ? ` · ${ingesta.lecturas.join(' · ')}` : '') +
         (cortes.length ? ` · ${cortes.join(' · ')}` : ''),
     )
 

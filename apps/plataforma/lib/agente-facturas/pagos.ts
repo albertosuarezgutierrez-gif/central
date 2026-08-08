@@ -6,7 +6,8 @@
 import { prisma } from '@/lib/db'
 import { eur } from '@/lib/dinero'
 import { Prisma } from '@prisma/client'
-import { listarCandidatosConLimite, marcarProcesado, etiquetarCorreo, type ListadoCandidatos } from './gmail'
+import { listarCandidatosConLimite, marcarProcesado, etiquetarCorreo, quitarEtiqueta, type ListadoCandidatos } from './gmail'
+import { ordenarAdjuntosFactura } from './elegir-adjuntos'
 import { aiExtractInvoiceDetallado, type FalloExtraccion } from '@/lib/ai-client'
 import { tgSend, tgSendButtons, tgEditMessage } from '@central/core-telegram'
 import { iniciarPago, estadoPago, disponiblePis } from '@/lib/enablebanking'
@@ -22,6 +23,15 @@ const ETIQUETA_GMAIL = 'Facturas/Proveedor'
  * promete un reintento eterno.
  */
 const ETIQUETA_SIN_LEER = 'Facturas/Extraccion-fallida'
+
+/**
+ * Cuántos adjuntos se prueban por correo antes de rendirse.
+ *
+ * No es 1 porque el primero suele ser el logo del HTML, y no es «todos» porque un
+ * correo maquetado trae una docena de iconos y cada intento es una llamada a la IA:
+ * con el orden de `elegir-adjuntos.ts` la factura sale en los primeros puestos.
+ */
+const MAX_ADJUNTOS_POR_CORREO = 3
 
 // ── Escaneo de Gmail → OCR → BD → Telegram ───────────────────────────────────
 
@@ -95,6 +105,8 @@ export async function escanearNuevasFacturas(
   let sinLeer = 0
   let descartados = 0
   let encolados = 0
+  /** Message-IDs de correos que SÍ se han podido leer en esta pasada. */
+  const resueltos: string[] = []
 
   for (let i = 0; i < correos.length; i++) {
     if (deadline && Date.now() > deadline) {
@@ -104,8 +116,10 @@ export async function escanearNuevasFacturas(
     const correo = correos[i]
     if (correo.sinAdjunto) continue
 
-    const adjunto = correo.adjuntos[0]
-    if (!adjunto) continue
+    // 🚨 NO `adjuntos[0]`: en un correo maquetado el primer adjunto es el logo del
+    // HTML, no la factura (ver `elegir-adjuntos.ts`, caso DIGI del 05/08/2026).
+    const candidatos = ordenarAdjuntosFactura(correo.adjuntos).slice(0, MAX_ADJUNTOS_POR_CORREO)
+    if (candidatos.length === 0) continue
 
     // Comprobar si ya está procesado por uid de Gmail (dedupe por uid)
     const yaExiste = await prisma.$queryRaw<{ id: string }[]>(
@@ -115,27 +129,44 @@ export async function escanearNuevasFacturas(
 
     // 🚨 Tres desenlaces DISTINTOS, no dos: con datos / leído y no era factura /
     // no se pudo leer. El tercero es el que antes desaparecía en un `continue` mudo.
+    //
+    // Se prueban VARIOS adjuntos porque el bueno no tiene por qué ser el primero:
+    // se para en cuanto uno da importe. Si ninguno lo da, el desenlace del correo
+    // es «no se pudo leer» en cuanto UN intento fuera técnico — un logo legible no
+    // autoriza a decir que el correo se ha revisado.
     let datos: Record<string, any> = {}
     let fallo: FalloExtraccion | null = null
-    try {
-      if (adjunto.mime === 'application/pdf') {
-        const pdfParse: any = await import('pdf-parse/lib/pdf-parse.js')
-        const parsed = await (pdfParse.default ?? pdfParse)(adjunto.buffer)
-        ;({ datos, fallo } = await aiExtractInvoiceDetallado({ text: parsed.text }))
-      } else if (adjunto.mime.startsWith('image/')) {
-        const b64 = adjunto.buffer.toString('base64')
-        ;({ datos, fallo } = await aiExtractInvoiceDetallado({ imageBase64: b64, mimeType: adjunto.mime }))
-      } else {
-        // Adjunto de un tipo que ni se intenta: leído y descartado, no es un fallo.
-        fallo = 'sin_datos'
+    let huboFalloTecnico = false
+    for (const adjunto of candidatos) {
+      let d: Record<string, any> = {}
+      let f: FalloExtraccion | null = null
+      try {
+        if (adjunto.mime === 'application/pdf') {
+          const pdfParse: any = await import('pdf-parse/lib/pdf-parse.js')
+          const parsed = await (pdfParse.default ?? pdfParse)(adjunto.buffer)
+          ;({ datos: d, fallo: f } = await aiExtractInvoiceDetallado({ text: parsed.text }))
+        } else if (adjunto.mime.startsWith('image/')) {
+          const b64 = adjunto.buffer.toString('base64')
+          ;({ datos: d, fallo: f } = await aiExtractInvoiceDetallado({ imageBase64: b64, mimeType: adjunto.mime }))
+        } else {
+          // Adjunto de un tipo que ni se intenta: leído y descartado, no es un fallo.
+          f = 'sin_datos'
+        }
+      } catch (e) {
+        // El PDF no se dejó abrir (cifrado, escaneado sin texto, corrupto): tampoco
+        // se ha leído. No es «no era una factura».
+        console.warn('[facturas] adjunto ilegible:', adjunto.nombre, String(e).slice(0, 120))
+        d = {}
+        f = 'tecnico'
       }
-    } catch (e) {
-      // El PDF no se dejó abrir (cifrado, escaneado sin texto, corrupto): tampoco
-      // se ha leído. No es «no era una factura».
-      console.warn('[facturas] adjunto ilegible:', String(e).slice(0, 140))
-      datos = {}
-      fallo = 'tecnico'
+      if (f === 'tecnico') huboFalloTecnico = true
+      // Un importe > 0 es la señal de que ESTE adjunto era la factura: se para aquí.
+      if (typeof d.total === 'number' && d.total > 0) { datos = d; fallo = null; break }
+      datos = d
+      fallo = f
+      if (deadline && Date.now() > deadline) break
     }
+    if (fallo !== null && huboFalloTecnico) fallo = 'tecnico'
 
     if (fallo === 'tecnico') {
       sinLeer++
@@ -146,6 +177,11 @@ export async function escanearNuevasFacturas(
       if (await etiquetarCorreo(correo.uid, ETIQUETA_SIN_LEER, listado.buzon).catch(() => false)) encolados++
       continue
     }
+
+    // Desenlace bueno (se leyó, sea factura o no): si el correo estaba en la cola de
+    // «no se pudo leer» de días anteriores, deja de estarlo. Se acumula y se limpia
+    // en UNA sola sesión IMAP al final.
+    if (correo.messageId) resueltos.push(correo.messageId)
 
     const proveedor = (datos.proveedor as string | null) || correo.from.split('<')[0].trim() || 'Proveedor desconocido'
     const importe = typeof datos.total === 'number' ? datos.total : null
@@ -194,6 +230,11 @@ export async function escanearNuevasFacturas(
     // Idea #11: proponer vínculo con reserva cercana
     await proponerVinculoReserva(facturaId, proveedor, fechaFactura).catch(() => {})
   }
+
+  // La cola de «no se pudo leer» se VACÍA de lo ya resuelto: si no, un correo que
+  // falló ayer y hoy se leyó bien seguiría etiquetado como fallido para siempre.
+  // Best-effort y en una sola sesión IMAP; nunca tumba la pasada.
+  if (resueltos.length > 0) await quitarEtiqueta(resueltos, ETIQUETA_SIN_LEER).catch(() => 0)
 
   return { nuevas, ok, error, pendientes, sinLeer, descartados, encolados }
 }

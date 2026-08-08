@@ -22,10 +22,27 @@
   el allowlist de red, usa `ALERTA_TOKEN`). Hubo una duplicada («Agente inversión») que se BORRÓ — no recrear
   una segunda rutina que cargue esta skill (toda la inteligencia ya está aquí; un prompt largo en el trigger
   solo se queda caduco). Si detectas dos, deja una y avisa.
-- **🐕 Watchdog** — cron `/api/cron/trading-watchdog` (`30 6 * * 2-6`, mar-sáb 08:30 CEST) comprueba que el
-  NAV de IBKR en `broker_saldos` se refrescó "anoche" (umbral 18 h) y, si no, avisa por Telegram (rutina
-  borrada/pausada · IBKR caído · `ALERTA_TOKEN` 401 sin redeploy). Lógica pura en `apps/plataforma/lib/trading/
-  watchdog.ts` (`evaluarWatchdog`/`seEsperaRefresco`). Es la red que caza que esta pasada deje de correr.
+- **🐕 Watchdog, 3 tramos (06/08/2026)** — cron `/api/cron/trading-watchdog` (`30 6 * * 2-6`, mar-sáb
+  08:30 CEST) comprueba que la pasada nocturna dejó "anoche" sus TRES huellas: 1) el NAV de IBKR en
+  `broker_saldos` (lectura del bróker), 2) el latido `trading_analizar` (análisis, `/analizar`), y 3) el
+  latido `trading_puntuar` en `agente_latidos` (cierre, `/puntuar` — no escribe tabla de negocio si no hay
+  tesis vencidas ni stops, por eso necesita un latido explícito). Vigilar solo el NAV dejaba un hueco: si
+  IBKR da el saldo pero `/analizar` o `/puntuar` petan a medias, el watchdog callaba con el fallo tapado
+  (caso real 06/08: NAV+64 tesis pero `/puntuar` nunca se llamó → stops y walk-forward congelados en
+  silencio). Si falta cualquiera de las tres, avisa por Telegram (rutina borrada/pausada · IBKR caído ·
+  `ALERTA_TOKEN` 401 sin redeploy). Lógica pura en `apps/plataforma/lib/trading/watchdog.ts`
+  (`evaluarWatchdog`/`seEsperaRefresco`). Es la red que caza que esta pasada deje de correr.
+  - **🚨 LANDMINE — una tabla IDEMPOTENTE no sirve de huella de frescura (07/08/2026, PR #1291).** El
+    tramo 2 medía `max(trading_tesis.created_at)`, pero desde #1271 esa tabla tiene único
+    `(simbolo,fecha,estrategia)` + `skipDuplicates`: la SEGUNDA pasada del mismo día no inserta ni una
+    fila y el reloj se queda clavado en la PRIMERA. El 06/08 `/analizar` corrió a las 09:34 UTC (repaso
+    manual) y otra vez esa noche → la nocturna fue un no-op en datos y a la mañana siguiente saltó
+    «21 h sin refrescarse» con la pasada completa (NAV 10 h, `/puntuar` 9,9 h). Ahora la huella es el
+    latido **`trading_analizar`** que escribe `/analizar` siempre, con las tesis de respaldo (`GREATEST`,
+    que en Postgres ignora los NULL). Regla: si el trabajo puede ser un no-op legítimo, su huella es un
+    latido, nunca la tabla de negocio. Segundo fallo del mismo aviso: el motivo llevaba «el NAV de IBKR»
+    cableado para los tres tramos → decía «Análisis/tesis: el NAV de IBKR lleva 21 h…» y mandaba a mirar
+    IBKR y la rutina. `evaluarWatchdog` recibe ahora `etiqueta` por tramo (con test que lo fija).
 
 ## Forward paper (la prueba limpia que decide el dinero real)
 - **`GET/POST {PLATAFORMA_URL}/api/trading/paper`** (Bearer `ALERTA_TOKEN` o sesión superadmin): mide el

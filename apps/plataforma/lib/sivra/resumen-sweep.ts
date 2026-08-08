@@ -134,16 +134,45 @@ export function corpusClonado(ventanas: VentanaMedida[]): boolean {
 }
 
 /**
- * ¿Se puede afirmar que esta pasada ha medido el mercado? Conservador a propósito: ante la duda,
- * NO (un latido verde de mentira es peor que uno rojo de más).
+ * ¿Sirve este corpus para la LÍNEA DE TEMPORADA (los buckets por mes y por fecha del motor)?
+ *
+ * Es la pregunta que responde la columna `market_rates.corpus_clonado`, y es DISTINTA de si la
+ * pasada salió bien: aquí no se juzga al agente, se juzga al dato.
+ */
+export function midioTemporada(ventanas: VentanaMedida[]): boolean {
+  return !sinSenalDeTemporada(ventanas) && !corpusClonado(ventanas)
+}
+
+/**
+ * ¿Se pudo MIRAR el mercado en esta pasada? Conservador a propósito: ante la duda, NO (un latido
+ * verde de mentira es peor que uno rojo de más).
+ *
+ * 🚨 QUÉ **NO** ENTRA AQUÍ, Y POR QUÉ (07/08/2026). Hasta hoy un corpus clonado tumbaba también el
+ * latido, y el resultado fue un rojo permanente: dos pasadas seguidas (06 y 07/08) con la búsqueda
+ * funcionando, 120 y 76 ventanas barridas, 346 y 174 comps escritos — y `ultimo_ok_at` en NULL
+ * desde el primer día. La causa ya está diagnosticada y NO se va a arreglar afinando el barrido:
+ * los snippets de Google devuelven el mismo puñado de anuncios genéricos de Sevilla se pida la
+ * fecha que se pida, así que el corpus por fecha es inalcanzable POR LA FUENTE.
+ *
+ * Un vigía que va a estar rojo para siempre no vigila nada: entrena a quien lo lee a ignorarlo, y
+ * el día que Serper se caiga de verdad ese rojo será indistinguible del de ayer. Por eso se separan
+ * las dos preguntas:
+ *   · **este `barridoFiable`** = «¿se pudo mirar?» → lo que el agente controla (búsquedas con
+ *     resultados, extracción legible, ronda base cubierta, sin excepciones). Es lo que enciende el
+ *     latido, y un rojo aquí SÍ significa que hay algo que arreglar.
+ *   · **`midioTemporada`** = «¿el dato distingue la fecha?» → lo que la FUENTE permite. No enciende
+ *     el latido: FRENA AL MOTOR marcando `market_rates.corpus_clonado`, que es la protección real.
+ *
+ * El «no lo sé» no se pierde en ningún sitio — sigue en el `detalle` del parte, en la columna de la
+ * BD y en los buckets que excluyen esas filas. Lo que se deja de hacer es confundirlo con una avería.
+ * Quien mide de verdad la temporada es el scraper diario (`mercado/cron`), que barre UNA fecha por
+ * pasada y la acumula: de ahí salen los comps limpios que sí alimentan los buckets.
  */
 export function barridoFiable(r: ResumenBarrido): boolean {
   if (r.errores.length) return false
   if (!r.baseCompleta) return false
   if (cegadasEnBase(r.ventanas) > 0) return false
   if (contarPorEstado(r.ventanas).comps === 0) return false
-  if (sinSenalDeTemporada(r.ventanas)) return false
-  if (corpusClonado(r.ventanas)) return false
   return true
 }
 

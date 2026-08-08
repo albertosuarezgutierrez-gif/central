@@ -36,6 +36,26 @@ que, sin mergear, dejaba la info vieja viva. Ahora la entrega va por riesgo:
   `docs/SKILLS.md`, `docs/CONTEXTO-SESIONES.md`, manuales de usuario. Se **commitean y
   empujan directos a `main`**, sin PR, sin aprobar nada (mismo patrón que el hook
   `persist-memoria.sh`). Cada cambio auto-aplicado se anota en `docs/AUTO-APLICADOS.md`.
+
+  **🚧 Si el entorno NO te deja empujar a `main`** (es lo normal bajo el harness de tareas de
+  GitHub, que te asigna una rama): NO abandones el carril 1 ni lo metas en el PR del carril 2
+  a lo bruto. Haz esto:
+  1. **Separa el carril 1 en su PROPIO PR**, cuyo diff toque **solo** ficheros de registro:
+     `docs/CONTEXTO-SESIONES.md`, `docs/AGENTES-BITACORA.md`, `docs/AUTO-APLICADOS.md`,
+     `docs/AUDITORIA-<YYYY-MM>.md`, `docs/memoria/*.md`. Ese PR **se mergea solo** en cuanto
+     la CI esté verde — lo hace `.github/workflows/rutinas-automerge.yml`. No hace falta que
+     Alberto lo toque, y así no envejece hasta el conflicto.
+  2. **Lo que cambia el COMPORTAMIENTO de alguien** (`.claude/**`, `CLAUDE.md`, `AGENTS.md`,
+     `docs/SKILLS.md`, `docs/FUENTES-DE-VERDAD.md`, `docs/RUTINAS-PROGRAMADAS.md`) **NO** entra
+     en ese PR aunque sea "solo texto": el auto-merge lo bloquea a propósito (un agente que se
+     reescribe las instrucciones sin que nadie mire es justo lo que no queremos). Va al PR del
+     carril 2, con su aviso.
+  3. Si tu PR de registro entra en conflicto igualmente, el workflow intenta traerte `main` a
+     la rama solo; si no puede, te deja UN comentario y ahí ya hace falta mano humana.
+
+  Historia de por qué existe este apartado: 04-07/08/2026, cinco PRs de rutinas (#1252, #1254,
+  #1277, #1279, #1286) murieron en conflicto por confiar en un push a `main` que el entorno
+  nunca permitió. Ver `docs/AUDITORIA-2026-08.md`.
 - **Carril 2 — REVISIÓN (lo "raro"):** código, infra, migraciones, cambios de gran radio,
   hallazgos ambiguos y **crons mudos**. Van a **PR draft** + **aviso por Telegram** (con
   botón-URL al PR) para que Alberto lo lleve a una conversación y lo estudie. Nunca a `main`.
@@ -208,6 +228,9 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
       `git push` directo a **`main`** (con `-u origin main` y reintentos con backoff si hay
       fallo de red). Anota cada cambio en `docs/AUTO-APLICADOS.md` (fecha · archivo · qué ·
       por qué · SHA), también en el mismo commit.
+      **Si el push a `main` te lo rechaza el entorno**, aplica el plan B del apartado "Dos
+      carriles" de arriba: PR propio SOLO con ficheros de registro (se auto-mergea), y lo que
+      cambie comportamiento al PR del carril 2.
    2. **Carril 2 (revisión):** si hay fixes de código de bajo riesgo, crons mudos o hallazgos
       que requieren tu ojo, crea rama `claude/auditoria-diaria-<YYYY-MM-DD>` **desde el `main`
       ya actualizado**, commitea ahí SOLO esos cambios + el informe `docs/AUDITORIA-<YYYY-MM>.md`

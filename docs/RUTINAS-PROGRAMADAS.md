@@ -7,6 +7,27 @@
 > El contenedor es efímero: una rutina NO puede leer las conversaciones de otras sesiones.
 > Reconcilia lo que quedó **commiteado** (memoria/skills/docs) contra el código e infra reales.
 
+## Cómo llega el texto a `main` (léelo antes de tocar una rutina)
+La suposición original era que una rutina puede **empujar texto directo a `main`** (el "carril 1").
+En la práctica **no puede**: corre bajo el harness de tareas de GitHub, que le asigna una rama y le
+prohíbe tocar `main`. Del 04 al 07/08/2026 eso dejó **cinco PRs de rutinas muertos en conflicto**
+(#1252, #1254, #1277, #1279, #1286) y hubo que rescatar su texto a mano.
+
+Desde el 07/08/2026 el repo cierra el círculo solo con
+**`.github/workflows/rutinas-automerge.yml`**:
+
+| | |
+|---|---|
+| **Qué mergea** | PRs de rama `claude/*`, del dueño del repo, cuyo diff toca **SOLO ficheros de registro**: `docs/CONTEXTO-SESIONES.md`, `docs/AGENTES-BITACORA.md`, `docs/AUTO-APLICADOS.md`, `docs/AUDITORIA-*.md`, `docs/memoria/*.md`. |
+| **Qué NO mergea (a propósito)** | Todo lo que **le dice a un agente qué hacer**: `.claude/**`, `CLAUDE.md`, `AGENTS.md`, `docs/SKILLS.md`, `docs/FUENTES-DE-VERDAD.md`, este mismo fichero. Y por supuesto código, infra y workflows. Un agente que se reescribe las instrucciones sin que nadie mire es justo el fallo que no queremos: eso sigue siendo carril 2. |
+| **Condiciones** | CI **entera en verde** (y al menos un check — "sin checks" no es "checks OK"), sin conflicto, y el último commit con **≥20 min** de antigüedad (para no comerse el push del hook `Stop` de la sesión que aún está viva). |
+| **Cuándo corre** | Al terminar la CI de un PR, al abrirse/actualizarse un PR, y **cada hora** como red de seguridad (los eventos se pierden a veces y los conflictos aparecen después). |
+| **Si hay conflicto** | **Lo resuelve el bot** cuando es una **inserción pura** (cada rama añadió su entrada arriba: se conservan LAS DOS, primero la que ya estaba en `main`). Si alguien **editó** texto que ya existía, no toca nada y deja **un** comentario — ahí sí hace falta mano humana. La guarda es la sección base de `merge.conflictStyle=diff3`: base vacía = nadie pisa a nadie. Lógica en `scripts/resolver-conflicto-registro.mjs` (puro + 14 tests). |
+| **Cómo pararlo** | Etiqueta `no-automerge` en el PR (puntual), o deshabilitar el workflow en Actions (del todo). |
+
+**Consecuencia para quien escribe una rutina:** separa siempre en **dos PRs** cuando toques ambas
+cosas. El de registro se mergea solo y no envejece; el que cambia comportamiento espera a Alberto.
+
 ## Cómo se crea un trigger (1 vez, manual de Alberto)
 1. Entra en `claude.ai/code` → **Rutinas** → **Nueva rutina**.
 2. Repo: `central`. Rama: la que prefieras (la rutina abre su propio PR draft).
@@ -24,7 +45,7 @@
 | **Prompt** | `Ejecuta /auditoria-diaria` |
 | **MCPs / envs** | Supabase + Vercel (lectura). **GitHub es nativo** al vincular el repo — ya cubre lectura + abrir el PR + push a `main`. Para el aviso, `PLATAFORMA_URL` + `ALERTA_TOKEN` en la env de la rutina (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos — ver "Arquitectura de notificaciones Telegram" abajo; si faltan, el aviso se omite). |
 | **Qué hace** | Reconcilia `CONTEXTO-SESIONES.md` + skills-maestro + `CLAUDE.md` + `docs/SKILLS.md` contra el código real + checks baratos (lockfile, estructura, drift) + **heartbeat de crons** (paso 2-bis: detecta crons mudos por falta de filas frescas en BD). SALTA typecheck/tests pesados. |
-| **Resultado (dos carriles)** | **Carril 1:** los arreglos de **texto** (memoria/skills/docs/manuales) se **auto-aplican a `main`** (sin PR) y se anotan en `docs/AUTO-APLICADOS.md`. **Carril 2:** lo "raro" (código, infra, crons mudos, gran radio) → **PR draft** `claude/auditoria-diaria-<fecha>` + **aviso Telegram** con botón-URL al PR. **Sin nada** → sin push, sin PR, sin aviso. |
+| **Resultado (dos carriles)** | **Carril 1:** los arreglos de **texto** (memoria/skills/docs/manuales) se **auto-aplican a `main`** (sin PR) y se anotan en `docs/AUTO-APLICADOS.md`. Si el entorno no deja empujar a `main` → PR propio SOLO con ficheros de registro, que **se mergea solo** (ver "Cómo llega el texto a `main`" abajo). **Carril 2:** lo "raro" (código, infra, crons mudos, gran radio) → **PR draft** `claude/auditoria-diaria-<fecha>` + **aviso Telegram** con botón-URL al PR. **Sin nada** → sin push, sin PR, sin aviso. |
 
 Es la **red de seguridad** del guardián de cierre (`.claude/hooks/persist-memoria.sh`):
 caza lo que las sesiones del día no anotaron a mano.
@@ -115,6 +136,23 @@ caza lo que las sesiones del día no anotaron a mano.
 | **MCPs** | Ninguno |
 | **Qué hace** | Lee `docs/ROADMAP-rrhh.md`, filtra ítems 🔴 obligatorios no completados y genera un informe de plazos legales (RD 8/2019 fichaje, RGPD art.28, canal denuncias, etc.). Mantiene visibilidad sobre obligaciones con riesgo de multa. |
 | **Verificar** | El chat muestra el informe de compliance con la lista de ítems 🔴 pendientes. |
+
+### 8-bis. Mercado real por fecha (SIVRA / Booking) — *PENDIENTE DE TRIGGER (alta manual de Alberto)*
+> ⚠️ El código está en producción y probado, pero **la rutina no existe todavía**: hay que crearla en
+> `claude.ai/code → Rutinas`. No se pudo crear por API — el parámetro de **conectores no está
+> disponible para esta organización**, y una rutina sin el conector de Booking no puede medir nada
+> (y sin `ALERTA_TOKEN` en su env, tampoco escribir). Mientras no exista, su latido dirá «sin ninguna
+> señal registrada», que es lo correcto: no está corriendo.
+
+| | |
+|---|---|
+| **Cuándo** | Diaria, **05:30 CEST** (03:30 UTC — media hora después del barrido de las 03:00 UTC, para que la cobertura del día ya esté escrita cuando se pide el plan) |
+| **Prompt** | `Ejecuta la skill mercado-booking` |
+| **MCPs / envs** | **Booking.com** (obligatorio) · `PLATAFORMA_URL` + `ALERTA_TOKEN` en la env de la rutina (**NUNCA** `CRON_SECRET`). Sin esas dos envs no puede ni pedir el plan ni escribir: el latido saldría en rojo. |
+| **Qué hace** | Pide a `GET /api/sivra/mercado/plan?max=12` las ventanas (fecha × aforo) con el corpus fiable más viejo, las mide con el conector de Booking (`number_of_adults` = aforo real del piso), y escribe los comparables en `market_rates` por `POST /api/sivra/mercado/ingest` con **`fuente:"booking_mcp"`**. Cierra con `POST /api/internal/latido` (`sivra_mercado_booking`). |
+| **Por qué existe** | Es la **única** fuente que distingue temporada. El barrido por búsqueda web da precios de anuncio SIN fecha: medido el 06/08/2026 para el Dúplex el 4-sep, Serper decía p50 **171€** y el mercado real era **129€** (−33%), con los mismos comps repitiendo precio en agosto, noviembre y marzo. Ver `docs/superpowers/specs/2026-08-06-mercado-booking-design.md`. |
+| **Verificar** | `SELECT checkin_date, guests, count(*) FROM market_rates WHERE fuente='booking_mcp' AND search_date >= CURRENT_DATE - 1 GROUP BY 1,2` + fila `sivra_mercado_booking` en `agente_latidos` con `ok=true`. |
+| **Pendiente (fase 2)** | Cuando haya ≥3 fechas por mes con `fuente='booking_mcp'`: retirar `mercado/sweep` de `CRON_JOBS`, neutralizar las filas `serper` de fechas lejanas y quitar su latido. **No antes**: el bucket mensual del motor exige 3 fechas y hoy las aporta Serper. |
 
 ### 9. Vigía GitHub/OSS — *pendiente de trigger*
 | | |

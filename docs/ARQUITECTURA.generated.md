@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-06T07:54:07Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-08T09:12:55Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 8 apps · 36 packages · 23 capacidades · 31 skills · 1153 rutas API.
+**Resumen:** 8 apps · 36 packages · 23 capacidades · 32 skills · 1155 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -30,8 +30,8 @@
 ### plataforma _(matriz)_
 - **Módulos que usa:** core-ai, core-email, core-identity, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-subastas, module-trading
 - **Capacidades:** Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
-- **Tablas (91):** agente_latidos, agente_salud, ai_usos, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_reglas, correo_cursor, correo_reglas, correo_triaje, cron_dispatch_cursor, cuentas_bancarias, domotica_acceso_pin, domotica_dispositivos…
-- **Rutas API:** 277
+- **Tablas (92):** agente_latidos, agente_salud, ai_usos, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_reglas, correo_cursor, correo_reglas, correo_triaje, cron_dispatch_cursor, cuentas_bancarias, domotica_acceso_pin, domotica_dispositivos…
+- **Rutas API:** 279
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -176,6 +176,7 @@
 - **ialimp-client-health** — Monitorización semanal de la salud de la cuenta de Sique Brilla (único cliente en producción de ialimp). Comprueba PMS sync, programaciones sin asignar, impagos activos y errores recientes. Genera un resumen de viernes para cerrar la semana operativa. Úsala en la rutina semanal o cuando Alberto quiera un pulso rápido del cliente. Sin secretos: solo nombres de variable.
 - **ialimp-maestro** — >
 - **marca-cliente** — Alta/intake de la identidad corporativa de un cliente/tenant y aplicación 100% a su app — convierte su marca real (logo, web, fotos) en un objeto `Marca` de `@central/brand` y lo enchufa dejando la UI IDÉNTICA a su marca. Úsala con cliente nuevo, rebrand, o si Alberto pide "adáptalo a la imagen corporativa de X". Complementa `adobe-diseno` y Adobe Fonts.
+- **mercado-booking** — Rutina PROGRAMADA diaria que mide el precio REAL por fecha y aforo con el conector de Booking.com y lo escribe en market_rates (fuente booking_mcp) — la única fuente de SIVRA que distingue temporada. Úsala al disparo diario o si Alberto pide "mide el mercado de verdad" / "refresca los comparables por fecha". Sin secretos: solo nombres de variable.
 - **perfil-fiscal** — Router de contexto FISCAL y PATRIMONIAL de Alberto (persona física) + Punto y Coma SL. Úsalo SIEMPRE que Alberto pida algo de su renta/IRPF, declaración, gastos deducibles, qué piso tributa dónde, o su asesoría, y al trabajar con `facturas-correo`, `fiscal-novedades` o el módulo `/finanzas`. Sin cifras ni datos sensibles.
 - **plataforma-maestro** — >
 - **pricing-agente** — >
@@ -217,14 +218,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (06/08/2026) 🌙 El agente de huéspedes ya no rechaza llegadas de madrugada (06/08/2026).
-- (05/08/2026) 🛡️ La barrera de earnings del torneo vuelve a ver + higiene de cantera (05/08/2026, 4ª tanda).
-- (05/08/2026) 📅 Fechas de earnings EXACTAS por Yahoo en trading (05/08/2026, 3ª tanda).
-- (05/08/2026) 🌱 Cantera capa C automática + alertas/altas de trading (05/08/2026, 2ª sesión).
-- (05/08/2026) 📈 STX (Seagate) alta en `trading_watchlist` capa C (05/08/2026, sin commit — cambio solo en BD).
-- (05/08/2026) 📈 Trading: pasada idempotente + 🪜 semáforo de la escalera real (05/08/2026, PR #1271).
-- (05/08/2026) 📱 El libro de `/banca` en móvil ya dice A QUÉ negocio va cada gasto deducible (05/08/2026).
-- (05/08/2026) 📲→📧 El agente de venta de ia-rest trabaja SOLO (05/08/2026).
-- (05/08/2026) 🚨 «otro» NO es un tipo, es un «no lo sé» — regresión en prod y su arreglo (05/08/2026).
-- (05/08/2026) 🔁 El arreglo del parser no llegaba a la BD: `tipo_bien` se re-deriva (05/08/2026).
+- (08/08/2026) ⏱️ «Sin respuesta.» sobre un extracto que SÍ había entrado (08/08/2026).
+- (08/08/2026) 🤝 El auto-merge ya resuelve el conflicto que se repite todos los días (08/08/2026).
+- (08/08/2026) 📬 Cursor incremental en las alertas de portales — el cron ya no relee 300 correos al día (08/08/2026).
+- (08/08/2026) 📎 Pasada diaria facturas-correo (08/08/2026).
+- (08/08/2026) 💳 El parser del extracto de tarjeta llevaba meses devolviendo CERO con el PDF real (08/08/2026).
+- (08/08/2026) 🤖 El agente contable dejaba de responder «no encuentro el cargo» a lo que no había mirado (08/08/2026).
+- (07/08/2026) 🧪 Prueba en vivo del auto-merge de rutinas (07/08/2026).
+- (07/08/2026) 🧾 Factura 47/2026 Jaime Salas (electricidad Socorro 24) archivada (07/08/2026).
+- (08/08/2026) 🧪 Prueba en vivo del resolver de conflictos (08/08/2026).
+- (07/08/2026) 🧹 Atasco de PRs de rutinas resuelto: 6 PRs cerrados en una pasada (07/08/2026).
 

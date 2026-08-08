@@ -8,11 +8,17 @@ import { eur } from '@/lib/dinero'
 import { evaluarWatchdog, seEsperaRefresco } from '@/lib/trading/watchdog'
 
 // 🐕 Perro guardián de la pasada nocturna de trading (mar-sáb 06:30 UTC ≈ 08:30 CEST).
-// Comprueba que la rutina `trading-analista` dejó "anoche" sus DOS huellas:
-//   1) el NAV de IBKR en `broker_saldos` (la lectura del bróker), y
-//   2) las tesis en `trading_tesis` (la parte de análisis: /analizar).
+// Comprueba que la rutina `trading-analista` dejó "anoche" sus TRES huellas:
+//   1) el NAV de IBKR en `broker_saldos` (la lectura del bróker),
+//   2) el latido `trading_analizar` en `agente_latidos` (la parte de análisis: /analizar — con las
+//      tesis de `trading_tesis` como huella de respaldo; ver el porqué en el tramo 2), y
+//   3) el latido `trading_puntuar` en `agente_latidos` (el CIERRE: /puntuar).
 // Vigilar solo el NAV dejaba un hueco: si IBKR da el saldo pero /analizar peta, el NAV se
 // refrescaría y el watchdog callaría, tapando el fallo del análisis. Ahora avisa si falta cualquiera.
+// El 3er tramo cierra el último hueco (06/08/2026): la pasada dejó NAV y 64 tesis pero NUNCA llamó a
+// /puntuar, así que ni los stops ni el walk-forward se actualizaron y el watchdog lo habría dado por
+// bueno. `/puntuar` no escribe nada cuando no hay tesis vencidas ni stops, por eso su huella no puede
+// ser una tabla de negocio: es un latido explícito (misma lección que `facturas-scan`, 31/07/2026).
 // Si no —rutina borrada/pausada, IBKR caído, token 401, egress 403— avisa por Telegram.
 // Auth Bearer CRON_SECRET. Ver lib/trading/watchdog.ts para la lógica pura (testeada).
 export const dynamic = 'force-dynamic'
@@ -37,15 +43,41 @@ async function handler(req: NextRequest) {
   })
   const evalNav = evaluarWatchdog({ ahora, ultimoRefresco: fila?.actualizadoEn ?? null })
 
-  // 2) Tesis (parte de análisis) — la pasada escribe filas en `trading_tesis` cada noche
-  const tesisRows = await prisma.$queryRaw<Array<{ ultimo: Date | null }>>(
-    Prisma.sql`SELECT max(created_at) AS ultimo FROM trading_tesis`,
+  // 2) Análisis (/analizar). La huella BUENA es el latido `trading_analizar`, NO `max(created_at)` de
+  // `trading_tesis`: esa tabla es idempotente (único `(simbolo,fecha,estrategia)` + `skipDuplicates`),
+  // así que una segunda pasada del mismo día no inserta nada y su reloj se queda clavado en la PRIMERA.
+  // Bug real del 07/08/2026: `/analizar` corrió a las 09:34 UTC (repaso manual) y otra vez esa noche;
+  // la nocturna fue un no-op en datos y el watchdog avisó de «21 h sin refrescarse» una pasada completa.
+  // Se toma el MÁS RECIENTE de ambas huellas (GREATEST ignora los NULL en Postgres): las tesis siguen
+  // valiendo como prueba —y cubren el hueco hasta que la primera pasada nueva escriba el latido—, pero
+  // ya no son la única. Solo si NINGUNA existe se declara «nunca».
+  const analisisRows = await prisma.$queryRaw<Array<{ ultimo: Date | null }>>(
+    Prisma.sql`SELECT GREATEST(
+      (SELECT max(created_at) FROM trading_tesis),
+      (SELECT ultimo_ok_at FROM agente_latidos WHERE agente = 'trading_analizar')
+    ) AS ultimo`,
   )
-  const evalTesis = evaluarWatchdog({ ahora, ultimoRefresco: tesisRows[0]?.ultimo ?? null })
+  const evalTesis = evaluarWatchdog({
+    ahora, ultimoRefresco: analisisRows[0]?.ultimo ?? null,
+    huella: 'ninguna pasada de /analizar (ni tesis en trading_tesis ni latido trading_analizar)',
+    etiqueta: 'el análisis de la pasada (/analizar)',
+  })
+
+  // 3) Cierre de la pasada (/puntuar): stops paper + walk-forward. Se mide sobre `ultimo_ok_at`, la
+  // última pasada BUENA — si el endpoint revienta a media faena no deja huella y el reloj sigue.
+  const puntuarRows = await prisma.$queryRaw<Array<{ ultimo: Date | null }>>(
+    Prisma.sql`SELECT ultimo_ok_at AS ultimo FROM agente_latidos WHERE agente = 'trading_puntuar'`,
+  )
+  const evalPuntuar = evaluarWatchdog({
+    ahora, ultimoRefresco: puntuarRows[0]?.ultimo ?? null,
+    huella: 'ni una sola pasada buena de /puntuar (agente_latidos.trading_puntuar)',
+    etiqueta: 'el cierre de la pasada (/puntuar)',
+  })
 
   const fallos: string[] = []
   if (evalNav.alerta) fallos.push(`• NAV/saldo IBKR: ${evalNav.motivo}`)
   if (evalTesis.alerta) fallos.push(`• Análisis/tesis: ${evalTesis.motivo}`)
+  if (evalPuntuar.alerta) fallos.push(`• Cierre /puntuar (stops + walk-forward): ${evalPuntuar.motivo}`)
 
   if (fallos.length > 0) {
     const detalle = fila
@@ -65,8 +97,10 @@ async function handler(req: NextRequest) {
     alerta: fallos.length > 0,
     nav: { alerta: evalNav.alerta, motivo: evalNav.motivo, horas: evalNav.horas },
     tesis: { alerta: evalTesis.alerta, motivo: evalTesis.motivo, horas: evalTesis.horas },
+    puntuar: { alerta: evalPuntuar.alerta, motivo: evalPuntuar.motivo, horas: evalPuntuar.horas },
     ultimoNav: fila?.actualizadoEn?.toISOString() ?? null,
-    ultimaTesis: tesisRows[0]?.ultimo?.toISOString() ?? null,
+    ultimoAnalisis: analisisRows[0]?.ultimo?.toISOString() ?? null,
+    ultimoPuntuar: puntuarRows[0]?.ultimo?.toISOString() ?? null,
   })
 }
 

@@ -181,6 +181,23 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'mercado». Huella: agente_latidos.sivra_mercado_sweep.',
   },
   {
+    id: 'sivra_mercado_booking',
+    etiqueta: '🏨 Mercado real por fecha (rutina Booking, diaria)',
+    // Diaria → 30 h deja pasar una pasada saltada sin dar la lata. La cobertura se ACUMULA (el
+    // motor mira 120 días atrás), así que un día perdido no rompe nada; una semana perdida sí.
+    maxHoras: 30,
+    nota:
+      'Es la ÚNICA fuente que mide el precio de una fecha CONCRETA: el barrido por búsqueda web da ' +
+      'precios de anuncio sin fecha (el mismo comparable a 305€ en agosto, noviembre y marzo — ' +
+      'medido el 06/08/2026), y con eso el motor tarifica un mes entero con el precio de hoy. Si ' +
+      'esta rutina calla, la línea de temporada deja de refrescarse y en 120 días el corpus fiable ' +
+      'se vacía solo. EL DETALLE DICE QUÉ FALLÓ: «sin respuesta del conector» = Booking no contestó ' +
+      '(NO es «no hay mercado»); «sin precio utilizable» = contestó sin cifra. Revisa en claude.ai → ' +
+      'Rutinas que la rutina corre, que tiene el conector de Booking.com adjunto y que su env lleva ' +
+      'PLATAFORMA_URL + ALERTA_TOKEN (sin ellos no puede ni pedir el plan ni escribir). ' +
+      'Huella: agente_latidos.sivra_mercado_booking.',
+  },
+  {
     id: 'sivra_pricing_guard',
     etiqueta: '🛡️ Guardián de precios (diario 07:30)',
     // Cron diario → 30 h deja pasar una pasada saltada sin dar la lata.

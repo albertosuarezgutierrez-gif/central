@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   barridoFiable,
+  midioTemporada,
   clonRatio,
   corpusClonado,
   muestrasPobres,
@@ -100,7 +101,9 @@ test('mismos comps y mismo precio en todas las fechas = corpus sin temporada', (
   assert.equal(sinSenalDeTemporada(iguales), true)
   const r = base({ comps: 24, ventanas: iguales })
   assert.match(detalleBarrido(r), /el corpus NO refleja temporada/)
-  assert.equal(barridoFiable(r), false)
+  // El dato no sirve para la curva, pero la pasada SÍ pudo mirar: son dos veredictos distintos.
+  assert.equal(midioTemporada(iguales), false)
+  assert.equal(barridoFiable(r), true)
 })
 
 test('que dos fechas compartan hoteles no basta para gritar', () => {
@@ -149,7 +152,8 @@ test('medianas clonadas entre fechas distintas invalidan el corpus', () => {
   assert.equal(corpusClonado(vs), true)
   const r = base({ comps: 12, ventanas: vs })
   assert.match(detalleBarrido(r), /100% de las medianas se repiten en otra fecha/)
-  assert.equal(barridoFiable(r), false)
+  assert.equal(midioTemporada(vs), false)
+  assert.equal(barridoFiable(r), true)
 })
 
 test('un mercado que SÍ varía por fecha pasa la guardia', () => {
@@ -193,4 +197,52 @@ test('las muestras de 1-2 comps se cantan: su mediana no describe un mercado', (
   })
   assert.equal(muestrasPobres(r.ventanas), 2)
   assert.match(detalleBarrido(r), /2 ventanas con menos de 3 comps \(mediana poco fiable\)/)
+})
+
+// ── Dos veredictos distintos: el agente y el dato (07/08/2026) ──────────────
+// El corpus clonado tumbaba también el latido, y el rojo se volvió permanente: 06 y 07/08 con la
+// búsqueda funcionando y `ultimo_ok_at` en NULL desde el primer día. La causa está en la FUENTE
+// (los snippets de Google no distinguen la fecha), así que nunca se iba a poner verde. Un vigía
+// eternamente rojo no vigila: entrena a ignorarlo y tapa la avería del día que sí la haya.
+
+test('corpus clonado NO apaga el latido: la pasada pudo mirar', () => {
+  const vs = ['2026-09-04', '2026-10-02', '2026-11-06'].map(checkin =>
+    ventana({ checkin, mediana: 204, comps: 4 }),
+  )
+  assert.equal(midioTemporada(vs), false, 'el dato no vale para la curva')
+  assert.equal(barridoFiable(base({ comps: 12, ventanas: vs })), true, 'pero el agente hizo su trabajo')
+})
+
+test('lo que SÍ apaga el latido sigue siendo lo que el agente controla', () => {
+  const vs = ['2026-09-04', '2026-10-02', '2026-11-06'].map(checkin =>
+    ventana({ checkin, mediana: 204, comps: 4 }),
+  )
+  // Mismo corpus clonado, pero con una avería encima: eso es un rojo legítimo.
+  assert.equal(barridoFiable(base({ comps: 12, ventanas: vs, errores: ['Serper 429'] })), false)
+  assert.equal(barridoFiable(base({ comps: 12, ventanas: vs, baseCompleta: false })), false)
+  assert.equal(
+    barridoFiable(base({ comps: 12, ventanas: [...vs, ventana({ ronda: 0, estado: 'sin_resultados', comps: 0 })] })),
+    false,
+    'una ventana ciega en la ronda base es «no se ha podido mirar»',
+  )
+})
+
+test('el parte sigue cantando el clon aunque el latido esté verde', () => {
+  // Nombres distintos por ventana: así cae en la rama del CLON (misma mediana en fechas
+  // distintas), no en la extrema de `sinSenalDeTemporada`, que tiene su propio titular.
+  const vs = ['2026-09-04', '2026-10-02', '2026-11-06'].map((checkin, i) =>
+    ventana({ checkin, nombres: [`A${i}`], mediana: 204, comps: 4 }),
+  )
+  const r = base({ comps: 12, ventanas: vs })
+  assert.equal(barridoFiable(r), true)
+  assert.match(detalleBarrido(r), /el corpus describe el mercado de HOY, no el de cada fecha/)
+})
+
+test('un corpus que distingue la fecha vale para la curva', () => {
+  const vs = [
+    ventana({ checkin: '2026-09-04', mediana: 204, comps: 4 }),
+    ventana({ checkin: '2026-10-02', mediana: 305, comps: 5 }),
+    ventana({ checkin: '2026-11-06', mediana: 133, comps: 4 }),
+  ]
+  assert.equal(midioTemporada(vs), true)
 })
