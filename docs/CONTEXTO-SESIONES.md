@@ -24,6 +24,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🏨 Filtro de ronda/fecha en el plan de mercado + 2ª pasada Booking (08/08/2026)
+`/api/sivra/mercado/plan` acepta **`?rondas=2,3&desde=&hasta=`**, aplicado ANTES del tope (filtrar
+en cliente no llega: el orden de urgencia pone las rondas de profundidad al final — con `?max=30` se
+alcanzaban 18 de 40 y ninguna de ronda 3). Respuesta nueva: `filtro`/`candidatas`/`recortadas` +
+aviso cuando el tope recorta. Filtro mal escrito → 400, nunca «mido todo». 6 tests nuevos; tsc 0,
+`next build` OK (fallan `fmp`/`edgar`, preexistentes, son de red).
+**🚨 Bloqueo de infra:** el proxy de egress da **403 al CONNECT contra `plataforma-ten-flame.vercel.app`**
+→ ninguna sesión puede usar el raíl HTTP (plan/ingest/latido) hasta que se abra la allowlist de red
+del environment. Esta pasada midió 10 ventanas (100 comps `booking_mcp`) y las escribió por SQL.
+**Tope real de una pasada ≈10-12 ventanas, no 30:** las respuestas del conector no caben en contexto.
+
 - **✅ H8 y H9 RESUELTAS sobre el corpus completo — ninguna se cablea (08/08/2026).** 1.018/1.018 símbolos,
   21.321 observaciones. **H9:** las tres reglas de salida fallan su propio criterio; stop −20% y trailing
   −15% EMPEORAN los batacazos (15,6% y 12,1% vs 10,4% sin regla) — la salida por TIEMPO queda validada,
