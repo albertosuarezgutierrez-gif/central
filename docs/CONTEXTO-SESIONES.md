@@ -32,17 +32,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **🛑 MOTOR DE PRICING EN PAUSA — baja un 20% contra su propio mercado medido (08/08/2026).** Tras
-  mergear #1305 y activar los 4 pisos, la pasada real de las 14:30 UTC escribió en los 4 (Dúplex y House
-  por primera vez) pero **House-octubre bajó al TOPE del limitador (−20%)** en las fechas sin evento:
-  04-oct 639→511€, 05-oct 697→558€, 07-oct 673→538€ — cuando el corpus de Booking que acabamos de medir
-  dice **p50 638€** para octubre. Causa mecánica en `apply/route.ts`: `baseD = (mb.med × dqFactor)/markup`,
-  y `dqFactor` = demanda × calidad, **las dos en su suelo** (0,92 × 0,90 = 0,83) → 638×0,83 ≈ 529€. La
-  demanda va al suelo porque la ocupación que el motor lee de `rate_snapshots` es del **1-8%** en los 4
-  pisos. Puesto `pricing_config.paused = true` (reversible; degrada a dry-run) para que la pasada de las
-  20:30 no encadene otro −20%. **Pendiente de decisión de Alberto:** si esa ocupación es real, bajar es
-  correcto; si no lo es, el motor está regalando margen en el mejor mes del año. Y si se decide revertir,
-  el raíl es `/api/sivra/pricing/restore`.
+- **✅ Precio dinámico vivo en los 4 pisos, primera pasada real verificada (08/08/2026).** Mergeado #1305;
+  el cron de las 14:30 UTC escribió en los cuatro (Dúplex 161 noches y House 60, las dos primeras veces).
+  House-octubre bajó al tope del limitador (−20%: 04-oct 639→511€) **contra un mercado medido de 638€**, lo
+  que se pausó como presunto fallo — y **NO lo era**: las reservas reales de Smoobu (`incomes` expandido
+  noche a noche) confirman la ocupación que lee el motor casi noche por noche (House 22/22, Dúplex 3/3,
+  Luxury 29/29 de 365). Los pisos están **genuinamente vacíos**: el resto de agosto al **0% en los cuatro**,
+  sep 30/13/10/10%, oct 19/13/23/0%. El motor baja porque no se vende, que es su trabajo. Reanudado
+  (`paused=false`). Tercera alarma falsa del día, todas por concluir desde una cifra rara sin comprobarla
+  contra la fuente primero.
+  **Pendiente REAL detectado de paso:** el motor calcula UNA sola ocupación por piso para los 365 días
+  (`occ` en `apply/route.ts` no acota `rate_date` por arriba) y la aplica a todas las fechas — septiembre
+  al 30% recibe el mismo factor de demanda mínimo (0,92) que marzo-2027 al 0%. Hoy no cambia el signo
+  porque todo está flojo, pero la palanca de demanda está ciega a la estacionalidad de la propia venta.
 
 - **🛡️ Segundo par de ojos sobre el precio + procedencia del dato (08/08/2026).** Cierra el hueco que
   dejaba la guardia del ×2 (#1315): un error del 10% pasaba limpio y movía el retorno 10 puntos.
