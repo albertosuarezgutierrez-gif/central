@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-08T14:44:42Z",
-  "sha": "440bf57f712329e69cd68226c8f9f2b45bff400f",
+  "generadoEn": "2026-08-08T14:49:13Z",
+  "sha": "8448dc6b034dd7753775045e1561b3c7a2e6b7b5",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -43822,7 +43822,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 575,
+          "linea": 590,
           "resumen": "Botón que abre Claude Code web y copia /facturas-correo al portapapeles listo para pegar."
         },
         {
@@ -43831,7 +43831,7 @@
           "exportada": true,
           "params": "{ cuentas, destinoLabel, initial, periodo }: { cuentas: { id: string; label: string; sincronizada?: boolean }[] destinoLabel: Record<string, string> initial: { movimientos: MovLedgerUI[]; total: number; hayMas: boolean } // Rango por defect",
           "retorno": null,
-          "linea": 614
+          "linea": 629
         },
         {
           "nombre": "IngresosPorRevisar",
@@ -43839,7 +43839,7 @@
           "exportada": true,
           "params": "{ ingresos, destinoLabel }: { ingresos: MovLedgerUI[] destinoLabel: Record<string, string> }",
           "retorno": null,
-          "linea": 903,
+          "linea": 918,
           "resumen": "Bandeja de INGRESOS por revisar: abonos cuyo negocio está sin confirmar. Antes no aparecían en ningún sitio accionable (la revisión de gastos es solo importe<0). Aquí el dueño les asigna el negocio (d"
         },
         {
@@ -43848,7 +43848,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 968
+          "linea": 983
         }
       ],
       "tablas": [
@@ -43856,7 +43856,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "65b9580475e6"
+      "hash": "02d6f6c7b6f7"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/BenchmarkPisos.tsx",
