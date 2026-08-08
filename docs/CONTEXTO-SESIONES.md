@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💶 Precio dinámico SIVRA operativo en los 4 pisos (08/08/2026).** Medidas a mano 19 ventanas de
+  Booking (190 comps, `fuente=booking_mcp`): ago-2026→ene-2027 ya tiene **≥3 fechas sin evento por mes
+  y por piso**, que es lo que exige `MIN_FECHAS_MES` del bucket mensual — antes solo 9 de 24 buckets
+  eran elegibles y el resto se tarificaba con el ancla global. Con el corpus arreglado se activó
+  `apply_enabled` en Dúplex y House (ya lo tenían Busto y Luxury): los 4 pisos tarifican solos.
+  **Pendiente:** feb→jul-2027 siguen sin bucket (caen al ancla global + prior estacional, que es el
+  fallback de diseño, no una avería); la rutina diaria de Booking los va rellenando. **A vigilar:**
+  23-oct y 27-nov salieron muy por encima de su mes sin estar en el calendario de eventos.
+
 - **🔍 Auditoría diaria ligera (08/08/2026).** Sin PRs de rutina atascados (el auto-merge de #1289/#1297
   ya funciona: #1298 resuelto solo hoy). Heartbeat de crons 12/14 ✅, 2 falsos positivos ya conocidos
   (`updates/sync` Smoobu sin reservas nuevas, `limpiadoras/auto-sessions` idempotente) verificados de

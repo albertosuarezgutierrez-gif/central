@@ -15,6 +15,15 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-08 · mercado-booking (2ª pasada MANUAL, para desbloquear el precio dinámico)** · hizo: 19
+  ventanas más con el conector (190 comps, `booking_mcp`), eligiendo las fechas por el déficit REAL de
+  cada bucket —el que ve el motor: fechas distintas SIN evento, contando `pricing_eventos_auto` además
+  del calendario del repo—. Resultado: ago→ene con ≥3 fechas en los 4 pisos (p50 house 325/472/638/478/
+  426/381€, dúplex 110/135/184/175/136/125€). dudas: 23-oct (12 pax, p50 ~830€ contra 615€ del resto de
+  octubre) y 27-nov (4 pax, 247€ contra 163€ del 13-nov) parecen fechas de evento SIN catalogar; se
+  escribieron igual —son mercado medido— pero convendría que el catalogador las mire, porque si lo son
+  están inflando el bucket "normal" del mes; fallos: —. Latido NO escrito (pasada a mano, no es la
+  Rutina). PRs/commits: este PR.
 - **2026-08-08 · mercado-booking (pasada MANUAL, la Rutina no existe)** · hizo: reprodujo
   `/api/sivra/mercado/plan` con los helpers puros (120 ventanas de plan, 10 pedidas, las 10 sin medir
   nunca) y midió 5 con el conector: 4-sep 2p **p50 110€** · 4-sep 12p **474€** · 16-oct 4p **184€** ·
