@@ -22,7 +22,7 @@ Desde el 07/08/2026 el repo cierra el círculo solo con
 | **Qué NO mergea (a propósito)** | Todo lo que **le dice a un agente qué hacer**: `.claude/**`, `CLAUDE.md`, `AGENTS.md`, `docs/SKILLS.md`, `docs/FUENTES-DE-VERDAD.md`, este mismo fichero. Y por supuesto código, infra y workflows. Un agente que se reescribe las instrucciones sin que nadie mire es justo el fallo que no queremos: eso sigue siendo carril 2. |
 | **Condiciones** | CI **entera en verde** (y al menos un check — "sin checks" no es "checks OK"), sin conflicto, y el último commit con **≥20 min** de antigüedad (para no comerse el push del hook `Stop` de la sesión que aún está viva). |
 | **Cuándo corre** | Al terminar la CI de un PR, al abrirse/actualizarse un PR, y **cada hora** como red de seguridad (los eventos se pierden a veces y los conflictos aparecen después). |
-| **Si hay conflicto** | Intenta traer `main` a la rama solo. Si no puede, deja **un** comentario en el PR y para — ahí ya hace falta mano humana. |
+| **Si hay conflicto** | **Lo resuelve el bot** cuando es una **inserción pura** (cada rama añadió su entrada arriba: se conservan LAS DOS, primero la que ya estaba en `main`). Si alguien **editó** texto que ya existía, no toca nada y deja **un** comentario — ahí sí hace falta mano humana. La guarda es la sección base de `merge.conflictStyle=diff3`: base vacía = nadie pisa a nadie. Lógica en `scripts/resolver-conflicto-registro.mjs` (puro + 14 tests). |
 | **Cómo pararlo** | Etiqueta `no-automerge` en el PR (puntual), o deshabilitar el workflow en Actions (del todo). |
 
 **Consecuencia para quien escribe una rutina:** separa siempre en **dos PRs** cuando toques ambas

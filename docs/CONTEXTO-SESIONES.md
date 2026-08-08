@@ -24,6 +24,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🤝 El auto-merge ya resuelve el conflicto que se repite todos los días (08/08/2026).** El
+  workflow de #1289 funcionó (probado: #1292 mergeado solo), pero se rendía ante los conflictos con
+  UN comentario y luego callaba: #1290 acabó **24 h abierto**, resuelto a mano, y `main` lo rompió
+  otra vez 44 min después. La causa es estructural — TODAS las rutinas insertan arriba de los mismos
+  dos ficheros, así que chocan siempre. Decisión de Alberto: que lo resuelva el bot. Ahora, si el
+  conflicto es una **inserción pura** (la sección base de `merge.conflictStyle=diff3` está vacía →
+  nadie pisa a nadie), conserva las DOS entradas —primero la de `main`, sin reordenar nada de lo que
+  ya está— y empuja el merge; si alguien editó texto existente, no toca nada y avisa.
+  `scripts/resolver-conflicto-registro.mjs` (puro, 14 tests) + simulación con git real de los dos
+  caminos. El merge va directo a `main`: un commit de arreglo en la rama del PR no volvería a
+  disparar la CI (los pushes con `GITHUB_TOKEN` no lanzan workflows) y lo dejaría atascado en «sin
+  checks» para siempre.
+
 ### 🐕 El watchdog de trading avisó de una pasada que SÍ corrió (07/08/2026)
 «NAV 21 h sin refrescar» era FALSO: el NAV llevaba 10 h (20:16 UTC) y `/puntuar` 9,9 h — la pasada
 del 06/08 corrió entera. Dos fallos: (1) el tramo 2 medía `max(trading_tesis.created_at)`, tabla
