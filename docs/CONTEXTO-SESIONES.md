@@ -31,7 +31,7 @@
   META←LLY · `04/08` NFLX←PLTR. Nuevo `detectarSuplantaciones()` (duplicado en la pasada + cruce contra
   referencias, 3%) vetando en `/analizar` y `/puntuar`; `trading_tesis.anulado` con 28 tesis y 16
   resultados anulados (una tesis sobre velas ajenas NO se re-puntúa: se anula) y 24 resultados LLY/META
-  re-puntuados con el cierre real. Stats: n 81→77, hit rate 0,296→0,312 (momentum). PR #1320.
+  re-puntuados con el cierre real. Stats: n 81→77, hit rate 0,296→0,312 (momentum). PR #1321.
 
 - **🛡️ Segundo par de ojos sobre el precio + procedencia del dato (08/08/2026).** Cierra el hueco que
   dejaba la guardia del ×2 (#1315): un error del 10% pasaba limpio y movía el retorno 10 puntos.
