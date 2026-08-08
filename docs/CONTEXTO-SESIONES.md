@@ -24,6 +24,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧹 Auditoría del corpus re-recolectado + dos «no lo sé» que afirmaban (08/08/2026).** El arreglo de
+  la barra en curso confirmado en producción: la asimetría por día de semana desapareció (medianas de
+  volRel 0,96–1,09 los siete días). **Veredictos:** H8 (capitulación) **NO cumple** — +1,4/+1,5 pp de
+  mediana ret91 contra los ≥+2 pp firmados; H9 (salidas) **fallan las tres**, y stop −20% y trailing
+  −15% EMPEORAN los batacazos (un stop convierte un susto en pérdida cerrada) → **no se cablea nada**.
+  Dos correcciones aprobadas por Alberto, en el pre-registro (§ Corrección de medición 08/08): (a) serie
+  de precios rota por contrasplit/reuso de ticker ⇒ capitulación a `null`, no `true` (`serieDiscontinua`
+  en `velas.ts`); (b) sin NI earningsYield NI fcfYield **no se rankea** — el `zValor = 0` de los que no
+  tienen dato es la MEDIA del universo, no una abstención, y colaba 3 nombres en el top-20 (TSEM/NBIS/ASX).
+  Anotado y SIN tocar: los pilares promedian columnas vacías → peso efectivo ≈39/28/34, no 40/40/20.
+
 - **🚨 La barra EN CURSO hundía el volumen: H8 era indetectable y lo decía como «no salta» (06/08/2026).**
   Auditando el retrovisor a mitad de ciclo: `volRelMes` medio 0,62 (debe rondar 1,0) y 47% de las
   observaciones por debajo de 0,2. Causa: `barrasPeriodicas` corta en la fecha del snapshot → su última
