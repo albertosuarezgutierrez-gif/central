@@ -24,6 +24,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔍 Auditoría diaria ligera (08/08/2026).** Sin PRs de rutina atascados (el auto-merge de #1289/#1297
+  ya funciona: #1298 resuelto solo hoy). Heartbeat de crons 12/14 ✅, 2 falsos positivos ya conocidos
+  (`updates/sync` Smoobu sin reservas nuevas, `limpiadoras/auto-sessions` idempotente) verificados de
+  nuevo, sin acción. Un hallazgo real: `docs/RUTINAS-PROGRAMADAS.md` describía el watchdog de trading
+  con solo 2 tramos (NAV+tesis) cuando el PR #1291 (mergeado hoy) le añadió un 3er tramo (`/puntuar`,
+  latido `trading_puntuar`) — corregido. Resto (skills-maestro, `docs/SKILLS.md`, triaje de correo,
+  reglas fiscales, manuales) sin drift.
+
 - **📚 Las 6 trampas del extracto de tarjeta, en la doc que se lee (08/08/2026).** Lo de #1295/#1300 estaba
   solo en esta memoria y en los PRs; una sesión futura que toque `lib/extracto-tarjeta-*` no las vería.
   Ahora viven en `plataforma-maestro/references/agentes-banca-landmines.md` (detalle) y en
