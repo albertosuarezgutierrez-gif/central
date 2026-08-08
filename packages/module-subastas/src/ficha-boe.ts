@@ -240,3 +240,23 @@ export function resultadoDeFicha(pares: Map<string, string>): ResultadoSubasta |
 function texto2(html: string): string {
   return decodificarHtml(html.replace(/<[^>]+>/g, ' '))
 }
+
+/**
+ * Mejor puja publicada por la ficha de una subasta EN CURSO (sin exigir
+ * estado, a diferencia de `resultadoDeFicha`). Sirve para vigilar las
+ * seguidas: si alguien ya puja por encima de nuestro techo, deja de ser
+ * negocio y hay que enterarse ANTES del cierre, no en el resultado.
+ *
+ * `null` = la ficha no la publica (o aún no hay pujas visibles) — que NO es
+ * «no hay pujas»: el portal solo enseña la mejor puja en algunos formatos.
+ */
+export function mejorPujaDeFicha(pares: Map<string, string>): number | null {
+  for (const [k, v] of pares) {
+    if (/importe de adjudicacion/.test(k)) continue // eso es un resultado, no una puja viva
+    if (/puja maxima|mejor puja|puja mas alta/.test(k)) {
+      const n = parseImporteEs(texto2(v))
+      return n != null && n > 0 ? n : null
+    }
+  }
+  return null
+}

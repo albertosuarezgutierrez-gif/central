@@ -99,6 +99,12 @@ export interface SubastaInmueble {
   tramos?: number | null
   /** Depósito exigido para pujar. Si la fuente no lo da se deriva (5%). */
   deposito?: number | null
+  /**
+   * Mejor puja publicada por la ficha del portal en la última consulta (solo
+   * se vigila en las SEGUIDAS cerca del cierre). `null` = no publicada o sin
+   * consultar — que NO es «sin pujas»: el portal no siempre la enseña.
+   */
+  mejorPuja?: number | null
 
   /**
    * Cantidad reclamada en el procedimiento (principal + intereses + costas).

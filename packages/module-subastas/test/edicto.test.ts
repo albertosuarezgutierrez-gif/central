@@ -4,7 +4,7 @@
 // 29/07/2026 (errata «VIVENDA» incluida — venía así en el documento).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { datosDeEdicto, enlacesDocumentos, fichaLegible, notasDeEdicto } from '../src/edicto.ts'
+import { datosDeEdicto, enlacesDocumentos, fichaLegible, notasDeEdicto, viviendaHabitualDeNotas } from '../src/edicto.ts'
 
 // Anclas reales de la ficha (con &amp; y entidades tal cual las sirve el portal).
 const FICHA_HTML = `
@@ -149,4 +149,19 @@ test('fichaLegible rechaza una página que no es la ficha (error/WAF con 200)', 
 
 test('fichaLegible rechaza la ficha de OTRA subasta', () => {
   assert.equal(fichaLegible(FICHA_OK, 'SUB-JA-2026-999999'), false)
+})
+
+// ── viviendaHabitualDeNotas: el inverso de notasDeEdicto (round-trip fijado) ──
+
+test('viviendaHabitualDeNotas hace round-trip con las notas que genera notasDeEdicto', () => {
+  const base = {
+    posesionNoConsta: false, herenciaYacente: false, sinCargasProcedencia: false,
+    sinTitularesPosteriores: false, anotacionEmbargo: false,
+  }
+  for (const vh of ['si', 'no', 'no_consta', null] as const) {
+    const notas = notasDeEdicto({ ...base, viviendaHabitual: vh }).join('\n')
+    assert.equal(viviendaHabitualDeNotas(notas), vh, `round-trip de «${vh}»`)
+  }
+  assert.equal(viviendaHabitualDeNotas(null), null)
+  assert.equal(viviendaHabitualDeNotas(''), null)
 })
