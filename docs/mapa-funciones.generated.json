@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-08T16:28:23Z",
-  "sha": "2638a8f3b9d413b6b1d802179df291adf910b3dd",
+  "generadoEn": "2026-08-08T16:50:30Z",
+  "sha": "23e24c8528705c90fc4c96fcaaacc82e9cb9f3ce",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -50606,7 +50606,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 84
+          "linea": 89
         }
       ],
       "tablas": [
@@ -50617,7 +50617,7 @@
         "pricing_decisiones"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "3d8de761bc6c"
+      "hash": "a06c5328692a"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -51556,7 +51556,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 27
+          "linea": 28
         }
       ],
       "tablas": [
@@ -51565,7 +51565,7 @@
         "trading_tesis"
       ],
       "rutaApi": "/api/cron/trading-watchdog",
-      "hash": "9c294770d17c"
+      "hash": "3464d9c22fcc"
     },
     {
       "ruta": "apps/plataforma/app/api/empresas/agente/route.ts",
@@ -63381,7 +63381,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8fee032f5606"
+      "hash": "2b7e859b16e3"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/sonda-ia.ts",
