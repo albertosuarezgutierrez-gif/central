@@ -62,6 +62,15 @@ ese watchdog es el único que cruza los 3 tramos, no dejaba huella propia y no l
 moría, su silencio se leía como «todo fresco». Ahora escribe `agente_latidos.trading_watchdog` y entra
 en la lista con **80 h** (su cron `30 6 * * 2-6` deja un hueco legítimo sáb→mar de 72 h). PR #1322.
 
+- **📏 El umbral de la guardia de suplantación estaba MAL, y se midió (08/08/2026).** Prueba de fuego con
+  precios vivos de IBKR: el 3% de `CRUCE_TOLERANCIA` (#1321) cazaba el caso histórico por 0,1 pp de suerte
+  y con la referencia de HOY ya NO cazaba el META←LLY. Barrido del umbral contra TODO el corpus limpio:
+  falsos positivos 3%→6, 5%→4, 6%→2, 8%→2, **10%→0**, y a partir del 5% caza el envenenamiento. Bajan al
+  ampliar porque la regla exige lejos-de-la-propia Y cerca-de-otra, y ampliar endurece más la primera:
+  **10% domina a 3%**, no es un equilibrio. Límite que ningún umbral tapa y queda afirmado en un test:
+  dos símbolos al mismo nivel (MSFT 487,46 / SPOT 482,23, 1,1%) son intercambiables sin que la regla lo
+  vea — eso solo lo ve la 2ª fuente. 28 tests. PR pendiente.
+
 ### 🛡️ Auditoría profunda: el vigía del agente de pricing estaba en verde falso (08/08/2026)
 Pasada completa a petición de Alberto («prueba que todo funciona y está todo al día»). **Todo verde
 salvo un 🔴 nuevo:** la sonda `pricing` de `agentes-latido` medía sobre `market_rates prop_*`, huella
