@@ -1,29 +1,54 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { isRoutineAuthorized } from '@/lib/cron-auth'
 import { prisma } from '@/lib/db'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { puntuarTesis, agregarStats, aplicarStop, cerrar } from '@central/module-trading'
 import type { Tesis } from '@central/module-trading'
+import { filtrarPreciosAnomalos, resumenDescartes, DIAS_REFERENCIA_MAX } from '@/lib/trading/precios-guardia'
 
 export async function POST(req: NextRequest) {
   if (!isRoutineAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
   const { hoy, precios } = (await req.json()) as { hoy: string; precios: Record<string, number> }
   const hoyMs = new Date(hoy).getTime()
 
+  // 0) GUARDIA DE PRECIOS. Este endpoint recibe los precios de la sesión y hasta el 08/08/2026 se los
+  // creía sin más: el 03/08 entró `CVX = 590,17` (cierre real 193,18) y envenenó 12 resultados, uno de
+  // ellos a +205 pp — con eso «momentum alcista» pasaba de +0,91 pp a +88,09 pp de media. Ver el
+  // porqué completo en `lib/trading/precios-guardia.ts`. La referencia se toma de los `precio_ref`
+  // ANTERIORES a hoy: si la pasada viene envenenada, el precio de hoy lo está por las dos puntas y
+  // compararlo consigo mismo no descubriría nada.
+  const refFilas = await prisma.$queryRaw<Array<{ simbolo: string; precio: number }>>(
+    Prisma.sql`SELECT DISTINCT ON (simbolo) simbolo, precio_ref AS precio
+               FROM trading_tesis
+               WHERE fecha < ${hoy}::date AND fecha >= ${hoy}::date - ${DIAS_REFERENCIA_MAX}
+               ORDER BY simbolo, fecha DESC`,
+  )
+  const referencias = Object.fromEntries(refFilas.map(f => [f.simbolo, f.precio]))
+  const { limpios, descartados } = filtrarPreciosAnomalos(precios, referencias)
+  if (descartados.length > 0) console.warn('[trading/puntuar]', resumenDescartes(descartados))
+
   // 1) Puntuar tesis vencidas sin resultado.
   const pendientes = await prisma.tradingTesis.findMany({ where: { resultado: null } })
   let puntuadas = 0
   for (const t of pendientes) {
     const vence = new Date(t.fecha).getTime() + t.horizonteDias * 86_400_000
-    const precio = precios[t.simbolo]
+    const precio = limpios[t.simbolo]
     if (vence > hoyMs || precio === undefined) continue
     const r = puntuarTesis(t as unknown as Tesis, precio)
-    await prisma.tradingTesisResultado.create({ data: { tesisId: t.id, precioDespues: precio, ventanaDias: t.horizonteDias, retorno: r.retorno, acierto: r.acierto } })
+    // `ventana_dias` = días REALES transcurridos, no el horizonte declarado. Si una pasada no corre (o
+    // la guardia descarta el precio y se puntúa días después), la ventana medida es más larga que el
+    // horizonte y etiquetarla con `horizonteDias` sería el error de siempre: un dato correcto leído con
+    // el periodo equivocado. Nunca menos que el horizonte: solo se puntúa ya vencida.
+    const ventanaReal = Math.round((hoyMs - new Date(t.fecha).getTime()) / 86_400_000)
+    await prisma.tradingTesisResultado.create({ data: { tesisId: t.id, precioDespues: precio, ventanaDias: ventanaReal, retorno: r.retorno, acierto: r.acierto } })
     puntuadas++
   }
 
   // 2) Recomputar stats por estrategia (régimen 'todos' en Fase 1; se refina con snapshot por tesis después).
-  const resultados = await prisma.tradingTesisResultado.findMany({ include: { tesis: true } })
+  // Los resultados ANULADOS (puntuados con un precio que luego se demostró falso) quedan en la tabla como
+  // registro pero NO cuentan: son «esto no lo sabemos», no un dato del track record.
+  const resultados = await prisma.tradingTesisResultado.findMany({ where: { anulado: false }, include: { tesis: true } })
   const stats = agregarStats(resultados.map(r => ({ estrategia: r.tesis.estrategia as Tesis['estrategia'], acierto: r.acierto, retorno: r.retorno })))
   for (const [est, s] of Object.entries(stats)) {
     await prisma.tradingEstrategiaStats.upsert({
@@ -39,7 +64,7 @@ export async function POST(req: NextRequest) {
   try {
     const sinDato = await prisma.tradingPaperOrden.findMany({ where: { precioDiaSiguiente: null, fecha: { lt: new Date(hoy) } } })
     for (const o of sinDato) {
-      const precio = precios[o.simbolo]
+      const precio = limpios[o.simbolo]
       // Solo el PRIMER precio tras la señal (≤5 días naturales cubre fines de semana/festivos): más tarde
       // ya no mide deslizamiento sino deriva, y mejor NULL («no lo sé») que un dato con otro significado.
       const diasDesde = (new Date(hoy).getTime() - new Date(o.fecha).getTime()) / 86_400_000
@@ -48,11 +73,13 @@ export async function POST(req: NextRequest) {
     }
   } catch (e) { console.warn('[trading/puntuar] deslizamiento falló (no bloquea):', e) }
 
-  // 3) Stops sobre posiciones paper.
+  // 3) Stops sobre posiciones paper. Va sobre `limpios` igual que todo lo demás: un precio hundido por
+  // error dispararía un stop que en el mercado real nunca saltó, y esa venta fantasma queda escrita en
+  // `trading_paper_orden` como si fuera historia.
   const posiciones = await prisma.tradingPaperPosicion.findMany()
   let cerradas = 0
   for (const p of posiciones) {
-    const precio = precios[p.simbolo]
+    const precio = limpios[p.simbolo]
     if (precio === undefined) continue
     if (aplicarStop({ simbolo: p.simbolo, cantidad: p.cantidad, precioEntrada: p.precioEntrada, stop: p.stop, abiertaEn: String(p.abiertaEn) }, precio)) {
       const o = cerrar({ simbolo: p.simbolo, cantidad: p.cantidad, precioEntrada: p.precioEntrada, stop: p.stop, abiertaEn: String(p.abiertaEn) }, precio, hoy, 'stop')
@@ -69,11 +96,16 @@ export async function POST(req: NextRequest) {
   // watchdog dio por buena la noche, pero `/puntuar` nunca corrió y ni los stops ni el walk-forward se
   // actualizaron. La huella se escribe SIEMPRE (haya trabajo o no) y es la que mira el 3er tramo del
   // watchdog. Best-effort: no rompe la respuesta si la tabla no está.
+  const resumen = resumenDescartes(descartados)
   await registrarLatido(
     'trading_puntuar',
     true,
-    `${puntuadas} tesis puntuadas · ${cerradas} stop(s) · ${Object.keys(stats).length} estrategias`,
+    `${puntuadas} tesis puntuadas · ${cerradas} stop(s) · ${Object.keys(stats).length} estrategias` +
+      (resumen ? ` · ⚠️ ${resumen}` : ''),
   )
 
-  return NextResponse.json({ puntuadas, cerradas, estrategias: Object.keys(stats).length })
+  // `descartados` viaja en la respuesta para que la sesión lo cante en su resumen de Telegram: un precio
+  // rechazado deja tesis SIN puntuar, y eso hay que verlo — callarlo sería el «no lo sé» disfrazado de
+  // «no había trabajo» que ya nos costó el latido de facturas-scan.
+  return NextResponse.json({ puntuadas, cerradas, estrategias: Object.keys(stats).length, descartados })
 }

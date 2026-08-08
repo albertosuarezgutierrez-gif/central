@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { evaluarWatchdog, seEsperaRefresco, MAX_HORAS_SIN_REFRESCO } from './watchdog.ts'
+import { evaluarWatchdog, seEsperaRefresco, MAX_HORAS_SIN_REFRESCO, diagnosticarPasada } from './watchdog.ts'
 
 const ahora = new Date('2026-07-21T06:30:00Z') // martes por la mañana
 
@@ -63,4 +63,40 @@ test('el «nunca» nombra la huella que falta, no siempre el NAV', () => {
   assert.equal(r.alerta, true)
   assert.match(r.motivo, /trading_puntuar/)
   assert.doesNotMatch(r.motivo, /broker_saldos/)
+})
+
+// ── diagnosticarPasada: el tercer estado («no PUDO dispararse») y no señalar lo que no se distingue ──
+
+test('diagnosticarPasada: sin huella de arranque = «no disparada», con las TRES causas candidatas', () => {
+  // El caso real del viernes 07/08/2026: ni intento ni OK desde el jueves.
+  const d = diagnosticarPasada({
+    ahora: new Date('2026-08-08T06:30:00Z'),
+    ultimoIntento: new Date('2026-08-06T20:34:00Z'),
+    ultimoOk: new Date('2026-08-06T20:34:00Z'),
+  })
+  assert.equal(d.causa, 'no-disparada')
+  assert.equal(d.candidatas.length, 3)
+  // El cupo va PRIMERO: es la causa que el vigía no puede ver y la que más despista.
+  assert.match(d.candidatas[0], /cupo de tokens/)
+  // No promete recuperar nada: los tres tramos reciben los datos de mercado del cliente.
+  assert.deepEqual(d.recuperables, [])
+})
+
+test('diagnosticarPasada: arrancó y no terminó ⇒ manda a mirar la sesión, NO el trigger', () => {
+  const d = diagnosticarPasada({
+    ahora: new Date('2026-08-07T06:30:00Z'),
+    ultimoIntento: new Date('2026-08-06T20:20:00Z'),   // 10 h: dentro de ventana
+    ultimoOk: new Date('2026-08-05T20:34:00Z'),        // 34 h: fuera
+  })
+  assert.equal(d.causa, 'disparada-sin-terminar')
+  assert.match(d.motivo, /arrancó hace 10\.2 h/)
+  assert.match(d.candidatas[0], /no terminó/)
+  // La causa «trigger borrado» NO aparece: se sabe que arrancó, señalarla sería mandar a mirar mal.
+  assert.ok(!d.candidatas.some(c => /trigger/.test(c)))
+})
+
+test('diagnosticarPasada: nunca corrió ⇒ no inventa horas', () => {
+  const d = diagnosticarPasada({ ahora: new Date('2026-08-08T06:30:00Z'), ultimoIntento: null, ultimoOk: null })
+  assert.equal(d.causa, 'no-disparada')
+  assert.match(d.motivo, /último intento: nunca/)
 })

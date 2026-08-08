@@ -5,7 +5,7 @@ import { Prisma } from '@prisma/client'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { tgSend } from '@central/core-telegram'
 import { eur } from '@/lib/dinero'
-import { evaluarWatchdog, seEsperaRefresco } from '@/lib/trading/watchdog'
+import { evaluarWatchdog, seEsperaRefresco, diagnosticarPasada } from '@/lib/trading/watchdog'
 
 // 🐕 Perro guardián de la pasada nocturna de trading (mar-sáb 06:30 UTC ≈ 08:30 CEST).
 // Comprueba que la rutina `trading-analista` dejó "anoche" sus TRES huellas:
@@ -65,8 +65,10 @@ async function handler(req: NextRequest) {
 
   // 3) Cierre de la pasada (/puntuar): stops paper + walk-forward. Se mide sobre `ultimo_ok_at`, la
   // última pasada BUENA — si el endpoint revienta a media faena no deja huella y el reloj sigue.
-  const puntuarRows = await prisma.$queryRaw<Array<{ ultimo: Date | null }>>(
-    Prisma.sql`SELECT ultimo_ok_at AS ultimo FROM agente_latidos WHERE agente = 'trading_puntuar'`,
+  // Se trae también `ultimo_at` (el INTENTO): distingue «no arrancó» de «arrancó y murió», que es
+  // lo que separa mirar el trigger/cupo de mirar el log de la sesión.
+  const puntuarRows = await prisma.$queryRaw<Array<{ ultimo: Date | null; intento: Date | null }>>(
+    Prisma.sql`SELECT ultimo_ok_at AS ultimo, ultimo_at AS intento FROM agente_latidos WHERE agente = 'trading_puntuar'`,
   )
   const evalPuntuar = evaluarWatchdog({
     ahora, ultimoRefresco: puntuarRows[0]?.ultimo ?? null,
@@ -79,16 +81,29 @@ async function handler(req: NextRequest) {
   if (evalTesis.alerta) fallos.push(`• Análisis/tesis: ${evalTesis.motivo}`)
   if (evalPuntuar.alerta) fallos.push(`• Cierre /puntuar (stops + walk-forward): ${evalPuntuar.motivo}`)
 
+  // Si fallan los TRES tramos, no es que se rompiera un paso: es que la pasada ENTERA no ocurrió, y
+  // ahí el aviso viejo mandaba a «revisar la rutina» señalando una causa que no puede distinguir.
+  // El 07/08/2026 la causa real fue quedarse sin CUPO de tokens y no aparecía en la lista.
+  const pasadaEntera = evalNav.alerta && evalTesis.alerta && evalPuntuar.alerta
+  const diag = pasadaEntera
+    ? diagnosticarPasada({ ahora, ultimoIntento: puntuarRows[0]?.intento ?? null, ultimoOk: puntuarRows[0]?.ultimo ?? null })
+    : null
+
   if (fallos.length > 0) {
     const detalle = fila
       ? `Último NAV conocido: ${eur(Number(fila.saldo))} (${fila.actualizadoEn.toISOString().slice(0, 16).replace('T', ' ')} UTC).`
       : 'No hay ningún saldo de IBKR registrado todavía.'
+    const cierre = diag
+      ? `<b>La pasada entera no ocurrió</b> — ${diag.motivo}.\nQué mirar, por orden:\n` +
+        diag.candidatas.map((c, i) => `${i + 1}. ${c}`).join('\n') +
+        `\n\n⚠️ Ningún tramo se puede recuperar solo: los tres reciben los datos de mercado de la ` +
+        `sesión (el NAV solo existe en el MCP de IBKR). El día perdido NO se rellena hacia atrás.`
+      : `Revisa la rutina <b>trading-analista</b> en Claude Code → Rutinas: ¿sigue activa y con el ` +
+        `conector IBKR encendido? Causas típicas: rutina borrada/pausada, IBKR caído, o ` +
+        `<code>ALERTA_TOKEN</code> desincronizado (401) sin redeploy de plataforma.`
     const msg =
       `🐕⚠️ <b>Pasada nocturna de trading incompleta</b>\n\n` +
-      `${fallos.join('\n')}\n${detalle}\n\n` +
-      `Revisa la rutina <b>trading-analista</b> en Claude Code → Rutinas: ¿sigue activa y con el ` +
-      `conector IBKR encendido? Causas típicas: rutina borrada/pausada, IBKR caído, o ` +
-      `<code>ALERTA_TOKEN</code> desincronizado (401) sin redeploy de plataforma.`
+      `${fallos.join('\n')}\n${detalle}\n\n${cierre}`
     await tgSend(msg, { html: true })
   }
 
@@ -101,6 +116,7 @@ async function handler(req: NextRequest) {
     ultimoNav: fila?.actualizadoEn?.toISOString() ?? null,
     ultimoAnalisis: analisisRows[0]?.ultimo?.toISOString() ?? null,
     ultimoPuntuar: puntuarRows[0]?.ultimo?.toISOString() ?? null,
+    diagnostico: diag,
   })
 }
 

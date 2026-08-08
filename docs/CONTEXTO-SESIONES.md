@@ -24,6 +24,26 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🚨 Un precio falso envenenó el track record de trading (08/08/2026).** Al comprobar si el agente había
+  dado alguna compra (no: 0 propuestas reales, 1 posición paper MSFT) salió que el 03/08 la pasada mandó
+  **CVX=590,17$** con cierre real **193,18$** (verificado en IBKR). `/puntuar` cogía `precios[simbolo]` sin
+  comprobar nada → 12 resultados envenenados, 3 a +205 pp. Efecto en `trading_estrategia_stats`, que
+  alimenta `ajustesDeStats` y por tanto el torneo: momentum **+7,18 pp → −0,40 pp** (cambio de SIGNO).
+  Fix: guardia pura `lib/trading/precios-guardia.ts` (×2 contra el último `precio_ref` ANTERIOR a hoy;
+  sin referencia NO se juzga), aplicada a tesis + deslizamiento + **stops**; `ventana_dias` pasa a ser los
+  días REALES, no el horizonte declarado; columnas `anulado`/`anulado_motivo` (marcar, nunca borrar).
+  Las 12 filas re-puntuadas con el cierre real; la guardia va también en `/analizar`, que es el ORIGEN
+  (la vela falsa contaminaba EMA/MACD/RSI/ADX → el símbolo se salta entero y avisa). PR #1315.
+
+- **🩺 El watchdog de trading ya distingue «no PUDO dispararse» (08/08/2026).** El viernes 07/08 la pasada
+  nocturna no corrió y el aviso mandaba a mirar trigger/IBKR; la causa real fue quedarse **sin cupo de
+  tokens**. Nuevo `diagnosticarPasada()` (puro, 3 tests) en `lib/trading/watchdog.ts`: si fallan los TRES
+  tramos enumera las causas candidatas en vez de señalar una que no puede distinguir, y separa «arrancó y
+  murió» (usa `agente_latidos.ultimo_at`) de «ni arrancó». **Corrección a lo que dije antes: solo `/puntuar`
+  sería auto-recuperable** (`/saldo` y `/analizar` dependen del NAV, que solo existe en el MCP de IBKR) — y
+  exige marcar la FUENTE del precio (patrón `market_rates.fuente`) porque toca el track record. **Pendiente
+  de decisión de Alberto.** Retrovisor de 15 años en marcha: 178 snapshots/fila, 40 símbolos/pasada, ETA ~13 h.
+
 - **🔍 Rutinas de auditoría ampliadas (08/08/2026).** Revisión pedida por Alberto de la diaria/semanal:
   el heartbeat (paso 2-bis) pasa a leer `agente_latidos` como fuente preferida y saca de la SQL las 3
   huellas de actividad (`incomes`, `market_rates normal`, `cleaning_sessions`) que daban falso ⛔ cada
