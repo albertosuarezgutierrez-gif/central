@@ -24,6 +24,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ H8 y H9 RESUELTAS sobre el corpus completo — ninguna se cablea (08/08/2026).** 1.018/1.018 símbolos,
+  21.321 observaciones. **H9:** las tres reglas de salida fallan su propio criterio; stop −20% y trailing
+  −15% EMPEORAN los batacazos (15,6% y 12,1% vs 10,4% sin regla) — la salida por TIEMPO queda validada,
+  **no se ponen stops**. **H8:** el agregado SÍ cruza el umbral (+2,34 pp ≥ +2) y aun así no se cablea,
+  porque **el signo se invierte entre mitades**: +6,85 pp en ago24-jul25 y **−2,24 pp** en ago25-may26.
+  Aviso de método que costó dos veredictos contradictorios en el mismo día: con 920 símbolos daba +1,38
+  («no cumple»), con 1.000 daba +2,15 («cumple») — un 8% más de muestra movió 0,8 pp y cruzó la línea; la
+  guarda de serie rota solo aportó +0,19 de eso. **Toda resolución del retrovisor se reporta partida por
+  subperiodo, no solo agregada** — un criterio de una cifra sobre el agregado no ve la inversión de signo.
+
 - **🧹 Auditoría del corpus re-recolectado + dos «no lo sé» que afirmaban (08/08/2026).** El arreglo de
   la barra en curso confirmado en producción: la asimetría por día de semana desapareció (medianas de
   volRel 0,96–1,09 los siete días). **Veredictos:** H8 (capitulación) **NO cumple** — +1,4/+1,5 pp de

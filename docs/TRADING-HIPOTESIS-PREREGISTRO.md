@@ -193,6 +193,53 @@ primer dato forward — la cohorte 2 y el radar empiezan a medir el 20/07/2026).
 - **Evaluación:** por estado de la tabla — ciclo completo con los campos `salidaStop10/20/Trail15`
   presentes (no por fecha de calendario; lección del cron muerto del 19/07).
 
+## ✅ RESOLUCIÓN de H8 y H9 — ciclo completo, 08/08/2026
+> Corpus: **1.018 de 1.018 símbolos** re-recolectados tras el arreglo de la barra en curso (PR #1283) y
+> con la guarda de serie rota (PR #1301). Última pasada 2026-08-08 12:10 UTC. 21.321 observaciones con
+> `ret91` y las tres salidas — por encima del mínimo de 5.000 firmado en H9.
+
+### H8 (capitulación) — **NO se cablea**
+| periodo | n señales | mediana ret91 con señal | sin señal | diferencia | batacazos con/sin |
+|---|---|---|---|---|---|
+| ago-24 → jul-25 | 429 | +9,41% | +2,55% | **+6,85 pp** | 10,3% / 9,2% |
+| ago-25 → may-26 | 344 | +1,31% | +3,55% | **−2,24 pp** | 15,4% / 11,3% |
+| **total** | **773** | **+5,31%** | **+2,97%** | **+2,34 pp** | 12,5% / 10,2% |
+
+El agregado cruza el umbral firmado (≥ +2 pp de mediana, batacazos no peores en >10 pp), **y aun así la
+hipótesis no se cablea**. Motivo, declarado antes de mirar más particiones: **el signo se invierte entre
+mitades**. El +2,34 pp global es el promedio de un semestre muy bueno y otro en contra; un factor que en
+la mitad más reciente de la muestra RESTA 2,24 pp y sube los batacazos 4 pp no es una señal, es el rebote
+de 2024-25 metido en la media. Cablearlo sería comprar el régimen pasado.
+
+**Aviso de método, por si sirve la próxima vez:** el agregado era además INESTABLE. Con el corpus al 90%
+(920 símbolos) daba +1,38 pp —«no cumple»— y con el 98% (1.000) daba +2,15 pp —«cumple»—: un 8% más de
+datos movió el veredicto 0,8 pp y lo cruzó de lado. La guarda de serie rota aporta solo +0,19 pp de esa
+diferencia (de +2,15 a +2,34), así que **no fue la limpieza lo que cambió el resultado, fue la muestra**.
+Un criterio de una sola cifra sobre un agregado no detecta eso: la partición sí. Toda resolución futura
+del retrovisor se reporta **partida por subperiodo**, no solo agregada.
+
+**Qué queda:** `capitulacionMes/Sem` se siguen RECOLECTANDO (cuestan cero y sirven de contexto), pero no
+tocan ranking, cestas ni pesos. Se re-abre si H6 marca cambio de régimen y hay una tercera mitad que
+medir — con la partición como criterio, no el agregado.
+
+### H9 (reglas de salida) — **NO se cablea ninguna de las tres**
+| regla | mediana | batacazos (≤ −15%) |
+|---|---|---|
+| sin regla (salida por tiempo, 91 días) | +3,09% | 10,39% |
+| stop fijo −10% | −0,93% | 3,56% |
+| stop fijo −20% | +2,57% | 15,59% |
+| trailing −15% | +0,42% | 12,11% |
+
+- **Stop −10%:** cumple de sobra el perfil freno en batacazos (−6,8 pp, umbral ≥5 pp) pero **cede 4,02 pp
+  de mediana** y el criterio firmado permitía ceder 1. Rechazado por su propia condición.
+- **Stop −20% y trailing −15%:** **SUBEN** la tasa de batacazos (+5,2 pp y +1,7 pp). No es una anomalía:
+  un stop convierte un susto temporal que habría recuperado en una pérdida cerrada, y el propio criterio
+  del perfil retorno exige no subirla.
+- **Conclusión:** la salida por TIEMPO queda validada como la mejor disponible de las cuatro medidas, tal
+  y como preveía la cláusula de cierre de H9. **No se ponen stops.**
+- Sigue en pie el caveat firmado: si alguna vez se cablea una entrada de reversión, su salida se evalúa
+  aparte — este resultado es del universo agregado y no autoriza nada sobre una cesta concreta.
+
 ## 💶 Plan de despliegue de capital REAL — escalera de tramos · firmada 2026-08-05
 - **Origen:** Alberto — «¿ves viable adelantar la inversión con dinero real? […] poco a poco, no de
   golpe» + «lo que veas mejor y me avisas». Se firma ANTES de que haya dinero de por medio para que
