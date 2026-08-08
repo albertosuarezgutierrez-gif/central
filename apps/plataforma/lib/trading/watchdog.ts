@@ -38,10 +38,17 @@ export function evaluarWatchdog(params: {
    *  mismo evaluador vigila ya las tesis y el cierre de /puntuar, y decirles «nunca se ha refrescado
    *  el NAV (broker_saldos vacío)» manda a Alberto a mirar la tabla equivocada. */
   huella?: string
+  /** Cómo se NOMBRA esa huella cuando sí existe pero está vieja. Va aparte de `huella` porque las dos
+   *  frases piden gramática distinta («nunca se ha registrado ninguna tesis» vs «el análisis lleva
+   *  21 h sin refrescarse»). Sin esto, los tramos 2 y 3 salían con el texto del NAV cableado: el aviso
+   *  del 07/08/2026 decía «Análisis/tesis: el NAV de IBKR lleva 21.0 h sin refrescarse» con el NAV
+   *  fresco de 10 h — mandaba a mirar IBKR y la rutina cuando el que no se había movido era el análisis. */
+  etiqueta?: string
 }): EvalWatchdog {
   const { ahora, ultimoRefresco } = params
   const maxHoras = params.maxHoras ?? MAX_HORAS_SIN_REFRESCO
   const huella = params.huella ?? 'el NAV de IBKR (broker_saldos vacío)'
+  const etiqueta = params.etiqueta ?? 'el NAV de IBKR'
 
   if (!ultimoRefresco) {
     return { alerta: true, horas: null, motivo: `nunca se ha registrado ${huella}` }
@@ -51,8 +58,8 @@ export function evaluarWatchdog(params: {
     return {
       alerta: true,
       horas,
-      motivo: `el NAV de IBKR lleva ${horas.toFixed(1)} h sin refrescarse (umbral ${maxHoras} h)`,
+      motivo: `${etiqueta} lleva ${horas.toFixed(1)} h sin refrescarse (umbral ${maxHoras} h)`,
     }
   }
-  return { alerta: false, horas, motivo: `NAV fresco (${horas.toFixed(1)} h)` }
+  return { alerta: false, horas, motivo: `${etiqueta}: fresco (${horas.toFixed(1)} h)` }
 }

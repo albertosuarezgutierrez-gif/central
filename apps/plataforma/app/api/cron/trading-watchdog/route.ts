@@ -10,7 +10,8 @@ import { evaluarWatchdog, seEsperaRefresco } from '@/lib/trading/watchdog'
 // 🐕 Perro guardián de la pasada nocturna de trading (mar-sáb 06:30 UTC ≈ 08:30 CEST).
 // Comprueba que la rutina `trading-analista` dejó "anoche" sus TRES huellas:
 //   1) el NAV de IBKR en `broker_saldos` (la lectura del bróker),
-//   2) las tesis en `trading_tesis` (la parte de análisis: /analizar), y
+//   2) el latido `trading_analizar` en `agente_latidos` (la parte de análisis: /analizar — con las
+//      tesis de `trading_tesis` como huella de respaldo; ver el porqué en el tramo 2), y
 //   3) el latido `trading_puntuar` en `agente_latidos` (el CIERRE: /puntuar).
 // Vigilar solo el NAV dejaba un hueco: si IBKR da el saldo pero /analizar peta, el NAV se
 // refrescaría y el watchdog callaría, tapando el fallo del análisis. Ahora avisa si falta cualquiera.
@@ -42,13 +43,24 @@ async function handler(req: NextRequest) {
   })
   const evalNav = evaluarWatchdog({ ahora, ultimoRefresco: fila?.actualizadoEn ?? null })
 
-  // 2) Tesis (parte de análisis) — la pasada escribe filas en `trading_tesis` cada noche
-  const tesisRows = await prisma.$queryRaw<Array<{ ultimo: Date | null }>>(
-    Prisma.sql`SELECT max(created_at) AS ultimo FROM trading_tesis`,
+  // 2) Análisis (/analizar). La huella BUENA es el latido `trading_analizar`, NO `max(created_at)` de
+  // `trading_tesis`: esa tabla es idempotente (único `(simbolo,fecha,estrategia)` + `skipDuplicates`),
+  // así que una segunda pasada del mismo día no inserta nada y su reloj se queda clavado en la PRIMERA.
+  // Bug real del 07/08/2026: `/analizar` corrió a las 09:34 UTC (repaso manual) y otra vez esa noche;
+  // la nocturna fue un no-op en datos y el watchdog avisó de «21 h sin refrescarse» una pasada completa.
+  // Se toma el MÁS RECIENTE de ambas huellas (GREATEST ignora los NULL en Postgres): las tesis siguen
+  // valiendo como prueba —y cubren el hueco hasta que la primera pasada nueva escriba el latido—, pero
+  // ya no son la única. Solo si NINGUNA existe se declara «nunca».
+  const analisisRows = await prisma.$queryRaw<Array<{ ultimo: Date | null }>>(
+    Prisma.sql`SELECT GREATEST(
+      (SELECT max(created_at) FROM trading_tesis),
+      (SELECT ultimo_ok_at FROM agente_latidos WHERE agente = 'trading_analizar')
+    ) AS ultimo`,
   )
   const evalTesis = evaluarWatchdog({
-    ahora, ultimoRefresco: tesisRows[0]?.ultimo ?? null,
-    huella: 'ninguna tesis (trading_tesis vacía)',
+    ahora, ultimoRefresco: analisisRows[0]?.ultimo ?? null,
+    huella: 'ninguna pasada de /analizar (ni tesis en trading_tesis ni latido trading_analizar)',
+    etiqueta: 'el análisis de la pasada (/analizar)',
   })
 
   // 3) Cierre de la pasada (/puntuar): stops paper + walk-forward. Se mide sobre `ultimo_ok_at`, la
@@ -59,6 +71,7 @@ async function handler(req: NextRequest) {
   const evalPuntuar = evaluarWatchdog({
     ahora, ultimoRefresco: puntuarRows[0]?.ultimo ?? null,
     huella: 'ni una sola pasada buena de /puntuar (agente_latidos.trading_puntuar)',
+    etiqueta: 'el cierre de la pasada (/puntuar)',
   })
 
   const fallos: string[] = []
@@ -86,7 +99,7 @@ async function handler(req: NextRequest) {
     tesis: { alerta: evalTesis.alerta, motivo: evalTesis.motivo, horas: evalTesis.horas },
     puntuar: { alerta: evalPuntuar.alerta, motivo: evalPuntuar.motivo, horas: evalPuntuar.horas },
     ultimoNav: fila?.actualizadoEn?.toISOString() ?? null,
-    ultimaTesis: tesisRows[0]?.ultimo?.toISOString() ?? null,
+    ultimoAnalisis: analisisRows[0]?.ultimo?.toISOString() ?? null,
     ultimoPuntuar: puntuarRows[0]?.ultimo?.toISOString() ?? null,
   })
 }

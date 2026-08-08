@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🐕 El watchdog de trading avisó de una pasada que SÍ corrió (07/08/2026)
+«NAV 21 h sin refrescar» era FALSO: el NAV llevaba 10 h (20:16 UTC) y `/puntuar` 9,9 h — la pasada
+del 06/08 corrió entera. Dos fallos: (1) el tramo 2 medía `max(trading_tesis.created_at)`, tabla
+IDEMPOTENTE desde #1271 (único `(simbolo,fecha,estrategia)` + `skipDuplicates`), así que la 2ª
+pasada del mismo día (repaso manual a las 09:34) no insertó nada y el reloj se quedó clavado en la
+primera; (2) el motivo de los TRES tramos llevaba «el NAV de IBKR» cableado → el aviso mandaba a
+mirar IBKR y la rutina. Fix: latido explícito `trading_analizar` (como `/puntuar`) + `GREATEST` con
+las tesis de respaldo, y `etiqueta` por tramo en `evaluarWatchdog`. PR #1291.
+
 - **📎 Pasada diaria facturas-correo (08/08/2026).** Vía B sana (`dias_caido=1`), sin backlog en
   `PDF-pendiente`/`Revisar`. Día tranquilo: 0 candidatos nuevos en Gmail, 0 subidas manuales nuevas,
   0 duplicados nuevos (los 2 "FACTURA JULIO SOCORRO" de la raíz ya estaban avisados). Roborock
