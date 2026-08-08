@@ -626,56 +626,40 @@ function NotaSimpleViva({ dedupeKey }: { dedupeKey: string }) {
 }
 
 /**
- * Qué hay que pujar de verdad: deuda reclamada, puja mínima y los umbrales de
- * APROBACIÓN del remate. Corrige la confusión de «hay que pujar el 70% de la
- * deuda»: el 70% de la LEC es del VALOR DE SUBASTA, y la deuda entra como vía
- * alternativa (y como techo probable de la puja del banco). Toda la lógica
- * viene del helper puro `umbralesPuja` del módulo; aquí solo se pinta.
+ * Par etiqueta→valor del bloque «💶 Los números»: etiqueta pequeña arriba,
+ * valor con peso debajo. La jerarquía la da la tipografía — antes todos los
+ * importes eran chips/líneas del mismo peso y se confundían entre sí.
  */
-function UmbralesPujaFicha({ s, notasEdicto }: { s: Subasta; notasEdicto?: string | null }) {
-  const u = umbralesPuja({
-    dedupeKey: s.dedupeKey,
-    fuente: (s.fuente ?? 'boe') as SubastaInmueble['fuente'],
-    tipo: s.tipo as SubastaInmueble['tipo'],
-    valorSubasta: s.valorSubasta,
-    cantidadReclamada: s.cantidadReclamada,
-    pujaMinima: s.pujaMinima,
-    // Si el edicto declaró «vivienda habitual», el escenario de desierta
-    // (art. 671) deja de ser genérico. La señal viene de las notas persistidas.
-  }, { viviendaHabitual: viviendaHabitualDeNotas(notasEdicto) })
-  // Venta directa / régimen especial sin deuda conocida: nada que pujar, nada que pintar.
-  if (u.regimen == null && u.cantidadReclamada == null) return null
-
-  const epm = estadoPujaMinima(u.pujaMinima)
+function Dato({ etiqueta, sub, children }: { etiqueta: string; sub?: string; children: React.ReactNode }) {
   return (
-    <div style={{ marginTop: 8, fontSize: 13 }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, fontSize: 12 }}>
-        {u.cantidadReclamada != null ? (
-          <span style={{ color: 'var(--text)' }}>
-            💰 deuda reclamada <strong>{eur(u.cantidadReclamada)}</strong>
-            <span style={{ color: 'var(--muted)' }}> · techo probable de la puja del ejecutante</span>
-          </span>
-        ) : (
-          <span style={{ color: 'var(--muted)' }}>💰 deuda reclamada: no publicada</span>
-        )}
-        {u.regimen != null && (
-          epm === 'publicada' ? <span style={{ color: 'var(--text)' }}>puja mínima <strong>{eur(u.pujaMinima!)}</strong></span>
-          : epm === 'sin_minimo' ? <span style={{ color: 'var(--muted)' }}>sin puja mínima — cualquier postura es admisible</span>
-          : <span style={{ color: 'var(--muted)' }}>puja mínima: no publicada</span>
-        )}
-      </div>
-      {u.umbrales.length > 0 && (
-        <details style={{ marginTop: 6 }}>
-          <summary style={{ cursor: 'pointer', minHeight: 32, display: 'flex', alignItems: 'center', color: 'var(--text)', fontSize: 13 }}>
-            ⚖️ Umbrales de aprobación del remate{u.regimen === 'judicial' ? ' (art. 670 LEC)' : ' (RGR)'}
-          </summary>
-          <ul style={{ margin: '6px 0 0', paddingLeft: 18, color: 'var(--text)', fontSize: 12, lineHeight: 1.5 }}>
-            {u.umbrales.map((x) => <li key={x.clave}>{x.etiqueta}</li>)}
-            {u.notas.map((n, i) => <li key={`n${i}`} style={{ color: 'var(--muted)' }}>{n}</li>)}
-          </ul>
-        </details>
-      )}
+    <div>
+      <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.4 }}>{etiqueta}</div>
+      <div style={{ fontSize: 14, color: 'var(--text)', marginTop: 2 }}>{children}</div>
+      {sub && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{sub}</div>}
     </div>
+  )
+}
+
+/**
+ * Umbrales de APROBACIÓN del remate. Corrige la confusión de «hay que pujar el
+ * 70% de la deuda»: el 70% de la LEC es del VALOR DE SUBASTA, y la deuda entra
+ * como vía alternativa (y como techo probable de la puja del banco). La deuda
+ * reclamada y la puja mínima se pintan arriba, en «💶 Los números»; aquí queda
+ * solo el detalle legal, plegado. Toda la lógica viene del helper puro
+ * `umbralesPuja` (lo calcula `FichaSubasta` y lo comparte con ese bloque).
+ */
+function UmbralesPujaFicha({ u }: { u: ReturnType<typeof umbralesPuja> }) {
+  if (u.umbrales.length === 0) return null
+  return (
+    <details style={{ marginTop: 6 }}>
+      <summary style={{ cursor: 'pointer', minHeight: 32, display: 'flex', alignItems: 'center', color: 'var(--text)', fontSize: 13 }}>
+        ⚖️ Umbrales de aprobación del remate{u.regimen === 'judicial' ? ' (art. 670 LEC)' : ' (RGR)'}
+      </summary>
+      <ul style={{ margin: '6px 0 0', paddingLeft: 18, color: 'var(--text)', fontSize: 12, lineHeight: 1.5 }}>
+        {u.umbrales.map((x) => <li key={x.clave}>{x.etiqueta}</li>)}
+        {u.notas.map((n, i) => <li key={`n${i}`} style={{ color: 'var(--muted)' }}>{n}</li>)}
+      </ul>
+    </details>
   )
 }
 
@@ -788,6 +772,12 @@ function FichaSubasta({ s, o, acciones, extra, doc, escenarios, params }: { s: S
   const panoUrl = urlStreetView(s.lat, s.lon)
   const catastroUrl = urlFichaCatastro(s.refCatastral)
   const exacta = s.geoPrecision === 'catastro'
+  // Deuda, puja mínima y umbrales: UN solo cálculo (helper puro del módulo)
+  // compartido por «💶 Los números» y el detalle legal de «⚖️ Cómo pujar».
+  // Si el edicto declaró «vivienda habitual», el escenario de desierta
+  // (art. 671) deja de ser genérico. La señal viene de las notas persistidas.
+  const u = umbralesPuja(aInmueble(s), { viviendaHabitual: viviendaHabitualDeNotas(doc?.notasEdicto) })
+  const epm = estadoPujaMinima(u.pujaMinima)
 
   return (
     <div style={card}>
@@ -835,18 +825,11 @@ function FichaSubasta({ s, o, acciones, extra, doc, escenarios, params }: { s: S
         </p>
       )}
 
+      {/* Contexto de dónde/cuándo. Los importes ya NO van aquí: viven juntos
+          en «💶 Los números» — como chips grises del mismo peso se confundían. */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, fontSize: 12, color: 'var(--muted)' }}>
         {s.provincia && <span>📍 {s.municipio ? `${s.municipio} (${s.provincia})` : s.provincia}</span>}
         {cierre && <span>⏰ cierra {cierre}</span>}
-        {s.valorSubasta != null && <span>salida {eur(s.valorSubasta)}</span>}
-        {s.tasacion != null && <span>tasación {eur(s.tasacion)}</span>}
-        {/* La puja en vivo que vio el vigía de seguidas (solo BOE, cerca del cierre). */}
-        {s.mejorPuja != null && (
-          <span style={{ color: 'var(--text)', fontWeight: 600 }}>
-            🔥 mejor puja {eur(s.mejorPuja)}
-            {s.valorSubasta != null && s.valorSubasta > 0 && ` (${Math.round((s.mejorPuja / s.valorSubasta) * 100)}% del tipo)`}
-          </span>
-        )}
         {s.situacionPosesoria === 'ocupada' && <span>⚠️ ocupada</span>}
       </div>
 
@@ -860,78 +843,160 @@ function FichaSubasta({ s, o, acciones, extra, doc, escenarios, params }: { s: S
         </div>
       )}
 
-      {/* El origen del valor va SIEMPRE junto a la cifra: una estimación por
-          comparables no puede parecer una tasación. */}
-      {o?.valorMercado != null && (
-        <div style={{ marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>
-          Valor de mercado {eur(o.valorMercado)} · {ORIGEN_VALOR[o.origenValor ?? 'tasacion']}
-          {/* La cifra manda sobre el descuento, la puntuación y la puja: si está
-              construida con la mediana de una ciudad entera hay que verlo AQUÍ,
-              no enterrado en los avisos del detalle plegado. */}
-          {o.valorOrientativo && (
-            <span
-              title="El €/m² es la mediana de todo el municipio, donde el precio cambia mucho por barrio. Orienta, pero no sirve para decidir una puja."
-              style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 999, fontSize: 11, fontWeight: 700, background: 'var(--warning-bg, #fef3c7)', color: 'var(--text)' }}
+      {/* ── 💶 LOS NÚMEROS ─────────────────────────────────────────────────
+          Todas las cifras de la subasta en UN bloque de pares etiqueta→valor,
+          en vez de chips grises y líneas sueltas del mismo peso (así se llegó
+          a confundir el coste con el precio de mercado — Alberto, 08/08/2026).
+          La distinción que debe VERSE: salida = por lo que se puja · valor de
+          mercado = con qué se compara · coste (bloque siguiente) = lo que te
+          costaría en total. */}
+      <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--card-2, var(--bg))' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8 }}>
+          💶 Los números
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px 14px' }}>
+          <Dato etiqueta="Salida" sub={u.regimen != null ? 'por lo que se puja' : undefined}>
+            {s.valorSubasta != null
+              ? <strong>{eur(s.valorSubasta)}</strong>
+              : <span style={{ color: 'var(--muted)' }}>no publicada</span>}
+          </Dato>
+          <Dato etiqueta="Tasación">
+            {s.tasacion != null
+              ? <strong>{eur(s.tasacion)}</strong>
+              : <span style={{ color: 'var(--muted)' }}>no publicada</span>}
+          </Dato>
+          {/* La puja en vivo que vio el vigía de seguidas (solo BOE, cerca del
+              cierre): sin dato no se pinta — su ausencia no informa de nada. */}
+          {s.mejorPuja != null && (
+            <Dato
+              etiqueta="🔥 Mejor puja vista"
+              sub={s.valorSubasta != null && s.valorSubasta > 0 ? `${Math.round((s.mejorPuja / s.valorSubasta) * 100)}% del tipo` : undefined}
             >
-              ⚠️ orientativo
-            </span>
+              <strong>{eur(s.mejorPuja)}</strong>
+            </Dato>
+          )}
+          {/* Deuda y puja mínima solo si el procedimiento las tiene: en venta
+              directa no hay puja, y pintar ahí un «no publicada» sería
+              prometer un dato que nunca va a llegar. */}
+          {(u.regimen != null || u.cantidadReclamada != null) && (
+            <Dato etiqueta="Deuda reclamada" sub={u.cantidadReclamada != null ? 'techo probable de la puja del ejecutante' : undefined}>
+              {u.cantidadReclamada != null
+                ? <strong>{eur(u.cantidadReclamada)}</strong>
+                : <span style={{ color: 'var(--muted)' }}>no publicada</span>}
+            </Dato>
+          )}
+          {u.regimen != null && (
+            <Dato etiqueta="Puja mínima">
+              {epm === 'publicada' ? <strong>{eur(u.pujaMinima!)}</strong>
+                : epm === 'sin_minimo' ? <span style={{ color: 'var(--muted)' }}>sin mínimo — cualquier postura es admisible</span>
+                : <span style={{ color: 'var(--muted)' }}>no publicada</span>}
+            </Dato>
+          )}
+          {o && (
+            <Dato etiqueta="Depósito para pujar">
+              {o.deposito != null
+                ? <strong>{eur(o.deposito)}</strong>
+                : <span style={{ color: 'var(--muted)' }}>no publicado</span>}
+            </Dato>
           )}
         </div>
-      )}
 
-      {o && o.coste.total > 0 && (
-        <div style={{ marginTop: 10, fontSize: 13, color: 'var(--text)' }}>
-          Coste real estimado: <strong>{eur(o.coste.total)}</strong>
-          {o.deposito != null && <> · depósito para pujar {eur(o.deposito)}</>}
-        </div>
-      )}
-
-      {/* Escenarios informativos: el coste de arriba (y el score) simulan el
-          remate al 100% de la salida — lo conservador. Esto enseña cuánto
-          costaría rematar donde de verdad se adjudican las subastas. */}
-      {escenarios && escenarios.length > 0 && (
-        <div style={{ marginTop: 4, fontSize: 12, color: 'var(--muted)' }}>
-          {escenarios.map((e) => (
-            <div key={e.origen}>{e.etiqueta}: ~<strong style={{ color: 'var(--text)' }}>{eur(e.total)}</strong> de coste real</div>
-          ))}
-          <div style={{ fontSize: 11 }}>El coste y la puntuación de arriba siguen calculados con remate al 100% de la salida (conservador).</div>
-        </div>
-      )}
-
-      {/* Deuda, puja mínima y umbrales legales de aprobación del remate. */}
-      <UmbralesPujaFicha s={s} notasEdicto={doc?.notasEdicto} />
-
-      {/* 🧮 ¿Y si pujo X? — todo con la lógica pura del módulo, sin red. */}
-      <SimuladorPuja s={s} o={o} params={params} />
-
-      {/* Montaje perezoso: el detalle solo se renderiza al abrirlo. */}
-      {o && (
-        <>
-          <button onClick={() => setAbierto((v) => !v)} style={{ ...boton(), marginTop: 10, minHeight: 36 }}>
-            {abierto ? 'Ocultar detalle' : 'Ver detalle del coste'}
-          </button>
-          {abierto && (
-            <div style={{ marginTop: 10, fontSize: 13, color: 'var(--text)' }}>
-              <div style={{ marginBottom: 6 }}>
-                {o.coste.impuestoConcepto} sobre {eur(o.coste.baseImponible)} ={' '}
-                <strong>{eur(o.coste.impuestoTransmision)}</strong>
-              </div>
-              {o.motivos.length > 0 && (
-                <ul style={{ margin: '6px 0', paddingLeft: 18 }}>
-                  {o.motivos.map((m, i) => <li key={i}>{m}</li>)}
-                </ul>
+        {/* El origen del valor va SIEMPRE junto a la cifra: una estimación por
+            comparables no puede parecer una tasación. */}
+        {o?.valorMercado != null && (
+          <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px dashed var(--border)' }}>
+            <Dato etiqueta="Valor de mercado" sub="con qué se compara">
+              <strong>{eur(o.valorMercado)}</strong>
+              <span style={{ color: 'var(--muted)', fontSize: 12 }}> · {ORIGEN_VALOR[o.origenValor ?? 'tasacion']}</span>
+              {/* La cifra manda sobre el descuento, la puntuación y la puja: si está
+                  construida con la mediana de una ciudad entera hay que verlo AQUÍ,
+                  no enterrado en los avisos del detalle plegado. */}
+              {o.valorOrientativo && (
+                <span
+                  title="El €/m² es la mediana de todo el municipio, donde el precio cambia mucho por barrio. Orienta, pero no sirve para decidir una puja."
+                  style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 999, fontSize: 11, fontWeight: 700, background: 'var(--warning-bg, #fef3c7)', color: 'var(--text)' }}
+                >
+                  ⚠️ orientativo
+                </span>
               )}
-              {o.avisos.length > 0 && (
-                <div style={{ marginTop: 8, padding: 10, borderRadius: 8, background: 'var(--warning-bg, #fef3c7)' }}>
-                  <strong style={{ fontSize: 12 }}>Ojo:</strong>
-                  <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 12 }}>
-                    {o.avisos.map((a, i) => <li key={i}>{a}</li>)}
-                  </ul>
-                </div>
-              )}
+            </Dato>
+          </div>
+        )}
+      </div>
+
+      {/* ── COSTE PUERTA ABIERTA ───────────────────────────────────────────
+          Con acento propio para que no se lea como otra valoración: es la
+          salida + impuestos + gastos, lo que te costaría en total. */}
+      {(o || (escenarios && escenarios.length > 0)) && (
+        <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 8, borderLeft: '3px solid var(--primary)', background: 'var(--card-2, var(--bg))' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', color: 'var(--muted)' }}>
+            Coste — lo que te costaría en total
+          </div>
+          {o && o.coste.total > 0 && (
+            <div style={{ marginTop: 6, fontSize: 13, color: 'var(--text)' }}>
+              {/* «Coste real estimado» a secas se leía como precio de mercado
+                  (Alberto, 08/08/2026, la de 806.015,16€): el titular dice A
+                  QUÉ REMATE está simulado. El depósito vive en «💶 Los números». */}
+              Coste puerta abierta si rematas a la salida
+              {s.valorSubasta != null && <> ({eur(s.valorSubasta)})</>}: <strong>{eur(o.coste.total)}</strong>
             </div>
           )}
-        </>
+          {/* Escenarios informativos: el coste de arriba (y el score) simulan el
+              remate al 100% de la salida — lo conservador. Esto enseña cuánto
+              costaría rematar donde de verdad se adjudican las subastas. */}
+          {escenarios && escenarios.length > 0 && (
+            <div style={{ marginTop: 4, fontSize: 12, color: 'var(--muted)' }}>
+              {escenarios.map((e) => (
+                <div key={e.origen}>{e.etiqueta}: ~<strong style={{ color: 'var(--text)' }}>{eur(e.total)}</strong> de coste real</div>
+              ))}
+              <div style={{ fontSize: 11 }}>El coste y la puntuación de arriba siguen calculados con remate al 100% de la salida (conservador).</div>
+            </div>
+          )}
+          {/* Montaje perezoso: el detalle solo se renderiza al abrirlo. */}
+          {o && (
+            <>
+              <button onClick={() => setAbierto((v) => !v)} style={{ ...boton(), marginTop: 8, minHeight: 36 }}>
+                {abierto ? 'Ocultar detalle' : 'Ver detalle del coste'}
+              </button>
+              {abierto && (
+                <div style={{ marginTop: 10, fontSize: 13, color: 'var(--text)' }}>
+                  <div style={{ marginBottom: 6 }}>
+                    {o.coste.impuestoConcepto} sobre {eur(o.coste.baseImponible)} ={' '}
+                    <strong>{eur(o.coste.impuestoTransmision)}</strong>
+                  </div>
+                  {o.motivos.length > 0 && (
+                    <ul style={{ margin: '6px 0', paddingLeft: 18 }}>
+                      {o.motivos.map((m, i) => <li key={i}>{m}</li>)}
+                    </ul>
+                  )}
+                  {o.avisos.length > 0 && (
+                    <div style={{ marginTop: 8, padding: 10, borderRadius: 8, background: 'var(--warning-bg, #fef3c7)' }}>
+                      <strong style={{ fontSize: 12 }}>Ojo:</strong>
+                      <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 12 }}>
+                        {o.avisos.map((a, i) => <li key={i}>{a}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── ⚖️ CÓMO PUJAR ──────────────────────────────────────────────────
+          Umbrales legales + simulador bajo un mismo techo: «cuánto hay que
+          pujar y qué pasa si pujo X» es UNA pregunta, no dos widgets sueltos.
+          Sin valor de subasta no hay nada que simular ni umbral que calcular. */}
+      {s.valorSubasta != null && s.valorSubasta > 0 && (
+        <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border)' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', color: 'var(--muted)' }}>
+            ⚖️ Cómo pujar
+          </div>
+          <UmbralesPujaFicha u={u} />
+          {/* 🧮 ¿Y si pujo X? — todo con la lógica pura del módulo, sin red. */}
+          <SimuladorPuja s={s} o={o} params={params} />
+        </div>
       )}
 
       {/* Cargas + documentación: en TODAS las pestañas, no solo en «Todas». */}
