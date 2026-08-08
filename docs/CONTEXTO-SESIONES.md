@@ -33,6 +33,62 @@
   fallback de diseño, no una avería); la rutina diaria de Booking los va rellenando. **A vigilar:**
   23-oct y 27-nov salieron muy por encima de su mes sin estar en el calendario de eventos.
 
+- **🕰️ Retrovisor de 24 meses → 15 AÑOS (08/08/2026).** Decisión de Alberto tras ver que H8 invertía el
+  signo entre mitades y con 22 snapshots no había forma de saber cuál era el mundo. `MESES_RETROVISOR`
+  = 180 en `backtest-puro.ts`: de ~22 snapshots por símbolo a **178**, cubriendo 2011-2026 (euro, 2015-16,
+  Q4-2018, COVID, oso de 2022, ciclo actual). No toca factores, pesos ni umbrales — solo la ventana de
+  medición. **Firmado en el pre-registro ANTES de ver datos, con el caveat que manda: sesgo de
+  SUPERVIVENCIA** (el universo son los 1.018 de hoy) → el nivel absoluto queda inflado y no se usa; lo
+  válido es la comparación cruzada dentro de cada fecha, que es justo lo que miden H8/H9/factores.
+  Fundamentales solo desde ~2010 (mandato XBRL) → los factores se miden sobre menos años que el precio.
+  El lote lleva ahora **presupuesto de tiempo** (240 s de 300) porque cada símbolo hace ~8× más CPU, y el
+  cron va **temporalmente cada 30 min** para reconstruir en ~1 día — **devolver a `10 */2 * * *` al cerrar**.
+  Durante la reconstrucción el corpus está MEZCLADO: filtrar por `actualizado_en` en todo análisis.
+  Reconciliadas las skills: `trading-analista/SKILL.md` (regla nueva — H8/H9 resueltas, no proponer
+  entradas «porque capituló» ni stops) y `references/infra-forward-radar.md` (decía 546 símbolos × 22
+  snapshots; ahora 1.018 × 178, con el sesgo de supervivencia y el límite de fundamentales desde ~2010).
+
+- **⚠️ mercado-booking: 2º disparo el mismo día, sin huella del 1º en `market_rates` (08/08/2026).**
+  El disparo de las 12:28 UTC de hoy dio `ok:true` y logeó 120 comps escritos. Este 2º disparo (horas
+  después) pidió `/api/sivra/mercado/plan` y recibió **las mismas 12 ventanas "nunca medidas"** —
+  `comps:0` en las 12, como si el primero no hubiera escrito nada. Medidas de nuevo (120 comps más),
+  y esta vez sí hizo avanzar la cola. **Sin diagnosticar la causa:** ¿se disparó dos veces la skill
+  por config de scheduling, con la primera fallando en silencio pese a loggear éxito? ¿o algo borró
+  `market_rates` entre medias? Pide revisar logs de `/api/sivra/mercado/ingest` de Vercel y el trigger
+  de la skill. Detalle en `docs/AGENTES-BITACORA.md`.
+
+- **✅ H8 y H9 RESUELTAS sobre el corpus completo — ninguna se cablea (08/08/2026).** 1.018/1.018 símbolos,
+  21.321 observaciones. **H9:** las tres reglas de salida fallan su propio criterio; stop −20% y trailing
+  −15% EMPEORAN los batacazos (15,6% y 12,1% vs 10,4% sin regla) — la salida por TIEMPO queda validada,
+  **no se ponen stops**. **H8:** el agregado SÍ cruza el umbral (+2,34 pp ≥ +2) y aun así no se cablea,
+  porque **el signo se invierte entre mitades**: +6,85 pp en ago24-jul25 y **−2,24 pp** en ago25-may26.
+  Aviso de método que costó dos veredictos contradictorios en el mismo día: con 920 símbolos daba +1,38
+  («no cumple»), con 1.000 daba +2,15 («cumple») — un 8% más de muestra movió 0,8 pp y cruzó la línea; la
+  guarda de serie rota solo aportó +0,19 de eso. **Toda resolución del retrovisor se reporta partida por
+  subperiodo, no solo agregada** — un criterio de una cifra sobre el agregado no ve la inversión de signo.
+
+- **🧹 Auditoría del corpus re-recolectado + dos «no lo sé» que afirmaban (08/08/2026).** El arreglo de
+  la barra en curso confirmado en producción: la asimetría por día de semana desapareció (medianas de
+  volRel 0,96–1,09 los siete días). **Veredictos:** H8 (capitulación) **NO cumple** — +1,4/+1,5 pp de
+  mediana ret91 contra los ≥+2 pp firmados; H9 (salidas) **fallan las tres**, y stop −20% y trailing
+  −15% EMPEORAN los batacazos (un stop convierte un susto en pérdida cerrada) → **no se cablea nada**.
+  Dos correcciones aprobadas por Alberto, en el pre-registro (§ Corrección de medición 08/08): (a) serie
+  de precios rota por contrasplit/reuso de ticker ⇒ capitulación a `null`, no `true` (`serieDiscontinua`
+  en `velas.ts`); (b) sin NI earningsYield NI fcfYield **no se rankea** — el `zValor = 0` de los que no
+  tienen dato es la MEDIA del universo, no una abstención, y colaba 3 nombres en el top-20 (TSEM/NBIS/ASX).
+  Anotado y SIN tocar: los pilares promedian columnas vacías → peso efectivo ≈39/28/34, no 40/40/20.
+
+- **📡 mercado-booking: primer disparo programado real (08/08/2026).** Hasta hoy la Rutina diaria no
+  había dejado huella (ver nota de ayer en la bitácora). Este disparo sí funcionó de punta a punta:
+  12 ventanas medidas con Booking.com, 120 comps escritos (`fuente='booking_mcp'`), latido
+  `sivra_mercado_booking` con `ok:true`. Detalle de p50 por ventana en `docs/AGENTES-BITACORA.md`.
+  Sin acción pendiente — vigilar que se repita mañana.
+
+- **📅 mercado-booking arranca como Rutina programada (08/08/2026).** Primer disparo automático (antes
+  solo se había probado a mano, ver entrada #1299): plan de 12 ventanas (las 12 nunca medidas),
+  medidas todas contra Booking respetando aforo real, 120 comps escritos (`fuente='booking_mcp'`),
+  0 sin respuesta, latido `sivra_mercado_booking` ok. Detalle y medianas en `docs/AGENTES-BITACORA.md`.
+
 - **🔍 Auditoría diaria ligera (08/08/2026).** Sin PRs de rutina atascados (el auto-merge de #1289/#1297
   ya funciona: #1298 resuelto solo hoy). Heartbeat de crons 12/14 ✅, 2 falsos positivos ya conocidos
   (`updates/sync` Smoobu sin reservas nuevas, `limpiadoras/auto-sessions` idempotente) verificados de
@@ -439,7 +495,6 @@ anuncio» por la vía legítima: `Comparable.aReformar` desde el `status` de la 
 (`renew`; columna `mercado_comparables.a_reformar`, aplicada) — el scraping de la ficha sigue vetado
 (Idealista bloquea datacenter). Fotocasa: estado de la ficha PENDIENTE de validar contra ficha real.
 Tests 409/409 módulo + 851/851 plataforma, `tsc` 0, build OK. PR #1259.
-
 - **🔘 Botones ✅/❌ en las propuestas de trading por Telegram (05/08/2026).** Alberto: «lo más rápido
   y fácil para mí». `/api/internal/alerta` acepta `botones` opcionales validados por
   `lib/alerta-botones.ts` (puro, 5 tests): URLs solo https y callbacks SOLO `trd_*` — un ALERTA_TOKEN

@@ -193,6 +193,97 @@ primer dato forward — la cohorte 2 y el radar empiezan a medir el 20/07/2026).
 - **Evaluación:** por estado de la tabla — ciclo completo con los campos `salidaStop10/20/Trail15`
   presentes (no por fecha de calendario; lección del cron muerto del 19/07).
 
+## ✅ RESOLUCIÓN de H8 y H9 — ciclo completo, 08/08/2026
+> Corpus: **1.018 de 1.018 símbolos** re-recolectados tras el arreglo de la barra en curso (PR #1283) y
+> con la guarda de serie rota (PR #1301). Última pasada 2026-08-08 12:10 UTC. 21.321 observaciones con
+> `ret91` y las tres salidas — por encima del mínimo de 5.000 firmado en H9.
+
+### H8 (capitulación) — **NO se cablea**
+| periodo | n señales | mediana ret91 con señal | sin señal | diferencia | batacazos con/sin |
+|---|---|---|---|---|---|
+| ago-24 → jul-25 | 429 | +9,41% | +2,55% | **+6,85 pp** | 10,3% / 9,2% |
+| ago-25 → may-26 | 344 | +1,31% | +3,55% | **−2,24 pp** | 15,4% / 11,3% |
+| **total** | **773** | **+5,31%** | **+2,97%** | **+2,34 pp** | 12,5% / 10,2% |
+
+El agregado cruza el umbral firmado (≥ +2 pp de mediana, batacazos no peores en >10 pp), **y aun así la
+hipótesis no se cablea**. Motivo, declarado antes de mirar más particiones: **el signo se invierte entre
+mitades**. El +2,34 pp global es el promedio de un semestre muy bueno y otro en contra; un factor que en
+la mitad más reciente de la muestra RESTA 2,24 pp y sube los batacazos 4 pp no es una señal, es el rebote
+de 2024-25 metido en la media. Cablearlo sería comprar el régimen pasado.
+
+**Aviso de método, por si sirve la próxima vez:** el agregado era además INESTABLE. Con el corpus al 90%
+(920 símbolos) daba +1,38 pp —«no cumple»— y con el 98% (1.000) daba +2,15 pp —«cumple»—: un 8% más de
+datos movió el veredicto 0,8 pp y lo cruzó de lado. La guarda de serie rota aporta solo +0,19 pp de esa
+diferencia (de +2,15 a +2,34), así que **no fue la limpieza lo que cambió el resultado, fue la muestra**.
+Un criterio de una sola cifra sobre un agregado no detecta eso: la partición sí. Toda resolución futura
+del retrovisor se reporta **partida por subperiodo**, no solo agregada.
+
+**Qué queda:** `capitulacionMes/Sem` se siguen RECOLECTANDO (cuestan cero y sirven de contexto), pero no
+tocan ranking, cestas ni pesos. Se re-abre si H6 marca cambio de régimen y hay una tercera mitad que
+medir — con la partición como criterio, no el agregado.
+
+### H9 (reglas de salida) — **NO se cablea ninguna de las tres**
+| regla | mediana | batacazos (≤ −15%) |
+|---|---|---|
+| sin regla (salida por tiempo, 91 días) | +3,09% | 10,39% |
+| stop fijo −10% | −0,93% | 3,56% |
+| stop fijo −20% | +2,57% | 15,59% |
+| trailing −15% | +0,42% | 12,11% |
+
+- **Stop −10%:** cumple de sobra el perfil freno en batacazos (−6,8 pp, umbral ≥5 pp) pero **cede 4,02 pp
+  de mediana** y el criterio firmado permitía ceder 1. Rechazado por su propia condición.
+- **Stop −20% y trailing −15%:** **SUBEN** la tasa de batacazos (+5,2 pp y +1,7 pp). No es una anomalía:
+  un stop convierte un susto temporal que habría recuperado en una pérdida cerrada, y el propio criterio
+  del perfil retorno exige no subirla.
+- **Conclusión:** la salida por TIEMPO queda validada como la mejor disponible de las cuatro medidas, tal
+  y como preveía la cláusula de cierre de H9. **No se ponen stops.**
+- Sigue en pie el caveat firmado: si alguna vez se cablea una entrada de reversión, su salida se evalúa
+  aparte — este resultado es del universo agregado y no autoriza nada sobre una cesta concreta.
+
+## 🕰️ Ampliación del retrovisor a 15 AÑOS — firmada 2026-08-08, ANTES de ver un solo dato
+- **Origen:** Alberto, tras la resolución de H8/H9 — «ok hazlo». El caveat «un solo régimen» estaba
+  firmado en H1, H3, H4, H7, H8 y H9, y ese mismo día H8 enseñó lo que cuesta: agregado +2,34 pp
+  (por encima de su umbral) con el **signo invertido entre mitades** (+6,85 / −2,24 pp). Con 22
+  snapshots no hay forma de saber cuál de las dos mitades es el mundo. Más símbolos no lo arregla:
+  solo más historia.
+- **Cambio:** `MESES_RETROVISOR` 24 → **180** (`backtest-puro.ts`). De ~22 snapshots por símbolo a
+  **178**, cubriendo 2011-2026: crisis del euro, selloff 2015-16, Q4-2018, COVID, oso de 2022 y el
+  ciclo actual. No toca ningún factor, peso, umbral ni criterio de cableado — solo la ventana de
+  MEDICIÓN.
+
+### 🚨 Sesgo de supervivencia — el caveat que hay que firmar ANTES de tener los números
+El universo son los **1.018 símbolos que existen hoy**. Las empresas que quebraron o salieron de bolsa
+entre 2011 y 2026 no están. A 24 meses eso apenas pesaba; **a 15 años es severo**. Consecuencia,
+aceptada y declarada de antemano:
+- **El nivel absoluto de retorno del retrovisor queda INFLADO.** Cualquier «la estrategia habría hecho
+  X%» sobre este corpus es papel mojado y no se va a usar para nada.
+- **La comparación CRUZADA dentro de cada fecha sigue siendo válida**: capitula vs no capitula, con
+  regla de salida vs sin ella, quintil alto vs bajo. Los dos brazos arrastran el mismo sesgo, así que
+  la DIFERENCIA se mantiene interpretable — y la diferencia es exactamente lo que miden H8, H9 y los
+  criterios de factores.
+- **Lo que este corpus responde:** «¿la señal cambia de signo según el régimen?». **Lo que NO
+  responde:** «¿cuánto se gana?». Ningún tramo de la escalera de capital se mueve con datos del
+  retrovisor: la escalera la suben las cestas paper vivas, que no tienen este sesgo.
+
+### Otros límites, declarados ahora y no cuando molesten
+- **Fundamentales solo desde ~2010:** los `companyfacts` de la SEC arrancan con el mandato XBRL. Los
+  snapshots anteriores tendrán `piotroski/roic/ey/fcfy` a **null** — que es lo correcto («no se sabe»),
+  pero significa que los criterios de FACTORES se miden sobre una ventana más corta que los de
+  precio/volumen (H8, H9, medias móviles), que sí cubren los 15 años. Al reportar un factor hay que
+  decir sobre cuántos años se midió, no dar por hecho que son 15.
+- **Precios sin ajustar por acciones corporativas:** la guarda `serieDiscontinua` (08/08/2026) caza lo
+  imposible, no lo meramente erróneo, y a 15 años hay muchos más splits que a 2 años. Es la razón por
+  la que el siguiente trabajo pendiente es validar la fuente de precios contra IBKR.
+- **Regla de reporte (heredada de la resolución de H8):** toda conclusión del retrovisor se reporta
+  **partida por subperiodo**, nunca solo agregada. Con 15 años eso pasa de recomendable a obligatorio.
+- **Coste medido antes de ejecutarlo:** 162 B/snapshot → ~29 KB/fila, ~30 MB de jsonb para el universo.
+  El lote pasa a llevar **presupuesto de tiempo** (240 s de los 300 de `maxDuration`) porque cada
+  símbolo hace ~8× más CPU; los símbolos que no entran conservan su `actualizadoEn` y encabezan la
+  pasada siguiente.
+- **Durante la reconstrucción el corpus está MEZCLADO** (filas de 22 snapshots y filas de 178). Toda
+  consulta de análisis debe filtrar por `actualizado_en` hasta que el ciclo cierre — es la tercera vez
+  que pasa (06/08 y 08/08) y las dos anteriores ya obligaron a anular lecturas a medias.
+
 ## 💶 Plan de despliegue de capital REAL — escalera de tramos · firmada 2026-08-05
 - **Origen:** Alberto — «¿ves viable adelantar la inversión con dinero real? […] poco a poco, no de
   golpe» + «lo que veas mejor y me avisas». Se firma ANTES de que haya dinero de por medio para que
@@ -235,6 +326,48 @@ primer dato forward — la cohorte 2 y el radar empiezan a medir el 20/07/2026).
 - **Implementación (no cambia el modelo):** helper puro `apps/plataforma/lib/trading/puerta-fase2.ts`
   (`evaluarEscalera`, testeado) pintado en `/trading` (🪜) y en el digest semanal del paper-tracker.
   El semáforo solo MIDE; cada tramo sigue siendo una decisión separada de Alberto.
+
+## 🧹 Corrección de MEDICIÓN (no de modelo) — el «no lo sé» dejaba de puntuar como media · firmada 2026-08-08
+> Dos arreglos de higiene de datos aprobados por Alberto el 08/08/2026 tras la auditoría del corpus
+> re-recolectado. Se registran aquí porque **el segundo cambia el ranking**, aunque ninguno toca pesos,
+> pilares ni composición de cestas. Ambos son la misma regla del CLAUDE.md aplicada al trading: un dato
+> que no se sabe no puede convertirse en una afirmación que decide.
+
+**(a) Serie de precios rota ⇒ la capitulación vale `null`, no `true`.** La fuente diaria no viene
+ajustada por acciones corporativas: un contrasplit 1:20 multiplica el precio por 20 sin que nadie gane
+nada, y la ventana de H8 lo leía como «−95% con volumen» → `capitulacionMes: true`. Medido sobre 18.817
+observaciones: 51 (0,27%) con volumen relativo imposible y retornos a 91 días de hasta **+5.890%**
+(QUHUO 110,43$ → 9,63$ en un mes; Lytus 1.545 → 427 → 47; Smurfit Westrock con volRel 4.992 por empezar
+a cotizar en jul-2024). Guarda en `apps/plataforma/lib/trading/velas.ts` (`serieDiscontinua`, testeada):
+salto de cierre mensual ×3 o ÷3 dentro de la ventana, o volRel > 50 ⇒ `{activa, caida, volRel}` a `null`
+con motivo `'serie-rota'`. **Umbrales de lo imposible, no de lo raro** — una caída real del −60% en un
+mes sigue puntuando. **Límite asumido y declarado:** las barras posteriores a la costura conservan
+ratios ya plausibles (SW dio 4,8 → 3,7 → 2,4 los tres meses siguientes) y NO se cazan; se prefiere
+dejar pasar una dudosa a anular señales buenas.
+
+**(b) Sin ningún dato de VALOR no se rankea.** `zscores()` documentaba que «un dato ausente = 0
+(neutral), nunca penaliza ni premia por faltar». En un z-score eso es falso: **0 es la MEDIA del
+universo**. Medido sobre la caché viva del 08/08/2026: de 875 elegibles, **161 no tenían NI
+earningsYield NI fcfYield** (casi todas ADR/extranjeras cuya capitalización no se cruza con el XBRL) y
+recibían `zValor = 0` con el 40% del peso; el **58,4%** de las que sí tienen el dato salían con zValor
+negativo, así que no saber si eras cara te ponía por delante de más de la mitad del universo — y **3 de
+esas 161 estaban en el top-20** (TSEM #15, NBIS #17, ASX #19). La puerta de `rankearUniverso` pasa a
+exigir el núcleo de calidad (piotroski + roic) **y al menos uno** de los dos datos de valor; las
+descartadas salen contadas en `salud.sinValor` del snapshot, no escondidas.
+- **Por qué UNO y no LOS DOS:** exigir ambos echaría a 249 nombres por un capex ausente, que es otra
+  ausencia distinta y ya la absorbe el promedio del pilar.
+- **Qué NO es esto:** no cambia pesos (0,4/0,4/0,2), ni pilares, ni el satélite 🚀, ni las cestas. Es la
+  puerta de elegibilidad, que ya excluía por calidad (piotroski+roic) desde el origen.
+- **Cómo se revierte:** quitando `tieneValor` del filtro. Reversible en una línea.
+- **Efecto secundario esperado y aceptado:** el universo elegible baja de 875 a ~714 y el top-20 cambia
+  en 3 nombres. Los snapshots anteriores al 08/08/2026 NO se recalculan: el track record se sigue
+  midiendo contra lo que el sistema decidió el día que lo decidió.
+
+**Hallazgo relacionado, NO tocado (requiere hipótesis propia):** los pilares promedian columnas que
+nunca se rellenan (`shareholderYield` en valor; `margenNeto` y `deudaEbitda` en calidad), así que valor
+se divide entre 3 y calidad entre 4 mientras momentum va sin dividir. El peso EFECTIVO resulta ≈39%
+valor / 28% calidad / 34% momentum, no el 40/40/20 nominal. Queda anotado y **sin cambiar**: mover eso
+es tocar el modelo y necesita su propia entrada firmada.
 
 ## 📦 Archivo — pre-registro original de la cohorte 1 (tabla `trading_forward_paper`, retirada 01/08/2026)
 La primera cohorte se pre-registró el 18/07/2026 en una tabla ad-hoc (`trading_forward_paper`, con

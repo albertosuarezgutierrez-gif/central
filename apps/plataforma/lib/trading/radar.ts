@@ -229,6 +229,11 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
   const errores = filas.filter(f => f.error != null).length
   const salud = {
     total: filas.length, frescas: frescas.length, errores, regimen, eventos, insiders,
+    // Descartadas por no tener NI earningsYield NI fcfYield: no puntúan porque su valor se DESCONOCE
+    // (casi todas ADR/extranjeras sin capitalización cruzable), no porque sean caras. Ver la landmine
+    // de `rankearUniverso`: antes entraban con zValor = 0, que es la MEDIA del universo, no una
+    // abstención. Si este número crece mucho, el problema es la cobertura de datos, no el ranking.
+    sinValor: radar.sinValor,
     correlacionTop, correlacionWatchlist, resultadosProximos,
     anomalias: anomalias.map(a => ({ simbolo: a.simbolo, campo: a.campo, motivo: a.motivo })),
   }

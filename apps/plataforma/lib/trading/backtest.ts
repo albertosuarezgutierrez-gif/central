@@ -67,11 +67,21 @@ export function factoresEnFecha(cf: CompanyFacts | null, puntos: PuntoVol[], fec
   }
 }
 
+// Presupuesto de tiempo de UNA pasada. El handler declara `maxDuration = 300`; se reserva un margen
+// para que la función VUELVA y reporte en vez de morir en 504 a mitad de lote.
+// Lección del repo (facturas-scan, 31/07/2026): subir el techo solo mueve la pared — lo que garantiza
+// que la pasada termina es el presupuesto. Al pasar el retrovisor de 24 a 180 meses cada símbolo hace
+// ~8× más trabajo de CPU (una tanda de barridos O(n) sobre la serie diaria POR snapshot), así que un
+// lote fijo de 40 dejó de caber con holgura. Los símbolos no procesados NO se tocan: conservan su
+// `actualizadoEn` viejo y el `ORDER BY actualizadoEn ASC` los pone los primeros en la pasada siguiente.
+const PRESUPUESTO_MS = 240_000
+
 // Recolecta el siguiente lote: siembra desde trading_universo (+SPY como benchmark) y rellena las
 // filas más rancias. Mismo patrón/ritmo que refrescarLoteUniverso (~4 símbolos/s contra SEC).
-export async function refrescarLoteBacktest(lote = 40): Promise<{ sembradas: number; procesadas: number; conDatos: number; errores: number }> {
+export async function refrescarLoteBacktest(lote = 40, presupuestoMs = PRESUPUESTO_MS): Promise<{ sembradas: number; procesadas: number; conDatos: number; errores: number; sinTiempo: number }> {
+  const t0 = Date.now()
   const universo = await prisma.tradingUniverso.findMany({ select: { simbolo: true, cik: true, nombre: true } })
-  if (universo.length === 0) return { sembradas: 0, procesadas: 0, conDatos: 0, errores: 0 }
+  if (universo.length === 0) return { sembradas: 0, procesadas: 0, conDatos: 0, errores: 0, sinTiempo: 0 }
 
   const sembrado = await prisma.tradingBacktest.createMany({
     data: [
@@ -93,8 +103,12 @@ export async function refrescarLoteBacktest(lote = 40): Promise<{ sembradas: num
     take: lote,
   })
 
-  let conDatos = 0, errores = 0
+  let conDatos = 0, errores = 0, procesadas = 0
   for (const fila of filas) {
+    // Se corta ANTES de empezar un símbolo, no a media escritura: así la fila queda intacta y rancia
+    // (se reintenta entera la próxima pasada) en vez de a medio actualizar.
+    if (Date.now() - t0 > presupuestoMs) break
+    procesadas++
     try {
       const crudo = fila.cik ? await companyfactsCrudo(fila.cik) : null
       // Adelgazar UNA vez a los conceptos usados; el recorte por fecha (×~22) va sobre el delgado.
@@ -120,7 +134,7 @@ export async function refrescarLoteBacktest(lote = 40): Promise<{ sembradas: num
     }
     await sleep(250)
   }
-  return { sembradas: sembrado.count, procesadas: filas.length, conDatos, errores }
+  return { sembradas: sembrado.count, procesadas, conDatos, errores, sinTiempo: filas.length - procesadas }
 }
 
 // La LUPA de gurús: convicciones ACTUALES de Dataroma cruzadas con los factores actuales de la caché

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { barrasPeriodicas, barrasCerradas, claveDePeriodo, caidaDesdeMaximo, volumenRelativo, senalCapitulacion } from './velas.ts'
+import { barrasPeriodicas, barrasCerradas, claveDePeriodo, caidaDesdeMaximo, volumenRelativo, senalCapitulacion, serieDiscontinua } from './velas.ts'
 import type { PuntoVol } from './precios-stooq.ts'
 
 const p = (fecha: string, cierre: number, volumen: number | null = 1000): PuntoVol => ({ fecha, cierre, volumen })
@@ -208,4 +208,68 @@ test('capitulación real: con la barra en curso NO salta, con la cerrada SÍ', (
   assert.equal(cerrada.activa, true)               // enero cerrado: −30% con 3× de volumen
   assert.ok(cerrada.caida !== null && cerrada.caida <= -0.25)
   assert.ok(cerrada.volRel !== null && cerrada.volRel >= 1.5)
+})
+
+test('serieDiscontinua caza el contrasplit y el split, y NO una caída fuerte de verdad', () => {
+  const plano = (n: number, precio: number) => Array.from({ length: n }, (_, i) => [precio, 2000] as [number, number])
+  // 13 barras planas a 100 → sin costura.
+  assert.equal(serieDiscontinua(barrasPeriodicas(meses(plano(13, 100)), '2030-01-01', 'mes')), false)
+  // Caída BRUTAL pero continua (−60% en un mes): es mercado, no una costura.
+  const caidaReal = barrasPeriodicas(meses([...plano(12, 100), [40, 6000]]), '2030-01-01', 'mes')
+  assert.equal(serieDiscontinua(caidaReal), false)
+  // Contrasplit 1:20 (precio ×20 de un mes al siguiente).
+  const contrasplit = barrasPeriodicas(meses([...plano(12, 5), [100, 2000]]), '2030-01-01', 'mes')
+  assert.equal(serieDiscontinua(contrasplit), true)
+  // Split 10:1 (precio ÷10) en mitad de la ventana, no solo en la última barra.
+  const split = barrasPeriodicas(meses([...plano(6, 500), ...plano(7, 50)]), '2030-01-01', 'mes')
+  assert.equal(serieDiscontinua(split), true)
+})
+
+test('capitulación: un CONTRASPLIT no se guarda como señal — devuelve null, no true ni false', () => {
+  // Caso QUHUO: 12 meses a 100 y el último cierra a 8 (÷12,5) con volumen alto. Sin la guarda esto
+  // es «caída del −92% con 3× de volumen» = capitulación de manual, y jamás ocurrió.
+  const puntos: PuntoVol[] = []
+  for (let i = 0; i < 12; i++) {
+    const total = 2025 * 12 + i
+    const ym = `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, '0')}`
+    puntos.push(p(`${ym}-10`, 100, 1000), p(`${ym}-20`, 100, 1000))
+  }
+  puntos.push(p('2026-01-10', 8, 3000), p('2026-01-20', 8, 3000))
+
+  const s = senalCapitulacion(barrasCerradas(puntos, '2026-02-01', 'mes'))
+  assert.equal(s.activa, null)          // «no se puede saber», NUNCA true
+  assert.equal(s.motivo, 'serie-rota')
+  assert.equal(s.caida, null)           // la caída del −92% tampoco es un dato
+  assert.equal(s.volRel, null)
+})
+
+test('capitulación: volumen relativo imposible (ticker recién listado) también da null', () => {
+  // Caso Smurfit Westrock: 12 meses de cotización residual (volumen 1) y el primero de verdad
+  // (volumen 100.000) → volRel ≈ 100.000. Precios continuos: solo lo caza el techo de volumen.
+  const puntos: PuntoVol[] = []
+  for (let i = 0; i < 12; i++) {
+    const total = 2025 * 12 + i
+    const ym = `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, '0')}`
+    puntos.push(p(`${ym}-10`, 100, 1), p(`${ym}-20`, 95, 1))
+  }
+  puntos.push(p('2026-01-10', 70, 50_000), p('2026-01-20', 70, 50_000))
+
+  const s = senalCapitulacion(barrasCerradas(puntos, '2026-02-01', 'mes'))
+  assert.equal(s.activa, null)
+  assert.equal(s.motivo, 'serie-rota')
+})
+
+test('capitulación de verdad: la guarda NO la anula', () => {
+  // La misma serie del test anterior de capitulación real (−30% con 3× de volumen) sigue saltando.
+  const puntos: PuntoVol[] = []
+  for (let i = 0; i < 12; i++) {
+    const total = 2025 * 12 + i
+    const ym = `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, '0')}`
+    puntos.push(p(`${ym}-10`, 100, 1000), p(`${ym}-20`, 100, 1000))
+  }
+  puntos.push(p('2026-01-10', 70, 3000), p('2026-01-20', 70, 3000))
+
+  const s = senalCapitulacion(barrasCerradas(puntos, '2026-02-01', 'mes'))
+  assert.equal(s.activa, true)
+  assert.equal(s.motivo, 'activa')
 })
