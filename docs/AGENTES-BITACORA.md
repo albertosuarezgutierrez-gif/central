@@ -15,6 +15,20 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-08 · mercado-booking (2º disparo programado del mismo día)** · hizo: pidió el plan y
+  recibió **las mismas 12 ventanas "nunca medidas"** que ya reportó como medidas el disparo de las
+  12:28 UTC de hoy (mismo `checkin/checkout/aforo`, `ronda:1`, `comps:0`) — es decir, cuando este
+  disparo consultó el plan, la escritura anterior NO estaba reflejada en `market_rates` pese al
+  `ok:true` de aquel latido. Medidas de nuevo las 12 con Booking.com (120 comps, `fuente='booking_mcp'`,
+  0 sin respuesta) y confirmado que esta vez SÍ hicieron avanzar la cola (el plan post-ingest ya
+  ofrece ventanas distintas: 2 nuevas del partido Sevilla FC-Betis + 10 de ronda 2 "mes"). Latido
+  `sivra_mercado_booking` reenviado con `ok:true`. **dudas: por qué el disparo de las 12:28 quedó sin
+  huella en `market_rates` pese a loggear éxito — o el disparo se repitió por un fallo de scheduling
+  (dos ejecuciones el mismo día) y algo entre medias limpió las filas, o aquel `ok:true` fue en falso
+  (la escritura no llegó a persistir pese a que el latido la dio por buena); no se puede diferenciar
+  con lo que hay aquí — pide revisar logs de Vercel de `/api/sivra/mercado/ingest` entre 12:28 y
+  ahora, y confirmar si `CRON_JOBS`/el disparador de esta skill está configurado para disparar más de
+  una vez al día.** fallos: —. PRs/commits: —.
 - **2026-08-08 · mercado-booking (disparo programado)** · hizo: pidió el plan
   (`/api/sivra/mercado/plan?max=12`, 120 ventanas totales, 12 nunca medidas) y midió las 12 con el
   conector Booking.com — 120 comps escritos con `fuente='booking_mcp'`, 0 sin respuesta, 0 sin precio,

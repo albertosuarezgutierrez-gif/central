@@ -39,6 +39,15 @@
   entradas «porque capituló» ni stops) y `references/infra-forward-radar.md` (decía 546 símbolos × 22
   snapshots; ahora 1.018 × 178, con el sesgo de supervivencia y el límite de fundamentales desde ~2010).
 
+- **⚠️ mercado-booking: 2º disparo el mismo día, sin huella del 1º en `market_rates` (08/08/2026).**
+  El disparo de las 12:28 UTC de hoy dio `ok:true` y logeó 120 comps escritos. Este 2º disparo (horas
+  después) pidió `/api/sivra/mercado/plan` y recibió **las mismas 12 ventanas "nunca medidas"** —
+  `comps:0` en las 12, como si el primero no hubiera escrito nada. Medidas de nuevo (120 comps más),
+  y esta vez sí hizo avanzar la cola. **Sin diagnosticar la causa:** ¿se disparó dos veces la skill
+  por config de scheduling, con la primera fallando en silencio pese a loggear éxito? ¿o algo borró
+  `market_rates` entre medias? Pide revisar logs de `/api/sivra/mercado/ingest` de Vercel y el trigger
+  de la skill. Detalle en `docs/AGENTES-BITACORA.md`.
+
 - **✅ H8 y H9 RESUELTAS sobre el corpus completo — ninguna se cablea (08/08/2026).** 1.018/1.018 símbolos,
   21.321 observaciones. **H9:** las tres reglas de salida fallan su propio criterio; stop −20% y trailing
   −15% EMPEORAN los batacazos (15,6% y 12,1% vs 10,4% sin regla) — la salida por TIEMPO queda validada,
