@@ -32,6 +32,30 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🛡️ Auditoría profunda: el vigía del agente de pricing estaba en verde falso (08/08/2026)
+Pasada completa a petición de Alberto («prueba que todo funciona y está todo al día»). **Todo verde
+salvo un 🔴 nuevo:** la sonda `pricing` de `agentes-latido` medía sobre `market_rates prop_*`, huella
+que dejó de ser exclusiva de la Rutina semanal cuando el barrido Serper (diario 03:00) y la rutina
+`mercado-booking` (diaria desde el 06/08) empezaron a escribir ahí → **saldría verde con la Rutina
+muerta**, justo la avería de los 16 días del 21/07. Cambiada a `pricing_decisiones.ciclo_at` por piso
+(solo la escribe `aplicar-propuesta`, y solo la Rutina lo llama); misma corrección en la SQL de
+`/auditoria-diaria`. La Rutina está viva (último ciclo 03/08). Corregidas 2 afirmaciones mías: F2 ya
+estaba arreglado en #1299 y «latidos OK» no estaba comprobado. Todo en **PR #1318**.
+Verificado: 1031/1031 + 26/26 + 53/53, `tsc` 0 en las **8** apps, build 0, advisors sin ERROR.
+
+### 🔎 Auditoría de precios dinámicos + fallo mudo en el plan (08/08/2026)
+Informe: `docs/AUDITORIA-2026-08-precios-dinamicos.md`. **No está al 100%.** 🔴 El bucket mensual de
+`pricing/apply` excluye `corpus_clonado` pero **no filtra por `fuente`**, así que mezcla los precios
+de anuncio de Serper con las mediciones de Booking: medido hoy, mueve el objetivo **+24% en sep** y
+**−13% en octubre** (justo a la baja en el mejor mes). No se arregla filtrando ya — Booking solo
+llega a ≥3 fechas en sep/oct/nov; dic→abr se quedarían sin bucket. Propuesta: preferencia
+condicional (usar solo-fiable cuando él mismo cumple el umbral) + declarar `bucket_fuente`.
+Pendiente de decisión de Alberto por ser cambio de fórmula.
+🟡 `sivra_mercado_sweep` tiene `ultimo_ok_at` **NULL**: ninguna pasada buena desde que existe el latido.
+🟢 Raíles OK (suelo, tope ±%/día, techo, circuit-breaker sobre la intención cruda); 1023/1023 tests,
+tsc 0, build 0. Falso positivo propio corregido en el informe (marzo-27 no está contaminado: Semana
+Santa sí está catalogada). Arreglado de paso `?max=abc` → 0 ventanas en silencio (**PR #1318**).
+
 - **✅ Precio dinámico vivo en los 4 pisos, primera pasada real verificada (08/08/2026).** Mergeado #1305;
   el cron de las 14:30 UTC escribió en los cuatro (Dúplex 161 noches y House 60, las dos primeras veces).
   House-octubre bajó al tope del limitador (−20%: 04-oct 639→511€) **contra un mercado medido de 638€**, lo

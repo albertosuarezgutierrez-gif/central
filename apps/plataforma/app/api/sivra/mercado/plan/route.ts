@@ -5,8 +5,8 @@ import { isRoutineAuthorized } from "@/lib/cron-auth"
 import { EVENTS } from "@/lib/pricing-calendar"
 import { ventanasDelBarrido, type EventoFecha } from "@/lib/sivra/mercado-ventanas"
 import {
-  planDeVentanas, FUENTES_FIABLES,
-  type CoberturaVentana, type FiltroVentanas,
+  planDeVentanas, parsearParametrosPlan, FUENTES_FIABLES,
+  type CoberturaVentana,
 } from "@/lib/sivra/mercado-cobertura"
 
 export const dynamic = "force-dynamic"
@@ -31,43 +31,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "no autorizado" }, { status: 401 })
   }
 
-  const qs = new URL(req.url).searchParams
-  const max = Math.min(30, Math.max(1, Number(qs.get("max") ?? 12)))
-  const hoy = new Date().toISOString().slice(0, 10)
-  const avisos: string[] = []
+  // Parseo de `max`/`rondas`/`desde`/`hasta` en un helper PURO y testeado: el handler no se puede
+  // ejercitar con `node --test` (necesita Prisma y el alias `@/`), y ahí es donde se escondió un
+  // fallo mudo real — `?max=abc` devolvía CERO ventanas en silencio. Ver `parsearParametrosPlan`.
+  const parseo = parsearParametrosPlan(new URL(req.url).searchParams)
+  if (!parseo.ok) return NextResponse.json({ error: parseo.error }, { status: 400 })
+  const { max, filtro } = parseo.valor
 
-  // Recorte OPCIONAL del plan para una pasada concreta (`?rondas=2,3&desde=…&hasta=…`). Se aplica
-  // ANTES del tope: filtrar después solo alcanzaría lo que el tope no se hubiera comido ya (ver la
-  // nota de `FiltroVentanas`). Un filtro MAL ESCRITO se rechaza en vez de ignorarse: un `rondas=dos`
-  // que silenciosamente mide el plan entero es peor que un error, porque la pasada parece la pedida.
-  const filtro: FiltroVentanas = {}
-  const rondasRaw = qs.get("rondas")
-  if (rondasRaw !== null) {
-    const partes = rondasRaw.split(",").map(s => s.trim()).filter(Boolean)
-    const rondas = partes.map(Number)
-    if (!partes.length || rondas.some(n => !Number.isInteger(n) || n < 0)) {
-      return NextResponse.json(
-        { error: `rondas inválidas: "${rondasRaw}". Formato: enteros ≥0 separados por coma (p. ej. 2,3)` },
-        { status: 400 },
-      )
-    }
-    filtro.rondas = [...new Set(rondas)]
-  }
-  const ISO = /^\d{4}-\d{2}-\d{2}$/
-  for (const clave of ["desde", "hasta"] as const) {
-    const v = qs.get(clave)
-    if (v === null) continue
-    if (!ISO.test(v)) {
-      return NextResponse.json({ error: `${clave} inválida: "${v}". Formato: YYYY-MM-DD` }, { status: 400 })
-    }
-    filtro[clave] = v
-  }
-  if (filtro.desde && filtro.hasta && filtro.desde > filtro.hasta) {
-    return NextResponse.json(
-      { error: `rango vacío: desde (${filtro.desde}) es posterior a hasta (${filtro.hasta})` },
-      { status: 400 },
-    )
-  }
+  const hoy = new Date().toISOString().slice(0, 10)
+  const avisos: string[] = [...parseo.avisos]
 
   // Aforos REALES por piso: el comparable de una casa de 12 plazas no es el de un apartamento de 4
   // (bug del 31/07/2026). Los pisos que comparten aforo comparten consulta.

@@ -90,6 +90,72 @@ export type PlanPedido = {
   recortadas: number
 }
 
+/** Tope por defecto de ventanas por pasada, y techo duro (cada consulta cuesta contexto). */
+export const MAX_VENTANAS_DEFECTO = 12
+export const MAX_VENTANAS_TECHO = 30
+
+export type ParametrosPlan = { max: number; filtro: FiltroVentanas }
+
+/**
+ * Lee los parámetros del plan (`max`, `rondas`, `desde`, `hasta`) de una query string.
+ *
+ * Vive AQUÍ y no en el route handler para poder testearlo: el handler necesita Prisma y el alias
+ * `@/`, así que su lógica no se puede ejercitar con `node --test`. Lo que no se puede ejecutar en
+ * un test es justo donde se esconden los fallos mudos — y este parseo ya tenía uno:
+ *
+ * 🚨 **`?max=abc` devolvía CERO ventanas en silencio** (09/08/2026). `Number('abc')` es `NaN`,
+ * `Math.min(30, Math.max(1, NaN))` sigue siendo `NaN`, y `slice(0, NaN)` devuelve `[]` — así que
+ * una pasada con el tope mal escrito no medía nada y lo reportaba como «no había ventanas», con
+ * `recortadas: NaN` (que en JSON sale como `null`). Mismo fallo de clase que el filtro en cliente
+ * que este módulo vino a arreglar, pero dentro del propio endpoint. Ahora un `max` no numérico se
+ * RECHAZA; un `max` fuera de rango se acota y se dice.
+ */
+export function parsearParametrosPlan(
+  qs: URLSearchParams,
+): { ok: true; valor: ParametrosPlan; avisos: string[] } | { ok: false; error: string } {
+  const avisos: string[] = []
+
+  const maxRaw = qs.get('max')
+  let max = MAX_VENTANAS_DEFECTO
+  if (maxRaw !== null) {
+    const n = Number(maxRaw)
+    if (maxRaw.trim() === '' || !Number.isFinite(n) || !Number.isInteger(n)) {
+      return { ok: false, error: `max inválido: "${maxRaw}". Formato: entero entre 1 y ${MAX_VENTANAS_TECHO}` }
+    }
+    max = Math.min(MAX_VENTANAS_TECHO, Math.max(1, n))
+    // Acotar en silencio es mentir a medias: quien pidió 100 tiene que saber que le dieron 30.
+    if (max !== n) avisos.push(`max=${n} acotado a ${max} (rango válido 1-${MAX_VENTANAS_TECHO})`)
+  }
+
+  const filtro: FiltroVentanas = {}
+
+  const rondasRaw = qs.get('rondas')
+  if (rondasRaw !== null) {
+    const partes = rondasRaw.split(',').map(s => s.trim()).filter(Boolean)
+    const rondas = partes.map(Number)
+    if (!partes.length || rondas.some(n => !Number.isInteger(n) || n < 0)) {
+      return {
+        ok: false,
+        error: `rondas inválidas: "${rondasRaw}". Formato: enteros ≥0 separados por coma (p. ej. 2,3)`,
+      }
+    }
+    filtro.rondas = [...new Set(rondas)]
+  }
+
+  const ISO = /^\d{4}-\d{2}-\d{2}$/
+  for (const clave of ['desde', 'hasta'] as const) {
+    const v = qs.get(clave)
+    if (v === null) continue
+    if (!ISO.test(v)) return { ok: false, error: `${clave} inválida: "${v}". Formato: YYYY-MM-DD` }
+    filtro[clave] = v
+  }
+  if (filtro.desde && filtro.hasta && filtro.desde > filtro.hasta) {
+    return { ok: false, error: `rango vacío: desde (${filtro.desde}) es posterior a hasta (${filtro.hasta})` }
+  }
+
+  return { ok: true, valor: { max, filtro }, avisos }
+}
+
 const DIA_MS = 86_400_000
 
 function diasEntre(desdeIso: string, hastaIso: string): number {

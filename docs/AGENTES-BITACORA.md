@@ -15,6 +15,17 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-08 · auditoria-diaria (pasada PROFUNDA, a petición de Alberto)** · hizo: verificación
+  completa en verde (1031/1031 plataforma, 26/26 guardianes, 53/53 packages, `tsc` 0 en las **8**
+  apps, build 0, lockfile en sync, `ignoreCommand` y `transpilePackages` OK en las 8, advisors sin
+  ERROR, 12 heartbeats de dominio ✅, auto-merge de rutinas vivo) + **1 🔴 nuevo**: la sonda `pricing`
+  de `agentes-latido` estaba en verde falso porque su huella (`market_rates prop_*`) dejó de ser
+  exclusiva de la Rutina semanal al empezar a escribir ahí el barrido Serper y `mercado-booking`;
+  cambiada a `pricing_decisiones.ciclo_at` por piso. dudas: —; fallos: **🔇 SIN TELEGRAM** — el
+  preflight `GET /api/internal/alerta` NO llegó a dar 401 ni 200: el proxy de egress corta el CONNECT
+  con **403** contra `plataforma-ten-flame.vercel.app` (curl 56). No es el token: es la política de
+  red del environment, que deja mudo TODO el raíl HTTP (plan/ingest/latido/alerta) para cualquier
+  sesión. Acción #1 de Alberto: abrir `*.vercel.app` en la allowlist. PRs/commits: #1318
 - **2026-08-08 · mercado-booking (2ª pasada MANUAL, desviación pedida por Alberto: solo rondas 2-3,
   sep→ene)** · hizo: 10 ventanas medidas y **100 comps** escritos con `fuente='booking_mcp'` —
   8-sep (2p **p50 105€** · 4p 110€ · 5p 134€ · 12p 386€), 14-nov (2p 128€ · 4p 160€ · 5p 189€ ·

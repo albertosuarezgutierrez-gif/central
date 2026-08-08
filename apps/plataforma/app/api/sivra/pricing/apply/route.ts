@@ -6,6 +6,7 @@ import { eventFactor, seasonalFloorFactor, PRICING_HORIZON_DAYS, EVENTS } from "
 import { combinarEventosDeFecha, type EventoBruto } from "@/lib/sivra/eventos-estado"
 import { factorLastMinute } from "@/lib/sivra/pricing-lastminute"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
+import { elegirBucket } from "@/lib/sivra/pricing-bucket-fuente"
 import { aplicarPrior, indicesPrior, type IndicePrior, type MesHistorico } from "@/lib/sivra/prior-estacional"
 import { getSmoobuKey } from "@/lib/smoobu"
 import { tgSend } from "@central/core-telegram"
@@ -280,9 +281,22 @@ export async function POST(req: NextRequest) {
   const eventosCalendarioSql = fechasEventoCalendario.length
     ? Prisma.sql`UNION SELECT d::date FROM (VALUES ${Prisma.join(fechasEventoCalendario.map(d => Prisma.sql`(${d})`))}) AS t(d)`
     : Prisma.empty
+  // 🚨 PREFERENCIA DE FUENTE (09/08/2026, auditoría `docs/AUDITORIA-2026-08-precios-dinamicos.md`).
+  // El bucket excluía `corpus_clonado` pero NO miraba `fuente`, así que mezclaba los precios de
+  // ANUNCIO de Serper (que no distinguen la fecha) con las mediciones reales del conector. Medido
+  // ese día, el objetivo se movía **+24% en septiembre** y **−13% en octubre** contra el corpus
+  // fiable — y la dirección mala es la segunda: Serper hunde el bucket justo en el mejor mes.
+  //
+  // NO se puede filtrar a secas: hoy el corpus fiable solo alcanza las 3 fechas que exige
+  // `MIN_FECHAS_MES` en sep/oct/nov; de diciembre en adelante tiene 1-2 y esos meses se quedarían
+  // sin bucket (caerían al ancla global, que es PEOR). Así que el percentil se calcula DOS veces y
+  // se usa el fiable **solo cuando por sí mismo cumple el umbral**; si no, la mezcla, como antes.
+  // Nunca se degrada respecto al estado anterior: el peor caso es exactamente lo de ayer.
   const mesRows = await prisma.$queryRaw<{
     property_id: string; ym: string; med_guest: number; flo_guest: number; cei_guest: number
     n: number; fechas: number
+    med_fiable: number | null; flo_fiable: number | null; cei_fiable: number | null
+    n_fiable: number; fechas_fiable: number
   }[]>(Prisma.sql`
     WITH eventos AS (
       SELECT DISTINCT rate_date FROM pricing_eventos_auto WHERE factor >= ${FACTOR_EVENTO_EXCLUIR}
@@ -291,8 +305,11 @@ export async function POST(req: NextRequest) {
     recent AS (
       -- price_night NORMALIZADO al aforo del piso (ver pricing_factor_aforo); con comps del mismo
       -- aforo el factor es 1. Sin esto los buckets de un piso grande salian a precio de apartamento.
+      -- La columna fuente viaja con la fila GANADORA del dedupe (una por comp, la más reciente).
+      -- OJO: NO entra en el DISTINCT ON a propósito — si entrara, un mismo comparable medido por
+      -- las dos vías contaría DOS veces en el percentil.
       SELECT DISTINCT ON (m.scenario, m.checkin_date, m.comp_name)
-        m.scenario, m.checkin_date,
+        m.scenario, m.checkin_date, m.fuente,
         m.price_night * pricing_factor_aforo(z.max_guests, m.guests) AS price_night
       FROM market_rates m
       LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
@@ -313,14 +330,32 @@ export async function POST(req: NextRequest) {
       ROUND(percentile_cont(s.floor_pctl)  WITHIN GROUP (ORDER BY r.price_night))::int AS flo_guest,
       ROUND(percentile_cont(s.ceil_pctl)   WITHIN GROUP (ORDER BY r.price_night))::int AS cei_guest,
       COUNT(*)::int AS n,
-      COUNT(DISTINCT r.checkin_date)::int AS fechas
+      COUNT(DISTINCT r.checkin_date)::int AS fechas,
+      -- Mismo percentil sobre SOLO el corpus fiable (medido por fecha, no de anuncio).
+      ROUND(percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY r.price_night)
+            FILTER (WHERE r.fuente IN ('booking_mcp','manual')))::int AS med_fiable,
+      ROUND(percentile_cont(s.floor_pctl)  WITHIN GROUP (ORDER BY r.price_night)
+            FILTER (WHERE r.fuente IN ('booking_mcp','manual')))::int AS flo_fiable,
+      ROUND(percentile_cont(s.ceil_pctl)   WITHIN GROUP (ORDER BY r.price_night)
+            FILTER (WHERE r.fuente IN ('booking_mcp','manual')))::int AS cei_fiable,
+      COUNT(*) FILTER (WHERE r.fuente IN ('booking_mcp','manual'))::int AS n_fiable,
+      COUNT(DISTINCT r.checkin_date) FILTER (WHERE r.fuente IN ('booking_mcp','manual'))::int AS fechas_fiable
     FROM recent r JOIN pricing_settings s ON s.property_id = r.scenario
     GROUP BY r.scenario, to_char(r.checkin_date, 'YYYY-MM'), s.target_pctl, s.floor_pctl, s.ceil_pctl
   `).catch(() => [])
-  const mes = new Map<string, Map<string, { med: number; flo: number; cei: number; n: number; fechas: number }>>()
+  const mes = new Map<string, Map<string, {
+    med: number; flo: number; cei: number; n: number; fechas: number; fuente: 'fiable' | 'mixto'
+  }>>()
   for (const m of mesRows) {
     if (!mes.has(m.property_id)) mes.set(m.property_id, new Map())
-    mes.get(m.property_id)!.set(m.ym, { med: m.med_guest, flo: m.flo_guest, cei: m.cei_guest, n: m.n, fechas: m.fechas })
+    const el = elegirBucket(
+      { valores: m.med_fiable == null ? null : { med: m.med_fiable, flo: m.flo_fiable!, cei: m.cei_fiable! },
+        n: m.n_fiable, fechas: m.fechas_fiable },
+      { valores: { med: m.med_guest, flo: m.flo_guest, cei: m.cei_guest }, n: m.n, fechas: m.fechas },
+      MIN_BUCKET, MIN_FECHAS_MES,
+    )
+    if (!el) continue
+    mes.get(m.property_id)!.set(m.ym, { ...el.valores, n: el.n, fechas: el.fechas, fuente: el.fuente })
   }
 
   // ─── Idea #4: mercado por FECHA EXACTA (resolución por día en noches de evento) ─────────
@@ -329,12 +364,18 @@ export async function POST(req: NextRequest) {
   // día, el premio de evento se ancla a la mediana de ESA fecha en vez de la del mes/global. Solo
   // influye en fechas con evento (acota el radio de cambio a lo que el fallo destapó).
   const MIN_FECHA_BUCKET = 3
-  const fechaRows = await prisma.$queryRaw<{ property_id: string; rate_date: string; med_guest: number; n: number }[]>(Prisma.sql`
+  const fechaRows = await prisma.$queryRaw<{
+    property_id: string; rate_date: string; med_guest: number; n: number
+    med_fiable: number | null; n_fiable: number
+  }[]>(Prisma.sql`
     WITH recent AS (
       -- price_night NORMALIZADO al aforo del piso (ver pricing_factor_aforo); con comps del mismo
       -- aforo el factor es 1. Sin esto los buckets de un piso grande salian a precio de apartamento.
+      -- La columna fuente viaja con la fila GANADORA del dedupe (una por comp, la más reciente).
+      -- OJO: NO entra en el DISTINCT ON a propósito — si entrara, un mismo comparable medido por
+      -- las dos vías contaría DOS veces en el percentil.
       SELECT DISTINCT ON (m.scenario, m.checkin_date, m.comp_name)
-        m.scenario, m.checkin_date,
+        m.scenario, m.checkin_date, m.fuente,
         m.price_night * pricing_factor_aforo(z.max_guests, m.guests) AS price_night
       FROM market_rates m
       LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
@@ -346,14 +387,24 @@ export async function POST(req: NextRequest) {
     )
     SELECT r.scenario AS property_id, r.checkin_date::text AS rate_date,
       ROUND(percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY r.price_night))::int AS med_guest,
-      COUNT(*)::int AS n
+      COUNT(*)::int AS n,
+      ROUND(percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY r.price_night)
+            FILTER (WHERE r.fuente IN ('booking_mcp','manual')))::int AS med_fiable,
+      COUNT(*) FILTER (WHERE r.fuente IN ('booking_mcp','manual'))::int AS n_fiable
     FROM recent r JOIN pricing_settings s ON s.property_id = r.scenario
     GROUP BY r.scenario, r.checkin_date, s.target_pctl
   `).catch(() => [])
-  const fecha = new Map<string, Map<string, { med: number; n: number }>>()
+  const fecha = new Map<string, Map<string, { med: number; n: number; fuente: 'fiable' | 'mixto' }>>()
   for (const f of fechaRows) {
     if (!fecha.has(f.property_id)) fecha.set(f.property_id, new Map())
-    fecha.get(f.property_id)!.set(f.rate_date, { med: f.med_guest, n: f.n })
+    // Misma regla que en el mes, con el umbral de este bucket y sin exigir fechas distintas.
+    const el = elegirBucket(
+      { valores: f.med_fiable, n: f.n_fiable, fechas: 1 },
+      { valores: f.med_guest, n: f.n, fechas: 1 },
+      MIN_FECHA_BUCKET,
+    )
+    if (!el) continue
+    fecha.get(f.property_id)!.set(f.rate_date, { med: el.valores, n: el.n, fuente: el.fuente })
   }
 
   // ─── Prior estacional desde el HISTÓRICO PROPIO (17/07/2026, OK de Alberto) ────────────
@@ -713,6 +764,13 @@ export async function POST(req: NextRequest) {
       property: r.property_id,
       recommended_guest: r.recommended_guest, base_target: baseTargetGlobal,
       meses_con_mercado: mesProp ? [...mesProp.entries()].filter(([, v]) => v.n >= MIN_BUCKET && v.fechas >= MIN_FECHAS_MES).map(([k]) => k) : [],
+      // De QUÉ corpus sale el bucket de cada mes elegible. Un objetivo que no dice su procedencia es
+      // indistinguible de uno medido: `mixto` avisa de que ahí todavía pesa el precio de anuncio.
+      meses_bucket_fuente: mesProp
+        ? Object.fromEntries([...mesProp.entries()]
+            .filter(([, v]) => v.n >= MIN_BUCKET && v.fechas >= MIN_FECHAS_MES)
+            .map(([k, v]) => [k, v.fuente]))
+        : {},
       meses_calientes: [...(velocidad.get(r.property_id)?.entries() ?? [])].filter(([, n]) => n >= 2).map(([k, n]) => `${k}:${n}`),
       bounds: { floor_base: floorBaseGlobal, ceil_base: ceilBaseGlobal, min: r.min_price, max: r.max_price },
       // Antelación MEDIDA del piso POR MES (mes → días de mediana). Sin ella la palanca de urgencia
