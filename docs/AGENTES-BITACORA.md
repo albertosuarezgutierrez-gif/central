@@ -15,6 +15,14 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-08 · mercado-booking (primera pasada de la Rutina)** · hizo: pidió el plan
+  (`/api/sivra/mercado/plan?max=12`, 120 ventanas totales, las 12 sin medir nunca), midió las 12 con
+  el conector de Booking.com (aforos 2/4/5/12) y escribió 120 comps (`fuente='booking_mcp'`), 0
+  ventanas sin respuesta, 0 sin precio utilizable. Cubrió: dúplex+luxury Feria abr-2027, las 4
+  ventanas del evento Sevilla FC-Rayo (15-17 ago) y Athletic-Sevilla (22-24 ago), house_sevillana+
+  busto_reform de la Bienal Flamenco (29 sep-1 oct). Latido `sivra_mercado_booking` escrito con
+  `ok:true` (primera huella real de la Rutina — hasta ayer solo había una pasada manual). dudas: —;
+  fallos: —; PRs/commits: esta rama.
 - **2026-08-08 · mercado-booking (pasada MANUAL, la Rutina no existe)** · hizo: reprodujo
   `/api/sivra/mercado/plan` con los helpers puros (120 ventanas de plan, 10 pedidas, las 10 sin medir
   nunca) y midió 5 con el conector: 4-sep 2p **p50 110€** · 4-sep 12p **474€** · 16-oct 4p **184€** ·
