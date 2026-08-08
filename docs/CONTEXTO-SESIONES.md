@@ -24,6 +24,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧹 Auditoría del corpus re-recolectado + dos «no lo sé» que afirmaban (08/08/2026).** El arreglo de
+  la barra en curso confirmado en producción: la asimetría por día de semana desapareció (medianas de
+  volRel 0,96–1,09 los siete días). **Veredictos:** H8 (capitulación) **NO cumple** — +1,4/+1,5 pp de
+  mediana ret91 contra los ≥+2 pp firmados; H9 (salidas) **fallan las tres**, y stop −20% y trailing
+  −15% EMPEORAN los batacazos (un stop convierte un susto en pérdida cerrada) → **no se cablea nada**.
+  Dos correcciones aprobadas por Alberto, en el pre-registro (§ Corrección de medición 08/08): (a) serie
+  de precios rota por contrasplit/reuso de ticker ⇒ capitulación a `null`, no `true` (`serieDiscontinua`
+  en `velas.ts`); (b) sin NI earningsYield NI fcfYield **no se rankea** — el `zValor = 0` de los que no
+  tienen dato es la MEDIA del universo, no una abstención, y colaba 3 nombres en el top-20 (TSEM/NBIS/ASX).
+  Anotado y SIN tocar: los pilares promedian columnas vacías → peso efectivo ≈39/28/34, no 40/40/20.
 - **🔍 Auditoría diaria ligera (08/08/2026).** Sin PRs de rutina atascados (el auto-merge de #1289/#1297
   ya funciona: #1298 resuelto solo hoy). Heartbeat de crons 12/14 ✅, 2 falsos positivos ya conocidos
   (`updates/sync` Smoobu sin reservas nuevas, `limpiadoras/auto-sessions` idempotente) verificados de
@@ -430,7 +440,6 @@ anuncio» por la vía legítima: `Comparable.aReformar` desde el `status` de la 
 (`renew`; columna `mercado_comparables.a_reformar`, aplicada) — el scraping de la ficha sigue vetado
 (Idealista bloquea datacenter). Fotocasa: estado de la ficha PENDIENTE de validar contra ficha real.
 Tests 409/409 módulo + 851/851 plataforma, `tsc` 0, build OK. PR #1259.
-
 - **🔘 Botones ✅/❌ en las propuestas de trading por Telegram (05/08/2026).** Alberto: «lo más rápido
   y fácil para mí». `/api/internal/alerta` acepta `botones` opcionales validados por
   `lib/alerta-botones.ts` (puro, 5 tests): URLs solo https y callbacks SOLO `trd_*` — un ALERTA_TOKEN

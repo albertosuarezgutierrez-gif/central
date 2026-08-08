@@ -125,14 +125,44 @@ export function volumenRelativo(barras: Barra[], ventana = 12): number | null {
 export const CAIDA_MIN = 0.25   // ≥25% por debajo del máximo de 12 barras
 export const VOL_MIN = 1.5      // ≥1,5× el volumen medio de 12 barras
 
+// 🚨 LANDMINE (08/08/2026) — la serie de precios NO viene ajustada por acciones corporativas.
+// Un contrasplit 1:20 multiplica el precio por 20 de un día para otro sin que nadie gane un duro, y
+// un split normal lo divide; si la fuente no corrige el histórico, la ventana lee «−95% con volumen»
+// y `senalCapitulacion` escribía `true`: una capitulación que nunca ocurrió, con la misma pinta que
+// las 18.000 buenas. Visto en el retrovisor: QUHUO 110,43$ → 9,63$ en un mes y 0,13$ → 2,90$ en dos;
+// Lytus 1.545 → 427 → 47. También lo dispara el REUSO de ticker (la serie de dos empresas pegada).
+// El otro sabor es de VOLUMEN: Smurfit Westrock empezó a cotizar en jul-2024 y sus 12 barras previas
+// —cotización residual— dieron un volumen relativo de 4.992×.
+// Umbrales de lo IMPOSIBLE, no de lo raro (mismo criterio que `calidad-datos.ts`): un valor sano no
+// triplica ni divide entre tres su cierre MENSUAL, ni negocia 50 veces su volumen medio de un año.
+// LÍMITE ASUMIDO: las barras siguientes a la costura siguen contaminadas con ratios ya plausibles
+// (SW dio 4,8 → 3,7 → 2,4 los tres meses siguientes) y esas NO se cazan. Se prefiere dejar pasar
+// una dudosa a anular señales reales.
+export const SALTO_PRECIO_MAX = 3    // cierre de una barra vs la anterior: ×3 o ÷3 = costura
+export const VOL_REL_MAX = 50        // volumen de la barra vs la media de la ventana
+
+// ¿Hay una costura (acción corporativa sin ajustar / reuso de ticker) en las últimas `ventana`+1
+// barras — las MISMAS que miran `caidaDesdeMaximo` y `volumenRelativo`? Puro, sin efectos.
+export function serieDiscontinua(barras: Barra[], ventana = 12): boolean {
+  if (barras.length < ventana + 1) return false
+  for (let i = barras.length - ventana; i < barras.length; i++) {
+    const previo = barras[i - 1].cierre, actual = barras[i].cierre
+    if (!(previo > 0) || !(actual > 0)) continue
+    const ratio = actual / previo
+    if (ratio >= SALTO_PRECIO_MAX || ratio <= 1 / SALTO_PRECIO_MAX) return true
+  }
+  return false
+}
+
 export type SenalCapitulacion = {
-  // TRES estados, nunca dos: null = «no se puede saber con estos datos» (serie corta o sin volumen),
-  // false = «se ha mirado y no salta», true = «salta». Colapsar null a false pintaría de «no hay
-  // señal» a un valor que simplemente no tiene histórico cargado todavía.
+  // TRES estados, nunca dos: null = «no se puede saber con estos datos» (serie corta, sin volumen o
+  // rota por una acción corporativa), false = «se ha mirado y no salta», true = «salta». Colapsar
+  // null a false pintaría de «no hay señal» a un valor que simplemente no tiene histórico cargado
+  // todavía; colapsarlo a true pintaría de capitulación a un contrasplit.
   activa: boolean | null
   caida: number | null
   volRel: number | null
-  motivo: 'sin-datos' | 'sin-caida' | 'sin-volumen' | 'activa'
+  motivo: 'sin-datos' | 'serie-rota' | 'sin-caida' | 'sin-volumen' | 'activa'
 }
 
 // Señal medida como la única con exceso positivo en el estudio: caída fuerte CON volumen.
@@ -144,6 +174,13 @@ export function senalCapitulacion(
   const caida = caidaDesdeMaximo(barras, ventana)
   const volRel = volumenRelativo(barras, ventana)
   if (caida == null || volRel == null) return { activa: null, caida, volRel, motivo: 'sin-datos' }
+  // Costura en la ventana ⇒ ni la caída ni el volumen relativo significan nada: los DOS se anulan.
+  // Devolverlos «por diagnóstico» los dejaría contaminando cualquier análisis que los agregue (una
+  // caída del −99% por un split entra igual en un recuento de «caídas ≥25%»). El precio crudo sigue
+  // guardado aparte, así que no se pierde la trazabilidad.
+  if (volRel > VOL_REL_MAX || serieDiscontinua(barras, ventana)) {
+    return { activa: null, caida: null, volRel: null, motivo: 'serie-rota' }
+  }
   if (caida > -caidaMin) return { activa: false, caida, volRel, motivo: 'sin-caida' }
   if (volRel < volMin) return { activa: false, caida, volRel, motivo: 'sin-volumen' }
   return { activa: true, caida, volRel, motivo: 'activa' }

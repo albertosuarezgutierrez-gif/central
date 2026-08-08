@@ -236,6 +236,48 @@ primer dato forward — la cohorte 2 y el radar empiezan a medir el 20/07/2026).
   (`evaluarEscalera`, testeado) pintado en `/trading` (🪜) y en el digest semanal del paper-tracker.
   El semáforo solo MIDE; cada tramo sigue siendo una decisión separada de Alberto.
 
+## 🧹 Corrección de MEDICIÓN (no de modelo) — el «no lo sé» dejaba de puntuar como media · firmada 2026-08-08
+> Dos arreglos de higiene de datos aprobados por Alberto el 08/08/2026 tras la auditoría del corpus
+> re-recolectado. Se registran aquí porque **el segundo cambia el ranking**, aunque ninguno toca pesos,
+> pilares ni composición de cestas. Ambos son la misma regla del CLAUDE.md aplicada al trading: un dato
+> que no se sabe no puede convertirse en una afirmación que decide.
+
+**(a) Serie de precios rota ⇒ la capitulación vale `null`, no `true`.** La fuente diaria no viene
+ajustada por acciones corporativas: un contrasplit 1:20 multiplica el precio por 20 sin que nadie gane
+nada, y la ventana de H8 lo leía como «−95% con volumen» → `capitulacionMes: true`. Medido sobre 18.817
+observaciones: 51 (0,27%) con volumen relativo imposible y retornos a 91 días de hasta **+5.890%**
+(QUHUO 110,43$ → 9,63$ en un mes; Lytus 1.545 → 427 → 47; Smurfit Westrock con volRel 4.992 por empezar
+a cotizar en jul-2024). Guarda en `apps/plataforma/lib/trading/velas.ts` (`serieDiscontinua`, testeada):
+salto de cierre mensual ×3 o ÷3 dentro de la ventana, o volRel > 50 ⇒ `{activa, caida, volRel}` a `null`
+con motivo `'serie-rota'`. **Umbrales de lo imposible, no de lo raro** — una caída real del −60% en un
+mes sigue puntuando. **Límite asumido y declarado:** las barras posteriores a la costura conservan
+ratios ya plausibles (SW dio 4,8 → 3,7 → 2,4 los tres meses siguientes) y NO se cazan; se prefiere
+dejar pasar una dudosa a anular señales buenas.
+
+**(b) Sin ningún dato de VALOR no se rankea.** `zscores()` documentaba que «un dato ausente = 0
+(neutral), nunca penaliza ni premia por faltar». En un z-score eso es falso: **0 es la MEDIA del
+universo**. Medido sobre la caché viva del 08/08/2026: de 875 elegibles, **161 no tenían NI
+earningsYield NI fcfYield** (casi todas ADR/extranjeras cuya capitalización no se cruza con el XBRL) y
+recibían `zValor = 0` con el 40% del peso; el **58,4%** de las que sí tienen el dato salían con zValor
+negativo, así que no saber si eras cara te ponía por delante de más de la mitad del universo — y **3 de
+esas 161 estaban en el top-20** (TSEM #15, NBIS #17, ASX #19). La puerta de `rankearUniverso` pasa a
+exigir el núcleo de calidad (piotroski + roic) **y al menos uno** de los dos datos de valor; las
+descartadas salen contadas en `salud.sinValor` del snapshot, no escondidas.
+- **Por qué UNO y no LOS DOS:** exigir ambos echaría a 249 nombres por un capex ausente, que es otra
+  ausencia distinta y ya la absorbe el promedio del pilar.
+- **Qué NO es esto:** no cambia pesos (0,4/0,4/0,2), ni pilares, ni el satélite 🚀, ni las cestas. Es la
+  puerta de elegibilidad, que ya excluía por calidad (piotroski+roic) desde el origen.
+- **Cómo se revierte:** quitando `tieneValor` del filtro. Reversible en una línea.
+- **Efecto secundario esperado y aceptado:** el universo elegible baja de 875 a ~714 y el top-20 cambia
+  en 3 nombres. Los snapshots anteriores al 08/08/2026 NO se recalculan: el track record se sigue
+  midiendo contra lo que el sistema decidió el día que lo decidió.
+
+**Hallazgo relacionado, NO tocado (requiere hipótesis propia):** los pilares promedian columnas que
+nunca se rellenan (`shareholderYield` en valor; `margenNeto` y `deudaEbitda` en calidad), así que valor
+se divide entre 3 y calidad entre 4 mientras momentum va sin dividir. El peso EFECTIVO resulta ≈39%
+valor / 28% calidad / 34% momentum, no el 40/40/20 nominal. Queda anotado y **sin cambiar**: mover eso
+es tocar el modelo y necesita su propia entrada firmada.
+
 ## 📦 Archivo — pre-registro original de la cohorte 1 (tabla `trading_forward_paper`, retirada 01/08/2026)
 La primera cohorte se pre-registró el 18/07/2026 en una tabla ad-hoc (`trading_forward_paper`, con
 `trading_forward_paper_marca` para marcas interinas) que quedó huérfana cuando el forward pasó a
