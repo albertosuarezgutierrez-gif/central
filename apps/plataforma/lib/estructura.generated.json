@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-08T14:52:56Z",
+  "generadoEn": "2026-08-08T15:29:48Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3979,6 +3979,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ Precio dinámico vivo en los 4 pisos, primera pasada real verificada (08/08/2026).",
+      "fecha": "08/08/2026"
+    },
+    {
       "titulo": "🛡️ Segundo par de ojos sobre el precio + procedencia del dato (08/08/2026).",
       "fecha": "08/08/2026"
     },
@@ -4032,10 +4036,6 @@
     },
     {
       "titulo": "📚 Las 6 trampas del extracto de tarjeta, en la doc que se lee (08/08/2026).",
-      "fecha": "08/08/2026"
-    },
-    {
-      "titulo": "⏱️ «Sin respuesta.» sobre un extracto que SÍ había entrado (08/08/2026).",
       "fecha": "08/08/2026"
     }
   ],

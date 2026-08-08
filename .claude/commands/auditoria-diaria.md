@@ -138,7 +138,10 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
      -- AGENTES (sesiones Claude programadas) + crons de trading. Umbrales por cadencia real:
      -- diario→~30h, cada-6h→12h, SEMANAL→~192h (8 días). OJO: la huella tiene que ser la del
      -- AGENTE, no una que otro proceso mantenga fresca (ver nota del pricing abajo).
-     UNION ALL SELECT 'AGENTE pricing (estudio mercado)', 'market_rates prop_*',    max(created_at),     192 FROM market_rates WHERE scenario LIKE 'prop_%'
+     -- pricing: la huella NO puede ser `market_rates prop_*` — desde el 06/08/2026 escriben ahí a
+     -- diario el barrido Serper y la rutina de Booking, así que salía verde con la Rutina semanal
+     -- parada (la avería del 21/07, reaparecida). `pricing_decisiones` solo la escribe la Rutina.
+     UNION ALL SELECT 'AGENTE pricing (ciclo semanal)',   'pricing_decisiones',     max(ciclo_at),       192 FROM pricing_decisiones
      UNION ALL SELECT 'AGENTE mercado-booking (diario)',  'market_rates booking_mcp',max(created_at),     30 FROM market_rates WHERE fuente='booking_mcp'
      UNION ALL SELECT 'trading forward-paper (sem)',      'trading_paper_track',    max(created_at),     192 FROM trading_paper_track
      UNION ALL SELECT 'ia-director-refresh (sem)',        'ia_director_aprendizaje',max(creada_at),      192 FROM ia_director_aprendizaje
