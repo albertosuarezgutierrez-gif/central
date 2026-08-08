@@ -22,7 +22,29 @@
 
 ---
 
+## 🧱 (08/08/2026) Bandeja «cargos duplicados» de /banca responsive en móvil — PR #1319
+- Captura de Alberto: en móvil las filas desbordaban (chips `flexShrink:0` + importe fuera de pantalla).
+- Fix CSS-only en `BancaClient.tsx::DuplicadosBandeja`: media query ≤768px, concepto a ancho completo,
+  fecha+chips+importe con wrap, botonera con wrap y botones ≥44px (`#duplicados`). Igual en «Ya resueltos».
+- Mismo patrón que la bandeja «Gastos por revisar» del mismo archivo.
+- Verificado 320/360px con Playwright (0px overflow). OJO: `next build` en el contenedor falla en
+  page data de `/api/admin/clientes/[vertical]/[id]` YA en main (envs ausentes), no es del cambio.
+
 ## 📌 Estado actual (lo más reciente arriba)
+
+- **✅ Precio dinámico vivo en los 4 pisos, primera pasada real verificada (08/08/2026).** Mergeado #1305;
+  el cron de las 14:30 UTC escribió en los cuatro (Dúplex 161 noches y House 60, las dos primeras veces).
+  House-octubre bajó al tope del limitador (−20%: 04-oct 639→511€) **contra un mercado medido de 638€**, lo
+  que se pausó como presunto fallo — y **NO lo era**: las reservas reales de Smoobu (`incomes` expandido
+  noche a noche) confirman la ocupación que lee el motor casi noche por noche (House 22/22, Dúplex 3/3,
+  Luxury 29/29 de 365). Los pisos están **genuinamente vacíos**: el resto de agosto al **0% en los cuatro**,
+  sep 30/13/10/10%, oct 19/13/23/0%. El motor baja porque no se vende, que es su trabajo. Reanudado
+  (`paused=false`). Tercera alarma falsa del día, todas por concluir desde una cifra rara sin comprobarla
+  contra la fuente primero.
+  **Pendiente REAL detectado de paso:** el motor calcula UNA sola ocupación por piso para los 365 días
+  (`occ` en `apply/route.ts` no acota `rate_date` por arriba) y la aplica a todas las fechas — septiembre
+  al 30% recibe el mismo factor de demanda mínimo (0,92) que marzo-2027 al 0%. Hoy no cambia el signo
+  porque todo está flojo, pero la palanca de demanda está ciega a la estacionalidad de la propia venta.
 
 - **🔀 El precio era real… pero de otra empresa: saneo del corpus de trading (08/08/2026).** La auditoría
   encontró que el fallo caro no es un precio absurdo sino un cierre VERDADERO bajo la etiqueta
@@ -94,6 +116,15 @@ del environment. Esta pasada midió 10 ventanas (100 comps `booking_mcp`) y las 
   olvidados) + vigilar que `rutinas-automerge.yml` corre (lección PRs #1252-#1286). `auditoria-central`
   gana el check de `ignoreCommand` en los 8 `vercel.json` (incidente ~600$). Corregido "4 apps"→8.
   PR draft de la rama `claude/revision-rutinas-diarias-semanales-sviqer` — cambia comportamiento, carril 2.
+
+- **💶 Precio dinámico SIVRA operativo en los 4 pisos (08/08/2026).** Medidas a mano 19 ventanas de
+  Booking (190 comps, `fuente=booking_mcp`): ago-2026→ene-2027 ya tiene **≥3 fechas sin evento por mes
+  y por piso**, que es lo que exige `MIN_FECHAS_MES` del bucket mensual — antes solo 9 de 24 buckets
+  eran elegibles y el resto se tarificaba con el ancla global. Con el corpus arreglado se activó
+  `apply_enabled` en Dúplex y House (ya lo tenían Busto y Luxury): los 4 pisos tarifican solos.
+  **Pendiente:** feb→jul-2027 siguen sin bucket (caen al ancla global + prior estacional, que es el
+  fallback de diseño, no una avería); la rutina diaria de Booking los va rellenando. **A vigilar:**
+  23-oct y 27-nov salieron muy por encima de su mes sin estar en el calendario de eventos.
 
 - **🕰️ Retrovisor de 24 meses → 15 AÑOS (08/08/2026).** Decisión de Alberto tras ver que H8 invertía el
   signo entre mitades y con 22 snapshots no había forma de saber cuál era el mundo. `MESES_RETROVISOR`

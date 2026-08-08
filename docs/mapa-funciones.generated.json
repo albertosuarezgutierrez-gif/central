@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-08T14:44:42Z",
-  "sha": "440bf57f712329e69cd68226c8f9f2b45bff400f",
+  "generadoEn": "2026-08-08T14:52:56Z",
+  "sha": "17be38b2ed95201d2111316614223bf2fc807d99",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -43822,7 +43822,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 575,
+          "linea": 590,
           "resumen": "Botón que abre Claude Code web y copia /facturas-correo al portapapeles listo para pegar."
         },
         {
@@ -43831,7 +43831,7 @@
           "exportada": true,
           "params": "{ cuentas, destinoLabel, initial, periodo }: { cuentas: { id: string; label: string; sincronizada?: boolean }[] destinoLabel: Record<string, string> initial: { movimientos: MovLedgerUI[]; total: number; hayMas: boolean } // Rango por defect",
           "retorno": null,
-          "linea": 614
+          "linea": 629
         },
         {
           "nombre": "IngresosPorRevisar",
@@ -43839,7 +43839,7 @@
           "exportada": true,
           "params": "{ ingresos, destinoLabel }: { ingresos: MovLedgerUI[] destinoLabel: Record<string, string> }",
           "retorno": null,
-          "linea": 903,
+          "linea": 918,
           "resumen": "Bandeja de INGRESOS por revisar: abonos cuyo negocio está sin confirmar. Antes no aparecían en ningún sitio accionable (la revisión de gastos es solo importe<0). Aquí el dueño les asigna el negocio (d"
         },
         {
@@ -43848,7 +43848,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 968
+          "linea": 983
         }
       ],
       "tablas": [
@@ -43856,7 +43856,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "65b9580475e6"
+      "hash": "02d6f6c7b6f7"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/BenchmarkPisos.tsx",
@@ -60530,18 +60530,36 @@
       "ruta": "apps/plataforma/lib/cron-auth.ts",
       "ambito": "apps/plataforma",
       "exporta": [
+        "autorizaCron",
         "isCronAuthorized",
         "isAlertaTokenAuthorized",
         "isRoutineAuthorized"
       ],
       "funciones": [
         {
+          "nombre": "autorizaCron",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { secret?: string | null bearer?: string | null qs?: string | null produccion: boolean }",
+          "retorno": "boolean",
+          "linea": 21,
+          "resumen": "Decisión PURA de si una llamada de cron está autorizada. Separada del `NextRequest` para poder testearla, porque el caso importante es justamente el que no se ve en local. 🚨 SIN SECRETO, EN PRODUCCIÓ"
+        },
+        {
+          "nombre": "enProduccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 31
+        },
+        {
           "nombre": "isCronAuthorized",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": "boolean",
-          "linea": 3
+          "linea": 35
         },
         {
           "nombre": "isAlertaTokenAuthorized",
@@ -60549,7 +60567,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": "boolean",
-          "linea": 20,
+          "linea": 58,
           "resumen": "Token DEDICADO de bajo privilegio para las rutinas de Claude Code (sesiones efímeras que corren en un entorno cuyo campo de variables es TEXTO PLANO VISIBLE — no un almacén de secretos). Por eso NO se"
         },
         {
@@ -60558,13 +60576,13 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": "boolean",
-          "linea": 30,
+          "linea": 68,
           "resumen": "Autorización para endpoints pensados para RUTINAS: acepta el token de bajo privilegio (`ALERTA_TOKEN`) o, por compatibilidad, el `CRON_SECRET` maestro. Úsala en lugar de `isCronAuthorized` en los endp"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fa72b303af2d"
+      "hash": "47a8261588a2"
     },
     {
       "ruta": "apps/plataforma/lib/cron-dispatch.ts",
@@ -89599,6 +89617,6 @@
   ],
   "resumen": {
     "archivos": 2402,
-    "funciones": 6466
+    "funciones": 6468
   }
 }
