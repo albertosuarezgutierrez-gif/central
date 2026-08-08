@@ -32,7 +32,19 @@ cosas. El de registro se mergea solo y no envejece; el que cambia comportamiento
 1. Entra en `claude.ai/code` → **Rutinas** → **Nueva rutina**.
 2. Repo: `central`. Rama: la que prefieras (la rutina abre su propio PR draft).
 3. Define horario, prompt y MCPs según la tabla de abajo.
-4. Guarda. A partir de ahí corre sola; revisa el PR draft que deje.
+4. **Adjunta SOLO los conectores que la rutina usa de verdad — y ninguno más.** El propio formulario
+   avisa de que la rutina usará **todas** las herramientas de los conectores adjuntos, **incluidas las
+   de escritura, sin pedir permiso en cada ejecución**. Y los conectores vienen **heredados en bloque**:
+   al montar `mercado-booking` (08/08/2026) el formulario traía **16 adjuntos** de serie — entre ellos
+   Interactive Brokers, Gmail, Resend y Vercel — para una rutina que lo único que hace es escribir
+   comparables de mercado. Eso es dar a un agente desatendido la capacidad de operar en el bróker,
+   mandar correo y tocar infraestructura para una tarea que no lo necesita. Es el mismo principio por
+   el que las rutinas llevan `ALERTA_TOKEN` y no `CRON_SECRET`: **el mínimo alcance que le permita
+   hacer su trabajo**. La columna "MCPs / envs" de cada ficha lista lo NECESARIO; lo que no esté ahí,
+   se quita.
+   ⚠️ Dos cosas que NO son conectores y por eso no hay que adjuntar: **GitHub** (es nativo al vincular
+   el repo) y las llamadas HTTP a plataforma (`/api/...` con Bearer, van por red normal).
+5. Guarda. A partir de ahí corre sola; revisa el PR draft que deje.
 
 ---
 
@@ -148,7 +160,7 @@ caza lo que las sesiones del día no anotaron a mano.
 |---|---|
 | **Cuándo** | Diaria, **05:30 CEST** (03:30 UTC — media hora después del barrido de las 03:00 UTC, para que la cobertura del día ya esté escrita cuando se pide el plan) |
 | **Prompt** | `Ejecuta la skill mercado-booking` |
-| **MCPs / envs** | **Booking.com** (obligatorio) · `PLATAFORMA_URL` + `ALERTA_TOKEN` en la env de la rutina (**NUNCA** `CRON_SECRET`). Sin esas dos envs no puede ni pedir el plan ni escribir: el latido saldría en rojo. |
+| **MCPs / envs** | **Booking.com y NADA MÁS** (obligatorio; el formulario trae 16 conectores heredados — quitar los otros 15, ver paso 4 de "Cómo se crea un trigger"). GitHub va nativo por el repo; las 3 llamadas a plataforma son HTTPS con Bearer, no necesitan conector. · `PLATAFORMA_URL` + `ALERTA_TOKEN` en la env de la rutina (**NUNCA** `CRON_SECRET`). Sin esas dos envs no puede ni pedir el plan ni escribir: el latido saldría en rojo. |
 | **Qué hace** | Pide a `GET /api/sivra/mercado/plan?max=12` las ventanas (fecha × aforo) con el corpus fiable más viejo, las mide con el conector de Booking (`number_of_adults` = aforo real del piso), y escribe los comparables en `market_rates` por `POST /api/sivra/mercado/ingest` con **`fuente:"booking_mcp"`**. Cierra con `POST /api/internal/latido` (`sivra_mercado_booking`). |
 | **Por qué existe** | Es la **única** fuente que distingue temporada. El barrido por búsqueda web da precios de anuncio SIN fecha: medido el 06/08/2026 para el Dúplex el 4-sep, Serper decía p50 **171€** y el mercado real era **129€** (−33%), con los mismos comps repitiendo precio en agosto, noviembre y marzo. Ver `docs/superpowers/specs/2026-08-06-mercado-booking-design.md`. |
 | **Verificar** | `SELECT checkin_date, guests, count(*) FROM market_rates WHERE fuente='booking_mcp' AND search_date >= CURRENT_DATE - 1 GROUP BY 1,2` + fila `sivra_mercado_booking` en `agente_latidos` con `ok=true`. |
