@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-08T09:11:13Z",
-  "sha": "80a5140772a58fea859cb2e90e4af4fc1a2643d5",
+  "generadoEn": "2026-08-08T09:12:55Z",
+  "sha": "77f53e6f5a25edf6ae7267cd18177b5f3a2a2687",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -44477,7 +44477,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7bd7b73b59bd"
+      "hash": "4e95bea4beb1"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CorreduriaClient.tsx",
@@ -50480,7 +50480,7 @@
           "exportada": false,
           "params": "e: any",
           "retorno": "string",
-          "linea": 19,
+          "linea": 24,
           "resumen": "Traduce un error de la IA a un mensaje claro para Alberto. Los proveedores gratuitos (NIM/Groq/ Gemini) devuelven 429/quota cuando se saturan, y el cerebro puede abortar por timeout: en ambos casos NO"
         },
         {
@@ -50489,12 +50489,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 27
+          "linea": 32
         }
       ],
       "tablas": [],
       "rutaApi": "/api/contable/chat",
-      "hash": "9ef8f1eff1d5"
+      "hash": "948718c6ba6d"
     },
     {
       "ruta": "apps/plataforma/app/api/contable/feedback/route.ts",
@@ -59508,7 +59508,7 @@
           "exportada": false,
           "params": "cuentaId: string, ccc: string,",
           "retorno": "Promise<",
-          "linea": 29,
+          "linea": 30,
           "resumen": "Resuelve la sociedad + titular de una tarjeta por su ccc (TARJETA-KUTXA-<últ.4>), reutilizando la cuenta bancaria que YA existe (ambas tarjetas están dadas de alta con su titular). Fallback a la prime"
         },
         {
@@ -59517,7 +59517,7 @@
           "exportada": false,
           "params": "cuentaBancariaIds: string[], desde: string, hasta: string,",
           "retorno": "Promise<",
-          "linea": 48,
+          "linea": 49,
           "resumen": "Empareja las devoluciones (abonos que no son PAGO RECIBO) con su compra original y les copia el destino para que se ANULEN en el cómputo por destino. Las que no casan → requiere_revision y un mensaje "
         },
         {
@@ -59526,7 +59526,7 @@
           "exportada": false,
           "params": "cuentaId: string, ids: string[], desde: string, hasta: string,",
           "retorno": "Promise<void>",
-          "linea": 123
+          "linea": 124
         },
         {
           "nombre": "procesarExtractoTarjeta",
@@ -59534,8 +59534,7 @@
           "exportada": true,
           "params": "cuentaId: string, buffer: Buffer, mimeType: string, fileName: string, extractos: ExtractoN43[], origen: 'pdf' | 'xls' = 'pdf',",
           "retorno": "Promise<ResultadoExtractoTarjeta>",
-          "linea": 201,
-          "resumen": "Procesa un extracto de tarjeta subido al chat/Telegram. Los movimientos llegan YA parseados: del PDF («Movimientos de tarjeta») o del Excel del mismo listado — el resto del flujo es idéntico, así que "
+          "linea": 206
         }
       ],
       "tablas": [
@@ -59544,7 +59543,7 @@
         "sociedades"
       ],
       "rutaApi": null,
-      "hash": "80067f2a727b"
+      "hash": "bb6dc5460d3e"
     },
     {
       "ruta": "apps/plataforma/lib/contable/formato.ts",
@@ -59875,6 +59874,38 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "74ecb5215b4d"
+    },
+    {
+      "ruta": "apps/plataforma/lib/contable/presupuesto-extracto.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "apps/plataforma/lib/contable/presupuesto-extracto.ts Reparto del tiempo de la pasada que importa un extracto de tarjeta. Módulo PURO (testeable con `node --test`): solo decide QUÉ pasos caben en el tiempo que queda; no mide ni ejecuta nada. Motivo (08/08/2026, fallo real en producción): subir el PDF",
+      "exporta": [
+        "planificarPasos",
+        "lineaSaltados"
+      ],
+      "funciones": [
+        {
+          "nombre": "planificarPasos",
+          "kind": "function",
+          "exportada": true,
+          "params": "msRestantes: number",
+          "retorno": "PlanPasos",
+          "linea": 41,
+          "resumen": "Qué pasos opcionales caben en `msRestantes`. Un paso solo entra si, además de su coste, deja la reserva para responder. Se evalúan en orden de importancia, así que quedarse corto degrada de forma pred"
+        },
+        {
+          "nombre": "lineaSaltados",
+          "kind": "function",
+          "exportada": true,
+          "params": "saltados: PasoOpcional[]",
+          "retorno": "string",
+          "linea": 65,
+          "resumen": "Línea para el resumen del chat. '' si no se saltó nada."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "763c5fe8f635"
     },
     {
       "ruta": "apps/plataforma/lib/contable/proactivo.ts",
@@ -89413,7 +89444,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2399,
-    "funciones": 6451
+    "archivos": 2400,
+    "funciones": 6453
   }
 }
