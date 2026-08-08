@@ -24,6 +24,11 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📅 mercado-booking arranca como Rutina programada (08/08/2026).** Primer disparo automático (antes
+  solo se había probado a mano, ver entrada #1299): plan de 12 ventanas (las 12 nunca medidas),
+  medidas todas contra Booking respetando aforo real, 120 comps escritos (`fuente='booking_mcp'`),
+  0 sin respuesta, latido `sivra_mercado_booking` ok. Detalle y medianas en `docs/AGENTES-BITACORA.md`.
+
 - **🔍 Auditoría diaria ligera (08/08/2026).** Sin PRs de rutina atascados (el auto-merge de #1289/#1297
   ya funciona: #1298 resuelto solo hoy). Heartbeat de crons 12/14 ✅, 2 falsos positivos ya conocidos
   (`updates/sync` Smoobu sin reservas nuevas, `limpiadoras/auto-sessions` idempotente) verificados de

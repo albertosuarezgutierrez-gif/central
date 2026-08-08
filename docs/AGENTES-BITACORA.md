@@ -15,6 +15,13 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-08 · mercado-booking (primera pasada de la Rutina programada)** · hizo: pidió el plan
+  (`/api/sivra/mercado/plan?max=12`, 120 ventanas totales, las 12 devueltas eran las 12 nunca medidas)
+  y midió las 12 con Booking respetando el aforo real (2/4/5/12 pax) en 4 fechas (8-ene, 5-feb, 5-mar,
+  2-abr 2027); 120 comps escritos con `fuente='booking_mcp'`, 0 ventanas sin respuesta. Medianas
+  destacadas: 5-feb 12p (house) **395€** vs 5-feb 2p (busto) **111€**; 2-abr 12p **659€** vs 2-abr 2p
+  **186€** — confirma que sin aforo real el motor mezclaría precios de tamaños muy distintos. Latido
+  `sivra_mercado_booking` = ok:true. dudas: —; fallos: —. PRs/commits: —.
 - **2026-08-08 · mercado-booking (pasada MANUAL, la Rutina no existe)** · hizo: reprodujo
   `/api/sivra/mercado/plan` con los helpers puros (120 ventanas de plan, 10 pedidas, las 10 sin medir
   nunca) y midió 5 con el conector: 4-sep 2p **p50 110€** · 4-sep 12p **474€** · 16-oct 4p **184€** ·
