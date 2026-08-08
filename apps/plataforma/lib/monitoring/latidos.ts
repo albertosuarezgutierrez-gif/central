@@ -109,6 +109,29 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'rutina de Booking escriben ahí a diario, esa sonda sale verde con la Rutina parada (08/08/2026).',
   },
   {
+    id: 'trading_watchdog',
+    etiqueta: '🐕 Vigía de la pasada de trading (cron mar-sáb 06:30)',
+    // 🚨 Vigila al VIGILANTE, no a la pasada. Los tres tramos de trading (NAV, /analizar, /puntuar)
+    // los comprueba el propio `trading-watchdog`, que es más fino que esta lista porque sabe QUÉ
+    // días se espera pasada. Meter aquí `trading_puntuar` sería duplicar su aviso Y saltar en falso
+    // cada domingo y lunes (la pasada es L-V ~20:15 UTC: el lunes por la mañana la última buena es
+    // la del viernes, ~59 h). Lo que faltaba es esto: el watchdog no dejaba huella de sí mismo, así
+    // que si dejaba de correr su silencio se leía como «los tres tramos frescos».
+    //
+    // Umbral 80 h, no 30: el cron es `30 6 * * 2-6`, así que el hueco legítimo más largo es de
+    // sábado 06:30 a martes 06:30 = 72 h. Por debajo de eso avisaría todos los lunes sin avería.
+    maxHoras: 80,
+    nota:
+      'El vigía de trading no ha comprobado la pasada. Mientras esté así, NADIE mira el NAV de IBKR, ' +
+      'ni las tesis de /analizar, ni el cierre de /puntuar: los tres pueden estar caídos y no saltará ' +
+      'nada, porque el único que los cruza es él. Revisa que `/api/cron/trading-watchdog` sigue en ' +
+      '`CRON_JOBS` (lib/cron-dispatch.ts, `30 6 * * 2-6`) y sus logs en Vercel. OJO al leer el hueco: ' +
+      'de sábado a martes son 72 h SIN avería — el umbral son 80 h por eso. ' +
+      'Y si el aviso dice «sin ninguna señal registrada» justo después de desplegar esta huella, es el ' +
+      'estreno, no una avería: la primera constancia la deja la primera pasada del cron (martes 06:30 ' +
+      'si se desplegó en fin de semana). Huella: agente_latidos.trading_watchdog.',
+  },
+  {
     id: 'correo_triaje',
     etiqueta: '📧 Triaje de correo (cron cada 10 min)',
     // El cursor avanza en cada pasada; 6 h de margen tolera noches tranquilas y caza un cron muerto.
