@@ -24,6 +24,34 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🤝 El auto-merge ya resuelve el conflicto que se repite todos los días (08/08/2026).** El
+  workflow de #1289 funcionó (probado: #1292 mergeado solo), pero se rendía ante los conflictos con
+  UN comentario y luego callaba: #1290 acabó **24 h abierto**, resuelto a mano, y `main` lo rompió
+  otra vez 44 min después. La causa es estructural — TODAS las rutinas insertan arriba de los mismos
+  dos ficheros, así que chocan siempre. Decisión de Alberto: que lo resuelva el bot. Ahora, si el
+  conflicto es una **inserción pura** (la sección base de `merge.conflictStyle=diff3` está vacía →
+  nadie pisa a nadie), conserva las DOS entradas —primero la de `main`, sin reordenar nada de lo que
+  ya está— y empuja el merge; si alguien editó texto existente, no toca nada y avisa.
+  `scripts/resolver-conflicto-registro.mjs` (puro, 14 tests) + simulación con git real de los dos
+  caminos. El merge va directo a `main`: un commit de arreglo en la rama del PR no volvería a
+  disparar la CI (los pushes con `GITHUB_TOKEN` no lanzan workflows) y lo dejaría atascado en «sin
+  checks» para siempre.
+
+### 🐕 El watchdog de trading avisó de una pasada que SÍ corrió (07/08/2026)
+«NAV 21 h sin refrescar» era FALSO: el NAV llevaba 10 h (20:16 UTC) y `/puntuar` 9,9 h — la pasada
+del 06/08 corrió entera. Dos fallos: (1) el tramo 2 medía `max(trading_tesis.created_at)`, tabla
+IDEMPOTENTE desde #1271 (único `(simbolo,fecha,estrategia)` + `skipDuplicates`), así que la 2ª
+pasada del mismo día (repaso manual a las 09:34) no insertó nada y el reloj se quedó clavado en la
+primera; (2) el motivo de los TRES tramos llevaba «el NAV de IBKR» cableado → el aviso mandaba a
+mirar IBKR y la rutina. Fix: latido explícito `trading_analizar` (como `/puntuar`) + `GREATEST` con
+las tesis de respaldo, y `etiqueta` por tramo en `evaluarWatchdog`. PR #1291.
+
+- **📎 Pasada diaria facturas-correo (08/08/2026).** Vía B sana (`dias_caido=1`), sin backlog en
+  `PDF-pendiente`/`Revisar`. Día tranquilo: 0 candidatos nuevos en Gmail, 0 subidas manuales nuevas,
+  0 duplicados nuevos (los 2 "FACTURA JULIO SOCORRO" de la raíz ya estaban avisados). Roborock
+  -247,92€ (House Sevillana) sigue sin conciliar en banco. Nada que archivar/decidir hoy. Detalle en
+  `docs/AGENTES-BITACORA.md`.
+
 - **💳 El parser del extracto de tarjeta llevaba meses devolviendo CERO con el PDF real (08/08/2026).**
   Con el `movimientos (1).pdf` de Alberto en la mano: Kutxabank ya no separa los campos
   (`01/07/2026******2019750300COMPRA EN…-8,00 €`) y `RE_LINEA` exigía `\s+` → 0 movimientos → el chat lo
@@ -50,6 +78,15 @@
   auto-merge funciona de punta a punta: rama `claude/*` + diff solo de registro + CI en verde +
   margen de quietud ≥20 min → mergeado sin mano humana. A partir de aquí las rutinas ya no necesitan
   push directo a `main` para que su memoria llegue: les basta con separar el PR de registro.
+
+- **🧾 Factura 47/2026 Jaime Salas (electricidad Socorro 24) archivada (07/08/2026).** 278,30€
+  (base 230 + IVA 48,30), reparación de avería en CGP + cuadro eléctrico → `turistico_pisos` /
+  `prop_house_sevillana`. En Drive `08-Agosto-2026` + fila en `facturas_drive`. **Conciliación
+  pendiente**: Alberto la pagó por transferencia hoy y el cargo aún no está en el feed PSD2 (último
+  movimiento 06/08) — recogerlo en la próxima pasada de `facturas-correo` con `propiedad_id`.
+  Dos límites del entorno anotados: `script.google.com` (Apps Script de Drive) está **bloqueado por
+  la política de red** (403 en CONNECT) y el MCP de Drive no traga un PDF de 563 KB → se archivó una
+  copia rasterizada 200 dpi 1-bit (11 KB, legible, sin capa de texto).
 
 ### 💓 El latido del barrido deja de estar rojo para siempre (07/08/2026)
 Segunda pasada con #1282 vivo: la guardia volvió a saltar (174 comps, 19 fechas, **17 precios
