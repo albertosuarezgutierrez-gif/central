@@ -34,10 +34,11 @@ const VENTANA_ANCHA = 60
 // «todavía no ha llegado» de todo lo que se pregunte.
 const DIAS_CUENTA_VIVA = 30
 
-type FilaMov = { id: string; fecha: string; concepto: string | null; importe: unknown; banco: string | null; conciliado: boolean | null }
+type FilaMov = { id: string; fecha: string; concepto: string | null; importe: unknown; banco: string | null; conciliado: boolean | null; factura_ref: string | null }
 
 const aCandidato = (m: FilaMov): MovCandidato => ({
   movId: m.id, fecha: m.fecha, concepto: m.concepto, importe: Number(m.importe), banco: m.banco,
+  facturaRef: m.factura_ref,
 })
 
 // Cargos del MISMO importe (al céntimo) dentro de una ventana de días. READ-ONLY: réplica de la
@@ -47,7 +48,8 @@ const aCandidato = (m: FilaMov): MovCandidato => ({
 async function cargosDelImporte(cuentaId: string, f: FacturaDoc, dias: number): Promise<FilaMov[]> {
   return await prisma.$queryRaw<FilaMov[]>(Prisma.sql`
     SELECT mb.id, mb.fecha_operacion::text AS fecha, mb.concepto, mb.importe,
-           coalesce(cb.alias, cb.banco) AS banco, coalesce(mb.conciliado, false) AS conciliado
+           coalesce(cb.alias, cb.banco) AS banco, coalesce(mb.conciliado, false) AS conciliado,
+           mb.factura_ref
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid
@@ -84,9 +86,13 @@ async function buscarCruce(cuentaId: string, f: FacturaDoc, tolDias = 7): Promis
   const cercanos = await cargosDelImporte(cuentaId, f, tolDias)
   const libre = cercanos.find(m => !m.conciliado)
   if (libre) return { estado: 'match', mov: aCandidato(libre) }
-  if (cercanos[0]) return { estado: 'ya_conciliado', mov: aCandidato(cercanos[0]) }
 
+  // Los ±60 días se miran SIEMPRE, aunque haya un cargo cercano ya conciliado: mismo importe y fecha
+  // parecida es un indicio fuerte, pero no es una prueba de que sea ESTA factura (dos recibos
+  // gemelos del mismo proveedor lo rompen). Si hay un cargo libre, se ofrece; el conciliado se cuenta
+  // como lo que es —un dato— y se deja que Alberto lo desmienta.
   const lejano = (await cargosDelImporte(cuentaId, f, VENTANA_ANCHA)).find(m => !m.conciliado)
+  if (cercanos[0]) return { estado: 'ya_conciliado', mov: aCandidato(cercanos[0]), otro: lejano ? aCandidato(lejano) : null }
   if (lejano) {
     return { estado: 'fuera_de_ventana', mov: aCandidato(lejano), dias: diasEntre(lejano.fecha, f.fecha) }
   }
@@ -107,7 +113,14 @@ const MIME_EXCEL = /(excel|spreadsheet)/i
 async function procesarExcel(
   cuentaId: string, buffer: Buffer, mimeType: string, fileName: string,
 ): Promise<DocProcesado> {
-  const extractos = parseExtractoXls(buffer)
+  // El catch cubre SOLO el parseo. Si falla la importación (BD), el error sube: decir «no pude leer
+  // la hoja» cuando las filas ya están dentro dejaría a Alberto reimportando algo ya importado.
+  let extractos
+  try {
+    extractos = parseExtractoXls(buffer)
+  } catch {
+    return { ok: false, motivo: 'No pude abrir la hoja de cálculo. ¿Es el Excel de movimientos que descarga el banco?' }
+  }
   const primero = extractos[0]
   if (!primero || !primero.movimientos.length) {
     return { ok: false, motivo: 'He abierto la hoja de cálculo pero no reconozco ninguna columna de movimientos (fecha, concepto, importe). Si es un extracto, súbelo en /banca → Importar.' }
@@ -135,9 +148,7 @@ export async function procesarDocumento(
   cuentaId: string, buffer: Buffer, mimeType: string, fileName = '',
 ): Promise<DocProcesado> {
   if (RE_EXCEL.test(fileName) || MIME_EXCEL.test(mimeType)) {
-    return await procesarExcel(cuentaId, buffer, mimeType, fileName).catch(() => ({
-      ok: false as const, motivo: 'No pude leer la hoja de cálculo. ¿Es el Excel de movimientos que descarga el banco?',
-    }))
+    return await procesarExcel(cuentaId, buffer, mimeType, fileName)
   }
 
   let extraido
@@ -163,7 +174,7 @@ export async function procesarDocumento(
       const rango = listado.desde && listado.hasta ? ` (del ${fechaEs(listado.desde)} al ${fechaEs(listado.hasta)})` : ''
       return {
         ok: false,
-        motivo: `Esto no es una factura: es un listado de ${listado.lineas} movimientos${rango}. Los movimientos del banco entran solos por la sincronización; si quieres cargar este extracto, súbelo en /banca → Importar. Si lo que buscas es cuadrar una factura, mándame la factura y yo busco el cargo.`,
+        motivo: `Esto parece un listado de ${listado.lineas} movimientos${rango}, no una factura suelta. Los movimientos del banco entran solos por la sincronización; si quieres cargar este extracto, súbelo en /banca → Importar. Si de verdad es una factura, dime el importe y la fecha y te la cuadro.`,
       }
     }
     return interp

@@ -44,38 +44,70 @@ function fechaIso(d: string, m: string, y: string): string {
 }
 
 // Fecha al principio de la línea + el resto (con o sin espacio antes del nº de tarjeta enmascarado).
-const RE_LINEA = /^(\d{2})\/(\d{2})\/(\d{4})\s*(\*{2,}\d.*)$/
-// Importe: el ÚNICO número anclado al símbolo €. `\d{1,3}` + grupos de millar impide que se trague
-// los dígitos del nº de tarjeta pegado por delante (a lo sumo se cuela un cero a la izquierda).
+const RE_LINEA = /^(\d{2})\/(\d{2})\/(\d{4})\s*(\*{2,}[\d\s].*)$/
+// Importe en formato es-ES anclado al símbolo €. OJO: solo es fiable DESPUÉS de haber quitado el
+// número de tarjeta (ver `digitosEnmascarados`): pegado a los dígitos del PAN, el grupo de millar se
+// traga hasta 3 de ellos — `******20196503021.355,24 €` daría 21.355,24€ en vez de 1.355,24€.
 const RE_IMPORTE = /(-?\d{1,3}(?:\.\d{3})*,\d{2})\s*€/
-// Prefijo de tarjeta enmascarada al principio del resto: `******2019750300`.
-const RE_TARJETA_PREFIJO = /^\s*\*+\d*/
+// Dígitos del nº de tarjeta que SÍ se pueden delimitar sin ambigüedad: los que van seguidos de algo
+// que no puede ser parte de un importe (una letra del concepto). Las líneas de abono, donde el
+// importe va pegado detrás, no votan aquí precisamente porque ahí no se sabe dónde acaba el PAN.
+const RE_TARJETA_INEQUIVOCA = /\*{2,}(\d+)(?=[^\d.,])/
 const RE_PAN = /N[uú]mero:\s*(\d{15,19})/i
+
+/**
+ * Los dígitos que el extracto enseña del nº de tarjeta (`******2019750300` → `2019750300`). Son los
+ * MISMOS en todas las líneas, así que basta con delimitarlos una vez para poder recortarlos de todas
+ * y leer el importe sobre un texto ya limpio.
+ *
+ * Dos fuentes, en este orden, las dos deterministas:
+ *   1. una línea de cargo, donde tras los dígitos viene una letra (`…2019750300COMPRA EN…`);
+ *   2. el PAN de la cabecera (`Número: 4662032019750300`): se prueba su sufijo más largo que encaje
+ *      con los dígitos que siguen a los asteriscos.
+ * Si ninguna resuelve, se devuelve null y las líneas se DESCARTAN: escribir un importe adivinado en
+ * el banco es peor que no importar (un 21.355,24€ inventado no lo detecta nadie aguas abajo).
+ */
+function digitosEnmascarados(lineas: string[], pan: string | null): string | null {
+  for (const l of lineas) {
+    const d = l.match(RE_TARJETA_INEQUIVOCA)?.[1]
+    if (d) return d
+  }
+  if (!pan) return null
+  const tras = lineas.map(l => l.match(/\*{2,}(\d+)/)?.[1]).filter(Boolean) as string[]
+  for (let n = pan.length; n >= 4; n--) {
+    const suf = pan.slice(-n)
+    if (tras.some(t => t.startsWith(suf))) return suf
+  }
+  return null
+}
 
 export function parseTarjetaPdfTexto(
   texto: string,
   opts: { iban?: string; banco?: string } = {},
 ): ExtractoN43[] {
   const pan = texto.match(RE_PAN)?.[1] ?? null
+  const lineas = texto.split(/\r?\n/).map(l => l.trim())
+  const digitos = digitosEnmascarados(lineas, pan)
   const movimientos: MovimientoN43[] = []
   let fechaMin: string | null = null
   let fechaMax: string | null = null
 
-  for (const cruda of texto.split(/\r?\n/)) {
-    const linea = cruda.trim()
+  // Prefijo EXACTO a recortar de cada línea: los asteriscos + los dígitos que enseña esta tarjeta.
+  const rePrefijo = digitos ? new RegExp(`^\\s*\\*+${digitos}\\s*`) : null
+
+  for (const linea of lineas) {
     const m = linea.match(RE_LINEA)
-    if (!m) continue
-    const [, dd, mm, yyyy, resto] = m
+    if (!m || !rePrefijo) continue
+    const [, dd, mm, yyyy, conTarjeta] = m
+    // Fuera el nº de tarjeta ANTES de leer nada: si no casa, la línea es de otra tarjeta o de otro
+    // formato y no se adivina.
+    if (!rePrefijo.test(conTarjeta)) continue
+    const resto = conTarjeta.replace(rePrefijo, '')
     const imp = resto.match(RE_IMPORTE)
     if (!imp) continue
     const importe = importeEs(imp[1])
     if (importe === null) continue
-    // Importe fuera PRIMERO (ver cabecera), y solo entonces el prefijo de la tarjeta.
-    const concepto = resto
-      .replace(imp[0], ' ')
-      .replace(RE_TARJETA_PREFIJO, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
+    const concepto = resto.replace(imp[0], ' ').replace(/\s+/g, ' ').trim()
     if (!concepto) continue
     const fecha = fechaIso(dd, mm, yyyy)
     if (!fechaMin || fecha < fechaMin) fechaMin = fecha
@@ -174,7 +206,9 @@ export function cuadrarExtractoTarjeta(ex: ExtractoN43, tol = 0.02): CuadreTarje
   }
   const esperado = sumaCompras - sumaDevoluciones
   const cicloAnterior = !!(fechaLiquidacion && primeraCompra && fechaLiquidacion <= primeraCompra)
-  const verificable = liquidacion !== null && !cicloAnterior
+  // Sin una sola compra no hay nada que contrastar (mes solo con la liquidación, o PDF a medias):
+  // afirmar un descuadre de "Σ compras = 0 vs la liquidación" sería inventarse un problema.
+  const verificable = liquidacion !== null && primeraCompra !== null && !cicloAnterior
   const diferencia = verificable ? Math.abs(liquidacion! - esperado) : 0
   const cuadra = !verificable || diferencia < tol
   return { liquidacion, sumaCompras, sumaDevoluciones, esperado, diferencia, cuadra, verificable }

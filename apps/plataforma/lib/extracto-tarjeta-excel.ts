@@ -73,6 +73,9 @@ export function comoExtractoTarjeta(ex: ExtractoN43, ccc: string): ExtractoN43 {
     // `banco: ''` a propósito: el upsert de importarExtracto hace COALESCE, así que no renombra la
     // cuenta existente (p. ej. «💳 Tarjeta Kutxabank Pilar») — misma decisión que el parser del PDF.
     banco: '',
+    // El saldo del Excel es el del día en que se descargó, no el de hoy: dejarlo pisaría el
+    // `saldo_actual` de la tarjeta con una foto vieja. El PDF nunca lo trae; aquí tampoco.
+    saldoFinal: null,
     movimientos: ex.movimientos.map(m => ({
       ...m,
       fechaValor: m.fechaOperacion,

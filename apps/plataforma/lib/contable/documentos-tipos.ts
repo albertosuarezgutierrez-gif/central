@@ -36,6 +36,8 @@ export type MovCandidato = {
   concepto: string | null
   importe: number        // con su signo (los cargos, negativos)
   banco: string | null
+  /** Con qué factura se concilió, si ya lo está. Sirve para que Alberto vea si es OTRA factura. */
+  facturaRef?: string | null
 }
 
 /** Hasta dónde llega el extracto de cada banco. `ultima: null` = esa cuenta no tiene movimientos. */
@@ -52,7 +54,7 @@ export type CoberturaBanco = { banco: string; ultima: string | null }
  */
 export type CruceDoc =
   | { estado: 'match'; mov: MovCandidato }
-  | { estado: 'ya_conciliado'; mov: MovCandidato }
+  | { estado: 'ya_conciliado'; mov: MovCandidato; otro?: MovCandidato | null }
   | { estado: 'fuera_de_ventana'; mov: MovCandidato; dias: number }
   | { estado: 'sin_cobertura'; cobertura: CoberturaBanco[] }
   | { estado: 'sin_match'; cobertura: CoberturaBanco[] }
@@ -106,8 +108,16 @@ export function resumenDocumento(f: FacturaDoc, cruce: CruceDoc): string {
     case 'match':
       return `${cab}\nCuadra con un movimiento bancario de ${eur(Math.abs(cruce.mov.importe))}${cruce.mov.concepto ? ` (${cruce.mov.concepto})` : ''}. ¿Lo concilio?`
 
-    case 'ya_conciliado':
-      return `${cab}\nEse cargo ya está conciliado: ${de(cruce.mov)}. No toco nada.`
+    // Mismo importe y fecha cercana es un indicio fuerte, NO una prueba: dos recibos gemelos del
+    // mismo proveedor son indistinguibles por importe. Se dice lo que se sabe (hay un cargo así y ya
+    // está conciliado, y con qué) y se deja la puerta abierta a que la factura sea otra.
+    case 'ya_conciliado': {
+      const ref = cruce.mov.facturaRef ? ` con ${cruce.mov.facturaRef}` : ''
+      const alternativa = cruce.otro
+        ? `\nSi esta factura es otra distinta, tengo otro cargo del mismo importe sin conciliar: ${de(cruce.otro)}.`
+        : '\nSi esta factura es otra distinta, dímelo.'
+      return `${cab}\nHay un cargo de ese importe el ${fechaEs(cruce.mov.fecha)}${cruce.mov.banco ? ` (${cruce.mov.banco})` : ''} que YA está conciliado${ref}, así que no toco nada.${alternativa}`
+    }
 
     case 'fuera_de_ventana':
       return `${cab}\nNo hay ningún cargo de ese importe en ±7 días, pero sí uno ${cruce.dias} días después/antes: ${de(cruce.mov)}. ¿Es ese? Dime que sí y lo concilio.`

@@ -32,6 +32,11 @@ const RE_IMPORTE = /-?\d{1,3}(?:\.\d{3})*,\d{2}(?!\d)/
 // Con 5 nos ponemos por encima del detalle de líneas de una factura normal (que además suele traer
 // una sola fecha, no una por línea).
 const MIN_LINEAS = 5
+// …y encima tienen que ser de FECHAS distintas. Una factura detallada (una minuta, una de telefonía)
+// puede traer muchas líneas con importe, pero todas del mismo periodo o de un puñado de días; lo que
+// caracteriza a un extracto es el goteo de fechas. Sin esta segunda condición, a una factura larga
+// que la IA no supo leer se le respondería «esto no es una factura», que es peor que no saber.
+const MIN_FECHAS = 3
 
 function iso(dd: string, mm: string, aa: string): string | null {
   const d = Number(dd), m = Number(mm)
@@ -50,6 +55,7 @@ export function detectarListadoMovimientos(texto: string | undefined | null): Li
   let lineas = 0
   let desde: string | null = null
   let hasta: string | null = null
+  const fechas = new Set<string>()
 
   for (const cruda of texto.split(/\r?\n/)) {
     const linea = cruda.trim()
@@ -59,9 +65,10 @@ export function detectarListadoMovimientos(texto: string | undefined | null): Li
     lineas++
     const fecha = iso(f[1], f[2], f[3])
     if (!fecha) continue
+    fechas.add(fecha)
     if (!desde || fecha < desde) desde = fecha
     if (!hasta || fecha > hasta) hasta = fecha
   }
 
-  return lineas >= MIN_LINEAS ? { lineas, desde, hasta } : null
+  return lineas >= MIN_LINEAS && fechas.size >= MIN_FECHAS ? { lineas, desde, hasta } : null
 }

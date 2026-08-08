@@ -46,6 +46,23 @@ TOTAL                               550,00
   assert.equal(detectarListadoMovimientos(minuta), null)
 })
 
+// Una factura detallada trae muchas líneas con importe pero pocas fechas distintas. El detector solo
+// entra cuando la extracción YA ha fallado, así que un falso positivo aquí le diría a Alberto «esto
+// no es una factura» sobre una factura de verdad.
+test('factura con muchas líneas pero de una sola fecha → NO es listado', () => {
+  const telefonia = `
+FACTURA DIGI · Periodo 01/07/2026 - 31/07/2026
+01/07/2026  Cuota línea móvil 1      12,00
+01/07/2026  Cuota línea móvil 2      12,00
+01/07/2026  Cuota fibra              22,00
+01/07/2026  Servicios adicionales     3,50
+01/07/2026  Descuento               -5,00
+01/07/2026  IVA 21%                  9,14
+TOTAL                                53,64
+`
+  assert.equal(detectarListadoMovimientos(telefonia), null)
+})
+
 test('texto vacío o nulo → null (no inventa una clase)', () => {
   assert.equal(detectarListadoMovimientos(''), null)
   assert.equal(detectarListadoMovimientos(undefined), null)
