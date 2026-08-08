@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-08T14:33:48Z",
+  "generadoEn": "2026-08-08T14:52:56Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -641,7 +641,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 34
+        "evidencias": 35
       },
       "rrhh": {
         "estado": "usado",
@@ -3979,6 +3979,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🛡️ Segundo par de ojos sobre el precio + procedencia del dato (08/08/2026).",
+      "fecha": "08/08/2026"
+    },
+    {
       "titulo": "🚨 Un precio falso envenenó el track record de trading (08/08/2026).",
       "fecha": "08/08/2026"
     },
@@ -3992,6 +3996,10 @@
     },
     {
       "titulo": "🔍 Rutinas de auditoría ampliadas (08/08/2026).",
+      "fecha": "08/08/2026"
+    },
+    {
+      "titulo": "💶 Precio dinámico SIVRA operativo en los 4 pisos (08/08/2026).",
       "fecha": "08/08/2026"
     },
     {
@@ -4028,14 +4036,6 @@
     },
     {
       "titulo": "⏱️ «Sin respuesta.» sobre un extracto que SÍ había entrado (08/08/2026).",
-      "fecha": "08/08/2026"
-    },
-    {
-      "titulo": "💓 El latido del barrido de mercado llevaba rojo desde el día 1 por 1 ventana de 32 (08/08/2026).",
-      "fecha": "08/08/2026"
-    },
-    {
-      "titulo": "🤝 El auto-merge ya resuelve el conflicto que se repite todos los días (08/08/2026).",
       "fecha": "08/08/2026"
     }
   ],

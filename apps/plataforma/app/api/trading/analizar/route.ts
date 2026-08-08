@@ -10,9 +10,15 @@ import {
 } from '@central/module-trading'
 import type { Vela, Fundamentales } from '@central/module-trading'
 import { datosYahoo, lineaEarningsProximos, type FechaEarnings } from '@/lib/trading/earnings-yahoo'
-import { filtrarPreciosAnomalos, resumenDescartes, DIAS_REFERENCIA_MAX } from '@/lib/trading/precios-guardia'
+import { filtrarPreciosAnomalos, resumenDescartes, contrastarFuentes, resumenDivergencias, DIAS_REFERENCIA_MAX } from '@/lib/trading/precios-guardia'
+import { cierresDeContraste } from '@/lib/trading/precios-contraste'
 
 type Entrada = { simbolo: string; velas: Vela[]; fundamentales?: Fundamentales; opsRecientes?: number; factorScore?: number }
+
+// El contraste de precios sale a internet una vez por símbolo (además de los fundamentales de Yahoo,
+// que ya lo hacían). Techo alto + presupuesto acotado dentro: lo que garantiza que la pasada VUELVE es
+// el presupuesto, no el techo (lección de `facturas-scan`, 31/07/2026).
+export const maxDuration = 300
 
 export async function POST(req: NextRequest) {
   if (!isRoutineAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
@@ -87,13 +93,23 @@ export async function POST(req: NextRequest) {
     FROM trading_tesis
     WHERE fecha < ${fecha}::date AND fecha >= ${fecha}::date - ${DIAS_REFERENCIA_MAX}
     ORDER BY simbolo, fecha DESC`
-  const { descartados } = filtrarPreciosAnomalos(cierresHoy, Object.fromEntries(refFilas.map(f => [f.simbolo, f.precio])))
-  const vetados = new Set(descartados.map(d => d.simbolo))
-  if (descartados.length > 0) {
-    console.warn('[trading/analizar]', resumenDescartes(descartados))
+  const { limpios, descartados } = filtrarPreciosAnomalos(cierresHoy, Object.fromEntries(refFilas.map(f => [f.simbolo, f.precio])))
+
+  // 0-bis) SEGUNDO PAR DE OJOS. El ×2 de arriba solo caza lo escandaloso; un error del 10% entra limpio
+  // y contamina los indicadores del día igual de bien. Se pregunta el MISMO cierre a la fuente propia
+  // del servidor (Stooq con respaldo Yahoo) y el que no cuadre se veta. Presupuesto acotado: los
+  // símbolos que no dan tiempo salen «sin contraste», que deja pasar el precio — un contraste a medias
+  // nunca puede bloquear la pasada entera.
+  const contraste = await cierresDeContraste(Object.keys(limpios), fecha, { presupuestoMs: 90_000 })
+  const { divergentes, sinContraste } = contrastarFuentes(limpios, contraste.cierres)
+
+  const vetados = new Set([...descartados.map(d => d.simbolo), ...divergentes.map(d => d.simbolo)])
+  const aviso = [resumenDescartes(descartados), resumenDivergencias(divergentes)].filter(Boolean).join('\n')
+  if (aviso) {
+    console.warn('[trading/analizar]', aviso)
     // Se avisa SIEMPRE: un símbolo que desaparece del análisis en silencio es indistinguible de un
     // símbolo que hoy no dio señal, y eso es justo lo que dejó pasar el 03/08 sin que nadie mirara.
-    await tgSend(`⚠️ <b>Trading ${fecha}:</b> precio descartado por la guardia, esos símbolos NO se analizan hoy.\n${resumenDescartes(descartados)}`).catch(() => {})
+    await tgSend(`⚠️ <b>Trading ${fecha}:</b> precio no fiable, esos símbolos NO se analizan hoy.\n${aviso}`).catch(() => {})
   }
 
   const ideas: Array<{ simbolo: string; estrategia: string; direccion: string; confianza: number; operada: boolean; motivo?: string; rvol?: number | null; volConfirma?: string; factorScore?: number }> = []
@@ -113,7 +129,7 @@ export async function POST(req: NextRequest) {
       data: señales.map(se => ({
         simbolo: s.simbolo, fecha: new Date(fecha), estrategia: se.estrategia,
         direccion: se.direccion, confianza: se.confianza, horizonteDias: 10,
-        precioRef, indicadores: ind as object, rationale: se.rationale,
+        precioRef, precioFuente: 'sesion', indicadores: ind as object, rationale: se.rationale,
       })),
       skipDuplicates: true,
     })
@@ -186,9 +202,17 @@ export async function POST(req: NextRequest) {
   await registrarLatido(
     'trading_analizar',
     true,
-    `${ideas.length} símbolo(s) analizados · ${ideas.filter(i => i.operada).length} operado(s) en paper`,
+    `${ideas.length} símbolo(s) analizados · ${ideas.filter(i => i.operada).length} operado(s) en paper` +
+      (vetados.size > 0 ? ` · ⚠️ ${vetados.size} vetado(s) por precio no fiable` : '') +
+      (sinContraste.length > 0 ? ` · ${sinContraste.length} sin 2ª fuente` : ''),
   )
 
   ideas.sort((a, b) => b.confianza - a.confianza)
-  return NextResponse.json({ fecha, top: ideas.slice(0, 5), total: ideas.length })
+  // `vetados` y `sinContraste` viajan en la respuesta para que la sesión los cante: un símbolo que
+  // desaparece del análisis sin decirlo se confunde con uno que hoy no dio señal.
+  return NextResponse.json({
+    fecha, top: ideas.slice(0, 5), total: ideas.length,
+    vetados: [...vetados], descartados, divergentes,
+    contraste: { consultados: contraste.consultados, sinDato: contraste.sinDato, sinTiempo: contraste.sinTiempo, sinJuzgar: sinContraste },
+  })
 }

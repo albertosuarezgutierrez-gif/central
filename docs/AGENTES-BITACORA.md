@@ -45,6 +45,15 @@
   `c45f564`, `f9a3fe6` — 3 disparos el mismo día) — sep y nov quedan
   ELEGIBLES para el bucket mensual en los 4 aforos, pero el mérito es compartido, no de esta pasada
   sola. dic-26 y ene-27 siguen cortos (2 y 1 fechas). PRs/commits: PR de `claude/mercado-booking-ronda-filter-ssg8cj`.
+- **2026-08-08 · mercado-booking (2ª pasada MANUAL, para desbloquear el precio dinámico)** · hizo: 19
+  ventanas más con el conector (190 comps, `booking_mcp`), eligiendo las fechas por el déficit REAL de
+  cada bucket —el que ve el motor: fechas distintas SIN evento, contando `pricing_eventos_auto` además
+  del calendario del repo—. Resultado: ago→ene con ≥3 fechas en los 4 pisos (p50 house 325/472/638/478/
+  426/381€, dúplex 110/135/184/175/136/125€). dudas: 23-oct (12 pax, p50 ~830€ contra 615€ del resto de
+  octubre) y 27-nov (4 pax, 247€ contra 163€ del 13-nov) parecen fechas de evento SIN catalogar; se
+  escribieron igual —son mercado medido— pero convendría que el catalogador las mire, porque si lo son
+  están inflando el bucket "normal" del mes; fallos: —. Latido NO escrito (pasada a mano, no es la
+  Rutina). PRs/commits: este PR.
 - **2026-08-08 · mercado-booking (2º disparo programado del mismo día)** · hizo: pidió el plan y
   recibió **las mismas 12 ventanas "nunca medidas"** que ya reportó como medidas el disparo de las
   12:28 UTC de hoy (mismo `checkin/checkout/aforo`, `ronda:1`, `comps:0`) — es decir, cuando este

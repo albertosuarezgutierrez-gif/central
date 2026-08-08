@@ -22,6 +22,14 @@
 
 ---
 
+## 🧱 (08/08/2026) Bandeja «cargos duplicados» de /banca responsive en móvil — PR #1319
+- Captura de Alberto: en móvil las filas desbordaban (chips `flexShrink:0` + importe fuera de pantalla).
+- Fix CSS-only en `BancaClient.tsx::DuplicadosBandeja`: media query ≤768px, concepto a ancho completo,
+  fecha+chips+importe con wrap, botonera con wrap y botones ≥44px (`#duplicados`). Igual en «Ya resueltos».
+- Mismo patrón que la bandeja «Gastos por revisar» del mismo archivo.
+- Verificado 320/360px con Playwright (0px overflow). OJO: `next build` en el contenedor falla en
+  page data de `/api/admin/clientes/[vertical]/[id]` YA en main (envs ausentes), no es del cambio.
+
 ## 📌 Estado actual (lo más reciente arriba)
 
 ### 🛡️ Auditoría profunda: el vigía del agente de pricing estaba en verde falso (08/08/2026)
@@ -47,6 +55,20 @@ Pendiente de decisión de Alberto por ser cambio de fórmula.
 🟢 Raíles OK (suelo, tope ±%/día, techo, circuit-breaker sobre la intención cruda); 1023/1023 tests,
 tsc 0, build 0. Falso positivo propio corregido en el informe (marzo-27 no está contaminado: Semana
 Santa sí está catalogada). Arreglado de paso `?max=abc` → 0 ventanas en silencio (**PR #1318**).
+
+- **🛡️ Segundo par de ojos sobre el precio + procedencia del dato (08/08/2026).** Cierra el hueco que
+  dejaba la guardia del ×2 (#1315): un error del 10% pasaba limpio y movía el retorno 10 puntos.
+  `contrastarFuentes` (puro) compara cada precio con la fuente propia del servidor (Stooq→Yahoo,
+  tolerancia 2%) el MISMO día; `precios-contraste.ts` hace el acarreo con presupuesto y concurrencia
+  acotada — sin contraste NO se juzga, y un contraste a medias nunca bloquea la pasada. En `/analizar`
+  el símbolo divergente se salta entero y avisa por Telegram. Nuevas columnas **`precio_fuente`** en
+  `trading_tesis` y `trading_tesis_resultado` (default `sesion`; las 12 filas del saneo de CVX quedan
+  `manual`) — patrón `market_rates.fuente`, es lo que desbloquea la recuperación automática de
+  `/puntuar`. De regalo: **`/saldo` avisa si el NAV salta >15%** (no bloquea: puede ser un ingreso real,
+  pero con el NAV se dimensionan TODAS las compras). PR #1317. **Dos fallos propios cazados en la
+  auto-revisión antes de mergear:** la lectura del NAV anterior no filtraba por `cuenta_id` (regla
+  multi-tenant — habría comparado contra el saldo de otra cuenta) y `sinContraste` de `/puntuar` metía
+  los ~100 símbolos que nunca se quisieron contrastar, exagerando lo que no se sabe.
 
 ### 🏨 Filtro de ronda/fecha en el plan de mercado + 2ª pasada Booking (08/08/2026)
 `/api/sivra/mercado/plan` acepta **`?rondas=2,3&desde=&hasta=`**, aplicado ANTES del tope (filtrar
@@ -95,6 +117,15 @@ del environment. Esta pasada midió 10 ventanas (100 comps `booking_mcp`) y las 
   olvidados) + vigilar que `rutinas-automerge.yml` corre (lección PRs #1252-#1286). `auditoria-central`
   gana el check de `ignoreCommand` en los 8 `vercel.json` (incidente ~600$). Corregido "4 apps"→8.
   PR draft de la rama `claude/revision-rutinas-diarias-semanales-sviqer` — cambia comportamiento, carril 2.
+
+- **💶 Precio dinámico SIVRA operativo en los 4 pisos (08/08/2026).** Medidas a mano 19 ventanas de
+  Booking (190 comps, `fuente=booking_mcp`): ago-2026→ene-2027 ya tiene **≥3 fechas sin evento por mes
+  y por piso**, que es lo que exige `MIN_FECHAS_MES` del bucket mensual — antes solo 9 de 24 buckets
+  eran elegibles y el resto se tarificaba con el ancla global. Con el corpus arreglado se activó
+  `apply_enabled` en Dúplex y House (ya lo tenían Busto y Luxury): los 4 pisos tarifican solos.
+  **Pendiente:** feb→jul-2027 siguen sin bucket (caen al ancla global + prior estacional, que es el
+  fallback de diseño, no una avería); la rutina diaria de Booking los va rellenando. **A vigilar:**
+  23-oct y 27-nov salieron muy por encima de su mes sin estar en el calendario de eventos.
 
 - **🕰️ Retrovisor de 24 meses → 15 AÑOS (08/08/2026).** Decisión de Alberto tras ver que H8 invertía el
   signo entre mitades y con 22 snapshots no había forma de saber cuál era el mundo. `MESES_RETROVISOR`
