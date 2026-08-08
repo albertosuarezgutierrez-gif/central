@@ -32,7 +32,8 @@
   Fix: guardia pura `lib/trading/precios-guardia.ts` (×2 contra el último `precio_ref` ANTERIOR a hoy;
   sin referencia NO se juzga), aplicada a tesis + deslizamiento + **stops**; `ventana_dias` pasa a ser los
   días REALES, no el horizonte declarado; columnas `anulado`/`anulado_motivo` (marcar, nunca borrar).
-  Las 12 filas re-puntuadas con el cierre real. PR #1316.
+  Las 12 filas re-puntuadas con el cierre real; la guardia va también en `/analizar`, que es el ORIGEN
+  (la vela falsa contaminaba EMA/MACD/RSI/ADX → el símbolo se salta entero y avisa). PR #1315.
 
 - **🩺 El watchdog de trading ya distingue «no PUDO dispararse» (08/08/2026).** El viernes 07/08 la pasada
   nocturna no corrió y el aviso mandaba a mirar trigger/IBKR; la causa real fue quedarse **sin cupo de
@@ -42,6 +43,15 @@
   sería auto-recuperable** (`/saldo` y `/analizar` dependen del NAV, que solo existe en el MCP de IBKR) — y
   exige marcar la FUENTE del precio (patrón `market_rates.fuente`) porque toca el track record. **Pendiente
   de decisión de Alberto.** Retrovisor de 15 años en marcha: 178 snapshots/fila, 40 símbolos/pasada, ETA ~13 h.
+
+- **🔍 Rutinas de auditoría ampliadas (08/08/2026).** Revisión pedida por Alberto de la diaria/semanal:
+  el heartbeat (paso 2-bis) pasa a leer `agente_latidos` como fuente preferida y saca de la SQL las 3
+  huellas de actividad (`incomes`, `market_rates normal`, `cleaning_sessions`) que daban falso ⛔ cada
+  pasada desde el 02/07; añade huella de `mercado-booking` + reconciliación de cobertura contra
+  `CRON_JOBS`/`AGENTES_VIGILADOS`. Nuevo paso 2-ter: backlog de PRs `claude/*` (atascados/conflicto/
+  olvidados) + vigilar que `rutinas-automerge.yml` corre (lección PRs #1252-#1286). `auditoria-central`
+  gana el check de `ignoreCommand` en los 8 `vercel.json` (incidente ~600$). Corregido "4 apps"→8.
+  PR draft de la rama `claude/revision-rutinas-diarias-semanales-sviqer` — cambia comportamiento, carril 2.
 
 - **🕰️ Retrovisor de 24 meses → 15 AÑOS (08/08/2026).** Decisión de Alberto tras ver que H8 invertía el
   signo entre mitades y con 22 snapshots no había forma de saber cuál era el mundo. `MESES_RETROVISOR`
@@ -57,6 +67,15 @@
   Reconciliadas las skills: `trading-analista/SKILL.md` (regla nueva — H8/H9 resueltas, no proponer
   entradas «porque capituló» ni stops) y `references/infra-forward-radar.md` (decía 546 símbolos × 22
   snapshots; ahora 1.018 × 178, con el sesgo de supervivencia y el límite de fundamentales desde ~2010).
+
+- **⚠️ mercado-booking: 2º disparo el mismo día, sin huella del 1º en `market_rates` (08/08/2026).**
+  El disparo de las 12:28 UTC de hoy dio `ok:true` y logeó 120 comps escritos. Este 2º disparo (horas
+  después) pidió `/api/sivra/mercado/plan` y recibió **las mismas 12 ventanas "nunca medidas"** —
+  `comps:0` en las 12, como si el primero no hubiera escrito nada. Medidas de nuevo (120 comps más),
+  y esta vez sí hizo avanzar la cola. **Sin diagnosticar la causa:** ¿se disparó dos veces la skill
+  por config de scheduling, con la primera fallando en silencio pese a loggear éxito? ¿o algo borró
+  `market_rates` entre medias? Pide revisar logs de `/api/sivra/mercado/ingest` de Vercel y el trigger
+  de la skill. Detalle en `docs/AGENTES-BITACORA.md`.
 
 - **✅ H8 y H9 RESUELTAS sobre el corpus completo — ninguna se cablea (08/08/2026).** 1.018/1.018 símbolos,
   21.321 observaciones. **H9:** las tres reglas de salida fallan su propio criterio; stop −20% y trailing

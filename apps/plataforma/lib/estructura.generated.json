@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-08T13:13:47Z",
+  "generadoEn": "2026-08-08T13:29:52Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3979,7 +3979,15 @@
   ],
   "novedades": [
     {
+      "titulo": "🔍 Rutinas de auditoría ampliadas (08/08/2026).",
+      "fecha": "08/08/2026"
+    },
+    {
       "titulo": "🕰️ Retrovisor de 24 meses → 15 AÑOS (08/08/2026).",
+      "fecha": "08/08/2026"
+    },
+    {
+      "titulo": "⚠️ mercado-booking: 2º disparo el mismo día, sin huella del 1º en `market_rates` (08/08/2026).",
       "fecha": "08/08/2026"
     },
     {
@@ -4029,14 +4037,6 @@
     {
       "titulo": "💳 El parser del extracto de tarjeta llevaba meses devolviendo CERO con el PDF real (08/08/2026).",
       "fecha": "08/08/2026"
-    },
-    {
-      "titulo": "🤖 El agente contable dejaba de responder «no encuentro el cargo» a lo que no había mirado (08/08/2026).",
-      "fecha": "08/08/2026"
-    },
-    {
-      "titulo": "🧪 Prueba en vivo del auto-merge de rutinas (07/08/2026).",
-      "fecha": "07/08/2026"
     }
   ],
   "saludRepo": {
