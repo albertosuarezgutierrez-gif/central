@@ -3,37 +3,97 @@
 // CANÓNICA existente (extraerDesdeBuffer → aiExtractInvoice) y busca un movimiento bancario que
 // cuadre, SIN escribir nada (la conciliación real se hace luego por confirmación, en acciones.ts).
 // No implementa OCR nuevo (spec §5).
+//
+// 08/08/2026 — el cruce ya no responde sí/no, responde CUÁL de los cinco desenlaces es (ver CruceDoc
+// en documentos-tipos.ts). El motivo es un fallo repetido: los extractos del banco llegan con retraso
+// (Kutxabank suele ir 1-3 días por detrás), así que una factura de anteayer NO se puede contrastar
+// todavía — y el agente contestaba «no encuentro un movimiento bancario que cuadre», que suena a «no
+// lo has pagado». Casos reales: la factura de lavandería de 780,10€ del 03/08 (el cargo entró en la
+// BD el 06/08, un día DESPUÉS de que el agente lo negara) y la factura 47/2026 de 278,30€ del 06/08
+// (Kutxabank llegaba entonces al 05/08). Regla del CLAUDE.md: dato que no hay ≠ dato que no se ha mirado.
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { extraerDesdeBuffer } from '@/lib/agente-facturas/extraer'
 import { esExtractoTarjeta } from '@/lib/extracto-tarjeta-pdf'
-import { interpretarExtraccion, type FacturaDoc, type MatchDoc } from './documentos-tipos'
+import { interpretarExtraccion, fechaEs, type FacturaDoc, type CruceDoc, type CoberturaBanco, type MovCandidato } from './documentos-tipos'
+import { detectarListadoMovimientos } from './documento-clase'
 import { procesarExtractoTarjeta } from './extracto-tarjeta'
 
 export type DocProcesado =
   | { ok: false; motivo: string }
-  | { ok: true; tipo: 'factura'; factura: FacturaDoc; match: MatchDoc }
+  | { ok: true; tipo: 'factura'; factura: FacturaDoc; cruce: CruceDoc }
   | { ok: true; tipo: 'extracto_tarjeta'; resumen: string; driveUrl?: string }
 
-// Busca un movimiento sin conciliar que cuadre con la factura (gasto → cargo), al céntimo y ±tol
-// días. READ-ONLY: réplica de la SELECT de factura-ocr.ts::casarFactura pero SIN el UPDATE (aquí
-// solo proponemos; el UPDATE lo hace acciones.ts tras confirmar). Todo scoped por cuenta_id.
-async function buscarMovimiento(cuentaId: string, f: FacturaDoc, tolDias = 7): Promise<MatchDoc> {
-  const rows = await prisma.$queryRaw<Array<{ id: string; concepto: string | null; importe: unknown }>>(Prisma.sql`
-    SELECT mb.id, mb.concepto, mb.importe
+// Ventana ancha para el «existe, pero en otra fecha»: un recibo domiciliado puede cargarse bastante
+// después de la fecha de la factura. Se PREGUNTA, no se concilia solo.
+const VENTANA_ANCHA = 60
+// Una cuenta cuenta como "viva" (su feed está al día) si tiene movimientos recientes. Las cuentas
+// dormidas (N26, las tarjetas que solo se cargan con el PDF mensual) NO deben hacernos decir
+// «todavía no ha llegado» de todo lo que se pregunte.
+const DIAS_CUENTA_VIVA = 30
+
+type FilaMov = { id: string; fecha: string; concepto: string | null; importe: unknown; banco: string | null; conciliado: boolean | null }
+
+const aCandidato = (m: FilaMov): MovCandidato => ({
+  movId: m.id, fecha: m.fecha, concepto: m.concepto, importe: Number(m.importe), banco: m.banco,
+})
+
+// Cargos del MISMO importe (al céntimo) dentro de una ventana de días. READ-ONLY: réplica de la
+// SELECT de factura-ocr.ts::casarFactura pero SIN el UPDATE (aquí solo proponemos; el UPDATE lo hace
+// acciones.ts tras confirmar). Todo scoped por cuenta_id. Los ya conciliados vienen marcados, no
+// filtrados: un cargo conciliado es una RESPUESTA («ya está hecho»), no una ausencia.
+async function cargosDelImporte(cuentaId: string, f: FacturaDoc, dias: number): Promise<FilaMov[]> {
+  return await prisma.$queryRaw<FilaMov[]>(Prisma.sql`
+    SELECT mb.id, mb.fecha_operacion::text AS fecha, mb.concepto, mb.importe,
+           coalesce(cb.alias, cb.banco) AS banco, coalesce(mb.conciliado, false) AS conciliado
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid
-      AND mb.conciliado = false
       AND (mb.duplicado_estado IS NULL OR mb.duplicado_estado <> 'ignorado')
       AND sign(mb.importe) = -1
       AND ABS(ABS(mb.importe) - ${f.total}) < 0.005
       AND mb.fecha_operacion IS NOT NULL
-      AND ABS(mb.fecha_operacion - ${f.fecha}::date) <= ${tolDias}
-    ORDER BY ABS(mb.fecha_operacion - ${f.fecha}::date) ASC
-    LIMIT 1`).catch(() => [])
-  const m = rows[0]
-  return m ? { movId: m.id, concepto: m.concepto, importe: Number(m.importe) } : null
+      AND ABS(mb.fecha_operacion - ${f.fecha}::date) <= ${dias}
+    ORDER BY coalesce(mb.conciliado, false) ASC, ABS(mb.fecha_operacion - ${f.fecha}::date) ASC
+    LIMIT 5`).catch(() => [])
+}
+
+// Hasta qué fecha llega el extracto de cada cuenta VIVA. Es lo que convierte un «no lo encuentro» en
+// un «todavía no me ha llegado» (regla del CLAUDE.md: dato que no hay ≠ dato que no se ha mirado).
+async function coberturaExtractos(cuentaId: string): Promise<CoberturaBanco[]> {
+  const rows = await prisma.$queryRaw<Array<{ banco: string | null; ultima: string | null }>>(Prisma.sql`
+    SELECT coalesce(cb.alias, cb.banco) AS banco, max(mb.fecha_operacion)::text AS ultima
+    FROM cuentas_bancarias cb
+    JOIN movimientos_bancarios mb ON mb.cuenta_bancaria_id = cb.id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND NOT coalesce(cb.oculta, false)
+      AND (mb.duplicado_estado IS NULL OR mb.duplicado_estado <> 'ignorado')
+    GROUP BY 1
+    HAVING max(mb.fecha_operacion) >= CURRENT_DATE - ${DIAS_CUENTA_VIVA}::int
+    ORDER BY 1`).catch(() => [])
+  return rows.filter(r => r.banco).map(r => ({ banco: String(r.banco), ultima: r.ultima }))
+}
+
+const diasEntre = (a: string, b: string) =>
+  Math.round(Math.abs(Date.parse(a) - Date.parse(b)) / 86_400_000)
+
+// Cruza la factura contra los movimientos y devuelve CUÁL de los cinco desenlaces es (ver CruceDoc).
+async function buscarCruce(cuentaId: string, f: FacturaDoc, tolDias = 7): Promise<CruceDoc> {
+  const cercanos = await cargosDelImporte(cuentaId, f, tolDias)
+  const libre = cercanos.find(m => !m.conciliado)
+  if (libre) return { estado: 'match', mov: aCandidato(libre) }
+  if (cercanos[0]) return { estado: 'ya_conciliado', mov: aCandidato(cercanos[0]) }
+
+  const lejano = (await cargosDelImporte(cuentaId, f, VENTANA_ANCHA)).find(m => !m.conciliado)
+  if (lejano) {
+    return { estado: 'fuera_de_ventana', mov: aCandidato(lejano), dias: diasEntre(lejano.fecha, f.fecha) }
+  }
+
+  // Nada casa. Antes de afirmar que no existe, ¿he podido mirarlo siquiera? Si alguna cuenta viva
+  // no llega todavía a la fecha de la factura, la respuesta honesta es «aún no lo sé».
+  const cobertura = await coberturaExtractos(cuentaId)
+  const ciega = cobertura.some(c => c.ultima && c.ultima < f.fecha)
+  return ciega ? { estado: 'sin_cobertura', cobertura } : { estado: 'sin_match', cobertura }
 }
 
 export async function procesarDocumento(
@@ -53,8 +113,21 @@ export async function procesarDocumento(
   }
 
   const interp = interpretarExtraccion(extraido.data, extraido.source)
-  if (!interp.ok) return interp
+  if (!interp.ok) {
+    // El documento SÍ se lee: lo que pasa es que no es una factura suelta, sino un listado de
+    // movimientos (el «movimientos (1).pdf» que Alberto subió tres veces el 07/08/2026). Pedirle
+    // «una copia más clara» de un PDF perfectamente legible es mandarlo a arreglar lo que no falla.
+    const listado = detectarListadoMovimientos(extraido.texto)
+    if (listado) {
+      const rango = listado.desde && listado.hasta ? ` (del ${fechaEs(listado.desde)} al ${fechaEs(listado.hasta)})` : ''
+      return {
+        ok: false,
+        motivo: `Esto no es una factura: es un listado de ${listado.lineas} movimientos${rango}. Los movimientos del banco entran solos por la sincronización; si quieres cargar este extracto, súbelo en /banca → Importar. Si lo que buscas es cuadrar una factura, mándame la factura y yo busco el cargo.`,
+      }
+    }
+    return interp
+  }
 
-  const match = await buscarMovimiento(cuentaId, interp.factura)
-  return { ok: true, tipo: 'factura', factura: interp.factura, match }
+  const cruce = await buscarCruce(cuentaId, interp.factura)
+  return { ok: true, tipo: 'factura', factura: interp.factura, cruce }
 }

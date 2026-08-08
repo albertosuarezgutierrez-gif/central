@@ -9,7 +9,7 @@ import { tgSend, tgSendButtons, escapeHtml } from '@central/core-telegram'
 import { responder } from './cerebro'
 import { guardarAcciones, ejecutarAccion, descartarAccion } from './acciones'
 import { procesarDocumento } from './documentos'
-import { resumenDocumento, accionConciliar } from './documentos-tipos'
+import { resumenDocumento, accionConciliar, matchDeCruce } from './documentos-tipos'
 import { logTurno } from './memoria'
 import { aiTranscribe } from '@/lib/ai-client'
 
@@ -54,12 +54,14 @@ export async function manejarDocumentoTg(
     return
   }
 
-  const resumen = resumenDocumento(doc.factura, doc.match)
+  const resumen = resumenDocumento(doc.factura, doc.cruce)
   await logTurno(cuentaId, 'telegram', 'assistant', resumen)
-  const prop = accionConciliar(doc.factura, doc.match)
+  const prop = accionConciliar(doc.factura, matchDeCruce(doc.cruce))
   if (prop) {
+    // «Fuera de ventana» es una PREGUNTA (el cargo está en otra fecha), así que el botón lo dice.
+    const etiqueta = doc.cruce.estado === 'fuera_de_ventana' ? '✅ Sí, es ese' : '✅ Conciliar'
     const [acc] = await guardarAcciones(cuentaId, [prop])
-    if (acc) { await tgSendButtons(escapeHtml(resumen), botonesAccion(acc.id, '✅ Conciliar')).catch(() => {}); return }
+    if (acc) { await tgSendButtons(escapeHtml(resumen), botonesAccion(acc.id, etiqueta)).catch(() => {}); return }
   }
   await tgSend(escapeHtml(resumen)).catch(() => {})
 }
