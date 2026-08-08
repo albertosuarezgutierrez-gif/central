@@ -24,6 +24,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🩺 El watchdog de trading ya distingue «no PUDO dispararse» (08/08/2026).** El viernes 07/08 la pasada
+  nocturna no corrió y el aviso mandaba a mirar trigger/IBKR; la causa real fue quedarse **sin cupo de
+  tokens**. Nuevo `diagnosticarPasada()` (puro, 3 tests) en `lib/trading/watchdog.ts`: si fallan los TRES
+  tramos enumera las causas candidatas en vez de señalar una que no puede distinguir, y separa «arrancó y
+  murió» (usa `agente_latidos.ultimo_at`) de «ni arrancó». **Corrección a lo que dije antes: solo `/puntuar`
+  sería auto-recuperable** (`/saldo` y `/analizar` dependen del NAV, que solo existe en el MCP de IBKR) — y
+  exige marcar la FUENTE del precio (patrón `market_rates.fuente`) porque toca el track record. **Pendiente
+  de decisión de Alberto.** Retrovisor de 15 años en marcha: 178 snapshots/fila, 40 símbolos/pasada, ETA ~13 h.
+
 - **🕰️ Retrovisor de 24 meses → 15 AÑOS (08/08/2026).** Decisión de Alberto tras ver que H8 invertía el
   signo entre mitades y con 22 snapshots no había forma de saber cuál era el mundo. `MESES_RETROVISOR`
   = 180 en `backtest-puro.ts`: de ~22 snapshots por símbolo a **178**, cubriendo 2011-2026 (euro, 2015-16,
