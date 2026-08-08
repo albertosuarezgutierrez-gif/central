@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-08T12:42:47Z",
+  "generadoEn": "2026-08-08T12:49:30Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3979,6 +3979,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ H8 y H9 RESUELTAS sobre el corpus completo — ninguna se cablea (08/08/2026).",
+      "fecha": "08/08/2026"
+    },
+    {
       "titulo": "🧹 Auditoría del corpus re-recolectado + dos «no lo sé» que afirmaban (08/08/2026).",
       "fecha": "08/08/2026"
     },
@@ -4032,10 +4036,6 @@
     },
     {
       "titulo": "🧹 Atasco de PRs de rutinas resuelto: 6 PRs cerrados en una pasada (07/08/2026).",
-      "fecha": "07/08/2026"
-    },
-    {
-      "titulo": "🤖 El carril 1 ya no depende de que la rutina pueda empujar a `main` (07/08/2026).",
       "fecha": "07/08/2026"
     }
   ],
