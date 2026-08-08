@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-08T16:06:56Z",
-  "sha": "45af6440c640720b55fffff2b1e0a7d3aae8bace",
+  "generadoEn": "2026-08-08T16:14:04Z",
+  "sha": "d1e629619a0b99763812e0624815693678e8ba01",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47909,7 +47909,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "90880ac4287a"
+      "hash": "ce92e7334be6"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -55816,7 +55816,7 @@
         "trading_tesis"
       ],
       "rutaApi": "/api/trading/analizar",
-      "hash": "672817120a9b"
+      "hash": "28df1f4b1e0c"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/cartera-estudio/route.ts",
@@ -56040,7 +56040,7 @@
         "trading_tesis"
       ],
       "rutaApi": "/api/trading/puntuar",
-      "hash": "0c8c0a3128ff"
+      "hash": "bfd3d83a7fdd"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/saldo/route.ts",
@@ -69323,6 +69323,8 @@
         "resumenDescartes",
         "contrastarFuentes",
         "resumenDivergencias",
+        "detectarSuplantaciones",
+        "resumenSuplantaciones",
         "saltoDeSaldo"
       ],
       "funciones": [
@@ -69363,18 +69365,44 @@
           "resumen": "Resumen de una línea. Cadena vacía si no hay divergencias — el consumidor no tiene que comprobarlo."
         },
         {
+          "nombre": "cerca",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: number, b: number, tol: number",
+          "retorno": "boolean",
+          "linea": 220
+        },
+        {
+          "nombre": "detectarSuplantaciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "precios: Record<string, number>, referencias: Record<string, number>, tol = CRUCE_TOLERANCIA,",
+          "retorno": "Suplantaciones",
+          "linea": 226,
+          "resumen": "Detecta precios que pertenecen a otro símbolo. `referencias` = mismo mapa que `filtrarPreciosAnomalos` (último `precio_ref` conocido ANTERIOR a la pasada, por símbolo)."
+        },
+        {
+          "nombre": "resumenSuplantaciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "suplantados: Suplantacion[]",
+          "retorno": "string",
+          "linea": 275,
+          "resumen": "Resumen de una línea. Cadena vacía si no hay nada — el consumidor no tiene que comprobarlo."
+        },
+        {
           "nombre": "saltoDeSaldo",
           "kind": "function",
           "exportada": true,
           "params": "nuevo: number, anterior: number | null, umbral = SALTO_NAV_AVISO",
           "retorno": "SaltoSaldo",
-          "linea": 185,
+          "linea": 301,
           "resumen": "`variacion` = (nuevo − anterior) / anterior. Sin anterior no hay nada que comparar (primer saldo): no se avisa, que es distinto de «no ha cambiado»."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "efb4edc9583b"
+      "hash": "852f7757da30"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-stooq.ts",
@@ -89731,6 +89759,6 @@
   ],
   "resumen": {
     "archivos": 2404,
-    "funciones": 6478
+    "funciones": 6481
   }
 }
