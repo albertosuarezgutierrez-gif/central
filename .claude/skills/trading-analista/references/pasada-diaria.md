@@ -40,6 +40,21 @@ simulada en BD. Esta invariante protege todo lo demás: si dudas, no operas.
    el símbolo malo). Esto es lectura pura de IBKR (no rompe la regla de oro), pero un payload
    corrupto SÍ puede llegar a abrir una posición paper con precioRef basura — por eso es
    bloqueante, no cosmético.
+   **🚨 EL LANDMINE DE ARRIBA SE INCUMPLIÓ TRES VECES — ahora lo vigila el servidor (08/08/2026).**
+   La auditoría del corpus encontró, verificados uno a uno contra IBKR: `17/07` META←MSFT,
+   MSFT←SPOT, SPOT←NFLX, NFLX←LLY · `03/08` LLY←CVX, META←LLY · `04/08` NFLX←PLTR. Las dos
+   últimas ocurrieron DESPUÉS de escribir el protocolo, así que la lección de método es que
+   **una regla de disciplina del que llama no basta: tiene que comprobarlo el que recibe.**
+   `/analizar` y `/puntuar` ejecutan ahora `detectarSuplantaciones()`
+   (`apps/plataforma/lib/trading/precios-guardia.ts`), que veta un símbolo cuando su precio es
+   idéntico al de otro de la misma pasada, o cuando cuadra con la referencia de ayer de OTRO
+   símbolo y no con la suya. **Consecuencia práctica para ti:** si barajas el payload, esos
+   símbolos NO se analizan y lo verás en el aviso de Telegram y en `suplantados` de la respuesta —
+   no es un fallo del servidor, es tu transcripción. Y lo que la guardia NO puede ver: la primera
+   pasada de un símbolo (sin referencia) barajada sin duplicar a nadie. Ahí solo estás tú y el
+   contraste con la 2ª fuente. Sigue el protocolo igual.
+   28 tesis y 16 resultados quedaron anulados por esto (`trading_tesis.anulado`); las tesis
+   anuladas ni se puntúan, ni sirven de referencia de precio, ni salen en el panel.
 4. `POST {PLATAFORMA_URL}/api/trading/analizar` con `{ fecha, nav, simbolos: [...] }`
    (Bearer `ALERTA_TOKEN`). Devuelve el `top` de ideas.
 5. `POST {PLATAFORMA_URL}/api/trading/puntuar` con `{ hoy, precios }` (snapshot de cada símbolo con

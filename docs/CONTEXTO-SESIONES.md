@@ -80,6 +80,15 @@ Santa sí está catalogada). Arreglado de paso `?max=abc` → 0 ventanas en sile
   al 30% recibe el mismo factor de demanda mínimo (0,92) que marzo-2027 al 0%. Hoy no cambia el signo
   porque todo está flojo, pero la palanca de demanda está ciega a la estacionalidad de la propia venta.
 
+- **🔀 El precio era real… pero de otra empresa: saneo del corpus de trading (08/08/2026).** La auditoría
+  encontró que el fallo caro no es un precio absurdo sino un cierre VERDADERO bajo la etiqueta
+  equivocada: los `get_price_history` paralelos vuelven en orden de finalización y se transcribían por
+  posición. Verificado contra IBKR: `17/07` META←MSFT, MSFT←SPOT, SPOT←NFLX, NFLX←LLY · `03/08` LLY←CVX,
+  META←LLY · `04/08` NFLX←PLTR. Nuevo `detectarSuplantaciones()` (duplicado en la pasada + cruce contra
+  referencias, 3%) vetando en `/analizar` y `/puntuar`; `trading_tesis.anulado` con 28 tesis y 16
+  resultados anulados (una tesis sobre velas ajenas NO se re-puntúa: se anula) y 24 resultados LLY/META
+  re-puntuados con el cierre real. Stats: n 81→77, hit rate 0,296→0,312 (momentum). PR #1321.
+
 - **🛡️ Segundo par de ojos sobre el precio + procedencia del dato (08/08/2026).** Cierra el hueco que
   dejaba la guardia del ×2 (#1315): un error del 10% pasaba limpio y movía el retorno 10 puntos.
   `contrastarFuentes` (puro) compara cada precio con la fuente propia del servidor (Stooq→Yahoo,
