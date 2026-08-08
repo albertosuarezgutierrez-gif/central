@@ -33,6 +33,12 @@ primera; (2) el motivo de los TRES tramos llevaba «el NAV de IBKR» cableado �
 mirar IBKR y la rutina. Fix: latido explícito `trading_analizar` (como `/puntuar`) + `GREATEST` con
 las tesis de respaldo, y `etiqueta` por tramo en `evaluarWatchdog`. PR #1291.
 
+- **📎 Pasada diaria facturas-correo (08/08/2026).** Vía B sana (`dias_caido=1`), sin backlog en
+  `PDF-pendiente`/`Revisar`. Día tranquilo: 0 candidatos nuevos en Gmail, 0 subidas manuales nuevas,
+  0 duplicados nuevos (los 2 "FACTURA JULIO SOCORRO" de la raíz ya estaban avisados). Roborock
+  -247,92€ (House Sevillana) sigue sin conciliar en banco. Nada que archivar/decidir hoy. Detalle en
+  `docs/AGENTES-BITACORA.md`.
+
 - **🧪 Prueba en vivo del auto-merge de rutinas (07/08/2026).** Esta entrada se subió en un PR que
   toca **solo** `docs/CONTEXTO-SESIONES.md` para ejercitar el camino feliz de
   `.github/workflows/rutinas-automerge.yml` (#1289) — el camino de bloqueo ya estaba probado contra
@@ -40,6 +46,15 @@ las tesis de respaldo, y `etiqueta` por tramo en `evaluarWatchdog`. PR #1291.
   auto-merge funciona de punta a punta: rama `claude/*` + diff solo de registro + CI en verde +
   margen de quietud ≥20 min → mergeado sin mano humana. A partir de aquí las rutinas ya no necesitan
   push directo a `main` para que su memoria llegue: les basta con separar el PR de registro.
+
+- **🧾 Factura 47/2026 Jaime Salas (electricidad Socorro 24) archivada (07/08/2026).** 278,30€
+  (base 230 + IVA 48,30), reparación de avería en CGP + cuadro eléctrico → `turistico_pisos` /
+  `prop_house_sevillana`. En Drive `08-Agosto-2026` + fila en `facturas_drive`. **Conciliación
+  pendiente**: Alberto la pagó por transferencia hoy y el cargo aún no está en el feed PSD2 (último
+  movimiento 06/08) — recogerlo en la próxima pasada de `facturas-correo` con `propiedad_id`.
+  Dos límites del entorno anotados: `script.google.com` (Apps Script de Drive) está **bloqueado por
+  la política de red** (403 en CONNECT) y el MCP de Drive no traga un PDF de 563 KB → se archivó una
+  copia rasterizada 200 dpi 1-bit (11 KB, legible, sin capa de texto).
 
 ### 💓 El latido del barrido deja de estar rojo para siempre (07/08/2026)
 Segunda pasada con #1282 vivo: la guardia volvió a saltar (174 comps, 19 fechas, **17 precios

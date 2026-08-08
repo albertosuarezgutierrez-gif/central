@@ -15,6 +15,29 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-08 · facturas-correo (trigger diario)** · hizo: Vía B sana (`dias_caido=1`, última copia
+  07/08 en `_buzon_pdf` — PriceLabs; `agente_salud` sin cambios porque ya estaba en `ok=true`), sin
+  backlog en `PDF-pendiente`/`Revisar` (ambas etiquetas a 0). 0 candidatos nuevos en Gmail
+  (`newer_than:2d` vacío) y 0 subidas manuales nuevas en `_subir_aqui`/raíz 2026 (los 2 "FACTURA JULIO
+  SOCORRO.pdf" sueltos de la raíz ya tenían aviso en `_DUPLICADOS_BORRAR` desde 03/08 y 06/08 — sin
+  duplicar). Papelera con 19 avisos pendientes de borrado manual, sin verificación de zombis hoy (ya
+  se hizo 06/08, nada cambió desde entonces). Roborock Amazon -247,92€ (House Sevillana, confirmado
+  06/08) SIGUE sin aparecer en `movimientos_bancarios` — conciliación pendiente, a recoger en próximas
+  pasadas. Booking dúplex 587,23€ aún no vence (16/08). dudas: —; fallos: —; PRs/commits: este commit
+  (solo bitácora/memoria, sin cambios de código).
+- **2026-08-07 · facturas-correo (a petición de Alberto, factura suelta)** · hizo: factura 47/2026 de
+  **Jaime Salas Calderón** (instalaciones eléctricas, NIF 47010941-E) — reparación de avería en CGP +
+  sustitución/conexión en cuadro eléctrico, base 230,00€ + IVA 21% 48,30€ = **278,30€**, fecha 06/08/2026,
+  a nombre de Alberto en **C/ Socorro 24** → `turistico_pisos` / `prop_house_sevillana`, deducible.
+  Archivada en Drive `08-Agosto-2026` (`1BNr2lF0FupYngJ_gxCheQ1da-0Z5XTZL`) + fila en `facturas_drive`
+  (`jaime-salas-electricidad`, 2026-08). **Conciliación PENDIENTE**: no hay cargo de -278,30€ en
+  `movimientos_bancarios` (feed PSD2 fresco, último movimiento 06/08; Alberto pagó por transferencia hoy
+  07/08) — recoger el cargo en la próxima pasada e imputar `propiedad_id=prop_house_sevillana`.
+  dudas: —; fallos: el Apps Script de Drive (`script.google.com`) está **bloqueado por la política de red**
+  de este entorno (403 en CONNECT), así que la subida fue por el MCP de Drive; el PDF original pesa 563 KB
+  (5 fuentes CID incrustadas) y no cabe en una llamada MCP → se archivó una copia **rasterizada 200 dpi
+  1-bit (11 KB), legible al 100%** pero sin capa de texto. Si hace falta el original para el gestor, que
+  Alberto lo suelte en `_subir_aqui`.
 - **2026-08-07 · facturas-correo (trigger diario)** · hizo: Vía B sana (dias_caido=2, última copia
   05/08 en `_buzon_pdf` — Stripe/Anthropic, Allianz, Parte Sevilla; `agente_salud` actualizado), sin
   backlog en `PDF-pendiente`/`Revisar`, papelera `_DUPLICADOS_BORRAR` sin novedad (la 2ª copia de
