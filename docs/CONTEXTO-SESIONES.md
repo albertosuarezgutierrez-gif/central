@@ -48,6 +48,18 @@
   «Sin respuesta.» a un 504: dice que puede haber entrado y manda a mirarlo a /banca. Es el mismo landmine
   de `facturas-scan` (31/07) en otra ruta: subir el techo solo mueve la pared. PR draft.
 
+- **💓 El latido del barrido de mercado llevaba rojo desde el día 1 por 1 ventana de 32 (08/08/2026).**
+  `barridoFiable` exigía CERO ventanas ciegas en la ronda base (8 meses × 4 aforos) y el token de fecha
+  de Google es lotería: hoy, 162 comps en 60 ventanas y rojo por **1**. Tercera vez que la misma guarda
+  absoluta hace permanente el rojo (07/08 fue el clon). Ahora manda `mesesCiegosEnBase` (mes SIN ningún
+  aforo visto) + tope del 25%; las ciegas sueltas se siguen cantando en el parte. El marcado de
+  `corpus_clonado` pasa ANTES del latido (si falla, ahora se ve).
+  **🏨 La rutina de Booking NUNCA ha corrido** (`booking_mcp`: 10 filas del 06/08, y nada más). Pasada
+  manual desde esta sesión: 50 comps reales en 5 ventanas. El contraste con el corpus Serper del mismo
+  día es brutal: Busto 4-sep 204€→**110€**, 6-nov 305€→**156€**, Dúplex 16-oct 282€→**184€**, y House
+  (12 pax) 260€→**474€** (el motor le pone precio de apartamento de 4). El latido se deja EN ROJO a
+  propósito: darlo por verde con una pasada a mano taparía que la Rutina sigue sin existir. PR #1299.
+
 - **🤝 El auto-merge ya resuelve el conflicto que se repite todos los días (08/08/2026).** El
   workflow de #1289 funcionó (probado: #1292 mergeado solo), pero se rendía ante los conflictos con
   UN comentario y luego callaba: #1290 acabó **24 h abierto**, resuelto a mano, y `main` lo rompió

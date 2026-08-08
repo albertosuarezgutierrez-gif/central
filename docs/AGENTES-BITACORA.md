@@ -15,6 +15,16 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-08 · mercado-booking (pasada MANUAL, la Rutina no existe)** · hizo: reprodujo
+  `/api/sivra/mercado/plan` con los helpers puros (120 ventanas de plan, 10 pedidas, las 10 sin medir
+  nunca) y midió 5 con el conector: 4-sep 2p **p50 110€** · 4-sep 12p **474€** · 16-oct 4p **184€** ·
+  6-nov 2p **156€** · 6-nov 4p **180€**. 50 comps escritos con `fuente='booking_mcp'`. dudas: se dejó
+  el latido `sivra_mercado_booking` SIN escribir a propósito — una pasada a mano no es la Rutina, y un
+  verde de cortesía habría apagado el aviso que dice justo lo que hay que arreglar; fallos: la Rutina
+  diaria no ha dejado ni una huella desde que existe (`booking_mcp` = 10 filas sueltas del 06/08).
+  Hallazgo: contra el corpus Serper del MISMO día, Booking desvía +85%/+96%/+53%/+44% a la baja en los
+  aforos pequeños y **−45% a la alta en House** (12 pax: 260€ Serper contra 474€ reales).
+  PRs/commits: #1299.
 - **2026-08-08 · ialimp-client-health (semanal)** · hizo: pasada de salud de Sique Brilla
   (`empresa_id=05edacff-...a845`). PMS sync OK (Smoobu, `sync_error=null`, `last_sync_at` hoy
   07:40 UTC, 21 `cleaning_sessions` en 24h/7d). Programaciones sin cubrir: 0. Impagos activos
