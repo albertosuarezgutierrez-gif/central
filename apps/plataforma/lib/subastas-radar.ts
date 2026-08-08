@@ -126,6 +126,7 @@ export function filaASubasta(f: any): SubastaInmueble {
     valorSubasta: num(f.valor_subasta),
     tasacion: num(f.tasacion),
     pujaMinima: num(f.puja_minima),
+    cantidadReclamada: num(f.cantidad_reclamada),
     tramos: num(f.tramos),
     deposito: num(f.deposito),
     cargas: num(f.cargas),

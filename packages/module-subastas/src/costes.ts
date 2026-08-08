@@ -15,6 +15,8 @@
 import type { CosteAdquisicion, ParamsCoste, SubastaInmueble } from './types.ts'
 import { deudaComunidadEstimada } from './comunidad.ts'
 import { costeFinanciacion } from './financiacion.ts'
+import { MIN_MUESTRA_CALIBRACION } from './adjudicaciones.ts'
+import { umbralesPuja } from './umbrales.ts'
 
 /** Porcentaje del valor de subasta que hay que consignar para poder pujar. */
 export const PCT_DEPOSITO = 0.05
@@ -190,6 +192,17 @@ function formatearEur(n: number): string {
   return `${n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' })}€`
 }
 
+/** Puja máxima calculada, con su viabilidad legal al lado (tres estados). */
+export interface PujaMaxima {
+  /** Techo económico (bisección + tramo). `null` si ni pujando 0 hay descuento. */
+  importe: number | null
+  /** ¿Alcanza la puja mínima publicada? `null` = sin puja mínima que comprobar. */
+  admisible: boolean | null
+  /** ¿Llega al umbral de aprobación automática (70% LEC / 50% RGR)? `null` = sin régimen o sin tipo. */
+  aprobacionDirecta: boolean | null
+  notas: string[]
+}
+
 /**
  * Puja MÁXIMA para que la adquisición salga con al menos `descuentoObjetivo`
  * de descuento real sobre `valorMercado` — con el coste puerta abierta entero
@@ -198,14 +211,27 @@ function formatearEur(n: number): string {
  * Se resuelve por bisección sobre `calcularCoste` (así hereda TODA la lógica
  * fiscal, incluida la base imponible por valor de referencia, sin duplicarla)
  * y se alinea hacia abajo al tramo de puja si la subasta los publica.
- * `null` si ni pujando 0 se alcanza el objetivo (las cargas/impuestos fijos ya
- * se comen el descuento).
+ * `importe: null` si ni pujando 0 se alcanza el objetivo (las cargas/impuestos
+ * fijos ya se comen el descuento).
+ *
+ * El importe NO se sube hasta la puja mínima ni hasta un umbral legal (eso
+ * violaría el descuento objetivo en silencio): si queda por debajo se marca
+ * `admisible: false` / `aprobacionDirecta: false` con su nota.
  */
 export function pujaMaximaParaDescuento(
   s: SubastaInmueble,
   valorMercado: number,
   descuentoObjetivo = 0.25,
   params: ParamsCoste = {},
+): PujaMaxima {
+  return valorarPuja(s, pujaBiseccion(s, valorMercado, descuentoObjetivo, params))
+}
+
+function pujaBiseccion(
+  s: SubastaInmueble,
+  valorMercado: number,
+  descuentoObjetivo: number,
+  params: ParamsCoste,
 ): number | null {
   if (!(valorMercado > 0) || descuentoObjetivo <= 0 || descuentoObjetivo >= 1) return null
   const costeMax = valorMercado * (1 - descuentoObjetivo)
@@ -223,6 +249,107 @@ export function pujaMaximaParaDescuento(
   }
   const puja = Math.floor(lo)
   return puja > 0 ? alinearATramo(puja, s) : null
+}
+
+/** Contrasta un techo de puja contra la puja mínima y los umbrales legales. */
+function valorarPuja(s: SubastaInmueble, importe: number | null): PujaMaxima {
+  const notas: string[] = []
+  if (importe == null) return { importe, admisible: null, aprobacionDirecta: null, notas }
+
+  const pujaMinima = s.pujaMinima ?? null
+  let admisible: boolean | null = null
+  if (pujaMinima != null) {
+    admisible = pujaMinima === 0 || importe >= pujaMinima
+    if (!admisible) {
+      notas.push(
+        `El techo queda por debajo de la puja mínima (${formatearEur(pujaMinima)}): ` +
+          'con este objetivo de descuento no se puede pujar en esta subasta.',
+      )
+    }
+  }
+
+  const u = umbralesPuja(s)
+  const directa = u.umbrales.find((x) => x.clave === 'aprobacion_directa') ??
+    (u.regimen === 'administrativa' ? u.umbrales.find((x) => x.clave === 'suelo_laj') : undefined)
+  let aprobacionDirecta: boolean | null = null
+  if (directa != null) {
+    aprobacionDirecta = importe >= directa.importe
+    if (!aprobacionDirecta) {
+      notas.push(
+        u.regimen === 'judicial'
+          ? 'El remate no sería de aprobación automática (art. 670 LEC): el ejecutado puede presentar mejor postor en 10 días.'
+          : 'Por debajo del 50% del tipo: la adjudicación queda a criterio de la Mesa (RGR).',
+      )
+      const sueloLaj = u.umbrales.find((x) => x.clave === 'suelo_laj')
+      const deuda = u.cantidadReclamada
+      if (
+        u.regimen === 'judicial' && sueloLaj != null && importe < sueloLaj.importe &&
+        (deuda == null || importe < deuda)
+      ) {
+        notas.push('Por debajo del 50% del tipo y sin cubrir la deuda: la aprobación sería discrecional del LAJ.')
+      }
+    }
+  }
+
+  return { importe, admisible, aprobacionDirecta, notas }
+}
+
+// ── Escenarios de coste informativos ─────────────────────────────────────────
+// El coste por defecto (y el score) simulan el remate al 100% de la salida — el
+// estado conservador. Estos escenarios enseñan cuánto costaría rematar a los
+// niveles donde de verdad se adjudican las subastas, sin tocar el score.
+
+export interface EscenarioCoste {
+  origen: 'aprobacion_directa' | 'mediana_provincial'
+  /** Fracción del valor de subasta a la que se simula el remate. */
+  pct: number
+  remate: number
+  total: number
+  etiqueta: string
+}
+
+export function escenariosCoste(
+  s: SubastaInmueble,
+  params: ParamsCoste = {},
+  medianaProvincial?: { ratio: number; muestraRatio: number; provincia: string } | null,
+): EscenarioCoste[] {
+  const v = s.valorSubasta
+  if (v == null || v <= 0 || s.tipo === 'venta_adjudicado') return []
+
+  const escenarios: EscenarioCoste[] = []
+  const u = umbralesPuja(s)
+  const directa = u.umbrales.find((x) => x.clave === 'aprobacion_directa') ??
+    (u.regimen === 'administrativa' ? u.umbrales.find((x) => x.clave === 'suelo_laj') : undefined)
+  if (directa?.pct != null) {
+    const remate = directa.importe
+    escenarios.push({
+      origen: 'aprobacion_directa',
+      pct: directa.pct,
+      remate,
+      total: calcularCoste(s, remate, params).total,
+      etiqueta:
+        `Si se rematara al ${Math.round(directa.pct * 100)}% del tipo (${formatearEur(remate)}, ` +
+        `umbral de aprobación ${u.regimen === 'judicial' ? 'automática, art. 670 LEC' : 'de la Mesa, RGR'})`,
+    })
+  }
+
+  if (
+    medianaProvincial != null && medianaProvincial.ratio > 0 &&
+    medianaProvincial.muestraRatio >= MIN_MUESTRA_CALIBRACION
+  ) {
+    const remate = redondear(v * medianaProvincial.ratio)
+    escenarios.push({
+      origen: 'mediana_provincial',
+      pct: medianaProvincial.ratio,
+      remate,
+      total: calcularCoste(s, remate, params).total,
+      etiqueta:
+        `Si se rematara al ${Math.round(medianaProvincial.ratio * 100)}% del tipo (${formatearEur(remate)}, ` +
+        `mediana real de ${medianaProvincial.provincia} sobre ${medianaProvincial.muestraRatio} adjudicaciones)`,
+    })
+  }
+
+  return escenarios
 }
 
 /** El portal solo acepta pujas en tramos desde el valor de salida: se alinea hacia abajo. */

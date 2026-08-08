@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { Prisma } from '@prisma/client'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
-import { evaluarOportunidad, pujaMaximaParaDescuento, yieldTuristico } from '@central/module-subastas'
+import { escenariosCoste, evaluarOportunidad, pujaMaximaParaDescuento, yieldTuristico } from '@central/module-subastas'
 import { COLS_SUBASTA, filaASubasta, RADAR_CON_CORPUS, RADAR_VIGENTE, SUBASTA_VIGENTE } from '@/lib/subastas-radar'
 import { tesoreriaSubastas } from '@/lib/subastas/tesoreria'
 import { chollosVigentes, leerIndiceINE, pulsoMercado } from '@/lib/subastas/mercado'
@@ -113,6 +113,12 @@ export default async function SubastasPage() {
     const c = criterios[0]
     // Coste del dinero: solo si esta cuenta ha declarado cómo financia.
     const params = paramsCoste(c)
+    // Mediana real de remate por provincia (escenario de coste informativo).
+    const ratioPorProvincia = new Map(
+      calibracion
+        .filter((z) => z.provincia !== '(todas)' && z.ratioMediano != null)
+        .map((z) => [z.provincia, { ratio: z.ratioMediano!, muestraRatio: z.muestraRatio, provincia: z.provincia }]),
+    )
     inicial = {
       resultados: filas.map((f) => {
         const s = filaASubasta(f)
@@ -127,8 +133,11 @@ export default async function SubastasPage() {
         const pujaMaxima = oportunidad.valorMercado
           ? pujaMaximaParaDescuento(s, oportunidad.valorMercado, 0.25, params)
           : null
+        // Coste si se rematara al 70% (o a la mediana real de la provincia) —
+        // informativo: el coste/score de arriba siguen al 100% de la salida.
+        const escenarios = escenariosCoste(s, params, ratioPorProvincia.get(s.provincia ?? '') ?? null)
         return {
-          subasta: s, oportunidad, rendimiento, dormitorios, pujaMaxima,
+          subasta: s, oportunidad, rendimiento, dormitorios, pujaMaxima, escenarios,
           notasEdicto: f.notas_edicto ?? null,
           tipoBien: f.tipo_bien ?? null,
           esPlaya: f.es_playa ?? false,
@@ -159,11 +168,16 @@ export default async function SubastasPage() {
         financia_meses: c?.financia_meses == null ? null : Number(c.financia_meses),
         financia_comision: aPct(c?.financia_comision),
       },
-      radar: radar.map((r) => ({
-        ...r,
-        subasta: vivas.get(r.dedupe_key) ?? r.subasta,
-        doc: docs.get(r.dedupe_key) ?? null,
-      })),
+      radar: radar.map((r) => {
+        const viva = vivas.get(r.dedupe_key)
+        return {
+          ...r,
+          subasta: viva ?? r.subasta,
+          doc: docs.get(r.dedupe_key) ?? null,
+          // Escenarios solo con la foto de HOY: el snapshot no trae con qué.
+          escenarios: viva ? escenariosCoste(viva, params, ratioPorProvincia.get(viva.provincia ?? '') ?? null) : [],
+        }
+      }),
       tesoreria,
       chollos: chollos.map((ch) => ({
         ...ch,

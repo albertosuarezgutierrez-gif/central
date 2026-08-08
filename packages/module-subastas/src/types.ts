@@ -89,10 +89,25 @@ export interface SubastaInmueble {
   valorSubasta?: number | null
   /** Tasación publicada. Sin ella no hay descuento calculable. */
   tasacion?: number | null
+  /**
+   * Puja mínima admisible. TRES estados: número = publicada · `0` = el portal
+   * declara «Sin puja mínima» (revisado, no hay) · `null` = no publicada / sin
+   * leer. NUNCA comprobar con truthiness (`if (s.pujaMinima)` confunde el 0 con
+   * el null): siempre `!= null`.
+   */
   pujaMinima?: number | null
   tramos?: number | null
   /** Depósito exigido para pujar. Si la fuente no lo da se deriva (5%). */
   deposito?: number | null
+
+  /**
+   * Cantidad reclamada en el procedimiento (principal + intereses + costas).
+   * Es la deuda que se ejecuta: vía alternativa de aprobación del remate
+   * (art. 670.4 LEC) y techo probable de la puja del ejecutante, que hasta ahí
+   * puja sin desembolso real. NO es el valor por el que se puja (ese es
+   * `valorSubasta`).
+   */
+  cantidadReclamada?: number | null
 
   /** Cargas ANTERIORES/preferentes que NO se cancelan con la adjudicación. */
   cargas?: number | null

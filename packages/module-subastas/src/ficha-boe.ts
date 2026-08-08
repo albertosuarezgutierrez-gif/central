@@ -10,10 +10,13 @@
 //   · ver=2     → autoridad gestora (juzgado/notaría) con teléfono y correo
 //   · ver=3     → el bien: dirección postal, provincia, posesión, visitable
 //
-// CENTINELAS: el portal escribe «Sin puja mínima», «Sin lotes», «No consta» y
-// —crítico— «0,00 €» cuando NO hay dato. Un 0 que se cuele como número haría
-// dividir por cero en el descuento y produciría un chollo falso. Todos ellos
-// se traducen a `null`.
+// CENTINELAS: el portal escribe «Sin lotes», «No consta» y —crítico— «0,00 €»
+// cuando NO hay dato. Un 0 que se cuele como número haría dividir por cero en
+// el descuento y produciría un chollo falso. Todos ellos se traducen a `null`.
+// EXCEPCIÓN deliberada: «Sin puja mínima» NO es falta de dato — es el portal
+// declarando que cualquier postura es admisible. Se traduce a `pujaMinima: 0`
+// («revisado: no hay mínimo»), distinto del `null` de «no publicado». Un
+// «Puja mínima: 0,00 €» numérico sigue siendo `null` (no es una declaración).
 // ────────────────────────────────────────────────────────────────────────────
 
 import { decodificarHtml } from './email-boe.ts'
@@ -30,6 +33,7 @@ export interface FichaBoe {
 
   valorSubasta: number | null
   tasacion: number | null
+  /** `0` = «Sin puja mínima» declarado por el portal · `null` = no publicada. */
   pujaMinima: number | null
   tramos: number | null
   deposito: number | null
@@ -156,7 +160,8 @@ export function parsearFichaBoe(
 
     valorSubasta: importe(g, 'valor subasta'),
     tasacion: importe(g, 'tasacion'),
-    pujaMinima: importe(g, 'puja minima'),
+    // «Sin puja mínima» es una declaración, no un hueco: 0 = revisado, no hay.
+    pujaMinima: /^sin puja/.test(norm(g.get('puja minima') ?? '')) ? 0 : importe(g, 'puja minima'),
     tramos: importe(g, 'tramos entre pujas'),
     deposito: importe(g, 'importe del deposito'),
     cantidadReclamada: importe(g, 'cantidad reclamada'),
