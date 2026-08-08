@@ -15,6 +15,14 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-08 · mercado-booking (disparo programado)** · hizo: pidió el plan
+  (`/api/sivra/mercado/plan?max=12`, 120 ventanas totales, 12 nunca medidas) y midió las 12 con el
+  conector Booking.com — 120 comps escritos con `fuente='booking_mcp'`, 0 sin respuesta, 0 sin precio,
+  0 fallos. p50 €/noche: house_sevillana 12p 4-sep n/d·16-oct **856€**·6-nov **604€**·11-dic **424€**·
+  8-ene **368€** (temporada Feria→invierno clara); luxury_busto 5p 4-sep **196€**·16-oct **282€**·
+  6-nov **206€**·11-dic **174€**; busto_reform 2p 16-oct **174€**·11-dic **106€**·8-ene **104€**;
+  duplex_center 4p 11-dic **139€**. Latido `sivra_mercado_booking` escrito con `ok:true`. dudas: —;
+  fallos: —. PRs/commits: —.
 - **2026-08-08 · mercado-booking (pasada MANUAL, la Rutina no existe)** · hizo: reprodujo
   `/api/sivra/mercado/plan` con los helpers puros (120 ventanas de plan, 10 pedidas, las 10 sin medir
   nunca) y midió 5 con el conector: 4-sep 2p **p50 110€** · 4-sep 12p **474€** · 16-oct 4p **184€** ·

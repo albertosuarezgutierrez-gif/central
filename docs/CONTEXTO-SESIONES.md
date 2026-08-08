@@ -24,6 +24,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📡 mercado-booking: primer disparo programado real (08/08/2026).** Hasta hoy la Rutina diaria no
+  había dejado huella (ver nota de ayer en la bitácora). Este disparo sí funcionó de punta a punta:
+  12 ventanas medidas con Booking.com, 120 comps escritos (`fuente='booking_mcp'`), latido
+  `sivra_mercado_booking` con `ok:true`. Detalle de p50 por ventana en `docs/AGENTES-BITACORA.md`.
+  Sin acción pendiente — vigilar que se repita mañana.
+
 - **🔍 Auditoría diaria ligera (08/08/2026).** Sin PRs de rutina atascados (el auto-merge de #1289/#1297
   ya funciona: #1298 resuelto solo hoy). Heartbeat de crons 12/14 ✅, 2 falsos positivos ya conocidos
   (`updates/sync` Smoobu sin reservas nuevas, `limpiadoras/auto-sessions` idempotente) verificados de
