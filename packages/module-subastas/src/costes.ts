@@ -17,6 +17,7 @@ import { deudaComunidadEstimada } from './comunidad.ts'
 import { costeFinanciacion } from './financiacion.ts'
 import { MIN_MUESTRA_CALIBRACION } from './adjudicaciones.ts'
 import { umbralesPuja } from './umbrales.ts'
+import { itpGeneral } from './impuestos.ts'
 
 /** Porcentaje del valor de subasta que hay que consignar para poder pujar. */
 export const PCT_DEPOSITO = 0.05
@@ -65,6 +66,27 @@ export function calcularCoste(
 ): CosteAdquisicion {
   const p = { ...PARAMS_ANDALUCIA, ...params }
   const avisos: string[] = []
+
+  // ── ITP por comunidad autónoma ────────────────────────────────────────────
+  // Si el caller no fija el tipo, manda la CCAA de la provincia del bien: el
+  // 7% andaluz aplicado a una subasta de Asturias (8%) era un coste plausible
+  // y mal. Sin provincia reconocida se queda el default y se avisa igual.
+  // Con ejecutado empresa no aplica: esa adjudicación va por IVA + AJD.
+  if (params.tipoItp == null && s.ejecutado !== 'juridica') {
+    const itp = itpGeneral(s.provincia)
+    if (itp != null) {
+      p.tipoItp = itp.tipo
+      if (itp.progresivo) {
+        avisos.push(
+          `ITP al ${pct(itp.tipo)} (primer tramo de la escala de ${itp.ccaa}): en importes altos el tipo real sube — confírmalo antes de pujar.`,
+        )
+      } else if (itp.ccaa !== 'Andalucía') {
+        avisos.push(`ITP al ${pct(itp.tipo)} (tipo general de ${itp.ccaa}). Los tipos reducidos van aparte.`)
+      }
+    } else if (s.provincia) {
+      avisos.push(`Provincia «${s.provincia}» sin CCAA reconocida: el ITP se asume al ${pct(p.tipoItp)} (Andalucía).`)
+    }
+  }
 
   const precio = remate ?? s.valorSubasta ?? 0
   if (precio <= 0) avisos.push('Sin valor de subasta publicado: el cálculo parte de 0 €.')

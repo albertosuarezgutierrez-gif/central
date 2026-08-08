@@ -22,6 +22,17 @@
 
 ---
 
+## 🧮 (08/08/2026) Subastas 2ª tanda: ITP por CCAA, puja en vivo, vivienda habitual y simulador
+- **ITP por CCAA** (`module-subastas/src/impuestos.ts`): `calcularCoste` deja de aplicar el 7% andaluz a
+  todo — la provincia elige el tipo general de su CCAA (Asturias 8%: Cancienes pasa de 94.248€ a 95.112€),
+  con aviso del tipo aplicado y de las escalas progresivas. `params.tipoItp` explícito sigue mandando.
+- **Vigía de pujas en vivo** en `subastas-cierre`: `mejorPujaViva()` (1 llamada/ficha, seguidas a ≤3 días)
+  → `subastas.mejor_puja(_at)` (migración `2026-08-08_subastas_mejor_puja.sql`, aplicada) + Telegram 🔥 una
+  sola vez si superan tu techo (`sobrepuja_avisada_at`). NULL nunca pisa un valor visto.
+- **Vivienda habitual** (ya se extraía del edicto): `viviendaHabitualDeNotas` (round-trip testeado) afina la
+  nota del art. 671 en umbrales/ficha. **Simulador «¿y si pujo X?»** en la ficha (módulo puro + financiación
+  de criterios; banda de aprobación, admisibilidad, tramos). Tests 443 módulo + 1045 app, tsc 0, build OK.
+
 ## ⚖️ (08/08/2026) Subastas: deuda, puja mínima y umbrales LEC 670 en la ficha
 - Pregunta de Alberto («¿se puja por la deuda? ¿el 70%?»): la «salida» YA es el valor de puja (tipo del
   BOE, no mercado); el 70% legal es del VALOR DE SUBASTA, no de la deuda (LEC 670). SUB-JA-* = judicial.
@@ -42,6 +53,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🐕 Decisión: `trading_puntuar` NO entra en AGENTES_VIGILADOS; el que faltaba era el vigía (08/08/2026)
+Alberto pidió meterlo; **no procede** y le dije que «nadie lo lee», que era FALSO: lo vigila
+`trading-watchdog` (tramo 3) y mejor, porque sabe qué días se espera pasada. Duplicarlo daría dos
+Telegram Y falsos positivos cada domingo/lunes (pasada L-V ~20:15 UTC → el lunes la última buena es
+la del viernes, ~59 h; hoy está a 43 h con `ok:true` y el watchdog calla, bien). **El hueco real:**
+ese watchdog es el único que cruza los 3 tramos, no dejaba huella propia y no lo vigilaba nadie — si
+moría, su silencio se leía como «todo fresco». Ahora escribe `agente_latidos.trading_watchdog` y entra
+en la lista con **80 h** (su cron `30 6 * * 2-6` deja un hueco legítimo sáb→mar de 72 h). PR #1322.
+
 - **📏 El umbral de la guardia de suplantación estaba MAL, y se midió (08/08/2026).** Prueba de fuego con
   precios vivos de IBKR: el 3% de `CRUCE_TOLERANCIA` (#1321) cazaba el caso histórico por 0,1 pp de suerte
   y con la referencia de HOY ya NO cazaba el META←LLY. Barrido del umbral contra TODO el corpus limpio:
@@ -59,8 +79,10 @@ que dejó de ser exclusiva de la Rutina semanal cuando el barrido Serper (diario
 muerta**, justo la avería de los 16 días del 21/07. Cambiada a `pricing_decisiones.ciclo_at` por piso
 (solo la escribe `aplicar-propuesta`, y solo la Rutina lo llama); misma corrección en la SQL de
 `/auditoria-diaria`. La Rutina está viva (último ciclo 03/08). Corregidas 2 afirmaciones mías: F2 ya
-estaba arreglado en #1299 y «latidos OK» no estaba comprobado. Todo en **PR #1318**.
-Verificado: 1031/1031 + 26/26 + 53/53, `tsc` 0 en las **8** apps, build 0, advisors sin ERROR.
+estaba arreglado en #1299 y «latidos OK» no estaba comprobado. **#1318 MERGEADO** (`d45d20f`) —
+lleva también F1 (el bucket prefiere el corpus medido: house-octubre 638→728) y el `?max=abc`.
+Re-verificado sobre `main` ya fusionado: 1045/1045 + 26/26 + 53/53, `tsc` 0 en las **8** apps,
+build 0, advisors sin ERROR, y la sonda nueva ejecutada contra la BD da ✅ (130 h < 192).
 
 ### 🔎 Auditoría de precios dinámicos + fallo mudo en el plan (08/08/2026)
 Informe: `docs/AUDITORIA-2026-08-precios-dinamicos.md`. **No está al 100%.** 🔴 El bucket mensual de

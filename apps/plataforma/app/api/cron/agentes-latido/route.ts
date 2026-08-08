@@ -40,6 +40,11 @@ const PROBES: Record<string, Prisma.Sql> = {
       LEFT JOIN pricing_decisiones d ON d.property_id = p.piso
       GROUP BY p.piso
     ) t`,
+  // El vigía de trading: se mide sobre su ÚLTIMA PASADA BUENA, igual que los demás latidos. Trae
+  // `ultimo_at` y `detalle` para poder decir si no se dispara o si se dispara y no termina.
+  trading_watchdog: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'trading_watchdog'`,
   correo_triaje: Prisma.sql`SELECT max(updated_at) AS ultimo FROM correo_cursor`,
   // ialimp: `last_sync_at` es la columna que el sync escribe DE VERDAD en cada
   // pasada (la del panel, `ultimo_sync`, está a NULL desde siempre — nadie la

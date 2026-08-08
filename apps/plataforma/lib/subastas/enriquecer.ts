@@ -27,6 +27,7 @@ import {
   type ParamsDnploc,
   type DatosCatastro,
   type FichaBoe,
+  mejorPujaDeFicha,
   paresFicha,
   resultadoDeFicha,
 } from '@central/module-subastas'
@@ -117,6 +118,23 @@ export async function bajarFicha(identificador: string): Promise<FichaBoe> {
     throw new Error('la respuesta del Portal no es la ficha de esta subasta')
   }
   return parsearFichaBoe(general, bien, autoridad)
+}
+
+/**
+ * Mejor puja EN VIVO de una subasta abierta: solo la pestaña general (una
+ * llamada, no tres — esto se consulta a diario para cada seguida cerca del
+ * cierre). Lanza si la respuesta no es la ficha, igual que `bajarFicha`;
+ * `null` = la ficha no publica la puja, que NO es «sin pujas».
+ */
+export async function mejorPujaViva(identificador: string): Promise<number | null> {
+  // Timeout corto a propósito: el cron que llama vigila hasta 10 seguidas con
+  // maxDuration 60 s — con el timeout por defecto (20 s) bastarían 3 fichas
+  // lentas para comerse la pasada entera.
+  const general = await bajar(`${FICHA}?idSub=${encodeURIComponent(identificador)}`, 8000)
+  if (!fichaLegible(general, identificador)) {
+    throw new Error('la respuesta del Portal no es la ficha de esta subasta')
+  }
+  return mejorPujaDeFicha(paresFicha(general))
 }
 
 /**

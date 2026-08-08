@@ -71,6 +71,18 @@ test('«Sin puja mínima» (0) añade la nota de admisión — el 0 NO es un nul
   assert.ok(!sin.notas.some((n) => n.includes('cualquier postura')))
 })
 
+test('vivienda habitual declarada: la nota del art. 671 deja de ser genérica', () => {
+  const si = umbralesPuja(base, { viviendaHabitual: 'si' })
+  assert.ok(si.notas.some((n) => n.includes('ES la vivienda habitual') && n.includes('70.000,00€')))
+  const no = umbralesPuja(base, { viviendaHabitual: 'no' })
+  assert.ok(no.notas.some((n) => n.includes('NO es la vivienda habitual') && n.includes('50.000,00€')))
+  // Sin señal (o «no consta») se mantiene la genérica.
+  for (const vh of [undefined, null, 'no_consta'] as const) {
+    const u = umbralesPuja(base, { viviendaHabitual: vh })
+    assert.ok(u.notas.some((n) => n.includes('por el 50% en otro caso')))
+  }
+})
+
 test('estadoPujaMinima: tres estados, el 0 no colapsa con el null', () => {
   assert.equal(estadoPujaMinima(12000), 'publicada')
   assert.equal(estadoPujaMinima(0), 'sin_minimo')
