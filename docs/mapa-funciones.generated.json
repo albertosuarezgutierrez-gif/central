@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-08T14:49:13Z",
-  "sha": "8448dc6b034dd7753775045e1561b3c7a2e6b7b5",
+  "generadoEn": "2026-08-08T14:52:56Z",
+  "sha": "17be38b2ed95201d2111316614223bf2fc807d99",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -60530,18 +60530,36 @@
       "ruta": "apps/plataforma/lib/cron-auth.ts",
       "ambito": "apps/plataforma",
       "exporta": [
+        "autorizaCron",
         "isCronAuthorized",
         "isAlertaTokenAuthorized",
         "isRoutineAuthorized"
       ],
       "funciones": [
         {
+          "nombre": "autorizaCron",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { secret?: string | null bearer?: string | null qs?: string | null produccion: boolean }",
+          "retorno": "boolean",
+          "linea": 21,
+          "resumen": "Decisión PURA de si una llamada de cron está autorizada. Separada del `NextRequest` para poder testearla, porque el caso importante es justamente el que no se ve en local. 🚨 SIN SECRETO, EN PRODUCCIÓ"
+        },
+        {
+          "nombre": "enProduccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 31
+        },
+        {
           "nombre": "isCronAuthorized",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": "boolean",
-          "linea": 3
+          "linea": 35
         },
         {
           "nombre": "isAlertaTokenAuthorized",
@@ -60549,7 +60567,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": "boolean",
-          "linea": 20,
+          "linea": 58,
           "resumen": "Token DEDICADO de bajo privilegio para las rutinas de Claude Code (sesiones efímeras que corren en un entorno cuyo campo de variables es TEXTO PLANO VISIBLE — no un almacén de secretos). Por eso NO se"
         },
         {
@@ -60558,13 +60576,13 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": "boolean",
-          "linea": 30,
+          "linea": 68,
           "resumen": "Autorización para endpoints pensados para RUTINAS: acepta el token de bajo privilegio (`ALERTA_TOKEN`) o, por compatibilidad, el `CRON_SECRET` maestro. Úsala en lugar de `isCronAuthorized` en los endp"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fa72b303af2d"
+      "hash": "47a8261588a2"
     },
     {
       "ruta": "apps/plataforma/lib/cron-dispatch.ts",
@@ -89599,6 +89617,6 @@
   ],
   "resumen": {
     "archivos": 2402,
-    "funciones": 6466
+    "funciones": 6468
   }
 }

@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-08T14:44:42Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-08T14:52:56Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -223,9 +223,9 @@
 - (08/08/2026) 🩺 El watchdog de trading ya distingue «no PUDO dispararse» (08/08/2026).
 - (08/08/2026) 🔴→🟢 Latido rojo de `sivra_mercado_sweep` — diagnosticado: NO investigar de nuevo (08/08/2026).
 - (08/08/2026) 🔍 Rutinas de auditoría ampliadas (08/08/2026).
+- (08/08/2026) 💶 Precio dinámico SIVRA operativo en los 4 pisos (08/08/2026).
 - (08/08/2026) 🕰️ Retrovisor de 24 meses → 15 AÑOS (08/08/2026).
 - (08/08/2026) ⚠️ mercado-booking: 2º disparo el mismo día, sin huella del 1º en `market_rates` (08/08/2026).
 - (08/08/2026) ✅ H8 y H9 RESUELTAS sobre el corpus completo — ninguna se cablea (08/08/2026).
 - (08/08/2026) 🧹 Auditoría del corpus re-recolectado + dos «no lo sé» que afirmaban (08/08/2026).
-- (08/08/2026) 📡 mercado-booking: primer disparo programado real (08/08/2026).
 
