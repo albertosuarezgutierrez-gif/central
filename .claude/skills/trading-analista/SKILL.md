@@ -24,6 +24,13 @@ Detalle paso a paso en `references/pasada-diaria.md`.
 - **Prohibido** pasar cohetes a cohortes o tocar pesos del blend por tu cuenta. **Todo cambio
   del modelo pasa por `docs/TRADING-HIPOTESIS-PREREGISTRO.md`** (condiciones firmadas antes de
   ver los datos). El criterio cohetes NO se auto-modifica (H7).
+- **✅ H8 (capitulación) y H9 (salidas) están RESUELTAS y NINGUNA se cabla (08/08/2026).** No
+  propongas entradas «porque capituló» ni pongas stops: se midieron sobre 21.321 observaciones y
+  fallaron. **H9:** las tres reglas fallan su criterio; stop −20% y trailing −15% EMPEORAN los
+  batacazos (15,6% y 12,1% frente al 10,4% de la salida por tiempo) — un stop convierte un susto
+  temporal en pérdida cerrada. **H8:** el agregado cruzaba el umbral (+2,34 pp) pero el signo se
+  INVIERTE entre mitades (+6,85 pp en ago24-jul25, −2,24 pp en ago25-may26). `capitulacionMes/Sem`
+  se siguen recolectando como CONTEXTO, igual que las noticias. Detalle en el pre-registro.
 - **📰 Noticias, 🌅 premarket, 🧑‍💼 insiders, 📊 volumen, medias móviles = CONTEXTO, nunca
   filtro:** jamás cambian ranking, pesos ni cestas; ninguna cifra de noticia entra en BD/modelo.
 - **Congelar cohortes = AÑADIR entrada a `COHORTES_PAPER`, nunca editar una existente** (no

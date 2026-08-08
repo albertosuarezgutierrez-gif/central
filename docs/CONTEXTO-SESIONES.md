@@ -35,6 +35,9 @@
   El lote lleva ahora **presupuesto de tiempo** (240 s de 300) porque cada símbolo hace ~8× más CPU, y el
   cron va **temporalmente cada 30 min** para reconstruir en ~1 día — **devolver a `10 */2 * * *` al cerrar**.
   Durante la reconstrucción el corpus está MEZCLADO: filtrar por `actualizado_en` en todo análisis.
+  Reconciliadas las skills: `trading-analista/SKILL.md` (regla nueva — H8/H9 resueltas, no proponer
+  entradas «porque capituló» ni stops) y `references/infra-forward-radar.md` (decía 546 símbolos × 22
+  snapshots; ahora 1.018 × 178, con el sesgo de supervivencia y el límite de fundamentales desde ~2010).
 
 - **✅ H8 y H9 RESUELTAS sobre el corpus completo — ninguna se cablea (08/08/2026).** 1.018/1.018 símbolos,
   21.321 observaciones. **H9:** las tres reglas de salida fallan su propio criterio; stop −20% y trailing
