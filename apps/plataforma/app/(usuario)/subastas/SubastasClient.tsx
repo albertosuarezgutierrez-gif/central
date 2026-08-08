@@ -881,7 +881,12 @@ function FichaSubasta({ s, o, acciones, extra, doc, escenarios, params }: { s: S
 
       {o && o.coste.total > 0 && (
         <div style={{ marginTop: 10, fontSize: 13, color: 'var(--text)' }}>
-          Coste real estimado: <strong>{eur(o.coste.total)}</strong>
+          {/* «Coste real estimado» a secas se leía como precio de mercado
+              (Alberto, 08/08/2026, la de 806.015,16€): el titular dice ahora A
+              QUÉ REMATE está simulado. Es la salida + impuestos + gastos, no
+              una valoración. */}
+          Coste puerta abierta si rematas a la salida
+          {s.valorSubasta != null && <> ({eur(s.valorSubasta)})</>}: <strong>{eur(o.coste.total)}</strong>
           {o.deposito != null && <> · depósito para pujar {eur(o.deposito)}</>}
         </div>
       )}

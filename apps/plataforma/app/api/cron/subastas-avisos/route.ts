@@ -140,7 +140,9 @@ export async function GET(req: NextRequest) {
 
       const lineas = [`⚖️ <b>${escapar(s.identificador ?? p.dedupe_key)}</b> — ${punt}`]
       if (s.descripcion) lineas.push(escapar(String(s.descripcion).slice(0, 160)))
-      const pie = [s.provincia, coste ? `coste estimado ${coste}` : null, cierre ? `cierra ${cierre}` : null]
+      // «coste estimado» a secas se confundía con una valoración: es el coste
+      // puerta abierta simulando el remate a la salida (mismo criterio que la ficha).
+      const pie = [s.provincia, coste ? `coste a la salida ${coste}` : null, cierre ? `cierra ${cierre}` : null]
         .filter(Boolean)
         .join(' · ')
       if (pie) lineas.push(`<i>${escapar(pie)}</i>`)
