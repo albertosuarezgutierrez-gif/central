@@ -240,6 +240,50 @@ medir — con la partición como criterio, no el agregado.
 - Sigue en pie el caveat firmado: si alguna vez se cablea una entrada de reversión, su salida se evalúa
   aparte — este resultado es del universo agregado y no autoriza nada sobre una cesta concreta.
 
+## 🕰️ Ampliación del retrovisor a 15 AÑOS — firmada 2026-08-08, ANTES de ver un solo dato
+- **Origen:** Alberto, tras la resolución de H8/H9 — «ok hazlo». El caveat «un solo régimen» estaba
+  firmado en H1, H3, H4, H7, H8 y H9, y ese mismo día H8 enseñó lo que cuesta: agregado +2,34 pp
+  (por encima de su umbral) con el **signo invertido entre mitades** (+6,85 / −2,24 pp). Con 22
+  snapshots no hay forma de saber cuál de las dos mitades es el mundo. Más símbolos no lo arregla:
+  solo más historia.
+- **Cambio:** `MESES_RETROVISOR` 24 → **180** (`backtest-puro.ts`). De ~22 snapshots por símbolo a
+  **178**, cubriendo 2011-2026: crisis del euro, selloff 2015-16, Q4-2018, COVID, oso de 2022 y el
+  ciclo actual. No toca ningún factor, peso, umbral ni criterio de cableado — solo la ventana de
+  MEDICIÓN.
+
+### 🚨 Sesgo de supervivencia — el caveat que hay que firmar ANTES de tener los números
+El universo son los **1.018 símbolos que existen hoy**. Las empresas que quebraron o salieron de bolsa
+entre 2011 y 2026 no están. A 24 meses eso apenas pesaba; **a 15 años es severo**. Consecuencia,
+aceptada y declarada de antemano:
+- **El nivel absoluto de retorno del retrovisor queda INFLADO.** Cualquier «la estrategia habría hecho
+  X%» sobre este corpus es papel mojado y no se va a usar para nada.
+- **La comparación CRUZADA dentro de cada fecha sigue siendo válida**: capitula vs no capitula, con
+  regla de salida vs sin ella, quintil alto vs bajo. Los dos brazos arrastran el mismo sesgo, así que
+  la DIFERENCIA se mantiene interpretable — y la diferencia es exactamente lo que miden H8, H9 y los
+  criterios de factores.
+- **Lo que este corpus responde:** «¿la señal cambia de signo según el régimen?». **Lo que NO
+  responde:** «¿cuánto se gana?». Ningún tramo de la escalera de capital se mueve con datos del
+  retrovisor: la escalera la suben las cestas paper vivas, que no tienen este sesgo.
+
+### Otros límites, declarados ahora y no cuando molesten
+- **Fundamentales solo desde ~2010:** los `companyfacts` de la SEC arrancan con el mandato XBRL. Los
+  snapshots anteriores tendrán `piotroski/roic/ey/fcfy` a **null** — que es lo correcto («no se sabe»),
+  pero significa que los criterios de FACTORES se miden sobre una ventana más corta que los de
+  precio/volumen (H8, H9, medias móviles), que sí cubren los 15 años. Al reportar un factor hay que
+  decir sobre cuántos años se midió, no dar por hecho que son 15.
+- **Precios sin ajustar por acciones corporativas:** la guarda `serieDiscontinua` (08/08/2026) caza lo
+  imposible, no lo meramente erróneo, y a 15 años hay muchos más splits que a 2 años. Es la razón por
+  la que el siguiente trabajo pendiente es validar la fuente de precios contra IBKR.
+- **Regla de reporte (heredada de la resolución de H8):** toda conclusión del retrovisor se reporta
+  **partida por subperiodo**, nunca solo agregada. Con 15 años eso pasa de recomendable a obligatorio.
+- **Coste medido antes de ejecutarlo:** 162 B/snapshot → ~29 KB/fila, ~30 MB de jsonb para el universo.
+  El lote pasa a llevar **presupuesto de tiempo** (240 s de los 300 de `maxDuration`) porque cada
+  símbolo hace ~8× más CPU; los símbolos que no entran conservan su `actualizadoEn` y encabezan la
+  pasada siguiente.
+- **Durante la reconstrucción el corpus está MEZCLADO** (filas de 22 snapshots y filas de 178). Toda
+  consulta de análisis debe filtrar por `actualizado_en` hasta que el ciclo cierre — es la tercera vez
+  que pasa (06/08 y 08/08) y las dos anteriores ya obligaron a anular lecturas a medias.
+
 ## 💶 Plan de despliegue de capital REAL — escalera de tramos · firmada 2026-08-05
 - **Origen:** Alberto — «¿ves viable adelantar la inversión con dinero real? […] poco a poco, no de
   golpe» + «lo que veas mejor y me avisas». Se firma ANTES de que haya dinero de por medio para que

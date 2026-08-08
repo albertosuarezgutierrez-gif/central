@@ -20,17 +20,60 @@
   8-sep (2p **p50 105€** · 4p 110€ · 5p 134€ · 12p 386€), 14-nov (2p 128€ · 4p 160€ · 5p 189€ ·
   12p **486€**), 10-nov (4p 113€ · 5p 131€). El contraste finde/entre semana sale limpio: 4p pasa de
   160€ el sábado 14-nov a 113€ el martes 10-nov (−29%), que es justo lo que las rondas 2-3 vienen a
-  medir. dudas: latido `sivra_mercado_booking` NO escrito, mismo criterio que la pasada anterior (un
-  verde de cortesía apagaría el aviso de que la Rutina diaria sigue sin dispararse). fallos: (1) el
+  medir. dudas: latido `sivra_mercado_booking` NO escrito — **corregido al mergear `main`**: el motivo
+  que se dio (que la Rutina no se dispara) era FALSO, la Rutina corrió hoy 3 veces y dejó su `ok:true`;
+  el motivo bueno es el contrario — la huella de hoy ya es de la Rutina y una pasada manual no debe
+  pisarla. fallos: (1) el
   raíl HTTP está **inalcanzable desde el contenedor** — el proxy de egress da 403 al CONNECT contra
   `plataforma-ten-flame.vercel.app`, así que no hubo `/plan` ni `/ingest` ni `/latido`: el plan se
   reprodujo con los helpers puros contra datos reales de la BD y los comps se escribieron por SQL
   replicando el upsert de `/ingest`; (2) solo 10 de las 30 ventanas pedidas — 30 respuestas del
   conector no caben en el contexto de una sesión (**el tope real está en ~10-12, no en 30**); las 20
-  restantes NO se midieron, que no es «no hay mercado»; (3) **otra sesión escribía a la vez** en
-  `market_rates` (ventanas a las 13:04-13:17 UTC no atribuibles a esta pasada) — sep y nov quedan
+  restantes NO se midieron, que no es «no hay mercado»; (3) **era la Rutina diaria escribiendo a la vez**
+  en `market_rates` (ventanas de las 13:04-13:17 UTC; identificada al mergear `main`: commits `fba3fbb`,
+  `c45f564`, `f9a3fe6` — 3 disparos el mismo día) — sep y nov quedan
   ELEGIBLES para el bucket mensual en los 4 aforos, pero el mérito es compartido, no de esta pasada
   sola. dic-26 y ene-27 siguen cortos (2 y 1 fechas). PRs/commits: PR de `claude/mercado-booking-ronda-filter-ssg8cj`.
+- **2026-08-08 · mercado-booking (2º disparo programado del mismo día)** · hizo: pidió el plan y
+  recibió **las mismas 12 ventanas "nunca medidas"** que ya reportó como medidas el disparo de las
+  12:28 UTC de hoy (mismo `checkin/checkout/aforo`, `ronda:1`, `comps:0`) — es decir, cuando este
+  disparo consultó el plan, la escritura anterior NO estaba reflejada en `market_rates` pese al
+  `ok:true` de aquel latido. Medidas de nuevo las 12 con Booking.com (120 comps, `fuente='booking_mcp'`,
+  0 sin respuesta) y confirmado que esta vez SÍ hicieron avanzar la cola (el plan post-ingest ya
+  ofrece ventanas distintas: 2 nuevas del partido Sevilla FC-Betis + 10 de ronda 2 "mes"). Latido
+  `sivra_mercado_booking` reenviado con `ok:true`. **dudas: por qué el disparo de las 12:28 quedó sin
+  huella en `market_rates` pese a loggear éxito — o el disparo se repitió por un fallo de scheduling
+  (dos ejecuciones el mismo día) y algo entre medias limpió las filas, o aquel `ok:true` fue en falso
+  (la escritura no llegó a persistir pese a que el latido la dio por buena); no se puede diferenciar
+  con lo que hay aquí — pide revisar logs de Vercel de `/api/sivra/mercado/ingest` entre 12:28 y
+  ahora, y confirmar si `CRON_JOBS`/el disparador de esta skill está configurado para disparar más de
+  una vez al día.** fallos: —. PRs/commits: —.
+- **2026-08-08 · mercado-booking (disparo programado)** · hizo: pidió el plan
+  (`/api/sivra/mercado/plan?max=12`, 120 ventanas totales, 12 nunca medidas) y midió las 12 con el
+  conector Booking.com — 120 comps escritos con `fuente='booking_mcp'`, 0 sin respuesta, 0 sin precio,
+  0 fallos. p50 €/noche: house_sevillana 12p 4-sep n/d·16-oct **856€**·6-nov **604€**·11-dic **424€**·
+  8-ene **368€** (temporada Feria→invierno clara); luxury_busto 5p 4-sep **196€**·16-oct **282€**·
+  6-nov **206€**·11-dic **174€**; busto_reform 2p 16-oct **174€**·11-dic **106€**·8-ene **104€**;
+  duplex_center 4p 11-dic **139€**. Latido `sivra_mercado_booking` escrito con `ok:true`. dudas: —;
+  fallos: —. PRs/commits: —.
+
+- **2026-08-08 · mercado-booking (primera pasada de la Rutina)** · hizo: pidió el plan
+  (`/api/sivra/mercado/plan?max=12`, 120 ventanas totales, las 12 sin medir nunca), midió las 12 con
+  el conector de Booking.com (aforos 2/4/5/12) y escribió 120 comps (`fuente='booking_mcp'`), 0
+  ventanas sin respuesta, 0 sin precio utilizable. Cubrió: dúplex+luxury Feria abr-2027, las 4
+  ventanas del evento Sevilla FC-Rayo (15-17 ago) y Athletic-Sevilla (22-24 ago), house_sevillana+
+  busto_reform de la Bienal Flamenco (29 sep-1 oct). Latido `sivra_mercado_booking` escrito con
+  `ok:true` (primera huella real de la Rutina — hasta ayer solo había una pasada manual). dudas: —;
+  fallos: —; PRs/commits: esta rama.
+
+- **2026-08-08 · mercado-booking (primera pasada de la Rutina programada)** · hizo: pidió el plan
+  (`/api/sivra/mercado/plan?max=12`, 120 ventanas totales, las 12 devueltas eran las 12 nunca medidas)
+  y midió las 12 con Booking respetando el aforo real (2/4/5/12 pax) en 4 fechas (8-ene, 5-feb, 5-mar,
+  2-abr 2027); 120 comps escritos con `fuente='booking_mcp'`, 0 ventanas sin respuesta. Medianas
+  destacadas: 5-feb 12p (house) **395€** vs 5-feb 2p (busto) **111€**; 2-abr 12p **659€** vs 2-abr 2p
+  **186€** — confirma que sin aforo real el motor mezclaría precios de tamaños muy distintos. Latido
+  `sivra_mercado_booking` = ok:true. dudas: —; fallos: —. PRs/commits: —.
+
 - **2026-08-08 · mercado-booking (pasada MANUAL, la Rutina no existe)** · hizo: reprodujo
   `/api/sivra/mercado/plan` con los helpers puros (120 ventanas de plan, 10 pedidas, las 10 sin medir
   nunca) y midió 5 con el conector: 4-sep 2p **p50 110€** · 4-sep 12p **474€** · 16-oct 4p **184€** ·

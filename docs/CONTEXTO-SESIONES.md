@@ -34,6 +34,58 @@ aviso cuando el tope recorta. Filtro mal escrito → 400, nunca «mido todo». 6
 → ninguna sesión puede usar el raíl HTTP (plan/ingest/latido) hasta que se abra la allowlist de red
 del environment. Esta pasada midió 10 ventanas (100 comps `booking_mcp`) y las escribió por SQL.
 **Tope real de una pasada ≈10-12 ventanas, no 30:** las respuestas del conector no caben en contexto.
+- **🚨 Un precio falso envenenó el track record de trading (08/08/2026).** Al comprobar si el agente había
+  dado alguna compra (no: 0 propuestas reales, 1 posición paper MSFT) salió que el 03/08 la pasada mandó
+  **CVX=590,17$** con cierre real **193,18$** (verificado en IBKR). `/puntuar` cogía `precios[simbolo]` sin
+  comprobar nada → 12 resultados envenenados, 3 a +205 pp. Efecto en `trading_estrategia_stats`, que
+  alimenta `ajustesDeStats` y por tanto el torneo: momentum **+7,18 pp → −0,40 pp** (cambio de SIGNO).
+  Fix: guardia pura `lib/trading/precios-guardia.ts` (×2 contra el último `precio_ref` ANTERIOR a hoy;
+  sin referencia NO se juzga), aplicada a tesis + deslizamiento + **stops**; `ventana_dias` pasa a ser los
+  días REALES, no el horizonte declarado; columnas `anulado`/`anulado_motivo` (marcar, nunca borrar).
+  Las 12 filas re-puntuadas con el cierre real; la guardia va también en `/analizar`, que es el ORIGEN
+  (la vela falsa contaminaba EMA/MACD/RSI/ADX → el símbolo se salta entero y avisa). PR #1315.
+
+- **🩺 El watchdog de trading ya distingue «no PUDO dispararse» (08/08/2026).** El viernes 07/08 la pasada
+  nocturna no corrió y el aviso mandaba a mirar trigger/IBKR; la causa real fue quedarse **sin cupo de
+  tokens**. Nuevo `diagnosticarPasada()` (puro, 3 tests) en `lib/trading/watchdog.ts`: si fallan los TRES
+  tramos enumera las causas candidatas en vez de señalar una que no puede distinguir, y separa «arrancó y
+  murió» (usa `agente_latidos.ultimo_at`) de «ni arrancó». **Corrección a lo que dije antes: solo `/puntuar`
+  sería auto-recuperable** (`/saldo` y `/analizar` dependen del NAV, que solo existe en el MCP de IBKR) — y
+  exige marcar la FUENTE del precio (patrón `market_rates.fuente`) porque toca el track record. **Pendiente
+  de decisión de Alberto.** Retrovisor de 15 años en marcha: 178 snapshots/fila, 40 símbolos/pasada, ETA ~13 h.
+
+- **🔍 Rutinas de auditoría ampliadas (08/08/2026).** Revisión pedida por Alberto de la diaria/semanal:
+  el heartbeat (paso 2-bis) pasa a leer `agente_latidos` como fuente preferida y saca de la SQL las 3
+  huellas de actividad (`incomes`, `market_rates normal`, `cleaning_sessions`) que daban falso ⛔ cada
+  pasada desde el 02/07; añade huella de `mercado-booking` + reconciliación de cobertura contra
+  `CRON_JOBS`/`AGENTES_VIGILADOS`. Nuevo paso 2-ter: backlog de PRs `claude/*` (atascados/conflicto/
+  olvidados) + vigilar que `rutinas-automerge.yml` corre (lección PRs #1252-#1286). `auditoria-central`
+  gana el check de `ignoreCommand` en los 8 `vercel.json` (incidente ~600$). Corregido "4 apps"→8.
+  PR draft de la rama `claude/revision-rutinas-diarias-semanales-sviqer` — cambia comportamiento, carril 2.
+
+- **🕰️ Retrovisor de 24 meses → 15 AÑOS (08/08/2026).** Decisión de Alberto tras ver que H8 invertía el
+  signo entre mitades y con 22 snapshots no había forma de saber cuál era el mundo. `MESES_RETROVISOR`
+  = 180 en `backtest-puro.ts`: de ~22 snapshots por símbolo a **178**, cubriendo 2011-2026 (euro, 2015-16,
+  Q4-2018, COVID, oso de 2022, ciclo actual). No toca factores, pesos ni umbrales — solo la ventana de
+  medición. **Firmado en el pre-registro ANTES de ver datos, con el caveat que manda: sesgo de
+  SUPERVIVENCIA** (el universo son los 1.018 de hoy) → el nivel absoluto queda inflado y no se usa; lo
+  válido es la comparación cruzada dentro de cada fecha, que es justo lo que miden H8/H9/factores.
+  Fundamentales solo desde ~2010 (mandato XBRL) → los factores se miden sobre menos años que el precio.
+  El lote lleva ahora **presupuesto de tiempo** (240 s de 300) porque cada símbolo hace ~8× más CPU, y el
+  cron va **temporalmente cada 30 min** para reconstruir en ~1 día — **devolver a `10 */2 * * *` al cerrar**.
+  Durante la reconstrucción el corpus está MEZCLADO: filtrar por `actualizado_en` en todo análisis.
+  Reconciliadas las skills: `trading-analista/SKILL.md` (regla nueva — H8/H9 resueltas, no proponer
+  entradas «porque capituló» ni stops) y `references/infra-forward-radar.md` (decía 546 símbolos × 22
+  snapshots; ahora 1.018 × 178, con el sesgo de supervivencia y el límite de fundamentales desde ~2010).
+
+- **⚠️ mercado-booking: 2º disparo el mismo día, sin huella del 1º en `market_rates` (08/08/2026).**
+  El disparo de las 12:28 UTC de hoy dio `ok:true` y logeó 120 comps escritos. Este 2º disparo (horas
+  después) pidió `/api/sivra/mercado/plan` y recibió **las mismas 12 ventanas "nunca medidas"** —
+  `comps:0` en las 12, como si el primero no hubiera escrito nada. Medidas de nuevo (120 comps más),
+  y esta vez sí hizo avanzar la cola. **Sin diagnosticar la causa:** ¿se disparó dos veces la skill
+  por config de scheduling, con la primera fallando en silencio pese a loggear éxito? ¿o algo borró
+  `market_rates` entre medias? Pide revisar logs de `/api/sivra/mercado/ingest` de Vercel y el trigger
+  de la skill. Detalle en `docs/AGENTES-BITACORA.md`.
 
 - **✅ H8 y H9 RESUELTAS sobre el corpus completo — ninguna se cablea (08/08/2026).** 1.018/1.018 símbolos,
   21.321 observaciones. **H9:** las tres reglas de salida fallan su propio criterio; stop −20% y trailing
@@ -55,6 +107,18 @@ del environment. Esta pasada midió 10 ventanas (100 comps `booking_mcp`) y las 
   en `velas.ts`); (b) sin NI earningsYield NI fcfYield **no se rankea** — el `zValor = 0` de los que no
   tienen dato es la MEDIA del universo, no una abstención, y colaba 3 nombres en el top-20 (TSEM/NBIS/ASX).
   Anotado y SIN tocar: los pilares promedian columnas vacías → peso efectivo ≈39/28/34, no 40/40/20.
+
+- **📡 mercado-booking: primer disparo programado real (08/08/2026).** Hasta hoy la Rutina diaria no
+  había dejado huella (ver nota de ayer en la bitácora). Este disparo sí funcionó de punta a punta:
+  12 ventanas medidas con Booking.com, 120 comps escritos (`fuente='booking_mcp'`), latido
+  `sivra_mercado_booking` con `ok:true`. Detalle de p50 por ventana en `docs/AGENTES-BITACORA.md`.
+  Sin acción pendiente — vigilar que se repita mañana.
+
+- **📅 mercado-booking arranca como Rutina programada (08/08/2026).** Primer disparo automático (antes
+  solo se había probado a mano, ver entrada #1299): plan de 12 ventanas (las 12 nunca medidas),
+  medidas todas contra Booking respetando aforo real, 120 comps escritos (`fuente='booking_mcp'`),
+  0 sin respuesta, latido `sivra_mercado_booking` ok. Detalle y medianas en `docs/AGENTES-BITACORA.md`.
+
 - **🔍 Auditoría diaria ligera (08/08/2026).** Sin PRs de rutina atascados (el auto-merge de #1289/#1297
   ya funciona: #1298 resuelto solo hoy). Heartbeat de crons 12/14 ✅, 2 falsos positivos ya conocidos
   (`updates/sync` Smoobu sin reservas nuevas, `limpiadoras/auto-sessions` idempotente) verificados de

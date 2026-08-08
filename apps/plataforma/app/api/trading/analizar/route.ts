@@ -10,6 +10,7 @@ import {
 } from '@central/module-trading'
 import type { Vela, Fundamentales } from '@central/module-trading'
 import { datosYahoo, lineaEarningsProximos, type FechaEarnings } from '@/lib/trading/earnings-yahoo'
+import { filtrarPreciosAnomalos, resumenDescartes, DIAS_REFERENCIA_MAX } from '@/lib/trading/precios-guardia'
 
 type Entrada = { simbolo: string; velas: Vela[]; fundamentales?: Fundamentales; opsRecientes?: number; factorScore?: number }
 
@@ -72,10 +73,34 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // 🚨 GUARDIA DE PRECIOS — aquí está el ORIGEN del envenenamiento del 03/08/2026 (CVX a 590,17 con
+  // cierre real 193,18; ver `lib/trading/precios-guardia.ts`). El precio malo no solo se guardaba como
+  // `precio_ref`: TODA la serie de velas de ese símbolo entra en `indicadoresDe`, así que EMA, MACD, RSI,
+  // ADX y ATR salían de una vela falsa y las tesis del día no eran conocimiento. Por eso un símbolo con
+  // el último cierre fuera de rango se salta ENTERO — no se le recorta el precio: no se le cree nada.
+  // Sin referencia reciente no se juzga (símbolo nuevo): la guardia nunca inventa un veto.
+  const cierresHoy = Object.fromEntries(
+    simbolos.filter(s => s.velas?.length).map(s => [s.simbolo, s.velas[s.velas.length - 1].cierre]),
+  )
+  const refFilas = await prisma.$queryRaw<Array<{ simbolo: string; precio: number }>>`
+    SELECT DISTINCT ON (simbolo) simbolo, precio_ref AS precio
+    FROM trading_tesis
+    WHERE fecha < ${fecha}::date AND fecha >= ${fecha}::date - ${DIAS_REFERENCIA_MAX}
+    ORDER BY simbolo, fecha DESC`
+  const { descartados } = filtrarPreciosAnomalos(cierresHoy, Object.fromEntries(refFilas.map(f => [f.simbolo, f.precio])))
+  const vetados = new Set(descartados.map(d => d.simbolo))
+  if (descartados.length > 0) {
+    console.warn('[trading/analizar]', resumenDescartes(descartados))
+    // Se avisa SIEMPRE: un símbolo que desaparece del análisis en silencio es indistinguible de un
+    // símbolo que hoy no dio señal, y eso es justo lo que dejó pasar el 03/08 sin que nadie mirara.
+    await tgSend(`⚠️ <b>Trading ${fecha}:</b> precio descartado por la guardia, esos símbolos NO se analizan hoy.\n${resumenDescartes(descartados)}`).catch(() => {})
+  }
+
   const ideas: Array<{ simbolo: string; estrategia: string; direccion: string; confianza: number; operada: boolean; motivo?: string; rvol?: number | null; volConfirma?: string; factorScore?: number }> = []
 
   for (const s of simbolos) {
     if (!s.velas?.length) continue
+    if (vetados.has(s.simbolo)) continue
     const ind = indicadoresDe(s.velas)
     const precioRef = s.velas[s.velas.length - 1].cierre
     const volumenRel = rvol(s.velas.map(v => v.volumen))   // volumen de hoy vs su media

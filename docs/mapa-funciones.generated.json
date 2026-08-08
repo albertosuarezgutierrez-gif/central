@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-08T12:42:47Z",
-  "sha": "451a2c131dd83352f00791a4746022c89f0257d9",
+  "generadoEn": "2026-08-08T14:20:27Z",
+  "sha": "9e4b45377545d0471b2cbc40aaf327e5e050d461",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -51521,7 +51521,7 @@
         "trading_tesis"
       ],
       "rutaApi": "/api/cron/trading-watchdog",
-      "hash": "068e4d6fb98f"
+      "hash": "9c294770d17c"
     },
     {
       "ruta": "apps/plataforma/app/api/empresas/agente/route.ts",
@@ -55797,16 +55797,17 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 16
+          "linea": 17
         }
       ],
       "tablas": [
         "next",
         "set",
-        "trading_pasadas"
+        "trading_pasadas",
+        "trading_tesis"
       ],
       "rutaApi": "/api/trading/analizar",
-      "hash": "61b00d3a9896"
+      "hash": "ad279d012fbd"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/cartera-estudio/route.ts",
@@ -56022,12 +56023,15 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 8
+          "linea": 10
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "next",
+        "trading_tesis"
+      ],
       "rutaApi": "/api/trading/puntuar",
-      "hash": "0545ef9b0b4f"
+      "hash": "eaa2e3f81edb"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/saldo/route.ts",
@@ -60579,7 +60583,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 98,
+          "linea": 104,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -60588,7 +60592,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 128,
+          "linea": 134,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -60597,7 +60601,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 150
+          "linea": 156
         },
         {
           "nombre": "ventanaMinutos",
@@ -60605,7 +60609,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 158,
+          "linea": 164,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -60614,13 +60618,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 170,
+          "linea": 176,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "14bbdd27b5f8"
+      "hash": "5081e85a68e3"
     },
     {
       "ruta": "apps/plataforma/lib/deducibilidad.ts",
@@ -68123,9 +68127,9 @@
           "nombre": "fechasSnapshot",
           "kind": "function",
           "exportada": true,
-          "params": "hoy: string, meses = 24, margenDias = 98",
+          "params": "hoy: string, meses = MESES_RETROVISOR, margenDias = 98",
           "retorno": "string[]",
-          "linea": 14,
+          "linea": 35,
           "resumen": "Fechas de snapshot: día 1 de cada mes, desde hace `meses` hasta hace `margenDias` (para que la ventana forward más larga quepa entera en la serie de precios)."
         },
         {
@@ -68134,7 +68138,7 @@
           "exportada": true,
           "params": "puntos: PuntoPrecio[], fecha: string",
           "retorno": "number | null",
-          "linea": 27,
+          "linea": 48,
           "resumen": "Último cierre con fecha <= objetivo (los snapshots caen en festivos/fin de semana sin cotización)."
         },
         {
@@ -68143,7 +68147,7 @@
           "exportada": true,
           "params": "puntos: PuntoPrecio[], fecha: string, dias: number",
           "retorno": "number | null",
-          "linea": 37,
+          "linea": 58,
           "resumen": "Retorno desde `fecha` al primer cierre >= fecha+dias. null si la serie no llega o no hay base."
         },
         {
@@ -68152,7 +68156,7 @@
           "exportada": true,
           "params": "puntos: PuntoPrecio[], hasta: string, periodo: 'sem' | 'mes'",
           "retorno": "number[]",
-          "linea": 77,
+          "linea": 98,
           "resumen": "Remuestrea una serie diaria al cierre de cada PERIODO ('sem' = semana ISO aprox por lunes, 'mes' = mes natural), hasta `hasta` inclusive. El cierre del periodo = último cierre diario en él."
         },
         {
@@ -68161,7 +68165,7 @@
           "exportada": true,
           "params": "cierres: number[], n: number",
           "retorno": "number | null",
-          "linea": 96,
+          "linea": 117,
           "resumen": "SMA del ÚLTIMO punto de la serie (media de los n últimos cierres). null si no hay n puntos."
         },
         {
@@ -68170,13 +68174,13 @@
           "exportada": true,
           "params": "cierres: number[], n: number",
           "retorno": "boolean | null",
-          "linea": 104,
+          "linea": 125,
           "resumen": "¿Último cierre por encima de su SMA n en ese marco temporal? null si la serie no da para la media."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "272f9a3cc171"
+      "hash": "55d431aa0165"
     },
     {
       "ruta": "apps/plataforma/lib/trading/backtest.ts",
@@ -68216,9 +68220,9 @@
           "nombre": "refrescarLoteBacktest",
           "kind": "function",
           "exportada": true,
-          "params": "lote = 40",
+          "params": "lote = 40, presupuestoMs = PRESUPUESTO_MS",
           "retorno": "Promise<",
-          "linea": 72,
+          "linea": 81,
           "resumen": "Recolecta el siguiente lote: siembra desde trading_universo (+SPY como benchmark) y rellena las filas más rancias. Mismo patrón/ritmo que refrescarLoteUniverso (~4 símbolos/s contra SEC)."
         },
         {
@@ -68227,13 +68231,13 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 129,
+          "linea": 143,
           "resumen": "La LUPA de gurús: convicciones ACTUALES de Dataroma cruzadas con los factores actuales de la caché del radar — la materia prima para responder \"¿por qué se posicionan en esas empresas?\". Se guarda en "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "69221ac43395"
+      "hash": "b64d528c0e7a"
     },
     {
       "ruta": "apps/plataforma/lib/trading/buscar-simbolo.ts",
@@ -69213,6 +69217,38 @@
       "hash": "3f28ba06523e"
     },
     {
+      "ruta": "apps/plataforma/lib/trading/precios-guardia.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Guardia de cordura de los precios que la pasada de trading manda a `/api/trading/puntuar`. 🚨 LANDMINE FUNDACIONAL (08/08/2026) — el track record se envenenó con UN dato. El 03/08 la pasada mandó `CVX = 590,17` cuando Chevron cerró a 193,18 (contrastado contra IBKR): un ×3,06. El endpoint cogía `pre",
+      "exporta": [
+        "filtrarPreciosAnomalos",
+        "resumenDescartes"
+      ],
+      "funciones": [
+        {
+          "nombre": "filtrarPreciosAnomalos",
+          "kind": "function",
+          "exportada": true,
+          "params": "precios: Record<string, number>, referencias: Record<string, number>, saltoMax = SALTO_PRECIO_DIA_MAX,",
+          "retorno": "FiltroPrecios",
+          "linea": 50,
+          "resumen": "Separa los precios usables de los que no superan la guardia. `referencias` = último precio conocido por símbolo ANTERIOR a la fecha de la pasada (nunca el de hoy: si la pasada viene envenenada, el pre"
+        },
+        {
+          "nombre": "resumenDescartes",
+          "kind": "function",
+          "exportada": true,
+          "params": "descartados: PrecioDescartado[]",
+          "retorno": "string",
+          "linea": 84,
+          "resumen": "Resumen de una línea para el latido y el aviso. Cadena vacía si no se descartó nada — así el que la consume no tiene que acordarse de comprobarlo."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "498ffda421eb"
+    },
+    {
       "ruta": "apps/plataforma/lib/trading/precios-stooq.ts",
       "ambito": "apps/plataforma",
       "resumen": "Precios diarios GRATIS desde Stooq (sin API key). Fuente para la VALIDACIÓN de selección vs SPY sin depender del conector IBKR (frágil por el 2FA/reset diario). Stooq da CSV: `Date,Open,High,Low,Close,Volume`. Parseo PURO y testeado; el fetch corre desde el egress de Vercel (el sandbox de las sesion",
@@ -69745,7 +69781,8 @@
       "resumen": "🐕 Perro guardián de la pasada nocturna de trading. La app en Vercel NO habla con IBKR: el NAV del bróker lo refresca CADA NOCHE LABORABLE la rutina `trading-analista` (sesión Claude con el MCP de IBKR) vía POST /api/trading/saldo → `broker_saldos`. Si esa rutina desaparece (se borra/pausa) o falla ",
       "exporta": [
         "seEsperaRefresco",
-        "evaluarWatchdog"
+        "evaluarWatchdog",
+        "diagnosticarPasada"
       ],
       "funciones": [
         {
@@ -69764,11 +69801,20 @@
           "params": "params: { ahora: Date ultimoRefresco: Date | null maxHoras?: number /** Qué huella se está mirando, para que el «nunca» diga la VERDAD. Por defecto, el NAV — pero el * mismo evaluador vigila ya las tesis y el cierre de /puntuar, y decirles ",
           "retorno": "EvalWatchdog",
           "linea": 33
+        },
+        {
+          "nombre": "diagnosticarPasada",
+          "kind": "function",
+          "exportada": true,
+          "params": "params: { ahora: Date ultimoIntento: Date | null ultimoOk: Date | null maxHoras?: number }",
+          "retorno": "DiagnosticoPasada",
+          "linea": 107,
+          "resumen": "Por qué falta la pasada. `ultimoIntento` = la sesión ARRANCÓ; `ultimoOk` = terminó bien. Puro."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f213bc404ac1"
+      "hash": "3d35ccac199a"
     },
     {
       "ruta": "apps/plataforma/lib/vercel-env.ts",
@@ -89483,7 +89529,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2400,
-    "funciones": 6457
+    "archivos": 2401,
+    "funciones": 6460
   }
 }

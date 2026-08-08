@@ -116,13 +116,27 @@
   snapshot (Yahoo `includePrePost`, gratis; Finviz descartado: premarket solo en Elite de pago y
   bloquea bots), aviso Telegram con 📰 al lado, silencio si no hay movimiento. Contexto, nunca
   filtro. Fase 2 global = datos de pago, solo si el forward paper valida.
-- **🔭 Retrovisor (backtest INDICATIVO, 19/07):** tabla `trading_backtest` (546 empresas × 22 snapshots
-  mensuales punto-en-el-tiempo por `filed` + SPY + lupa `_GURUS_`; re-poblable con el workflow
-  `trading-backtest.yml`). Informe: **`docs/TRADING-RETROVISOR-2026-07.md`** — top-10 batió a SPY 17/22
-  a 91d (alpha mediano +8,5 pp); momentum = único factor con spread positivo en 2024-26 (régimen junk
-  rally); calidad/valor = freno de caídas >15%; gurús = calidad a precio razonable comprada contra el
-  momentum. OJO sesgo: membresía del universo NO es histórica (lista de hoy retro-aplicada). NO cambiar
-  pesos del blend por este backtest — solo si el FORWARD lo confirma con 2-3 meses.
+- **🔭 Retrovisor (backtest INDICATIVO):** tabla `trading_backtest` — **1.018 símbolos × 178 snapshots
+  mensuales** punto-en-el-tiempo por `filed` (+ SPY y lupa `_GURUS_`). **Ventana de 15 AÑOS desde el
+  08/08/2026** (`MESES_RETROVISOR = 180` en `backtest-puro.ts`, subida desde 24 meses): cubre 2011-2026
+  —euro, selloff 2015-16, Q4-2018, COVID, oso de 2022, ciclo actual— porque con un solo régimen H8 daba
+  un resultado que se invertía de signo entre mitades y no había forma de saber cuál era el mundo.
+  Cron `trading-backtest`, lote con **presupuesto de 240 s** (cada símbolo hace ~8× más CPU que con la
+  ventana corta; lo que no entra conserva su `actualizadoEn` y encabeza la pasada siguiente).
+  - **🚨 SESGO DE SUPERVIVENCIA, y a 15 años es severo:** el universo son los símbolos que existen HOY.
+    El **nivel absoluto de retorno está inflado y NO se usa para nada**; lo válido es la comparación
+    CRUZADA dentro de cada fecha (capitula vs no, con salida vs sin, quintil alto vs bajo), donde ambos
+    brazos cargan el mismo sesgo. Responde «¿la señal cambia de signo según el régimen?», no «¿cuánto
+    se gana?». Ningún tramo de la escalera de capital se mueve con datos de aquí.
+  - **Fundamentales solo desde ~2010** (mandato XBRL de la SEC): los snapshots anteriores llevan
+    piotroski/roic/ey/fcfy a `null`. Al reportar un FACTOR hay que decir sobre cuántos años se midió —
+    no son los 15 que sí cubren precio y volumen.
+  - **Reporte SIEMPRE partido por subperiodo, nunca solo agregado** (lección de la resolución de H8:
+    un criterio de una sola cifra sobre el agregado no ve la inversión de signo).
+  - Informe histórico de la ventana corta: `docs/TRADING-RETROVISOR-2026-07.md` (top-10 batió a SPY
+    17/22 a 91d; momentum el único factor con spread positivo en 2024-26). Queda como registro de lo
+    que se creía con 22 snapshots — **no se cita como estado del arte**.
+  - NO cambiar pesos del blend por este backtest: solo si el FORWARD lo confirma.
 - **🚀 Satélite caza-cohetes (19/07, dentro del ranking semanal):** lista APARTE de ≤5 nombres con perfil
   lotería (momentum>30% + ROIC<0 ∨ Piotroski≤4; 13% acaba +50%/3m según el retrovisor). Las medias
   multi-marco (SMA30 semanal / SMA12 mensual) se muestran como INFORMACIÓN (✓/✗), **NO como filtro**: la

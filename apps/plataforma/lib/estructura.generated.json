@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-08T12:49:30Z",
+  "generadoEn": "2026-08-08T14:20:27Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3979,11 +3979,39 @@
   ],
   "novedades": [
     {
+      "titulo": "🚨 Un precio falso envenenó el track record de trading (08/08/2026).",
+      "fecha": "08/08/2026"
+    },
+    {
+      "titulo": "🩺 El watchdog de trading ya distingue «no PUDO dispararse» (08/08/2026).",
+      "fecha": "08/08/2026"
+    },
+    {
+      "titulo": "🔍 Rutinas de auditoría ampliadas (08/08/2026).",
+      "fecha": "08/08/2026"
+    },
+    {
+      "titulo": "🕰️ Retrovisor de 24 meses → 15 AÑOS (08/08/2026).",
+      "fecha": "08/08/2026"
+    },
+    {
+      "titulo": "⚠️ mercado-booking: 2º disparo el mismo día, sin huella del 1º en `market_rates` (08/08/2026).",
+      "fecha": "08/08/2026"
+    },
+    {
       "titulo": "✅ H8 y H9 RESUELTAS sobre el corpus completo — ninguna se cablea (08/08/2026).",
       "fecha": "08/08/2026"
     },
     {
       "titulo": "🧹 Auditoría del corpus re-recolectado + dos «no lo sé» que afirmaban (08/08/2026).",
+      "fecha": "08/08/2026"
+    },
+    {
+      "titulo": "📡 mercado-booking: primer disparo programado real (08/08/2026).",
+      "fecha": "08/08/2026"
+    },
+    {
+      "titulo": "📅 mercado-booking arranca como Rutina programada (08/08/2026).",
       "fecha": "08/08/2026"
     },
     {
@@ -4009,34 +4037,6 @@
     {
       "titulo": "📬 Cursor incremental en las alertas de portales — el cron ya no relee 300 correos al día (08/08/2026).",
       "fecha": "08/08/2026"
-    },
-    {
-      "titulo": "📎 Pasada diaria facturas-correo (08/08/2026).",
-      "fecha": "08/08/2026"
-    },
-    {
-      "titulo": "💳 El parser del extracto de tarjeta llevaba meses devolviendo CERO con el PDF real (08/08/2026).",
-      "fecha": "08/08/2026"
-    },
-    {
-      "titulo": "🤖 El agente contable dejaba de responder «no encuentro el cargo» a lo que no había mirado (08/08/2026).",
-      "fecha": "08/08/2026"
-    },
-    {
-      "titulo": "🧪 Prueba en vivo del auto-merge de rutinas (07/08/2026).",
-      "fecha": "07/08/2026"
-    },
-    {
-      "titulo": "🧾 Factura 47/2026 Jaime Salas (electricidad Socorro 24) archivada (07/08/2026).",
-      "fecha": "07/08/2026"
-    },
-    {
-      "titulo": "🧪 Prueba en vivo del resolver de conflictos (08/08/2026).",
-      "fecha": "08/08/2026"
-    },
-    {
-      "titulo": "🧹 Atasco de PRs de rutinas resuelto: 6 PRs cerrados en una pasada (07/08/2026).",
-      "fecha": "07/08/2026"
     }
   ],
   "saludRepo": {
