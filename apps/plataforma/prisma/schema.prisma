@@ -134,6 +134,10 @@ model TradingTesis {
   confianza     Int
   horizonteDias Int                    @map("horizonte_dias")
   precioRef     Float                  @map("precio_ref")
+  // PROCEDENCIA de `precioRef`. `'sesion'` = lo mandó la rutina Claude (IBKR); `'stooq'`/`'yahoo'` =
+  // fuente propia del servidor. Un cierre de IBKR y uno de Stooq NO son el mismo dato: sin esta columna,
+  // cualquier recuperación automática mezclaría fuentes en el track record que decide el capital real.
+  precioFuente  String                 @default("sesion") @map("precio_fuente")
   indicadores   Json
   rationale     String
   // `operada` = esta señal fue la GANADORA del torneo de su símbolo Y pasó todas las barreras de riesgo,
@@ -162,6 +166,15 @@ model TradingTesisResultado {
   retorno       Float
   acierto       Boolean
   puntuadoEn    DateTime     @default(now()) @map("puntuado_en") @db.Timestamptz(6)
+  // `anulado` = este resultado se puntuó con un precio que después se demostró falso, así que NO cuenta
+  // para las stats de estrategia (el walk-forward que decide si algún día se despliega capital real).
+  // La fila NO se borra: se marca. Un resultado anulado es un «esto no lo sabemos», no un dato.
+  // `anuladoMotivo` sobrevive a la re-puntuación — es la cicatriz que cuenta qué pasó (caso fundacional:
+  // CVX 590,17 del 03/08/2026, ver `lib/trading/precios-guardia.ts`).
+  anulado       Boolean      @default(false)
+  anuladoMotivo String?      @map("anulado_motivo")
+  // Procedencia de `precioDespues` (mismo contrato que `TradingTesis.precioFuente`).
+  precioFuente  String       @default("sesion") @map("precio_fuente")
   tesis         TradingTesis @relation(fields: [tesisId], references: [id], onDelete: Cascade)
 
   @@map("trading_tesis_resultado")

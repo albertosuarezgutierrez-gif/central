@@ -22,7 +22,68 @@
 
 ---
 
+## 🧱 (08/08/2026) Bandeja «cargos duplicados» de /banca responsive en móvil — PR #1319
+- Captura de Alberto: en móvil las filas desbordaban (chips `flexShrink:0` + importe fuera de pantalla).
+- Fix CSS-only en `BancaClient.tsx::DuplicadosBandeja`: media query ≤768px, concepto a ancho completo,
+  fecha+chips+importe con wrap, botonera con wrap y botones ≥44px (`#duplicados`). Igual en «Ya resueltos».
+- Mismo patrón que la bandeja «Gastos por revisar» del mismo archivo.
+- Verificado 320/360px con Playwright (0px overflow). OJO: `next build` en el contenedor falla en
+  page data de `/api/admin/clientes/[vertical]/[id]` YA en main (envs ausentes), no es del cambio.
+
 ## 📌 Estado actual (lo más reciente arriba)
+
+- **🛡️ Segundo par de ojos sobre el precio + procedencia del dato (08/08/2026).** Cierra el hueco que
+  dejaba la guardia del ×2 (#1315): un error del 10% pasaba limpio y movía el retorno 10 puntos.
+  `contrastarFuentes` (puro) compara cada precio con la fuente propia del servidor (Stooq→Yahoo,
+  tolerancia 2%) el MISMO día; `precios-contraste.ts` hace el acarreo con presupuesto y concurrencia
+  acotada — sin contraste NO se juzga, y un contraste a medias nunca bloquea la pasada. En `/analizar`
+  el símbolo divergente se salta entero y avisa por Telegram. Nuevas columnas **`precio_fuente`** en
+  `trading_tesis` y `trading_tesis_resultado` (default `sesion`; las 12 filas del saneo de CVX quedan
+  `manual`) — patrón `market_rates.fuente`, es lo que desbloquea la recuperación automática de
+  `/puntuar`. De regalo: **`/saldo` avisa si el NAV salta >15%** (no bloquea: puede ser un ingreso real,
+  pero con el NAV se dimensionan TODAS las compras). PR #1317. **Dos fallos propios cazados en la
+  auto-revisión antes de mergear:** la lectura del NAV anterior no filtraba por `cuenta_id` (regla
+  multi-tenant — habría comparado contra el saldo de otra cuenta) y `sinContraste` de `/puntuar` metía
+  los ~100 símbolos que nunca se quisieron contrastar, exagerando lo que no se sabe.
+
+### 🏨 Filtro de ronda/fecha en el plan de mercado + 2ª pasada Booking (08/08/2026)
+`/api/sivra/mercado/plan` acepta **`?rondas=2,3&desde=&hasta=`**, aplicado ANTES del tope (filtrar
+en cliente no llega: el orden de urgencia pone las rondas de profundidad al final — con `?max=30` se
+alcanzaban 18 de 40 y ninguna de ronda 3). Respuesta nueva: `filtro`/`candidatas`/`recortadas` +
+aviso cuando el tope recorta. Filtro mal escrito → 400, nunca «mido todo». 6 tests nuevos; tsc 0,
+`next build` OK (fallan `fmp`/`edgar`, preexistentes, son de red).
+**🚨 Bloqueo de infra:** el proxy de egress da **403 al CONNECT contra `plataforma-ten-flame.vercel.app`**
+→ ninguna sesión puede usar el raíl HTTP (plan/ingest/latido) hasta que se abra la allowlist de red
+del environment. Esta pasada midió 10 ventanas (100 comps `booking_mcp`) y las escribió por SQL.
+**Tope real de una pasada ≈10-12 ventanas, no 30:** las respuestas del conector no caben en contexto.
+- **🚨 Un precio falso envenenó el track record de trading (08/08/2026).** Al comprobar si el agente había
+  dado alguna compra (no: 0 propuestas reales, 1 posición paper MSFT) salió que el 03/08 la pasada mandó
+  **CVX=590,17$** con cierre real **193,18$** (verificado en IBKR). `/puntuar` cogía `precios[simbolo]` sin
+  comprobar nada → 12 resultados envenenados, 3 a +205 pp. Efecto en `trading_estrategia_stats`, que
+  alimenta `ajustesDeStats` y por tanto el torneo: momentum **+7,18 pp → −0,40 pp** (cambio de SIGNO).
+  Fix: guardia pura `lib/trading/precios-guardia.ts` (×2 contra el último `precio_ref` ANTERIOR a hoy;
+  sin referencia NO se juzga), aplicada a tesis + deslizamiento + **stops**; `ventana_dias` pasa a ser los
+  días REALES, no el horizonte declarado; columnas `anulado`/`anulado_motivo` (marcar, nunca borrar).
+  Las 12 filas re-puntuadas con el cierre real; la guardia va también en `/analizar`, que es el ORIGEN
+  (la vela falsa contaminaba EMA/MACD/RSI/ADX → el símbolo se salta entero y avisa). PR #1315.
+
+- **🩺 El watchdog de trading ya distingue «no PUDO dispararse» (08/08/2026).** El viernes 07/08 la pasada
+  nocturna no corrió y el aviso mandaba a mirar trigger/IBKR; la causa real fue quedarse **sin cupo de
+  tokens**. Nuevo `diagnosticarPasada()` (puro, 3 tests) en `lib/trading/watchdog.ts`: si fallan los TRES
+  tramos enumera las causas candidatas en vez de señalar una que no puede distinguir, y separa «arrancó y
+  murió» (usa `agente_latidos.ultimo_at`) de «ni arrancó». **Corrección a lo que dije antes: solo `/puntuar`
+  sería auto-recuperable** (`/saldo` y `/analizar` dependen del NAV, que solo existe en el MCP de IBKR) — y
+  exige marcar la FUENTE del precio (patrón `market_rates.fuente`) porque toca el track record. **Pendiente
+  de decisión de Alberto.** Retrovisor de 15 años en marcha: 178 snapshots/fila, 40 símbolos/pasada, ETA ~13 h.
+
+- **🔴→🟢 Latido rojo de `sivra_mercado_sweep` — diagnosticado: NO investigar de nuevo (08/08/2026).**
+  El `ok=false` de la pasada de hoy 03:04 UTC es código VIEJO: exigía cero ventanas ciegas en base y
+  saltó por 1 de 32 (lotería de fecha de Google, documentada). El fix (PR #1299, `mesesCiegosEnBase`
+  + ratio 25%) mergeó a las 11:28 UTC y **ya está en producción** (deploy `0fe9d9e`, 13:04 UTC).
+  Verificado localmente: con los números reales de hoy la lógica nueva da `ok=true` (tests 25/25).
+  Si la pasada del 09/08 03:00 UTC sigue roja, ESO sí es señal nueva. Las «6 búsquedas sin resultados»
+  son la lotería conocida (ya mitigada con consulta de mes); el precio por fecha real lo trae
+  `mercado-booking` (hoy verde, 120 comps).
 
 - **🔍 Rutinas de auditoría ampliadas (08/08/2026).** Revisión pedida por Alberto de la diaria/semanal:
   el heartbeat (paso 2-bis) pasa a leer `agente_latidos` como fuente preferida y saca de la SQL las 3
