@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-08T16:14:04Z",
+  "generadoEn": "2026-08-08T16:28:23Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3979,6 +3979,18 @@
   ],
   "novedades": [
     {
+      "titulo": "ITP por CCAA",
+      "fecha": ""
+    },
+    {
+      "titulo": "Vigía de pujas en vivo",
+      "fecha": ""
+    },
+    {
+      "titulo": "Vivienda habitual",
+      "fecha": ""
+    },
+    {
       "titulo": "✅ Precio dinámico vivo en los 4 pisos, primera pasada real verificada (08/08/2026).",
       "fecha": "08/08/2026"
     },
@@ -4024,18 +4036,6 @@
     },
     {
       "titulo": "🧹 Auditoría del corpus re-recolectado + dos «no lo sé» que afirmaban (08/08/2026).",
-      "fecha": "08/08/2026"
-    },
-    {
-      "titulo": "📡 mercado-booking: primer disparo programado real (08/08/2026).",
-      "fecha": "08/08/2026"
-    },
-    {
-      "titulo": "📅 mercado-booking arranca como Rutina programada (08/08/2026).",
-      "fecha": "08/08/2026"
-    },
-    {
-      "titulo": "🔍 Auditoría diaria ligera (08/08/2026).",
       "fecha": "08/08/2026"
     }
   ],
