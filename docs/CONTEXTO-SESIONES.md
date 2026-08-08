@@ -22,6 +22,14 @@
 
 ---
 
+## 🧱 (08/08/2026) Bandeja «cargos duplicados» de /banca responsive en móvil — PR #1319
+- Captura de Alberto: en móvil las filas desbordaban (chips `flexShrink:0` + importe fuera de pantalla).
+- Fix CSS-only en `BancaClient.tsx::DuplicadosBandeja`: media query ≤768px, concepto a ancho completo,
+  fecha+chips+importe con wrap, botonera con wrap y botones ≥44px (`#duplicados`). Igual en «Ya resueltos».
+- Mismo patrón que la bandeja «Gastos por revisar» del mismo archivo.
+- Verificado 320/360px con Playwright (0px overflow). OJO: `next build` en el contenedor falla en
+  page data de `/api/admin/clientes/[vertical]/[id]` YA en main (envs ausentes), no es del cambio.
+
 ## 📌 Estado actual (lo más reciente arriba)
 
 ### 🏨 Filtro de ronda/fecha en el plan de mercado + 2ª pasada Booking (08/08/2026)
