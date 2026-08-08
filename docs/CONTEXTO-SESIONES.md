@@ -32,6 +32,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🐕 Decisión: `trading_puntuar` NO entra en AGENTES_VIGILADOS; el que faltaba era el vigía (08/08/2026)
+Alberto pidió meterlo; **no procede** y le dije que «nadie lo lee», que era FALSO: lo vigila
+`trading-watchdog` (tramo 3) y mejor, porque sabe qué días se espera pasada. Duplicarlo daría dos
+Telegram Y falsos positivos cada domingo/lunes (pasada L-V ~20:15 UTC → el lunes la última buena es
+la del viernes, ~59 h; hoy está a 43 h con `ok:true` y el watchdog calla, bien). **El hueco real:**
+ese watchdog es el único que cruza los 3 tramos, no dejaba huella propia y no lo vigilaba nadie — si
+moría, su silencio se leía como «todo fresco». Ahora escribe `agente_latidos.trading_watchdog` y entra
+en la lista con **80 h** (su cron `30 6 * * 2-6` deja un hueco legítimo sáb→mar de 72 h). PR #1322.
+
 ### 🛡️ Auditoría profunda: el vigía del agente de pricing estaba en verde falso (08/08/2026)
 Pasada completa a petición de Alberto («prueba que todo funciona y está todo al día»). **Todo verde
 salvo un 🔴 nuevo:** la sonda `pricing` de `agentes-latido` medía sobre `market_rates prop_*`, huella
