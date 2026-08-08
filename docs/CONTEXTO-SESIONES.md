@@ -24,6 +24,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🛡️ Segundo par de ojos sobre el precio + procedencia del dato (08/08/2026).** Cierra el hueco que
+  dejaba la guardia del ×2 (#1315): un error del 10% pasaba limpio y movía el retorno 10 puntos.
+  `contrastarFuentes` (puro) compara cada precio con la fuente propia del servidor (Stooq→Yahoo,
+  tolerancia 2%) el MISMO día; `precios-contraste.ts` hace el acarreo con presupuesto y concurrencia
+  acotada — sin contraste NO se juzga, y un contraste a medias nunca bloquea la pasada. En `/analizar`
+  el símbolo divergente se salta entero y avisa por Telegram. Nuevas columnas **`precio_fuente`** en
+  `trading_tesis` y `trading_tesis_resultado` (default `sesion`; las 12 filas del saneo de CVX quedan
+  `manual`) — patrón `market_rates.fuente`, es lo que desbloquea la recuperación automática de
+  `/puntuar`. De regalo: **`/saldo` avisa si el NAV salta >15%** (no bloquea: puede ser un ingreso real,
+  pero con el NAV se dimensionan TODAS las compras). PR #1317.
+
 - **🚨 Un precio falso envenenó el track record de trading (08/08/2026).** Al comprobar si el agente había
   dado alguna compra (no: 0 propuestas reales, 1 posición paper MSFT) salió que el 03/08 la pasada mandó
   **CVX=590,17$** con cierre real **193,18$** (verificado en IBKR). `/puntuar` cogía `precios[simbolo]` sin

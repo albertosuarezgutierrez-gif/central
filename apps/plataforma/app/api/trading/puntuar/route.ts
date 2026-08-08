@@ -5,7 +5,13 @@ import { prisma } from '@/lib/db'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { puntuarTesis, agregarStats, aplicarStop, cerrar } from '@central/module-trading'
 import type { Tesis } from '@central/module-trading'
-import { filtrarPreciosAnomalos, resumenDescartes, DIAS_REFERENCIA_MAX } from '@/lib/trading/precios-guardia'
+import { filtrarPreciosAnomalos, resumenDescartes, contrastarFuentes, resumenDivergencias, DIAS_REFERENCIA_MAX } from '@/lib/trading/precios-guardia'
+import { cierresDeContraste } from '@/lib/trading/precios-contraste'
+
+// El contraste con la 2ª fuente sale a internet una vez por símbolo, así que la ruta necesita techo y
+// presupuesto propios (lección de `facturas-scan`: el techo evita el 504, el presupuesto es lo que
+// garantiza que la pasada VUELVE). Solo se contrastan los símbolos que este endpoint va a USAR.
+export const maxDuration = 300
 
 export async function POST(req: NextRequest) {
   if (!isRoutineAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
@@ -30,10 +36,26 @@ export async function POST(req: NextRequest) {
 
   // 1) Puntuar tesis vencidas sin resultado.
   const pendientes = await prisma.tradingTesis.findMany({ where: { resultado: null } })
+
+  // 0-bis) SEGUNDO PAR DE OJOS. La guardia de arriba solo caza el ×2; un error del 10% pasa limpio y
+  // mueve el retorno de la tesis 10 puntos sin que nada chirríe. Se contrasta contra la fuente propia
+  // del servidor (Stooq/Yahoo) SOLO los símbolos que este endpoint va a usar de verdad — puntuar una
+  // tesis vencida o mover un stop —, que son un puñado, no el universo entero.
+  const posicionesPrevias = await prisma.tradingPaperPosicion.findMany({ select: { simbolo: true } })
+  const aUsar = [...new Set([
+    ...pendientes
+      .filter(t => new Date(t.fecha).getTime() + t.horizonteDias * 86_400_000 <= hoyMs)
+      .map(t => t.simbolo),
+    ...posicionesPrevias.map(p => p.simbolo),
+  ])].filter(s => limpios[s] !== undefined)
+  const contraste = await cierresDeContraste(aUsar, hoy, { presupuestoMs: 120_000 })
+  const { conformes, divergentes, sinContraste } = contrastarFuentes(limpios, contraste.cierres)
+  if (divergentes.length > 0) console.warn('[trading/puntuar]', resumenDivergencias(divergentes))
+
   let puntuadas = 0
   for (const t of pendientes) {
     const vence = new Date(t.fecha).getTime() + t.horizonteDias * 86_400_000
-    const precio = limpios[t.simbolo]
+    const precio = conformes[t.simbolo]
     if (vence > hoyMs || precio === undefined) continue
     const r = puntuarTesis(t as unknown as Tesis, precio)
     // `ventana_dias` = días REALES transcurridos, no el horizonte declarado. Si una pasada no corre (o
@@ -41,7 +63,7 @@ export async function POST(req: NextRequest) {
     // horizonte y etiquetarla con `horizonteDias` sería el error de siempre: un dato correcto leído con
     // el periodo equivocado. Nunca menos que el horizonte: solo se puntúa ya vencida.
     const ventanaReal = Math.round((hoyMs - new Date(t.fecha).getTime()) / 86_400_000)
-    await prisma.tradingTesisResultado.create({ data: { tesisId: t.id, precioDespues: precio, ventanaDias: ventanaReal, retorno: r.retorno, acierto: r.acierto } })
+    await prisma.tradingTesisResultado.create({ data: { tesisId: t.id, precioDespues: precio, ventanaDias: ventanaReal, retorno: r.retorno, acierto: r.acierto, precioFuente: 'sesion' } })
     puntuadas++
   }
 
@@ -64,7 +86,7 @@ export async function POST(req: NextRequest) {
   try {
     const sinDato = await prisma.tradingPaperOrden.findMany({ where: { precioDiaSiguiente: null, fecha: { lt: new Date(hoy) } } })
     for (const o of sinDato) {
-      const precio = limpios[o.simbolo]
+      const precio = conformes[o.simbolo]
       // Solo el PRIMER precio tras la señal (≤5 días naturales cubre fines de semana/festivos): más tarde
       // ya no mide deslizamiento sino deriva, y mejor NULL («no lo sé») que un dato con otro significado.
       const diasDesde = (new Date(hoy).getTime() - new Date(o.fecha).getTime()) / 86_400_000
@@ -73,13 +95,13 @@ export async function POST(req: NextRequest) {
     }
   } catch (e) { console.warn('[trading/puntuar] deslizamiento falló (no bloquea):', e) }
 
-  // 3) Stops sobre posiciones paper. Va sobre `limpios` igual que todo lo demás: un precio hundido por
-  // error dispararía un stop que en el mercado real nunca saltó, y esa venta fantasma queda escrita en
-  // `trading_paper_orden` como si fuera historia.
+  // 3) Stops sobre posiciones paper. Va sobre `conformes` (guardia + contraste) igual que todo lo demás:
+  // un precio hundido por error dispararía un stop que en el mercado real nunca saltó, y esa venta
+  // fantasma queda escrita en `trading_paper_orden` como si fuera historia.
   const posiciones = await prisma.tradingPaperPosicion.findMany()
   let cerradas = 0
   for (const p of posiciones) {
-    const precio = limpios[p.simbolo]
+    const precio = conformes[p.simbolo]
     if (precio === undefined) continue
     if (aplicarStop({ simbolo: p.simbolo, cantidad: p.cantidad, precioEntrada: p.precioEntrada, stop: p.stop, abiertaEn: String(p.abiertaEn) }, precio)) {
       const o = cerrar({ simbolo: p.simbolo, cantidad: p.cantidad, precioEntrada: p.precioEntrada, stop: p.stop, abiertaEn: String(p.abiertaEn) }, precio, hoy, 'stop')
@@ -96,7 +118,7 @@ export async function POST(req: NextRequest) {
   // watchdog dio por buena la noche, pero `/puntuar` nunca corrió y ni los stops ni el walk-forward se
   // actualizaron. La huella se escribe SIEMPRE (haya trabajo o no) y es la que mira el 3er tramo del
   // watchdog. Best-effort: no rompe la respuesta si la tabla no está.
-  const resumen = resumenDescartes(descartados)
+  const resumen = [resumenDescartes(descartados), resumenDivergencias(divergentes)].filter(Boolean).join(' · ')
   await registrarLatido(
     'trading_puntuar',
     true,
@@ -107,5 +129,10 @@ export async function POST(req: NextRequest) {
   // `descartados` viaja en la respuesta para que la sesión lo cante en su resumen de Telegram: un precio
   // rechazado deja tesis SIN puntuar, y eso hay que verlo — callarlo sería el «no lo sé» disfrazado de
   // «no había trabajo» que ya nos costó el latido de facturas-scan.
-  return NextResponse.json({ puntuadas, cerradas, estrategias: Object.keys(stats).length, descartados })
+  return NextResponse.json({
+    puntuadas, cerradas, estrategias: Object.keys(stats).length,
+    descartados,
+    divergentes,
+    contraste: { consultados: contraste.consultados, sinDato: contraste.sinDato, sinTiempo: contraste.sinTiempo, sinJuzgar: sinContraste },
+  })
 }
