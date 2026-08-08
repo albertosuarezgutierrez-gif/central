@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-08T14:20:27Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-08T14:33:48Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -220,6 +220,7 @@
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - (08/08/2026) 🚨 Un precio falso envenenó el track record de trading (08/08/2026).
 - (08/08/2026) 🩺 El watchdog de trading ya distingue «no PUDO dispararse» (08/08/2026).
+- (08/08/2026) 🔴→🟢 Latido rojo de `sivra_mercado_sweep` — diagnosticado: NO investigar de nuevo (08/08/2026).
 - (08/08/2026) 🔍 Rutinas de auditoría ampliadas (08/08/2026).
 - (08/08/2026) 🕰️ Retrovisor de 24 meses → 15 AÑOS (08/08/2026).
 - (08/08/2026) ⚠️ mercado-booking: 2º disparo el mismo día, sin huella del 1º en `market_rates` (08/08/2026).
@@ -227,5 +228,4 @@
 - (08/08/2026) 🧹 Auditoría del corpus re-recolectado + dos «no lo sé» que afirmaban (08/08/2026).
 - (08/08/2026) 📡 mercado-booking: primer disparo programado real (08/08/2026).
 - (08/08/2026) 📅 mercado-booking arranca como Rutina programada (08/08/2026).
-- (08/08/2026) 🔍 Auditoría diaria ligera (08/08/2026).
 

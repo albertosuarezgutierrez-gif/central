@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-08T14:20:27Z",
-  "sha": "9e4b45377545d0471b2cbc40aaf327e5e050d461",
+  "generadoEn": "2026-08-08T14:33:48Z",
+  "sha": "11af0f448a2f83f0a3f84b69d96250c19310a138",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54550,7 +54550,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 26,
+          "linea": 29,
           "resumen": "GET /api/sivra/mercado/plan?max=12 QUÉ ventanas (fecha × aforo) debe medir la rutina de Booking en ESTA pasada, ya ordenadas por urgencia. Es el contrato entre el plan de fechas (que vive en el código"
         }
       ],
@@ -54561,7 +54561,7 @@
         "pricing_piso_zona"
       ],
       "rutaApi": "/api/sivra/mercado/plan",
-      "hash": "de1b4d595b70"
+      "hash": "19150a795717"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/search/route.ts",
@@ -65451,6 +65451,7 @@
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/mercado-cobertura.ts — QUÉ ventanas pide medir la rutina de Booking, y en qué orden. POR QUÉ (06/08/2026). El barrido por búsqueda web quedó mecánicamente perfecto (120/120 ventanas el 06/08) y aun así NO mide temporada: los precios que devuelven los snippets son de anuncio y vienen SIN fe",
       "exporta": [
+        "planDeVentanas",
         "ventanasQuePedir",
         "detalleIngesta",
         "ingestaFiable"
@@ -65462,7 +65463,7 @@
           "exportada": false,
           "params": "desdeIso: string, hastaIso: string",
           "retorno": "number",
-          "linea": 62
+          "linea": 95
         },
         {
           "nombre": "clave",
@@ -65470,16 +65471,25 @@
           "exportada": false,
           "params": "checkin: string, aforo: number",
           "retorno": "string",
-          "linea": 68
+          "linea": 101
+        },
+        {
+          "nombre": "planDeVentanas",
+          "kind": "function",
+          "exportada": true,
+          "params": "plan: Ventana[], aforos: Map<number, string[]>, cobertura: CoberturaVentana[], hoyIso: string, max = 12, filtro: FiltroVentanas = {},",
+          "retorno": "PlanPedido",
+          "linea": 123,
+          "resumen": "Cruza el plan de ventanas (fechas) con los aforos de los pisos y la cobertura fiable ya medida, y devuelve las `max` que más falta hacen. Orden de urgencia, y el porqué de cada nivel: 1. **Nunca medid"
         },
         {
           "nombre": "ventanasQuePedir",
           "kind": "function",
           "exportada": true,
-          "params": "plan: Ventana[], aforos: Map<number, string[]>, cobertura: CoberturaVentana[], hoyIso: string, max = 12,",
+          "params": "plan: Ventana[], aforos: Map<number, string[]>, cobertura: CoberturaVentana[], hoyIso: string, max = 12, filtro: FiltroVentanas = {},",
           "retorno": "VentanaPedida[]",
-          "linea": 87,
-          "resumen": "Cruza el plan de ventanas (fechas) con los aforos de los pisos y la cobertura fiable ya medida, y devuelve las `max` que más falta hacen. Orden de urgencia, y el porqué de cada nivel: 1. **Nunca medid"
+          "linea": 182,
+          "resumen": "Envoltura histórica: solo la lista. Nuevos usos, mejor `planDeVentanas` (declara el recorte)."
         },
         {
           "nombre": "detalleIngesta",
@@ -65487,7 +65497,7 @@
           "exportada": true,
           "params": "r: { ventanas: number comps: number sinRespuesta: number sinPrecio: number errores: string[] }",
           "retorno": "string",
-          "linea": 139,
+          "linea": 198,
           "resumen": "Parte de la pasada para el latido. Igual que en el barrido por búsqueda, **lo que NO se pudo medir va primero**: una ventana que el conector no contestó es «no lo sé», no «no hay mercado», y confundir"
         },
         {
@@ -65496,13 +65506,13 @@
           "exportada": true,
           "params": "r: { ventanas: number comps: number sinRespuesta: number errores: string[] }",
           "retorno": "boolean",
-          "linea": 162,
+          "linea": 221,
           "resumen": "¿Vale la pasada? Conservador igual que `barridoFiable`: hace falta haber MEDIDO algo y que la mayoría de lo intentado haya respondido. Una pasada que pide 12 ventanas y solo contesta 1 no es «poco mer"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4aa3c50284b6"
+      "hash": "ae9b2abf39db"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/mercado-ventanas.ts",
@@ -89530,6 +89540,6 @@
   ],
   "resumen": {
     "archivos": 2401,
-    "funciones": 6460
+    "funciones": 6461
   }
 }

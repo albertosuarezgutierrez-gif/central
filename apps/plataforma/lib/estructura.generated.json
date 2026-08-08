@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-08T14:20:27Z",
+  "generadoEn": "2026-08-08T14:33:48Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3987,6 +3987,10 @@
       "fecha": "08/08/2026"
     },
     {
+      "titulo": "🔴→🟢 Latido rojo de `sivra_mercado_sweep` — diagnosticado: NO investigar de nuevo (08/08/2026).",
+      "fecha": "08/08/2026"
+    },
+    {
       "titulo": "🔍 Rutinas de auditoría ampliadas (08/08/2026).",
       "fecha": "08/08/2026"
     },
@@ -4032,10 +4036,6 @@
     },
     {
       "titulo": "🤝 El auto-merge ya resuelve el conflicto que se repite todos los días (08/08/2026).",
-      "fecha": "08/08/2026"
-    },
-    {
-      "titulo": "📬 Cursor incremental en las alertas de portales — el cron ya no relee 300 correos al día (08/08/2026).",
       "fecha": "08/08/2026"
     }
   ],
