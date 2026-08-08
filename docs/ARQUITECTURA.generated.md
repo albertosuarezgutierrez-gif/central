@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-08T08:12:57Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-08T08:39:34Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -220,12 +220,12 @@
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - (08/08/2026) 🤝 El auto-merge ya resuelve el conflicto que se repite todos los días (08/08/2026).
 - (08/08/2026) 📎 Pasada diaria facturas-correo (08/08/2026).
+- (08/08/2026) 💳 El parser del extracto de tarjeta llevaba meses devolviendo CERO con el PDF real (08/08/2026).
+- (08/08/2026) 🤖 El agente contable dejaba de responder «no encuentro el cargo» a lo que no había mirado (08/08/2026).
 - (07/08/2026) 🧪 Prueba en vivo del auto-merge de rutinas (07/08/2026).
 - (07/08/2026) 🧾 Factura 47/2026 Jaime Salas (electricidad Socorro 24) archivada (07/08/2026).
+- (08/08/2026) 🧪 Prueba en vivo del resolver de conflictos (08/08/2026).
 - (07/08/2026) 🧹 Atasco de PRs de rutinas resuelto: 6 PRs cerrados en una pasada (07/08/2026).
 - (07/08/2026) 🤖 El carril 1 ya no depende de que la rutina pueda empujar a `main` (07/08/2026).
 - (06/08/2026) 📬 Pasada diaria facturas-correo (06/08/2026).
-- (06/08/2026) 🤝 Landing privada de partnership Teya (06/08/2026, auditoría diaria, PR #771).
-- 💶 ialimp: precio de plan y ahorro anual sin formato español (auditoría diaria, PR #1139).
-- (06/08/2026) 🐕 3er tramo del watchdog de trading + 2 crons rotos desde el 30/07 (06/08/2026).
 
