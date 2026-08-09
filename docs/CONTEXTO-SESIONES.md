@@ -22,6 +22,18 @@
 
 ---
 
+## 🤖 (09/08/2026) agentes-entrenador — pasada semanal (29/07→09/08): backlog sano, un fix trivial
+- Backlog de PRs `claude/*` abiertos: **5** (bajando desde 73→31 del barrido de Alberto de 29/07) —
+  sin crecimiento, sin necesidad de escalar. `FEEDBACK-AGENTES.md` sin pendientes.
+- Único fix: `psd2-health-check/SKILL.md` usaba la columna `fecha` (no existe; real
+  `fecha_operacion`, confirmado contra Supabase) — señalado el 05/08, corregido ahora.
+- Resto de fallos del rango (tope real de mercado-booking, sonda pricing en verde falso) ya
+  resueltos por PRs de sus propias sesiones (#1314, #1318) antes de esta pasada.
+- 🔇 Canal Telegram mudo (401, `ALERTA_TOKEN` desincronizado) — mismo síntoma recurrente desde 26/07,
+  avisado por push. Detalle completo en `docs/AGENTES-BITACORA.md`.
+
+---
+
 ## 🏛️ (08/08/2026) Subastas 3ª tanda: coste autoexplicativo, ITP valenciano al 9% y presupuesto del vigía — PR #1327
 - «Coste real estimado: 806.015,16€» se leía como valoración de mercado (pregunta de Alberto sobre
   SUB-JA-2026-264062): es el coste puerta abierta simulando el remate al 100% de la salida — el
