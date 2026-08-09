@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-09T11:27:29Z",
-  "sha": "77f32f2545742fcccb831f66ab89356e8df98c8d",
+  "generadoEn": "2026-08-09T12:00:11Z",
+  "sha": "041d962489722c468496e431780e4d02615f0d43",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -51148,12 +51148,12 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 9
+          "linea": 10
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/paper-tracker",
-      "hash": "10c3e2441815"
+      "hash": "0ab308bd5a25"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/patrones-fiscal-refresh/route.ts",
@@ -54930,7 +54930,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "7deeba4a3f79"
+      "hash": "19a8d0d292ee"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -65912,23 +65912,33 @@
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-demanda.ts",
       "ambito": "apps/plataforma",
-      "resumen": "lib/sivra/pricing-demanda.ts — el descuento por ocupación baja NO aplica a fechas cuya ventana de venta aún no ha abierto. POR QUÉ (09/08/2026, auditoría tras la reserva de Luxury 16-18/10). El motor calcula UN factor de demanda por piso (`1 + (ocupación − baseline) × k`, suelo ×0,92) con la ocupaci",
+      "resumen": "lib/sivra/pricing-demanda.ts — el factor de demanda de UNA fecha: qué ocupación lo mueve y cuándo esa ocupación significa algo. POR QUÉ, PARTE 1 (09/08/2026, auditoría tras la reserva de Luxury 16-18/10). El motor calcula UN factor de demanda por piso (`1 + (ocupación − baseline) × k`, suelo ×0,92) ",
       "exporta": [
+        "factorDemanda",
         "factorDemandaFecha"
       ],
       "funciones": [
+        {
+          "nombre": "factorDemanda",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { ocupacion: number; baseline: number; k: number }",
+          "retorno": "number",
+          "linea": 51,
+          "resumen": "La misma fórmula que la SQL, en JS, para poder alimentarla con la ocupación de un mes concreto."
+        },
         {
           "nombre": "factorDemandaFecha",
           "kind": "function",
           "exportada": true,
           "params": "i: DemandaFechaInput, o: DemandaFechaOpts = {}",
           "retorno": "DemandaFechaResult",
-          "linea": 44
+          "linea": 87
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fda11ba3ee29"
+      "hash": "c71b9aa1afbc"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-engine.ts",
@@ -89934,6 +89944,6 @@
   ],
   "resumen": {
     "archivos": 2407,
-    "funciones": 6496
+    "funciones": 6497
   }
 }

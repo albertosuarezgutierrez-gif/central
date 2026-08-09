@@ -32,6 +32,7 @@
 
 ---
 
+### ✅ (09/08/2026) Pasada diaria de trading completada — 2 PRs mergeados en caliente para arreglar `date - bigint`
 ### 🔀 (09/08/2026) Backlog de PRs revisado y drenado: 3 mergeados, 1 superado, 2 a decisión
 - Revisión "que no sea antiguo lo pendiente": mergeados #1304 (informe auditoría 08/08), #1329
   (auditoría profunda 09/08 + landmines subastas en CLAUDE.md + watchdog 3 tramos en RUTINAS) y
@@ -46,13 +47,34 @@
 ### 🔴 (09/08/2026) Pasada diaria de trading BLOQUEADA desde el despliegue de la guardia de precios — fix en PR draft
 - Rutina `trading-analista`: NAV IBKR (33.328,17€) empujado a `/banca` OK; watchlist + histórico de 16
   símbolos bajado sin incidencias. `POST /api/trading/analizar` devolvía **500 en cada intento** (payload
-  completo y mínimo de prueba) → pasada terminada sin inventar cifras, avisado por Telegram.
-- Causa: `lib/trading/precios-guardia`-related query en `analizar/route.ts` hace `fecha - DIAS_REFERENCIA_MAX`
-  sin castear la constante; Prisma la manda `bigint`, Postgres no define `date - bigint`. Rota desde que se
-  desplegó esa guardia (post-incidente CVX 03/08) — **toda pasada de análisis desde entonces ha fallado en
-  silencio** para quien no mirara `get_runtime_errors`.
-- Fix de una línea (`::int`) verificado byte a byte contra Supabase. **PR #1340 (draft), pendiente merge +
-  redeploy + reintentar la pasada.**
+  completo y mínimo de prueba) → causa raíz: `lib/trading/precios-guardia`, query hace
+  `fecha - DIAS_REFERENCIA_MAX` sin castear la constante, Prisma la manda `bigint`, Postgres no define
+  `date - bigint`. Rota desde que se desplegó esa guardia (post-incidente CVX 03/08) — toda pasada de
+  análisis desde entonces había fallado en silencio.
+- Fix de una línea (`::int`), verificado byte a byte contra Supabase. **PR #1340 mergeado a petición de
+  Alberto** ("mergea"); tras el redeploy se encontró el MISMO bug sin corregir en `/puntuar` (copia literal
+  de la query, no cubierta por #1340) → **PR #1341**, mismo fix, mergeado también.
+- Pasada completada tras los dos redeploys: 14/16 símbolos analizados (SNDK/WDC vetados por la guardia de
+  suplantación), 2 compras paper nuevas (NVO 90u@47,26€, PLTR 17u@172,01€), 24 tesis puntuadas walk-forward,
+  0 stops. Resumen enviado por Telegram.
+- **Fase 2 (dinero real):** Alberto preguntó por adelantar el plazo — recordado que ya existe
+  `docs/TRADING-HIPOTESIS-PREREGISTRO.md` § «Plan de despliegue de capital REAL» (firmada 05/08): la
+  escalera la suben las SEÑALES, no el calendario (`lib/trading/puerta-fase2.ts`). Estado real hoy:
+  cohortes paper en 14-16 de los 120 días que exige el Tramo 2 (~12%). Verificado que el cron semanal
+  `paper-tracker` (lunes 10:00 UTC) NO está roto — el dato del 03/08 es el último lunes, no un fallo.
+- **Watchlist ampliada** (`trading_watchlist`, capa C): +**ORCL** (a petición expresa, con caveat: la
+  tesis de rebote en EMA100 mensual que la motivaba ya fue REFUTADA por H8 y tuvo un incidente de datos
+  serio el 31/07); +**BKNG**/+**APP** (únicos `guru:true` del top-20 del radar factorial 03/08 no
+  presentes en la watchlist); +**SQM**/+**CHT** (mejor calidad restante del top-20, sector diverso —
+  litio/materiales y telecom, sin solapar con lo ya cableado). `trading_cantera` (pipeline de
+  descubrimiento IBKR-temas+FMP) sigue vacía — no se ha ejecutado ese flujo, es un mecanismo distinto
+  del radar factorial usado aquí.
+- **Decisión explícita: NO maximizar la watchlist.** Alberto preguntó por meter "el máximo posible" de
+  símbolos; se explicó y se decidió NO hacerlo — más símbolos no acelera Fase 2 (gate por antigüedad de
+  cohorte, tabla `trading_paper_track`, no por nº de tickers de la watchlist diaria), y sí infla el
+  fetch secuencial de IBKR (techo 300s en `/analizar`) y arriesga meter ruido/correlación en las
+  estadísticas de `trading_estrategia_stats`. Watchlist final: **21 símbolos** (3 índices, 10 capa B,
+  8 capa C). Alberto delegó la decisión final ("lo dejo en tu decisión").
 
 ### 🛡️ (09/08/2026) Auditoría PROFUNDA semanal — todo verde, PR #1329
 Pasada completa `auditoria-central` (no solo la ligera): typecheck 0 errores en las **8 apps**, tests
@@ -170,6 +192,17 @@ completo `docs/AUDITORIA-2026-08.md`.
 - Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
+## 💹 (09/08/2026) La palanca de DEMANDA ya mira el MES, no el año — PR #1323 (draft, rehecho sobre #1337)
+- #1337 (mergeado el 09/08) quitó el castigo a las fechas sin abrir, pero el `occ` de `pricing/apply`
+  seguía siendo UNA ocupación anual por piso: el mes que se LLENA no podía subir el precio.
+- #1323 se rehízo encima: consulta nueva de ocupación por piso+mes y `factorDemandaFecha`
+  (`pricing-demanda.ts`) decide las dos cosas a la vez. Módulo único, +8 tests (1.075 verdes).
+- 🚨 Trampa medida ANTES de darlo por bueno: usar el mes sin poder juzgar su ventana es PEOR que el bug
+  — con muestra de antelación <10 (House jun/jul-2027) el 0% de un mes sin abrir hundía al suelo 0,92.
+  Regla: la ocupación del mes solo se usa si la ventana es JUZGABLE; si no, factor global de siempre.
+- Efecto real medido: 41 de 1.460 noches. House sept **+4,1%** (30 fechas); 11 fechas de agosto bajan
+  ≤1,4%. Mucho menor que el +7,6% que se midió antes de #1337: aquel ya se llevó casi todo.
+- Pendientes ya declarados: buckets feb→jul-2027, 23-oct/27-nov sin catalogar, `seasonal_floor_k` 0 vs 1.
 
 ### 🧱 (08/08/2026) Bandeja «cargos duplicados» de /banca responsive en móvil — PR #1319
 - Captura de Alberto: en móvil las filas desbordaban (chips `flexShrink:0` + importe fuera de pantalla).
