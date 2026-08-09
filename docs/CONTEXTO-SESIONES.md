@@ -52,6 +52,11 @@
   alertas ya cubren Gijón/Villaviciosa/Llanes): lente 93 viviendas, 15 chollos 🌊, 0 falsos positivos del
   sur. El fix #1347: un descuento de derribo (>50%) saca de la lente (la derruida de Llanes salía 1ª con
   −73% y título limpio — la doctrina del peaje de obra aplica también aquí). Prod desplegado y verificado.
+- **Refinada por Alberto y MERGEADA (#1349):** solo CASAS (pisos fuera), tope 230.000€, +Islantilla
+  como zona preferente; orden rebajadas→particular→descuento (ordenan, NO filtran — exigir rebaja
+  escondería el recién publicado mal preciado). `dedupeRelistados`: Idealista re-publica con ref nuevo
+  (piso de Ceares duplicado en la UI, verificado en BD) — colapso por (portal,título,precio,m²) al corpus
+  entero. Corpus real: 11 casas ≤230k (Villaviciosa −49%, 6 adosados Islantilla), 43 re-listados fuera.
 - Ojo: la lente solo ve las alertas guardadas — para vigilar más norte, crear alertas de Idealista en
   esas zonas. Galicia/Euskadi pendientes de que Alberto las pida (patrón Cádiz).
 
