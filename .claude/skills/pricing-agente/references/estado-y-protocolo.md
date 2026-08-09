@@ -11,6 +11,16 @@
   ponderado `1 + (factor−1) × confianza × 0,5` (riesgo asimétrico: inflar y bajar a tiempo es
   recuperable; no inflar y que cuaje, no). Cerca de la fecha se retira solo (vuelve a solo-suelo);
   el confirmado sigue al factor pleno. `eventos-estado.ts` v2 + `diasVista` desde el motor.
+- **SIN techo de precio, A PROPÓSITO (decisión de Alberto, 09/08/2026):** `max_price` se queda NULL
+  en los 4 pisos — «no tope! final copa rey hay q aprovechar!! … siempre hay tiempo de ir bajando
+  precio». NO volver a proponer techos.
+- **Last-minute ENCENDIDO (decisión de Alberto, 09/08/2026):** `lastminute_k = 0.5` en los 4 pisos
+  (descuento máx. 12,5% el día de entrada, curva cuadrática desde la antelación mediana por
+  piso/mes; inerte sin muestra ≥10). Su condición: «que ganemos dinero, si no prefiero no vender
+  esa noche» — la cumple el orden del motor (el descuento va ANTES de `min_price`, del suelo
+  estacional y del raíl; noches de evento factor ≥1,15 no se rebajan). De paso,
+  `seasonal_floor_k` 0→1 en Dúplex/House (venían del dry-run) para que la urgencia no perfore la
+  temporada. SQL registro: `prisma/sql/2026-08-09_lastminute_activado.sql` (aplicado).
 
 ### Actualización 09/08/2026 — la venta bajo mercado del finde tenía TRES causas (reparadas)
 Disparador: 3ª reserva bajo el p50 de su fecha exacta (Luxury 16-18/10 a −36% efectivo; antes 18/09
