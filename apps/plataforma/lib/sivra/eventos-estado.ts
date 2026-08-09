@@ -10,20 +10,27 @@
 // justamente la buena: con 6 meses por delante, el raíl de ±%/día tiene tiempo de sobra para llegar
 // al precio; con 3 semanas, ya no.
 //
-// LA DECISIÓN CENTRAL — un evento previsto NO toca el precio objetivo, solo el suelo.
+// LA DECISIÓN CENTRAL (v2, 09/08/2026, decisión de Alberto) — un previsto LEJANO sí puede subir el
+// precio, PONDERADO por su confianza; cerca de la fecha vuelve a ser solo-suelo.
 //
-// Porque los dos errores no cuestan lo mismo:
-//   · Proteger el suelo de una fecha que al final no era nada → unas noches sin vender a precio
-//     bajo, en una fecha que probablemente tampoco se habría vendido al mínimo. Recuperable.
-//   · NO protegerla y que sí fuera la final → esa noche se vendió a precio de sábado corriente y no
-//     vuelve. Irrecuperable.
-// Subir el PRECIO por una noticia de prensa, en cambio, sería inventarse demanda que nadie ha
-// comprado todavía: el centinela #7 («evento sin respaldo de mercado») tendría toda la razón al
-// saltar, y con razón. Así que la previsión entra por la puerta del suelo, no por la del precio.
+// La v1 (01/08) dejaba a los previstos solo el suelo, para no «inventarse demanda que nadie ha
+// comprado». Alberto le dio la vuelta con el argumento correcto de teoría de decisión: el riesgo es
+// ASIMÉTRICO cuando la fecha está lejos.
+//   · Inflar y que el evento no cuaje → se baja a tiempo (el raíl ±%/día tarda 2-3 pasadas) y a
+//     meses vista apenas había reservas que perder. Recuperable.
+//   · NO inflar y que cuaje → las reservas que entraron ANTES de la confirmación se fueron a precio
+//     de sábado corriente. Irrecuperable (el caso Karol G, otra vez).
+// Por eso el premio de un previsto va PONDERADO (`1 + (factor−1) × confianza × peso`), nunca al
+// factor pleno: la final de Copa tiene DOS fechas candidatas y solo una será verdad — inflarlas
+// ambas al 100% sobrevalora una seguro; ponderar reparte la apuesta. Y SOLO a distancia
+// (`diasVistaMinimosPrecio`): un rumor a dos semanas no da tiempo a deshacerse. Al acercarse la
+// fecha sin confirmarse, el premio se retira SOLO (el gate de distancia deja de cumplirse) — la
+// «bajada a tiempo» no depende de que nadie se acuerde.
 //
-// El camino completo de un previsto: la prensa lo propone → protege suelo + entra en el barrido de
-// mercado + avisa a Alberto → cuando el mercado sube (o Ticketmaster lo publica) pasa a confirmado y
-// ya sí tarifica. Si era falso, Alberto lo descarta y no se vuelve a proponer.
+// El camino completo de un previsto: la prensa lo propone → premio ponderado (si está lejos) +
+// suelo + entra en el barrido de mercado + avisa a Alberto → cuando el mercado sube (o Ticketmaster
+// lo publica) pasa a confirmado y tarifica al factor pleno. Si era falso, Alberto lo descarta y no
+// se vuelve a proponer.
 //
 // ⚠️ ALCANCE REAL DE LA PROTECCIÓN DE SUELO — medido, no supuesto (01/08/2026).
 // El factor de suelo que sale de aquí pasa DESPUÉS por `seasonalFloorFactor`, que lo vuelve a
@@ -69,6 +76,18 @@ export type EfectoOpts = {
   pesoSueloPrevisto?: number
   /** a partir de aquí una fecha cuenta como evento para el barrido */
   factorMinimo?: number
+  /**
+   * Cuánto del premio (ya ponderado por confianza) se concede al PRECIO de un previsto LEJANO.
+   * 0.5 por la misma razón que el suelo: apuesta, no hecho.
+   */
+  pesoPrecioPrevisto?: number
+  /** días vista mínimos para que un previsto toque el PRECIO (cerca no hay tiempo de deshacer) */
+  diasVistaMinimosPrecio?: number
+  /**
+   * Días que faltan para la fecha (contexto de la llamada, no configuración). Sin él —o negativo—
+   * el previsto NO toca el precio: es el comportamiento clásico y el conservador.
+   */
+  diasVista?: number | null
 }
 
 export function normalizarEstado(v?: string | null): EstadoEvento {
@@ -111,15 +130,22 @@ export function efectoDeEvento(e: EventoBruto, o: EfectoOpts = {}): EfectoEvento
 
   // El suelo recorre parte del camino hacia el factor, nunca todo.
   const factorSuelo = 1 + (factor - 1) * peso
+  // El PRECIO solo con la fecha LEJOS, y ponderado por confianza (v2, decisión de Alberto 09/08).
+  const pesoPrecio = o.pesoPrecioPrevisto ?? 0.5
+  const diasMinimos = o.diasVistaMinimosPrecio ?? 60
+  const lejos = o.diasVista != null && Number.isFinite(o.diasVista) && o.diasVista >= diasMinimos
+  const factorPrecio = lejos ? 1 + (factor - 1) * confianza * pesoPrecio : 1
   return {
-    factorPrecio: 1,
+    factorPrecio,
     factorSuelo,
     // Un previsto SIEMPRE merece barrido si llega a la confianza mínima: medirlo es justo lo que
     // permite confirmarlo o tirarlo, y sin comps se queda en el limbo para siempre.
     mereceBarrido: true,
-    motivo:
-      `previsto (x${factor}, confianza ${confianza}): NO mueve el precio, ` +
-      `protege el suelo a x${factorSuelo.toFixed(2)} y pide mercado`,
+    motivo: lejos
+      ? `previsto (x${factor}, confianza ${confianza}) a ${o.diasVista} días: premio ponderado ` +
+        `x${factorPrecio.toFixed(2)}, suelo x${factorSuelo.toFixed(2)} y pide mercado`
+      : `previsto (x${factor}, confianza ${confianza}): cerca o sin días vista NO mueve el precio, ` +
+        `protege el suelo a x${factorSuelo.toFixed(2)} y pide mercado`,
   }
 }
 

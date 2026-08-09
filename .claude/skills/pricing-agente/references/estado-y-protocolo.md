@@ -2,6 +2,16 @@
 
 ## Estado vivo (13/07/2026) — leer al empezar el ciclo
 
+### Actualización 09/08/2026 (tarde) — los 4 pisos EN VIVO bajo el motor; PriceLabs de baja; previstos v2
+- **Los 4 pisos tienen `apply_enabled=true` y `channel_markup=1.0`** (OK explícito de Alberto: «el
+  agente coge las riendas de los 4 apartamentos»). PriceLabs: Busto/Luxury ya estaban desconectados;
+  Alberto pausó Dúplex/House el 09/08 ~15:00 UTC (medido antes: PL les hacía 1.140/1.653 escrituras
+  sin motor en la semana). La curva PL quedó persistida en `pricing_pl_referencia` (caduca a 120 días).
+- **Eventos `previsto` v2 (decisión de Alberto):** un previsto LEJANO (≥60 días) SÍ sube el precio,
+  ponderado `1 + (factor−1) × confianza × 0,5` (riesgo asimétrico: inflar y bajar a tiempo es
+  recuperable; no inflar y que cuaje, no). Cerca de la fecha se retira solo (vuelve a solo-suelo);
+  el confirmado sigue al factor pleno. `eventos-estado.ts` v2 + `diasVista` desde el motor.
+
 ### Actualización 09/08/2026 — la venta bajo mercado del finde tenía TRES causas (reparadas)
 Disparador: 3ª reserva bajo el p50 de su fecha exacta (Luxury 16-18/10 a −36% efectivo; antes 18/09
 −40% y 06/11 −43%). Detalle completo en `docs/AUDITORIA-2026-08-precios-dinamicos.md` (adenda 09/08):
