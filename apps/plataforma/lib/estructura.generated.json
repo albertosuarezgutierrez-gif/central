@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-09T21:03:27Z",
+  "generadoEn": "2026-08-09T21:22:49Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4003,6 +4003,10 @@
       "fecha": ""
     },
     {
+      "titulo": "4ª ronda:",
+      "fecha": ""
+    },
+    {
       "titulo": "Decisión de Alberto:",
       "fecha": ""
     },
@@ -4032,10 +4036,6 @@
     },
     {
       "titulo": "El `channel_markup` 1,16 NO existe en el escaparate",
-      "fecha": ""
-    },
-    {
-      "titulo": "Ancla suave por fecha",
       "fecha": ""
     }
   ],

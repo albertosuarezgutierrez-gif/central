@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-09T21:02:51Z",
-  "sha": "721e13e93149de963951889e077b88399a416189",
+  "generadoEn": "2026-08-09T21:22:49Z",
+  "sha": "7b20393de1ed684a42b850bb1524ed49435dc83f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47644,7 +47644,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "de264f16afea"
+      "hash": "56caa0c290f9"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -67437,7 +67437,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "35ee12f8797a"
+      "hash": "3970d23d7679"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/nota-simple.ts",
@@ -87052,7 +87052,7 @@
           "exportada": false,
           "params": "texto: string, termino: string",
           "retorno": "boolean",
-          "linea": 150,
+          "linea": 159,
           "resumen": "¿El texto contiene el término como PALABRA completa? Un `includes` a secas ya mordió con núcleos cortos («isla» dentro de «Islantilla»): se exige frontera de palabra a ambos lados."
         },
         {
@@ -87061,7 +87061,7 @@
           "exportada": true,
           "params": "zona: string | null | undefined, titulo?: string | null",
           "retorno": "'Asturias' | 'Cantabria' | null",
-          "linea": 171,
+          "linea": 180,
           "resumen": "Costa a la que pertenece el anuncio, mirando su zona y su título (las alertas no traen municipio estructurado: la zona es texto libre del portal, «Barrio d'Arriba, Colunga»). `null` = no es costa nort"
         },
         {
@@ -87070,7 +87070,7 @@
           "exportada": true,
           "params": "zona: string | null | undefined, titulo?: string | null",
           "retorno": "boolean",
-          "linea": 181,
+          "linea": 190,
           "resumen": "La costa norte como booleano, para etiquetar sin nombrar la costa."
         },
         {
@@ -87079,7 +87079,7 @@
           "exportada": true,
           "params": "zona: string | null | undefined, titulo?: string | null,",
           "retorno": "ZonaPreferente | null",
-          "linea": 189,
+          "linea": 198,
           "resumen": "Zona de la preferencia completa: costa norte, Islantilla o Matalascañas."
         },
         {
@@ -87088,7 +87088,7 @@
           "exportada": true,
           "params": "zona: string | null | undefined, titulo?: string | null",
           "retorno": "boolean",
-          "linea": 203,
+          "linea": 212,
           "resumen": "¿Está en alguna zona preferente? (para la etiqueta 🌊 de los chollos)."
         },
         {
@@ -87097,7 +87097,7 @@
           "exportada": true,
           "params": "titulo: string | null | undefined",
           "retorno": "boolean",
-          "linea": 213,
+          "linea": 222,
           "resumen": "¿El anuncio es una CASA (chalet/adosado/pareado/casona) y no un piso? Se decide por el título, que el portal siempre encabeza con el tipo («Casa o chalet independiente en…», «casa adosada en…», «Piso "
         },
         {
@@ -87106,7 +87106,7 @@
           "exportada": true,
           "params": "c: Comparable",
           "retorno": "boolean",
-          "linea": 224,
+          "linea": 233,
           "resumen": "¿Nada en el anuncio delata obra? OJO: esto NO confirma «buen estado» — el correo de alerta no trae la descripción ni fotos. Dice exactamente que ni el título confiesa reforma ni la API lo marcó `a ref"
         },
         {
@@ -87115,7 +87115,7 @@
           "exportada": true,
           "params": "comparables: Comparable[]",
           "retorno": "Comparable[]",
-          "linea": 237,
+          "linea": 246,
           "resumen": "Colapsa los RE-LISTADOS del mismo portal: Idealista re-publica el mismo anuncio con un `ref` nuevo (visto en prod el 09/08/2026: el piso de Ceares salía DOS veces, refs 112188897 y 112233004, idéntico"
         },
         {
@@ -87124,13 +87124,13 @@
           "exportada": true,
           "params": "comparables: Comparable[], zonasPortal?: ZonaPortalRef[]",
           "retorno": "Preferente[]",
-          "linea": 273,
-          "resumen": "CASAS ≤230.000€ de las zonas preferentes, sin señales de obra, con su comparación de zona si existe. Orden: primero las que YA HAN BAJADO de precio (más bajadas antes), luego las de particular, luego "
+          "linea": 283,
+          "resumen": "CASAS ≤230.000€ de las zonas preferentes (Matalascañas sin tope), sin señales de obra, con su comparación de zona si existe. Orden: primero las que YA HAN BAJADO de precio (más bajadas antes), luego l"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d92629f01ad8"
+      "hash": "9336dfccbe1a"
     },
     {
       "ruta": "packages/module-subastas/src/costes.ts",
