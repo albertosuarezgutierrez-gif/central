@@ -32,6 +32,17 @@
 
 ---
 
+### 🔴 (09/08/2026) Pasada diaria de trading BLOQUEADA desde el despliegue de la guardia de precios — fix en PR draft
+- Rutina `trading-analista`: NAV IBKR (33.328,17€) empujado a `/banca` OK; watchlist + histórico de 16
+  símbolos bajado sin incidencias. `POST /api/trading/analizar` devolvía **500 en cada intento** (payload
+  completo y mínimo de prueba) → pasada terminada sin inventar cifras, avisado por Telegram.
+- Causa: `lib/trading/precios-guardia`-related query en `analizar/route.ts` hace `fecha - DIAS_REFERENCIA_MAX`
+  sin castear la constante; Prisma la manda `bigint`, Postgres no define `date - bigint`. Rota desde que se
+  desplegó esa guardia (post-incidente CVX 03/08) — **toda pasada de análisis desde entonces ha fallado en
+  silencio** para quien no mirara `get_runtime_errors`.
+- Fix de una línea (`::int`) verificado byte a byte contra Supabase. **PR #1340 (draft), pendiente merge +
+  redeploy + reintentar la pasada.**
+
 ### 🧹 (09/08/2026) «Estado actual» podado: el vivo baja de 121 KB a ~15 KB por sesión
 - La sección acumulaba 42 bloques (1.212 de 1.329 líneas, ~30k tokens de peaje en CADA
   sesión) porque la rotación mensual no la tocaba. Contenido ÍNTEGRO movido a
