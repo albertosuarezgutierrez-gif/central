@@ -22,7 +22,15 @@
 
 ---
 
-## 🧾 (09/08/2026) facturas-correo: pasada diaria, Vía B sana, sin pendientes nuevos
+## 💶 (09/08/2026) Verificación reserva Luxury 16-18/10: 3ª venta bajo el p50 de fecha exacta
+- Reserva Booking (Genius, 5p): 341,74€/2 noches = 170,87€/noche efectivo; lista 194€ (el motor
+  bajó 208→194 el 08/08 14:30, reserva entró el 09/08 08:36). p50 real de esas fechas (comps 5p,
+  barrido 09/08): 275€ (vie) / 258,50€ (sáb) → −27% en lista, −36% efectivo, bajo el p25.
+- Causa: hueco conocido finde-sin-evento — ratio fecha/mes 1,1 < umbral 1,5 del premio de mercado
+  → tarifica por bucket octubre (p50 250€) + descuento de demanda (ocupación ~12%). Mismo patrón
+  que 06/11 (−43%) y 18/09 (−40%). Margen sano (coste 29,70€/noche); no ruinosa, sí barata.
+- Sin cambios de código; el guardián debería avisar `reserva_bajo_mercado` en su cron. Pendiente
+  (ya apuntado en skill): bajada last-minute real + revisar si el premio 1,5× deja escapar findes.
 - Vía B sana (`dias_caido=1`), sin backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida`, 0
   candidatos nuevos en Gmail ni subidas manuales.
 - Cerrado 1 pendiente de días atrás: recibo Anthropic/Claude Max (180€, 05/08) archivado en Drive
