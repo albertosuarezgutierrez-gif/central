@@ -1,5 +1,12 @@
 # Precio automático (pricing dinámico) — SIVRA
 
+> **🟢 Actualización 09/08/2026 — los 4 pisos tarifican con el motor propio; PriceLabs DE BAJA.**
+> El motor anclado a mercado (`apps/plataforma/app/api/sivra/pricing/apply/route.ts`, cron
+> `apply-auto` 3×/día) escribe los precios de los 4 pisos en Smoobu. PriceLabs quedó pausado y
+> cancelado ese día (su última curva persiste en `pricing_pl_referencia` como referencia, 120 días).
+> Las menciones a PriceLabs de este documento son HISTÓRICAS. La columna
+> `rate_snapshots.price_pricelabs` conserva su nombre legacy pero es el precio real vivo en Smoobu.
+
 > **Objetivo de negocio:** convertir esto en un **producto vendible** (automatización de
 > pricing para pisos turísticos). Premisa: **no puede fallar** — un precio mal puesto es
 > dinero perdido o una reserva perdida para el cliente. Este documento es la fuente de

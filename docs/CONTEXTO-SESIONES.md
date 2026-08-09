@@ -32,6 +32,15 @@
 
 ---
 
+### ⏳ (09/08/2026) Last-minute encendido · sin techo de precio (decisión) · barrido PL de baja
+- **Decisión de Alberto (2 palancas):** (1) **SIN techo** — `max_price` queda NULL a propósito
+  («no tope! final copa rey hay q aprovechar»; el raíl permite bajar a tiempo). NO re-proponer.
+  (2) **Last-minute ON**: `lastminute_k=0.5` en los 4 pisos, con su condición «que ganemos dinero,
+  si no prefiero no vender» — cubierta porque el descuento va ANTES de min_price/suelo estacional/raíl
+  y las noches de evento no se rebajan. De paso `seasonal_floor_k` 0→1 en Dúplex/House (venían del
+  dry-run). SQL registro: `prisma/sql/2026-08-09_lastminute_activado.sql` (aplicado ~16:00 UTC).
+- **Barrido «PriceLabs de baja»** en memoria/skills/facturas-control/UI → PR #1345 (draft).
+
 ### 🌊 (09/08/2026) Lente costa norte en mercado: preferencia por viviendas de playa Asturias/Cantabria
 - **Preferencia de Alberto** (con una casona en Colunga, 235.000€/257 m²/~914€/m²): «da preferencia a
   casas como estas, cerca de playa en el norte». Nueva lente PURA `costa-norte.ts` en `module-subastas`

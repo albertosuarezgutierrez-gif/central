@@ -63,8 +63,10 @@ graba la regla `comercio → destino` y se aplica a los iguales (pasados y futur
 - **GENERALI seguro coche** → lo mete en **correduría** como gasto (decisión de Alberto), pero **SIN
   regla global** (GENERALI es nombre de aseguradora; una regla rompería la detección de comisiones):
   se reclasifica solo ese recibo.
-- **PriceLabs/DynaPrice** → pisos (ya auto). Mandan **factura por email en PDF** → deben archivarse
-  TODAS en Drive (justificante, vía `facturas-correo`).
+- **PriceLabs/DynaPrice** → pisos (ya auto). ⚠️ **PriceLabs DE BAJA 09/08/2026** (los 4 pisos
+  tarifican con el motor propio): no se esperan facturas nuevas — como mucho una última en agosto,
+  que se archiva en Drive como siempre. Los cargos históricos del banco siguen clasificándose a
+  pisos (la regla `PRICELABS|DYNAPRICE` de `lib/destino.ts` se queda para el histórico).
 - **Prestaciones EXENTAS de IRPF (12/07/2026, PR #843) — resuelve el pendiente de la «baja»:** la
   prestación por nacimiento y cuidado del menor (paternidad) que Alberto cobra como autónomo llega a
   la correduría (BBVA, `destino='seguros'`) pero está **EXENTA** (Art. 7.h LIRPF): se marca
@@ -107,7 +109,8 @@ sugerencia IA y badge de justificante (📎 con factura / ❗ sin justificante �
   comercios; NO se aplican a cuentas del cónyuge).
 - **Siguientes fases (pendientes):** agrupar la bandeja por comercio (1 decisión = todos los iguales),
   sugerencia IA en bloque + auto-proponer reglas recurrentes, y justificante automático
-  (`facturas-correo` archiva los PDF de email en Drive y concilia; **PriceLabs al 100%**).
+  (`facturas-correo` archiva los PDF de email en Drive y concilia; PriceLabs de baja 09/08/2026 —
+  solo quedan sus facturas históricas).
 - **`movimientos_bancarios.amortizable`** (BOOLEAN): marca el cargo como inmovilizado (mobiliario/obra
   — ver regla de clasificación arriba). Los amortizables se **excluyen del gasto deducible del año** y
   se listan aparte (nota en base imponible + sección del CSV `/api/finanzas/gastos/export` para la

@@ -24,7 +24,7 @@ prob_reserva`. Reglas:
 | Comps históricos por `checkin_date` | tabla `market_rates` (barrido `/api/mercado/sweep`) |
 | Eventos (puentes/festivos + aforo) | `apps/sivra/lib/pricing-calendar.ts` (`eventFactor`) + tabla `pricing_eventos_auto` (Ticketmaster) |
 | Ocupación + antelación de reserva | tablas `rate_snapshots` (`available`, `was_booked`), `incomes` |
-| **Precio VIVO de un piso hoy** | `rate_snapshots.price_pricelabs` (pese al nombre = precio real en Smoobu) o `pricing_applied.new_price`. **NUNCA `price_ours`** — ver trampa abajo |
+| **Precio VIVO de un piso hoy** | `rate_snapshots.price_pricelabs` (nombre LEGACY: es el precio real en Smoobu; PriceLabs de baja 09/08/2026) o `pricing_applied.new_price`. **NUNCA `price_ours`** — ver trampa abajo |
 | Costes por piso (suelo) | `gastos_fijos`/`gastos` + limpieza (`coste_por_sesion`/`sesiones_con_precio`) + `channel_markup` |
 | Reglas por piso | tabla `pricing_settings` (`min_price`, `max_change_pct`, `apply_enabled`, percentiles…) |
 | **Memoria/aprendizaje** | tabla `pricing_aprendizaje` (se lee al empezar, se escribe al final) |
@@ -41,7 +41,8 @@ concluirás que "el motor tarifica al doble del mercado" cuando en realidad est�
 27/07 y volvió a pasar en la verificación del 31/07 (Busto agosto: `price_ours` 131-176€ congelado desde
 el 11/07, precio REAL 65-81€ contra un mercado de 80€). El aviso está en la cabecera de
 `app/api/sivra/rates/snapshot/route.ts`. **Para cualquier juicio sobre el nivel de precio usa
-`price_pricelabs` (precio real vivo en Smoobu) o `pricing_applied.new_price` (lo que escribió el motor).**
+`price_pricelabs` (nombre legacy, PL de baja 09/08/2026: es el precio real vivo en Smoobu) o
+`pricing_applied.new_price` (lo que escribió el motor).**
 `available` de esa misma tabla SÍ es real (viene de Smoobu) y es válido para ocupación.
 
 ## El ciclo (cada ~7 días; autónomo). Hazlo en este orden:

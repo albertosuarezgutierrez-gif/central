@@ -172,6 +172,18 @@ caza lo que las sesiones del día no anotaron a mano.
 | **El motor ya lo usa (08/08/2026, misma tarde)** | Con 19 ventanas más medidas a mano (190 comps), **ago-2026→ene-2027 tiene ≥3 fechas SIN evento por mes en los 4 pisos**, que es lo que exige `MIN_FECHAS_MES` — el bucket mensual está vivo y con él se activó `apply_enabled` en Dúplex y House. 🚨 **Al elegir qué fecha medir, cuenta las fechas que ve el MOTOR, no las que hay en la tabla**: el bucket excluye las fechas de evento del calendario del repo **y** de `pricing_eventos_auto`, así que un mes con 6 fechas medidas puede tener 1 elegible (le pasó a septiembre: la Feria/Bienal se come del 9 al 30). De feb a jul-2027 aún no hay bucket: esos meses caen al ancla global + prior estacional, que es el fallback de diseño. |
 | **Pendiente (fase 2)** | Cuando haya ≥3 fechas por mes con `fuente='booking_mcp'` **en todo el horizonte de 365 días** (hoy solo ago→ene): retirar `mercado/sweep` de `CRON_JOBS`, neutralizar las filas `serper` de fechas lejanas y quitar su latido. **No antes**: en feb→jul el bucket todavía lo sostiene Serper. |
 
+### 8-ter. Vigilancia diaria pricing SIVRA — *TEMPORAL, activa desde el 09/08/2026*
+> Pedida por Alberto el 09/08/2026 tras poner los 4 pisos bajo el motor propio (PriceLabs de baja,
+> last-minute activado): «haz seguimiento que todo vaya ok varios días hasta que confirme que todo
+> ok — septiembre empieza temporada». **Se BORRA cuando Alberto confirme** (`delete_trigger`).
+
+| | |
+|---|---|
+| **Cuándo** | Diaria, 09:00 UTC (tras el guardián de las 07:30 y la pasada de las 08:30) |
+| **Trigger** | `trig_01Eagedr3hBNtpf1oEgDHj5R` — self-bind a la sesión del 09/08 (hereda sus conectores, Supabase incluido; el parámetro `connectors` de la API no está disponible en esta organización) |
+| **Qué hace** | Verifica las últimas 24h: 3 pasadas `apply-auto` escritas en los 4 pisos · ningún precio bajo `min_price` ni fuera del raíl ±20% vs REF24 · PriceLabs sigue mudo en Dúplex/House · last-minute solo dentro de la antelación mediana y sin perforar suelos · alertas del guardián 07:30 · reservas nuevas no bajo el p50 fiable de su fecha |
+| **Si todo bien** | Una línea corta de confirmación a Alberto; si algo grave, pausa el motor (`pricing_config.paused=true`) y avisa con detalle |
+
 ### 9. Vigía GitHub/OSS — *pendiente de trigger*
 | | |
 |---|---|
