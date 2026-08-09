@@ -33,6 +33,18 @@
 ---
 
 ### ✅ (09/08/2026) Pasada diaria de trading completada — 2 PRs mergeados en caliente para arreglar `date - bigint`
+### 🔀 (09/08/2026) Backlog de PRs revisado y drenado: 3 mergeados, 1 superado, 2 a decisión
+- Revisión "que no sea antiguo lo pendiente": mergeados #1304 (informe auditoría 08/08), #1329
+  (auditoría profunda 09/08 + landmines subastas en CLAUDE.md + watchdog 3 tramos en RUTINAS) y
+  #1333 (entrenador: fix `fecha`→`fecha_operacion` en `psd2-health-check` + poda bitácora),
+  resolviendo sus conflictos de inserción contra el vivo podado. #1340 (::int trading) ya estaba en main.
+- **#1323 (demanda por mes) SUPERADO a medias:** main ya tiene OTRO `pricing-demanda.ts` (gateo por
+  antelación, 09/08) con API distinta; lo que #1323 añade de más (ocupación POR MES + boost
+  `mes-anticipado`) hay que rehacerlo sobre el código nuevo — no mergear tal cual (ver Estado vivo).
+- #1055 (mariscos) y #755 (CSV banca) siguen a decisión de Alberto. Verificado post-merge: CI verde
+  ×3, rotación 17/17 + dry-run limpio, 0 marcadores de conflicto, vivo en 17 KB.
+
+### 🔴 (09/08/2026) Pasada diaria de trading BLOQUEADA desde el despliegue de la guardia de precios — fix en PR draft
 - Rutina `trading-analista`: NAV IBKR (33.328,17€) empujado a `/banca` OK; watchlist + histórico de 16
   símbolos bajado sin incidencias. `POST /api/trading/analizar` devolvía **500 en cada intento** (payload
   completo y mínimo de prueba) → causa raíz: `lib/trading/precios-guardia`, query hace
@@ -203,6 +215,9 @@ completo `docs/AUDITORIA-2026-08.md`.
 
 - **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 09/08/2026).** Detalle en
   `docs/memoria/2026-08.md` y en los PRs citados.
+  - **Pricing SIVRA — PR #1323 a rehacer:** su mejora real (ocupación POR MES + boost de mes
+    anticipado, con 12 tests) quedó superada por el `pricing-demanda.ts` del 09/08 (gateo por
+    antelación, otra API); reimplementarla sobre el código nuevo y cerrar #1323 sin mergear.
   - **Pricing SIVRA (motor vivo en los 4 pisos):** aplicar `prisma/sql/2026-08-09_channel_markup_sin_recargo.sql`
     SOLO tras desplegar el código del 09/08. Decisión de Alberto pendiente: el bucket mensual mezcla
     Serper+Booking sin filtrar `fuente` (propuesta: preferencia condicional + `bucket_fuente`,
