@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-09T20:48:57Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-09T21:03:27Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -223,9 +223,9 @@
 - Preferencia de Alberto
 - MERGEADO
 - Refinada por Alberto y MERGEADA (#1349):
+- 3ª ronda (#1351, mergeado):
 - Decisión de Alberto:
 - PriceLabs:
 - Previstos v2 (idea de Alberto, riesgo asimétrico):
 - #1323 (demanda por mes) SUPERADO a medias:
-- Fase 2 (dinero real):
 

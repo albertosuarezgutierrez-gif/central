@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-09T20:48:57Z",
+  "generadoEn": "2026-08-09T21:03:27Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3999,6 +3999,10 @@
       "fecha": ""
     },
     {
+      "titulo": "3ª ronda (#1351, mergeado):",
+      "fecha": ""
+    },
+    {
       "titulo": "Decisión de Alberto:",
       "fecha": ""
     },
@@ -4032,10 +4036,6 @@
     },
     {
       "titulo": "Ancla suave por fecha",
-      "fecha": ""
-    },
-    {
-      "titulo": "ITP por CCAA",
       "fecha": ""
     }
   ],
