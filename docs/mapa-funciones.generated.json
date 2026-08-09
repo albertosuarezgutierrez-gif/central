@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-09T11:57:06Z",
-  "sha": "2126904fa1cdb8d1f2edb0938925799243a37e55",
+  "generadoEn": "2026-08-09T12:00:11Z",
+  "sha": "041d962489722c468496e431780e4d02615f0d43",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -51148,12 +51148,12 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 9
+          "linea": 10
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/paper-tracker",
-      "hash": "10c3e2441815"
+      "hash": "0ab308bd5a25"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/patrones-fiscal-refresh/route.ts",

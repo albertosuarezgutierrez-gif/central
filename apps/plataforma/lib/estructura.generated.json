@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-09T11:03:56Z",
+  "generadoEn": "2026-08-09T12:00:11Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3978,6 +3978,18 @@
     }
   ],
   "novedades": [
+    {
+      "titulo": "Fase 2 (dinero real):",
+      "fecha": ""
+    },
+    {
+      "titulo": "Watchlist ampliada",
+      "fecha": ""
+    },
+    {
+      "titulo": "Decisión explícita: NO maximizar la watchlist.",
+      "fecha": ""
+    },
     {
       "titulo": "El `channel_markup` 1,16 NO existe en el escaparate",
       "fecha": ""
