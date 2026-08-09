@@ -80,6 +80,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔭 Retrovisor de 15 años CERRADO y H8/H9 resueltas con el corpus entero (09/08/2026).** 1.009 de
+  1.018 filas con los 178 snapshots en ~12,5 h (9 sin precios en la fuente: AGGI, AZBLY, BSP, CONE,
+  HONA, INIO, QNT, SKHY, TRMOY). Cron `trading-backtest` devuelto de `*/30` a `10 */2`. **H8 rechazada
+  y ahora sin ambigüedad:** date-matched, mediana +0,77 pp y **94/178 fechas a favor (52,8%)**, con el
+  signo INVERTIDO en 2011-14 (−1,05 pp) — el spread agregado lo cargan unas pocas fechas de rebote.
+  **H9: stop −20% rechazado** (cuesta media y su cola es igual que sin stop); **stop −10% y trailing
+  −15% recortan el peor decil 7-16 pp a costa de 1,2-2,4 pp de media**, consistente en los 4
+  subperiodos — intercambio a decidir, no mejora gratis. 153.615 observaciones. Ninguna se cabla.
+
 ### 🐕 Decisión: `trading_puntuar` NO entra en AGENTES_VIGILADOS; el que faltaba era el vigía (08/08/2026)
 Alberto pidió meterlo; **no procede** y le dije que «nadie lo lee», que era FALSO: lo vigila
 `trading-watchdog` (tramo 3) y mejor, porque sabe qué días se espera pasada. Duplicarlo daría dos
