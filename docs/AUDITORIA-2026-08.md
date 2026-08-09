@@ -1,5 +1,90 @@
 # Auditoría diaria — agosto 2026
 
+# Actualización 2026-08-09 — auditoría PROFUNDA (semanal)
+
+Pasada completa `auditoria-central` (checklist entero: integridad, typecheck de las 8 apps, tests,
+seguridad/multi-tenant, deps, infra real por MCP) + heartbeat de crons/agentes + backlog de PRs de
+rutinas. Rango: desde la auditoría ligera de hoy 02:05 UTC (PR #1328, sin commits nuevos en `main`
+desde entonces) — foco en la cobertura profunda que la ligera se salta.
+
+## 🟢 Integridad estructural
+`pnpm install --frozen-lockfile` en sync. `auditar-estructura.mjs --check` al día. Grep `@iarest/`
+en código real: 0 (única mención es el propio guardián `test/regression-scope.test.ts`, esperado).
+Los 8 `apps/*/vercel.json` llevan el `ignoreCommand` obligatorio.
+
+## 🟢 Typecheck de las 8 apps
+`prisma generate` + `tsc --noEmit` en las 8 (ialimp, sivra, plataforma, rrhh, transporte, alquiler,
+almacen, ia-rest): **0 errores**.
+
+## 🟢 Tests
+`pnpm test` exit 0 — guardián raíz (26, incluye `regression-secrets`/`regression-scope`) + todos los
+`packages/*` y apps en verde (module-subastas 443, plataforma 1054, module-trading 112, rrhh 47,
+ialimp 22…). Cero fallos en todo el log.
+
+## 🟢 Seguridad + multi-tenant
+Sin secretos de auth con fallback a literal (los `|| ''` que aparecen son de API keys externas —
+Cloudinary, Google OAuth, Tuya, `CRON_SECRET` en headers salientes — no de firma/validación de
+sesión). Pasada ligera sobre queries sin `where` de tenant: los únicos candidatos (`property.findMany()`
+de sivra, módulo trading) son de apps de tenant único (los propios pisos/cartera de Alberto), no de
+las SaaS multi-cliente — sin fugas cross-tenant evidentes en ialimp/rrhh/transporte/alquiler/almacen/
+plataforma. Supabase advisors (compartida `wswbehlcuxqxyinousql`): **0 ERROR** en seguridad y
+rendimiento (solo WARN ya conocidos, mayoría `security_definer` de siempre).
+
+## 🟡 Deps (sin acción — documentado, no explotable)
+`pnpm audit`: 21 vulns (1 low/6 moderate/14 high), ninguna explotable en el uso real del repo:
+- `xlsx` (ialimp) — prototype pollution/ReDoS: solo **exporta** (nunca parsea entrada externa),
+  patrón ya documentado en `docs/AUDITORIA-2026-06-29.md`.
+- `pdfjs-dist` (ialimp) — riesgo es "JS arbitrario al abrir PDF malicioso" con `enableScripting=true`
+  y contexto navegador; aquí es transitiva de `pdf-parse`, extracción de texto server-side en Node,
+  sin DOM. Riesgo teórico bajo, no verificado a fondo — si se quiere cerrar del todo, subir a
+  `pdfjs-dist>=6.2.108`.
+- `vite`/`brace-expansion`/`js-yaml`/`nanoid` — todas en devDependencies (vitest/eslint/postcss) o
+  build-time, no en runtime servido.
+
+Packages sin consumidor en ningún `apps/*/package.json`: `@central/module-agenda`,
+`@central/module-encargo`, `@central/module-revenue` — se autodescriben como infraestructura
+transversal a la espera de que una vertical los enchufe, no código muerto por descuido
+(`module-agenda` ni tiene `test/` todavía). Sin acción.
+
+## 🟢 Heartbeat de crons/agentes (Supabase MCP)
+Los 12 agentes de `agente_latidos` + los vigilados sin fila propia (`ialimp_pms`, computado sobre
+`pms_connections.last_sync_at`, 0,0h) + las 12 huellas de dominio de la consulta b): **todo ✅**.
+`sivra_mercado_sweep` sigue en rojo estructural conocido y aceptado (lotería del snippet de Google,
+diagnosticado en PR #1299 — no es señal nueva). `trading_watchdog` sin fila todavía (cron `30 6 * *
+2-6`, hoy domingo, estreno esperado el martes — no avería).
+
+## 🟢 Backlog de PRs de rutinas + salud del automerge
+`rutinas-automerge.yml` con runs recientes en verde (última corrida ~2 min antes de esta pasada, en
+`main`). Sin PRs de solo-registro atascados >24h (#1328 es de hoy, `mergeable_state: unstable` por
+CI en curso, normal para un PR de 4 min). PRs de código no-auditoría abiertos: #1323 (pricing,
+autoverificado 449 tests/tsc 0/build OK, <24h, pendiente del ojo de Alberto), #1304 (fix audit 08/08,
+<24h). Dos PRs de feature antiguos y NO relacionados con esta rutina llevan mucho abiertos y merecen
+una decisión de Alberto (mergear o cerrar): **#1055** (mariscos, 19 días) y **#755** (import CSV
+banca, 35 días) — fuera del alcance de esta auditoría, solo se anota.
+
+## ✅ Reconciliación de docs (carril 2 — afecta comportamiento de sesiones futuras)
+- `apps/plataforma/CLAUDE.md`: sección Subastas sin los PRs #1324/#1325/#1327 (08/08) — añadidos.
+- `docs/RUTINAS-PROGRAMADAS.md`: entrada de trading-watchdog/agentes-latido desactualizada en 3
+  puntos — el watchdog tiene 3 tramos (no 2) desde el PR #1291, tiene latido propio desde el PR
+  #1322, y la huella de "pricing" cambió de `market_rates prop_%` a `pricing_decisiones.ciclo_at`
+  en el PR #1318. Añadidos los vigilados que faltaban en la lista.
+
+## Nota metodológica: `list_migrations` no es fuente fiable de "aplicado o no" en este repo
+3 migraciones locales de esta semana (`2026-08-08_subastas_mejor_puja.sql`,
+`2026-08-08_puja_minima_centinela.sql`, `2026-08-07_corpus_clonado_solo_del_barrido.sql`) no
+aparecen en `mcp__Supabase__list_migrations`. Verificado a mano que **sí están aplicadas** (columnas
+`subastas.mejor_puja(_at)`, `subastas_seguidas.sobrepuja_avisada_at` existen; el backfill de
+`corpus_clonado` da 0 filas mal marcadas) — se aplicaron por `execute_sql` directo, no por el flujo
+que registra el historial de migraciones. No es drift real; es un límite del propio check a tener en
+cuenta en próximas auditorías (verificar el EFECTO, no solo el registro).
+
+## Checklist de Alberto
+1. Revisar y mergear (o pedir cambios) en este PR — solo texto (2 docs), carril 2 por afectar
+   comportamiento de sesiones futuras.
+2. Sin acción técnica urgente — todo verde salvo los WARN de deps ya documentados como no explotables.
+3. Opcional: decidir sobre #1055 (mariscos, 19 días) y #755 (CSV banca, 35 días) — no relacionados
+   con esta auditoría.
+
 # Actualización 2026-08-08 — auditoría diaria (ligera)
 
 Rango: desde la última auditoría (5a473f1, 07/08 06:40 UTC) hasta hoy (58c2e4c, 08/08 09:12 UTC) —
