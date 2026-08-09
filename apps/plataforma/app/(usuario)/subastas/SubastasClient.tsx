@@ -184,11 +184,11 @@ interface Chollo {
   antiguedadCapada?: boolean
   velocidad?: { diasMediana: number; muestra: number } | null
   rendimiento?: Rendimiento | null
-  /** 🌊 En zona de la lente costa norte (preferencia). */
-  costaNorte?: boolean
+  /** 🌊 En zona preferente (Asturias/Cantabria/Islantilla). */
+  preferente?: boolean
 }
-/** Lente 🌊 costa norte: vivienda de playa del Cantábrico sin señales de obra. */
-interface PreferenteNorte {
+/** Lente 🌊: casas ≤230k de playa preferente, sin señales de obra. */
+interface Preferente {
   comparable: Chollo['comparable']
   costa: string
   /** null = sin referencia €/m² de su zona todavía (no «a precio de mercado»). */
@@ -205,7 +205,7 @@ interface Inicial {
   tesoreria: Tesoreria | null
   chollos: Chollo[]
   /** Preferentes 🌊 que NO llegan a chollo (los que sí, van en `chollos` etiquetados). */
-  costaNorte?: PreferenteNorte[]
+  preferentes?: Preferente[]
   ingresoDorm: { porDormitorio: number; pisos: number } | null
   indice?: { anual: number | null; trimestral: number | null; etiqueta: string | null } | null
   calibracion?: Array<{ provincia: string; muestra: number; adjudicadas: number; desiertas: number; ratioMediano: number | null; muestraRatio: number }>
@@ -1333,16 +1333,18 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
             zona. Es la otra cara del mismo dato que valora las subastas: aquí no se puja, se llama.
             Los de particular se marcan 👤 — negociación directa.
           </p>
-          {(datos.costaNorte?.length ?? 0) > 0 && (
+          {(datos.preferentes?.length ?? 0) > 0 && (
             <div style={{ marginBottom: 16 }}>
-              <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>🌊 Costa norte — tu preferencia</h3>
+              <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>🌊 Casas de playa hasta 230.000€ — tu preferencia</h3>
               <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 0 }}>
-                Viviendas sin señales de obra en municipios de playa de Asturias y Cantabria, aunque no
-                lleguen a chollo. «Sin señales de obra» dice solo que el anuncio no confiesa reforma —
-                el estado real se comprueba en las fotos y en la visita. Los chollos de estas zonas
-                salen abajo con la marca 🌊.
+                Casas y adosados (pisos no) sin señales de obra en playa de Asturias, Cantabria e
+                Islantilla, aunque no lleguen a chollo. Primero las que <strong>ya han bajado de
+                precio</strong> (vendedor que no vende — margen para negociar) y las de{' '}
+                <strong>👤 particular</strong>. «Sin señales de obra» dice solo que el anuncio no
+                confiesa reforma — el estado real se comprueba en las fotos y en la visita. Los
+                chollos de estas zonas salen abajo con la marca 🌊.
               </p>
-              {datos.costaNorte!.slice(0, 20).map((p) => (
+              {datos.preferentes!.slice(0, 20).map((p) => (
                 <div key={`${p.comparable.portal}|${p.comparable.refAnuncio}`}
                      style={{ ...card, borderLeft: '4px solid var(--primary, #4f46e5)' }}>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'baseline', justifyContent: 'space-between' }}>
@@ -1382,8 +1384,8 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                   )}
                 </div>
               ))}
-              {datos.costaNorte!.length > 20 && (
-                <p style={{ color: 'var(--muted)', fontSize: 13 }}>…y {datos.costaNorte!.length - 20} más (llegan por el aviso diario)</p>
+              {datos.preferentes!.length > 20 && (
+                <p style={{ color: 'var(--muted)', fontSize: 13 }}>…y {datos.preferentes!.length - 20} más (llegan por el aviso diario)</p>
               )}
             </div>
           )}
@@ -1428,7 +1430,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
             chollosFiltrados.slice(0, visibles).map((ch) => (
               <div key={ch.comparable.refAnuncio} style={{ ...card, borderLeft: '4px solid var(--positive, #16a34a)' }}>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'baseline', justifyContent: 'space-between' }}>
-                  <strong style={{ color: 'var(--text)', fontSize: 15 }}>{ch.costaNorte && '🌊 '}{ch.comparable.titulo}</strong>
+                  <strong style={{ color: 'var(--text)', fontSize: 15 }}>{ch.preferente && '🌊 '}{ch.comparable.titulo}</strong>
                   <span style={{ fontWeight: 700, color: ch.sospechoso ? 'var(--warning, #b45309)' : 'var(--positive, #15803d)' }}>
                     −{(ch.descuento * 100).toFixed(0)}%{ch.sospechoso && ' ⚠️'}
                   </span>

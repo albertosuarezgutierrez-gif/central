@@ -1,18 +1,25 @@
 // ────────────────────────────────────────────────────────────────────────────
-// Lente 🌊 costa norte: viviendas cerca de playa en el Cantábrico (Asturias y
-// Cantabria) sin señales de obra. PURO.
+// Lente 🌊 de PREFERENCIAS de mercado: CASAS de playa baratas. PURO.
 //
-// Preferencia de Alberto (09/08/2026, a raíz de una casona en Colunga a
-// ~914€/m²): inmuebles en buen estado en municipios de playa del norte, que
-// puedan ponerse a rendir como alquiler vacacional sin pasar por una reforma.
-// A diferencia de la lente 🏖️ del sur (uso propio), esta es de INVERSIÓN.
+// Criterios de Alberto (09/08/2026, refinados el mismo día sobre la v1):
+//   · CASAS, no pisos (chalet/adosado/casona valen; un piso de Gijón no).
+//   · Tope 230.000€.
+//   · Zonas: litoral de Asturias y Cantabria (alquiler vacacional que rinda
+//     rápido) + Islantilla (Huelva) — allí un adosado también interesa.
+//   · Sin señales de obra («buen estado» hasta donde el anuncio deja saber).
+//   · ORDEN: primero las que YA HAN BAJADO de precio (vendedor que no vende
+//     — margen para negociar más), luego las de PARTICULAR (sin agencia),
+//     luego el descuento sobre su zona.
+//
+// La rebaja y el particular ORDENAN, no filtran: exigir rebaja escondería el
+// anuncio recién publicado mal preciado, que es justo el que vuela primero.
 //
 // Por qué no basta con los chollos: en los municipios rurales del norte el
 // corpus de alertas rara vez junta 3 comparables y la mediana de zona no
-// existe, así que exigir un descuento ≥20% convertiría la preferencia en una
-// lente que nunca salta. Aquí la ZONA es el criterio; si hay referencia €/m²
-// se enseña el descuento, y si no se dice «sin referencia» — nunca se calla
-// ni se inventa.
+// existe — exigir un descuento convertiría la preferencia en una lente que
+// nunca salta. Aquí la ZONA+tipo+precio son el criterio; si hay referencia
+// €/m² se enseña el descuento, y si no se dice «sin referencia» — nunca se
+// calla ni se inventa.
 // ────────────────────────────────────────────────────────────────────────────
 
 import { norm } from './parsing.ts'
@@ -24,6 +31,9 @@ import {
   type Comparable,
   type ZonaPortalRef,
 } from './comparables.ts'
+
+/** Tope de precio de la preferencia (decisión de Alberto, 09/08/2026). */
+export const TOPE_PREFERENTE_EUR = 230_000
 
 /**
  * Municipios del litoral asturiano (término municipal completo, de este a
@@ -122,6 +132,14 @@ export const NUCLEOS_COSTA_CANTABRIA = [
 ] as const
 
 /**
+ * Núcleos preferentes del SUR (petición de Alberto, 09/08/2026): Islantilla.
+ * OJO: esto NO es la lente 🏖️ de `playa.ts` (esa es de SUBASTAS y uso
+ * propio, cubre toda la costa de Huelva/Cádiz sin tope) — aquí es la
+ * preferencia de compra de mercado, acotada al núcleo que le interesa.
+ */
+export const NUCLEOS_PREFERENTES_SUR = ['islantilla'] as const
+
+/**
  * ¿El texto contiene el término como PALABRA completa? Un `includes` a secas
  * ya mordió con núcleos cortos («isla» dentro de «Islantilla»): se exige
  * frontera de palabra a ambos lados.
@@ -156,9 +174,37 @@ export function costaNorteDe(zona: string | null | undefined, titulo?: string | 
   return null
 }
 
-/** La lente completa como booleano, para etiquetar (🌊) sin nombrar la costa. */
+/** La costa norte como booleano, para etiquetar sin nombrar la costa. */
 export function esCostaNorte(zona: string | null | undefined, titulo?: string | null): boolean {
   return costaNorteDe(zona, titulo) !== null
+}
+
+/** Zona de la preferencia completa: costa norte o Islantilla. */
+export function zonaPreferenteDe(
+  zona: string | null | undefined,
+  titulo?: string | null,
+): 'Asturias' | 'Cantabria' | 'Islantilla' | null {
+  const norte = costaNorteDe(zona, titulo)
+  if (norte) return norte
+  const texto = norm(`${zona ?? ''} ${titulo ?? ''}`)
+  if (texto && NUCLEOS_PREFERENTES_SUR.some((x) => contieneTermino(texto, x))) return 'Islantilla'
+  return null
+}
+
+/** ¿Está en alguna zona preferente? (para la etiqueta 🌊 de los chollos). */
+export function esZonaPreferente(zona: string | null | undefined, titulo?: string | null): boolean {
+  return zonaPreferenteDe(zona, titulo) !== null
+}
+
+/**
+ * ¿El anuncio es una CASA (chalet/adosado/pareado/casona) y no un piso?
+ * Se decide por el título, que el portal siempre encabeza con el tipo
+ * («Casa o chalet independiente en…», «casa adosada en…», «Piso en…»).
+ * Un dúplex/ático/planta baja sigue siendo un piso: fuera.
+ */
+export function esCasa(titulo: string | null | undefined): boolean {
+  const t = norm(titulo ?? '')
+  return /\b(casa|chalet|casona|villa|adosado|adosada|pareado|pareada|caserio)\b/.test(t)
 }
 
 /**
@@ -171,9 +217,30 @@ export function sinSenalesDeObra(c: Comparable): boolean {
   return !pareceRuina(c.titulo) && c.aReformar !== true
 }
 
-export interface PreferenteNorte {
+/**
+ * Colapsa los RE-LISTADOS del mismo portal: Idealista re-publica el mismo
+ * anuncio con un `ref` nuevo (visto en prod el 09/08/2026: el piso de Ceares
+ * salía DOS veces, refs 112188897 y 112233004, idénticos en todo lo demás).
+ * Clave = portal + título + precio + superficie; se queda la PRIMERA
+ * aparición (el corpus llega ordenado por visto_en DESC → la más reciente).
+ * No intenta cruzar portales: el mismo inmueble en Idealista y Fotocasa
+ * lleva títulos distintos y fusionarlos a ciegas daría falsos positivos.
+ */
+export function dedupeRelistados(comparables: Comparable[]): Comparable[] {
+  const vistos = new Set<string>()
+  const out: Comparable[] = []
+  for (const c of comparables) {
+    const clave = `${c.portal}|${norm(c.titulo)}|${c.precio}|${c.superficie ?? ''}`
+    if (vistos.has(clave)) continue
+    vistos.add(clave)
+    out.push(c)
+  }
+  return out
+}
+
+export interface Preferente {
   comparable: Comparable
-  costa: 'Asturias' | 'Cantabria'
+  costa: 'Asturias' | 'Cantabria' | 'Islantilla'
   /**
    * Comparación con su zona cuando el corpus la da. `null` = SIN referencia
    * €/m² todavía (pocas alertas en esa zona) — que no es «a precio de
@@ -190,19 +257,21 @@ export interface PreferenteNorte {
 }
 
 /**
- * Viviendas de la costa norte sin señales de obra, con su comparación de zona
- * si existe. Ordenadas: mayor descuento primero, las sin referencia al final
- * (dentro de cada grupo, más baratas primero).
+ * CASAS ≤230.000€ de las zonas preferentes, sin señales de obra, con su
+ * comparación de zona si existe. Orden: primero las que YA HAN BAJADO de
+ * precio (más bajadas antes), luego las de particular, luego mayor descuento
+ * (las sin referencia al final; a igualdad, más baratas primero).
  */
-export function lenteCostaNorte(comparables: Comparable[], zonasPortal?: ZonaPortalRef[]): PreferenteNorte[] {
+export function lentePreferentes(comparables: Comparable[], zonasPortal?: ZonaPortalRef[]): Preferente[] {
   const portalPorSlug = new Map((zonasPortal ?? []).map((z) => [z.slug, z]))
-  const out: PreferenteNorte[] = []
-  for (const c of comparables) {
-    if (c.tipo !== 'vivienda') continue
-    const costa = costaNorteDe(c.zona, c.titulo)
+  const out: Preferente[] = []
+  for (const c of dedupeRelistados(comparables)) {
+    if (c.tipo !== 'vivienda' || !esCasa(c.titulo)) continue
+    if (c.precio > TOPE_PREFERENTE_EUR) continue
+    const costa = zonaPreferenteDe(c.zona, c.titulo)
     if (!costa || !sinSenalesDeObra(c)) continue
 
-    let referencia: PreferenteNorte['referencia'] = null
+    let referencia: Preferente['referencia'] = null
     // Una parcela (>400 m²) puede ser una casa con finca: entra en la lente,
     // pero su €/m² mide suelo y no se compara con medianas de vivienda.
     if (c.precioM2 != null && c.precioM2 > 0 && !esParcela(c)) {
@@ -224,6 +293,15 @@ export function lenteCostaNorte(comparables: Comparable[], zonasPortal?: ZonaPor
     out.push({ comparable: c, costa, referencia })
   }
   return out.sort((a, b) => {
+    // «Sobre todo que ya hayan tenido rebaja»: el vendedor que baja no vende,
+    // y quien no vende negocia. Manda el nº de bajadas.
+    const ba = a.comparable.bajadas ?? 0
+    const bb = b.comparable.bajadas ?? 0
+    if (ba !== bb) return bb - ba
+    // Luego el particular: negociación directa, sin comisión de agencia.
+    const pa = a.comparable.esParticular === true ? 1 : 0
+    const pb = b.comparable.esParticular === true ? 1 : 0
+    if (pa !== pb) return pb - pa
     const da = a.referencia?.descuento ?? -Infinity
     const db = b.referencia?.descuento ?? -Infinity
     if (da !== db) return db - da
