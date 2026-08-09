@@ -576,6 +576,22 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
   · **INE €/m² → PENDIENTE de diseño** (la API JSON Tempus responde; es fuente de VALORACIÓN, no de subastas).
   ⚠️ TEMPORAL mientras dure la fase: endpoint puente `/api/subastas/fase3-debug` (token en BD
   `subastas_debug_token`, hosts oficiales cerrados, en PUBLIC del middleware) — eliminarlo al cerrar Fase 3.
+- **⚖️ Deuda, puja mínima y umbrales LEC 670 en la ficha (08/08/2026, PR #1324):** `cantidad_reclamada`
+  era campo muerto (ahora en ficha, vía alternativa de aprobación del remate art. 670.4 y techo probable
+  de la puja del ejecutante — NO es el valor por el que se puja, ese es `valor_subasta`); `puja_minima`
+  gana consumidor (`umbralesPuja`/`estadoPujaMinima` en `module-subastas/umbrales.ts`); «Sin puja mínima»
+  del portal → centinela **`0`** (≠ NULL «no publicada»; **nunca filtrar `puja_minima > 0` para «tiene
+  dato», usar `IS NOT NULL`**). Score/coste siguen conservadores al 100% (decisión de Alberto).
+- **🧮 ITP por CCAA, puja en vivo, vivienda habitual y simulador (08/08/2026, PR #1325):** `calcularCoste`
+  (`module-subastas/impuestos.ts`) deja de aplicar el 7% andaluz a TODO — la provincia elige el tipo
+  general de su CCAA (con escalas progresivas donde aplica). **Vigía de pujas en vivo** en
+  `subastas-cierre` (`mejorPujaViva()`, 1 llamada/ficha, seguidas a ≤3 días) → `subastas.mejor_puja(_at)`
+  + Telegram 🔥 una sola vez si superan el techo de Alberto (`sobrepuja_avisada_at`; NULL nunca pisa un
+  valor visto). **Simulador «¿y si pujo X?»** en la ficha (módulo puro + financiación de criterios).
+- **🧾 3ª tanda — coste autoexplicativo, ITP valenciano al 9%, presupuesto del vigía (08/08/2026, PR
+  #1327):** el desglose de coste se explica solo en la ficha (sin volver a `impuestos.ts`); Comunidad
+  Valenciana gana su tipo general (9%, antes heredaba el genérico); `mejorPujaViva()` (vigía de pujas en
+  vivo del PR anterior) gana presupuesto de tiempo propio para no comerse el del cron `subastas-cierre`.
 
 ## 💓 Latidos de agentes — el vigía que avisa por Telegram (ampliado 30/07/2026)
 `lib/monitoring/latidos.ts` (registro + `evaluarLatido` puro) + cron `agentes-latido` (07:45 UTC) →

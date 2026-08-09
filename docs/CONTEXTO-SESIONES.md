@@ -32,6 +32,26 @@
 
 ---
 
+### 🔴 (09/08/2026) Pasada diaria de trading BLOQUEADA desde el despliegue de la guardia de precios — fix en PR draft
+- Rutina `trading-analista`: NAV IBKR (33.328,17€) empujado a `/banca` OK; watchlist + histórico de 16
+  símbolos bajado sin incidencias. `POST /api/trading/analizar` devolvía **500 en cada intento** (payload
+  completo y mínimo de prueba) → pasada terminada sin inventar cifras, avisado por Telegram.
+- Causa: `lib/trading/precios-guardia`-related query en `analizar/route.ts` hace `fecha - DIAS_REFERENCIA_MAX`
+  sin castear la constante; Prisma la manda `bigint`, Postgres no define `date - bigint`. Rota desde que se
+  desplegó esa guardia (post-incidente CVX 03/08) — **toda pasada de análisis desde entonces ha fallado en
+  silencio** para quien no mirara `get_runtime_errors`.
+- Fix de una línea (`::int`) verificado byte a byte contra Supabase. **PR #1340 (draft), pendiente merge +
+  redeploy + reintentar la pasada.**
+
+### 🛡️ (09/08/2026) Auditoría PROFUNDA semanal — todo verde, PR #1329
+Pasada completa `auditoria-central` (no solo la ligera): typecheck 0 errores en las **8 apps**, tests
+sin fallos, sin secretos con fallback literal, Supabase advisors 0 ERROR, heartbeat de crons/agentes
+limpio, automerge de rutinas sano. Único hallazgo: 21 vulns de `pnpm audit`, ninguna explotable
+(documentado). Reconciliados 2 docs desactualizados que #1328 (ligera, mismo día) no cubrió:
+`apps/plataforma/CLAUDE.md` (subastas sin los PRs #1324/#1325/#1327) y `docs/RUTINAS-PROGRAMADAS.md`
+(watchdog de trading descrito con 2 tramos en vez de 3, huella de pricing desactualizada). Informe
+completo `docs/AUDITORIA-2026-08.md`.
+
 ### 🤖 (09/08/2026) agentes-entrenador — pasada semanal (29/07→09/08): backlog sano, un fix trivial
 - Backlog de PRs `claude/*` abiertos: **5** (bajando desde 73→31 del barrido de Alberto de 29/07) —
   sin crecimiento, sin necesidad de escalar. `FEEDBACK-AGENTES.md` sin pendientes.
