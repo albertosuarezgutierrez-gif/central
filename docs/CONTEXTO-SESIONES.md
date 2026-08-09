@@ -57,8 +57,14 @@
   escondería el recién publicado mal preciado). `dedupeRelistados`: Idealista re-publica con ref nuevo
   (piso de Ceares duplicado en la UI, verificado en BD) — colapso por (portal,título,precio,m²) al corpus
   entero. Corpus real: 11 casas ≤230k (Villaviciosa −49%, 6 adosados Islantilla), 43 re-listados fuera.
+- **3ª ronda (#1351, mergeado):** (a) la preferencia llega a SUBASTAS — vivienda en zona 🌊 suena SIEMPRE
+  en `subastas-avisos` con cabecera «🌊 TU PREFERENCIA» aunque el filtro rentable/limpia la silenciara
+  (honestidad: el aviso dice si va sin verificar); (b) **Matalascañas** entra como zona preferente tras
+  medirla en vivo (Fotocasa: 216 anuncios vs 133 Islantilla, mediana 2.857 vs 3.308 €/m²); (c) pestaña
+  **🔥 Oportunidades** default de /subastas (diseño del agente Plan): bloque 🌊 fijo + lista única
+  portal+subastas por atractivo, tarjeta compacta de subasta, filtros casas/rebajados/particular/fuente.
 - Ojo: la lente solo ve las alertas guardadas — para vigilar más norte, crear alertas de Idealista en
-  esas zonas. Galicia/Euskadi pendientes de que Alberto las pida (patrón Cádiz).
+  esas zonas (y en Matalascañas: hoy solo 2 anuncios en el corpus). Galicia/Euskadi pendientes (patrón Cádiz).
 
 ### 🎯 (09/08/2026) Los 4 pisos bajo el motor · PriceLabs de baja · previstos v2 · fix verificado en vivo
 - **Decisión de Alberto:** «el agente coge las riendas de los 4 apartamentos». Los 4 con
