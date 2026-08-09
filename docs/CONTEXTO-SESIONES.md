@@ -22,6 +22,23 @@
 
 ---
 
+## 🏛️ (08/08/2026) Subastas 3ª tanda: coste autoexplicativo, ITP valenciano al 9% y presupuesto del vigía — PR #1327
+- «Coste real estimado: 806.015,16€» se leía como valoración de mercado (pregunta de Alberto sobre
+  SUB-JA-2026-264062): es el coste puerta abierta simulando el remate al 100% de la salida — el
+  titular y el aviso de Telegram lo dicen ahora explícitamente («…si rematas a la salida»).
+- ITP Comunidad Valenciana corregido: 10%→**9%** (Ley 5/2025), tabla de tipos por CCAA re-verificada
+  contra fuentes vigentes. `subastas-cierre` gana presupuesto de tiempo (mismo patrón que #1281/#1296).
+- Rediseño de la ficha de subasta con la información de las tandas anteriores (ITP, umbrales, simulador).
+
+## 📬 (08/08/2026) Subastas: cursor incremental por UID — la ingesta dejaba de releer 300 correos/día — PR #1296
+- El cron diario pedía «últimos 30 días, hasta 150 correos/portal» siempre — como el corpus de
+  Idealista/Fotocasa es acumulativo, relía ~300 correos para encontrar los pocos nuevos y se comía el
+  presupuesto de tiempo (latido 07/08: «cortado tras 0 fichas»). Ahora cada portal guarda hasta qué UID
+  leyó (`subastas_correo_cursor`, tabla propia — NO `correo_cursor`, que es el latido del triaje de correo).
+- `lib/subastas/correo-incremental.ts` (puro, testeado): filtro `>lastUid` en cliente (RFC 3501),
+  `uidvalidity` distinto → vuelve a ventana por fecha, cursor solo se confirma tras ingerir (at-least-once).
+  BOE (`leerAlertas`) queda intacto, sin cursor. 826 tests, tsc 0, build OK.
+
 ## 🧮 (08/08/2026) Subastas 2ª tanda: ITP por CCAA, puja en vivo, vivienda habitual y simulador
 - **ITP por CCAA** (`module-subastas/src/impuestos.ts`): `calcularCoste` deja de aplicar el 7% andaluz a
   todo — la provincia elige el tipo general de su CCAA (Asturias 8%: Cancienes pasa de 94.248€ a 95.112€),
@@ -63,6 +80,24 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+### 🐕 Decisión: `trading_puntuar` NO entra en AGENTES_VIGILADOS; el que faltaba era el vigía (08/08/2026)
+Alberto pidió meterlo; **no procede** y le dije que «nadie lo lee», que era FALSO: lo vigila
+`trading-watchdog` (tramo 3) y mejor, porque sabe qué días se espera pasada. Duplicarlo daría dos
+Telegram Y falsos positivos cada domingo/lunes (pasada L-V ~20:15 UTC → el lunes la última buena es
+la del viernes, ~59 h; hoy está a 43 h con `ok:true` y el watchdog calla, bien). **El hueco real:**
+ese watchdog es el único que cruza los 3 tramos, no dejaba huella propia y no lo vigilaba nadie — si
+moría, su silencio se leía como «todo fresco». Ahora escribe `agente_latidos.trading_watchdog` y entra
+en la lista con **80 h** (su cron `30 6 * * 2-6` deja un hueco legítimo sáb→mar de 72 h). PR #1322.
+
+- **📏 El umbral de la guardia de suplantación estaba MAL, y se midió (08/08/2026).** Prueba de fuego con
+  precios vivos de IBKR: el 3% de `CRUCE_TOLERANCIA` (#1321) cazaba el caso histórico por 0,1 pp de suerte
+  y con la referencia de HOY ya NO cazaba el META←LLY. Barrido del umbral contra TODO el corpus limpio:
+  falsos positivos 3%→6, 5%→4, 6%→2, 8%→2, **10%→0**, y a partir del 5% caza el envenenamiento. Bajan al
+  ampliar porque la regla exige lejos-de-la-propia Y cerca-de-otra, y ampliar endurece más la primera:
+  **10% domina a 3%**, no es un equilibrio. Límite que ningún umbral tapa y queda afirmado en un test:
+  dos símbolos al mismo nivel (MSFT 487,46 / SPOT 482,23, 1,1%) son intercambiables sin que la regla lo
+  vea — eso solo lo ve la 2ª fuente. 28 tests. PR pendiente.
+
 ### 🛡️ Auditoría profunda: el vigía del agente de pricing estaba en verde falso (08/08/2026)
 Pasada completa a petición de Alberto («prueba que todo funciona y está todo al día»). **Todo verde
 salvo un 🔴 nuevo:** la sonda `pricing` de `agentes-latido` medía sobre `market_rates prop_*`, huella
@@ -71,8 +106,10 @@ que dejó de ser exclusiva de la Rutina semanal cuando el barrido Serper (diario
 muerta**, justo la avería de los 16 días del 21/07. Cambiada a `pricing_decisiones.ciclo_at` por piso
 (solo la escribe `aplicar-propuesta`, y solo la Rutina lo llama); misma corrección en la SQL de
 `/auditoria-diaria`. La Rutina está viva (último ciclo 03/08). Corregidas 2 afirmaciones mías: F2 ya
-estaba arreglado en #1299 y «latidos OK» no estaba comprobado. Todo en **PR #1318**.
-Verificado: 1031/1031 + 26/26 + 53/53, `tsc` 0 en las **8** apps, build 0, advisors sin ERROR.
+estaba arreglado en #1299 y «latidos OK» no estaba comprobado. **#1318 MERGEADO** (`d45d20f`) —
+lleva también F1 (el bucket prefiere el corpus medido: house-octubre 638→728) y el `?max=abc`.
+Re-verificado sobre `main` ya fusionado: 1045/1045 + 26/26 + 53/53, `tsc` 0 en las **8** apps,
+build 0, advisors sin ERROR, y la sonda nueva ejecutada contra la BD da ✅ (130 h < 192).
 
 ### 🔎 Auditoría de precios dinámicos + fallo mudo en el plan (08/08/2026)
 Informe: `docs/AUDITORIA-2026-08-precios-dinamicos.md`. **No está al 100%.** 🔴 El bucket mensual de

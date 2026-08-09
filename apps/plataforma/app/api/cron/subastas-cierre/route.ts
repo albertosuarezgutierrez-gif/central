@@ -42,8 +42,16 @@ async function vigilarPujasSeguidas(): Promise<{ vigiladas: number; sobrepujas: 
     LIMIT ${MAX_VIGILADAS}
   `)
 
+  // Presupuesto de tiempo (lección de facturas-scan, 31/07/2026): subir el
+  // techo solo mueve la pared — lo que garantiza que la pasada VUELVE y llega
+  // a los recordatorios de abajo es cortar aquí. Lo no consultado hoy se
+  // consulta mañana; las fichas ya vistas conservan su último valor.
+  const inicioVigilancia = Date.now()
+  const PRESUPUESTO_VIGILANCIA_MS = 35_000
+
   let sobrepujas = 0
   for (const sg of seguidas) {
+    if (Date.now() - inicioVigilancia > PRESUPUESTO_VIGILANCIA_MS) break
     let puja: number | null
     try {
       puja = await mejorPujaViva(sg.identificador)

@@ -198,11 +198,29 @@ export function resumenDivergencias(divergentes: Divergencia[]): string {
 // hueco que deja —símbolo estrenándose Y suplantado sin duplicar a nadie— lo cubre el contraste con
 // la 2ª fuente, que no depende de nada de esto.
 
-// Cercanía a partir de la cual se considera que un precio «es» el de otro símbolo. Tiene que ser más
-// ancha que un día de mercado: el valor suplantado es el cierre de HOY del culpable y la referencia
-// con la que se compara es su cierre de AYER, así que entre medias cabe su movimiento diario (el caso
-// META←LLY del 03/08 fue del 2,9% y con un umbral más fino se habría escapado).
-export const CRUCE_TOLERANCIA = 0.03
+// Cercanía a partir de la cual se considera que un precio «es» el de otro símbolo.
+//
+// 🚨 Este umbral se MIDIÓ contra el corpus real (08/08/2026), y el resultado invierte la intuición: el
+// 3% con el que nació la guardia era el PEOR valor posible de los probados. Barriendo todas las pasadas
+// limpias del corpus (17/07→06/08, 16 símbolos) y contando cuántos precios BUENOS habría vetado:
+//
+//     umbral    3%    5%    6%    8%   10%   12%
+//     falsos     6     4     2     2     0     0     ← cada uno = un día perdido de un símbolo
+//     ¿caza META←LLY?  no*  sí    sí    sí    sí    sí
+//     (*) lo cazaba con la referencia de 31/07 por 0,1 pp de margen; con la del 06/08 ya NO.
+//
+// Los falsos positivos BAJAN al ampliar el umbral porque la regla exige las dos cosas a la vez: que el
+// precio esté LEJOS de su propia referencia Y CERCA de la de otro. Ampliar el umbral endurece mucho más
+// la primera condición (un símbolo que se movió un 6% pasa a «cuadra consigo mismo» y ni se examina) de
+// lo que relaja la segunda. Por eso 10% DOMINA a 3%: cero falsos positivos Y caza el envenenamiento con
+// margen. No es un equilibrio entre sensibilidad y ruido — el 3% era sencillamente un error.
+//
+// ⚠️ LÍMITE QUE NINGÚN UMBRAL ARREGLA, encontrado en la misma prueba: si dos símbolos cotizan al MISMO
+// nivel, intercambiarlos es invisible para esta regla — el precio ajeno cuadra con la referencia propia
+// y no se examina. Hoy mismo pasa con MSFT (487,46) y SPOT (482,23), a un 1,1%: son justo los dos que se
+// barajaron el 17/07 y hoy no se detectarían. Eso solo lo ve el contraste con la 2ª fuente. Dicho aquí
+// para que nadie suba el umbral creyendo que cierra ese hueco: no lo cierra, es de otra naturaleza.
+export const CRUCE_TOLERANCIA = 0.10
 
 export type Suplantacion = {
   simbolo: string

@@ -127,7 +127,10 @@ export async function bajarFicha(identificador: string): Promise<FichaBoe> {
  * `null` = la ficha no publica la puja, que NO es «sin pujas».
  */
 export async function mejorPujaViva(identificador: string): Promise<number | null> {
-  const general = await bajar(`${FICHA}?idSub=${encodeURIComponent(identificador)}`)
+  // Timeout corto a propósito: el cron que llama vigila hasta 10 seguidas con
+  // maxDuration 60 s — con el timeout por defecto (20 s) bastarían 3 fichas
+  // lentas para comerse la pasada entera.
+  const general = await bajar(`${FICHA}?idSub=${encodeURIComponent(identificador)}`, 8000)
   if (!fichaLegible(general, identificador)) {
     throw new Error('la respuesta del Portal no es la ficha de esta subasta')
   }

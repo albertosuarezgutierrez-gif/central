@@ -181,6 +181,40 @@ test('una pasada sana no dispara nada', () => {
   assert.deepEqual(limpios, pasada)
 })
 
+// Las referencias REALES del 06/08/2026 (últimos `precio_ref` no anulados de la watchlist activa).
+// Con ellas se fijan las dos propiedades que decidieron el umbral, medidas contra el corpus entero.
+const REFERENCIAS_06_08 = {
+  CVX: 186.41, IWM: 299.77, LLY: 1169.86, META: 588.77, MSFT: 487.46, NFLX: 74.20, NVDA: 219.22,
+  NVO: 44.53, PLTR: 158.43, QQQ: 717.30, RBLX: 36.19, SNDK: 1350.50, SPOT: 482.23, SPY: 769.79,
+  STX: 837.66, WDC: 519.17,
+}
+
+test('el envenenamiento de META se caza también con la referencia de HOY, no solo con la del 31/07', () => {
+  // Con el umbral viejo del 3% esto pasaba limpio: META recibió 1121,09 y la referencia de LLY se había
+  // movido a 1169,86, un 4,2% — fuera del 3% por muy poco. El caso histórico se cazaba por 0,1 pp de
+  // margen, o sea por suerte. Este test es el que impide volver a estrechar el umbral.
+  const { suplantados } = detectarSuplantaciones({ META: 1121.09 }, REFERENCIAS_06_08)
+  assert.equal(suplantados.length, 1)
+  assert.equal(suplantados[0].culpable, 'LLY')
+})
+
+test('un día de mercado normal sobre la watchlist real no veta a nadie', () => {
+  // Cierres reales del 07/08/2026 (IBKR, consolidados) contra las referencias del 06/08.
+  const cierres = { MSFT: 499.99, SPOT: 488.14, NFLX: 74.14, LLY: 1185.71, META: 592.10 }
+  const { limpios, suplantados } = detectarSuplantaciones(cierres, REFERENCIAS_06_08)
+  assert.equal(suplantados.length, 0)
+  assert.deepEqual(limpios, cierres)
+})
+
+test('límite conocido: dos símbolos al mismo nivel son intercambiables sin que la regla lo vea', () => {
+  // MSFT y SPOT cotizan a un 1,1% el 06/08. Si se barajan —como ya pasó el 17/07— el precio ajeno cuadra
+  // con la referencia propia y la regla no lo examina. NO es un fallo que arregle el umbral: se afirma
+  // aquí para que el hueco esté medido y quede claro que solo lo tapa el contraste con la 2ª fuente.
+  const barajado = { MSFT: REFERENCIAS_06_08.SPOT, SPOT: REFERENCIAS_06_08.MSFT }
+  const { suplantados } = detectarSuplantaciones(barajado, REFERENCIAS_06_08)
+  assert.equal(suplantados.length, 0)
+})
+
 test('resumenSuplantaciones: vacío cuando no hay nada, nombra al culpable cuando lo hay', () => {
   assert.equal(resumenSuplantaciones([]), '')
   const { suplantados } = detectarSuplantaciones({ LLY: 193.18 }, { LLY: 1154.97, CVX: 192.31 })
