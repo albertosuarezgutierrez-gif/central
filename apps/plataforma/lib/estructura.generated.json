@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-09T17:41:10Z",
+  "generadoEn": "2026-08-09T20:48:57Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3995,6 +3995,10 @@
       "fecha": ""
     },
     {
+      "titulo": "Refinada por Alberto y MERGEADA (#1349):",
+      "fecha": ""
+    },
+    {
       "titulo": "Decisión de Alberto:",
       "fecha": ""
     },
@@ -4032,10 +4036,6 @@
     },
     {
       "titulo": "ITP por CCAA",
-      "fecha": ""
-    },
-    {
-      "titulo": "Vigía de pujas en vivo",
       "fecha": ""
     }
   ],
