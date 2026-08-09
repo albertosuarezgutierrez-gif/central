@@ -15,6 +15,12 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-09 · mercado-booking (pasada diaria, plan sin filtro)** · hizo: pedido el plan
+  (`plan_total` 120, `pedidas` 12, `sin_medir_nunca` 12) y medidas las 12 ventanas devueltas —
+  1 par de evento (22-nov Sevilla FC-Betis, aforo 4 y 5) + 8 de profundidad ronda-2 (oct/dic,
+  aforo 2/4/5) + `prop_house_sevillana` aforo 12 (12-dic). **120 comps** escritos con
+  `fuente='booking_mcp'`, 10/10 por ventana, 0 ventanas sin respuesta. Latido `ok:true`.
+  dudas: —; fallos: —; PRs/commits: —
 - **2026-08-08 · auditoria-diaria (pasada PROFUNDA, a petición de Alberto)** · hizo: verificación
   completa en verde (1031/1031 plataforma, 26/26 guardianes, 53/53 packages, `tsc` 0 en las **8**
   apps, build 0, lockfile en sync, `ignoreCommand` y `transpilePackages` OK en las 8, advisors sin
