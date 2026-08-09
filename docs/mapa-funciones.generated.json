@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-09T20:48:22Z",
-  "sha": "85739af03e039650ebd2efda9ef9a54167e7dc53",
+  "generadoEn": "2026-08-09T21:02:51Z",
+  "sha": "721e13e93149de963951889e077b88399a416189",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47491,7 +47491,7 @@
         "subastas_criterios"
       ],
       "rutaApi": null,
-      "hash": "19ff1b4182fc"
+      "hash": "09262652a01f"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/subastas/SubastasClient.tsx",
@@ -47506,7 +47506,7 @@
           "exportada": false,
           "params": "activo = false",
           "retorno": "React.CSSProperties",
-          "linea": 225
+          "linea": 246
         },
         {
           "nombre": "fecha",
@@ -47514,7 +47514,7 @@
           "exportada": false,
           "params": "iso: string | null | undefined",
           "retorno": "string | null",
-          "linea": 232
+          "linea": 253
         },
         {
           "nombre": "Puntuacion",
@@ -47522,7 +47522,7 @@
           "exportada": false,
           "params": "{ v }: { v: number | null }",
           "retorno": null,
-          "linea": 246,
+          "linea": 267,
           "resumen": "Semáforo de la puntuación. `null` se pinta distinto a 0: no es lo mismo."
         },
         {
@@ -47531,7 +47531,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 254
+          "linea": 275
         },
         {
           "nombre": "PanelTesoreria",
@@ -47539,7 +47539,7 @@
           "exportada": false,
           "params": "{ t }: { t: Tesoreria }",
           "retorno": null,
-          "linea": 261,
+          "linea": 282,
           "resumen": "Dinero que hay que tener bloqueado para poder pujar. Lo que importa NO es la suma de depósitos sino el máximo simultáneo: los que no se solapan reutilizan el mismo dinero."
         },
         {
@@ -47548,8 +47548,17 @@
           "exportada": false,
           "params": "{ r, dormitorios }: { r: Rendimiento | null | undefined; dormitorios?: number | null }",
           "retorno": null,
-          "linea": 345,
+          "linea": 366,
           "resumen": "Yield turístico estimado con los pisos PROPIOS. Siempre con el caveat: los pisos de referencia son de Sevilla capital — fuera de ahí es extrapolación."
+        },
+        {
+          "nombre": "TarjetaSubastaCompacta",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ s, onVerFicha }: { s: SubastaChollo; onVerFicha: () => void }",
+          "retorno": null,
+          "linea": 383,
+          "resumen": "Tarjeta COMPACTA de una subasta para la vista unificada de Oportunidades: la señal (descuento/flip), las pegas rápidas y un enlace a su ficha completa en la pestaña «Todas» — FichaSubasta es demasiado"
         },
         {
           "nombre": "Caracteristicas",
@@ -47557,7 +47566,7 @@
           "exportada": false,
           "params": "{ s, plantaAparte }: { s: Subasta; plantaAparte?: boolean }",
           "retorno": null,
-          "linea": 369,
+          "linea": 431,
           "resumen": "repetirla sería ruido."
         },
         {
@@ -47566,7 +47575,7 @@
           "exportada": false,
           "params": "{ s, d }: { s: Subasta; d?: Documental | null }",
           "retorno": null,
-          "linea": 406,
+          "linea": 468,
           "resumen": "Resumen de CARGAS + documentación de la subasta. Vive dentro de `FichaSubasta` a propósito: antes el semáforo y las notas del edicto solo se pintaban en la pestaña «Todas» (iban en su `extra`), así qu"
         },
         {
@@ -47575,7 +47584,7 @@
           "exportada": false,
           "params": "{ dedupeKey }: { dedupeKey: string }",
           "retorno": null,
-          "linea": 552,
+          "linea": 614,
           "resumen": "«Nota simple viva»: la certificación que adjunta el juzgado es de hace años y las cargas se mueven. Aquí se sube una nota simple recién pedida al registro y el agente dice QUÉ HA CAMBIADO — es lo únic"
         },
         {
@@ -47584,7 +47593,7 @@
           "exportada": false,
           "params": "{ etiqueta, sub, children }: { etiqueta: string; sub?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 647,
+          "linea": 709,
           "resumen": "Par etiqueta→valor del bloque «💶 Los números»: etiqueta pequeña arriba, valor con peso debajo. La jerarquía la da la tipografía — antes todos los importes eran chips/líneas del mismo peso y se confun"
         },
         {
@@ -47593,7 +47602,7 @@
           "exportada": false,
           "params": "{ u }: { u: ReturnType<typeof umbralesPuja> }",
           "retorno": null,
-          "linea": 665,
+          "linea": 727,
           "resumen": "Umbrales de APROBACIÓN del remate. Corrige la confusión de «hay que pujar el 70% de la deuda»: el 70% de la LEC es del VALOR DE SUBASTA, y la deuda entra como vía alternativa (y como techo probable de"
         },
         {
@@ -47602,7 +47611,7 @@
           "exportada": false,
           "params": "s: Subasta",
           "retorno": "SubastaInmueble",
-          "linea": 681,
+          "linea": 743,
           "resumen": "El `Subasta` del cliente, como lo espera la lógica pura del módulo."
         },
         {
@@ -47611,7 +47620,7 @@
           "exportada": false,
           "params": "{ s, o, params }: { s: Subasta; o?: Oportunidad | null; params?: ParamsCoste }",
           "retorno": null,
-          "linea": 708,
+          "linea": 770,
           "resumen": "«¿Y si pujo X?»: coste puerta abierta, descuento real y banda de aprobación de UNA puja concreta. Mismo motor que el resto de la ficha (`calcularCoste` + `umbralesPuja` del módulo, con la financiación"
         },
         {
@@ -47620,7 +47629,7 @@
           "exportada": false,
           "params": "{ s, o, acciones, extra, doc, escenarios, params }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null; escenarios?: EscenarioUI[] | null; params?: ParamsCoste }",
           "retorno": null,
-          "linea": 773
+          "linea": 835
         },
         {
           "nombre": "SubastasClient",
@@ -47628,14 +47637,14 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Inicial | null }",
           "retorno": null,
-          "linea": 1050
+          "linea": 1112
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "082a099ce240"
+      "hash": "de264f16afea"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -51306,7 +51315,7 @@
         "subastas_radar"
       ],
       "rutaApi": "/api/cron/subastas-avisos",
-      "hash": "c15d407d0434"
+      "hash": "1e3e8ade9184"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-cierre/route.ts",
@@ -87043,7 +87052,7 @@
           "exportada": false,
           "params": "texto: string, termino: string",
           "retorno": "boolean",
-          "linea": 147,
+          "linea": 150,
           "resumen": "¿El texto contiene el término como PALABRA completa? Un `includes` a secas ya mordió con núcleos cortos («isla» dentro de «Islantilla»): se exige frontera de palabra a ambos lados."
         },
         {
@@ -87052,7 +87061,7 @@
           "exportada": true,
           "params": "zona: string | null | undefined, titulo?: string | null",
           "retorno": "'Asturias' | 'Cantabria' | null",
-          "linea": 168,
+          "linea": 171,
           "resumen": "Costa a la que pertenece el anuncio, mirando su zona y su título (las alertas no traen municipio estructurado: la zona es texto libre del portal, «Barrio d'Arriba, Colunga»). `null` = no es costa nort"
         },
         {
@@ -87061,7 +87070,7 @@
           "exportada": true,
           "params": "zona: string | null | undefined, titulo?: string | null",
           "retorno": "boolean",
-          "linea": 178,
+          "linea": 181,
           "resumen": "La costa norte como booleano, para etiquetar sin nombrar la costa."
         },
         {
@@ -87069,9 +87078,9 @@
           "kind": "function",
           "exportada": true,
           "params": "zona: string | null | undefined, titulo?: string | null,",
-          "retorno": "'Asturias' | 'Cantabria' | 'Islantilla' | null",
-          "linea": 183,
-          "resumen": "Zona de la preferencia completa: costa norte o Islantilla."
+          "retorno": "ZonaPreferente | null",
+          "linea": 189,
+          "resumen": "Zona de la preferencia completa: costa norte, Islantilla o Matalascañas."
         },
         {
           "nombre": "esZonaPreferente",
@@ -87079,7 +87088,7 @@
           "exportada": true,
           "params": "zona: string | null | undefined, titulo?: string | null",
           "retorno": "boolean",
-          "linea": 195,
+          "linea": 203,
           "resumen": "¿Está en alguna zona preferente? (para la etiqueta 🌊 de los chollos)."
         },
         {
@@ -87088,7 +87097,7 @@
           "exportada": true,
           "params": "titulo: string | null | undefined",
           "retorno": "boolean",
-          "linea": 205,
+          "linea": 213,
           "resumen": "¿El anuncio es una CASA (chalet/adosado/pareado/casona) y no un piso? Se decide por el título, que el portal siempre encabeza con el tipo («Casa o chalet independiente en…», «casa adosada en…», «Piso "
         },
         {
@@ -87097,7 +87106,7 @@
           "exportada": true,
           "params": "c: Comparable",
           "retorno": "boolean",
-          "linea": 216,
+          "linea": 224,
           "resumen": "¿Nada en el anuncio delata obra? OJO: esto NO confirma «buen estado» — el correo de alerta no trae la descripción ni fotos. Dice exactamente que ni el título confiesa reforma ni la API lo marcó `a ref"
         },
         {
@@ -87106,7 +87115,7 @@
           "exportada": true,
           "params": "comparables: Comparable[]",
           "retorno": "Comparable[]",
-          "linea": 229,
+          "linea": 237,
           "resumen": "Colapsa los RE-LISTADOS del mismo portal: Idealista re-publica el mismo anuncio con un `ref` nuevo (visto en prod el 09/08/2026: el piso de Ceares salía DOS veces, refs 112188897 y 112233004, idéntico"
         },
         {
@@ -87115,13 +87124,13 @@
           "exportada": true,
           "params": "comparables: Comparable[], zonasPortal?: ZonaPortalRef[]",
           "retorno": "Preferente[]",
-          "linea": 265,
+          "linea": 273,
           "resumen": "CASAS ≤230.000€ de las zonas preferentes, sin señales de obra, con su comparación de zona si existe. Orden: primero las que YA HAN BAJADO de precio (más bajadas antes), luego las de particular, luego "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "831bcc234fab"
+      "hash": "d92629f01ad8"
     },
     {
       "ruta": "packages/module-subastas/src/costes.ts",
@@ -90065,6 +90074,6 @@
   ],
   "resumen": {
     "archivos": 2408,
-    "funciones": 6508
+    "funciones": 6509
   }
 }
