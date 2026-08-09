@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-09T10:31:09Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-09T11:03:56Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -223,9 +223,5 @@
 - ITP por CCAA
 - Vigía de pujas en vivo
 - Vivienda habitual
-- (09/08/2026) 🔭 Retrovisor de 15 años CERRADO y H8/H9 resueltas con el corpus entero (09/08/2026).
-- (08/08/2026) 📏 El umbral de la guardia de suplantación estaba MAL, y se midió (08/08/2026).
-- (08/08/2026) ✅ Precio dinámico vivo en los 4 pisos, primera pasada real verificada (08/08/2026).
-- (08/08/2026) 🔀 El precio era real… pero de otra empresa: saneo del corpus de trading (08/08/2026).
-- (08/08/2026) 🛡️ Segundo par de ojos sobre el precio + procedencia del dato (08/08/2026).
+- (09/08/2026) 📌 Estado vivo — pendientes y decisiones abiertas (actualizado 09/08/2026).
 
