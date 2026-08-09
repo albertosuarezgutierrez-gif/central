@@ -87,7 +87,7 @@ export type { Chollo, ObservacionRef, VelocidadZona, ZonaPortalRef } from './com
 // Cantabria/Islantilla) sin señales de obra — rebajadas y de particular primero
 export {
   lentePreferentes, zonaPreferenteDe, esZonaPreferente, costaNorteDe, esCostaNorte,
-  esCasa, sinSenalesDeObra, dedupeRelistados, TOPE_PREFERENTE_EUR,
+  esCasa, sinSenalesDeObra, dedupeRelistados, TOPE_PREFERENTE_EUR, ZONAS_SIN_TOPE,
   MUNICIPIOS_COSTA_ASTURIAS, NUCLEOS_COSTA_ASTURIAS,
   MUNICIPIOS_COSTA_CANTABRIA, NUCLEOS_COSTA_CANTABRIA, NUCLEOS_PREFERENTES_SUR,
 } from './costa-norte.ts'
