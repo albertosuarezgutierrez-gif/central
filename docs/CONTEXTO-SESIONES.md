@@ -52,6 +52,19 @@ limpio, automerge de rutinas sano. Único hallazgo: 21 vulns de `pnpm audit`, ni
 (watchdog de trading descrito con 2 tramos en vez de 3, huella de pricing desactualizada). Informe
 completo `docs/AUDITORIA-2026-08.md`.
 
+### 🤖 (09/08/2026) agentes-entrenador — pasada semanal (29/07→09/08): backlog sano, un fix trivial
+- Backlog de PRs `claude/*` abiertos: **5** (bajando desde 73→31 del barrido de Alberto de 29/07) —
+  sin crecimiento, sin necesidad de escalar. `FEEDBACK-AGENTES.md` sin pendientes.
+- Único fix: `psd2-health-check/SKILL.md` usaba la columna `fecha` (no existe; real
+  `fecha_operacion`, confirmado contra Supabase) — señalado el 05/08, corregido ahora.
+- Resto de fallos del rango (tope real de mercado-booking, sonda pricing en verde falso) ya
+  resueltos por PRs de sus propias sesiones (#1314, #1318) antes de esta pasada.
+- 🔇→✅ Canal Telegram mudo (401, `ALERTA_TOKEN` desincronizado) — a petición de Alberto, resuelto en la
+  misma sesión SIN tocar Vercel: registrado el token que ya lleva esta rutina en `rutina_tokens`
+  (3ª vía de `docs/AVISOS-AGENTES.md`). Verificado end-to-end (200 + Telegram real recibido). Ningún
+  tool de Vercel MCP expone env vars — la sincronización byte-a-byte en Vercel sigue sin ser algo que
+  una sesión pueda ejecutar.
+
 ### 🧹 (09/08/2026) «Estado actual» podado: el vivo baja de 121 KB a ~15 KB por sesión
 - La sección acumulaba 42 bloques (1.212 de 1.329 líneas, ~30k tokens de peaje en CADA
   sesión) porque la rotación mensual no la tocaba. Contenido ÍNTEGRO movido a
