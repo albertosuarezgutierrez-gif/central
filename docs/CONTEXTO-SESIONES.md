@@ -22,6 +22,15 @@
 
 ---
 
+## 🛡️ (09/08/2026) Auditoría PROFUNDA semanal — todo verde, PR #1329
+Pasada completa `auditoria-central` (no solo la ligera): typecheck 0 errores en las **8 apps**, tests
+sin fallos, sin secretos con fallback literal, Supabase advisors 0 ERROR, heartbeat de crons/agentes
+limpio, automerge de rutinas sano. Único hallazgo: 21 vulns de `pnpm audit`, ninguna explotable
+(documentado). Reconciliados 2 docs desactualizados que #1328 (ligera, mismo día) no cubrió:
+`apps/plataforma/CLAUDE.md` (subastas sin los PRs #1324/#1325/#1327) y `docs/RUTINAS-PROGRAMADAS.md`
+(watchdog de trading descrito con 2 tramos en vez de 3, huella de pricing desactualizada). Informe
+completo `docs/AUDITORIA-2026-08.md`.
+
 ## 🧮 (08/08/2026) Subastas 2ª tanda: ITP por CCAA, puja en vivo, vivienda habitual y simulador
 - **ITP por CCAA** (`module-subastas/src/impuestos.ts`): `calcularCoste` deja de aplicar el 7% andaluz a
   todo — la provincia elige el tipo general de su CCAA (Asturias 8%: Cancienes pasa de 94.248€ a 95.112€),
