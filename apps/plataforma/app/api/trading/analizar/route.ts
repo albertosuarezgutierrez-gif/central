@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
   const refFilas = await prisma.$queryRaw<Array<{ simbolo: string; precio: number }>>`
     SELECT DISTINCT ON (simbolo) simbolo, precio_ref AS precio
     FROM trading_tesis
-    WHERE fecha < ${fecha}::date AND fecha >= ${fecha}::date - ${DIAS_REFERENCIA_MAX} AND NOT anulado
+    WHERE fecha < ${fecha}::date AND fecha >= ${fecha}::date - ${DIAS_REFERENCIA_MAX}::int AND NOT anulado
     ORDER BY simbolo, fecha DESC`
   const referencias = Object.fromEntries(refFilas.map(f => [f.simbolo, f.precio]))
   const { limpios, descartados } = filtrarPreciosAnomalos(cierresHoy, referencias)
