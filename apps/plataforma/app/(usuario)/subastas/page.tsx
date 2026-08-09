@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { Prisma } from '@prisma/client'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
-import { escenariosCoste, evaluarOportunidad, pujaMaximaParaDescuento, yieldTuristico } from '@central/module-subastas'
+import { escenariosCoste, evaluarOportunidad, pujaMaximaParaDescuento, yieldTuristico, zonaPreferenteDe } from '@central/module-subastas'
 import { COLS_SUBASTA, filaASubasta, RADAR_CON_CORPUS, RADAR_VIGENTE, SUBASTA_VIGENTE } from '@/lib/subastas-radar'
 import { tesoreriaSubastas } from '@/lib/subastas/tesoreria'
 import { lentesMercado, leerIndiceINE, pulsoMercado } from '@/lib/subastas/mercado'
@@ -28,7 +28,7 @@ export default async function SubastasPage() {
 
   let inicial = null
   try {
-    const [filas, total, criterios, radar, tesoreria, lentes, ingresoDorm, indice, calibracion, pulso, calibPuja] = await Promise.all([
+    const [filas, total, criterios, radar, tesoreria, lentes, ingresoDorm, indice, calibracion, pulso, calibPuja, filasOportunidad] = await Promise.all([
       prisma.$queryRaw<any[]>(Prisma.sql`
         SELECT ${COLS_SUBASTA} FROM subastas
         WHERE es_inmueble = true AND ${SUBASTA_VIGENTE}
@@ -77,6 +77,18 @@ export default async function SubastasPage() {
       pulsoMercado().catch(() => null),
       // ¿Nuestra puja máxima se parece al remate real? `lectura: null` sin muestra.
       calibracionDePuja().catch(() => null),
+      // Subastas con SEÑAL para la vista unificada 🔥 Oportunidades: las que
+      // tienen con qué medirse (mercado, flip o tasación). Best-effort.
+      prisma.$queryRaw<any[]>(Prisma.sql`
+        SELECT ${COLS_SUBASTA} FROM subastas
+        WHERE es_inmueble = true AND ${SUBASTA_VIGENTE}
+          AND (margen_flip_pct IS NOT NULL OR precio_m2_mercado IS NOT NULL OR tasacion > 0)
+        ORDER BY margen_flip_pct DESC NULLS LAST
+        LIMIT 60
+      `).catch((e) => {
+        console.error('[subastas page oportunidades]', e)
+        return [] as any[]
+      }),
     ])
 
     // El radar guarda un SNAPSHOT (sobrevive a la poda del corpus), pero se
@@ -185,6 +197,35 @@ export default async function SubastasPage() {
           ? yieldTuristico(ingresoDorm.porDormitorio, ch.comparable.habitaciones, ch.comparable.precio)
           : null,
       })),
+      // Subastas con señal, en tarjeta COMPACTA para 🔥 Oportunidades. El corte
+      // (≥15% de descuento, flip apto o 🌊 preferente) es el mismo umbral de
+      // «merece un vistazo» que usan los avisos; el detalle vive en su ficha.
+      subastasChollo: filasOportunidad
+        .map((f) => {
+          const s = filaASubasta(f)
+          const oportunidad = evaluarOportunidad(s, null, params)
+          const preferente =
+            !['garaje', 'local', 'terreno', 'nave'].includes(String(f.tipo_bien ?? '')) &&
+            zonaPreferenteDe(s.municipio ?? null, s.descripcion ?? null) != null
+          return {
+            dedupeKey: f.dedupe_key as string,
+            identificador: s.identificador ?? (f.dedupe_key as string),
+            municipio: s.municipio ?? null,
+            provincia: s.provincia ?? null,
+            valorSubasta: s.valorSubasta ?? null,
+            superficie: s.superficie ?? null,
+            descuento: oportunidad.descuento,
+            margenFlipPct: f.margen_flip_pct == null ? null : Number(f.margen_flip_pct),
+            flipApto: f.flip_apto ?? false,
+            tipoBien: f.tipo_bien ?? null,
+            ocupada: s.situacionPosesoria === 'ocupada' || s.situacionPosesoria === 'ocupada_desconocida',
+            fechaFin: s.fechaFin ? String(s.fechaFin) : null,
+            url: s.url ?? null,
+            preferente,
+          }
+        })
+        .filter((x) => (x.descuento != null && x.descuento >= 0.15) || x.flipApto || x.preferente)
+        .slice(0, 30),
       // La preferencia 🌊: el yield estimado usa el ingreso por dormitorio de
       // SUS pisos (Sevilla) — orientativo; en el norte la temporada es otra.
       preferentes: lentes.preferentes.map((p) => ({

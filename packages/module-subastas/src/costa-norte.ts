@@ -132,12 +132,15 @@ export const NUCLEOS_COSTA_CANTABRIA = [
 ] as const
 
 /**
- * Núcleos preferentes del SUR (petición de Alberto, 09/08/2026): Islantilla.
- * OJO: esto NO es la lente 🏖️ de `playa.ts` (esa es de SUBASTAS y uso
- * propio, cubre toda la costa de Huelva/Cádiz sin tope) — aquí es la
- * preferencia de compra de mercado, acotada al núcleo que le interesa.
+ * Núcleos preferentes del SUR (petición de Alberto, 09/08/2026): Islantilla y
+ * Matalascañas. Matalascañas entró tras medirla en vivo (09/08/2026, Fotocasa):
+ * 216 anuncios en venta contra 133 de Islantilla y mediana ~14% más barata
+ * (2.857 vs 3.308 €/m²) — más oferta, mejor precio de entrada, como intuía
+ * Alberto. OJO: esto NO es la lente 🏖️ de `playa.ts` (esa es de SUBASTAS y
+ * uso propio, cubre toda la costa de Huelva/Cádiz sin tope) — aquí es la
+ * preferencia de compra de mercado, acotada a los núcleos que le interesan.
  */
-export const NUCLEOS_PREFERENTES_SUR = ['islantilla'] as const
+export const NUCLEOS_PREFERENTES_SUR = ['islantilla', 'matalascanas'] as const
 
 /**
  * ¿El texto contiene el término como PALABRA completa? Un `includes` a secas
@@ -179,15 +182,20 @@ export function esCostaNorte(zona: string | null | undefined, titulo?: string | 
   return costaNorteDe(zona, titulo) !== null
 }
 
-/** Zona de la preferencia completa: costa norte o Islantilla. */
+/** Nombre visible de cada zona preferente del sur (los slugs van sin ñ). */
+export type ZonaPreferente = 'Asturias' | 'Cantabria' | 'Islantilla' | 'Matalascañas'
+
+/** Zona de la preferencia completa: costa norte, Islantilla o Matalascañas. */
 export function zonaPreferenteDe(
   zona: string | null | undefined,
   titulo?: string | null,
-): 'Asturias' | 'Cantabria' | 'Islantilla' | null {
+): ZonaPreferente | null {
   const norte = costaNorteDe(zona, titulo)
   if (norte) return norte
   const texto = norm(`${zona ?? ''} ${titulo ?? ''}`)
-  if (texto && NUCLEOS_PREFERENTES_SUR.some((x) => contieneTermino(texto, x))) return 'Islantilla'
+  if (!texto) return null
+  if (contieneTermino(texto, 'islantilla')) return 'Islantilla'
+  if (contieneTermino(texto, 'matalascanas')) return 'Matalascañas'
   return null
 }
 
@@ -240,7 +248,7 @@ export function dedupeRelistados(comparables: Comparable[]): Comparable[] {
 
 export interface Preferente {
   comparable: Comparable
-  costa: 'Asturias' | 'Cantabria' | 'Islantilla'
+  costa: ZonaPreferente
   /**
    * Comparación con su zona cuando el corpus la da. `null` = SIN referencia
    * €/m² todavía (pocas alertas en esa zona) — que no es «a precio de

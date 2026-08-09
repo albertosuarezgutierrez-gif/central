@@ -9,7 +9,7 @@ import { tgSend, tgSendButtons } from '@central/core-telegram'
 import { prisma } from '@/lib/db'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { eur } from '@/lib/dinero'
-import { decidirAviso, esEmpresaInmobiliaria, umbralesPuja } from '@central/module-subastas'
+import { decidirAviso, esEmpresaInmobiliaria, umbralesPuja, zonaPreferenteDe } from '@central/module-subastas'
 import { RADAR_CON_CORPUS, RADAR_VIGENTE } from '@/lib/subastas-radar'
 
 export const dynamic = 'force-dynamic'
@@ -74,7 +74,10 @@ export async function GET(req: NextRequest) {
              -- Umbrales de aprobación del remate en el propio aviso: el 70% es
              -- del VALOR DE SUBASTA (no de la deuda), y la deuda marca hasta
              -- dónde puja el ejecutante sin desembolso.
-             s.tipo AS tipo_subasta, s.valor_subasta, s.cantidad_reclamada
+             s.tipo AS tipo_subasta, s.valor_subasta, s.cantidad_reclamada,
+             -- Para la preferencia 🌊: el tipo de BIEN (vivienda/garaje/…) y la
+             -- ubicación viven en el corpus, no siempre en el snapshot del radar.
+             s.tipo_bien, s.municipio AS municipio_corpus, s.descripcion AS descripcion_corpus
       ${RADAR_CON_CORPUS}
       WHERE r.avisado_at IS NULL
         AND ${RADAR_VIGENTE}
@@ -109,8 +112,19 @@ export async function GET(req: NextRequest) {
       // esté verificada» — una subasta vencida se colaría como la más urgente.
       const cerrada = fin != null && fin < Date.now()
       const claves = Array.isArray(p.analisis) ? p.analisis.map((x: any) => x?.clave).filter(Boolean) : []
+      // 🌊 Preferencia de Alberto (09/08/2026): una VIVIENDA subastada en sus
+      // zonas de playa (Asturias/Cantabria/Islantilla/Matalascañas) es «aviso
+      // más importante» — suena SIEMPRE (salvo cerrada), aunque el filtro de
+      // «rentable y limpia» la silenciara, y sale la primera. La honestidad se
+      // conserva: las pegas (cargas, sin verificar) van igualmente en el texto.
+      const s0 = p.subasta ?? {}
+      const preferente =
+        !['garaje', 'local', 'terreno', 'nave'].includes(String(p.tipo_bien ?? '')) &&
+        zonaPreferenteDe(p.municipio_corpus ?? s0.municipio ?? null, p.descripcion_corpus ?? s0.descripcion ?? null) != null
       return {
         p,
+        preferente,
+        cerrada,
         d: decidirAviso({
           // Rentabilidad: el radar ya casó criterios, y las lentes marcan flip/playa.
           rentable: true,
@@ -128,17 +142,21 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    const aAvisar = decisiones.filter((x) => x.d.decision === 'avisar')
-    const silenciadas = decisiones.filter((x) => x.d.decision === 'silenciar')
-    const esperando = decisiones.filter((x) => x.d.decision === 'esperar')
+    // Los 🌊 preferentes se avisan aunque el filtro los silenciara o mandara
+    // esperar al lector (con su caveat de «sin verificar»); y van primero.
+    const aAvisar = decisiones
+      .filter((x) => x.d.decision === 'avisar' || (x.preferente && !x.cerrada))
+      .sort((a, b) => Number(b.preferente) - Number(a.preferente))
+    const silenciadas = decisiones.filter((x) => x.d.decision === 'silenciar' && !(x.preferente && !x.cerrada))
+    const esperando = decisiones.filter((x) => x.d.decision === 'esperar' && !(x.preferente && !x.cerrada))
 
-    for (const { p, d } of aAvisar.slice(0, MAX_EN_MENSAJE)) {
+    for (const { p, d, preferente } of aAvisar.slice(0, MAX_EN_MENSAJE)) {
       const s = p.subasta ?? {}
       const punt = p.puntuacion == null ? 'sin datos para puntuar' : `${p.puntuacion}/100`
       const coste = p.coste_total == null ? null : eur(Number(p.coste_total))
       const cierre = p.fecha_fin ? new Date(p.fecha_fin).toLocaleDateString('es-ES') : null
 
-      const lineas = [`⚖️ <b>${escapar(s.identificador ?? p.dedupe_key)}</b> — ${punt}`]
+      const lineas = [`${preferente ? '🌊 <b>TU PREFERENCIA — vivienda de playa en subasta</b>\n' : ''}⚖️ <b>${escapar(s.identificador ?? p.dedupe_key)}</b> — ${punt}`]
       if (s.descripcion) lineas.push(escapar(String(s.descripcion).slice(0, 160)))
       // «coste estimado» a secas se confundía con una valoración: es el coste
       // puerta abierta simulando el remate a la salida (mismo criterio que la ficha).
@@ -176,6 +194,11 @@ export async function GET(req: NextRequest) {
       // Honestidad sobre lo que se ha comprobado: si el plazo obligó a avisar sin
       // haber leído la documentación, se dice en el propio mensaje.
       if (d.sinVerificar) lineas.push('⏳ <b>Documentación SIN verificar</b> — cierra pronto y avisa igualmente')
+      // Un preferente adelantado por la lente (el filtro lo habría silenciado o
+      // hecho esperar) lo dice: la urgencia es de la ZONA, no de que esté limpia.
+      if (preferente && d.decision !== 'avisar') {
+        lineas.push(`⚠️ <i>Adelantado por tu preferencia (${escapar(d.motivo ?? 'pendiente de verificar')}) — revisa cargas y documentación antes de pujar</i>`)
+      }
       if (s.url) lineas.push(escapar(s.url))
 
       // Tercer botón: el «siguiente paso» que pidió Alberto (30/07/2026). En vez

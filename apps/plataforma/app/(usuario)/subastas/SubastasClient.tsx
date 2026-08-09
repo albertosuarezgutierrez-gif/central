@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { eur } from '@/lib/dinero'
 import { estadoDocumentacion, resumenDocumentos, type DocumentoAdjunto } from '@/lib/subastas/resumen-docs'
-import { calcularCoste, direccionCatastro, esDireccionPostal, estadoPujaMinima, titularCargas, umbralesPuja, urlFichaCatastro, urlGoogleMaps, urlStreetView, viviendaHabitualDeNotas, type ParamsCoste, type SubastaInmueble } from '@central/module-subastas'
+import { calcularCoste, direccionCatastro, esCasa, esDireccionPostal, estadoPujaMinima, titularCargas, umbralesPuja, urlFichaCatastro, urlGoogleMaps, urlStreetView, viviendaHabitualDeNotas, type ParamsCoste, type SubastaInmueble } from '@central/module-subastas'
 import MapaSubastas from './MapaSubastas'
 
 const PAGE = 50
@@ -197,6 +197,25 @@ interface Preferente {
   antiguedadCapada?: boolean
   rendimiento?: Rendimiento | null
 }
+/** Subasta con señal de oportunidad, en versión COMPACTA para la vista unificada. */
+interface SubastaChollo {
+  dedupeKey: string
+  identificador: string
+  municipio: string | null
+  provincia: string | null
+  valorSubasta: number | null
+  superficie: number | null
+  /** Descuento vs valor de mercado (tanto por uno). null = sin referencia. */
+  descuento: number | null
+  margenFlipPct: number | null
+  flipApto: boolean
+  tipoBien: string | null
+  ocupada: boolean
+  fechaFin: string | null
+  url: string | null
+  /** 🌊 vivienda en zona preferente. */
+  preferente: boolean
+}
 interface Inicial {
   resultados: Resultado[]
   total: number
@@ -206,6 +225,8 @@ interface Inicial {
   chollos: Chollo[]
   /** Preferentes 🌊 que NO llegan a chollo (los que sí, van en `chollos` etiquetados). */
   preferentes?: Preferente[]
+  /** Subastas con señal (descuento vs mercado o flip) para la vista unificada. */
+  subastasChollo?: SubastaChollo[]
   ingresoDorm: { porDormitorio: number; pisos: number } | null
   indice?: { anual: number | null; trimestral: number | null; etiqueta: string | null } | null
   calibracion?: Array<{ provincia: string; muestra: number; adjudicadas: number; desiertas: number; ratioMediano: number | null; muestraRatio: number }>
@@ -350,6 +371,47 @@ function LineaRendimiento({ r, dormitorios }: { r: Rendimiento | null | undefine
       netos → se paga en <strong>{r.aniosRecuperacion} años</strong> ({(r.yieldBruto * 100).toFixed(1)}% bruto).
       <em> Estimación, no proyección.</em>
     </p>
+  )
+}
+
+/**
+ * Tarjeta COMPACTA de una subasta para la vista unificada de Oportunidades:
+ * la señal (descuento/flip), las pegas rápidas y un enlace a su ficha completa
+ * en la pestaña «Todas» — FichaSubasta es demasiado pesada para montarla en
+ * una lista (regla de rendimiento).
+ */
+function TarjetaSubastaCompacta({ s, onVerFicha }: { s: SubastaChollo; onVerFicha: () => void }) {
+  const senal = s.descuento != null && s.descuento > 0
+    ? `−${Math.round(s.descuento * 100)}% vs mercado`
+    : s.margenFlipPct != null ? `🔨 flip ~${Math.round(s.margenFlipPct)}%` : null
+  const cierre = s.fechaFin ? new Date(s.fechaFin).toLocaleDateString('es-ES') : null
+  return (
+    <div style={{ ...card, borderLeft: '4px solid var(--primary, #4f46e5)' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'baseline', justifyContent: 'space-between' }}>
+        <strong style={{ color: 'var(--text)', fontSize: 15 }}>
+          {s.preferente && '🌊 '}⚖️ {s.identificador}{s.municipio ? ` — ${s.municipio}` : ''}
+        </strong>
+        {senal && <span style={{ fontWeight: 700, color: 'var(--positive, #15803d)' }}>{senal}</span>}
+      </div>
+      <p style={{ margin: '6px 0 0', color: 'var(--text)', fontSize: 14 }}>
+        {s.valorSubasta != null ? `Salida ${eur(s.valorSubasta)}` : 'Salida sin publicar'}
+        {s.superficie != null && ` · ${s.superficie} m²`}
+        {s.tipoBien && ` · ${s.tipoBien}`}
+      </p>
+      <p style={{ margin: '4px 0 0', color: 'var(--muted)', fontSize: 13 }}>
+        ⚖️ Subasta{s.provincia ? ` · ${s.provincia}` : ''}{cierre ? ` · cierra ${cierre}` : ''}
+        {s.ocupada && ' · ⚠️ ocupada'}
+      </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+        <button onClick={onVerFicha} style={boton()}>Ver ficha completa →</button>
+        {s.url && (
+          <a href={s.url} target="_blank" rel="noreferrer"
+             style={{ ...boton(), display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
+            Portal oficial
+          </a>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -1048,7 +1110,10 @@ function FichaSubasta({ s, o, acciones, extra, doc, escenarios, params }: { s: S
 }
 
 export default function SubastasClient({ inicial }: { inicial: Inicial | null }) {
-  const [tab, setTab] = useState<'radar' | 'chollos' | 'todas' | 'mapa' | 'criterios'>('radar')
+  // 🔥 Oportunidades es la puerta de entrada (decisión de Alberto, 09/08/2026):
+  // «me da igual la fuente, el objetivo es buscar chollos y sobre todo mis
+  // preferencias». El radar sigue ahí para el detalle de subastas.
+  const [tab, setTab] = useState<'radar' | 'oportunidades' | 'todas' | 'mapa' | 'criterios'>('oportunidades')
   const [datos, setDatos] = useState<Inicial | null>(inicial)
   const [visibles, setVisibles] = useState(PAGE)
   const [crit, setCrit] = useState<Criterios>(
@@ -1082,13 +1147,18 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
   const [totalLista, setTotalLista] = useState(inicial?.total ?? 0)
   const [pagina, setPagina] = useState(1)
   const [buscando, setBuscando] = useState(false)
-  // Filtros de la pestaña Chollos: client-side (la lista completa ya viene del SSR).
-  const [fch, setFch] = useState({ soloParticulares: false, portal: 'all', zona: '', precioMax: '' })
+  // Filtros de la pestaña Oportunidades: client-side (todo viene del SSR).
+  // «Por si alguien me pregunta»: la lente 🌊 es fija, pero aquí se puede
+  // explorar TODO el corpus con filtros (casas, rebajados, particular, fuente).
+  const [fch, setFch] = useState({ soloParticulares: false, soloCasas: false, soloRebajados: false, portal: 'all', zona: '', precioMax: '' })
   const chollosFiltrados = useMemo(() => {
     const zona = fch.zona.trim().toLowerCase()
     const precioMax = parseInt(fch.precioMax, 10)
+    if (fch.portal === 'subasta') return []
     return (datos?.chollos ?? []).filter((ch) => {
       if (fch.soloParticulares && !ch.comparable.esParticular) return false
+      if (fch.soloCasas && !esCasa(ch.comparable.titulo)) return false
+      if (fch.soloRebajados && !((ch.comparable.bajadas ?? 0) > 0)) return false
       // Los comparables viejos de Idealista no llevan `portal`: se asume idealista.
       if (fch.portal !== 'all' && (ch.comparable.portal ?? 'idealista') !== fch.portal) return false
       if (zona && !`${ch.comparable.titulo} ${ch.comparable.zona ?? ''} ${ch.zona}`.toLowerCase().includes(zona)) return false
@@ -1096,6 +1166,34 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
       return true
     })
   }, [datos?.chollos, fch])
+  // Subastas con señal (descuento vs mercado o margen flip), filtradas con los
+  // mismos mandos. OJO honesto: una subasta no tiene «rebaja» ni «particular» —
+  // con esos filtros activos quedan fuera, y el contador lo dice.
+  const subastasFiltradas = useMemo(() => {
+    const zona = fch.zona.trim().toLowerCase()
+    const precioMax = parseInt(fch.precioMax, 10)
+    if (fch.soloParticulares || fch.soloRebajados) return []
+    if (fch.portal !== 'all' && fch.portal !== 'subasta') return []
+    return (datos?.subastasChollo ?? []).filter((s) => {
+      if (fch.soloCasas && s.tipoBien !== 'vivienda') return false
+      if (zona && !`${s.identificador} ${s.municipio ?? ''} ${s.provincia ?? ''}`.toLowerCase().includes(zona)) return false
+      if (Number.isFinite(precioMax) && s.valorSubasta != null && s.valorSubasta > precioMax) return false
+      return true
+    })
+  }, [datos?.subastasChollo, fch])
+  // La lista unificada: la fuente es un badge, el orden lo pone el ATRACTIVO
+  // (descuento neto/margen flip, el mayor primero; sin señal, al final).
+  const oportunidades = useMemo(() => {
+    const items: Array<{ clave: string; atractivo: number; chollo?: Chollo; subasta?: SubastaChollo }> = []
+    for (const ch of chollosFiltrados) {
+      items.push({ clave: `m|${ch.comparable.portal}|${ch.comparable.refAnuncio}`, atractivo: ch.descuentoNeto ?? ch.descuento, chollo: ch })
+    }
+    for (const s of subastasFiltradas) {
+      const atractivo = Math.max(s.descuento ?? -Infinity, s.margenFlipPct != null ? s.margenFlipPct / 100 : -Infinity)
+      items.push({ clave: `s|${s.dedupeKey}`, atractivo, subasta: s })
+    }
+    return items.sort((a, b) => b.atractivo - a.atractivo)
+  }, [chollosFiltrados, subastasFiltradas])
 
   async function buscarTodas(reset: boolean, f: Filtros = filtros) {
     const page = reset ? 1 : pagina + 1
@@ -1264,8 +1362,8 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
         <button onClick={() => setTab('radar')} style={boton(tab === 'radar')}>
           🎯 Mi radar {datos.radar.length > 0 && `(${datos.radar.length})`}
         </button>
-        <button onClick={() => setTab('chollos')} style={boton(tab === 'chollos')}>
-          💡 Chollos {datos.chollos.length > 0 && `(${datos.chollos.length})`}
+        <button onClick={() => setTab('oportunidades')} style={boton(tab === 'oportunidades')}>
+          🔥 Oportunidades {(datos.chollos.length + (datos.subastasChollo?.length ?? 0)) > 0 && `(${datos.chollos.length + (datos.subastasChollo?.length ?? 0)})`}
         </button>
         <button onClick={() => setTab('todas')} style={boton(tab === 'todas')}>
           📋 Todas ({datos.total})
@@ -1326,12 +1424,13 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
         </section>
       )}
 
-      {tab === 'chollos' && (
+      {tab === 'oportunidades' && (
         <section>
           <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 0 }}>
-            Anuncios de tus alertas de Idealista y Fotocasa muy por debajo de la mediana €/m² de su
-            zona. Es la otra cara del mismo dato que valora las subastas: aquí no se puja, se llama.
-            Los de particular se marcan 👤 — negociación directa.
+            TODO lo que huele a chollo, venga de donde venga: anuncios de tus alertas de Idealista y
+            Fotocasa muy por debajo de la mediana €/m² de su zona y subastas con descuento o margen de
+            flip. La fuente es un detalle (⚖️/portal); el orden lo pone el atractivo. Los de particular
+            se marcan 👤 — negociación directa.
           </p>
           {(datos.preferentes?.length ?? 0) > 0 && (
             <div style={{ marginBottom: 16 }}>
@@ -1389,8 +1488,18 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
               )}
             </div>
           )}
-          {datos.chollos.length > 0 && (
+          {(datos.chollos.length > 0 || (datos.subastasChollo?.length ?? 0) > 0) && (
             <div style={{ ...card, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+              <button
+                onClick={() => { setFch((f) => ({ ...f, soloCasas: !f.soloCasas })); setVisibles(PAGE) }}
+                style={{ ...boton(fch.soloCasas), padding: '0 10px', fontSize: 13 }}>
+                🏠 Solo casas
+              </button>
+              <button
+                onClick={() => { setFch((f) => ({ ...f, soloRebajados: !f.soloRebajados })); setVisibles(PAGE) }}
+                style={{ ...boton(fch.soloRebajados), padding: '0 10px', fontSize: 13 }}>
+                ⬇️ Solo rebajados
+              </button>
               <button
                 onClick={() => { setFch((f) => ({ ...f, soloParticulares: !f.soloParticulares })); setVisibles(PAGE) }}
                 style={{ ...boton(fch.soloParticulares), padding: '0 10px', fontSize: 13 }}>
@@ -1399,7 +1508,8 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
               <select value={fch.portal}
                       onChange={(e) => { setFch((f) => ({ ...f, portal: e.target.value })); setVisibles(PAGE) }}
                       style={{ ...control, fontSize: 13 }}>
-                <option value="all">Ambos portales</option>
+                <option value="all">Todas las fuentes</option>
+                <option value="subasta">⚖️ Subastas</option>
                 <option value="idealista">Idealista</option>
                 <option value="fotocasa">Fotocasa</option>
               </select>
@@ -1410,25 +1520,34 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                      onChange={(e) => { setFch((f) => ({ ...f, precioMax: e.target.value.replace(/\D/g, '') })); setVisibles(PAGE) }}
                      style={{ ...control, fontSize: 13, width: 110 }} />
               <span style={{ color: 'var(--muted)', fontSize: 13 }}>
-                {chollosFiltrados.length === datos.chollos.length
-                  ? `${datos.chollos.length} chollos`
-                  : `${chollosFiltrados.length} de ${datos.chollos.length}`}
+                {oportunidades.length} oportunidad{oportunidades.length === 1 ? '' : 'es'}
+                {(fch.soloRebajados || fch.soloParticulares) && (datos.subastasChollo?.length ?? 0) > 0 &&
+                  ' · las subastas no llevan rebaja/particular: quedan fuera con estos filtros'}
               </span>
             </div>
           )}
-          {datos.chollos.length === 0 ? (
+          {datos.chollos.length === 0 && (datos.subastasChollo?.length ?? 0) === 0 ? (
             <p style={{ color: 'var(--muted)' }}>
-              Ningún anuncio destaca sobre su zona ahora mismo. Cuantas más búsquedas guardadas
+              Ninguna oportunidad destaca ahora mismo. Cuantas más búsquedas guardadas
               de vivienda tengas en Idealista, más zonas vigila esto.
             </p>
-          ) : chollosFiltrados.length === 0 ? (
+          ) : oportunidades.length === 0 ? (
             <p style={{ color: 'var(--muted)' }}>
-              Ningún chollo pasa estos filtros. {fch.soloParticulares && 'Los particulares son pocos: prueba a quitar el resto de filtros. '}
+              Nada pasa estos filtros. {fch.soloParticulares && 'Los particulares son pocos: prueba a quitar el resto de filtros. '}
               El corpus crece con cada pasada diaria de tus alertas.
             </p>
           ) : (
-            chollosFiltrados.slice(0, visibles).map((ch) => (
-              <div key={ch.comparable.refAnuncio} style={{ ...card, borderLeft: '4px solid var(--positive, #16a34a)' }}>
+            oportunidades.slice(0, visibles).map((it) => {
+              if (it.subasta) return (
+                <TarjetaSubastaCompacta key={it.clave} s={it.subasta}
+                  onVerFicha={() => {
+                    const f = { ...FILTROS_VACIOS, municipio: it.subasta!.municipio ?? '' }
+                    setFiltros(f); setTab('todas'); buscarTodas(true, f)
+                  }} />
+              )
+              const ch = it.chollo!
+              return (
+              <div key={it.clave} style={{ ...card, borderLeft: '4px solid var(--positive, #16a34a)' }}>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'baseline', justifyContent: 'space-between' }}>
                   <strong style={{ color: 'var(--text)', fontSize: 15 }}>{ch.preferente && '🌊 '}{ch.comparable.titulo}</strong>
                   <span style={{ fontWeight: 700, color: ch.sospechoso ? 'var(--warning, #b45309)' : 'var(--positive, #15803d)' }}>
@@ -1510,9 +1629,10 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                   </pre>
                 )}
               </div>
-            ))
+              )
+            })
           )}
-          {chollosFiltrados.length > visibles && (
+          {oportunidades.length > visibles && (
             <button onClick={() => setVisibles((v) => v + PAGE)} style={boton()}>Ver más</button>
           )}
         </section>

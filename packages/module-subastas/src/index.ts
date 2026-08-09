@@ -91,7 +91,7 @@ export {
   MUNICIPIOS_COSTA_ASTURIAS, NUCLEOS_COSTA_ASTURIAS,
   MUNICIPIOS_COSTA_CANTABRIA, NUCLEOS_COSTA_CANTABRIA, NUCLEOS_PREFERENTES_SUR,
 } from './costa-norte.ts'
-export type { Preferente } from './costa-norte.ts'
+export type { Preferente, ZonaPreferente } from './costa-norte.ts'
 // Calibración con RESULTADOS reales: a qué % del tipo se adjudica de verdad
 export { calibracionAdjudicaciones, calibracionPorCargas, calibracionPuja, MIN_MUESTRA_CALIBRACION, MIN_MUESTRA_PUJA } from './adjudicaciones.ts'
 export type {
