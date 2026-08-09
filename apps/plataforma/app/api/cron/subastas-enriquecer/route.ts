@@ -22,16 +22,33 @@ export const dynamic = 'force-dynamic'
 // en silencio. Mismo techo que `subastas-mercado`.
 export const maxDuration = 300
 
-/** Se reenriquece pasado este tiempo: los importes cambian durante la subasta. */
-const REFRESCO_HORAS = 24
+/**
+ * Se reenriquece pasado este tiempo: los importes cambian durante la subasta.
+ * 23 y no 24: el cron corre a diario a la misma hora, así que con un umbral de
+ * 24 h exactas la fila enriquecida ayer a las 06:15:31 aún no es elegible
+ * cuando la query corre hoy a las 06:15:05 — y cada ficha pasaba a releerse
+ * cada DOS días, no cada día.
+ */
+const REFRESCO_HORAS = 23
 
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const max = Math.min(Math.max(parseInt(new URL(req.url).searchParams.get('max') || '12', 10) || 12, 1), 40)
+  // 24 (no 12): la pasada diaria debe cubrir TODAS las fichas vivas del BOE en
+  // un día. Con 12 plazas y ~40 filas elegibles (23 de la Junta + ~18 del BOE),
+  // la rotación por `enriquecida_at ASC` dejaba fichas del BOE 3-4 días sin
+  // releer — y la relectura diaria es la que refresca puja mínima/importes
+  // mientras la subasta está abierta. El techo real lo ponen `maxDuration` 300
+  // y los presupuestos de tiempo internos, calibrados para `?max=40`.
+  const max = Math.min(Math.max(parseInt(new URL(req.url).searchParams.get('max') || '24', 10) || 24, 1), 40)
 
   try {
     // Prioridad: las que nunca se enriquecieron y las que cierran antes.
+    // Las fuentes SIN ficha en el Portal (Junta…) solo entran en la cola si les
+    // queda trabajo real: geocodificar (`lat IS NULL`) o subir de centroide a
+    // punto exacto (aparece la referencia catastral). Su re-pasada de las 24 h
+    // era un no-op —solo refrescaba `enriquecida_at`— pero consumía las plazas
+    // de la pasada y dejaba fuera a las fichas del BOE, que sí cambian.
     const pendientes = await prisma.$queryRaw<{ dedupe_key: string; fuente: string; identificador: string | null; ref_catastral: string | null; lat: number | null; geo_precision: string | null; municipio: string | null; provincia: string | null; direccion: string | null }[]>(
       Prisma.sql`
         SELECT dedupe_key, fuente, identificador, ref_catastral, lat, geo_precision,
@@ -39,7 +56,13 @@ export async function GET(req: NextRequest) {
         FROM subastas
         WHERE identificador IS NOT NULL
           AND (fecha_fin IS NULL OR fecha_fin >= now())
-          AND (enriquecida_at IS NULL OR enriquecida_at < now() - make_interval(hours => ${REFRESCO_HORAS}::int))
+          AND (
+            enriquecida_at IS NULL
+            OR (enriquecida_at < now() - make_interval(hours => ${REFRESCO_HORAS}::int)
+                AND (fuente = 'boe'
+                     OR lat IS NULL
+                     OR (geo_precision = 'municipio' AND ref_catastral IS NOT NULL)))
+          )
         ORDER BY enriquecida_at NULLS FIRST, fecha_fin ASC NULLS LAST
         LIMIT ${max}
       `,
