@@ -31,6 +31,10 @@ test('reconoce municipios y núcleos del litoral asturiano y cántabro, e Islant
   assert.equal(costaNorteDe('Somo, Ribamontán al Mar'), 'Cantabria')
   assert.equal(zonaPreferenteDe('Islantilla Golf, Islantilla'), 'Islantilla')
   assert.equal(zonaPreferenteDe(null, 'casa adosada en Avenida del Deporte12, Islantilla'), 'Islantilla')
+  // Matalascañas entró el 09/08/2026 (216 anuncios vs 133 de Islantilla y
+  // mediana ~14% más barata, medido en vivo). La ñ se normaliza.
+  assert.equal(zonaPreferenteDe('Caño Guerrero, Matalascañas'), 'Matalascañas')
+  assert.equal(zonaPreferenteDe(null, 'Casa en Matalascanas, Almonte'), 'Matalascañas')
 })
 
 test('NO confunde el resto del sur ni el interior con las zonas preferentes', () => {
