@@ -241,6 +241,51 @@ function texto2(html: string): string {
   return decodificarHtml(html.replace(/<[^>]+>/g, ' '))
 }
 
+// ── Cierre visto en una ficha REAL (validado el 09/08/2026, El Puerto) ───────
+// La primera conclusión real enseñó el marcado: la ficha concluida NO publica
+// el estado como par clave/valor (por eso `resultadoDeFicha` devolvía null y el
+// cron llevaba semanas logueando «sin estado reconocible») sino como BANNER en
+// una caja de aviso: «LA SUBASTA HA CONCLUIDO SU PERIODO DE PUJAS (se encuentra
+// pendiente de finalización…)». El desenlace definitivo del periodo de pujas
+// vive en el CERTIFICADO DE CIERRE (PDF público, `verCertificadoCierre.php`):
+// «La subasta concluyó con pujas (puja máxima X euros)».
+
+/**
+ * Detecta el banner de conclusión en el HTML CRUDO de la ficha — no aparece en
+ * los pares clave/valor, así que hay que mirar el texto completo.
+ * `null` = ningún banner reconocido, que NO es «sigue abierta».
+ */
+export function resultadoDeBanner(html: string): 'concluida' | null {
+  const t = norm(texto2(html))
+  return /ha concluido su periodo de pujas/.test(t) ? 'concluida' : null
+}
+
+export interface CierreCertificado {
+  /**
+   * `con_pujas` = hubo remate (la aprobación del LAJ puede seguir pendiente,
+   * pero la puja máxima ya es definitiva) · `desierta` = cerró sin pujas.
+   */
+  resultado: 'con_pujas' | 'desierta'
+  /** Puja máxima del certificado (el remate). `null` solo en desiertas. */
+  pujaMaxima: number | null
+}
+
+/**
+ * Desenlace del certificado de cierre (texto extraído de su PDF). Defensivo:
+ * si el marcado no se reconoce devuelve `null` y el caller reintenta en la
+ * pasada siguiente — nunca inventa.
+ */
+export function parsearCertificadoCierre(texto: string): CierreCertificado | null {
+  const t = norm(texto)
+  const con = t.match(/concluyo con pujas[^(]*\(puja maxima ([0-9.,]+) euros?\)/)
+  if (con) {
+    const n = parseImporteEs(con[1])
+    return { resultado: 'con_pujas', pujaMaxima: n != null && n > 0 ? n : null }
+  }
+  if (/concluyo sin pujas/.test(t)) return { resultado: 'desierta', pujaMaxima: null }
+  return null
+}
+
 /**
  * Mejor puja publicada por la ficha de una subasta EN CURSO (sin exigir
  * estado, a diferencia de `resultadoDeFicha`). Sirve para vigilar las

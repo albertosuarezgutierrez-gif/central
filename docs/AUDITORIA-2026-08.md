@@ -1,5 +1,56 @@
 # Auditoría diaria — agosto 2026
 
+# Actualización 2026-08-08 — auditoría diaria (ligera)
+
+Rango: desde la última auditoría (5a473f1, 07/08 06:40 UTC) hasta hoy (58c2e4c, 08/08 09:12 UTC) —
+día de trabajo intenso: fix del agente contable (#1295, #1300), cursor incremental de subastas-mercado
+(#1296), watchdog de trading (#1291), latido del barrido de sivra (#1288), y el workflow de
+auto-merge de rutinas (#1289, #1297) que resuelve el atasco de PRs documentado ayer.
+
+## ✅ Sin atasco de PRs de rutina — el auto-merge de #1289/#1297 ya funciona
+A diferencia del 04-07/08, hoy **no hay PRs de rutina muertos en conflicto**: el PR #1298 (registro,
+conflicto de inserción pura) se resolvió y mergeó solo. Confirmado por `git log`: `019c403 Merge PR
+#1298 (registro) resolviendo el conflicto conservando ambas entradas`.
+
+## 🔴→✅ `docs/RUTINAS-PROGRAMADAS.md`: descripción del watchdog de trading desactualizada
+La sección 12 ("Monitorización — watchdog trading + latidos de agentes") describía `trading-watchdog`
+comprobando solo 2 huellas (`broker_saldos` NAV + `trading_tesis`). El PR #1291 (mergeado hoy) le
+añadió un 3er tramo — latido explícito `agente_latidos.trading_puntuar` — tras un caso real (06/08):
+NAV y tesis quedaron frescos pero `/puntuar` nunca se llamó, y el watchdog de 2 tramos lo habría dado
+por bueno (stops y walk-forward sin actualizar, en silencio). Corregido para reflejar los 3 tramos.
+Este fichero está en la lista de exclusión del auto-merge de registro (describe comportamiento de
+agentes), así que va en este PR de revisión, no al de solo-registro.
+
+## ✅ Heartbeat de crons — 12/14 ✅, 2 falsos positivos ya conocidos (verificados de nuevo)
+`updates/sync` (Smoobu) ⛔ por umbral (113,6h sin fila en `incomes`) — verificado por
+`agente_latidos.smoobu_sync`: `ok:true`, última pasada hace 5,4h, "0 nuevas, 0 modificadas, 0
+canceladas (6 vistas)" — corre bien, simplemente no hay reservas nuevas. `limpiadoras/auto-sessions`
+⛔ por umbral (82,4h) — verificado: 5 inserciones en los últimos 12 días (patrón idempotente ya
+documentado desde el 02/07, huecos de días son la norma). Ninguno requiere acción.
+
+## ✅ Integridad estructural — sin hallazgos
+Sin cambios de `package.json`/`pnpm-lock.yaml` en el rango.
+
+## ✅ Skills-maestro / `docs/SKILLS.md` — sin drift
+Las 31 skills de `.claude/skills/` y los 3 comandos de `.claude/commands/` están reflejados. Reglas
+fiscales (`amortizable = NUNCA sin orden de Alberto`) consistentes entre `perfil-fiscal` y memoria.
+
+## ✅ Manuales de usuario — sin cambios que reconciliar
+Ningún commit del rango toca `apps/ia-rest/**` (único árbol con manual de usuario final); las features
+de hoy (agente contable, subastas) viven en `apps/plataforma`, sin manual de usuario equivalente.
+
+## ✅ Correo triaje — sin drift
+`lib/correo/rutas.ts` ya tiene categoría `contabilidad` para el agente contable; subastas usa su
+lector IMAP dedicado por diseño (fuera del triaje genérico, ya documentado). Sin cambios necesarios.
+
+## Nota sobre el carril de entrega de esta pasada
+Sesión bajo harness de tareas de GitHub, sin push directo a `main` (esperado). Carril 1 (memoria +
+`docs/AUTO-APLICADOS.md`) va en PR aparte de solo-registro (`claude/auditoria-registro-2026-08-08`),
+que el workflow de auto-merge mergeará solo en cuanto la CI esté verde. El fix de
+`docs/RUTINAS-PROGRAMADAS.md` va en este PR porque el fichero está excluido del auto-merge a propósito.
+
+---
+
 # Actualización 2026-08-07 — auditoría diaria (ligera)
 
 Rango: 50 commits desde la última reconciliación real en `main` (023fb05, 04/08 22:45 UTC) hasta

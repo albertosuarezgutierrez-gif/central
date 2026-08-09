@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   const refFilas = await prisma.$queryRaw<Array<{ simbolo: string; precio: number }>>(
     Prisma.sql`SELECT DISTINCT ON (simbolo) simbolo, precio_ref AS precio
                FROM trading_tesis
-               WHERE fecha < ${hoy}::date AND fecha >= ${hoy}::date - ${DIAS_REFERENCIA_MAX} AND NOT anulado
+               WHERE fecha < ${hoy}::date AND fecha >= ${hoy}::date - ${DIAS_REFERENCIA_MAX}::int AND NOT anulado
                ORDER BY simbolo, fecha DESC`,
   )
   const referencias = Object.fromEntries(refFilas.map(f => [f.simbolo, f.precio]))

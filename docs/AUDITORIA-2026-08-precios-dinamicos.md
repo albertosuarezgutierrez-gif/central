@@ -200,3 +200,48 @@ Esta segunda pasada corrigió **dos afirmaciones mías** de la primera:
 Van escritas aquí a propósito. Las dos son la misma clase de error que persigue la regla «dato que
 NO hay ≠ dato que NO se ha mirado» de `CLAUDE.md`, aplicada esta vez a la auditoría misma: un verde
 sin comprobar de dónde sale es indistinguible de un verde de verdad.
+
+---
+
+# Adenda 09/08/2026 — por qué la reserva de Luxury 16-18/10 salió un 36% bajo mercado
+
+Disparador: reserva Booking de Luxury (16-18/10, Genius, 5p) a **170,87€/noche efectivos** con el p50
+fiable de esas fechas a **275€ (vie) / 258,50€ (sáb)**. Tercera vez con el mismo patrón (18/09 −40%,
+06/11 −43%). Tres causas raíz, las tres reparadas en este PR:
+
+## 🔴 F6 — El `channel_markup` 1,16 NO existe en el escaparate: −13,8% sistemático
+
+El motor divide TODOS sus objetivos por `channel_markup` (1,16) asumiendo que el huésped ve
+`base × 1,16` en Booking. Medido contra 20 reservas Booking reales (25/06→09/08): **bruto pagado /
+precio listado = 0,66–1,08, mediana 0,92** — solo los descuentos del canal (Genius ~12%, móvil 10%).
+Bajo el modelo «markup 1,16», una reserva sin descuentos pagaría ratio ≈1,16 y **no aparece ni una**.
+La prueba limpia es la reserva del 06/11: pagó **122,43€/noche con el precio recién puesto a 122€**
+(factor 1,004 — ni markup ni descuento). ⚠️ La entrada de memoria del 01/08 que «confirmó» el markup
+(«122 × 1,16 con −10% móvil y −18% Genius = 104,44 vs 105,43 reales») usó el importe CORRUPTO de
+antes del fix de la doble comisión de ese mismo día, y ajustó dos descuentos supuestos a un solo
+punto. Fix: guarda `>= 1` en `apply/route.ts` + `settings/route.ts` + `pricing-engine.ts` (con `> 1`,
+un markup de 1.0 se ignoraba en silencio) y migración
+`prisma/sql/2026-08-09_channel_markup_sin_recargo.sql` (**aplicar SOLO tras desplegar el código**).
+
+## 🔴 F7 — El finde sin evento era invisible: bucket del mes + premio a 1,5×
+
+El bucket mensual mezcla entre semana y findes; el «premio de mercado» exige ≥1,5× para anclar a la
+fecha (diseñado para eventos). Un sábado a 1,1-1,4× su mes se tarificaba como día medio **teniendo
+29-40 comps fiables de ESA fecha en la mano**. Fix: **ancla suave por fecha**
+(`lib/sivra/pricing-ancla-fecha.ts`, pura y testeada): con mediana FIABLE de la fecha (≥5 comps,
+nunca Serper), la base del día es al menos esa mediana ajustada por demanda/calidad — solo sube, NO
+salta el raíl ±%/día (a diferencia del premio de evento) y last-minute/gap pueden seguir descontando.
+
+## 🔴 F8 — El descuento de demanda castigaba fechas cuya venta no ha empezado
+
+Un solo factor de demanda por piso (ocupación media de TODO el horizonte, suelo ×0,92) aplicado a
+todas las fechas: Luxury vende octubre con **11-17 días de mediana** de antelación, así que su
+octubre «vacío» a 68 días vista es su estado normal — y aun así el descuento le quitaba un 6-8%
+meses antes de abrir la venta. Fix: `lib/sivra/pricing-demanda.ts` (pura y testeada) — con
+antelación medida (≥10 reservas) y `diasVista > mediana`, el descuento se neutraliza; el boost >1 se
+conserva siempre; sin datos, comportamiento clásico. Emparenta con el pendiente del PR #1320 (una
+sola `occ` para 365 días) y con la filosofía de `pricing-lastminute.ts`.
+
+**Exposición medida hoy** (precio vivo vs p50 fiable de fecha exacta, ≥5 comps): Luxury 8/24 fechas
+por debajo del 80% (4 bajo el 70%); Busto 2/22, Dúplex 4/26, House 1/26 — el agujero se concentra en
+Luxury; en la otra dirección (fechas de evento sostenidas por suelos PL) los pisos van por encima.

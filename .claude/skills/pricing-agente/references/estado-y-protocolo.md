@@ -2,6 +2,22 @@
 
 ## Estado vivo (13/07/2026) — leer al empezar el ciclo
 
+### Actualización 09/08/2026 — la venta bajo mercado del finde tenía TRES causas (reparadas)
+Disparador: 3ª reserva bajo el p50 de su fecha exacta (Luxury 16-18/10 a −36% efectivo; antes 18/09
+−40% y 06/11 −43%). Detalle completo en `docs/AUDITORIA-2026-08-precios-dinamicos.md` (adenda 09/08):
+- **🚨 El `channel_markup` 1,16 NO existe en el escaparate** — 20 reservas medidas: bruto/listado
+  0,66-1,08 (mediana 0,92, solo Genius/móvil); la del 06/11 pagó 122,43€ con listado 122€ (factor
+  1,004). El ÷1,16 era un −13,8% sistemático. La «confirmación» del 01/08 usó el importe corrupto
+  pre-fix de la doble comisión. Fix: guardas `>= 1` (con `> 1`, un markup 1.0 se ignoraba) +
+  `prisma/sql/2026-08-09_channel_markup_sin_recargo.sql` → `channel_markup = 1.0` (**aplicar SOLO
+  tras desplegar el código**).
+- **Ancla suave por fecha** (`pricing-ancla-fecha.ts`): con mediana FIABLE de la fecha (≥5 comps,
+  nunca Serper), la base del día es al menos esa mediana ajustada — solo sube, respeta el raíl.
+  Cierra el hueco del finde a 1,1-1,4× que el premio (≥1,5×, para eventos) no cubre a propósito.
+- **Descuento de demanda gateado por antelación** (`pricing-demanda.ts`): la ocupación baja de una
+  fecha FUERA de la ventana de venta del piso/mes (antelación mediana medida) ya no descuenta; el
+  boost >1 se conserva. Luxury vende octubre a 11-17 días — estar «vacío» a 68 días es lo normal.
+
 ### Actualización 22/07/2026 (MERGEADO a main, PR #1065, producción verde)
 - **Motor — «premio de mercado por fecha» (lever NUEVO, `apply/route.ts` + helper puro
   `lib/sivra/pricing-premio-mercado.ts`).** Antes el motor solo consultaba el mercado por FECHA EXACTA dentro
