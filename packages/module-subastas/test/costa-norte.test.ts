@@ -82,6 +82,20 @@ test('excluye lo que no es la preferencia: fuera de zona, con obra, garajes', ()
   assert.equal(r.length, 0)
 })
 
+test('un descuento de derribo (>50%) es señal de obra: fuera de la lente aunque el anuncio calle', () => {
+  // El caso Llanes 111790643: casa derruida a 541€/m² contra ~2.000€/m² de
+  // zona (−73%), con título limpio. En la primera prueba con corpus real
+  // salió la PRIMERA de la lente — un derribo vestido de preferencia.
+  const derruida = comp({ refAnuncio: '30', zona: 'Llanes', titulo: 'Casa o chalet independiente en Llanes', superficie: 183, precioM2: 541, precio: 99000 })
+  const resto = ['31', '32', '33'].map((id) =>
+    comp({ refAnuncio: id, zona: 'Llanes', titulo: 'Casa en Llanes', superficie: 100, precioM2: 2000 }),
+  )
+  const r = lenteCostaNorte([derruida, ...resto])
+  assert.equal(r.find((p) => p.comparable.refAnuncio === '30'), undefined)
+  // Los comparables sanos de la misma zona siguen dentro.
+  assert.equal(r.length, 3)
+})
+
 test('una finca >400 m² entra pero sin comparar €/m² (mide suelo, no vivienda)', () => {
   const finca = comp({ refAnuncio: '20', zona: 'Villaviciosa', superficie: 1000, precioM2: 235 })
   const resto = ['21', '22', '23', '24'].map((id) =>
