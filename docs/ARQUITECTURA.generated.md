@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-09T16:32:02Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-09T16:38:28Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -219,6 +219,7 @@
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - Preferencia de Alberto
+- MERGEADO
 - Decisión de Alberto:
 - PriceLabs:
 - Previstos v2 (idea de Alberto, riesgo asimétrico):
@@ -227,5 +228,4 @@
 - Watchlist ampliada
 - Decisión explícita: NO maximizar la watchlist.
 - El `channel_markup` 1,16 NO existe en el escaparate
-- Ancla suave por fecha
 
