@@ -6,6 +6,8 @@ import { eventFactor, seasonalFloorFactor, PRICING_HORIZON_DAYS, EVENTS } from "
 import { combinarEventosDeFecha, type EventoBruto } from "@/lib/sivra/eventos-estado"
 import { factorLastMinute } from "@/lib/sivra/pricing-lastminute"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
+import { anclaMercadoFecha } from "@/lib/sivra/pricing-ancla-fecha"
+import { factorDemandaFecha } from "@/lib/sivra/pricing-demanda"
 import { elegirBucket } from "@/lib/sivra/pricing-bucket-fuente"
 import { aplicarPrior, indicesPrior, type IndicePrior, type MesHistorico } from "@/lib/sivra/prior-estacional"
 import { getSmoobuKey } from "@/lib/smoobu"
@@ -96,6 +98,7 @@ export async function POST(req: NextRequest) {
 
   const recs = await prisma.$queryRaw<{
     property_id: string; recommended_guest: number; med_guest_global: number; floor_guest: number; ceil_guest: number
+    demand_factor: number; quality_factor: number
     channel_markup: number; max_change_pct: number; min_price: number | null; max_price: number | null
     sample_n: number; market_age_days: number; events_enabled: boolean; gap_discount_pct: number
     flight_demand_k: number; seasonal_floor_k: number; lastminute_k: number
@@ -133,6 +136,10 @@ export async function POST(req: NextRequest) {
         * GREATEST(LEAST(1 + (COALESCE(occ.occupancy,0.5) - s.demand_baseline) * s.demand_k, 1.10), 0.92)
         * GREATEST(LEAST(1 + (s.own_score - mkt.mkt_score) * s.quality_k, 1.10), 0.90))::int AS recommended_guest,
       ROUND(mkt.med)::int AS med_guest_global,
+      -- Los dos factores del ajuste, POR SEPARADO: el de demanda se gatea por fecha segun la
+      -- antelacion real del piso (ver pricing-demanda.ts) y el de calidad aplica siempre.
+      GREATEST(LEAST(1 + (COALESCE(occ.occupancy,0.5) - s.demand_baseline) * s.demand_k, 1.10), 0.92)::float8 AS demand_factor,
+      GREATEST(LEAST(1 + (s.own_score - mkt.mkt_score) * s.quality_k, 1.10), 0.90)::float8 AS quality_factor,
       ROUND(mkt.flo)::int AS floor_guest, ROUND(mkt.cei)::int AS ceil_guest,
       COALESCE(s.channel_markup, 1.16)::float8 AS channel_markup,
       s.max_change_pct::float8 AS max_change_pct,
@@ -517,8 +524,13 @@ export async function POST(req: NextRequest) {
       results.push({ property: r.property_id, error: `Smoobu GET ${String(e).slice(0, 80)}` }); continue
     }
 
-    const markup = Number(r.channel_markup) > 1 ? Number(r.channel_markup) : 1.16
-    const dqFactor = r.med_guest_global > 0 ? r.recommended_guest / r.med_guest_global : 1
+    // 🚨 `>= 1`, no `> 1`: el escaparate de Booking NO añade recargo sobre el precio de Smoobu
+    // (medido 09/08/2026: 20 reservas con bruto/listado 0,66-1,08 y la del 06/11 a factor 1,004
+    // exacto — el ÷1,16 era un −14% sistemático). Con la guarda vieja, poner 1.0 en settings se
+    // ignoraba en silencio y caía al default.
+    const markup = Number(r.channel_markup) >= 1 ? Number(r.channel_markup) : 1.16
+    const demandFactor = Number(r.demand_factor) > 0 ? Number(r.demand_factor) : 1
+    const qualityFactor = Number(r.quality_factor) > 0 ? Number(r.quality_factor) : 1
     const baseTargetGlobal = Math.round(r.recommended_guest / markup)
     const floorBaseGlobal = Math.round(r.floor_guest / markup)
     const ceilBaseGlobal = Math.round(r.ceil_guest / markup)
@@ -538,10 +550,22 @@ export async function POST(req: NextRequest) {
       const old = info.price != null ? Math.round(info.price) : null
       const ym = date.slice(0, 7)
       const mb = mesProp?.get(ym)
+      // Ajuste demanda/calidad POR FECHA: el descuento por ocupación baja se neutraliza en fechas
+      // cuya ventana de venta aún no ha abierto (antelación real del piso/mes, ver pricing-demanda.ts).
+      // El boost por demanda alta y el ajuste de calidad aplican siempre.
+      const ant = antelacionDe(r.property_id, date)
+      const dGate = factorDemandaFecha({
+        factorDemanda: demandFactor,
+        diasVista: daysOut,
+        antelacionMediana: ant?.mediana ?? null,
+        muestra: ant?.muestra ?? 0,
+      })
+      const dqDate = dGate.factor * qualityFactor
+      const baseGlobalD = Math.round((r.med_guest_global * dqDate) / markup)
       // El bucket del mes solo vale si hay comps SUFICIENTES y de VARIAS fechas: 10 anuncios del mismo
       // dia describen ese dia, no el mes (lección de junio 2027, ver la nota de la consulta).
       const useMonth = !!mb && mb.n >= MIN_BUCKET && mb.fechas >= MIN_FECHAS_MES
-      const baseD = useMonth ? Math.round((mb!.med * dqFactor) / markup) : baseTargetGlobal
+      const baseD = useMonth ? Math.round((mb!.med * dqDate) / markup) : baseGlobalD
       const floorD = useMonth ? Math.round(mb!.flo / markup) : floorBaseGlobal
       const ceilD = useMonth ? Math.round(mb!.cei / markup) : ceilBaseGlobal
       const normalBase = baseD // "precio normal" del día (mes/global), referencia del outlier (idea #2)
@@ -574,9 +598,9 @@ export async function POST(req: NextRequest) {
           // En ambos casos compite por MAX con el target del mes (que tampoco se multiplica).
           const fb = fechaProp?.get(date)
           const useFecha = !!fb && fb.n >= MIN_FECHA_BUCKET
-          const globalEvent = Math.round(clamp(baseTargetGlobal, floorBaseGlobal, ceilBaseGlobal) * ev)
+          const globalEvent = Math.round(clamp(baseGlobalD, floorBaseGlobal, ceilBaseGlobal) * ev)
           const bestEvent = useFecha
-            ? Math.max(globalEvent, Math.round((fb!.med * dqFactor) / markup))
+            ? Math.max(globalEvent, Math.round((fb!.med * dqDate) / markup))
             : globalEvent
           target = Math.max(target, bestEvent)
           eventTarget = bestEvent // capturado para saltar el raíl ±20% al ALZA (ver abajo)
@@ -589,7 +613,7 @@ export async function POST(req: NextRequest) {
         const fbMkt = fechaProp?.get(date)
         if (fbMkt) {
           const premio = premioMercadoFecha(
-            { medFechaGuest: fbMkt.med, comps: fbMkt.n, normalBase, markup, dqFactor },
+            { medFechaGuest: fbMkt.med, comps: fbMkt.n, normalBase, markup, dqFactor: dqDate },
             { minComps: MIN_FECHA_BUCKET, ratio: PREMIO_MERCADO_RATIO },
           )
           if (premio > target) { target = premio; eventTarget = Math.max(eventTarget, premio) }
@@ -602,8 +626,21 @@ export async function POST(req: NextRequest) {
       // nadie. Y nunca perfora el suelo del piso. Reglas y tests en `lib/sivra/prior-estacional.ts`.
       const pIdx = priorIdx.get(r.property_id)?.[Number(ym.slice(5, 7)) - 1] ?? { alza: 1, baja: 1 }
       target = aplicarPrior({
-        target, indice: pIdx, anclaGlobal: baseTargetGlobal, floor: floorD, hayBucketMes: useMonth,
+        target, indice: pIdx, anclaGlobal: baseGlobalD, floor: floorD, hayBucketMes: useMonth,
       })
+      // Ancla SUAVE al mercado de la FECHA exacta (el finde sin evento) — ver pricing-ancla-fecha.ts.
+      // El bucket del MES mezcla entre semana y findes y el premio de evento exige ≥1,5×, así que un
+      // sábado a 1,1-1,4× su mes era invisible (3 reservas vendidas un 36-43% bajo el p50 de su fecha).
+      // Solo corpus FIABLE y ≥5 comps; solo SUBE y NO salta el raíl ±%/día (escala en 1-2 pasadas).
+      {
+        const fbA = fechaProp?.get(date)
+        if (fbA) {
+          const ancla = anclaMercadoFecha({
+            medFechaGuest: fbA.med, comps: fbA.n, fuente: fbA.fuente, markup, dqFactor: dqDate,
+          })
+          if (ancla > target) target = ancla
+        }
+      }
       // Velocidad de conversión: +10% con ≥2 reservas del mes en 7 días (+20% desde 4), sin
       // pasar del techo de mercado del mes. Se recalcula desde el mercado en cada pasada (no
       // compone) y el raíl ±% por pasada sigue limitando el movimiento.
@@ -628,9 +665,8 @@ export async function POST(req: NextRequest) {
       // que viene después —el raíl de ±%/día, el suelo de coste, el estacional y el techo— sigue
       // mandando. Inerte con lastminute_k=0 y en las noches de evento. La referencia de "cuándo
       // toca" es la antelación MEDIDA del piso, no un umbral inventado (ver pricing-lastminute.ts).
-      // Antelación del piso PARA EL MES de esta fecha (ver el bloque de la consulta, arriba): la
-      // global mezclaba Feria con noviembre y disparaba la urgencia meses antes de tiempo.
-      const ant = antelacionDe(r.property_id, date)
+      // Antelación del piso PARA EL MES de esta fecha (`ant`, calculada arriba para el gate de
+      // demanda): la global mezclaba Feria con noviembre y disparaba la urgencia meses antes de tiempo.
       const lm = factorLastMinute(
         {
           diasVista: daysOut,

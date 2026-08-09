@@ -114,7 +114,9 @@ export async function GET() {
     const g = byScenario[p.property_id]
     const occupancy = occByScenario[p.property_id]
     const baseActual = baseByScenario[p.property_id] ?? null
-    const markup = Number(p.channel_markup) > 1 ? Number(p.channel_markup) : 1.16
+    // `>= 1`: un markup de 1.0 (escaparate sin recargo, medido 09/08/2026) es un valor VÁLIDO — la
+    // guarda vieja lo ignoraba en silencio y caía al default 1.16.
+    const markup = Number(p.channel_markup) >= 1 ? Number(p.channel_markup) : 1.16
 
     let market_ctx: any = { sample: 0 }
     let recommended_guest: number | null = null

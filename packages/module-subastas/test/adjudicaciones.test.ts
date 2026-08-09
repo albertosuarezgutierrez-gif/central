@@ -42,3 +42,16 @@ test('una adjudicada sin importe cuenta en la muestra pero no en el ratio', () =
   assert.equal(cadiz.muestraRatio, 1)
   assert.equal(cadiz.ratioMediano, 0.5)
 })
+
+test('«con_pujas» (del certificado de cierre) calibra igual que «adjudicada»', () => {
+  // El certificado real dice «concluyó con pujas (puja máxima X)» — para la
+  // calibración ese remate ES la señal de mercado, igual que una adjudicada.
+  const filas = [
+    fila('Sevilla', 275206, 170627.72, 'con_pujas'),
+    fila('Sevilla', 100000, 60000, 'con_pujas'),
+    fila('Sevilla', 100000, 70000, 'adjudicada'),
+  ]
+  const sevilla = calibracionAdjudicaciones(filas).find((c) => c.provincia === 'Sevilla')!
+  assert.equal(sevilla.adjudicadas, 3)
+  assert.equal(sevilla.muestraRatio, 3)
+})

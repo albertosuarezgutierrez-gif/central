@@ -4,7 +4,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { mejorPujaDeFicha, parsearFichaBoe, paresFicha, resultadoDeFicha } from '../src/ficha-boe.ts'
+import { mejorPujaDeFicha, parsearCertificadoCierre, parsearFichaBoe, paresFicha, resultadoDeBanner, resultadoDeFicha } from '../src/ficha-boe.ts'
 import { evaluarOportunidad } from '../src/scoring.ts'
 import type { SubastaInmueble } from '../src/types.ts'
 
@@ -129,4 +129,39 @@ test('resultadoDeFicha: estados concluidos plausibles se clasifican, celebrándo
   assert.deepEqual(con('Desierta'), { resultado: 'desierta', importe: null })
   assert.deepEqual(con('Cancelada'), { resultado: 'cancelada', importe: null })
   assert.equal(con('Celebrándose'), null)
+})
+
+// ── Cierre REAL (SUB-JA-2026-264154, El Puerto, 09/08/2026) ──────────────────
+// La ficha concluida publica el estado como BANNER (no como par clave/valor) y
+// el desenlace vive en el certificado de cierre. Fixtures copiados del HTML y
+// del PDF reales — regla del repo: el fixture de un parser de documento externo
+// se copia de un documento real.
+
+const BANNER_CONCLUIDA = `
+  <div class="caja gris aviso">
+    <p class="destaca">
+      <strong>LA SUBASTA HA CONCLUIDO SU PERIODO DE PUJAS (se encuentra pendiente de finalizaci&#xF3;n y devoluci&#xF3;n de dep&#xF3;sitos con reserva por parte de la Autoridad Gestora).</strong>
+    </p>
+    <p class="puntoPDF">
+      <a href="./verCertificadoCierre.php?idSub=SUB-JA-2026-264154" target="_blank">Certificado de cierre de la subasta en el Portal de Subastas</a>
+    </p>`
+
+test('resultadoDeBanner: el banner real de conclusión se reconoce; la ficha abierta no', () => {
+  assert.equal(resultadoDeBanner(BANNER_CONCLUIDA), 'concluida')
+  // La ficha real ABIERTA (fixture) no lleva banner → null.
+  assert.equal(resultadoDeBanner(F.general), null)
+  assert.equal(resultadoDeBanner('<html><body>Portal de Subastas</body></html>'), null)
+})
+
+test('parsearCertificadoCierre: el texto real del certificado → con_pujas + puja máxima', () => {
+  // Texto extraído del PDF real de SUB-JA-2026-264154.
+  const texto = 'Valor de la subasta: 275.206,00 euros.\nValor de tasación: 0,00 euros.\nLa subasta concluyó con pujas (puja máxima 170.627,72 euros).\n4 de Agosto de 2026'
+  assert.deepEqual(parsearCertificadoCierre(texto), { resultado: 'con_pujas', pujaMaxima: 170627.72 })
+})
+
+test('parsearCertificadoCierre: sin pujas → desierta; marcado desconocido → null', () => {
+  assert.deepEqual(parsearCertificadoCierre('La subasta concluyó sin pujas.'), { resultado: 'desierta', pujaMaxima: null })
+  // Defensivo: un certificado con otro marcado no se inventa (se reintenta).
+  assert.equal(parsearCertificadoCierre('CERTIFICACIÓN DE CIERRE DE SUBASTA'), null)
+  assert.equal(parsearCertificadoCierre(''), null)
 })
