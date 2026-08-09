@@ -1434,10 +1434,10 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
           </p>
           {(datos.preferentes?.length ?? 0) > 0 && (
             <div style={{ marginBottom: 16 }}>
-              <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>🌊 Casas de playa hasta 230.000€ — tu preferencia</h3>
+              <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>🌊 Casas de playa hasta 230.000€ (Matalascañas sin tope) — tu preferencia</h3>
               <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 0 }}>
-                Casas y adosados (pisos no) sin señales de obra en playa de Asturias, Cantabria e
-                Islantilla, aunque no lleguen a chollo. Primero las que <strong>ya han bajado de
+                Casas y adosados (pisos no) sin señales de obra en playa de Asturias, Cantabria,
+                Islantilla y Matalascañas (allí sin tope de precio), aunque no lleguen a chollo. Primero las que <strong>ya han bajado de
                 precio</strong> (vendedor que no vende — margen para negociar) y las de{' '}
                 <strong>👤 particular</strong>. «Sin señales de obra» dice solo que el anuncio no
                 confiesa reforma — el estado real se comprueba en las fotos y en la visita. Los

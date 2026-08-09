@@ -65,16 +65,20 @@ test('sinSenalesDeObra: título con obra o aReformar la excluyen; null NO afirma
   assert.equal(sinSenalesDeObra(comp({ aReformar: null })), true)
 })
 
-test('la lente exige CASA y tope de precio; con referencia de zona si la hay', () => {
+test('la lente exige CASA y tope de precio (Matalascañas SIN tope); con referencia de zona si la hay', () => {
   const casa = comp({ refAnuncio: '10', zona: "Barrio d'Arriba, Colunga", precioM2: 914, precio: 229000 })
   const resto = ['11', '12', '13'].map((id, i) =>
     comp({ refAnuncio: id, zona: 'Colunga', precio: 150000 + i, superficie: 100, precioM2: 1400 + i * 100 }),
   )
   const piso = comp({ refAnuncio: '14', titulo: 'Piso en Colunga', precio: 90000 })
   const cara = comp({ refAnuncio: '15', zona: 'Llanes', titulo: 'Casa en Llanes', precio: TOPE_PREFERENTE_EUR + 1 })
-  const r = lentePreferentes([casa, ...resto, piso, cara])
+  // La alerta de Alberto en Matalascañas va sin límite de precio (09/08/2026):
+  // un adosado de 320k allí SÍ entra; la misma cifra en Llanes queda fuera.
+  const adosadoCaro = comp({ refAnuncio: '16', zona: 'Matalascañas, Almonte', titulo: 'Casa adosada en Matalascañas', precio: 320000, precioM2: null })
+  const r = lentePreferentes([casa, ...resto, piso, cara, adosadoCaro])
   assert.equal(r.find((p) => p.comparable.refAnuncio === '14'), undefined) // piso fuera
   assert.equal(r.find((p) => p.comparable.refAnuncio === '15'), undefined) // >230k fuera
+  assert.equal(r.find((p) => p.comparable.refAnuncio === '16')?.costa, 'Matalascañas') // sin tope
   const c = r.find((p) => p.comparable.refAnuncio === '10')!
   assert.equal(c.costa, 'Asturias')
   // La referencia de zona es de VIVIENDA (pisos incluidos): mediana de

@@ -622,7 +622,7 @@ export async function avisarChollos(): Promise<{ chollos: number; avisados: numb
   // chollo; rebajadas y de particular primero. Sin referencia de zona se dice
   // «sin referencia», nunca «a precio de mercado».
   if (nuevosPref.length) {
-    lineas.push(`🌊 <b>Casas de playa hasta ${eur(TOPE_PREFERENTE_EUR)}</b> (tu preferencia) — ${nuevosPref.length} nueva${nuevosPref.length > 1 ? 's' : ''}`, '')
+    lineas.push(`🌊 <b>Casas de playa hasta ${eur(TOPE_PREFERENTE_EUR)}</b> (Matalascañas sin tope) — tu preferencia — ${nuevosPref.length} nueva${nuevosPref.length > 1 ? 's' : ''}`, '')
     for (const p of nuevosPref.slice(0, 5)) {
       const c = p.comparable
       lineas.push(`• <b>${escaparHtml(c.titulo)}</b> (${p.costa})`)

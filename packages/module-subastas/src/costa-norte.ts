@@ -32,8 +32,17 @@ import {
   type ZonaPortalRef,
 } from './comparables.ts'
 
-/** Tope de precio de la preferencia (decisión de Alberto, 09/08/2026). */
+/**
+ * Tope de precio de la preferencia (decisión de Alberto, 09/08/2026).
+ * Matalascañas va SIN tope (09/08/2026, segunda decisión del mismo día:
+ * Alberto creó allí una alerta de portal sin límite de precio para casas y
+ * adosados — capar aquí lo que su búsqueda trae sería descartarle anuncios
+ * que pidió ver). El resto de zonas mantienen el tope.
+ */
 export const TOPE_PREFERENTE_EUR = 230_000
+
+/** Zonas preferentes exentas del tope de precio. */
+export const ZONAS_SIN_TOPE: readonly ZonaPreferente[] = ['Matalascañas']
 
 /**
  * Municipios del litoral asturiano (término municipal completo, de este a
@@ -265,7 +274,8 @@ export interface Preferente {
 }
 
 /**
- * CASAS ≤230.000€ de las zonas preferentes, sin señales de obra, con su
+ * CASAS ≤230.000€ de las zonas preferentes (Matalascañas sin tope), sin
+ * señales de obra, con su
  * comparación de zona si existe. Orden: primero las que YA HAN BAJADO de
  * precio (más bajadas antes), luego las de particular, luego mayor descuento
  * (las sin referencia al final; a igualdad, más baratas primero).
@@ -275,9 +285,9 @@ export function lentePreferentes(comparables: Comparable[], zonasPortal?: ZonaPo
   const out: Preferente[] = []
   for (const c of dedupeRelistados(comparables)) {
     if (c.tipo !== 'vivienda' || !esCasa(c.titulo)) continue
-    if (c.precio > TOPE_PREFERENTE_EUR) continue
     const costa = zonaPreferenteDe(c.zona, c.titulo)
     if (!costa || !sinSenalesDeObra(c)) continue
+    if (!ZONAS_SIN_TOPE.includes(costa) && c.precio > TOPE_PREFERENTE_EUR) continue
 
     let referencia: Preferente['referencia'] = null
     // Una parcela (>400 m²) puede ser una casa con finca: entra en la lente,

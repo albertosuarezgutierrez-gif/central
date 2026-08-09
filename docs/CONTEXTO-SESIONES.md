@@ -63,8 +63,12 @@
   medirla en vivo (Fotocasa: 216 anuncios vs 133 Islantilla, mediana 2.857 vs 3.308 €/m²); (c) pestaña
   **🔥 Oportunidades** default de /subastas (diseño del agente Plan): bloque 🌊 fijo + lista única
   portal+subastas por atractivo, tarjeta compacta de subasta, filtros casas/rebajados/particular/fuente.
+- **4ª ronda:** Alberto creó la alerta de Idealista en Matalascañas SIN límite de precio (casas/adosados)
+  → `ZONAS_SIN_TOPE = ['Matalascañas']` en la lente (el tope 230k sigue en el resto de zonas); copy de
+  Telegram y /subastas lo dicen. Decisión de estrategia: Asturias = jugada de chollo puro con gestora
+  (~20-25% comisión); Huelva = uso mixto autogestionado — el radar vigila ambas.
 - Ojo: la lente solo ve las alertas guardadas — para vigilar más norte, crear alertas de Idealista en
-  esas zonas (y en Matalascañas: hoy solo 2 anuncios en el corpus). Galicia/Euskadi pendientes (patrón Cádiz).
+  esas zonas. Galicia/Euskadi pendientes (patrón Cádiz).
 
 ### 🎯 (09/08/2026) Los 4 pisos bajo el motor · PriceLabs de baja · previstos v2 · fix verificado en vivo
 - **Decisión de Alberto:** «el agente coge las riendas de los 4 apartamentos». Los 4 con
