@@ -63,10 +63,13 @@
   medirla en vivo (Fotocasa: 216 anuncios vs 133 Islantilla, mediana 2.857 vs 3.308 €/m²); (c) pestaña
   **🔥 Oportunidades** default de /subastas (diseño del agente Plan): bloque 🌊 fijo + lista única
   portal+subastas por atractivo, tarjeta compacta de subasta, filtros casas/rebajados/particular/fuente.
-- **4ª ronda:** Alberto creó la alerta de Idealista en Matalascañas SIN límite de precio (casas/adosados)
-  → `ZONAS_SIN_TOPE = ['Matalascañas']` en la lente (el tope 230k sigue en el resto de zonas); copy de
-  Telegram y /subastas lo dicen. Decisión de estrategia: Asturias = jugada de chollo puro con gestora
-  (~20-25% comisión); Huelva = uso mixto autogestionado — el radar vigila ambas.
+- **4ª ronda (#1353, mergeado y READY en prod):** Alberto creó la alerta de Idealista en Matalascañas SIN
+  límite de precio (casas/adosados) → `ZONAS_SIN_TOPE = ['Matalascañas']` en la lente (el tope 230k sigue
+  en el resto); copy de Telegram y /subastas lo dicen. Las SUBASTAS ya iban sin tope (el aviso forzado 🌊
+  nunca filtró por precio). Decisión de estrategia: Asturias = chollo puro con gestora (~20-25% comisión);
+  Huelva = uso mixto autogestionado — el radar vigila ambas. Skill `plataforma-maestro` actualizada.
+- **Repaso programado 12/08 07:00 UTC** (send_later `trig_01AzUvq8vW2K8Aan4T7HG7c6`): verificar corpus
+  Matalascañas creciendo, lente sin tope, avisos 🌊 de mercado y subastas, pestaña 🔥 sin duplicados.
 - Ojo: la lente solo ve las alertas guardadas — para vigilar más norte, crear alertas de Idealista en
   esas zonas. Galicia/Euskadi pendientes (patrón Cádiz).
 
