@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db'
 import { escenariosCoste, evaluarOportunidad, pujaMaximaParaDescuento, yieldTuristico } from '@central/module-subastas'
 import { COLS_SUBASTA, filaASubasta, RADAR_CON_CORPUS, RADAR_VIGENTE, SUBASTA_VIGENTE } from '@/lib/subastas-radar'
 import { tesoreriaSubastas } from '@/lib/subastas/tesoreria'
-import { chollosVigentes, leerIndiceINE, pulsoMercado } from '@/lib/subastas/mercado'
+import { lentesMercado, leerIndiceINE, pulsoMercado } from '@/lib/subastas/mercado'
 import { calibracionDePuja, calibracionResultados } from '@/lib/subastas/calibracion'
 import { paramsCoste } from '@/lib/subastas/params-coste'
 import { caducidadDeFila } from '@/lib/subastas/caducidad-fila'
@@ -28,7 +28,7 @@ export default async function SubastasPage() {
 
   let inicial = null
   try {
-    const [filas, total, criterios, radar, tesoreria, chollos, ingresoDorm, indice, calibracion, pulso, calibPuja] = await Promise.all([
+    const [filas, total, criterios, radar, tesoreria, lentes, ingresoDorm, indice, calibracion, pulso, calibPuja] = await Promise.all([
       prisma.$queryRaw<any[]>(Prisma.sql`
         SELECT ${COLS_SUBASTA} FROM subastas
         WHERE es_inmueble = true AND ${SUBASTA_VIGENTE}
@@ -59,10 +59,10 @@ export default async function SubastasPage() {
         console.error('[subastas page tesoreria]', e)
         return null
       }),
-      // Chollos de venta directa desde los mismos comparables de Idealista.
-      chollosVigentes().catch((e) => {
+      // Chollos de venta directa + lente 🌊 costa norte, del mismo corpus.
+      lentesMercado().catch((e) => {
         console.error('[subastas page chollos]', e)
-        return []
+        return { chollos: [], costaNorte: [] }
       }),
       // €/año por dormitorio de SUS pisos: la base del yield estimado.
       ingresoPorDormitorio().catch((e) => {
@@ -179,10 +179,18 @@ export default async function SubastasPage() {
         }
       }),
       tesoreria,
-      chollos: chollos.map((ch) => ({
+      chollos: lentes.chollos.map((ch) => ({
         ...ch,
         rendimiento: ingresoDorm && ch.comparable.habitaciones
           ? yieldTuristico(ingresoDorm.porDormitorio, ch.comparable.habitaciones, ch.comparable.precio)
+          : null,
+      })),
+      // La preferencia 🌊: el yield estimado usa el ingreso por dormitorio de
+      // SUS pisos (Sevilla) — orientativo; en el norte la temporada es otra.
+      costaNorte: lentes.costaNorte.map((p) => ({
+        ...p,
+        rendimiento: ingresoDorm && p.comparable.habitaciones
+          ? yieldTuristico(ingresoDorm.porDormitorio, p.comparable.habitaciones, p.comparable.precio)
           : null,
       })),
       ingresoDorm,

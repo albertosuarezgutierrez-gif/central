@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-09T15:47:47Z",
+  "generadoEn": "2026-08-09T16:38:28Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3978,6 +3978,14 @@
     }
   ],
   "novedades": [
+    {
+      "titulo": "Preferencia de Alberto",
+      "fecha": ""
+    },
+    {
+      "titulo": "MERGEADO",
+      "fecha": ""
+    },
     {
       "titulo": "Decisión de Alberto:",
       "fecha": ""

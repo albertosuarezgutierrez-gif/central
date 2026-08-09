@@ -167,7 +167,7 @@ export function esAlertaIdealista(remitente: string | null | undefined): boolean
  */
 const SUPERFICIE_MAX_COMPARABLE = 400
 
-function esParcela(c: Comparable): boolean {
+export function esParcela(c: Comparable): boolean {
   return c.superficie != null && c.superficie > SUPERFICIE_MAX_COMPARABLE
 }
 
@@ -302,6 +302,32 @@ export function zonasDeComparable(zona: string | null | undefined): string[] {
  * anuncio («Islantilla Golf, Islantilla») nunca casa un slug y conserva su
  * mediana de alertas — el orden fina→amplia no cambia.
  */
+/**
+ * Referencia €/m² para UN comparable: recorre sus zonas de fina a amplia y se
+ * queda con la PRIMERA que tenga muestra — del buscador del portal si su
+ * muestra es sólida, de las alertas si no. `null` si ninguna zona da
+ * referencia. Es la misma selección que usan los chollos, extraída para que la
+ * lente 🌊 costa norte compare con idéntico criterio.
+ */
+export function referenciaZona(
+  c: Comparable,
+  resto: Comparable[],
+  portalPorSlug: Map<string, ZonaPortalRef>,
+  minMuestra = 3,
+): { zona: string; precioM2Zona: number; muestra: number; fuente: 'portal' | 'alertas' } | null {
+  for (const z of zonasDeComparable(c.zona)) {
+    const slug = slugZonaFotocasa(z)
+    const zp = slug ? portalPorSlug.get(slug) : undefined
+    if (zp && zp.muestra >= MIN_MUESTRA_ZONA && zp.p50m2 > 0) {
+      return { zona: z, precioM2Zona: zp.p50m2, muestra: zp.muestra, fuente: 'portal' }
+    }
+    const ref = precioM2Zona(resto, z, minMuestra)
+    if (ref) return { zona: z, precioM2Zona: ref.precioM2, muestra: ref.muestra, fuente: 'alertas' }
+    // la primera zona con muestra decide; la amplia solo es red de la fina
+  }
+  return null
+}
+
 export function detectarChollos(
   comparables: Comparable[],
   minDescuento = CHOLLO_DESCUENTO_MIN,
@@ -314,20 +340,9 @@ export function detectarChollos(
     if (c.tipo !== 'vivienda' || c.precioM2 == null || c.precioM2 <= 0 || esParcela(c)) continue
 
     const resto = comparables.filter((x) => x.refAnuncio !== c.refAnuncio)
-    for (const z of zonasDeComparable(c.zona)) {
-      const slug = slugZonaFotocasa(z)
-      const zp = slug ? portalPorSlug.get(slug) : undefined
-      let ref: { precioM2: number; muestra: number } | null
-      let fuente: 'portal' | 'alertas'
-      if (zp && zp.muestra >= MIN_MUESTRA_ZONA && zp.p50m2 > 0) {
-        ref = { precioM2: zp.p50m2, muestra: zp.muestra }
-        fuente = 'portal'
-      } else {
-        ref = precioM2Zona(resto, z, minMuestra)
-        fuente = 'alertas'
-      }
-      if (!ref) continue
-      const descuento = 1 - c.precioM2 / ref.precioM2
+    const ref = referenciaZona(c, resto, portalPorSlug, minMuestra)
+    if (ref) {
+      const descuento = 1 - c.precioM2 / ref.precioM2Zona
       if (descuento >= minDescuento) {
         // Peaje de obra: un descuento de derribo (> sospechoso) o un título que
         // confiesa la reforma significan que ese precio NO compra una vivienda,
@@ -335,21 +350,20 @@ export function detectarChollos(
         // quedando por debajo de la zona — si no, es una ruina a precio justo
         // de suelo y NO se enseña (caso Llanes 111790643, 05/08/2026).
         const conObra = descuento > CHOLLO_DESCUENTO_SOSPECHOSO || pareceRuina(c.titulo) || c.aReformar === true
-        const descuentoNeto = conObra ? 1 - (c.precioM2 + RECONSTRUIR_EUR_M2) / ref.precioM2 : null
+        const descuentoNeto = conObra ? 1 - (c.precioM2 + RECONSTRUIR_EUR_M2) / ref.precioM2Zona : null
         if (descuentoNeto == null || descuentoNeto >= minDescuento) {
           out.push({
             comparable: c,
-            zona: z,
-            precioM2Zona: ref.precioM2,
+            zona: ref.zona,
+            precioM2Zona: ref.precioM2Zona,
             muestra: ref.muestra,
             descuento,
             sospechoso: descuento > CHOLLO_DESCUENTO_SOSPECHOSO,
             descuentoNeto,
-            fuente,
+            fuente: ref.fuente,
           })
         }
       }
-      break // la primera zona con muestra decide; la amplia solo es red de la fina
     }
   }
   return out.sort((a, b) => b.descuento - a.descuento)
