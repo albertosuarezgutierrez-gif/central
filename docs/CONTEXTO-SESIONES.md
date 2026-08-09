@@ -64,6 +64,28 @@
   estadísticas de `trading_estrategia_stats`. Watchlist final: **21 símbolos** (3 índices, 10 capa B,
   8 capa C). Alberto delegó la decisión final ("lo dejo en tu decisión").
 
+### 🛡️ (09/08/2026) Auditoría PROFUNDA semanal — todo verde, PR #1329
+Pasada completa `auditoria-central` (no solo la ligera): typecheck 0 errores en las **8 apps**, tests
+sin fallos, sin secretos con fallback literal, Supabase advisors 0 ERROR, heartbeat de crons/agentes
+limpio, automerge de rutinas sano. Único hallazgo: 21 vulns de `pnpm audit`, ninguna explotable
+(documentado). Reconciliados 2 docs desactualizados que #1328 (ligera, mismo día) no cubrió:
+`apps/plataforma/CLAUDE.md` (subastas sin los PRs #1324/#1325/#1327) y `docs/RUTINAS-PROGRAMADAS.md`
+(watchdog de trading descrito con 2 tramos en vez de 3, huella de pricing desactualizada). Informe
+completo `docs/AUDITORIA-2026-08.md`.
+
+### 🤖 (09/08/2026) agentes-entrenador — pasada semanal (29/07→09/08): backlog sano, un fix trivial
+- Backlog de PRs `claude/*` abiertos: **5** (bajando desde 73→31 del barrido de Alberto de 29/07) —
+  sin crecimiento, sin necesidad de escalar. `FEEDBACK-AGENTES.md` sin pendientes.
+- Único fix: `psd2-health-check/SKILL.md` usaba la columna `fecha` (no existe; real
+  `fecha_operacion`, confirmado contra Supabase) — señalado el 05/08, corregido ahora.
+- Resto de fallos del rango (tope real de mercado-booking, sonda pricing en verde falso) ya
+  resueltos por PRs de sus propias sesiones (#1314, #1318) antes de esta pasada.
+- 🔇→✅ Canal Telegram mudo (401, `ALERTA_TOKEN` desincronizado) — a petición de Alberto, resuelto en la
+  misma sesión SIN tocar Vercel: registrado el token que ya lleva esta rutina en `rutina_tokens`
+  (3ª vía de `docs/AVISOS-AGENTES.md`). Verificado end-to-end (200 + Telegram real recibido). Ningún
+  tool de Vercel MCP expone env vars — la sincronización byte-a-byte en Vercel sigue sin ser algo que
+  una sesión pueda ejecutar.
+
 ### 🧹 (09/08/2026) «Estado actual» podado: el vivo baja de 121 KB a ~15 KB por sesión
 - La sección acumulaba 42 bloques (1.212 de 1.329 líneas, ~30k tokens de peaje en CADA
   sesión) porque la rotación mensual no la tocaba. Contenido ÍNTEGRO movido a
@@ -158,6 +180,17 @@
 - Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
+## 💹 (09/08/2026) La palanca de DEMANDA ya mira el MES, no el año — PR #1323 (draft, rehecho sobre #1337)
+- #1337 (mergeado el 09/08) quitó el castigo a las fechas sin abrir, pero el `occ` de `pricing/apply`
+  seguía siendo UNA ocupación anual por piso: el mes que se LLENA no podía subir el precio.
+- #1323 se rehízo encima: consulta nueva de ocupación por piso+mes y `factorDemandaFecha`
+  (`pricing-demanda.ts`) decide las dos cosas a la vez. Módulo único, +8 tests (1.075 verdes).
+- 🚨 Trampa medida ANTES de darlo por bueno: usar el mes sin poder juzgar su ventana es PEOR que el bug
+  — con muestra de antelación <10 (House jun/jul-2027) el 0% de un mes sin abrir hundía al suelo 0,92.
+  Regla: la ocupación del mes solo se usa si la ventana es JUZGABLE; si no, factor global de siempre.
+- Efecto real medido: 41 de 1.460 noches. House sept **+4,1%** (30 fechas); 11 fechas de agosto bajan
+  ≤1,4%. Mucho menor que el +7,6% que se midió antes de #1337: aquel ya se llevó casi todo.
+- Pendientes ya declarados: buckets feb→jul-2027, 23-oct/27-nov sin catalogar, `seasonal_floor_k` 0 vs 1.
 
 ### 🧱 (08/08/2026) Bandeja «cargos duplicados» de /banca responsive en móvil — PR #1319
 - Captura de Alberto: en móvil las filas desbordaban (chips `flexShrink:0` + importe fuera de pantalla).
