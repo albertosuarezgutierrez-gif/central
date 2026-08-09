@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-09T16:32:02Z",
-  "sha": "0d2627441bf8962a6c335096dbd286dca5bd0095",
+  "generadoEn": "2026-08-09T16:37:46Z",
+  "sha": "138e8ffdd1effd67da545e035152a64f1af71e55",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -87039,7 +87039,7 @@
           "exportada": false,
           "params": "texto: string, termino: string",
           "retorno": "boolean",
-          "linea": 128,
+          "linea": 129,
           "resumen": "¿El texto contiene el término como PALABRA completa? Un `includes` a secas ya mordió con núcleos cortos («isla» dentro de «Islantilla»): se exige frontera de palabra a ambos lados."
         },
         {
@@ -87048,7 +87048,7 @@
           "exportada": true,
           "params": "zona: string | null | undefined, titulo?: string | null",
           "retorno": "'Asturias' | 'Cantabria' | null",
-          "linea": 149,
+          "linea": 150,
           "resumen": "Costa a la que pertenece el anuncio, mirando su zona y su título (las alertas no traen municipio estructurado: la zona es texto libre del portal, «Barrio d'Arriba, Colunga»). `null` = no es costa nort"
         },
         {
@@ -87057,7 +87057,7 @@
           "exportada": true,
           "params": "zona: string | null | undefined, titulo?: string | null",
           "retorno": "boolean",
-          "linea": 159,
+          "linea": 160,
           "resumen": "La lente completa como booleano, para etiquetar (🌊) sin nombrar la costa."
         },
         {
@@ -87066,7 +87066,7 @@
           "exportada": true,
           "params": "c: Comparable",
           "retorno": "boolean",
-          "linea": 169,
+          "linea": 170,
           "resumen": "¿Nada en el anuncio delata obra? OJO: esto NO confirma «buen estado» — el correo de alerta no trae la descripción ni fotos. Dice exactamente que ni el título confiesa reforma ni la API lo marcó `a ref"
         },
         {
@@ -87075,13 +87075,13 @@
           "exportada": true,
           "params": "comparables: Comparable[], zonasPortal?: ZonaPortalRef[]",
           "retorno": "PreferenteNorte[]",
-          "linea": 196,
+          "linea": 197,
           "resumen": "Viviendas de la costa norte sin señales de obra, con su comparación de zona si existe. Ordenadas: mayor descuento primero, las sin referencia al final (dentro de cada grupo, más baratas primero)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "137f2681849e"
+      "hash": "d5416bf23cd6"
     },
     {
       "ruta": "packages/module-subastas/src/costes.ts",
