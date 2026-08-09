@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-09T21:22:49Z",
+  "generadoEn": "2026-08-09T21:30:57Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4003,7 +4003,11 @@
       "fecha": ""
     },
     {
-      "titulo": "4ª ronda:",
+      "titulo": "4ª ronda (#1353, mergeado y READY en prod):",
+      "fecha": ""
+    },
+    {
+      "titulo": "Repaso programado 12/08 07:00 UTC",
       "fecha": ""
     },
     {
@@ -4032,10 +4036,6 @@
     },
     {
       "titulo": "Decisión explícita: NO maximizar la watchlist.",
-      "fecha": ""
-    },
-    {
-      "titulo": "El `channel_markup` 1,16 NO existe en el escaparate",
       "fecha": ""
     }
   ],
