@@ -13,7 +13,7 @@ export interface ResultadoConcluido {
   provincia: string | null
   valorSubasta: number | null
   importeAdjudicacion: number | null
-  /** Texto del resultado capturado de la ficha («adjudicada», «desierta»…). */
+  /** Resultado capturado («adjudicada», «con_pujas» del certificado, «desierta»…). */
   resultado: string | null
 }
 
@@ -74,7 +74,7 @@ export function calibracionPorCargas(filas: ResultadoConCargas[]): CalibracionCa
       return f.cargasSubsistentes > 0 ? grupo === 'con_cargas' : grupo === 'sin_cargas'
     })
 
-    const adjudicadas = delGrupo.filter((f) => /adjudicad/i.test(f.resultado ?? '')).length
+    const adjudicadas = delGrupo.filter((f) => /adjudicad|con_?pujas/i.test(f.resultado ?? '')).length
     const desiertas = delGrupo.filter((f) => /desiert/i.test(f.resultado ?? '')).length
     const ratios = delGrupo
       .filter((f) => f.importeAdjudicacion != null && (f.valorSubasta ?? 0) > 0)
@@ -121,7 +121,7 @@ export function calibracionAdjudicaciones(
   }
 
   const calibrar = (provincia: string, g: ResultadoConcluido[]): CalibracionZona => {
-    const adjudicadas = g.filter((f) => /adjudicad/i.test(f.resultado!))
+    const adjudicadas = g.filter((f) => /adjudicad|con_?pujas/i.test(f.resultado!))
     const ratios = adjudicadas
       .filter((f) => (f.importeAdjudicacion ?? 0) > 0 && (f.valorSubasta ?? 0) > 0)
       .map((f) => f.importeAdjudicacion! / f.valorSubasta!)
@@ -188,7 +188,7 @@ export function calibracionPuja(
   minMuestra = MIN_MUESTRA_PUJA,
 ): CalibracionPuja {
   const utiles = filas.filter(
-    (f) => (f.pujaMaxima ?? 0) > 0 && (f.importeAdjudicacion ?? 0) > 0 && /adjudicad/i.test(f.resultado ?? ''),
+    (f) => (f.pujaMaxima ?? 0) > 0 && (f.importeAdjudicacion ?? 0) > 0 && /adjudicad|con_?pujas/i.test(f.resultado ?? ''),
   )
 
   const porEncima = utiles.filter((f) => f.importeAdjudicacion! > f.pujaMaxima!).length
