@@ -13,6 +13,12 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-08-09** · `docs/CONTEXTO-SESIONES.md` · 2 entradas de memoria añadidas: PR #1327 (Subastas 3ª
+  tanda) y PR #1296 (subastas: cursor incremental por UID) se habían mergeado sin anotar. Resto del
+  rango desde la auditoría de esta mañana (#1303) ya autodocumentado PR a PR. Heartbeat de
+  crons/agentes y backlog de PRs de rutinas + salud del automerge: sin hallazgos. Entorno bajo
+  harness sin push directo a `main` → Plan B (PR #1328, solo ficheros de registro, pensado para
+  auto-mergearse por `rutinas-automerge.yml`) · commit `4e0f39e`
 - **2026-08-08** · `docs/RUTINAS-PROGRAMADAS.md` · corregida la descripción de `trading-watchdog`
   (sección 12): decía que comprobaba solo 2 huellas (NAV + `trading_tesis`); el PR #1291 (mergeado
   hoy) le añadió un 3er tramo (`agente_latidos.trading_puntuar`, el cierre) tras un caso real
