@@ -15,6 +15,23 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-09 · facturas-correo (trigger diario)** · hizo: preflight canal alerta OK (200); Vía B
+  sana (`dias_caido=1`, última copia 08/08 en `_buzon_pdf`; `agente_salud` actualizado), sin backlog
+  en `PDF-pendiente`/`Revisar`/`Extraccion-fallida` (las 3 a 0). 0 candidatos nuevos en Gmail
+  (`newer_than:2d` vacío — Booking/Stripe/Allianz/Anthropic de los últimos 7d ya estaban `Procesada`)
+  y 0 subidas manuales nuevas en `_subir_aqui`/raíz 2026. Encontrado y cerrado 1 pendiente de pasadas
+  anteriores: el recibo **Anthropic/Claude Max plan** (180,00€, 05/08/2026, Anthropic Ireland Ltd.)
+  no estaba archivado — copiado a Drive `08-Agosto-2026` (`1IT9drkZm1g1oswhB9XAEWPAvG4hFBCPi`) y
+  conciliado contra el cargo `-180,00€` del 07/08 (`destino=seguros`, exacto y sin ambigüedad).
+  Roborock Amazon -247,92€ (House Sevillana) SIGUE sin aparecer en `movimientos_bancarios` —
+  conciliación pendiente, a recoger en próximas pasadas. Las 3 facturas Booking de agosto
+  (167,01/155,94/110,74€, ya archivadas) aún no vencen (16/08), sin cargo en banco todavía — normal.
+  Papelera `_DUPLICADOS_BORRAR` con 19 avisos pendientes de borrado manual (sin cambios desde 06/08;
+  no reverificada hoy). Etiqueta `Luz pendiente 2026` con 6 hilos TotalEnergies antiguos (abr–jun
+  2026, contratos viejos de la SL fuera de `movimientos_bancarios`) sin tocar — llevan meses sin
+  moverse, quedan para que Alberto decida si los quita a mano. dudas: —; fallos: —; PRs/commits: este
+  commit (solo bitácora; el archivo+conciliación de Anthropic se hizo por Drive MCP + SQL directo,
+  sin tocar código).
 - **2026-08-09 · mercado-booking (pasada diaria, plan sin filtro)** · hizo: pedido el plan
   (`plan_total` 120, `pedidas` 12, `sin_medir_nunca` 12) y medidas las 12 ventanas devueltas —
   1 par de evento (22-nov Sevilla FC-Betis, aforo 4 y 5) + 8 de profundidad ronda-2 (oct/dic,

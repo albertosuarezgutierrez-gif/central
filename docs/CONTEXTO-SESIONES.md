@@ -22,6 +22,14 @@
 
 ---
 
+## 🧾 (09/08/2026) facturas-correo: pasada diaria, Vía B sana, sin pendientes nuevos
+- Vía B sana (`dias_caido=1`), sin backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida`, 0
+  candidatos nuevos en Gmail ni subidas manuales.
+- Cerrado 1 pendiente de días atrás: recibo Anthropic/Claude Max (180€, 05/08) archivado en Drive
+  y conciliado contra el cargo bancario del 07/08.
+- Sigue pendiente: Roborock Amazon -247,92€ aún sin aparecer en `movimientos_bancarios`. Detalle
+  completo en `docs/AGENTES-BITACORA.md`.
+
 ## 🏛️ (08/08/2026) Subastas 3ª tanda: coste autoexplicativo, ITP valenciano al 9% y presupuesto del vigía — PR #1327
 - «Coste real estimado: 806.015,16€» se leía como valoración de mercado (pregunta de Alberto sobre
   SUB-JA-2026-264062): es el coste puerta abierta simulando el remate al 100% de la salida — el
