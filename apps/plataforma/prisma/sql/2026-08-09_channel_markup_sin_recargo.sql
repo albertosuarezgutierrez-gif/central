@@ -1,0 +1,16 @@
+-- 2026-08-09 · El escaparate de Booking NO añade recargo sobre el precio de Smoobu → channel_markup 1.0
+--
+-- Evidencia (auditoría 09/08/2026, docs/AUDITORIA-2026-08-precios-dinamicos.md):
+--   · 20 reservas Booking (25/06→09/08): bruto pagado / precio listado en el momento de reservar =
+--     0,66–1,08, mediana 0,92 — solo descuentos del canal (Genius dinámico ~12%, móvil 10%). Bajo el
+--     modelo «markup 1,16» una reserva SIN descuentos daría ratio ≈1,16 y no aparece NI UNA.
+--   · La reserva del 06/11 (Luxury) pagó 122,43€/noche con el motor recién puesto a 122€ → factor
+--     1,004 exacto, sin markup ni descuento. (La «confirmación» del 01/08 de que el 1,16 sí llegaba
+--     al escaparate usó el importe corrupto de ANTES del fix de la doble comisión de ese mismo día.)
+--   · Consecuencia: el motor dividía TODOS sus objetivos por 1,16 → un −13,8% sistemático de lista,
+--     encima del cual mordían los descuentos reales del canal.
+--
+-- 🚨 ORDEN: aplicar SOLO con el fix de código desplegado (apply/route.ts, settings/route.ts y
+-- pricing-engine.ts con la guarda `>= 1`). Con el código viejo, un markup de 1.0 se ignoraba en
+-- silencio y caía al default 1.16.
+UPDATE pricing_settings SET channel_markup = 1.0;
