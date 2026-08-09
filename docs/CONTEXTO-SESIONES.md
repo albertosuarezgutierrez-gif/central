@@ -137,15 +137,16 @@
 - Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
-## 💹 (08/08/2026) La palanca de DEMANDA del pricing miraba el año, no el mes — PR #1323 (draft)
-- `pricing/apply` promediaba la ocupación de los 365 días en UNA cifra por piso (1-8%, real) y la
-  aplicaba a TODAS las fechas → factor de demanda clavado en su suelo (0,92) todo el calendario.
-- Nuevo helper puro `lib/sivra/pricing-demanda.ts` (+12 tests): cruza la ocupación DEL MES con la
-  antelación REAL de venta del piso (`incomes.reserved_at`, ya medida). Dentro de la ventana de venta
-  la ocupación es dato; fuera es «aún no se vende» → NEUTRO (1), nunca el suelo. Asimétrico: fuera de
-  ventana solo puede SUBIR (un mes medio vendido a 10 meses vista sí es señal).
-- ⚠️ Efecto medido en prod: solo el **3,3%** de las noches cae dentro de ventana (medianas de 2-21 días)
-  → el resto pasa de ~0,93 a 1,00. Es un **+7,6% de media** en el ancla, acotado por el techo de mercado.
+## 💹 (09/08/2026) La palanca de DEMANDA ya mira el MES, no el año — PR #1323 (draft, rehecho sobre #1337)
+- #1337 (mergeado el 09/08) quitó el castigo a las fechas sin abrir, pero el `occ` de `pricing/apply`
+  seguía siendo UNA ocupación anual por piso: el mes que se LLENA no podía subir el precio.
+- #1323 se rehízo encima: consulta nueva de ocupación por piso+mes y `factorDemandaFecha`
+  (`pricing-demanda.ts`) decide las dos cosas a la vez. Módulo único, +8 tests (1.075 verdes).
+- 🚨 Trampa medida ANTES de darlo por bueno: usar el mes sin poder juzgar su ventana es PEOR que el bug
+  — con muestra de antelación <10 (House jun/jul-2027) el 0% de un mes sin abrir hundía al suelo 0,92.
+  Regla: la ocupación del mes solo se usa si la ventana es JUZGABLE; si no, factor global de siempre.
+- Efecto real medido: 41 de 1.460 noches. House sept **+4,1%** (30 fechas); 11 fechas de agosto bajan
+  ≤1,4%. Mucho menor que el +7,6% que se midió antes de #1337: aquel ya se llevó casi todo.
 - Pendientes ya declarados: buckets feb→jul-2027, 23-oct/27-nov sin catalogar, `seasonal_floor_k` 0 vs 1.
 
 ### 🧱 (08/08/2026) Bandeja «cargos duplicados» de /banca responsive en móvil — PR #1319
