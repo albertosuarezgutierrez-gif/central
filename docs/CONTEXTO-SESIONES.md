@@ -159,6 +159,17 @@ completo `docs/AUDITORIA-2026-08.md`.
 - Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
+## 💹 (09/08/2026) La palanca de DEMANDA ya mira el MES, no el año — PR #1323 (draft, rehecho sobre #1337)
+- #1337 (mergeado el 09/08) quitó el castigo a las fechas sin abrir, pero el `occ` de `pricing/apply`
+  seguía siendo UNA ocupación anual por piso: el mes que se LLENA no podía subir el precio.
+- #1323 se rehízo encima: consulta nueva de ocupación por piso+mes y `factorDemandaFecha`
+  (`pricing-demanda.ts`) decide las dos cosas a la vez. Módulo único, +8 tests (1.075 verdes).
+- 🚨 Trampa medida ANTES de darlo por bueno: usar el mes sin poder juzgar su ventana es PEOR que el bug
+  — con muestra de antelación <10 (House jun/jul-2027) el 0% de un mes sin abrir hundía al suelo 0,92.
+  Regla: la ocupación del mes solo se usa si la ventana es JUZGABLE; si no, factor global de siempre.
+- Efecto real medido: 41 de 1.460 noches. House sept **+4,1%** (30 fechas); 11 fechas de agosto bajan
+  ≤1,4%. Mucho menor que el +7,6% que se midió antes de #1337: aquel ya se llevó casi todo.
+- Pendientes ya declarados: buckets feb→jul-2027, 23-oct/27-nov sin catalogar, `seasonal_floor_k` 0 vs 1.
 
 ### 🧱 (08/08/2026) Bandeja «cargos duplicados» de /banca responsive en móvil — PR #1319
 - Captura de Alberto: en móvil las filas desbordaban (chips `flexShrink:0` + importe fuera de pantalla).

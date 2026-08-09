@@ -7,7 +7,7 @@ import { combinarEventosDeFecha, type EventoBruto } from "@/lib/sivra/eventos-es
 import { factorLastMinute } from "@/lib/sivra/pricing-lastminute"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { anclaMercadoFecha } from "@/lib/sivra/pricing-ancla-fecha"
-import { factorDemandaFecha } from "@/lib/sivra/pricing-demanda"
+import { factorDemandaFecha, type DemandaFechaResult } from "@/lib/sivra/pricing-demanda"
 import { elegirBucket } from "@/lib/sivra/pricing-bucket-fuente"
 import { aplicarPrior, indicesPrior, type IndicePrior, type MesHistorico } from "@/lib/sivra/prior-estacional"
 import { getSmoobuKey } from "@/lib/smoobu"
@@ -99,6 +99,7 @@ export async function POST(req: NextRequest) {
   const recs = await prisma.$queryRaw<{
     property_id: string; recommended_guest: number; med_guest_global: number; floor_guest: number; ceil_guest: number
     demand_factor: number; quality_factor: number
+    occupancy_global: number; demand_baseline: number; demand_k: number
     channel_markup: number; max_change_pct: number; min_price: number | null; max_price: number | null
     sample_n: number; market_age_days: number; events_enabled: boolean; gap_discount_pct: number
     flight_demand_k: number; seasonal_floor_k: number; lastminute_k: number
@@ -140,6 +141,12 @@ export async function POST(req: NextRequest) {
       -- antelacion real del piso (ver pricing-demanda.ts) y el de calidad aplica siempre.
       GREATEST(LEAST(1 + (COALESCE(occ.occupancy,0.5) - s.demand_baseline) * s.demand_k, 1.10), 0.92)::float8 AS demand_factor,
       GREATEST(LEAST(1 + (s.own_score - mkt.mkt_score) * s.quality_k, 1.10), 0.90)::float8 AS quality_factor,
+      -- Los ingredientes del factor de demanda, en crudo: hacen falta para RECALCULARLO con la
+      -- ocupacion del MES de cada fecha (ver pricing-demanda.ts). El de arriba, con la
+      -- ocupacion anual, queda de fallback para los meses sin snapshot.
+      COALESCE(occ.occupancy, 0.5)::float8 AS occupancy_global,
+      s.demand_baseline::float8 AS demand_baseline,
+      s.demand_k::float8 AS demand_k,
       ROUND(mkt.flo)::int AS floor_guest, ROUND(mkt.cei)::int AS ceil_guest,
       COALESCE(s.channel_markup, 1.16)::float8 AS channel_markup,
       s.max_change_pct::float8 AS max_change_pct,
@@ -276,6 +283,26 @@ export async function POST(req: NextRequest) {
    *  se queda quieta, que es lo correcto — una urgencia inventada cuesta margen real. */
   const antelacionDe = (propertyId: string, fechaIso: string) =>
     antelacion.get(`${propertyId}|${Number(fechaIso.slice(5, 7))}`) ?? null
+
+  // Ocupación por piso y MES (año-mes real, no mes del año): el mismo cálculo que la subconsulta
+  // `occ` de arriba con un GROUP BY más. Es lo único que le faltaba al motor para poder distinguir
+  // «septiembre va lleno» de «el año está vacío» — ver pricing-demanda.ts.
+  // OJO: SQL dentro de un template literal de TS — aqui NO se pueden usar backticks ni $ { }.
+  const ocupacionMesRows = await prisma.$queryRaw<{
+    property_id: string; ym: string; occ: number
+  }[]>(Prisma.sql`
+    SELECT property_id,
+           to_char(rate_date, 'YYYY-MM') AS ym,
+           (1 - AVG(available))::float8 AS occ
+    FROM rate_snapshots
+    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM rate_snapshots)
+      AND rate_date >= CURRENT_DATE
+      AND available IS NOT NULL
+    GROUP BY property_id, to_char(rate_date, 'YYYY-MM')
+  `).catch(() => [])
+  const ocupacionMes = new Map(
+    ocupacionMesRows.map(o => [`${o.property_id}|${o.ym}`, Number(o.occ)]),
+  )
 
   const MIN_BUCKET = 3
   const MIN_FECHAS_MES = 3
@@ -537,6 +564,11 @@ export async function POST(req: NextRequest) {
     const mesProp = mes.get(r.property_id)
     const fechaProp = fecha.get(r.property_id)
 
+    // De dónde salió la ocupación que movió la palanca en cada fecha, y cuántas fechas se libraron
+    // del descuento por no haber abierto aún su venta. Va al informe para poder distinguir «bajó
+    // porque el mes está flojo» de «no se tocó porque todavía no se vende».
+    const demFuentes: Record<DemandaFechaResult["fuente"], number> = { mes: 0, global: 0 }
+    let demGateadas = 0
     const ops: { dates: string[]; daily_price: number; min_length_of_stay?: number }[] = []
     const audit: { rate_date: string; old_price: number | null; new_price: number }[] = []
     const cur = new Date(today)
@@ -550,16 +582,22 @@ export async function POST(req: NextRequest) {
       const old = info.price != null ? Math.round(info.price) : null
       const ym = date.slice(0, 7)
       const mb = mesProp?.get(ym)
-      // Ajuste demanda/calidad POR FECHA: el descuento por ocupación baja se neutraliza en fechas
-      // cuya ventana de venta aún no ha abierto (antelación real del piso/mes, ver pricing-demanda.ts).
-      // El boost por demanda alta y el ajuste de calidad aplican siempre.
+      // Ajuste demanda/calidad POR FECHA (ver pricing-demanda.ts, que decide las dos cosas a la vez):
+      // la ocupación de SU MES manda cuando se puede juzgar si esa fecha ya se vende, y el descuento
+      // se neutraliza en las fechas cuya ventana de venta aún no ha abierto (el boost sí se conserva).
+      // El ajuste de calidad aplica siempre.
       const ant = antelacionDe(r.property_id, date)
       const dGate = factorDemandaFecha({
         factorDemanda: demandFactor,
         diasVista: daysOut,
         antelacionMediana: ant?.mediana ?? null,
         muestra: ant?.muestra ?? 0,
+        ocupacionMes: ocupacionMes.get(`${r.property_id}|${ym}`) ?? null,
+        demandaBaseline: Number(r.demand_baseline),
+        demandaK: Number(r.demand_k),
       })
+      demFuentes[dGate.fuente]++
+      if (dGate.gateado) demGateadas++
       const dqDate = dGate.factor * qualityFactor
       const baseGlobalD = Math.round((r.med_guest_global * dqDate) / markup)
       // El bucket del mes solo vale si hay comps SUFICIENTES y de VARIAS fechas: 10 anuncios del mismo
@@ -819,6 +857,18 @@ export async function POST(req: NextRequest) {
           .map(a => [a.mes, { mediana: Number(a.mediana), muestra: Number(a.muestra) }]),
       ),
       lastminute_k: Number(r.lastminute_k),
+      // La palanca de demanda, auditable: la ocupación ANUAL que veía el motor antes, la de cada mes
+      // que ahora sí mira, cuántas fechas salieron de cada fuente y cuántas se libraron del descuento.
+      demanda: {
+        ocupacion_global: Number(r.occupancy_global),
+        fuentes: demFuentes,
+        fechas_sin_descuento: demGateadas,
+        ocupacion_por_mes: Object.fromEntries(
+          ocupacionMesRows
+            .filter(o => o.property_id === r.property_id)
+            .map(o => [o.ym, Number(Number(o.occ).toFixed(3))]),
+        ),
+      },
       dates_con_cambio: ops.length, written, sample: audit.slice(0, 3),
     })
   }
