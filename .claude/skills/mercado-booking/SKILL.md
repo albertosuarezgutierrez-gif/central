@@ -46,9 +46,22 @@ GET {PLATAFORMA_URL}/api/sivra/mercado/plan?max=12
 Authorization: Bearer {ALERTA_TOKEN}
 ```
 Devuelve `{ventanas:[{checkin, checkout, aforo, pisos[], motivo, etiqueta, ronda, diasSinMedir,
-comps}], plan_total, pedidas, sin_medir_nunca, avisos}` **ya ordenado por urgencia** (lo nunca medido
-primero, luego lo más viejo). No reordenes ni elijas tú: el orden protege la línea de temporada.
-Si trae `avisos`, arrástralos al parte final.
+comps}], plan_total, filtro, candidatas, recortadas, pedidas, sin_medir_nunca, avisos}` **ya ordenado
+por urgencia** (lo nunca medido primero, luego lo más viejo). No reordenes ni elijas tú: el orden
+protege la línea de temporada. Si trae `avisos`, arrástralos al parte final.
+
+**Pasada acotada (`?rondas=2,3&desde=2026-09-01&hasta=2027-01-31`).** Para dirigir una pasada a una
+parte del plan — típicamente la **profundidad de bucket** (rondas 2 y 3 = 2ª y 3ª fecha de cada mes,
+las que hacen ELEGIBLE el bucket mensual del motor, que exige ≥3 fechas distintas). Reparto de
+rondas: **0** = 1ª fecha de cada mes (línea de temporada) · **1** = fechas de evento · **2 y 3** =
+profundidad.
+🚨 **Filtra por query, NUNCA descartando ventanas del JSON después.** El orden de urgencia pone lo
+virgen primero y, entre vírgenes, la ronda baja antes que la alta: las rondas de profundidad son las
+últimas de la cola, así que recortar en cliente solo alcanza lo que el tope no se comió ya (medido el
+08/08/2026: de 40 ventanas de ronda 2-3 entre sep y ene, `?max=30` + filtro en cliente llegaba a 18,
+y a ninguna de ronda 3). Un filtro mal escrito devuelve **400**, no la pasada entera.
+Con filtro, el denominador honesto del parte es **`candidatas`**, no `plan_total`; y si
+`recortadas > 0` el tope dejó fuera ventanas que casaban — dilo en el parte.
 
 ### 2. Mide cada ventana con Booking.com
 Por cada ventana, una búsqueda de alojamientos con:

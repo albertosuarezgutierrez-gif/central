@@ -22,11 +22,11 @@ description: Auditoría diaria del monorepo central — reconcilia memoria + ski
 >
 > **Dos cadencias (ver `docs/RUTINAS-PROGRAMADAS.md`):**
 > - **Ligera (por defecto, diaria):** reconcilia memoria/skills/docs + checks baratos
->   (lockfile, radiografía de estructura, drift skills↔código). SALTA typecheck de las 4
+>   (lockfile, radiografía de estructura, drift skills↔código). SALTA typecheck de las 8
 >   apps y tests pesados. Rápida y de bajo ruido. Es la red de seguridad del guardián de
 >   cierre (`persist-memoria.sh`): caza lo que las sesiones no anotaron a mano.
 > - **Profunda (`/auditoria-diaria --profunda`, semanal):** corre `auditoria-central`
->   ENTERA (typecheck de las 4 apps + tests + seguridad multi-tenant + infra por MCP).
+>   ENTERA (typecheck de las 8 apps + tests + seguridad multi-tenant + infra por MCP).
 
 ## Dos carriles de entrega (lo que cambió — léelo antes de tocar nada)
 El problema histórico no era de alcance sino de **entrega**: todo se quedaba en un PR draft
@@ -92,28 +92,43 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
 2. **Auditoría según cadencia.**
    - **Modo ligero (por defecto):** invoca **`auditoria-central`** pero recorre solo los
      bloques baratos (integridad estructural: lockfile + radiografía + `transpilePackages`;
-     coherencia de docs; deps/código muerto rápidos). SALTA typecheck de las 4 apps y los
+     coherencia de docs; deps/código muerto rápidos). SALTA typecheck de las 8 apps y los
      tests pesados — esos son de la pasada semanal.
    - **Modo profundo (`--profunda` en el prompt):** recorre `auditoria-central` ENTERA
-     (integridad, typecheck de las 4 apps, tests, seguridad multi-tenant, deps, infra real
+     (integridad, typecheck de las 8 apps, tests, seguridad multi-tenant, deps, infra real
      por MCP, coherencia de docs).
    Distingue error real de ruido de entorno; no infles conteos.
 
-2-bis. **Heartbeat de crons** (barato, corre SIEMPRE — también en modo ligero).
+2-bis. **Heartbeat de crons y agentes** (barato, corre SIEMPRE — también en modo ligero).
    Los crons pueden dejar de escribir en silencio (p. ej. jun-2026: el middleware de
    plataforma redirigía los crons `/api/sivra/*` a `/login` y estuvieron 5 días mudos sin
-   que saltara ninguna alarma). Este check vigila el **síntoma** (no hay filas frescas),
+   que saltara ninguna alarma). Este check vigila el **síntoma** (no hay huella fresca),
    así que caza cualquier causa (middleware, clave Smoobu, bug en handler, caída Vercel…).
-   Corre por Supabase MCP (lectura) sobre `wswbehlcuxqxyinousql`:
+   Corre por Supabase MCP (lectura) sobre `wswbehlcuxqxyinousql`, en dos consultas:
+
+   **a) Latidos de pasada buena (`agente_latidos`) — la fuente PREFERIDA.** Cada agente/cron
+   instrumentado escribe su fila al completar una pasada buena (`agente, ultimo_at,
+   ultimo_ok_at, ok, detalle`), así que la huella mide SALUD, no actividad de negocio:
+
+   ```sql
+   SELECT agente, ok, ultimo_at, ultimo_ok_at, detalle,
+          round(extract(epoch FROM now()-ultimo_ok_at)/3600, 1) AS horas_sin_ok
+   FROM agente_latidos ORDER BY ultimo_ok_at ASC NULLS FIRST;
+   ```
+
+   Cruza cada fila con su cadencia real (diario→~30h, cada-10min→6h, semanal→~192h; la lista
+   canónica de vigilados con umbral y nota de diagnóstico vive en `AGENTES_VIGILADOS` de
+   `apps/plataforma/lib/monitoring/latidos.ts` — léela, no la dupliques aquí). `ok=false` o
+   `ultimo_ok_at` más viejo que la cadencia → ⛔. **Lee siempre `detalle`** antes de
+   diagnosticar: distingue «no pudo mirar» de «miró y no había» (regla NULL≠0 de `CLAUDE.md`).
+
+   **b) Filas frescas en tablas de dominio — SOLO para lo que aún no escribe latido:**
 
    ```sql
    WITH h(cron, tabla, ultimo, max_horas) AS (
      SELECT 'rates/snapshot',            'rate_snapshots',         max(created_at),     36 FROM rate_snapshots
      UNION ALL SELECT 'pricing/apply-auto',       'pricing_applied',        max(applied_at),     36 FROM pricing_applied
-     UNION ALL SELECT 'updates/sync',             'incomes',                max("createdAt"),    36 FROM incomes
-     UNION ALL SELECT 'mercado/cron in-app',      'market_rates normal',    max(created_at),     36 FROM market_rates WHERE scenario='normal'
      UNION ALL SELECT 'pricing/pilot-track',      'pricing_pilot_tracking', max(created_at),     36 FROM pricing_pilot_tracking
-     UNION ALL SELECT 'limpiadoras/auto-sessions','cleaning_sessions',      max(created_at),     36 FROM cleaning_sessions
      UNION ALL SELECT 'concursos-ingesta',        'concursos_licitaciones', max(actualizado_en), 12 FROM concursos_licitaciones
      -- psd2: la huella es «hay movimientos NUEVOS», no «el cron corrió» — un finde sin cargos la
      -- deja quieta >30h con el cron vivo (falsa alarma 02/08/2026: cron 200 a las 06:01 y ⛔ igual).
@@ -123,7 +138,11 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
      -- AGENTES (sesiones Claude programadas) + crons de trading. Umbrales por cadencia real:
      -- diario→~30h, cada-6h→12h, SEMANAL→~192h (8 días). OJO: la huella tiene que ser la del
      -- AGENTE, no una que otro proceso mantenga fresca (ver nota del pricing abajo).
-     UNION ALL SELECT 'AGENTE pricing (estudio mercado)', 'market_rates prop_*',    max(created_at),     192 FROM market_rates WHERE scenario LIKE 'prop_%'
+     -- pricing: la huella NO puede ser `market_rates prop_*` — desde el 06/08/2026 escriben ahí a
+     -- diario el barrido Serper y la rutina de Booking, así que salía verde con la Rutina semanal
+     -- parada (la avería del 21/07, reaparecida). `pricing_decisiones` solo la escribe la Rutina.
+     UNION ALL SELECT 'AGENTE pricing (ciclo semanal)',   'pricing_decisiones',     max(ciclo_at),       192 FROM pricing_decisiones
+     UNION ALL SELECT 'AGENTE mercado-booking (diario)',  'market_rates booking_mcp',max(created_at),     30 FROM market_rates WHERE fuente='booking_mcp'
      UNION ALL SELECT 'trading forward-paper (sem)',      'trading_paper_track',    max(created_at),     192 FROM trading_paper_track
      UNION ALL SELECT 'ia-director-refresh (sem)',        'ia_director_aprendizaje',max(creada_at),      192 FROM ia_director_aprendizaje
      UNION ALL SELECT 'trading-universo (6h)',            'trading_universo',       max(actualizado_en),  12 FROM trading_universo
@@ -136,7 +155,23 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
    FROM h ORDER BY estado DESC, horas DESC;
    ```
 
-   - Cualquier fila **⛔ MUDO** es hallazgo 🔴 y **caso estrella del carril 2**: investiga la
+   - 🚨 **Huella de ACTIVIDAD ≠ huella de SALUD.** Una tabla que solo recibe filas cuando hay
+     actividad de negocio (reservas nuevas, cargos, limpiezas) NO sirve de heartbeat: en
+     temporada baja da ⛔ con el cron perfectamente vivo. `updates/sync` (incomes),
+     `mercado in-app` (market_rates normal) y `limpiadoras/auto-sessions` (cleaning_sessions)
+     dieron ese falso positivo en CADA pasada del 02/07 al 07/08/2026 y hubo que re-verificarlos
+     a mano por logs cada día — por eso ya NO están en la consulta b): los dos primeros tienen
+     latido (`smoobu_sync`, `sivra_mercado_sweep`, consulta a) y `auto-sessions` queda como
+     **huella condicionada**: solo se investiga si otra señal apunta a fallo (p. ej. `ialimp_pms`
+     en rojo), nunca ⛔ por sí sola. Si detectas otra huella así, sácala de b) igual: o se
+     instrumenta con latido (propuesta carril 2) o no es un heartbeat.
+   - **Reconciliación de cobertura (nuevo, cada pasada):** compara esta lista de huellas contra
+     (1) los crons reales de `apps/plataforma/lib/cron-dispatch.ts` (`CRON_JOBS`) y los
+     `vercel.json` de las apps, (2) `AGENTES_VIGILADOS` de `latidos.ts`, y (3) las rutinas
+     *activas* de `docs/RUTINAS-PROGRAMADAS.md`. Un cron/agente nuevo sin huella en ningún
+     vigilante = hallazgo 🟡 carril 2 (propón la fila de latido o de esta lista en el PR).
+     Los agentes nacen más rápido que este doc — sin este diff, cada agente nuevo nace sin vigilar.
+   - Cualquier fila **⛔** es hallazgo 🔴 y **caso estrella del carril 2**: investiga la
      causa (mira el middleware/auth de la app dueña del endpoint, la env del secreto y los
      logs de runtime por Vercel MCP), métela en el PR draft con la acción concreta y
      **SIEMPRE dispara Telegram** (un cron mudo es justo lo que Alberto tiene que ver). Si un
@@ -156,6 +191,26 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
      (razona la causa y abre PR); si añades una huella aquí que ya vigile un cron dedicado, no
      hace falta el segundo aviso — coordina umbrales para no avisar por duplicado.
    - Si todo ✅, una línea verde en el informe y sigue.
+
+2-ter. **Backlog de PRs de rutinas + salud del automerge** (barato, corre SIEMPRE).
+   El canal de entrega también se muere en silencio: del 04 al 07/08/2026 cinco PRs de
+   rutinas (#1252, #1254, #1277, #1279, #1286) envejecieron hasta el conflicto sin que nadie
+   avisara, y el 29/07 un barrido manual cerró trabajo real sin mergear. El workflow
+   `.github/workflows/rutinas-automerge.yml` cierra el círculo — pero nadie vigila al
+   vigilante. Por GitHub MCP (lectura):
+   1. Lista los PRs abiertos de ramas `claude/*`. Por cada uno:
+      - **Solo ficheros de registro** (los que el automerge acepta) y >24h sin mergear →
+        el automerge NO lo está cogiendo: mira por qué (¿CI roja? ¿cero checks? ¿etiqueta
+        `no-automerge`? ¿workflow deshabilitado en Actions?) y repórtalo como 🔴.
+      - **`mergeable_state: dirty`** (conflicto) → 🟡 con el archivo en conflicto y si es
+        inserción pura (el bot debería resolverla) o edición real (mano humana).
+      - Draft de carril 2 con **>7 días** sin actividad → línea en el informe para que
+        Alberto decida mergear o cerrar (un PR draft olvidado es información que envejece;
+        cerrarlo sin mirar pierde trabajo — lección del 29/07).
+   2. Comprueba que `rutinas-automerge.yml` tiene ejecuciones recientes (`actions_list`):
+      corre cada hora — sin runs en las últimas ~3h con PRs de registro abiertos = el
+      vigilante está muerto → 🔴 + Telegram.
+   Sin nada raro → una línea verde y sigue.
 
 3. **Informe.** Crea/actualiza `docs/AUDITORIA-<YYYY-MM>.md` con hallazgos por
    severidad (🔴/🟡/🟢), cada uno con `ruta:línea` + acción, y el checklist de acciones

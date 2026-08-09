@@ -496,6 +496,21 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
   if (pend.length === 0 && res.length === 0) return null
   return (
     <section id="duplicados" style={{ marginBottom: '32px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          /* Fila de movimiento apilada en móvil (sin scroll horizontal): concepto a ancho
+             completo arriba; fecha + chips + importe fluyen debajo. Mismo patrón que la
+             bandeja "Gastos por revisar". */
+          .banca-dup-mov { flex-wrap: wrap; gap: 2px 10px !important; }
+          .banca-dup-concepto { order: -1; flex: 1 1 100% !important; white-space: normal !important; overflow: visible !important; }
+          .banca-dup-fecha { width: auto !important; }
+          .banca-dup-importe { width: auto !important; margin-left: auto; }
+          .banca-dup-acciones { flex-wrap: wrap; }
+          .banca-dup-acciones .banca-dup-sep { display: none; }
+          .banca-dup-acciones button { flex: 1 1 auto; }
+          #duplicados button { min-height: 44px; }
+        }
+      `}</style>
       <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>⚠️ Posibles cargos duplicados ({pend.length})</h2>
       <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>Mismo importe y comercio en pocos días. Revisa cada par y resuélvelo: no vuelve a salir.</p>
 
@@ -510,17 +525,17 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
                 <span style={{ fontSize: '14px', fontWeight: 700, color: '#dc2626' }}>{eur(g.importe)}</span>
               </div>
               {g.movimientos.map(m => (
-                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px', padding: '3px 0' }}>
-                  <span style={{ color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</span>
-                  <span style={{ flex: 1, minWidth: 0, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}{m.conciliado ? ' 🔗' : ''}</span>
+                <div key={m.id} className="banca-dup-mov" style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px', padding: '3px 0' }}>
+                  <span className="banca-dup-fecha" style={{ color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</span>
+                  <span className="banca-dup-concepto" style={{ flex: 1, minWidth: 0, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}{m.conciliado ? ' 🔗' : ''}</span>
                   {m.cuentaLabel && <span title="Banco / cuenta donde está este cargo" style={{ fontSize: '10px', color: 'var(--text)', background: 'var(--primary-light)', borderRadius: '4px', padding: '1px 6px', flexShrink: 0, fontWeight: 600, whiteSpace: 'nowrap' }}>🏦 {m.cuentaLabel}</span>}
                   {m.origen && <span style={{ fontSize: '10px', color: 'var(--muted)', background: 'var(--border)', borderRadius: '4px', padding: '1px 5px', flexShrink: 0, fontWeight: 500 }}>{m.origen}</span>}
-                  <span style={{ fontWeight: 700, color: '#dc2626', width: '92px', textAlign: 'right', flexShrink: 0 }}>{eur(m.importe)}</span>
+                  <span className="banca-dup-importe" style={{ fontWeight: 700, color: '#dc2626', width: '92px', textAlign: 'right', flexShrink: 0 }}>{eur(m.importe)}</span>
                 </div>
               ))}
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '10px' }}>
+              <div className="banca-dup-acciones" style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '10px' }}>
                 <button disabled={busy === g.clave} onClick={() => redactar(g)} style={dupGhost}>📝 Reclamar</button>
-                <div style={{ flex: 1 }} />
+                <div className="banca-dup-sep" style={{ flex: 1 }} />
                 <button disabled={busy === g.clave} onClick={() => resolver(g, 'ignorado')} style={dupGhost}>Es normal</button>
                 <button disabled={busy === g.clave} onClick={() => resolver(g, 'confirmado')} style={dupDanger}>Es un cobro doble</button>
               </div>
@@ -537,12 +552,12 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
           {verResueltos && (
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', marginTop: '8px' }}>
               {res.map((m, i) => (
-                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)', fontSize: '13px' }}>
-                  <span style={{ color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</span>
-                  <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</span>
+                <div key={m.id} className="banca-dup-mov" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)', fontSize: '13px' }}>
+                  <span className="banca-dup-fecha" style={{ color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</span>
+                  <span className="banca-dup-concepto" style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</span>
                   {m.cuentaLabel && <span title="Banco / cuenta" style={{ fontSize: '10px', color: 'var(--text)', background: 'var(--primary-light)', borderRadius: '4px', padding: '1px 6px', flexShrink: 0, fontWeight: 600, whiteSpace: 'nowrap' }}>🏦 {m.cuentaLabel}</span>}
                   <span style={{ fontSize: '11px', color: 'var(--muted)', flexShrink: 0 }}>{m.estado === 'confirmado' ? 'cobro doble' : 'normal'}</span>
-                  <span style={{ fontWeight: 700, color: '#dc2626', width: '80px', textAlign: 'right', flexShrink: 0 }}>{eur(m.importe)}</span>
+                  <span className="banca-dup-importe" style={{ fontWeight: 700, color: '#dc2626', width: '80px', textAlign: 'right', flexShrink: 0 }}>{eur(m.importe)}</span>
                   <button disabled={busy === m.id} onClick={() => reactivar(m.id)} style={{ ...dupGhost, fontSize: '12px', flexShrink: 0 }}>Reactivar</button>
                 </div>
               ))}

@@ -24,6 +24,43 @@ Detalle paso a paso en `references/pasada-diaria.md`.
 - **Prohibido** pasar cohetes a cohortes o tocar pesos del blend por tu cuenta. **Todo cambio
   del modelo pasa por `docs/TRADING-HIPOTESIS-PREREGISTRO.md`** (condiciones firmadas antes de
   ver los datos). El criterio cohetes NO se auto-modifica (H7).
+- **✅ H8 (capitulación) y H9 (salidas) están RESUELTAS y NINGUNA se cabla (08/08/2026).** No
+  propongas entradas «porque capituló» ni pongas stops: se midieron sobre 21.321 observaciones y
+  fallaron. **H9:** las tres reglas fallan su criterio; stop −20% y trailing −15% EMPEORAN los
+  batacazos (15,6% y 12,1% frente al 10,4% de la salida por tiempo) — un stop convierte un susto
+  temporal en pérdida cerrada. **H8:** el agregado cruzaba el umbral (+2,34 pp) pero el signo se
+  INVIERTE entre mitades (+6,85 pp en ago24-jul25, −2,24 pp en ago25-may26). `capitulacionMes/Sem`
+  se siguen recolectando como CONTEXTO, igual que las noticias. Detalle en el pre-registro.
+- **🛡️ Los endpoints VETAN precios que no se creen — hay que CANTARLO en el resumen (08/08/2026).**
+  `/analizar` y `/puntuar` ya no se tragan `precios[simbolo]` a ciegas: cada precio pasa una guardia de
+  ×2 contra el último `precio_ref` y un CONTRASTE contra la fuente propia del servidor (Stooq/Yahoo,
+  tolerancia 2%). Lo que no cuadra se descarta y, en `/analizar`, el símbolo se salta ENTERO (sus velas
+  contaminan EMA/MACD/RSI/ADX). Las respuestas traen `vetados`, `descartados`, `divergentes` y
+  `contraste.sinJuzgar`: **si vienen con contenido, dilo en el Telegram**. Un símbolo que desaparece en
+  silencio es indistinguible de uno que hoy no dio señal — exactamente cómo el CVX de 590,17$ del 03/08
+  envenenó 12 resultados (momentum pasó de −0,40 pp a +7,18 pp de media) sin que nadie mirara. Si un día
+  salen MUCHAS divergencias, el dato a revisar es **a qué hora corrió la pasada**: con el mercado abierto
+  IBKR da precio vivo y Stooq el cierre anterior, y mezclar intradía con cierres es el error de periodo
+  de siempre.
+- **🔀 El fallo más caro NO es un precio absurdo: es un precio REAL de OTRA empresa (08/08/2026).**
+  Los `get_price_history` que pides en paralelo vuelven en orden de FINALIZACIÓN, y transcribirlos por
+  posición baraja los símbolos. Ha pasado TRES veces (verificado contra IBKR): `17/07` META←MSFT,
+  MSFT←SPOT, SPOT←NFLX, NFLX←LLY · `03/08` LLY←CVX, META←LLY · `04/08` NFLX←PLTR. Ningún umbral de
+  plausibilidad lo ve, porque el número es un cierre verdadero. Ahora lo veta `detectarSuplantaciones()`
+  (precio idéntico a otro de la misma pasada, o que cuadra con la referencia de otro y no con la suya) y
+  viaja en `suplantados` — **cántalo en el Telegram y arregla tu transcripción, no es un fallo del
+  servidor**. Guarda cada respuesta con el nombre de su símbolo NADA MÁS recibirla; nunca acumules
+  respuestas paralelas para transcribirlas al final. Hueco conocido: la PRIMERA pasada de un símbolo
+  (sin referencia) barajada sin duplicar a nadie solo la ve el contraste con la 2ª fuente.
+- **Una tesis anulada no existe** (`trading_tesis.anulado`, 28 filas del saneo del 08/08). Se construyó
+  con la serie de velas de otra empresa, así que su dirección y su confianza no hablan de ese símbolo:
+  ni se puntúa, ni sirve de referencia de precio, ni sale en el panel. **No propongas «recuperarlas»
+  poniéndoles el precio bueno** — eso fabricaría el veredicto de una señal que nunca se emitió. Distinto
+  es un RESULTADO cuyo `precio_despues` vino cambiado con la tesis sana: eso sí se re-puntúa con el
+  cierre real y se marca `precio_fuente='manual'` (24 filas LLY/META del 03/08).
+- **💰 Un salto del NAV >15% avisa por Telegram y NO se bloquea.** Puede ser un ingreso tuyo o una
+  lectura rota, y el servidor no puede distinguirlos. Si el aviso salta y tú no has movido dinero, la
+  lectura del NAV viene mal y con ella se dimensionan TODAS las compras.
 - **📰 Noticias, 🌅 premarket, 🧑‍💼 insiders, 📊 volumen, medias móviles = CONTEXTO, nunca
   filtro:** jamás cambian ranking, pesos ni cestas; ninguna cifra de noticia entra en BD/modelo.
 - **Congelar cohortes = AÑADIR entrada a `COHORTES_PAPER`, nunca editar una existente** (no

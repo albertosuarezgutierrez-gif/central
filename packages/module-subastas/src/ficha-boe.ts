@@ -10,10 +10,13 @@
 //   · ver=2     → autoridad gestora (juzgado/notaría) con teléfono y correo
 //   · ver=3     → el bien: dirección postal, provincia, posesión, visitable
 //
-// CENTINELAS: el portal escribe «Sin puja mínima», «Sin lotes», «No consta» y
-// —crítico— «0,00 €» cuando NO hay dato. Un 0 que se cuele como número haría
-// dividir por cero en el descuento y produciría un chollo falso. Todos ellos
-// se traducen a `null`.
+// CENTINELAS: el portal escribe «Sin lotes», «No consta» y —crítico— «0,00 €»
+// cuando NO hay dato. Un 0 que se cuele como número haría dividir por cero en
+// el descuento y produciría un chollo falso. Todos ellos se traducen a `null`.
+// EXCEPCIÓN deliberada: «Sin puja mínima» NO es falta de dato — es el portal
+// declarando que cualquier postura es admisible. Se traduce a `pujaMinima: 0`
+// («revisado: no hay mínimo»), distinto del `null` de «no publicado». Un
+// «Puja mínima: 0,00 €» numérico sigue siendo `null` (no es una declaración).
 // ────────────────────────────────────────────────────────────────────────────
 
 import { decodificarHtml } from './email-boe.ts'
@@ -30,6 +33,7 @@ export interface FichaBoe {
 
   valorSubasta: number | null
   tasacion: number | null
+  /** `0` = «Sin puja mínima» declarado por el portal · `null` = no publicada. */
   pujaMinima: number | null
   tramos: number | null
   deposito: number | null
@@ -156,7 +160,8 @@ export function parsearFichaBoe(
 
     valorSubasta: importe(g, 'valor subasta'),
     tasacion: importe(g, 'tasacion'),
-    pujaMinima: importe(g, 'puja minima'),
+    // «Sin puja mínima» es una declaración, no un hueco: 0 = revisado, no hay.
+    pujaMinima: /^sin puja/.test(norm(g.get('puja minima') ?? '')) ? 0 : importe(g, 'puja minima'),
     tramos: importe(g, 'tramos entre pujas'),
     deposito: importe(g, 'importe del deposito'),
     cantidadReclamada: importe(g, 'cantidad reclamada'),
@@ -234,4 +239,69 @@ export function resultadoDeFicha(pares: Map<string, string>): ResultadoSubasta |
 
 function texto2(html: string): string {
   return decodificarHtml(html.replace(/<[^>]+>/g, ' '))
+}
+
+// ── Cierre visto en una ficha REAL (validado el 09/08/2026, El Puerto) ───────
+// La primera conclusión real enseñó el marcado: la ficha concluida NO publica
+// el estado como par clave/valor (por eso `resultadoDeFicha` devolvía null y el
+// cron llevaba semanas logueando «sin estado reconocible») sino como BANNER en
+// una caja de aviso: «LA SUBASTA HA CONCLUIDO SU PERIODO DE PUJAS (se encuentra
+// pendiente de finalización…)». El desenlace definitivo del periodo de pujas
+// vive en el CERTIFICADO DE CIERRE (PDF público, `verCertificadoCierre.php`):
+// «La subasta concluyó con pujas (puja máxima X euros)».
+
+/**
+ * Detecta el banner de conclusión en el HTML CRUDO de la ficha — no aparece en
+ * los pares clave/valor, así que hay que mirar el texto completo.
+ * `null` = ningún banner reconocido, que NO es «sigue abierta».
+ */
+export function resultadoDeBanner(html: string): 'concluida' | null {
+  const t = norm(texto2(html))
+  return /ha concluido su periodo de pujas/.test(t) ? 'concluida' : null
+}
+
+export interface CierreCertificado {
+  /**
+   * `con_pujas` = hubo remate (la aprobación del LAJ puede seguir pendiente,
+   * pero la puja máxima ya es definitiva) · `desierta` = cerró sin pujas.
+   */
+  resultado: 'con_pujas' | 'desierta'
+  /** Puja máxima del certificado (el remate). `null` solo en desiertas. */
+  pujaMaxima: number | null
+}
+
+/**
+ * Desenlace del certificado de cierre (texto extraído de su PDF). Defensivo:
+ * si el marcado no se reconoce devuelve `null` y el caller reintenta en la
+ * pasada siguiente — nunca inventa.
+ */
+export function parsearCertificadoCierre(texto: string): CierreCertificado | null {
+  const t = norm(texto)
+  const con = t.match(/concluyo con pujas[^(]*\(puja maxima ([0-9.,]+) euros?\)/)
+  if (con) {
+    const n = parseImporteEs(con[1])
+    return { resultado: 'con_pujas', pujaMaxima: n != null && n > 0 ? n : null }
+  }
+  if (/concluyo sin pujas/.test(t)) return { resultado: 'desierta', pujaMaxima: null }
+  return null
+}
+
+/**
+ * Mejor puja publicada por la ficha de una subasta EN CURSO (sin exigir
+ * estado, a diferencia de `resultadoDeFicha`). Sirve para vigilar las
+ * seguidas: si alguien ya puja por encima de nuestro techo, deja de ser
+ * negocio y hay que enterarse ANTES del cierre, no en el resultado.
+ *
+ * `null` = la ficha no la publica (o aún no hay pujas visibles) — que NO es
+ * «no hay pujas»: el portal solo enseña la mejor puja en algunos formatos.
+ */
+export function mejorPujaDeFicha(pares: Map<string, string>): number | null {
+  for (const [k, v] of pares) {
+    if (/importe de adjudicacion/.test(k)) continue // eso es un resultado, no una puja viva
+    if (/puja maxima|mejor puja|puja mas alta/.test(k)) {
+      const n = parseImporteEs(texto2(v))
+      return n != null && n > 0 ? n : null
+    }
+  }
+  return null
 }

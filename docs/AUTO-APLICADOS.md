@@ -13,6 +13,19 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-08-09** · `docs/CONTEXTO-SESIONES.md` · 2 entradas de memoria añadidas: PR #1327 (Subastas 3ª
+  tanda) y PR #1296 (subastas: cursor incremental por UID) se habían mergeado sin anotar. Resto del
+  rango desde la auditoría de esta mañana (#1303) ya autodocumentado PR a PR. Heartbeat de
+  crons/agentes y backlog de PRs de rutinas + salud del automerge: sin hallazgos. Entorno bajo
+  harness sin push directo a `main` → Plan B (PR #1328, solo ficheros de registro, pensado para
+  auto-mergearse por `rutinas-automerge.yml`) · commit `4e0f39e`
+- **2026-08-08** · `docs/RUTINAS-PROGRAMADAS.md` · corregida la descripción de `trading-watchdog`
+  (sección 12): decía que comprobaba solo 2 huellas (NAV + `trading_tesis`); el PR #1291 (mergeado
+  hoy) le añadió un 3er tramo (`agente_latidos.trading_puntuar`, el cierre) tras un caso real
+  (06/08) donde NAV y tesis quedaron frescos pero `/puntuar` nunca se llamó y el watchdog lo habría
+  dado por bueno · auditoría diaria ligera, heartbeat de crons 12/14 ✅ (2 falsos positivos ya
+  conocidos, sin acción) · commit de esta auditoría
+
 - **2026-08-02 (2ª pasada — revisión pedida por Alberto)** · rama `claude/revision-conversaciones-memorias-9hq32s` ·
   4 reconciliaciones de texto: **(1)** `.claude/skills/buscador-ia/SKILL.md` + `docs/BUSCADOR-IA.md` — la cadena
   seguía pintando Gemini como eslabón vivo y con id `gemini-2.5-flash`; el código manda: apagado por defecto

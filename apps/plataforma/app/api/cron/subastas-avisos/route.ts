@@ -9,7 +9,7 @@ import { tgSend, tgSendButtons } from '@central/core-telegram'
 import { prisma } from '@/lib/db'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { eur } from '@/lib/dinero'
-import { decidirAviso, esEmpresaInmobiliaria } from '@central/module-subastas'
+import { decidirAviso, esEmpresaInmobiliaria, umbralesPuja } from '@central/module-subastas'
 import { RADAR_CON_CORPUS, RADAR_VIGENTE } from '@/lib/subastas-radar'
 
 export const dynamic = 'force-dynamic'
@@ -70,7 +70,11 @@ export async function GET(req: NextRequest) {
              -- es la diferencia entre un chollo y una ruina, así que va EN el aviso,
              -- no escondido en la ficha.
              s.cargas AS cargas_subsistentes, s.cargas_fuente, s.semaforo, s.identificador,
-             s.cargas_conocidas, s.lector_version, s.analisis, s.flip_apto, s.margen_flip_pct, s.es_playa
+             s.cargas_conocidas, s.lector_version, s.analisis, s.flip_apto, s.margen_flip_pct, s.es_playa,
+             -- Umbrales de aprobación del remate en el propio aviso: el 70% es
+             -- del VALOR DE SUBASTA (no de la deuda), y la deuda marca hasta
+             -- dónde puja el ejecutante sin desembolso.
+             s.tipo AS tipo_subasta, s.valor_subasta, s.cantidad_reclamada
       ${RADAR_CON_CORPUS}
       WHERE r.avisado_at IS NULL
         AND ${RADAR_VIGENTE}
@@ -136,7 +140,9 @@ export async function GET(req: NextRequest) {
 
       const lineas = [`⚖️ <b>${escapar(s.identificador ?? p.dedupe_key)}</b> — ${punt}`]
       if (s.descripcion) lineas.push(escapar(String(s.descripcion).slice(0, 160)))
-      const pie = [s.provincia, coste ? `coste estimado ${coste}` : null, cierre ? `cierra ${cierre}` : null]
+      // «coste estimado» a secas se confundía con una valoración: es el coste
+      // puerta abierta simulando el remate a la salida (mismo criterio que la ficha).
+      const pie = [s.provincia, coste ? `coste a la salida ${coste}` : null, cierre ? `cierra ${cierre}` : null]
         .filter(Boolean)
         .join(' · ')
       if (pie) lineas.push(`<i>${escapar(pie)}</i>`)
@@ -144,6 +150,22 @@ export async function GET(req: NextRequest) {
       // Cargas que hereda quien se lo adjudique, leídas de la certificación. Es
       // el dato que convierte un «descuento del 55%» en una pérdida, así que se
       // dice en el aviso y con su procedencia (OCR o texto).
+      // Cuánto hay que pujar de verdad: umbral de aprobación directa (70% del
+      // valor de subasta en la judicial) y la deuda reclamada.
+      const u = umbralesPuja({
+        dedupeKey: p.dedupe_key,
+        fuente: 'boe',
+        tipo: p.tipo_subasta,
+        valorSubasta: p.valor_subasta == null ? null : Number(p.valor_subasta),
+        cantidadReclamada: p.cantidad_reclamada == null ? null : Number(p.cantidad_reclamada),
+      })
+      const directa = u.umbrales.find((x) => x.clave === 'aprobacion_directa')
+      const trozos = [
+        directa ? `aprobación directa desde ${eur(directa.importe)} (${Math.round((directa.pct ?? 0) * 100)}% del tipo)` : null,
+        u.cantidadReclamada != null ? `deuda reclamada ${eur(u.cantidadReclamada)}` : null,
+      ].filter(Boolean)
+      if (trozos.length) lineas.push(`⚖️ ${escapar(trozos.join(' · '))}`)
+
       const subsistentes = p.cargas_subsistentes == null ? null : Number(p.cargas_subsistentes)
       if (subsistentes != null && subsistentes > 0) {
         const via = p.cargas_fuente === 'ocr_ia' ? ' (leído del escaneo por IA)' : ''

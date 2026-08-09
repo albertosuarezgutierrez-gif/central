@@ -4,7 +4,10 @@ import { Prisma } from "@prisma/client"
 import { isRoutineAuthorized } from "@/lib/cron-auth"
 import { EVENTS } from "@/lib/pricing-calendar"
 import { ventanasDelBarrido, type EventoFecha } from "@/lib/sivra/mercado-ventanas"
-import { ventanasQuePedir, FUENTES_FIABLES, type CoberturaVentana } from "@/lib/sivra/mercado-cobertura"
+import {
+  planDeVentanas, parsearParametrosPlan, FUENTES_FIABLES,
+  type CoberturaVentana,
+} from "@/lib/sivra/mercado-cobertura"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -28,9 +31,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "no autorizado" }, { status: 401 })
   }
 
-  const max = Math.min(30, Math.max(1, Number(new URL(req.url).searchParams.get("max") ?? 12)))
+  // Parseo de `max`/`rondas`/`desde`/`hasta` en un helper PURO y testeado: el handler no se puede
+  // ejercitar con `node --test` (necesita Prisma y el alias `@/`), y ahí es donde se escondió un
+  // fallo mudo real — `?max=abc` devolvía CERO ventanas en silencio. Ver `parsearParametrosPlan`.
+  const parseo = parsearParametrosPlan(new URL(req.url).searchParams)
+  if (!parseo.ok) return NextResponse.json({ error: parseo.error }, { status: 400 })
+  const { max, filtro } = parseo.valor
+
   const hoy = new Date().toISOString().slice(0, 10)
-  const avisos: string[] = []
+  const avisos: string[] = [...parseo.avisos]
 
   // Aforos REALES por piso: el comparable de una casa de 12 plazas no es el de un apartamento de 4
   // (bug del 31/07/2026). Los pisos que comparten aforo comparten consulta.
@@ -98,7 +107,14 @@ export async function GET(req: NextRequest) {
     avisos.push(`cobertura ilegible (${String(e).slice(0, 80)}): el plan sale como si nada estuviera medido`)
   }
 
-  const ventanas = ventanasQuePedir(plan, aforos, cobertura, hoy, max)
+  const { ventanas, candidatas, recortadas } = planDeVentanas(plan, aforos, cobertura, hoy, max, filtro)
+
+  // Un recorte MUDO se lee como «esto era todo lo que había». Se dice, para que el parte de la
+  // rutina pueda distinguir «cubierto» de «cubierto hasta donde cabía en la pasada».
+  if (recortadas > 0) {
+    avisos.push(`el tope (max=${max}) dejó fuera ${recortadas} ventanas que casaban el filtro: la pasada NO agota lo pedido`)
+  }
+  const hayFiltro = Boolean(filtro.rondas || filtro.desde || filtro.hasta)
 
   return NextResponse.json({
     ok: true,
@@ -106,6 +122,10 @@ export async function GET(req: NextRequest) {
     // Cuántas ventanas tiene el plan COMPLETO frente a las que se piden ahora: así la rutina puede
     // decir en su parte «voy por 12 de 96» en vez de dar a entender que ha cubierto todo.
     plan_total: plan.length * aforos.size,
+    // Con filtro, `plan_total` ya no es el denominador honesto de la pasada: `candidatas` sí.
+    filtro: hayFiltro ? filtro : null,
+    candidatas,
+    recortadas,
     pedidas: ventanas.length,
     sin_medir_nunca: ventanas.filter(v => v.diasSinMedir === null).length,
     ventanas,

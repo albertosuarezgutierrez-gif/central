@@ -47,7 +47,7 @@ export const COLS_SUBASTA = Prisma.raw(
     'uso_catastral, direccion_catastro, precio_m2_mercado, muestra_mercado, zona_mercado, notas_edicto, ' +
     'documentos, es_playa, margen_flip, margen_flip_pct, flip_apto, semaforo, analisis, precio_m2_zona, ' +
     'muestra_zona, zona_portal, lat, lon, geo_precision, ' +
-    'cargas_detalle, cargas_fuente, documentos_leidos, lector_version, valor_orientativo',
+    'cargas_detalle, cargas_fuente, documentos_leidos, lector_version, valor_orientativo, mejor_puja, mejor_puja_at',
 )
 
 /**
@@ -126,6 +126,8 @@ export function filaASubasta(f: any): SubastaInmueble {
     valorSubasta: num(f.valor_subasta),
     tasacion: num(f.tasacion),
     pujaMinima: num(f.puja_minima),
+    cantidadReclamada: num(f.cantidad_reclamada),
+    mejorPuja: num(f.mejor_puja),
     tramos: num(f.tramos),
     deposito: num(f.deposito),
     cargas: num(f.cargas),

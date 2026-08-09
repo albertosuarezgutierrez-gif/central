@@ -32,7 +32,19 @@ cosas. El de registro se mergea solo y no envejece; el que cambia comportamiento
 1. Entra en `claude.ai/code` → **Rutinas** → **Nueva rutina**.
 2. Repo: `central`. Rama: la que prefieras (la rutina abre su propio PR draft).
 3. Define horario, prompt y MCPs según la tabla de abajo.
-4. Guarda. A partir de ahí corre sola; revisa el PR draft que deje.
+4. **Adjunta SOLO los conectores que la rutina usa de verdad — y ninguno más.** El propio formulario
+   avisa de que la rutina usará **todas** las herramientas de los conectores adjuntos, **incluidas las
+   de escritura, sin pedir permiso en cada ejecución**. Y los conectores vienen **heredados en bloque**:
+   al montar `mercado-booking` (08/08/2026) el formulario traía **16 adjuntos** de serie — entre ellos
+   Interactive Brokers, Gmail, Resend y Vercel — para una rutina que lo único que hace es escribir
+   comparables de mercado. Eso es dar a un agente desatendido la capacidad de operar en el bróker,
+   mandar correo y tocar infraestructura para una tarea que no lo necesita. Es el mismo principio por
+   el que las rutinas llevan `ALERTA_TOKEN` y no `CRON_SECRET`: **el mínimo alcance que le permita
+   hacer su trabajo**. La columna "MCPs / envs" de cada ficha lista lo NECESARIO; lo que no esté ahí,
+   se quita.
+   ⚠️ Dos cosas que NO son conectores y por eso no hay que adjuntar: **GitHub** (es nativo al vincular
+   el repo) y las llamadas HTTP a plataforma (`/api/...` con Bearer, van por red normal).
+5. Guarda. A partir de ahí corre sola; revisa el PR draft que deje.
 
 ---
 
@@ -44,7 +56,7 @@ cosas. El de registro se mergea solo y no envejece; el que cambia comportamiento
 | **Cuándo** | Diaria, ~**04:00 CEST** |
 | **Prompt** | `Ejecuta /auditoria-diaria` |
 | **MCPs / envs** | Supabase + Vercel (lectura). **GitHub es nativo** al vincular el repo — ya cubre lectura + abrir el PR + push a `main`. Para el aviso, `PLATAFORMA_URL` + `ALERTA_TOKEN` en la env de la rutina (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos — ver "Arquitectura de notificaciones Telegram" abajo; si faltan, el aviso se omite). |
-| **Qué hace** | Reconcilia `CONTEXTO-SESIONES.md` + skills-maestro + `CLAUDE.md` + `docs/SKILLS.md` contra el código real + checks baratos (lockfile, estructura, drift) + **heartbeat de crons** (paso 2-bis: detecta crons mudos por falta de filas frescas en BD). SALTA typecheck/tests pesados. |
+| **Qué hace** | Reconcilia `CONTEXTO-SESIONES.md` + skills-maestro + `CLAUDE.md` + `docs/SKILLS.md` contra el código real + checks baratos (lockfile, estructura, drift) + **heartbeat de crons/agentes** (paso 2-bis: `agente_latidos` como fuente preferida + filas frescas en BD para lo no instrumentado + reconciliación de cobertura contra `CRON_JOBS`/`AGENTES_VIGILADOS`/este doc) + **backlog de PRs de rutinas y salud del automerge** (paso 2-ter: PRs de registro atascados, conflictos, drafts olvidados, workflow `rutinas-automerge` vivo). SALTA typecheck/tests pesados. |
 | **Resultado (dos carriles)** | **Carril 1:** los arreglos de **texto** (memoria/skills/docs/manuales) se **auto-aplican a `main`** (sin PR) y se anotan en `docs/AUTO-APLICADOS.md`. Si el entorno no deja empujar a `main` → PR propio SOLO con ficheros de registro, que **se mergea solo** (ver "Cómo llega el texto a `main`" abajo). **Carril 2:** lo "raro" (código, infra, crons mudos, gran radio) → **PR draft** `claude/auditoria-diaria-<fecha>` + **aviso Telegram** con botón-URL al PR. **Sin nada** → sin push, sin PR, sin aviso. |
 
 Es la **red de seguridad** del guardián de cierre (`.claude/hooks/persist-memoria.sh`):
@@ -56,7 +68,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Cuándo** | Semanal (domingos, ~**04:00 CEST**) |
 | **Prompt** | `Ejecuta /auditoria-diaria --profunda` |
 | **MCPs / envs** | Supabase + Vercel. **GitHub nativo**. `PLATAFORMA_URL` + `ALERTA_TOKEN` para el aviso y el **heartbeat semanal** (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos — ver "Arquitectura de notificaciones Telegram" abajo). |
-| **Qué hace** | `auditoria-central` ENTERA: typecheck de las 4 apps + tests + seguridad multi-tenant + infra por MCP + coherencia de docs. |
+| **Qué hace** | `auditoria-central` ENTERA: typecheck de las 8 apps + tests + seguridad multi-tenant + `pnpm audit` + infra por MCP (incl. `ignoreCommand` en los 8 `vercel.json`) + coherencia de docs. |
 | **Resultado** | Igual que la ligera (carril 1 a `main` + carril 2 PR draft con informe `docs/AUDITORIA-<YYYY-MM>.md` + aviso Telegram). Además, **heartbeat semanal**: manda SIEMPRE un Telegram corto de "sigo viva" aunque no haya hallazgos, para confirmar que la rutina no se ha muerto en silencio. |
 
 ### 3. Facturas correo — *activa*
@@ -137,22 +149,28 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Qué hace** | Lee `docs/ROADMAP-rrhh.md`, filtra ítems 🔴 obligatorios no completados y genera un informe de plazos legales (RD 8/2019 fichaje, RGPD art.28, canal denuncias, etc.). Mantiene visibilidad sobre obligaciones con riesgo de multa. |
 | **Verificar** | El chat muestra el informe de compliance con la lista de ítems 🔴 pendientes. |
 
-### 8-bis. Mercado real por fecha (SIVRA / Booking) — *PENDIENTE DE TRIGGER (alta manual de Alberto)*
-> ⚠️ El código está en producción y probado, pero **la rutina no existe todavía**: hay que crearla en
-> `claude.ai/code → Rutinas`. No se pudo crear por API — el parámetro de **conectores no está
-> disponible para esta organización**, y una rutina sin el conector de Booking no puede medir nada
-> (y sin `ALERTA_TOKEN` en su env, tampoco escribir). Mientras no exista, su latido dirá «sin ninguna
-> señal registrada», que es lo correcto: no está corriendo.
+### 8-bis. Mercado real por fecha (SIVRA / Booking) — *ACTIVA desde el 08/08/2026*
+> Creada a mano por Alberto («SIVRA mercado booking (diario)») tras dos meses de latido en «sin
+> ninguna señal registrada» — que era el diagnóstico correcto: no existía. **No se pudo crear por
+> API**: el parámetro de conectores no está disponible para esta organización, y sin el conector de
+> Booking la rutina no puede medir nada. Primera pasada real ese mismo día, disparada a mano:
+> **120 comps en 12 ventanas, todas con respuesta del conector, 0 fallos**, latido `ok=true`.
+>
+> 🚨 **Al crearla, el formulario traía 16 conectores heredados** (Interactive Brokers, Gmail, Resend,
+> Vercel…) para una rutina que solo escribe comparables. Se dejó **solo Booking.com** — ver el paso 4
+> de "Cómo se crea un trigger".
 
 | | |
 |---|---|
 | **Cuándo** | Diaria, **05:30 CEST** (03:30 UTC — media hora después del barrido de las 03:00 UTC, para que la cobertura del día ya esté escrita cuando se pide el plan) |
 | **Prompt** | `Ejecuta la skill mercado-booking` |
-| **MCPs / envs** | **Booking.com** (obligatorio) · `PLATAFORMA_URL` + `ALERTA_TOKEN` en la env de la rutina (**NUNCA** `CRON_SECRET`). Sin esas dos envs no puede ni pedir el plan ni escribir: el latido saldría en rojo. |
+| **MCPs / envs** | **Booking.com y NADA MÁS** (obligatorio; el formulario trae 16 conectores heredados — quitar los otros 15, ver paso 4 de "Cómo se crea un trigger"). GitHub va nativo por el repo; las 3 llamadas a plataforma son HTTPS con Bearer, no necesitan conector. · `PLATAFORMA_URL` + `ALERTA_TOKEN` en la env de la rutina (**NUNCA** `CRON_SECRET`). Sin esas dos envs no puede ni pedir el plan ni escribir: el latido saldría en rojo. |
 | **Qué hace** | Pide a `GET /api/sivra/mercado/plan?max=12` las ventanas (fecha × aforo) con el corpus fiable más viejo, las mide con el conector de Booking (`number_of_adults` = aforo real del piso), y escribe los comparables en `market_rates` por `POST /api/sivra/mercado/ingest` con **`fuente:"booking_mcp"`**. Cierra con `POST /api/internal/latido` (`sivra_mercado_booking`). |
 | **Por qué existe** | Es la **única** fuente que distingue temporada. El barrido por búsqueda web da precios de anuncio SIN fecha: medido el 06/08/2026 para el Dúplex el 4-sep, Serper decía p50 **171€** y el mercado real era **129€** (−33%), con los mismos comps repitiendo precio en agosto, noviembre y marzo. Ver `docs/superpowers/specs/2026-08-06-mercado-booking-design.md`. |
 | **Verificar** | `SELECT checkin_date, guests, count(*) FROM market_rates WHERE fuente='booking_mcp' AND search_date >= CURRENT_DATE - 1 GROUP BY 1,2` + fila `sivra_mercado_booking` en `agente_latidos` con `ok=true`. |
-| **Pendiente (fase 2)** | Cuando haya ≥3 fechas por mes con `fuente='booking_mcp'`: retirar `mercado/sweep` de `CRON_JOBS`, neutralizar las filas `serper` de fechas lejanas y quitar su latido. **No antes**: el bucket mensual del motor exige 3 fechas y hoy las aporta Serper. |
+| **Qué se vio en la 1ª pasada (08/08/2026)** | La temporada que Serper NUNCA pudo ver, medida sobre una fecha por mes: **House (12p)** 474€ sep · **856€ oct** · 604€ nov · 424€ dic · 368€ ene; **Luxury (5p)** 196/282/206/174; **Busto (2p)** 110/174/156/106/104. Octubre es el pico en los cuatro aforos. Para comparar: el corpus Serper le ponía a House **260€** — con precios de apartamento de 4 plazas. Cobertura tras la 1ª: 17 de 120 ventanas (12 de la rutina + 5 medidas a mano esa mañana). |
+| **El motor ya lo usa (08/08/2026, misma tarde)** | Con 19 ventanas más medidas a mano (190 comps), **ago-2026→ene-2027 tiene ≥3 fechas SIN evento por mes en los 4 pisos**, que es lo que exige `MIN_FECHAS_MES` — el bucket mensual está vivo y con él se activó `apply_enabled` en Dúplex y House. 🚨 **Al elegir qué fecha medir, cuenta las fechas que ve el MOTOR, no las que hay en la tabla**: el bucket excluye las fechas de evento del calendario del repo **y** de `pricing_eventos_auto`, así que un mes con 6 fechas medidas puede tener 1 elegible (le pasó a septiembre: la Feria/Bienal se come del 9 al 30). De feb a jul-2027 aún no hay bucket: esos meses caen al ancla global + prior estacional, que es el fallback de diseño. |
+| **Pendiente (fase 2)** | Cuando haya ≥3 fechas por mes con `fuente='booking_mcp'` **en todo el horizonte de 365 días** (hoy solo ago→ene): retirar `mercado/sweep` de `CRON_JOBS`, neutralizar las filas `serper` de fechas lejanas y quitar su latido. **No antes**: en feb→jul el bucket todavía lo sostiene Serper. |
 
 ### 9. Vigía GitHub/OSS — *pendiente de trigger*
 | | |

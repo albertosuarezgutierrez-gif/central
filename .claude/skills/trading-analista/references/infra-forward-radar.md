@@ -116,13 +116,27 @@
   snapshot (Yahoo `includePrePost`, gratis; Finviz descartado: premarket solo en Elite de pago y
   bloquea bots), aviso Telegram con 📰 al lado, silencio si no hay movimiento. Contexto, nunca
   filtro. Fase 2 global = datos de pago, solo si el forward paper valida.
-- **🔭 Retrovisor (backtest INDICATIVO, 19/07):** tabla `trading_backtest` (546 empresas × 22 snapshots
-  mensuales punto-en-el-tiempo por `filed` + SPY + lupa `_GURUS_`; re-poblable con el workflow
-  `trading-backtest.yml`). Informe: **`docs/TRADING-RETROVISOR-2026-07.md`** — top-10 batió a SPY 17/22
-  a 91d (alpha mediano +8,5 pp); momentum = único factor con spread positivo en 2024-26 (régimen junk
-  rally); calidad/valor = freno de caídas >15%; gurús = calidad a precio razonable comprada contra el
-  momentum. OJO sesgo: membresía del universo NO es histórica (lista de hoy retro-aplicada). NO cambiar
-  pesos del blend por este backtest — solo si el FORWARD lo confirma con 2-3 meses.
+- **🔭 Retrovisor (backtest INDICATIVO):** tabla `trading_backtest` — **1.018 símbolos × 178 snapshots
+  mensuales** punto-en-el-tiempo por `filed` (+ SPY y lupa `_GURUS_`). **Ventana de 15 AÑOS desde el
+  08/08/2026** (`MESES_RETROVISOR = 180` en `backtest-puro.ts`, subida desde 24 meses): cubre 2011-2026
+  —euro, selloff 2015-16, Q4-2018, COVID, oso de 2022, ciclo actual— porque con un solo régimen H8 daba
+  un resultado que se invertía de signo entre mitades y no había forma de saber cuál era el mundo.
+  Cron `trading-backtest`, lote con **presupuesto de 240 s** (cada símbolo hace ~8× más CPU que con la
+  ventana corta; lo que no entra conserva su `actualizadoEn` y encabeza la pasada siguiente).
+  - **🚨 SESGO DE SUPERVIVENCIA, y a 15 años es severo:** el universo son los símbolos que existen HOY.
+    El **nivel absoluto de retorno está inflado y NO se usa para nada**; lo válido es la comparación
+    CRUZADA dentro de cada fecha (capitula vs no, con salida vs sin, quintil alto vs bajo), donde ambos
+    brazos cargan el mismo sesgo. Responde «¿la señal cambia de signo según el régimen?», no «¿cuánto
+    se gana?». Ningún tramo de la escalera de capital se mueve con datos de aquí.
+  - **Fundamentales solo desde ~2010** (mandato XBRL de la SEC): los snapshots anteriores llevan
+    piotroski/roic/ey/fcfy a `null`. Al reportar un FACTOR hay que decir sobre cuántos años se midió —
+    no son los 15 que sí cubren precio y volumen.
+  - **Reporte SIEMPRE partido por subperiodo, nunca solo agregado** (lección de la resolución de H8:
+    un criterio de una sola cifra sobre el agregado no ve la inversión de signo).
+  - Informe histórico de la ventana corta: `docs/TRADING-RETROVISOR-2026-07.md` (top-10 batió a SPY
+    17/22 a 91d; momentum el único factor con spread positivo en 2024-26). Queda como registro de lo
+    que se creía con 22 snapshots — **no se cita como estado del arte**.
+  - NO cambiar pesos del blend por este backtest: solo si el FORWARD lo confirma.
 - **🚀 Satélite caza-cohetes (19/07, dentro del ranking semanal):** lista APARTE de ≤5 nombres con perfil
   lotería (momentum>30% + ROIC<0 ∨ Piotroski≤4; 13% acaba +50%/3m según el retrovisor). Las medias
   multi-marco (SMA30 semanal / SMA12 mensual) se muestran como INFORMACIÓN (✓/✗), **NO como filtro**: la
@@ -151,6 +165,31 @@ DE MUESTRA (walk-forward). Esa decisión es de Alberto y tendrá su propio spec.
   abierta» es barrera y deja `motivo_bloqueo`). `trading_pasadas` cuenta ejecuciones/día y avisa por
   Telegram si la pasada corre 2 veces. `trading_paper_orden.precio_dia_siguiente` = deslizamiento
   (lo rellena `/puntuar`); NULL = sin dato, no 0.
+
+- **🛡️ Higiene del precio en los endpoints (08/08/2026, PRs #1315 y #1317).** Ni `/analizar` ni
+  `/puntuar` se creen ya los precios que manda la sesión. Dos filtros en cadena, ambos con la regla de
+  tres estados (sin con qué comparar → NO se juzga y el precio pasa):
+  1. **Guardia del ×2** (`lib/trading/precios-guardia.ts::filtrarPreciosAnomalos`) contra el último
+     `precio_ref` ANTERIOR a hoy — nunca el de hoy, que vendría envenenado por las dos puntas.
+  2. **Contraste con 2ª fuente** (`contrastarFuentes` + `precios-contraste.ts`): el MISMO cierre pedido
+     a Stooq→Yahoo, tolerancia 2%, presupuesto de tiempo y concurrencia 8. El cierre de contraste se
+     descarta si es más viejo que 5 días (comparar con la semana pasada fabrica divergencias falsas).
+  En `/puntuar` se contrastan solo los símbolos que se van a usar; en `/analizar`, el universo, y el
+  símbolo divergente **se salta ENTERO** porque sus velas contaminan EMA/MACD/RSI/ADX. Las respuestas
+  traen `vetados`/`descartados`/`divergentes`/`contraste.sinJuzgar` y **hay que cantarlo en el Telegram**.
+  Origen: el 03/08 entró `CVX = 590,17$` (cierre real 193,18$), puntuó 12 tesis —tres a +205 pp— y movió
+  `trading_estrategia_stats`: momentum de **−0,40 pp a +7,18 pp** de media, con `ajustesDeStats` activo
+  (n=81) inclinando el torneo cinco días.
+- **`trading_tesis.precio_fuente` / `trading_tesis_resultado.precio_fuente`** (default `'sesion'`):
+  procedencia del precio, patrón `market_rates.fuente`. Un cierre de IBKR y uno de Stooq no son el mismo
+  dato. Es el requisito que faltaba para poder recuperar `/puntuar` sin la sesión (los `body.precios` son
+  cierres y el servidor tiene fuente propia; `/saldo` y `/analizar` NO son recuperables porque dependen
+  del NAV, que solo existe en el MCP de IBKR).
+- **`ventana_dias` = días REALES transcurridos**, no el horizonte declarado: si una pasada no corre o la
+  guardia difiere el scoring, etiquetar 13 días como 10 sería leer un dato bueno con el periodo malo.
+- **Salto del NAV >15% → aviso por Telegram, sin bloquear** (`/api/trading/saldo`). Puede ser un ingreso
+  real de Alberto o una lectura rota, y el servidor no puede distinguirlos; con el NAV se dimensiona cada
+  posición, así que la pregunta la contesta él.
 
 ## Canal de aviso — protocolo común
 

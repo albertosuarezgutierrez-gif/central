@@ -274,6 +274,27 @@ declara **UN solo cron**: `/api/cron/dispatch` cada minuto.
 
 - [x] **Cierre ciclo tarjetas/facturas (02/07/2026):** `/api/banca/importar` acepta **PDF de tarjeta Kutxabank** (`lib/extracto-tarjeta-pdf.ts`, parser puro + pdf-parse por subpath, `origen='pdf'`; el `ccc` sale del PAN → `TARJETA-KUTXA-<últ.4>` y el dedupe_hash es idéntico al de Excel/manual → reimportar no duplica). `health-check` +2 checks: **Check 7 cuadre tarjetas** (liquidación `TARJ.CRDTO` en corriente sin espejo `PAGO RECIBO` en otra cuenta = falta el extracto de ese mes → 🔴 Telegram) y **Check 8 justificantes** (últimos 10 días del trimestre: deducibles sin `conciliado`/`factura_ref` → aviso con total y link a `/finanzas?tab=gastos`).
   - **Subir el extracto al AGENTE (📎), no solo en /banca (13/07/2026, Fase 1):** el 📎 del chat contable (y Telegram) detecta un extracto de tarjeta (`esExtractoTarjeta`, ≥3 movimientos) en `lib/contable/documentos.ts::procesarDocumento` y lo enruta a `lib/contable/extracto-tarjeta.ts::procesarExtractoTarjeta` (variante `DocProcesado.tipo='extracto_tarjeta'`) — NO al lector de factura suelta. Ese flujo: parse → resuelve sociedad/titular por el ccc de la tarjeta (reutiliza la `cuentas_bancarias` existente; **NO** filtra `cuentas` por `estado`) → `importarExtracto(...,'pdf',titular,'tarjeta')` → `analizarMovimientos` → **empareja DEVOLUCIONES** (`lib/devoluciones-tarjeta.ts::casarDevolucion`: abono que no es `PAGO RECIBO` ↔ compra misma comercio+importe, ventana 120d → copia `destino`/`propiedad_id` para que se ANULEN; sin casar → `requiere_revision` + botones `mov_*` propios, porque `getMovimientosDudosos` solo mira cargos) → **cuadre** (`cuadrarExtractoTarjeta`: Σcompras−Σdevoluciones = liquidación; si no cuadra, avisa) → `enviarResumenTarjeta` (dudosas por Telegram) → **archiva el PDF en Drive** (`subir`, año/mes). Check 7 ahora pide "súbeme el PDF en el chat (📎)" en vez de "/banca". Restricción de Alberto: sube en el PC (web), revisa dudosas en el móvil (Telegram). **Fase 2 (vigilantes, mismo PR):** `lib/vigilantes-tarjeta.ts` (puro: `esCargoFinanciero`/`dobleCobro`/`subioPrecio`) + `vigilantesTarjeta()` en `extracto-tarjeta.ts` manda UN mensaje Telegram tras importar con lo que aplique: intereses/comisiones, posible cobro doble (mismo comercio+importe), cargos de comercio nunca visto (>80€, solo si hay histórico), subidas de precio de recurrentes, y justificantes pendientes de deducibles >100€ sin factura (enlaza Check 8). **Fase 3 (comodidades, 13/07/2026):** (a) **extracto consultable por el chat** — al archivar en Drive se persiste el enlace por tarjeta+mes en `contable_memoria` (clave `extracto_tarjeta:<PAN4>:<YYYY-MM>`, excluida del contexto del LLM como los `sinonimo_negocio:`), y una intención nueva `extracto_drive` (detector puro en `intencion.ts`, respuesta en `respuestas-directas.ts`, también enrutable por la IA) devuelve el link a demanda ("enséñame el extracto de junio de la ****0302"); (b) **auto-factura del correo** — tras importar, `procesarExtractoTarjeta` dispara `conciliarFacturasDesdeGmail` (acotado `maxAdjuntos:8/mesesAtras:2`, best-effort) para enganchar YA los justificantes de las compras deducibles recién importadas (mismo motor conservador que el cron diario `facturas-conciliar-gmail`, que sigue de red de seguridad).
+  - **🚨 El extracto de tarjeta llevaba MESES sin poder leerse + 5 trampas más (08/08/2026, PRs #1295 y
+    #1300).** Alberto: «el agente falla mucho»; en `contable_log`, el mismo PDF subido TRES veces con «no
+    distingo el importe». No era el OCR: **`parseTarjetaPdfTexto` devolvía CERO** porque Kutxabank ya no
+    separa los campos (`01/07/2026******2019750300COMPRA EN…-8,00 €`) y `RE_LINEA` exigía `\s+` — y el
+    fixture del test se había escrito a mano CON espacios, así que la suite en verde no probaba nada
+    (**regla: el fixture de un parser de documento externo se copia de un documento real**). Al arreglarlo
+    aparecieron cinco trampas más, todas con su test: (a) leer el importe antes de recortar el PAN hace que
+    el grupo de millar se trague dígitos del nº de tarjeta (`…20196503021.355,24 €` → 21.355,24€ en la
+    …0302; invisible en la …0300 porque acaba en ceros) → los dígitos enmascarados se delimitan PRIMERO y,
+    si no se puede, la línea no se importa; (b) el **Excel** del mismo listado ya entra por el 📎
+    (`lib/extracto-tarjeta-excel.ts`: el nº de tarjeta sale del `PAGO RECIBO <16>` porque no está en
+    cabecera) pero **hay que normalizar `fechaValor`/saldo** o los dos ficheros del mismo mes duplican 63
+    de 109 compras (~1.990€) — el `dedupe_hash` incluye la fecha valor; (c) el cuadre solo se afirma si es
+    **verificable**: en el extracto real el `PAGO RECIBO` ABRE el mes (paga el ciclo anterior), así que
+    contrastarlo con esas compras gritaba «no cuadra» siempre; (d) el cruce factura↔movimiento pasa a
+    **`CruceDoc` de cinco desenlaces** (match · ya_conciliado · fuera_de_ventana ±60d · **sin_cobertura** ·
+    sin_match): Kutxabank va 1-3 días por detrás POR DISEÑO, y decir «no encuentro el cargo» de lo que aún
+    no ha llegado es afirmar una ausencia sin mirar (dos facturas reales dadas por no pagadas); (e)
+    `maxDuration` 60 → **300 + presupuesto de tiempo** (`lib/contable/presupuesto-extracto.ts`): con 60 s
+    la ruta importaba los 109 movimientos y moría antes de contestar → «Sin respuesta.» sobre un extracto
+    que sí había entrado. Detalle completo en la skill `plataforma-maestro` (`agentes-banca-landmines.md`).
 - [x] **`/banca` = cuadro financiero UNIFICADO + IA GRATIS (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, PRs #882/#886-893):** sustituye a la vista suelta de movimientos. **Core (F1-F3):** period-driven (`?year/quarter/desde/hasta`, default mes en curso, mismo `IntervaloSelector` que la radiografía) — `ResumenPeriodo.tsx` reusa `getResumenFinanciero`; gráficas Recharts (evolución + dona); P&L de pisos (`getPLMensual`); libro completo paginado con reclasificación en línea (`MovimientosTabla`, PR #840, ver bullet de arriba). **Extras de IA GRATIS bajo demanda (todos: la IA solo SUGIERE/CLASIFICA/NARRA, los importes SIEMPRE salen de `lib/banca.ts`/`lib/finanzas.ts`, nunca los inventa):** 🧾 **Cazador de deducciones** (`lib/cazador-deducciones.ts`, `POST /api/banca/cazador-deducciones`) — gasto personal que probablemente es deducible + ahorro fiscal estimado; 💬 **Mini-chat** (`MiniChatContable.tsx` → `POST /api/contable/chat`, embebe el agente contable existente); 🤖 **Sugerir por fila** en cargos del libro (reusa `POST /api/finanzas/gastos/sugerir`); 📈 **Benchmark entre pisos** (`BenchmarkPisos.tsx`, lectura IA bajo demanda vía `POST /api/banca/benchmark-pisos`); ✂️ **Fugas en recurrentes** (`POST /api/banca/fugas`, anualiza los recurrentes que ya detecta la tesorería y marca cancelar/renegociar); 🚨 **Antifraude** (`POST /api/banca/antifraude`, **reglas DETERMINISTAS sin IA** — cobro doble/comercio nuevo/subida de precio/cargo financiero, reusa `lib/vigilantes-tarjeta.ts` + `lib/comercio.ts`); 📤 **Cierre de mes narrado** (`lib/resumen-mensual.ts::enviarResumenMensual`, cron día 1 08:00 `/api/cron/resumen-mensual`, por cuenta: cifras del mes anterior + narración IA de 1-2 frases que degrada sin romper). Todo verificado `tsc` 0 + `next build` exit 0. Pendiente (F4 cola): desviación explicada, aviso fiscal proactivo, adjuntar/conciliar factura por foto en banca; F5: módulo 🛒 tickets de súper + comparador de precios.
 - [x] **🚨 LANDMINE — flag `requiere_revision` zombie: confirmar destino DEBE limpiarlo (PR #906, 15/07/2026):**
   `requiere_revision` es el flag del **destino** (negocio dudoso), NO de la categoría contable ni de la
@@ -625,6 +646,23 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
   05/08 (55 fechas), que sí alimentan el bucket mensual (ventana de 120 días de `search_date`), y el
   ancla global no se filtra por ninguna de las dos a propósito.
   Diseño y gate completos: `docs/superpowers/specs/2026-08-06-mercado-booking-design.md`.
+- **🚨 LANDMINE — un precio que la app se cree sin contrastar envenena el track record (08/08/2026,
+  PRs #1315 y #1317).** `/api/trading/puntuar` cogía `precios[simbolo]` tal cual lo mandaba la sesión.
+  El 03/08 entró **`CVX = 590,17$`** con cierre real **193,18$** (contrastado contra IBKR): puntuó 12
+  tesis vencidas, tres a **+205 pp**, y como `trading_estrategia_stats` se recalcula sobre TODOS los
+  resultados y `ajustesDeStats` lo convierte en delta de confianza del torneo (activo con n=81), estuvo
+  cinco días inclinando decisiones — momentum pasó de **−0,40 pp a +7,18 pp** de media y «reversión
+  bajista» cambió de SIGNO. Dos filtros en cadena, los dos con tres estados (**sin con qué comparar NO
+  se juzga**): guardia del **×2** contra el último `precio_ref` *anterior a hoy* (nunca el de hoy: una
+  pasada envenenada lo está por las dos puntas) y **contraste con 2ª fuente** (Stooq→Yahoo, 2%, el mismo
+  cierre) — el ×2 solo caza lo escandaloso, un error del 10% pasa limpio y mueve el retorno 10 puntos.
+  Se aplica también en **`/analizar`, que es el ORIGEN**: ahí el símbolo se salta ENTERO, porque sus
+  velas alimentan `indicadoresDe` y contaminan EMA/MACD/RSI/ADX igual que el precio. Y en los **stops**:
+  un precio hundido cierra una posición paper que en el mercado real nunca saltó. Todo lo vetado viaja
+  en la respuesta y se canta por Telegram — un símbolo que desaparece en silencio es indistinguible de
+  uno que hoy no dio señal. Hermanas: `trading_*.precio_fuente` (procedencia, patrón `market_rates.fuente`),
+  `ventana_dias` = días reales y no el horizonte declarado, y el aviso de salto del NAV >15% en `/saldo`
+  (no bloquea: puede ser un ingreso real, pero con el NAV se dimensiona cada compra).
 - **🚨 LANDMINE — la huella se escribe DENTRO del trabajo que vigila: si la función muere, no hay
   huella (31/07/2026).** El mismo día de estrenar el vigía saltó «🧾 Escaneo de facturas: sin ninguna
   señal registrada» y la nota mandaba a mirar IMAP/app-password. No era eso: `facturas-scan` corría

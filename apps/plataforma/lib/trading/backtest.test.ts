@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { fechasSnapshot, precioEn, retornoForward, cierresPeriodicos, ultimaSma, sobreSma } from './backtest-puro.ts'
+import { fechasSnapshot, precioEn, retornoForward, cierresPeriodicos, ultimaSma, sobreSma, MESES_RETROVISOR } from './backtest-puro.ts'
 import { recortarFactsHasta, extraerFundamentales, type CompanyFacts } from './edgar.ts'
 import { parseYahooChartPuntos } from './precios-stooq.ts'
 
@@ -11,6 +11,30 @@ test('fechasSnapshot: mensuales día 1, sin pasarse del margen forward', () => {
   // la última debe dejar ≥98 días de forward: 2026-07-19 − 98d ≈ 2026-04-12 → última = 2026-04-01
   assert.equal(fechas.at(-1), '2026-04-01')
   assert.equal(fechas.length, 22)
+})
+
+test('la ventana por DEFECTO es de 15 años: 178 snapshots que cruzan varios regímenes', () => {
+  // El motivo del cambio (08/08/2026): con 24 meses H8 invertía el signo entre mitades y no había
+  // forma de saber cuál era el mundo. Con 180 meses el corpus atraviesa 2011-2026.
+  assert.equal(MESES_RETROVISOR, 180)
+  const fechas = fechasSnapshot('2026-08-08')
+  assert.equal(fechas[0], '2011-08-01')
+  assert.equal(fechas.at(-1), '2026-05-01')   // 2026-08-08 − 98d ≈ 2026-05-02 → cabe mayo
+  assert.equal(fechas.length, 178)
+  assert.ok(fechas.every(f => f.endsWith('-01')))
+  // Estrictamente creciente y sin huecos de mes (lo que hace comparables los subperiodos).
+  for (let i = 1; i < fechas.length; i++) assert.ok(fechas[i] > fechas[i - 1])
+  // Cubre de verdad los regímenes que motivaron el cambio.
+  for (const hito of ['2015-08-01', '2018-12-01', '2020-03-01', '2022-06-01'])
+    assert.ok(fechas.includes(hito), `falta el snapshot de ${hito}`)
+})
+
+test('fechasSnapshot: el margen forward se respeta también en la ventana larga', () => {
+  // La última fecha SIEMPRE deja ≥98 días para que ret91 quepa entero: sin esto la ventana larga
+  // colaría snapshots con retorno forward truncado, que es un dato inventado.
+  const hoy = '2026-08-08'
+  const limite = new Date(Date.parse(`${hoy}T00:00:00Z`) - 98 * 86_400_000).toISOString().slice(0, 10)
+  assert.ok(fechasSnapshot(hoy).every(f => f <= limite))
 })
 
 test('precioEn: último cierre <= fecha (snapshot en festivo usa el cierre anterior)', () => {

@@ -77,5 +77,49 @@
   categoría legítima. Corregida a `otros_gasto` (gasto médico puntual con tarjeta, no una póliza).
 - **🚨 Duplicados cross-cuenta tarjeta↔corriente (01/07/2026, PR #640):** Kutxabank exporta los cargos de tarjeta en DOS extractos: el de la **cuenta corriente** (`tipo='corriente'`) Y el **propio de la tarjeta** (`tipo='tarjeta'`). Al importar ambos Excels la misma compra entra bajo dos `cuenta_bancaria_id` distintos → gastos duplicados. Incidente: 47 cargos duplicados, **3.764€ inflados** (backfill `2026-07-01_dedupe_cross_cuenta.sql` — marcó `duplicado_estado='ignorado'` en los de la corriente). **FIX en código:** `importarExtracto` tiene un nuevo bloque anti-dedup cross-cuenta: si se importa `tipo='corriente'` y ya existe el mismo (fecha, importe) en una `tipo='tarjeta'` de la misma sociedad (o viceversa), el de la corriente se marca ignorado. `getDuplicadosSospechosos` añade UNION cross-cuenta con etiqueta de cuenta (`DupMovimiento.cuentaLabel`). **REGLA:** `tipo='tarjeta'` gana siempre sobre `tipo='corriente'`. Esto es DISTINTO al LANDMINE anterior (cross-origen psd2 vs xls, que opera DENTRO de la misma cuenta).
 
+## 🚨 Extracto de tarjeta + agente contable — 6 trampas del 08/08/2026 (PRs #1295 y #1300)
+Alberto: «el agente falla mucho». El log (`contable_log`) tenía el mismo PDF subido TRES veces con
+«no distingo el importe», y dos facturas dadas por no pagadas. Ninguna de las dos cosas era lo que
+parecía. Lo aprendido, por orden de lo que más cuesta volver a descubrir:
+
+1. **El parser se validó contra un fixture escrito a mano, no contra un PDF real → llevaba meses
+   devolviendo CERO.** Kutxabank ya no separa los campos en el texto extraído
+   (`01/07/2026******2019750300COMPRA EN ZAPATERIA CERRAJERIA-8,00 €`) y `RE_LINEA` exigía `\s+`
+   entre la fecha y el nº de tarjeta. `parseTarjetaPdfTexto` → `[]` → `esExtractoTarjeta` false → el
+   chat lo mandaba al lector de FACTURAS y respondía «no distingo el importe». La suposición
+   equivocada estaba en el código **y en el test**, así que la suite en verde no significaba nada.
+   **Regla: el fixture de un parser de documento externo se copia de un documento real.**
+2. **Con un importe PEGADO a otros dígitos, delimita primero el otro campo.** Leer el importe antes
+   de recortar el PAN hace que el grupo de millar se trague hasta 3 dígitos del número de tarjeta:
+   `******20196503021.355,24 €` → **21.355,24€** en vez de 1.355,24€ (tarjeta …0302, la de Pilar; con
+   la …0300 NO se ve porque sus dígitos finales son ceros y se pierden al parsear). Hoy los dígitos
+   enmascarados se delimitan primero por dos vías deterministas —una línea de cargo (tras el PAN viene
+   una letra) o el PAN de la cabecera— y **si ninguna resuelve, la línea NO se importa**: un importe
+   verosímil e inventado no lo caza nadie aguas abajo.
+3. **El mismo extracto en PDF y en Excel tiene que dar el MISMO `dedupe_hash`.** El Excel trae la
+   columna «fecha valor», distinta de la de operación en **63 de las 109** compras del fichero real, y
+   el hash la incluye → subir los dos ficheros (justo lo que uno hace cuando el PDF no se lee) metía
+   esas 63 compras por segunda vez (~1.990€ fantasma). `lib/extracto-tarjeta-excel.ts::comoExtractoTarjeta`
+   normaliza `fechaValor`/`saldo` a la forma del PDF; hay test que fija la invariante. El Excel tampoco
+   trae el nº de tarjeta en cabecera: sale del concepto de la liquidación (`PAGO RECIBO <16 dígitos>`),
+   y si hay 0 o >1 se devuelve `null` y se PREGUNTA en vez de adivinar la cuenta.
+4. **El cuadre solo se afirma cuando el extracto lo permite.** En el PDF real el `PAGO RECIBO` **abre**
+   el mes (el 01/07 se paga junio) y las compras del fichero son posteriores, así que contrastarlos daba
+   «⚠️ el desglose NO cuadra, ¿faltan páginas?» en TODOS los extractos. `CuadreTarjeta.verificable` es
+   false si la liquidación va antes de la primera compra o si no hay ni una compra.
+5. **Cobertura del extracto: «no encuentro el cargo» ≠ «mi extracto no llega a esa fecha».**
+   Kutxabank va 1-3 días por detrás POR DISEÑO (la conexión PSD2 está sana), así que una factura de
+   anteayer no se puede contrastar todavía. `CruceDoc` (documentos-tipos.ts) tiene cinco desenlaces
+   —match · ya_conciliado · fuera_de_ventana ±60d · **sin_cobertura** · sin_match— y el mensaje dice
+   hasta qué fecha llega cada banco. Casos reales: 780,10€ del 03/08 negados el 05/08 (el cargo entró
+   en BD el 06/08) y la factura 47/2026 del 06/08 con Kutxabank llegando al 05/08.
+6. **Subir el `maxDuration` solo mueve la pared.** Con 60 s la ruta del chat importó los 109
+   movimientos, los categorizó y archivó el PDF en Drive… y murió justo ANTES de contestar: en pantalla
+   «Sin respuesta.» sobre un extracto que sí había entrado (mismo patrón que `facturas-scan`, 31/07).
+   Ahora 300 s **+ presupuesto** (`lib/contable/presupuesto-extracto.ts`, puro): los pasos opcionales
+   (Telegram → vigilantes → Drive → Gmail) se sueltan de abajo arriba si no caben, se reserva tiempo
+   para responder y **se dice cuál faltó**. El cliente tampoco llama ya «Sin respuesta.» a un 504: avisa
+   de que el documento puede haber entrado y manda a mirarlo en `/banca` (reimportar no duplica).
+
 ## Frontera multi-tenant
 Scope `cuenta_id` siempre. BD compartida con sivra/ialimp: cambios transversales de BD → `auditoria-central`.

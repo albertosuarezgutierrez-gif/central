@@ -36,6 +36,10 @@ plantilla. Arregla en el acto solo bugs de bajo riesgo; lo de gran radio se cons
 - Guardián: `pnpm test:guardia` (falla si reaparece `@iarest/`). Grep manual de scopes viejos.
 - **`transpilePackages` vs deps**: cada `@central/*` declarado debe estar en `transpilePackages`
   de su app (exportan TS crudo). Cada import `@central/*` debe estar declarado en deps.
+- **`ignoreCommand` en los 8 `apps/*/vercel.json`**: cada uno debe llevar
+  `"ignoreCommand": "node ../../scripts/vercel-ignore-build.mjs apps/<app>"` (regla 🚨 de
+  `CLAUDE.md`). Una app sin él reconstruye en CADA push del monorepo — incidente 15/07/2026,
+  ~600 US$ de Build CPU en un mes (PR #904). App nueva sin la clave = hallazgo 🔴.
 
 ### 2. Compila y typechequea TODO (no solo ia-rest)
 - Las apps con Prisma (**ialimp, sivra, plataforma, rrhh, transporte, alquiler, almacen** — las

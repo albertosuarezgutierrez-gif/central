@@ -15,6 +15,140 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-09 · pricing-agente (auditoría a demanda de Alberto)** · hizo: auditó las 3 ventas bajo
+  el p50 de fecha exacta y reparó las 3 causas — `channel_markup` 1,16 inexistente en el escaparate
+  (medido con 20 reservas; guardas `>= 1` + SQL a 1.0 pendiente de deploy), ancla suave por fecha
+  fiable (`pricing-ancla-fecha.ts`) y descuento de demanda gateado por antelación
+  (`pricing-demanda.ts`); dudas: efecto del +16% en ocupación — vigilar `pilot-track` 2 semanas;
+  fallos: la «confirmación» del markup del 01/08 se hizo con el importe corrupto pre-fix de la doble
+  comisión; PRs/commits: PR de esta rama (`claude/luxury-busto-dynamic-pricing-xh4sr4`).
+- **2026-08-09 · facturas-correo (trigger diario)** · hizo: preflight canal alerta OK (200); Vía B
+  sana (`dias_caido=1`, última copia 08/08 en `_buzon_pdf`; `agente_salud` actualizado), sin backlog
+  en `PDF-pendiente`/`Revisar`/`Extraccion-fallida` (las 3 a 0). 0 candidatos nuevos en Gmail
+  (`newer_than:2d` vacío — Booking/Stripe/Allianz/Anthropic de los últimos 7d ya estaban `Procesada`)
+  y 0 subidas manuales nuevas en `_subir_aqui`/raíz 2026. Encontrado y cerrado 1 pendiente de pasadas
+  anteriores: el recibo **Anthropic/Claude Max plan** (180,00€, 05/08/2026, Anthropic Ireland Ltd.)
+  no estaba archivado — copiado a Drive `08-Agosto-2026` (`1IT9drkZm1g1oswhB9XAEWPAvG4hFBCPi`) y
+  conciliado contra el cargo `-180,00€` del 07/08 (`destino=seguros`, exacto y sin ambigüedad).
+  Roborock Amazon -247,92€ (House Sevillana) SIGUE sin aparecer en `movimientos_bancarios` —
+  conciliación pendiente, a recoger en próximas pasadas. Las 3 facturas Booking de agosto
+  (167,01/155,94/110,74€, ya archivadas) aún no vencen (16/08), sin cargo en banco todavía — normal.
+  Papelera `_DUPLICADOS_BORRAR` con 19 avisos pendientes de borrado manual (sin cambios desde 06/08;
+  no reverificada hoy). Etiqueta `Luz pendiente 2026` con 6 hilos TotalEnergies antiguos (abr–jun
+  2026, contratos viejos de la SL fuera de `movimientos_bancarios`) sin tocar — llevan meses sin
+  moverse, quedan para que Alberto decida si los quita a mano. dudas: —; fallos: —; PRs/commits: este
+  commit (solo bitácora; el archivo+conciliación de Anthropic se hizo por Drive MCP + SQL directo,
+  sin tocar código).
+- **2026-08-09 · mercado-booking (pasada diaria, plan sin filtro)** · hizo: pedido el plan
+  (`plan_total` 120, `pedidas` 12, `sin_medir_nunca` 12) y medidas las 12 ventanas devueltas —
+  1 par de evento (22-nov Sevilla FC-Betis, aforo 4 y 5) + 8 de profundidad ronda-2 (oct/dic,
+  aforo 2/4/5) + `prop_house_sevillana` aforo 12 (12-dic). **120 comps** escritos con
+  `fuente='booking_mcp'`, 10/10 por ventana, 0 ventanas sin respuesta. Latido `ok:true`.
+  dudas: —; fallos: —; PRs/commits: —
+
+- **2026-08-09 · sivra_mercado_sweep (verificación del fix #1299)** · hizo: la pasada de las 03:07 UTC
+  dejó por fin **`ultimo_ok_at`** — primera pasada buena desde que existe el latido, que llevaba en
+  NULL desde el día 1. El fix #1299 (separar «¿se pudo mirar?» de «¿el dato distingue la fecha?»)
+  funciona. dudas: el verde NO significa corpus bueno y conviene no leerlo así — el propio parte dice
+  «**89% de las medianas se repiten en otra fecha**» y 84 de 120 ventanas con <3 comps. Verificado que
+  la protección real sí actuó: **las 176 filas escritas salieron con `corpus_clonado = true`**, o sea
+  excluidas de los buckets por mes y por fecha del motor. Es el comportamiento diseñado (`barridoFiable`
+  juzga al agente, `midioTemporada` juzga al dato), no un verde de mentira. fallos: —. PRs/commits: —.
+
+- **2026-08-08 · auditoria-diaria (pasada PROFUNDA, a petición de Alberto)** · hizo: verificación
+  completa en verde (1031/1031 plataforma, 26/26 guardianes, 53/53 packages, `tsc` 0 en las **8**
+  apps, build 0, lockfile en sync, `ignoreCommand` y `transpilePackages` OK en las 8, advisors sin
+  ERROR, 12 heartbeats de dominio ✅, auto-merge de rutinas vivo) + **1 🔴 nuevo**: la sonda `pricing`
+  de `agentes-latido` estaba en verde falso porque su huella (`market_rates prop_*`) dejó de ser
+  exclusiva de la Rutina semanal al empezar a escribir ahí el barrido Serper y `mercado-booking`;
+  cambiada a `pricing_decisiones.ciclo_at` por piso. dudas: —; fallos: **🔇 SIN TELEGRAM** — el
+  preflight `GET /api/internal/alerta` NO llegó a dar 401 ni 200: el proxy de egress corta el CONNECT
+  con **403** contra `plataforma-ten-flame.vercel.app` (curl 56). No es el token: es la política de
+  red del environment, que deja mudo TODO el raíl HTTP (plan/ingest/latido/alerta) para cualquier
+  sesión. Acción #1 de Alberto: abrir `*.vercel.app` en la allowlist. PRs/commits: **#1318 MERGEADO**
+  (`d45d20f`), tras dos rondas de conflicto con `main` (PRs de registro de otras sesiones) resueltas
+  conservando ambas entradas. Post-merge re-verificado sobre `main`: 1045/1045 · 26/26 · 53/53 ·
+  `tsc` 0 en las 8 apps · build 0, y la sonda `pricing` nueva ejecutada contra la BD real da
+  ✅ 130 h (umbral 192). Pendiente de mirar mañana: la pasada 03:04 del sweep, que debe dejar por fin
+  `ultimo_ok_at` tras el fix #1299.
+- **2026-08-08 · mercado-booking (2ª pasada MANUAL, desviación pedida por Alberto: solo rondas 2-3,
+  sep→ene)** · hizo: 10 ventanas medidas y **100 comps** escritos con `fuente='booking_mcp'` —
+  8-sep (2p **p50 105€** · 4p 110€ · 5p 134€ · 12p 386€), 14-nov (2p 128€ · 4p 160€ · 5p 189€ ·
+  12p **486€**), 10-nov (4p 113€ · 5p 131€). El contraste finde/entre semana sale limpio: 4p pasa de
+  160€ el sábado 14-nov a 113€ el martes 10-nov (−29%), que es justo lo que las rondas 2-3 vienen a
+  medir. dudas: latido `sivra_mercado_booking` NO escrito — **corregido al mergear `main`**: el motivo
+  que se dio (que la Rutina no se dispara) era FALSO, la Rutina corrió hoy 3 veces y dejó su `ok:true`;
+  el motivo bueno es el contrario — la huella de hoy ya es de la Rutina y una pasada manual no debe
+  pisarla. fallos: (1) el
+  raíl HTTP está **inalcanzable desde el contenedor** — el proxy de egress da 403 al CONNECT contra
+  `plataforma-ten-flame.vercel.app`, así que no hubo `/plan` ni `/ingest` ni `/latido`: el plan se
+  reprodujo con los helpers puros contra datos reales de la BD y los comps se escribieron por SQL
+  replicando el upsert de `/ingest`; (2) solo 10 de las 30 ventanas pedidas — 30 respuestas del
+  conector no caben en el contexto de una sesión (**el tope real está en ~10-12, no en 30**); las 20
+  restantes NO se midieron, que no es «no hay mercado»; (3) **era la Rutina diaria escribiendo a la vez**
+  en `market_rates` (ventanas de las 13:04-13:17 UTC; identificada al mergear `main`: commits `fba3fbb`,
+  `c45f564`, `f9a3fe6` — 3 disparos el mismo día) — sep y nov quedan
+  ELEGIBLES para el bucket mensual en los 4 aforos, pero el mérito es compartido, no de esta pasada
+  sola. dic-26 y ene-27 siguen cortos (2 y 1 fechas). PRs/commits: PR de `claude/mercado-booking-ronda-filter-ssg8cj`.
+- **2026-08-08 · mercado-booking (2ª pasada MANUAL, para desbloquear el precio dinámico)** · hizo: 19
+  ventanas más con el conector (190 comps, `booking_mcp`), eligiendo las fechas por el déficit REAL de
+  cada bucket —el que ve el motor: fechas distintas SIN evento, contando `pricing_eventos_auto` además
+  del calendario del repo—. Resultado: ago→ene con ≥3 fechas en los 4 pisos (p50 house 325/472/638/478/
+  426/381€, dúplex 110/135/184/175/136/125€). dudas: 23-oct (12 pax, p50 ~830€ contra 615€ del resto de
+  octubre) y 27-nov (4 pax, 247€ contra 163€ del 13-nov) parecen fechas de evento SIN catalogar; se
+  escribieron igual —son mercado medido— pero convendría que el catalogador las mire, porque si lo son
+  están inflando el bucket "normal" del mes; fallos: —. Latido NO escrito (pasada a mano, no es la
+  Rutina). PRs/commits: este PR.
+- **2026-08-08 · mercado-booking (2º disparo programado del mismo día)** · hizo: pidió el plan y
+  recibió **las mismas 12 ventanas "nunca medidas"** que ya reportó como medidas el disparo de las
+  12:28 UTC de hoy (mismo `checkin/checkout/aforo`, `ronda:1`, `comps:0`) — es decir, cuando este
+  disparo consultó el plan, la escritura anterior NO estaba reflejada en `market_rates` pese al
+  `ok:true` de aquel latido. Medidas de nuevo las 12 con Booking.com (120 comps, `fuente='booking_mcp'`,
+  0 sin respuesta) y confirmado que esta vez SÍ hicieron avanzar la cola (el plan post-ingest ya
+  ofrece ventanas distintas: 2 nuevas del partido Sevilla FC-Betis + 10 de ronda 2 "mes"). Latido
+  `sivra_mercado_booking` reenviado con `ok:true`. **dudas: por qué el disparo de las 12:28 quedó sin
+  huella en `market_rates` pese a loggear éxito — o el disparo se repitió por un fallo de scheduling
+  (dos ejecuciones el mismo día) y algo entre medias limpió las filas, o aquel `ok:true` fue en falso
+  (la escritura no llegó a persistir pese a que el latido la dio por buena); no se puede diferenciar
+  con lo que hay aquí — pide revisar logs de Vercel de `/api/sivra/mercado/ingest` entre 12:28 y
+  ahora, y confirmar si `CRON_JOBS`/el disparador de esta skill está configurado para disparar más de
+  una vez al día.** fallos: —. PRs/commits: —.
+- **2026-08-08 · mercado-booking (disparo programado)** · hizo: pidió el plan
+  (`/api/sivra/mercado/plan?max=12`, 120 ventanas totales, 12 nunca medidas) y midió las 12 con el
+  conector Booking.com — 120 comps escritos con `fuente='booking_mcp'`, 0 sin respuesta, 0 sin precio,
+  0 fallos. p50 €/noche: house_sevillana 12p 4-sep n/d·16-oct **856€**·6-nov **604€**·11-dic **424€**·
+  8-ene **368€** (temporada Feria→invierno clara); luxury_busto 5p 4-sep **196€**·16-oct **282€**·
+  6-nov **206€**·11-dic **174€**; busto_reform 2p 16-oct **174€**·11-dic **106€**·8-ene **104€**;
+  duplex_center 4p 11-dic **139€**. Latido `sivra_mercado_booking` escrito con `ok:true`. dudas: —;
+  fallos: —. PRs/commits: —.
+
+- **2026-08-08 · mercado-booking (primera pasada de la Rutina)** · hizo: pidió el plan
+  (`/api/sivra/mercado/plan?max=12`, 120 ventanas totales, las 12 sin medir nunca), midió las 12 con
+  el conector de Booking.com (aforos 2/4/5/12) y escribió 120 comps (`fuente='booking_mcp'`), 0
+  ventanas sin respuesta, 0 sin precio utilizable. Cubrió: dúplex+luxury Feria abr-2027, las 4
+  ventanas del evento Sevilla FC-Rayo (15-17 ago) y Athletic-Sevilla (22-24 ago), house_sevillana+
+  busto_reform de la Bienal Flamenco (29 sep-1 oct). Latido `sivra_mercado_booking` escrito con
+  `ok:true` (primera huella real de la Rutina — hasta ayer solo había una pasada manual). dudas: —;
+  fallos: —; PRs/commits: esta rama.
+
+- **2026-08-08 · mercado-booking (primera pasada de la Rutina programada)** · hizo: pidió el plan
+  (`/api/sivra/mercado/plan?max=12`, 120 ventanas totales, las 12 devueltas eran las 12 nunca medidas)
+  y midió las 12 con Booking respetando el aforo real (2/4/5/12 pax) en 4 fechas (8-ene, 5-feb, 5-mar,
+  2-abr 2027); 120 comps escritos con `fuente='booking_mcp'`, 0 ventanas sin respuesta. Medianas
+  destacadas: 5-feb 12p (house) **395€** vs 5-feb 2p (busto) **111€**; 2-abr 12p **659€** vs 2-abr 2p
+  **186€** — confirma que sin aforo real el motor mezclaría precios de tamaños muy distintos. Latido
+  `sivra_mercado_booking` = ok:true. dudas: —; fallos: —. PRs/commits: —.
+
+- **2026-08-08 · mercado-booking (pasada MANUAL, la Rutina no existe)** · hizo: reprodujo
+  `/api/sivra/mercado/plan` con los helpers puros (120 ventanas de plan, 10 pedidas, las 10 sin medir
+  nunca) y midió 5 con el conector: 4-sep 2p **p50 110€** · 4-sep 12p **474€** · 16-oct 4p **184€** ·
+  6-nov 2p **156€** · 6-nov 4p **180€**. 50 comps escritos con `fuente='booking_mcp'`. dudas: se dejó
+  el latido `sivra_mercado_booking` SIN escribir a propósito — una pasada a mano no es la Rutina, y un
+  verde de cortesía habría apagado el aviso que dice justo lo que hay que arreglar; fallos: la Rutina
+  diaria no ha dejado ni una huella desde que existe (`booking_mcp` = 10 filas sueltas del 06/08).
+  Hallazgo: contra el corpus Serper del MISMO día, Booking desvía +85%/+96%/+53%/+44% a la baja en los
+  aforos pequeños y **−45% a la alta en House** (12 pax: 260€ Serper contra 474€ reales).
+  PRs/commits: #1299.
 - **2026-08-08 · ialimp-client-health (semanal)** · hizo: pasada de salud de Sique Brilla
   (`empresa_id=05edacff-...a845`). PMS sync OK (Smoobu, `sync_error=null`, `last_sync_at` hoy
   07:40 UTC, 21 `cleaning_sessions` en 24h/7d). Programaciones sin cubrir: 0. Impagos activos
