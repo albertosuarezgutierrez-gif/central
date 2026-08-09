@@ -32,16 +32,19 @@
 
 ---
 
-### 🔴 (09/08/2026) Pasada diaria de trading BLOQUEADA desde el despliegue de la guardia de precios — fix en PR draft
+### ✅ (09/08/2026) Pasada diaria de trading completada — 2 PRs mergeados en caliente para arreglar `date - bigint`
 - Rutina `trading-analista`: NAV IBKR (33.328,17€) empujado a `/banca` OK; watchlist + histórico de 16
   símbolos bajado sin incidencias. `POST /api/trading/analizar` devolvía **500 en cada intento** (payload
-  completo y mínimo de prueba) → pasada terminada sin inventar cifras, avisado por Telegram.
-- Causa: `lib/trading/precios-guardia`-related query en `analizar/route.ts` hace `fecha - DIAS_REFERENCIA_MAX`
-  sin castear la constante; Prisma la manda `bigint`, Postgres no define `date - bigint`. Rota desde que se
-  desplegó esa guardia (post-incidente CVX 03/08) — **toda pasada de análisis desde entonces ha fallado en
-  silencio** para quien no mirara `get_runtime_errors`.
-- Fix de una línea (`::int`) verificado byte a byte contra Supabase. **PR #1340 (draft), pendiente merge +
-  redeploy + reintentar la pasada.**
+  completo y mínimo de prueba) → causa raíz: `lib/trading/precios-guardia`, query hace
+  `fecha - DIAS_REFERENCIA_MAX` sin castear la constante, Prisma la manda `bigint`, Postgres no define
+  `date - bigint`. Rota desde que se desplegó esa guardia (post-incidente CVX 03/08) — toda pasada de
+  análisis desde entonces había fallado en silencio.
+- Fix de una línea (`::int`), verificado byte a byte contra Supabase. **PR #1340 mergeado a petición de
+  Alberto** ("mergea"); tras el redeploy se encontró el MISMO bug sin corregir en `/puntuar` (copia literal
+  de la query, no cubierta por #1340) → **PR #1341**, mismo fix, mergeado también.
+- Pasada completada tras los dos redeploys: 14/16 símbolos analizados (SNDK/WDC vetados por la guardia de
+  suplantación), 2 compras paper nuevas (NVO 90u@47,26€, PLTR 17u@172,01€), 24 tesis puntuadas walk-forward,
+  0 stops. Resumen enviado por Telegram.
 
 ### 🧹 (09/08/2026) «Estado actual» podado: el vivo baja de 121 KB a ~15 KB por sesión
 - La sección acumulaba 42 bloques (1.212 de 1.329 líneas, ~30k tokens de peaje en CADA
