@@ -62,7 +62,7 @@ export default async function SubastasPage() {
       // Chollos de venta directa + lente 🌊 costa norte, del mismo corpus.
       lentesMercado().catch((e) => {
         console.error('[subastas page chollos]', e)
-        return { chollos: [], costaNorte: [] }
+        return { chollos: [], preferentes: [] }
       }),
       // €/año por dormitorio de SUS pisos: la base del yield estimado.
       ingresoPorDormitorio().catch((e) => {
@@ -187,7 +187,7 @@ export default async function SubastasPage() {
       })),
       // La preferencia 🌊: el yield estimado usa el ingreso por dormitorio de
       // SUS pisos (Sevilla) — orientativo; en el norte la temporada es otra.
-      costaNorte: lentes.costaNorte.map((p) => ({
+      preferentes: lentes.preferentes.map((p) => ({
         ...p,
         rendimiento: ingresoDorm && p.comparable.habitaciones
           ? yieldTuristico(ingresoDorm.porDormitorio, p.comparable.habitaciones, p.comparable.precio)

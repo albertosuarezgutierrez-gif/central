@@ -83,14 +83,15 @@ export type { Comparable } from './comparables.ts'
 // ¿qué anuncio está muy por debajo de la mediana €/m² de su zona?
 export { detectarChollos, referenciaZona, zonasDeComparable, estimarAntiguedad, pareceRuina, esParcela, CHOLLO_DESCUENTO_MIN, CHOLLO_DESCUENTO_SOSPECHOSO, RECONSTRUIR_EUR_M2 } from './comparables.ts'
 export type { Chollo, ObservacionRef, VelocidadZona, ZonaPortalRef } from './comparables.ts'
-// Lente 🌊 costa norte (Asturias/Cantabria): preferencia de Alberto por
-// viviendas de playa del Cantábrico sin señales de obra, con o sin descuento
+// Lente 🌊 de preferencias de mercado: CASAS ≤230k de playa (Asturias/
+// Cantabria/Islantilla) sin señales de obra — rebajadas y de particular primero
 export {
-  lenteCostaNorte, costaNorteDe, esCostaNorte, sinSenalesDeObra,
+  lentePreferentes, zonaPreferenteDe, esZonaPreferente, costaNorteDe, esCostaNorte,
+  esCasa, sinSenalesDeObra, dedupeRelistados, TOPE_PREFERENTE_EUR,
   MUNICIPIOS_COSTA_ASTURIAS, NUCLEOS_COSTA_ASTURIAS,
-  MUNICIPIOS_COSTA_CANTABRIA, NUCLEOS_COSTA_CANTABRIA,
+  MUNICIPIOS_COSTA_CANTABRIA, NUCLEOS_COSTA_CANTABRIA, NUCLEOS_PREFERENTES_SUR,
 } from './costa-norte.ts'
-export type { PreferenteNorte } from './costa-norte.ts'
+export type { Preferente } from './costa-norte.ts'
 // Calibración con RESULTADOS reales: a qué % del tipo se adjudica de verdad
 export { calibracionAdjudicaciones, calibracionPorCargas, calibracionPuja, MIN_MUESTRA_CALIBRACION, MIN_MUESTRA_PUJA } from './adjudicaciones.ts'
 export type {
