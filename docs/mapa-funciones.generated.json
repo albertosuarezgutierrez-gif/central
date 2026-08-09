@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-09T10:39:24Z",
-  "sha": "1921d79c8062e1c7af39704a4a191b7abde1f735",
+  "generadoEn": "2026-08-09T11:23:14Z",
+  "sha": "fb39dd91e5a99e9d685fb098376aa487bc674aff",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -55860,7 +55860,7 @@
         "trading_tesis"
       ],
       "rutaApi": "/api/trading/analizar",
-      "hash": "28df1f4b1e0c"
+      "hash": "a6565324817b"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/cartera-estudio/route.ts",
