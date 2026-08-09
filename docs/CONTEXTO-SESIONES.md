@@ -22,6 +22,23 @@
 
 ---
 
+## 🏛️ (08/08/2026) Subastas 3ª tanda: coste autoexplicativo, ITP valenciano al 9% y presupuesto del vigía — PR #1327
+- «Coste real estimado: 806.015,16€» se leía como valoración de mercado (pregunta de Alberto sobre
+  SUB-JA-2026-264062): es el coste puerta abierta simulando el remate al 100% de la salida — el
+  titular y el aviso de Telegram lo dicen ahora explícitamente («…si rematas a la salida»).
+- ITP Comunidad Valenciana corregido: 10%→**9%** (Ley 5/2025), tabla de tipos por CCAA re-verificada
+  contra fuentes vigentes. `subastas-cierre` gana presupuesto de tiempo (mismo patrón que #1281/#1296).
+- Rediseño de la ficha de subasta con la información de las tandas anteriores (ITP, umbrales, simulador).
+
+## 📬 (08/08/2026) Subastas: cursor incremental por UID — la ingesta dejaba de releer 300 correos/día — PR #1296
+- El cron diario pedía «últimos 30 días, hasta 150 correos/portal» siempre — como el corpus de
+  Idealista/Fotocasa es acumulativo, relía ~300 correos para encontrar los pocos nuevos y se comía el
+  presupuesto de tiempo (latido 07/08: «cortado tras 0 fichas»). Ahora cada portal guarda hasta qué UID
+  leyó (`subastas_correo_cursor`, tabla propia — NO `correo_cursor`, que es el latido del triaje de correo).
+- `lib/subastas/correo-incremental.ts` (puro, testeado): filtro `>lastUid` en cliente (RFC 3501),
+  `uidvalidity` distinto → vuelve a ventana por fecha, cursor solo se confirma tras ingerir (at-least-once).
+  BOE (`leerAlertas`) queda intacto, sin cursor. 826 tests, tsc 0, build OK.
+
 ## 🧮 (08/08/2026) Subastas 2ª tanda: ITP por CCAA, puja en vivo, vivienda habitual y simulador
 - **ITP por CCAA** (`module-subastas/src/impuestos.ts`): `calcularCoste` deja de aplicar el 7% andaluz a
   todo — la provincia elige el tipo general de su CCAA (Asturias 8%: Cancienes pasa de 94.248€ a 95.112€),
