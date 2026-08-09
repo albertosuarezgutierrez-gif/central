@@ -66,8 +66,8 @@ export {
 export type { UbicacionSubasta } from './geo.ts'
 
 // Ficha del Portal de Subastas (las CIFRAS) y Catastro (superficie, año, uso)
-export { parsearFichaBoe, paresFicha, resultadoDeFicha, mejorPujaDeFicha } from './ficha-boe.ts'
-export type { FichaBoe, ResultadoSubasta } from './ficha-boe.ts'
+export { parsearFichaBoe, paresFicha, resultadoDeFicha, resultadoDeBanner, parsearCertificadoCierre, mejorPujaDeFicha } from './ficha-boe.ts'
+export type { FichaBoe, ResultadoSubasta, CierreCertificado } from './ficha-boe.ts'
 export {
   parsearCatastro, errorCatastro, superficieUtil, parsearCoordenadas,
   refParcela, direccionCatastro, parsearInmueblesDnploc, parcelaUnica, paramsDnploc,
