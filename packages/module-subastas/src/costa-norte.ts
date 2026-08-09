@@ -17,6 +17,7 @@
 
 import { norm } from './parsing.ts'
 import {
+  CHOLLO_DESCUENTO_SOSPECHOSO,
   esParcela,
   pareceRuina,
   referenciaZona,
@@ -207,7 +208,18 @@ export function lenteCostaNorte(comparables: Comparable[], zonasPortal?: ZonaPor
     if (c.precioM2 != null && c.precioM2 > 0 && !esParcela(c)) {
       const resto = comparables.filter((x) => x.refAnuncio !== c.refAnuncio)
       const ref = referenciaZona(c, resto, portalPorSlug)
-      if (ref) referencia = { ...ref, descuento: 1 - c.precioM2 / ref.precioM2Zona }
+      if (ref) {
+        const descuento = 1 - c.precioM2 / ref.precioM2Zona
+        // Un «descuento» de derribo ES una señal de obra aunque el anuncio
+        // calle: nadie vende una casa EN PIE a mitad de mercado (caso Llanes
+        // 111790643, que en la primera prueba real salió el PRIMERO de la
+        // lente con −73% y sin aviso). Fuera de la lente: si aun pagando
+        // levantarla siguiera barata, ya sale por el camino de los chollos
+        // (que aplica ese peaje); si no, es una ruina a precio de suelo y no
+        // es la preferencia (buen estado).
+        if (descuento > CHOLLO_DESCUENTO_SOSPECHOSO) continue
+        referencia = { ...ref, descuento }
+      }
     }
     out.push({ comparable: c, costa, referencia })
   }
