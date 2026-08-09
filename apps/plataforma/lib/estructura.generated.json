@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-09T12:50:50Z",
+  "generadoEn": "2026-08-09T15:47:47Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3978,6 +3978,18 @@
     }
   ],
   "novedades": [
+    {
+      "titulo": "Decisión de Alberto:",
+      "fecha": ""
+    },
+    {
+      "titulo": "PriceLabs:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Previstos v2 (idea de Alberto, riesgo asimétrico):",
+      "fecha": ""
+    },
     {
       "titulo": "#1323 (demanda por mes) SUPERADO a medias:",
       "fecha": ""

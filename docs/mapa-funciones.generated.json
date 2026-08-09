@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-09T12:00:11Z",
-  "sha": "041d962489722c468496e431780e4d02615f0d43",
+  "generadoEn": "2026-08-09T15:47:47Z",
+  "sha": "c8a0843df28468d22545e3111bc850c1c989f6f4",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54930,7 +54930,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "19a8d0d292ee"
+      "hash": "f0e1296fc6be"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -65272,7 +65272,7 @@
           "exportada": true,
           "params": "v?: string | null",
           "retorno": "EstadoEvento",
-          "linea": 74
+          "linea": 93
         },
         {
           "nombre": "efectoDeEvento",
@@ -65280,7 +65280,7 @@
           "exportada": true,
           "params": "e: EventoBruto, o: EfectoOpts = {}",
           "retorno": "EfectoEvento",
-          "linea": 84
+          "linea": 103
         },
         {
           "nombre": "combinarEventosDeFecha",
@@ -65288,13 +65288,13 @@
           "exportada": true,
           "params": "eventos: EventoBruto[], o: EfectoOpts = {}",
           "retorno": "EfectoEvento",
-          "linea": 131,
+          "linea": 157,
           "resumen": "Combina TODOS los eventos de una misma fecha (pueden ser varios: Ticketmaster, búsqueda web y la mano de Alberto sobre el mismo concierto). Manda el mayor de cada cosa por separado — un previsto no pu"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "03ad2ef6fba7"
+      "hash": "fa8f3025b9e9"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/eventos-impacto.ts",

@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-09T12:50:50Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-09T15:47:47Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -218,6 +218,9 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- Decisión de Alberto:
+- PriceLabs:
+- Previstos v2 (idea de Alberto, riesgo asimétrico):
 - #1323 (demanda por mes) SUPERADO a medias:
 - Fase 2 (dinero real):
 - Watchlist ampliada
@@ -225,7 +228,4 @@
 - El `channel_markup` 1,16 NO existe en el escaparate
 - Ancla suave por fecha
 - ITP por CCAA
-- Vigía de pujas en vivo
-- Vivienda habitual
-- (09/08/2026) 📌 Estado vivo — pendientes y decisiones abiertas (actualizado 09/08/2026).
 
