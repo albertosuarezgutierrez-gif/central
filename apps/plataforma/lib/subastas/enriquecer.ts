@@ -29,11 +29,15 @@ import {
   type FichaBoe,
   mejorPujaDeFicha,
   paresFicha,
+  parsearCertificadoCierre,
+  resultadoDeBanner,
   resultadoDeFicha,
+  type ResultadoSubasta,
 } from '@central/module-subastas'
 
 const UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36'
 const FICHA = 'https://subastas.boe.es/detalleSubasta.php'
+const CERTIFICADO_CIERRE = 'https://subastas.boe.es/verCertificadoCierre.php'
 const CATASTRO = 'https://ovc.catastro.meh.es/ovcservweb/OVCSWLocalizacionRC/OVCCallejero.asmx/Consulta_DNPRC'
 const CATASTRO_COORD = 'https://ovc.catastro.meh.es/ovcservweb/OVCSWLocalizacionRC/OVCCoordenadas.asmx/Consulta_CPMRC'
 const CATASTRO_DIR = 'https://ovc.catastro.meh.es/ovcservweb/OVCSWLocalizacionRC/OVCCallejero.asmx/Consulta_DNPLOC'
@@ -326,6 +330,34 @@ export async function geocodificarMunicipio(
  * pendiente y aquí se loguean las claves vistas para ajustar el parser con la
  * primera conclusión real (03/08/2026, El Puerto).
  */
+/**
+ * Desenlace desde el certificado de cierre (PDF público del Portal): «La
+ * subasta concluyó con pujas (puja máxima X euros)» / «concluyó sin pujas».
+ * `null` = certificado no disponible o marcado no reconocido (se reintenta).
+ */
+async function resultadoDeCertificado(identificador: string): Promise<ResultadoSubasta | null> {
+  try {
+    const r = await fetch(`${CERTIFICADO_CIERRE}?idSub=${encodeURIComponent(identificador)}`, {
+      headers: { 'User-Agent': UA, Accept: 'application/pdf' },
+      signal: AbortSignal.timeout(15000),
+      cache: 'no-store',
+    })
+    if (!r.ok || !(r.headers.get('content-type') ?? '').includes('pdf')) return null
+    const buf = Buffer.from(await r.arrayBuffer())
+    // Mismo subpath que lib/extracto-tarjeta-pdf.ts: la raíz de pdf-parse
+    // ejecuta código de debug al importarse.
+    const mod: any = await import('pdf-parse/lib/pdf-parse.js')
+    const pdf = mod.default ?? mod
+    const texto: string = (await pdf(buf))?.text ?? ''
+    const cierre = parsearCertificadoCierre(texto)
+    if (!cierre) return null
+    return { resultado: cierre.resultado, importe: cierre.pujaMaxima }
+  } catch (e) {
+    console.error('[subastas-resultado] certificado', identificador, e)
+    return null
+  }
+}
+
 export async function capturarResultados(max = 20): Promise<{ revisadas: number; capturadas: number }> {
   const filas = await prisma.$queryRaw<Array<{ dedupe_key: string; identificador: string }>>(Prisma.sql`
     SELECT dedupe_key, identificador FROM subastas
@@ -347,7 +379,15 @@ export async function capturarResultados(max = 20): Promise<{ revisadas: number;
       // reconocible», ensuciando el log que sirve para ajustar el parser.
       if (!fichaLegible(html, f.identificador)) throw new Error('la respuesta del Portal no es la ficha')
       const pares = paresFicha(html)
-      const res = resultadoDeFicha(pares)
+      let res = resultadoDeFicha(pares)
+      if (!res && resultadoDeBanner(html)) {
+        // La primera conclusión real (09/08/2026, El Puerto) enseñó el marcado:
+        // la ficha concluida publica el estado como BANNER, no como par, y el
+        // desenlace definitivo del periodo de pujas vive en el CERTIFICADO DE
+        // CIERRE (PDF público). Sin certificado legible se deja NULL y la
+        // ventana de 60 días reintenta — nunca se inventa un desenlace.
+        res = await resultadoDeCertificado(f.identificador)
+      }
       if (!res) {
         // La materia prima para ajustar el parser con la primera real.
         console.log('[subastas-resultado] sin estado reconocible en', f.identificador, 'claves:', [...pares.keys()].slice(0, 20).join(' | '))

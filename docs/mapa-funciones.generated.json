@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-09T04:59:17Z",
-  "sha": "593ebb282813376c04304c2ce4f07c6fe8ca6cc0",
+  "generadoEn": "2026-08-09T10:39:24Z",
+  "sha": "1921d79c8062e1c7af39704a4a191b7abde1f735",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47293,7 +47293,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "17cc8072f7cb"
+      "hash": "3ee46020562d"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/pricing/page.tsx",
@@ -51373,7 +51373,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 28
+          "linea": 34
         }
       ],
       "tablas": [
@@ -51381,7 +51381,7 @@
         "subastas"
       ],
       "rutaApi": "/api/cron/subastas-enriquecer",
-      "hash": "f922552f4da2"
+      "hash": "51ed328ff0b2"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-ingesta/route.ts",
@@ -54881,7 +54881,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 34
+          "linea": 36
         },
         {
           "nombre": "fmt",
@@ -54889,7 +54889,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 35
+          "linea": 37
         },
         {
           "nombre": "GET",
@@ -54897,7 +54897,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 63,
+          "linea": 65,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -54906,7 +54906,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 67
+          "linea": 69
         }
       ],
       "tablas": [
@@ -54930,7 +54930,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "84478f71960d"
+      "hash": "7deeba4a3f79"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -55304,7 +55304,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 177
+          "linea": 179
         }
       ],
       "tablas": [
@@ -55317,7 +55317,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/settings",
-      "hash": "784a17ea12d5"
+      "hash": "395cc33e6fe5"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/stats/route.ts",
@@ -65797,6 +65797,28 @@
       "hash": "921158fc3d71"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/pricing-ancla-fecha.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-ancla-fecha.ts — el ancla SUAVE al mercado de la FECHA exacta (el finde visible). POR QUÉ (09/08/2026, auditoría tras la reserva de Luxury 16-18/10). El motor tarifica los días normales con el bucket del MES, que mezcla entre semana y findes: un sábado que el mercado vende a 258€ s",
+      "exporta": [
+        "anclaMercadoFecha"
+      ],
+      "funciones": [
+        {
+          "nombre": "anclaMercadoFecha",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: AnclaFechaInput, o: AnclaFechaOpts = {}",
+          "retorno": "number",
+          "linea": 46,
+          "resumen": "Devuelve el precio BASE (sin markup) mínimo que justifica el mercado de ESA fecha, o 0 si no hay evidencia suficiente. En el motor: `target = max(target, ancla)` ANTES del raíl ±%/día."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "735b380e3667"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/pricing-bucket-fuente.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/pricing-bucket-fuente.ts — de QUÉ corpus sale el bucket de mercado del motor. POR QUÉ (09/08/2026, auditoría `docs/AUDITORIA-2026-08-precios-dinamicos.md`). El bucket de `pricing/apply` excluía `corpus_clonado` pero NO miraba `fuente`, así que mezclaba en el mismo percentil los precios de ",
@@ -65888,6 +65910,27 @@
       "hash": "53f220a5dc2d"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/pricing-demanda.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-demanda.ts — el descuento por ocupación baja NO aplica a fechas cuya ventana de venta aún no ha abierto. POR QUÉ (09/08/2026, auditoría tras la reserva de Luxury 16-18/10). El motor calcula UN factor de demanda por piso (`1 + (ocupación − baseline) × k`, suelo ×0,92) con la ocupaci",
+      "exporta": [
+        "factorDemandaFecha"
+      ],
+      "funciones": [
+        {
+          "nombre": "factorDemandaFecha",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: DemandaFechaInput, o: DemandaFechaOpts = {}",
+          "retorno": "DemandaFechaResult",
+          "linea": 44
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fda11ba3ee29"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/pricing-engine.ts",
       "ambito": "apps/plataforma",
       "resumen": "Motor de precio ANCLADO AL MERCADO — FUENTE ÚNICA del cálculo. Lo consumen `recommend`, `settings` (panel) y `pilot-track` (agente) para que el \"precio recomendado\" sea el mismo en todos. Es lógica pura (sin DB ni red). `computeRecommendation` devuelve el precio a nivel MERCADO (huésped) acotado a [",
@@ -65935,7 +65978,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dfa05f72093d"
+      "hash": "8555c024d453"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-guardia.ts",
@@ -66871,7 +66914,7 @@
           "exportada": false,
           "params": "url: string, ms = 20000",
           "retorno": "Promise<string>",
-          "linea": 42
+          "linea": 46
         },
         {
           "nombre": "turnoCatastro",
@@ -66879,7 +66922,7 @@
           "exportada": false,
           "params": "pausaExtra = 0",
           "retorno": "Promise<void>",
-          "linea": 72,
+          "linea": 76,
           "resumen": "Reserva el siguiente turno del cerrojo y espera a que llegue. `pausaExtra` añade un descanso contado DESDE AHORA (para el reintento: el servicio acaba de cortar y hay que darle aire, no basta con el e"
         },
         {
@@ -66888,7 +66931,7 @@
           "exportada": false,
           "params": "url: string",
           "retorno": "Promise<string>",
-          "linea": 79
+          "linea": 83
         },
         {
           "nombre": "bajarFicha",
@@ -66896,7 +66939,7 @@
           "exportada": true,
           "params": "identificador: string",
           "retorno": "Promise<FichaBoe>",
-          "linea": 108,
+          "linea": 112,
           "resumen": "Descarga y parsea las tres pestañas de la ficha de una subasta. 🚨 Un HTTP 200 que NO sea la ficha (mantenimiento del Portal, muro de un WAF, página de error) es lo más peligroso que puede pasar aquí:"
         },
         {
@@ -66905,7 +66948,7 @@
           "exportada": true,
           "params": "identificador: string",
           "retorno": "Promise<number | null>",
-          "linea": 129,
+          "linea": 133,
           "resumen": "`null` = la ficha no publica la puja, que NO es «sin pujas»."
         },
         {
@@ -66914,7 +66957,7 @@
           "exportada": true,
           "params": "refCatastral: string",
           "retorno": "Promise<DatosCatastro | null>",
-          "linea": 150,
+          "linea": 154,
           "resumen": "Consulta el Catastro por referencia catastral. `null` si no hay dato. ⚠️ Solo devuelve datos del BIEN (superficie, año, uso) con la referencia COMPLETA de 20 caracteres. Con la de parcela (14) el serv"
         },
         {
@@ -66923,7 +66966,7 @@
           "exportada": true,
           "params": "refCatastral: string",
           "retorno": "Promise<CoordenadasCatastro | null>",
-          "linea": 165,
+          "linea": 169,
           "resumen": "Coordenadas WGS84 por referencia catastral (`Consulta_CPMRC`, probado el 30/07/2026). El servicio trabaja a nivel de PARCELA: acepta los 14 primeros caracteres; con la referencia de 20 del bien concre"
         },
         {
@@ -66932,7 +66975,7 @@
           "exportada": true,
           "params": "provincia: string, municipio: string, sigla: string, calle: string,",
           "retorno": "Promise<",
-          "linea": 183,
+          "linea": 187,
           "resumen": "Nombre OFICIAL de la vía según el callejero del Catastro (`ConsultaVia`). Se pregunta por UNA PALABRA distintiva, no por el nombre entero: el servicio busca por subcadena y el Catastro reescribe los n"
         },
         {
@@ -66941,7 +66984,7 @@
           "exportada": true,
           "params": "p: ParamsDnploc & { provincia: string; municipio: string },",
           "retorno": "Promise<",
-          "linea": 211,
+          "linea": 215,
           "resumen": "DIRECCIÓN → referencia catastral (`Consulta_DNPLOC`, servicio libre; probado el 30/07/2026). Es lo que desbloquea la ubicación EXACTA de la mayor parte del corpus: el BOE publica la dirección del inmu"
         },
         {
@@ -66950,7 +66993,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<void>",
-          "linea": 279
+          "linea": 283
         },
         {
           "nombre": "geocodificarMunicipio",
@@ -66958,8 +67001,17 @@
           "exportada": true,
           "params": "municipio: string, provincia?: string | null,",
           "retorno": "Promise<CoordenadasCatastro | null>",
-          "linea": 297,
+          "linea": 301,
           "resumen": "Centro del municipio por Nominatim (OSM, gratis). Es el escalón APROXIMADO para las subastas sin referencia catastral (la mayoría del corpus): mejor un pin honesto en el centro del pueblo que un mapa "
+        },
+        {
+          "nombre": "resultadoDeCertificado",
+          "kind": "function",
+          "exportada": false,
+          "params": "identificador: string",
+          "retorno": "Promise<ResultadoSubasta | null>",
+          "linea": 338,
+          "resumen": "Desenlace desde el certificado de cierre (PDF público del Portal): «La subasta concluyó con pujas (puja máxima X euros)» / «concluyó sin pujas». `null` = certificado no disponible o marcado no reconoc"
         },
         {
           "nombre": "capturarResultados",
@@ -66967,15 +67019,14 @@
           "exportada": true,
           "params": "max = 20",
           "retorno": "Promise<",
-          "linea": 329,
-          "resumen": "el marcado de una CONCLUIDA aún no se ha podido ver, así que el parser (`resultadoDeFicha`) es defensivo — si no reconoce nada deja la fila pendiente y aquí se loguean las claves vistas para ajustar e"
+          "linea": 361
         }
       ],
       "tablas": [
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "931778f1008b"
+      "hash": "5befb242bb7d"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/gmail-boe.ts",
@@ -86126,7 +86177,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b169a63a9435"
+      "hash": "1c8523f2a689"
     },
     {
       "ruta": "packages/module-subastas/src/analisis.ts",
@@ -87336,6 +87387,8 @@
         "paresFicha",
         "parsearFichaBoe",
         "resultadoDeFicha",
+        "resultadoDeBanner",
+        "parsearCertificadoCierre",
         "mejorPujaDeFicha"
       ],
       "funciones": [
@@ -87409,18 +87462,36 @@
           "linea": 240
         },
         {
+          "nombre": "resultadoDeBanner",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string",
+          "retorno": "'concluida' | null",
+          "linea": 258,
+          "resumen": "Detecta el banner de conclusión en el HTML CRUDO de la ficha — no aparece en los pares clave/valor, así que hay que mirar el texto completo. `null` = ningún banner reconocido, que NO es «sigue abierta"
+        },
+        {
+          "nombre": "parsearCertificadoCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "CierreCertificado | null",
+          "linea": 278,
+          "resumen": "Desenlace del certificado de cierre (texto extraído de su PDF). Defensivo: si el marcado no se reconoce devuelve `null` y el caller reintenta en la pasada siguiente — nunca inventa."
+        },
+        {
           "nombre": "mejorPujaDeFicha",
           "kind": "function",
           "exportada": true,
           "params": "pares: Map<string, string>",
           "retorno": "number | null",
-          "linea": 253,
+          "linea": 298,
           "resumen": "Mejor puja publicada por la ficha de una subasta EN CURSO (sin exigir estado, a diferencia de `resultadoDeFicha`). Sirve para vigilar las seguidas: si alguien ya puja por encima de nuestro techo, deja"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6d43626ce867"
+      "hash": "c9a1881eac34"
     },
     {
       "ruta": "packages/module-subastas/src/financiacion.ts",
@@ -89862,7 +89933,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2405,
-    "funciones": 6491
+    "archivos": 2407,
+    "funciones": 6496
   }
 }
