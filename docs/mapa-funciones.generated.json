@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-09T17:41:10Z",
-  "sha": "71cf8afd02fb2b2d5b1b163a8e34d6b6cae52236",
+  "generadoEn": "2026-08-09T20:48:22Z",
+  "sha": "85739af03e039650ebd2efda9ef9a54167e7dc53",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47491,7 +47491,7 @@
         "subastas_criterios"
       ],
       "rutaApi": null,
-      "hash": "5f08bf475a1b"
+      "hash": "19ff1b4182fc"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/subastas/SubastasClient.tsx",
@@ -47635,7 +47635,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "15fd89a7300d"
+      "hash": "082a099ce240"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -67353,8 +67353,8 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 547,
-          "resumen": "Chollos vigentes + lente 🌊 costa norte sobre el MISMO corpus (una sola lectura de comparables). Los preferentes que además son chollo no se duplican: se quedan en la lista de chollos con su etiqueta "
+          "linea": 548,
+          "resumen": "Chollos vigentes + lente 🌊 de preferencias sobre el MISMO corpus (una sola lectura de comparables, con los re-listados del portal ya colapsados). Los preferentes que además son chollo no se duplican:"
         },
         {
           "nombre": "chollosVigentes",
@@ -67362,7 +67362,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<CholloSeguido[]>",
-          "linea": 584,
+          "linea": 587,
           "resumen": "Solo los chollos (el borrador de oferta y el debug no necesitan la lente)."
         },
         {
@@ -67371,7 +67371,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 596,
+          "linea": 599,
           "resumen": "Aviso Telegram de los chollos NUEVOS (una sola vez por anuncio). La mediana de zona se mueve a diario y un anuncio podría entrar y salir del umbral: `chollo_avisado_at` fija que cada anuncio avisa UNA"
         },
         {
@@ -67380,7 +67380,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 693
+          "linea": 697
         },
         {
           "nombre": "refrescarIndiceINE",
@@ -67388,7 +67388,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 721,
+          "linea": 725,
           "resumen": "Refresca la caché del IPV si está caducada. Best-effort (el cron lo llama)."
         },
         {
@@ -67397,7 +67397,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<IndicesVivienda | null>",
-          "linea": 755,
+          "linea": 759,
           "resumen": "Lee el IPV cacheado (sin red). Campos a null si aún no se han capturado."
         },
         {
@@ -67406,7 +67406,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<PulsoMercado | null>",
-          "linea": 786
+          "linea": 790
         },
         {
           "nombre": "avisarBajadas",
@@ -67414,7 +67414,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 813,
+          "linea": 817,
           "resumen": "Aviso Telegram de las BAJADAS DE PRECIO nuevas en las zonas vigiladas. Una bajada es señal aunque el anuncio no llegue a chollo: el vendedor ya ha cedido una vez y es el candidato natural a una oferta"
         }
       ],
@@ -67428,7 +67428,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "2df8b4809140"
+      "hash": "35ee12f8797a"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/nota-simple.ts",
@@ -87025,12 +87025,16 @@
     {
       "ruta": "packages/module-subastas/src/costa-norte.ts",
       "ambito": "packages/module-subastas",
-      "resumen": "──────────────────────────────────────────────────────────────────────────── Lente 🌊 costa norte: viviendas cerca de playa en el Cantábrico (Asturias y Cantabria) sin señales de obra. PURO. Preferencia de Alberto (09/08/2026, a raíz de una casona en Colunga a ~914€/m²): inmuebles en buen estado en ",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Lente 🌊 de PREFERENCIAS de mercado: CASAS de playa baratas. PURO. Criterios de Alberto (09/08/2026, refinados el mismo día sobre la v1): · CASAS, no pisos (chalet/adosado/casona valen; un piso de Gijón no). · Tope 230.000€",
       "exporta": [
         "costaNorteDe",
         "esCostaNorte",
+        "zonaPreferenteDe",
+        "esZonaPreferente",
+        "esCasa",
         "sinSenalesDeObra",
-        "lenteCostaNorte"
+        "dedupeRelistados",
+        "lentePreferentes"
       ],
       "funciones": [
         {
@@ -87039,7 +87043,7 @@
           "exportada": false,
           "params": "texto: string, termino: string",
           "retorno": "boolean",
-          "linea": 129,
+          "linea": 147,
           "resumen": "¿El texto contiene el término como PALABRA completa? Un `includes` a secas ya mordió con núcleos cortos («isla» dentro de «Islantilla»): se exige frontera de palabra a ambos lados."
         },
         {
@@ -87048,7 +87052,7 @@
           "exportada": true,
           "params": "zona: string | null | undefined, titulo?: string | null",
           "retorno": "'Asturias' | 'Cantabria' | null",
-          "linea": 150,
+          "linea": 168,
           "resumen": "Costa a la que pertenece el anuncio, mirando su zona y su título (las alertas no traen municipio estructurado: la zona es texto libre del portal, «Barrio d'Arriba, Colunga»). `null` = no es costa nort"
         },
         {
@@ -87057,8 +87061,35 @@
           "exportada": true,
           "params": "zona: string | null | undefined, titulo?: string | null",
           "retorno": "boolean",
-          "linea": 160,
-          "resumen": "La lente completa como booleano, para etiquetar (🌊) sin nombrar la costa."
+          "linea": 178,
+          "resumen": "La costa norte como booleano, para etiquetar sin nombrar la costa."
+        },
+        {
+          "nombre": "zonaPreferenteDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "zona: string | null | undefined, titulo?: string | null,",
+          "retorno": "'Asturias' | 'Cantabria' | 'Islantilla' | null",
+          "linea": 183,
+          "resumen": "Zona de la preferencia completa: costa norte o Islantilla."
+        },
+        {
+          "nombre": "esZonaPreferente",
+          "kind": "function",
+          "exportada": true,
+          "params": "zona: string | null | undefined, titulo?: string | null",
+          "retorno": "boolean",
+          "linea": 195,
+          "resumen": "¿Está en alguna zona preferente? (para la etiqueta 🌊 de los chollos)."
+        },
+        {
+          "nombre": "esCasa",
+          "kind": "function",
+          "exportada": true,
+          "params": "titulo: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 205,
+          "resumen": "¿El anuncio es una CASA (chalet/adosado/pareado/casona) y no un piso? Se decide por el título, que el portal siempre encabeza con el tipo («Casa o chalet independiente en…», «casa adosada en…», «Piso "
         },
         {
           "nombre": "sinSenalesDeObra",
@@ -87066,22 +87097,31 @@
           "exportada": true,
           "params": "c: Comparable",
           "retorno": "boolean",
-          "linea": 170,
+          "linea": 216,
           "resumen": "¿Nada en el anuncio delata obra? OJO: esto NO confirma «buen estado» — el correo de alerta no trae la descripción ni fotos. Dice exactamente que ni el título confiesa reforma ni la API lo marcó `a ref"
         },
         {
-          "nombre": "lenteCostaNorte",
+          "nombre": "dedupeRelistados",
+          "kind": "function",
+          "exportada": true,
+          "params": "comparables: Comparable[]",
+          "retorno": "Comparable[]",
+          "linea": 229,
+          "resumen": "Colapsa los RE-LISTADOS del mismo portal: Idealista re-publica el mismo anuncio con un `ref` nuevo (visto en prod el 09/08/2026: el piso de Ceares salía DOS veces, refs 112188897 y 112233004, idéntico"
+        },
+        {
+          "nombre": "lentePreferentes",
           "kind": "function",
           "exportada": true,
           "params": "comparables: Comparable[], zonasPortal?: ZonaPortalRef[]",
-          "retorno": "PreferenteNorte[]",
-          "linea": 197,
-          "resumen": "Viviendas de la costa norte sin señales de obra, con su comparación de zona si existe. Ordenadas: mayor descuento primero, las sin referencia al final (dentro de cada grupo, más baratas primero)."
+          "retorno": "Preferente[]",
+          "linea": 265,
+          "resumen": "CASAS ≤230.000€ de las zonas preferentes, sin señales de obra, con su comparación de zona si existe. Orden: primero las que YA HAN BAJADO de precio (más bajadas antes), luego las de particular, luego "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d5416bf23cd6"
+      "hash": "831bcc234fab"
     },
     {
       "ruta": "packages/module-subastas/src/costes.ts",
@@ -90025,6 +90065,6 @@
   ],
   "resumen": {
     "archivos": 2408,
-    "funciones": 6504
+    "funciones": 6508
   }
 }
