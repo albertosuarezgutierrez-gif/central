@@ -81,7 +81,8 @@ ORDER BY abs(mb.fecha_operacion - <fecha_factura>::date) LIMIT 3;
 - **PriceLabs (y demás SaaS que facturan por email): al 100%.** Sus facturas llegan SIEMPRE como PDF
   por correo (no como cargo con concepto rico) → archívalas TODAS en Drive y concílialas con el cargo
   `PriceLabs`/`DynaPrice` del banco para encender su 📎. Si una no casa por importe (cambio USD→EUR),
-  empareja por fecha + emisor y deja nota.
+  empareja por fecha + emisor y deja nota. ⚠️ **PriceLabs DE BAJA 09/08/2026**: no esperes facturas
+  nuevas — como mucho una última (agosto); si no llega, NO es una factura que falta.
 
 ### Patrón especial — ENDESA DÚPLEX (dos facturas en un cargo)
 Las facturas de Endesa del **Dúplex** (PJ Francisco Molina 4 1C, contrato 130139482171, BBVA ES34)

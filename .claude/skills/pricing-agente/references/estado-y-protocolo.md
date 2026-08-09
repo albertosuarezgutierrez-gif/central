@@ -156,7 +156,9 @@ el motor bajara esa noche **152€ → 122€** a las 14:30. Comparables de ESE 
   (`truncado`, `base_completa`); el latido solo baja a `ok:false` si no cubrió la temporada. La
   cobertura se ACUMULA entre días (el motor mira 120 días de `search_date`), así que truncar es barato.
 
-### 📉 Qué hace PriceLabs (medido, 01/08/2026) — sirve de DATOS, no de modelo
+### 📉 Qué hace PriceLabs (medido, 01/08/2026) — HISTÓRICO: PL de baja el 09/08/2026
+> PriceLabs ya no tarifica ningún piso (baja 09/08/2026). Esta sección se conserva porque su
+> historial en `rate_snapshots` sigue siendo dato útil (curva de anticipación, ADR realizado).
 Idea de Alberto: «¿por qué no estudias cómo lo hace PriceLabs?». Se puede, porque `rate_snapshots` lleva
 fotografiando sus decisiones a diario desde mayo. Lo que hace, por días de antelación (mayo-julio 2026):
 
@@ -225,11 +227,12 @@ y testeada en **`lib/sivra/pricing-centinelas.ts`** (21/21), cableada en el rout
   protección, no precio. NO volver a subirlos por encima del p25 de fechas flojas sin OK de Alberto.
 - **Motor por temporada (B2)** YA en prod: `apply/route.ts` tarifica por mes de `checkin_date` con fallback al
   global. NO hace falta reimplementar bucketing; solo alimentar `market_rates` con comps fechados por mes.
-- **EN VIVO `busto_reform` y `luxury_busto`** (`apply_enabled=true`; Luxury desde 13/07 con OK de Alberto,
-  desconectado de PriceLabs). Duplex/House siguen en dry-run a 30/07 — plan: activarlos antes del ~3/08
-  (cierre PriceLabs), desconectarlos de PL y cancelar la suscripción. La activación la hace Alberto
-  (`apply_enabled=true`); auditoría 30/07 no encontró bloqueantes técnicos. NO actives `apply_enabled` de
-  otros pisos sin OK explícito de Alberto.
+- **EN VIVO los 4 pisos** (`apply_enabled=true` en busto_reform, luxury_busto, duplex_center y
+  house_sevillana — los dos últimos activados 09/08/2026 con OK de Alberto). **PriceLabs DE BAJA
+  09/08/2026**: Alberto pausó los listados de Dúplex/House ese día y canceló la suscripción; ya no
+  escribe en Smoobu ni se espera factura nueva. Su última curva queda persistida en
+  `pricing_pl_referencia` (366 fechas/piso, caduca a 120 días) como referencia histórica. NO actives
+  ni desactives `apply_enabled` de un piso sin OK explícito de Alberto.
 - **Mercado cargado a 12 meses** (Booking MCP, barrido F1 13/07): verano, Semana Santa 2027 (~462€ p50),
   Feria 2027, may/jun/jul 2027. **Ticketmaster VIVO** (cron semanal; busca por latlong — postalCode da 0
   fuera de EE.UU.). **🔥 KAROL G 3 noches en La Cartuja 11-13 jun 2027** (mercado 4-8x, factor 2,5) — rampar.
