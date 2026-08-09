@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-09T04:59:17Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-09T10:31:09Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -218,6 +218,8 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- El `channel_markup` 1,16 NO existe en el escaparate
+- Ancla suave por fecha
 - ITP por CCAA
 - Vigía de pujas en vivo
 - Vivienda habitual
@@ -226,6 +228,4 @@
 - (08/08/2026) ✅ Precio dinámico vivo en los 4 pisos, primera pasada real verificada (08/08/2026).
 - (08/08/2026) 🔀 El precio era real… pero de otra empresa: saneo del corpus de trading (08/08/2026).
 - (08/08/2026) 🛡️ Segundo par de ojos sobre el precio + procedencia del dato (08/08/2026).
-- (08/08/2026) 🚨 Un precio falso envenenó el track record de trading (08/08/2026).
-- (08/08/2026) 🩺 El watchdog de trading ya distingue «no PUDO dispararse» (08/08/2026).
 

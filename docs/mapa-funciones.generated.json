@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-09T10:03:46Z",
-  "sha": "83d517142c48b661c29940d7383fc8ab2c19a0de",
+  "generadoEn": "2026-08-09T10:31:09Z",
+  "sha": "f5a971387e05497eea51bac984c8f2beb095860c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47293,7 +47293,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "17cc8072f7cb"
+      "hash": "3ee46020562d"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/pricing/page.tsx",
@@ -54881,7 +54881,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 34
+          "linea": 36
         },
         {
           "nombre": "fmt",
@@ -54889,7 +54889,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 35
+          "linea": 37
         },
         {
           "nombre": "GET",
@@ -54897,7 +54897,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 63,
+          "linea": 65,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -54906,7 +54906,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 67
+          "linea": 69
         }
       ],
       "tablas": [
@@ -54930,7 +54930,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "84478f71960d"
+      "hash": "7deeba4a3f79"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -55304,7 +55304,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 177
+          "linea": 179
         }
       ],
       "tablas": [
@@ -55317,7 +55317,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/settings",
-      "hash": "784a17ea12d5"
+      "hash": "395cc33e6fe5"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/stats/route.ts",
@@ -65797,6 +65797,28 @@
       "hash": "921158fc3d71"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/pricing-ancla-fecha.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-ancla-fecha.ts — el ancla SUAVE al mercado de la FECHA exacta (el finde visible). POR QUÉ (09/08/2026, auditoría tras la reserva de Luxury 16-18/10). El motor tarifica los días normales con el bucket del MES, que mezcla entre semana y findes: un sábado que el mercado vende a 258€ s",
+      "exporta": [
+        "anclaMercadoFecha"
+      ],
+      "funciones": [
+        {
+          "nombre": "anclaMercadoFecha",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: AnclaFechaInput, o: AnclaFechaOpts = {}",
+          "retorno": "number",
+          "linea": 46,
+          "resumen": "Devuelve el precio BASE (sin markup) mínimo que justifica el mercado de ESA fecha, o 0 si no hay evidencia suficiente. En el motor: `target = max(target, ancla)` ANTES del raíl ±%/día."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "735b380e3667"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/pricing-bucket-fuente.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/pricing-bucket-fuente.ts — de QUÉ corpus sale el bucket de mercado del motor. POR QUÉ (09/08/2026, auditoría `docs/AUDITORIA-2026-08-precios-dinamicos.md`). El bucket de `pricing/apply` excluía `corpus_clonado` pero NO miraba `fuente`, así que mezclaba en el mismo percentil los precios de ",
@@ -65888,6 +65910,27 @@
       "hash": "53f220a5dc2d"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/pricing-demanda.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-demanda.ts — el descuento por ocupación baja NO aplica a fechas cuya ventana de venta aún no ha abierto. POR QUÉ (09/08/2026, auditoría tras la reserva de Luxury 16-18/10). El motor calcula UN factor de demanda por piso (`1 + (ocupación − baseline) × k`, suelo ×0,92) con la ocupaci",
+      "exporta": [
+        "factorDemandaFecha"
+      ],
+      "funciones": [
+        {
+          "nombre": "factorDemandaFecha",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: DemandaFechaInput, o: DemandaFechaOpts = {}",
+          "retorno": "DemandaFechaResult",
+          "linea": 44
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fda11ba3ee29"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/pricing-engine.ts",
       "ambito": "apps/plataforma",
       "resumen": "Motor de precio ANCLADO AL MERCADO — FUENTE ÚNICA del cálculo. Lo consumen `recommend`, `settings` (panel) y `pilot-track` (agente) para que el \"precio recomendado\" sea el mismo en todos. Es lógica pura (sin DB ni red). `computeRecommendation` devuelve el precio a nivel MERCADO (huésped) acotado a [",
@@ -65935,7 +65978,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dfa05f72093d"
+      "hash": "8555c024d453"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-guardia.ts",
@@ -89862,7 +89905,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2405,
-    "funciones": 6491
+    "archivos": 2407,
+    "funciones": 6493
   }
 }
