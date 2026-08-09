@@ -86,6 +86,50 @@ test('un previsto muy fuerte SÍ puede elevar el suelo por encima de un confirma
   assert.equal(e.factorSuelo, 1.75, 'el suelo sube: es justo el caso que protege la fecha')
 })
 
+// ————— v2 (09/08/2026, decisión de Alberto): el previsto LEJANO sube el precio ponderado —————
+
+test('v2: un previsto LEJANO sube el precio ponderado por confianza, nunca al factor pleno', () => {
+  // Final de Copa (x2.2, confianza 0.8) a 120 días: 1 + 1.2×0.8×0.5 = 1.48 — apuesta, no hecho.
+  const e = efectoDeEvento({ estado: 'previsto', factor: 2.2, confianza: 0.8 }, { diasVista: 120 })
+  assert.equal(Number(e.factorPrecio.toFixed(2)), 1.48)
+  assert.ok(e.factorPrecio < 2.2, 'el factor pleno queda reservado a la confirmación')
+  assert.equal(e.factorSuelo, 1.6, 'el suelo no cambia con la v2')
+})
+
+test('v2: cerca de la fecha el previsto vuelve a solo-suelo (el premio se retira solo)', () => {
+  const e = efectoDeEvento({ estado: 'previsto', factor: 2.2, confianza: 0.8 }, { diasVista: 30 })
+  assert.equal(e.factorPrecio, 1, 'a 30 días no hay tiempo de deshacer una apuesta fallida')
+  assert.equal(e.factorSuelo, 1.6)
+})
+
+test('v2: sin días vista (llamador viejo) el previsto no toca el precio — conservador', () => {
+  const e = efectoDeEvento({ estado: 'previsto', factor: 2.2, confianza: 0.8 })
+  assert.equal(e.factorPrecio, 1)
+})
+
+test('v2: la confianza pondera el premio — dos fechas candidatas no se inflan al 100%', () => {
+  const alta = efectoDeEvento({ estado: 'previsto', factor: 2.2, confianza: 0.9 }, { diasVista: 200 })
+  const justa = efectoDeEvento({ estado: 'previsto', factor: 2.2, confianza: 0.6 }, { diasVista: 200 })
+  assert.ok(alta.factorPrecio > justa.factorPrecio)
+  assert.equal(Number(justa.factorPrecio.toFixed(2)), 1.36)
+})
+
+test('v2: un confirmado sigue tarifando al factor pleno a cualquier distancia', () => {
+  const e = efectoDeEvento({ estado: 'confirmado', factor: 2.5 }, { diasVista: 10 })
+  assert.equal(e.factorPrecio, 2.5)
+})
+
+test('v2: al combinar, el confirmado de la misma fecha sigue mandando sobre el previsto ponderado', () => {
+  const e = combinarEventosDeFecha(
+    [
+      { estado: 'confirmado', factor: 2.0 },
+      { estado: 'previsto', factor: 2.2, confianza: 0.9 },
+    ],
+    { diasVista: 200 },
+  )
+  assert.equal(e.factorPrecio, 2.0, 'previsto ponderado 1.54 < confirmado 2.0 → max')
+})
+
 test('una fecha sin eventos sale neutra', () => {
   const e = combinarEventosDeFecha([])
   assert.equal(e.factorPrecio, 1)

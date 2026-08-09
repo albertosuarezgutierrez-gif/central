@@ -32,6 +32,17 @@
 
 ---
 
+### 🎯 (09/08/2026) Los 4 pisos bajo el motor · PriceLabs de baja · previstos v2 · fix verificado en vivo
+- **Decisión de Alberto:** «el agente coge las riendas de los 4 apartamentos». Los 4 con
+  `apply_enabled=true` + `channel_markup=1.0` (SQL aplicado tras deploy del PR #1337, mergeado).
+  Pasada real 14:30 verificada: 4 pisos escritos, anclas al euro de lo predicho (House 4-sep 421€,
+  Dúplex 13-nov 149€…), raíl ±20% respetado vs ancla diaria; 0 alertas nuevas.
+- **PriceLabs:** Alberto pausó Dúplex/House en PL ~15:00 UTC (medido: 1.140/1.653 escrituras suyas
+  sin motor esa semana; Busto/Luxury ya limpios). Curva PL persistida como suelo (120 días).
+  Vigilancia: test de silencio de PL tras pasada 20:30 + snapshot y guard mañana (triggers armados).
+- **Previstos v2 (idea de Alberto, riesgo asimétrico):** evento `previsto` LEJANO (≥60d) sube precio
+  ponderado por confianza (×0,5); cerca se retira solo; confirmado = factor pleno. Tests 1.081 verdes.
+
 ### ✅ (09/08/2026) Pasada diaria de trading completada — 2 PRs mergeados en caliente para arreglar `date - bigint`
 ### 🔀 (09/08/2026) Backlog de PRs revisado y drenado: 3 mergeados, 1 superado, 2 a decisión
 - Revisión "que no sea antiguo lo pendiente": mergeados #1304 (informe auditoría 08/08), #1329

@@ -200,7 +200,10 @@ export async function POST(req: NextRequest) {
   /** factor que protege el SUELO: confirmados + la parte prudente de los previstos */
   const autoEvSuelo = new Map<string, number>()
   for (const [fecha, lista] of porFecha) {
-    const ef = combinarEventosDeFecha(lista)
+    // Los previstos LEJANOS suben el precio ponderado por confianza (v2, decisión de Alberto
+    // 09/08/2026); cerca de la fecha vuelven a solo-suelo. El contexto de distancia va aquí.
+    const diasVista = Math.round((new Date(fecha).getTime() - today.getTime()) / 86400000)
+    const ef = combinarEventosDeFecha(lista, { diasVista })
     if (ef.factorPrecio > 1) autoEv.set(fecha, ef.factorPrecio)
     if (ef.factorSuelo > 1) autoEvSuelo.set(fecha, ef.factorSuelo)
   }
