@@ -81,8 +81,16 @@ export { parsearAlertaIdealista, esAlertaIdealista, precioM2Zona, velocidadZona,
 export type { Comparable } from './comparables.ts'
 // Chollos de venta directa: el mismo corpus de anuncios, mirado al revés —
 // ¿qué anuncio está muy por debajo de la mediana €/m² de su zona?
-export { detectarChollos, zonasDeComparable, estimarAntiguedad, pareceRuina, CHOLLO_DESCUENTO_MIN, CHOLLO_DESCUENTO_SOSPECHOSO, RECONSTRUIR_EUR_M2 } from './comparables.ts'
+export { detectarChollos, referenciaZona, zonasDeComparable, estimarAntiguedad, pareceRuina, esParcela, CHOLLO_DESCUENTO_MIN, CHOLLO_DESCUENTO_SOSPECHOSO, RECONSTRUIR_EUR_M2 } from './comparables.ts'
 export type { Chollo, ObservacionRef, VelocidadZona, ZonaPortalRef } from './comparables.ts'
+// Lente 🌊 costa norte (Asturias/Cantabria): preferencia de Alberto por
+// viviendas de playa del Cantábrico sin señales de obra, con o sin descuento
+export {
+  lenteCostaNorte, costaNorteDe, esCostaNorte, sinSenalesDeObra,
+  MUNICIPIOS_COSTA_ASTURIAS, NUCLEOS_COSTA_ASTURIAS,
+  MUNICIPIOS_COSTA_CANTABRIA, NUCLEOS_COSTA_CANTABRIA,
+} from './costa-norte.ts'
+export type { PreferenteNorte } from './costa-norte.ts'
 // Calibración con RESULTADOS reales: a qué % del tipo se adjudica de verdad
 export { calibracionAdjudicaciones, calibracionPorCargas, calibracionPuja, MIN_MUESTRA_CALIBRACION, MIN_MUESTRA_PUJA } from './adjudicaciones.ts'
 export type {

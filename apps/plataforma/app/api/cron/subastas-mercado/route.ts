@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
     // Best-effort — que un fallo de Telegram no tire la referencia de mercado.
     const chollos = await avisarChollos().catch((e) => {
       console.error('[subastas-mercado] chollos', e)
-      return { chollos: 0, avisados: 0 }
+      return { chollos: 0, avisados: 0, preferentesNorte: 0, preferentesAvisados: 0 }
     })
     // Bajadas de precio: señal de negociación aunque el anuncio no sea chollo.
     const bajadas = await avisarBajadas().catch((e) => {
@@ -90,7 +90,7 @@ export async function GET(req: NextRequest) {
     await registrarLatido(
       'subastas_mercado',
       true,
-      `${ingesta.anuncios} anuncio(s), ${chollos.avisados} chollo(s) avisado(s), ${bajadas.bajadas} bajada(s) en ${segundos}s` +
+      `${ingesta.anuncios} anuncio(s), ${chollos.avisados} chollo(s) avisado(s), ${chollos.preferentesAvisados} 🌊 costa norte, ${bajadas.bajadas} bajada(s) en ${segundos}s` +
         // Cómo leyó cada portal: un «primera lectura» repetido día tras día
         // significa que el cursor no se está guardando, y sin decirlo se vería
         // igual que una ingesta sana (solo que lenta y sin tiempo para fichas).
