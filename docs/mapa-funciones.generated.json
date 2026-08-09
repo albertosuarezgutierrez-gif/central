@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-09T04:59:17Z",
-  "sha": "593ebb282813376c04304c2ce4f07c6fe8ca6cc0",
+  "generadoEn": "2026-08-09T10:03:46Z",
+  "sha": "83d517142c48b661c29940d7383fc8ab2c19a0de",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -51373,7 +51373,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 28
+          "linea": 34
         }
       ],
       "tablas": [
@@ -51381,7 +51381,7 @@
         "subastas"
       ],
       "rutaApi": "/api/cron/subastas-enriquecer",
-      "hash": "f922552f4da2"
+      "hash": "51ed328ff0b2"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-ingesta/route.ts",
