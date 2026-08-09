@@ -39,8 +39,12 @@
   + `lenteCostaNorte`: viviendas sin señales de obra AUNQUE no lleguen a chollo (en el norte casi nunca
   hay mediana de zona; referencia null SE DICE, no se calla). `lentesMercado()` en plataforma: sección 🌊
   en el Telegram del cron `subastas-mercado` y en /subastas; chollos de esas zonas etiquetados 🌊 y primero.
-- PR #1346 (draft). Ojo: la lente solo ve las alertas guardadas — para vigilar más norte, crear alertas
-  de Idealista en esas zonas. Galicia/Euskadi pendientes de que Alberto las pida (patrón Cádiz).
+- **MERGEADO** (#1346 + fix #1347) y probado contra el corpus real (741 comps, 99 en zona norte — las
+  alertas ya cubren Gijón/Villaviciosa/Llanes): lente 93 viviendas, 15 chollos 🌊, 0 falsos positivos del
+  sur. El fix #1347: un descuento de derribo (>50%) saca de la lente (la derruida de Llanes salía 1ª con
+  −73% y título limpio — la doctrina del peaje de obra aplica también aquí). Prod desplegado y verificado.
+- Ojo: la lente solo ve las alertas guardadas — para vigilar más norte, crear alertas de Idealista en
+  esas zonas. Galicia/Euskadi pendientes de que Alberto las pida (patrón Cádiz).
 
 ### 🎯 (09/08/2026) Los 4 pisos bajo el motor · PriceLabs de baja · previstos v2 · fix verificado en vivo
 - **Decisión de Alberto:** «el agente coge las riendas de los 4 apartamentos». Los 4 con
