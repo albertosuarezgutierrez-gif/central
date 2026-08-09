@@ -18,7 +18,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
-import { CHOLLO_DESCUENTO_MIN, datosFichaFotocasa, detectarChollos, estimarAntiguedad, MIN_MUESTRA_ZONA, parsearAlertaFotocasa, parsearAlertaIdealista, precioM2Zona, RECONSTRUIR_EUR_M2, slugDistritoFotocasa, slugNucleoPlaya, slugZonaFotocasa, velocidadZona, type Chollo, type Comparable, type VelocidadZona, type ZonaPortal, type ZonaPortalRef } from '@central/module-subastas'
+import { CHOLLO_DESCUENTO_MIN, datosFichaFotocasa, detectarChollos, esCostaNorte, estimarAntiguedad, lenteCostaNorte, MIN_MUESTRA_ZONA, parsearAlertaFotocasa, parsearAlertaIdealista, precioM2Zona, RECONSTRUIR_EUR_M2, slugDistritoFotocasa, slugNucleoPlaya, slugZonaFotocasa, velocidadZona, type Chollo, type Comparable, type PreferenteNorte, type VelocidadZona, type ZonaPortal, type ZonaPortalRef } from '@central/module-subastas'
 import { leerAlertasDesde } from '@/lib/subastas/gmail-boe'
 import { guardarCursor, leerCursor } from '@/lib/subastas/correo-cursor'
 import { COSTE_PETICION_PORTAL_MS, motivoCorte, quedaTiempo } from '@/lib/subastas/presupuesto-mercado'
@@ -523,10 +523,20 @@ export type CholloSeguido = Chollo & {
   antiguedadCapada: boolean
   /** Lo rápido que se vende la zona (mediana de días de los anuncios desaparecidos). */
   velocidad: VelocidadZona | null
+  /** 🌊 Zona de la lente costa norte (preferencia de Alberto): se etiqueta y va primero. */
+  costaNorte: boolean
+}
+
+/** Un preferente 🌊 con las mismas señales de seguimiento que un chollo. */
+export type PreferenteNorteSeguido = PreferenteNorte & {
+  antiguedadDias: number | null
+  antiguedadCapada: boolean
 }
 
 /**
- * Chollos vigentes + antigüedad estimada.
+ * Chollos vigentes + lente 🌊 costa norte sobre el MISMO corpus (una sola
+ * lectura de comparables). Los preferentes que además son chollo no se
+ * duplican: se quedan en la lista de chollos con su etiqueta 🌊.
  *
  * La calibración del ritmo de refs usa `created_at` (primera vez que NOSOTROS
  * vimos cada ref): para los anuncios que van ENTRANDO al corpus con los correos
@@ -534,7 +544,7 @@ export type CholloSeguido = Chollo & {
  * suficiente y `estimarAntiguedad` devuelve `null` — la UI enseña entonces solo
  * el «lo vemos desde», que es cota inferior honesta.
  */
-export async function chollosVigentes(): Promise<CholloSeguido[]> {
+export async function lentesMercado(): Promise<{ chollos: CholloSeguido[]; costaNorte: PreferenteNorteSeguido[] }> {
   const comparables = await comparablesVigentes()
   const observaciones = comparables
     .filter((c) => c.vistoDesde != null)
@@ -549,15 +559,30 @@ export async function chollosVigentes(): Promise<CholloSeguido[]> {
     .then((filas) => filas.map((f) => ({ slug: f.slug, p50m2: Number(f.p50_m2), muestra: f.muestra })))
     .catch(() => [])
   const hoy = new Date().toISOString()
-  return detectarChollos(comparables, CHOLLO_DESCUENTO_MIN, 3, zonasPortal).map((ch) => {
-    const est = estimarAntiguedad(ch.comparable.refAnuncio, observaciones, hoy)
-    return {
+  const antiguedad = (refAnuncio: string) => {
+    const est = estimarAntiguedad(refAnuncio, observaciones, hoy)
+    return { antiguedadDias: est?.dias ?? null, antiguedadCapada: est?.capada ?? false }
+  }
+
+  const chollos = detectarChollos(comparables, CHOLLO_DESCUENTO_MIN, 3, zonasPortal)
+    .map((ch) => ({
       ...ch,
-      antiguedadDias: est?.dias ?? null,
-      antiguedadCapada: est?.capada ?? false,
+      ...antiguedad(ch.comparable.refAnuncio),
       velocidad: velocidadZona(comparables, ch.zona, hoy),
-    }
-  })
+      costaNorte: esCostaNorte(ch.comparable.zona, ch.comparable.titulo),
+    }))
+    // La preferencia manda también en el orden: 🌊 primero, luego por descuento.
+    .sort((a, b) => Number(b.costaNorte) - Number(a.costaNorte) || b.descuento - a.descuento)
+  const enChollos = new Set(chollos.map((ch) => `${ch.comparable.portal}|${ch.comparable.refAnuncio}`))
+  const costaNorte = lenteCostaNorte(comparables, zonasPortal)
+    .filter((p) => !enChollos.has(`${p.comparable.portal}|${p.comparable.refAnuncio}`))
+    .map((p) => ({ ...p, ...antiguedad(p.comparable.refAnuncio) }))
+  return { chollos, costaNorte }
+}
+
+/** Solo los chollos (el borrador de oferta y el debug no necesitan la lente). */
+export async function chollosVigentes(): Promise<CholloSeguido[]> {
+  return (await lentesMercado()).chollos
 }
 
 /**
@@ -568,11 +593,11 @@ export async function chollosVigentes(): Promise<CholloSeguido[]> {
  * Mensaje agregado, no uno por chollo — misma regla anti-ruido que el resto
  * de avisos de subastas.
  */
-export async function avisarChollos(): Promise<{ chollos: number; avisados: number }> {
-  const chollos = await chollosVigentes()
-  if (!chollos.length) return { chollos: 0, avisados: 0 }
+export async function avisarChollos(): Promise<{ chollos: number; avisados: number; preferentesNorte: number; preferentesAvisados: number }> {
+  const { chollos, costaNorte } = await lentesMercado()
+  if (!chollos.length && !costaNorte.length) return { chollos: 0, avisados: 0, preferentesNorte: 0, preferentesAvisados: 0 }
 
-  const refs = chollos.map((c) => c.comparable.refAnuncio)
+  const refs = [...chollos, ...costaNorte].map((c) => c.comparable.refAnuncio)
   // La clave real es (portal, ref): dos portales podrían compartir un id numérico.
   const pendientes = await prisma.$queryRaw<Array<{ portal: string; ref_anuncio: string }>>(Prisma.sql`
     SELECT portal, ref_anuncio FROM mercado_comparables
@@ -580,13 +605,47 @@ export async function avisarChollos(): Promise<{ chollos: number; avisados: numb
       AND chollo_avisado_at IS NULL
   `)
   const nuevosRefs = new Set(pendientes.map((p) => `${p.portal}|${p.ref_anuncio}`))
-  const nuevos = chollos.filter((c) => nuevosRefs.has(`${c.comparable.portal}|${c.comparable.refAnuncio}`))
-  if (!nuevos.length) return { chollos: chollos.length, avisados: 0 }
+  const esNuevo = (c: { comparable: Comparable }) => nuevosRefs.has(`${c.comparable.portal}|${c.comparable.refAnuncio}`)
+  // Los chollos 🌊 de la costa norte van primero: es la preferencia declarada.
+  const nuevos = chollos.filter(esNuevo).sort((a, b) => Number(b.costaNorte) - Number(a.costaNorte))
+  const nuevosNorte = costaNorte.filter(esNuevo)
+  if (!nuevos.length && !nuevosNorte.length) {
+    return { chollos: chollos.length, avisados: 0, preferentesNorte: costaNorte.length, preferentesAvisados: 0 }
+  }
 
-  const lineas: string[] = [`💡 <b>Chollos en tus zonas de Idealista</b> — ${nuevos.length} nuevo${nuevos.length > 1 ? 's' : ''}`, '']
+  const lineas: string[] = []
+  // Sección 🌊: la preferencia de Alberto (09/08/2026) — viviendas de playa del
+  // norte sin señales de obra, AUNQUE no lleguen a chollo. Sin referencia de
+  // zona se dice «sin referencia», nunca «a precio de mercado».
+  if (nuevosNorte.length) {
+    lineas.push(`🌊 <b>Costa norte — casas cerca de playa</b> (tu preferencia) — ${nuevosNorte.length} nueva${nuevosNorte.length > 1 ? 's' : ''}`, '')
+    for (const p of nuevosNorte.slice(0, 5)) {
+      const c = p.comparable
+      lineas.push(`• <b>${escaparHtml(c.titulo)}</b> (${p.costa})`)
+      lineas.push(`  ${eur(c.precio)}${c.superficie ? ` · ${c.superficie} m²` : ''}${c.habitaciones ? ` · ${c.habitaciones} hab.` : ''}`)
+      if (p.referencia) {
+        const pct = Math.round(p.referencia.descuento * 100)
+        lineas.push(
+          `  ${Math.round(c.precioM2 ?? 0)}€/m² frente a ${Math.round(p.referencia.precioM2Zona)}€/m² de ${escaparHtml(p.referencia.zona)} → ` +
+            (pct >= 0 ? `<b>${pct}% por debajo</b>` : `${-pct}% por encima`),
+        )
+      } else {
+        lineas.push('  Sin referencia €/m² de su zona todavía (pocas alertas ahí) — compara tú en el portal')
+      }
+      if ((c.bajadas ?? 0) > 0 && c.precioInicial != null && c.precioInicial > c.precio) {
+        lineas.push(`  ⬇️ Ha bajado ${c.bajadas} ${c.bajadas === 1 ? 'vez' : 'veces'}: de ${eur(c.precioInicial)} a ${eur(c.precio)}`)
+      }
+      if (c.esParticular) lineas.push('  👤 Anuncio de PARTICULAR — negociación directa, sin comisión de agencia')
+      if (c.url) lineas.push(`  ${escaparHtml(c.url)}`)
+    }
+    if (nuevosNorte.length > 5) lineas.push(`…y ${nuevosNorte.length - 5} más en /subastas`)
+    if (nuevos.length) lineas.push('')
+  }
+
+  if (nuevos.length) lineas.push(`💡 <b>Chollos en tus zonas de Idealista</b> — ${nuevos.length} nuevo${nuevos.length > 1 ? 's' : ''}`, '')
   for (const ch of nuevos.slice(0, 6)) {
     const c = ch.comparable
-    lineas.push(`• <b>${escaparHtml(c.titulo)}</b>${ch.sospechoso ? ' ⚠️' : ''}`)
+    lineas.push(`• <b>${escaparHtml(c.titulo)}</b>${ch.costaNorte ? ' 🌊' : ''}${ch.sospechoso ? ' ⚠️' : ''}`)
     lineas.push(
       `  ${eur(c.precio)}${c.superficie ? ` · ${c.superficie} m²` : ''} · ${Math.round(c.precioM2 ?? 0)}€/m² ` +
         `frente a ${Math.round(ch.precioM2Zona)}€/m² de ${escaparHtml(ch.zona)} (${ch.muestra} anuncios) → ` +
@@ -617,15 +676,18 @@ export async function avisarChollos(): Promise<{ chollos: number; avisados: numb
 
   await tgSend(lineas.join('\n'), { html: true }).catch(() => {})
 
+  // Los preferentes 🌊 comparten el marcador `chollo_avisado_at`: es el mismo
+  // «ya te lo enseñé una vez» y evita que el mismo anuncio vuelva por la otra vía.
+  const avisadosTodos = [...nuevos, ...nuevosNorte]
   for (const portal of ['idealista', 'fotocasa'] as const) {
-    const delPortal = nuevos.filter((c) => c.comparable.portal === portal).map((c) => c.comparable.refAnuncio)
+    const delPortal = avisadosTodos.filter((c) => c.comparable.portal === portal).map((c) => c.comparable.refAnuncio)
     if (!delPortal.length) continue
     await prisma.$executeRaw(Prisma.sql`
       UPDATE mercado_comparables SET chollo_avisado_at = now()
       WHERE portal = ${portal} AND ref_anuncio = ANY(${delPortal}::text[])
     `)
   }
-  return { chollos: chollos.length, avisados: nuevos.length }
+  return { chollos: chollos.length, avisados: nuevos.length, preferentesNorte: costaNorte.length, preferentesAvisados: nuevosNorte.length }
 }
 
 function escaparHtml(s: string): string {

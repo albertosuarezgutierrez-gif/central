@@ -32,6 +32,16 @@
 
 ---
 
+### 🌊 (09/08/2026) Lente costa norte en mercado: preferencia por viviendas de playa Asturias/Cantabria
+- **Preferencia de Alberto** (con una casona en Colunga, 235.000€/257 m²/~914€/m²): «da preferencia a
+  casas como estas, cerca de playa en el norte». Nueva lente PURA `costa-norte.ts` en `module-subastas`
+  (litoral asturiano+cántabro, matching por palabra completa — «Isla»/«Salinas» fuera por Isla Cristina)
+  + `lenteCostaNorte`: viviendas sin señales de obra AUNQUE no lleguen a chollo (en el norte casi nunca
+  hay mediana de zona; referencia null SE DICE, no se calla). `lentesMercado()` en plataforma: sección 🌊
+  en el Telegram del cron `subastas-mercado` y en /subastas; chollos de esas zonas etiquetados 🌊 y primero.
+- PR #1346 (draft). Ojo: la lente solo ve las alertas guardadas — para vigilar más norte, crear alertas
+  de Idealista en esas zonas. Galicia/Euskadi pendientes de que Alberto las pida (patrón Cádiz).
+
 ### 🎯 (09/08/2026) Los 4 pisos bajo el motor · PriceLabs de baja · previstos v2 · fix verificado en vivo
 - **Decisión de Alberto:** «el agente coge las riendas de los 4 apartamentos». Los 4 con
   `apply_enabled=true` + `channel_markup=1.0` (SQL aplicado tras deploy del PR #1337, mergeado).
