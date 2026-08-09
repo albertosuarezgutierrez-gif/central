@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-08T19:39:56Z",
+  "generadoEn": "2026-08-09T04:59:17Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3991,6 +3991,10 @@
       "fecha": ""
     },
     {
+      "titulo": "🔭 Retrovisor de 15 años CERRADO y H8/H9 resueltas con el corpus entero (09/08/2026).",
+      "fecha": "09/08/2026"
+    },
+    {
       "titulo": "📏 El umbral de la guardia de suplantación estaba MAL, y se midió (08/08/2026).",
       "fecha": "08/08/2026"
     },
@@ -4032,10 +4036,6 @@
     },
     {
       "titulo": "⚠️ mercado-booking: 2º disparo el mismo día, sin huella del 1º en `market_rates` (08/08/2026).",
-      "fecha": "08/08/2026"
-    },
-    {
-      "titulo": "✅ H8 y H9 RESUELTAS sobre el corpus completo — ninguna se cablea (08/08/2026).",
       "fecha": "08/08/2026"
     }
   ],
