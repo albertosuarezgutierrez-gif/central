@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-09T16:37:46Z",
-  "sha": "138e8ffdd1effd67da545e035152a64f1af71e55",
+  "generadoEn": "2026-08-09T17:41:10Z",
+  "sha": "71cf8afd02fb2b2d5b1b163a8e34d6b6cae52236",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47256,7 +47256,7 @@
           "exportada": false,
           "params": "base64String: string",
           "retorno": null,
-          "linea": 63
+          "linea": 64
         },
         {
           "nombre": "PricingAutoPage",
@@ -47264,7 +47264,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 72
+          "linea": 73
         },
         {
           "nombre": "Stat",
@@ -47272,7 +47272,7 @@
           "exportada": false,
           "params": "{ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: boolean }",
           "retorno": null,
-          "linea": 413
+          "linea": 414
         },
         {
           "nombre": "Toggle",
@@ -47280,7 +47280,7 @@
           "exportada": false,
           "params": "{ label, checked, onChange, warn }: { label: string; checked: boolean; onChange: (v: boolean) => void; warn?: boolean }",
           "retorno": null,
-          "linea": 423
+          "linea": 424
         },
         {
           "nombre": "btn",
@@ -47288,12 +47288,12 @@
           "exportada": false,
           "params": "bg: string, disabled: boolean",
           "retorno": "CSSProperties",
-          "linea": 432
+          "linea": 433
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3ee46020562d"
+      "hash": "27b6db204387"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/pricing/page.tsx",
@@ -65342,7 +65342,7 @@
           "exportada": true,
           "params": "p: ProveedorRecurrente, _año: number, mes: number",
           "retorno": "boolean",
-          "linea": 35
+          "linea": 36
         },
         {
           "nombre": "calcularEstado",
@@ -65350,12 +65350,12 @@
           "exportada": true,
           "params": "driveUrl: string | null, año: number, mes: number",
           "retorno": "EstadoFactura",
-          "linea": 44
+          "linea": 45
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4a7f60857ae6"
+      "hash": "af30c49a17f5"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/facturas-mensuales.ts",

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-09T16:38:28Z",
+  "generadoEn": "2026-08-09T17:41:10Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3979,6 +3979,14 @@
   ],
   "novedades": [
     {
+      "titulo": "Decisión de Alberto (2 palancas):",
+      "fecha": ""
+    },
+    {
+      "titulo": "Barrido «PriceLabs de baja»",
+      "fecha": ""
+    },
+    {
       "titulo": "Preferencia de Alberto",
       "fecha": ""
     },
@@ -4029,14 +4037,6 @@
     {
       "titulo": "Vigía de pujas en vivo",
       "fecha": ""
-    },
-    {
-      "titulo": "Vivienda habitual",
-      "fecha": ""
-    },
-    {
-      "titulo": "📌 Estado vivo — pendientes y decisiones abiertas (actualizado 09/08/2026).",
-      "fecha": "09/08/2026"
     }
   ],
   "saludRepo": {
