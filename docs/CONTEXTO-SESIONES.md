@@ -29,8 +29,11 @@
   `fecha_operacion`, confirmado contra Supabase) — señalado el 05/08, corregido ahora.
 - Resto de fallos del rango (tope real de mercado-booking, sonda pricing en verde falso) ya
   resueltos por PRs de sus propias sesiones (#1314, #1318) antes de esta pasada.
-- 🔇 Canal Telegram mudo (401, `ALERTA_TOKEN` desincronizado) — mismo síntoma recurrente desde 26/07,
-  avisado por push. Detalle completo en `docs/AGENTES-BITACORA.md`.
+- 🔇→✅ Canal Telegram mudo (401, `ALERTA_TOKEN` desincronizado) — a petición de Alberto, resuelto en la
+  misma sesión SIN tocar Vercel: registrado el token que ya lleva esta rutina en `rutina_tokens`
+  (3ª vía de `docs/AVISOS-AGENTES.md`). Verificado end-to-end (200 + Telegram real recibido). Ningún
+  tool de Vercel MCP expone env vars — la sincronización byte-a-byte en Vercel sigue sin ser algo que
+  una sesión pueda ejecutar.
 
 ---
 

@@ -33,13 +33,20 @@
   (#1254/#1279/#1286) comparten la misma causa raíz ya diagnosticada (harness sin push a `main`) y ya
   tiene solución estructural (`rutinas-automerge.yml`, desde 08/08) — sin acción nueva. dudas: 2 PR NO
   de agentes llevan >2 semanas abiertos (#755 CSV import 05/07, #1055 mariscos 21/07) — fuera del
-  alcance de este agente, solo lo anoto. fallos: 🔇 SIN TELEGRAM (401) — preflight `GET
+  alcance de este agente, solo lo anoto. fallos: 🔇 SIN TELEGRAM (401) al arrancar — preflight `GET
   /api/internal/alerta` de esta sesión dio 401 (causa: "el token no coincide con el de Vercel ni con
-  ningún token de rutina activo en BD", remedio: sincronizar `ALERTA_TOKEN` byte a byte o registrar
-  token propio en `rutina_tokens`) — mismo síntoma recurrente ya reportado desde el 26/07, sigue sin
-  resolverse; avisado por push nativo en su lugar. PRs/commits: rama
-  `claude/upbeat-shannon-0mb3yk` (fix `.claude/skills/psd2-health-check/SKILL.md` + mantenimiento de
-  esta bitácora/feedback/memoria).
+  ningún token de rutina activo en BD") — mismo síntoma recurrente ya reportado desde el 26/07;
+  avisado por push nativo en su momento. **Resuelto en la misma pasada, a petición de Alberto**: no
+  hay tool que escriba envs de Vercel (confirmado — ningún tool de Vercel MCP expone variables de
+  entorno), así que la sincronización byte-a-byte NO es ejecutable desde una sesión; en su lugar se
+  usó la 3ª vía ya documentada en `docs/AVISOS-AGENTES.md` — el hash SHA-256 del `ALERTA_TOKEN` que
+  YA lleva el entorno de esta rutina (`ee100c6d…`, coincide con el valor stale descrito en el audit
+  del 27/07 de `buscador-ia`, mismo template heredado) registrado en `rutina_tokens` como
+  `'agentes-entrenador'` — sin tocar Vercel ni redeploy. Verificado end-to-end: preflight → 200
+  `{ok:true,rutina:'agentes-entrenador'}`, POST de prueba → Telegram real recibido (`messageId
+  2948`). PRs/commits: rama `claude/upbeat-shannon-0mb3yk` (fix `.claude/skills/psd2-health-check/
+  SKILL.md` + mantenimiento de esta bitácora/feedback/memoria; el alta en `rutina_tokens` es un INSERT
+  en BD, no deja commit).
 
 <!-- Los agentes insertan aquí. Ejemplo:
 - **2026-07-05 · facturas-correo** · hizo: 12 correos revisados, 3 facturas archivadas en
