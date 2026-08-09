@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-09T12:00:11Z",
+  "generadoEn": "2026-08-09T12:50:50Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3978,6 +3978,10 @@
     }
   ],
   "novedades": [
+    {
+      "titulo": "#1323 (demanda por mes) SUPERADO a medias:",
+      "fecha": ""
+    },
     {
       "titulo": "Fase 2 (dinero real):",
       "fecha": ""
