@@ -53,8 +53,16 @@
 - **Watchlist ampliada** (`trading_watchlist`, capa C): +**ORCL** (a petición expresa, con caveat: la
   tesis de rebote en EMA100 mensual que la motivaba ya fue REFUTADA por H8 y tuvo un incidente de datos
   serio el 31/07); +**BKNG**/+**APP** (únicos `guru:true` del top-20 del radar factorial 03/08 no
-  presentes en la watchlist). `trading_cantera` (pipeline de descubrimiento IBKR-temas+FMP) sigue
-  vacía — no se ha ejecutado ese flujo, es un mecanismo distinto del radar factorial usado aquí.
+  presentes en la watchlist); +**SQM**/+**CHT** (mejor calidad restante del top-20, sector diverso —
+  litio/materiales y telecom, sin solapar con lo ya cableado). `trading_cantera` (pipeline de
+  descubrimiento IBKR-temas+FMP) sigue vacía — no se ha ejecutado ese flujo, es un mecanismo distinto
+  del radar factorial usado aquí.
+- **Decisión explícita: NO maximizar la watchlist.** Alberto preguntó por meter "el máximo posible" de
+  símbolos; se explicó y se decidió NO hacerlo — más símbolos no acelera Fase 2 (gate por antigüedad de
+  cohorte, tabla `trading_paper_track`, no por nº de tickers de la watchlist diaria), y sí infla el
+  fetch secuencial de IBKR (techo 300s en `/analizar`) y arriesga meter ruido/correlación en las
+  estadísticas de `trading_estrategia_stats`. Watchlist final: **21 símbolos** (3 índices, 10 capa B,
+  8 capa C). Alberto delegó la decisión final ("lo dejo en tu decisión").
 
 ### 🧹 (09/08/2026) «Estado actual» podado: el vivo baja de 121 KB a ~15 KB por sesión
 - La sección acumulaba 42 bloques (1.212 de 1.329 líneas, ~30k tokens de peaje en CADA
