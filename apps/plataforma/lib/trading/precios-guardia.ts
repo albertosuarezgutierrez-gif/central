@@ -162,6 +162,57 @@ export function resumenDivergencias(divergentes: Divergencia[]): string {
   return `${divergentes.length} precio(s) en desacuerdo con la 2ª fuente: ${lista}`
 }
 
+// ¿Sirve lo que ha traído la 2ª fuente para contrastar el precio de `hoy`? SOLO si su cierre más
+// reciente es de la MISMA sesión. El acarreo de red vive en `precios-contraste.ts`; la decisión está
+// aquí porque es lo que hay que poder testear.
+//
+// Hasta el 10/08/2026 se aceptaba cualquier cierre de los últimos 5 días naturales: se cogía el último
+// con fecha <= hoy y se usaba COMO SI fuera el de hoy. El lunes 10/08 la pasada corrió a las 20:33
+// UTC, media hora después del cierre de Wall Street; Stooq/Yahoo todavía publicaban el cierre del
+// VIERNES 07/08, y la guardia leyó el hueco del fin de semana de cada valor como «desacuerdo con la 2ª
+// fuente»: 8 de 21 símbolos vetados en `/analizar` (CVX +4,5%, SPOT +4,9%, LLY +3,9%…) y 5 precios
+// descartados en `/puntuar`. Ninguno estaba mal. El signo de cada «divergencia» era, uno a uno, el
+// movimiento viernes→lunes de esa acción.
+//
+// Es el mismo error que persigue todo este módulo, cometido por la propia guardia: un dato REAL leído
+// con el periodo equivocado. Que la fecha no cuadre con la sesión no vuelve el contraste más flojo —
+// lo vuelve un contraste de OTRA cosa, y por eso `desfasado` no veta: es un «no lo sé».
+//
+// Consecuencia asumida: a la hora a la que corre la pasada la fuente casi nunca tendrá el cierre del
+// día, así que el contraste queda inerte la mayoría de las noches. Eso hay que CANTARLO
+// (`resumenDesfase`), no esconderlo: una guardia inerte y callada se confunde con una que aprueba. La
+// regla es correcta por construcción y se enciende sola en cuanto la fuente publique a tiempo o la
+// pasada se mueva de hora.
+
+export type PuntoContraste = { fecha: string; cierre: number }
+
+export type Veredicto =
+  | { estado: 'vale'; fecha: string; cierre: number }
+  | { estado: 'desfasado'; fecha: string; cierre: number }
+  | { estado: 'sin-dato' }
+
+export type Desfasado = { simbolo: string; fecha: string; cierre: number }
+
+export function juzgarPuntos(puntos: PuntoContraste[], hoy: string): Veredicto {
+  let ultimo: PuntoContraste | null = null
+  for (const p of puntos) {
+    if (p.fecha > hoy) break     // nunca se contrasta contra el futuro
+    ultimo = p
+  }
+  if (!ultimo) return { estado: 'sin-dato' }
+  if (ultimo.fecha !== hoy) return { estado: 'desfasado', fecha: ultimo.fecha, cierre: ultimo.cierre }
+  return { estado: 'vale', fecha: ultimo.fecha, cierre: ultimo.cierre }
+}
+
+// Una línea para el latido/Telegram cuando la 2ª fuente va por detrás. Vacía si no hay desfase: el
+// parte solo debe hablar de lo que ha pasado.
+export function resumenDesfase(desfasados: Desfasado[]): string {
+  if (desfasados.length === 0) return ''
+  const fechas = [...new Set(desfasados.map(d => d.fecha))].sort()
+  const cual = fechas.length === 1 ? fechas[0] : `${fechas[0]}…${fechas[fechas.length - 1]}`
+  return `2ª fuente aún sin el cierre de hoy (${desfasados.length} símbolo(s) con dato de ${cual}): sin contrastar, no vetado`
+}
+
 // ---------------------------------------------------------------------------
 // SUPLANTACIÓN: el precio es real, pero es de OTRA empresa
 // ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { filtrarPreciosAnomalos, resumenDescartes, contrastarFuentes, resumenDivergencias, saltoDeSaldo, detectarSuplantaciones, resumenSuplantaciones, SALTO_PRECIO_DIA_MAX } from './precios-guardia.ts'
+import { filtrarPreciosAnomalos, resumenDescartes, contrastarFuentes, resumenDivergencias, saltoDeSaldo, detectarSuplantaciones, resumenSuplantaciones, juzgarPuntos, resumenDesfase, SALTO_PRECIO_DIA_MAX } from './precios-guardia.ts'
 
 test('el caso real del 03/08/2026: CVX a 590,17 con referencia 192,31 se descarta', () => {
   const { limpios, descartados } = filtrarPreciosAnomalos({ CVX: 590.17 }, { CVX: 192.31 })
@@ -244,4 +244,79 @@ test('NAV: también avisa a la baja (retirada real o lectura rota — Alberto de
   const r = saltoDeSaldo(5_000, 10_000)
   assert.equal(r.avisa, true)
   assert.equal(r.variacion, -0.5)
+})
+
+// ---------------------------------------------------------------------------
+// ¿Es de HOY el cierre de la 2ª fuente? (el fallo del 10/08/2026)
+// ---------------------------------------------------------------------------
+
+// Cierres REALES del viernes 07/08/2026, verificados uno a uno contra IBKR el sábado 08/08. Son
+// exactamente los que Stooq/Yahoo devolvieron el lunes 10/08 a las 20:33 UTC, media hora después del
+// cierre de Wall Street, cuando aún no habían publicado la sesión del lunes.
+const CIERRES_VIERNES_07_08 = {
+  CVX: 186.55999755859375, LLY: 1185.7099609375, NFLX: 74.13999938964844, NVDA: 223.9600067138672,
+  SPOT: 488.1400146484375, APP: 346.79998779296875, ORCL: 147.02000427246094, SNDK: 1212.2099609375,
+}
+
+// Precios REALES de la sesión del lunes 10/08/2026, los que la pasada mandó a `/analizar`.
+const SESION_LUNES_10_08 = {
+  CVX: 194.97, LLY: 1231.52, NFLX: 76.31, NVDA: 217.59,
+  SPOT: 511.9, APP: 338.86, ORCL: 151.03, SNDK: 1237.19,
+}
+
+test('el cierre de HOY vale como contraste', () => {
+  const v = juzgarPuntos([{ fecha: '2026-08-07', cierre: 186.56 }, { fecha: '2026-08-10', cierre: 194.97 }], '2026-08-10')
+  assert.deepEqual(v, { estado: 'vale', fecha: '2026-08-10', cierre: 194.97 })
+})
+
+test('el cierre de la sesión ANTERIOR no vale: es un contraste de otra cosa, no uno más flojo', () => {
+  const v = juzgarPuntos([{ fecha: '2026-08-06', cierre: 185.1 }, { fecha: '2026-08-07', cierre: 186.56 }], '2026-08-10')
+  assert.deepEqual(v, { estado: 'desfasado', fecha: '2026-08-07', cierre: 186.56 })
+})
+
+test('una fuente muda es «sin dato», no un contraste vacío', () => {
+  assert.deepEqual(juzgarPuntos([], '2026-08-10'), { estado: 'sin-dato' })
+})
+
+test('los cierres POSTERIORES a hoy se ignoran (nunca se contrasta contra el futuro)', () => {
+  const v = juzgarPuntos([{ fecha: '2026-08-10', cierre: 194.97 }, { fecha: '2026-08-11', cierre: 199 }], '2026-08-10')
+  assert.deepEqual(v, { estado: 'vale', fecha: '2026-08-10', cierre: 194.97 })
+})
+
+test('el fallo real del 10/08/2026: con el cierre del viernes, los 8 vetos eran el hueco del fin de semana', () => {
+  // Cómo se comportaba ANTES del arreglo: se le daba el cierre del viernes como si fuera el de hoy y
+  // cantaba divergencia en los 8. Ninguno de esos precios estaba mal.
+  const { divergentes } = contrastarFuentes(SESION_LUNES_10_08, CIERRES_VIERNES_07_08)
+  assert.equal(divergentes.length, 8)
+
+  // Cómo se comporta AHORA: ese cierre nunca llega a `contrastarFuentes`, así que no veta a nadie y
+  // los 8 quedan explícitamente sin juzgar.
+  for (const [simbolo, cierre] of Object.entries(CIERRES_VIERNES_07_08)) {
+    assert.equal(juzgarPuntos([{ fecha: '2026-08-07', cierre }], '2026-08-10').estado, 'desfasado', simbolo)
+  }
+  const { divergentes: ninguno, sinContraste } = contrastarFuentes(SESION_LUNES_10_08, {})
+  assert.equal(ninguno.length, 0)
+  assert.equal(sinContraste.length, 8)
+})
+
+test('el signo de cada «divergencia» del 10/08 era el movimiento viernes→lunes de esa acción', () => {
+  // Es la firma que delata el fallo: no era ruido de fuente, era un dato bueno leído con el periodo
+  // equivocado. NVDA y APP bajaron el lunes y por eso su desvío salía negativo; el resto subió.
+  const { divergentes } = contrastarFuentes(SESION_LUNES_10_08, CIERRES_VIERNES_07_08)
+  for (const d of divergentes) {
+    const viernes = CIERRES_VIERNES_07_08[d.simbolo as keyof typeof CIERRES_VIERNES_07_08]
+    const movimiento = SESION_LUNES_10_08[d.simbolo as keyof typeof SESION_LUNES_10_08] / viernes - 1
+    assert.equal(Math.sign(d.desvio), Math.sign(movimiento), d.simbolo)
+  }
+})
+
+test('el desfase se canta con su fecha; sin desfase no se dice nada', () => {
+  assert.equal(resumenDesfase([]), '')
+  const linea = resumenDesfase([
+    { simbolo: 'CVX', fecha: '2026-08-07', cierre: 186.56 },
+    { simbolo: 'LLY', fecha: '2026-08-07', cierre: 1185.71 },
+  ])
+  assert.match(linea, /2 símbolo\(s\)/)
+  assert.match(linea, /2026-08-07/)
+  assert.match(linea, /no vetado/)
 })
