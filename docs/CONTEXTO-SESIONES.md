@@ -32,6 +32,18 @@
 
 ---
 
+### 💶 (10/08/2026) Pricing sivra — ciclo semanal completo (4 pisos)
+- Ciclo semanal del agente de pricing: los 4 pisos (no solo los ya en vivo). Mercado real Booking
+  (aforo real) para may/jun/jul-27 (estaban con 1 sola fecha, rancios) — 120 comps nuevos, ninguno a 0.
+  Propuestas dry-run aplicadas por los raíles en los 4 pisos; circuit-breaker sano.
+- Hallazgo: el bucket MENSUAL de junio-27 queda inflado por Karol G (11-13 jun) — el finde normal
+  (25-27 jun) vale 126€ real, no los 339€ del mes. Usar siempre fecha exacta, no el mes, en junio.
+- Pendiente: confirmar con Alberto si la venta de Busto-Feria (17-abr-27) a 103€ es real (sin fila en
+  `incomes`) o un bloqueo/desfase; revisar 3 fechas de Luxury marcadas "no_disponible" pese a libres.
+- Detalle en `pricing_aprendizaje` y `pricing_decisiones` (fuente=`agente_ciclo_10_08_2026`).
+
+---
+
 ### ⏳ (09/08/2026) Last-minute encendido · sin techo de precio (decisión) · barrido PL de baja
 - **Decisión de Alberto (2 palancas):** (1) **SIN techo** — `max_price` queda NULL a propósito
   («no tope! final copa rey hay q aprovechar»; el raíl permite bajar a tiempo). NO re-proponer.
