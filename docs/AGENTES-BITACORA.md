@@ -15,6 +15,15 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-10 · buscador-ia** · hizo: watch de deprecación de los 5 eslabones cableados (NIM, Groq,
+  Cerebras, Gemini, Kimi) — todos VIVOS; descubrimiento (Paso 2): Kimi K3 lanzado pero 3-4× más caro
+  que `kimi-k2.6` (sin mejora calidad/precio, no se propone); una primera búsqueda sobre Kimi sugería
+  que K2.6 se retiraba el 25/05 y una segunda pasada dirigida lo desmintió (confusión con las
+  `k2-*-preview` antiguas) — sin tocar `client.ts`. dudas: `CONTABLE_MODEL` (`deepseek-ai/deepseek-v3`
+  en NIM) sigue sin confirmar por WebSearch, como el 27/07 — necesita alguien con `NVIDIA_API_KEY`;
+  fallos: WebFetch a los 5 catálogos bloqueado por el proxy de egress de la sesión, se resolvió por
+  WebSearch; PRs/commits: solo doc (`docs/BUSCADOR-IA.md`), sin PR de código.
+
 - **2026-08-10 · mercado-booking (pasada diaria, plan sin filtro)** · hizo: pedido el plan
   (`plan_total` 120, `candidatas` 120, `pedidas` 12, `sin_medir_nunca` 12) y medidas las 12 ventanas
   devueltas — todas ronda-2, 3 fechas de profundidad (09-ene/13-feb/13-mar 2027) x 4 aforos

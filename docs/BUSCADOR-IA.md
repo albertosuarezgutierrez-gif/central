@@ -62,6 +62,35 @@
 
 ## Bitácora de hallazgos (lo más reciente arriba)
 
+- **2026-08-10 · pasada semanal — los 5 eslabones cableados siguen VIVOS, sin candidatos nuevos.**
+  Watch de deprecación (Paso 1, por WebSearch — `build.nvidia.com`/`console.groq.com`/`ai.google.dev`/
+  `platform.moonshot.ai`/`inference-docs.cerebras.ai` siguen bloqueados por el proxy de egress de esta
+  sesión, igual que el 27/07): NIM `meta/llama-3.3-70b-instruct` vivo (sigue en el catálogo, sin aviso
+  de retirada); Groq `openai/gpt-oss-120b` vivo (de hecho sigue siendo el destino de migración
+  recomendado de OTROS modelos que Groq deprecia — 3 rondas más el 20/02, 23/03 y 17/06/2026, todas
+  apuntando aquí o a `qwen/qwen3.6-27b`); Cerebras `gpt-oss-120b` vivo (free tier 1M tok/día
+  confirmado, aunque las fuentes discrepan entre 5 y 30 req/min — cablear con margen, no con el
+  límite alto); Gemini `gemini-flash-latest` vivo (Flash/Flash-Lite siguen en free tier tras el
+  recorte de abril/2026 que sacó a Pro; sigue APAGADO por defecto por la falta de cuota real,
+  sin cambios ahí). **Kimi — ojo con la lectura rápida:** una búsqueda inicial sugería que TODA la
+  serie K2 (incluido `k2.6`) se retiraba el 25/05/2026 en favor de K3; una segunda pasada más
+  dirigida lo desmiente — esa fecha retiró los `k2-0711-preview`/`k2-0905-preview` (previos a K2.6,
+  que se lanzó el 20/04/2026) y el catálogo oficial (`platform.kimi.ai/docs/models`) sigue listando
+  `kimi-k2.6` como modelo general vigente; el único sunset con fecha real es `kimi-k2.5` +
+  `moonshot-v1` el 31/08/2026, que no nos afecta. **No cambiar nada en `client.ts`** — quede como
+  nota de que las búsquedas sobre nombres de versión similares (K2 vs K2.6 vs K2.7 vs K3) se
+  contradicen entre sí y conviene una segunda pasada dirigida antes de dar un id por muerto.
+  Descubrimiento (Paso 2): **Kimi K3** (2.8T, lanzado 16-27/07/2026, pesos abiertos en HF) es ahora
+  el flagship de Moonshot, pero **NO desplaza a `kimi-k2.6`** como último fallback de pago — K3 cuesta
+  $3,00/$15,00 por M tokens frente a los $0,95/$4,00 de K2.6 (~3-4× más caro) para un eslabón que en
+  esta cadena solo hace redacción corta a huésped y clasificación de una palabra; sin mejora de
+  calidad/precio, no hay caso. Sin más candidatos nuevos con mejor calidad/precio que lo cableado.
+  `CONTABLE_MODEL` (`deepseek-ai/deepseek-v3`, NIM) sigue **sin confirmar por WebSearch directo**
+  (el catálogo de NIM que aparece en los resultados solo lista `deepseek-v3.1`/`v3.1-terminus`/`v3.2`,
+  igual que el 27/07) — sin evidencia de rotura, solo falta de confirmación; pendiente de alguien con
+  `NVIDIA_API_KEY` a mano. Sin hallazgos críticos → sin Telegram (preflight `200 OK`, canal vivo, pero
+  nada que avisar), solo doc.
+
 - **2026-07-27 · pasada limpia — los 4 eslabones de la cadena directa VIVOS.** Primera vez desde que
   existe el agente que no hay ningún id roto: NIM `meta/llama-3.3-70b-instruct`, Groq
   `openai/gpt-oss-120b`, Kimi `kimi-k2.6` confirmados en catálogo; Gemini `gemini-flash-latest` es
