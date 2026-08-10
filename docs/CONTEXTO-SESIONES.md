@@ -32,6 +32,17 @@
 
 ---
 
+### 💸 (10/08/2026) Decisión: Alberto deja de operar en real hasta aviso del agente
+- Dos operaciones manuales reales en IBKR hoy con stops demasiado pegados: SPCX (270 acc.
+  a 134,25 $, stop −2,35% saltó en 1 h, −855,10 $; luego recuperó POR ENCIMA de la entrada)
+  y PLTR (200 acc. a 178,04 $, stop −0,72% saltó en 46 min, −258,77 $). Total −1.113,87 $.
+  Confirmación en vivo de H9: el stop convierte el bache temporal en pérdida cerrada.
+- **Decisión (sesión de solo charla, anotada a mano):** no operar más en real por impulso;
+  esperar los avisos del agente `trading-analista`. OJO: el agente sigue en Fase 1 (paper) —
+  sus ideas por Telegram son simuladas y la puerta a Fase 2 sigue cerrada (decisión de Alberto).
+- Alberto pide **aviso explícito cuando el forward justifique plantear Fase 2** (hoy lejos:
+  hit rate 26-29%, retorno medio ~0 sobre n=103 en `trading_estrategia_stats` al 08/08).
+
 ### ✅ (10/08/2026) Confirmación final: motor 100% operativo y probado tras la baja de PriceLabs
 - **Prueba reina:** snapshot Smoobu 10/08 = últimas escrituras del motor del 09/08 **al euro en
   604/604 fechas** (129/205/103/167 por piso). PL mudo post-pausa (0 divergencias 14:30↔20:30).
