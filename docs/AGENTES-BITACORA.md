@@ -15,6 +15,17 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-10 · pricing-agente (ciclo semanal completo, los 4 pisos)** · hizo: midió el ciclo anterior
+  (03/08 — SS/Feria vendidas a los niveles propuestos, confirma que el ramp anticipado se vende);
+  sembró 120 comps Booking reales (aforo real por piso) para may/jun/jul 2027, que estaban con solo
+  1 fecha rancia — verificación obligatoria: house=98, busto=89, luxury=105, duplex=92 en BD hoy,
+  ninguno a 0; aplicó 4 propuestas dry-run vía `aplicar-propuesta` (duplex necesitó 2 reintentos por
+  "Smoobu GET 503" transitorio, resuelto solo) — circuit-breaker sano en las 4 (avg 27-55%); escribió
+  5 entradas en `pricing_aprendizaje` (mes de junio contaminado por Karol G, House rozando el suelo en
+  agosto, posible reserva Feria sin income asociado); avisó por Telegram con línea de comps y alertas.
+  dudas: si la venta Busto-Feria a 103€ (available=0, sin fila en incomes) es un bloqueo manual o un
+  desfase de sync — pendiente de que Alberto lo confirme en Smoobu; también 3 fechas de Luxury que el
+  endpoint marcó "no_disponible" pese a estar libres en `rate_snapshots`. fallos: —; PRs/commits: —
 - **2026-08-10 · mercado-booking (pasada diaria, plan sin filtro)** · hizo: pedido el plan
   (`plan_total` 120, `candidatas` 120, `pedidas` 12, `sin_medir_nunca` 12) y medidas las 12 ventanas
   devueltas — todas ronda-2, 3 fechas de profundidad (09-ene/13-feb/13-mar 2027) x 4 aforos
