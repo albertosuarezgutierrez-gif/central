@@ -250,6 +250,109 @@ const boton = (activo = false): React.CSSProperties => ({
   color: activo ? '#fff' : 'var(--text)',
 })
 
+/** Chip homogéneo de la tarjeta de oportunidad: fuente, señales y descuento. */
+type TonoChip = 'ok' | 'warn' | 'neg' | 'info' | 'neutro'
+interface Chip { tono: TonoChip; texto: string }
+const CHIP_TONOS: Record<TonoChip, { bg: string; fg: string }> = {
+  ok:     { bg: 'var(--positive-bg)', fg: 'var(--positive)' },
+  warn:   { bg: 'var(--warning-bg)',  fg: 'var(--warning)' },
+  neg:    { bg: 'var(--negative-bg)', fg: 'var(--negative)' },
+  info:   { bg: 'var(--info-bg)',     fg: 'var(--info)' },
+  neutro: { bg: 'var(--bg)',          fg: 'var(--muted)' },
+}
+function ChipUI({ tono = 'neutro', children }: { tono?: TonoChip; children: React.ReactNode }) {
+  const t = CHIP_TONOS[tono]
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px',
+                   borderRadius: 999, fontSize: 12, fontWeight: 600, lineHeight: '16px',
+                   background: t.bg, color: t.fg, whiteSpace: 'nowrap' }}>
+      {children}
+    </span>
+  )
+}
+const precioGrande: React.CSSProperties = { fontSize: 20, fontWeight: 800, color: 'var(--text)', lineHeight: 1.1 }
+const tituloCard: React.CSSProperties = { fontSize: 14, fontWeight: 600, color: 'var(--text)', lineHeight: 1.35, margin: '4px 0 0' }
+const lineaZona: React.CSSProperties = { fontSize: 13, color: 'var(--muted)', margin: '2px 0 0' }
+const resumenTapa: React.CSSProperties = { cursor: 'pointer', fontSize: 13, color: 'var(--muted)', minHeight: 44, display: 'flex', alignItems: 'center' }
+
+/**
+ * UNA sola anatomía para chollos de portal, preferentes 🌊 y subastas — antes
+ * había tres tarjetas distintas y la pestaña se veía destartalada (queja de
+ * Alberto, 09/08/2026). Orden de lectura móvil: precio grande + descuento →
+ * título → zona/m² → chips → evidencia €/m² (SIEMPRE visible, honestidad) →
+ * «Más datos» plegado → acciones. La honestidad no se borra: se pliega.
+ */
+function TarjetaOportunidad(p: {
+  precio: number | null
+  precioNota?: string
+  descuento?: { etiqueta: string; tono: TonoChip } | null
+  titulo: string
+  zona?: string | null
+  metros?: string | null
+  chips: Chip[]
+  evidencia?: string | null
+  detalles?: React.ReactNode
+  acento?: boolean
+  acciones?: React.ReactNode
+  extra?: React.ReactNode
+}) {
+  return (
+    <div style={{ ...card, ...(p.acento ? { borderLeft: '4px solid var(--info)' } : {}) }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+        <span style={precioGrande}>
+          {p.precio != null ? eur(p.precio) : 'Sin precio publicado'}
+          {p.precioNota && <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--muted)' }}> {p.precioNota}</span>}
+        </span>
+        {p.descuento && <ChipUI tono={p.descuento.tono}>{p.descuento.etiqueta}</ChipUI>}
+      </div>
+      <p style={tituloCard}>{p.titulo}</p>
+      {(p.zona || p.metros) && (
+        <p style={lineaZona}>{[p.zona && `📍 ${p.zona}`, p.metros].filter(Boolean).join(' · ')}</p>
+      )}
+      {p.chips.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+          {p.chips.map((c, i) => <ChipUI key={i} tono={c.tono}>{c.texto}</ChipUI>)}
+        </div>
+      )}
+      {p.evidencia && <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--muted)' }}>{p.evidencia}</p>}
+      {p.detalles && (
+        <details style={{ marginTop: 4 }}>
+          <summary style={resumenTapa}>Más datos</summary>
+          {p.detalles}
+        </details>
+      )}
+      {p.acciones && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>{p.acciones}</div>}
+      {p.extra}
+    </div>
+  )
+}
+
+/** Chips por origen: la FUENTE siempre es el primero (deja de ser texto suelto). */
+function chipsDeChollo(ch: Chollo): Chip[] {
+  const out: Chip[] = [{ tono: 'neutro', texto: (ch.comparable.portal ?? 'idealista') === 'fotocasa' ? 'Fotocasa' : 'Idealista' }]
+  if (ch.preferente) out.push({ tono: 'info', texto: '🌊 Playa' })
+  if (ch.comparable.esParticular) out.push({ tono: 'ok', texto: '👤 Particular' })
+  const b = ch.comparable.bajadas ?? 0
+  if (b > 0) out.push({ tono: 'ok', texto: `⬇️ ${b} bajada${b === 1 ? '' : 's'}` })
+  if (ch.comparable.aReformar || ch.descuentoNeto != null) out.push({ tono: 'warn', texto: '🔨 Obra' })
+  return out
+}
+function chipsDePreferente(p: Preferente): Chip[] {
+  const out: Chip[] = [{ tono: 'neutro', texto: (p.comparable.portal ?? 'idealista') === 'fotocasa' ? 'Fotocasa' : 'Idealista' }]
+  if (p.comparable.esParticular) out.push({ tono: 'ok', texto: '👤 Particular' })
+  const b = p.comparable.bajadas ?? 0
+  if (b > 0) out.push({ tono: 'ok', texto: `⬇️ ${b} bajada${b === 1 ? '' : 's'}` })
+  return out
+}
+function chipsDeSubasta(s: SubastaChollo): Chip[] {
+  const out: Chip[] = [{ tono: 'neutro', texto: '⚖️ Subasta' }]
+  if (s.preferente) out.push({ tono: 'info', texto: '🌊 Playa' })
+  if (s.ocupada) out.push({ tono: 'neg', texto: '⚠️ Ocupada' })
+  const cierre = s.fechaFin ? new Date(s.fechaFin).toLocaleDateString('es-ES') : null
+  if (cierre) out.push({ tono: 'warn', texto: `⏰ Cierra ${cierre}` })
+  return out
+}
+
 function fecha(iso: string | null | undefined): string | null {
   if (!iso) return null
   const d = new Date(iso)
@@ -375,43 +478,39 @@ function LineaRendimiento({ r, dormitorios }: { r: Rendimiento | null | undefine
 }
 
 /**
- * Tarjeta COMPACTA de una subasta para la vista unificada de Oportunidades:
- * la señal (descuento/flip), las pegas rápidas y un enlace a su ficha completa
- * en la pestaña «Todas» — FichaSubasta es demasiado pesada para montarla en
- * una lista (regla de rendimiento).
+ * Subasta en la vista unificada de Oportunidades, con la anatomía común de
+ * `TarjetaOportunidad`. El enlace va a su ficha completa en la pestaña
+ * «Todas» — FichaSubasta es demasiado pesada para montarla en una lista
+ * (regla de rendimiento).
  */
-function TarjetaSubastaCompacta({ s, onVerFicha }: { s: SubastaChollo; onVerFicha: () => void }) {
-  const senal = s.descuento != null && s.descuento > 0
-    ? `−${Math.round(s.descuento * 100)}% vs mercado`
-    : s.margenFlipPct != null ? `🔨 flip ~${Math.round(s.margenFlipPct)}%` : null
-  const cierre = s.fechaFin ? new Date(s.fechaFin).toLocaleDateString('es-ES') : null
+function TarjetaSubasta({ s, onVerFicha }: { s: SubastaChollo; onVerFicha: () => void }) {
+  const descuento = s.descuento != null && s.descuento > 0
+    ? { etiqueta: `−${Math.round(s.descuento * 100)}% vs mercado`, tono: 'ok' as TonoChip }
+    : s.margenFlipPct != null
+      ? { etiqueta: `🔨 flip ~${Math.round(s.margenFlipPct)}%`, tono: 'ok' as TonoChip }
+      : null
   return (
-    <div style={{ ...card, borderLeft: '4px solid var(--primary, #4f46e5)' }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'baseline', justifyContent: 'space-between' }}>
-        <strong style={{ color: 'var(--text)', fontSize: 15 }}>
-          {s.preferente && '🌊 '}⚖️ {s.identificador}{s.municipio ? ` — ${s.municipio}` : ''}
-        </strong>
-        {senal && <span style={{ fontWeight: 700, color: 'var(--positive, #15803d)' }}>{senal}</span>}
-      </div>
-      <p style={{ margin: '6px 0 0', color: 'var(--text)', fontSize: 14 }}>
-        {s.valorSubasta != null ? `Salida ${eur(s.valorSubasta)}` : 'Salida sin publicar'}
-        {s.superficie != null && ` · ${s.superficie} m²`}
-        {s.tipoBien && ` · ${s.tipoBien}`}
-      </p>
-      <p style={{ margin: '4px 0 0', color: 'var(--muted)', fontSize: 13 }}>
-        ⚖️ Subasta{s.provincia ? ` · ${s.provincia}` : ''}{cierre ? ` · cierra ${cierre}` : ''}
-        {s.ocupada && ' · ⚠️ ocupada'}
-      </p>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
-        <button onClick={onVerFicha} style={boton()}>Ver ficha completa →</button>
-        {s.url && (
-          <a href={s.url} target="_blank" rel="noreferrer"
-             style={{ ...boton(), display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
-            Portal oficial
-          </a>
-        )}
-      </div>
-    </div>
+    <TarjetaOportunidad
+      precio={s.valorSubasta}
+      precioNota="salida"
+      descuento={descuento}
+      titulo={s.identificador}
+      zona={[s.municipio, s.provincia].filter(Boolean).join(' · ') || null}
+      metros={[s.superficie != null ? `${s.superficie} m²` : null, s.tipoBien].filter(Boolean).join(' · ') || null}
+      chips={chipsDeSubasta(s)}
+      acento={s.preferente}
+      acciones={
+        <>
+          <button onClick={onVerFicha} style={boton()}>Ver ficha completa →</button>
+          {s.url && (
+            <a href={s.url} target="_blank" rel="noreferrer"
+               style={{ ...boton(), display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
+              Portal oficial
+            </a>
+          )}
+        </>
+      }
+    />
   )
 }
 
@@ -1151,6 +1250,8 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
   // «Por si alguien me pregunta»: la lente 🌊 es fija, pero aquí se puede
   // explorar TODO el corpus con filtros (casas, rebajados, particular, fuente).
   const [fch, setFch] = useState({ soloParticulares: false, soloCasas: false, soloRebajados: false, portal: 'all', zona: '', precioMax: '' })
+  // La sección 🌊 arranca colapsada a 5 tarjetas; «Ver todas» la despliega.
+  const [prefTodas, setPrefTodas] = useState(false)
   const chollosFiltrados = useMemo(() => {
     const zona = fch.zona.trim().toLowerCase()
     const precioMax = parseInt(fch.precioMax, 10)
@@ -1426,104 +1527,137 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
 
       {tab === 'oportunidades' && (
         <section>
-          <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 0 }}>
-            TODO lo que huele a chollo, venga de donde venga: anuncios de tus alertas de Idealista y
-            Fotocasa muy por debajo de la mediana €/m² de su zona y subastas con descuento o margen de
-            flip. La fuente es un detalle (⚖️/portal); el orden lo pone el atractivo. Los de particular
-            se marcan 👤 — negociación directa.
-          </p>
-          {(datos.preferentes?.length ?? 0) > 0 && (
-            <div style={{ marginBottom: 16 }}>
-              <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>🌊 Casas de playa hasta 230.000€ (Matalascañas sin tope) — tu preferencia</h3>
-              <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 0 }}>
-                Casas y adosados (pisos no) sin señales de obra en playa de Asturias, Cantabria,
-                Islantilla y Matalascañas (allí sin tope de precio), aunque no lleguen a chollo. Primero las que <strong>ya han bajado de
-                precio</strong> (vendedor que no vende — margen para negociar) y las de{' '}
-                <strong>👤 particular</strong>. «Sin señales de obra» dice solo que el anuncio no
-                confiesa reforma — el estado real se comprueba en las fotos y en la visita. Los
-                chollos de estas zonas salen abajo con la marca 🌊.
+          {/* Cabecera compacta: contador REAL (reacciona a los filtros) + explicación plegada. */}
+          <div style={{ marginBottom: 12 }}>
+            <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>
+              {oportunidades.length} oportunidad{oportunidades.length === 1 ? '' : 'es'} ahora mismo
+            </p>
+            <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--muted)' }}>
+              Chollos de tus alertas y subastas con descuento — lo más atractivo primero.
+            </p>
+            <details>
+              <summary style={resumenTapa}>¿Cómo funciona esta lista?</summary>
+              <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--muted)' }}>
+                Junta anuncios de tus alertas de Idealista y Fotocasa muy por debajo de la mediana
+                €/m² de su zona, y subastas con descuento o margen de flip. La fuente es un chip; el
+                orden lo pone el atractivo. 👤 = particular (negociación directa, sin comisión de
+                agencia). Ojo: los filtros ⬇️ Rebajados y 👤 Particulares no aplican a subastas (una
+                subasta no tiene rebaja ni particular) — con ellos activos las subastas quedan fuera.
+                Todo son estimaciones: no sustituyen a un análisis jurídico ni fiscal.
               </p>
-              {datos.preferentes!.slice(0, 20).map((p) => (
-                <div key={`${p.comparable.portal}|${p.comparable.refAnuncio}`}
-                     style={{ ...card, borderLeft: '4px solid var(--primary, #4f46e5)' }}>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'baseline', justifyContent: 'space-between' }}>
-                    <strong style={{ color: 'var(--text)', fontSize: 15 }}>🌊 {p.comparable.titulo}</strong>
-                    <span style={{ color: 'var(--muted)', fontSize: 13 }}>{p.costa}</span>
-                  </div>
-                  <p style={{ margin: '6px 0 0', color: 'var(--text)', fontSize: 14 }}>
-                    {eur(p.comparable.precio)}
-                    {p.comparable.superficie != null && ` · ${p.comparable.superficie} m²`}
-                    {p.comparable.habitaciones != null && ` · ${p.comparable.habitaciones} hab.`}
-                  </p>
-                  <p style={{ margin: '4px 0 0', color: 'var(--muted)', fontSize: 13 }}>
-                    {p.referencia
-                      ? `${Math.round(p.comparable.precioM2 ?? 0)}€/m² frente a ${Math.round(p.referencia.precioM2Zona)}€/m² de ${p.referencia.zona} (${p.referencia.muestra} anuncios) → ${p.referencia.descuento >= 0 ? `${Math.round(p.referencia.descuento * 100)}% por debajo` : `${Math.round(-p.referencia.descuento * 100)}% por encima`}`
-                      : 'Sin referencia €/m² de su zona todavía (pocas alertas ahí) — compáralo tú en el portal'}
-                  </p>
-                  {p.comparable.esParticular && (
-                    <p style={{ margin: '4px 0 0', color: 'var(--positive, #15803d)', fontSize: 13, fontWeight: 600 }}>
-                      👤 Anuncio de PARTICULAR — negociación directa, sin comisión de agencia
-                    </p>
-                  )}
-                  {(p.comparable.bajadas ?? 0) > 0 && p.comparable.precioInicial != null &&
-                    p.comparable.precioInicial > p.comparable.precio && (
-                    <p style={{ margin: '4px 0 0', color: 'var(--positive, #15803d)', fontSize: 13 }}>
-                      ⬇️ Ha bajado {p.comparable.bajadas} {p.comparable.bajadas === 1 ? 'vez' : 'veces'}: de{' '}
-                      {eur(p.comparable.precioInicial)} a {eur(p.comparable.precio)} — vendedor negociable
-                    </p>
-                  )}
-                  <LineaRendimiento r={p.rendimiento} dormitorios={p.comparable.habitaciones} />
-                  {p.comparable.url && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+            </details>
+          </div>
+          {(datos.preferentes?.length ?? 0) > 0 && (
+            <div style={{ border: '1px solid var(--info)', borderRadius: 'var(--radius, 10px)',
+                          background: 'var(--info-bg)', padding: 12, marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+                <h3 style={{ margin: 0, fontSize: 15, color: 'var(--text)' }}>🌊 Casas de playa — tu preferencia</h3>
+                <ChipUI tono="info">{datos.preferentes!.length}</ChipUI>
+              </div>
+              <p style={{ margin: '2px 0 8px', fontSize: 13, color: 'var(--muted)' }}>
+                Hasta 230.000€ (Matalascañas sin tope) — primero las rebajadas y las de particular.
+              </p>
+              <details style={{ marginBottom: 8 }}>
+                <summary style={resumenTapa}>¿Qué entra aquí?</summary>
+                <p style={{ margin: '4px 0 8px', fontSize: 13, color: 'var(--muted)' }}>
+                  Casas y adosados (pisos no) sin señales de obra en playa de Asturias, Cantabria,
+                  Islantilla y Matalascañas, aunque no lleguen a chollo. «Sin señales de obra» dice
+                  solo que el anuncio no confiesa reforma — el estado real se comprueba en las fotos
+                  y en la visita. Los chollos de estas zonas salen también en la lista de abajo con
+                  el chip 🌊.
+                </p>
+              </details>
+              {datos.preferentes!.slice(0, prefTodas ? undefined : 5).map((p) => {
+                const pct = p.referencia ? Math.round(p.referencia.descuento * 100) : null
+                const bajo = (p.comparable.bajadas ?? 0) > 0 && p.comparable.precioInicial != null &&
+                  p.comparable.precioInicial > p.comparable.precio
+                return (
+                  <TarjetaOportunidad
+                    key={`${p.comparable.portal}|${p.comparable.refAnuncio}`}
+                    acento
+                    precio={p.comparable.precio}
+                    descuento={pct != null ? (pct >= 0
+                      ? { etiqueta: `−${pct}% vs zona`, tono: 'ok' }
+                      : { etiqueta: `+${-pct}% vs zona`, tono: 'warn' }) : null}
+                    titulo={p.comparable.titulo}
+                    zona={[p.comparable.zona, p.costa].filter(Boolean).join(' · ')}
+                    metros={[
+                      p.comparable.superficie != null ? `${p.comparable.superficie} m²` : null,
+                      p.comparable.habitaciones != null ? `${p.comparable.habitaciones} hab.` : null,
+                    ].filter(Boolean).join(' · ') || null}
+                    chips={chipsDePreferente(p)}
+                    evidencia={p.referencia
+                      ? `${Math.round(p.comparable.precioM2 ?? 0)}€/m² vs ${Math.round(p.referencia.precioM2Zona)}€/m² de ${p.referencia.zona} (${p.referencia.muestra} anuncios)`
+                      : 'Sin referencia €/m² de su zona todavía — compáralo tú en el portal'}
+                    detalles={(bajo || p.rendimiento) ? (
+                      <>
+                        {bajo && (
+                          <p style={{ margin: '4px 0 0', color: 'var(--positive, #15803d)', fontSize: 13 }}>
+                            ⬇️ Ha bajado {p.comparable.bajadas} {p.comparable.bajadas === 1 ? 'vez' : 'veces'}: de{' '}
+                            {eur(p.comparable.precioInicial!)} a {eur(p.comparable.precio)} — no se vende, margen para negociar
+                          </p>
+                        )}
+                        <LineaRendimiento r={p.rendimiento} dormitorios={p.comparable.habitaciones} />
+                      </>
+                    ) : undefined}
+                    acciones={p.comparable.url ? (
                       <a href={p.comparable.url} target="_blank" rel="noreferrer"
                          style={{ ...boton(), display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
                         Ver anuncio
                       </a>
-                    </div>
-                  )}
-                </div>
-              ))}
-              {datos.preferentes!.length > 20 && (
-                <p style={{ color: 'var(--muted)', fontSize: 13 }}>…y {datos.preferentes!.length - 20} más (llegan por el aviso diario)</p>
+                    ) : undefined}
+                  />
+                )
+              })}
+              {datos.preferentes!.length > 5 && !prefTodas && (
+                <button onClick={() => setPrefTodas(true)} style={{ ...boton(), width: '100%' }}>
+                  Ver todas ({datos.preferentes!.length})
+                </button>
               )}
             </div>
           )}
           {(datos.chollos.length > 0 || (datos.subastasChollo?.length ?? 0) > 0) && (
-            <div style={{ ...card, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-              <button
-                onClick={() => { setFch((f) => ({ ...f, soloCasas: !f.soloCasas })); setVisibles(PAGE) }}
-                style={{ ...boton(fch.soloCasas), padding: '0 10px', fontSize: 13 }}>
-                🏠 Solo casas
-              </button>
-              <button
-                onClick={() => { setFch((f) => ({ ...f, soloRebajados: !f.soloRebajados })); setVisibles(PAGE) }}
-                style={{ ...boton(fch.soloRebajados), padding: '0 10px', fontSize: 13 }}>
-                ⬇️ Solo rebajados
-              </button>
-              <button
-                onClick={() => { setFch((f) => ({ ...f, soloParticulares: !f.soloParticulares })); setVisibles(PAGE) }}
-                style={{ ...boton(fch.soloParticulares), padding: '0 10px', fontSize: 13 }}>
-                👤 Solo particulares
-              </button>
-              <select value={fch.portal}
-                      onChange={(e) => { setFch((f) => ({ ...f, portal: e.target.value })); setVisibles(PAGE) }}
-                      style={{ ...control, fontSize: 13 }}>
-                <option value="all">Todas las fuentes</option>
-                <option value="subasta">⚖️ Subastas</option>
-                <option value="idealista">Idealista</option>
-                <option value="fotocasa">Fotocasa</option>
-              </select>
-              <input value={fch.zona} placeholder="Municipio o zona"
-                     onChange={(e) => { setFch((f) => ({ ...f, zona: e.target.value })); setVisibles(PAGE) }}
-                     style={{ ...control, fontSize: 13, width: 160 }} />
-              <input value={fch.precioMax} placeholder="Precio máx. €" inputMode="numeric"
-                     onChange={(e) => { setFch((f) => ({ ...f, precioMax: e.target.value.replace(/\D/g, '') })); setVisibles(PAGE) }}
-                     style={{ ...control, fontSize: 13, width: 110 }} />
-              <span style={{ color: 'var(--muted)', fontSize: 13 }}>
-                {oportunidades.length} oportunidad{oportunidades.length === 1 ? '' : 'es'}
-                {(fch.soloRebajados || fch.soloParticulares) && (datos.subastasChollo?.length ?? 0) > 0 &&
-                  ' · las subastas no llevan rebaja/particular: quedan fuera con estos filtros'}
-              </span>
+            <div style={{ ...card, padding: '10px 12px' }}>
+              {/* Fila 1: chips toggle + fuente — scroll horizontal, no envuelve en 320px. */}
+              <div style={{ display: 'flex', gap: 8, overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 2 }}>
+                <button
+                  onClick={() => { setFch((f) => ({ ...f, soloCasas: !f.soloCasas })); setVisibles(PAGE) }}
+                  style={{ ...boton(fch.soloCasas), padding: '0 12px', fontSize: 13, flex: '0 0 auto' }}>
+                  🏠 Casas
+                </button>
+                <button
+                  onClick={() => { setFch((f) => ({ ...f, soloRebajados: !f.soloRebajados })); setVisibles(PAGE) }}
+                  style={{ ...boton(fch.soloRebajados), padding: '0 12px', fontSize: 13, flex: '0 0 auto' }}>
+                  ⬇️ Rebajados
+                </button>
+                <button
+                  onClick={() => { setFch((f) => ({ ...f, soloParticulares: !f.soloParticulares })); setVisibles(PAGE) }}
+                  style={{ ...boton(fch.soloParticulares), padding: '0 12px', fontSize: 13, flex: '0 0 auto' }}>
+                  👤 Particulares
+                </button>
+                <select value={fch.portal}
+                        onChange={(e) => { setFch((f) => ({ ...f, portal: e.target.value })); setVisibles(PAGE) }}
+                        style={{ ...control, fontSize: 13, flex: '0 0 auto', borderRadius: 999 }}>
+                  <option value="all">Fuente: todas</option>
+                  <option value="subasta">⚖️ Subastas</option>
+                  <option value="idealista">Idealista</option>
+                  <option value="fotocasa">Fotocasa</option>
+                </select>
+              </div>
+              {/* Fila 2: los dos inputs a partes iguales (nunca desbordan). */}
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <input value={fch.zona} placeholder="Municipio o zona"
+                       onChange={(e) => { setFch((f) => ({ ...f, zona: e.target.value })); setVisibles(PAGE) }}
+                       style={{ ...control, fontSize: 13, flex: 1, minWidth: 0 }} />
+                <input value={fch.precioMax} placeholder="Precio máx. €" inputMode="numeric"
+                       onChange={(e) => { setFch((f) => ({ ...f, precioMax: e.target.value.replace(/\D/g, '') })); setVisibles(PAGE) }}
+                       style={{ ...control, fontSize: 13, flex: 1, minWidth: 0 }} />
+              </div>
+              {(fch.soloRebajados || fch.soloParticulares) && (datos.subastasChollo?.length ?? 0) > 0 && (
+                <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+                  Con estos filtros las subastas quedan fuera.
+                </p>
+              )}
             </div>
           )}
           {datos.chollos.length === 0 && (datos.subastasChollo?.length ?? 0) === 0 ? (
@@ -1539,101 +1673,106 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
           ) : (
             oportunidades.slice(0, visibles).map((it) => {
               if (it.subasta) return (
-                <TarjetaSubastaCompacta key={it.clave} s={it.subasta}
+                <TarjetaSubasta key={it.clave} s={it.subasta}
                   onVerFicha={() => {
                     const f = { ...FILTROS_VACIOS, municipio: it.subasta!.municipio ?? '' }
                     setFiltros(f); setTab('todas'); buscarTodas(true, f)
                   }} />
               )
               const ch = it.chollo!
+              const bajo = (ch.comparable.bajadas ?? 0) > 0 && ch.comparable.precioInicial != null &&
+                ch.comparable.precioInicial > ch.comparable.precio
               return (
-              <div key={it.clave} style={{ ...card, borderLeft: '4px solid var(--positive, #16a34a)' }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'baseline', justifyContent: 'space-between' }}>
-                  <strong style={{ color: 'var(--text)', fontSize: 15 }}>{ch.preferente && '🌊 '}{ch.comparable.titulo}</strong>
-                  <span style={{ fontWeight: 700, color: ch.sospechoso ? 'var(--warning, #b45309)' : 'var(--positive, #15803d)' }}>
-                    −{(ch.descuento * 100).toFixed(0)}%{ch.sospechoso && ' ⚠️'}
-                  </span>
-                </div>
-                <p style={{ margin: '6px 0 0', color: 'var(--text)', fontSize: 14 }}>
-                  {eur(ch.comparable.precio)}
-                  {ch.comparable.superficie != null && ` · ${ch.comparable.superficie} m²`}
-                  {ch.comparable.habitaciones != null && ` · ${ch.comparable.habitaciones} hab.`}
-                </p>
-                <p style={{ margin: '4px 0 0', color: 'var(--muted)', fontSize: 13 }}>
-                  {Math.round(ch.comparable.precioM2 ?? 0)}€/m² frente a {Math.round(ch.precioM2Zona)}€/m² de{' '}
-                  {ch.zona} (mediana de {ch.muestra} anuncios{ch.fuente === 'portal' ? ' del buscador de Fotocasa' : ', sin contar este'})
-                  {ch.comparable.portal === 'fotocasa' && ' · Fotocasa'}
-                </p>
-                {ch.comparable.esParticular ? (
-                  <p style={{ margin: '4px 0 0', color: 'var(--positive, #15803d)', fontSize: 13, fontWeight: 600 }}>
-                    👤 Anuncio de PARTICULAR — negociación directa, sin comisión de agencia
-                  </p>
-                ) : ch.comparable.anunciante ? (
-                  <p style={{ margin: '4px 0 0', color: 'var(--muted)', fontSize: 12 }}>
-                    🏢 Anuncia: {ch.comparable.anunciante}
-                  </p>
-                ) : null}
-                {(ch.comparable.bajadas ?? 0) > 0 && ch.comparable.precioInicial != null &&
-                  ch.comparable.precioInicial > ch.comparable.precio && (
-                  <p style={{ margin: '4px 0 0', color: 'var(--positive, #15803d)', fontSize: 13 }}>
-                    ⬇️ Ha bajado {ch.comparable.bajadas} {ch.comparable.bajadas === 1 ? 'vez' : 'veces'}: de{' '}
-                    {eur(ch.comparable.precioInicial)} a {eur(ch.comparable.precio)} — vendedor negociable
-                  </p>
-                )}
-                <p style={{ margin: '4px 0 0', color: 'var(--muted)', fontSize: 12 }}>
-                  {ch.antiguedadDias != null
-                    ? `⏳ En venta desde hace ~${ch.antiguedadDias >= 60 ? `${Math.round(ch.antiguedadDias / 30)} meses` : `${ch.antiguedadDias} días`}${ch.antiguedadCapada ? ' o más' : ''} (estimado por el nº de anuncio)`
-                    : ch.comparable.vistoDesde
-                      ? `👀 Lo vemos desde el ${new Date(ch.comparable.vistoDesde).toLocaleDateString('es-ES')} (la antigüedad real no la publica el portal)`
-                      : null}
-                </p>
-                {ch.velocidad && (
-                  <p style={{ margin: '4px 0 0', color: 'var(--muted)', fontSize: 12 }}>
-                    ⚡ En esta zona los anuncios se venden en ~{ch.velocidad.diasMediana} días
-                    (mediana de {ch.velocidad.muestra} desaparecidos)
-                  </p>
-                )}
-                <LineaRendimiento r={ch.rendimiento} dormitorios={ch.comparable.habitaciones} />
-                {ch.comparable.aReformar && (
-                  <p style={{ margin: '4px 0 0', color: 'var(--warning, #b45309)', fontSize: 12 }}>
-                    🔨 El propio anuncio se declara «a reformar»
-                  </p>
-                )}
-                {ch.descuentoNeto != null && (
-                  <p style={{ margin: '4px 0 0', color: 'var(--warning, #b45309)', fontSize: 12 }}>
-                    🔨 Huele a obra (descuento de derribo): aun pagando levantarla (~1.100€/m²) quedaría un{' '}
-                    −{(ch.descuentoNeto * 100).toFixed(0)}% neto frente a la zona
-                  </p>
-                )}
-                {ch.sospechoso && (
-                  <p style={{ margin: '4px 0 0', color: 'var(--warning, #b45309)', fontSize: 12 }}>
-                    Descuento anormalmente alto: verifica el estado real del inmueble en el anuncio.
-                  </p>
-                )}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
-                  {ch.comparable.url && (
-                    <a href={ch.comparable.url} target="_blank" rel="noreferrer"
-                       style={{ ...boton(), display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
-                      Ver anuncio
-                    </a>
-                  )}
-                  <button onClick={() => pedirOferta(ch.comparable.refAnuncio)} style={boton()}
-                          disabled={ofertaCargando === ch.comparable.refAnuncio}>
-                    {ofertaCargando === ch.comparable.refAnuncio ? '✍️ Redactando…' : '✍️ Borrador de oferta'}
-                  </button>
-                </div>
-                {oferta?.ref === ch.comparable.refAnuncio && (
-                  <pre style={{ marginTop: 8, padding: 10, borderRadius: 8, background: 'var(--bg)',
-                                color: 'var(--text)', fontSize: 13, whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
-                    {oferta.texto}
-                  </pre>
-                )}
-              </div>
+                <TarjetaOportunidad
+                  key={it.clave}
+                  acento={ch.preferente}
+                  precio={ch.comparable.precio}
+                  descuento={{
+                    etiqueta: `−${(ch.descuento * 100).toFixed(0)}% vs zona${ch.sospechoso ? ' ⚠️' : ''}`,
+                    tono: ch.sospechoso ? 'warn' : 'ok',
+                  }}
+                  titulo={ch.comparable.titulo}
+                  zona={ch.comparable.zona ?? ch.zona}
+                  metros={[
+                    ch.comparable.superficie != null ? `${ch.comparable.superficie} m²` : null,
+                    ch.comparable.habitaciones != null ? `${ch.comparable.habitaciones} hab.` : null,
+                  ].filter(Boolean).join(' · ') || null}
+                  chips={chipsDeChollo(ch)}
+                  evidencia={`${Math.round(ch.comparable.precioM2 ?? 0)}€/m² vs ${Math.round(ch.precioM2Zona)}€/m² de ${ch.zona} (${ch.muestra} anuncios${ch.fuente === 'portal' ? ' del buscador de Fotocasa' : ''})`}
+                  detalles={
+                    <>
+                      {bajo && (
+                        <p style={{ margin: '4px 0 0', color: 'var(--positive, #15803d)', fontSize: 13 }}>
+                          ⬇️ Ha bajado {ch.comparable.bajadas} {ch.comparable.bajadas === 1 ? 'vez' : 'veces'}: de{' '}
+                          {eur(ch.comparable.precioInicial!)} a {eur(ch.comparable.precio)} — no se vende, margen para negociar
+                        </p>
+                      )}
+                      {!ch.comparable.esParticular && ch.comparable.anunciante && (
+                        <p style={{ margin: '4px 0 0', color: 'var(--muted)', fontSize: 12 }}>
+                          🏢 Anuncia: {ch.comparable.anunciante}
+                        </p>
+                      )}
+                      {ch.antiguedadDias != null ? (
+                        <p style={{ margin: '4px 0 0', color: 'var(--muted)', fontSize: 12 }}>
+                          ⏳ En venta desde hace ~{ch.antiguedadDias >= 60 ? `${Math.round(ch.antiguedadDias / 30)} meses` : `${ch.antiguedadDias} días`}
+                          {ch.antiguedadCapada ? ' o más' : ''} (estimado por el nº de anuncio)
+                        </p>
+                      ) : ch.comparable.vistoDesde ? (
+                        <p style={{ margin: '4px 0 0', color: 'var(--muted)', fontSize: 12 }}>
+                          👀 Lo vemos desde el {new Date(ch.comparable.vistoDesde).toLocaleDateString('es-ES')} (la antigüedad real no la publica el portal)
+                        </p>
+                      ) : null}
+                      {ch.velocidad && (
+                        <p style={{ margin: '4px 0 0', color: 'var(--muted)', fontSize: 12 }}>
+                          ⚡ En esta zona los anuncios se venden en ~{ch.velocidad.diasMediana} días
+                          (mediana de {ch.velocidad.muestra} desaparecidos)
+                        </p>
+                      )}
+                      <LineaRendimiento r={ch.rendimiento} dormitorios={ch.comparable.habitaciones} />
+                      {ch.comparable.aReformar && (
+                        <p style={{ margin: '4px 0 0', color: 'var(--warning, #b45309)', fontSize: 12 }}>
+                          🔨 El propio anuncio se declara «a reformar»
+                        </p>
+                      )}
+                      {ch.descuentoNeto != null && (
+                        <p style={{ margin: '4px 0 0', color: 'var(--warning, #b45309)', fontSize: 12 }}>
+                          🔨 Huele a obra (descuento de derribo): aun pagando levantarla (~1.100€/m²) quedaría un{' '}
+                          −{(ch.descuentoNeto * 100).toFixed(0)}% neto frente a la zona
+                        </p>
+                      )}
+                      {ch.sospechoso && (
+                        <p style={{ margin: '4px 0 0', color: 'var(--warning, #b45309)', fontSize: 12 }}>
+                          Descuento anormalmente alto: verifica el estado real del inmueble en el anuncio.
+                        </p>
+                      )}
+                    </>
+                  }
+                  acciones={
+                    <>
+                      {ch.comparable.url && (
+                        <a href={ch.comparable.url} target="_blank" rel="noreferrer"
+                           style={{ ...boton(), display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
+                          Ver anuncio
+                        </a>
+                      )}
+                      <button onClick={() => pedirOferta(ch.comparable.refAnuncio)} style={boton()}
+                              disabled={ofertaCargando === ch.comparable.refAnuncio}>
+                        {ofertaCargando === ch.comparable.refAnuncio ? '✍️ Redactando…' : '✍️ Borrador de oferta'}
+                      </button>
+                    </>
+                  }
+                  extra={oferta?.ref === ch.comparable.refAnuncio ? (
+                    <pre style={{ marginTop: 8, padding: 10, borderRadius: 8, background: 'var(--bg)',
+                                  color: 'var(--text)', fontSize: 13, whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
+                      {oferta.texto}
+                    </pre>
+                  ) : undefined}
+                />
               )
             })
           )}
           {oportunidades.length > visibles && (
-            <button onClick={() => setVisibles((v) => v + PAGE)} style={boton()}>Ver más</button>
+            <button onClick={() => setVisibles((v) => v + PAGE)} style={{ ...boton(), width: '100%' }}>Ver más</button>
           )}
         </section>
       )}
