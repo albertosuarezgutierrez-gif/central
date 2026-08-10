@@ -40,6 +40,8 @@
 - **Decisión (sesión de solo charla, anotada a mano):** no operar más en real por impulso;
   esperar los avisos del agente `trading-analista`. OJO: el agente sigue en Fase 1 (paper) —
   sus ideas por Telegram son simuladas y la puerta a Fase 2 sigue cerrada (decisión de Alberto).
+- Alberto pide **aviso explícito cuando el forward justifique plantear Fase 2** (hoy lejos:
+  hit rate 26-29%, retorno medio ~0 sobre n=103 en `trading_estrategia_stats` al 08/08).
 
 ### ✅ (10/08/2026) Confirmación final: motor 100% operativo y probado tras la baja de PriceLabs
 - **Prueba reina:** snapshot Smoobu 10/08 = últimas escrituras del motor del 09/08 **al euro en
