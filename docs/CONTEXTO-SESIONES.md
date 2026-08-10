@@ -39,7 +39,7 @@
 - Causa: la pasada corre a las 20:33 UTC, media hora tras el cierre de Wall Street; Stooq/Yahoo aún
   publicaban el cierre del **viernes 07/08** (verificado contra IBKR) y `DIAS_CONTRASTE_MAX = 5` lo
   aceptaba *como si fuera el de hoy*. Cada «divergencia» era el hueco viernes→lunes de esa acción.
-- Arreglo (**PR #1364**): el contraste **solo acepta el cierre de la MISMA sesión** (`juzgarPuntos`,
+- Arreglo (**PR #1363**): el contraste **solo acepta el cierre de la MISMA sesión** (`juzgarPuntos`,
   puro y testeado con los datos reales del 10/08); si la fuente va por detrás → `desfasados`, que no
   veta y se canta en el latido. Consecuencia asumida: **el contraste queda inerte casi todas las
   noches** a esta hora — visible, no silencioso. Pendiente de decisión de Alberto: contraste diferido
