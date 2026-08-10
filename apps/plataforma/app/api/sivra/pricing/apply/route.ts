@@ -288,6 +288,14 @@ export async function POST(req: NextRequest) {
   // `occ` de arriba con un GROUP BY más. Es lo único que le faltaba al motor para poder distinguir
   // «septiembre va lleno» de «el año está vacío» — ver pricing-demanda.ts.
   // OJO: SQL dentro de un template literal de TS — aqui NO se pueden usar backticks ni $ { }.
+  //
+  // 🚨 El fallo de esta consulta NO puede ser mudo. Si revienta, TODAS las fechas caen al factor
+  // global y la pasada aplica precios más bajos sin un solo error en el log — indistinguible de una
+  // pasada correcta. Es el mismo agujero que tenía la lectura de eventos hasta el 01/08/2026 (ver el
+  // bloque de `eventosIlegibles` al final), así que se trata igual: se marca, se declara `degradado`
+  // en la respuesta y se avisa por Telegram. Descubierto el 09/08/2026 al intentar verificar el
+  // PR #1323 en producción: la señal que se había diseñado para cazarlo no era observable.
+  let ocupacionMesIlegible = false
   const ocupacionMesRows = await prisma.$queryRaw<{
     property_id: string; ym: string; occ: number
   }[]>(Prisma.sql`
@@ -299,7 +307,7 @@ export async function POST(req: NextRequest) {
       AND rate_date >= CURRENT_DATE
       AND available IS NOT NULL
     GROUP BY property_id, to_char(rate_date, 'YYYY-MM')
-  `).catch(() => [])
+  `).catch((e) => { ocupacionMesIlegible = true; console.error("[pricing] ocupación por mes ilegible:", e); return [] })
   const ocupacionMes = new Map(
     ocupacionMesRows.map(o => [`${o.property_id}|${o.ym}`, Number(o.occ)]),
   )
@@ -570,7 +578,12 @@ export async function POST(req: NextRequest) {
     const demFuentes: Record<DemandaFechaResult["fuente"], number> = { mes: 0, global: 0 }
     let demGateadas = 0
     const ops: { dates: string[]; daily_price: number; min_length_of_stay?: number }[] = []
-    const audit: { rate_date: string; old_price: number | null; new_price: number }[] = []
+    // La procedencia del factor viaja hasta la fila persistida: sin ella, una pasada degradada al
+    // factor global es indistinguible de una buena en cuanto la respuesta HTTP se pierde.
+    const audit: {
+      rate_date: string; old_price: number | null; new_price: number
+      demanda_fuente: DemandaFechaResult["fuente"]; demanda_gateada: boolean
+    }[] = []
     const cur = new Date(today)
     let dayIndex = -1
     while (cur <= end) {
@@ -802,7 +815,10 @@ export async function POST(req: NextRequest) {
         if (!esHueco) minStay = evFactor >= 2.5 ? 3 : 2
       }
       ops.push({ dates: [date], daily_price: target, ...(minStay > 0 ? { min_length_of_stay: minStay } : {}) })
-      audit.push({ rate_date: date, old_price: old, new_price: target })
+      audit.push({
+        rate_date: date, old_price: old, new_price: target,
+        demanda_fuente: dGate.fuente, demanda_gateada: dGate.gateado,
+      })
       const pl = plPrice.get(`${r.property_id}|${date}`)
       if (!dryRun && pl && target < pl * 0.7) {
         plAvisos.push(`${r.property_id.replace("prop_", "")} ${date}: ${eur(target)} vs PL ${eur(Math.round(pl))}`)
@@ -827,9 +843,9 @@ export async function POST(req: NextRequest) {
     if (audit.length > 0) {
       try {
         const auditRows = audit.map(a =>
-          Prisma.sql`(${r.property_id}, ${a.rate_date}::date, ${a.old_price}::int, ${a.new_price}::int, ${dryRun})`)
+          Prisma.sql`(${r.property_id}, ${a.rate_date}::date, ${a.old_price}::int, ${a.new_price}::int, ${dryRun}, ${a.demanda_fuente}, ${a.demanda_gateada})`)
         await prisma.$executeRaw(Prisma.sql`
-          INSERT INTO pricing_applied (property_id, rate_date, old_price, new_price, dry_run)
+          INSERT INTO pricing_applied (property_id, rate_date, old_price, new_price, dry_run, demanda_fuente, demanda_gateada)
           VALUES ${Prisma.join(auditRows)}`)
       } catch { /* no crítico */ }
     }
@@ -899,9 +915,28 @@ export async function POST(req: NextRequest) {
     } catch { /* el aviso es best-effort; el flag de la respuesta manda */ }
   }
 
+  // Hermano del anterior, un escalón menos grave: sin la ocupación por mes el motor no tarifica MAL,
+  // tarifica como antes del PR #1323 (la palanca de demanda vuelve a mirar el año). Los precios son
+  // defendibles, pero más bajos en los meses que se están llenando — y sin este aviso, nadie lo
+  // sabría. NO se marca `ok:false` a propósito: el vigía de latidos debe seguir reservado para lo
+  // que invalida la pasada; un vigía que grita por lo que no toca acaba ignorándose.
+  if (ocupacionMesIlegible) {
+    try {
+      await tgSend(
+        "⚠️ *Pricing: la ocupación POR MES no se pudo leer*\n\n" +
+        "La pasada ha tarificado con la ocupación ANUAL del piso, como antes del arreglo del 09/08: " +
+        "los meses que ya se están llenando no han recibido su subida. Los precios no son erróneos, " +
+        "pero sí más bajos de lo que tocaba.\n\n" +
+        "Revisa `rate_snapshots` en Supabase y vuelve a lanzar el motor.",
+      )
+    } catch { /* el aviso es best-effort; el flag de la respuesta manda */ }
+  }
+
   return NextResponse.json({
     ok: !eventosIlegibles,
     degradado: eventosIlegibles ? "pricing_eventos_auto ilegible: tarificado SIN eventos" : undefined,
+    // Degradación menor: no invalida la pasada, pero tiene que verse sin tener que deducirlo.
+    demanda_degradada: ocupacionMesIlegible ? "ocupación por mes ilegible: tarificado con la anual" : undefined,
     dryRun, paused, days, properties: recs.length, results, pl_avisos: plAvisos.length,
   })
 }
