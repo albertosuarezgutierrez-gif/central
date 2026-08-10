@@ -32,6 +32,16 @@
 
 ---
 
+### ✅ (10/08/2026) Confirmación final: motor 100% operativo y probado tras la baja de PriceLabs
+- **Prueba reina:** snapshot Smoobu 10/08 = últimas escrituras del motor del 09/08 **al euro en
+  604/604 fechas** (129/205/103/167 por piso). PL mudo post-pausa (0 divergencias 14:30↔20:30).
+- Alertas «precio_revertido» del guard 07:31 = restos PRE-pausa (últ. escritura 08/08, PL las pisó
+  antes de las 15:00 del 09/08); la pasada 08:30 de hoy ya re-escribió las 7 → se autolimpian.
+- Pasada 08:30 sana: 455 escrituras, 0 bajo suelo, 0 bajadas fuera del raíl (106 subidas sobre-raíl
+  = suelos/eventos/ancla, legales por diseño). Previstos v2 verificado en vivo (House 25-nov 467 =
+  base×1,25 ASEICA). 1ª reserva House bajo el motor: 11-13/09, 672€/noche ≈ 1,4× p50 fiable.
+- **Vigilancia diaria 09:00 UTC** (`trig_01Eagedr...`) sigue hasta el OK de Alberto; PR #1345 mergeado.
+
 ### 💶 (10/08/2026) Pricing sivra — ciclo semanal completo (4 pisos)
 - Ciclo semanal del agente de pricing: los 4 pisos (no solo los ya en vivo). Mercado real Booking
   (aforo real) para may/jun/jul-27 (estaban con 1 sola fecha, rancios) — 120 comps nuevos, ninguno a 0.
