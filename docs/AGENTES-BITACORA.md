@@ -15,6 +15,14 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-10 · buscador-ia** · hizo: watch de deprecación de los 5 eslabones cableados (NIM, Groq,
+  Cerebras, Gemini, Kimi) — todos VIVOS; descubrimiento (Paso 2): Kimi K3 lanzado pero 3-4× más caro
+  que `kimi-k2.6` (sin mejora calidad/precio, no se propone); una primera búsqueda sobre Kimi sugería
+  que K2.6 se retiraba el 25/05 y una segunda pasada dirigida lo desmintió (confusión con las
+  `k2-*-preview` antiguas) — sin tocar `client.ts`. dudas: `CONTABLE_MODEL` (`deepseek-ai/deepseek-v3`
+  en NIM) sigue sin confirmar por WebSearch, como el 27/07 — necesita alguien con `NVIDIA_API_KEY`;
+  fallos: WebFetch a los 5 catálogos bloqueado por el proxy de egress de la sesión, se resolvió por
+  WebSearch; PRs/commits: solo doc (`docs/BUSCADOR-IA.md`), sin PR de código.
 - **2026-08-10 · pricing-agente (ciclo semanal completo, los 4 pisos)** · hizo: midió el ciclo anterior
   (03/08 — SS/Feria vendidas a los niveles propuestos, confirma que el ramp anticipado se vende);
   sembró 120 comps Booking reales (aforo real por piso) para may/jun/jul 2027, que estaban con solo
