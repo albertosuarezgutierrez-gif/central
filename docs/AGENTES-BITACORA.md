@@ -15,6 +15,13 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-10 · mercado-booking (pasada diaria, plan sin filtro)** · hizo: pedido el plan
+  (`plan_total` 120, `candidatas` 120, `pedidas` 12, `sin_medir_nunca` 12) y medidas las 12 ventanas
+  devueltas — todas ronda-2, 3 fechas de profundidad (09-ene/13-feb/13-mar 2027) x 4 aforos
+  (2/4/5/12) de los 4 pisos. **120 comps** escritos con `fuente='booking_mcp'`, 10/10 por ventana,
+  0 ventanas sin respuesta. Latido `ok:true`. Aviso persistente: tope `max=12` deja fuera 108
+  ventanas que casaban (`recortadas=108`) — cobertura se sigue acumulando pasada a pasada.
+  dudas: —; fallos: —; PRs/commits: —
 - **2026-08-09 · pricing-agente (auditoría a demanda de Alberto)** · hizo: auditó las 3 ventas bajo
   el p50 de fecha exacta y reparó las 3 causas — `channel_markup` 1,16 inexistente en el escaparate
   (medido con 20 reservas; guardas `>= 1` + SQL a 1.0 pendiente de deploy), ancla suave por fecha
