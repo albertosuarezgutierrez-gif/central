@@ -240,6 +240,9 @@ completo `docs/AUDITORIA-2026-08.md`.
 - `lib/subastas/correo-incremental.ts` (puro, testeado): filtro `>lastUid` en cliente (RFC 3501),
   `uidvalidity` distinto → vuelve a ventana por fecha, cursor solo se confirma tras ingerir (at-least-once).
   BOE (`leerAlertas`) queda intacto, sin cursor. 826 tests, tsc 0, build OK.
+- **VERIFICADO en producción (10/08/2026, 2ª pasada — la 1ª fue el bootstrap):** 34 correos leídos
+  (23 idealista + 11 fotocasa, «desde uid N») frente a 300, **55s** frente a 284s, y **cero cortes por
+  presupuesto** — fichas de anunciante y zonas se enriquecen enteras por primera vez desde el 05/08.
 
 ### 🧮 (08/08/2026) Subastas 2ª tanda: ITP por CCAA, puja en vivo, vivienda habitual y simulador
 - **ITP por CCAA** (`module-subastas/src/impuestos.ts`): `calcularCoste` deja de aplicar el 7% andaluz a
