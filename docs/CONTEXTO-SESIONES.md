@@ -68,6 +68,11 @@
   en el resto); copy de Telegram y /subastas lo dicen. Las SUBASTAS ya iban sin tope (el aviso forzado 🌊
   nunca filtró por precio). Decisión de estrategia: Asturias = chollo puro con gestora (~20-25% comisión);
   Huelva = uso mixto autogestionado — el radar vigila ambas. Skill `plataforma-maestro` actualizada.
+- **5ª ronda — rediseño de 🔥 Oportunidades** («veo muy destartalada la página y poco clara», agente de
+  diseño): UNA tarjeta `TarjetaOportunidad` para chollos/preferentes/subastas (precio 20px primero, chips
+  homogéneos `ChipUI` con tokens --positive/--warning/--info, evidencia €/m² siempre visible, resto plegado
+  en «Más datos»); cabecera con contador real + explicación en `<details>`; 🌊 en caja --info-bg colapsada
+  a 5 con «Ver todas (N)»; filtros en fila scrollable (320px OK). Solo presentación, lógica intacta.
 - **Repaso programado 12/08 07:00 UTC** (send_later `trig_01AzUvq8vW2K8Aan4T7HG7c6`): verificar corpus
   Matalascañas creciendo, lente sin tope, avisos 🌊 de mercado y subastas, pestaña 🔥 sin duplicados.
 - Ojo: la lente solo ve las alertas guardadas — para vigilar más norte, crear alertas de Idealista en
