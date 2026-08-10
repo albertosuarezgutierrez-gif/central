@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-10T06:11:07Z",
+  "generadoEn": "2026-08-10T14:18:27Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3979,6 +3979,14 @@
   ],
   "novedades": [
     {
+      "titulo": "Prueba reina:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Vigilancia diaria 09:00 UTC",
+      "fecha": ""
+    },
+    {
       "titulo": "Decisión de Alberto (2 palancas):",
       "fecha": ""
     },
@@ -4028,14 +4036,6 @@
     },
     {
       "titulo": "#1323 (demanda por mes) SUPERADO a medias:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Fase 2 (dinero real):",
-      "fecha": ""
-    },
-    {
-      "titulo": "Watchlist ampliada",
       "fecha": ""
     }
   ],
