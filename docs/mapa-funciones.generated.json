@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-09T21:22:49Z",
-  "sha": "7b20393de1ed684a42b850bb1524ed49435dc83f",
+  "generadoEn": "2026-08-10T06:11:07Z",
+  "sha": "7de7f3db4215225069ef4cf0161a4077abf5f2e5",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47509,12 +47509,54 @@
           "linea": 246
         },
         {
+          "nombre": "ChipUI",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ tono = 'neutro', children }: { tono?: TonoChip; children: React.ReactNode }",
+          "retorno": null,
+          "linea": 263
+        },
+        {
+          "nombre": "TarjetaOportunidad",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: { precio: number | null precioNota?: string descuento?: { etiqueta: string; tono: TonoChip } | null titulo: string zona?: string | null metros?: string | null chips: Chip[] evidencia?: string | null detalles?: React.ReactNode acento?: bo",
+          "retorno": null,
+          "linea": 285,
+          "resumen": "UNA sola anatomía para chollos de portal, preferentes 🌊 y subastas — antes había tres tarjetas distintas y la pestaña se veía destartalada (queja de Alberto, 09/08/2026). Orden de lectura móvil: prec"
+        },
+        {
+          "nombre": "chipsDeChollo",
+          "kind": "function",
+          "exportada": false,
+          "params": "ch: Chollo",
+          "retorno": "Chip[]",
+          "linea": 331,
+          "resumen": "Chips por origen: la FUENTE siempre es el primero (deja de ser texto suelto)."
+        },
+        {
+          "nombre": "chipsDePreferente",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: Preferente",
+          "retorno": "Chip[]",
+          "linea": 340
+        },
+        {
+          "nombre": "chipsDeSubasta",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: SubastaChollo",
+          "retorno": "Chip[]",
+          "linea": 347
+        },
+        {
           "nombre": "fecha",
           "kind": "function",
           "exportada": false,
           "params": "iso: string | null | undefined",
           "retorno": "string | null",
-          "linea": 253
+          "linea": 356
         },
         {
           "nombre": "Puntuacion",
@@ -47522,7 +47564,7 @@
           "exportada": false,
           "params": "{ v }: { v: number | null }",
           "retorno": null,
-          "linea": 267,
+          "linea": 370,
           "resumen": "Semáforo de la puntuación. `null` se pinta distinto a 0: no es lo mismo."
         },
         {
@@ -47531,7 +47573,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 275
+          "linea": 378
         },
         {
           "nombre": "PanelTesoreria",
@@ -47539,7 +47581,7 @@
           "exportada": false,
           "params": "{ t }: { t: Tesoreria }",
           "retorno": null,
-          "linea": 282,
+          "linea": 385,
           "resumen": "Dinero que hay que tener bloqueado para poder pujar. Lo que importa NO es la suma de depósitos sino el máximo simultáneo: los que no se solapan reutilizan el mismo dinero."
         },
         {
@@ -47548,17 +47590,17 @@
           "exportada": false,
           "params": "{ r, dormitorios }: { r: Rendimiento | null | undefined; dormitorios?: number | null }",
           "retorno": null,
-          "linea": 366,
+          "linea": 469,
           "resumen": "Yield turístico estimado con los pisos PROPIOS. Siempre con el caveat: los pisos de referencia son de Sevilla capital — fuera de ahí es extrapolación."
         },
         {
-          "nombre": "TarjetaSubastaCompacta",
+          "nombre": "TarjetaSubasta",
           "kind": "function",
           "exportada": false,
           "params": "{ s, onVerFicha }: { s: SubastaChollo; onVerFicha: () => void }",
           "retorno": null,
-          "linea": 383,
-          "resumen": "Tarjeta COMPACTA de una subasta para la vista unificada de Oportunidades: la señal (descuento/flip), las pegas rápidas y un enlace a su ficha completa en la pestaña «Todas» — FichaSubasta es demasiado"
+          "linea": 486,
+          "resumen": "Subasta en la vista unificada de Oportunidades, con la anatomía común de `TarjetaOportunidad`. El enlace va a su ficha completa en la pestaña «Todas» — FichaSubasta es demasiado pesada para montarla e"
         },
         {
           "nombre": "Caracteristicas",
@@ -47566,7 +47608,7 @@
           "exportada": false,
           "params": "{ s, plantaAparte }: { s: Subasta; plantaAparte?: boolean }",
           "retorno": null,
-          "linea": 431,
+          "linea": 530,
           "resumen": "repetirla sería ruido."
         },
         {
@@ -47575,7 +47617,7 @@
           "exportada": false,
           "params": "{ s, d }: { s: Subasta; d?: Documental | null }",
           "retorno": null,
-          "linea": 468,
+          "linea": 567,
           "resumen": "Resumen de CARGAS + documentación de la subasta. Vive dentro de `FichaSubasta` a propósito: antes el semáforo y las notas del edicto solo se pintaban en la pestaña «Todas» (iban en su `extra`), así qu"
         },
         {
@@ -47584,7 +47626,7 @@
           "exportada": false,
           "params": "{ dedupeKey }: { dedupeKey: string }",
           "retorno": null,
-          "linea": 614,
+          "linea": 713,
           "resumen": "«Nota simple viva»: la certificación que adjunta el juzgado es de hace años y las cargas se mueven. Aquí se sube una nota simple recién pedida al registro y el agente dice QUÉ HA CAMBIADO — es lo únic"
         },
         {
@@ -47593,7 +47635,7 @@
           "exportada": false,
           "params": "{ etiqueta, sub, children }: { etiqueta: string; sub?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 709,
+          "linea": 808,
           "resumen": "Par etiqueta→valor del bloque «💶 Los números»: etiqueta pequeña arriba, valor con peso debajo. La jerarquía la da la tipografía — antes todos los importes eran chips/líneas del mismo peso y se confun"
         },
         {
@@ -47602,7 +47644,7 @@
           "exportada": false,
           "params": "{ u }: { u: ReturnType<typeof umbralesPuja> }",
           "retorno": null,
-          "linea": 727,
+          "linea": 826,
           "resumen": "Umbrales de APROBACIÓN del remate. Corrige la confusión de «hay que pujar el 70% de la deuda»: el 70% de la LEC es del VALOR DE SUBASTA, y la deuda entra como vía alternativa (y como techo probable de"
         },
         {
@@ -47611,7 +47653,7 @@
           "exportada": false,
           "params": "s: Subasta",
           "retorno": "SubastaInmueble",
-          "linea": 743,
+          "linea": 842,
           "resumen": "El `Subasta` del cliente, como lo espera la lógica pura del módulo."
         },
         {
@@ -47620,7 +47662,7 @@
           "exportada": false,
           "params": "{ s, o, params }: { s: Subasta; o?: Oportunidad | null; params?: ParamsCoste }",
           "retorno": null,
-          "linea": 770,
+          "linea": 869,
           "resumen": "«¿Y si pujo X?»: coste puerta abierta, descuento real y banda de aprobación de UNA puja concreta. Mismo motor que el resto de la ficha (`calcularCoste` + `umbralesPuja` del módulo, con la financiación"
         },
         {
@@ -47629,7 +47671,7 @@
           "exportada": false,
           "params": "{ s, o, acciones, extra, doc, escenarios, params }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null; escenarios?: EscenarioUI[] | null; params?: ParamsCoste }",
           "retorno": null,
-          "linea": 835
+          "linea": 934
         },
         {
           "nombre": "SubastasClient",
@@ -47637,14 +47679,14 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Inicial | null }",
           "retorno": null,
-          "linea": 1112
+          "linea": 1211
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "56caa0c290f9"
+      "hash": "bbafe665b5da"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -90074,6 +90116,6 @@
   ],
   "resumen": {
     "archivos": 2408,
-    "funciones": 6509
+    "funciones": 6514
   }
 }
