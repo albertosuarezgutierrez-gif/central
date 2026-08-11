@@ -49,6 +49,21 @@
   operacionalización, `COBERTURA_MIN_ESCALERA`). Quedan 🟡: momentum/costuras, Piotroski NULL→0, cohetes
   a precio de entrada, nav de `/analizar` sin contrastar, Dataroma caído = «sin gurús».
 
+### 🔁 (11/08/2026) FK real facturas↔banco y el barrido del backlog como paso OBLIGATORIO
+- Cierre del hilo de la factura 47/2026 (#1372). El fallo de fondo no era de dato sino de método: la pasada
+  solo miraba el correo nuevo, así que su «sin novedades» era cierto sobre la bandeja y falso sobre la
+  contabilidad — 11 facturas archivadas llevaban desde enero sin cargo casado.
+- **Causa estructural:** `facturas_drive` y `movimientos_bancarios` no tenían relación; el único puente era
+  `factura_ref`, texto libre con 4 formatos. **FK APLICADA** (Alberto: «tira con la FK»):
+  `facturas_drive.movimiento_id` + `sin_cargo_motivo` (migración `2026-08-11_facturas_drive_movimiento_fk.sql`).
+  **Tres estados**: casada · `revisada_sin_cargo` (con motivo) · `sin_revisar` — un NULL ya no es «no hay».
+- Backfill 2026 de las 38: **29 casadas** (25 automáticas + 4 a mano), **8 revisadas sin cargo** (Pepephone
+  ene–jun y Giraldillo mayo `sin_cargo_localizado`, CREATE junio `duplicada`), **1 sin revisar a propósito**
+  (Endesa Dúplex marzo: su cargo se separa 9,70€ y no 5,78€ del patrón → que alguien abra el PDF).
+- Nuevo **Paso 4.0** en la skill: toda pasada abre `v_facturas_sin_cargo` ANTES de conciliar lo del día, y
+  al conciliar escribe la FK (o el motivo). PR #1376. Pendiente de Alberto: Pepephone (¿cuenta de la SL?) y
+  si el Giraldillo de mayo está sin pagar.
+
 ### 🧾 (11/08/2026) Conciliada la factura 47/2026 de Jaime Salas (electricidad Socorro 24)
 - Alberto preguntó por el cargo `TRANSF. 2100 FACTURA 472026 REPARACIN ELECTRICIDAD` −278,30€ (Kutxa, 07/08),
   que salía ❌ en `/finanzas`. La factura SÍ estaba archivada desde el 07/08 (Drive `1BNr2lF0…`, fila en

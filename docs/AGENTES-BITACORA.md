@@ -15,6 +15,23 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-11 · facturas-correo (FK real, orden de Alberto)** · hizo: aplicada la migración
+  `2026-08-11_facturas_drive_movimiento_fk.sql` — `facturas_drive.movimiento_id` (FK a
+  `movimientos_bancarios`) + `sin_cargo_motivo` + vista `v_facturas_sin_cargo`, con TRES estados para
+  que un NULL no pueda leerse como «no hay cargo». Backfill 2026: 30 casadas (26 automáticas por
+  importe único + 4 a mano: 3 Endesa Dúplex del patrón +5,78€ y PriceLabs USD→EUR), 7
+  `sin_cargo_localizado`, 1 `duplicada`, 1 dejada sin revisar a propósito. Paso 4.0 de la skill
+  reescrito para leer la vista en vez de cruzar por importe. dudas: Endesa Dúplex de marzo — su único
+  cargo candidato se separa 9,70€ y no 5,78€, así que no encaja en el patrón y queda en cola para que
+  alguien abra el PDF; fallos: —; PRs/commits: esta rama.
+- **2026-08-11 · facturas-correo (verificación + fix de método)** · hizo: verificó las 38 facturas
+  de 2026 contra el banco tras el barrido de #1372 — 30 casadas, 1 duplicada (CREATE junio), 7 huecos
+  reales (Pepephone ene–jun y Giraldillo mayo, ambos sin NINGÚN cargo). Añadido **Paso 4.0
+  obligatorio** a la skill: cruzar `facturas_drive` del año contra el banco en toda pasada, con los 3
+  falsos positivos del cruce por importe documentados. dudas: Pepephone y Giraldillo mayo esperan
+  respuesta de Alberto; fallos: **`factura_ref` es texto libre con 4 formatos** → un cruce por
+  referencia da falsos negativos en las filas viejas y NO sirve como clave; propuesta de FK real
+  entre `facturas_drive` y `movimientos_bancarios` a decisión de Alberto; PRs/commits: esta rama.
 - **2026-08-11 · facturas-correo** · hizo: Paso 0 salud OK (Vía B al día, última copia hoy 11/08
   IONOS; backlog `PDF-pendiente`/`Revisar` vacío; `agente_salud` actualizado ok=true dias_caido=0);
   Paso 1 sin candidatos nuevos — 2 hilos descartados y etiquetados `Procesada` (recordatorio de cobro

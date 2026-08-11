@@ -1,5 +1,55 @@
 # Pasos 4–5 — Conciliación bancaria, resumen y protocolo de cierre
 
+## Paso 4.0 — Barrido del BACKLOG (obligatorio, ANTES de conciliar lo de hoy)
+
+> **Por qué existe este paso (11/08/2026).** Alberto preguntó por un cargo de 278,30€ que le salía
+> ❌ en `/finanzas`: la factura (47/2026, Jaime Salas) llevaba archivada desde el 07/08 — lo que
+> faltaba era la conciliación. La pasada del 07/08 archivó el PDF ANTES de que el cargo entrara por
+> PSD2, lo dejó como «pendiente de que entre el movimiento»… y **ninguna pasada posterior volvió a
+> mirarlo**. Al barrer 2026 aparecieron **10 más** en el mismo estado desde enero. Ese mismo día la
+> pasada programada había cerrado como «sin novedades» (#1369): mirar SOLO el correo nuevo hace que
+> el «no hay novedades» sea verdad sobre la bandeja y **mentira sobre la contabilidad**.
+>
+> Una factura archivada sin cargo casado no es un pendiente que se olvida: el movimiento se queda
+> con su `destino` por defecto (normalmente `personal`) y **el gasto desaparece del radar de
+> deducibles**. Es la regla de «dato que NO hay ≠ dato que NO se ha mirado» aplicada al dinero.
+
+**Regla: toda pasada empieza mirando la cola de facturas sin cargo.** No es opcional ni «si da
+tiempo»: es más barato que volver a perder un gasto deducible.
+
+Desde el 11/08/2026 hay **FK real** (`facturas_drive.movimiento_id` → `movimientos_bancarios.id`,
+migración `2026-08-11_facturas_drive_movimiento_fk.sql`), así que la cola se lee de una vista y ya no
+hay que cruzar por importe ni interpretar nada:
+
+```sql
+SELECT * FROM v_facturas_sin_cargo
+WHERE anio = date_part('year', current_date)
+ORDER BY estado, mes DESC;   -- estado: 'sin_revisar' | 'revisada_sin_cargo'
+```
+
+**Tres estados, no dos** (`movimiento_id` / `sin_cargo_motivo`):
+- **casada** — `movimiento_id` apunta al cargo. No sale en la vista.
+- **`sin_revisar`** — las dos a NULL: **nadie lo ha mirado todavía**. Es TU cola de trabajo.
+- **`revisada_sin_cargo`** — hay `sin_cargo_motivo`: ya se buscó y no hay cargo. No la reabras salvo
+  que cambie algo. Valores en uso: `sin_cargo_localizado` (buscado en todas las cuentas del feed y no
+  aparece — Pepephone ene–jun, Giraldillo de mayo), `fuera_del_feed` (se paga desde una cuenta que no
+  importamos, p. ej. la SL), `impagada`, `duplicada` (misma factura archivada dos veces; el cargo
+  cuelga de la otra fila — caso CREATE de junio).
+
+Al conciliar una factura del Paso 4, **escribe SIEMPRE la FK** (`UPDATE facturas_drive SET
+movimiento_id = '<id del movimiento>'`) además del `factura_ref` del movimiento. Si la buscas y no la
+encuentras, escribe el **motivo**: dejarla a NULL la devuelve a la cola mañana y la siguiente pasada
+repetirá tu trabajo.
+
+> **Por qué la FK y no `factura_ref`.** `factura_ref` es TEXT libre y arrastra cuatro formatos según
+> qué pasada lo escribió (URL de Drive, nota de EMASESA, referencia de e-factura, texto suelto): un
+> cruce por ahí da falsos negativos en todas las filas viejas. Y el cruce por importe da falsos
+> positivos en tres patrones reales — **Endesa Dúplex** (el cargo suma +5,78€ del servicio),
+> **PriceLabs** (factura en USD, cargo en EUR: «es por el cambio», dictado de Alberto 11/08/2026) y
+> cualquier **cargo agrupado**. Por eso 11 facturas pasaron desde enero sin que nadie lo notara.
+> `factura_ref` sigue vivo como texto legible para el badge 📎 de `/finanzas`, pero **la relación es
+> la FK**.
+
 ## Paso 4 — Conciliar con el banco (Supabase)
 
 > **Política de auto-confirmación (decisión de Alberto: «auto-confirma si cuadra exacto»).**
