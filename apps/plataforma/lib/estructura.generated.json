@@ -1,10 +1,11 @@
 {
-  "generadoEn": "2026-08-11T05:54:59Z",
+  "generadoEn": "2026-08-11T06:05:06Z",
   "verticales": [
     "almacen",
     "alquiler",
     "ia-rest",
     "ialimp",
+    "mariscos",
     "plataforma",
     "rrhh",
     "sivra",
@@ -151,6 +152,11 @@
       "id": "module-pagos",
       "tipo": "module",
       "npm": "@central/module-pagos"
+    },
+    {
+      "id": "module-pesca",
+      "tipo": "module",
+      "npm": "@central/module-pesca"
     },
     {
       "id": "module-presupuestos",
@@ -333,6 +339,10 @@
         "estado": "usado",
         "evidencias": 2
       },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "plataforma": {
         "estado": "usado",
         "evidencias": 29
@@ -366,6 +376,10 @@
       "ialimp": {
         "estado": "usado",
         "evidencias": 2
+      },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
       },
       "plataforma": {
         "estado": "usado",
@@ -401,6 +415,10 @@
         "estado": "usado",
         "evidencias": 2
       },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "plataforma": {
         "estado": "no",
         "evidencias": 0
@@ -434,6 +452,10 @@
       "ialimp": {
         "estado": "usado",
         "evidencias": 2
+      },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
       },
       "plataforma": {
         "estado": "no",
@@ -469,6 +491,10 @@
         "estado": "usado",
         "evidencias": 11
       },
+      "mariscos": {
+        "estado": "usado",
+        "evidencias": 2
+      },
       "plataforma": {
         "estado": "usado",
         "evidencias": 3
@@ -502,6 +528,10 @@
       "ialimp": {
         "estado": "usado",
         "evidencias": 3
+      },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
       },
       "plataforma": {
         "estado": "no",
@@ -537,6 +567,10 @@
         "estado": "usado",
         "evidencias": 2
       },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "plataforma": {
         "estado": "no",
         "evidencias": 0
@@ -570,6 +604,10 @@
       "ialimp": {
         "estado": "usado",
         "evidencias": 2
+      },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
       },
       "plataforma": {
         "estado": "no",
@@ -605,6 +643,10 @@
         "estado": "usado",
         "evidencias": 3
       },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "plataforma": {
         "estado": "no",
         "evidencias": 0
@@ -636,6 +678,10 @@
         "evidencias": 0
       },
       "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
         "estado": "no",
         "evidencias": 0
       },
@@ -673,6 +719,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "plataforma": {
         "estado": "no",
         "evidencias": 0
@@ -704,6 +754,10 @@
         "evidencias": 0
       },
       "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
         "estado": "no",
         "evidencias": 0
       },
@@ -741,6 +795,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "plataforma": {
         "estado": "no",
         "evidencias": 0
@@ -772,6 +830,10 @@
         "evidencias": 0
       },
       "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
         "estado": "no",
         "evidencias": 0
       },
@@ -809,6 +871,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "plataforma": {
         "estado": "usado",
         "evidencias": 17
@@ -842,6 +908,10 @@
       "ialimp": {
         "estado": "usado",
         "evidencias": 3
+      },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
       },
       "plataforma": {
         "estado": "usado",
@@ -877,6 +947,10 @@
         "estado": "usado",
         "evidencias": 2
       },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "plataforma": {
         "estado": "no",
         "evidencias": 0
@@ -911,6 +985,10 @@
         "estado": "usado",
         "evidencias": 4
       },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "plataforma": {
         "estado": "no",
         "evidencias": 0
@@ -942,6 +1020,10 @@
         "evidencias": 0
       },
       "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
         "estado": "no",
         "evidencias": 0
       },
@@ -979,6 +1061,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "plataforma": {
         "estado": "no",
         "evidencias": 0
@@ -1010,6 +1096,10 @@
         "evidencias": 4
       },
       "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1047,6 +1137,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "plataforma": {
         "estado": "no",
         "evidencias": 0
@@ -1078,6 +1172,10 @@
         "evidencias": 4
       },
       "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1115,6 +1213,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "plataforma": {
         "estado": "usado",
         "evidencias": 4
@@ -1149,6 +1251,10 @@
         "estado": "usado",
         "evidencias": 2
       },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "plataforma": {
         "estado": "no",
         "evidencias": 0
@@ -1180,6 +1286,10 @@
         "evidencias": 0
       },
       "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1217,6 +1327,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "plataforma": {
         "estado": "no",
         "evidencias": 0
@@ -1251,9 +1365,51 @@
         "estado": "no",
         "evidencias": 0
       },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "plataforma": {
         "estado": "usado",
         "evidencias": 3
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-pesca": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
+        "estado": "usado",
+        "evidencias": 7
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
       },
       "rrhh": {
         "estado": "no",
@@ -1282,6 +1438,10 @@
         "evidencias": 3
       },
       "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1319,6 +1479,10 @@
         "estado": "usado",
         "evidencias": 2
       },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "plataforma": {
         "estado": "no",
         "evidencias": 0
@@ -1350,6 +1514,10 @@
         "evidencias": 0
       },
       "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1387,6 +1555,10 @@
         "estado": "usado",
         "evidencias": 4
       },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "plataforma": {
         "estado": "no",
         "evidencias": 0
@@ -1418,6 +1590,10 @@
         "evidencias": 0
       },
       "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1455,6 +1631,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "plataforma": {
         "estado": "usado",
         "evidencias": 24
@@ -1489,6 +1669,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "plataforma": {
         "estado": "no",
         "evidencias": 0
@@ -1520,6 +1704,10 @@
         "evidencias": 5
       },
       "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1559,6 +1747,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "mariscos": {
+        "presente": false,
+        "evidencias": 0
+      },
       "plataforma": {
         "presente": false,
         "evidencias": 0
@@ -1590,6 +1782,10 @@
         "evidencias": 32
       },
       "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "mariscos": {
         "presente": false,
         "evidencias": 0
       },
@@ -1627,6 +1823,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "mariscos": {
+        "presente": false,
+        "evidencias": 0
+      },
       "plataforma": {
         "presente": false,
         "evidencias": 0
@@ -1658,6 +1858,10 @@
         "evidencias": 1
       },
       "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "mariscos": {
         "presente": false,
         "evidencias": 0
       },
@@ -1695,6 +1899,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "mariscos": {
+        "presente": false,
+        "evidencias": 0
+      },
       "plataforma": {
         "presente": false,
         "evidencias": 0
@@ -1726,6 +1934,10 @@
         "evidencias": 7
       },
       "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "mariscos": {
         "presente": false,
         "evidencias": 0
       },
@@ -1763,6 +1975,10 @@
         "presente": true,
         "evidencias": 8
       },
+      "mariscos": {
+        "presente": false,
+        "evidencias": 0
+      },
       "plataforma": {
         "presente": true,
         "evidencias": 20
@@ -1797,6 +2013,10 @@
         "presente": true,
         "evidencias": 3
       },
+      "mariscos": {
+        "presente": false,
+        "evidencias": 0
+      },
       "plataforma": {
         "presente": true,
         "evidencias": 1
@@ -1828,6 +2048,10 @@
         "evidencias": 0
       },
       "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "mariscos": {
         "presente": false,
         "evidencias": 0
       },
@@ -1865,6 +2089,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "mariscos": {
+        "presente": false,
+        "evidencias": 0
+      },
       "plataforma": {
         "presente": true,
         "evidencias": 8
@@ -1899,6 +2127,10 @@
         "presente": true,
         "evidencias": 6
       },
+      "mariscos": {
+        "presente": false,
+        "evidencias": 0
+      },
       "plataforma": {
         "presente": true,
         "evidencias": 3
@@ -1930,6 +2162,10 @@
         "evidencias": 13
       },
       "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "mariscos": {
         "presente": false,
         "evidencias": 0
       },
@@ -1967,6 +2203,10 @@
         "presente": true,
         "evidencias": 10
       },
+      "mariscos": {
+        "presente": false,
+        "evidencias": 0
+      },
       "plataforma": {
         "presente": true,
         "evidencias": 5
@@ -2000,6 +2240,10 @@
       "ialimp": {
         "presente": true,
         "evidencias": 8
+      },
+      "mariscos": {
+        "presente": false,
+        "evidencias": 0
       },
       "plataforma": {
         "presente": true,
@@ -2035,6 +2279,10 @@
         "presente": true,
         "evidencias": 1
       },
+      "mariscos": {
+        "presente": false,
+        "evidencias": 0
+      },
       "plataforma": {
         "presente": true,
         "evidencias": 1
@@ -2068,6 +2316,10 @@
       "ialimp": {
         "presente": true,
         "evidencias": 16
+      },
+      "mariscos": {
+        "presente": false,
+        "evidencias": 0
       },
       "plataforma": {
         "presente": false,
@@ -2103,6 +2355,10 @@
         "presente": true,
         "evidencias": 6
       },
+      "mariscos": {
+        "presente": false,
+        "evidencias": 0
+      },
       "plataforma": {
         "presente": true,
         "evidencias": 5
@@ -2134,6 +2390,10 @@
         "evidencias": 15
       },
       "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "mariscos": {
         "presente": false,
         "evidencias": 0
       },
@@ -2171,6 +2431,10 @@
         "presente": true,
         "evidencias": 3
       },
+      "mariscos": {
+        "presente": false,
+        "evidencias": 0
+      },
       "plataforma": {
         "presente": false,
         "evidencias": 0
@@ -2204,6 +2468,10 @@
       "ialimp": {
         "presente": true,
         "evidencias": 3
+      },
+      "mariscos": {
+        "presente": false,
+        "evidencias": 0
       },
       "plataforma": {
         "presente": false,
@@ -2239,6 +2507,10 @@
         "presente": true,
         "evidencias": 1
       },
+      "mariscos": {
+        "presente": false,
+        "evidencias": 0
+      },
       "plataforma": {
         "presente": false,
         "evidencias": 0
@@ -2273,6 +2545,10 @@
         "presente": true,
         "evidencias": 2
       },
+      "mariscos": {
+        "presente": false,
+        "evidencias": 0
+      },
       "plataforma": {
         "presente": true,
         "evidencias": 3
@@ -2304,6 +2580,10 @@
         "evidencias": 0
       },
       "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "mariscos": {
         "presente": false,
         "evidencias": 0
       },
@@ -2361,6 +2641,7 @@
     "module-nominas": [],
     "module-organizador-trabajo": [],
     "module-pagos": [],
+    "module-pesca": [],
     "module-presupuestos": [],
     "module-proveedores": [],
     "module-revenue": [],
@@ -3104,6 +3385,12 @@
       "/api/superadmin/mailing/prospectos",
       "/api/superadmin/mailing/prospectos/[id]"
     ],
+    "mariscos": [
+      "/api/auth/login",
+      "/api/auth/logout",
+      "/api/envasados",
+      "/api/partidas"
+    ],
     "plataforma": [
       "/api/admin/clientes",
       "/api/admin/clientes/[vertical]/[id]",
@@ -3692,6 +3979,10 @@
       "stock_consumos",
       "tenant_modulos"
     ],
+    "mariscos": [
+      "mariscos_envasados",
+      "mariscos_partidas"
+    ],
     "plataforma": [
       "agente_latidos",
       "agente_salud",
@@ -4059,6 +4350,7 @@
           "almacen",
           "alquiler",
           "ialimp",
+          "mariscos",
           "rrhh",
           "sivra",
           "transporte"
@@ -4074,6 +4366,7 @@
           "almacen",
           "alquiler",
           "ialimp",
+          "mariscos",
           "rrhh",
           "sivra",
           "transporte"
@@ -4090,6 +4383,7 @@
         "falta": [
           "alquiler",
           "ialimp",
+          "mariscos",
           "rrhh",
           "transporte"
         ]
@@ -4104,6 +4398,7 @@
           "almacen",
           "alquiler",
           "ialimp",
+          "mariscos",
           "rrhh",
           "sivra",
           "transporte"
@@ -4119,6 +4414,7 @@
           "almacen",
           "alquiler",
           "ialimp",
+          "mariscos",
           "rrhh",
           "sivra",
           "transporte"
@@ -4134,6 +4430,7 @@
           "almacen",
           "alquiler",
           "ialimp",
+          "mariscos",
           "rrhh",
           "sivra",
           "transporte"
@@ -4150,6 +4447,7 @@
           "almacen",
           "alquiler",
           "ia-rest",
+          "mariscos",
           "rrhh",
           "transporte"
         ]
@@ -4165,6 +4463,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "mariscos",
           "rrhh",
           "transporte"
         ]
@@ -4180,6 +4479,7 @@
           "alquiler",
           "ia-rest",
           "ialimp",
+          "mariscos",
           "rrhh",
           "transporte"
         ]
@@ -4195,6 +4495,7 @@
           "alquiler",
           "ia-rest",
           "ialimp",
+          "mariscos",
           "rrhh",
           "transporte"
         ]
@@ -4209,6 +4510,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "mariscos",
           "rrhh",
           "sivra",
           "transporte"
@@ -4225,6 +4527,7 @@
           "almacen",
           "alquiler",
           "ialimp",
+          "mariscos",
           "rrhh",
           "transporte"
         ]
@@ -4239,6 +4542,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "mariscos",
           "rrhh",
           "sivra",
           "transporte"
@@ -4255,6 +4559,7 @@
           "sivra"
         ],
         "falta": [
+          "mariscos",
           "rrhh",
           "transporte"
         ]
@@ -4270,6 +4575,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "mariscos",
           "rrhh",
           "transporte"
         ]
@@ -4284,6 +4590,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "mariscos",
           "rrhh",
           "sivra",
           "transporte"
@@ -4299,6 +4606,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "mariscos",
           "rrhh",
           "sivra",
           "transporte"
@@ -4314,6 +4622,7 @@
           "almacen",
           "alquiler",
           "ialimp",
+          "mariscos",
           "rrhh",
           "sivra",
           "transporte"
@@ -4329,6 +4638,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "mariscos",
           "rrhh",
           "sivra",
           "transporte"
@@ -4344,6 +4654,7 @@
           "almacen",
           "alquiler",
           "ia-rest",
+          "mariscos",
           "rrhh",
           "sivra",
           "transporte"
@@ -4360,6 +4671,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "mariscos",
           "sivra",
           "transporte"
         ]
@@ -4376,6 +4688,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "mariscos",
           "transporte"
         ]
       }
@@ -4398,11 +4711,11 @@
     ]
   },
   "resumen": {
-    "verticales": 8,
-    "packages": 36,
+    "verticales": 9,
+    "packages": 37,
     "capacidades": 23,
     "skills": 32,
-    "apis": 1155,
+    "apis": 1159,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

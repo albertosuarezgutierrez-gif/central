@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-10T14:18:27Z",
-  "sha": "8172c47725092fb50f93d2999e98f1171f2fbc6d",
+  "generadoEn": "2026-08-11T06:05:06Z",
+  "sha": "c4724edc09c8dc4de05d6ef1e2227e11557c293d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -43470,6 +43470,660 @@
       "hash": "b358c8f885d4"
     },
     {
+      "ruta": "apps/mariscos/app/(usuario)/_forms.tsx",
+      "ambito": "apps/mariscos",
+      "exporta": [
+        "NuevaPartidaForm",
+        "EnvasarForm"
+      ],
+      "funciones": [
+        {
+          "nombre": "HOY",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 6
+        },
+        {
+          "nombre": "NuevaPartidaForm",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "── Recepción de una partida (datos del albarán) ───────────────────────────"
+        },
+        {
+          "nombre": "EnvasarForm",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ partidaId, precioVentaKg, restanteKg, }: { partidaId: string precioVentaKg: number | null restanteKg: number }",
+          "retorno": null,
+          "linea": 148,
+          "resumen": "── Envasar una unidad de venta a partir de una partida ────────────────────"
+        }
+      ],
+      "tablas": [
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "efefae8addf1"
+    },
+    {
+      "ruta": "apps/mariscos/app/(usuario)/dashboard/page.tsx",
+      "ambito": "apps/mariscos",
+      "exporta": [
+        "DashboardPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "DashboardPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9bb503cc4d08"
+    },
+    {
+      "ruta": "apps/mariscos/app/(usuario)/etiquetas/page.tsx",
+      "ambito": "apps/mariscos",
+      "exporta": [
+        "EtiquetasPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "EtiquetasPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c0b06887539f"
+    },
+    {
+      "ruta": "apps/mariscos/app/(usuario)/layout.tsx",
+      "ambito": "apps/mariscos",
+      "exporta": [
+        "UsuarioLayout"
+      ],
+      "funciones": [
+        {
+          "nombre": "UsuarioLayout",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ children }: { children: React.ReactNode }",
+          "retorno": null,
+          "linea": 6
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d2fabee322d9"
+    },
+    {
+      "ruta": "apps/mariscos/app/(usuario)/logout-button.tsx",
+      "ambito": "apps/mariscos",
+      "exporta": [
+        "LogoutButton"
+      ],
+      "funciones": [
+        {
+          "nombre": "LogoutButton",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 5
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3f99490f1a22"
+    },
+    {
+      "ruta": "apps/mariscos/app/(usuario)/partidas/[id]/page.tsx",
+      "ambito": "apps/mariscos",
+      "exporta": [
+        "PartidaDetalle"
+      ],
+      "funciones": [
+        {
+          "nombre": "Dato",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ label, value }: { label: string; value: React.ReactNode }",
+          "retorno": null,
+          "linea": 11
+        },
+        {
+          "nombre": "PartidaDetalle",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 20
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ee0338486c2c"
+    },
+    {
+      "ruta": "apps/mariscos/app/(usuario)/partidas/page.tsx",
+      "ambito": "apps/mariscos",
+      "exporta": [
+        "PartidasPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "PartidasPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 9
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d9c9e5b22300"
+    },
+    {
+      "ruta": "apps/mariscos/app/api/auth/login/route.ts",
+      "ambito": "apps/mariscos",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [
+        "next",
+        "zod"
+      ],
+      "rutaApi": "/api/auth/login",
+      "hash": "2d6f05ea3dcb"
+    },
+    {
+      "ruta": "apps/mariscos/app/api/auth/logout/route.ts",
+      "ambito": "apps/mariscos",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 4
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/auth/logout",
+      "hash": "940406db64c5"
+    },
+    {
+      "ruta": "apps/mariscos/app/api/envasados/route.ts",
+      "ambito": "apps/mariscos",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "optDate",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 7
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 18
+        }
+      ],
+      "tablas": [
+        "next",
+        "zod"
+      ],
+      "rutaApi": "/api/envasados",
+      "hash": "d4dda11e6290"
+    },
+    {
+      "ruta": "apps/mariscos/app/api/partidas/route.ts",
+      "ambito": "apps/mariscos",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "opt",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 7
+        },
+        {
+          "nombre": "optNum",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 8
+        },
+        {
+          "nombre": "optDate",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 9
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 32
+        }
+      ],
+      "tablas": [
+        "next",
+        "zod"
+      ],
+      "rutaApi": "/api/partidas",
+      "hash": "53a1deea66f7"
+    },
+    {
+      "ruta": "apps/mariscos/app/etiqueta/[id]/page.tsx",
+      "ambito": "apps/mariscos",
+      "exporta": [
+        "EtiquetaPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "Fila",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ k, v }: { k: string; v: React.ReactNode }",
+          "retorno": null,
+          "linea": 16
+        },
+        {
+          "nombre": "EtiquetaPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 25
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "19228c7eb8da"
+    },
+    {
+      "ruta": "apps/mariscos/app/etiqueta/[id]/print-button.tsx",
+      "ambito": "apps/mariscos",
+      "exporta": [
+        "PrintButton"
+      ],
+      "funciones": [
+        {
+          "nombre": "PrintButton",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 3
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4bd05623bc22"
+    },
+    {
+      "ruta": "apps/mariscos/app/layout.tsx",
+      "ambito": "apps/mariscos",
+      "exporta": [
+        "RootLayout"
+      ],
+      "funciones": [
+        {
+          "nombre": "RootLayout",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ children }: { children: React.ReactNode }",
+          "retorno": null,
+          "linea": 9
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "749533b386d8"
+    },
+    {
+      "ruta": "apps/mariscos/app/login/page.tsx",
+      "ambito": "apps/mariscos",
+      "exporta": [
+        "LoginPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "LoginPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 6
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "75d6259c4a95"
+    },
+    {
+      "ruta": "apps/mariscos/app/page.tsx",
+      "ambito": "apps/mariscos",
+      "exporta": [
+        "Home"
+      ],
+      "funciones": [
+        {
+          "nombre": "Home",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 3
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ced9dccc438a"
+    },
+    {
+      "ruta": "apps/mariscos/lib/auth.ts",
+      "ambito": "apps/mariscos",
+      "exporta": [
+        "hashPassword",
+        "verifyPassword",
+        "createSessionToken",
+        "verifySessionToken"
+      ],
+      "funciones": [
+        {
+          "nombre": "SECRET",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 12,
+          "resumen": "Secreto PROPIO de la vertical. NUNCA fallback a literal en producción (guardián regression-secrets)."
+        },
+        {
+          "nombre": "hashPassword",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "p: string",
+          "retorno": null,
+          "linea": 22
+        },
+        {
+          "nombre": "verifyPassword",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "p: string, hash: string",
+          "retorno": null,
+          "linea": 23
+        },
+        {
+          "nombre": "createSessionToken",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, email: string,",
+          "retorno": "Promise<",
+          "linea": 25
+        },
+        {
+          "nombre": "verifySessionToken",
+          "kind": "function",
+          "exportada": true,
+          "params": "token: string,",
+          "retorno": "Promise<",
+          "linea": 32
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fcbcf4e67ab0"
+    },
+    {
+      "ruta": "apps/mariscos/lib/format.ts",
+      "ambito": "apps/mariscos",
+      "resumen": "Formato dinero ESPAÑOL (regla global del monorepo): miles con punto, decimales con coma, símbolo € DETRÁS y pegado (sin espacio). Ej.: 2.162,49€",
+      "exporta": [
+        "eur",
+        "kg",
+        "fecha"
+      ],
+      "funciones": [
+        {
+          "nombre": "eur",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "n: number | null | undefined",
+          "retorno": "string",
+          "linea": 3,
+          "resumen": "Formato dinero ESPAÑOL (regla global del monorepo): miles con punto, decimales con coma, símbolo € DETRÁS y pegado (sin espacio). Ej.: 2.162,49€"
+        },
+        {
+          "nombre": "kg",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "n: number | null | undefined",
+          "retorno": "string",
+          "linea": 7,
+          "resumen": "Peso en kg, formato español con hasta 3 decimales. Ej.: 2,5 kg · 12,750 kg"
+        },
+        {
+          "nombre": "fecha",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "iso: string | null | undefined",
+          "retorno": "string",
+          "linea": 11,
+          "resumen": "Fecha ISO (YYYY-MM-DD) → dd/mm/aaaa. Vacío si null."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "cbe2e5f97f9e"
+    },
+    {
+      "ruta": "apps/mariscos/lib/mariscos-repo.ts",
+      "ambito": "apps/mariscos",
+      "resumen": "Capa de I/O de la vertical Mariscos: adapta filas de Prisma a los tipos de @central/module-pesca y compone su lógica pura. Todo filtrado por `cuentaId` (scope del holding).",
+      "exporta": [
+        "aPartida",
+        "aEnvasado",
+        "listarPartidas",
+        "getPartida",
+        "getEtiqueta",
+        "listarEnvasados",
+        "dashboard"
+      ],
+      "funciones": [
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: Dec",
+          "retorno": "number",
+          "linea": 15
+        },
+        {
+          "nombre": "numN",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: Dec",
+          "retorno": "number | null",
+          "linea": 16
+        },
+        {
+          "nombre": "isoDate",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: Date | null | undefined",
+          "retorno": "string | null",
+          "linea": 17
+        },
+        {
+          "nombre": "aPartida",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: any",
+          "retorno": "Partida",
+          "linea": 21,
+          "resumen": "eslint-disable @typescript-eslint/no-explicit-any"
+        },
+        {
+          "nombre": "aEnvasado",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: any",
+          "retorno": "Envasado",
+          "linea": 46
+        },
+        {
+          "nombre": "listarPartidas",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string",
+          "retorno": "Promise<PartidaView[]>",
+          "linea": 67,
+          "resumen": "Lista de partidas con su stock ya derivado (para la tabla de /partidas)."
+        },
+        {
+          "nombre": "getPartida",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, id: string",
+          "retorno": null,
+          "linea": 86,
+          "resumen": "Una partida con sus envasados (para el detalle)."
+        },
+        {
+          "nombre": "getEtiqueta",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, envasadoId: string,",
+          "retorno": "Promise<EtiquetaPayload | null>",
+          "linea": 103,
+          "resumen": "Resuelve la etiqueta de un envasado (con su partida) lista para imprimir."
+        },
+        {
+          "nombre": "listarEnvasados",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, limit = 100",
+          "retorno": "Promise<EnvasadoView[]>",
+          "linea": 120,
+          "resumen": "Últimos envasados (para /etiquetas → reimpresión)."
+        },
+        {
+          "nombre": "dashboard",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string",
+          "retorno": "Promise<DashboardData>",
+          "linea": 138,
+          "resumen": "KPIs del dashboard."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a5715e903e61"
+    },
+    {
+      "ruta": "apps/mariscos/lib/session.ts",
+      "ambito": "apps/mariscos",
+      "exporta": [
+        "getSession",
+        "requireSession"
+      ],
+      "funciones": [
+        {
+          "nombre": "getSession",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 7,
+          "resumen": "Verificación STATELESS (solo firma JWT + existencia de la cuenta), igual que alquiler/transporte: no valida `session_jti` para no acoplarse a la sesión de plataforma (comparten `cuentas`)."
+        },
+        {
+          "nombre": "requireSession",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 21
+        }
+      ],
+      "tablas": [
+        "next"
+      ],
+      "rutaApi": null,
+      "hash": "bc1b7811fe24"
+    },
+    {
+      "ruta": "apps/mariscos/middleware.ts",
+      "ambito": "apps/mariscos",
+      "exporta": [
+        "middleware"
+      ],
+      "funciones": [
+        {
+          "nombre": "middleware",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 7
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f6c44d7a82bc"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/agente/page.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -43856,7 +44510,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "02d6f6c7b6f7"
+      "hash": "4fe1b90eac87"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/BenchmarkPisos.tsx",
@@ -49550,13 +50204,13 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 19,
+          "linea": 21,
           "resumen": "POST multipart/form-data { sociedadId, file, iban?, banco? } — importa un extracto bancario en una sociedad de la cuenta. Detecta el formato por extensión: .xls/.xlsx → Excel (Kutxa, BBVA, Santander…)"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/banca/importar",
-      "hash": "b33322e6769f"
+      "hash": "f7d1fd56fbc6"
     },
     {
       "ruta": "apps/plataforma/app/api/banca/movimientos/route.ts",
@@ -62198,6 +62852,89 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "ac2522d02d84"
+    },
+    {
+      "ruta": "apps/plataforma/lib/extracto-csv.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Importador de extractos en CSV. Cubre dos casos habituales: 1) El CSV que EXPORTA la propia plataforma (`/api/banca/export`): separador ';', coma decimal y cabecera \"Fecha;Valor;Sociedad;Banco;Concepto;Contraparte;Categoría;Cuenta PGC;Negocio;Importe (€);Conciliado\". 2) CSV genérico de banco con col",
+      "exporta": [
+        "parseExtractoCsv"
+      ],
+      "funciones": [
+        {
+          "nombre": "aIso",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string",
+          "linea": 16,
+          "resumen": "'YYYY-MM-DD' o 'DD/MM/YYYY' (tolerante a '-', '/', '.') → 'YYYY-MM-DD'. '' si no parsea."
+        },
+        {
+          "nombre": "num",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 27,
+          "resumen": "Número tolerante a formato es-ES (\"1.234,56\" / \"-986,70\") y a símbolos. null si no es número."
+        },
+        {
+          "nombre": "norm",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 36
+        },
+        {
+          "nombre": "parseCsv",
+          "kind": "function",
+          "exportada": false,
+          "params": "text: string, delim: string",
+          "retorno": "string[][]",
+          "linea": 40,
+          "resumen": "Parser CSV tolerante a comillas (RFC4180-ish): campos entrecomillados con separador o salto de línea dentro, y comillas internas duplicadas (\"\")."
+        },
+        {
+          "nombre": "detectDelim",
+          "kind": "function",
+          "exportada": false,
+          "params": "text: string",
+          "retorno": "string",
+          "linea": 68,
+          "resumen": "Elige el separador a partir de la primera línea (la cabecera casi nunca va entrecomillada, y no lleva decimales, así que la coma es segura de contar)."
+        },
+        {
+          "nombre": "mapColumnas",
+          "kind": "function",
+          "exportada": false,
+          "params": "fila: string[]",
+          "retorno": "Cols | null",
+          "linea": 79,
+          "resumen": "Localiza los índices de columna a partir de una fila de cabecera."
+        },
+        {
+          "nombre": "cerrarExtracto",
+          "kind": "function",
+          "exportada": false,
+          "params": "movimientos: MovimientoN43[], ccc: string, banco: string",
+          "retorno": "ExtractoN43",
+          "linea": 99,
+          "resumen": "Cierra un grupo de movimientos (mismo banco) en un ExtractoN43."
+        },
+        {
+          "nombre": "parseExtractoCsv",
+          "kind": "function",
+          "exportada": true,
+          "params": "buf: Buffer, opts: { iban?: string; banco?: string } = {},",
+          "retorno": "ExtractoN43[]",
+          "linea": 114
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2e01d83bb40e"
     },
     {
       "ruta": "apps/plataforma/lib/extracto-tarjeta-excel.ts",
@@ -85827,6 +86564,98 @@
       "hash": "d44f7323bee7"
     },
     {
+      "ruta": "packages/module-pesca/src/pesca.ts",
+      "ambito": "packages/module-pesca",
+      "resumen": "Lógica pura de trazabilidad pesquera: importe por peso, stock por partida, la regla de \"qué canal lleva lote\", la construcción de la etiqueta (HEREDANDO el lote de origen) y las validaciones.",
+      "exporta": [
+        "redondear2",
+        "importe",
+        "pesoEnvasadoTotalKg",
+        "stockRestanteKg",
+        "canalLlevaLote",
+        "construirEtiqueta",
+        "validarPartida",
+        "validarEnvasado"
+      ],
+      "funciones": [
+        {
+          "nombre": "redondear2",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "n: number",
+          "retorno": "number",
+          "linea": 13,
+          "resumen": "Redondeo a 2 decimales sin errores de coma flotante (céntimos)."
+        },
+        {
+          "nombre": "importe",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "pesoKg: number, precioKg: number",
+          "retorno": "number",
+          "linea": 16,
+          "resumen": "Importe de un envase = peso (kg) × precio (€/kg), a céntimos."
+        },
+        {
+          "nombre": "pesoEnvasadoTotalKg",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "envasados: Pick<Envasado, 'pesoKg'>[]",
+          "retorno": "number",
+          "linea": 20,
+          "resumen": "Suma del peso ya envasado de una lista de envasados."
+        },
+        {
+          "nombre": "stockRestanteKg",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "partida: Pick<Partida, 'pesoRecibidoKg'>, envasados: Pick<Envasado, 'pesoKg'>[],",
+          "retorno": "number",
+          "linea": 24,
+          "resumen": "Kg que quedan sin envasar de una partida (nunca negativo)."
+        },
+        {
+          "nombre": "canalLlevaLote",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "canal: Canal",
+          "retorno": "boolean",
+          "linea": 33,
+          "resumen": "LA regla de la reunión: ¿la etiqueta de este canal lleva el nº de lote? Catering / bares / hotel (va en factura) SÍ; mostrador (ticket corriente) NO."
+        },
+        {
+          "nombre": "construirEtiqueta",
+          "kind": "function",
+          "exportada": true,
+          "params": "partida: Partida, envasado: Envasado",
+          "retorno": "EtiquetaPayload",
+          "linea": 49,
+          "resumen": "Construye el payload de la etiqueta de un envasado a partir de SU partida. Puntos clave: - El `lote` es SIEMPRE el `loteOrigen` de la partida (nunca se genera uno nuevo), y solo se rellena si el canal"
+        },
+        {
+          "nombre": "validarPartida",
+          "kind": "function",
+          "exportada": true,
+          "params": "input: Partial<PartidaInput>",
+          "retorno": "string[]",
+          "linea": 78,
+          "resumen": "Valida los datos de una recepción de partida. Devuelve la lista de errores (vacía = OK)."
+        },
+        {
+          "nombre": "validarEnvasado",
+          "kind": "function",
+          "exportada": true,
+          "params": "partida: Pick<Partida, 'pesoRecibidoKg'>, yaEnvasados: Pick<Envasado, 'pesoKg'>[], input: Partial<EnvasadoInput>,",
+          "retorno": "string[]",
+          "linea": 96,
+          "resumen": "Valida un envasado contra su partida y lo ya envasado: el peso debe ser > 0 y no superar el stock que queda en cámara."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "633f2223fc73"
+    },
+    {
       "ruta": "packages/module-presupuestos/src/calculo.ts",
       "ambito": "packages/module-presupuestos",
       "resumen": "Lógica de presupuestos: cálculo de totales, descuento, margen y rentabilidad. Funciones puras sobre los tipos genéricos (sin BD).",
@@ -90115,7 +90944,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2408,
-    "funciones": 6514
+    "archivos": 2431,
+    "funciones": 6575
   }
 }
