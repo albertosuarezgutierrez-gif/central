@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { anomaliasUniverso, camposEnvenenados } from './calidad-datos.ts'
+import { anomaliasUniverso, camposEnvenenados, neutralizarUniverso } from './calidad-datos.ts'
 
 test('anomaliasUniverso caza el caso MCD (mkt_cap de 196.044$) y el EY inflado', () => {
   const a = anomaliasUniverso([
@@ -32,4 +32,24 @@ test('camposEnvenenados agrupa por símbolo', () => {
     { simbolo: 'MCD', campo: 'earningsYield', valor: 1, motivo: '' },
   ])
   assert.deepEqual([...m.get('MCD')!], ['mktCap', 'earningsYield'])
+})
+
+test('neutralizarUniverso caza el caso RDY (ADR en rupias: EY 682%) sin tocar las filas sanas', () => {
+  // Números REALES de trading_universo el 11/08/2026: RDY salía nº 1 del explorador con score 6,03.
+  const { filas, anomalias } = neutralizarUniverso([
+    { simbolo: 'RDY', roic: 0.196, earningsYield: 6.8198, fcfYield: 5.0075, momentum: -0.044, mktCap: 9.49e9 },
+    { simbolo: 'SNDK', roic: -0.119, earningsYield: -0.0078, fcfYield: -0.0007, momentum: 43.139, mktCap: 1.75e11 },
+  ])
+  assert.deepEqual(anomalias.map(a => `${a.simbolo}:${a.campo}`), ['RDY:earningsYield', 'RDY:fcfYield'])
+  assert.equal(filas[0].earningsYield, null)
+  assert.equal(filas[0].fcfYield, null)
+  assert.equal(filas[0].momentum, -0.044)     // el campo sano de la fila envenenada se conserva
+  assert.equal(filas[1].momentum, 43.139)     // la manía de memoria es real y no se toca
+})
+
+test('neutralizarUniverso sin anomalías devuelve las filas tal cual', () => {
+  const entrada = [{ simbolo: 'MSFT', earningsYield: 0.04, mktCap: 2.9e12 }]
+  const { filas, anomalias } = neutralizarUniverso(entrada)
+  assert.equal(anomalias.length, 0)
+  assert.equal(filas, entrada)
 })

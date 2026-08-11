@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db'
 import { eur } from '@/lib/dinero'
+import { neutralizarUniverso } from '@/lib/trading/calidad-datos'
 import { etiquetaCalidad, rankearUniverso, type EmpresaUniverso } from '@central/module-trading'
 import OnboardingBanner from './OnboardingBanner'
 import RadarExplorador, { type FilaExplorador } from './RadarExplorador'
@@ -79,9 +80,13 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
   // el score del blend se calcula para TODO el universo elegible con el MISMO rankearUniverso del cron,
   // y la tabla única se ordena por él por defecto — las primeras filas SON el top del radar. El guruScore
   // solo se conoce para el top-20 del snapshot (para el resto 0, aproximación documentada).
+  // 🛡️ MISMO escudo de calidad de datos que el cron ANTES de puntuar: esta página leía la caché CRUDA
+  // y un ADR con resultados en rupias (RDY, EY «682%») salió nº 1 con score 6,03 (11/08/2026). Los
+  // campos imposibles se anulan (no puntúan) y se declaran bajo el ranking.
+  const { filas: universoSano, anomalias } = neutralizarUniverso(universoFilas)
   const limiteFresco = new Date(Date.now() - 14 * 86_400_000)
   const badges = new Map(((radar?.entries as unknown as { simbolo: string; guru: boolean; tecnico: 'si' | 'esperar' | null; volumen?: 'acumulacion' | 'distribucion' | 'neutral' | null }[] | null) ?? []).map(e => [e.simbolo, e]))
-  const empresasUniverso: EmpresaUniverso[] = universoFilas.map(f => ({
+  const empresasUniverso: EmpresaUniverso[] = universoSano.map(f => ({
     simbolo: f.simbolo, nombre: f.nombre ?? undefined,
     piotroski: f.piotroski, roic: f.roic, earningsYield: f.earningsYield, fcfYield: f.fcfYield,
     momentum: f.momentum, mktCap: f.mktCap, guruScore: badges.get(f.simbolo)?.guru ? 1 : 0,
@@ -322,6 +327,11 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
           )
         })()}
         {universoExplorador.length > 0 && <RadarExplorador filas={universoExplorador} />}
+        {anomalias.length > 0 && (
+          <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
+            🛡️ Datos imposibles NEUTRALIZADOS (no puntúan ese factor): {anomalias.slice(0, 5).map(a => `${a.simbolo} ${a.campo} (${a.motivo})`).join(' · ')}{anomalias.length > 5 ? ` · +${anomalias.length - 5} más` : ''}
+          </p>
+        )}
       </section>
 
       {/* 💡 Ideas de COMPRA — SOLO compras REALES (petición de Alberto 20/07: «aquí solo interesan las de
