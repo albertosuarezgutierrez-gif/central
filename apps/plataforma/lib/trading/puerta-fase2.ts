@@ -24,6 +24,11 @@ export const DIAS_TRAMO3 = 180   // ~6 meses
 export const MIN_CESTAS_TRAMO3 = 3
 export const FRACCION_CESTAS_BATIENDO = 2 / 3
 export const FACTOR_DRAWDOWN_MAX = 1.5
+// Enmienda de operacionalización (auditoría 11/08/2026): un alpha medido sobre MENOS del 80% de la
+// cesta no es el alpha de esa cesta (símbolos sin serie que cubra la ventana). No cambia el criterio
+// firmado — exige que el dato que lo evalúa sea el que dice ser. `cobertura` null = desconocida
+// (snapshots antiguos): se acepta por compatibilidad, las mediciones nuevas SIEMPRE la traen.
+export const COBERTURA_MIN_ESCALERA = 0.8
 
 export type CohorteEscalera = {
   cohorte: string
@@ -31,6 +36,7 @@ export type CohorteEscalera = {
   alphaMediana: number | null       // mediana de la cesta − retorno del benchmark (fracción)
   maxDrawdown: number | null        // de la cesta (negativo)
   maxDrawdownBench: number | null   // del benchmark (negativo)
+  cobertura?: number | null         // fracción de la cesta con serie que cubre la ventana (0..1)
 }
 
 export type OrdenPaper = { simbolo: string; lado: string; precio: number; fecha: string }
@@ -64,6 +70,11 @@ export function emparejarOps(ordenes: OrdenPaper[]): { simbolo: string; retorno:
 const pctTxt = (x: number): string => `${x >= 0 ? '+' : ''}${(x * 100).toFixed(1)}%`
 const meses = (dias: number): string => `${(dias / 30).toFixed(1)} meses`
 
+// Con cobertura insuficiente el alpha/riesgo de la cohorte NO se usa para subir tramos (no es el
+// dato que dice ser); cobertura desconocida (null) pasa por compatibilidad con snapshots antiguos.
+const coberturaFiable = (c: CohorteEscalera): boolean => c.cobertura == null || c.cobertura >= COBERTURA_MIN_ESCALERA
+const alphaFiable = (c: CohorteEscalera): number | null => (coberturaFiable(c) ? c.alphaMediana : null)
+
 // Evalúa la escalera. `cohortes` deben venir YA deduplicadas por cesta (dos versiones con los mismos
 // valores son UNA prueba, no dos — misma regla que el dashboard y el digest).
 export function evaluarEscalera(cohortes: CohorteEscalera[]): EstadoEscalera {
@@ -74,20 +85,24 @@ export function evaluarEscalera(cohortes: CohorteEscalera[]): EstadoEscalera {
     detalle: 'disponible YA con señal viva del agente en el momento de comprar (nunca perseguir un gap). Objetivo: medir fricción, no ganar.',
   }
 
-  const t2ok = masVieja != null && masVieja.dias >= DIAS_TRAMO2 && (masVieja.alphaMediana ?? -Infinity) > 0
+  const t2ok = masVieja != null && masVieja.dias >= DIAS_TRAMO2 && (alphaFiable(masVieja) ?? -Infinity) > 0
+  const notaCobertura = masVieja != null && !coberturaFiable(masVieja)
+    ? ` · ⚠️ cobertura ${((masVieja.cobertura ?? 0) * 100).toFixed(0)}% < ${COBERTURA_MIN_ESCALERA * 100}% — el alpha no es evaluable (símbolos sin serie que cubra la ventana)`
+    : ''
   const t2: EstadoTramo = {
     tramo: 2, titulo: 'Tramo 2 — +2.000€ (total ~9%)', ok: t2ok,
     detalle: masVieja
-      ? `cesta más vieja: ${meses(masVieja.dias)} de ${meses(DIAS_TRAMO2)} · mediana vs SPY ${masVieja.alphaMediana != null ? pctTxt(masVieja.alphaMediana) : 'sin dato'}${t2ok ? '' : ' — aún no'}. Además: fricción del tramo 1 sin anomalías (round-trip ≤2%, se mide con los trades reales).`
+      ? `cesta más vieja: ${meses(masVieja.dias)} de ${meses(DIAS_TRAMO2)} · mediana vs SPY ${masVieja.alphaMediana != null ? pctTxt(masVieja.alphaMediana) : 'sin dato'}${notaCobertura}${t2ok ? '' : ' — aún no'}. Además: fricción del tramo 1 sin anomalías (round-trip ≤2%, se mide con los trades reales).`
       : 'sin cohortes en seguimiento aún',
   }
 
   const maduras = cohortes.filter(c => c.dias >= DIAS_TRAMO3)
   const cestasOk = cohortes.length >= MIN_CESTAS_TRAMO3
   const viejaOk = masVieja != null && masVieja.dias >= DIAS_TRAMO3
-  const baten = cohortes.filter(c => (c.alphaMediana ?? -Infinity) > 0)
+  const baten = cohortes.filter(c => (alphaFiable(c) ?? -Infinity) > 0)
   const batenOk = cohortes.length > 0 && baten.length >= Math.ceil(cohortes.length * FRACCION_CESTAS_BATIENDO)
-  const riesgoOk = masVieja != null && masVieja.maxDrawdown != null && masVieja.maxDrawdownBench != null
+  const riesgoOk = masVieja != null && coberturaFiable(masVieja)
+    && masVieja.maxDrawdown != null && masVieja.maxDrawdownBench != null
     && Math.abs(masVieja.maxDrawdown) <= FACTOR_DRAWDOWN_MAX * Math.abs(masVieja.maxDrawdownBench)
   const t3ok = cestasOk && viejaOk && batenOk && riesgoOk
   const t3: EstadoTramo = {
