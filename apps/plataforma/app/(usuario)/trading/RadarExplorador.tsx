@@ -17,9 +17,10 @@ export type FilaExplorador = {
 }
 
 const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 16 }
-const th: React.CSSProperties = { textAlign: 'left', padding: '8px 10px', color: 'var(--muted)', fontWeight: 600, fontSize: 13, borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none' }
+// padding vertical 12px: las cabeceras son clicables (ordenación) y el objetivo táctil debe rondar los 44px.
+const th: React.CSSProperties = { textAlign: 'left', padding: '12px 10px', color: 'var(--muted)', fontWeight: 600, fontSize: 13, borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none' }
 const td: React.CSSProperties = { padding: '8px 10px', borderBottom: '1px solid var(--border)', fontSize: 14, whiteSpace: 'nowrap' }
-const sel: React.CSSProperties = { padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }
+const sel: React.CSSProperties = { padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13, minHeight: 44 }
 
 const ETIQ = { fuerte: '🟢 fuerte', media: '🟡 media', debil: '⚪ débil' } as const
 type Orden = 'score' | 'roic' | 'piotroski' | 'ey' | 'momentum' | 'mktCap' | 'simbolo' | 'senal'
@@ -85,6 +86,15 @@ export default function RadarExplorador({ filas }: { filas: FilaExplorador[] }) 
   return (
     <div style={{ ...card, marginTop: 10 }}>
       <div style={{ fontWeight: 700, marginBottom: 8 }}>Ranking + explorador <span style={{ color: 'var(--muted)', fontSize: 12, fontWeight: 400 }}>({filas.length} empresas · ordenado por el score del modelo — las primeras filas son el top del radar; busca, filtra u ordena por cualquier columna)</span></div>
+      {/* Presets de un toque para las preguntas típicas (los selects de abajo siguen mandando). */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+        <button onClick={() => { setSenal(s => (s === 'si' ? 'todas' : 'si')); setMostrar(50) }} style={{ ...sel, cursor: 'pointer', fontWeight: senal === 'si' ? 700 : 400, borderColor: senal === 'si' ? 'var(--brand)' : 'var(--border)' }}>📈 Compra ahora</button>
+        <button onClick={() => { setSoloGuru(g => !g); setMostrar(50) }} style={{ ...sel, cursor: 'pointer', fontWeight: soloGuru ? 700 : 400, borderColor: soloGuru ? 'var(--brand)' : 'var(--border)' }}>🏆 Solo gurús</button>
+        <button onClick={() => { setEtiqueta(e => (e === 'fuerte' ? 'todas' : 'fuerte')); setMostrar(50) }} style={{ ...sel, cursor: 'pointer', fontWeight: etiqueta === 'fuerte' ? 700 : 400, borderColor: etiqueta === 'fuerte' ? 'var(--brand)' : 'var(--border)' }}>🟢 Calidad fuerte</button>
+        {(senal !== 'todas' || soloGuru || etiqueta !== 'todas' || q || minPio !== 0 || minRoic !== -1 || minMom !== -10) && (
+          <button onClick={() => { setQ(''); setMinPio(0); setMinRoic(-1); setMinMom(-10); setEtiqueta('todas'); setSenal('todas'); setSoloGuru(false); setMostrar(50) }} style={{ ...sel, cursor: 'pointer', color: 'var(--muted)' }}>✕ Limpiar</button>
+        )}
+      </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10, alignItems: 'center' }}>
         <input
           value={q} onChange={e => { setQ(e.target.value); setMostrar(50) }}
@@ -157,7 +167,10 @@ export default function RadarExplorador({ filas }: { filas: FilaExplorador[] }) 
                 <td style={td}>{pctCell(f.momentum)}</td>
                 <td style={td}>{mktCapCell(f.mktCap)}</td>
                 <td style={td}>{ETIQ[f.etiqueta]}</td>
-                <td style={td}>{f.guru ? '🏆 ' : ''}{f.tecnico === 'si' ? '📈' : f.tecnico === 'esperar' ? '⏳' : ''}{f.volumen === 'acumulacion' ? <span title="picos de volumen COMPRANDO (huella de fondos acumulando)"> 📊↑</span> : f.volumen === 'distribucion' ? <span title="picos de volumen VENDIENDO (fondos distribuyendo)"> 📊↓</span> : null}</td>
+                {/* Sin señal alguna ≠ «no hay señal»: fuera del top-20 no se CALCULA — se declara. */}
+                <td style={td}>{!f.guru && !f.tecnico && !f.volumen
+                  ? <span style={{ color: 'var(--muted)' }} title="no calculado — el técnico/gurús solo se evalúan para el top-20 del snapshot semanal">—</span>
+                  : <>{f.guru ? '🏆 ' : ''}{f.tecnico === 'si' ? '📈' : f.tecnico === 'esperar' ? '⏳' : ''}{f.volumen === 'acumulacion' ? <span title="picos de volumen COMPRANDO (huella de fondos acumulando)"> 📊↑</span> : f.volumen === 'distribucion' ? <span title="picos de volumen VENDIENDO (fondos distribuyendo)"> 📊↓</span> : null}</>}</td>
               </tr>
             ))}
             {lista.length === 0 && (

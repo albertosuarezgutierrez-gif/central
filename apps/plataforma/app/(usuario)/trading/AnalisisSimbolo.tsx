@@ -23,7 +23,8 @@ type Analisis = {
 
 const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 16 }
 const sel: React.CSSProperties = { padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 14 }
-const fila: React.CSSProperties = { display: 'flex', gap: 8, alignItems: 'baseline', fontSize: 14, padding: '3px 0' }
+// flexWrap: sin él, la fila «Fundamentales» (5 métricas) desbordaba la página entera a 320px.
+const fila: React.CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'baseline', fontSize: 14, padding: '3px 0' }
 const etiq: React.CSSProperties = { color: 'var(--muted)', minWidth: 150, fontSize: 13 }
 
 const pct = (x: number | null | undefined, dec = 1) => (x == null ? '—' : `${x >= 0 ? '+' : ''}${(x * 100).toFixed(dec)}%`)
