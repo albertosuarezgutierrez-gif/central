@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-11T06:05:06Z",
-  "sha": "c4724edc09c8dc4de05d6ef1e2227e11557c293d",
+  "generadoEn": "2026-08-11T06:06:14Z",
+  "sha": "0ca59b66e973f4ca707d6a8b0789f042a23a037b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -56565,7 +56565,7 @@
         "trading_tesis"
       ],
       "rutaApi": "/api/trading/analizar",
-      "hash": "a6565324817b"
+      "hash": "641485451c0f"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/cartera-estudio/route.ts",
@@ -56789,7 +56789,7 @@
         "trading_tesis"
       ],
       "rutaApi": "/api/trading/puntuar",
-      "hash": "0e291bd254eb"
+      "hash": "fdf44bf078f6"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/saldo/route.ts",
@@ -70206,26 +70206,17 @@
       ],
       "funciones": [
         {
-          "nombre": "cierreDeContraste",
-          "kind": "function",
-          "exportada": false,
-          "params": "simbolo: string, hoy: string, maxDias: number",
-          "retorno": "Promise<number | null>",
-          "linea": 31,
-          "resumen": "Último cierre <= `hoy` y no más viejo que `maxDias`. null si la fuente no da nada utilizable."
-        },
-        {
           "nombre": "cierresDeContraste",
           "kind": "function",
           "exportada": true,
-          "params": "simbolos: string[], hoy: string, opts: { presupuestoMs?: number; concurrencia?: number; maxDias?: number } = {},",
+          "params": "simbolos: string[], hoy: string, opts: { presupuestoMs?: number; concurrencia?: number; ventanaDias?: number } = {},",
           "retorno": "Promise<ResultadoContraste>",
-          "linea": 44
+          "linea": 31
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6e8a831fffc3"
+      "hash": "2a951f8006fd"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-guardia.ts",
@@ -70236,6 +70227,8 @@
         "resumenDescartes",
         "contrastarFuentes",
         "resumenDivergencias",
+        "juzgarPuntos",
+        "resumenDesfase",
         "detectarSuplantaciones",
         "resumenSuplantaciones",
         "saltoDeSaldo"
@@ -70278,12 +70271,29 @@
           "resumen": "Resumen de una línea. Cadena vacía si no hay divergencias — el consumidor no tiene que comprobarlo."
         },
         {
+          "nombre": "juzgarPuntos",
+          "kind": "function",
+          "exportada": true,
+          "params": "puntos: PuntoContraste[], hoy: string",
+          "retorno": "Veredicto",
+          "linea": 196
+        },
+        {
+          "nombre": "resumenDesfase",
+          "kind": "function",
+          "exportada": true,
+          "params": "desfasados: Desfasado[]",
+          "retorno": "string",
+          "linea": 209,
+          "resumen": "Una línea para el latido/Telegram cuando la 2ª fuente va por detrás. Vacía si no hay desfase: el parte solo debe hablar de lo que ha pasado."
+        },
+        {
           "nombre": "cerca",
           "kind": "function",
           "exportada": false,
           "params": "a: number, b: number, tol: number",
           "retorno": "boolean",
-          "linea": 238
+          "linea": 289
         },
         {
           "nombre": "detectarSuplantaciones",
@@ -70291,7 +70301,7 @@
           "exportada": true,
           "params": "precios: Record<string, number>, referencias: Record<string, number>, tol = CRUCE_TOLERANCIA,",
           "retorno": "Suplantaciones",
-          "linea": 244,
+          "linea": 295,
           "resumen": "Detecta precios que pertenecen a otro símbolo. `referencias` = mismo mapa que `filtrarPreciosAnomalos` (último `precio_ref` conocido ANTERIOR a la pasada, por símbolo)."
         },
         {
@@ -70300,7 +70310,7 @@
           "exportada": true,
           "params": "suplantados: Suplantacion[]",
           "retorno": "string",
-          "linea": 293,
+          "linea": 344,
           "resumen": "Resumen de una línea. Cadena vacía si no hay nada — el consumidor no tiene que comprobarlo."
         },
         {
@@ -70309,13 +70319,13 @@
           "exportada": true,
           "params": "nuevo: number, anterior: number | null, umbral = SALTO_NAV_AVISO",
           "retorno": "SaltoSaldo",
-          "linea": 319,
+          "linea": 370,
           "resumen": "`variacion` = (nuevo − anterior) / anterior. Sin anterior no hay nada que comparar (primer saldo): no se avisa, que es distinto de «no ha cambiado»."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "32d64024bc5f"
+      "hash": "1ddfc6eb3f67"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-stooq.ts",
@@ -90945,6 +90955,6 @@
   ],
   "resumen": {
     "archivos": 2431,
-    "funciones": 6575
+    "funciones": 6576
   }
 }
