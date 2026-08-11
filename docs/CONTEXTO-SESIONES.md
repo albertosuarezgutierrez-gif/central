@@ -32,6 +32,16 @@
 
 ---
 
+### ⏰ (11/08/2026) Recordatorios de seguimiento del laboratorio de inversión (decisión: seguir en paper)
+- Alberto, tras el informe de la auditoría: **seguimos en paper** («ok seguimos entonces») + recordatorios.
+- Trigger **quincenal** `trig_01FJtQFiEMVGnEj9vpdBYA3f` (días 1 y 15, 08:00 UTC, sesión nueva + push):
+  informe del forward vs SPY, escalera con cobertura, cohetes y veredicto sobre dinero real. Solo escribe
+  en memoria/PR si hay cambio material. **One-shot** `trig_014V3ytMp9JZPwnbkEPxZRWu` el 16/11/2026
+  (hito ~4 meses de la cohorte 18/07 → evaluar Tramo 2; push+email).
+- ⚠️ Limitación: los triggers por MCP no almacenan conectores en esta org → el prompt lleva plan B
+  (leer el hero de `/invitado/trading` con el token de `trading_acceso_token`; si se rota el token,
+  `update_trigger`). Documentado como rutina 14 en `docs/RUTINAS-PROGRAMADAS.md`.
+
 ### 🛡️ (11/08/2026) Auditoría completa del laboratorio de inversión + guardián de datos en TODOS los caminos
 - Origen: Alberto vio a RDY nº 1 (score 6,03) — EY 682% (ADR en rupias, familia ORCL #1189). **#1373**: la página
   puntuaba la caché CRUDA (el guardián `calidad-datos.ts` solo lo aplicaban cron y analisis-simbolo) →
