@@ -40,6 +40,15 @@
   y al importarse después cayó con `destino='personal'` por defecto — nadie volvió a recogerlo.
 - Movimiento `1b1204d7` actualizado: `turistico_pisos` · `prop_house_sevillana` · `conciliado=true` ·
   `destino_confirmado=true` · `factura_ref` al PDF de Drive. Deducible al 100% (gasto corriente).
+- **Barrido del mismo fallo en todo 2026** (Alberto: «mira si hay más facturas sin conciliar»): 10 más
+  casadas — 8 recibos EMASESA (ene/mar/may, los 3 pisos, con `propiedad_id`; los de mar y may traen el
+  nº de factura en el propio concepto), CREATE ventilador Socorro 123,45€ e IONOS 1,82€.
+- Quedan 5 avisos SIN tocar (necesitan a Alberto): Pepephone ene–jun (6 PDF archivados y **ningún**
+  cargo suyo en las cuentas de Alberto → probablemente se carga en la cuenta de la SL); lavandería
+  Giraldillo mayo 504,57€ sin cargo (paga el mes vencido; el de abril sí está); PriceLabs factura en
+  USD vs cargo en EUR (no casa por importe); Endesa Dúplex 24/07 87,42€ con cargo pero sin PDF
+  archivado; fila duplicada en `facturas_drive` del ticket CREATE (`create-socorro` + `create_ventilador`,
+  mismo importe y fecha, distinto fileId — el banco solo tiene UN cargo).
 
 ### 📈 (11/08/2026) /trading rediseñado: hero con las 2 respuestas (empresas + rentabilidad)
 - Petición de Alberto: la página daba mucha info; lo que importa es qué empresas interesan y cómo va la cartera.
