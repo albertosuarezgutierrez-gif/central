@@ -54,3 +54,22 @@ export function camposEnvenenados(anomalias: Anomalia[]): Map<string, Set<CampoA
   }
   return m
 }
+
+// Escaneo + neutralización EN COPIA, en una llamada: los campos imposibles salen a null (esa empresa
+// no puntúa ese factor) y las anomalías se devuelven para DECLARARLAS en la UI/digest. Todo consumidor
+// de la caché `trading_universo` que puntúe o muestre debe pasar por aquí — el cron del radar ya lo
+// hacía, pero el ranking+explorador de /trading leía la caché CRUDA y un ADR con los resultados en
+// rupias (RDY, EY «682%») salió nº 1 con score 6,03 el 11/08/2026.
+export function neutralizarUniverso<T extends FilaCalidad>(filas: T[]): { filas: T[]; anomalias: Anomalia[] } {
+  const anomalias = anomaliasUniverso(filas)
+  if (!anomalias.length) return { filas, anomalias }
+  const envenenados = camposEnvenenados(anomalias)
+  const limpias = filas.map(f => {
+    const malos = envenenados.get(f.simbolo)
+    if (!malos) return f
+    const copia: T = { ...f }
+    for (const campo of malos) (copia as FilaCalidad)[campo] = null
+    return copia
+  })
+  return { filas: limpias, anomalias }
+}
