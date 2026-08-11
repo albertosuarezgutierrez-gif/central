@@ -43,12 +43,16 @@
 - **Barrido del mismo fallo en todo 2026** (Alberto: «mira si hay más facturas sin conciliar»): 10 más
   casadas — 8 recibos EMASESA (ene/mar/may, los 3 pisos, con `propiedad_id`; los de mar y may traen el
   nº de factura en el propio concepto), CREATE ventilador Socorro 123,45€ e IONOS 1,82€.
-- Quedan 5 avisos SIN tocar (necesitan a Alberto): Pepephone ene–jun (6 PDF archivados y **ningún**
+- **PriceLabs resuelto por Alberto (11/08): «es por el cambio».** Factura SIEMPRE 64,96 USD el día 8 de
+  cada mes (feb–jul) y el banco carga el euro del día — 54,99 · 55,91 · 55,59 · 55,38 · 56,38 · 56,98€.
+  La diferencia es solo FX, no un descuadre. Conciliado el cargo de junio (56,38€) con su PDF; feb, mar,
+  abr, may y jul siguen sin PDF archivado (hay que bajarlos del portal). El deducible es el EURO cargado.
+- Quedan 4 avisos SIN tocar (necesitan a Alberto): Pepephone ene–jun (6 PDF archivados y **ningún**
   cargo suyo en las cuentas de Alberto → probablemente se carga en la cuenta de la SL); lavandería
-  Giraldillo mayo 504,57€ sin cargo (paga el mes vencido; el de abril sí está); PriceLabs factura en
-  USD vs cargo en EUR (no casa por importe); Endesa Dúplex 24/07 87,42€ con cargo pero sin PDF
-  archivado; fila duplicada en `facturas_drive` del ticket CREATE (`create-socorro` + `create_ventilador`,
-  mismo importe y fecha, distinto fileId — el banco solo tiene UN cargo).
+  Giraldillo mayo 504,57€ sin cargo (paga el mes vencido; el de abril sí está); Endesa Dúplex 24/07
+  87,42€ con cargo pero sin PDF archivado; fila duplicada en `facturas_drive` del ticket CREATE
+  (`create-socorro` + `create_ventilador`, mismo importe y fecha, distinto fileId — el banco solo tiene
+  UN cargo).
 
 ### 📈 (11/08/2026) /trading rediseñado: hero con las 2 respuestas (empresas + rentabilidad)
 - Petición de Alberto: la página daba mucha info; lo que importa es qué empresas interesan y cómo va la cartera.
