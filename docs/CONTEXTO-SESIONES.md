@@ -32,6 +32,25 @@
 
 ---
 
+### 📈 (11/08/2026) /trading rediseñado: hero con las 2 respuestas (empresas + rentabilidad)
+- Petición de Alberto: la página daba mucha info; lo que importa es qué empresas interesan y cómo va la cartera.
+- Hero doble arriba (💡 señales 📈 + top ranking + compras del agente · 📊 mediana vs SPY + curva + tramo escalera);
+  onboarding condensado a 1 línea; forward paper, cartera cohetes y caza-cohetes PLEGADOS.
+- Nuevo `DetallePerezoso.tsx` (details con montaje perezoso — la cartera de estudio ya no paga fetch+Recharts si nadie la abre).
+- Honestidad de datos: banner «datos parciales» si falla una query (antes un fallo de BD pintaba el 🌱 vacío),
+  alpha/IPO null ya no salen como ⚠️/0€, celda de señal «no calculado» fuera del top-20; fixes móvil 320px + hex→tokens.
+- **PR #1368 MERGEADO y verificado en producción** (hero servido, 0 errores runtime; revisión previa con
+  agente de diseño). Follow-up: 401 de `/api/trading/cartera-estudio` al invitado ya no se pinta como «fuente caída».
+
+### 🔀 (11/08/2026) Rescatados los 2 PRs con semanas en conflicto: #755 y #1055 MERGEADOS
+- Orden de Alberto tras el FYI de la auditoría. Conflicto en ambos = memoria (sus entradas de julio
+  chocaban con la rotación mensual) + radiografía generada; las entradas se archivaron en
+  `docs/memoria/2026-07.md` (05/07 CSV con su caveat; 21/07 mariscos) y se regeneró la radiografía.
+- **#755** banca: importar extractos CSV (tests 6/6; ⚠️ caveat: re-importar el export completo sin IBAN duplica el ledger).
+- **#1055** NUEVA vertical `apps/mariscos` + `@central/module-pesca` (Fase 1 trazabilidad/etiquetado, 8/8 tests, build OK).
+  **Pendiente para darla por viva:** proyecto Vercel (Root `apps/mariscos`), ejecutar su SQL en Supabase
+  (preview→prod), sembrar cuenta real de Mariscos González; Fase 2 báscula/etiquetadora.
+
 ### ⚖️ (11/08/2026) Contraste diferido: la 2ª fuente juzga AYER, que es lo que sí ha publicado
 - Mergeado **#1363** (el contraste del mismo día dejaba de vetar precios buenos) y desplegado en prod.
   Efecto colateral asumido: a las 20:30 UTC la fuente casi nunca tiene el cierre del día → contraste inerte.

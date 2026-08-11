@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-11T06:05:06Z",
-  "sha": "c4724edc09c8dc4de05d6ef1e2227e11557c293d",
+  "generadoEn": "2026-08-11T06:23:25Z",
+  "sha": "8629824baee845c4e5ba9c9ebb5ec597a03ebfec",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -48383,7 +48383,7 @@
           "exportada": false,
           "params": "x: number | null | undefined, dec = 1",
           "retorno": null,
-          "linea": 29
+          "linea": 30
         },
         {
           "nombre": "mm$",
@@ -48391,7 +48391,7 @@
           "exportada": false,
           "params": "n: number | null",
           "retorno": null,
-          "linea": 30
+          "linea": 31
         },
         {
           "nombre": "AnalisisSimbolo",
@@ -48399,12 +48399,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 43
+          "linea": 44
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "74b75241e5ff"
+      "hash": "d262a37487c0"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/trading/CarteraCohetes.tsx",
@@ -48422,12 +48422,22 @@
           "linea": 16
         },
         {
+          "nombre": "Sw",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ color }: { color: string }",
+          "retorno": null,
+          "linea": 19,
+          "resumen": "Swatch de leyenda con el MISMO token que pinta la curva (un emoji de color fijo mentía en tema oscuro)."
+        },
+        {
           "nombre": "CarteraCohetes",
           "kind": "function",
           "exportada": true,
           "params": "{ data }: { data: CarteraCohetesData | null }",
           "retorno": null,
-          "linea": 18
+          "linea": 25,
+          "resumen": "Contenido de la cartera cohetes. El título/summary lo pone el padre (va plegada en un <details> del dashboard, cuyo resumen ya enseña valor y P&L sin abrir)."
         },
         {
           "nombre": "CurvaSVG",
@@ -48435,13 +48445,13 @@
           "exportada": false,
           "params": "{ curva, nucleo }: { curva: PuntoCurva[]; nucleo?: { fecha: string; valorEur: number }[] }",
           "retorno": null,
-          "linea": 55,
+          "linea": 59,
           "resumen": "Mini-curva a 3 bandas: cohetes (var(--brand)) vs núcleo (var(--muted)) vs SPY (var(--accent))."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "497eacc8bda4"
+      "hash": "547748b2b378"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/trading/CarteraEstudio.tsx",
@@ -48480,12 +48490,33 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 80
+          "linea": 81
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "00d8a46a542f"
+      "hash": "9a6f1c126fd9"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/trading/DetallePerezoso.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "DetallePerezoso"
+      ],
+      "funciones": [
+        {
+          "nombre": "DetallePerezoso",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ resumen, children, style }: { resumen: React.ReactNode children: React.ReactNode style?: React.CSSProperties }",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "<details> con MONTAJE PEREZOSO: el contenido solo se renderiza al abrir. Un <details> cerrado normal igualmente crea todo su DOM (regla de rendimiento del monorepo) — aquí los hijos no se montan hasta"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5a086c43081e"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/trading/OnboardingBanner.tsx",
@@ -48500,12 +48531,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 16
+          "linea": 18
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3c958e236704"
+      "hash": "7c6007b95a35"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/trading/page.tsx",
@@ -48540,7 +48571,7 @@
           "exportada": false,
           "params": "f: FilaExplorador",
           "retorno": "number",
-          "linea": 29,
+          "linea": 30,
           "resumen": "a igualdad, 🏆 gurús desempata. (Las señales solo existen para el top-20 del snapshot.)"
         },
         {
@@ -48549,7 +48580,7 @@
           "exportada": false,
           "params": "n: number | null, dec = 0",
           "retorno": "string",
-          "linea": 33
+          "linea": 34
         },
         {
           "nombre": "mktCapCell",
@@ -48557,7 +48588,7 @@
           "exportada": false,
           "params": "n: number | null",
           "retorno": "string",
-          "linea": 36
+          "linea": 37
         },
         {
           "nombre": "RadarExplorador",
@@ -48565,14 +48596,14 @@
           "exportada": true,
           "params": "{ filas }: { filas: FilaExplorador[] }",
           "retorno": null,
-          "linea": 41
+          "linea": 42
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "0aab5af7e64b"
+      "hash": "791993586490"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/trading/TradingDashboard.tsx",
@@ -48587,7 +48618,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 15
+          "linea": 17
         },
         {
           "nombre": "pctN",
@@ -48595,7 +48626,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 18
+          "linea": 20
         },
         {
           "nombre": "pct0N",
@@ -48603,7 +48634,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 21
+          "linea": 23
         },
         {
           "nombre": "CurvaForward",
@@ -48611,7 +48642,7 @@
           "exportada": false,
           "params": "{ serie }: { serie: { m: number | null; b: number }[] }",
           "retorno": null,
-          "linea": 27,
+          "linea": 29,
           "resumen": "Mini-curva del forward (SVG puro, sin dependencias): línea de la cesta (MEDIANA) vs el SPY a lo largo de los snapshots persistidos. La mediana es la métrica de decisión (un outlier no la mueve)."
         },
         {
@@ -48620,15 +48651,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 44
-        },
-        {
-          "nombre": "safe",
-          "kind": "function",
-          "exportada": false,
-          "params": "p: Promise<T>, fallback: T",
-          "retorno": "Promise<T>",
-          "linea": 47
+          "linea": 46
         },
         {
           "nombre": "TradingDashboard",
@@ -48636,12 +48659,12 @@
           "exportada": true,
           "params": "{ carteraCohetes }: { carteraCohetes: CarteraCohetesData | null }",
           "retorno": null,
-          "linea": 58
+          "linea": 57
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ce92e7334be6"
+      "hash": "73761e70c61c"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -56565,7 +56588,7 @@
         "trading_tesis"
       ],
       "rutaApi": "/api/trading/analizar",
-      "hash": "a6565324817b"
+      "hash": "641485451c0f"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/cartera-estudio/route.ts",
@@ -56789,7 +56812,7 @@
         "trading_tesis"
       ],
       "rutaApi": "/api/trading/puntuar",
-      "hash": "0e291bd254eb"
+      "hash": "fdf44bf078f6"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/saldo/route.ts",
@@ -70206,26 +70229,17 @@
       ],
       "funciones": [
         {
-          "nombre": "cierreDeContraste",
-          "kind": "function",
-          "exportada": false,
-          "params": "simbolo: string, hoy: string, maxDias: number",
-          "retorno": "Promise<number | null>",
-          "linea": 31,
-          "resumen": "Último cierre <= `hoy` y no más viejo que `maxDias`. null si la fuente no da nada utilizable."
-        },
-        {
           "nombre": "cierresDeContraste",
           "kind": "function",
           "exportada": true,
-          "params": "simbolos: string[], hoy: string, opts: { presupuestoMs?: number; concurrencia?: number; maxDias?: number } = {},",
+          "params": "simbolos: string[], hoy: string, opts: { presupuestoMs?: number; concurrencia?: number; ventanaDias?: number } = {},",
           "retorno": "Promise<ResultadoContraste>",
-          "linea": 44
+          "linea": 31
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6e8a831fffc3"
+      "hash": "2a951f8006fd"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-guardia.ts",
@@ -70236,6 +70250,8 @@
         "resumenDescartes",
         "contrastarFuentes",
         "resumenDivergencias",
+        "juzgarPuntos",
+        "resumenDesfase",
         "detectarSuplantaciones",
         "resumenSuplantaciones",
         "saltoDeSaldo"
@@ -70278,12 +70294,29 @@
           "resumen": "Resumen de una línea. Cadena vacía si no hay divergencias — el consumidor no tiene que comprobarlo."
         },
         {
+          "nombre": "juzgarPuntos",
+          "kind": "function",
+          "exportada": true,
+          "params": "puntos: PuntoContraste[], hoy: string",
+          "retorno": "Veredicto",
+          "linea": 196
+        },
+        {
+          "nombre": "resumenDesfase",
+          "kind": "function",
+          "exportada": true,
+          "params": "desfasados: Desfasado[]",
+          "retorno": "string",
+          "linea": 209,
+          "resumen": "Una línea para el latido/Telegram cuando la 2ª fuente va por detrás. Vacía si no hay desfase: el parte solo debe hablar de lo que ha pasado."
+        },
+        {
           "nombre": "cerca",
           "kind": "function",
           "exportada": false,
           "params": "a: number, b: number, tol: number",
           "retorno": "boolean",
-          "linea": 238
+          "linea": 289
         },
         {
           "nombre": "detectarSuplantaciones",
@@ -70291,7 +70324,7 @@
           "exportada": true,
           "params": "precios: Record<string, number>, referencias: Record<string, number>, tol = CRUCE_TOLERANCIA,",
           "retorno": "Suplantaciones",
-          "linea": 244,
+          "linea": 295,
           "resumen": "Detecta precios que pertenecen a otro símbolo. `referencias` = mismo mapa que `filtrarPreciosAnomalos` (último `precio_ref` conocido ANTERIOR a la pasada, por símbolo)."
         },
         {
@@ -70300,7 +70333,7 @@
           "exportada": true,
           "params": "suplantados: Suplantacion[]",
           "retorno": "string",
-          "linea": 293,
+          "linea": 344,
           "resumen": "Resumen de una línea. Cadena vacía si no hay nada — el consumidor no tiene que comprobarlo."
         },
         {
@@ -70309,13 +70342,13 @@
           "exportada": true,
           "params": "nuevo: number, anterior: number | null, umbral = SALTO_NAV_AVISO",
           "retorno": "SaltoSaldo",
-          "linea": 319,
+          "linea": 370,
           "resumen": "`variacion` = (nuevo − anterior) / anterior. Sin anterior no hay nada que comparar (primer saldo): no se avisa, que es distinto de «no ha cambiado»."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "32d64024bc5f"
+      "hash": "1ddfc6eb3f67"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-stooq.ts",
@@ -90944,7 +90977,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2431,
-    "funciones": 6575
+    "archivos": 2432,
+    "funciones": 6577
   }
 }

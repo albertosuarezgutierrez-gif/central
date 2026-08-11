@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-11T06:05:06Z",
+  "generadoEn": "2026-08-11T06:23:25Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4270,6 +4270,10 @@
   ],
   "novedades": [
     {
+      "titulo": "PR #1368 MERGEADO y verificado en producción",
+      "fecha": ""
+    },
+    {
       "titulo": "Decisión (sesión de solo charla, anotada a mano):",
       "fecha": ""
     },
@@ -4323,10 +4327,6 @@
     },
     {
       "titulo": "PriceLabs:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Previstos v2 (idea de Alberto, riesgo asimétrico):",
       "fecha": ""
     }
   ],

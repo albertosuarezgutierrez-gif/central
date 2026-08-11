@@ -15,6 +15,15 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-11 · facturas-correo** · hizo: Paso 0 salud OK (Vía B al día, última copia hoy 11/08
+  IONOS; backlog `PDF-pendiente`/`Revisar` vacío; `agente_salud` actualizado ok=true dias_caido=0);
+  Paso 1 sin candidatos nuevos — 2 hilos descartados y etiquetados `Procesada` (recordatorio de cobro
+  futuro PriceLabs sin PDF, mensaje de huésped de Booking); la única factura nueva de hoy (IONOS
+  202786983417, 11,71€) ya estaba archivada+etiquetada por una pasada previa del mismo día, no se
+  tocó; sin subidas manuales nuevas en `_subir_aqui`/raíz 2026. dudas: la papelera
+  `_DUPLICADOS_BORRAR` acumula 18 avisos sin resolver desde el 10/07 — no se auditó zombis hoy (sin
+  avisos nuevos que crear), Alberto podría querer una pasada de limpieza dedicada; fallos: —;
+  PRs/commits: — (solo Gmail/Drive/Supabase vía MCP, esta entrada de bitácora).
 - **2026-08-11 · mercado-booking** · hizo: pasada de 12 ventanas (tope de la rutina) del plan de 120
   candidatas — Bienal de Flamenco 3er finde (26-28 sep 2026, evento), ronda 2 (24-26 abr 2027) y ronda
   3 (13-15 oct 2026) de profundidad de bucket, ×4 aforos (2/4/5/12) cada una; 120 comps reales escritos
