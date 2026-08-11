@@ -15,39 +15,43 @@ export type CarteraCohetesData = {
 
 const pct = (x: number | null | undefined) => (x == null ? '—' : `${x >= 0 ? '+' : ''}${(x * 100).toFixed(1)}%`)
 
+// Swatch de leyenda con el MISMO token que pinta la curva (un emoji de color fijo mentía en tema oscuro).
+function Sw({ color }: { color: string }) {
+  return <span aria-hidden style={{ display: 'inline-block', width: 14, height: 3, background: color, verticalAlign: 'middle', borderRadius: 2 }} />
+}
+
+// Contenido de la cartera cohetes. El título/summary lo pone el padre (va plegada en un
+// <details> del dashboard, cuyo resumen ya enseña valor y P&L sin abrir).
 export default function CarteraCohetes({ data }: { data: CarteraCohetesData | null }) {
   if (!data) {
-    return (
-      <section style={{ marginTop: 24 }}>
-        <h3>🚀 Cartera cohetes <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(paper · lotería)</span></h3>
-        <p style={{ color: 'var(--muted)' }}>Aún sin datos: el bolsillo empieza a medir tras el primer rebalanceo (lunes) y su valoración diaria.</p>
-      </section>
-    )
+    return <p style={{ color: 'var(--muted)', marginTop: 8 }}>Aún sin datos: el bolsillo empieza a medir tras el primer rebalanceo (lunes) y su valoración diaria.</p>
   }
-  const bate = (data.alphaPct ?? -Infinity) > 0
+  // alpha null = «aún no medido» — ni ✅ ni ⚠️ (un NULL vestido de aviso también miente).
+  const bate = data.alphaPct == null ? null : data.alphaPct > 0
   return (
-    <section style={{ marginTop: 24 }}>
-      <h3>🚀 Cartera cohetes <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(30.000€ SIMULADOS, bolsillo aparte · lotería · SOLO estudio)</span></h3>
+    <div style={{ marginTop: 10 }}>
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'baseline' }}>
         <strong style={{ fontSize: 20 }}>{eur(data.valorEur)}</strong>
         <span style={{ color: data.plPct != null && data.plPct >= 0 ? 'var(--positive)' : 'var(--negative)' }}>{pct(data.plPct)}</span>
-        <span>vs SPY {data.spyEur != null ? eur(data.spyEur) : '—'} · alpha {pct(data.alphaPct)} {bate ? '✅' : '⚠️'}</span>
+        <span>vs SPY {data.spyEur != null ? eur(data.spyEur) : '—'} · alpha {pct(data.alphaPct)}{bate == null ? '' : bate ? ' ✅' : ' ⚠️'}</span>
         <span style={{ color: 'var(--muted)' }}>rebalanceo {data.fechaRebalanceo} · {data.tenencias.length} pos.</span>
       </div>
       <CurvaSVG curva={data.curva} nucleo={data.curvaNucleo} />
-      <p style={{ fontSize: 12, color: 'var(--muted)' }}>🚀 cohetes · ⚪ cesta núcleo · 🟣 SPY</p>
+      <p style={{ fontSize: 12, color: 'var(--muted)' }}>
+        <Sw color="var(--brand)" /> cohetes · <Sw color="var(--muted)" /> cesta núcleo · <Sw color="var(--accent)" /> SPY
+      </p>
       {data.narracion ? <p style={{ fontStyle: 'italic' }}>💬 {data.narracion}</p> : null}
       {data.nIpo ? (
         <p style={{ color: 'var(--muted)', fontSize: 13 }}>
-          🆕 De los recién cotizados (IPO): {eur(data.ipoValorEur ?? 0)} ({pct(data.ipoPlPct)}), {data.nIpo} nombre(s).
+          🆕 De los recién cotizados (IPO): {data.ipoValorEur != null ? eur(data.ipoValorEur) : 'sin valorar aún'} ({pct(data.ipoPlPct)}), {data.nIpo} nombre(s).
           <br />Contexto: el retrovisor da a las IPO recientes la peor lotería (mediana +0,8%).
         </p>
       ) : null}
       <details style={{ marginTop: 8 }}>
-        <summary>Tenencias actuales</summary>
+        <summary style={{ cursor: 'pointer' }}>Tenencias actuales</summary>
         <ul>{data.tenencias.map(t => <li key={t.simbolo}>{t.simbolo}{t.esIpo ? ' 🆕 IPO' : ''}</li>)}</ul>
       </details>
-    </section>
+    </div>
   )
 }
 

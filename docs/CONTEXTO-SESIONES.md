@@ -32,6 +32,15 @@
 
 ---
 
+### 📈 (11/08/2026) /trading rediseñado: hero con las 2 respuestas (empresas + rentabilidad)
+- Petición de Alberto: la página daba mucha info; lo que importa es qué empresas interesan y cómo va la cartera.
+- Hero doble arriba (💡 señales 📈 + top ranking + compras del agente · 📊 mediana vs SPY + curva + tramo escalera);
+  onboarding condensado a 1 línea; forward paper, cartera cohetes y caza-cohetes PLEGADOS.
+- Nuevo `DetallePerezoso.tsx` (details con montaje perezoso — la cartera de estudio ya no paga fetch+Recharts si nadie la abre).
+- Honestidad de datos: banner «datos parciales» si falla una query (antes un fallo de BD pintaba el 🌱 vacío),
+  alpha/IPO null ya no salen como ⚠️/0€, celda de señal «no calculado» fuera del top-20; fixes móvil 320px + hex→tokens.
+- Rama `claude/investment-lab-page-2r0yaa` (PR draft). Revisión previa con agente de diseño.
+
 ### 🔧 (10/08/2026) Pricing: el reparto mes/global del factor de demanda deja de perderse (#1361)
 - `factorDemandaFecha` decidía por fecha si la demanda se mueve con la ocupación DEL MES o la anual,
   pero esa decisión solo viajaba en la respuesta HTTP del cron (nadie la guarda) — y su `.catch(() => [])`

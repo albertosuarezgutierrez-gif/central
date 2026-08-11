@@ -45,8 +45,9 @@ function BloqueCartera({ cartera, curva, abierta }: { cartera: Cartera; curva: P
               <XAxis dataKey="fecha" tick={{ fontSize: 11 }} tickFormatter={(f: string) => f.slice(5)} />
               <YAxis tick={{ fontSize: 11 }} width={58} domain={['auto', 'auto']} tickFormatter={(v: number) => `${Math.round(v / 1000)}k€`} />
               <Tooltip formatter={(v: number, name: string) => [eur(v), name === 'valorEur' ? 'Cartera' : cartera.bench.simbolo]} labelFormatter={(f: string) => f} />
-              <Line type="monotone" dataKey="valorEur" stroke="#6366f1" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="benchEur" stroke="#9ca3af" strokeWidth={2} strokeDasharray="5 4" dot={false} />
+              {/* Tokens del tema, no hex fijos (regla del repo: el hex se quedaba fijo en modo oscuro). */}
+              <Line type="monotone" dataKey="valorEur" stroke="var(--brand)" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="benchEur" stroke="var(--muted)" strokeWidth={2} strokeDasharray="5 4" dot={false} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>

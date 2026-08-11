@@ -1,10 +1,12 @@
 import { prisma } from '@/lib/db'
+import { eur } from '@/lib/dinero'
 import { etiquetaCalidad, rankearUniverso, type EmpresaUniverso } from '@central/module-trading'
 import OnboardingBanner from './OnboardingBanner'
 import RadarExplorador, { type FilaExplorador } from './RadarExplorador'
 import CarteraEstudio from './CarteraEstudio'
 import CarteraCohetes, { type CarteraCohetesData } from './CarteraCohetes'
 import AnalisisSimbolo from './AnalisisSimbolo'
+import DetallePerezoso from './DetallePerezoso'
 import { COHORTES_PAPER } from '@/lib/trading/paper-cartera'
 import { evaluarEscalera, emparejarOps } from '@/lib/trading/puerta-fase2'
 
@@ -44,31 +46,33 @@ function CurvaForward({ serie }: { serie: { m: number | null; b: number }[] }) {
 function fechaCorta(d: Date): string {
   return new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
-async function safe<T>(p: Promise<T>, fallback: T): Promise<T> {
-  try { return await p } catch { return fallback }
-}
-
 const CAPA_LABEL: Record<string, string> = { A: 'A · ancla', B: 'B · conocido', C: 'C · cantera' }
-const DIR_COLOR: Record<string, string> = { alcista: 'var(--positive)', bajista: 'var(--negative)', neutral: 'var(--muted)' }
+const ETIQ_MINI = { fuerte: '🟢', media: '🟡', debil: '⚪' } as const
 
 const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 16 }
 const th: React.CSSProperties = { textAlign: 'left', padding: '8px 10px', color: 'var(--muted)', fontWeight: 600, fontSize: 13, borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }
 const td: React.CSSProperties = { padding: '8px 10px', borderBottom: '1px solid var(--border)', fontSize: 14, whiteSpace: 'nowrap' }
+const chipCss: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999, padding: '4px 12px', fontSize: 13, whiteSpace: 'nowrap' }
 
 export default async function TradingDashboard({ carteraCohetes }: { carteraCohetes: CarteraCohetesData | null }) {
+  // Un fallo de BD NO es «no hay datos»: se apunta qué consulta cayó y se avisa arriba con un banner
+  // de datos parciales — nunca se pinta el estado vacío tranquilizador sobre un error (regla del repo).
+  const fallos: string[] = []
+  const vigilado = <T,>(nombre: string, p: Promise<T>, fallback: T): Promise<T> =>
+    p.catch(() => { fallos.push(nombre); return fallback })
   const [posiciones, tesis, watchlist, track, radar, universoFilas, ordenes] = await Promise.all([
-    safe(prisma.tradingPaperPosicion.findMany({ orderBy: { abiertaEn: 'desc' } }), []),
+    vigilado('posiciones', prisma.tradingPaperPosicion.findMany({ orderBy: { abiertaEn: 'desc' } }), []),
     // `anulado: false`: las tesis anuladas se construyeron con el precio de otra empresa (17/07, 03/08
     // y 04/08 de 2026). Pintarlas sería enseñar como idea del agente una señal que nunca fue de ese
     // símbolo; siguen en BD como registro del incidente.
-    safe(prisma.tradingTesis.findMany({ where: { anulado: false }, orderBy: [{ fecha: 'desc' }, { confianza: 'desc' }], take: 40, include: { resultado: true } }), []),
-    safe(prisma.tradingWatchlist.findMany({ where: { activo: true }, orderBy: [{ capa: 'asc' }, { simbolo: 'asc' }] }), []),
-    safe(prisma.tradingPaperTrack.findMany({ orderBy: [{ cohorte: 'asc' }, { fecha: 'asc' }] }), []),
-    safe(prisma.tradingRanking.findFirst({ orderBy: { fecha: 'desc' } }), null),
-    safe(prisma.tradingUniverso.findMany({
+    vigilado('ideas del agente', prisma.tradingTesis.findMany({ where: { anulado: false }, orderBy: [{ fecha: 'desc' }, { confianza: 'desc' }], take: 40, include: { resultado: true } }), []),
+    vigilado('watchlist', prisma.tradingWatchlist.findMany({ where: { activo: true }, orderBy: [{ capa: 'asc' }, { simbolo: 'asc' }] }), []),
+    vigilado('seguimiento forward', prisma.tradingPaperTrack.findMany({ orderBy: [{ cohorte: 'asc' }, { fecha: 'asc' }] }), []),
+    vigilado('radar', prisma.tradingRanking.findFirst({ orderBy: { fecha: 'desc' } }), null),
+    vigilado('universo', prisma.tradingUniverso.findMany({
       select: { simbolo: true, nombre: true, piotroski: true, roic: true, earningsYield: true, fcfYield: true, momentum: true, mktCap: true, actualizadoEn: true },
     }), []),
-    safe(prisma.tradingPaperOrden.findMany(), []),
+    vigilado('órdenes', prisma.tradingPaperOrden.findMany(), []),
   ])
 
   // Ranking+explorador UNIFICADOS (petición de Alberto 20/07: dos tablas eran la misma información):
@@ -139,93 +143,132 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
 
   const ultimaPasada = tesis[0]?.fecha
   const vacio = posiciones.length === 0 && tesis.length === 0 && watchlist.length === 0
+  // Página completamente virgen Y sin errores de lectura → 🌱 (con un fallo de BD NUNCA: sería
+  // pintar «no hay nada» sobre un «no he podido mirar»).
+  const nadaDeNada = vacio && fallos.length === 0 && !radar && universoFilas.length === 0 && cohortesPaper.length === 0
 
-  return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '16px' }}>
+  // 📌 Datos del hero (las dos respuestas de la página; cero queries nuevas): cohorte de referencia
+  // = la de más recorrido; interesantes = señal 📈 del top-20 + top del ranking; compras reales.
+  const cohorteRef = cohortesPaper.reduce<(typeof cohortesPaper)[number] | null>(
+    (max, c) => (max == null || c.ultima.dias > max.ultima.dias ? c : max), null)
+  const senalesCompra = universoExplorador
+    .filter(f => f.tecnico === 'si')
+    .sort((a, b) => (b.score ?? -Infinity) - (a.score ?? -Infinity))
+  const topRanking = [...universoExplorador]
+    .sort((a, b) => (b.score ?? -Infinity) - (a.score ?? -Infinity))
+    .slice(0, 5)
+  const comprasRecientes = tesis.filter(t => t.direccion === 'alcista' && t.operada).slice(0, 4)
+
+  const cabecera = (
+    <>
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 10, marginBottom: 4 }}>
         <h1 style={{ margin: 0, fontSize: 24 }}>📈 Laboratorio de inversión</h1>
         <span style={{ background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid var(--border)', borderRadius: 999, padding: '2px 10px', fontSize: 12, fontWeight: 700 }}>SOLO SIMULADO · PAPER</span>
       </div>
-      <p style={{ color: 'var(--muted)', marginTop: 4, marginBottom: 18, fontSize: 14 }}>
+      <p style={{ color: 'var(--muted)', marginTop: 4, marginBottom: 14, fontSize: 14 }}>
         El agente estudia el mercado y opera <strong>en simulación</strong>. No toca tu cuenta real de Interactive Brokers.
         {ultimaPasada ? <> Última pasada: <strong>{fechaCorta(ultimaPasada)}</strong>.</> : null}
       </p>
-
       <OnboardingBanner />
+    </>
+  )
 
-      {/* 🔍 Buscador de análisis por acción (determinista, mismos ojos del radar) */}
-      <AnalisisSimbolo />
+  if (nadaDeNada) {
+    return (
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '16px' }}>
+        {cabecera}
+        <div style={{ ...card, textAlign: 'center', color: 'var(--muted)' }}>
+          <div style={{ fontSize: 40, marginBottom: 8 }}>🌱</div>
+          <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>Aún no hay pasadas registradas</div>
+          <div style={{ fontSize: 14 }}>Cuando el agente haga su primera pasada nocturna (temas → cantera → torneo paper) verás aquí sus ideas, la cartera simulada y el rendimiento por estrategia.</div>
+        </div>
+      </div>
+    )
+  }
 
-      {/* Forward paper — la prueba limpia (sin look-ahead) que decide el paso a dinero real */}
-      <section style={{ marginBottom: 22 }}>
-        <h2 style={{ fontSize: 17, marginBottom: 8 }}>🧪 Forward paper <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>(cesta gurús∩calidad congelada vs SPY · MEDIANA decide)</span></h2>
-        <CarteraEstudio />
-        {cohortesPaper.length === 0 ? (
-          <div style={{ ...card, color: 'var(--muted)', fontSize: 14 }}>
-            El seguimiento arranca con el <strong>cron semanal</strong> (lunes 10:00): cada snapshot mide la cesta congelada frente al SPY y se guarda aquí para dibujar la curva. Aún sin puntos — vuelve tras el primer lunes.
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12 }}>
-            {cohortesPaper.map(({ cohorte, alias, filas, ultima }) => {
-              const bateMed = ultima.retornoMediana != null && ultima.retornoMediana > ultima.retornoBench
-              return (
-                <div key={cohorte} style={card}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-                    <strong style={{ fontSize: 14 }}>{cohorte}</strong>
-                    <span style={{ color: 'var(--muted)', fontSize: 12 }}>{ultima.dias} días · {filas.length} snapshot{filas.length === 1 ? '' : 's'}</span>
-                  </div>
-                  {alias.length > 0 && (
-                    <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 2 }}>
-                      Misma cesta que {alias.join(', ')} — es UNA prueba, no {alias.length + 1}.
-                    </div>
-                  )}
-                  <div style={{ margin: '10px 0' }}><CurvaForward serie={filas.map(f => ({ m: f.retornoMediana, b: f.retornoBench }))} /></div>
-                  <div style={{ fontSize: 14, lineHeight: 1.7 }}>
-                    <div>Cesta (MEDIANA): <strong style={{ color: bateMed ? 'var(--positive)' : 'var(--negative)' }}>{pctN(ultima.retornoMediana)}</strong> {bateMed ? '✅' : '⚠️'} <span style={{ color: 'var(--muted)' }}>vs SPY {pct(ultima.retornoBench)}</span></div>
-                    <div style={{ color: 'var(--muted)' }}>Baten al SPY: {ultima.baten}/{ultima.n} · media {pct(ultima.retornoCesta)}</div>
-                    <div style={{ color: 'var(--muted)' }}>Riesgo — caída máx {pctN(ultima.maxDrawdown)} · vol {pct0N(ultima.volAnual)} · TE {pct0N(ultima.trackingError)}</div>
-                    {ultima.medianaBase != null && (
-                      <div style={{ color: 'var(--muted)' }}>Filtro calidad: base {pct(ultima.medianaBase)} → aporta <strong style={{ color: (ultima.retornoMediana ?? 0) - ultima.medianaBase > 0 ? 'var(--positive)' : 'var(--negative)' }}>{pctN(ultima.retornoMediana != null ? ultima.retornoMediana - ultima.medianaBase : null)}</strong></div>
-                    )}
-                  </div>
+  return (
+    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '16px' }}>
+      {cabecera}
+
+      {fallos.length > 0 && (
+        <div style={{ ...card, borderColor: 'var(--warning)', color: 'var(--warning)', fontSize: 14, marginBottom: 18 }}>
+          ⚠️ Datos parciales — no se pudo leer: {fallos.join(', ')}. Un hueco abajo significa «sin poder leer», no «no hay».
+        </div>
+      )}
+
+      {/* 📌 HERO — las DOS respuestas que se vienen a buscar (Alberto, 11/08/2026): qué empresas
+          interesan AHORA y cómo va la rentabilidad. La metodología y la auditoría van plegadas abajo. */}
+      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: 12, marginBottom: 22 }}>
+        <div style={card}>
+          <h2 style={{ fontSize: 17, margin: '0 0 8px' }}>💡 Empresas interesantes ahora</h2>
+          {!radar && universoExplorador.length === 0 ? (
+            <div style={{ color: 'var(--muted)', fontSize: 14 }}>
+              El radar aún no tiene snapshot — rankea las ~500 mayores de EEUU (calidad + valor + momentum + gurús) cada lunes. Vuelve tras el próximo lunes.
+            </div>
+          ) : (
+            <>
+              <div style={{ color: 'var(--muted)', fontSize: 12, marginBottom: 4 }}>📈 Señal de compra AHORA (el técnico solo se calcula para el top-20 del snapshot):</div>
+              {senalesCompra.length ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                  {senalesCompra.slice(0, 8).map(f => (
+                    <span key={f.simbolo} style={chipCss} title={f.nombre ?? undefined}>📈 <strong>{f.simbolo}</strong>{f.guru ? ' 🏆' : ''}</span>
+                  ))}
                 </div>
-              )
-            })}
-          </div>
-        )}
-        <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
-          Sin look-ahead: las cestas se congelan ANTES de medir. No es veredicto hasta acumular semanas/meses; si la mediana bate al SPY sostenida, entre cohortes y ajustada a riesgo → recién ahí la conversación de dinero real.
-        </p>
+              ) : (
+                <div style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 10 }}>ninguna esta semana — el técnico no marca «compra ahora» en el top del radar.</div>
+              )}
+              <div style={{ color: 'var(--muted)', fontSize: 12, marginBottom: 4 }}>🏆 Top del ranking (la selección elige el QUÉ; 📈 confirma el CUÁNDO):</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {topRanking.map((f, i) => (
+                  <span key={f.simbolo} style={chipCss} title={f.nombre ?? undefined}>
+                    <span style={{ color: 'var(--muted)' }}>{i + 1}.</span> <strong>{f.simbolo}</strong> {ETIQ_MINI[f.etiqueta]}
+                  </span>
+                ))}
+              </div>
+              {comprasRecientes.length > 0 && (
+                <div style={{ fontSize: 13, marginTop: 10 }}>
+                  Últimas compras del agente (paper): <strong>{comprasRecientes.map(t => t.simbolo).join(', ')}</strong> — detalle en «💡 Ideas de compra».
+                </div>
+              )}
+              <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 10 }}>Busca, filtra y ordena las ~550 del universo en el 🌎 radar de abajo.</div>
+            </>
+          )}
+        </div>
 
-        {/* 🪜 Escalera de dinero real — requisitos FIRMADOS en docs/TRADING-HIPOTESIS-PREREGISTRO.md
-            («escalera de tramos», 05/08/2026). SIN fecha objetivo: la suben las señales, no el
-            calendario (Alberto, 05/08/2026). Cada tramo es una decisión SEPARADA de Alberto y la
-            orden la ejecuta SIEMPRE él a mano — el agente jamás opera en IBKR. */}
-        <div style={{ ...card, marginTop: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-            <strong style={{ fontSize: 15 }}>🪜 Escalera de dinero real — escalón alcanzable: <span style={{ color: escalera.alcanzable === 3 ? 'var(--positive)' : escalera.alcanzable === 2 ? 'var(--warning)' : 'var(--text)' }}>Tramo {escalera.alcanzable}</span></strong>
-            <span style={{ color: 'var(--muted)', fontSize: 12 }}>la suben las señales, no el calendario — sin fecha objetivo · techo 6.000€ hasta validar</span>
-          </div>
-          <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 13, lineHeight: 1.8 }}>
-            {escalera.tramos.map(t => (
-              <li key={t.tramo} style={{ color: t.ok ? 'var(--text)' : 'var(--muted)' }}>
-                {t.ok ? '✅' : '⬜'} <strong>{t.titulo}</strong> — <span style={{ color: 'var(--muted)' }}>{t.detalle}</span>
-              </li>
-            ))}
-          </ul>
-          <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--muted)' }}>
-            {deslizMedio != null ? <>Deslizamiento señal→día sig.: <strong>{pct(deslizMedio)}</strong> (n={deslizBuys.length}) · </> : null}
-            Ops cerradas del sistema de señales: <strong>{opsCerradas.length}</strong>{opsCerradas.length ? <> · retorno medio <strong>{pct(opsCerradas.reduce((s, o) => s + o.retorno, 0) / opsCerradas.length)}</strong></> : null}.
-            Cada tramo es una decisión separada de Alberto; el agente jamás ejecuta órdenes reales. Congelador H6: si SPY cierra un mes bajo su media de 10 meses, la escalera se congela.
-          </p>
+        <div style={card}>
+          <h2 style={{ fontSize: 17, margin: '0 0 8px' }}>📊 Rentabilidad de la cartera <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>(paper)</span></h2>
+          {!cohorteRef ? (
+            <div style={{ color: 'var(--muted)', fontSize: 14 }}>
+              Aún sin medición: el seguimiento arranca con el cron semanal (lunes 10:00) — la cesta se congela ANTES de medir y se compara con el SPY.
+            </div>
+          ) : (() => {
+            const u = cohorteRef.ultima
+            const bate = u.retornoMediana == null ? null : u.retornoMediana > u.retornoBench
+            return (
+              <>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 10 }}>
+                  <span style={{ fontSize: 26, fontWeight: 700, color: bate == null ? 'var(--text)' : bate ? 'var(--positive)' : 'var(--negative)' }}>{pctN(u.retornoMediana)}</span>
+                  <span style={{ fontSize: 14, color: 'var(--muted)' }}>vs SPY {pct(u.retornoBench)}{bate == null ? '' : bate ? ' ✅' : ' ⚠️'}</span>
+                </div>
+                <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 2 }}>mediana de la cesta congelada · {u.dias} días medidos</div>
+                <div style={{ margin: '8px 0' }}><CurvaForward serie={cohorteRef.filas.map(f => ({ m: f.retornoMediana, b: f.retornoBench }))} /></div>
+                <div style={{ color: 'var(--muted)', fontSize: 13 }}>
+                  Baten al SPY {u.baten}/{u.n} · caída máx {pctN(u.maxDrawdown)} · 🪜 dinero real: <strong style={{ color: 'var(--text)' }}>Tramo {escalera.alcanzable}</strong> alcanzable
+                </div>
+                <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
+                  {cohortesPaper.length > 1 ? `Cohorte con más recorrido (de ${cohortesPaper.length}); todas` : 'La única cohorte; el detalle'}, la cartera de estudio (30.000€ simulados) y la escalera, en «🧪 Forward paper» abajo.
+                </div>
+              </>
+            )
+          })()}
         </div>
       </section>
 
-      {/* 🚀 Cartera cohetes — bolsillo APARTE (lotería, paper): rota semanal a los cohetes confirmados y
-          se valora a diario vs SPY + curva del núcleo. SOLO estudio, nunca entra en cohortes/núcleo. */}
-      <CarteraCohetes data={carteraCohetes} />
+      {/* 🔍 Buscador de análisis por acción (determinista, mismos ojos del radar) — herramienta bajo demanda */}
+      <AnalisisSimbolo />
 
-      {/* Radar del mercado — ranking semanal del universo S&P 500 (caché trading_universo) */}
+      {/* Radar del mercado — ranking semanal del universo S&P 500 (caché trading_universo). El
+          caza-cohetes va PLEGADO (satélite lotería, secundario). */}
       <section style={{ marginBottom: 22 }}>
         <h2 style={{ fontSize: 17, marginBottom: 8 }}>🌎 Radar del mercado <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>(S&P 500 · la selección elige el QUÉ, 📈 confirma el CUÁNDO)</span></h2>
         {!radar ? (
@@ -233,22 +276,19 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
             El radar rankea las ~500 mayores de EEUU cada lunes (calidad + valor + momentum + gurús). Aún sin snapshot — la caché de fundamentales se está llenando; primer ranking el próximo lunes.
           </div>
         ) : (() => {
-          type Entry = { simbolo: string; nombre?: string; score: number; piotroski?: number | null; roic?: number | null; guru: boolean; etiqueta: 'fuerte' | 'media' | 'debil'; tecnico: 'si' | 'esperar' | null }
           type Track = { evals: { fecha: string; dias: number; mediana: number | null; retornoBench: number; baten: number; n: number }[]; ventanas: number; bateVentanas: number; cohetes?: { evals: unknown[]; ventanas: number; bateVentanas: number } }
           type CoheteUi = { simbolo: string; nombre: string | null; momentum: number | null; piotroski: number | null; roic: number | null; sobreSmaSem: boolean | null; sobreSmaMes: boolean | null; confirmado: boolean; mesesCotizando?: number | null }
-          const entries = (radar.entries as unknown as Entry[]) ?? []
           const cohetes = (radar.cohetes as unknown as CoheteUi[] | null) ?? []
           const track = radar.trackRecord as unknown as Track | null
           const salud = radar.salud as unknown as { total: number; frescas: number; errores: number } | null
-          const ETIQ = { fuerte: '🟢 fuerte', media: '🟡 media', debil: '⚪ débil' }
           return (
             <>
               {/* La tabla del ranking vive UNIFICADA en el explorador de abajo (orden por score del
-                  modelo por defecto) — aquí solo el satélite 🚀 y el pie con snapshot/track/salud. */}
+                  modelo por defecto) — aquí solo el satélite 🎯 (plegado) y el pie con snapshot/track/salud. */}
               {cohetes.length > 0 && (
-                <div style={{ ...card, marginTop: 10 }}>
-                  <div style={{ fontWeight: 700, marginBottom: 6 }}>🚀 Caza-cohetes <span style={{ color: 'var(--muted)', fontSize: 12, fontWeight: 400 }}>(satélite LOTERÍA — momentum alto + calidad mala; aparte del núcleo, nunca entra en cohortes)</span></div>
-                  <div style={{ overflowX: 'auto' }}>
+                <details style={{ ...card, marginTop: 10, padding: '10px 16px' }}>
+                  <summary style={{ fontWeight: 700, cursor: 'pointer' }}>🎯 Caza-cohetes ({cohetes.length}) <span style={{ color: 'var(--muted)', fontSize: 12, fontWeight: 400 }}>(screener LOTERÍA — momentum alto + calidad mala; alimenta la 🚀 Cartera cohetes, nunca entra en cohortes)</span></summary>
+                  <div style={{ overflowX: 'auto', marginTop: 8 }}>
                     <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 560 }}>
                       <thead><tr><th style={th}>Empresa</th><th style={th}>Momentum</th><th style={th}>Piotroski</th><th style={th}>ROIC</th><th style={th}>Medias (sem/mes)</th></tr></thead>
                       <tbody>
@@ -266,10 +306,10 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
                   </div>
                   {track?.cohetes ? (
                     <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
-                      Track 🚀: {track.cohetes.ventanas > 0 ? `${track.cohetes.bateVentanas}/${track.cohetes.ventanas} ventanas baten al SPY` : 'acumulando historial'}
+                      Track 🎯: {track.cohetes.ventanas > 0 ? `${track.cohetes.bateVentanas}/${track.cohetes.ventanas} ventanas baten al SPY` : 'acumulando historial'}
                     </div>
                   ) : null}
-                </div>
+                </details>
               )}
               <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
                 Snapshot del {fechaCorta(radar.fecha)} · universo {radar.universoTotal} ({radar.conDatos} con datos)
@@ -283,29 +323,6 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
         })()}
         {universoExplorador.length > 0 && <RadarExplorador filas={universoExplorador} />}
       </section>
-
-      {vacio && (
-        <div style={{ ...card, textAlign: 'center', color: 'var(--muted)' }}>
-          <div style={{ fontSize: 40, marginBottom: 8 }}>🌱</div>
-          <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>Aún no hay pasadas registradas</div>
-          <div style={{ fontSize: 14 }}>Cuando el agente haga su primera pasada nocturna (temas → cantera → torneo paper) verás aquí sus ideas, la cartera simulada y el rendimiento por estrategia.</div>
-        </div>
-      )}
-
-      {/* (El grid de contadores «Pulso» se retiró el 20/07/2026 — petición de Alberto de página más
-          simple y corta: eran 4 números sin acción posible; el detalle vive en sus secciones.) */}
-
-      {/* (💼 «Cartera simulada» RETIRADA el 04/08/2026 — petición de Alberto «quítame el ruido que no me
-          da números reales»: la tabla listaba entrada/stop/cantidad de posiciones del torneo en paper
-          SIN ningún resultado (ni precio actual, ni P&L, ni cierre), así que no medía nada — era una
-          lista de intenciones con pinta de cartera. Lo que sí mide de verdad es el 🧪 Forward paper de
-          arriba (cesta congelada vs SPY). Las posiciones siguen en BD `trading_posiciones`.) */}
-
-      {/* (📊 «Rendimiento por estrategia» RETIRADA el 04/08/2026 — misma petición. Su «retorno medio»
-          NO era dinero: es el retorno HIPOTÉTICO de seguir cada señal del torneo interno (la bajista
-          "gana" si el valor cae, la neutral cuenta 0), medido sobre las señales que el propio agente
-          generó. Un número que sube sin que nadie compre nada, y que se leía como rentabilidad. Los
-          datos siguen en BD `trading_estrategia_stats` si hace falta auditarlos.) */}
 
       {/* 💡 Ideas de COMPRA — SOLO compras REALES (petición de Alberto 20/07: «aquí solo interesan las de
           comprar»; auditoría 21/07: `operada`=la señal ganadora del torneo que pasó las barreras y el agente
@@ -372,6 +389,102 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
           </section>
         )
       })()}
+
+      {/* Forward paper — la prueba limpia (sin look-ahead) que decide el paso a dinero real. El
+          TITULAR vive en el hero; aquí el detalle completo, PLEGADO con montaje perezoso (la cartera
+          de estudio hace fetch de precios + Recharts: solo lo paga quien la abre). */}
+      <DetallePerezoso
+        style={{ marginBottom: 22 }}
+        resumen={<>🧪 Forward paper — detalle <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>(cohortes gurús∩calidad congeladas vs SPY · MEDIANA decide · cartera de estudio 30.000€ · 🪜 escalera)</span></>}
+      >
+        <div style={{ marginTop: 10 }}>
+        <CarteraEstudio />
+        {cohortesPaper.length === 0 ? (
+          <div style={{ ...card, color: 'var(--muted)', fontSize: 14 }}>
+            El seguimiento arranca con el <strong>cron semanal</strong> (lunes 10:00): cada snapshot mide la cesta congelada frente al SPY y se guarda aquí para dibujar la curva. Aún sin puntos — vuelve tras el primer lunes.
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12 }}>
+            {cohortesPaper.map(({ cohorte, alias, filas, ultima }) => {
+              const bateMed = ultima.retornoMediana != null && ultima.retornoMediana > ultima.retornoBench
+              return (
+                <div key={cohorte} style={card}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+                    <strong style={{ fontSize: 14 }}>{cohorte}</strong>
+                    <span style={{ color: 'var(--muted)', fontSize: 12 }}>{ultima.dias} días · {filas.length} snapshot{filas.length === 1 ? '' : 's'}</span>
+                  </div>
+                  {alias.length > 0 && (
+                    <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 2 }}>
+                      Misma cesta que {alias.join(', ')} — es UNA prueba, no {alias.length + 1}.
+                    </div>
+                  )}
+                  <div style={{ margin: '10px 0' }}><CurvaForward serie={filas.map(f => ({ m: f.retornoMediana, b: f.retornoBench }))} /></div>
+                  <div style={{ fontSize: 14, lineHeight: 1.7 }}>
+                    <div>Cesta (MEDIANA): <strong style={{ color: bateMed ? 'var(--positive)' : 'var(--negative)' }}>{pctN(ultima.retornoMediana)}</strong> {bateMed ? '✅' : '⚠️'} <span style={{ color: 'var(--muted)' }}>vs SPY {pct(ultima.retornoBench)}</span></div>
+                    <div style={{ color: 'var(--muted)' }}>Baten al SPY: {ultima.baten}/{ultima.n} · media {pct(ultima.retornoCesta)}</div>
+                    <div style={{ color: 'var(--muted)' }}>Riesgo — caída máx {pctN(ultima.maxDrawdown)} · vol {pct0N(ultima.volAnual)} · TE {pct0N(ultima.trackingError)}</div>
+                    {ultima.medianaBase != null && (
+                      <div style={{ color: 'var(--muted)' }}>Filtro calidad: base {pct(ultima.medianaBase)} → aporta <strong style={{ color: (ultima.retornoMediana ?? 0) - ultima.medianaBase > 0 ? 'var(--positive)' : 'var(--negative)' }}>{pctN(ultima.retornoMediana != null ? ultima.retornoMediana - ultima.medianaBase : null)}</strong></div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+        <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
+          Sin look-ahead: las cestas se congelan ANTES de medir. No es veredicto hasta acumular semanas/meses; si la mediana bate al SPY sostenida, entre cohortes y ajustada a riesgo → recién ahí la conversación de dinero real.
+        </p>
+
+        {/* 🪜 Escalera de dinero real — requisitos FIRMADOS en docs/TRADING-HIPOTESIS-PREREGISTRO.md
+            («escalera de tramos», 05/08/2026). SIN fecha objetivo: la suben las señales, no el
+            calendario (Alberto, 05/08/2026). Cada tramo es una decisión SEPARADA de Alberto y la
+            orden la ejecuta SIEMPRE él a mano — el agente jamás opera en IBKR. */}
+        <div style={{ ...card, marginTop: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+            <strong style={{ fontSize: 15 }}>🪜 Escalera de dinero real — escalón alcanzable: <span style={{ color: escalera.alcanzable === 3 ? 'var(--positive)' : escalera.alcanzable === 2 ? 'var(--warning)' : 'var(--text)' }}>Tramo {escalera.alcanzable}</span></strong>
+            <span style={{ color: 'var(--muted)', fontSize: 12 }}>la suben las señales, no el calendario — sin fecha objetivo · techo 6.000€ hasta validar</span>
+          </div>
+          <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 13, lineHeight: 1.8 }}>
+            {escalera.tramos.map(t => (
+              <li key={t.tramo} style={{ color: t.ok ? 'var(--text)' : 'var(--muted)' }}>
+                {t.ok ? '✅' : '⬜'} <strong>{t.titulo}</strong> — <span style={{ color: 'var(--muted)' }}>{t.detalle}</span>
+              </li>
+            ))}
+          </ul>
+          <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+            {deslizMedio != null ? <>Deslizamiento señal→día sig.: <strong>{pct(deslizMedio)}</strong> (n={deslizBuys.length}) · </> : null}
+            Ops cerradas del sistema de señales: <strong>{opsCerradas.length}</strong>{opsCerradas.length ? <> · retorno medio <strong>{pct(opsCerradas.reduce((s, o) => s + o.retorno, 0) / opsCerradas.length)}</strong></> : null}.
+            Cada tramo es una decisión separada de Alberto; el agente jamás ejecuta órdenes reales. Congelador H6: si SPY cierra un mes bajo su media de 10 meses, la escalera se congela.
+          </p>
+        </div>
+        </div>
+      </DetallePerezoso>
+
+      {/* 🚀 Cartera cohetes — bolsillo APARTE (lotería, paper): rota semanal a los cohetes confirmados y
+          se valora a diario vs SPY + curva del núcleo. SOLO estudio, nunca entra en cohortes/núcleo.
+          Plegada (secundaria): el resumen enseña la cifra sin abrir. */}
+      <DetallePerezoso
+        style={{ marginBottom: 22 }}
+        resumen={<>🚀 Cartera cohetes <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>(lotería · 30.000€ simulados, bolsillo aparte)</span>{carteraCohetes ? <> — {eur(carteraCohetes.valorEur)} <span style={{ color: carteraCohetes.plPct != null && carteraCohetes.plPct >= 0 ? 'var(--positive)' : carteraCohetes.plPct != null ? 'var(--negative)' : 'var(--muted)' }}>{pctN(carteraCohetes.plPct)}</span></> : null}</>}
+      >
+        <CarteraCohetes data={carteraCohetes} />
+      </DetallePerezoso>
+
+      {/* (El grid de contadores «Pulso» se retiró el 20/07/2026 — petición de Alberto de página más
+          simple y corta: eran 4 números sin acción posible; el detalle vive en sus secciones.) */}
+
+      {/* (💼 «Cartera simulada» RETIRADA el 04/08/2026 — petición de Alberto «quítame el ruido que no me
+          da números reales»: la tabla listaba entrada/stop/cantidad de posiciones del torneo en paper
+          SIN ningún resultado (ni precio actual, ni P&L, ni cierre), así que no medía nada — era una
+          lista de intenciones con pinta de cartera. Lo que sí mide de verdad es el 🧪 Forward paper de
+          arriba (cesta congelada vs SPY). Las posiciones siguen en BD `trading_posiciones`.) */}
+
+      {/* (📊 «Rendimiento por estrategia» RETIRADA el 04/08/2026 — misma petición. Su «retorno medio»
+          NO era dinero: es el retorno HIPOTÉTICO de seguir cada señal del torneo interno (la bajista
+          "gana" si el valor cae, la neutral cuenta 0), medido sobre las señales que el propio agente
+          generó. Un número que sube sin que nadie compre nada, y que se leía como rentabilidad. Los
+          datos siguen en BD `trading_estrategia_stats` si hace falta auditarlos.) */}
 
       {/* Watchlist — PLEGADA (secundaria) */}
       {watchlist.length > 0 && (
