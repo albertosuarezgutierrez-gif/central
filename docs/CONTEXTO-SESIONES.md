@@ -32,6 +32,18 @@
 
 ---
 
+### 🛡️ (11/08/2026) Auditoría completa del laboratorio de inversión + guardián de datos en TODOS los caminos
+- Origen: Alberto vio a RDY nº 1 (score 6,03) — EY 682% (ADR en rupias, familia ORCL #1189). **#1373**: la página
+  puntuaba la caché CRUDA (el guardián `calidad-datos.ts` solo lo aplicaban cron y analisis-simbolo) →
+  `neutralizarUniverso()` + backfill BD (RDY/BMNR/VRSN). Verificado en prod: nº 1 ahora SNDK, RDY score null.
+- **#1374**: mismo agujero en `/api/trading/seleccion` (¡la ruta que congela cohortes!), caza-cohetes y `/factores`.
+- Auditoría (agente + SQL): 🔴 PENDIENTE GORDO — el walk-forward que alimenta la 🪜 escalera mide con ventanas
+  DESALINEADAS (series truncadas de Stooq → retorno de otra ventana; riesgo cesta vs bench en longitudes distintas)
+  y sin declarar cobertura. 🟡 momentum sin ventana declarada ni guarda de costuras; Piotroski NULL→0 regala puntos;
+  cohetes sin precio se congelan a precio de entrada; `/analizar` se cree el nav del body; Dataroma caído = «sin gurús».
+- Track real (23 días): cesta mediana +0,24% vs SPY +4,20% (baten 3/8) · cohetes −2,6% (alpha −7,2%) · torneo hit 26-28%
+  ret ~0 (n=460) · Tramo 1. Sin señal de ventaja aún — la decisión de no operar en real sigue vigente.
+
 ### 🧾 (11/08/2026) Conciliada la factura 47/2026 de Jaime Salas (electricidad Socorro 24)
 - Alberto preguntó por el cargo `TRANSF. 2100 FACTURA 472026 REPARACIN ELECTRICIDAD` −278,30€ (Kutxa, 07/08),
   que salía ❌ en `/finanzas`. La factura SÍ estaba archivada desde el 07/08 (Drive `1BNr2lF0…`, fila en
