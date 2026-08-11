@@ -15,6 +15,14 @@
   (`pricing_eventos_auto.verificaciones`), y el latido `sivra_eventos_verificar` se pone en rojo.
 - **Telegram solo para pelotazos** (factor ≥1,4 auto-confirmado) y para el latido. Si tocas un
   evento a mano, pon `decidido_por='alberto'` y el cron no te lo pisa.
+### Actualización 10/08/2026 (noche) — el reparto mes/global de la demanda ya se persiste (PR #1361)
+- `pricing_applied` tiene columnas nuevas: **`demanda_fuente`** (`'mes'|'global'` por fecha, antes solo
+  viajaba en la respuesta HTTP del cron, que nadie guarda) y **`demanda_gateada`**. Filas anteriores a
+  NULL a propósito — no saben la respuesta, no asumas `'global'`.
+- El `.catch(() => [])` de la consulta de ocupación mensual ya no es mudo: si falla marca
+  `ocupacionMesIlegible` (aviso Telegram + `demanda_degradada`), pero `ok` sigue en `true` a propósito
+  — sin ocupación por mes el motor tarifica como antes de #1323 (no mal), el vigía se reserva para lo
+  que sí invalida la pasada. Migración `2026-08-10_pricing_applied_demanda.sql` (aditiva, aplicada).
 
 ### Actualización 09/08/2026 (tarde) — los 4 pisos EN VIVO bajo el motor; PriceLabs de baja; previstos v2
 - **Los 4 pisos tienen `apply_enabled=true` y `channel_markup=1.0`** (OK explícito de Alberto: «el
