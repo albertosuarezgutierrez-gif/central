@@ -15,6 +15,12 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-11 · mercado-booking** · hizo: pasada de 12 ventanas (tope de la rutina) del plan de 120
+  candidatas — Bienal de Flamenco 3er finde (26-28 sep 2026, evento), ronda 2 (24-26 abr 2027) y ronda
+  3 (13-15 oct 2026) de profundidad de bucket, ×4 aforos (2/4/5/12) cada una; 120 comps reales escritos
+  en `market_rates` (`fuente:booking_mcp`), precio/noche calculado dividiendo `price.book` entre 2
+  noches; latido `ok:true`. dudas: —; fallos: 0 ventanas sin respuesta del conector; PRs/commits: —
+  (solo BD vía API, esta entrada de bitácora).
 - **2026-08-10 · buscador-ia** · hizo: watch de deprecación de los 5 eslabones cableados (NIM, Groq,
   Cerebras, Gemini, Kimi) — todos VIVOS; descubrimiento (Paso 2): Kimi K3 lanzado pero 3-4× más caro
   que `kimi-k2.6` (sin mejora calidad/precio, no se propone); una primera búsqueda sobre Kimi sugería
