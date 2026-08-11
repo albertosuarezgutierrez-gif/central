@@ -23,7 +23,10 @@ export default function AdminShell({ activo, children, logoUrl, nombreEmpresa, c
           {logoUrl
             ? <img src={logoUrl} alt={nombreEmpresa ?? 'Logo'} className="max-h-16 w-auto max-w-[180px] shrink-0 object-contain md:mb-3" />
             : <Wordmark className="shrink-0 text-xl md:mb-2" />}
-          <nav className="flex flex-1 flex-row gap-1 overflow-x-auto md:w-full md:flex-col">
+          {/* min-w-0: sin él, el ancho mínimo automático del flex item lo fija la suma
+              de los enlaces (whitespace-nowrap) → el overflow-x-auto no llega a activarse
+              y era la PÁGINA entera la que se ensanchaba (~90 px de scroll lateral a 320 px). */}
+          <nav className="flex min-w-0 flex-1 flex-row gap-1 overflow-x-auto md:w-full md:flex-col">
             {item('empleados', '/admin/empleados', 'Empleados')}
             {item('solicitudes', '/admin/solicitudes', 'Solicitudes')}
             {item('calendario', '/admin/calendario', 'Calendario')}

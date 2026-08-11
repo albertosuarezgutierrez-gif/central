@@ -62,6 +62,33 @@ test('ENERGIA XXI (luz vivienda habitual Monte Carmelo) → personal auto-confir
   assert.equal(clasificarDestino('Kutxabank', 'RECIBO ENDESA ENERGIA            ENDESA ENERGIA S.A. FACTURA DE ELECTRICIDAD P26', null, -80), 'turistico_pisos')
 })
 
+test('TotalEnergies (luz/gas): BBVA → Dúplex, Kutxa → pisos, sin revisar (antes caía a seguros)', () => {
+  // Caso REAL 21/07/2026: el recibo de TotalEnergies en BBVA caía a 'seguros' por descarte
+  // (RE_DUPLEX no lo conocía) y se marcaba «por revisar». Ahora → turistico_duplex directo.
+  assert.deepEqual(
+    clasificarDestinoDetalle('BBVA', 'ADEUDO A SU CARGO // PAGO DE ADEUDO DIRECTO SEPA // N 2026198000644355 TE ELECTRICIDAD Y GAS ESPANA SA', null, -3.98),
+    { destino: 'turistico_duplex', revisar: false },
+  )
+  // La misma comercializadora en Kutxa (pisos): "RECIBO Total Gas Y Elect ..." → turistico_pisos.
+  assert.equal(clasificarDestino('Kutxabank', 'RECIBO Total Gas Y Elect         FACTURA VARIOS2600016685 - CUPS ES0031102227887014EY0F', null, -16.86), 'turistico_pisos')
+  // Abono de TotalEnergies en Kutxa (devolución de un piso) → turistico_pisos.
+  assert.equal(clasificarDestino('Kutxabank', 'ABONO TOTALENERGIES ELECTRICIDA', null, 152.94), 'turistico_pisos')
+})
+
+test('Software/infra profesional en BBVA (Vercel/Anthropic) → seguros deducible informatica, auto-confirmado', () => {
+  // Casos REALES (jul-2026): la contraparte trae el proveedor; el concepto es genérico de tarjeta.
+  assert.deepEqual(
+    clasificarDestinoDetalle('BBVA', 'COMPRA EN COMERCIO EXTRANJERO-COMISIÓN 3 % INCLUÍDA // PAGO CON TARJETA', 'VERCEL INC.', -683.39),
+    { destino: 'seguros', revisar: false, confirmado: true, subcategoria: 'informatica' },
+  )
+  assert.deepEqual(
+    clasificarDestinoDetalle('BBVA', "PAGO CON TARJETA EN DISCOS, LIBROS, FOTOS Y PC'S // PAGO CON TARJETA", 'ANTHROPIC IRELAND', -38.25),
+    { destino: 'seguros', revisar: false, confirmado: true, subcategoria: 'informatica' },
+  )
+  // El ocio NO entra aquí: una compra en Amazon a secas sigue su camino (no es infra profesional).
+  assert.notEqual(clasificarDestinoDetalle('BBVA', 'COMPRA EN AMZN MKTP ES', null, -30).subcategoria, 'informatica')
+})
+
 test('CARGO por DESCARTE: BBVA → revisar (va a la bandeja); Kutxa personal → NO revisar', () => {
   // BBVA, cargo que no casa el Dúplex → seguros por descarte → revisar (se contaría como correduría).
   assert.deepEqual(clasificarDestinoDetalle('BBVA', 'COMPRA EN COMERCIO DESCONOCIDO', null, -50), { destino: 'seguros', revisar: true })

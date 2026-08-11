@@ -101,18 +101,61 @@ export async function redeployProjectProduction(
   if (!deploymentId) return { ok: false, error: 'sin deployment de producción previo que redeployar' }
 
   // 2) Redeploy con el commit más reciente de la rama (no el viejo sha).
-  const res = await fetch(`${base}/v13/deployments?teamId=${TEAM}&forceNew=1`, {
+  //    `commandForIgnoringBuildStep: ''` desactiva el Ignored Build Step SOLO para este
+  //    deployment: un redeploy pedido a mano desde el panel debe construir SIEMPRE.
+  //    Sin el override, `vercel-ignore-build.mjs` cancela el build si el último commit
+  //    de main es el de la auditoría con [skip ci] (que es lo habitual) y la env
+  //    guardada nunca entra en runtime (incidente GITHUB_TOKEN, 03/08/2026).
+  const cuerpo: Record<string, unknown> = {
+    name: projectName,
+    project: projectId,
+    deploymentId,
+    target: 'production',
+    withLatestCommit: true,
+  }
+  let res = await fetch(`${base}/v13/deployments?teamId=${TEAM}&forceNew=1`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({
-      name: projectName,
-      project: projectId,
-      deploymentId,
-      target: 'production',
-      withLatestCommit: true,
-    }),
+    body: JSON.stringify({ ...cuerpo, projectSettings: { commandForIgnoringBuildStep: '' } }),
   })
-  if (res.ok) return { ok: true }
-  const e = await res.json().catch(() => ({}))
-  return { ok: false, error: e?.error?.message || `POST ${res.status}` }
+  if (!res.ok) {
+    // Si la API rechaza el override en un redeploy, reintentar sin él (mejor un
+    // redeploy que puede cancelarse que ninguno) — la sonda de abajo lo detecta.
+    res = await fetch(`${base}/v13/deployments?teamId=${TEAM}&forceNew=1`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(cuerpo),
+    })
+  }
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}))
+    return { ok: false, error: e?.error?.message || `POST ${res.status}` }
+  }
+
+  // 3) Verificar que el deployment creado no se cancela: "redeploy lanzado" no es
+  //    "redeploy hecho". Sondeo breve; si al agotarlo sigue en cola/build se da por
+  //    bueno (best-effort), pero un CANCELED/ERROR se reporta como fallo real.
+  const creado = await res.json().catch(() => ({}))
+  const nuevoId: string | undefined = creado?.id || creado?.uid
+  if (nuevoId) {
+    const limite = Date.now() + 15_000
+    while (Date.now() < limite) {
+      await new Promise((r) => setTimeout(r, 3_000))
+      const st = await fetch(`${base}/v13/deployments/${nuevoId}?teamId=${TEAM}`, { headers })
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null)
+      const estado = st?.readyState || st?.status
+      if (estado === 'CANCELED') {
+        return {
+          ok: false,
+          error: `el redeploy de ${projectName} se canceló (Ignored Build Step) — la env está guardada pero NO en runtime`,
+        }
+      }
+      if (estado === 'ERROR') {
+        return { ok: false, error: `el build del redeploy de ${projectName} falló — la env no está en runtime` }
+      }
+      if (estado === 'READY' || estado === 'BUILDING') break
+    }
+  }
+  return { ok: true }
 }

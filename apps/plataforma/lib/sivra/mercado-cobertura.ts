@@ -1,0 +1,299 @@
+// lib/sivra/mercado-cobertura.ts — QUÉ ventanas pide medir la rutina de Booking, y en qué orden.
+//
+// POR QUÉ (06/08/2026). El barrido por búsqueda web quedó mecánicamente perfecto (120/120 ventanas
+// el 06/08) y aun así NO mide temporada: los precios que devuelven los snippets son de anuncio y
+// vienen SIN fecha, así que el mismo comparable sale al mismo precio en agosto, en noviembre y en
+// marzo (Vincci ≈305€, Smartr ≈93€, Genteel ≈259€ los tres meses). Contrastado el mismo día con el
+// conector de Booking: esas mismas propiedades valen ~160€/noche en noviembre y ~650€/noche en la
+// Feria. La fuente que sí distingue la fecha es el conector, y a un conector se le pregunta desde
+// una SESIÓN (una rutina de Claude), no desde un cron.
+//
+// Una sesión no puede medir las 120 ventanas del plan: cada consulta al conector devuelve una
+// respuesta grande y el contexto es finito. Por eso la rutina no decide qué mirar — lo pregunta, y
+// este módulo responde con las ventanas cuyo corpus FIABLE está más viejo. Consecuencias buscadas:
+//   · la cobertura se completa en 3-4 pasadas y luego se auto-refresca por antigüedad;
+//   · si una pasada se corta a la mitad, la siguiente retoma justo por donde iba (sin estado);
+//   · el plan de fechas sigue siendo UNO (`ventanasDelBarrido`), no una copia en un prompt.
+//
+// Módulo PURO: sin Prisma, sin `@/`, testeable con `node --test`.
+
+import type { Ventana } from './mercado-ventanas.ts'
+
+/** Fuentes de `market_rates.fuente`. Ver `prisma/sql/2026-08-06_market_rates_fuente.sql`. */
+export type FuenteComparable = 'serper' | 'booking_mcp' | 'manual'
+
+/**
+ * Solo estas fuentes CUENTAN como «esta fecha está medida». `serper` queda fuera a propósito: sus
+ * precios no distinguen la fecha, así que tener 20 comps suyos de noviembre no es saber cuánto
+ * cuesta noviembre — es la trampa que este trabajo viene a cerrar.
+ */
+export const FUENTES_FIABLES: FuenteComparable[] = ['booking_mcp', 'manual']
+
+/** Última medición fiable de una ventana (fecha × aforo). `null` = nunca se ha medido. */
+export type CoberturaVentana = {
+  /** YYYY-MM-DD */
+  checkin: string
+  aforo: number
+  /** YYYY-MM-DD del último `search_date` con fuente fiable, o null si no hay ninguno. */
+  ultimaMedicion: string | null
+  /** comps fiables vigentes de esa ventana (para poder decir «medida pero con muestra pobre») */
+  comps: number
+}
+
+export type VentanaPedida = {
+  /** YYYY-MM-DD */
+  checkin: string
+  /** YYYY-MM-DD */
+  checkout: string
+  aforo: number
+  /** pisos que comparten ese aforo — el comparable se guarda para todos ellos */
+  pisos: string[]
+  motivo: 'mes' | 'evento'
+  etiqueta?: string
+  /** 0 = ronda base (línea de temporada). Ver `mercado-ventanas.ts`. */
+  ronda: number
+  /** días desde la última medición fiable; `null` = nunca medida (lo más urgente) */
+  diasSinMedir: number | null
+  comps: number
+}
+
+/**
+ * Recorte del plan para una pasada CONCRETA. Nace de una petición manual (08/08/2026): «mide solo
+ * la 2ª y 3ª fecha de cada mes entre septiembre y enero», que es la profundidad de bucket — lo que
+ * hace ELEGIBLE el bucket mensual del motor (exige ≥3 fechas distintas del mes).
+ *
+ * 🚨 Por qué el filtro va AQUÍ y no en quien consume el plan. El orden de urgencia manda lo virgen
+ * primero y, entre vírgenes, la ronda baja antes que la alta (ver `ventanasQuePedir`), así que las
+ * rondas de profundidad son justo las últimas de la cola: filtrar DESPUÉS del tope deja pasar solo
+ * las que el tope no se comió ya. Medido con el corpus real del 08/08/2026: de las 40 ventanas de
+ * ronda 2-3 entre sep y ene, `?max=30` + filtro en cliente solo alcanzaba 18, y NINGUNA de ronda 3
+ * — sin que nada lo dijera. Filtrando antes del tope se piden las 30 que de verdad se querían.
+ */
+export type FiltroVentanas = {
+  /** solo estas rondas; vacío u omitido = todas. Reparto de rondas en `mercado-ventanas.ts`. */
+  rondas?: number[]
+  /** checkin >= desde (YYYY-MM-DD) */
+  desde?: string
+  /** checkin <= hasta (YYYY-MM-DD) */
+  hasta?: string
+}
+
+export type PlanPedido = {
+  /** las que hay que medir en esta pasada (ya ordenadas por urgencia y recortadas al tope) */
+  ventanas: VentanaPedida[]
+  /** cuántas casaban el filtro ANTES del tope */
+  candidatas: number
+  /**
+   * cuántas dejó fuera el tope. Va en el contrato a propósito: un recorte mudo se lee como
+   * «esto era todo lo que había», que es la misma mentira que un `?? []` sobre un dato sin mirar.
+   */
+  recortadas: number
+}
+
+/** Tope por defecto de ventanas por pasada, y techo duro (cada consulta cuesta contexto). */
+export const MAX_VENTANAS_DEFECTO = 12
+export const MAX_VENTANAS_TECHO = 30
+
+export type ParametrosPlan = { max: number; filtro: FiltroVentanas }
+
+/**
+ * Lee los parámetros del plan (`max`, `rondas`, `desde`, `hasta`) de una query string.
+ *
+ * Vive AQUÍ y no en el route handler para poder testearlo: el handler necesita Prisma y el alias
+ * `@/`, así que su lógica no se puede ejercitar con `node --test`. Lo que no se puede ejecutar en
+ * un test es justo donde se esconden los fallos mudos — y este parseo ya tenía uno:
+ *
+ * 🚨 **`?max=abc` devolvía CERO ventanas en silencio** (09/08/2026). `Number('abc')` es `NaN`,
+ * `Math.min(30, Math.max(1, NaN))` sigue siendo `NaN`, y `slice(0, NaN)` devuelve `[]` — así que
+ * una pasada con el tope mal escrito no medía nada y lo reportaba como «no había ventanas», con
+ * `recortadas: NaN` (que en JSON sale como `null`). Mismo fallo de clase que el filtro en cliente
+ * que este módulo vino a arreglar, pero dentro del propio endpoint. Ahora un `max` no numérico se
+ * RECHAZA; un `max` fuera de rango se acota y se dice.
+ */
+export function parsearParametrosPlan(
+  qs: URLSearchParams,
+): { ok: true; valor: ParametrosPlan; avisos: string[] } | { ok: false; error: string } {
+  const avisos: string[] = []
+
+  const maxRaw = qs.get('max')
+  let max = MAX_VENTANAS_DEFECTO
+  if (maxRaw !== null) {
+    const n = Number(maxRaw)
+    if (maxRaw.trim() === '' || !Number.isFinite(n) || !Number.isInteger(n)) {
+      return { ok: false, error: `max inválido: "${maxRaw}". Formato: entero entre 1 y ${MAX_VENTANAS_TECHO}` }
+    }
+    max = Math.min(MAX_VENTANAS_TECHO, Math.max(1, n))
+    // Acotar en silencio es mentir a medias: quien pidió 100 tiene que saber que le dieron 30.
+    if (max !== n) avisos.push(`max=${n} acotado a ${max} (rango válido 1-${MAX_VENTANAS_TECHO})`)
+  }
+
+  const filtro: FiltroVentanas = {}
+
+  const rondasRaw = qs.get('rondas')
+  if (rondasRaw !== null) {
+    const partes = rondasRaw.split(',').map(s => s.trim()).filter(Boolean)
+    const rondas = partes.map(Number)
+    if (!partes.length || rondas.some(n => !Number.isInteger(n) || n < 0)) {
+      return {
+        ok: false,
+        error: `rondas inválidas: "${rondasRaw}". Formato: enteros ≥0 separados por coma (p. ej. 2,3)`,
+      }
+    }
+    filtro.rondas = [...new Set(rondas)]
+  }
+
+  const ISO = /^\d{4}-\d{2}-\d{2}$/
+  for (const clave of ['desde', 'hasta'] as const) {
+    const v = qs.get(clave)
+    if (v === null) continue
+    if (!ISO.test(v)) return { ok: false, error: `${clave} inválida: "${v}". Formato: YYYY-MM-DD` }
+    filtro[clave] = v
+  }
+  if (filtro.desde && filtro.hasta && filtro.desde > filtro.hasta) {
+    return { ok: false, error: `rango vacío: desde (${filtro.desde}) es posterior a hasta (${filtro.hasta})` }
+  }
+
+  return { ok: true, valor: { max, filtro }, avisos }
+}
+
+const DIA_MS = 86_400_000
+
+function diasEntre(desdeIso: string, hastaIso: string): number {
+  return Math.round(
+    (new Date(hastaIso + 'T00:00:00Z').getTime() - new Date(desdeIso + 'T00:00:00Z').getTime()) / DIA_MS,
+  )
+}
+
+function clave(checkin: string, aforo: number): string {
+  return `${checkin}#${aforo}`
+}
+
+/**
+ * Cruza el plan de ventanas (fechas) con los aforos de los pisos y la cobertura fiable ya medida,
+ * y devuelve las `max` que más falta hacen.
+ *
+ * Orden de urgencia, y el porqué de cada nivel:
+ *   1. **Nunca medida** antes que vieja. Una fecha sin ningún comp fiable es un hueco que el motor
+ *      rellena con el ancla global (dominada por las fechas cercanas, más baratas); una fecha
+ *      medida hace tres días sigue siendo razonablemente cierta.
+ *   2. **Ronda base antes que evento** SOLO cuando ambas están sin medir: la línea de temporada es
+ *      lo que hace elegible el bucket mensual del motor (exige ≥3 fechas distintas del mes), y sin
+ *      bucket no hay temporada que aplicar a los otros 28 días del mes.
+ *   3. A igualdad, **la fecha más cercana primero**: es la que ya se está vendiendo.
+ *
+ * `hoyIso` entra como parámetro (no `new Date()`) para que la función sea pura y testeable.
+ *
+ * `filtro` recorta el plan ANTES de aplicar el tope (ver `FiltroVentanas`); sin él se comporta
+ * exactamente como antes.
+ */
+export function planDeVentanas(
+  plan: Ventana[],
+  aforos: Map<number, string[]>,
+  cobertura: CoberturaVentana[],
+  hoyIso: string,
+  max = 12,
+  filtro: FiltroVentanas = {},
+): PlanPedido {
+  const porClave = new Map<string, CoberturaVentana>()
+  for (const c of cobertura) porClave.set(clave(c.checkin, c.aforo), c)
+
+  const rondas = filtro.rondas?.length ? new Set(filtro.rondas) : null
+
+  const pedidas: VentanaPedida[] = []
+  for (const v of plan) {
+    if (rondas && !rondas.has(v.ronda)) continue
+    if (filtro.desde && v.checkin < filtro.desde) continue
+    if (filtro.hasta && v.checkin > filtro.hasta) continue
+    for (const [aforo, pisos] of aforos) {
+      if (!pisos.length) continue
+      const c = porClave.get(clave(v.checkin, aforo))
+      const diasSinMedir = c?.ultimaMedicion ? diasEntre(c.ultimaMedicion, hoyIso) : null
+      pedidas.push({
+        checkin: v.checkin,
+        checkout: v.checkout,
+        aforo,
+        pisos,
+        motivo: v.motivo,
+        etiqueta: v.etiqueta,
+        ronda: v.ronda,
+        diasSinMedir,
+        comps: c?.comps ?? 0,
+      })
+    }
+  }
+
+  pedidas.sort((a, b) => {
+    const aNunca = a.diasSinMedir === null
+    const bNunca = b.diasSinMedir === null
+    if (aNunca !== bNunca) return aNunca ? -1 : 1
+    if (aNunca && bNunca) {
+      // Ambas vírgenes: manda la ronda (base → evento → profundidad) y luego la cercanía.
+      if (a.ronda !== b.ronda) return a.ronda - b.ronda
+      return a.checkin.localeCompare(b.checkin)
+    }
+    // Ambas medidas: la más vieja primero; empate → la fecha más cercana.
+    if (a.diasSinMedir !== b.diasSinMedir) return (b.diasSinMedir ?? 0) - (a.diasSinMedir ?? 0)
+    return a.checkin.localeCompare(b.checkin)
+  })
+
+  const tope = Math.max(1, max)
+  return {
+    ventanas: pedidas.slice(0, tope),
+    candidatas: pedidas.length,
+    recortadas: Math.max(0, pedidas.length - tope),
+  }
+}
+
+/** Envoltura histórica: solo la lista. Nuevos usos, mejor `planDeVentanas` (declara el recorte). */
+export function ventanasQuePedir(
+  plan: Ventana[],
+  aforos: Map<number, string[]>,
+  cobertura: CoberturaVentana[],
+  hoyIso: string,
+  max = 12,
+  filtro: FiltroVentanas = {},
+): VentanaPedida[] {
+  return planDeVentanas(plan, aforos, cobertura, hoyIso, max, filtro).ventanas
+}
+
+/**
+ * Parte de la pasada para el latido. Igual que en el barrido por búsqueda, **lo que NO se pudo
+ * medir va primero**: una ventana que el conector no contestó es «no lo sé», no «no hay mercado»,
+ * y confundirlas es exactamente lo que dejó al motor tarificando a ciegas en julio.
+ */
+export function detalleIngesta(r: {
+  ventanas: number
+  comps: number
+  sinRespuesta: number
+  sinPrecio: number
+  errores: string[]
+}): string {
+  const partes = [`${r.comps} comps reales en ${r.ventanas} ventanas`]
+  if (r.sinRespuesta) {
+    partes.push(
+      `⚠️ ${r.sinRespuesta} ventanas sin respuesta del conector (NO es «no hay mercado»: no se ha podido mirar)`,
+    )
+  }
+  if (r.sinPrecio) partes.push(`${r.sinPrecio} sin precio utilizable (respondió, no traía cifra)`)
+  if (r.errores.length) partes.push(`${r.errores.length} fallos: ${r.errores[0]}`)
+  return partes.join(' · ')
+}
+
+/**
+ * ¿Vale la pasada? Conservador igual que `barridoFiable`: hace falta haber MEDIDO algo y que la
+ * mayoría de lo intentado haya respondido. Una pasada que pide 12 ventanas y solo contesta 1 no
+ * es «poco mercado», es un conector medio caído — y eso tiene que verse en rojo.
+ */
+export function ingestaFiable(r: {
+  ventanas: number
+  comps: number
+  sinRespuesta: number
+  errores: string[]
+}): boolean {
+  if (r.errores.length) return false
+  if (r.ventanas === 0) return false
+  if (r.comps === 0) return false
+  // Estrictamente MENOS de la mitad: con la mitad justa sin contestar ya no se puede afirmar que
+  // se ha mirado el mercado, y ante la duda el latido va en rojo.
+  return r.sinRespuesta * 2 < r.ventanas
+}

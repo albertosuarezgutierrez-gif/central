@@ -4,6 +4,7 @@ import { puntosDiariosVol, cierresDiarios } from './precios-stooq'
 import { acumulacionDistribucion, type SenalVolumen } from './volumen'
 import { fuerzaRelativaEnCaidas, type FuerzaRelativa } from './fuerza-relativa'
 import { submissionsCik, extraerEventos8K, extraerFilingsForm4, estimarProximoInforme, type Evento8K } from './edgar'
+import { proximaFechaEarningsYahoo } from './earnings-yahoo'
 import { transaccionesFiling } from './form4'
 import { anomaliasUniverso, camposEnvenenados } from './calidad-datos'
 import { buscarCandidatos } from './buscar-simbolo'
@@ -13,7 +14,7 @@ import { buscarCandidatos } from './buscar-simbolo'
 // existen en el radar sobre UN símbolo: factores de la caché + puesto en el ranking del blend, técnico
 // (SMA50/RSI), 📊 volumen, 💪 fuerza relativa en caídas, 📰 8-K, 🧑‍💼 insiders y 📅 próximo informe
 // (30 días para el análisis puntual, más ancho que los 7 del digest). Cero cifras inventadas — todo
-// sale de la SEC y de precios públicos. Si el símbolo no está en el universo (~550 mayores de EEUU),
+// sale de la SEC y de precios públicos. Si el símbolo no está en el universo (~800 mayores de EEUU),
 // degrada al análisis solo-precio (Yahoo cubre cualquier ticker de EEUU). SOLO estudio.
 
 export type AnalisisSimbolo = {
@@ -34,6 +35,9 @@ export type AnalisisSimbolo = {
   eventos8K: Evento8K[]
   insiders: { compras: number; ventas: number; usdCompras: number } | null
   proximoInforme: string | null
+  // 'confirmada' = la empresa la anunció (Yahoo) · 'prevista' = previsión de Yahoo ·
+  // 'estimada' = patrón EDGAR del año pasado · null = sin fecha.
+  proximoInformeFuente: 'confirmada' | 'prevista' | 'estimada' | null
 }
 
 const hoyIso = () => new Date().toISOString().slice(0, 10)
@@ -113,11 +117,21 @@ async function analizarConFilas(simbolo: string, filas: FilaUniverso[]): Promise
   let eventos8K: Evento8K[] = []
   let insiders: AnalisisSimbolo['insiders'] = null
   let proximoInforme: string | null = null
+  let proximoInformeFuente: AnalisisSimbolo['proximoInformeFuente'] = null
+  // 3-pre) 📅 Fecha de resultados por Yahoo (exacta/prevista; funciona sin CIK). EDGAR de respaldo.
+  const earningsYahoo = await proximaFechaEarningsYahoo(simbolo, hoy)
+  if (earningsYahoo) {
+    proximoInforme = earningsYahoo.fecha
+    proximoInformeFuente = earningsYahoo.confirmada ? 'confirmada' : 'prevista'
+  }
   if (fila?.cik) {
     const subs = await submissionsCik(fila.cik).catch(() => null)
     if (subs) {
       eventos8K = extraerEventos8K(subs, haceDias(30))
-      proximoInforme = estimarProximoInforme(subs, hoy)
+      if (!proximoInforme) {
+        proximoInforme = estimarProximoInforme(subs, hoy)
+        if (proximoInforme) proximoInformeFuente = 'estimada'
+      }
       let compras = 0; let ventas = 0; let usdCompras = 0
       const cikCorto = fila.cik.replace(/^0+/, '') || '0'
       for (const f of extraerFilingsForm4(subs, haceDias(30)).slice(0, 5)) {
@@ -149,6 +163,6 @@ async function analizarConFilas(simbolo: string, filas: FilaUniverso[]): Promise
     tecnico, sobreSma50, rsi14: r14,
     volumen: acumulacionDistribucion(puntos),
     fuerza: fuerzaRelativaEnCaidas(cierres, cierresSpy),
-    eventos8K, insiders, proximoInforme,
+    eventos8K, insiders, proximoInforme, proximoInformeFuente,
   }
 }

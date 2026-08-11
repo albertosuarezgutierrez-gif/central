@@ -31,7 +31,9 @@ export async function GET(req: NextRequest) {
   }[]>(Prisma.sql`
     SELECT property_id, rate_date::text, old_price, new_price
     FROM pricing_applied
-    WHERE dry_run = false AND created_at >= now() - INTERVAL '24 hours'
+    -- La columna de tiempo de pricing_applied es applied_at, NO created_at (esa sí existe, pero en
+    -- pricing_alerts, de ahí la confusión): con created_at el cron moría en 500 a diario desde el 30/07/2026.
+    WHERE dry_run = false AND applied_at >= now() - INTERVAL '24 hours'
     ORDER BY property_id, rate_date`)
 
   const alertas = await prisma.$queryRaw<{ titulo: string; prioridad: string }[]>(Prisma.sql`

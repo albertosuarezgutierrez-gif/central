@@ -15,15 +15,101 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
-- **2026-07-20 · pricing-agente** · hizo: Alberto mandó captura de una reserva de Luxury (Elena Martín, 18-20 sep) preguntando «¿qué tal el precio?» → salió a 110€/noche brutos con mercado real ~160€ (mediana Booking conector). **Diagnóstico de por qué se repite:** el agente «de verdad» (sesión Claude + conectores de viajes) NO corre desde el 05/07 (`pricing_decisiones`: busto 8, luxury/duplex 1 — solo bootstrap 16/06) y NO hay trigger de precios programado; el cron diario in-app SÍ tarifica pero ancla a `market_rates.scenario='normal'` (Serper barato, p50 ~117€) en vez del mercado real por piso (`scenario='prop_luxury_busto'`, p50 ~185€ conector) → un piso 30% bajo mercado parecía correcto y NADIE se enteraba (el guard solo hacía console.warn). Alberto pidió los 3 arreglos («lo más completo, en breve damos de baja PriceLabs»). **Entregado:** (1) **guardián de sub-mercado** en el guard vivo (`apps/plataforma/app/api/sivra/pricing/guard/route.ts`): chequeo #4 sub-mercado (precio vivo vs mercado REAL por piso, casando fecha a fecha; endurecido para NO dar falsa alarma con datos sesgados a findes/eventos — validado: hoy NO dispara falso) + #5 reserva-barata (pilló a Elena −42% y destapó otra, Ouafa 13-nov −45%) + **envío a Telegram** de alertas alta/media no avisadas (columna nueva `pricing_alerts.avisado_at`, migración aplicada); helper puro `lib/sivra/pricing-guardia.ts` (8 tests node --test verdes). dudas: el chequeo #4 solo cubrirá meses como septiembre cuando el barrido de mercado se amplíe (hoy el conector solo barrió verano/eventos → sept sin comps que casar); el **re-anclaje cold-start de Luxury/Busto queda PENDIENTE** (necesito CRON_SECRET o que Alberto dispare `/api/pricing/aplicar-propuesta` dryRun); la **sesión semanal del agente NO se pudo crear por API** (los triggers vía MCP no llevan los conectores de viajes → correría a ciegas; hay que crearla desde la UI de Rutinas de claude.ai); build no verificable en local (sin node_modules) → validado por tests + revisión + preview Vercel; fallos: —; PRs/commits: rama `claude/precio-mediatico-knp0ju` (PR nuevo)
-- **2026-07-18 · auditoria-central (pricing, 2ª tanda)** · hizo: ejecutó el checklist con delegación de Alberto («haz todo como tú veas mejor») — R4 min_price Busto 90→115 (BD+lección), R5 motor viejo sivra → 410 Gone (2 stubs), R6 factor vísperas ≥2× (mitad del premio, ±1 día), R7 29 alertas pre-fixes resueltas (dejadas las 3 de hoy como control); R8 DIFERIDO a propósito (4º cambio de fórmula el mismo día = patrón del bug R2). dudas: min_price 115 podría frenar ventas de temporada muerta entre semana — vigilar enero; fallos: —; PRs/commits: PR nuevo en rama `claude/pricing-below-pricelabs-bf1vab`
-- **2026-07-18 · auditoria-central (pricing)** · hizo: auditoría completa del pricing a petición de Alberto («está fallando mucho») — informe `docs/AUDITORIA-PRICING-2026-07.md`. 3 hallazgos 🔴 ARREGLADOS en el mismo PR: raíl ±20% era por PASADA no por día (±73%/día real → V de Karol G 326→112→701), doble conteo de evento introducido por #985 esa misma mañana (iba camino de 2.000€/noche), sin banda muerta (3.448 escrituras/7d, 78% fechas ping-pong). Malventas cuantificadas: Karol G 344€ vs mercado 931€, Pilar 126€ vs PL 473€, 7 noches oct a 65€ brutos. 🟡 pendientes de OK: retirar motor duplicado viejo de sivra, factor vísperas, min_price efectivo vs descuentos canal, limpiar 32 alertas, bucket mensual contaminado por evento. dudas: la reserva de Karol G entró por Airbnb — el ratio de canal de Airbnb no está modelado (solo Booking); fallos: **el doble conteo R2 lo introduje YO en #985 la misma mañana** — lección: todo cambio en la fórmula del motor necesita un caso de prueba numérico con una fecha de evento antes de mergear; PRs/commits: rama `claude/pricing-below-pricelabs-bf1vab` (PR nuevo)
-- **2026-07-18 · pricing-agente** · hizo: 2ª tanda (Alberto: «¿añadimos todo?») — 4 mejoras sobre el suelo PL en `apply/route.ts` para robustez SIN PriceLabs (que se cancela ~ago-2026): #1 curva PL persistida (`pricing_pl_referencia`, migración aplicada+sembrada 366 filas/piso, suelo hasta 120d tras última captura), #2 guarda de outlier por precio actual (>1,4× base normal y >30d → no hundir), #3 min-stay 2-3 en eventos ≥1.8× lejanos (salvo hueco), #4 premio de evento anclado a mejor base (fecha exacta>mes>global) pudiendo superar el p90 del mes. dudas: el bucket por fecha exacta hoy está vacío en las fechas-mina (el sweep no barre esos check-in exactos) → #4 cae al anclaje por mes hasta que el agente barra fechas de evento; #2 puede congelar un precio alto legítimamente-a-bajar en fechas >30d (mitigado: se libera <30d + last-minute); build no verificable en local (sin node_modules) → validado por preview Vercel; fallos: —; PRs/commits: rama `claude/pricing-below-pricelabs-bf1vab` (PR nuevo)
-- **2026-07-18 · pricing-agente** · hizo: disparado por el aviso Telegram «91 fecha(s) escritas por debajo del 70% de PriceLabs». Diagnóstico contra BD: **solo `luxury_busto`** (Busto 0 fechas), las 91 son noches de puente (Pilar 11-12 oct, Todos los Santos 30 oct-1 nov, y compañía) — todas escritas a **exactamente 0,80×old** (el raíl ±20%/día) y **0,64×PL**. Causa raíz: el motor cotiza por MES; el bucket de octubre (n=40, p50=210) **promedia** la noche especial y su premio de evento se ancla a la base GLOBAL baja → objetivo ~217, muy por debajo del valor real por fecha (PL 473-490, old 378-392), y el raíl ±%/día lo hunde. El calendario SÍ cubría esas fechas y había bucket → las guardas previas (Karol G `!useMonth`, suelo estacional sobre min_price) no las tapaban. Fix: convertí el **tripwire PL de aviso en SUELO** (`PL_FLOOR_RATIO=0.85`) en `apps/plataforma/app/api/sivra/pricing/apply/route.ts` — no escribe por debajo de 0,85×PL mientras PL siga conectado (reusa el `plPrice` ya cargado, ventana 14d → se auto-jubila al cancelar PL). Radio: inerte para Busto, recupera ~8.842€ de tarifa en las 91 de Luxury; el próximo `apply-auto` tras desplegar las re-sube. dudas: PL (473) va por encima del máx de mercado de octubre (~289 base) — asumido OK por estrategia «pelotazo en eventos» de Alberto + softening last-minute; `luxury_busto.max_price=null` (sin techo); no re-tarifiqué EN VIVO (sin CRON_SECRET, lo hace el cron al desplegar); fallos: —; PRs/commits: rama `claude/pricing-below-pricelabs-bf1vab`
-- **2026-07-12 · facturas-correo** · hizo: a petición de Alberto ("revisa y dame info") diagnosticó y RESOLVIÓ el corte de Vía B (parada desde 23/06). **CAUSA REAL:** la constante `QUERY` del Apps Script se había estrechado el 23/06 a mono-remitente Mapfre (que además llega cifrado → 0 resultados); NO era OAuth. Fix: Alberto restauró la `QUERY` a allowlist de 11 remitentes (+`newer_than:3d`) vía Claude para Chrome → verificado que vuelve a copiar (IONOS 11/07, BBVA 09/07). Construyó la RED DE SEGURIDAD en la skill: Paso 0 (health-check + backlog persistente `Facturas/PDF-pendiente`/`Revisar` + escalado Telegram vía `/api/internal/alerta`), cadena de vías con fallback (B→A→OCR/visual→conciliación inversa por banco), doc corregida (SKILL+SETUP: fuera la falsa causa OAuth, documentado el mecanismo real de la `QUERY` + caveat Mapfre cifrado); en plataforma **badge de corte en `/finanzas`** (tabla nueva `agente_salud`, migración `2026-07-12_agente_salud.sql` aplicada en prod, lectura tolerante en `lib/finanzas.ts`, banner en `FinanzasClient.tsx`) — sembrado rojo y puesto en verde al arreglarse; preview Vercel de plataforma compiló verde. Procesó IONOS 24,19€ (archivada julio) + aviso duplicado IONOS 1,82€ en `_DUPLICADOS_BORRAR`; barrido del hueco 23/06→12/07 = sin backlog (todo ya `Procesada` por pasadas previas). **ERROR PROPIO (aprendizaje):** el primer diagnóstico fue "token OAuth caducado en Testing → publica la app"; era falso (la consola mostraba el trigger sano) y Alberto lo frenó bien — la lección "si Vía B no trae nada, revisar la QUERY, NUNCA OAuth" quedó documentada en la skill. dudas: badge `agente_salud` se lee global (sin `cuenta_id`) — vale para 1 dueño, revisar si entran más tenants; **pendiente de Alberto (no del agente):** Booking 03/07 (3 facturas → bandeja de revisión) y ASECON 10/07 (reemitir a su nombre); fallos: 1er diagnóstico erróneo (OAuth), corregido en la misma sesión tras contraste con Alberto; PRs/commits: PR #836 (rama `claude/facturas-correo-pdf-extraction-x805fl`)
-- **2026-07-11 · facturas-correo** · hizo: pasada tras 8 días sin correr (última real 03/07, hueco cubierto ampliando a `newer_than:9d`) — revisó Gmail + Paso 1-bis (buzón manual/raíz FACTURAS 2026); encontró 13 PDFs sueltos en la raíz que resultaron ser solo 3 facturas distintas duplicadas 9+2+2 veces (EMASESA Reform 57,09€, EMASESA "Bustos 1º DER" 2025 ×2); archivó en Drive 11 facturas ya conciliadas en banco pero nunca filed (Dimitri Casa Socorro 907,50€, CREATE ventilador 123,45€, 4× Endesa Dúplex, 4× Endesa Bustos Reform/Luxury — quedaron pendientes de sesiones previas sin bitácora) + puso `propiedad_id` que faltaba en 7 movimientos; registró 4 avisos de duplicados en `_DUPLICADOS_BORRAR`; dudas: **Vía B (Apps Script→Drive) sigue cortada 18 días** (última copia 23/06, no autocorregida) → Petroprix/fal.ai/ASECON sin PDF legible, quedan "Para tu decisión"; Leroy Merlin (factura+abono, 51,75€ neto) sin decidir piso vs personal; EMASESA "Bustos Tavera 1º DER" contrato 0105329645 (facturas 2025, Punto y Coma SL) es una unidad NO mapeada en la tabla CUPS — ¿seguís con ella?; `Escaneado_20260707-1446.pdf` no se pudo leer (PDF sin texto extraíble); fallos: al menos 2 sesiones previas (entre 03/07 y hoy) hicieron trabajo real (conciliación bancaria, Castuera dedup) sin dejar entrada en esta bitácora — solo se supo por notas dentro del propio SKILL.md; PRs/commits: commit directo a `main` (SKILL.md + esta entrada)
-- **2026-07-03 · facturas-correo** · hizo: procesó 4 facturas Endesa de luz de Bustos Tavera 22 (uploads de Alberto, a nombre de Punto y Coma SL) — clasificadas `turistico_pisos` y conciliadas (`conciliado=true`) en los 4 cargos del banco; **corrigió un intercambio Reform↔Luxury** en `propiedad_id` (la asignación del 02/07 por correlación de ocupación estaba al revés; los PDF traen CUPS+dirección+nº factura = concepto bancario → prueba documental); arregló la tabla LUZ de la skill (contratos 130139655504=IZQ/Reform, 130139685932=DCHA/Luxury) y el estado; dudas: subida binaria a Drive no factible por MCP (PDF ~700KB → base64 inline) → archivado en Drive queda a Alberto; caveat fiscal: facturas a nombre de la SL pero deducidas en IRPF personal de Alberto (pisos a personal desde 2026) → recomendado cambiar titular Endesa a su nombre; fallos: —; PRs/commits: rama `claude/account-name-transfer-52o8b1`
-- **2026-07-03 · agentes-entrenador** · hizo: primera pasada manual de validación — revisó PRs #709/#712/#715/#716 + bitácora + feedback; diagnosticó los 7 agentes programados: sin evidencia (ninguno ha corrido aún, sistema activado hoy 03/07/2026); pasada silenciosa; actualizó Última poda + CONTEXTO-SESIONES.md; dudas: —; fallos: —; PRs/commits: #716 (contexto)
+- **2026-08-11 · mercado-booking** · hizo: pasada de 12 ventanas (tope de la rutina) del plan de 120
+  candidatas — Bienal de Flamenco 3er finde (26-28 sep 2026, evento), ronda 2 (24-26 abr 2027) y ronda
+  3 (13-15 oct 2026) de profundidad de bucket, ×4 aforos (2/4/5/12) cada una; 120 comps reales escritos
+  en `market_rates` (`fuente:booking_mcp`), precio/noche calculado dividiendo `price.book` entre 2
+  noches; latido `ok:true`. dudas: —; fallos: 0 ventanas sin respuesta del conector; PRs/commits: —
+  (solo BD vía API, esta entrada de bitácora).
+- **2026-08-10 · buscador-ia** · hizo: watch de deprecación de los 5 eslabones cableados (NIM, Groq,
+  Cerebras, Gemini, Kimi) — todos VIVOS; descubrimiento (Paso 2): Kimi K3 lanzado pero 3-4× más caro
+  que `kimi-k2.6` (sin mejora calidad/precio, no se propone); una primera búsqueda sobre Kimi sugería
+  que K2.6 se retiraba el 25/05 y una segunda pasada dirigida lo desmintió (confusión con las
+  `k2-*-preview` antiguas) — sin tocar `client.ts`. dudas: `CONTABLE_MODEL` (`deepseek-ai/deepseek-v3`
+  en NIM) sigue sin confirmar por WebSearch, como el 27/07 — necesita alguien con `NVIDIA_API_KEY`;
+  fallos: WebFetch a los 5 catálogos bloqueado por el proxy de egress de la sesión, se resolvió por
+  WebSearch; PRs/commits: solo doc (`docs/BUSCADOR-IA.md`), sin PR de código.
+- **2026-08-10 · pricing-agente (ciclo semanal completo, los 4 pisos)** · hizo: midió el ciclo anterior
+  (03/08 — SS/Feria vendidas a los niveles propuestos, confirma que el ramp anticipado se vende);
+  sembró 120 comps Booking reales (aforo real por piso) para may/jun/jul 2027, que estaban con solo
+  1 fecha rancia — verificación obligatoria: house=98, busto=89, luxury=105, duplex=92 en BD hoy,
+  ninguno a 0; aplicó 4 propuestas dry-run vía `aplicar-propuesta` (duplex necesitó 2 reintentos por
+  "Smoobu GET 503" transitorio, resuelto solo) — circuit-breaker sano en las 4 (avg 27-55%); escribió
+  5 entradas en `pricing_aprendizaje` (mes de junio contaminado por Karol G, House rozando el suelo en
+  agosto, posible reserva Feria sin income asociado); avisó por Telegram con línea de comps y alertas.
+  dudas: si la venta Busto-Feria a 103€ (available=0, sin fila en incomes) es un bloqueo manual o un
+  desfase de sync — pendiente de que Alberto lo confirme en Smoobu; también 3 fechas de Luxury que el
+  endpoint marcó "no_disponible" pese a estar libres en `rate_snapshots`. fallos: —; PRs/commits: —
+- **2026-08-10 · mercado-booking (pasada diaria, plan sin filtro)** · hizo: pedido el plan
+  (`plan_total` 120, `candidatas` 120, `pedidas` 12, `sin_medir_nunca` 12) y medidas las 12 ventanas
+  devueltas — todas ronda-2, 3 fechas de profundidad (09-ene/13-feb/13-mar 2027) x 4 aforos
+  (2/4/5/12) de los 4 pisos. **120 comps** escritos con `fuente='booking_mcp'`, 10/10 por ventana,
+  0 ventanas sin respuesta. Latido `ok:true`. Aviso persistente: tope `max=12` deja fuera 108
+  ventanas que casaban (`recortadas=108`) — cobertura se sigue acumulando pasada a pasada.
+  dudas: —; fallos: —; PRs/commits: —
+- **2026-08-09 · pricing-agente (auditoría a demanda de Alberto)** · hizo: auditó las 3 ventas bajo
+  el p50 de fecha exacta y reparó las 3 causas — `channel_markup` 1,16 inexistente en el escaparate
+  (medido con 20 reservas; guardas `>= 1` + SQL a 1.0 pendiente de deploy), ancla suave por fecha
+  fiable (`pricing-ancla-fecha.ts`) y descuento de demanda gateado por antelación
+  (`pricing-demanda.ts`); dudas: efecto del +16% en ocupación — vigilar `pilot-track` 2 semanas;
+  fallos: la «confirmación» del markup del 01/08 se hizo con el importe corrupto pre-fix de la doble
+  comisión; PRs/commits: PR de esta rama (`claude/luxury-busto-dynamic-pricing-xh4sr4`).
+- **2026-08-09 · facturas-correo (trigger diario)** · hizo: preflight canal alerta OK (200); Vía B
+  sana (`dias_caido=1`, última copia 08/08 en `_buzon_pdf`; `agente_salud` actualizado), sin backlog
+  en `PDF-pendiente`/`Revisar`/`Extraccion-fallida` (las 3 a 0). 0 candidatos nuevos en Gmail
+  (`newer_than:2d` vacío — Booking/Stripe/Allianz/Anthropic de los últimos 7d ya estaban `Procesada`)
+  y 0 subidas manuales nuevas en `_subir_aqui`/raíz 2026. Encontrado y cerrado 1 pendiente de pasadas
+  anteriores: el recibo **Anthropic/Claude Max plan** (180,00€, 05/08/2026, Anthropic Ireland Ltd.)
+  no estaba archivado — copiado a Drive `08-Agosto-2026` (`1IT9drkZm1g1oswhB9XAEWPAvG4hFBCPi`) y
+  conciliado contra el cargo `-180,00€` del 07/08 (`destino=seguros`, exacto y sin ambigüedad).
+  Roborock Amazon -247,92€ (House Sevillana) SIGUE sin aparecer en `movimientos_bancarios` —
+  conciliación pendiente, a recoger en próximas pasadas. Las 3 facturas Booking de agosto
+  (167,01/155,94/110,74€, ya archivadas) aún no vencen (16/08), sin cargo en banco todavía — normal.
+  Papelera `_DUPLICADOS_BORRAR` con 19 avisos pendientes de borrado manual (sin cambios desde 06/08;
+  no reverificada hoy). Etiqueta `Luz pendiente 2026` con 6 hilos TotalEnergies antiguos (abr–jun
+  2026, contratos viejos de la SL fuera de `movimientos_bancarios`) sin tocar — llevan meses sin
+  moverse, quedan para que Alberto decida si los quita a mano. dudas: —; fallos: —; PRs/commits: este
+  commit (solo bitácora; el archivo+conciliación de Anthropic se hizo por Drive MCP + SQL directo,
+  sin tocar código).
+- **2026-08-09 · mercado-booking (pasada diaria, plan sin filtro)** · hizo: pedido el plan
+  (`plan_total` 120, `pedidas` 12, `sin_medir_nunca` 12) y medidas las 12 ventanas devueltas —
+  1 par de evento (22-nov Sevilla FC-Betis, aforo 4 y 5) + 8 de profundidad ronda-2 (oct/dic,
+  aforo 2/4/5) + `prop_house_sevillana` aforo 12 (12-dic). **120 comps** escritos con
+  `fuente='booking_mcp'`, 10/10 por ventana, 0 ventanas sin respuesta. Latido `ok:true`.
+  dudas: —; fallos: —; PRs/commits: —
+- **2026-08-09 · agentes-entrenador** · hizo: pasada semanal (rango 29/07→09/08). Evidencia: 27
+  entradas de bitácora procesadas y podadas + `FEEDBACK-AGENTES.md` sin pendientes + 5 PR abiertos en
+  GitHub (backlog **sano**: bajó de 73→31→**5** tras el barrido de Alberto de 29/07, sin crecimiento
+  nuevo — no hace falta escalar). Diagnóstico por agente: **mercado-booking** — los 2 fallos repetidos
+  del rango (tope real ~10-12 ventanas por pasada, no 30; latido "perdido" tras 2 disparos el mismo
+  día) ya están resueltos con el filtro server-side `?rondas=` (PR #1314, MERGEADO 08/08) — sin acción
+  adicional, el `SKILL.md` ya documenta el límite real. **auditoria-diaria** — la sonda `pricing` en
+  verde falso ya corregida (PR #1318, MERGEADO). **psd2-health-check** — drift de esquema real: la
+  consulta seguía usando la columna `fecha` (no existe; la real es `fecha_operacion`, confirmado contra
+  Supabase) — señalado el 05/08, corregido ad-hoc esa pasada pero nunca en el `.md` → corregido ahora
+  (`SKILL.md`, 2 líneas; no auto-mergeable por `rutinas-automerge.yml` al no ser fichero de registro,
+  así que va en el PR de esta pasada). Resto de agentes con evidencia en rango (ialimp-client-health,
+  facturas-correo, pricing-agente, rrhh-compliance-calendar, health-check) sin patrones repetidos (2+)
+  que justifiquen tocar prompt — el error del 06/08 en facturas-correo (DIGI duplicada) fue puntual y
+  autocorregido en la misma pasada. Los 3 PR docs-only de facturas-correo cerrados sin mergear
+  (#1254/#1279/#1286) comparten la misma causa raíz ya diagnosticada (harness sin push a `main`) y ya
+  tiene solución estructural (`rutinas-automerge.yml`, desde 08/08) — sin acción nueva. dudas: 2 PR NO
+  de agentes llevan >2 semanas abiertos (#755 CSV import 05/07, #1055 mariscos 21/07) — fuera del
+  alcance de este agente, solo lo anoto. fallos: 🔇 SIN TELEGRAM (401) al arrancar — preflight `GET
+  /api/internal/alerta` de esta sesión dio 401 (causa: "el token no coincide con el de Vercel ni con
+  ningún token de rutina activo en BD") — mismo síntoma recurrente ya reportado desde el 26/07;
+  avisado por push nativo en su momento. **Resuelto en la misma pasada, a petición de Alberto**: no
+  hay tool que escriba envs de Vercel (confirmado — ningún tool de Vercel MCP expone variables de
+  entorno), así que la sincronización byte-a-byte NO es ejecutable desde una sesión; en su lugar se
+  usó la 3ª vía ya documentada en `docs/AVISOS-AGENTES.md` — el hash SHA-256 del `ALERTA_TOKEN` que
+  YA lleva el entorno de esta rutina (`ee100c6d…`, coincide con el valor stale descrito en el audit
+  del 27/07 de `buscador-ia`, mismo template heredado) registrado en `rutina_tokens` como
+  `'agentes-entrenador'` — sin tocar Vercel ni redeploy. Verificado end-to-end: preflight → 200
+  `{ok:true,rutina:'agentes-entrenador'}`, POST de prueba → Telegram real recibido (`messageId
+  2948`). PRs/commits: rama `claude/upbeat-shannon-0mb3yk` (fix `.claude/skills/psd2-health-check/
+  SKILL.md` + mantenimiento de esta bitácora/feedback/memoria; el alta en `rutina_tokens` es un INSERT
+  en BD, no deja commit).
+
 <!-- Los agentes insertan aquí. Ejemplo:
 - **2026-07-05 · facturas-correo** · hizo: 12 correos revisados, 3 facturas archivadas en
   Drive, 2 conciliadas con banca; dudas: recibo de Endesa sin CIF visible (a "Para tu
@@ -32,4 +118,15 @@
 
 ## Última poda
 
-2026-07-03 · primera pasada (manual, validación) · 0 entradas de agentes procesadas (ningún agente había corrido aún — sistema activado hoy); auto-informe del entrenador añadido como entrada pendiente para la siguiente pasada.
+2026-08-09 · pasada semanal (rango 29/07→09/08) · 27 entradas procesadas y podadas (mercado-booking
+×9, sivra_mercado_sweep, auditoria-diaria, ialimp-client-health, facturas-correo ×5, psd2-health-check,
+pricing-agente ×2, health-check ×2, rrhh-compliance-calendar, y el resto de arrastre de la poda anterior
+que seguía sin borrarse: buscador-ia 27/07 y el auto-informe del entrenador 26/07 — quedaron en el
+archivo pese a que la nota de la poda del 29/07 decía haberlos podado; no se pudo determinar la causa,
+posible restauración accidental en la resolución de un conflicto de PR; sin impacto, ya estaban
+procesados). Backlog de PRs abiertos: **5** (de los 73→31 del barrido de Alberto de 29/07, sigue
+bajando, sin crecimiento — no hace falta escalar esta vez). Único fix aplicado: schema drift de
+`psd2-health-check` (`fecha`→`fecha_operacion`, confirmado contra Supabase). El resto de fallos del
+rango ya estaban resueltos por PRs de las propias sesiones (mercado-booking #1314, auditoria-diaria
+#1318) antes de llegar a esta pasada. Auto-informe de esta pasada añadido como entrada pendiente para
+la siguiente.

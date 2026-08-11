@@ -11,8 +11,9 @@ export async function GET(req: NextRequest) {
   }
   const supabase = createServerClient()
   // Hasta 15 presentaciones de catering (España) por día laborable. Desde el
-  // 03/07/2026 se ENVÍAN automáticamente (mensaje tipo genérico + resumen
-  // Telegram); CRM_ENVIO_AUTO='0' vuelve al modo aprobación con botón.
+  // 03/07/2026 se ENVÍAN automáticamente (mensaje tipo genérico); desde el
+  // 05/08/2026 sin resumen Telegram — solo avisan los errores.
+  // CRM_ENVIO_AUTO='0' vuelve al modo aprobación con botón.
   // Volumen total elegido por Alberto: ~40/día (15 catering + 15 restaurantes
   // + 12 Sevilla), muy por debajo del plan gratis de Resend (100/día, 3.000/mes)
   // para cuidar la reputación de hola@iarest.es.

@@ -7,11 +7,44 @@
 > El contenedor es efímero: una rutina NO puede leer las conversaciones de otras sesiones.
 > Reconcilia lo que quedó **commiteado** (memoria/skills/docs) contra el código e infra reales.
 
+## Cómo llega el texto a `main` (léelo antes de tocar una rutina)
+La suposición original era que una rutina puede **empujar texto directo a `main`** (el "carril 1").
+En la práctica **no puede**: corre bajo el harness de tareas de GitHub, que le asigna una rama y le
+prohíbe tocar `main`. Del 04 al 07/08/2026 eso dejó **cinco PRs de rutinas muertos en conflicto**
+(#1252, #1254, #1277, #1279, #1286) y hubo que rescatar su texto a mano.
+
+Desde el 07/08/2026 el repo cierra el círculo solo con
+**`.github/workflows/rutinas-automerge.yml`**:
+
+| | |
+|---|---|
+| **Qué mergea** | PRs de rama `claude/*`, del dueño del repo, cuyo diff toca **SOLO ficheros de registro**: `docs/CONTEXTO-SESIONES.md`, `docs/AGENTES-BITACORA.md`, `docs/AUTO-APLICADOS.md`, `docs/AUDITORIA-*.md`, `docs/memoria/*.md`. |
+| **Qué NO mergea (a propósito)** | Todo lo que **le dice a un agente qué hacer**: `.claude/**`, `CLAUDE.md`, `AGENTS.md`, `docs/SKILLS.md`, `docs/FUENTES-DE-VERDAD.md`, este mismo fichero. Y por supuesto código, infra y workflows. Un agente que se reescribe las instrucciones sin que nadie mire es justo el fallo que no queremos: eso sigue siendo carril 2. |
+| **Condiciones** | CI **entera en verde** (y al menos un check — "sin checks" no es "checks OK"), sin conflicto, y el último commit con **≥20 min** de antigüedad (para no comerse el push del hook `Stop` de la sesión que aún está viva). |
+| **Cuándo corre** | Al terminar la CI de un PR, al abrirse/actualizarse un PR, y **cada hora** como red de seguridad (los eventos se pierden a veces y los conflictos aparecen después). |
+| **Si hay conflicto** | **Lo resuelve el bot** cuando es una **inserción pura** (cada rama añadió su entrada arriba: se conservan LAS DOS, primero la que ya estaba en `main`). Si alguien **editó** texto que ya existía, no toca nada y deja **un** comentario — ahí sí hace falta mano humana. La guarda es la sección base de `merge.conflictStyle=diff3`: base vacía = nadie pisa a nadie. Lógica en `scripts/resolver-conflicto-registro.mjs` (puro + 14 tests). |
+| **Cómo pararlo** | Etiqueta `no-automerge` en el PR (puntual), o deshabilitar el workflow en Actions (del todo). |
+
+**Consecuencia para quien escribe una rutina:** separa siempre en **dos PRs** cuando toques ambas
+cosas. El de registro se mergea solo y no envejece; el que cambia comportamiento espera a Alberto.
+
 ## Cómo se crea un trigger (1 vez, manual de Alberto)
 1. Entra en `claude.ai/code` → **Rutinas** → **Nueva rutina**.
 2. Repo: `central`. Rama: la que prefieras (la rutina abre su propio PR draft).
 3. Define horario, prompt y MCPs según la tabla de abajo.
-4. Guarda. A partir de ahí corre sola; revisa el PR draft que deje.
+4. **Adjunta SOLO los conectores que la rutina usa de verdad — y ninguno más.** El propio formulario
+   avisa de que la rutina usará **todas** las herramientas de los conectores adjuntos, **incluidas las
+   de escritura, sin pedir permiso en cada ejecución**. Y los conectores vienen **heredados en bloque**:
+   al montar `mercado-booking` (08/08/2026) el formulario traía **16 adjuntos** de serie — entre ellos
+   Interactive Brokers, Gmail, Resend y Vercel — para una rutina que lo único que hace es escribir
+   comparables de mercado. Eso es dar a un agente desatendido la capacidad de operar en el bróker,
+   mandar correo y tocar infraestructura para una tarea que no lo necesita. Es el mismo principio por
+   el que las rutinas llevan `ALERTA_TOKEN` y no `CRON_SECRET`: **el mínimo alcance que le permita
+   hacer su trabajo**. La columna "MCPs / envs" de cada ficha lista lo NECESARIO; lo que no esté ahí,
+   se quita.
+   ⚠️ Dos cosas que NO son conectores y por eso no hay que adjuntar: **GitHub** (es nativo al vincular
+   el repo) y las llamadas HTTP a plataforma (`/api/...` con Bearer, van por red normal).
+5. Guarda. A partir de ahí corre sola; revisa el PR draft que deje.
 
 ---
 
@@ -23,8 +56,8 @@
 | **Cuándo** | Diaria, ~**04:00 CEST** |
 | **Prompt** | `Ejecuta /auditoria-diaria` |
 | **MCPs / envs** | Supabase + Vercel (lectura). **GitHub es nativo** al vincular el repo — ya cubre lectura + abrir el PR + push a `main`. Para el aviso, `PLATAFORMA_URL` + `ALERTA_TOKEN` en la env de la rutina (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos — ver "Arquitectura de notificaciones Telegram" abajo; si faltan, el aviso se omite). |
-| **Qué hace** | Reconcilia `CONTEXTO-SESIONES.md` + skills-maestro + `CLAUDE.md` + `docs/SKILLS.md` contra el código real + checks baratos (lockfile, estructura, drift) + **heartbeat de crons** (paso 2-bis: detecta crons mudos por falta de filas frescas en BD). SALTA typecheck/tests pesados. |
-| **Resultado (dos carriles)** | **Carril 1:** los arreglos de **texto** (memoria/skills/docs/manuales) se **auto-aplican a `main`** (sin PR) y se anotan en `docs/AUTO-APLICADOS.md`. **Carril 2:** lo "raro" (código, infra, crons mudos, gran radio) → **PR draft** `claude/auditoria-diaria-<fecha>` + **aviso Telegram** con botón-URL al PR. **Sin nada** → sin push, sin PR, sin aviso. |
+| **Qué hace** | Reconcilia `CONTEXTO-SESIONES.md` + skills-maestro + `CLAUDE.md` + `docs/SKILLS.md` contra el código real + checks baratos (lockfile, estructura, drift) + **heartbeat de crons/agentes** (paso 2-bis: `agente_latidos` como fuente preferida + filas frescas en BD para lo no instrumentado + reconciliación de cobertura contra `CRON_JOBS`/`AGENTES_VIGILADOS`/este doc) + **backlog de PRs de rutinas y salud del automerge** (paso 2-ter: PRs de registro atascados, conflictos, drafts olvidados, workflow `rutinas-automerge` vivo). SALTA typecheck/tests pesados. |
+| **Resultado (dos carriles)** | **Carril 1:** los arreglos de **texto** (memoria/skills/docs/manuales) se **auto-aplican a `main`** (sin PR) y se anotan en `docs/AUTO-APLICADOS.md`. Si el entorno no deja empujar a `main` → PR propio SOLO con ficheros de registro, que **se mergea solo** (ver "Cómo llega el texto a `main`" abajo). **Carril 2:** lo "raro" (código, infra, crons mudos, gran radio) → **PR draft** `claude/auditoria-diaria-<fecha>` + **aviso Telegram** con botón-URL al PR. **Sin nada** → sin push, sin PR, sin aviso. |
 
 Es la **red de seguridad** del guardián de cierre (`.claude/hooks/persist-memoria.sh`):
 caza lo que las sesiones del día no anotaron a mano.
@@ -35,7 +68,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Cuándo** | Semanal (domingos, ~**04:00 CEST**) |
 | **Prompt** | `Ejecuta /auditoria-diaria --profunda` |
 | **MCPs / envs** | Supabase + Vercel. **GitHub nativo**. `PLATAFORMA_URL` + `ALERTA_TOKEN` para el aviso y el **heartbeat semanal** (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos — ver "Arquitectura de notificaciones Telegram" abajo). |
-| **Qué hace** | `auditoria-central` ENTERA: typecheck de las 4 apps + tests + seguridad multi-tenant + infra por MCP + coherencia de docs. |
+| **Qué hace** | `auditoria-central` ENTERA: typecheck de las 8 apps + tests + seguridad multi-tenant + `pnpm audit` + infra por MCP (incl. `ignoreCommand` en los 8 `vercel.json`) + coherencia de docs. |
 | **Resultado** | Igual que la ligera (carril 1 a `main` + carril 2 PR draft con informe `docs/AUDITORIA-<YYYY-MM>.md` + aviso Telegram). Además, **heartbeat semanal**: manda SIEMPRE un Telegram corto de "sigo viva" aunque no haya hallazgos, para confirmar que la rutina no se ha muerto en silencio. |
 
 ### 3. Facturas correo — *activa*
@@ -116,6 +149,41 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Qué hace** | Lee `docs/ROADMAP-rrhh.md`, filtra ítems 🔴 obligatorios no completados y genera un informe de plazos legales (RD 8/2019 fichaje, RGPD art.28, canal denuncias, etc.). Mantiene visibilidad sobre obligaciones con riesgo de multa. |
 | **Verificar** | El chat muestra el informe de compliance con la lista de ítems 🔴 pendientes. |
 
+### 8-bis. Mercado real por fecha (SIVRA / Booking) — *ACTIVA desde el 08/08/2026*
+> Creada a mano por Alberto («SIVRA mercado booking (diario)») tras dos meses de latido en «sin
+> ninguna señal registrada» — que era el diagnóstico correcto: no existía. **No se pudo crear por
+> API**: el parámetro de conectores no está disponible para esta organización, y sin el conector de
+> Booking la rutina no puede medir nada. Primera pasada real ese mismo día, disparada a mano:
+> **120 comps en 12 ventanas, todas con respuesta del conector, 0 fallos**, latido `ok=true`.
+>
+> 🚨 **Al crearla, el formulario traía 16 conectores heredados** (Interactive Brokers, Gmail, Resend,
+> Vercel…) para una rutina que solo escribe comparables. Se dejó **solo Booking.com** — ver el paso 4
+> de "Cómo se crea un trigger".
+
+| | |
+|---|---|
+| **Cuándo** | Diaria, **05:30 CEST** (03:30 UTC — media hora después del barrido de las 03:00 UTC, para que la cobertura del día ya esté escrita cuando se pide el plan) |
+| **Prompt** | `Ejecuta la skill mercado-booking` |
+| **MCPs / envs** | **Booking.com y NADA MÁS** (obligatorio; el formulario trae 16 conectores heredados — quitar los otros 15, ver paso 4 de "Cómo se crea un trigger"). GitHub va nativo por el repo; las 3 llamadas a plataforma son HTTPS con Bearer, no necesitan conector. · `PLATAFORMA_URL` + `ALERTA_TOKEN` en la env de la rutina (**NUNCA** `CRON_SECRET`). Sin esas dos envs no puede ni pedir el plan ni escribir: el latido saldría en rojo. |
+| **Qué hace** | Pide a `GET /api/sivra/mercado/plan?max=12` las ventanas (fecha × aforo) con el corpus fiable más viejo, las mide con el conector de Booking (`number_of_adults` = aforo real del piso), y escribe los comparables en `market_rates` por `POST /api/sivra/mercado/ingest` con **`fuente:"booking_mcp"`**. Cierra con `POST /api/internal/latido` (`sivra_mercado_booking`). |
+| **Por qué existe** | Es la **única** fuente que distingue temporada. El barrido por búsqueda web da precios de anuncio SIN fecha: medido el 06/08/2026 para el Dúplex el 4-sep, Serper decía p50 **171€** y el mercado real era **129€** (−33%), con los mismos comps repitiendo precio en agosto, noviembre y marzo. Ver `docs/superpowers/specs/2026-08-06-mercado-booking-design.md`. |
+| **Verificar** | `SELECT checkin_date, guests, count(*) FROM market_rates WHERE fuente='booking_mcp' AND search_date >= CURRENT_DATE - 1 GROUP BY 1,2` + fila `sivra_mercado_booking` en `agente_latidos` con `ok=true`. |
+| **Qué se vio en la 1ª pasada (08/08/2026)** | La temporada que Serper NUNCA pudo ver, medida sobre una fecha por mes: **House (12p)** 474€ sep · **856€ oct** · 604€ nov · 424€ dic · 368€ ene; **Luxury (5p)** 196/282/206/174; **Busto (2p)** 110/174/156/106/104. Octubre es el pico en los cuatro aforos. Para comparar: el corpus Serper le ponía a House **260€** — con precios de apartamento de 4 plazas. Cobertura tras la 1ª: 17 de 120 ventanas (12 de la rutina + 5 medidas a mano esa mañana). |
+| **El motor ya lo usa (08/08/2026, misma tarde)** | Con 19 ventanas más medidas a mano (190 comps), **ago-2026→ene-2027 tiene ≥3 fechas SIN evento por mes en los 4 pisos**, que es lo que exige `MIN_FECHAS_MES` — el bucket mensual está vivo y con él se activó `apply_enabled` en Dúplex y House. 🚨 **Al elegir qué fecha medir, cuenta las fechas que ve el MOTOR, no las que hay en la tabla**: el bucket excluye las fechas de evento del calendario del repo **y** de `pricing_eventos_auto`, así que un mes con 6 fechas medidas puede tener 1 elegible (le pasó a septiembre: la Feria/Bienal se come del 9 al 30). De feb a jul-2027 aún no hay bucket: esos meses caen al ancla global + prior estacional, que es el fallback de diseño. |
+| **Pendiente (fase 2)** | Cuando haya ≥3 fechas por mes con `fuente='booking_mcp'` **en todo el horizonte de 365 días** (hoy solo ago→ene): retirar `mercado/sweep` de `CRON_JOBS`, neutralizar las filas `serper` de fechas lejanas y quitar su latido. **No antes**: en feb→jul el bucket todavía lo sostiene Serper. |
+
+### 8-ter. Vigilancia diaria pricing SIVRA — *TEMPORAL, activa desde el 09/08/2026*
+> Pedida por Alberto el 09/08/2026 tras poner los 4 pisos bajo el motor propio (PriceLabs de baja,
+> last-minute activado): «haz seguimiento que todo vaya ok varios días hasta que confirme que todo
+> ok — septiembre empieza temporada». **Se BORRA cuando Alberto confirme** (`delete_trigger`).
+
+| | |
+|---|---|
+| **Cuándo** | Diaria, 09:00 UTC (tras el guardián de las 07:30 y la pasada de las 08:30) |
+| **Trigger** | `trig_01Eagedr3hBNtpf1oEgDHj5R` — self-bind a la sesión del 09/08 (hereda sus conectores, Supabase incluido; el parámetro `connectors` de la API no está disponible en esta organización) |
+| **Qué hace** | Verifica las últimas 24h: 3 pasadas `apply-auto` escritas en los 4 pisos · ningún precio bajo `min_price` ni fuera del raíl ±20% vs REF24 · PriceLabs sigue mudo en Dúplex/House · last-minute solo dentro de la antelación mediana y sin perforar suelos · alertas del guardián 07:30 · reservas nuevas no bajo el p50 fiable de su fecha |
+| **Si todo bien** | Una línea corta de confirmación a Alberto; si algo grave, pausa el motor (`pricing_config.paused=true`) y avisa con detalle |
+
 ### 9. Vigía GitHub/OSS — *pendiente de trigger*
 | | |
 |---|---|
@@ -143,6 +211,20 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Qué hace** | Mejora los prompts de los agentes programados por RENDIMIENTO: lee `docs/AGENTES-BITACORA.md` (auto-informes), `docs/FEEDBACK-AGENTES.md` (feedback de Alberto), PRs/commits de la semana y BD (`pricing_aprendizaje`, `fiscal_novedades`); diagnostica por agente y revisa calidad transversal entre skills. La frescura factual es de `/auditoria-diaria` — no se pisan. |
 | **Resultado** | Cambios de **comportamiento** → **PR draft por skill** (`claude/entrenador-<skill>-<fecha>`, con evidencia→diagnóstico→cambio en el cuerpo) + **UN Telegram** con los links. Solo lo factual trivial (máx. 5) directo a `main` con línea en `docs/AUTO-APLICADOS.md`. **Nunca se auto-modifica** (a su propia skill, siempre PR). Sin evidencia → pasada silenciosa (solo poda de bitácora). |
 
+### 13. Agente de prospección comercial — ialimp + ia-rest — *activa*
+| | |
+|---|---|
+| **Cuándo** | L-V, **11:00 CEST** (`0 9 * * 1-5` UTC) |
+| **Prompt** | Vive en la config del trigger (`claude.ai/code → Rutinas`), **no** en una skill del repo — por eso esta rutina tardó en tener ficha. Flujo: busca en Gmail (enviados + borradores) para no duplicar contactos, **envía** los emails de captación de ia-rest, **crea borradores** (sin enviar) para ialimp, y manda un resumen por Telegram. |
+| **MCPs / envs** | **Gmail** (conector claude.ai — buscar histórico, enviar, crear borradores). Para el aviso: `PLATAFORMA_URL` + `ALERTA_TOKEN` en las Instrucciones de la rutina (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos — ver "Arquitectura de notificaciones Telegram"; si faltan, el resumen se omite). |
+| **Qué hace** | Prospección comercial diaria de las dos verticales SaaS: ia-rest (Voice POS hostelería) en modo **envío directo**; ialimp (limpiezas) en modo **borrador para revisión**. La deduplicación se hace contra el propio Gmail (enviados/borradores), por lo que el conector Gmail es un **requisito duro**. |
+| **Verificar** | El chat muestra el resumen de contactados/borradores; en Gmail aparecen los enviados de ia-rest y los borradores de ialimp del día. |
+
+> ⚠️ **Incidente 22/07/2026 — run abortado por "faltan dos piezas de infraestructura" → RE-DIAGNOSTICADO.**
+> Un run reportó dos bloqueos: (1) conector Gmail deshabilitado (`enabledInChat: false`) y (2) `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` sin definir. Verificación del 22/07 en sesión:
+> - **(1) Gmail — dependiente de sesión.** `ListConnectors` dio `connected: true`, `enabledInChat: true` (Gmail SÍ disponible en la sesión del 22/07). El flag `enabledInChat` es **por-sesión**: si en el entorno de la rutina el conector no aparece adjunto/activado, hay que activarlo en la config de la rutina (mismo patrón que "adjuntar el repo").
+> - **(2) Telegram — diagnóstico ERRÓNEO.** El monorepo NO usa `TELEGRAM_BOT_TOKEN`/`CHAT_ID` en las rutinas Claude (viven solo en Vercel plataforma). El resumen debe salir por `/api/internal/alerta` con `ALERTA_TOKEN` — que esta rutina **aún no lleva** en sus Instrucciones. **Pendiente:** añadir `PLATAFORMA_URL` + `ALERTA_TOKEN` como las rutinas 6/7/9 (ver "Pendientes manuales de Alberto", ítem 11).
+
 ---
 
 ### 10. Triaje de correo — *activa (CRON DE VERCEL, no rutina Claude)*
@@ -153,6 +235,17 @@ caza lo que las sesiones del día no anotaron a mano.
 | **MCPs / envs** | Ninguno de rutina. Usa envs de Vercel plataforma: `GMAIL_USER`/`GMAIL_APP_PASSWORD` (IMAP), `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`, `NVIDIA_API_KEY`, `CRON_SECRET`. Opcional `TRIAJE_DRY_RUN=true` (modo sombra). |
 | **Qué hace** | Lee lo nuevo del Gmail, clasifica (reglas → OTP → IA) y actúa: ruido→`Triaje/Ruido`+archivar, contabilidad→`Triaje/Contabilidad` (buzón puente de `facturas-correo`), personal/huéspedes/leads→aviso Telegram, phishing→marcar con cautela. Huéspedes se delegan al agente SIVRA. |
 | **Resultado** | Filas en `correo_triaje` (BD compartida), avisos inmediatos + digest diario + resumen semanal por Telegram. `/auditoria-diaria` vigila la frescura de `correo_triaje` y reconcilia `lib/correo/rutas.ts`. |
+
+---
+
+### 12. Monitorización — watchdog trading + latidos de agentes — *activa (CRONS DE VERCEL, no rutina Claude)*
+| | |
+|---|---|
+| **Cuándo** | `apps/plataforma` `vercel.json`: `trading-watchdog` `30 6 * * 2-6` (mar-sáb 08:30 CEST), `agentes-latido` `45 7 * * *` (diario 09:45 CEST) |
+| **Prompt** | *N/A* — no son sesiones Claude; corren como código (`app/api/cron/{trading-watchdog,agentes-latido}/route.ts`). |
+| **MCPs / envs** | Ninguno de rutina. Auth `CRON_SECRET`; avisan por `tgSend` (bot único del monorepo). |
+| **Qué hace** | `trading-watchdog` comprueba **3 tramos** de la pasada nocturna de trading: `broker_saldos` (NAV), `trading_tesis` (parte de `/analizar`) y **`/puntuar`** (stops + walk-forward, latido `trading_puntuar` — añadido PR #1291 tras un caso real donde NAV y tesis quedaron frescos pero `/puntuar` nunca se llamó y el watchdog de 2 tramos lo habría dado por bueno). Desde el 08/08/2026 (PR #1322) el propio watchdog **deja su huella** en `agente_latidos.trading_watchdog` (antes, si él mismo dejaba de correr, su silencio se leía como «los tres tramos frescos»; vigilado por `agentes-latido` con 80h de umbral). `agentes-latido` (`lib/monitoring/latidos.ts`, registro `AGENTES_VIGILADOS`) comprueba, por cada agente vigilado, una huella FIABLE en BD que SOLO se refresca cuando ese agente corre — hoy vigila **pricing** (`pricing_decisiones.ciclo_at` por piso — **cambiado desde `market_rates prop_%`** el 08/08/2026, PR #1318: esa huella dejó de ser exclusiva de la Rutina semanal cuando el barrido Serper diario y `mercado-booking` empezaron a escribir en el mismo namespace, y salía verde con la Rutina muerta; 192h), **trading_watchdog** (80h, ver arriba), **correo-triaje** (`correo_cursor.updated_at`, 6h), **facturas-scan**, **ialimp_pms**, **sivra_eventos**, **sivra_mercado_sweep**, **sivra_mercado_booking** y **sivra_pricing_guard** (30h los diarios). Nace de que el agente de pricing dejó de correr en silencio y una reserva entró un 40% bajo mercado sin que nadie se enterara. ⚠️ **Un latido mide FRESCURA, no CORRECCIÓN**, y confundirlo sale caro: el 01/08/2026 `market_rates` estaba fresquísima y aun así el ancla de House venía de comps de otro aforo — eso no lo caza un latido, lo caza el centinela #9 del guardián de precios. Al añadir un vigilante, pregúntate cuál de las dos cosas estás midiendo. |
+| **Resultado** | Sin anomalías → sin ruido. Huella vieja/inexistente → Telegram con el motivo y la acción sugerida. **No duplica** con el heartbeat de `/auditoria-diaria` (paso 2-bis): coordina umbrales para no avisar dos veces por lo mismo — para añadir un agente nuevo al monitor, una fila en `AGENTES_VIGILADOS` + su probe SQL en el route. |
 
 ---
 
@@ -168,12 +261,15 @@ caza lo que las sesiones del día no anotaron a mano.
 | Lunes 06:00 | Pricing agente SIVRA |
 | Miércoles 09:00 | Guardián PSD2 |
 | Viernes 17:00 | ialimp client health |
+| L-V 11:00 | Agente de prospección comercial (ialimp + ia-rest) |
 | Domingo 04:00 | Auditoría semanal profunda |
 | Domingo 07:30 | Agentes-entrenador (mejora de prompts) |
 | Lunes 07:00 | Buscador de IA |
 | Día 1 del mes 07:00 | Vigilante fiscal IRPF |
 | Día 1 del mes 08:00 | RRHH compliance calendar |
 | Día 15 del mes 07:00 | Vigía GitHub/OSS |
+| Diaria 09:45 | Latidos de agentes (cron Vercel) |
+| Mar-sáb 08:30 | Watchdog trading (cron Vercel) |
 
 ---
 
@@ -255,6 +351,11 @@ Así si el bot cambia, solo se actualiza en Vercel plataforma — ninguna rutina
    - c) Una vez ninguna rutina lleve ya `CRON_SECRET` en el prompt, **rotar `CRON_SECRET`** (env de equipo Vercel
      + GitHub Actions secrets) para matar la copia que estuvo expuesta.
    - d) Revisar el aviso de que los conectores pueden ejecutar **operaciones de escritura sin pedir permiso**.
+11. 🟡 **Rutina 13 (Agente de prospección comercial — ialimp + ia-rest) — desbloquear los 2 falsos "bloqueos de infra"** (re-diagnóstico 22/07/2026, ver incidente bajo la rutina 13):
+    - a) **Telegram:** añadir al final del campo "Instrucciones" de la rutina, igual que las rutinas 6/7/9:
+      `PLATAFORMA_URL=https://plataforma-ten-flame.vercel.app` y `ALERTA_TOKEN=<el mismo valor que ya funciona en la rutina de auditoría diaria>`. **NO** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` (no van en rutinas Claude) **ni** `CRON_SECRET` (llave maestra — ver ítem 9). Como las rutinas 1/2 de auditoría ya alcanzan `/api/internal/alerta` sin 403, la env `ALERTA_TOKEN` ya existe en Vercel plataforma: solo hay que reusar su valor.
+    - b) **Gmail:** verificar que el conector **Gmail** figura adjunto/activado en la config de la rutina (el flag `enabledInChat` es por-sesión). Es requisito duro: sin Gmail no hay deduplicación contra enviados/borradores.
+    Ambas acciones son en la UI `claude.ai/code → Rutinas` (Alberto, p.ej. vía Claude Chrome). No requieren tocar código.
 10. ✅ **RESUELTO (20/07/2026) — Rutinas 1 y 2 (`/auditoria-diaria` ligera + profunda) YA tienen
     `ALERTA_TOKEN`/`PLATAFORMA_URL`.** Detectado el 17/07/2026 (ninguna de las dos envs presente); esta
     misma pasada del 20/07 verificó ambas presentes en el entorno de la rutina y la red alcanzando
@@ -295,11 +396,15 @@ Así si el bot cambia, solo se actualiza en Vercel plataforma — ninguna rutina
 | ~~**pricing-agente**~~ (duplicado) | — | ✅ **ELIMINADO 13/07/2026** por Alberto vía Claude Chrome (fardaba con "la skill no existe") |
 
 Notas de deriva detectadas de paso:
-- 🔴 **Seguridad:** el prompt de **buscador-ia** lleva el `CRON_SECRET` como **literal en texto plano** (valor real,
-  no el placeholder que este doc daba por sin rellenar) + una `PLATAFORMA_URL`. **Rotar y sacarlo del prompt** (ver
-  pendiente #9). El valor concreto NO se transcribe aquí a propósito.
+- ~~🔴 **Seguridad:** el prompt de **buscador-ia** lleva el `CRON_SECRET` como literal en texto plano~~
+  → 🟢 **RESUELTO (verificado 27/07/2026)** leyendo el prompt real del trigger por la API de Routines:
+  hoy solo trae `PLATAFORMA_URL` y `ALERTA_TOKEN` (el token estrecho, que es lo correcto). El pendiente #9
+  queda cerrado en su parte de `CRON_SECRET`.
+  ⚠️ **Pero ese `ALERTA_TOKEN` va INCRUSTADO EN EL PROMPT**, no en las variables del entorno como el resto
+  de rutinas. Consecuencia práctica: cuando se rote el token, `buscador-ia` **no se arregla tocando su
+  entorno** — hay que editar su prompt. Detalle y huella de verificación en `docs/AVISOS-AGENTES.md`.
 - **buscador-ia YA tiene trigger** (lunes `0 5 * * 1`) aunque este doc lo daba por "pendiente" — estado corregido.
-- **"Agente de prospección comercial — ialimp + ia-rest"** (L-V `0 9 * * 1-5`) sigue sin ficha propia en este doc.
+- ~~**"Agente de prospección comercial — ialimp + ia-rest"** (L-V `0 9 * * 1-5`) sigue sin ficha propia en este doc.~~ ✅ **Ficha creada (22/07/2026) — ver rutina 13 arriba**, con el re-diagnóstico del incidente "faltan dos piezas de infraestructura".
 - ~~Posible **pricing duplicado**~~: existían `pricing-agente` y `Agente de pricing (sivra)`. **Resuelto
   13/07/2026**: el duplicado se eliminó (Alberto vía Claude Chrome). Solo queda "Agente de pricing (sivra)",
   lunes 07:00 CEST.
@@ -331,6 +436,10 @@ allá de `analizar`/`puntuar`: `factores`, `gurus`, `fundamentales`, `insiders`,
   `plataforma-ten-flame.vercel.app` → arreglado en el entorno "Default" de la rutina (Network access
   Trusted → Custom, dominio en Allowed domains). (b) `ALERTA_TOKEN` desincronizado entre el entorno de la
   rutina y el proyecto Vercel `plataforma` → rotado (mismo valor en ambos) + redeploy de plataforma.
+  ⚠️ **Ese arreglo (b) valió SOLO para el entorno "Default"** — hay un entorno de Claude Code POR RUTINA y
+  nadie recorrió los demás: `agentes-entrenador` (26/07) y `buscador-ia` (27/07) siguieron dando 401 contra
+  el mismo despliegue en el que la rutina de pricing sí avisaba. Protocolo completo de resincronización y
+  degradación en **`docs/AVISOS-AGENTES.md`**.
   **Verificado end-to-end:** `POST /api/trading/saldo` → 200, `broker_saldos.actualizado_en` refrescado
   (19/07 14:08 UTC, NAV €33.658,82); la pasada nocturna de trading corrió completa por primera vez.
   Detalle en `docs/CONTEXTO-SESIONES.md` (entrada 19/07/2026, "RESUELTO el bloqueo de red+auth").

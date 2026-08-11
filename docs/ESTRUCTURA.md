@@ -15,22 +15,23 @@
 > conectar módulos), chat IA, salud, glosario y novedades. **Para sesiones nuevas de Claude** (sin abrir la app):
 > lee **`docs/ARQUITECTURA.generated.md`** — el mismo mapa en markdown, regenerado en cada push.
 
-## 0. Resumen de un vistazo  (auditoría 2026-06-25)
-- **Verticales (apps/*):** 5 — `plataforma` (matriz), `ia-rest`, `ialimp`, `sivra`, **`rrhh`** (iarrhh).
-- **Núcleos compartidos (`packages/core-*`):** **10** (antes se listaban 6).
-- **Módulos de dominio (`packages/module-*`):** **20** + `legal-templates` (antes se listaban 9).
+## 0. Resumen de un vistazo  (auditoría 2026-06-25; counts refrescados 30/07/2026)
+- **Verticales (apps/*):** 8 — `plataforma` (matriz), `ia-rest`, `ialimp`, `sivra`, `rrhh` (iarrhh),
+  `transporte`, `alquiler`, `almacen`.
+- **Núcleos compartidos (`packages/core-*`):** **10**.
+- **Módulos de dominio (`packages/module-*`):** **26** + `legal-templates`.
 - **Agentes de IA:** 30+ repartidos por vertical.
-- **Estado de los módulos:** **15 de 19 HECHOS y CONSUMIDOS** por ≥1 vertical (con adaptador real).
-  `module-flota` YA está cableado en ia-rest (adaptador `flota-adapter.ts` + endpoint aditivo
-  `/api/owner/flota/resumen`). Siguen **sin consumo/adaptador**: `module-agenda`, `module-revenue`,
-  `module-intercompany` y `module-encargo` (extraídos 25-26/06) — HECHOS como contrato/lógica +
-  tests, ése es el cableado pendiente. `module-materiales` ya cubre **alquiler**. `module-encargo`
-  es el agregado central que une todos.
-- **Pendiente de CABLEADO (el código del núcleo ya existe como módulo):** la **consolidación
-  intercompany** en `apps/plataforma` — `@central/module-intercompany` ya implementa la
-  eliminación de operaciones entre sociedades; falta la tabla de operaciones + enchufarlo al
-  dashboard (hoy el consolidado es **suma simple**). Y la **flota** (`packages/module-flota`):
-  falta el adaptador en ia-rest (`vehiculos_grupo`+`evento_transporte`) y la vertical Transporte.
+- **Estado de los módulos:** **23 de 26 HECHOS y CONSUMIDOS** por ≥1 vertical (con adaptador real).
+  `module-flota` cableado en ia-rest Y en `apps/transporte`; `module-alquiler` cableado en
+  `apps/alquiler`; `module-intercompany` cableado en `apps/plataforma`. Siguen **sin
+  consumo/adaptador**: `module-agenda`, `module-revenue` y `module-encargo` — HECHOS como
+  contrato/lógica + tests, ése es el cableado pendiente (`module-encargo` es el agregado
+  central que une todos, aún sin vertical que lo use directamente).
+- **Pendiente de CABLEADO (el código del núcleo ya existe como módulo):** `module-agenda`
+  (disponibilidad/reserva de recurso) y `module-revenue` (analítica de demanda) siguen sin
+  ninguna vertical consumidora; `module-encargo` (agregado central) tampoco, aunque
+  `module-alquiler` y `module-transporte` ya replican su patrón de agregado sobre sus propios
+  dominios en vez de componerse sobre él.
 - **BD:** `plataforma`+`ialimp`+`sivra`+`rrhh` comparten Supabase `wswbehlcuxqxyinousql`
   (schema `public`/`rrhh`); `ia-rest` usa schema `iarest`. (Nota histórica: el proyecto viejo
   `efncqyvhniaxsirhdxaa` es pre-migración; los datos vivos de ia-rest están en `wswbehlcuxqxyinousql`,
@@ -47,6 +48,9 @@
 | **ialimp** | Limpieza | SaaS multi-tenant de limpieza de pisos turísticos (white-label). | Compartida | Vivo (`app.ialimp.es`) |
 | **sivra** | Inmobiliario | Intranet de gestión de pisos turísticos (instancia propia, Sevilla). | Compartida | Vivo |
 | **rrhh** | RR.HH. | **iarrhh** — Portal del Empleado multi-tenant (fichas, contratos+firma eIDAS, ausencias, expediente documental). Alta de empresa por operador. | Compartida (schema `rrhh`) | Vivo (`central-rrhh.vercel.app`) |
+| **transporte** | Flota/transporte | Camiones/portes como negocio: interno (intercompany) + a terceros. Compone `module-flota`+`module-transporte`. | Compartida (rol `prisma_transporte`) | Vivo |
+| **alquiler** | Alquiler de materiales | Alquiler de menaje/materiales (interno al grupo + a terceros). Compone `module-alquiler`. | Compartida (rol `prisma_alquiler`) | Vivo (login demo probado) |
+| **almacen** | Almacén de eventos | Gestión de almacén de eventos/catering (cliente Joaquín Jaén). Compone `module-materiales`. | Compartida (rol `prisma_almacen`) | Vivo (tenant DEMO; tenant real pendiente) |
 
 ---
 
@@ -80,6 +84,7 @@ para crecer a verticales nuevas (alquiler de materiales, transporte, clínica/ci
 |---|---|---|
 | `module-contabilidad` | IVA trimestral, PyG, tesorería, rentabilidad, arqueos, recurrentes. | ✅ ia-rest, ialimp, sivra, plataforma |
 | `module-concursos` | Agente de licitaciones LCSP: pliego (AiRunner) → ficha + checklist + Go/No-Go + baja temeraria + garantías. | ✅ plataforma |
+| `module-subastas` | Subastas de inmuebles: normaliza anuncios de cualquier fuente, calcula el coste real «puerta abierta» (ITP sobre valor de referencia, cargas, lanzamiento) y puntúa la oportunidad. | ✅ plataforma |
 | `module-crm` | Pipeline comercial genérico (oportunidades/leads) anclado a un Encargo. | ✅ ia-rest (`crm-eventos.ts`), ialimp |
 | `module-presupuestos` | Líneas, costes, descuentos y cálculo de margen/rentabilidad. | ✅ ia-rest, ialimp |
 | `module-proveedores` | Catálogo de proveedores + servicios subcontratados con comisiones. | ✅ ia-rest, ialimp, sivra |
@@ -94,18 +99,22 @@ para crecer a verticales nuevas (alquiler de materiales, transporte, clínica/ci
 | `module-rrhh` | Orquestación de firma avanzada OTP (eIDAS) sobre expedientes. | ✅ rrhh, ialimp |
 | `module-agenda` | Disponibilidad + reserva de recurso (sala, vehículo, kit, persona) con detección de solapes. | ⏳ HECHO sin consumo → cablear haciendas/flota/kits |
 | `module-revenue` | Análisis de demanda (ocupación, estacionalidad, lead time, pickup, pace, KPIs). | ⏳ HECHO sin consumo → falta superficie/BI |
-| `module-flota` | Flota/transporte: vehículos, portes, asignación por capacidad/tipo, rentabilidad por porte/vehículo, documental ITV/seguro, intercompany. | ✅ ia-rest (`flota-adapter.ts` + `/api/owner/flota/resumen`) · falta vertical Transporte |
-| `module-intercompany` | Consolidación con **eliminación** de operaciones entre sociedades del holding (cocina→tiendas, flota→catering, materiales→eventos) → resultado real del grupo + detalle por sociedad. | ⏳ HECHO+tests sin consumo → cablear dashboard de plataforma |
-| `module-encargo` | **Agregado central**: une CRM+presupuestos+agenda+inventario+proveedores+portal+feedback+flota+intercompany bajo una identidad (evento/porte/alquiler/cita) con máquina de estados. | ⏳ HECHO+tests sin consumo → base de las verticales nuevas |
-| `module-alquiler` | **Vertical alquiler de materiales/menaje** (interno a eventos del grupo Y a terceros): se compone sobre `module-encargo` + referencia materiales por id. Precio por días, máquina de estados (reservado→entregado→devuelto), recargo por retraso, disponibilidad por solape de fechas, costura intercompany. | ⏳ HECHO+tests sin consumo → base de la vertical Alquiler |
+| `module-flota` | Flota/transporte: vehículos, portes, asignación por capacidad/tipo, rentabilidad por porte/vehículo, documental ITV/seguro, intercompany. | ✅ ia-rest (`flota-adapter.ts` + `/api/owner/flota/resumen`), `apps/transporte` |
+| `module-transporte` | Servicio/orden de transporte (porte interno intercompany o externo a cliente) sobre `module-flota` + Encargo tipo 'porte'. | ✅ apps/transporte |
+| `module-intercompany` | Consolidación con **eliminación** de operaciones entre sociedades del holding (cocina→tiendas, flota→catering, materiales→eventos) → resultado real del grupo + detalle por sociedad. | ✅ apps/plataforma |
+| `module-encargo` | **Agregado central**: une CRM+presupuestos+agenda+inventario+proveedores+portal+feedback+flota+intercompany bajo una identidad (evento/porte/alquiler/cita) con máquina de estados. | ⏳ HECHO+tests sin consumo directo — `module-alquiler`/`module-transporte` replican su patrón en vez de componerse sobre él |
+| `module-alquiler` | **Vertical alquiler de materiales/menaje** (interno a eventos del grupo Y a terceros): se compone sobre `module-encargo` + referencia materiales por id. Precio por días, máquina de estados (reservado→entregado→devuelto), recargo por retraso, disponibilidad por solape de fechas, costura intercompany. | ✅ apps/alquiler (desplegada) |
+| `module-nominas` | Motor de cálculo de nóminas españolas (SS, IRPF, cuota patronal). | ✅ rrhh |
+| `module-trading` | Análisis de inversión: indicadores técnicos, torneo de estrategias, paper trading, scoring walk-forward, barreras de riesgo. | ✅ plataforma |
+| `module-geo` | Geolocalización (haversine, rumbo, velocidad, señal viva/perdida, geocerca, ETA, km recorridos). | ✅ rrhh, transporte |
+| `module-pagos` | Pago de facturas a proveedores: SEPA XML pain.001, normalización, deduplicación (agnóstico de PIS/banco). | ✅ plataforma |
 | `legal-templates` | Plantillas legales versionadas (RGPD, confidencialidad, código de conducta) → HTML. | ✅ rrhh |
 
-> **Nota:** 15 de 19 `module-*` están construidos Y consumidos por ≥1 vertical. La modularización
-> NO es un diseño pendiente: es realidad. Sin cablear aún: `module-agenda`, `module-revenue`,
-> `module-intercompany` y `module-encargo` (`module-flota` ya cableado en ia-rest). Para verticales
-> nuevas (alquiler de materiales a terceros, transporte/flota, clínica/citas) ya existe TODO el
-> andamiaje, incluido el **agregado central `module-encargo`** que las une; el siguiente paso es
-> el cableado (adaptadores + UI) en cada app, que se revisa en preview por tocar runtime vivo.
+> **Nota:** 23 de 26 `module-*` están construidos Y consumidos por ≥1 vertical. La modularización
+> NO es un diseño pendiente: es realidad. Sin cablear aún: `module-agenda`, `module-revenue` y
+> `module-encargo` (agregado central, aún sin vertical que se componga directamente sobre él).
+> El siguiente paso para esos tres es el cableado (adaptadores + UI) en la app que corresponda,
+> que se revisa en preview por tocar runtime vivo.
 
 ---
 

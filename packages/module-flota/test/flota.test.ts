@@ -18,6 +18,7 @@ import {
   asignarVehiculo,
   estadoDocumento,
   alertasDocumentos,
+  vehiculosSinDocumentar,
   esPorteIntercompany,
   totalIntercompany,
 } from '../src/flota.ts'
@@ -243,4 +244,36 @@ test('totalIntercompany suma facturación interna (excluye cancelados y externos
     porte({ id: 'ext', importeFacturado: 999 }), // externo
   ]
   assert.equal(totalIntercompany(portes), 100)
+})
+
+// ── Un vehículo sin documentos no está «en regla»: está sin documentar ───────
+
+test('vehiculosSinDocumentar detecta ITV/seguro que nunca se han registrado', () => {
+  const vehiculos: any[] = [
+    { id: 'v1', matricula: '1234ABC' },
+    { id: 'v2', matricula: '5678DEF' },
+    { id: 'v3', matricula: '9012GHI' },
+  ]
+  const documentos: any[] = [
+    { id: 'd1', vehiculoId: 'v1', tipo: 'itv', fechaCaducidad: '2027-01-01' },
+    { id: 'd2', vehiculoId: 'v1', tipo: 'seguro', fechaCaducidad: '2027-01-01' },
+    { id: 'd3', vehiculoId: 'v2', tipo: 'itv', fechaCaducidad: '2027-01-01' },
+  ]
+
+  const faltan = vehiculosSinDocumentar(vehiculos, documentos)
+  // v1 completo; v2 sin seguro; v3 sin nada (el más peligroso, y el que antes
+  // salía verde porque no generaba ninguna alerta de caducidad).
+  assert.equal(faltan.length, 2)
+  assert.deepEqual(faltan.find((f) => f.vehiculoId === 'v2')?.faltan, ['seguro'])
+  assert.deepEqual(faltan.find((f) => f.vehiculoId === 'v3')?.faltan, ['itv', 'seguro'])
+})
+
+test('vehiculosSinDocumentar no señala nada cuando todo está registrado', () => {
+  const vehiculos: any[] = [{ id: 'v1', matricula: '1234ABC' }]
+  const documentos: any[] = [
+    { id: 'd1', vehiculoId: 'v1', tipo: 'itv', fechaCaducidad: '2020-01-01' },
+    { id: 'd2', vehiculoId: 'v1', tipo: 'seguro', fechaCaducidad: '2020-01-01' },
+  ]
+  // OJO: caducados, pero REGISTRADOS — de esos ya avisa `alertasDocumentos`.
+  assert.deepEqual(vehiculosSinDocumentar(vehiculos, documentos), [])
 })

@@ -22,7 +22,8 @@ export const PROVEEDORES_RECURRENTES: ProveedorRecurrente[] = [
   { id: 'emasesa_bustos',   label: 'EMASESA Bustos Reform',             frecuencia: 'bimestral_impar', destino: 'turistico_pisos',  importeAprox: '33–57€',      carpetaDrive: 'Pisos turísticos', diaHabitual: 10 },
   { id: 'emasesa_luxury',   label: 'EMASESA Luxury',                    frecuencia: 'bimestral_impar', destino: 'turistico_pisos',  importeAprox: '59–91€',      carpetaDrive: 'Pisos turísticos', diaHabitual: 10 },
   { id: 'digi',             label: 'DIGI (2/3 negocio)',                frecuencia: 'mensual',         destino: 'turistico_pisos',  importeAprox: '~51€',        carpetaDrive: 'Pisos turísticos', diaHabitual: 1 },
-  { id: 'pricelabs',        label: 'PriceLabs',                         frecuencia: 'mensual',         destino: 'turistico_pisos',  importeAprox: '55–65 USD',   carpetaDrive: 'Pisos turísticos', diaHabitual: 1 },
+  // PriceLabs de baja el 09/08/2026 (los 4 pisos tarifican con el motor propio) — sin facturas nuevas
+  // esperadas; como mucho una última en agosto, que entra por el flujo normal sin necesitar fila aquí.
   { id: 'chekin',           label: 'Chekin Soluciones',                 frecuencia: 'mensual',         destino: 'turistico_pisos',  importeAprox: 'variable',    carpetaDrive: 'Pisos turísticos', diaHabitual: 1 },
   { id: 'renta_luxury',     label: 'Renta Gutierrez Alcalá — Luxury',  frecuencia: 'mensual',         destino: 'turistico_pisos',  importeAprox: '~309€',       carpetaDrive: 'Pisos turísticos', diaHabitual: 5 },
   { id: 'renta_bustos',     label: 'Renta Gutierrez Alcalá — Bustos',  frecuencia: 'mensual',         destino: 'turistico_pisos',  importeAprox: '~259€',       carpetaDrive: 'Pisos turísticos', diaHabitual: 5 },

@@ -5,7 +5,8 @@ import { useEffect, useState, useCallback, type CSSProperties } from "react"
 // Panel del PROPIETARIO — Pricing Auto
 // Alberto ve sus 4 pisos y configura A MANO todos los parámetros del motor de
 // precio automático (pricing_settings). Además: medidor de resultados (€ extra vs
-// PriceLabs), botón de pánico (pausa global), avisos push, restaurar precio e
+// la referencia PriceLabs, servicio de baja el 09/08/2026), botón de pánico (pausa
+// global), avisos push, restaurar precio e
 // histórico por piso. Cada piso muestra mercado real, ocupación, base actual y
 // recomendado. Botones por piso: Guardar / Simular / Aplicar / Restaurar.
 
@@ -48,7 +49,7 @@ const NUM_FIELDS: { key: keyof Settings; label: string; step: number; hint: stri
   { key: "demand_k",        label: "Sensib. demanda",    step: 0.02, hint: "cuánto pesa tu ocupación" },
   { key: "demand_baseline", label: "Ocupación neutra",   step: 0.05, hint: "0–1 · por encima sube, por debajo baja" },
   { key: "own_score",       label: "Tu nota (reseñas)",  step: 0.1,  hint: "0–10 · tu puntuación media" },
-  { key: "channel_markup",  label: "Margen canal",       step: 0.01, hint: "×1–2 · Booking ≈1.16" },
+  { key: "channel_markup",  label: "Margen canal",       step: 0.01, hint: "×1–2 · 1 = escaparate sin recargo (medido 08/2026)" },
   { key: "max_change_pct",  label: "Cambio máx. /vez",   step: 0.05, hint: "0–1 · tope por aplicación (0.2 = ±20%)" },
   { key: "gap_discount_pct",label: "Descuento hueco",    step: 0.05, hint: "0–0.5 · noche suelta entre reservas" },
   { key: "min_price",       label: "Precio mín. (base €)", step: 1,  hint: "suelo de coste (autoridad final)" },
@@ -241,7 +242,7 @@ export default function PricingAutoPage() {
       {/* Barra superior: resultados + pausa + push */}
       <div className="pricingauto-top-bar" style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginBottom: 16 }}>
         <div style={{ flex: "1 1 240px", background: C.card, border: `1px solid ${C.line}`, borderRadius: 12, padding: "12px 16px" }}>
-          <div style={{ fontSize: 11, color: C.soft, textTransform: "uppercase", letterSpacing: 0.5 }}>Generado vs PriceLabs</div>
+          <div style={{ fontSize: 11, color: C.soft, textTransform: "uppercase", letterSpacing: 0.5 }}>Generado vs ref. PriceLabs (de baja)</div>
           <div style={{ fontSize: 24, fontWeight: 800, color: C.ok }}>
             +{resultados?.total_extra_eur ?? 0}€
             <span style={{ fontSize: 12, fontWeight: 500, color: C.soft }}> · {resultados?.noches_reservadas ?? 0} noches reservadas</span>

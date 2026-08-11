@@ -5,8 +5,29 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { getSmoobuKey } from '@/lib/smoobu'
 import { PORTAL_MAP } from '@/lib/portales'
+import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 
-const BOOKING_NET_FACTOR = 0.8028
+// 🚨 AQUÍ NO SE DESCUENTA COMISIÓN. Lo hace la BD (01/08/2026).
+//
+// La tabla `incomes` tiene un trigger BEFORE INSERT/UPDATE —`incomes_compute_net`, función
+// `compute_income_net()`— que hace DOS cosas: copia a `amount_gross` el valor que llegue en
+// `amount` y luego calcula `amount = amount_gross × (1 − commission_pct/100)` leyendo la tasa de
+// la tabla `portal_rates`. Para BOOKING esa tasa es **19,72%**, y es CORRECTA: 15% de comisión +
+// 1,3% de servicio de pagos, todo con el 21% de IVA encima (verificado contra la factura de marzo
+// de 2026, según la propia descripción de la fila).
+//
+// Lo que estaba mal era que este sync aplicaba ESE MISMO 0,8028 antes de escribir, así que el
+// descuento se aplicaba dos veces: Smoobu daba 244,86€ → la app escribía 196,57€ → el trigger
+// tomaba eso por el bruto y dejaba `amount` en 157,81€. Un 20% de ingreso desaparecido en cada
+// reserva de Booking, y con `amount_gross` guardando un neto disfrazado de bruto.
+//
+// Contrastado con el desglose real de la extranet (Luxury, 6-8 nov 2026): precio total 244,86€,
+// comisión 36,73€ + 3,18€ de servicio de pagos, +21% de IVA = 48,29€ → neto 196,57€. Es
+// exactamente `amount_gross`, que confirma la tasa y confirma el doble conteo.
+//
+// Escribiendo el precio de Smoobu TAL CUAL, el trigger deja `amount_gross` = 244,86 (bruto de
+// verdad, como dice su nombre) y `amount` = 196,57 (neto de verdad). Si algún día cambia la
+// comisión, se toca `portal_rates` — nunca esto.
 
 function parseDate(s?: string): Date | null {
   if (!s) return null
@@ -34,6 +55,12 @@ async function fetchPage(p: number, from: string, apiKey: string, arrFrom?: stri
 }
 
 export async function runSync(days: number, maxPages = 20, arrFrom?: string, arrTo?: string) {
+  // Latido de INTENTO antes de tocar Smoobu (patrón agente_latidos, landmine 31/07/2026):
+  // si la pasada muere a medias, queda constancia de que SE DISPARÓ y no terminó — sin esto,
+  // «no se dispara» y «se dispara y no termina» son el mismo silencio. `incomes` no sirve de
+  // huella (solo escribe cuando entra una reserva); el Check 4 del health-check lee ultimo_ok_at.
+  await registrarLatido('smoobu_sync', false, 'inicio de pasada')
+
   const API_KEY = await getSmoobuKey()
   if (!API_KEY) throw new Error('SMOOBU_API_KEY no configurada')
 
@@ -54,7 +81,7 @@ export async function runSync(days: number, maxPages = 20, arrFrom?: string, arr
   `)
   const byName = new Map(props.map(p => [p.name.toLowerCase().trim(), p.id]))
 
-  const cnt = { new: 0, modified: 0, cancelled: 0, skipped: 0 }
+  const cnt = { new: 0, modified: 0, cancelled: 0, skipped: 0, reservedAt: 0 }
   const logs: any[] = []
 
   for (const b of all) {
@@ -64,7 +91,8 @@ export async function runSync(days: number, maxPages = 20, arrFrom?: string, arr
     const co = parseDate(b.departure)
     const amtGross = typeof b.price === 'string' ? parseFloat(b.price) : (b.price || 0)
     const portal_tmp = PORTAL_MAP[b.channel?.name || ''] || 'OTRO'
-    const amt = portal_tmp === 'BOOKING' ? Math.round(amtGross * BOOKING_NET_FACTOR * 100) / 100 : amtGross
+    // El precio de Smoobu se escribe TAL CUAL (es el bruto). El neto lo pone el trigger. Ver arriba.
+    const amt = amtGross
     const portal = portal_tmp
     const isCancel = b.type === 'cancellation'
 
@@ -76,7 +104,7 @@ export async function runSync(days: number, maxPages = 20, arrFrom?: string, arr
     }
 
     const ex = await prisma.$queryRaw<any[]>(Prisma.sql`
-      SELECT id, "propertyId", "guestName", portal, amount, "checkIn", "checkOut"
+      SELECT id, "propertyId", "guestName", portal, amount, amount_gross, "checkIn", "checkOut"
       FROM incomes WHERE "reservationId" = ${rid} LIMIT 1
     `)
 
@@ -91,33 +119,57 @@ export async function runSync(days: number, maxPages = 20, arrFrom?: string, arr
 
     if (!ci || !pid) { cnt.skipped++; continue }
 
+    // Fecha REAL en que se hizo la reserva. Smoobu la publica como `created-at` (kebab-case, como
+    // `guest-name` o `is-blocked-booking`) y la trae también para el histórico. Es el dato que
+    // permite medir la antelación de verdad: `incomes.createdAt` es, en casi todo el histórico, la
+    // fecha de la importación masiva. Ver `prisma/sql/2026-08-01_incomes_reserved_at.sql`.
+    const reservedAt = parseDate(b['created-at'])?.toISOString() ?? null
+
     if (ex.length === 0) {
       await prisma.$executeRaw(Prisma.sql`
-        INSERT INTO incomes ("propertyId", date, amount, portal, "reservationId", "guestName", "checkIn", "checkOut", nights)
+        INSERT INTO incomes ("propertyId", date, amount, portal, "reservationId", "guestName", "checkIn", "checkOut", nights, reserved_at)
         VALUES (${pid}, ${ci.toISOString()}::timestamptz, ${amt}, ${portal}::"Portal",
                 ${rid}, ${b['guest-name'] || null}, ${ci.toISOString()}::timestamptz,
-                ${co?.toISOString() || null}::timestamptz, ${nights(ci, co)})
+                ${co?.toISOString() || null}::timestamptz, ${nights(ci, co)},
+                ${reservedAt}::timestamptz)
       `)
       cnt.new++
     } else {
       const row = ex[0]
-      const changed = Math.abs(row.amount - amt) > 0.01 ||
+      // Se compara contra `amount_gross`, NO contra `amount`: `amt` es el precio BRUTO de Smoobu y
+      // `amount` es el NETO que calcula el trigger. Compararlos daría siempre distinto y esta pasada
+      // reescribiría TODAS las reservas cada vez (churn permanente y `modificadas` sin significado).
+      const changed = Math.abs((row.amount_gross ?? row.amount) - amt) > 0.01 ||
         row.checkIn?.toISOString().slice(0, 10) !== ci?.toISOString().slice(0, 10)
       if (changed) {
         await prisma.$executeRaw(Prisma.sql`
           UPDATE incomes SET amount=${amt}, "checkIn"=${ci.toISOString()}::timestamptz,
             "checkOut"=${co?.toISOString() || null}::timestamptz, nights=${nights(ci, co)},
-            portal=${portal}::"Portal"
+            portal=${portal}::"Portal",
+            reserved_at = COALESCE(${reservedAt}::timestamptz, reserved_at)
           WHERE "reservationId" = ${rid}
         `)
         cnt.modified++
+      } else if (reservedAt) {
+        // La fila no cambió de importe ni de fechas, pero puede que le falte `reserved_at` (todas
+        // las anteriores al 01/08/2026 lo tienen NULL). Rellenarlo aquí hace que el sync diario
+        // vaya completando el histórico solo, sin depender de que el backfill llegue a todo.
+        const rellenadas = await prisma.$executeRaw(Prisma.sql`
+          UPDATE incomes SET reserved_at = ${reservedAt}::timestamptz
+          WHERE "reservationId" = ${rid} AND reserved_at IS NULL`)
+        if (rellenadas > 0) cnt.reservedAt++
+        cnt.skipped++
       } else cnt.skipped++
     }
   }
 
+  await registrarLatido('smoobu_sync', true,
+    `${cnt.new} nuevas, ${cnt.modified} modificadas, ${cnt.cancelled} canceladas (${all.length} vistas, desde ${from})`)
+
   return {
     success: true,
-    message: `${cnt.new} nuevas, ${cnt.modified} modificadas, ${cnt.cancelled} canceladas`,
+    message: `${cnt.new} nuevas, ${cnt.modified} modificadas, ${cnt.cancelled} canceladas` +
+      (cnt.reservedAt ? `, ${cnt.reservedAt} con fecha de reserva rellenada` : ''),
     ...cnt, total: all.length, since: from,
   }
 }

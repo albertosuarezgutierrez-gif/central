@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { ResumenFinanciero } from '@/lib/finanzas'
 import type { EstadoDeclaracion } from '@/lib/comparativa-declaracion'
 import { eur, eurSinDecimales } from '@/lib/dinero'
+import ConsejoFiscalBox from '../finanzas/ConsejoFiscalBox'
 
 // 🧾 Segmento FISCAL del Inicio unificado (/banca?tab=fiscal). Es la previsión de la declaración de la
 // renta que quedó huérfana al fusionar Resumen+Banca: fusiona lo que antes estaba en /finanzas/fiscal y
@@ -88,6 +89,7 @@ export default function FiscalResumen({ fiscal, declaracion, year }: {
       {/* Mi declaración: hoy vs fin de año, solo yo vs conjunta (fusiona Fiscal + Proyección) */}
       {declaracion ? (
         <div style={card}>
+          <ConsejoFiscalBox estado={declaracion} />
           <div style={{ marginBottom: '12px' }}>
             <strong>🧾 Mi declaración {declaracion.year} — cómo voy y cómo acabaría</strong>
             <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>Resultado estimado hoy y proyectado a 31/12, declarando solo o en conjunta con Pilar.</div>

@@ -1,4 +1,4 @@
-import { tgSend } from '@central/core-telegram'
+import { tgSend, tgSendButtons } from '@central/core-telegram'
 import { prisma } from '@/lib/db'
 import {
   rankearUniverso, diffRanking, snapshotsParaEvaluar, resumenTrackRecord,
@@ -13,6 +13,8 @@ import { transaccionesFiling } from './form4'
 import { acumulacionDistribucion, type VeredictoVolumen } from './volumen'
 import { anomaliasUniverso, camposEnvenenados } from './calidad-datos'
 import { correlacionMediaCesta, etiquetaConcentracion } from './concentracion'
+import { candidatosCantera, bajasCantera, CANTERA_MAX_PROPUESTAS, type SnapshotTop } from './cantera'
+import { proximaFechaEarningsYahoo } from './earnings-yahoo'
 
 // RANKING SEMANAL del radar (Fase 1): lee la caché (cero llamadas a la SEC), rankea, confirma el
 // timing del top-20 con técnico ligero (SMA50+RSI sobre cierres), cruza gurús, evalúa el track
@@ -113,6 +115,18 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
   // Alta = el top es UNA sola apuesta (hoy, la manía de memoria) y la diversificación es ilusoria.
   const correlacionTop = correlacionMediaCesta(cierresTop10)
 
+  // ⚖️ Ídem para la WATCHLIST del análisis nocturno (capas B+C; la A son índices): una watchlist
+  // correlacionada es UNA sola apuesta aunque tenga 13 nombres — con paper da igual, pero es lo que
+  // la escalera convertirá en dinero real (05/08/2026: STX+SNDK+WDC entraron a la vez — el mismo
+  // tirón de almacenamiento por triplicado). Best-effort: sin series suficientes, sin línea.
+  const wl = await prisma.tradingWatchlist.findMany({ select: { simbolo: true, capa: true, activo: true } })
+  let correlacionWatchlist: number | null = null
+  try {
+    const simbolosBC = wl.filter(w => w.activo && w.capa !== 'A').map(w => w.simbolo)
+    const seriesBC = await Promise.all(simbolosBC.map(s => puntosDiarios(s, haceDias(150), hoy).then(p => p.map(x => x.cierre))))
+    correlacionWatchlist = correlacionMediaCesta(seriesBC)
+  } catch { /* la concentración de la watchlist nunca tumba el radar */ }
+
   // 4-bis-pre) RÉGIMEN de mercado: SPY vs su media de 10 MESES (la media clásica de índice; distinta
   // del uso por-acción que el retrovisor descartó). Es CONTEXTO en el digest, no filtro — pero si un
   // lunes cruza a bajista, es la señal pre-registrada para re-correr las mediciones del retrovisor
@@ -157,17 +171,24 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
   const simbolosDigest = [...new Set([...entries.slice(0, 10).map(e => e.simbolo), ...cohetes.map(c => c.simbolo)])]
   const eventos: Array<{ simbolo: string; fecha: string; etiquetas: string[] }> = []
   const insiders: Array<{ simbolo: string; compras: number; ventas: number; usdCompras: number }> = []
-  const resultadosProximos: Array<{ simbolo: string; fecha: string }> = []
+  const resultadosProximos: Array<{ simbolo: string; fecha: string; exacta?: boolean }> = []
+  const VENTANA_RESULTADOS = haceDias(-10)   // próximos 10 días (misma ventana que el estimador EDGAR)
   for (const s of simbolosDigest) {
+    // 📅 Fecha de resultados: Yahoo primero (exacta/prevista, ver earnings-yahoo.ts); EDGAR de respaldo.
+    const earningsYahoo = await proximaFechaEarningsYahoo(s, hoy)
+    if (earningsYahoo && earningsYahoo.fecha <= VENTANA_RESULTADOS)
+      resultadosProximos.push({ simbolo: s, fecha: earningsYahoo.fecha, exacta: earningsYahoo.confirmada })
     const cik = cikPor.get(s)
     if (!cik) continue
     const subs = await submissionsCik(cik).catch(() => null)
     if (!subs) continue
     for (const ev of extraerEventos8K(subs, haceDias(7)))
       eventos.push({ simbolo: s, fecha: ev.fecha, etiquetas: ev.etiquetas })
-    // 📅 Semana de resultados ESTIMADA por el patrón de 10-Q/10-K del año pasado (mismo JSON, sin fetch extra).
-    const informe = estimarProximoInforme(subs, hoy)
-    if (informe) resultadosProximos.push({ simbolo: s, fecha: informe })
+    // 📅 Respaldo EDGAR: semana ESTIMADA por el patrón de 10-Q/10-K del año pasado (mismo JSON, sin fetch extra).
+    if (!earningsYahoo) {
+      const informe = estimarProximoInforme(subs, hoy)
+      if (informe) resultadosProximos.push({ simbolo: s, fecha: informe })
+    }
     let compras = 0; let ventas = 0; let usdCompras = 0
     const cikCorto = cik.replace(/^0+/, '') || '0'
     for (const f of extraerFilingsForm4(subs, haceDias(7)).slice(0, 3)) {
@@ -208,7 +229,12 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
   const errores = filas.filter(f => f.error != null).length
   const salud = {
     total: filas.length, frescas: frescas.length, errores, regimen, eventos, insiders,
-    correlacionTop, resultadosProximos,
+    // Descartadas por no tener NI earningsYield NI fcfYield: no puntúan porque su valor se DESCONOCE
+    // (casi todas ADR/extranjeras sin capitalización cruzable), no porque sean caras. Ver la landmine
+    // de `rankearUniverso`: antes entraban con zValor = 0, que es la MEDIA del universo, no una
+    // abstención. Si este número crece mucho, el problema es la cobertura de datos, no el ranking.
+    sinValor: radar.sinValor,
+    correlacionTop, correlacionWatchlist, resultadosProximos,
     anomalias: anomalias.map(a => ({ simbolo: a.simbolo, campo: a.campo, motivo: a.motivo })),
   }
   const ultimo = previos.at(-1)
@@ -237,11 +263,14 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
     ...(correlacionTop != null ? [
       `⚖️ Concentración del top-10: correlación media ${correlacionTop.toFixed(2).replace('.', ',')} (60 sesiones) — ${etiquetaConcentracion(correlacionTop)}`,
     ] : []),
+    ...(correlacionWatchlist != null ? [
+      `⚖️ Concentración de la watchlist (B+C): correlación media ${correlacionWatchlist.toFixed(2).replace('.', ',')} — ${etiquetaConcentracion(correlacionWatchlist)}`,
+    ] : []),
     ...(anomalias.length ? [
       `🛡️ Datos sospechosos NEUTRALIZADOS (no puntúan ese factor esta semana): ${anomalias.slice(0, 5).map(a => `<b>${a.simbolo}</b> ${a.campo} (${a.motivo})`).join(' · ')}${anomalias.length > 5 ? ` · +${anomalias.length - 5} más` : ''}`,
     ] : []),
     ...(resultadosProximos.length ? [
-      `📅 Resultados PRONTO (estimado por el patrón del año pasado): ${resultadosProximos.slice(0, 8).map(r => `<b>${r.simbolo}</b> ~${r.fecha.slice(5)}`).join(' · ')}`,
+      `📅 Resultados PRONTO (sin ~ = fecha confirmada; ~ = prevista/estimada): ${resultadosProximos.slice(0, 8).map(r => `<b>${r.simbolo}</b> ${r.exacta ? '' : '~'}${r.fecha.slice(5)}`).join(' · ')}`,
     ] : []),
     ...(eventos.length ? [
       `📰 Eventos 8-K (7 días, SEC — contexto, no filtran): ${eventos.slice(0, 8).map(e => `<b>${e.simbolo}</b> ${e.etiquetas.join(' + ')} (${e.fecha.slice(5)})`).join(' · ')}${eventos.length > 8 ? ` · +${eventos.length - 8} más` : ''}`,
@@ -262,5 +291,71 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
     '<i>La selección elige el QUÉ (calidad+gurús); 📈 solo confirma el CUÁNDO. 📊↑/↓ = picos de volumen comprando/vendiendo (huella de fondos entrando/saliendo; info, no filtra). SOLO paper.</i>',
   ]
   await tgSend(lineas.join('\n')).catch(() => {})
+
+  // 7-bis) 🌱 Cantera capa C: los valores SOSTENIDOS ≥2 lunes seguidos en el top-10 se proponen por
+  // Telegram con botones (el alta la decide Alberto — callback `wlc_` en el webhook). Es descubrimiento,
+  // no cambia ranking/pesos/cestas. Best-effort: si algo falla aquí, el digest ya salió y no se rompe.
+  try {
+    const snaps: SnapshotTop[] = [
+      ...previos.map(p => ({
+        fecha: p.fecha.toISOString().slice(0, 10),
+        top: (p.entries as unknown as EntryRadar[]).slice(0, 10).map(e => e.simbolo),
+      })),
+      { fecha: hoy, top: entries.slice(0, 10).map(e => e.simbolo) },
+    ]
+    const propuestas = await prisma.tradingCantera.findMany({ select: { simbolo: true, bajaPropuestaAt: true, bajaDecision: true, bajaDecididaAt: true } })
+    const candidatos = candidatosCantera(snaps, new Set(wl.map(w => w.simbolo)), new Set(propuestas.map(p => p.simbolo)))
+      .slice(0, CANTERA_MAX_PROPUESTAS)
+    for (const c of candidatos) {
+      await prisma.tradingCantera.upsert({
+        where: { simbolo: c.simbolo },
+        create: { simbolo: c.simbolo, semanasSeguidas: c.semanas },
+        update: { semanasSeguidas: c.semanas },
+      })
+      const e = entries.find(x => x.simbolo === c.simbolo)
+      await tgSendButtons(
+        `🌱 <b>Cantera</b>: <b>${c.simbolo}</b>${e?.nombre ? ` — ${e.nombre}` : ''} lleva <b>${c.semanas} lunes seguidos</b> en el top-10 del radar (${e ? ETIQ[e.etiqueta] : '—'}${e?.tecnico === 'si' ? ' · 📈 técnico ok' : ''}).\n¿Alta en la watchlist (capa C) para el análisis nocturno? SOLO paper.`,
+        [[
+          { texto: '✅ Alta en capa C', callback: `wlc_alta:${c.simbolo}` },
+          { texto: '❌ No', callback: `wlc_no:${c.simbolo}` },
+        ]],
+      )
+    }
+
+    // Espejo de BAJA: capa C que lleva ≥4 lunes fuera del top-20 → proponer quitarla (decide Alberto).
+    // Los snapshots de baja miran el top-20 completo (más laxo que el top-10 de las altas a propósito:
+    // salir del top-10 es normal; desaparecer del top-20 un mes seguido es haber perdido el sitio).
+    const snaps20: SnapshotTop[] = [
+      ...previos.map(p => ({
+        fecha: p.fecha.toISOString().slice(0, 10),
+        top: (p.entries as unknown as EntryRadar[]).map(e => e.simbolo),
+      })),
+      { fecha: hoy, top: entries.map(e => e.simbolo) },
+    ]
+    const capaC = new Set(wl.filter(w => w.capa === 'C' && w.activo).map(w => w.simbolo))
+    // Un «✋ mantener» caduca a los 30 días (se re-pregunta si sigue fuera del top); una baja
+    // pendiente o ejecutada no se re-propone.
+    const limiteMantener = Date.now() - 30 * 86_400_000
+    const yaPropuestasBaja = new Set(propuestas
+      .filter(p => p.bajaPropuestaAt != null
+        && !(p.bajaDecision === 'mantener' && p.bajaDecididaAt != null && p.bajaDecididaAt.getTime() < limiteMantener))
+      .map(p => p.simbolo))
+    const bajas = bajasCantera(snaps20, capaC, yaPropuestasBaja).slice(0, CANTERA_MAX_PROPUESTAS)
+    for (const b of bajas) {
+      await prisma.tradingCantera.upsert({
+        where: { simbolo: b.simbolo },
+        create: { simbolo: b.simbolo, bajaPropuestaAt: new Date() },
+        update: { bajaPropuestaAt: new Date(), bajaDecision: null, bajaDecididaAt: null },
+      })
+      await tgSendButtons(
+        `🍂 <b>Cantera</b>: <b>${b.simbolo}</b> lleva <b>${b.semanas} lunes seguidos</b> fuera del top-20 del radar.\n¿La quito de la watchlist (capa C)? Dejará de analizarse cada noche.`,
+        [[
+          { texto: '🗑️ Quitar de capa C', callback: `wlc_baja:${b.simbolo}` },
+          { texto: '✋ Mantener', callback: `wlc_mantener:${b.simbolo}` },
+        ]],
+      )
+    }
+  } catch { /* la cantera nunca tumba el radar */ }
+
   return { ok: true, enviado: true, top: entries.length }
 }

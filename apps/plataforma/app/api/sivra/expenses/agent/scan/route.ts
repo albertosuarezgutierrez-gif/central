@@ -1,12 +1,13 @@
 // Cron diario del agente de facturas: lee Gmail + Drive, imputa/encola y avisa.
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
-import { listarCandidatos, marcarProcesado } from '@/lib/agente-facturas/gmail'
+import { listarCandidatosConLimite, marcarProcesado } from '@/lib/agente-facturas/gmail'
 import { listNuevos, getContenido, archivar, subir } from '@/lib/agente-facturas/drive'
 import { extraerDesdeBuffer } from '@/lib/agente-facturas/extraer'
 import { procesarFactura, clasificarDocumento, type ProcesarResult } from '@/lib/agente-facturas/procesar'
 import { recurrentesQueFaltan } from '@/lib/agente-facturas/anomalias'
-import { avisaBandeja, avisaSinAdjunto, avisaSinDrive, avisaNoLegibles, avisaRecurrentesQueFaltan, resumen, type PendienteAviso } from '@/lib/agente-facturas/avisos'
+import { avisaBandeja, avisaSinAdjunto, avisaSinDrive, avisaNoLegibles, avisaAjenas, avisaRecurrentesQueFaltan, resumen, type PendienteAviso } from '@/lib/agente-facturas/avisos'
+import { cargarTitulares } from '@/lib/agente-facturas/titulares'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -14,11 +15,16 @@ export const maxDuration = 300
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
 
-  const stats = { auto: 0, bandeja: 0, duplicados: 0, omitidos: 0, errores: 0 }
+  const stats = { auto: 0, bandeja: 0, duplicados: 0, omitidos: 0, ajenas: 0, errores: 0 }
   const pendientes: PendienteAviso[] = []
   const sinAdjunto: { from: string; subject: string }[] = []
   const sinDrive: { nombre: string; from?: string; esBooking?: boolean }[] = []
   const noLegibles: { nombre: string; from?: string }[] = []
+  const ajenas: { proveedor: string | null; total: number; receptor?: string | null }[] = []
+
+  // A nombre de quién pueden estar SUS facturas; lo demás llega por reenvíos y no se imputa.
+  // Si esto falla vuelve vacío y no se descarta nada (ver titulares.ts).
+  const titulares = await cargarTitulares()
 
   // Ventana de Gmail: 36h por defecto (cron diario). Override manual `?horas=N` (1..240) para
   // recuperar facturas que se salieron de la ventana (p.ej. las que se perdieron mientras el
@@ -35,6 +41,7 @@ export async function GET(req: NextRequest) {
     if (r.decision === 'auto') stats.auto++
     else if (r.decision === 'duplicado') stats.duplicados++
     else if (r.decision === 'omitido') stats.omitidos++
+    else if (r.decision === 'ajena') { stats.ajenas++; ajenas.push({ proveedor: r.proveedor || proveedorFallback || null, total: r.total, receptor: r.receptor }) }
     else if (r.decision === 'error') stats.errores++
     else { stats.bandeja++; pendientes.push({ proveedor: r.proveedor || proveedorFallback || null, total: r.total, motivo: r.motivo }) }
   }
@@ -43,7 +50,9 @@ export async function GET(req: NextRequest) {
   try {
     const desde = new Date(Date.now() - horas * 3600_000)
     const etiqueta = process.env.GMAIL_FACTURAS_LABEL || undefined
-    const correos = await listarCandidatos({ desde, etiqueta })
+    // `buzon` viaja hasta `marcarProcesado`: los UID de IMAP son por buzón, y con
+    // `GMAIL_FACTURAS_LABEL` puesta el marcado contra INBOX no encontraba nada.
+    const { correos, buzon } = await listarCandidatosConLimite({ desde, etiqueta })
     for (const c of correos) {
       if (agotado()) break
       if (c.sinAdjunto) { sinAdjunto.push({ from: c.from, subject: c.subject }); continue }
@@ -72,7 +81,7 @@ export async function GET(req: NextRequest) {
           const r = await procesarFactura({ ...doc.factura, fecha }, {
             fuente: 'agente-email', drive: drive || undefined,
             esPresupuesto: doc.esPresupuesto, fingerprintOverride: doc.fingerprintOverride,
-            esBooking: doc.esBooking,
+            esBooking: doc.esBooking, titulares,
           })
           acumula(r, c.from)
           if (r.decision !== 'error') imputadoAlguno = true
@@ -81,7 +90,7 @@ export async function GET(req: NextRequest) {
           console.error('[scan] adjunto email error:', e)
         }
       }
-      if (imputadoAlguno) await marcarProcesado(c.uid).catch(() => {})
+      if (imputadoAlguno) await marcarProcesado(c.uid, undefined, buzon).catch(() => {})
     }
   } catch (e) {
     console.error('[scan] Gmail error:', e)
@@ -105,7 +114,7 @@ export async function GET(req: NextRequest) {
           fuente: 'agente-drive', drive: { url, carpeta, nombre },
           propiedadPorDefecto: doc.esBooking ? undefined : 'prop_personal',
           esPresupuesto: doc.esPresupuesto, fingerprintOverride: doc.fingerprintOverride,
-          esBooking: doc.esBooking,
+          esBooking: doc.esBooking, titulares,
         })
         acumula(r)
       } catch (e) {
@@ -124,6 +133,7 @@ export async function GET(req: NextRequest) {
     await avisaSinAdjunto(sinAdjunto)
     await avisaSinDrive(sinDrive)
     await avisaNoLegibles(noLegibles)
+    await avisaAjenas(ajenas)
     await avisaBandeja(pendientes)
     await avisaRecurrentesQueFaltan(faltan)
     await resumen({ fuente: 'diario', ...stats })
@@ -131,5 +141,5 @@ export async function GET(req: NextRequest) {
     console.error('[scan] avisos error:', e)
   }
 
-  return NextResponse.json({ ok: true, horas, stats, pendientes: pendientes.length, sinAdjunto: sinAdjunto.length, sinDrive: sinDrive.length, noLegibles: noLegibles.length })
+  return NextResponse.json({ ok: true, horas, stats, pendientes: pendientes.length, sinAdjunto: sinAdjunto.length, sinDrive: sinDrive.length, noLegibles: noLegibles.length, ajenas: ajenas.length })
 }

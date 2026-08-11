@@ -76,7 +76,7 @@ export async function medirCarteraPaper(): Promise<MedidaPaper> {
 // cohorte+fecha. Best-effort: si la tabla aún no existe o la BD falla, NO rompe el digest.
 export async function persistirSnapshot(m: MedidaPaper): Promise<boolean> {
   const r = m.resultado
-  if (!r) return false // sin precios no se guarda ruido
+  if (!r) { console.warn(`[paper-tracker] sin precios para cohorte ${m.cohorte} (Stooq+Yahoo no dieron datos) — no se persiste`); return false }
   const alphaMediana = m.medianaCesta == null ? null : m.medianaCesta - r.retornoBench
   const datos = {
     dias: m.diasTranscurridos, n: r.n, retornoCesta: r.retornoCesta, retornoMediana: m.medianaCesta,
@@ -93,7 +93,8 @@ export async function persistirSnapshot(m: MedidaPaper): Promise<boolean> {
       update: datos,
     })
     return true
-  } catch {
+  } catch (e) {
+    console.error(`[paper-tracker] persistirSnapshot falló para cohorte ${m.cohorte}:`, e)
     return false
   }
 }
@@ -146,6 +147,69 @@ export async function enviarPaperTracker(): Promise<{ enviado: boolean; medidas:
       for (const c of carteras) {
         lineas.push(`· Cohorte ${c.fechaInicio}: ${eur(c.valorEur)} (${pct(c.plPct)}) · ${c.bench.simbolo}: ${eur(c.bench.valorEur)} ${c.valorEur >= c.bench.valorEur ? '✅' : '⚠️'}`)
       }
+    }
+  }
+
+  // 🚀 Cartera cohetes (paper): bolsillo APARTE que rota a los cohetes confirmados. Contexto, nunca filtro;
+  // el criterio de selección NO se auto-modifica. Best-effort: sin datos, sin bloque.
+  {
+    const { resumenCohetes, CAPITAL_COHETES_EUR } = await import('./cartera-cohetes-io')
+    const { eur } = await import('@/lib/dinero')
+    const r = await resumenCohetes().catch(() => null)
+    if (r) {
+      const semanas = Math.round(dias(r.track.fecha.toISOString().slice(0, 10), hoy()) / 7)
+      const bate = (r.track.alphaPct ?? -Infinity) > 0
+      const lineas2 = [
+        '',
+        `🚀 <b>Cartera cohetes</b> (${eur(CAPITAL_COHETES_EUR)} SIMULADOS, bolsillo aparte — lotería, SOLO estudio):`,
+        `Valor: ${eur(r.track.valorEur)} (${pct(r.track.plPct)}) · SPY: ${r.track.spyEur != null ? eur(r.track.spyEur) : '—'} ${bate ? '✅' : '⚠️'}`,
+        r.track.nIpo ? `De los recién cotizados (IPO): ${eur(r.track.ipoValorEur ?? 0)} (${pct(r.track.ipoPlPct)}) · n=${r.track.nIpo}` : '',
+        semanas >= 6
+          ? `<i>Veredicto provisional: ${bate ? 'bate' : 'NO bate'} al SPY (${semanas} sem).</i>`
+          : '<i>Reloj joven: aún NO es veredicto.</i>',
+      ].filter(Boolean)
+      const narr = await (await import('./cartera-cohetes-io')).narrarCohetes().catch(() => '')
+      if (narr) lineas2.push(`💬 <i>${narr}</i>`)
+      lineas.push(...lineas2)
+    }
+  }
+
+  // 🪜 Escalera de dinero real (firmada en TRADING-HIPOTESIS-PREREGISTRO.md, 05/08/2026): la suben
+  // las señales, NO el calendario (Alberto). Cada tramo es una decisión SEPARADA suya; esto solo mide.
+  {
+    const { evaluarEscalera, emparejarOps } = await import('./puerta-fase2')
+    // Dedupe por cesta: dos versiones con los MISMOS valores son UNA prueba (misma regla que /trading).
+    const vistas = new Set<string>()
+    const cohortesEscalera = medidas.filter(m => {
+      const c = COHORTES_PAPER.find(x => x.version === m.cohorte)
+      const clave = c ? [...c.simbolos].sort().join(',') : m.cohorte
+      if (vistas.has(clave)) return false
+      vistas.add(clave)
+      return true
+    }).map(m => ({
+      cohorte: m.cohorte, dias: m.diasTranscurridos,
+      alphaMediana: m.medianaCesta != null && m.resultado ? m.medianaCesta - m.resultado.retornoBench : null,
+      maxDrawdown: m.riesgo?.maxDrawdown ?? null, maxDrawdownBench: m.riesgo?.maxDrawdownBench ?? null,
+    }))
+    const escalera = evaluarEscalera(cohortesEscalera)
+    lineas.push('', `🪜 <b>Escalera de dinero real — escalón alcanzable: Tramo ${escalera.alcanzable}</b> <i>(la suben las señales, no el calendario)</i>`)
+    for (const t of escalera.tramos) lineas.push(`${t.ok ? '✅' : '⬜'} ${t.titulo} — ${t.detalle}`)
+    if (escalera.alcanzable >= 2) lineas.push('<b>Un tramo nuevo cumple sus requisitos medibles. La decisión (y la orden) es SIEMPRE de Alberto.</b>')
+
+    // Deslizamiento señal→día siguiente (proxy de ejecución real): media de las BUY con dato. Alimenta
+    // el requisito de «fricción sin anomalías» del tramo 2. Walk-forward de señales: ops cerradas.
+    const ordenes = await prisma.tradingPaperOrden.findMany().catch(() => [])
+    const desliz = ordenes
+      .filter(o => o.lado === 'BUY' && o.precioDiaSiguiente != null && o.precio > 0)
+      .map(o => (o.precioDiaSiguiente! - o.precio) / o.precio)
+    if (desliz.length) {
+      const media = desliz.reduce((s, x) => s + x, 0) / desliz.length
+      lineas.push(`Deslizamiento señal→día sig.: ${pct(media)} de media (n=${desliz.length})`)
+    }
+    const ops = emparejarOps(ordenes.map(o => ({ simbolo: o.simbolo, lado: o.lado, precio: o.precio, fecha: o.fecha.toISOString().slice(0, 10) })))
+    if (ops.length) {
+      const mediaOps = ops.reduce((s, o) => s + o.retorno, 0) / ops.length
+      lineas.push(`Ops cerradas del sistema de señales: ${ops.length} · retorno medio ${pct(mediaOps)}`)
     }
   }
 

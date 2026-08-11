@@ -158,7 +158,7 @@ export default function CateringPage() {
     <>
       <LandingClickTracker />
       <title>Software para Empresas de Catering en España | ia.rest</title>
-      <meta name="description" content="ia.rest: presupuesto, portal cliente, APPCC, control de costes y VeriFactu. El ciclo completo de tu catering, automatizado. Desde 59€/mes." />
+      <meta name="description" content="ia.rest: presupuesto, portal cliente, APPCC, control de costes y VeriFactu. El ciclo completo de tu catering, automatizado. Sin comisión por transacción. Pide presupuesto sin compromiso." />
       <link rel="canonical" href="https://www.iarest.es/catering" />
       <meta property="og:title" content="Software para Catering | ia.rest" />
       <meta property="og:description" content="Del presupuesto a la caja. ia.rest gestiona el ciclo completo de tu catering." />
@@ -417,7 +417,6 @@ h2 i{font-style:italic;color:var(--red)}
 
 <!-- STRIP — OCULTO -->
 <div class="strip" style="display:none">
-  <div class="strip-item"><span class="strip-num">59<b>€</b></span><span class="strip-lbl">Desde / mes</span></div>
   <div class="strip-item"><span class="strip-num">0<b>%</b></span><span class="strip-lbl">Comisión</span></div>
   <div class="strip-item"><span class="strip-num">0<b>€</b></span><span class="strip-lbl">Sorpresas en caja</span></div>
   <div class="strip-item"><span class="strip-num">14<b>d</b></span><span class="strip-lbl">Prueba gratis</span></div>

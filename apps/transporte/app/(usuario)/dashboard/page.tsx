@@ -41,8 +41,22 @@ export default async function DashboardPage() {
       {/* Semáforo documental */}
       <div className="card" style={{ gridColumn: '1 / 3' }}>
         <h3 style={{ marginTop: 0 }}>Semáforo documental (ITV / seguro / permisos)</h3>
+        {/* Un vehículo sin documentos REGISTRADOS no genera alerta, así que
+            antes salía «Todo en regla ✅»: el camión con la ITV sin dar de alta
+            —el más peligroso— era precisamente el que se veía verde. */}
+        {d.sinDocumentar.length > 0 && (
+          <p style={{ color: 'var(--warn, #d97706)', fontWeight: 600, margin: '0 0 8px' }}>
+            🟠 {d.sinDocumentar.length} vehículo(s) sin ITV o seguro registrados en el sistema —{' '}
+            no es que estén en regla, es que no consta el documento:{' '}
+            {d.sinDocumentar.map((v) => `${v.matricula} (falta ${v.faltan.join(' y ')})`).join(', ')}.
+          </p>
+        )}
         {d.alertas.length === 0 ? (
-          <p className="muted">Sin caducidades próximas. Todo en regla. ✅</p>
+          <p className="muted">
+            {d.sinDocumentar.length > 0
+              ? 'Sin caducidades próximas entre los documentos que SÍ constan.'
+              : 'Sin caducidades próximas. Todo en regla. ✅'}
+          </p>
         ) : (
           <table>
             <thead>

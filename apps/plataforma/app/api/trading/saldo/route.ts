@@ -8,6 +8,9 @@ import { prisma } from '@/lib/db'
 import { isRoutineAuthorized } from '@/lib/cron-auth'
 import { resolverCuentaBuzon } from '@/lib/agente-facturas/cuenta-buzon'
 import { upsertBrokerSaldo } from '@/lib/broker'
+import { tgSend } from '@central/core-telegram'
+import { saltoDeSaldo } from '@/lib/trading/precios-guardia'
+import { eur } from '@/lib/dinero'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,6 +41,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'no se pudo resolver la cuenta (define TRADING_CUENTA_ID o GMAIL_USER)' }, { status: 422 })
   }
 
+  // 🚨 El NAV es el otro número que se cogía a ciegas (ver `lib/trading/precios-guardia.ts`): con él se
+  // dimensiona cada posición, así que un cero de más multiplica el tamaño de todas las compras. No se
+  // puede rechazar —un salto puede ser un ingreso o una retirada REALES— pero tampoco tragarse en
+  // silencio: se registra y se pregunta, porque solo Alberto distingue su ingreso de un error de lectura.
+  // Se lee la MISMA fila que va a escribir `upsertBrokerSaldo` — misma normalización del nombre y,
+  // sobre todo, filtrada por `cuentaId` (regla multi-tenant): comparar contra el NAV de otra cuenta
+  // daría un salto inventado.
+  const brokerNombre = (body.broker || 'Interactive Brokers').trim()
+  const anterior = await prisma.brokerSaldo.findUnique({
+    where: { cuentaId_broker: { cuentaId, broker: brokerNombre } },
+    select: { saldo: true },
+  }).catch(() => null)
+  const { avisa, variacion } = saltoDeSaldo(saldo, anterior ? Number(anterior.saldo) : null)
+
   await upsertBrokerSaldo(cuentaId, saldo, { broker: body.broker, divisa: body.divisa })
-  return NextResponse.json({ ok: true, cuentaId, saldo, divisa: (body.divisa || 'EUR').toUpperCase() })
+
+  if (avisa && variacion != null) {
+    const signo = variacion > 0 ? '+' : ''
+    await tgSend(
+      `⚠️ <b>Trading:</b> el patrimonio del bróker ha saltado <b>${signo}${(variacion * 100).toFixed(1)}%</b> ` +
+      `(${eur(Number(anterior!.saldo))} → ${eur(saldo)}).\n\n¿Has ingresado o retirado dinero? Si no, la lectura ` +
+      `del NAV viene mal y con ella se dimensionan TODAS las compras: revísalo antes de la próxima pasada.`,
+      { html: true },
+    ).catch(() => {})
+  }
+
+  return NextResponse.json({ ok: true, cuentaId, saldo, divisa: (body.divisa || 'EUR').toUpperCase(), saltoNav: avisa ? variacion : null })
 }

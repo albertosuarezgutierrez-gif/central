@@ -364,21 +364,24 @@ const input: React.CSSProperties = { border: '1px solid var(--border)', borderRa
 const cancel: React.CSSProperties = { background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 14px', fontSize: '14px', cursor: 'pointer', color: 'var(--text)' }
 const submitBtn: React.CSSProperties = { background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }
 
-// Bandeja "Por revisar": la IA dudó de la categoría; el dueño la asigna con un desplegable.
-export function RevisarBandeja({ movimientos, categorias }: {
+// Bandeja "Por revisar": lo que de verdad estaba en duda es el NEGOCIO del gasto (¿deducible de
+// la correduría, del Dúplex/pisos, o personal?) — no la categoría contable, que para una compra
+// con tarjeta es obvia ('tarjeta'). El dueño responde con un toque; /api/banca/destino confirma,
+// limpia el flag y APRENDE la regla del comercio (se aplica a iguales pasados y futuros).
+export function RevisarBandeja({ movimientos, destinoLabel }: {
   movimientos: Array<{ id: string; fecha: string | null; concepto: string; importe: number }>
-  categorias: Array<{ value: string; label: string }>
+  destinoLabel: Record<string, string>
 }) {
   const router = useRouter()
   const [pendientes, setPendientes] = useState(movimientos)
   const [guardando, setGuardando] = useState<string | null>(null)
 
-  async function asignar(id: string, categoria: string) {
-    if (!categoria) return
+  async function asignar(id: string, destino: string) {
+    if (!destino) return
     setGuardando(id)
-    const res = await fetch('/api/banca/revisar', {
+    const res = await fetch('/api/banca/destino', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ movimientoId: id, categoria }),
+      body: JSON.stringify({ id, destino }),
     })
     setGuardando(null)
     if (res.ok) {
@@ -388,31 +391,44 @@ export function RevisarBandeja({ movimientos, categorias }: {
   }
 
   if (pendientes.length === 0) return null
+  const btn: React.CSSProperties = {
+    border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg)',
+    color: 'var(--text)', padding: '10px 12px', minHeight: '44px', fontSize: '13px',
+    fontWeight: 600, cursor: 'pointer', flexShrink: 0,
+  }
   return (
     <section style={{ marginBottom: '32px' }}>
       <style>{`
         @media (max-width: 768px) {
           /* Card apilada en móvil (sin scroll horizontal): concepto a ancho completo arriba,
-             fecha + importe en una línea, desplegable de categoría a ancho completo abajo. */
+             fecha + importe en una línea, botones de negocio a ancho completo abajo. */
           .banca-revisar-row { flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
           .banca-revisar-concepto { order: -1; flex: 1 1 100% !important; white-space: normal !important; overflow: visible !important; }
           .banca-revisar-fecha { width: auto !important; }
           .banca-revisar-importe { width: auto !important; margin-left: auto; }
-          .banca-revisar-select { flex: 0 0 100% !important; width: 100% !important; }
+          .banca-revisar-acciones { order: 1; flex: 0 0 100% !important; }
+          .banca-revisar-acciones button { flex: 1 1 auto; }
         }
       `}</style>
-      <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>🏷️ Gastos por revisar · categoría ({pendientes.length})</h2>
-      <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>La IA no tuvo clara la <strong>categoría contable</strong> de estos gastos. Asígnasela tú con un clic. (El <em>negocio</em> de los ingresos dudosos se asigna arriba, en «Ingresos por revisar».)</p>
+      <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>🏷️ Gastos por revisar · ¿de qué negocio? ({pendientes.length})</h2>
+      <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>La IA no tuvo claro a quién pertenecen estos gastos: ¿deducible del negocio o personal? Un toque lo resuelve y <strong>aprende la regla del comercio</strong>. (Los ingresos dudosos se asignan arriba, en «Ingresos por revisar».)</p>
       <div style={{ background: 'var(--surface)', border: '1px solid #f59e0b66', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
         {pendientes.map((m, i) => (
           <div key={m.id} className="banca-revisar-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
             <div className="banca-revisar-fecha" style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
             <div className="banca-revisar-concepto" style={{ flex: 1, minWidth: 0, fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</div>
             <div className="banca-revisar-importe" style={{ fontSize: '14px', fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
-            <select className="banca-revisar-select" defaultValue="" disabled={guardando === m.id} onChange={e => asignar(m.id, e.target.value)} style={{ ...input, flexShrink: 0, width: '152px' }}>
-              <option value="" disabled>{guardando === m.id ? 'Guardando…' : 'Categoría…'}</option>
-              {categorias.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-            </select>
+            <div className="banca-revisar-acciones" style={{ display: 'flex', gap: '8px', flexShrink: 0, alignItems: 'center' }}>
+              <button style={btn} disabled={guardando === m.id} onClick={() => asignar(m.id, 'seguros')}>🛡️ Correduría</button>
+              <button style={btn} disabled={guardando === m.id} onClick={() => asignar(m.id, 'personal')}>👨‍👩‍👧 Personal</button>
+              <select defaultValue="" disabled={guardando === m.id} onChange={e => asignar(m.id, e.target.value)}
+                style={{ ...input, minHeight: '44px', flexShrink: 0, width: '96px', fontSize: '13px' }}>
+                <option value="" disabled>{guardando === m.id ? 'Guardando…' : 'Otro…'}</option>
+                {DESTINOS_RECLASIF.filter(d => d !== 'seguros' && d !== 'personal').map(d => (
+                  <option key={d} value={d}>{destinoLabel[d] || d}</option>
+                ))}
+              </select>
+            </div>
           </div>
         ))}
       </div>
@@ -425,9 +441,9 @@ export function ExportarBtn() {
   return <a href="/api/banca/export" style={{ ...ghost, textDecoration: 'none', display: 'inline-block' }}>📥 Exportar (CSV)</a>
 }
 
-type DupMov = { id: string; fecha: string | null; concepto: string; importe: number; conciliado: boolean; origen?: string }
+type DupMov = { id: string; fecha: string | null; concepto: string; importe: number; conciliado: boolean; origen?: string; cuentaLabel?: string }
 type DupGrupoUI = { clave: string; confianza: 'alta' | 'baja'; importe: number; superaUmbral: boolean; movimientos: DupMov[] }
-type DupResueltoUI = { id: string; fecha: string | null; concepto: string; importe: number; estado: 'ignorado' | 'confirmado' }
+type DupResueltoUI = { id: string; fecha: string | null; concepto: string; importe: number; estado: 'ignorado' | 'confirmado'; cuentaLabel?: string }
 
 // Bandeja "Posibles cargos duplicados": pares sospechosos de cobro doble. El dueño los resuelve
 // con un clic ("Es normal" / "Es un cobro doble"); la decisión persiste. Plegable de "ya
@@ -462,7 +478,7 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
     setBusy(null)
     if (r.ok) {
       setPend(p => p.filter(x => x.clave !== g.clave))
-      setRes(prev => [...g.movimientos.map(m => ({ id: m.id, fecha: m.fecha, concepto: m.concepto, importe: m.importe, estado })), ...prev])
+      setRes(prev => [...g.movimientos.map(m => ({ id: m.id, fecha: m.fecha, concepto: m.concepto, importe: m.importe, estado, cuentaLabel: m.cuentaLabel })), ...prev])
       router.refresh()
     }
   }
@@ -480,6 +496,21 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
   if (pend.length === 0 && res.length === 0) return null
   return (
     <section id="duplicados" style={{ marginBottom: '32px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          /* Fila de movimiento apilada en móvil (sin scroll horizontal): concepto a ancho
+             completo arriba; fecha + chips + importe fluyen debajo. Mismo patrón que la
+             bandeja "Gastos por revisar". */
+          .banca-dup-mov { flex-wrap: wrap; gap: 2px 10px !important; }
+          .banca-dup-concepto { order: -1; flex: 1 1 100% !important; white-space: normal !important; overflow: visible !important; }
+          .banca-dup-fecha { width: auto !important; }
+          .banca-dup-importe { width: auto !important; margin-left: auto; }
+          .banca-dup-acciones { flex-wrap: wrap; }
+          .banca-dup-acciones .banca-dup-sep { display: none; }
+          .banca-dup-acciones button { flex: 1 1 auto; }
+          #duplicados button { min-height: 44px; }
+        }
+      `}</style>
       <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>⚠️ Posibles cargos duplicados ({pend.length})</h2>
       <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>Mismo importe y comercio en pocos días. Revisa cada par y resuélvelo: no vuelve a salir.</p>
 
@@ -494,16 +525,17 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
                 <span style={{ fontSize: '14px', fontWeight: 700, color: '#dc2626' }}>{eur(g.importe)}</span>
               </div>
               {g.movimientos.map(m => (
-                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px', padding: '3px 0' }}>
-                  <span style={{ color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</span>
-                  <span style={{ flex: 1, minWidth: 0, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}{m.conciliado ? ' 🔗' : ''}</span>
+                <div key={m.id} className="banca-dup-mov" style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px', padding: '3px 0' }}>
+                  <span className="banca-dup-fecha" style={{ color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</span>
+                  <span className="banca-dup-concepto" style={{ flex: 1, minWidth: 0, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}{m.conciliado ? ' 🔗' : ''}</span>
+                  {m.cuentaLabel && <span title="Banco / cuenta donde está este cargo" style={{ fontSize: '10px', color: 'var(--text)', background: 'var(--primary-light)', borderRadius: '4px', padding: '1px 6px', flexShrink: 0, fontWeight: 600, whiteSpace: 'nowrap' }}>🏦 {m.cuentaLabel}</span>}
                   {m.origen && <span style={{ fontSize: '10px', color: 'var(--muted)', background: 'var(--border)', borderRadius: '4px', padding: '1px 5px', flexShrink: 0, fontWeight: 500 }}>{m.origen}</span>}
-                  <span style={{ fontWeight: 700, color: '#dc2626', width: '92px', textAlign: 'right', flexShrink: 0 }}>{eur(m.importe)}</span>
+                  <span className="banca-dup-importe" style={{ fontWeight: 700, color: '#dc2626', width: '92px', textAlign: 'right', flexShrink: 0 }}>{eur(m.importe)}</span>
                 </div>
               ))}
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '10px' }}>
+              <div className="banca-dup-acciones" style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '10px' }}>
                 <button disabled={busy === g.clave} onClick={() => redactar(g)} style={dupGhost}>📝 Reclamar</button>
-                <div style={{ flex: 1 }} />
+                <div className="banca-dup-sep" style={{ flex: 1 }} />
                 <button disabled={busy === g.clave} onClick={() => resolver(g, 'ignorado')} style={dupGhost}>Es normal</button>
                 <button disabled={busy === g.clave} onClick={() => resolver(g, 'confirmado')} style={dupDanger}>Es un cobro doble</button>
               </div>
@@ -520,11 +552,12 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
           {verResueltos && (
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', marginTop: '8px' }}>
               {res.map((m, i) => (
-                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)', fontSize: '13px' }}>
-                  <span style={{ color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</span>
-                  <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</span>
+                <div key={m.id} className="banca-dup-mov" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)', fontSize: '13px' }}>
+                  <span className="banca-dup-fecha" style={{ color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</span>
+                  <span className="banca-dup-concepto" style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</span>
+                  {m.cuentaLabel && <span title="Banco / cuenta" style={{ fontSize: '10px', color: 'var(--text)', background: 'var(--primary-light)', borderRadius: '4px', padding: '1px 6px', flexShrink: 0, fontWeight: 600, whiteSpace: 'nowrap' }}>🏦 {m.cuentaLabel}</span>}
                   <span style={{ fontSize: '11px', color: 'var(--muted)', flexShrink: 0 }}>{m.estado === 'confirmado' ? 'cobro doble' : 'normal'}</span>
-                  <span style={{ fontWeight: 700, color: '#dc2626', width: '80px', textAlign: 'right', flexShrink: 0 }}>{eur(m.importe)}</span>
+                  <span className="banca-dup-importe" style={{ fontWeight: 700, color: '#dc2626', width: '80px', textAlign: 'right', flexShrink: 0 }}>{eur(m.importe)}</span>
                   <button disabled={busy === m.id} onClick={() => reactivar(m.id)} style={{ ...dupGhost, fontSize: '12px', flexShrink: 0 }}>Reactivar</button>
                 </div>
               ))}
@@ -767,6 +800,15 @@ export function MovimientosTabla({ cuentas, destinoLabel, initial, periodo }: {
                 <span style={{ color: ded.color }}>{ded.icon}{ded.kind === 'gasto' && ded.deducible && m.amortizable ? <sup style={{ fontSize: '9px' }}>A</sup> : null}</span>
               )}
             </div>
+            {/* En móvil el select de negocio va oculto (la fila apilada lo esconde), así que un gasto
+                deducible no decía A QUÉ negocio está asignado. Este chip lo dice; solo visible ≤768px
+                (en escritorio el select ya lo muestra y sería un duplicado). */}
+            {ded.kind === 'gasto' && ded.deducible && m.destino && (
+              <span className="banca-mov-destino-chip" title="Negocio al que está asignado este gasto deducible"
+                style={{ display: 'none', fontSize: '11px', fontWeight: 600, color: 'var(--positive)', flexShrink: 1, minWidth: 0, maxWidth: '45vw', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {destinoLabel[m.destino] || m.destino}
+              </span>
+            )}
             <div style={{ fontSize: '13px', flexShrink: 0, width: '18px', textAlign: 'center' }} title={m.conciliado ? 'Conciliado con factura' : 'Sin conciliar'}>
               {m.conciliado ? '🔗' : ''}
             </div>
@@ -890,6 +932,20 @@ export function IngresosPorRevisar({ ingresos, destinoLabel }: {
 
   return (
     <section style={{ marginBottom: '32px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          /* Card apilada en móvil (sin scroll horizontal): concepto a ancho completo arriba,
+             fecha + importe en una línea, desplegable de negocio a ancho completo abajo.
+             Sin esto, la fecha + el select "Asignar negocio…" + el importe (todos de ancho fijo)
+             no caben en 320px y el desplegable tapaba el concepto. */
+          .banca-ingr-row { flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
+          .banca-ingr-concepto { order: -1; flex: 1 1 100% !important; }
+          .banca-ingr-concepto > div:first-child { white-space: normal !important; overflow: visible !important; }
+          .banca-ingr-fecha { width: auto !important; }
+          .banca-ingr-importe { width: auto !important; margin-left: auto; }
+          .banca-ingr-select { order: 1; flex: 0 0 100% !important; max-width: none !important; width: 100% !important; }
+        }
+      `}</style>
       <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>🔎 Ingresos por revisar</h2>
       <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '12px' }}>
         Abonos entrantes cuyo negocio no está confirmado. Asígnales el negocio para que cuadren en el P&amp;L.
@@ -897,18 +953,18 @@ export function IngresosPorRevisar({ ingresos, destinoLabel }: {
       <div className="banca-movs-outer">
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
         {items.map((m, i) => (
-          <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
-            <div style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
+          <div key={m.id} className="banca-ingr-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
+            <div className="banca-ingr-fecha" style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
+            <div className="banca-ingr-concepto" style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</div>
               <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{m.banco || ''}</div>
             </div>
-            <select defaultValue="" onChange={e => e.target.value && asignar(m.id, e.target.value)}
+            <select className="banca-ingr-select" defaultValue="" onChange={e => e.target.value && asignar(m.id, e.target.value)}
               style={{ ...input, padding: '5px 6px', fontSize: '12px', flexShrink: 0, maxWidth: '160px' }}>
               <option value="" disabled>Asignar negocio…</option>
               {DESTINOS_RECLASIF.map(d => <option key={d} value={d}>{destinoLabel[d] || d}</option>)}
             </select>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: '#16a34a', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
+            <div className="banca-ingr-importe" style={{ fontSize: '14px', fontWeight: 700, color: '#16a34a', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
           </div>
         ))}
       </div>
