@@ -122,7 +122,7 @@ export function ImportarExtractoBtn({ sociedades }: { sociedades: SociedadOpt[] 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     const file = fileRef.current?.files?.[0]
-    if (!file) { setErr('Selecciona un fichero (.xls, .xlsx o .n43)'); return }
+    if (!file) { setErr('Selecciona un fichero (.xls, .xlsx, .csv o .n43)'); return }
     if (!sociedadId) { setErr('Selecciona una sociedad'); return }
     setLoading(true); setErr(''); setMsg('')
 
@@ -152,7 +152,7 @@ export function ImportarExtractoBtn({ sociedades }: { sociedades: SociedadOpt[] 
         <div style={overlay} onClick={() => setOpen(false)}>
           <div style={modal} onClick={e => e.stopPropagation()}>
             <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>Importar extracto bancario</h3>
-            <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>Excel del banco (.xls/.xlsx — Kutxa, BBVA…) o fichero Norma 43 (.n43).</p>
+            <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>Excel del banco (.xls/.xlsx — Kutxa, BBVA…), CSV (el que exporta esta app o el de tu banco) o fichero Norma 43 (.n43).</p>
             <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <label style={lbl}>Tipo de cuenta
                 <select value={tipo} onChange={e => setTipo(e.target.value as 'corriente' | 'tarjeta')} style={input}>
@@ -170,8 +170,8 @@ export function ImportarExtractoBtn({ sociedades }: { sociedades: SociedadOpt[] 
                   {sociedades.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
                 </select>
               </label>
-              <label style={lbl}>Fichero (.xls, .xlsx o .n43)
-                <input ref={fileRef} type="file" accept=".n43,.xls,.xlsx,.txt,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain" style={{ fontSize: '14px' }} />
+              <label style={lbl}>Fichero (.xls, .xlsx, .csv o .n43)
+                <input ref={fileRef} type="file" accept=".n43,.xls,.xlsx,.csv,.txt,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/plain" style={{ fontSize: '14px' }} />
               </label>
               <label style={lbl}>Titular de la cuenta
                 <select value={titular} onChange={e => setTitular(e.target.value as 'titular' | 'conyuge')} style={input}>
