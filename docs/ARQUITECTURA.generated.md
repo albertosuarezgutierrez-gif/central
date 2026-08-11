@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-11T06:23:25Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-11T07:38:59Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -226,14 +226,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- Barrido del mismo fallo en todo 2026
+- PriceLabs resuelto por Alberto (11/08): «es por el cambio».
 - PR #1368 MERGEADO y verificado en producción
+- #755
+- #1055
 - Decisión (sesión de solo charla, anotada a mano):
 - Prueba reina:
 - Vigilancia diaria 09:00 UTC
 - Decisión de Alberto (2 palancas):
 - Barrido «PriceLabs de baja»
-- Preferencia de Alberto
-- MERGEADO
-- Refinada por Alberto y MERGEADA (#1349):
-- 3ª ronda (#1351, mergeado):
 
