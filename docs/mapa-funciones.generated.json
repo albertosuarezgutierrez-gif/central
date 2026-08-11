@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-11T08:10:58Z",
-  "sha": "ddec2bf5654a1a58c78b7621e794132d9287eb69",
+  "generadoEn": "2026-08-11T08:16:43Z",
+  "sha": "4fbddaa9a4fc1a8becdf8154cab7f5b038127764",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -56644,13 +56644,13 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 11,
+          "linea": 12,
           "resumen": "SELECCIÓN por FACTORES (Fase B). El agente reúne fundamentales por su cuenta (FMP/EDGAR) y este endpoint rankea el universo por value+quality+momentum (z-scores cross-seccionales) y, si le pasas las p"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/trading/factores",
-      "hash": "00270895ad34"
+      "hash": "6ebd9fc70da4"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/fmp/route.ts",
@@ -56872,12 +56872,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 15
+          "linea": 16
         }
       ],
       "tablas": [],
       "rutaApi": "/api/trading/seleccion",
-      "hash": "93137c8f13a5"
+      "hash": "04190029bbd0"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/validar-oos/route.ts",
@@ -70698,7 +70698,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2c3f52267166"
+      "hash": "27ac4f6ba904"
     },
     {
       "ruta": "apps/plataforma/lib/trading/salidas.ts",
