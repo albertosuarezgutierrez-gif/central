@@ -32,19 +32,37 @@
 
 ---
 
-### 🔁 (11/08/2026) El barrido del backlog pasa a ser paso OBLIGATORIO de `facturas-correo`
-- Cierre del hilo de la factura 47/2026 (#1372). Verificación de las 38 facturas de 2026 contra el banco:
-  30 casadas, 1 fila duplicada (CREATE junio) y **7 huecos reales** — Pepephone ene–jun (6, sin ningún
-  cargo en las cuentas de Alberto) y lavandería Giraldillo de mayo (504,57€, sin cargo).
-- Nuevo **Paso 4.0** en la skill: toda pasada cruza `facturas_drive` del año contra el banco ANTES de
-  conciliar lo del día. Documentados los 3 falsos positivos del cruce por importe (Endesa Dúplex +5,78€,
-  PriceLabs USD→EUR, cargos agrupados) para que nadie los «arregle» rompiendo un cargo bueno.
-- **FK real APLICADA (Alberto: «tira con la FK»):** `facturas_drive.movimiento_id` →
-  `movimientos_bancarios.id` + `sin_cargo_motivo` (migración `2026-08-11_facturas_drive_movimiento_fk.sql`,
-  aplicada). **Tres estados**: casada · `revisada_sin_cargo` (con motivo) · `sin_revisar` — un NULL ya no
-  puede leerse como «no hay». Backfill de 2026: 30 casadas, 7 `sin_cargo_localizado`, 1 `duplicada`,
-  1 sin revisar a propósito (Endesa Dúplex marzo: su cargo se separa 9,70€, no 5,78€ → que lo mire alguien).
-  Vista `v_facturas_sin_cargo` = la cola del Paso 4.0; el cruce por importe se retira de la skill.
+### 🛡️ (11/08/2026) Auditoría completa del laboratorio de inversión + guardián de datos en TODOS los caminos
+- Origen: Alberto vio a RDY nº 1 (score 6,03) — EY 682% (ADR en rupias, familia ORCL #1189). **#1373**: la página
+  puntuaba la caché CRUDA (el guardián `calidad-datos.ts` solo lo aplicaban cron y analisis-simbolo) →
+  `neutralizarUniverso()` + backfill BD (RDY/BMNR/VRSN). Verificado en prod: nº 1 ahora SNDK, RDY score null.
+- **#1374**: mismo agujero en `/api/trading/seleccion` (¡la ruta que congela cohortes!), caza-cohetes y `/factores`.
+- Auditoría (agente + SQL): 🔴 PENDIENTE GORDO — el walk-forward que alimenta la 🪜 escalera mide con ventanas
+  DESALINEADAS (series truncadas de Stooq → retorno de otra ventana; riesgo cesta vs bench en longitudes distintas)
+  y sin declarar cobertura. 🟡 momentum sin ventana declarada ni guarda de costuras; Piotroski NULL→0 regala puntos;
+  cohetes sin precio se congelan a precio de entrada; `/analizar` se cree el nav del body; Dataroma caído = «sin gurús».
+- Track real (23 días): cesta mediana +0,24% vs SPY +4,20% (baten 3/8) · cohetes −2,6% (alpha −7,2%) · torneo hit 26-28%
+  ret ~0 (n=460) · Tramo 1. Sin señal de ventaja aún — la decisión de no operar en real sigue vigente.
+- **El 🔴 gordo ARREGLADO en la misma sesión:** nuevo `module-trading/medicionAlineada.ts` (series FECHADAS,
+  misma ventana cesta/bench, cobertura declarada — serie truncada de Stooq → `sinDatos`, nunca un retorno de
+  otra ventana); `paper-tracker` migrado y la escalera gana gate `cobertura ≥ 80%` (enmienda de
+  operacionalización, `COBERTURA_MIN_ESCALERA`). Quedan 🟡: momentum/costuras, Piotroski NULL→0, cohetes
+  a precio de entrada, nav de `/analizar` sin contrastar, Dataroma caído = «sin gurús».
+
+### 🔁 (11/08/2026) FK real facturas↔banco y el barrido del backlog como paso OBLIGATORIO
+- Cierre del hilo de la factura 47/2026 (#1372). El fallo de fondo no era de dato sino de método: la pasada
+  solo miraba el correo nuevo, así que su «sin novedades» era cierto sobre la bandeja y falso sobre la
+  contabilidad — 11 facturas archivadas llevaban desde enero sin cargo casado.
+- **Causa estructural:** `facturas_drive` y `movimientos_bancarios` no tenían relación; el único puente era
+  `factura_ref`, texto libre con 4 formatos. **FK APLICADA** (Alberto: «tira con la FK»):
+  `facturas_drive.movimiento_id` + `sin_cargo_motivo` (migración `2026-08-11_facturas_drive_movimiento_fk.sql`).
+  **Tres estados**: casada · `revisada_sin_cargo` (con motivo) · `sin_revisar` — un NULL ya no es «no hay».
+- Backfill 2026 de las 38: **29 casadas** (25 automáticas + 4 a mano), **8 revisadas sin cargo** (Pepephone
+  ene–jun y Giraldillo mayo `sin_cargo_localizado`, CREATE junio `duplicada`), **1 sin revisar a propósito**
+  (Endesa Dúplex marzo: su cargo se separa 9,70€ y no 5,78€ del patrón → que alguien abra el PDF).
+- Nuevo **Paso 4.0** en la skill: toda pasada abre `v_facturas_sin_cargo` ANTES de conciliar lo del día, y
+  al conciliar escribe la FK (o el motivo). PR #1376. Pendiente de Alberto: Pepephone (¿cuenta de la SL?) y
+  si el Giraldillo de mayo está sin pagar.
 
 ### 🧾 (11/08/2026) Conciliada la factura 47/2026 de Jaime Salas (electricidad Socorro 24)
 - Alberto preguntó por el cargo `TRANSF. 2100 FACTURA 472026 REPARACIN ELECTRICIDAD` −278,30€ (Kutxa, 07/08),

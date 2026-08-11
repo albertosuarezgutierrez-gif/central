@@ -66,3 +66,27 @@ test('emparejarOps: BUY→SELL por símbolo, desordenadas, y SELL sin BUY se ign
   assert.equal(ops[0].simbolo, 'MSFT')
   assert.ok(Math.abs(ops[0].retorno - 0.1) < 1e-9)
 })
+
+test('cobertura insuficiente: un alpha positivo medido sobre media cesta NO sube al tramo 2', () => {
+  // Enmienda de operacionalización (auditoría 11/08/2026): con series truncadas el alpha es de OTRA
+  // cesta. cobertura < 80% → no evaluable (y el detalle lo declara), aunque el número diera ✅.
+  const r = evaluarEscalera([cohorte({ cohorte: 'a', dias: DIAS_TRAMO2, alphaMediana: 0.05, cobertura: 0.5 })])
+  assert.equal(r.alcanzable, 1)
+  assert.match(r.tramos[1].detalle, /cobertura 50%/)
+})
+
+test('cobertura suficiente (≥80%) o desconocida (snapshots antiguos) no bloquea', () => {
+  const ok = evaluarEscalera([cohorte({ cohorte: 'a', dias: DIAS_TRAMO2, cobertura: 7 / 8 })])
+  assert.equal(ok.alcanzable, 2)
+  const compat = evaluarEscalera([cohorte({ cohorte: 'a', dias: DIAS_TRAMO2, cobertura: null })])
+  assert.equal(compat.alcanzable, 2)
+})
+
+test('cobertura insuficiente también invalida el criterio de riesgo del tramo 3', () => {
+  const r = evaluarEscalera([
+    cohorte({ cohorte: 'a', dias: DIAS_TRAMO3, cobertura: 0.5 }),
+    cohorte({ cohorte: 'b', dias: DIAS_TRAMO2 }),
+    cohorte({ cohorte: 'c', dias: 90 }),
+  ])
+  assert.equal(r.tramos[2].ok, false)
+})

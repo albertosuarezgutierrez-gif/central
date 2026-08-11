@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-11T07:38:59Z",
+  "generadoEn": "2026-08-11T08:37:39Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4270,6 +4270,14 @@
   ],
   "novedades": [
     {
+      "titulo": "#1374",
+      "fecha": ""
+    },
+    {
+      "titulo": "El 🔴 gordo ARREGLADO en la misma sesión:",
+      "fecha": ""
+    },
+    {
       "titulo": "Barrido del mismo fallo en todo 2026",
       "fecha": ""
     },
@@ -4319,14 +4327,6 @@
     },
     {
       "titulo": "Refinada por Alberto y MERGEADA (#1349):",
-      "fecha": ""
-    },
-    {
-      "titulo": "3ª ronda (#1351, mergeado):",
-      "fecha": ""
-    },
-    {
-      "titulo": "4ª ronda (#1353, mergeado y READY en prod):",
       "fecha": ""
     }
   ],

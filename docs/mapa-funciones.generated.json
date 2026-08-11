@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-11T08:10:58Z",
-  "sha": "ddec2bf5654a1a58c78b7621e794132d9287eb69",
+  "generadoEn": "2026-08-11T08:37:39Z",
+  "sha": "be891bcd5e00710eed75f2aac37e95cdfc5879d0",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -48664,7 +48664,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5f2c144ea93d"
+      "hash": "e8c4ac6d26e2"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -56644,13 +56644,13 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 11,
+          "linea": 12,
           "resumen": "SELECCIÓN por FACTORES (Fase B). El agente reúne fundamentales por su cuenta (FMP/EDGAR) y este endpoint rankea el universo por value+quality+momentum (z-scores cross-seccionales) y, si le pasas las p"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/trading/factores",
-      "hash": "00270895ad34"
+      "hash": "6ebd9fc70da4"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/fmp/route.ts",
@@ -56872,12 +56872,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 15
+          "linea": 16
         }
       ],
       "tablas": [],
       "rutaApi": "/api/trading/seleccion",
-      "hash": "93137c8f13a5"
+      "hash": "04190029bbd0"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/validar-oos/route.ts",
@@ -70169,8 +70169,8 @@
           "exportada": true,
           "params": "c: CarteraPaper",
           "retorno": "Promise<MedidaPaper>",
-          "linea": 40,
-          "resumen": "Calcula el rendimiento hacia delante de UNA cohorte congelada vs su benchmark, con riesgo y atribución. Best-effort (precios): lo que no haya (base ausente, fuente caída) queda a null sin romper."
+          "linea": 42,
+          "resumen": "Calcula el rendimiento hacia delante de UNA cohorte congelada vs su benchmark, con riesgo y atribución. MEDICIÓN ALINEADA (auditoría 11/08/2026): series FECHADAS y la MISMA ventana [fechaInicio, hoy] "
         },
         {
           "nombre": "medirTodasCohortes",
@@ -70178,7 +70178,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<MedidaPaper[]>",
-          "linea": 66,
+          "linea": 68,
           "resumen": "Mide TODAS las cohortes (la más antigua primero, como en `COHORTES_PAPER`)."
         },
         {
@@ -70187,7 +70187,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<MedidaPaper>",
-          "linea": 71,
+          "linea": 73,
           "resumen": "Compat: medición de la cohorte más reciente (consumidores de una sola cesta)."
         },
         {
@@ -70196,7 +70196,7 @@
           "exportada": true,
           "params": "m: MedidaPaper",
           "retorno": "Promise<boolean>",
-          "linea": 77,
+          "linea": 79,
           "resumen": "Persiste un snapshot de la medición (curva del forward + riesgo + atribución). Idempotente por cohorte+fecha. Best-effort: si la tabla aún no existe o la BD falla, NO rompe el digest."
         },
         {
@@ -70205,7 +70205,7 @@
           "exportada": false,
           "params": "m: MedidaPaper, i: number, total: number",
           "retorno": "string[]",
-          "linea": 103,
+          "linea": 105,
           "resumen": "Bloque de digest de UNA cohorte. La MEDIANA es la métrica que decide (un outlier no la mueve)."
         },
         {
@@ -70214,7 +70214,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 128,
+          "linea": 134,
           "resumen": "Mide, PERSISTE y avisa por Telegram. Si NINGUNA cohorte tiene precios (fuente caída) no molesta."
         },
         {
@@ -70223,13 +70223,13 @@
           "exportada": true,
           "params": "cohorte?: string",
           "retorno": null,
-          "linea": 233,
+          "linea": 240,
           "resumen": "Lee la CURVA persistida de una cohorte (o de todas), de más antigua a más reciente. Best-effort."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3f28ba06523e"
+      "hash": "5142f5b3ac57"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-contraste.ts",
@@ -70615,7 +70615,7 @@
           "exportada": true,
           "params": "ordenes: OrdenPaper[]",
           "retorno": "",
-          "linea": 47,
+          "linea": 53,
           "resumen": "Empareja órdenes paper BUY→SELL por símbolo (la SELL cierra la última BUY previa sin consumir) y devuelve las operaciones CERRADAS con su retorno. Informativo (walk-forward del sistema de señales)."
         },
         {
@@ -70624,7 +70624,7 @@
           "exportada": false,
           "params": "x: number",
           "retorno": "string",
-          "linea": 64
+          "linea": 70
         },
         {
           "nombre": "meses",
@@ -70632,7 +70632,24 @@
           "exportada": false,
           "params": "dias: number",
           "retorno": "string",
-          "linea": 65
+          "linea": 71
+        },
+        {
+          "nombre": "coberturaFiable",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "c: CohorteEscalera",
+          "retorno": "boolean",
+          "linea": 75,
+          "resumen": "Con cobertura insuficiente el alpha/riesgo de la cohorte NO se usa para subir tramos (no es el dato que dice ser); cobertura desconocida (null) pasa por compatibilidad con snapshots antiguos."
+        },
+        {
+          "nombre": "alphaFiable",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "c: CohorteEscalera",
+          "retorno": "number | null",
+          "linea": 76
         },
         {
           "nombre": "evaluarEscalera",
@@ -70640,13 +70657,13 @@
           "exportada": true,
           "params": "cohortes: CohorteEscalera[]",
           "retorno": "EstadoEscalera",
-          "linea": 69,
+          "linea": 80,
           "resumen": "Evalúa la escalera. `cohortes` deben venir YA deduplicadas por cesta (dos versiones con los mismos valores son UNA prueba, no dos — misma regla que el dashboard y el digest)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "debb6899e0b3"
+      "hash": "325f0553a3b6"
     },
     {
       "ruta": "apps/plataforma/lib/trading/radar.ts",
@@ -70698,7 +70715,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2c3f52267166"
+      "hash": "27ac4f6ba904"
     },
     {
       "ruta": "apps/plataforma/lib/trading/salidas.ts",
@@ -90058,6 +90075,66 @@
       "hash": "8a3fd871bed3"
     },
     {
+      "ruta": "packages/module-trading/src/medicionAlineada.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "📏 MEDICIÓN ALINEADA del forward paper (auditoría 11/08/2026). Las funciones históricas de seleccionEval.ts / riesgoCesta.ts miden sobre «lo que la fuente devuelva»: si Stooq trunca una serie (limita IPs de datacenter; con ≥2 puntos no se cae a Yahoo), el retorno de ese símbolo se calcula sobre OTRA",
+      "exporta": [
+        "retornoVentana",
+        "evaluarCestaVsBenchAlineada",
+        "curvasAlineadas",
+        "metricasRiesgoAlineadas"
+      ],
+      "funciones": [
+        {
+          "nombre": "diasEntre",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d1: string, d2: string",
+          "retorno": "number",
+          "linea": 21
+        },
+        {
+          "nombre": "retornoVentana",
+          "kind": "function",
+          "exportada": true,
+          "params": "puntos: PuntoSerie[], desde: string, hasta: string, toleranciaDias = TOLERANCIA_COBERTURA_DIAS,",
+          "retorno": "number | null",
+          "linea": 25,
+          "resumen": "Retorno total de una serie fechada DENTRO de [desde, hasta]. null si la serie no cubre la ventana (empieza tarde o acaba pronto más allá de la tolerancia) — medir sobre otra ventana es mentir."
+        },
+        {
+          "nombre": "evaluarCestaVsBenchAlineada",
+          "kind": "function",
+          "exportada": true,
+          "params": "cesta: Array<{ simbolo: string; puntos: PuntoSerie[] }>, bench: PuntoSerie[], desde: string, hasta: string,",
+          "retorno": "EvalCestaAlineada | null",
+          "linea": 46,
+          "resumen": "Como evaluarCestaVsBench pero con series FECHADAS y la MISMA ventana para todos. El benchmark debe cubrir la ventana (si no, no hay con qué comparar → null). Los símbolos que no la cubren no puntúan Y"
+        },
+        {
+          "nombre": "curvasAlineadas",
+          "kind": "function",
+          "exportada": true,
+          "params": "series: PuntoSerie[][], bench: PuntoSerie[], desde: string, hasta: string,",
+          "retorno": "",
+          "linea": 80,
+          "resumen": "Curvas de cesta equiponderada y benchmark sobre el MISMO calendario (las fechas del benchmark dentro de la ventana — el SPY siempre cotiza). Solo entran las series que CUBREN la ventana; en los huecos"
+        },
+        {
+          "nombre": "metricasRiesgoAlineadas",
+          "kind": "function",
+          "exportada": true,
+          "params": "series: PuntoSerie[][], bench: PuntoSerie[], desde: string, hasta: string,",
+          "retorno": "MetricasRiesgoAlineadas | null",
+          "linea": 120,
+          "resumen": "Riesgo de la cesta vs benchmark medido sobre el MISMO calendario y la MISMA ventana — el cociente de drawdowns del tramo 3 de la escalera deja de comparar 30 sesiones contra 4 meses."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "002bad3dc8eb"
+    },
+    {
       "ruta": "packages/module-trading/src/mercado.ts",
       "ambito": "packages/module-trading",
       "resumen": "Señales de mercado LIBRES: derivables de una cotización básica (precio + medias móviles + rango de 52 semanas), que es lo que da el plan gratuito de FMP (/quote) — sin screener ni DCF. Puro y testeable; lo consume apps/plataforma/lib/fmp.ts al mapear la cotización.",
@@ -90987,7 +91064,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2432,
-    "funciones": 6578
+    "archivos": 2433,
+    "funciones": 6585
   }
 }

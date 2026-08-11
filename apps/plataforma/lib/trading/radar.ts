@@ -136,7 +136,13 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
   const regimen: 'alcista' | 'bajista' | null = regimenAlcista === true ? 'alcista' : regimenAlcista === false ? 'bajista' : null
 
   // 4-bis) 🚀 Satélite caza-cohetes: perfil lotería + confirmación por medias multi-marco.
+  // 🛡️ Con los campos NEUTRALIZADOS (no los crudos): como ordena por momentum DESC, un momentum
+  // envenenado que quede bajo el techo del guardián encabezaría la lista — auditoría 11/08/2026.
   const candidatosCohete = filas
+    .map(f => {
+      const malos = envenenados.get(f.simbolo)
+      return malos ? { ...f, momentum: malos.has('momentum') ? null : f.momentum, roic: malos.has('roic') ? null : f.roic } : f
+    })
     .filter(f => f.actualizadoEn > limiteFresco && (f.momentum ?? 0) > COHETES_MOMENTUM_MIN
       && ((f.roic != null && f.roic < 0) || (f.piotroski != null && f.piotroski <= 4)))
     .sort((a, b) => (b.momentum ?? 0) - (a.momentum ?? 0))

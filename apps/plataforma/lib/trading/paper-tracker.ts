@@ -1,7 +1,7 @@
 import { tgSend } from '@central/core-telegram'
 import { prisma } from '@/lib/db'
-import { cierresDiarios } from './precios-stooq'
-import { evaluarCestaVsBench, metricasRiesgoCesta, type EvalCesta, type MetricasRiesgo } from '@central/module-trading'
+import { puntosDiarios } from './precios-stooq'
+import { evaluarCestaVsBenchAlineada, metricasRiesgoAlineadas, type EvalCestaAlineada, type MetricasRiesgo } from '@central/module-trading'
 import { COHORTES_PAPER, COHORTE_ULTIMA, DIAS_ENTRE_COHORTES, type CarteraPaper } from './paper-cartera'
 
 // Seguimiento del FORWARD PAPER (Fase B): mide cada cesta CONGELADA (`paper-cartera.ts`) vs el SPY desde
@@ -28,32 +28,34 @@ export type MedidaPaper = {
   hoy: string
   diasTranscurridos: number
   benchmark: string
-  resultado: EvalCesta | null       // cesta combinada (media/alpha/bate/porSimbolo)
+  resultado: EvalCestaAlineada | null   // cesta combinada (media/alpha/bate/porSimbolo + cobertura declarada)
   medianaCesta: number | null
-  riesgo: MetricasRiesgo | null     // drawdown/vol/tracking error (idea 3)
-  resultadoBase: EvalCesta | null   // cesta gurús-solo (atribución, idea 4) — null si la cohorte no la tiene
+  riesgo: MetricasRiesgo | null         // drawdown/vol/tracking error (idea 3), MISMA ventana que el bench
+  resultadoBase: EvalCestaAlineada | null // cesta gurús-solo (atribución, idea 4) — null si la cohorte no la tiene
   medianaBase: number | null
 }
 
 // Calcula el rendimiento hacia delante de UNA cohorte congelada vs su benchmark, con riesgo y atribución.
-// Best-effort (precios): lo que no haya (base ausente, fuente caída) queda a null sin romper.
+// MEDICIÓN ALINEADA (auditoría 11/08/2026): series FECHADAS y la MISMA ventana [fechaInicio, hoy] para
+// cesta y benchmark — una serie truncada de Stooq ya no produce un retorno de otra ventana, sale como
+// «sin datos» y DECLARADA. Best-effort (precios): lo que no haya queda a null sin romper.
 export async function medirCohorte(c: CarteraPaper): Promise<MedidaPaper> {
   const d1 = c.fechaInicio
   const d2 = hoy()
   const base = c.simbolosBase ?? []
   const [bench, series, serieBase] = await Promise.all([
-    cierresDiarios(c.benchmark, d1, d2),
-    Promise.all(c.simbolos.map(s => cierresDiarios(s, d1, d2))),
-    Promise.all(base.map(s => cierresDiarios(s, d1, d2))),
+    puntosDiarios(c.benchmark, d1, d2),
+    Promise.all(c.simbolos.map(s => puntosDiarios(s, d1, d2))),
+    Promise.all(base.map(s => puntosDiarios(s, d1, d2))),
   ])
 
-  const cesta = c.simbolos.map((simbolo, i) => ({ simbolo, cierres: series[i] }))
-  const resultado = evaluarCestaVsBench(cesta, bench)
+  const cesta = c.simbolos.map((simbolo, i) => ({ simbolo, puntos: series[i] }))
+  const resultado = evaluarCestaVsBenchAlineada(cesta, bench, d1, d2)
   const medianaCesta = resultado ? mediana(resultado.porSimbolo.map(x => x.retorno)) : null
-  const riesgo = metricasRiesgoCesta(series, bench)
+  const riesgo = metricasRiesgoAlineadas(series, bench, d1, d2)
 
-  const cestaBase = base.map((simbolo, i) => ({ simbolo, cierres: serieBase[i] }))
-  const resultadoBase = base.length ? evaluarCestaVsBench(cestaBase, bench) : null
+  const cestaBase = base.map((simbolo, i) => ({ simbolo, puntos: serieBase[i] }))
+  const resultadoBase = base.length ? evaluarCestaVsBenchAlineada(cestaBase, bench, d1, d2) : null
   const medianaBase = resultadoBase ? mediana(resultadoBase.porSimbolo.map(x => x.retorno)) : null
 
   return {
@@ -112,6 +114,10 @@ function bloqueCohorte(m: MedidaPaper, i: number, total: number): string[] {
     `SPY: ${pct(r.retornoBench)}`,
     `Baten al SPY: ${r.ganadoresVsBench}/${r.n}`,
   ]
+  // Cobertura declarada: un 6/8 no puede leerse como la cesta entera (series que no cubren la ventana).
+  if (r.sinDatos.length) {
+    lineas.push(`⚠️ Cobertura ${r.n}/${r.total} — sin precios que cubran la ventana: ${r.sinDatos.join(', ')} (no puntúan)`)
+  }
   // Riesgo (idea 3): batir con más riesgo no es batir. Drawdown y volatilidad de la cesta vs el índice.
   if (m.riesgo) {
     lineas.push(`Riesgo — caída máx: ${pct(m.riesgo.maxDrawdown)} (SPY ${pct(m.riesgo.maxDrawdownBench)}) · vol ${pct0(m.riesgo.volAnual)} (SPY ${pct0(m.riesgo.volBenchAnual)}) · TE ${pct0(m.riesgo.trackingError)}`)
@@ -190,6 +196,7 @@ export async function enviarPaperTracker(): Promise<{ enviado: boolean; medidas:
       cohorte: m.cohorte, dias: m.diasTranscurridos,
       alphaMediana: m.medianaCesta != null && m.resultado ? m.medianaCesta - m.resultado.retornoBench : null,
       maxDrawdown: m.riesgo?.maxDrawdown ?? null, maxDrawdownBench: m.riesgo?.maxDrawdownBench ?? null,
+      cobertura: m.resultado ? m.resultado.n / m.resultado.total : null,
     }))
     const escalera = evaluarEscalera(cohortesEscalera)
     lineas.push('', `🪜 <b>Escalera de dinero real — escalón alcanzable: Tramo ${escalera.alcanzable}</b> <i>(la suben las señales, no el calendario)</i>`)
