@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-11T06:23:25Z",
-  "sha": "8629824baee845c4e5ba9c9ebb5ec597a03ebfec",
+  "generadoEn": "2026-08-11T08:10:58Z",
+  "sha": "ddec2bf5654a1a58c78b7621e794132d9287eb69",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -48618,7 +48618,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 17
+          "linea": 18
         },
         {
           "nombre": "pctN",
@@ -48626,7 +48626,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 20
+          "linea": 21
         },
         {
           "nombre": "pct0N",
@@ -48634,7 +48634,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 23
+          "linea": 24
         },
         {
           "nombre": "CurvaForward",
@@ -48642,7 +48642,7 @@
           "exportada": false,
           "params": "{ serie }: { serie: { m: number | null; b: number }[] }",
           "retorno": null,
-          "linea": 29,
+          "linea": 30,
           "resumen": "Mini-curva del forward (SVG puro, sin dependencias): línea de la cesta (MEDIANA) vs el SPY a lo largo de los snapshots persistidos. La mediana es la métrica de decisión (un outlier no la mueve)."
         },
         {
@@ -48651,7 +48651,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 46
+          "linea": 47
         },
         {
           "nombre": "TradingDashboard",
@@ -48659,12 +48659,12 @@
           "exportada": true,
           "params": "{ carteraCohetes }: { carteraCohetes: CarteraCohetesData | null }",
           "retorno": null,
-          "linea": 57
+          "linea": 58
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "73761e70c61c"
+      "hash": "5f2c144ea93d"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -69280,7 +69280,8 @@
       "resumen": "🛡️ GUARDIÁN de calidad de datos del universo (lección del 20/07/2026: MCD llegó al nº 1 del ranking porque la SEC trajo sus acciones sin escalar → mkt_cap de 196.044$ → earnings/FCF yield ×1e6, y el outlier contaminó los z-scores de valor de TODO el universo; lo cazamos porque Alberto pegó el diges",
       "exporta": [
         "anomaliasUniverso",
-        "camposEnvenenados"
+        "camposEnvenenados",
+        "neutralizarUniverso"
       ],
       "funciones": [
         {
@@ -69300,11 +69301,20 @@
           "retorno": "Map<string, Set<CampoAnomalia>>",
           "linea": 49,
           "resumen": "Mapa símbolo → campos envenenados (para neutralizarlos a null antes de rankear)."
+        },
+        {
+          "nombre": "neutralizarUniverso",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: T[]",
+          "retorno": "",
+          "linea": 63,
+          "resumen": "Escaneo + neutralización EN COPIA, en una llamada: los campos imposibles salen a null (esa empresa no puntúa ese factor) y las anomalías se devuelven para DECLARARLAS en la UI/digest. Todo consumidor "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1d781cbf552a"
+      "hash": "424ab04737aa"
     },
     {
       "ruta": "apps/plataforma/lib/trading/cantera.ts",
@@ -90978,6 +90988,6 @@
   ],
   "resumen": {
     "archivos": 2432,
-    "funciones": 6577
+    "funciones": 6578
   }
 }
