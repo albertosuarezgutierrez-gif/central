@@ -15,7 +15,16 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
-- **2026-08-11 · facturas-correo** · hizo: pasada ad-hoc a petición de Alberto sobre el cargo −278,30€
+- **2026-08-11 · facturas-correo** · hizo: Paso 0 salud OK (Vía B al día, última copia hoy 11/08
+  IONOS; backlog `PDF-pendiente`/`Revisar` vacío; `agente_salud` actualizado ok=true dias_caido=0);
+  Paso 1 sin candidatos nuevos — 2 hilos descartados y etiquetados `Procesada` (recordatorio de cobro
+  futuro PriceLabs sin PDF, mensaje de huésped de Booking); la única factura nueva de hoy (IONOS
+  202786983417, 11,71€) ya estaba archivada+etiquetada por una pasada previa del mismo día, no se
+  tocó; sin subidas manuales nuevas en `_subir_aqui`/raíz 2026. dudas: la papelera
+  `_DUPLICADOS_BORRAR` acumula 18 avisos sin resolver desde el 10/07 — no se auditó zombis hoy (sin
+  avisos nuevos que crear), Alberto podría querer una pasada de limpieza dedicada; fallos: —;
+  PRs/commits: — (solo Gmail/Drive/Supabase vía MCP, esta entrada de bitácora).
+- **2026-08-11 · facturas-correo (ad-hoc, Alberto)** · hizo: pasada ad-hoc a petición de Alberto sobre el cargo −278,30€
   `FACTURA 472026 REPARACIN ELECTRICIDAD` (Kutxa 07/08) — la factura 47/2026 de Jaime Salas ya estaba
   archivada (Drive `1BNr2lF0…` + `facturas_drive`), faltaba conciliar: movimiento `1b1204d7` →
   `turistico_pisos`/`prop_house_sevillana`/`conciliado=true`/`factura_ref`. dudas: —; fallos: el cargo
