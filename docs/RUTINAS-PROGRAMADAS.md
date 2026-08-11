@@ -247,6 +247,15 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Qué hace** | `trading-watchdog` comprueba **3 tramos** de la pasada nocturna de trading: `broker_saldos` (NAV), `trading_tesis` (parte de `/analizar`) y **`/puntuar`** (stops + walk-forward, latido `trading_puntuar` — añadido PR #1291 tras un caso real donde NAV y tesis quedaron frescos pero `/puntuar` nunca se llamó y el watchdog de 2 tramos lo habría dado por bueno). Desde el 08/08/2026 (PR #1322) el propio watchdog **deja su huella** en `agente_latidos.trading_watchdog` (antes, si él mismo dejaba de correr, su silencio se leía como «los tres tramos frescos»; vigilado por `agentes-latido` con 80h de umbral). `agentes-latido` (`lib/monitoring/latidos.ts`, registro `AGENTES_VIGILADOS`) comprueba, por cada agente vigilado, una huella FIABLE en BD que SOLO se refresca cuando ese agente corre — hoy vigila **pricing** (`pricing_decisiones.ciclo_at` por piso — **cambiado desde `market_rates prop_%`** el 08/08/2026, PR #1318: esa huella dejó de ser exclusiva de la Rutina semanal cuando el barrido Serper diario y `mercado-booking` empezaron a escribir en el mismo namespace, y salía verde con la Rutina muerta; 192h), **trading_watchdog** (80h, ver arriba), **correo-triaje** (`correo_cursor.updated_at`, 6h), **facturas-scan**, **ialimp_pms**, **sivra_eventos**, **sivra_mercado_sweep**, **sivra_mercado_booking** y **sivra_pricing_guard** (30h los diarios). Nace de que el agente de pricing dejó de correr en silencio y una reserva entró un 40% bajo mercado sin que nadie se enterara. ⚠️ **Un latido mide FRESCURA, no CORRECCIÓN**, y confundirlo sale caro: el 01/08/2026 `market_rates` estaba fresquísima y aun así el ancla de House venía de comps de otro aforo — eso no lo caza un latido, lo caza el centinela #9 del guardián de precios. Al añadir un vigilante, pregúntate cuál de las dos cosas estás midiendo. |
 | **Resultado** | Sin anomalías → sin ruido. Huella vieja/inexistente → Telegram con el motivo y la acción sugerida. **No duplica** con el heartbeat de `/auditoria-diaria` (paso 2-bis): coordina umbrales para no avisar dos veces por lo mismo — para añadir un agente nuevo al monitor, una fila en `AGENTES_VIGILADOS` + su probe SQL en el route. |
 
+### 14. Seguimiento quincenal — laboratorio de inversión — *activa desde el 11/08/2026*
+| | |
+|---|---|
+| **Cuándo** | Días **1 y 15** de cada mes, 08:00 UTC (~10:00 CEST). Trigger `trig_01FJtQFiEMVGnEj9vpdBYA3f` (sesión nueva por disparo, notificación push). Además, **one-shot** `trig_014V3ytMp9JZPwnbkEPxZRWu` el **16/11/2026** (hito: la cohorte 2026-07-18 cumple los ~4 meses del Tramo 2; push+email). |
+| **Prompt** | Autocontenido en el trigger (creado por MCP desde sesión, 11/08/2026 — pedido de Alberto «ir poniendo recordatorios para ir haciendo seguimientos»). |
+| **MCPs / envs** | Supabase (lectura) **si la sesión disparada lo trae**; el trigger creado por MCP **no almacena conectores** (limitación de la org), así que el prompt lleva **plan B**: leer el hero de la vista de invitado `/invitado/trading` con el token de `trading_acceso_token` (solo abre esa vista, rotable en BD — si se rota, actualizar el prompt del trigger con `update_trigger`). Para la vía completa con Supabase, recrearla desde la UI de Rutinas de claude.ai. |
+| **Qué hace** | SOLO LECTURA: informe quincenal del forward paper (mediana vs SPY y tendencia, tramo alcanzable de la 🪜 escalera con cobertura, cohetes, anomalías de datos) comparado con el seguimiento anterior + veredicto honesto sobre dinero real. NO ejecuta la pasada diaria (esa es del agente `trading-analista`) ni duplica el digest del lunes (ese es el cron semanal de Vercel): esto es la revisión con perspectiva para Alberto. |
+| **Resultado** | Notificación push con el resumen. Solo con cambio material (tramo, mediana cruza al SPY, cobertura <80%, datos envenenados) → entrada «📈 Seguimiento laboratorio» en memoria + PR draft. |
+
 ---
 
 ## Resumen de cadencias
@@ -257,6 +266,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | Día/hora | Rutina |
 |---|---|
 | Diaria 04:00 | Auditoría nocturna ligera |
+| Días 1 y 15, ~10:00 | Seguimiento quincenal del laboratorio de inversión |
 | Diaria 08:00 | Facturas correo |
 | Lunes 06:00 | Pricing agente SIVRA |
 | Miércoles 09:00 | Guardián PSD2 |
