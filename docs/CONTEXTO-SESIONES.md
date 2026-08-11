@@ -32,6 +32,15 @@
 
 ---
 
+### 🔧 (10/08/2026) Pricing: el reparto mes/global del factor de demanda deja de perderse (#1361)
+- `factorDemandaFecha` decidía por fecha si la demanda se mueve con la ocupación DEL MES o la anual,
+  pero esa decisión solo viajaba en la respuesta HTTP del cron (nadie la guarda) — y su `.catch(() => [])`
+  hacía que un fallo de la consulta cayera TODO a factor global sin un solo error en el log.
+- Fix: `pricing_applied.demanda_fuente`/`demanda_gateada` por fecha (filas viejas a NULL a propósito) +
+  aviso Telegram si la ocupación mensual es ilegible. `ok` no pasa a false (degradación, no fallo).
+  Migración `2026-08-10_pricing_applied_demanda.sql` aplicada antes que el código. Detalle en skill
+  `pricing-agente` (`estado-y-protocolo.md`).
+
 ### 🛡️ (10/08/2026) La 2ª fuente vetaba precios BUENOS: el contraste comparaba contra la sesión anterior
 - La pasada del lunes 10/08 corrió **entera y por primera vez con las 4 huellas + el latido
   `trading_analizar`** (20:33 UTC). Pero vetó 8 de 21 símbolos en `/analizar` y descartó 5 precios
@@ -321,17 +330,14 @@ completo `docs/AUDITORIA-2026-08.md`.
 
 - **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 09/08/2026).** Detalle en
   `docs/memoria/2026-08.md` y en los PRs citados.
-  - **Pricing SIVRA — PR #1323 a rehacer:** su mejora real (ocupación POR MES + boost de mes
-    anticipado, con 12 tests) quedó superada por el `pricing-demanda.ts` del 09/08 (gateo por
-    antelación, otra API); reimplementarla sobre el código nuevo y cerrar #1323 sin mergear.
-  - **Pricing SIVRA (motor vivo en los 4 pisos):** aplicar `prisma/sql/2026-08-09_channel_markup_sin_recargo.sql`
-    SOLO tras desplegar el código del 09/08. Decisión de Alberto pendiente: el bucket mensual mezcla
-    Serper+Booking sin filtrar `fuente` (propuesta: preferencia condicional + `bucket_fuente`,
-    informe `docs/AUDITORIA-2026-08-precios-dinamicos.md`). Hueco finde-sin-evento parcheado con
-    ancla por fecha (09/08) tras 3 ventas bajo p50; pendiente bajada last-minute real. El motor usa
-    UNA ocupación por piso para 365 días (`occ` en `apply/route.ts`): palanca de demanda ciega a la
-    estacionalidad. feb→jul-2027 sin bucket (fallback de diseño; la rutina Booking rellena).
-    A vigilar: 23-oct y 27-nov muy por encima de su mes sin evento catalogado.
+  - **Pricing SIVRA (motor vivo en los 4 pisos, resuelto desde el 09-10/08):** #1323 (ocupación
+    POR MES) rehecho y mergeado sobre `pricing-demanda.ts`, `channel_markup_sin_recargo.sql`
+    aplicado, last-minute encendido (`lastminute_k=0,5`) y reparto mes/global ya se persiste en
+    `pricing_applied` (#1361, 10/08). Sigue abierto: el bucket mensual mezcla Serper+Booking sin
+    filtrar `fuente` (propuesta: preferencia condicional + `bucket_fuente`, informe
+    `docs/AUDITORIA-2026-08-precios-dinamicos.md`). feb→jul-2027 sin bucket (fallback de diseño;
+    la rutina Booking lo va rellenando). A vigilar: 23-oct y 27-nov muy por encima de su mes sin
+    evento catalogado.
   - **Mercado SIVRA:** `sivra_mercado_sweep` con latido rojo A PROPÓSITO hasta que la Rutina Booking
     consolide (Serper no distingue fecha). Incidente sin diagnosticar: 2º disparo de `mercado-booking`
     el mismo día sin huella del 1º (08/08, `docs/AGENTES-BITACORA.md`). Tope real ≈10-12 ventanas por
