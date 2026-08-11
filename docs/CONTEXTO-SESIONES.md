@@ -39,10 +39,12 @@
 - Nuevo **Paso 4.0** en la skill: toda pasada cruza `facturas_drive` del año contra el banco ANTES de
   conciliar lo del día. Documentados los 3 falsos positivos del cruce por importe (Endesa Dúplex +5,78€,
   PriceLabs USD→EUR, cargos agrupados) para que nadie los «arregle» rompiendo un cargo bueno.
-- **Hallazgo estructural pendiente de decisión:** `facturas_drive` y `movimientos_bancarios` NO tienen
-  relación; el único puente es `factura_ref`, texto libre con 4 formatos distintos según qué pasada lo
-  escribió. Por eso la pregunta «¿qué factura no tiene cargo?» no se puede contestar sin repasar a ojo,
-  y por eso 11 facturas pasaron desde enero sin que nadie lo notara. Propuesto: FK real. PR draft.
+- **FK real APLICADA (Alberto: «tira con la FK»):** `facturas_drive.movimiento_id` →
+  `movimientos_bancarios.id` + `sin_cargo_motivo` (migración `2026-08-11_facturas_drive_movimiento_fk.sql`,
+  aplicada). **Tres estados**: casada · `revisada_sin_cargo` (con motivo) · `sin_revisar` — un NULL ya no
+  puede leerse como «no hay». Backfill de 2026: 30 casadas, 7 `sin_cargo_localizado`, 1 `duplicada`,
+  1 sin revisar a propósito (Endesa Dúplex marzo: su cargo se separa 9,70€, no 5,78€ → que lo mire alguien).
+  Vista `v_facturas_sin_cargo` = la cola del Paso 4.0; el cruce por importe se retira de la skill.
 
 ### 🧾 (11/08/2026) Conciliada la factura 47/2026 de Jaime Salas (electricidad Socorro 24)
 - Alberto preguntó por el cargo `TRANSF. 2100 FACTURA 472026 REPARACIN ELECTRICIDAD` −278,30€ (Kutxa, 07/08),

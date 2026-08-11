@@ -14,45 +14,41 @@
 > con su `destino` por defecto (normalmente `personal`) y **el gasto desaparece del radar de
 > deducibles**. Es la regla de «dato que NO hay ≠ dato que NO se ha mirado» aplicada al dinero.
 
-**Regla: toda pasada empieza cruzando `facturas_drive` del año en curso contra el banco.** No es
-opcional ni «si da tiempo»: es más barato que volver a perder un gasto deducible.
+**Regla: toda pasada empieza mirando la cola de facturas sin cargo.** No es opcional ni «si da
+tiempo»: es más barato que volver a perder un gasto deducible.
+
+Desde el 11/08/2026 hay **FK real** (`facturas_drive.movimiento_id` → `movimientos_bancarios.id`,
+migración `2026-08-11_facturas_drive_movimiento_fk.sql`), así que la cola se lee de una vista y ya no
+hay que cruzar por importe ni interpretar nada:
 
 ```sql
-SELECT fd.proveedor, fd.mes, fd.importe, fd.nombre_archivo, fd.drive_file_id,
-  (SELECT count(*) FROM movimientos_bancarios mb JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
-     WHERE cb.cuenta_id = '<cuenta_id de Alberto>'::uuid
-       AND abs(mb.importe + fd.importe) < 0.02
-       AND (mb.duplicado_estado IS NULL OR mb.duplicado_estado <> 'ignorado')) AS cargos_mismo_importe,
-  (SELECT count(*) FROM movimientos_bancarios mb JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
-     WHERE cb.cuenta_id = '<cuenta_id de Alberto>'::uuid
-       AND abs(mb.importe + fd.importe) < 0.02 AND mb.conciliado
-       AND (mb.duplicado_estado IS NULL OR mb.duplicado_estado <> 'ignorado')) AS cargos_conciliados
-FROM facturas_drive fd
-WHERE fd.anio = date_part('year', current_date)
-ORDER BY cargos_conciliados, fd.mes DESC;
+SELECT * FROM v_facturas_sin_cargo
+WHERE anio = date_part('year', current_date)
+ORDER BY estado, mes DESC;   -- estado: 'sin_revisar' | 'revisada_sin_cargo'
 ```
 
-**Cómo leer el resultado — NINGUNA de las dos columnas es la verdad por sí sola:**
+**Tres estados, no dos** (`movimiento_id` / `sin_cargo_motivo`):
+- **casada** — `movimiento_id` apunta al cargo. No sale en la vista.
+- **`sin_revisar`** — las dos a NULL: **nadie lo ha mirado todavía**. Es TU cola de trabajo.
+- **`revisada_sin_cargo`** — hay `sin_cargo_motivo`: ya se buscó y no hay cargo. No la reabras salvo
+  que cambie algo. Valores en uso: `sin_cargo_localizado` (buscado en todas las cuentas del feed y no
+  aparece — Pepephone ene–jun, Giraldillo de mayo), `fuera_del_feed` (se paga desde una cuenta que no
+  importamos, p. ej. la SL), `impagada`, `duplicada` (misma factura archivada dos veces; el cargo
+  cuelga de la otra fila — caso CREATE de junio).
 
-- `cargos_conciliados = 0` **no** significa «falta conciliar». Casa por importe exacto, así que da
-  falso positivo en los tres patrones documentados más abajo: **Endesa Dúplex** (el cargo lleva
-  +5,78€ del servicio), **PriceLabs** (factura en USD, cargo en EUR — «es por el cambio», dictado de
-  Alberto 11/08/2026) y cualquier cargo agrupado. Antes de tocar nada, comprueba el `factura_ref`
-  del cargo candidato.
-- `cargos_mismo_importe = 0` **sí** es señal fuerte de que el cargo no existe: o se paga desde otra
-  cuenta fuera del feed (caso **Pepephone**: 6 facturas archivadas y ningún cargo en las cuentas de
-  Alberto → mirar la cuenta de la SL), o **está sin pagar** (caso lavandería Giraldillo de mayo).
-  Ese caso va a «Para tu decisión», no se inventa una conciliación.
-- **Dos filas con el mismo `(importe, mes)` y distinto `drive_file_id`** = la misma factura archivada
-  dos veces (caso CREATE de junio). El banco manda: si solo hay UN cargo, el gasto es uno. Concilia
-  contra la fila con más trazabilidad (la que lleva el nº de factura en el nombre) y deja la otra en
-  «Para tu decisión» para que Alberto confirme el borrado — no borres tú una fila de registro.
+Al conciliar una factura del Paso 4, **escribe SIEMPRE la FK** (`UPDATE facturas_drive SET
+movimiento_id = '<id del movimiento>'`) además del `factura_ref` del movimiento. Si la buscas y no la
+encuentras, escribe el **motivo**: dejarla a NULL la devuelve a la cola mañana y la siguiente pasada
+repetirá tu trabajo.
 
-**Ojo con `factura_ref`: hoy es texto libre** (URL de Drive, nota de EMASESA, texto suelto según qué
-pasada la escribió), así que **no se puede usar como clave** para saber qué factura casa con qué
-cargo — un cruce por `factura_ref` da falsos negativos en las filas viejas. Mientras siga siendo
-texto, el cruce fiable es el de arriba (importe + revisión a ojo de los tres patrones). Lo pendiente
-de verdad es darle a `facturas_drive` una FK real al movimiento; está propuesto a Alberto.
+> **Por qué la FK y no `factura_ref`.** `factura_ref` es TEXT libre y arrastra cuatro formatos según
+> qué pasada lo escribió (URL de Drive, nota de EMASESA, referencia de e-factura, texto suelto): un
+> cruce por ahí da falsos negativos en todas las filas viejas. Y el cruce por importe da falsos
+> positivos en tres patrones reales — **Endesa Dúplex** (el cargo suma +5,78€ del servicio),
+> **PriceLabs** (factura en USD, cargo en EUR: «es por el cambio», dictado de Alberto 11/08/2026) y
+> cualquier **cargo agrupado**. Por eso 11 facturas pasaron desde enero sin que nadie lo notara.
+> `factura_ref` sigue vivo como texto legible para el badge 📎 de `/finanzas`, pero **la relación es
+> la FK**.
 
 ## Paso 4 — Conciliar con el banco (Supabase)
 
