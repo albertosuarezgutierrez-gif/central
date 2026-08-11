@@ -179,7 +179,21 @@ DE MUESTRA (walk-forward). Esa decisión es de Alberto y tendrá su propio spec.
      20:33 UTC, Stooq todavía daba el cierre del viernes 07/08 y la guardia leyó el hueco del fin de
      semana como divergencia → **8 de 21 símbolos vetados en `/analizar` y 5 precios descartados en
      `/puntuar`, ninguno mal** (PR #1363). A la hora de la pasada la fuente casi nunca tiene el cierre
-     del día, así que **hoy este contraste está inerte casi todas las noches** y el latido lo dice.
+     del día, así que este contraste del MISMO día está inerte casi todas las noches y el latido lo dice.
+  3. **Contraste DIFERIDO** (`juzgarDiferido` + `/puntuar`, decisión de Alberto del 11/08/2026 frente a
+     un cron aparte): lo que la fuente SÍ publica es el cierre de la sesión ANTERIOR, y de esa sesión ya
+     tenemos nuestro `precio_ref`. Se comparan las últimas **3 sesiones** por símbolo; lo que la fuente
+     desmiente >2% **anula la tesis y su resultado** (marcadas con el motivo, nunca borradas) ANTES de
+     recalcular `trading_estrategia_stats`. Va lo PRIMERO de la ruta: un `precio_ref` que se acaba de
+     declarar falso no puede servir de referencia a las guardias 1 y 2 de esa misma pasada. **NO toca
+     `trading_paper_orden`** — la compra paper ocurrió. Dos frenos, ambos testeados:
+     · **split/ajuste ≠ precio malo** — si TODAS las sesiones de la ventana están desplazadas por el
+       MISMO factor (±1%), es un reescalado del histórico y no se anula nada (con una sola sesión no hay
+       forma de distinguirlo, y ahí sí se anula: perder una tesis cuesta un dato, conservar una
+       envenenada mueve el torneo);
+     · **fuente rota ≠ corpus envenenado** — si discrepa en más de la mitad de los símbolos (con ≥4
+       símbolos con dato; con menos la fracción no significa nada) no se anula NADA y se avisa.
+     Todo se canta por Telegram y en el latido, incluso cuando la decisión es no anular.
   En `/puntuar` se contrastan solo los símbolos que se van a usar; en `/analizar`, el universo, y el
   símbolo divergente **se salta ENTERO** porque sus velas contaminan EMA/MACD/RSI/ADX. Las respuestas
   traen `vetados`/`descartados`/`divergentes`/`contraste.sinJuzgar` y **hay que cantarlo en el Telegram**.

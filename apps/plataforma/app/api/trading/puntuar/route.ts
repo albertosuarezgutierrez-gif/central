@@ -5,25 +5,91 @@ import { prisma } from '@/lib/db'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { puntuarTesis, agregarStats, aplicarStop, cerrar } from '@central/module-trading'
 import type { Tesis } from '@central/module-trading'
-import { filtrarPreciosAnomalos, resumenDescartes, detectarSuplantaciones, resumenSuplantaciones, contrastarFuentes, resumenDivergencias, resumenDesfase, DIAS_REFERENCIA_MAX } from '@/lib/trading/precios-guardia'
+import { filtrarPreciosAnomalos, resumenDescartes, detectarSuplantaciones, resumenSuplantaciones, contrastarFuentes, resumenDivergencias, resumenDesfase, juzgarDiferido, resumenDiferido, DIAS_REFERENCIA_MAX, type ParDiferido } from '@/lib/trading/precios-guardia'
 import { cierresDeContraste } from '@/lib/trading/precios-contraste'
+import { tgSend } from '@/lib/telegram'
 
 // El contraste con la 2ª fuente sale a internet una vez por símbolo, así que la ruta necesita techo y
 // presupuesto propios (lección de `facturas-scan`: el techo evita el 504, el presupuesto es lo que
-// garantiza que la pasada VUELVE). Solo se contrastan los símbolos que este endpoint va a USAR.
+// garantiza que la pasada VUELVE).
 export const maxDuration = 300
+
+// Sesiones hacia atrás que revisa el contraste diferido. Corta a propósito: la ventana es la que decide
+// cuánto daño puede hacer un reescalado que se cuele (un split desplaza TODO el histórico del símbolo) y
+// cuántas sesiones se recuperan si una pasada no corre. Tres cubre el hueco de un fin de semana largo.
+const SESIONES_DIFERIDO = 3
+const DIAS_DIFERIDO = 10   // naturales, para alcanzar esas 3 sesiones con festivos de por medio
 
 export async function POST(req: NextRequest) {
   if (!isRoutineAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
   const { hoy, precios } = (await req.json()) as { hoy: string; precios: Record<string, number> }
   const hoyMs = new Date(hoy).getTime()
 
+  // 0-pre) CONTRASTE DIFERIDO — se juzga AYER, que es lo que la 2ª fuente sí ha publicado.
+  //
+  // Va lo PRIMERO a propósito: si una sesión pasada resulta desmentida, su `precio_ref` deja de servir
+  // de referencia para las guardias de hoy. Al revés (anular después) las guardias del ×2 y de
+  // suplantación se apoyarían en un número que en esta misma pasada acabamos de declarar falso.
+  //
+  // Una sola salida a internet para todo: la serie que hace falta aquí viene en la MISMA petición que el
+  // cierre de hoy del contraste normal, así que se piden juntos los símbolos del payload y los que
+  // tienen `precio_ref` reciente. El porqué del diseño (splits, fallo global de la fuente) está en
+  // `juzgarDiferido`.
+  const refsRecientes = await prisma.$queryRaw<Array<{ simbolo: string; fecha: Date; precio: number }>>(
+    Prisma.sql`SELECT DISTINCT simbolo, fecha, precio_ref AS precio
+               FROM trading_tesis
+               WHERE fecha < ${hoy}::date AND fecha >= ${hoy}::date - ${DIAS_DIFERIDO}::int AND NOT anulado
+               ORDER BY simbolo, fecha DESC`,
+  )
+  const aContrastarTodo = [...new Set([...Object.keys(precios), ...refsRecientes.map(r => r.simbolo)])]
+  const contraste = await cierresDeContraste(aContrastarTodo, hoy, { presupuestoMs: 120_000 })
+
+  // Pares (cierre publicado de la sesión D, nuestro `precio_ref` de D) de las últimas sesiones. Solo
+  // fechas ANTERIORES a hoy: el cierre de hoy, si lo hubiera, ya lo juzga `contrastarFuentes`.
+  const refPorClave = new Map(refsRecientes.map(r => [`${r.simbolo}|${r.fecha.toISOString().slice(0, 10)}`, r.precio]))
+  const paresDiferido: Record<string, ParDiferido[]> = {}
+  for (const [simbolo, serie] of Object.entries(contraste.series)) {
+    const pares = serie
+      .filter(p => p.fecha < hoy)
+      .slice(-SESIONES_DIFERIDO)
+      .map(p => ({ fecha: p.fecha, fuente: p.cierre, propio: refPorClave.get(`${simbolo}|${p.fecha}`) ?? 0 }))
+      .filter(p => p.propio > 0)
+    if (pares.length > 0) paresDiferido[simbolo] = pares
+  }
+  const diferido = juzgarDiferido(paresDiferido)
+
+  // Anular es una escritura sobre el track record, así que se hace explícita y trazable: la tesis y su
+  // resultado quedan en la tabla marcados con el porqué (la cicatriz), nunca se borran. No se toca
+  // `trading_paper_orden`: la compra paper OCURRIÓ, y reescribir la historia de las órdenes para que
+  // cuadre con lo que hoy sabemos del precio sería inventar un track record distinto del vivido.
+  let tesisAnuladas = 0
+  for (const s of diferido.sospechosas) {
+    const motivo = `2ª fuente desmiente el precio_ref del ${s.fecha}: ${s.propio} vs ${s.fuente} (${(s.desvio * 100).toFixed(1)}%)`
+    const ids = (await prisma.tradingTesis.findMany({
+      where: { simbolo: s.simbolo, fecha: new Date(s.fecha), anulado: false },
+      select: { id: true },
+    })).map(t => t.id)
+    if (ids.length === 0) continue
+    await prisma.tradingTesis.updateMany({ where: { id: { in: ids } }, data: { anulado: true, anuladoMotivo: motivo } })
+    await prisma.tradingTesisResultado.updateMany({ where: { tesisId: { in: ids }, anulado: false }, data: { anulado: true, anuladoMotivo: motivo } })
+    tesisAnuladas += ids.length
+  }
+  const parteDiferido = resumenDiferido(diferido)
+  if (parteDiferido) {
+    console.warn('[trading/puntuar]', parteDiferido)
+    // Se canta SIEMPRE, también cuando no se ha anulado nada: «la fuente discrepa en medio universo y
+    // por eso me he quedado quieto» es justo la clase de silencio que dejó pasar el 03/08.
+    await tgSend(`⚠️ <b>Trading ${hoy} — contraste diferido:</b>\n${parteDiferido}` +
+      (tesisAnuladas > 0 ? `\n→ ${tesisAnuladas} tesis anulada(s); el walk-forward se recalcula sin ellas.` : '')).catch(() => {})
+  }
+
   // 0) GUARDIA DE PRECIOS. Este endpoint recibe los precios de la sesión y hasta el 08/08/2026 se los
   // creía sin más: el 03/08 entró `CVX = 590,17` (cierre real 193,18) y envenenó 12 resultados, uno de
   // ellos a +205 pp — con eso «momentum alcista» pasaba de +0,91 pp a +88,09 pp de media. Ver el
   // porqué completo en `lib/trading/precios-guardia.ts`. La referencia se toma de los `precio_ref`
   // ANTERIORES a hoy: si la pasada viene envenenada, el precio de hoy lo está por las dos puntas y
-  // compararlo consigo mismo no descubriría nada.
+  // compararlo consigo mismo no descubriría nada. Se relee DESPUÉS del contraste diferido: lo que se
+  // acaba de anular ya no puede servir de referencia.
   const refFilas = await prisma.$queryRaw<Array<{ simbolo: string; precio: number }>>(
     Prisma.sql`SELECT DISTINCT ON (simbolo) simbolo, precio_ref AS precio
                FROM trading_tesis
@@ -46,10 +112,11 @@ export async function POST(req: NextRequest) {
   // Puntuarla no rescataría nada — inventaría un veredicto para una señal que nunca existió.
   const pendientes = await prisma.tradingTesis.findMany({ where: { resultado: null, anulado: false } })
 
-  // 0-bis) SEGUNDO PAR DE OJOS. La guardia de arriba solo caza el ×2; un error del 10% pasa limpio y
-  // mueve el retorno de la tesis 10 puntos sin que nada chirríe. Se contrasta contra la fuente propia
-  // del servidor (Stooq/Yahoo) SOLO los símbolos que este endpoint va a usar de verdad — puntuar una
-  // tesis vencida o mover un stop —, que son un puñado, no el universo entero.
+  // 0-bis) SEGUNDO PAR DE OJOS del MISMO día. La guardia del ×2 solo caza lo escandaloso; un error del
+  // 10% pasa limpio y mueve el retorno de la tesis 10 puntos sin que nada chirríe. Solo entra aquí el
+  // cierre de la MISMA sesión: si la fuente todavía publica el de ayer sale en `desfasados`, no veta a
+  // nadie (ver `juzgarPuntos`) y ese ayer lo juzga el contraste diferido de arriba. Los cierres ya se
+  // pidieron en la única salida a internet de la ruta; aquí solo se evalúan.
   const posicionesPrevias = await prisma.tradingPaperPosicion.findMany({ select: { simbolo: true } })
   const aUsar = [...new Set([
     ...pendientes
@@ -57,10 +124,7 @@ export async function POST(req: NextRequest) {
       .map(t => t.simbolo),
     ...posicionesPrevias.map(p => p.simbolo),
   ])].filter(s => propios[s] !== undefined)
-  // Solo entra al contraste el cierre de la MISMA sesión; si la fuente todavía publica el de ayer sale
-  // en `desfasados` y no veta nada (ver `juzgarPuntos` en `lib/trading/precios-guardia.ts`).
-  const contraste = await cierresDeContraste(aUsar, hoy, { presupuestoMs: 120_000 })
-  const desfase = resumenDesfase(contraste.desfasados)
+  const desfase = resumenDesfase(contraste.desfasados.filter(d => aUsar.includes(d.simbolo)))
   if (desfase) console.warn('[trading/puntuar]', desfase)
   // El contraste se evalúa SOLO sobre los símbolos que se intentaron. Pasarle el mapa entero metería
   // en `sinContraste` a los ~100 que nunca se quisieron contrastar, y el parte diría «sin 2ª fuente»
@@ -144,6 +208,8 @@ export async function POST(req: NextRequest) {
     true,
     `${puntuadas} tesis puntuadas · ${cerradas} stop(s) · ${Object.keys(stats).length} estrategias` +
       (resumen ? ` · ⚠️ ${resumen}` : '') +
+      (tesisAnuladas > 0 ? ` · ${tesisAnuladas} tesis anulada(s) por la 2ª fuente` : '') +
+      (parteDiferido ? ` · ${parteDiferido}` : '') +
       (desfase ? ` · ${desfase}` : ''),
   )
 
@@ -156,5 +222,6 @@ export async function POST(req: NextRequest) {
     suplantados,
     divergentes,
     contraste: { consultados: contraste.consultados, sinDato: contraste.sinDato, desfasados: contraste.desfasados, sinTiempo: contraste.sinTiempo, sinJuzgar: sinContraste },
+    diferido: { ...diferido, tesisAnuladas },
   })
 }
