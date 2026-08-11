@@ -32,6 +32,15 @@
 
 ---
 
+### 🧾 (11/08/2026) Conciliada la factura 47/2026 de Jaime Salas (electricidad Socorro 24)
+- Alberto preguntó por el cargo `TRANSF. 2100 FACTURA 472026 REPARACIN ELECTRICIDAD` −278,30€ (Kutxa, 07/08),
+  que salía ❌ en `/finanzas`. La factura SÍ estaba archivada desde el 07/08 (Drive `1BNr2lF0…`, fila en
+  `facturas_drive`, proveedor `jaime-salas-electricidad`); lo que faltaba era la conciliación bancaria.
+- Causa: la pasada del 07/08 archivó la factura ANTES de que el cargo entrara por PSD2 (feed iba por el 06/08),
+  y al importarse después cayó con `destino='personal'` por defecto — nadie volvió a recogerlo.
+- Movimiento `1b1204d7` actualizado: `turistico_pisos` · `prop_house_sevillana` · `conciliado=true` ·
+  `destino_confirmado=true` · `factura_ref` al PDF de Drive. Deducible al 100% (gasto corriente).
+
 ### 📈 (11/08/2026) /trading rediseñado: hero con las 2 respuestas (empresas + rentabilidad)
 - Petición de Alberto: la página daba mucha info; lo que importa es qué empresas interesan y cómo va la cartera.
 - Hero doble arriba (💡 señales 📈 + top ranking + compras del agente · 📊 mediana vs SPY + curva + tramo escalera);

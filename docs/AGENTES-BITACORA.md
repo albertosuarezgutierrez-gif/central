@@ -15,6 +15,13 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-11 · facturas-correo** · hizo: pasada ad-hoc a petición de Alberto sobre el cargo −278,30€
+  `FACTURA 472026 REPARACIN ELECTRICIDAD` (Kutxa 07/08) — la factura 47/2026 de Jaime Salas ya estaba
+  archivada (Drive `1BNr2lF0…` + `facturas_drive`), faltaba conciliar: movimiento `1b1204d7` →
+  `turistico_pisos`/`prop_house_sevillana`/`conciliado=true`/`factura_ref`. dudas: —; fallos: el cargo
+  llegó por PSD2 DESPUÉS de la pasada del 07/08 y ninguna pasada posterior lo recogió (lección: cuando
+  una pasada deja «pendiente de que entre el movimiento», hay que reintentarlo en las siguientes);
+  PRs/commits: esta rama.
 - **2026-08-11 · mercado-booking** · hizo: pasada de 12 ventanas (tope de la rutina) del plan de 120
   candidatas — Bienal de Flamenco 3er finde (26-28 sep 2026, evento), ronda 2 (24-26 abr 2027) y ronda
   3 (13-15 oct 2026) de profundidad de bucket, ×4 aforos (2/4/5/12) cada una; 120 comps reales escritos
