@@ -81,12 +81,17 @@ function BloqueCartera({ cartera, curva, abierta }: { cartera: Cartera; curva: P
 export default function CarteraEstudio() {
   const [carteras, setCarteras] = useState<Cartera[]>([])
   const [curvas, setCurvas] = useState<Record<string, PuntoCurva[]>>({})
-  const [estado, setEstado] = useState<'cargando' | 'ok' | 'error'>('cargando')
+  const [estado, setEstado] = useState<'cargando' | 'ok' | 'sin-acceso' | 'error'>('cargando')
 
   useEffect(() => {
     fetch('/api/trading/cartera-estudio')
-      .then(r => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then(j => { setCarteras(j.carteras ?? []); setCurvas(j.curvas ?? {}); setEstado('ok') })
+      .then(r => {
+        // 401/403 = la valoración exige sesión de administrador (el endpoint no acepta el token de
+        // invitado). Decirle al invitado «fuente caída» sería vestir un «no puedes» de avería.
+        if (r.status === 401 || r.status === 403) { setEstado('sin-acceso'); return null }
+        return r.ok ? r.json() : Promise.reject(new Error(String(r.status)))
+      })
+      .then(j => { if (j) { setCarteras(j.carteras ?? []); setCurvas(j.curvas ?? {}); setEstado('ok') } })
       .catch(() => setEstado('error'))
   }, [])
 
@@ -99,6 +104,7 @@ export default function CarteraEstudio() {
         </span>
       </div>
       {estado === 'cargando' && <div style={{ color: 'var(--muted)', fontSize: 13, marginTop: 8 }}>Valorando las carteras con precios de mercado…</div>}
+      {estado === 'sin-acceso' && <div style={{ color: 'var(--muted)', fontSize: 13, marginTop: 8 }}>La valoración en € requiere sesión de administrador — no está disponible en el acceso de invitado. Las cifras del forward (mediana vs SPY) sí son públicas, arriba.</div>}
       {estado === 'error' && <div style={{ color: 'var(--muted)', fontSize: 13, marginTop: 8 }}>Sin precios ahora mismo (fuente caída) — recarga en un rato.</div>}
       {estado === 'ok' && carteras.map((c, i) => (
         <BloqueCartera key={c.cohorte} cartera={c} curva={curvas[c.cohorte] ?? []} abierta={i === carteras.length - 1} />

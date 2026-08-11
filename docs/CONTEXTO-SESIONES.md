@@ -39,7 +39,8 @@
 - Nuevo `DetallePerezoso.tsx` (details con montaje perezoso — la cartera de estudio ya no paga fetch+Recharts si nadie la abre).
 - Honestidad de datos: banner «datos parciales» si falla una query (antes un fallo de BD pintaba el 🌱 vacío),
   alpha/IPO null ya no salen como ⚠️/0€, celda de señal «no calculado» fuera del top-20; fixes móvil 320px + hex→tokens.
-- Rama `claude/investment-lab-page-2r0yaa` (PR draft). Revisión previa con agente de diseño.
+- **PR #1368 MERGEADO y verificado en producción** (hero servido, 0 errores runtime; revisión previa con
+  agente de diseño). Follow-up: 401 de `/api/trading/cartera-estudio` al invitado ya no se pinta como «fuente caída».
 
 ### 🔧 (10/08/2026) Pricing: el reparto mes/global del factor de demanda deja de perderse (#1361)
 - `factorDemandaFecha` decidía por fecha si la demanda se mueve con la ocupación DEL MES o la anual,
