@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { puntuarTesis, agregarStats, aplicarStop, cerrar } from '@central/module-trading'
 import type { Tesis } from '@central/module-trading'
-import { filtrarPreciosAnomalos, resumenDescartes, detectarSuplantaciones, resumenSuplantaciones, contrastarFuentes, resumenDivergencias, DIAS_REFERENCIA_MAX } from '@/lib/trading/precios-guardia'
+import { filtrarPreciosAnomalos, resumenDescartes, detectarSuplantaciones, resumenSuplantaciones, contrastarFuentes, resumenDivergencias, resumenDesfase, DIAS_REFERENCIA_MAX } from '@/lib/trading/precios-guardia'
 import { cierresDeContraste } from '@/lib/trading/precios-contraste'
 
 // El contraste con la 2ª fuente sale a internet una vez por símbolo, así que la ruta necesita techo y
@@ -57,7 +57,11 @@ export async function POST(req: NextRequest) {
       .map(t => t.simbolo),
     ...posicionesPrevias.map(p => p.simbolo),
   ])].filter(s => propios[s] !== undefined)
+  // Solo entra al contraste el cierre de la MISMA sesión; si la fuente todavía publica el de ayer sale
+  // en `desfasados` y no veta nada (ver `juzgarPuntos` en `lib/trading/precios-guardia.ts`).
   const contraste = await cierresDeContraste(aUsar, hoy, { presupuestoMs: 120_000 })
+  const desfase = resumenDesfase(contraste.desfasados)
+  if (desfase) console.warn('[trading/puntuar]', desfase)
   // El contraste se evalúa SOLO sobre los símbolos que se intentaron. Pasarle el mapa entero metería
   // en `sinContraste` a los ~100 que nunca se quisieron contrastar, y el parte diría «sin 2ª fuente»
   // de un trabajo que no se pidió: un recuento que exagera lo que no se sabe engaña igual que uno que
@@ -139,7 +143,8 @@ export async function POST(req: NextRequest) {
     'trading_puntuar',
     true,
     `${puntuadas} tesis puntuadas · ${cerradas} stop(s) · ${Object.keys(stats).length} estrategias` +
-      (resumen ? ` · ⚠️ ${resumen}` : ''),
+      (resumen ? ` · ⚠️ ${resumen}` : '') +
+      (desfase ? ` · ${desfase}` : ''),
   )
 
   // `descartados` viaja en la respuesta para que la sesión lo cante en su resumen de Telegram: un precio
@@ -150,6 +155,6 @@ export async function POST(req: NextRequest) {
     descartados,
     suplantados,
     divergentes,
-    contraste: { consultados: contraste.consultados, sinDato: contraste.sinDato, sinTiempo: contraste.sinTiempo, sinJuzgar: sinContraste },
+    contraste: { consultados: contraste.consultados, sinDato: contraste.sinDato, desfasados: contraste.desfasados, sinTiempo: contraste.sinTiempo, sinJuzgar: sinContraste },
   })
 }

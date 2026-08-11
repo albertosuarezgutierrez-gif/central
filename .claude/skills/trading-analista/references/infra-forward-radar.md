@@ -172,8 +172,14 @@ DE MUESTRA (walk-forward). Esa decisión es de Alberto y tendrá su propio spec.
   1. **Guardia del ×2** (`lib/trading/precios-guardia.ts::filtrarPreciosAnomalos`) contra el último
      `precio_ref` ANTERIOR a hoy — nunca el de hoy, que vendría envenenado por las dos puntas.
   2. **Contraste con 2ª fuente** (`contrastarFuentes` + `precios-contraste.ts`): el MISMO cierre pedido
-     a Stooq→Yahoo, tolerancia 2%, presupuesto de tiempo y concurrencia 8. El cierre de contraste se
-     descarta si es más viejo que 5 días (comparar con la semana pasada fabrica divergencias falsas).
+     a Stooq→Yahoo, tolerancia 2%, presupuesto de tiempo y concurrencia 8. **Solo vale el cierre de la
+     MISMA sesión** (`juzgarPuntos`): si la fuente aún publica el de ayer sale en `desfasados`, y eso
+     NO veta — es un «no lo sé», y se canta en el latido. Hasta el 10/08/2026 se aceptaba cualquier
+     cierre de los últimos 5 días y se usaba *como si* fuera el de hoy: esa noche la pasada corrió a las
+     20:33 UTC, Stooq todavía daba el cierre del viernes 07/08 y la guardia leyó el hueco del fin de
+     semana como divergencia → **8 de 21 símbolos vetados en `/analizar` y 5 precios descartados en
+     `/puntuar`, ninguno mal** (PR #1363). A la hora de la pasada la fuente casi nunca tiene el cierre
+     del día, así que **hoy este contraste está inerte casi todas las noches** y el latido lo dice.
   En `/puntuar` se contrastan solo los símbolos que se van a usar; en `/analizar`, el universo, y el
   símbolo divergente **se salta ENTERO** porque sus velas contaminan EMA/MACD/RSI/ADX. Las respuestas
   traen `vetados`/`descartados`/`divergentes`/`contraste.sinJuzgar` y **hay que cantarlo en el Telegram**.

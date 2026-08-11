@@ -10,7 +10,7 @@ import {
 } from '@central/module-trading'
 import type { Vela, Fundamentales } from '@central/module-trading'
 import { datosYahoo, lineaEarningsProximos, type FechaEarnings } from '@/lib/trading/earnings-yahoo'
-import { filtrarPreciosAnomalos, resumenDescartes, detectarSuplantaciones, resumenSuplantaciones, contrastarFuentes, resumenDivergencias, DIAS_REFERENCIA_MAX } from '@/lib/trading/precios-guardia'
+import { filtrarPreciosAnomalos, resumenDescartes, detectarSuplantaciones, resumenSuplantaciones, contrastarFuentes, resumenDivergencias, resumenDesfase, DIAS_REFERENCIA_MAX } from '@/lib/trading/precios-guardia'
 import { cierresDeContraste } from '@/lib/trading/precios-contraste'
 
 type Entrada = { simbolo: string; velas: Vela[]; fundamentales?: Fundamentales; opsRecientes?: number; factorScore?: number }
@@ -109,9 +109,13 @@ export async function POST(req: NextRequest) {
   // y contamina los indicadores del día igual de bien. Se pregunta el MISMO cierre a la fuente propia
   // del servidor (Stooq con respaldo Yahoo) y el que no cuadre se veta. Presupuesto acotado: los
   // símbolos que no dan tiempo salen «sin contraste», que deja pasar el precio — un contraste a medias
-  // nunca puede bloquear la pasada entera.
+  // nunca puede bloquear la pasada entera. Solo entra al contraste el cierre de la MISMA sesión: si la
+  // fuente aún va por detrás (lo normal a las 20:30 UTC), sale en `desfasados` y no veta a nadie — ver
+  // `juzgarPuntos` en `lib/trading/precios-guardia.ts`.
   const contraste = await cierresDeContraste(Object.keys(propios), fecha, { presupuestoMs: 90_000 })
   const { divergentes, sinContraste } = contrastarFuentes(propios, contraste.cierres)
+  const desfase = resumenDesfase(contraste.desfasados)
+  if (desfase) console.warn('[trading/analizar]', desfase)
 
   const vetados = new Set([
     ...descartados.map(d => d.simbolo),
@@ -219,7 +223,8 @@ export async function POST(req: NextRequest) {
     true,
     `${ideas.length} símbolo(s) analizados · ${ideas.filter(i => i.operada).length} operado(s) en paper` +
       (vetados.size > 0 ? ` · ⚠️ ${vetados.size} vetado(s) por precio no fiable` : '') +
-      (sinContraste.length > 0 ? ` · ${sinContraste.length} sin 2ª fuente` : ''),
+      (sinContraste.length > 0 ? ` · ${sinContraste.length} sin 2ª fuente` : '') +
+      (desfase ? ` · ${desfase}` : ''),
   )
 
   ideas.sort((a, b) => b.confianza - a.confianza)
@@ -228,6 +233,6 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     fecha, top: ideas.slice(0, 5), total: ideas.length,
     vetados: [...vetados], descartados, suplantados, divergentes,
-    contraste: { consultados: contraste.consultados, sinDato: contraste.sinDato, sinTiempo: contraste.sinTiempo, sinJuzgar: sinContraste },
+    contraste: { consultados: contraste.consultados, sinDato: contraste.sinDato, desfasados: contraste.desfasados, sinTiempo: contraste.sinTiempo, sinJuzgar: sinContraste },
   })
 }

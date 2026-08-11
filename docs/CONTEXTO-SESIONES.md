@@ -41,6 +41,19 @@
   Migración `2026-08-10_pricing_applied_demanda.sql` aplicada antes que el código. Detalle en skill
   `pricing-agente` (`estado-y-protocolo.md`).
 
+### 🛡️ (10/08/2026) La 2ª fuente vetaba precios BUENOS: el contraste comparaba contra la sesión anterior
+- La pasada del lunes 10/08 corrió **entera y por primera vez con las 4 huellas + el latido
+  `trading_analizar`** (20:33 UTC). Pero vetó 8 de 21 símbolos en `/analizar` y descartó 5 precios
+  en `/puntuar` — **ninguno estaba mal**.
+- Causa: la pasada corre a las 20:33 UTC, media hora tras el cierre de Wall Street; Stooq/Yahoo aún
+  publicaban el cierre del **viernes 07/08** (verificado contra IBKR) y `DIAS_CONTRASTE_MAX = 5` lo
+  aceptaba *como si fuera el de hoy*. Cada «divergencia» era el hueco viernes→lunes de esa acción.
+- Arreglo (**PR #1363**): el contraste **solo acepta el cierre de la MISMA sesión** (`juzgarPuntos`,
+  puro y testeado con los datos reales del 10/08); si la fuente va por detrás → `desfasados`, que no
+  veta y se canta en el latido. Consecuencia asumida: **el contraste queda inerte casi todas las
+  noches** a esta hora — visible, no silencioso. Pendiente de decisión de Alberto: contraste diferido
+  (comparar el cierre publicado contra nuestro `precio_ref` de ESA fecha) o cron aparte unas horas después.
+
 ### 💸 (10/08/2026) Decisión: Alberto deja de operar en real hasta aviso del agente
 - Dos operaciones manuales reales en IBKR hoy con stops demasiado pegados: SPCX (270 acc.
   a 134,25 $, stop −2,35% saltó en 1 h, −855,10 $; luego recuperó POR ENCIMA de la entrada)
