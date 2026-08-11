@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-11T06:18:17Z",
-  "sha": "4fc0cb63eb37c398d3d35f0f6d55c0fda788e640",
+  "generadoEn": "2026-08-11T06:23:25Z",
+  "sha": "8629824baee845c4e5ba9c9ebb5ec597a03ebfec",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -48495,7 +48495,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "66d14cc55254"
+      "hash": "9a6f1c126fd9"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/trading/DetallePerezoso.tsx",
