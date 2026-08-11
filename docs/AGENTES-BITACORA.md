@@ -15,6 +15,14 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-11 · facturas-correo (verificación + fix de método)** · hizo: verificó las 38 facturas
+  de 2026 contra el banco tras el barrido de #1372 — 30 casadas, 1 duplicada (CREATE junio), 7 huecos
+  reales (Pepephone ene–jun y Giraldillo mayo, ambos sin NINGÚN cargo). Añadido **Paso 4.0
+  obligatorio** a la skill: cruzar `facturas_drive` del año contra el banco en toda pasada, con los 3
+  falsos positivos del cruce por importe documentados. dudas: Pepephone y Giraldillo mayo esperan
+  respuesta de Alberto; fallos: **`factura_ref` es texto libre con 4 formatos** → un cruce por
+  referencia da falsos negativos en las filas viejas y NO sirve como clave; propuesta de FK real
+  entre `facturas_drive` y `movimientos_bancarios` a decisión de Alberto; PRs/commits: esta rama.
 - **2026-08-11 · facturas-correo** · hizo: Paso 0 salud OK (Vía B al día, última copia hoy 11/08
   IONOS; backlog `PDF-pendiente`/`Revisar` vacío; `agente_salud` actualizado ok=true dias_caido=0);
   Paso 1 sin candidatos nuevos — 2 hilos descartados y etiquetados `Procesada` (recordatorio de cobro

@@ -11,7 +11,8 @@ Google Drive (`FACTURAS Apartamentos/2026/<MM-Mes-2026>`) y los concilia contra
 `movimientos_bancarios` en Supabase (`wswbehlcuxqxyinousql`). Entorno efímero: cada ejecución
 es una pasada completa e idempotente (etiqueta Gmail `Facturas/Procesada` para no reprocesar).
 Flujo: Paso 0 (salud+backlog) → 1/1-bis (candidatos Gmail + subidas manuales Drive) →
-2 (clasificar) → 3 (archivar) → 4 (conciliar banco) → 5 (etiquetar+resumen) → auto-informe.
+2 (clasificar) → 3 (archivar) → **4.0 (barrido del backlog `facturas_drive` ↔ banco, OBLIGATORIO)** →
+4 (conciliar banco) → 5 (etiquetar+resumen) → auto-informe.
 
 ## 🚨 No romper / crítico
 
@@ -20,6 +21,10 @@ Flujo: Paso 0 (salud+backlog) → 1/1-bis (candidatos Gmail + subidas manuales D
   `1lQXsajYn-7zkupIpEwvA_Sdr2BI95pbh` · raíz `2026` `1M7PwjU3MSJ7zb83rhlXzTx1O2RlTad3O` ·
   `_subir_aqui` `1JlK9JXIpqlbDlOawtAFlk4_X7bn0Onjf` · `_DUPLICADOS_BORRAR`
   `1Au-_pFEPqvwZN_a7xKNZzVZOWGMAAO7Z`. Mapa en `docs/DRIVE-ESTRUCTURA.md`.
+- **«Sin candidatos nuevos» NO es «todo conciliado» (11/08/2026).** Una pasada que solo mira el
+  correo puede cerrar en verde con facturas archivadas hace meses sin cargo casado — pasó con 11
+  desde enero, mientras el cron cerraba «sin novedades». **Paso 4.0 (barrido del backlog) es
+  obligatorio en TODA pasada**, ver `references/03-conciliacion-y-cierre.md`.
 - **NUNCA inventes un importe.** Si el PDF no se puede leer: cadena de vías (B Apps Script→
   `_buzon_pdf` → A MCP `gmail-adjuntos` → OCR/visual → conciliación inversa por banco →
   etiqueta `Facturas/PDF-pendiente`).

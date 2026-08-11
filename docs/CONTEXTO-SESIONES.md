@@ -32,6 +32,18 @@
 
 ---
 
+### 🔁 (11/08/2026) El barrido del backlog pasa a ser paso OBLIGATORIO de `facturas-correo`
+- Cierre del hilo de la factura 47/2026 (#1372). Verificación de las 38 facturas de 2026 contra el banco:
+  30 casadas, 1 fila duplicada (CREATE junio) y **7 huecos reales** — Pepephone ene–jun (6, sin ningún
+  cargo en las cuentas de Alberto) y lavandería Giraldillo de mayo (504,57€, sin cargo).
+- Nuevo **Paso 4.0** en la skill: toda pasada cruza `facturas_drive` del año contra el banco ANTES de
+  conciliar lo del día. Documentados los 3 falsos positivos del cruce por importe (Endesa Dúplex +5,78€,
+  PriceLabs USD→EUR, cargos agrupados) para que nadie los «arregle» rompiendo un cargo bueno.
+- **Hallazgo estructural pendiente de decisión:** `facturas_drive` y `movimientos_bancarios` NO tienen
+  relación; el único puente es `factura_ref`, texto libre con 4 formatos distintos según qué pasada lo
+  escribió. Por eso la pregunta «¿qué factura no tiene cargo?» no se puede contestar sin repasar a ojo,
+  y por eso 11 facturas pasaron desde enero sin que nadie lo notara. Propuesto: FK real. PR draft.
+
 ### 🧾 (11/08/2026) Conciliada la factura 47/2026 de Jaime Salas (electricidad Socorro 24)
 - Alberto preguntó por el cargo `TRANSF. 2100 FACTURA 472026 REPARACIN ELECTRICIDAD` −278,30€ (Kutxa, 07/08),
   que salía ❌ en `/finanzas`. La factura SÍ estaba archivada desde el 07/08 (Drive `1BNr2lF0…`, fila en

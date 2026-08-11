@@ -1,5 +1,59 @@
 # Pasos 4–5 — Conciliación bancaria, resumen y protocolo de cierre
 
+## Paso 4.0 — Barrido del BACKLOG (obligatorio, ANTES de conciliar lo de hoy)
+
+> **Por qué existe este paso (11/08/2026).** Alberto preguntó por un cargo de 278,30€ que le salía
+> ❌ en `/finanzas`: la factura (47/2026, Jaime Salas) llevaba archivada desde el 07/08 — lo que
+> faltaba era la conciliación. La pasada del 07/08 archivó el PDF ANTES de que el cargo entrara por
+> PSD2, lo dejó como «pendiente de que entre el movimiento»… y **ninguna pasada posterior volvió a
+> mirarlo**. Al barrer 2026 aparecieron **10 más** en el mismo estado desde enero. Ese mismo día la
+> pasada programada había cerrado como «sin novedades» (#1369): mirar SOLO el correo nuevo hace que
+> el «no hay novedades» sea verdad sobre la bandeja y **mentira sobre la contabilidad**.
+>
+> Una factura archivada sin cargo casado no es un pendiente que se olvida: el movimiento se queda
+> con su `destino` por defecto (normalmente `personal`) y **el gasto desaparece del radar de
+> deducibles**. Es la regla de «dato que NO hay ≠ dato que NO se ha mirado» aplicada al dinero.
+
+**Regla: toda pasada empieza cruzando `facturas_drive` del año en curso contra el banco.** No es
+opcional ni «si da tiempo»: es más barato que volver a perder un gasto deducible.
+
+```sql
+SELECT fd.proveedor, fd.mes, fd.importe, fd.nombre_archivo, fd.drive_file_id,
+  (SELECT count(*) FROM movimientos_bancarios mb JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+     WHERE cb.cuenta_id = '<cuenta_id de Alberto>'::uuid
+       AND abs(mb.importe + fd.importe) < 0.02
+       AND (mb.duplicado_estado IS NULL OR mb.duplicado_estado <> 'ignorado')) AS cargos_mismo_importe,
+  (SELECT count(*) FROM movimientos_bancarios mb JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+     WHERE cb.cuenta_id = '<cuenta_id de Alberto>'::uuid
+       AND abs(mb.importe + fd.importe) < 0.02 AND mb.conciliado
+       AND (mb.duplicado_estado IS NULL OR mb.duplicado_estado <> 'ignorado')) AS cargos_conciliados
+FROM facturas_drive fd
+WHERE fd.anio = date_part('year', current_date)
+ORDER BY cargos_conciliados, fd.mes DESC;
+```
+
+**Cómo leer el resultado — NINGUNA de las dos columnas es la verdad por sí sola:**
+
+- `cargos_conciliados = 0` **no** significa «falta conciliar». Casa por importe exacto, así que da
+  falso positivo en los tres patrones documentados más abajo: **Endesa Dúplex** (el cargo lleva
+  +5,78€ del servicio), **PriceLabs** (factura en USD, cargo en EUR — «es por el cambio», dictado de
+  Alberto 11/08/2026) y cualquier cargo agrupado. Antes de tocar nada, comprueba el `factura_ref`
+  del cargo candidato.
+- `cargos_mismo_importe = 0` **sí** es señal fuerte de que el cargo no existe: o se paga desde otra
+  cuenta fuera del feed (caso **Pepephone**: 6 facturas archivadas y ningún cargo en las cuentas de
+  Alberto → mirar la cuenta de la SL), o **está sin pagar** (caso lavandería Giraldillo de mayo).
+  Ese caso va a «Para tu decisión», no se inventa una conciliación.
+- **Dos filas con el mismo `(importe, mes)` y distinto `drive_file_id`** = la misma factura archivada
+  dos veces (caso CREATE de junio). El banco manda: si solo hay UN cargo, el gasto es uno. Concilia
+  contra la fila con más trazabilidad (la que lleva el nº de factura en el nombre) y deja la otra en
+  «Para tu decisión» para que Alberto confirme el borrado — no borres tú una fila de registro.
+
+**Ojo con `factura_ref`: hoy es texto libre** (URL de Drive, nota de EMASESA, texto suelto según qué
+pasada la escribió), así que **no se puede usar como clave** para saber qué factura casa con qué
+cargo — un cruce por `factura_ref` da falsos negativos en las filas viejas. Mientras siga siendo
+texto, el cruce fiable es el de arriba (importe + revisión a ojo de los tres patrones). Lo pendiente
+de verdad es darle a `facturas_drive` una FK real al movimiento; está propuesto a Alberto.
+
 ## Paso 4 — Conciliar con el banco (Supabase)
 
 > **Política de auto-confirmación (decisión de Alberto: «auto-confirma si cuadra exacto»).**
