@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Auth ────────────────────────────────────────────────────────────────────
+// La vertical Mariscos autentica contra la MISMA tabla `cuentas` de la BD compartida.
+model Cuenta {
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre       String
+  email        String
+  passwordHash String? @map("password_hash")
+  sessionJti   String? @map("session_jti")
+
+  @@map("cuentas")
+}
+
+// ─── Partida (recepción de género con datos del albarán) ───────────────────────
+// Ancla de trazabilidad: todo lo que se venda conserva su `lote_origen`.
+model MariscosPartida {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId          String    @map("cuenta_id") @db.Uuid
+  producto          String
+  nombreCientifico  String?   @map("nombre_cientifico")
+  proveedor         String?
+  loteOrigen        String    @map("lote_origen")
+  albaran           String?
+  marea             String?
+  barco             String?
+  zonaCaptura       String?   @map("zona_captura")
+  artePesca         String?   @map("arte_pesca")
+  metodoProduccion  String?   @map("metodo_produccion")
+  fechaCaptura      DateTime? @map("fecha_captura") @db.Date
+  fechaRecepcion    DateTime  @default(now()) @map("fecha_recepcion") @db.Date
+  fechaCaducidad    DateTime? @map("fecha_caducidad") @db.Date
+  calibre           String?
+  pesoRecibidoKg    Decimal   @default(0) @map("peso_recibido_kg") @db.Decimal
+  precioCompraKg    Decimal?  @map("precio_compra_kg") @db.Decimal
+  precioVentaKg     Decimal?  @map("precio_venta_kg") @db.Decimal
+  estado            String    @default("en_camara")
+  notas             String?
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  envasados MariscosEnvasado[]
+
+  @@index([cuentaId])
+  @@map("mariscos_partidas")
+}
+
+// ─── Envasado (unidad de venta; HEREDA el lote de la partida) ───────────────────
+model MariscosEnvasado {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId       String   @map("cuenta_id") @db.Uuid
+  partidaId      String   @map("partida_id") @db.Uuid
+  canal          String   @default("mostrador") // mostrador|catering|hotel
+  pesoKg         Decimal  @default(0) @map("peso_kg") @db.Decimal
+  precioKg       Decimal  @default(0) @map("precio_kg") @db.Decimal
+  importe        Decimal  @default(0) @db.Decimal
+  fechaEnvasado  DateTime @default(now()) @map("fecha_envasado") @db.Date
+  fechaCaducidad DateTime? @map("fecha_caducidad") @db.Date
+  cliente        String?
+  codigo         String?
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  partida MariscosPartida @relation(fields: [partidaId], references: [id], onDelete: Cascade)
+
+  @@index([cuentaId])
+  @@index([partidaId])
+  @@map("mariscos_envasados")
+}
