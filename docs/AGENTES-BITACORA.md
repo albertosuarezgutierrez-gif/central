@@ -24,6 +24,22 @@
   `_DUPLICADOS_BORRAR` acumula 18 avisos sin resolver desde el 10/07 — no se auditó zombis hoy (sin
   avisos nuevos que crear), Alberto podría querer una pasada de limpieza dedicada; fallos: —;
   PRs/commits: — (solo Gmail/Drive/Supabase vía MCP, esta entrada de bitácora).
+- **2026-08-11 · facturas-correo (ad-hoc, Alberto)** · hizo: pasada ad-hoc a petición de Alberto sobre el cargo −278,30€
+  `FACTURA 472026 REPARACIN ELECTRICIDAD` (Kutxa 07/08) — la factura 47/2026 de Jaime Salas ya estaba
+  archivada (Drive `1BNr2lF0…` + `facturas_drive`), faltaba conciliar: movimiento `1b1204d7` →
+  `turistico_pisos`/`prop_house_sevillana`/`conciliado=true`/`factura_ref`. dudas: —; fallos: el cargo
+  llegó por PSD2 DESPUÉS de la pasada del 07/08 y ninguna pasada posterior lo recogió (lección: cuando
+  una pasada deja «pendiente de que entre el movimiento», hay que reintentarlo en las siguientes);
+  PRs/commits: esta rama.
+- **2026-08-11 · facturas-correo (2ª pasada)** · hizo: barrido de TODO 2026 cruzando `facturas_drive`
+  contra `movimientos_bancarios` — 10 conciliaciones más (8 EMASESA ene/mar/may con su `propiedad_id`,
+  CREATE 123,45€, IONOS 1,82€). dudas: 5 casos dejados a Alberto (Pepephone sin cargo en sus cuentas;
+  Giraldillo mayo 504,57€ sin cargo; PriceLabs USD↔EUR; Endesa Dúplex 24/07 con cargo y sin PDF; fila
+  duplicada CREATE en `facturas_drive`); fallos: el `drive_url` de la factura IONOS apunta a un Google
+  **Doc**, no al PDF — archivo mal hecho en su día. **Fallo de método, para el entrenador:** la pasada
+  programada de HOY cerró como «sin novedades» (#1369) teniendo 10 facturas archivadas sin casar desde
+  enero — mira solo el correo nuevo, nunca el backlog de `facturas_drive` sin cargo conciliado. Ese
+  cruce debería ser parte fija del Paso 4; PRs/commits: esta rama.
 - **2026-08-11 · mercado-booking** · hizo: pasada de 12 ventanas (tope de la rutina) del plan de 120
   candidatas — Bienal de Flamenco 3er finde (26-28 sep 2026, evento), ronda 2 (24-26 abr 2027) y ronda
   3 (13-15 oct 2026) de profundidad de bucket, ×4 aforos (2/4/5/12) cada una; 120 comps reales escritos

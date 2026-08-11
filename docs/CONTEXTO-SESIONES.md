@@ -32,6 +32,28 @@
 
 ---
 
+### 🧾 (11/08/2026) Conciliada la factura 47/2026 de Jaime Salas (electricidad Socorro 24)
+- Alberto preguntó por el cargo `TRANSF. 2100 FACTURA 472026 REPARACIN ELECTRICIDAD` −278,30€ (Kutxa, 07/08),
+  que salía ❌ en `/finanzas`. La factura SÍ estaba archivada desde el 07/08 (Drive `1BNr2lF0…`, fila en
+  `facturas_drive`, proveedor `jaime-salas-electricidad`); lo que faltaba era la conciliación bancaria.
+- Causa: la pasada del 07/08 archivó la factura ANTES de que el cargo entrara por PSD2 (feed iba por el 06/08),
+  y al importarse después cayó con `destino='personal'` por defecto — nadie volvió a recogerlo.
+- Movimiento `1b1204d7` actualizado: `turistico_pisos` · `prop_house_sevillana` · `conciliado=true` ·
+  `destino_confirmado=true` · `factura_ref` al PDF de Drive. Deducible al 100% (gasto corriente).
+- **Barrido del mismo fallo en todo 2026** (Alberto: «mira si hay más facturas sin conciliar»): 10 más
+  casadas — 8 recibos EMASESA (ene/mar/may, los 3 pisos, con `propiedad_id`; los de mar y may traen el
+  nº de factura en el propio concepto), CREATE ventilador Socorro 123,45€ e IONOS 1,82€.
+- **PriceLabs resuelto por Alberto (11/08): «es por el cambio».** Factura SIEMPRE 64,96 USD el día 8 de
+  cada mes (feb–jul) y el banco carga el euro del día — 54,99 · 55,91 · 55,59 · 55,38 · 56,38 · 56,98€.
+  La diferencia es solo FX, no un descuadre. Conciliado el cargo de junio (56,38€) con su PDF; feb, mar,
+  abr, may y jul siguen sin PDF archivado (hay que bajarlos del portal). El deducible es el EURO cargado.
+- Quedan 4 avisos SIN tocar (necesitan a Alberto): Pepephone ene–jun (6 PDF archivados y **ningún**
+  cargo suyo en las cuentas de Alberto → probablemente se carga en la cuenta de la SL); lavandería
+  Giraldillo mayo 504,57€ sin cargo (paga el mes vencido; el de abril sí está); Endesa Dúplex 24/07
+  87,42€ con cargo pero sin PDF archivado; fila duplicada en `facturas_drive` del ticket CREATE
+  (`create-socorro` + `create_ventilador`, mismo importe y fecha, distinto fileId — el banco solo tiene
+  UN cargo).
+
 ### 📈 (11/08/2026) /trading rediseñado: hero con las 2 respuestas (empresas + rentabilidad)
 - Petición de Alberto: la página daba mucha info; lo que importa es qué empresas interesan y cómo va la cartera.
 - Hero doble arriba (💡 señales 📈 + top ranking + compras del agente · 📊 mediana vs SPY + curva + tramo escalera);
