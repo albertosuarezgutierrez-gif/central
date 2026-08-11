@@ -127,11 +127,17 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
   // 🪜 Escalera de dinero real (firmada en TRADING-HIPOTESIS-PREREGISTRO.md): evaluada sobre las
   // cohortes DEDUPLICADAS por cesta (mismo helper que el digest semanal). SIN fecha objetivo.
   const escalera = evaluarEscalera(
-    cohortesPaper.map(({ cohorte, ultima }) => ({
-      cohorte, dias: ultima.dias,
-      alphaMediana: ultima.retornoMediana != null ? ultima.retornoMediana - ultima.retornoBench : null,
-      maxDrawdown: ultima.maxDrawdown, maxDrawdownBench: ultima.maxDrawdownBench,
-    })),
+    cohortesPaper.map(({ cohorte, ultima }) => {
+      // Cobertura = símbolos medidos (n del snapshot) / tamaño de la cesta congelada. Un alpha medido
+      // sobre media cesta no sube tramos (enmienda de operacionalización, auditoría 11/08/2026).
+      const total = COHORTES_PAPER.find(x => x.version === cohorte)?.simbolos.length
+      return {
+        cohorte, dias: ultima.dias,
+        alphaMediana: ultima.retornoMediana != null ? ultima.retornoMediana - ultima.retornoBench : null,
+        maxDrawdown: ultima.maxDrawdown, maxDrawdownBench: ultima.maxDrawdownBench,
+        cobertura: total ? ultima.n / total : null,
+      }
+    }),
   )
   const opsCerradas = emparejarOps(ordenes.map(o => ({ simbolo: o.simbolo, lado: o.lado, precio: o.precio, fecha: o.fecha.toISOString().slice(0, 10) })))
   const deslizBuys = ordenes.filter(o => o.lado === 'BUY' && o.precioDiaSiguiente != null && o.precio > 0)

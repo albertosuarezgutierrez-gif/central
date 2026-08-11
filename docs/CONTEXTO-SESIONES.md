@@ -43,6 +43,11 @@
   cohetes sin precio se congelan a precio de entrada; `/analizar` se cree el nav del body; Dataroma caído = «sin gurús».
 - Track real (23 días): cesta mediana +0,24% vs SPY +4,20% (baten 3/8) · cohetes −2,6% (alpha −7,2%) · torneo hit 26-28%
   ret ~0 (n=460) · Tramo 1. Sin señal de ventaja aún — la decisión de no operar en real sigue vigente.
+- **El 🔴 gordo ARREGLADO en la misma sesión:** nuevo `module-trading/medicionAlineada.ts` (series FECHADAS,
+  misma ventana cesta/bench, cobertura declarada — serie truncada de Stooq → `sinDatos`, nunca un retorno de
+  otra ventana); `paper-tracker` migrado y la escalera gana gate `cobertura ≥ 80%` (enmienda de
+  operacionalización, `COBERTURA_MIN_ESCALERA`). Quedan 🟡: momentum/costuras, Piotroski NULL→0, cohetes
+  a precio de entrada, nav de `/analizar` sin contrastar, Dataroma caído = «sin gurús».
 
 ### 🧾 (11/08/2026) Conciliada la factura 47/2026 de Jaime Salas (electricidad Socorro 24)
 - Alberto preguntó por el cargo `TRANSF. 2100 FACTURA 472026 REPARACIN ELECTRICIDAD` −278,30€ (Kutxa, 07/08),
