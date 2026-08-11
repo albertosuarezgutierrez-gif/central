@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-11T08:37:39Z",
+  "generadoEn": "2026-08-11T09:41:29Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4278,6 +4278,10 @@
       "fecha": ""
     },
     {
+      "titulo": "Causa estructural:",
+      "fecha": ""
+    },
+    {
       "titulo": "Barrido del mismo fallo en todo 2026",
       "fecha": ""
     },
@@ -4323,10 +4327,6 @@
     },
     {
       "titulo": "MERGEADO",
-      "fecha": ""
-    },
-    {
-      "titulo": "Refinada por Alberto y MERGEADA (#1349):",
       "fecha": ""
     }
   ],
