@@ -44,6 +44,8 @@ export {
   asignarVehiculo,
   estadoDocumento,
   alertasDocumentos,
+  vehiculosSinDocumentar,
+  DOCS_OBLIGATORIOS,
   esPorteIntercompany,
   totalIntercompany,
 } from './flota'

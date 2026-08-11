@@ -1,0 +1,265 @@
+name: Auto-merge de PRs de rutinas (solo registro)
+
+# EL PROBLEMA QUE RESUELVE (07-08/08/2026, ver docs/AUDITORIA-2026-08.md)
+# El "carril 1" de /auditoria-diaria asume que la rutina puede empujar texto DIRECTO a `main`.
+# En la práctica las rutinas corren bajo el harness de tareas de GitHub, que les asigna una rama
+# y les prohíbe tocar `main` → cada pasada acaba en un PR draft que nadie mergea. Los PRs
+# envejecen, `main` avanza, y a los 1-3 días están todos en conflicto: el 07/08 había CINCO
+# (#1252, #1254, #1277, #1279, #1286) y hubo que rescatar su texto a mano.
+#
+# La solución NO es dar permisos de push (el bloqueo es del harness, no de GitHub): es que el
+# repo cierre el círculo solo. Este workflow mergea los PRs de rutina que tocan ÚNICAMENTE
+# ficheros de REGISTRO, en cuanto su CI está en verde.
+#
+# LA LÍNEA QUE SEPARA LO QUE SE AUTO-MERGEA DE LO QUE NO
+# Se auto-mergea lo que solo **cuenta lo que pasó** (memoria, bitácoras, informes de auditoría):
+# equivocarse ahí deja un párrafo mal escrito, y git guarda el histórico.
+# NO se auto-mergea lo que **le dice a un agente qué hacer** — `.claude/**`, `CLAUDE.md`,
+# `AGENTS.md`, `docs/SKILLS.md`, `docs/FUENTES-DE-VERDAD.md`, `docs/RUTINAS-PROGRAMADAS.md` — ni
+# código, ni infra, ni workflows. Un agente que se auto-modifica las instrucciones sin que nadie
+# lo mire es exactamente el fallo que no queremos. Esos siguen siendo carril 2 (PR + tu ojo).
+# El filtro es por RUTA, no por etiqueta: una etiqueta se le puede poner a un PR que toca código,
+# una lista de rutas no miente.
+#
+# CONFLICTOS: los resuelve el bot, pero solo el caso trivial (decisión de Alberto, 08/08/2026)
+# Todas las rutinas insertan su entrada ARRIBA DEL TODO de los mismos dos ficheros, así que dos
+# rutinas del mismo día chocan SIEMPRE. La primera versión de este workflow se rendía ahí y dejaba
+# UN comentario: el PR #1290 acabó 24 h abierto, resuelto a mano, y `main` lo volvió a romper 44 min
+# después — el mismo pudrirse en silencio, solo que más callado. Ahora, cuando el conflicto es una
+# INSERCIÓN PURA por ambos lados (`scripts/resolver-conflicto-registro.mjs` lo comprueba con la
+# sección base de `merge.conflictStyle=diff3`), el bot conserva LAS DOS entradas y empuja el merge.
+# Si alguien EDITÓ texto que ya existía, no toca nada y avisa: eso lo mira una persona.
+#
+# CÓMO PARARLO
+# - Puntual: pon la etiqueta `no-automerge` al PR.
+# - Del todo: deshabilita este workflow en Actions (o borra el fichero).
+
+on:
+  # Cuando termina la CI de un PR (es el disparo que hace que el merge sea rápido).
+  check_suite:
+    types: [completed]
+  # Alta / actualización de un PR. `pull_request_target` corre con el workflow de `main` y con
+  # token de escritura; es seguro porque este job NUNCA ejecuta código del PR: hace checkout de
+  # `main`, y del PR solo trae contenido de ficheros de registro (markdown) para mergearlo.
+  pull_request_target:
+    types: [opened, reopened, ready_for_review, synchronize]
+  # Red de seguridad: los eventos de arriba se pierden a veces, y un PR que quedó en conflicto
+  # necesita que alguien reintente más tarde.
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+  statuses: read
+
+# Nunca dos pasadas a la vez: mergear en paralelo genera conflictos entre los propios PRs.
+concurrency:
+  group: rutinas-automerge
+  cancel-in-progress: false
+
+jobs:
+  automerge:
+    name: Mergear PRs de registro en verde
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # `ref: main` explícito: en `pull_request_target` el checkout por defecto ya es la base, pero
+      # dejarlo escrito evita que un cambio de disparador acabe ejecutando scripts del PR.
+      - name: Checkout de main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Revisar PRs abiertos
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          OWNER: ${{ github.repository_owner }}
+          # Margen de quietud: no se toca un PR cuyo último commit es más nuevo que esto.
+          # La sesión que abre el PR sigue viva un rato y su hook `Stop` (persist-memoria.sh)
+          # aún puede empujar la entrada de memoria — mergear antes se la comería. Aplica también
+          # a los merges que empuja este propio bot, por el mismo motivo.
+          QUIETUD_MIN: '20'
+        run: |
+          set -euo pipefail
+
+          # El resolver se copia FUERA del árbol antes de tocar nada: así, pase lo que pase durante
+          # los merges, siempre se ejecuta la versión de `main` y nunca una que venga de una rama.
+          cp scripts/resolver-conflicto-registro.mjs /tmp/resolver.mjs
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          # Solo ficheros que REGISTRAN lo que pasó. Ver la cabecera para el porqué de la línea.
+          # (Ninguna de estas rutas lleva espacios, por eso las listas se pueden expandir sin comillas.)
+          es_registro() {
+            case "$1" in
+              docs/CONTEXTO-SESIONES.md) return 0 ;;
+              docs/AGENTES-BITACORA.md)  return 0 ;;
+              docs/AUTO-APLICADOS.md)    return 0 ;;
+              docs/AUDITORIA-*.md)       return 0 ;;
+              docs/memoria/*.md)         return 0 ;;
+              *)                         return 1 ;;
+            esac
+          }
+
+          # Un solo aviso por PR: el marcador evita repetirlo en cada pasada horaria.
+          avisar_conflicto() {
+            local n="$1" motivo="$2" marca='<!-- automerge-conflicto -->'
+            if gh pr view "$n" --repo "$REPO" --json comments --jq '.comments[].body' | grep -qF "$marca"; then
+              return 0
+            fi
+            printf '%s\n' \
+              "$marca" \
+              "Este PR solo toca ficheros de registro, así que el auto-merge de rutinas intentó" \
+              "mergearlo — pero **el conflicto con \`main\` no se puede resolver solo**." \
+              "" \
+              "Motivo: $motivo" \
+              "" \
+              "El bot resuelve por su cuenta los conflictos de **inserción pura** (cada rama añadió una" \
+              "entrada nueva arriba: se conservan las dos). Este no lo es, así que hace falta mano" \
+              "humana: rehacer la rama sobre el \`main\` actual, o cerrarla rescatando su texto." \
+              "" \
+              "No volveré a avisar de este PR." \
+              "" \
+              "---" \
+              "_Generated by [Claude Code](https://claude.ai/code)_" > /tmp/aviso-conflicto.md
+            gh pr comment "$n" --repo "$REPO" --body-file /tmp/aviso-conflicto.md
+          }
+
+          prs=$(gh pr list --repo "$REPO" --state open --limit 50 --json number --jq '.[].number')
+          if [ -z "$prs" ]; then echo "Sin PRs abiertos."; exit 0; fi
+
+          ahora=$(date -u +%s)
+
+          for n in $prs; do
+            echo "::group::PR #$n"
+            git merge --abort >/dev/null 2>&1 || true   # por si quedó algo del PR anterior
+            git checkout -q -f -B automerge-tmp origin/main
+
+            datos=$(gh pr view "$n" --repo "$REPO" \
+              --json number,author,headRefName,headRefOid,isDraft,mergeable,labels,files,statusCheckRollup)
+
+            autor=$(jq -r '.author.login' <<<"$datos")
+            rama=$(jq -r '.headRefName' <<<"$datos")
+
+            # 1. Solo PRs de las rutinas del propio dueño del repo. Nada de forks ni de terceros.
+            if [ "$autor" != "$OWNER" ]; then echo "autor $autor ≠ $OWNER — se salta."; echo "::endgroup::"; continue; fi
+            case "$rama" in claude/*) ;; *) echo "rama $rama no es de rutina — se salta."; echo "::endgroup::"; continue ;; esac
+
+            # 2. Freno de mano manual.
+            if jq -e '.labels[] | select(.name == "no-automerge")' <<<"$datos" >/dev/null; then
+              echo "etiqueta no-automerge — se salta."; echo "::endgroup::"; continue
+            fi
+
+            # 3. TODOS los ficheros tocados tienen que ser de registro. Uno solo fuera → carril 2.
+            ficheros=$(jq -r '.files[].path' <<<"$datos")
+            if [ -z "$ficheros" ]; then echo "sin ficheros (¿API incompleta?) — se salta."; echo "::endgroup::"; continue; fi
+            fuera=0
+            while IFS= read -r f; do
+              if ! es_registro "$f"; then echo "  fuera de la lista: $f"; fuera=1; fi
+            done <<<"$ficheros"
+            if [ "$fuera" = "1" ]; then echo "toca algo que no es registro — necesita revisión humana."; echo "::endgroup::"; continue; fi
+
+            # 4. Margen de quietud (ver env QUIETUD_MIN).
+            sha=$(jq -r '.headRefOid' <<<"$datos")
+            fecha=$(gh api "repos/$REPO/commits/$sha" --jq '.commit.committer.date' 2>/dev/null || echo '')
+            if [ -z "$fecha" ]; then echo "no se pudo leer la fecha del commit — se salta."; echo "::endgroup::"; continue; fi
+            edad_min=$(( (ahora - $(date -u -d "$fecha" +%s)) / 60 ))
+            if [ "$edad_min" -lt "$QUIETUD_MIN" ]; then
+              echo "último commit hace ${edad_min} min (< $QUIETUD_MIN) — se espera a la próxima pasada."
+              echo "::endgroup::"; continue
+            fi
+
+            # 5. CI: TODO en verde y al menos un check. Un PR sin checks no se mergea solo —
+            #    "no hay checks" no es lo mismo que "los checks pasaron" (ver la regla del
+            #    CLAUDE.md raíz: dato que no hay ≠ dato que no se ha mirado).
+            #    No se mira `__typename`: un check en curso no tiene ni `conclusion` ni `state`
+            #    en verde, así que basta con exigir uno de los dos (sirve para CheckRun y para
+            #    StatusContext, que es como llegan los estados de Vercel).
+            #    Se comprueba ANTES de resolver conflictos: si la CI no está verde, no hay nada
+            #    que resolver todavía.
+            total=$(jq '[.statusCheckRollup[]?] | length' <<<"$datos")
+            verdes=$(jq '[.statusCheckRollup[]? | select(
+                       ((.conclusion // "") | ascii_upcase | . == "SUCCESS" or . == "NEUTRAL" or . == "SKIPPED")
+                    or ((.state // "") | ascii_upcase | . == "SUCCESS")
+                   )] | length' <<<"$datos")
+            if [ "$total" -eq 0 ]; then echo "sin checks — no se mergea a ciegas."; echo "::endgroup::"; continue; fi
+            if [ "$verdes" -ne "$total" ]; then echo "CI $verdes/$total — pendiente o en rojo, se espera."; echo "::endgroup::"; continue; fi
+
+            mergeable=$(jq -r '.mergeable' <<<"$datos")
+
+            # 6a. Camino normal: sin conflicto → fuera de draft y squash por la API de GitHub.
+            #     La rama NO se borra a propósito: si la sesión que abrió el PR sigue viva, su
+            #     hook `Stop` todavía puede querer empujar ahí.
+            if [ "$mergeable" = "MERGEABLE" ]; then
+              echo "✅ solo registro + CI $verdes/$total en verde → mergeando."
+              if [ "$(jq -r '.isDraft' <<<"$datos")" = "true" ]; then gh pr ready "$n" --repo "$REPO"; fi
+              gh pr merge "$n" --repo "$REPO" --squash
+              echo "::endgroup::"; continue
+            fi
+
+            if [ "$mergeable" != "CONFLICTING" ]; then
+              echo "mergeable=$mergeable (GitHub aún lo está calculando) — próxima pasada."
+              echo "::endgroup::"; continue
+            fi
+
+            # 6b. Camino de conflicto: se intenta resolver conservando ambas entradas.
+            #     Se hace con git de verdad (no con la API) porque hay que MERGEAR el contenido.
+            #     El resultado se empuja a `main` directamente: eso marca el PR como mergeado, y
+            #     evita el commit-de-arreglo en la rama del PR, que con GITHUB_TOKEN no vuelve a
+            #     disparar la CI (los pushes del bot no lanzan workflows) y dejaría el PR atascado
+            #     para siempre en "sin checks". La CI del PR ya se verificó verde en el paso 5.
+            echo "en conflicto — intento resolverlo (inserción pura conserva ambos lados)."
+            git fetch -q origin "$rama"
+            if git -c merge.conflictStyle=diff3 merge --no-commit --no-ff FETCH_HEAD >/dev/null 2>&1; then
+              echo "  git no ve conflicto real; se commitea el merge tal cual."
+            else
+              conflictivos=$(git diff --name-only --diff-filter=U)
+              if [ -z "$conflictivos" ]; then
+                git merge --abort >/dev/null 2>&1 || true
+                avisar_conflicto "$n" "git falló el merge sin dejar ficheros en conflicto"
+                echo "::endgroup::"; continue
+              fi
+              malo=0
+              while IFS= read -r f; do
+                if ! es_registro "$f"; then echo "  conflicto en $f, que no es de registro"; malo=1; fi
+              done <<<"$conflictivos"
+              if [ "$malo" = "1" ]; then
+                git merge --abort >/dev/null 2>&1 || true
+                avisar_conflicto "$n" "hay conflicto en ficheros que no son de registro"
+                echo "::endgroup::"; continue
+              fi
+              if ! node /tmp/resolver.mjs $conflictivos; then
+                git merge --abort >/dev/null 2>&1 || true
+                avisar_conflicto "$n" "el conflicto no es una inserción pura (alguien editó texto que ya existía)"
+                echo "::endgroup::"; continue
+              fi
+              git add $conflictivos
+            fi
+
+            # Cinturón: si quedó CUALQUIER cosa sin resolver, no se commitea nada.
+            if [ -n "$(git diff --name-only --diff-filter=U)" ]; then
+              git merge --abort >/dev/null 2>&1 || true
+              avisar_conflicto "$n" "quedaron ficheros sin resolver tras el intento automático"
+              echo "::endgroup::"; continue
+            fi
+
+            git commit -q -m "Merge PR #$n (registro) resolviendo el conflicto conservando ambas entradas" \
+              -m "Conflicto de inserción pura en ficheros de registro: cada rama había añadido su entrada
+          arriba del todo. Se conservan las dos, primero la que ya estaba en main.
+          Resuelto por .github/workflows/rutinas-automerge.yml + scripts/resolver-conflicto-registro.mjs."
+
+            if git push -q origin HEAD:main; then
+              echo "✅ conflicto resuelto y mergeado en main."
+            else
+              echo "push rechazado (main se movió mientras tanto) — se reintenta en la próxima pasada."
+            fi
+            echo "::endgroup::"
+          done
+
+          git checkout -q -f origin/main 2>/dev/null || true

@@ -11,7 +11,7 @@ const SUGERENCIAS = [
 
 type Guardado = { clave: string; insight: string }
 type Accion = { id: string; tipo: string; resumen: string; estado?: 'pendiente' | 'ejecutada' | 'descartada' | 'error'; mensaje?: string }
-type Msg = { rol: 'tu' | 'agente'; texto: string; guardados?: Guardado[]; acciones?: Accion[] }
+type Msg = { rol: 'tu' | 'agente'; texto: string; guardados?: Guardado[]; acciones?: Accion[]; feedback?: 'enviado' }
 
 const card: React.CSSProperties = {
   background: 'var(--surface)', border: '1px solid var(--border)',
@@ -78,10 +78,18 @@ export default function ContablePage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ adjunto: { base64, mimeType: file.type || 'application/octet-stream', fileName: file.name } }),
       })
-      const data = await r.json().catch(() => ({}))
-      pintarRespuesta(data)
+      const data = await r.json().catch(() => null)
+      // Sin cuerpo legible (504 del servidor, conexión cortada) NO es «el agente no ha dicho nada»:
+      // el documento puede haber entrado igual. El 08/08/2026 pasó exactamente eso — un extracto con
+      // 109 movimientos importado y archivado, y en pantalla «Sin respuesta.» Reimportar no duplica,
+      // así que lo honesto es decir dónde comprobarlo antes de volver a subirlo.
+      if (!data) {
+        setMsgs(m => [...m, { rol: 'agente', texto: 'Se me ha cortado la conexión antes de poder contestarte. Puede que el documento SÍ haya entrado: compruébalo en /banca antes de volver a subirlo (reimportarlo no duplica nada).' }])
+      } else {
+        pintarRespuesta(data)
+      }
     } catch {
-      setMsgs(m => [...m, { rol: 'agente', texto: 'No se pudo subir el documento.' }])
+      setMsgs(m => [...m, { rol: 'agente', texto: 'No se pudo subir el documento. Si era un extracto, míralo en /banca por si entró.' }])
     } finally {
       setLoading(false)
     }
@@ -105,6 +113,21 @@ export default function ContablePage() {
         ...msg, acciones: msg.acciones?.map(a => a.id === accId ? { ...a, estado: 'error', mensaje: 'Error de red' } : a),
       }))
     }
+  }, [])
+
+  // 👎: marca una respuesta del agente como mala. Coge la PREGUNTA (el turno 'tu' anterior) y la
+  // respuesta, y las registra en contable_feedback para alimentar el bucle de mejora. Optimista.
+  const marcarMalo = useCallback(async (msgIdx: number) => {
+    setMsgs(m => {
+      const respuesta = m[msgIdx]?.texto || ''
+      let pregunta = ''
+      for (let j = msgIdx - 1; j >= 0; j--) { if (m[j].rol === 'tu') { pregunta = m[j].texto; break } }
+      fetch('/api/contable/feedback', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pregunta, respuesta }),
+      }).catch(() => {})
+      return m.map((msg, i) => i === msgIdx ? { ...msg, feedback: 'enviado' as const } : msg)
+    })
   }, [])
 
   return (
@@ -164,6 +187,14 @@ export default function ContablePage() {
                   ))}
                 </div>
               )}
+              {m.rol === 'agente' && (
+                <div style={{ marginTop: 8 }}>
+                  {m.feedback === 'enviado'
+                    ? <span style={{ fontSize: 11, color: 'var(--muted)' }}>Gracias, lo reviso 🙌</span>
+                    : <button onClick={() => marcarMalo(i)} title="Marcar como respuesta incorrecta" aria-label="Respuesta incorrecta"
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--muted)', padding: '2px 4px', opacity: 0.7 }}>👎</button>}
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -171,10 +202,10 @@ export default function ContablePage() {
       </div>
 
       <form onSubmit={e => { e.preventDefault(); enviar(input) }} style={{ display: 'flex', gap: 8 }}>
-        <input ref={fileRef} type="file" accept="image/*,application/pdf" style={{ display: 'none' }}
+        <input ref={fileRef} type="file" accept="image/*,application/pdf,.xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style={{ display: 'none' }}
           onChange={e => { const f = e.target.files?.[0]; if (f) subirDocumento(f); e.target.value = '' }} />
-        <button type="button" onClick={() => fileRef.current?.click()} disabled={loading} title="Subir ticket o factura (foto o PDF)"
-          aria-label="Subir ticket o factura" style={{
+        <button type="button" onClick={() => fileRef.current?.click()} disabled={loading} title="Subir ticket, factura o extracto de tarjeta (foto, PDF o Excel)"
+          aria-label="Subir ticket, factura o extracto" style={{
             flexShrink: 0, width: 44, height: 44, borderRadius: 10, border: '1px solid var(--border)',
             background: 'var(--surface)', color: 'var(--text)', fontSize: 18, cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1,
           }}>📎</button>

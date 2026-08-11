@@ -12,17 +12,21 @@ description: Auditoría diaria del monorepo central — reconcilia memoria + ski
 >
 > **MCPs que necesita:** Supabase + Vercel + github (todo lectura, salvo abrir el PR).
 >
-> **Para el aviso por Telegram** necesita `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` en la
-> env de la rutina (los mismos del bot único; ver `packages/core-telegram`). Si no están,
-> el aviso degrada con gracia (no se manda) y el resto sigue igual.
+> **Para el aviso por Telegram** necesita `PLATAFORMA_URL` + `ALERTA_TOKEN` en la env de la
+> rutina (ver "Arquitectura de notificaciones Telegram" en `docs/RUTINAS-PROGRAMADAS.md`).
+> **NUNCA** `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` directos: esa llave vive UNA sola vez en
+> Vercel plataforma; una rutina de Claude Code con el bot token maestro en su prompt en claro
+> lo expondría sin necesidad (por eso existe `ALERTA_TOKEN`, de bajo privilegio — solo abre
+> `/api/internal/alerta`). Si `ALERTA_TOKEN` no está, el aviso degrada con gracia (no se
+> manda) y el resto sigue igual.
 >
 > **Dos cadencias (ver `docs/RUTINAS-PROGRAMADAS.md`):**
 > - **Ligera (por defecto, diaria):** reconcilia memoria/skills/docs + checks baratos
->   (lockfile, radiografía de estructura, drift skills↔código). SALTA typecheck de las 4
+>   (lockfile, radiografía de estructura, drift skills↔código). SALTA typecheck de las 8
 >   apps y tests pesados. Rápida y de bajo ruido. Es la red de seguridad del guardián de
 >   cierre (`persist-memoria.sh`): caza lo que las sesiones no anotaron a mano.
 > - **Profunda (`/auditoria-diaria --profunda`, semanal):** corre `auditoria-central`
->   ENTERA (typecheck de las 4 apps + tests + seguridad multi-tenant + infra por MCP).
+>   ENTERA (typecheck de las 8 apps + tests + seguridad multi-tenant + infra por MCP).
 
 ## Dos carriles de entrega (lo que cambió — léelo antes de tocar nada)
 El problema histórico no era de alcance sino de **entrega**: todo se quedaba en un PR draft
@@ -32,6 +36,26 @@ que, sin mergear, dejaba la info vieja viva. Ahora la entrega va por riesgo:
   `docs/SKILLS.md`, `docs/CONTEXTO-SESIONES.md`, manuales de usuario. Se **commitean y
   empujan directos a `main`**, sin PR, sin aprobar nada (mismo patrón que el hook
   `persist-memoria.sh`). Cada cambio auto-aplicado se anota en `docs/AUTO-APLICADOS.md`.
+
+  **🚧 Si el entorno NO te deja empujar a `main`** (es lo normal bajo el harness de tareas de
+  GitHub, que te asigna una rama): NO abandones el carril 1 ni lo metas en el PR del carril 2
+  a lo bruto. Haz esto:
+  1. **Separa el carril 1 en su PROPIO PR**, cuyo diff toque **solo** ficheros de registro:
+     `docs/CONTEXTO-SESIONES.md`, `docs/AGENTES-BITACORA.md`, `docs/AUTO-APLICADOS.md`,
+     `docs/AUDITORIA-<YYYY-MM>.md`, `docs/memoria/*.md`. Ese PR **se mergea solo** en cuanto
+     la CI esté verde — lo hace `.github/workflows/rutinas-automerge.yml`. No hace falta que
+     Alberto lo toque, y así no envejece hasta el conflicto.
+  2. **Lo que cambia el COMPORTAMIENTO de alguien** (`.claude/**`, `CLAUDE.md`, `AGENTS.md`,
+     `docs/SKILLS.md`, `docs/FUENTES-DE-VERDAD.md`, `docs/RUTINAS-PROGRAMADAS.md`) **NO** entra
+     en ese PR aunque sea "solo texto": el auto-merge lo bloquea a propósito (un agente que se
+     reescribe las instrucciones sin que nadie mire es justo lo que no queremos). Va al PR del
+     carril 2, con su aviso.
+  3. Si tu PR de registro entra en conflicto igualmente, el workflow intenta traerte `main` a
+     la rama solo; si no puede, te deja UN comentario y ahí ya hace falta mano humana.
+
+  Historia de por qué existe este apartado: 04-07/08/2026, cinco PRs de rutinas (#1252, #1254,
+  #1277, #1279, #1286) murieron en conflicto por confiar en un push a `main` que el entorno
+  nunca permitió. Ver `docs/AUDITORIA-2026-08.md`.
 - **Carril 2 — REVISIÓN (lo "raro"):** código, infra, migraciones, cambios de gran radio,
   hallazgos ambiguos y **crons mudos**. Van a **PR draft** + **aviso por Telegram** (con
   botón-URL al PR) para que Alberto lo lleve a una conversación y lo estudie. Nunca a `main`.
@@ -68,31 +92,61 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
 2. **Auditoría según cadencia.**
    - **Modo ligero (por defecto):** invoca **`auditoria-central`** pero recorre solo los
      bloques baratos (integridad estructural: lockfile + radiografía + `transpilePackages`;
-     coherencia de docs; deps/código muerto rápidos). SALTA typecheck de las 4 apps y los
+     coherencia de docs; deps/código muerto rápidos). SALTA typecheck de las 8 apps y los
      tests pesados — esos son de la pasada semanal.
    - **Modo profundo (`--profunda` en el prompt):** recorre `auditoria-central` ENTERA
-     (integridad, typecheck de las 4 apps, tests, seguridad multi-tenant, deps, infra real
+     (integridad, typecheck de las 8 apps, tests, seguridad multi-tenant, deps, infra real
      por MCP, coherencia de docs).
    Distingue error real de ruido de entorno; no infles conteos.
 
-2-bis. **Heartbeat de crons** (barato, corre SIEMPRE — también en modo ligero).
+2-bis. **Heartbeat de crons y agentes** (barato, corre SIEMPRE — también en modo ligero).
    Los crons pueden dejar de escribir en silencio (p. ej. jun-2026: el middleware de
    plataforma redirigía los crons `/api/sivra/*` a `/login` y estuvieron 5 días mudos sin
-   que saltara ninguna alarma). Este check vigila el **síntoma** (no hay filas frescas),
+   que saltara ninguna alarma). Este check vigila el **síntoma** (no hay huella fresca),
    así que caza cualquier causa (middleware, clave Smoobu, bug en handler, caída Vercel…).
-   Corre por Supabase MCP (lectura) sobre `wswbehlcuxqxyinousql`:
+   Corre por Supabase MCP (lectura) sobre `wswbehlcuxqxyinousql`, en dos consultas:
+
+   **a) Latidos de pasada buena (`agente_latidos`) — la fuente PREFERIDA.** Cada agente/cron
+   instrumentado escribe su fila al completar una pasada buena (`agente, ultimo_at,
+   ultimo_ok_at, ok, detalle`), así que la huella mide SALUD, no actividad de negocio:
+
+   ```sql
+   SELECT agente, ok, ultimo_at, ultimo_ok_at, detalle,
+          round(extract(epoch FROM now()-ultimo_ok_at)/3600, 1) AS horas_sin_ok
+   FROM agente_latidos ORDER BY ultimo_ok_at ASC NULLS FIRST;
+   ```
+
+   Cruza cada fila con su cadencia real (diario→~30h, cada-10min→6h, semanal→~192h; la lista
+   canónica de vigilados con umbral y nota de diagnóstico vive en `AGENTES_VIGILADOS` de
+   `apps/plataforma/lib/monitoring/latidos.ts` — léela, no la dupliques aquí). `ok=false` o
+   `ultimo_ok_at` más viejo que la cadencia → ⛔. **Lee siempre `detalle`** antes de
+   diagnosticar: distingue «no pudo mirar» de «miró y no había» (regla NULL≠0 de `CLAUDE.md`).
+
+   **b) Filas frescas en tablas de dominio — SOLO para lo que aún no escribe latido:**
 
    ```sql
    WITH h(cron, tabla, ultimo, max_horas) AS (
      SELECT 'rates/snapshot',            'rate_snapshots',         max(created_at),     36 FROM rate_snapshots
      UNION ALL SELECT 'pricing/apply-auto',       'pricing_applied',        max(applied_at),     36 FROM pricing_applied
-     UNION ALL SELECT 'updates/sync',             'incomes',                max("createdAt"),    36 FROM incomes
-     UNION ALL SELECT 'mercado/cron',             'market_rates',           max(created_at),     36 FROM market_rates
      UNION ALL SELECT 'pricing/pilot-track',      'pricing_pilot_tracking', max(created_at),     36 FROM pricing_pilot_tracking
-     UNION ALL SELECT 'limpiadoras/auto-sessions','cleaning_sessions',      max(created_at),     36 FROM cleaning_sessions
      UNION ALL SELECT 'concursos-ingesta',        'concursos_licitaciones', max(actualizado_en), 12 FROM concursos_licitaciones
-     UNION ALL SELECT 'psd2-sync',                'movimientos_bancarios',  max(created_at),     30 FROM movimientos_bancarios
-     UNION ALL SELECT 'correo-triaje',            'correo_triaje',          max(created_at),     30 FROM correo_triaje
+     -- psd2: la huella es «hay movimientos NUEVOS», no «el cron corrió» — un finde sin cargos la
+     -- deja quieta >30h con el cron vivo (falsa alarma 02/08/2026: cron 200 a las 06:01 y ⛔ igual).
+     -- 54h cubre el finde; el guardián dedicado (psd2-health-check, <48h) sigue siendo el fino.
+     UNION ALL SELECT 'psd2-sync',                'movimientos_bancarios',  max(created_at),     54 FROM movimientos_bancarios
+     UNION ALL SELECT 'correo-triaje',            'correo_cursor',          max(updated_at),      2 FROM correo_cursor
+     -- AGENTES (sesiones Claude programadas) + crons de trading. Umbrales por cadencia real:
+     -- diario→~30h, cada-6h→12h, SEMANAL→~192h (8 días). OJO: la huella tiene que ser la del
+     -- AGENTE, no una que otro proceso mantenga fresca (ver nota del pricing abajo).
+     -- pricing: la huella NO puede ser `market_rates prop_*` — desde el 06/08/2026 escriben ahí a
+     -- diario el barrido Serper y la rutina de Booking, así que salía verde con la Rutina semanal
+     -- parada (la avería del 21/07, reaparecida). `pricing_decisiones` solo la escribe la Rutina.
+     UNION ALL SELECT 'AGENTE pricing (ciclo semanal)',   'pricing_decisiones',     max(ciclo_at),       192 FROM pricing_decisiones
+     UNION ALL SELECT 'AGENTE mercado-booking (diario)',  'market_rates booking_mcp',max(created_at),     30 FROM market_rates WHERE fuente='booking_mcp'
+     UNION ALL SELECT 'trading forward-paper (sem)',      'trading_paper_track',    max(created_at),     192 FROM trading_paper_track
+     UNION ALL SELECT 'ia-director-refresh (sem)',        'ia_director_aprendizaje',max(creada_at),      192 FROM ia_director_aprendizaje
+     UNION ALL SELECT 'trading-universo (6h)',            'trading_universo',       max(actualizado_en),  12 FROM trading_universo
+     UNION ALL SELECT 'trading-ranking (sem L)',          'trading_ranking',        max(created_at),     192 FROM trading_ranking
    )
    SELECT cron, tabla, ultimo,
           round(extract(epoch FROM now()-ultimo)/3600, 1) AS horas,
@@ -101,12 +155,62 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
    FROM h ORDER BY estado DESC, horas DESC;
    ```
 
-   - Cualquier fila **⛔ MUDO** es hallazgo 🔴 y **caso estrella del carril 2**: investiga la
+   - 🚨 **Huella de ACTIVIDAD ≠ huella de SALUD.** Una tabla que solo recibe filas cuando hay
+     actividad de negocio (reservas nuevas, cargos, limpiezas) NO sirve de heartbeat: en
+     temporada baja da ⛔ con el cron perfectamente vivo. `updates/sync` (incomes),
+     `mercado in-app` (market_rates normal) y `limpiadoras/auto-sessions` (cleaning_sessions)
+     dieron ese falso positivo en CADA pasada del 02/07 al 07/08/2026 y hubo que re-verificarlos
+     a mano por logs cada día — por eso ya NO están en la consulta b): los dos primeros tienen
+     latido (`smoobu_sync`, `sivra_mercado_sweep`, consulta a) y `auto-sessions` queda como
+     **huella condicionada**: solo se investiga si otra señal apunta a fallo (p. ej. `ialimp_pms`
+     en rojo), nunca ⛔ por sí sola. Si detectas otra huella así, sácala de b) igual: o se
+     instrumenta con latido (propuesta carril 2) o no es un heartbeat.
+   - **Reconciliación de cobertura (nuevo, cada pasada):** compara esta lista de huellas contra
+     (1) los crons reales de `apps/plataforma/lib/cron-dispatch.ts` (`CRON_JOBS`) y los
+     `vercel.json` de las apps, (2) `AGENTES_VIGILADOS` de `latidos.ts`, y (3) las rutinas
+     *activas* de `docs/RUTINAS-PROGRAMADAS.md`. Un cron/agente nuevo sin huella en ningún
+     vigilante = hallazgo 🟡 carril 2 (propón la fila de latido o de esta lista en el PR).
+     Los agentes nacen más rápido que este doc — sin este diff, cada agente nuevo nace sin vigilar.
+   - Cualquier fila **⛔** es hallazgo 🔴 y **caso estrella del carril 2**: investiga la
      causa (mira el middleware/auth de la app dueña del endpoint, la env del secreto y los
      logs de runtime por Vercel MCP), métela en el PR draft con la acción concreta y
      **SIEMPRE dispara Telegram** (un cron mudo es justo lo que Alberto tiene que ver). Si un
      cron es semanal/mensual, ajusta su umbral en vez de marcarlo (los diarios son los críticos).
+   - 🚨 **LECCIÓN — elige la huella del AGENTE, no una que otro proceso mantenga viva
+     (21/07/2026):** el agente de pricing (sesión Claude SEMANAL con conectores de viaje) estuvo
+     **16 días parado** y este heartbeat **no lo cazó** porque miraba `market_rates` genérico —
+     que el cron diario in-app rellena con `scenario='normal'` (Serper) cada día → siempre en
+     verde. La huella REAL del agente es `market_rates scenario LIKE 'prop_%'` (mercado por piso,
+     que SOLO escribe el agente con conectores) y sus decisiones `pricing_decisiones.ciclo_at`.
+     Regla general: antes de fiarte de una huella, confirma que **solo** el agente vigilado la
+     refresca; si la comparte con otro proceso, el heartbeat miente.
+   - **No dupliques con los vigías dedicados:** la pasada nocturna de trading (NAV `broker_saldos`
+     + tesis `trading_tesis`) ya la cubre el cron **`/api/cron/trading-watchdog`** (mar-sáb), y el
+     cron **`/api/cron/agentes-latido`** (diario, `lib/monitoring/latidos.ts`) es el gemelo
+     DETERMINISTA de este heartbeat para pricing+correo. Este bloque es el carril CON CONTEXTO
+     (razona la causa y abre PR); si añades una huella aquí que ya vigile un cron dedicado, no
+     hace falta el segundo aviso — coordina umbrales para no avisar por duplicado.
    - Si todo ✅, una línea verde en el informe y sigue.
+
+2-ter. **Backlog de PRs de rutinas + salud del automerge** (barato, corre SIEMPRE).
+   El canal de entrega también se muere en silencio: del 04 al 07/08/2026 cinco PRs de
+   rutinas (#1252, #1254, #1277, #1279, #1286) envejecieron hasta el conflicto sin que nadie
+   avisara, y el 29/07 un barrido manual cerró trabajo real sin mergear. El workflow
+   `.github/workflows/rutinas-automerge.yml` cierra el círculo — pero nadie vigila al
+   vigilante. Por GitHub MCP (lectura):
+   1. Lista los PRs abiertos de ramas `claude/*`. Por cada uno:
+      - **Solo ficheros de registro** (los que el automerge acepta) y >24h sin mergear →
+        el automerge NO lo está cogiendo: mira por qué (¿CI roja? ¿cero checks? ¿etiqueta
+        `no-automerge`? ¿workflow deshabilitado en Actions?) y repórtalo como 🔴.
+      - **`mergeable_state: dirty`** (conflicto) → 🟡 con el archivo en conflicto y si es
+        inserción pura (el bot debería resolverla) o edición real (mano humana).
+      - Draft de carril 2 con **>7 días** sin actividad → línea en el informe para que
+        Alberto decida mergear o cerrar (un PR draft olvidado es información que envejece;
+        cerrarlo sin mirar pierde trabajo — lección del 29/07).
+   2. Comprueba que `rutinas-automerge.yml` tiene ejecuciones recientes (`actions_list`):
+      corre cada hora — sin runs en las últimas ~3h con PRs de registro abiertos = el
+      vigilante está muerto → 🔴 + Telegram.
+   Sin nada raro → una línea verde y sigue.
 
 3. **Informe.** Crea/actualiza `docs/AUDITORIA-<YYYY-MM>.md` con hallazgos por
    severidad (🔴/🟡/🟢), cada uno con `ruta:línea` + acción, y el checklist de acciones
@@ -116,6 +220,10 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
 4. **Reconciliación de memoria y skills** (el núcleo, **carril 1**):
    - `docs/CONTEXTO-SESIONES.md`: añade entrada(s) de lo hecho en el rango que no esté
      anotado; mueve a "hecho" los pendientes ya resueltos; corrige el "Estado actual".
+   - **Rotación mensual de la memoria (ahorro de contexto):** si el archivo vivo contiene
+     entradas de un mes YA CERRADO, ejecuta `node scripts/rotar-memoria.mjs` (idempotente;
+     las archiva en `docs/memoria/AAAA-MM.md`). Además, si ves entradas nuevas que violan
+     la regla de tamaño (~8 líneas máx), resúmelas en el archivo vivo (carril 1).
    - Skills-maestro (`central-maestro`, `ia-rest-maestro`, `sivra-maestro`,
      `ialimp-maestro`, `plataforma-maestro`) y los `apps/*/CLAUDE.md`: corrige cualquier
      afirmación que el código contradiga (rutas, envs, tablas, reglas, estado). Si una
@@ -175,21 +283,23 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
       `git push` directo a **`main`** (con `-u origin main` y reintentos con backoff si hay
       fallo de red). Anota cada cambio en `docs/AUTO-APLICADOS.md` (fecha · archivo · qué ·
       por qué · SHA), también en el mismo commit.
+      **Si el push a `main` te lo rechaza el entorno**, aplica el plan B del apartado "Dos
+      carriles" de arriba: PR propio SOLO con ficheros de registro (se auto-mergea), y lo que
+      cambie comportamiento al PR del carril 2.
    2. **Carril 2 (revisión):** si hay fixes de código de bajo riesgo, crons mudos o hallazgos
       que requieren tu ojo, crea rama `claude/auditoria-diaria-<YYYY-MM-DD>` **desde el `main`
       ya actualizado**, commitea ahí SOLO esos cambios + el informe `docs/AUDITORIA-<YYYY-MM>.md`
       y abre **PR draft** (cuerpo = resumen ejecutivo por severidad + acciones manuales).
    3. **Aviso Telegram (idea A):** si el carril 2 produjo PR (o hay 🔴/🟡 / cron mudo), manda
-      el aviso con `tgSendButtons` (HTML), botones-URL: **[📋 Ver PR draft](url)** y, si aplica,
-      **[📄 Informe](url)**. Cuerpo: severidades + 1 línea por hallazgo "raro". Así lo abres y
-      arrancas la conversación desde el PR. (Si no hay `TELEGRAM_BOT_TOKEN`/`CHAT_ID`, omite.)
-      Comando de referencia (curl a la Bot API, equivalente a `tgSend`):
+      el aviso llamando al endpoint interno (NUNCA la Bot API directa — ver nota de arriba),
+      con botones-URL si aplica: **[📋 Ver PR draft](url)** y, si aplica, **[📄 Informe](url)**.
+      Cuerpo: severidades + 1 línea por hallazgo "raro". Así lo abres y arrancas la
+      conversación desde el PR. (Si no hay `PLATAFORMA_URL`/`ALERTA_TOKEN`, omite.)
+      Comando de referencia:
       ```bash
-      curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-        --data-urlencode chat_id="${TELEGRAM_CHAT_ID}" \
-        --data-urlencode text="<resumen>" \
-        -d parse_mode=HTML -d disable_web_page_preview=true \
-        --data-urlencode reply_markup='{"inline_keyboard":[[{"text":"📋 Ver PR draft","url":"<PR_URL>"}]]}'
+      curl -s -X POST "${PLATAFORMA_URL}/api/internal/alerta" \
+        -H "Authorization: Bearer ${ALERTA_TOKEN}" -H "Content-Type: application/json" \
+        -d '{"text":"<resumen HTML, incluye el link al PR>"}'
       ```
    4. **Frugalidad:** si NO hubo nada que auto-aplicar (carril 1 vacío) Y nada "raro" (carril
       2 vacío) → no push, no PR, no Telegram. Excepción: el heartbeat semanal de abajo.
@@ -215,3 +325,16 @@ no hacer ruido.
   (vía `docs/FUENTES-DE-VERDAD.md`) no se actualizó, y lo comente. Evita que la info nazca vieja.
 - **H · Trigger por evento:** disparar la auditoría también **tras cada merge a `main`**, no
   solo a las 04:00, para actualizar la doc al ritmo del cambio.
+
+## Canal de aviso — protocolo común
+
+**Preflight AL ARRANCAR** (no al final, cuando ya tengas algo que contar):
+`GET {PLATAFORMA_URL}/api/internal/alerta` con `Authorization: Bearer {ALERTA_TOKEN}`.
+
+- `200` → el canal está vivo, sigue con tu pasada.
+- `401` → el canal está **mudo** (el token de ESTE entorno no coincide con el de Vercel `plataforma`;
+  hay un entorno por rutina y se desincronizan de uno en uno). El cuerpo trae `causa` y `remedio`.
+  Entonces, según `docs/AVISOS-AGENTES.md`: avisa por el **push nativo** de la sesión empezando por
+  `🔇 SIN TELEGRAM (401):` y deja el aviso **entero** en `docs/AGENTES-BITACORA.md` (`fallos:`).
+
+Nunca te inventes el token, nunca uses `CRON_SECRET` en el prompt, y **nunca falles en silencio**.

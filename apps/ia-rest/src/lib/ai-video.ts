@@ -2,11 +2,14 @@
 // con fal.ai Kling, ASÍNCRONA. start encola y devuelve las URLs de la cola que
 // da fal.ai; status las usa tal cual (nunca reconstruirlas — gotcha fal.ai).
 
+export type VideoEngine = 'veo3-fast' | 'kling'
+
 export type VideoJob = {
   requestId: string
   statusUrl: string
   responseUrl: string
   modelo: string
+  engine: string
 }
 
 export type VideoEstado =
@@ -32,11 +35,27 @@ async function llamarEF(body: Record<string, unknown>): Promise<Record<string, u
   return data
 }
 
-export async function startVideoIA(prompt: string, opts: { imageUrl?: string; duration?: number } = {}): Promise<VideoJob> {
-  const data = await llamarEF({ action: 'start', prompt, imageUrl: opts.imageUrl, duration: opts.duration })
+export async function startVideoIA(
+  prompt: string,
+  opts: { imageUrl?: string; duration?: number; engine?: VideoEngine; generateAudio?: boolean } = {},
+): Promise<VideoJob> {
+  const data = await llamarEF({
+    action: 'start',
+    prompt,
+    imageUrl: opts.imageUrl,
+    duration: opts.duration,
+    engine: opts.engine,
+    generateAudio: opts.generateAudio,
+  })
   if (typeof data.requestId !== 'string' || typeof data.statusUrl !== 'string' || typeof data.responseUrl !== 'string')
     throw new Error('ig-video-gen: start sin requestId/statusUrl')
-  return { requestId: data.requestId, statusUrl: data.statusUrl, responseUrl: data.responseUrl, modelo: String(data.modelo ?? '') }
+  return {
+    requestId: data.requestId,
+    statusUrl: data.statusUrl,
+    responseUrl: data.responseUrl,
+    modelo: String(data.modelo ?? ''),
+    engine: String(data.engine ?? ''),
+  }
 }
 
 export async function checkVideoIA(job: Pick<VideoJob, 'statusUrl' | 'responseUrl'>): Promise<VideoEstado> {
@@ -112,9 +131,10 @@ export async function videoConSubtitulo(videoUrl: string, titulo: string): Promi
       ensureEndcard(CLOUD, KEY, SEC),
     ])
     const base = `https://res.cloudinary.com/${CLOUD}/video/upload`
-    // Marca sutil (sin caja): los modelos de vídeo no saben escribir texto
-    // fiable, así que "ia.rest" se quema aquí, no en el prompt.
-    const marca = `l_text:Arial_46_bold:ia.rest,co_white,o_75,g_north,y_70`
+    // LOGOTIPO ia.rest: chip de marca (caja roja + wordmark blanco) arriba-izquierda,
+    // SIEMPRE visible (los modelos de vídeo no escriben texto fiable → se quema aquí).
+    // Rojo de marca D9442B; los %20 dan aire al texto para que parezca un logo, no una etiqueta.
+    const marca = `l_text:Arial_50_bold:%20ia.rest%20,co_white,b_rgb:D9442B,g_north_west,x_44,y_44`
     // Título grande centrado abajo, blanco sobre banda oscura de marca.
     const texto = encodeTextoCloudinary(titulo)
     const capas = [marca]

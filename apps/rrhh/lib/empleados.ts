@@ -4,8 +4,8 @@ export function generarAccesoToken(): string {
   return Buffer.from(bytes).toString('base64url')
 }
 
-type EntradaEmpleado = { nombre: string; dni?: string; email?: string; telefono?: string }
-type EmpleadoNormalizado = { nombre: string; dni: string | null; email: string | null; telefono: string | null }
+type EntradaEmpleado = { nombre: string; apellidos?: string; dni?: string; email?: string; telefono?: string }
+type EmpleadoNormalizado = { nombre: string; apellidos: string | null; dni: string | null; email: string | null; telefono: string | null }
 
 export function normalizarEmpleado(e: EntradaEmpleado): EmpleadoNormalizado {
   const limpia = (v?: string) => { const t = (v ?? '').trim(); return t.length ? t : null }
@@ -16,5 +16,5 @@ export function normalizarEmpleado(e: EntradaEmpleado): EmpleadoNormalizado {
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw new Error('El email es obligatorio (se usa para firmar documentos)')
   }
-  return { nombre, dni: limpia(e.dni), email, telefono: limpia(e.telefono) }
+  return { nombre, apellidos: limpia(e.apellidos), dni: limpia(e.dni), email, telefono: limpia(e.telefono) }
 }

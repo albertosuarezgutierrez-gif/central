@@ -90,7 +90,8 @@ export function recommendedBaseFromEngine(
   opts: { markup: number; max_change_pct: number; min_price: number | null; max_price: number | null; baseActual: number | null },
 ): number | null {
   if (res.guest == null || res.basis == null) return null
-  const markup = opts.markup > 1 ? opts.markup : 1.16
+  // `>= 1`: markup 1.0 (escaparate sin recargo, medido 09/08/2026) es válido; `> 1` lo ignoraba.
+  const markup = opts.markup >= 1 ? opts.markup : 1.16
   let base = Math.round(res.guest / markup)
   const floorBase = Math.round(res.basis.floorRaw / markup), ceilBase = Math.round(res.basis.ceilRaw / markup)
   base = clamp(base, floorBase, ceilBase)

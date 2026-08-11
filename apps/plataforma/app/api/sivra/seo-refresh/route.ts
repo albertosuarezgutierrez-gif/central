@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { geminiSearch } from '@central/core-ai'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { aiComplete } from '@/lib/ai-client'
@@ -7,13 +6,14 @@ import { tgAlert, escapeHtml } from '@/lib/telegram'
 import {
   fetchLanding, pushToGitHub, extractSeoParams, applySeoReplacements,
 } from '@/lib/sivra/seo-landing'
+import { buscarWeb } from '@/lib/websearch'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
 // Análisis SEO con búsqueda de competencia en vivo. Orden de preferencia (todo GRATIS salvo aviso):
 //   1) Serper (Google Search API, free hasta ~2.500/mes) + NIM redacta  → competencia REAL, coste 0.
-//   2) Gemini con grounding de Google  → en el plan gratuito su cuota es ínfima (suele dar 429).
+//   2) `buscarWeb` (lib/websearch.ts): Gemini grounding gratis → plugin web de OpenRouter de pago.
 //   3) NIM/Groq texto puro SIN búsqueda → último recurso, el SEO sale de los datos del piso, no rompe.
 // Histórico: empezó en Anthropic (key retirada → JSON.parse('') petaba), pasó a Gemini (429 de cuota),
 // y ahora Serper es la vía principal gratis. SERPER_API_KEY se pega desde /operador/secretos.
@@ -75,15 +75,14 @@ async function runSeoAnalysis(current: ReturnType<typeof extractSeoParams>) {
     }
   }
 
-  // 2) Gemini con grounding de Google (si la key tiene cuota; en el plan gratuito suele dar 429).
-  const geminiKey = process.env.GEMINI_API_KEY
-  if (geminiKey) {
-    try {
-      const parsed = parseSeoJson(await geminiSearch({ apiKey: geminiKey }, SEO_SYSTEM, user, { maxTokens: 1500, timeoutMs: 45_000 }))
-      if (parsed) return parsed
-    } catch (e) {
-      console.warn('[sivra/seo-refresh] Gemini search no disponible:', String(e).slice(0, 150))
-    }
+  // 2) Búsqueda web con síntesis vía `buscarWeb` (Gemini grounding gratis → plugin web de
+  //    OpenRouter de pago si Gemini está en racha de 429). Registra en ai_usos (endpoint 'seo').
+  try {
+    const res = await buscarWeb(SEO_SYSTEM, user, { app: 'sivra', endpoint: 'seo', maxTokens: 1500, timeoutMs: 45_000 })
+    const parsed = parseSeoJson(res.text)
+    if (parsed) return parsed
+  } catch (e) {
+    console.warn('[sivra/seo-refresh] búsqueda web no disponible:', String(e).slice(0, 150))
   }
 
   // 3) ÚLTIMO RECURSO: NIM/Groq texto puro, SIN búsqueda (gratis). SEO desde los datos de la propiedad.

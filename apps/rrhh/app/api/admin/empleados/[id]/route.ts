@@ -15,9 +15,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
 
     const str = (k: string) => body[k] !== undefined ? (String(body[k]).trim() || null) : undefined
+    const apellidos        = str('apellidos')
     const email            = str('email')
     const telefono         = str('telefono')
     const dni              = str('dni')
+    const nss              = str('nss')
     const puesto           = str('puesto')
     const estado           = body.estado !== undefined ? String(body.estado) : undefined
     const domicilio        = str('domicilio')
@@ -36,19 +38,26 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const c = (val: string | null | undefined, colName: string) =>
       val === undefined ? Prisma.sql`${Prisma.raw(colName)}` : Prisma.sql`${val}`
+    // Las columnas DATE necesitan cast explícito: Prisma manda el parámetro como `text`
+    // y Postgres rechaza `date = text` (ERROR 42804) — incluso cuando el valor es NULL —
+    // haciendo fallar TODO el UPDATE. Igual que los `::uuid` del WHERE.
+    const cDate = (val: string | null | undefined, colName: string) =>
+      val === undefined ? Prisma.sql`${Prisma.raw(colName)}` : Prisma.sql`${val}::date`
 
     await prisma.$executeRaw(Prisma.sql`
       UPDATE rrhh.empleados SET
         nombre            = COALESCE(${nombre}, nombre),
+        apellidos         = ${c(apellidos, 'apellidos')},
         email             = ${c(email, 'email')},
         telefono          = ${c(telefono, 'telefono')},
         dni               = ${c(dni, 'dni')},
+        nss               = ${c(nss, 'nss')},
         puesto            = ${c(puesto, 'puesto')},
         estado            = COALESCE(${estado}, estado),
         domicilio         = ${c(domicilio, 'domicilio')},
         localidad         = ${c(localidad, 'localidad')},
         provincia         = ${c(provincia, 'provincia')},
-        fecha_nacimiento  = ${c(fecha_nacimiento, 'fecha_nacimiento')},
+        fecha_nacimiento  = ${cDate(fecha_nacimiento, 'fecha_nacimiento')},
         estado_civil      = ${c(estado_civil, 'estado_civil')},
         tipo_contrato     = ${c(tipo_contrato, 'tipo_contrato')},
         centro_trabajo    = ${c(centro_trabajo, 'centro_trabajo')},
@@ -56,8 +65,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         categoria         = ${c(categoria, 'categoria')},
         grupo_cotizacion  = ${c(grupo_cotizacion, 'grupo_cotizacion')},
         tipo_jornada      = ${c(tipo_jornada, 'tipo_jornada')},
-        fecha_alta        = ${c(fecha_alta, 'fecha_alta')},
-        fecha_reconocimiento_medico = ${c(fecha_reconocimiento_medico, 'fecha_reconocimiento_medico')}
+        fecha_alta        = ${cDate(fecha_alta, 'fecha_alta')},
+        fecha_reconocimiento_medico = ${cDate(fecha_reconocimiento_medico, 'fecha_reconocimiento_medico')}
       WHERE id=${id}::uuid AND empresa_id=${empresa_id}::uuid`)
     return NextResponse.json({ ok: true })
   } catch (e) {

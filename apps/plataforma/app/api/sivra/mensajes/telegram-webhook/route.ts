@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { parseCallback, tgAnswerCallback, tgAskForReply, tgSend, tgSendButtons, escapeHtml, verifyTelegramWebhook } from '@central/core-telegram'
+import { parseCallback, tgAnswerCallback, tgAskForReply, tgSend, tgSendButtons, tgEditMessage, escapeHtml, verifyTelegramWebhook } from '@central/core-telegram'
 import { enviarAlHuesped } from '@/lib/sivra/agente-huesped/enviar'
 import { confirmarEnviado, confirmarDescartado, reproponerBorrador } from '@/lib/sivra/agente-huesped/telegram-msg'
 import { aprenderCorreccion } from '@/lib/sivra/agente-huesped/aprender'
@@ -11,6 +11,7 @@ import { redactarDesdeIdea } from '@/lib/sivra/agente-huesped/redactar'
 import type { ContextoRedaccion } from '@/lib/sivra/agente-huesped/redactar'
 import { aprobarPago, aplazarPago, rechazarFactura, pagarTodo, resumenSemanal } from '@/lib/agente-facturas/pagos'
 import { getMovParaCallback, aprenderReglaMovimiento, enviarMensajeDudoso, sugerirDestinoConContexto, PROP_LABELS } from '@/lib/agente-movimientos'
+import { simboloValido } from '@/lib/trading/cantera'
 import { getCuentaTelegram, resolverAccionTg, manejarTextoLibreTg, manejarDocumentoTg, manejarVozTg, descargarTelegram, adjuntoDeMensaje, vozDeMensaje, arrancarOnboarding, esComandoContable } from '@/lib/contable/telegram'
 
 export const dynamic = 'force-dynamic'
@@ -99,6 +100,73 @@ export async function POST(req: NextRequest) {
   const cb = body.callback_query
   if (cb) {
     const { prefix, action, args } = parseCallback(cb.data || '')
+    // ── Propuestas de trading (tramo real de la escalera) ────────────────────
+    // El ✅ es un botón URL (abre la pestaña AI Instructions de IBKR — el envío final SIEMPRE lo
+    // pulsa Alberto en su app; ningún callback ejecuta órdenes). Aquí solo llega el ❌: registrar el
+    // rechazo para que la sesión de trading borre la instrucción en su siguiente check-in (este
+    // servidor no tiene acceso a IBKR — la instrucción caduca sola aunque nadie la borre).
+    if (prefix === 'trd') {
+      if (action === 'no') {
+        const instrId = args[0] || ''
+        await prisma.$executeRaw`
+          INSERT INTO trading_propuestas (instruccion_id, estado, decidido_en)
+          VALUES (${instrId}, 'rechazada', now())
+          ON CONFLICT (instruccion_id)
+          DO UPDATE SET estado = 'rechazada', decidido_en = now()`.catch(() => {})
+        await tgAnswerCallback(cb.id, 'Vale — descartada, no se ejecutará')
+        const original: string = cb.message?.text || '💡 Propuesta'
+        if (cb.message?.message_id) {
+          await tgEditMessage(cb.message.message_id,
+            `${escapeHtml(original)}\n\n❌ <b>Descartada.</b> No se ejecutará; la instrucción de IBKR caduca sola.`)
+        }
+        return NextResponse.json({ ok: true })
+      }
+      await tgAnswerCallback(cb.id)
+      return NextResponse.json({ ok: true })
+    }
+    // ── 🌱 Cantera del radar (watchlist capa C) ──────────────────────────────
+    // Propuesta del digest de los lunes (radar.ts 7-bis): ✅ = alta en trading_watchlist (capa C,
+    // SOLO paper — cero órdenes reales); ❌ = se registra y no se vuelve a proponer.
+    if (prefix === 'wlc') {
+      const simbolo = args[0] || ''
+      if (!simboloValido(simbolo)) { await tgAnswerCallback(cb.id, 'Símbolo no válido'); return NextResponse.json({ ok: true }) }
+      // Espejo de BAJA (🍂): quitar de capa C (activo=false, conserva histórico) o mantener.
+      if (action === 'baja' || action === 'mantener') {
+        if (action === 'baja') {
+          await prisma.$executeRaw`
+            UPDATE trading_watchlist SET activo = false WHERE simbolo = ${simbolo} AND capa = 'C'`.catch(() => {})
+        }
+        await prisma.$executeRaw`
+          UPDATE trading_cantera SET baja_decision = ${action === 'baja' ? 'baja' : 'mantener'}, baja_decidida_at = now()
+          WHERE simbolo = ${simbolo}`.catch(() => {})
+        await tgAnswerCallback(cb.id, action === 'baja' ? `${simbolo} fuera de la watchlist` : 'Vale — se mantiene')
+        if (cb.message?.message_id) {
+          await tgEditMessage(cb.message.message_id,
+            `${escapeHtml(cb.message.text || `🍂 Cantera: ${simbolo}`)}\n\n${action === 'baja'
+              ? `🗑️ <b>Fuera de capa C.</b> ${simbolo} deja de analizarse cada noche.`
+              : `✋ <b>Se mantiene.</b> Si vuelve a pasar un mes fuera del top-20, se re-preguntará.`}`)
+        }
+        return NextResponse.json({ ok: true })
+      }
+      const decision = action === 'alta' ? 'alta' : 'rechazada'
+      if (decision === 'alta') {
+        await prisma.$executeRaw`
+          INSERT INTO trading_watchlist (simbolo, capa) VALUES (${simbolo}, 'C')
+          ON CONFLICT (simbolo) DO NOTHING`.catch(() => {})
+      }
+      await prisma.$executeRaw`
+        UPDATE trading_cantera SET decision = ${decision}, decidido_at = now()
+        WHERE simbolo = ${simbolo}`.catch(() => {})
+      await tgAnswerCallback(cb.id, decision === 'alta' ? `${simbolo} en capa C — entra esta noche` : 'Vale — no se vuelve a proponer')
+      if (cb.message?.message_id) {
+        const original: string = cb.message.text || `🌱 Cantera: ${simbolo}`
+        await tgEditMessage(cb.message.message_id,
+          `${escapeHtml(original)}\n\n${decision === 'alta'
+            ? `✅ <b>Alta en capa C.</b> ${simbolo} entra en la pasada nocturna (SOLO paper).`
+            : `❌ <b>Descartado.</b> No se volverá a proponer.`}`)
+      }
+      return NextResponse.json({ ok: true })
+    }
     // ── Agente de pagos a proveedores ────────────────────────────────────────
     if (prefix === 'pago') {
       // Acciones con args[0] = cuentaId (no facturaId)
@@ -255,6 +323,236 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
+    // ── Radar de subastas: seguir / descartar desde el aviso ────────────────
+    // El descarte alimenta el aprendizaje futuro: queda en subastas_radar como
+    // decisión explícita de Alberto, no como silencio.
+    if (prefix === 'subr') {
+      const radarId = args[0]
+      if (!radarId) { await tgAnswerCallback(cb.id, 'No encontrado'); return NextResponse.json({ ok: true }) }
+      const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
+        SELECT id, cuenta_id, dedupe_key, subasta, fecha_fin FROM subastas_radar WHERE id = ${radarId}::uuid
+      `)
+      const fila = filas[0]
+      if (!fila) { await tgAnswerCallback(cb.id, 'Subasta no encontrada'); return NextResponse.json({ ok: true }) }
+
+      if (action === 'seguir') {
+        // Idempotente: si ya la sigue, no se duplica.
+        const ya = await prisma.$queryRaw<any[]>(Prisma.sql`
+          SELECT 1 FROM subastas_seguidas WHERE cuenta_id = ${fila.cuenta_id}::uuid AND dedupe_key = ${fila.dedupe_key} LIMIT 1
+        `)
+        if (!ya.length) {
+          await prisma.$executeRaw(Prisma.sql`
+            INSERT INTO subastas_seguidas (cuenta_id, dedupe_key, subasta, fecha_fin)
+            VALUES (${fila.cuenta_id}::uuid, ${fila.dedupe_key}, ${JSON.stringify(fila.subasta)}::jsonb, ${fila.fecha_fin})
+          `)
+        }
+        await prisma.$executeRaw(Prisma.sql`UPDATE subastas_radar SET visto = true WHERE id = ${radarId}::uuid`)
+        await tgAnswerCallback(cb.id, '👀 Siguiéndola — entra en el aviso de cierre y en la tesorería')
+        return NextResponse.json({ ok: true })
+      }
+      if (action === 'desc') {
+        await prisma.$executeRaw(Prisma.sql`UPDATE subastas_radar SET descartado = true WHERE id = ${radarId}::uuid`)
+        await tgAnswerCallback(cb.id, '🚫 Descartada')
+        // El MOTIVO alimenta el aprendizaje (3 descartes «zona» del mismo
+        // municipio → el radar deja de avisar de ese municipio). Opcional:
+        // si Alberto no contesta, el descarte vale igual.
+        const ident = fila.subasta?.identificador ?? fila.dedupe_key
+        await tgSendButtons(
+          `🧠 ¿Por qué descartas <b>${escapeHtml(String(ident))}</b>? (opcional — me ayuda a afinar los avisos)`,
+          [[
+            { texto: '💶 Cara', callback: `subd_precio:${radarId}` },
+            { texto: '📍 No me interesa la zona', callback: `subd_zona:${radarId}` },
+          ], [
+            { texto: '🏚️ Tipo/estado del inmueble', callback: `subd_tipo:${radarId}` },
+            { texto: '🤷 Otro', callback: `subd_otro:${radarId}` },
+          ]],
+        ).catch(() => {})
+        return NextResponse.json({ ok: true })
+      }
+      await tgAnswerCallback(cb.id, 'Acción desconocida')
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── Reaparición: la misma finca vuelve más barata ────────────────────────
+    // El aviso viene por `dedupe_key` (no por fila de radar): la segunda vuelta
+    // puede no haber casado criterios, y aun así interesa seguirla.
+    if (prefix === 'subv') {
+      const clave = args[0]
+      if (!clave) { await tgAnswerCallback(cb.id, 'No encontrada'); return NextResponse.json({ ok: true }) }
+      if (action === 'no') {
+        await tgAnswerCallback(cb.id, '🚫 Vale, no insisto con esta')
+        return NextResponse.json({ ok: true })
+      }
+      const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
+        SELECT dedupe_key, fecha_fin FROM subastas WHERE dedupe_key = ${clave} LIMIT 1
+      `)
+      if (!filas.length) { await tgAnswerCallback(cb.id, 'No encontrada'); return NextResponse.json({ ok: true }) }
+      // Alta en seguidas para la cuenta real (la única con criterios de subastas).
+      const cuentas = await prisma.$queryRaw<any[]>(Prisma.sql`
+        SELECT cuenta_id FROM subastas_criterios WHERE activo = true ORDER BY created_at ASC LIMIT 1
+      `).catch(() => [])
+      const cuentaId = cuentas[0]?.cuenta_id
+      if (!cuentaId) { await tgAnswerCallback(cb.id, 'No hay cuenta con criterios activos'); return NextResponse.json({ ok: true }) }
+      await prisma.$executeRaw(Prisma.sql`
+        INSERT INTO subastas_seguidas (cuenta_id, dedupe_key, subasta, fecha_fin)
+        SELECT ${cuentaId}::uuid, dedupe_key, to_jsonb(subastas) - 'fts', fecha_fin
+        FROM subastas WHERE dedupe_key = ${clave}
+        ON CONFLICT DO NOTHING
+      `).catch((e) => console.error('[telegram-webhook] subv:seguir', e))
+      await tgAnswerCallback(cb.id, '👀 Siguiéndola — entra en el aviso de cierre')
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── Siguiente paso de una subasta: consulta al juzgado ──────────────────
+    // Las dudas que deja la certificación (¿subsiste la hipoteca anterior?, ¿está
+    // ocupado?, ¿cuánto se debe de comunidad?) solo las resuelve el órgano que
+    // lleva la ejecución, y son las que deciden si la operación sale o no. Este
+    // botón redacta el escrito con las preguntas de ESA subasta.
+    // Enviar de verdad la consulta al órgano gestor. Se manda desde el buzón del
+    // monorepo con Reply-To a Alberto: así la respuesta le llega a él (y el triaje
+    // de correo puede reconocerla), no a un buzón que nadie lee.
+    if (prefix === 'subn' && action === 'enviar') {
+      const radarId = args[0]
+      if (!radarId) { await tgAnswerCallback(cb.id, 'No encontrado'); return NextResponse.json({ ok: true }) }
+      await tgAnswerCallback(cb.id, '📨 Enviando…')
+      try {
+        const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
+          SELECT r.dedupe_key, r.subasta, s.cargas_detalle, s.autoridad, s.telefono_autoridad,
+                 s.email_autoridad, s.direccion, s.arrendamiento_inscrito
+          FROM subastas_radar r
+          LEFT JOIN subastas s ON s.dedupe_key = r.dedupe_key
+          WHERE r.id = ${radarId}::uuid
+        `)
+        const fila = filas[0]
+        if (!fila) { await tgSend('No encuentro esa subasta.'); return NextResponse.json({ ok: true }) }
+
+        const { preguntasParaJuzgado, escritoConsulta, enviarConsulta } = await import('@/lib/subastas/consulta-juzgado')
+        const { getTransporter, MAIL_FROM } = await import('@/lib/mailer')
+        const datos = {
+          subasta: fila.subasta ?? { dedupeKey: fila.dedupe_key },
+          cuadro: fila.cargas_detalle ?? null,
+          autoridad: fila.autoridad ?? null,
+          telefono: fila.telefono_autoridad ?? null,
+          email: fila.email_autoridad ?? null,
+          direccion: fila.direccion ?? null,
+          arrendamientoInscrito: fila.arrendamiento_inscrito ?? null,
+        }
+        const escrito = escritoConsulta(datos, preguntasParaJuzgado(datos))
+        // Sin SMTP configurado en este proyecto Vercel no se puede enviar: se dice
+        // en claro en vez de fallar en silencio (las envs SMTP_* viven hoy en ialimp).
+        const transporter = getTransporter()
+        if (!transporter) {
+          await tgSend('⚠️ No hay correo saliente configurado en plataforma (falta SMTP). El texto lo tienes arriba para mandarlo a mano.')
+          return NextResponse.json({ ok: true })
+        }
+
+        const r = await enviarConsulta(datos, escrito, {
+          enviar: ({ to, subject, text, replyTo }) =>
+            transporter.sendMail({ from: `"Subastas" <${MAIL_FROM}>`, to, subject, text, replyTo }),
+          registrar: ({ dedupeKey, email, escrito: cuerpo }) =>
+            prisma.$executeRaw(Prisma.sql`
+              INSERT INTO subastas_consultas (dedupe_key, email_destino, escrito, enviado_at)
+              VALUES (${dedupeKey}, ${email}, ${cuerpo}, now())
+            `),
+          replyTo: process.env.GMAIL_USER || undefined,
+        })
+        await tgSend(r.enviado ? `✅ ${r.motivo}` : `⚠️ No la he enviado: ${r.motivo}`)
+      } catch (e) {
+        console.error('[telegram-webhook] subn:enviar', e)
+        await tgSend('No he podido enviar la consulta. El texto lo tienes arriba para mandarlo a mano.').catch(() => {})
+      }
+      return NextResponse.json({ ok: true })
+    }
+
+    if (prefix === 'subn' && action === 'consulta') {
+      const radarId = args[0]
+      if (!radarId) { await tgAnswerCallback(cb.id, 'No encontrado'); return NextResponse.json({ ok: true }) }
+      await tgAnswerCallback(cb.id, '📝 Preparando la consulta…')
+      try {
+        const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
+          SELECT r.dedupe_key, r.subasta, s.cargas_detalle, s.autoridad, s.telefono_autoridad,
+                 s.email_autoridad, s.direccion, s.arrendamiento_inscrito
+          FROM subastas_radar r
+          LEFT JOIN subastas s ON s.dedupe_key = r.dedupe_key
+          WHERE r.id = ${radarId}::uuid
+        `)
+        const fila = filas[0]
+        if (!fila) { await tgSend('No encuentro esa subasta.'); return NextResponse.json({ ok: true }) }
+
+        const { preguntasParaJuzgado, escritoConsulta } = await import('@/lib/subastas/consulta-juzgado')
+        const datos = {
+          subasta: fila.subasta ?? { dedupeKey: fila.dedupe_key },
+          cuadro: fila.cargas_detalle ?? null,
+          autoridad: fila.autoridad ?? null,
+          telefono: fila.telefono_autoridad ?? null,
+          email: fila.email_autoridad ?? null,
+          direccion: fila.direccion ?? null,
+          arrendamientoInscrito: fila.arrendamiento_inscrito ?? null,
+        }
+        const preguntas = preguntasParaJuzgado(datos)
+        const escrito = escritoConsulta(datos, preguntas)
+
+        const contacto = [
+          datos.email ? `✉️ ${datos.email}` : null,
+          datos.telefono ? `☎️ ${datos.telefono}` : null,
+        ].filter(Boolean).join('  ·  ')
+
+        // Con correo del órgano se ofrece mandarla desde aquí; sin él, solo el texto
+        // (muchos juzgados publican solo teléfono o exigen sede judicial).
+        const cuerpo =
+          `📝 <b>Consulta para ${escapeHtml(String(datos.subasta.identificador ?? fila.dedupe_key))}</b>` +
+          `${contacto ? `\n${escapeHtml(contacto)}` : ''}\n\n<pre>${escapeHtml(escrito)}</pre>`
+        if (datos.email) {
+          // tgSendButtons ya manda parse_mode HTML.
+          await tgSendButtons(cuerpo, [[
+            { texto: '📨 Enviar al juzgado', callback: `subn:enviar:${radarId}` },
+          ]])
+        } else {
+          await tgSend(cuerpo, { html: true })
+        }
+      } catch (e) {
+        console.error('[telegram-webhook] subn:consulta', e)
+        await tgSend('No he podido preparar la consulta. Lo tienes en /subastas.').catch(() => {})
+      }
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── Motivo de un descarte del radar (aprendizaje) ───────────────────────
+    if (prefix === 'subd') {
+      const radarId = args[0]
+      const motivo = action // precio | zona | tipo | otro
+      if (!radarId || !['precio', 'zona', 'tipo', 'otro'].includes(motivo)) {
+        await tgAnswerCallback(cb.id, 'Motivo desconocido')
+        return NextResponse.json({ ok: true })
+      }
+      const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
+        SELECT cuenta_id, dedupe_key, subasta FROM subastas_radar WHERE id = ${radarId}::uuid
+      `)
+      const fila = filas[0]
+      if (!fila) { await tgAnswerCallback(cb.id, 'No encontrada'); return NextResponse.json({ ok: true }) }
+      const municipio = fila.subasta?.municipio ?? null
+      const tipoBien = fila.subasta?.tipo ?? null
+      await prisma.$executeRaw(Prisma.sql`
+        INSERT INTO subastas_descartes (cuenta_id, dedupe_key, municipio, tipo_bien, motivo)
+        VALUES (${fila.cuenta_id}::uuid, ${fila.dedupe_key}, ${municipio}, ${tipoBien}, ${motivo})
+        ON CONFLICT (cuenta_id, dedupe_key) DO UPDATE SET motivo = EXCLUDED.motivo
+      `)
+      if (motivo === 'zona' && municipio) {
+        const n = await prisma.$queryRaw<Array<{ n: number }>>(Prisma.sql`
+          SELECT COUNT(*)::int AS n FROM subastas_descartes
+          WHERE cuenta_id = ${fila.cuenta_id}::uuid AND motivo = 'zona'
+            AND upper(municipio) = upper(${municipio})
+        `)
+        if ((n[0]?.n ?? 0) >= 3) {
+          await tgAnswerCallback(cb.id, '🧠 Aprendido')
+          await tgSend(`🧠 Tres descartes por zona en <b>${escapeHtml(String(municipio))}</b> — dejo de avisarte de ese municipio. (Se reactiva borrando sus descartes.)`, { html: true }).catch(() => {})
+          return NextResponse.json({ ok: true })
+        }
+      }
+      await tgAnswerCallback(cb.id, '✅ Anotado')
+      return NextResponse.json({ ok: true })
+    }
+
     // ── Agente revisión movimientos bancarios ────────────────────────────────
     if (prefix === 'mov') {
       const movId = args[0]
@@ -378,7 +676,17 @@ export async function POST(req: NextRequest) {
     if (prefix !== 'hsp') return NextResponse.json({ ok: true }) // no es de este agente (bot compartido)
     const bookingId = args[0]
     const pend = bookingId ? await getPendiente(bookingId) : null
-    if (!pend) { await tgAnswerCallback(cb.id, 'Ya no está disponible'); return NextResponse.json({ ok: true }) }
+    if (!pend) {
+      // El borrador ya no está pendiente: se envió/descartó desde otro aviso, o es un botón de una
+      // propuesta DUPLICADA ya resuelta (mismo mensaje del huésped propuesto dos veces). En vez del
+      // críptico "Ya no está disponible", avisamos claro y RETIRAMOS los botones del mensaje pulsado
+      // (editar el texto sin reply_markup quita el teclado) para que no vuelva a inducir a error.
+      const eraEnvio = action === 'send' || action === 'grant' || action === 'grad'
+      await tgAnswerCallback(cb.id, eraEnvio ? 'Ese borrador ya se envió o se gestionó' : 'Ya no está disponible')
+      const staleId = cb.message?.message_id
+      if (staleId) await tgEditMessage(staleId, '☑️ <i>Este borrador ya se gestionó (enviado o descartado en otro aviso).</i>').catch(() => {})
+      return NextResponse.json({ ok: true })
+    }
 
     if (action === 'send' || action === 'grant' || action === 'grad') {
       const ok = await enviarAlHuesped(bookingId, pend.borrador || '')

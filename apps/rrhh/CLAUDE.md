@@ -38,17 +38,31 @@ El god-panel de plataforma crea empresas vía HTTP:
 /admin/cuenta       → datos de la empresa + documentación de empresa (CIF, escritura, TC2…)
 /admin/fichajes     → control de presencia en tiempo real + corrección manual
 /admin/obras        → CRUD de centros de trabajo (geovalla lat/lng/radio para fichaje)
+/admin/prl          → documentos de Prevención de Riesgos Laborales (autorización maquinaria,
+                      entrega EPIs, información de riesgos art.18, acuerdos de confidencialidad
+                      RGPD con/sin acceso a datos) — firma doble empresa→empleado
 /e/[token]          → portal del empleado (acceso por token único; incluye fichaje GPS)
-/api/admin/*        → endpoints protegidos por sesión JWT (responsable)
+/api/admin/*        → endpoints protegidos por sesión JWT (responsable), incl. `/api/admin/prl/generar`
+                      y `/api/admin/empleados/[id]/documentos/[docId]/descargar-firmado`
+                      (fusiona el PDF con el certificado de firma eIDAS art.26, vía pdf-lib)
 /api/operador/*     → endpoints protegidos por Bearer (god-panel plataforma)
 /api/e/*            → endpoints del portal empleado (auth por token/PIN), incl. `/api/e/fichaje`
-/api/auth/seleccionar-empresa → elige empresa activa cuando el responsable tiene varias
+/api/auth/seleccionar-empresa → elige empresa activa en el flujo de LOGIN (cuando el responsable tiene varias)
+/api/auth/cambiar-empresa  → cambia empresa estando ya autenticado (rota el JWT; usa getSesion())
+/api/admin/mis-empresas    → lista empresas del usuario autenticado (para el cambiador en sidebar)
 ```
 
 ## Packages consumidos (transpilePackages)
 `@central/core-ai`, `@central/core-email`, `@central/core-firma`, `@central/core-storage`,
 `@central/core-identity`, `@central/legal-templates`, `@central/module-documental`,
-`@central/module-rrhh`, `@central/module-chat`, `@central/module-geo`, `@central/module-horario`.
+`@central/module-rrhh`, `@central/module-chat`, `@central/module-nominas`, `@central/module-geo`,
+`@central/module-horario`, `@central/core-telegram` (aviso de fichajes abiertos, 16/07/2026).
+
+## Crons (`vercel.json`)
+- `/api/cron/nominas` — mensual (día 25, 08h).
+- `/api/cron/recordatorio-fichaje` — L-V 9h (hora ES): push a empleados que aún no han fichado entrada.
+- `/api/cron/alerta-fichajes-abiertos` — diario 22h (hora ES): Telegram si un fichaje activo lleva
+  >10h sin fichar salida.
 
 ## Patrones clave
 - `lib/auth.ts` — sesión del responsable (JWT firmado, `requireSecret()` para la clave de firma).
@@ -58,12 +72,23 @@ El god-panel de plataforma crea empresas vía HTTP:
 - `lib/firma.ts` / `lib/firma-publica.ts` — firma de documentos vía `@central/core-firma`.
 - `lib/documental.ts` — gestión documental vía `@central/module-documental`.
 - `lib/push.ts` — Web Push vía `@central/core-push` (si se activa).
-- `lib/branding.ts` — personalización (logo, color) por empresa.
+- `lib/branding.ts` — personalización (logo, color) por empresa. `color_primario` en `rrhh.empresas` → Mariscos González `#1B3461`.
+- `components/CambiadorEmpresa.tsx` — selector de empresa en sidebar (auto-carga, visible solo si ≥2 empresas). Se auto-incluye en `AdminShell`.
+- `lib/plantillas-prl.tsx` — plantillas PDF de PRL (autorización maquinaria, EPIs, riesgos,
+  confidencialidad) con `@react-pdf/renderer` (`serverExternalPackages` en `next.config`).
+- `lib/certificado-firma.tsx` — genera la página de certificado de firma (eIDAS art.26) que se
+  fusiona con el PDF original en la descarga del documento firmado.
 
 ## Tests
 `vitest run` — los tests viven en `lib/*.test.ts`. Gate de tipos: `tsc --noEmit` (CI).
 El build de Vercel ignora errores de tipos (`typescript.ignoreBuildErrors: true`) — el gate
 real es el job `typecheck` de `.github/workflows/tests.yml`.
+
+## Comportamientos establecidos
+- **Login:** nunca muestra branding de empresa — siempre neutro `ia·rrhh`. El branding entra solo dentro del panel.
+- **Multi-empresa:** `rrhh.usuario_empresas` (N:N). Login con 1 empresa → sesión directa. Login con N → selector. Ya autenticado → `CambiadorEmpresa` en sidebar.
+- **Fichajes sin obra:** si `obra_id` es null pero hay coordenadas GPS, la columna Obra muestra `📍 Ver mapa` (enlace a Google Maps con `lat_entrada,lng_entrada`).
+- **Crons:** deben llevar `Authorization: Bearer CRON_SECRET` (sin User-Agent bypass).
 
 ## Reglas heredadas del monorepo
 - Secrets que firman/validan sesiones → `requireSecret()`, **sin fallback literal**.

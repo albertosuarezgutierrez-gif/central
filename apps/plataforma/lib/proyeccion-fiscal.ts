@@ -14,6 +14,10 @@ export type ProyeccionFiscal = {
   patrones: PatronRecurrente[]
   ingresosRecurrentesProyectados: number
   gastosDeduciblesProyectados: number
+  // Coste deducible variable estimado de las reservas futuras (ingresosFuturos × margen histórico).
+  costeTuristicoFuturo: number
+  // Ratio histórico gasto-deducible/ingreso de los pisos (0..1) usado para el coste variable.
+  margenTuristico: number
   mesesRestantes: number
 }
 
@@ -48,13 +52,35 @@ export async function getProyeccionFiscal(
   }))
 
   const ingresosFuturos = reservasFuturas.reduce((s, r) => s + r.totalNeto, 0)
+  const meses = patronesResult.mesesRestantes
+
+  // ── Coste deducible VARIABLE de las reservas futuras ────────────────────────────────────────
+  // `ingresosFuturos` (tabla `incomes`) es NETO de comisión del portal, pero BRUTO de coste de
+  // operación (limpieza/lavandería/suministros por estancia). Aplicamos el ratio histórico
+  // gasto-deducible/ingreso de los pisos del propio `resumen` (ya sin amortizables) para descontar
+  // ese coste. Cap [0, 0.6] y guarda contra división por cero.
+  const pisos = resumen.pisos.total
+  const margenTuristico = pisos.ingresos > 0
+    ? Math.min(0.6, Math.max(0, pisos.gastos / pisos.ingresos))
+    : 0
+  const costeTuristicoFuturo = ingresosFuturos * margenTuristico
+
+  // ── Recurrentes proyectados: SOLO correduría (`seguros`) ────────────────────────────────────
+  // El ingreso/gasto turístico futuro YA entra por `ingresosFuturos` (neto del coste variable de
+  // arriba). Los patrones turísticos del BANCO (payouts de Booking, gastos fijos de pisos) se
+  // proyectarían OTRA VEZ hacia el futuro → doble conteo. Se excluyen de la proyección (siguen en
+  // `patrones` solo para mostrarlos). Correduría no tiene equivalente en `incomes` → sí se proyecta.
+  const segurosProy = patronesResult.patrones.filter(p => p.destino === 'seguros')
+  const ingresosSegurosProy = segurosProy.filter(p => p.tipo === 'ingreso').reduce((s, p) => s + p.importeMedioMensual * meses, 0)
+  const gastosSegurosProy = segurosProy.filter(p => p.tipo === 'gasto').reduce((s, p) => s + p.importeMedioMensual * meses, 0)
 
   const baseReal = resumen.fiscal.baseImponibleEstimada
   const baseProyectada =
     baseReal +
-    ingresosFuturos +
-    patronesResult.ingresosProyectados -
-    patronesResult.gastosProyectados
+    ingresosFuturos -
+    costeTuristicoFuturo +
+    ingresosSegurosProy -
+    gastosSegurosProy
 
   return {
     baseReal,
@@ -62,8 +88,11 @@ export async function getProyeccionFiscal(
     ingresosFuturos,
     reservasFuturas,
     patrones: patronesResult.patrones,
-    ingresosRecurrentesProyectados: patronesResult.ingresosProyectados,
-    gastosDeduciblesProyectados: patronesResult.gastosProyectados,
-    mesesRestantes: patronesResult.mesesRestantes,
+    ingresosRecurrentesProyectados: ingresosSegurosProy,
+    // El gasto deducible proyectado total = fijos de correduría + coste variable turístico.
+    gastosDeduciblesProyectados: gastosSegurosProy + costeTuristicoFuturo,
+    costeTuristicoFuturo,
+    margenTuristico,
+    mesesRestantes: meses,
   }
 }

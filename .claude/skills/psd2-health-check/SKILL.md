@@ -23,12 +23,19 @@ Vercel `psd2-sync` seguirá ejecutándose sin errores HTTP visibles pero devolvi
 
 ```sql
 SELECT
-  MAX(fecha)                                                AS ultimo_movimiento,
-  COUNT(*) FILTER (WHERE fecha >= CURRENT_DATE - 30)       AS mov_30d,
-  COUNT(*) FILTER (WHERE fecha >= CURRENT_DATE - 60
-                     AND fecha < CURRENT_DATE - 30)        AS mov_30d_prev
-FROM movimientos_bancarios;
+  MAX(fecha_operacion)                                                AS ultimo_movimiento,
+  COUNT(*) FILTER (WHERE fecha_operacion >= CURRENT_DATE - 30)       AS mov_30d,
+  COUNT(*) FILTER (WHERE fecha_operacion >= CURRENT_DATE - 60
+                     AND fecha_operacion < CURRENT_DATE - 30)        AS mov_30d_prev
+FROM movimientos_bancarios
+WHERE origen = 'psd2';
 ```
+
+> **`WHERE origen = 'psd2'` es obligatorio.** Sin el filtro, la caída de volumen de las importaciones
+> MANUALES (`xls`/`pdf`/`xls-kutxa`/`xls-bbva` — cargas históricas puntuales que se agotan solas) se
+> mezcla con el feed PSD2 real y dispara falsos positivos (caso real 22/07/2026: 57% de caída total,
+> pero el feed PSD2 estaba sano — la caída era 100% de las importaciones manuales, fuera del alcance de
+> esta skill). Si el feed PSD2 real está seco, dilo; si son las manuales, no es una anomalía de esta skill.
 
 Evalúa:
 - `ultimo_movimiento < CURRENT_DATE - 2` → **anomalía crítica** (>48h sin datos)
@@ -51,13 +58,15 @@ Evalúa:
    - Causa probable: token caducado / tier gratuito EB / cron mudo
    - Acción: revisar EB_PIS_ENABLED en Vercel + logs del cron psd2-sync
    ```
-2. Si `PLATAFORMA_URL` + `CRON_SECRET` están disponibles en la sesión, envía la alerta
+2. Si `PLATAFORMA_URL` + `ALERTA_TOKEN` están disponibles en la sesión, envía la alerta
    por el endpoint interno de plataforma (no necesitas TELEGRAM_BOT_TOKEN):
    ```
    POST {PLATAFORMA_URL}/api/internal/alerta
-   Authorization: Bearer {CRON_SECRET}
+   Authorization: Bearer {ALERTA_TOKEN}
    { "text": "⚠️ PSD2 sync lleva {N} días sin datos nuevos. Último mov: {fecha}. Revisar EB_PIS_ENABLED en Vercel." }
    ```
+   (`ALERTA_TOKEN` = token estrecho que SOLO abre este endpoint; el endpoint acepta también el
+   viejo `CRON_SECRET` por compat, pero NO pongas la llave maestra en el prompt.)
 
 ## Paso 3 — Informe final (siempre)
 
@@ -70,8 +79,9 @@ Muestra en el chat:
 ## Herramientas
 
 - **Supabase** (`wswbehlcuxqxyinousql`): `execute_sql` para las consultas
-- **Telegram** (a través de plataforma): `POST {PLATAFORMA_URL}/api/internal/alerta` con Bearer `CRON_SECRET`.
-  El token de Telegram vive en Vercel plataforma — la rutina NO necesita `TELEGRAM_BOT_TOKEN`.
+- **Telegram** (a través de plataforma): `POST {PLATAFORMA_URL}/api/internal/alerta` con Bearer `ALERTA_TOKEN`
+  (token estrecho; el endpoint acepta también el viejo `CRON_SECRET` por compat). El token de Telegram vive en
+  Vercel plataforma — la rutina NO necesita `TELEGRAM_BOT_TOKEN`.
 - Sin GitHub: esta skill no abre PRs (es un guardián, no un corrector)
 
 ## Auto-informe (obligatorio al terminar la pasada)
@@ -85,3 +95,16 @@ procesar" de `docs/AGENTES-BITACORA.md` (3-5 líneas máx.):
 - Commitea la entrada con el resto de tu trabajo (o en un commit propio a `main` si la
   pasada no tocó el repo). La consume el `agentes-entrenador` (semanal) para mejorar este
   prompt; si no queda escrita, esta pasada no existió para él.
+
+## Canal de aviso — protocolo común
+
+**Preflight AL ARRANCAR** (no al final, cuando ya tengas algo que contar):
+`GET {PLATAFORMA_URL}/api/internal/alerta` con `Authorization: Bearer {ALERTA_TOKEN}`.
+
+- `200` → el canal está vivo, sigue con tu pasada.
+- `401` → el canal está **mudo** (el token de ESTE entorno no coincide con el de Vercel `plataforma`;
+  hay un entorno por rutina y se desincronizan de uno en uno). El cuerpo trae `causa` y `remedio`.
+  Entonces, según `docs/AVISOS-AGENTES.md`: avisa por el **push nativo** de la sesión empezando por
+  `🔇 SIN TELEGRAM (401):` y deja el aviso **entero** en `docs/AGENTES-BITACORA.md` (`fallos:`).
+
+Nunca te inventes el token, nunca uses `CRON_SECRET` en el prompt, y **nunca falles en silencio**.

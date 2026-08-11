@@ -2,7 +2,23 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { detectarCompania, motivoSeguros, companiaLabel, claveReferencia, COMPANIA_OTRAS } from './correduria.ts'
+import { detectarCompania, motivoSeguros, companiaLabel, claveReferencia, claveReglaValida, COMPANIA_OTRAS } from './correduria.ts'
+
+test('claveReglaValida rechaza claves genéricas/trampa y acepta comercios/códigos específicos', () => {
+  // Trampa: substrings genéricos que colisionan con casi cualquier concepto del banco.
+  // 'CUOTA' describe la naturaleza del cargo (hipoteca, comunidad, club, RETA), no el comercio:
+  // aprendida de la hipoteca secuestraba la cuota de autónomos de BBVA (deducible).
+  for (const mala of ['TRANSF', 'TOTAL', 'RECEIPT', 'MODA', 'RESTAURANTES', 'TRANSFERENCIA RECIBIDA', 'PAGO', 'SALDO', 'ABC',
+    'CUOTA', 'IMPUESTO', 'CUOTA PTMO', 'PAGO DE IMPUESTO']) {
+    assert.equal(claveReglaValida(mala), false, `debería rechazar "${mala}"`)
+  }
+  // Específicas y seguras: comercios, códigos de agente, DNI.
+  for (const buena of ['PETROPRIX', 'IONOS', 'NETFLIX', 'M00171', '8/92361', 'TOTALENERGIES', '28823484E', 'GALOS CMI']) {
+    assert.equal(claveReglaValida(buena), true, `debería aceptar "${buena}"`)
+  }
+  assert.equal(claveReglaValida(null), false)
+  assert.equal(claveReglaValida(''), false)
+})
 
 test('detectarCompania reconoce aseguradoras por nombre', () => {
   assert.equal(detectarCompania('RECIBO GENERALI SEGUROS', '', 'GENERALI SEG.'), 'Generali')

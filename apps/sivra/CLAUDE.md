@@ -78,9 +78,16 @@ público: todo está detrás de login. El `package.json` se llama `roi-intranet`
 
 ## Variables de entorno (no hay `.env` en el repo)
 `DATABASE_URL`, `DIRECT_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`,
-`SMOOBU_API_KEY`, `NVIDIA_API_KEY`, `SERPER_API_KEY`, `GMAIL_USER`/`GMAIL_APP_PASSWORD`,
+`SMOOBU_API_KEY`, `NVIDIA_API_KEY`, `SERPER_API_KEY`, `GITHUB_TOKEN`, `GMAIL_USER`/`GMAIL_APP_PASSWORD`,
 `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY`, `CRON_SECRET`, `DRIVE_SCRIPT_URL`.
 En local, NextAuth v5 necesita además `AUTH_TRUST_HOST=true`.
+
+> **🔑 `GITHUB_TOKEN` — obligatoria para el agente SEO:** `lib/seo-landing.ts` la necesita para leer
+> y commitear la landing de `house-sevillana-landing` (repo externo) vía GitHub Contents API. Es un
+> PAT de GitHub con `contents:write` sobre ese repo — el **mismo valor** que ya usa el botón manual en
+> `plataforma`. Sin ella, el cron semanal `/api/seo-refresh` da **500**. **PUESTA el 03/08/2026** desde
+> el panel `/operador/secretos` de plataforma (entrada editable con write-through a los proyectos Vercel
+> `sivra` + `plataforma`); si hay que rotarla, se rota desde ese panel, no a mano en Vercel.
 
 > **🔑 Smoobu key — fuente única (14/06/2026):** la API key de Smoobu se lee ahora de la **BD**
 > (`pms_connections.smoobu_api_key`, la fila de Alberto, tabla propiedad de ialimp) vía

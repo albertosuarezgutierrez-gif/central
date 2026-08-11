@@ -1,6 +1,6 @@
 ---
 name: fiscal-novedades
-description: Agente PROGRAMADO que vigila cambios en las deducciones del IRPF (estatales en el BOE y autonómicas de Andalucía en el BOJA/AEAT) y los contrasta con los importes que usa el módulo /finanzas de plataforma (IMPORTES_POR_ANIO en apps/plataforma/lib/fiscal-deducciones.ts). Cuando un importe cambia, abre un PR draft que actualiza la constante e inserta una fila en fiscal_novedades para que la app avise EN PANTALLA si el cambio beneficia a Alberto. Úsala cuando Alberto pida "revisa si han cambiado las deducciones" o cuando la dispare su trigger (mensual + antes de la campaña de renta). NO se cuelga del agente de concursos (ese sondea PLACSP por CPV).
+description: Agente PROGRAMADO (mensual + pre-renta) que vigila cambios en deducciones IRPF (BOE estatal, BOJA/AEAT Andalucía) y los contrasta con IMPORTES_POR_ANIO de apps/plataforma/lib/fiscal-deducciones.ts; si cambian, PR draft + fila en fiscal_novedades para aviso en pantalla. Úsala si Alberto pide "revisa si han cambiado las deducciones".
 ---
 
 # Vigilante de novedades fiscales — deducciones IRPF (Alberto)
@@ -18,7 +18,9 @@ la campaña de renta) por un trigger de Claude Code web, o a petición.
 `fuente` y `revisado`. Los campos a vigilar (con su `clave` para `fiscal_novedades`):
 `maternidadPorHijo`, `maternidadGuarderiaMax`, `familiaNumerosaGeneral`,
 `familiaNumerosaEspecial`, `minimoContribuyente`, `minimoDescendiente[]`, `incrementoMenor3`,
-y las andaluzas `andaluciaNacimiento`, `andaluciaFamiliaNumerosa*`.
+y las andaluzas `andaluciaNacimiento`, `andaluciaFamiliaNumerosa*` **y sus límites de renta
+`andaluciaFamiliaNumerosaLimiteIndividual/Conjunta`** (25.000/30.000 €; añadidos 18/07/2026 — la FN
+autonómica se gatea por renta, la de nacimiento NO desde Ley 8/2025).
 
 ## Herramientas (MCP de la sesión)
 - **WebFetch / WebSearch**: AEAT (`sede.agenciatributaria.gob.es`), **BOE** (`boe.es`,

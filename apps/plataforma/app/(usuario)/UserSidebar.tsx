@@ -5,17 +5,24 @@ import { usePathname, useRouter } from 'next/navigation'
 import ThemeToggle from './ThemeToggle'
 
 const NAV_NEGOCIO = [
-  { href: '/dashboard', icon: '🏠', label: 'Resumen' },
-  { href: '/banca', icon: '🏦', label: 'Banca' },
-  { href: '/finanzas/gastos', icon: '🧾', label: 'Gastos' },
-  { href: '/finanzas/fiscal', icon: '🏛️', label: 'Fiscal' },
-  { href: '/finanzas/proyeccion', icon: '📈', label: 'Proyección' },
+  // 🏠 Inicio = Resumen + Banca FUSIONADOS (Fase 2). Una sola entrada: /banca con control
+  // 💶 Dinero (saldos+movimientos+IA) | 🏢 Negocios (holding, antiguo Resumen). Absorbe también la
+  // «Radiografía» y las entradas fiscales sueltas (rutas vivas, alcanzables desde sus enlaces).
+  // /dashboard sigue existiendo pero redirige aquí (segmento Negocios).
+  { href: '/banca', icon: '🏠', label: 'Inicio' },
+  { href: '/banca/transferencia', icon: '💸', label: 'Transferencia' },
   { href: '/agente', icon: '🤖', label: 'Agente precios' },
   { href: '/contable', icon: '🧮', label: 'Contable' },
   { href: '/limpiezas', icon: '🧹', label: 'Limpiezas' },
   { href: '/comunicacion', icon: '💬', label: 'Comunicación' },
   { href: '/concursos', icon: '🏛️', label: 'Concursos' },
+  { href: '/subastas', icon: '⚖️', label: 'Subastas y chollos' },
+  { href: '/empresas', icon: '🏢', label: 'Empresas' },
+  { href: '/trading', icon: '📈', label: 'Inversión' },
 ]
+
+// Entrada única para una cuenta acotada a la sección Empresas (rol='empresas').
+const NAV_SOLO_EMPRESAS = [{ href: '/empresas', icon: '🏢', label: 'Empresas' }]
 
 const NAV_PISOS = [
   { href: '/sivra/resultado-pisos', icon: '📈', label: 'Resultado pisos' },
@@ -29,7 +36,6 @@ const NAV_PISOS = [
   { href: '/sivra/mercado', icon: '📊', label: 'Competencia' },
   { href: '/sivra/pricing', icon: '🔬', label: 'Pricing Lab' },
   { href: '/sivra/pricing-auto', icon: '⚙️', label: 'Pricing auto' },
-  { href: '/sivra/inversion', icon: '🏡', label: 'Inversión' },
   { href: '/sivra/seo', icon: '🔍', label: 'SEO' },
   { href: '/sivra/limpiadoras', icon: '🛠️', label: 'Admin limpiezas' },
   { href: '/sivra/domotica', icon: '🌀', label: 'Domótica' },
@@ -48,7 +54,8 @@ const NAV_OPERADOR = [
   { href: '/operador/iarest/crecimiento', icon: '📈', label: 'Crecimiento', sub: true },
   { href: '/operador/iarest/sistema', icon: '🔬', label: 'Sistema', sub: true },
   { href: '/operador/iarest/crm', icon: '🎯', label: 'CRM', sub: true },
-  { href: '/operador/ia', icon: '🤖', label: 'IA · gasto' },
+  { href: '/operador/agentes', icon: '🤖', label: 'Agentes' },
+  { href: '/operador/ia', icon: '💸', label: 'IA · gasto' },
   { href: '/operador/rrhh', icon: '👥', label: 'RR.HH.' },
   { href: '/operador/rrhh/empleados', icon: '🧑‍💼', label: 'Empleados', sub: true },
   { href: '/operador/rrhh/solicitudes', icon: '📋', label: 'Solicitudes', sub: true },
@@ -58,9 +65,10 @@ const NAV_OPERADOR = [
 
 const NAV_OPERADOR_RESTRINGIDO = new Set(['/operador/clientes', '/operador/rrhh', '/operador/rrhh/empleados', '/operador/rrhh/solicitudes'])
 
-export default function UserSidebar({ email, nombre, isOperator, operadorRol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string }) {
+export default function UserSidebar({ email, nombre, isOperator, operadorRol, rol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string; rol?: string | null }) {
   const path = usePathname()
   const router = useRouter()
+  const soloEmpresas = rol === 'empresas'
   const [isMobile, setIsMobile] = useState(false)
   const [open, setOpen] = useState(false)
 
@@ -81,8 +89,8 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol }: 
     return (
       <div style={{ flex: 1, padding: '12px', overflowY: 'auto' }}>
         <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '4px 12px 6px', textTransform: 'uppercase' }}>Mi negocio</div>
-        {NAV_NEGOCIO.map(({ href, icon, label }) => {
-          const active = path === href || (href !== '/dashboard' && path.startsWith(href))
+        {(soloEmpresas ? NAV_SOLO_EMPRESAS : NAV_NEGOCIO).map(({ href, icon, label }) => {
+          const active = path === href || path.startsWith(href + '/')
           return (
             <Link key={href} href={href} onClick={() => setOpen(false)} className="nav-link" style={{
               display: 'flex', alignItems: 'center', gap: '10px',
@@ -98,8 +106,8 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol }: 
           )
         })}
 
-        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '16px 12px 6px', textTransform: 'uppercase' }}>Pisos · detalle</div>
-        {NAV_PISOS.map(({ href, icon, label }) => {
+        {!soloEmpresas && <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '16px 12px 6px', textTransform: 'uppercase' }}>Pisos · detalle</div>}
+        {!soloEmpresas && NAV_PISOS.map(({ href, icon, label }) => {
           const active = path.startsWith(href)
           return (
             <Link key={href} href={href} onClick={() => setOpen(false)} className="nav-link" style={{
@@ -115,7 +123,7 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol }: 
           )
         })}
 
-        {isOperator && (
+        {!soloEmpresas && isOperator && (
           <>
             <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '16px 12px 6px', textTransform: 'uppercase' }}>Operador</div>
             {NAV_OPERADOR.filter(n => operadorRol !== 'operador' || NAV_OPERADOR_RESTRINGIDO.has(n.href)).map(({ href, icon, label, sub }) => {

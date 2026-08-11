@@ -530,6 +530,99 @@ export async function enviarEmailNuevoLead({
   })
 }
 
+// ── EMAIL: Aviso interno al operador (sustituye al Telegram de tgAlert) ───────
+// Alberto pidió (20/07/2026) no recibir más pings de Telegram de los agentes y
+// recibir estos avisos por correo. Va a la bandeja del operador (por defecto
+// hola@iarest.es, que cae en su Gmail); override con env OPERADOR_EMAIL.
+const NIVEL_AVISO: Record<string, { emoji: string; label: string; color: string }> = {
+  critico:  { emoji: '🔴', label: 'Crítico',  color: C.verm },
+  aviso:    { emoji: '🟡', label: 'Aviso',    color: '#B8860B' },
+  info:     { emoji: '🔵', label: 'Info',     color: '#2A6FB0' },
+  resuelto: { emoji: '✅', label: 'Resuelto', color: '#3F7D44' },
+}
+
+export async function enviarEmailAvisoOperador({
+  mensaje,
+  nivel = 'info',
+}: {
+  mensaje: string
+  nivel?: 'critico' | 'aviso' | 'info' | 'resuelto'
+}) {
+  const to = process.env.OPERADOR_EMAIL || 'hola@iarest.es'
+  const n = NIVEL_AVISO[nivel] || NIVEL_AVISO.info
+  const fecha = new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' })
+  // Los callers de tgAlert pasan texto plano → escapamos y conservamos saltos de línea.
+  const safe = mensaje
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>')
+  const asuntoCorto = mensaje.replace(/\s+/g, ' ').trim().slice(0, 70)
+
+  const html = layout(`
+    <div class="card">
+      <h1>${n.emoji} ${n.label} · ia.rest</h1>
+      <div class="token-box" style="font-family:inherit;white-space:pre-line;font-size:14px;border-left:3px solid ${n.color};">${safe}</div>
+      <p style="font-size:13px;color:${C.fg3};margin-top:12px">${fecha}</p>
+      <a href="${BASE}/super" class="btn">Abrir /super →</a>
+    </div>
+  `, `${n.label} · ${asuntoCorto}`)
+
+  return getResend().emails.send({
+    from: FROM,
+    to,
+    subject: `${n.emoji} ia.rest · ${asuntoCorto}`,
+    html,
+  })
+}
+
+// ── EMAIL: Resumen diario de avisos al operador ──────────────────────────────
+// Un solo email al día con todos los avisos acumulados (canal 'resumen' de tgAlert).
+// Lo dispara el cron /api/cron/avisos-resumen vía enviarResumenOperador().
+export async function enviarEmailResumenOperador({
+  avisos,
+}: {
+  avisos: Array<{ nivel?: string | null; mensaje: string; created_at?: string | null }>
+}) {
+  const to = process.env.OPERADOR_EMAIL || 'hola@iarest.es'
+  const total = avisos.length
+  const criticos = avisos.filter(a => a.nivel === 'critico').length
+  const hoy = new Date().toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid', day: '2-digit', month: 'long', year: 'numeric' })
+
+  const filas = avisos.map(a => {
+    const n = NIVEL_AVISO[a.nivel || 'info'] || NIVEL_AVISO.info
+    const hora = a.created_at
+      ? new Date(a.created_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
+      : ''
+    const safe = a.mensaje
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br>')
+    return `<tr>
+      <td style="padding:10px 8px;border-bottom:1px solid ${C.rule};font-size:14px;vertical-align:top;white-space:nowrap;color:${n.color};font-weight:700;">${n.emoji}</td>
+      <td style="padding:10px 8px;border-bottom:1px solid ${C.rule};font-size:14px;vertical-align:top;color:${C.fg2};">${safe}</td>
+      <td style="padding:10px 8px;border-bottom:1px solid ${C.rule};font-size:12px;vertical-align:top;white-space:nowrap;color:${C.fg3};">${hora}</td>
+    </tr>`
+  }).join('')
+
+  const html = layout(`
+    <div class="card">
+      <h1>Resumen del día · ia.rest</h1>
+      <p>${total} aviso${total !== 1 ? 's' : ''}${criticos ? ` · <strong style="color:${C.verm}">${criticos} crítico${criticos !== 1 ? 's' : ''}</strong>` : ''} · ${hoy}</p>
+      <table style="width:100%;border-collapse:collapse;margin-top:8px">${filas}</table>
+      <a href="${BASE}/super" class="btn" style="margin-top:16px">Abrir /super →</a>
+    </div>
+  `, `${total} aviso${total !== 1 ? 's' : ''} de ia.rest hoy`)
+
+  return getResend().emails.send({
+    from: FROM,
+    to,
+    subject: `📋 ia.rest · resumen del día (${total} aviso${total !== 1 ? 's' : ''}${criticos ? `, ${criticos} crítico${criticos !== 1 ? 's' : ''}` : ''})`,
+    html,
+  })
+}
+
 // ── Función genérica de envío (para propuestas y otros usos internos) ─────────
 // ── EMAIL: Cierre de un portal de cobros de grupo (resumen al dueño) ──
 export async function enviarEmailCierreCobros({

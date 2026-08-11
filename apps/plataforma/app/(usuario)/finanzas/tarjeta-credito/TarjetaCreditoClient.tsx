@@ -2,6 +2,7 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import Link from 'next/link'
+import { eur } from '@/lib/dinero'
 
 const DESTINO_LABEL: Record<string, string> = {
   personal: 'Personal',
@@ -28,10 +29,6 @@ type Tarjeta = {
   banco: string | null
   alias: string | null
   movimientos: Mov[]
-}
-
-function eur(n: number) {
-  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(n)
 }
 
 function mesLabel(mes: string) {

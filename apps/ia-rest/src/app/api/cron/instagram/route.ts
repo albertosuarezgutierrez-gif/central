@@ -6,7 +6,13 @@ import { callAI, cleanJSON } from '@/lib/ai-client'
 import { tgAlertButtons } from '@/lib/telegram'
 import { notifyError } from '@/lib/notify'
 import { obtenerNoticias, elegirTemaConContexto, leerContextoDrive } from '@/lib/instagram-context'
-import { startVideoIA } from '@/lib/ai-video'
+import { startVideoIA, type VideoEngine } from '@/lib/ai-video'
+
+// Motor de vídeo IA del Reel: Veo 3 Fast (audio nativo) por defecto; IG_VIDEO_ENGINE=kling
+// revierte al motor anterior sin tocar código. Un solo mando en Vercel.
+function motorVideo(): VideoEngine {
+  return process.env.IG_VIDEO_ENGINE === 'kling' ? 'kling' : 'veo3-fast'
+}
 
 type Plantilla = 'stat'|'pregunta'|'comparativa'|'tip'|'cita'|'producto'
 type Estilo = 'editorial'|'brutalist'|'humano'
@@ -82,9 +88,11 @@ async function conReintentos<T>(fn: () => Promise<T>, intentos = 3): Promise<T> 
 }
 
 // Contenido del reel: gancho + 3 puntos + caption (lo monta generarReel sobre slides+ambiente).
-async function generarReelContenido(tema: string, hashtags: string[]) {
+async function generarReelContenido(tema: string, hashtags: string[], modulo: string) {
+  const foco = modulo ? `Este reel va de la funcionalidad "${modulo}" (NO siempre las comandas por voz — varía el ángulo respecto a otros reels).` : ''
   const prompt = `Eres el agente de Instagram de ia.rest (siempre "ia.rest", nunca "IA Rest").
-PRODUCTO: TPV por voz para hostelería española. El camarero habla → la cocina recibe en <0,5s.
+PRODUCTO: suite de software para hostelería española (comandas por voz, QR en mesa, KDS de cocina, analítica, VeriFactu, almacén, fichajes, delivery propio…). El camarero habla → la cocina recibe en <0,5s es SOLO una de sus piezas.
+${foco}
 TONO: directo, sin palabrería, como un hostelero experimentado. PROHIBIDO nombrar competidores ni ciudades EN EL ARTE.
 Crea un REEL sobre: "${tema}".
 - titulo: portada, gancho corto que pare el scroll (máx 55 chars).
@@ -98,13 +106,22 @@ SOLO JSON: {"titulo":"","p1":"","p2":"","p3":"","caption":""}`
 
 // Prompt cinematográfico (inglés) para el vídeo IA del Reel. Regla de oro:
 // describir MOVIMIENTO explícito (cámara, gente, pantallas) o el modelo genera una foto.
-async function generarPromptVideo(tema: string): Promise<string> {
-  const prompt = `You write prompts for an AI video model (Kling). Product: ia.rest, a voice-powered POS for Spanish bars/restaurants (waiter speaks → kitchen receives instantly).
-Topic of this Instagram Reel: "${tema}".
-Write ONE cinematic video prompt in English (max 90 words) showing that topic as a real scene in a Spanish bar/restaurant where ia.rest visibly helps. REQUIREMENTS: explicit camera movement (dolly/orbit/whip-pan), people in motion, screens/tablets updating, energetic modern commercial style, vertical 9:16. No text overlays, no brand names on screen.
+// Veo 3 genera AUDIO nativo → se le dirige el sonido ambiente y se le PROHÍBE con
+// fuerza el texto en pantalla (Veo tiende a quemar subtítulos si detecta palabras).
+async function generarPromptVideo(tema: string, engine: VideoEngine, modulo: string): Promise<string> {
+  const esVeo = engine === 'veo3-fast'
+  const modelName = esVeo ? 'Veo 3 (generates its own synced audio)' : 'Kling'
+  const audioLine = esVeo
+    ? 'AUDIO: natural ambient sound of a lively Spanish bar/restaurant that fits the scene (chatter, clinking glasses, kitchen sizzle) — NO spoken dialogue, NO voice-over, NO music lyrics. '
+    : ''
+  const foco = modulo ? `the feature/module "${modulo}"` : 'this topic'
+  const prompt = `You write prompts for an AI video model (${modelName}). Product: ia.rest, a hospitality software suite for Spanish bars/restaurants.
+This Reel is about ${foco} — topic: "${tema}".
+Write ONE cinematic video prompt in English (max 90 words) that VISUALLY DEPICTS THAT SPECIFIC FEATURE in action in a real Spanish bar/restaurant, so the reel looks DIFFERENT from other reels. Make the scene UNMISTAKABLY about ${foco} — pick the matching visual: a phone SCANNING a QR at the table, a glowing ANALYTICS dashboard on a tablet, a KITCHEN DISPLAY screen updating with tickets, a STOCK/inventory alert popping, an e-INVOICE printing, staff CLOCKING IN, a delivery bag handoff, etc. Do NOT default to the generic "waiter speaking an order into a phone" shot UNLESS the topic is literally voice ordering.
+REQUIREMENTS: explicit camera movement (dolly/orbit/whip-pan/push-in), people in motion, screens/devices clearly visible and updating, energetic modern commercial style, vertical 9:16. ${audioLine}CRITICAL: absolutely NO on-screen text, NO subtitles, NO captions, NO brand names or logos on screen, NO watermark.
 Answer with the prompt only, no quotes.`
   // noFallback=true → NIM puro (regla de crons/agentes)
-  const raw = await callAI('Video prompt writer. Answer with the prompt only.', prompt, 250, 20_000, true)
+  const raw = await callAI('Video prompt writer. Answer with the prompt only.', prompt, 260, 20_000, true)
   return raw.trim().replace(/^"|"$/g, '')
 }
 
@@ -303,9 +320,24 @@ SOLO JSON: {"ganchoA":"","ganchoB":"","claves":[{"t":"","frase":""},{"t":"","fra
     // 2º intento: reel de slides Cloudinary. 3º: imagen (nunca queda el día vacío).
     if (formato === 'reel' && req.nextUrl.searchParams.get('video') !== '0') {
       try {
-        const reel = await conReintentos(() => generarReelContenido(tema, hashtags))
-        const promptVideo = await conReintentos(() => generarPromptVideo(tema))
-        const job = await startVideoIA(promptVideo, { duration: 10 })
+        const reel = await conReintentos(() => generarReelContenido(tema, hashtags, modulo))
+        // Motor por defecto Veo 3 Fast (audio nativo, 8s); si Veo falla al encolar,
+        // se reintenta UNA vez con Kling (sin audio) antes de caer a imagen.
+        const engine = motorVideo()
+        const promptVideo = await conReintentos(() => generarPromptVideo(tema, engine, modulo))
+        let job
+        try {
+          job = await startVideoIA(promptVideo, { duration: 8, engine, generateAudio: true })
+        } catch (veoErr: any) {
+          if (engine === 'veo3-fast') {
+            notifyError({ tipo: 'instagram_reel_ia', modulo: 'cron', nivel: 'aviso', mensaje: `Veo 3 falló al encolar, pruebo Kling: ${veoErr?.message||'error'}`, detalle: { tema } })
+            const promptKling = await conReintentos(() => generarPromptVideo(tema, 'kling', modulo))
+            job = await startVideoIA(promptKling, { duration: 10, engine: 'kling' })
+          } else {
+            throw veoErr
+          }
+        }
+        const motorEmoji = job.engine === 'veo3-fast' ? '🎬 Veo 3 (con sonido)' : '🎬 Kling'
         const { data: bIA, error: errIA } = await supabase.from('instagram_borradores').insert({
           plantilla: 'reel', titulo: reel.titulo, caption: reel.caption + coletilla, image_url: '',
           tema_elegido: tema, modulo_relacionado: modulo,
@@ -313,11 +345,11 @@ SOLO JSON: {"ganchoA":"","ganchoB":"","claves":[{"t":"","frase":""},{"t":"","fra
         }).select('id').single()
         if (errIA) throw new Error(`No se pudo guardar borrador Reel IA: ${errIA.message}`)
         await tgAlertButtons(
-          `🎬 <b>Reel IA generándose</b> (~1 min)\n\n${modulo||'—'} · <i>${tema.slice(0,80)}</i>\n\n<b>${reel.titulo?.slice(0,70)}</b>\n\nPulsa 🔄 en un minuto para ver el vídeo y publicarlo.`,
+          `${motorEmoji} <b>Reel IA generándose</b> (~1-2 min)\n\n${modulo||'—'} · <i>${tema.slice(0,80)}</i>\n\n<b>${reel.titulo?.slice(0,70)}</b>\n\nPulsa 🔄 en un minuto para ver el vídeo y publicarlo.`,
           'info',
           [[{ texto:'🔄 Comprobar vídeo', callback:`ig_reel_check:${bIA.id}` },{ texto:'🗑️ Descartar', callback:`ig_descartar:${bIA.id}` }]]
         )
-        return NextResponse.json({ ok: true, formato: 'reel_ia', borradorId: bIA.id, tema })
+        return NextResponse.json({ ok: true, formato: 'reel_ia', engine: job.engine, borradorId: bIA.id, tema })
       } catch (iaErr: any) {
         notifyError({ tipo: 'instagram_reel_ia', modulo: 'cron', nivel: 'aviso', mensaje: `Reel IA falló, pruebo Cloudinary: ${iaErr?.message||'error'}`, detalle: { tema } })
         // cae DIRECTO a imagen (decisión Alberto 02/07/2026: los reels de

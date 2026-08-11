@@ -269,8 +269,27 @@ export async function enviarResumenTarjeta(
   const lineasTop = top5.map(([c, v]) => `  · ${c}: ${fmtEur(v)}`).join('\n')
   const lineasDest = [...porDestino.entries()].map(([d, v]) => `  · ${destinoLabel[d] ?? d}: ${fmtEur(v)}`).join('\n')
 
-  // Movimientos dudosos para revisión interactiva
-  const dudosos = await getMovimientosDudosos(ids, mes).catch(() => [] as Awaited<ReturnType<typeof getMovimientosDudosos>>)
+  // Movimientos dudosos para revisión interactiva.
+  // 🚨 Un `[]` por FALLO de la consulta no puede acabar diciendo «todos
+  // clasificados»: este Telegram es el único aviso que se recibe del extracto,
+  // y si afirma que está todo bien nadie vuelve a mirarlo.
+  let dudosos: Awaited<ReturnType<typeof getMovimientosDudosos>> = []
+  let dudososFallo = false
+  try {
+    dudosos = await getMovimientosDudosos(ids, mes)
+  } catch {
+    dudososFallo = true
+  }
+  // OJO: `sinClasificar` (arriba) son los cargos sin `destino`. Tampoco están
+  // clasificados aunque no lleven `requiere_revision` y por tanto no entren en
+  // `getMovimientosDudosos` — antes se los contaba como «clasificados».
+  const estadoClasificacion = dudososFallo
+    ? '⚠️ No se ha podido comprobar cuáles necesitan revisión (fallo al consultar): revísalo a mano.'
+    : dudosos.length > 0
+      ? `❓ ${dudosos.length} necesitan revisión`
+      : sinClasificar > 0
+        ? `❓ ${sinClasificar} sin clasificar`
+        : '✅ todos clasificados'
 
   // Calcular deducible/no deducible para el resumen
   const deducibleDestinos = new Set(['turistico_pisos', 'turistico_duplex', 'seguros'])
@@ -282,8 +301,8 @@ export async function enviarResumenTarjeta(
     `<b>${label.toUpperCase()}</b>`,
     '',
     `Total gastado: <b>${fmtEur(totalMes)}</b>${diffStr}`,
-    `✅ ${cargos.length - dudosos.length} clasificados automáticamente`,
-    dudosos.length > 0 ? `❓ ${dudosos.length} necesitan revisión` : '✅ todos clasificados',
+    `✅ ${Math.max(0, cargos.length - dudosos.length - sinClasificar)} clasificados automáticamente`,
+    estadoClasificacion,
     '',
     `Deducible: <b>${fmtEur(totalDeducible)}</b> · No deducible: ${fmtEur(totalNoDeducible)}`,
     '',
@@ -335,12 +354,21 @@ export type CuentaBancaria = {
   saldoActual: number | null
   saldoFecha: string | null
   oculta: boolean
+  sincronizada: boolean
 }
 
 export type SaldoConsolidado = {
   total: number
   porSociedad: Array<{ sociedadId: string; sociedadNombre: string; saldo: number }>
   cuentas: CuentaBancaria[]
+  /**
+   * Cuentas visibles cuyo `saldo_actual` es NULL — el banco no lo devolvió o
+   * nunca se han sincronizado. NO suman al `total`, así que el total es un
+   * MÍNIMO, no la foto completa. Quien lo presente (pantalla, email de
+   * tesorería) tiene que decirlo: un total al que le faltan cuentas leído como
+   * cifra firme dispara alarmas falsas o esconde dinero.
+   */
+  sinSaldo: number
 }
 
 // Saldo consolidado de TODAS las cuentas bancarias de una cuenta (scoped por cuenta_id).
@@ -349,10 +377,14 @@ export async function getSaldoConsolidado(cuentaId: string): Promise<SaldoConsol
   const cuentas = await prisma.$queryRaw<Array<{
     id: string; sociedad_id: string; sociedad_nombre: string; banco: string | null
     iban_mascara: string | null; alias: string | null; divisa: string
-    saldo_actual: unknown; saldo_fecha: Date | null; oculta: boolean
+    saldo_actual: unknown; saldo_fecha: Date | null; oculta: boolean; sincronizada: boolean
   }>>`
     SELECT cb.id, cb.sociedad_id, s.nombre AS sociedad_nombre, cb.banco, cb.iban_mascara,
-           cb.alias, cb.divisa, cb.saldo_actual, cb.saldo_fecha, cb.oculta
+           cb.alias, cb.divisa, cb.saldo_actual, cb.saldo_fecha, cb.oculta,
+           EXISTS (
+             SELECT 1 FROM movimientos_bancarios mb
+             WHERE mb.cuenta_bancaria_id = cb.id AND mb.origen = 'psd2'
+           ) AS sincronizada
     FROM cuentas_bancarias cb
     JOIN sociedades s ON s.id = cb.sociedad_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid
@@ -370,20 +402,26 @@ export async function getSaldoConsolidado(cuentaId: string): Promise<SaldoConsol
     saldoActual: c.saldo_actual == null ? null : Number(c.saldo_actual),
     saldoFecha: c.saldo_fecha ? c.saldo_fecha.toISOString().slice(0, 10) : null,
     oculta: c.oculta,
+    sincronizada: c.sincronizada,
   }))
 
   const porSocMap = new Map<string, { sociedadId: string; sociedadNombre: string; saldo: number }>()
   let total = 0
+  let sinSaldo = 0
   for (const c of lista) {
     if (c.oculta) continue
-    const s = c.saldoActual ?? 0
+    // Un saldo desconocido NO es cero: se cuenta aparte y el total queda como
+    // mínimo declarado (mismo criterio que `lib/subastas/tesoreria.ts`, que ya
+    // filtra `saldo_actual IS NOT NULL` en vez de sumar ceros).
+    if (c.saldoActual == null) { sinSaldo++; continue }
+    const s = c.saldoActual
     total += s
     const prev = porSocMap.get(c.sociedadId) ?? { sociedadId: c.sociedadId, sociedadNombre: c.sociedadNombre, saldo: 0 }
     prev.saldo += s
     porSocMap.set(c.sociedadId, prev)
   }
 
-  return { total, porSociedad: [...porSocMap.values()], cuentas: lista }
+  return { total, porSociedad: [...porSocMap.values()], cuentas: lista, sinSaldo }
 }
 
 // ── Saldo por cuenta + últimos movimientos (home) ──────────────────────────────
@@ -528,7 +566,7 @@ export async function getSerieCobrosPisos(cuentaId: string, meses = 6): Promise<
     WHERE cb.cuenta_id = ${cuentaId}::uuid
       AND mb.importe > 0
       AND mb.destino IN ('turistico_duplex', 'turistico_pisos')
-      AND mb.fecha_operacion >= date_trunc('month', current_date) - make_interval(months => ${meses - 1})
+      AND mb.fecha_operacion >= date_trunc('month', current_date) - make_interval(months => ${meses - 1}::int)
     GROUP BY 1
     ORDER BY 1
   `) as SerieCobrosRow[]
@@ -646,13 +684,146 @@ export async function listarMovimientos(
   return rows.map(mapMov)
 }
 
-// Movimientos que la IA marcó "por revisar" (categoría dudosa): el dueño les pone categoría.
+// ── Libro completo de movimientos (paginado, con filtros) ───────────────────────────────────────
+// Para la vista "ver TODOS los movimientos" de /banca: filtra por cuenta bancaria, rango de fechas,
+// signo y texto, y pagina en el servidor (LIMIT/OFFSET) para no montar miles de filas de golpe.
+// Devuelve el negocio (`destino`) por fila para poder reclasificar en línea. Scoped por cuenta_id.
+export type MovLedger = {
+  id: string
+  fecha: string | null
+  concepto: string
+  contraparte: string | null
+  importe: number
+  destino: string | null
+  categoria: string | null
+  banco: string | null
+  cuentaBancariaId: string
+  conciliado: boolean
+  requiereRevision: boolean
+  // Bien de inversión (mobiliario/obra): sigue en un bucket deducible pero se amortiza por años,
+  // no cuenta como gasto deducible del ejercicio. La UI lo matiza en el badge de deducibilidad.
+  amortizable: boolean
+}
+export type LedgerFiltros = {
+  cuentaBancariaId?: string
+  desde?: string   // YYYY-MM-DD
+  hasta?: string   // YYYY-MM-DD
+  signo?: 'ingreso' | 'gasto'
+  q?: string
+}
+export async function listarMovimientosLedger(
+  cuentaId: string, filtros: LedgerFiltros = {}, limite = 50, offset = 0,
+): Promise<{ movimientos: MovLedger[]; total: number; hayMas: boolean }> {
+  const conds: Prisma.Sql[] = [
+    Prisma.sql`cb.cuenta_id = ${cuentaId}::uuid`,
+    Prisma.sql`COALESCE(mb.duplicado_estado, '') <> 'ignorado'`,
+  ]
+  if (filtros.cuentaBancariaId) conds.push(Prisma.sql`mb.cuenta_bancaria_id = ${filtros.cuentaBancariaId}::uuid`)
+  if (filtros.desde) conds.push(Prisma.sql`mb.fecha_operacion >= ${filtros.desde}::date`)
+  if (filtros.hasta) conds.push(Prisma.sql`mb.fecha_operacion <= ${filtros.hasta}::date`)
+  if (filtros.signo === 'ingreso') conds.push(Prisma.sql`mb.importe > 0`)
+  if (filtros.signo === 'gasto') conds.push(Prisma.sql`mb.importe < 0`)
+  if (filtros.q) {
+    const like = `%${filtros.q}%`
+    conds.push(Prisma.sql`(mb.concepto ILIKE ${like} OR mb.contraparte ILIKE ${like} OR mb.concepto_normalizado ILIKE ${like})`)
+  }
+  const where = Prisma.join(conds, ' AND ')
+
+  const rows = await prisma.$queryRaw<Array<{
+    id: string; fecha_operacion: Date | null; concepto: string | null; contraparte: string | null
+    importe: unknown; destino: string | null; categoria: string | null; banco: string | null
+    cuenta_bancaria_id: string; conciliado: boolean; requiere_revision: boolean; amortizable: boolean | null
+  }>>(Prisma.sql`
+    SELECT mb.id, mb.fecha_operacion,
+           coalesce(mb.concepto_normalizado, mb.concepto, mb.contraparte) AS concepto,
+           mb.contraparte, mb.importe, mb.destino, mb.categoria, cb.banco,
+           mb.cuenta_bancaria_id, mb.conciliado, mb.requiere_revision, mb.amortizable
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE ${where}
+    ORDER BY mb.fecha_operacion DESC NULLS LAST, mb.created_at DESC
+    LIMIT ${limite} OFFSET ${offset}
+  `)
+  const totalRows = await prisma.$queryRaw<Array<{ n: bigint }>>(Prisma.sql`
+    SELECT count(*)::bigint AS n
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE ${where}
+  `)
+  const total = Number(totalRows[0]?.n ?? 0)
+  const movimientos: MovLedger[] = rows.map(r => ({
+    id: r.id,
+    fecha: r.fecha_operacion ? r.fecha_operacion.toISOString().slice(0, 10) : null,
+    concepto: r.concepto || '',
+    contraparte: r.contraparte,
+    importe: Number(r.importe),
+    destino: r.destino,
+    categoria: r.categoria,
+    banco: r.banco,
+    cuentaBancariaId: r.cuenta_bancaria_id,
+    conciliado: r.conciliado,
+    requiereRevision: r.requiere_revision,
+    amortizable: !!r.amortizable,
+  }))
+  return { movimientos, total, hayMas: offset + movimientos.length < total }
+}
+
+// INGRESOS (abonos) marcados para revisar cuyo NEGOCIO está sin confirmar. Antes un ingreso mal
+// clasificado no tenía dónde aparecer (la revisión de /finanzas/gastos es solo importe<0); estos
+// abonos se surten aquí para que el dueño les asigne el negocio (destino) desde /banca. Scoped.
+export async function listarIngresosPorRevisar(cuentaId: string, limite = 40): Promise<MovLedger[]> {
+  const rows = await prisma.$queryRaw<Array<{
+    id: string; fecha_operacion: Date | null; concepto: string | null; contraparte: string | null
+    importe: unknown; destino: string | null; categoria: string | null; banco: string | null
+    cuenta_bancaria_id: string; conciliado: boolean; requiere_revision: boolean
+  }>>`
+    SELECT mb.id, mb.fecha_operacion,
+           coalesce(mb.concepto_normalizado, mb.concepto, mb.contraparte) AS concepto,
+           mb.contraparte, mb.importe, mb.destino, mb.categoria, cb.banco,
+           mb.cuenta_bancaria_id, mb.conciliado, mb.requiere_revision
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND mb.importe > 0
+      AND mb.requiere_revision = true
+      AND COALESCE(mb.destino_confirmado, false) = false
+      AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'
+      -- Los traspasos internos (pago del recibo de la tarjeta "PAGO RECIBO 466…", movimientos entre
+      -- cuentas propias) NO son ingresos: el gasto real ya está en el detalle de la tarjeta. No tienen
+      -- negocio que asignar → fuera de la bandeja aunque conserven la marca de revisión.
+      AND COALESCE(mb.destino, '') <> 'traspaso_interno'
+    ORDER BY mb.fecha_operacion DESC NULLS LAST, mb.importe DESC
+    LIMIT ${limite}
+  `
+  return rows.map(r => ({
+    id: r.id,
+    fecha: r.fecha_operacion ? r.fecha_operacion.toISOString().slice(0, 10) : null,
+    concepto: r.concepto || '',
+    contraparte: r.contraparte,
+    importe: Number(r.importe),
+    destino: r.destino,
+    categoria: r.categoria,
+    banco: r.banco,
+    cuentaBancariaId: r.cuenta_bancaria_id,
+    conciliado: r.conciliado,
+    requiereRevision: r.requiere_revision,
+    amortizable: false,   // los abonos (ingresos) no son bienes de inversión amortizables
+  }))
+}
+
+// GASTOS que la IA marcó "por revisar": lo dudoso es el NEGOCIO (destino) — la bandeja de /banca
+// lo resuelve vía /api/banca/destino (confirma + aprende regla del comercio).
 export async function listarPorRevisar(cuentaId: string, limite = 40): Promise<MovimientoBancario[]> {
   const rows = await prisma.$queryRaw<MovRow[]>`
     SELECT ${SELECT_MOV}
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.requiere_revision = true
+      AND COALESCE(mb.destino_confirmado, false) = false  -- un destino YA confirmado no es "por revisar":
+                          -- reclasificar/confirmar deja el negocio decidido; mostrarlo aquí es un flag
+                          -- zombie (mismo criterio que getAlertas, health-check y /finanzas/gastos).
+      AND mb.importe < 0  -- solo GASTOS: los ingresos dudosos viven en «Ingresos por revisar» (negocio),
+                          -- si no, el mismo abono salía en las dos bandejas (categoría y negocio).
       AND COALESCE(mb.duplicado_estado, '') <> 'ignorado' -- excluir duplicados marcados
     ORDER BY mb.fecha_operacion DESC NULLS LAST, mb.created_at DESC
     LIMIT ${limite}
@@ -825,13 +996,16 @@ export async function getAlertas(cuentaId: string): Promise<Alertas> {
 
   const [rev, sinJustif, grupos, registrosPrev, cobros] = await Promise.all([
     // «Por revisar»: mismo criterio que la bandeja de /finanzas?tab=gastos
-    // (requiere_revision, aún sin confirmar y que no sea un traspaso interno).
+    // (requiere_revision, aún sin confirmar, que no sea un traspaso interno y que sea un GASTO).
+    // El filtro importe<0 evita etiquetar como "gastos por revisar" a los abonos (ingresos) que
+    // conservan el flag requiere_revision sin confirmar — antes inflaban el contador del banner.
     prisma.$queryRaw<Array<{ n: bigint }>>`
       SELECT count(*) AS n
       FROM movimientos_bancarios mb
       JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
       WHERE cb.cuenta_id = ${cuentaId}::uuid
         AND mb.requiere_revision = true
+        AND mb.importe < 0
         AND COALESCE(mb.destino_confirmado, false) = false
         AND COALESCE(mb.destino, '') <> 'traspaso_interno'
         AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'`,
@@ -913,7 +1087,10 @@ export async function getDuplicadosSospechosos(cuentaId: string): Promise<DupGru
                AND m2.importe < 0
                AND m2.fecha_operacion >= current_date - 60) AS ocurrencias_contraparte,
            a.origen AS origen_a, b.origen AS origen_b,
-           NULL::text AS cuenta_label_a, NULL::text AS cuenta_label_b
+           -- Mismo par = misma cuenta bancaria → misma etiqueta para los dos (banco + IBAN
+           -- enmascarado), para que el dueño sepa DÓNDE buscar cada cargo y verificarlo.
+           coalesce(cb.banco || coalesce(' ' || cb.iban_mascara, ''), cb.alias, cb.iban_mascara, 'Cuenta') AS cuenta_label_a,
+           coalesce(cb.banco || coalesce(' ' || cb.iban_mascara, ''), cb.alias, cb.iban_mascara, 'Cuenta') AS cuenta_label_b
     FROM movimientos_bancarios a
     JOIN movimientos_bancarios b
       ON b.cuenta_bancaria_id = a.cuenta_bancaria_id AND b.id > a.id
@@ -954,8 +1131,8 @@ export async function getDuplicadosSospechosos(cuentaId: string): Promise<DupGru
            coalesce(a.contraparte, a.concepto) AS contraparte_key,
            0::int AS ocurrencias_contraparte,
            a.origen AS origen_a, b.origen AS origen_b,
-           coalesce(cba.banco, cba.iban_mascara, 'Cuenta A') AS cuenta_label_a,
-           coalesce(cbb.banco, cbb.iban_mascara, 'Cuenta B') AS cuenta_label_b
+           coalesce(cba.banco || coalesce(' ' || cba.iban_mascara, ''), cba.alias, cba.iban_mascara, 'Cuenta A') AS cuenta_label_a,
+           coalesce(cbb.banco || coalesce(' ' || cbb.iban_mascara, ''), cbb.alias, cbb.iban_mascara, 'Cuenta B') AS cuenta_label_b
     FROM movimientos_bancarios a
     JOIN cuentas_bancarias cba ON cba.id = a.cuenta_bancaria_id
     JOIN movimientos_bancarios b
@@ -989,12 +1166,13 @@ export async function getDuplicadosSospechosos(cuentaId: string): Promise<DupGru
 }
 
 // Resueltos recientes (para el plegable "ya resueltos" con opción de reactivar).
-export type DupResuelto = { id: string; fecha: string | null; concepto: string; importe: number; estado: 'ignorado' | 'confirmado' }
+export type DupResuelto = { id: string; fecha: string | null; concepto: string; importe: number; estado: 'ignorado' | 'confirmado'; cuentaLabel?: string }
 export async function getDuplicadosResueltos(cuentaId: string, limite = 40): Promise<DupResuelto[]> {
-  const rows = await prisma.$queryRaw<Array<{ id: string; fecha_operacion: Date | null; concepto: string | null; contraparte: string | null; importe: number; duplicado_estado: string }>>`
+  const rows = await prisma.$queryRaw<Array<{ id: string; fecha_operacion: Date | null; concepto: string | null; contraparte: string | null; importe: number; duplicado_estado: string; cuenta_label: string | null }>>`
     SELECT mb.id, mb.fecha_operacion,
            coalesce(mb.concepto_normalizado, mb.concepto, mb.contraparte) AS concepto,
-           mb.contraparte, mb.importe::float AS importe, mb.duplicado_estado
+           mb.contraparte, mb.importe::float AS importe, mb.duplicado_estado,
+           coalesce(cb.banco || coalesce(' ' || cb.iban_mascara, ''), cb.alias, cb.iban_mascara, 'Cuenta') AS cuenta_label
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.duplicado_estado IN ('ignorado', 'confirmado')
@@ -1007,6 +1185,7 @@ export async function getDuplicadosResueltos(cuentaId: string, limite = 40): Pro
     concepto: r.concepto || r.contraparte || 'Movimiento',
     importe: Number(r.importe),
     estado: r.duplicado_estado as 'ignorado' | 'confirmado',
+    cuentaLabel: r.cuenta_label ?? undefined,
   }))
 }
 

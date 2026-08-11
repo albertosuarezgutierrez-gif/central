@@ -1,11 +1,12 @@
 // Lógica PURA del briefing consolidado: agrega los resúmenes financieros de los
 // negocios de una cuenta y compone el texto del email. Sin red ni BD → testeable
 // con `node --test`. La E/S (Prisma, fetch financiero, Resend) vive en el endpoint.
-// El formateo de € se define aquí (y no se importa de ./financiero) para no
-// arrastrar la cadena financiero→db→prisma al módulo puro.
+// El formateo de € se delega en el helper puro ./dinero (sin deps, seguro para el
+// módulo puro; no se importa de ./financiero para no arrastrar financiero→db→prisma).
+import { eur } from './dinero.ts'
 
 function fmtEur(n: number): string {
-  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
+  return eur(n)
 }
 
 export type NegocioResumen = {

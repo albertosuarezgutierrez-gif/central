@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { gmailTransporter } from '@central/core-email'
 import { isCronAuthorized } from '@/lib/cron-auth'
+import { eur } from '@/lib/dinero'
 
 export const dynamic = 'force-dynamic'
 
@@ -58,7 +59,7 @@ export async function GET(req: NextRequest) {
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
     <div style="background:#f0fdf4;border-radius:8px;padding:14px;text-align:center">
-      <div style="font-size:26px;font-weight:800;color:#16a34a">€${Math.round(net).toLocaleString('es-ES')}</div>
+      <div style="font-size:26px;font-weight:800;color:#16a34a">${eur(net)}</div>
       <div style="font-size:11px;color:#666">Ingresos netos semana pasada</div>
     </div>
     <div style="background:#eff6ff;border-radius:8px;padding:14px;text-align:center">
@@ -97,7 +98,7 @@ export async function GET(req: NextRequest) {
         await transporter.sendMail({
           from: `"Plataforma" <${process.env.GMAIL_USER}>`,
           to: process.env.GMAIL_USER,
-          subject: `📊 Resumen semanal — €${Math.round(net).toLocaleString('es-ES')} netos`,
+          subject: `📊 Resumen semanal — ${eur(net)} netos`,
           html,
         })
       }

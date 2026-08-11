@@ -3,13 +3,17 @@
 // error si falla; la POLÍTICA de fallback (p. ej. a NIM) la decide la app.
 
 import type { ImageInput } from './types'
+import { fetchAI } from './http.ts'
 
 export interface GeminiConfig {
   apiKey: string
-  model?: string   // default: gemini-2.0-flash
+  model?: string   // default: gemini-flash-latest
 }
 
-const DEFAULT_GEMINI_MODEL = 'gemini-2.0-flash'
+// Google retiró `gemini-2.5-flash` de la API directa el 09/07/2026 (404 "no longer available",
+// antes de la fecha oficial 16/10) → usamos el alias rodante `gemini-flash-latest`, que Google
+// mantiene apuntado al Flash GA vigente (hoy Gemini 3.5 Flash) y no se rompe al retirar versiones.
+const DEFAULT_GEMINI_MODEL = 'gemini-flash-latest'
 
 export async function geminiSearch(
   config: GeminiConfig,
@@ -23,7 +27,7 @@ export async function geminiSearch(
   const model = config.model ?? DEFAULT_GEMINI_MODEL
 
   const res = await Promise.race([
-    fetch(
+    fetchAI(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${config.apiKey}`,
       {
         method: 'POST',
@@ -35,11 +39,11 @@ export async function geminiSearch(
           generationConfig: { maxOutputTokens: maxTokens, temperature: 0.2 },
         }),
       },
+      { provider: 'Gemini' },
     ),
     new Promise<never>((_, r) => setTimeout(() => r(new Error('Gemini timeout')), timeoutMs)),
   ])
 
-  if (!res.ok) throw new Error(`Gemini HTTP ${res.status}: ${(await res.text()).substring(0, 150)}`)
   const data = await res.json()
   const text = data?.candidates?.[0]?.content?.parts?.find((p: { text?: string }) => p.text)?.text
   if (!text) throw new Error('Gemini: respuesta vacía')
@@ -120,7 +124,7 @@ export async function geminiVision(
   ]
 
   const res = await Promise.race([
-    doFetch(
+    fetchAI(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${config.apiKey}`,
       {
         method: 'POST',
@@ -131,11 +135,11 @@ export async function geminiVision(
           generationConfig: { maxOutputTokens: maxTokens, temperature: 0.1 },
         }),
       },
+      { provider: 'Gemini-Vision', fetchImpl: doFetch },
     ),
     new Promise<never>((_, r) => setTimeout(() => r(new Error('Gemini-Vision timeout')), timeoutMs)),
   ])
 
-  if (!res.ok) throw new Error(`Gemini-Vision HTTP ${res.status}: ${(await res.text()).substring(0, 150)}`)
   const data = await res.json()
   const text = data?.candidates?.[0]?.content?.parts?.find((p: { text?: string }) => p.text)?.text
   if (!text) throw new Error('Gemini-Vision: respuesta vacía')

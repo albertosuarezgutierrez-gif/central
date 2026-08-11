@@ -27,17 +27,26 @@ export async function generateMetadata(): Promise<Metadata> {
 
 async function getRestaurantes() {
   const supabase = createServerClient()
-  const { data } = await supabase
-    .from('web_restaurante')
-    .select(`
-      slug, descripcion_local, logo_url, foto_portada_url, color_acento, template,
-      restaurantes(nombre, ciudad, tipo_negocio)
-    `)
-    .eq('activa', true)
-    .not('slug', 'is', null)
-    .order('visitas_total', { ascending: false })
+  // Timeout defensivo: esta página se prerenderiza en el build (revalidate). Si la BD no responde a
+  // tiempo (build sin egress a la Supabase de ia-rest, query lenta…), NO bloquees el deploy —
+  // prerenderiza vacío (la página ya maneja el caso 0) y deja que ISR rellene con datos reales en la
+  // primera petición. Sin este corte, el prerender colgaba >60s y tumbaba el build entero.
+  try {
+    const { data } = await supabase
+      .from('web_restaurante')
+      .select(`
+        slug, descripcion_local, logo_url, foto_portada_url, color_acento, template,
+        restaurantes(nombre, ciudad, tipo_negocio)
+      `)
+      .eq('activa', true)
+      .not('slug', 'is', null)
+      .order('visitas_total', { ascending: false })
+      .abortSignal(AbortSignal.timeout(25000))
 
-  return data ?? []
+    return data ?? []
+  } catch {
+    return []
+  }
 }
 
 function slugCiudad(ciudad: string) {

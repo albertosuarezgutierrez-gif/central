@@ -4,15 +4,23 @@ import ActivarPush from '@/components/ActivarPush'
 import AdminShell from '@/components/AdminShell'
 import AsistentePanelAdmin from '@/components/AsistentePanelAdmin'
 
-type Vac = { aprobados: number; en_tramite: number; pendientes: number }
-type E = { id: string; nombre: string; dni: string | null; nss: string | null; email: string | null; puesto: string | null; estado: string; acceso_token: string | null; vacaciones?: Vac }
+type Vac = { aprobados: number; en_tramite: number; pendientes: number | null }
+type E = { id: string; nombre: string; apellidos: string | null; dni: string | null; nss: string | null; email: string | null; puesto: string | null; estado: string; acceso_token: string | null; vacaciones?: Vac; fecha_reconocimiento_medico?: string | null }
 
-export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa, logoUrl, colorPrimario }: { inicial: E[]; nombreUsuario: string; nombreEmpresa: string; logoUrl?: string | null; colorPrimario?: string | null }) {
+function diasParaCaducarReconocimiento(fecha: string | null | undefined): number | null {
+  if (!fecha) return null
+  const expiry = new Date(fecha)
+  expiry.setFullYear(expiry.getFullYear() + 1)
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
+  return Math.floor((expiry.getTime() - hoy.getTime()) / 86400000)
+}
+
+export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa, logoUrl, colorPrimario, tieneFichaje }: { inicial: E[]; nombreUsuario: string; nombreEmpresa: string; logoUrl?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
   const [lista, setLista] = useState<E[]>(inicial)
-  const [alta, setAlta] = useState({ nombre: '', email: '', dni: '', telefono: '', puesto: '' })
+  const [alta, setAlta] = useState({ apellidos: '', nombre: '', email: '', dni: '', telefono: '', puesto: '' })
   const [altaErr, setAltaErr] = useState('')
   const [editId, setEditId] = useState<string | null>(null)
-  const [edit, setEdit] = useState({ nombre: '', email: '', puesto: '', estado: 'activo' })
+  const [edit, setEdit] = useState({ apellidos: '', nombre: '', email: '', puesto: '', estado: 'activo' })
   const [busy, setBusy] = useState(false)
   const [q, setQ] = useState('')
   const [filtro, setFiltro] = useState<'activos' | 'baja' | 'todos'>('activos')
@@ -26,7 +34,7 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa,
       if (filtro === 'activos' && e.estado === 'baja') return false
       if (filtro === 'baja' && e.estado !== 'baja') return false
       if (!t) return true
-      return [e.nombre, e.email, e.dni, e.nss].some(v => (v ?? '').toLowerCase().includes(t))
+      return [e.nombre, e.apellidos, e.email, e.dni, e.nss].some(v => (v ?? '').toLowerCase().includes(t))
     })
   }, [lista, q, filtro])
 
@@ -34,28 +42,30 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa,
     ev.preventDefault(); setAltaErr(''); setBusy(true)
     const r = await fetch('/api/admin/empleados', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(alta) })
     setBusy(false)
-    if (r.ok) { setAlta({ nombre: '', email: '', dni: '', telefono: '', puesto: '' }); await refrescar() }
+    if (r.ok) { setAlta({ apellidos: '', nombre: '', email: '', dni: '', telefono: '', puesto: '' }); await refrescar() }
     else setAltaErr((await r.json()).error ?? 'No se pudo crear')
   }
 
   function abrirEdicion(e: E) {
-    setEditId(e.id); setEdit({ nombre: e.nombre, email: e.email ?? '', puesto: e.puesto ?? '', estado: e.estado || 'activo' })
+    setEditId(e.id); setEdit({ apellidos: e.apellidos ?? '', nombre: e.nombre, email: e.email ?? '', puesto: e.puesto ?? '', estado: e.estado || 'activo' })
   }
   async function guardar(id: string) {
     setBusy(true)
     const r = await fetch(`/api/admin/empleados/${id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(edit) })
     setBusy(false)
-    if (r.ok) { setEditId(null); await refrescar() } else alert((await r.json()).error ?? 'No se pudo guardar')
+    if (r.ok) { setEditId(null); await refrescar() }
+    else setAltaErr((await r.json().catch(() => ({}))).error ?? 'No se pudo guardar')
   }
   async function borrar(e: E) {
     if (!confirm(`¿Borrar a ${e.nombre}? Se eliminará su ficha y su expediente. Esta acción no se puede deshacer.\n\nSi solo quieres que deje de tener acceso, usa "Editar" y ponle estado "baja".`)) return
     setBusy(true)
     const r = await fetch(`/api/admin/empleados/${e.id}`, { method: 'DELETE' })
     setBusy(false)
-    if (r.ok) await refrescar(); else alert((await r.json()).error ?? 'No se pudo borrar')
+    if (r.ok) await refrescar()
+    else setAltaErr((await r.json().catch(() => ({}))).error ?? 'No se pudo borrar')
   }
   return (
-    <AdminShell activo="empleados" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario}>
+    <AdminShell activo="empleados" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario} tieneFichaje={tieneFichaje}>
       {(nombreUsuario || nombreEmpresa) && (
         <p className="mb-4 text-sm text-ink-3">
           {nombreUsuario ? `Bienvenida, ${nombreUsuario}` : ''}{nombreUsuario && nombreEmpresa ? ' · ' : ''}{nombreEmpresa}
@@ -71,6 +81,7 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa,
       {/* Alta */}
       <form onSubmit={crear} className="mb-4 rounded-[12px] border border-line bg-card p-3">
         <div className="flex flex-wrap gap-2">
+          <input placeholder="Apellidos *" value={alta.apellidos} onChange={e => setAlta(s => ({ ...s, apellidos: e.target.value }))} />
           <input placeholder="Nombre *" value={alta.nombre} onChange={e => setAlta(s => ({ ...s, nombre: e.target.value }))} />
           <input placeholder="Email * (para firmar)" type="email" value={alta.email} onChange={e => setAlta(s => ({ ...s, email: e.target.value }))} />
           <input placeholder="DNI/NIE" value={alta.dni} onChange={e => setAlta(s => ({ ...s, dni: e.target.value }))} />
@@ -112,6 +123,7 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa,
                 {editId === e.id ? (
                   <td colSpan={6} className="px-4 py-3">
                     <div className="flex flex-wrap gap-2">
+                      <input placeholder="Apellidos" value={edit.apellidos} onChange={ev => setEdit(s => ({ ...s, apellidos: ev.target.value }))} />
                       <input placeholder="Nombre" value={edit.nombre} onChange={ev => setEdit(s => ({ ...s, nombre: ev.target.value }))} />
                       <input placeholder="Email" value={edit.email} onChange={ev => setEdit(s => ({ ...s, email: ev.target.value }))} />
                       <input placeholder="Puesto" value={edit.puesto} onChange={ev => setEdit(s => ({ ...s, puesto: ev.target.value }))} />
@@ -119,14 +131,17 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa,
                         <option value="activo">Activo</option>
                         <option value="baja">Baja</option>
                       </select>
-                      <button disabled={busy || !edit.nombre.trim()} onClick={() => guardar(e.id)}>Guardar</button>
+                      <button disabled={busy || (!edit.nombre.trim() && !edit.apellidos.trim())} onClick={() => guardar(e.id)}>Guardar</button>
                       <button className="bg-paper-2 text-ink-2 hover:bg-line" onClick={() => setEditId(null)}>Cancelar</button>
                     </div>
                   </td>
                 ) : (
                   <>
                     <td className="px-4 py-3">
-                      <a href={`/admin/empleados/${e.id}`} className="font-medium text-ink no-underline hover:text-accent">{e.nombre}</a>
+                      <a href={`/admin/empleados/${e.id}`} className="font-medium text-ink no-underline hover:text-accent">
+                        {e.apellidos ? `${e.apellidos}, ${e.nombre}` : e.nombre}
+                      </a>
+                      {(() => { const d = diasParaCaducarReconocimiento(e.fecha_reconocimiento_medico); return d !== null && d <= 15 ? <span className={`ml-2 rounded-full px-2 py-0.5 text-xs ${d < 0 ? 'bg-alert/10 text-alert' : 'bg-warn/10 text-warn'}`} title="Reconocimiento médico">{d < 0 ? `Reconoc. caducado (${Math.abs(d)}d)` : `Reconoc. caduca en ${d}d`}</span> : null })()}
                     </td>
                     <td className="px-4 py-3 font-mono text-xs text-ink-2">{e.dni ?? <span className="text-ink-3">—</span>}</td>
                     <td className="px-4 py-3 font-mono text-xs text-ink-3">{e.nss ?? <span className="text-ink-3">—</span>}</td>
@@ -141,14 +156,21 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa,
                           <span className="text-ok">{e.vacaciones.aprobados}</span>
                           {e.vacaciones.en_tramite > 0 && <span className="text-ink-3">+{e.vacaciones.en_tramite}</span>}
                           <span className="text-ink-3"> / </span>
-                          <span className={e.vacaciones.pendientes <= 0 ? 'text-alert' : ''}>{e.vacaciones.pendientes} pend.</span>
+                          {/* `null` = convenio de la empresa sin cargar: no hay saldo
+                              que calcular, y un número inventado aquí acabaría en la
+                              planificación de vacaciones del empleado. */}
+                          {e.vacaciones.pendientes == null ? (
+                            <span className="text-ink-3" title="Convenio sin cargar: no se puede calcular el saldo">— pend.</span>
+                          ) : (
+                            <span className={e.vacaciones.pendientes <= 0 ? 'text-alert' : ''}>{e.vacaciones.pendientes} pend.</span>
+                          )}
                         </span>
                       )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        <button className="px-2 py-0.5 text-xs" title="Editar" onClick={() => abrirEdicion(e)}>✏️</button>
-                        <button className="bg-paper-2 px-2 py-0.5 text-xs text-alert hover:bg-line" title="Borrar" onClick={() => borrar(e)}>🗑️</button>
+                        <button className="px-2 py-1.5 text-xs min-h-[36px]" title="Editar" onClick={() => abrirEdicion(e)}>✏️</button>
+                        <button className="bg-paper-2 px-2 py-1.5 text-xs text-alert hover:bg-line min-h-[36px]" title="Borrar" onClick={() => borrar(e)}>🗑️</button>
                       </div>
                     </td>
                   </>

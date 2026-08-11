@@ -1,4 +1,5 @@
 {
+  "ignoreCommand": "node ../../scripts/vercel-ignore-build.mjs apps/ia-rest",
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
@@ -20,6 +21,10 @@
     }
   ],
   "crons": [
+    {
+      "path": "/api/cron/avisos-resumen",
+      "schedule": "0 6 * * *"
+    },
     {
       "path": "/api/cron/alertas",
       "schedule": "*/2 * * * *"
@@ -71,10 +76,6 @@
     {
       "path": "/api/cron/backfill-leads-sevilla",
       "schedule": "0 5 * * *"
-    },
-    {
-      "path": "/api/cron/crm-whatsapp-sevilla",
-      "schedule": "0 10 * * 1-5"
     },
     {
       "path": "/api/cron/crm-followup-sevilla",

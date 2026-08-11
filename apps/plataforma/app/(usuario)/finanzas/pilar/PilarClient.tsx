@@ -2,6 +2,7 @@
 import { useRouter, usePathname } from 'next/navigation'
 import { useTransition } from 'react'
 import type { ResumenPilar, ClientePilar, TrimPilar } from '@/lib/finanzas'
+import { eur } from '@/lib/dinero'
 
 type Props = {
   initialData: ResumenPilar | null
@@ -10,10 +11,10 @@ type Props = {
 }
 
 function fmt(n: number) {
-  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
+  return eur(n)
 }
 function fmtDec(n: number) {
-  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(n)
+  return eur(n)
 }
 
 const ESTADO_BADGE: Record<TrimPilar['estado'], { label: string; bg: string; color: string }> = {
@@ -130,6 +131,15 @@ export default function PilarClient({ initialData, year, quarter }: Props) {
         </div>
       ) : (
         <>
+          {/* Notas manuales (p.ej. importes estimados al cargar un extracto a mano) */}
+          {d.notas.length > 0 && (
+            <div style={{ background: '#e6f3ff', border: '1px solid #63b3ed', borderRadius: 'var(--radius)', padding: '12px 16px', marginBottom: '16px', fontSize: '13px', color: '#2c5282' }}>
+              {d.notas.map((n, i) => (
+                <div key={i} style={i > 0 ? { marginTop: '6px' } : undefined}>📝 {n}</div>
+              ))}
+            </div>
+          )}
+
           {/* Alerta concentración */}
           {d.alertaConcentracion && (
             <div style={{ background: '#fff3cd', border: '1px solid #ffc107', borderRadius: 'var(--radius)', padding: '12px 16px', marginBottom: '16px', fontSize: '13px', color: '#856404' }}>

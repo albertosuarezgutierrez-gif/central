@@ -47,7 +47,7 @@ const AMBER = '#E8A33B'
 const GREEN = '#3F7D44'
 const SE = "'Newsreader', Georgia, serif"
 const SN = "'Inter Tight', system-ui, sans-serif"
-const MAIL = 'mailto:hola@iarest.es?subject=Videollamada%20ia.rest&body=Hola%2C%20me%20gustar%C3%ADa%20ver%20ia.rest%20para%20nuestro%20restaurante.'
+const WA = 'https://wa.me/34637349990?text=Hola%2C%20quiero%20ver%20ia.rest%20para%20nuestro%20restaurante.'
 
 export default function DemoRestauranteIndio() {
   const schema = {
@@ -68,7 +68,7 @@ export default function DemoRestauranteIndio() {
       {/* NAV */}
       <nav style={{ padding: '20px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${RULE_L}` }}>
         <span style={{ fontFamily: SE, fontSize: 22, color: DARK }}>ia<span style={{ color: RED }}>.</span>rest</span>
-        <a href={MAIL} style={{ background: RED, color: '#fff', padding: '9px 22px', borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
+        <a href={WA} target="_blank" rel="noopener" data-ga="click_whatsapp" style={{ background: RED, color: '#fff', padding: '9px 22px', borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
           Solicitar videollamada →
         </a>
       </nav>
@@ -85,7 +85,7 @@ export default function DemoRestauranteIndio() {
         <p style={{ fontSize: 19, color: INK4, lineHeight: 1.7, margin: '0 0 48px', maxWidth: 520, marginLeft: 'auto', marginRight: 'auto' }}>
           Sala, cocina, almacén, proveedores y eventos. Conectados, automatizados, bajo control.
         </p>
-        <a href={MAIL} style={{ display: 'inline-block', background: RED, color: '#fff', padding: '18px 44px', borderRadius: 10, fontSize: 16, fontWeight: 700, textDecoration: 'none' }}>
+        <a href={WA} target="_blank" rel="noopener" data-ga="click_whatsapp" style={{ display: 'inline-block', background: RED, color: '#fff', padding: '18px 44px', borderRadius: 10, fontSize: 16, fontWeight: 700, textDecoration: 'none' }}>
           Ver cómo funciona — 15 min
         </a>
         <p style={{ fontSize: 12, color: INK3, marginTop: 14 }}>Videollamada gratuita · Sin compromiso</p>
@@ -199,9 +199,9 @@ export default function DemoRestauranteIndio() {
             Precio fijo mensual. <strong style={{ color: PAPER }}>Sin comisión por venta. Sin permanencia.</strong>
           </p>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' as const, marginBottom: 20 }}>
-            {[['59€/mes', 'Plan base'], ['+20€', 'Por usuario (2-6)'], ['+15€', 'Por usuario (7+)']].map(([p, l]) => (
+            {[['Sin comisión', 'Por venta'], ['Sin permanencia', 'Cancelas cuando quieras'], ['Presupuesto a medida', 'Según tu local']].map(([p, l]) => (
               <div key={l} style={{ background: BG3, border: `1px solid ${RULE_D}`, borderRadius: 10, padding: '14px 22px' }}>
-                <div style={{ fontFamily: SE, fontSize: 24, fontWeight: 400, color: RED }}>{p}</div>
+                <div style={{ fontFamily: SE, fontSize: 18, fontWeight: 400, color: RED }}>{p}</div>
                 <div style={{ fontSize: 11, color: INK3, marginTop: 4 }}>{l}</div>
               </div>
             ))}
@@ -218,12 +218,12 @@ export default function DemoRestauranteIndio() {
         <p style={{ fontSize: 15, color: INK4, marginBottom: 36, lineHeight: 1.65 }}>
           15 minutos. Te mostramos el sistema funcionando en un restaurante real. Sin instalación, sin compromiso.
         </p>
-        <a href={MAIL} style={{ display: 'inline-block', background: RED, color: '#fff', padding: '18px 48px', borderRadius: 10, fontSize: 17, fontWeight: 700, textDecoration: 'none' }}>
+        <a href={WA} target="_blank" rel="noopener" data-ga="click_whatsapp" style={{ display: 'inline-block', background: RED, color: '#fff', padding: '18px 48px', borderRadius: 10, fontSize: 17, fontWeight: 700, textDecoration: 'none' }}>
           Solicitar videollamada gratuita →
         </a>
         <p style={{ fontSize: 13, color: INK3, marginTop: 18 }}>
-          O escríbenos a{' '}
-          <a href="mailto:hola@iarest.es" style={{ color: RED, textDecoration: 'none', fontWeight: 600 }}>hola@iarest.es</a>
+          O déjanos tus datos en el{' '}
+          <a href="/#contacto" style={{ color: RED, textDecoration: 'none', fontWeight: 600 }}>formulario de contacto</a>
         </p>
       </section>
 

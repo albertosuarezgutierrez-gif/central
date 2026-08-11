@@ -1,0 +1,75 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { LOGO_JJ_DATAURI } from './logo-data'
+
+export default function LoginPage() {
+  const router = useRouter()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(j.error || 'No se pudo iniciar sesión')
+        return
+      }
+      router.replace(j.tipo === 'empleado' ? '/mi' : '/panel')
+      router.refresh()
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="login-wrap">
+      <form onSubmit={onSubmit} className="login-card">
+        {/* Logotipo oficial (embebido para que no falle la carga) */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={LOGO_JJ_DATAURI} alt="Joaquín Jaén · Catering" className="login-logo-jj" />
+        <div className="login-flourish"><span className="rule" /><span className="dia" /><span className="rule" /></div>
+        <p className="login-sub">Almacén · Acceso del holding</p>
+        <div className="grid" style={{ textAlign: 'left' }}>
+          <div className="form-field">
+            <label className="field-label">Email</label>
+            <input
+              type="email"
+              placeholder="tu@correo.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="username"
+              required
+            />
+          </div>
+          <div className="form-field">
+            <label className="field-label">Contraseña</label>
+            <input
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              required
+            />
+          </div>
+          {error && <div className="badge danger" style={{ padding: '8px 12px' }}>{error}</div>}
+          <button className="btn btn-primary btn-block" disabled={loading}>
+            {loading ? 'Entrando…' : 'Entrar'}
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}

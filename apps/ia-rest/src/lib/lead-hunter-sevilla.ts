@@ -2,20 +2,68 @@
 // Desde el 03/07/2026 (decisión de Alberto) el email frío de presentación se ENVÍA
 // AUTOMÁTICAMENTE con la plantilla tipo por vertical (construirEmail): el botón de
 // aprobación en Telegram estuvo semanas muerto (plataforma no reenviaba el callback)
-// y se acumulaban propuestas sin enviar. Se avisa por Telegram de cada tanda enviada.
+// y se acumulaban propuestas sin enviar.
+// Desde el 05/08/2026 (decisión de Alberto: «el agente tiene que trabajar solo») el
+// envío automático es SILENCIOSO — sin resumen Telegram por tanda; solo se avisa de
+// ERRORES. Y los leads con móvil ya NO se desvían: el carril WhatsApp
+// (crm-whatsapp-sevilla) exigía un toque manual suyo por lead, así que se retiró y
+// esos leads reciben el email frío como los demás.
 // CRM_ENVIO_AUTO='0' devuelve el modo antiguo: proponer con botón "✅ Enviar"
 // (envío real en /api/telegram/webhook → enviar_sevilla).
-// Los leads CON móvil se excluyen aquí: esos van por WhatsApp (crm-whatsapp-sevilla).
 // Lo usan el cron `/api/cron/crm-lead-hunter-sevilla` y el panel `/api/super/lead-hunter-sevilla`.
 
 import type { createServerClient } from '@/lib/supabase'
 import { tgAlert } from '@/lib/telegram'
-import { construirEmail, esMovilEs, detectarVertical, construirInstagram } from '@/lib/crm-sevilla'
+import { construirEmail, detectarVertical, construirInstagram } from '@/lib/crm-sevilla'
 import { crmSecret } from '@/lib/crm-secret'
 
 type SupabaseSrv = ReturnType<typeof createServerClient>
 
 const esc = (s: unknown) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+// Normaliza un email para comparar por DIRECCIÓN (minúsculas, sin espacios).
+export const normEmail = (e: unknown) => String(e ?? '').trim().toLowerCase()
+
+// Dedup POR DIRECCIÓN DE EMAIL (no por lead.id): dado un conjunto de emails
+// candidatos, devuelve las direcciones que YA recibieron el email frío en
+// ALGUNA fila de lead que las comparta. Cierra el hueco de un mismo local
+// duplicado en dos leads distintos (el guard por lead.id no lo veía). Mira los
+// dos caminos de envío vivos: `leads_web_tracking` (estado enviado_*) y el
+// pipeline del cron `crm-envio-auto` (`estado_pipeline='enviado'` /
+// `propuesta_enviada_at`). 'propuesto' y 'descartado' NO cuentan como enviado.
+export async function emailsYaContactados(
+  supabase: SupabaseSrv,
+  emails: unknown[]
+): Promise<Set<string>> {
+  const uniq = [...new Set(emails.map(normEmail).filter(Boolean))]
+  if (uniq.length === 0) return new Set()
+  const { data: rows } = await supabase
+    .from('leads')
+    .select('id, email, propuesta_enviada_at, estado_pipeline')
+    .in('email', uniq)
+  const emailPorLead = new Map<string, string>()
+  const contactados = new Set<string>()
+  for (const r of (rows || []) as Array<{ id: string; email: string | null; propuesta_enviada_at: string | null; estado_pipeline: string | null }>) {
+    const em = normEmail(r.email)
+    if (!em) continue
+    emailPorLead.set(r.id, em)
+    if (r.propuesta_enviada_at || r.estado_pipeline === 'enviado') contactados.add(em) // camino cron auto
+  }
+  const ids = [...emailPorLead.keys()]
+  if (ids.length > 0) {
+    const { data: tr } = await supabase
+      .from('leads_web_tracking')
+      .select('lead_id, estado')
+      .in('lead_id', ids)
+    for (const t of (tr || []) as Array<{ lead_id: string; estado: string | null }>) {
+      if (t.estado && t.estado !== 'propuesto' && t.estado !== 'descartado') {
+        const em = emailPorLead.get(t.lead_id)
+        if (em) contactados.add(em)
+      }
+    }
+  }
+  return contactados
+}
 
 // Envío automático activo por defecto; CRM_ENVIO_AUTO='0' vuelve al modo propuesta.
 const envioAutomatico = () => process.env.CRM_ENVIO_AUTO !== '0'
@@ -66,8 +114,8 @@ export async function enviarEmailsSevilla(
   limite = 3
 ): Promise<{ ok: boolean; enviados: number; propuestos?: number; motivo?: string; error?: string }> {
   try {
-    // Sobre-pedimos al RPC: ~la mitad del pool tiene móvil (van por WhatsApp), así que
-    // pedimos de más para llegar a `limite` emails NO-móvil reales.
+    // Sobre-pedimos al RPC: algunos candidatos caen por dedup de dirección, así que
+    // pedimos de más para llegar a `limite` envíos reales.
     const pedir = Math.min(Math.max(limite * 3, limite + 12), 80)
     const { data: leads, error: leadsError } = await supabase.rpc(
       'search_leads_sevilla_nuevos',
@@ -78,10 +126,10 @@ export async function enviarEmailsSevilla(
       return { ok: true, enviados: 0, motivo: 'Sin leads nuevos disponibles' }
     }
 
-    // Excluir los que tienen MÓVIL (esos se contactan por WhatsApp, no por email).
-    const ids = leads.map((l: { id: string }) => l.id)
-    const { data: tels } = await supabase.from('leads').select('id, telefono').in('id', ids)
-    const tieneMovil = new Map((tels || []).map((t: { id: string; telefono: string | null }) => [t.id, esMovilEs(t.telefono)]))
+    // Dedup por dirección de email: no repetir a un correo ya contactado ni dos
+    // veces al mismo correo dentro de esta tanda (aunque sean leads distintos).
+    const yaContactados = await emailsYaContactados(supabase, leads.map((l: { email?: string | null }) => l.email))
+    const enviadosEmails = new Set<string>()
 
     const token = process.env.TELEGRAM_BOT_TOKEN
     const chat = process.env.TELEGRAM_CHAT_ID
@@ -93,7 +141,9 @@ export async function enviarEmailsSevilla(
     for (const lead of leads) {
       try {
         if ((auto ? enviadosAuto : propuestos) >= limite) break // tanda objetivo alcanzada
-        if (tieneMovil.get(lead.id)) continue // tiene móvil → WhatsApp
+        const em = normEmail(lead.email)
+        if (em && (yaContactados.has(em) || enviadosEmails.has(em))) continue // esa dirección ya recibió el email
+        if (em) enviadosEmails.add(em)
 
         const tpl = construirEmail(lead, '', '') // solo para asunto/utm en la propuesta
         // Marca como "propuesto" para que el RPC no lo vuelva a proponer (excluye leads con tracking).
@@ -140,13 +190,9 @@ export async function enviarEmailsSevilla(
       }
     }
 
-    if (enviadosAuto > 0) {
-      await tgAlert(
-        `📨 Presentación enviada automáticamente a ${enviadosAuto} lead(s) de Sevilla desde hola@iarest.es:\n` +
-        nombresEnviados.map((n) => `• ${n}`).join('\n'),
-        'info'
-      )
-    }
+    // En modo auto NO se avisa por Telegram (decisión 05/08/2026: el agente trabaja
+    // solo). El detalle de cada envío queda en leads_web_tracking / leads.
+    if (enviadosAuto > 0) console.log(`[lead-hunter] auto: ${enviadosAuto} → ${nombresEnviados.join(' · ')}`)
     if (propuestos > 0) {
       await tgAlert(`📧 ${propuestos} email(s) de venta listos para aprobar (botón "Enviar" arriba).`, 'info')
     }
@@ -199,6 +245,11 @@ export async function proponerEmailsVertical(
     const trackingEstado = new Map((tr || []).map((t: { lead_id: string; estado: string }) => [t.lead_id, t.estado]))
     const desuscrito = new Set((baja || []).map((b: { lead_id: string }) => b.lead_id))
 
+    // Dedup por dirección de email: no repetir a un correo ya contactado ni dos
+    // veces al mismo correo dentro de esta tanda (aunque sean leads distintos).
+    const yaContactados = await emailsYaContactados(supabase, cand.map((l: { email?: string | null }) => l.email))
+    const enviadosEmails = new Set<string>()
+
     const token = process.env.TELEGRAM_BOT_TOKEN
     const chat = process.env.TELEGRAM_CHAT_ID
 
@@ -210,10 +261,13 @@ export async function proponerEmailsVertical(
       try {
         if ((auto ? enviadosAuto : propuestos) >= limite) break
         if (desuscrito.has(lead.id)) continue
+        const em = normEmail(lead.email)
+        if (em && (yaContactados.has(em) || enviadosEmails.has(em))) continue // esa dirección ya recibió el email
         const trEstado = trackingEstado.get(lead.id)
         // Ya gestionado (enviado/descartado/…). En auto, un 'propuesto' pendiente
         // de la etapa de aprobación manual SÍ se envía (drena el backlog).
         if (trEstado && !(auto && trEstado === 'propuesto')) continue
+        if (em) enviadosEmails.add(em) // marca la dirección para no repetirla en esta tanda
 
         const tpl = construirEmail(lead, '', '')
         if (!trEstado) {
@@ -261,13 +315,9 @@ export async function proponerEmailsVertical(
       }
     }
 
-    if (enviadosAuto > 0) {
-      await tgAlert(
-        `${lbl.icono} Presentación enviada automáticamente a ${enviadosAuto} ${lbl.plur} desde hola@iarest.es:\n` +
-        nombresEnviados.map((n) => `• ${n}`).join('\n'),
-        'info'
-      )
-    }
+    // En modo auto NO se avisa por Telegram (decisión 05/08/2026: el agente trabaja
+    // solo). El detalle de cada envío queda en leads_web_tracking / leads.
+    if (enviadosAuto > 0) console.log(`[${vertical}] auto: ${enviadosAuto} → ${nombresEnviados.join(' · ')}`)
     if (propuestos > 0) {
       await tgAlert(`${lbl.icono} ${propuestos} ${lbl.plur} listos para aprobar (botón "Enviar" arriba).`, 'info')
     }

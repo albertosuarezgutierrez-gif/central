@@ -22,15 +22,18 @@ export async function getEmpresa(empresaId: string): Promise<EmpresaConvenio | n
   return rows[0] ?? null
 }
 
-export type BrandingEmpresa = { nombre: string; color_primario: string | null; logo_url: string | null }
+export type BrandingEmpresa = { nombre: string; color_primario: string | null; logo_url: string | null; tiene_fichaje: boolean }
 
 /** Marca corporativa lista para pintar el portal: color + URL firmada del logo (o null). */
 export async function getBranding(empresaId: string): Promise<BrandingEmpresa> {
-  const e = await getEmpresa(empresaId)
+  const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
+    SELECT nombre, color_primario, logo_path, tiene_fichaje
+    FROM rrhh.empresas WHERE id = ${empresaId}::uuid LIMIT 1`)
+  const e = rows[0] ?? null
   const logo_url = e?.logo_path
     ? (e.logo_path.startsWith('/') || e.logo_path.startsWith('http') ? e.logo_path : await urlFirmada(e.logo_path))
     : null
-  return { nombre: e?.nombre ?? '', color_primario: e?.color_primario ?? null, logo_url }
+  return { nombre: e?.nombre ?? '', color_primario: e?.color_primario ?? null, logo_url, tiene_fichaje: e?.tiene_fichaje ?? false }
 }
 
 /** El gestor fija el color corporativo (hex) y/o el path del logo. `undefined` = no tocar; `null` = borrar. */

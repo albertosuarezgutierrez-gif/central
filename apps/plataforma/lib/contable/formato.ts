@@ -4,6 +4,7 @@
 
 export type Candidato = {
   ref: string; movId: string; fecha: string; concepto: string; importe: number; destino: string; porRevisar: boolean
+  banco?: string | null
 }
 
 export type CtxData = {
@@ -17,10 +18,14 @@ export type CtxData = {
   fiscal?: {
     base: number; tramoTipo: number; tramoDesde: number; tramoHasta: number | null
     tipoEfectivo: number; margenProximo: number | null; ahorroBajar: number | null
+    exento?: number   // prestaciones exentas cobradas en la correduría (no tributan)
   } | null
   // Panorama de negocios: estructura (sociedad → negocios) y saldos bancarios. Opcionales.
   estructura?: { sociedad: string; negocio: string | null; sector: string | null }[]
   saldos?: { sociedad: string; banco: string | null; alias: string | null; saldo: number | null }[]
+  // Gasto REAL por categoría (solo para preguntas de consejo/ahorro). Excluye ingresos y traspasos
+  // internos. Es la muestra que el modelo debe usar para aconsejar (NO la lista de "Movimientos").
+  mayoresGastos?: { destino: string; subcategoria: string | null; gastado: number; n: number }[]
 }
 
 const e0 = (n: number) => `${Math.round(n || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')}€`
@@ -62,16 +67,26 @@ export function formatearContexto(d: CtxData): string {
   const sal = (d.saldos && d.saldos.length)
     ? d.saldos.map(x => `- ${[x.banco, x.alias].filter(Boolean).join(' ') || 'Cuenta'} [${x.sociedad}]: ${x.saldo != null ? e0(x.saldo) : '—'}`).join('\n')
     : ''
+  // Gasto real por categoría (para consejos). Personal → "Personal · <subcategoría>"; negocio → su destino.
+  const gastosReales = (d.mayoresGastos && d.mayoresGastos.length)
+    ? d.mayoresGastos.map(x => {
+        const etiqueta = x.destino === 'personal'
+          ? `Personal · ${x.subcategoria || 'sin clasificar'}`
+          : (DESTINO_LABEL[x.destino] || x.destino)
+        return `- ${etiqueta}: ${e0(x.gastado)}${x.n > 1 ? ` (${x.n} mov.)` : ''}`
+      }).join('\n')
+    : ''
   const fis = d.fiscal ? [
     `- Base imponible estimada: ${e0(d.fiscal.base)}`,
     `- Tramo marginal actual (IRPF): ${pct(d.fiscal.tramoTipo)} (${d.fiscal.tramoHasta != null ? `de ${e0(d.fiscal.tramoDesde)} a ${e0(d.fiscal.tramoHasta)}` : `desde ${e0(d.fiscal.tramoDesde)}`})`,
     `- Tipo medio efectivo: ${pct(d.fiscal.tipoEfectivo)}`,
     d.fiscal.margenProximo != null ? `- Faltan ${e0(d.fiscal.margenProximo)} de base para el siguiente tramo` : null,
     d.fiscal.ahorroBajar != null ? `- Bajando al tramo previo ahorrarías ~${e0(d.fiscal.ahorroBajar)}` : null,
+    d.fiscal.exento ? `- Prestaciones EXENTAS cobradas en la correduría (no tributan, ya fuera de la base): ${e0(d.fiscal.exento)}` : null,
   ].filter(Boolean).join('\n') : ''
   return `${estr ? `# Tus sociedades y negocios\n${estr}\n\n` : ''}${sal ? `# Saldos bancarios (último conocido)\n${sal}\n\n` : ''}# Resumen ${d.year} por destino (deducibilidad)
 ${dest}
-${fis ? `\n# Fiscal IRPF ${d.year} (estimación con lo declarado hasta hoy)\n${fis}\n` : ''}
+${fis ? `\n# Fiscal IRPF ${d.year} (estimación con lo declarado hasta hoy)\n${fis}\n` : ''}${gastosReales ? `\n# En qué gastas de verdad ${d.year} (gasto REAL por categoría — ÚSALO para aconsejar; excluye ingresos y traspasos internos)\n${gastosReales}\n` : ''}
 # Movimientos (usa el #ref para proponer una ACCION)
 ${cand}
 

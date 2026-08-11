@@ -68,19 +68,70 @@ async function getToken(): Promise<string> {
 export type TuyaDP = { code: string; value: unknown }
 export type TuyaDevice = { id: string; name: string; online: boolean; category: string }
 
-// Dispositivos visibles para el proyecto (incluye los de la cuenta de app vinculada por QR).
-export async function tuyaListDevices(): Promise<TuyaDevice[]> {
+// Normaliza una fila de dispositivo de CUALQUIERA de los dos endpoints de listado (los
+// nombres de campo difieren: associated-users usa name/online, cloud/thing usa customName/isOnline).
+export function normalizarDispositivo(d: Record<string, unknown>): TuyaDevice {
+  return {
+    id: String(d.id ?? ''),
+    name: String(d.customName || d.name || ''),
+    online: Boolean(d.isOnline ?? d.is_online ?? d.online),
+    category: String(d.category || ''),
+  }
+}
+
+// Fusiona varias listas deduplicando por id; la PRIMERA aparición gana (orden de prioridad).
+export function fusionarDispositivos(...listas: TuyaDevice[][]): TuyaDevice[] {
+  const porId = new Map<string, TuyaDevice>()
+  for (const lista of listas) for (const d of lista) if (d.id && !porId.has(d.id)) porId.set(d.id, d)
+  return [...porId.values()]
+}
+
+// Dispositivos de las cuentas de app vinculadas al proyecto por QR ("Link App Account").
+// Es el endpoint correcto para el flujo de setup (docs/DOMOTICA-TUYA.md): el ventilador se
+// vincula escaneando el QR con Smart Life, y esos cacharros SALEN por aquí (paginado por
+// last_row_key), NO por /v2.0/cloud/thing/device.
+async function listarAsociados(): Promise<TuyaDevice[]> {
+  const token = await getToken()
+  const out: TuyaDevice[] = []
+  let lastRowKey = ''
+  for (let pagina = 0; pagina < 5; pagina++) {
+    const q = `size=100${lastRowKey ? `&last_row_key=${encodeURIComponent(lastRowKey)}` : ''}`
+    const r = await request<{ devices?: unknown[]; has_more?: boolean; last_row_key?: string }>(
+      'GET', `/v1.0/iot-01/associated-users/devices?${q}`, undefined, token,
+    )
+    const devs = (r?.devices || []) as Array<Record<string, unknown>>
+    out.push(...devs.map(normalizarDispositivo))
+    if (!r?.has_more || !r?.last_row_key) break
+    lastRowKey = String(r.last_row_key)
+  }
+  return out
+}
+
+// Dispositivos importados DIRECTAMENTE al proyecto cloud (sin cuenta de app). Complementa al
+// anterior por si algún cacharro se añadió por ese camino en vez del QR.
+async function listarProyecto(): Promise<TuyaDevice[]> {
   const token = await getToken()
   const r = await request<{ list?: unknown[] } | unknown[]>(
     'GET', '/v2.0/cloud/thing/device?page_size=100', undefined, token,
   )
   const list = (Array.isArray(r) ? r : (r as { list?: unknown[] })?.list || []) as Array<Record<string, unknown>>
-  return list.map(d => ({
-    id: String(d.id ?? ''),
-    name: String(d.customName || d.name || ''),
-    online: Boolean(d.isOnline ?? d.is_online),
-    category: String(d.category || ''),
-  }))
+  return list.map(normalizarDispositivo)
+}
+
+// Dispositivos visibles para el proyecto por CUALQUIER vía de alta (QR + importados).
+// Prueba ambos endpoints y los fusiona. Si el principal (QR) falla y el secundario no aporta
+// nada, propaga el error real (envs mal / trial de IoT Core caducado) para que la UI lo muestre.
+export async function tuyaListDevices(): Promise<TuyaDevice[]> {
+  let asociados: TuyaDevice[] = []
+  let errAsociados: unknown = null
+  try { asociados = await listarAsociados() } catch (e) { errAsociados = e }
+
+  let proyecto: TuyaDevice[] = []
+  try { proyecto = await listarProyecto() } catch { /* endpoint secundario, no crítico */ }
+
+  const todos = fusionarDispositivos(asociados, proyecto)
+  if (errAsociados && todos.length === 0) throw errAsociados
+  return todos
 }
 
 export async function tuyaGetStatus(deviceId: string): Promise<TuyaDP[]> {
@@ -115,3 +166,6 @@ export async function codigoVentilador(deviceId: string): Promise<{ code: string
   const code = elegirCodigo(status.map(s => s.code), DP_VENTILADOR)
   return code ? { code, status } : null
 }
+
+// Acceso genérico a la OpenAPI + al token para módulos hermanos (p.ej. lib/domotica/acceso.ts).
+export { request as tuyaRequest, getToken as tuyaGetToken }

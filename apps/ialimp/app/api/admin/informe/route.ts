@@ -29,27 +29,30 @@ function fmtTs(ts: string|null): string {
 }
 
 export async function GET(req: NextRequest) {
+  const empresa_id = await requireEmpresaId()
   const { searchParams } = new URL(req.url)
   const lid = searchParams.get('lid')!
   const from = searchParams.get('from')!
   const to = searchParams.get('to')!
 
-  const limp = await prisma.$queryRaw<any[]>(Prisma.sql`SELECT * FROM limpiadoras WHERE id = ${lid}::uuid`)
+  // Scope por empresa: la limpiadora DEBE ser de la empresa de la sesión (evita IDOR cross-empresa)
+  const limp = await prisma.$queryRaw<any[]>(Prisma.sql`SELECT * FROM limpiadoras WHERE id = ${lid}::uuid AND empresa_id = ${empresa_id}::uuid`)
+  if (!limp.length) return NextResponse.json({ error: 'Limpiadora no encontrada' }, { status: 404 })
+
   const sessions = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT cs.*,
       (SELECT COUNT(*) FROM session_completions sc WHERE sc.session_id = cs.id AND sc.photo_url IS NOT NULL) as n_fotos
     FROM cleaning_sessions cs
     WHERE cs.limpiadora_id = ${lid}::uuid
+      AND cs.empresa_id = ${empresa_id}::uuid
       AND cs.session_date BETWEEN ${from}::date AND ${to}::date
     ORDER BY cs.session_date
   `)
   const tarifa = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT * FROM tarifas_limpiadoras
-    WHERE limpiadora_id = ${lid}::uuid AND property_id = '__all__' AND activo = true
+    WHERE limpiadora_id = ${lid}::uuid AND empresa_id = ${empresa_id}::uuid AND property_id = '__all__' AND activo = true
     LIMIT 1
   `)
-
-  if (!limp.length) return NextResponse.json({ error: 'Limpiadora no encontrada' }, { status: 404 })
 
   const l = limp[0]
   const t = tarifa[0]

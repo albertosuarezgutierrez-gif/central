@@ -7,13 +7,9 @@ export type DocEmpresa = {
   storage_path: string; mime_type: string | null; anio: number | null; mes: number | null; subido_at: string
 }
 
-export const CATEGORIAS = [
-  { id: 'cif', label: 'CIF' },
-  { id: 'escritura', label: 'Escritura' },
-  { id: 'seguro_social', label: 'Seguro Social (TC2)' },
-  { id: 'poliza', label: 'Póliza de seguro' },
-  { id: 'otro', label: 'Otro' },
-] as const
+// La lista vive en un módulo puro para que también la usen los componentes cliente.
+export { CATEGORIAS, MESES, etiquetaCategoria, periodoDe, pideAnio, pideMes } from '@/lib/categorias-empresa'
+export type { CategoriaEmpresa, Periodo } from '@/lib/categorias-empresa'
 
 export async function listarDocumentosEmpresa(empresaId: string): Promise<DocEmpresa[]> {
   const rows = await prisma.$queryRaw<DocEmpresa[]>(Prisma.sql`
@@ -33,7 +29,7 @@ export async function subirDocumentoEmpresa(
   await subirObjeto(path, file.bytes, file.contentType)
   const rows = await prisma.$queryRaw<DocEmpresa[]>(Prisma.sql`
     INSERT INTO rrhh.empresa_documentos (empresa_id, categoria, nombre, storage_path, mime_type, anio, mes, subido_por)
-    VALUES (${empresaId}::uuid, ${categoria}, ${nombre}, ${path}, ${file.contentType}, ${anio ?? null}, ${mes ?? null}, ${usuarioId}::uuid)
+    VALUES (${empresaId}::uuid, ${categoria}, ${nombre}, ${path}, ${file.contentType}, ${anio ?? null}::int, ${mes ?? null}::int, ${usuarioId}::uuid)
     RETURNING *`)
   return JSON.parse(JSON.stringify(rows[0]))
 }

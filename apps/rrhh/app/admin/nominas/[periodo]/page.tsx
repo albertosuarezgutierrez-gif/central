@@ -12,5 +12,5 @@ export default async function Page({ params }: { params: Promise<{ periodo: stri
   try { parsePeriodo(periodo) } catch { notFound() }
 
   const [nominas, branding] = await Promise.all([listarNominas(empresa_id, periodo), getBranding(empresa_id)])
-  return <NominasPanel periodo={periodo} inicial={JSON.parse(JSON.stringify(nominas))} logoUrl={branding.logo_url} nombreEmpresa={branding.nombre} colorPrimario={branding.color_primario} />
+  return <NominasPanel periodo={periodo} inicial={JSON.parse(JSON.stringify(nominas))} logoUrl={branding.logo_url} nombreEmpresa={branding.nombre} colorPrimario={branding.color_primario} tieneFichaje={branding.tiene_fichaje} />
 }
