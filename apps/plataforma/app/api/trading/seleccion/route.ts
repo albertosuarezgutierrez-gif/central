@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { isTradingLecturaAutorizado } from '@/lib/trading/auth'
 import { movimientosGestorDataroma, GESTORES_DEFECTO } from '@/lib/trading/dataroma'
 import { fundamentalesSimbolo } from '@/lib/trading/edgar'
+import { neutralizarUniverso } from '@/lib/trading/calidad-datos'
 import { agregarConviccion, piotroskiFScore, seleccionCombinada, seleccionSoloGurus, type EntradaCombinada } from '@central/module-trading'
 
 // SELECCIÓN COMBINADA (Fase B) — cruza CONVICCIÓN de gurús (Dataroma) × CALIDAD fundamental (Piotroski +
@@ -28,9 +29,12 @@ export async function POST(req: NextRequest) {
   // La convicción de gurús sigue viniendo de Dataroma; los nombres sin gurús entran con score 0
   // (el desempate de seleccionCombinada ya prioriza calidad).
   if (universo === 'sp500') {
-    const filas = await prisma.tradingUniverso.findMany({ where: { piotroski: { not: null }, roic: { not: null } } })
+    // 🛡️ MISMO guardián de imposibles que el radar ANTES de puertear por calidad: esta es la ruta
+    // que congela cestas (cohortes = la evidencia de la escalera) y leía la caché cruda — un ROIC
+    // roto tipo MCD/VRSN pasaba la puerta. Tras neutralizar, un roic a null deja de ser elegible.
+    const { filas } = neutralizarUniverso(await prisma.tradingUniverso.findMany({ where: { piotroski: { not: null }, roic: { not: null } } }))
     const porSimbolo = new Map(convicciones.map(c => [c.simbolo, c]))
-    const entradas: EntradaCombinada[] = filas.map(f => ({
+    const entradas: EntradaCombinada[] = filas.filter(f => f.roic != null).map(f => ({
       simbolo: f.simbolo,
       guruScore: porSimbolo.get(f.simbolo)?.score ?? 0,
       comprando: porSimbolo.get(f.simbolo)?.comprando ?? 0,
