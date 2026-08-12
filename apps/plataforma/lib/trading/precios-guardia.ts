@@ -251,13 +251,41 @@ export const SOSPECHA_MASIVA = 0.5        // fracción de símbolos a partir de 
 // devolvían cero sospechosas.
 export const MIN_SIMBOLOS_MASIVA = 4
 
-export type ParDiferido = { fecha: string; fuente: number; propio: number }
+// Tercer freno: nuestro `precio_ref` con la ETIQUETA de otra sesión.
+//
+// Una pasada que corre ANTES del cierre de Wall Street guarda, bajo la fecha de hoy, el cierre de la
+// sesión ANTERIOR — que es el último que existe cuando se le pregunta. No es un precio malo: es un
+// precio bueno con la etiqueta corrida un día. Verificado contra IBKR el 12/08/2026 sobre el repaso
+// manual del 06/08 (09:34 UTC, con el mercado aún cerrado): MSFT quedó con `precio_ref` 487,46 cuando
+// el cierre real del 06/08 fue 499,86 — **−2,48%, por encima del umbral del 2%**, así que el contraste
+// diferido habría anulado esas tesis. Y 487,46 es, al céntimo, el cierre del 05/08. Lo mismo en CVX
+// (186,41 el 06/08 = cierre exacto del 05/08; ahí el desvío se quedó en −1,49% y no llegó a saltar por
+// pura suerte del mercado).
+//
+// La firma es inconfundible y no necesita saber nada de husos horarios ni de a qué hora corrió la
+// pasada: el ref se parece al cierre de la sesión ANTERIOR mucho más de lo que se parece al de la suya.
+// Un precio envenenado no se parece a ninguno de los dos (CVX 590,17 no era ni el cierre del 03/08 ni
+// el del 31/07). Cuando aparece esta firma NO se anula: se declara no juzgable y se canta — es la regla
+// de tres estados otra vez, y es la misma lección que persigue el módulo entero, aplicada a nuestro
+// propio corpus: la clave de un dato es su periodo, no la etiqueta con la que se guardó.
+export const ETIQUETA_TOL = 0.005
+
+export type ParDiferido = {
+  fecha: string
+  fuente: number
+  propio: number
+  // Cierre que la fuente publica para la sesión ANTERIOR a `fecha`. `null` cuando no hay sesión previa
+  // en la ventana consultada: sin ella no se puede distinguir la etiqueta corrida, y se juzga igual.
+  fuentePrevia?: number | null
+}
 export type Sospecha = { simbolo: string; fecha: string; fuente: number; propio: number; desvio: number }
 export type Reescalado = { simbolo: string; factor: number; sesiones: number }
+export type Etiquetada = { simbolo: string; fecha: string; propio: number; cierrePrevio: number }
 
 export type Diferido = {
   sospechosas: Sospecha[]
   reescalados: Reescalado[]
+  etiquetadas: Etiquetada[]   // ref bueno con la fecha corrida: no se juzga ni se anula
   simbolosConDato: number
   masiva: boolean          // true = se sospecha de la FUENTE, no del corpus: no se ha anulado nada
 }
@@ -273,16 +301,33 @@ export function juzgarDiferido(
   maxDesvio = DIVERGENCIA_MAX,
   tolReescalado = REESCALADO_TOL,
   umbralMasiva = SOSPECHA_MASIVA,
+  tolEtiqueta = ETIQUETA_TOL,
 ): Diferido {
   const sospechosas: Sospecha[] = []
   const reescalados: Reescalado[] = []
+  const etiquetadas: Etiquetada[] = []
   let simbolosConDato = 0
   const conSospecha = new Set<string>()
 
   for (const [simbolo, todos] of Object.entries(porSimbolo)) {
-    const pares = todos.filter(p => p.fuente > 0 && p.propio > 0)
-    if (pares.length === 0) continue
+    const validos = todos.filter(p => p.fuente > 0 && p.propio > 0)
+    if (validos.length === 0) continue
     simbolosConDato++
+
+    // Se apartan ANTES de cualquier otro juicio los pares cuya etiqueta está corrida (ver `ETIQUETA_TOL`):
+    // de esos NO sabemos si el precio cuadra con su sesión, porque no es de su sesión. Dejarlos dentro
+    // contaminaría también el juicio de reescalado, que cuenta cuántas sesiones desvían.
+    const pares: ParDiferido[] = []
+    for (const p of validos) {
+      const desvia = Math.abs(p.fuente / p.propio - 1) > maxDesvio
+      const previa = p.fuentePrevia
+      if (desvia && previa != null && previa > 0 && Math.abs(p.propio / previa - 1) <= tolEtiqueta) {
+        etiquetadas.push({ simbolo, fecha: p.fecha, propio: p.propio, cierrePrevio: previa })
+        continue
+      }
+      pares.push(p)
+    }
+    if (pares.length === 0) continue
 
     const desviados = pares.filter(p => Math.abs(p.fuente / p.propio - 1) > maxDesvio)
     if (desviados.length === 0) continue
@@ -306,7 +351,7 @@ export function juzgarDiferido(
   }
 
   const masiva = simbolosConDato >= MIN_SIMBOLOS_MASIVA && conSospecha.size / simbolosConDato > umbralMasiva
-  return { sospechosas: masiva ? [] : sospechosas, reescalados, simbolosConDato, masiva }
+  return { sospechosas: masiva ? [] : sospechosas, reescalados, etiquetadas, simbolosConDato, masiva }
 }
 
 export function resumenDiferido(d: Diferido): string {
@@ -322,6 +367,10 @@ export function resumenDiferido(d: Diferido): string {
   if (d.reescalados.length > 0) {
     const lista = d.reescalados.map(r => `${r.simbolo} ×${r.factor.toFixed(3)}`).join(' · ')
     partes.push(`${d.reescalados.length} reescalado(s) (split/ajuste, NO envenenamiento): ${lista}`)
+  }
+  if (d.etiquetadas.length > 0) {
+    const lista = d.etiquetadas.map(e => `${e.simbolo} ${e.fecha}`).join(' · ')
+    partes.push(`${d.etiquetadas.length} precio_ref con la fecha corrida (es el cierre de la sesión anterior; pasada ejecutada antes del cierre): sin juzgar, NO anulado — ${lista}`)
   }
   return partes.join(' · ')
 }

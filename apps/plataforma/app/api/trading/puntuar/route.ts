@@ -46,15 +46,22 @@ export async function POST(req: NextRequest) {
 
   // Pares (cierre publicado de la sesión D, nuestro `precio_ref` de D) de las últimas sesiones. Solo
   // fechas ANTERIORES a hoy: el cierre de hoy, si lo hubiera, ya lo juzga `contrastarFuentes`.
+  // Cada par lleva también el cierre de la sesión ANTERIOR de la propia fuente: es lo que permite
+  // reconocer un `precio_ref` con la fecha corrida (pasada ejecutada antes del cierre) y NO anularlo.
+  // Ver `ETIQUETA_TOL` en `precios-guardia.ts`, con los casos reales de MSFT y CVX del 06/08/2026.
   const refPorClave = new Map(refsRecientes.map(r => [`${r.simbolo}|${r.fecha.toISOString().slice(0, 10)}`, r.precio]))
   const paresDiferido: Record<string, ParDiferido[]> = {}
   for (const [simbolo, serie] of Object.entries(contraste.series)) {
-    const pares = serie
-      .filter(p => p.fecha < hoy)
-      .slice(-SESIONES_DIFERIDO)
-      .map(p => ({ fecha: p.fecha, fuente: p.cierre, propio: refPorClave.get(`${simbolo}|${p.fecha}`) ?? 0 }))
-      .filter(p => p.propio > 0)
-    if (pares.length > 0) paresDiferido[simbolo] = pares
+    const pares: ParDiferido[] = []
+    for (let i = 0; i < serie.length; i++) {
+      const p = serie[i]
+      if (p.fecha >= hoy) continue
+      const propio = refPorClave.get(`${simbolo}|${p.fecha}`)
+      if (propio === undefined || !(propio > 0)) continue
+      pares.push({ fecha: p.fecha, fuente: p.cierre, propio, fuentePrevia: i > 0 ? serie[i - 1].cierre : null })
+    }
+    const ultimos = pares.slice(-SESIONES_DIFERIDO)
+    if (ultimos.length > 0) paresDiferido[simbolo] = ultimos
   }
   const diferido = juzgarDiferido(paresDiferido)
 

@@ -193,7 +193,15 @@ DE MUESTRA (walk-forward). Esa decisión es de Alberto y tendrá su propio spec.
        envenenada mueve el torneo);
      · **fuente rota ≠ corpus envenenado** — si discrepa en más de la mitad de los símbolos (con ≥4
        símbolos con dato; con menos la fracción no significa nada) no se anula NADA y se avisa.
+     · **etiqueta corrida ≠ precio malo** (`ETIQUETA_TOL`, PR #1382) — una pasada ejecutada ANTES del
+       cierre guarda bajo la fecha de hoy el cierre de AYER. La firma: el ref se parece al cierre de la
+       sesión anterior mucho más que al de la suya. Se aparta como no juzgable y NO se anula. Caso real
+       verificado contra IBKR: el repaso manual del 06/08/2026 (09:34 UTC) dejó MSFT en 487,46 con cierre
+       real 499,86 (−2,48%, por encima del umbral) y 487,46 = cierre exacto del 05/08.
      Todo se canta por Telegram y en el latido, incluso cuando la decisión es no anular.
+     **Estado en vivo (11/08/2026, primera pasada con el arreglo):** 22 símbolos analizados (13 la
+     víspera), **0 vetados**, 0 anulados, y el latido cantando «2ª fuente aún sin el cierre de hoy
+     (22 símbolos con dato de 2026-08-10): sin contrastar, no vetado».
   En `/puntuar` se contrastan solo los símbolos que se van a usar; en `/analizar`, el universo, y el
   símbolo divergente **se salta ENTERO** porque sus velas contaminan EMA/MACD/RSI/ADX. Las respuestas
   traen `vetados`/`descartados`/`divergentes`/`contraste.sinJuzgar` y **hay que cantarlo en el Telegram**.
