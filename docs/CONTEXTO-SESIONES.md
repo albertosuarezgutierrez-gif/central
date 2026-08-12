@@ -32,6 +32,20 @@
 
 ---
 
+### 🔑 (12/08/2026) El expediente de RR.HH. de ialimp NO puede escribir en Storage (PR #1392)
+- El proyecto Vercel `ialimp` **no tiene `SUPABASE_SERVICE_ROLE_KEY`** por ninguna vía: ni propia, ni
+  compartida enlazada, ni del equipo. Pero `lib/storage-limpiadora.ts` la usaba con `process.env.X!` →
+  cabecera `Bearer undefined` → **401** al subir/borrar documento del expediente y al generar la nómina PDF.
+- **0 errores de runtime en 7 días. Eso no era que funcionara: era que nadie lo había usado.** Se cobraría
+  la primera vez que Vanessa generase una nómina.
+- Salió de cruzar el inventario de la clave en Vercel (hecho para poder rotarla) contra los consumidores
+  reales del código. Un solo nombre de variable en todo el monorepo, así que el mapa está completo:
+  `ia-rest` ✅ (en TODOS los entornos, Development incluido — acotarlo al rotar) · `central-rrhh` ✅ ·
+  **`ialimp` ❌ pese a usarla** · `plataforma` ❌ correcto (solo la nombra `secrets-registry.ts`, que es doc).
+- El PR NO añade la clave (es de Alberto): cambia `!` por `requireSecret` para que el error **diga qué falta**.
+- ⚠️ Al añadirla, ojo: `agente-cotizador/route.ts` hace `SERVICE_ROLE || ANON_KEY` — hoy corre bajo RLS y ese
+  día **empezará a saltárselo sin que nadie toque nada**. Es el «no lo sé disfrazado de valor» del CLAUDE.md.
+
 ### 🕳️ (12/08/2026) Las cancelaciones NO EXISTEN en nuestra BD — el cuadro de mando es ciego a ellas
 - Smoobu dice **269 noches canceladas contra 241 reservadas** (may-nov 2026, 67 cancelaciones). Se cancela
   más de lo que se consume y **ningún panel nuestro lo puede ver**.
