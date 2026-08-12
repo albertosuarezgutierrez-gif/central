@@ -32,6 +32,54 @@
 
 ---
 
+### 🔗 (12/08/2026) Los SEIS botones de reserva de la landing iban a un dominio INEXISTENTE (PR #1390)
+- `reservas.house-sevillana.com` **no tiene registro DNS**, ni su padre `house-sevillana.com`. Comprobado
+  por dos vías (resolución del sistema y fetch → `ENOTFOUND`, distinto del «bloqueado por proxy» que da
+  un dominio vivo). Ahí apuntaban hero, enlaces internos, `/barrio`, `/que-ver` y los dos de `/parking`.
+- El botón principal de una web cuyo único objetivo es la reserva directa daba error de DNS. **Falla en el
+  PRIMER paso, no en el último**, y explica el dato de GA4 mejor que ninguna hipótesis de diseño: 109
+  sesiones en 12 meses y **1 clic saliente en todo el año**.
+- Ahora la URL vive en `apps/housesevillana/app/reservas.ts`. Lo que arregla el fondo no es el valor: es que
+  haya **un solo sitio donde equivocarse** — copiado seis veces no se revisa nunca, porque mirar uno no dice
+  nada de los otros cinco. `app/enlaces.test.ts` lo blinda (verificado que muerde).
+- Destino nuevo: `booking.smoobu.com/yourothercity?apartmentId=352007` — **enlace profundo**, entra directo
+  a House Sevillana y sigue bloqueada en ella al cambiar fechas. Sin el id abre el portal multi-propiedad
+  con las 4 casas. Validado con prueba real de huésped (solo tarjeta, Stripe live, sin sandbox).
+- Por qué `reservas.house-sevillana.com` nunca existió: el campo «External link» de Smoobu **no aloja
+  nada**, solo redirige enlaces a una URL propia YA montada. Nadie publicó la página con el iframe — así
+  que aquello no fue un enlace que se rompiera, fue **un enlace que nunca llegó a funcionar**.
+- ✅ Arreglado antes por Alberto en Smoobu: el método de pago por defecto era **PayPal en sandbox** (no
+  cobraba). Ahora Stripe único y preseleccionado, verificado hasta la pantalla de pago.
+
+### 🅿️ (12/08/2026) Landing housesevillana: `/parking` en 3 idiomas + auditoría de Chrome (PR #1390)
+- Nueva `/parking` (es/en/it) — la búsqueda de más intención y menos competencia; la URL del anuncio de
+  Booking ya es `house-sevillana-parking`. Dato clave y contraintuitivo: **la ZBE de Sevilla es SOLO la Isla
+  de la Cartuja**; el casco histórico tiene otro régimen. Lo no comprobado (precio de la plaza, medidas,
+  matrícula) se remite a Alberto en vez de rellenarse a ojo, y queda anotado en `app/parking/contenido.ts`.
+- Dos fallos de i18n corregidos: `description`/`og:description` de la portada **nunca se tradujeron**
+  (`/en` servía castellano a Google con el 72% del tráfico en inglés), y el `<title>` era clave de
+  diccionario — el agente SEO reescribe esa frase cada lunes, así que el primer lunes la portada inglesa
+  habría pasado a anunciarse en español sin error ni aviso. Ahora van por `Variante.meta`, por etiqueta.
+- 🔴 **PENDIENTE URGENTE DE ALBERTO — el motor de reservas no cobra por defecto:** en Smoobu, PayPal está en
+  **sandbox** Y es el **método por defecto**. Cambiar el default a Stripe (live, sí cobra) y desactivar PayPal.
+- Auditoría de Chrome: Search Console verificado y sitemap enviado (**3 URLs → confirma que lo desplegado
+  sigue siendo el repo viejo**; reenviar tras crear el proyecto Vercel). Smoobu: quedarse en Pre-paid, Flex
+  sale **el doble** con el 0,9%. GBP: 1 reseña vs 50 de Booking (link `g.page/r/CX403tjxZhLaEBM/review`),
+  web en `http://`, sin logo ni horario, posible **ficha duplicada**.
+- ⚠️ Dato sin explicar y más gordo que la landing: **269 noches canceladas contra 241 reservadas** (may-nov).
+
+### 🚨 (12/08/2026) CREDENCIAL EXPUESTA: `service_role` de Supabase en repo público — ROTAR
+- Al traer `house-sevillana-landing` al monorepo, **gitleaks tumbó el PR**: 12 hallazgos en sus 64 commits.
+- **El grave: una `service_role` del proyecto de PRODUCCIÓN `wswbehlcuxqxyinousql`**, commit `7c53e19`
+  del **06/05/2026**, emitida el 15/04/2026 y **vigente hasta 2036**, en un repo **PÚBLICO** (`central`
+  también lo es). Se salta el RLS → lectura/escritura total sobre la BD compartida de TODAS las verticales.
+- Los otros 11 son claves `anon` (públicas por diseño, sin riesgo). En la historia hay versiones con el
+  `ref` alterado a mano: alguien lo vio e intentó taparlo editando — **editar no borra la historia de git**.
+- ⚠️ **PENDIENTE DE ALBERTO: rotar en Supabase.** Orden obligatorio: inventariar dónde se usa
+  (env vars de los 8 proyectos Vercel + secrets de Actions) → rotar → actualizar → redesplegar. Rotar antes
+  del inventario tumba producción. Revisar además logs de Supabase por si hubo uso ajeno en estos 3 meses.
+- La landing se importó **SIN historia** (PR #1390) para no replicarla; silenciar gitleaks se descartó.
+
 ### 🏠 (12/08/2026) CORRECCIÓN: la web de housesevillana SÍ existe — el fallo era la atribución
 - Alberto desmonta el plan del PR #1387: «punto 4, para eso hicimos la web de housesevillana.es». Tenía razón.
 - La landing **vive en OTRO repo** (`albertosuarezgutierrez-gif/house-sevillana-landing`, `app/route.ts`, edge);

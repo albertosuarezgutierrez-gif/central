@@ -1,12 +1,12 @@
 // apps/plataforma/lib/sivra/seo-landing.ts
-// Lectura/escritura de la landing estática housesevillana (repo house-sevillana-landing,
+// Lectura/escritura de la landing estática housesevillana (ahora en el propio monorepo,
 // fichero app/route.ts) vía GitHub Contents API. Usado por /api/sivra/seo-refresh.
 //
 // Versión BLINDADA (portada del patrón de apps/sivra/lib/seo-landing.ts): si la GitHub API
 // no devuelve un fichero (token ausente/inválido, 401/403/404, rate-limit), lanza un error
 // CLARO en vez del críptico `Buffer.from(undefined)` (ERR_INVALID_ARG_TYPE) que petaba antes.
 
-const LANDING_API = 'https://api.github.com/repos/albertosuarezgutierrez-gif/house-sevillana-landing/contents/app/route.ts'
+const LANDING_API = 'https://api.github.com/repos/albertosuarezgutierrez-gif/central/contents/apps/housesevillana/app/route.ts'
 
 export function githubToken(): string {
   const t = process.env.GITHUB_TOKEN
@@ -23,7 +23,7 @@ export function decodeLanding(ok: boolean, status: number, body: unknown): { con
   const d = body as { content?: unknown; sha?: unknown; message?: unknown } | null
   if (!ok || typeof d?.content !== 'string') {
     const detalle = typeof d?.message === 'string' ? d.message : `HTTP ${status}`
-    throw new Error(`No se pudo leer la landing desde GitHub (${status}): ${detalle}. Revisa GITHUB_TOKEN y su acceso al repo house-sevillana-landing.`)
+    throw new Error(`No se pudo leer la landing desde GitHub (${status}): ${detalle}. Revisa GITHUB_TOKEN y su acceso a apps/housesevillana del repo central.`)
   }
   return { content: Buffer.from(d.content, 'base64').toString('utf-8'), sha: d.sha as string }
 }

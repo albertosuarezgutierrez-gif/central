@@ -1,8 +1,8 @@
 // apps/sivra/lib/seo-landing.ts
-// Lectura/escritura de la landing estática housesevillana (repo house-sevillana-landing,
+// Lectura/escritura de la landing estática housesevillana (ahora en el propio monorepo,
 // fichero app/route.ts) vía GitHub Contents API. Compartido por seo-refresh y seo-revert.
 
-const LANDING_API = 'https://api.github.com/repos/albertosuarezgutierrez-gif/house-sevillana-landing/contents/app/route.ts'
+const LANDING_API = 'https://api.github.com/repos/albertosuarezgutierrez-gif/central/contents/apps/housesevillana/app/route.ts'
 
 export function githubToken(): string {
   const t = process.env.GITHUB_TOKEN
@@ -17,7 +17,7 @@ export async function fetchLanding(): Promise<{ content: string; sha: string }> 
   const d = await res.json().catch(() => ({}))
   if (!res.ok || typeof d?.content !== 'string') {
     const detalle = typeof d?.message === 'string' ? d.message : `HTTP ${res.status}`
-    throw new Error(`No se pudo leer la landing desde GitHub (${res.status}): ${detalle}. Revisa GITHUB_TOKEN y su acceso al repo house-sevillana-landing.`)
+    throw new Error(`No se pudo leer la landing desde GitHub (${res.status}): ${detalle}. Revisa GITHUB_TOKEN y su acceso a apps/housesevillana del repo central.`)
   }
   return { content: Buffer.from(d.content, 'base64').toString('utf-8'), sha: d.sha as string }
 }
