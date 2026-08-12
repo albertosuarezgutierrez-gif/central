@@ -32,6 +32,39 @@ cadencia horaria respetada). Dos PRs de carril 2 abiertos, ninguno atascado: **#
 
 ---
 
+# Actualización 2026-08-11 — auditoría diaria (ligera)
+
+Rango: desde la profunda del 09/08 13:34 (PR #1329) hasta ahora — 32 commits, todos autodocumentados
+PR a PR salvo uno. SALTA typecheck/tests pesados (son de la pasada profunda).
+
+## 🟢 Heartbeat de crons/agentes
+`agente_latidos` (10 filas) — todo `ok=true`, todas dentro de su cadencia (máx. 23h de un umbral
+diario ~30h). Tablas de dominio (12 huellas, incl. `pricing_decisiones`/`market_rates booking_mcp`
+como huella del AGENTE de pricing) — todas ✅, la más vieja a 21h de un umbral de 36-192h según
+cadencia. Sin muflos.
+
+## 🟢 Backlog de PRs de rutinas + salud del automerge
+`rutinas-automerge.yml`: última ejecución hace ~2h, en verde — vigilante vivo. Sin PRs de registro
+atascados >24h ni en conflicto. Dos PRs abiertos ajenos a las rutinas y en conflicto desde hace
+semanas (**#1055** «mariscos», 21/07; **#755** «banca CSV», 05/07) — no son de registro ni draft de
+carril 2, quedan fuera del alcance de esta auditoría; FYI para que Alberto decida rebasar o cerrar.
+`#1363` (trading, draft) tiene solo ~5h de vida — no está atascado.
+
+## 🟡 Reconciliación de memoria/skills (carril 1)
+- **PR #1361** (pricing: `pricing_applied.demanda_fuente`/`demanda_gateada`, mergeado 10/08) no
+  tenía entrada de memoria — añadida en `docs/CONTEXTO-SESIONES.md` (PR #1364, registro) y en
+  `pricing-agente/references/estado-y-protocolo.md` (este PR, va aparte por tocar `.claude/**`).
+- El bloque «Estado vivo» de `CONTEXTO-SESIONES.md` seguía listando dos pendientes ya resueltos el
+  09/08 y nunca podados: **#1323** «a rehacer» (se rehizo y mergeó ese mismo día — ver su entrada del
+  09/08) y el SQL `channel_markup_sin_recargo` «por aplicar» (ya aplicado, confirmado en la entrada
+  del 09/08). Podados en el mismo PR #1364.
+- `docs/SKILLS.md` sin drift (todas las skills/comandos reales están listados). Sin cambios visibles
+  en `apps/ia-rest` en el rango → manuales de usuario final sin acción.
+
+## Sin acciones manuales pendientes de esta pasada.
+
+---
+
 # Actualización 2026-08-09 — auditoría PROFUNDA (semanal)
 
 Pasada completa `auditoria-central` (checklist entero: integridad, typecheck de las 8 apps, tests,
