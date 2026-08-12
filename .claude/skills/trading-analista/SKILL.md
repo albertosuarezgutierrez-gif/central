@@ -31,6 +31,16 @@ Detalle paso a paso en `references/pasada-diaria.md`.
   temporal en pérdida cerrada. **H8:** el agregado cruzaba el umbral (+2,34 pp) pero el signo se
   INVIERTE entre mitades (+6,85 pp en ago24-jul25, −2,24 pp en ago25-may26). `capitulacionMes/Sem`
   se siguen recolectando como CONTEXTO, igual que las noticias. Detalle en el pre-registro.
+- **⛔ INTRADÍA, objetivo diario fijo y cruces de medias: DESCARTADOS con datos (12/08/2026).** No
+  propongas operativa intradía, ni un objetivo de «X% al día», ni entradas por cruce de medias.
+  Medido sobre las 227 ejecuciones REALES de la cuenta en 2026: cuanto más corto el horizonte, peor
+  el retorno, de forma monótona — **−1,88% de media a <1 día (n=106) frente a +1,16% a >10 días**.
+  El cruce de medias YA está en el torneo (`momentum` = EMA12/26 + MACD) y es la PEOR de las cuatro
+  estrategias: hit 24,1%, retorno medio **−0,63%** (n=116). Cruce y MACD **no son dos señales**: la
+  línea MACD ES ema12−ema26 (ver `estrategias.ts:10-12`), así que «confirmar» una con otra es
+  contarse la misma señal dos veces. Backtest propio sobre SPY 30 min / 77 sesiones: ninguna
+  variante bate a comprar y no tocar, y forzar el cierre diario destruye del 65% al 100% del
+  retorno de la misma señal. **Veredicto completo y método en `docs/INVERSION-VEREDICTO-2026-08.md`.**
 - **🛡️ Los endpoints VETAN precios que no se creen — hay que CANTARLO en el resumen (08/08/2026).**
   `/analizar` y `/puntuar` ya no se tragan `precios[simbolo]` a ciegas: cada precio pasa una guardia de
   ×2 contra el último `precio_ref` y un CONTRASTE contra la fuente propia del servidor (Stooq/Yahoo,
