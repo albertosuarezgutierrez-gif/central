@@ -32,6 +32,18 @@
 
 ---
 
+### 🚨 (12/08/2026) CREDENCIAL EXPUESTA: `service_role` de Supabase en repo público — ROTAR
+- Al traer `house-sevillana-landing` al monorepo, **gitleaks tumbó el PR**: 12 hallazgos en sus 64 commits.
+- **El grave: una `service_role` del proyecto de PRODUCCIÓN `wswbehlcuxqxyinousql`**, commit `7c53e19`
+  del **06/05/2026**, emitida el 15/04/2026 y **vigente hasta 2036**, en un repo **PÚBLICO** (`central`
+  también lo es). Se salta el RLS → lectura/escritura total sobre la BD compartida de TODAS las verticales.
+- Los otros 11 son claves `anon` (públicas por diseño, sin riesgo). En la historia hay versiones con el
+  `ref` alterado a mano: alguien lo vio e intentó taparlo editando — **editar no borra la historia de git**.
+- ⚠️ **PENDIENTE DE ALBERTO: rotar en Supabase.** Orden obligatorio: inventariar dónde se usa
+  (env vars de los 8 proyectos Vercel + secrets de Actions) → rotar → actualizar → redesplegar. Rotar antes
+  del inventario tumba producción. Revisar además logs de Supabase por si hubo uso ajeno en estos 3 meses.
+- La landing se importó **SIN historia** (PR #1390) para no replicarla; silenciar gitleaks se descartó.
+
 ### 🏠 (12/08/2026) CORRECCIÓN: la web de housesevillana SÍ existe — el fallo era la atribución
 - Alberto desmonta el plan del PR #1387: «punto 4, para eso hicimos la web de housesevillana.es». Tenía razón.
 - La landing **vive en OTRO repo** (`albertosuarezgutierrez-gif/house-sevillana-landing`, `app/route.ts`, edge);
