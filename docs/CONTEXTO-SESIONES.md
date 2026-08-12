@@ -32,6 +32,21 @@
 
 ---
 
+### 🏷️ (12/08/2026) El contraste diferido casi anula tesis BUENAS: el ref con la fecha corrida
+- Mergeado **#1370** (contraste diferido, opción (a)). La pasada del 11/08 —primera con #1363 en prod—
+  salió perfecta: **22 símbolos** (13 la víspera), **0 vetados**, 0 anulados, 4 huellas + 2 latidos,
+  1 sola pasada. El arreglo del veto falso funciona en real.
+- Al probarlo contra IBKR apareció un fallo del propio #1370: una pasada que corre ANTES del cierre
+  guarda bajo la fecha de hoy el **cierre de AYER**. El repaso manual del 06/08 (09:34 UTC) dejó MSFT
+  en `precio_ref` 487,46 con cierre real 499,86 → **−2,48%, por encima del umbral: habría anulado esas
+  tesis**. Y 487,46 es al céntimo el cierre del 05/08 (CVX igual, pero su desvío se quedó en −1,49% y
+  no llegó a saltar: no se vio antes por suerte del mercado, no porque no estuviera).
+- Arreglo (**PR #1372**): `ETIQUETA_TOL` — si el ref se parece al cierre de la sesión ANTERIOR mucho más
+  que al de la suya, es la etiqueta corrida, no un precio malo: no se juzga ni se anula, y se canta.
+  Un precio envenenado no se parece a ninguno de los dos, así que sigue cayendo. 50/50 tests.
+- Skill `trading-analista`: sección nueva **«cuándo se corre y por qué importa la hora»** (repasos a mano,
+  SIEMPRE después del cierre americano).
+
 ### ⏰ (11/08/2026) Recordatorios de seguimiento del laboratorio de inversión (decisión: seguir en paper)
 - Alberto, tras el informe de la auditoría: **seguimos en paper** («ok seguimos entonces») + recordatorios.
 - Trigger **quincenal** `trig_01FJtQFiEMVGnEj9vpdBYA3f` (días 1 y 15, 08:00 UTC, sesión nueva + push):

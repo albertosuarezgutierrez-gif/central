@@ -5,6 +5,21 @@ NO ejecutar NINGUNA orden real en IBKR. Solo lectura (get_account_*, get_price_h
 get_price_snapshot, get_watchlist) y llamadas a los endpoints de plataforma. La operativa es 100%
 simulada en BD. Esta invariante protege todo lo demás: si dudas, no operas.
 
+## 🕗 CUÁNDO se corre (y por qué importa la hora)
+La rutina va **L-V ~22:15 CEST**, es decir **después del cierre de Wall Street** (20:00 UTC en verano,
+21:00 en invierno). No es un detalle de agenda: `precio_ref` se guarda con la fecha de HOY, y si la
+pasada se ejecuta con el mercado aún cerrado, lo que se guarda bajo la fecha de hoy es **el cierre de
+la sesión ANTERIOR** — un dato bueno con la etiqueta corrida un día.
+
+**Pasó de verdad** (repaso manual del 06/08/2026 a las 09:34 UTC, destapado el 12/08 contrastando contra
+IBKR): MSFT quedó con `precio_ref` **487,46** cuando el cierre real del 06/08 fue **499,86** — 487,46 es,
+al céntimo, el cierre del 05/08. CVX igual (186,41 = cierre del 05/08). El contraste diferido lo leía
+como un desacuerdo del −2,48% y **habría anulado esas tesis**; hoy lo reconoce y las deja en paz
+(`ETIQUETA_TOL`, PR #1372), pero la tesis sigue midiendo contra el precio de otra sesión.
+
+**Regla:** si tienes que repasar a mano, hazlo **después del cierre americano**. Si por lo que sea corres
+antes, dilo en el resumen de Telegram — esa pasada mide contra el cierre de ayer.
+
 ## Pasada (orden exacto)
 1. Leer NAV: `get_account_summary` → `net_liquidation` (EUR). **Empújalo también a la vista 💶 Dinero**
    de plataforma para que el saldo del bróker salga como una tarjeta más (junto a BBVA/Kutxabank) y sume

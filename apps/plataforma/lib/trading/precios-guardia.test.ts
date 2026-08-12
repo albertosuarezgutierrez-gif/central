@@ -419,3 +419,80 @@ test('el interruptor de «fuente rota» NO se dispara con una muestra minúscula
   assert.equal(d.masiva, false)
   assert.equal(d.sospechosas.length, 1)
 })
+
+// ---------------------------------------------------------------------------
+// La etiqueta corrida: `precio_ref` bueno guardado con la fecha del día siguiente
+// ---------------------------------------------------------------------------
+
+// Cierres REALES de IBKR (verificados el 12/08/2026) y los `precio_ref` REALES que la pasada manual del
+// 06/08 a las 09:34 UTC —con Wall Street aún cerrado— dejó en `trading_tesis`. El ref del 06/08 es, al
+// céntimo, el cierre del 05/08: la pasada guardó el último cierre que existía cuando preguntó.
+const MSFT_REAL = { c05: 487.46, c06: 499.86, ref06: 487.46 }
+const CVX_REAL = { c05: 186.41, c06: 189.23, ref06: 186.41 }
+
+test('el caso real de MSFT 06/08: −2,48% de desvío que NO es un precio malo sino la fecha corrida', () => {
+  // Sin el freno esto pasaba del umbral del 2% y anulaba tesis buenas.
+  assert.ok(Math.abs(MSFT_REAL.c06 / MSFT_REAL.ref06 - 1) > 0.02)
+  const d = juzgarDiferido({
+    MSFT: [{ fecha: '2026-08-06', fuente: MSFT_REAL.c06, propio: MSFT_REAL.ref06, fuentePrevia: MSFT_REAL.c05 }],
+  })
+  assert.deepEqual(d.sospechosas, [])
+  assert.equal(d.etiquetadas.length, 1)
+  assert.equal(d.etiquetadas[0].simbolo, 'MSFT')
+  assert.equal(d.etiquetadas[0].fecha, '2026-08-06')
+  assert.match(resumenDiferido(d), /fecha corrida/)
+  assert.match(resumenDiferido(d), /NO anulado/)
+})
+
+test('CVX el mismo día tenía la MISMA fecha corrida, pero su desvío no llegaba al umbral', () => {
+  // −1,49%: no habría saltado ni sin el freno. Se guarda como recordatorio de que el fallo del 06/08 no
+  // se vio antes por suerte del mercado, no porque no estuviera.
+  assert.ok(Math.abs(CVX_REAL.c06 / CVX_REAL.ref06 - 1) < 0.02)
+  const d = juzgarDiferido({
+    CVX: [{ fecha: '2026-08-06', fuente: CVX_REAL.c06, propio: CVX_REAL.ref06, fuentePrevia: CVX_REAL.c05 }],
+  })
+  assert.deepEqual(d.sospechosas, [])
+  assert.deepEqual(d.etiquetadas, [])
+})
+
+test('un precio ENVENENADO no se parece al cierre de ayer, así que el freno no lo salva', () => {
+  // CVX 590,17 del 03/08 no era ni el cierre del 03/08 (193,18) ni el del 31/07 (192,31).
+  const d = juzgarDiferido({
+    CVX: [{ fecha: '2026-08-03', fuente: 193.18, propio: 590.17, fuentePrevia: 192.31 }],
+  })
+  assert.equal(d.sospechosas.length, 1)
+  assert.deepEqual(d.etiquetadas, [])
+})
+
+test('sin cierre previo no se puede reconocer la etiqueta corrida: se juzga igual', () => {
+  const d = juzgarDiferido({
+    MSFT: [{ fecha: '2026-08-06', fuente: MSFT_REAL.c06, propio: MSFT_REAL.ref06, fuentePrevia: null }],
+  })
+  assert.equal(d.sospechosas.length, 1)
+  assert.deepEqual(d.etiquetadas, [])
+})
+
+test('la etiqueta corrida se aparta ANTES del juicio de reescalado, no cuenta como sesión que desvía', () => {
+  // Dos sesiones: una con la fecha corrida y otra buena. Si la corrida contase, «todas desvían» sería
+  // falso o verdadero por accidente y el veredicto de split saldría del ruido.
+  const d = juzgarDiferido({
+    MSFT: [
+      { fecha: '2026-08-06', fuente: MSFT_REAL.c06, propio: MSFT_REAL.ref06, fuentePrevia: MSFT_REAL.c05 },
+      { fecha: '2026-08-10', fuente: 506.06, propio: 505.93, fuentePrevia: 499.99 },
+    ],
+  })
+  assert.deepEqual(d.sospechosas, [])
+  assert.deepEqual(d.reescalados, [])
+  assert.equal(d.etiquetadas.length, 1)
+})
+
+test('la sesión real del 11/08 cuadra al céntimo: la pasada de la noche no tiene la fecha corrida', () => {
+  // Contraste de control con los datos reales de la pasada de las 20:41 UTC.
+  const d = juzgarDiferido({
+    MSFT: [{ fecha: '2026-08-11', fuente: 503.81, propio: 503.74, fuentePrevia: 506.06 }],
+    CVX: [{ fecha: '2026-08-11', fuente: 196.66, propio: 196.66, fuentePrevia: 194.91 }],
+  })
+  assert.deepEqual(d.sospechosas, [])
+  assert.deepEqual(d.etiquetadas, [])
+  assert.equal(d.simbolosConDato, 2)
+})
