@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MOTOR_RESERVAS } from './reservas';
 
 export const HTML = `<!DOCTYPE html>
 <html lang="es">
@@ -323,7 +324,7 @@ fbq('init','12124662686780882173');fbq('track','PageView');
         <span class="hero-pill">&#128101; Hasta 12 personas</span>
       </div>
       <div class="ctas">
-        <a href="https://reservas.house-sevillana.com" class="btn-p" target="_blank" rel="noopener">Consultar disponibilidad</a>
+        <a href="${MOTOR_RESERVAS}" class="btn-p" target="_blank" rel="noopener">Consultar disponibilidad</a>
         <a href="#caracteristicas" class="btn-s">Ver la casa</a>
       </div>
     </div>
@@ -819,7 +820,7 @@ function cm(){document.getElementById('mob').classList.remove('open')}
     <a href="/parking" style="background:#2d2d2d;color:white;padding:12px 16px;border-radius:10px;text-decoration:none;font-size:13px">
       🚗 Casa con parking en el centro
     </a>
-    <a href="https://reservas.house-sevillana.com" style="background:#B04E2A;color:white;padding:12px 16px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:700">
+    <a href="${MOTOR_RESERVAS}" style="background:#B04E2A;color:white;padding:12px 16px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:700">
       📅 Comprobar disponibilidad
     </a>
   </div>

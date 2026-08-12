@@ -6,13 +6,16 @@ import { RUTAS_LOCALIZADAS, localizar, traducir } from './motor.ts'
 import { TRADUCCIONES as PORTADA_EN } from '../en/traducciones.ts'
 import { TRADUCCIONES as PORTADA_IT } from '../it/traducciones.ts'
 import { EN as PARKING_EN, IT as PARKING_IT } from '../parking/traducciones.ts'
-import { HTML as PARKING } from '../parking/contenido.ts'
 
-// La portada se lee como TEXTO en vez de importarla: `app/route.ts` arrastra `next/server`,
-// que aquí no se resuelve. Y mover su HTML a otro fichero no es opción — el agente SEO de
-// sivra reescribe `app/route.ts` por esa ruta exacta. Las páginas nuevas sí guardan su HTML
-// en un `contenido.ts` aparte, que se importa de verdad.
-const PORTADA = readFileSync(fileURLToPath(new URL('../route.ts', import.meta.url)), 'utf8')
+// Las páginas se leen como TEXTO, no se importan. Dos motivos distintos que llevan al mismo
+// sitio: `app/route.ts` arrastra `next/server`, que aquí no se resuelve; y el resto importa
+// `../reservas` sin extensión —como manda Next— que el runner de Node tampoco resuelve.
+// No es una limitación: todo lo que comprueba este fichero son operaciones sobre cadenas,
+// así que el texto crudo sirve igual. (Mover el HTML de la portada a otro fichero NO es
+// opción: el agente SEO de sivra la reescribe por esa ruta exacta.)
+const leer = (ruta: string) => readFileSync(fileURLToPath(new URL(ruta, import.meta.url)), 'utf8')
+const PORTADA = leer('../route.ts')
+const PARKING = leer('../parking/contenido.ts')
 
 const IDIOMAS = [
   { codigo: 'en', ogLocale: 'en_GB' },

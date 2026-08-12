@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { MOTOR_RESERVAS } from '../reservas'
 const H = `<!DOCTYPE html><html lang="es">
 <head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
@@ -59,7 +60,7 @@ ${[
 <div class="cta">
   <p style="font-size:17px;font-weight:700">¿Listo para explorar Sevilla?</p>
   <p style="font-size:13px;margin-top:6px;opacity:.85">Alójate en el centro histórico. Sin comisiones de agencia.</p>
-  <a href="https://reservas.house-sevillana.com">Ver disponibilidad</a>
+  <a href="${MOTOR_RESERVAS}">Ver disponibilidad</a>
 </div>
 </body></html>`
 export function GET() { return new Response(H, { headers: { 'Content-Type': 'text/html; charset=utf-8' } }) }

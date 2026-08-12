@@ -22,6 +22,8 @@
 //   Todo eso se remite a Alberto en la reserva en vez de inventarse. Cuando se confirme,
 //   se escribe aquí — y entonces sí es un argumento de venta, no una promesa a medias.
 
+import { MOTOR_RESERVAS } from '../reservas'
+
 export const HTML = `<!DOCTYPE html><html lang="es">
 <head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
@@ -69,7 +71,7 @@ nav a{color:white;text-decoration:none;font-family:Arial,sans-serif;font-size:13
 <body>
 <nav>
   <a href="/" style="font-weight:700;font-size:15px">House Sevillana</a>
-  <a href="https://reservas.house-sevillana.com" target="_blank" rel="noopener" style="background:#B04E2A;padding:11px 18px;border-radius:20px">Reservar</a>
+  <a href="${MOTOR_RESERVAS}" target="_blank" rel="noopener" style="background:#B04E2A;padding:11px 18px;border-radius:20px">Reservar</a>
 </nav>
 <div class="breadcrumb"><a href="/">Inicio</a> › Parking</div>
 <div class="hero">
@@ -125,6 +127,6 @@ nav a{color:white;text-decoration:none;font-family:Arial,sans-serif;font-size:13
 <div class="cta">
   <p style="font-family:Arial,sans-serif;font-size:18px;font-weight:700">Ven en coche sin preocuparte de aparcar</p>
   <p style="font-family:Arial,sans-serif;font-size:14px;opacity:.9;margin-top:8px">290 m² · 6 dormitorios · Garaje privado · Reserva directa sin comisiones</p>
-  <a href="https://reservas.house-sevillana.com" target="_blank" rel="noopener">Consultar disponibilidad</a>
+  <a href="${MOTOR_RESERVAS}" target="_blank" rel="noopener">Consultar disponibilidad</a>
 </div>
 </body></html>`

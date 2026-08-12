@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { MOTOR_RESERVAS } from '../reservas'
 const H = `<!DOCTYPE html><html lang="es">
 <head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
@@ -66,7 +67,7 @@ nav a{color:white;text-decoration:none;font-family:Arial,sans-serif;font-size:13
 <div class="cta">
   <p style="font-family:Arial,sans-serif;font-size:18px;font-weight:700">¿Listo para vivir la Macarena?</p>
   <p style="font-family:Arial,sans-serif;font-size:14px;opacity:.85;margin-top:8px">290 m² · 6 dormitorios · Parking privado · Sin comisiones</p>
-  <a href="https://reservas.house-sevillana.com">Comprobar disponibilidad</a>
+  <a href="${MOTOR_RESERVAS}">Comprobar disponibilidad</a>
 </div>
 </body></html>`
 export function GET() { return new Response(H, { headers: { 'Content-Type': 'text/html; charset=utf-8' } }) }
