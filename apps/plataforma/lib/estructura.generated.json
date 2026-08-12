@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-12T09:28:34Z",
+  "generadoEn": "2026-08-12T10:02:03Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4271,6 +4271,10 @@
   ],
   "novedades": [
     {
+      "titulo": "«DIRECTO = 0 €» era la etiqueta, no el negocio:",
+      "fecha": ""
+    },
+    {
       "titulo": "Hallazgo grande:",
       "fecha": ""
     },
@@ -4324,10 +4328,6 @@
     },
     {
       "titulo": "Decisión de Alberto (2 palancas):",
-      "fecha": ""
-    },
-    {
-      "titulo": "Barrido «PriceLabs de baja»",
       "fecha": ""
     }
   ],
