@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-12T17:03:41Z",
-  "sha": "f1e631a66557809a691ffe0febb14db39f4a50c6",
+  "generadoEn": "2026-08-12T17:08:12Z",
+  "sha": "e362168bdf85361443980d767a748754cb27a8fd",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -35440,7 +35440,7 @@
           "exportada": false,
           "params": "params: { empresa_nombre: string empresa_email: string lead_nombre: string lead_email: string zona: string tipo_servicio: string m2: number frecuencia: string precio_estimado: number servicios_incluidos: string[] argumentario: string fecha:",
           "retorno": "string",
-          "linea": 13
+          "linea": 12
         },
         {
           "nombre": "POST",
@@ -35448,8 +35448,8 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 163,
-          "resumen": "POST /api/admin/ia/agente-cotizador Body: { lead_id, empresa_id }"
+          "linea": 171,
+          "resumen": "POST /api/admin/ia/agente-cotizador Body: { lead_id } — y `empresa_id` SOLO en la llamada interna con Bearer CRON_SECRET. 🚨 El `empresa_id` venía del BODY y no se comparaba con la sesión (12/08/2026)"
         }
       ],
       "tablas": [
@@ -35460,7 +35460,7 @@
         "next"
       ],
       "rutaApi": "/api/admin/ia/agente-cotizador",
-      "hash": "281363bb6404"
+      "hash": "837096d08385"
     },
     {
       "ruta": "apps/ialimp/app/api/admin/ia/analizar-apartamento/route.ts",
@@ -35955,6 +35955,30 @@
       ],
       "rutaApi": "/api/admin/kits",
       "hash": "50dc2a07eb6f"
+    },
+    {
+      "ruta": "apps/ialimp/app/api/admin/leads/[id]/propuesta/route.ts",
+      "ambito": "apps/ialimp",
+      "resumen": "GET /api/admin/leads/[id]/propuesta — devuelve el HTML de la propuesta del lead. La propuesta que genera `ia/agente-cotizador` ya se persiste entera en `leads.propuesta_html`, así que se sirve desde ahí. Antes se subía además al bucket `propuestas-leads` y el panel enlazaba a su ruta pública — pero ",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: Request, { params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 17
+        }
+      ],
+      "tablas": [
+        "leads",
+        "next"
+      ],
+      "rutaApi": "/api/admin/leads/[id]/propuesta",
+      "hash": "b0a061d86d19"
     },
     {
       "ruta": "apps/ialimp/app/api/admin/leads/route.ts",
@@ -38811,7 +38835,7 @@
         "next"
       ],
       "rutaApi": "/api/leads",
-      "hash": "69b30df6f234"
+      "hash": "74acbe50a839"
     },
     {
       "ruta": "apps/ialimp/app/api/m/baja/[token]/route.ts",
@@ -43523,7 +43547,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 30,
+          "linea": 34,
           "resumen": "🚨 `requireSecret` y no `process.env.X!` (12/08/2026). El proyecto Vercel `ialimp` NO tiene `SUPABASE_SERVICE_ROLE_KEY` — comprobado en las variables propias del proyecto, en las compartidas enlazadas"
         },
         {
@@ -43532,7 +43556,7 @@
           "exportada": false,
           "params": "path: string",
           "retorno": null,
-          "linea": 31
+          "linea": 35
         },
         {
           "nombre": "subirObjeto",
@@ -43540,7 +43564,7 @@
           "exportada": true,
           "params": "path: string, bytes: ArrayBuffer, contentType: string",
           "retorno": "Promise<string>",
-          "linea": 35,
+          "linea": 39,
           "resumen": "Sube bytes al bucket privado con service_role. Devuelve el path o lanza."
         },
         {
@@ -43549,7 +43573,7 @@
           "exportada": true,
           "params": "path: string",
           "retorno": "Promise<void>",
-          "linea": 50,
+          "linea": 54,
           "resumen": "Borra un objeto del bucket privado (best-effort)."
         },
         {
@@ -43558,7 +43582,7 @@
           "exportada": true,
           "params": "path: string",
           "retorno": "Promise<string | null>",
-          "linea": 55,
+          "linea": 59,
           "resumen": "URL firmada de descarga (1 h) para un objeto del bucket privado."
         },
         {
@@ -43567,13 +43591,13 @@
           "exportada": true,
           "params": "path: string",
           "retorno": "Promise<ArrayBuffer>",
-          "linea": 60,
+          "linea": 64,
           "resumen": "Descarga los bytes de un objeto del bucket privado (service_role). Para hashear al firmar."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3f6a5d9a6688"
+      "hash": "7ae779354364"
     },
     {
       "ruta": "apps/ialimp/lib/tenant.ts",
@@ -57176,7 +57200,7 @@
         "trading_tesis"
       ],
       "rutaApi": "/api/trading/puntuar",
-      "hash": "38cb60c4ad92"
+      "hash": "3e17bfc69f89"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/saldo/route.ts",
@@ -70823,15 +70847,15 @@
           "exportada": false,
           "params": "xs: number[]",
           "retorno": "number",
-          "linea": 265
+          "linea": 293
         },
         {
           "nombre": "juzgarDiferido",
           "kind": "function",
           "exportada": true,
-          "params": "porSimbolo: Record<string, ParDiferido[]>, maxDesvio = DIVERGENCIA_MAX, tolReescalado = REESCALADO_TOL, umbralMasiva = SOSPECHA_MASIVA,",
+          "params": "porSimbolo: Record<string, ParDiferido[]>, maxDesvio = DIVERGENCIA_MAX, tolReescalado = REESCALADO_TOL, umbralMasiva = SOSPECHA_MASIVA, tolEtiqueta = ETIQUETA_TOL,",
           "retorno": "Diferido",
-          "linea": 271
+          "linea": 299
         },
         {
           "nombre": "resumenDiferido",
@@ -70839,7 +70863,7 @@
           "exportada": true,
           "params": "d: Diferido",
           "retorno": "string",
-          "linea": 312
+          "linea": 357
         },
         {
           "nombre": "cerca",
@@ -70847,7 +70871,7 @@
           "exportada": false,
           "params": "a: number, b: number, tol: number",
           "retorno": "boolean",
-          "linea": 402
+          "linea": 451
         },
         {
           "nombre": "detectarSuplantaciones",
@@ -70855,7 +70879,7 @@
           "exportada": true,
           "params": "precios: Record<string, number>, referencias: Record<string, number>, tol = CRUCE_TOLERANCIA,",
           "retorno": "Suplantaciones",
-          "linea": 408,
+          "linea": 457,
           "resumen": "Detecta precios que pertenecen a otro símbolo. `referencias` = mismo mapa que `filtrarPreciosAnomalos` (último `precio_ref` conocido ANTERIOR a la pasada, por símbolo)."
         },
         {
@@ -70864,7 +70888,7 @@
           "exportada": true,
           "params": "suplantados: Suplantacion[]",
           "retorno": "string",
-          "linea": 457,
+          "linea": 506,
           "resumen": "Resumen de una línea. Cadena vacía si no hay nada — el consumidor no tiene que comprobarlo."
         },
         {
@@ -70873,13 +70897,13 @@
           "exportada": true,
           "params": "nuevo: number, anterior: number | null, umbral = SALTO_NAV_AVISO",
           "retorno": "SaltoSaldo",
-          "linea": 483,
+          "linea": 532,
           "resumen": "`variacion` = (nuevo − anterior) / anterior. Sin anterior no hay nada que comparar (primer saldo): no se avisa, que es distinto de «no ha cambiado»."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ea1a62eb68b2"
+      "hash": "50f5f5e86589"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-stooq.ts",
@@ -91585,7 +91609,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2449,
-    "funciones": 6620
+    "archivos": 2450,
+    "funciones": 6621
   }
 }

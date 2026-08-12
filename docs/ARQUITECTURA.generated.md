@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-12T17:03:41Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-12T17:08:12Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 10 apps · 37 packages · 23 capacidades · 32 skills · 1160 rutas API.
+**Resumen:** 10 apps · 37 packages · 23 capacidades · 32 skills · 1161 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -31,7 +31,7 @@
 - **Módulos que usa:** core-ai, core-email, core-firma, core-fiscal, core-identity, core-payments, core-push, core-receipts, core-storage, module-contabilidad, module-crm, module-documental, module-materiales, module-proveedores, module-rrhh
 - **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, CRM / leads / cotizador, RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Contabilidad, Facturación / VeriFactu, Escáner / OCR, Informes, Notificaciones (push), Asistente / copiloto IA
 - **Tablas (33):** apuntes_recurrentes, auth_rate_limit, biblioteca_documentos, catalogo_tarifas, cliente_auth_tokens, cliente_consentimientos, concursos, concursos_licitaciones, concursos_perfil_empresa, concursos_radar_anuncios, concursos_seguidos, cuentas, documentos_contables, documentos_limpiadora, firma_otps_limpiadora, firmas_limpiadora, ingresos_manuales, mailing_campanas, mailing_envios, mailing_eventos, mailing_pasos, mailing_prospectos, negocios, partes_trabajo, protocolo_fotos, protocolo_items, protocolos, recordatorios_impagos, repartidor_checklist_plantillas, repartidor_parada_items…
-- **Rutas API:** 198
+- **Rutas API:** 199
 ### mariscos
 - **Módulos que usa:** core-identity, module-pesca
 - **Capacidades:** —
@@ -231,14 +231,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- Corrige el aviso del PR #1392:
 - 0 errores de runtime en 7 días. Eso no era que funcionara: era que nadie lo había usado.
 - La buena noticia: la puerta ya está abierta.
 - El grave: una `service_role` del proyecto de PRODUCCIÓN `wswbehlcuxqxyinousql`
+- Bucle de alertas encontrado:
 - «DIRECTO = 0 €» era la etiqueta, no el negocio:
 - Hallazgo grande:
 - Plan de reservas directas
 - #1374
 - El 🔴 gordo ARREGLADO en la misma sesión:
-- Causa estructural:
-- Barrido del mismo fallo en todo 2026
 

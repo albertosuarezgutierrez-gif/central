@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-12T17:03:41Z",
+  "generadoEn": "2026-08-12T17:08:12Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3492,6 +3492,7 @@
       "/api/admin/items",
       "/api/admin/kits",
       "/api/admin/leads",
+      "/api/admin/leads/[id]/propuesta",
       "/api/admin/lenceria",
       "/api/admin/lenceria/[id]",
       "/api/admin/limpiadoras",
@@ -4514,6 +4515,10 @@
   ],
   "novedades": [
     {
+      "titulo": "Corrige el aviso del PR #1392:",
+      "fecha": ""
+    },
+    {
       "titulo": "0 errores de runtime en 7 días. Eso no era que funcionara: era que nadie lo había usado.",
       "fecha": ""
     },
@@ -4523,6 +4528,10 @@
     },
     {
       "titulo": "El grave: una `service_role` del proyecto de PRODUCCIÓN `wswbehlcuxqxyinousql`",
+      "fecha": ""
+    },
+    {
+      "titulo": "Bucle de alertas encontrado:",
       "fecha": ""
     },
     {
@@ -4563,14 +4572,6 @@
     },
     {
       "titulo": "#755",
-      "fecha": ""
-    },
-    {
-      "titulo": "#1055",
-      "fecha": ""
-    },
-    {
-      "titulo": "Decisión (sesión de solo charla, anotada a mano):",
       "fecha": ""
     }
   ],
@@ -4982,7 +4983,7 @@
     "packages": 37,
     "capacidades": 23,
     "skills": 32,
-    "apis": 1160,
+    "apis": 1161,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
