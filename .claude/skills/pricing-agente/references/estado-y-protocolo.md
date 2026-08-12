@@ -2,6 +2,20 @@
 
 ## Estado vivo (13/07/2026) — leer al empezar el ciclo
 
+### Actualización 12/08/2026 — los previstos ya NO esperan a Alberto (verificación automática)
+- **Alberto no confirma eventos.** Su respuesta al aviso 🔮 de previstos fue «esto tiene q ser
+  automático, yo no sé de esta información». Ese Telegram **se retiró**; ahora decide el cron
+  **`/api/sivra/eventos/verificar`** (05:30 UTC, detrás de `eventos/sync` y `eventos/websearch`).
+- **Tres señales independientes** (`lib/sivra/eventos-verificacion.ts`, puro y testeado): otra fila
+  ya `confirmado` en la misma fecha con **nombre parecido** · **búsqueda dirigida** sobre ese
+  evento (confirma con confianza ≥0,8; `desmentido` → descarta) · **mercado real** de esa noche
+  (comps `booking_mcp`/`manual` ≥25% sobre la línea del mes, con ≥4 comps y ≥3 fechas de base).
+- **Caducidad a 21 días** vista sin corroborar → `descartado`. 🚨 **Con la búsqueda caída NO se
+  decide nada** (ni se descarta): solo cuentan las verificaciones ÚTILES
+  (`pricing_eventos_auto.verificaciones`), y el latido `sivra_eventos_verificar` se pone en rojo.
+- **Telegram solo para pelotazos** (factor ≥1,4 auto-confirmado) y para el latido. Si tocas un
+  evento a mano, pon `decidido_por='alberto'` y el cron no te lo pisa.
+
 ### Actualización 09/08/2026 (tarde) — los 4 pisos EN VIVO bajo el motor; PriceLabs de baja; previstos v2
 - **Los 4 pisos tienen `apply_enabled=true` y `channel_markup=1.0`** (OK explícito de Alberto: «el
   agente coge las riendas de los 4 apartamentos»). PriceLabs: Busto/Luxury ya estaban desconectados;

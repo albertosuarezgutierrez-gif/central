@@ -6,7 +6,6 @@ import { PRICING_HORIZON_DAYS } from "@/lib/pricing-calendar"
 import { buscarWeb, busquedaConfigurada } from "@/lib/websearch"
 import { impactoEvento } from "@/lib/sivra/eventos-impacto"
 import { registrarLatido } from "@/lib/monitoring/latido-escribir"
-import { tgSend } from "@central/core-telegram"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 120
@@ -83,10 +82,25 @@ export async function GET(req: NextRequest) {
   `).catch(() => [])
   const yaResumen = yaRows.map(r => `${r.rate_date} ${r.nombre}`).join(" | ")
 
+  // Los DESCARTADOS van aparte y también al prompt (12/08/2026). Antes se excluían de la lista de
+  // «no repitas» y la búsqueda podía volver a proponer, semana tras semana, lo mismo que ya se
+  // había juzgado falso. Con el descarte AUTOMÁTICO eso deja de ser ruido inocuo: cada
+  // re-propuesta se lleva una verificación de pago para volver a tirarla.
+  const descartadasRows = await prisma.$queryRaw<{ rate_date: string; nombre: string }[]>(Prisma.sql`
+    SELECT rate_date::text AS rate_date, MIN(left(nombre, 45)) AS nombre
+    FROM pricing_eventos_auto
+    WHERE rate_date >= CURRENT_DATE AND estado = 'descartado'
+    GROUP BY rate_date ORDER BY rate_date LIMIT 60
+  `).catch(() => [])
+  const descartadosResumen = descartadasRows.map(r => `${r.rate_date} ${r.nombre}`).join(" | ")
+
   const prompt = `Busca eventos CONFIRMADOS en Sevilla (España) entre ${desde} y ${hasta} que disparen la demanda de ALOJAMIENTO turístico: partidos de LaLiga del Sevilla FC y del Real Betis (local), conciertos en recintos de >1000 personas, ferias y congresos en FIBES, festivales, y festivos locales/puentes grandes (Semana Santa, Feria de Abril).
 
 EVENTOS YA REGISTRADOS (NO repitas ni incluyas nada parecido a estos):
 ${yaResumen || "Ninguno aún"}
+
+YA COMPROBADOS Y DESCARTADOS (NO los vuelvas a proponer):
+${descartadosResumen || "Ninguno"}
 
 Incluye solo eventos con FECHA CONFIRMADA. Estima el aforo del recinto (estadio La Cartuja ~60000, Sánchez-Pizjuán ~43000, Benito Villamarín ~60000, FIBES ~7000, conciertos medianos ~3000, feria/festivo ciudad ~20000).
 
@@ -135,7 +149,7 @@ Si no hay nada nuevo: {"eventos":[]}`
   }
 
   // ─── 2ª pasada: ANTICIPACIÓN ────────────────────────────────────────────────────────────────
-  const previstos = await buscarPrevistos(desde, hasta, yaResumen)
+  const previstos = await buscarPrevistos(desde, hasta, yaResumen, descartadosResumen)
   errors.push(...previstos.errors)
 
   const okFinal = errors.length === 0 && (upserted > 0 || evs.length > 0 || previstos.guardados > 0)
@@ -145,7 +159,12 @@ Si no hay nada nuevo: {"eventos":[]}`
     (errors.length ? ` · ${errors.length} fallos: ${errors[0]}` : ''),
   ).catch(() => {})
 
-  if (previstos.guardados > 0) await avisarPrevistos().catch(() => {})
+  // ⚠️ Aquí había un aviso 🔮 por Telegram que pedía a Alberto pasar cada previsto a
+  // `confirmado`. RETIRADO el 12/08/2026 por petición suya («esto tiene q ser automático, yo no
+  // sé de esta información»): quien juzga ahora un previsto es el cron
+  // `/api/sivra/eventos/verificar`, contra fuentes independientes. El texto del aviso además ya
+  // mentía — decía «de momento NO suben el precio» cuando desde la v2 del 09/08 un previsto
+  // LEJANO sí mueve el precio ponderado por confianza.
 
   return NextResponse.json({
     ok: errors.length === 0, configured: true, via,
@@ -157,7 +176,9 @@ Si no hay nada nuevo: {"eventos":[]}`
 
 // Busca lo que la prensa ya da por hecho pero todavía no tiene entradas. Devuelve cuántos guardó;
 // nunca lanza (es una mejora, no puede tumbar el descubrimiento normal).
-async function buscarPrevistos(desde: string, hasta: string, yaResumen: string): Promise<{
+async function buscarPrevistos(
+  desde: string, hasta: string, yaResumen: string, descartadosResumen: string,
+): Promise<{
   vistos: number; guardados: number; errors: string[]
 }> {
   const errors: string[] = []
@@ -171,6 +192,9 @@ Es exactamente lo contrario de una búsqueda de entradas: quiero lo que ya se ha
 
 NO incluyas: rumores sin fuente, especulación de aficionados, ni nada de esta lista de ya registrados:
 ${yaResumen || "Ninguno aún"}
+
+TAMPOCO incluyas nada parecido a esto, que ya se comprobó y resultó falso o cancelado:
+${descartadosResumen || "Ninguno"}
 
 Para cada uno estima la fecha más probable (si solo se sabe el mes, usa el día más probable e indícalo), el aforo del recinto, tu confianza de 0 a 1, y CITA la evidencia (medio + titular o fuente oficial). Sin evidencia citable, no lo incluyas.
 
@@ -233,28 +257,3 @@ Si no encuentras nada sólido: {"eventos":[]}`
   return { vistos: evs.length, guardados, errors }
 }
 
-// Avisa UNA vez por evento previsto (dedupe por `avisado_at`). Alberto es quien confirma o descarta.
-async function avisarPrevistos(): Promise<void> {
-  const filas = await prisma.$queryRaw<{
-    id: bigint; rate_date: string; nombre: string; factor: number; confianza: number; evidencia: string
-  }[]>(Prisma.sql`
-    SELECT id, rate_date::text AS rate_date, nombre, factor::float AS factor,
-           confianza::float AS confianza, COALESCE(evidencia, '') AS evidencia
-    FROM pricing_eventos_auto
-    WHERE estado = 'previsto' AND avisado_at IS NULL AND rate_date >= CURRENT_DATE
-    ORDER BY rate_date LIMIT 10`)
-  if (!filas.length) return
-
-  const lineas = filas.map(f =>
-    `• *${f.rate_date}* — ${f.nombre}\n  x${f.factor} · confianza ${Math.round(f.confianza * 100)}%\n  _${f.evidencia.slice(0, 160)}_`
-  )
-  await tgSend(
-    `🔮 *Eventos PREVISTOS en Sevilla* (aún sin entradas a la venta)\n\n${lineas.join('\n\n')}\n\n` +
-    `De momento *NO suben el precio* — solo protegen el suelo de esas noches y piden barrido de mercado. ` +
-    `Si confirmas alguno, pásalo a \`confirmado\` y ya tarifica.`,
-  )
-
-  await prisma.$executeRaw(Prisma.sql`
-    UPDATE pricing_eventos_auto SET avisado_at = now()
-    WHERE id IN (${Prisma.join(filas.map(f => f.id))})`)
-}

@@ -32,6 +32,17 @@
 
 ---
 
+### 🔍 (12/08/2026) Los eventos PREVISTOS se verifican y deciden SOLOS (PR #1382)
+- Alberto, ante el aviso 🔮 con 3 fechas de Mangafest: «esto tiene q ser automático, yo no sé de esta
+  información». **Retirado ese Telegram**; decide el cron nuevo `/api/sivra/eventos/verificar` (05:30 UTC).
+- Tres señales independientes (`lib/sivra/eventos-verificacion.ts`, puro, 23 tests): fila ya confirmada
+  de la misma fecha con nombre parecido · búsqueda dirigida (confirma ≥0,8; desmentido → descarta) ·
+  mercado real de esa noche (+25% sobre la línea del mes). **Caducidad a 21 días.**
+- 🚨 Con la búsqueda caída NO se decide nada (solo cuentan las verificaciones ÚTILES) y el latido nuevo
+  `sivra_eventos_verificar` se pone en rojo. Migración `2026-08-12_eventos_verificacion.sql` **aplicada**.
+- Decisiones de Alberto: verificar y decidir solo (incl. auto-confirmar) · Telegram solo para pelotazos
+  (factor ≥1,4) y para el latido. `decidido_por='alberto'` bloquea al cron. Diseño en `docs/superpowers/specs/`.
+
 ### ⏰ (11/08/2026) Recordatorios de seguimiento del laboratorio de inversión (decisión: seguir en paper)
 - Alberto, tras el informe de la auditoría: **seguimos en paper** («ok seguimos entonces») + recordatorios.
 - Trigger **quincenal** `trig_01FJtQFiEMVGnEj9vpdBYA3f` (días 1 y 15, 08:00 UTC, sesión nueva + push):
