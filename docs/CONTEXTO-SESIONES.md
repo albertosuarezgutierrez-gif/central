@@ -59,6 +59,16 @@
   entrada 💸 de arriba): esa clave nunca tocó Postgres, solo la cabecera de una subida a Storage. RLS es
   seguridad de fila en Postgres; ahí no había ninguna que saltarse.
 
+### 🔒 (12/08/2026) Cero tablas sin RLS en `public` — eran las 2 de trading (PR #1395)
+- `trading_cohetes_rebalanceo` y `trading_cohetes_track` eran las **últimas** de `public` con RLS
+  desactivado (las otras 296 ya lo tenían). Aplicado por migración `rls_trading_cohetes`; verificado
+  después: 0 tablas sin RLS y las filas (3 y 12) se siguen leyendo.
+- **No cerraba una fuga**: `anon`/`authenticated` no tenían ningún privilegio, y los cinco roles que sí
+  (app_user, postgres, prisma_plataforma, prisma_sivra, service_role) llevan **BYPASSRLS** → nada
+  operativo cambia. Lo que fija es el suelo: un GRANT futuro a anon ya no las deja abiertas.
+- Lo importante es la otra mitad: el `.sql` del repo hacía `DISABLE ROW LEVEL SECURITY` **explícito**,
+  así que reejecutarlo habría deshecho la migración sin que nadie lo notase. Corregido en el fichero.
+
 ### 🕳️ (12/08/2026) Las cancelaciones NO EXISTEN en nuestra BD — el cuadro de mando es ciego a ellas
 - Smoobu dice **269 noches canceladas contra 241 reservadas** (may-nov 2026, 67 cancelaciones). Se cancela
   más de lo que se consume y **ningún panel nuestro lo puede ver**.
