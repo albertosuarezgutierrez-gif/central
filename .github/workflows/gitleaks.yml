@@ -22,7 +22,19 @@ jobs:
       - name: gitleaks (solo commits nuevos)
         run: |
           VER=8.21.2
-          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${VER}/gitleaks_${VER}_linux_x64.tar.gz" | tar -xz gitleaks
+          # --retry: la descarga NO tenía reintento y un 503 de GitHub Releases pintaba el PR
+          # en rojo sin haber escaneado una sola línea (12/08/2026, PR #1394). Falla cerrado a
+          # propósito —un escáner de secretos que no arranca debe ponerse rojo, nunca verde—,
+          # pero un rojo que no significa nada acaba mirándose por encima, y ese es justo el
+          # check que no puede acostumbrar a nadie a ignorarlo. --retry-all-errors reintenta
+          # también los 5xx (sin él, curl solo reintenta errores de conexión y timeouts).
+          curl -sSfL --retry 5 --retry-delay 2 --retry-all-errors \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${VER}/gitleaks_${VER}_linux_x64.tar.gz" | tar -xz gitleaks
+          # El runner corre `bash -e` SIN `pipefail`, así que el código de salida de
+          # `curl | tar` es el de TAR, no el de curl. Esta vez se vio el fallo solo porque tar
+          # también reventó al recibir un .gz truncado; una descarga que devolviera algo
+          # desempaquetable pero inservible pasaría de largo. Se comprueba el binario y punto.
+          test -x ./gitleaks || { echo "::error::no se pudo descargar gitleaks v${VER}"; exit 1; }
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             RANGE="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
           else
