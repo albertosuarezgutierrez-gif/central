@@ -44,11 +44,21 @@ export async function POST(req: Request) {
 
     const lead_id = result[0]?.id
 
-    // Disparar agente-cotizador en background si hay empresa_id y precio
+    // Disparar agente-cotizador en background si hay empresa_id y precio.
+    // 🚨 Iba SIN cabecera de autorización (12/08/2026). Esta ruta es pública, así que la
+    // llamada no arrastra la cookie `ialimp_session`, y el middleware corta todo `/api/admin/*`
+    // sin ella: el disparo devolvía 401 y ahí moría. El `.catch()` no lo veía porque `fetch` no
+    // rechaza ante un 401 — la respuesta se descartaba entera. Es exactamente la landmine que
+    // avisa el CLAUDE.md («llamadas servidor→servidor a /api/admin/* DEBEN enviar Bearer
+    // CRON_SECRET, o devuelven 401 silencioso»). Ningún lead del cotizador llegó a tener
+    // propuesta: 8 filas, todas con `propuesta_ia_at` a NULL.
     if (empresa_id && lead_id && precio_estimado) {
       fetch(APP_URL + '/api/admin/ia/agente-cotizador', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + (process.env.CRON_SECRET || ''),
+        },
         body: JSON.stringify({ lead_id, empresa_id })
       }).catch(() => { /* agente no crítico */ })
     }

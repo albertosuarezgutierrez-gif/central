@@ -23,10 +23,14 @@ function cfg(): SupabaseStorageConfig {
 // Ahora el error dice el nombre de la variable que falta. Esto NO arregla la ausencia —
 // eso es añadirla al proyecto Vercel—, solo hace que se diagnostique de un vistazo.
 //
-// Ojo al añadirla: `app/api/admin/ia/agente-cotizador/route.ts` hace
-// `SUPABASE_SERVICE_ROLE_KEY || NEXT_PUBLIC_SUPABASE_ANON_KEY`, así que hoy corre con la
-// clave pública y sujeto a RLS. El día que exista la variable, ese endpoint pasa a saltarse
-// RLS sin que nadie lo toque: conviene revisar qué devuelve antes y después.
+// Este fichero es el ÚNICO consumidor de la clave en ialimp. Aquí se usa contra la API HTTP
+// de Storage, no contra Postgres — añadir la variable no cambia ninguna política de RLS.
+//
+// (Se avisaba lo contrario cuando se escribió esto: que `agente-cotizador/route.ts` haría
+// `SERVICE_ROLE || ANON_KEY` y pasaría a saltarse RLS. Comprobado el mismo día: era falso —
+// esa clave tampoco tocaba Postgres, solo la cabecera de una subida a Storage que además
+// nunca funcionó. RLS es seguridad de FILA en Postgres; ahí no había ninguna en juego. El
+// cotizador dejó de usar Storage por completo, así que hoy ni eso.)
 const serviceKey = () => requireSecret('SUPABASE_SERVICE_ROLE_KEY')
 const baseUrl = (path: string) =>
   `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/${BUCKET_DOCS_LIMP}/${path}`
