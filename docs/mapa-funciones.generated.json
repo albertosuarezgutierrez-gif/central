@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-12T09:28:34Z",
-  "sha": "e2298e752a74b963898bb66c2063634a269adb6e",
+  "generadoEn": "2026-08-12T12:18:30Z",
+  "sha": "45f4426bd766cd9a88ad74fc569dcda64eb8f60c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -65939,6 +65939,67 @@
       "hash": "4c48b06d5c30"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/atribucion-canal.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "apps/plataforma/lib/sivra/atribucion-canal.ts De dónde vino REALMENTE una reserva de SIVRA. El problema que resuelve (12/08/2026): el cuadro de mando decía «canal directo = 0 €» en 2026 mientras la landing de housesevillana YA cerraba reservas directas por su motor, su WhatsApp de grupos y su teléfo",
+      "exporta": [
+        "esCentinela",
+        "comisionPct",
+        "atribuirCanal",
+        "resumirCanales"
+      ],
+      "funciones": [
+        {
+          "nombre": "esCentinela",
+          "kind": "function",
+          "exportada": true,
+          "params": "portal: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 60,
+          "resumen": "¿Este valor de `portal` es un cajón de sastre en vez de un dato?"
+        },
+        {
+          "nombre": "otaDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "portal: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 66,
+          "resumen": "Normaliza a la OTA conocida, o null si no lo es."
+        },
+        {
+          "nombre": "comisionPct",
+          "kind": "function",
+          "exportada": true,
+          "params": "fila: FilaIngreso",
+          "retorno": "number | null",
+          "linea": 79,
+          "resumen": "Comisión efectiva de la fila, o null si no se puede saber. Devuelve null —y no 0— cuando falta el bruto o cuando no es positivo. Un `?? 0` aquí sería precisamente el bug que este módulo existe para im"
+        },
+        {
+          "nombre": "atribuirCanal",
+          "kind": "function",
+          "exportada": true,
+          "params": "fila: FilaIngreso",
+          "retorno": "Atribucion",
+          "linea": 95,
+          "resumen": "Decide el canal de una fila de `incomes`. Nunca devuelve 'DIRECTO' por descarte: hace falta una comisión calculable y esencialmente nula sobre un importe que sea una venta de verdad. Ante cualquier du"
+        },
+        {
+          "nombre": "resumirCanales",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: FilaIngreso[]",
+          "retorno": "ResumenCanales",
+          "linea": 176,
+          "resumen": "Reparte importes por canal para el cuadro de mando. `sinClasificar` sale como una categoría propia y visible a propósito: si se sumara al directo inflaría el logro, y si se sumara a las OTA inflaría l"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0547ea24d3f4"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/cobros-ota-db.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/cobros-ota-db.ts — lectura de BD para el vigilante de cobros OTA. Separado de cobros-ota.ts (puro, testeable con node --test) para que la parte pura no arrastre el import de prisma/@/lib/db (que rompe el type-stripping de node --test).",
@@ -91224,7 +91285,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2435,
-    "funciones": 6599
+    "archivos": 2436,
+    "funciones": 6604
   }
 }
