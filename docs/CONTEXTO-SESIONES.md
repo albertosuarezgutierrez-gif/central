@@ -43,6 +43,22 @@
 - Decisiones de Alberto: verificar y decidir solo (incl. auto-confirmar) · Telegram solo para pelotazos
   (factor ≥1,4) y para el latido. `decidido_por='alberto'` bloquea al cron. Diseño en `docs/superpowers/specs/`.
 
+### 💸 (12/08/2026) Veredicto: intradía NO, y la mejor inversión no está en bolsa — `docs/INVERSION-VEREDICTO-2026-08.md`
+- Alberto pregunta si meter toda la cuenta a intradía al 0,5-1% diario, y luego por cruces de medias.
+  **No, con sus propios datos:** 227 ejecuciones reales 2026 → −34,0% YTD, acierto 17,2%, PF 0,28,
+  esperanza −172 $/op (Kelly negativo). Retorno monótono por horizonte: **−1,88% a <1 día vs +1,16% a >10 días**.
+- Cruces de medias ya medidos: `momentum` (EMA12/26+MACD) es la PEOR del torneo (hit 24,1%, ret −0,63%).
+  Backtest propio SPY 30 min/77 sesiones: ninguna variante bate comprar-y-no-tocar (+8,43%).
+- **Hallazgo grande:** comisión Booking = 19,72% real (`amount_gross−amount`), **120.635 € en 5 años**;
+  en 2026 (22.504 €) supera la pérdida bursátil (16.698 €). DIRECTO en 2026 = 0 € con `apps/sivra` y la
+  skill SEO ya construidas. Booking = 92% de facturación (riesgo de canal: Airbnb 42.460 €→1.219 €).
+- Regla dura añadida a la skill `trading-analista`. Decisión de no operar en real SIGUE vigente. PR draft #1387.
+- **Plan de reservas directas** (`docs/PLAN-RESERVAS-DIRECTAS.md`): el 0 € de directo NO es marketing —
+  **no hay web pública**: `app/[locale]/page.tsx` redirige a `/dashboard`, el sitemap dice que las páginas
+  «no existen» y el dominio sigue en `housesevillana.vercel.app`. Fase 0 = encender el motor de Smoobu (ya
+  conectado, 4 apts, sync OK) + registrar dominio. Palanca clave: Booking renunció a la paridad de precios
+  en el EEE el 02/12/2024 (DMA art. 5(3)) → **legal ser −10% en web propia**. Meta año 1: 20% directo ≈ 5.000 €.
+
 ### 📧 (12/08/2026) facturas-correo — pasada diaria sin novedades
 - Vía B sana (`dias_caido=0`), backlog `PDF-pendiente`/`Revisar` vacío, 0 candidatos Gmail y 0
   subidas manuales nuevas.
