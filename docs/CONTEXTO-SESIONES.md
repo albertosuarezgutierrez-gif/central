@@ -42,6 +42,14 @@
   «o llámanos al …» va DENTRO de una frase: se amplía con padding + margen negativo, no estirándolo.
 - Medido antes/después en las **6 rutas** (3 idiomas × 2 páginas): 18 → **0**, sin scroll horizontal.
 - ⚠️ El CSS vive en un template literal de JS: una comilla invertida en un comentario rompe el build (me pasó).
+- **2ª pasada, el hallazgo de verdad:** el sitemap declara **8** rutas y yo había medido 6. Al medir
+  `/barrio` y `/que-ver` salió que su botón **«Reservar» apuntaba a `/#reservar`** y el ancla del motor
+  en la portada es **`id="reserva"`** — no existe ningún `id="reservar"`. El botón llevaba a la portada
+  y ahí te dejaba, sin bajar nunca al motor: no da error, no sale en logs, y en escritorio no se nota.
+  Mismo patrón que los seis botones al dominio muerto (destino a mano en varias páginas). Ahí la red fue
+  una constante; un ancla no puede serlo, así que la red es **`app/anclas.test.ts`** (todo `href="#x"`
+  con su id en la página, todo `href="/#x"` con su id en la portada). **Verificado que el test sirve**
+  reintroduciendo el fallo: 46 pasan, 1 falla. 6/8 → **8/8** rutas limpias a 320px.
 
 ### 💸 (12/08/2026) El cotizador de IA de ialimp no ha generado NUNCA una propuesta (PR #1394)
 - 8 leads, **0 con `propuesta_url` o `propuesta_ia_at`**; el bucket `propuestas-leads` tiene **0 objetos**.
