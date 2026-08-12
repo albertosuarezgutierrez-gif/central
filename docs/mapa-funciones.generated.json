@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-12T12:19:18Z",
-  "sha": "14fab38335de42352ee13af4c0a649a2f271f9aa",
+  "generadoEn": "2026-08-12T17:03:41Z",
+  "sha": "f1e631a66557809a691ffe0febb14db39f4a50c6",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -43515,7 +43515,7 @@
           "exportada": false,
           "params": "",
           "retorno": "SupabaseStorageConfig",
-          "linea": 7
+          "linea": 8
         },
         {
           "nombre": "serviceKey",
@@ -43523,7 +43523,8 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 14
+          "linea": 30,
+          "resumen": "🚨 `requireSecret` y no `process.env.X!` (12/08/2026). El proyecto Vercel `ialimp` NO tiene `SUPABASE_SERVICE_ROLE_KEY` — comprobado en las variables propias del proyecto, en las compartidas enlazadas"
         },
         {
           "nombre": "baseUrl",
@@ -43531,7 +43532,7 @@
           "exportada": false,
           "params": "path: string",
           "retorno": null,
-          "linea": 15
+          "linea": 31
         },
         {
           "nombre": "subirObjeto",
@@ -43539,7 +43540,7 @@
           "exportada": true,
           "params": "path: string, bytes: ArrayBuffer, contentType: string",
           "retorno": "Promise<string>",
-          "linea": 19,
+          "linea": 35,
           "resumen": "Sube bytes al bucket privado con service_role. Devuelve el path o lanza."
         },
         {
@@ -43548,7 +43549,7 @@
           "exportada": true,
           "params": "path: string",
           "retorno": "Promise<void>",
-          "linea": 34,
+          "linea": 50,
           "resumen": "Borra un objeto del bucket privado (best-effort)."
         },
         {
@@ -43557,7 +43558,7 @@
           "exportada": true,
           "params": "path: string",
           "retorno": "Promise<string | null>",
-          "linea": 39,
+          "linea": 55,
           "resumen": "URL firmada de descarga (1 h) para un objeto del bucket privado."
         },
         {
@@ -43566,13 +43567,13 @@
           "exportada": true,
           "params": "path: string",
           "retorno": "Promise<ArrayBuffer>",
-          "linea": 44,
+          "linea": 60,
           "resumen": "Descarga los bytes de un objeto del bucket privado (service_role). Para hashear al firmar."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2bb3c23e1f4b"
+      "hash": "3f6a5d9a6688"
     },
     {
       "ruta": "apps/ialimp/lib/tenant.ts",
