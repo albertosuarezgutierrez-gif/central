@@ -2,6 +2,7 @@
 // Espejo de apps/rrhh/lib/storage.ts: subir/borrar con service_role, URL firmada con
 // anon key (core-storage), descargar para hashear al firmar. NO es el bucket público de fotos.
 import { signStorageObject, type SupabaseStorageConfig } from '@central/core-storage'
+import { requireSecret } from '@central/core-identity'
 import { BUCKET_DOCS_LIMP } from '@/lib/carpetas-limpiadora'
 
 function cfg(): SupabaseStorageConfig {
@@ -11,7 +12,26 @@ function cfg(): SupabaseStorageConfig {
   }
 }
 
-const serviceKey = () => process.env.SUPABASE_SERVICE_ROLE_KEY!
+// 🚨 `requireSecret` y no `process.env.X!` (12/08/2026). El proyecto Vercel `ialimp` NO
+// tiene `SUPABASE_SERVICE_ROLE_KEY` — comprobado en las variables propias del proyecto, en
+// las compartidas enlazadas y en las del equipo: no está por ninguna vía. Con el `!`, la
+// cabecera salía como `Bearer undefined` y Storage devolvía un `401` opaco: subir un
+// documento al expediente o generar la nómina en PDF fallaba con «Storage upload 401», que
+// no menciona la variable y manda a quien lo investigue a buscar un problema de permisos
+// que no existe. Nadie lo vio porque el módulo lleva semanas sin usarse, no porque funcione.
+//
+// Ahora el error dice el nombre de la variable que falta. Esto NO arregla la ausencia —
+// eso es añadirla al proyecto Vercel—, solo hace que se diagnostique de un vistazo.
+//
+// Este fichero es el ÚNICO consumidor de la clave en ialimp. Aquí se usa contra la API HTTP
+// de Storage, no contra Postgres — añadir la variable no cambia ninguna política de RLS.
+//
+// (Se avisaba lo contrario cuando se escribió esto: que `agente-cotizador/route.ts` haría
+// `SERVICE_ROLE || ANON_KEY` y pasaría a saltarse RLS. Comprobado el mismo día: era falso —
+// esa clave tampoco tocaba Postgres, solo la cabecera de una subida a Storage que además
+// nunca funcionó. RLS es seguridad de FILA en Postgres; ahí no había ninguna en juego. El
+// cotizador dejó de usar Storage por completo, así que hoy ni eso.)
+const serviceKey = () => requireSecret('SUPABASE_SERVICE_ROLE_KEY')
 const baseUrl = (path: string) =>
   `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/${BUCKET_DOCS_LIMP}/${path}`
 

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-12T12:24:19Z",
+  "generadoEn": "2026-08-12T17:03:41Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -510,7 +510,7 @@
       },
       "ialimp": {
         "estado": "usado",
-        "evidencias": 11
+        "evidencias": 12
       },
       "mariscos": {
         "estado": "usado",
@@ -4514,6 +4514,10 @@
   ],
   "novedades": [
     {
+      "titulo": "0 errores de runtime en 7 días. Eso no era que funcionara: era que nadie lo había usado.",
+      "fecha": ""
+    },
+    {
       "titulo": "La buena noticia: la puerta ya está abierta.",
       "fecha": ""
     },
@@ -4567,10 +4571,6 @@
     },
     {
       "titulo": "Decisión (sesión de solo charla, anotada a mano):",
-      "fecha": ""
-    },
-    {
-      "titulo": "Prueba reina:",
       "fecha": ""
     }
   ],
