@@ -18,18 +18,30 @@
 // impide que vuelva a aparecer una URL de reservas escrita a pelo en una página.
 
 /**
- * Motor de reservas público (Smoobu, cuenta 103685).
+ * Motor de reservas de House Sevillana (Smoobu, cuenta 103685).
  *
- * ⚠️ PENDIENTE DE CONFIRMAR: el enlace PROFUNDO a House Sevillana. Este portal es
- * multi-propiedad — en la prueba de huésped del 12/08/2026 salió «Busto Reform»— así que
- * mandar aquí obliga al huésped a encontrar el piso él solo, que es fricción justo donde
- * menos conviene. En cuanto se tenga la URL directa de House Sevillana, se cambia SOLO aquí.
+ * El `apartmentId` NO es opcional. Sin él, la misma URL abre el portal MULTI-PROPIEDAD de la
+ * cuenta y lista las cuatro casas en tarjetas (Busto Reform, Duplex Center, House Sevillana,
+ * Luxury Busto): el huésped que llega desde esta web tendría que identificar la suya entre
+ * las otras tres, justo después de haber decidido reservar. Con el id entra directo a House
+ * Sevillana, ya seleccionada, y sigue bloqueada en ella aunque cambie las fechas y busque.
  *
- * Lo que sí está verificado de esta URL (prueba real de huésped, sin completar la reserva):
- * carga, ofrece únicamente tarjeta (Stripe, claves live) y llega a la pantalla de pago sin
- * ningún aviso de sandbox.
+ * Verificado en prueba real de huésped (12/08/2026, sin completar la reserva): carga con la
+ * casa correcta, ofrece únicamente tarjeta (Stripe con claves live) y llega a la pantalla de
+ * pago sin ningún aviso de sandbox.
+ *
+ * Los ids de la cuenta, por si algún día hace falta otro: Busto Reform 352418 · Duplex Center
+ * 352928 · House Sevillana 352007 · Luxury Busto 352943.
  */
-export const MOTOR_RESERVAS = 'https://booking.smoobu.com/yourothercity'
+export const MOTOR_RESERVAS = 'https://booking.smoobu.com/yourothercity?apartmentId=352007'
 
-/** Dominios que NO deben volver a aparecer como destino de reserva. */
+/**
+ * Dominios que NO deben volver a aparecer como destino de reserva.
+ *
+ * `reservas.house-sevillana.com` nunca llegó a existir: parece una intención que se quedó a
+ * medias. Comprobado en Smoobu (12/08/2026) que el campo «External link» del motor **no aloja
+ * nada** — solo redirige los enlaces que Smoobu genera hacia una URL propia que ya tengas
+ * montada. Para servir el motor bajo un subdominio propio habría que publicar una página con
+ * el iframe y apuntar ahí el DNS; nadie lo hizo, pero los botones ya apuntaban al subdominio.
+ */
 export const DOMINIOS_MUERTOS = ['reservas.house-sevillana.com', 'house-sevillana.com']
