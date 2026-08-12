@@ -411,7 +411,7 @@ completo `docs/AUDITORIA-2026-08.md`.
   page data de `/api/admin/clientes/[vertical]/[id]` YA en main (envs ausentes), no es del cambio.
 
 
-- **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 09/08/2026).** Detalle en
+- **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 12/08/2026).** Detalle en
   `docs/memoria/2026-08.md` y en los PRs citados.
   - **Pricing SIVRA (motor vivo en los 4 pisos, resuelto desde el 09-10/08):** #1323 (ocupación
     POR MES) rehecho y mergeado sobre `pricing-demanda.ts`, `channel_markup_sin_recargo.sql`
@@ -425,18 +425,35 @@ completo `docs/AUDITORIA-2026-08.md`.
     consolide (Serper no distingue fecha). Incidente sin diagnosticar: 2º disparo de `mercado-booking`
     el mismo día sin huella del 1º (08/08, `docs/AGENTES-BITACORA.md`). Tope real ≈10-12 ventanas por
     pasada (las respuestas del conector no caben en contexto).
-  - **Trading (solo paper):** H8 rechazada y retrovisor de 15 años cerrado; decisión de Alberto
-    pendiente sobre H9 (stop −10%/trailing −15% recortan el peor decil a costa de media). PR pendiente:
-    umbral 10% de la guardia de suplantación. Pendiente: foto completa a Alberto con propuesta de
-    tramo 1 de la escalera (1.000€→techo 6.000€, firmada) y decisión sobre auto-recuperación de
-    `/puntuar`. FMP sin créditos y redundante (Yahoo cubre); NO recargar. Solo el DCF sigue sin fuente.
-  - **Subastas:** corpus 41 vigentes sano, 0 con margen ≥25% (resultado honesto). 🟡 el dispatcher
-    marca timeout en `subastas-mercado` si desborda 280 s (2×/7d, el job acaba).
-  - **Facturas/banca sin conciliar:** Roborock −247,92€ (House) sin aparecer en banco; transferencia
-    Jaime Salas 278,30€ (Socorro 24); PriceLabs 49,97 USD sin factura real; Booking Dúplex 587,23€
-    vence 16/08; Socorro 24 julio sin factura de comisión. Casos abiertos sin respuesta: Bernardi
-    −466,70€ (House) y Valantin −84,61€ (Busto). El cron `facturas-scan` archiva TODO en
-    `ALBERTO 2026 PERSONAL (SEGUROS)/<mes>` — revisar su resolución de carpeta algún día.
+  - **Trading (solo paper):** auditoría del laboratorio 11/08 — el 🔴 gordo (walk-forward de la
+    escalera desalineado entre cesta y bench) YA ARREGLADO en la misma sesión (`medicionAlineada.ts`,
+    gate `COBERTURA_MIN_ESCALERA=0,8`, PR #1377). Quedan 🟡: momentum sin ventana declarada ni guarda
+    de costuras, Piotroski NULL→0 regala puntos, cohetes sin precio se congelan al de entrada, nav de
+    `/analizar` sin contrastar, Dataroma caído = «sin gurús». Contraste DIFERIDO (la 2ª fuente juzga el
+    cierre de AYER en vez del de hoy, que casi nunca está publicado a la hora de la pasada) ya
+    implementado y testeado — **PR #1370 en draft, pendiente de que Alberto lo revise/mergee**. H9
+    (stop −10%/trailing −15%) sigue sin decisión de Alberto. Decisión vigente (10/08): no operar más
+    en real por impulso, esperar aviso explícito del agente cuando el forward justifique Fase 2 (hoy
+    lejos: hit rate 26-29%, alpha ≈0 sobre n grande). FMP sin créditos y redundante (Yahoo cubre); NO
+    recargar. Solo el DCF sigue sin fuente.
+  - **Subastas:** lente 🌊 (costa norte + Matalascañas sin tope) MERGEADA y en prod (#1346/#1349/
+    #1351/#1353); pestaña 🔥 Oportunidades rediseñada (#1358 — una tarjeta, chips homogéneos,
+    €/m² siempre visible). Repaso programado **12/08 07:00 UTC** (`trig_01AzUvq8vW2K8Aan4T7HG7c6`,
+    HOY): verificar corpus Matalascañas creciendo, lente sin tope, avisos 🌊 sin duplicados. 🟡 el
+    dispatcher marca timeout en `subastas-mercado` si desborda 280 s (2×/7d, el job acaba).
+  - **Facturas/banca sin conciliar:** Roborock −247,92€ (House) sin aparecer en banco; Booking Dúplex
+    587,23€ vence 16/08; Socorro 24 julio sin factura de comisión; Endesa Dúplex 24/07 87,42€ con
+    cargo pero sin PDF archivado; fila duplicada CREATE (`create-socorro` + `create_ventilador`,
+    mismo importe/fecha, distinto fileId — el banco solo tiene un cargo). PriceLabs: la diferencia es
+    SOLO el cambio USD→EUR (confirmado por Alberto 11/08), junio ya conciliado; feb/mar/abr/may/jul
+    sin PDF archivado (bajar del portal). Pepephone ene-jun (6 PDF, **ningún** cargo en las cuentas de
+    Alberto — probable cuenta de la SL) y lavandería Giraldillo mayo 504,57€ (paga el mes vencido)
+    marcados `revisada_sin_cargo`, a la espera de que Alberto confirme. Casos abiertos sin respuesta:
+    Bernardi −466,70€ (House) y Valantin −84,61€ (Busto). Desde #1376 hay FK real
+    `facturas_drive.movimiento_id` + `sin_cargo_motivo` (3 estados: casada · revisada-sin-cargo ·
+    sin-revisar) y el Paso 4.0 abre `v_facturas_sin_cargo` en cada pasada, antes de conciliar lo del
+    día. El cron `facturas-scan` sigue archivando TODO en `ALBERTO 2026 PERSONAL (SEGUROS)/<mes>` —
+    revisar su resolución de carpeta algún día.
   - **Infra/entorno:** el proxy de egress del contenedor da 403 al CONNECT contra `*.vercel.app` y
     `script.google.com` → el raíl HTTP de plataforma no sirve desde sesiones (usar SQL o `pg_net`
     desde Supabase) hasta abrir la allowlist de red del environment. NIM tier gratis degradado
