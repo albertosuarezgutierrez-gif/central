@@ -223,6 +223,14 @@ footer{background:var(--night);color:rgba(255,255,255,.65);padding:4rem 2.5rem 2
 .fbot{border-top:1px solid rgba(255,255,255,.06);padding-top:1.5rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem}
 .fbot p,.fvft{font-size:.762rem;color:rgba(255,255,255,.28);font-weight:300}
 
+/* Objetivo táctil de los enlaces SEO del final: 12px de padding sobre 13px de texto
+   daban 40px de alto, por debajo del mínimo de 44. Con flex + min-height suben a 44
+   sin cambiar el aspecto (el texto sigue centrado y la caja crece 4px). Van fuera de
+   media query porque su altura no depende del ancho de pantalla.
+   OJO: este CSS vive dentro de un template literal de JS — nada de comillas
+   invertidas en los comentarios, cierran la plantilla y rompen el build. */
+.seo-links a{display:flex;align-items:center;min-height:44px}
+
 /* WHATSAPP BUTTON */
 .wa-btn{position:fixed;right:1.5rem;bottom:5.5rem;z-index:97;width:52px;height:52px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(37,211,102,.35),0 0 0 1px rgba(37,211,102,.2);transition:transform .2s,box-shadow .2s;opacity:0;pointer-events:none;transform:scale(.85)}
 .wa-btn.show{opacity:1;pointer-events:auto;transform:scale(1);transition:opacity .3s,transform .3s}
@@ -248,6 +256,26 @@ footer{background:var(--night);color:rgba(255,255,255,.65);padding:4rem 2.5rem 2
   nav{padding:0 1.25rem}
   .nav-links{display:none}
   .ham{display:flex}
+
+  /* 🖐️ OBJETIVOS TÁCTILES ≥44px (regla del CLAUDE.md raíz).
+     Medido con Playwright a 320px: la marca del nav daba 27px, el botón hamburguesa
+     27px y los 11 enlaces del pie 16px — todos por debajo del mínimo para un dedo.
+     Venían así del repo suelto: la portada se importó tal cual y nunca pasó por esta
+     regla (la página /parking, escrita ya en el monorepo, sí cumplía). No era una
+     regresión, pero seguían siendo enlaces difíciles de acertar con el pulgar.
+     Se acota a móvil a propósito: con ratón 16px se pulsa bien y estirar el pie en
+     escritorio solo lo haría más largo sin ganar nada. */
+  .brand{display:inline-flex;align-items:center;min-height:44px}
+  .ham{min-width:44px;min-height:44px;align-items:center;justify-content:center}
+  .fl{gap:.125rem}
+  .fl a{display:inline-flex;align-items:center;min-height:44px}
+  .fbot a{display:inline-flex;align-items:center;min-height:44px}
+
+  /* El teléfono de "o llámanos al ..." va DENTRO de una frase, no es un botón:
+     estirarlo a 44px partiría el párrafo. Se amplía el área de toque con padding y
+     se compensa con margen negativo — 16px de texto + 2×14px = 44px pulsables, y la
+     línea se ve exactamente igual que antes. */
+  .directo-note a{display:inline-block;padding:.875rem .25rem;margin:-.875rem -.25rem}
   section,.gal-section,.book-sec,footer{padding:3.5rem 1.25rem}
   h1{font-size:2.6rem}
   .hero-content{padding:8rem 1.25rem 4rem}
@@ -810,7 +838,7 @@ function cm(){document.getElementById('mob').classList.remove('open')}
 
 <!-- Links internos SEO -->
 <section style="background:#1a1a1a;padding:32px 24px">
-  <div style="max-width:900px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+  <div class="seo-links" style="max-width:900px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
     <a href="/que-ver" style="background:#2d2d2d;color:white;padding:12px 16px;border-radius:10px;text-decoration:none;font-size:13px">
       🗺️ Qué ver en Sevilla
     </a>
