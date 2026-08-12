@@ -32,6 +32,18 @@
 
 ---
 
+### 🗄️ (12/08/2026) Supabase ia-rest: 290 MB → 60 MB (eran logs, no datos)
+- Alberto pregunta la capacidad usada. Compartida (`wswbeh…`) 137 MB, sana. Silo ia-rest (`efncqy…`) **290 MB**,
+  de los que 252 MB eran infraestructura: `net._http_response` 123 MB con **368 filas vivas** (bloat puro,
+  pg_net purga pero no devuelve el disco), `cron.job_run_details` 98 MB/158k filas desde el 04/05 (pg_cron
+  **no purga por defecto** y nadie le puso retención) y `alerta_log` 31 MB/51.559 filas.
+- **Bucle de alertas encontrado:** el 100% de `alerta_log` es del "Restaurante Demo" — 1.170/día EXACTAS,
+  0 leídas, 0 actuadas. 3 comandas demo con items abiertas desde el 21 y 27/05 mantenían B1/S2/T5 en `activa`
+  77 días; `limpiar-mesas-fantasma` solo cerraba comandas SIN items → nunca las tocaba.
+- Hecho: VACUUM FULL de las 3 tablas + purga (7d cron, 30d alertas) → **60 MB**; migración
+  `20260812_retencion_logs_y_mesas_fantasma.sql` con crons de retención diarios y corte de comandas >24 h.
+  Verificado: 0 comandas vivas, 0 mesas ocupadas. **Ojo:** el silo NO tiene alerta de tamaño de disco.
+
 ### 🏠 (12/08/2026) CORRECCIÓN: la web de housesevillana SÍ existe — el fallo era la atribución
 - Alberto desmonta el plan del PR #1387: «punto 4, para eso hicimos la web de housesevillana.es». Tenía razón.
 - La landing **vive en OTRO repo** (`albertosuarezgutierrez-gif/house-sevillana-landing`, `app/route.ts`, edge);
