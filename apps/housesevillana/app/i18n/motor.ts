@@ -15,7 +15,28 @@ export type Variante = {
   ogLocale: string
   /** Diccionario con las cadenas EXACTAS del HTML español como clave. */
   diccionario: Record<string, string>
+  /**
+   * Ruta de la página SIN prefijo de idioma: '' para la portada, '/parking'…
+   * De aquí salen las URL canónicas: la española es `…/es${ruta}` (la portada, `…/`)
+   * y la de la variante `…/${codigo}${ruta}`.
+   */
+  ruta?: string
 }
+
+/** URL absoluta de una página en español. La portada lleva barra final; el resto, no. */
+function urlEs(ruta: string): string {
+  return `https://www.housesevillana.es${ruta || '/'}`
+}
+
+/**
+ * Páginas que existen en TODOS los idiomas. Sus enlaces internos se reescriben con el
+ * prefijo de la variante, porque si no un visitante inglés que pulsa «Home» o «Parking»
+ * aterriza en la página española — y ahí se acaba la visita.
+ *
+ * `/barrio` y `/que-ver` NO están aquí a propósito: hoy solo existen en español, así que
+ * prefijarlas daría un 404. Cuando se traduzcan, se añaden aquí Y en el sitemap.
+ */
+export const RUTAS_LOCALIZADAS = ['/', '/parking'] as const
 
 /**
  * Sustituye las cadenas del diccionario, de la más larga a la más corta.
@@ -32,16 +53,33 @@ export function traducir(html: string, diccionario: Record<string, string>): str
 }
 
 /**
- * Traduce y ajusta los metadatos propios de la variante: idioma del documento, canonical
- * y og:locale. Los `hreflang` no se tocan porque ya vienen del HTML español y son
- * correctos para todas las variantes: declaran todas las versiones más el x-default.
+ * Traduce y ajusta los metadatos propios de la variante: idioma del documento, canonical,
+ * og:url y og:locale.
+ *
+ * Los `hreflang` NO se tocan, y es deliberado: ya vienen del HTML español declarando todas
+ * las versiones más el x-default, que es exactamente lo que Google espera encontrar —
+ * idéntico— en cada una de ellas. Por eso canonical y og:url se sustituyen por su etiqueta
+ * completa y no reemplazando la URL suelta: un `split/join` de la URL española también
+ * pisaría el `hreflang="es"` y dejaría el grupo de alternativas descuadrado.
  */
 export function localizar(html: string, v: Variante): string {
-  return traducir(html, v.diccionario)
+  const ruta = v.ruta ?? ''
+  const es = urlEs(ruta)
+  const destino = `https://www.housesevillana.es/${v.codigo}${ruta}`
+  let out = traducir(html, v.diccionario)
+  for (const r of RUTAS_LOCALIZADAS) {
+    // `href="/"` no colisiona con `href="/parking"`: la comilla de cierre va en la clave.
+    out = out.split(`href="${r}"`).join(`href="/${v.codigo}${r === '/' ? '' : r}"`)
+  }
+  return out
     .replace('<html lang="es">', `<html lang="${v.codigo}">`)
     .replace(
-      '<link rel="canonical" href="https://www.housesevillana.es/"/>',
-      `<link rel="canonical" href="https://www.housesevillana.es/${v.codigo}"/>`,
+      `<link rel="canonical" href="${es}"/>`,
+      `<link rel="canonical" href="${destino}"/>`,
+    )
+    .replace(
+      `<meta property="og:url" content="${es}"/>`,
+      `<meta property="og:url" content="${destino}"/>`,
     )
     .replace('content="es_ES"', `content="${v.ogLocale}"`)
 }

@@ -267,6 +267,8 @@ export const TRADUCCIONES: Record<string, string> = {
     '&#128506;&#65039; Cosa vedere a Siviglia',
   '🏘️ El barrio de la Macarena':
     '&#127960;&#65039; Il quartiere della Macarena',
+  '🚗 Casa con parking en el centro':
+    '&#128663; Casa con parcheggio in centro',
   '📅 Comprobar disponibilidad':
     '&#128197; Verifica disponibilità',
 }

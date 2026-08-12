@@ -19,6 +19,24 @@ export function GET() {
     <xhtml:link rel="alternate" hreflang="it" href="https://www.housesevillana.es/it"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.housesevillana.es/"/>
   </url>
+  <url><loc>https://www.housesevillana.es/parking</loc><changefreq>monthly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.housesevillana.es/parking"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.housesevillana.es/en/parking"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://www.housesevillana.es/it/parking"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.housesevillana.es/parking"/>
+  </url>
+  <url><loc>https://www.housesevillana.es/en/parking</loc><changefreq>monthly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.housesevillana.es/parking"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.housesevillana.es/en/parking"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://www.housesevillana.es/it/parking"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.housesevillana.es/parking"/>
+  </url>
+  <url><loc>https://www.housesevillana.es/it/parking</loc><changefreq>monthly</changefreq><priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.housesevillana.es/parking"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.housesevillana.es/en/parking"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://www.housesevillana.es/it/parking"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.housesevillana.es/parking"/>
+  </url>
   <url><loc>https://www.housesevillana.es/barrio</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.housesevillana.es/que-ver</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
 </urlset>`

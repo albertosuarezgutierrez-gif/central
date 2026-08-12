@@ -189,6 +189,7 @@ export const TRADUCCIONES: Record<string, string> = {
   '&#128222; Llamar': '&#128222; Call',
   '🗺️ Qué ver en Sevilla': '&#128506;&#65039; What to see in Seville',
   '🏘️ El barrio de la Macarena': '&#127960;&#65039; The Macarena quarter',
+  '🚗 Casa con parking en el centro': '&#128663; House with parking in the centre',
   '📅 Comprobar disponibilidad': '&#128197; Check availability',
 }
 
