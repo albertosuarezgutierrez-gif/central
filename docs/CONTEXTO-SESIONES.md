@@ -42,8 +42,12 @@
 - Ahora la URL vive en `apps/housesevillana/app/reservas.ts`. Lo que arregla el fondo no es el valor: es que
   haya **un solo sitio donde equivocarse** — copiado seis veces no se revisa nunca, porque mirar uno no dice
   nada de los otros cinco. `app/enlaces.test.ts` lo blinda (verificado que muerde).
-- Destino nuevo `booking.smoobu.com/yourothercity`, validado con prueba real de huésped (solo tarjeta,
-  Stripe live, sin sandbox). ⚠️ **Es multi-propiedad: falta el enlace PROFUNDO a House Sevillana.**
+- Destino nuevo: `booking.smoobu.com/yourothercity?apartmentId=352007` — **enlace profundo**, entra directo
+  a House Sevillana y sigue bloqueada en ella al cambiar fechas. Sin el id abre el portal multi-propiedad
+  con las 4 casas. Validado con prueba real de huésped (solo tarjeta, Stripe live, sin sandbox).
+- Por qué `reservas.house-sevillana.com` nunca existió: el campo «External link» de Smoobu **no aloja
+  nada**, solo redirige enlaces a una URL propia YA montada. Nadie publicó la página con el iframe — así
+  que aquello no fue un enlace que se rompiera, fue **un enlace que nunca llegó a funcionar**.
 - ✅ Arreglado antes por Alberto en Smoobu: el método de pago por defecto era **PayPal en sandbox** (no
   cobraba). Ahora Stripe único y preseleccionado, verificado hasta la pantalla de pago.
 
