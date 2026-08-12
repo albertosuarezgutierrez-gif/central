@@ -214,6 +214,119 @@ export function resumenDesfase(desfasados: Desfasado[]): string {
 }
 
 // ---------------------------------------------------------------------------
+// CONTRASTE DIFERIDO: la 2ª fuente llega tarde, así que se juzga el AYER
+// ---------------------------------------------------------------------------
+//
+// La regla de arriba deja el contraste inerte casi todas las noches: la pasada corre a las 20:30 UTC y
+// la fuente todavía no ha publicado el cierre del día. Pero SÍ tiene el de la sesión anterior — y de esa
+// sesión nosotros ya guardamos nuestro propio `precio_ref`. Contrastar eso no depende de que nadie
+// publique a tiempo: el par (cierre de la fuente de la sesión D, nuestro `precio_ref` de D) está siempre
+// disponible una sesión más tarde.
+//
+// Cambia el REMEDIO, no la pregunta: no se veta el precio de hoy (que sigue sin segunda opinión), se
+// anula la tesis de ayer, que es lo que de verdad envenena — porque `trading_estrategia_stats` se
+// recalcula sobre los resultados y `ajustesDeStats` los convierte en delta de confianza del torneo.
+// Decisión de Alberto (11/08/2026) entre esto y un cron aparte unas horas después de la pasada.
+//
+// Las dos trampas que hacen que esto NO se pueda escribir como un simple «desvía >2% ⇒ anular»:
+//
+//  1. UN SPLIT NO ES UN PRECIO MALO. La fuente publica el histórico AJUSTADO; nuestro `precio_ref` es el
+//     precio sin ajustar del día en que se guardó. Tras un split (o un dividendo extraordinario), TODAS
+//     las sesiones anteriores de ese símbolo divergen a la vez y por el MISMO factor. Un precio
+//     envenenado, en cambio, es de UNA sesión suelta. Por eso el juicio es por símbolo y mira la FORMA
+//     del desvío, no su tamaño: si todas las sesiones de la ventana divergen con el mismo factor, es un
+//     reescalado y no se anula nada — se reporta.
+//  2. UN FALLO GLOBAL DE LA FUENTE NO ES UN CORPUS ENVENENADO. Si la fuente cambia de base de ajuste o
+//     devuelve otra divisa, medio universo diverge de golpe. Anular en bloque el track record por lo que
+//     dice una fuente que acaba de cambiar debajo de nosotros es exactamente el error que este módulo
+//     existe para evitar, con el signo cambiado. Interruptor: si más de la mitad de los símbolos con dato
+//     salen sospechosos, no se anula nada y se avisa.
+
+export const REESCALADO_TOL = 0.01        // dispersión máxima entre factores para llamarlo reescalado
+export const SOSPECHA_MASIVA = 0.5        // fracción de símbolos a partir de la cual no se anula nada
+// El interruptor de arriba necesita una muestra para significar algo: con uno o dos símbolos, «más de la
+// mitad diverge» es la descripción de un caso normal (un único precio envenenado), no la firma de una
+// fuente rota. Sin este mínimo el interruptor se dispara SIEMPRE que el corpus es pequeño y la guardia
+// entera queda desactivada en silencio — se descubrió porque los tres tests del caso fundacional
+// devolvían cero sospechosas.
+export const MIN_SIMBOLOS_MASIVA = 4
+
+export type ParDiferido = { fecha: string; fuente: number; propio: number }
+export type Sospecha = { simbolo: string; fecha: string; fuente: number; propio: number; desvio: number }
+export type Reescalado = { simbolo: string; factor: number; sesiones: number }
+
+export type Diferido = {
+  sospechosas: Sospecha[]
+  reescalados: Reescalado[]
+  simbolosConDato: number
+  masiva: boolean          // true = se sospecha de la FUENTE, no del corpus: no se ha anulado nada
+}
+
+function mediana(xs: number[]): number {
+  const s = [...xs].sort((a, b) => a - b)
+  const m = Math.floor(s.length / 2)
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
+}
+
+export function juzgarDiferido(
+  porSimbolo: Record<string, ParDiferido[]>,
+  maxDesvio = DIVERGENCIA_MAX,
+  tolReescalado = REESCALADO_TOL,
+  umbralMasiva = SOSPECHA_MASIVA,
+): Diferido {
+  const sospechosas: Sospecha[] = []
+  const reescalados: Reescalado[] = []
+  let simbolosConDato = 0
+  const conSospecha = new Set<string>()
+
+  for (const [simbolo, todos] of Object.entries(porSimbolo)) {
+    const pares = todos.filter(p => p.fuente > 0 && p.propio > 0)
+    if (pares.length === 0) continue
+    simbolosConDato++
+
+    const desviados = pares.filter(p => Math.abs(p.fuente / p.propio - 1) > maxDesvio)
+    if (desviados.length === 0) continue
+
+    // Reescalado: TODAS las sesiones de la ventana desplazadas por el mismo factor. Con una sola sesión
+    // no hay forma de distinguirlo de un precio malo, así que no se concede el beneficio de la duda —
+    // perder una tesis buena cuesta un dato; conservar una envenenada mueve el torneo.
+    const factores = pares.map(p => p.fuente / p.propio)
+    const f = mediana(factores)
+    const uniforme = desviados.length === pares.length && pares.length >= 2 &&
+      factores.every(x => Math.abs(x / f - 1) <= tolReescalado)
+    if (uniforme) {
+      reescalados.push({ simbolo, factor: f, sesiones: pares.length })
+      continue
+    }
+
+    conSospecha.add(simbolo)
+    for (const p of desviados) {
+      sospechosas.push({ simbolo, fecha: p.fecha, fuente: p.fuente, propio: p.propio, desvio: p.fuente / p.propio - 1 })
+    }
+  }
+
+  const masiva = simbolosConDato >= MIN_SIMBOLOS_MASIVA && conSospecha.size / simbolosConDato > umbralMasiva
+  return { sospechosas: masiva ? [] : sospechosas, reescalados, simbolosConDato, masiva }
+}
+
+export function resumenDiferido(d: Diferido): string {
+  const partes: string[] = []
+  if (d.masiva) {
+    partes.push(`⚠️ la 2ª fuente discrepa en MÁS de la mitad de los símbolos (${d.simbolosConDato} con dato): no se anula nada, revisar la FUENTE`)
+  } else if (d.sospechosas.length > 0) {
+    const lista = d.sospechosas
+      .map(s => `${s.simbolo} ${s.fecha} ${s.propio} vs ${s.fuente} (${(s.desvio * 100).toFixed(1)}%)`)
+      .join(' · ')
+    partes.push(`${d.sospechosas.length} precio(s) de sesiones pasadas que la 2ª fuente desmiente: ${lista}`)
+  }
+  if (d.reescalados.length > 0) {
+    const lista = d.reescalados.map(r => `${r.simbolo} ×${r.factor.toFixed(3)}`).join(' · ')
+    partes.push(`${d.reescalados.length} reescalado(s) (split/ajuste, NO envenenamiento): ${lista}`)
+  }
+  return partes.join(' · ')
+}
+
+// ---------------------------------------------------------------------------
 // SUPLANTACIÓN: el precio es real, pero es de OTRA empresa
 // ---------------------------------------------------------------------------
 //

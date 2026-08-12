@@ -115,6 +115,17 @@
   **Pendiente para darla por viva:** proyecto Vercel (Root `apps/mariscos`), ejecutar su SQL en Supabase
   (preview→prod), sembrar cuenta real de Mariscos González; Fase 2 báscula/etiquetadora.
 
+### ⚖️ (11/08/2026) Contraste diferido: la 2ª fuente juzga AYER, que es lo que sí ha publicado
+- Mergeado **#1363** (el contraste del mismo día dejaba de vetar precios buenos) y desplegado en prod.
+  Efecto colateral asumido: a las 20:30 UTC la fuente casi nunca tiene el cierre del día → contraste inerte.
+- Alberto elige la **opción (a)**: comparar el cierre que la fuente SÍ publica de la sesión D contra
+  nuestro `precio_ref` de D. Siempre disponible, cero falsos vetos; el remedio cambia — en vez de vetar
+  el precio de hoy, **anula la tesis de ayer** (y su resultado) antes de recalcular el walk-forward.
+- `juzgarDiferido` (puro, 9 tests) con dos frenos: un **split** desplaza TODAS las sesiones por el mismo
+  factor → no se anula; si discrepa en **>½ de los símbolos** (≥4 con dato) la sospechosa es la FUENTE y
+  tampoco se anula nada. El mínimo de 4 salió de un fallo real: sin él el interruptor se disparaba con un
+  solo símbolo y la guardia quedaba muda justo en el caso que existe para cazar.
+
 ### 🔧 (10/08/2026) Pricing: el reparto mes/global del factor de demanda deja de perderse (#1361)
 - `factorDemandaFecha` decidía por fecha si la demanda se mueve con la ocupación DEL MES o la anual,
   pero esa decisión solo viajaba en la respuesta HTTP del cron (nadie la guarda) — y su `.catch(() => [])`

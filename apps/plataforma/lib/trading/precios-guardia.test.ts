@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { filtrarPreciosAnomalos, resumenDescartes, contrastarFuentes, resumenDivergencias, saltoDeSaldo, detectarSuplantaciones, resumenSuplantaciones, juzgarPuntos, resumenDesfase, SALTO_PRECIO_DIA_MAX } from './precios-guardia.ts'
+import { filtrarPreciosAnomalos, resumenDescartes, contrastarFuentes, resumenDivergencias, saltoDeSaldo, detectarSuplantaciones, resumenSuplantaciones, juzgarPuntos, resumenDesfase, juzgarDiferido, resumenDiferido, SALTO_PRECIO_DIA_MAX } from './precios-guardia.ts'
 
 test('el caso real del 03/08/2026: CVX a 590,17 con referencia 192,31 se descarta', () => {
   const { limpios, descartados } = filtrarPreciosAnomalos({ CVX: 590.17 }, { CVX: 192.31 })
@@ -319,4 +319,103 @@ test('el desfase se canta con su fecha; sin desfase no se dice nada', () => {
   assert.match(linea, /2 símbolo\(s\)/)
   assert.match(linea, /2026-08-07/)
   assert.match(linea, /no vetado/)
+})
+
+// ---------------------------------------------------------------------------
+// Contraste DIFERIDO: se juzga el ayer que la fuente sí ha publicado
+// ---------------------------------------------------------------------------
+
+test('sesión que cuadra con la 2ª fuente: no se sospecha de nada', () => {
+  const d = juzgarDiferido({
+    CVX: [{ fecha: '2026-08-07', fuente: 186.56, propio: 186.41 }, { fecha: '2026-08-10', fuente: 194.97, propio: 194.97 }],
+  })
+  assert.deepEqual(d.sospechosas, [])
+  assert.deepEqual(d.reescalados, [])
+  assert.equal(d.simbolosConDato, 1)
+})
+
+test('el caso fundacional al revés: CVX 590,17 del 03/08 lo desmiente la 2ª fuente una sesión después', () => {
+  // Cierre real de CVX el 03/08/2026: 193,18. El `precio_ref` que entró fue 590,17.
+  const d = juzgarDiferido({
+    CVX: [
+      { fecha: '2026-07-31', fuente: 192.31, propio: 192.31 },
+      { fecha: '2026-08-03', fuente: 193.18, propio: 590.17 },
+      { fecha: '2026-08-04', fuente: 190.41, propio: 190.41 },
+    ],
+  })
+  assert.equal(d.sospechosas.length, 1)
+  assert.equal(d.sospechosas[0].fecha, '2026-08-03')
+  assert.equal(d.sospechosas[0].propio, 590.17)
+  assert.equal(d.masiva, false)
+})
+
+test('un SPLIT no es un precio malo: todas las sesiones desplazadas por el mismo factor NO se anulan', () => {
+  // Split 2:1 — la fuente publica el histórico ajustado, nuestro `precio_ref` es el precio de aquel día.
+  const d = juzgarDiferido({
+    NVDA: [
+      { fecha: '2026-08-05', fuente: 108.40, propio: 216.80 },
+      { fecha: '2026-08-06', fuente: 110.15, propio: 220.30 },
+      { fecha: '2026-08-07', fuente: 111.98, propio: 223.96 },
+    ],
+  })
+  assert.deepEqual(d.sospechosas, [])
+  assert.equal(d.reescalados.length, 1)
+  assert.equal(d.reescalados[0].simbolo, 'NVDA')
+  assert.ok(Math.abs(d.reescalados[0].factor - 0.5) < 0.001)
+})
+
+test('con UNA sola sesión no se concede el beneficio de la duda: se anula', () => {
+  // No hay forma de distinguir un split de un precio envenenado con un solo par. Perder una tesis buena
+  // cuesta un dato; conservar una envenenada mueve el torneo.
+  const d = juzgarDiferido({ WDC: [{ fecha: '2026-08-07', fuente: 259.6, propio: 519.17 }] })
+  assert.equal(d.sospechosas.length, 1)
+  assert.equal(d.reescalados.length, 0)
+})
+
+test('si desvía solo UNA de tres sesiones, no es reescalado aunque las otras dos cuadren', () => {
+  const d = juzgarDiferido({
+    LLY: [
+      { fecha: '2026-08-05', fuente: 1170.0, propio: 1169.86 },
+      { fecha: '2026-08-06', fuente: 1180.0, propio: 1450.00 },
+      { fecha: '2026-08-07', fuente: 1185.71, propio: 1185.71 },
+    ],
+  })
+  assert.equal(d.sospechosas.length, 1)
+  assert.equal(d.sospechosas[0].fecha, '2026-08-06')
+  assert.equal(d.reescalados.length, 0)
+})
+
+test('si la fuente discrepa en MÁS de la mitad del universo, la sospechosa es la FUENTE: no se anula nada', () => {
+  const pares = (mal: boolean) => [
+    { fecha: '2026-08-06', fuente: mal ? 50 : 100, propio: 100 },
+    { fecha: '2026-08-07', fuente: mal ? 90 : 101, propio: 101 },
+  ]
+  const d = juzgarDiferido({ A: pares(true), B: pares(true), C: pares(true), D: pares(false) })
+  assert.equal(d.masiva, true)
+  assert.deepEqual(d.sospechosas, [])
+  assert.match(resumenDiferido(d), /revisar la FUENTE/)
+})
+
+test('justo en el umbral (mitad exacta) todavía se anula: solo se frena por ENCIMA de la mitad', () => {
+  const d = juzgarDiferido({
+    A: [{ fecha: '2026-08-06', fuente: 50, propio: 100 }, { fecha: '2026-08-07', fuente: 101, propio: 101 }],
+    B: [{ fecha: '2026-08-06', fuente: 100, propio: 100 }, { fecha: '2026-08-07', fuente: 101, propio: 101 }],
+  })
+  assert.equal(d.masiva, false)
+  assert.equal(d.sospechosas.length, 1)
+})
+
+test('un par sin referencia propia no cuenta como símbolo con dato (no se inventa un cero)', () => {
+  const d = juzgarDiferido({ XYZ: [{ fecha: '2026-08-07', fuente: 100, propio: 0 }] })
+  assert.equal(d.simbolosConDato, 0)
+  assert.deepEqual(d.sospechosas, [])
+  assert.equal(resumenDiferido(d), '')
+})
+
+test('el interruptor de «fuente rota» NO se dispara con una muestra minúscula (un símbolo no es el universo)', () => {
+  // Este es el fallo que tuvo la primera versión: con un solo símbolo, «más de la mitad diverge» era
+  // siempre cierto y la guardia entera quedaba muda justo en el caso que existe para cazar.
+  const d = juzgarDiferido({ CVX: [{ fecha: '2026-08-03', fuente: 193.18, propio: 590.17 }] })
+  assert.equal(d.masiva, false)
+  assert.equal(d.sospechosas.length, 1)
 })

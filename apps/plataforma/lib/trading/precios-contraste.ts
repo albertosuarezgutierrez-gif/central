@@ -1,6 +1,6 @@
 import { puntosDiarios } from './precios-stooq'
 import { sumarDias } from './backtest-puro'
-import { juzgarPuntos, type Desfasado } from './precios-guardia'
+import { juzgarPuntos, type Desfasado, type PuntoContraste } from './precios-guardia'
 
 // Trae el CIERRE de la segunda fuente (Stooq, con respaldo Yahoo) para contrastar los precios que la
 // sesión manda a `/analizar` y `/puntuar`. Aquí solo está el acarreo de red, que es lo que no se puede
@@ -22,6 +22,10 @@ export const PRESUPUESTO_CONTRASTE_MS = 45_000
 
 export type ResultadoContraste = {
   cierres: Record<string, number>
+  // Las últimas sesiones que la fuente SÍ ha publicado (<= hoy), tal cual. Es lo que alimenta el
+  // contraste DIFERIDO: viene gratis con la misma petición que el cierre de hoy, así que pedirla no
+  // cuesta ni una llamada más. Sin ella habría que volver a salir a internet para juzgar el ayer.
+  series: Record<string, PuntoContraste[]>
   consultados: number
   sinDato: string[]           // la fuente no respondió, o no tiene ninguna sesión <= hoy
   desfasados: Desfasado[]     // respondió, pero su cierre más reciente es de una sesión ANTERIOR
@@ -40,6 +44,7 @@ export async function cierresDeContraste(
   const desde = sumarDias(hoy, -ventanaDias)
 
   const cierres: Record<string, number> = {}
+  const series: Record<string, PuntoContraste[]> = {}
   const sinDato: string[] = []
   const desfasados: Desfasado[] = []
   const sinTiempo: string[] = []
@@ -57,6 +62,8 @@ export async function cierresDeContraste(
       if (Date.now() - t0 > presupuestoMs) { sinTiempo.push(simbolo); continue }
       consultados++
       const puntos = await puntosDiarios(simbolo, desde, hoy).catch(() => [])
+      const publicadas = puntos.filter(p => p.fecha <= hoy)
+      if (publicadas.length > 0) series[simbolo] = publicadas
       const v = juzgarPuntos(puntos, hoy)
       if (v.estado === 'vale') cierres[simbolo] = v.cierre
       else if (v.estado === 'desfasado') desfasados.push({ simbolo, fecha: v.fecha, cierre: v.cierre })
@@ -65,5 +72,5 @@ export async function cierresDeContraste(
   }
 
   await Promise.all(Array.from({ length: Math.min(concurrencia, pendientes.length) }, obrero))
-  return { cierres, consultados, sinDato, desfasados, sinTiempo }
+  return { cierres, series, consultados, sinDato, desfasados, sinTiempo }
 }
