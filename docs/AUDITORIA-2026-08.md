@@ -1,5 +1,37 @@
 # Auditoría diaria — agosto 2026
 
+# Actualización 2026-08-12 — auditoría diaria (ligera)
+
+Rango: desde la profunda del 09/08 hasta ahora — 32+ commits, casi todos autodocumentados PR a PR
+(la PR #1365 del 11/08, aún abierta, ya había hecho la primera pasada del tramo 09→11/08). SALTA
+typecheck/tests pesados (son de la pasada profunda).
+
+## 🟢 Heartbeat de crons/agentes
+`agente_latidos` (10 filas) — todo `ok=true`, todas dentro de su cadencia (la más vieja a 45,1h de
+un umbral semanal ~192h). Tablas de dominio (12 huellas) — todas ✅, la más vieja a 45,1h de un
+umbral de 36-192h según cadencia. Sin mudos.
+
+## 🟢 Backlog de PRs de rutinas + salud del automerge
+`rutinas-automerge.yml`: última ejecución hace <1h, en verde — vigilante vivo (554 runs históricos,
+cadencia horaria respetada). Dos PRs de carril 2 abiertos, ninguno atascado: **#1365** (informe
+11/08, 1 día) y **#1370** (trading: contraste diferido, 1 día) — ambos por debajo del umbral de
+7 días sin actividad. Sin PRs de registro atascados >24h ni en conflicto.
+
+## 🟡 Reconciliación de memoria/skills (carril 1 → PR #1379, registro)
+- El bloque «Estado vivo» de `CONTEXTO-SESIONES.md` listaba pendientes ya resueltos entre el 09 y
+  el 11/08 y nunca podados: Jaime Salas (278,30€, conciliado #1372/#1376), PriceLabs (explicado por
+  FX, no descuadre), y no reflejaba los hallazgos nuevos de trading (auditoría del laboratorio
+  11/08) ni de subastas (lente 🌊/Matalascañas, rediseño Oportunidades). Podado y actualizado.
+- `docs/SKILLS.md`: el comando `/facturas-correo` (existe en `.claude/commands/`) no estaba
+  listado junto a la skill homónima. Corregido en **este PR** (toca `docs/SKILLS.md`, que el
+  guardarraíl del auto-merge excluye a propósito).
+- Sin drift en `lib/correo/rutas.ts` (categorías del triaje) ni contradicciones en reglas fiscales
+  dictadas (`perfil-fiscal` sigue consistente: amortizable = nunca sin orden expresa de Alberto).
+
+## Sin acciones manuales pendientes de esta pasada.
+
+---
+
 # Actualización 2026-08-09 — auditoría PROFUNDA (semanal)
 
 Pasada completa `auditoria-central` (checklist entero: integridad, typecheck de las 8 apps, tests,
