@@ -32,7 +32,7 @@
 
 ---
 
-### 🔍 (12/08/2026) Los eventos PREVISTOS se verifican y deciden SOLOS (PR #1382)
+### 🔍 (12/08/2026) Los eventos PREVISTOS se verifican y deciden SOLOS (PR #1386)
 - Alberto, ante el aviso 🔮 con 3 fechas de Mangafest: «esto tiene q ser automático, yo no sé de esta
   información». **Retirado ese Telegram**; decide el cron nuevo `/api/sivra/eventos/verificar` (05:30 UTC).
 - Tres señales independientes (`lib/sivra/eventos-verificacion.ts`, puro, 23 tests): fila ya confirmada
@@ -42,6 +42,15 @@
   `sivra_eventos_verificar` se pone en rojo. Migración `2026-08-12_eventos_verificacion.sql` **aplicada**.
 - Decisiones de Alberto: verificar y decidir solo (incl. auto-confirmar) · Telegram solo para pelotazos
   (factor ≥1,4) y para el latido. `decidido_por='alberto'` bloquea al cron. Diseño en `docs/superpowers/specs/`.
+
+### 📧 (12/08/2026) facturas-correo — pasada diaria sin novedades
+- Vía B sana (`dias_caido=0`), backlog `PDF-pendiente`/`Revisar` vacío, 0 candidatos Gmail y 0
+  subidas manuales nuevas.
+- Paso 4.0: única fila `sin_revisar` (Endesa-Dúplex marzo, 69,21€) ya estaba conciliada de antes
+  (mismo `factura_ref`) — solo faltaba el FK `movimiento_id`, backfilleado en Supabase.
+- PR draft #1383 (solo bitácora) abierto y en seguimiento (`subscribe_pr_activity`).
+- Pendiente sin resolver: `search_threads label:Facturas/Extraccion-fallida` (Label_16, 1 mensaje
+  según `list_labels`) devuelve vacío — posible lag del índice del conector Gmail, revisar a mano.
 
 ### ⏰ (11/08/2026) Recordatorios de seguimiento del laboratorio de inversión (decisión: seguir en paper)
 - Alberto, tras el informe de la auditoría: **seguimos en paper** («ok seguimos entonces») + recordatorios.
@@ -233,8 +242,12 @@
   homogéneos `ChipUI` con tokens --positive/--warning/--info, evidencia €/m² siempre visible, resto plegado
   en «Más datos»); cabecera con contador real + explicación en `<details>`; 🌊 en caja --info-bg colapsada
   a 5 con «Ver todas (N)»; filtros en fila scrollable (320px OK). Solo presentación, lógica intacta.
-- **Repaso programado 12/08 07:00 UTC** (send_later `trig_01AzUvq8vW2K8Aan4T7HG7c6`): verificar corpus
-  Matalascañas creciendo, lente sin tope, avisos 🌊 de mercado y subastas, pestaña 🔥 sin duplicados.
+- **Repaso 12/08 EJECUTADO — todo sano:** corpus fresco (844, último hoy 05:50) y avisos vivos (93
+  chollo_avisado_at en 7d, último hoy 06:21; Islantilla/Ribadesella avisados hoy); crons subastas al día
+  (ingesta 06:00 · enriquecer 06:16 · radar 06:30); 0 errores runtime en rutas subastas (48h). Matalascañas
+  sigue en 2 comparables PERO la alerta de Idealista SÍ llega (digest diario: «Viviendas en Matalascañas,
+  Almonte — Nada nuevo por aquí hoy») — no hay chalets nuevos publicados, no es fallo. 0 subastas vigentes
+  en zona 🌊 ahora mismo (el aviso forzado no ha tenido con qué dispararse; camino fijado por tests).
 - Ojo: la lente solo ve las alertas guardadas — para vigilar más norte, crear alertas de Idealista en
   esas zonas. Galicia/Euskadi pendientes (patrón Cádiz).
 

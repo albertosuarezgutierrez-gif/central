@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-11T08:37:39Z",
-  "sha": "be891bcd5e00710eed75f2aac37e95cdfc5879d0",
+  "generadoEn": "2026-08-12T05:55:13Z",
+  "sha": "ad7c04d1253931677b3e8334c2ab4aa53caa9436",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -56804,7 +56804,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 16
+          "linea": 23
         }
       ],
       "tablas": [
@@ -56812,7 +56812,7 @@
         "trading_tesis"
       ],
       "rutaApi": "/api/trading/puntuar",
-      "hash": "fdf44bf078f6"
+      "hash": "38cb60c4ad92"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/saldo/route.ts",
@@ -70244,12 +70244,12 @@
           "exportada": true,
           "params": "simbolos: string[], hoy: string, opts: { presupuestoMs?: number; concurrencia?: number; ventanaDias?: number } = {},",
           "retorno": "Promise<ResultadoContraste>",
-          "linea": 31
+          "linea": 35
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2a951f8006fd"
+      "hash": "51e87f3af427"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-guardia.ts",
@@ -70262,6 +70262,8 @@
         "resumenDivergencias",
         "juzgarPuntos",
         "resumenDesfase",
+        "juzgarDiferido",
+        "resumenDiferido",
         "detectarSuplantaciones",
         "resumenSuplantaciones",
         "saltoDeSaldo"
@@ -70321,12 +70323,36 @@
           "resumen": "Una línea para el latido/Telegram cuando la 2ª fuente va por detrás. Vacía si no hay desfase: el parte solo debe hablar de lo que ha pasado."
         },
         {
+          "nombre": "mediana",
+          "kind": "function",
+          "exportada": false,
+          "params": "xs: number[]",
+          "retorno": "number",
+          "linea": 265
+        },
+        {
+          "nombre": "juzgarDiferido",
+          "kind": "function",
+          "exportada": true,
+          "params": "porSimbolo: Record<string, ParDiferido[]>, maxDesvio = DIVERGENCIA_MAX, tolReescalado = REESCALADO_TOL, umbralMasiva = SOSPECHA_MASIVA,",
+          "retorno": "Diferido",
+          "linea": 271
+        },
+        {
+          "nombre": "resumenDiferido",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: Diferido",
+          "retorno": "string",
+          "linea": 312
+        },
+        {
           "nombre": "cerca",
           "kind": "function",
           "exportada": false,
           "params": "a: number, b: number, tol: number",
           "retorno": "boolean",
-          "linea": 289
+          "linea": 402
         },
         {
           "nombre": "detectarSuplantaciones",
@@ -70334,7 +70360,7 @@
           "exportada": true,
           "params": "precios: Record<string, number>, referencias: Record<string, number>, tol = CRUCE_TOLERANCIA,",
           "retorno": "Suplantaciones",
-          "linea": 295,
+          "linea": 408,
           "resumen": "Detecta precios que pertenecen a otro símbolo. `referencias` = mismo mapa que `filtrarPreciosAnomalos` (último `precio_ref` conocido ANTERIOR a la pasada, por símbolo)."
         },
         {
@@ -70343,7 +70369,7 @@
           "exportada": true,
           "params": "suplantados: Suplantacion[]",
           "retorno": "string",
-          "linea": 344,
+          "linea": 457,
           "resumen": "Resumen de una línea. Cadena vacía si no hay nada — el consumidor no tiene que comprobarlo."
         },
         {
@@ -70352,13 +70378,13 @@
           "exportada": true,
           "params": "nuevo: number, anterior: number | null, umbral = SALTO_NAV_AVISO",
           "retorno": "SaltoSaldo",
-          "linea": 370,
+          "linea": 483,
           "resumen": "`variacion` = (nuevo − anterior) / anterior. Sin anterior no hay nada que comparar (primer saldo): no se avisa, que es distinto de «no ha cambiado»."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1ddfc6eb3f67"
+      "hash": "ea1a62eb68b2"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-stooq.ts",
@@ -91065,6 +91091,6 @@
   ],
   "resumen": {
     "archivos": 2433,
-    "funciones": 6585
+    "funciones": 6588
   }
 }
