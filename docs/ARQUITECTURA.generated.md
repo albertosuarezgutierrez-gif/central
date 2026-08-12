@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-12T12:19:18Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-12T12:24:19Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -231,6 +231,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- La buena noticia: la puerta ya está abierta.
 - El grave: una `service_role` del proyecto de PRODUCCIÓN `wswbehlcuxqxyinousql`
 - «DIRECTO = 0 €» era la etiqueta, no el negocio:
 - Hallazgo grande:
@@ -240,5 +241,4 @@
 - Causa estructural:
 - Barrido del mismo fallo en todo 2026
 - PriceLabs resuelto por Alberto (11/08): «es por el cambio».
-- PR #1368 MERGEADO y verificado en producción
 

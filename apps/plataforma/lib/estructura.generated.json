@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-12T12:19:18Z",
+  "generadoEn": "2026-08-12T12:24:19Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4514,6 +4514,10 @@
   ],
   "novedades": [
     {
+      "titulo": "La buena noticia: la puerta ya está abierta.",
+      "fecha": ""
+    },
+    {
       "titulo": "El grave: una `service_role` del proyecto de PRODUCCIÓN `wswbehlcuxqxyinousql`",
       "fecha": ""
     },
@@ -4567,10 +4571,6 @@
     },
     {
       "titulo": "Prueba reina:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Vigilancia diaria 09:00 UTC",
       "fecha": ""
     }
   ],
