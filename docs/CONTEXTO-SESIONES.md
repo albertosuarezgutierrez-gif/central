@@ -32,6 +32,23 @@
 
 ---
 
+### 🅿️ (12/08/2026) Landing housesevillana: `/parking` en 3 idiomas + auditoría de Chrome (PR #1390)
+- Nueva `/parking` (es/en/it) — la búsqueda de más intención y menos competencia; la URL del anuncio de
+  Booking ya es `house-sevillana-parking`. Dato clave y contraintuitivo: **la ZBE de Sevilla es SOLO la Isla
+  de la Cartuja**; el casco histórico tiene otro régimen. Lo no comprobado (precio de la plaza, medidas,
+  matrícula) se remite a Alberto en vez de rellenarse a ojo, y queda anotado en `app/parking/contenido.ts`.
+- Dos fallos de i18n corregidos: `description`/`og:description` de la portada **nunca se tradujeron**
+  (`/en` servía castellano a Google con el 72% del tráfico en inglés), y el `<title>` era clave de
+  diccionario — el agente SEO reescribe esa frase cada lunes, así que el primer lunes la portada inglesa
+  habría pasado a anunciarse en español sin error ni aviso. Ahora van por `Variante.meta`, por etiqueta.
+- 🔴 **PENDIENTE URGENTE DE ALBERTO — el motor de reservas no cobra por defecto:** en Smoobu, PayPal está en
+  **sandbox** Y es el **método por defecto**. Cambiar el default a Stripe (live, sí cobra) y desactivar PayPal.
+- Auditoría de Chrome: Search Console verificado y sitemap enviado (**3 URLs → confirma que lo desplegado
+  sigue siendo el repo viejo**; reenviar tras crear el proyecto Vercel). Smoobu: quedarse en Pre-paid, Flex
+  sale **el doble** con el 0,9%. GBP: 1 reseña vs 50 de Booking (link `g.page/r/CX403tjxZhLaEBM/review`),
+  web en `http://`, sin logo ni horario, posible **ficha duplicada**.
+- ⚠️ Dato sin explicar y más gordo que la landing: **269 noches canceladas contra 241 reservadas** (may-nov).
+
 ### 🚨 (12/08/2026) CREDENCIAL EXPUESTA: `service_role` de Supabase en repo público — ROTAR
 - Al traer `house-sevillana-landing` al monorepo, **gitleaks tumbó el PR**: 12 hallazgos en sus 64 commits.
 - **El grave: una `service_role` del proyecto de PRODUCCIÓN `wswbehlcuxqxyinousql`**, commit `7c53e19`
