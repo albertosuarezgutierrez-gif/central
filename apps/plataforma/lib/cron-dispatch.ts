@@ -81,6 +81,10 @@ export const CRON_JOBS: CronJob[] = [
   // el de búsqueda web va contra el presupuesto diario de la pasarela como cualquier otra llamada.
   { path: '/api/sivra/eventos/sync', schedule: '0 4 * * *' },
   { path: '/api/sivra/eventos/websearch', schedule: '0 5 * * *' },
+  // Verificación automática de los PREVISTOS (12/08/2026): va DETRÁS de los dos descubridores
+  // para juzgar en la misma mañana lo que acaban de encontrar. Antes esto lo hacía Alberto a mano
+  // desde un Telegram — y lo que no decidía nadie se quedaba moviendo el precio para siempre.
+  { path: '/api/sivra/eventos/verificar', schedule: '30 5 * * *' },
   { path: '/api/cron/cima-liq', schedule: '30 7 * * *' },
   { path: '/api/cron/facturas-scan', schedule: '15 6 * * *' },
   { path: '/api/cron/facturas-resumen-semanal', schedule: '15 9 * * 1' },

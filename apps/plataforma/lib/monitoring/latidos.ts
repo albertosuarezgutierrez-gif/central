@@ -191,6 +191,21 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'Huella: agente_latidos.sivra_eventos.',
   },
   {
+    id: 'sivra_eventos_verificar',
+    etiqueta: '🔍 Verificación automática de eventos previstos (diaria 05:30)',
+    maxHoras: 30,
+    nota:
+      'Nadie está juzgando los eventos PREVISTOS, y un previsto sin veredicto NO es neutro: ' +
+      'protege el suelo de esa noche y, si la fecha está lejos, sube el precio ponderado por su ' +
+      'confianza. Antes esto lo decidía Alberto por Telegram; desde el 12/08/2026 lo decide el ' +
+      'cron contra tres fuentes independientes (otra fila ya confirmada, búsqueda dirigida en ' +
+      'prensa, y el mercado real de esa noche). EL DETALLE DICE QUÉ FALLÓ: «sin poder verificar» ' +
+      '= la búsqueda web no respondió, y entonces NO se descarta nada a propósito (una búsqueda ' +
+      'caída no es un evento inexistente) — con lo cual los previstos se acumulan sin caducar. ' +
+      'Mira el presupuesto diario de la pasarela y las keys de búsqueda antes que nada. ' +
+      'Huella: agente_latidos.sivra_eventos_verificar.',
+  },
+  {
     id: 'sivra_mercado_sweep',
     etiqueta: '🔎 Barrido de mercado por temporada (diario 03:00)',
     maxHoras: 30,

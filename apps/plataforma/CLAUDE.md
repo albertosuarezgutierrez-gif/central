@@ -662,6 +662,23 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
   05/08 (55 fechas), que sí alimentan el bucket mensual (ventana de 120 días de `search_date`), y el
   ancla global no se filtra por ninguna de las dos a propósito.
   Diseño y gate completos: `docs/superpowers/specs/2026-08-06-mercado-booking-design.md`.
+- **🔍 `sivra_eventos_verificar` — los eventos PREVISTOS ya no esperan a Alberto (12/08/2026).**
+  Su respuesta al aviso 🔮 que le pedía pasarlos a `confirmado`: «esto tiene q ser automático, yo no
+  sé de esta información». Ese Telegram se retiró (y además mentía: decía «NO suben el precio» cuando
+  desde la v2 del 09/08 un previsto LEJANO sí lo sube ponderado). Ahora decide el cron
+  **`/api/sivra/eventos/verificar`** (05:30 UTC, detrás de los dos descubridores) con tres señales
+  independientes en `lib/sivra/eventos-verificacion.ts` (PURO, testeado con pares reales del corpus):
+  **fuente dura** (otra fila ya `confirmado` en la misma fecha con nombre parecido — `nombresParecidos`
+  exige 2 palabras significativas: un concierto DE la Bienal confirma «Bienal de Flamenco», una
+  convención de tatuajes no) · **prensa dirigida** (`buscarWeb` por evento; confirma con confianza
+  ≥0,8, `desmentido` descarta, y si da OTRA fecha el evento se **muda** a la buena en vez de perderse)
+  · **mercado real** (comps `booking_mcp`/`manual` ≥25% sobre la línea del mes de ese piso, con ≥4
+  comps y ≥3 fechas de base; hoy casi siempre `sin_datos`, y eso es correcto). Caducidad a 21 días
+  vista. 🚨 **Una búsqueda caída NO descarta nada**: solo suman las verificaciones ÚTILES
+  (`pricing_eventos_auto.verificaciones`, columnas de `2026-08-12_eventos_verificacion.sql`, aplicada)
+  y el latido se pone en rojo — un verificador mudo deja previstos eternos igual que antes, pero en
+  silencio. Telegram SOLO para el pelotazo auto-confirmado (factor ≥`SIVRA_EVENTOS_PELOTAZO`, 1,4).
+  `decidido_por='alberto'` en una fila la saca del alcance del cron para siempre.
 - **🚨 LANDMINE — un precio que la app se cree sin contrastar envenena el track record (08/08/2026,
   PRs #1315 y #1317).** `/api/trading/puntuar` cogía `precios[simbolo]` tal cual lo mandaba la sesión.
   El 03/08 entró **`CVX = 590,17$`** con cierre real **193,18$** (contrastado contra IBKR): puntuó 12

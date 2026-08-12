@@ -28,9 +28,18 @@
 // «bajada a tiempo» no depende de que nadie se acuerde.
 //
 // El camino completo de un previsto: la prensa lo propone → premio ponderado (si está lejos) +
-// suelo + entra en el barrido de mercado + avisa a Alberto → cuando el mercado sube (o Ticketmaster
-// lo publica) pasa a confirmado y tarifica al factor pleno. Si era falso, Alberto lo descarta y no
-// se vuelve a proponer.
+// suelo + entra en el barrido de mercado → cuando el mercado sube (o Ticketmaster lo publica, o la
+// prensa lo cierra) pasa a confirmado y tarifica al factor pleno. Si era falso, se descarta y no se
+// vuelve a proponer.
+//
+// 🚨 QUIÉN CIERRA ESE CAMINO (v3, 12/08/2026, petición de Alberto: «esto tiene q ser automático, yo
+// no sé de esta información»). Hasta hoy los dos finales —confirmar y descartar— los ponía ÉL a
+// mano desde un Telegram, y por tanto casi nunca se ponían: un previsto se quedaba moviendo el
+// suelo y el precio de una fecha para siempre. Ahora lo decide el cron
+// `/api/sivra/eventos/verificar` contra tres señales independientes (otra fila ya confirmada,
+// búsqueda dirigida en prensa, y el mercado real de esa noche), con caducidad a
+// `DIAS_CADUCIDAD` días. La lógica vive en `eventos-verificacion.ts`; este fichero solo dice qué
+// EFECTO tiene cada estado, que no ha cambiado.
 //
 // ⚠️ ALCANCE REAL DE LA PROTECCIÓN DE SUELO — medido, no supuesto (01/08/2026).
 // El factor de suelo que sale de aquí pasa DESPUÉS por `seasonalFloorFactor`, que lo vuelve a
