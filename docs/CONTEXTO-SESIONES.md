@@ -32,6 +32,18 @@
 
 ---
 
+### 🏠 (12/08/2026) CORRECCIÓN: la web de housesevillana SÍ existe — el fallo era la atribución
+- Alberto desmonta el plan del PR #1387: «punto 4, para eso hicimos la web de housesevillana.es». Tenía razón.
+- La landing **vive en OTRO repo** (`albertosuarezgutierrez-gif/house-sevillana-landing`, `app/route.ts`, edge);
+  el puente es `apps/sivra/lib/seo-landing.ts:5` y el agente SEO la reescribe sola (último: 10/08/2026). Tiene
+  motor propio (`reservas.house-sevillana.com`), WhatsApp de grupos, teléfono. Todo el copy es **grupos grandes**
+  (6 dorm, 12 personas) → el «punto 4» que yo iba a proponer ya estaba ejecutado.
+- **«DIRECTO = 0 €» era la etiqueta, no el negocio:** el directo de 2026 está como `portal='OTRO'` con
+  **comisión 0,00%**, incl. **1.383,24 € por 2 noches** (≈691 €/noche, perfil de grupo). Fase 0 reescrita:
+  arreglar atribución + **sacar el motor del pie de página** (hoy es el 3er botón a 13 px, junto a «Qué ver en Sevilla»).
+- Causa del error, para no repetirla: se comprobó `apps/sivra` y se afirmó una ausencia **global**. Comprobar
+  donde el dato viviría si existiera; si no aparece, escribir «no lo he encontrado», nunca «no existe».
+
 ### 🔍 (12/08/2026) Los eventos PREVISTOS se verifican y deciden SOLOS (PR #1386)
 - Alberto, ante el aviso 🔮 con 3 fechas de Mangafest: «esto tiene q ser automático, yo no sé de esta
   información». **Retirado ese Telegram**; decide el cron nuevo `/api/sivra/eventos/verificar` (05:30 UTC).
@@ -53,11 +65,9 @@
   en 2026 (22.504 €) supera la pérdida bursátil (16.698 €). DIRECTO en 2026 = 0 € con `apps/sivra` y la
   skill SEO ya construidas. Booking = 92% de facturación (riesgo de canal: Airbnb 42.460 €→1.219 €).
 - Regla dura añadida a la skill `trading-analista`. Decisión de no operar en real SIGUE vigente. PR draft #1387.
-- **Plan de reservas directas** (`docs/PLAN-RESERVAS-DIRECTAS.md`): el 0 € de directo NO es marketing —
-  **no hay web pública**: `app/[locale]/page.tsx` redirige a `/dashboard`, el sitemap dice que las páginas
-  «no existen» y el dominio sigue en `housesevillana.vercel.app`. Fase 0 = encender el motor de Smoobu (ya
-  conectado, 4 apts, sync OK) + registrar dominio. Palanca clave: Booking renunció a la paridad de precios
-  en el EEE el 02/12/2024 (DMA art. 5(3)) → **legal ser −10% en web propia**. Meta año 1: 20% directo ≈ 5.000 €.
+- **Plan de reservas directas** (`docs/PLAN-RESERVAS-DIRECTAS.md`). Palanca clave: Booking renunció a la
+  paridad de precios en el EEE el 02/12/2024 (DMA art. 5(3)) → **legal ser −10% en web propia**.
+  Meta año 1: 20% directo ≈ 5.000 €. ⚠️ **Diagnóstico inicial CORREGIDO el mismo día — ver entrada 🏠.**
 
 ### 📧 (12/08/2026) facturas-correo — pasada diaria sin novedades
 - Vía B sana (`dias_caido=0`), backlog `PDF-pendiente`/`Revisar` vacío, 0 candidatos Gmail y 0

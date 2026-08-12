@@ -21,45 +21,65 @@ con el mismo inventario y la misma disponibilidad.
 
 ---
 
-## 1. El diagnóstico que cambia el plan
+## 1. El diagnóstico — corregido el 12/08/2026
 
-**Los 0 € de directo no son un problema de marketing: no existe ningún sitio donde reservar.**
-Comprobado en el código, no supuesto:
+> ⚠️ **Corrección.** La primera versión de este documento afirmaba que «no existe ningún sitio donde
+> reservar». **Era falso.** Se comprobó `apps/sivra` y se extrapoló a todo el negocio, que es
+> exactamente lo que prohíbe la regla *«dato que NO hay ≠ dato que NO se ha mirado»* del `CLAUDE.md`.
+> Lo que sigue es el diagnóstico real.
 
-- `apps/sivra/app/[locale]/page.tsx` — la home pública **redirige a `/dashboard`**. La app es una
-  intranet (dashboard, limpiadoras, admin), no una web de cara al huésped.
-- `apps/sivra/app/sitemap.ts` lo dice literalmente: *«las páginas /la-casa, /ubicacion, /precios y
-  /contacto **no existen**, así que no se anuncian en el sitemap»*.
-- `apps/sivra/app/robots.ts` y `sitemap.ts` siguen con `SITE_URL = "https://housesevillana.vercel.app"`
-  y el aviso *«⚠️ CAMBIA esta URL cuando registres el dominio definitivo»*. **El dominio ni está puesto.**
+**La web existe, está viva y está construida para el punto que más renta.** No vive en este monorepo:
+está en el repo **`albertosuarezgutierrez-gif/house-sevillana-landing`** (`app/route.ts`, runtime edge),
+y `apps/sivra/lib/seo-landing.ts:5` es el puente — el agente SEO la reescribe por la GitHub Contents API.
+Último commit automático: `chore(seo): actualización automática [2026-08-10]`. Páginas: `/`, `/barrio`,
+`/que-ver`, `/sitemap.xml`.
 
-Consecuencia: la skill `seo-house-sevillana` está optimizando una página que no existe. **Primero se
-construye el canal; optimizarlo viene después.**
+Y **ya tiene canal directo**, no hay que construirlo:
+- Motor de reservas propio en **`reservas.house-sevillana.com`** («📅 Comprobar disponibilidad»).
+- **WhatsApp pre-rellenado para grupos**: `wa.me/34637349990?text=…me interesa House Sevillana para un grupo`.
+- Teléfono (3 veces en la página), email, y enlaces a Booking y Airbnb.
 
-Lo que sí está listo y operativo:
-- **Smoobu conectado y sincronizando** (`pms_connections`: `smoobu_api`, activa, 4 apartamentos,
-  último sync 12/08/2026 08:51 UTC, sin errores).
-- El `pricing-agente` y `market_rates` funcionando.
-- 1.956 huéspedes históricos en `incomes` — una base de contactos que nunca se ha trabajado.
+**El posicionamiento entero es el de grupos grandes:** «6 dormitorios dobles», «hasta 12 personas»,
+«ideal para grupos y familias», «Reserva directa sin comisiones». La hipótesis de «grupos grandes» no
+era una idea nueva que proponer — **ya está ejecutada**.
+
+### Lo que de verdad falla
+
+**1. La atribución miente, y por eso el negocio parecía peor de lo que es.** «Directo = 0 € en 2026» era
+un artefacto de la etiqueta: las reservas directas de 2026 están en `incomes` como **`portal='OTRO'`**,
+y su firma es inequívoca — **comisión 0,00%** (`amount = amount_gross`). Entre ellas,
+**1.383,24 € por 2 noches** (nov-2026), unos 691 €/noche: el perfil exacto del grupo grande que la
+landing persigue. Consistente con una reserva directa, aunque el origen concreto no está registrado.
+Sin arreglar la etiqueta, cualquier medición de este plan es ruido.
+
+**2. El motor de reservas está enterrado.** El único enlace a `reservas.house-sevillana.com` es el
+**tercero de una fila de tres, al final del `<body>`**, a 13 px y con el mismo peso visual que «🗺️ Qué
+ver en Sevilla» y «🏘️ El barrio de la Macarena». El CTA repetido de la página (7 veces) es `#reserva`,
+un **ancla interna**. La página empuja al visitante a leer sobre Sevilla, no a comprobar disponibilidad.
+
+Lo demás que sí está operativo: **Smoobu** conectado y sincronizando (`pms_connections`: `smoobu_api`,
+activa, 4 apartamentos, último sync 12/08/2026 08:51 UTC, sin errores), el `pricing-agente` con
+`market_rates`, y 1.956 huéspedes históricos en `incomes`.
 
 ---
 
-## 2. Fase 0 — Encender el canal (esta semana, ~0 € de desarrollo)
+## 2. Fase 0 — Medir y desenterrar lo que ya existe (esta semana, ~0 € de desarrollo)
 
-**Usar el motor de reservas de Smoobu, no construir uno.** Smoobu incluye *booking engine* y
-creador de web en sus planes, ya tiene los 4 apartamentos sincronizados y comparte calendario con
-Booking (sin riesgo de overbooking). Comisión de canal: **0%**.
+No hay que encender ningún canal: hay que **poder verlo** y **dejar de esconderlo**.
 
-1. Activar el Booking Engine + la web de Smoobu con los 4 apartamentos. *(Confirmar qué plan tienes
-   contratado: el motor entra en los planes de pago, no en el gratuito.)*
-2. **Registrar `housesevillana.es`** y apuntarlo ahí. Hoy no está registrado.
-3. Pasarela de cobro en el motor (Stripe) para cobrar por adelantado — es lo que sustituye la
-   «garantía» de Booking en el canal directo.
-4. Actualizar `SITE_URL` en `app/robots.ts` y `app/sitemap.ts` de `sivra` al dominio real.
-5. **Google Business Profile** de cada apartamento, con enlace a la web. Gratis, y es la mitad del
+1. **Arreglar la atribución antes que nada.** Reclasificar a `DIRECTO` las filas `OTRO` con comisión
+   0,00%, y separar el origen (motor / WhatsApp / teléfono) para saber cuál de los tres convierte.
+   Sin esto no se puede afirmar nada sobre el canal — ni bueno ni malo.
+2. **Subir el motor de reservas al primer scroll**, como CTA primario y con peso visual propio; que
+   `#reserva` lleve al motor y no a un ancla. Es el cambio de mayor retorno por esfuerzo del plan.
+3. **Cobro por adelantado** (Stripe) en el motor — es lo que sustituye la «garantía» de Booking.
+4. **Google Business Profile** de cada apartamento enlazando a la web: gratis, y es la mitad del
    efecto billboard.
+5. Actualizar `SITE_URL` en `apps/sivra/app/robots.ts` y `sitemap.ts`, que siguen apuntando a
+   `housesevillana.vercel.app` — resto de la app-intranet, sin efecto sobre la landing real.
 
-**Criterio de salida de la fase:** existe una URL donde un huésped puede ver fechas, precio y pagar.
+**Criterio de salida:** el cuadro de mando distingue las tres vías de directo, y un visitante llega al
+motor de reservas sin hacer scroll hasta el pie.
 
 ## 3. Fase 1 — Capturar al huésped que ya viene (semanas 1–4)
 
@@ -71,7 +91,8 @@ pagar comisión por la que ya entra.
 3. **Captar el email in situ** — portal WiFi, check‑in digital o WhatsApp. ⚠️ **Booking no te da el
    email real del huésped**: da un alias `@guest.booking.com` que caduca. La lista propia se
    construye en la casa, no descargándola de Booking.
-4. **Registrar el origen**: `incomes.portal` ya tiene el valor `DIRECTO`. Es la métrica del plan.
+4. **Registrar el origen**: `incomes.portal` ya tiene el valor `DIRECTO`, pero hoy el directo real
+   cae en `OTRO` — ver Fase 0, punto 1. Sin esa corrección, esta fase no se puede evaluar.
 
 **Expectativa honesta:** de 1.956 huéspedes históricos solo **21 han repetido (1,1%)**. En turismo
 urbano de ciudad la repetición es baja por naturaleza — el grueso del retorno de este plan **no**
@@ -102,7 +123,13 @@ subirte la comisión ni despriorizar tus anuncios** por ofrecer otro precio en o
 2. **Anuncios de marca** — pujar por «House Sevillana» y variantes cuesta céntimos e intercepta al
    usuario del efecto billboard justo antes de que vuelva a Booking. Es la partida de marketing con
    mejor retorno del plan.
-3. **Google Hotel Ads / metabuscadores**, si el motor de Smoobu lo soporta con el plan contratado.
+3. **Google Hotel Ads / metabuscadores**, si el motor de `reservas.house-sevillana.com` lo soporta.
+4. **Grupos grandes — ya es el posicionamiento de la landing, falta cerrarle el circuito.** El
+   producto (6 dormitorios dobles, hasta 12 personas, 4 baños, parking) es escaso en el centro de
+   Sevilla y de ticket alto: la reserva directa de mayor importe registrada en 2026 son **1.383,24 €
+   por 2 noches**. Los grupos negocian por conversación, no por formulario, y el WhatsApp de grupos
+   ya existe — lo que no existe es **medir cuántos entran por ahí ni responderlos con un proceso**
+   (tarifa de grupo, señal, condiciones). Es la Fase 0 punto 1 aplicada al segmento que más paga.
 
 ---
 
@@ -115,7 +142,11 @@ subirte la comisión ni despriorizar tus anuncios** por ofrecer otro precio en o
 | 30% | ≈ 7.500 € | **+23,1% anual**, recurrente y sin riesgo de mercado |
 
 **Métrica única:** `select portal, sum(amount) from incomes group by portal` — el % que representa
-`DIRECTO`. Hoy es 0. Revisión mensual, en la misma pasada que ya hace el resumen semanal.
+`DIRECTO`. Revisión mensual, en la misma pasada que ya hace el resumen semanal.
+
+⚠️ **Esa métrica no es fiable hasta cerrar el punto 1 de la Fase 0.** Hoy marca 0, pero el directo de
+2026 está registrado como `OTRO` (comisión 0,00%), así que el 0 mide la etiqueta, no el negocio. La
+primera versión de este plan tomó ese 0 al pie de la letra y construyó encima un diagnóstico falso.
 
 ## 7. Riesgo de canal (razón número dos para hacer esto)
 
@@ -136,10 +167,27 @@ margen, es la única cobertura real frente a eso.
 
 ## Lo que NO se ha comprobado
 
-- **Qué plan de Smoobu está contratado** y si su motor de reservas está incluido. Es el supuesto que
-  sostiene la Fase 0; si no lo estuviera, habría que valorar un motor propio (semanas de trabajo, no
-  días) o subir de plan.
-- **Si `housesevillana.es` está libre.** El código sugiere que el dominio nunca se registró, pero no
-  se ha consultado el registrador.
+- **Qué software hay detrás de `reservas.house-sevillana.com`** (¿el motor de Smoobu, otro, uno
+  propio?), si cobra por adelantado y qué comisión aplica. El proxy de salida de esta sesión bloquea
+  el dominio, así que solo se ha visto el enlace desde el HTML de la landing, no el destino.
+- **Cuánto tráfico recibe la landing y cuántas reservas origina.** No se ha mirado Search Console ni
+  analítica. Que el motor esté enterrado en el pie es un hecho del HTML; que eso cueste reservas es
+  una inferencia razonable, no una medición.
+- **El origen real de la reserva de 1.383,24 €** etiquetada `OTRO`. La comisión 0,00% y el ticket son
+  consistentes con directo, pero el canal concreto no está registrado — que es justo el agujero que
+  la Fase 0 viene a tapar.
 - **El texto del contrato vigente con Booking.** El marco legal del DMA es claro; el contrato
   concreto no se ha leído.
+
+## Registro de la corrección
+
+La versión original (PR #1387, 12/08/2026) sostenía que no había web pública ni canal directo, y
+proponía «encender el canal» con el motor de Smoobu. Alberto lo desmintió en el acto — *«punto 4,
+para eso hicimos la web de housesevillana.es»* — y la comprobación le dio la razón: la landing lleva
+viva desde antes, se actualiza sola y está construida entera alrededor de los grupos grandes.
+
+La causa del error merece quedar escrita, porque es reincidente: **se comprobó un directorio
+(`apps/sivra`) y se afirmó una ausencia global.** El puente al repo real estaba a un grep de
+distancia, en `apps/sivra/lib/seo-landing.ts`. La regla del `CLAUDE.md` no dice «comprueba antes de
+afirmar», dice algo más exigente — **comprueba en el sitio donde el dato viviría si existiera**, y
+cuando la respuesta es «no lo he encontrado», eso es lo que hay que escribir, no «no existe».
