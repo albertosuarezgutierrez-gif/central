@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-12T05:55:13Z",
-  "sha": "ad7c04d1253931677b3e8334c2ab4aa53caa9436",
+  "generadoEn": "2026-08-12T09:28:34Z",
+  "sha": "e2298e752a74b963898bb66c2063634a269adb6e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -53623,6 +53623,79 @@
       "hash": "ac095fdb2d22"
     },
     {
+      "ruta": "apps/plataforma/app/api/sivra/eventos/verificar/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 56
+        },
+        {
+          "nombre": "leerConfirmadosDeEsasFechas",
+          "kind": "function",
+          "exportada": false,
+          "params": "fechas: string[], resumen: ResumenVerificacion,",
+          "retorno": "Promise<Map<string,",
+          "linea": 198,
+          "resumen": "── Señal 1: otras filas ya CONFIRMADAS en la misma fecha ─────────────────────────────────────"
+        },
+        {
+          "nombre": "leerMercadoDeEsasFechas",
+          "kind": "function",
+          "exportada": false,
+          "params": "fechas: string[], resumen: ResumenVerificacion,",
+          "retorno": "Promise<Map<string, FilaMercado[]>>",
+          "linea": 227,
+          "resumen": "── Señal 3: ¿el mercado ya cotiza esa noche por encima de su mes? ──────────────────────────── Solo comps FIABLES (`booking_mcp`/`manual`): los de Serper son precios de anuncio SIN fecha, así que comp"
+        },
+        {
+          "nombre": "preguntarPrensa",
+          "kind": "function",
+          "exportada": false,
+          "params": "ev: FilaPrevisto, resumen: ResumenVerificacion",
+          "retorno": "Promise<SenalPrensa>",
+          "linea": 291,
+          "resumen": "── Señal 2: la búsqueda dirigida sobre ESE evento ────────────────────────────────────────────"
+        },
+        {
+          "nombre": "guardarDecision",
+          "kind": "function",
+          "exportada": false,
+          "params": "ev: FilaPrevisto, d: { estado: string | null; confianza?: number | null; veredicto: string; motivo: string; util: boolean },",
+          "retorno": "Promise<void>",
+          "linea": 342,
+          "resumen": "── Escritura ─────────────────────────────────────────────────────────────────────────────────"
+        },
+        {
+          "nombre": "reubicar",
+          "kind": "function",
+          "exportada": false,
+          "params": "ev: FilaPrevisto, fecha: string, estado: string, prensa: SenalPrensa,",
+          "retorno": "Promise<void>",
+          "linea": 368,
+          "resumen": "El evento existe, pero otro día. Se crea la fila en la fecha buena (idempotente) para no perder la protección de esa noche; la vieja ya queda descartada por la decisión."
+        }
+      ],
+      "tablas": [
+        "base",
+        "fecha",
+        "fiables",
+        "market_rates",
+        "next",
+        "pricing_eventos_auto",
+        "set"
+      ],
+      "rutaApi": "/api/sivra/eventos/verificar",
+      "hash": "6be1d6de31f7"
+    },
+    {
       "ruta": "apps/plataforma/app/api/sivra/eventos/websearch/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -53635,25 +53708,16 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 48
+          "linea": 47
         },
         {
           "nombre": "buscarPrevistos",
           "kind": "function",
           "exportada": false,
-          "params": "desde: string, hasta: string, yaResumen: string",
+          "params": "desde: string, hasta: string, yaResumen: string, descartadosResumen: string,",
           "retorno": "Promise<",
-          "linea": 160,
+          "linea": 179,
           "resumen": "nunca lanza (es una mejora, no puede tumbar el descubrimiento normal)."
-        },
-        {
-          "nombre": "avisarPrevistos",
-          "kind": "function",
-          "exportada": false,
-          "params": "",
-          "retorno": "Promise<void>",
-          "linea": 237,
-          "resumen": "Avisa UNA vez por evento previsto (dedupe por `avisado_at`). Alberto es quien confirma o descarta."
         }
       ],
       "tablas": [
@@ -53662,7 +53726,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/eventos/websearch",
-      "hash": "354894d27dec"
+      "hash": "57ec3145a8e3"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/agent/resumen-mensual/route.ts",
@@ -61382,7 +61446,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 102,
+          "linea": 106,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -61391,7 +61455,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 132,
+          "linea": 136,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -61400,7 +61464,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 154
+          "linea": 158
         },
         {
           "nombre": "ventanaMinutos",
@@ -61408,7 +61472,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 162,
+          "linea": 166,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -61417,13 +61481,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 174,
+          "linea": 178,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dbde4969ca32"
+      "hash": "b5f559ca65be"
     },
     {
       "ruta": "apps/plataforma/lib/deducibilidad.ts",
@@ -64201,7 +64265,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2b7e859b16e3"
+      "hash": "9dc14306d21a"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/sonda-ia.ts",
@@ -66083,7 +66147,7 @@
           "exportada": true,
           "params": "v?: string | null",
           "retorno": "EstadoEvento",
-          "linea": 93
+          "linea": 102
         },
         {
           "nombre": "efectoDeEvento",
@@ -66091,7 +66155,7 @@
           "exportada": true,
           "params": "e: EventoBruto, o: EfectoOpts = {}",
           "retorno": "EfectoEvento",
-          "linea": 103
+          "linea": 112
         },
         {
           "nombre": "combinarEventosDeFecha",
@@ -66099,13 +66163,13 @@
           "exportada": true,
           "params": "eventos: EventoBruto[], o: EfectoOpts = {}",
           "retorno": "EfectoEvento",
-          "linea": 157,
+          "linea": 166,
           "resumen": "Combina TODOS los eventos de una misma fecha (pueden ser varios: Ticketmaster, búsqueda web y la mano de Alberto sobre el mismo concierto). Manda el mayor de cada cosa por separado — un previsto no pu"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fa8f3025b9e9"
+      "hash": "9cf899ce9afc"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/eventos-impacto.ts",
@@ -66138,6 +66202,76 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "ea3b0a1b1b2e"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/eventos-verificacion.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/eventos-verificacion.ts — qué hace el sistema, SOLO, con un evento previsto. POR QUÉ (12/08/2026, petición de Alberto: «esto tiene q ser automático, yo no sé de esta información»). El descubrimiento de previstos (01/08) acababa en un Telegram que le pedía pasarlos a `confirmado` a mano. Do",
+      "exporta": [
+        "decidirVerificacion",
+        "nombresParecidos",
+        "senalMercado",
+        "detalleVerificacion",
+        "verificacionFiable"
+      ],
+      "funciones": [
+        {
+          "nombre": "decidirVerificacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "dura: SenalDura, prensa: SenalPrensa, mercado: SenalMercado, ctx: ContextoVerificacion,",
+          "retorno": "Decision",
+          "linea": 120,
+          "resumen": "Decide qué hacer con UN previsto. No lanza nunca: ante cualquier duda devuelve `estado: null`, que es «déjalo como está y vuelve mañana»."
+        },
+        {
+          "nombre": "tokens",
+          "kind": "function",
+          "exportada": false,
+          "params": "nombre: string",
+          "retorno": "string[]",
+          "linea": 247
+        },
+        {
+          "nombre": "nombresParecidos",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: string, b: string",
+          "retorno": "boolean",
+          "linea": 260,
+          "resumen": "¿Hablan del mismo evento? Exige 2 palabras significativas en común, salvo que uno de los dos nombres solo tenga una (`Mangafest` vs `Mangafest Winter Edition`), donde basta esa."
+        },
+        {
+          "nombre": "senalMercado",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: FilaMercado[]",
+          "retorno": "SenalMercado",
+          "linea": 287,
+          "resumen": "Traduce el corpus a una señal. Devuelve `sin_datos` en cuanto no hay con qué comparar — que es lo que va a pasar casi siempre mientras `booking_mcp` acumula cobertura, y está bien: una señal sin datos"
+        },
+        {
+          "nombre": "detalleVerificacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResumenVerificacion",
+          "retorno": "string",
+          "linea": 320,
+          "resumen": "Igual que en el barrido de mercado y en el escaneo de facturas: lo que NO se pudo mirar va PRIMERO. «0 cambios» con la búsqueda caída y «0 cambios» porque no había novedades se leen igual en un parte "
+        },
+        {
+          "nombre": "verificacionFiable",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResumenVerificacion",
+          "retorno": "boolean",
+          "linea": 341,
+          "resumen": "¿Vale la pasada? Conservador como `barridoFiable`/`ingestaFiable`: si se intentó verificar y la mayoría no se pudo mirar, el latido va en ROJO. Un verificador que no verifica deja previstos eternos ex"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "61e1f1812ee2"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/facturas-control.ts",
@@ -91090,7 +91224,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2433,
-    "funciones": 6588
+    "archivos": 2435,
+    "funciones": 6599
   }
 }
