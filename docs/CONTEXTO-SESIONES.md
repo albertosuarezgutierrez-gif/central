@@ -32,6 +32,15 @@
 
 ---
 
+### 📧 (12/08/2026) facturas-correo — pasada diaria sin novedades
+- Vía B sana (`dias_caido=0`), backlog `PDF-pendiente`/`Revisar` vacío, 0 candidatos Gmail y 0
+  subidas manuales nuevas.
+- Paso 4.0: única fila `sin_revisar` (Endesa-Dúplex marzo, 69,21€) ya estaba conciliada de antes
+  (mismo `factura_ref`) — solo faltaba el FK `movimiento_id`, backfilleado en Supabase.
+- PR draft #1383 (solo bitácora) abierto y en seguimiento (`subscribe_pr_activity`).
+- Pendiente sin resolver: `search_threads label:Facturas/Extraccion-fallida` (Label_16, 1 mensaje
+  según `list_labels`) devuelve vacío — posible lag del índice del conector Gmail, revisar a mano.
+
 ### ⏰ (11/08/2026) Recordatorios de seguimiento del laboratorio de inversión (decisión: seguir en paper)
 - Alberto, tras el informe de la auditoría: **seguimos en paper** («ok seguimos entonces») + recordatorios.
 - Trigger **quincenal** `trig_01FJtQFiEMVGnEj9vpdBYA3f` (días 1 y 15, 08:00 UTC, sesión nueva + push):
