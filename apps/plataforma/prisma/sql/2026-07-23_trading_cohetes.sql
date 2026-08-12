@@ -26,7 +26,23 @@ CREATE TABLE IF NOT EXISTS trading_cohetes_track (
   creado_en     timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE trading_cohetes_rebalanceo DISABLE ROW LEVEL SECURITY;
-ALTER TABLE trading_cohetes_track      DISABLE ROW LEVEL SECURITY;
+-- Acceso: SOLO roles de servicio. Se cierra por las dos vías a la vez.
+--
+-- (1) REVOKE a anon/authenticated: es lo que de verdad impide que PostgREST sirva estas
+--     tablas. Sin privilegio no hay lectura, con RLS o sin ella.
+-- (2) ENABLE RLS: aquí no cierra ninguna fuga —los cinco roles que sí tienen privilegio
+--     (app_user, postgres, prisma_plataforma, prisma_sivra, service_role) llevan BYPASSRLS,
+--     así que no cambia nada operativo. Lo que hace es fijar el suelo: si algún día alguien
+--     concede un GRANT a anon «para una gráfica», deny-by-default lo detiene en vez de
+--     publicar la cartera entera. Es además el estado del resto del esquema: tras esto,
+--     CERO tablas de `public` quedan sin RLS (antes eran estas dos, las últimas).
+--
+-- 🚨 Estaba al revés hasta el 12/08/2026 (`DISABLE ROW LEVEL SECURITY`), que es lo que
+-- levantaba el aviso de seguridad de Supabase. Se corrigió en la BD por migración
+-- `rls_trading_cohetes`; esta línea se cambia para que reejecutar el fichero NO lo deshaga.
+-- Sin políticas a propósito: escribir una sin saber quién la necesita sería inventarse el
+-- criterio de acceso.
+ALTER TABLE trading_cohetes_rebalanceo ENABLE ROW LEVEL SECURITY;
+ALTER TABLE trading_cohetes_track      ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON trading_cohetes_rebalanceo FROM anon, authenticated;
 REVOKE ALL ON trading_cohetes_track      FROM anon, authenticated;
