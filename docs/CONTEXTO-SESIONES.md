@@ -32,6 +32,15 @@
 
 ---
 
+### 📧 (12/08/2026) facturas-correo — pasada diaria sin novedades
+- Vía B sana (`dias_caido=0`), backlog `PDF-pendiente`/`Revisar` vacío, 0 candidatos Gmail y 0
+  subidas manuales nuevas.
+- Paso 4.0: única fila `sin_revisar` (Endesa-Dúplex marzo, 69,21€) ya estaba conciliada de antes
+  (mismo `factura_ref`) — solo faltaba el FK `movimiento_id`, backfilleado en Supabase.
+- PR draft #1383 (solo bitácora) abierto y en seguimiento (`subscribe_pr_activity`).
+- Pendiente sin resolver: `search_threads label:Facturas/Extraccion-fallida` (Label_16, 1 mensaje
+  según `list_labels`) devuelve vacío — posible lag del índice del conector Gmail, revisar a mano.
+
 ### 🏷️ (12/08/2026) El contraste diferido casi anula tesis BUENAS: el ref con la fecha corrida
 - Mergeado **#1370** (contraste diferido, opción (a)). La pasada del 11/08 —primera con #1363 en prod—
   salió perfecta: **22 símbolos** (13 la víspera), **0 vetados**, 0 anulados, 4 huellas + 2 latidos,
