@@ -32,6 +32,17 @@
 
 ---
 
+### 📱 (12/08/2026) La portada de House Sevillana suspendía el mínimo táctil de 44px (PR #1399)
+- Claude in Chrome **no puede medir 320px** (su gestor de ventanas fuerza ~1536px de ancho mínimo), así que
+  lo medí con Playwright sobre la app en local: **18 elementos por debajo de 44px** en la portada (marca del
+  nav 27px, hamburguesa 27px, los 11 enlaces del pie 16px, los 4 SEO del final 40px). `/parking` limpia.
+- **No era una regresión:** `git log` sobre `app/route.ts` da un solo commit, el de la importación (#1390).
+  `/parking` se escribió en el monorepo con la regla delante; la portada entró tal cual del repo suelto.
+- Arreglo acotado a `max-width:768px` salvo los SEO (su altura no depende del ancho). El teléfono de
+  «o llámanos al …» va DENTRO de una frase: se amplía con padding + margen negativo, no estirándolo.
+- Medido antes/después en las **6 rutas** (3 idiomas × 2 páginas): 18 → **0**, sin scroll horizontal.
+- ⚠️ El CSS vive en un template literal de JS: una comilla invertida en un comentario rompe el build (me pasó).
+
 ### 💸 (12/08/2026) El cotizador de IA de ialimp no ha generado NUNCA una propuesta (PR #1394)
 - 8 leads, **0 con `propuesta_url` o `propuesta_ia_at`**; el bucket `propuestas-leads` tiene **0 objetos**.
   Tres fallos encadenados, todos mudos: (1) el disparo desde `/api/leads` iba sin `Bearer CRON_SECRET` →
