@@ -32,6 +32,22 @@
 
 ---
 
+### 🕳️ (12/08/2026) Las cancelaciones NO EXISTEN en nuestra BD — el cuadro de mando es ciego a ellas
+- Smoobu dice **269 noches canceladas contra 241 reservadas** (may-nov 2026, 67 cancelaciones). Se cancela
+  más de lo que se consume y **ningún panel nuestro lo puede ver**.
+- Comprobado columna a columna: `incomes` (13 col.) **no tiene estado ni flag de cancelación** — solo
+  guarda el ingreso de lo que sí entró. `cleaning_sessions` tampoco. Es decir: no es que el dato esté a
+  NULL, es que **el concepto no existe en el esquema**. Ninguna consulta puede responder «¿cuánto se
+  cancela?» porque no hay dónde mirar.
+- **La buena noticia: la puerta ya está abierta.** `pms_connections` tiene una conexión **Smoobu API viva**
+  («Alberto Suarez — Smoobu», `pms_tipo='smoobu_api'`, `activa=true`, `sync_error` NULL, último sync
+  12/08 12:11) con los CUATRO `apartment_id`: 352007 House Sevillana · 352928 Duplex Center · 352943
+  Luxury Busto · 352418 Busto Reform. Hoy solo se usa para programar limpiezas.
+- Siguiente paso natural: traer las reservas CON su estado por esa misma conexión y darles tabla propia.
+  Sin eso, cualquier medida sobre el canal directo mide solo la mitad del embudo.
+- ⚠️ Al mirar esto salió otra cosa: **`trading_cohetes_rebalanceo` y `trading_cohetes_track` tienen RLS
+  DESACTIVADO** — expuestas a la clave `anon`, que es pública por diseño. Ver aviso al final.
+
 ### 🔗 (12/08/2026) Los SEIS botones de reserva de la landing iban a un dominio INEXISTENTE (PR #1390)
 - `reservas.house-sevillana.com` **no tiene registro DNS**, ni su padre `house-sevillana.com`. Comprobado
   por dos vías (resolución del sistema y fetch → `ENOTFOUND`, distinto del «bloqueado por proxy» que da
