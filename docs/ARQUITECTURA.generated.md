@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-12T10:02:03Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-12T12:19:18Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 9 apps · 37 packages · 23 capacidades · 32 skills · 1160 rutas API.
+**Resumen:** 10 apps · 37 packages · 23 capacidades · 32 skills · 1160 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -17,6 +17,11 @@
 - **Capacidades:** Almacén / stock / ASN
 - **Tablas (3):** alquiler_alquileres, alquiler_lineas, alquiler_materiales
 - **Rutas API:** 4
+### housesevillana
+- **Módulos que usa:** —
+- **Capacidades:** —
+- **Tablas (0):** —
+- **Rutas API:** 0
 ### ia-rest
 - **Módulos que usa:** core-ai, core-fiscal, core-payments, core-push, core-receipts, module-asn, module-contabilidad, module-crm, module-feedback, module-flota, module-horario, module-materiales, module-organizador-trabajo, module-presupuestos, module-proveedores, module-trazabilidad
 - **Capacidades:** TPV / comanda, KDS (cocina), Eventos / catering / BEO, Reservas, QR / portal cliente, Feedback / propinas, Agenda / auto-asignación, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Contabilidad, Facturación / VeriFactu, Hardware bridge, Escáner / OCR, Notificaciones (push), Asistente / copiloto IA
@@ -202,30 +207,31 @@
 
 ## Avisos de arquitectura
 - 🔴 **Almacén / stock / ASN**: duplicada en alquiler (debería usar `module-materiales`).
-- ⚠️ **TPV / comanda**: en ia-rest; falta en almacen, alquiler, ialimp, mariscos, rrhh, sivra, transporte.
-- ⚠️ **KDS (cocina)**: en ia-rest; falta en almacen, alquiler, ialimp, mariscos, rrhh, sivra, transporte.
-- ⚠️ **Eventos / catering / BEO**: en almacen, ia-rest, sivra; falta en alquiler, ialimp, mariscos, rrhh, transporte.
-- ⚠️ **Reservas**: en ia-rest; falta en almacen, alquiler, ialimp, mariscos, rrhh, sivra, transporte.
-- ⚠️ **QR / portal cliente**: en ia-rest; falta en almacen, alquiler, ialimp, mariscos, rrhh, sivra, transporte.
-- ⚠️ **Feedback / propinas**: en ia-rest; falta en almacen, alquiler, ialimp, mariscos, rrhh, sivra, transporte.
-- ⚠️ **Equipo limpiadoras**: en ialimp, sivra; falta en almacen, alquiler, ia-rest, mariscos, rrhh, transporte.
-- ⚠️ **Agenda / auto-asignación**: en ia-rest, ialimp, sivra; falta en almacen, alquiler, mariscos, rrhh, transporte.
-- ⚠️ **Pricing dinámico**: en sivra; falta en almacen, alquiler, ia-rest, ialimp, mariscos, rrhh, transporte.
-- ⚠️ **Mercado / ingest**: en sivra; falta en almacen, alquiler, ia-rest, ialimp, mariscos, rrhh, transporte.
-- ⚠️ **CRM / leads / cotizador**: en ia-rest, ialimp; falta en almacen, alquiler, mariscos, rrhh, sivra, transporte.
-- ⚠️ **Marketing (blog/IG/SEO)**: en ia-rest, sivra; falta en almacen, alquiler, ialimp, mariscos, rrhh, transporte.
-- ⚠️ **RRHH / equipo**: en ia-rest, ialimp; falta en almacen, alquiler, mariscos, rrhh, sivra, transporte.
-- ⚠️ **Almacén / stock / ASN**: en almacen, alquiler, ia-rest, ialimp, sivra; falta en mariscos, rrhh, transporte.
-- ⚠️ **Proveedores / compras**: en ia-rest, ialimp, sivra; falta en almacen, alquiler, mariscos, rrhh, transporte.
-- ⚠️ **Contabilidad**: en ia-rest, ialimp; falta en almacen, alquiler, mariscos, rrhh, sivra, transporte.
-- ⚠️ **Facturación / VeriFactu**: en ia-rest, ialimp; falta en almacen, alquiler, mariscos, rrhh, sivra, transporte.
-- ⚠️ **Hardware bridge**: en ia-rest; falta en almacen, alquiler, ialimp, mariscos, rrhh, sivra, transporte.
-- ⚠️ **Escáner / OCR**: en ia-rest, ialimp; falta en almacen, alquiler, mariscos, rrhh, sivra, transporte.
-- ⚠️ **Informes**: en ialimp; falta en almacen, alquiler, ia-rest, mariscos, rrhh, sivra, transporte.
-- ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en almacen, alquiler, mariscos, sivra, transporte.
-- ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, mariscos, transporte.
+- ⚠️ **TPV / comanda**: en ia-rest; falta en almacen, alquiler, housesevillana, ialimp, mariscos, rrhh, sivra, transporte.
+- ⚠️ **KDS (cocina)**: en ia-rest; falta en almacen, alquiler, housesevillana, ialimp, mariscos, rrhh, sivra, transporte.
+- ⚠️ **Eventos / catering / BEO**: en almacen, ia-rest, sivra; falta en alquiler, housesevillana, ialimp, mariscos, rrhh, transporte.
+- ⚠️ **Reservas**: en ia-rest; falta en almacen, alquiler, housesevillana, ialimp, mariscos, rrhh, sivra, transporte.
+- ⚠️ **QR / portal cliente**: en ia-rest; falta en almacen, alquiler, housesevillana, ialimp, mariscos, rrhh, sivra, transporte.
+- ⚠️ **Feedback / propinas**: en ia-rest; falta en almacen, alquiler, housesevillana, ialimp, mariscos, rrhh, sivra, transporte.
+- ⚠️ **Equipo limpiadoras**: en ialimp, sivra; falta en almacen, alquiler, housesevillana, ia-rest, mariscos, rrhh, transporte.
+- ⚠️ **Agenda / auto-asignación**: en ia-rest, ialimp, sivra; falta en almacen, alquiler, housesevillana, mariscos, rrhh, transporte.
+- ⚠️ **Pricing dinámico**: en sivra; falta en almacen, alquiler, housesevillana, ia-rest, ialimp, mariscos, rrhh, transporte.
+- ⚠️ **Mercado / ingest**: en sivra; falta en almacen, alquiler, housesevillana, ia-rest, ialimp, mariscos, rrhh, transporte.
+- ⚠️ **CRM / leads / cotizador**: en ia-rest, ialimp; falta en almacen, alquiler, housesevillana, mariscos, rrhh, sivra, transporte.
+- ⚠️ **Marketing (blog/IG/SEO)**: en ia-rest, sivra; falta en almacen, alquiler, housesevillana, ialimp, mariscos, rrhh, transporte.
+- ⚠️ **RRHH / equipo**: en ia-rest, ialimp; falta en almacen, alquiler, housesevillana, mariscos, rrhh, sivra, transporte.
+- ⚠️ **Almacén / stock / ASN**: en almacen, alquiler, ia-rest, ialimp, sivra; falta en housesevillana, mariscos, rrhh, transporte.
+- ⚠️ **Proveedores / compras**: en ia-rest, ialimp, sivra; falta en almacen, alquiler, housesevillana, mariscos, rrhh, transporte.
+- ⚠️ **Contabilidad**: en ia-rest, ialimp; falta en almacen, alquiler, housesevillana, mariscos, rrhh, sivra, transporte.
+- ⚠️ **Facturación / VeriFactu**: en ia-rest, ialimp; falta en almacen, alquiler, housesevillana, mariscos, rrhh, sivra, transporte.
+- ⚠️ **Hardware bridge**: en ia-rest; falta en almacen, alquiler, housesevillana, ialimp, mariscos, rrhh, sivra, transporte.
+- ⚠️ **Escáner / OCR**: en ia-rest, ialimp; falta en almacen, alquiler, housesevillana, mariscos, rrhh, sivra, transporte.
+- ⚠️ **Informes**: en ialimp; falta en almacen, alquiler, housesevillana, ia-rest, mariscos, rrhh, sivra, transporte.
+- ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en almacen, alquiler, housesevillana, mariscos, sivra, transporte.
+- ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- El grave: una `service_role` del proyecto de PRODUCCIÓN `wswbehlcuxqxyinousql`
 - «DIRECTO = 0 €» era la etiqueta, no el negocio:
 - Hallazgo grande:
 - Plan de reservas directas
@@ -235,5 +241,4 @@
 - Barrido del mismo fallo en todo 2026
 - PriceLabs resuelto por Alberto (11/08): «es por el cambio».
 - PR #1368 MERGEADO y verificado en producción
-- #755
 

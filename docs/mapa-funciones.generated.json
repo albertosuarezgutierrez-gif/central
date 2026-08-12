@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-12T12:18:30Z",
-  "sha": "45f4426bd766cd9a88ad74fc569dcda64eb8f60c",
+  "generadoEn": "2026-08-12T12:19:18Z",
+  "sha": "14fab38335de42352ee13af4c0a649a2f271f9aa",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -2805,6 +2805,305 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "290889117deb"
+    },
+    {
+      "ruta": "apps/housesevillana/app/barrio/route.ts",
+      "ambito": "apps/housesevillana",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 73
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7100830f7f9d"
+    },
+    {
+      "ruta": "apps/housesevillana/app/en/parking/route.ts",
+      "ambito": "apps/housesevillana",
+      "resumen": "apps/housesevillana/app/en/parking/route.ts — /parking en inglés (72% del tráfico real).",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 9
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "af8750170eaa"
+    },
+    {
+      "ruta": "apps/housesevillana/app/en/route.ts",
+      "ambito": "apps/housesevillana",
+      "resumen": "apps/housesevillana/app/en/route.ts Versión en inglés, derivada del MISMO HTML que sirve `app/route.ts`. Motivo (GA4, 12 meses a 11/08/2026): el 72% de los visitantes navega en inglés.",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 23
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8d5b448bb05f"
+    },
+    {
+      "ruta": "apps/housesevillana/app/en/traducciones.ts",
+      "ambito": "apps/housesevillana",
+      "resumen": "apps/housesevillana/app/en/traducciones.ts Diccionario ES→EN de la landing. Se aplica sobre el MISMO HTML de `app/route.ts` en vez de mantener una segunda copia del fichero, por dos razones: 1. El agente SEO de sivra (`/api/seo-refresh`) reescribe `app/route.ts` sola cada lunes por la GitHub Content",
+      "exporta": [
+        "traducir"
+      ],
+      "funciones": [
+        {
+          "nombre": "traducir",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string",
+          "retorno": "string",
+          "linea": 203,
+          "resumen": "Traduce el HTML español al inglés. Sustituye de la cadena más larga a la más corta a propósito: si «La casa» se aplicase antes que «La casa por dentro», la segunda quedaría medio traducida."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d79942b40e51"
+    },
+    {
+      "ruta": "apps/housesevillana/app/i18n/motor.ts",
+      "ambito": "apps/housesevillana",
+      "resumen": "apps/housesevillana/app/i18n/motor.ts Motor de traducción de la landing, común a todos los idiomas. La página española (`app/route.ts`) es la ÚNICA fuente: el resto de idiomas se derivan de su HTML aplicando un diccionario. No hay copias del fichero, y eso es deliberado: el agente SEO de sivra reesc",
+      "exporta": [
+        "traducir",
+        "localizar"
+      ],
+      "funciones": [
+        {
+          "nombre": "urlEs",
+          "kind": "function",
+          "exportada": false,
+          "params": "ruta: string",
+          "retorno": "string",
+          "linea": 42,
+          "resumen": "URL absoluta de una página en español. La portada lleva barra final; el resto, no."
+        },
+        {
+          "nombre": "traducir",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string, diccionario: Record<string, string>",
+          "retorno": "string",
+          "linea": 62,
+          "resumen": "Sustituye las cadenas del diccionario, de la más larga a la más corta. El orden no es un detalle: si «La casa» se aplicara antes que «La casa por dentro», la segunda quedaría medio traducida y con una"
+        },
+        {
+          "nombre": "localizar",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string, v: Variante",
+          "retorno": "string",
+          "linea": 80,
+          "resumen": "Traduce y ajusta los metadatos propios de la variante: idioma del documento, canonical, og:url y og:locale. Los `hreflang` NO se tocan, y es deliberado: ya vienen del HTML español declarando todas las"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1c879f97fea2"
+    },
+    {
+      "ruta": "apps/housesevillana/app/it/parking/route.ts",
+      "ambito": "apps/housesevillana",
+      "resumen": "apps/housesevillana/app/it/parking/route.ts — /parking en italiano (11% del tráfico real).",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 9
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ba2abff72ada"
+    },
+    {
+      "ruta": "apps/housesevillana/app/it/route.ts",
+      "ambito": "apps/housesevillana",
+      "resumen": "apps/housesevillana/app/it/route.ts Versión en italiano, derivada del MISMO HTML que sirve `app/route.ts`. Motivo (GA4, 12 meses a 11/08/2026): el 11% de los visitantes navega en italiano.",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 23
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6df069e689ee"
+    },
+    {
+      "ruta": "apps/housesevillana/app/layout.tsx",
+      "ambito": "apps/housesevillana",
+      "exporta": [
+        "RootLayout"
+      ],
+      "funciones": [
+        {
+          "nombre": "RootLayout",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ children }: { children: React.ReactNode }",
+          "retorno": null,
+          "linea": 14
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "115b90c29796"
+    },
+    {
+      "ruta": "apps/housesevillana/app/parking/route.ts",
+      "ambito": "apps/housesevillana",
+      "resumen": "apps/housesevillana/app/parking/route.ts — versión española de /parking.",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7691d104eb37"
+    },
+    {
+      "ruta": "apps/housesevillana/app/que-ver/route.ts",
+      "ambito": "apps/housesevillana",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 66
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2c8f87106d6a"
+    },
+    {
+      "ruta": "apps/housesevillana/app/robots.txt/route.ts",
+      "ambito": "apps/housesevillana",
+      "resumen": "robots.txt de housesevillana.es No existía: el sitemap estaba publicado en /sitemap.xml pero no se anunciaba en ningún sitio, así que los buscadores solo lo encontraban por descubrimiento. Anunciarlo aquí es la forma estándar y la más barata de que se rastreen /barrio y /que-ver además de la home. S",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 12
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a7e9b36c4330"
+    },
+    {
+      "ruta": "apps/housesevillana/app/route.ts",
+      "ambito": "apps/housesevillana",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "cm",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 658
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 833
+        }
+      ],
+      "tablas": [
+        "next"
+      ],
+      "rutaApi": null,
+      "hash": "bd8e226a9d73"
+    },
+    {
+      "ruta": "apps/housesevillana/app/sitemap.xml/route.ts",
+      "ambito": "apps/housesevillana",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 1
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2090eb6a1e1c"
     },
     {
       "ruta": "apps/ia-rest/public/bridge-local.js",
@@ -67251,7 +67550,7 @@
     {
       "ruta": "apps/plataforma/lib/sivra/seo-landing.ts",
       "ambito": "apps/plataforma",
-      "resumen": "apps/plataforma/lib/sivra/seo-landing.ts Lectura/escritura de la landing estática housesevillana (repo house-sevillana-landing, fichero app/route.ts) vía GitHub Contents API. Usado por /api/sivra/seo-refresh. Versión BLINDADA (portada del patrón de apps/sivra/lib/seo-landing.ts): si la GitHub API no",
+      "resumen": "apps/plataforma/lib/sivra/seo-landing.ts Lectura/escritura de la landing estática housesevillana (ahora en el propio monorepo, fichero app/route.ts) vía GitHub Contents API. Usado por /api/sivra/seo-refresh. Versión BLINDADA (portada del patrón de apps/sivra/lib/seo-landing.ts): si la GitHub API no ",
       "exporta": [
         "githubToken",
         "decodeLanding",
@@ -67331,7 +67630,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "500a660bd8b1"
+      "hash": "6ab026fe5ece"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/smoobu-sync.ts",
@@ -81120,7 +81419,7 @@
     {
       "ruta": "apps/sivra/lib/seo-landing.ts",
       "ambito": "apps/sivra",
-      "resumen": "apps/sivra/lib/seo-landing.ts Lectura/escritura de la landing estática housesevillana (repo house-sevillana-landing, fichero app/route.ts) vía GitHub Contents API. Compartido por seo-refresh y seo-revert.",
+      "resumen": "apps/sivra/lib/seo-landing.ts Lectura/escritura de la landing estática housesevillana (ahora en el propio monorepo, fichero app/route.ts) vía GitHub Contents API. Compartido por seo-refresh y seo-revert.",
       "exporta": [
         "githubToken",
         "fetchLanding",
@@ -81191,7 +81490,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "15a59cb8be66"
+      "hash": "a72e826c453d"
     },
     {
       "ruta": "apps/sivra/lib/smoobu.ts",
@@ -91285,7 +91584,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2436,
-    "funciones": 6604
+    "archivos": 2449,
+    "funciones": 6620
   }
 }
