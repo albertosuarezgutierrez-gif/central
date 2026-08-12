@@ -32,7 +32,7 @@
 ## Agentes programados
 | Skill | Cuándo usarla |
 |---|---|
-| **`facturas-correo`** | Revisar Gmail → clasificar facturas → archivar en Drive → conciliar con banca. A mano o por rutina diaria (08:00 CEST). |
+| **`facturas-correo`** (skill) / **`/facturas-correo`** (comando) | Revisar Gmail → clasificar facturas → archivar en Drive → conciliar con banca. A mano (`/facturas-correo`) o por rutina diaria (08:00 CEST). |
 | **`correo-triaje`** | Router de contexto del triaje de correo. **Corre como CRON de Vercel** (`apps/plataforma`, cada ~10 min), no como sesión Claude: clasifica lo nuevo del Gmail y actúa (ruido→archivar, contabilidad→buzón puente de `facturas-correo`, personal/huéspedes/leads→Telegram, phishing→marcar). Úsala para entender/extender el sistema: añadir categoría = `lib/correo/rutas.ts`; forzar remitente = fila en `correo_reglas`. Flag `TRIAJE_DRY_RUN` = modo sombra. |
 | **`pricing-agente`** | Correr el agente de precios de SIVRA (estudia mercado y tarifica por los raíles del Paso 4). A mano o por rutina semanal (lunes 06:00 CEST). |
 | **`mercado-booking`** | Medir el precio REAL por fecha y aforo con el conector de Booking y escribirlo en `market_rates` (`fuente='booking_mcp'`) — la única fuente de SIVRA que distingue temporada (el barrido por búsqueda web da precios de anuncio sin fecha). Rutina diaria 05:30 CEST — PENDIENTE de alta manual en claude.ai/code → Rutinas (el conector de Booking no se puede adjuntar por API); a mano si Alberto pide refrescar comparables. |
