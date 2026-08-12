@@ -32,6 +32,18 @@
 
 ---
 
+### 💸 (12/08/2026) El cotizador de IA de ialimp no ha generado NUNCA una propuesta (PR #1394)
+- 8 leads, **0 con `propuesta_url` o `propuesta_ia_at`**; el bucket `propuestas-leads` tiene **0 objetos**.
+  Tres fallos encadenados, todos mudos: (1) el disparo desde `/api/leads` iba sin `Bearer CRON_SECRET` →
+  401 del middleware, y `fetch` no rechaza ante un 401 así que el `.catch()` no veía nada; (2) la subida a
+  Storage usaba la anon key contra un bucket **privado**, sin mirar `r.ok`; (3) la URL guardada era la ruta
+  **pública** de ese bucket privado → rota igualmente. El lead quedaba `propuesta_enviada` con un enlace muerto.
+- Arreglado: auth por sesión (el `empresa_id` venía del **body**, sin comparar con la sesión = frontera
+  multi-tenant que dependía de que un uuid no se filtrase), Storage fuera (se sirve de `leads.propuesta_html`
+  por `GET /api/admin/leads/[id]/propuesta`) y los dos `UPDATE leads` scopeados por empresa.
+- **Corrige el aviso del PR #1392:** añadir `SUPABASE_SERVICE_ROLE_KEY` a ialimp **no** eleva privilegios de
+  RLS — esa clave solo se usaba para subir a Storage, nunca contra Postgres. Y tras este PR ni eso.
+
 ### 🕳️ (12/08/2026) Las cancelaciones NO EXISTEN en nuestra BD — el cuadro de mando es ciego a ellas
 - Smoobu dice **269 noches canceladas contra 241 reservadas** (may-nov 2026, 67 cancelaciones). Se cancela
   más de lo que se consume y **ningún panel nuestro lo puede ver**.

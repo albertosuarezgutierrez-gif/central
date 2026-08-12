@@ -3,10 +3,9 @@ import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { aiComplete } from '@/lib/ai-client'
 import { getTransporter, MAIL_FROM } from '@/lib/mailer'
+import { requireEmpresaId, apiError } from '@/lib/tenant'
 
-const SUPABASE_URL  = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const SUPABASE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const APP_URL       = process.env.NEXTAUTH_URL || 'https://app.ialimp.es'
+const APP_URL = process.env.NEXTAUTH_URL || 'https://app.ialimp.es'
 
 // ─── Generador de HTML de propuesta ───────────────────────────────────────
 
@@ -159,12 +158,29 @@ function generarHTMLPropuesta(params: {
 // ─── Endpoint principal ────────────────────────────────────────────────────
 
 // POST /api/admin/ia/agente-cotizador
-// Body: { lead_id, empresa_id }
+// Body: { lead_id } — y `empresa_id` SOLO en la llamada interna con Bearer CRON_SECRET.
+//
+// 🚨 El `empresa_id` venía del BODY y no se comparaba con la sesión (12/08/2026): quien
+// tuviera sesión en CUALQUIER empresa podía generar la propuesta de un lead ajeno, escribir
+// en su fila y dejarle una alerta, con solo conocer el par (lead_id, empresa_id). El uuid del
+// lead no es adivinable, así que no era explotable a ciegas — pero basta con que se filtre una
+// vez (una exportación, una captura, un ex-usuario que lo recuerde) para que siga valiendo para
+// siempre. La frontera multi-tenant no puede depender de que un identificador no se filtre.
+// Ahora manda la sesión. Se mantiene la vía servidor→servidor con Bearer CRON_SECRET (mismo
+// patrón que `escanear/process`), que es la que usa el alta pública de leads.
 export async function POST(req: NextRequest) {
   try {
-    const { lead_id, empresa_id } = await req.json()
-    if (!lead_id || !empresa_id) {
-      return NextResponse.json({ error: 'lead_id y empresa_id requeridos' }, { status: 400 })
+    const body = await req.json()
+    const lead_id = body?.lead_id
+    if (!lead_id) {
+      return NextResponse.json({ error: 'lead_id requerido' }, { status: 400 })
+    }
+
+    const secret = process.env.CRON_SECRET
+    const interna = !!secret && req.headers.get('authorization') === 'Bearer ' + secret
+    const empresa_id = interna ? body?.empresa_id : await requireEmpresaId()
+    if (!empresa_id) {
+      return NextResponse.json({ error: 'empresa_id requerido' }, { status: 400 })
     }
 
     // Obtener datos del lead y empresa en paralelo
@@ -242,21 +258,19 @@ No menciones competidores. No uses exclamaciones. Responde SOLO con el texto de 
       fecha
     })
 
-    // ── Guardar propuesta en Storage ──────────────────────────────────
-    const storagePath = `propuestas/${empresa_id}/${lead_id}.html`
-    const storageUrl  = SUPABASE_URL + '/storage/v1/object/propuestas-leads/' + storagePath
-
-    await fetch(storageUrl, {
-      method: 'PUT',
-      headers: {
-        'Authorization': 'Bearer ' + SUPABASE_KEY,
-        'Content-Type': 'text/html; charset=utf-8',
-        'x-upsert': 'true',
-      },
-      body: html,
-    }).catch(() => { /* storage no crítico */ })
-
-    const propuesta_url = SUPABASE_URL + '/storage/v1/object/public/propuestas-leads/' + storagePath
+    // ── La propuesta se sirve desde la BD, no desde Storage ───────────
+    // 🚨 Antes esto subía el HTML al bucket `propuestas-leads` y construía una URL
+    // `/object/PUBLIC/propuestas-leads/...`. Tres cosas fallaban a la vez, y ninguna se veía:
+    //   1) la subida iba con la anon key (`SERVICE_ROLE || ANON`) y el bucket es PRIVADO;
+    //   2) el `fetch(...).catch(() => {})` no detectaba nada — `fetch` NO rechaza ante un 401
+    //      ni un 400, así que la respuesta de error se descartaba sin mirar `r.ok`;
+    //   3) aunque hubiera subido, la URL era la ruta PÚBLICA de un bucket privado → 400.
+    // Y aun así el lead quedaba `estado='propuesta_enviada'` con un enlace «Ver propuesta» en
+    // el panel que no llevaba a ninguna parte. Comprobado en producción: el bucket tiene
+    // 0 objetos y las 8 filas de `leads` tienen `propuesta_url` a NULL — no ha funcionado nunca.
+    // El HTML ya se guarda en `leads.propuesta_html`, así que Storage sobraba: se sirve desde
+    // ahí por una ruta con sesión. De paso, esta ruta deja de necesitar la service_role.
+    const propuesta_url = `${APP_URL}/api/admin/leads/${lead_id}/propuesta`
 
     // ── Actualizar lead con propuesta generada ────────────────────────
     await prisma.$executeRaw(Prisma.sql`
@@ -265,7 +279,7 @@ No menciones competidores. No uses exclamaciones. Responde SOLO con el texto de 
         propuesta_url    = ${propuesta_url},
         propuesta_ia_at  = NOW(),
         estado           = CASE WHEN estado = 'nuevo' THEN 'propuesta_enviada' ELSE estado END
-      WHERE id = ${lead_id}::uuid
+      WHERE id = ${lead_id}::uuid AND empresa_id = ${empresa_id}::uuid
     `)
 
     // ── Crear alerta para coordinadora ───────────────────────────────
@@ -293,7 +307,8 @@ No menciones competidores. No uses exclamaciones. Responde SOLO con el texto de 
           text: `Estimado/a ${lead.nombre}, adjuntamos su propuesta personalizada de ${empresa.nombre}. Precio estimado: ${lead.precio_estimado || '?'}€/mes.`
         })
         await prisma.$executeRaw(Prisma.sql`
-          UPDATE leads SET propuesta_email_at = NOW() WHERE id = ${lead_id}::uuid
+          UPDATE leads SET propuesta_email_at = NOW()
+          WHERE id = ${lead_id}::uuid AND empresa_id = ${empresa_id}::uuid
         `)
         email_enviado = true
       } catch (_) { /* email no crítico */ }
@@ -309,6 +324,6 @@ No menciones competidores. No uses exclamaciones. Responde SOLO con el texto de 
 
   } catch (e: any) {
     console.error('[agente-cotizador] Error:', e)
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    return apiError(e)
   }
 }
