@@ -41,7 +41,7 @@
   en `precio_ref` 487,46 con cierre real 499,86 → **−2,48%, por encima del umbral: habría anulado esas
   tesis**. Y 487,46 es al céntimo el cierre del 05/08 (CVX igual, pero su desvío se quedó en −1,49% y
   no llegó a saltar: no se vio antes por suerte del mercado, no porque no estuviera).
-- Arreglo (**PR #1372**): `ETIQUETA_TOL` — si el ref se parece al cierre de la sesión ANTERIOR mucho más
+- Arreglo (**PR #1382**): `ETIQUETA_TOL` — si el ref se parece al cierre de la sesión ANTERIOR mucho más
   que al de la suya, es la etiqueta corrida, no un precio malo: no se juzga ni se anula, y se canta.
   Un precio envenenado no se parece a ninguno de los dos, así que sigue cayendo. 50/50 tests.
 - Skill `trading-analista`: sección nueva **«cuándo se corre y por qué importa la hora»** (repasos a mano,

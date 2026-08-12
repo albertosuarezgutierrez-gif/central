@@ -193,7 +193,7 @@ DE MUESTRA (walk-forward). Esa decisión es de Alberto y tendrá su propio spec.
        envenenada mueve el torneo);
      · **fuente rota ≠ corpus envenenado** — si discrepa en más de la mitad de los símbolos (con ≥4
        símbolos con dato; con menos la fracción no significa nada) no se anula NADA y se avisa.
-     · **etiqueta corrida ≠ precio malo** (`ETIQUETA_TOL`, PR #1372) — una pasada ejecutada ANTES del
+     · **etiqueta corrida ≠ precio malo** (`ETIQUETA_TOL`, PR #1382) — una pasada ejecutada ANTES del
        cierre guarda bajo la fecha de hoy el cierre de AYER. La firma: el ref se parece al cierre de la
        sesión anterior mucho más que al de la suya. Se aparta como no juzgable y NO se anula. Caso real
        verificado contra IBKR: el repaso manual del 06/08/2026 (09:34 UTC) dejó MSFT en 487,46 con cierre

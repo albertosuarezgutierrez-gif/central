@@ -15,7 +15,7 @@ la sesión ANTERIOR** — un dato bueno con la etiqueta corrida un día.
 IBKR): MSFT quedó con `precio_ref` **487,46** cuando el cierre real del 06/08 fue **499,86** — 487,46 es,
 al céntimo, el cierre del 05/08. CVX igual (186,41 = cierre del 05/08). El contraste diferido lo leía
 como un desacuerdo del −2,48% y **habría anulado esas tesis**; hoy lo reconoce y las deja en paz
-(`ETIQUETA_TOL`, PR #1372), pero la tesis sigue midiendo contra el precio de otra sesión.
+(`ETIQUETA_TOL`, PR #1382), pero la tesis sigue midiendo contra el precio de otra sesión.
 
 **Regla:** si tienes que repasar a mano, hazlo **después del cierre americano**. Si por lo que sea corres
 antes, dilo en el resumen de Telegram — esa pasada mide contra el cierre de ayer.
