@@ -1,8 +1,9 @@
 {
-  "generadoEn": "2026-08-12T10:02:03Z",
+  "generadoEn": "2026-08-12T12:24:19Z",
   "verticales": [
     "almacen",
     "alquiler",
+    "housesevillana",
     "ia-rest",
     "ialimp",
     "mariscos",
@@ -331,6 +332,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "usado",
         "evidencias": 3
@@ -366,6 +371,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
         "estado": "no",
         "evidencias": 0
       },
@@ -407,6 +416,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "no",
         "evidencias": 0
@@ -442,6 +455,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
         "estado": "no",
         "evidencias": 0
       },
@@ -483,6 +500,10 @@
         "estado": "usado",
         "evidencias": 2
       },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "no",
         "evidencias": 0
@@ -518,6 +539,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
         "estado": "no",
         "evidencias": 0
       },
@@ -559,6 +584,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "usado",
         "evidencias": 4
@@ -594,6 +623,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
         "estado": "no",
         "evidencias": 0
       },
@@ -635,6 +668,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "no",
         "evidencias": 0
@@ -670,6 +707,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
         "estado": "no",
         "evidencias": 0
       },
@@ -711,6 +752,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "no",
         "evidencias": 0
@@ -749,6 +794,10 @@
         "estado": "usado",
         "evidencias": 3
       },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "no",
         "evidencias": 0
@@ -784,6 +833,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
         "estado": "no",
         "evidencias": 0
       },
@@ -825,6 +878,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "no",
         "evidencias": 0
@@ -860,6 +917,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
         "estado": "no",
         "evidencias": 0
       },
@@ -901,6 +962,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "usado",
         "evidencias": 5
@@ -936,6 +1001,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
         "estado": "no",
         "evidencias": 0
       },
@@ -977,6 +1046,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "no",
         "evidencias": 0
@@ -1012,6 +1085,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1053,6 +1130,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "usado",
         "evidencias": 4
@@ -1088,6 +1169,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1129,6 +1214,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "no",
         "evidencias": 0
@@ -1164,6 +1253,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1205,6 +1298,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "no",
         "evidencias": 0
@@ -1240,6 +1337,10 @@
         "evidencias": 5
       },
       "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1281,6 +1382,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "no",
         "evidencias": 0
@@ -1316,6 +1421,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1357,6 +1466,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "no",
         "evidencias": 0
@@ -1392,6 +1505,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1433,6 +1550,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "usado",
         "evidencias": 3
@@ -1468,6 +1589,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1509,6 +1634,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "no",
         "evidencias": 0
@@ -1544,6 +1673,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1585,6 +1718,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "no",
         "evidencias": 0
@@ -1620,6 +1757,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1661,6 +1802,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "no",
         "evidencias": 0
@@ -1696,6 +1841,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1739,6 +1888,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "housesevillana": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": true,
         "evidencias": 18
@@ -1774,6 +1927,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "housesevillana": {
         "presente": false,
         "evidencias": 0
       },
@@ -1815,6 +1972,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "housesevillana": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": true,
         "evidencias": 5
@@ -1850,6 +2011,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "housesevillana": {
         "presente": false,
         "evidencias": 0
       },
@@ -1891,6 +2056,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "housesevillana": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": true,
         "evidencias": 28
@@ -1926,6 +2095,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "housesevillana": {
         "presente": false,
         "evidencias": 0
       },
@@ -1967,6 +2140,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "housesevillana": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": false,
         "evidencias": 0
@@ -2002,6 +2179,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "housesevillana": {
         "presente": false,
         "evidencias": 0
       },
@@ -2043,6 +2224,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "housesevillana": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": false,
         "evidencias": 0
@@ -2078,6 +2263,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "housesevillana": {
         "presente": false,
         "evidencias": 0
       },
@@ -2119,6 +2308,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "housesevillana": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": true,
         "evidencias": 6
@@ -2154,6 +2347,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "housesevillana": {
         "presente": false,
         "evidencias": 0
       },
@@ -2195,6 +2392,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "housesevillana": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": true,
         "evidencias": 2
@@ -2233,6 +2434,10 @@
         "presente": true,
         "evidencias": 2
       },
+      "housesevillana": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": true,
         "evidencias": 38
@@ -2268,6 +2473,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "housesevillana": {
         "presente": false,
         "evidencias": 0
       },
@@ -2309,6 +2518,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "housesevillana": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": true,
         "evidencias": 10
@@ -2344,6 +2557,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "housesevillana": {
         "presente": false,
         "evidencias": 0
       },
@@ -2385,6 +2602,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "housesevillana": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": true,
         "evidencias": 15
@@ -2420,6 +2641,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "housesevillana": {
         "presente": false,
         "evidencias": 0
       },
@@ -2461,6 +2686,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "housesevillana": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": false,
         "evidencias": 0
@@ -2496,6 +2725,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "housesevillana": {
         "presente": false,
         "evidencias": 0
       },
@@ -2537,6 +2770,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "housesevillana": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": true,
         "evidencias": 166
@@ -2572,6 +2809,10 @@
         "evidencias": 0
       },
       "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "housesevillana": {
         "presente": false,
         "evidencias": 0
       },
@@ -2690,6 +2931,7 @@
       "/api/auth/logout",
       "/api/materiales"
     ],
+    "housesevillana": [],
     "ia-rest": [
       "/api/admin/cobros",
       "/api/admin/crecimiento",
@@ -3860,6 +4102,7 @@
       "alquiler_lineas",
       "alquiler_materiales"
     ],
+    "housesevillana": [],
     "ia-rest": [
       "arqueos_caja_empleado",
       "avisos_operador",
@@ -4271,6 +4514,14 @@
   ],
   "novedades": [
     {
+      "titulo": "La buena noticia: la puerta ya está abierta.",
+      "fecha": ""
+    },
+    {
+      "titulo": "El grave: una `service_role` del proyecto de PRODUCCIÓN `wswbehlcuxqxyinousql`",
+      "fecha": ""
+    },
+    {
       "titulo": "«DIRECTO = 0 €» era la etiqueta, no el negocio:",
       "fecha": ""
     },
@@ -4321,20 +4572,13 @@
     {
       "titulo": "Prueba reina:",
       "fecha": ""
-    },
-    {
-      "titulo": "Vigilancia diaria 09:00 UTC",
-      "fecha": ""
-    },
-    {
-      "titulo": "Decisión de Alberto (2 palancas):",
-      "fecha": ""
     }
   ],
   "saludRepo": {
     "packagesSinDescripcion": [],
     "appsSinClaudeMd": [
-      "almacen"
+      "almacen",
+      "housesevillana"
     ],
     "appsSinVercelJson": []
   },
@@ -4350,6 +4594,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "housesevillana",
           "ialimp",
           "mariscos",
           "rrhh",
@@ -4366,6 +4611,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "housesevillana",
           "ialimp",
           "mariscos",
           "rrhh",
@@ -4383,6 +4629,7 @@
         ],
         "falta": [
           "alquiler",
+          "housesevillana",
           "ialimp",
           "mariscos",
           "rrhh",
@@ -4398,6 +4645,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "housesevillana",
           "ialimp",
           "mariscos",
           "rrhh",
@@ -4414,6 +4662,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "housesevillana",
           "ialimp",
           "mariscos",
           "rrhh",
@@ -4430,6 +4679,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "housesevillana",
           "ialimp",
           "mariscos",
           "rrhh",
@@ -4447,6 +4697,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "housesevillana",
           "ia-rest",
           "mariscos",
           "rrhh",
@@ -4464,6 +4715,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "housesevillana",
           "mariscos",
           "rrhh",
           "transporte"
@@ -4478,6 +4730,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "housesevillana",
           "ia-rest",
           "ialimp",
           "mariscos",
@@ -4494,6 +4747,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "housesevillana",
           "ia-rest",
           "ialimp",
           "mariscos",
@@ -4511,6 +4765,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "housesevillana",
           "mariscos",
           "rrhh",
           "sivra",
@@ -4527,6 +4782,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "housesevillana",
           "ialimp",
           "mariscos",
           "rrhh",
@@ -4543,6 +4799,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "housesevillana",
           "mariscos",
           "rrhh",
           "sivra",
@@ -4560,6 +4817,7 @@
           "sivra"
         ],
         "falta": [
+          "housesevillana",
           "mariscos",
           "rrhh",
           "transporte"
@@ -4576,6 +4834,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "housesevillana",
           "mariscos",
           "rrhh",
           "transporte"
@@ -4591,6 +4850,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "housesevillana",
           "mariscos",
           "rrhh",
           "sivra",
@@ -4607,6 +4867,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "housesevillana",
           "mariscos",
           "rrhh",
           "sivra",
@@ -4622,6 +4883,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "housesevillana",
           "ialimp",
           "mariscos",
           "rrhh",
@@ -4639,6 +4901,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "housesevillana",
           "mariscos",
           "rrhh",
           "sivra",
@@ -4654,6 +4917,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "housesevillana",
           "ia-rest",
           "mariscos",
           "rrhh",
@@ -4672,6 +4936,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "housesevillana",
           "mariscos",
           "sivra",
           "transporte"
@@ -4689,6 +4954,7 @@
         "falta": [
           "almacen",
           "alquiler",
+          "housesevillana",
           "mariscos",
           "transporte"
         ]
@@ -4712,7 +4978,7 @@
     ]
   },
   "resumen": {
-    "verticales": 9,
+    "verticales": 10,
     "packages": 37,
     "capacidades": 23,
     "skills": 32,

@@ -32,6 +32,70 @@
 
 ---
 
+### 🕳️ (12/08/2026) Las cancelaciones NO EXISTEN en nuestra BD — el cuadro de mando es ciego a ellas
+- Smoobu dice **269 noches canceladas contra 241 reservadas** (may-nov 2026, 67 cancelaciones). Se cancela
+  más de lo que se consume y **ningún panel nuestro lo puede ver**.
+- Comprobado columna a columna: `incomes` (13 col.) **no tiene estado ni flag de cancelación** — solo
+  guarda el ingreso de lo que sí entró. `cleaning_sessions` tampoco. Es decir: no es que el dato esté a
+  NULL, es que **el concepto no existe en el esquema**. Ninguna consulta puede responder «¿cuánto se
+  cancela?» porque no hay dónde mirar.
+- **La buena noticia: la puerta ya está abierta.** `pms_connections` tiene una conexión **Smoobu API viva**
+  («Alberto Suarez — Smoobu», `pms_tipo='smoobu_api'`, `activa=true`, `sync_error` NULL, último sync
+  12/08 12:11) con los CUATRO `apartment_id`: 352007 House Sevillana · 352928 Duplex Center · 352943
+  Luxury Busto · 352418 Busto Reform. Hoy solo se usa para programar limpiezas.
+- Siguiente paso natural: traer las reservas CON su estado por esa misma conexión y darles tabla propia.
+  Sin eso, cualquier medida sobre el canal directo mide solo la mitad del embudo.
+- ⚠️ Al mirar esto salió otra cosa: **`trading_cohetes_rebalanceo` y `trading_cohetes_track` tienen RLS
+  DESACTIVADO** — expuestas a la clave `anon`, que es pública por diseño. Ver aviso al final.
+
+### 🔗 (12/08/2026) Los SEIS botones de reserva de la landing iban a un dominio INEXISTENTE (PR #1390)
+- `reservas.house-sevillana.com` **no tiene registro DNS**, ni su padre `house-sevillana.com`. Comprobado
+  por dos vías (resolución del sistema y fetch → `ENOTFOUND`, distinto del «bloqueado por proxy» que da
+  un dominio vivo). Ahí apuntaban hero, enlaces internos, `/barrio`, `/que-ver` y los dos de `/parking`.
+- El botón principal de una web cuyo único objetivo es la reserva directa daba error de DNS. **Falla en el
+  PRIMER paso, no en el último**, y explica el dato de GA4 mejor que ninguna hipótesis de diseño: 109
+  sesiones en 12 meses y **1 clic saliente en todo el año**.
+- Ahora la URL vive en `apps/housesevillana/app/reservas.ts`. Lo que arregla el fondo no es el valor: es que
+  haya **un solo sitio donde equivocarse** — copiado seis veces no se revisa nunca, porque mirar uno no dice
+  nada de los otros cinco. `app/enlaces.test.ts` lo blinda (verificado que muerde).
+- Destino nuevo: `booking.smoobu.com/yourothercity?apartmentId=352007` — **enlace profundo**, entra directo
+  a House Sevillana y sigue bloqueada en ella al cambiar fechas. Sin el id abre el portal multi-propiedad
+  con las 4 casas. Validado con prueba real de huésped (solo tarjeta, Stripe live, sin sandbox).
+- Por qué `reservas.house-sevillana.com` nunca existió: el campo «External link» de Smoobu **no aloja
+  nada**, solo redirige enlaces a una URL propia YA montada. Nadie publicó la página con el iframe — así
+  que aquello no fue un enlace que se rompiera, fue **un enlace que nunca llegó a funcionar**.
+- ✅ Arreglado antes por Alberto en Smoobu: el método de pago por defecto era **PayPal en sandbox** (no
+  cobraba). Ahora Stripe único y preseleccionado, verificado hasta la pantalla de pago.
+
+### 🅿️ (12/08/2026) Landing housesevillana: `/parking` en 3 idiomas + auditoría de Chrome (PR #1390)
+- Nueva `/parking` (es/en/it) — la búsqueda de más intención y menos competencia; la URL del anuncio de
+  Booking ya es `house-sevillana-parking`. Dato clave y contraintuitivo: **la ZBE de Sevilla es SOLO la Isla
+  de la Cartuja**; el casco histórico tiene otro régimen. Lo no comprobado (precio de la plaza, medidas,
+  matrícula) se remite a Alberto en vez de rellenarse a ojo, y queda anotado en `app/parking/contenido.ts`.
+- Dos fallos de i18n corregidos: `description`/`og:description` de la portada **nunca se tradujeron**
+  (`/en` servía castellano a Google con el 72% del tráfico en inglés), y el `<title>` era clave de
+  diccionario — el agente SEO reescribe esa frase cada lunes, así que el primer lunes la portada inglesa
+  habría pasado a anunciarse en español sin error ni aviso. Ahora van por `Variante.meta`, por etiqueta.
+- 🔴 **PENDIENTE URGENTE DE ALBERTO — el motor de reservas no cobra por defecto:** en Smoobu, PayPal está en
+  **sandbox** Y es el **método por defecto**. Cambiar el default a Stripe (live, sí cobra) y desactivar PayPal.
+- Auditoría de Chrome: Search Console verificado y sitemap enviado (**3 URLs → confirma que lo desplegado
+  sigue siendo el repo viejo**; reenviar tras crear el proyecto Vercel). Smoobu: quedarse en Pre-paid, Flex
+  sale **el doble** con el 0,9%. GBP: 1 reseña vs 50 de Booking (link `g.page/r/CX403tjxZhLaEBM/review`),
+  web en `http://`, sin logo ni horario, posible **ficha duplicada**.
+- ⚠️ Dato sin explicar y más gordo que la landing: **269 noches canceladas contra 241 reservadas** (may-nov).
+
+### 🚨 (12/08/2026) CREDENCIAL EXPUESTA: `service_role` de Supabase en repo público — ROTAR
+- Al traer `house-sevillana-landing` al monorepo, **gitleaks tumbó el PR**: 12 hallazgos en sus 64 commits.
+- **El grave: una `service_role` del proyecto de PRODUCCIÓN `wswbehlcuxqxyinousql`**, commit `7c53e19`
+  del **06/05/2026**, emitida el 15/04/2026 y **vigente hasta 2036**, en un repo **PÚBLICO** (`central`
+  también lo es). Se salta el RLS → lectura/escritura total sobre la BD compartida de TODAS las verticales.
+- Los otros 11 son claves `anon` (públicas por diseño, sin riesgo). En la historia hay versiones con el
+  `ref` alterado a mano: alguien lo vio e intentó taparlo editando — **editar no borra la historia de git**.
+- ⚠️ **PENDIENTE DE ALBERTO: rotar en Supabase.** Orden obligatorio: inventariar dónde se usa
+  (env vars de los 8 proyectos Vercel + secrets de Actions) → rotar → actualizar → redesplegar. Rotar antes
+  del inventario tumba producción. Revisar además logs de Supabase por si hubo uso ajeno en estos 3 meses.
+- La landing se importó **SIN historia** (PR #1390) para no replicarla; silenciar gitleaks se descartó.
+
 ### 🗄️ (12/08/2026) Supabase ia-rest: 290 MB → 60 MB (eran logs, no datos)
 - Alberto pregunta la capacidad usada. Compartida (`wswbeh…`) 137 MB, sana. Silo ia-rest (`efncqy…`) **290 MB**,
   de los que 252 MB eran infraestructura: `net._http_response` 123 MB con **368 filas vivas** (bloat puro,
@@ -42,7 +106,7 @@
   77 días; `limpiar-mesas-fantasma` solo cerraba comandas SIN items → nunca las tocaba.
 - Hecho: VACUUM FULL de las 3 tablas + purga (7d cron, 30d alertas) → **60 MB**; migración
   `20260812_retencion_logs_y_mesas_fantasma.sql` con crons de retención diarios y corte de comandas >24 h.
-  Verificado: 0 comandas vivas, 0 mesas ocupadas. **Ojo:** el silo NO tiene alerta de tamaño de disco.
+  Verificado: 0 comandas vivas, 0 mesas ocupadas. **Ojo:** el silo NO tiene alerta de tamaño de disco. PR #1391.
 
 ### 🏠 (12/08/2026) CORRECCIÓN: la web de housesevillana SÍ existe — el fallo era la atribución
 - Alberto desmonta el plan del PR #1387: «punto 4, para eso hicimos la web de housesevillana.es». Tenía razón.
