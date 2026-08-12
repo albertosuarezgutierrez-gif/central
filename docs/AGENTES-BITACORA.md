@@ -15,6 +15,14 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-12 · mercado-booking** · hizo: pasada de 12 ventanas (plan `?max=12`, ronda 3 —
+  profundidad de bucket, nunca medidas antes) entre nov-2026 y feb-2027, las 4 propiedades de
+  SIVRA. 120 comparables reales escritos en `market_rates` (`fuente:booking_mcp`), 0 ventanas sin
+  respuesta, 0 sin precio utilizable. `price_night` = `price.book/noches` (2 noches en las 12
+  ventanas) para no repetir el bug de unidad del 06/08. Latido `ok:true`. dudas: el plan trae
+  120 ventanas candidatas y el tope de 12/pasada solo cubre ~10%/día — a este ritmo el plan
+  completo tarda ~10 pasadas, no las 3-4 días que asume la skill; fallos: —; PRs/commits: —
+  (solo escritura HTTP a `market_rates`, sin cambios de código).
 - **2026-08-11 · facturas-correo (FK real, orden de Alberto)** · hizo: aplicada la migración
   `2026-08-11_facturas_drive_movimiento_fk.sql` — `facturas_drive.movimiento_id` (FK a
   `movimientos_bancarios`) + `sin_cargo_motivo` + vista `v_facturas_sin_cargo`, con TRES estados para
