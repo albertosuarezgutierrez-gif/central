@@ -15,6 +15,18 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-12 · facturas-correo (trigger diario)** · hizo: Paso 0 salud OK (Vía B sana,
+  `dias_caido=0`, última copia 11/08 IONOS; `agente_salud` ya en verde, sin tocar); backlog
+  `PDF-pendiente`/`Revisar` a 0. 0 candidatos nuevos en Gmail (`newer_than:2d` vacío) y 0
+  subidas manuales nuevas en `_subir_aqui`/raíz 2026. Paso 4.0 (`v_facturas_sin_cargo`):
+  solo 1 fila `sin_revisar` (Endesa-Dúplex marzo, 69,21€) — resultó ya conciliada de una
+  pasada anterior (cargo −78,91€ 23/03, `factura_ref` apuntaba al mismo PDF), solo faltaba
+  el FK; backfilleado `movimiento_id`. El resto de la cola sigue en `revisada_sin_cargo`
+  (Pepephone ene-jun, Giraldillo mayo, CREATE junio duplicada) sin cambios, esperando a
+  Alberto. dudas: —; fallos: `search_threads label:Facturas/Extraccion-fallida` (Label_16,
+  1 mensaje según `list_labels`) devuelve vacío pese a probar con/sin `includeTrash` — posible
+  lag de índice del conector Gmail, revisar a mano si persiste; PRs/commits: — (solo
+  Gmail/Drive/Supabase vía MCP + esta entrada de bitácora).
 - **2026-08-12 · mercado-booking** · hizo: pasada de 12 ventanas (plan `?max=12`, ronda 3 —
   profundidad de bucket, nunca medidas antes) entre nov-2026 y feb-2027, las 4 propiedades de
   SIVRA. 120 comparables reales escritos en `market_rates` (`fuente:booking_mcp`), 0 ventanas sin
