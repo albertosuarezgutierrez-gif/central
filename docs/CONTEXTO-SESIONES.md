@@ -231,8 +231,12 @@
   homogéneos `ChipUI` con tokens --positive/--warning/--info, evidencia €/m² siempre visible, resto plegado
   en «Más datos»); cabecera con contador real + explicación en `<details>`; 🌊 en caja --info-bg colapsada
   a 5 con «Ver todas (N)»; filtros en fila scrollable (320px OK). Solo presentación, lógica intacta.
-- **Repaso programado 12/08 07:00 UTC** (send_later `trig_01AzUvq8vW2K8Aan4T7HG7c6`): verificar corpus
-  Matalascañas creciendo, lente sin tope, avisos 🌊 de mercado y subastas, pestaña 🔥 sin duplicados.
+- **Repaso 12/08 EJECUTADO — todo sano:** corpus fresco (844, último hoy 05:50) y avisos vivos (93
+  chollo_avisado_at en 7d, último hoy 06:21; Islantilla/Ribadesella avisados hoy); crons subastas al día
+  (ingesta 06:00 · enriquecer 06:16 · radar 06:30); 0 errores runtime en rutas subastas (48h). Matalascañas
+  sigue en 2 comparables PERO la alerta de Idealista SÍ llega (digest diario: «Viviendas en Matalascañas,
+  Almonte — Nada nuevo por aquí hoy») — no hay chalets nuevos publicados, no es fallo. 0 subastas vigentes
+  en zona 🌊 ahora mismo (el aviso forzado no ha tenido con qué dispararse; camino fijado por tests).
 - Ojo: la lente solo ve las alertas guardadas — para vigilar más norte, crear alertas de Idealista en
   esas zonas. Galicia/Euskadi pendientes (patrón Cádiz).
 
