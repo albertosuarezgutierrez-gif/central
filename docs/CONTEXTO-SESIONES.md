@@ -32,6 +32,21 @@
 
 ---
 
+### 🔗 (12/08/2026) Los SEIS botones de reserva de la landing iban a un dominio INEXISTENTE (PR #1390)
+- `reservas.house-sevillana.com` **no tiene registro DNS**, ni su padre `house-sevillana.com`. Comprobado
+  por dos vías (resolución del sistema y fetch → `ENOTFOUND`, distinto del «bloqueado por proxy» que da
+  un dominio vivo). Ahí apuntaban hero, enlaces internos, `/barrio`, `/que-ver` y los dos de `/parking`.
+- El botón principal de una web cuyo único objetivo es la reserva directa daba error de DNS. **Falla en el
+  PRIMER paso, no en el último**, y explica el dato de GA4 mejor que ninguna hipótesis de diseño: 109
+  sesiones en 12 meses y **1 clic saliente en todo el año**.
+- Ahora la URL vive en `apps/housesevillana/app/reservas.ts`. Lo que arregla el fondo no es el valor: es que
+  haya **un solo sitio donde equivocarse** — copiado seis veces no se revisa nunca, porque mirar uno no dice
+  nada de los otros cinco. `app/enlaces.test.ts` lo blinda (verificado que muerde).
+- Destino nuevo `booking.smoobu.com/yourothercity`, validado con prueba real de huésped (solo tarjeta,
+  Stripe live, sin sandbox). ⚠️ **Es multi-propiedad: falta el enlace PROFUNDO a House Sevillana.**
+- ✅ Arreglado antes por Alberto en Smoobu: el método de pago por defecto era **PayPal en sandbox** (no
+  cobraba). Ahora Stripe único y preseleccionado, verificado hasta la pantalla de pago.
+
 ### 🅿️ (12/08/2026) Landing housesevillana: `/parking` en 3 idiomas + auditoría de Chrome (PR #1390)
 - Nueva `/parking` (es/en/it) — la búsqueda de más intención y menos competencia; la URL del anuncio de
   Booking ya es `house-sevillana-parking`. Dato clave y contraintuitivo: **la ZBE de Sevilla es SOLO la Isla
