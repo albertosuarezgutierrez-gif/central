@@ -21,6 +21,14 @@
   GPS en vivo (`module-geo`), ingesta hardware (OsmAnd/Traccar/genérico). Ver `apps/transporte/CLAUDE.md`.
 - **`apps/alquiler`** — Alquiler de materiales/menaje (interno al grupo + a terceros). Compone
   `@central/module-alquiler`. BD compartida (rol `prisma_alquiler`). Desplegada y probada. Ver `apps/alquiler/CLAUDE.md`.
+- **`apps/housesevillana`** — **landing pública** de House Sevillana (`housesevillana.es`; 6 dorm/12 personas,
+  parking, centro de Sevilla). Next.js mínimo servido por rutas `edge` (`app/route.ts` devuelve el HTML entero).
+  **Unificada en el monorepo el 12/08/2026** desde el repo suelto `house-sevillana-landing` — vivía fuera y por eso
+  era invisible al leer `apps/sivra`, lo que llevó a afirmar por error que «no había web» (PR #1387→#1388). Se
+  importó **SIN su historia git a propósito**: esa historia contenía una `service_role` de Supabase (ver
+  `docs/CONTEXTO-SESIONES.md`, 12/08/2026). La reescribe sola el agente SEO de `apps/sivra` (`/api/seo-refresh`,
+  lunes) por la GitHub Contents API — ver `apps/sivra/lib/seo-landing.ts`. Es **el canal directo**: motor de
+  reservas, WhatsApp de grupos y teléfono.
 - **`apps/almacen`** — gestión de almacén de eventos/catering para el cliente **Joaquín Jaén** (Fase 1: maestro
   por familias/materiales; orquestación de evento completa en curso). Compone `@central/module-materiales`
   (dep `workspace:*`, no `file:`). BD compartida (rol propio pendiente de confirmar). Desplegada 15/07/2026
