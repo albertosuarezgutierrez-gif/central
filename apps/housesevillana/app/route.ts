@@ -13,10 +13,12 @@ export const HTML = `<!DOCTYPE html>
 <link rel="canonical" href="https://www.housesevillana.es/"/>
 <link rel="alternate" hreflang="es" href="https://www.housesevillana.es/"/>
 <link rel="alternate" hreflang="en" href="https://www.housesevillana.es/en"/>
+<link rel="alternate" hreflang="it" href="https://www.housesevillana.es/it"/>
 <link rel="alternate" hreflang="x-default" href="https://www.housesevillana.es/"/>
 
 <!-- Open Graph -->
 <meta property="og:type" content="website"/>
+<meta property="og:locale" content="es_ES"/>
 <meta property="og:url" content="https://www.housesevillana.es/"/>
 <meta property="og:title" content="Casa vacacional en Sevilla centro con parking | House Sevillana"/>
 <meta property="og:description" content="Casa vacacional en Sevilla centro con parking privado y patio andaluz para 12 personas. Reserva directa sin comisiones."/>
