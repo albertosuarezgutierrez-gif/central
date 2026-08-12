@@ -13,6 +13,19 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-08-12** · `docs/CONTEXTO-SESIONES.md` · auditoría ligera diaria (rango desde la profunda del
+  09/08, 32+ commits, casi todos autodocumentados PR a PR): podado el bloque «Estado vivo» — Jaime
+  Salas (278,30€) ya conciliado (#1372/#1376) fuera de pendientes; PriceLabs actualizado (diferencia
+  = solo FX, confirmado por Alberto 11/08; junio conciliado); trading con los hallazgos de la
+  auditoría del laboratorio 11/08 (🔴 walk-forward ya arreglado #1377, 🟡 pendientes, contraste
+  diferido en PR #1370 draft sin mergear); subastas con la lente 🌊/Matalascañas y el rediseño de
+  Oportunidades (#1358); facturas con el estado FK real (#1376, 3 estados) y los casos nuevos
+  (Pepephone, Giraldillo, Endesa Dúplex, duplicado CREATE). Heartbeat de crons/agentes (10/10 latidos
+  + 12/12 huellas de dominio) y backlog de PRs de rutina + salud del automerge (última ejecución <1h,
+  éxito): todo verde, sin hallazgos de carril 2. `docs/SKILLS.md` (comando `/facturas-correo` sin
+  listar) va en PR aparte: toca el guardarraíl de `.claude/**`/`docs/SKILLS.md` que el auto-merge
+  excluye a propósito · commit de esta auditoría
+
 - **2026-08-09** · `docs/CONTEXTO-SESIONES.md` · 2 entradas de memoria añadidas: PR #1327 (Subastas 3ª
   tanda) y PR #1296 (subastas: cursor incremental por UID) se habían mergeado sin anotar. Resto del
   rango desde la auditoría de esta mañana (#1303) ya autodocumentado PR a PR. Heartbeat de
