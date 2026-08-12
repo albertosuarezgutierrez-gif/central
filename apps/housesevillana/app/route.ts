@@ -318,7 +318,7 @@ fbq('init','12124662686780882173');fbq('track','PageView');
         <span class="hero-pill">&#128101; Hasta 12 personas</span>
       </div>
       <div class="ctas">
-        <a href="#reserva" class="btn-p">Consultar disponibilidad</a>
+        <a href="https://reservas.house-sevillana.com" class="btn-p" target="_blank" rel="noopener">Consultar disponibilidad</a>
         <a href="#caracteristicas" class="btn-s">Ver la casa</a>
       </div>
     </div>
