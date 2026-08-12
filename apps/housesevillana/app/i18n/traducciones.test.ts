@@ -19,6 +19,11 @@ const IDIOMAS = [
   { codigo: 'it', ogLocale: 'it_IT' },
 ] as const
 
+const META = {
+  en: { title: 'EN title', description: 'EN description', ogDescription: 'EN og' },
+  it: { title: 'IT title', description: 'IT description', ogDescription: 'IT og' },
+} as Record<string, { title: string; description: string; ogDescription: string }>
+
 const PAGINAS = [
   {
     nombre: 'portada',
@@ -121,6 +126,38 @@ describe('i18n — cada idioma se deriva del español, sin copiar el fichero', (
     // mandar al huésped a un 404 desde el propio menú.
     const rutas = PAGINAS.map((p) => p.ruta || '/')
     for (const r of RUTAS_LOCALIZADAS) assert.ok(rutas.includes(r), `${r} se prefija pero no hay página`)
+  })
+
+  describe('`meta` sobrevive a la reescritura semanal del agente SEO', () => {
+    // El agente de sivra (`lib/seo-landing.ts`) reescribe title/description/og de
+    // `app/route.ts` cada lunes. Si esas frases fueran claves de diccionario, la primera
+    // pasada dejaría la portada inglesa con el título en castellano y nadie se enteraría
+    // hasta ver el resultado en Google. Esto simula esa pasada.
+    const comoLoDejaElAgente = PORTADA
+      .replace(/<title>[^<]*<\/title>/, '<title>Titular nuevo que ha elegido el agente</title>')
+      .replace(/(<meta name="description" content=")[^"]*"/, '$1Descripción nueva del agente"')
+      .replace(/(<meta property="og:title" content=")[^"]*"/, '$1Titular nuevo que ha elegido el agente"')
+      .replace(/(<meta property="og:description" content=")[^"]*"/, '$1Og nuevo del agente"')
+
+    for (const idioma of IDIOMAS) {
+      test(`la portada ${idioma.codigo} mantiene sus metadatos`, () => {
+        const meta = META[idioma.codigo]
+        const out = localizar(comoLoDejaElAgente, {
+          ...idioma,
+          diccionario: PAGINAS[0].dicc[idioma.codigo],
+          meta,
+        })
+        assert.ok(out.includes(`<title>${meta.title}</title>`), 'title de la variante')
+        assert.ok(out.includes(`name="description" content="${meta.description}"`), 'description')
+        assert.ok(out.includes(`property="og:title" content="${meta.title}"`), 'og:title')
+        assert.ok(
+          out.includes(`property="og:description" content="${meta.ogDescription}"`),
+          'og:description',
+        )
+        for (const castellano of ['Titular nuevo que ha elegido el agente', 'Descripción nueva del agente', 'Og nuevo del agente'])
+          assert.ok(!out.includes(castellano), `se ha colado el español: ${castellano}`)
+      })
+    }
   })
 
   test('el sitemap publica cada página en sus tres idiomas', () => {

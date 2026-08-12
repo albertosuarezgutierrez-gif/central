@@ -22,8 +22,9 @@
 
 export const TRADUCCIONES: Record<string, string> = {
   // ── Head, navegación y hero ──────────────────────────────────────────────────
-  'Casa vacacional en Sevilla centro con parking | House Sevillana':
-    'Holiday home in central Seville with parking | House Sevillana',
+  // El <title> y las descripciones NO están aquí: los escribe `META` en `route.ts` por
+  // etiqueta, porque el agente SEO reescribe esas frases en el español cada lunes y una
+  // clave de diccionario dejaría de casar en silencio. Ver `../i18n/motor`.
   'La casa': 'The house',
   'Fotos': 'Photos',
   'Ubicaci&oacute;n': 'Location',

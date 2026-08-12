@@ -21,8 +21,9 @@
 // quede troceada por una sustitución corta que sea subcadena suya.
 
 export const TRADUCCIONES: Record<string, string> = {
-  'Casa vacacional en Sevilla centro con parking | House Sevillana':
-    'Casa vacanze nel centro di Siviglia con parcheggio | House Sevillana',
+  // El <title> y las descripciones NO están aquí: los escribe `META` en `route.ts` por
+  // etiqueta, porque el agente SEO reescribe esas frases en el español cada lunes y una
+  // clave de diccionario dejaría de casar en silencio. Ver `../i18n/motor`.
   'La casa':
     'La casa',
   'Fotos':

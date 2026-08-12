@@ -21,6 +21,21 @@ export type Variante = {
    * y la de la variante `…/${codigo}${ruta}`.
    */
   ruta?: string
+  /**
+   * Título y descripciones de la variante, escritos por ETIQUETA y no por diccionario.
+   *
+   * Van aparte por una razón concreta: el agente SEO de sivra reescribe `<title>`,
+   * `description` y los `og:` de `app/route.ts` cada lunes (`lib/seo-landing.ts`). Si esas
+   * frases fueran claves del diccionario, el primer lunes dejarían de casar y la página
+   * inglesa serviría su título y su descripción EN CASTELLANO — en el resultado de Google
+   * y en la tarjeta de WhatsApp, que es justo donde se decide el clic. Al escribirlas por
+   * etiqueta, la variante conserva su texto pase lo que pase con el español.
+   *
+   * El precio de hacerlo así: la optimización semanal del agente solo mejora el español.
+   * Es el lado correcto del intercambio — un título inglés algo más viejo se lee; uno en
+   * español no se pulsa.
+   */
+  meta?: { title: string; description: string; ogDescription: string }
 }
 
 /** URL absoluta de una página en español. La portada lleva barra final; el resto, no. */
@@ -71,7 +86,7 @@ export function localizar(html: string, v: Variante): string {
     // `href="/"` no colisiona con `href="/parking"`: la comilla de cierre va en la clave.
     out = out.split(`href="${r}"`).join(`href="/${v.codigo}${r === '/' ? '' : r}"`)
   }
-  return out
+  out = out
     .replace('<html lang="es">', `<html lang="${v.codigo}">`)
     .replace(
       `<link rel="canonical" href="${es}"/>`,
@@ -82,6 +97,17 @@ export function localizar(html: string, v: Variante): string {
       `<meta property="og:url" content="${destino}"/>`,
     )
     .replace('content="es_ES"', `content="${v.ogLocale}"`)
+  if (v.meta) {
+    const { title, description, ogDescription } = v.meta
+    // Reemplazo por función y no por cadena: un `$&` o un `$1` dentro de una traducción
+    // sería interpretado por `String.replace` y se colaría un texto que nadie escribió.
+    out = out
+      .replace(/<title>[^<]*<\/title>/, () => `<title>${title}</title>`)
+      .replace(/(<meta name="description" content=")[^"]*"/, (_m, p) => `${p}${description}"`)
+      .replace(/(<meta property="og:title" content=")[^"]*"/, (_m, p) => `${p}${title}"`)
+      .replace(/(<meta property="og:description" content=")[^"]*"/, (_m, p) => `${p}${ogDescription}"`)
+  }
+  return out
 }
 
 /** Cabeceras comunes a todas las variantes. */
