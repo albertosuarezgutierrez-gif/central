@@ -6,6 +6,7 @@ import { Prisma } from '@prisma/client'
 import { getSmoobuKey } from '@/lib/smoobu'
 import { PORTAL_MAP } from '@/lib/portales'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
+import { filaCancelacion } from '@/lib/sivra/cancelaciones'
 
 // 🚨 AQUÍ NO SE DESCUENTA COMISIÓN. Lo hace la BD (01/08/2026).
 //
@@ -81,7 +82,7 @@ export async function runSync(days: number, maxPages = 20, arrFrom?: string, arr
   `)
   const byName = new Map(props.map(p => [p.name.toLowerCase().trim(), p.id]))
 
-  const cnt = { new: 0, modified: 0, cancelled: 0, skipped: 0, reservedAt: 0 }
+  const cnt = { new: 0, modified: 0, cancelled: 0, skipped: 0, reservedAt: 0, registradas: 0 }
   const logs: any[] = []
 
   for (const b of all) {
@@ -109,6 +110,38 @@ export async function runSync(days: number, maxPages = 20, arrFrom?: string, arr
     `)
 
     if (isCancel) {
+      // 🚨 REGISTRAR ANTES DE BORRAR (12/08/2026). El DELETE de abajo es correcto —una reserva
+      // cancelada no se cobra y no puede inflar el calendario— pero hasta hoy era lo ÚNICO que
+      // pasaba: el hecho de la cancelación se destruía con la fila y solo sobrevivía como un
+      // número en el texto del latido. Ver `lib/sivra/cancelaciones.ts` para el porqué largo.
+      //
+      // Se guarda TAMBIÉN cuando `ex.length === 0` (la reserva nunca llegó a `incomes`, porque se
+      // hizo y se deshizo entre dos pasadas): antes esas caían en `skipped` y desaparecían del
+      // todo. `estaba_en_incomes` las mantiene distinguibles para que no cuenten como noches que
+      // de verdad perdimos.
+      cnt.registradas++
+      const fila = filaCancelacion(b, { propertyId: pid, portal, estabaEnIncomes: ex.length > 0 })
+      await prisma.$executeRaw(Prisma.sql`
+        INSERT INTO reservas_canceladas (
+          reservation_id, property_id, property_name, portal, guest_name,
+          check_in, check_out, nights, amount_gross, reserved_at, estaba_en_incomes, datos
+        ) VALUES (
+          ${fila.reservation_id}, ${fila.property_id}, ${fila.property_name}, ${fila.portal},
+          ${fila.guest_name}, ${fila.check_in}::timestamptz, ${fila.check_out}::timestamptz,
+          ${fila.nights}, ${fila.amount_gross}, ${fila.reserved_at}::timestamptz,
+          ${fila.estaba_en_incomes}, ${JSON.stringify(b)}::jsonb
+        )
+        ON CONFLICT (reservation_id) DO UPDATE SET
+          property_id = COALESCE(EXCLUDED.property_id, reservas_canceladas.property_id),
+          nights      = COALESCE(EXCLUDED.nights,      reservas_canceladas.nights),
+          amount_gross= COALESCE(EXCLUDED.amount_gross,reservas_canceladas.amount_gross),
+          reserved_at = COALESCE(EXCLUDED.reserved_at, reservas_canceladas.reserved_at),
+          datos       = EXCLUDED.datos
+      `)
+      // El upsert NO pisa `cancelacion_vista_at` ni `estaba_en_incomes`: la primera vez que se vio
+      // es la buena, y una segunda pasada (cuando la fila de `incomes` ya no está) diría false y
+      // borraría la información de que sí llegó a contar como ingreso.
+
       if (ex.length > 0) {
         await prisma.$executeRaw(Prisma.sql`DELETE FROM incomes WHERE "reservationId" = ${rid}`)
         logs.push({ reservationId: rid, type: 'cancelled' })
@@ -164,7 +197,8 @@ export async function runSync(days: number, maxPages = 20, arrFrom?: string, arr
   }
 
   await registrarLatido('smoobu_sync', true,
-    `${cnt.new} nuevas, ${cnt.modified} modificadas, ${cnt.cancelled} canceladas (${all.length} vistas, desde ${from})`)
+    `${cnt.new} nuevas, ${cnt.modified} modificadas, ${cnt.cancelled} canceladas, ` +
+    `${cnt.registradas} cancelaciones registradas (${all.length} vistas, desde ${from})`)
 
   return {
     success: true,

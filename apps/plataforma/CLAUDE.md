@@ -17,6 +17,21 @@ Next.js 15 · React 19 · Prisma 5 · jose/bcryptjs (JWT, cookie `plataforma_ses
 Misma Supabase compartida que sivra + ialimp: **`wswbehlcuxqxyinousql`**.  
 Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuentas_sociedades_negocios.sql`, ya aplicada).
 
+### 📉 `reservas_canceladas` — lo que se perdió, separado de lo que se cobra (12/08/2026)
+`incomes` = lo que SÍ entra. **`reservas_canceladas`** = lo que se canceló. Están separadas a
+propósito para que nadie sume una cancelación al ingreso por descuido, y el `DELETE FROM incomes`
+del sync **sigue existiendo**: una reserva cancelada no se cobra. Lo que cambia es que ahora, antes
+de borrar, `smoobu-sync.ts` deja constancia (helper puro y testeado `lib/sivra/cancelaciones.ts`).
+- **`cancelacion_vista_at` NO es la fecha de la cancelación**, es cuándo la vio nuestro sync. El
+  listado de Smoobu marca `type:'cancellation'` pero no publica el momento del acto; el payload
+  íntegro se guarda en `datos` por si algún día se confirma que sí lo trae.
+- **`estaba_en_incomes`** separa la cancelación de una reserva que llegamos a contar como ingreso
+  de la de una que se hizo y deshizo entre dos pasadas. Mezclarlas inflaría «noches perdidas».
+- `nights` y `amount_gross` pueden ser **NULL** (sin fechas o sin precio no se escribe 0).
+- 🚨 **La tabla arrancó VACÍA**: todo lo cancelado antes del 12/08/2026 ya estaba borrado. Un «0
+  cancelaciones» en un periodo anterior significa **«no se sabe»**, no «no hubo». Rellenarlo exige
+  un backfill deliberado contra Smoobu con `modifiedFrom` atrás — nunca el cron diario.
+
 ### 🧭 LANDMINE — DÓNDE VIVE CADA INGRESO (lee esto ANTES de tocar ingresos/contabilidad)
 > Punto ciego real (11/07/2026): se buscó "ingreso por piso" por nombres de tabla en **español**
 > (`%ingres%`, `%propiedad%`, `%reserv%`), no aparecieron las tablas de SIVRA (que están en **inglés**),
