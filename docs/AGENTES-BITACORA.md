@@ -15,6 +15,11 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-12 · psd2-health-check** · hizo: preflight `/api/internal/alerta` 200 OK (canal
+  vivo); consulta de frescura `movimientos_bancarios WHERE origen='psd2'` → último movimiento
+  2026-08-10 (hace 2 días, dentro del umbral de 48h), mov_30d=75 vs mov_30d_prev=72 (sin caída).
+  Estado ✅ OK, sin anomalía, sin alerta Telegram. dudas: —; fallos: —; PRs/commits: — (solo
+  esta entrada de bitácora, commit directo a main).
 - **2026-08-12 · facturas-correo (trigger diario)** · hizo: Paso 0 salud OK (Vía B sana,
   `dias_caido=0`, última copia 11/08 IONOS; `agente_salud` ya en verde, sin tocar); backlog
   `PDF-pendiente`/`Revisar` a 0. 0 candidatos nuevos en Gmail (`newer_than:2d` vacío) y 0
