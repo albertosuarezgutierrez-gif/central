@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const HTML = `<!DOCTYPE html>
+export const HTML = `<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8"/>
@@ -11,6 +11,9 @@ const HTML = `<!DOCTYPE html>
 <title>Casa vacacional en Sevilla centro con parking | House Sevillana</title>
 <meta name="description" content="Alquila esta casa de 290m² en Sevilla centro: 6 dormitorios, 4 baños, parking privado y patio andaluz. Ideal para grupos hasta 12 personas. Reserva directa sin comisiones."/>
 <link rel="canonical" href="https://www.housesevillana.es/"/>
+<link rel="alternate" hreflang="es" href="https://www.housesevillana.es/"/>
+<link rel="alternate" hreflang="en" href="https://www.housesevillana.es/en"/>
+<link rel="alternate" hreflang="x-default" href="https://www.housesevillana.es/"/>
 
 <!-- Open Graph -->
 <meta property="og:type" content="website"/>
