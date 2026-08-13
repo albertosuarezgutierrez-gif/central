@@ -15,6 +15,18 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-13 · facturas-correo (trigger diario)** · hizo: Paso 0 salud OK (Vía B sana,
+  `dias_caido=2` — última copia `_buzon_pdf` 11/08 IONOS, dentro del umbral ≤2; `agente_salud`
+  ya en verde, sin tocar); labels `PDF-pendiente`/`Revisar` a 0. 0 candidatos nuevos en Gmail
+  (`newer_than:2d` vacío) y 0 subidas manuales nuevas (`_subir_aqui` vacío). Barrido raíz
+  `FACTURAS Apartamentos/2026` (20 ficheros sueltos): todos ya cubiertos por avisos existentes
+  en `_DUPLICADOS_BORRAR` de pasadas previas, nada nuevo que archivar. Paso 4.0
+  (`v_facturas_sin_cargo`): 0 filas `sin_revisar`, las 8 `revisada_sin_cargo` (Pepephone
+  ene-jun, Giraldillo mayo, CREATE junio duplicada) sin cambios, siguen esperando a Alberto.
+  dudas: —; fallos: `search_threads label:Facturas/Extraccion-fallida` (Label_16, 1 mensaje
+  según `list_labels`) sigue devolviendo vacío por 2º día consecutivo (visto ya el 12/08) —
+  posible lag/bug del índice del conector Gmail, no bloquea nada pero convendría mirarlo a
+  mano si persiste; PRs/commits: — (solo Gmail/Drive/Supabase vía MCP + esta entrada).
 - **2026-08-13 · mercado-booking** · hizo: pasada de 12 ventanas (plan `?max=12`, sin filtro
   de rondas — las 12 candidatas eran ronda 1/evento, `sin_medir_nunca`): Sevilla FC-Atlético
   (29-ago), Espanyol-Sevilla (6-sep) y Pan de oro Pedro el Granaíno (13-sep), las 4 propiedades
