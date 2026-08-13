@@ -56,6 +56,18 @@
   tenía esa carpeta como Root Directory. `ERR_PNPM_OUTDATED_LOCKFILE` al primer intento real.
 - `pnpm install --lockfile-only`: solo añade el bloque nuevo de `apps/housesevillana`, sin mover
   versiones de las demás 8 apps.
+### 📉 (12/08/2026) Las cancelaciones ya se registran: el sync las veía y las tiraba (PR #1397)
+- Corrige la entrada 🕳️ de más abajo. NO era que el concepto no existiera: `smoobu-sync.ts` pide
+  `showCancellation=1` **a propósito** y hace `DELETE FROM incomes` al ver una — correcto para el
+  ingreso, pero era lo ÚNICO que pasaba, así que el hecho moría con la fila y solo quedaba un número
+  en el texto del latido. 67 cancelaciones / 269 noches (may-nov) invisibles por diseño, no por hueco.
+- Tabla nueva **`reservas_canceladas`** (migración aplicada y verificada). Se escribe ANTES del DELETE
+  y también cuando la reserva nunca llegó a `incomes` (antes caían en `skipped` y desaparecían).
+- Nombres deliberados: **`cancelacion_vista_at`** = cuándo la vimos, NO cuándo canceló el huésped (el
+  listado no publica esa fecha; el payload íntegro queda en `datos`). `nights`/`amount_gross` admiten
+  NULL — sin fechas no se escribe 0, que se leería como «cero noches perdidas».
+- ⚠️ **Nace vacía**: lo anterior está borrado. «0 cancelaciones» en un periodo viejo = «no se sabe».
+  El backfill (Smoobu con `modifiedFrom` atrás) es una pasada aparte y consciente, no el cron diario.
 
 ### 💸 (12/08/2026) El cotizador de IA de ialimp no ha generado NUNCA una propuesta (PR #1394)
 - 8 leads, **0 con `propuesta_url` o `propuesta_ia_at`**; el bucket `propuestas-leads` tiene **0 objetos**.
