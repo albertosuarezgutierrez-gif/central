@@ -32,6 +32,21 @@
 
 ---
 
+### 🏛️ (13/08/2026) Surus in situ = 6ª fuente de subastas + la comisión del portal entra al coste
+- Alberto se dio de alta en **surusin.com** (portal privado de liquidaciones: viviendas y coches) para
+  recibir avisos por correo. Añadido como `fuente='surus'`: parser puro `module-subastas/surus.ts`
+  validado contra la ficha REAL del lote de Santillana (fixture copiado del PDF, no tecleado) + ingesta
+  IMAP `lib/subastas/surus.ts` colgada del cron `subastas-ingesta`. 474 tests verdes.
+- **`calcularCoste` gana `comisionCompra`**: los portales privados cobran al COMPRADOR (Surus, 5% + 400€
+  + IVA) y no se descuenta del remate. Se aplica **por FUENTE** (igual que el ITP por provincia), así que
+  ninguna pantalla puede olvidarla. Las fuentes oficiales siguen a 0. Bonus: el depósito PUBLICADO ahora
+  manda sobre el 5% derivado (Surus pide el 25%).
+- ⚠️ **Honesto y pendiente:** el correo de alerta de Surus **no se ha visto todavía** (alta del mismo día).
+  El adaptador reutiliza el vocabulario de etiquetas de sus fichas y CUENTA los correos ilegibles en
+  `correosSinLeer` — nunca los da por «no había subastas». Contrastar contra el primer aviso real.
+- **Coches fuera de alcance**: `subastas` es `es_inmueble` de punta a punta (Catastro, m², ITP, flip).
+  Sus lotes de vehículos NO se ingieren; hacerlo pide diseño propio, no un flag.
+
 ### 🔢 (13/08/2026) Re-verificado el veredicto de inversión: 7 cifras publicadas estaban mal
 - Mergeados **#1399** (botón Reservar de /barrio y /que-ver no llevaba al motor + táctil 44px) y
   **#1397** (cancelaciones de Smoobu). Verificado sobre `main`: 47/47 y 11/11 tests, las 20 anclas

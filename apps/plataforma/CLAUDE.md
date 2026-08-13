@@ -513,6 +513,26 @@ Las licitaciones son **transversales a los negocios de la cuenta** (fontanería,
 ## Subastas de inmuebles del BOE (agente) — PRs #1113-#1120 (28/07/2026)
 Radar de subastas judiciales/notariales del BOE con coste real de adquisición. Sección de usuario **🏛️ Subastas** (`app/(usuario)/subastas/{page,SubastasClient}.tsx`). Módulo PURO **`@central/module-subastas`** (BOE parsing, Catastro, geo, extracción de importes en texto español, scoring, comparables de mercado, costes/tesorería del depósito).
 - **Ingesta de alertas del BOE por IMAP dedicado, NO por el triaje de correo:** `lib/subastas/gmail-boe.ts` abre «Todos los mensajes» (`specialUse \All`) y busca por remitente (`no-responder@boe.es`) porque las alertas llegan ya etiquetadas/archivadas fuera de INBOX — el lector incremental de `lib/correo/**` (que solo mira INBOX y trunca el cuerpo) nunca las vería. Es una decisión deliberada, no un gap del triaje.
+- **🏛️ Surus in situ — 6ª fuente, y la primera que cobra COMISIÓN AL COMPRADOR (13/08/2026):** portal
+  privado de subastas de activos en liquidación (concursal/fondos). `fuente='surus'`, `tipo='concursal'`
+  (aquí NO aplica el art. 670 LEC: el vendedor se reserva adjudicar o no). Parser puro
+  `module-subastas/surus.ts` (lector de etiquetas + **lector COLUMNAR**: «Precio de salida» vive en una
+  cabecera de tabla, no en `etiqueta: valor`, y confundir su columna con la de «Valor de tasación» son
+  90.000€ de error — hay test que lo fija). Ingesta `lib/subastas/surus.ts` por el MISMO IMAP del BOE
+  (`leerAlertas(dias,max,'surusin.com')`, que ya aceptaba otro remitente), colgada de `subastas-ingesta`.
+  **`CosteAdquisicion.comisionCompra`**: 5% del remate + 400€ + 21% IVA, NO se descuenta del precio
+  (2.299€ sobre una salida de 30.000€). Se aplica **por FUENTE dentro de `calcularCoste`** — mismo
+  criterio que el ITP por provincia — para que ninguna pantalla dé un coste distinto por olvidarla;
+  tabla `COMISION_POR_FUENTE` en `costes.ts`, las fuentes oficiales NO están ahí (0, no un default
+  inventado). También: el **depósito PUBLICADO manda sobre el 5% derivado** en el coste del dinero
+  (Surus exige el 25%: 7.500€ sobre 30.000€, y derivarlo al 5% inflaba lo que queda por financiar).
+  🚨 **Sin validar todavía: el CORREO de alerta** — Alberto se dio de alta el mismo día y no había
+  llegado ninguno, así que la maquetación del aviso no se ha visto. El adaptador aplica el vocabulario
+  de etiquetas de las FICHAS (eso sí está copiado del PDF real, `test/fixtures-surus.ts`) y devuelve
+  `correosSinLeer` cuando no extrae nada: un aviso ilegible es un hueco CONTADO, nunca «no había
+  subastas». Contrastar con el primer correo real y ajustar con ese documento delante.
+  ⚠️ **Los lotes de VEHÍCULOS de Surus quedan fuera**: el corpus `subastas` es `es_inmueble` de punta a
+  punta (Catastro, m², ITP, flip, comparables). Meter coches ahí pide diseño propio, no un booleano.
 - **API:** `app/api/subastas/{criterios,radar,seguidas,route,oferta}`. **Crons** (`vercel.json`): `subastas-ingesta`, `subastas-radar`, `subastas-cierre`, `subastas-mercado`, `subastas-enriquecer`, `subastas-avisos`.
 - **Coste real:** ficha del BOE + valor de mercado (comparables) + valor Catastro + tesorería del depósito (`lib/subastas/{tesoreria,mercado,enriquecer}.ts`).
 - **Yield con datos PROPIOS (28/07/2026):** `lib/subastas/rendimiento.ts` usa la mediana real de los 4 pisos turísticos del grupo (`incomes` + `properties.bedrooms`) para estimar el retorno de un inmueble en subasta, siempre con caveat de que asume rendimiento similar.
