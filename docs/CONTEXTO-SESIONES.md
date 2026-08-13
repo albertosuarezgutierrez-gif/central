@@ -32,6 +32,24 @@
 
 ---
 
+### 📱 (12/08/2026) La portada de House Sevillana suspendía el mínimo táctil de 44px (PR #1399)
+- Claude in Chrome **no puede medir 320px** (su gestor de ventanas fuerza ~1536px de ancho mínimo), así que
+  lo medí con Playwright sobre la app en local: **18 elementos por debajo de 44px** en la portada (marca del
+  nav 27px, hamburguesa 27px, los 11 enlaces del pie 16px, los 4 SEO del final 40px). `/parking` limpia.
+- **No era una regresión:** `git log` sobre `app/route.ts` da un solo commit, el de la importación (#1390).
+  `/parking` se escribió en el monorepo con la regla delante; la portada entró tal cual del repo suelto.
+- Arreglo acotado a `max-width:768px` salvo los SEO (su altura no depende del ancho). El teléfono de
+  «o llámanos al …» va DENTRO de una frase: se amplía con padding + margen negativo, no estirándolo.
+- Medido antes/después en las **6 rutas** (3 idiomas × 2 páginas): 18 → **0**, sin scroll horizontal.
+- ⚠️ El CSS vive en un template literal de JS: una comilla invertida en un comentario rompe el build (me pasó).
+- **2ª pasada, el hallazgo de verdad:** el sitemap declara **8** rutas y yo había medido 6. Al medir
+  `/barrio` y `/que-ver` salió que su botón **«Reservar» apuntaba a `/#reservar`** y el ancla del motor
+  en la portada es **`id="reserva"`** — no existe ningún `id="reservar"`. El botón llevaba a la portada
+  y ahí te dejaba, sin bajar nunca al motor: no da error, no sale en logs, y en escritorio no se nota.
+  Mismo patrón que los seis botones al dominio muerto (destino a mano en varias páginas). Ahí la red fue
+  una constante; un ancla no puede serlo, así que la red es **`app/anclas.test.ts`** (todo `href="#x"`
+  con su id en la página, todo `href="/#x"` con su id en la portada). **Verificado que el test sirve**
+  reintroduciendo el fallo: 46 pasan, 1 falla. 6/8 → **8/8** rutas limpias a 320px.
 ### 🔒 (12/08/2026) `housesevillana` no arrancaba build: faltaba en `pnpm-lock.yaml` (PR #1398)
 - El PR #1390 (import de la landing al monorepo) añadió `apps/housesevillana/package.json` sin
   regenerar el lockfile compartido. No se notó porque hasta esta sesión ningún proyecto Vercel

@@ -18,8 +18,13 @@ const H = `<!DOCTYPE html><html lang="es">
 .lugar h3{font-size:16px;font-weight:700;color:#1a1a1a;margin-bottom:4px}
 .lugar p{font-size:13px;color:#555;margin:0}
 .tag{font-size:10px;background:#fdf6f0;color:#B04E2A;padding:2px 8px;border-radius:20px;display:inline-block;margin-right:6px;margin-top:4px}
-nav{background:#1a1a1a;padding:12px 24px;display:flex;justify-content:space-between}
+nav{background:#1a1a1a;padding:12px 24px;display:flex;justify-content:space-between;align-items:center}
 nav a{color:white;text-decoration:none;font-size:13px}
+/* Objetivo tactil de 44px (regla del CLAUDE.md raiz). Medido a 320px: la marca y el
+   boton Reservar daban 35px. Con flex + min-height suben a 44 sin cambiar el aspecto.
+   OJO: este CSS vive dentro de un template literal de JS — nada de comillas
+   invertidas en los comentarios, cierran la plantilla y rompen el build. */
+nav a{display:inline-flex;align-items:center;min-height:44px}
 .cta{background:#8B2500;color:white;padding:32px 24px;text-align:center;margin-top:32px}
 .cta a{background:white;color:#8B2500;padding:12px 28px;border-radius:25px;text-decoration:none;font-weight:700;display:inline-block;margin-top:10px}
 </style>
@@ -27,7 +32,7 @@ nav a{color:white;text-decoration:none;font-size:13px}
 <body>
 <nav>
   <a href="/" style="font-weight:700;font-size:15px">House Sevillana</a>
-  <a href="/#reservar" style="background:#B04E2A;padding:7px 18px;border-radius:20px">Reservar</a>
+  <a href="/#reserva" style="background:#B04E2A;padding:7px 18px;border-radius:20px">Reservar</a>
 </nav>
 <div class="hero"><h1>Qué ver en Sevilla</h1><p>Los 15 imprescindibles según los que vivimos aquí</p></div>
 <div class="container">
