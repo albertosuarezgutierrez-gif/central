@@ -32,6 +32,22 @@
 
 ---
 
+### 🐛 (13/08/2026) El #1406 mergeado NO leía ni un correo de Surus — lo cazó el E2E, no los tests
+- Alberto pidió «mergea y prueba que todo vaya 100%». Mergeado (#1406, `0d054fa`, producción READY) y,
+  al probarlo con un **correo de forma realista**, la ingesta devolvía `null` siempre. Arreglo en **#1408**.
+- Tres defectos en cadena: (a) `htmlATexto` metía los saltos de línea y los borraba acto seguido al
+  decodificar (`decodificarHtml` acaba en `\s+→' '`) → todo en UNA línea y el lector por línea ciego;
+  (b) el lector columnar emparejaba por DISTANCIA EN CARACTERES → en una tabla HTML habría leído
+  **120.000€ donde pone 30.000€** (el error de 90.000€ por la puerta de atrás; ahora manda el ÍNDICE de
+  celda y sin misma forma devuelve `null`); (c) `valorTrasEtiqueta` cortaba por longitud → una línea
+  indentada daba «ida: 30.000 €». Y `tituloDe` cortaba en la 1ª fila de tabla, dejando sin ficha
+  cualquier aviso que abra con la tabla de precios.
+- **Por qué ningún test lo vio:** `htmlATexto`/`urlsDeLote` son PURAS pero vivían en el archivo de la app
+  (importa Prisma + IMAP) → `node --test` no las alcanzaba. Movidas a `@central/module-subastas` con sus
+  regresiones. **Lección: un helper puro que vive donde no se puede testear acaba sin testear.**
+- El camino del PDF (de donde salen los 42.799€ del lote de Santillana) nunca estuvo afectado, y el
+  diseño defensivo aguantó: `null` → `correosSinLeer`, nunca una fila inventada.
+
 ### 🏛️ (13/08/2026) Surus in situ = 6ª fuente de subastas + la comisión del portal entra al coste
 - Alberto se dio de alta en **surusin.com** (portal privado de liquidaciones: viviendas y coches) para
   recibir avisos por correo. Añadido como `fuente='surus'`: parser puro `module-subastas/surus.ts`
