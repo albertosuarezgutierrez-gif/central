@@ -711,6 +711,21 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
   uno que hoy no dio señal. Hermanas: `trading_*.precio_fuente` (procedencia, patrón `market_rates.fuente`),
   `ventana_dias` = días reales y no el horizonte declarado, y el aviso de salto del NAV >15% en `/saldo`
   (no bloquea: puede ser un ingreso real, pero con el NAV se dimensiona cada compra).
+- **🚨 LANDMINE — SESGO DE SUPERVIVENCIA: la tesis cuyo símbolo se cae del universo no se puntuaba NUNCA
+  (12/08/2026).** `/puntuar` solo sabía puntuar con `conformes[simbolo]`, el precio que trae la pasada de
+  hoy, así que 16 tesis del 18/07 (CEG, ISRG, SYM, UEC) llevaban desde el 28/07 vencidas y en
+  `resultado: null` — sin contar en `trading_estrategia_stats`, sin aparecer en ningún recuento y sin que
+  nada las echara de menos. El silencio se leía como «no había trabajo». Y el sesgo no es neutro: un
+  símbolo sale del universo por dejar de dar señal, desplomarse o ser adquirido, nunca al azar. Fix
+  (`juzgarHuerfana`/`resumenHuerfanas` en `lib/trading/precios-guardia.ts`, puros y testeados con series
+  reales de IBKR): pasada una gracia de 3 días se piden a la 2ª fuente y se puntúan con el **cierre de su
+  sesión de vencimiento** (`precio_fuente='contraste'`), con ancla contra nuestro `precio_ref` (protege de
+  splits y de tickers reciclados) y margen de ventana de 5 días. ⚠️ **El ancla NO puede pedir la fecha
+  exacta de la tesis**: la fecha es la de la PASADA y las pasadas no siempre caen en sesión — las 16
+  reales son de un SÁBADO y sus refs son el cierre del viernes anterior al céntimo. Lo que no se puede
+  puntuar **se cuenta y se canta** (latido + campo `huerfanas` de la respuesta); a los 60 días se deja de
+  reintentar pero se sigue declarando como hueco conocido. Regla general: **una fila que desaparece de un
+  recuento no es una fila que no existe** — al añadir un camino que deja trabajo pendiente, cuéntalo.
 - **🚨 LANDMINE — la huella se escribe DENTRO del trabajo que vigila: si la función muere, no hay
   huella (31/07/2026).** El mismo día de estrenar el vigía saltó «🧾 Escaneo de facturas: sin ninguna
   señal registrada» y la nota mandaba a mirar IMAP/app-password. No era eso: `facturas-scan` corría

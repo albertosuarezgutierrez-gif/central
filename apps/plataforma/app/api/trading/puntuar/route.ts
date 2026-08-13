@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { puntuarTesis, agregarStats, aplicarStop, cerrar } from '@central/module-trading'
 import type { Tesis } from '@central/module-trading'
-import { filtrarPreciosAnomalos, resumenDescartes, detectarSuplantaciones, resumenSuplantaciones, contrastarFuentes, resumenDivergencias, resumenDesfase, juzgarDiferido, resumenDiferido, DIAS_REFERENCIA_MAX, type ParDiferido } from '@/lib/trading/precios-guardia'
+import { filtrarPreciosAnomalos, resumenDescartes, detectarSuplantaciones, resumenSuplantaciones, contrastarFuentes, resumenDivergencias, resumenDesfase, juzgarDiferido, resumenDiferido, juzgarHuerfana, resumenHuerfanas, fechaMas, diasEntre, HUERFANA_GRACIA_DIAS, HUERFANA_MAX_DIAS, DIAS_REFERENCIA_MAX, type ParDiferido, type HuerfanaNoResuelta } from '@/lib/trading/precios-guardia'
 import { cierresDeContraste } from '@/lib/trading/precios-contraste'
 import { tgSend } from '@/lib/telegram'
 
@@ -19,6 +19,11 @@ export const maxDuration = 300
 // cuántas sesiones se recuperan si una pasada no corre. Tres cubre el hueco de un fin de semana largo.
 const SESIONES_DIFERIDO = 3
 const DIAS_DIFERIDO = 10   // naturales, para alcanzar esas 3 sesiones con festivos de por medio
+
+// Rescate de tesis huérfanas: presupuesto y margen de ventana propios. Solo se paga cuando hay alguna,
+// que es lo excepcional — un símbolo que se cae del universo con tesis vivas detrás.
+const PRESUPUESTO_HUERFANAS_MS = 45_000
+const MARGEN_VENTANA_HUERFANAS = 7   // días extra para que la serie cubra con holgura la sesión ancla
 
 export async function POST(req: NextRequest) {
   if (!isRoutineAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
@@ -158,6 +163,51 @@ export async function POST(req: NextRequest) {
     puntuadas++
   }
 
+  // 1-bis) TESIS HUÉRFANAS: vencieron y su símbolo ya no viene en la pasada, así que el bucle de arriba
+  // no las puede tocar y se quedaban `resultado: null` PARA SIEMPRE, sin contar y sin salir en ningún
+  // recuento (16 encontradas el 12/08/2026). Su desenlace sí existe: el cierre de su sesión de
+  // vencimiento, que publica la 2ª fuente. El porqué de las dos guardas —ancla contra nuestro
+  // `precio_ref` y margen de ventana— está en `juzgarHuerfana`.
+  //
+  // Va DESPUÉS del bucle normal y ANTES de recalcular stats: lo rescatado cuenta ya en esta misma
+  // pasada, que es lo que corrige el sesgo. Y va en su propia salida a internet, con presupuesto propio,
+  // porque necesita una ventana mucho más larga que el contraste del día y solo se paga si hay huérfanas.
+  const huerfanasTodas = pendientes
+    .map(t => {
+      const fecha = t.fecha.toISOString().slice(0, 10)
+      return { t, fecha, vence: fechaMas(fecha, t.horizonteDias) }
+    })
+    // `precios[...]`, no `conformes[...]`: un símbolo que SÍ vino hoy y cayó en una guardia no es
+    // huérfano, es un «todavía no lo sé» que se recupera mañana por el camino normal. Rescatarlo aquí
+    // sería saltarse por la puerta de atrás el veto que se le acaba de poner.
+    .filter(x => precios[x.t.simbolo] === undefined && diasEntre(x.vence, hoy) > HUERFANA_GRACIA_DIAS)
+  const huerfanas = huerfanasTodas.filter(x => diasEntre(x.vence, hoy) <= HUERFANA_MAX_DIAS)
+  const huerfanasFueraDePlazo = huerfanasTodas.length - huerfanas.length
+
+  let huerfanasPuntuadas = 0
+  const huerfanasSinResolver: HuerfanaNoResuelta[] = []
+  if (huerfanas.length > 0) {
+    const simbolos = [...new Set(huerfanas.map(x => x.t.simbolo))]
+    const masVieja = huerfanas.map(x => x.fecha).sort()[0]
+    const ventanaDias = diasEntre(masVieja, hoy) + MARGEN_VENTANA_HUERFANAS
+    const { series } = await cierresDeContraste(simbolos, hoy, { ventanaDias, presupuestoMs: PRESUPUESTO_HUERFANAS_MS })
+    for (const { t, fecha, vence } of huerfanas) {
+      const v = juzgarHuerfana({ simbolo: t.simbolo, fecha, vence, precioRef: t.precioRef }, series[t.simbolo] ?? [])
+      if (v.estado !== 'puntuable') {
+        huerfanasSinResolver.push({ simbolo: t.simbolo, fecha, vence, motivo: v.motivo })
+        continue
+      }
+      const r = puntuarTesis(t as unknown as Tesis, v.precio)
+      // `precioFuente: 'contraste'` — la procedencia se declara SIEMPRE: este resultado no lo midió la
+      // sesión con el precio del bróker, lo midió la 2ª fuente, y además sin nadie con quien contrastarlo
+      // (para eso está el ancla). Quien lea el track record tiene que poder distinguirlos.
+      await prisma.tradingTesisResultado.create({ data: { tesisId: t.id, precioDespues: v.precio, ventanaDias: v.ventanaDias, retorno: r.retorno, acierto: r.acierto, precioFuente: 'contraste' } })
+      huerfanasPuntuadas++
+    }
+  }
+  const parteHuerfanas = resumenHuerfanas(huerfanasPuntuadas, huerfanasSinResolver, huerfanasFueraDePlazo)
+  if (parteHuerfanas) console.warn('[trading/puntuar]', parteHuerfanas)
+
   // 2) Recomputar stats por estrategia (régimen 'todos' en Fase 1; se refina con snapshot por tesis después).
   // Los resultados ANULADOS (puntuados con un precio que luego se demostró falso) quedan en la tabla como
   // registro pero NO cuentan: son «esto no lo sabemos», no un dato del track record.
@@ -217,8 +267,17 @@ export async function POST(req: NextRequest) {
       (resumen ? ` · ⚠️ ${resumen}` : '') +
       (tesisAnuladas > 0 ? ` · ${tesisAnuladas} tesis anulada(s) por la 2ª fuente` : '') +
       (parteDiferido ? ` · ${parteDiferido}` : '') +
+      (parteHuerfanas ? ` · ${parteHuerfanas}` : '') +
       (desfase ? ` · ${desfase}` : ''),
   )
+
+  // Telegram SOLO cuando ha pasado algo irreversible: se ha escrito en el track record, o un hueco ha
+  // quedado cerrado para siempre. Las que siguen «sin resolver» se repetirían cada noche sin novedad, y
+  // un aviso que se repite deja de leerse — esas viven en el latido y en la respuesta, que es donde se
+  // consultan. No avisar ≠ no contarlas.
+  if (huerfanasPuntuadas > 0 || huerfanasFueraDePlazo > 0) {
+    await tgSend(`📒 <b>Trading ${hoy} — tesis huérfanas:</b>\n${parteHuerfanas}`).catch(() => {})
+  }
 
   // `descartados` viaja en la respuesta para que la sesión lo cante en su resumen de Telegram: un precio
   // rechazado deja tesis SIN puntuar, y eso hay que verlo — callarlo sería el «no lo sé» disfrazado de
@@ -230,5 +289,6 @@ export async function POST(req: NextRequest) {
     divergentes,
     contraste: { consultados: contraste.consultados, sinDato: contraste.sinDato, desfasados: contraste.desfasados, sinTiempo: contraste.sinTiempo, sinJuzgar: sinContraste },
     diferido: { ...diferido, tesisAnuladas },
+    huerfanas: { puntuadas: huerfanasPuntuadas, sinResolver: huerfanasSinResolver, fueraDePlazo: huerfanasFueraDePlazo },
   })
 }

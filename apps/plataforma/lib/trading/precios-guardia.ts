@@ -376,6 +376,143 @@ export function resumenDiferido(d: Diferido): string {
 }
 
 // ---------------------------------------------------------------------------
+// TESIS HUÉRFANA: venció, pero su símbolo ya no viene en la pasada
+// ---------------------------------------------------------------------------
+//
+// 🚨 LANDMINE (12/08/2026) — el track record tenía SESGO DE SUPERVIVENCIA y no se veía por ningún lado.
+// `/puntuar` solo sabe puntuar con el precio que trae la pasada de hoy (`conformes[simbolo]`), así que
+// una tesis cuyo símbolo SALIÓ del universo no se puntúa nunca: se queda `resultado: null` para siempre,
+// sin contar, sin aparecer en ningún recuento y sin que nadie la eche de menos. Encontradas 16 así
+// (CEG, ISRG, SYM y UEC, tesis del 18/07 vencidas el 28/07) al revisar la pasada del 12/08.
+//
+// Es el error de siempre con otro disfraz: no es que sepamos que esas tesis fallaron o acertaron — es
+// que NO LO PREGUNTAMOS, y el silencio se lee como «no había nada». Y el sesgo no es neutro: un símbolo
+// se cae del universo por dejar de dar señal, por desplomarse o por ser adquirido, no al azar, así que
+// las tesis que desaparecen no son una muestra aleatoria de las que se quedan.
+//
+// El desenlace de esas tesis SÍ existe: es el cierre de su sesión de vencimiento, y la 2ª fuente lo
+// publica. Se puntúan con él, no con el precio de hoy — medir una ventana de 10 días con el precio de 25
+// días después sería otra vez un dato bueno leído con el periodo equivocado.
+//
+// Dos guardas, porque la serie de la 2ª fuente no es intercambiable con nuestro corpus:
+//
+//  1. ANCLA. La fuente publica el histórico AJUSTADO por splits y dividendos; nuestro `precio_ref` es el
+//     precio SIN ajustar del día que se guardó. Cruzarlos a ciegas tras un split da un retorno inventado
+//     de ±50% que además parece perfectamente plausible. Antes de usar nada de la serie se comprueba que
+//     nuestro `precio_ref` coincide (±`DIVERGENCIA_MAX`) con lo que la fuente publica alrededor de la
+//     sesión de la tesis: eso valida a la vez la escala y la identidad del símbolo (un ticker reciclado
+//     por otra empresa no cuadra). Si no ancla, no se puntúa — y se dice por qué.
+//
+//     🚨 El ancla NO puede pedir la fecha EXACTA de la tesis. La fecha de una tesis es la de la PASADA,
+//     y las pasadas no siempre caen en sesión: las 16 huérfanas que destaparon todo esto son del SÁBADO
+//     18/07/2026, y sus cuatro `precio_ref` (CEG 252,39 · ISRG 345,42 · SYM 41,25 · UEC 9,28) son, al
+//     céntimo, el cierre del VIERNES 17/07 — verificado contra IBKR. Un ancla por fecha exacta las habría
+//     dejado a las cuatro sin resolver y el arreglo no habría arreglado nada. Se aceptan por eso las DOS
+//     últimas sesiones publicadas hasta la fecha de la tesis: la última (caso normal y caso fin de
+//     semana) y la anterior (pasada lanzada antes del cierre, la firma de `ETIQUETA_TOL`). Es todo lo que
+//     el ancla necesita: no data la tesis, solo confirma que la serie habla de nuestro mismo valor y en
+//     nuestra misma escala.
+//  2. VENTANA. Vale el PRIMER cierre publicado en o tras el vencimiento, y solo si llega dentro del
+//     margen (fin de semana o festivo). Más tarde ya no mide la ventana de la tesis sino la deriva
+//     posterior, exactamente el mismo corte que el proxy de deslizamiento.
+//
+// Lo que no se pueda puntuar se CUENTA y se canta. Ese es el arreglo de fondo: el defecto no era no
+// poder puntuarlas, era que desaparecían sin dejar rastro.
+
+// Margen tras el vencimiento en el que el primer cierre publicado sigue siendo «el de la ventana»
+// (cubre fin de semana largo). Mismo criterio que el ≤5 días del proxy de deslizamiento.
+export const HUERFANA_MARGEN_DIAS = 5
+
+// Días tras el vencimiento antes de recurrir a la 2ª fuente. Un símbolo puede faltar una noche suelta y
+// volver mañana; en ese caso el camino normal (precio de la sesión, ya contrastado) es preferible y esto
+// no debe adelantarse. Solo se rescata lo que lleva parado de verdad.
+export const HUERFANA_GRACIA_DIAS = 3
+
+// Tope de reintento. Pasado ese plazo la fuente ya ha dicho lo que tenía que decir y volver a preguntar
+// cada noche es gasto sin desenlace. Dejan de intentarse, pero NO dejan de contarse: siguen saliendo en
+// el parte como lo que son, un hueco conocido del track record.
+export const HUERFANA_MAX_DIAS = 60
+
+export type Huerfana = { simbolo: string; fecha: string; vence: string; precioRef: number }
+
+export type VeredictoHuerfana =
+  | { estado: 'puntuable'; precio: number; fecha: string; ventanaDias: number }
+  | { estado: 'sin-ancla'; motivo: string }
+  | { estado: 'sin-cierre'; motivo: string }
+
+// Aritmética de fechas en días naturales UTC. Aquí y no en un util compartido porque este módulo no
+// importa NADA a propósito: es lo que permite testearlo con `node --test --experimental-strip-types`.
+export function fechaMas(fecha: string, dias: number): string {
+  const t = Date.parse(`${fecha}T00:00:00Z`)
+  if (!Number.isFinite(t)) return fecha
+  return new Date(t + dias * 86_400_000).toISOString().slice(0, 10)
+}
+
+export function diasEntre(desde: string, hasta: string): number {
+  const a = Date.parse(`${desde}T00:00:00Z`)
+  const b = Date.parse(`${hasta}T00:00:00Z`)
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return NaN
+  return Math.round((b - a) / 86_400_000)
+}
+
+// `serie` = cierres publicados por la 2ª fuente en orden ascendente (lo que devuelven tanto el CSV de
+// Stooq como el chart de Yahoo, y lo que ya asume `juzgarPuntos`).
+export function juzgarHuerfana(
+  h: Huerfana,
+  serie: PuntoContraste[],
+  maxDesvio = DIVERGENCIA_MAX,
+  margenDias = HUERFANA_MARGEN_DIAS,
+): VeredictoHuerfana {
+  // Las dos últimas sesiones publicadas HASTA la fecha de la tesis (ver el porqué en la cabecera).
+  const hasta = serie.filter(p => p.fecha <= h.fecha)
+  const candidatas = hasta.slice(-2)
+  if (candidatas.length === 0) return { estado: 'sin-ancla', motivo: `la 2ª fuente no publica ninguna sesión hasta el ${h.fecha}` }
+  const ultima = candidatas[candidatas.length - 1]
+  const hueco = diasEntre(ultima.fecha, h.fecha)
+  if (hueco > margenDias) {
+    return { estado: 'sin-ancla', motivo: `la última sesión publicada antes de la tesis (${ultima.fecha}) queda a ${hueco} días: la serie no cubre el ${h.fecha}` }
+  }
+  if (!(h.precioRef > 0) || !candidatas.some(p => Math.abs(p.cierre / h.precioRef - 1) <= maxDesvio)) {
+    const vistas = candidatas.map(p => `${p.fecha}=${p.cierre}`).join(', ')
+    return {
+      estado: 'sin-ancla',
+      motivo: `el precio_ref ${h.precioRef} no cuadra con la serie (${vistas}): otra escala (split/ajuste) u otro valor`,
+    }
+  }
+  const cierre = serie.find(p => p.fecha >= h.vence)
+  if (!cierre) return { estado: 'sin-cierre', motivo: `la 2ª fuente no llega al vencimiento (${h.vence})` }
+  const retraso = diasEntre(h.vence, cierre.fecha)
+  if (retraso > margenDias) {
+    return {
+      estado: 'sin-cierre',
+      motivo: `el primer cierre tras el vencimiento (${cierre.fecha}) llega ${retraso} días tarde: mediría deriva, no la ventana`,
+    }
+  }
+  return { estado: 'puntuable', precio: cierre.cierre, fecha: cierre.fecha, ventanaDias: diasEntre(h.fecha, cierre.fecha) }
+}
+
+export type HuerfanaNoResuelta = { simbolo: string; fecha: string; vence: string; motivo: string }
+
+// Parte de una línea. Vacío solo si no hubo NINGUNA huérfana: en cuanto hay una, se dice — aunque no se
+// haya podido hacer nada con ella, que es justo el caso que se pasó cuatro semanas callado.
+export function resumenHuerfanas(
+  puntuadas: number,
+  sinResolver: HuerfanaNoResuelta[],
+  fueraDePlazo: number,
+): string {
+  const partes: string[] = []
+  if (puntuadas > 0) partes.push(`${puntuadas} tesis huérfana(s) puntuada(s) con el cierre de su vencimiento (2ª fuente)`)
+  if (sinResolver.length > 0) {
+    const lista = sinResolver.map(h => `${h.simbolo} ${h.fecha}→${h.vence} (${h.motivo})`).join(' · ')
+    partes.push(`${sinResolver.length} huérfana(s) sin resolver: ${lista}`)
+  }
+  if (fueraDePlazo > 0) {
+    partes.push(`${fueraDePlazo} huérfana(s) fuera de plazo (>${HUERFANA_MAX_DIAS} días): ya no se reintentan y quedan como hueco conocido del track record`)
+  }
+  return partes.join(' · ')
+}
+
+// ---------------------------------------------------------------------------
 // SUPLANTACIÓN: el precio es real, pero es de OTRA empresa
 // ---------------------------------------------------------------------------
 //

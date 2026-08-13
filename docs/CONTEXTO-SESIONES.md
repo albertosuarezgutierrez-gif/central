@@ -47,6 +47,17 @@
   `trading_estrategia_stats` es un **centinela «sin calcular»**, no un cero medido.
 - Pendiente: mirar quién escribe `trading_estrategia_stats.retorno_medio` (los dos ceros).
 
+### 📒 (12/08/2026) Sesgo de supervivencia: 16 tesis vencidas que no se puntuaban NUNCA
+- Verificada la pasada del 12/08: 0 anuladas y el freno de #1382 actuando de verdad — apartó 4 `precio_ref`
+  del 06/08 como fecha corrida (MSFT/NVO/SNDK/WDC, contrastados uno a uno contra IBKR: los cuatro son el
+  cierre exacto del 05/08). Sin él, 16 tesis sanas anuladas en su primer día vivo.
+- Al revisarlo salió un agujero mayor: `/puntuar` solo puntúa con el precio de la pasada, así que las tesis
+  de un símbolo que sale del universo se quedan en `resultado: null` para siempre y sin contar (16 del
+  18/07 — CEG/ISRG/SYM/UEC). Fix: `juzgarHuerfana` las puntúa con el cierre de su vencimiento (2ª fuente),
+  con ancla contra `precio_ref` (splits/ticker reciclado) y margen de ventana; lo que no se puede, se canta.
+- ⚠️ El ancla NO puede pedir la fecha exacta: las 16 son de un SÁBADO y sus refs son el cierre del viernes.
+
+
 ### 📱 (12/08/2026) La portada de House Sevillana suspendía el mínimo táctil de 44px (PR #1399)
 - Claude in Chrome **no puede medir 320px** (su gestor de ventanas fuerza ~1536px de ancho mínimo), así que
   lo medí con Playwright sobre la app en local: **18 elementos por debajo de 44px** en la portada (marca del
