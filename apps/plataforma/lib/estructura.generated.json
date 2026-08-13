@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-13T21:11:34Z",
+  "generadoEn": "2026-08-13T21:29:46Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4516,6 +4516,10 @@
   ],
   "novedades": [
     {
+      "titulo": "Por qué ningún test lo vio:",
+      "fecha": ""
+    },
+    {
       "titulo": "`calcularCoste` gana `comisionCompra`",
       "fecha": ""
     },
@@ -4569,10 +4573,6 @@
     },
     {
       "titulo": "#1374",
-      "fecha": ""
-    },
-    {
-      "titulo": "El 🔴 gordo ARREGLADO en la misma sesión:",
       "fecha": ""
     }
   ],

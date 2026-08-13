@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-13T21:11:34Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-13T21:29:46Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -231,6 +231,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- Por qué ningún test lo vio:
 - `calcularCoste` gana `comisionCompra`
 - Coches fuera de alcance
 - No era una regresión:
@@ -240,5 +241,4 @@
 - No cerraba una fuga
 - La buena noticia: la puerta ya está abierta.
 - El grave: una `service_role` del proyecto de PRODUCCIÓN `wswbehlcuxqxyinousql`
-- Bucle de alertas encontrado:
 
