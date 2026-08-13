@@ -29,12 +29,21 @@ nav{background:#1a1a1a;padding:12px 24px;display:flex;justify-content:space-betw
 nav a{color:white;text-decoration:none;font-family:Arial,sans-serif;font-size:13px}
 .breadcrumb{padding:12px 24px;font-family:Arial,sans-serif;font-size:12px;color:#666;background:#fdf6f0}
 .breadcrumb a{color:#B04E2A;text-decoration:none}
+/* Objetivo tactil de 44px (regla del CLAUDE.md raiz). Medido a 320px: la marca del
+   nav daba 26px y el boton Reservar 36px. Con flex + min-height suben a 44 sin
+   cambiar el aspecto. El de la miga de pan va DENTRO de una frase ("Inicio > Barrio"),
+   asi que ahi se amplia el area de toque con padding y se compensa con margen
+   negativo: 44px pulsables, linea identica.
+   OJO: este CSS vive dentro de un template literal de JS — nada de comillas
+   invertidas en los comentarios, cierran la plantilla y rompen el build. */
+nav a{display:inline-flex;align-items:center;min-height:44px}
+.breadcrumb a{display:inline-block;padding:.875rem .25rem;margin:-.875rem -.25rem}
 </style>
 </head>
 <body>
 <nav>
   <a href="/" style="font-weight:700;font-size:15px">House Sevillana</a>
-  <a href="/#reservar" style="background:#B04E2A;padding:7px 18px;border-radius:20px">Reservar</a>
+  <a href="/#reserva" style="background:#B04E2A;padding:7px 18px;border-radius:20px">Reservar</a>
 </nav>
 <div class="breadcrumb"><a href="/">Inicio</a> › Barrio</div>
 <div class="hero">
