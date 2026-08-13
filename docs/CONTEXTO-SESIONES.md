@@ -50,6 +50,12 @@
   una constante; un ancla no puede serlo, así que la red es **`app/anclas.test.ts`** (todo `href="#x"`
   con su id en la página, todo `href="/#x"` con su id en la portada). **Verificado que el test sirve**
   reintroduciendo el fallo: 46 pasan, 1 falla. 6/8 → **8/8** rutas limpias a 320px.
+### 🔒 (12/08/2026) `housesevillana` no arrancaba build: faltaba en `pnpm-lock.yaml` (PR #1398)
+- El PR #1390 (import de la landing al monorepo) añadió `apps/housesevillana/package.json` sin
+  regenerar el lockfile compartido. No se notó porque hasta esta sesión ningún proyecto Vercel
+  tenía esa carpeta como Root Directory. `ERR_PNPM_OUTDATED_LOCKFILE` al primer intento real.
+- `pnpm install --lockfile-only`: solo añade el bloque nuevo de `apps/housesevillana`, sin mover
+  versiones de las demás 8 apps.
 
 ### 💸 (12/08/2026) El cotizador de IA de ialimp no ha generado NUNCA una propuesta (PR #1394)
 - 8 leads, **0 con `propuesta_url` o `propuesta_ia_at`**; el bucket `propuestas-leads` tiene **0 objetos**.
