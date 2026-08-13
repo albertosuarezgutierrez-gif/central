@@ -202,9 +202,29 @@ DE MUESTRA (walk-forward). Esa decisión es de Alberto y tendrá su propio spec.
      **Estado en vivo (11/08/2026, primera pasada con el arreglo):** 22 símbolos analizados (13 la
      víspera), **0 vetados**, 0 anulados, y el latido cantando «2ª fuente aún sin el cierre de hoy
      (22 símbolos con dato de 2026-08-10): sin contrastar, no vetado».
+  4. **Rescate de TESIS HUÉRFANAS** (`juzgarHuerfana` + `/puntuar`, 12/08/2026). No es una guardia del
+     precio sino del **sesgo de supervivencia**: `/puntuar` solo sabía puntuar con el precio que trae la
+     pasada, así que una tesis cuyo símbolo SALIÓ del universo se quedaba `resultado: null` para siempre,
+     sin contar y sin salir en ningún recuento. Encontradas **16** así (CEG, ISRG, SYM, UEC — tesis del
+     18/07 vencidas el 28/07) al verificar la pasada del 12/08. Ahora, pasada la gracia de 3 días desde el
+     vencimiento, se piden a la 2ª fuente y se puntúan con **el cierre de su sesión de vencimiento** (no
+     con el de hoy: medir una ventana de 10 días con el precio de 25 días después es el error de periodo
+     de siempre), con `precio_fuente='contraste'`. Dos guardas:
+     · **ancla** — el `precio_ref` debe cuadrar (±2%) con una de las DOS últimas sesiones que la fuente
+       publica hasta la fecha de la tesis. Valida escala (la fuente publica histórico AJUSTADO por
+       splits; nuestro ref es sin ajustar) e identidad (ticker reciclado). 🚨 **NO puede pedir la fecha
+       exacta**: la fecha de una tesis es la de la PASADA y las pasadas no siempre caen en sesión — las 16
+       reales son de un SÁBADO y sus cuatro refs son, al céntimo, el cierre del viernes anterior
+       (verificado contra IBKR). La 2ª candidata cubre además la etiqueta corrida del punto 3.
+     · **ventana** — vale el primer cierre en o tras el vencimiento y solo dentro de 5 días naturales;
+       más tarde mediría deriva, no la ventana (mismo corte que el proxy de deslizamiento).
+     Tras 60 días se deja de reintentar pero **se sigue contando**: el hueco se declara, no se olvida.
+     Telegram solo cuando se escribe en el track record o un hueco queda cerrado para siempre; el estado
+     permanente vive en el latido y en `huerfanas` de la respuesta.
   En `/puntuar` se contrastan solo los símbolos que se van a usar; en `/analizar`, el universo, y el
   símbolo divergente **se salta ENTERO** porque sus velas contaminan EMA/MACD/RSI/ADX. Las respuestas
-  traen `vetados`/`descartados`/`divergentes`/`contraste.sinJuzgar` y **hay que cantarlo en el Telegram**.
+  traen `vetados`/`descartados`/`divergentes`/`contraste.sinJuzgar`/`huerfanas` y **hay que cantarlo en
+  el Telegram**.
   Origen: el 03/08 entró `CVX = 590,17$` (cierre real 193,18$), puntuó 12 tesis —tres a +205 pp— y movió
   `trading_estrategia_stats`: momentum de **−0,40 pp a +7,18 pp** de media, con `ajustesDeStats` activo
   (n=81) inclinando el torneo cinco días.
