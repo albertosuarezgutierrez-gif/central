@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-13T08:56:01Z",
-  "sha": "4598c03ebb101f11e7722b942c5bedc928ae3297",
+  "generadoEn": "2026-08-13T09:13:15Z",
+  "sha": "a4a84d371ccf4387b14d247e628447d0ae09f741",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -53944,7 +53944,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/eventos/sync",
-      "hash": "ac095fdb2d22"
+      "hash": "d5284fe99b56"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/eventos/verificar/route.ts",
@@ -54050,7 +54050,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/eventos/websearch",
-      "hash": "57ec3145a8e3"
+      "hash": "88747f58f0dc"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/agent/resumen-mensual/route.ts",
@@ -66612,6 +66612,7 @@
       "resumen": "lib/sivra/eventos-impacto.ts — cuánto sube el precio un evento descubierto automáticamente. POR QUÉ (01/08/2026). Esta escala vivía DUPLICADA y palabra por palabra en los dos crons de descubrimiento (`eventos/sync` de Ticketmaster y `eventos/websearch`), con un comentario que decía «idéntico a /even",
       "exporta": [
         "clasificarTipo",
+        "esPartidoLigaRegular",
         "impactoEvento"
       ],
       "funciones": [
@@ -66625,18 +66626,27 @@
           "resumen": "Normaliza el `tipo` que traen las fuentes (Ticketmaster o la IA), que es texto libre."
         },
         {
+          "nombre": "esPartidoLigaRegular",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre?: string | null",
+          "retorno": "boolean",
+          "linea": 66,
+          "resumen": "¿Es un partido de liga REGULAR de un club local? («Sevilla FC vs Valencia CF») Existe porque el `tipo` que devuelve la IA muchas veces no trae ninguna palabra clave y el partido caía en la curva gener"
+        },
+        {
           "nombre": "impactoEvento",
           "kind": "function",
           "exportada": true,
-          "params": "aforo: number, tipo?: string | null",
+          "params": "aforo: number, tipo?: string | null, nombre?: string | null",
           "retorno": "number",
-          "linea": 64,
+          "linea": 84,
           "resumen": "Multiplicador de precio para un evento, por aforo y tipo. La curva general (conciertos, festivales, lo que no sabemos clasificar) llega a 2.20 en aforo de estadio: por debajo del 2.5 del calendario a "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ea3b0a1b1b2e"
+      "hash": "864386825533"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/eventos-verificacion.ts",
@@ -91701,6 +91711,6 @@
   ],
   "resumen": {
     "archivos": 2451,
-    "funciones": 6629
+    "funciones": 6630
   }
 }
