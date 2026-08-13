@@ -32,6 +32,21 @@
 
 ---
 
+### 🔢 (13/08/2026) Re-verificado el veredicto de inversión: 7 cifras publicadas estaban mal
+- Mergeados **#1399** (botón Reservar de /barrio y /que-ver no llevaba al motor + táctil 44px) y
+  **#1397** (cancelaciones de Smoobu). Verificado sobre `main`: 47/47 y 11/11 tests, las 20 anclas
+  apuntan a `id`s vivos, `reservas_canceladas` existe en producción con RLS y 0 filas (se llena en
+  la 1ª pasada del cron). **Producción no se puede comprobar desde el contenedor** (egress bloqueado).
+- Al retomar el plan de intradía resultó estar **ya hecho** (`docs/INVERSION-VEREDICTO-2026-08.md`).
+  Pero al re-derivar sus cifras desde IBKR/Supabase, **7 estaban mal y 3 se contradecían con sus
+  propias tablas**: esperanza −172→**−162 $**, Kelly −47,6→**−44,7%**, «39% intradía»→**61%**,
+  SPY +11,4→**+13,3%** (y en USD contra un TWR en euros), *day trades* del PDT, subastas y la tabla
+  del backtest. **El veredicto no cambia** — el intradía sigue siendo el peor tramo con n=106.
+- Lo importante: el **+1,16% a >10 días** que citaba el skill son **7 round-trips con mediana
+  NEGATIVA**. Se ha quitado de la regla del agente. Y el `0.000000` de `valor`/`catalizador` en
+  `trading_estrategia_stats` es un **centinela «sin calcular»**, no un cero medido.
+- Pendiente: mirar quién escribe `trading_estrategia_stats.retorno_medio` (los dos ceros).
+
 ### 📒 (12/08/2026) Sesgo de supervivencia: 16 tesis vencidas que no se puntuaban NUNCA
 - Verificada la pasada del 12/08: 0 anuladas y el freno de #1382 actuando de verdad — apartó 4 `precio_ref`
   del 06/08 como fecha corrida (MSFT/NVO/SNDK/WDC, contrastados uno a uno contra IBKR: los cuatro son el
@@ -41,6 +56,7 @@
   18/07 — CEG/ISRG/SYM/UEC). Fix: `juzgarHuerfana` las puntúa con el cierre de su vencimiento (2ª fuente),
   con ancla contra `precio_ref` (splits/ticker reciclado) y margen de ventana; lo que no se puede, se canta.
 - ⚠️ El ancla NO puede pedir la fecha exacta: las 16 son de un SÁBADO y sus refs son el cierre del viernes.
+
 
 ### 📱 (12/08/2026) La portada de House Sevillana suspendía el mínimo táctil de 44px (PR #1399)
 - Claude in Chrome **no puede medir 320px** (su gestor de ventanas fuerza ~1536px de ancho mínimo), así que
