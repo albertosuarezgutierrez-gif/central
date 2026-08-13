@@ -47,6 +47,8 @@ export {
   parsearLoteSurus,
   loteASubasta as loteSurusASubasta,
   esSurus,
+  htmlATexto,
+  urlsDeLote,
   COMISION_SURUS,
   DOMINIO_SURUS,
 } from './surus.ts'

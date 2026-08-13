@@ -25,9 +25,10 @@
 // ────────────────────────────────────────────────────────────────────────────
 import {
   DOMINIO_SURUS,
-  decodificarHtml,
+  htmlATexto,
   loteSurusASubasta,
   parsearLoteSurus,
+  urlsDeLote,
 } from '@central/module-subastas'
 import { leerAlertas } from '@/lib/subastas/gmail-boe'
 import { upsertSubastas, type SubastaEnriquecida } from '@/lib/subastas-ingesta'
@@ -43,39 +44,14 @@ export interface IngestaSurus {
 }
 
 /**
- * HTML de correo → texto con SALTOS DE LÍNEA conservados. El parser de Surus se
- * apoya en que cada etiqueta va en su línea, así que aplanar el HTML a un solo
- * párrafo (como hace el lector del BOE) lo dejaría ciego.
+ * NOTA: `htmlATexto` y `urlsDeLote` vivían aquí y se han movido a
+ * `@central/module-subastas` (13/08/2026). Son PURAS, y aquí no había manera de
+ * cubrirlas con `node --test` porque este archivo importa Prisma y el lector
+ * IMAP — que es exactamente por lo que su fallo de saltos de línea llegó a
+ * `main` sin que ningún test lo viera. Se re-exportan para no romper a quien
+ * las importe desde aquí.
  */
-export function htmlATexto(html: string): string {
-  return decodificarHtml(
-    html
-      .replace(/<(script|style)[\s\S]*?<\/\1>/gi, ' ')
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<\/(p|div|tr|li|h[1-6]|table)>/gi, '\n')
-      .replace(/<\/t[dh]>/gi, '  ') // celdas: dos espacios = separador de columna
-      .replace(/<[^>]+>/g, ' '),
-  )
-    .split('\n')
-    .map((l) => l.replace(/[ \t ]+/g, ' ').trimEnd())
-    .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
-}
-
-/** URLs de lote de surusin.com que aparecen en el HTML, en orden de aparición. */
-export function urlsDeLote(html: string): string[] {
-  const vistas = new Set<string>()
-  const out: string[] = []
-  for (const m of html.matchAll(/https?:\/\/[^\s"'<>]*surusin\.com[^\s"'<>]*/gi)) {
-    const url = decodificarHtml(m[0]).replace(/[.,)]+$/, '')
-    // Solo enlaces a una ficha concreta: el logo y el pie apuntan a la home.
-    if (!/\/(lote|subasta|activo)s?\//i.test(url)) continue
-    if (vistas.has(url)) continue
-    vistas.add(url)
-    out.push(url)
-  }
-  return out
-}
+export { htmlATexto, urlsDeLote }
 
 /**
  * Fichas contenidas en UN correo. Un aviso puede traer varios lotes, así que el
