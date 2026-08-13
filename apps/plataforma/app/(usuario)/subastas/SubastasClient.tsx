@@ -19,7 +19,13 @@ interface Oportunidad {
   origenValor?: 'tasacion' | 'valor_referencia' | 'comparables' | null
   /** El €/m² sale de la mediana de un municipio grande: orienta, no tasa. */
   valorOrientativo?: boolean
-  coste: { total: number; impuestoTransmision: number; impuestoConcepto: string; baseImponible: number }
+  /**
+   * `comisionCompra` es OPCIONAL a propósito: el snapshot del radar solo guarda
+   * el coste total, y ahí no se sabe cuánto era comisión. `undefined` = «este
+   * camino no trae el desglose» y la línea no se pinta — un 0 diría «no hay
+   * comisión», que en un lote de portal privado sería falso.
+   */
+  coste: { total: number; impuestoTransmision: number; impuestoConcepto: string; baseImponible: number; comisionCompra?: number }
   motivos: string[]
   avisos: string[]
 }
@@ -1139,6 +1145,15 @@ function FichaSubasta({ s, o, acciones, extra, doc, escenarios, params }: { s: S
                     {o.coste.impuestoConcepto} sobre {eur(o.coste.baseImponible)} ={' '}
                     <strong>{eur(o.coste.impuestoTransmision)}</strong>
                   </div>
+                  {/* Comisión del portal: solo la cobran los privados (Surus,
+                      servicers) y no se descuenta del remate, así que se pinta
+                      como partida propia y no escondida en los avisos. */}
+                  {!!o.coste.comisionCompra && o.coste.comisionCompra > 0 && (
+                    <div style={{ marginBottom: 6 }}>
+                      Comisión del portal a tu cargo (IVA incl.) ={' '}
+                      <strong>{eur(o.coste.comisionCompra)}</strong>
+                    </div>
+                  )}
                   {o.motivos.length > 0 && (
                     <ul style={{ margin: '6px 0', paddingLeft: 18 }}>
                       {o.motivos.map((m, i) => <li key={i}>{m}</li>)}

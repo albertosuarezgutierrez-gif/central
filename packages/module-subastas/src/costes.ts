@@ -18,6 +18,7 @@ import { costeFinanciacion } from './financiacion.ts'
 import { MIN_MUESTRA_CALIBRACION } from './adjudicaciones.ts'
 import { umbralesPuja } from './umbrales.ts'
 import { itpGeneral } from './impuestos.ts'
+import { COMISION_SURUS } from './surus.ts'
 
 /** Porcentaje del valor de subasta que hay que consignar para poder pujar. */
 export const PCT_DEPOSITO = 0.05
@@ -37,6 +38,11 @@ export const PARAMS_ANDALUCIA: ParamsBase = {
   tipoAjd: 0.012,  // AJD, acompaña al IVA
   notariaRegistro: 1200,
   cancelacionCargas: 600,
+  // Las subastas oficiales no cobran comisión al comprador: el default es 0 y
+  // solo los adaptadores de portal privado (Surus, servicers) la declaran.
+  comisionPct: 0,
+  comisionFija: 0,
+  comisionIva: 0.21,
   plusvaliaMunicipal: 0,
   comunidadPendiente: 0,
   ibiPendiente: 0,
@@ -45,6 +51,15 @@ export const PARAMS_ANDALUCIA: ParamsBase = {
 
 /** Coste estimado de recuperar la posesión de un inmueble ocupado. */
 export const LANZAMIENTO_ESTIMADO = 6000
+
+/**
+ * Comisión que cada PORTAL PRIVADO carga al comprador. Las fuentes oficiales
+ * (BOE, Junta, BOP, PLACSP) no aparecen aquí a propósito: no cobran nada por
+ * rematar, y un default distinto de 0 les inventaría un coste.
+ */
+const COMISION_POR_FUENTE: Partial<Record<SubastaInmueble['fuente'], { pct: number; fija: number; iva: number }>> = {
+  surus: { ...COMISION_SURUS },
+}
 
 /** Lo que hay que consignar para pujar en una subasta. */
 export function deposito(valorSubasta: number | null | undefined, pct = PCT_DEPOSITO): number | null {
@@ -127,6 +142,35 @@ export function calcularCoste(
     }
   }
 
+  // ── Comisión del portal a cargo del comprador ─────────────────────────────
+  // En una subasta oficial no existe; en los portales privados es la partida
+  // que más descoloca, porque se anuncia como «5% + 400€» y se paga SOBRE el
+  // remate (no se descuenta de él) y con su 21% de IVA encima.
+  //
+  // Si el caller no la declara, manda la FUENTE — mismo criterio que el ITP por
+  // provincia: la comisión está en las condiciones del portal y es idéntica en
+  // todos sus lotes, así que olvidarla en una pantalla y no en otra daría dos
+  // costes distintos para la misma subasta.
+  if (params.comisionPct == null && params.comisionFija == null) {
+    const portal = COMISION_POR_FUENTE[s.fuente]
+    if (portal) {
+      p.comisionPct = portal.pct
+      p.comisionFija = portal.fija
+      if (params.comisionIva == null) p.comisionIva = portal.iva
+    }
+  }
+
+  let comisionCompra = 0
+  if (p.comisionPct > 0 || p.comisionFija > 0) {
+    const base = precio * p.comisionPct + p.comisionFija
+    comisionCompra = redondear(base * (1 + p.comisionIva))
+    avisos.push(
+      `Comisión del portal a tu cargo: ${pct(p.comisionPct)} del remate` +
+        (p.comisionFija > 0 ? ` + ${formatearEur(p.comisionFija)}` : '') +
+        ` + IVA ${pct(p.comisionIva)} = ${formatearEur(comisionCompra)}. No se descuenta del precio.`,
+    )
+  }
+
   // ── Posesión ──────────────────────────────────────────────────────────────
   let lanzamiento = p.lanzamiento
   if (lanzamiento === 0 && (s.situacionPosesoria === 'ocupada' || s.situacionPosesoria === 'ocupada_desconocida')) {
@@ -160,6 +204,7 @@ export function calcularCoste(
     precio +
       cargasPreferentes +
       impuestoTransmision +
+      comisionCompra +
       p.notariaRegistro +
       p.cancelacionCargas +
       p.plusvaliaMunicipal +
@@ -174,7 +219,10 @@ export function calcularCoste(
   // que falta por poner, ya descontado el depósito consignado para pujar.
   let costeDinero = 0
   if (p.financiacion) {
-    const consignado = deposito(s.valorSubasta) ?? 0
+    // El depósito PUBLICADO manda sobre el 5% derivado: los portales privados
+    // piden mucho más (Surus, 7.500€ sobre una salida de 30.000€ = 25%), y
+    // derivarlo al 5% inflaría el importe que queda por financiar.
+    const consignado = s.deposito ?? deposito(s.valorSubasta) ?? 0
     const f = costeFinanciacion(Math.max(0, subtotal - consignado), p.financiacion)
     costeDinero = f.total
     if (costeDinero > 0) avisos.push(f.nota)
@@ -190,6 +238,7 @@ export function calcularCoste(
     impuestoConcepto,
     notariaRegistro: p.notariaRegistro,
     cancelacionCargas: p.cancelacionCargas,
+    comisionCompra,
     plusvaliaMunicipal: p.plusvaliaMunicipal,
     comunidadPendiente: redondear(comunidadPendiente),
     ibiPendiente: p.ibiPendiente,
