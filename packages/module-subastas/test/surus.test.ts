@@ -3,7 +3,7 @@
 // Aquí se decide con qué números entra un lote de Surus al radar. `node --test`.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { COMISION_SURUS, esSurus, loteASubasta, parsearLoteSurus } from '../src/surus.ts'
+import { COMISION_SURUS, esSurus, htmlATexto, loteASubasta, parsearLoteSurus, urlsDeLote } from '../src/surus.ts'
 import { calcularCoste } from '../src/costes.ts'
 import { FICHA_SURUS_SANTILLANA } from './fixtures-surus.ts'
 
@@ -127,4 +127,69 @@ test('un texto sin ninguna señal NO produce una ficha hueca', () => {
   assert.equal(parsearLoteSurus('Hola, esto no es una subasta.'), null)
   assert.equal(parsearLoteSurus(''), null)
   assert.equal(parsearLoteSurus(null), null)
+})
+
+// ── El camino del CORREO ────────────────────────────────────────────────────
+// Regresión de un fallo que llegó a `main` (13/08/2026): `htmlATexto` insertaba
+// los saltos de línea y luego los borraba al decodificar entidades, así que el
+// aviso entero quedaba en UNA línea y el lector —que va por línea— no leía
+// nada. Los tests del PDF no lo vieron porque el PDF ya viene en líneas.
+
+test('htmlATexto CONSERVA los saltos de línea (el fallo que se coló)', () => {
+  const t = htmlATexto('<p>Primera</p><p>Segunda</p>')
+  assert.equal(t.split('\n').filter((l) => l.trim()).length, 2, 'deben quedar dos líneas, no una')
+  assert.match(t, /Primera\nSegunda/)
+})
+
+test('htmlATexto decodifica entidades sin fundir las líneas', () => {
+  const t = htmlATexto('<p>Dep&oacute;sito De Garant&iacute;a: 7.500 &euro;</p><p>Uso Principal</p>')
+  assert.match(t, /Depósito De Garantía: 7\.500/)
+  assert.equal(t.split('\n').filter((l) => l.trim()).length, 2)
+})
+
+test('un correo con el vocabulario de la ficha SÍ se lee', () => {
+  const html = `<div><a href="https://www.surusin.com/lotes/999">Ver lote</a>
+    <p>VIVIENDA EN SANTILLANA DEL MAR (CANTABRIA).</p>
+    <p>Precio de salida: 30.000,00 &euro;</p>
+    <p>Dep&oacute;sito De Garant&iacute;a: 7.500 &euro;</p>
+    <p>Situaci&oacute;n Posesoria: La vivienda se encuentra actualmente ocupada.</p></div>`
+  const l = parsearLoteSurus(htmlATexto(html))
+  assert.ok(l, 'el correo debe producir ficha')
+  assert.equal(l.precioSalida, 30000)
+  assert.equal(l.deposito, 7500)
+  assert.equal(l.situacionPosesoria, 'ocupada')
+})
+
+test('etiqueta INDENTADA: el valor se corta por los dos puntos, no por la longitud', () => {
+  // «  Precio de salida: 30.000 €» devolvía «ida: 30.000 €» al cortar por
+  // longitud asumiendo que el rótulo empieza en la columna 0.
+  const l = parsearLoteSurus('   CASA EN OSUNA (SEVILLA).\n      Precio de salida: 30.000,00 €\n      Uso Principal: Residencial')
+  assert.equal(l?.precioSalida, 30000)
+  assert.equal(l?.usoPrincipal, 'Residencial')
+})
+
+test('🚨 tabla HTML: NO se lee la tasación donde pone la salida', () => {
+  // La versión por distancia en caracteres elegía 120.000 € — el error de
+  // 90.000 € por la puerta de atrás. Ahora manda el ÍNDICE de celda.
+  const html = `<table><tr><td>Tipo de inmueble</td><td>Precio de salida</td><td>Valor de tasación</td></tr>
+    <tr><td>Viviendas</td><td>30.000,00 &euro;</td><td>120.000 &euro;</td></tr></table>
+    <p>CASA EN RIA&Ntilde;O (CANTABRIA).</p>`
+  const l = parsearLoteSurus(htmlATexto(html))
+  assert.equal(l?.precioSalida, 30000)
+  assert.equal(l?.tasacion, 120000)
+})
+
+test('tabla con filas de forma distinta: prefiere NO leer a leer la columna de al lado', () => {
+  const texto = 'Tipo de inmueble  Precio de salida  Valor de tasación\nViviendas  30.000,00 €'
+  // Solo 2 celdas frente a 3 rótulos → no se adivina.
+  assert.equal(parsearLoteSurus(`CASA.\n${texto}`), null)
+})
+
+test('urlsDeLote coge solo las fichas, no el logo ni el pie', () => {
+  const html = `<a href="https://www.surusin.com">logo</a>
+    <a href="https://www.surusin.com/lotes/999">ficha</a>
+    <a href="https://www.surusin.com/lotes/999">la misma otra vez</a>
+    <a href="https://www.surusin.com/aviso-legal">pie</a>`
+  assert.deepEqual(urlsDeLote(html), ['https://www.surusin.com/lotes/999'])
+  assert.deepEqual(urlsDeLote(null), [])
 })

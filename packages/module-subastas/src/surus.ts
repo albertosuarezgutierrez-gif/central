@@ -29,6 +29,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 
 import { norm, parseImporteEs } from './parsing.ts'
+import { decodificarHtml } from './email-boe.ts'
 import { provinciaCanonica } from './geo.ts'
 import type { SituacionPosesoria, SubastaInmueble } from './types.ts'
 
@@ -81,6 +82,58 @@ export interface LoteSurus {
    * no una curiosidad: sin inscripción no hay escritura.
    */
   registroEnTramite: boolean
+}
+
+/**
+ * Separador de CELDA que sobrevive al colapso de espacios de `decodificarHtml`.
+ * Se sustituye por dos espacios al final, que es lo que distingue una columna
+ * de un espacio normal para el lector de tablas.
+ */
+const CELDA = ''
+
+/**
+ * HTML de correo → texto con SALTOS DE LÍNEA y COLUMNAS conservados. Puro.
+ *
+ * 🚨 Aquí vivió un fallo que merece el comentario (13/08/2026): la primera
+ * versión insertaba los saltos y DESPUÉS pasaba todo por `decodificarHtml`,
+ * que termina con `.replace(/\s+/g,' ')` — o sea, se comía justo los saltos
+ * que acababa de poner. El correo entero quedaba en UNA línea y el lector de
+ * etiquetas, que trabaja por línea, no encontraba nada: la ingesta por correo
+ * habría contado todos los avisos como ilegibles. Lo cazó una prueba de punta
+ * a punta con un correo de forma realista, no los tests del PDF.
+ *
+ * Por eso ahora se decodifica CELDA A CELDA y se recompone: la decodificación
+ * solo colapsa espacios dentro de una celda, nunca la estructura.
+ */
+export function htmlATexto(html: string | null | undefined): string {
+  if (!html) return ''
+  return html
+    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|tr|li|h[1-6]|table)>/gi, '\n')
+    .replace(/<\/t[dh]>/gi, CELDA)
+    .replace(/<[^>]+>/g, ' ')
+    .split('\n')
+    .map((linea) => linea.split(CELDA).map((celda) => decodificarHtml(celda)).join('  '))
+    .map((linea) => linea.replace(/\s+$/, ''))
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+}
+
+/** URLs de ficha de lote de surusin.com que aparecen en un HTML, en orden. */
+export function urlsDeLote(html: string | null | undefined): string[] {
+  if (!html) return []
+  const vistas = new Set<string>()
+  const out: string[] = []
+  for (const m of html.matchAll(/https?:\/\/[^\s"'<>]*surusin\.com[^\s"'<>]*/gi)) {
+    const url = decodificarHtml(m[0]).replace(/[.,)]+$/, '')
+    // Solo enlaces a una ficha concreta: el logo y el pie apuntan a la home.
+    if (!/\/(lote|subasta|activo)s?\//i.test(url)) continue
+    if (vistas.has(url)) continue
+    vistas.add(url)
+    out.push(url)
+  }
+  return out
 }
 
 /** ¿Este texto es una ficha/aviso de Surus? Conservador a propósito. */
@@ -197,7 +250,15 @@ export function loteASubasta(
 // Surus escribe «Etiqueta: valor» o «Etiqueta\nvalor» según la sección, así que
 // se aceptan las dos formas de un tirón.
 
-/** Texto que sigue a una etiqueta, en la misma línea o en la siguiente. */
+/**
+ * Texto que sigue a una etiqueta, en la misma línea o en la siguiente.
+ *
+ * El valor se corta por los DOS PUNTOS, no por la longitud de la etiqueta:
+ * cortar por longitud asume que el rótulo empieza en la columna 0, y un correo
+ * con la línea indentada («  Precio de salida: 30.000 €») devolvía un trozo a
+ * medias («ida: 30.000 €»). Como ya se ha comprobado que la línea EMPIEZA por
+ * la etiqueta, los primeros dos puntos son necesariamente los suyos.
+ */
 function valorTrasEtiqueta(texto: string, etiqueta: string): string | null {
   const lineas = texto.split('\n')
   const objetivo = norm(etiqueta)
@@ -206,7 +267,9 @@ function valorTrasEtiqueta(texto: string, etiqueta: string): string | null {
     if (!l) continue
     const n = norm(l)
     if (!n.startsWith(objetivo)) continue
-    const resto = l.slice(etiqueta.length).replace(/^\s*:?\s*/, '').trim()
+    const sinIndent = l.trimStart()
+    const dosPuntos = sinIndent.indexOf(':')
+    const resto = (dosPuntos >= 0 ? sinIndent.slice(dosPuntos + 1) : sinIndent.slice(etiqueta.length)).trim()
     if (resto) return resto
     // Etiqueta sola: el valor va en la primera línea no vacía de debajo.
     for (let j = i + 1; j < lineas.length && j <= i + 3; j++) {
@@ -229,16 +292,24 @@ function importeTrasEtiqueta(texto: string, etiqueta: string): number | null {
 
 /**
  * Importe de una TABLA de dos filas: los rótulos en una línea y los valores
- * alineados debajo. Así publica Surus la cabecera del lote —
+ * debajo. Así publica Surus la cabecera del lote —
  *
  *   Tipo de inmueble       Precio de salida       Valor de tasación
  *   Viviendas              30.000,00 €            120.000 €
  *
- * — y por eso «Precio de salida» no se puede leer como «etiqueta: valor». Se
- * empareja por POSICIÓN: de los importes de la fila de valores gana el que
- * empieza más cerca de la columna del rótulo. Si el más cercano está a más de
- * media tabla de distancia se descarta: preferimos no leerlo a leer el de al
- * lado (confundir la salida con la tasación sería un error de 90.000 €).
+ * — y por eso «Precio de salida» no se puede leer como «etiqueta: valor».
+ *
+ * 🚨 Se empareja por ÍNDICE DE CELDA, no por posición en caracteres. La primera
+ * versión medía la distancia horizontal al rótulo, lo cual funciona en el PDF
+ * (ancho fijo) pero se equivoca de columna en cuanto la maquetación no conserva
+ * la posición — en una tabla HTML de correo, «Precio de salida» cae más cerca
+ * de la tasación que de la salida y el parser habría leído 120.000 € donde pone
+ * 30.000 €. Justo el error de 90.000 € que se quería evitar, por la puerta de
+ * atrás. Las celdas se separan por 2+ espacios, que es lo que sobrevive tanto
+ * al PDF como al HTML.
+ *
+ * Si la fila de valores no tiene la MISMA forma que la de rótulos, se devuelve
+ * `null`: preferimos no leerlo a leer la columna de al lado.
  */
 function importeColumnar(texto: string, etiqueta: string): number | null {
   const lineas = texto.split('\n')
@@ -246,25 +317,24 @@ function importeColumnar(texto: string, etiqueta: string): number | null {
   for (let i = 0; i < lineas.length; i++) {
     const cabecera = lineas[i]
     if (!cabecera || !/\s{2,}/.test(cabecera)) continue
-    const col = cabecera.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().indexOf(objetivo)
+    const rotulos = celdas(cabecera)
+    const col = rotulos.findIndex((r) => norm(r).startsWith(objetivo))
     if (col < 0) continue
 
     for (let j = i + 1; j < lineas.length && j <= i + 4; j++) {
-      const valores = lineas[j]
-      if (!valores?.trim()) continue
-      let mejor: { n: number; d: number } | null = null
-      for (const m of valores.matchAll(/-?\d[\d.,]*\s*(?:€|eur)/gi)) {
-        const n = parseImporteEs(m[0])
-        if (n == null) continue
-        const d = Math.abs((m.index ?? 0) - col)
-        if (!mejor || d < mejor.d) mejor = { n, d }
-      }
-      // Tolerancia: la mitad del ancho de la tabla, nunca más.
-      if (mejor && mejor.d <= Math.max(20, cabecera.trimEnd().length / 2)) return mejor.n
-      break
+      if (!lineas[j]?.trim()) continue
+      const valores = celdas(lineas[j])
+      if (valores.length !== rotulos.length) return null
+      const m = valores[col].match(/-?\d[\d.,]*\s*(?:€|eur)?/i)
+      return m ? parseImporteEs(m[0]) : null
     }
   }
   return null
+}
+
+/** Celdas de una fila: lo separado por 2+ espacios, sin vacíos. */
+function celdas(linea: string): string[] {
+  return linea.trim().split(/\s{2,}/).map((c) => c.trim()).filter(Boolean)
 }
 
 function numeroTrasEtiqueta(texto: string, etiqueta: string): number | null {
@@ -323,15 +393,27 @@ function refCatastralSurus(texto: string): string | null {
   return m ? m[0] : null
 }
 
-/** Primera línea con contenido: el título del lote. Se une si viene partido. */
+/**
+ * Título del lote: la primera PROSA con contenido, unida si viene partida en
+ * varias líneas («VIVIENDA EN SANTILLANA / DEL MAR (CANTABRIA).»).
+ *
+ * Un título NUNCA es una fila de tabla, así que las líneas con celdas (2+
+ * espacios) se saltan en vez de cortar la búsqueda. Cortar en la primera de
+ * ellas dejaba sin título —y por tanto sin ficha— cualquier aviso que abriera
+ * con la tabla de precios en vez de con el titular, que es una maquetación de
+ * correo perfectamente normal.
+ */
 function tituloDe(lineas: string[]): string {
   const utiles: string[] = []
   for (const l of lineas) {
-    if (!l) {
+    if (!l || /\s{2,}/.test(l)) {
       if (utiles.length) break
       continue
     }
-    if (/^(localizacion|localización|tipo de inmueble)\b/i.test(l)) break
+    if (/^(localizacion|localización|tipo de inmueble|precio de salida|valor de tasaci)/i.test(l)) {
+      if (utiles.length) break
+      continue
+    }
     utiles.push(l)
     if (l.endsWith('.') && utiles.join(' ').length > 12) break
     if (utiles.length >= 3) break
