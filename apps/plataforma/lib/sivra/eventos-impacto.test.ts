@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { impactoEvento, clasificarTipo, FACTOR_MAX } from './eventos-impacto.ts'
+import { impactoEvento, clasificarTipo, esPartidoLigaRegular, FACTOR_MAX } from './eventos-impacto.ts'
 
 test('un concierto de estadio ya no se queda en 1.60', () => {
   // La Cartuja, 60.000 (Karol G). Antes salía 1.60 y hubo que corregirlo a mano.
@@ -76,4 +76,34 @@ test('un nombre sin palabra clave cae en `otro`, y eso NO le cuesta dinero', () 
 
 test('un tipo desconocido usa la curva general, no la de deporte', () => {
   assert.equal(impactoEvento(60000, 'no sé qué es esto'), 2.2)
+})
+
+// ————— Democión por NOMBRE: la jornada de liga no vale una final (caso real 12/08/2026) —————
+
+test('caso real: jornada de liga con tipo mudo entraba a x2.2 — el NOMBRE la demota a 1.35', () => {
+  // El websearch metió «Sevilla FC vs Atlético de Madrid» (29-ago) y «Sevilla FC vs Valencia CF»
+  // (13-sep) con tipo sin palabra clave → curva general ×2,2. El centinela #7 las cazó (mercado a
+  // 0,82-0,85× su mes). Con el nombre, caen a la curva plana del deporte.
+  assert.equal(impactoEvento(43000, 'evento', 'Sevilla FC vs Atlético de Madrid'), 1.35)
+  assert.equal(impactoEvento(43000, '', 'Sevilla FC vs Valencia CF'), 1.35)
+})
+
+test('una FINAL jamás se demota por nombre («no tope, final copa rey hay q aprovechar»)', () => {
+  assert.equal(esPartidoLigaRegular('Final Copa del Rey 2027'), false)
+  assert.equal(esPartidoLigaRegular('Sevilla FC vs Real Betis — semifinal Copa del Rey'), false)
+  assert.equal(impactoEvento(60000, '', 'Final Copa del Rey 2027'), 2.2)
+})
+
+test('el nombre nunca PROMOCIONA ni pisa un tipo reconocible', () => {
+  // Un concierto se queda en su curva aunque el nombre mencione un club.
+  assert.equal(impactoEvento(60000, 'Concierto', 'Himno del Sevilla FC vs el olvido'), 2.2)
+  // Y un nombre sin señal de partido no activa nada.
+  assert.equal(esPartidoLigaRegular('KAROL G - VIAJANDO POR EL MUNDO TROPITOUR'), false)
+  assert.equal(esPartidoLigaRegular(''), false)
+  assert.equal(esPartidoLigaRegular(null), false)
+})
+
+test('Ticketmaster manda tipo "deportes" (plural) y también cuenta como deporte', () => {
+  assert.equal(clasificarTipo('deportes'), 'deporte')
+  assert.equal(impactoEvento(43000, 'deportes'), 1.35)
 })
