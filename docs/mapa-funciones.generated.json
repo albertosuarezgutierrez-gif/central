@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-12T17:08:12Z",
-  "sha": "e362168bdf85361443980d767a748754cb27a8fd",
+  "generadoEn": "2026-08-13T08:15:31Z",
+  "sha": "baa5b9bed85cce6af9e53dd73cc5605f20975f5b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -2819,12 +2819,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 73
+          "linea": 82
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7100830f7f9d"
+      "hash": "a8c4cb25f8cc"
     },
     {
       "ruta": "apps/housesevillana/app/en/parking/route.ts",
@@ -3027,12 +3027,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 66
+          "linea": 71
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2c8f87106d6a"
+      "hash": "34b583ec73a4"
     },
     {
       "ruta": "apps/housesevillana/app/robots.txt/route.ts",
@@ -3068,7 +3068,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 658
+          "linea": 686
         },
         {
           "nombre": "GET",
@@ -3076,14 +3076,14 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 833
+          "linea": 861
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "bd8e226a9d73"
+      "hash": "fa46030ccc2f"
     },
     {
       "ruta": "apps/housesevillana/app/sitemap.xml/route.ts",

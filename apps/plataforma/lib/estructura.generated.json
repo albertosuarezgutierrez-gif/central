@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-12T17:11:02Z",
+  "generadoEn": "2026-08-13T08:15:31Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4515,6 +4515,14 @@
   ],
   "novedades": [
     {
+      "titulo": "No era una regresión:",
+      "fecha": ""
+    },
+    {
+      "titulo": "2ª pasada, el hallazgo de verdad:",
+      "fecha": ""
+    },
+    {
       "titulo": "Corrige el aviso del PR #1392:",
       "fecha": ""
     },
@@ -4564,14 +4572,6 @@
     },
     {
       "titulo": "Barrido del mismo fallo en todo 2026",
-      "fecha": ""
-    },
-    {
-      "titulo": "PriceLabs resuelto por Alberto (11/08): «es por el cambio».",
-      "fecha": ""
-    },
-    {
-      "titulo": "PR #1368 MERGEADO y verificado en producción",
       "fecha": ""
     }
   ],
