@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-13T08:22:51Z",
-  "sha": "19873bbf4e13cd9b167745308bba8f5d07fdd813",
+  "generadoEn": "2026-08-13T08:56:01Z",
+  "sha": "4598c03ebb101f11e7722b942c5bedc928ae3297",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -57192,7 +57192,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 23
+          "linea": 28
         }
       ],
       "tablas": [
@@ -57200,7 +57200,7 @@
         "trading_tesis"
       ],
       "rutaApi": "/api/trading/puntuar",
-      "hash": "3e17bfc69f89"
+      "hash": "6fea9f5739ef"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/saldo/route.ts",
@@ -70835,6 +70835,10 @@
         "resumenDesfase",
         "juzgarDiferido",
         "resumenDiferido",
+        "fechaMas",
+        "diasEntre",
+        "juzgarHuerfana",
+        "resumenHuerfanas",
         "detectarSuplantaciones",
         "resumenSuplantaciones",
         "saltoDeSaldo"
@@ -70918,12 +70922,47 @@
           "linea": 357
         },
         {
+          "nombre": "fechaMas",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string, dias: number",
+          "retorno": "string",
+          "linea": 445,
+          "resumen": "Aritmética de fechas en días naturales UTC. Aquí y no en un util compartido porque este módulo no importa NADA a propósito: es lo que permite testearlo con `node --test --experimental-strip-types`."
+        },
+        {
+          "nombre": "diasEntre",
+          "kind": "function",
+          "exportada": true,
+          "params": "desde: string, hasta: string",
+          "retorno": "number",
+          "linea": 451
+        },
+        {
+          "nombre": "juzgarHuerfana",
+          "kind": "function",
+          "exportada": true,
+          "params": "h: Huerfana, serie: PuntoContraste[], maxDesvio = DIVERGENCIA_MAX, margenDias = HUERFANA_MARGEN_DIAS,",
+          "retorno": "VeredictoHuerfana",
+          "linea": 460,
+          "resumen": "`serie` = cierres publicados por la 2ª fuente en orden ascendente (lo que devuelven tanto el CSV de Stooq como el chart de Yahoo, y lo que ya asume `juzgarPuntos`)."
+        },
+        {
+          "nombre": "resumenHuerfanas",
+          "kind": "function",
+          "exportada": true,
+          "params": "puntuadas: number, sinResolver: HuerfanaNoResuelta[], fueraDePlazo: number,",
+          "retorno": "string",
+          "linea": 498,
+          "resumen": "Parte de una línea. Vacío solo si no hubo NINGUNA huérfana: en cuanto hay una, se dice — aunque no se haya podido hacer nada con ella, que es justo el caso que se pasó cuatro semanas callado."
+        },
+        {
           "nombre": "cerca",
           "kind": "function",
           "exportada": false,
           "params": "a: number, b: number, tol: number",
           "retorno": "boolean",
-          "linea": 451
+          "linea": 588
         },
         {
           "nombre": "detectarSuplantaciones",
@@ -70931,7 +70970,7 @@
           "exportada": true,
           "params": "precios: Record<string, number>, referencias: Record<string, number>, tol = CRUCE_TOLERANCIA,",
           "retorno": "Suplantaciones",
-          "linea": 457,
+          "linea": 594,
           "resumen": "Detecta precios que pertenecen a otro símbolo. `referencias` = mismo mapa que `filtrarPreciosAnomalos` (último `precio_ref` conocido ANTERIOR a la pasada, por símbolo)."
         },
         {
@@ -70940,7 +70979,7 @@
           "exportada": true,
           "params": "suplantados: Suplantacion[]",
           "retorno": "string",
-          "linea": 506,
+          "linea": 643,
           "resumen": "Resumen de una línea. Cadena vacía si no hay nada — el consumidor no tiene que comprobarlo."
         },
         {
@@ -70949,13 +70988,13 @@
           "exportada": true,
           "params": "nuevo: number, anterior: number | null, umbral = SALTO_NAV_AVISO",
           "retorno": "SaltoSaldo",
-          "linea": 532,
+          "linea": 669,
           "resumen": "`variacion` = (nuevo − anterior) / anterior. Sin anterior no hay nada que comparar (primer saldo): no se avisa, que es distinto de «no ha cambiado»."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "50f5f5e86589"
+      "hash": "ad6b10d26632"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-stooq.ts",
@@ -91662,6 +91701,6 @@
   ],
   "resumen": {
     "archivos": 2451,
-    "funciones": 6625
+    "funciones": 6629
   }
 }
