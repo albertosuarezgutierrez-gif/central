@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-12T17:08:12Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-12T17:11:02Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -233,6 +233,7 @@
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - Corrige el aviso del PR #1392:
 - 0 errores de runtime en 7 días. Eso no era que funcionara: era que nadie lo había usado.
+- No cerraba una fuga
 - La buena noticia: la puerta ya está abierta.
 - El grave: una `service_role` del proyecto de PRODUCCIÓN `wswbehlcuxqxyinousql`
 - Bucle de alertas encontrado:
@@ -240,5 +241,4 @@
 - Hallazgo grande:
 - Plan de reservas directas
 - #1374
-- El 🔴 gordo ARREGLADO en la misma sesión:
 

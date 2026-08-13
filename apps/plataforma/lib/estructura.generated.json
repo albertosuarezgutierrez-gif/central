@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-12T17:08:12Z",
+  "generadoEn": "2026-08-12T17:11:02Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4523,6 +4523,10 @@
       "fecha": ""
     },
     {
+      "titulo": "No cerraba una fuga",
+      "fecha": ""
+    },
+    {
       "titulo": "La buena noticia: la puerta ya está abierta.",
       "fecha": ""
     },
@@ -4568,10 +4572,6 @@
     },
     {
       "titulo": "PR #1368 MERGEADO y verificado en producción",
-      "fecha": ""
-    },
-    {
-      "titulo": "#755",
       "fecha": ""
     }
   ],
