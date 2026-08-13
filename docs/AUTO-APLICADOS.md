@@ -13,6 +13,11 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-08-13** · `docs/CONTEXTO-SESIONES.md` · auditoría ligera diaria (rango de 5 commits desde la
+  pasada del 11/08, `e362168..b3ca200`): añadida la entrada que faltaba del PR #1398 (`housesevillana`
+  no arrancaba build por lockfile desactualizado — PR #1390 lo dejó sin regenerar). Los otros 4 commits
+  del rango (2× regeneración de radiografía, CI gitleaks, RLS trading #1395) ya estaban documentados o
+  son ruido de CI · commit de esta auditoría
 - **2026-08-12** · `docs/CONTEXTO-SESIONES.md` · auditoría ligera diaria (rango desde la profunda del
   09/08, 32+ commits, casi todos autodocumentados PR a PR): podado el bloque «Estado vivo» — Jaime
   Salas (278,30€) ya conciliado (#1372/#1376) fuera de pendientes; PriceLabs actualizado (diferencia
