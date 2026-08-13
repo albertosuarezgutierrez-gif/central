@@ -15,6 +15,13 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-13 · mercado-booking** · hizo: pasada de 12 ventanas (plan `?max=12`, sin filtro
+  de rondas — las 12 candidatas eran ronda 1/evento, `sin_medir_nunca`): Sevilla FC-Atlético
+  (29-ago), Espanyol-Sevilla (6-sep) y Pan de oro Pedro el Granaíno (13-sep), las 4 propiedades
+  de SIVRA (aforos 12/5/4/2) en cada fecha. 120 comparables reales escritos en `market_rates`
+  (`fuente:booking_mcp`), 0 ventanas sin respuesta, 0 sin precio utilizable. `price_night` =
+  `price.book/2` (todas 2 noches). Latido `ok:true`. dudas: —; fallos: —; PRs/commits: — (solo
+  Booking MCP + Supabase vía HTTP + esta entrada de bitácora).
 - **2026-08-12 · psd2-health-check** · hizo: preflight `/api/internal/alerta` 200 OK (canal
   vivo); consulta de frescura `movimientos_bancarios WHERE origen='psd2'` → último movimiento
   2026-08-10 (hace 2 días, dentro del umbral de 48h), mov_30d=75 vs mov_30d_prev=72 (sin caída).
