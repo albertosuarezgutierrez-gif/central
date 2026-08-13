@@ -47,6 +47,17 @@
   `trading_estrategia_stats` es un **centinela «sin calcular»**, no un cero medido.
 - Pendiente: mirar quién escribe `trading_estrategia_stats.retorno_medio` (los dos ceros).
 
+### ✅ (13/08/2026) El rescate de tesis huérfanas, confirmado en producción
+- PR #1403 mergeado (`4598c03`) y **verificado en la pasada de las 20:52 UTC**: las 16 tesis del 18/07
+  (CEG/ISRG/SYM/UEC) se puntuaron con `precio_fuente='contraste'`, `ventana_dias=10` y el cierre real del
+  28/07 al céntimo — 259,82 · 361,80 · 42,34 · 9,44 (contrastado contra IBKR antes de escribir el código).
+- El latido lo canta: «40 tesis puntuadas · 16 tesis huérfana(s) puntuada(s) con el cierre de su
+  vencimiento (2ª fuente)». `n` por estrategia 116 → **130**; momentum 0,2414 → 0,2385 de hit-rate. 0 anuladas.
+- El freno de la etiqueta corrida (#1382) volvió a actuar: SNDK del 06/08 apartado, no anulado.
+- Método: el ancla NO puede pedir la fecha exacta de la tesis (las 16 son de un SÁBADO y sus refs son el
+  cierre del viernes). Y ojo con el `[skip ci]` del bot 18 s tras un merge: no pude fechar el build desde
+  el contenedor; lo cerró el despliegue de #1405, que por estar `main` por delante ya llevaba el arreglo.
+
 ### 📒 (12/08/2026) Sesgo de supervivencia: 16 tesis vencidas que no se puntuaban NUNCA
 - Verificada la pasada del 12/08: 0 anuladas y el freno de #1382 actuando de verdad — apartó 4 `precio_ref`
   del 06/08 como fecha corrida (MSFT/NVO/SNDK/WDC, contrastados uno a uno contra IBKR: los cuatro son el
