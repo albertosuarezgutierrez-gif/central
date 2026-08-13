@@ -27,7 +27,7 @@
 /** Tipos que distinguimos. Cualquier otra cosa cae en el caso general. */
 export type TipoEvento = 'deporte' | 'concierto' | 'congreso' | 'festival' | 'otro'
 
-const DEPORTE = /\b(f[úu]tbol|futbol|laliga|la liga|liga|partido|derbi|sevilla fc|real betis|betis|copa del rey|champions|europa league|baloncesto|deporte|sports?)\b/i
+const DEPORTE = /\b(f[úu]tbol|futbol|laliga|la liga|liga|partido|derbi|sevilla fc|real betis|betis|copa del rey|champions|europa league|baloncesto|deportes?|deportivo|sports?)\b/i
 const CONGRESO = /\b(congreso|convenci[óo]n|feria|sal[óo]n|simposio|jornadas?|fibes|expo)\b/i
 
 /** Normaliza el `tipo` que traen las fuentes (Ticketmaster o la IA), que es texto libre. */
@@ -49,6 +49,26 @@ export function clasificarTipo(texto?: string | null): TipoEvento {
 /** Techo duro: es el mismo que honra `eventFactor` del calendario. Nada sale de aquí por encima. */
 export const FACTOR_MAX = 2.5
 
+// Un partido que SÍ mueve hotel (una final, una eliminatoria) nunca se demota por nombre: se deja
+// en la curva general o se cataloga a mano. La lista es deliberadamente corta.
+const RE_PARTIDO_GRANDE = /\b(final(es)?|semifinal(es)?|copa del rey|supercopa|champions|europa league|conference|eliminatoria|playoff)\b/i
+const RE_CLUB_LOCAL = /\b(sevilla fc|real betis|betis)\b/i
+
+/**
+ * ¿Es un partido de liga REGULAR de un club local? («Sevilla FC vs Valencia CF»)
+ *
+ * Existe porque el `tipo` que devuelve la IA muchas veces no trae ninguna palabra clave y el
+ * partido caía en la curva general (12/08/2026: dos jornadas de liga entraron a ×2,2, el nivel de
+ * una final — el centinela #7 las cazó porque el mercado iba a 0,82-0,85× su mes). El NOMBRE sí
+ * delata el partido, pero solo se usa para DEMOTAR liga regular: una final de Copa («no tope!
+ * final copa rey hay q aprovechar», decisión de Alberto 09/08/2026) jamás baja a la curva plana.
+ */
+export function esPartidoLigaRegular(nombre?: string | null): boolean {
+  const n = String(nombre ?? '')
+  if (!n.trim() || RE_PARTIDO_GRANDE.test(n)) return false
+  return RE_CLUB_LOCAL.test(n) && /\bvs\.?\b|\bcontra\b|[-–—]\s*(fc|cf|ud|cd|real)\b/i.test(n)
+}
+
 /**
  * Multiplicador de precio para un evento, por aforo y tipo.
  *
@@ -61,11 +81,14 @@ export const FACTOR_MAX = 2.5
  * hotel (una final, una eliminatoria europea grande) se cataloga a mano, que es lo que ya hacemos
  * con los pelotazos.
  */
-export function impactoEvento(aforo: number, tipo?: string | null): number {
+export function impactoEvento(aforo: number, tipo?: string | null, nombre?: string | null): number {
   const n = Number(aforo)
   if (!Number.isFinite(n) || n <= 0) return 1.08
 
-  const clase = clasificarTipo(tipo)
+  let clase = clasificarTipo(tipo)
+  // El nombre solo puede DEMOTAR a la curva plana de liga (nunca promociona ni toca finales):
+  // ver `esPartidoLigaRegular`. Con `tipo` reconocible, manda el tipo.
+  if (clase === 'otro' && esPartidoLigaRegular(nombre)) clase = 'deporte'
 
   if (clase === 'deporte') {
     let f = 1.08
