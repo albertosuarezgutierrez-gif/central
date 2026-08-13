@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-13T08:22:51Z",
+  "generadoEn": "2026-08-13T21:11:34Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1736,7 +1736,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 28
+        "evidencias": 29
       },
       "rrhh": {
         "estado": "no",
@@ -4516,6 +4516,14 @@
   ],
   "novedades": [
     {
+      "titulo": "`calcularCoste` gana `comisionCompra`",
+      "fecha": ""
+    },
+    {
+      "titulo": "Coches fuera de alcance",
+      "fecha": ""
+    },
+    {
       "titulo": "No era una regresión:",
       "fecha": ""
     },
@@ -4565,14 +4573,6 @@
     },
     {
       "titulo": "El 🔴 gordo ARREGLADO en la misma sesión:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Causa estructural:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Barrido del mismo fallo en todo 2026",
       "fecha": ""
     }
   ],
