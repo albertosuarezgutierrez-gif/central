@@ -52,6 +52,8 @@ export type VentanaPedida = {
   etiqueta?: string
   /** 0 = ronda base (línea de temporada). Ver `mercado-ventanas.ts`. */
   ronda: number
+  /** ventana de evento CONFIRMADO (su precio está congelado mientras no se mida) */
+  eventoConfirmado?: boolean
   /** días desde la última medición fiable; `null` = nunca medida (lo más urgente) */
   diasSinMedir: number | null
   comps: number
@@ -176,10 +178,14 @@ function clave(checkin: string, aforo: number): string {
  *   1. **Nunca medida** antes que vieja. Una fecha sin ningún comp fiable es un hueco que el motor
  *      rellena con el ancla global (dominada por las fechas cercanas, más baratas); una fecha
  *      medida hace tres días sigue siendo razonablemente cierta.
- *   2. **Ronda base antes que evento** SOLO cuando ambas están sin medir: la línea de temporada es
- *      lo que hace elegible el bucket mensual del motor (exige ≥3 fechas distintas del mes), y sin
- *      bucket no hay temporada que aplicar a los otros 28 días del mes.
- *   3. A igualdad, **la fecha más cercana primero**: es la que ya se está vendiendo.
+ *   2. Entre vírgenes, **el evento CONFIRMADO sin medir pasa por DELANTE de todo** (13/08/2026,
+ *      caso Bienal): el motor CONGELA esas noches a un precio posiblemente falso hasta que se
+ *      midan — cada día sin medir es un día congelado. Solo confirmados: un previsto es una
+ *      apuesta y no gasta ventana prioritaria.
+ *   3. Después, **ronda base antes que evento previsto**: la línea de temporada es lo que hace
+ *      elegible el bucket mensual del motor (exige ≥3 fechas distintas del mes), y sin bucket no
+ *      hay temporada que aplicar a los otros 28 días del mes.
+ *   4. A igualdad, **la fecha más cercana primero**: es la que ya se está vendiendo.
  *
  * `hoyIso` entra como parámetro (no `new Date()`) para que la función sea pura y testeable.
  *
@@ -216,6 +222,7 @@ export function planDeVentanas(
         motivo: v.motivo,
         etiqueta: v.etiqueta,
         ronda: v.ronda,
+        eventoConfirmado: v.eventoConfirmado === true,
         diasSinMedir,
         comps: c?.comps ?? 0,
       })
@@ -227,7 +234,11 @@ export function planDeVentanas(
     const bNunca = b.diasSinMedir === null
     if (aNunca !== bNunca) return aNunca ? -1 : 1
     if (aNunca && bNunca) {
-      // Ambas vírgenes: manda la ronda (base → evento → profundidad) y luego la cercanía.
+      // Ambas vírgenes: el evento CONFIRMADO primero (su precio está congelado hasta medirse),
+      // luego la ronda (base → evento previsto → profundidad) y luego la cercanía.
+      const aCong = a.eventoConfirmado === true
+      const bCong = b.eventoConfirmado === true
+      if (aCong !== bCong) return aCong ? -1 : 1
       if (a.ronda !== b.ronda) return a.ronda - b.ronda
       return a.checkin.localeCompare(b.checkin)
     }

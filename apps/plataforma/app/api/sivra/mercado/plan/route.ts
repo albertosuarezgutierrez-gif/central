@@ -59,18 +59,27 @@ export async function GET(req: NextRequest) {
 
   // Fechas de evento de las dos fuentes que conoce el motor (calendario del repo + descubrimiento
   // de los crons). Si la tabla falla se barre la base mensual y SE DICE — no es «no había eventos».
+  // El calendario del repo es curado a mano: cuenta como CONFIRMADO (el flag decide la prioridad
+  // de la cola — una fecha de evento confirmado sin medir está CONGELADA por el motor, 13/08/2026).
   const eventos: EventoFecha[] = Object.entries(EVENTS).map(([fecha, factor]) => ({
-    fecha, factor: Number(factor), nombre: "calendario",
+    fecha, factor: Number(factor), nombre: "calendario", confirmado: true,
   }))
   try {
-    const ev = await prisma.$queryRaw<{ rate_date: Date; factor: number; nombre: string }[]>(Prisma.sql`
-      SELECT rate_date, MAX(factor)::float AS factor, MIN(nombre) AS nombre
-      FROM pricing_eventos_auto WHERE rate_date >= CURRENT_DATE GROUP BY rate_date`)
+    // Los `descartado` quedan FUERA: ya no cuentan para el motor (eventos-estado.ts) y pedir
+    // barrido para ellos era gastar ventanas en fechas juzgadas falsas. `confirmado` sigue la
+    // misma normalización que `normalizarEstado`: NULL/vacío = confirmado (histórico pre-columna).
+    const ev = await prisma.$queryRaw<{ rate_date: Date; factor: number; nombre: string; confirmado: boolean }[]>(Prisma.sql`
+      SELECT rate_date, MAX(factor)::float AS factor, MIN(nombre) AS nombre,
+             bool_or(COALESCE(estado, '') NOT IN ('previsto', 'descartado')) AS confirmado
+      FROM pricing_eventos_auto
+      WHERE rate_date >= CURRENT_DATE AND COALESCE(estado, '') <> 'descartado'
+      GROUP BY rate_date`)
     for (const f of ev) {
       eventos.push({
         fecha: new Date(f.rate_date).toISOString().slice(0, 10),
         factor: Number(f.factor),
         nombre: String(f.nombre ?? "").slice(0, 60),
+        confirmado: Boolean(f.confirmado),
       })
     }
   } catch {

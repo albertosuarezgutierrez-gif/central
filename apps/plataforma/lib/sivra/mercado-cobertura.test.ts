@@ -29,13 +29,40 @@ test('lo NUNCA medido va antes que lo medido hace mucho', () => {
   assert.equal(pedidas.at(-1)!.aforo, 4)
 })
 
-test('entre vírgenes manda la RONDA: la línea de temporada antes que el evento', () => {
+test('entre vírgenes manda la RONDA: la línea de temporada antes que el evento PREVISTO', () => {
   const plan = ventanasDelBarrido(HOY, [{ fecha: '2026-09-20', factor: 2.5, nombre: 'Concierto' }],
     { mesesBase: 3, maxEventos: 3 })
   const pedidas = ventanasQuePedir(plan, AFOROS, [], HOY, 30)
   const primerEvento = pedidas.findIndex(p => p.motivo === 'evento')
   const ultimaBase = pedidas.reduce((acc, p, i) => (p.ronda === 0 ? i : acc), -1)
   assert.ok(primerEvento > ultimaBase, 'toda la ronda base entra antes del primer evento')
+})
+
+test('🧊 el evento CONFIRMADO sin medir pasa por DELANTE de la ronda base (caso Bienal 13/08/2026)', () => {
+  // Mientras una noche de evento confirmado no se mida, el motor la tiene CONGELADA a un precio
+  // posiblemente falso: cada día sin medir es un día congelado. La base puede esperar un día.
+  const plan = ventanasDelBarrido(HOY, [
+    { fecha: '2026-09-20', factor: 1.25, nombre: 'Bienal', confirmado: true },
+    { fecha: '2026-10-24', factor: 2.5, nombre: 'Rumor de gira' }, // previsto: apuesta, no congela
+  ], { mesesBase: 3, maxEventos: 3 })
+  const pedidas = ventanasQuePedir(plan, AFOROS, [], HOY, 30)
+  assert.equal(pedidas[0].etiqueta, 'Bienal', 'la congelada se mide ANTES que nada')
+  assert.equal(pedidas[0].eventoConfirmado, true)
+  const idxPrevisto = pedidas.findIndex(p => p.etiqueta === 'Rumor de gira')
+  const ultimaBase = pedidas.reduce((acc, p, i) => (p.ronda === 0 ? i : acc), -1)
+  assert.ok(idxPrevisto > ultimaBase, 'el previsto sigue DETRÁS de la ronda base, como siempre')
+})
+
+test('🧊 un evento confirmado YA MEDIDO no roba la prioridad (la condición es estar a ciegas)', () => {
+  const plan = ventanasDelBarrido(HOY, [
+    { fecha: '2026-09-20', factor: 1.25, nombre: 'Bienal', confirmado: true },
+  ], { mesesBase: 2, maxEventos: 2, fechasPorMes: 1 })
+  const cobertura = [{ checkin: '2026-09-20', aforo: 4, ultimaMedicion: '2026-08-05', comps: 10 }]
+  const pedidas = ventanasQuePedir(plan, AFOROS, cobertura, HOY, 30)
+  // Para el aforo 4 (medido) la Bienal deja de ser virgen → van primero las vírgenes de la base.
+  const delAforo4 = pedidas.filter(p => p.aforo === 4)
+  assert.equal(delAforo4[0].motivo, 'mes', 'medida ya no urge: vuelve el orden normal')
+  assert.equal(delAforo4.at(-1)!.etiqueta, 'Bienal')
 })
 
 test('entre medidas manda la MÁS VIEJA', () => {

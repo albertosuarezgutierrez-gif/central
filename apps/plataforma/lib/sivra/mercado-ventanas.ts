@@ -24,6 +24,13 @@ export type EventoFecha = {
   fecha: string
   factor: number
   nombre?: string
+  /**
+   * true = evento CONFIRMADO (calendario del repo o `pricing_eventos_auto` con estado confirmado).
+   * Importa para la COLA (13/08/2026): una fecha de evento confirmado sin medir está CONGELADA por
+   * el motor a un precio posiblemente falso — medirla es lo que la descongela. Un previsto no
+   * congela nada, así que no gasta ventana prioritaria en una apuesta.
+   */
+  confirmado?: boolean
 }
 
 export type Ventana = {
@@ -41,6 +48,8 @@ export type Ventana = {
    * que ser lo importante. Ver la nota del reparto por rondas en `ventanasDelBarrido`.
    */
   ronda: number
+  /** el evento de esta ventana está CONFIRMADO (ver `EventoFecha.confirmado`) */
+  eventoConfirmado?: boolean
 }
 
 export type ConsultaVentana = {
@@ -169,7 +178,10 @@ export function picosDeEvento(eventos: EventoFecha[], factorMinimo = 1.15): Even
   const cerrar = () => {
     let mejor = bloque[0]
     for (const e of bloque) if (Number(e.factor) > Number(mejor.factor)) mejor = e
-    picos.push(mejor)
+    // El bloque cuenta como CONFIRMADO si CUALQUIERA de sus noches lo está: la ventana representa
+    // al bloque entero, y basta una noche congelada para que medirlo sea urgente (13/08/2026).
+    const confirmado = bloque.some(e => e.confirmado === true)
+    picos.push(confirmado && mejor.confirmado !== true ? { ...mejor, confirmado: true } : mejor)
   }
 
   for (let i = 1; i < dignos.length; i++) {
@@ -252,6 +264,7 @@ export function ventanasDelBarrido(
         motivo: 'evento',
         etiqueta: e.nombre,
         ronda: 1,
+        eventoConfirmado: e.confirmado === true,
       })
     }
   }
