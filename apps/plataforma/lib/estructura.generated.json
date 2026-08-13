@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-13T08:15:31Z",
+  "generadoEn": "2026-08-13T08:22:51Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4290,6 +4290,7 @@
       "presupuesto_proveedores",
       "pricing_flight_demand",
       "pricing_pl_referencia",
+      "reservas_canceladas",
       "rutina_tokens",
       "secrets_audit",
       "sector_tendencias",

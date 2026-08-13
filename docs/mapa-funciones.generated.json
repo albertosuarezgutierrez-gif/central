@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-13T08:15:31Z",
-  "sha": "baa5b9bed85cce6af9e53dd73cc5605f20975f5b",
+  "generadoEn": "2026-08-13T08:22:51Z",
+  "sha": "19873bbf4e13cd9b167745308bba8f5d07fdd813",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -66324,6 +66324,56 @@
       "hash": "0547ea24d3f4"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/cancelaciones.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/cancelaciones.ts — qué se guarda cuando Smoobu dice que una reserva se canceló. PURO y testeado: no toca BD ni red. La escritura la hace `smoobu-sync.ts`. 🚨 POR QUÉ EXISTE ESTO (12/08/2026). El sync ya VEÍA las cancelaciones —pide `showCancellation=1` a propósito— y hacía lo correcto con ",
+      "exporta": [
+        "nochesPerdidas",
+        "filaCancelacion",
+        "diasDeAntelacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "fecha",
+          "kind": "function",
+          "exportada": false,
+          "params": "s?: string",
+          "retorno": "Date | null",
+          "linea": 64
+        },
+        {
+          "nombre": "nochesPerdidas",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada?: string, salida?: string",
+          "retorno": "number | null",
+          "linea": 74,
+          "resumen": "Noches entre dos fechas. Devuelve `null` —no 0— si falta alguna: un 0 se sumaría en los agregados como «cancelación de cero noches», que es una afirmación, y aquí no sabemos nada."
+        },
+        {
+          "nombre": "filaCancelacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "b: ReservaSmoobu, opts: { propertyId: string | null; portal: string; estabaEnIncomes: boolean },",
+          "retorno": "FilaCancelacion",
+          "linea": 91,
+          "resumen": "Arma la fila a persistir a partir del payload de Smoobu. `propertyId` lo resuelve el llamador (tiene el mapa de `properties`); `estabaEnIncomes` sale de si el DELETE encontró algo. El precio se guarda"
+        },
+        {
+          "nombre": "diasDeAntelacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "reservedAt: string | null, checkIn: string | null",
+          "retorno": "number | null",
+          "linea": 117,
+          "resumen": "Antelación con la que se canceló, en días: de cuándo se reservó a cuándo se iba a entrar. `null` si falta cualquiera de las dos fechas — es la métrica que dirá si las cancelaciones son ruido de reserv"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "569d890e48ed"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/cobros-ota-db.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/cobros-ota-db.ts — lectura de BD para el vigilante de cobros OTA. Separado de cobros-ota.ts (puro, testeable con node --test) para que la parte pura no arrastre el import de prisma/@/lib/db (que rompe el type-stripping de node --test).",
@@ -67671,7 +67721,7 @@
           "exportada": false,
           "params": "s?: string",
           "retorno": "Date | null",
-          "linea": 32
+          "linea": 33
         },
         {
           "nombre": "nights",
@@ -67679,7 +67729,7 @@
           "exportada": false,
           "params": "ci: Date | null, co: Date | null",
           "retorno": "number",
-          "linea": 38
+          "linea": 39
         },
         {
           "nombre": "fetchPage",
@@ -67687,7 +67737,7 @@
           "exportada": false,
           "params": "p: number, from: string, apiKey: string, arrFrom?: string, arrTo?: string",
           "retorno": null,
-          "linea": 42
+          "linea": 43
         },
         {
           "nombre": "runSync",
@@ -67695,15 +67745,17 @@
           "exportada": true,
           "params": "days: number, maxPages = 20, arrFrom?: string, arrTo?: string",
           "retorno": null,
-          "linea": 57
+          "linea": 58
         }
       ],
       "tablas": [
         "incomes",
-        "properties"
+        "properties",
+        "reservas_canceladas",
+        "set"
       ],
       "rutaApi": null,
-      "hash": "8d4329a8cb87"
+      "hash": "7ce4a72a7921"
     },
     {
       "ruta": "apps/plataforma/lib/smoobu.ts",
@@ -91609,7 +91661,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2450,
-    "funciones": 6621
+    "archivos": 2451,
+    "funciones": 6625
   }
 }
