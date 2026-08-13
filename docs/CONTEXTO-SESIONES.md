@@ -32,6 +32,13 @@
 
 ---
 
+### 🔒 (12/08/2026) `housesevillana` no arrancaba build: faltaba en `pnpm-lock.yaml` (PR #1398)
+- El PR #1390 (import de la landing al monorepo) añadió `apps/housesevillana/package.json` sin
+  regenerar el lockfile compartido. No se notó porque hasta esta sesión ningún proyecto Vercel
+  tenía esa carpeta como Root Directory. `ERR_PNPM_OUTDATED_LOCKFILE` al primer intento real.
+- `pnpm install --lockfile-only`: solo añade el bloque nuevo de `apps/housesevillana`, sin mover
+  versiones de las demás 8 apps.
+
 ### 💸 (12/08/2026) El cotizador de IA de ialimp no ha generado NUNCA una propuesta (PR #1394)
 - 8 leads, **0 con `propuesta_url` o `propuesta_ia_at`**; el bucket `propuestas-leads` tiene **0 objetos**.
   Tres fallos encadenados, todos mudos: (1) el disparo desde `/api/leads` iba sin `Bearer CRON_SECRET` →

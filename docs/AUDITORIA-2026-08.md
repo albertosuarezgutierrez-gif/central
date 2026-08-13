@@ -1,5 +1,30 @@
 # Auditoría diaria — agosto 2026
 
+# Actualización 2026-08-13 — auditoría diaria (ligera)
+
+Rango: 5 commits desde la pasada del 11/08 (`e362168..b3ca200`) — 2× regeneración automática de
+radiografía (`[skip ci]`), CI gitleaks (reintento de descarga, #1396), RLS de las 2 últimas tablas
+de trading (#1395, ya autodocumentado en memoria por su propio commit) y el fix de lockfile de
+`housesevillana` (#1398). SALTA typecheck/tests pesados (pasada profunda).
+
+## 🟢 Heartbeat de crons/agentes
+`agente_latidos` (10 filas) — todo `ok=true`, todas dentro de cadencia (la más vieja, `paper-tracker`
+semanal, a 64h de un umbral ~192h). Sin mudos.
+
+## 🟢 Backlog de PRs de rutinas + salud del automerge
+`rutinas-automerge.yml`: última ejecución hace <4h, en verde, cadencia horaria confirmada (708 runs
+históricos). Dos PRs abiertos de código (#1399, #1397), ambos draft, ambos <24h — normal, sin acción.
+
+## ✅ Reconciliación memoria — 1 hueco
+Único hueco del rango: PR #1398 (`housesevillana`: `pnpm-lock.yaml` desactualizado desde el import
+#1390, build no arrancaba). Añadido a `docs/CONTEXTO-SESIONES.md`. Nada más que reconciliar — sin
+skills/docs nuevos en el rango, sin drift en `docs/SKILLS.md` ni en la tabla de rutas del triaje.
+
+## ✅ Manuales de usuario — nada que tocar
+Ningún archivo de `apps/ia-rest/src/app/**` ni `apps/ia-rest/public/**` cambió en el rango.
+
+---
+
 # Actualización 2026-08-12 — auditoría diaria (ligera)
 
 Rango: desde la profunda del 09/08 hasta ahora — 32+ commits, casi todos autodocumentados PR a PR
