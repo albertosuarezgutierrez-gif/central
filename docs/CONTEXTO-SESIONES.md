@@ -38,6 +38,7 @@
 - **Landmine 2 — partidos a domicilio como eventos:** el websearch tenía 9 jornadas fuera de casa confirmadas (Athletic-Sevilla en Bilbao ×2,2…) subiendo precios en Sevilla. Descartadas en BD + guarda determinista `esPartidoFueraDeSevilla` (el club sevillano DETRÁS del «vs» = visitante; finales exentas) en ambas pasadas + el upsert ya no resucita `descartado`.
 - Factores de liga re-derivados a la curva plana (×1,35) en BD; finales/Mundial de Remo restaurados (×2,2/×1,55).
 - Octubre verificado: ninguna fecha vendiéndose barata; los precios altos del puente son el suelo PL diseñado (caduca 08/12).
+- Post-merge: skill `pricing-agente` sincronizada (estado-y-protocolo + ciclo) con los dos fixes; seguimiento programado (14/08 ~17:05 pasada del motor, 15/08 ~09:55 veredicto final).
 
 ### 🧊 (14/08/2026) Pasada de mercado a mano para descongelar las noches de evento
 - Alberto preguntó por qué el aviso de «236 noches congeladas» no se mide al instante. **No es un

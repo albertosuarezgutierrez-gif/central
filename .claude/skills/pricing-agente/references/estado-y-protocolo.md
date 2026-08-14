@@ -2,6 +2,19 @@
 
 ## Estado vivo (13/07/2026) — leer al empezar el ciclo
 
+### Actualización 14/08/2026 — suelo PL congelado + partidos a domicilio (PR #1416)
+- **El suelo PriceLabs era autorreferente:** `pricing/apply` re-capturaba `pricing_pl_referencia`
+  a diario desde `rate_snapshots` — que desde la baja de PL refleja los precios del PROPIO motor —
+  así que el «suelo PriceLabs» nunca caducaba. **Upsert eliminado**; la tabla quedó congelada a
+  `captured_at='2026-08-10'` (última captura con PL vivo; migración
+  `2026-08-14_pl_referencia_congelada.sql`) → el suelo caduca el **08/12/2026** como estaba diseñado.
+  Regla: una referencia EXTERNA jamás se recaptura de un espejo que escribes tú.
+- **Partidos a domicilio ya no suben precios:** el websearch metía jornadas del Sevilla/Betis FUERA
+  de Sevilla como eventos locales (9 confirmadas, hasta ×2,2). Guarda determinista
+  `esPartidoFueraDeSevilla` (`lib/sivra/eventos-impacto.ts`: club sevillano DETRÁS del «vs» =
+  visitante; finales/neutral exentas) en sync y websearch, y el upsert **ya no resucita filas
+  `descartado`**. Factores de liga re-derivados a la curva plana (×1,35).
+
 ### Actualización 13/08/2026 — guarda 🧊 «evento a ciegas» (decisión delegada a Fable 5)
 - **Una noche de evento CONFIRMADO (factor ≥1,15) sin ≥3 comps fiables de SU fecha no se baja**
   (subir sí). Caso fundacional: el verificador confirmó la Bienal a las 05:31 y a las 08:30 el motor
@@ -276,7 +289,8 @@ y testeada en **`lib/sivra/pricing-centinelas.ts`** (21/21), cableada en el rout
   house_sevillana — los dos últimos activados 09/08/2026 con OK de Alberto). **PriceLabs DE BAJA
   09/08/2026**: Alberto pausó los listados de Dúplex/House ese día y canceló la suscripción; ya no
   escribe en Smoobu ni se espera factura nueva. Su última curva queda persistida en
-  `pricing_pl_referencia` (366 fechas/piso, caduca a 120 días) como referencia histórica. NO actives
+  `pricing_pl_referencia` (366 fechas/piso, **congelada a `captured_at='2026-08-10'`, caduca
+  08/12/2026** — la recaptura diaria era autorreferente y se eliminó, PR #1416). NO actives
   ni desactives `apply_enabled` de un piso sin OK explícito de Alberto.
 - **Mercado cargado a 12 meses** (Booking MCP, barrido F1 13/07): verano, Semana Santa 2027 (~462€ p50),
   Feria 2027, may/jun/jul 2027. **Ticketmaster VIVO** (cron semanal; busca por latlong — postalCode da 0

@@ -77,7 +77,9 @@ el 11/07, precio REAL 65-81€ contra un mercado de 80€). El aviso está en la
   Alberto o que lo dispare él si no lo tienes en sesión.) Guarda **precio Y rating** (paridad competitiva).
 - Eventos: `eventFactor(fecha)` (calendario) + `pricing_eventos_auto` — ahora alimentada por DOS crons:
   **Ticketmaster** (`/eventos/sync`, conciertos/deportes) y **web_search** (`/eventos/websearch`, Gemini:
-  LaLiga/ferias/congresos/festivos). El motor toma el más alto (MAX; cap 2.5).
+  LaLiga/ferias/congresos/festivos). El motor toma el más alto (MAX; cap 2.5). Ambas pasadas filtran
+  con `esPartidoFueraDeSevilla` (`lib/sivra/eventos-impacto.ts`) — un partido del Sevilla/Betis a
+  domicilio NO es evento local — y el upsert no resucita filas `descartado` (PR #1416).
 - Ocupación/antelación: `rate_snapshots`. Coste/piso: ver tabla de arriba. Reglas: `pricing_settings`.
 - **Demanda adelantada por vuelos (opcional, Fase 3):** con `mcp__Expedia__search_flights` a **SVQ**
   desde mercados emisores, calcula un `demand_index` por fecha (≥1 = pico) y POSTéalo a
