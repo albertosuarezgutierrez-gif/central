@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-14T08:54:28Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-14T10:27:08Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -233,6 +233,7 @@
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - Landmine 1 — suelo PL autorreferente:
 - Landmine 2 — partidos a domicilio como eventos:
+- Verificado end-to-end:
 - Por qué ningún test lo vio:
 - `calcularCoste` gana `comisionCompra`
 - Coches fuera de alcance
@@ -240,5 +241,4 @@
 - 2ª pasada, el hallazgo de verdad:
 - Corrige el aviso del PR #1392:
 - 0 errores de runtime en 7 días. Eso no era que funcionara: era que nadie lo había usado.
-- No cerraba una fuga
 

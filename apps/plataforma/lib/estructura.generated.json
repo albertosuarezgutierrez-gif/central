@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-14T08:54:28Z",
+  "generadoEn": "2026-08-14T10:27:08Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4525,6 +4525,10 @@
       "fecha": ""
     },
     {
+      "titulo": "Verificado end-to-end:",
+      "fecha": ""
+    },
+    {
       "titulo": "Por qué ningún test lo vio:",
       "fecha": ""
     },
@@ -4570,10 +4574,6 @@
     },
     {
       "titulo": "«DIRECTO = 0 €» era la etiqueta, no el negocio:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Decisión DELEGADA a Fable 5 por Alberto",
       "fecha": ""
     }
   ],

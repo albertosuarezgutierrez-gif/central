@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-14T08:54:28Z",
-  "sha": "16463cdf75a138a3b96eaf46d470d16d78747024",
+  "generadoEn": "2026-08-14T10:27:08Z",
+  "sha": "7631851ab81752e66457b07c8613fac9b6c363ca",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -55686,7 +55686,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 43,
+          "linea": 44,
           "resumen": "\"portal\": \"booking\", // booking | trivago | expedia | tripadvisor | ... \"scenario\": \"prop_busto_reform\", // prop_<id> para comparables por piso, o normal/corpus \"checkin\": \"2026-06-13\", \"checkout\": \"2"
         }
       ],
@@ -55696,7 +55696,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/ingest",
-      "hash": "09a952ac94c4"
+      "hash": "1c819c451914"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/plan/route.ts",
@@ -67021,7 +67021,7 @@
           "nombre": "detalleIngesta",
           "kind": "function",
           "exportada": true,
-          "params": "r: { ventanas: number comps: number sinRespuesta: number sinPrecio: number errores: string[] }",
+          "params": "r: { ventanas: number comps: number sinRespuesta: number sinPrecio: number errores: string[] /** * Anuncios NUESTROS que el portal devolvió y se descartaron (ver `mercado-propios.ts`). Se * declara aunque sea un descarte correcto: un compar",
           "retorno": "string",
           "linea": 275,
           "resumen": "Parte de la pasada para el latido. Igual que en el barrido por búsqueda, **lo que NO se pudo medir va primero**: una ventana que el conector no contestó es «no lo sé», no «no hay mercado», y confundir"
@@ -67032,13 +67032,45 @@
           "exportada": true,
           "params": "r: { ventanas: number comps: number sinRespuesta: number errores: string[] }",
           "retorno": "boolean",
-          "linea": 298,
+          "linea": 308,
           "resumen": "¿Vale la pasada? Conservador igual que `barridoFiable`: hace falta haber MEDIDO algo y que la mayoría de lo intentado haya respondido. Una pasada que pide 12 ventanas y solo contesta 1 no es «poco mer"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "15421acfcb62"
+      "hash": "a9434f2b70f4"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/mercado-propios.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/mercado-propios.ts — NUESTROS propios anuncios NO son comparables de mercado. POR QUÉ (14/08/2026). Midiendo con el conector de Booking las fechas de evento congeladas, la búsqueda de \"apartamentos en Sevilla para 12 adultos\" devolvió, entre los resultados, **nuestro propio anuncio** («HOU",
+      "exporta": [
+        "normalizarNombre",
+        "esAnuncioPropio"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizarNombre",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string",
+          "retorno": "string",
+          "linea": 26,
+          "resumen": "Normaliza para comparar: sin acentos, minúsculas, sin puntuación y con espacios colapsados."
+        },
+        {
+          "nombre": "esAnuncioPropio",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string",
+          "retorno": "boolean",
+          "linea": 54,
+          "resumen": "¿Este comparable es en realidad un anuncio nuestro? Coincide por prefijo/inclusión del nombre curado dentro del nombre publicado, porque el portal le cuelga sufijos comerciales que cambian solos («HOU"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2b62dde309ed"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/mercado-ventanas.ts",
@@ -92060,7 +92092,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2454,
-    "funciones": 6664
+    "archivos": 2455,
+    "funciones": 6666
   }
 }
