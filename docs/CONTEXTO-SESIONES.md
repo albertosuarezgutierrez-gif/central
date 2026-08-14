@@ -32,6 +32,18 @@
 
 ---
 
+### 🧊 (14/08/2026) Pasada de mercado a mano para descongelar las noches de evento
+- Alberto preguntó por qué el aviso de «236 noches congeladas» no se mide al instante. **No es un
+  fallo:** el cron de Vercel no puede llamar a un MCP, así que quien mide Booking es una SESIÓN
+  (rutina `mercado-booking`, ~12 ventanas/pasada de un plan de 472). El motor congela y avisa, pero
+  no puede medir.
+- Disparada una pasada a mano sobre las rondas de EVENTO (15/08→31/10): **119 comps en 12/12
+  ventanas**, 0 sin respuesta. Medianas aforo 12: 16-ago 265€ · 9-sep 346€ · **10-sep 506€**.
+- Quedan **120 de 132** ventanas candidatas sin medir (tope `max=12`): las congeladas de sep-oct
+  se descongelarán en las siguientes pasadas diarias.
+- 🔎 Duda abierta para `agentes-entrenador`: excluí el propio anuncio de House Sevillana de sus
+  comps (era circular). Ni la skill ni `/mercado/ingest` lo contemplan — decidir y escribirlo.
+
 ### 💸 (14/08/2026) El `ignoreCommand` reconstruía las ~10 apps por cualquier cambio en `packages/`
 - Lo destapó Claude in Chrome al verificar el despliegue de la landing: dos commits de subastas
   construyeron en `house-sevillana-landing`. **No era un fallo del filtro** — su regla decía
