@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-14T07:40:33Z",
-  "sha": "978f5cafeee4d3d04b09f68f5922412ccae01f45",
+  "generadoEn": "2026-08-14T07:47:21Z",
+  "sha": "c5dba6ce671258aa395c70b256380ec9c2c4d656",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -55722,7 +55722,7 @@
         "pricing_piso_zona"
       ],
       "rutaApi": "/api/sivra/mercado/plan",
-      "hash": "59f788c0307d"
+      "hash": "374cbe1e5355"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/search/route.ts",
@@ -67040,7 +67040,8 @@
         "consultasDeVentana",
         "findeDelMes",
         "picosDeEvento",
-        "ventanasDelBarrido"
+        "ventanasDelBarrido",
+        "ventanasDeConfirmadosPorFecha"
       ],
       "funciones": [
         {
@@ -67119,11 +67120,20 @@
           "retorno": "Ventana[]",
           "linea": 201,
           "resumen": "Ventanas a barrer en una pasada. La base mensual va SIEMPRE (es la línea de temporada); las de evento se añaden por cercanía hasta el tope, sin repetir una fecha que ya cubre la base."
+        },
+        {
+          "nombre": "ventanasDeConfirmadosPorFecha",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoyIso: string, eventos: EventoFecha[], plan: Ventana[], opts: Pick<VentanasOpts, 'factorMinimo' | 'noches' | 'horizonteDias'> = {},",
+          "retorno": "Ventana[]",
+          "linea": 294,
+          "resumen": "Ventanas POR FECHA para los eventos CONFIRMADOS, sin colapsar bloques. SOLO para el plan del conector de Booking — el sweep de Serper sigue con `ventanasDelBarrido` a secas. POR QUÉ (14/08/2026, cazad"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2b2b3aaaf17c"
+      "hash": "33d7fb499463"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pilot-track.ts",
@@ -92042,6 +92052,6 @@
   ],
   "resumen": {
     "archivos": 2454,
-    "funciones": 6662
+    "funciones": 6663
   }
 }
