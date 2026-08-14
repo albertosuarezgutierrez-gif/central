@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-14T00:52:29Z",
+  "generadoEn": "2026-08-14T08:54:28Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4517,6 +4517,14 @@
   ],
   "novedades": [
     {
+      "titulo": "Landmine 1 — suelo PL autorreferente:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Landmine 2 — partidos a domicilio como eventos:",
+      "fecha": ""
+    },
+    {
       "titulo": "Por qué ningún test lo vio:",
       "fecha": ""
     },
@@ -4566,14 +4574,6 @@
     },
     {
       "titulo": "Decisión DELEGADA a Fable 5 por Alberto",
-      "fecha": ""
-    },
-    {
-      "titulo": "Hallazgo grande:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Plan de reservas directas",
       "fecha": ""
     }
   ],

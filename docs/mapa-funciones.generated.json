@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-14T07:47:21Z",
-  "sha": "c5dba6ce671258aa395c70b256380ec9c2c4d656",
+  "generadoEn": "2026-08-14T08:54:28Z",
+  "sha": "16463cdf75a138a3b96eaf46d470d16d78747024",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54032,7 +54032,7 @@
           "exportada": false,
           "params": "desde: string, hasta: string, yaResumen: string, descartadosResumen: string,",
           "retorno": "Promise<",
-          "linea": 179,
+          "linea": 185,
           "resumen": "nunca lanza (es una mejora, no puede tumbar el descubrimiento normal)."
         }
       ],
@@ -54042,7 +54042,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/eventos/websearch",
-      "hash": "88747f58f0dc"
+      "hash": "885690b5e479"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/agent/resumen-mensual/route.ts",
@@ -56035,11 +56035,10 @@
         "pricing_pl_referencia",
         "pricing_settings",
         "rate_snapshots",
-        "recent",
-        "set"
+        "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "a31f188ab8f8"
+      "hash": "81869145b7dc"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -66659,6 +66658,7 @@
       "exporta": [
         "clasificarTipo",
         "esPartidoLigaRegular",
+        "esPartidoFueraDeSevilla",
         "impactoEvento"
       ],
       "funciones": [
@@ -66681,18 +66681,27 @@
           "resumen": "¿Es un partido de liga REGULAR de un club local? («Sevilla FC vs Valencia CF») Existe porque el `tipo` que devuelve la IA muchas veces no trae ninguna palabra clave y el partido caía en la curva gener"
         },
         {
+          "nombre": "esPartidoFueraDeSevilla",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre?: string | null",
+          "retorno": "boolean",
+          "linea": 83,
+          "resumen": "¿Es un partido del Sevilla/Betis A DOMICILIO? («Levante UD vs Sevilla FC» se juega en Valencia.) En fútbol el equipo LOCAL va SIEMPRE primero, así que un club sevillano DETRÁS del «vs» significa que e"
+        },
+        {
           "nombre": "impactoEvento",
           "kind": "function",
           "exportada": true,
           "params": "aforo: number, tipo?: string | null, nombre?: string | null",
           "retorno": "number",
-          "linea": 84,
+          "linea": 105,
           "resumen": "Multiplicador de precio para un evento, por aforo y tipo. La curva general (conciertos, festivales, lo que no sabemos clasificar) llega a 2.20 en aforo de estadio: por debajo del 2.5 del calendario a "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "864386825533"
+      "hash": "5bdf4cf05b8e"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/eventos-verificacion.ts",
@@ -92052,6 +92061,6 @@
   ],
   "resumen": {
     "archivos": 2454,
-    "funciones": 6663
+    "funciones": 6664
   }
 }
