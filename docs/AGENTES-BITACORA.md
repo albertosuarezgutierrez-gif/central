@@ -15,6 +15,19 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-14 · mercado-booking (a petición de Alberto, fuera del disparo diario)** · hizo: pasada
+  acotada `?max=12&rondas=1&desde=2026-08-15&hasta=2026-10-31` (rondas de EVENTO, que son las que
+  congelan precio) → **119 comps reales en 12/12 ventanas**, 0 sin respuesta del conector; 3 fechas
+  × 4 aforos. Medianas por noche (aforo 12 / 5 / 4 / 2): 16-ago 265 / 104 / 103 / 72 · 9-sep
+  346 / 135 / 109 / 89 · 10-sep **506** / 159 / 128 / 99. El salto 9→10 sep (+46% en aforo 12)
+  confirma que el evento del 10 es real y que la línea de temporada de Serper no lo veía.
+  dudas: **excluí a propósito el propio anuncio «HOUSE SEVILLANA 6 habitaciones»** de los comps del
+  16-ago aforo 12 — Booking lo devuelve como resultado y meterlo anclaría el mercado a nuestro
+  propio precio (circular). La skill no dice nada al respecto y `ingest` no filtra: si se confirma
+  el criterio, debería ir escrito en la skill o en el endpoint; fallos: el tope `max=12` dejó
+  **120 de 132** ventanas candidatas del filtro sin medir (el aviso del plan lo declara) — las
+  congeladas de sep-oct siguen en cola; PRs/commits: — (solo `market_rates` vía MCP + esta entrada).
+
 - **2026-08-14 · facturas-correo (trigger diario)** · hizo: preflight `/api/internal/alerta` 200
   OK; Paso 0 salud: Vía B con `dias_caido=3` (última copia `_buzon_pdf` 11/08 IONOS, `newer_than:2d`
   vacío) — cruza el umbral `>2` de "corte activo" pero no el `>3` de escalado Telegram, así que
