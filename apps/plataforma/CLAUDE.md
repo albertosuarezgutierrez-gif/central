@@ -310,6 +310,31 @@ declara **UN solo cron**: `/api/cron/dispatch` cada minuto.
     `maxDuration` 60 → **300 + presupuesto de tiempo** (`lib/contable/presupuesto-extracto.ts`): con 60 s
     la ruta importaba los 109 movimientos y moría antes de contestar → «Sin respuesta.» sobre un extracto
     que sí había entrado. Detalle completo en la skill `plataforma-maestro` (`agentes-banca-landmines.md`).
+  - **🚨 LANDMINE — un vigilante que compara STRINGS no puede decir «no lo reconozco» (14/08/2026).**
+    Alberto, sobre la «🔎 Revisión de la tarjeta»: «¿por qué no lo reconoce el agente contable con IA?».
+    Primera respuesta: **ese bloque no llama a ninguna IA** (`vigilantesTarjeta` + `lib/vigilantes-tarjeta.ts`,
+    reglas puras). El fallo real: «no reconozco» significaba *este rótulo literal no aparece en el histórico
+    de ESTA tarjeta*, así que **«MERCADONA COLMENA SEVILLA» salía como comercio nuevo con decenas de compras
+    previas en Mercadona** (otra sucursal = otra cadena de texto), y una compra hecha con otra tarjeta/cuenta
+    tampoco contaba como histórico. Es el patrón de siempre: un «no lo he mirado» servido como afirmación.
+    - **Identidad ≠ etiqueta:** nuevo módulo PURO **`lib/comercio-canonico.ts`** (`claveComercio`/`cadenaDe`/
+      `mismoComercio`, testeado). `lib/comercio.ts::comercioDe` sigue dando la ETIQUETA que se PINTA
+      ("DIA SEVILLA 2260"); `claveComercio` da la IDENTIDAD con la que se compara ("DIA"): quita nº de
+      tienda/terminal, forma jurídica y ciudad, y mapea las **cadenas** (solo MARCAS reales — meter
+      'BAR'/'FARMACIA' fundiría comercios independientes distintos, que es el error simétrico y peor).
+    - **El histórico es el de la CUENTA**, no el de la tarjeta: 24 meses sobre `v_movimientos_activos`
+      (vista canónica). Si la lectura falla o toca el techo de filas, **no se emite el aviso y se dice
+      por qué** — un histórico truncado no autoriza a llamar nuevo a nada.
+    - **Cobro doble** exige ahora **mismo día** + ≥`DOBLE_MIN_EUR` (10€): repetir importe en días distintos
+      es rutina (2×40,00€ de gasolina al mes), y 2×0,99€ en el súper son dos compras.
+    - **Subida de precio** solo en recurrentes de **importe estable** (`baseRecurrente`: ≥3 cargos, ≥3 meses
+      distintos, todos ±10% de la mediana). Comparar dos tickets de súper o de restaurante y llamarlo subida
+      (DIA 3,25€→7,52€, un restaurante 33€→87€) es comparar cosas no comparables. Sin base → se calla.
+    - Mismo criterio aplicado a **`POST /api/banca/antifraude`** (comparte los helpers) + su UI: sin
+      movimientos anteriores al periodo no se afirma «comercio nuevo», se declara el hueco (`nota`, que
+      ahora convive con los avisos en vez de ocultarlos).
+    - Regla que deja el caso: **un vigilante solo habla cuando la señal DISTINGUE el aviso del
+      comportamiento normal.** El ruido no es un aviso conservador — entrena a ignorar el mensaje entero.
 - [x] **`/banca` = cuadro financiero UNIFICADO + IA GRATIS (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, PRs #882/#886-893):** sustituye a la vista suelta de movimientos. **Core (F1-F3):** period-driven (`?year/quarter/desde/hasta`, default mes en curso, mismo `IntervaloSelector` que la radiografía) — `ResumenPeriodo.tsx` reusa `getResumenFinanciero`; gráficas Recharts (evolución + dona); P&L de pisos (`getPLMensual`); libro completo paginado con reclasificación en línea (`MovimientosTabla`, PR #840, ver bullet de arriba). **Extras de IA GRATIS bajo demanda (todos: la IA solo SUGIERE/CLASIFICA/NARRA, los importes SIEMPRE salen de `lib/banca.ts`/`lib/finanzas.ts`, nunca los inventa):** 🧾 **Cazador de deducciones** (`lib/cazador-deducciones.ts`, `POST /api/banca/cazador-deducciones`) — gasto personal que probablemente es deducible + ahorro fiscal estimado; 💬 **Mini-chat** (`MiniChatContable.tsx` → `POST /api/contable/chat`, embebe el agente contable existente); 🤖 **Sugerir por fila** en cargos del libro (reusa `POST /api/finanzas/gastos/sugerir`); 📈 **Benchmark entre pisos** (`BenchmarkPisos.tsx`, lectura IA bajo demanda vía `POST /api/banca/benchmark-pisos`); ✂️ **Fugas en recurrentes** (`POST /api/banca/fugas`, anualiza los recurrentes que ya detecta la tesorería y marca cancelar/renegociar); 🚨 **Antifraude** (`POST /api/banca/antifraude`, **reglas DETERMINISTAS sin IA** — cobro doble/comercio nuevo/subida de precio/cargo financiero, reusa `lib/vigilantes-tarjeta.ts` + `lib/comercio.ts`); 📤 **Cierre de mes narrado** (`lib/resumen-mensual.ts::enviarResumenMensual`, cron día 1 08:00 `/api/cron/resumen-mensual`, por cuenta: cifras del mes anterior + narración IA de 1-2 frases que degrada sin romper). Todo verificado `tsc` 0 + `next build` exit 0. Pendiente (F4 cola): desviación explicada, aviso fiscal proactivo, adjuntar/conciliar factura por foto en banca; F5: módulo 🛒 tickets de súper + comparador de precios.
 - [x] **🚨 LANDMINE — flag `requiere_revision` zombie: confirmar destino DEBE limpiarlo (PR #906, 15/07/2026):**
   `requiere_revision` es el flag del **destino** (negocio dudoso), NO de la categoría contable ni de la
@@ -513,6 +538,26 @@ Las licitaciones son **transversales a los negocios de la cuenta** (fontanería,
 ## Subastas de inmuebles del BOE (agente) — PRs #1113-#1120 (28/07/2026)
 Radar de subastas judiciales/notariales del BOE con coste real de adquisición. Sección de usuario **🏛️ Subastas** (`app/(usuario)/subastas/{page,SubastasClient}.tsx`). Módulo PURO **`@central/module-subastas`** (BOE parsing, Catastro, geo, extracción de importes en texto español, scoring, comparables de mercado, costes/tesorería del depósito).
 - **Ingesta de alertas del BOE por IMAP dedicado, NO por el triaje de correo:** `lib/subastas/gmail-boe.ts` abre «Todos los mensajes» (`specialUse \All`) y busca por remitente (`no-responder@boe.es`) porque las alertas llegan ya etiquetadas/archivadas fuera de INBOX — el lector incremental de `lib/correo/**` (que solo mira INBOX y trunca el cuerpo) nunca las vería. Es una decisión deliberada, no un gap del triaje.
+- **🏛️ Surus in situ — 6ª fuente, y la primera que cobra COMISIÓN AL COMPRADOR (13/08/2026):** portal
+  privado de subastas de activos en liquidación (concursal/fondos). `fuente='surus'`, `tipo='concursal'`
+  (aquí NO aplica el art. 670 LEC: el vendedor se reserva adjudicar o no). Parser puro
+  `module-subastas/surus.ts` (lector de etiquetas + **lector COLUMNAR**: «Precio de salida» vive en una
+  cabecera de tabla, no en `etiqueta: valor`, y confundir su columna con la de «Valor de tasación» son
+  90.000€ de error — hay test que lo fija). Ingesta `lib/subastas/surus.ts` por el MISMO IMAP del BOE
+  (`leerAlertas(dias,max,'surusin.com')`, que ya aceptaba otro remitente), colgada de `subastas-ingesta`.
+  **`CosteAdquisicion.comisionCompra`**: 5% del remate + 400€ + 21% IVA, NO se descuenta del precio
+  (2.299€ sobre una salida de 30.000€). Se aplica **por FUENTE dentro de `calcularCoste`** — mismo
+  criterio que el ITP por provincia — para que ninguna pantalla dé un coste distinto por olvidarla;
+  tabla `COMISION_POR_FUENTE` en `costes.ts`, las fuentes oficiales NO están ahí (0, no un default
+  inventado). También: el **depósito PUBLICADO manda sobre el 5% derivado** en el coste del dinero
+  (Surus exige el 25%: 7.500€ sobre 30.000€, y derivarlo al 5% inflaba lo que queda por financiar).
+  🚨 **Sin validar todavía: el CORREO de alerta** — Alberto se dio de alta el mismo día y no había
+  llegado ninguno, así que la maquetación del aviso no se ha visto. El adaptador aplica el vocabulario
+  de etiquetas de las FICHAS (eso sí está copiado del PDF real, `test/fixtures-surus.ts`) y devuelve
+  `correosSinLeer` cuando no extrae nada: un aviso ilegible es un hueco CONTADO, nunca «no había
+  subastas». Contrastar con el primer correo real y ajustar con ese documento delante.
+  ⚠️ **Los lotes de VEHÍCULOS de Surus quedan fuera**: el corpus `subastas` es `es_inmueble` de punta a
+  punta (Catastro, m², ITP, flip, comparables). Meter coches ahí pide diseño propio, no un booleano.
 - **API:** `app/api/subastas/{criterios,radar,seguidas,route,oferta}`. **Crons** (`vercel.json`): `subastas-ingesta`, `subastas-radar`, `subastas-cierre`, `subastas-mercado`, `subastas-enriquecer`, `subastas-avisos`.
 - **Coste real:** ficha del BOE + valor de mercado (comparables) + valor Catastro + tesorería del depósito (`lib/subastas/{tesoreria,mercado,enriquecer}.ts`).
 - **Yield con datos PROPIOS (28/07/2026):** `lib/subastas/rendimiento.ts` usa la mediana real de los 4 pisos turísticos del grupo (`incomes` + `properties.bedrooms`) para estimar el retorno de un inmueble en subasta, siempre con caveat de que asume rendimiento similar.
@@ -711,6 +756,21 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
   uno que hoy no dio señal. Hermanas: `trading_*.precio_fuente` (procedencia, patrón `market_rates.fuente`),
   `ventana_dias` = días reales y no el horizonte declarado, y el aviso de salto del NAV >15% en `/saldo`
   (no bloquea: puede ser un ingreso real, pero con el NAV se dimensiona cada compra).
+- **🚨 LANDMINE — SESGO DE SUPERVIVENCIA: la tesis cuyo símbolo se cae del universo no se puntuaba NUNCA
+  (12/08/2026).** `/puntuar` solo sabía puntuar con `conformes[simbolo]`, el precio que trae la pasada de
+  hoy, así que 16 tesis del 18/07 (CEG, ISRG, SYM, UEC) llevaban desde el 28/07 vencidas y en
+  `resultado: null` — sin contar en `trading_estrategia_stats`, sin aparecer en ningún recuento y sin que
+  nada las echara de menos. El silencio se leía como «no había trabajo». Y el sesgo no es neutro: un
+  símbolo sale del universo por dejar de dar señal, desplomarse o ser adquirido, nunca al azar. Fix
+  (`juzgarHuerfana`/`resumenHuerfanas` en `lib/trading/precios-guardia.ts`, puros y testeados con series
+  reales de IBKR): pasada una gracia de 3 días se piden a la 2ª fuente y se puntúan con el **cierre de su
+  sesión de vencimiento** (`precio_fuente='contraste'`), con ancla contra nuestro `precio_ref` (protege de
+  splits y de tickers reciclados) y margen de ventana de 5 días. ⚠️ **El ancla NO puede pedir la fecha
+  exacta de la tesis**: la fecha es la de la PASADA y las pasadas no siempre caen en sesión — las 16
+  reales son de un SÁBADO y sus refs son el cierre del viernes anterior al céntimo. Lo que no se puede
+  puntuar **se cuenta y se canta** (latido + campo `huerfanas` de la respuesta); a los 60 días se deja de
+  reintentar pero se sigue declarando como hueco conocido. Regla general: **una fila que desaparece de un
+  recuento no es una fila que no existe** — al añadir un camino que deja trabajo pendiente, cuéntalo.
 - **🚨 LANDMINE — la huella se escribe DENTRO del trabajo que vigila: si la función muere, no hay
   huella (31/07/2026).** El mismo día de estrenar el vigía saltó «🧾 Escaneo de facturas: sin ninguna
   señal registrada» y la nota mandaba a mirar IMAP/app-password. No era eso: `facturas-scan` corría

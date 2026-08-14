@@ -126,7 +126,7 @@ export async function GET(req: NextRequest) {
           await prisma.$executeRaw(Prisma.sql`
             INSERT INTO pricing_eventos_auto (rate_date, nombre, fuente, tipo, aforo, factor, venue, raw, estado, updated_at)
             VALUES (${rateDate}::date, ${String(ev.name)}, 'ticketmaster', ${tipo},
-              ${aforo}::int, ${impactoEvento(aforo, tipo)}::numeric, ${venue}, ${JSON.stringify({ id: ev.id, url: ev.url })}::jsonb,
+              ${aforo}::int, ${impactoEvento(aforo, tipo, String(ev.name))}::numeric, ${venue}, ${JSON.stringify({ id: ev.id, url: ev.url })}::jsonb,
               'confirmado', now())
             ON CONFLICT (fuente, nombre, rate_date) DO UPDATE
               SET aforo = EXCLUDED.aforo, factor = EXCLUDED.factor, venue = EXCLUDED.venue,

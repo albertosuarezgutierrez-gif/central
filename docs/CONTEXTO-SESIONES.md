@@ -32,7 +32,7 @@
 
 ---
 
-### 💸 (13/08/2026) El `ignoreCommand` reconstruía las ~10 apps por cualquier cambio en `packages/`
+### 💸 (14/08/2026) El `ignoreCommand` reconstruía las ~10 apps por cualquier cambio en `packages/`
 - Lo destapó Claude in Chrome al verificar el despliegue de la landing: dos commits de subastas
   construyeron en `house-sevillana-landing`. **No era un fallo del filtro** — su regla decía
   «tocar `packages/` ⇒ construir», sin mirar quién consume qué. Pero `apps/housesevillana` no
@@ -48,6 +48,49 @@
   baja al motor. Root Directory correcto; «Ignored Build Step: Overridden» es lo esperado (gana el
   `vercel.json`). **Pendiente:** el salto al `#reserva` tarda unos segundos (carga del widget de Smoobu).
 
+### 🔎 (14/08/2026) «¿Por qué el agente contable no reconoce Mercadona?» — los vigilantes de la tarjeta eran 3 comparaciones de strings
+- La «🔎 Revisión de la tarjeta» del extracto **no llama a ninguna IA**: son reglas puras. «No reconozco
+  MERCADONA COLMENA SEVILLA» solo significaba *ese rótulo literal no está en el histórico de ESA tarjeta*.
+- Nuevo módulo puro **`lib/comercio-canonico.ts`** (identidad ≠ etiqueta): sucursal/terminal/forma jurídica/
+  ciudad fuera + lista de cadenas → «MERCADONA COLMENA» = «MERCADONA». El histórico pasa a ser el de **toda
+  la cuenta** (24 meses, `v_movimientos_activos`), no el de la tarjeta.
+- Los otros dos bloques eran ruido puro: «cobro doble» ahora exige **mismo día** y ≥10€ (2×40€ de gasolina en
+  el mes es rutina); «subida de precio» solo en **recurrentes de importe estable** (`baseRecurrente`: ≥3 cargos,
+  ≥3 meses, ±10%) — DIA 3,25€→7,52€ o un restaurante 33€→87€ ya no se comparan.
+- Histórico truncado/ilegible → se **dice** y no se afirma «comercio nuevo». Mismo criterio en `/api/banca/antifraude`.
+- Verificado: tsc 0 · 1193 tests `node --test` (14 nuevos) · `next build` OK. PR draft.
+
+### 🐛 (13/08/2026) El #1406 mergeado NO leía ni un correo de Surus — lo cazó el E2E, no los tests
+- Alberto pidió «mergea y prueba que todo vaya 100%». Mergeado (#1406, `0d054fa`, producción READY) y,
+  al probarlo con un **correo de forma realista**, la ingesta devolvía `null` siempre. Arreglo en **#1408**.
+- Tres defectos en cadena: (a) `htmlATexto` metía los saltos de línea y los borraba acto seguido al
+  decodificar (`decodificarHtml` acaba en `\s+→' '`) → todo en UNA línea y el lector por línea ciego;
+  (b) el lector columnar emparejaba por DISTANCIA EN CARACTERES → en una tabla HTML habría leído
+  **120.000€ donde pone 30.000€** (el error de 90.000€ por la puerta de atrás; ahora manda el ÍNDICE de
+  celda y sin misma forma devuelve `null`); (c) `valorTrasEtiqueta` cortaba por longitud → una línea
+  indentada daba «ida: 30.000 €». Y `tituloDe` cortaba en la 1ª fila de tabla, dejando sin ficha
+  cualquier aviso que abra con la tabla de precios.
+- **Por qué ningún test lo vio:** `htmlATexto`/`urlsDeLote` son PURAS pero vivían en el archivo de la app
+  (importa Prisma + IMAP) → `node --test` no las alcanzaba. Movidas a `@central/module-subastas` con sus
+  regresiones. **Lección: un helper puro que vive donde no se puede testear acaba sin testear.**
+- El camino del PDF (de donde salen los 42.799€ del lote de Santillana) nunca estuvo afectado, y el
+  diseño defensivo aguantó: `null` → `correosSinLeer`, nunca una fila inventada.
+
+### 🏛️ (13/08/2026) Surus in situ = 6ª fuente de subastas + la comisión del portal entra al coste
+- Alberto se dio de alta en **surusin.com** (portal privado de liquidaciones: viviendas y coches) para
+  recibir avisos por correo. Añadido como `fuente='surus'`: parser puro `module-subastas/surus.ts`
+  validado contra la ficha REAL del lote de Santillana (fixture copiado del PDF, no tecleado) + ingesta
+  IMAP `lib/subastas/surus.ts` colgada del cron `subastas-ingesta`. 474 tests verdes.
+- **`calcularCoste` gana `comisionCompra`**: los portales privados cobran al COMPRADOR (Surus, 5% + 400€
+  + IVA) y no se descuenta del remate. Se aplica **por FUENTE** (igual que el ITP por provincia), así que
+  ninguna pantalla puede olvidarla. Las fuentes oficiales siguen a 0. Bonus: el depósito PUBLICADO ahora
+  manda sobre el 5% derivado (Surus pide el 25%).
+- ⚠️ **Honesto y pendiente:** el correo de alerta de Surus **no se ha visto todavía** (alta del mismo día).
+  El adaptador reutiliza el vocabulario de etiquetas de sus fichas y CUENTA los correos ilegibles en
+  `correosSinLeer` — nunca los da por «no había subastas». Contrastar contra el primer aviso real.
+- **Coches fuera de alcance**: `subastas` es `es_inmueble` de punta a punta (Catastro, m², ITP, flip).
+  Sus lotes de vehículos NO se ingieren; hacerlo pide diseño propio, no un flag.
+
 ### 🔢 (13/08/2026) Re-verificado el veredicto de inversión: 7 cifras publicadas estaban mal
 - Mergeados **#1399** (botón Reservar de /barrio y /que-ver no llevaba al motor + táctil 44px) y
   **#1397** (cancelaciones de Smoobu). Verificado sobre `main`: 47/47 y 11/11 tests, las 20 anclas
@@ -62,6 +105,28 @@
   NEGATIVA**. Se ha quitado de la regla del agente. Y el `0.000000` de `valor`/`catalizador` en
   `trading_estrategia_stats` es un **centinela «sin calcular»**, no un cero medido.
 - Pendiente: mirar quién escribe `trading_estrategia_stats.retorno_medio` (los dos ceros).
+
+### ✅ (13/08/2026) El rescate de tesis huérfanas, confirmado en producción
+- PR #1403 mergeado (`4598c03`) y **verificado en la pasada de las 20:52 UTC**: las 16 tesis del 18/07
+  (CEG/ISRG/SYM/UEC) se puntuaron con `precio_fuente='contraste'`, `ventana_dias=10` y el cierre real del
+  28/07 al céntimo — 259,82 · 361,80 · 42,34 · 9,44 (contrastado contra IBKR antes de escribir el código).
+- El latido lo canta: «40 tesis puntuadas · 16 tesis huérfana(s) puntuada(s) con el cierre de su
+  vencimiento (2ª fuente)». `n` por estrategia 116 → **130**; momentum 0,2414 → 0,2385 de hit-rate. 0 anuladas.
+- El freno de la etiqueta corrida (#1382) volvió a actuar: SNDK del 06/08 apartado, no anulado.
+- Método: el ancla NO puede pedir la fecha exacta de la tesis (las 16 son de un SÁBADO y sus refs son el
+  cierre del viernes). Y ojo con el `[skip ci]` del bot 18 s tras un merge: no pude fechar el build desde
+  el contenedor; lo cerró el despliegue de #1405, que por estar `main` por delante ya llevaba el arreglo.
+
+### 📒 (12/08/2026) Sesgo de supervivencia: 16 tesis vencidas que no se puntuaban NUNCA
+- Verificada la pasada del 12/08: 0 anuladas y el freno de #1382 actuando de verdad — apartó 4 `precio_ref`
+  del 06/08 como fecha corrida (MSFT/NVO/SNDK/WDC, contrastados uno a uno contra IBKR: los cuatro son el
+  cierre exacto del 05/08). Sin él, 16 tesis sanas anuladas en su primer día vivo.
+- Al revisarlo salió un agujero mayor: `/puntuar` solo puntúa con el precio de la pasada, así que las tesis
+  de un símbolo que sale del universo se quedan en `resultado: null` para siempre y sin contar (16 del
+  18/07 — CEG/ISRG/SYM/UEC). Fix: `juzgarHuerfana` las puntúa con el cierre de su vencimiento (2ª fuente),
+  con ancla contra `precio_ref` (splits/ticker reciclado) y margen de ventana; lo que no se puede, se canta.
+- ⚠️ El ancla NO puede pedir la fecha exacta: las 16 son de un SÁBADO y sus refs son el cierre del viernes.
+
 
 ### 📱 (12/08/2026) La portada de House Sevillana suspendía el mínimo táctil de 44px (PR #1399)
 - Claude in Chrome **no puede medir 320px** (su gestor de ventanas fuerza ~1536px de ancho mínimo), así que
@@ -224,6 +289,39 @@
   arreglar atribución + **sacar el motor del pie de página** (hoy es el 3er botón a 13 px, junto a «Qué ver en Sevilla»).
 - Causa del error, para no repetirla: se comprobó `apps/sivra` y se afirmó una ausencia **global**. Comprobar
   donde el dato viviría si existiera; si no aparece, escribir «no lo he encontrado», nunca «no existe».
+
+### ⚽ (13/08/2026) Una jornada de liga ya no entra a x2.2 — democión por NOMBRE (PR #1405)
+- Caso real (12/08, lo cazó el centinela #7): el websearch metió 'Sevilla FC vs Atlético de Madrid'
+  (29-ago) y 'Sevilla FC vs Valencia CF' (13-sep) a factor x2.2 (nivel de final) porque el 'tipo' de
+  la IA no traía palabra clave y el aforo caía en la curva general. Mercado real 0,82-0,85x su mes;
+  Busto se infló a 235€ con mercado ~98-115€. Corregido a mano ese día (factor 1.15).
+- `esPartidoLigaRegular(nombre)` en `eventos-impacto.ts`: el NOMBRE solo puede DEMOTAR a la curva
+  plana un evento sin tipo reconocido ('otro'); nunca una final/eliminatoria (lista de exclusión) ni
+  promociona/pisa un tipo ya reconocible. De regalo: Ticketmaster mandaba 'deportes' (plural) sin
+  casar el regex. 6 tests nuevos (14/14).
+
+### 🧊 (14/08/2026) Fix: el colapso por bloques dejaba noches congeladas SIN MEDIR nunca
+- Verificación 100% de la primera pasada real del #1409: la prioridad de cola FUNCIONÓ (Booking midió
+  primero los eventos confirmados vírgenes 20-sep y 11-oct)… y eso destapó el hueco: el plan colapsa
+  un bloque contiguo en UNA ventana (la de mayor factor), pero la congelación es POR FECHA — medido el
+  20-sep (Barcelona), el bloque dejó de estar virgen y el 18/19-sep (Bienal) quedaban congelados para
+  siempre sin comps propios.
+- Fix: `ventanasDeConfirmadosPorFecha` (puro) — el plan de BOOKING añade una ventana por cada fecha
+  confirmada ≥1,15 sin colapsar (solo candidatas; el tope 12/pasada acota el coste). El sweep de
+  Serper mantiene el colapso (paga por búsqueda y su corpus no descongela). Ensayado con datos reales:
+  la próxima pasada dedica 12/12 huecos a noches congeladas (16-ago, 09/10-sep…).
+
+### 🧊 (13/08/2026) Guarda «evento a ciegas»: una noche de evento confirmado sin mercado fiable NO baja
+- Primera pasada real del verificador: 6 noches de la Bienal confirmadas solas (0,072€, 0 fallos, 0
+  descartes indebidos)… y el motor las siguió bajando −20%/día hacia el ancla global — esas fechas
+  tienen 0 comps fiables y el «no sé nada de esta noche» moría en `evaluado:false` sin oyente.
+- **Decisión DELEGADA a Fable 5 por Alberto** («que el analice todo y tome la decisión»): congelar la
+  bajada (subir sí) mientras la fecha no tenga ≥3 comps fiables; descongelado automático al medirse.
+  Dato que decidió: la única noche de evento de sept. medida (26-sep) da p50 264€ vs ~104€ el mes.
+- `decidirEventoACiegas` (centinela #5, puro) + guarda en `apply` (solo confirmados; generaliza la de
+  Karol G a factor ≥1,15 y por FECHA) + cola de Booking prioriza evento confirmado sin medir + aviso
+  🧊 agrupado con dedupe 7d (tabla `pricing_avisos`, migración aplicada). NO se bajó el umbral de
+  `evento_sin_respaldo` (ruido). Los `descartado` ya no gastan ventanas del plan de barrido.
 
 ### 🔍 (12/08/2026) Los eventos PREVISTOS se verifican y deciden SOLOS (PR #1386)
 - Alberto, ante el aviso 🔮 con 3 fechas de Mangafest: «esto tiene q ser automático, yo no sé de esta
@@ -668,7 +766,7 @@ completo `docs/AUDITORIA-2026-08.md`.
   page data de `/api/admin/clientes/[vertical]/[id]` YA en main (envs ausentes), no es del cambio.
 
 
-- **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 12/08/2026).** Detalle en
+- **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 14/08/2026).** Detalle en
   `docs/memoria/2026-08.md` y en los PRs citados.
   - **Pricing SIVRA (motor vivo en los 4 pisos, resuelto desde el 09-10/08):** #1323 (ocupación
     POR MES) rehecho y mergeado sobre `pricing-demanda.ts`, `channel_markup_sin_recargo.sql`
@@ -687,17 +785,24 @@ completo `docs/AUDITORIA-2026-08.md`.
     gate `COBERTURA_MIN_ESCALERA=0,8`, PR #1377). Quedan 🟡: momentum sin ventana declarada ni guarda
     de costuras, Piotroski NULL→0 regala puntos, cohetes sin precio se congelan al de entrada, nav de
     `/analizar` sin contrastar, Dataroma caído = «sin gurús». Contraste DIFERIDO (la 2ª fuente juzga el
-    cierre de AYER en vez del de hoy, que casi nunca está publicado a la hora de la pasada) ya
-    implementado y testeado — **PR #1370 en draft, pendiente de que Alberto lo revise/mergee**. H9
-    (stop −10%/trailing −15%) sigue sin decisión de Alberto. Decisión vigente (10/08): no operar más
-    en real por impulso, esperar aviso explícito del agente cuando el forward justifique Fase 2 (hoy
-    lejos: hit rate 26-29%, alpha ≈0 sobre n grande). FMP sin créditos y redundante (Yahoo cubre); NO
-    recargar. Solo el DCF sigue sin fuente.
+    cierre de AYER en vez del de hoy) mergeado (#1370, 12/08). Rescate de tesis huérfanas (símbolo
+    fuera del universo → se puntúa con el cierre de su vencimiento) mergeado y **verificado en
+    producción** (#1403/12/08, contrastado 13/08: 16 tesis del 18/07 puntuadas al céntimo). Veredicto
+    de inversión (`docs/INVERSION-VEREDICTO-2026-08.md`) re-verificado 13/08: 7 cifras publicadas
+    estaban mal, corregidas; el veredicto (intradía NO) no cambia. H9 (stop −10%/trailing −15%) sigue
+    sin decisión de Alberto. Decisión vigente (10/08): no operar más en real por impulso, esperar
+    aviso explícito del agente cuando el forward justifique Fase 2 (hoy lejos: hit rate 26-29%, alpha
+    ≈0 sobre n grande). FMP sin créditos y redundante (Yahoo cubre); NO recargar. Solo el DCF sigue
+    sin fuente. Nuevo pendiente (13/08): averiguar quién escribe `trading_estrategia_stats.retorno_medio`
+    (dos filas en `0.000000` — centinela «sin calcular», no cero medido).
   - **Subastas:** lente 🌊 (costa norte + Matalascañas sin tope) MERGEADA y en prod (#1346/#1349/
     #1351/#1353); pestaña 🔥 Oportunidades rediseñada (#1358 — una tarjeta, chips homogéneos,
-    €/m² siempre visible). Repaso programado **12/08 07:00 UTC** (`trig_01AzUvq8vW2K8Aan4T7HG7c6`,
-    HOY): verificar corpus Matalascañas creciendo, lente sin tope, avisos 🌊 sin duplicados. 🟡 el
-    dispatcher marca timeout en `subastas-mercado` si desborda 280 s (2×/7d, el job acaba).
+    €/m² siempre visible). 🟡 el dispatcher marca timeout en `subastas-mercado` si desborda 280 s
+    (2×/7d, el job acaba). **Surus (6ª fuente, 13/08, #1406/#1408):** portal privado de liquidaciones
+    con comisión al COMPRADOR (`comisionCompra` en `calcularCoste`, por fuente). El primer bug real
+    (ingesta IMAP no leía nada por saltos de línea/columna) ya arreglado y con regresión — pero el
+    correo de alerta de Surus **aún no se ha visto en producción** (alta del mismo día): pendiente
+    contrastar el parser contra el primer aviso real que le llegue a Alberto.
   - **Facturas/banca sin conciliar:** Roborock −247,92€ (House) sin aparecer en banco; Booking Dúplex
     587,23€ vence 16/08; Socorro 24 julio sin factura de comisión; Endesa Dúplex 24/07 87,42€ con
     cargo pero sin PDF archivado; fila duplicada CREATE (`create-socorro` + `create_ventilador`,

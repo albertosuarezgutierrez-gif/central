@@ -6,6 +6,7 @@ import {
   decidirPrecioPorPlaza,
   decidirCompsDeOtroAforo,
   factorAforo,
+  decidirEventoACiegas,
 } from './pricing-centinelas.ts'
 
 // ─── 1. Evento declarado que el mercado no respalda ──────────────────────────────────────────
@@ -167,4 +168,38 @@ test('comps MAS GRANDES que el piso tambien avisan (la extrapolacion va en los d
   // Un apartamento de 4 medido con casas de 10: factor 0,43 → recortado a 0,6, desvio 1,67.
   const v = decidirCompsDeOtroAforo({ plazasPiso: 4, comps: [{ plazas: 10, n: 20 }] })
   assert.equal(v.alerta, true)
+})
+
+// ————— 5. evento a ciegas (caso Bienal 13/08/2026) —————
+
+test('la Bienal: evento confirmado x1,25 con 0 comps fiables → CONGELAR y alertar', () => {
+  const v = decidirEventoACiegas({ factorEvento: 1.25, compsFiablesFecha: 0 })
+  assert.equal(v.congelar, true)
+  assert.equal(v.alerta, true)
+  assert.equal(v.evaluado, true)
+  assert.match(v.motivo, /a ciegas/)
+})
+
+test('con la fecha MEDIDA (≥3 comps fiables) el mercado manda: no se congela nada', () => {
+  const v = decidirEventoACiegas({ factorEvento: 1.25, compsFiablesFecha: 3 })
+  assert.equal(v.congelar, false)
+  assert.equal(v.alerta, false)
+  assert.equal(v.evaluado, true)
+})
+
+test('sin evento confirmado no hay nada que evaluar (un martes sin comps es normal)', () => {
+  const v = decidirEventoACiegas({ factorEvento: 1, compsFiablesFecha: 0 })
+  assert.equal(v.congelar, false)
+  assert.equal(v.evaluado, false)
+})
+
+test('un factor por debajo del umbral (puente flojo 1,1) tampoco congela', () => {
+  const v = decidirEventoACiegas({ factorEvento: 1.1, compsFiablesFecha: 0 })
+  assert.equal(v.congelar, false)
+  assert.equal(v.evaluado, false)
+})
+
+test('2 comps fiables siguen siendo a ciegas (el umbral es el del bucket por fecha)', () => {
+  const v = decidirEventoACiegas({ factorEvento: 2.2, compsFiablesFecha: 2 })
+  assert.equal(v.congelar, true)
 })

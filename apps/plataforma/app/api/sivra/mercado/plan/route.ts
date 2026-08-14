@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
 import { isRoutineAuthorized } from "@/lib/cron-auth"
 import { EVENTS } from "@/lib/pricing-calendar"
-import { ventanasDelBarrido, type EventoFecha } from "@/lib/sivra/mercado-ventanas"
+import { ventanasDelBarrido, ventanasDeConfirmadosPorFecha, type EventoFecha } from "@/lib/sivra/mercado-ventanas"
 import {
   planDeVentanas, parsearParametrosPlan, FUENTES_FIABLES,
   type CoberturaVentana,
@@ -59,29 +59,44 @@ export async function GET(req: NextRequest) {
 
   // Fechas de evento de las dos fuentes que conoce el motor (calendario del repo + descubrimiento
   // de los crons). Si la tabla falla se barre la base mensual y SE DICE — no es «no había eventos».
+  // El calendario del repo es curado a mano: cuenta como CONFIRMADO (el flag decide la prioridad
+  // de la cola — una fecha de evento confirmado sin medir está CONGELADA por el motor, 13/08/2026).
   const eventos: EventoFecha[] = Object.entries(EVENTS).map(([fecha, factor]) => ({
-    fecha, factor: Number(factor), nombre: "calendario",
+    fecha, factor: Number(factor), nombre: "calendario", confirmado: true,
   }))
   try {
-    const ev = await prisma.$queryRaw<{ rate_date: Date; factor: number; nombre: string }[]>(Prisma.sql`
-      SELECT rate_date, MAX(factor)::float AS factor, MIN(nombre) AS nombre
-      FROM pricing_eventos_auto WHERE rate_date >= CURRENT_DATE GROUP BY rate_date`)
+    // Los `descartado` quedan FUERA: ya no cuentan para el motor (eventos-estado.ts) y pedir
+    // barrido para ellos era gastar ventanas en fechas juzgadas falsas. `confirmado` sigue la
+    // misma normalización que `normalizarEstado`: NULL/vacío = confirmado (histórico pre-columna).
+    const ev = await prisma.$queryRaw<{ rate_date: Date; factor: number; nombre: string; confirmado: boolean }[]>(Prisma.sql`
+      SELECT rate_date, MAX(factor)::float AS factor, MIN(nombre) AS nombre,
+             bool_or(COALESCE(estado, '') NOT IN ('previsto', 'descartado')) AS confirmado
+      FROM pricing_eventos_auto
+      WHERE rate_date >= CURRENT_DATE AND COALESCE(estado, '') <> 'descartado'
+      GROUP BY rate_date`)
     for (const f of ev) {
       eventos.push({
         fecha: new Date(f.rate_date).toISOString().slice(0, 10),
         factor: Number(f.factor),
         nombre: String(f.nombre ?? "").slice(0, 60),
+        confirmado: Boolean(f.confirmado),
       })
     }
   } catch {
     avisos.push("pricing_eventos_auto ilegible: plan SIN las fechas de evento descubiertas por los crons")
   }
 
-  const plan = ventanasDelBarrido(hoy, eventos, {
+  const planBase = ventanasDelBarrido(hoy, eventos, {
     mesesBase: Number(process.env.SIVRA_SWEEP_MESES ?? 8),
     maxEventos: Number(process.env.SIVRA_SWEEP_MAX_EVENTOS ?? 6),
     fechasPorMes: Number(process.env.SIVRA_SWEEP_FECHAS_MES ?? 3),
   })
+  // 🧊 Los eventos CONFIRMADOS entran además POR FECHA, sin colapsar bloques (14/08/2026): la
+  // congelación del motor es por fecha exacta, y con el colapso las noches no-representantes de
+  // un bloque (18/19-sep de la Bienal tras medirse el 20-sep) se quedaban congeladas para
+  // siempre. Solo en ESTE plan (Booking): el sweep de Serper mantiene el colapso — allí cada
+  // ventana es una búsqueda de pago y su corpus ni siquiera cuenta para descongelar.
+  const plan = [...planBase, ...ventanasDeConfirmadosPorFecha(hoy, eventos, planBase)]
 
   // Cobertura FIABLE ya existente. La ventana de 120 días es la misma que mira el motor
   // (`pricing/apply`): más atrás no le sirve a nadie. `fuente` excluye a Serper a propósito.

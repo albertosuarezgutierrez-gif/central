@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { ingerirDesdeCorreo, podarCorpus } from '@/lib/subastas-ingesta'
 import { ingerirJunta } from '@/lib/subastas/junta'
+import { ingerirSurus } from '@/lib/subastas/surus'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -28,13 +29,22 @@ export async function GET(req: NextRequest) {
       console.error('[subastas-ingesta] junta', e)
       junta = { error: e?.message ?? String(e) }
     }
+    // Surus in situ — alertas por correo del portal privado de liquidaciones.
+    // Best-effort igual que la Junta: su buzón no puede tumbar el del BOE.
+    let surus: Awaited<ReturnType<typeof ingerirSurus>> | { error: string } = { error: 'no ejecutada' }
+    try {
+      surus = await ingerirSurus(dias, max)
+    } catch (e: any) {
+      console.error('[subastas-ingesta] surus', e)
+      surus = { error: e?.message ?? String(e) }
+    }
     let podadas = 0
     try {
       podadas = await podarCorpus()
     } catch (e) {
       console.error('[subastas-ingesta] poda', e)
     }
-    return NextResponse.json({ ok: true, ...r, junta, podadas })
+    return NextResponse.json({ ok: true, ...r, junta, surus, podadas })
   } catch (e: any) {
     console.error('[subastas-ingesta]', e)
     return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })

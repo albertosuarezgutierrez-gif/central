@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-13T08:22:51Z",
-  "sha": "19873bbf4e13cd9b167745308bba8f5d07fdd813",
+  "generadoEn": "2026-08-14T07:47:21Z",
+  "sha": "c5dba6ce671258aa395c70b256380ec9c2c4d656",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -44663,7 +44663,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "530f2ce103c4"
+      "hash": "a7e8e7b430fb"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/BancaClient.tsx",
@@ -48484,7 +48484,7 @@
           "exportada": false,
           "params": "activo = false",
           "retorno": "React.CSSProperties",
-          "linea": 246
+          "linea": 252
         },
         {
           "nombre": "ChipUI",
@@ -48492,7 +48492,7 @@
           "exportada": false,
           "params": "{ tono = 'neutro', children }: { tono?: TonoChip; children: React.ReactNode }",
           "retorno": null,
-          "linea": 263
+          "linea": 269
         },
         {
           "nombre": "TarjetaOportunidad",
@@ -48500,7 +48500,7 @@
           "exportada": false,
           "params": "p: { precio: number | null precioNota?: string descuento?: { etiqueta: string; tono: TonoChip } | null titulo: string zona?: string | null metros?: string | null chips: Chip[] evidencia?: string | null detalles?: React.ReactNode acento?: bo",
           "retorno": null,
-          "linea": 285,
+          "linea": 291,
           "resumen": "UNA sola anatomía para chollos de portal, preferentes 🌊 y subastas — antes había tres tarjetas distintas y la pestaña se veía destartalada (queja de Alberto, 09/08/2026). Orden de lectura móvil: prec"
         },
         {
@@ -48509,7 +48509,7 @@
           "exportada": false,
           "params": "ch: Chollo",
           "retorno": "Chip[]",
-          "linea": 331,
+          "linea": 337,
           "resumen": "Chips por origen: la FUENTE siempre es el primero (deja de ser texto suelto)."
         },
         {
@@ -48518,7 +48518,7 @@
           "exportada": false,
           "params": "p: Preferente",
           "retorno": "Chip[]",
-          "linea": 340
+          "linea": 346
         },
         {
           "nombre": "chipsDeSubasta",
@@ -48526,7 +48526,7 @@
           "exportada": false,
           "params": "s: SubastaChollo",
           "retorno": "Chip[]",
-          "linea": 347
+          "linea": 353
         },
         {
           "nombre": "fecha",
@@ -48534,7 +48534,7 @@
           "exportada": false,
           "params": "iso: string | null | undefined",
           "retorno": "string | null",
-          "linea": 356
+          "linea": 362
         },
         {
           "nombre": "Puntuacion",
@@ -48542,7 +48542,7 @@
           "exportada": false,
           "params": "{ v }: { v: number | null }",
           "retorno": null,
-          "linea": 370,
+          "linea": 376,
           "resumen": "Semáforo de la puntuación. `null` se pinta distinto a 0: no es lo mismo."
         },
         {
@@ -48551,7 +48551,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 378
+          "linea": 384
         },
         {
           "nombre": "PanelTesoreria",
@@ -48559,7 +48559,7 @@
           "exportada": false,
           "params": "{ t }: { t: Tesoreria }",
           "retorno": null,
-          "linea": 385,
+          "linea": 391,
           "resumen": "Dinero que hay que tener bloqueado para poder pujar. Lo que importa NO es la suma de depósitos sino el máximo simultáneo: los que no se solapan reutilizan el mismo dinero."
         },
         {
@@ -48568,7 +48568,7 @@
           "exportada": false,
           "params": "{ r, dormitorios }: { r: Rendimiento | null | undefined; dormitorios?: number | null }",
           "retorno": null,
-          "linea": 469,
+          "linea": 475,
           "resumen": "Yield turístico estimado con los pisos PROPIOS. Siempre con el caveat: los pisos de referencia son de Sevilla capital — fuera de ahí es extrapolación."
         },
         {
@@ -48577,7 +48577,7 @@
           "exportada": false,
           "params": "{ s, onVerFicha }: { s: SubastaChollo; onVerFicha: () => void }",
           "retorno": null,
-          "linea": 486,
+          "linea": 492,
           "resumen": "Subasta en la vista unificada de Oportunidades, con la anatomía común de `TarjetaOportunidad`. El enlace va a su ficha completa en la pestaña «Todas» — FichaSubasta es demasiado pesada para montarla e"
         },
         {
@@ -48586,7 +48586,7 @@
           "exportada": false,
           "params": "{ s, plantaAparte }: { s: Subasta; plantaAparte?: boolean }",
           "retorno": null,
-          "linea": 530,
+          "linea": 536,
           "resumen": "repetirla sería ruido."
         },
         {
@@ -48595,7 +48595,7 @@
           "exportada": false,
           "params": "{ s, d }: { s: Subasta; d?: Documental | null }",
           "retorno": null,
-          "linea": 567,
+          "linea": 573,
           "resumen": "Resumen de CARGAS + documentación de la subasta. Vive dentro de `FichaSubasta` a propósito: antes el semáforo y las notas del edicto solo se pintaban en la pestaña «Todas» (iban en su `extra`), así qu"
         },
         {
@@ -48604,7 +48604,7 @@
           "exportada": false,
           "params": "{ dedupeKey }: { dedupeKey: string }",
           "retorno": null,
-          "linea": 713,
+          "linea": 719,
           "resumen": "«Nota simple viva»: la certificación que adjunta el juzgado es de hace años y las cargas se mueven. Aquí se sube una nota simple recién pedida al registro y el agente dice QUÉ HA CAMBIADO — es lo únic"
         },
         {
@@ -48613,7 +48613,7 @@
           "exportada": false,
           "params": "{ etiqueta, sub, children }: { etiqueta: string; sub?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 808,
+          "linea": 814,
           "resumen": "Par etiqueta→valor del bloque «💶 Los números»: etiqueta pequeña arriba, valor con peso debajo. La jerarquía la da la tipografía — antes todos los importes eran chips/líneas del mismo peso y se confun"
         },
         {
@@ -48622,7 +48622,7 @@
           "exportada": false,
           "params": "{ u }: { u: ReturnType<typeof umbralesPuja> }",
           "retorno": null,
-          "linea": 826,
+          "linea": 832,
           "resumen": "Umbrales de APROBACIÓN del remate. Corrige la confusión de «hay que pujar el 70% de la deuda»: el 70% de la LEC es del VALOR DE SUBASTA, y la deuda entra como vía alternativa (y como techo probable de"
         },
         {
@@ -48631,7 +48631,7 @@
           "exportada": false,
           "params": "s: Subasta",
           "retorno": "SubastaInmueble",
-          "linea": 842,
+          "linea": 848,
           "resumen": "El `Subasta` del cliente, como lo espera la lógica pura del módulo."
         },
         {
@@ -48640,7 +48640,7 @@
           "exportada": false,
           "params": "{ s, o, params }: { s: Subasta; o?: Oportunidad | null; params?: ParamsCoste }",
           "retorno": null,
-          "linea": 869,
+          "linea": 875,
           "resumen": "«¿Y si pujo X?»: coste puerta abierta, descuento real y banda de aprobación de UNA puja concreta. Mismo motor que el resto de la ficha (`calcularCoste` + `umbralesPuja` del módulo, con la financiación"
         },
         {
@@ -48649,7 +48649,7 @@
           "exportada": false,
           "params": "{ s, o, acciones, extra, doc, escenarios, params }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null; escenarios?: EscenarioUI[] | null; params?: ParamsCoste }",
           "retorno": null,
-          "linea": 934
+          "linea": 940
         },
         {
           "nombre": "SubastasClient",
@@ -48657,14 +48657,14 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Inicial | null }",
           "retorno": null,
-          "linea": 1211
+          "linea": 1226
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "bbafe665b5da"
+      "hash": "f4fb383c432d"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -50200,20 +50200,12 @@
       ],
       "funciones": [
         {
-          "nombre": "mediana",
-          "kind": "function",
-          "exportada": false,
-          "params": "xs: number[]",
-          "retorno": "number",
-          "linea": 22
-        },
-        {
           "nombre": "POST",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 29
+          "linea": 23
         }
       ],
       "tablas": [
@@ -50222,7 +50214,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": "/api/banca/antifraude",
-      "hash": "450f4719aadf"
+      "hash": "7eeef0183c1a"
     },
     {
       "ruta": "apps/plataforma/app/api/banca/benchmark-pisos/route.ts",
@@ -52449,12 +52441,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 12
+          "linea": 13
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/subastas-ingesta",
-      "hash": "45b4e279dd45"
+      "hash": "c385ee6de9e7"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-mercado/route.ts",
@@ -53944,7 +53936,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/eventos/sync",
-      "hash": "ac095fdb2d22"
+      "hash": "d5284fe99b56"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/eventos/verificar/route.ts",
@@ -54050,7 +54042,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/eventos/websearch",
-      "hash": "57ec3145a8e3"
+      "hash": "88747f58f0dc"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/agent/resumen-mensual/route.ts",
@@ -55730,7 +55722,7 @@
         "pricing_piso_zona"
       ],
       "rutaApi": "/api/sivra/mercado/plan",
-      "hash": "ddc6f899b38d"
+      "hash": "374cbe1e5355"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/search/route.ts",
@@ -55997,7 +55989,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 36
+          "linea": 37
         },
         {
           "nombre": "fmt",
@@ -56005,7 +55997,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 37
+          "linea": 38
         },
         {
           "nombre": "GET",
@@ -56013,7 +56005,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 65,
+          "linea": 66,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -56022,7 +56014,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 69
+          "linea": 70
         }
       ],
       "tablas": [
@@ -56035,6 +56027,7 @@
         "next",
         "occ",
         "pricing_applied",
+        "pricing_avisos",
         "pricing_config",
         "pricing_eventos_auto",
         "pricing_flight_demand",
@@ -56046,7 +56039,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "05cf450b6189"
+      "hash": "a31f188ab8f8"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -57192,7 +57185,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 23
+          "linea": 28
         }
       ],
       "tablas": [
@@ -57200,7 +57193,7 @@
         "trading_tesis"
       ],
       "rutaApi": "/api/trading/puntuar",
-      "hash": "3e17bfc69f89"
+      "hash": "6fea9f5739ef"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/saldo/route.ts",
@@ -59878,6 +59871,58 @@
       "hash": "37644e162e1b"
     },
     {
+      "ruta": "apps/plataforma/lib/comercio-canonico.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "apps/plataforma/lib/comercio-canonico.ts IDENTIDAD canónica de un comercio, para comparar el gasto de HOY contra el histórico. `lib/comercio.ts::comercioDe` da la ETIQUETA que se PINTA (\"DIA SEVILLA 2260\"): fiel al banco, buena para leer. Este módulo da la IDENTIDAD (\"DIA\"): la clave con la que se d",
+      "exporta": [
+        "normalizarComercio",
+        "cadenaDe",
+        "claveComercio",
+        "mismoComercio"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizarComercio",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string | null | undefined",
+          "retorno": "string",
+          "linea": 68,
+          "resumen": "Mayúsculas sin acentos, sin puntuación y con espacios colapsados (mantiene '&' porque forma parte de marcas reales: H&M, PULL&BEAR)."
+        },
+        {
+          "nombre": "cadenaDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 78,
+          "resumen": "¿A qué cadena conocida pertenece este rótulo? null si no es de ninguna (comercio independiente)."
+        },
+        {
+          "nombre": "claveComercio",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string | null | undefined",
+          "retorno": "string",
+          "linea": 93,
+          "resumen": "Clave con la que se decide \"¿este comercio ya lo conocía?\". Cadena conocida → la marca; comercio independiente → su rótulo sin el ruido de sucursal/terminal/forma jurídica. NUNCA vacía: si todo el rót"
+        },
+        {
+          "nombre": "mismoComercio",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: string | null | undefined, b: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 108,
+          "resumen": "¿Dos rótulos son el MISMO comercio? (azúcar sobre claveComercio, para leer mejor en los filtros)"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "99fe5ffacaae"
+    },
+    {
       "ruta": "apps/plataforma/lib/comercio.ts",
       "ambito": "apps/plataforma",
       "resumen": "apps/plataforma/lib/comercio.ts \"Comercio\" mostrado en el drill-down de gasto personal. En los datos reales, tanto `contraparte` como `concepto` suelen traer el nombre precedido del verbo de la operación (\"COMPRA EN DIA SEVILLA 2260\", \"PAGO EN ...\", \"RECIBO ...\"). Si se agrupa por el texto CRUDO: (a",
@@ -60682,7 +60727,7 @@
           "exportada": false,
           "params": "cuentaId: string, ccc: string,",
           "retorno": "Promise<",
-          "linea": 30,
+          "linea": 31,
           "resumen": "Resuelve la sociedad + titular de una tarjeta por su ccc (TARJETA-KUTXA-<últ.4>), reutilizando la cuenta bancaria que YA existe (ambas tarjetas están dadas de alta con su titular). Fallback a la prime"
         },
         {
@@ -60691,7 +60736,7 @@
           "exportada": false,
           "params": "cuentaBancariaIds: string[], desde: string, hasta: string,",
           "retorno": "Promise<",
-          "linea": 49,
+          "linea": 50,
           "resumen": "Empareja las devoluciones (abonos que no son PAGO RECIBO) con su compra original y les copia el destino para que se ANULEN en el cómputo por destino. Las que no casan → requiere_revision y un mensaje "
         },
         {
@@ -60700,7 +60745,7 @@
           "exportada": false,
           "params": "cuentaId: string, ids: string[], desde: string, hasta: string,",
           "retorno": "Promise<void>",
-          "linea": 124
+          "linea": 127
         },
         {
           "nombre": "procesarExtractoTarjeta",
@@ -60708,16 +60753,17 @@
           "exportada": true,
           "params": "cuentaId: string, buffer: Buffer, mimeType: string, fileName: string, extractos: ExtractoN43[], origen: 'pdf' | 'xls' = 'pdf',",
           "retorno": "Promise<ResultadoExtractoTarjeta>",
-          "linea": 206
+          "linea": 246
         }
       ],
       "tablas": [
         "cuentas_bancarias",
         "movimientos_bancarios",
-        "sociedades"
+        "sociedades",
+        "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "bb6dc5460d3e"
+      "hash": "0b51ca0e3e6f"
     },
     {
       "ruta": "apps/plataforma/lib/contable/formato.ts",
@@ -66612,6 +66658,7 @@
       "resumen": "lib/sivra/eventos-impacto.ts — cuánto sube el precio un evento descubierto automáticamente. POR QUÉ (01/08/2026). Esta escala vivía DUPLICADA y palabra por palabra en los dos crons de descubrimiento (`eventos/sync` de Ticketmaster y `eventos/websearch`), con un comentario que decía «idéntico a /even",
       "exporta": [
         "clasificarTipo",
+        "esPartidoLigaRegular",
         "impactoEvento"
       ],
       "funciones": [
@@ -66625,18 +66672,27 @@
           "resumen": "Normaliza el `tipo` que traen las fuentes (Ticketmaster o la IA), que es texto libre."
         },
         {
+          "nombre": "esPartidoLigaRegular",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre?: string | null",
+          "retorno": "boolean",
+          "linea": 66,
+          "resumen": "¿Es un partido de liga REGULAR de un club local? («Sevilla FC vs Valencia CF») Existe porque el `tipo` que devuelve la IA muchas veces no trae ninguna palabra clave y el partido caía en la curva gener"
+        },
+        {
           "nombre": "impactoEvento",
           "kind": "function",
           "exportada": true,
-          "params": "aforo: number, tipo?: string | null",
+          "params": "aforo: number, tipo?: string | null, nombre?: string | null",
           "retorno": "number",
-          "linea": 64,
+          "linea": 84,
           "resumen": "Multiplicador de precio para un evento, por aforo y tipo. La curva general (conciertos, festivales, lo que no sabemos clasificar) llega a 2.20 en aforo de estadio: por debajo del 2.5 del calendario a "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ea3b0a1b1b2e"
+      "hash": "864386825533"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/eventos-verificacion.ts",
@@ -66915,7 +66971,7 @@
           "exportada": true,
           "params": "qs: URLSearchParams,",
           "retorno": "",
-          "linea": 113,
+          "linea": 115,
           "resumen": "Lee los parámetros del plan (`max`, `rondas`, `desde`, `hasta`) de una query string. Vive AQUÍ y no en el route handler para poder testearlo: el handler necesita Prisma y el alias `@/`, así que su lóg"
         },
         {
@@ -66924,7 +66980,7 @@
           "exportada": false,
           "params": "desdeIso: string, hastaIso: string",
           "retorno": "number",
-          "linea": 161
+          "linea": 163
         },
         {
           "nombre": "clave",
@@ -66932,7 +66988,7 @@
           "exportada": false,
           "params": "checkin: string, aforo: number",
           "retorno": "string",
-          "linea": 167
+          "linea": 169
         },
         {
           "nombre": "planDeVentanas",
@@ -66940,7 +66996,7 @@
           "exportada": true,
           "params": "plan: Ventana[], aforos: Map<number, string[]>, cobertura: CoberturaVentana[], hoyIso: string, max = 12, filtro: FiltroVentanas = {},",
           "retorno": "PlanPedido",
-          "linea": 189,
+          "linea": 195,
           "resumen": "Cruza el plan de ventanas (fechas) con los aforos de los pisos y la cobertura fiable ya medida, y devuelve las `max` que más falta hacen. Orden de urgencia, y el porqué de cada nivel: 1. **Nunca medid"
         },
         {
@@ -66949,7 +67005,7 @@
           "exportada": true,
           "params": "plan: Ventana[], aforos: Map<number, string[]>, cobertura: CoberturaVentana[], hoyIso: string, max = 12, filtro: FiltroVentanas = {},",
           "retorno": "VentanaPedida[]",
-          "linea": 248,
+          "linea": 259,
           "resumen": "Envoltura histórica: solo la lista. Nuevos usos, mejor `planDeVentanas` (declara el recorte)."
         },
         {
@@ -66958,7 +67014,7 @@
           "exportada": true,
           "params": "r: { ventanas: number comps: number sinRespuesta: number sinPrecio: number errores: string[] }",
           "retorno": "string",
-          "linea": 264,
+          "linea": 275,
           "resumen": "Parte de la pasada para el latido. Igual que en el barrido por búsqueda, **lo que NO se pudo medir va primero**: una ventana que el conector no contestó es «no lo sé», no «no hay mercado», y confundir"
         },
         {
@@ -66967,13 +67023,13 @@
           "exportada": true,
           "params": "r: { ventanas: number comps: number sinRespuesta: number errores: string[] }",
           "retorno": "boolean",
-          "linea": 287,
+          "linea": 298,
           "resumen": "¿Vale la pasada? Conservador igual que `barridoFiable`: hace falta haber MEDIDO algo y que la mayoría de lo intentado haya respondido. Una pasada que pide 12 ventanas y solo contesta 1 no es «poco mer"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6900e8c4d8ab"
+      "hash": "15421acfcb62"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/mercado-ventanas.ts",
@@ -66984,7 +67040,8 @@
         "consultasDeVentana",
         "findeDelMes",
         "picosDeEvento",
-        "ventanasDelBarrido"
+        "ventanasDelBarrido",
+        "ventanasDeConfirmadosPorFecha"
       ],
       "funciones": [
         {
@@ -66993,7 +67050,7 @@
           "exportada": true,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 55,
+          "linea": 64,
           "resumen": "«2026-11-13» → «noviembre 2026» (para la consulta de refuerzo por mes)."
         },
         {
@@ -67002,7 +67059,7 @@
           "exportada": true,
           "params": "checkin: string, checkout: string, aforo: number, motivo: 'mes' | 'evento',",
           "retorno": "ConsultaVentana[]",
-          "linea": 76,
+          "linea": 85,
           "resumen": "Consultas de una ventana, en orden de intento (la siguiente solo se lanza si la anterior no resuelve, y a partir de la segunda pagan el cupo de refuerzo): 1. ABIERTA con la fecha ISO → es la que trae "
         },
         {
@@ -67011,7 +67068,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "Date",
-          "linea": 109
+          "linea": 118
         },
         {
           "nombre": "fmt",
@@ -67019,7 +67076,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 112
+          "linea": 121
         },
         {
           "nombre": "sumarDias",
@@ -67027,7 +67084,7 @@
           "exportada": false,
           "params": "iso: string, n: number",
           "retorno": "string",
-          "linea": 115
+          "linea": 124
         },
         {
           "nombre": "diasEntre",
@@ -67035,7 +67092,7 @@
           "exportada": false,
           "params": "desdeIso: string, hastaIso: string",
           "retorno": "number",
-          "linea": 118
+          "linea": 127
         },
         {
           "nombre": "findeDelMes",
@@ -67043,7 +67100,7 @@
           "exportada": true,
           "params": "hoyIso: string, m: number, orden = 0",
           "retorno": "string",
-          "linea": 141,
+          "linea": 150,
           "resumen": "Fecha de muestra nº `orden` del mes a `m` meses vista. `orden` 0 = primer VIERNES (el que se ha barrido siempre; se mantiene para no mover la serie histórica). 🚨 POR QUÉ HAY MÁS DE UNA (01/08/2026, c"
         },
         {
@@ -67052,7 +67109,7 @@
           "exportada": true,
           "params": "eventos: EventoFecha[], factorMinimo = 1.15",
           "retorno": "EventoFecha[]",
-          "linea": 160,
+          "linea": 169,
           "resumen": "Agrupa fechas de evento CONTIGUAS en bloques y devuelve, de cada bloque, la de mayor factor (empate → la primera). La Feria entera gasta una sola ventana."
         },
         {
@@ -67061,13 +67118,22 @@
           "exportada": true,
           "params": "hoyIso: string, eventos: EventoFecha[], opts: VentanasOpts = {},",
           "retorno": "Ventana[]",
-          "linea": 189,
+          "linea": 201,
           "resumen": "Ventanas a barrer en una pasada. La base mensual va SIEMPRE (es la línea de temporada); las de evento se añaden por cercanía hasta el tope, sin repetir una fecha que ya cubre la base."
+        },
+        {
+          "nombre": "ventanasDeConfirmadosPorFecha",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoyIso: string, eventos: EventoFecha[], plan: Ventana[], opts: Pick<VentanasOpts, 'factorMinimo' | 'noches' | 'horizonteDias'> = {},",
+          "retorno": "Ventana[]",
+          "linea": 294,
+          "resumen": "Ventanas POR FECHA para los eventos CONFIRMADOS, sin colapsar bloques. SOLO para el plan del conector de Booking — el sweep de Serper sigue con `ventanasDelBarrido` a secas. POR QUÉ (14/08/2026, cazad"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "116d2348de69"
+      "hash": "33d7fb499463"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pilot-track.ts",
@@ -67229,7 +67295,8 @@
         "decidirEventoNoCatalogado",
         "decidirPrecioPorPlaza",
         "factorAforo",
-        "decidirCompsDeOtroAforo"
+        "decidirCompsDeOtroAforo",
+        "decidirEventoACiegas"
       ],
       "funciones": [
         {
@@ -67283,11 +67350,19 @@
           "retorno": "Veredicto",
           "linea": 244,
           "resumen": "⚠️ EL UMBRAL ES HOLGADO A PROPÓSITO (1,35). Con 1,25 saltaría también Luxury Busto, que son 5 plazas medidas con comps de 4 (factor 1,28): esa diferencia de UNA plaza es ruido de cómo cada anfitrión c"
+        },
+        {
+          "nombre": "decidirEventoACiegas",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: EventoACiegasInput, o: EventoACiegasOpts = {},",
+          "retorno": "VeredictoCongelacion",
+          "linea": 334
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "53f220a5dc2d"
+      "hash": "d97d7fbaea59"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-demanda.ts",
@@ -69071,6 +69146,46 @@
       "hash": "37829e785b50"
     },
     {
+      "ruta": "apps/plataforma/lib/subastas/surus.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Adaptador de SURUS IN SITU (surusin.com). Aquí va SOLO la red y la BD; el parseo es puro (`@central/module-subastas/surus.ts`). Surus es un portal privado de subastas electrónicas de activos en liquidación (concursal y de f",
+      "exporta": [
+        "fichasDeCorreo",
+        "ingerirSurus"
+      ],
+      "funciones": [
+        {
+          "nombre": "fichasDeCorreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string",
+          "retorno": "SubastaEnriquecida[]",
+          "linea": 61,
+          "resumen": "Fichas contenidas en UN correo. Un aviso puede traer varios lotes, así que el texto se trocea por los enlaces de ficha; con un solo lote (o ninguno) se intenta leer el correo entero de una pieza."
+        },
+        {
+          "nombre": "conOrigen",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: ReturnType<typeof loteSurusASubasta>",
+          "retorno": "SubastaEnriquecida",
+          "linea": 91
+        },
+        {
+          "nombre": "ingerirSurus",
+          "kind": "function",
+          "exportada": true,
+          "params": "dias = 7, maxCorreos = 60",
+          "retorno": "Promise<IngestaSurus>",
+          "linea": 99,
+          "resumen": "Ingesta de las alertas de Surus del buzón. Best-effort: un fallo aquí no debe tumbar la ingesta del BOE ni de la Junta (el cron la llama en su try/catch)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1e897935152d"
+    },
+    {
       "ruta": "apps/plataforma/lib/subastas/tesoreria.ts",
       "ambito": "apps/plataforma",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Tesorería del depósito — capa de app: saca de la BD los compromisos y el saldo real, y delega el cálculo en el módulo puro (`planTesoreria`). POR QUÉ: pujar exige consignar el 5% ANTES, y el dinero queda bloqueado hasta des",
@@ -70835,6 +70950,10 @@
         "resumenDesfase",
         "juzgarDiferido",
         "resumenDiferido",
+        "fechaMas",
+        "diasEntre",
+        "juzgarHuerfana",
+        "resumenHuerfanas",
         "detectarSuplantaciones",
         "resumenSuplantaciones",
         "saltoDeSaldo"
@@ -70918,12 +71037,47 @@
           "linea": 357
         },
         {
+          "nombre": "fechaMas",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string, dias: number",
+          "retorno": "string",
+          "linea": 445,
+          "resumen": "Aritmética de fechas en días naturales UTC. Aquí y no en un util compartido porque este módulo no importa NADA a propósito: es lo que permite testearlo con `node --test --experimental-strip-types`."
+        },
+        {
+          "nombre": "diasEntre",
+          "kind": "function",
+          "exportada": true,
+          "params": "desde: string, hasta: string",
+          "retorno": "number",
+          "linea": 451
+        },
+        {
+          "nombre": "juzgarHuerfana",
+          "kind": "function",
+          "exportada": true,
+          "params": "h: Huerfana, serie: PuntoContraste[], maxDesvio = DIVERGENCIA_MAX, margenDias = HUERFANA_MARGEN_DIAS,",
+          "retorno": "VeredictoHuerfana",
+          "linea": 460,
+          "resumen": "`serie` = cierres publicados por la 2ª fuente en orden ascendente (lo que devuelven tanto el CSV de Stooq como el chart de Yahoo, y lo que ya asume `juzgarPuntos`)."
+        },
+        {
+          "nombre": "resumenHuerfanas",
+          "kind": "function",
+          "exportada": true,
+          "params": "puntuadas: number, sinResolver: HuerfanaNoResuelta[], fueraDePlazo: number,",
+          "retorno": "string",
+          "linea": 498,
+          "resumen": "Parte de una línea. Vacío solo si no hubo NINGUNA huérfana: en cuanto hay una, se dice — aunque no se haya podido hacer nada con ella, que es justo el caso que se pasó cuatro semanas callado."
+        },
+        {
           "nombre": "cerca",
           "kind": "function",
           "exportada": false,
           "params": "a: number, b: number, tol: number",
           "retorno": "boolean",
-          "linea": 451
+          "linea": 588
         },
         {
           "nombre": "detectarSuplantaciones",
@@ -70931,7 +71085,7 @@
           "exportada": true,
           "params": "precios: Record<string, number>, referencias: Record<string, number>, tol = CRUCE_TOLERANCIA,",
           "retorno": "Suplantaciones",
-          "linea": 457,
+          "linea": 594,
           "resumen": "Detecta precios que pertenecen a otro símbolo. `referencias` = mismo mapa que `filtrarPreciosAnomalos` (último `precio_ref` conocido ANTERIOR a la pasada, por símbolo)."
         },
         {
@@ -70940,7 +71094,7 @@
           "exportada": true,
           "params": "suplantados: Suplantacion[]",
           "retorno": "string",
-          "linea": 506,
+          "linea": 643,
           "resumen": "Resumen de una línea. Cadena vacía si no hay nada — el consumidor no tiene que comprobarlo."
         },
         {
@@ -70949,13 +71103,13 @@
           "exportada": true,
           "params": "nuevo: number, anterior: number | null, umbral = SALTO_NAV_AVISO",
           "retorno": "SaltoSaldo",
-          "linea": 532,
+          "linea": 669,
           "resumen": "`variacion` = (nuevo − anterior) / anterior. Sin anterior no hay nada que comparar (primer saldo): no se avisa, que es distinto de «no ha cambiado»."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "50f5f5e86589"
+      "hash": "ad6b10d26632"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-stooq.ts",
@@ -71594,11 +71748,12 @@
     {
       "ruta": "apps/plataforma/lib/vigilantes-tarjeta.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Detectores PUROS de los \"vigilantes\" de la tarjeta (Fase 2): solo avisan, nunca bloquean. Sin Prisma ni '@/': la parte de BD (histórico, justificantes) vive en lib/contable/extracto-tarjeta.ts. Testeable con `node --test`.",
+      "resumen": "Detectores PUROS de los \"vigilantes\" de la tarjeta (Fase 2): solo avisan, nunca bloquean. Sin Prisma ni '@/': la parte de BD (histórico, justificantes) vive en lib/contable/extracto-tarjeta.ts. Testeable con `node --test`. 🚨 REGLA DE DISEÑO (14/08/2026, tras la queja «el agente no reconoce Mercadon",
       "exporta": [
         "esCargoFinanciero",
         "dobleCobro",
-        "subioPrecio"
+        "subioPrecio",
+        "baseRecurrente"
       ],
       "funciones": [
         {
@@ -71607,17 +71762,17 @@
           "exportada": true,
           "params": "concepto: string | null | undefined",
           "retorno": "boolean",
-          "linea": 7,
+          "linea": 16,
           "resumen": "Línea de coste financiero de la tarjeta (intereses por aplazar, comisiones, cuota de financiación). NO es una compra: liquidando la tarjeta en el mes se evita. Puro/testeable."
         },
         {
           "nombre": "dobleCobro",
           "kind": "function",
           "exportada": true,
-          "params": "movs: MovVig[]",
+          "params": "movs: MovVig[], minImporte = DOBLE_MIN_EUR",
           "retorno": "",
-          "linea": 15,
-          "resumen": "Agrupa cargos idénticos (mismo comercio + mismo importe absoluto) que aparecen ≥2 veces en el periodo → posible cobro doble del comercio. Devuelve solo los grupos con repetición."
+          "linea": 32,
+          "resumen": "Cargos idénticos (mismo comercio + mismo importe + **el MISMO DÍA**) que aparecen ≥2 veces. La fecha es la clave del asunto: repetir un importe en días distintos es una rutina (repostar 40,00€ cada se"
         },
         {
           "nombre": "subioPrecio",
@@ -71625,13 +71780,22 @@
           "exportada": true,
           "params": "actual: number, previo: number, umbralPct = 15",
           "retorno": "boolean",
-          "linea": 31,
+          "linea": 53,
           "resumen": "¿El importe actual supera al previo en más de umbralPct %? (subida de precio de un cargo recurrente, p.ej. una suscripción que sube de 6,99€ a 9,99€). Requiere ambos importes positivos (valor absoluto"
+        },
+        {
+          "nombre": "baseRecurrente",
+          "kind": "function",
+          "exportada": true,
+          "params": "previos: CargoPrevio[]",
+          "retorno": "number | null",
+          "linea": 73,
+          "resumen": "Precio de referencia de un comercio RECURRENTE DE IMPORTE ESTABLE (suscripción, cuota, recibo), o **null** si ese comercio no tiene un precio del que se pueda decir que \"ha subido\". Esta función es la"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1922c0ecbb56"
+      "hash": "edd8b6785fba"
     },
     {
       "ruta": "apps/plataforma/lib/websearch.ts",
@@ -88678,7 +88842,7 @@
           "exportada": true,
           "params": "valorSubasta: number | null | undefined, pct = PCT_DEPOSITO",
           "retorno": "number | null",
-          "linea": 50,
+          "linea": 65,
           "resumen": "Lo que hay que consignar para pujar en una subasta."
         },
         {
@@ -88687,7 +88851,7 @@
           "exportada": true,
           "params": "s: SubastaInmueble, remate?: number | null, params: ParamsCoste = {},",
           "retorno": "CosteAdquisicion",
-          "linea": 62,
+          "linea": 77,
           "resumen": "Calcula el coste puerta abierta. @param s la subasta ya normalizada @param remate precio de adjudicación a simular; por defecto el valor de subasta @param params parámetros de coste (por defecto, Anda"
         },
         {
@@ -88696,7 +88860,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "number",
-          "linea": 203
+          "linea": 252
         },
         {
           "nombre": "pct",
@@ -88704,7 +88868,7 @@
           "exportada": false,
           "params": "x: number",
           "retorno": "string",
-          "linea": 207
+          "linea": 256
         },
         {
           "nombre": "formatearEur",
@@ -88712,7 +88876,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 213,
+          "linea": 262,
           "resumen": "Formato español (2.162,49 €) para los avisos. La UI usa el helper `eur()` de la app; aquí se replica porque el módulo es puro y no importa nada de fuera."
         },
         {
@@ -88721,7 +88885,7 @@
           "exportada": true,
           "params": "s: SubastaInmueble, valorMercado: number, descuentoObjetivo = 0.25, params: ParamsCoste = {},",
           "retorno": "PujaMaxima",
-          "linea": 243,
+          "linea": 292,
           "resumen": "Puja MÁXIMA para que la adquisición salga con al menos `descuentoObjetivo` de descuento real sobre `valorMercado` — con el coste puerta abierta entero dentro, no solo el remate. Se resuelve por bisecc"
         },
         {
@@ -88730,7 +88894,7 @@
           "exportada": false,
           "params": "s: SubastaInmueble, valorMercado: number, descuentoObjetivo: number, params: ParamsCoste,",
           "retorno": "number | null",
-          "linea": 252
+          "linea": 301
         },
         {
           "nombre": "valorarPuja",
@@ -88738,7 +88902,7 @@
           "exportada": false,
           "params": "s: SubastaInmueble, importe: number | null",
           "retorno": "PujaMaxima",
-          "linea": 277,
+          "linea": 326,
           "resumen": "Contrasta un techo de puja contra la puja mínima y los umbrales legales."
         },
         {
@@ -88747,7 +88911,7 @@
           "exportada": true,
           "params": "s: SubastaInmueble, params: ParamsCoste = {}, medianaProvincial?: { ratio: number; muestraRatio: number; provincia: string } | null,",
           "retorno": "EscenarioCoste[]",
-          "linea": 333
+          "linea": 382
         },
         {
           "nombre": "alinearATramo",
@@ -88755,7 +88919,7 @@
           "exportada": false,
           "params": "puja: number, s: SubastaInmueble",
           "retorno": "number",
-          "linea": 378,
+          "linea": 427,
           "resumen": "El portal solo acepta pujas en tramos desde el valor de salida: se alinea hacia abajo."
         },
         {
@@ -88764,13 +88928,13 @@
           "exportada": true,
           "params": "ingresoPorDormitorio: number, dormitorios: number, costeTotal: number,",
           "retorno": "YieldTuristico | null",
-          "linea": 401,
+          "linea": 450,
           "resumen": "Yield estimado POR DORMITORIO: `ingresoPorDormitorio` sale del histórico real de los pisos del usuario (€ netos/año por dormitorio). Es la métrica disponible con sus datos (sus pisos no tienen m² regi"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ad7d95bd8e93"
+      "hash": "140f61fd2229"
     },
     {
       "ruta": "packages/module-subastas/src/edicto.ts",
@@ -90007,6 +90171,232 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "0998e3c83bad"
+    },
+    {
+      "ruta": "packages/module-subastas/src/surus.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Adaptador de SURUS IN SITU (surusin.com). PURO. Qué es: portal privado de subastas electrónicas de activos en liquidación (concursal y de fondos). No es el BOE — aquí no hay LEC 670, ni umbral del 70%, ni Mesa: el vendedor ",
+      "exporta": [
+        "htmlATexto",
+        "urlsDeLote",
+        "esSurus",
+        "parsearLoteSurus",
+        "loteASubasta"
+      ],
+      "funciones": [
+        {
+          "nombre": "htmlATexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string | null | undefined",
+          "retorno": "string",
+          "linea": 108,
+          "resumen": "HTML de correo → texto con SALTOS DE LÍNEA y COLUMNAS conservados. Puro. 🚨 Aquí vivió un fallo que merece el comentario (13/08/2026): la primera versión insertaba los saltos y DESPUÉS pasaba todo por"
+        },
+        {
+          "nombre": "urlsDeLote",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string | null | undefined",
+          "retorno": "string[]",
+          "linea": 124,
+          "resumen": "URLs de ficha de lote de surusin.com que aparecen en un HTML, en orden."
+        },
+        {
+          "nombre": "esSurus",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 140,
+          "resumen": "¿Este texto es una ficha/aviso de Surus? Conservador a propósito."
+        },
+        {
+          "nombre": "parsearLoteSurus",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined",
+          "retorno": "LoteSurus | null",
+          "linea": 152,
+          "resumen": "Lee la ficha de un lote. Devuelve `null` cuando el texto no trae las señales mínimas de una ficha (un título Y al menos un dato duro: precio, depósito o referencia catastral). Preferimos NO ingerir a "
+        },
+        {
+          "nombre": "loteASubasta",
+          "kind": "function",
+          "exportada": true,
+          "params": "l: LoteSurus, opciones: { url?: string | null; id?: string | null } = {},",
+          "retorno": "SubastaInmueble",
+          "linea": 203,
+          "resumen": "Lote → contrato común. `url` e `id` los aporta quien descarga (la ficha en PDF no los lleva dentro), y sin ninguno de los dos la clave de dedupe se deriva del título + la salida, que es lo único estab"
+        },
+        {
+          "nombre": "valorTrasEtiqueta",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string, etiqueta: string",
+          "retorno": "string | null",
+          "linea": 262,
+          "resumen": "Texto que sigue a una etiqueta, en la misma línea o en la siguiente. El valor se corta por los DOS PUNTOS, no por la longitud de la etiqueta: cortar por longitud asume que el rótulo empieza en la colu"
+        },
+        {
+          "nombre": "importeTrasEtiqueta",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string, etiqueta: string",
+          "retorno": "number | null",
+          "linea": 283
+        },
+        {
+          "nombre": "importeColumnar",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string, etiqueta: string",
+          "retorno": "number | null",
+          "linea": 314,
+          "resumen": "Importe de una TABLA de dos filas: los rótulos en una línea y los valores debajo. Así publica Surus la cabecera del lote — Tipo de inmueble Precio de salida Valor de tasación Viviendas 30.000,00 € 120"
+        },
+        {
+          "nombre": "celdas",
+          "kind": "function",
+          "exportada": false,
+          "params": "linea: string",
+          "retorno": "string[]",
+          "linea": 336,
+          "resumen": "Celdas de una fila: lo separado por 2+ espacios, sin vacíos."
+        },
+        {
+          "nombre": "numeroTrasEtiqueta",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string, etiqueta: string",
+          "retorno": "number | null",
+          "linea": 340
+        },
+        {
+          "nombre": "anioDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string",
+          "retorno": "number | null",
+          "linea": 353,
+          "resumen": "«Año Construcción: 1.945» → 1945. Surus escribe el año con punto de millar, así que `parseImporteEs` lo leería bien pero un año fuera de rango es más probablemente otra cosa (una superficie, un import"
+        },
+        {
+          "nombre": "fechaEtiquetada",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string, etiqueta: string",
+          "retorno": "string | null",
+          "linea": 361,
+          "resumen": "«10/08/2026 a las 12:30» → ISO. Sin hora se queda a las 00:00."
+        },
+        {
+          "nombre": "fechasDeCabecera",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string",
+          "retorno": "string[]",
+          "linea": 373
+        },
+        {
+          "nombre": "aIso",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: string",
+          "retorno": "string | null",
+          "linea": 381
+        },
+        {
+          "nombre": "refCatastralSurus",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string",
+          "retorno": "string | null",
+          "linea": 390,
+          "resumen": "Referencia catastral de la sección «Datos Catastrales» (14 o 20 caracteres)."
+        },
+        {
+          "nombre": "tituloDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "lineas: string[]",
+          "retorno": "string",
+          "linea": 406,
+          "resumen": "Título del lote: la primera PROSA con contenido, unida si viene partida en varias líneas («VIVIENDA EN SANTILLANA / DEL MAR (CANTABRIA).»). Un título NUNCA es una fila de tabla, así que las líneas con"
+        },
+        {
+          "nombre": "localizacionDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string",
+          "retorno": "string | null",
+          "linea": 425,
+          "resumen": "«Santillana del Mar, España» de la fila de cabecera."
+        },
+        {
+          "nombre": "municipioDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "localizacion: string | null, ubicacion: string | null",
+          "retorno": "string | null",
+          "linea": 431
+        },
+        {
+          "nombre": "provinciaDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "titulo: string, ubicacion: string | null, localizacion: string | null",
+          "retorno": "string | null",
+          "linea": 445
+        },
+        {
+          "nombre": "posesionDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string | null",
+          "retorno": "SituacionPosesoria",
+          "linea": 457
+        },
+        {
+          "nombre": "cargasDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string",
+          "retorno": "",
+          "linea": 471,
+          "resumen": "Cargas. Surus las declara en prosa («Se venderá libre de cargas hipotecarias»), nunca cuantificadas. Se guarda el texto literal y un booleano de tres estados — `null` cuando la ficha no dice nada."
+        },
+        {
+          "nombre": "comisionDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string",
+          "retorno": "",
+          "linea": 481,
+          "resumen": "«5% de la puja + 400 € fijos como gastos de gestión» → {pct:0.05, fija:400}."
+        },
+        {
+          "nombre": "idDeUrl",
+          "kind": "function",
+          "exportada": false,
+          "params": "url: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 497,
+          "resumen": "El id del lote va en la URL de Surus; sin URL no hay id que inventar."
+        },
+        {
+          "nombre": "claveDeTitulo",
+          "kind": "function",
+          "exportada": false,
+          "params": "l: LoteSurus",
+          "retorno": "string",
+          "linea": 504,
+          "resumen": "Respaldo de dedupe cuando no hay id: título + salida, normalizados."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ec18ad9c810e"
     },
     {
       "ruta": "packages/module-subastas/src/tesoreria.ts",
@@ -91661,7 +92051,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2451,
-    "funciones": 6625
+    "archivos": 2454,
+    "funciones": 6663
   }
 }

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { filtrarPreciosAnomalos, resumenDescartes, contrastarFuentes, resumenDivergencias, saltoDeSaldo, detectarSuplantaciones, resumenSuplantaciones, juzgarPuntos, resumenDesfase, juzgarDiferido, resumenDiferido, SALTO_PRECIO_DIA_MAX } from './precios-guardia.ts'
+import { filtrarPreciosAnomalos, resumenDescartes, contrastarFuentes, resumenDivergencias, saltoDeSaldo, detectarSuplantaciones, resumenSuplantaciones, juzgarPuntos, resumenDesfase, juzgarDiferido, resumenDiferido, juzgarHuerfana, resumenHuerfanas, fechaMas, diasEntre, SALTO_PRECIO_DIA_MAX } from './precios-guardia.ts'
 
 test('el caso real del 03/08/2026: CVX a 590,17 con referencia 192,31 se descarta', () => {
   const { limpios, descartados } = filtrarPreciosAnomalos({ CVX: 590.17 }, { CVX: 192.31 })
@@ -495,4 +495,118 @@ test('la sesión real del 11/08 cuadra al céntimo: la pasada de la noche no tie
   assert.deepEqual(d.sospechosas, [])
   assert.deepEqual(d.etiquetadas, [])
   assert.equal(d.simbolosConDato, 2)
+})
+
+// --- Tesis huérfanas: vencieron y su símbolo ya no viene en la pasada -------------------------------
+
+// Series REALES de IBKR (12/08/2026) de los cuatro símbolos que se cayeron del universo dejando 16
+// tesis del sábado 18/07 sin puntuar. Sus `precio_ref` son los que están en `trading_tesis`.
+const SERIE_CEG = [
+  { fecha: '2026-07-16', cierre: 251.77 }, { fecha: '2026-07-17', cierre: 252.39 },
+  { fecha: '2026-07-20', cierre: 253.5 }, { fecha: '2026-07-21', cierre: 262.22 },
+  { fecha: '2026-07-22', cierre: 274.9 }, { fecha: '2026-07-23', cierre: 275.6 },
+  { fecha: '2026-07-24', cierre: 274.35 }, { fecha: '2026-07-27', cierre: 270 },
+  { fecha: '2026-07-28', cierre: 259.82 }, { fecha: '2026-07-29', cierre: 257.95 },
+]
+const REF_18_07 = { CEG: 252.39, ISRG: 345.42, SYM: 41.25, UEC: 9.28 }
+const CIERRE_28_07 = { CEG: 259.82, ISRG: 361.8, SYM: 42.34, UEC: 9.44 }
+const CIERRE_17_07 = { CEG: 252.39, ISRG: 345.42, SYM: 41.25, UEC: 9.28 }
+
+const serieDe = (simbolo: keyof typeof REF_18_07) => [
+  { fecha: '2026-07-17', cierre: CIERRE_17_07[simbolo] },
+  { fecha: '2026-07-28', cierre: CIERRE_28_07[simbolo] },
+]
+
+test('fechaMas y diasEntre trabajan en días naturales UTC', () => {
+  assert.equal(fechaMas('2026-07-18', 10), '2026-07-28')
+  assert.equal(fechaMas('2026-07-28', -10), '2026-07-18')
+  assert.equal(diasEntre('2026-07-18', '2026-07-28'), 10)
+  assert.equal(diasEntre('2026-08-12', '2026-08-12'), 0)
+  assert.ok(Number.isNaN(diasEntre('no-es-fecha', '2026-08-12')))
+})
+
+test('el caso real de las 16 huérfanas del 18/07: los cuatro símbolos se puntúan con el cierre del 28/07', () => {
+  for (const simbolo of ['CEG', 'ISRG', 'SYM', 'UEC'] as const) {
+    const v = juzgarHuerfana(
+      { simbolo, fecha: '2026-07-18', vence: '2026-07-28', precioRef: REF_18_07[simbolo] },
+      serieDe(simbolo),
+    )
+    assert.equal(v.estado, 'puntuable', simbolo)
+    if (v.estado !== 'puntuable') return
+    assert.equal(v.precio, CIERRE_28_07[simbolo])
+    // Ventana REAL medida desde la fecha de la tesis, no el horizonte declarado.
+    assert.equal(v.ventanaDias, 10)
+  }
+})
+
+test('la tesis es de SÁBADO y el precio_ref es el cierre del VIERNES: ancla igual (fecha exacta la habría perdido)', () => {
+  // Sin esto, las 16 huérfanas reales quedan sin resolver: el 18/07/2026 no fue sesión.
+  assert.equal(SERIE_CEG.find(p => p.fecha === '2026-07-18'), undefined)
+  const v = juzgarHuerfana({ simbolo: 'CEG', fecha: '2026-07-18', vence: '2026-07-28', precioRef: 252.39 }, SERIE_CEG)
+  assert.equal(v.estado, 'puntuable')
+  if (v.estado !== 'puntuable') return
+  assert.equal(v.precio, 259.82)
+})
+
+test('precio_ref con la fecha corrida (cierre de la sesión anterior) también ancla', () => {
+  // Pasada lanzada antes del cierre: la tesis del 17/07 lleva el cierre del 16/07. La serie sigue siendo
+  // la nuestra y en nuestra escala, que es lo único que el ancla tiene que confirmar.
+  const v = juzgarHuerfana({ simbolo: 'CEG', fecha: '2026-07-17', vence: '2026-07-27', precioRef: 251.77 }, SERIE_CEG)
+  assert.equal(v.estado, 'puntuable')
+  if (v.estado !== 'puntuable') return
+  assert.equal(v.precio, 270)
+})
+
+test('SPLIT: la serie ajustada no cuadra con nuestro precio_ref → NO se puntúa', () => {
+  // El riesgo de fondo: la fuente publica histórico ajustado y nuestro ref es sin ajustar. Cruzarlos
+  // daría un retorno inventado de −50% perfectamente plausible.
+  const mitad = SERIE_CEG.map(p => ({ ...p, cierre: p.cierre / 2 }))
+  const v = juzgarHuerfana({ simbolo: 'CEG', fecha: '2026-07-18', vence: '2026-07-28', precioRef: 252.39 }, mitad)
+  assert.equal(v.estado, 'sin-ancla')
+})
+
+test('ticker reciclado por otra empresa: el precio_ref no cuadra con nada de la serie → NO se puntúa', () => {
+  const v = juzgarHuerfana({ simbolo: 'CEG', fecha: '2026-07-18', vence: '2026-07-28', precioRef: 41.25 }, SERIE_CEG)
+  assert.equal(v.estado, 'sin-ancla')
+})
+
+test('serie que no llega a la sesión de la tesis: no ancla en un cierre de hace semanas', () => {
+  const vieja = [{ fecha: '2026-06-01', cierre: 252.39 }, { fecha: '2026-07-28', cierre: 259.82 }]
+  const v = juzgarHuerfana({ simbolo: 'CEG', fecha: '2026-07-18', vence: '2026-07-28', precioRef: 252.39 }, vieja)
+  assert.equal(v.estado, 'sin-ancla')
+})
+
+test('la fuente aún no llega al vencimiento: sin-cierre, no se inventa un desenlace', () => {
+  const v = juzgarHuerfana({ simbolo: 'CEG', fecha: '2026-07-18', vence: '2026-08-30', precioRef: 252.39 }, SERIE_CEG)
+  assert.equal(v.estado, 'sin-cierre')
+})
+
+test('el primer cierre tras el vencimiento llega demasiado tarde: mide deriva, no la ventana', () => {
+  // Deja de cotizar y vuelve un mes después: ese cierre ya no es el de la ventana de la tesis.
+  const conHueco = [{ fecha: '2026-07-17', cierre: 252.39 }, { fecha: '2026-08-25', cierre: 300 }]
+  const v = juzgarHuerfana({ simbolo: 'CEG', fecha: '2026-07-18', vence: '2026-07-28', precioRef: 252.39 }, conHueco)
+  assert.equal(v.estado, 'sin-cierre')
+})
+
+test('vencimiento en viernes con el cierre en lunes: dentro del margen, se puntúa', () => {
+  const s = [{ fecha: '2026-07-17', cierre: 252.39 }, { fecha: '2026-07-27', cierre: 270 }]
+  const v = juzgarHuerfana({ simbolo: 'CEG', fecha: '2026-07-18', vence: '2026-07-25', precioRef: 252.39 }, s)
+  assert.equal(v.estado, 'puntuable')
+  if (v.estado !== 'puntuable') return
+  assert.equal(v.fecha, '2026-07-27')
+  assert.equal(v.ventanaDias, 9)
+})
+
+test('sin serie (la fuente no respondió) no se puntúa: es un «no lo sé», no un cero', () => {
+  const v = juzgarHuerfana({ simbolo: 'CEG', fecha: '2026-07-18', vence: '2026-07-28', precioRef: 252.39 }, [])
+  assert.equal(v.estado, 'sin-ancla')
+})
+
+test('resumenHuerfanas: vacío solo si no hubo ninguna; en cuanto hay una, se dice', () => {
+  assert.equal(resumenHuerfanas(0, [], 0), '')
+  assert.match(resumenHuerfanas(16, [], 0), /16 tesis huérfana\(s\) puntuada/)
+  const parte = resumenHuerfanas(0, [{ simbolo: 'CEG', fecha: '2026-07-18', vence: '2026-07-28', motivo: 'sin serie' }], 0)
+  assert.match(parte, /1 huérfana\(s\) sin resolver/)
+  assert.match(parte, /CEG 2026-07-18→2026-07-28/)
+  assert.match(resumenHuerfanas(0, [], 4), /fuera de plazo/)
 })

@@ -15,6 +15,29 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-14 · facturas-correo (trigger diario)** · hizo: preflight `/api/internal/alerta` 200
+  OK; Paso 0 salud: Vía B con `dias_caido=3` (última copia `_buzon_pdf` 11/08 IONOS, `newer_than:2d`
+  vacío) — cruza el umbral `>2` de "corte activo" pero no el `>3` de escalado Telegram, así que
+  actualicé `agente_salud` a `ok=false` sin avisar por Telegram; backlog `PDF-pendiente`/`Revisar`
+  a 0. 0 candidatos nuevos en Gmail (`newer_than:2d` vacío), 0 subidas manuales nuevas
+  (`_subir_aqui` vacío). Barrido raíz `FACTURAS Apartamentos/2026` (mismos 20 ficheros sueltos que
+  el 13/08): todos ya cubiertos por avisos existentes en `_DUPLICADOS_BORRAR`, nada nuevo. Paso 4.0
+  (`v_facturas_sin_cargo`): 0 filas `sin_revisar`, las 8 `revisada_sin_cargo` (Pepephone ene-jun,
+  Giraldillo mayo, CREATE junio duplicada) sin cambios, siguen esperando a Alberto. dudas: —;
+  fallos: `search_threads label:Facturas/Extraccion-fallida` (Label_16, 1 mensaje según
+  `list_labels`) sigue vacío por **3er día consecutivo** (12/08, 13/08, 14/08) — ya no parece lag
+  puntual, convendría que `agentes-entrenador` lo mire esta semana; PRs/commits: — (solo
+  Gmail/Drive/Supabase vía MCP + esta entrada).
+- **2026-08-14 · mercado-booking** · hizo: pasada de 12 ventanas (plan `?max=12`, sin filtro
+  de rondas — las 12 candidatas eran `sin_medir_nunca`, ronda 1/evento y ronda 3): Sevilla FC-
+  Barcelona (20-sep) y Levante-Sevilla (11-oct) en las 4 propiedades (aforos 12/5/4/2), más
+  profundidad de bucket ronda 3 en feb/mar-2027 (luxury_busto, house_sevillana, busto_reform,
+  duplex_center). 119 comparables reales escritos en `market_rates` (`fuente:booking_mcp`),
+  0 ventanas sin respuesta, 0 sin precio utilizable; excluido 1 listado (HOUSE SEVILLANA propio
+  en la ventana de house_sevillana 11-oct — no es comparable de mercado). `price_night` =
+  `price.book/2` (todas 2 noches). Latido `ok:true`. Aviso del plan: tope `max=12` dejó fuera
+  108 de las 120 ventanas candidatas — cobertura normal, se acumula en próximas pasadas.
+  dudas: —; fallos: —; PRs/commits: — (solo Booking MCP + HTTP a plataforma + esta entrada).
 - **2026-08-13 · facturas-correo (trigger diario)** · hizo: Paso 0 salud OK (Vía B sana,
   `dias_caido=2` — última copia `_buzon_pdf` 11/08 IONOS, dentro del umbral ≤2; `agente_salud`
   ya en verde, sin tocar); labels `PDF-pendiente`/`Revisar` a 0. 0 candidatos nuevos en Gmail

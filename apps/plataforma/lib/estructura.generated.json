@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-13T08:22:51Z",
+  "generadoEn": "2026-08-14T00:52:29Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1736,7 +1736,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 28
+        "evidencias": 29
       },
       "rrhh": {
         "estado": "no",
@@ -4288,6 +4288,7 @@
       "operaciones_intercompany",
       "patrones_recurrentes_cache",
       "presupuesto_proveedores",
+      "pricing_avisos",
       "pricing_flight_demand",
       "pricing_pl_referencia",
       "reservas_canceladas",
@@ -4516,6 +4517,18 @@
   ],
   "novedades": [
     {
+      "titulo": "Por qué ningún test lo vio:",
+      "fecha": ""
+    },
+    {
+      "titulo": "`calcularCoste` gana `comisionCompra`",
+      "fecha": ""
+    },
+    {
+      "titulo": "Coches fuera de alcance",
+      "fecha": ""
+    },
+    {
       "titulo": "No era una regresión:",
       "fecha": ""
     },
@@ -4552,27 +4565,15 @@
       "fecha": ""
     },
     {
+      "titulo": "Decisión DELEGADA a Fable 5 por Alberto",
+      "fecha": ""
+    },
+    {
       "titulo": "Hallazgo grande:",
       "fecha": ""
     },
     {
       "titulo": "Plan de reservas directas",
-      "fecha": ""
-    },
-    {
-      "titulo": "#1374",
-      "fecha": ""
-    },
-    {
-      "titulo": "El 🔴 gordo ARREGLADO en la misma sesión:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Causa estructural:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Barrido del mismo fallo en todo 2026",
       "fecha": ""
     }
   ],

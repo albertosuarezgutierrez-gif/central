@@ -133,7 +133,7 @@ Si no hay nada nuevo: {"eventos":[]}`
       await prisma.$executeRaw(Prisma.sql`
         INSERT INTO pricing_eventos_auto (rate_date, nombre, fuente, tipo, aforo, factor, venue, raw, estado, updated_at)
         VALUES (${rateDate}::date, ${nombre}, 'websearch', ${tipo},
-          ${aforo}::int, ${impactoEvento(aforo, tipo)}::numeric, NULL, ${JSON.stringify({ via })}::jsonb,
+          ${aforo}::int, ${impactoEvento(aforo, tipo, nombre)}::numeric, NULL, ${JSON.stringify({ via })}::jsonb,
           'confirmado', now())
         ON CONFLICT (fuente, nombre, rate_date) DO UPDATE
           SET aforo = EXCLUDED.aforo, factor = EXCLUDED.factor, tipo = EXCLUDED.tipo,
@@ -239,7 +239,7 @@ Si no encuentras nada sólido: {"eventos":[]}`
         INSERT INTO pricing_eventos_auto
           (rate_date, nombre, fuente, tipo, aforo, factor, venue, raw, estado, confianza, evidencia, updated_at)
         VALUES (${fecha}::date, ${nombre}, 'prensa', ${tipo}, ${aforo}::int,
-          ${impactoEvento(aforo, tipo)}::numeric, NULL,
+          ${impactoEvento(aforo, tipo, nombre)}::numeric, NULL,
           ${JSON.stringify({ via, fecha_aproximada: ev.fecha_aproximada === true })}::jsonb,
           'previsto', ${confianza}::numeric, ${evidencia.slice(0, 500)}, now())
         ON CONFLICT (fuente, nombre, rate_date) DO UPDATE

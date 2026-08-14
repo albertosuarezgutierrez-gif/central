@@ -41,6 +41,19 @@ export type { ResultadoAlertaBoe } from './email-boe.ts'
 export { parsearPatrimonioJunta, loteASubasta, municipioDeLote, fechaTextualEs } from './junta.ts'
 export type { LoteJunta } from './junta.ts'
 
+// Surus in situ — portal privado de subastas de liquidación (concursal/fondos).
+// `loteASubasta` ya lo exporta la Junta, así que este va con nombre propio.
+export {
+  parsearLoteSurus,
+  loteASubasta as loteSurusASubasta,
+  esSurus,
+  htmlATexto,
+  urlsDeLote,
+  COMISION_SURUS,
+  DOMINIO_SURUS,
+} from './surus.ts'
+export type { LoteSurus } from './surus.ts'
+
 // Documentos adjuntos a la ficha del BOE: edictos con texto → señales explícitas
 export { enlacesDocumentos, fichaLegible, datosDeEdicto, notasDeEdicto, viviendaHabitualDeNotas } from './edicto.ts'
 export type { DocumentoFicha, DatosEdicto } from './edicto.ts'

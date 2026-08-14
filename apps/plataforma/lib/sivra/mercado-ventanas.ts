@@ -24,6 +24,13 @@ export type EventoFecha = {
   fecha: string
   factor: number
   nombre?: string
+  /**
+   * true = evento CONFIRMADO (calendario del repo o `pricing_eventos_auto` con estado confirmado).
+   * Importa para la COLA (13/08/2026): una fecha de evento confirmado sin medir está CONGELADA por
+   * el motor a un precio posiblemente falso — medirla es lo que la descongela. Un previsto no
+   * congela nada, así que no gasta ventana prioritaria en una apuesta.
+   */
+  confirmado?: boolean
 }
 
 export type Ventana = {
@@ -41,6 +48,8 @@ export type Ventana = {
    * que ser lo importante. Ver la nota del reparto por rondas en `ventanasDelBarrido`.
    */
   ronda: number
+  /** el evento de esta ventana está CONFIRMADO (ver `EventoFecha.confirmado`) */
+  eventoConfirmado?: boolean
 }
 
 export type ConsultaVentana = {
@@ -169,7 +178,10 @@ export function picosDeEvento(eventos: EventoFecha[], factorMinimo = 1.15): Even
   const cerrar = () => {
     let mejor = bloque[0]
     for (const e of bloque) if (Number(e.factor) > Number(mejor.factor)) mejor = e
-    picos.push(mejor)
+    // El bloque cuenta como CONFIRMADO si CUALQUIERA de sus noches lo está: la ventana representa
+    // al bloque entero, y basta una noche congelada para que medirlo sea urgente (13/08/2026).
+    const confirmado = bloque.some(e => e.confirmado === true)
+    picos.push(confirmado && mejor.confirmado !== true ? { ...mejor, confirmado: true } : mejor)
   }
 
   for (let i = 1; i < dignos.length; i++) {
@@ -252,10 +264,61 @@ export function ventanasDelBarrido(
         motivo: 'evento',
         etiqueta: e.nombre,
         ronda: 1,
+        eventoConfirmado: e.confirmado === true,
       })
     }
   }
 
   const ordenadas = [rondasBase[0] ?? [], eventoVentanas, ...rondasBase.slice(1)]
   return ordenadas.flatMap((lista, i) => lista.map(v => ({ ...v, ronda: i })))
+}
+
+/**
+ * Ventanas POR FECHA para los eventos CONFIRMADOS, sin colapsar bloques. SOLO para el plan del
+ * conector de Booking — el sweep de Serper sigue con `ventanasDelBarrido` a secas.
+ *
+ * POR QUÉ (14/08/2026, cazado en la primera pasada real de la guarda 🧊). El colapso por bloques
+ * («la Feria entera gasta una ventana») es correcto para la línea de temporada, pero choca con la
+ * congelación, que es POR FECHA EXACTA: el bloque 18-21 sep lo representaba el 20-sep
+ * (Sevilla-Barcelona, mayor factor), Booking midió el 20 → el bloque dejó de estar virgen → las
+ * noches 18 y 19 de la Bienal quedaban CONGELADAS PARA SIEMPRE, porque sus comps propios no se
+ * pedían nunca. El descongelado automático asumía «una noche congelada = una ventana» y el bloque
+ * lo rompía.
+ *
+ * Devuelve una ventana por cada fecha confirmada ≥`factorMinimo` dentro del horizonte que NO esté
+ * ya en `plan` (las del plan mandan: traen su etiqueta de bloque). El coste está acotado por el
+ * tope por pasada de siempre (`?max=`): esto añade CANDIDATAS, no consultas — y `planDeVentanas`
+ * ya prioriza las vírgenes confirmadas y hunde las medidas, así que solo se consulta lo que la
+ * congelación necesita, unas pocas por pasada.
+ */
+export function ventanasDeConfirmadosPorFecha(
+  hoyIso: string,
+  eventos: EventoFecha[],
+  plan: Ventana[],
+  opts: Pick<VentanasOpts, 'factorMinimo' | 'noches' | 'horizonteDias'> = {},
+): Ventana[] {
+  const factorMinimo = opts.factorMinimo ?? 1.15
+  const noches = opts.noches ?? 2
+  const horizonteDias = opts.horizonteDias ?? 365
+
+  const enPlan = new Set(plan.map(v => v.checkin))
+  const extra: Ventana[] = []
+  const vistas = new Set<string>()
+  for (const e of eventos) {
+    if (e.confirmado !== true) continue
+    if (!(Number(e.factor) >= factorMinimo)) continue
+    const d = diasEntre(hoyIso, e.fecha)
+    if (d < 0 || d > horizonteDias) continue
+    if (enPlan.has(e.fecha) || vistas.has(e.fecha)) continue
+    vistas.add(e.fecha)
+    extra.push({
+      checkin: e.fecha,
+      checkout: sumarDias(e.fecha, noches),
+      motivo: 'evento',
+      etiqueta: e.nombre,
+      ronda: 1,
+      eventoConfirmado: true,
+    })
+  }
+  return extra.sort((a, b) => a.checkin.localeCompare(b.checkin))
 }

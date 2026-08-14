@@ -16,6 +16,7 @@ export type Fuente =
   | 'junta'      // D.G. de Patrimonio de la Junta de Andalucía
   | 'sareb'      // Canal de subastas electrónicas de Sareb
   | 'servicer'   // Servihabitat, Aliseda, Solvia, Haya, Altamira, Diglo…
+  | 'surus'      // Surus in situ: subastas electrónicas concursales/de liquidación
 
 /**
  * Naturaleza de la operación. `venta_adjudicado` NO es una subasta: es venta
@@ -189,6 +190,13 @@ export interface CosteAdquisicion {
   impuestoConcepto: string
   notariaRegistro: number
   cancelacionCargas: number
+  /**
+   * Comisión del PORTAL a cargo del comprador, IVA incluido. 0 en las subastas
+   * oficiales (BOE, Junta): nadie cobra por rematar. En los portales privados
+   * (Surus y los servicers) es un porcentaje del remate + una parte fija que
+   * NO se descuenta del precio, así que sale entera del bolsillo del comprador.
+   */
+  comisionCompra: number
   plusvaliaMunicipal: number
   comunidadPendiente: number
   ibiPendiente: number
@@ -211,6 +219,15 @@ export interface ParamsCoste {
   tipoAjd?: number
   notariaRegistro?: number
   cancelacionCargas?: number
+  /**
+   * Comisión del portal a cargo del COMPRADOR, en tanto por uno del remate.
+   * Surus: 0.05. Los servicers rondan el 3-5%. En las subastas oficiales es 0.
+   */
+  comisionPct?: number
+  /** Parte FIJA de esa comisión («+ 400 € de gastos de gestión» de Surus). */
+  comisionFija?: number
+  /** IVA que grava la comisión del portal (es un servicio: 21%). */
+  comisionIva?: number
   plusvaliaMunicipal?: number
   /**
    * Deuda con la comunidad. Si va a 0 se ESTIMA por baremo (art. 9.1.e LPH),
