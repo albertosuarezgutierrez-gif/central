@@ -121,5 +121,40 @@ parecía. Lo aprendido, por orden de lo que más cuesta volver a descubrir:
    para responder y **se dice cuál faltó**. El cliente tampoco llama ya «Sin respuesta.» a un 504: avisa
    de que el documento puede haber entrado y manda a mirarlo en `/banca` (reimportar no duplica).
 
+## 🚨 Los VIGILANTES de la tarjeta: un aviso que sale de comparar strings (14/08/2026, PR #1413)
+Alberto, con la captura de la «🔎 Revisión de la tarjeta» delante: *«¿por qué no lo reconoce el agente
+contable con IA?»*. **Lo primero que hay que saber al leer una queja sobre ese mensaje: NO lo escribe
+ninguna IA.** Es `vigilantesTarjeta()` (`lib/contable/extracto-tarjeta.ts`) sobre las reglas puras de
+`lib/vigilantes-tarjeta.ts`; la IA solo entra en el chat y en las dudosas de Telegram. Los tres bloques
+del mensaje afirmaban cosas que su comparación no sostenía:
+
+1. **«Cargos que no reconozco» comparaba el RÓTULO LITERAL** contra el histórico de ESA tarjeta, así que
+   «MERCADONA COLMENA SEVILLA: 187,67€» salía como comercio nuevo con decenas de compras previas en
+   Mercadona (otra sucursal = otra cadena de texto), y lo pagado con otra cuenta tampoco contaba.
+   **Identidad ≠ etiqueta:** `lib/comercio.ts::comercioDe` da la etiqueta que se PINTA («DIA SEVILLA
+   2260»); el módulo nuevo **`lib/comercio-canonico.ts`** (`claveComercio`/`cadenaDe`/`mismoComercio`,
+   puro y testeado) da la IDENTIDAD con la que se COMPARA («DIA»): quita nº de tienda/terminal, forma
+   jurídica y ciudad, y mapea las cadenas. ⚠️ En `CADENAS` solo van MARCAS reales — meter genéricos de
+   sector ('BAR', 'FARMACIA') fundiría comercios independientes distintos, que es el error simétrico y
+   PEOR (taparía un cargo que de verdad no se reconoce). Para clasificar por sector está
+   `lib/subcategoria-keywords.ts`, que es otro problema.
+2. **El histórico es el de la CUENTA, no el de la tarjeta** (24 meses sobre `v_movimientos_activos`).
+   Y si la lectura falla o toca el techo de filas (`VIG_HIST_MAX`), **no se emite el aviso y se dice por
+   qué**: un histórico truncado o ilegible no autoriza a llamar nuevo a nada.
+3. **«Posible cobro doble» necesita el MISMO DÍA.** Agrupar mismo comercio + mismo importe en todo el mes
+   marcaba 2×40,00€ de gasolina (repostar dos veces) y 2×0,99€ en el súper (dos compras). Ahora exige
+   misma fecha y ≥`DOBLE_MIN_EUR` (10€).
+4. **«Subida de precio» solo tiene sentido en recurrentes de importe ESTABLE.** Comparaba el último
+   importe contra el de hoy en cualquier comercio: «DIA subió de 3,25€ a 7,52€», «restaurante 33€ → 87€».
+   `baseRecurrente()` devuelve precio de referencia solo con ≥3 cargos, en ≥3 meses distintos y todos
+   ±10% de la mediana; sin base, el vigilante se calla.
+5. Mismo criterio en **`POST /api/banca/antifraude`** (comparte los helpers) y su UI: sin movimientos
+   anteriores al periodo no se afirma «comercio nuevo», se declara el hueco en `nota` — que ahora
+   CONVIVE con los avisos en vez de ocultarlos.
+
+**Regla que deja el caso, aplicable a cualquier vigilante nuevo: solo habla cuando la señal DISTINGUE el
+aviso del comportamiento normal.** El ruido no es un aviso conservador: entrena a ignorar el mensaje
+entero, y el día que haya un cargo raro de verdad pasará desapercibido entre la paja.
+
 ## Frontera multi-tenant
 Scope `cuenta_id` siempre. BD compartida con sivra/ialimp: cambios transversales de BD → `auditoria-central`.
