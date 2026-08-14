@@ -1,5 +1,45 @@
 # Auditoría diaria — agosto 2026
 
+# Actualización 2026-08-14 — auditoría diaria (ligera)
+
+Rango: 18 commits desde la pasada del 13/08 (`d76db8c..716c8d6`) — 6 regeneraciones automáticas de
+radiografía (`[skip ci]`), 3 bitácoras de agentes (mercado-booking #1401, facturas-correo #1402,
+memoria #1407), y 7 PRs de código: housesevillana fix botón Reservar (#1399), sivra cancelaciones
+Smoobu (#1397), trading re-verificado veredicto de inversión (#1404) y tesis huérfanas confirmadas
+(#1403), pricing democión de jornada de liga (#1405), subastas Surus como 6ª fuente (#1406) y su fix
+de ingesta IMAP (#1408), sivra guarda «evento a ciegas» (#1409). SALTA typecheck/tests pesados
+(pasada profunda).
+
+## 🟡 Heartbeat de crons/agentes
+`agente_latidos` (11 filas) — todo `ok=true`, todas dentro de cadencia (la más vieja, `paper-tracker`
+semanal, a 88h de un umbral ~192h). Tablas de dominio (12 huellas): 11/12 ✅, **1 `psd2-sync` ⛔ MUDO**
+(92h sin fila nueva en `movimientos_bancarios`, umbral 54h). Investigado por Vercel runtime logs antes
+de escalar: `GET /api/cron/psd2-sync 200` confirmado a las ~06:00 UTC los días 11, 12 y 13/08 — el
+cron corre bien, es idempotente y simplemente no ha habido movimientos bancarios nuevos desde el
+10/08 (mismo patrón que `updates/sync`/`auto-sessions`, documentado desde 02/07). No es un cron mudo;
+sin acción. Dado que supera el umbral de 48h del guardián dedicado (`psd2-health-check`), se deja
+anotado para que esa skill lo confirme en su próxima pasada semanal.
+
+## 🟢 Backlog de PRs de rutinas + salud del automerge
+0 PRs abiertos de ramas `claude/*` — backlog vacío, sin conflictos ni drafts envejeciendo.
+
+## ✅ Reconciliación memoria — 1 hueco + poda de Estado vivo
+Único hueco de commit: **PR #1405** (pricing: democión por nombre de jornada de liga a la curva
+plana, evita que un partido de liga regular entre a factor x2.2). Añadido a `docs/CONTEXTO-SESIONES.md`.
+De paso, el bloque «Estado vivo» (sin refrescar desde 12/08) tenía 2 pendientes ya resueltos: PR #1370
+(contraste diferido) llevaba mergeado desde el 12/08 y seguía como «en draft, pendiente de revisión»;
+el «repaso programado 12/08 HOY» de subastas ya había pasado. Podados y sustituidos por los pendientes
+reales vigentes (retorno_medio en cero de `trading_estrategia_stats`; correo real de Surus aún sin
+contrastar). Sin skills/comandos nuevos en el rango (`docs/SKILLS.md` sin drift) ni cambios en
+`lib/correo/rutas.ts` (sin drift en la tabla de rutas del triaje). Integridad estructural: lockfile
+presente, `ignoreCommand` obligatorio verificado en las 8 apps.
+
+## ✅ Manuales de usuario — nada que tocar
+Ningún archivo de `apps/*/src/app/**`, `apps/*/app/**` ni `apps/*/public/**` cambió en el rango (los
+cambios del día son de lógica interna: pricing, subastas, trading).
+
+---
+
 # Actualización 2026-08-13 — auditoría diaria (ligera)
 
 Rango: 5 commits desde la pasada del 11/08 (`e362168..b3ca200`) — 2× regeneración automática de

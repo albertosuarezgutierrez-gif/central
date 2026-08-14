@@ -13,6 +13,16 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-08-14** · `docs/CONTEXTO-SESIONES.md` · entrada nueva para PR #1405 (pricing: democión por
+  nombre de jornada de liga, evita factor x2.2 en partidos regulares) · el commit no se había
+  anotado en memoria · poda de 2 pendientes ya resueltos en «Estado vivo» (PR #1370 mergeado desde
+  el 12/08 seguía como «en draft»; el repaso de subastas del 12/08 ya había pasado), sustituidos por
+  los pendientes reales vigentes (retorno_medio en cero, correo real de Surus sin contrastar) · re-
+  fechada la cabecera del bloque a 14/08 · commit de esta auditoría
+- **2026-08-14** · `docs/AUDITORIA-2026-08.md` · sección "Actualización 2026-08-14 — auditoría diaria
+  (ligera)" añadida · informe de esta pasada (heartbeat, backlog, reconciliación) · commit de esta
+  auditoría
+
 - **2026-08-13** · `docs/CONTEXTO-SESIONES.md` · auditoría ligera diaria (rango de 5 commits desde la
   pasada del 11/08, `e362168..b3ca200`): añadida la entrada que faltaba del PR #1398 (`housesevillana`
   no arrancaba build por lockfile desactualizado — PR #1390 lo dejó sin regenerar). Los otros 4 commits
