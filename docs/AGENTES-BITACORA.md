@@ -15,6 +15,12 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-14 · ialimp-client-health (pasada semanal)** · hizo: preflight `/api/internal/alerta`
+  200 OK; empresa Sique Brilla SL (`05edacff-…`) — PMS sync Smoobu activo, `sync_error` null,
+  `last_sync_at` hoy 15:10, 23 `cleaning_sessions` actualizadas en 7 días; 0 programaciones activas
+  sin limpiadora; 0 impagos en `facturas_clientes`. Todo verde, no se envió aviso Telegram (protocolo
+  solo alerta si hay ⚠️); dudas: —; fallos: —; PRs/commits: — (solo lectura, esta entrada).
+
 - **2026-08-14 · mercado-booking (a petición de Alberto, fuera del disparo diario)** · hizo: pasada
   acotada `?max=12&rondas=1&desde=2026-08-15&hasta=2026-10-31` (rondas de EVENTO, que son las que
   congelan precio) → **119 comps reales en 12/12 ventanas**, 0 sin respuesta del conector; 3 fechas
