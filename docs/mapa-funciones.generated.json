@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-14T00:52:29Z",
-  "sha": "e19913d0524c48657a3fd6b070b5ecce6558f167",
+  "generadoEn": "2026-08-14T07:40:33Z",
+  "sha": "978f5cafeee4d3d04b09f68f5922412ccae01f45",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -44663,7 +44663,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "530f2ce103c4"
+      "hash": "a7e8e7b430fb"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/BancaClient.tsx",
@@ -50200,20 +50200,12 @@
       ],
       "funciones": [
         {
-          "nombre": "mediana",
-          "kind": "function",
-          "exportada": false,
-          "params": "xs: number[]",
-          "retorno": "number",
-          "linea": 22
-        },
-        {
           "nombre": "POST",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 29
+          "linea": 23
         }
       ],
       "tablas": [
@@ -50222,7 +50214,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": "/api/banca/antifraude",
-      "hash": "450f4719aadf"
+      "hash": "7eeef0183c1a"
     },
     {
       "ruta": "apps/plataforma/app/api/banca/benchmark-pisos/route.ts",
@@ -59879,6 +59871,58 @@
       "hash": "37644e162e1b"
     },
     {
+      "ruta": "apps/plataforma/lib/comercio-canonico.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "apps/plataforma/lib/comercio-canonico.ts IDENTIDAD canónica de un comercio, para comparar el gasto de HOY contra el histórico. `lib/comercio.ts::comercioDe` da la ETIQUETA que se PINTA (\"DIA SEVILLA 2260\"): fiel al banco, buena para leer. Este módulo da la IDENTIDAD (\"DIA\"): la clave con la que se d",
+      "exporta": [
+        "normalizarComercio",
+        "cadenaDe",
+        "claveComercio",
+        "mismoComercio"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizarComercio",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string | null | undefined",
+          "retorno": "string",
+          "linea": 68,
+          "resumen": "Mayúsculas sin acentos, sin puntuación y con espacios colapsados (mantiene '&' porque forma parte de marcas reales: H&M, PULL&BEAR)."
+        },
+        {
+          "nombre": "cadenaDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 78,
+          "resumen": "¿A qué cadena conocida pertenece este rótulo? null si no es de ninguna (comercio independiente)."
+        },
+        {
+          "nombre": "claveComercio",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string | null | undefined",
+          "retorno": "string",
+          "linea": 93,
+          "resumen": "Clave con la que se decide \"¿este comercio ya lo conocía?\". Cadena conocida → la marca; comercio independiente → su rótulo sin el ruido de sucursal/terminal/forma jurídica. NUNCA vacía: si todo el rót"
+        },
+        {
+          "nombre": "mismoComercio",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: string | null | undefined, b: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 108,
+          "resumen": "¿Dos rótulos son el MISMO comercio? (azúcar sobre claveComercio, para leer mejor en los filtros)"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "99fe5ffacaae"
+    },
+    {
       "ruta": "apps/plataforma/lib/comercio.ts",
       "ambito": "apps/plataforma",
       "resumen": "apps/plataforma/lib/comercio.ts \"Comercio\" mostrado en el drill-down de gasto personal. En los datos reales, tanto `contraparte` como `concepto` suelen traer el nombre precedido del verbo de la operación (\"COMPRA EN DIA SEVILLA 2260\", \"PAGO EN ...\", \"RECIBO ...\"). Si se agrupa por el texto CRUDO: (a",
@@ -60683,7 +60727,7 @@
           "exportada": false,
           "params": "cuentaId: string, ccc: string,",
           "retorno": "Promise<",
-          "linea": 30,
+          "linea": 31,
           "resumen": "Resuelve la sociedad + titular de una tarjeta por su ccc (TARJETA-KUTXA-<últ.4>), reutilizando la cuenta bancaria que YA existe (ambas tarjetas están dadas de alta con su titular). Fallback a la prime"
         },
         {
@@ -60692,7 +60736,7 @@
           "exportada": false,
           "params": "cuentaBancariaIds: string[], desde: string, hasta: string,",
           "retorno": "Promise<",
-          "linea": 49,
+          "linea": 50,
           "resumen": "Empareja las devoluciones (abonos que no son PAGO RECIBO) con su compra original y les copia el destino para que se ANULEN en el cómputo por destino. Las que no casan → requiere_revision y un mensaje "
         },
         {
@@ -60701,7 +60745,7 @@
           "exportada": false,
           "params": "cuentaId: string, ids: string[], desde: string, hasta: string,",
           "retorno": "Promise<void>",
-          "linea": 124
+          "linea": 127
         },
         {
           "nombre": "procesarExtractoTarjeta",
@@ -60709,16 +60753,17 @@
           "exportada": true,
           "params": "cuentaId: string, buffer: Buffer, mimeType: string, fileName: string, extractos: ExtractoN43[], origen: 'pdf' | 'xls' = 'pdf',",
           "retorno": "Promise<ResultadoExtractoTarjeta>",
-          "linea": 206
+          "linea": 246
         }
       ],
       "tablas": [
         "cuentas_bancarias",
         "movimientos_bancarios",
-        "sociedades"
+        "sociedades",
+        "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "bb6dc5460d3e"
+      "hash": "0b51ca0e3e6f"
     },
     {
       "ruta": "apps/plataforma/lib/contable/formato.ts",
@@ -71693,11 +71738,12 @@
     {
       "ruta": "apps/plataforma/lib/vigilantes-tarjeta.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Detectores PUROS de los \"vigilantes\" de la tarjeta (Fase 2): solo avisan, nunca bloquean. Sin Prisma ni '@/': la parte de BD (histórico, justificantes) vive en lib/contable/extracto-tarjeta.ts. Testeable con `node --test`.",
+      "resumen": "Detectores PUROS de los \"vigilantes\" de la tarjeta (Fase 2): solo avisan, nunca bloquean. Sin Prisma ni '@/': la parte de BD (histórico, justificantes) vive en lib/contable/extracto-tarjeta.ts. Testeable con `node --test`. 🚨 REGLA DE DISEÑO (14/08/2026, tras la queja «el agente no reconoce Mercadon",
       "exporta": [
         "esCargoFinanciero",
         "dobleCobro",
-        "subioPrecio"
+        "subioPrecio",
+        "baseRecurrente"
       ],
       "funciones": [
         {
@@ -71706,17 +71752,17 @@
           "exportada": true,
           "params": "concepto: string | null | undefined",
           "retorno": "boolean",
-          "linea": 7,
+          "linea": 16,
           "resumen": "Línea de coste financiero de la tarjeta (intereses por aplazar, comisiones, cuota de financiación). NO es una compra: liquidando la tarjeta en el mes se evita. Puro/testeable."
         },
         {
           "nombre": "dobleCobro",
           "kind": "function",
           "exportada": true,
-          "params": "movs: MovVig[]",
+          "params": "movs: MovVig[], minImporte = DOBLE_MIN_EUR",
           "retorno": "",
-          "linea": 15,
-          "resumen": "Agrupa cargos idénticos (mismo comercio + mismo importe absoluto) que aparecen ≥2 veces en el periodo → posible cobro doble del comercio. Devuelve solo los grupos con repetición."
+          "linea": 32,
+          "resumen": "Cargos idénticos (mismo comercio + mismo importe + **el MISMO DÍA**) que aparecen ≥2 veces. La fecha es la clave del asunto: repetir un importe en días distintos es una rutina (repostar 40,00€ cada se"
         },
         {
           "nombre": "subioPrecio",
@@ -71724,13 +71770,22 @@
           "exportada": true,
           "params": "actual: number, previo: number, umbralPct = 15",
           "retorno": "boolean",
-          "linea": 31,
+          "linea": 53,
           "resumen": "¿El importe actual supera al previo en más de umbralPct %? (subida de precio de un cargo recurrente, p.ej. una suscripción que sube de 6,99€ a 9,99€). Requiere ambos importes positivos (valor absoluto"
+        },
+        {
+          "nombre": "baseRecurrente",
+          "kind": "function",
+          "exportada": true,
+          "params": "previos: CargoPrevio[]",
+          "retorno": "number | null",
+          "linea": 73,
+          "resumen": "Precio de referencia de un comercio RECURRENTE DE IMPORTE ESTABLE (suscripción, cuota, recibo), o **null** si ese comercio no tiene un precio del que se pueda decir que \"ha subido\". Esta función es la"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1922c0ecbb56"
+      "hash": "edd8b6785fba"
     },
     {
       "ruta": "apps/plataforma/lib/websearch.ts",
@@ -91986,7 +92041,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2453,
-    "funciones": 6658
+    "archivos": 2454,
+    "funciones": 6662
   }
 }
