@@ -15,6 +15,16 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-14 · mercado-booking** · hizo: pasada de 12 ventanas (plan `?max=12`, sin filtro
+  de rondas — las 12 candidatas eran `sin_medir_nunca`, ronda 1/evento y ronda 3): Sevilla FC-
+  Barcelona (20-sep) y Levante-Sevilla (11-oct) en las 4 propiedades (aforos 12/5/4/2), más
+  profundidad de bucket ronda 3 en feb/mar-2027 (luxury_busto, house_sevillana, busto_reform,
+  duplex_center). 119 comparables reales escritos en `market_rates` (`fuente:booking_mcp`),
+  0 ventanas sin respuesta, 0 sin precio utilizable; excluido 1 listado (HOUSE SEVILLANA propio
+  en la ventana de house_sevillana 11-oct — no es comparable de mercado). `price_night` =
+  `price.book/2` (todas 2 noches). Latido `ok:true`. Aviso del plan: tope `max=12` dejó fuera
+  108 de las 120 ventanas candidatas — cobertura normal, se acumula en próximas pasadas.
+  dudas: —; fallos: —; PRs/commits: — (solo Booking MCP + HTTP a plataforma + esta entrada).
 - **2026-08-13 · facturas-correo (trigger diario)** · hizo: Paso 0 salud OK (Vía B sana,
   `dias_caido=2` — última copia `_buzon_pdf` 11/08 IONOS, dentro del umbral ≤2; `agente_salud`
   ya en verde, sin tocar); labels `PDF-pendiente`/`Revisar` a 0. 0 candidatos nuevos en Gmail
