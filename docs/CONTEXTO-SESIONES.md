@@ -32,6 +32,22 @@
 
 ---
 
+### 💸 (13/08/2026) El `ignoreCommand` reconstruía las ~10 apps por cualquier cambio en `packages/`
+- Lo destapó Claude in Chrome al verificar el despliegue de la landing: dos commits de subastas
+  construyeron en `house-sevillana-landing`. **No era un fallo del filtro** — su regla decía
+  «tocar `packages/` ⇒ construir», sin mirar quién consume qué. Pero `apps/housesevillana` no
+  declara **ni un** `@central/*` (solo Next y React), así que eran builds regalados.
+- Medido: 6 de 92 commits de 30 días tocan `packages/` y **ninguno** tocó la landing. Un commit de
+  `module-subastas` construía 10 apps cuando solo `plataforma` lo consume. Familia del incidente de
+  los ~600 US$ (PR #904), en pequeño.
+- Ahora se resuelve el **cierre transitivo** de deps `@central/*` por app. Verificado con el cwd real
+  de Vercel sobre `068255b`: plataforma construye, housesevillana/sivra/transporte saltan. **Fail-open
+  intacto** (SHA inexistente y commit sin padre → construir; paquete sin `package.json` legible →
+  construir). Red: `test/vercel-ignore-build.test.ts`.
+- Confirmado en vivo por Chrome: `/barrio` y `/que-ver` sirven `/#reserva` (`#reservar` ×0) y el botón
+  baja al motor. Root Directory correcto; «Ignored Build Step: Overridden» es lo esperado (gana el
+  `vercel.json`). **Pendiente:** el salto al `#reserva` tarda unos segundos (carga del widget de Smoobu).
+
 ### 🔢 (13/08/2026) Re-verificado el veredicto de inversión: 7 cifras publicadas estaban mal
 - Mergeados **#1399** (botón Reservar de /barrio y /que-ver no llevaba al motor + táctil 44px) y
   **#1397** (cancelaciones de Smoobu). Verificado sobre `main`: 47/47 y 11/11 tests, las 20 anclas
