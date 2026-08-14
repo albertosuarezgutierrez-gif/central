@@ -18,6 +18,14 @@
 
 ## Procesadas
 
+- [x] **2026-08-14 · agente contable (vigilantes del extracto de tarjeta)** · la «🔎 Revisión de la
+  tarjeta» avisó de «cargos que no reconozco» con MERCADONA/BRASERÍA/CHIRINGUITO, marcó «cobro doble»
+  2×0,99€ del DIA y 2×40€ de gasolina, y llamó «subida de precio» a DIA 3,25€→7,52€ y a un restaurante
+  33€→87€. Alberto: «¿por qué no lo reconoce el agente contable con IA?» — **ese bloque no usa IA**, son
+  reglas puras que comparaban strings. Arreglado el mismo día: identidad canónica de comercio
+  (`lib/comercio-canonico.ts`), histórico de toda la cuenta (24 meses), cobro doble solo mismo día y
+  ≥10€, subida solo en recurrentes de importe estable. → ✅ procesado 2026-08-14 → PR #1413 (mergeado)
+
 - [x] **2026-07-04 · agente-huésped** · en un borrador de cancelación (reserva 134250232, huésped
   Mirian) AFIRMÓ que la reserva "ya está cancelada" / "la cancelación se ha realizado correctamente"
   — falso: el agente solo redacta, no cancela en Smoobu; se inventó la acción. Además pedía al huésped

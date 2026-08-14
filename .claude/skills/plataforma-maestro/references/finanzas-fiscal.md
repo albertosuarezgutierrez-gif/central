@@ -68,6 +68,11 @@ borraron páginas), solo se quitaron del menú. En su lugar hay tres ítems nuev
   alertas al fondo; sin tabla de Ingresos. Drill-down de comercio filtra por subcategoría (`?categoria=`).
   Comercio derivado con **`lib/comercio.ts::comercioDe`** (quita prefijo "COMPRA EN…"; fusiona filas con/sin
   contraparte); `getMerchantsForCategoria` agrupa en JS por él; `movimientos`/`asignar` casan igual.
+  ⚠️ **`comercioDe` es la ETIQUETA que se PINTA, no la identidad del comercio** (14/08/2026, PR #1413):
+  para COMPARAR contra el histórico («¿ya conocía este comercio?») usa **`lib/comercio-canonico.ts::claveComercio`**,
+  que colapsa sucursales de la misma cadena («MERCADONA COLMENA SEVILLA» → «MERCADONA»). Usar la etiqueta
+  para comparar fue lo que hacía decir «no reconozco este cargo» de un Mercadona con 50 compras previas.
+  Aquí, en la agrupación de gasto, la etiqueta sigue siendo lo correcto (Alberto quiere ver el rótulo real).
 - **Formato de dinero (regla global):** todo importe en € usa **`lib/dinero.ts::eur`** → `2.162,49€` (español,
   € detrás, millar con punto también en 4 cifras). Pantalla + Telegram + email. Nada de `€${x.toFixed(2)}`.
 - **Recurrentes conocidos ya revisados (07/07/2026) — NO re-preguntar:** el diccionario `lib/subcategoria-keywords.ts`

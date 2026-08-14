@@ -77,7 +77,10 @@
   el mes es rutina); «subida de precio» solo en **recurrentes de importe estable** (`baseRecurrente`: ≥3 cargos,
   ≥3 meses, ±10%) — DIA 3,25€→7,52€ o un restaurante 33€→87€ ya no se comparan.
 - Histórico truncado/ilegible → se **dice** y no se afirma «comercio nuevo». Mismo criterio en `/api/banca/antifraude`.
-- Verificado: tsc 0 · 1193 tests `node --test` (14 nuevos) · `next build` OK. PR draft.
+- **Regla nueva para cualquier vigilante: solo habla si la señal DISTINGUE el aviso del comportamiento
+  normal.** El ruido no es prudencia: entrena a ignorar el mensaje entero. Landmine completo en la skill
+  `plataforma-maestro` (`agentes-banca-landmines.md`).
+- Verificado: tsc 0 · 1193 tests `node --test` (14 nuevos) · `next build` OK. **PR #1413 MERGEADO** (15 checks verdes).
 
 ### 🐛 (13/08/2026) El #1406 mergeado NO leía ni un correo de Surus — lo cazó el E2E, no los tests
 - Alberto pidió «mergea y prueba que todo vaya 100%». Mergeado (#1406, `0d054fa`, producción READY) y,
