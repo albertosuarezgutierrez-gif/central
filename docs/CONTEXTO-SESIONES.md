@@ -48,9 +48,17 @@
 - Disparada una pasada a mano sobre las rondas de EVENTO (15/08→31/10): **119 comps en 12/12
   ventanas**, 0 sin respuesta. Medianas aforo 12: 16-ago 265€ · 9-sep 346€ · **10-sep 506€**.
 - Quedan **120 de 132** ventanas candidatas sin medir (tope `max=12`): las congeladas de sep-oct
-  se descongelarán en las siguientes pasadas diarias.
-- 🔎 Duda abierta para `agentes-entrenador`: excluí el propio anuncio de House Sevillana de sus
-  comps (era circular). Ni la skill ni `/mercado/ingest` lo contemplan — decidir y escribirlo.
+  se descongelarán en las siguientes pasadas diarias. Parte en PR #1417 (mergeado).
+- **Verificado end-to-end:** las 3 fechas × 4 pisos tienen 9-10 comps fiables y el umbral de
+  `decidirEventoACiegas` es 3 → `congelar=false` en las 12. (No se pudo probar la SALIDA de
+  `pricing/apply`: exige `CRON_SECRET`, que la rutina no lleva a propósito.)
+- 🪞 **Landmine nueva — nuestro propio anuncio salía como comparable.** Booking devuelve «HOUSE
+  SEVILLANA 6 habitaciones» en la búsqueda de aforo 12; escribirlo ancla el mercado al precio que el
+  motor acaba de poner (bucle silencioso: el precio es real y de la fecha, lo que falla es de QUIÉN
+  es, así que `fuente='booking_mcp'` no protege). Lo descarté a mano y se ha convertido en raíl:
+  `lib/sivra/mercado-propios.ts` (lista CURADA, no heurística) + filtro en `/mercado/ingest`, que
+  devuelve `propios[]` en vez de callarse. Corpus histórico limpio (verificado: los «Bustos Tavera»
+  del corpus son competencia real de la calle, no nuestros).
 
 ### 💸 (14/08/2026) El `ignoreCommand` reconstruía las ~10 apps por cualquier cambio en `packages/`
 - Lo destapó Claude in Chrome al verificar el despliegue de la landing: dos commits de subastas

@@ -315,3 +315,16 @@ test('🧊 el colapso por bloques ya no deja noches congeladas sin medir (caso 1
   const pedidas = ventanasQuePedir(todo, new Map([[4, ['prop_duplex_center']]]), cobertura, '2026-08-14', 3)
   assert.deepEqual(pedidas.map(v => v.checkin), ['2026-09-18', '2026-09-19', '2026-09-21'])
 })
+
+test('el parte declara los anuncios propios descartados', () => {
+  const d = detalleIngesta({
+    ventanas: 12, comps: 119, sinRespuesta: 0, sinPrecio: 0, errores: [], propios: 1,
+  })
+  assert.match(d, /119 comps reales en 12 ventanas/)
+  assert.match(d, /1 anuncio\(s\) propio\(s\) descartado\(s\)/)
+})
+
+test('sin anuncios propios el parte no menciona el descarte', () => {
+  const d = detalleIngesta({ ventanas: 12, comps: 119, sinRespuesta: 0, sinPrecio: 0, errores: [] })
+  assert.doesNotMatch(d, /propio/)
+})

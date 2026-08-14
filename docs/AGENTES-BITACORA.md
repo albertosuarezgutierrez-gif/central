@@ -24,7 +24,9 @@
   dudas: **excluí a propósito el propio anuncio «HOUSE SEVILLANA 6 habitaciones»** de los comps del
   16-ago aforo 12 — Booking lo devuelve como resultado y meterlo anclaría el mercado a nuestro
   propio precio (circular). La skill no dice nada al respecto y `ingest` no filtra: si se confirma
-  el criterio, debería ir escrito en la skill o en el endpoint; fallos: el tope `max=12` dejó
+  el criterio, debería ir escrito en la skill o en el endpoint **[RESUELTO el mismo día: va en las dos
+  — regla en «No romper» de la skill + raíl `lib/sivra/mercado-propios.ts` en `/mercado/ingest`]**;
+  fallos: el tope `max=12` dejó
   **120 de 132** ventanas candidatas del filtro sin medir (el aviso del plan lo declara) — las
   congeladas de sep-oct siguen en cola; PRs/commits: — (solo `market_rates` vía MCP + esta entrada).
 

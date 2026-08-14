@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
 import { isRoutineAuthorized } from "@/lib/cron-auth"
+import { esAnuncioPropio } from "@/lib/sivra/mercado-propios"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -75,11 +76,21 @@ export async function POST(req: NextRequest) {
 
   let inserted = 0
   const skipped: string[] = []
+  /**
+   * Comparables descartados por ser NUESTROS propios anuncios. Van en una lista APARTE de `skipped`
+   * (que es «no tenía precio utilizable») y se devuelven en la respuesta: un comparable que
+   * desaparece en silencio es indistinguible de uno que el portal no devolvió. Ver
+   * `lib/sivra/mercado-propios.ts`.
+   */
+  const propios: string[] = []
 
   for (const apt of apartments) {
     const name  = apt?.name
     const night = Number(apt?.price_night)
     if (!name || !Number.isFinite(night) || night <= 0) { skipped.push(String(name ?? "?")); continue }
+    // 🪞 Nuestro propio anuncio NO es mercado: escribirlo aquí ancla el ancla al precio que este
+    // mismo motor acaba de poner. El raíl va en el endpoint, no solo en el prompt de la rutina.
+    if (esAnuncioPropio(String(name))) { propios.push(String(name)); continue }
     const total  = Number.isFinite(Number(apt?.price_total)) ? Number(apt.price_total) : night
     const score  = apt?.score != null && Number.isFinite(Number(apt.score)) ? Number(apt.score) : null
     const reviews = Number.isFinite(Number(apt?.review_count)) ? Number(apt.review_count) : 0
@@ -108,5 +119,5 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, portal, fuente, scenario, checkin, checkout, inserted, skipped })
+  return NextResponse.json({ ok: true, portal, fuente, scenario, checkin, checkout, inserted, skipped, propios })
 }
