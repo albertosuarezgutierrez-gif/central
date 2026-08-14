@@ -512,23 +512,19 @@ export async function POST(req: NextRequest) {
   }
 
   // PriceLabs como referencia por FECHA, que el motor —anclado al mercado por MES— no reproduce en
-  // las noches especiales (puente del Pilar, Todos los Santos, Feria, Karol G). Idea #1: en vez de
-  // leer solo la última foto viva (que muere al cancelar PL), PERSISTIMOS su curva en
-  // `pricing_pl_referencia` (upsert de la foto más reciente) para que sobreviva a la cancelación
-  // (~ago-2026): el suelo sigue anclado a la última curva conocida hasta PL_REF_MAX_AGE_DAYS.
+  // las noches especiales (puente del Pilar, Todos los Santos, Feria, Karol G). Idea #1: la curva de
+  // PL vive PERSISTIDA en `pricing_pl_referencia` para sobrevivir a la cancelación: el suelo sigue
+  // anclado a la última curva conocida hasta PL_REF_MAX_AGE_DAYS y luego caduca solo.
   // Usos del dato: (1) SUELO PL_FLOOR_RATIO×PL en el bucle; (2) tripwire de aviso a <70%.
-  try {
-    await prisma.$executeRaw(Prisma.sql`
-      INSERT INTO pricing_pl_referencia (property_id, rate_date, pl_price, captured_at)
-      SELECT property_id, rate_date, price_pricelabs::int, snapshot_date
-      FROM rate_snapshots
-      WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM rate_snapshots)
-        AND snapshot_date >= CURRENT_DATE - 14
-        AND rate_date >= CURRENT_DATE AND price_pricelabs > 0
-      ON CONFLICT (property_id, rate_date) DO UPDATE
-        SET pl_price = EXCLUDED.pl_price, captured_at = EXCLUDED.captured_at
-        WHERE pricing_pl_referencia.captured_at <= EXCLUDED.captured_at`)
-  } catch { /* sin tabla o sin foto fresca: el suelo simplemente queda inerte */ }
+  //
+  // 🚨 LANDMINE (14/08/2026): aquí había un upsert que RE-CAPTURABA la referencia a diario desde
+  // `rate_snapshots`, asumiendo que «al cancelar PL el snapshot caduca». Falso: el snapshot lee
+  // SMOOBU (que sigue vivo siempre), así que tras desconectar PriceLabs (10/08/2026) la "referencia
+  // PL" pasaba a capturar los precios del PROPIO motor — un suelo autorreferente que nunca caducaba
+  // y dejaba cada precio blindado a −15% de sí mismo para siempre. La tabla queda CONGELADA con la
+  // última curva real de PL (`captured_at='2026-08-10'`, migración 2026-08-14_pl_referencia_congelada.sql)
+  // y el reloj de PL_REF_MAX_AGE_DAYS corre de verdad (suelo inerte desde el 08/12/2026). Regla
+  // general: una referencia EXTERNA no puede recapturarse de un espejo que escribes tú mismo.
   const plRows = await prisma.$queryRaw<{ pid: string; rate_date: string; pl: number }[]>(Prisma.sql`
     SELECT property_id AS pid, rate_date::text AS rate_date, pl_price::float8 AS pl
     FROM pricing_pl_referencia

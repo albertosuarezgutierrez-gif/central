@@ -4,7 +4,7 @@ import { Prisma } from "@prisma/client"
 import { isCronAuthorized } from "@/lib/cron-auth"
 import { PRICING_HORIZON_DAYS } from "@/lib/pricing-calendar"
 import { buscarWeb, busquedaConfigurada } from "@/lib/websearch"
-import { impactoEvento } from "@/lib/sivra/eventos-impacto"
+import { impactoEvento, esPartidoFueraDeSevilla } from "@/lib/sivra/eventos-impacto"
 import { registrarLatido } from "@/lib/monitoring/latido-escribir"
 
 export const dynamic = "force-dynamic"
@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
   `).catch(() => [])
   const descartadosResumen = descartadasRows.map(r => `${r.rate_date} ${r.nombre}`).join(" | ")
 
-  const prompt = `Busca eventos CONFIRMADOS en Sevilla (España) entre ${desde} y ${hasta} que disparen la demanda de ALOJAMIENTO turístico: partidos de LaLiga del Sevilla FC y del Real Betis (local), conciertos en recintos de >1000 personas, ferias y congresos en FIBES, festivales, y festivos locales/puentes grandes (Semana Santa, Feria de Abril).
+  const prompt = `Busca eventos CONFIRMADOS en Sevilla (España) entre ${desde} y ${hasta} que disparen la demanda de ALOJAMIENTO turístico: partidos de LaLiga del Sevilla FC y del Real Betis (SOLO como locales: en fútbol el equipo local va PRIMERO — «Levante UD vs Sevilla FC» se juega en Valencia y NO cuenta), conciertos en recintos de >1000 personas, ferias y congresos en FIBES, festivales, y festivos locales/puentes grandes (Semana Santa, Feria de Abril).
 
 EVENTOS YA REGISTRADOS (NO repitas ni incluyas nada parecido a estos):
 ${yaResumen || "Ninguno aún"}
@@ -121,12 +121,15 @@ Si no hay nada nuevo: {"eventos":[]}`
     return NextResponse.json({ ok: false, configured: true, errors: [String(e).slice(0, 200)] })
   }
 
-  let upserted = 0, descartados = 0
+  let upserted = 0, descartados = 0, fueraDeCasa = 0
   for (const ev of evs) {
     const rateDate = ev.fecha
     const nombre = (ev.nombre ?? "").trim()
     if (!rateDate || !/^\d{4}-\d{2}-\d{2}$/.test(rateDate) || !nombre) { descartados++; continue }
     if (rateDate < desde || rateDate > hasta) { descartados++; continue }
+    // Partido del Sevilla/Betis A DOMICILIO: se juega fuera y no trae huéspedes. El prompt ya lo
+    // pide, pero la IA lo coló 9 veces (14/08/2026) — la guarda determinista es la que cuenta.
+    if (esPartidoFueraDeSevilla(nombre)) { fueraDeCasa++; continue }
     const aforo = Math.max(0, Math.round(Number(ev.aforo_estimado ?? 3000)) || 3000)
     const tipo = (ev.tipo ?? "evento").toString().slice(0, 40)
     try {
@@ -138,6 +141,9 @@ Si no hay nada nuevo: {"eventos":[]}`
         ON CONFLICT (fuente, nombre, rate_date) DO UPDATE
           SET aforo = EXCLUDED.aforo, factor = EXCLUDED.factor, tipo = EXCLUDED.tipo,
               estado = 'confirmado', updated_at = now()
+          -- Un DESCARTADO no se resucita: si Alberto (o una guarda) lo tumbó y la IA lo vuelve a
+          -- proponer, su decision manda — sin este WHERE, cada pasada semanal lo re-confirmaba.
+          WHERE pricing_eventos_auto.estado <> 'descartado'
       `)
       upserted++
     } catch (e) {
@@ -168,7 +174,7 @@ Si no hay nada nuevo: {"eventos":[]}`
 
   return NextResponse.json({
     ok: errors.length === 0, configured: true, via,
-    vistos: evs.length, upserted, descartados,
+    vistos: evs.length, upserted, descartados, fuera_de_casa: fueraDeCasa,
     previstos: previstos.guardados, previstosVistos: previstos.vistos,
     errors,
   })
@@ -224,6 +230,8 @@ Si no encuentras nada sólido: {"eventos":[]}`
     const nombre = (ev.nombre ?? "").trim()
     if (!fecha || !/^\d{4}-\d{2}-\d{2}$/.test(fecha) || !nombre) continue
     if (fecha < desde || fecha > hasta) continue
+    // Misma guarda que en los confirmados: un partido a domicilio tampoco vale como previsto.
+    if (esPartidoFueraDeSevilla(nombre)) continue
 
     const confianza = Number(ev.confianza)
     // Sin confianza declarada NO se guarda: un previsto sin confianza no hace nada aguas abajo

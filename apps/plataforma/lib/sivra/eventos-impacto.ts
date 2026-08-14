@@ -70,6 +70,27 @@ export function esPartidoLigaRegular(nombre?: string | null): boolean {
 }
 
 /**
+ * ¿Es un partido del Sevilla/Betis A DOMICILIO? («Levante UD vs Sevilla FC» se juega en Valencia.)
+ *
+ * En fútbol el equipo LOCAL va SIEMPRE primero, así que un club sevillano DETRÁS del «vs» significa
+ * que el partido no se juega en Sevilla: no trae ni un huésped y no debe entrar en el calendario.
+ * Caso real (14/08/2026): el websearch tenía 9 jornadas a domicilio confirmadas —Athletic-Sevilla en
+ * Bilbao a ×2,2, Real Sociedad-Sevilla a ×1,9…— subiendo el precio de noches corrientes en Sevilla.
+ *
+ * Un partido GRANDE (final, eliminatoria) nunca se descarta por esto: las finales se juegan en campo
+ * neutral y «X vs Sevilla FC» puede perfectamente ser en La Cartuja.
+ */
+export function esPartidoFueraDeSevilla(nombre?: string | null): boolean {
+  const n = String(nombre ?? '')
+  if (!n.trim() || RE_PARTIDO_GRANDE.test(n)) return false
+  const partes = n.split(/\bvs\.?\b|\bcontra\b/i)
+  if (partes.length < 2) return false
+  const casa = partes[0]
+  const visitante = partes.slice(1).join(' ')
+  return !RE_CLUB_LOCAL.test(casa) && RE_CLUB_LOCAL.test(visitante)
+}
+
+/**
  * Multiplicador de precio para un evento, por aforo y tipo.
  *
  * La curva general (conciertos, festivales, lo que no sabemos clasificar) llega a 2.20 en aforo de

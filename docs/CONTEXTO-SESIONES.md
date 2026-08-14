@@ -32,6 +32,13 @@
 
 ---
 
+### 🏷️ (14/08/2026) Guardián de precios: PriceLabs desconectado + 2 landmines del motor y del calendario
+- Cierre del episodio 10-14/08: Alberto desconectó PriceLabs (las 7 reversiones eran suyas); verificado 0 reversiones el 11 y el 14/08.
+- **Landmine 1 — suelo PL autorreferente:** `pricing/apply` re-capturaba `pricing_pl_referencia` a diario desde `rate_snapshots` (que lee SMOOBU, no PL) → tras la desconexión el «suelo PriceLabs» capturaba los precios del propio motor y NUNCA caducaba. Upsert eliminado; tabla congelada a `captured_at='2026-08-10'` (migración `2026-08-14_pl_referencia_congelada.sql`, aplicada) → suelo inerte el 08/12/2026 como diseñado. Regla: una referencia EXTERNA no se recaptura de un espejo que escribes tú.
+- **Landmine 2 — partidos a domicilio como eventos:** el websearch tenía 9 jornadas fuera de casa confirmadas (Athletic-Sevilla en Bilbao ×2,2…) subiendo precios en Sevilla. Descartadas en BD + guarda determinista `esPartidoFueraDeSevilla` (el club sevillano DETRÁS del «vs» = visitante; finales exentas) en ambas pasadas + el upsert ya no resucita `descartado`.
+- Factores de liga re-derivados a la curva plana (×1,35) en BD; finales/Mundial de Remo restaurados (×2,2/×1,55).
+- Octubre verificado: ninguna fecha vendiéndose barata; los precios altos del puente son el suelo PL diseñado (caduca 08/12).
+
 ### 🧊 (14/08/2026) Pasada de mercado a mano para descongelar las noches de evento
 - Alberto preguntó por qué el aviso de «236 noches congeladas» no se mide al instante. **No es un
   fallo:** el cron de Vercel no puede llamar a un MCP, así que quien mide Booking es una SESIÓN

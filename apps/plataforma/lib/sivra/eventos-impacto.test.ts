@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { impactoEvento, clasificarTipo, esPartidoLigaRegular, FACTOR_MAX } from './eventos-impacto.ts'
+import { impactoEvento, clasificarTipo, esPartidoLigaRegular, esPartidoFueraDeSevilla, FACTOR_MAX } from './eventos-impacto.ts'
 
 test('un concierto de estadio ya no se queda en 1.60', () => {
   // La Cartuja, 60.000 (Karol G). Antes salía 1.60 y hubo que corregirlo a mano.
@@ -106,4 +106,29 @@ test('el nombre nunca PROMOCIONA ni pisa un tipo reconocible', () => {
 test('Ticketmaster manda tipo "deportes" (plural) y también cuenta como deporte', () => {
   assert.equal(clasificarTipo('deportes'), 'deporte')
   assert.equal(impactoEvento(43000, 'deportes'), 1.35)
+})
+
+// ————— Partidos a domicilio: el rival delante del «vs» delata que no se juega aquí (14/08/2026) —————
+
+test('caso real: 9 jornadas a domicilio confirmadas subían precios de noches corrientes', () => {
+  assert.equal(esPartidoFueraDeSevilla('Levante UD vs Sevilla FC'), true)
+  assert.equal(esPartidoFueraDeSevilla('Athletic Club vs Sevilla FC'), true)
+  assert.equal(esPartidoFueraDeSevilla('Real Sociedad vs Sevilla FC'), true)
+})
+
+test('un partido EN Sevilla nunca se descarta — incluido el derbi (Betis es local en casa)', () => {
+  assert.equal(esPartidoFueraDeSevilla('Sevilla FC vs Rayo Vallecano'), false)
+  assert.equal(esPartidoFueraDeSevilla('Real Betis vs Sevilla FC'), false)
+  assert.equal(esPartidoFueraDeSevilla('Real Betis vs Deportivo (LaLiga)'), false)
+})
+
+test('una final en campo neutral no se descarta aunque el sevillano vaya detrás del vs', () => {
+  assert.equal(esPartidoFueraDeSevilla('Final Copa del Rey: FC Barcelona vs Sevilla FC'), false)
+})
+
+test('sin estructura de partido o sin club sevillano no opina', () => {
+  assert.equal(esPartidoFueraDeSevilla('Spain vs Croatia (Nations League)'), false)
+  assert.equal(esPartidoFueraDeSevilla('KAROL G - VIAJANDO POR EL MUNDO TROPITOUR'), false)
+  assert.equal(esPartidoFueraDeSevilla(''), false)
+  assert.equal(esPartidoFueraDeSevilla(null), false)
 })
