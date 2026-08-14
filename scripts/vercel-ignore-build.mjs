@@ -23,6 +23,7 @@
 //   "ignoreCommand": "node ../../scripts/vercel-ignore-build.mjs apps/<app>"
 
 import { execSync } from 'node:child_process';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
 const appDir = (process.argv[2] || '').replace(/\/+$/, ''); // p.ej. "apps/plataforma"
 
@@ -65,15 +66,95 @@ try {
 
 if (!changed.length) build('diff vacío → construir por seguridad');
 
-// 3) Construir solo si el cambio afecta a ESTA app o a dependencias compartidas.
-//    Regla conservadora a propósito: cualquier cambio en packages/* reconstruye
-//    la app (las apps consumen packages compartidos vía file: deps +
-//    transpilePackages; los packages cambian poco). Evita derivar el cierre de
-//    dependencias por app y nunca deja de construir algo que sí cambió.
+// 3) Construir solo si el cambio afecta a ESTA app o a un package que ESTA app consume.
+//
+//    Antes, CUALQUIER cambio en packages/* reconstruía TODAS las apps. Era la regla
+//    conservadora del primer día (evitaba derivar el cierre de dependencias), pero se
+//    pasa de frenada: `apps/housesevillana` no declara ni un solo `@central/*` —solo
+//    Next y React— y aun así se reconstruía cada vez que alguien tocaba, por ejemplo,
+//    `packages/module-subastas`, que solo consume `plataforma`. Medido sobre 30 días:
+//    6 de 92 commits tocaron packages/ y NINGUNO tocó la landing → 6 builds regalados
+//    en esa app, y otros tantos en cada una de las que tampoco consumían el paquete.
+//    Es la misma familia que el incidente de los ~600 US$ (PR #904), en pequeño.
+//
+//    Ahora se resuelve el cierre TRANSITIVO de dependencias `@central/*` de la app y
+//    solo cuentan los packages que están dentro. El fail-open se mantiene intacto: si
+//    algo no se puede leer o un directorio no se sabe a qué paquete corresponde, ese
+//    cambio se considera relevante y se construye. Nunca se deja de construir por duda.
 const RAIZ = new Set(['pnpm-lock.yaml', 'pnpm-workspace.yaml', 'package.json']);
+
+// Mapa directorio de packages/ -> nombre npm del paquete (packages/core-ai -> @central/core-ai).
+// El nombre NO siempre coincide con la carpeta, así que se lee de su package.json.
+function mapaPaquetes(raiz) {
+  const porDir = new Map();
+  for (const dir of readdirSync(`${raiz}/packages`, { withFileTypes: true })) {
+    if (!dir.isDirectory()) continue;
+    try {
+      const pkg = JSON.parse(readFileSync(`${raiz}/packages/${dir.name}/package.json`, 'utf8'));
+      if (pkg.name) porDir.set(dir.name, pkg.name);
+    } catch { /* sin package.json legible: se queda fuera del mapa => se tratará como relevante */ }
+  }
+  return porDir;
+}
+
+// Cierre transitivo: la app declara @central/module-transporte, que a su vez puede
+// declarar @central/core-identity. Tocar el segundo TAMBIÉN debe reconstruir la app.
+function cierreDeps(raiz, appDir, porDir) {
+  const dirDe = new Map([...porDir].map(([d, n]) => [n, d]));
+  const deps = (ruta) => {
+    const pkg = JSON.parse(readFileSync(ruta, 'utf8'));
+    return Object.keys({ ...pkg.dependencies, ...pkg.devDependencies })
+      .filter((k) => k.startsWith('@central/'));
+  };
+  const vistos = new Set(), cola = deps(`${raiz}/${appDir}/package.json`);
+  while (cola.length) {
+    const nombre = cola.pop();
+    if (vistos.has(nombre)) continue;
+    vistos.add(nombre);
+    const dir = dirDe.get(nombre);
+    if (!dir) continue; // dependencia sin carpeta conocida: no puede casar con ningún cambio
+    try { cola.push(...deps(`${raiz}/packages/${dir}/package.json`)); } catch { /* ilegible */ }
+  }
+  return vistos;
+}
+
+// Vercel corre esto con cwd = Root Directory (apps/<app>), así que la raíz queda dos
+// niveles arriba; en local (tests, ejecución a mano) el cwd ya ES la raíz. Se localiza
+// mirando dónde está `packages/` en vez de cablear '../..', que solo valdría en Vercel.
+const raiz = ['../..', '.', '..'].find((p) => existsSync(`${p}/packages`)) ?? '../..';
+
+let consumidos = null;  // null = no se pudo resolver => todo packages/ cuenta (fail-open)
+let conocidos = null;   // carpetas de packages/ cuyo package.json SÍ se pudo leer
+try {
+  const porDir = mapaPaquetes(raiz);
+  const cierre = cierreDeps(raiz, appDir, porDir);
+  conocidos = new Set(porDir.keys());
+  consumidos = new Set(
+    [...porDir].filter(([, nombre]) => cierre.has(nombre)).map(([dir]) => dir),
+  );
+} catch (e) {
+  console.log(`⚠ no se pudo resolver el cierre de dependencias (${e.message}) → packages/ cuenta entero`);
+}
+
+function tocaPaqueteConsumido(f) {
+  if (consumidos === null) return true;      // no se pudo resolver nada: fail-open
+  const partes = f.split('/');
+  if (partes.length < 3) return true;        // suelto en packages/ (p.ej. packages/README.md)
+  const dir = partes[1];
+  // Carpeta sin package.json legible: NO se sabe quién la consume, así que se construye.
+  // (Sin esto, un paquete ilegible se saltaría en silencio — fail-CLOSED, justo lo que
+  //  este script no debe hacer nunca.)
+  if (!conocidos.has(dir)) return true;
+  return consumidos.has(dir);
+}
+
 const relevante = changed.some(
-  (f) => f.startsWith(appDir + '/') || f.startsWith('packages/') || RAIZ.has(f),
+  (f) => f.startsWith(appDir + '/') || (f.startsWith('packages/') && tocaPaqueteConsumido(f)) || RAIZ.has(f),
 );
 
-if (relevante) build(`el commit toca ${appDir}/ o dependencias compartidas`);
-skip(`el commit no toca ${appDir} (${changed.length} archivo(s) en otras rutas)`);
+if (relevante) build(`el commit toca ${appDir}/, un package que consume, o un manifiesto raíz`);
+skip(
+  `el commit no toca ${appDir} ni ninguno de sus packages` +
+    (consumidos ? ` (consume ${consumidos.size})` : '') +
+    ` (${changed.length} archivo(s) en otras rutas)`,
+);
