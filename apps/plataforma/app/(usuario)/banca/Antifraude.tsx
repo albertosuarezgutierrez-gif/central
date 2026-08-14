@@ -50,9 +50,15 @@ export default function Antifraude({ desde, hasta, periodoLabel }: {
 
         {res && (
           <div style={{ marginTop: '14px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
-            {res.nota ? (
-              <div style={{ fontSize: '13px', color: 'var(--muted)' }}>{res.nota}</div>
-            ) : res.avisos.length === 0 ? (
+            {/* La nota puede convivir con los avisos: dice qué NO se ha podido revisar (p. ej. sin
+                histórico previo no se sabe qué comercio es nuevo). Ocultar los avisos cuando hay
+                nota escondía hallazgos reales; ocultar la nota haría pasar un hueco por un "ok". */}
+            {res.nota && (
+              <div style={{ fontSize: '13px', color: 'var(--text)', background: 'var(--warning-bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 10px', marginBottom: res.avisos.length ? '10px' : 0 }}>
+                ⚠️ {res.nota}
+              </div>
+            )}
+            {res.avisos.length === 0 ? (!res.nota &&
               <div style={{ fontSize: '13px', color: 'var(--muted)' }}>
                 Nada raro entre los cargos del periodo{typeof res.revisados === 'number' ? ` (revisé ${res.revisados})` : ''}. 👍
               </div>

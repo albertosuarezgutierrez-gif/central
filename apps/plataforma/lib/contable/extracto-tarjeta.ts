@@ -16,7 +16,8 @@ import { conciliarFacturasDesdeGmail } from '@/lib/agente-facturas/conciliar-gma
 import { cuadrarExtractoTarjeta, esPagoReciboTarjeta } from '@/lib/extracto-tarjeta-pdf'
 import type { ExtractoN43 } from '@/lib/norma43'
 import { casarDevolucion, type CompraCandidata } from '@/lib/devoluciones-tarjeta'
-import { esCargoFinanciero, dobleCobro, subioPrecio } from '@/lib/vigilantes-tarjeta'
+import { esCargoFinanciero, dobleCobro, subioPrecio, baseRecurrente, type CargoPrevio } from '@/lib/vigilantes-tarjeta'
+import { claveComercio } from '@/lib/comercio-canonico'
 import { guardarEnlaceExtracto } from './memoria'
 import { planificarPasos, lineaSaltados, RESERVA_RESPUESTA_MS } from './presupuesto-extracto'
 
@@ -120,6 +121,8 @@ async function emparejarDevoluciones(
 const VIG_UMBRAL_NUEVO = 80        // € — cargo de comercio nunca visto que merece confirmación
 const VIG_UMBRAL_JUSTIFICANTE = 100 // € — compra deducible grande sin factura
 const VIG_MAX_LISTA = 5
+const VIG_HIST_MESES = 24          // ventana del histórico con el que se decide "comercio nuevo"
+const VIG_HIST_MAX = 20000         // techo de filas leídas; si se toca, el histórico está INCOMPLETO
 
 async function vigilantesTarjeta(
   cuentaId: string, ids: string[], desde: string, hasta: string,
@@ -138,38 +141,73 @@ async function vigilantesTarjeta(
   // 1) Intereses / comisiones de la tarjeta (coste financiero evitable).
   const totalFinanc = conComercio.filter(c => esCargoFinanciero(c.concepto)).reduce((s, c) => s + Math.abs(c.importe), 0)
 
-  // 2) Posible cobro doble (mismo comercio + mismo importe repetido).
-  const dobles = dobleCobro(conComercio.filter(c => !esCargoFinanciero(c.concepto)).map(c => ({ id: c.id, comercio: c.comercio, importe: c.importe })))
+  // 2) Posible cobro doble (mismo comercio + mismo importe + MISMO DÍA; ver lib/vigilantes-tarjeta).
+  const dobles = dobleCobro(conComercio
+    .filter(c => !esCargoFinanciero(c.concepto))
+    .map(c => ({ id: c.id, comercio: c.comercio, importe: c.importe, fecha: c.fecha })))
 
-  // Histórico previo de estas tarjetas → "comercio nunca visto" y "subida de precio de recurrente".
-  const previos = await prisma.$queryRaw<Array<{ importe: number; concepto: string | null; contraparte: string | null }>>(Prisma.sql`
-    SELECT importe::float AS importe, concepto, contraparte
-    FROM movimientos_bancarios
-    WHERE cuenta_bancaria_id = ANY(${ids}::uuid[]) AND importe < 0
-      AND fecha_operacion < ${desde}::date
-      AND coalesce(duplicado_estado, '') <> 'ignorado'
-    ORDER BY fecha_operacion DESC
-    LIMIT 3000
-  `).catch(() => [])
+  // Histórico previo → "comercio nunca visto" y "subida de precio de recurrente".
+  // 🚨 De TODA la cuenta, no solo de esta tarjeta: si Alberto ya compró en ese comercio pagando con
+  // otra tarjeta o por transferencia, el comercio NO es nuevo. Mirar solo la tarjeta convertía un
+  // «no lo he mirado en el resto de cuentas» en un «no lo reconozco». Lectura por la vista canónica
+  // `v_movimientos_activos` (excluye duplicados) — regla de banca.
+  type FilaPrevia = { importe: number; concepto: string | null; contraparte: string | null; fecha: string }
+  let previos: FilaPrevia[] = []
+  let historicoLeido = true
+  try {
+    previos = await prisma.$queryRaw<FilaPrevia[]>(Prisma.sql`
+      SELECT mb.importe::float AS importe, mb.concepto, mb.contraparte, mb.fecha_operacion::text AS fecha
+      FROM v_movimientos_activos mb
+      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.importe < 0
+        AND mb.fecha_operacion < ${desde}::date
+        AND mb.fecha_operacion >= (${desde}::date - (${VIG_HIST_MESES} || ' months')::interval)
+      ORDER BY mb.fecha_operacion DESC
+      LIMIT ${VIG_HIST_MAX + 1}
+    `)
+  } catch (e) {
+    // Un histórico que NO se ha podido leer no es un histórico vacío: sin él no se puede decir ni
+    // que un comercio sea nuevo ni que un precio haya subido. Se calla y se avisa del hueco.
+    console.error('[vigilantesTarjeta] histórico', e)
+    historicoLeido = false
+  }
+  // Si se toca el techo, el histórico está TRUNCADO: no se puede afirmar que un comercio sea nuevo
+  // (podría estar en las filas que no se han leído). Se calla el aviso y se dice por qué.
+  const historicoCompleto = historicoLeido && previos.length <= VIG_HIST_MAX
+
   const seen = new Set<string>()
-  const ultImporte = new Map<string, number>()   // comercio → |importe| más reciente previo
-  for (const p of previos) {
-    const com = comercioDe(p.contraparte, p.concepto).toLowerCase()
-    if (!com) continue
-    seen.add(com)
-    if (!ultImporte.has(com)) ultImporte.set(com, Math.abs(p.importe))  // ORDER BY DESC → el primero es el más reciente
+  const previosPorComercio = new Map<string, CargoPrevio[]>()
+  for (const p of previos.slice(0, VIG_HIST_MAX)) {
+    const clave = claveComercio(comercioDe(p.contraparte, p.concepto))
+    if (!clave) continue
+    seen.add(clave)
+    const arr = previosPorComercio.get(clave) ?? []
+    arr.push({ importe: Math.abs(p.importe), fecha: p.fecha })
+    previosPorComercio.set(clave, arr)
   }
 
-  // 3) Cargos no reconocidos (solo si hay histórico; en el primer import todo sería "nuevo").
-  const nuevos = seen.size === 0 ? [] : conComercio
-    .filter(c => !esCargoFinanciero(c.concepto) && Math.abs(c.importe) > VIG_UMBRAL_NUEVO && c.comercio && !seen.has(c.comercio.toLowerCase()))
+  // 3) Cargos no reconocidos: comercio cuya IDENTIDAD (no su rótulo literal) no aparece en el
+  //    histórico. Solo si hay histórico Y está completo; en el primer import todo sería "nuevo".
+  const nuevos = (seen.size === 0 || !historicoCompleto) ? [] : conComercio
+    .filter(c => !esCargoFinanciero(c.concepto) && Math.abs(c.importe) > VIG_UMBRAL_NUEVO
+      && !!claveComercio(c.comercio) && !seen.has(claveComercio(c.comercio)))
     .sort((a, b) => Math.abs(b.importe) - Math.abs(a.importe))
     .slice(0, VIG_MAX_LISTA)
 
-  // 4) Subida de precio de un cargo recurrente (suscripción que sube).
-  const subidas = conComercio
-    .filter(c => c.comercio && ultImporte.has(c.comercio.toLowerCase()) && subioPrecio(c.importe, ultImporte.get(c.comercio.toLowerCase()) as number))
-    .slice(0, VIG_MAX_LISTA)
+  // 4) Subida de precio SOLO de recurrentes de importe estable (suscripción/cuota que sube). Un
+  //    súper o un bar cobran distinto cada vez: ahí "subida" no significa nada (ver baseRecurrente).
+  const subidas: Array<{ comercio: string; importe: number; base: number }> = []
+  const yaAvisado = new Set<string>()   // un recurrente que se cobra 2 veces en el mes avisa 1 vez
+  for (const c of conComercio) {
+    const clave = claveComercio(c.comercio)
+    if (!clave || yaAvisado.has(clave) || esCargoFinanciero(c.concepto)) continue
+    const base = baseRecurrente(previosPorComercio.get(clave) ?? [])
+    if (base !== null && subioPrecio(c.importe, base)) {
+      subidas.push({ comercio: c.comercio, importe: Math.abs(c.importe), base })
+      yaAvisado.add(clave)
+    }
+    if (subidas.length >= VIG_MAX_LISTA) break
+  }
 
   // 5) Justificantes pendientes de compras deducibles grandes (enlaza con el Check 8 trimestral).
   const just = await prisma.$queryRaw<Array<{ n: bigint; total: number }>>(Prisma.sql`
@@ -188,9 +226,11 @@ async function vigilantesTarjeta(
   // Un solo mensaje Telegram con las secciones que tengan contenido (evita spam).
   const bloques: string[] = []
   if (totalFinanc > 0) bloques.push(`💸 <b>Intereses/comisiones</b>: la tarjeta te cobró ${eur(totalFinanc)} este mes. Liquidando en el mes te lo ahorras.`)
-  if (dobles.length) bloques.push(`🔁 <b>Posible cobro doble</b>:\n${dobles.slice(0, VIG_MAX_LISTA).map(d => `  · ${escapeHtml(d.comercio)}: ${d.ids.length}× ${eur(d.importe)}`).join('\n')}`)
-  if (nuevos.length) bloques.push(`🆕 <b>Cargos que no reconozco</b> (comercio nuevo):\n${nuevos.map(c => `  · ${escapeHtml(c.comercio)}: ${eur(Math.abs(c.importe))} (${c.fecha})`).join('\n')}\n¿Los reconoces?`)
-  if (subidas.length) bloques.push(`📈 <b>Subidas de precio</b>:\n${subidas.map(c => `  · ${escapeHtml(c.comercio)}: ${eur(ultImporte.get(c.comercio.toLowerCase()) as number)} → ${eur(Math.abs(c.importe))}`).join('\n')}`)
+  if (dobles.length) bloques.push(`🔁 <b>Posible cobro doble</b> (mismo día):\n${dobles.slice(0, VIG_MAX_LISTA).map(d => `  · ${escapeHtml(d.comercio)}: ${d.ids.length}× ${eur(d.importe)} el ${d.fecha}`).join('\n')}`)
+  if (nuevos.length) bloques.push(`🆕 <b>Comercio que no aparece en tus ${VIG_HIST_MESES} meses anteriores</b>:\n${nuevos.map(c => `  · ${escapeHtml(c.comercio)}: ${eur(Math.abs(c.importe))} (${c.fecha})`).join('\n')}\n¿Los reconoces?`)
+  if (!historicoLeido) bloques.push('⚠️ No he podido leer tu histórico de movimientos, así que esta vez NO he revisado comercios nuevos ni subidas de precio. No es que no haya: es que no lo he podido mirar.')
+  else if (!historicoCompleto) bloques.push(`⚠️ No repaso los comercios nuevos: tu histórico de ${VIG_HIST_MESES} meses supera lo que puedo leer de una vez, así que no puedo afirmar que un comercio sea nuevo.`)
+  if (subidas.length) bloques.push(`📈 <b>Subidas de precio</b> (cargos recurrentes de importe fijo):\n${subidas.map(s => `  · ${escapeHtml(s.comercio)}: ${eur(s.base)} → ${eur(s.importe)}`).join('\n')}`)
   if (justN > 0) bloques.push(`🧾 <b>Justificantes pendientes</b>: ${justN} compra(s) deducible(s) por ${eur(justTotal)} sin factura. Consíguelas para Hacienda (/finanzas?tab=gastos).`)
 
   if (bloques.length) await tgSend(`🔎 <b>Revisión de la tarjeta</b>\n\n${bloques.join('\n\n')}`).catch(() => {})

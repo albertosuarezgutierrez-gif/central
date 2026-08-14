@@ -310,6 +310,31 @@ declara **UN solo cron**: `/api/cron/dispatch` cada minuto.
     `maxDuration` 60 → **300 + presupuesto de tiempo** (`lib/contable/presupuesto-extracto.ts`): con 60 s
     la ruta importaba los 109 movimientos y moría antes de contestar → «Sin respuesta.» sobre un extracto
     que sí había entrado. Detalle completo en la skill `plataforma-maestro` (`agentes-banca-landmines.md`).
+  - **🚨 LANDMINE — un vigilante que compara STRINGS no puede decir «no lo reconozco» (14/08/2026).**
+    Alberto, sobre la «🔎 Revisión de la tarjeta»: «¿por qué no lo reconoce el agente contable con IA?».
+    Primera respuesta: **ese bloque no llama a ninguna IA** (`vigilantesTarjeta` + `lib/vigilantes-tarjeta.ts`,
+    reglas puras). El fallo real: «no reconozco» significaba *este rótulo literal no aparece en el histórico
+    de ESTA tarjeta*, así que **«MERCADONA COLMENA SEVILLA» salía como comercio nuevo con decenas de compras
+    previas en Mercadona** (otra sucursal = otra cadena de texto), y una compra hecha con otra tarjeta/cuenta
+    tampoco contaba como histórico. Es el patrón de siempre: un «no lo he mirado» servido como afirmación.
+    - **Identidad ≠ etiqueta:** nuevo módulo PURO **`lib/comercio-canonico.ts`** (`claveComercio`/`cadenaDe`/
+      `mismoComercio`, testeado). `lib/comercio.ts::comercioDe` sigue dando la ETIQUETA que se PINTA
+      ("DIA SEVILLA 2260"); `claveComercio` da la IDENTIDAD con la que se compara ("DIA"): quita nº de
+      tienda/terminal, forma jurídica y ciudad, y mapea las **cadenas** (solo MARCAS reales — meter
+      'BAR'/'FARMACIA' fundiría comercios independientes distintos, que es el error simétrico y peor).
+    - **El histórico es el de la CUENTA**, no el de la tarjeta: 24 meses sobre `v_movimientos_activos`
+      (vista canónica). Si la lectura falla o toca el techo de filas, **no se emite el aviso y se dice
+      por qué** — un histórico truncado no autoriza a llamar nuevo a nada.
+    - **Cobro doble** exige ahora **mismo día** + ≥`DOBLE_MIN_EUR` (10€): repetir importe en días distintos
+      es rutina (2×40,00€ de gasolina al mes), y 2×0,99€ en el súper son dos compras.
+    - **Subida de precio** solo en recurrentes de **importe estable** (`baseRecurrente`: ≥3 cargos, ≥3 meses
+      distintos, todos ±10% de la mediana). Comparar dos tickets de súper o de restaurante y llamarlo subida
+      (DIA 3,25€→7,52€, un restaurante 33€→87€) es comparar cosas no comparables. Sin base → se calla.
+    - Mismo criterio aplicado a **`POST /api/banca/antifraude`** (comparte los helpers) + su UI: sin
+      movimientos anteriores al periodo no se afirma «comercio nuevo», se declara el hueco (`nota`, que
+      ahora convive con los avisos en vez de ocultarlos).
+    - Regla que deja el caso: **un vigilante solo habla cuando la señal DISTINGUE el aviso del
+      comportamiento normal.** El ruido no es un aviso conservador — entrena a ignorar el mensaje entero.
 - [x] **`/banca` = cuadro financiero UNIFICADO + IA GRATIS (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, PRs #882/#886-893):** sustituye a la vista suelta de movimientos. **Core (F1-F3):** period-driven (`?year/quarter/desde/hasta`, default mes en curso, mismo `IntervaloSelector` que la radiografía) — `ResumenPeriodo.tsx` reusa `getResumenFinanciero`; gráficas Recharts (evolución + dona); P&L de pisos (`getPLMensual`); libro completo paginado con reclasificación en línea (`MovimientosTabla`, PR #840, ver bullet de arriba). **Extras de IA GRATIS bajo demanda (todos: la IA solo SUGIERE/CLASIFICA/NARRA, los importes SIEMPRE salen de `lib/banca.ts`/`lib/finanzas.ts`, nunca los inventa):** 🧾 **Cazador de deducciones** (`lib/cazador-deducciones.ts`, `POST /api/banca/cazador-deducciones`) — gasto personal que probablemente es deducible + ahorro fiscal estimado; 💬 **Mini-chat** (`MiniChatContable.tsx` → `POST /api/contable/chat`, embebe el agente contable existente); 🤖 **Sugerir por fila** en cargos del libro (reusa `POST /api/finanzas/gastos/sugerir`); 📈 **Benchmark entre pisos** (`BenchmarkPisos.tsx`, lectura IA bajo demanda vía `POST /api/banca/benchmark-pisos`); ✂️ **Fugas en recurrentes** (`POST /api/banca/fugas`, anualiza los recurrentes que ya detecta la tesorería y marca cancelar/renegociar); 🚨 **Antifraude** (`POST /api/banca/antifraude`, **reglas DETERMINISTAS sin IA** — cobro doble/comercio nuevo/subida de precio/cargo financiero, reusa `lib/vigilantes-tarjeta.ts` + `lib/comercio.ts`); 📤 **Cierre de mes narrado** (`lib/resumen-mensual.ts::enviarResumenMensual`, cron día 1 08:00 `/api/cron/resumen-mensual`, por cuenta: cifras del mes anterior + narración IA de 1-2 frases que degrada sin romper). Todo verificado `tsc` 0 + `next build` exit 0. Pendiente (F4 cola): desviación explicada, aviso fiscal proactivo, adjuntar/conciliar factura por foto en banca; F5: módulo 🛒 tickets de súper + comparador de precios.
 - [x] **🚨 LANDMINE — flag `requiere_revision` zombie: confirmar destino DEBE limpiarlo (PR #906, 15/07/2026):**
   `requiere_revision` es el flag del **destino** (negocio dudoso), NO de la categoría contable ni de la
