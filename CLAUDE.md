@@ -169,7 +169,9 @@ replican la misma convención. Si un cambio toca una pantalla con importes mal f
   los proyectos Vercel cuelgan del MISMO repo, **cada push reconstruye TODOS los proyectos** aunque el
   commit no toque esa app → la factura de Build CPU Minutes se dispara (incidente 15/07/2026: ~600 US$
   en un mes, PR #904). El script (`scripts/vercel-ignore-build.mjs`) salta el build salvo que el commit
-  toque `apps/<app>/`, `packages/*` o los manifiestos raíz; los commits con marcador de salto de CI en
+  toque `apps/<app>/`, **un `packages/*` que ESA app declare** (cierre transitivo de sus deps
+  `@central/*`, desde 13/08/2026 — antes bastaba con tocar cualquier `packages/*` y eso reconstruía
+  las ~10 apps aunque no lo consumieran) o los manifiestos raíz; los commits con marcador de salto de CI en
   el asunto nunca construyen; fail-open ante dudas. **Al crear una app nueva, añade esta clave y punto**
   (y también su alerta de gasto ya está puesta a nivel de equipo Vercel: Spend Management $50, solo aviso).
 - **NUNCA** poner `apps/` en el `.vercelignore` de la raíz (se aplica a todos los proyectos del
