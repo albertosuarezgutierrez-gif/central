@@ -285,3 +285,33 @@ test('ingestaFiable: un error técnico invalida la pasada', () => {
 test('ingestaFiable: una pasada que no pidió nada no vale como buena', () => {
   assert.equal(ingestaFiable({ ventanas: 0, comps: 0, sinRespuesta: 0, errores: [] }), false)
 })
+
+test('🧊 el colapso por bloques ya no deja noches congeladas sin medir (caso 18/19-sep, 14/08/2026)', async () => {
+  const { ventanasDeConfirmadosPorFecha } = await import('./mercado-ventanas.ts')
+  // Bloque real: 18(Bienal 1,5) · 19(Bienal 1,5) · 20(Sevilla-Barcelona 1,5) · 21(Bienal 1,15).
+  // El bloque lo representa una sola ventana; Booking midió el 20 → sin la expansión, el 18 y el
+  // 19 (CONGELADOS por el motor) no se pedían nunca.
+  const eventos = [
+    { fecha: '2026-09-18', factor: 1.5, nombre: 'Bienal 2o finde', confirmado: true },
+    { fecha: '2026-09-19', factor: 1.5, nombre: 'Bienal 2o finde', confirmado: true },
+    { fecha: '2026-09-20', factor: 1.5, nombre: 'Sevilla FC vs Barcelona', confirmado: true },
+    { fecha: '2026-09-21', factor: 1.15, nombre: 'Olga Pericet', confirmado: true },
+    { fecha: '2026-12-05', factor: 1.5, nombre: 'Mangafest (previsto)' }, // previsto: NO se expande
+  ]
+  const plan = ventanasDelBarrido('2026-08-14', eventos, { mesesBase: 2, maxEventos: 6, fechasPorMes: 1 })
+  const extra = ventanasDeConfirmadosPorFecha('2026-08-14', eventos, plan)
+  const fechasExtra = extra.map(v => v.checkin)
+  // El representante del bloque ya está en el plan; las demás fechas confirmadas entran aparte.
+  for (const f of ['2026-09-18', '2026-09-19', '2026-09-21']) {
+    const enAlguno = fechasExtra.includes(f) || plan.some(v => v.checkin === f)
+    assert.ok(enAlguno, `${f} tiene que poder medirse en algún sitio`)
+  }
+  assert.ok(!fechasExtra.includes('2026-12-05'), 'un previsto no gasta ventana por fecha')
+  assert.ok(extra.every(v => v.eventoConfirmado && v.ronda === 1))
+
+  // Y con el bloque YA MEDIDO (el 20-sep), la cola pide PRIMERO las congeladas 18/19/21.
+  const todo = [...plan, ...extra]
+  const cobertura = [{ checkin: '2026-09-20', aforo: 4, ultimaMedicion: '2026-08-14', comps: 10 }]
+  const pedidas = ventanasQuePedir(todo, new Map([[4, ['prop_duplex_center']]]), cobertura, '2026-08-14', 3)
+  assert.deepEqual(pedidas.map(v => v.checkin), ['2026-09-18', '2026-09-19', '2026-09-21'])
+})
