@@ -262,6 +262,16 @@
 - Causa del error, para no repetirla: se comprobó `apps/sivra` y se afirmó una ausencia **global**. Comprobar
   donde el dato viviría si existiera; si no aparece, escribir «no lo he encontrado», nunca «no existe».
 
+### ⚽ (13/08/2026) Una jornada de liga ya no entra a x2.2 — democión por NOMBRE (PR #1405)
+- Caso real (12/08, lo cazó el centinela #7): el websearch metió 'Sevilla FC vs Atlético de Madrid'
+  (29-ago) y 'Sevilla FC vs Valencia CF' (13-sep) a factor x2.2 (nivel de final) porque el 'tipo' de
+  la IA no traía palabra clave y el aforo caía en la curva general. Mercado real 0,82-0,85x su mes;
+  Busto se infló a 235€ con mercado ~98-115€. Corregido a mano ese día (factor 1.15).
+- `esPartidoLigaRegular(nombre)` en `eventos-impacto.ts`: el NOMBRE solo puede DEMOTAR a la curva
+  plana un evento sin tipo reconocido ('otro'); nunca una final/eliminatoria (lista de exclusión) ni
+  promociona/pisa un tipo ya reconocible. De regalo: Ticketmaster mandaba 'deportes' (plural) sin
+  casar el regex. 6 tests nuevos (14/14).
+
 ### 🧊 (13/08/2026) Guarda «evento a ciegas»: una noche de evento confirmado sin mercado fiable NO baja
 - Primera pasada real del verificador: 6 noches de la Bienal confirmadas solas (0,072€, 0 fallos, 0
   descartes indebidos)… y el motor las siguió bajando −20%/día hacia el ancla global — esas fechas
@@ -717,7 +727,7 @@ completo `docs/AUDITORIA-2026-08.md`.
   page data de `/api/admin/clientes/[vertical]/[id]` YA en main (envs ausentes), no es del cambio.
 
 
-- **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 12/08/2026).** Detalle en
+- **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 14/08/2026).** Detalle en
   `docs/memoria/2026-08.md` y en los PRs citados.
   - **Pricing SIVRA (motor vivo en los 4 pisos, resuelto desde el 09-10/08):** #1323 (ocupación
     POR MES) rehecho y mergeado sobre `pricing-demanda.ts`, `channel_markup_sin_recargo.sql`
@@ -736,17 +746,24 @@ completo `docs/AUDITORIA-2026-08.md`.
     gate `COBERTURA_MIN_ESCALERA=0,8`, PR #1377). Quedan 🟡: momentum sin ventana declarada ni guarda
     de costuras, Piotroski NULL→0 regala puntos, cohetes sin precio se congelan al de entrada, nav de
     `/analizar` sin contrastar, Dataroma caído = «sin gurús». Contraste DIFERIDO (la 2ª fuente juzga el
-    cierre de AYER en vez del de hoy, que casi nunca está publicado a la hora de la pasada) ya
-    implementado y testeado — **PR #1370 en draft, pendiente de que Alberto lo revise/mergee**. H9
-    (stop −10%/trailing −15%) sigue sin decisión de Alberto. Decisión vigente (10/08): no operar más
-    en real por impulso, esperar aviso explícito del agente cuando el forward justifique Fase 2 (hoy
-    lejos: hit rate 26-29%, alpha ≈0 sobre n grande). FMP sin créditos y redundante (Yahoo cubre); NO
-    recargar. Solo el DCF sigue sin fuente.
+    cierre de AYER en vez del de hoy) mergeado (#1370, 12/08). Rescate de tesis huérfanas (símbolo
+    fuera del universo → se puntúa con el cierre de su vencimiento) mergeado y **verificado en
+    producción** (#1403/12/08, contrastado 13/08: 16 tesis del 18/07 puntuadas al céntimo). Veredicto
+    de inversión (`docs/INVERSION-VEREDICTO-2026-08.md`) re-verificado 13/08: 7 cifras publicadas
+    estaban mal, corregidas; el veredicto (intradía NO) no cambia. H9 (stop −10%/trailing −15%) sigue
+    sin decisión de Alberto. Decisión vigente (10/08): no operar más en real por impulso, esperar
+    aviso explícito del agente cuando el forward justifique Fase 2 (hoy lejos: hit rate 26-29%, alpha
+    ≈0 sobre n grande). FMP sin créditos y redundante (Yahoo cubre); NO recargar. Solo el DCF sigue
+    sin fuente. Nuevo pendiente (13/08): averiguar quién escribe `trading_estrategia_stats.retorno_medio`
+    (dos filas en `0.000000` — centinela «sin calcular», no cero medido).
   - **Subastas:** lente 🌊 (costa norte + Matalascañas sin tope) MERGEADA y en prod (#1346/#1349/
     #1351/#1353); pestaña 🔥 Oportunidades rediseñada (#1358 — una tarjeta, chips homogéneos,
-    €/m² siempre visible). Repaso programado **12/08 07:00 UTC** (`trig_01AzUvq8vW2K8Aan4T7HG7c6`,
-    HOY): verificar corpus Matalascañas creciendo, lente sin tope, avisos 🌊 sin duplicados. 🟡 el
-    dispatcher marca timeout en `subastas-mercado` si desborda 280 s (2×/7d, el job acaba).
+    €/m² siempre visible). 🟡 el dispatcher marca timeout en `subastas-mercado` si desborda 280 s
+    (2×/7d, el job acaba). **Surus (6ª fuente, 13/08, #1406/#1408):** portal privado de liquidaciones
+    con comisión al COMPRADOR (`comisionCompra` en `calcularCoste`, por fuente). El primer bug real
+    (ingesta IMAP no leía nada por saltos de línea/columna) ya arreglado y con regresión — pero el
+    correo de alerta de Surus **aún no se ha visto en producción** (alta del mismo día): pendiente
+    contrastar el parser contra el primer aviso real que le llegue a Alberto.
   - **Facturas/banca sin conciliar:** Roborock −247,92€ (House) sin aparecer en banco; Booking Dúplex
     587,23€ vence 16/08; Socorro 24 julio sin factura de comisión; Endesa Dúplex 24/07 87,42€ con
     cargo pero sin PDF archivado; fila duplicada CREATE (`create-socorro` + `create_ventilador`,
