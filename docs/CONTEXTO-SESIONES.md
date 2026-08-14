@@ -32,6 +32,18 @@
 
 ---
 
+### 🔎 (14/08/2026) «¿Por qué el agente contable no reconoce Mercadona?» — los vigilantes de la tarjeta eran 3 comparaciones de strings
+- La «🔎 Revisión de la tarjeta» del extracto **no llama a ninguna IA**: son reglas puras. «No reconozco
+  MERCADONA COLMENA SEVILLA» solo significaba *ese rótulo literal no está en el histórico de ESA tarjeta*.
+- Nuevo módulo puro **`lib/comercio-canonico.ts`** (identidad ≠ etiqueta): sucursal/terminal/forma jurídica/
+  ciudad fuera + lista de cadenas → «MERCADONA COLMENA» = «MERCADONA». El histórico pasa a ser el de **toda
+  la cuenta** (24 meses, `v_movimientos_activos`), no el de la tarjeta.
+- Los otros dos bloques eran ruido puro: «cobro doble» ahora exige **mismo día** y ≥10€ (2×40€ de gasolina en
+  el mes es rutina); «subida de precio» solo en **recurrentes de importe estable** (`baseRecurrente`: ≥3 cargos,
+  ≥3 meses, ±10%) — DIA 3,25€→7,52€ o un restaurante 33€→87€ ya no se comparan.
+- Histórico truncado/ilegible → se **dice** y no se afirma «comercio nuevo». Mismo criterio en `/api/banca/antifraude`.
+- Verificado: tsc 0 · 1193 tests `node --test` (14 nuevos) · `next build` OK. PR draft.
+
 ### 🐛 (13/08/2026) El #1406 mergeado NO leía ni un correo de Surus — lo cazó el E2E, no los tests
 - Alberto pidió «mergea y prueba que todo vaya 100%». Mergeado (#1406, `0d054fa`, producción READY) y,
   al probarlo con un **correo de forma realista**, la ingesta devolvía `null` siempre. Arreglo en **#1408**.
