@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-13T21:29:46Z",
-  "sha": "068255b7676fe0b7953440cd5f3d943962ca9ebf",
+  "generadoEn": "2026-08-14T00:52:29Z",
+  "sha": "e19913d0524c48657a3fd6b070b5ecce6558f167",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -55730,7 +55730,7 @@
         "pricing_piso_zona"
       ],
       "rutaApi": "/api/sivra/mercado/plan",
-      "hash": "ddc6f899b38d"
+      "hash": "59f788c0307d"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/search/route.ts",
@@ -55997,7 +55997,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 36
+          "linea": 37
         },
         {
           "nombre": "fmt",
@@ -56005,7 +56005,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 37
+          "linea": 38
         },
         {
           "nombre": "GET",
@@ -56013,7 +56013,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 65,
+          "linea": 66,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -56022,7 +56022,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 69
+          "linea": 70
         }
       ],
       "tablas": [
@@ -56035,6 +56035,7 @@
         "next",
         "occ",
         "pricing_applied",
+        "pricing_avisos",
         "pricing_config",
         "pricing_eventos_auto",
         "pricing_flight_demand",
@@ -56046,7 +56047,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "05cf450b6189"
+      "hash": "a31f188ab8f8"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -66925,7 +66926,7 @@
           "exportada": true,
           "params": "qs: URLSearchParams,",
           "retorno": "",
-          "linea": 113,
+          "linea": 115,
           "resumen": "Lee los parámetros del plan (`max`, `rondas`, `desde`, `hasta`) de una query string. Vive AQUÍ y no en el route handler para poder testearlo: el handler necesita Prisma y el alias `@/`, así que su lóg"
         },
         {
@@ -66934,7 +66935,7 @@
           "exportada": false,
           "params": "desdeIso: string, hastaIso: string",
           "retorno": "number",
-          "linea": 161
+          "linea": 163
         },
         {
           "nombre": "clave",
@@ -66942,7 +66943,7 @@
           "exportada": false,
           "params": "checkin: string, aforo: number",
           "retorno": "string",
-          "linea": 167
+          "linea": 169
         },
         {
           "nombre": "planDeVentanas",
@@ -66950,7 +66951,7 @@
           "exportada": true,
           "params": "plan: Ventana[], aforos: Map<number, string[]>, cobertura: CoberturaVentana[], hoyIso: string, max = 12, filtro: FiltroVentanas = {},",
           "retorno": "PlanPedido",
-          "linea": 189,
+          "linea": 195,
           "resumen": "Cruza el plan de ventanas (fechas) con los aforos de los pisos y la cobertura fiable ya medida, y devuelve las `max` que más falta hacen. Orden de urgencia, y el porqué de cada nivel: 1. **Nunca medid"
         },
         {
@@ -66959,7 +66960,7 @@
           "exportada": true,
           "params": "plan: Ventana[], aforos: Map<number, string[]>, cobertura: CoberturaVentana[], hoyIso: string, max = 12, filtro: FiltroVentanas = {},",
           "retorno": "VentanaPedida[]",
-          "linea": 248,
+          "linea": 259,
           "resumen": "Envoltura histórica: solo la lista. Nuevos usos, mejor `planDeVentanas` (declara el recorte)."
         },
         {
@@ -66968,7 +66969,7 @@
           "exportada": true,
           "params": "r: { ventanas: number comps: number sinRespuesta: number sinPrecio: number errores: string[] }",
           "retorno": "string",
-          "linea": 264,
+          "linea": 275,
           "resumen": "Parte de la pasada para el latido. Igual que en el barrido por búsqueda, **lo que NO se pudo medir va primero**: una ventana que el conector no contestó es «no lo sé», no «no hay mercado», y confundir"
         },
         {
@@ -66977,13 +66978,13 @@
           "exportada": true,
           "params": "r: { ventanas: number comps: number sinRespuesta: number errores: string[] }",
           "retorno": "boolean",
-          "linea": 287,
+          "linea": 298,
           "resumen": "¿Vale la pasada? Conservador igual que `barridoFiable`: hace falta haber MEDIDO algo y que la mayoría de lo intentado haya respondido. Una pasada que pide 12 ventanas y solo contesta 1 no es «poco mer"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6900e8c4d8ab"
+      "hash": "15421acfcb62"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/mercado-ventanas.ts",
@@ -67003,7 +67004,7 @@
           "exportada": true,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 55,
+          "linea": 64,
           "resumen": "«2026-11-13» → «noviembre 2026» (para la consulta de refuerzo por mes)."
         },
         {
@@ -67012,7 +67013,7 @@
           "exportada": true,
           "params": "checkin: string, checkout: string, aforo: number, motivo: 'mes' | 'evento',",
           "retorno": "ConsultaVentana[]",
-          "linea": 76,
+          "linea": 85,
           "resumen": "Consultas de una ventana, en orden de intento (la siguiente solo se lanza si la anterior no resuelve, y a partir de la segunda pagan el cupo de refuerzo): 1. ABIERTA con la fecha ISO → es la que trae "
         },
         {
@@ -67021,7 +67022,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "Date",
-          "linea": 109
+          "linea": 118
         },
         {
           "nombre": "fmt",
@@ -67029,7 +67030,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 112
+          "linea": 121
         },
         {
           "nombre": "sumarDias",
@@ -67037,7 +67038,7 @@
           "exportada": false,
           "params": "iso: string, n: number",
           "retorno": "string",
-          "linea": 115
+          "linea": 124
         },
         {
           "nombre": "diasEntre",
@@ -67045,7 +67046,7 @@
           "exportada": false,
           "params": "desdeIso: string, hastaIso: string",
           "retorno": "number",
-          "linea": 118
+          "linea": 127
         },
         {
           "nombre": "findeDelMes",
@@ -67053,7 +67054,7 @@
           "exportada": true,
           "params": "hoyIso: string, m: number, orden = 0",
           "retorno": "string",
-          "linea": 141,
+          "linea": 150,
           "resumen": "Fecha de muestra nº `orden` del mes a `m` meses vista. `orden` 0 = primer VIERNES (el que se ha barrido siempre; se mantiene para no mover la serie histórica). 🚨 POR QUÉ HAY MÁS DE UNA (01/08/2026, c"
         },
         {
@@ -67062,7 +67063,7 @@
           "exportada": true,
           "params": "eventos: EventoFecha[], factorMinimo = 1.15",
           "retorno": "EventoFecha[]",
-          "linea": 160,
+          "linea": 169,
           "resumen": "Agrupa fechas de evento CONTIGUAS en bloques y devuelve, de cada bloque, la de mayor factor (empate → la primera). La Feria entera gasta una sola ventana."
         },
         {
@@ -67071,13 +67072,13 @@
           "exportada": true,
           "params": "hoyIso: string, eventos: EventoFecha[], opts: VentanasOpts = {},",
           "retorno": "Ventana[]",
-          "linea": 189,
+          "linea": 201,
           "resumen": "Ventanas a barrer en una pasada. La base mensual va SIEMPRE (es la línea de temporada); las de evento se añaden por cercanía hasta el tope, sin repetir una fecha que ya cubre la base."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "116d2348de69"
+      "hash": "2b2b3aaaf17c"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pilot-track.ts",
@@ -67239,7 +67240,8 @@
         "decidirEventoNoCatalogado",
         "decidirPrecioPorPlaza",
         "factorAforo",
-        "decidirCompsDeOtroAforo"
+        "decidirCompsDeOtroAforo",
+        "decidirEventoACiegas"
       ],
       "funciones": [
         {
@@ -67293,11 +67295,19 @@
           "retorno": "Veredicto",
           "linea": 244,
           "resumen": "⚠️ EL UMBRAL ES HOLGADO A PROPÓSITO (1,35). Con 1,25 saltaría también Luxury Busto, que son 5 plazas medidas con comps de 4 (factor 1,28): esa diferencia de UNA plaza es ruido de cómo cada anfitrión c"
+        },
+        {
+          "nombre": "decidirEventoACiegas",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: EventoACiegasInput, o: EventoACiegasOpts = {},",
+          "retorno": "VeredictoCongelacion",
+          "linea": 334
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "53f220a5dc2d"
+      "hash": "d97d7fbaea59"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-demanda.ts",
@@ -91977,6 +91987,6 @@
   ],
   "resumen": {
     "archivos": 2453,
-    "funciones": 6657
+    "funciones": 6658
   }
 }
