@@ -262,6 +262,18 @@
 - Causa del error, para no repetirla: se comprobó `apps/sivra` y se afirmó una ausencia **global**. Comprobar
   donde el dato viviría si existiera; si no aparece, escribir «no lo he encontrado», nunca «no existe».
 
+### 🧊 (13/08/2026) Guarda «evento a ciegas»: una noche de evento confirmado sin mercado fiable NO baja
+- Primera pasada real del verificador: 6 noches de la Bienal confirmadas solas (0,072€, 0 fallos, 0
+  descartes indebidos)… y el motor las siguió bajando −20%/día hacia el ancla global — esas fechas
+  tienen 0 comps fiables y el «no sé nada de esta noche» moría en `evaluado:false` sin oyente.
+- **Decisión DELEGADA a Fable 5 por Alberto** («que el analice todo y tome la decisión»): congelar la
+  bajada (subir sí) mientras la fecha no tenga ≥3 comps fiables; descongelado automático al medirse.
+  Dato que decidió: la única noche de evento de sept. medida (26-sep) da p50 264€ vs ~104€ el mes.
+- `decidirEventoACiegas` (centinela #5, puro) + guarda en `apply` (solo confirmados; generaliza la de
+  Karol G a factor ≥1,15 y por FECHA) + cola de Booking prioriza evento confirmado sin medir + aviso
+  🧊 agrupado con dedupe 7d (tabla `pricing_avisos`, migración aplicada). NO se bajó el umbral de
+  `evento_sin_respaldo` (ruido). Los `descartado` ya no gastan ventanas del plan de barrido.
+
 ### 🔍 (12/08/2026) Los eventos PREVISTOS se verifican y deciden SOLOS (PR #1386)
 - Alberto, ante el aviso 🔮 con 3 fechas de Mangafest: «esto tiene q ser automático, yo no sé de esta
   información». **Retirado ese Telegram**; decide el cron nuevo `/api/sivra/eventos/verificar` (05:30 UTC).

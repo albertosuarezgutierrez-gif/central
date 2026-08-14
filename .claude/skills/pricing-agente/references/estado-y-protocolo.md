@@ -2,6 +2,19 @@
 
 ## Estado vivo (13/07/2026) — leer al empezar el ciclo
 
+### Actualización 13/08/2026 — guarda 🧊 «evento a ciegas» (decisión delegada a Fable 5)
+- **Una noche de evento CONFIRMADO (factor ≥1,15) sin ≥3 comps fiables de SU fecha no se baja**
+  (subir sí). Caso fundacional: el verificador confirmó la Bienal a las 05:31 y a las 08:30 el motor
+  la seguía hundiendo −20%/día hacia el ancla global (0 comps fiables en esas 5 noches). Centinela
+  `decidirEventoACiegas` (pricing-centinelas.ts #5) + guarda en `apply` junto a la de Karol G (que
+  se mantiene). Solo confirmados: un previsto es una apuesta y no congela.
+- **Descongelado automático**: al medir la fecha (rutina Booking) la condición deja de cumplirse y
+  el raíl −20%/día deshace lo que estuviera inflado. La cola del plan (`mercado-cobertura.ts`)
+  prioriza el evento confirmado sin medir POR DELANTE de la ronda base (solo entre vírgenes).
+- Aviso 🧊 agrupado por pasada con dedupe 7d por (piso,fecha) — tabla `pricing_avisos` (aplicada).
+- NO se bajó `factorMinimo` de `evento_sin_respaldo` (2,0): con factores 1,15-1,5 la señal es
+  indistinguible del premio de finde → falsas alarmas crónicas. El hueco lo cubre el #5.
+
 ### Actualización 12/08/2026 — los previstos ya NO esperan a Alberto (verificación automática)
 - **Alberto no confirma eventos.** Su respuesta al aviso 🔮 de previstos fue «esto tiene q ser
   automático, yo no sé de esta información». Ese Telegram **se retiró**; ahora decide el cron

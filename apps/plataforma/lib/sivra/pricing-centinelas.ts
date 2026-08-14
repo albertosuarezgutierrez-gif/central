@@ -291,3 +291,71 @@ export function decidirCompsDeOtroAforo(
       `Lanza un barrido del aforo correcto antes de mover el precio con este dato.`,
   }
 }
+
+// ─── 5. Evento CONFIRMADO que se tarifica A CIEGAS ───────────────────────────────────────────
+// Nace del caso Bienal 2026 (13/08/2026): el verificador confirmó 6 noches (×1,25) a las 05:31 y a
+// las 08:30 el motor las siguió BAJANDO −20%/día hacia el ancla global — porque esas fechas tenían
+// CERO comparables fiables y ningún centinela recogía ese estado. `decidirEventoSinRespaldo` (el
+// #1) no cubría el hueco por partida doble: exige factor ≥2 (la Bienal es 1,25) y con pocos comps
+// devuelve `evaluado:false`… que nadie escuchaba. El «no sé nada de esta noche» moría en silencio,
+// que es exactamente la clase de fallo que la regla de la casa prohíbe.
+//
+// Decisión (Fable, 13/08/2026, delegada por Alberto): mientras una noche de evento CONFIRMADO no
+// tenga mercado fiable propio, el motor NO puede bajarla (subir sí). La asimetría es la de siempre
+// («siempre hay tiempo de ir bajando»): si el precio congelado venía inflado, la medición llega en
+// 1-2 días (la cola de Booking prioriza estas fechas) y el raíl −20%/día lo deshace en 2-3 pasadas;
+// si NO estaba inflado y se hubiera dejado caer, la Bienal se vende a precio de martes — Karol G
+// otra vez. Dato que decidió: la única noche de evento de sept. medida de verdad (26-sep) da p50
+// 264€ contra ~104€ la línea fiable del mes, así que «312€» no era un precio absurdo de proteger.
+//
+// Solo eventos CONFIRMADOS congelan: un previsto es una apuesta y su premio ya va ponderado — darle
+// también el freno de bajada sería tratar un rumor como un hecho. El descongelado es automático y
+// sin estado: en cuanto la fecha tenga comps fiables suficientes, la condición deja de cumplirse.
+
+export type EventoACiegasInput = {
+  /** factor de evento CONFIRMADO que aplicaría el motor (calendario + tabla, solo confirmados) */
+  factorEvento: number
+  /** comps FIABLES (`booking_mcp`/`manual`, sin clonados) de ESA fecha para ese piso */
+  compsFiablesFecha: number
+}
+
+export type EventoACiegasOpts = {
+  /** desde aquí una fecha cuenta como evento (mismo umbral que el resto del motor) */
+  factorMinimo?: number
+  /** con estos comps fiables o más, la fecha está MEDIDA y no hay nada que congelar */
+  minCompsFiables?: number
+}
+
+export type VeredictoCongelacion = Veredicto & {
+  /** true = el motor no debe BAJAR el precio de esta fecha en esta pasada */
+  congelar: boolean
+}
+
+export function decidirEventoACiegas(
+  i: EventoACiegasInput,
+  o: EventoACiegasOpts = {},
+): VeredictoCongelacion {
+  const factorMinimo = o.factorMinimo ?? 1.15
+  const minComps = o.minCompsFiables ?? 3
+
+  if (!(i.factorEvento >= factorMinimo)) {
+    return { congelar: false, ...NO_EVALUADO(`sin evento confirmado (factor ${i.factorEvento})`) }
+  }
+  if (i.compsFiablesFecha >= minComps) {
+    return {
+      congelar: false,
+      alerta: false,
+      evaluado: true,
+      motivo: `evento confirmado con ${i.compsFiablesFecha} comps fiables de su fecha: el mercado manda`,
+    }
+  }
+  return {
+    congelar: true,
+    alerta: true,
+    evaluado: true,
+    motivo:
+      `evento CONFIRMADO (x${i.factorEvento}) con ${i.compsFiablesFecha} comps fiables de su fecha ` +
+      `(mínimo ${minComps}): tarificarla a ciegas hacia el ancla global es malvenderla. ` +
+      `No se baja hasta que la rutina de Booking mida la fecha.`,
+  }
+}

@@ -3,7 +3,8 @@ import { getSession } from "@/lib/session"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
 import { eventFactor, seasonalFloorFactor, PRICING_HORIZON_DAYS, EVENTS } from "@/lib/pricing-calendar"
-import { combinarEventosDeFecha, type EventoBruto } from "@/lib/sivra/eventos-estado"
+import { combinarEventosDeFecha, normalizarEstado, type EventoBruto } from "@/lib/sivra/eventos-estado"
+import { decidirEventoACiegas } from "@/lib/sivra/pricing-centinelas"
 import { factorLastMinute } from "@/lib/sivra/pricing-lastminute"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { anclaMercadoFecha } from "@/lib/sivra/pricing-ancla-fecha"
@@ -195,10 +196,16 @@ export async function POST(req: NextRequest) {
     lista.push({ estado: r.estado, factor: Number(r.factor), confianza: r.confianza })
     porFecha.set(r.rate_date, lista)
   }
-  /** factor que puede mover el PRECIO: solo eventos confirmados */
+  /** factor que puede mover el PRECIO: confirmados + previstos LEJANOS ponderados (v2) */
   const autoEv = new Map<string, number>()
   /** factor que protege el SUELO: confirmados + la parte prudente de los previstos */
   const autoEvSuelo = new Map<string, number>()
+  /**
+   * factor SOLO de eventos CONFIRMADOS de la tabla. `autoEv` no sirve para la guarda de
+   * congelación: mezcla confirmados con previstos lejanos ponderados, y un previsto es una
+   * apuesta — congelarle la bajada sería tratar un rumor como un hecho (decisión Fable 13/08/2026).
+   */
+  const autoEvConfirmado = new Map<string, number>()
   for (const [fecha, lista] of porFecha) {
     // Los previstos LEJANOS suben el precio ponderado por confianza (v2, decisión de Alberto
     // 09/08/2026); cerca de la fecha vuelven a solo-suelo. El contexto de distancia va aquí.
@@ -206,6 +213,10 @@ export async function POST(req: NextRequest) {
     const ef = combinarEventosDeFecha(lista, { diasVista })
     if (ef.factorPrecio > 1) autoEv.set(fecha, ef.factorPrecio)
     if (ef.factorSuelo > 1) autoEvSuelo.set(fecha, ef.factorSuelo)
+    const confirmado = Math.max(1, ...lista
+      .filter(e => normalizarEstado(e.estado) === 'confirmado')
+      .map(e => Number(e.factor) || 1))
+    if (confirmado > 1) autoEvConfirmado.set(fecha, confirmado)
   }
 
   // Señal de demanda por vuelos a SVQ (Fase 3). Solo influye si flight_demand_k>0 por piso.
@@ -440,7 +451,13 @@ export async function POST(req: NextRequest) {
     GROUP BY r.scenario, r.checkin_date, s.target_pctl
   `).catch(() => [])
   const fecha = new Map<string, Map<string, { med: number; n: number; fuente: 'fiable' | 'mixto' }>>()
+  // Comps FIABLES crudos por piso×fecha, para la guarda de congelación. Va aparte del mapa `fecha`
+  // porque ese descarta filas vía `elegirBucket` — y para la guarda un «0 comps fiables» es
+  // precisamente el dato, no una fila que se pueda tirar. Una fecha SIN fila aquí es 0.
+  const fiablesFecha = new Map<string, Map<string, number>>()
   for (const f of fechaRows) {
+    if (!fiablesFecha.has(f.property_id)) fiablesFecha.set(f.property_id, new Map())
+    fiablesFecha.get(f.property_id)!.set(f.rate_date, Number(f.n_fiable) || 0)
     if (!fecha.has(f.property_id)) fecha.set(f.property_id, new Map())
     // Misma regla que en el mes, con el umbral de este bucket y sin exigir fechas distintas.
     const el = elegirBucket(
@@ -520,6 +537,8 @@ export async function POST(req: NextRequest) {
   `).catch(() => [])
   const plPrice = new Map(plRows.map(x => [`${x.pid}|${x.rate_date}`, Number(x.pl)]))
   const plAvisos: string[] = []
+  /** congelaciones de TODOS los pisos, para el aviso agrupado (una pasada = un mensaje como mucho) */
+  const congeladasGlobal: { property: string; fecha: string; precio: number; factor: number }[] = []
 
   // ⏱️ Raíl por DÍA de verdad (fix auditoría 18/07/2026): `max_change_pct` está documentado como
   // tope "±/día", pero anclado al precio de la PASADA anterior con 3 crons/día era ±73%/día real
@@ -587,6 +606,9 @@ export async function POST(req: NextRequest) {
       rate_date: string; old_price: number | null; new_price: number
       demanda_fuente: DemandaFechaResult["fuente"]; demanda_gateada: boolean
     }[] = []
+    // Fechas que la guarda «evento a ciegas» dejó sin bajar en esta pasada (van a la respuesta y
+    // al aviso agrupado del final — una congelación muda sería un precio que nadie explica).
+    const congeladas: { fecha: string; precio: number; factor: number }[] = []
     const cur = new Date(today)
     let dayIndex = -1
     while (cur <= end) {
@@ -791,6 +813,26 @@ export async function POST(req: NextRequest) {
       // Excepción: si el techo del propietario (max_price) exige bajar, manda el techo.
       if (evFactor >= 2 && !useMonth && old != null && target < old
           && (r.max_price == null || old <= r.max_price)) continue
+      // 🧊 Guarda «evento a ciegas» (caso Bienal, 13/08/2026 — decisión Fable delegada por
+      // Alberto): generaliza la de Karol G por FECHA en vez de por mes y desde factor 1,15. Un
+      // evento CONFIRMADO cuya fecha no tiene comps fiables propios NO se baja: el ancla global
+      // (dominada por fechas cercanas baratas) hundió la Bienal −20%/día tres horas DESPUÉS de
+      // confirmarla. Subir sí puede (eventTarget/ancla siguen mandando); el descongelado es
+      // automático — en cuanto la rutina de Booking mida la fecha, la condición deja de cumplirse
+      // y el raíl deshace en 2-3 pasadas lo que estuviera inflado. Solo confirmados: los previstos
+      // son apuestas y su premio ya va ponderado. `max_price` manda si obligara a bajar (hoy NULL).
+      if (r.events_enabled && old != null && target < old
+          && (r.max_price == null || old <= r.max_price)) {
+        const evConfirmado = Math.max(eventFactor(date), autoEvConfirmado.get(date) ?? 1)
+        const ciegas = decidirEventoACiegas({
+          factorEvento: evConfirmado,
+          compsFiablesFecha: fiablesFecha.get(r.property_id)?.get(date) ?? 0,
+        })
+        if (ciegas.congelar) {
+          congeladas.push({ fecha: date, precio: old, factor: evConfirmado })
+          continue
+        }
+      }
       // Idea #2 — guarda de outlier por precio ACTUAL (funciona SIN PriceLabs, es la red para
       // cuando PL se cancele): si el precio de hoy supera en +40% la base normal del mes/global,
       // esa noche es especial (un puente/evento que el bucket del mes no ve). Lejos de la fecha
@@ -889,7 +931,45 @@ export async function POST(req: NextRequest) {
         ),
       },
       dates_con_cambio: ops.length, written, sample: audit.slice(0, 3),
+      // Fechas de evento confirmado que NO se bajaron por falta de mercado fiable propio. Van en la
+      // respuesta a propósito: un precio congelado que no se declara es indistinguible de uno olvidado.
+      congeladas,
     })
+    for (const c of congeladas) congeladasGlobal.push({ property: r.property_id, ...c })
+  }
+
+  // 🧊 Aviso AGRUPADO de las fechas congeladas por «evento a ciegas», con dedupe de 7 días por
+  // (piso, fecha) en la tabla `pricing_avisos` (2026-08-13_pricing_avisos.sql). El motor corre 3
+  // veces al día y la congelación persiste hasta que la fecha se mida: sin dedupe serían 21
+  // mensajes/semana por fecha y el canal acabaría ignorado (lección del guardián, 19/07). Es
+  // informativo — la acción ya está tomada (no bajar) y la medición ya está pedida (cola de
+  // Booking priorizada); no se le pide nada a Alberto.
+  if (!dryRun && congeladasGlobal.length > 0) {
+    try {
+      const claves = congeladasGlobal.map(c =>
+        Prisma.sql`(${`congelada:${c.property}:${c.fecha}`}, now())`)
+      // INSERT … ON CONFLICT DO NOTHING + RETURNING: solo las claves NUEVAS (o caducadas y
+      // purgadas) generan aviso. La purga de >7 días va delante para que una congelación LARGA
+      // se recuerde una vez por semana, no una vez en la vida.
+      await prisma.$executeRaw(Prisma.sql`
+        DELETE FROM pricing_avisos WHERE enviado_at < now() - interval '7 days'`)
+      const nuevas = await prisma.$queryRaw<{ clave: string }[]>(Prisma.sql`
+        INSERT INTO pricing_avisos (clave, enviado_at) VALUES ${Prisma.join(claves)}
+        ON CONFLICT (clave) DO NOTHING RETURNING clave`)
+      if (nuevas.length > 0) {
+        const nuevasSet = new Set(nuevas.map(n => n.clave))
+        const lineas = congeladasGlobal
+          .filter(c => nuevasSet.has(`congelada:${c.property}:${c.fecha}`))
+          .slice(0, 10)
+          .map(c => `• ${c.property.replace("prop_", "")} ${c.fecha}: ${eur(c.precio)} (evento x${c.factor})`)
+        await tgSend(
+          `🧊 *Pricing: ${nuevas.length} noche(s) de evento congeladas (sin mercado fiable)*\n\n` +
+          lineas.join("\n") +
+          (nuevas.length > 10 ? `\n… y ${nuevas.length - 10} más` : "") +
+          `\n\n_No bajan hasta que Booking mida esas fechas (ya priorizadas en la cola). Subir sí pueden._`,
+        )
+      }
+    } catch { /* best-effort: la congelación en sí ya está aplicada y declarada en la respuesta */ }
   }
 
   if (plAvisos.length > 0) {
