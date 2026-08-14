@@ -278,6 +278,13 @@ export function detalleIngesta(r: {
   sinRespuesta: number
   sinPrecio: number
   errores: string[]
+  /**
+   * Anuncios NUESTROS que el portal devolvió y se descartaron (ver `mercado-propios.ts`). Se
+   * declara aunque sea un descarte correcto: un comparable que desaparece sin decirlo es
+   * indistinguible de uno que el conector nunca trajo. Opcional por compatibilidad — una pasada
+   * que no lo mide no debe inventar un 0.
+   */
+  propios?: number
 }): string {
   const partes = [`${r.comps} comps reales en ${r.ventanas} ventanas`]
   if (r.sinRespuesta) {
@@ -286,6 +293,9 @@ export function detalleIngesta(r: {
     )
   }
   if (r.sinPrecio) partes.push(`${r.sinPrecio} sin precio utilizable (respondió, no traía cifra)`)
+  if (r.propios) {
+    partes.push(`🪞 ${r.propios} anuncio(s) propio(s) descartado(s) (no son mercado)`)
+  }
   if (r.errores.length) partes.push(`${r.errores.length} fallos: ${r.errores[0]}`)
   return partes.join(' · ')
 }

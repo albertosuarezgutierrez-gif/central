@@ -29,6 +29,18 @@ rutina y no un `CRON_JOBS`.
   error de unidad que costó el radar de trading (PR #1189).
 - **Escribe SIEMPRE con `fuente: "booking_mcp"`.** Es lo único que distingue tu medición real de un
   precio de anuncio scrapeado (los dos llegan con `portal: "booking"`).
+- **🪞 NUESTRO propio anuncio NO es un comparable.** Booking devuelve nuestros pisos entre los
+  resultados (visto el 14/08/2026: «HOUSE SEVILLANA 6 habitaciones» en la ventana de aforo 12).
+  Escribirlo es comparar el piso consigo mismo: el ancla de mercado pasa a contener el precio que el
+  propio motor acaba de poner y el sistema se realimenta en silencio — el `fuente:"booking_mcp"` no
+  te protege, porque el precio es real y de la fecha correcta; lo que está mal es de QUIÉN es.
+  Descártalo y **dilo en el parte** (cuántos y cuáles). Desde el 14/08/2026 el endpoint `ingest`
+  también lo filtra (`lib/sivra/mercado-propios.ts`) y devuelve `propios[]`, pero no te apoyes solo
+  en el raíl: su lista es curada y solo conoce los anuncios ya vistos. Si aparece uno nuestro que no
+  esté en ella, descártalo tú y déjalo anotado para añadirlo.
+  ⚠️ **No confundas con la competencia de la misma calle:** dos de nuestros pisos están en Bustos
+  Tavera y ahí hay comparables legítimos ajenos («Monkeys Apartments Casa Palacio Bustos Tavera»,
+  «Bustos Tavera Suite»). Se descarta por el NOMBRE del anuncio, nunca por la calle.
 - **NO inventes comparables ni rellenes huecos.** Si una ventana no devuelve nada, cuéntala como
   `sinRespuesta` y sigue: «el conector no contestó» NO es «no hay mercado». Esa distinción es el
   motivo de que exista esta rutina.
@@ -75,7 +87,8 @@ De cada alojamiento quédate con: `name`, `price.book`, `rating.review_score`,
 `rating.number_of_reviews`, `location.district_name`. **Ignora la lista de `facilities`** (es enorme
 y no aporta nada al pricing).
 
-`price_night = round(price.book / noches)`. Descarta el alojamiento si no trae precio.
+`price_night = round(price.book / noches)`. Descarta el alojamiento si no trae precio, y descarta
+también **nuestros propios anuncios** (ver «No romper»): con aforos grandes salen entre los resultados.
 
 ### 3. Escribe los comparables
 Una llamada por ventana **y por piso** (los pisos del aforo comparten los mismos comps):
@@ -98,7 +111,7 @@ Authorization: Bearer {ALERTA_TOKEN}
 ```
 `ok = true` **solo si** escribiste comps y **menos de la mitad** de las ventanas se quedaron sin
 respuesta. El `detalle` dice, en este orden: comps escritos y ventanas medidas · ⚠️ ventanas sin
-respuesta del conector · sin precio utilizable · fallos. Ejemplo:
+respuesta del conector · sin precio utilizable · 🪞 anuncios propios descartados · fallos. Ejemplo:
 `«38 comps reales en 12 ventanas · ⚠️ 2 ventanas sin respuesta del conector (NO es «no hay mercado»:
 no se ha podido mirar)»`.
 Si algo revienta a mitad, **manda el latido con `ok:false` antes de rendirte**: un agente sin huella
