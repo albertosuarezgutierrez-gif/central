@@ -272,6 +272,17 @@
   promociona/pisa un tipo ya reconocible. De regalo: Ticketmaster mandaba 'deportes' (plural) sin
   casar el regex. 6 tests nuevos (14/14).
 
+### 🧊 (14/08/2026) Fix: el colapso por bloques dejaba noches congeladas SIN MEDIR nunca
+- Verificación 100% de la primera pasada real del #1409: la prioridad de cola FUNCIONÓ (Booking midió
+  primero los eventos confirmados vírgenes 20-sep y 11-oct)… y eso destapó el hueco: el plan colapsa
+  un bloque contiguo en UNA ventana (la de mayor factor), pero la congelación es POR FECHA — medido el
+  20-sep (Barcelona), el bloque dejó de estar virgen y el 18/19-sep (Bienal) quedaban congelados para
+  siempre sin comps propios.
+- Fix: `ventanasDeConfirmadosPorFecha` (puro) — el plan de BOOKING añade una ventana por cada fecha
+  confirmada ≥1,15 sin colapsar (solo candidatas; el tope 12/pasada acota el coste). El sweep de
+  Serper mantiene el colapso (paga por búsqueda y su corpus no descongela). Ensayado con datos reales:
+  la próxima pasada dedica 12/12 huecos a noches congeladas (16-ago, 09/10-sep…).
+
 ### 🧊 (13/08/2026) Guarda «evento a ciegas»: una noche de evento confirmado sin mercado fiable NO baja
 - Primera pasada real del verificador: 6 noches de la Bienal confirmadas solas (0,072€, 0 fallos, 0
   descartes indebidos)… y el motor las siguió bajando −20%/día hacia el ancla global — esas fechas
