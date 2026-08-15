@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-15T13:44:17Z",
+  "generadoEn": "2026-08-15T14:15:45Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3553,6 +3553,7 @@
       "/api/cron/procesar-documentos",
       "/api/dashboard",
       "/api/empresas/register",
+      "/api/interno/actividad",
       "/api/l/auth",
       "/api/l/auto-sessions",
       "/api/l/chat",
@@ -3635,6 +3636,7 @@
       "/api/partidas"
     ],
     "plataforma": [
+      "/api/admin/actividad",
       "/api/admin/clientes",
       "/api/admin/clientes/[vertical]/[id]",
       "/api/admin/clientes/[vertical]/[id]/modulos",
@@ -4219,6 +4221,7 @@
       "protocolo_items",
       "protocolos",
       "recordatorios_impagos",
+      "registro_actividad",
       "repartidor_checklist_plantillas",
       "repartidor_parada_items",
       "sociedades",
@@ -4988,7 +4991,7 @@
     "packages": 37,
     "capacidades": 23,
     "skills": 32,
-    "apis": 1162,
+    "apis": 1164,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

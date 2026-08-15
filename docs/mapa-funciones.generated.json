@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-15T13:44:17Z",
-  "sha": "b30e46f1abbd9353faea75b8d064b8eaf01e352c",
+  "generadoEn": "2026-08-15T14:15:45Z",
+  "sha": "bcee14919989e3d830a80f94affaca95ae7efed3",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -37744,7 +37744,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 9
+          "linea": 10
         }
       ],
       "tablas": [
@@ -37754,7 +37754,7 @@
         "usuarios_empresa"
       ],
       "rutaApi": "/api/auth/login-usuario",
-      "hash": "16e3a98cc17a"
+      "hash": "ed7a520e5dc0"
     },
     {
       "ruta": "apps/ialimp/app/api/auth/login/route.ts",
@@ -37769,7 +37769,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 9
+          "linea": 10
         }
       ],
       "tablas": [
@@ -37777,7 +37777,7 @@
         "next"
       ],
       "rutaApi": "/api/auth/login",
-      "hash": "8f016f1bf8e7"
+      "hash": "6c3e96aa98ff"
     },
     {
       "ruta": "apps/ialimp/app/api/auth/logout/route.ts",
@@ -38023,6 +38023,31 @@
       "hash": "72afaeeaa39d"
     },
     {
+      "ruta": "apps/ialimp/app/api/interno/actividad/route.ts",
+      "ambito": "apps/ialimp",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 13
+        }
+      ],
+      "tablas": [
+        "limpiadora_sessions",
+        "limpiadoras",
+        "next",
+        "registro_actividad"
+      ],
+      "rutaApi": "/api/interno/actividad",
+      "hash": "930204dd0601"
+    },
+    {
       "ruta": "apps/ialimp/app/api/l/auth/route.ts",
       "ambito": "apps/ialimp",
       "exporta": [
@@ -38035,9 +38060,9 @@
           "nombre": "crearSesionResponse",
           "kind": "function",
           "exportada": false,
-          "params": "limp: any",
+          "params": "limp: any, meta?: { ip: string | null; ua: string | null; via: string }",
           "retorno": null,
-          "linea": 13,
+          "linea": 14,
           "resumen": "Crea la sesión de la limpiadora y devuelve la respuesta con cookies. Sesión ÚNICA: borra cualquier sesión previa de esa limpiadora (un asiento = un dispositivo a la vez). Además fija `limpiadora_empre"
         },
         {
@@ -38046,7 +38071,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 33
+          "linea": 40
         },
         {
           "nombre": "GET",
@@ -38054,7 +38079,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 116
+          "linea": 123
         },
         {
           "nombre": "DELETE",
@@ -38062,7 +38087,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 137
+          "linea": 144
         }
       ],
       "tablas": [
@@ -38073,7 +38098,7 @@
         "usuarios_empresa"
       ],
       "rutaApi": "/api/l/auth",
-      "hash": "02f823a82f43"
+      "hash": "07be7ff8ee26"
     },
     {
       "ruta": "apps/ialimp/app/api/l/auto-sessions/route.ts",
@@ -39737,7 +39762,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 11
+          "linea": 12
         }
       ],
       "tablas": [
@@ -39745,7 +39770,7 @@
         "next"
       ],
       "rutaApi": "/api/propietario/auth/login",
-      "hash": "eccbf5673e7a"
+      "hash": "379c257ff493"
     },
     {
       "ruta": "apps/ialimp/app/api/propietario/auth/logout/route.ts",
@@ -42426,6 +42451,47 @@
       "hash": "565e0b8fadd0"
     },
     {
+      "ruta": "apps/ialimp/lib/actividad.ts",
+      "ambito": "apps/ialimp",
+      "exporta": [
+        "registrarActividad",
+        "ipDe",
+        "uaDe"
+      ],
+      "funciones": [
+        {
+          "nombre": "registrarActividad",
+          "kind": "function",
+          "exportada": true,
+          "params": "ev: EventoActividad",
+          "retorno": "Promise<void>",
+          "linea": 23,
+          "resumen": "Best-effort: el historial nunca puede romper la petición que lo origina."
+        },
+        {
+          "nombre": "ipDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": "string | null",
+          "linea": 38
+        },
+        {
+          "nombre": "uaDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": "string | null",
+          "linea": 42
+        }
+      ],
+      "tablas": [
+        "registro_actividad"
+      ],
+      "rutaApi": null,
+      "hash": "dc1ada56d73a"
+    },
+    {
       "ruta": "apps/ialimp/lib/ai-client.ts",
       "ambito": "apps/ialimp",
       "resumen": "Cliente IA para ialimp — enruta por la PASARELA central (plataforma): las keys de proveedor y el control de coste/uso viven en plataforma. Si la pasarela no está configurada, usa NVIDIA NIM directo (fallback de transición). Envs: AI_GATEWAY_URL + AI_GATEWAY_SECRET (= los de plataforma).",
@@ -43785,17 +43851,25 @@
       ],
       "funciones": [
         {
+          "nombre": "logActividad",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest, event: NextFetchEvent, actor?: { tipo: string; id: string | null; empresa_id: string | null; nombre: string | null },",
+          "retorno": null,
+          "linea": 13
+        },
+        {
           "nombre": "middleware",
           "kind": "function",
           "exportada": true,
-          "params": "req: NextRequest",
+          "params": "req: NextRequest, event: NextFetchEvent",
           "retorno": null,
-          "linea": 41
+          "linea": 85
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "609c7a3de7c2"
+      "hash": "36928a388be7"
     },
     {
       "ruta": "apps/ialimp/scripts/fetch-fonts.mjs",
@@ -46634,6 +46708,56 @@
       "hash": "17089b2b608f"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/operador/actividad/ActividadClient.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "ActividadClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "fmtFecha",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string | null",
+          "retorno": "string",
+          "linea": 9
+        },
+        {
+          "nombre": "ActividadClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ actores, desde, total, empresas }: { actores: ActorResumen[] desde: string | null total: number empresas: Array<{ id: string; nombre: string }> }",
+          "retorno": null,
+          "linea": 16
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "506a0f7ade77"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/operador/actividad/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "OperadorActividadPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "OperadorActividadPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6bb44cbe4e06"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/operador/agentes/page.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -49069,12 +49193,12 @@
           "exportada": true,
           "params": "{ email, nombre, isOperator, operadorRol, rol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string; rol?: string | null }",
           "retorno": null,
-          "linea": 68
+          "linea": 69
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "767cc638cf9b"
+      "hash": "3f01656103d3"
     },
     {
       "ruta": "apps/plataforma/app/admin/MapaArquitectura.tsx",
@@ -49362,6 +49486,30 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "e9d8a638f662"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/admin/actividad/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 12
+        }
+      ],
+      "tablas": [
+        "empresas",
+        "next",
+        "registro_actividad"
+      ],
+      "rutaApi": "/api/admin/actividad",
+      "hash": "246d00a821d2"
     },
     {
       "ruta": "apps/plataforma/app/api/admin/clientes/[vertical]/[id]/modulos/route.ts",
@@ -57495,6 +57643,29 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "ac240fae6bb8"
+    },
+    {
+      "ruta": "apps/plataforma/lib/actividad-ialimp.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "getResumenActividad"
+      ],
+      "funciones": [
+        {
+          "nombre": "getResumenActividad",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 34
+        }
+      ],
+      "tablas": [
+        "empresas",
+        "registro_actividad"
+      ],
+      "rutaApi": null,
+      "hash": "3bb26b38eb72"
     },
     {
       "ruta": "apps/plataforma/lib/adapters/ialimp.ts",
@@ -92210,7 +92381,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2459,
-    "funciones": 6673
+    "archivos": 2465,
+    "funciones": 6683
   }
 }
