@@ -15,6 +15,12 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-15 · pricing-agente (reparación a demanda de Alberto)** · hizo: destapó que la curva
+  «PL» congelada por #1416 era el propio motor (la migración re-etiquetó `captured_at` sin restaurar
+  precios) → reconstruyó `pricing_pl_referencia` (Busto/Luxury fuera, Dúplex/House con el snapshot
+  limpio del 08/08), cota de cordura del suelo vs ancla de fecha (`pricing-suelo-pl.ts`), y descartó
+  el Sevilla-Rayo fantasma del 16/08; dudas: —; fallos: el propio #1416 (congeló valores contaminados
+  — al congelar una referencia, verificar VALORES contra la fuente real, no solo la fecha); PR: draft de esta rama.
 - **2026-08-15 · mercado-booking** · hizo: pasada de 12 ventanas (plan `?max=12`, sin filtro —
   las 12 candidatas eran `sin_medir_nunca`, todas ronda 1/evento: Bienal de Flamenco 11/12/14-sep,
   las 4 propiedades por aforo 12/5/4/2). 110 comparables reales escritos en `market_rates`

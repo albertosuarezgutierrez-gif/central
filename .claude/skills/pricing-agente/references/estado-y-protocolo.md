@@ -2,6 +2,21 @@
 
 ## Estado vivo (13/07/2026) — leer al empezar el ciclo
 
+### Actualización 15/08/2026 — la curva PL «congelada» era el PROPIO motor; reconstruida + cota de cordura
+- **La congelación del #1416 re-etiquetó `captured_at='2026-08-10'` SIN restaurar los precios**: el upsert
+  autorreferente corrió hasta el despliegue, así que `pricing_pl_referencia` guardaba el sawtooth del motor
+  (capturas 11-14/08) y el suelo 85% retenía la noche del 15/08 a 359€ (Busto, 2 plazas) con la mediana
+  fiable de SU fecha en 77€ — y toda la curva hasta ago-2027 blindada a −15% del propio motor.
+- **Reconstruida** (`2026-08-15_pl_referencia_reconstruida.sql`, aplicada): Busto/Luxury BORRADOS de la tabla
+  (motor en vivo desde 10/06 y 13/07 — la tabla, nacida el 18/07, nunca tuvo PL genuino suyo); Dúplex/House
+  repuestos con el snapshot del 08/08 07:00 UTC (última foto pre-motor; el suelo caduca el **06/12/2026**).
+- **Cota de cordura en `apply`** (`lib/sivra/pricing-suelo-pl.ts`, puro+test; campo `pl_suelo_acotadas` en la
+  respuesta): con ancla FIABLE de la fecha, el suelo PL se acota a ×1,2 el ancla. Una noche especial sin comps
+  sigue protegida (punto ciego original); una referencia estática ya no puede desmentir al mercado medido.
+- **Sevilla-Rayo estaba confirmado en 15 Y 16/08** (websearch, sin evidencia): el partido es el sáb 15
+  (verificado, web oficial) → fila del 16 `descartado`+`decidido_por='alberto'`. `price_pricelabs` del
+  snapshot NO se corta: es «precio vivo en Smoobu» (documentado en su route) y lo consumen guard/pilot-track.
+
 ### Actualización 14/08/2026 — suelo PL congelado + partidos a domicilio (PR #1416)
 - **El suelo PriceLabs era autorreferente:** `pricing/apply` re-capturaba `pricing_pl_referencia`
   a diario desde `rate_snapshots` — que desde la baja de PL refleja los precios del PROPIO motor —

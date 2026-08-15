@@ -32,6 +32,16 @@
 
 ---
 
+### 🧯 (15/08/2026) La curva «PL» congelada era el PROPIO motor: suelo contaminado reteniendo agosto a 2-5× mercado
+- Alberto vio en Smoobu 359/234/414/554€ para la noche del 15/08 (mercado fiable de la fecha: 77/99/113/320€).
+  Causa: la congelación del #1416 re-etiquetó `captured_at` SIN restaurar precios → `pricing_pl_referencia`
+  guardaba el sawtooth del motor (capturas 11-14/08) y el suelo 85% lo blindaba hasta ago-2027.
+- Reconstruida (SQL `2026-08-15_pl_referencia_reconstruida.sql`, aplicada): Busto/Luxury FUERA (motor vivo
+  desde 10/06 y 13/07 — nunca hubo PL genuino en la tabla); Dúplex/House con la foto real del snapshot
+  08/08 07:00 (caduca 06/12/2026). Sevilla-Rayo duplicado 15+16/08 → fila del 16 descartada (partido: sáb 15).
+- Guarda nueva en apply: con ancla fiable de la fecha, el suelo PL se acota a ×1,2 el ancla
+  (`lib/sivra/pricing-suelo-pl.ts`, puro+test). Una referencia estática ya no puede desmentir al mercado medido.
+
 ### 🧊 (15/08/2026) Cierre del bucle de eventos — congelar→medir→mercado manda, verificado en producción
 - Ciclo completo confirmado con datos reales (PRs #1386 verificador, #1409 guarda 🧊, #1414 ventanas por fecha):
   0 bajadas ciegas en noches de evento confirmado desde el 14/08; el apply de las 14:30 descongeló solo
