@@ -39,8 +39,9 @@
   corrida): NAV 32.335,37€ → saldo, 22 símbolos por subagentes (velas a fichero, anti-barajado), /analizar
   (0 vetados, sin compras nuevas) y /puntuar (48 tesis, 0 cerradas, diferido limpio). 3 huellas verificadas.
 - **Limitación:** `fire_trigger`/`update_trigger` rechazan rutinas creadas en la UI, y los triggers MCP no
-  llevan conectores → el reintento automático (doble disparo `15 20,23 * * 1-5` + PASO 0 de huella) solo
-  puede aplicarlo Alberto en la UI. Receta en `docs/RUTINAS-PROGRAMADAS.md`; recuperación en la skill.
+  llevan conectores → el reintento solo podía aplicarse en la UI. **✅ Alberto lo aplicó el mismo día**
+  (Claude Chrome): cron `15 20,23 * * 1-5` + PASO 0 de huella, verificado por MCP (prompt y 4 conectores
+  OK). Estreno real el lunes 17/08 (check-in nocturno armado). Receta en `docs/RUTINAS-PROGRAMADAS.md`.
 
 ### 🔧 (15/08/2026) Los 3 runtime errors diarios de plataforma NO eran «normales» — 2 fixes
 - Al verificar producción tras mergear #1424, Alberto preguntó por los 3 errores de la última hora. Ninguno era del PR, pero dos eran bugs reales sonando a diario desde julio/agosto:
