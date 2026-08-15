@@ -32,6 +32,15 @@
 
 ---
 
+### 👁️ (15/08/2026) Registro de accesos/actividad de ialimp + historial en el god-panel de plataforma
+- Alberto preguntó por el último acceso de Vanessa: no existía rastro (el login de empresa solo tenía el
+  flag `sesion_activa`, sin fecha). Decisión: historial completo (logins + páginas + acciones) en SU panel.
+- Tabla compartida `registro_actividad` (aplicada; ialimp escribe, `prisma_plataforma` lee) + columna
+  `empresas.ultimo_acceso`. Captura: 4 logins + middleware de ialimp fire-and-forget → `/api/interno/actividad`
+  (Bearer CRON_SECRET). Superadmin excluido; purga 90 días; regla NULL declarada en la UI (tabla nace vacía).
+- Plataforma: `/operador/actividad` (último acceso por persona + historial filtrable 50+Ver más).
+- Spec en `docs/superpowers/specs/2026-08-15-registro-actividad-design.md`. Builds ialimp+plataforma OK.
+
 ### 📧 (15/08/2026) Ayudas conciliación: radar fiscal completo + regla de comunicaciones (PR #1432)
 - Alberto pidió que el asesor fiscal viera la convocatoria de la Consejería de Empleo: Línea 4 (autónomos
   con hijos <3 años que contraten personal, 6.000–7.200 €) y Línea 5 (riesgo embarazo / descanso por

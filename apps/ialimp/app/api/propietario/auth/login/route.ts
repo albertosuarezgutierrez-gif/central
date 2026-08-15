@@ -5,6 +5,7 @@ import { Prisma } from '@prisma/client'
 import { verifyPassword, createPropietarioToken } from '@/lib/auth'
 import { verifyTurnstile } from '@/lib/turnstile'
 import { rateLimit, getIp } from '@/lib/propietario-auth'
+import { registrarActividad, uaDe } from '@/lib/actividad'
 
 const GENERIC = 'Email o contraseña incorrectos'
 
@@ -45,6 +46,10 @@ export async function POST(req: Request) {
 
     const { token, jti } = await createPropietarioToken(c.id, c.empresa_id, c.login_email || norm)
     await prisma.$executeRaw(Prisma.sql`UPDATE clientes SET ultimo_login_at = now(), session_jti = ${jti} WHERE id = ${c.id}::uuid`)
+    await registrarActividad({
+      empresa_id: c.empresa_id, actor_tipo: 'propietario', actor_id: c.id, actor_nombre: c.nombre,
+      accion: 'login', ip, user_agent: uaDe(req),
+    })
     const store = await cookies()
     store.set('ialimp_prop', token, {
       httpOnly: true,

@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client'
 import { verifyPassword, createSessionToken } from '@/lib/auth'
 import { getModulosOff } from '@/lib/modulos-tenant'
 import { rateLimitHit, rateLimitClear, clientIp } from '@/lib/rate-limit-db'
+import { registrarActividad, uaDe } from '@/lib/actividad'
 import { cookies } from 'next/headers'
 
 export async function POST(req: Request) {
@@ -45,7 +46,11 @@ export async function POST(req: Request) {
     const modulosOff = await getModulosOff(empresa.id)
     const { token, jti } = await createSessionToken(empresa.id, empresa.email, modulosOff)
     // Rotar jti (expulsa al dispositivo anterior si se forzó) y marcar sesión viva.
-    await prisma.$executeRaw(Prisma.sql`UPDATE empresas SET session_jti = ${jti}, sesion_activa = true WHERE id = ${empresa.id}::uuid`)
+    await prisma.$executeRaw(Prisma.sql`UPDATE empresas SET session_jti = ${jti}, sesion_activa = true, ultimo_acceso = now() WHERE id = ${empresa.id}::uuid`)
+    await registrarActividad({
+      empresa_id: empresa.id, actor_tipo: 'owner', actor_id: empresa.id, actor_nombre: empresa.nombre,
+      accion: forzar ? 'login_forzado' : 'login', ip: clientIp(req), user_agent: uaDe(req),
+    })
     const cookieStore = await cookies()
     cookieStore.set('ialimp_session', token, {
       httpOnly: true,

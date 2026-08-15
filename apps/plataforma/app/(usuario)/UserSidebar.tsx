@@ -54,6 +54,7 @@ const NAV_OPERADOR = [
   { href: '/operador/iarest/crecimiento', icon: '📈', label: 'Crecimiento', sub: true },
   { href: '/operador/iarest/sistema', icon: '🔬', label: 'Sistema', sub: true },
   { href: '/operador/iarest/crm', icon: '🎯', label: 'CRM', sub: true },
+  { href: '/operador/actividad', icon: '👁️', label: 'Actividad ialimp' },
   { href: '/operador/agentes', icon: '🤖', label: 'Agentes' },
   { href: '/operador/ia', icon: '💸', label: 'IA · gasto' },
   { href: '/operador/rrhh', icon: '👥', label: 'RR.HH.' },
