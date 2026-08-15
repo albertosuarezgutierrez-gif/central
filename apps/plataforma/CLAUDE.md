@@ -512,6 +512,12 @@ El alta manual por SQL ya no es necesaria.
 - **Adaptadores:** `lib/adapters/*` — ialimp/sivra por BD compartida, ia-rest e **iarrhh** por HTTP Bearer
   (iarrhh: alta de empresa+responsable desde `/operador/clientes`, vertical `'rrhh'`).
 - **`lib/conciliacion.ts`:** `candidatosSivra()` lee tabla `gastos` (raw SQL). Ref: `sivra:gasto:<id>`.
+- **👁️ Actividad ialimp (`/operador/actividad`, 15/08/2026):** historial de accesos y actividad de los
+  usuarios del SaaS ialimp (dueña/usuarios/limpiadoras/propietarios) leído de la tabla compartida
+  `registro_actividad` (la escribe apps/ialimp; `prisma_plataforma` solo SELECT). «Último acceso por
+  persona» + historial filtrable (empresa/perfil/tipo/texto), 50 filas + «Ver más»
+  (`lib/actividad-ialimp.ts` + `GET /api/admin/actividad`). La tabla nació vacía el 15/08/2026: la UI
+  declara desde cuándo hay registro — «sin filas» ≠ «no ha entrado». Retención 90 días (purga en ialimp).
 - **Personas a través de verticales (RR.HH., SOLO LECTURA):** `/operador/personas` (`PersonasClient.tsx`)
   consolida a la **misma persona** aunque tenga roles en varias verticales, agrupando por **`persona_id`**.
   `lib/personas.ts` lee ialimp (`limpiadoras`, prisma directo) + rrhh (empleados por el puerto operador

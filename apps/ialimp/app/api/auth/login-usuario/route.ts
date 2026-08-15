@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client'
 import { verifyPassword, createUsuarioToken } from '@/lib/auth'
 import { getModulosOff } from '@/lib/modulos-tenant'
 import { rateLimitHit, rateLimitClear, clientIp } from '@/lib/rate-limit-db'
+import { registrarActividad, uaDe } from '@/lib/actividad'
 import { cookies } from 'next/headers'
 
 export async function POST(req: Request) {
@@ -51,6 +52,10 @@ export async function POST(req: Request) {
     const modulosOff = await getModulosOff(u.empresa_id)
     const { token, jti } = await createUsuarioToken(u.id, u.empresa_id, u.email, u.rol, u.modulos || [], modulosOff)
     await prisma.$executeRaw(Prisma.sql`UPDATE usuarios_empresa SET session_jti = ${jti}, sesion_activa = true WHERE id = ${u.id}::uuid`)
+    await registrarActividad({
+      empresa_id: u.empresa_id, actor_tipo: 'usuario', actor_id: u.id, actor_nombre: u.nombre || u.email,
+      accion: forzar ? 'login_forzado' : 'login', ip: clientIp(req), user_agent: uaDe(req),
+    })
     const cookieStore = await cookies()
     cookieStore.set('ialimp_session', token, {
       httpOnly: true, secure: process.env.NODE_ENV === 'production',

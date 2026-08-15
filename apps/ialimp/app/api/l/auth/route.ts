@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { cookies } from 'next/headers'
 import { rateLimitHit, rateLimitClear, clientIp } from '@/lib/rate-limit-db'
+import { registrarActividad, uaDe } from '@/lib/actividad'
 import { sha256Hex as hashPin } from '@central/core-identity'
 // ────────────────────────────────────────────────────────────────────
 
@@ -10,7 +11,13 @@ import { sha256Hex as hashPin } from '@central/core-identity'
 // Sesión ÚNICA: borra cualquier sesión previa de esa limpiadora (un asiento =
 // un dispositivo a la vez). Además fija `limpiadora_empresa` (recuerda la empresa
 // en el móvil → el PIN se acota a ella en futuros accesos).
-async function crearSesionResponse(limp: any) {
+async function crearSesionResponse(limp: any, meta?: { ip: string | null; ua: string | null; via: string }) {
+  if (meta) {
+    await registrarActividad({
+      empresa_id: limp.empresa_id, actor_tipo: 'limpiadora', actor_id: limp.id, actor_nombre: limp.nombre,
+      accion: 'login', detalle: meta.via, ip: meta.ip, user_agent: meta.ua,
+    })
+  }
   await prisma.$executeRaw(Prisma.sql`DELETE FROM limpiadora_sessions WHERE limpiadora_id = ${limp.id}::uuid`)
   const session = await prisma.$queryRaw<any[]>(Prisma.sql`
     INSERT INTO limpiadora_sessions (limpiadora_id) VALUES (${limp.id}::uuid) RETURNING token
@@ -59,7 +66,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Enlace de acceso no válido' }, { status: 401 })
       }
       await rateLimitClear('l:' + ip)
-      return crearSesionResponse(porToken[0])
+      return crearSesionResponse(porToken[0], { ip, ua: uaDe(req), via: 'enlace' })
     }
 
     // ── Acceso por PIN: acotado a la empresa del dispositivo si se conoce ──
@@ -98,7 +105,7 @@ export async function POST(req: Request) {
     await rateLimitClear('l:' + ip)
 
     if (limpRows.length > 0) {
-      return crearSesionResponse(limpRows[0])
+      return crearSesionResponse(limpRows[0], { ip, ua: uaDe(req), via: 'pin' })
     }
     // Usuario polivalente: usa la limpiadora vinculada
     const u = usuRows[0]
@@ -106,7 +113,7 @@ export async function POST(req: Request) {
     return crearSesionResponse({
       id: u.limpiadora_id, nombre: u.nombre, empresa_id: u.empresa_id,
       propiedades: u.propiedades, color: u.color,
-    })
+    }, { ip, ua: uaDe(req), via: 'pin' })
 
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
