@@ -36,7 +36,6 @@
   `search_threads label:Facturas/Extraccion-fallida` (Label_16, 1 mensaje según `list_labels`)
   sigue vacío, ya 5º día consecutivo (12→15/08) — patrón repetido, para `agentes-entrenador`;
   PRs/commits: este commit (solo Gmail/Drive/Supabase vía MCP + esta entrada).
->>>>>>> origin/main
 - **2026-08-15 · mercado-booking** · hizo: pasada de 12 ventanas (plan `?max=12`, sin filtro —
   las 12 candidatas eran `sin_medir_nunca`, todas ronda 1/evento: Bienal de Flamenco 11/12/14-sep,
   las 4 propiedades por aforo 12/5/4/2). 110 comparables reales escritos en `market_rates`
