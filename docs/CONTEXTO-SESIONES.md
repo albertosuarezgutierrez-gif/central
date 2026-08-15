@@ -32,6 +32,19 @@
 
 ---
 
+### 🐛 (15/08/2026) Pasada de trading duplicada: el PASO 0 del trigger no ve una recuperación con `fecha` backdateada
+- El trigger de las 20:15/23:15 disparó otra vez a las ~08:14 UTC. PASO 0 comprobó `trading_pasadas WHERE
+  fecha=CURRENT_DATE` (2026-08-15) → NULL → concluí «no ha corrido hoy» y ejecuté la pasada completa.
+- **Pero SÍ había corrido**: la sesión de la entrada anterior recuperó el viernes 14/08 usando `fecha='2026-08-14'`
+  a propósito (evitar etiqueta corrida) — invisible para un check que mira `CURRENT_DATE`. Mi pasada (NAV→saldo,
+  22 símbolos, /analizar, /puntuar) corrió igual con `fecha='2026-08-15'` pero **con los MISMOS cierres del
+  viernes** (el mercado seguía cerrado) → 88 tesis nuevas duplicando información ya analizada, un día desplazada.
+- **Sin daño operativo**: 0 compras paper nuevas (la barrera "posición ya abierta" protegió), 0 vetados/huérfanas.
+  `ETIQUETA_TOL` ya tolera el desfase sin anular tesis. El coste real es ruido en `trading_estrategia_stats`.
+- **Pendiente:** el PASO 0 del prompt del trigger debería comprobar la HUELLA real (última vela usada / último
+  precio_ref), no solo `fecha=CURRENT_DATE` — una recuperación backdateada lo esquiva. No lo he tocado (vive en
+  la config del trigger, fuera de este repo).
+
 ### ✅ (15/08/2026) Verificación final PR #1416 — todo OK; el suelo PL quedó RESTAURADO a la curva genuina
 - Seguimiento cerrado: 9/9 partidos a domicilio siguen descartados (los 3 «vs Sevilla/Betis» vivos son derbis, locales), guardián 07:30 con 0 alertas nuevas, latidos sivra_* en verde, sin recaptura tras las pasadas 20:30/14:30 con código nuevo.
 - Incidencia menor (14/08 ~15:00): la pasada de las 08:31 corrió con código viejo minutos antes del deploy (READY 08:54) y recapturó una última vez; re-congelada en el momento.
