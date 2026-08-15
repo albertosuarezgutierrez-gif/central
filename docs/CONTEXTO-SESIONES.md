@@ -32,6 +32,15 @@
 
 ---
 
+### 🧊 (15/08/2026) Cierre del bucle de eventos — congelar→medir→mercado manda, verificado en producción
+- Ciclo completo confirmado con datos reales (PRs #1386 verificador, #1409 guarda 🧊, #1414 ventanas por fecha):
+  0 bajadas ciegas en noches de evento confirmado desde el 14/08; el apply de las 14:30 descongeló solo
+  las fechas ya medidas y las llevó al mercado real en horas (Busto 09-09 163→130€ con p50 135€; Luxury
+  08-16 241→193€; Dúplex 09-09 165→149€).
+- Booking prioriza congeladas por fecha: 14/08 midió 08-16 + 09-09/10; 15/08 midió 09-11/12/14 (110 comps,
+  1 ventana `not_found` declarada honestamente en el latido). p50 reales anclando (09-11 aforo12 = 593€).
+- Hilo de eventos CERRADO: sin check-ins pendientes; el circuito verificar→congelar→medir→repreciar es autónomo.
+
 ### 🏷️ (14/08/2026) Guardián de precios: PriceLabs desconectado + 2 landmines del motor y del calendario
 - Cierre del episodio 10-14/08: Alberto desconectó PriceLabs (las 7 reversiones eran suyas); verificado 0 reversiones el 11 y el 14/08.
 - **Landmine 1 — suelo PL autorreferente:** `pricing/apply` re-capturaba `pricing_pl_referencia` a diario desde `rate_snapshots` (que lee SMOOBU, no PL) → tras la desconexión el «suelo PriceLabs» capturaba los precios del propio motor y NUNCA caducaba. Upsert eliminado; tabla congelada a `captured_at='2026-08-10'` (migración `2026-08-14_pl_referencia_congelada.sql`, aplicada) → suelo inerte el 08/12/2026 como diseñado. Regla: una referencia EXTERNA no se recaptura de un espejo que escribes tú.
