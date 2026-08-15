@@ -32,6 +32,12 @@
 
 ---
 
+### 🧾 (15/08/2026) facturas-correo (trigger diario) — Vía B recuperada, nada pendiente nuevo
+- Vía B (Apps Script) volvió a copiar el 14/08 tras 3 días parada → `agente_salud` a `ok=true`.
+  2 pedidos Amazon (lima pies, microondas) entregados a Cádiz → `personal`, sin archivar.
+  Sin candidatos nuevos más, backlog `PDF-pendiente`/`Revisar`/`v_facturas_sin_cargo.sin_revisar`
+  a 0. Detalle completo en `docs/AGENTES-BITACORA.md` (entrada de hoy).
+
 ### 🧊 (15/08/2026) Cierre del bucle de eventos — congelar→medir→mercado manda, verificado en producción
 - Ciclo completo confirmado con datos reales (PRs #1386 verificador, #1409 guarda 🧊, #1414 ventanas por fecha):
   0 bajadas ciegas en noches de evento confirmado desde el 14/08; el apply de las 14:30 descongeló solo
