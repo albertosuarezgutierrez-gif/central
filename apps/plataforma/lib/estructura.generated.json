@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-15T07:14:07Z",
+  "generadoEn": "2026-08-15T08:13:15Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4517,6 +4517,10 @@
   ],
   "novedades": [
     {
+      "titulo": "Estado REAL de `pricing_pl_referencia` (difiere del PR):",
+      "fecha": ""
+    },
+    {
       "titulo": "Limitación:",
       "fecha": ""
     },
@@ -4570,10 +4574,6 @@
     },
     {
       "titulo": "Coches fuera de alcance",
-      "fecha": ""
-    },
-    {
-      "titulo": "No era una regresión:",
       "fecha": ""
     }
   ],
