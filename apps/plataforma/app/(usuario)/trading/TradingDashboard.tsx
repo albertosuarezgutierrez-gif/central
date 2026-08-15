@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/db'
-import { eur } from '@/lib/dinero'
+import { eur, eurSinDecimales } from '@/lib/dinero'
+import { curvaEnEuros, CAPITAL_ESTUDIO_EUR } from '@/lib/trading/cartera-estudio'
+import { puntosDiarios } from '@/lib/trading/precios-stooq'
 import { neutralizarUniverso } from '@/lib/trading/calidad-datos'
 import { etiquetaCalidad, rankearUniverso, type EmpresaUniverso } from '@central/module-trading'
 import OnboardingBanner from './OnboardingBanner'
@@ -9,7 +11,7 @@ import CarteraCohetes, { type CarteraCohetesData } from './CarteraCohetes'
 import AnalisisSimbolo from './AnalisisSimbolo'
 import DetallePerezoso from './DetallePerezoso'
 import { COHORTES_PAPER } from '@/lib/trading/paper-cartera'
-import { evaluarEscalera, emparejarOps } from '@/lib/trading/puerta-fase2'
+import { evaluarEscalera, evaluarApagado, emparejarOps } from '@/lib/trading/puerta-fase2'
 
 // Contenido del «Laboratorio de inversión», extraído de page.tsx para poder reutilizarlo tal cual en la
 // vista de invitado (/invitado/trading, solo lectura vía token — ver lib/trading-acceso.ts). Es 100%
@@ -49,6 +51,41 @@ function fechaCorta(d: Date): string {
 }
 const CAPA_LABEL: Record<string, string> = { A: 'A · ancla', B: 'B · conocido', C: 'C · cantera' }
 const ETIQ_MINI = { fuerte: '🟢', media: '🟡', debil: '⚪' } as const
+// Nombres internos del torneo → etiqueta legible (la palabra suelta «momentum»/«reversion» no le
+// dice nada a quien no vive en el código; el nombre interno se conserva entre paréntesis).
+const ESTRATEGIA_LABEL: Record<string, string> = {
+  momentum: 'seguir la tendencia (momentum)',
+  reversion: 'comprar el rebote (reversión)',
+  valor: 'por fundamentales (valor)',
+  catalizador: 'por catalizador (noticias)',
+}
+// Qué significa cada tramo de la escalera, para el tooltip del hero (importes del pre-registro).
+const TRAMO_INFO: Record<1 | 2 | 3, string> = {
+  1: 'Tramo 1 = 1.000€ de prueba (~3% del cash) con señal viva — objetivo: medir fricción, no ganar',
+  2: 'Tramo 2 = +2.000€ (total ~9%) — exige 4 meses de cesta batiendo al SPY por mediana',
+  3: 'Tramo 3 = +3.000€ (total ~18%, techo 6.000€ hasta validar) — exige 3 cestas y 6 meses batiendo',
+}
+
+// ❓ Glosario en lenguaje llano — la página usa términos de análisis (Piotroski, ROIC, mediana,
+// cohorte…) que no se explican en ningún sitio; esto los traduce UNA vez, plegado para no estorbar.
+const GLOSARIO: Array<[string, string]> = [
+  ['Paper / simulado', 'todas las operaciones ocurren en nuestra base de datos, jamás en tu cuenta real de Interactive Brokers.'],
+  ['Score', 'nota del modelo frente a sus pares (calidad 40% + valor 40% + momentum 20%). Sirve para ordenar el ranking; no es un precio objetivo.'],
+  ['Piotroski (0–9)', 'salud contable calculada con las cuentas oficiales de la SEC; ≥6 se considera sólido.'],
+  ['ROIC', 'rentabilidad que la empresa saca al capital que emplea; ≥10% es bueno.'],
+  ['Earnings yield (EY)', 'beneficio operativo dividido por lo que cuesta comprar la empresa entera — cuanto más alto, más barata está.'],
+  ['FCF yield', 'lo mismo pero con la caja libre que genera de verdad (la versión «en efectivo» del EY).'],
+  ['Momentum 12m', 'cuánto ha subido en el último año (sin contar el último mes). Se usa para SELECCIONAR, no para hacer trading de cruces.'],
+  ['🟢/🟡/⚪ Calidad', 'resumen de los factores de arriba en un vistazo.'],
+  ['📈/⏳ Señal técnica', 'el CUÁNDO entrar en un valor ya seleccionado. Solo se calcula para el top-20 del snapshot semanal.'],
+  ['🏆 Gurús', 'gestores value conocidos (informes 13F) tienen o están ampliando esa posición.'],
+  ['Mediana', 'el valor del medio de la cesta: la mitad de las posiciones lo hace mejor y la otra mitad peor. Es la cifra que decide, porque un pelotazo suelto no la infla (una media sí).'],
+  ['Cohorte', 'una cesta congelada en una fecha que ya no se toca — así se puede medir limpia, sin trampas retrospectivas, contra el SPY.'],
+  ['SPY', 'el índice S&P 500. Es el listón: comprarlo y no tocarlo es la alternativa que el sistema tiene que batir para merecer dinero real.'],
+  ['Caída máx (drawdown)', 'lo peor que ha llegado a ir la cesta de un pico a un valle. Batir con mucho más riesgo no es batir.'],
+  ['TE (tracking error)', 'cuánto se separa la cesta del índice en el día a día.'],
+  ['🪜 Tramos', 'plan firmado de dinero real: 1.000€ → +2.000€ → +3.000€ (techo 6.000€ hasta validar). Los suben las señales, no el calendario, y cada tramo es una decisión tuya.'],
+]
 
 const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 16 }
 const th: React.CSSProperties = { textAlign: 'left', padding: '8px 10px', color: 'var(--muted)', fontWeight: 600, fontSize: 13, borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }
@@ -126,19 +163,20 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
 
   // 🪜 Escalera de dinero real (firmada en TRADING-HIPOTESIS-PREREGISTRO.md): evaluada sobre las
   // cohortes DEDUPLICADAS por cesta (mismo helper que el digest semanal). SIN fecha objetivo.
-  const escalera = evaluarEscalera(
-    cohortesPaper.map(({ cohorte, ultima }) => {
-      // Cobertura = símbolos medidos (n del snapshot) / tamaño de la cesta congelada. Un alpha medido
-      // sobre media cesta no sube tramos (enmienda de operacionalización, auditoría 11/08/2026).
-      const total = COHORTES_PAPER.find(x => x.version === cohorte)?.simbolos.length
-      return {
-        cohorte, dias: ultima.dias,
-        alphaMediana: ultima.retornoMediana != null ? ultima.retornoMediana - ultima.retornoBench : null,
-        maxDrawdown: ultima.maxDrawdown, maxDrawdownBench: ultima.maxDrawdownBench,
-        cobertura: total ? ultima.n / total : null,
-      }
-    }),
-  )
+  const cohortesEscalera = cohortesPaper.map(({ cohorte, ultima }) => {
+    // Cobertura = símbolos medidos (n del snapshot) / tamaño de la cesta congelada. Un alpha medido
+    // sobre media cesta no sube tramos (enmienda de operacionalización, auditoría 11/08/2026).
+    const total = COHORTES_PAPER.find(x => x.version === cohorte)?.simbolos.length
+    return {
+      cohorte, dias: ultima.dias,
+      alphaMediana: ultima.retornoMediana != null ? ultima.retornoMediana - ultima.retornoBench : null,
+      maxDrawdown: ultima.maxDrawdown, maxDrawdownBench: ultima.maxDrawdownBench,
+      cobertura: total ? ultima.n / total : null,
+    }
+  })
+  const escalera = evaluarEscalera(cohortesEscalera)
+  // 🛑 Regla de apagado (firmada 15/08/2026): la contraparte de la escalera, sobre las mismas cohortes.
+  const apagado = evaluarApagado(cohortesEscalera)
   const opsCerradas = emparejarOps(ordenes.map(o => ({ simbolo: o.simbolo, lado: o.lado, precio: o.precio, fecha: o.fecha.toISOString().slice(0, 10) })))
   const deslizBuys = ordenes.filter(o => o.lado === 'BUY' && o.precioDiaSiguiente != null && o.precio > 0)
   const deslizMedio = deslizBuys.length ? deslizBuys.reduce((s, o) => s + (o.precioDiaSiguiente! - o.precio) / o.precio, 0) / deslizBuys.length : null
@@ -162,6 +200,29 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
   // = la de más recorrido; interesantes = señal 📈 del top-20 + top del ranking; compras reales.
   const cohorteRef = cohortesPaper.reduce<(typeof cohortesPaper)[number] | null>(
     (max, c) => (max == null || c.ultima.dias > max.ultima.dias ? c : max), null)
+
+  // 💶 La rentabilidad del hero, también en EUROS (Alberto piensa en euros; la cifra vivía enterrada
+  // en el desplegable del forward). Misma matemática que la cartera de estudio (curvaEnEuros, puro)
+  // sobre los snapshots ya leídos + UNA serie FX con presupuesto corto. Best-effort honesto: sin FX
+  // real NO se pinta — un 1:1 disfrazado de euros sería mentir, y el detalle plegado ya la enseña.
+  let heroEur: { valorEur: number; benchEur: number } | null = null
+  if (cohorteRef) {
+    const inicio = COHORTES_PAPER.find(c => c.version === cohorteRef.cohorte)?.fechaInicio
+    if (inicio) {
+      const fx = await puntosDiarios('EURUSD=X', inicio, new Date().toISOString().slice(0, 10), 2500).catch(() => [])
+      if (fx.length) {
+        const puntos = curvaEnEuros(
+          CAPITAL_ESTUDIO_EUR, inicio,
+          cohorteRef.filas
+            .filter(f => f.retornoCesta != null && f.retornoBench != null)
+            .map(f => ({ fecha: f.fecha.toISOString().slice(0, 10), retornoCesta: f.retornoCesta!, retornoBench: f.retornoBench! })),
+          fx,
+        )
+        const ult = puntos.at(-1)
+        if (ult && ult.fecha !== inicio) heroEur = { valorEur: ult.valorEur, benchEur: ult.benchEur }
+      }
+    }
+  }
   const senalesCompra = universoExplorador
     .filter(f => f.tecnico === 'si')
     .sort((a, b) => (b.score ?? -Infinity) - (a.score ?? -Infinity))
@@ -259,12 +320,17 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
               <>
                 <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 10 }}>
                   <span style={{ fontSize: 26, fontWeight: 700, color: bate == null ? 'var(--text)' : bate ? 'var(--positive)' : 'var(--negative)' }}>{pctN(u.retornoMediana)}</span>
-                  <span style={{ fontSize: 14, color: 'var(--muted)' }}>vs SPY {pct(u.retornoBench)}{bate == null ? '' : bate ? ' ✅' : ' ⚠️'}</span>
+                  <span style={{ fontSize: 14, color: 'var(--muted)' }}>vs SPY {pct(u.retornoBench)}{bate == null ? '' : bate ? ' ✅ va mejor que el índice' : ' ⚠️ va peor que el índice'}</span>
                 </div>
-                <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 2 }}>mediana de la cesta congelada · {u.dias} días medidos</div>
+                <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 2 }} title="mediana = el valor del medio de la cesta: la mitad de las posiciones lo hace mejor y la otra mitad peor; un pelotazo suelto no la infla">mediana de la cesta congelada · {u.dias} días medidos</div>
+                {heroEur && (
+                  <div style={{ fontSize: 14, marginTop: 4 }}>
+                    💼 Con {eurSinDecimales(CAPITAL_ESTUDIO_EUR)} simulados: <strong style={{ color: heroEur.valorEur >= CAPITAL_ESTUDIO_EUR ? 'var(--positive)' : 'var(--negative)' }}>{eur(heroEur.valorEur)}</strong> <span style={{ color: 'var(--muted)' }}>· en SPY serían {eur(heroEur.benchEur)}</span>
+                  </div>
+                )}
                 <div style={{ margin: '8px 0' }}><CurvaForward serie={cohorteRef.filas.map(f => ({ m: f.retornoMediana, b: f.retornoBench }))} /></div>
                 <div style={{ color: 'var(--muted)', fontSize: 13 }}>
-                  Baten al SPY {u.baten}/{u.n} · caída máx {pctN(u.maxDrawdown)} · 🪜 dinero real: <strong style={{ color: 'var(--text)' }}>Tramo {escalera.alcanzable}</strong> alcanzable
+                  Baten al SPY {u.baten}/{u.n} · caída máx {pctN(u.maxDrawdown)} · 🪜 dinero real: <strong style={{ color: 'var(--text)' }} title={TRAMO_INFO[escalera.alcanzable]}>Tramo {escalera.alcanzable}</strong> alcanzable <span style={{ fontSize: 12 }}>({escalera.alcanzable === 1 ? '1.000€ de prueba, tu decisión' : escalera.alcanzable === 2 ? 'hasta 3.000€, tu decisión' : 'hasta 6.000€, tu decisión'})</span>
                 </div>
                 <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
                   {cohortesPaper.length > 1 ? `Cohorte con más recorrido (de ${cohortesPaper.length}); todas` : 'La única cohorte; el detalle'}, la cartera de estudio (30.000€ simulados) y la escalera, en «🧪 Forward paper» abajo.
@@ -275,70 +341,18 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
         </div>
       </section>
 
-      {/* 🔍 Buscador de análisis por acción (determinista, mismos ojos del radar) — herramienta bajo demanda */}
-      <AnalisisSimbolo />
-
-      {/* Radar del mercado — ranking semanal del universo S&P 500 (caché trading_universo). El
-          caza-cohetes va PLEGADO (satélite lotería, secundario). */}
-      <section style={{ marginBottom: 22 }}>
-        <h2 style={{ fontSize: 17, marginBottom: 8 }}>🌎 Radar del mercado <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>(S&P 500 · la selección elige el QUÉ, 📈 confirma el CUÁNDO)</span></h2>
-        {!radar ? (
-          <div style={{ ...card, color: 'var(--muted)', fontSize: 14 }}>
-            El radar rankea las ~500 mayores de EEUU cada lunes (calidad + valor + momentum + gurús). Aún sin snapshot — la caché de fundamentales se está llenando; primer ranking el próximo lunes.
-          </div>
-        ) : (() => {
-          type Track = { evals: { fecha: string; dias: number; mediana: number | null; retornoBench: number; baten: number; n: number }[]; ventanas: number; bateVentanas: number; cohetes?: { evals: unknown[]; ventanas: number; bateVentanas: number } }
-          type CoheteUi = { simbolo: string; nombre: string | null; momentum: number | null; piotroski: number | null; roic: number | null; sobreSmaSem: boolean | null; sobreSmaMes: boolean | null; confirmado: boolean; mesesCotizando?: number | null }
-          const cohetes = (radar.cohetes as unknown as CoheteUi[] | null) ?? []
-          const track = radar.trackRecord as unknown as Track | null
-          const salud = radar.salud as unknown as { total: number; frescas: number; errores: number } | null
-          return (
-            <>
-              {/* La tabla del ranking vive UNIFICADA en el explorador de abajo (orden por score del
-                  modelo por defecto) — aquí solo el satélite 🎯 (plegado) y el pie con snapshot/track/salud. */}
-              {cohetes.length > 0 && (
-                <details style={{ ...card, marginTop: 10, padding: '10px 16px' }}>
-                  <summary style={{ fontWeight: 700, cursor: 'pointer' }}>🎯 Caza-cohetes ({cohetes.length}) <span style={{ color: 'var(--muted)', fontSize: 12, fontWeight: 400 }}>(screener LOTERÍA — momentum alto + calidad mala; alimenta la 🚀 Cartera cohetes, nunca entra en cohortes)</span></summary>
-                  <div style={{ overflowX: 'auto', marginTop: 8 }}>
-                    <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 560 }}>
-                      <thead><tr><th style={th}>Empresa</th><th style={th}>Momentum</th><th style={th}>Piotroski</th><th style={th}>ROIC</th><th style={th}>Medias (sem/mes)</th></tr></thead>
-                      <tbody>
-                        {cohetes.map(c => (
-                          <tr key={c.simbolo}>
-                            <td style={{ ...td, fontWeight: 700 }}>{c.simbolo} <span style={{ color: 'var(--muted)', fontWeight: 400 }}>— {c.nombre ?? '¿?'}</span>{c.mesesCotizando != null ? <span style={{ color: 'var(--warning)', fontSize: 12, marginLeft: 6 }}>🆕 ~{c.mesesCotizando}m en bolsa</span> : null}</td>
-                            <td style={td}>{c.momentum != null ? `+${(c.momentum * 100).toFixed(0)}%` : '—'}</td>
-                            <td style={td}>{c.piotroski ?? '—'}</td>
-                            <td style={td}>{c.roic != null ? `${(c.roic * 100).toFixed(0)}%` : '—'}</td>
-                            <td style={td}>{c.confirmado ? '✅ sobre SMA30sem + SMA12mes' : `${c.sobreSmaSem === true ? '✓' : c.sobreSmaSem === false ? '✗' : '?'} / ${c.sobreSmaMes === true ? '✓' : c.sobreSmaMes === false ? '✗' : '?'}`}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  {track?.cohetes ? (
-                    <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
-                      Track 🎯: {track.cohetes.ventanas > 0 ? `${track.cohetes.bateVentanas}/${track.cohetes.ventanas} ventanas baten al SPY` : 'acumulando historial'}
-                    </div>
-                  ) : null}
-                </details>
-              )}
-              <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
-                Snapshot del {fechaCorta(radar.fecha)} · universo {radar.universoTotal} ({radar.conDatos} con datos)
-                {salud ? <> · salud: {salud.frescas}/{salud.total} frescos, {salud.errores} con error</> : null}
-                {track && track.evals.length > 0
-                  ? <> · track record: {track.bateVentanas}/{track.ventanas} ventanas baten al SPY ({track.evals.map(ev => `${Math.round(ev.dias / 7)}sem ${pct(ev.mediana ?? 0)} vs ${pct(ev.retornoBench)}`).join(' · ')})</>
-                  : <> · track record: acumulando historial</>}
-              </p>
-            </>
-          )
-        })()}
-        {universoExplorador.length > 0 && <RadarExplorador filas={universoExplorador} />}
-        {anomalias.length > 0 && (
-          <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
-            🛡️ Datos imposibles NEUTRALIZADOS (no puntúan ese factor): {anomalias.slice(0, 5).map(a => `${a.simbolo} ${a.campo} (${a.motivo})`).join(' · ')}{anomalias.length > 5 ? ` · +${anomalias.length - 5} más` : ''}
-          </p>
-        )}
-      </section>
+      {/* ❓ Glosario plegado — la página usa términos que no se explican en ningún otro sitio;
+          traducirlos UNA vez aquí evita que cada sección cargue con su propia chuleta. */}
+      <details style={{ ...card, padding: '10px 16px', marginBottom: 22 }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 14 }}>
+          ❓ Cómo leer esta página <span style={{ color: 'var(--muted)', fontWeight: 400, fontSize: 13 }}>(qué significa cada término, en cristiano)</span>
+        </summary>
+        <ul style={{ margin: '10px 0 0', paddingLeft: 18, fontSize: 13, lineHeight: 1.7 }}>
+          {GLOSARIO.map(([termino, texto]) => (
+            <li key={termino}><strong>{termino}</strong> — <span style={{ color: 'var(--muted)' }}>{texto}</span></li>
+          ))}
+        </ul>
+      </details>
 
       {/* 💡 Ideas de COMPRA — SOLO compras REALES (petición de Alberto 20/07: «aquí solo interesan las de
           comprar»; auditoría 21/07: `operada`=la señal ganadora del torneo que pasó las barreras y el agente
@@ -371,20 +385,20 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
             </section>
           )
         }
-        const subtitulo = compras.length === 1 ? 'la más reciente' : `las ${compras.length} más recientes`
+        const subtitulo = compras.length === 1 ? 'la compra simulada más reciente' : `las ${compras.length} compras simuladas más recientes`
         return (
           <section style={{ marginBottom: 22 }}>
-            <h2 style={{ fontSize: 17, marginBottom: 8 }}>💡 Ideas de compra del agente <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>({subtitulo})</span></h2>
+            <h2 style={{ fontSize: 17, marginBottom: 8 }}>💡 Ideas de compra del agente <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>— ¿qué ha comprado en paper? ({subtitulo})</span></h2>
             <div style={{ ...card, padding: 0, overflowX: 'auto' }}>
               <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 520 }}>
-                <thead><tr><th style={th}>Fecha</th><th style={th}>Símbolo</th><th style={th}>Estrategia</th><th style={th}>Confianza</th><th style={th}>Resultado</th></tr></thead>
+                <thead><tr><th style={th}>Fecha</th><th style={th}>Símbolo</th><th style={th} title="qué regla del torneo interno ganó y motivó la compra">Estrategia</th><th style={th} title="convicción de la señal, de 0 a 100 (ajustada por el acierto real histórico de cada estrategia)">Confianza</th><th style={th} title="se rellena al vencer la ventana de la tesis (walk-forward) — «pendiente» = aún midiéndose, no un fallo">Resultado</th></tr></thead>
                 <tbody>
                   {compras.map(t => (
                     <tr key={t.id}>
                       <td style={{ ...td, color: 'var(--muted)' }}>{fechaCorta(t.fecha)}</td>
                       <td style={{ ...td, fontWeight: 700 }}>{t.simbolo}</td>
-                      <td style={td}>{t.estrategia}</td>
-                      <td style={td}>{t.confianza}</td>
+                      <td style={td}>{ESTRATEGIA_LABEL[t.estrategia] ?? t.estrategia}</td>
+                      <td style={td}>{t.confianza}<span style={{ color: 'var(--muted)' }}>/100</span></td>
                       <td style={td}>{t.resultado ? <span style={{ color: t.resultado.acierto ? 'var(--positive)' : 'var(--negative)' }}>{t.resultado.acierto ? '✓' : '✗'} {pct(t.resultado.retorno)}</span> : <span style={{ color: 'var(--muted)' }}>pendiente</span>}</td>
                     </tr>
                   ))}
@@ -411,7 +425,7 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
           de estudio hace fetch de precios + Recharts: solo lo paga quien la abre). */}
       <DetallePerezoso
         style={{ marginBottom: 22 }}
-        resumen={<>🧪 Forward paper — detalle <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>(cohortes gurús∩calidad congeladas vs SPY · MEDIANA decide · cartera de estudio 30.000€ · 🪜 escalera)</span></>}
+        resumen={<>🧪 Forward paper — detalle <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>— ¿funciona el método? La prueba limpia que decide el dinero real (cestas congeladas vs SPY · la MEDIANA decide · cartera de estudio 30.000€ · 🪜 escalera)</span></>}
       >
         <div style={{ marginTop: 10 }}>
         <CarteraEstudio />
@@ -473,9 +487,78 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
             Ops cerradas del sistema de señales: <strong>{opsCerradas.length}</strong>{opsCerradas.length ? <> · retorno medio <strong>{pct(opsCerradas.reduce((s, o) => s + o.retorno, 0) / opsCerradas.length)}</strong></> : null}.
             Cada tramo es una decisión separada de Alberto; el agente jamás ejecuta órdenes reales. Congelador H6: si SPY cierra un mes bajo su media de 10 meses, la escalera se congela.
           </p>
+          {/* 🛑 La contraparte de la escalera (firmada 15/08/2026): cuándo CERRAR el experimento. */}
+          <p style={{ margin: '6px 0 0', fontSize: 12, color: apagado.evaluable && apagado.apagar ? 'var(--negative)' : 'var(--muted)' }}>
+            🛑 <strong>Regla de apagado</strong> <span title="firmada en el pre-registro el 15/08/2026: al año de la cesta más vieja, con 3 cestas distintas, si no baten al SPY por mediana al menos 2/3 → capital a ETF global y escalera cerrada">(cuándo cerrar el experimento)</span>: {apagado.detalle}
+          </p>
         </div>
         </div>
       </DetallePerezoso>
+
+      {/* 🔍 Buscador de análisis por acción (determinista, mismos ojos del radar) — herramienta bajo demanda */}
+      <AnalisisSimbolo />
+
+      {/* Radar del mercado — ranking semanal del universo S&P 500 (caché trading_universo). El
+          caza-cohetes va PLEGADO (satélite lotería, secundario). */}
+      <section style={{ marginBottom: 22 }}>
+        <h2 style={{ fontSize: 17, marginBottom: 8 }}>🌎 Radar del mercado <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>— ¿qué empresas vigila y cuáles salen mejor? (las ~550 mayores de EEUU, rankeadas cada lunes; la selección elige el QUÉ, 📈 el CUÁNDO)</span></h2>
+        {!radar ? (
+          <div style={{ ...card, color: 'var(--muted)', fontSize: 14 }}>
+            El radar rankea las ~500 mayores de EEUU cada lunes (calidad + valor + momentum + gurús). Aún sin snapshot — la caché de fundamentales se está llenando; primer ranking el próximo lunes.
+          </div>
+        ) : (() => {
+          type Track = { evals: { fecha: string; dias: number; mediana: number | null; retornoBench: number; baten: number; n: number }[]; ventanas: number; bateVentanas: number; cohetes?: { evals: unknown[]; ventanas: number; bateVentanas: number } }
+          type CoheteUi = { simbolo: string; nombre: string | null; momentum: number | null; piotroski: number | null; roic: number | null; sobreSmaSem: boolean | null; sobreSmaMes: boolean | null; confirmado: boolean; mesesCotizando?: number | null }
+          const cohetes = (radar.cohetes as unknown as CoheteUi[] | null) ?? []
+          const track = radar.trackRecord as unknown as Track | null
+          const salud = radar.salud as unknown as { total: number; frescas: number; errores: number } | null
+          return (
+            <>
+              {/* La tabla del ranking vive UNIFICADA en el explorador de abajo (orden por score del
+                  modelo por defecto) — aquí solo el satélite 🎯 (plegado) y el pie con snapshot/track/salud. */}
+              {cohetes.length > 0 && (
+                <details style={{ ...card, marginTop: 10, padding: '10px 16px' }}>
+                  <summary style={{ fontWeight: 700, cursor: 'pointer' }}>🎯 Caza-cohetes ({cohetes.length}) <span style={{ color: 'var(--muted)', fontSize: 12, fontWeight: 400 }}>(screener LOTERÍA — momentum alto + calidad mala; alimenta la 🚀 Cartera cohetes, nunca entra en cohortes)</span></summary>
+                  <div style={{ overflowX: 'auto', marginTop: 8 }}>
+                    <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 560 }}>
+                      <thead><tr><th style={th}>Empresa</th><th style={th}>Momentum</th><th style={th}>Piotroski</th><th style={th}>ROIC</th><th style={th}>Medias (sem/mes)</th></tr></thead>
+                      <tbody>
+                        {cohetes.map(c => (
+                          <tr key={c.simbolo}>
+                            <td style={{ ...td, fontWeight: 700 }}>{c.simbolo} <span style={{ color: 'var(--muted)', fontWeight: 400 }}>— {c.nombre ?? '¿?'}</span>{c.mesesCotizando != null ? <span style={{ color: 'var(--warning)', fontSize: 12, marginLeft: 6 }}>🆕 ~{c.mesesCotizando}m en bolsa</span> : null}</td>
+                            <td style={td}>{c.momentum != null ? `+${(c.momentum * 100).toFixed(0)}%` : '—'}</td>
+                            <td style={td}>{c.piotroski ?? '—'}</td>
+                            <td style={td}>{c.roic != null ? `${(c.roic * 100).toFixed(0)}%` : '—'}</td>
+                            <td style={td}>{c.confirmado ? '✅ sobre SMA30sem + SMA12mes' : `${c.sobreSmaSem === true ? '✓' : c.sobreSmaSem === false ? '✗' : '?'} / ${c.sobreSmaMes === true ? '✓' : c.sobreSmaMes === false ? '✗' : '?'}`}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {track?.cohetes ? (
+                    <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
+                      Track 🎯: {track.cohetes.ventanas > 0 ? `${track.cohetes.bateVentanas}/${track.cohetes.ventanas} ventanas baten al SPY` : 'acumulando historial'}
+                    </div>
+                  ) : null}
+                </details>
+              )}
+              <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
+                Snapshot del {fechaCorta(radar.fecha)} · universo {radar.universoTotal} ({radar.conDatos} con datos)
+                {salud ? <> · salud: {salud.frescas}/{salud.total} frescos, {salud.errores} con error</> : null}
+                {track && track.evals.length > 0
+                  ? <> · track record: {track.bateVentanas}/{track.ventanas} ventanas baten al SPY ({track.evals.map(ev => `${Math.round(ev.dias / 7)}sem ${pct(ev.mediana ?? 0)} vs ${pct(ev.retornoBench)}`).join(' · ')})</>
+                  : <> · track record: acumulando historial</>}
+              </p>
+            </>
+          )
+        })()}
+        {universoExplorador.length > 0 && <RadarExplorador filas={universoExplorador} />}
+        {anomalias.length > 0 && (
+          <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
+            🛡️ Datos imposibles NEUTRALIZADOS (no puntúan ese factor): {anomalias.slice(0, 5).map(a => `${a.simbolo} ${a.campo} (${a.motivo})`).join(' · ')}{anomalias.length > 5 ? ` · +${anomalias.length - 5} más` : ''}
+          </p>
+        )}
+      </section>
 
       {/* 🚀 Cartera cohetes — bolsillo APARTE (lotería, paper): rota semanal a los cohetes confirmados y
           se valora a diario vs SPY + curva del núcleo. SOLO estudio, nunca entra en cohortes/núcleo.
@@ -505,7 +588,7 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
       {/* Watchlist — PLEGADA (secundaria) */}
       {watchlist.length > 0 && (
         <details style={{ marginBottom: 22 }}>
-          <summary style={{ fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 8 }}>👀 Watchlist ({watchlist.length})</summary>
+          <summary style={{ fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 8 }}>👀 Watchlist ({watchlist.length}) <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>— los valores que el agente sigue de cerca (A ancla · B conocidos · C cantera)</span></summary>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {watchlist.map(w => (
               <span key={w.id} title={CAPA_LABEL[w.capa] ?? w.capa} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999, padding: '4px 12px', fontSize: 13 }}>

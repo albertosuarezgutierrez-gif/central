@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { evaluarEscalera, emparejarOps, DIAS_TRAMO2, DIAS_TRAMO3, type CohorteEscalera } from './puerta-fase2.ts'
+import { evaluarEscalera, evaluarApagado, emparejarOps, DIAS_TRAMO2, DIAS_TRAMO3, DIAS_APAGADO, type CohorteEscalera } from './puerta-fase2.ts'
 
 const cohorte = (o: Partial<CohorteEscalera>): CohorteEscalera => ({
   cohorte: 'c', dias: 200, alphaMediana: 0.02, maxDrawdown: -0.06, maxDrawdownBench: -0.05, ...o,
@@ -89,4 +89,50 @@ test('cobertura insuficiente también invalida el criterio de riesgo del tramo 3
     cohorte({ cohorte: 'c', dias: 90 }),
   ])
   assert.equal(r.tramos[2].ok, false)
+})
+
+// ── 🛑 Regla de apagado (firmada 2026-08-15) ─────────────────────────────────────────────────────
+
+test('apagado: cestas jóvenes → NO evaluable todavía (reloj declarado)', () => {
+  const r = evaluarApagado([cohorte({ cohorte: 'a', dias: 200 }), cohorte({ cohorte: 'b', dias: 120 }), cohorte({ cohorte: 'c', dias: 90 })])
+  assert.equal(r.evaluable, false)
+  assert.equal(r.apagar, false)
+  assert.match(r.detalle, /reloj/)
+})
+
+test('apagado: más vieja ≥365 pero <3 cestas distintas → NO evaluable (la cadencia falló, se declara)', () => {
+  const r = evaluarApagado([cohorte({ cohorte: 'a', dias: DIAS_APAGADO }), cohorte({ cohorte: 'b', dias: 300 })])
+  assert.equal(r.evaluable, false)
+  assert.match(r.detalle, /2\/3/)   // «cestas distintas 2/3»
+})
+
+test('apagado: al año, menos de 2/3 baten → veredicto NEGATIVO', () => {
+  const r = evaluarApagado([
+    cohorte({ cohorte: 'a', dias: DIAS_APAGADO, alphaMediana: -0.01 }),
+    cohorte({ cohorte: 'b', dias: 300, alphaMediana: 0.02 }),
+    cohorte({ cohorte: 'c', dias: 250, alphaMediana: -0.03 }),
+  ])
+  assert.equal(r.evaluable, true)
+  assert.equal(r.apagar, true)
+  assert.match(r.detalle, /NEGATIVO/)
+})
+
+test('apagado: al año, ≥2/3 baten → el experimento sigue', () => {
+  const r = evaluarApagado([
+    cohorte({ cohorte: 'a', dias: DIAS_APAGADO, alphaMediana: 0.01 }),
+    cohorte({ cohorte: 'b', dias: 300, alphaMediana: 0.02 }),
+    cohorte({ cohorte: 'c', dias: 250, alphaMediana: -0.03 }),
+  ])
+  assert.equal(r.evaluable, true)
+  assert.equal(r.apagar, false)
+})
+
+test('apagado: alpha null o cobertura floja cuentan como NO bate (no lo sé ≠ bate)', () => {
+  const r = evaluarApagado([
+    cohorte({ cohorte: 'a', dias: DIAS_APAGADO, alphaMediana: null }),
+    cohorte({ cohorte: 'b', dias: 300, alphaMediana: 0.05, cobertura: 0.5 }),
+    cohorte({ cohorte: 'c', dias: 250, alphaMediana: 0.02 }),
+  ])
+  assert.equal(r.evaluable, true)
+  assert.equal(r.apagar, true)   // solo 1/3 bate de forma fiable
 })

@@ -32,6 +32,14 @@
 
 ---
 
+### 📈 (15/08/2026) Trading: regla de APAGADO firmada + correlación de cestas + veredicto fuentes de pago
+- Revisión a raíz de unos prompts de inversión de Twitter (descartados: 3 contradicen H9/intradía/cruces ya refutados).
+- **🛑 Regla de apagado firmada en el pre-registro:** más vieja ≥365d + ≥3 cestas y <2/3 batiendo por mediana → capital a ETF y escalera cerrada. `evaluarApagado` (`puerta-fase2.ts`, 5 tests) + línea 🛑 en el digest semanal.
+- **Correlación media por cohorte** en el digest (contexto, nunca filtro; reutiliza `concentracion.ts`) — la mediana no ve una cesta que es una sola apuesta. Anotada en el pre-registro junto a la re-declaración de «sin dividendos, ambos brazos».
+- **`docs/TRADING-FUENTES-PAGO.md`:** las fuentes de pago NO acortan el camino a operar en real (el reloj es el forward, no los datos); único gasto que protege dinero real = calendario de earnings + datos IBKR, y solo al abrir Tramo 1. Decisión APLAZADA se mantiene.
+- FX EUR/USD y caveat de dividendos ya estaban cubiertos (cartera-estudio) — verificado antes de tocar nada.
+- **Pasada de claridad en `/trading`** (Alberto: «no está clara del todo» + «el orden también»): glosario plegado, tooltips, estrategias legibles, subtítulos-pregunta, línea 🛑 en la escalera; **reorden** hero→glosario→ideas→forward→analiza→radar→cohetes→watchlist (la tabla de 550 al final, lo que hizo el agente arriba) y **cifra en euros en el hero** (curvaEnEuros + FX real, no se pinta sin FX). Sin tocar lógica del modelo.
+
 ### 🧊 (15/08/2026) Cierre del bucle de eventos — congelar→medir→mercado manda, verificado en producción
 - Ciclo completo confirmado con datos reales (PRs #1386 verificador, #1409 guarda 🧊, #1414 ventanas por fecha):
   0 bajadas ciegas en noches de evento confirmado desde el 14/08; el apply de las 14:30 descongeló solo

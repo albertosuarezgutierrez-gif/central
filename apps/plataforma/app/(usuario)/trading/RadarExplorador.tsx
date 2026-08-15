@@ -77,8 +77,9 @@ export default function RadarExplorador({ filas }: { filas: FilaExplorador[] }) 
     return out
   }, [filas, q, minPio, minRoic, minMom, etiqueta, senal, soloGuru, orden, desc])
 
-  const cabecera = (campo: Orden, label: string) => (
-    <th style={th} onClick={() => { if (orden === campo) setDesc(!desc); else { setOrden(campo); setDesc(campo !== 'simbolo') } }}>
+  // El tooltip traduce el término al pasar el ratón (el glosario completo vive plegado arriba del todo).
+  const cabecera = (campo: Orden, label: string, tooltip?: string) => (
+    <th style={th} title={tooltip ? `${tooltip} — clic para ordenar` : 'clic para ordenar'} onClick={() => { if (orden === campo) setDesc(!desc); else { setOrden(campo); setDesc(campo !== 'simbolo') } }}>
       {label}{orden === campo ? (desc ? ' ↓' : ' ↑') : ''}
     </th>
   )
@@ -143,14 +144,14 @@ export default function RadarExplorador({ filas }: { filas: FilaExplorador[] }) 
             <tr>
               <th style={{ ...th, cursor: 'default' }}>#</th>
               {cabecera('simbolo', 'Empresa')}
-              {cabecera('score', 'Score')}
-              {cabecera('piotroski', 'Piotroski')}
-              {cabecera('roic', 'ROIC')}
-              {cabecera('ey', 'Earnings yield')}
-              {cabecera('momentum', 'Momentum')}
-              {cabecera('mktCap', 'Capitalización')}
-              <th style={{ ...th, cursor: 'default' }}>Calidad</th>
-              {cabecera('senal', 'Señales')}
+              {cabecera('score', 'Score', 'nota del modelo frente a sus pares (calidad+valor+momentum); ordena el ranking, no es un precio objetivo')}
+              {cabecera('piotroski', 'Piotroski', 'salud contable 0–9 según las cuentas de la SEC; ≥6 se considera sólido')}
+              {cabecera('roic', 'ROIC', 'rentabilidad que la empresa saca al capital que emplea; ≥10% es bueno')}
+              {cabecera('ey', 'Earnings yield', 'beneficio operativo / precio de la empresa entera — más alto = más barata')}
+              {cabecera('momentum', 'Momentum', 'subida de los últimos 12 meses (sin el último mes)')}
+              {cabecera('mktCap', 'Capitalización', 'tamaño de la empresa en bolsa, en miles de millones de dólares')}
+              <th style={{ ...th, cursor: 'default' }} title="resumen de los factores en un vistazo: 🟢 fuerte · 🟡 media · ⚪ débil">Calidad</th>
+              {cabecera('senal', 'Señales', '📈 compra ahora / ⏳ en espera (técnico, solo top-20 semanal) · 🏆 la tienen gestores value · 📊 picos de volumen')}
             </tr>
           </thead>
           <tbody>
