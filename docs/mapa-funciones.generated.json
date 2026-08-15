@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-15T06:31:30Z",
-  "sha": "decfd9646332f6ede1344e1635c05c48ba36adb1",
+  "generadoEn": "2026-08-15T13:12:50Z",
+  "sha": "a9b91269a5efad47d15d89476a4e2070808ec278",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -55989,7 +55989,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 37
+          "linea": 38
         },
         {
           "nombre": "fmt",
@@ -55997,7 +55997,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 38
+          "linea": 39
         },
         {
           "nombre": "GET",
@@ -56005,7 +56005,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 66,
+          "linea": 71,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -56014,7 +56014,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 70
+          "linea": 75
         }
       ],
       "tablas": [
@@ -56038,7 +56038,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "81869145b7dc"
+      "hash": "e3b6a67e4281"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -67568,6 +67568,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c6e4079eff25"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pricing-suelo-pl.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-suelo-pl.ts — el suelo PriceLabs cede ante el mercado MEDIDO de la fecha. POR QUÉ (15/08/2026). La referencia PL (`pricing_pl_referencia`) es una foto ESTÁTICA del pasado que actúa de suelo (PL_FLOOR_RATIO×PL) hasta caducar. Ese día se descubrió que la foto congelada por el PR #141",
+      "exporta": [
+        "acotarSueloPL"
+      ],
+      "funciones": [
+        {
+          "nombre": "acotarSueloPL",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: SueloPLInput",
+          "retorno": "SueloPLResult",
+          "linea": 39
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "53e1ea612f18"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/prior-estacional.ts",
@@ -92101,7 +92122,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2455,
-    "funciones": 6667
+    "archivos": 2456,
+    "funciones": 6668
   }
 }
