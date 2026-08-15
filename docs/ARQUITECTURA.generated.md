@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-15T06:31:30Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-15T07:14:07Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -231,6 +231,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- Limitación:
 - BORME 404 en festivos = error 500
 - `titulares.ts` roto desde el 05/08
 - 📦 «Cartera paper» vuelve a /trading CON rentabilidad
@@ -240,5 +241,4 @@
 - Pasada de claridad en `/trading`
 - Landmine 1 — suelo PL autorreferente:
 - Landmine 2 — partidos a domicilio como eventos:
-- Verificado end-to-end:
 
