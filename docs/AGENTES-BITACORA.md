@@ -15,6 +15,11 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-15 · pricing-agente (revisión a demanda de Alberto, reserva bajo precio)** · hizo: auditó la
+  reserva Luxury 22-25/10 (430€ brutos vs listado vivo 203€/noche → canal −29,4%, Genius+móvil apilados;
+  neto 345,20€, rentable pero bajo p25 de su fecha) y pasó revista completa: apply/sweep/guard/eventos/
+  latidos/Telegram todos OK, alertas ×2,2 del 29/08+13/09 obsoletas tras #1416; dudas: ¿qué nivel de
+  Genius y descuento móvil hay activos en la extranet? es la fuga restante; fallos: —; PRs/commits: (este PR).
 - **2026-08-15 · pricing-agente (reparación a demanda de Alberto)** · hizo: destapó que la curva
   «PL» congelada por #1416 era el propio motor (la migración re-etiquetó `captured_at` sin restaurar
   precios) → reconstruyó `pricing_pl_referencia` (Busto/Luxury fuera, Dúplex/House con el snapshot
