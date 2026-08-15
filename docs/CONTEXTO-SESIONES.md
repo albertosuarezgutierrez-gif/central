@@ -32,6 +32,13 @@
 
 ---
 
+### 📧 (15/08/2026) Aviso a Asecon: ayudas Junta Andalucía conciliación autónomos (hasta 7.200 €)
+- Alberto pidió que el asesor fiscal viera la convocatoria de la Consejería de Empleo: Línea 4 (autónomos
+  con hijos <3 años que contraten personal, 6.000–7.200 €) y Línea 5 (riesgo embarazo / descanso por
+  nacimiento). **Plazo de solicitud: hasta el 15/09/2026** (telemática, Oficina Virtual de Empleo).
+- Enviado email a Marta Albarrán (malbarran@aseconconsultores.com, cc Pilar) pidiendo revisar si Alberto
+  o Pilar pueden acogerse y tramitarla. **Pendiente: respuesta de Asecon antes del 15/09.**
+
 ### 🐛 (15/08/2026) Pasada de trading duplicada: el PASO 0 del trigger no ve una recuperación con `fecha` backdateada
 - El trigger de las 20:15/23:15 disparó otra vez a las ~08:14 UTC. PASO 0 comprobó `trading_pasadas WHERE
   fecha=CURRENT_DATE` (2026-08-15) → NULL → concluí «no ha corrido hoy» y ejecuté la pasada completa.
