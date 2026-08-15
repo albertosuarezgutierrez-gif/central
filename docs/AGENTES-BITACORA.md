@@ -15,6 +15,13 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-15 · pricing-agente (reparación a demanda de Alberto)** · hizo: destapó que la curva
+  «PL» congelada por #1416 era el propio motor (la migración re-etiquetó `captured_at` sin restaurar
+  precios) → reconstruyó `pricing_pl_referencia` (Busto/Luxury fuera, Dúplex/House con el snapshot
+  limpio del 08/08), cota de cordura del suelo vs ancla de fecha (`pricing-suelo-pl.ts`), y descartó
+  el Sevilla-Rayo fantasma del 16/08; dudas: —; fallos: el propio #1416 (congeló valores contaminados
+  — al congelar una referencia, verificar VALORES contra la fuente real, no solo la fecha); PR: #1427 (MERGEADO
+  el 15/08 con OK de Alberto; bajada verificada en producción: pasada 08:31 con 275 escrituras sin re-anclar).
 - **2026-08-15 · facturas-correo (trigger diario)** · hizo: preflight `/api/internal/alerta` 200
   OK. Paso 0 salud: Vía B **recuperada** (`dias_caido=1`, `_buzon_pdf` recibió 2 recibos Vercel el
   14/08 tras 3 días parada) — actualicé `agente_salud` a `ok=true`; backlog `PDF-pendiente`/

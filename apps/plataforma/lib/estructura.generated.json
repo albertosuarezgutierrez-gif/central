@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-15T08:13:15Z",
+  "generadoEn": "2026-08-15T13:12:50Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4517,6 +4517,18 @@
   ],
   "novedades": [
     {
+      "titulo": "Pero SÍ había corrido",
+      "fecha": ""
+    },
+    {
+      "titulo": "Sin daño operativo",
+      "fecha": ""
+    },
+    {
+      "titulo": "Pendiente:",
+      "fecha": ""
+    },
+    {
       "titulo": "Estado REAL de `pricing_pl_referencia` (difiere del PR):",
       "fecha": ""
     },
@@ -4562,18 +4574,6 @@
     },
     {
       "titulo": "Verificado end-to-end:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Por qué ningún test lo vio:",
-      "fecha": ""
-    },
-    {
-      "titulo": "`calcularCoste` gana `comisionCompra`",
-      "fecha": ""
-    },
-    {
-      "titulo": "Coches fuera de alcance",
       "fecha": ""
     }
   ],
