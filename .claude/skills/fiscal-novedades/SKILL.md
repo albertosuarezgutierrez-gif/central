@@ -96,12 +96,14 @@ BOE/BOJA a fecha X"). Idempotente: re-ejecutar no duplica avisos.
    pluriactividad. Si un recibo `cuota_autonomos` de `movimientos_bancarios` NO cuadra con la
    bonificación que tocaría (p. ej. cuota entera pagada durante una baja), avisa por Telegram y
    deja el detalle en la fila de `docs/FISCAL-AYUDAS.md` — puede haber devolución reclamable.
-6. **Radar por cliente (casa de marcas):** tras el perfil propio, repite la búsqueda para los
-   tenants con cliente real usando su sector/provincia (hoy: Joaquín Jaén — catering/eventos;
-   Sique Brilla — limpiezas, cliente de ialimp; añade los que aparezcan en `docs/CONTEXTO-SESIONES.md`).
-   Kit Digital y ayudas de digitalización/contratación sectoriales suelen ser lo relevante. El aviso
-   va SIEMPRE a Alberto (mismo Telegram, prefijo `💼 AYUDA CLIENTE <nombre>`), nunca al cliente:
-   Alberto decide si reenviarla. Estado en la sección «Clientes» de `docs/FISCAL-AYUDAS.md`.
+6. **Radar por cliente (casa de marcas):** los perfiles viven en la tabla **`ayudas_perfiles`**
+   (`SELECT tenant, nombre, sector, provincia, notas FROM ayudas_perfiles WHERE activo` — cliente
+   nuevo = INSERT ahí, NO tocar este prompt). Por cada perfil, repite la búsqueda con su
+   sector/provincia (Kit Digital y ayudas de digitalización/contratación sectoriales suelen ser lo
+   relevante) y las que encajen se INSERTAN en `fiscal_ayudas` con `tenant = <su tenant>` — así el
+   cliente las ve en el banner 💶 de SU app (almacén/ialimp). El aviso Telegram va SIEMPRE a Alberto
+   (prefijo `💼 AYUDA CLIENTE <nombre>`), nunca al cliente directamente: Alberto decide si además se
+   lo comenta. Estado en la sección «Clientes» de `docs/FISCAL-AYUDAS.md`.
 7. **Nunca tramites ni contactes a nadie** (ni a la asesoría, ni a clientes): el radar informa a
    Alberto y decide él (regla global de comunicaciones salientes en el CLAUDE.md raíz).
 

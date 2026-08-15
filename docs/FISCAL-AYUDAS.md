@@ -14,7 +14,10 @@
 | Cuota RETA de Pilar vs. descanso por nacimiento (nov-2025): recibos empiezan 30/01/2026 (72,12€+49,71€), suben hasta 118,04€ (abril) y caen a 32,34€ desde mayo; ninguna prestación INSS en la cuenta sincronizada | 15/08/2026 (pasada manual) | **Pendiente**: preguntar a Marta si el alta fue posterior a la baja, si aplicó la bonificación del art. 38 LETA y a qué responde la variación de cuotas (borrador preparado) |
 
 ## Clientes
+> Los perfiles canónicos viven en la tabla `ayudas_perfiles` (BD compartida) — cliente nuevo =
+> INSERT ahí. Esta tabla es solo el registro de lo detectado por pasada.
+
 | Tenant | Sector/ámbito | Convocatorias detectadas |
 |---|---|---|
-| Joaquín Jaén (almacén/catering) | Eventos/catering, Andalucía | — (sin pasada aún) |
-| Sique Brilla (ialimp) | Limpiezas, Sevilla | — (sin pasada aún) |
+| `joaquin_jaen` (almacén/catering) | Eventos/catering, Sevilla | — (sin pasada aún) |
+| `sique_brilla` (ialimp) | Limpiezas, Sevilla | — (sin pasada aún) |
