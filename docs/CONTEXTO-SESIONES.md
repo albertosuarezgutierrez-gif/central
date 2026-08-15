@@ -32,6 +32,13 @@
 
 ---
 
+### 🔧 (15/08/2026) Los 3 runtime errors diarios de plataforma NO eran «normales» — 2 fixes
+- Al verificar producción tras mergear #1424, Alberto preguntó por los 3 errores de la última hora. Ninguno era del PR, pero dos eran bugs reales sonando a diario desde julio/agosto:
+- **BORME 404 en festivos = error 500** (y su eco en cron-dispatch): el BOE no publica domingos/festivos; `descargarSumario` ahora devuelve `null` en 404 → `ingestaDia` responde `sinPublicacion: true` con 200. Ausencia legítima declarada, no disfrazada de avería. Otros HTTP siguen lanzando.
+- **`titulares.ts` roto desde el 05/08**: `WHERE cuenta_id = ${cuentaId}` sin `::uuid` → 42883 y lista de titulares vacía en silencio (el catch degradaba). Cast añadido (patrón psd2/adapters); verificado contra la BD real (2 sociedades de la cuenta).
+- Verificado: tsc 0 · 53/53 tests · build OK. Mismo día: #1424 mergeado y producción comprobada al 100% (render real de /trading vía invitado, orden nuevo + euros en hero con FX vivo).
+- **📦 «Cartera paper» vuelve a /trading CON rentabilidad** (Alberto: «¿solo hay comprada ORCL? no indica la rentabilidad»): 8 posiciones abiertas en BD pero invisibles — la lista de ideas filtraba las 40 tesis recientes y las compras viejas desaparecían (consulta propia de compras ahora), y las posiciones no se pintaban desde que se retiró la «Cartera simulada» sin P&L (04/08). Sección nueva con precio actual (Stooq→Yahoo, «—» declarado si no hay) + rentabilidad por posición + total; explica los vetos «posición ya abierta».
+
 ### 📈 (15/08/2026) Trading: regla de APAGADO firmada + correlación de cestas + veredicto fuentes de pago
 - Revisión a raíz de unos prompts de inversión de Twitter (descartados: 3 contradicen H9/intradía/cruces ya refutados).
 - **🛑 Regla de apagado firmada en el pre-registro:** más vieja ≥365d + ≥3 cestas y <2/3 batiendo por mediana → capital a ETF y escalera cerrada. `evaluarApagado` (`puerta-fase2.ts`, 5 tests) + línea 🛑 en el digest semanal.

@@ -33,9 +33,17 @@ async function mapLimit<T, R>(items: T[], limit: number, fn: (t: T) => Promise<R
   return out
 }
 
-/** Descarga el sumario de una fecha (YYYYMMDD) y devuelve los boletines provinciales de la Sección A. */
-export async function descargarSumario(fechaYYYYMMDD: string): Promise<ItemProvincia[]> {
+/**
+ * Descarga el sumario de una fecha (YYYYMMDD) y devuelve los boletines provinciales de la Sección A.
+ * `null` = el BOE NO publicó boletín ese día (404 de la API: fines de semana y festivos — los tres
+ * avisos históricos, 25/07, 01/08 y 15/08, son sábados o festivos) — es una ausencia
+ * LEGÍTIMA y definitiva, no un fallo. Tratarla como error hacía sonar el cron con un 500 cada
+ * festivo desde julio (visto en runtime errors: 25/07, 01/08, 15/08…). El resto de estados HTTP
+ * SÍ son averías reales y siguen lanzando.
+ */
+export async function descargarSumario(fechaYYYYMMDD: string): Promise<ItemProvincia[] | null> {
   const r = await fetch(`${BASE}/sumario/${fechaYYYYMMDD}`, { headers: { Accept: 'application/json' } })
+  if (r.status === 404) return null
   if (!r.ok) throw new Error(`BORME sumario ${fechaYYYYMMDD}: HTTP ${r.status}`)
   const j = (await r.json()) as any
   const secciones = j?.data?.sumario?.diario?.[0]?.seccion ?? j?.sumario?.diario?.[0]?.seccion ?? []
@@ -86,10 +94,16 @@ export async function ingerirEventos(eventos: EventoBorme[]): Promise<number> {
   return n
 }
 
-/** Ingesta completa de un día. isoDate = 'YYYY-MM-DD'. */
-export async function ingestaDia(isoDate: string): Promise<{ eventos: number; provincias: number }> {
+/**
+ * Ingesta completa de un día. isoDate = 'YYYY-MM-DD'.
+ * `sinPublicacion: true` = ese día no hubo BORME (domingo/festivo) — 0 eventos «revisado, no hay»,
+ * distinto de un 0 por avería (eso lanza y el caller responde 500). Regla de la casa: la ausencia
+ * legítima se declara, no se disfraza de error ni de silencio.
+ */
+export async function ingestaDia(isoDate: string): Promise<{ eventos: number; provincias: number; sinPublicacion?: boolean }> {
   const yyyymmdd = isoDate.replace(/-/g, '')
   const items = await descargarSumario(yyyymmdd)
+  if (items === null) return { eventos: 0, provincias: 0, sinPublicacion: true }
   const listas = await mapLimit(items, 8, (item) =>
     ingerirProvincia(item, isoDate).catch((e) => {
       console.error('[borme] provincia', item.id, e)

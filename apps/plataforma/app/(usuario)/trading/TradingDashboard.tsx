@@ -98,12 +98,16 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
   const fallos: string[] = []
   const vigilado = <T,>(nombre: string, p: Promise<T>, fallback: T): Promise<T> =>
     p.catch(() => { fallos.push(nombre); return fallback })
-  const [posiciones, tesis, watchlist, track, radar, universoFilas, ordenes] = await Promise.all([
+  const [posiciones, tesis, compras, watchlist, track, radar, universoFilas, ordenes] = await Promise.all([
     vigilado('posiciones', prisma.tradingPaperPosicion.findMany({ orderBy: { abiertaEn: 'desc' } }), []),
     // `anulado: false`: las tesis anuladas se construyeron con el precio de otra empresa (17/07, 03/08
     // y 04/08 de 2026). Pintarlas sería enseñar como idea del agente una señal que nunca fue de ese
     // símbolo; siguen en BD como registro del incidente.
     vigilado('ideas del agente', prisma.tradingTesis.findMany({ where: { anulado: false }, orderBy: [{ fecha: 'desc' }, { confianza: 'desc' }], take: 40, include: { resultado: true } }), []),
+    // Compras REALES por consulta PROPIA: filtrar las 40 tesis recientes escondía las compras de hace
+    // días detrás de las señales nuevas (una pasada mete ~22 tesis/día → a los 2 días solo quedaba la
+    // compra más reciente y Alberto veía «solo ORCL» con 8 posiciones abiertas, 15/08/2026).
+    vigilado('compras', prisma.tradingTesis.findMany({ where: { anulado: false, direccion: 'alcista', operada: true }, orderBy: { fecha: 'desc' }, take: 8, include: { resultado: true } }), []),
     vigilado('watchlist', prisma.tradingWatchlist.findMany({ where: { activo: true }, orderBy: [{ capa: 'asc' }, { simbolo: 'asc' }] }), []),
     vigilado('seguimiento forward', prisma.tradingPaperTrack.findMany({ orderBy: [{ cohorte: 'asc' }, { fecha: 'asc' }] }), []),
     vigilado('radar', prisma.tradingRanking.findFirst({ orderBy: { fecha: 'desc' } }), null),
@@ -196,6 +200,21 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
   // pintar «no hay nada» sobre un «no he podido mirar»).
   const nadaDeNada = vacio && fallos.length === 0 && !radar && universoFilas.length === 0 && cohortesPaper.length === 0
 
+  // 💵 Precio actual de cada posición abierta (último cierre público, Stooq→Yahoo) para poder pintar
+  // la RENTABILIDAD por posición — lo que faltaba cuando se retiró la «Cartera simulada» (04/08) y lo
+  // que Alberto pidió el 15/08. Best-effort con presupuesto corto: sin precio → null y se DECLARA
+  // («—»), nunca un 0 ni la entrada disfrazada de precio de hoy.
+  const precioAhora = new Map<string, number | null>()
+  if (posiciones.length) {
+    const hoyIso = new Date().toISOString().slice(0, 10)
+    const desde = new Date(Date.now() - 10 * 86_400_000).toISOString().slice(0, 10)
+    const cierres = await Promise.all(posiciones.map(p =>
+      puntosDiarios(p.simbolo, desde, hoyIso, 2500).then(s => s.at(-1)?.cierre ?? null).catch(() => null),
+    ))
+    posiciones.forEach((p, i) => precioAhora.set(p.simbolo, cierres[i]))
+  }
+  const usd = (n: number): string => `${n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`
+
   // 📌 Datos del hero (las dos respuestas de la página; cero queries nuevas): cohorte de referencia
   // = la de más recorrido; interesantes = señal 📈 del top-20 + top del ranking; compras reales.
   const cohorteRef = cohortesPaper.reduce<(typeof cohortesPaper)[number] | null>(
@@ -229,7 +248,7 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
   const topRanking = [...universoExplorador]
     .sort((a, b) => (b.score ?? -Infinity) - (a.score ?? -Infinity))
     .slice(0, 5)
-  const comprasRecientes = tesis.filter(t => t.direccion === 'alcista' && t.operada).slice(0, 4)
+  const comprasRecientes = compras.slice(0, 4)
 
   const cabecera = (
     <>
@@ -354,14 +373,58 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
         </ul>
       </details>
 
+      {/* 📦 CARTERA PAPER — las posiciones ABIERTAS con su rentabilidad EN VIVO. Vuelve (15/08/2026,
+          petición de Alberto: «¿solo hay comprada ORCL? tampoco indica la rentabilidad por acción») lo
+          que la «Cartera simulada» retirada el 04/08 no tenía: el precio de AHORA y el P&L. Además es
+          la explicación de los vetos «posición ya abierta» de abajo: el agente no duplica compras. */}
+      {posiciones.length > 0 && (
+        <section style={{ marginBottom: 22 }}>
+          <h2 style={{ fontSize: 17, marginBottom: 8 }}>📦 Cartera paper — {posiciones.length} posiciones abiertas <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>— qué tiene comprado el agente AHORA (simulado) y cómo va cada una</span></h2>
+          <div style={{ ...card, padding: 0, overflowX: 'auto' }}>
+            <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 560 }}>
+              <thead><tr><th style={th}>Símbolo</th><th style={th}>Abierta</th><th style={th}>Cantidad</th><th style={th}>Entrada</th><th style={th} title="último cierre público (Stooq→Yahoo); «—» = sin precio ahora mismo, no un 0">Precio ahora</th><th style={th}>Rentabilidad</th></tr></thead>
+              <tbody>
+                {posiciones.map(p => {
+                  const px = precioAhora.get(p.simbolo) ?? null
+                  const ret = px != null && p.precioEntrada > 0 ? px / p.precioEntrada - 1 : null
+                  return (
+                    <tr key={p.id}>
+                      <td style={{ ...td, fontWeight: 700 }}>{p.simbolo}</td>
+                      <td style={{ ...td, color: 'var(--muted)' }}>{fechaCorta(p.abiertaEn)}</td>
+                      <td style={td}>{p.cantidad}</td>
+                      <td style={td}>{usd(p.precioEntrada)}</td>
+                      <td style={td}>{px != null ? usd(px) : <span style={{ color: 'var(--muted)' }}>—</span>}</td>
+                      <td style={{ ...td, fontWeight: 700, color: ret == null ? 'var(--muted)' : ret >= 0 ? 'var(--positive)' : 'var(--negative)' }}>{pctN(ret)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          {(() => {
+            const conPrecio = posiciones.filter(p => (precioAhora.get(p.simbolo) ?? null) != null && p.precioEntrada > 0)
+            const invertido = conPrecio.reduce((s, p) => s + p.cantidad * p.precioEntrada, 0)
+            const ahora = conPrecio.reduce((s, p) => s + p.cantidad * (precioAhora.get(p.simbolo) as number), 0)
+            const completo = conPrecio.length === posiciones.length
+            return (
+              <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
+                {invertido > 0 && (
+                  <>Total{completo ? '' : ` (${conPrecio.length}/${posiciones.length} con precio — parcial, no la cartera entera)`}: invertido {usd(invertido)} → ahora <strong style={{ color: ahora >= invertido ? 'var(--positive)' : 'var(--negative)' }}>{usd(ahora)}</strong> ({pct(ahora / invertido - 1)}) · </>
+                )}
+                Valorada con el último cierre público; «—» = sin precio ahora mismo (no un 0). Estas posiciones son la razón de los vetos «posición ya abierta»: el agente no duplica compras. La salida es por TIEMPO al vencer la ventana de cada tesis (regla firmada: los stops empeoran, H9).
+              </p>
+            )
+          })()}
+        </section>
+      )}
+
       {/* 💡 Ideas de COMPRA — SOLO compras REALES (petición de Alberto 20/07: «aquí solo interesan las de
           comprar»; auditoría 21/07: `operada`=la señal ganadora del torneo que pasó las barreras y el agente
           compró en paper). Antes se listaba TODA señal alcista en bruto → salían nombres cuyo torneo ganó
           bajista o que las barreras vetaron, contradiciendo la tarjeta «Analiza una acción». El histórico
           completo (bajistas/neutrales/no operadas) sigue en BD (trading_tesis). */}
       {(() => {
-        const compras = tesis.filter(t => t.direccion === 'alcista' && t.operada).slice(0, 8)
-        const hayAlcistas = tesis.some(t => t.direccion === 'alcista')
+        const hayAlcistas = compras.length > 0 || tesis.some(t => t.direccion === 'alcista')
         // Sin compras reales y sin ningún histórico alcista → nada que contar (el onboarding cubre el vacío).
         if (!compras.length && !hayAlcistas) return null
         // Hay señales alcistas pero el agente NO ha comprado ninguna (torneo ganado por otra dirección o
@@ -574,10 +637,9 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
           simple y corta: eran 4 números sin acción posible; el detalle vive en sus secciones.) */}
 
       {/* (💼 «Cartera simulada» RETIRADA el 04/08/2026 — petición de Alberto «quítame el ruido que no me
-          da números reales»: la tabla listaba entrada/stop/cantidad de posiciones del torneo en paper
-          SIN ningún resultado (ni precio actual, ni P&L, ni cierre), así que no medía nada — era una
-          lista de intenciones con pinta de cartera. Lo que sí mide de verdad es el 🧪 Forward paper de
-          arriba (cesta congelada vs SPY). Las posiciones siguen en BD `trading_posiciones`.) */}
+          da números reales»: la tabla listaba entrada/stop/cantidad SIN ningún resultado. El 15/08/2026
+          VOLVIÓ como «📦 Cartera paper» (arriba) exactamente con lo que le faltaba: precio actual y
+          rentabilidad por posición — no re-crear una segunda tabla de posiciones sin P&L.) */}
 
       {/* (📊 «Rendimiento por estrategia» RETIRADA el 04/08/2026 — misma petición. Su «retorno medio»
           NO era dinero: es el retorno HIPOTÉTICO de seguir cada señal del torneo interno (la bajista
