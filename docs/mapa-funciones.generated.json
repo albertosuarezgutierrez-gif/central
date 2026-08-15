@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-15T13:12:50Z",
-  "sha": "a9b91269a5efad47d15d89476a4e2070808ec278",
+  "generadoEn": "2026-08-15T13:44:17Z",
+  "sha": "b30e46f1abbd9353faea75b8d064b8eaf01e352c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -834,7 +834,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 11
+          "linea": 12
         }
       ],
       "tablas": [
@@ -844,7 +844,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "f7352f13b6c9"
+      "hash": "7444a3e57551"
     },
     {
       "ruta": "apps/almacen/app/(usuario)/transferencias/page.tsx",
@@ -1810,6 +1810,39 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "1151476fa833"
+    },
+    {
+      "ruta": "apps/almacen/lib/ayudas.ts",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "ayudasVigentes",
+        "diasRestantes"
+      ],
+      "funciones": [
+        {
+          "nombre": "ayudasVigentes",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string",
+          "retorno": "Promise<AyudaCliente[]>",
+          "linea": 17,
+          "resumen": "Ayudas/subvenciones vigentes detectadas por el radar del grupo para ESTE tenant (fiscal_ayudas + ayudas_perfiles, BD compartida; ref_ext = cuentas.id de esta app). plazo_fin NULL = plazo por confirmar"
+        },
+        {
+          "nombre": "diasRestantes",
+          "kind": "function",
+          "exportada": true,
+          "params": "plazoFin: Date | null",
+          "retorno": "number | null",
+          "linea": 35
+        }
+      ],
+      "tablas": [
+        "ayudas_perfiles",
+        "fiscal_ayudas"
+      ],
+      "rutaApi": null,
+      "hash": "6038212e84d2"
     },
     {
       "ruta": "apps/almacen/lib/empleados.ts",
@@ -40659,7 +40692,7 @@
           "exportada": false,
           "params": "t?: string | null",
           "retorno": "string",
-          "linea": 38,
+          "linea": 39,
           "resumen": "timestamptz (texto, p.ej. \"2026-06-14 09:30:00+00\") → \"09:30\""
         },
         {
@@ -40668,21 +40701,21 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 59,
+          "linea": 60,
           "resumen": "── Tarjeta de escaneo rápido de facturas ──────────────────────────"
         },
         {
           "nombre": "DashboardClient",
           "kind": "function",
           "exportada": true,
-          "params": "{ empresa, sesionesIniciales, conexiones, clientes, limpiadoras, today, modulosOff = [] }: Props",
+          "params": "{ empresa, sesionesIniciales, conexiones, clientes, limpiadoras, today, modulosOff = [], ayudas = [] }: Props",
           "retorno": null,
-          "linea": 127
+          "linea": 128
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "03762faac121"
+      "hash": "9cfbbcd8c133"
     },
     {
       "ruta": "apps/ialimp/app/dashboard/page.tsx",
@@ -40697,7 +40730,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         }
       ],
       "tablas": [
@@ -40709,7 +40742,7 @@
         "pms_connections"
       ],
       "rutaApi": null,
-      "hash": "ca99e84bd94b"
+      "hash": "7d093e07cbf9"
     },
     {
       "ruta": "apps/ialimp/app/l/acceso/[token]/page.tsx",
@@ -42551,6 +42584,30 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "7e4ec5cadf17"
+    },
+    {
+      "ruta": "apps/ialimp/lib/ayudas.ts",
+      "ambito": "apps/ialimp",
+      "exporta": [
+        "ayudasVigentes"
+      ],
+      "funciones": [
+        {
+          "nombre": "ayudasVigentes",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string",
+          "retorno": "Promise<AyudaEmpresa[]>",
+          "linea": 17,
+          "resumen": "Ayudas/subvenciones vigentes detectadas por el radar del grupo para ESTA empresa (fiscal_ayudas + ayudas_perfiles, BD compartida; ref_ext = empresas.id). plazo_fin NULL = plazo por confirmar: se muest"
+        }
+      ],
+      "tablas": [
+        "ayudas_perfiles",
+        "fiscal_ayudas"
+      ],
+      "rutaApi": null,
+      "hash": "9e919111cfd0"
     },
     {
       "ruta": "apps/ialimp/lib/branding.ts",
@@ -45930,12 +45987,21 @@
           "linea": 77
         },
         {
+          "nombre": "AyudaBanner",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ ayudas, onDescartar }: { ayudas: ResumenFinanciero['deducciones']['ayudas']; onDescartar: (id: string) => void }",
+          "retorno": null,
+          "linea": 96,
+          "resumen": "── Banner de ayuda/subvención con plazo abierto (radar fiscal-novedades) ────"
+        },
+        {
           "nombre": "NovedadBanner",
           "kind": "function",
           "exportada": false,
           "params": "{ novedades, onDescartar }: { novedades: ResumenFinanciero['deducciones']['novedades']; onDescartar: (id: string) => void }",
           "retorno": null,
-          "linea": 96,
+          "linea": 126,
           "resumen": "── Banner de novedad fiscal (cambio normativo que te beneficia) ─────────────"
         },
         {
@@ -45944,7 +46010,7 @@
           "exportada": false,
           "params": "{ salud }: { salud: ResumenFinanciero['saludExtraccion'] }",
           "retorno": null,
-          "linea": 117,
+          "linea": 147,
           "resumen": "── Badge de corte de extracción de facturas (skill `facturas-correo`) ─────── Se pinta solo si el agente marcó la extracción de PDFs como caída (`ok=false`)."
         },
         {
@@ -45953,7 +46019,7 @@
           "exportada": true,
           "params": "{ initialData, year, quarter }: Props",
           "retorno": null,
-          "linea": 137
+          "linea": 167
         }
       ],
       "tablas": [
@@ -45961,7 +46027,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "a5fae16ae749"
+      "hash": "92babe4b8f30"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/fiscal/FiscalPageClient.tsx",
@@ -52835,6 +52901,27 @@
       "tablas": [],
       "rutaApi": "/api/empresas/sector-web",
       "hash": "5fc41b3db9d9"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/finanzas/ayudas/[id]/descartar/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: NextRequest, { params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "Marca una ayuda/subvención del radar como descartada (deja de mostrarse en pantalla)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/finanzas/ayudas/[id]/descartar",
+      "hash": "6b5ad079bc1e"
     },
     {
       "ruta": "apps/plataforma/app/api/finanzas/categorias/asignar/route.ts",
@@ -63702,7 +63789,7 @@
           "exportada": false,
           "params": "base: number, tramos: Tramo[]",
           "retorno": null,
-          "linea": 232
+          "linea": 246
         },
         {
           "nombre": "mesRange",
@@ -63710,7 +63797,7 @@
           "exportada": false,
           "params": "year: number, quarter: number",
           "retorno": "",
-          "linea": 259
+          "linea": 273
         },
         {
           "nombre": "shiftYearStr",
@@ -63718,7 +63805,7 @@
           "exportada": false,
           "params": "fecha: string, delta: number",
           "retorno": "string",
-          "linea": 274,
+          "linea": 288,
           "resumen": "Desplaza el año de una fecha 'YYYY-MM-DD' (para la comparativa \"mismo periodo del año anterior\" cuando el periodo es un rango libre). Solo toca los 4 primeros caracteres."
         },
         {
@@ -63727,7 +63814,7 @@
           "exportada": false,
           "params": "cuentaId: string, year: number, baseImponible: number, retenciones: number,",
           "retorno": "Promise<DeduccionesView>",
-          "linea": 280,
+          "linea": 294,
           "resumen": "── Deducciones fiscales (perfil familiar + motor puro) ──────────────────────"
         },
         {
@@ -63736,7 +63823,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string,",
           "retorno": "Promise<ResumenFinanciero>",
-          "linea": 371
+          "linea": 409
         },
         {
           "nombre": "getGastosControl",
@@ -63744,7 +63831,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string,",
           "retorno": "Promise<GastosControl>",
-          "linea": 755,
+          "linea": 793,
           "resumen": "── Control de gastos: lista de cargos del periodo agrupada por bucket de deducibilidad ──────── Alimenta la pestaña «Gastos» de /finanzas. Excluye traspasos del cómputo de totales y las cuentas del có"
         },
         {
@@ -63753,7 +63840,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string",
           "retorno": "Promise<ResumenPilar>",
-          "linea": 931
+          "linea": 969
         },
         {
           "nombre": "bancoCond",
@@ -63761,7 +63848,7 @@
           "exportada": true,
           "params": "banco?: string",
           "retorno": null,
-          "linea": 1081,
+          "linea": 1119,
           "resumen": "Filtro por cuenta para el eje personal: BBVA (100% de Alberto) vs \"familiar\" (el resto, p.ej. Kutxabank). Coherente con la separación de `getResumenFinanciero.personal.bbva/.kutxa`."
         },
         {
@@ -63770,13 +63857,14 @@
           "exportada": true,
           "params": "cuentaId: string, categoria: string, desde: string, hasta: string, banco?: string,",
           "retorno": "Promise<MerchantRow[]>",
-          "linea": 1087
+          "linea": 1125
         }
       ],
       "tablas": [
         "agente_salud",
         "cuentas_bancarias",
         "facturas_proveedor",
+        "fiscal_ayudas",
         "fiscal_descendientes",
         "fiscal_historico",
         "fiscal_novedades",
@@ -63787,7 +63875,7 @@
         "properties"
       ],
       "rutaApi": null,
-      "hash": "73cb5b960d9e"
+      "hash": "0a65d2a7762e"
     },
     {
       "ruta": "apps/plataforma/lib/fiscal-deducciones.ts",
@@ -92122,7 +92210,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2456,
-    "funciones": 6668
+    "archivos": 2459,
+    "funciones": 6673
   }
 }
