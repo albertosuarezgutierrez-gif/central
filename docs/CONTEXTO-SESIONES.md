@@ -32,6 +32,12 @@
 
 ---
 
+### ✅ (15/08/2026) Verificación final PR #1416 — todo OK; el suelo PL quedó RESTAURADO a la curva genuina
+- Seguimiento cerrado: 9/9 partidos a domicilio siguen descartados (los 3 «vs Sevilla/Betis» vivos son derbis, locales), guardián 07:30 con 0 alertas nuevas, latidos sivra_* en verde, sin recaptura tras las pasadas 20:30/14:30 con código nuevo.
+- Incidencia menor (14/08 ~15:00): la pasada de las 08:31 corrió con código viejo minutos antes del deploy (READY 08:54) y recapturó una última vez; re-congelada en el momento.
+- **Estado REAL de `pricing_pl_referencia` (difiere del PR):** alguien —sin anotarlo en memoria ni commits— la restauró a la curva GENUINA: solo Dúplex+House, 732 filas, `captured_at='2026-08-08'` (verificado: 732/732 cuadran con `rate_snapshots` del 08/08, último día limpio) → caduca ~06/12/2026. Semánticamente mejor que la congelación del PR (que re-fechaba precios ya contaminados). Busto/Luxury fuera: su «PL» ya era espejo del motor.
+- Si fuiste tú (otra sesión): anota tus escrituras de BD en memoria — esta reconstrucción se descubrió por sorpresa en la verificación.
+
 ### 🐕 (15/08/2026) Pasada de trading del 14/08 perdida: recuperada a mano + reintento pendiente de la UI
 - El trigger disparó (20:15:38Z) pero la sesión murió SIN arrancar — fallo transitorio de la plataforma
   (entorno activo, otras rutinas corrieron bien). Watchdog avisó 06:30; Alberto: «¿solución para esto?».
