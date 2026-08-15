@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-15T06:10:08Z",
+  "generadoEn": "2026-08-15T06:31:30Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4517,6 +4517,18 @@
   ],
   "novedades": [
     {
+      "titulo": "BORME 404 en festivos = error 500",
+      "fecha": ""
+    },
+    {
+      "titulo": "`titulares.ts` roto desde el 05/08",
+      "fecha": ""
+    },
+    {
+      "titulo": "📦 «Cartera paper» vuelve a /trading CON rentabilidad",
+      "fecha": ""
+    },
+    {
       "titulo": "🛑 Regla de apagado firmada en el pre-registro:",
       "fecha": ""
     },
@@ -4562,18 +4574,6 @@
     },
     {
       "titulo": "2ª pasada, el hallazgo de verdad:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Corrige el aviso del PR #1392:",
-      "fecha": ""
-    },
-    {
-      "titulo": "0 errores de runtime en 7 días. Eso no era que funcionara: era que nadie lo había usado.",
-      "fecha": ""
-    },
-    {
-      "titulo": "No cerraba una fuga",
       "fecha": ""
     }
   ],

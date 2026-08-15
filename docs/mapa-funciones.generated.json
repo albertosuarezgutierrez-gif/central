@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-15T06:10:08Z",
-  "sha": "42c12e230e5022b3d85f7530cd435406f617208f",
+  "generadoEn": "2026-08-15T06:31:30Z",
+  "sha": "decfd9646332f6ede1344e1635c05c48ba36adb1",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -48988,7 +48988,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b95c2e6439dc"
+      "hash": "835001bad4ba"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -58669,7 +58669,7 @@
         "sociedades"
       ],
       "rutaApi": null,
-      "hash": "f03160b69921"
+      "hash": "57eb9479eef1"
     },
     {
       "ruta": "apps/plataforma/lib/agente-movimientos.ts",
@@ -59426,9 +59426,9 @@
           "kind": "function",
           "exportada": true,
           "params": "fechaYYYYMMDD: string",
-          "retorno": "Promise<ItemProvincia[]>",
-          "linea": 37,
-          "resumen": "Descarga el sumario de una fecha (YYYYMMDD) y devuelve los boletines provinciales de la Sección A."
+          "retorno": "Promise<ItemProvincia[] | null>",
+          "linea": 44,
+          "resumen": "Descarga el sumario de una fecha (YYYYMMDD) y devuelve los boletines provinciales de la Sección A. `null` = el BOE NO publicó boletín ese día (404 de la API: fines de semana y festivos — los tres avis"
         },
         {
           "nombre": "ingerirProvincia",
@@ -59436,7 +59436,7 @@
           "exportada": true,
           "params": "item: ItemProvincia, fecha: string",
           "retorno": "Promise<EventoBorme[]>",
-          "linea": 51,
+          "linea": 59,
           "resumen": "Baja y parsea el XML de un boletín provincial → eventos."
         },
         {
@@ -59445,7 +59445,7 @@
           "exportada": true,
           "params": "eventos: EventoBorme[]",
           "retorno": "Promise<number>",
-          "linea": 65,
+          "linea": 73,
           "resumen": "Upsert en LOTE (chunks) de una lista de eventos, deduplicada por dedupe_key. Devuelve cuántos."
         },
         {
@@ -59454,8 +59454,8 @@
           "exportada": true,
           "params": "isoDate: string",
           "retorno": "Promise<",
-          "linea": 90,
-          "resumen": "Ingesta completa de un día. isoDate = 'YYYY-MM-DD'."
+          "linea": 103,
+          "resumen": "Ingesta completa de un día. isoDate = 'YYYY-MM-DD'. `sinPublicacion: true` = ese día no hubo BORME (domingo/festivo) — 0 eventos «revisado, no hay», distinto de un 0 por avería (eso lanza y el caller "
         }
       ],
       "tablas": [
@@ -59464,7 +59464,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "3770ae09adb7"
+      "hash": "01bc6b0c7cde"
     },
     {
       "ruta": "apps/plataforma/lib/borme.ts",
