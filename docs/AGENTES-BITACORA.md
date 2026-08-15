@@ -15,6 +15,21 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-15 · facturas-correo (trigger diario)** · hizo: preflight `/api/internal/alerta` 200
+  OK. Paso 0 salud: Vía B **recuperada** (`dias_caido=1`, `_buzon_pdf` recibió 2 recibos Vercel el
+  14/08 tras 3 días parada) — actualicé `agente_salud` a `ok=true`; backlog `PDF-pendiente`/
+  `Revisar` a 0, sin escalado necesario. 2 candidatos nuevos en Gmail (2 pedidos Amazon: lima
+  eléctrica pies 17,77€ y microondas LG 142,18€, ambos entregados a "Cádiz" — ninguna dirección de
+  los 4 pisos/vivienda habitual) → `personal` (higiene personal + electrodoméstico de cocina
+  doméstica, ambos inequívocos por regla de material físico), no archivados, etiquetados
+  `Procesada`. 0 subidas manuales nuevas (`_subir_aqui` vacío); barrido raíz `FACTURAS
+  Apartamentos/2026` sin novedades frente a pasadas previas (mismos ficheros ya cubiertos por
+  avisos en `_DUPLICADOS_BORRAR`, no reauditados hoy). Paso 4.0 (`v_facturas_sin_cargo`): 0 filas
+  `sin_revisar`, las 8 `revisada_sin_cargo` (Pepephone ene-jun, Giraldillo mayo, CREATE junio
+  duplicada) sin cambios, siguen esperando a Alberto. dudas: —; fallos:
+  `search_threads label:Facturas/Extraccion-fallida` (Label_16, 1 mensaje según `list_labels`)
+  sigue vacío, ya 5º día consecutivo (12→15/08) — patrón repetido, para `agentes-entrenador`;
+  PRs/commits: este commit (solo Gmail/Drive/Supabase vía MCP + esta entrada).
 - **2026-08-15 · mercado-booking** · hizo: pasada de 12 ventanas (plan `?max=12`, sin filtro —
   las 12 candidatas eran `sin_medir_nunca`, todas ronda 1/evento: Bienal de Flamenco 11/12/14-sep,
   las 4 propiedades por aforo 12/5/4/2). 110 comparables reales escritos en `market_rates`
