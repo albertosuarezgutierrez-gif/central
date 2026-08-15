@@ -22,6 +22,23 @@
   el allowlist de red, usa `ALERTA_TOKEN`). Hubo una duplicada («Agente inversión») que se BORRÓ — no recrear
   una segunda rutina que cargue esta skill (toda la inteligencia ya está aquí; un prompt largo en el trigger
   solo se queda caduco). Si detectas dos, deja una y avisa.
+- **🩹 Recuperar una pasada que NO llegó a arrancar (caso real 14/08/2026):** el trigger disparó
+  (`last_fired_at` 20:15:38) pero la sesión murió sin dejar NI UNA huella (ni saldo, ni Telegram, ni
+  bitácora) — fallo transitorio de arranque de la plataforma, no de la config (entorno activo, otras
+  rutinas corrieron bien horas después). **La pasada perdida SE PUEDE recuperar desde cualquier sesión
+  con el conector IBKR** mientras el mercado no haya vuelto a abrir: se corre entera (NAV→saldo,
+  watchlist, velas, `/analizar`, `/puntuar`, Telegram) con **`fecha`/`hoy` = la SESIÓN de mercado de los
+  cierres** (p. ej. recuperada en sábado → `fecha` del viernes; ponerle la fecha del sábado sería la
+  etiqueta corrida de `pasada-diaria.md`). Así el contador `trading_pasadas` cae en el día correcto y el
+  contraste casa con su sesión (saldrá `desfasados` si la 2ª fuente aún no publicó ese cierre — declarado,
+  no veta). Con muchos símbolos, delega la bajada de velas a subagentes que escriban `velas/<SIM>.json`
+  UNO A UNO (protocolo anti-barajado) y ensambla el payload desde ficheros, sin datos por el contexto.
+  ⚠️ Los triggers creados desde la UI de claude.ai NO se pueden disparar ni editar por MCP
+  (`fire_trigger`/`update_trigger` los rechazan), y los creados por MCP no llevan conectores en esta org:
+  la única vía de automatizar el reintento es que Alberto edite la Rutina en la UI (doble disparo
+  `15 20,23 * * 1-5` + PASO 0 de huella — propuesto 15/08/2026, pendiente de Alberto; ver
+  `docs/RUTINAS-PROGRAMADAS.md`). Mientras no exista, el hueco lo caza el watchdog a la mañana siguiente
+  y la recuperación es manual con este procedimiento.
 - **🐕 Watchdog, 3 tramos (06/08/2026)** — cron `/api/cron/trading-watchdog` (`30 6 * * 2-6`, mar-sáb
   08:30 CEST) comprueba que la pasada nocturna dejó "anoche" sus TRES huellas: 1) el NAV de IBKR en
   `broker_saldos` (lectura del bróker), 2) el latido `trading_analizar` (análisis, `/analizar`), y 3) el

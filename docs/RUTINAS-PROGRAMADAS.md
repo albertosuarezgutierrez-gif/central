@@ -458,3 +458,23 @@ allá de `analizar`/`puntuar`: `factores`, `gurus`, `fundamentales`, `insiders`,
   red alcanzando `plataforma-ten-flame.vercel.app` (sin 403) también en el entorno de `/auditoria-diaria`
   (comparte el mismo arreglo). Con la pasada de punta a punta confirmada, `lib/agentes-catalogo.ts` pasa
   de `pendiente-trigger` a `activo` (carril 2, PR draft — es código).
+- **🩹 Incidente 14/08/2026 — el trigger disparó pero la sesión murió sin arrancar (pasada perdida):**
+  `last_fired_at` 20:15:38Z y CERO huella (ni saldo, ni Telegram, ni bitácora). No fue la config: entorno
+  activo, mismas credenciales, y otras rutinas corrieron bien esa madrugada — fallo transitorio de
+  arranque del lado de la plataforma de Claude. El watchdog lo cazó a las 06:30 y la pasada se recuperó
+  a mano la mañana del sábado con los cierres del viernes (`fecha`/`hoy` = 2026-08-14; procedimiento
+  completo en la skill, `references/infra-forward-radar.md` → «Recuperar una pasada que NO llegó a
+  arrancar»). Verificado después: 3 huellas frescas, `trading_pasadas[14/08]=1`, 48 tesis puntuadas.
+  **Limitación descubierta:** las Rutinas creadas desde la UI de claude.ai NO se pueden disparar ni
+  editar por MCP (`fire_trigger`/`update_trigger` las rechazan: «created via http_api»), y las creadas
+  por MCP no almacenan conectores en esta org → **el reintento automático solo puede montarlo Alberto
+  desde la UI de Rutinas** editando ESTA rutina (sigue siendo UNA sola):
+  1. Programación → cron `15 20,23 * * 1-5` (dispara a las 20:15 y a las 23:15 UTC).
+  2. Añadir al PRINCIPIO del prompt el PASO 0 de huella: comprobar por Supabase
+     `broker_saldos.actualizado_en` (< 6 h) Y `trading_pasadas` de hoy con `analizar >= 1` → si ambas,
+     TERMINAR EN SILENCIO (la de las 20:15 ya corrió); si no hay huella, ejecutar la pasada completa y
+     decir en el Telegram que es el reintento; si Supabase no responde a las 23:15, avisar y NO ejecutar
+     a ciegas (riesgo de doble pasada).
+  **PENDIENTE de Alberto (propuesto 15/08/2026).** El anti-duplicado de datos ya existe de serie
+  (`trading_pasadas` cuenta y avisa a la 2ª pasada; únicos por `(simbolo,fecha,estrategia)`), así que el
+  coste de un fallo del PASO 0 es un aviso, no datos corruptos.
