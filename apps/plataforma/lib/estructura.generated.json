@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-14T10:27:08Z",
+  "generadoEn": "2026-08-15T06:10:08Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4517,6 +4517,22 @@
   ],
   "novedades": [
     {
+      "titulo": "🛑 Regla de apagado firmada en el pre-registro:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Correlación media por cohorte",
+      "fecha": ""
+    },
+    {
+      "titulo": "`docs/TRADING-FUENTES-PAGO.md`:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Pasada de claridad en `/trading`",
+      "fecha": ""
+    },
+    {
       "titulo": "Landmine 1 — suelo PL autorreferente:",
       "fecha": ""
     },
@@ -4558,22 +4574,6 @@
     },
     {
       "titulo": "No cerraba una fuga",
-      "fecha": ""
-    },
-    {
-      "titulo": "La buena noticia: la puerta ya está abierta.",
-      "fecha": ""
-    },
-    {
-      "titulo": "El grave: una `service_role` del proyecto de PRODUCCIÓN `wswbehlcuxqxyinousql`",
-      "fecha": ""
-    },
-    {
-      "titulo": "Bucle de alertas encontrado:",
-      "fecha": ""
-    },
-    {
-      "titulo": "«DIRECTO = 0 €» era la etiqueta, no el negocio:",
       "fecha": ""
     }
   ],

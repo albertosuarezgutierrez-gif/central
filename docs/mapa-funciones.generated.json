@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-14T10:27:08Z",
-  "sha": "7631851ab81752e66457b07c8613fac9b6c363ca",
+  "generadoEn": "2026-08-15T06:10:08Z",
+  "sha": "42c12e230e5022b3d85f7530cd435406f617208f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -48927,7 +48927,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "791993586490"
+      "hash": "4ec2c9cedc4a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/trading/TradingDashboard.tsx",
@@ -48942,7 +48942,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 18
+          "linea": 20
         },
         {
           "nombre": "pctN",
@@ -48950,7 +48950,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 21
+          "linea": 23
         },
         {
           "nombre": "pct0N",
@@ -48958,7 +48958,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 24
+          "linea": 26
         },
         {
           "nombre": "CurvaForward",
@@ -48966,7 +48966,7 @@
           "exportada": false,
           "params": "{ serie }: { serie: { m: number | null; b: number }[] }",
           "retorno": null,
-          "linea": 30,
+          "linea": 32,
           "resumen": "Mini-curva del forward (SVG puro, sin dependencias): línea de la cesta (MEDIANA) vs el SPY a lo largo de los snapshots persistidos. La mediana es la métrica de decisión (un outlier no la mueve)."
         },
         {
@@ -48975,7 +48975,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 47
+          "linea": 49
         },
         {
           "nombre": "TradingDashboard",
@@ -48983,12 +48983,12 @@
           "exportada": true,
           "params": "{ carteraCohetes }: { carteraCohetes: CarteraCohetesData | null }",
           "retorno": null,
-          "linea": 58
+          "linea": 95
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e8c4ac6d26e2"
+      "hash": "b95c2e6439dc"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -70856,7 +70856,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 14
+          "linea": 15
         },
         {
           "nombre": "mediana",
@@ -70864,7 +70864,7 @@
           "exportada": false,
           "params": "xs: number[]",
           "retorno": "number | null",
-          "linea": 15
+          "linea": 16
         },
         {
           "nombre": "pct",
@@ -70872,7 +70872,7 @@
           "exportada": false,
           "params": "x: number | null | undefined",
           "retorno": "string",
-          "linea": 21
+          "linea": 22
         },
         {
           "nombre": "pct0",
@@ -70880,7 +70880,7 @@
           "exportada": false,
           "params": "x: number | null | undefined",
           "retorno": "string",
-          "linea": 22
+          "linea": 23
         },
         {
           "nombre": "dias",
@@ -70888,7 +70888,7 @@
           "exportada": false,
           "params": "d1: string, d2: string",
           "retorno": "number",
-          "linea": 23
+          "linea": 24
         },
         {
           "nombre": "medirCohorte",
@@ -70896,7 +70896,7 @@
           "exportada": true,
           "params": "c: CarteraPaper",
           "retorno": "Promise<MedidaPaper>",
-          "linea": 42,
+          "linea": 47,
           "resumen": "Calcula el rendimiento hacia delante de UNA cohorte congelada vs su benchmark, con riesgo y atribución. MEDICIÓN ALINEADA (auditoría 11/08/2026): series FECHADAS y la MISMA ventana [fechaInicio, hoy] "
         },
         {
@@ -70905,7 +70905,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<MedidaPaper[]>",
-          "linea": 68,
+          "linea": 76,
           "resumen": "Mide TODAS las cohortes (la más antigua primero, como en `COHORTES_PAPER`)."
         },
         {
@@ -70914,7 +70914,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<MedidaPaper>",
-          "linea": 73,
+          "linea": 81,
           "resumen": "Compat: medición de la cohorte más reciente (consumidores de una sola cesta)."
         },
         {
@@ -70923,7 +70923,7 @@
           "exportada": true,
           "params": "m: MedidaPaper",
           "retorno": "Promise<boolean>",
-          "linea": 79,
+          "linea": 87,
           "resumen": "Persiste un snapshot de la medición (curva del forward + riesgo + atribución). Idempotente por cohorte+fecha. Best-effort: si la tabla aún no existe o la BD falla, NO rompe el digest."
         },
         {
@@ -70932,7 +70932,7 @@
           "exportada": false,
           "params": "m: MedidaPaper, i: number, total: number",
           "retorno": "string[]",
-          "linea": 105,
+          "linea": 113,
           "resumen": "Bloque de digest de UNA cohorte. La MEDIANA es la métrica que decide (un outlier no la mueve)."
         },
         {
@@ -70941,7 +70941,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 134,
+          "linea": 146,
           "resumen": "Mide, PERSISTE y avisa por Telegram. Si NINGUNA cohorte tiene precios (fuente caída) no molesta."
         },
         {
@@ -70950,13 +70950,13 @@
           "exportada": true,
           "params": "cohorte?: string",
           "retorno": null,
-          "linea": 240,
+          "linea": 259,
           "resumen": "Lee la CURVA persistida de una cohorte (o de todas), de más antigua a más reciente. Best-effort."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5142f5b3ac57"
+      "hash": "eb977da532da"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-contraste.ts",
@@ -71398,7 +71398,8 @@
       "resumen": "🪜 Escalera de dinero real — evaluación PURA y determinista de los requisitos FIRMADOS en docs/TRADING-HIPOTESIS-PREREGISTRO.md («💶 Plan de despliegue de capital REAL — escalera de tramos», firmada 2026-08-05). Este módulo NO inventa criterios: operacionaliza los firmados (la operacionalización exa",
       "exporta": [
         "emparejarOps",
-        "evaluarEscalera"
+        "evaluarEscalera",
+        "evaluarApagado"
       ],
       "funciones": [
         {
@@ -71451,11 +71452,19 @@
           "retorno": "EstadoEscalera",
           "linea": 80,
           "resumen": "Evalúa la escalera. `cohortes` deben venir YA deduplicadas por cesta (dos versiones con los mismos valores son UNA prueba, no dos — misma regla que el dashboard y el digest)."
+        },
+        {
+          "nombre": "evaluarApagado",
+          "kind": "function",
+          "exportada": true,
+          "params": "cohortes: CohorteEscalera[]",
+          "retorno": "EstadoApagado",
+          "linea": 140
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "325f0553a3b6"
+      "hash": "feae50c35d25"
     },
     {
       "ruta": "apps/plataforma/lib/trading/radar.ts",
@@ -92093,6 +92102,6 @@
   ],
   "resumen": {
     "archivos": 2455,
-    "funciones": 6666
+    "funciones": 6667
   }
 }
