@@ -35,10 +35,11 @@
   UNO A UNO (protocolo anti-barajado) y ensambla el payload desde ficheros, sin datos por el contexto.
   ⚠️ Los triggers creados desde la UI de claude.ai NO se pueden disparar ni editar por MCP
   (`fire_trigger`/`update_trigger` los rechazan), y los creados por MCP no llevan conectores en esta org:
-  la única vía de automatizar el reintento es que Alberto edite la Rutina en la UI (doble disparo
-  `15 20,23 * * 1-5` + PASO 0 de huella — propuesto 15/08/2026, pendiente de Alberto; ver
-  `docs/RUTINAS-PROGRAMADAS.md`). Mientras no exista, el hueco lo caza el watchdog a la mañana siguiente
-  y la recuperación es manual con este procedimiento.
+  los cambios de la Rutina van siempre por la UI (o Claude Chrome). **✅ Desde el 15/08/2026 la Rutina
+  dispara DOS veces (`15 20,23 * * 1-5`) con PASO 0 de huella: el disparo de las 23:15 es la repesca y
+  se apaga solo si la de las 20:15 dejó huella** — sigue siendo UNA sola Rutina; no crear otra. Si aun
+  así un día mueren los dos disparos, el watchdog lo caza a la mañana siguiente y la recuperación es
+  manual con este procedimiento.
 - **🐕 Watchdog, 3 tramos (06/08/2026)** — cron `/api/cron/trading-watchdog` (`30 6 * * 2-6`, mar-sáb
   08:30 CEST) comprueba que la pasada nocturna dejó "anoche" sus TRES huellas: 1) el NAV de IBKR en
   `broker_saldos` (lectura del bróker), 2) el latido `trading_analizar` (análisis, `/analizar`), y 3) el

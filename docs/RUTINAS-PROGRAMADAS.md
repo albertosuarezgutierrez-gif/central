@@ -475,6 +475,8 @@ allá de `analizar`/`puntuar`: `factores`, `gurus`, `fundamentales`, `insiders`,
      TERMINAR EN SILENCIO (la de las 20:15 ya corrió); si no hay huella, ejecutar la pasada completa y
      decir en el Telegram que es el reintento; si Supabase no responde a las 23:15, avisar y NO ejecutar
      a ciegas (riesgo de doble pasada).
-  **PENDIENTE de Alberto (propuesto 15/08/2026).** El anti-duplicado de datos ya existe de serie
-  (`trading_pasadas` cuenta y avisa a la 2ª pasada; únicos por `(simbolo,fecha,estrategia)`), así que el
-  coste de un fallo del PASO 0 es un aviso, no datos corruptos.
+  **✅ APLICADO por Alberto el 15/08/2026** (vía Claude Chrome) y verificado por MCP: cron
+  `15 20,23 * * 1-5`, prompt con PASO 0, los 4 conectores intactos. El anti-duplicado de datos ya
+  existe de serie (`trading_pasadas` cuenta y avisa a la 2ª pasada; únicos por
+  `(simbolo,fecha,estrategia)`), así que el coste de un fallo del PASO 0 es un aviso, no datos
+  corruptos. Primer estreno real: lunes 17/08 (check-in de esa noche armado en la sesión del 15/08).
