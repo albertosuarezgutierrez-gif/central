@@ -74,12 +74,36 @@ BOE/BOJA a fecha X"). Idempotente: re-ejecutar no duplica avisos.
 3. **Dedupe contra `docs/FISCAL-AYUDAS.md`** (estado): una tabla `| Convocatoria | Plazo | Encaje |
    Estado | Avisada |`. Si ya está listada, no re-avises; si cambió el plazo o se reabrió, actualiza
    la fila y avisa de nuevo. Añade SIEMPRE las nuevas (también las descartadas, con el porqué).
-4. **Aviso Telegram** solo si hay convocatoria nueva que encaje (o cambio de plazo relevante), por el
-   canal común (preflight al arrancar, ver abajo):
+   **Re-aviso de cierre:** si una fila sigue «pendiente de decisión» y quedan ≤15 días de plazo,
+   manda UN recordatorio (`⏳ PLAZO CIERRA — …`) y anótalo en la fila para no repetirlo.
+4. **Aviso Telegram + banner en pantalla** si hay convocatoria nueva que encaje (o cambio de plazo
+   relevante), por el canal común (preflight al arrancar, ver abajo):
    `💶 AYUDA NUEVA — <título>: hasta <importe>, plazo <fecha límite>. Encaje: <por qué aplica>. <URL oficial>`
-   Sin novedades → sin Telegram. Este radar NO abre PR salvo por el propio archivo de estado.
-5. **Nunca tramites ni contactes a nadie** (ni a la asesoría): el radar informa a Alberto y decide él
-   (regla global de comunicaciones salientes en el CLAUDE.md raíz).
+   Y además INSERT en la tabla **`fiscal_ayudas`** (Supabase `wswbehlcuxqxyinousql`) para que salga el
+   banner 💶 de `/finanzas` con cuenta atrás (`prisma/sql/2026-08-15_fiscal_ayudas.sql`):
+   ```sql
+   INSERT INTO fiscal_ayudas (titulo, organismo, cuantia_texto, encaje, url, plazo_fin, tenant)
+   VALUES ('<título corto>', '<organismo>', 'hasta X€', '<por qué encaja>', '<url>', '<yyyy-mm-dd o NULL>', NULL);
+   ```
+   (`tenant` NULL = Alberto; las de clientes llevan su nombre y NO se pintan en `/finanzas`.
+   `plazo_fin` NULL = «plazo por confirmar», el banner lo dice así — nunca lo inventes.)
+   Sin novedades → sin Telegram y sin INSERT. Este radar NO abre PR salvo por el propio archivo de estado.
+5. **Bonificaciones de Seguridad Social (checklist, en la pasada de enero y en la pre-renta):**
+   no salen en convocatorias — son derechos que se aplican o se pierden en silencio. Contrasta la
+   situación real (BD + `perfil-fiscal`) con al menos: tarifa plana/reducida de nueva alta,
+   **bonificación 100% de cuota durante descanso por nacimiento/riesgo embarazo** (art. 38 LETA),
+   bonificación por cuidado de menor de 12 años (ligada a contratación), y exención de cuota por
+   pluriactividad. Si un recibo `cuota_autonomos` de `movimientos_bancarios` NO cuadra con la
+   bonificación que tocaría (p. ej. cuota entera pagada durante una baja), avisa por Telegram y
+   deja el detalle en la fila de `docs/FISCAL-AYUDAS.md` — puede haber devolución reclamable.
+6. **Radar por cliente (casa de marcas):** tras el perfil propio, repite la búsqueda para los
+   tenants con cliente real usando su sector/provincia (hoy: Joaquín Jaén — catering/eventos;
+   Sique Brilla — limpiezas, cliente de ialimp; añade los que aparezcan en `docs/CONTEXTO-SESIONES.md`).
+   Kit Digital y ayudas de digitalización/contratación sectoriales suelen ser lo relevante. El aviso
+   va SIEMPRE a Alberto (mismo Telegram, prefijo `💼 AYUDA CLIENTE <nombre>`), nunca al cliente:
+   Alberto decide si reenviarla. Estado en la sección «Clientes» de `docs/FISCAL-AYUDAS.md`.
+7. **Nunca tramites ni contactes a nadie** (ni a la asesoría, ni a clientes): el radar informa a
+   Alberto y decide él (regla global de comunicaciones salientes en el CLAUDE.md raíz).
 
 ## Canal de aviso — protocolo común
 **Preflight AL ARRANCAR** (no al final): `GET {PLATAFORMA_URL}/api/internal/alerta` con

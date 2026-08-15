@@ -43,6 +43,10 @@
 - Resolución: NO se solicita (la L4 exige contratar 12 meses y no hay contratación prevista); Marta avisada
   por Alberto. `fiscal-novedades` ampliado con radar mensual de convocatorias de ayudas + aviso Telegram
   (Paso 5; estado en `docs/FISCAL-AYUDAS.md`) para que la próxima no llegue por prensa.
+- Ampliación (mismo día): Paso 5 suma bonificaciones SS (checklist anual) + radar por cliente; banner 💶 en
+  `/finanzas` con cuenta atrás (tabla `fiscal_ayudas`, aplicada y sembrada; `AyudaBanner` + descartar).
+  **Pendiente:** borrador Gmail a Marta sobre la cuota RETA de Pilar (serie rara 72→118→32€, ¿bonificación
+  art. 38 LETA aplicada?) — lo envía Alberto si quiere.
 
 ### 🐛 (15/08/2026) Pasada de trading duplicada: el PASO 0 del trigger no ve una recuperación con `fecha` backdateada
 - El trigger de las 20:15/23:15 disparó otra vez a las ~08:14 UTC. PASO 0 comprobó `trading_pasadas WHERE

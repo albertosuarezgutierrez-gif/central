@@ -98,6 +98,24 @@ model FiscalNovedad {
   @@map("fiscal_novedades")
 }
 
+// Radar de ayudas/subvenciones (skill fiscal-novedades): convocatorias con plazo.
+// tenant NULL = Alberto (se pintan en /finanzas); con valor = radar por cliente.
+model FiscalAyuda {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  titulo       String
+  organismo    String?
+  cuantiaTexto String?   @map("cuantia_texto")
+  encaje       String?
+  url          String?
+  plazoFin     DateTime? @map("plazo_fin") @db.Date
+  tenant       String?
+  descartado   Boolean   @default(false)
+  detectadoAt  DateTime  @default(now()) @map("detectado_at") @db.Timestamptz(6)
+
+  @@index([descartado, plazoFin])
+  @@map("fiscal_ayudas")
+}
+
 // ── Trading-analista (IBKR, Fase 1 · paper). Tablas nuevas y aisladas; no tocan otras verticales ──
 model TradingWatchlist {
   id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
