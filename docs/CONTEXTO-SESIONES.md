@@ -32,7 +32,7 @@
 
 ---
 
-### 📧 (15/08/2026) Aviso a Asecon: ayudas Junta Andalucía conciliación autónomos (hasta 7.200 €)
+### 📧 (15/08/2026) Ayudas conciliación: radar fiscal completo + regla de comunicaciones (PR #1432)
 - Alberto pidió que el asesor fiscal viera la convocatoria de la Consejería de Empleo: Línea 4 (autónomos
   con hijos <3 años que contraten personal, 6.000–7.200 €) y Línea 5 (riesgo embarazo / descanso por
   nacimiento). **Plazo de solicitud: hasta el 15/09/2026** (telemática, Oficina Virtual de Empleo).
