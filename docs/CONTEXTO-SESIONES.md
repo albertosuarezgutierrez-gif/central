@@ -38,6 +38,8 @@
   nacimiento). **Plazo de solicitud: hasta el 15/09/2026** (telemática, Oficina Virtual de Empleo).
 - Enviado email a Marta Albarrán (malbarran@aseconconsultores.com, cc Pilar) pidiendo revisar si Alberto
   o Pilar pueden acogerse y tramitarla. **Pendiente: respuesta de Asecon antes del 15/09.**
+- **🚨 Regla dictada por Alberto a raíz de ese envío (ya en CLAUDE.md):** NUNCA enviar comunicaciones a
+  terceros sin su autorización explícita para ese envío — por defecto, borrador o texto para que decida él.
 
 ### 🐛 (15/08/2026) Pasada de trading duplicada: el PASO 0 del trigger no ve una recuperación con `fecha` backdateada
 - El trigger de las 20:15/23:15 disparó otra vez a las ~08:14 UTC. PASO 0 comprobó `trading_pasadas WHERE
