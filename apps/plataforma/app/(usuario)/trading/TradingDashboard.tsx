@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/db'
-import { eur } from '@/lib/dinero'
+import { eur, eurSinDecimales } from '@/lib/dinero'
+import { curvaEnEuros, CAPITAL_ESTUDIO_EUR } from '@/lib/trading/cartera-estudio'
+import { puntosDiarios } from '@/lib/trading/precios-stooq'
 import { neutralizarUniverso } from '@/lib/trading/calidad-datos'
 import { etiquetaCalidad, rankearUniverso, type EmpresaUniverso } from '@central/module-trading'
 import OnboardingBanner from './OnboardingBanner'
@@ -198,6 +200,29 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
   // = la de más recorrido; interesantes = señal 📈 del top-20 + top del ranking; compras reales.
   const cohorteRef = cohortesPaper.reduce<(typeof cohortesPaper)[number] | null>(
     (max, c) => (max == null || c.ultima.dias > max.ultima.dias ? c : max), null)
+
+  // 💶 La rentabilidad del hero, también en EUROS (Alberto piensa en euros; la cifra vivía enterrada
+  // en el desplegable del forward). Misma matemática que la cartera de estudio (curvaEnEuros, puro)
+  // sobre los snapshots ya leídos + UNA serie FX con presupuesto corto. Best-effort honesto: sin FX
+  // real NO se pinta — un 1:1 disfrazado de euros sería mentir, y el detalle plegado ya la enseña.
+  let heroEur: { valorEur: number; benchEur: number } | null = null
+  if (cohorteRef) {
+    const inicio = COHORTES_PAPER.find(c => c.version === cohorteRef.cohorte)?.fechaInicio
+    if (inicio) {
+      const fx = await puntosDiarios('EURUSD=X', inicio, new Date().toISOString().slice(0, 10), 2500).catch(() => [])
+      if (fx.length) {
+        const puntos = curvaEnEuros(
+          CAPITAL_ESTUDIO_EUR, inicio,
+          cohorteRef.filas
+            .filter(f => f.retornoCesta != null && f.retornoBench != null)
+            .map(f => ({ fecha: f.fecha.toISOString().slice(0, 10), retornoCesta: f.retornoCesta!, retornoBench: f.retornoBench! })),
+          fx,
+        )
+        const ult = puntos.at(-1)
+        if (ult && ult.fecha !== inicio) heroEur = { valorEur: ult.valorEur, benchEur: ult.benchEur }
+      }
+    }
+  }
   const senalesCompra = universoExplorador
     .filter(f => f.tecnico === 'si')
     .sort((a, b) => (b.score ?? -Infinity) - (a.score ?? -Infinity))
@@ -298,6 +323,11 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
                   <span style={{ fontSize: 14, color: 'var(--muted)' }}>vs SPY {pct(u.retornoBench)}{bate == null ? '' : bate ? ' ✅ va mejor que el índice' : ' ⚠️ va peor que el índice'}</span>
                 </div>
                 <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 2 }} title="mediana = el valor del medio de la cesta: la mitad de las posiciones lo hace mejor y la otra mitad peor; un pelotazo suelto no la infla">mediana de la cesta congelada · {u.dias} días medidos</div>
+                {heroEur && (
+                  <div style={{ fontSize: 14, marginTop: 4 }}>
+                    💼 Con {eurSinDecimales(CAPITAL_ESTUDIO_EUR)} simulados: <strong style={{ color: heroEur.valorEur >= CAPITAL_ESTUDIO_EUR ? 'var(--positive)' : 'var(--negative)' }}>{eur(heroEur.valorEur)}</strong> <span style={{ color: 'var(--muted)' }}>· en SPY serían {eur(heroEur.benchEur)}</span>
+                  </div>
+                )}
                 <div style={{ margin: '8px 0' }}><CurvaForward serie={cohorteRef.filas.map(f => ({ m: f.retornoMediana, b: f.retornoBench }))} /></div>
                 <div style={{ color: 'var(--muted)', fontSize: 13 }}>
                   Baten al SPY {u.baten}/{u.n} · caída máx {pctN(u.maxDrawdown)} · 🪜 dinero real: <strong style={{ color: 'var(--text)' }} title={TRAMO_INFO[escalera.alcanzable]}>Tramo {escalera.alcanzable}</strong> alcanzable <span style={{ fontSize: 12 }}>({escalera.alcanzable === 1 ? '1.000€ de prueba, tu decisión' : escalera.alcanzable === 2 ? 'hasta 3.000€, tu decisión' : 'hasta 6.000€, tu decisión'})</span>
@@ -323,71 +353,6 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
           ))}
         </ul>
       </details>
-
-      {/* 🔍 Buscador de análisis por acción (determinista, mismos ojos del radar) — herramienta bajo demanda */}
-      <AnalisisSimbolo />
-
-      {/* Radar del mercado — ranking semanal del universo S&P 500 (caché trading_universo). El
-          caza-cohetes va PLEGADO (satélite lotería, secundario). */}
-      <section style={{ marginBottom: 22 }}>
-        <h2 style={{ fontSize: 17, marginBottom: 8 }}>🌎 Radar del mercado <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>— ¿qué empresas vigila y cuáles salen mejor? (las ~550 mayores de EEUU, rankeadas cada lunes; la selección elige el QUÉ, 📈 el CUÁNDO)</span></h2>
-        {!radar ? (
-          <div style={{ ...card, color: 'var(--muted)', fontSize: 14 }}>
-            El radar rankea las ~500 mayores de EEUU cada lunes (calidad + valor + momentum + gurús). Aún sin snapshot — la caché de fundamentales se está llenando; primer ranking el próximo lunes.
-          </div>
-        ) : (() => {
-          type Track = { evals: { fecha: string; dias: number; mediana: number | null; retornoBench: number; baten: number; n: number }[]; ventanas: number; bateVentanas: number; cohetes?: { evals: unknown[]; ventanas: number; bateVentanas: number } }
-          type CoheteUi = { simbolo: string; nombre: string | null; momentum: number | null; piotroski: number | null; roic: number | null; sobreSmaSem: boolean | null; sobreSmaMes: boolean | null; confirmado: boolean; mesesCotizando?: number | null }
-          const cohetes = (radar.cohetes as unknown as CoheteUi[] | null) ?? []
-          const track = radar.trackRecord as unknown as Track | null
-          const salud = radar.salud as unknown as { total: number; frescas: number; errores: number } | null
-          return (
-            <>
-              {/* La tabla del ranking vive UNIFICADA en el explorador de abajo (orden por score del
-                  modelo por defecto) — aquí solo el satélite 🎯 (plegado) y el pie con snapshot/track/salud. */}
-              {cohetes.length > 0 && (
-                <details style={{ ...card, marginTop: 10, padding: '10px 16px' }}>
-                  <summary style={{ fontWeight: 700, cursor: 'pointer' }}>🎯 Caza-cohetes ({cohetes.length}) <span style={{ color: 'var(--muted)', fontSize: 12, fontWeight: 400 }}>(screener LOTERÍA — momentum alto + calidad mala; alimenta la 🚀 Cartera cohetes, nunca entra en cohortes)</span></summary>
-                  <div style={{ overflowX: 'auto', marginTop: 8 }}>
-                    <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 560 }}>
-                      <thead><tr><th style={th}>Empresa</th><th style={th}>Momentum</th><th style={th}>Piotroski</th><th style={th}>ROIC</th><th style={th}>Medias (sem/mes)</th></tr></thead>
-                      <tbody>
-                        {cohetes.map(c => (
-                          <tr key={c.simbolo}>
-                            <td style={{ ...td, fontWeight: 700 }}>{c.simbolo} <span style={{ color: 'var(--muted)', fontWeight: 400 }}>— {c.nombre ?? '¿?'}</span>{c.mesesCotizando != null ? <span style={{ color: 'var(--warning)', fontSize: 12, marginLeft: 6 }}>🆕 ~{c.mesesCotizando}m en bolsa</span> : null}</td>
-                            <td style={td}>{c.momentum != null ? `+${(c.momentum * 100).toFixed(0)}%` : '—'}</td>
-                            <td style={td}>{c.piotroski ?? '—'}</td>
-                            <td style={td}>{c.roic != null ? `${(c.roic * 100).toFixed(0)}%` : '—'}</td>
-                            <td style={td}>{c.confirmado ? '✅ sobre SMA30sem + SMA12mes' : `${c.sobreSmaSem === true ? '✓' : c.sobreSmaSem === false ? '✗' : '?'} / ${c.sobreSmaMes === true ? '✓' : c.sobreSmaMes === false ? '✗' : '?'}`}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  {track?.cohetes ? (
-                    <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
-                      Track 🎯: {track.cohetes.ventanas > 0 ? `${track.cohetes.bateVentanas}/${track.cohetes.ventanas} ventanas baten al SPY` : 'acumulando historial'}
-                    </div>
-                  ) : null}
-                </details>
-              )}
-              <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
-                Snapshot del {fechaCorta(radar.fecha)} · universo {radar.universoTotal} ({radar.conDatos} con datos)
-                {salud ? <> · salud: {salud.frescas}/{salud.total} frescos, {salud.errores} con error</> : null}
-                {track && track.evals.length > 0
-                  ? <> · track record: {track.bateVentanas}/{track.ventanas} ventanas baten al SPY ({track.evals.map(ev => `${Math.round(ev.dias / 7)}sem ${pct(ev.mediana ?? 0)} vs ${pct(ev.retornoBench)}`).join(' · ')})</>
-                  : <> · track record: acumulando historial</>}
-              </p>
-            </>
-          )
-        })()}
-        {universoExplorador.length > 0 && <RadarExplorador filas={universoExplorador} />}
-        {anomalias.length > 0 && (
-          <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
-            🛡️ Datos imposibles NEUTRALIZADOS (no puntúan ese factor): {anomalias.slice(0, 5).map(a => `${a.simbolo} ${a.campo} (${a.motivo})`).join(' · ')}{anomalias.length > 5 ? ` · +${anomalias.length - 5} más` : ''}
-          </p>
-        )}
-      </section>
 
       {/* 💡 Ideas de COMPRA — SOLO compras REALES (petición de Alberto 20/07: «aquí solo interesan las de
           comprar»; auditoría 21/07: `operada`=la señal ganadora del torneo que pasó las barreras y el agente
@@ -529,6 +494,71 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
         </div>
         </div>
       </DetallePerezoso>
+
+      {/* 🔍 Buscador de análisis por acción (determinista, mismos ojos del radar) — herramienta bajo demanda */}
+      <AnalisisSimbolo />
+
+      {/* Radar del mercado — ranking semanal del universo S&P 500 (caché trading_universo). El
+          caza-cohetes va PLEGADO (satélite lotería, secundario). */}
+      <section style={{ marginBottom: 22 }}>
+        <h2 style={{ fontSize: 17, marginBottom: 8 }}>🌎 Radar del mercado <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>— ¿qué empresas vigila y cuáles salen mejor? (las ~550 mayores de EEUU, rankeadas cada lunes; la selección elige el QUÉ, 📈 el CUÁNDO)</span></h2>
+        {!radar ? (
+          <div style={{ ...card, color: 'var(--muted)', fontSize: 14 }}>
+            El radar rankea las ~500 mayores de EEUU cada lunes (calidad + valor + momentum + gurús). Aún sin snapshot — la caché de fundamentales se está llenando; primer ranking el próximo lunes.
+          </div>
+        ) : (() => {
+          type Track = { evals: { fecha: string; dias: number; mediana: number | null; retornoBench: number; baten: number; n: number }[]; ventanas: number; bateVentanas: number; cohetes?: { evals: unknown[]; ventanas: number; bateVentanas: number } }
+          type CoheteUi = { simbolo: string; nombre: string | null; momentum: number | null; piotroski: number | null; roic: number | null; sobreSmaSem: boolean | null; sobreSmaMes: boolean | null; confirmado: boolean; mesesCotizando?: number | null }
+          const cohetes = (radar.cohetes as unknown as CoheteUi[] | null) ?? []
+          const track = radar.trackRecord as unknown as Track | null
+          const salud = radar.salud as unknown as { total: number; frescas: number; errores: number } | null
+          return (
+            <>
+              {/* La tabla del ranking vive UNIFICADA en el explorador de abajo (orden por score del
+                  modelo por defecto) — aquí solo el satélite 🎯 (plegado) y el pie con snapshot/track/salud. */}
+              {cohetes.length > 0 && (
+                <details style={{ ...card, marginTop: 10, padding: '10px 16px' }}>
+                  <summary style={{ fontWeight: 700, cursor: 'pointer' }}>🎯 Caza-cohetes ({cohetes.length}) <span style={{ color: 'var(--muted)', fontSize: 12, fontWeight: 400 }}>(screener LOTERÍA — momentum alto + calidad mala; alimenta la 🚀 Cartera cohetes, nunca entra en cohortes)</span></summary>
+                  <div style={{ overflowX: 'auto', marginTop: 8 }}>
+                    <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 560 }}>
+                      <thead><tr><th style={th}>Empresa</th><th style={th}>Momentum</th><th style={th}>Piotroski</th><th style={th}>ROIC</th><th style={th}>Medias (sem/mes)</th></tr></thead>
+                      <tbody>
+                        {cohetes.map(c => (
+                          <tr key={c.simbolo}>
+                            <td style={{ ...td, fontWeight: 700 }}>{c.simbolo} <span style={{ color: 'var(--muted)', fontWeight: 400 }}>— {c.nombre ?? '¿?'}</span>{c.mesesCotizando != null ? <span style={{ color: 'var(--warning)', fontSize: 12, marginLeft: 6 }}>🆕 ~{c.mesesCotizando}m en bolsa</span> : null}</td>
+                            <td style={td}>{c.momentum != null ? `+${(c.momentum * 100).toFixed(0)}%` : '—'}</td>
+                            <td style={td}>{c.piotroski ?? '—'}</td>
+                            <td style={td}>{c.roic != null ? `${(c.roic * 100).toFixed(0)}%` : '—'}</td>
+                            <td style={td}>{c.confirmado ? '✅ sobre SMA30sem + SMA12mes' : `${c.sobreSmaSem === true ? '✓' : c.sobreSmaSem === false ? '✗' : '?'} / ${c.sobreSmaMes === true ? '✓' : c.sobreSmaMes === false ? '✗' : '?'}`}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {track?.cohetes ? (
+                    <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
+                      Track 🎯: {track.cohetes.ventanas > 0 ? `${track.cohetes.bateVentanas}/${track.cohetes.ventanas} ventanas baten al SPY` : 'acumulando historial'}
+                    </div>
+                  ) : null}
+                </details>
+              )}
+              <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
+                Snapshot del {fechaCorta(radar.fecha)} · universo {radar.universoTotal} ({radar.conDatos} con datos)
+                {salud ? <> · salud: {salud.frescas}/{salud.total} frescos, {salud.errores} con error</> : null}
+                {track && track.evals.length > 0
+                  ? <> · track record: {track.bateVentanas}/{track.ventanas} ventanas baten al SPY ({track.evals.map(ev => `${Math.round(ev.dias / 7)}sem ${pct(ev.mediana ?? 0)} vs ${pct(ev.retornoBench)}`).join(' · ')})</>
+                  : <> · track record: acumulando historial</>}
+              </p>
+            </>
+          )
+        })()}
+        {universoExplorador.length > 0 && <RadarExplorador filas={universoExplorador} />}
+        {anomalias.length > 0 && (
+          <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
+            🛡️ Datos imposibles NEUTRALIZADOS (no puntúan ese factor): {anomalias.slice(0, 5).map(a => `${a.simbolo} ${a.campo} (${a.motivo})`).join(' · ')}{anomalias.length > 5 ? ` · +${anomalias.length - 5} más` : ''}
+          </p>
+        )}
+      </section>
 
       {/* 🚀 Cartera cohetes — bolsillo APARTE (lotería, paper): rota semanal a los cohetes confirmados y
           se valora a diario vs SPY + curva del núcleo. SOLO estudio, nunca entra en cohortes/núcleo.

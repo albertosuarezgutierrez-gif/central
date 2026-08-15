@@ -38,7 +38,7 @@
 - **Correlación media por cohorte** en el digest (contexto, nunca filtro; reutiliza `concentracion.ts`) — la mediana no ve una cesta que es una sola apuesta. Anotada en el pre-registro junto a la re-declaración de «sin dividendos, ambos brazos».
 - **`docs/TRADING-FUENTES-PAGO.md`:** las fuentes de pago NO acortan el camino a operar en real (el reloj es el forward, no los datos); único gasto que protege dinero real = calendario de earnings + datos IBKR, y solo al abrir Tramo 1. Decisión APLAZADA se mantiene.
 - FX EUR/USD y caveat de dividendos ya estaban cubiertos (cartera-estudio) — verificado antes de tocar nada.
-- **Pasada de claridad en `/trading`** (Alberto: «no está clara del todo»): glosario plegado «Cómo leer esta página», tooltips en cabeceras del explorador, estrategias con nombre legible, subtítulos-pregunta por sección, tramo del hero con importes, línea 🛑 del apagado en la escalera. Sin tocar lógica.
+- **Pasada de claridad en `/trading`** (Alberto: «no está clara del todo» + «el orden también»): glosario plegado, tooltips, estrategias legibles, subtítulos-pregunta, línea 🛑 en la escalera; **reorden** hero→glosario→ideas→forward→analiza→radar→cohetes→watchlist (la tabla de 550 al final, lo que hizo el agente arriba) y **cifra en euros en el hero** (curvaEnEuros + FX real, no se pinta sin FX). Sin tocar lógica del modelo.
 
 ### 🏷️ (14/08/2026) Guardián de precios: PriceLabs desconectado + 2 landmines del motor y del calendario
 - Cierre del episodio 10-14/08: Alberto desconectó PriceLabs (las 7 reversiones eran suyas); verificado 0 reversiones el 11 y el 14/08.
