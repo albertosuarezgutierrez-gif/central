@@ -32,6 +32,26 @@
 
 ---
 
+### 📧 (15/08/2026) Ayudas conciliación: radar fiscal completo + regla de comunicaciones (PR #1432)
+- Alberto pidió que el asesor fiscal viera la convocatoria de la Consejería de Empleo: Línea 4 (autónomos
+  con hijos <3 años que contraten personal, 6.000–7.200 €) y Línea 5 (riesgo embarazo / descanso por
+  nacimiento). **Plazo de solicitud: hasta el 15/09/2026** (telemática, Oficina Virtual de Empleo).
+- Enviado email a Marta Albarrán (malbarran@aseconconsultores.com, cc Pilar) pidiendo revisar si Alberto
+  o Pilar pueden acogerse y tramitarla. **Pendiente: respuesta de Asecon antes del 15/09.**
+- **🚨 Regla dictada por Alberto a raíz de ese envío (ya en CLAUDE.md):** NUNCA enviar comunicaciones a
+  terceros sin su autorización explícita para ese envío — por defecto, borrador o texto para que decida él.
+- Resolución: NO se solicita (la L4 exige contratar 12 meses y no hay contratación prevista); Marta avisada
+  por Alberto. `fiscal-novedades` ampliado con radar mensual de convocatorias de ayudas + aviso Telegram
+  (Paso 5; estado en `docs/FISCAL-AYUDAS.md`) para que la próxima no llegue por prensa.
+- Ampliación (mismo día): Paso 5 suma bonificaciones SS (checklist anual) + radar por cliente; banner 💶 en
+  `/finanzas` con cuenta atrás (tabla `fiscal_ayudas`, aplicada y sembrada; `AyudaBanner` + descartar).
+- Radar por cliente TERMINADO: perfiles en BD (`ayudas_perfiles`, con `ref_ext` → cuenta/empresa de su app;
+  Joaquín apunta a la cuenta DEMO del almacén hasta sembrar la real) + banner 💶 en `apps/almacen` (panel)
+  y `apps/ialimp` (dashboard empresa, manual actualizado). GRANTs de solo lectura a `prisma_ialimp`/`prisma_almacen`.
+  OJO: `next build` de ialimp falla en este contenedor por envs (preexistente, falla igual sin los cambios).
+  **Pendiente:** borrador Gmail a Marta sobre la cuota RETA de Pilar (serie rara 72→118→32€, ¿bonificación
+  art. 38 LETA aplicada?) — lo envía Alberto si quiere.
+
 ### 🧯 (15/08/2026) La curva «PL» congelada era el PROPIO motor: suelo contaminado reteniendo agosto a 2-5× mercado
 - Alberto vio en Smoobu 359/234/414/554€ para la noche del 15/08 (mercado fiable de la fecha: 77/99/113/320€).
   Causa: la congelación del #1416 re-etiquetó `captured_at` SIN restaurar precios → `pricing_pl_referencia`

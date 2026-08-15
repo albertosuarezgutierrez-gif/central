@@ -92,6 +92,36 @@ function MiniChart({ porMes, color = 'var(--primary)' }: { porMes: { mes: string
   )
 }
 
+// ── Banner de ayuda/subvención con plazo abierto (radar fiscal-novedades) ────
+function AyudaBanner({ ayudas, onDescartar }: { ayudas: ResumenFinanciero['deducciones']['ayudas']; onDescartar: (id: string) => void }) {
+  if (!ayudas.length) return null
+  return (
+    <div style={{ marginBottom: '16px' }}>
+      {ayudas.map(a => {
+        const urgente = a.diasRestantes != null && a.diasRestantes <= 15
+        const plazo = a.diasRestantes == null
+          ? 'plazo por confirmar'
+          : a.diasRestantes === 0 ? '¡el plazo acaba HOY!' : `quedan ${a.diasRestantes} días (hasta ${a.plazoFin})`
+        return (
+          <div key={a.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap', background: '#fefcbf', border: '1px solid #f6e05e', borderRadius: 'var(--radius)', padding: '12px 16px', marginBottom: '8px' }}>
+            <span style={{ fontSize: '20px' }}>💶</span>
+            <div style={{ flex: 1, minWidth: '220px', fontSize: '13px', color: '#744210' }}>
+              <strong>Ayuda con plazo abierto:</strong> {a.titulo}
+              {a.organismo && <> · {a.organismo}</>}
+              {a.cuantiaTexto && <> · <strong>{a.cuantiaTexto}</strong></>}
+              {' · '}
+              <span style={{ color: urgente ? '#c53030' : '#744210', fontWeight: urgente ? 700 : 400 }}>{plazo}</span>
+              {a.encaje && <div style={{ marginTop: '2px' }}>{a.encaje}</div>}
+              {a.url && <> <a href={a.url} target="_blank" rel="noreferrer" style={{ color: '#744210', textDecoration: 'underline' }}>convocatoria</a></>}
+            </div>
+            <button onClick={() => onDescartar(a.id)} style={{ fontSize: '12px', padding: '4px 10px', background: '#fff', border: '1px solid #f6e05e', borderRadius: '6px', cursor: 'pointer', color: '#744210', fontWeight: 600, minHeight: '32px' }}>Descartar</button>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // ── Banner de novedad fiscal (cambio normativo que te beneficia) ─────────────
 function NovedadBanner({ novedades, onDescartar }: { novedades: ResumenFinanciero['deducciones']['novedades']; onDescartar: (id: string) => void }) {
   if (!novedades.length) return null
@@ -170,6 +200,11 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
     refresh()
   }
 
+  async function descartarAyuda(id: string) {
+    await fetch(`/api/finanzas/ayudas/${id}/descartar`, { method: 'POST' })
+    refresh()
+  }
+
   const d = data
   const totalIngresos = d ? d.correduria.cobradoNeto + d.pisos.total.ingresos : 0
   const totalGastos = d ? d.correduria.gastosDeducibles + d.pisos.total.gastos + d.personal.total + (d.amortizables?.total ?? 0) : 0
@@ -225,6 +260,9 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
         <>
           {/* ── Badge corte de extracción de facturas ── */}
           <SaludExtraccionBanner salud={d.saludExtraccion} />
+
+          {/* ── Banner ayudas con plazo abierto ── */}
+          <AyudaBanner ayudas={d.deducciones.ayudas} onDescartar={descartarAyuda} />
 
           {/* ── Banner novedad fiscal ── */}
           <NovedadBanner novedades={d.deducciones.novedades} onDescartar={descartarNovedad} />

@@ -33,6 +33,19 @@ export type NovedadView = {
   fuenteUrl: string | null
 }
 
+// Convocatoria de ayuda/subvención con plazo (radar de la skill fiscal-novedades).
+// plazoFin null = plazo no publicado todavía (se muestra «por confirmar», no se oculta).
+export type AyudaView = {
+  id: string
+  titulo: string
+  organismo: string | null
+  cuantiaTexto: string | null
+  encaje: string | null
+  url: string | null
+  plazoFin: string | null
+  diasRestantes: number | null
+}
+
 export type DeduccionesView = {
   perfil: PerfilFiscal
   descendientes: DescendienteView[]
@@ -42,6 +55,7 @@ export type DeduccionesView = {
   transiciones: { nombre: string; aviso: string }[]
   calendario: typeof PLAZOS_FISCALES
   novedades: NovedadView[]
+  ayudas: AyudaView[]
   historico: { anio: number; cuotaLiquida: number; deduccionesTotal: number; resultado: number }[]
   fuente: string
   revisado: string
@@ -329,6 +343,29 @@ async function getDeducciones(
   }>>`SELECT id, clave, importe_anterior, importe_nuevo, ambito, fuente_url
       FROM fiscal_novedades WHERE beneficia = true AND descartado = false ORDER BY detectado_at DESC LIMIT 5`
 
+  // Convocatorias vivas del radar de ayudas (tenant NULL = Alberto). plazo_fin NULL se
+  // conserva («plazo por confirmar»); las vencidas sí se dejan de pintar.
+  const ayudasRows = await prisma.$queryRaw<Array<{
+    id: string; titulo: string; organismo: string | null; cuantia_texto: string | null
+    encaje: string | null; url: string | null; plazo_fin: Date | null
+  }>>`SELECT id, titulo, organismo, cuantia_texto, encaje, url, plazo_fin
+      FROM fiscal_ayudas
+      WHERE descartado = false AND tenant IS NULL
+        AND (plazo_fin IS NULL OR plazo_fin >= CURRENT_DATE)
+      ORDER BY plazo_fin ASC NULLS LAST LIMIT 5`
+
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
+  const ayudas: AyudaView[] = ayudasRows.map(a => ({
+    id: a.id,
+    titulo: a.titulo,
+    organismo: a.organismo,
+    cuantiaTexto: a.cuantia_texto,
+    encaje: a.encaje,
+    url: a.url,
+    plazoFin: a.plazo_fin ? a.plazo_fin.toISOString().slice(0, 10) : null,
+    diasRestantes: a.plazo_fin ? Math.round((a.plazo_fin.getTime() - hoy.getTime()) / 86_400_000) : null,
+  }))
+
   const novedades: NovedadView[] = novedadesRows.map(n => ({
     id: n.id,
     clave: n.clave,
@@ -362,6 +399,7 @@ async function getDeducciones(
     transiciones: transicionesEdad(hijosCalc, year),
     calendario: PLAZOS_FISCALES,
     novedades,
+    ayudas,
     historico,
     fuente: imp.fuente,
     revisado: imp.revisado,

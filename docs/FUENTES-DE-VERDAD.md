@@ -36,7 +36,8 @@
 | skill `transporte-maestro` | `apps/transporte/**` |
 | skill `alquiler-maestro` | `apps/alquiler/**` |
 | Manuales usuario ia-rest | `apps/ia-rest/src/components/help/help-prompts.ts`, `apps/ia-rest/public/manual*.html`, `apps/ia-rest/src/app/**` (features visibles) |
-| skill `fiscal-novedades` | `apps/plataforma/lib/fiscal-deducciones.ts` (`IMPORTES_POR_ANIO`), tabla `fiscal_novedades` |
+| skill `fiscal-novedades` | `apps/plataforma/lib/fiscal-deducciones.ts` (`IMPORTES_POR_ANIO`), tablas `fiscal_novedades`/`fiscal_ayudas`/`ayudas_perfiles`, banners 💶 (`apps/plataforma` `/finanzas`, `apps/almacen` panel, `apps/ialimp` dashboard) |
+| `docs/FISCAL-AYUDAS.md` | tablas `fiscal_ayudas` (convocatorias) y `ayudas_perfiles` (perfiles de tenant del radar) |
 | skill `correo-triaje` | `apps/plataforma/lib/correo/**` (rutas, imap, clasificador, huespedes, triaje), `apps/plataforma/app/api/cron/correo-*`, tablas `correo_triaje`/`correo_cursor`/`correo_reglas`, `.claude/skills/facturas-correo/SKILL.md` (etiqueta puente `Triaje/Contabilidad`) |
 | `docs/DRIVE-ESTRUCTURA.md` (estructura `CENTRAL/` + IDs de carpetas Drive) | `.claude/skills/facturas-correo/SKILL.md` (IDs de carpetas de Drive), `scripts/drive/**`, Apps Scripts que escriben en Drive (`Facturas a Drive`) |
 | skill `pricing-agente` | `apps/sivra/**` pricing / `apps/plataforma/**` pricing, raíles Paso 4 |

@@ -15,6 +15,7 @@ interface Props {
   limpiadoras: any[]
   today: string
   modulosOff?: string[]
+  ayudas?: any[]
 }
 
 // Módulo gateable por entrada de menú (el operador puede apagarlos desde el god-panel).
@@ -125,7 +126,7 @@ function ScanFacturasCard() {
 }
 
 export default function DashboardClient({
-  empresa, sesionesIniciales, conexiones, clientes, limpiadoras, today, modulosOff = []
+  empresa, sesionesIniciales, conexiones, clientes, limpiadoras, today, modulosOff = [], ayudas = []
 }: Props) {
   const router = useRouter()
   const nav = NAV.filter(i => { const m = NAV_MODULO[i.href]; return !m || !modulosOff.includes(m) })
@@ -928,6 +929,48 @@ export default function DashboardClient({
 
           {/* Content */}
           <div className="dash-content">
+
+            {/* Ayudas/subvenciones con plazo abierto (radar del grupo) */}
+            {ayudas.map((a) => {
+              const fin = a.plazo_fin ? new Date(a.plazo_fin) : null
+              const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
+              const dias = fin ? Math.round((fin.getTime() - hoy.getTime()) / 86_400_000) : null
+              const plazo = dias == null ? 'plazo por confirmar' : dias === 0 ? '¡el plazo acaba hoy!' : `quedan ${dias} días`
+              const urgente = dias != null && dias <= 15
+              return (
+                <div key={a.id} style={{
+                  background: 'var(--brand-light)',
+                  border: '1px solid #c7d2fe',
+                  borderRadius: 14,
+                  padding: '14px 18px',
+                  marginBottom: 16,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 12,
+                  flexWrap: 'wrap',
+                }}>
+                  <div style={{ fontSize: 22, flexShrink: 0, marginTop: 2 }}>💶</div>
+                  <div style={{ flex: 1, minWidth: 220 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--brand-primary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      Ayuda con plazo abierto
+                    </div>
+                    <div style={{ fontSize: 13, color: '#1e1b4b', lineHeight: 1.6 }}>
+                      <strong>{a.titulo}</strong>
+                      {a.organismo && <> · {a.organismo}</>}
+                      {a.cuantia_texto && <> · <strong>{a.cuantia_texto}</strong></>}
+                      {' · '}
+                      <span style={{ color: urgente ? '#dc2626' : '#d97706', fontWeight: 700 }}>{plazo}</span>
+                    </div>
+                    {a.encaje && <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{a.encaje}</div>}
+                    {a.url && (
+                      <a href={a.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: 'var(--brand-primary)', textDecoration: 'underline' }}>
+                        Ver la convocatoria
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
 
             {/* Widget Briefing IA */}
             <div style={{

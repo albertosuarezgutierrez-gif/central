@@ -3,6 +3,7 @@ import { getEmpresaId } from '@/lib/tenant'
 import { getModulosOff } from '@/lib/modulos-tenant'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { ayudasVigentes } from '@/lib/ayudas'
 import DashboardClient from './DashboardClient'
 
 export default async function DashboardPage() {
@@ -13,7 +14,7 @@ export default async function DashboardPage() {
 
   const today = new Date().toISOString().split('T')[0]
 
-  const [empresa, sesiones, conexiones, clientes, limpiadoras] = await Promise.all([
+  const [empresa, sesiones, conexiones, clientes, limpiadoras, ayudas] = await Promise.all([
     prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT nombre, email, plan FROM empresas WHERE id = ${empresa_id}::uuid
     `),
@@ -45,7 +46,8 @@ export default async function DashboardPage() {
       SELECT id, nombre FROM limpiadoras
       WHERE empresa_id = ${empresa_id}::uuid AND activa = true
       ORDER BY nombre
-    `)
+    `),
+    ayudasVigentes(empresa_id)
   ])
 
   return (
@@ -57,6 +59,7 @@ export default async function DashboardPage() {
       limpiadoras={limpiadoras}
       today={today}
       modulosOff={modulosOff}
+      ayudas={ayudas}
     />
   )
 }
