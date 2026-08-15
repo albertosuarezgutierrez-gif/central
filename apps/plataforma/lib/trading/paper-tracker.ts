@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { puntosDiarios } from './precios-stooq'
 import { evaluarCestaVsBenchAlineada, metricasRiesgoAlineadas, type EvalCestaAlineada, type MetricasRiesgo } from '@central/module-trading'
 import { COHORTES_PAPER, COHORTE_ULTIMA, DIAS_ENTRE_COHORTES, type CarteraPaper } from './paper-cartera'
+import { correlacionMediaCesta, etiquetaConcentracion } from './concentracion'
 
 // Seguimiento del FORWARD PAPER (Fase B): mide cada cesta CONGELADA (`paper-cartera.ts`) vs el SPY desde
 // su `fechaInicio` con precios gratis (Stooq→Yahoo), PERSISTE un snapshot por cohorte (curva del forward)
@@ -33,6 +34,10 @@ export type MedidaPaper = {
   riesgo: MetricasRiesgo | null         // drawdown/vol/tracking error (idea 3), MISMA ventana que el bench
   resultadoBase: EvalCestaAlineada | null // cesta gurús-solo (atribución, idea 4) — null si la cohorte no la tiene
   medianaBase: number | null
+  // Correlación MEDIA de los retornos diarios entre los valores de la cesta (últimas 60 sesiones).
+  // CONTEXTO, nunca filtro (anotada 15/08/2026 en el pre-registro): la MEDIANA protege de un outlier
+  // (lección APP ×39) pero no ve una cesta donde todos los nombres son la MISMA apuesta.
+  correlacion: number | null
 }
 
 // Calcula el rendimiento hacia delante de UNA cohorte congelada vs su benchmark, con riesgo y atribución.
@@ -58,9 +63,12 @@ export async function medirCohorte(c: CarteraPaper): Promise<MedidaPaper> {
   const resultadoBase = base.length ? evaluarCestaVsBenchAlineada(cestaBase, bench, d1, d2) : null
   const medianaBase = resultadoBase ? mediana(resultadoBase.porSimbolo.map(x => x.retorno)) : null
 
+  // Contexto de concentración: correlación media de la cesta sobre las series ya bajadas (coste 0).
+  const correlacion = correlacionMediaCesta(series.map(s => s.map(p => p.cierre)))
+
   return {
     cohorte: c.version, fechaInicio: d1, hoy: d2, diasTranscurridos: dias(d1, d2), benchmark: c.benchmark,
-    resultado, medianaCesta, riesgo, resultadoBase, medianaBase,
+    resultado, medianaCesta, riesgo, resultadoBase, medianaBase, correlacion,
   }
 }
 
@@ -127,6 +135,10 @@ function bloqueCohorte(m: MedidaPaper, i: number, total: number): string[] {
     const aporta = m.medianaCesta != null && m.medianaBase != null ? m.medianaCesta - m.medianaBase : null
     lineas.push(`Filtro calidad: gurús-solo (MEDIANA) ${pct(m.medianaBase)} → aporta ${pct(aporta)} ${aporta != null && aporta > 0 ? '✅' : '⚠️'}`)
   }
+  // Concentración (contexto, nunca filtro): la mediana no ve una cesta que es UNA sola apuesta.
+  if (m.correlacion != null) {
+    lineas.push(`Correlación media de la cesta (60 sesiones): ${m.correlacion.toFixed(2).replace('.', ',')} — ${etiquetaConcentracion(m.correlacion)}`)
+  }
   return lineas
 }
 
@@ -183,7 +195,7 @@ export async function enviarPaperTracker(): Promise<{ enviado: boolean; medidas:
   // 🪜 Escalera de dinero real (firmada en TRADING-HIPOTESIS-PREREGISTRO.md, 05/08/2026): la suben
   // las señales, NO el calendario (Alberto). Cada tramo es una decisión SEPARADA suya; esto solo mide.
   {
-    const { evaluarEscalera, emparejarOps } = await import('./puerta-fase2')
+    const { evaluarEscalera, evaluarApagado, emparejarOps } = await import('./puerta-fase2')
     // Dedupe por cesta: dos versiones con los MISMOS valores son UNA prueba (misma regla que /trading).
     const vistas = new Set<string>()
     const cohortesEscalera = medidas.filter(m => {
@@ -202,6 +214,13 @@ export async function enviarPaperTracker(): Promise<{ enviado: boolean; medidas:
     lineas.push('', `🪜 <b>Escalera de dinero real — escalón alcanzable: Tramo ${escalera.alcanzable}</b> <i>(la suben las señales, no el calendario)</i>`)
     for (const t of escalera.tramos) lineas.push(`${t.ok ? '✅' : '⬜'} ${t.titulo} — ${t.detalle}`)
     if (escalera.alcanzable >= 2) lineas.push('<b>Un tramo nuevo cumple sus requisitos medibles. La decisión (y la orden) es SIEMPRE de Alberto.</b>')
+
+    // 🛑 Regla de apagado (firmada 15/08/2026): la contraparte de la escalera — cuándo CERRAR el
+    // experimento. Se emite en la PRIMERA evaluación que cumpla condiciones; no se re-litiga después.
+    const apagado = evaluarApagado(cohortesEscalera)
+    lineas.push(apagado.evaluable
+      ? `🛑 <b>Regla de apagado:</b> ${apagado.detalle}`
+      : `🛑 Regla de apagado: ${apagado.detalle}`)
 
     // Deslizamiento señal→día siguiente (proxy de ejecución real): media de las BUY con dato. Alimenta
     // el requisito de «fricción sin anomalías» del tramo 2. Walk-forward de señales: ops cerradas.

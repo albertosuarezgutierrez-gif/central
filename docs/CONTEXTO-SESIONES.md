@@ -32,6 +32,13 @@
 
 ---
 
+### 📈 (15/08/2026) Trading: regla de APAGADO firmada + correlación de cestas + veredicto fuentes de pago
+- Revisión a raíz de unos prompts de inversión de Twitter (descartados: 3 contradicen H9/intradía/cruces ya refutados).
+- **🛑 Regla de apagado firmada en el pre-registro:** más vieja ≥365d + ≥3 cestas y <2/3 batiendo por mediana → capital a ETF y escalera cerrada. `evaluarApagado` (`puerta-fase2.ts`, 5 tests) + línea 🛑 en el digest semanal.
+- **Correlación media por cohorte** en el digest (contexto, nunca filtro; reutiliza `concentracion.ts`) — la mediana no ve una cesta que es una sola apuesta. Anotada en el pre-registro junto a la re-declaración de «sin dividendos, ambos brazos».
+- **`docs/TRADING-FUENTES-PAGO.md`:** las fuentes de pago NO acortan el camino a operar en real (el reloj es el forward, no los datos); único gasto que protege dinero real = calendario de earnings + datos IBKR, y solo al abrir Tramo 1. Decisión APLAZADA se mantiene.
+- FX EUR/USD y caveat de dividendos ya estaban cubiertos (cartera-estudio) — verificado antes de tocar nada.
+
 ### 🏷️ (14/08/2026) Guardián de precios: PriceLabs desconectado + 2 landmines del motor y del calendario
 - Cierre del episodio 10-14/08: Alberto desconectó PriceLabs (las 7 reversiones eran suyas); verificado 0 reversiones el 11 y el 14/08.
 - **Landmine 1 — suelo PL autorreferente:** `pricing/apply` re-capturaba `pricing_pl_referencia` a diario desde `rate_snapshots` (que lee SMOOBU, no PL) → tras la desconexión el «suelo PriceLabs» capturaba los precios del propio motor y NUNCA caducaba. Upsert eliminado; tabla congelada a `captured_at='2026-08-10'` (migración `2026-08-14_pl_referencia_congelada.sql`, aplicada) → suelo inerte el 08/12/2026 como diseñado. Regla: una referencia EXTERNA no se recaptura de un espejo que escribes tú.

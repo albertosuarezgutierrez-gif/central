@@ -76,6 +76,14 @@
 - 🧭 **Datos de pago (EODHD MCP u otros): decisión APLAZADA** — no meter en el camino crítico; reevaluar solo con
   resultados reales (si Stooq+Yahoo caen a la vez → EODHD como 3er fallback de precios; al abrir Opción B/IBKR →
   EODHD por MCP para fundamentales/noticias). Plan de pago solo si el track record demuestra que aporta.
+  **Veredicto detallado (15/08/2026): `docs/TRADING-FUENTES-PAGO.md`** — las fuentes de pago NO acortan el
+  camino al dinero real (el reloj es el forward, no los datos); el único gasto que protege dinero real de forma
+  directa es el calendario de earnings fiable + datos de mercado IBKR, y solo al abrir el Tramo 1.
+- **🛑 Regla de APAGADO (firmada 15/08/2026, pre-registro):** la contraparte de la escalera — con la cesta más
+  vieja a ≥365 días y ≥3 cestas distintas, si baten al SPY por mediana menos de 2/3 → capital a ETF global y
+  escalera cerrada. La mide `evaluarApagado` (`puerta-fase2.ts`) y la pinta el digest semanal (línea 🛑). El
+  veredicto se emite en la PRIMERA evaluación que cumpla condiciones y no se re-litiga; ejecutarlo es decisión
+  de Alberto. El digest lleva además la **correlación media de cada cesta** (contexto, nunca filtro).
 - ✅ **RESUELTO (19/07/2026) — la rutina YA llega a Vercel.** Hubo DOS bloqueadores encadenados, arreglados:
   (1) **egress 403** en el túnel CONNECT hacia `plataforma-ten-flame.vercel.app` → se añadió ese host al
   **allowlist de red** del entorno "Default" de la rutina (Network access: Trusted → Custom, con el dominio +
