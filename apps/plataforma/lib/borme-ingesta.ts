@@ -35,7 +35,8 @@ async function mapLimit<T, R>(items: T[], limit: number, fn: (t: T) => Promise<R
 
 /**
  * Descarga el sumario de una fecha (YYYYMMDD) y devuelve los boletines provinciales de la Sección A.
- * `null` = el BOE NO publicó boletín ese día (404 de la API: domingos y festivos) — es una ausencia
+ * `null` = el BOE NO publicó boletín ese día (404 de la API: fines de semana y festivos — los tres
+ * avisos históricos, 25/07, 01/08 y 15/08, son sábados o festivos) — es una ausencia
  * LEGÍTIMA y definitiva, no un fallo. Tratarla como error hacía sonar el cron con un 500 cada
  * festivo desde julio (visto en runtime errors: 25/07, 01/08, 15/08…). El resto de estados HTTP
  * SÍ son averías reales y siguen lanzando.
