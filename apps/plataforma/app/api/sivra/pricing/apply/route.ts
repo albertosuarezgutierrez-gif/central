@@ -7,6 +7,7 @@ import { combinarEventosDeFecha, normalizarEstado, type EventoBruto } from "@/li
 import { decidirEventoACiegas } from "@/lib/sivra/pricing-centinelas"
 import { factorLastMinute } from "@/lib/sivra/pricing-lastminute"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
+import { acotarSueloPL } from "@/lib/sivra/pricing-suelo-pl"
 import { anclaMercadoFecha } from "@/lib/sivra/pricing-ancla-fecha"
 import { factorDemandaFecha, type DemandaFechaResult } from "@/lib/sivra/pricing-demanda"
 import { elegirBucket } from "@/lib/sivra/pricing-bucket-fuente"
@@ -42,6 +43,10 @@ const fmt = (d: Date) => d.toISOString().slice(0, 10)
 // aviso del tripwire salta a <70%; el suelo (85%) deja holgura para que el motor cotice algo por
 // debajo de PL cuando su propia señal lo justifique, pero corta el desplome a ~64% de las minas.
 const PL_FLOOR_RATIO: number = 0.85
+// Cota de cordura del suelo PL: con ancla fiable de la FECHA, el suelo no retiene el precio a más
+// de este margen sobre el mercado medido (lección del 15/08/2026 — referencia PL contaminada con
+// los precios del propio motor reteniendo 359€ en una fecha medida a 77€). Ver pricing-suelo-pl.ts.
+const PL_FLOOR_VS_ANCLA = 1.2
 // Idea #1: la referencia PL persistida (`pricing_pl_referencia`) actúa como suelo hasta N días
 // tras la última captura, para que SOBREVIVA a la cancelación de PL (~ago-2026). Pasado ese
 // plazo caduca sola y el suelo queda inerte (el motor ya se apoya en las ideas #2/#4).
@@ -533,6 +538,8 @@ export async function POST(req: NextRequest) {
   `).catch(() => [])
   const plPrice = new Map(plRows.map(x => [`${x.pid}|${x.rate_date}`, Number(x.pl)]))
   const plAvisos: string[] = []
+  /** fechas donde el mercado fiable de la fecha acotó el suelo PL (referencia desfasada/corrupta) */
+  let plSueloAcotadas = 0
   /** congelaciones de TODOS los pisos, para el aviso agrupado (una pasada = un mensaje como mucho) */
   const congeladasGlobal: { property: string; fecha: string; precio: number; factor: number }[] = []
 
@@ -704,13 +711,15 @@ export async function POST(req: NextRequest) {
       // El bucket del MES mezcla entre semana y findes y el premio de evento exige ≥1,5×, así que un
       // sábado a 1,1-1,4× su mes era invisible (3 reservas vendidas un 36-43% bajo el p50 de su fecha).
       // Solo corpus FIABLE y ≥5 comps; solo SUBE y NO salta el raíl ±%/día (escala en 1-2 pasadas).
+      // Se conserva en `anclaF` porque el suelo PL de más abajo la usa como cota de cordura.
+      let anclaF = 0
       {
         const fbA = fechaProp?.get(date)
         if (fbA) {
-          const ancla = anclaMercadoFecha({
+          anclaF = anclaMercadoFecha({
             medFechaGuest: fbA.med, comps: fbA.n, fuente: fbA.fuente, markup, dqFactor: dqDate,
           })
-          if (ancla > target) target = ancla
+          if (anclaF > target) target = anclaF
         }
       }
       // Velocidad de conversión: +10% con ≥2 reservas del mes en 7 días (+20% desde 4), sin
@@ -784,21 +793,32 @@ export async function POST(req: NextRequest) {
       // ALZA (las bajadas siguen el raíl). Resuelve la malventa por antelación: quien reserva una
       // fecha de evento la ve ya a su precio aunque el apply no haya escalado día a día.
       if (eventTarget > target) target = eventTarget
-      // 🛡️ Suelo PriceLabs (raíl, no solo aviso): mientras PL siga conectado, NO deshacer sus
-      // precios altos por debajo de PL_FLOOR_RATIO×PL. Las noches-mina (puente del Pilar, Todos
-      // los Santos, Feria, Karol G) valen mucho más que el bucket del MES —que las promedia— y su
-      // premio de evento se ancla a la base global baja, así que el objetivo se queda muy por
-      // debajo y el raíl ±%/día va hundiendo el precio (392→314→… a 0,64×PL en oct-26). PL tiene
-      // resolución por fecha y sí las ve. Solo SUBE (nunca baja), respeta el techo del propietario,
-      // y se auto-jubila: al cancelar PL el snapshot caduca (>14d) y plPrice queda vacío → inerte.
+      // 🛡️ Suelo PriceLabs (raíl, no solo aviso): NO deshacer los precios altos de la última curva
+      // PL por debajo de PL_FLOOR_RATIO×PL. Las noches-mina (puente del Pilar, Todos los Santos,
+      // Feria, Karol G) valen mucho más que el bucket del MES —que las promedia— y su premio de
+      // evento se ancla a la base global baja, así que el objetivo se queda muy por debajo y el
+      // raíl ±%/día va hundiendo el precio (392→314→… a 0,64×PL en oct-26). PL tenía resolución
+      // por fecha y sí las veía. Solo SUBE (nunca baja), respeta el techo del propietario, y
+      // caduca solo: la tabla quedó CONGELADA al desconectar PL (PR #1416) y el reloj de
+      // PL_REF_MAX_AGE_DAYS deja el suelo inerte desde diciembre de 2026.
       // Actúa CON o SIN bucket del mes (a diferencia de la guarda Karol G, solo !useMonth): el
       // fallo del Pilar ocurrió teniendo bucket de octubre.
+      //
+      // 🚨 Cota de cordura (15/08/2026): la referencia es una foto ESTÁTICA y ya estuvo una vez
+      // contaminada con los precios del propio motor (la congelación del #1416 re-etiquetó
+      // `captured_at` sin restaurar valores → un piso de 2 plazas a 359€ con su fecha medida en
+      // 77€). Con ancla fiable de la fecha (`anclaF`), el suelo no puede retenerla a más de
+      // PL_FLOOR_VS_ANCLA× el mercado — ver lib/sivra/pricing-suelo-pl.ts y su test.
       if (PL_FLOOR_RATIO > 0) {
         const plRef = plPrice.get(`${r.property_id}|${date}`)
         if (plRef && plRef > 0) {
-          let plFloor = Math.round(plRef * PL_FLOOR_RATIO)
+          const suelo = acotarSueloPL({
+            plRef, ratio: PL_FLOOR_RATIO, anclaFecha: anclaF, margen: PL_FLOOR_VS_ANCLA,
+          })
+          let plFloor = suelo.floor
           if (r.max_price != null) plFloor = Math.min(plFloor, r.max_price)
           if (plFloor > target) target = plFloor
+          if (suelo.acotado) plSueloAcotadas++
         }
       }
       if (r.max_price != null) target = Math.min(target, r.max_price)
@@ -1017,5 +1037,6 @@ export async function POST(req: NextRequest) {
     // Degradación menor: no invalida la pasada, pero tiene que verse sin tener que deducirlo.
     demanda_degradada: ocupacionMesIlegible ? "ocupación por mes ilegible: tarificado con la anual" : undefined,
     dryRun, paused, days, properties: recs.length, results, pl_avisos: plAvisos.length,
+    pl_suelo_acotadas: plSueloAcotadas,
   })
 }
