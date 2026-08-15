@@ -304,9 +304,13 @@ y testeada en **`lib/sivra/pricing-centinelas.ts`** (21/21), cableada en el rout
   house_sevillana — los dos últimos activados 09/08/2026 con OK de Alberto). **PriceLabs DE BAJA
   09/08/2026**: Alberto pausó los listados de Dúplex/House ese día y canceló la suscripción; ya no
   escribe en Smoobu ni se espera factura nueva. Su última curva queda persistida en
-  `pricing_pl_referencia` (366 fechas/piso, **congelada a `captured_at='2026-08-10'`, caduca
-  08/12/2026** — la recaptura diaria era autorreferente y se eliminó, PR #1416). NO actives
-  ni desactives `apply_enabled` de un piso sin OK explícito de Alberto.
+  `pricing_pl_referencia` (**estado real verificado 15/08/2026: SOLO Dúplex+House, 366 fechas/piso,
+  todo `captured_at='2026-08-08'` → caduca ~06/12/2026** — la recaptura diaria autorreferente se
+  eliminó en el PR #1416, y después alguien restauró la tabla a la curva GENUINA del snapshot del
+  08/08, último día limpio antes de la pausa, descartando Busto/Luxury cuyo «PL» ya era espejo del
+  motor; restauración fiel —732/732 filas cuadran con `rate_snapshots` del 08/08— pero SIN autoría
+  anotada en memoria/commits). NO actives ni desactives `apply_enabled` de un piso sin OK explícito
+  de Alberto.
 - **Mercado cargado a 12 meses** (Booking MCP, barrido F1 13/07): verano, Semana Santa 2027 (~462€ p50),
   Feria 2027, may/jun/jul 2027. **Ticketmaster VIVO** (cron semanal; busca por latlong — postalCode da 0
   fuera de EE.UU.). **🔥 KAROL G 3 noches en La Cartuja 11-13 jun 2027** (mercado 4-8x, factor 2,5) — rampar.

@@ -22,6 +22,24 @@
   el allowlist de red, usa `ALERTA_TOKEN`). Hubo una duplicada («Agente inversión») que se BORRÓ — no recrear
   una segunda rutina que cargue esta skill (toda la inteligencia ya está aquí; un prompt largo en el trigger
   solo se queda caduco). Si detectas dos, deja una y avisa.
+- **🩹 Recuperar una pasada que NO llegó a arrancar (caso real 14/08/2026):** el trigger disparó
+  (`last_fired_at` 20:15:38) pero la sesión murió sin dejar NI UNA huella (ni saldo, ni Telegram, ni
+  bitácora) — fallo transitorio de arranque de la plataforma, no de la config (entorno activo, otras
+  rutinas corrieron bien horas después). **La pasada perdida SE PUEDE recuperar desde cualquier sesión
+  con el conector IBKR** mientras el mercado no haya vuelto a abrir: se corre entera (NAV→saldo,
+  watchlist, velas, `/analizar`, `/puntuar`, Telegram) con **`fecha`/`hoy` = la SESIÓN de mercado de los
+  cierres** (p. ej. recuperada en sábado → `fecha` del viernes; ponerle la fecha del sábado sería la
+  etiqueta corrida de `pasada-diaria.md`). Así el contador `trading_pasadas` cae en el día correcto y el
+  contraste casa con su sesión (saldrá `desfasados` si la 2ª fuente aún no publicó ese cierre — declarado,
+  no veta). Con muchos símbolos, delega la bajada de velas a subagentes que escriban `velas/<SIM>.json`
+  UNO A UNO (protocolo anti-barajado) y ensambla el payload desde ficheros, sin datos por el contexto.
+  ⚠️ Los triggers creados desde la UI de claude.ai NO se pueden disparar ni editar por MCP
+  (`fire_trigger`/`update_trigger` los rechazan), y los creados por MCP no llevan conectores en esta org:
+  los cambios de la Rutina van siempre por la UI (o Claude Chrome). **✅ Desde el 15/08/2026 la Rutina
+  dispara DOS veces (`15 20,23 * * 1-5`) con PASO 0 de huella: el disparo de las 23:15 es la repesca y
+  se apaga solo si la de las 20:15 dejó huella** — sigue siendo UNA sola Rutina; no crear otra. Si aun
+  así un día mueren los dos disparos, el watchdog lo caza a la mañana siguiente y la recuperación es
+  manual con este procedimiento.
 - **🐕 Watchdog, 3 tramos (06/08/2026)** — cron `/api/cron/trading-watchdog` (`30 6 * * 2-6`, mar-sáb
   08:30 CEST) comprueba que la pasada nocturna dejó "anoche" sus TRES huellas: 1) el NAV de IBKR en
   `broker_saldos` (lectura del bróker), 2) el latido `trading_analizar` (análisis, `/analizar`), y 3) el
@@ -76,6 +94,14 @@
 - 🧭 **Datos de pago (EODHD MCP u otros): decisión APLAZADA** — no meter en el camino crítico; reevaluar solo con
   resultados reales (si Stooq+Yahoo caen a la vez → EODHD como 3er fallback de precios; al abrir Opción B/IBKR →
   EODHD por MCP para fundamentales/noticias). Plan de pago solo si el track record demuestra que aporta.
+  **Veredicto detallado (15/08/2026): `docs/TRADING-FUENTES-PAGO.md`** — las fuentes de pago NO acortan el
+  camino al dinero real (el reloj es el forward, no los datos); el único gasto que protege dinero real de forma
+  directa es el calendario de earnings fiable + datos de mercado IBKR, y solo al abrir el Tramo 1.
+- **🛑 Regla de APAGADO (firmada 15/08/2026, pre-registro):** la contraparte de la escalera — con la cesta más
+  vieja a ≥365 días y ≥3 cestas distintas, si baten al SPY por mediana menos de 2/3 → capital a ETF global y
+  escalera cerrada. La mide `evaluarApagado` (`puerta-fase2.ts`) y la pinta el digest semanal (línea 🛑). El
+  veredicto se emite en la PRIMERA evaluación que cumpla condiciones y no se re-litiga; ejecutarlo es decisión
+  de Alberto. El digest lleva además la **correlación media de cada cesta** (contexto, nunca filtro).
 - ✅ **RESUELTO (19/07/2026) — la rutina YA llega a Vercel.** Hubo DOS bloqueadores encadenados, arreglados:
   (1) **egress 403** en el túnel CONNECT hacia `plataforma-ten-flame.vercel.app` → se añadió ese host al
   **allowlist de red** del entorno "Default" de la rutina (Network access: Trusted → Custom, con el dominio +

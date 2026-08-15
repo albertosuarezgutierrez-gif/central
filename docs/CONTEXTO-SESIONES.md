@@ -36,11 +36,65 @@
 - Alberto vio en Smoobu 359/234/414/554€ para la noche del 15/08 (mercado fiable de la fecha: 77/99/113/320€).
   Causa: la congelación del #1416 re-etiquetó `captured_at` SIN restaurar precios → `pricing_pl_referencia`
   guardaba el sawtooth del motor (capturas 11-14/08) y el suelo 85% lo blindaba hasta ago-2027.
-- Reconstruida (SQL `2026-08-15_pl_referencia_reconstruida.sql`, aplicada): Busto/Luxury FUERA (motor vivo
-  desde 10/06 y 13/07 — nunca hubo PL genuino en la tabla); Dúplex/House con la foto real del snapshot
-  08/08 07:00 (caduca 06/12/2026). Sevilla-Rayo duplicado 15+16/08 → fila del 16 descartada (partido: sáb 15).
+- Reconstruida (SQL `2026-08-15_pl_referencia_reconstruida.sql`, aplicada ~06:20 UTC; PR #1427): Busto/Luxury
+  FUERA (motor vivo desde 10/06 y 13/07 — nunca hubo PL genuino en la tabla); Dúplex/House con la foto real del
+  snapshot 08/08 07:00 (caduca 06/12/2026). Sevilla-Rayo duplicado 15+16/08 → fila del 16 descartada (partido: sáb 15).
+  Es la reconstrucción que la entrada ✅ de abajo encontró «sin anotar»: la anotación viajaba en la rama draft.
 - Guarda nueva en apply: con ancla fiable de la fecha, el suelo PL se acota a ×1,2 el ancla
   (`lib/sivra/pricing-suelo-pl.ts`, puro+test). Una referencia estática ya no puede desmentir al mercado medido.
+- Verificado post-fix (pasada 08:31): los 4 pisos bajaron el raíl completo sin re-anclarse (15/08:
+  359→287 · 234→187 · 414→331 · 554→443; 275 escrituras, toda la curva despinzada).
+
+### 🐛 (15/08/2026) Pasada de trading duplicada: el PASO 0 del trigger no ve una recuperación con `fecha` backdateada
+- El trigger de las 20:15/23:15 disparó otra vez a las ~08:14 UTC. PASO 0 comprobó `trading_pasadas WHERE
+  fecha=CURRENT_DATE` (2026-08-15) → NULL → concluí «no ha corrido hoy» y ejecuté la pasada completa.
+- **Pero SÍ había corrido**: la sesión de la entrada anterior recuperó el viernes 14/08 usando `fecha='2026-08-14'`
+  a propósito (evitar etiqueta corrida) — invisible para un check que mira `CURRENT_DATE`. Mi pasada (NAV→saldo,
+  22 símbolos, /analizar, /puntuar) corrió igual con `fecha='2026-08-15'` pero **con los MISMOS cierres del
+  viernes** (el mercado seguía cerrado) → 88 tesis nuevas duplicando información ya analizada, un día desplazada.
+- **Sin daño operativo**: 0 compras paper nuevas (la barrera "posición ya abierta" protegió), 0 vetados/huérfanas.
+  `ETIQUETA_TOL` ya tolera el desfase sin anular tesis. El coste real es ruido en `trading_estrategia_stats`.
+- **Pendiente:** el PASO 0 del prompt del trigger debería comprobar la HUELLA real (última vela usada / último
+  precio_ref), no solo `fecha=CURRENT_DATE` — una recuperación backdateada lo esquiva. No lo he tocado (vive en
+  la config del trigger, fuera de este repo).
+
+### ✅ (15/08/2026) Verificación final PR #1416 — todo OK; el suelo PL quedó RESTAURADO a la curva genuina
+- Seguimiento cerrado: 9/9 partidos a domicilio siguen descartados (los 3 «vs Sevilla/Betis» vivos son derbis, locales), guardián 07:30 con 0 alertas nuevas, latidos sivra_* en verde, sin recaptura tras las pasadas 20:30/14:30 con código nuevo.
+- Incidencia menor (14/08 ~15:00): la pasada de las 08:31 corrió con código viejo minutos antes del deploy (READY 08:54) y recapturó una última vez; re-congelada en el momento.
+- **Estado REAL de `pricing_pl_referencia` (difiere del PR):** alguien —sin anotarlo en memoria ni commits— la restauró a la curva GENUINA: solo Dúplex+House, 732 filas, `captured_at='2026-08-08'` (verificado: 732/732 cuadran con `rate_snapshots` del 08/08, último día limpio) → caduca ~06/12/2026. Semánticamente mejor que la congelación del PR (que re-fechaba precios ya contaminados). Busto/Luxury fuera: su «PL» ya era espejo del motor.
+- Si fuiste tú (otra sesión): anota tus escrituras de BD en memoria — esta reconstrucción se descubrió por sorpresa en la verificación.
+
+### 🐕 (15/08/2026) Pasada de trading del 14/08 perdida: recuperada a mano + reintento pendiente de la UI
+- El trigger disparó (20:15:38Z) pero la sesión murió SIN arrancar — fallo transitorio de la plataforma
+  (entorno activo, otras rutinas corrieron bien). Watchdog avisó 06:30; Alberto: «¿solución para esto?».
+- Recuperada la mañana del sábado con `fecha`/`hoy`=**2026-08-14** (cierres del viernes, evita la etiqueta
+  corrida): NAV 32.335,37€ → saldo, 22 símbolos por subagentes (velas a fichero, anti-barajado), /analizar
+  (0 vetados, sin compras nuevas) y /puntuar (48 tesis, 0 cerradas, diferido limpio). 3 huellas verificadas.
+- **Limitación:** `fire_trigger`/`update_trigger` rechazan rutinas creadas en la UI, y los triggers MCP no
+  llevan conectores → el reintento solo podía aplicarse en la UI. **✅ Alberto lo aplicó el mismo día**
+  (Claude Chrome): cron `15 20,23 * * 1-5` + PASO 0 de huella, verificado por MCP (prompt y 4 conectores
+  OK). Estreno real el lunes 17/08 (check-in nocturno armado). Receta en `docs/RUTINAS-PROGRAMADAS.md`.
+
+### 🔧 (15/08/2026) Los 3 runtime errors diarios de plataforma NO eran «normales» — 2 fixes
+- Al verificar producción tras mergear #1424, Alberto preguntó por los 3 errores de la última hora. Ninguno era del PR, pero dos eran bugs reales sonando a diario desde julio/agosto:
+- **BORME 404 en festivos = error 500** (y su eco en cron-dispatch): el BOE no publica domingos/festivos; `descargarSumario` ahora devuelve `null` en 404 → `ingestaDia` responde `sinPublicacion: true` con 200. Ausencia legítima declarada, no disfrazada de avería. Otros HTTP siguen lanzando.
+- **`titulares.ts` roto desde el 05/08**: `WHERE cuenta_id = ${cuentaId}` sin `::uuid` → 42883 y lista de titulares vacía en silencio (el catch degradaba). Cast añadido (patrón psd2/adapters); verificado contra la BD real (2 sociedades de la cuenta).
+- Verificado: tsc 0 · 53/53 tests · build OK. Mismo día: #1424 mergeado y producción comprobada al 100% (render real de /trading vía invitado, orden nuevo + euros en hero con FX vivo).
+- **📦 «Cartera paper» vuelve a /trading CON rentabilidad** (Alberto: «¿solo hay comprada ORCL? no indica la rentabilidad»): 8 posiciones abiertas en BD pero invisibles — la lista de ideas filtraba las 40 tesis recientes y las compras viejas desaparecían (consulta propia de compras ahora), y las posiciones no se pintaban desde que se retiró la «Cartera simulada» sin P&L (04/08). Sección nueva con precio actual (Stooq→Yahoo, «—» declarado si no hay) + rentabilidad por posición + total; explica los vetos «posición ya abierta».
+
+### 📈 (15/08/2026) Trading: regla de APAGADO firmada + correlación de cestas + veredicto fuentes de pago
+- Revisión a raíz de unos prompts de inversión de Twitter (descartados: 3 contradicen H9/intradía/cruces ya refutados).
+- **🛑 Regla de apagado firmada en el pre-registro:** más vieja ≥365d + ≥3 cestas y <2/3 batiendo por mediana → capital a ETF y escalera cerrada. `evaluarApagado` (`puerta-fase2.ts`, 5 tests) + línea 🛑 en el digest semanal.
+- **Correlación media por cohorte** en el digest (contexto, nunca filtro; reutiliza `concentracion.ts`) — la mediana no ve una cesta que es una sola apuesta. Anotada en el pre-registro junto a la re-declaración de «sin dividendos, ambos brazos».
+- **`docs/TRADING-FUENTES-PAGO.md`:** las fuentes de pago NO acortan el camino a operar en real (el reloj es el forward, no los datos); único gasto que protege dinero real = calendario de earnings + datos IBKR, y solo al abrir Tramo 1. Decisión APLAZADA se mantiene.
+- FX EUR/USD y caveat de dividendos ya estaban cubiertos (cartera-estudio) — verificado antes de tocar nada.
+- **Pasada de claridad en `/trading`** (Alberto: «no está clara del todo» + «el orden también»): glosario plegado, tooltips, estrategias legibles, subtítulos-pregunta, línea 🛑 en la escalera; **reorden** hero→glosario→ideas→forward→analiza→radar→cohetes→watchlist (la tabla de 550 al final, lo que hizo el agente arriba) y **cifra en euros en el hero** (curvaEnEuros + FX real, no se pinta sin FX). Sin tocar lógica del modelo.
+
+### 🧾 (15/08/2026) facturas-correo (trigger diario) — Vía B recuperada, nada pendiente nuevo
+- Vía B (Apps Script) volvió a copiar el 14/08 tras 3 días parada → `agente_salud` a `ok=true`.
+  2 pedidos Amazon (lima pies, microondas) entregados a Cádiz → `personal`, sin archivar.
+  Sin candidatos nuevos más, backlog `PDF-pendiente`/`Revisar`/`v_facturas_sin_cargo.sin_revisar`
+  a 0. Detalle completo en `docs/AGENTES-BITACORA.md` (entrada de hoy).
 
 ### 🧊 (15/08/2026) Cierre del bucle de eventos — congelar→medir→mercado manda, verificado en producción
 - Ciclo completo confirmado con datos reales (PRs #1386 verificador, #1409 guarda 🧊, #1414 ventanas por fecha):

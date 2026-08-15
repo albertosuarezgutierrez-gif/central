@@ -120,3 +120,37 @@ export function evaluarEscalera(cohortes: CohorteEscalera[]): EstadoEscalera {
 
   return { tramos: [t1, t2, t3], alcanzable: t3ok ? 3 : t2ok ? 2 : 1 }
 }
+
+// ── 🛑 Regla de APAGADO del experimento (firmada 2026-08-15 en el pre-registro) ──────────────────
+// La escalera dice cuándo SUBIR capital y el congelador H6 cuándo PAUSAR; esto dice cuándo CERRAR:
+// cuando la cesta más vieja cumpla DIAS_APAGADO habiendo ≥MIN_CESTAS_TRAMO3 cestas distintas, si NO
+// baten al SPY por MEDIANA al menos 2/3 (mismos alphaFiable/cobertura que la escalera), el veredicto
+// es negativo — según lo firmado: capital a ETF global y escalera cerrada. El veredicto se emite en
+// la PRIMERA evaluación que cumpla las condiciones; no se re-litiga con semanas buenas posteriores.
+// H6 pausa la escalera, NO este reloj (la comparación contra el SPY es relativa, vale en cualquier
+// régimen). Este módulo solo MIDE — ejecutar el apagado es una decisión de Alberto.
+export const DIAS_APAGADO = 365
+
+export type EstadoApagado = {
+  evaluable: boolean   // condiciones para emitir veredicto (edad de la más vieja + nº de cestas)
+  apagar: boolean      // veredicto negativo (solo significativo si evaluable)
+  detalle: string
+}
+
+export function evaluarApagado(cohortes: CohorteEscalera[]): EstadoApagado {
+  const masVieja = cohortes.length ? [...cohortes].sort((a, b) => b.dias - a.dias)[0] : null
+  const evaluable = masVieja != null && masVieja.dias >= DIAS_APAGADO && cohortes.length >= MIN_CESTAS_TRAMO3
+  if (!evaluable) {
+    const reloj = masVieja ? `cesta más vieja ${meses(masVieja.dias)} de ${meses(DIAS_APAGADO)}` : 'sin cestas'
+    return { evaluable: false, apagar: false, detalle: `reloj: ${reloj} · cestas distintas ${cohortes.length}/${MIN_CESTAS_TRAMO3}` }
+  }
+  const baten = cohortes.filter(c => (alphaFiable(c) ?? -Infinity) > 0)
+  const necesarias = Math.ceil(cohortes.length * FRACCION_CESTAS_BATIENDO)
+  const apagar = baten.length < necesarias
+  return {
+    evaluable: true, apagar,
+    detalle: apagar
+      ? `veredicto NEGATIVO — baten ${baten.length}/${cohortes.length} (mínimo ${necesarias}) con la más vieja a ${meses(masVieja.dias)}: según lo firmado, capital a ETF global y escalera cerrada. La decisión es de Alberto.`
+      : `veredicto: el experimento SIGUE — baten ${baten.length}/${cohortes.length} (≥2/3) con la más vieja a ${meses(masVieja.dias)}.`,
+  }
+}

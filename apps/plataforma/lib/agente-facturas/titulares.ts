@@ -35,9 +35,12 @@ export async function cargarTitulares(): Promise<Titular[]> {
       cuentas.map((c) => ({ id: c.id, email: c.email, esDemo: /\[seed-demo\]/i.test(c.nombre) })),
       { facturaCuentaId: process.env.FACTURAS_CUENTA_ID, gmailUser: process.env.GMAIL_USER },
     )
+    // `::uuid` obligatorio: el parámetro de Prisma llega tipado como text y `cuenta_id` es uuid —
+    // sin el cast Postgres lanza 42883 (operator does not exist: uuid = text) y la lista caía
+    // vacía en silencio desde el catch (roto del 05/08 al 15/08 sin que nadie lo notara).
     const rows = await prisma.$queryRaw<{ nombre: string; cif: string | null }[]>(
       cuentaId
-        ? Prisma.sql`SELECT nombre, cif FROM sociedades WHERE cuenta_id = ${cuentaId}`
+        ? Prisma.sql`SELECT nombre, cif FROM sociedades WHERE cuenta_id = ${cuentaId}::uuid`
         : Prisma.sql`SELECT nombre, cif FROM sociedades`,
     )
     for (const r of rows) out.push({ nif: r.cif, nombre: r.nombre })

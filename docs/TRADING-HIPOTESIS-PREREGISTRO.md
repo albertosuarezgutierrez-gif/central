@@ -369,6 +369,43 @@ se divide entre 3 y calidad entre 4 mientras momentum va sin dividir. El peso EF
 valor / 28% calidad / 34% momentum, no el 40/40/20 nominal. Queda anotado y **sin cambiar**: mover eso
 es tocar el modelo y necesita su propia entrada firmada.
 
+## 🛑 Regla de APAGADO del experimento de selección · firmada 2026-08-15
+- **Origen:** Alberto («añade todo lo que veas necesario», 15/08/2026), a propuesta de la revisión de
+  ese día: la escalera define cuándo SUBIR capital y el congelador H6 cuándo PAUSAR, pero nadie había
+  firmado cuándo CERRAR. Sin regla de cierre, un experimento que no funciona se prorroga
+  indefinidamente — la portería móvil por omisión. Se firma AHORA, antes de que haya resultados que
+  duelan, que es exactamente para lo que existe este documento.
+- **Condición de evaluación:** cuando la cesta más vieja del forward cumpla **≥365 días** habiendo
+  **≥3 cestas distintas** (misma definición que el tramo 3: composiciones distintas; alpha fiable =
+  cobertura ≥80%, y un alpha desconocido cuenta como NO bate).
+- **Veredicto negativo:** si en ese momento **baten al SPY por MEDIANA menos de 2/3 de las cestas** →
+  el sistema de selección no bate al índice. Según lo ya recomendado en
+  `INVERSION-VEREDICTO-2026-08.md` §8: **el capital va a un ETF global amplio y la escalera queda
+  CERRADA** (ningún tramo nuevo). La recolección (crons, retrovisor, cohortes) puede seguir como
+  observatorio, pero sin camino a dinero real salvo hipótesis nueva firmada sobre un modelo distinto.
+  La cartera cohetes tiene su propio marcador (H3/H7) y **no salva** el veredicto del núcleo.
+- **Sin re-litigar:** el veredicto se emite en la PRIMERA evaluación que cumpla las condiciones (el
+  digest semanal lo pinta); unas semanas buenas posteriores no lo reabren. Reabrir exige entrada nueva
+  fechada aquí con motivo (p. ej. cambio de régimen H6 + modelo revisado).
+- **H6 pausa la escalera, NO este reloj:** la comparación contra el SPY es relativa y vale en
+  cualquier régimen — un mercado bajista no es excusa para no medirse contra el índice que lo sufre igual.
+- **Medición:** `evaluarApagado` en `apps/plataforma/lib/trading/puerta-fase2.ts` (puro, testeado);
+  línea 🛑 en el digest semanal del paper-tracker. Solo mide: ejecutar el apagado es decisión de Alberto.
+
+## 📎 Correlación media de la cesta = CONTEXTO en el digest · anotada 2026-08-15
+- **Qué es:** medición nueva, NO cambio de modelo. La MEDIANA protege del outlier (lección APP ×39)
+  pero no ve una cesta donde todos los nombres son la MISMA apuesta (el top del radar ya lo vigila
+  así desde el 20/07: `correlacionMediaCesta`, correlación de retornos diarios en vez de etiquetas de
+  sector, que parten un mismo tema en varios SIC). Ahora se calcula también por **cohorte del forward**
+  sobre las series que el tracker ya baja (coste 0) y se pinta en el digest como contexto.
+- **Qué NO toca:** ranking, pesos, composición de cestas ni criterios de la escalera. Si algún día se
+  quiere un TOPE de correlación/concentración en `/seleccion`, exigirá su propia hipótesis firmada
+  ANTES, usando estas observaciones — no se cablea nada por el retrovisor.
+- **Re-declaración para el registro (ya estaba en código, `cartera-estudio.ts`):** los cierres de
+  Stooq/Yahoo con los que se mide el forward son **SIN dividendos, en ambos brazos** (cesta y SPY):
+  los alphas están medidos a PRECIO, no a retorno total. El sesgo es pequeño y simétrico y por eso la
+  comparativa se acepta; queda anotado aquí para que ninguna lectura futura lo descubra por sorpresa.
+
 ## 📦 Archivo — pre-registro original de la cohorte 1 (tabla `trading_forward_paper`, retirada 01/08/2026)
 La primera cohorte se pre-registró el 18/07/2026 en una tabla ad-hoc (`trading_forward_paper`, con
 `trading_forward_paper_marca` para marcas interinas) que quedó huérfana cuando el forward pasó a
