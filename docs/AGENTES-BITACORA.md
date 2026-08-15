@@ -15,6 +15,17 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-15 · mercado-booking** · hizo: pasada de 12 ventanas (plan `?max=12`, sin filtro —
+  las 12 candidatas eran `sin_medir_nunca`, todas ronda 1/evento: Bienal de Flamenco 11/12/14-sep,
+  las 4 propiedades por aforo 12/5/4/2). 110 comparables reales escritos en `market_rates`
+  (`fuente:booking_mcp`); 0 anuncios propios detectados entre los resultados. Medianas €/noche
+  por fecha×aforo (12/5/4/2): 11-sep 593/184/147/132 · 12-sep 461/182/143/— · 14-sep 279/114/106/104.
+  dudas: —; fallos: 1 ventana sin respuesta del conector (12-sep→14-sep, aforo 2,
+  `prop_busto_reform`: Booking devolvió `not_found` — no se inventó comp, se cuenta como
+  "no se ha podido mirar" y no como "no hay mercado", queda pendiente de reintento). Latido
+  `ok:true`. Aviso del plan: tope `max=12` dejó fuera 460 de las 472 ventanas candidatas —
+  cobertura normal, se acumula en próximas pasadas; PRs/commits: — (solo Booking MCP + HTTP a
+  plataforma + esta entrada).
 - **2026-08-14 · ialimp-client-health (pasada semanal)** · hizo: preflight `/api/internal/alerta`
   200 OK; empresa Sique Brilla SL (`05edacff-…`) — PMS sync Smoobu activo, `sync_error` null,
   `last_sync_at` hoy 15:10, 23 `cleaning_sessions` actualizadas en 7 días; 0 programaciones activas
