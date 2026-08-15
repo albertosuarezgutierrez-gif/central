@@ -79,7 +79,7 @@ flowchart TB
 | Auditoría semanal profunda | Typecheck 4 apps + tests + seguridad multi-tenant + infra | Domingo 04:00 | mixto + informe | ✅ | `auditoria-central --profunda` |
 | Facturas correo | Gmail → clasifica facturas → Drive → concilia con banca | Diaria 08:00 | PR draft | ✅ | `.claude/skills/facturas-correo` |
 | Pricing agente (SIVRA) | Estudia mercado → precio → aplica por Paso 4 → aprende en BD | Lunes 06:00 | PR draft | ✅ | `.claude/skills/pricing-agente` |
-| Vigilante fiscal IRPF | Contrasta importes con BOE/BOJA; actualiza constante + BD | Día 1 mes 07:00 | PR draft | ✅ | `.claude/skills/fiscal-novedades` |
+| Vigilante fiscal IRPF + ayudas | Contrasta importes con BOE/BOJA; actualiza constante + BD. Además radar de convocatorias de ayudas → Telegram | Día 1 mes 07:00 | PR draft | ✅ | `.claude/skills/fiscal-novedades` |
 | Guardián PSD2 | Verifica que la banca llega fresca (<48h); alerta si roto | Miércoles 09:00 | solo lectura | ✅ | `.claude/skills/psd2-health-check` |
 | ialimp client health | Pulso semanal de Sique Brilla (PMS, impagos…) | Viernes 17:00 | solo lectura | ✅ | `.claude/skills/ialimp-client-health` |
 | RRHH compliance calendar | Filtra obligaciones legales 🔴 pendientes e informa plazos | Día 1 mes 08:00 | solo lectura | — | `.claude/skills/rrhh-compliance-calendar` |

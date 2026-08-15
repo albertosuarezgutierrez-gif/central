@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { getSession } from '@/lib/session'
+import { ayudasVigentes, diasRestantes } from '@/lib/ayudas'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,7 +13,7 @@ export default async function PanelPage() {
   const s = await getSession()
   if (!s) redirect('/login')
 
-  const [unidadesPorEspacio, bajoMinimo, pendientes] = await Promise.all([
+  const [unidadesPorEspacio, bajoMinimo, pendientes, ayudas] = await Promise.all([
     prisma.$queryRaw<EspacioRow[]>(Prisma.sql`
       SELECT e.id, e.nombre, e.tipo,
              COALESCE(SUM(s.disponible), 0)::int AS unidades
@@ -28,6 +29,7 @@ export default async function PanelPage() {
         AND stock_minimo IS NOT NULL AND cantidad_disponible < stock_minimo
     `),
     prisma.almacenTransferencia.count({ where: { cuentaId: s.id, estado: 'pendiente' } }),
+    ayudasVigentes(s.id),
   ])
 
   const nBajoMinimo = Number(bajoMinimo[0]?.n ?? 0)
@@ -40,6 +42,29 @@ export default async function PanelPage() {
           <div className="sub">Control de almacén — visión general</div>
         </div>
       </div>
+
+      {ayudas.map((a) => {
+        const dias = diasRestantes(a.plazo_fin)
+        const plazo = dias == null ? 'plazo por confirmar' : dias === 0 ? '¡el plazo acaba hoy!' : `quedan ${dias} días`
+        return (
+          <div key={a.id} className="card" style={{ marginBottom: 14, borderLeft: '4px solid var(--brand)', background: 'var(--brand-soft)' }}>
+            <div className="card-title">💶 Ayuda con plazo abierto</div>
+            <div style={{ fontSize: 14, marginTop: 6 }}>
+              <strong>{a.titulo}</strong>
+              {a.organismo && <> · {a.organismo}</>}
+              {a.cuantia_texto && <> · <strong>{a.cuantia_texto}</strong></>}
+              {' · '}
+              <span className={dias != null && dias <= 15 ? 'badge danger' : 'badge warn'}>{plazo}</span>
+            </div>
+            {a.encaje && <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>{a.encaje}</div>}
+            {a.url && (
+              <div style={{ marginTop: 6 }}>
+                <a href={a.url} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-ink)' }}>Ver la convocatoria</a>
+              </div>
+            )}
+          </div>
+        )
+      })}
 
       <div className="kpi-grid">
         <Link href="/transferencias" className="kpi kpi-link">
