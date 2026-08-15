@@ -45,6 +45,10 @@
   (Paso 5; estado en `docs/FISCAL-AYUDAS.md`) para que la próxima no llegue por prensa.
 - Ampliación (mismo día): Paso 5 suma bonificaciones SS (checklist anual) + radar por cliente; banner 💶 en
   `/finanzas` con cuenta atrás (tabla `fiscal_ayudas`, aplicada y sembrada; `AyudaBanner` + descartar).
+- Radar por cliente TERMINADO: perfiles en BD (`ayudas_perfiles`, con `ref_ext` → cuenta/empresa de su app;
+  Joaquín apunta a la cuenta DEMO del almacén hasta sembrar la real) + banner 💶 en `apps/almacen` (panel)
+  y `apps/ialimp` (dashboard empresa, manual actualizado). GRANTs de solo lectura a `prisma_ialimp`/`prisma_almacen`.
+  OJO: `next build` de ialimp falla en este contenedor por envs (preexistente, falla igual sin los cambios).
   **Pendiente:** borrador Gmail a Marta sobre la cuota RETA de Pilar (serie rara 72→118→32€, ¿bonificación
   art. 38 LETA aplicada?) — lo envía Alberto si quiere.
 

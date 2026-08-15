@@ -16,3 +16,10 @@ CREATE TABLE IF NOT EXISTS fiscal_ayudas (
 );
 CREATE INDEX IF NOT EXISTS fiscal_ayudas_visibles ON fiscal_ayudas (descartado, plazo_fin);
 REVOKE ALL ON fiscal_ayudas FROM anon, authenticated;
+
+-- Grants (migración `ayudas_grants_verticales`, aplicada 15/08/2026): los roles de las
+-- verticales de cliente solo LEEN; plataforma además descarta (UPDATE) e inserta.
+-- OJO: prisma_ialimp es least-privilege — una tabla nueva sin GRANT da `permission denied`.
+GRANT SELECT ON fiscal_ayudas, ayudas_perfiles TO prisma_ialimp, prisma_almacen;
+GRANT SELECT, INSERT, UPDATE ON fiscal_ayudas TO prisma_plataforma;
+GRANT SELECT ON ayudas_perfiles TO prisma_plataforma;
