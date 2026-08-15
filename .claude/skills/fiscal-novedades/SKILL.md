@@ -1,6 +1,6 @@
 ---
 name: fiscal-novedades
-description: Agente PROGRAMADO (mensual + pre-renta) que vigila cambios en deducciones IRPF (BOE estatal, BOJA/AEAT Andalucía) y los contrasta con IMPORTES_POR_ANIO de apps/plataforma/lib/fiscal-deducciones.ts; si cambian, PR draft + fila en fiscal_novedades para aviso en pantalla. Úsala si Alberto pide "revisa si han cambiado las deducciones".
+description: Agente PROGRAMADO (mensual + pre-renta) con DOS radares fiscales; (1) deducciones IRPF (BOE estatal, BOJA/AEAT Andalucía) contrastadas con IMPORTES_POR_ANIO de apps/plataforma/lib/fiscal-deducciones.ts — si cambian, PR draft + fila en fiscal_novedades; (2) convocatorias de AYUDAS/SUBVENCIONES (BOJA/Junta/estatales) que encajen con el perfil de Alberto y Pilar — si hay una nueva, aviso Telegram con plazo y requisitos, estado en docs/FISCAL-AYUDAS.md. Úsala si Alberto pide "revisa si han cambiado las deducciones" o "¿hay ayudas nuevas?".
 ---
 
 # Vigilante de novedades fiscales — deducciones IRPF (Alberto)
@@ -56,10 +56,45 @@ anótalo como duda en el cuerpo del PR.
 No abras PR ni insertes filas. Deja solo un resumen en el chat ("sin cambios; revisado contra
 BOE/BOJA a fecha X"). Idempotente: re-ejecutar no duplica avisos.
 
+## Paso 5 — Radar de convocatorias de ayudas/subvenciones (misma pasada mensual)
+> Caso fundacional (15/08/2026): la Junta convocó en junio ayudas de conciliación para autónomos
+> (hasta 7.200€, plazo 30/06→15/09) y nadie avisó — Alberto se enteró por prensa a mitad de plazo.
+> Este radar existe para que eso no se repita.
+
+1. **Busca convocatorias nuevas o con plazo abierto** (WebSearch + WebFetch; OJO: muchos dominios de
+   prensa están bloqueados por el proxy — apóyate en la síntesis del buscador y cita las URLs):
+   BOJA / Junta de Andalucía (Consejería de Empleo, portal de ayudas), BOE/estatales (SEPE, Seg. Social,
+   Industria) y bonos tipo Kit Digital. Consultas tipo: "ayudas autónomos Andalucía <año>",
+   "subvenciones familia numerosa Andalucía", "ayudas vivienda turística/rehabilitación Sevilla".
+2. **Filtra por el perfil real** (skill `perfil-fiscal` + BD `fiscal_perfil`/`fiscal_descendientes`
+   para edades de hijos — no las asumas): Alberto y Pilar autónomos con domicilio fiscal en Andalucía
+   (Sevilla), familia numerosa general con hijos pequeños, pisos turísticos en IRPF personal,
+   SL dormida (descarta ayudas que exijan sociedad ACTIVA). Descarta lo que exija condiciones que no
+   se dan; si exige algo posible pero no seguro (p. ej. contratar personal), avisa igual marcándolo.
+3. **Dedupe contra `docs/FISCAL-AYUDAS.md`** (estado): una tabla `| Convocatoria | Plazo | Encaje |
+   Estado | Avisada |`. Si ya está listada, no re-avises; si cambió el plazo o se reabrió, actualiza
+   la fila y avisa de nuevo. Añade SIEMPRE las nuevas (también las descartadas, con el porqué).
+4. **Aviso Telegram** solo si hay convocatoria nueva que encaje (o cambio de plazo relevante), por el
+   canal común (preflight al arrancar, ver abajo):
+   `💶 AYUDA NUEVA — <título>: hasta <importe>, plazo <fecha límite>. Encaje: <por qué aplica>. <URL oficial>`
+   Sin novedades → sin Telegram. Este radar NO abre PR salvo por el propio archivo de estado.
+5. **Nunca tramites ni contactes a nadie** (ni a la asesoría): el radar informa a Alberto y decide él
+   (regla global de comunicaciones salientes en el CLAUDE.md raíz).
+
+## Canal de aviso — protocolo común
+**Preflight AL ARRANCAR** (no al final): `GET {PLATAFORMA_URL}/api/internal/alerta` con
+`Authorization: Bearer {ALERTA_TOKEN}`. `200` → canal vivo; enviar con
+`POST {PLATAFORMA_URL}/api/internal/alerta` y body `{ "text": "..." }` (el token de Telegram vive en
+Vercel plataforma, esta skill no lo necesita). `401` → canal mudo: según `docs/AVISOS-AGENTES.md`,
+avisa por el push nativo de la sesión empezando por `🔇 SIN TELEGRAM (401):` y deja el aviso entero
+en `docs/AGENTES-BITACORA.md` (`fallos:`). Nunca falles en silencio.
+
 ## Reglas
 - **Orientativo**: el módulo no sustituye asesoría fiscal; el vigilante solo mantiene cifras.
 - No inventes importes: sin fuente oficial clara, no se toca el valor.
 - Multi-tenant: `fiscal_novedades` es global (normativa), no lleva `cuenta_id`.
+- En el radar de ayudas, cuantías/plazos que no consigas verificar en fuente oficial se avisan
+  como «según prensa, por confirmar» — mejor un aviso imperfecto a tiempo que ninguno.
 
 ## Auto-informe (obligatorio al terminar la pasada)
 
