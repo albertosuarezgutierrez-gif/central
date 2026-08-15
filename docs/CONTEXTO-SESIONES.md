@@ -32,6 +32,16 @@
 
 ---
 
+### 🐕 (15/08/2026) Pasada de trading del 14/08 perdida: recuperada a mano + reintento pendiente de la UI
+- El trigger disparó (20:15:38Z) pero la sesión murió SIN arrancar — fallo transitorio de la plataforma
+  (entorno activo, otras rutinas corrieron bien). Watchdog avisó 06:30; Alberto: «¿solución para esto?».
+- Recuperada la mañana del sábado con `fecha`/`hoy`=**2026-08-14** (cierres del viernes, evita la etiqueta
+  corrida): NAV 32.335,37€ → saldo, 22 símbolos por subagentes (velas a fichero, anti-barajado), /analizar
+  (0 vetados, sin compras nuevas) y /puntuar (48 tesis, 0 cerradas, diferido limpio). 3 huellas verificadas.
+- **Limitación:** `fire_trigger`/`update_trigger` rechazan rutinas creadas en la UI, y los triggers MCP no
+  llevan conectores → el reintento automático (doble disparo `15 20,23 * * 1-5` + PASO 0 de huella) solo
+  puede aplicarlo Alberto en la UI. Receta en `docs/RUTINAS-PROGRAMADAS.md`; recuperación en la skill.
+
 ### 🔧 (15/08/2026) Los 3 runtime errors diarios de plataforma NO eran «normales» — 2 fixes
 - Al verificar producción tras mergear #1424, Alberto preguntó por los 3 errores de la última hora. Ninguno era del PR, pero dos eran bugs reales sonando a diario desde julio/agosto:
 - **BORME 404 en festivos = error 500** (y su eco en cron-dispatch): el BOE no publica domingos/festivos; `descargarSumario` ahora devuelve `null` en 404 → `ingestaDia` responde `sinPublicacion: true` con 200. Ausencia legítima declarada, no disfrazada de avería. Otros HTTP siguen lanzando.
