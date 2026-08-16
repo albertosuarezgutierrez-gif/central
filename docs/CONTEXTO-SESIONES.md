@@ -32,6 +32,19 @@
 
 ---
 
+### 🎓 (16/08/2026) agentes-entrenador: pasada semanal — falsa alarma de facturas-correo diagnosticada
+- Rango 09/08→16/08, 27 entradas de bitácora procesadas y podadas. Backlog de PRs abiertos sano (3,
+  todos del propio 16/08). Sin pendientes en `FEEDBACK-AGENTES.md`.
+- **Hallazgo:** el "fallo" que `facturas-correo` venía anotando 5 pasadas seguidas (12→16/08 —
+  `search_threads label:Facturas/Extraccion-fallida` vacío pese a `list_labels` marcando
+  `messagesTotal:1`) era una falsa alarma: verificado en vivo con el MCP de Gmail que la búsqueda
+  real (ID, nombre con/sin comillas, `in:anywhere`/`includeTrash`) da 0 hilos de forma consistente —
+  el contador de `list_labels` está desincronizado en esa etiqueta de uso raro. Añadida caveat
+  aditiva en `.claude/skills/facturas-correo/SKILL.md` para que no se repita.
+- mercado-booking y pricing-agente: sus únicas dudas/fallos del rango ya estaban resueltos en
+  código/skill antes de esta pasada, sin acción nueva. Detalle completo en la entrada de esta
+  pasada en `docs/AGENTES-BITACORA.md`.
+
 ### 📈 (15/08/2026) Agente inversor → copiloto con confirmación humana (decisión de Alberto)
 - Pregunta origen: ¿comprar ya en IBKR? NO — forward −4,38% con 21/120 días del Tramo 2. Decisión:
   núcleo-satélite (ETF global = grueso, intocable; satélite 10-20% sigue en paper hasta validar).

@@ -37,6 +37,14 @@ Flujo: Paso 0 (salud+backlog) → 1/1-bis (candidatos Gmail + subidas manuales D
   `Facturas/Extraccion-fallida` y sale con ⚠️ en el latido (`resumen-escaneo.ts`) — no se afirma
   «0 facturas nuevas» sin haberlos leído. Ventana de escaneo 7 días: lo que falle 7 días seguidos
   queda para revisión a mano.
+- **`list_labels` NO es fuente de verdad para saber si hay backlog bajo `Facturas/Extraccion-fallida`
+  (16/08/2026, verificado por `agentes-entrenador` tras 5 pasadas seguidas — 12→16/08 — anotando el
+  mismo «fallo»):** su contador `messagesTotal`/`threadsTotal` puede quedar desincronizado en
+  etiquetas de uso raro — marcaba `messagesTotal:1` mientras `search_threads` (probado con el ID
+  `Label_16`, con el nombre con y sin comillas, y con `in:anywhere`/`includeTrash`) devolvía siempre
+  0 hilos. Para saber si hay algo pendiente bajo esa etiqueta, confía SIEMPRE en `search_threads`,
+  nunca en el contador de `list_labels`: un resultado vacío ahí es «no hay backlog», no un fallo que
+  anotar en la bitácora cada día.
 - **Etiqueta `Facturas/Procesada` (Label_11): nombre real en femenino** — usa la existente, no
   crees `Procesado`. NUNCA la pongas en hilos con `PDF-pendiente`/`Revisar` (quedarían
   excluidos de la query base y no se reprocesarían jamás).
