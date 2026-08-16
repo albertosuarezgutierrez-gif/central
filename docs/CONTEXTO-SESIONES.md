@@ -41,6 +41,10 @@
 - Fix (rama `claude/psd2-sync-no-movements-yw0gig`): `sincronizarSesion/Todas` devuelven `avisos` (fallo de
   /transactions, ventana 89d vacía en cuenta conocida, drift de saldo con 0 transacciones) + Telegram del cron.
 - La pasada de mañana 06:00 dirá el motivo exacto en el Telegram/logs. Telegram enviado hoy con el diagnóstico.
+- 2ª tanda (orden de Alberto, «que no vuelva a pasar + panel»): semáforo del feed PSD2 en /banca
+  (`lib/psd2-semaforo.ts` puro+testeado, 🟢≤2d·🟠3-5d/caducidad≤10d·🔴≥6d/avisos/caducado), avisos del
+  sync persistidos en `conexiones_banco.ultimo_avisos` (migración aplicada) y aviso previo de caducidad
+  del consentimiento (creado+89d) — deja de depender de que alguien mire el Telegram.
 
 ### 📈 (15/08/2026) Agente inversor → copiloto con confirmación humana (decisión de Alberto)
 - Pregunta origen: ¿comprar ya en IBKR? NO — forward −4,38% con 21/120 días del Tramo 2. Decisión:

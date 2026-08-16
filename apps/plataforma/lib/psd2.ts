@@ -170,8 +170,13 @@ export async function sincronizarSesion(
     }
   }
 
+  // Persiste el desenlace del sync en la conexión para el panel /banca (lib/psd2-estado.ts):
+  // `[]` explícito = pasada limpia; con contenido = qué falló. NULL queda solo en filas que
+  // ningún sync nuevo ha tocado («no se sabe», no «limpio»).
   await prisma.$executeRaw`
-    UPDATE conexiones_banco SET estado = 'vinculada', ultimo_sync = now()
+    UPDATE conexiones_banco SET estado = 'vinculada', ultimo_sync = now(),
+      ultimo_avisos = ${JSON.stringify(avisos)}::jsonb,
+      avisos_at = ${avisos.length > 0 ? new Date() : null}
     WHERE requisition_id = ${sessionId} AND cuenta_id = ${cuentaId}::uuid
   `
   return { cuentas, insertados, duplicados, avisos }
@@ -193,6 +198,14 @@ export async function sincronizarTodas(dateFrom?: string): Promise<{ conexiones:
       return null
     })
     if (r) { insertados += r.insertados; avisos.push(...r.avisos) }
+    else {
+      // La sesión entera falló (getSesion lanzó): deja el motivo en la conexión para el panel —
+      // aquí no llega el UPDATE final de sincronizarSesion.
+      await prisma.$executeRaw`
+        UPDATE conexiones_banco SET ultimo_avisos = ${JSON.stringify([avisos[avisos.length - 1]])}::jsonb, avisos_at = now()
+        WHERE requisition_id = ${c.requisition_id} AND cuenta_id = ${c.cuenta_id}::uuid
+      `.catch(() => {})
+    }
   }
   if (avisos.length) console.error('[psd2-sync] avisos:', avisos.join(' | '))
   return { conexiones: conns.length, insertados, avisos }

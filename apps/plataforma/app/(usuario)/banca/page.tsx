@@ -7,6 +7,7 @@ import { getPLMensual } from '@/lib/sivra/pl-mensual'
 import { DESTINO_LABEL } from '@/lib/categorizar'
 import { getTesoreria } from '@/lib/tesoreria'
 import { getBrokerSaldos } from '@/lib/broker'
+import { getEstadoFeedPsd2 } from '@/lib/psd2-estado'
 import { eur } from '@/lib/dinero'
 import IntervaloSelector from '../finanzas/IntervaloSelector'
 import { periodoLabel, type Periodo } from '../finanzas/periodo'
@@ -135,7 +136,7 @@ export default async function BancaPage({ searchParams }: {
   const esMesUnico = !!desde && desde.slice(0, 7) === hasta.slice(0, 7)
   const mesPL = (desde || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`).slice(0, 7)
 
-  const [sociedades, saldo, ledger, ingresosRevisar, tesoreria, porRevisar, duplicados, dupResueltos, resumen, plPisos, evolucion, brokerSaldos] = await Promise.all([
+  const [sociedades, saldo, ledger, ingresosRevisar, tesoreria, porRevisar, duplicados, dupResueltos, resumen, plPisos, evolucion, brokerSaldos, feedPsd2] = await Promise.all([
     prisma.sociedad.findMany({ where: { cuentaId: session.id }, orderBy: { createdAt: 'asc' }, select: { id: true, nombre: true } }),
     getSaldoConsolidado(session.id),
     listarMovimientosLedger(session.id, { desde: desde || undefined, hasta: hasta || undefined }, 50, 0),
@@ -148,6 +149,7 @@ export default async function BancaPage({ searchParams }: {
     esMesUnico ? safe(getPLMensual(mesPL), null) : null,
     safe(getEvolucionMensual(session.id, 12), []),
     safe(getBrokerSaldos(session.id), []),
+    safe(getEstadoFeedPsd2(session.id), null),
   ])
 
   // El saldo del bróker (IBKR, refrescado por el agente `trading-analista`) suma al total del grupo
@@ -206,6 +208,29 @@ export default async function BancaPage({ searchParams }: {
             />
           </div>
         </div>
+
+        {/* Estado del feed bancario PSD2 (Enable Banking): frescura de movimientos + caducidad del
+            consentimiento + avisos del último sync. Tres estados (lib/psd2-semaforo.ts) — un feed
+            que lleva días a cero no se pinta «en verde» aunque el cron corra (incidente 11-16/08). */}
+        {feedPsd2 && (
+          <section style={{ marginBottom: '16px' }}>
+            <div style={{
+              background: feedPsd2.estado.nivel === 'ok' ? 'var(--surface)' : feedPsd2.estado.nivel === 'atencion' ? 'var(--warning-bg)' : 'var(--negative-bg)',
+              border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 14px', fontSize: '13px',
+            }}>
+              <div style={{ fontWeight: 700 }}>
+                {feedPsd2.estado.nivel === 'ok' ? '🟢' : feedPsd2.estado.nivel === 'atencion' ? '🟠' : '🔴'} {feedPsd2.estado.titular}
+              </div>
+              {feedPsd2.estado.nivel !== 'ok' && feedPsd2.estado.detalles.map((d, i) => (
+                <div key={i} style={{ marginTop: '4px', color: 'var(--text)' }}>• {d}</div>
+              ))}
+              <div style={{ marginTop: '4px', fontSize: '12px', color: 'var(--muted)' }}>
+                {feedPsd2.cuentas.map(c => `${c.banco || 'Banco'} ${c.mascara || ''}: último mov. ${c.ultimoMov ?? 'ninguno'}`).join(' · ')}
+                {feedPsd2.estado.nivel === 'ok' && feedPsd2.estado.detalles[0] ? ` · ${feedPsd2.estado.detalles[0]}` : ''}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Cuentas por sociedad */}
         {!hayCuentas ? (
