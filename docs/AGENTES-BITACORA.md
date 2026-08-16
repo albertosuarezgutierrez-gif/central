@@ -15,6 +15,22 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-16 · psd2-health-check** · hizo: pasada profunda tras escalado de la auditoría — 🚨 crítica
+  confirmada (último mov 10/08, 6 días; 30d 61 vs 72). Hallazgo: sesión EB VIVA (saldo BBVA al 15/08) pero
+  `/transactions` seco desde 08-10/08, tragado por `catch(()=>[])`; BBVA …2620 muerta desde 27/06. Fix de
+  observabilidad en `lib/psd2.ts` + Telegram del cron (rama `claude/psd2-sync-no-movements-yw0gig`, PR draft).
+  Telegram enviado; anotado en CONTEXTO-SESIONES. dudas: causa exacta la dirá la pasada de las 06:00; fallos: —
+- **2026-08-16 · mercado-booking** · hizo: pasada de 12 ventanas (plan `?max=12`, sin filtro —
+  las 12 candidatas eran `sin_medir_nunca`, todas ronda 1/evento: Feria/calendario 12-17 sep,
+  las 4 propiedades por aforo 12/5/4/2). 119 comparables reales escritos en `market_rates`
+  (`fuente:booking_mcp`); 🪞 1 anuncio propio descartado a mano (HOUSE SEVILLANA 6 habitaciones,
+  ventana 15→17 sep aforo 12, Calle Socorro 24 — no está en la lista curada de
+  `lib/sivra/mercado-propios.ts`, queda anotado para añadirla). Medianas €/noche
+  por fecha×aforo (12/5/4/2): 12-sep —/—/—/100 · 15-sep 406/114/119/109 ·
+  16-sep 354/128/117/103 · 17-sep 477/—/156/124. dudas: —; fallos: 0 ventanas sin respuesta
+  del conector. Latido `ok:true`. Aviso del plan: tope `max=12` dejó fuera 452 de las 464
+  ventanas candidatas — cobertura normal, se acumula en próximas pasadas; PRs/commits: —
+  (solo Booking MCP + HTTP a plataforma + esta entrada).
 - **2026-08-15 · pricing-agente (revisión a demanda de Alberto, reserva bajo precio)** · hizo: auditó la
   reserva Luxury 22-25/10 (430€ brutos vs listado vivo 203€/noche → canal −29,4%, Genius+móvil apilados;
   neto 345,20€, rentable pero bajo p25 de su fecha) y pasó revista completa: apply/sweep/guard/eventos/

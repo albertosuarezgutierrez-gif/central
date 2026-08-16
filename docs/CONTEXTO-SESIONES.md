@@ -32,6 +32,27 @@
 
 ---
 
+### ⚠️ (16/08/2026) Alerta PSD2 sync — 6 días sin movimientos con la sesión VIVA
+- Último mov `origen='psd2'`: 10/08 (histórico: nunca >1 día de hueco desde 20/07). Cron OK (200 diario).
+- Clave: el SALDO de BBVA …1175 se actualizó el 15/08 → la sesión Enable Banking responde, pero
+  `/transactions` viene vacío/fallando — invisible porque `lib/psd2.ts` lo tragaba con `catch(() => [])`.
+- Causa probable: consentimiento degradado (SCA 14/06, `valid_until` ~11/09 — no caducidad formal). BBVA …2620
+  además muerta desde 27/06 (ya no está en la sesión). Acción de Alberto: re-vincular ambos bancos en /banca.
+- Fix (rama `claude/psd2-sync-no-movements-yw0gig`): `sincronizarSesion/Todas` devuelven `avisos` (fallo de
+  /transactions, ventana 89d vacía en cuenta conocida, drift de saldo con 0 transacciones) + Telegram del cron.
+- La pasada de mañana 06:00 dirá el motivo exacto en el Telegram/logs. Telegram enviado hoy con el diagnóstico.
+
+### 📈 (15/08/2026) Agente inversor → copiloto con confirmación humana (decisión de Alberto)
+- Pregunta origen: ¿comprar ya en IBKR? NO — forward −4,38% con 21/120 días del Tramo 2. Decisión:
+  núcleo-satélite (ETF global = grueso, intocable; satélite 10-20% sigue en paper hasta validar).
+- Ampliado `trading-analista`: nuevo `references/copiloto-ordenes.md` — `create_order_instruction`
+  crea BORRADORES que Alberto confirma en IBKR (el MCP no puede ejecutar), solo a petición suya;
+  la Rutina nocturna jamás crea instrucciones. Bloque 💼 Cartera real en la pasada + alertas con email.
+- ⛔ Rotación núcleo→satélite prohibida (timing = el patrón del −33,9% + regla fiscal 2 meses).
+- **Mergeado (16/08, PR #1435, orden de Alberto) y verificado en vivo:** los 3 tools del bloque 💼
+  responden — NAV 32.335,37€, 0 posiciones (100% liquidez), 1 alerta activa preexistente (STX ≥865).
+- Pendiente: Alberto compra el ETF (elegirá él); reservas directas Booking → conversación aparte.
+
 ### 👁️ (15/08/2026) Registro de accesos/actividad de ialimp + historial en el god-panel de plataforma
 - Alberto preguntó por el último acceso de Vanessa: no existía rastro (el login de empresa solo tenía el
   flag `sesion_activa`, sin fecha). Decisión: historial completo (logins + páginas + acciones) en SU panel.
@@ -910,8 +931,15 @@ completo `docs/AUDITORIA-2026-08.md`.
   page data de `/api/admin/clientes/[vertical]/[id]` YA en main (envs ausentes), no es del cambio.
 
 
-- **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 14/08/2026).** Detalle en
+- **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 16/08/2026).** Detalle en
   `docs/memoria/2026-08.md` y en los PRs citados.
+  - **Ayudas/subvenciones (15/08, #1432):** pendiente respuesta de Asecon (Marta Albarrán) sobre la
+    convocatoria de conciliación antes del **15/09/2026** (plazo de solicitud). Pendiente además un
+    borrador (sin enviar, a decisión de Alberto) sobre la cuota RETA de Pilar (serie 72→118→32€,
+    ¿bonificación art. 38 LETA aplicada?).
+  - **Pricing SIVRA — canal Booking (15/08):** reserva Luxury 22-25/10 mordida 29,4% por
+    Genius+descuento móvil apilados (motor tarificó bien, la fuga es de canal). Pendiente que
+    Alberto revise el nivel Genius y el descuento móvil activos en la extranet.
   - **Pricing SIVRA (motor vivo en los 4 pisos, resuelto desde el 09-10/08):** #1323 (ocupación
     POR MES) rehecho y mergeado sobre `pricing-demanda.ts`, `channel_markup_sin_recargo.sql`
     aplicado, last-minute encendido (`lastminute_k=0,5`) y reparto mes/global ya se persiste en
@@ -937,8 +965,12 @@ completo `docs/AUDITORIA-2026-08.md`.
     sin decisión de Alberto. Decisión vigente (10/08): no operar más en real por impulso, esperar
     aviso explícito del agente cuando el forward justifique Fase 2 (hoy lejos: hit rate 26-29%, alpha
     ≈0 sobre n grande). FMP sin créditos y redundante (Yahoo cubre); NO recargar. Solo el DCF sigue
-    sin fuente. Nuevo pendiente (13/08): averiguar quién escribe `trading_estrategia_stats.retorno_medio`
-    (dos filas en `0.000000` — centinela «sin calcular», no cero medido).
+    sin fuente. Pendiente (13/08): averiguar quién escribe `trading_estrategia_stats.retorno_medio`
+    (dos filas en `0.000000` — centinela «sin calcular», no cero medido). Pendiente nuevo (15/08,
+    #1431): el PASO 0 del prompt del trigger comprueba `fecha=CURRENT_DATE`, que una recuperación
+    backdateada esquiva (duplicó 88 tesis sin daño operativo) — debería comprobar la huella real
+    (última vela/precio_ref usado); vive en la config del trigger, fuera de este repo. Trigger
+    reprogramado por Alberto (15/08) a `15 20,23 * * 1-5`; estreno real lunes 17/08.
   - **Subastas:** lente 🌊 (costa norte + Matalascañas sin tope) MERGEADA y en prod (#1346/#1349/
     #1351/#1353); pestaña 🔥 Oportunidades rediseñada (#1358 — una tarjeta, chips homogéneos,
     €/m² siempre visible). 🟡 el dispatcher marca timeout en `subastas-mercado` si desborda 280 s

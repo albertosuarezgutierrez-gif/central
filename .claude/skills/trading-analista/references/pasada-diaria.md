@@ -26,6 +26,12 @@ antes, dilo en el resumen de Telegram — esa pasada mide contra el cierre de ay
    al «Saldo total del grupo»: `POST {PLATAFORMA_URL}/api/trading/saldo` con `{ saldo: <net_liquidation>,
    divisa: 'EUR' }` (Bearer `ALERTA_TOKEN`). La app en Vercel no habla con IBKR, así que este empujón del
    agente es la ÚNICA vía por la que ese saldo se refresca. Es solo lectura de IBKR → no rompe la regla de oro.
+1b. **💼 Cartera real (15/08/2026):** leer `get_account_positions` y preparar el bloque
+   «💼 Cartera real» del resumen (núcleo ETF: valor/peso/P&L; liquidez >20% sin desplegar =
+   una línea «liquidez parada»; posiciones fuera del plan = se informan, no se juzgan). Si
+   la lectura falla, el bloque dice «cartera real: sin leer hoy» — nunca omitirlo en
+   silencio. Reglas completas en `references/copiloto-ordenes.md`. Sigue siendo solo
+   lectura; la pasada programada JAMÁS crea instrucciones de orden.
 2. Cargar la watchlist activa (tabla `trading_watchlist`, capas A/B/C; ver spec). En Fase 1 la lista
    inicial se siembra con `apps/plataforma/prisma/sql/trading_watchlist_seed.sql`.
 3. Por símbolo: `get_price_history` (diario, ~120 velas) → mapear a `Vela[]`
