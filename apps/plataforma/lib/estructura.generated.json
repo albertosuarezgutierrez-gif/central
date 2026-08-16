@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-16T06:59:41Z",
+  "generadoEn": "2026-08-16T16:22:21Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4523,6 +4523,10 @@
   ],
   "novedades": [
     {
+      "titulo": "Guarda nueva en `latidos.test.ts`",
+      "fecha": ""
+    },
+    {
       "titulo": "Aplicada en producción",
       "fecha": ""
     },
@@ -4576,10 +4580,6 @@
     },
     {
       "titulo": "📦 «Cartera paper» vuelve a /trading CON rentabilidad",
-      "fecha": ""
-    },
-    {
-      "titulo": "🛑 Regla de apagado firmada en el pre-registro:",
       "fecha": ""
     }
   ],
