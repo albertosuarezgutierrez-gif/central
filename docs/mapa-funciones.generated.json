@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-16T05:49:53Z",
-  "sha": "92aaea2d2b0069ea401e9ec9676ef1ae679de000",
+  "generadoEn": "2026-08-16T05:59:31Z",
+  "sha": "8669b7ad6a8fa6f432897154577a69dd4c83b11b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -45197,7 +45197,7 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: F",
           "retorno": "Promise<T | F>",
-          "linea": 35,
+          "linea": 36,
           "resumen": "/banca = Inicio unificado con control 💶 Dinero | 🏢 Negocios (SegTabs, por navegación → carga perezosa: cada pestaña computa SOLO sus datos). Dinero (por defecto): resumen negocio+personal (misma fue"
         },
         {
@@ -45206,14 +45206,14 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string; tab?: string }> }",
           "retorno": null,
-          "linea": 39
+          "linea": 40
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "c8bbcac3b43b"
+      "hash": "f5803d82a6b5"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",
@@ -65332,6 +65332,78 @@
       "hash": "15cd614287e8"
     },
     {
+      "ruta": "apps/plataforma/lib/psd2-estado.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/psd2-estado.ts — estado VIVO del feed bancario PSD2 para el panel /banca. Junta las conexiones vinculadas (consentimiento + avisos del último sync, persistidos por lib/psd2.ts en conexiones_banco.ultimo_avisos) con el último movimiento importado por cuenta, y decide el semáforo con el helper pur",
+      "exporta": [
+        "getEstadoFeedPsd2"
+      ],
+      "funciones": [
+        {
+          "nombre": "getEstadoFeedPsd2",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string",
+          "retorno": "Promise<FeedPsd2 | null>",
+          "linea": 17
+        }
+      ],
+      "tablas": [
+        "conexiones_banco",
+        "cuentas_bancarias",
+        "movimientos_bancarios"
+      ],
+      "rutaApi": null,
+      "hash": "835b809d310a"
+    },
+    {
+      "ruta": "apps/plataforma/lib/psd2-semaforo.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/psd2-semaforo.ts — decisión PURA del estado del feed bancario PSD2 (Enable Banking) que pinta /banca. Tres estados, nunca dos: un feed que lleva días sin traer nada no es un feed sano aunque el cron devuelva 200 (caso fundacional 11→16/08/2026: 6 días a cero con la sesión viva). El histórico rea",
+      "exporta": [
+        "diasEntre",
+        "fechaCaducidadConsent",
+        "semaforoFeed"
+      ],
+      "funciones": [
+        {
+          "nombre": "diasEntre",
+          "kind": "function",
+          "exportada": true,
+          "params": "aISO: string, bISO: string",
+          "retorno": "number",
+          "linea": 23
+        },
+        {
+          "nombre": "fechaCaducidadConsent",
+          "kind": "function",
+          "exportada": true,
+          "params": "consentCreadaISO: string",
+          "retorno": "string",
+          "linea": 27
+        },
+        {
+          "nombre": "fmtDDMM",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 31
+        },
+        {
+          "nombre": "semaforoFeed",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { hoyISO: string // Último movimiento psd2 importado (el más reciente entre todas las cuentas del feed). ultimoMovISO: string | null // ultimo_avisos del último sync; null = el sync aún no reporta (fila anterior al cambio) — // NO equiva",
+          "retorno": "EstadoFeed",
+          "linea": 38
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1ec16e370673"
+    },
+    {
       "ruta": "apps/plataforma/lib/psd2.ts",
       "ambito": "apps/plataforma",
       "resumen": "Orquestación PSD2 (Fase 6): tras el consentimiento, vuelca las cuentas y movimientos de Enable Banking en las MISMAS tablas que la importación manual (cuentas_bancarias / movimientos_bancarios), con dedupe por el entry_reference del banco. Scoped por cuenta_id. El identificador persistido en conexio",
@@ -65363,19 +65435,20 @@
           "exportada": true,
           "params": "dateFrom?: string",
           "retorno": "Promise<",
-          "linea": 184,
+          "linea": 189,
           "resumen": "Re-sincroniza todas las conexiones vinculadas de todas las cuentas (cron diario). dateFrom: override para importar histórico (p. ej. \"2026-01-01\"). Por defecto 89 días. Los fallos por sesión NO se tra"
         }
       ],
       "tablas": [
         "conexiones_banco",
         "cuentas_bancarias",
+        "final",
         "movimientos_bancarios",
         "node",
         "set"
       ],
       "rutaApi": null,
-      "hash": "7e9b4e2618de"
+      "hash": "60cab49a5267"
     },
     {
       "ruta": "apps/plataforma/lib/reclamacion.ts",
@@ -92381,7 +92454,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2465,
-    "funciones": 6683
+    "archivos": 2467,
+    "funciones": 6688
   }
 }
