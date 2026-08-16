@@ -32,6 +32,15 @@
 
 ---
 
+### 📈 (15/08/2026) Agente inversor → copiloto con confirmación humana (decisión de Alberto)
+- Pregunta origen: ¿comprar ya en IBKR? NO — forward −4,38% con 21/120 días del Tramo 2. Decisión:
+  núcleo-satélite (ETF global = grueso, intocable; satélite 10-20% sigue en paper hasta validar).
+- Ampliado `trading-analista`: nuevo `references/copiloto-ordenes.md` — `create_order_instruction`
+  crea BORRADORES que Alberto confirma en IBKR (el MCP no puede ejecutar), solo a petición suya;
+  la Rutina nocturna jamás crea instrucciones. Bloque 💼 Cartera real en la pasada + alertas con email.
+- ⛔ Rotación núcleo→satélite prohibida (timing = el patrón del −33,9% + regla fiscal 2 meses).
+- Pendiente: Alberto compra el ETF (elegirá él); reservas directas Booking → conversación aparte.
+
 ### 👁️ (15/08/2026) Registro de accesos/actividad de ialimp + historial en el god-panel de plataforma
 - Alberto preguntó por el último acceso de Vanessa: no existía rastro (el login de empresa solo tenía el
   flag `sesion_activa`, sin fecha). Decisión: historial completo (logins + páginas + acciones) en SU panel.
