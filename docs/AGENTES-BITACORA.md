@@ -15,6 +15,13 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-16 · facturas-correo** · hizo: pasada completa (Paso 0→5). Vía B sana (última copia
+  _buzon_pdf 14/08, dias_caido=2, `agente_salud` actualizado). Sin backlog en `PDF-pendiente`/
+  `Revisar`/`Extraccion-fallida`. Paso 4.0 (`v_facturas_sin_cargo`): 8 filas, TODAS ya
+  `revisada_sin_cargo` (ninguna `sin_revisar`) — nada que trabajar. Candidatos Gmail (`newer_than:2d`):
+  1 hilo (mensaje de huésped de Booking, no factura). Sin subidas manuales nuevas en `_subir_aqui` ni
+  en la raíz de `2026`. Sin novedades reales que archivar/conciliar hoy. dudas: —; fallos: —;
+  PRs/commits: — (solo memoria + `agente_salud`)
 - **2026-08-16 · psd2-health-check** · hizo: pasada profunda tras escalado de la auditoría — 🚨 crítica
   confirmada (último mov 10/08, 6 días; 30d 61 vs 72). Hallazgo: sesión EB VIVA (saldo BBVA al 15/08) pero
   `/transactions` seco desde 08-10/08, tragado por `catch(()=>[])`; BBVA …2620 muerta desde 27/06. Fix de
