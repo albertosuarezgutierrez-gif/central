@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-16T05:12:42Z",
+  "generadoEn": "2026-08-16T05:58:46Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4523,6 +4523,10 @@
   ],
   "novedades": [
     {
+      "titulo": "Hallazgo:",
+      "fecha": ""
+    },
+    {
       "titulo": "Mergeado (16/08, PR #1435, orden de Alberto) y verificado en vivo:",
       "fecha": ""
     },
@@ -4576,10 +4580,6 @@
     },
     {
       "titulo": "`docs/TRADING-FUENTES-PAGO.md`:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Pasada de claridad en `/trading`",
       "fecha": ""
     }
   ],
