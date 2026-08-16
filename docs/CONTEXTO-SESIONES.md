@@ -39,6 +39,8 @@
   crea BORRADORES que Alberto confirma en IBKR (el MCP no puede ejecutar), solo a petición suya;
   la Rutina nocturna jamás crea instrucciones. Bloque 💼 Cartera real en la pasada + alertas con email.
 - ⛔ Rotación núcleo→satélite prohibida (timing = el patrón del −33,9% + regla fiscal 2 meses).
+- **Mergeado (16/08, PR #1435, orden de Alberto) y verificado en vivo:** los 3 tools del bloque 💼
+  responden — NAV 32.335,37€, 0 posiciones (100% liquidez), 1 alerta activa preexistente (STX ≥865).
 - Pendiente: Alberto compra el ETF (elegirá él); reservas directas Booking → conversación aparte.
 
 ### 👁️ (15/08/2026) Registro de accesos/actividad de ialimp + historial en el god-panel de plataforma
