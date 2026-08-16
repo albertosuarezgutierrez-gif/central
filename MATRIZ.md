@@ -30,7 +30,8 @@
 │   ├── rrhh           ← Portal del Empleado multi-tenant (iarrhh)         [✅ en apps/]
 │   ├── transporte     ← Flota/transporte como negocio (camiones, portes)  [✅ en apps/]
 │   ├── alquiler       ← Alquiler de materiales/menaje (grupo + terceros)  [✅ en apps/]
-│   └── almacen        ← Almacén de eventos/catering (cliente Joaquín Jaén) [✅ en apps/]
+│   ├── almacen        ← Almacén de eventos/catering (cliente Joaquín Jaén) [✅ en apps/]
+│   └── mariscos       ← Trazabilidad pesquera + etiquetado (Mariscos González) [✅ en apps/]
 └── docs/              ← runbook del corte, contexto de sesiones, arquitectura
 ```
 
@@ -46,6 +47,7 @@
 | **transporte** | Flota/transporte como negocio (camiones; interno + a terceros) | `transporte` | ✅ En `apps/transporte`, Root Directory `apps/transporte`. Compone `@central/module-flota` + `@central/module-transporte`. BD compartida (rol `prisma_transporte`). |
 | **alquiler** | Alquiler de materiales/menaje (interno al grupo + a terceros) | `alquiler` | ✅ En `apps/alquiler`, Root Directory `apps/alquiler` (desplegada + login demo probado). Compone `@central/module-alquiler`. BD compartida (rol `prisma_alquiler`). |
 | **almacen** | Almacén de eventos/catering (cliente Joaquín Jaén) | `almacen` | ✅ En `apps/almacen`, Root Directory `apps/almacen` (desplegada 15/07/2026, tenant DEMO poblado; tenant real de Joaquín pendiente). Compone `@central/module-materiales`. BD compartida. `ignoreCommand` YA puesto en `vercel.json` (17/07/2026, PR #945); añadida a la matriz de typecheck de CI y wireado su test (26/07/2026, PR #1093 — sustituyó a los duplicados #917/#936). Rol `prisma_almacen` acotado a least-privilege (26/07/2026): solo `SELECT/INSERT/UPDATE/DELETE` en `almacen_*` + `SELECT` en `cuentas` (antes tenía DML sobre las 254 tablas de `public`, igual que el resto de `prisma_*`); `negocios` deliberadamente FUERA del grant (declarado en `schema.prisma` para la Fase 2 pero sin ningún uso real en el código hoy — añadir GRANT cuando se use de verdad). ⚠️ Sigue sin `CLAUDE.md` propio ni fila en `docs/FUENTES-DE-VERDAD.md`. |
+| **mariscos** | Trazabilidad pesquera + etiquetado por peso (cliente Mariscos González) | `mariscos` | ✅ En `apps/mariscos`, Root Directory `apps/mariscos` (Fase 1, PR #1055, 11/08/2026). Compone `@central/module-pesca`. BD compartida (tablas `mariscos_partidas`/`mariscos_envasados`, SQL en `prisma/sql/2026-07-21_mariscos_schema.sql`, aplicación preview→prod pendiente). `CLAUDE.md` propio. **Pendiente para darla por viva:** proyecto Vercel, ejecutar su SQL, sembrar cuenta real. |
 
 ## Cómo se bajó `ia.rest` a `apps/ia-rest` (HECHO — 08/06/2026, PR #90)
 
