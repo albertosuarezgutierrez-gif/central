@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-16T06:33:14Z",
+  "generadoEn": "2026-08-16T06:59:41Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4535,6 +4535,10 @@
       "fecha": ""
     },
     {
+      "titulo": "16/08: PRIMERA orden real vía copiloto.",
+      "fecha": ""
+    },
+    {
       "titulo": "Pendiente (Alberto, extranet):",
       "fecha": ""
     },
@@ -4576,10 +4580,6 @@
     },
     {
       "titulo": "🛑 Regla de apagado firmada en el pre-registro:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Correlación media por cohorte",
       "fecha": ""
     }
   ],

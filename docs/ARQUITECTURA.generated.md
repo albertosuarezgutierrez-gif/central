@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-16T06:33:14Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-16T06:59:41Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -234,11 +234,11 @@
 - Aplicada en producción
 - Hallazgo:
 - Mergeado (16/08, PR #1435, orden de Alberto) y verificado en vivo:
+- 16/08: PRIMERA orden real vía copiloto.
 - Pendiente (Alberto, extranet):
 - 🚨 Regla dictada por Alberto a raíz de ese envío (ya en CLAUDE.md):
 - Pero SÍ había corrido
 - Sin daño operativo
 - Pendiente:
 - Estado REAL de `pricing_pl_referencia` (difiere del PR):
-- Limitación:
 
