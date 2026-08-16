@@ -42,6 +42,15 @@
 - Docs al día: regla en `apps/plataforma/CLAUDE.md` (§Latidos) y `docs/RUTINAS-PROGRAMADAS.md` §12
   (lista de vigilados completada con `sivra_eventos_verificar` y `subastas_mercado`).
 
+### ⏳ (16/08/2026) Estudio posicionamiento Booking — SÍ al +20% por portal, con condición
+- `docs/ESTUDIO-BOOKING-POSICIONAMIENTO.md`: Booking ordena por conversión×precio FINAL; subir la base
+  +20% solo funciona devuelto en descuentos visibles (1,20×0,76≈0,91 vs 0,92 medido en las 20 reservas).
+  Paridad muerta en la UE (DMA) → legal poner la web directa más barata que Booking.
+- Plan 5 fases. 🚨 ORDEN CRÍTICO: Smoobu +20% SOLO canal Booking (Alberto, forzar push de precios)
+  ANTES de `pricing_settings.channel_markup=1.20` (Claude). Pendiente del OK de Alberto para ejecutar.
+- **Convención (petición de Alberto): todo estudio/informe se archiva TAMBIÉN en Drive
+  `CENTRAL/02·CONTABILIDAD/informes`** (`1l2OLodxPuL07tKykZKtBV382w6yRMQQA`, ver `DRIVE-ESTRUCTURA.md`).
+
 ### ✅ (16/08/2026) Backlog de PRs resuelto («resuelve todo» de Alberto) + migración v_facturas_sin_cargo aplicada
 - Mergeados los 3 PRs abiertos: #1436 (auditoría ligera), #1437 (auditoría profunda, con bump
   `next` 15.5.21 en housesevillana) y #1441 (agentes-entrenador). Conflictos de registro de
