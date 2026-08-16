@@ -13,6 +13,13 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-08-16** · `docs/AUDITORIA-2026-08.md` · sección "Actualización 2026-08-16 — auditoría diaria
+  (PROFUNDA)" añadida (hallazgo `psd2-sync` escalado a 🔴 tras 6 días sin movimientos + guardián
+  `psd2-health-check` en crítico, Telegram enviado; hallazgo Supabase `v_facturas_sin_cargo`
+  SECURITY DEFINER sin revoke de anon/authenticated) · commit de esta auditoría
+- **2026-08-16** · `apps/plataforma/lib/estructura.generated.json` + `docs/ARQUITECTURA.generated.md` ·
+  regeneración automática de la radiografía de estructura (`node scripts/auditar-estructura.mjs`) ·
+  refleja el estado real del repo tras los commits del 15-16/08 · commit de esta auditoría
 - **2026-08-14** · `docs/CONTEXTO-SESIONES.md` · entrada nueva para PR #1405 (pricing: democión por
   nombre de jornada de liga, evita factor x2.2 en partidos regulares) · el commit no se había
   anotado en memoria · poda de 2 pendientes ya resueltos en «Estado vivo» (PR #1370 mergeado desde

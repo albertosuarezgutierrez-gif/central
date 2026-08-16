@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-15T14:15:45Z",
+  "generadoEn": "2026-08-16T02:13:46Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4523,6 +4523,10 @@
   ],
   "novedades": [
     {
+      "titulo": "Pendiente (Alberto, extranet):",
+      "fecha": ""
+    },
+    {
       "titulo": "🚨 Regla dictada por Alberto a raíz de ese envío (ya en CLAUDE.md):",
       "fecha": ""
     },
@@ -4576,10 +4580,6 @@
     },
     {
       "titulo": "Landmine 1 — suelo PL autorreferente:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Landmine 2 — partidos a domicilio como eventos:",
       "fecha": ""
     }
   ],
