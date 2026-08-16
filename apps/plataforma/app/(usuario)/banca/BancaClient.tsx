@@ -53,18 +53,24 @@ export function AccionesBanca({ anadir, mas }: { anadir: React.ReactNode; mas: R
   }, [])
   return (
     <div ref={ref} style={{ display: 'flex', gap: '10px', position: 'relative' }}>
+      {/* 🚨 El panel NO se auto-cierra al pulsar una opción: cerrar aquí (setAbierto(null) en el
+          onClick del panel) DESMONTA el botón pulsado junto con el modal que ese mismo toque acaba
+          de abrir — el modal vive dentro del botón, así que «Conectar banco»/«Importar extracto»
+          parecían no hacer nada (bug real 16/08/2026). El menú se cierra por el listener de fuera
+          o re-pulsando «Añadir»; mientras un modal está abierto, sus clics caen dentro de `ref` y
+          no lo cierran, que es justo lo que mantiene vivo el modal. */}
       <div style={{ position: 'relative' }}>
         <button type="button" aria-expanded={abierto === 'anadir'}
           onClick={() => setAbierto(a => (a === 'anadir' ? null : 'anadir'))} style={btn}>➕ Añadir</button>
         {abierto === 'anadir' && (
-          <div style={menuPanel} onClick={() => setAbierto(null)}>{anadir}</div>
+          <div style={menuPanel}>{anadir}</div>
         )}
       </div>
       <div style={{ position: 'relative' }}>
         <button type="button" aria-expanded={abierto === 'mas'}
           onClick={() => setAbierto(a => (a === 'mas' ? null : 'mas'))} style={ghost}>⋯ Más</button>
         {abierto === 'mas' && (
-          <div style={{ ...menuPanel, left: 'auto', right: 0 }} onClick={() => setAbierto(null)}>{mas}</div>
+          <div style={{ ...menuPanel, left: 'auto', right: 0 }}>{mas}</div>
         )}
       </div>
     </div>
