@@ -32,6 +32,17 @@
 
 ---
 
+### ✅ (16/08/2026) Backlog de PRs resuelto («resuelve todo» de Alberto) + migración v_facturas_sin_cargo aplicada
+- Mergeados los 3 PRs abiertos: #1436 (auditoría ligera), #1437 (auditoría profunda, con bump
+  `next` 15.5.21 en housesevillana) y #1441 (agentes-entrenador). Conflictos de registro de
+  #1437/#1441 resueltos conservando ambos lados (bitácora: poda del entrenador + entrada nueva
+  de psd2-health-check que entró después del corte).
+- **Aplicada en producción** la migración propuesta por #1437 (`revoke_anon_v_facturas_sin_cargo`):
+  `REVOKE ALL FROM anon, authenticated` + `security_invoker=true`. Verificado: vista viva (8 filas),
+  solo roles privilegiados con grant.
+- PSD2 sigue seco (último mov 10/08, 0 desde el 11): queda en manos de Alberto re-vincular en
+  Enable Banking. Pendiente de decisión: skill `mariscos-maestro` (recomendación de #1436).
+
 ### 🎓 (16/08/2026) agentes-entrenador: pasada semanal — falsa alarma de facturas-correo diagnosticada
 - Rango 09/08→16/08, 27 entradas de bitácora procesadas y podadas. Backlog de PRs abiertos sano (3,
   todos del propio 16/08). Sin pendientes en `FEEDBACK-AGENTES.md`.
