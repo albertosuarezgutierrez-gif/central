@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-15T14:15:45Z",
-  "sha": "bcee14919989e3d830a80f94affaca95ae7efed3",
+  "generadoEn": "2026-08-16T05:49:53Z",
+  "sha": "92aaea2d2b0069ea401e9ec9676ef1ae679de000",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -52478,12 +52478,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 13
+          "linea": 14
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/psd2-sync",
-      "hash": "56196ee045ea"
+      "hash": "4f54017b7d8c"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/resumen-mensual/route.ts",
@@ -65354,8 +65354,8 @@
           "exportada": true,
           "params": "cuentaId: string, sociedadId: string, sessionId: string, dateFrom?: string,",
           "retorno": "Promise<",
-          "linea": 29,
-          "resumen": "Sincroniza todas las cuentas de una sesión vinculada. Idempotente (upsert + dedupe). dateFrom: override opcional para importar histórico (p. ej. \"2026-01-01\"). Por defecto 89 días."
+          "linea": 34,
+          "resumen": "Sincroniza todas las cuentas de una sesión vinculada. Idempotente (upsert + dedupe). dateFrom: override opcional para importar histórico (p. ej. \"2026-01-01\"). Por defecto 89 días. `avisos` distingue "
         },
         {
           "nombre": "sincronizarTodas",
@@ -65363,8 +65363,8 @@
           "exportada": true,
           "params": "dateFrom?: string",
           "retorno": "Promise<",
-          "linea": 149,
-          "resumen": "Re-sincroniza todas las conexiones vinculadas de todas las cuentas (cron diario). dateFrom: override para importar histórico (p. ej. \"2026-01-01\"). Por defecto 89 días."
+          "linea": 184,
+          "resumen": "Re-sincroniza todas las conexiones vinculadas de todas las cuentas (cron diario). dateFrom: override para importar histórico (p. ej. \"2026-01-01\"). Por defecto 89 días. Los fallos por sesión NO se tra"
         }
       ],
       "tablas": [
@@ -65375,7 +65375,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "7a624a13c9bc"
+      "hash": "7e9b4e2618de"
     },
     {
       "ruta": "apps/plataforma/lib/reclamacion.ts",

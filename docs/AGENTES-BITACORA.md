@@ -15,6 +15,11 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-16 · psd2-health-check** · hizo: pasada profunda tras escalado de la auditoría — 🚨 crítica
+  confirmada (último mov 10/08, 6 días; 30d 61 vs 72). Hallazgo: sesión EB VIVA (saldo BBVA al 15/08) pero
+  `/transactions` seco desde 08-10/08, tragado por `catch(()=>[])`; BBVA …2620 muerta desde 27/06. Fix de
+  observabilidad en `lib/psd2.ts` + Telegram del cron (rama `claude/psd2-sync-no-movements-yw0gig`, PR draft).
+  Telegram enviado; anotado en CONTEXTO-SESIONES. dudas: causa exacta la dirá la pasada de las 06:00; fallos: —
 - **2026-08-16 · agentes-entrenador** · hizo: pasada semanal (rango 09/08→16/08, 27 entradas
   procesadas y podadas). Sin pendientes en `FEEDBACK-AGENTES.md`. Backlog de PRs abiertos: **3**
   (#1436/#1437/#1440, todos de hoy — sano, sigue bajando desde el pico de 73 del 29/07, sin
