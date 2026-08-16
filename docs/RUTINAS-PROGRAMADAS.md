@@ -427,7 +427,10 @@ Notas de deriva detectadas de paso:
 ## trading-analista (IBKR, paper) — trigger CREADO y corriendo de punta a punta (actualizado 20/07/2026)
 
 Agente de inversión asistida (Fase 1 técnica cerrada, Fase B por SELECCIÓN en marcha — SOLO paper
-trading, cero ejecución real). Skill: `.claude/skills/trading-analista/SKILL.md`. Compone el paquete
+trading, cero ejecución real). **Copiloto desde 15/08/2026 (PR #1435):** en sesión interactiva y solo a
+petición de Alberto puede preparar instrucciones de orden (borradores que él confirma en IBKR) y alertas;
+la Rutina nocturna sigue siendo 100% lectura y jamás crea instrucciones — ver
+`.claude/skills/trading-analista/references/copiloto-ordenes.md`. Skill: `.claude/skills/trading-analista/SKILL.md`. Compone el paquete
 puro `@central/module-trading` + los endpoints `apps/plataforma/app/api/trading/**` (creció mucho más
 allá de `analizar`/`puntuar`: `factores`, `gurus`, `fundamentales`, `insiders`, `seleccion`,
 `validar-oos`, `paper`, `saldo`, `descubrir`, `screener`, `fmp`).

@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-15T14:15:45Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-16T05:12:42Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -199,7 +199,7 @@
 - **rrhh-compliance-calendar** — Recordatorio mensual de obligaciones legales pendientes de implementar en la vertical RRHH (Portal del Empleado). Lee el roadmap, filtra los ítems 🔴 obligatorios no completados y genera un informe de plazos. Úsala el primer día de cada mes o cuando Alberto quiera un pulso del estado de compliance de RRHH.
 - **sivra-maestro** — >
 - **systematic-debugging** — Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes
-- **trading-analista** — Pasada diaria del agente de inversión sobre Interactive Brokers (Fase 1, SOLO paper). Lee cartera + watchlist, tira precios (IBKR) y fundamentales (FMP) por MCP, llama a /api/trading/analizar y /api/trading/puntuar de plataforma, y resume por Telegram. NUNCA ejecuta órdenes reales.
+- **trading-analista** — Pasada diaria del agente de inversión sobre Interactive Brokers (Fase 1, SOLO paper). Lee cartera real + watchlist, tira precios (IBKR) y fundamentales por MCP, llama a /api/trading/analizar y /api/trading/puntuar de plataforma, y resume por Telegram. Copiloto de órdenes: solo INSTRUCCIONES que Alberto confirma en IBKR, y solo si él las pide. NUNCA ejecuta órdenes reales.
 - **transporte-maestro** — >
 - **using-superpowers** — Use when starting any conversation - establishes how to find and use skills, requiring Skill tool invocation before ANY response including clarifying questions
 - **verification-before-completion** — Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always
@@ -231,6 +231,8 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- Mergeado (16/08, PR #1435, orden de Alberto) y verificado en vivo:
+- Pendiente (Alberto, extranet):
 - 🚨 Regla dictada por Alberto a raíz de ese envío (ya en CLAUDE.md):
 - Pero SÍ había corrido
 - Sin daño operativo
@@ -239,6 +241,4 @@
 - Limitación:
 - BORME 404 en festivos = error 500
 - `titulares.ts` roto desde el 05/08
-- 📦 «Cartera paper» vuelve a /trading CON rentabilidad
-- 🛑 Regla de apagado firmada en el pre-registro:
 
