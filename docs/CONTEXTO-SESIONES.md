@@ -40,8 +40,13 @@
 - **Aplicada en producción** la migración propuesta por #1437 (`revoke_anon_v_facturas_sin_cargo`):
   `REVOKE ALL FROM anon, authenticated` + `security_invoker=true`. Verificado: vista viva (8 filas),
   solo roles privilegiados con grant.
-- PSD2 sigue seco (último mov 10/08, 0 desde el 11): queda en manos de Alberto re-vincular en
-  Enable Banking. Pendiente de decisión: skill `mariscos-maestro` (recomendación de #1436).
+- PSD2, con el aviso del vigilante nuevo (06:02): **BBVA recuperado** (entró 1 mov, Bizum 30€);
+  **Kutxabank ****0855 falla solo la PAGINACIÓN de `/transactions`** (página 1 responde — sesión viva;
+  la 2ª con `continuation_key` revienta, patrón de consentimiento degradado sin SCA reciente, del 14/06).
+  Queda en manos de Alberto re-vincular Kutxabank en `/banca`. Fix en este PR: el error de
+  `enablebanking.ts::api()` pone `HTTP <status>: <motivo>` PRIMERO y la ruta sin query al final — el
+  recorte de 160 chars de los avisos se comía el código HTTP. Pendiente de decisión: skill
+  `mariscos-maestro` (recomendación de #1436).
 
 ### 🎓 (16/08/2026) agentes-entrenador: pasada semanal — falsa alarma de facturas-correo diagnosticada
 - Rango 09/08→16/08, 27 entradas de bitácora procesadas y podadas. Backlog de PRs abiertos sano (3,
