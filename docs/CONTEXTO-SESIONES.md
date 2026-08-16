@@ -39,8 +39,11 @@
   House Sevillana: cero cambios. Apilado máx. −37%→−33,8% s/ standard; suelo no-Genius 0%→−8%.
 - **Parado a propósito:** precios por ocupación de Luxury — el Standard Rate es XML de Smoobu
   (sobrescrito) y la extranet solo acepta €-fijos por fecha → hacerlo en **Smoobu** (pendiente).
-- Siguientes fases: +20% Smoobu (Alberto) → `channel_markup=1.20` (Claude) → medir a 14 días
-  (si mediana pagado/listado <0,85, bajar la oferta del 8% al 5-6%).
+- Siguientes fases: +20% Smoobu = **solo UI de Smoobu, no hay conector ni API para el ajuste por
+  canal** (Alberto o Claude Chrome) → SOLO DESPUÉS `channel_markup=1.20` (Claude; el orden es
+  crítico, ver estudio). Rutinas programadas: medición Fase 4 el 30/08 (`trig_01DHwh6a38D4…`,
+  incluye mirar volumen/conversión, no solo la mediana) y renovación de la oferta el 01/11/2028
+  (`trig_01SDP3vfKHxZ…`).
 
 ### 🏷️ (16/08/2026) Inventario de descuentos Booking — el −29% explicado
 - Pasada de solo-lectura por la extranet (Claude Chrome) → `docs/BOOKING-DESCUENTOS-INVENTARIO.md`
