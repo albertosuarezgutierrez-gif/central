@@ -794,6 +794,11 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
   van en el `detalle` (se retoman en la pasada siguiente, dedupe por `gmail_uid`).
 - **Una sonda que revienta ya NO se traga en silencio**: va en un bloque aparte del Telegram, «Sin poder
   comprobar — esto NO es "todo bien"». Un vigía averiado que calla es un parte de buena salud falso.
+- **Declarar un agente en `AGENTES_VIGILADOS` exige su sonda en `PROBES` (route del cron) EN EL MISMO
+  PR (16/08/2026, PR #1447):** `sivra_eventos_verificar` se declaró el 12/08 sin sonda y el parte diario
+  lo listaba en «Sin poder comprobar» aunque el agente latía bien en `agente_latidos`. Lo fija un test de
+  `latidos.test.ts` que compara los ids del registro contra las claves de `PROBES` (lee el fuente de la
+  ruta, porque `Prisma.sql` no es importable desde `node --test`).
 
 ## Reglas
 - Multi-tenant: SIEMPRE filtrar por `cuenta_id` en todas las queries.

@@ -32,12 +32,15 @@
 
 ---
 
-### 💓 (16/08/2026) Sonda del verificador de eventos añadida a PROBES
+### 💓 (16/08/2026) Sonda del verificador de eventos + guarda de regresión (PR #1447)
 - El parte «Sin poder comprobar» decía la verdad: `sivra_eventos_verificar` se declaró en
-  `AGENTES_VIGILADOS` (12/08) pero nadie añadió su sonda al mapa `PROBES` del cron
-  `agentes-latido` — el agente SÍ late en `agente_latidos`, el vigía no tenía query para leerlo.
-- Fix: sonda gemela de `sivra_eventos` (ultimo_ok_at/ultimo_at/detalle). tsc 0, tests 8/8.
-- Al declarar un agente vigilado nuevo: su sonda en PROBES va en el MISMO PR.
+  `AGENTES_VIGILADOS` (12/08) sin su sonda en `PROBES` del cron `agentes-latido` — el agente SÍ
+  late (verificado en BD: hoy 05:30, «3 previstos revisados · 3 confirmados»), el vigía no tenía
+  query para leerlo. Fix: sonda gemela de `sivra_eventos`; la sonda exacta probada contra la BD real.
+- **Guarda nueva en `latidos.test.ts`**: todo id de `AGENTES_VIGILADOS` debe tener clave en `PROBES`
+  (verificada en rojo contra el estado pre-fix). tsc 0 · 1227 tests · build OK.
+- Docs al día: regla en `apps/plataforma/CLAUDE.md` (§Latidos) y `docs/RUTINAS-PROGRAMADAS.md` §12
+  (lista de vigilados completada con `sivra_eventos_verificar` y `subastas_mercado`).
 
 ### ✅ (16/08/2026) Backlog de PRs resuelto («resuelve todo» de Alberto) + migración v_facturas_sin_cargo aplicada
 - Mergeados los 3 PRs abiertos: #1436 (auditoría ligera), #1437 (auditoría profunda, con bump

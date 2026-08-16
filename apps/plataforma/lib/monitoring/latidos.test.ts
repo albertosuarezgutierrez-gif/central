@@ -1,5 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
 import { evaluarLatido, AGENTES_VIGILADOS } from './latidos.ts'
 
 const ahora = new Date('2026-07-21T08:00:00Z')
@@ -69,4 +72,21 @@ test('el registro tiene ids únicos y umbrales positivos', () => {
   const ids = AGENTES_VIGILADOS.map(a => a.id)
   assert.equal(new Set(ids).size, ids.length)
   for (const a of AGENTES_VIGILADOS) assert.ok(a.maxHoras > 0, `${a.id} debe tener umbral > 0`)
+})
+
+// Guarda de regresión (16/08/2026): sivra_eventos_verificar se declaró vigilado sin añadir su query
+// a PROBES y cada parte diario salía en «Sin poder comprobar». PROBES vive en la ruta del cron
+// (Prisma.sql, no importable desde node --test), así que se lee el fuente y se extraen sus claves.
+test('todo agente de AGENTES_VIGILADOS tiene su sonda en PROBES del cron', () => {
+  const ruta = join(dirname(fileURLToPath(import.meta.url)), '../../app/api/cron/agentes-latido/route.ts')
+  const src = readFileSync(ruta, 'utf8')
+  const desde = src.indexOf('const PROBES')
+  const hasta = src.indexOf('async function handler')
+  assert.ok(desde >= 0 && hasta > desde, 'no se encuentra el bloque PROBES en la ruta del cron')
+  const bloque = src.slice(desde, hasta)
+  const claves = new Set([...bloque.matchAll(/^ {2}(\w+): Prisma\.sql/gm)].map(m => m[1]))
+  assert.ok(claves.size > 0, 'el patrón de claves de PROBES no casó ninguna entrada — ¿cambió el formato?')
+  for (const a of AGENTES_VIGILADOS) {
+    assert.ok(claves.has(a.id), `«${a.etiqueta}» (${a.id}) está declarado en AGENTES_VIGILADOS pero sin sonda en PROBES — añádela en el mismo PR`)
+  }
 })
