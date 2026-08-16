@@ -13,6 +13,20 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-08-16** · `CLAUDE.md` (raíz), `MATRIZ.md`, `docs/FUENTES-DE-VERDAD.md` · añadida
+  `apps/mariscos` (Mariscos González, trazabilidad pesquera) a la sección "Verticales", al árbol +
+  tabla de apps, y al mapa doc→código · el vertical existe desde el 11/08 (PR #1055) con su propio
+  `CLAUDE.md` pero no aparecía en ninguno de los 3 mapas raíz que listan verticales · pasada ligera
+  diaria, rango 49 commits desde `716c8d6` (última auditoría, 14/08) · commit de esta auditoría
+- **2026-08-16** · `docs/CONTEXTO-SESIONES.md` · bloque «Estado vivo» (sin refrescar desde 14/08)
+  actualizado con 3 pendientes del 15/08 sin reflejar: respuesta de Asecon sobre ayudas de
+  conciliación (#1432, plazo 15/09), revisión de Alberto del nivel Genius/descuento móvil en la
+  extranet (#1432), y el PASO 0 del trigger de trading que no distingue una recuperación con fecha
+  backdateada (#1431) · 0 huecos de commit (el rango ya estaba autodocumentado PR a PR) · pasada
+  ligera diaria · commit de esta auditoría
+- **2026-08-16** · `docs/AUDITORIA-2026-08.md` · informe de esta pasada (heartbeat, backlog PRs,
+  gap de `mariscos` en docs+CI, reconciliación de memoria) · commit de esta auditoría
+
 - **2026-08-14** · `docs/CONTEXTO-SESIONES.md` · entrada nueva para PR #1405 (pricing: democión por
   nombre de jornada de liga, evita factor x2.2 en partidos regulares) · el commit no se había
   anotado en memoria · poda de 2 pendientes ya resueltos en «Estado vivo» (PR #1370 mergeado desde

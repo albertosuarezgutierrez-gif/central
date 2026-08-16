@@ -931,8 +931,15 @@ completo `docs/AUDITORIA-2026-08.md`.
   page data de `/api/admin/clientes/[vertical]/[id]` YA en main (envs ausentes), no es del cambio.
 
 
-- **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 14/08/2026).** Detalle en
+- **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 16/08/2026).** Detalle en
   `docs/memoria/2026-08.md` y en los PRs citados.
+  - **Ayudas/subvenciones (15/08, #1432):** pendiente respuesta de Asecon (Marta Albarrán) sobre la
+    convocatoria de conciliación antes del **15/09/2026** (plazo de solicitud). Pendiente además un
+    borrador (sin enviar, a decisión de Alberto) sobre la cuota RETA de Pilar (serie 72→118→32€,
+    ¿bonificación art. 38 LETA aplicada?).
+  - **Pricing SIVRA — canal Booking (15/08):** reserva Luxury 22-25/10 mordida 29,4% por
+    Genius+descuento móvil apilados (motor tarificó bien, la fuga es de canal). Pendiente que
+    Alberto revise el nivel Genius y el descuento móvil activos en la extranet.
   - **Pricing SIVRA (motor vivo en los 4 pisos, resuelto desde el 09-10/08):** #1323 (ocupación
     POR MES) rehecho y mergeado sobre `pricing-demanda.ts`, `channel_markup_sin_recargo.sql`
     aplicado, last-minute encendido (`lastminute_k=0,5`) y reparto mes/global ya se persiste en
@@ -958,8 +965,12 @@ completo `docs/AUDITORIA-2026-08.md`.
     sin decisión de Alberto. Decisión vigente (10/08): no operar más en real por impulso, esperar
     aviso explícito del agente cuando el forward justifique Fase 2 (hoy lejos: hit rate 26-29%, alpha
     ≈0 sobre n grande). FMP sin créditos y redundante (Yahoo cubre); NO recargar. Solo el DCF sigue
-    sin fuente. Nuevo pendiente (13/08): averiguar quién escribe `trading_estrategia_stats.retorno_medio`
-    (dos filas en `0.000000` — centinela «sin calcular», no cero medido).
+    sin fuente. Pendiente (13/08): averiguar quién escribe `trading_estrategia_stats.retorno_medio`
+    (dos filas en `0.000000` — centinela «sin calcular», no cero medido). Pendiente nuevo (15/08,
+    #1431): el PASO 0 del prompt del trigger comprueba `fecha=CURRENT_DATE`, que una recuperación
+    backdateada esquiva (duplicó 88 tesis sin daño operativo) — debería comprobar la huella real
+    (última vela/precio_ref usado); vive en la config del trigger, fuera de este repo. Trigger
+    reprogramado por Alberto (15/08) a `15 20,23 * * 1-5`; estreno real lunes 17/08.
   - **Subastas:** lente 🌊 (costa norte + Matalascañas sin tope) MERGEADA y en prod (#1346/#1349/
     #1351/#1353); pestaña 🔥 Oportunidades rediseñada (#1358 — una tarjeta, chips homogéneos,
     €/m² siempre visible). 🟡 el dispatcher marca timeout en `subastas-mercado` si desborda 280 s

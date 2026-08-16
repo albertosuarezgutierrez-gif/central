@@ -1,5 +1,71 @@
 # Auditoría diaria — agosto 2026
 
+# Actualización 2026-08-16 — auditoría diaria (ligera)
+
+Rango: 49 commits desde la pasada del 14/08 (`716c8d6..24e8ced`) — casi todo autodocumentado PR a
+PR (registro accesos ialimp #1433, ayudas conciliación #1432, suelo PL reconstruido #1427/#1430,
+trading: reintento aplicado #1428/#1429, pasada duplicada #1431, claridad+apagado #1424, runtime
+errors #1426, 2 merges de conflicto de registro #1425/#1434). SALTA typecheck/tests pesados
+(pasada profunda).
+
+## 🟢 Heartbeat de crons/agentes
+`agente_latidos` (11 filas) — todo `ok=true`, todas dentro de cadencia (más vieja: `paper-tracker`
+semanal, 136h de ~192h). Tablas de dominio (12 huellas): 11/12 ✅, **`psd2-sync` ⛔ por umbral**
+(140h sin fila nueva en `movimientos_bancarios`, umbral 54h) — **investigado, no es un cron mudo**:
+Vercel runtime logs confirman `GET /api/cron/psd2-sync 200` a las 06:00 UTC; simplemente no ha
+habido movimientos bancarios nuevos desde el 10/08 (mismo patrón documentado desde 02/07). Supera
+el umbral de 48h del guardián dedicado (`psd2-health-check`, miércoles) — se deja anotado para su
+próxima pasada.
+
+## 🟢 Backlog de PRs de rutinas + salud del automerge
+`rutinas-automerge.yml`: última ejecución hace <5min, en verde (948 runs históricos, cadencia
+horaria). Un único PR abierto (#1435, copiloto de órdenes trading), draft, <12h — sin acción.
+
+## 🔴→✅ (carril 1) `apps/mariscos` invisible en 3 docs raíz desde su alta (11/08, PR #1055, 5 días)
+El vertical **Mariscos González** (trazabilidad pesquera) tiene `CLAUDE.md` propio y viene en la
+memoria (`CONTEXTO-SESIONES.md`), pero **no aparecía en ninguno de los 3 mapas raíz** que listan
+verticales: `CLAUDE.md` (sección "Verticales"), `MATRIZ.md` (árbol + tabla) ni
+`docs/FUENTES-DE-VERDAD.md`. Corregido en los tres (este commit).
+
+## 🟡→✅ (carril 2) `apps/mariscos` sin typecheck en CI desde su alta — 5 días sin red de seguridad de tipos
+La matriz `typecheck` de `.github/workflows/tests.yml` (bloqueante, 8 apps) no incluía `mariscos` —
+lleva `typescript.ignoreBuildErrors` como el resto de verticales, así que un tipo roto se habría
+colado sin que nada lo cazara. Verificado antes de tocar la matriz: `pnpm exec tsc --noEmit` en
+`apps/mariscos` da **0 errores** y los 8 tests de `@central/module-pesca` pasan. Añadida `mariscos`
+a la matriz (PR de esta auditoría, revisión de código — no carril 1).
+
+## 🟡 (recomendación, sin aplicar) Falta skill `mariscos-maestro`
+Es el único vertical con `CLAUDE.md` propio sin su router `*-maestro` en `.claude/skills/` (todas
+las demás verticales de negocio lo tienen: ia-rest/sivra/ialimp/plataforma/transporte/alquiler). No
+creada en esta pasada — crear una skill nueva es más que un fix de texto acotado (guardarraíl B).
+Propuesta para Alberto: crearla siguiendo el patrón de `alquiler-maestro`/`transporte-maestro`.
+
+## ✅ Reconciliación memoria — 0 huecos de commit, bloque «Estado vivo» actualizado
+Todos los commits del rango ya estaban autodocumentados en `CONTEXTO-SESIONES.md` (patrón PR+docs
+funcionando). El bloque «Estado vivo» (sin refrescar desde 14/08) tenía 3 pendientes nuevos del
+15/08 sin reflejar: respuesta de Asecon sobre ayudas de conciliación (plazo 15/09, #1432), revisión
+de Alberto del nivel Genius/descuento móvil en la extranet de Booking (#1432), y el PASO 0 del
+trigger de trading que no distingue una recuperación con fecha backdateada (#1431). Añadidos.
+Sin drift en `docs/SKILLS.md` (comandos/skills reales = los listados) ni en `lib/correo/rutas.ts`
+(sin categorías nuevas de correo en el rango). Reglas fiscales dictadas consistentes (`perfil-fiscal`
+sigue con «amortizable = nunca sin orden expresa»).
+
+## ✅ Integridad estructural — sin hallazgos nuevos
+Lockfile presente y al día. `ignoreCommand` obligatorio verificado en las 10 apps (incluida
+`mariscos`, que ya lo traía). `transpilePackages` de `mariscos` coincide con sus deps `@central/*`
+declaradas.
+
+## ✅ Manuales de usuario — nada que tocar
+Ningún archivo de `apps/ia-rest/src/app/**` ni `apps/ia-rest/public/**` cambió en el rango (los
+cambios visibles del rango son de `apps/ialimp` y `apps/plataforma`, ya autodocumentados en sus
+propios PRs — `apps/ialimp/public/manual.html` se actualizó en el propio PR #1432).
+
+## Checklist de acciones manuales de Alberto (esta pasada)
+- Ninguna urgente. Opcional: revisar nivel Genius/descuento móvil en la extranet de Booking
+  (fuga de canal en la reserva Luxury 22-25/10, ver memoria 15/08).
+- Cuando tengas un rato: decidir si quieres la skill `mariscos-maestro` (recomendación arriba).
+
+---
 # Actualización 2026-08-14 — auditoría diaria (ligera)
 
 Rango: 18 commits desde la pasada del 13/08 (`d76db8c..716c8d6`) — 6 regeneraciones automáticas de

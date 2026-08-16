@@ -35,6 +35,7 @@
 | `apps/alquiler/CLAUDE.md` | `apps/alquiler/**` |
 | skill `transporte-maestro` | `apps/transporte/**` |
 | skill `alquiler-maestro` | `apps/alquiler/**` |
+| `apps/mariscos/CLAUDE.md` | `apps/mariscos/**`, `packages/module-pesca/**` |
 | Manuales usuario ia-rest | `apps/ia-rest/src/components/help/help-prompts.ts`, `apps/ia-rest/public/manual*.html`, `apps/ia-rest/src/app/**` (features visibles) |
 | skill `fiscal-novedades` | `apps/plataforma/lib/fiscal-deducciones.ts` (`IMPORTES_POR_ANIO`), tablas `fiscal_novedades`/`fiscal_ayudas`/`ayudas_perfiles`, banners 💶 (`apps/plataforma` `/finanzas`, `apps/almacen` panel, `apps/ialimp` dashboard) |
 | `docs/FISCAL-AYUDAS.md` | tablas `fiscal_ayudas` (convocatorias) y `ayudas_perfiles` (perfiles de tenant del radar) |
