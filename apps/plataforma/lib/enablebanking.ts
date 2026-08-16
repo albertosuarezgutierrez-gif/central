@@ -88,7 +88,10 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
     headers: { Authorization: `Bearer ${await jwt()}`, 'Content-Type': 'application/json', Accept: 'application/json', ...(init?.headers ?? {}) },
     cache: 'no-store',
   })
-  if (!res.ok) throw new Error(`EnableBanking ${path} HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`)
+  // Estado y motivo PRIMERO y la ruta SIN query string al final: los avisos aguas abajo
+  // recortan a 160 chars (lib/psd2.ts) y una URL con continuation_key se come el hueco —
+  // el aviso del 16/08/2026 llegó sin el código HTTP, que es justo lo que diagnostica.
+  if (!res.ok) throw new Error(`EnableBanking HTTP ${res.status}: ${(await res.text()).slice(0, 200)} (${path.split('?')[0]})`)
   return res.json() as Promise<T>
 }
 
