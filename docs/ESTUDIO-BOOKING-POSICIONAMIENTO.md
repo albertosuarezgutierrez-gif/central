@@ -84,6 +84,11 @@ Smoobu soporta **ajuste porcentual de precio POR PORTAL** (Configuración del ca
 - **Fase 3 — ofertas visibles (Alberto, extranet):** activar UNA oferta permanente tipo
   «oferta de temporada/Getaway» del 10-15% (crea el tachado) + mantener Genius y móvil. NO
   reactivar semanal/mensual por encima del −5/−10% actual (landmine multiplicación).
+  📋 **Inventario real de la extranet (16/08/2026): `docs/BOOKING-DESCUENTOS-INVENTARIO.md`** —
+  el −29% observado era el **Genius dinámico (0-30%, activo en 3 de 4 pisos)** × móvil 10%; antes
+  de subir +20% hay que decidir si ese dinámico se queda (House Sevillana lo tiene en «No» y su
+  exposición máxima es la mitad). Ojo también: Luxury Busto tiene el No reembolsable a −15%
+  (los demás −10%).
 - **Fase 4 — medir (Claude, a los 14 días):** repetir la auditoría de las 20 reservas
   (`amount_gross/nights` vs listado): la mediana efectivo/base debe salir ≈ 0,90-0,95. Si sale
   <0,85, hay una oferta de más; recalibrar `channel_markup` al valor MEDIDO. Comparar además
