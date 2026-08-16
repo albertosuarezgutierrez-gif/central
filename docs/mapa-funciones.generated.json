@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-16T05:59:31Z",
-  "sha": "8669b7ad6a8fa6f432897154577a69dd4c83b11b",
+  "generadoEn": "2026-08-16T06:33:14Z",
+  "sha": "d8617bb260d3a1d5eeb212677b7be066484e6e22",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -63430,7 +63430,7 @@
           "exportada": true,
           "params": "country = 'ES'",
           "retorno": "Promise<Aspsp[]>",
-          "linea": 98
+          "linea": 101
         },
         {
           "nombre": "iniciarAuth",
@@ -63438,7 +63438,7 @@
           "exportada": true,
           "params": "aspspName: string, country: string, redirect: string, state: string",
           "retorno": "Promise<AuthInit>",
-          "linea": 106
+          "linea": 109
         },
         {
           "nombre": "crearSesion",
@@ -63446,7 +63446,7 @@
           "exportada": true,
           "params": "code: string",
           "retorno": "Promise<Sesion>",
-          "linea": 122
+          "linea": 125
         },
         {
           "nombre": "getSesion",
@@ -63454,7 +63454,7 @@
           "exportada": true,
           "params": "sessionId: string",
           "retorno": "Promise<Sesion>",
-          "linea": 133,
+          "linea": 136,
           "resumen": "Recupera una sesión ya creada (para el re-sync diario): devuelve sus cuentas (uids). Enable Banking devuelve `accounts` como lista de objetos cuenta (con `uid`) o de uids string según el endpoint; ace"
         },
         {
@@ -63463,7 +63463,7 @@
           "exportada": false,
           "params": "j: Record<string, unknown>",
           "retorno": "string | undefined",
-          "linea": 138
+          "linea": 141
         },
         {
           "nombre": "extraerUids",
@@ -63471,7 +63471,7 @@
           "exportada": false,
           "params": "j: Record<string, unknown>",
           "retorno": "string[]",
-          "linea": 145,
+          "linea": 148,
           "resumen": "Extrae los uid de cuenta de una respuesta de sesión, tolerando las variantes de la API: accounts: [uid] | [{uid}] | [{account:{uid}}]; o accounts_data: [{uid}]; o accounts: [{id}]."
         },
         {
@@ -63480,7 +63480,7 @@
           "exportada": true,
           "params": "accountUid: string",
           "retorno": "Promise<CuentaDetalle>",
-          "linea": 162
+          "linea": 165
         },
         {
           "nombre": "getSaldo",
@@ -63488,7 +63488,7 @@
           "exportada": true,
           "params": "accountUid: string",
           "retorno": "Promise<number | null>",
-          "linea": 170
+          "linea": 173
         },
         {
           "nombre": "disponiblePis",
@@ -63496,7 +63496,7 @@
           "exportada": true,
           "params": "",
           "retorno": "boolean",
-          "linea": 203
+          "linea": 206
         },
         {
           "nombre": "iniciarPago",
@@ -63504,7 +63504,7 @@
           "exportada": true,
           "params": "params: { debtorIban: string creditorName: string creditorIban: string importe: number concepto: string redirectUrl: string }",
           "retorno": "Promise<PagoEB>",
-          "linea": 212
+          "linea": 215
         },
         {
           "nombre": "estadoPago",
@@ -63512,7 +63512,7 @@
           "exportada": true,
           "params": "paymentId: string",
           "retorno": "Promise<EstadoPagoEB>",
-          "linea": 240
+          "linea": 243
         },
         {
           "nombre": "getMovimientos",
@@ -63520,12 +63520,12 @@
           "exportada": true,
           "params": "accountUid: string, dateFromOverride?: string",
           "retorno": "Promise<MovEB[]>",
-          "linea": 245
+          "linea": 248
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3715f9f8e6f4"
+      "hash": "ee0ec28a2230"
     },
     {
       "ruta": "apps/plataforma/lib/estructura.ts",

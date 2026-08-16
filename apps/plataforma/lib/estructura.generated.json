@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-16T05:58:46Z",
+  "generadoEn": "2026-08-16T06:33:14Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4523,6 +4523,10 @@
   ],
   "novedades": [
     {
+      "titulo": "Aplicada en producción",
+      "fecha": ""
+    },
+    {
       "titulo": "Hallazgo:",
       "fecha": ""
     },
@@ -4576,10 +4580,6 @@
     },
     {
       "titulo": "Correlación media por cohorte",
-      "fecha": ""
-    },
-    {
-      "titulo": "`docs/TRADING-FUENTES-PAGO.md`:",
       "fecha": ""
     }
   ],

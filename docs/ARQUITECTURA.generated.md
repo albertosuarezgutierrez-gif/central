@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-16T05:58:46Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-16T06:33:14Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -231,6 +231,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- Aplicada en producción
 - Hallazgo:
 - Mergeado (16/08, PR #1435, orden de Alberto) y verificado en vivo:
 - Pendiente (Alberto, extranet):
@@ -240,5 +241,4 @@
 - Pendiente:
 - Estado REAL de `pricing_pl_referencia` (difiere del PR):
 - Limitación:
-- BORME 404 en festivos = error 500
 
