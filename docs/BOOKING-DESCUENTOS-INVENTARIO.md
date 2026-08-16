@@ -1,6 +1,12 @@
 # Inventario de descuentos activos — Booking.com Extranet
 **Fecha de auditoría:** 16 agosto 2026 · **Modo:** solo lectura (no se ha activado ni modificado nada)
 
+> ⚠️ **SUPERSEDIDO PARCIALMENTE el mismo 16/08/2026 por la tarde** — ver
+> `docs/BOOKING-CAMBIOS-2026-08-16.md`. Cambios aplicados: Genius dinámico → **No** en
+> Luxury/Reform/Dúplex; NR de Luxury −15% → **−10%**; nueva **Oferta estándar 8%**
+> (16/08/2026–31/12/2028, todos los planes) en esos 3 pisos. House Sevillana intacta.
+> Este archivo queda como foto del estado ANTERIOR.
+
 ---
 
 ## 0. Cómo apila Booking (regla oficial, del simulador "Simular descuento máximo")

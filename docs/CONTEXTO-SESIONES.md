@@ -32,6 +32,16 @@
 
 ---
 
+### ✂️ (16/08/2026) Cambios EJECUTADOS en la extranet de Booking (Fase 3 del estudio)
+- Vía Claude Chrome → `docs/BOOKING-CAMBIOS-2026-08-16.md`: **Genius dinámico → No** en
+  Luxury/Reform/Dúplex (tramos fijos 10/15/20 intactos); **NR de Luxury −15% → −10%**;
+  **Oferta estándar 8%** en los 3 (16/08/2026–**31/12/2028**, ⏰ renovar; no permite «sin fin»).
+  House Sevillana: cero cambios. Apilado máx. −37%→−33,8% s/ standard; suelo no-Genius 0%→−8%.
+- **Parado a propósito:** precios por ocupación de Luxury — el Standard Rate es XML de Smoobu
+  (sobrescrito) y la extranet solo acepta €-fijos por fecha → hacerlo en **Smoobu** (pendiente).
+- Siguientes fases: +20% Smoobu (Alberto) → `channel_markup=1.20` (Claude) → medir a 14 días
+  (si mediana pagado/listado <0,85, bajar la oferta del 8% al 5-6%).
+
 ### 🏷️ (16/08/2026) Inventario de descuentos Booking — el −29% explicado
 - Pasada de solo-lectura por la extranet (Claude Chrome) → `docs/BOOKING-DESCUENTOS-INVENTARIO.md`
   (copia también en Drive). El −29% de Luxury Busto = **Genius dinámico ~21,5% × móvil 10%**
