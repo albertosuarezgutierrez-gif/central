@@ -84,7 +84,10 @@
 - ⛔ Rotación núcleo→satélite prohibida (timing = el patrón del −33,9% + regla fiscal 2 meses).
 - **Mergeado (16/08, PR #1435, orden de Alberto) y verificado en vivo:** los 3 tools del bloque 💼
   responden — NAV 32.335,37€, 0 posiciones (100% liquidez), 1 alerta activa preexistente (STX ≥865).
-- Pendiente: Alberto compra el ETF (elegirá él); reservas directas Booking → conversación aparte.
+- **16/08: PRIMERA orden real vía copiloto.** VWCE (Vanguard FTSE All-World Acc, IBIS2): 188 part.
+  LIMIT 169,80€ GTC (~31.922€, cierre vie. 168,88€). Claude preparó la instrucción → Alberto la envió
+  en la app → orden viva `PENDING_NEW` (se ejecuta lunes en apertura Xetra). El núcleo NO se toca.
+- Pendiente: verificar ejecución el lunes (la pasada 💼 debe cantarla); reservas directas Booking → aparte.
 
 ### 👁️ (15/08/2026) Registro de accesos/actividad de ialimp + historial en el god-panel de plataforma
 - Alberto preguntó por el último acceso de Vanessa: no existía rastro (el login de empresa solo tenía el
