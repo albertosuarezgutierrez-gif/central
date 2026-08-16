@@ -32,6 +32,16 @@
 
 ---
 
+### ⚠️ (16/08/2026) Alerta PSD2 sync — 6 días sin movimientos con la sesión VIVA
+- Último mov `origen='psd2'`: 10/08 (histórico: nunca >1 día de hueco desde 20/07). Cron OK (200 diario).
+- Clave: el SALDO de BBVA …1175 se actualizó el 15/08 → la sesión Enable Banking responde, pero
+  `/transactions` viene vacío/fallando — invisible porque `lib/psd2.ts` lo tragaba con `catch(() => [])`.
+- Causa probable: consentimiento degradado (SCA 14/06, `valid_until` ~11/09 — no caducidad formal). BBVA …2620
+  además muerta desde 27/06 (ya no está en la sesión). Acción de Alberto: re-vincular ambos bancos en /banca.
+- Fix (rama `claude/psd2-sync-no-movements-yw0gig`): `sincronizarSesion/Todas` devuelven `avisos` (fallo de
+  /transactions, ventana 89d vacía en cuenta conocida, drift de saldo con 0 transacciones) + Telegram del cron.
+- La pasada de mañana 06:00 dirá el motivo exacto en el Telegram/logs. Telegram enviado hoy con el diagnóstico.
+
 ### 👁️ (15/08/2026) Registro de accesos/actividad de ialimp + historial en el god-panel de plataforma
 - Alberto preguntó por el último acceso de Vanessa: no existía rastro (el login de empresa solo tenía el
   flag `sesion_activa`, sin fecha). Decisión: historial completo (logins + páginas + acciones) en SU panel.
