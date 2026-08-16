@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-16T06:33:14Z",
-  "sha": "d8617bb260d3a1d5eeb212677b7be066484e6e22",
+  "generadoEn": "2026-08-16T07:01:23Z",
+  "sha": "a2fbc73c8e0b093b692c3c273408603620202eac",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -44841,7 +44841,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 83,
+          "linea": 89,
           "resumen": "Ancla al libro de movimientos (que ya va siempre visible más abajo, es \"lo que más se usa\" — ver comentario en page.tsx). El botón lleva directo al selector de cuenta, donde las cuentas sincronizadas "
         },
         {
@@ -44850,7 +44850,7 @@
           "exportada": true,
           "params": "{ titulo, children }: { titulo: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 94,
+          "linea": 100,
           "resumen": "Envoltorio plegable para agrupar los paneles secundarios (IA / herramientas) y que no tapen los movimientos. Cerrado por defecto y con MONTAJE PEREZOSO: los hijos no se renderizan (ni disparan sus fet"
         },
         {
@@ -44859,7 +44859,7 @@
           "exportada": true,
           "params": "{ sociedades }: { sociedades: SociedadOpt[] }",
           "retorno": null,
-          "linea": 109,
+          "linea": 115,
           "resumen": "Formulario de subida de extracto Norma 43 (.n43) para una sociedad."
         },
         {
@@ -44868,7 +44868,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 205,
+          "linea": 211,
           "resumen": "Botón para (re)lanzar la categorización IA de los movimientos pendientes."
         },
         {
@@ -44877,7 +44877,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 229,
+          "linea": 235,
           "resumen": "Botón para cruzar banco ↔ facturas/ingresos registrados (sivra + ialimp)."
         },
         {
@@ -44886,7 +44886,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 253,
+          "linea": 259,
           "resumen": "Sube una FOTO/imagen de factura → OCR (IA) → intenta casarla con un movimiento."
         },
         {
@@ -44895,7 +44895,7 @@
           "exportada": true,
           "params": "{ sociedades }: { sociedades: SociedadOpt[] }",
           "retorno": null,
-          "linea": 287,
+          "linea": 293,
           "resumen": "Conexión automática del banco vía Open Banking (PSD2/Enable Banking): elige banco + sociedad, crea el consentimiento y redirige al banco para autorizar."
         },
         {
@@ -44904,7 +44904,7 @@
           "exportada": true,
           "params": "{ movimientos, destinoLabel }: { movimientos: Array<{ id: string; fecha: string | null; concepto: string; importe: number }> destinoLabel: Record<string, string> }",
           "retorno": null,
-          "linea": 371,
+          "linea": 377,
           "resumen": "Bandeja \"Por revisar\": lo que de verdad estaba en duda es el NEGOCIO del gasto (¿deducible de la correduría, del Dúplex/pisos, o personal?) — no la categoría contable, que para una compra con tarjeta "
         },
         {
@@ -44913,7 +44913,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 440,
+          "linea": 446,
           "resumen": "Descarga el CSV de todos los movimientos para enviárselo al gestor."
         },
         {
@@ -44922,7 +44922,7 @@
           "exportada": true,
           "params": "{ grupos, resueltos }: { grupos: DupGrupoUI[]; resueltos: DupResueltoUI[] }",
           "retorno": null,
-          "linea": 451,
+          "linea": 457,
           "resumen": "Bandeja \"Posibles cargos duplicados\": pares sospechosos de cobro doble. El dueño los resuelve con un clic (\"Es normal\" / \"Es un cobro doble\"); la decisión persiste. Plegable de \"ya resueltos\" para rea"
         },
         {
@@ -44931,7 +44931,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 590,
+          "linea": 596,
           "resumen": "Botón que abre Claude Code web y copia /facturas-correo al portapapeles listo para pegar."
         },
         {
@@ -44940,7 +44940,7 @@
           "exportada": true,
           "params": "{ cuentas, destinoLabel, initial, periodo }: { cuentas: { id: string; label: string; sincronizada?: boolean }[] destinoLabel: Record<string, string> initial: { movimientos: MovLedgerUI[]; total: number; hayMas: boolean } // Rango por defect",
           "retorno": null,
-          "linea": 629
+          "linea": 635
         },
         {
           "nombre": "IngresosPorRevisar",
@@ -44948,7 +44948,7 @@
           "exportada": true,
           "params": "{ ingresos, destinoLabel }: { ingresos: MovLedgerUI[] destinoLabel: Record<string, string> }",
           "retorno": null,
-          "linea": 918,
+          "linea": 924,
           "resumen": "Bandeja de INGRESOS por revisar: abonos cuyo negocio está sin confirmar. Antes no aparecían en ningún sitio accionable (la revisión de gastos es solo importe<0). Aquí el dueño les asigna el negocio (d"
         },
         {
@@ -44957,7 +44957,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 983
+          "linea": 989
         }
       ],
       "tablas": [
@@ -44965,7 +44965,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "4fe1b90eac87"
+      "hash": "28db8eb3891e"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/BenchmarkPisos.tsx",
