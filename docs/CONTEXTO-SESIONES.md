@@ -32,6 +32,13 @@
 
 ---
 
+### 💓 (16/08/2026) Sonda del verificador de eventos añadida a PROBES
+- El parte «Sin poder comprobar» decía la verdad: `sivra_eventos_verificar` se declaró en
+  `AGENTES_VIGILADOS` (12/08) pero nadie añadió su sonda al mapa `PROBES` del cron
+  `agentes-latido` — el agente SÍ late en `agente_latidos`, el vigía no tenía query para leerlo.
+- Fix: sonda gemela de `sivra_eventos` (ultimo_ok_at/ultimo_at/detalle). tsc 0, tests 8/8.
+- Al declarar un agente vigilado nuevo: su sonda en PROBES va en el MISMO PR.
+
 ### ✅ (16/08/2026) Backlog de PRs resuelto («resuelve todo» de Alberto) + migración v_facturas_sin_cargo aplicada
 - Mergeados los 3 PRs abiertos: #1436 (auditoría ligera), #1437 (auditoría profunda, con bump
   `next` 15.5.21 en housesevillana) y #1441 (agentes-entrenador). Conflictos de registro de

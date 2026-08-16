@@ -65,6 +65,11 @@ const PROBES: Record<string, Prisma.Sql> = {
   sivra_eventos: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'sivra_eventos'`,
+  // El verificador de previstos escribe su latido desde el 12/08/2026 (eventos/verificar), pero
+  // se declaró vigilado sin darle sonda → salía en «Sin poder comprobar» en cada parte.
+  sivra_eventos_verificar: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'sivra_eventos_verificar'`,
   // Subastas/mercado: la huella es la de la PASADA que llega a avisar. NO vale
   // mirar `mercado_comparables` (solo crece si el portal manda alertas nuevas)
   // ni `chollo_avisado_at` (cada anuncio avisa UNA vez en su vida): con esas dos
