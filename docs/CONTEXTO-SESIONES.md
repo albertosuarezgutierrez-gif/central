@@ -32,6 +32,16 @@
 
 ---
 
+### 💓 (16/08/2026) Sonda del verificador de eventos + guarda de regresión (PR #1447)
+- El parte «Sin poder comprobar» decía la verdad: `sivra_eventos_verificar` se declaró en
+  `AGENTES_VIGILADOS` (12/08) sin su sonda en `PROBES` del cron `agentes-latido` — el agente SÍ
+  late (verificado en BD: hoy 05:30, «3 previstos revisados · 3 confirmados»), el vigía no tenía
+  query para leerlo. Fix: sonda gemela de `sivra_eventos`; la sonda exacta probada contra la BD real.
+- **Guarda nueva en `latidos.test.ts`**: todo id de `AGENTES_VIGILADOS` debe tener clave en `PROBES`
+  (verificada en rojo contra el estado pre-fix). tsc 0 · 1227 tests · build OK.
+- Docs al día: regla en `apps/plataforma/CLAUDE.md` (§Latidos) y `docs/RUTINAS-PROGRAMADAS.md` §12
+  (lista de vigilados completada con `sivra_eventos_verificar` y `subastas_mercado`).
+
 ### ⏳ (16/08/2026) Estudio posicionamiento Booking — SÍ al +20% por portal, con condición
 - `docs/ESTUDIO-BOOKING-POSICIONAMIENTO.md`: Booking ordena por conversión×precio FINAL; subir la base
   +20% solo funciona devuelto en descuentos visibles (1,20×0,76≈0,91 vs 0,92 medido en las 20 reservas).
