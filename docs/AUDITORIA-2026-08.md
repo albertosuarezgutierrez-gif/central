@@ -80,10 +80,50 @@ del 15/08 ya los cubre el PR #1436 (no se duplican aquí).
 Ningún archivo de `apps/ia-rest/src/app/**`, `apps/ia-rest/src/components/**` ni
 `apps/ia-rest/public/**` cambió en el rango.
 
-## ⏳ Bloque técnico (typecheck 8 apps + tests + deps) — en curso
-Delegado a un sub-agente en background (integridad estructural, `tsc --noEmit` en las 8 apps con
-Prisma regenerado antes de cada una, `pnpm test`, `pnpm audit`, código muerto). Se completa este
-informe con un commit adicional de este mismo PR en cuanto termine.
+## 🟢 Bloque técnico — integridad, typecheck, tests
+- **Integridad estructural:** lockfile en sync (872 paquetes). `pnpm test:guardia` 32/32 OK. **10 apps
+  en el repo** (no 8: `housesevillana` y `mariscos` también cuentan) — las 10 llevan el `ignoreCommand`
+  obligatorio en su `vercel.json` y `transpilePackages` cuadra exactamente con sus imports `@central/*`
+  reales en ambos sentidos. Radiografía de estructura desfasada por timestamp (drift normal entre
+  pushes, se autorregenera) — ya regenerada en el commit anterior de este PR.
+- **Typecheck de las 8 apps con Prisma+ia-rest** (`tsc --noEmit`, client regenerado antes de cada
+  una): **0 errores en las 8**.
+- **`pnpm test`** (raíz): guardián + todos los `packages/*` + tests de apps (ialimp 22, plataforma
+  &gt;900 subtests, rrhh 47 vitest + 7 suites de packages) — **0 fallos reales**.
+- **Seguridad/multi-tenant** (125 archivos de `apps/*/app/api/**` tocados en 30 días): todas las
+  queries multi-tenant revisadas (rrhh admin, almacen, mariscos, ialimp agente-cotizador/leads,
+  plataforma operador) llevan scope explícito por `empresa_id`/`cuenta_id`/sesión. Sin hallazgos.
+- **Documentación:** confirma independientemente lo que ya cubre PR #1436 — `apps/mariscos` sin
+  entrada en `CLAUDE.md` (sección Verticales) ni en `apps/plataforma/lib/estructura.ts`. No se duplica
+  aquí.
+
+## 🔴 `next` desactualizado en `housesevillana` (producción pública) — CORREGIDO en este PR
+`pnpm audit` marcaba `next@15.5.15` en `apps/housesevillana` con **16 CVEs** (varios *high*: DoS,
+SSRF en Server Actions, bypass de middleware/proxy), varias con fix ya publicado. `housesevillana` es
+la landing pública de producción (`housesevillana.es`, canal directo de reservas) — no es tooling
+interno, así que se corrige en el acto (bajo riesgo, mecánico): bump a **`next@15.5.21`** (última
+del mismo major 15.5.x, sin saltar a la 16 para no arriesgar breaking changes sin revisar).
+Verificado tras el bump: `pnpm install` sin conflictos, `next build` compila y genera las 10 páginas
+sin error, `node --test` 47/47 OK. Los errores de `tsc --noEmit` en los ficheros `*.test.ts` (imports
+con extensión `.ts` explícita, patrón de `node --test` de este repo) son preexistentes y no los
+introduce este cambio.
+
+## 🟡 Deps de bajo riesgo, sin acción en este PR (documentadas para Alberto)
+- **`jimp`/`file-type`** (vía `apps/ialimp/app/api/admin/ia/comparar-foto/route.ts`, comparación de
+  foto de limpiadora): vuln de DoS (bucle infinito con input malformado) en una ruta que sí procesa
+  binario subido por usuarios con sesión de limpiadora. Riesgo moderado, no RCE. Recomendado: migrar
+  de `jimp` (sin mantenimiento activo) a `sharp` (ya fijado a `&gt;=0.35.0` en `pnpm.overrides` de la
+  raíz y usado en el resto del monorepo) — cambio de librería, no un bump mecánico, se deja para un
+  PR propio.
+- **`xlsx`** en ialimp: no explotable (solo escribe, nunca parsea un xlsx subido) — sin acción, ya
+  documentado como excepción aceptada.
+- **`pdfjs-dist`** en `apps/ialimp/package.json`: dependencia **muerta** (0 imports reales; ialimp usa
+  la versión correcta y no vulnerable vía `apps/rrhh`) — candidato a retirar del `package.json` y de
+  `serverExternalPackages`, sin urgencia de seguridad.
+- Resto de advisories (`esbuild`/`vite`/`launch-editor` vía vitest, `brace-expansion`/`js-yaml` vía
+  eslint, `nanoid` vía postcss): solo dev-time/build-time, no viajan a producción.
+- **Packages sin consumidor** (`module-agenda`, `module-encargo`, `module-revenue`): reconfirmado
+  el estado ya triado — infraestructura a la espera de vertical, no código muerto por descuido.
 
 ---
 

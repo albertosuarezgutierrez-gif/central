@@ -14,9 +14,14 @@
 ## Registro (lo más reciente arriba)
 
 - **2026-08-16** · `docs/AUDITORIA-2026-08.md` · sección "Actualización 2026-08-16 — auditoría diaria
-  (PROFUNDA)" añadida (hallazgo `psd2-sync` escalado a 🔴 tras 6 días sin movimientos + guardián
+  (PROFUNDA)" completa (hallazgo `psd2-sync` escalado a 🔴 tras 6 días sin movimientos + guardián
   `psd2-health-check` en crítico, Telegram enviado; hallazgo Supabase `v_facturas_sin_cargo`
-  SECURITY DEFINER sin revoke de anon/authenticated) · commit de esta auditoría
+  SECURITY DEFINER sin revoke de anon/authenticated; bloque técnico completo — 10 apps con
+  `ignoreCommand`/`transpilePackages` OK, typecheck 8/8 apps sin errores, tests raíz sin fallos,
+  scoping multi-tenant OK en 125 rutas recientes) · commit de esta auditoría
+- **2026-08-16** · `apps/housesevillana/package.json` + `pnpm-lock.yaml` · bump `next` 15.5.15→15.5.21
+  (16 CVEs, varios high, con fix publicado; landing pública de producción) · verificado `next build` +
+  `node --test` 47/47 OK tras el bump · commit de esta auditoría
 - **2026-08-16** · `apps/plataforma/lib/estructura.generated.json` + `docs/ARQUITECTURA.generated.md` ·
   regeneración automática de la radiografía de estructura (`node scripts/auditar-estructura.mjs`) ·
   refleja el estado real del repo tras los commits del 15-16/08 · commit de esta auditoría
