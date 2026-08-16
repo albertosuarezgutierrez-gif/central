@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-15T14:15:45Z",
+  "generadoEn": "2026-08-16T05:11:08Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4498,7 +4498,7 @@
     {
       "id": "trading-analista",
       "name": "trading-analista",
-      "description": "Pasada diaria del agente de inversión sobre Interactive Brokers (Fase 1, SOLO paper). Lee cartera + watchlist, tira precios (IBKR) y fundamentales (FMP) por MCP, llama a /api/trading/analizar y /api/trading/puntuar de plataforma, y resume por Telegram. NUNCA ejecuta órdenes reales."
+      "description": "Pasada diaria del agente de inversión sobre Interactive Brokers (Fase 1, SOLO paper). Lee cartera real + watchlist, tira precios (IBKR) y fundamentales por MCP, llama a /api/trading/analizar y /api/trading/puntuar de plataforma, y resume por Telegram. Copiloto de órdenes: solo INSTRUCCIONES que Alberto confirma en IBKR, y solo si él las pide. NUNCA ejecuta órdenes reales."
     },
     {
       "id": "transporte-maestro",
@@ -4522,6 +4522,10 @@
     }
   ],
   "novedades": [
+    {
+      "titulo": "Pendiente (Alberto, extranet):",
+      "fecha": ""
+    },
     {
       "titulo": "🚨 Regla dictada por Alberto a raíz de ese envío (ya en CLAUDE.md):",
       "fecha": ""
@@ -4576,10 +4580,6 @@
     },
     {
       "titulo": "Landmine 1 — suelo PL autorreferente:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Landmine 2 — partidos a domicilio como eventos:",
       "fecha": ""
     }
   ],
