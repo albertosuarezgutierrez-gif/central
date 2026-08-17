@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-17T08:19:23Z",
-  "sha": "f4a700b785f369e657ef2dbc2bdea438a28fa72b",
+  "generadoEn": "2026-08-17T08:24:54Z",
+  "sha": "f38a83791b7c640291754d820e69b1048be670bf",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -8917,7 +8917,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/ig-img",
-      "hash": "6c1b8c5a574a"
+      "hash": "58f97100beee"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/ig-lab-img/route.tsx",
@@ -18930,7 +18930,7 @@
         "next"
       ],
       "rutaApi": "/api/telegram/instagram-callback",
-      "hash": "da5861d2ad78"
+      "hash": "0ef82e996dba"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/telegram/setup-webhook/route.ts",
