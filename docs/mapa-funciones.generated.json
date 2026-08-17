@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-17T08:24:54Z",
-  "sha": "f38a83791b7c640291754d820e69b1048be670bf",
+  "generadoEn": "2026-08-17T08:34:01Z",
+  "sha": "b2e7f61b56b125f7b67a07e139912af24fe808e5",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -49086,12 +49086,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c5d4ec50f7c4"
+      "hash": "5b3d8965d90e"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/trading/RadarExplorador.tsx",
@@ -49153,7 +49153,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 20
+          "linea": 22
         },
         {
           "nombre": "pctN",
@@ -49161,7 +49161,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 23
+          "linea": 25
         },
         {
           "nombre": "pct0N",
@@ -49169,7 +49169,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 26
+          "linea": 28
         },
         {
           "nombre": "CurvaForward",
@@ -49177,7 +49177,7 @@
           "exportada": false,
           "params": "{ serie }: { serie: { m: number | null; b: number }[] }",
           "retorno": null,
-          "linea": 32,
+          "linea": 34,
           "resumen": "Mini-curva del forward (SVG puro, sin dependencias): línea de la cesta (MEDIANA) vs el SPY a lo largo de los snapshots persistidos. La mediana es la métrica de decisión (un outlier no la mueve)."
         },
         {
@@ -49186,20 +49186,30 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 49
+          "linea": 51
+        },
+        {
+          "nombre": "dinero",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number, divisa: string",
+          "retorno": "string",
+          "linea": 98,
+          "resumen": "Importe en la divisa de la posición, formato español (regla global: nunca estilo dólar)."
         },
         {
           "nombre": "TradingDashboard",
           "kind": "function",
           "exportada": true,
-          "params": "{ carteraCohetes }: { carteraCohetes: CarteraCohetesData | null }",
+          "params": "{ carteraCohetes, carteraReal }: { carteraCohetes: CarteraCohetesData | null; carteraReal?: CarteraRealUI | null | 'error' }",
           "retorno": null,
-          "linea": 95
+          "linea": 107,
+          "resumen": "`carteraReal` solo llega desde la página con SESIÓN (app/(usuario)/trading/page.tsx): es dinero REAL de Alberto y la vista de invitado (/invitado/trading) no debe verlo — ahí queda undefined y la secc"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "835001bad4ba"
+      "hash": "2ca09888a91c"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -57269,6 +57279,30 @@
       "tablas": [],
       "rutaApi": "/api/trading/cartera-estudio",
       "hash": "78a63de3123d"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/trading/cartera/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Refresco de la CARTERA REAL del bróker (Interactive Brokers) para el panel /trading. La app no habla con IBKR: es la pasada diaria del agente `trading-analista` quien lee `get_account_positions` por MCP (solo lectura) y empuja aquí la foto completa. Mismo contrato de auth que /api/trading/saldo (Bea",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 18
+        }
+      ],
+      "tablas": [
+        "cuentas",
+        "next"
+      ],
+      "rutaApi": "/api/trading/cartera",
+      "hash": "fc553fc09df5"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/descubrir/route.ts",
@@ -70727,6 +70761,89 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "a4e249751ac0"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/cartera-real-io.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "💼 Cartera REAL del bróker — IO (Prisma). La escribe POST /api/trading/cartera (pasada diaria del agente trading-analista, que es quien lee IBKR); la lee el panel /trading. La parte pura (normalización + resumen) vive en cartera-real.ts.",
+      "exporta": [
+        "reemplazarCarteraReal",
+        "getCarteraReal"
+      ],
+      "funciones": [
+        {
+          "nombre": "reemplazarCarteraReal",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, broker: string, posiciones: PosicionRealIn[],",
+          "retorno": "Promise<void>",
+          "linea": 19,
+          "resumen": "Reemplaza la foto completa de la cartera de una cuenta+bróker (transacción: borrar + insertar + marcar sincronización). Un array vacío es válido: significa «leída, sin posiciones»."
+        },
+        {
+          "nombre": "getCarteraReal",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string",
+          "retorno": "Promise<CarteraRealUI | null>",
+          "linea": 49,
+          "resumen": "Última foto conocida de la cartera real de la cuenta. `null` = NUNCA sincronizada (distinto de «sin posiciones»: eso es un objeto con posiciones []). Si hubiera varios brókers, devuelve el sincronizad"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a36d87d0e007"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/cartera-real.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "💼 Cartera REAL del bróker — parte PURA (sin BD): normalización del payload que empuja la pasada diaria del agente (get_account_positions de IBKR) y resumen por divisa para la UI. El IO (Prisma) vive en cartera-real-io.ts. Testeable con node --test.",
+      "exporta": [
+        "normalizarPosiciones",
+        "resumenPorDivisa",
+        "rentabilidadPosicion"
+      ],
+      "funciones": [
+        {
+          "nombre": "num",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 20,
+          "resumen": "Número finito o null — un NaN/Infinity/string rara del bróker NO se convierte en 0 (regla del repo: colapsar «no lo sé» a 0 fabrica una afirmación falsa sobre dinero real)."
+        },
+        {
+          "nombre": "normalizarPosiciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "",
+          "linea": 28,
+          "resumen": "Valida y normaliza las posiciones del body. Lo que no se puede leer se DESCARTA y se cuenta (el endpoint lo devuelve en la respuesta): una fila ilegible tragada en silencio es una posición que desapar"
+        },
+        {
+          "nombre": "resumenPorDivisa",
+          "kind": "function",
+          "exportada": true,
+          "params": "posiciones: PosicionRealIn[]",
+          "retorno": "ResumenDivisa[]",
+          "linea": 69,
+          "resumen": "Totales POR DIVISA — nunca se suman euros con dólares (error de unidad, PR #1189). Un total al que le faltan posiciones se marca `completo:false` para que la UI lo declare parcial."
+        },
+        {
+          "nombre": "rentabilidadPosicion",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: Pick<PosicionRealIn, 'cantidad' | 'precioMedio' | 'pnlNoRealizado'>",
+          "retorno": "number | null",
+          "linea": 92,
+          "resumen": "Rentabilidad de una posición sobre su coste. null si falta cualquiera de las patas."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b0734d89d48b"
     },
     {
       "ruta": "apps/plataforma/lib/trading/concentracion.ts",
@@ -92555,7 +92672,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2470,
-    "funciones": 6695
+    "archivos": 2473,
+    "funciones": 6703
   }
 }

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-17T07:36:52Z",
+  "generadoEn": "2026-08-17T08:34:01Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3905,6 +3905,7 @@
       "/api/subastas/seguidas",
       "/api/trading/analisis-simbolo",
       "/api/trading/analizar",
+      "/api/trading/cartera",
       "/api/trading/cartera-estudio",
       "/api/trading/descubrir",
       "/api/trading/factores",
@@ -4317,6 +4318,8 @@
       "trading_acceso_token",
       "trading_backtest",
       "trading_cantera",
+      "trading_cartera_real",
+      "trading_cartera_real_sync",
       "trading_cohetes_rebalanceo",
       "trading_cohetes_track",
       "trading_estrategia_stats",
@@ -4992,7 +4995,7 @@
     "packages": 37,
     "capacidades": 23,
     "skills": 32,
-    "apis": 1165,
+    "apis": 1166,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
