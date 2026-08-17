@@ -32,7 +32,14 @@
 
 ---
 
-### ✅ (17/08/2026) Kutxabank PSD2 RESUELTO — era la VENTANA de 89 días (+2 fixes de camino)
+### 📸 (17/08/2026) Stories de Instagram salían recortadas — lienzo 9:16 real en ig-img
+- Alberto mandó pantallazo: la Story auto de ia.rest se veía fatal (el «2» y el texto cortados,
+  casi todo negro). Causa: `ig_aprobar` republicaba como Story la MISMA imagen cuadrada 1080×1080
+  del feed, e Instagram la escala a pantalla completa 9:16 recortando los laterales.
+- Fix: `/api/ig-img` acepta `story=1` → lienzo 1080×1920 con el arte cuadrado centrado sobre el
+  fondo de su propia plantilla (bandas del mismo color → se ve nativo). El callback de Telegram
+  publica la Story (y el fallback manual por foto) con `&story=1`. Verificado con render local
+  (stat editorial, pregunta, brutalist). `next build` verde.
 - Causa raíz: Kutxabank rechaza `/transactions` con ventana de 89 días («Account not found /
   AccountNotAccessibleException», error engañoso) incluso recién firmado el SCA. Fallback 89d→30d→7d
   en `getMovimientosConVentana` (PR #1462) → feed vivo, último mov = HOY. Aviso ℹ️ informativo

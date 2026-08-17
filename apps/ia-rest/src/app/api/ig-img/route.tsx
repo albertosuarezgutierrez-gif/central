@@ -42,8 +42,35 @@ export async function GET(req: NextRequest) {
   const modulo = p.get('modulo') || ''
   const { accent: AC, glifo: GL } = temaModulo(modulo)
 
+  // story=1 → lienzo 1080×1920 (9:16 real). Instagram escala la imagen a pantalla
+  // completa en las Stories: si le mandas el cuadrado del feed, recorta los laterales
+  // y el arte sale cortado. Aquí el cuadrado va centrado sobre el fondo de su propia
+  // plantilla (bandas del mismo color arriba/abajo → se ve nativo y queda dentro de
+  // la zona segura, fuera de los overlays de UI de Instagram).
+  const story = p.get('story') === '1'
+  const H = story ? 1920 : S
+  const fondoStory = (): string => {
+    if (estilo === 'brutalist') return tipo === 'stat' ? DARK : RED
+    if (estilo === 'humano') return '#362C22'
+    if (tipo === 'pregunta' || tipo === 'cita') return CR
+    if (tipo === 'tip') return RED
+    if (tipo === 'comparativa') return D2
+    if (tipo === 'slide') {
+      if (num === 1) return DARK
+      if (num === total) return AC
+      return num % 2 === 0 ? CR : DARK
+    }
+    return DARK // stat editorial, producto
+  }
+
   const fonts = await getFonts()
-  const R = (el: React.ReactElement) => new ImageResponse(el, { width:S, height:S, fonts })
+  const R = (el: React.ReactElement) => new ImageResponse(
+    story
+      ? <div style={{width:S,height:H,background:fondoStory(),display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}>
+          <div style={{width:S,height:S,display:'flex'}}>{el}</div>
+        </div>
+      : el,
+    { width:S, height:H, fonts })
 
   // ───────── ESTILOS ALTERNATIVOS (brutalist / humano) para stat y pregunta ─────────
   if (estilo === 'brutalist') {
