@@ -33,13 +33,14 @@
 ---
 
 ### 🧊 (17/08/2026) Cohorte 3 DOBLE congelada (H5) + primer contraste forward vs retrovisor
-- Cohorte 3 congelada en `COHORTES_PAPER`, DOBLE según H5: `2026-08-17.v1` (combinada sp500, 25 valores,
-  con `simbolosBase`) + `2026-08-17.factores.v1` (factores-solo, top-10 `rankearUniverso` sin gurús:
-  SNDK/BKNG/MU/WDC/NLY/STX/CMCSA/MOH/VICR/UMBF). `/api/trading/seleccion` sp500 devuelve ahora
-  `simbolosFactores` para las próximas congelaciones. Tests 6/6, tsc 0.
+- PR #1460 **MERGEADO y verificado en prod**: cohorte 3 DOBLE en `COHORTES_PAPER` según H5 —
+  `2026-08-17.v1` (combinada sp500, 25 valores, con `simbolosBase`) + `2026-08-17.factores.v1`
+  (factores-solo: SNDK/BKNG/MU/WDC/NLY/STX/CMCSA/MOH/VICR/UMBF). `/seleccion` sp500 sirve
+  `simbolosFactores` (verificado = cesta congelada) y `/paper` mide 4 cohortes (las 2 nuevas a 0d,
+  `resultado null` correcto). Skill `trading-analista` + pre-registro (H5 ejecutada) actualizados.
 - Contraste forward (~28d) vs retrovisor: NI confirma NI desmiente — alpha mediano −1,65 pp (cohortes)
-  / −2,22 pp (radar, 0/1 ventanas), dentro del ruido que el retrovisor declaró a 28d. Nada evaluable
-  del pre-registro hasta ~91d (~oct). Doc: `docs/TRADING-FORWARD-VS-RETROVISOR-2026-08.md`.
+  / −2,22 pp (radar, 0/1 ventanas), zona de ruido declarada a 28d; nada del pre-registro evaluable
+  hasta ~91d (~oct). Doc: `docs/TRADING-FORWARD-VS-RETROVISOR-2026-08.md`.
 
 ### 💼 (17/08/2026) Cartera REAL de IBKR en el panel /trading — la compra de VWCE no aparecía
 - Alberto compró 188×VWCE (~31.840€, ETF núcleo) y el panel solo pintaba paper. Nuevas tablas

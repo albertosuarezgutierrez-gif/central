@@ -74,7 +74,11 @@
   (`DIAS_ENTRE_COHORTES`). Cada cohorte = muestra independiente; batir al SPY repetido entre cohortes es mucho
   más difícil por suerte. **Congelar = AÑADIR una entrada a `COHORTES_PAPER`** (nunca editar una existente →
   no rompe el out-of-sample). Copia `simbolos` (combinada) **y** `simbolosBase` (gurús-solo) que devuelve
-  `/api/trading/seleccion`. El digest recuerda cuándo toca.
+  `/api/trading/seleccion`. El digest recuerda cuándo toca. **Desde la cohorte 3 (17/08/2026, H5 ejecutada,
+  PR #1460) la congelación es DOBLE:** además de la combinada se congela una entrada APARTE **factores-solo**
+  (`simbolosFactores` de la respuesta sp500: top-10 por score de factores puros, `rankearUniverso` sin gurús
+  ni puerta de calidad) — la tercera pata de atribución (gurús-solo / gurús∩calidad / factores-solo).
+  Las cohortes se congelan desde el universo amplio (`{"universo":"sp500"}`), no desde la watchlist.
 - **CURVA persistida (idea 2):** el cron guarda un snapshot por cohorte en `trading_paper_track` (tabla ya
   aplicada en la Supabase compartida; el tracker es best-effort si no existe). Da la trayectoria, no solo el
   número de hoy.
