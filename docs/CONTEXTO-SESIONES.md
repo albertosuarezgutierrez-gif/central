@@ -32,6 +32,63 @@
 
 ---
 
+### 🏷️ (17/08/2026) Revisión post-ciclo pricing: los 2 accionables del 17/08, resueltos
+- Las 3 fechas `no_disponible` de House (12-sep, 10-oct, 17-abr-2027) SÍ tienen reserva real con
+  income (Booking: 1.344€ / 2.044,74€ / 3.318,47€ brutos — la de Feria a ~1.659€/noche). No hay
+  bloqueo manual ni sync roto: el chequeo del ciclo las dio por «sin income» en falso. Nada que tocar.
+- La muestra ruidosa del 29-ago NO es puntual: 364 filas / 36 fechas de House con comps a <12€/plaza
+  (44-104€ para 12 personas = precio de habitación), **todas `fuente='serper'`** (sweep, desde 04/08).
+  **Filtro de plausibilidad €/plaza APLICADO con OK de Alberto** (`pricing-comps-plausibles.ts`, umbral
+  12€/plaza, comps sin aforo no se juzgan): apply (3 consultas) + guard (#4/#5/#7/#8/#9) + recommend/
+  pilot-track/settings. Efecto medido: +14/+38€ en p50 de fechas contaminadas, 0€ en las limpias.
+- Reservas Dúplex del 16/08 verificadas OK: 3-5 oct y 16-18 oct a 137-140€/noche bruto con listado
+  en mercado (p50 fiable 171/184,5€); el descuento es el canal (~0,78-0,80), no infraprecio.
+- 2ª tanda («haz todo», OK de Alberto): rutina `mercado-booking` sube de 12→24 ventanas/pasada
+  (plan de 464; objetivo: 3 fechas/mes fiables para retirar Serper). Suelo estacional de House
+  verificado con la serie 2024+ → NO está plano en la práctica (FLOOR_SEASONAL ya modula: abr 390€
+  vs peor venta real 428€); pendiente cerrado, aprendizaje en `pricing_aprendizaje` id 74. El «ADR
+  agosto 62€» era artefacto de reservas DIRECTO/OTRO a 0-200€ (huecos de amigos) — al analizar House
+  excluirlas. `gastos_fijos` de House sigue a 0 filas: hace falta que Alberto pase IBI/seguro/
+  suministros (no se inventan). FLOOR_SEASONAL nov ×1,00→×1,10 APLICADO («lo q veas mejor» de
+  Alberto): suave a propósito — House 330€ de suelo nov, justo sobre su peor venta real (~263-310€
+  de listado), sin cerrar la puerta al mercado flojo; el pricing lo sigue decidiendo el mercado.
+
+### 🔴 (17/08/2026) Swap NIM verificado en vivo: 70B→GLM-5.2 · contable→deepseek-v4-flash (PRs #1454+fix)
+- NIM retira el 3.3-70b el **25/08/2026**. 1ª elección (Maverick, PR #1454 mergeado) resultó **410 Gone
+  en el API** (EOL 27/07 con la ficha web aún viva) — cazado al probar con la key real vía harness en
+  una edge function de ia-rest + `pg_net`. **La ficha de build.nvidia.com NO prueba que el modelo viva.**
+- Final, todo probado con llamadas reales: default NIM **`z-ai/glm-5.2`** (mini-eval A/B 2/2) y
+  `CONTABLE_MODEL` **`deepseek-ai/deepseek-v4-flash-0731`** (el `deepseek-v3` YA NO existe en `/v1/models`
+  — cerrado el "sin confirmar" del 27/07). Radio completo re-swapeado; 4 edge functions redesplegadas
+  (Supabase MCP) y `nim-sentiment` probado end-to-end. Ids OpenRouter `meta-llama/*` NO tocados.
+- Detalle y regla nueva del Paso 1 (id vivo = está en `/v1/models` o responde) en `docs/BUSCADOR-IA.md`.
+
+### 🧾 (17/08/2026) facturas-correo — hueco real en `facturas_drive` (SiQueBrilla julio) + autocrítica
+- Paso 4.0 sin `sin_revisar` y sin candidatos Gmail nuevos, pero la raíz de `FACTURAS Apartamentos/2026`
+  seguía teniendo ~30 PDFs sueltos: al investigar, casi todos ya estaban cubiertos por avisos previos en
+  `_DUPLICADOS_BORRAR` (Endesa Bustos/Dúplex, EMASESA Reform ×9, Castuera, Leroy, Dimitri/CREATE) — no
+  eran backlog nuevo. El hueco real: la factura SiQueBrilla de julio (780,10€) SÍ estaba archivada en
+  Drive y conciliada en banco desde el 03/08, pero sin fila en `facturas_drive` → invisible para
+  `v_facturas_sin_cargo` (esa vista solo detecta filas existentes sin `movimiento_id`, no filas
+  ausentes). Fila insertada.
+- **Autocrítica:** antes de verificar bien, copié 2 duplicados nuevos (SiQueBrilla + Leroy) sin
+  comprobar que ya existían archivados — avisos de borrado añadidos a la papelera para los dos.
+- Etiqueta `Facturas/Extraccion-fallida` retirada de un hilo que era un mensaje de huésped de Booking
+  (falso positivo, no factura). `agente_salud` actualizado (Vía B: dias_caido=3, sin backlog real).
+- Papelera `_DUPLICADOS_BORRAR` acumula ~22 avisos sin que Alberto los haya vaciado — mencionado en el
+  resumen, no bloqueante.
+
+### 📊 (17/08/2026) Ciclo semanal de pricing — los 4 pisos, comps por conector real
+- Ciclo completo del agente de pricing (skill `pricing-agente`): medido el ciclo anterior (10/08) contra
+  incomes/rate_snapshots (ventas confirmadas de busto SS/Feria a precio decidido, 4 ventas nuevas en
+  luxury/duplex en octubre), sembrado mercado en las 4 propiedades (12 ventanas: 1 finde/mes ~10 meses +
+  Semana Santa + Feria, vía Booking/Trivago/Tripadvisor MCP) y aplicado en dry-run (48 decisiones,
+  circuit-breaker sano en los 4 pisos).
+- **Comps escritos hoy: busto=406 · duplex=263 · luxury=322 · house=186** (ninguno a 0).
+- Pendiente sin cerrar (no bloqueante): 3 fechas de House quedaron `no_disponible` sin income que lo
+  confirme — mismo patrón ya visto con busto/Feria (posible bloqueo manual o reserva aún sin sincronizar).
+  Detalle en `pricing_aprendizaje` (`ALL`/`ciclo_17_08_2026`).
+
 ### 📈 (16/08/2026) Fases 1+2 del +20% Booking EJECUTADAS (Smoobu + motor)
 - **Fase 1 (Claude Chrome, `docs/BOOKING-FASE1-SMOOBU-2026-08-16.md`):** `priceDifference` del canal
   Booking en Smoobu 0% → **+20%** (campo ÚNICO por canal, cubre los 4 pisos; resto de portales a 0%),

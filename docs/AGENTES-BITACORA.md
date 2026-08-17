@@ -15,6 +15,55 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-17 · pricing-agente (revisión post-ciclo)** · hizo: verificados los 2 accionables del
+  ciclo 17/08 — las 3 fechas `no_disponible` de House tienen reserva real con income (el ciclo las
+  reportó «sin income» en falso); el ruido de comps <12€/plaza en House es 100% `fuente='serper'`
+  (364 filas/36 fechas desde 04/08); con OK de Alberto se aplicó el filtro €/plaza
+  (`pricing-comps-plausibles.ts`) en apply+guard+recommend+pilot-track+settings, y la lección del
+  cruce de incomes quedó en `references/ciclo.md`. Reservas Dúplex 16/08 verificadas OK en precio.
+  2ª tanda: `mercado-booking` a 24 ventanas/pasada; suelo estacional House verificado contra serie
+  2024+ (no está plano — pendiente del 01/08 cerrado, aprendizaje id 74); gastos_fijos House a 0
+  (necesita datos de Alberto). 3ª tanda: FLOOR_SEASONAL nov ×1,10. dudas: —; fallos: —
+- **2026-08-17 · buscador-ia** · hizo: hallazgo crítico (NIM retira el 3.3-70b el 25/08) → swap a
+  Maverick (PR #1454, mergeado por Alberto) → al verificar en vivo con la key real (harness en edge
+  function + pg_net), Maverick daba **410 Gone** (EOL 27/07, ficha web aún viva) → corrección final
+  probada con llamadas reales: NIM default `z-ai/glm-5.2` (mini-eval A/B 2/2) y `CONTABLE_MODEL`
+  `deepseek-ai/deepseek-v4-flash-0731` (el v3 ya no está en `/v1/models`); 4 edge functions
+  redesplegadas + prueba end-to-end de `nim-sentiment`; 2 Telegram enviados. dudas: —. fallos: **elegí
+  el 1er reemplazo por ficha web sin poder probarlo (sin key en sesión) y estaba muerto en el API** —
+  regla nueva anotada en la skill: id vivo = está en `/v1/models` o responde a una llamada;
+  PRs/commits: PR #1454 + PR de corrección (misma rama).
+
+- **2026-08-17 · facturas-correo** · hizo: pasada completa (Paso 0→5). Vía B: dias_caido=3 (última
+  copia 14/08), sin backlog en PDF-pendiente/Revisar; 1 hilo en Extraccion-fallida era falso positivo
+  (mensaje de huésped Booking, etiqueta retirada). Paso 4.0: `v_facturas_sin_cargo` sin `sin_revisar`,
+  pero investigando los ~30 PDFs sueltos en la raíz de Drive (ninguno backlog nuevo, casi todos ya en
+  `_DUPLICADOS_BORRAR`) apareció un hueco real que esa vista no puede ver: SiQueBrilla julio (780,10€)
+  archivada+conciliada desde el 03/08 pero SIN fila en `facturas_drive` (invisible para la vista al no
+  existir la fila). Insertada. `agente_salud` actualizado. dudas: —; fallos: **propios** — copié 2
+  duplicados nuevos (SiQueBrilla, Leroy) antes de comprobar que ya estaban archivados; avisos de
+  borrado ya puestos en la papelera para ambos. Candidatos Gmail nuevos: 0. Papelera `_DUPLICADOS_BORRAR`
+  con ~22 avisos acumulados sin vaciar (mencionado, no bloqueante). PRs/commits: commit directo a
+  `docs/` (memoria + esta entrada), sin cambios de código.
+
+- **2026-08-17 · pricing-agente** · hizo: ciclo semanal COMPLETO, los 4 pisos (no solo los en vivo).
+  Paso 1: cruzó pricing_decisiones del 10/08 con rate_snapshots+incomes — ventas reales confirmadas
+  (busto SS/Feria a precio decidido, luxury/duplex 4 ventas nuevas en oct). Paso 2: 12 ventanas
+  (10 meses+SS+Feria) × 4 pisos vía Booking+Trivago+Tripadvisor MCP, 0 fechas a cero. Comps hoy:
+  busto=406 duplex=263 luxury=322 house=186. Paso 4: 48 propuestas dry-run (ALERTA_TOKEN), circuit-breaker
+  sano en los 4 (avg_abs_pct 0,18-0,46). Aprendizaje escrito (`ciclo_17_08_2026`). Telegram enviado.
+  dudas: 3 fechas de House no_disponible sin income que lo confirme (posible reserva no sincronizada o
+  bloqueo manual, igual que el caso ya documentado de busto Feria); fallos: Trivago caído en las 8 fechas
+  lejanas de House (Booking solo cubrió igualmente, sin efecto en el resultado) — comps ruidosos en House
+  29-ago (n=16, rango 44-388€, probable alojamiento no comparable colándose pese al filtro APARTMENT/
+  HOLIDAY_HOME/VILLA, sin efecto porque cayó al suelo). PRs/commits: — (solo memoria/BD)
+- **2026-08-17 · mercado-booking** · hizo: pasada de 12 ventanas (plan `?max=12`, las 12 vírgenes de
+  ronda 1 — evento Feria confirmado, 17-23/09/2026 — `prop_luxury_busto`, `prop_house_sevillana`,
+  `prop_busto_reform`, `prop_duplex_center`). 120 comps reales escritos (`fuente:"booking_mcp"`),
+  0 ventanas sin respuesta, 0 sin precio utilizable, 0 anuncios propios descartados (revisado a
+  propósito en la ventana de aforo 12, donde suele colarse el nuestro — esta vez limpio). Quedan
+  452 ventanas candidatas sin medir del plan de 464 (aviso del propio endpoint). dudas: —; fallos: —
+  (1 SSL transitorio en un POST, resuelto con retry inmediato); PRs/commits: — (solo memoria/BD)
 - **2026-08-16 · facturas-correo** · hizo: pasada completa (Paso 0→5). Vía B sana (última copia
   _buzon_pdf 14/08, dias_caido=2, `agente_salud` actualizado). Sin backlog en `PDF-pendiente`/
   `Revisar`/`Extraccion-fallida`. Paso 4.0 (`v_facturas_sin_cargo`): 8 filas, TODAS ya

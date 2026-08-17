@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-16T16:22:21Z",
+  "generadoEn": "2026-08-17T06:46:28Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4523,6 +4523,14 @@
   ],
   "novedades": [
     {
+      "titulo": "Autocrítica:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Comps escritos hoy: busto=406 · duplex=263 · luxury=322 · house=186",
+      "fecha": ""
+    },
+    {
       "titulo": "Guarda nueva en `latidos.test.ts`",
       "fecha": ""
     },
@@ -4572,14 +4580,6 @@
     },
     {
       "titulo": "BORME 404 en festivos = error 500",
-      "fecha": ""
-    },
-    {
-      "titulo": "`titulares.ts` roto desde el 05/08",
-      "fecha": ""
-    },
-    {
-      "titulo": "📦 «Cartera paper» vuelve a /trading CON rentabilidad",
       "fecha": ""
     }
   ],

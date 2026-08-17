@@ -61,7 +61,7 @@ pedido_urgente = en mínimos O rotura <3 días. pedido_esta_semana = rotura 3-7 
       fuente: 'nim_analitico',
       calidad: 3,
       confianza: 0.75,
-      modelo_usado: 'nvidia/llama-3.3-70b',
+      modelo_usado: 'nvidia/glm-5.2',
     })
   }
   return NextResponse.json({ stock: stockConConsumo, prediccion })

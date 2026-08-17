@@ -52,7 +52,7 @@ export async function responderAsistente(
   try {
     const respuesta = await iaChat(recientes, {
       system: construirSystemPrompt(ctx),
-      model: 'meta/llama-3.3-70b-instruct',
+      model: 'z-ai/glm-5.2',
       maxTokens: 700,
       // El cliente debe esperar MÁS que el timeout de NIM en la pasarela (25 s) para no abortar
       // justo cuando la pasarela aún está respondiendo (causaba "no disponible" con NIM lento).

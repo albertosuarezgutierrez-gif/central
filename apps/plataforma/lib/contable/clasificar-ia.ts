@@ -96,7 +96,8 @@ export async function verificarIntencionIA(mensaje: string, intn: Intencion, hoy
       maxTokens: 160, timeoutMs: 5_000,
       // 2º modelo DISTINTO del clasificador (que usa el default de la pasarela): sesga la cadena
       // clásica a deepseek. Configurable por env; si no está, cae al default de la pasarela igual.
-      modeloClasico: process.env.CONTABLE_VERIFIER_MODEL ?? 'deepseek-ai/deepseek-v3',
+      // deepseek-v3 retirado del API de NIM (17/08/2026) → sucesor v4-flash, probado en vivo.
+      modeloClasico: process.env.CONTABLE_VERIFIER_MODEL ?? 'deepseek-ai/deepseek-v4-flash-0731',
     })
     text = r.text || ''
   } catch { return intn }                                                  // fail-open

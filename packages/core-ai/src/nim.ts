@@ -6,7 +6,8 @@ import type { ImageInput, NimConfig } from './types'
 import { fetchAI } from './http.ts'
 
 const DEFAULT_BASE_URL = 'https://integrate.api.nvidia.com/v1/chat/completions'
-const DEFAULT_TEXT_MODEL = 'meta/llama-3.3-70b-instruct'
+// Swap 17/08/2026: `meta/llama-3.3-70b-instruct` deja de soportarse en NIM el 25/08/2026.
+const DEFAULT_TEXT_MODEL = 'z-ai/glm-5.2'
 const DEFAULT_VISION_MODEL = 'meta/llama-3.2-11b-vision-instruct'
 
 function requireKey(config: NimConfig): string {

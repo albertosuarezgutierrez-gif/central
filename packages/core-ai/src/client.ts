@@ -5,7 +5,7 @@
 // Política de fallback de TEXTO (compartida por todas las verticales que usan este
 // wrapper, incluida la PASARELA de plataforma, cuyas rutas /api/ai/chat y /api/ai/tools
 // llaman aquí): OpenRouter (agregador con fallback nativo entre modelos, si hay key) →
-// NIM → Groq (mismo Llama 3.3 70B, gratis, otra infra) → Cerebras (gratis, infra WSE
+// NIM → Groq (gpt-oss-120b, gratis, otra infra) → Cerebras (gratis, infra WSE
 // independiente) → [Gemini, APAGADO por defecto]
 // → Kimi/Moonshot (de pago, último recurso). Cada eslabón queda inactivo si no está su
 // API key, sin romper nada: sin OPENROUTER_API_KEY la cadena es EXACTAMENTE la de
@@ -33,7 +33,12 @@ import type { MoonshotConfig } from './moonshot'
 import type { GeminiConfig } from './gemini'
 import type { OpenRouterConfig } from './openrouter'
 
-const DEFAULT_MODEL = 'meta/llama-3.3-70b-instruct'
+// `meta/llama-3.3-70b-instruct` deja de soportarse en NIM el 25/08/2026 (aviso en su ficha
+// de build.nvidia.com; NVIDIA no nombra sucesor). ⚠️ La ficha web NO prueba que el modelo viva:
+// el primer sustituto elegido (llama-4-maverick) tenía ficha viva y el API devolvía 410 Gone
+// (EOL 27/07/2026). GLM-5.2 se eligió del listado REAL `/v1/models` y se verificó con llamadas
+// en vivo (17/08/2026): responde directo (sin razonamiento parásito), multilingüe y gratis.
+const DEFAULT_MODEL = 'z-ai/glm-5.2'
 const DEFAULT_GROQ_MODEL = 'openai/gpt-oss-120b'
 const DEFAULT_CEREBRAS_MODEL = 'gpt-oss-120b'
 const DEFAULT_MOONSHOT_MODEL = 'kimi-k2.6'
@@ -106,7 +111,7 @@ function openrouterEnvConfig(): OpenRouterConfig | null {
  * → Cerebras (gratis) → [Gemini, solo con GEMINI_TEXTO=1] → Kimi (de pago). Cada eslabón se activa solo si está su API key.
  * Acepta string (prompt) o array de mensajes.
  *
- * OJO con `options.model`: es un id de NIM (p. ej. `deepseek-ai/deepseek-v3`), NO un slug de
+ * OJO con `options.model`: es un id de NIM (p. ej. `deepseek-ai/deepseek-v4-flash-0731`), NO un slug de
  * OpenRouter. Si el caller fija modelo, se respeta NIM como primario (comportamiento de siempre)
  * y OpenRouter pasa a ser un fallback más (con SU propio modelo por defecto).
  */
@@ -143,7 +148,7 @@ export async function aiComplete(
     // (p.ej. NIM con timeout + Gemini con 429) porque estos catch tragaban el error. Cada eslabón
     // deja rastro en logs — qué proveedor falló y por qué, o si estaba inactivo por falta de key.
     console.warn(`[aiComplete] NIM falló (${msg(eNim)}); probando fallbacks`)
-    // Fallback 1: Groq GRATIS (mismo Llama 3.3 70B). Señal nueva (la de NIM pudo abortar).
+    // Fallback 1: Groq GRATIS (gpt-oss-120b). Señal nueva (la de NIM pudo abortar).
     const groq = groqEnvConfig()
     if (groq) {
       try {
