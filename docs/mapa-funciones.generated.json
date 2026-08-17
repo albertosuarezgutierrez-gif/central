@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-17T06:46:28Z",
-  "sha": "a3c8587497d01550ec9858ba10bb3cbe3ae0669a",
+  "generadoEn": "2026-08-17T06:52:36Z",
+  "sha": "0de4e919397d57852b14635c0cd094b3d65f3e89",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -56273,7 +56273,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "b6d60d7e2ff5"
+      "hash": "19c32cfcad33"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",

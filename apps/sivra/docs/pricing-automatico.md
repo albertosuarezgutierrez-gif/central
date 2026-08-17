@@ -7,6 +7,14 @@
 > Las menciones a PriceLabs de este documento son HISTÓRICAS. La columna
 > `rate_snapshots.price_pricelabs` conserva su nombre legacy pero es el precio real vivo en Smoobu.
 
+> **🟢 Actualización 16/08/2026 — escaparate +20% en el canal Booking.** Smoobu lleva
+> `priceDifference` +20% SOLO en Booking (campo único por canal; resto de portales 0%) y
+> `pricing_settings.channel_markup = 1.20` en los 4 pisos — el markup del motor es el ESPEJO de ese
+> ajuste (si cambia uno, cambia el otro; Smoobu primero). Booking publica `techo(base × 1,20)`
+> (verificado 17/08); el margen lo devuelven los descuentos de la extranet (Genius fijo, móvil,
+> oferta estándar 8% hasta 31/12/2028). Las menciones antiguas a «markup 1.0 / 1,16» son de la era
+> escaparate-a-0%. Plan y verificaciones: `docs/ESTUDIO-BOOKING-POSICIONAMIENTO.md` + `docs/BOOKING-*.md`.
+
 > **Objetivo de negocio:** convertir esto en un **producto vendible** (automatización de
 > pricing para pisos turísticos). Premisa: **no puede fallar** — un precio mal puesto es
 > dinero perdido o una reserva perdida para el cliente. Este documento es la fuente de

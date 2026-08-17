@@ -76,14 +76,30 @@ Smoobu soporta **ajuste porcentual de precio POR PORTAL** (Configuración del ca
 
 - **Fase 1 — escaparate (Alberto, 10 min):** en Smoobu, ajuste **+20% SOLO canal Booking** en los
   4 pisos. La web directa y otros portales quedan a base.
+  ✅ **EJECUTADA 16/08/2026** (Claude Chrome, `docs/BOOKING-FASE1-SMOOBU-2026-08-16.md`): el ajuste
+  es UN campo por canal (`priceDifference`, Portales → Booking.com → ⚙), no por piso; 0% → 20%;
+  push con «Sobrescribir precios» (botón GLOBAL a los 5 portales — los demás a 0% reciben sus mismos
+  valores). El rótulo «Sobrescritos por PriceLabs» de la pantalla de Precios es LEGACY (PriceLabs de
+  baja desde el 09/08; escribe el motor). Verificación en extranet pendiente (referencias 16/08:
+  Luxury 123→147,60 · Reform 107→128,40 · Dúplex 94→112,80 · House 306→367,20).
 - **Fase 2 — motor (misma hora, Claude):** poner `pricing_settings.channel_markup = 1.20` en los
   4 pisos. 🚨 **ORDEN CRÍTICO**: el markup del motor se cambia DESPUÉS del de Smoobu — el motor
   divide sus objetivos de mercado por este factor para fijar la base; si se cambia antes, bajaría
   las bases un 17% sin escaparate que lo compense. (Es la misma mecánica que el fix del 09/08,
   en sentido inverso.)
+  ✅ **EJECUTADA 16/08/2026** (BD, 1.0 → 1.20 en los 4). El re-baseo lo hace el siguiente
+  `apply-auto` (08:30/14:30/20:30 UTC).
 - **Fase 3 — ofertas visibles (Alberto, extranet):** activar UNA oferta permanente tipo
   «oferta de temporada/Getaway» del 10-15% (crea el tachado) + mantener Genius y móvil. NO
   reactivar semanal/mensual por encima del −5/−10% actual (landmine multiplicación).
+  📋 **Inventario real de la extranet (16/08/2026): `docs/BOOKING-DESCUENTOS-INVENTARIO.md`** —
+  el −29% observado era el **Genius dinámico (0-30%, activo en 3 de 4 pisos)** × móvil 10%.
+  ✅ **Fase 3 EJECUTADA el 16/08/2026 por la tarde** (`docs/BOOKING-CAMBIOS-2026-08-16.md`):
+  dinámico → No en los 3 pisos (tramos fijos 10/15/20 intactos), NR de Luxury igualado a −10%,
+  y **Oferta estándar 8%** activada (16/08/2026–**31/12/2028** ⏰ renovar antes de que caduque;
+  el formulario no permite «sin fin»). Apilado máx. ahora −33,8% s/ standard (antes −37% y
+  variable). Pendiente: precios por ocupación de Luxury van por **Smoobu** (el Standard Rate es
+  XML sobrescrito — la extranet solo acepta importes fijos por fecha).
 - **Fase 4 — medir (Claude, a los 14 días):** repetir la auditoría de las 20 reservas
   (`amount_gross/nights` vs listado): la mediana efectivo/base debe salir ≈ 0,90-0,95. Si sale
   <0,85, hay una oferta de más; recalibrar `channel_markup` al valor MEDIDO. Comparar además

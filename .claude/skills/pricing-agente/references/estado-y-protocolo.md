@@ -27,6 +27,22 @@
   SUMINISTROS de House (Endesa/EMASESA/DIGI) NO van en fijos a propósito: ya entran por factura real
   en `gastos` y duplicarían. Un recibo de Ayto. sin identificar (130,93€, 16/04/2026) quedó fuera.
 
+### 🚨 Actualización 16-17/08/2026 — `channel_markup = 1.20` CASADO con el escaparate real (+20% Smoobu)
+- Desde el 16/08 Smoobu lleva **`priceDifference` +20% SOLO en el canal Booking** (resto de portales
+  a 0%; campo único por canal, no por piso) y `pricing_settings.channel_markup` está a **1.20 en los
+  4 pisos**. Booking publica `techo(base × 1,20)` — verificado el 17/08 dígito a dígito en los 4.
+  **La nota del 09/08 de abajo («channel_markup = 1.0», «el 1,16 NO existe») es HISTÓRICA: describía
+  el escaparate a 0%. NO «corregir» el 1.20 de vuelta a 1.0** — la regla permanente es que el markup
+  del motor debe ser el ESPEJO del ajuste real del canal en Smoobu; si cambia uno, cambia el otro
+  (y en ese orden: Smoobu primero).
+- El margen del +20% lo devuelven los descuentos de la extranet (16/08): Genius fijo 10/15/20 (el
+  DINÁMICO se apagó — no reactivar), tarifa móvil 10% y **oferta estándar 8% hasta el 31/12/2028**
+  (rutina de renovación programada nov-2028). Apilado máx. −33,8% s/ Standard. Al comparar
+  bruto/listado en reservas nuevas: ratio esperado ~0,66-0,92 SOBRE el listado ya inflado ×1,20.
+- Medición Fase 4 programada (rutina 30/08): mediana pagado/listado + volumen de reservas; si mediana
+  <0,85 se baja la oferta 8%→5-6%; si mediana bien pero reservas secas, el culpable es el markup.
+  Contexto completo: `docs/ESTUDIO-BOOKING-POSICIONAMIENTO.md` + `docs/BOOKING-*.md`.
+
 ### Actualización 15/08/2026 — la curva PL «congelada» era el PROPIO motor; reconstruida + cota de cordura
 - **La congelación del #1416 re-etiquetó `captured_at='2026-08-10'` SIN restaurar los precios**: el upsert
   autorreferente corrió hasta el despliegue, así que `pricing_pl_referencia` guardaba el sawtooth del motor

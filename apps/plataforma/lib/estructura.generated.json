@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-17T06:46:28Z",
+  "generadoEn": "2026-08-17T06:48:57Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4531,6 +4531,22 @@
       "fecha": ""
     },
     {
+      "titulo": "Fase 1 (Claude Chrome, `docs/BOOKING-FASE1-SMOOBU-2026-08-16.md`):",
+      "fecha": ""
+    },
+    {
+      "titulo": "Fase 2 (BD):",
+      "fecha": ""
+    },
+    {
+      "titulo": "17/08 ✅ Verificación A5 hecha:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Parado a propósito:",
+      "fecha": ""
+    },
+    {
       "titulo": "Guarda nueva en `latidos.test.ts`",
       "fecha": ""
     },
@@ -4564,22 +4580,6 @@
     },
     {
       "titulo": "Sin daño operativo",
-      "fecha": ""
-    },
-    {
-      "titulo": "Pendiente:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Estado REAL de `pricing_pl_referencia` (difiere del PR):",
-      "fecha": ""
-    },
-    {
-      "titulo": "Limitación:",
-      "fecha": ""
-    },
-    {
-      "titulo": "BORME 404 en festivos = error 500",
       "fecha": ""
     }
   ],

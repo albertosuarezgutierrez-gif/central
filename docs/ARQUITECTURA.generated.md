@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-17T06:46:28Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-17T06:48:57Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -233,12 +233,12 @@
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - Autocrítica:
 - Comps escritos hoy: busto=406 · duplex=263 · luxury=322 · house=186
+- Fase 1 (Claude Chrome, `docs/BOOKING-FASE1-SMOOBU-2026-08-16.md`):
+- Fase 2 (BD):
+- 17/08 ✅ Verificación A5 hecha:
+- Parado a propósito:
 - Guarda nueva en `latidos.test.ts`
 - Aplicada en producción
 - Hallazgo:
 - Mergeado (16/08, PR #1435, orden de Alberto) y verificado en vivo:
-- 16/08: PRIMERA orden real vía copiloto.
-- Pendiente (Alberto, extranet):
-- 🚨 Regla dictada por Alberto a raíz de ese envío (ya en CLAUDE.md):
-- Pero SÍ había corrido
 

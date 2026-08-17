@@ -42,6 +42,15 @@
   `propiedad_id`+confirmado, no solo tarjeta → los recibos Kutxa de House (luz/agua/IBI) pueden
   contar DOBLE contra sus facturas de `gastos` en el P&L por piso. Decidir fix con Alberto.
 
+### ✅ (17/08/2026) PR #1449 (ciclo Booking +20%) MERGEADO + sincronía de skills/docs con el 1.20
+- #1449 mergeado (inventario + Fases 1-3 ejecutadas y verificadas). Post-merge: actualizados la
+  skill `pricing-agente` (estado-y-protocolo), el comentario del markup en `pricing/apply/route.ts`
+  y `pricing-automatico.md` — la nota del 09/08 («channel_markup=1.0») quedaba como trampa: una
+  sesión podía «corregir» el 1.20 de vuelta. **Regla: el markup del motor es el ESPEJO del ajuste
+  real del canal Booking en Smoobu (hoy +20% ↔ 1.20); si cambia uno, cambia el otro, Smoobu primero.**
+- BD verificada post-merge: `channel_markup=1.20` y `enabled=true` en los 4. Vigilancia del PR
+  retirada. Quedan las rutinas: medición Fase 4 (30/08) y renovación oferta 8% (01/11/2028).
+
 ### 🏷️ (17/08/2026) Revisión post-ciclo pricing: los 2 accionables del 17/08, resueltos
 - Las 3 fechas `no_disponible` de House (12-sep, 10-oct, 17-abr-2027) SÍ tienen reserva real con
   income (Booking: 1.344€ / 2.044,74€ / 3.318,47€ brutos — la de Feria a ~1.659€/noche). No hay
@@ -98,6 +107,41 @@
 - Pendiente sin cerrar (no bloqueante): 3 fechas de House quedaron `no_disponible` sin income que lo
   confirme — mismo patrón ya visto con busto/Feria (posible bloqueo manual o reserva aún sin sincronizar).
   Detalle en `pricing_aprendizaje` (`ALL`/`ciclo_17_08_2026`).
+
+### 📈 (16/08/2026) Fases 1+2 del +20% Booking EJECUTADAS (Smoobu + motor)
+- **Fase 1 (Claude Chrome, `docs/BOOKING-FASE1-SMOOBU-2026-08-16.md`):** `priceDifference` del canal
+  Booking en Smoobu 0% → **+20%** (campo ÚNICO por canal, cubre los 4 pisos; resto de portales a 0%),
+  push forzado con «Sobrescribir precios» (guardar NO basta). Hallazgo: el rótulo «Sobrescritos por
+  PriceLabs» de Smoobu es LEGACY — PriceLabs está de baja desde el 09/08, los precios los escribe el motor.
+- **Fase 2 (BD):** `pricing_settings.channel_markup` 1.0 → **1.20** en los 4 pisos. El motor re-basa en
+  el siguiente `apply-auto` (08:30/14:30/20:30 UTC); hasta entonces Booking muestra ~+20% (lado seguro).
+- **17/08 ✅ Verificación A5 hecha:** los 4 pisos cuadran `extranet = techo(base×1,20)` (24.08:
+  113/125/126/360€); web directa confirmada al 100%. **Paso B (ocupación) DESCARTADO definitivo:**
+  Smoobu no modela ocupación (precio plano por noche) y PriceLabs está de baja — no hay palanca.
+  👀 Para Alberto: Reform publica Standard Rate «×2» (¿capacidad real?), House «Configurar»/×11.
+  Medición Fase 4 programada 30/08 (`trig_01DHwh…`).
+
+### ✂️ (16/08/2026) Cambios EJECUTADOS en la extranet de Booking (Fase 3 del estudio)
+- Vía Claude Chrome → `docs/BOOKING-CAMBIOS-2026-08-16.md`: **Genius dinámico → No** en
+  Luxury/Reform/Dúplex (tramos fijos 10/15/20 intactos); **NR de Luxury −15% → −10%**;
+  **Oferta estándar 8%** en los 3 (16/08/2026–**31/12/2028**, ⏰ renovar; no permite «sin fin»).
+  House Sevillana: cero cambios. Apilado máx. −37%→−33,8% s/ standard; suelo no-Genius 0%→−8%.
+- **Parado a propósito:** precios por ocupación de Luxury — el Standard Rate es XML de Smoobu
+  (sobrescrito) y la extranet solo acepta €-fijos por fecha → hacerlo en **Smoobu** (pendiente).
+- Siguientes fases: +20% Smoobu = **solo UI de Smoobu, no hay conector ni API para el ajuste por
+  canal** (Alberto o Claude Chrome) → SOLO DESPUÉS `channel_markup=1.20` (Claude; el orden es
+  crítico, ver estudio). Rutinas programadas: medición Fase 4 el 30/08 (`trig_01DHwh6a38D4…`,
+  incluye mirar volumen/conversión, no solo la mediana) y renovación de la oferta el 01/11/2028
+  (`trig_01SDP3vfKHxZ…`).
+
+### 🏷️ (16/08/2026) Inventario de descuentos Booking — el −29% explicado
+- Pasada de solo-lectura por la extranet (Claude Chrome) → `docs/BOOKING-DESCUENTOS-INVENTARIO.md`
+  (copia también en Drive). El −29% de Luxury Busto = **Genius dinámico ~21,5% × móvil 10%**
+  (reserva 6509021916 verificada: 430€ vs 609€ de calendario).
+- Hallazgos clave: Genius dinámico 0-30% ACTIVO en 3 de 4 pisos (House Sevillana en «No» → su
+  exposición máx. es −23,5% vs −37/−46,5% del resto); Luxury Busto con NR a −15% (resto −10%);
+  país+móvil no se acumulan (misma categoría); sin campañas activas; Luxury sin precios por ocupación.
+- Alimenta la Fase 3 del estudio de posicionamiento (PR #1448): decidir dinámico sí/no ANTES del +20%.
 
 ### 💓 (16/08/2026) Sonda del verificador de eventos + guarda de regresión (PR #1447)
 - El parte «Sin poder comprobar» decía la verdad: `sivra_eventos_verificar` se declaró en
