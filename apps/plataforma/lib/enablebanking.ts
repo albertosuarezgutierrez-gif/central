@@ -121,13 +121,15 @@ export function iniciarAuth(aspspName: string, country: string, redirect: string
 }
 
 // Canjea el `code` del callback por una sesión autenticada con la lista de cuentas (uids).
-export type Sesion = { session_id: string; accounts: string[]; aspsp?: string }
+// `status` es el estado de la sesión según Enable Banking (AUTHORIZED cuando está viva;
+// CLOSED/EXPIRED/REVOKED cuando el banco o una re-vinculación la ha invalidado).
+export type Sesion = { session_id: string; accounts: string[]; aspsp?: string; status?: string }
 export async function crearSesion(code: string): Promise<Sesion> {
   const j = await api<Record<string, unknown>>('/sessions', {
     method: 'POST',
     body: JSON.stringify({ code }),
   })
-  return { session_id: String(j.session_id ?? ''), accounts: extraerUids(j), aspsp: nombreAspsp(j) }
+  return { session_id: String(j.session_id ?? ''), accounts: extraerUids(j), aspsp: nombreAspsp(j), status: estadoSesion(j) }
 }
 
 // Recupera una sesión ya creada (para el re-sync diario): devuelve sus cuentas (uids).
@@ -135,7 +137,11 @@ export async function crearSesion(code: string): Promise<Sesion> {
 // string según el endpoint; aceptamos varias formas para no perder ninguna cuenta.
 export async function getSesion(sessionId: string): Promise<Sesion> {
   const j = await api<Record<string, unknown>>(`/sessions/${sessionId}`)
-  return { session_id: sessionId, accounts: extraerUids(j), aspsp: nombreAspsp(j) }
+  return { session_id: sessionId, accounts: extraerUids(j), aspsp: nombreAspsp(j), status: estadoSesion(j) }
+}
+
+function estadoSesion(j: Record<string, unknown>): string | undefined {
+  return typeof j.status === 'string' ? j.status : undefined
 }
 
 function nombreAspsp(j: Record<string, unknown>): string | undefined {

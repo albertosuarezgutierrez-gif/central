@@ -32,6 +32,18 @@
 
 ---
 
+### 🏦 (17/08/2026) Kutxabank PSD2: el re-vínculo del 16/08 NO funcionó — diagnóstico + fixes
+- Alberto vinculó 2 veces el 16/08 (07:46 y 08:30); hoy las 3 conexiones Kutxa `vinculada` fallaban:
+  las 2 viejas con `authentication failure`, la nueva (08:30) con `Account not found` en `/transactions`
+  DESDE EL MINUTO CERO (el callback del 16/08 no importó nada — no es caducidad por tiempo). Último mov 10/08.
+- Saneado en prod: conexiones 14/06 y 16/08-07:46 → `caducada` (solo queda viva la de las 08:30).
+- Fixes (este PR): el callback retira las conexiones anteriores del mismo banco al vincular
+  (`estado='sustituida'` — fin de los zombis); el sync lee el `status` de la sesión de Enable Banking
+  y avisa si no está `AUTHORIZED` (diagnóstico de raíz que hoy faltaba).
+- **Pendiente Alberto: mergear el PR y re-vincular Kutxabank UNA vez en `/banca`** (el callback
+  sincroniza al momento y rellenará el hueco 11/08→hoy; ventana 89 días). Tras vincular, mirar
+  `conexiones_banco.ultimo_avisos` — con el fix dirá el estado real de la sesión si vuelve a fallar.
+
 ### 🏦 (17/08/2026) Gastos fijos de House (Socorro) dados de alta desde banca real
 - Alberto: «los gastos de Socorro están en la cuenta de Kutxa» → derivados de `movimientos_bancarios`
   y dados de alta en `gastos_fijos` (2 filas, `origen='manual'`): IBI 40,49€/mes (2 plazos ~242,93€;

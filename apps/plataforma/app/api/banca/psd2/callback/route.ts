@@ -30,6 +30,19 @@ export async function GET(req: NextRequest) {
     if (c) {
       // Persistimos el session_id como referencia reutilizable por el re-sync diario.
       await prisma.$executeRaw`UPDATE conexiones_banco SET requisition_id = ${ses.session_id} WHERE id = ${c.id}::uuid`
+      // Retira las conexiones ANTERIORES del mismo banco: el banco invalida el consentimiento
+      // viejo al autorizar el nuevo (una re-vinculación Kutxabank del 16/08/2026 dejó TRES
+      // conexiones 'vinculada' a la vez — el cron machacaba consentimientos muertos y sus
+      // avisos tapaban a la única sesión viva). Solo las más antiguas que la recién vinculada:
+      // una 'pendiente' más nueva sería otro intento en curso y no se toca.
+      await prisma.$executeRaw`
+        UPDATE conexiones_banco SET estado = 'sustituida'
+        WHERE cuenta_id = ${session.id}::uuid
+          AND institution_id = (SELECT institution_id FROM conexiones_banco WHERE id = ${c.id}::uuid)
+          AND id <> ${c.id}::uuid
+          AND estado IN ('vinculada', 'pendiente', 'error')
+          AND created_at < (SELECT created_at FROM conexiones_banco WHERE id = ${c.id}::uuid)
+      `
       await sincronizarSesion(session.id, c.sociedad_id, ses.session_id).catch(async () => {
         await prisma.$executeRaw`UPDATE conexiones_banco SET estado='error' WHERE id=${c.id}::uuid`
       })
