@@ -32,6 +32,18 @@
 
 ---
 
+### ✅ (17/08/2026) Kutxabank PSD2 RESUELTO — era la VENTANA de 89 días (+2 fixes de camino)
+- Causa raíz: Kutxabank rechaza `/transactions` con ventana de 89 días («Account not found /
+  AccountNotAccessibleException», error engañoso) incluso recién firmado el SCA. Fallback 89d→30d→7d
+  en `getMovimientosConVentana` (PR #1462) → feed vivo, último mov = HOY. Aviso ℹ️ informativo
+  («importado solo desde X») que NO pone el semáforo en rojo (PR siguiente, tests 11/11).
+- De camino: (a) el retiro `estado='sustituida'` del PR #1459 reventaba contra el CHECK de
+  `conexiones_banco` → migración `conexiones_banco_estado_sustituida` aplicada (por eso fallaron los
+  4 re-vínculos de la mañana, en silencio); (b) el callback ya loguea cada desenlace (PR #1461);
+  (c) nuevo `POST /api/banca/psd2/sync` + botón «🔄 Sincronizar ahora» en el panel PSD2 de /banca
+  (reintentar sin quemar SCA). OJO: el botón está en el segmento 💶 Dinero del Inicio (no en Negocios).
+- Vigilar mañana: cron psd2-sync 06:00 debe traer Kutxa con la nota ℹ️ y sin rojo.
+
 ### 🏦 (17/08/2026) Kutxabank PSD2: el re-vínculo del 16/08 NO funcionó — diagnóstico + fixes
 - Alberto vinculó 2 veces el 16/08 (07:46 y 08:30); hoy las 3 conexiones Kutxa `vinculada` fallaban:
   las 2 viejas con `authentication failure`, la nueva (08:30) con `Account not found` en `/transactions`
