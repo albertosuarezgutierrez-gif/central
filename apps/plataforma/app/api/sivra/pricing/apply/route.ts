@@ -592,10 +592,11 @@ export async function POST(req: NextRequest) {
       results.push({ property: r.property_id, error: `Smoobu GET ${String(e).slice(0, 80)}` }); continue
     }
 
-    // 🚨 `>= 1`, no `> 1`: el escaparate de Booking NO añade recargo sobre el precio de Smoobu
-    // (medido 09/08/2026: 20 reservas con bruto/listado 0,66-1,08 y la del 06/11 a factor 1,004
-    // exacto — el ÷1,16 era un −14% sistemático). Con la guarda vieja, poner 1.0 en settings se
-    // ignoraba en silencio y caía al default.
+    // 🚨 `>= 1`, no `> 1`: con la guarda vieja, poner 1.0 en settings se ignoraba en silencio y
+    // caía al default. El markup debe ser el ESPEJO del ajuste real del canal Booking en Smoobu
+    // (priceDifference): a 0% → 1.0 (estado del 09/08/2026, cuando el ÷1,16 era un −14%
+    // sistemático); desde el 16/08/2026 el canal lleva +20% → 1.20 (plan escaparate,
+    // docs/ESTUDIO-BOOKING-POSICIONAMIENTO.md). Si cambia uno, cambia el otro — Smoobu primero.
     const markup = Number(r.channel_markup) >= 1 ? Number(r.channel_markup) : 1.16
     const demandFactor = Number(r.demand_factor) > 0 ? Number(r.demand_factor) : 1
     const qualityFactor = Number(r.quality_factor) > 0 ? Number(r.quality_factor) : 1
