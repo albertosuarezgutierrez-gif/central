@@ -50,7 +50,6 @@
 - Fix: sin espejo, valen las compras del mes del CICLO en la cuenta `TARJETA-KUTXA-<últ.4>`;
   veredicto 3 estados en `lib/cuadre-tarjetas.ts` (puro+tests; sin PAN = «no puedo comprobarlo»).
   SQL validado contra BD real (0300 → ✅, 0302 → 🔴 julio). La ****0302 de Pilar sigue faltando.
->>>>>>> origin/main
 
 ### 🧊 (17/08/2026) Cohorte 3 DOBLE congelada (H5) + primer contraste forward vs retrovisor
 - PR #1460 **MERGEADO y verificado en prod**: cohorte 3 DOBLE en `COHORTES_PAPER` según H5 —
