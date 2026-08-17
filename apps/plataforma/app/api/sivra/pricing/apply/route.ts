@@ -11,6 +11,7 @@ import { acotarSueloPL } from "@/lib/sivra/pricing-suelo-pl"
 import { anclaMercadoFecha } from "@/lib/sivra/pricing-ancla-fecha"
 import { factorDemandaFecha, type DemandaFechaResult } from "@/lib/sivra/pricing-demanda"
 import { elegirBucket } from "@/lib/sivra/pricing-bucket-fuente"
+import { MIN_EUR_PLAZA_COMP } from "@/lib/sivra/pricing-comps-plausibles"
 import { aplicarPrior, indicesPrior, type IndicePrior, type MesHistorico } from "@/lib/sivra/prior-estacional"
 import { getSmoobuKey } from "@/lib/smoobu"
 import { tgSend } from "@central/core-telegram"
@@ -130,6 +131,9 @@ export async function POST(req: NextRequest) {
       JOIN pricing_settings s ON s.property_id = m.scenario
       LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
       WHERE m.price_night > 0
+        -- Plausibilidad €/plaza (17/08/2026): un comp muy por debajo del minimo por plaza es una
+        -- HABITACION vestida de piso entero (ver pricing-comps-plausibles.ts) y no entra al percentil.
+        AND (m.guests IS NULL OR m.guests <= 0 OR m.price_night >= ${MIN_EUR_PLAZA_COMP} * m.guests)
       GROUP BY m.scenario, s.target_pctl, s.floor_pctl, s.ceil_pctl
     ),
     occ AS (
@@ -384,6 +388,8 @@ export async function POST(req: NextRequest) {
         -- mercado medido. Sin ellas se cae al ancla global, que es peor pero honesto.
         AND NOT m.corpus_clonado
         AND m.checkin_date NOT IN (SELECT rate_date FROM eventos)
+        -- Plausibilidad €/plaza (17/08/2026): fuera las habitaciones vestidas de piso entero.
+        AND (m.guests IS NULL OR m.guests <= 0 OR m.price_night >= ${MIN_EUR_PLAZA_COMP} * m.guests)
       ORDER BY m.scenario, m.checkin_date, m.comp_name, m.search_date DESC
     )
     SELECT r.scenario AS property_id, to_char(r.checkin_date, 'YYYY-MM') AS ym,
@@ -444,6 +450,8 @@ export async function POST(req: NextRequest) {
         AND m.checkin_date >= CURRENT_DATE
         AND m.search_date >= CURRENT_DATE - 120
         AND NOT m.corpus_clonado   -- mismo motivo que en el bucket del mes
+        -- Plausibilidad €/plaza (17/08/2026): fuera las habitaciones vestidas de piso entero.
+        AND (m.guests IS NULL OR m.guests <= 0 OR m.price_night >= ${MIN_EUR_PLAZA_COMP} * m.guests)
       ORDER BY m.scenario, m.checkin_date, m.comp_name, m.search_date DESC
     )
     SELECT r.scenario AS property_id, r.checkin_date::text AS rate_date,

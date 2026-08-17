@@ -15,6 +15,15 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-17 · pricing-agente (revisión post-ciclo)** · hizo: verificados los 2 accionables del
+  ciclo 17/08 — las 3 fechas `no_disponible` de House tienen reserva real con income (el ciclo las
+  reportó «sin income» en falso); el ruido de comps <12€/plaza en House es 100% `fuente='serper'`
+  (364 filas/36 fechas desde 04/08); con OK de Alberto se aplicó el filtro €/plaza
+  (`pricing-comps-plausibles.ts`) en apply+guard+recommend+pilot-track+settings, y la lección del
+  cruce de incomes quedó en `references/ciclo.md`. Reservas Dúplex 16/08 verificadas OK en precio.
+  2ª tanda: `mercado-booking` a 24 ventanas/pasada; suelo estacional House verificado contra serie
+  2024+ (no está plano — pendiente del 01/08 cerrado, aprendizaje id 74); gastos_fijos House a 0
+  (necesita datos de Alberto). 3ª tanda: FLOOR_SEASONAL nov ×1,10. dudas: —; fallos: —
 - **2026-08-17 · buscador-ia** · hizo: hallazgo crítico (NIM retira el 3.3-70b el 25/08) → swap a
   Maverick (PR #1454, mergeado por Alberto) → al verificar en vivo con la key real (harness en edge
   function + pg_net), Maverick daba **410 Gone** (EOL 27/07, ficha web aún viva) → corrección final

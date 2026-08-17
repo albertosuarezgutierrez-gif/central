@@ -103,9 +103,13 @@ export function eventFactor(dateStr: string): number {
 //
 // FLOOR_SEASONAL: multiplicador del suelo (sobre min_price) por mes (ene=0 … dic=11). >1 marca
 // los meses de Sevilla en que el piso NO debe caer al suelo base aunque el mercado falte:
-// alta = primavera (mar-jun) y otoño/Navidad (sep-oct, dic); baja = ene-feb, jul-ago, nov.
+// alta = primavera (mar-jun) y otoño/Navidad (sep-oct, nov suave, dic); baja = ene-feb, jul-ago.
 // NO sube el precio objetivo (eso lo hacen mercado/eventos): solo impide caer por debajo.
-export const FLOOR_SEASONAL = [1.00, 1.00, 1.25, 1.30, 1.30, 1.15, 1.00, 1.00, 1.25, 1.30, 1.00, 1.20]
+// nov 1.00→1.10 (17/08/2026, OK de Alberto): el ADR realizado de noviembre en House (serie 2024+,
+// 489€) supera al de junio (599€ pero con suelo ×1,15) y noviembre iba sin protección ninguna.
+// ×1,10 es deliberadamente suave: la peor venta real de nov fue ~263-310€ de listado y el suelo
+// resultante (House 330€) queda justo encima sin cerrar la puerta al mercado flojo real.
+export const FLOOR_SEASONAL = [1.00, 1.00, 1.25, 1.30, 1.30, 1.15, 1.00, 1.00, 1.25, 1.30, 1.10, 1.20]
 
 // Suelo estacional relativo a min_price para una fecha. En fechas de evento sube con el evento
 // (mitad del factor, acotado a ×2.0) para que Semana Santa/Feria no puedan venderse a suelo.

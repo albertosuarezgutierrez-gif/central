@@ -52,6 +52,11 @@ el 11/07, precio REAL 65-81€ contra un mercado de 80€). El aviso está en la
   `/api/pricing/pisos-zona` (logueado) y PARA. Sin zona real no hay comps por zona.
 
 ### 1. Lee memoria + mide el ciclo anterior (retroalimentación)
+- **🪤 Cruce con `incomes` (17/08/2026):** una noche `rate_date` está cubierta por una reserva si
+  `checkIn <= rate_date AND checkOut > rate_date` — NUNCA busques `checkIn = rate_date` ni por
+  `date`: una reserva de 2+ noches cubre fechas donde no hace check-in. El ciclo del 17/08 reportó
+  3 fechas `no_disponible` de House «sin income» que SÍ tenían reserva real (una de ellas la Feria
+  2027 a ~1.659€/noche). Antes de afirmar «no_disponible sin income», ejecuta el cruce por rango.
 - `SELECT * FROM pricing_aprendizaje` → insights/overrides previos por piso/temporada (p.ej.
   "Busto no bajar de 120", "Semana Santa muy elástica al alza"). **Respétalos.**
 - Mide outcomes del ciclo anterior: cruza `pricing_decisiones` (lo que decidiste) con
