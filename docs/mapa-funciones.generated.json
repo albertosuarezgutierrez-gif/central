@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-17T06:26:48Z",
-  "sha": "17feb649a1a066909bd4029ec23dbe27c6c0d057",
+  "generadoEn": "2026-08-17T06:39:17Z",
+  "sha": "7076426c5d7741ac305f1b59f9776a69a9352c6a",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -5042,7 +5042,7 @@
         "next"
       ],
       "rutaApi": "/api/brain/conversar",
-      "hash": "d521bda97604"
+      "hash": "90b0b9e1b513"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/bridge/cashlogy/result/route.ts",
@@ -10726,7 +10726,7 @@
         "next"
       ],
       "rutaApi": "/api/owner/almacen/prediccion",
-      "hash": "be7f9b2c3c00"
+      "hash": "f1a29a66f883"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/owner/analytics/route.ts",
@@ -11588,7 +11588,7 @@
         "next"
       ],
       "rutaApi": "/api/owner/copiloto",
-      "hash": "bbd8a0928c50"
+      "hash": "6e4ac5a958db"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/owner/dashboard/route.ts",
@@ -11707,7 +11707,7 @@
         "next"
       ],
       "rutaApi": "/api/owner/escandallos/analizar",
-      "hash": "e3f31b17d2fe"
+      "hash": "d7c78e0d6902"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/owner/escandallos/route.ts",
@@ -11778,7 +11778,7 @@
         "next"
       ],
       "rutaApi": "/api/owner/escandallos/sugerir",
-      "hash": "5adf460de63c"
+      "hash": "a410b8ec3c1d"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/owner/espacios/[id]/mantenimiento/route.ts",
@@ -15568,7 +15568,7 @@
         "next"
       ],
       "rutaApi": "/api/owner/turnos/analisis",
-      "hash": "e9ec9b3e23d7"
+      "hash": "6e3da584568d"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/owner/valoraciones/sentiment/route.ts",
@@ -19270,7 +19270,7 @@
         "next"
       ],
       "rutaApi": "/api/transcribe",
-      "hash": "055181a67955"
+      "hash": "03e72f13c58c"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/turno/route.ts",
@@ -22717,7 +22717,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ec0ebc553b03"
+      "hash": "07a31756bed2"
     },
     {
       "ruta": "apps/ia-rest/src/app/produccion/page.tsx",
@@ -28699,7 +28699,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8ad9a58b3c2e"
+      "hash": "7d004ab6c910"
     },
     {
       "ruta": "apps/ia-rest/src/lib/ai-video.ts",
@@ -29148,7 +29148,7 @@
     {
       "ruta": "apps/ia-rest/src/lib/brain-router.ts",
       "ambito": "apps/ia-rest",
-      "resumen": "brain-router.ts — Pipeline de destilación BRAIN v2 Capas por velocidad/coste: 1. patron <10ms €0 reconocimiento de patrones directo 2. nim_8b_fast ~80ms €0 Groq llama-3.1-8b-instant (solo comandas simples) 3. nim_70b ~800ms €0 NVIDIA llama-4-maverick (comandas complejas/ambiguas) 4. claude_api ~500m",
+      "resumen": "brain-router.ts — Pipeline de destilación BRAIN v2 Capas por velocidad/coste: 1. patron <10ms €0 reconocimiento de patrones directo 2. nim_8b_fast ~80ms €0 Groq llama-3.1-8b-instant (solo comandas simples) 3. nim_70b ~800ms €0 NVIDIA glm-5.2 (comandas complejas/ambiguas) 4. claude_api ~500ms ~€0.002",
       "exporta": [
         "routearComanda"
       ],
@@ -29190,7 +29190,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6bc3e30e3f08"
+      "hash": "3fb9ad96e7bc"
     },
     {
       "ruta": "apps/ia-rest/src/lib/brain.ts",
@@ -29285,7 +29285,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "410f88e43368"
+      "hash": "4d00ea5e2d82"
     },
     {
       "ruta": "apps/ia-rest/src/lib/carta-recomendar.ts",
@@ -32003,7 +32003,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "3015dd79690d"
+      "hash": "ec0c7340577b"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/eventos-entorno/index.ts",
@@ -32170,7 +32170,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "3a50212c2bab"
+      "hash": "0ac3520576ee"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/nim-sentiment/index.ts",
@@ -32191,7 +32191,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "e716362fc8eb"
+      "hash": "3137d667fdba"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/notify-error/index.ts",
@@ -32215,7 +32215,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "8b32b936a067"
+      "hash": "a58cca3924ba"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-call-waiter/index.ts",
@@ -59146,7 +59146,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "79fbe5d1f4db"
+      "hash": "af991fbbd44c"
     },
     {
       "ruta": "apps/plataforma/lib/ai-gateway.ts",
@@ -60719,12 +60719,12 @@
           "exportada": true,
           "params": "cuentaId: string, mensaje: string, canal = 'web',",
           "retorno": "Promise<",
-          "linea": 57
+          "linea": 60
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b50801a19285"
+      "hash": "88c8bfa41d98"
     },
     {
       "ruta": "apps/plataforma/lib/contable/clasificar-ia.ts",
@@ -60755,7 +60755,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b8a775f3c32d"
+      "hash": "8053f0123955"
     },
     {
       "ruta": "apps/plataforma/lib/contable/contexto.ts",
@@ -64932,7 +64932,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f8ea439cfda0"
+      "hash": "2abbc0fd5f20"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/sonda-veredicto.ts",
@@ -65931,7 +65931,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "077b628da53a"
+      "hash": "f5243319e2f2"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/disponibilidad.ts",
@@ -74895,7 +74895,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "a5a6b9dc6111"
+      "hash": "d24c480923c8"
     },
     {
       "ruta": "apps/rrhh/lib/asistente-prompt.ts",
@@ -74948,7 +74948,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "3b6a8fa3c160"
+      "hash": "85d54c502ff3"
     },
     {
       "ruta": "apps/rrhh/lib/at-ep-agente.ts",
@@ -81812,12 +81812,12 @@
           "params": "input: { text?: string imageBase64?: string mimeType?: string }",
           "retorno": "Promise<Record<string, any>>",
           "linea": 104,
-          "resumen": "Extrae datos estructurados de una factura. PDF → texto plano → NVIDIA NIM llama-4-maverick Imagen → base64 → NVIDIA NIM llama-3.2-90b-vision"
+          "resumen": "Extrae datos estructurados de una factura. PDF → texto plano → NVIDIA NIM glm-5.2 Imagen → base64 → NVIDIA NIM llama-3.2-90b-vision"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "21c143e7ddec"
+      "hash": "02b97e375048"
     },
     {
       "ruta": "apps/sivra/lib/cron-auth.ts",
@@ -83377,7 +83377,7 @@
           "exportada": false,
           "params": "model?: string",
           "retorno": "NimConfig",
-          "linea": 46
+          "linea": 48
         },
         {
           "nombre": "groqEnvConfig",
@@ -83385,7 +83385,7 @@
           "exportada": false,
           "params": "",
           "retorno": "GroqConfig | null",
-          "linea": 55,
+          "linea": 57,
           "resumen": "Config Groq de fallback desde el entorno. Devuelve null si no hay GROQ_API_KEY (el fallback queda inactivo sin romper nada). NO reutiliza el `model` de NIM (ids distintos): usa el modelo Groq propio ("
         },
         {
@@ -83394,7 +83394,7 @@
           "exportada": false,
           "params": "",
           "retorno": "CerebrasConfig | null",
-          "linea": 65,
+          "linea": 67,
           "resumen": "Config Cerebras de fallback GRATIS desde el entorno (4º proveedor, infra WSE distinta de NIM/Groq: sube la resiliencia frente a un apagón simultáneo como el del 06/07/2026). null si no hay CEREBRAS_AP"
         },
         {
@@ -83403,7 +83403,7 @@
           "exportada": false,
           "params": "",
           "retorno": "GeminiConfig | null",
-          "linea": 74,
+          "linea": 76,
           "resumen": "Config Gemini de fallback desde el entorno. APAGADO por defecto (ver cabecera: la key lleva meses sin cuota y el eslabón solo pagaba timeouts): requiere `GEMINI_TEXTO=1` ADEMÁS de GEMINI_API_KEY. Usa "
         },
         {
@@ -83412,7 +83412,7 @@
           "exportada": false,
           "params": "",
           "retorno": "MoonshotConfig | null",
-          "linea": 82,
+          "linea": 84,
           "resumen": "Config Moonshot/Kimi de ÚLTIMO fallback (de pago) desde el entorno. null si no hay MOONSHOT_API_KEY (queda inactivo sin romper nada). Modelo override: MOONSHOT_MODEL."
         },
         {
@@ -83421,7 +83421,7 @@
           "exportada": false,
           "params": "",
           "retorno": "OpenRouterConfig | null",
-          "linea": 92,
+          "linea": 94,
           "resumen": "Config OpenRouter PRIMARIO desde el entorno. null si no hay OPENROUTER_API_KEY (queda inactivo y la cadena arranca en NIM como siempre → rollout por proyecto poniendo la env). OPENROUTER_MODEL = model"
         },
         {
@@ -83430,7 +83430,7 @@
           "exportada": true,
           "params": "promptOrMessages: string | NimChatMessage[], options: { system?: string maxTokens?: number temperature?: number timeoutMs?: number model?: string /** La PASARELA lo pone a true cuando ya intentó/bloqueó OpenRouter (presupuesto): evita reint",
           "retorno": "Promise<string>",
-          "linea": 116,
+          "linea": 118,
           "resumen": "Completion de texto: OpenRouter (agregador, si hay key) → NVIDIA NIM (gratis) → Groq (gratis) → Cerebras (gratis) → [Gemini, solo con GEMINI_TEXTO=1] → Kimi (de pago). Cada eslabón se activa solo si e"
         },
         {
@@ -83439,13 +83439,13 @@
           "exportada": true,
           "params": "messages: NimToolMessage[], tools: unknown[], options: { system?: string; maxTokens?: number; model?: string; skipOpenRouter?: boolean } = {},",
           "retorno": "Promise<NimToolResult>",
-          "linea": 207,
+          "linea": 209,
           "resumen": "Function-calling: OpenRouter (si hay key) → NVIDIA NIM (gratis) → Groq (gratis) de fallback. Lee `OPENROUTER_API_KEY`/`NVIDIA_API_KEY`/`GROQ_API_KEY` del entorno. Wrapper usado por la pasarela central"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8e77601f2ffd"
+      "hash": "6257fac15d0a"
     },
     {
       "ruta": "packages/core-ai/src/embeddings.ts",
@@ -83832,7 +83832,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0210bfd2b250"
+      "hash": "1c03ff629a1e"
     },
     {
       "ruta": "packages/core-ai/src/openrouter.ts",
