@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-17T07:11:58Z",
-  "sha": "631b5352934de03a0badb41a9e887780ca4211c3",
+  "generadoEn": "2026-08-17T07:24:05Z",
+  "sha": "94657293eeb1bcdeb0644ffc9b800d2306ac7899",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -50927,7 +50927,7 @@
         "next"
       ],
       "rutaApi": "/api/banca/psd2/callback",
-      "hash": "9d8c03aec40a"
+      "hash": "a8ccf00d0afc"
     },
     {
       "ruta": "apps/plataforma/app/api/banca/psd2/conectar/route.ts",
