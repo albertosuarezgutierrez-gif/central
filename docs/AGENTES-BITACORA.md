@@ -15,6 +15,13 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-17 · mercado-booking** · hizo: pasada de 12 ventanas (plan `?max=12`, las 12 vírgenes de
+  ronda 1 — evento Feria confirmado, 17-23/09/2026 — `prop_luxury_busto`, `prop_house_sevillana`,
+  `prop_busto_reform`, `prop_duplex_center`). 120 comps reales escritos (`fuente:"booking_mcp"`),
+  0 ventanas sin respuesta, 0 sin precio utilizable, 0 anuncios propios descartados (revisado a
+  propósito en la ventana de aforo 12, donde suele colarse el nuestro — esta vez limpio). Quedan
+  452 ventanas candidatas sin medir del plan de 464 (aviso del propio endpoint). dudas: —; fallos: —
+  (1 SSL transitorio en un POST, resuelto con retry inmediato); PRs/commits: — (solo memoria/BD)
 - **2026-08-16 · facturas-correo** · hizo: pasada completa (Paso 0→5). Vía B sana (última copia
   _buzon_pdf 14/08, dias_caido=2, `agente_salud` actualizado). Sin backlog en `PDF-pendiente`/
   `Revisar`/`Extraccion-fallida`. Paso 4.0 (`v_facturas_sin_cargo`): 8 filas, TODAS ya
