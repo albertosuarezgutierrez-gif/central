@@ -32,6 +32,15 @@
 
 ---
 
+### 💳 (17/08/2026) Check 7 cuadre tarjetas: falso 🔴 tras cada liquidación, arreglado
+- Alberto: «los movimientos de 2.013,37€ los he pasado varias veces, ¿lo vuelvo a subir?». No: el
+  desglose de julio de la ****0300 SÍ estaba (94 compras). El check exigía el espejo `PAGO RECIBO`
+  del mismo día, que ABRE el extracto del mes SIGUIENTE (landmine PR #1300) → 🔴 durante ~un mes
+  aunque el desglose estuviera. Y pedía «el extracto de agosto» cuando lo que faltaría es JULIO.
+- Fix: sin espejo, valen las compras del mes del CICLO en la cuenta `TARJETA-KUTXA-<últ.4>`;
+  veredicto 3 estados en `lib/cuadre-tarjetas.ts` (puro+tests; sin PAN = «no puedo comprobarlo»).
+  SQL validado contra BD real (0300 → ✅, 0302 → 🔴 julio). La ****0302 de Pilar sigue faltando.
+
 ### ✅ (17/08/2026) PR #1449 (ciclo Booking +20%) MERGEADO + sincronía de skills/docs con el 1.20
 - #1449 mergeado (inventario + Fases 1-3 ejecutadas y verificadas). Post-merge: actualizados la
   skill `pricing-agente` (estado-y-protocolo), el comentario del markup en `pricing/apply/route.ts`
