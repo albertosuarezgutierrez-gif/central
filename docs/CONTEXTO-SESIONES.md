@@ -53,7 +53,6 @@
 - ⚠️ Hallazgo aparte SIN tocar: `getPLMensual` (query «tarjeta») suma CUALQUIER movimiento con
   `propiedad_id`+confirmado, no solo tarjeta → los recibos Kutxa de House (luz/agua/IBI) pueden
   contar DOBLE contra sus facturas de `gastos` en el P&L por piso. Decidir fix con Alberto.
->>>>>>> origin/main
 
 ### ✅ (17/08/2026) PR #1449 (ciclo Booking +20%) MERGEADO + sincronía de skills/docs con el 1.20
 - #1449 mergeado (inventario + Fases 1-3 ejecutadas y verificadas). Post-merge: actualizados la
