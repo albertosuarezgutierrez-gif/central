@@ -25,7 +25,8 @@
   semestrales ~242,93€; el 2º —nov— es ESTIMADO igual al 1º, confirmar al cobrarse) + seguro hogar
   Occident 49,45€/mes (593,45€/año, cargo 16/01; renovación ene-2027 → actualizar importe). Los
   SUMINISTROS de House (Endesa/EMASESA/DIGI) NO van en fijos a propósito: ya entran por factura real
-  en `gastos` y duplicarían. Un recibo de Ayto. sin identificar (130,93€, 16/04/2026) quedó fuera.
+  en `gastos` y duplicarían. El recibo de Ayto. de 130,93€ (16/04/2026) era de Monte
+  Carmelo (vivienda habitual → personal, NO deducible); reclasificado en banca el 17/08/2026.
 
 ### 🚨 Actualización 16-17/08/2026 — `channel_markup = 1.20` CASADO con el escaparate real (+20% Smoobu)
 - Desde el 16/08 Smoobu lleva **`priceDifference` +20% SOLO en el canal Booking** (resto de portales

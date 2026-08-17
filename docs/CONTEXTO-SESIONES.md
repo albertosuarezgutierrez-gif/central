@@ -36,8 +36,9 @@
 - Alberto: «los gastos de Socorro están en la cuenta de Kutxa» → derivados de `movimientos_bancarios`
   y dados de alta en `gastos_fijos` (2 filas, `origen='manual'`): IBI 40,49€/mes (2 plazos ~242,93€;
   2º plazo nov ESTIMADO, confirmar al cobrarse) + seguro Occident 49,45€/mes (593,45€/año, 16/01).
-- Suministros NO van en fijos (ya entran por factura en `gastos`; duplicarían). Recibo Ayto. 130,93€
-  (16/04) sin identificar, fuera. Skill pricing-agente actualizada en el PR #1457.
+- Suministros NO van en fijos (ya entran por factura en `gastos`; duplicarían). Skill pricing-agente
+  actualizada en el PR #1457. El recibo Ayto. 130,93€ (16/04) era de MONTE CARMELO (confirmado por
+  Alberto) → reclasificado en banca a `personal`+`ibi` (estaba como gasto de House, deducible en falso).
 - ⚠️ Hallazgo aparte SIN tocar: `getPLMensual` (query «tarjeta») suma CUALQUIER movimiento con
   `propiedad_id`+confirmado, no solo tarjeta → los recibos Kutxa de House (luz/agua/IBI) pueden
   contar DOBLE contra sus facturas de `gastos` en el P&L por piso. Decidir fix con Alberto.
