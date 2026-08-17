@@ -32,6 +32,15 @@
 
 ---
 
+### 🔴 (17/08/2026) Swap NIM: llama-3.3-70b → llama-4-maverick (retirada 25/08)
+- NIM retira `meta/llama-3.3-70b-instruct` el **25/08/2026** (banner en build.nvidia.com, sin sucesor
+  nombrado). Reemplazo elegido y verificado vivo: **`meta/llama-4-maverick-17b-128e-instruct`**.
+- Swap en todo el radio: core-ai (`client.ts`/`nim.ts`/`types.ts`), plataforma (`ai-client.ts`,
+  `sonda-ia.ts`), rrhh (`asistente*.ts`), ia-rest (`ai-client.ts`, `brain.ts`, labels, `.env.example`
+  + 4 edge functions ⚠️ **pendiente `supabase functions deploy`**). Ids OpenRouter `meta-llama/*` NO tocados.
+- PR draft en rama `claude/llama-3.3-deprecation-nim-ocj368`; Telegram enviado. `CONTABLE_MODEL`
+  (`deepseek-ai/deepseek-v3`) sigue sin confirmar. Detalle en `docs/BUSCADOR-IA.md`.
+
 ### 💓 (16/08/2026) Sonda del verificador de eventos + guarda de regresión (PR #1447)
 - El parte «Sin poder comprobar» decía la verdad: `sivra_eventos_verificar` se declaró en
   `AGENTES_VIGILADOS` (12/08) sin su sonda en `PROBES` del cron `agentes-latido` — el agente SÍ

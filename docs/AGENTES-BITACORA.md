@@ -15,6 +15,13 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-17 · buscador-ia** · hizo: seguimiento del hallazgo crítico del 17/08 — NIM retira
+  `meta/llama-3.3-70b-instruct` el 25/08/2026; confirmado el id de reemplazo
+  `meta/llama-4-maverick-17b-128e-instruct` (vivo en catálogo) por búsquedas dirigidas y aplicado el
+  swap en todo el radio (core-ai + plataforma + rrhh + ia-rest, incl. 4 edge functions que necesitan
+  deploy aparte); Telegram enviado (preflight 200). dudas: NVIDIA no nombra sucesor oficial — Maverick
+  es elección propia (vs `z-ai/glm-5.2`); sin mini-eval en vivo (sin key). fallos: WebFetch a
+  build.nvidia.com/docs.api.nvidia.com bloqueado por proxy (igual que 27/07 y 10/08); PRs/commits: PR draft rama `claude/llama-3.3-deprecation-nim-ocj368`.
 - **2026-08-17 · mercado-booking** · hizo: pasada de 12 ventanas (plan `?max=12`, las 12 vírgenes de
   ronda 1 — evento Feria confirmado, 17-23/09/2026 — `prop_luxury_busto`, `prop_house_sevillana`,
   `prop_busto_reform`, `prop_duplex_center`). 120 comps reales escritos (`fuente:"booking_mcp"`),

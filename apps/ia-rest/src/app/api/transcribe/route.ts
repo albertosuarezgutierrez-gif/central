@@ -926,7 +926,7 @@ export async function POST(req: NextRequest) {
         confianza: conf,
         fue_corregido: false,
         latencia_ms: latenciaTotal,
-        modelo_usado: fuente === 'patron' ? 'patron' : 'nvidia/llama-3.3-70b',
+        modelo_usado: fuente === 'patron' ? 'patron' : 'nvidia/llama-4-maverick',
         turno_id: turnoId,
         camarero_id: camareroId,
         // Fix duplicados: recording_id como clave de idempotencia en el log

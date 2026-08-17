@@ -69,7 +69,7 @@ async function generarNarrativa(contexto: string): Promise<{ texto: string; via:
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${nvidia}` },
     body: JSON.stringify({
-      model: 'meta/llama-3.3-70b-instruct',
+      model: 'meta/llama-4-maverick-17b-128e-instruct',
       max_tokens: 600,
       temperature: 0.4,
       messages: [
