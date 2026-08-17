@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-17T06:39:17Z",
-  "sha": "7076426c5d7741ac305f1b59f9776a69a9352c6a",
+  "generadoEn": "2026-08-17T06:46:28Z",
+  "sha": "a3c8587497d01550ec9858ba10bb3cbe3ae0669a",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -56224,7 +56224,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 38
+          "linea": 39
         },
         {
           "nombre": "fmt",
@@ -56232,7 +56232,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 39
+          "linea": 40
         },
         {
           "nombre": "GET",
@@ -56240,7 +56240,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 71,
+          "linea": 72,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -56249,7 +56249,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 75
+          "linea": 76
         }
       ],
       "tablas": [
@@ -56273,7 +56273,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "e3b6a67e4281"
+      "hash": "b6d60d7e2ff5"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -56414,7 +56414,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 63
+          "linea": 64
         }
       ],
       "tablas": [
@@ -56442,7 +56442,7 @@
         "ult"
       ],
       "rutaApi": "/api/sivra/pricing/guard",
-      "hash": "c509415ec93f"
+      "hash": "cf19e689fa4a"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/historial/route.ts",
@@ -56505,7 +56505,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 38
+          "linea": 39
         }
       ],
       "tablas": [
@@ -56522,7 +56522,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/pilot-track",
-      "hash": "8ccfc223b900"
+      "hash": "aef9f760aeaf"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/recommend/route.ts",
@@ -56537,7 +56537,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 21
+          "linea": 22
         }
       ],
       "tablas": [
@@ -56549,7 +56549,7 @@
         "rate_snapshots"
       ],
       "rutaApi": "/api/sivra/pricing/recommend",
-      "hash": "a23da0520cff"
+      "hash": "8dd8fe208552"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/restore/route.ts",
@@ -56639,7 +56639,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 38
+          "linea": 39
         },
         {
           "nombre": "PATCH",
@@ -56647,7 +56647,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 179
+          "linea": 182
         }
       ],
       "tablas": [
@@ -56660,7 +56660,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/settings",
-      "hash": "395cc33e6fe5"
+      "hash": "cde6cd9f6a28"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/stats/route.ts",
@@ -65201,13 +65201,13 @@
           "exportada": true,
           "params": "dateStr: string, evExterno = 1",
           "retorno": "number",
-          "linea": 120,
+          "linea": 124,
           "resumen": "Suelo estacional relativo a min_price para una fecha. En fechas de evento sube con el evento (mitad del factor, acotado a ×2.0) para que Semana Santa/Feria no puedan venderse a suelo. Devuelve 1.0 (si"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6ac76e040fac"
+      "hash": "c5972c261373"
     },
     {
       "ruta": "apps/plataforma/lib/programador.ts",
@@ -67736,6 +67736,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "d97d7fbaea59"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pricing-comps-plausibles.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Plausibilidad de un comparable de mercado por €/plaza. Un comp a 44-104€ \"para 12 personas\" no es un piso entero: es el precio de UNA habitación (o un anuncio sin fecha) que el buscador devuelve igualmente al pedir aforo 12. Detectado el 17/08/2026 en House (364 filas, 36 fechas, todas fuente='serpe",
+      "exporta": [
+        "esCompPlausible"
+      ],
+      "funciones": [
+        {
+          "nombre": "esCompPlausible",
+          "kind": "function",
+          "exportada": true,
+          "params": "precioNoche: number, plazasComp: number | null | undefined",
+          "retorno": "boolean",
+          "linea": 17
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8bcea36a0776"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-demanda.ts",
@@ -92454,7 +92475,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2467,
-    "funciones": 6688
+    "archivos": 2468,
+    "funciones": 6689
   }
 }
