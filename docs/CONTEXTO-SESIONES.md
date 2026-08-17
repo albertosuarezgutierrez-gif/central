@@ -32,6 +32,16 @@
 
 ---
 
+### 📈 (16/08/2026) Fases 1+2 del +20% Booking EJECUTADAS (Smoobu + motor)
+- **Fase 1 (Claude Chrome, `docs/BOOKING-FASE1-SMOOBU-2026-08-16.md`):** `priceDifference` del canal
+  Booking en Smoobu 0% → **+20%** (campo ÚNICO por canal, cubre los 4 pisos; resto de portales a 0%),
+  push forzado con «Sobrescribir precios» (guardar NO basta). Hallazgo: el rótulo «Sobrescritos por
+  PriceLabs» de Smoobu es LEGACY — PriceLabs está de baja desde el 09/08, los precios los escribe el motor.
+- **Fase 2 (BD):** `pricing_settings.channel_markup` 1.0 → **1.20** en los 4 pisos. El motor re-basa en
+  el siguiente `apply-auto` (08:30/14:30/20:30 UTC); hasta entonces Booking muestra ~+20% (lado seguro).
+- Pendiente: verificación A5 en extranet (extensión del navegador caída) y precios por ocupación de
+  Luxury en Smoobu (paso B, sin tocar). Medición Fase 4 programada 30/08 (`trig_01DHwh…`).
+
 ### ✂️ (16/08/2026) Cambios EJECUTADOS en la extranet de Booking (Fase 3 del estudio)
 - Vía Claude Chrome → `docs/BOOKING-CAMBIOS-2026-08-16.md`: **Genius dinámico → No** en
   Luxury/Reform/Dúplex (tramos fijos 10/15/20 intactos); **NR de Luxury −15% → −10%**;
