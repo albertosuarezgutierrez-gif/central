@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-17T08:34:01Z",
-  "sha": "b2e7f61b56b125f7b67a07e139912af24fe808e5",
+  "generadoEn": "2026-08-17T09:51:30Z",
+  "sha": "360441865099516e83662162a89c4049d732c70a",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -57571,7 +57571,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/trading/seleccion",
-      "hash": "04190029bbd0"
+      "hash": "fcd914560b21"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/validar-oos/route.ts",
