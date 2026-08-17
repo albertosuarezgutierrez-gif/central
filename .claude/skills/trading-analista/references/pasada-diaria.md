@@ -32,6 +32,19 @@ antes, dilo en el resumen de Telegram — esa pasada mide contra el cierre de ay
    la lectura falla, el bloque dice «cartera real: sin leer hoy» — nunca omitirlo en
    silencio. Reglas completas en `references/copiloto-ordenes.md`. Sigue siendo solo
    lectura; la pasada programada JAMÁS crea instrucciones de orden.
+1c. **💼 Empujar la cartera real al panel (17/08/2026):** con las MISMAS posiciones del paso 1b,
+   `POST {PLATAFORMA_URL}/api/trading/cartera` (Bearer `ALERTA_TOKEN`) con
+   `{ posiciones: [{ simbolo, descripcion, cantidad, precioMedio, precioActual, valorMercado,
+   pnlNoRealizado, pnlDiario, divisa }] }` — mapeo desde IBKR: `position`→cantidad,
+   `average_price`→precioMedio, `market_price`→precioActual, `market_value`→valorMercado,
+   `unrealized_pnl`→pnlNoRealizado, `daily_pnl`→pnlDiario, `currency`→divisa; el símbolo se saca
+   de `contract_description` (p. ej. «VWCE @IBIS2» → `VWCE`) y la descripción lleva el nombre
+   completo. Es la ÚNICA vía por la que la sección «💼 Cartera real» de `/trading` se refresca
+   (la app no habla con IBKR) — nació porque la compra de VWCE del 17/08 no aparecía en el panel.
+   **Un array vacío significa «leí IBKR y no hay posiciones»** — solo lo mandas si la lectura fue
+   BUENA; si `get_account_positions` falló, NO llames al endpoint (la foto anterior es mejor que
+   una vacía falsa) y dilo en el resumen. Si la respuesta trae `descartadas` con contenido,
+   cántalo en el Telegram: una posición descartada es una posición que desaparece del panel.
 2. Cargar la watchlist activa (tabla `trading_watchlist`, capas A/B/C; ver spec). En Fase 1 la lista
    inicial se siembra con `apps/plataforma/prisma/sql/trading_watchlist_seed.sql`.
 3. Por símbolo: `get_price_history` (diario, ~120 velas) → mapear a `Vela[]`

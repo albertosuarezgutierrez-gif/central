@@ -32,6 +32,15 @@
 
 ---
 
+### 💼 (17/08/2026) Cartera REAL de IBKR en el panel /trading — la compra de VWCE no aparecía
+- Alberto compró 188×VWCE (~31.840€, ETF núcleo) y el panel solo pintaba paper. Nuevas tablas
+  `trading_cartera_real(+_sync)` (aplicadas + sembradas con la foto de hoy), endpoint
+  `POST /api/trading/cartera` (mismo auth/resolución de cuenta que `/saldo`) y sección
+  «💼 Cartera real» en `/trading` (solo con sesión; el invitado NO la ve). Totales POR divisa,
+  NULL nunca 0, sync-marker separa «sin leer» de «sin posiciones».
+- La pasada diaria gana el paso 1c (skill `trading-analista`): empuja `get_account_positions`
+  al endpoint cada noche — SOLO con lectura buena; fallo de lectura ≠ cartera vacía.
+
 ### ✅ (17/08/2026) Kutxabank PSD2 RESUELTO — era la VENTANA de 89 días (+2 fixes de camino)
 - Causa raíz: Kutxabank rechaza `/transactions` con ventana de 89 días («Account not found /
   AccountNotAccessibleException», error engañoso) incluso recién firmado el SCA. Fallback 89d→30d→7d
