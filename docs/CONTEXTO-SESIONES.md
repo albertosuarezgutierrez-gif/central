@@ -32,6 +32,17 @@
 
 ---
 
+### 📊 (17/08/2026) Ciclo semanal de pricing — los 4 pisos, comps por conector real
+- Ciclo completo del agente de pricing (skill `pricing-agente`): medido el ciclo anterior (10/08) contra
+  incomes/rate_snapshots (ventas confirmadas de busto SS/Feria a precio decidido, 4 ventas nuevas en
+  luxury/duplex en octubre), sembrado mercado en las 4 propiedades (12 ventanas: 1 finde/mes ~10 meses +
+  Semana Santa + Feria, vía Booking/Trivago/Tripadvisor MCP) y aplicado en dry-run (48 decisiones,
+  circuit-breaker sano en los 4 pisos).
+- **Comps escritos hoy: busto=406 · duplex=263 · luxury=322 · house=186** (ninguno a 0).
+- Pendiente sin cerrar (no bloqueante): 3 fechas de House quedaron `no_disponible` sin income que lo
+  confirme — mismo patrón ya visto con busto/Feria (posible bloqueo manual o reserva aún sin sincronizar).
+  Detalle en `pricing_aprendizaje` (`ALL`/`ciclo_17_08_2026`).
+
 ### 💓 (16/08/2026) Sonda del verificador de eventos + guarda de regresión (PR #1447)
 - El parte «Sin poder comprobar» decía la verdad: `sivra_eventos_verificar` se declaró en
   `AGENTES_VIGILADOS` (12/08) sin su sonda en `PROBES` del cron `agentes-latido` — el agente SÍ

@@ -15,6 +15,17 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-17 · pricing-agente** · hizo: ciclo semanal COMPLETO, los 4 pisos (no solo los en vivo).
+  Paso 1: cruzó pricing_decisiones del 10/08 con rate_snapshots+incomes — ventas reales confirmadas
+  (busto SS/Feria a precio decidido, luxury/duplex 4 ventas nuevas en oct). Paso 2: 12 ventanas
+  (10 meses+SS+Feria) × 4 pisos vía Booking+Trivago+Tripadvisor MCP, 0 fechas a cero. Comps hoy:
+  busto=406 duplex=263 luxury=322 house=186. Paso 4: 48 propuestas dry-run (ALERTA_TOKEN), circuit-breaker
+  sano en los 4 (avg_abs_pct 0,18-0,46). Aprendizaje escrito (`ciclo_17_08_2026`). Telegram enviado.
+  dudas: 3 fechas de House no_disponible sin income que lo confirme (posible reserva no sincronizada o
+  bloqueo manual, igual que el caso ya documentado de busto Feria); fallos: Trivago caído en las 8 fechas
+  lejanas de House (Booking solo cubrió igualmente, sin efecto en el resultado) — comps ruidosos en House
+  29-ago (n=16, rango 44-388€, probable alojamiento no comparable colándose pese al filtro APARTMENT/
+  HOLIDAY_HOME/VILLA, sin efecto porque cayó al suelo). PRs/commits: — (solo memoria/BD)
 - **2026-08-17 · mercado-booking** · hizo: pasada de 12 ventanas (plan `?max=12`, las 12 vírgenes de
   ronda 1 — evento Feria confirmado, 17-23/09/2026 — `prop_luxury_busto`, `prop_house_sevillana`,
   `prop_busto_reform`, `prop_duplex_center`). 120 comps reales escritos (`fuente:"booking_mcp"`),
