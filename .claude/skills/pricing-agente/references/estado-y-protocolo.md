@@ -19,8 +19,13 @@
 - **Al analizar ADR de House excluye los incomes DIRECTO/OTRO con <~100€/noche** (huecos de
   amigos/bloqueos a 0-200€): el «ADR de agosto 62€» era ese artefacto — la única venta real de
   agosto desde 2024 fue 543,98€/noche. Suelo estacional de House VERIFICADO contra la serie 2024+
-  (no está plano en la práctica); aprendizaje en `pricing_aprendizaje` id 74. `gastos_fijos` de
-  House sigue a 0 filas (coste/noche infravalorado; los datos los tiene que pasar Alberto).
+  (no está plano en la práctica); aprendizaje en `pricing_aprendizaje` id 74.
+- **`gastos_fijos` de House YA tiene sus 2 filas** (17/08/2026, derivadas de banca real por indicación
+  de Alberto — «los gastos de Socorro están en la cuenta de Kutxa»): IBI 40,49€/mes (2 plazos
+  semestrales ~242,93€; el 2º —nov— es ESTIMADO igual al 1º, confirmar al cobrarse) + seguro hogar
+  Occident 49,45€/mes (593,45€/año, cargo 16/01; renovación ene-2027 → actualizar importe). Los
+  SUMINISTROS de House (Endesa/EMASESA/DIGI) NO van en fijos a propósito: ya entran por factura real
+  en `gastos` y duplicarían. Un recibo de Ayto. sin identificar (130,93€, 16/04/2026) quedó fuera.
 
 ### Actualización 15/08/2026 — la curva PL «congelada» era el PROPIO motor; reconstruida + cota de cordura
 - **La congelación del #1416 re-etiquetó `captured_at='2026-08-10'` SIN restaurar los precios**: el upsert
