@@ -43,6 +43,13 @@
   pilot-track/settings. Efecto medido: +14/+38€ en p50 de fechas contaminadas, 0€ en las limpias.
 - Reservas Dúplex del 16/08 verificadas OK: 3-5 oct y 16-18 oct a 137-140€/noche bruto con listado
   en mercado (p50 fiable 171/184,5€); el descuento es el canal (~0,78-0,80), no infraprecio.
+- 2ª tanda («haz todo», OK de Alberto): rutina `mercado-booking` sube de 12→24 ventanas/pasada
+  (plan de 464; objetivo: 3 fechas/mes fiables para retirar Serper). Suelo estacional de House
+  verificado con la serie 2024+ → NO está plano en la práctica (FLOOR_SEASONAL ya modula: abr 390€
+  vs peor venta real 428€); pendiente cerrado, aprendizaje en `pricing_aprendizaje` id 74. El «ADR
+  agosto 62€» era artefacto de reservas DIRECTO/OTRO a 0-200€ (huecos de amigos) — al analizar House
+  excluirlas. `gastos_fijos` de House sigue a 0 filas: hace falta que Alberto pase IBI/seguro/
+  suministros (no se inventan). Candidato con OK pendiente: FLOOR_SEASONAL nov ×1,00→×1,10-1,15.
 
 ### 💓 (16/08/2026) Sonda del verificador de eventos + guarda de regresión (PR #1447)
 - El parte «Sin poder comprobar» decía la verdad: `sivra_eventos_verificar` se declaró en

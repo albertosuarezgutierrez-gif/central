@@ -21,7 +21,9 @@
   (364 filas/36 fechas desde 04/08); con OK de Alberto se aplicó el filtro €/plaza
   (`pricing-comps-plausibles.ts`) en apply+guard+recommend+pilot-track+settings, y la lección del
   cruce de incomes quedó en `references/ciclo.md`. Reservas Dúplex 16/08 verificadas OK en precio.
-  dudas: —; fallos: —
+  2ª tanda: `mercado-booking` a 24 ventanas/pasada; suelo estacional House verificado contra serie
+  2024+ (no está plano — pendiente del 01/08 cerrado, aprendizaje id 74); gastos_fijos House a 0
+  (necesita datos de Alberto). dudas: —; fallos: —
 - **2026-08-17 · mercado-booking** · hizo: pasada de 12 ventanas (plan `?max=12`, las 12 vírgenes de
   ronda 1 — evento Feria confirmado, 17-23/09/2026 — `prop_luxury_busto`, `prop_house_sevillana`,
   `prop_busto_reform`, `prop_duplex_center`). 120 comps reales escritos (`fuente:"booking_mcp"`),
