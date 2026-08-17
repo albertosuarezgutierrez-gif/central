@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-17T09:51:30Z",
-  "sha": "360441865099516e83662162a89c4049d732c70a",
+  "generadoEn": "2026-08-17T10:05:29Z",
+  "sha": "71b5343ccca157baeaa1f5a995fe2f4c08546f96",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -52389,7 +52389,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 21
+          "linea": 22
         }
       ],
       "tablas": [
@@ -52399,12 +52399,13 @@
         "cuentas_bancarias",
         "gastos",
         "incomes",
+        "lateral",
         "movimientos_bancarios",
         "next",
         "v_movimientos_activos"
       ],
       "rutaApi": "/api/cron/health-check",
-      "hash": "613f89d3e275"
+      "hash": "d08cf6b88e1c"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/ia-director-refresh/route.ts",
@@ -62194,6 +62195,45 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "b5f559ca65be"
+    },
+    {
+      "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "apps/plataforma/lib/cuadre-tarjetas.ts Veredicto del Check 7 del health-check (cuadre de liquidaciones de tarjeta). Por qué existe (17/08/2026): el check exigía como única prueba el espejo `PAGO RECIBO` del MISMO día en la cuenta de la tarjeta, pero ese recibo ABRE el extracto del mes SIGUIENTE (pag",
+      "exporta": [
+        "mesCiclo",
+        "veredictoLiquidacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "aFechaUTC",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: Date | string",
+          "retorno": "Date",
+          "linea": 41
+        },
+        {
+          "nombre": "mesCiclo",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechaLiquidacion: Date | string",
+          "retorno": "",
+          "linea": 48,
+          "resumen": "Mes del CICLO que paga una liquidación: el del día anterior a la fecha del cargo. Kutxabank liquida el día 1, así que el 01/08 paga julio; si algún mes liquidara a fin de mes (31/07), el día anterior "
+        },
+        {
+          "nombre": "veredictoLiquidacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "l: LiquidacionSinEspejo",
+          "retorno": "",
+          "linea": 53
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "221d59ed500f"
     },
     {
       "ruta": "apps/plataforma/lib/deducibilidad.ts",
@@ -92672,7 +92712,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2473,
-    "funciones": 6703
+    "archivos": 2474,
+    "funciones": 6706
   }
 }

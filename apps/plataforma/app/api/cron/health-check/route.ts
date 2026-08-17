@@ -8,6 +8,7 @@ import { getResumenFinanciero } from '@/lib/finanzas'
 import { calcularEstadoDeclaracion } from '@/lib/comparativa-declaracion'
 import { facturasMensualesFaltantes } from '@/lib/sivra/facturas-mensuales'
 import { eur } from '@/lib/dinero'
+import { veredictoLiquidacion } from '@/lib/cuadre-tarjetas'
 import { sondearProveedoresIA, TIMEOUT_MS as SONDA_TIMEOUT_MS } from '@/lib/monitoring/sonda-ia'
 import { veredictoSonda } from '@/lib/monitoring/sonda-veredicto'
 import type { TraficoRealProveedor } from '@/lib/monitoring/sonda-veredicto'
@@ -124,16 +125,34 @@ export async function GET(req: NextRequest) {
     // no debe vigilar la tabla de otro tenant. No sustituir por otro conteo de `alertas` aquí.
 
     // Check 7: Cuadre tarjetas — cada liquidación mensual de tarjeta cargada en una cuenta
-    // corriente (TARJ.CRDTO / PAGO DE TARJETA) debe tener su espejo en el extracto de la
-    // tarjeta (línea 'PAGO RECIBO …' del mismo día por el mismo importe en OTRA cuenta;
-    // si el concepto trae el PAN, se exige que coincida). Si falta, es que el DETALLE de
-    // ese mes no se ha importado → gasto invisible para /finanzas (pasó con la tarjeta de
+    // corriente (TARJ.CRDTO / PAGO DE TARJETA) debe tener importado el DESGLOSE del ciclo
+    // que paga → si no, ese gasto es invisible para /finanzas (pasó con la tarjeta de
     // Pilar: 6 meses y ~3.500€ sin desglosar hasta que llegó el PDF, 02/07/2026).
-    const liqSinDetalle = await prisma.$queryRaw<Array<{ fecha: Date; importe: number; pan: string | null }>>(Prisma.sql`
+    // Dos pruebas, porque el espejo 'PAGO RECIBO' del mismo día/importe/PAN NO puede existir
+    // hasta el mes siguiente (esa línea ABRE el extracto siguiente — landmine 08/08/2026,
+    // PR #1300): si no hay espejo, vale como desglose que la cuenta de la tarjeta
+    // (TARJETA-KUTXA-<últ.4>, filas que solo pueden venir de un extracto subido) tenga
+    // compras del mes del ciclo (el del día anterior a la liquidación). El veredicto y el
+    // mensaje viven en lib/cuadre-tarjetas.ts (puro, testeado).
+    const liqSinEspejo = await prisma.$queryRaw<Array<{ fecha: Date; importe: number; pan: string | null; compras_ciclo: number; suma_ciclo: number }>>(Prisma.sql`
       SELECT mb.fecha_operacion AS fecha, mb.importe::float AS importe,
-             substring(mb.concepto FROM '\\d{10,19}') AS pan
+             substring(mb.concepto FROM '\\d{10,19}') AS pan,
+             COALESCE(det.n, 0)::int AS compras_ciclo,
+             COALESCE(det.total, 0)::float AS suma_ciclo
       FROM movimientos_bancarios mb
       JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      LEFT JOIN LATERAL (
+        SELECT COUNT(*) AS n, COALESCE(SUM(-m3.importe), 0) AS total
+        FROM movimientos_bancarios m3
+        JOIN cuentas_bancarias cb3 ON cb3.id = m3.cuenta_bancaria_id
+        WHERE cb3.tipo = 'tarjeta'
+          AND cb3.iban LIKE '%' || right(substring(mb.concepto FROM '\\d{10,19}'), 4)
+          AND m3.importe < 0
+          AND m3.concepto NOT ILIKE '%PAGO RECIBO%'
+          AND COALESCE(m3.duplicado_estado,'') <> 'ignorado'
+          AND m3.fecha_operacion >= date_trunc('month', mb.fecha_operacion - INTERVAL '1 day')
+          AND m3.fecha_operacion < date_trunc('month', mb.fecha_operacion - INTERVAL '1 day') + INTERVAL '1 month'
+      ) det ON substring(mb.concepto FROM '\\d{10,19}') IS NOT NULL
       WHERE mb.importe < 0
         AND mb.concepto ~* 'TARJ\\.?\\s*CR[EÉ]?DTO|PAGO DE TARJETA|LIQUIDACI.N (DE )?TARJETA'
         AND COALESCE(mb.duplicado_estado,'') <> 'ignorado'
@@ -150,16 +169,11 @@ export async function GET(req: NextRequest) {
         )
       ORDER BY mb.fecha_operacion
     `)
-    if (liqSinDetalle.length > 0) {
-      const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
-      for (const l of liqSinDetalle) {
-        const mask = l.pan ? `la tarjeta ****${l.pan.slice(-4)}` : 'la tarjeta'
-        const d = new Date(l.fecha)
-        const f = d.toISOString().slice(0, 10)
-        const mesLabel = `${MESES[d.getUTCMonth()]} de ${d.getUTCFullYear()}`
-        // Mensaje explícito (feedback de Alberto): no basta con "falta el extracto"; deja claro
-        // que es el extracto de tarjeta de ESTE mes lo que no ha subido, y que el cargo ya entró solo.
-        fallos.push(`🔴 No me has subido el extracto de ${mask} de ${mesLabel}: te la liquidaron el ${f} por ${eur(Math.abs(l.importe))} y aún no tengo el desglose de esas compras → súbeme el PDF «Movimientos de tarjeta» en el chat del agente (📎) y lo cuadro solo`)
+    if (liqSinEspejo.length > 0) {
+      for (const l of liqSinEspejo) {
+        const v = veredictoLiquidacion({ fecha: l.fecha, importe: l.importe, pan: l.pan, comprasCiclo: l.compras_ciclo, sumaCiclo: l.suma_ciclo })
+        if (v.nivel === 'fallo') fallos.push(v.texto)
+        else ok.push(v.texto)
       }
     } else ok.push('✅ Cuadre tarjetas: todas las liquidaciones tienen su detalle')
 
