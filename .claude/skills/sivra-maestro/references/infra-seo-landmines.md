@@ -21,6 +21,12 @@
   (no SQL crudo), con `topCompetitors` como `Prisma.InputJsonValue`/`Prisma.JsonNull`. Sigue gateado por kill-switch
   **`SEO_AGENT_ENABLED !== 'true'`** (apagado por defecto; el botón manual con sesión funciona siempre).
   Si en el futuro cambia la ruta del botón, **replicar el cambio aquí** para que no vuelvan a divergir.
+- 🚨 **`GITHUB_TOKEN` debe tener `contents:write` sobre el repo `central`** (la landing vive en el
+  monorepo desde el 12/08/2026: `apps/housesevillana/app/route.ts`). El PAT del 03/08 estaba scoped al
+  antiguo repo externo `house-sevillana-landing` y el primer cron tras la unificación (17/08) falló el
+  commit con `403 Resource not accessible by personal access token` — el GET no avisa porque `central`
+  es público; solo el PUT delata el permiso. Al rotar el PAT (desde `/operador/secretos`), verificar que
+  su scope incluye `central`. Detalle: PR #1470.
 - Envs: `NEXTAUTH_SECRET/URL`, `SMOOBU_API_KEY`, `NVIDIA_API_KEY`, `SERPER_API_KEY`,
   `GMAIL_USER/GMAIL_APP_PASSWORD`, `NEXT_PUBLIC_SUPABASE_URL/ANON_KEY`, `CRON_SECRET`, `DRIVE_SCRIPT_URL`,
   `AUTH_TRUST_HOST=true` (local). Valores en Vercel env, nunca en repo.

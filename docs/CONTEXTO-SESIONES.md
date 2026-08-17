@@ -40,7 +40,9 @@
 - **PENDIENTE de Alberto (ops):** crear/re-scope del PAT con `contents:write` sobre
   `albertosuarezgutierrez-gif/central` y guardarlo en `/operador/secretos` (write-through sivra+plataforma).
 - Repo: pista de diagnóstico en el 403 de ambos `pushToGitHub` + corregida la nota estale de
-  `apps/sivra/CLAUDE.md` que aún citaba el repo externo. PR draft de esta rama.
+  `apps/sivra/CLAUDE.md` que aún citaba el repo externo. **PR #1470 MERGEADO** (tests seo-landing 8/8,
+  previews sivra+plataforma OK); landmine añadido a la skill `sivra-maestro`. El cron seguirá en 403
+  hasta que se rote el PAT — verificación real: botón manual de `/sivra/seo` o el cron del lunes 24/08.
 
 ### 💳 (17/08/2026) Check 7 cuadre tarjetas: falso 🔴 tras cada liquidación, arreglado
 - Alberto: «los movimientos de 2.013,37€ los he pasado varias veces, ¿lo vuelvo a subir?». No: el
