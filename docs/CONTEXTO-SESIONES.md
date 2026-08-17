@@ -32,6 +32,15 @@
 
 ---
 
+### ✅ (17/08/2026) PR #1449 (ciclo Booking +20%) MERGEADO + sincronía de skills/docs con el 1.20
+- #1449 mergeado (inventario + Fases 1-3 ejecutadas y verificadas). Post-merge: actualizados la
+  skill `pricing-agente` (estado-y-protocolo), el comentario del markup en `pricing/apply/route.ts`
+  y `pricing-automatico.md` — la nota del 09/08 («channel_markup=1.0») quedaba como trampa: una
+  sesión podía «corregir» el 1.20 de vuelta. **Regla: el markup del motor es el ESPEJO del ajuste
+  real del canal Booking en Smoobu (hoy +20% ↔ 1.20); si cambia uno, cambia el otro, Smoobu primero.**
+- BD verificada post-merge: `channel_markup=1.20` y `enabled=true` en los 4. Vigilancia del PR
+  retirada. Quedan las rutinas: medición Fase 4 (30/08) y renovación oferta 8% (01/11/2028).
+
 ### 🏷️ (17/08/2026) Revisión post-ciclo pricing: los 2 accionables del 17/08, resueltos
 - Las 3 fechas `no_disponible` de House (12-sep, 10-oct, 17-abr-2027) SÍ tienen reserva real con
   income (Booking: 1.344€ / 2.044,74€ / 3.318,47€ brutos — la de Feria a ~1.659€/noche). No hay
