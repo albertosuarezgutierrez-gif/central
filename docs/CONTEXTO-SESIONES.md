@@ -41,6 +41,16 @@
   veredicto 3 estados en `lib/cuadre-tarjetas.ts` (puro+tests; sin PAN = «no puedo comprobarlo»).
   SQL validado contra BD real (0300 → ✅, 0302 → 🔴 julio). La ****0302 de Pilar sigue faltando.
 
+### 🧊 (17/08/2026) Cohorte 3 DOBLE congelada (H5) + primer contraste forward vs retrovisor
+- PR #1460 **MERGEADO y verificado en prod**: cohorte 3 DOBLE en `COHORTES_PAPER` según H5 —
+  `2026-08-17.v1` (combinada sp500, 25 valores, con `simbolosBase`) + `2026-08-17.factores.v1`
+  (factores-solo: SNDK/BKNG/MU/WDC/NLY/STX/CMCSA/MOH/VICR/UMBF). `/seleccion` sp500 sirve
+  `simbolosFactores` (verificado = cesta congelada) y `/paper` mide 4 cohortes (las 2 nuevas a 0d,
+  `resultado null` correcto). Skill `trading-analista` + pre-registro (H5 ejecutada) actualizados.
+- Contraste forward (~28d) vs retrovisor: NI confirma NI desmiente — alpha mediano −1,65 pp (cohortes)
+  / −2,22 pp (radar, 0/1 ventanas), zona de ruido declarada a 28d; nada del pre-registro evaluable
+  hasta ~91d (~oct). Doc: `docs/TRADING-FORWARD-VS-RETROVISOR-2026-08.md`.
+
 ### 💼 (17/08/2026) Cartera REAL de IBKR en el panel /trading — la compra de VWCE no aparecía
 - Alberto compró 188×VWCE (~31.840€, ETF núcleo) y el panel solo pintaba paper. Nuevas tablas
   `trading_cartera_real(+_sync)` (aplicadas + sembradas con la foto de hoy), endpoint

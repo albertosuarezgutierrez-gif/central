@@ -58,6 +58,12 @@ primer dato forward — la cohorte 2 y el radar empiezan a medir el 20/07/2026).
   combinada (como siempre) y una **factores-solo** desde `/api/trading/seleccion` con
   `{"universo":"sp500"}` ignorando el guruScore (los 10 primeros por score de factores puros).
 - **Evaluación:** por MEDIANA a 28/56/91 días, las tres patas contra SPY y entre sí.
+- **Ejecutada (17/08/2026, PR #1460):** cohorte 3 DOBLE congelada tal y como estaba pre-registrada —
+  `2026-08-17.v1` (combinada sp500, 25 valores, con `simbolosBase` gurús-solo) + `2026-08-17.factores.v1`
+  (factores-solo, top-10 `rankearUniverso` sobre la caché neutralizada: SNDK, BKNG, MU, WDC, NLY, STX,
+  CMCSA, MOH, VICR, UMBF). `/api/trading/seleccion` (sp500) devuelve desde entonces `simbolosFactores`
+  para que las siguientes congelaciones dobles salgan del endpoint. El reloj de las tres patas corre
+  desde el 17/08; primera lectura con sentido a ~28d (mediados de septiembre).
 
 ## H6 — Régimen de mercado como disparador de re-medición
 - **Base:** todas las conclusiones del retrovisor son de UN régimen (alcista 2024-26). Las medias
