@@ -52,40 +52,47 @@ export function semaforoFeed(p: {
     ? `Consentimiento del banco hasta el ${fmtDDMM(caducaISO)} (${caducaEn} día${caducaEn === 1 ? '' : 's'}).`
     : `El consentimiento del banco caducó el ${fmtDDMM(caducaISO)}.`
 
+  // Los avisos con prefijo ℹ️ son INFORMATIVOS (p. ej. «ventana de 89 días rechazada, importado
+  // desde X» — el feed FUNCIONA con ventana corta, caso Kutxabank 17/08/2026): se muestran pero
+  // no ponen el semáforo en rojo ni piden re-vincular. Solo los avisos de FALLO son críticos.
+  const criticos = (p.avisos ?? []).filter(a => !a.startsWith('ℹ️'))
+  const notas = (p.avisos ?? []).filter(a => a.startsWith('ℹ️'))
+  const conNotas = (e: EstadoFeed): EstadoFeed => notas.length ? { ...e, detalles: [...e.detalles, ...notas] } : e
+
   if (caducaEn <= 0) {
-    return { nivel: 'roto', titular: 'Consentimiento bancario CADUCADO — el banco ya no entrega datos', detalles: [lineaConsent, ACCION] }
+    return conNotas({ nivel: 'roto', titular: 'Consentimiento bancario CADUCADO — el banco ya no entrega datos', detalles: [lineaConsent, ACCION] })
   }
-  if (p.avisos && p.avisos.length > 0) {
-    return { nivel: 'roto', titular: 'El banco no está entregando movimientos', detalles: [...p.avisos, ACCION] }
+  if (criticos.length > 0) {
+    return conNotas({ nivel: 'roto', titular: 'El banco no está entregando movimientos', detalles: [...criticos, ACCION] })
   }
   if (diasMov == null) {
     // Sin movimientos importados nunca: no se sabe si el feed funciona — no se afirma que sí.
-    return { nivel: 'atencion', titular: 'Conectado, pero sin movimientos importados todavía', detalles: [lineaConsent] }
+    return conNotas({ nivel: 'atencion', titular: 'Conectado, pero sin movimientos importados todavía', detalles: [lineaConsent] })
   }
   if (diasMov >= DIAS_ROTO) {
-    return {
+    return conNotas({
       nivel: 'roto',
       titular: `${diasMov} días sin movimientos nuevos del banco`,
       detalles: [`Último movimiento: ${fmtDDMM(p.ultimoMovISO!.slice(0, 10))}. En estas cuentas nunca hubo más de 1 día de hueco — esto es el feed roto, no un parón real.`, lineaConsent, ACCION],
-    }
+    })
   }
   if (diasMov >= DIAS_ATENCION) {
-    return {
+    return conNotas({
       nivel: 'atencion',
       titular: `${diasMov} días sin movimientos nuevos del banco`,
       detalles: [`Último movimiento: ${fmtDDMM(p.ultimoMovISO!.slice(0, 10))}. Puede ser un parón real, pero en estas cuentas es raro (>1 día no había pasado).`, lineaConsent],
-    }
+    })
   }
   if (caducaEn <= CONSENT_AVISO_DIAS) {
-    return {
+    return conNotas({
       nivel: 'atencion',
       titular: `El consentimiento del banco caduca en ${caducaEn} día${caducaEn === 1 ? '' : 's'}`,
       detalles: [lineaConsent, ACCION],
-    }
+    })
   }
-  return {
+  return conNotas({
     nivel: 'ok',
     titular: diasMov === 0 ? 'Banco al día — hay movimientos de hoy' : `Banco al día — último movimiento hace ${diasMov} día${diasMov === 1 ? '' : 's'}`,
     detalles: [lineaConsent],
-  }
+  })
 }
