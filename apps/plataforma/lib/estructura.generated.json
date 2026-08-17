@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-17T06:48:57Z",
+  "generadoEn": "2026-08-17T07:11:58Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4523,6 +4523,10 @@
   ],
   "novedades": [
     {
+      "titulo": "Pendiente Alberto: mergear el PR y re-vincular Kutxabank UNA vez en `/banca`",
+      "fecha": ""
+    },
+    {
       "titulo": "Autocrítica:",
       "fecha": ""
     },
@@ -4576,10 +4580,6 @@
     },
     {
       "titulo": "Pero SÍ había corrido",
-      "fecha": ""
-    },
-    {
-      "titulo": "Sin daño operativo",
       "fecha": ""
     }
   ],

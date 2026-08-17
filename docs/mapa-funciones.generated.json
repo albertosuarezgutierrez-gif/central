@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-17T06:52:36Z",
-  "sha": "0de4e919397d57852b14635c0cd094b3d65f3e89",
+  "generadoEn": "2026-08-17T07:11:58Z",
+  "sha": "631b5352934de03a0badb41a9e887780ca4211c3",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -50927,7 +50927,7 @@
         "next"
       ],
       "rutaApi": "/api/banca/psd2/callback",
-      "hash": "a6dbde795b0e"
+      "hash": "9d8c03aec40a"
     },
     {
       "ruta": "apps/plataforma/app/api/banca/psd2/conectar/route.ts",
@@ -63446,7 +63446,7 @@
           "exportada": true,
           "params": "code: string",
           "retorno": "Promise<Sesion>",
-          "linea": 125
+          "linea": 127
         },
         {
           "nombre": "getSesion",
@@ -63454,8 +63454,16 @@
           "exportada": true,
           "params": "sessionId: string",
           "retorno": "Promise<Sesion>",
-          "linea": 136,
+          "linea": 138,
           "resumen": "Recupera una sesión ya creada (para el re-sync diario): devuelve sus cuentas (uids). Enable Banking devuelve `accounts` como lista de objetos cuenta (con `uid`) o de uids string según el endpoint; ace"
+        },
+        {
+          "nombre": "estadoSesion",
+          "kind": "function",
+          "exportada": false,
+          "params": "j: Record<string, unknown>",
+          "retorno": "string | undefined",
+          "linea": 143
         },
         {
           "nombre": "nombreAspsp",
@@ -63463,7 +63471,7 @@
           "exportada": false,
           "params": "j: Record<string, unknown>",
           "retorno": "string | undefined",
-          "linea": 141
+          "linea": 147
         },
         {
           "nombre": "extraerUids",
@@ -63471,7 +63479,7 @@
           "exportada": false,
           "params": "j: Record<string, unknown>",
           "retorno": "string[]",
-          "linea": 148,
+          "linea": 154,
           "resumen": "Extrae los uid de cuenta de una respuesta de sesión, tolerando las variantes de la API: accounts: [uid] | [{uid}] | [{account:{uid}}]; o accounts_data: [{uid}]; o accounts: [{id}]."
         },
         {
@@ -63480,7 +63488,7 @@
           "exportada": true,
           "params": "accountUid: string",
           "retorno": "Promise<CuentaDetalle>",
-          "linea": 165
+          "linea": 171
         },
         {
           "nombre": "getSaldo",
@@ -63488,7 +63496,7 @@
           "exportada": true,
           "params": "accountUid: string",
           "retorno": "Promise<number | null>",
-          "linea": 173
+          "linea": 179
         },
         {
           "nombre": "disponiblePis",
@@ -63496,7 +63504,7 @@
           "exportada": true,
           "params": "",
           "retorno": "boolean",
-          "linea": 206
+          "linea": 212
         },
         {
           "nombre": "iniciarPago",
@@ -63504,7 +63512,7 @@
           "exportada": true,
           "params": "params: { debtorIban: string creditorName: string creditorIban: string importe: number concepto: string redirectUrl: string }",
           "retorno": "Promise<PagoEB>",
-          "linea": 215
+          "linea": 221
         },
         {
           "nombre": "estadoPago",
@@ -63512,7 +63520,7 @@
           "exportada": true,
           "params": "paymentId: string",
           "retorno": "Promise<EstadoPagoEB>",
-          "linea": 243
+          "linea": 249
         },
         {
           "nombre": "getMovimientos",
@@ -63520,12 +63528,12 @@
           "exportada": true,
           "params": "accountUid: string, dateFromOverride?: string",
           "retorno": "Promise<MovEB[]>",
-          "linea": 248
+          "linea": 254
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ee0ec28a2230"
+      "hash": "69ca21991fab"
     },
     {
       "ruta": "apps/plataforma/lib/estructura.ts",
@@ -65435,7 +65443,7 @@
           "exportada": true,
           "params": "dateFrom?: string",
           "retorno": "Promise<",
-          "linea": 189,
+          "linea": 197,
           "resumen": "Re-sincroniza todas las conexiones vinculadas de todas las cuentas (cron diario). dateFrom: override para importar histórico (p. ej. \"2026-01-01\"). Por defecto 89 días. Los fallos por sesión NO se tra"
         }
       ],
@@ -65448,7 +65456,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "60cab49a5267"
+      "hash": "01d2acf40b32"
     },
     {
       "ruta": "apps/plataforma/lib/reclamacion.ts",
@@ -92476,6 +92484,6 @@
   ],
   "resumen": {
     "archivos": 2468,
-    "funciones": 6689
+    "funciones": 6690
   }
 }
