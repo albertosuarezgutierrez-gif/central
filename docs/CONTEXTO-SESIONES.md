@@ -32,6 +32,15 @@
 
 ---
 
+### 🧊 (17/08/2026) Cohorte 3 DOBLE congelada (H5) + primer contraste forward vs retrovisor
+- Cohorte 3 congelada en `COHORTES_PAPER`, DOBLE según H5: `2026-08-17.v1` (combinada sp500, 25 valores,
+  con `simbolosBase`) + `2026-08-17.factores.v1` (factores-solo, top-10 `rankearUniverso` sin gurús:
+  SNDK/BKNG/MU/WDC/NLY/STX/CMCSA/MOH/VICR/UMBF). `/api/trading/seleccion` sp500 devuelve ahora
+  `simbolosFactores` para las próximas congelaciones. Tests 6/6, tsc 0.
+- Contraste forward (~28d) vs retrovisor: NI confirma NI desmiente — alpha mediano −1,65 pp (cohortes)
+  / −2,22 pp (radar, 0/1 ventanas), dentro del ruido que el retrovisor declaró a 28d. Nada evaluable
+  del pre-registro hasta ~91d (~oct). Doc: `docs/TRADING-FORWARD-VS-RETROVISOR-2026-08.md`.
+
 ### ✅ (17/08/2026) PR #1449 (ciclo Booking +20%) MERGEADO + sincronía de skills/docs con el 1.20
 - #1449 mergeado (inventario + Fases 1-3 ejecutadas y verificadas). Post-merge: actualizados la
   skill `pricing-agente` (estado-y-protocolo), el comentario del markup en `pricing/apply/route.ts`

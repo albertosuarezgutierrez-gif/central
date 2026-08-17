@@ -53,6 +53,36 @@ export const COHORTES_PAPER: CarteraPaper[] = [
     simbolos: ['MSFT', 'APP', 'DAL', 'CVI', 'NYT', 'LYV', 'GOOG', 'AMZN'],
     simbolosBase: ['DAL', 'M', 'MSFT', 'SUNB', 'APP', 'SPGI', 'NYT', 'GOOG', 'LEN', 'LEN.B', 'AMZN', 'UBER', 'CVI', 'SD', 'RPRX', 'LYV', 'BKNG'],
   },
+  {
+    // Congelada el 17/08/2026 — COHORTE 3, pata COMBINADA (hipótesis H5 del pre-registro): primera cohorte
+    // desde el UNIVERSO AMPLIO — /api/trading/seleccion {"universo":"sp500"} (883 candidatos de la caché del
+    // radar, gestores con datos BRK/psc/ic/DA). Antes las cohortes salían solo de la watchlist de gurús;
+    // por eso esta cesta ya no coincide con las de julio.
+    version: '2026-08-17.v1',
+    fechaInicio: '2026-08-17',
+    benchmark: 'SPY',
+    metodo: 'gurús (Dataroma) ∩ calidad (Piotroski≥6 + ROIC≥10%) sobre universo sp500 — /api/trading/seleccion, equiponderada · con cesta base gurús-solo para atribución',
+    params: { minPiotroski: 6, minRoic: 0.10, tam: 25 },
+    simbolos: ['SPGI', 'MA', 'NFLX', 'V', 'APP', 'MSFT', 'GOOGL', 'DAL', 'ALSN', 'WWD', 'BSY', 'STE', 'VMC', 'NDAQ', 'DPZ', 'AAPL', 'IDXX', 'STX', 'LRCX', 'ASML', 'TPR', 'AU', 'CTAS', 'FTI', 'TT'],
+    simbolosBase: ['SPGI', 'V', 'MA', 'META', 'NFLX', 'DHI', 'UBER', 'DAL', 'QSR', 'BKNG', 'RPRX', 'LYV', 'DHR', 'APP', 'LEN', 'GOOGL', 'MSFT', 'CGNX', 'XYZ', 'RDY', 'APA', 'COR', 'MAA', 'TW', 'ARW'],
+  },
+  {
+    // Congelada el 17/08/2026 — COHORTE 3, pata FACTORES-SOLO (H5, atribución completa): los 10 primeros
+    // por score de factores PUROS (rankearUniverso: valor+calidad+momentum en z-scores) sobre la MISMA
+    // caché neutralizada que la pata combinada, SIN gurús y SIN la puerta minPiotroski/minRoic (params a 0
+    // = sin umbral; la elegibilidad es solo tener piotroski+roic y algún dato de valor). Es la tercera
+    // pata que faltaba para atribuir qué aporta cada pilar con datos forward: gurús-solo (simbolosBase de
+    // la combinada) vs gurús∩calidad (combinada) vs factores-solo (esta). Se evalúa por MEDIANA a
+    // 28/56/91 días, las tres contra SPY y entre sí (pre-registro H5). Desde este PR la devuelve
+    // /api/trading/seleccion en `simbolosFactores`; esta primera se calculó el mismo día con el mismo
+    // pipeline (neutralizarUniverso + rankearUniverso top-10) sobre la caché viva.
+    version: '2026-08-17.factores.v1',
+    fechaInicio: '2026-08-17',
+    benchmark: 'SPY',
+    metodo: 'factores-solo (H5): top-10 por score de factores puros (rankearUniverso) sobre universo sp500, sin gurús ni puerta de calidad, equiponderada',
+    params: { minPiotroski: 0, minRoic: 0, tam: 10 },
+    simbolos: ['SNDK', 'BKNG', 'MU', 'WDC', 'NLY', 'STX', 'CMCSA', 'MOH', 'VICR', 'UMBF'],
+  },
 ]
 
 // La cohorte más reciente (para avisos de cadencia y compat con consumidores de una sola cesta).

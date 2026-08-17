@@ -4,7 +4,7 @@ import { isTradingLecturaAutorizado } from '@/lib/trading/auth'
 import { movimientosGestorDataroma, GESTORES_DEFECTO } from '@/lib/trading/dataroma'
 import { fundamentalesSimbolo } from '@/lib/trading/edgar'
 import { neutralizarUniverso } from '@/lib/trading/calidad-datos'
-import { agregarConviccion, piotroskiFScore, seleccionCombinada, seleccionSoloGurus, type EntradaCombinada } from '@central/module-trading'
+import { agregarConviccion, piotroskiFScore, rankearUniverso, seleccionCombinada, seleccionSoloGurus, type EntradaCombinada } from '@central/module-trading'
 
 // SELECCIÓN COMBINADA (Fase B) — cruza CONVICCIÓN de gurús (Dataroma) × CALIDAD fundamental (Piotroski +
 // ROIC de EDGAR). Los gurús dicen QUÉ mirar; la calidad es la PUERTA (solo pasan negocios sólidos). La
@@ -41,12 +41,22 @@ export async function POST(req: NextRequest) {
       piotroski: f.piotroski, roic: f.roic,
     }))
     const sel = seleccionCombinada(entradas, { minPiotroski, minRoic, tam })
+    // Pata FACTORES-SOLO (H5 del pre-registro): top-10 por score de factores PUROS (rankearUniverso,
+    // guruScore fuera del score) sobre la MISMA caché neutralizada — la tercera cesta de la atribución
+    // (gurús-solo / gurús∩calidad / factores-solo). Se congela junto a las otras dos.
+    const factores = rankearUniverso(filas.filter(f => f.roic != null).map(f => ({
+      simbolo: f.simbolo, nombre: f.nombre ?? undefined,
+      piotroski: f.piotroski, roic: f.roic,
+      earningsYield: f.earningsYield, fcfYield: f.fcfYield,
+      momentum: f.momentum, mktCap: f.mktCap,
+    })), { top: 10 })
     return NextResponse.json({
       universo: 'sp500', gestoresConDatos, candidatos: entradas.length, conFundamentales: entradas.length,
       params: sel.params, pesoPct: sel.pesoPct, cesta: sel.cesta, descartados: sel.descartados.slice(0, 20),
       simbolos: sel.cesta.map(x => x.simbolo),
       simbolosBase: seleccionSoloGurus(entradas, sel.params.tam),
-      nota: 'universo S&P 500 desde la caché del radar. Al congelar una cohorte copia `simbolos` y `simbolosBase`. SOLO paper.',
+      simbolosFactores: factores.items.map(x => x.simbolo),
+      nota: 'universo S&P 500 desde la caché del radar. Al congelar una cohorte copia `simbolos`, `simbolosBase` y (cohorte doble H5) `simbolosFactores`. SOLO paper.',
     })
   }
 
