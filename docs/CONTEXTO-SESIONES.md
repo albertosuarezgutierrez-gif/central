@@ -39,7 +39,8 @@
 - Fix: `/api/ig-img` acepta `story=1` → lienzo 1080×1920 con el arte cuadrado centrado sobre el
   fondo de su propia plantilla (bandas del mismo color → se ve nativo). El callback de Telegram
   publica la Story (y el fallback manual por foto) con `&story=1`. Verificado con render local
-  (stat editorial, pregunta, brutalist). `next build` verde.
+  (stat editorial, pregunta, brutalist) y en prod tras el merge. `next build` verde. PR #1467
+  mergeado; skill `ia-rest-maestro` (tabla de agentes) actualizada con el detalle de la Story.
 - Causa raíz: Kutxabank rechaza `/transactions` con ventana de 89 días («Account not found /
   AccountNotAccessibleException», error engañoso) incluso recién firmado el SCA. Fallback 89d→30d→7d
   en `getMovimientosConVentana` (PR #1462) → feed vivo, último mov = HOY. Aviso ℹ️ informativo
