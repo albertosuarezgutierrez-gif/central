@@ -171,7 +171,9 @@ export async function sincronizarSesion(
     } else if (ventana.degradada) {
       // La ventana larga fue rechazada y una corta funcionó: hay datos, pero SOLO desde
       // `desde` — se declara para que nadie lea el hueco anterior como «no hubo movimientos».
-      avisos.push(`${banco} ${mascara}: el banco rechazó la ventana de 89 días — importado solo desde ${ventana.desde}`)
+      // El prefijo ℹ️ marca el aviso como INFORMATIVO: el semáforo (psd2-semaforo.ts) no lo
+      // trata como feed roto — el feed FUNCIONA, solo que con ventana corta.
+      avisos.push(`ℹ️ ${banco} ${mascara}: el banco rechazó la ventana de 89 días — importado solo desde ${ventana.desde}`)
     } else if (movs.length === 0 && previa.length > 0) {
       // Ventana de 89 días VACÍA en una cuenta ya conocida: aunque hoy no hubiera nada nuevo,
       // el banco devolvería el histórico reciente (que saldría como duplicados). Cero absoluto

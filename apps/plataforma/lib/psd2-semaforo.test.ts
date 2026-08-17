@@ -63,3 +63,25 @@ test('feed fresco y consentimiento lejos → ok con la fecha de caducidad declar
   assert.equal(e.nivel, 'ok')
   assert.ok(e.detalles.some(d => d.includes('11/09')))
 })
+
+test('aviso INFORMATIVO (ℹ️ ventana degradada) NO rompe el semáforo: feed fresco sigue ok y la nota se muestra', () => {
+  // Caso Kutxabank 17/08/2026: el banco rechaza la ventana de 89 días pero la de 30 funciona —
+  // el feed está VIVO. Un aviso ℹ️ no puede pedir re-vincular (quemaría SCAs sin motivo).
+  const e = semaforoFeed({
+    hoyISO: '2026-08-11', ultimoMovISO: '2026-08-11',
+    avisos: ['ℹ️ Kutxabank ****0855: el banco rechazó la ventana de 89 días — importado solo desde 2026-07-18'],
+    consentCreadaISO: CONSENT,
+  })
+  assert.equal(e.nivel, 'ok')
+  assert.ok(e.detalles.some(d => d.startsWith('ℹ️')))
+})
+
+test('aviso de FALLO real sigue poniendo el semáforo en roto aunque haya también una nota ℹ️', () => {
+  const e = semaforoFeed({
+    hoyISO: '2026-08-11', ultimoMovISO: '2026-08-11',
+    avisos: ['Kutxabank ****0855: /transactions falló — HTTP 400', 'ℹ️ BBVA ****1175: nota'],
+    consentCreadaISO: CONSENT,
+  })
+  assert.equal(e.nivel, 'roto')
+  assert.match(e.titular, /no está entregando movimientos/)
+})
