@@ -101,16 +101,20 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
       GROUP BY r.propiedad
     `,
 
-    // Gastos de tarjeta asignados a piso concreto (propiedad_id explícito)
+    // Gastos de tarjeta asignados a piso concreto (propiedad_id explícito).
+    // SOLO cuentas tipo 'tarjeta': los recibos de la corriente (luz/agua/IBI de Kutxa,
+    // que también llevan propiedad_id para lo fiscal) ya entran por factura en `gastos`
+    // y sumarlos aquí los contaba DOBLE en el P&L del piso (hallazgo 17/08/2026).
     prisma.$queryRaw<Array<{ propiedad_id: string; importe: number }>>`
-      SELECT propiedad_id, COALESCE(SUM(ABS(importe)), 0)::float AS importe
-      FROM v_movimientos_activos
-      WHERE fecha_operacion >= ${start} AND fecha_operacion < ${end}
-        AND destino = 'turistico_pisos'
-        AND propiedad_id IS NOT NULL
-        AND destino_confirmado = true
-        AND importe < 0
-      GROUP BY propiedad_id
+      SELECT m.propiedad_id, COALESCE(SUM(ABS(m.importe)), 0)::float AS importe
+      FROM v_movimientos_activos m
+      JOIN cuentas_bancarias cb ON cb.id = m.cuenta_bancaria_id AND cb.tipo = 'tarjeta'
+      WHERE m.fecha_operacion >= ${start} AND m.fecha_operacion < ${end}
+        AND m.destino = 'turistico_pisos'
+        AND m.propiedad_id IS NOT NULL
+        AND m.destino_confirmado = true
+        AND m.importe < 0
+      GROUP BY m.propiedad_id
     `,
 
     // El Giraldillo en banco, aún no en movimiento_reparto

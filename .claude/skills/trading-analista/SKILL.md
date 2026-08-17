@@ -6,7 +6,9 @@ description: Pasada diaria del agente de inversión sobre Interactive Brokers (F
 # Trading-analista (Fase 1 · paper) — router
 
 ## Qué hace la pasada diaria
-Lee el NAV de IBKR (`get_account_summary`) y lo empuja a `/api/trading/saldo`; carga la
+Lee el NAV de IBKR (`get_account_summary`) y lo empuja a `/api/trading/saldo`; lee las
+posiciones reales (`get_account_positions`) y las empuja a `/api/trading/cartera` (la sección
+«💼 Cartera real» de `/trading` SOLO se refresca por ahí, 17/08/2026); carga la
 watchlist activa, baja velas diarias por símbolo (IBKR) y fundamentales (FMP best-effort);
 llama a `POST /api/trading/analizar` (torneo + barreras + aperturas paper) y a
 `POST /api/trading/puntuar` (walk-forward + stops paper); resume por Telegram (importes

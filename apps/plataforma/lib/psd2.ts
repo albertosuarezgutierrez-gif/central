@@ -10,7 +10,7 @@
 import { createHash } from 'node:crypto'
 import { Prisma } from '@prisma/client'
 import { prisma } from './db'
-import { getSesion, getDetalleCuenta, getSaldo, getMovimientos, type MovEB } from './enablebanking'
+import { getSesion, getDetalleCuenta, getSaldo, getMovimientosConVentana, type MovEB, type MovsVentana } from './enablebanking'
 
 function hashMov(cbId: string, m: MovEB): string {
   // Dedupe ESTABLE entre pasadas, por CONTENIDO. Ni el entry_reference ni el accountUid de
@@ -41,19 +41,28 @@ export async function sincronizarSesion(
   let cuentas = 0, insertados = 0, duplicados = 0
   const avisos: string[] = []
 
+  // Diagnóstico de raíz ANTES de tocar cuentas: si Enable Banking ya dice que la sesión no
+  // está AUTHORIZED (CLOSED/EXPIRED/REVOKED — p. ej. el banco la invalidó al autorizar una
+  // re-vinculación posterior), los fallos por cuenta («Account not found», «authentication
+  // failure») son solo el síntoma. Se intenta igual (conservador), pero el aviso lleva la causa.
+  if (ses.status && ses.status !== 'AUTHORIZED') {
+    avisos.push(`sesión …${sessionId.slice(-6)} (${ses.aspsp ?? '?'}): estado ${ses.status} en Enable Banking — re-vincular en /banca`)
+  }
+
   for (const accountUid of ses.accounts ?? []) {
     let movsFallo: string | null = null
-    const [detalle, saldo, movs] = await Promise.all([
+    const [detalle, saldo, ventana] = await Promise.all([
       getDetalleCuenta(accountUid).catch((e: unknown) => {
         avisos.push(`detalle de cuenta …${accountUid.slice(-6)} (${ses.aspsp ?? '?'}): ${String(e).slice(0, 160)}`)
         return null
       }),
       getSaldo(accountUid).catch(() => null),
-      getMovimientos(accountUid, dateFrom).catch((e: unknown) => {
+      getMovimientosConVentana(accountUid, dateFrom).catch((e: unknown) => {
         movsFallo = String(e).slice(0, 160)
-        return [] as MovEB[]
+        return { movs: [] as MovEB[], desde: '', degradada: false } satisfies MovsVentana
       }),
     ])
+    const movs = ventana.movs
     const iban = detalle?.iban || accountUid
     // Si getDetalleCuenta falló, accountUid es un UUID opaco (no un IBAN real). Insertar
     // ese UUID como IBAN crea una cuenta_bancaria fantasma que burla el dedupe cross-sesión.
@@ -159,6 +168,12 @@ export async function sincronizarSesion(
 
     if (movsFallo) {
       avisos.push(`${banco} ${mascara}: /transactions falló — ${movsFallo}`)
+    } else if (ventana.degradada) {
+      // La ventana larga fue rechazada y una corta funcionó: hay datos, pero SOLO desde
+      // `desde` — se declara para que nadie lea el hueco anterior como «no hubo movimientos».
+      // El prefijo ℹ️ marca el aviso como INFORMATIVO: el semáforo (psd2-semaforo.ts) no lo
+      // trata como feed roto — el feed FUNCIONA, solo que con ventana corta.
+      avisos.push(`ℹ️ ${banco} ${mascara}: el banco rechazó la ventana de 89 días — importado solo desde ${ventana.desde}`)
     } else if (movs.length === 0 && previa.length > 0) {
       // Ventana de 89 días VACÍA en una cuenta ya conocida: aunque hoy no hubiera nada nuevo,
       // el banco devolvería el histórico reciente (que saldría como duplicados). Cero absoluto
