@@ -24,6 +24,19 @@
   el 1er reemplazo por ficha web sin poder probarlo (sin key en sesión) y estaba muerto en el API** —
   regla nueva anotada en la skill: id vivo = está en `/v1/models` o responde a una llamada;
   PRs/commits: PR #1454 + PR de corrección (misma rama).
+
+- **2026-08-17 · facturas-correo** · hizo: pasada completa (Paso 0→5). Vía B: dias_caido=3 (última
+  copia 14/08), sin backlog en PDF-pendiente/Revisar; 1 hilo en Extraccion-fallida era falso positivo
+  (mensaje de huésped Booking, etiqueta retirada). Paso 4.0: `v_facturas_sin_cargo` sin `sin_revisar`,
+  pero investigando los ~30 PDFs sueltos en la raíz de Drive (ninguno backlog nuevo, casi todos ya en
+  `_DUPLICADOS_BORRAR`) apareció un hueco real que esa vista no puede ver: SiQueBrilla julio (780,10€)
+  archivada+conciliada desde el 03/08 pero SIN fila en `facturas_drive` (invisible para la vista al no
+  existir la fila). Insertada. `agente_salud` actualizado. dudas: —; fallos: **propios** — copié 2
+  duplicados nuevos (SiQueBrilla, Leroy) antes de comprobar que ya estaban archivados; avisos de
+  borrado ya puestos en la papelera para ambos. Candidatos Gmail nuevos: 0. Papelera `_DUPLICADOS_BORRAR`
+  con ~22 avisos acumulados sin vaciar (mencionado, no bloqueante). PRs/commits: commit directo a
+  `docs/` (memoria + esta entrada), sin cambios de código.
+
 - **2026-08-17 · pricing-agente** · hizo: ciclo semanal COMPLETO, los 4 pisos (no solo los en vivo).
   Paso 1: cruzó pricing_decisiones del 10/08 con rate_snapshots+incomes — ventas reales confirmadas
   (busto SS/Feria a precio decidido, luxury/duplex 4 ventas nuevas en oct). Paso 2: 12 ventanas
