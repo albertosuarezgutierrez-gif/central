@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-17T07:24:05Z",
-  "sha": "94657293eeb1bcdeb0644ffc9b800d2306ac7899",
+  "generadoEn": "2026-08-17T07:36:52Z",
+  "sha": "53c791dd30396a6eb82f01ec9b08ebabadb8a4c9",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -45197,7 +45197,7 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: F",
           "retorno": "Promise<T | F>",
-          "linea": 36,
+          "linea": 37,
           "resumen": "/banca = Inicio unificado con control 💶 Dinero | 🏢 Negocios (SegTabs, por navegación → carga perezosa: cada pestaña computa SOLO sus datos). Dinero (por defecto): resumen negocio+personal (misma fue"
         },
         {
@@ -45206,14 +45206,14 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string; tab?: string }> }",
           "retorno": null,
-          "linea": 40
+          "linea": 41
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "f5803d82a6b5"
+      "hash": "8de25412e050"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",
@@ -45271,6 +45271,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "f5a15bead0df"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/banca/SyncPsd2Btn.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "SyncPsd2Btn"
+      ],
+      "funciones": [
+        {
+          "nombre": "SyncPsd2Btn",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 7,
+          "resumen": "Botón «Sincronizar ahora» del panel del feed PSD2: dispara POST /api/banca/psd2/sync y muestra el desenlace REAL (insertados + avisos del banco), no un «hecho» genérico."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4c9a59737944"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/TicketsSuper.tsx",
@@ -50974,6 +50995,30 @@
       "tablas": [],
       "rutaApi": "/api/banca/psd2/instituciones",
       "hash": "348b17b09036"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/banca/psd2/sync/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 13,
+          "resumen": "POST /api/banca/psd2/sync — re-sincroniza AHORA las conexiones vinculadas de la cuenta del dueño, sin esperar al cron diario (06:00 UTC) ni quemar otro SCA re-vinculando. Nació el 17/08/2026 depurando"
+        }
+      ],
+      "tablas": [
+        "conexiones_banco",
+        "next"
+      ],
+      "rutaApi": "/api/banca/psd2/sync",
+      "hash": "86ea0af9ff6b"
     },
     {
       "ruta": "apps/plataforma/app/api/banca/reglas/route.ts",
@@ -63387,7 +63432,8 @@
         "disponiblePis",
         "iniciarPago",
         "estadoPago",
-        "getMovimientos"
+        "getMovimientos",
+        "getMovimientosConVentana"
       ],
       "funciones": [
         {
@@ -63523,17 +63569,42 @@
           "linea": 249
         },
         {
+          "nombre": "diasAtrasISO",
+          "kind": "function",
+          "exportada": false,
+          "params": "dias: number",
+          "retorno": "string",
+          "linea": 254
+        },
+        {
+          "nombre": "pedirTransacciones",
+          "kind": "function",
+          "exportada": false,
+          "params": "accountUid: string, dateFrom: string",
+          "retorno": "Promise<MovEB[]>",
+          "linea": 258
+        },
+        {
           "nombre": "getMovimientos",
           "kind": "function",
           "exportada": true,
           "params": "accountUid: string, dateFromOverride?: string",
           "retorno": "Promise<MovEB[]>",
-          "linea": 254
+          "linea": 291
+        },
+        {
+          "nombre": "getMovimientosConVentana",
+          "kind": "function",
+          "exportada": true,
+          "params": "accountUid: string, dateFromOverride?: string",
+          "retorno": "Promise<MovsVentana>",
+          "linea": 303,
+          "resumen": "Enable Banking exige un rango de fechas para las transacciones; sin date_from devuelve vacío. Por defecto ~89 días para el sync diario, con FALLBACK a ventanas más cortas (30 → 7 días) si el banco rec"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "69ca21991fab"
+      "hash": "9cf1c320fb6c"
     },
     {
       "ruta": "apps/plataforma/lib/estructura.ts",
@@ -65443,7 +65514,7 @@
           "exportada": true,
           "params": "dateFrom?: string",
           "retorno": "Promise<",
-          "linea": 197,
+          "linea": 202,
           "resumen": "Re-sincroniza todas las conexiones vinculadas de todas las cuentas (cron diario). dateFrom: override para importar histórico (p. ej. \"2026-01-01\"). Por defecto 89 días. Los fallos por sesión NO se tra"
         }
       ],
@@ -65456,7 +65527,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "01d2acf40b32"
+      "hash": "d87055b8abe6"
     },
     {
       "ruta": "apps/plataforma/lib/reclamacion.ts",
@@ -92483,7 +92554,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2468,
-    "funciones": 6690
+    "archivos": 2470,
+    "funciones": 6695
   }
 }

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-17T07:11:58Z",
+  "generadoEn": "2026-08-17T07:36:52Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3698,6 +3698,7 @@
       "/api/banca/psd2/callback",
       "/api/banca/psd2/conectar",
       "/api/banca/psd2/instituciones",
+      "/api/banca/psd2/sync",
       "/api/banca/reglas",
       "/api/banca/revisar",
       "/api/banca/ticket",
@@ -4991,7 +4992,7 @@
     "packages": 37,
     "capacidades": 23,
     "skills": 32,
-    "apis": 1164,
+    "apis": 1165,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
