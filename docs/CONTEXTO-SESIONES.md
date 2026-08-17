@@ -32,6 +32,15 @@
 
 ---
 
+### 💳 (17/08/2026) Check 7 cuadre tarjetas: falso 🔴 tras cada liquidación, arreglado
+- Alberto: «los movimientos de 2.013,37€ los he pasado varias veces, ¿lo vuelvo a subir?». No: el
+  desglose de julio de la ****0300 SÍ estaba (94 compras). El check exigía el espejo `PAGO RECIBO`
+  del mismo día, que ABRE el extracto del mes SIGUIENTE (landmine PR #1300) → 🔴 durante ~un mes
+  aunque el desglose estuviera. Y pedía «el extracto de agosto» cuando lo que faltaría es JULIO.
+- Fix: sin espejo, valen las compras del mes del CICLO en la cuenta `TARJETA-KUTXA-<últ.4>`;
+  veredicto 3 estados en `lib/cuadre-tarjetas.ts` (puro+tests; sin PAN = «no puedo comprobarlo»).
+  SQL validado contra BD real (0300 → ✅, 0302 → 🔴 julio). La ****0302 de Pilar sigue faltando.
+
 ### 🧊 (17/08/2026) Cohorte 3 DOBLE congelada (H5) + primer contraste forward vs retrovisor
 - PR #1460 **MERGEADO y verificado en prod**: cohorte 3 DOBLE en `COHORTES_PAPER` según H5 —
   `2026-08-17.v1` (combinada sp500, 25 valores, con `simbolosBase`) + `2026-08-17.factores.v1`
