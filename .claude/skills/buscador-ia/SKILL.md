@@ -42,7 +42,9 @@ Los ids por defecto y sus envs de override:
   deprecaciones de la cadena DIRECTA (NIM/Groq/Gemini/Kimi), que es la red de seguridad
   cuando OpenRouter entero falla, y puede proponer por PR cambios a las listas de
   preferencia del cron (`PREFERIDOS` en su route.ts) si descubre algo mejor.
-- **NIM** `meta/llama-3.3-70b-instruct` — env `NVIDIA_API_KEY` (primario de la cadena directa, gratis).
+- **NIM** `meta/llama-4-maverick-17b-128e-instruct` — env `NVIDIA_API_KEY` (primario de la cadena
+  directa, gratis; swap 17/08/2026 — el anterior `meta/llama-3.3-70b-instruct` deja de soportarse
+  en NIM el 25/08/2026).
 - **Groq** `openai/gpt-oss-120b` — env `GROQ_API_KEY`, override `GROQ_BRAIN_MODEL`.
 - **Gemini** `gemini-flash-latest` (alias rodante; `gemini-2.5-flash` da 404 desde 09/07/2026) —
   envs `GEMINI_API_KEY` **+ `GEMINI_TEXTO=1`** (apagado por defecto), override `GEMINI_BRAIN_MODEL`.

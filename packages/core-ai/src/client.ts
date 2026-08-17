@@ -5,7 +5,7 @@
 // Política de fallback de TEXTO (compartida por todas las verticales que usan este
 // wrapper, incluida la PASARELA de plataforma, cuyas rutas /api/ai/chat y /api/ai/tools
 // llaman aquí): OpenRouter (agregador con fallback nativo entre modelos, si hay key) →
-// NIM → Groq (mismo Llama 3.3 70B, gratis, otra infra) → Cerebras (gratis, infra WSE
+// NIM → Groq (gpt-oss-120b, gratis, otra infra) → Cerebras (gratis, infra WSE
 // independiente) → [Gemini, APAGADO por defecto]
 // → Kimi/Moonshot (de pago, último recurso). Cada eslabón queda inactivo si no está su
 // API key, sin romper nada: sin OPENROUTER_API_KEY la cadena es EXACTAMENTE la de
@@ -33,7 +33,10 @@ import type { MoonshotConfig } from './moonshot'
 import type { GeminiConfig } from './gemini'
 import type { OpenRouterConfig } from './openrouter'
 
-const DEFAULT_MODEL = 'meta/llama-3.3-70b-instruct'
+// `meta/llama-3.3-70b-instruct` deja de soportarse en NIM el 25/08/2026 (aviso en su ficha
+// de build.nvidia.com; NVIDIA no nombra sucesor concreto). Maverick es el sustituto elegido:
+// mismo vendor, multilingüe, vivo en catálogo y gratis en el tier de build.nvidia.com.
+const DEFAULT_MODEL = 'meta/llama-4-maverick-17b-128e-instruct'
 const DEFAULT_GROQ_MODEL = 'openai/gpt-oss-120b'
 const DEFAULT_CEREBRAS_MODEL = 'gpt-oss-120b'
 const DEFAULT_MOONSHOT_MODEL = 'kimi-k2.6'
@@ -143,7 +146,7 @@ export async function aiComplete(
     // (p.ej. NIM con timeout + Gemini con 429) porque estos catch tragaban el error. Cada eslabón
     // deja rastro en logs — qué proveedor falló y por qué, o si estaba inactivo por falta de key.
     console.warn(`[aiComplete] NIM falló (${msg(eNim)}); probando fallbacks`)
-    // Fallback 1: Groq GRATIS (mismo Llama 3.3 70B). Señal nueva (la de NIM pudo abortar).
+    // Fallback 1: Groq GRATIS (gpt-oss-120b). Señal nueva (la de NIM pudo abortar).
     const groq = groqEnvConfig()
     if (groq) {
       try {

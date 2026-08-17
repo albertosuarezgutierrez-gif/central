@@ -98,7 +98,7 @@ Si no encuentras un campo, pon null. Solo JSON, sin texto adicional.`
 
 /**
  * Extrae datos estructurados de una factura.
- * PDF  → texto plano → NVIDIA NIM llama-3.3-70b
+ * PDF  → texto plano → NVIDIA NIM llama-4-maverick
  * Imagen → base64   → NVIDIA NIM llama-3.2-90b-vision
  */
 export async function aiExtractInvoice(input: {

@@ -31,8 +31,8 @@ import type { ImageInput, NimConfig, GroqConfig, OpenRouterConfig, NimToolMessag
  * │ callAI()  — texto, sin internet                             │
  * │   Cuándo: generación, clasificación, extracción, resúmenes  │
  * │   Cuándo NO: cuando necesitas datos actuales de internet    │
- * │   Modelo: NIM llama-3.3-70b → Groq (gratis) → OpenRouter   │
- * │   Fallback automático: Groq = mismo modelo/otra infra;      │
+ * │   Modelo: NIM llama-4-maverick → Groq (gratis) → OpenRouter   │
+ * │   Fallback automático: Groq = gpt-oss-120b/otra infra;      │
  * │   OpenRouter = agregador (última red si caen NIM y Groq).   │
  * │   noFallback: legacy (ya no bloquea el fallback gratis Groq)│
  * ├─────────────────────────────────────────────────────────────┤
@@ -56,12 +56,12 @@ import type { ImageInput, NimConfig, GroqConfig, OpenRouterConfig, NimToolMessag
  *  ¿Analiza imágenes?
  *    SÍ  → callAIVision()
  *
- *  Disponibilidad: callAI() intenta NIM y, si falla, cae a Groq (mismo Llama
- *  3.3 70B, gratis) de forma automática. `noFallback` es legacy — antaño evitaba
+ *  Disponibilidad: callAI() intenta NIM y, si falla, cae a Groq (gpt-oss-120b,
+ *  gratis) de forma automática. `noFallback` es legacy — antaño evitaba
  *  el fallback de PAGO (Anthropic, retirado); ya no bloquea el fallback gratis.
  *
  *  ¿Output muy corto (<20 tokens) con alta precisión requerida?
- *    NIM/Groq (Llama 3.3 70B) rinden bien; si quieres comparar modelos,
+ *    NIM/Groq rinden bien; si quieres comparar modelos,
  *    fuerza uno concreto con el parámetro `model` y mide en ia_training_log.
  *
  * PARA EVALUAR QUÉ MODELO ES MEJOR EN UNA TAREA NUEVA:
@@ -76,9 +76,10 @@ export { cleanJSON }
 export type { ImageInput }
 
 // Modelos por defecto (sobrescribibles via env var si hace falta)
-const TEXT_MODEL_NVIDIA   = process.env.NVIDIA_BRAIN_MODEL      ?? 'meta/llama-3.3-70b-instruct'
+// Swap 17/08/2026: el 3.3-70b deja de soportarse en NIM el 25/08/2026 (aviso en build.nvidia.com).
+const TEXT_MODEL_NVIDIA   = process.env.NVIDIA_BRAIN_MODEL      ?? 'meta/llama-4-maverick-17b-128e-instruct'
 const VISION_MODEL_NVIDIA = process.env.NVIDIA_VISION_MODEL     ?? 'meta/llama-3.2-11b-vision-instruct'
-// Fallback de texto GRATIS: Groq sirve el MISMO Llama 3.3 70B que NIM, en otra infra.
+// Fallback de texto GRATIS: Groq con gpt-oss-120b, en otra infra.
 const TEXT_MODEL_GROQ     = process.env.GROQ_BRAIN_MODEL        ?? 'openai/gpt-oss-120b'
 
 // Config NIM desde el entorno de ESTA app (el paquete core-ai no lee process.env).

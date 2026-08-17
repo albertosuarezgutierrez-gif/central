@@ -58,7 +58,7 @@ export async function responderAsistenteAdmin(
   try {
     const respuesta = await iaChat(recientes, {
       system: buildPrompt(empleados, solicitudes),
-      model: 'meta/llama-3.3-70b-instruct',
+      model: 'meta/llama-4-maverick-17b-128e-instruct',
       maxTokens: 700,
       timeoutMs: 35_000,
     })

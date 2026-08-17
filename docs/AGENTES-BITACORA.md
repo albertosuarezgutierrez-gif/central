@@ -15,6 +15,13 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-17 · buscador-ia** · hizo: seguimiento del hallazgo crítico del 17/08 — NIM retira
+  `meta/llama-3.3-70b-instruct` el 25/08/2026; confirmado el id de reemplazo
+  `meta/llama-4-maverick-17b-128e-instruct` (vivo en catálogo) por búsquedas dirigidas y aplicado el
+  swap en todo el radio (core-ai + plataforma + rrhh + ia-rest, incl. 4 edge functions que necesitan
+  deploy aparte); Telegram enviado (preflight 200). dudas: NVIDIA no nombra sucesor oficial — Maverick
+  es elección propia (vs `z-ai/glm-5.2`); sin mini-eval en vivo (sin key). fallos: WebFetch a
+  build.nvidia.com/docs.api.nvidia.com bloqueado por proxy (igual que 27/07 y 10/08); PRs/commits: PR #1454.
 - **2026-08-17 · pricing-agente** · hizo: ciclo semanal COMPLETO, los 4 pisos (no solo los en vivo).
   Paso 1: cruzó pricing_decisiones del 10/08 con rate_snapshots+incomes — ventas reales confirmadas
   (busto SS/Feria a precio decidido, luxury/duplex 4 ventas nuevas en oct). Paso 2: 12 ventanas
