@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-17T07:45:44Z",
-  "sha": "b1dbd30fa7a027ebe85e23bdb9c2f6ced298e581",
+  "generadoEn": "2026-08-17T08:24:54Z",
+  "sha": "f38a83791b7c640291754d820e69b1048be670bf",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -8917,7 +8917,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/ig-img",
-      "hash": "6c1b8c5a574a"
+      "hash": "58f97100beee"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/ig-lab-img/route.tsx",
@@ -18930,7 +18930,7 @@
         "next"
       ],
       "rutaApi": "/api/telegram/instagram-callback",
-      "hash": "da5861d2ad78"
+      "hash": "0ef82e996dba"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/telegram/setup-webhook/route.ts",
@@ -67647,11 +67647,12 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 235,
+          "linea": 239,
           "resumen": "Mes anterior al actual en formato 'YYYY-MM'"
         }
       ],
       "tablas": [
+        "cuentas_bancarias",
         "gastos",
         "incomes",
         "movimiento_reparto",
@@ -67660,7 +67661,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "a8c6da585103"
+      "hash": "3d5bcfc02fa5"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-aforo.ts",

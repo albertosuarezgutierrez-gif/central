@@ -39,7 +39,17 @@
   «💼 Cartera real» en `/trading` (solo con sesión; el invitado NO la ve). Totales POR divisa,
   NULL nunca 0, sync-marker separa «sin leer» de «sin posiciones».
 - La pasada diaria gana el paso 1c (skill `trading-analista`): empuja `get_account_positions`
-  al endpoint cada noche — SOLO con lectura buena; fallo de lectura ≠ cartera vacía.
+  al endpoint cada noche — SOLO con lectura buena; fallo de lectura ≠ cartera vacía. PR #1468.
+
+### 📸 (17/08/2026) Stories de Instagram salían recortadas — lienzo 9:16 real en ig-img
+- Alberto mandó pantallazo: la Story auto de ia.rest se veía fatal (el «2» y el texto cortados,
+  casi todo negro). Causa: `ig_aprobar` republicaba como Story la MISMA imagen cuadrada 1080×1080
+  del feed, e Instagram la escala a pantalla completa 9:16 recortando los laterales.
+- Fix: `/api/ig-img` acepta `story=1` → lienzo 1080×1920 con el arte cuadrado centrado sobre el
+  fondo de su propia plantilla (bandas del mismo color → se ve nativo). El callback de Telegram
+  publica la Story (y el fallback manual por foto) con `&story=1`. Verificado con render local
+  (stat editorial, pregunta, brutalist) y en prod tras el merge. `next build` verde. PR #1467
+  mergeado; skill `ia-rest-maestro` (tabla de agentes) actualizada con el detalle de la Story.
 
 ### ✅ (17/08/2026) Kutxabank PSD2 RESUELTO — era la VENTANA de 89 días (+2 fixes de camino)
 - Causa raíz: Kutxabank rechaza `/transactions` con ventana de 89 días («Account not found /
@@ -64,6 +74,13 @@
 - **Pendiente Alberto: mergear el PR y re-vincular Kutxabank UNA vez en `/banca`** (el callback
   sincroniza al momento y rellenará el hueco 11/08→hoy; ventana 89 días). Tras vincular, mirar
   `conexiones_banco.ultimo_avisos` — con el fix dirá el estado real de la sesión si vuelve a fallar.
+
+### 🧮 (17/08/2026) Fix doble conteo en el P&L por piso (`getPLMensual`)
+- La query «gastos de tarjeta» sumaba CUALQUIER movimiento con `propiedad_id`+confirmado — cogía
+  también los recibos de la corriente Kutxa (luz/agua/IBI de House, que llevan `propiedad_id` para lo
+  fiscal) y ya entran por factura en `gastos` → doble conteo. Ahora exige `cuentas_bancarias.tipo='tarjeta'`.
+- Efecto medido (junio, House): 420,31€ → 123,45€ en «otros» (solo la compra real de tarjeta).
+  OK de Alberto tras explicárselo. Suite 1232/0, tsc 0.
 
 ### 🏦 (17/08/2026) Gastos fijos de House (Socorro) dados de alta desde banca real
 - Alberto: «los gastos de Socorro están en la cuenta de Kutxa» → derivados de `movimientos_bancarios`
