@@ -32,6 +32,16 @@
 
 ---
 
+### 🏦 (17/08/2026) Gastos fijos de House (Socorro) dados de alta desde banca real
+- Alberto: «los gastos de Socorro están en la cuenta de Kutxa» → derivados de `movimientos_bancarios`
+  y dados de alta en `gastos_fijos` (2 filas, `origen='manual'`): IBI 40,49€/mes (2 plazos ~242,93€;
+  2º plazo nov ESTIMADO, confirmar al cobrarse) + seguro Occident 49,45€/mes (593,45€/año, 16/01).
+- Suministros NO van en fijos (ya entran por factura en `gastos`; duplicarían). Recibo Ayto. 130,93€
+  (16/04) sin identificar, fuera. Skill pricing-agente actualizada en el PR #1457.
+- ⚠️ Hallazgo aparte SIN tocar: `getPLMensual` (query «tarjeta») suma CUALQUIER movimiento con
+  `propiedad_id`+confirmado, no solo tarjeta → los recibos Kutxa de House (luz/agua/IBI) pueden
+  contar DOBLE contra sus facturas de `gastos` en el P&L por piso. Decidir fix con Alberto.
+
 ### ✅ (17/08/2026) PR #1449 (ciclo Booking +20%) MERGEADO + sincronía de skills/docs con el 1.20
 - #1449 mergeado (inventario + Fases 1-3 ejecutadas y verificadas). Post-merge: actualizados la
   skill `pricing-agente` (estado-y-protocolo), el comentario del markup en `pricing/apply/route.ts`
