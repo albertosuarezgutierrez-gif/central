@@ -56,6 +56,13 @@
   sincroniza al momento y rellenará el hueco 11/08→hoy; ventana 89 días). Tras vincular, mirar
   `conexiones_banco.ultimo_avisos` — con el fix dirá el estado real de la sesión si vuelve a fallar.
 
+### 🧮 (17/08/2026) Fix doble conteo en el P&L por piso (`getPLMensual`)
+- La query «gastos de tarjeta» sumaba CUALQUIER movimiento con `propiedad_id`+confirmado — cogía
+  también los recibos de la corriente Kutxa (luz/agua/IBI de House, que llevan `propiedad_id` para lo
+  fiscal) y ya entran por factura en `gastos` → doble conteo. Ahora exige `cuentas_bancarias.tipo='tarjeta'`.
+- Efecto medido (junio, House): 420,31€ → 123,45€ en «otros» (solo la compra real de tarjeta).
+  OK de Alberto tras explicárselo. Suite 1232/0, tsc 0.
+
 ### 🏦 (17/08/2026) Gastos fijos de House (Socorro) dados de alta desde banca real
 - Alberto: «los gastos de Socorro están en la cuenta de Kutxa» → derivados de `movimientos_bancarios`
   y dados de alta en `gastos_fijos` (2 filas, `origen='manual'`): IBI 40,49€/mes (2 plazos ~242,93€;
