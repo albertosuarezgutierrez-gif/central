@@ -82,8 +82,8 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
   ahí el "sigue sin tener contexto" de Alberto. Sin JSON ese fallo ya no puede vaciar el contexto. El
   guardrail anti-invención (`contieneDatoInventado`) sigue corriendo sobre el texto generado.
 - **Modelo del agente (`decidir.ts` — 06/07/2026):** por defecto usa el modelo por defecto de la pasarela
-  (`meta/llama-4-maverick-17b-128e-instruct` desde el 17/08/2026 — el 3.3-70b deja de soportarse en NIM
-  el 25/08/2026 —, con su cadena NIM→Groq→Cerebras→Gemini→Kimi). **`AGENTE_HUESPED_MODEL` está VACÍO por
+  (`z-ai/glm-5.2` desde el 17/08/2026 — el 3.3-70b deja de soportarse en NIM el 25/08/2026; verificado
+  en vivo con el prompt de huésped —, con su cadena NIM→Groq→Cerebras→Gemini→Kimi). **`AGENTE_HUESPED_MODEL` está VACÍO por
   defecto** (antes `meta/llama-3.1-405b-instruct`, que NVIDIA RETIRÓ de NIM → `HTTP 404` en CADA mensaje;
   enmascarado por el reintento con el modelo por defecto, hasta el día que ese también cayó → "IA no
   disponible" a un huésped). Si se quiere un modelo más capaz, poner en `AGENTE_HUESPED_MODEL` un id

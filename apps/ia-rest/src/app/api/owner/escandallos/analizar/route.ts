@@ -51,7 +51,7 @@ criticos = margen<50% O muy vendido con margen bajo. sugerencia_precio = precio 
       fuente: 'nim_analitico',
       calidad: 3,
       confianza: 0.75,
-      modelo_usado: 'nvidia/llama-4-maverick',
+      modelo_usado: 'nvidia/glm-5.2',
     })
   }
   return NextResponse.json({ escandallos: contexto, analisis })

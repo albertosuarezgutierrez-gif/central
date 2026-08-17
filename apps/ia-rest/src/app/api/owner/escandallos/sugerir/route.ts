@@ -95,7 +95,7 @@ Reglas:
       fuente:          'nim_analitico',
       calidad:         3,
       confianza:       resueltos / (ingredientesConId.length || 1),
-      modelo_usado:    'nvidia/llama-4-maverick',
+      modelo_usado:    'nvidia/glm-5.2',
     }).catch(() => { /* no bloquear si falla el log */ })
   }
 
