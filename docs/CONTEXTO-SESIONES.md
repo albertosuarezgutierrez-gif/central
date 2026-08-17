@@ -37,10 +37,12 @@
   income (Booking: 1.344€ / 2.044,74€ / 3.318,47€ brutos — la de Feria a ~1.659€/noche). No hay
   bloqueo manual ni sync roto: el chequeo del ciclo las dio por «sin income» en falso. Nada que tocar.
 - La muestra ruidosa del 29-ago NO es puntual: 364 filas / 36 fechas de House con comps a <12€/plaza
-  (44-104€ para 12 personas = precio de habitación), **todas `fuente='serper'`** (sweep, desde 04/08);
-  0 de `booking_mcp`. El apply no filtra plausibilidad €/plaza → pendiente propuesto a Alberto:
-  descartar (o anular) comps de aforo ≥10 bajo umbral €/plaza en sweep/percentiles. Sin tocar aún
-  (afecta a precio en vivo → necesita su OK).
+  (44-104€ para 12 personas = precio de habitación), **todas `fuente='serper'`** (sweep, desde 04/08).
+  **Filtro de plausibilidad €/plaza APLICADO con OK de Alberto** (`pricing-comps-plausibles.ts`, umbral
+  12€/plaza, comps sin aforo no se juzgan): apply (3 consultas) + guard (#4/#5/#7/#8/#9) + recommend/
+  pilot-track/settings. Efecto medido: +14/+38€ en p50 de fechas contaminadas, 0€ en las limpias.
+- Reservas Dúplex del 16/08 verificadas OK: 3-5 oct y 16-18 oct a 137-140€/noche bruto con listado
+  en mercado (p50 fiable 171/184,5€); el descuento es el canal (~0,78-0,80), no infraprecio.
 
 ### 💓 (16/08/2026) Sonda del verificador de eventos + guarda de regresión (PR #1447)
 - El parte «Sin poder comprobar» decía la verdad: `sivra_eventos_verificar` se declaró en

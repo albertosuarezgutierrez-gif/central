@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getSession } from "@/lib/session"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
+import { MIN_EUR_PLAZA_COMP } from "@/lib/sivra/pricing-comps-plausibles"
 import { computeRecommendation } from "@/lib/sivra/pricing-engine"
 
 export const dynamic = "force-dynamic"
@@ -34,6 +35,8 @@ export async function GET() {
     FROM market_rates m
     JOIN latest l ON l.scenario = m.scenario AND l.sd = m.search_date
     WHERE m.price_night > 0
+      -- Plausibilidad €/plaza, igual que el motor (ver pricing-comps-plausibles.ts).
+      AND (m.guests IS NULL OR m.guests <= 0 OR m.price_night >= ${MIN_EUR_PLAZA_COMP} * m.guests)
   `)
 
   // 2) Pisos + ajustes por piso (defaults si no hay fila en pricing_settings).
