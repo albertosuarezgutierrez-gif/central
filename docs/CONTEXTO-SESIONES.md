@@ -32,14 +32,15 @@
 
 ---
 
-### 🔴 (17/08/2026) Swap NIM: llama-3.3-70b → llama-4-maverick (retirada 25/08)
-- NIM retira `meta/llama-3.3-70b-instruct` el **25/08/2026** (banner en build.nvidia.com, sin sucesor
-  nombrado). Reemplazo elegido y verificado vivo: **`meta/llama-4-maverick-17b-128e-instruct`**.
-- Swap en todo el radio: core-ai (`client.ts`/`nim.ts`/`types.ts`), plataforma (`ai-client.ts`,
-  `sonda-ia.ts`), rrhh (`asistente*.ts`), ia-rest (`ai-client.ts`, `brain.ts`, labels, `.env.example`
-  + 4 edge functions ⚠️ **pendiente `supabase functions deploy`**). Ids OpenRouter `meta-llama/*` NO tocados.
-- PR #1454 (mergeado por orden de Alberto); Telegram enviado. `CONTABLE_MODEL`
-  (`deepseek-ai/deepseek-v3`) sigue sin confirmar. Detalle en `docs/BUSCADOR-IA.md`.
+### 🔴 (17/08/2026) Swap NIM verificado en vivo: 70B→GLM-5.2 · contable→deepseek-v4-flash (PRs #1454+fix)
+- NIM retira el 3.3-70b el **25/08/2026**. 1ª elección (Maverick, PR #1454 mergeado) resultó **410 Gone
+  en el API** (EOL 27/07 con la ficha web aún viva) — cazado al probar con la key real vía harness en
+  una edge function de ia-rest + `pg_net`. **La ficha de build.nvidia.com NO prueba que el modelo viva.**
+- Final, todo probado con llamadas reales: default NIM **`z-ai/glm-5.2`** (mini-eval A/B 2/2) y
+  `CONTABLE_MODEL` **`deepseek-ai/deepseek-v4-flash-0731`** (el `deepseek-v3` YA NO existe en `/v1/models`
+  — cerrado el "sin confirmar" del 27/07). Radio completo re-swapeado; 4 edge functions redesplegadas
+  (Supabase MCP) y `nim-sentiment` probado end-to-end. Ids OpenRouter `meta-llama/*` NO tocados.
+- Detalle y regla nueva del Paso 1 (id vivo = está en `/v1/models` o responde) en `docs/BUSCADOR-IA.md`.
 
 ### 📊 (17/08/2026) Ciclo semanal de pricing — los 4 pisos, comps por conector real
 - Ciclo completo del agente de pricing (skill `pricing-agente`): medido el ciclo anterior (10/08) contra

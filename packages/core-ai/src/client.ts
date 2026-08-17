@@ -34,9 +34,11 @@ import type { GeminiConfig } from './gemini'
 import type { OpenRouterConfig } from './openrouter'
 
 // `meta/llama-3.3-70b-instruct` deja de soportarse en NIM el 25/08/2026 (aviso en su ficha
-// de build.nvidia.com; NVIDIA no nombra sucesor concreto). Maverick es el sustituto elegido:
-// mismo vendor, multilingüe, vivo en catálogo y gratis en el tier de build.nvidia.com.
-const DEFAULT_MODEL = 'meta/llama-4-maverick-17b-128e-instruct'
+// de build.nvidia.com; NVIDIA no nombra sucesor). ⚠️ La ficha web NO prueba que el modelo viva:
+// el primer sustituto elegido (llama-4-maverick) tenía ficha viva y el API devolvía 410 Gone
+// (EOL 27/07/2026). GLM-5.2 se eligió del listado REAL `/v1/models` y se verificó con llamadas
+// en vivo (17/08/2026): responde directo (sin razonamiento parásito), multilingüe y gratis.
+const DEFAULT_MODEL = 'z-ai/glm-5.2'
 const DEFAULT_GROQ_MODEL = 'openai/gpt-oss-120b'
 const DEFAULT_CEREBRAS_MODEL = 'gpt-oss-120b'
 const DEFAULT_MOONSHOT_MODEL = 'kimi-k2.6'
@@ -109,7 +111,7 @@ function openrouterEnvConfig(): OpenRouterConfig | null {
  * → Cerebras (gratis) → [Gemini, solo con GEMINI_TEXTO=1] → Kimi (de pago). Cada eslabón se activa solo si está su API key.
  * Acepta string (prompt) o array de mensajes.
  *
- * OJO con `options.model`: es un id de NIM (p. ej. `deepseek-ai/deepseek-v3`), NO un slug de
+ * OJO con `options.model`: es un id de NIM (p. ej. `deepseek-ai/deepseek-v4-flash-0731`), NO un slug de
  * OpenRouter. Si el caller fija modelo, se respeta NIM como primario (comportamiento de siempre)
  * y OpenRouter pasa a ser un fallback más (con SU propio modelo por defecto).
  */

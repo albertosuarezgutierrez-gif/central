@@ -26,7 +26,7 @@
 | Eslabón | id por defecto | Env (key / override) | Coste | Estado (comprobado 2026-08-17) |
 |---|---|---|---|---|
 | OpenRouter (primario pasarela — lo vigila SU cron, no este agente) | `deepseek/deepseek-chat` | `OPENROUTER_API_KEY` / `OPENROUTER_MODEL` | según modelo (tope 1€/día) | fuera de scope (cron `ia-director-refresh`) |
-| NVIDIA NIM (primario cadena directa) | `meta/llama-4-maverick-17b-128e-instruct` | `NVIDIA_API_KEY` | gratis | 🔄 **SWAP 17/08/2026** — el anterior `meta/llama-3.3-70b-instruct` tiene aviso de retirada en su ficha de [build.nvidia.com](https://build.nvidia.com/meta/llama-3_3-70b-instruct): **deja de soportarse el 25/08/2026** (mismo patrón que el 405B del 06/07). NVIDIA no nombra sucesor; se eligió [Maverick](https://build.nvidia.com/meta/llama-4-maverick-17b-128e-instruct/modelcard) (vivo, multilingüe/multimodal, el más usado del catálogo, gratis). PR draft de esta pasada. |
+| NVIDIA NIM (primario cadena directa) | `z-ai/glm-5.2` | `NVIDIA_API_KEY` | gratis (~40 RPM) | 🔄 **SWAP 17/08/2026, verificado EN VIVO** — el 3.3-70b deja de soportarse el 25/08/2026 (banner en [su ficha](https://build.nvidia.com/meta/llama-3_3-70b-instruct); ese día además respondía 503 por saturación). El primer sustituto (llama-4-maverick, elegido por ficha web) resultó **410 Gone en el API** (EOL 27/07/2026 — la ficha seguía viva). GLM-5.2 salió del listado real `GET /v1/models` (102 modelos) y pasó la mini-eval con key real: prompt A (huésped) respuesta cálida directa en español, prompt B devuelve exactamente `ESCALAR`, sin razonamiento parásito. Descartado `nvidia/llama-3.3-nemotron-super-49b-v1.5` (razonador: `content:null` con maxTokens cortos). |
 | Groq (fallback 1) | `openai/gpt-oss-120b` | `GROQ_API_KEY` / `GROQ_BRAIN_MODEL` | gratis (rate-limited) | ✅ **VIVO** (10/08) — destino de migración recomendado de otros modelos que Groq deprecia |
 | Cerebras (fallback 2, plumbing 27/07/2026) | `gpt-oss-120b` | `CEREBRAS_API_KEY` / `CEREBRAS_MODEL` | gratis (1M tok/día, ctx 8192 en tier gratis) | ✅ vivo (10/08) — **INACTIVO sin key**, pendiente de Alberto |
 | Gemini (fallback 3, APAGADO por defecto) | `gemini-flash-latest` | `GEMINI_API_KEY` **+ `GEMINI_TEXTO=1`** / `GEMINI_BRAIN_MODEL` | gratis | ✅ vivo (10/08) — alias rodante apunta a Gemini 3.5 Flash GA; sigue apagado por falta de cuota real |
@@ -34,14 +34,14 @@
 
 **Consumidores con modelo propio:**
 - `AGENTE_HUESPED_MODEL` — **vacío por defecto** (usa el modelo por defecto de la cadena, desde el
-  17/08/2026 Maverick). *(Antes `meta/llama-3.1-405b-instruct`, RETIRADO de NIM → causó "IA no disponible".)*
-- `CONTABLE_MODEL` — default `deepseek-ai/deepseek-v3` (NIM). ⚠️ **sigue sin confirmar** (17/08): el
-  catálogo NIM visible por búsqueda solo lista `deepseek-v3.1`/`v3.1-terminus`/`v3.2`; WebFetch directo a
-  NIM bloqueado por proxy y sin `NVIDIA_API_KEY` en sesión. Sin evidencia de rotura; pendiente de
-  comprobación con key real.
+  17/08/2026 GLM-5.2). *(Antes `meta/llama-3.1-405b-instruct`, RETIRADO de NIM → causó "IA no disponible".)*
+- `CONTABLE_MODEL` — default `deepseek-ai/deepseek-v4-flash-0731` desde el 17/08/2026: el anterior
+  `deepseek-ai/deepseek-v3` **YA NO existe en el API de NIM** (confirmado contra `/v1/models` con key real
+  — cierra el "sin confirmar" que arrastrábamos desde el 27/07). El sucesor se probó en vivo con una
+  pregunta de cifras: correcta, 1 frase, sin `<think>`.
 - Ids pinneados del viejo 70B en apps (rrhh `asistente*.ts`, plataforma `ai-client.ts`/`sonda-ia.ts`,
-  ia-rest `ai-client.ts`/`brain.ts` + 4 edge functions) — **todos swapeados a Maverick en el PR del
-  17/08/2026**. ⚠️ Las edge functions de ia-rest necesitan `supabase functions deploy` aparte (como en PR #822).
+  ia-rest `ai-client.ts`/`brain.ts` + 4 edge functions) — **todos swapeados a GLM-5.2** (PRs del
+  17/08/2026). Las 4 edge functions de ia-rest **ya redesplegadas** por Supabase MCP en la misma sesión.
 
 ## Catálogos a comprobar cada pasada
 - NVIDIA NIM — https://build.nvidia.com/models
@@ -54,13 +54,27 @@
 
 | Candidato | Proveedor | id | Gratis/límite | Encaja para | Mini-eval |
 |---|---|---|---|---|---|
-| GLM-5.2 (z-ai) | NVIDIA NIM | `z-ai/glm-5.2` | Gratis, ~40 RPM (lento en hora punta) | Candidato a `AGENTE_HUESPED_MODEL`/`CONTABLE_MODEL`: reseñas de julio/2026 lo señalan top open-weight en razonamiento/código/agentic. El 17/08 se consideró como sustituto del 70B y se prefirió Maverick (mismo vendor Meta, más rodado en el catálogo, multilingüe para huéspedes; GLM-5.2 más lento en hora punta) | **Sin eval en vivo (sin key)** — solo datos publicados |
+| ~~GLM-5.2 (z-ai)~~ **PROMOVIDO a primario NIM el 17/08/2026** | NVIDIA NIM | `z-ai/glm-5.2` | Gratis, ~40 RPM | Ya no es candidato: es el default de la cadena directa (ver tabla). Mini-eval en vivo A 2/2 · B 2/2 | ✅ eval con key real 17/08 |
 | MiMo-V2.5 / -Pro (Xiaomi) | OpenRouter (de pago) o self-host (MIT) | `xiaomi/mimo-v2.5[-pro]` | NO gratis por API | Interés por ranking de uso en OpenRouter; fuera del scope de la cadena directa | Sin mini-eval |
 | Mistral (La Plateforme, free tier "Experiment") | Mistral | — | ~1B tok/mes, límites no publicados | 5º backstop potencial; el propio proveedor lo marca "evaluación, no producción" | En seguimiento, sin plumbing |
 
 ## Bitácora de hallazgos (lo más reciente arriba)
 
-- **2026-08-17 · 🔴 SWAP APLICADO (PR draft): NIM retira `meta/llama-3.3-70b-instruct` el 25/08/2026.**
+- **2026-08-17 (2ª parte) · 🔴 CORRECCIÓN VERIFICADA EN VIVO: Maverick estaba MUERTO en el API (410) →
+  GLM-5.2; y `deepseek-v3` del contable también muerto → `deepseek-v4-flash-0731`.** Al probar el swap
+  de la 1ª parte tras el merge (harness temporal en una edge function de ia-rest, que SÍ tiene
+  `NVIDIA_API_KEY`), NIM respondió `410 Gone: "meta/llama-4-maverick-17b-128e-instruct has reached its
+  end of life on 2026-07-27"` — **la ficha de build.nvidia.com seguía viva; la ficha NO prueba el API.**
+  Con la key real: `GET /v1/models` (102 vivos: ni un solo llama-4; el 3.3-70b aún listado pero 503 por
+  saturación y EOL 25/08; `deepseek-v3` AUSENTE) + mini-eval en vivo → **`z-ai/glm-5.2`** (A: respuesta
+  cálida directa en español · B: exactamente `ESCALAR` · sin razonamiento parásito) y
+  **`deepseek-ai/deepseek-v4-flash-0731`** para `CONTABLE_MODEL` (cifras correctas, 1 frase).
+  Descartado `nvidia/llama-3.3-nemotron-super-49b-v1.5` (razonador: `content:null` con maxTokens
+  cortos — la trampa del gpt-oss-120b de la sonda). Todo el radio re-swapeado y las 4 edge functions
+  redesplegadas. **Regla nueva para el Paso 1:** un id solo se da por vivo si aparece en `/v1/models`
+  o responde a una llamada real — el catálogo web puede ir semanas por detrás en ambos sentidos.
+
+- **2026-08-17 (1ª parte) · SWAP a Maverick (SUPERADO el mismo día, ver arriba): NIM retira `meta/llama-3.3-70b-instruct` el 25/08/2026.**
   Confirmado por búsquedas dirigidas sobre la ficha de [build.nvidia.com](https://build.nvidia.com/meta/llama-3_3-70b-instruct):
   «will be deprecated on 08/25/2026 and will no longer be supported after that date» — el banner pide
   migrar pero **no nombra sucesor** (remite al API Reference). WebFetch directo a `build.nvidia.com`/

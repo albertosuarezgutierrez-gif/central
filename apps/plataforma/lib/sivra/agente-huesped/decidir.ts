@@ -41,7 +41,7 @@ export type Decision = {
 const LANG_NAME: Record<string, string> = { es: 'español', en: 'English', fr: 'français', de: 'Deutsch', it: 'italiano' }
 
 // Modelo del agente de huéspedes. Por defecto VACÍO = usa el modelo por defecto de la pasarela
-// (`meta/llama-4-maverick-17b-128e-instruct` desde el 17/08/2026 — el 3.3-70b deja de
+// (`z-ai/glm-5.2` desde el 17/08/2026 — el 3.3-70b deja de
 // soportarse en NIM el 25/08/2026), que es el que de verdad sirve NIM y produce los borradores.
 // El id "fuerte" `meta/llama-3.1-405b-instruct` que poníamos antes fue RETIRADO del catálogo de
 // NVIDIA NIM → devolvía `HTTP 404: 404 page not found` en CADA mensaje (verificado en logs de

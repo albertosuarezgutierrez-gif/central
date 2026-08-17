@@ -31,7 +31,7 @@ import type { ImageInput, NimConfig, GroqConfig, OpenRouterConfig, NimToolMessag
  * │ callAI()  — texto, sin internet                             │
  * │   Cuándo: generación, clasificación, extracción, resúmenes  │
  * │   Cuándo NO: cuando necesitas datos actuales de internet    │
- * │   Modelo: NIM llama-4-maverick → Groq (gratis) → OpenRouter   │
+ * │   Modelo: NIM glm-5.2 → Groq (gratis) → OpenRouter          │
  * │   Fallback automático: Groq = gpt-oss-120b/otra infra;      │
  * │   OpenRouter = agregador (última red si caen NIM y Groq).   │
  * │   noFallback: legacy (ya no bloquea el fallback gratis Groq)│
@@ -77,7 +77,7 @@ export type { ImageInput }
 
 // Modelos por defecto (sobrescribibles via env var si hace falta)
 // Swap 17/08/2026: el 3.3-70b deja de soportarse en NIM el 25/08/2026 (aviso en build.nvidia.com).
-const TEXT_MODEL_NVIDIA   = process.env.NVIDIA_BRAIN_MODEL      ?? 'meta/llama-4-maverick-17b-128e-instruct'
+const TEXT_MODEL_NVIDIA   = process.env.NVIDIA_BRAIN_MODEL      ?? 'z-ai/glm-5.2'
 const VISION_MODEL_NVIDIA = process.env.NVIDIA_VISION_MODEL     ?? 'meta/llama-3.2-11b-vision-instruct'
 // Fallback de texto GRATIS: Groq con gpt-oss-120b, en otra infra.
 const TEXT_MODEL_GROQ     = process.env.GROQ_BRAIN_MODEL        ?? 'openai/gpt-oss-120b'

@@ -140,7 +140,7 @@ Ejemplos de buenas preguntas:
       nim_historial: historial_nuevo,
       texto_normalizado: parsed.brain_texto ?? null,
       latencia_ms: latencia,
-      modelo_usado: 'nvidia/llama-4-maverick',
+      modelo_usado: 'nvidia/glm-5.2',
       turno_id: turno_id ?? null,
       camarero_id: session.id,
     })
