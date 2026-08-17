@@ -45,6 +45,10 @@ bloque **💼 Cartera real** (2-4 líneas):
   Alberto; se informa, no se juzga ni se propone cerrarlas.
 - Si `get_account_positions` falla, el bloque dice «cartera real: sin leer hoy» — nunca
   omitirlo en silencio (un bloque ausente es indistinguible de una cartera vacía).
+- **Además de al Telegram, las posiciones van al PANEL (17/08/2026):** empujarlas a
+  `POST /api/trading/cartera` (paso 1c de `references/pasada-diaria.md`) para que la sección
+  «💼 Cartera real» de `/trading` se refresque. Solo se llama con una lectura BUENA — un fallo
+  de lectura no se manda como cartera vacía.
 
 ## Alertas de precio (`create_alert`)
 - Permitidas a petición de Alberto o para niveles que él haya acordado (p. ej. zona de

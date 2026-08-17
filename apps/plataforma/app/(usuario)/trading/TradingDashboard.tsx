@@ -12,6 +12,8 @@ import AnalisisSimbolo from './AnalisisSimbolo'
 import DetallePerezoso from './DetallePerezoso'
 import { COHORTES_PAPER } from '@/lib/trading/paper-cartera'
 import { evaluarEscalera, evaluarApagado, emparejarOps } from '@/lib/trading/puerta-fase2'
+import { resumenPorDivisa, rentabilidadPosicion } from '@/lib/trading/cartera-real'
+import type { CarteraRealUI } from '@/lib/trading/cartera-real-io'
 
 // Contenido del «Laboratorio de inversión», extraído de page.tsx para poder reutilizarlo tal cual en la
 // vista de invitado (/invitado/trading, solo lectura vía token — ver lib/trading-acceso.ts). Es 100%
@@ -92,7 +94,17 @@ const th: React.CSSProperties = { textAlign: 'left', padding: '8px 10px', color:
 const td: React.CSSProperties = { padding: '8px 10px', borderBottom: '1px solid var(--border)', fontSize: 14, whiteSpace: 'nowrap' }
 const chipCss: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999, padding: '4px 12px', fontSize: 13, whiteSpace: 'nowrap' }
 
-export default async function TradingDashboard({ carteraCohetes }: { carteraCohetes: CarteraCohetesData | null }) {
+// Importe en la divisa de la posición, formato español (regla global: nunca estilo dólar).
+function dinero(n: number, divisa: string): string {
+  const v = n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' })
+  return divisa === 'EUR' ? `${v}€` : divisa === 'USD' ? `${v} $` : `${v} ${divisa}`
+}
+
+// `carteraReal` solo llega desde la página con SESIÓN (app/(usuario)/trading/page.tsx): es dinero
+// REAL de Alberto y la vista de invitado (/invitado/trading) no debe verlo — ahí queda undefined
+// y la sección no se pinta. `null` = cuenta con sesión pero IBKR nunca sincronizado (estado
+// «pendiente» honesto, distinto de «sin posiciones»).
+export default async function TradingDashboard({ carteraCohetes, carteraReal }: { carteraCohetes: CarteraCohetesData | null; carteraReal?: CarteraRealUI | null | 'error' }) {
   // Un fallo de BD NO es «no hay datos»: se apunta qué consulta cayó y se avisa arriba con un banner
   // de datos parciales — nunca se pinta el estado vacío tranquilizador sobre un error (regla del repo).
   const fallos: string[] = []
@@ -199,6 +211,7 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
   // Página completamente virgen Y sin errores de lectura → 🌱 (con un fallo de BD NUNCA: sería
   // pintar «no hay nada» sobre un «no he podido mirar»).
   const nadaDeNada = vacio && fallos.length === 0 && !radar && universoFilas.length === 0 && cohortesPaper.length === 0
+    && !(carteraReal != null && (carteraReal === 'error' || carteraReal.posiciones.length > 0))
 
   // 💵 Precio actual de cada posición abierta (último cierre público, Stooq→Yahoo) para poder pintar
   // la RENTABILIDAD por posición — lo que faltaba cuando se retiró la «Cartera simulada» (04/08) y lo
@@ -359,6 +372,74 @@ export default async function TradingDashboard({ carteraCohetes }: { carteraCohe
           })()}
         </div>
       </section>
+
+      {/* 💼 CARTERA REAL (IBKR) — lo que Alberto tiene comprado DE VERDAD, con su P&L. Petición del
+          17/08/2026 («hemos hecho compra en IBKR y no aparece»): hasta hoy la cartera real solo salía
+          en el Telegram de la pasada diaria. La foto la empuja esa pasada vía POST /api/trading/cartera
+          (la app no habla con IBKR); aquí solo se pinta la última conocida. Solo con SESIÓN (la vista
+          de invitado no recibe la prop). Estados: undefined = invitado (nada) · null = IBKR nunca
+          sincronizado («pendiente», no «vacía») · posiciones [] = leída y sin posiciones. */}
+      {carteraReal !== undefined && (
+        <section style={{ marginBottom: 22 }}>
+          <h2 style={{ fontSize: 17, marginBottom: 8 }}>
+            💼 Cartera real — Interactive Brokers{' '}
+            <span style={{ background: 'var(--positive-bg, var(--surface))', color: 'var(--positive)', border: '1px solid var(--border)', borderRadius: 999, padding: '2px 10px', fontSize: 12, fontWeight: 700, verticalAlign: 'middle' }}>DINERO REAL · SOLO LECTURA</span>
+          </h2>
+          {carteraReal === 'error' ? (
+            <div style={{ ...card, borderColor: 'var(--warning)', color: 'var(--warning)', fontSize: 14 }}>
+              ⚠️ No se pudo leer la cartera real guardada — esto es un fallo de lectura, NO significa que
+              no tengas posiciones. Tu cartera sigue en la app de Interactive Brokers.
+            </div>
+          ) : carteraReal == null ? (
+            <div style={{ ...card, color: 'var(--muted)', fontSize: 14 }}>
+              Aún sin sincronizar con IBKR: la pasada nocturna del agente lee tus posiciones (solo lectura)
+              y las empuja aquí. Mientras tanto, tu cartera está en la app de Interactive Brokers — esto no
+              significa que no tengas posiciones.
+            </div>
+          ) : carteraReal.posiciones.length === 0 ? (
+            <div style={{ ...card, color: 'var(--muted)', fontSize: 14 }}>
+              IBKR leído el {fechaCorta(carteraReal.actualizado)}: sin posiciones abiertas en la cuenta.
+            </div>
+          ) : (
+            <>
+              <div style={{ ...card, padding: 0, overflowX: 'auto' }}>
+                <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 640 }}>
+                  <thead><tr><th style={th}>Posición</th><th style={th}>Cantidad</th><th style={th} title="coste medio por unidad, en la divisa de la posición">Precio medio</th><th style={th} title="precio de mercado del último refresco (la pasada diaria del agente); «—» = IBKR no lo dio, no un 0">Precio</th><th style={th}>Valor</th><th style={th} title="plusvalía/minusvalía NO realizada según IBKR, sobre el coste">Resultado</th></tr></thead>
+                  <tbody>
+                    {carteraReal.posiciones.map(p => {
+                      const ret = rentabilidadPosicion(p)
+                      return (
+                        <tr key={p.simbolo}>
+                          <td style={{ ...td, fontWeight: 700 }}>{p.simbolo}{p.descripcion ? <span style={{ color: 'var(--muted)', fontWeight: 400, fontSize: 12 }}> — {p.descripcion}</span> : null}</td>
+                          <td style={td}>{p.cantidad.toLocaleString('es-ES')}</td>
+                          <td style={td}>{p.precioMedio != null ? dinero(p.precioMedio, p.divisa) : <span style={{ color: 'var(--muted)' }}>—</span>}</td>
+                          <td style={td}>{p.precioActual != null ? dinero(p.precioActual, p.divisa) : <span style={{ color: 'var(--muted)' }}>—</span>}</td>
+                          <td style={td}>{p.valorMercado != null ? dinero(p.valorMercado, p.divisa) : <span style={{ color: 'var(--muted)' }}>—</span>}</td>
+                          <td style={{ ...td, fontWeight: 700, color: p.pnlNoRealizado == null ? 'var(--muted)' : p.pnlNoRealizado >= 0 ? 'var(--positive)' : 'var(--negative)' }}>
+                            {p.pnlNoRealizado != null ? <>{p.pnlNoRealizado >= 0 ? '+' : ''}{dinero(p.pnlNoRealizado, p.divisa)}{ret != null ? ` (${pct(ret)})` : ''}</> : '—'}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
+                {resumenPorDivisa(carteraReal.posiciones).map(r => (
+                  <span key={r.divisa}>
+                    Total {r.divisa}{r.completo ? '' : ' (parcial — a alguna posición le falta un dato)'}: {r.invertido != null ? <>invertido {dinero(r.invertido, r.divisa)} → </> : null}
+                    {r.valor != null ? <strong style={{ color: r.pnl == null ? 'var(--text)' : r.pnl >= 0 ? 'var(--positive)' : 'var(--negative)' }}>{dinero(r.valor, r.divisa)}</strong> : '—'}
+                    {r.pnl != null ? <> ({r.pnl >= 0 ? '+' : ''}{dinero(r.pnl, r.divisa)})</> : null}
+                    {' · '}
+                  </span>
+                ))}
+                Última lectura de IBKR: <strong>{fechaCorta(carteraReal.actualizado)}</strong> — la refresca la pasada diaria del agente
+                (solo lectura; el agente jamás ejecuta órdenes). Los importes van en la divisa de cada posición, sin mezclar divisas.
+              </p>
+            </>
+          )}
+        </section>
+      )}
 
       {/* ❓ Glosario plegado — la página usa términos que no se explican en ningún otro sitio;
           traducirlos UNA vez aquí evita que cada sección cargue con su propia chuleta. */}

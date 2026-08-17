@@ -56,7 +56,7 @@ Tablas de BD: `qa_patrones_error`, `ia_training_log`, `alerta_log`,
 | QA Agent v3 | 6:00 diario + 7:00 lunes | ✅ Prod — 6 patrones |
 | Lead Hunter | */30 * * * * | ✅ Prod |
 | Blog SEO | 8:00 lunes | ✅ Prod |
-| Instagram v6 — semana temática | briefing dom 8:30 → lun/mié/vie 8:00 | ✅ Prod — dom: 3 ideas blog por Telegram, Alberto elige → lun 🗂️ carrusel A/B de portada (claves), mié 🎬 Reel IA (Kling+Cloudinary, marca+cierre 2s), vie 🗂️ carrusel (errores ↔ frases de barra alternos). Aprobación por Telegram (webhook del bot en PLATAFORMA → reenvío `x-operador-secret`). ⛔ reels de slides Cloudinary NUNCA |
+| Instagram v6 — semana temática | briefing dom 8:30 → lun/mié/vie 8:00 | ✅ Prod — dom: 3 ideas blog por Telegram, Alberto elige → lun 🗂️ carrusel A/B de portada (claves), mié 🎬 Reel IA (Kling+Cloudinary, marca+cierre 2s), vie 🗂️ carrusel (errores ↔ frases de barra alternos). Aprobación por Telegram (webhook del bot en PLATAFORMA → reenvío `x-operador-secret`). Al aprobar un post de imagen se publica también **Story automática** con `/api/ig-img?...&story=1` (lienzo 1080×1920 real — la imagen cuadrada del feed a pelo sale recortada en Stories; fix 17/08/2026, PR #1467). ⛔ reels de slides Cloudinary NUNCA |
 | Pipeline Comercial v1.0 | 8:00 lun-vie | ✅ Prod |
 | Churn | — | 🔵 Backlog (cuando haya clientes) |
 
