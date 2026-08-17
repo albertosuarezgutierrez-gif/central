@@ -39,8 +39,11 @@
   PriceLabs» de Smoobu es LEGACY — PriceLabs está de baja desde el 09/08, los precios los escribe el motor.
 - **Fase 2 (BD):** `pricing_settings.channel_markup` 1.0 → **1.20** en los 4 pisos. El motor re-basa en
   el siguiente `apply-auto` (08:30/14:30/20:30 UTC); hasta entonces Booking muestra ~+20% (lado seguro).
-- Pendiente: verificación A5 en extranet (extensión del navegador caída) y precios por ocupación de
-  Luxury en Smoobu (paso B, sin tocar). Medición Fase 4 programada 30/08 (`trig_01DHwh…`).
+- **17/08 ✅ Verificación A5 hecha:** los 4 pisos cuadran `extranet = techo(base×1,20)` (24.08:
+  113/125/126/360€); web directa confirmada al 100%. **Paso B (ocupación) DESCARTADO definitivo:**
+  Smoobu no modela ocupación (precio plano por noche) y PriceLabs está de baja — no hay palanca.
+  👀 Para Alberto: Reform publica Standard Rate «×2» (¿capacidad real?), House «Configurar»/×11.
+  Medición Fase 4 programada 30/08 (`trig_01DHwh…`).
 
 ### ✂️ (16/08/2026) Cambios EJECUTADOS en la extranet de Booking (Fase 3 del estudio)
 - Vía Claude Chrome → `docs/BOOKING-CAMBIOS-2026-08-16.md`: **Genius dinámico → No** en

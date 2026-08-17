@@ -126,3 +126,43 @@ Cuando se retome, hay que confirmar que Smoobu lo ofrece como **porcentaje o der
 - ❌ Mapeos de tarifa — **no tocados**, verificados los 4
 - ❌ Otros canales — **0.00 % los cuatro**, sin cambios de valor
 - ❌ Avisos/asistentes de Smoobu — **ninguno aceptado**; el modal «Transferir precios de un año al siguiente» se abrió por error al buscar el push y se **canceló sin guardar**
+
+---
+
+## ✅ Verificación A5 COMPLETADA (17/08/2026, ~08:30, antes del re-base de las 10:30)
+
+Fecha de referencia 24.08.2026 — los cuatro cuadran con `extranet = techo(base × 1,20)`
+(el redondeo es HACIA ARRIBA, comprobado en 8 fechas por piso):
+
+| Piso | Base Smoobu | ×1,20 | Extranet | |
+|---|---|---|---|---|
+| Luxury Busto | 94€ | 112,80 | 113€ | ✅ |
+| Busto Reform | 104€ | 124,80 | 125€ | ✅ |
+| Duplex Center | 105€ | 126,00 | 126€ | ✅ |
+| House sevillana | 300€ | 360,00 | 360€ | ✅ |
+
+Confirmaciones extra: la fila «Booking.com +20.00%» de Smoobu coincide dígito a dígito con la
+extranet, y el modal de sincronización lista «Motor de reservas (100%) · Airbnb (100%) ·
+**Booking.com (120%)** · Expedia (100%) · Agoda (100%) · HomeToGo (100%)» — la web directa al 100%.
+No se pulsó «Sobrescribir precios» ni «Sincronizar ahora».
+
+## ❌ Paso B (ocupación de Luxury): NO EXISTE la palanca — ausencia definitiva
+
+Smoobu **no tiene precios por ocupación** en ninguna forma (ni %, ni importes): su modelo es un
+precio plano por noche y propiedad (revisadas las 4 vías: Precio base ⌄ abre filas por portal,
+«Editar rango de fechas» solo Precio+Mínimo, «Ajustes de Precio» es el % por canal, y la ficha
+del apartamento no lleva precios). El operador apuntó a PriceLabs como vía — **incorrecto:
+PriceLabs está DE BAJA desde el 09/08/2026** (el base lo escribe nuestro motor `apply-auto`, que
+tampoco tiene dimensión de ocupación: la API de rates de Smoobu es `daily_price` plano). La
+extranet solo acepta €-fijos por fecha sobre un plan XML sobrescrito (ver §4 del informe de
+cambios). **Conclusión: con el stack actual (motor → Smoobu → Booking) el precio por ocupación
+no es implementable — se descarta, no queda pendiente.** Si algún día compensa, exigiría diseño
+propio (p. ej. plan de tarifas derivado no-XML en la extranet), no un ajuste.
+
+## 👀 Para la mirada de Alberto (visto sin tocar, 17/08/2026)
+
+- **Ocupación del Standard Rate desigual entre pisos:** Busto Reform publica «× 2» mientras
+  House sevillana está «Configurar» con derivados a × 11. Si Reform vende para 2 personas con
+  capacidad real mayor, puede estar quedándose fuera de búsquedas de grupos.
+- El calendario del Dúplex tardó 5 recargas en renderizar (fallo de render de la extranet, la
+  vista anual sí funcionaba).
