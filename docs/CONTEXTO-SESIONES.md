@@ -32,6 +32,15 @@
 
 ---
 
+### 💼 (17/08/2026) Cartera REAL de IBKR en el panel /trading — la compra de VWCE no aparecía
+- Alberto compró 188×VWCE (~31.840€, ETF núcleo) y el panel solo pintaba paper. Nuevas tablas
+  `trading_cartera_real(+_sync)` (aplicadas + sembradas con la foto de hoy), endpoint
+  `POST /api/trading/cartera` (mismo auth/resolución de cuenta que `/saldo`) y sección
+  «💼 Cartera real» en `/trading` (solo con sesión; el invitado NO la ve). Totales POR divisa,
+  NULL nunca 0, sync-marker separa «sin leer» de «sin posiciones».
+- La pasada diaria gana el paso 1c (skill `trading-analista`): empuja `get_account_positions`
+  al endpoint cada noche — SOLO con lectura buena; fallo de lectura ≠ cartera vacía. PR #1468.
+
 ### 📸 (17/08/2026) Stories de Instagram salían recortadas — lienzo 9:16 real en ig-img
 - Alberto mandó pantallazo: la Story auto de ia.rest se veía fatal (el «2» y el texto cortados,
   casi todo negro). Causa: `ig_aprobar` republicaba como Story la MISMA imagen cuadrada 1080×1080
@@ -41,6 +50,8 @@
   publica la Story (y el fallback manual por foto) con `&story=1`. Verificado con render local
   (stat editorial, pregunta, brutalist) y en prod tras el merge. `next build` verde. PR #1467
   mergeado; skill `ia-rest-maestro` (tabla de agentes) actualizada con el detalle de la Story.
+
+### ✅ (17/08/2026) Kutxabank PSD2 RESUELTO — era la VENTANA de 89 días (+2 fixes de camino)
 - Causa raíz: Kutxabank rechaza `/transactions` con ventana de 89 días («Account not found /
   AccountNotAccessibleException», error engañoso) incluso recién firmado el SCA. Fallback 89d→30d→7d
   en `getMovimientosConVentana` (PR #1462) → feed vivo, último mov = HOY. Aviso ℹ️ informativo
