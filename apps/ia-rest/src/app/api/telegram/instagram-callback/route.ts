@@ -192,12 +192,16 @@ export async function POST(req: NextRequest) {
       await tgEditMessage(cb.message.message_id, `✅ <b>Instagram publicado</b>\n\n${b.titulo?.slice(0,60)}\nPost: <code>${postId}</code>`)
       await tgAnswerCallback(cb.id, '✅ Publicado')
       // Story automática (best-effort): comparte el mismo arte como Story. Si falla, recordatorio manual.
+      // story=1 → ig-img devuelve el lienzo 9:16 (1080×1920); la imagen cuadrada del feed
+      // a pelo sale recortada por los laterales en la Story.
       try {
-        await publicarStory(b.image_url, false)
+        const storyUrl = b.image_url.includes('/api/ig-img?') ? `${b.image_url}&story=1` : b.image_url
+        await publicarStory(storyUrl, false)
         await tgEditMessage(cb.message.message_id, `✅ <b>Instagram publicado</b> (feed + Story)\n\n${b.titulo?.slice(0,60)}\nPost: <code>${postId}</code>`)
       } catch (storyErr: any) {
         notifyError({ tipo: 'instagram_story', modulo: 'sistema', nivel: 'aviso', mensaje: `Story automática falló: ${storyErr?.message}`, detalle: { borradorId } })
-        await tgSendPhoto(b.image_url, `📱 <b>Story pendiente</b> (la automática falló)\nMantén pulsada → Compartir como Story → Publicar`)
+        const storyUrl = b.image_url.includes('/api/ig-img?') ? `${b.image_url}&story=1` : b.image_url
+        await tgSendPhoto(storyUrl, `📱 <b>Story pendiente</b> (la automática falló)\nMantén pulsada → Compartir como Story → Publicar`)
       }
     } catch (err: any) {
       notifyError({ tipo: 'instagram_publish', modulo: 'sistema', nivel: 'aviso', mensaje: `Fallo publicando post: ${err?.message}`, detalle: { borradorId } })
