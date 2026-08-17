@@ -32,6 +32,21 @@
 
 ---
 
+### 🧾 (17/08/2026) facturas-correo — hueco real en `facturas_drive` (SiQueBrilla julio) + autocrítica
+- Paso 4.0 sin `sin_revisar` y sin candidatos Gmail nuevos, pero la raíz de `FACTURAS Apartamentos/2026`
+  seguía teniendo ~30 PDFs sueltos: al investigar, casi todos ya estaban cubiertos por avisos previos en
+  `_DUPLICADOS_BORRAR` (Endesa Bustos/Dúplex, EMASESA Reform ×9, Castuera, Leroy, Dimitri/CREATE) — no
+  eran backlog nuevo. El hueco real: la factura SiQueBrilla de julio (780,10€) SÍ estaba archivada en
+  Drive y conciliada en banco desde el 03/08, pero sin fila en `facturas_drive` → invisible para
+  `v_facturas_sin_cargo` (esa vista solo detecta filas existentes sin `movimiento_id`, no filas
+  ausentes). Fila insertada.
+- **Autocrítica:** antes de verificar bien, copié 2 duplicados nuevos (SiQueBrilla + Leroy) sin
+  comprobar que ya existían archivados — avisos de borrado añadidos a la papelera para los dos.
+- Etiqueta `Facturas/Extraccion-fallida` retirada de un hilo que era un mensaje de huésped de Booking
+  (falso positivo, no factura). `agente_salud` actualizado (Vía B: dias_caido=3, sin backlog real).
+- Papelera `_DUPLICADOS_BORRAR` acumula ~22 avisos sin que Alberto los haya vaciado — mencionado en el
+  resumen, no bloqueante.
+
 ### 📊 (17/08/2026) Ciclo semanal de pricing — los 4 pisos, comps por conector real
 - Ciclo completo del agente de pricing (skill `pricing-agente`): medido el ciclo anterior (10/08) contra
   incomes/rate_snapshots (ventas confirmadas de busto SS/Feria a precio decidido, 4 ventas nuevas en
