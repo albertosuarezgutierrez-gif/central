@@ -32,6 +32,14 @@
 
 ---
 
+### 📈 (17/08/2026) Estreno del doble disparo de trading: la repesca SALVÓ la pasada — el disparo de las 20:15 murió OTRA VEZ
+- Check-in nocturno: el disparo de las 20:15Z no dejó NI UNA huella (2º fallo igual que el 14/08). La
+  repesca de las 23:15Z hizo lo diseñado: PASO 0 no vio huella → pasada COMPLETA (saldo 23:16, latidos
+  analizar 23:36 / puntuar 23:37, `trading_pasadas` 17/08 con `analizar=1` — sin duplicado).
+- Conclusión: la red de seguridad funciona, pero el disparo primario ha fallado 2 de 2 lunes/viernes —
+  ya no parece transitorio. Avisado Alberto: si se repite, abrir ticket a soporte de claude.ai (la Rutina
+  es de la UI, no editable por MCP). Cron semanal paper-tracker (10:00Z, 1º con digest #1424): verde.
+
 ### 🐕 (15/08/2026) Pasada de trading del 14/08 perdida: recuperada a mano + reintento pendiente de la UI
 - El trigger disparó (20:15:38Z) pero la sesión murió SIN arrancar — fallo transitorio de la plataforma
   (entorno activo, otras rutinas corrieron bien). Watchdog avisó 06:30; Alberto: «¿solución para esto?».
