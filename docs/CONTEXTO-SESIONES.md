@@ -32,6 +32,18 @@
 
 ---
 
+### 🏦 (17/08/2026) Kutxabank PSD2: el re-vínculo del 16/08 NO funcionó — diagnóstico + fixes
+- Alberto vinculó 2 veces el 16/08 (07:46 y 08:30); hoy las 3 conexiones Kutxa `vinculada` fallaban:
+  las 2 viejas con `authentication failure`, la nueva (08:30) con `Account not found` en `/transactions`
+  DESDE EL MINUTO CERO (el callback del 16/08 no importó nada — no es caducidad por tiempo). Último mov 10/08.
+- Saneado en prod: conexiones 14/06 y 16/08-07:46 → `caducada` (solo queda viva la de las 08:30).
+- Fixes (este PR): el callback retira las conexiones anteriores del mismo banco al vincular
+  (`estado='sustituida'` — fin de los zombis); el sync lee el `status` de la sesión de Enable Banking
+  y avisa si no está `AUTHORIZED` (diagnóstico de raíz que hoy faltaba).
+- **Pendiente Alberto: mergear el PR y re-vincular Kutxabank UNA vez en `/banca`** (el callback
+  sincroniza al momento y rellenará el hueco 11/08→hoy; ventana 89 días). Tras vincular, mirar
+  `conexiones_banco.ultimo_avisos` — con el fix dirá el estado real de la sesión si vuelve a fallar.
+
 ### ✅ (17/08/2026) PR #1449 (ciclo Booking +20%) MERGEADO + sincronía de skills/docs con el 1.20
 - #1449 mergeado (inventario + Fases 1-3 ejecutadas y verificadas). Post-merge: actualizados la
   skill `pricing-agente` (estado-y-protocolo), el comentario del markup en `pricing/apply/route.ts`

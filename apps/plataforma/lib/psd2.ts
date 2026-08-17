@@ -41,6 +41,14 @@ export async function sincronizarSesion(
   let cuentas = 0, insertados = 0, duplicados = 0
   const avisos: string[] = []
 
+  // Diagnóstico de raíz ANTES de tocar cuentas: si Enable Banking ya dice que la sesión no
+  // está AUTHORIZED (CLOSED/EXPIRED/REVOKED — p. ej. el banco la invalidó al autorizar una
+  // re-vinculación posterior), los fallos por cuenta («Account not found», «authentication
+  // failure») son solo el síntoma. Se intenta igual (conservador), pero el aviso lleva la causa.
+  if (ses.status && ses.status !== 'AUTHORIZED') {
+    avisos.push(`sesión …${sessionId.slice(-6)} (${ses.aspsp ?? '?'}): estado ${ses.status} en Enable Banking — re-vincular en /banca`)
+  }
+
   for (const accountUid of ses.accounts ?? []) {
     let movsFallo: string | null = null
     const [detalle, saldo, movs] = await Promise.all([
