@@ -15,6 +15,14 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-17 · buscador-ia** · hizo: watch de deprecación de los 5 eslabones cableados +
+  descubrimiento; encontró NIM `meta/llama-3.3-70b-instruct` (primario de la cadena directa y
+  fallback de `AGENTE_HUESPED_MODEL`) deprecado, corta 25/08/2026 — mismo patrón que el incidente
+  fundacional del 06/07. Aviso Telegram crítico enviado (preflight 200, entregado). Resto de la
+  cadena (Groq, Cerebras, Kimi, Gemini) VIVOS sin cambios; sin candidatos nuevos con mejor
+  calidad/precio. dudas: id de reemplazo NIM sin confirmar (WebFetch a build.nvidia.com/
+  docs.api.nvidia.com bloqueado por el proxy de esta sesión); fallos: —; PRs/commits: — (sin PR
+  a propósito — no hay id de reemplazo confirmado para hacer el swap con seguridad), solo doc.
 - **2026-08-17 · mercado-booking** · hizo: pasada de 12 ventanas (plan `?max=12`, las 12 vírgenes de
   ronda 1 — evento Feria confirmado, 17-23/09/2026 — `prop_luxury_busto`, `prop_house_sevillana`,
   `prop_busto_reform`, `prop_duplex_center`). 120 comps reales escritos (`fuente:"booking_mcp"`),

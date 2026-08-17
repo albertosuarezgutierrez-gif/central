@@ -31,7 +31,7 @@
 | Eslabón | id por defecto | Env (key / override) | Coste | Estado (comprobado 2026-07-27) |
 |---|---|---|---|---|
 | OpenRouter (primario pasarela — lo vigila SU cron, no este agente) | `deepseek/deepseek-chat` | `OPENROUTER_API_KEY` / `OPENROUTER_MODEL` | según modelo (tope 1€/día) | fuera de scope (cron `ia-director-refresh`) |
-| NVIDIA NIM (primario cadena directa) | `meta/llama-3.3-70b-instruct` | `NVIDIA_API_KEY` | gratis | ✅ **VIVO** — sigue en [build.nvidia.com](https://build.nvidia.com/meta/llama-3_3-70b-instruct), sin aviso de retirada (solo la serie 3.1 se ha ido deprecando, no la 3.3) |
+| NVIDIA NIM (primario cadena directa) | `meta/llama-3.3-70b-instruct` | `NVIDIA_API_KEY` | gratis | 🔴 **DEPRECADO — deja de soportarse el 25/08/2026** (aviso en [build.nvidia.com/meta/llama-3_3-70b-instruct](https://build.nvidia.com/meta/llama-3_3-70b-instruct), comprobado 2026-08-17). Reemplazo SIN CONFIRMAR — ver bitácora de hoy |
 | Groq (fallback 1) | `openai/gpt-oss-120b` | `GROQ_API_KEY` / `GROQ_BRAIN_MODEL` | gratis (rate-limited) | ✅ **VIVO** — Groq lo usa activamente como destino de migración de OTROS modelos que deprecia (ver [console.groq.com/docs/deprecations](https://console.groq.com/docs/deprecations)), señal de que se queda |
 | Gemini (fallback 2 + grounding) | `gemini-flash-latest` | `GEMINI_API_KEY` / `GEMINI_BRAIN_MODEL` | gratis | ✅ **VIVO — el alias rodante funcionó tal como se diseñó**: Google soltó Gemini 3.5 Flash GA y `gemini-flash-latest` ya apunta ahí solo, sin tocar código. Free tier confirmado para Flash/Flash-Lite (Pro salió del free tier en abril/2026); RPM/TPM de Flash incluso subieron. Nada que hacer. |
 | Kimi/Moonshot (fallback 3) | `kimi-k2.6` | `MOONSHOT_API_KEY` / `MOONSHOT_MODEL` | de pago | ✅ **VIVO** — sigue en el catálogo oficial ([platform.kimi.ai/docs/models](https://platform.kimi.ai/docs/models)) como tier de valor ($0.95/$4.00); los discontinuados del 25/05 eran otros ids (`kimi-k2-0905-preview` y similares), no el `k2.6` |
@@ -61,6 +61,39 @@
 | MiMo-V2.5 / MiMo-V2.5-Pro (Xiaomi) | Vía OpenRouter (de pago, $0,14/$0,28 por M el estándar) o self-host (pesos MIT, HF) | `xiaomi/mimo-v2.5[-pro]` | **NO gratis por API** (sí pesos abiertos MIT si alguien lo autoalojara) | Motivo del interés: subiendo mucho en el ranking de uso de OpenRouter (top 1 por tokens esta semana, +12%) — Alberto preguntó por él directamente | Sin mini-eval (no hay eslabón gratis al que engancharlo). Pro empata con Kimi K2.6 en el índice de Artificial Analysis. Fuera del scope de esta cadena directa mientras no haya un endpoint gratis — el catálogo de OpenRouter en sí lo vigila su propio cron (`ia-director-refresh`), no este agente. |
 
 ## Bitácora de hallazgos (lo más reciente arriba)
+
+- **2026-08-17 · pasada semanal — 🔴 HALLAZGO CRÍTICO: NIM `meta/llama-3.3-70b-instruct` deprecado, corta el 25/08/2026 (8 días).**
+  Watch de deprecación (Paso 1): el catálogo de NVIDIA NIM ([build.nvidia.com/meta/llama-3_3-70b-instruct](https://build.nvidia.com/meta/llama-3_3-70b-instruct))
+  ahora muestra aviso de retirada — deja de soportarse el **25/08/2026**. Es el **primario de la
+  cadena directa** Y el modelo que usa `AGENTE_HUESPED_MODEL` cuando está vacío (que es su valor
+  por defecto desde el incidente del 06/07) — mismo patrón exacto que el 405B que originó este
+  agente. **No he podido confirmar el id de reemplazo**: WebFetch directo a `build.nvidia.com` y
+  `docs.api.nvidia.com` bloqueado por el proxy de egress de esta sesión (igual que en pasadas
+  anteriores), y varias búsquedas dirigidas por WebSearch confirman la retirada pero ninguna trae
+  el id exacto que recomienda NVIDIA como sucesor. Nota aparte encontrada en la misma búsqueda:
+  `meta/llama-4-maverick-17b-128e-instruct` (que en teoría es más nuevo) YA dejó de soportarse el
+  27/07/2026 — NVIDIA está retirando varios Llama de golpe, no vale asumir que "el más nuevo" sigue
+  vivo sin comprobarlo. **Acción tomada:** aviso Telegram crítico enviado (preflight `200 OK`,
+  mensaje entregado). **Sin PR** — la regla de "no swap sin id confirmado por el catálogo" aplica
+  aquí más que nunca: sin saber el reemplazo real no hay id seguro que poner en `client.ts`.
+  **Pendiente urgente para la próxima pasada (o antes, si hay quien lo compruebe manualmente):**
+  entrar a `build.nvidia.com/models` con browser/WebFetch sin bloqueo y confirmar el id de
+  reemplazo antes del 25/08; si no aparece ninguno claro, evaluar `meta/llama-3.1-70b-instruct`
+  (previa a la 3.3, sigue en catálogo) o `z-ai/glm-5.2` (ya candidato en seguimiento, mismo
+  proveedor NIM) como sustituto directo.
+  Resto de la cadena (Paso 1, mismo método): Groq `openai/gpt-oss-120b` sigue VIVO (Groq lo usa
+  activamente como destino de migración de otros modelos que deprecia — sin cambios); Kimi
+  `kimi-k2.6` sigue VIVO (el sunset de K2 del 25/05/2026 afectó a `k2-0711-preview`/`k2-0905-preview`,
+  no a K2.6, que se lanzó después; el nuevo flagship K3 no desplaza a K2.6 como fallback de pago por
+  precio — sin cambios respecto al 10/08); Cerebras `gpt-oss-120b` sigue VIVO (free tier 1M tok/día
+  confirmado, RPM entre 5 y 30 según fuente — sin cambios); Gemini `gemini-flash-latest` sigue VIVO
+  y sigue APAGADO por defecto (free tier ahora en Gemini 3.6 Flash tras el lanzamiento de 3.7 Flash
+  el 13/08/2026, que es solo de pago — no afecta porque el eslabón está gateado y sin cuota real,
+  sin acción). Descubrimiento (Paso 2): sin candidatos nuevos con mejor calidad/precio que lo ya
+  cableado — GLM-5.2 sigue en cabeza de los rankings open-weight (ya en seguimiento desde 27/07);
+  Mistral sigue siendo el único otro proveedor gratis independiente sin plumbing (sin cambios en
+  sus límites publicados). `CONTABLE_MODEL` (`deepseek-ai/deepseek-v3`, NIM) sigue sin confirmar
+  por el mismo bloqueo de proxy — arrastrado de pasadas anteriores, sin evidencia de rotura.
 
 - **2026-08-10 · pasada semanal — los 5 eslabones cableados siguen VIVOS, sin candidatos nuevos.**
   Watch de deprecación (Paso 1, por WebSearch — `build.nvidia.com`/`console.groq.com`/`ai.google.dev`/
