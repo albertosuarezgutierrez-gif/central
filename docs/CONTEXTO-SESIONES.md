@@ -49,7 +49,9 @@
   vs peor venta real 428€); pendiente cerrado, aprendizaje en `pricing_aprendizaje` id 74. El «ADR
   agosto 62€» era artefacto de reservas DIRECTO/OTRO a 0-200€ (huecos de amigos) — al analizar House
   excluirlas. `gastos_fijos` de House sigue a 0 filas: hace falta que Alberto pase IBI/seguro/
-  suministros (no se inventan). Candidato con OK pendiente: FLOOR_SEASONAL nov ×1,00→×1,10-1,15.
+  suministros (no se inventan). FLOOR_SEASONAL nov ×1,00→×1,10 APLICADO («lo q veas mejor» de
+  Alberto): suave a propósito — House 330€ de suelo nov, justo sobre su peor venta real (~263-310€
+  de listado), sin cerrar la puerta al mercado flojo; el pricing lo sigue decidiendo el mercado.
 
 ### 💓 (16/08/2026) Sonda del verificador de eventos + guarda de regresión (PR #1447)
 - El parte «Sin poder comprobar» decía la verdad: `sivra_eventos_verificar` se declaró en
