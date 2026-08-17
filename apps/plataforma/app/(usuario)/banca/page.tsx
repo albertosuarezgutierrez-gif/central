@@ -13,6 +13,7 @@ import IntervaloSelector from '../finanzas/IntervaloSelector'
 import { periodoLabel, type Periodo } from '../finanzas/periodo'
 import ResumenPeriodo from './ResumenPeriodo'
 import AnalisisIAPanel from './AnalisisIAPanel'
+import SyncPsd2Btn from './SyncPsd2Btn'
 import CazadorDeducciones from './CazadorDeducciones'
 import Antifraude from './Antifraude'
 import BenchmarkPisos from './BenchmarkPisos'
@@ -228,6 +229,7 @@ export default async function BancaPage({ searchParams }: {
                 {feedPsd2.cuentas.map(c => `${c.banco || 'Banco'} ${c.mascara || ''}: último mov. ${c.ultimoMov ?? 'ninguno'}`).join(' · ')}
                 {feedPsd2.estado.nivel === 'ok' && feedPsd2.estado.detalles[0] ? ` · ${feedPsd2.estado.detalles[0]}` : ''}
               </div>
+              <SyncPsd2Btn />
             </div>
           </section>
         )}
