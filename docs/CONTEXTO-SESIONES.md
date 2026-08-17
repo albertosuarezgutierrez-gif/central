@@ -32,6 +32,16 @@
 
 ---
 
+### 🔑 (17/08/2026) SEO housesevillana: push 403 — el PAT quedó atrás en la unificación de la landing
+- El cron `/api/seo-refresh` (lunes 10:00 UTC, primero tras unificar la landing el 12/08) falló al
+  commitear: `403 Resource not accessible by personal access token`. Causa: los `seo-landing.ts`
+  apuntan ya a `central`, pero `GITHUB_TOKEN` es el PAT del 03/08 scoped SOLO al antiguo repo externo
+  `house-sevillana-landing`. El GET no delató nada porque `central` es público; solo el PUT falla.
+- **PENDIENTE de Alberto (ops):** crear/re-scope del PAT con `contents:write` sobre
+  `albertosuarezgutierrez-gif/central` y guardarlo en `/operador/secretos` (write-through sivra+plataforma).
+- Repo: pista de diagnóstico en el 403 de ambos `pushToGitHub` + corregida la nota estale de
+  `apps/sivra/CLAUDE.md` que aún citaba el repo externo. PR draft de esta rama.
+
 ### 🧊 (17/08/2026) Cohorte 3 DOBLE congelada (H5) + primer contraste forward vs retrovisor
 - PR #1460 **MERGEADO y verificado en prod**: cohorte 3 DOBLE en `COHORTES_PAPER` según H5 —
   `2026-08-17.v1` (combinada sp500, 25 valores, con `simbolosBase`) + `2026-08-17.factores.v1`

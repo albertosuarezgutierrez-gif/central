@@ -83,11 +83,15 @@ público: todo está detrás de login. El `package.json` se llama `roi-intranet`
 En local, NextAuth v5 necesita además `AUTH_TRUST_HOST=true`.
 
 > **🔑 `GITHUB_TOKEN` — obligatoria para el agente SEO:** `lib/seo-landing.ts` la necesita para leer
-> y commitear la landing de `house-sevillana-landing` (repo externo) vía GitHub Contents API. Es un
-> PAT de GitHub con `contents:write` sobre ese repo — el **mismo valor** que ya usa el botón manual en
-> `plataforma`. Sin ella, el cron semanal `/api/seo-refresh` da **500**. **PUESTA el 03/08/2026** desde
-> el panel `/operador/secretos` de plataforma (entrada editable con write-through a los proyectos Vercel
-> `sivra` + `plataforma`); si hay que rotarla, se rota desde ese panel, no a mano en Vercel.
+> y commitear la landing de housesevillana, que desde el 12/08/2026 vive **en el propio monorepo**
+> (`albertosuarezgutierrez-gif/central`, ruta `apps/housesevillana/app/route.ts`). Es un PAT de GitHub
+> con **`contents:write` sobre el repo `central`** — el **mismo valor** que ya usa el botón manual en
+> `plataforma`. Sin ella, el cron semanal `/api/seo-refresh` da **500**. Se gestiona desde el panel
+> `/operador/secretos` de plataforma (write-through a los proyectos Vercel `sivra` + `plataforma`); si
+> hay que rotarla, se rota desde ese panel, no a mano en Vercel. ⚠️ **El PAT del 03/08/2026 estaba
+> scoped al antiguo repo externo `house-sevillana-landing`** y al unificar la landing quedó sin permiso
+> de escritura sobre `central`: el GET seguía funcionando (repo público) pero el PUT daba
+> `403 Resource not accessible by personal access token` (primer cron tras la unificación, 17/08/2026).
 
 > **🔑 Smoobu key — fuente única (14/06/2026):** la API key de Smoobu se lee ahora de la **BD**
 > (`pms_connections.smoobu_api_key`, la fila de Alberto, tabla propiedad de ialimp) vía

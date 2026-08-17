@@ -42,7 +42,12 @@ export async function pushToGitHub(content: string, sha: string, message: string
     headers: { Authorization: `token ${githubToken()}`, 'Content-Type': 'application/json', 'User-Agent': 'plataforma-seo' },
     body: JSON.stringify({ message, content: Buffer.from(content).toString('base64'), sha }),
   })
-  if (!res.ok) throw new Error(`GitHub push failed (${res.status}): ${await res.text()}`)
+  if (!res.ok) {
+    const pista = res.status === 403
+      ? ' — el GET funciona porque el repo central es público; un 403 aquí casi siempre es GITHUB_TOKEN sin contents:write sobre albertosuarezgutierrez-gif/central (p. ej. un PAT fine-grained aún limitado al antiguo repo house-sevillana-landing). Rotarlo desde /operador/secretos.'
+      : ''
+    throw new Error(`GitHub push failed (${res.status}): ${await res.text()}${pista}`)
+  }
 }
 
 // 🚨 Las regex aceptan los DOS estilos de comilla del app/route.ts de la landing: comillas
