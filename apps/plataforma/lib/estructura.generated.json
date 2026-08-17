@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-17T08:34:01Z",
+  "generadoEn": "2026-08-17T10:10:29Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4527,6 +4527,10 @@
   ],
   "novedades": [
     {
+      "titulo": "PENDIENTE de Alberto (ops):",
+      "fecha": ""
+    },
+    {
       "titulo": "Pendiente Alberto: mergear el PR y re-vincular Kutxabank UNA vez en `/banca`",
       "fecha": ""
     },
@@ -4580,10 +4584,6 @@
     },
     {
       "titulo": "🚨 Regla dictada por Alberto a raíz de ese envío (ya en CLAUDE.md):",
-      "fecha": ""
-    },
-    {
-      "titulo": "Pero SÍ había corrido",
       "fecha": ""
     }
   ],
