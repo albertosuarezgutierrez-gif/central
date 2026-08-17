@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-17T07:36:52Z",
-  "sha": "53c791dd30396a6eb82f01ec9b08ebabadb8a4c9",
+  "generadoEn": "2026-08-17T07:45:44Z",
+  "sha": "b1dbd30fa7a027ebe85e23bdb9c2f6ced298e581",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -65480,7 +65480,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1ec16e370673"
+      "hash": "e0abb1171a8c"
     },
     {
       "ruta": "apps/plataforma/lib/psd2.ts",
@@ -65514,7 +65514,7 @@
           "exportada": true,
           "params": "dateFrom?: string",
           "retorno": "Promise<",
-          "linea": 202,
+          "linea": 204,
           "resumen": "Re-sincroniza todas las conexiones vinculadas de todas las cuentas (cron diario). dateFrom: override para importar histórico (p. ej. \"2026-01-01\"). Por defecto 89 días. Los fallos por sesión NO se tra"
         }
       ],
@@ -65527,7 +65527,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "d87055b8abe6"
+      "hash": "da6ad8e55da3"
     },
     {
       "ruta": "apps/plataforma/lib/reclamacion.ts",
