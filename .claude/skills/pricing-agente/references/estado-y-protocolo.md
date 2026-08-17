@@ -2,6 +2,26 @@
 
 ## Estado vivo (13/07/2026) — leer al empezar el ciclo
 
+### Actualización 17/08/2026 — filtro €/plaza en los lectores de mercado + Booking a 24 ventanas (PR #1453, mergeado)
+- **Los percentiles ya FILTRAN plausibilidad €/plaza** (`lib/sivra/pricing-comps-plausibles.ts`,
+  umbral 12€/plaza sobre precio y aforo CRUDOS; sin aforo declarado NO se juzga): un comp a 44-104€
+  «para 12 personas» es una habitación vestida de piso entero. Detectado en House: 364 filas /
+  36 fechas, TODAS `fuente='serper'` (0 de `booking_mcp`). Aplicado en `apply` (3 consultas),
+  `guard` (#4/#5/#7/#8/#9 — el guardián filtra LO MISMO que el motor), `recommend`, `pilot-track`
+  y `settings`. Si ves comps absurdos que PASAN el filtro, sube el caso, no el umbral a ojo.
+- **La rutina `mercado-booking` pide `?max=24`** (antes 12; techo del endpoint 30) para acumular
+  3 fechas fiables/mes por piso y poder retirar Serper (fase 2 del landmine `market_rates.fuente`).
+- **FLOOR_SEASONAL nov ×1,00→×1,10** (OK de Alberto): ADR realizado de noviembre en House (2024+)
+  489€, mejor que junio (×1,15); suave a propósito para no cerrar el mercado flojo real.
+- **🪤 Al cruzar `incomes` con una fecha**: cobertura = `checkIn <= fecha < checkOut`, NUNCA
+  `checkIn = fecha` (el ciclo del 17/08 dio por «sin income» 3 noches de House con reserva real —
+  una de ellas la Feria 2027 vendida a ~1.659€/noche). Detalle en `references/ciclo.md` Paso 1.
+- **Al analizar ADR de House excluye los incomes DIRECTO/OTRO con <~100€/noche** (huecos de
+  amigos/bloqueos a 0-200€): el «ADR de agosto 62€» era ese artefacto — la única venta real de
+  agosto desde 2024 fue 543,98€/noche. Suelo estacional de House VERIFICADO contra la serie 2024+
+  (no está plano en la práctica); aprendizaje en `pricing_aprendizaje` id 74. `gastos_fijos` de
+  House sigue a 0 filas (coste/noche infravalorado; los datos los tiene que pasar Alberto).
+
 ### Actualización 15/08/2026 — la curva PL «congelada» era el PROPIO motor; reconstruida + cota de cordura
 - **La congelación del #1416 re-etiquetó `captured_at='2026-08-10'` SIN restaurar los precios**: el upsert
   autorreferente corrió hasta el despliegue, así que `pricing_pl_referencia` guardaba el sawtooth del motor
