@@ -32,6 +32,16 @@
 
 ---
 
+### 🏷️ (17/08/2026) Revisión post-ciclo pricing: los 2 accionables del 17/08, resueltos
+- Las 3 fechas `no_disponible` de House (12-sep, 10-oct, 17-abr-2027) SÍ tienen reserva real con
+  income (Booking: 1.344€ / 2.044,74€ / 3.318,47€ brutos — la de Feria a ~1.659€/noche). No hay
+  bloqueo manual ni sync roto: el chequeo del ciclo las dio por «sin income» en falso. Nada que tocar.
+- La muestra ruidosa del 29-ago NO es puntual: 364 filas / 36 fechas de House con comps a <12€/plaza
+  (44-104€ para 12 personas = precio de habitación), **todas `fuente='serper'`** (sweep, desde 04/08);
+  0 de `booking_mcp`. El apply no filtra plausibilidad €/plaza → pendiente propuesto a Alberto:
+  descartar (o anular) comps de aforo ≥10 bajo umbral €/plaza en sweep/percentiles. Sin tocar aún
+  (afecta a precio en vivo → necesita su OK).
+
 ### 💓 (16/08/2026) Sonda del verificador de eventos + guarda de regresión (PR #1447)
 - El parte «Sin poder comprobar» decía la verdad: `sivra_eventos_verificar` se declaró en
   `AGENTES_VIGILADOS` (12/08) sin su sonda en `PROBES` del cron `agentes-latido` — el agente SÍ

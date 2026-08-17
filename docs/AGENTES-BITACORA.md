@@ -15,6 +15,11 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-17 · pricing-agente (revisión post-ciclo)** · hizo: verificados los 2 accionables del
+  ciclo 17/08 — las 3 fechas `no_disponible` de House tienen reserva real con income (el ciclo las
+  reportó «sin income» en falso); el ruido de comps <12€/plaza en House es 100% `fuente='serper'`
+  (364 filas/36 fechas desde 04/08), propuesto filtro €/plaza a Alberto (no aplicado: toca precio
+  en vivo). dudas: afinar cómo cruzó incomes el ciclo (checkIn/checkOut vs rate_date); fallos: —
 - **2026-08-17 · mercado-booking** · hizo: pasada de 12 ventanas (plan `?max=12`, las 12 vírgenes de
   ronda 1 — evento Feria confirmado, 17-23/09/2026 — `prop_luxury_busto`, `prop_house_sevillana`,
   `prop_busto_reform`, `prop_duplex_center`). 120 comps reales escritos (`fuente:"booking_mcp"`),
