@@ -82,7 +82,7 @@ REGLAS:
       { role: 'user', content: pregunta },
     ]
 
-    // Llamar a NIM (llama-3.3-70b) vía NVIDIA
+    // Llamar a NIM (glm-5.2) vía NVIDIA
     const nimKey = Deno.env.get('NIM_API_KEY') ?? Deno.env.get('NVIDIA_API_KEY')
     let respuesta = ''
 
@@ -91,7 +91,7 @@ REGLAS:
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${nimKey}` },
         body: JSON.stringify({
-          model: 'meta/llama-3.3-70b-instruct',
+          model: 'z-ai/glm-5.2',
           messages: [{ role: 'system', content: system }, ...msgs],
           max_tokens: 256,
           temperature: 0.4,

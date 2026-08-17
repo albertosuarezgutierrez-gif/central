@@ -42,13 +42,17 @@ Los ids por defecto y sus envs de override:
   deprecaciones de la cadena DIRECTA (NIM/Groq/Gemini/Kimi), que es la red de seguridad
   cuando OpenRouter entero falla, y puede proponer por PR cambios a las listas de
   preferencia del cron (`PREFERIDOS` en su route.ts) si descubre algo mejor.
-- **NIM** `meta/llama-3.3-70b-instruct` — env `NVIDIA_API_KEY` (primario de la cadena directa, gratis).
+- **NIM** `z-ai/glm-5.2` — env `NVIDIA_API_KEY` (primario de la cadena directa, gratis; swap
+  17/08/2026 — el 3.3-70b deja de soportarse el 25/08/2026, y el primer sustituto elegido por
+  ficha web, llama-4-maverick, daba 410 Gone en el API. ⚠️ Lección: la ficha de build.nvidia.com
+  NO prueba que el modelo viva — verificar contra `GET /v1/models` con key real, o con una llamada).
 - **Groq** `openai/gpt-oss-120b` — env `GROQ_API_KEY`, override `GROQ_BRAIN_MODEL`.
 - **Gemini** `gemini-flash-latest` (alias rodante; `gemini-2.5-flash` da 404 desde 09/07/2026) —
   envs `GEMINI_API_KEY` **+ `GEMINI_TEXTO=1`** (apagado por defecto), override `GEMINI_BRAIN_MODEL`.
 - **Kimi/Moonshot** `kimi-k2.6` — env `MOONSHOT_API_KEY` (de pago, último recurso), override `MOONSHOT_MODEL`.
 - Consumidores con modelo propio: `AGENTE_HUESPED_MODEL` (vacío = usa el 70B por defecto),
-  `CONTABLE_MODEL` (default `deepseek-ai/deepseek-v3` por NIM).
+  `CONTABLE_MODEL` (default `deepseek-ai/deepseek-v4-flash-0731` por NIM; el `deepseek-v3` fue
+  retirado del API — verificado 17/08/2026).
 
 > **Regla:** lee estos ids del código en cada pasada (no de aquí). Si este listado contradice
 > a `client.ts`, manda el código: corrige esta skill en el mismo PR.

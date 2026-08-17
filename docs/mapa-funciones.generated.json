@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-16T16:22:21Z",
-  "sha": "13658d0a6b8871a2417b15237d1ecf722af35ba3",
+  "generadoEn": "2026-08-17T06:39:17Z",
+  "sha": "7076426c5d7741ac305f1b59f9776a69a9352c6a",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -5042,7 +5042,7 @@
         "next"
       ],
       "rutaApi": "/api/brain/conversar",
-      "hash": "39bb9074f307"
+      "hash": "90b0b9e1b513"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/bridge/cashlogy/result/route.ts",
@@ -10726,7 +10726,7 @@
         "next"
       ],
       "rutaApi": "/api/owner/almacen/prediccion",
-      "hash": "2dbd32b23532"
+      "hash": "f1a29a66f883"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/owner/analytics/route.ts",
@@ -11588,7 +11588,7 @@
         "next"
       ],
       "rutaApi": "/api/owner/copiloto",
-      "hash": "ba41dd666649"
+      "hash": "6e4ac5a958db"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/owner/dashboard/route.ts",
@@ -11707,7 +11707,7 @@
         "next"
       ],
       "rutaApi": "/api/owner/escandallos/analizar",
-      "hash": "81f8ea5d75ad"
+      "hash": "d7c78e0d6902"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/owner/escandallos/route.ts",
@@ -11778,7 +11778,7 @@
         "next"
       ],
       "rutaApi": "/api/owner/escandallos/sugerir",
-      "hash": "5e3daee95286"
+      "hash": "a410b8ec3c1d"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/owner/espacios/[id]/mantenimiento/route.ts",
@@ -15568,7 +15568,7 @@
         "next"
       ],
       "rutaApi": "/api/owner/turnos/analisis",
-      "hash": "b442e1589b08"
+      "hash": "6e3da584568d"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/owner/valoraciones/sentiment/route.ts",
@@ -19270,7 +19270,7 @@
         "next"
       ],
       "rutaApi": "/api/transcribe",
-      "hash": "ec9717c280b5"
+      "hash": "03e72f13c58c"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/turno/route.ts",
@@ -22717,7 +22717,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3b0bc47dc8d7"
+      "hash": "07a31756bed2"
     },
     {
       "ruta": "apps/ia-rest/src/app/produccion/page.tsx",
@@ -28577,7 +28577,7 @@
           "exportada": false,
           "params": "",
           "retorno": "NimConfig",
-          "linea": 85,
+          "linea": 86,
           "resumen": "Config NIM desde el entorno de ESTA app (el paquete core-ai no lee process.env)."
         },
         {
@@ -28586,7 +28586,7 @@
           "exportada": false,
           "params": "",
           "retorno": "GroqConfig | null",
-          "linea": 93,
+          "linea": 94,
           "resumen": "Config Groq (fallback de texto). `GROQ_API_KEY` ya existe en producción (la usa el EAR/Whisper). Devuelve null si no está configurada, para no romper si el operador no la define."
         },
         {
@@ -28595,7 +28595,7 @@
           "exportada": false,
           "params": "",
           "retorno": "OpenRouterConfig | null",
-          "linea": 102,
+          "linea": 103,
           "resumen": "Config OpenRouter (agregador con fallback NATIVO entre proveedores) — ÚLTIMA red cuando NIM y Groq caen a la vez (los 3 gratis directos pueden apagarse simultáneamente). Devuelve null si no hay OPENRO"
         },
         {
@@ -28604,7 +28604,7 @@
           "exportada": false,
           "params": "",
           "retorno": "GatewayConfig | null",
-          "linea": 120
+          "linea": 121
         },
         {
           "nombre": "nvidiaText",
@@ -28612,7 +28612,7 @@
           "exportada": false,
           "params": "system: string, user: string, maxTokens = 600, model?: string",
           "retorno": "Promise<string>",
-          "linea": 129,
+          "linea": 130,
           "resumen": "── NVIDIA: llamada texto (delega en @central/core-ai) ──────────────────────── `model` permite forzar un modelo concreto por llamada (p. ej. el 8B rápido para tareas con presupuesto de tiempo ajustado"
         },
         {
@@ -28621,7 +28621,7 @@
           "exportada": false,
           "params": "system: string, images: ImageInput[], userText: string, maxTokens = 2000",
           "retorno": "Promise<string>",
-          "linea": 135,
+          "linea": 136,
           "resumen": "── NVIDIA: llamada visión (multi-imagen, delega en @central/core-ai) ─────────"
         },
         {
@@ -28630,7 +28630,7 @@
           "exportada": false,
           "params": "system: string, images: ImageInput[], userText: string, maxTokens = 2000",
           "retorno": "Promise<string>",
-          "linea": 142,
+          "linea": 143,
           "resumen": "── Gemini: visión/OCR de calidad (delega en @central/core-ai) ──────────────── Gemini Flash lee mucho mejor que NIM y acepta imágenes grandes (NIM cae a ~180 KB inline). Es el camino preferido para OC"
         },
         {
@@ -28639,7 +28639,7 @@
           "exportada": false,
           "params": "system: string, user: string, maxTokens = 600",
           "retorno": "Promise<string | null>",
-          "linea": 150,
+          "linea": 151,
           "resumen": "── Groq: llamada texto de FALLBACK (delega en @central/core-ai) ────────────── Mismo modelo Llama 3.3 70B que NIM, servido gratis por Groq desde otra infra."
         },
         {
@@ -28648,7 +28648,7 @@
           "exportada": false,
           "params": "system: string, user: string, maxTokens = 600",
           "retorno": "Promise<string | null>",
-          "linea": 159,
+          "linea": 160,
           "resumen": "── OpenRouter: llamada texto de ÚLTIMO fallback (delega en @central/core-ai) ── Agregador: una key da acceso a decenas de proveedores con fallback nativo entre modelos, así que sobrevive a un apagón s"
         },
         {
@@ -28657,7 +28657,7 @@
           "exportada": true,
           "params": "system: string, userOrMessages: string | { role: 'user' | 'assistant'; content: string }[], maxTokens = 600, timeoutMs = 15_000, // Default NIM puro: la cuenta de Anthropic (fallback) está SIN SALDO, así que caer // a ella solo da \"credit b",
           "retorno": "Promise<string>",
-          "linea": 176,
+          "linea": 177,
           "resumen": "Llamada texto: NVIDIA gratis → Anthropic fallback Acepta historial de conversación para soporte multi-turno (soporte, chat)"
         },
         {
@@ -28666,7 +28666,7 @@
           "exportada": true,
           "params": "system: string, user: string, maxTokens = 1500, timeoutMs = 45_000",
           "retorno": "Promise<string>",
-          "linea": 273,
+          "linea": 274,
           "resumen": "Llamada con búsqueda web: Gemini Flash + Google Search grounding Usar SOLO para agentes que necesitan datos reales de internet (Lead Hunter, research) Fallback a callAI() si Gemini no disponible o fal"
         },
         {
@@ -28675,7 +28675,7 @@
           "exportada": true,
           "params": "system: string, messages: NimToolMessage[], tools: unknown[], maxTokens = 1024,",
           "retorno": "Promise<NimToolResult>",
-          "linea": 313,
+          "linea": 314,
           "resumen": "la ruta ejecuta las herramientas y reenvía los resultados como mensajes `role:'tool'`."
         },
         {
@@ -28684,7 +28684,7 @@
           "exportada": true,
           "params": "prompt: string, opts: Omit<GatewayVideoOpts, 'timeoutMs'> = {},",
           "retorno": "Promise<string>",
-          "linea": 355,
+          "linea": 356,
           "resumen": "Generación de vídeo IA a través de la pasarela central. FAL_API_KEY vive solo en plataforma; ia-rest solo necesita AI_GATEWAY_URL + AI_GATEWAY_SECRET."
         },
         {
@@ -28693,13 +28693,13 @@
           "exportada": true,
           "params": "system: string, images: ImageInput[], userText: string, maxTokens = 2000, timeoutMs = 30_000, // Legacy: antaño evitaba el fallback de PAGO a Anthropic (retirado el 17/06/2026). // Ya NO bloquea nada — se conserva por compatibilidad de firm",
           "retorno": "Promise<string>",
-          "linea": 367,
+          "linea": 368,
           "resumen": "Llamada visión: NVIDIA gratis → Anthropic fallback"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "813422fd9aa0"
+      "hash": "7d004ab6c910"
     },
     {
       "ruta": "apps/ia-rest/src/lib/ai-video.ts",
@@ -29148,7 +29148,7 @@
     {
       "ruta": "apps/ia-rest/src/lib/brain-router.ts",
       "ambito": "apps/ia-rest",
-      "resumen": "brain-router.ts — Pipeline de destilación BRAIN v2 Capas por velocidad/coste: 1. patron <10ms €0 reconocimiento de patrones directo 2. nim_8b_fast ~80ms €0 Groq llama-3.1-8b-instant (solo comandas simples) 3. nim_70b ~800ms €0 NVIDIA llama-3.3-70b (comandas complejas/ambiguas) 4. claude_api ~500ms ~",
+      "resumen": "brain-router.ts — Pipeline de destilación BRAIN v2 Capas por velocidad/coste: 1. patron <10ms €0 reconocimiento de patrones directo 2. nim_8b_fast ~80ms €0 Groq llama-3.1-8b-instant (solo comandas simples) 3. nim_70b ~800ms €0 NVIDIA glm-5.2 (comandas complejas/ambiguas) 4. claude_api ~500ms ~€0.002",
       "exporta": [
         "routearComanda"
       ],
@@ -29190,7 +29190,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6eb733866460"
+      "hash": "3fb9ad96e7bc"
     },
     {
       "ruta": "apps/ia-rest/src/lib/brain.ts",
@@ -29285,7 +29285,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1551b0eea9a3"
+      "hash": "4d00ea5e2d82"
     },
     {
       "ruta": "apps/ia-rest/src/lib/carta-recomendar.ts",
@@ -32003,7 +32003,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "a38dc42f907e"
+      "hash": "ec0c7340577b"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/eventos-entorno/index.ts",
@@ -32170,7 +32170,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "fee0ef1d8588"
+      "hash": "0ac3520576ee"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/nim-sentiment/index.ts",
@@ -32191,7 +32191,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "131cd458ca92"
+      "hash": "3137d667fdba"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/notify-error/index.ts",
@@ -32215,7 +32215,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "94f8df495330"
+      "hash": "a58cca3924ba"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-call-waiter/index.ts",
@@ -59096,7 +59096,7 @@
           "exportada": false,
           "params": "",
           "retorno": "NimConfig",
-          "linea": 38
+          "linea": 39
         },
         {
           "nombre": "aiComplete",
@@ -59104,7 +59104,7 @@
           "exportada": true,
           "params": "messages: { role: string; content: string }[], opts: { timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 55,
+          "linea": 56,
           "resumen": "Completion de texto (system+user…). Mismo contrato de siempre: recibe mensajes {role,content} y devuelve el texto. Antes iba DIRECTO a NVIDIA NIM con modelo pinneado (Llama 3.3-70b), saltándose OpenRo"
         },
         {
@@ -59113,7 +59113,7 @@
           "exportada": true,
           "params": "system: string, images: ImageInput[], userText: string, opts: { maxTokens?: number; model?: string; timeoutMs?: number; endpoint?: string /** `true` = varias imágenes en la MISMA llamada: exige modelo multimodal y * NO cae a NIM, que solo a",
           "retorno": "Promise<string>",
-          "linea": 83,
+          "linea": 84,
           "resumen": "VISIÓN / OCR con el modelo que decida la app. Un solo punto de entrada para leer imágenes desde plataforma (certificaciones registrales escaneadas, tickets, fotos de facturas). Enrutado: si hay `OPENR"
         },
         {
@@ -59122,7 +59122,7 @@
           "exportada": true,
           "params": "audio: Buffer, fileName: string, mimeType?: string, opts: { timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 166,
+          "linea": 167,
           "resumen": "Transcribe voz → texto (STT) con Groq Whisper (`whisper-large-v3`, gratis). Usa GROQ_API_KEY (la misma del fallback de texto). Devuelve '' si no reconoce nada. Para las notas de voz del agente de cont"
         },
         {
@@ -59131,7 +59131,7 @@
           "exportada": true,
           "params": "input: { text?: string imageBase64?: string mimeType?: string }",
           "retorno": "Promise<ResultadoExtraccion>",
-          "linea": 245,
+          "linea": 246,
           "resumen": "Igual que `aiExtractInvoice`, pero dice POR QUÉ no hay datos cuando no los hay. PDF (texto) → pasarela de texto (Director/OpenRouter → cadena gratis). Imagen → pasarela de visión (`aiVision`: OpenRout"
         },
         {
@@ -59140,13 +59140,13 @@
           "exportada": true,
           "params": "input: { text?: string imageBase64?: string mimeType?: string }",
           "retorno": "Promise<Record<string, any>>",
-          "linea": 339,
+          "linea": 340,
           "resumen": "Extrae datos estructurados de una factura. Devuelve {} si NINGÚN modelo logra leerla. ⚠️ Este `{}` NO distingue «no era una factura» de «no se pudo leer»: si esa diferencia importa (y para contabilida"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a0cea5640830"
+      "hash": "af991fbbd44c"
     },
     {
       "ruta": "apps/plataforma/lib/ai-gateway.ts",
@@ -60719,12 +60719,12 @@
           "exportada": true,
           "params": "cuentaId: string, mensaje: string, canal = 'web',",
           "retorno": "Promise<",
-          "linea": 57
+          "linea": 60
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b50801a19285"
+      "hash": "88c8bfa41d98"
     },
     {
       "ruta": "apps/plataforma/lib/contable/clasificar-ia.ts",
@@ -60755,7 +60755,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b8a775f3c32d"
+      "hash": "8053f0123955"
     },
     {
       "ruta": "apps/plataforma/lib/contable/contexto.ts",
@@ -64932,7 +64932,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3b2cbb4231a0"
+      "hash": "2abbc0fd5f20"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/sonda-veredicto.ts",
@@ -65892,7 +65892,7 @@
           "exportada": false,
           "params": "text: string",
           "retorno": "boolean",
-          "linea": 64
+          "linea": 65
         },
         {
           "nombre": "sentimientoDe",
@@ -65900,7 +65900,7 @@
           "exportada": false,
           "params": "pregunta: string",
           "retorno": "Decision['sentimiento']",
-          "linea": 68
+          "linea": 69
         },
         {
           "nombre": "limpiarReply",
@@ -65908,7 +65908,7 @@
           "exportada": false,
           "params": "raw: string",
           "retorno": "string",
-          "linea": 76,
+          "linea": 77,
           "resumen": "Limpia adornos por si el modelo, pese a pedírsele texto plano, envuelve la respuesta en JSON, comillas o un prefijo tipo \"Respuesta:\"."
         },
         {
@@ -65917,7 +65917,7 @@
           "exportada": false,
           "params": "ctx: Contexto, pregunta: string, reply: string",
           "retorno": "Promise<boolean>",
-          "linea": 94,
+          "linea": 95,
           "resumen": "Control de calidad: ¿la respuesta resuelve bien lo que pide el huésped o hay que escalar a Alberto? UNA sola palabra (ESCALAR/OK) — mucho más fiable que un JSON. Si la llamada falla, NO escala por sí "
         },
         {
@@ -65926,12 +65926,12 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, categoria: string",
           "retorno": "Promise<Decision>",
-          "linea": 115
+          "linea": 116
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "df350cb8c1c5"
+      "hash": "f5243319e2f2"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/disponibilidad.ts",
@@ -74895,7 +74895,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "3e781a12ccab"
+      "hash": "d24c480923c8"
     },
     {
       "ruta": "apps/rrhh/lib/asistente-prompt.ts",
@@ -74948,7 +74948,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "179bf4d7663e"
+      "hash": "85d54c502ff3"
     },
     {
       "ruta": "apps/rrhh/lib/at-ep-agente.ts",
@@ -81812,12 +81812,12 @@
           "params": "input: { text?: string imageBase64?: string mimeType?: string }",
           "retorno": "Promise<Record<string, any>>",
           "linea": 104,
-          "resumen": "Extrae datos estructurados de una factura. PDF → texto plano → NVIDIA NIM llama-3.3-70b Imagen → base64 → NVIDIA NIM llama-3.2-90b-vision"
+          "resumen": "Extrae datos estructurados de una factura. PDF → texto plano → NVIDIA NIM glm-5.2 Imagen → base64 → NVIDIA NIM llama-3.2-90b-vision"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "231e75c6438b"
+      "hash": "02b97e375048"
     },
     {
       "ruta": "apps/sivra/lib/cron-auth.ts",
@@ -83377,7 +83377,7 @@
           "exportada": false,
           "params": "model?: string",
           "retorno": "NimConfig",
-          "linea": 43
+          "linea": 48
         },
         {
           "nombre": "groqEnvConfig",
@@ -83385,7 +83385,7 @@
           "exportada": false,
           "params": "",
           "retorno": "GroqConfig | null",
-          "linea": 52,
+          "linea": 57,
           "resumen": "Config Groq de fallback desde el entorno. Devuelve null si no hay GROQ_API_KEY (el fallback queda inactivo sin romper nada). NO reutiliza el `model` de NIM (ids distintos): usa el modelo Groq propio ("
         },
         {
@@ -83394,7 +83394,7 @@
           "exportada": false,
           "params": "",
           "retorno": "CerebrasConfig | null",
-          "linea": 62,
+          "linea": 67,
           "resumen": "Config Cerebras de fallback GRATIS desde el entorno (4º proveedor, infra WSE distinta de NIM/Groq: sube la resiliencia frente a un apagón simultáneo como el del 06/07/2026). null si no hay CEREBRAS_AP"
         },
         {
@@ -83403,7 +83403,7 @@
           "exportada": false,
           "params": "",
           "retorno": "GeminiConfig | null",
-          "linea": 71,
+          "linea": 76,
           "resumen": "Config Gemini de fallback desde el entorno. APAGADO por defecto (ver cabecera: la key lleva meses sin cuota y el eslabón solo pagaba timeouts): requiere `GEMINI_TEXTO=1` ADEMÁS de GEMINI_API_KEY. Usa "
         },
         {
@@ -83412,7 +83412,7 @@
           "exportada": false,
           "params": "",
           "retorno": "MoonshotConfig | null",
-          "linea": 79,
+          "linea": 84,
           "resumen": "Config Moonshot/Kimi de ÚLTIMO fallback (de pago) desde el entorno. null si no hay MOONSHOT_API_KEY (queda inactivo sin romper nada). Modelo override: MOONSHOT_MODEL."
         },
         {
@@ -83421,7 +83421,7 @@
           "exportada": false,
           "params": "",
           "retorno": "OpenRouterConfig | null",
-          "linea": 89,
+          "linea": 94,
           "resumen": "Config OpenRouter PRIMARIO desde el entorno. null si no hay OPENROUTER_API_KEY (queda inactivo y la cadena arranca en NIM como siempre → rollout por proyecto poniendo la env). OPENROUTER_MODEL = model"
         },
         {
@@ -83430,7 +83430,7 @@
           "exportada": true,
           "params": "promptOrMessages: string | NimChatMessage[], options: { system?: string maxTokens?: number temperature?: number timeoutMs?: number model?: string /** La PASARELA lo pone a true cuando ya intentó/bloqueó OpenRouter (presupuesto): evita reint",
           "retorno": "Promise<string>",
-          "linea": 113,
+          "linea": 118,
           "resumen": "Completion de texto: OpenRouter (agregador, si hay key) → NVIDIA NIM (gratis) → Groq (gratis) → Cerebras (gratis) → [Gemini, solo con GEMINI_TEXTO=1] → Kimi (de pago). Cada eslabón se activa solo si e"
         },
         {
@@ -83439,13 +83439,13 @@
           "exportada": true,
           "params": "messages: NimToolMessage[], tools: unknown[], options: { system?: string; maxTokens?: number; model?: string; skipOpenRouter?: boolean } = {},",
           "retorno": "Promise<NimToolResult>",
-          "linea": 204,
+          "linea": 209,
           "resumen": "Function-calling: OpenRouter (si hay key) → NVIDIA NIM (gratis) → Groq (gratis) de fallback. Lee `OPENROUTER_API_KEY`/`NVIDIA_API_KEY`/`GROQ_API_KEY` del entorno. Wrapper usado por la pasarela central"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "978c204de02c"
+      "hash": "6257fac15d0a"
     },
     {
       "ruta": "packages/core-ai/src/embeddings.ts",
@@ -83791,7 +83791,7 @@
           "exportada": false,
           "params": "config: NimConfig",
           "retorno": "string",
-          "linea": 12
+          "linea": 13
         },
         {
           "nombre": "nimText",
@@ -83799,7 +83799,7 @@
           "exportada": true,
           "params": "config: NimConfig, system: string, user: string, maxTokens = 600,",
           "retorno": "Promise<string>",
-          "linea": 18,
+          "linea": 19,
           "resumen": "Llamada de texto a NVIDIA NIM. Devuelve el contenido del primer choice."
         },
         {
@@ -83808,7 +83808,7 @@
           "exportada": true,
           "params": "config: NimConfig, messages: NimChatMessage[], opts: NimChatOptions = {},",
           "retorno": "Promise<string>",
-          "linea": 65,
+          "linea": 66,
           "resumen": "Llamada de texto **multi-turno** a NVIDIA NIM (array de mensajes estilo OpenAI). Variante de `nimText` para chats/agentes conversacionales. `opts.system` se antepone como mensaje de sistema. La app in"
         },
         {
@@ -83817,7 +83817,7 @@
           "exportada": true,
           "params": "config: NimConfig, messages: NimToolMessage[], tools: unknown[], opts: { system?: string; model?: string; maxTokens?: number; temperature?: number; signal?: AbortSignal } = {},",
           "retorno": "Promise<NimToolResult>",
-          "linea": 119,
+          "linea": 120,
           "resumen": "Function-calling con NVIDIA NIM (endpoint OpenAI-compatible). Pasa `tools` (formato OpenAI: `{type:'function', function:{name, description, parameters}}`) y devuelve el mensaje del modelo con `content"
         },
         {
@@ -83826,13 +83826,13 @@
           "exportada": true,
           "params": "config: NimConfig, system: string, images: ImageInput[], userText: string, maxTokens = 2000, opts: { temperature?: number; signal?: AbortSignal } = {},",
           "retorno": "Promise<string>",
-          "linea": 156,
+          "linea": 157,
           "resumen": "Llamada de visión (multi-imagen) a NVIDIA NIM. Formato image_url base64. `opts.temperature` permite afinar el determinismo (p. ej. OCR de facturas usa 0.05); por defecto 0.1. `opts.signal` permite can"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fd5cdbed02f4"
+      "hash": "1c03ff629a1e"
     },
     {
       "ruta": "packages/core-ai/src/openrouter.ts",

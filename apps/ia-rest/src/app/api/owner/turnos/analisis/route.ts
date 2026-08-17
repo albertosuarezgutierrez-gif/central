@@ -72,7 +72,7 @@ Solo JSON: {"horas_criticas":[{"hora":"H:00","situacion":"sobredotado|infradotad
       fuente: 'nim_analitico',
       calidad: 3,
       confianza: 0.75,
-      modelo_usado: 'nvidia/llama-3.3-70b',
+      modelo_usado: 'nvidia/glm-5.2',
     })
   }
   return NextResponse.json({ resumenHoras, resumenDias, analisis })

@@ -80,7 +80,7 @@ Responde en español, tono cálido y directo, hostelero. Máximo 3 frases. No in
     fuente: 'nim_analitico',
     calidad: 3,
     confianza: 0.80,
-    modelo_usado: 'nvidia/llama-3.3-70b',
+    modelo_usado: 'nvidia/glm-5.2',
   })
 
   return NextResponse.json({ respuesta: respuesta?.trim() ?? 'Sin respuesta disponible.' })
