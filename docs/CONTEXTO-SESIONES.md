@@ -32,6 +32,21 @@
 
 ---
 
+### 🔍 (18/08/2026) Auditoría diaria (ligera) — todo sano, sin carril 2
+- Rango: 39 commits desde la última auditoría (2026-08-16), casi todos ya autodocumentados por PR
+  (disciplina de memoria excelente estos días). Heartbeat de 23 huellas (12 latidos `agente_latidos`
+  + 11 tablas de dominio) **23/23 ✅**, sin crons mudos. Backlog de PRs de rutinas: **0 abiertos**
+  (los 3 del 16/08 ya mergeados) — nada que vigilar del automerge hoy.
+- Integridad estructural: lockfile presente, `ignoreCommand` correcto en los 10 `apps/*/vercel.json`.
+  `docs/SKILLS.md` reconciliado contra las 32 skills de `.claude/skills/` (sin huérfanos ni
+  faltantes). `apps/almacen` sigue sin `CLAUDE.md`/fila en `FUENTES-DE-VERDAD.md` — ya declarado
+  correctamente como pendiente en `MATRIZ.md`, no es drift nuevo.
+- Reconciliado el bloque «Estado vivo» (fecha 16/08→18/08): 2 pendientes cerrados con su desenlace
+  real — pricing Booking (Genius/NR/oferta ya ejecutados en extranet + `channel_markup=1.20`
+  verificado) y el PASO 0 del trigger de trading (estrenado 17/08: repesca salvó la pasada, disparo
+  primario sigue fallando 2/2 — a vigilar, no bloqueante). Sin manuales de usuario que tocar (ningún
+  cambio del rango es feature visible en `apps/ia-rest`).
+
 ### 📈 (17/08/2026) Estreno del doble disparo de trading: la repesca SALVÓ la pasada — el disparo de las 20:15 murió OTRA VEZ
 - Check-in nocturno: el disparo de las 20:15Z no dejó NI UNA huella (2º fallo igual que el 14/08). La
   repesca de las 23:15Z hizo lo diseñado: PASO 0 no vio huella → pasada COMPLETA (saldo 23:16, latidos
@@ -1187,15 +1202,17 @@ completo `docs/AUDITORIA-2026-08.md`.
   page data de `/api/admin/clientes/[vertical]/[id]` YA en main (envs ausentes), no es del cambio.
 
 
-- **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 16/08/2026).** Detalle en
+- **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 18/08/2026).** Detalle en
   `docs/memoria/2026-08.md` y en los PRs citados.
   - **Ayudas/subvenciones (15/08, #1432):** pendiente respuesta de Asecon (Marta Albarrán) sobre la
     convocatoria de conciliación antes del **15/09/2026** (plazo de solicitud). Pendiente además un
     borrador (sin enviar, a decisión de Alberto) sobre la cuota RETA de Pilar (serie 72→118→32€,
     ¿bonificación art. 38 LETA aplicada?).
-  - **Pricing SIVRA — canal Booking (15/08):** reserva Luxury 22-25/10 mordida 29,4% por
-    Genius+descuento móvil apilados (motor tarificó bien, la fuga es de canal). Pendiente que
-    Alberto revise el nivel Genius y el descuento móvil activos en la extranet.
+  - **Pricing SIVRA — canal Booking (resuelto 16-17/08):** revisado el nivel Genius/descuento móvil
+    tras la reserva Luxury mordida 29,4% (15/08) — Genius dinámico → No en 3 pisos, NR Luxury
+    −15%→−10%, oferta estándar 8% hasta 31/12/2028 (Fase 3, `docs/BOOKING-CAMBIOS-2026-08-16.md`);
+    Smoobu +20% canal Booking + motor `channel_markup=1.20` verificados en los 4 pisos (Fases 1-2,
+    PR #1449). Medición Fase 4 programada 30/08.
   - **Pricing SIVRA (motor vivo en los 4 pisos, resuelto desde el 09-10/08):** #1323 (ocupación
     POR MES) rehecho y mergeado sobre `pricing-demanda.ts`, `channel_markup_sin_recargo.sql`
     aplicado, last-minute encendido (`lastminute_k=0,5`) y reparto mes/global ya se persiste en
@@ -1222,11 +1239,12 @@ completo `docs/AUDITORIA-2026-08.md`.
     aviso explícito del agente cuando el forward justifique Fase 2 (hoy lejos: hit rate 26-29%, alpha
     ≈0 sobre n grande). FMP sin créditos y redundante (Yahoo cubre); NO recargar. Solo el DCF sigue
     sin fuente. Pendiente (13/08): averiguar quién escribe `trading_estrategia_stats.retorno_medio`
-    (dos filas en `0.000000` — centinela «sin calcular», no cero medido). Pendiente nuevo (15/08,
-    #1431): el PASO 0 del prompt del trigger comprueba `fecha=CURRENT_DATE`, que una recuperación
-    backdateada esquiva (duplicó 88 tesis sin daño operativo) — debería comprobar la huella real
-    (última vela/precio_ref usado); vive en la config del trigger, fuera de este repo. Trigger
-    reprogramado por Alberto (15/08) a `15 20,23 * * 1-5`; estreno real lunes 17/08.
+    (dos filas en `0.000000` — centinela «sin calcular», no cero medido). **PASO 0 del trigger
+    aplicado y estrenado 17/08 (#1471):** el disparo primario de las 20:15Z volvió a morir sin
+    huella (2º fallo seguido, igual que el 14/08) pero la repesca de las 23:15Z hizo su trabajo
+    (PASO 0 no vio huella → pasada completa, sin duplicado). Ya no parece transitorio: si el
+    disparo primario vuelve a fallar, Alberto abre ticket a soporte de claude.ai (la Rutina es de
+    la UI, no editable por MCP).
   - **Subastas:** lente 🌊 (costa norte + Matalascañas sin tope) MERGEADA y en prod (#1346/#1349/
     #1351/#1353); pestaña 🔥 Oportunidades rediseñada (#1358 — una tarjeta, chips homogéneos,
     €/m² siempre visible). 🟡 el dispatcher marca timeout en `subastas-mercado` si desborda 280 s
