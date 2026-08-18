@@ -32,6 +32,17 @@
 
 ---
 
+### 📈 (18/08/2026) Gráfico de evolución de la cartera REAL — antes no había pasado que dibujar
+- Alberto pidió ver la evolución del núcleo. Hallazgo: NO existía histórico — `trading_cartera_real` es
+  una foto que se REEMPLAZA cada pasada y `broker_saldos` una fila que se pisa; un gráfico habría tenido
+  un punto. Primero hay que grabar la serie.
+- Nueva tabla `trading_cartera_real_track` (aplicada): un punto por día y DIVISA (nunca se suman),
+  la escribe `POST /api/trading/cartera` (best-effort, devuelve `track`/`trackError`). Curva SVG
+  server-rendered en `/trading`: valor de mercado vs línea discontinua de lo invertido.
+- Honestidad de datos: <2 puntos → se dice que la curva arranca mañana; puntos parciales o sin valor se
+  DECLARAN y el área no se sombrea si falta algún coste; fallo de lectura ≠ «aún no hay puntos».
+- Verificado: 1.254 tests ✅, tsc 0, next build OK. Módulo puro `lib/trading/cartera-track.ts` (8 tests).
+
 ### 📧 (18/08/2026) facturas-correo — hueco nuevo: Vercel/Anthropic sin archivar desde abril
 - Pasada normal sin novedades de Gmail (Vía B sana, sin backlog, Paso 4.0 limpio). Al investigar
   por qué Vercel/Anthropic no salían nunca en `facturas_drive`, encontré que llevan desde **abril**
