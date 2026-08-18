@@ -49,6 +49,12 @@ bloque **💼 Cartera real** (2-4 líneas):
   `POST /api/trading/cartera` (paso 1c de `references/pasada-diaria.md`) para que la sección
   «💼 Cartera real» de `/trading` se refresque. Solo se llama con una lectura BUENA — un fallo
   de lectura no se manda como cartera vacía.
+- **📈 La curva de evolución la alimenta ESA MISMA llamada (18/08/2026):** el endpoint anota el punto
+  del día en `trading_cartera_real_track` (uno por día y DIVISA; la última pasada del día lo reescribe)
+  y devuelve `track` (puntos escritos) y `trackError`. Es la ÚNICA fuente del gráfico: la foto de
+  posiciones se reemplaza cada noche, así que un día sin pasada es un día sin punto — un hueco real en
+  la curva, no un valor a interpolar. **Si `trackError` viene con contenido, cántalo en el Telegram**
+  (la cartera sí se guardó, pero ese día no entra en el gráfico).
 
 ## Alertas de precio (`create_alert`)
 - Permitidas a petición de Alberto o para niveles que él haya acordado (p. ej. zona de

@@ -9,7 +9,7 @@ import { prisma } from '@/lib/db'
 import { isRoutineAuthorized } from '@/lib/cron-auth'
 import { resolverCuentaBuzon } from '@/lib/agente-facturas/cuenta-buzon'
 import { normalizarPosiciones } from '@/lib/trading/cartera-real'
-import { reemplazarCarteraReal } from '@/lib/trading/cartera-real-io'
+import { reemplazarCarteraReal, registrarTrackCartera } from '@/lib/trading/cartera-real-io'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,5 +45,16 @@ export async function POST(req: NextRequest) {
   const broker = (body.broker || 'Interactive Brokers').trim()
   await reemplazarCarteraReal(cuentaId, broker, posiciones)
 
-  return NextResponse.json({ ok: true, guardadas: posiciones.length, descartadas })
+  // 📈 Punto del día para la curva de evolución. Best-effort A PROPÓSITO: la foto ya está guardada
+  // y perder un punto de la serie no puede tumbar el refresco de la cartera. El fallo viaja en la
+  // respuesta (`trackError`) para que la pasada lo cante — no se pierde en silencio.
+  let track: number | null = null
+  let trackError: string | null = null
+  try {
+    track = await registrarTrackCartera(cuentaId, broker, posiciones)
+  } catch (e) {
+    trackError = e instanceof Error ? e.message : 'error desconocido'
+  }
+
+  return NextResponse.json({ ok: true, guardadas: posiciones.length, descartadas, track, trackError })
 }

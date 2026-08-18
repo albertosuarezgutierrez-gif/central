@@ -45,6 +45,11 @@ antes, dilo en el resumen de Telegram — esa pasada mide contra el cierre de ay
    BUENA; si `get_account_positions` falló, NO llames al endpoint (la foto anterior es mejor que
    una vacía falsa) y dilo en el resumen. Si la respuesta trae `descartadas` con contenido,
    cántalo en el Telegram: una posición descartada es una posición que desaparece del panel.
+   **📈 La respuesta trae además `track`/`trackError` (18/08/2026):** esta llamada es la que anota el
+   punto del día en `trading_cartera_real_track`, la ÚNICA fuente de la curva de evolución de
+   `/trading` (la foto de posiciones se reemplaza cada noche). Un día sin pasada = un hueco real en el
+   gráfico. Si `trackError` viene con contenido, dilo en el resumen: la cartera se guardó, pero ese día
+   no entra en la curva.
 2. Cargar la watchlist activa (tabla `trading_watchlist`, capas A/B/C; ver spec). En Fase 1 la lista
    inicial se siembra con `apps/plataforma/prisma/sql/trading_watchlist_seed.sql`.
 3. Por símbolo: `get_price_history` (diario, ~120 velas) → mapear a `Vela[]`

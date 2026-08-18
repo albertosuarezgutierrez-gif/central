@@ -13,6 +13,7 @@ import DetallePerezoso from './DetallePerezoso'
 import { COHORTES_PAPER } from '@/lib/trading/paper-cartera'
 import { evaluarEscalera, evaluarApagado, emparejarOps } from '@/lib/trading/puerta-fase2'
 import { resumenPorDivisa, rentabilidadPosicion } from '@/lib/trading/cartera-real'
+import { serieCartera, divisasDeTrack, type FilaTrack } from '@/lib/trading/cartera-track'
 import type { CarteraRealUI } from '@/lib/trading/cartera-real-io'
 
 // Contenido del «Laboratorio de inversión», extraído de page.tsx para poder reutilizarlo tal cual en la
@@ -50,6 +51,62 @@ function CurvaForward({ serie }: { serie: { m: number | null; b: number }[] }) {
 }
 function fechaCorta(d: Date): string {
   return new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+// 📈 Evolución de la cartera REAL (dinero de Alberto): línea del VALOR de mercado contra la línea
+// discontinua de lo INVERTIDO (coste). El área entre ambas es la ganancia/pérdida no realizada.
+// SVG puro server-rendered, sin dependencias ni JS de cliente (regla de rendimiento del repo).
+// Petición de Alberto (18/08/2026): «¿añadimos algo de gráfico para ver la evolución?».
+function CurvaCarteraReal({ filas, divisa }: { filas: FilaTrack[]; divisa: string }) {
+  const s = serieCartera(filas, divisa)
+  // Con UN punto no hay evolución que dibujar, y una línea plana inventada sería peor que decirlo:
+  // la serie arranca el día que la pasada empieza a anotarla.
+  if (s.puntos.length < 2) {
+    return (
+      <p style={{ color: 'var(--muted)', fontSize: 12, margin: '8px 0 0' }}>
+        📈 La curva de evolución necesita al menos 2 días de lecturas: hoy hay {s.puntos.length}.
+        La anota la pasada nocturna del agente, así que aparecerá sola a partir de mañana.
+      </p>
+    )
+  }
+  const W = 560, H = 120, P = 8
+  const vals = s.puntos.flatMap(p => (p.invertido != null ? [p.valor, p.invertido] : [p.valor]))
+  const lo = Math.min(...vals), hi = Math.max(...vals)
+  const span = hi - lo || Math.max(1, hi * 0.01)
+  const x = (i: number) => P + (i * (W - 2 * P)) / (s.puntos.length - 1)
+  const y = (v: number) => H - P - ((v - lo) / span) * (H - 2 * P)
+  const lineaValor = s.puntos.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.valor).toFixed(1)}`).join(' ')
+  const conCoste = s.puntos.map((p, i) => ({ p, i })).filter(({ p }) => p.invertido != null)
+  const lineaCoste = conCoste.map(({ p, i }, k) => `${k ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.invertido as number).toFixed(1)}`).join(' ')
+  // Área entre valor y coste — solo si TODOS los puntos traen coste (si no, el relleno insinuaría
+  // una ganancia sobre un coste que en parte no se conoce).
+  const areaCompleta = conCoste.length === s.puntos.length
+  const area = areaCompleta
+    ? `${lineaValor} ` + [...conCoste].reverse().map(({ p, i }) => `L${x(i).toFixed(1)},${y(p.invertido as number).toFixed(1)}`).join(' ') + ' Z'
+    : null
+  const ultimo = s.puntos[s.puntos.length - 1]
+  const enVerde = ultimo.rentabilidad == null ? null : ultimo.rentabilidad >= 0
+  const color = enVerde == null ? 'var(--text)' : enVerde ? 'var(--positive)' : 'var(--negative)'
+  const fechaISO = (iso: string) => iso.split('-').reverse().slice(0, 2).join('/')
+  return (
+    <div style={{ marginTop: 10 }}>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ maxWidth: W, display: 'block' }} role="img"
+           aria-label={`Evolución de la cartera real en ${divisa}: valor de mercado frente a lo invertido`}>
+        {area ? <path d={area} fill={color} opacity={0.12} /> : null}
+        {lineaCoste ? <path d={lineaCoste} fill="none" stroke="var(--muted)" strokeWidth={1.5} strokeDasharray="4 3" /> : null}
+        <path d={lineaValor} fill="none" stroke={color} strokeWidth={2} />
+        <circle cx={x(s.puntos.length - 1)} cy={y(ultimo.valor)} r={3} fill={color} />
+      </svg>
+      <p style={{ color: 'var(--muted)', fontSize: 12, margin: '4px 0 0' }}>
+        {divisa} · <strong style={{ color }}>línea llena</strong> = valor de mercado ·{' '}
+        <span style={{ borderBottom: '1px dashed var(--muted)' }}>discontinua</span> = lo invertido (coste).{' '}
+        {fechaISO(s.puntos[0].fecha)} → {fechaISO(ultimo.fecha)}, {s.puntos.length} lecturas.
+        {s.parciales > 0 ? ` ⚠️ ${s.parciales} punto(s) son totales PARCIALES (a alguna posición le faltaba un dato).` : ''}
+        {s.sinValor > 0 ? ` ⚠️ ${s.sinValor} lectura(s) sin valor de mercado no se dibujan.` : ''}
+        {!areaCompleta ? ' El área no se sombrea porque a alguna lectura le falta el coste.' : ''}
+      </p>
+    </div>
+  )
 }
 const CAPA_LABEL: Record<string, string> = { A: 'A · ancla', B: 'B · conocido', C: 'C · cantera' }
 const ETIQ_MINI = { fuerte: '🟢', media: '🟡', debil: '⚪' } as const
@@ -104,7 +161,7 @@ function dinero(n: number, divisa: string): string {
 // REAL de Alberto y la vista de invitado (/invitado/trading) no debe verlo — ahí queda undefined
 // y la sección no se pinta. `null` = cuenta con sesión pero IBKR nunca sincronizado (estado
 // «pendiente» honesto, distinto de «sin posiciones»).
-export default async function TradingDashboard({ carteraCohetes, carteraReal }: { carteraCohetes: CarteraCohetesData | null; carteraReal?: CarteraRealUI | null | 'error' }) {
+export default async function TradingDashboard({ carteraCohetes, carteraReal, trackCartera }: { carteraCohetes: CarteraCohetesData | null; carteraReal?: CarteraRealUI | null | 'error'; trackCartera?: FilaTrack[] | 'error' }) {
   // Un fallo de BD NO es «no hay datos»: se apunta qué consulta cayó y se avisa arriba con un banner
   // de datos parciales — nunca se pinta el estado vacío tranquilizador sobre un error (regla del repo).
   const fallos: string[] = []
@@ -436,6 +493,21 @@ export default async function TradingDashboard({ carteraCohetes, carteraReal }: 
                 Última lectura de IBKR: <strong>{fechaCorta(carteraReal.actualizado)}</strong> — la refresca la pasada diaria del agente
                 (solo lectura; el agente jamás ejecuta órdenes). Los importes van en la divisa de cada posición, sin mezclar divisas.
               </p>
+              {/* 📈 Evolución (18/08/2026). La serie la anota la pasada diaria en
+                  trading_cartera_real_track: la foto de posiciones se REEMPLAZA cada noche, así que sin
+                  esa tabla no habría pasado que dibujar. Una curva por divisa (nunca se suman). */}
+              {trackCartera === 'error' ? (
+                <p style={{ color: 'var(--warning)', fontSize: 12, marginTop: 8 }}>
+                  ⚠️ No se pudo leer el histórico para la curva — es un fallo de lectura, no que no haya puntos.
+                </p>
+              ) : trackCartera && trackCartera.length > 0 ? (
+                divisasDeTrack(trackCartera).map(d => <CurvaCarteraReal key={d} filas={trackCartera} divisa={d} />)
+              ) : trackCartera ? (
+                <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 8 }}>
+                  📈 La curva de evolución empieza a construirse con la próxima pasada nocturna: hasta hoy solo
+                  se guardaba la foto del día, sin histórico.
+                </p>
+              ) : null}
             </>
           )}
         </section>

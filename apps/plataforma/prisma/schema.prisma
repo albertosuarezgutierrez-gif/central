@@ -427,3 +427,24 @@ model TradingCarteraRealSync {
   @@unique([cuentaId, broker])
   @@map("trading_cartera_real_sync")
 }
+
+// Serie histórica de la cartera real: un punto por día y DIVISA (nunca se suman divisas). La foto
+// de `trading_cartera_real` se reemplaza en cada pasada, así que sin esta tabla no hay pasado que
+// dibujar. `completo=false` = total parcial (a alguna posición le faltaba valor o coste).
+model TradingCarteraRealTrack {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId      String   @map("cuenta_id") @db.Uuid
+  broker        String
+  fecha         DateTime @db.Date
+  divisa        String
+  invertido     Decimal? @db.Decimal(16, 2)
+  valor         Decimal? @db.Decimal(16, 2)
+  pnl           Decimal? @db.Decimal(16, 2)
+  completo      Boolean  @default(true)
+  numPosiciones Int      @default(0) @map("num_posiciones")
+  actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@unique([cuentaId, broker, fecha, divisa])
+  @@index([cuentaId, fecha(sort: Desc)])
+  @@map("trading_cartera_real_track")
+}
