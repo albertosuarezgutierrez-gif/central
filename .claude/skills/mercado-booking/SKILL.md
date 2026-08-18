@@ -38,6 +38,14 @@ rutina y no un `CRON_JOBS`.
   también lo filtra (`lib/sivra/mercado-propios.ts`) y devuelve `propios[]`, pero no te apoyes solo
   en el raíl: su lista es curada y solo conoce los anuncios ya vistos. Si aparece uno nuestro que no
   esté en ella, descártalo tú y déjalo anotado para añadirlo.
+  🆕 **Pero SÍ mándalo en `apartments` igualmente (18/08/2026).** El endpoint lo saca del corpus de
+  comparables y lo guarda aparte, en `pricing_escaparate`: es NUESTRO ESCAPARATE, el único sitio
+  donde se ve lo que paga de verdad el huésped por nuestra noche. Cruzado con la base de Smoobu da
+  el markup REAL del canal, que hasta ahora el motor SUPONÍA (`channel_markup`, 1,20 configurado
+  contra 1,10 medido el 18/08 en House). Lo devuelve como `escaparate: n` en la respuesta; dilo en
+  el parte junto a `propios`. **Mídelo al AFORO MÁXIMO del piso**: Booking recarga por persona por
+  encima de cierto umbral (+24,53€/persona/noche por encima de 6 en House), así que un escaparate
+  de aforo pequeño mide el recargo, no el markup.
   ⚠️ **No confundas con la competencia de la misma calle:** dos de nuestros pisos están en Bustos
   Tavera y ahí hay comparables legítimos ajenos («Monkeys Apartments Casa Palacio Bustos Tavera»,
   «Bustos Tavera Suite»). Se descarta por el NOMBRE del anuncio, nunca por la calle.

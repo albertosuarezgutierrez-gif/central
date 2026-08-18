@@ -32,6 +32,23 @@
 
 ---
 
+### 🎄 (18/08/2026) La Navidad de House no la tarificaba NADIE — y `price_ours` volvió a engañar
+- Reserva 21-25/12 a 892€/noche (84% de la base). Al mirarla leí `rate_snapshots.price_ours`, que es la
+  fórmula sombra LEGACY: dije 334-462€ cuando el precio real era 860-1.247€. **Corregido en el esquema**
+  (COMMENT en las dos columnas + vista `v_precio_vivo`): el aviso solo vivía en un comentario de TS.
+- Hallazgo: del 17/12 al 05/01 el motor NO ha escrito NUNCA (ni un dry-run). Los precios están congelados
+  desde el 10/08 (última curva de PriceLabs) y solo los sostiene la guarda de outlier, que deja de
+  proteger a 30 días vista — y el suelo PL caduca el 08/12.
+- Causas: (a) el barrido muestreaba SOLO la 1ª quincena (4º martes ahora) y la cola de eventos iba por
+  cercanía, así que Navidad nunca se medía (reserva de alto valor en `planDeVentanas`); (b) 27-30/12 no
+  tenían factor pese a ser el bloque más caro tras Nochevieja (medido: ×1,40 y ×1,85 vs diciembre normal);
+  (c) `channel_markup` 1,20 supuesto contra 1,10 medido en el escaparate real → nueva tabla
+  `pricing_escaparate` + `/api/sivra/pricing/markup` (avisa, no aplica solo); (d) `incomes` no guardaba
+  el aforo (ya sí: `adults`/`children`).
+- Sembrados 30 comps reales de Navidad (fuente `manual`) y las mediciones del escaparate. PR draft.
+- **Pendiente de tu decisión:** House vende a **1,23× la mediana de su bucket** (6/6 reservas por encima)
+  y el motor apunta al p50 con `position_factor` 1,00 → apunta corto por diseño.
+
 ### 📈 (18/08/2026) Gráfico de evolución de la cartera REAL — antes no había pasado que dibujar
 - Alberto pidió ver la evolución del núcleo. Hallazgo: NO existía histórico — `trading_cartera_real` es
   una foto que se REEMPLAZA cada pasada y `broker_saldos` una fila que se pisa; un gráfico habría tenido

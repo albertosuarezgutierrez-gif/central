@@ -75,6 +75,8 @@ export async function POST(req: NextRequest) {
   }
 
   let inserted = 0
+  /** mediciones de NUESTRO propio escaparate guardadas en esta llamada (ver `pricing_escaparate`) */
+  let escaparate = 0
   const skipped: string[] = []
   /**
    * Comparables descartados por ser NUESTROS propios anuncios. Van en una lista APARTE de `skipped`
@@ -90,7 +92,30 @@ export async function POST(req: NextRequest) {
     if (!name || !Number.isFinite(night) || night <= 0) { skipped.push(String(name ?? "?")); continue }
     // 🪞 Nuestro propio anuncio NO es mercado: escribirlo aquí ancla el ancla al precio que este
     // mismo motor acaba de poner. El raíl va en el endpoint, no solo en el prompt de la rutina.
-    if (esAnuncioPropio(String(name))) { propios.push(String(name)); continue }
+    //
+    // Pero tampoco es basura: es NUESTRO ESCAPARATE, el único sitio donde se puede ver lo que paga
+    // de verdad el huésped por nuestra noche (18/08/2026). Cruzado con la base de Smoobu de ese día
+    // da el markup REAL del canal, que hasta ahora el motor SUPONÍA (`channel_markup`). Se guarda
+    // aparte, en `pricing_escaparate`, para que no pueda mezclarse nunca con los comparables.
+    if (esAnuncioPropio(String(name))) {
+      propios.push(String(name))
+      if (String(scenario).startsWith("prop_")) {
+        try {
+          await prisma.$executeRaw(Prisma.sql`
+            INSERT INTO pricing_escaparate (property_id, rate_date, guests, price_night, portal, fuente)
+            VALUES (${String(scenario)}, ${checkin}::date, ${guests}, ${Math.round(night)}::integer,
+                    ${String(portal)}, ${fuente})
+            ON CONFLICT (property_id, rate_date, guests, portal, medido_el)
+            DO UPDATE SET price_night = EXCLUDED.price_night, created_at = now()`)
+          escaparate++
+        } catch (e) {
+          // Que no se pueda medir el escaparate NO puede tumbar la ingesta de comparables, pero
+          // tampoco puede desaparecer en silencio: va en la respuesta de la pasada.
+          skipped.push(`escaparate ${name}: ${String(e).slice(0, 60)}`)
+        }
+      }
+      continue
+    }
     const total  = Number.isFinite(Number(apt?.price_total)) ? Number(apt.price_total) : night
     const score  = apt?.score != null && Number.isFinite(Number(apt.score)) ? Number(apt.score) : null
     const reviews = Number.isFinite(Number(apt?.review_count)) ? Number(apt.review_count) : 0
@@ -119,5 +144,5 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, portal, fuente, scenario, checkin, checkout, inserted, skipped, propios })
+  return NextResponse.json({ ok: true, portal, fuente, scenario, checkin, checkout, inserted, skipped, propios, escaparate })
 }
