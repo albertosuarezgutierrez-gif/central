@@ -430,7 +430,7 @@ Agente de inversión asistida (Fase 1 técnica cerrada, Fase B por SELECCIÓN en
 trading, cero ejecución real). **Copiloto desde 15/08/2026 (PR #1435):** en sesión interactiva y solo a
 petición de Alberto puede preparar instrucciones de orden (borradores que él confirma en IBKR) y alertas;
 la Rutina nocturna sigue siendo 100% lectura y jamás crea instrucciones — ver
-`.claude/skills/trading-analista/references/copiloto-ordenes.md`. Skill: `.claude/skills/trading-analista/SKILL.md`. Compone el paquete
+`.claude/skills/trading-analista/references/copiloto-ordenes.md`. **📈 Desde el 18/08/2026 (PR #1476)** esa misma pasada alimenta la curva de evolución de la cartera real: cada `POST /api/trading/cartera` anota un punto por día y divisa en `trading_cartera_real_track` (única fuente del gráfico; un día sin pasada = hueco real, y `trackError` se canta en el resumen). Skill: `.claude/skills/trading-analista/SKILL.md`. Compone el paquete
 puro `@central/module-trading` + los endpoints `apps/plataforma/app/api/trading/**` (creció mucho más
 allá de `analizar`/`puntuar`: `factores`, `gurus`, `fundamentales`, `insiders`, `seleccion`,
 `validar-oos`, `paper`, `saldo`, `descubrir`, `screener`, `fmp`).
