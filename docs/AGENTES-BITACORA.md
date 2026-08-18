@@ -15,6 +15,23 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-18 · facturas-correo** · hizo: pasada completa (Paso 0→5). Vía B sana (dias_caido=1,
+  última copia `_buzon_pdf` 17/08); sin backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida`
+  (verificado por `search_threads`, no por `list_labels`). Candidato Gmail (`newer_than:2d`): 1 hilo
+  (tríptico comercial de Alquiber reenviado por Pilar, no es factura → etiquetado Procesada). Paso 4.0
+  (`v_facturas_sin_cargo`): 8 filas, todas `revisada_sin_cargo`, sin novedades. **Hallazgo nuevo (fuera
+  del radar de `facturas_drive`):** Vercel + Anthropic/Claude llevan desde **abril** con cargos en banco
+  auto-clasificados `seguros` pero **sin fila en `facturas_drive`** (invisibles para el Paso 4.0, que solo
+  mira facturas archivadas sin cargo — este es el caso inverso: cargos sin factura archivada). De los 13
+  cargos ene-ago, julio SÍ estaba conciliado por otro mecanismo (probable cron `expenses/agent/scan`, con
+  `factura_ref` propio). Archivé y concilié los 2 de agosto (Vercel 14/08 141,82US$↔cargo 17/08 126,77€
+  cambio de divisa; Anthropic 05/08 180€↔cargo 07/08 180€ exacto) e inserté sus filas en `facturas_drive`.
+  **Quedan 11 cargos abr-jun (~1.013€) sin factura archivada** — no tengo el PDF a mano (rotado de
+  `_buzon_pdf`), haría falta una pasada dedicada buscando cada email por mes. dudas: si Alberto quiere ese
+  backfill o lo deja así (SaaS recurrente, importe estable, bajo riesgo fiscal); fallos: **propio** — al
+  conciliar el cargo Anthropic 07/08 (ya estaba `conciliado=true` de antes) sobreescribí su `factura_ref`
+  sin leer el valor previo primero — no sé qué había ahí, aunque el nuevo enlace es un justificante válido.
+  PRs/commits: commit directo a `docs/` + UPDATE/INSERT en Supabase (sin cambios de código).
 - **2026-08-18 · mercado-booking** · hizo: pasada de 24 ventanas (plan `?max=24`, las 24 vírgenes —
   todas ronda 1/evento, sep-2026: Bienal/Feria dates 21-28 sep) × Booking.com, 238 comps reales
   escritos (`fuente:booking_mcp`). 6 anuncios propios descartados (HOUSE SEVILLANA 6 habitaciones

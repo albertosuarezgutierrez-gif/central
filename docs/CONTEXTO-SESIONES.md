@@ -32,6 +32,16 @@
 
 ---
 
+### 📧 (18/08/2026) facturas-correo — hueco nuevo: Vercel/Anthropic sin archivar desde abril
+- Pasada normal sin novedades de Gmail (Vía B sana, sin backlog, Paso 4.0 limpio). Al investigar
+  por qué Vercel/Anthropic no salían nunca en `facturas_drive`, encontré que llevan desde **abril**
+  con cargos en banco (auto-clasificados `seguros`) sin factura archivada — invisible al Paso 4.0
+  porque mira el caso contrario (factura sin cargo). Archivé y concilié los 2 de agosto; quedan
+  **11 cargos abril-junio (~1.013€)** sin PDF a mano (rotado de `_buzon_pdf`) — detalle en
+  `docs/AGENTES-BITACORA.md`. Pendiente: decidir si backfill dedicado o se deja así.
+- Detalle completo, incluido el fallo propio (sobreescribí un `factura_ref` existente sin leerlo
+  antes), en `docs/AGENTES-BITACORA.md` (entrada 18/08 facturas-correo).
+
 ### 🔍 (18/08/2026) Auditoría diaria (ligera) — todo sano, sin carril 2
 - Rango: 39 commits desde la última auditoría (2026-08-16), casi todos ya autodocumentados por PR
   (disciplina de memoria excelente estos días). Heartbeat de 23 huellas (12 latidos `agente_latidos`
