@@ -115,7 +115,9 @@
   4 re-vínculos de la mañana, en silencio); (b) el callback ya loguea cada desenlace (PR #1461);
   (c) nuevo `POST /api/banca/psd2/sync` + botón «🔄 Sincronizar ahora» en el panel PSD2 de /banca
   (reintentar sin quemar SCA). OJO: el botón está en el segmento 💶 Dinero del Inicio (no en Negocios).
-- Vigilar mañana: cron psd2-sync 06:00 debe traer Kutxa con la nota ℹ️ y sin rojo.
+- ✔ Verificado 18/08 06:25 (post-cron): pasada de las 06:01 LIMPIA en ambas conexiones (`ultimo_avisos=[]`
+  — hoy Kutxa ni siquiera rechazó la ventana de 89d; el fallback queda de red de seguridad), último mov
+  Kutxa 17/08, semáforo verde. Caso cerrado.
 
 ### 🏦 (17/08/2026) Kutxabank PSD2: el re-vínculo del 16/08 NO funcionó — diagnóstico + fixes
 - Alberto vinculó 2 veces el 16/08 (07:46 y 08:30); hoy las 3 conexiones Kutxa `vinculada` fallaban:
