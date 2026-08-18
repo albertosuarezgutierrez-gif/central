@@ -40,6 +40,347 @@
   ya no parece transitorio. Avisado Alberto: si se repite, abrir ticket a soporte de claude.ai (la Rutina
   es de la UI, no editable por MCP). Cron semanal paper-tracker (10:00Z, 1º con digest #1424): verde.
 
+### 🔑 (17/08/2026) SEO housesevillana: push 403 — el PAT quedó atrás en la unificación de la landing
+- El cron `/api/seo-refresh` (lunes 10:00 UTC, primero tras unificar la landing el 12/08) falló al
+  commitear: `403 Resource not accessible by personal access token`. Causa: los `seo-landing.ts`
+  apuntan ya a `central`, pero `GITHUB_TOKEN` es el PAT del 03/08 scoped SOLO al antiguo repo externo
+  `house-sevillana-landing`. El GET no delató nada porque `central` es público; solo el PUT falla.
+- **PENDIENTE de Alberto (ops):** crear/re-scope del PAT con `contents:write` sobre
+  `albertosuarezgutierrez-gif/central` y guardarlo en `/operador/secretos` (write-through sivra+plataforma).
+- Repo: pista de diagnóstico en el 403 de ambos `pushToGitHub` + corregida la nota estale de
+  `apps/sivra/CLAUDE.md` que aún citaba el repo externo. **PR #1470 MERGEADO** (tests seo-landing 8/8,
+  previews sivra+plataforma OK); landmine añadido a la skill `sivra-maestro`. El cron seguirá en 403
+  hasta que se rote el PAT — verificación real: botón manual de `/sivra/seo` o el cron del lunes 24/08.
+
+### 💳 (17/08/2026) Check 7 cuadre tarjetas: falso 🔴 tras cada liquidación, arreglado
+- Alberto: «los movimientos de 2.013,37€ los he pasado varias veces, ¿lo vuelvo a subir?». No: el
+  desglose de julio de la ****0300 SÍ estaba (94 compras). El check exigía el espejo `PAGO RECIBO`
+  del mismo día, que ABRE el extracto del mes SIGUIENTE (landmine PR #1300) → 🔴 durante ~un mes
+  aunque el desglose estuviera. Y pedía «el extracto de agosto» cuando lo que faltaría es JULIO.
+- Fix: sin espejo, valen las compras del mes del CICLO en la cuenta `TARJETA-KUTXA-<últ.4>`;
+  veredicto 3 estados en `lib/cuadre-tarjetas.ts` (puro+tests; sin PAN = «no puedo comprobarlo»).
+  SQL validado contra BD real (0300 → ✅, 0302 → 🔴 julio). La ****0302 de Pilar sigue faltando.
+
+### 🧊 (17/08/2026) Cohorte 3 DOBLE congelada (H5) + primer contraste forward vs retrovisor
+- PR #1460 **MERGEADO y verificado en prod**: cohorte 3 DOBLE en `COHORTES_PAPER` según H5 —
+  `2026-08-17.v1` (combinada sp500, 25 valores, con `simbolosBase`) + `2026-08-17.factores.v1`
+  (factores-solo: SNDK/BKNG/MU/WDC/NLY/STX/CMCSA/MOH/VICR/UMBF). `/seleccion` sp500 sirve
+  `simbolosFactores` (verificado = cesta congelada) y `/paper` mide 4 cohortes (las 2 nuevas a 0d,
+  `resultado null` correcto). Skill `trading-analista` + pre-registro (H5 ejecutada) actualizados.
+- Contraste forward (~28d) vs retrovisor: NI confirma NI desmiente — alpha mediano −1,65 pp (cohortes)
+  / −2,22 pp (radar, 0/1 ventanas), zona de ruido declarada a 28d; nada del pre-registro evaluable
+  hasta ~91d (~oct). Doc: `docs/TRADING-FORWARD-VS-RETROVISOR-2026-08.md`.
+
+### 💼 (17/08/2026) Cartera REAL de IBKR en el panel /trading — la compra de VWCE no aparecía
+- Alberto compró 188×VWCE (~31.840€, ETF núcleo) y el panel solo pintaba paper. Nuevas tablas
+  `trading_cartera_real(+_sync)` (aplicadas + sembradas con la foto de hoy), endpoint
+  `POST /api/trading/cartera` (mismo auth/resolución de cuenta que `/saldo`) y sección
+  «💼 Cartera real» en `/trading` (solo con sesión; el invitado NO la ve). Totales POR divisa,
+  NULL nunca 0, sync-marker separa «sin leer» de «sin posiciones».
+- La pasada diaria gana el paso 1c (skill `trading-analista`): empuja `get_account_positions`
+  al endpoint cada noche — SOLO con lectura buena; fallo de lectura ≠ cartera vacía. PR #1468.
+
+### 📸 (17/08/2026) Stories de Instagram salían recortadas — lienzo 9:16 real en ig-img
+- Alberto mandó pantallazo: la Story auto de ia.rest se veía fatal (el «2» y el texto cortados,
+  casi todo negro). Causa: `ig_aprobar` republicaba como Story la MISMA imagen cuadrada 1080×1080
+  del feed, e Instagram la escala a pantalla completa 9:16 recortando los laterales.
+- Fix: `/api/ig-img` acepta `story=1` → lienzo 1080×1920 con el arte cuadrado centrado sobre el
+  fondo de su propia plantilla (bandas del mismo color → se ve nativo). El callback de Telegram
+  publica la Story (y el fallback manual por foto) con `&story=1`. Verificado con render local
+  (stat editorial, pregunta, brutalist) y en prod tras el merge. `next build` verde. PR #1467
+  mergeado; skill `ia-rest-maestro` (tabla de agentes) actualizada con el detalle de la Story.
+
+### ✅ (17/08/2026) Kutxabank PSD2 RESUELTO — era la VENTANA de 89 días (+2 fixes de camino)
+- Causa raíz: Kutxabank rechaza `/transactions` con ventana de 89 días («Account not found /
+  AccountNotAccessibleException», error engañoso) incluso recién firmado el SCA. Fallback 89d→30d→7d
+  en `getMovimientosConVentana` (PR #1462) → feed vivo, último mov = HOY. Aviso ℹ️ informativo
+  («importado solo desde X») que NO pone el semáforo en rojo (PR siguiente, tests 11/11).
+- De camino: (a) el retiro `estado='sustituida'` del PR #1459 reventaba contra el CHECK de
+  `conexiones_banco` → migración `conexiones_banco_estado_sustituida` aplicada (por eso fallaron los
+  4 re-vínculos de la mañana, en silencio); (b) el callback ya loguea cada desenlace (PR #1461);
+  (c) nuevo `POST /api/banca/psd2/sync` + botón «🔄 Sincronizar ahora» en el panel PSD2 de /banca
+  (reintentar sin quemar SCA). OJO: el botón está en el segmento 💶 Dinero del Inicio (no en Negocios).
+- Vigilar mañana: cron psd2-sync 06:00 debe traer Kutxa con la nota ℹ️ y sin rojo.
+
+### 🏦 (17/08/2026) Kutxabank PSD2: el re-vínculo del 16/08 NO funcionó — diagnóstico + fixes
+- Alberto vinculó 2 veces el 16/08 (07:46 y 08:30); hoy las 3 conexiones Kutxa `vinculada` fallaban:
+  las 2 viejas con `authentication failure`, la nueva (08:30) con `Account not found` en `/transactions`
+  DESDE EL MINUTO CERO (el callback del 16/08 no importó nada — no es caducidad por tiempo). Último mov 10/08.
+- Saneado en prod: conexiones 14/06 y 16/08-07:46 → `caducada` (solo queda viva la de las 08:30).
+- Fixes (este PR): el callback retira las conexiones anteriores del mismo banco al vincular
+  (`estado='sustituida'` — fin de los zombis); el sync lee el `status` de la sesión de Enable Banking
+  y avisa si no está `AUTHORIZED` (diagnóstico de raíz que hoy faltaba).
+- **Pendiente Alberto: mergear el PR y re-vincular Kutxabank UNA vez en `/banca`** (el callback
+  sincroniza al momento y rellenará el hueco 11/08→hoy; ventana 89 días). Tras vincular, mirar
+  `conexiones_banco.ultimo_avisos` — con el fix dirá el estado real de la sesión si vuelve a fallar.
+
+### 🧮 (17/08/2026) Fix doble conteo en el P&L por piso (`getPLMensual`)
+- La query «gastos de tarjeta» sumaba CUALQUIER movimiento con `propiedad_id`+confirmado — cogía
+  también los recibos de la corriente Kutxa (luz/agua/IBI de House, que llevan `propiedad_id` para lo
+  fiscal) y ya entran por factura en `gastos` → doble conteo. Ahora exige `cuentas_bancarias.tipo='tarjeta'`.
+- Efecto medido (junio, House): 420,31€ → 123,45€ en «otros» (solo la compra real de tarjeta).
+  OK de Alberto tras explicárselo. Suite 1232/0, tsc 0.
+
+### 🏦 (17/08/2026) Gastos fijos de House (Socorro) dados de alta desde banca real
+- Alberto: «los gastos de Socorro están en la cuenta de Kutxa» → derivados de `movimientos_bancarios`
+  y dados de alta en `gastos_fijos` (2 filas, `origen='manual'`): IBI 40,49€/mes (2 plazos ~242,93€;
+  2º plazo nov ESTIMADO, confirmar al cobrarse) + seguro Occident 49,45€/mes (593,45€/año, 16/01).
+- Suministros NO van en fijos (ya entran por factura en `gastos`; duplicarían). Skill pricing-agente
+  actualizada en el PR #1457. El recibo Ayto. 130,93€ (16/04) era de MONTE CARMELO (confirmado por
+  Alberto) → reclasificado en banca a `personal`+`ibi` (estaba como gasto de House, deducible en falso).
+- ⚠️ Hallazgo aparte SIN tocar: `getPLMensual` (query «tarjeta») suma CUALQUIER movimiento con
+  `propiedad_id`+confirmado, no solo tarjeta → los recibos Kutxa de House (luz/agua/IBI) pueden
+  contar DOBLE contra sus facturas de `gastos` en el P&L por piso. Decidir fix con Alberto.
+
+### ✅ (17/08/2026) PR #1449 (ciclo Booking +20%) MERGEADO + sincronía de skills/docs con el 1.20
+- #1449 mergeado (inventario + Fases 1-3 ejecutadas y verificadas). Post-merge: actualizados la
+  skill `pricing-agente` (estado-y-protocolo), el comentario del markup en `pricing/apply/route.ts`
+  y `pricing-automatico.md` — la nota del 09/08 («channel_markup=1.0») quedaba como trampa: una
+  sesión podía «corregir» el 1.20 de vuelta. **Regla: el markup del motor es el ESPEJO del ajuste
+  real del canal Booking en Smoobu (hoy +20% ↔ 1.20); si cambia uno, cambia el otro, Smoobu primero.**
+- BD verificada post-merge: `channel_markup=1.20` y `enabled=true` en los 4. Vigilancia del PR
+  retirada. Quedan las rutinas: medición Fase 4 (30/08) y renovación oferta 8% (01/11/2028).
+
+### 🏷️ (17/08/2026) Revisión post-ciclo pricing: los 2 accionables del 17/08, resueltos
+- Las 3 fechas `no_disponible` de House (12-sep, 10-oct, 17-abr-2027) SÍ tienen reserva real con
+  income (Booking: 1.344€ / 2.044,74€ / 3.318,47€ brutos — la de Feria a ~1.659€/noche). No hay
+  bloqueo manual ni sync roto: el chequeo del ciclo las dio por «sin income» en falso. Nada que tocar.
+- La muestra ruidosa del 29-ago NO es puntual: 364 filas / 36 fechas de House con comps a <12€/plaza
+  (44-104€ para 12 personas = precio de habitación), **todas `fuente='serper'`** (sweep, desde 04/08).
+  **Filtro de plausibilidad €/plaza APLICADO con OK de Alberto** (`pricing-comps-plausibles.ts`, umbral
+  12€/plaza, comps sin aforo no se juzgan): apply (3 consultas) + guard (#4/#5/#7/#8/#9) + recommend/
+  pilot-track/settings. Efecto medido: +14/+38€ en p50 de fechas contaminadas, 0€ en las limpias.
+- Reservas Dúplex del 16/08 verificadas OK: 3-5 oct y 16-18 oct a 137-140€/noche bruto con listado
+  en mercado (p50 fiable 171/184,5€); el descuento es el canal (~0,78-0,80), no infraprecio.
+- 2ª tanda («haz todo», OK de Alberto): rutina `mercado-booking` sube de 12→24 ventanas/pasada
+  (plan de 464; objetivo: 3 fechas/mes fiables para retirar Serper). Suelo estacional de House
+  verificado con la serie 2024+ → NO está plano en la práctica (FLOOR_SEASONAL ya modula: abr 390€
+  vs peor venta real 428€); pendiente cerrado, aprendizaje en `pricing_aprendizaje` id 74. El «ADR
+  agosto 62€» era artefacto de reservas DIRECTO/OTRO a 0-200€ (huecos de amigos) — al analizar House
+  excluirlas. `gastos_fijos` de House sigue a 0 filas: hace falta que Alberto pase IBI/seguro/
+  suministros (no se inventan). FLOOR_SEASONAL nov ×1,00→×1,10 APLICADO («lo q veas mejor» de
+  Alberto): suave a propósito — House 330€ de suelo nov, justo sobre su peor venta real (~263-310€
+  de listado), sin cerrar la puerta al mercado flojo; el pricing lo sigue decidiendo el mercado.
+
+### 🔴 (17/08/2026) Swap NIM verificado en vivo: 70B→GLM-5.2 · contable→deepseek-v4-flash (PRs #1454+fix)
+- NIM retira el 3.3-70b el **25/08/2026**. 1ª elección (Maverick, PR #1454 mergeado) resultó **410 Gone
+  en el API** (EOL 27/07 con la ficha web aún viva) — cazado al probar con la key real vía harness en
+  una edge function de ia-rest + `pg_net`. **La ficha de build.nvidia.com NO prueba que el modelo viva.**
+- Final, todo probado con llamadas reales: default NIM **`z-ai/glm-5.2`** (mini-eval A/B 2/2) y
+  `CONTABLE_MODEL` **`deepseek-ai/deepseek-v4-flash-0731`** (el `deepseek-v3` YA NO existe en `/v1/models`
+  — cerrado el "sin confirmar" del 27/07). Radio completo re-swapeado; 4 edge functions redesplegadas
+  (Supabase MCP) y `nim-sentiment` probado end-to-end. Ids OpenRouter `meta-llama/*` NO tocados.
+- Detalle y regla nueva del Paso 1 (id vivo = está en `/v1/models` o responde) en `docs/BUSCADOR-IA.md`.
+
+### 🧾 (17/08/2026) facturas-correo — hueco real en `facturas_drive` (SiQueBrilla julio) + autocrítica
+- Paso 4.0 sin `sin_revisar` y sin candidatos Gmail nuevos, pero la raíz de `FACTURAS Apartamentos/2026`
+  seguía teniendo ~30 PDFs sueltos: al investigar, casi todos ya estaban cubiertos por avisos previos en
+  `_DUPLICADOS_BORRAR` (Endesa Bustos/Dúplex, EMASESA Reform ×9, Castuera, Leroy, Dimitri/CREATE) — no
+  eran backlog nuevo. El hueco real: la factura SiQueBrilla de julio (780,10€) SÍ estaba archivada en
+  Drive y conciliada en banco desde el 03/08, pero sin fila en `facturas_drive` → invisible para
+  `v_facturas_sin_cargo` (esa vista solo detecta filas existentes sin `movimiento_id`, no filas
+  ausentes). Fila insertada.
+- **Autocrítica:** antes de verificar bien, copié 2 duplicados nuevos (SiQueBrilla + Leroy) sin
+  comprobar que ya existían archivados — avisos de borrado añadidos a la papelera para los dos.
+- Etiqueta `Facturas/Extraccion-fallida` retirada de un hilo que era un mensaje de huésped de Booking
+  (falso positivo, no factura). `agente_salud` actualizado (Vía B: dias_caido=3, sin backlog real).
+- Papelera `_DUPLICADOS_BORRAR` acumula ~22 avisos sin que Alberto los haya vaciado — mencionado en el
+  resumen, no bloqueante.
+
+### 📊 (17/08/2026) Ciclo semanal de pricing — los 4 pisos, comps por conector real
+- Ciclo completo del agente de pricing (skill `pricing-agente`): medido el ciclo anterior (10/08) contra
+  incomes/rate_snapshots (ventas confirmadas de busto SS/Feria a precio decidido, 4 ventas nuevas en
+  luxury/duplex en octubre), sembrado mercado en las 4 propiedades (12 ventanas: 1 finde/mes ~10 meses +
+  Semana Santa + Feria, vía Booking/Trivago/Tripadvisor MCP) y aplicado en dry-run (48 decisiones,
+  circuit-breaker sano en los 4 pisos).
+- **Comps escritos hoy: busto=406 · duplex=263 · luxury=322 · house=186** (ninguno a 0).
+- Pendiente sin cerrar (no bloqueante): 3 fechas de House quedaron `no_disponible` sin income que lo
+  confirme — mismo patrón ya visto con busto/Feria (posible bloqueo manual o reserva aún sin sincronizar).
+  Detalle en `pricing_aprendizaje` (`ALL`/`ciclo_17_08_2026`).
+
+### 📈 (16/08/2026) Fases 1+2 del +20% Booking EJECUTADAS (Smoobu + motor)
+- **Fase 1 (Claude Chrome, `docs/BOOKING-FASE1-SMOOBU-2026-08-16.md`):** `priceDifference` del canal
+  Booking en Smoobu 0% → **+20%** (campo ÚNICO por canal, cubre los 4 pisos; resto de portales a 0%),
+  push forzado con «Sobrescribir precios» (guardar NO basta). Hallazgo: el rótulo «Sobrescritos por
+  PriceLabs» de Smoobu es LEGACY — PriceLabs está de baja desde el 09/08, los precios los escribe el motor.
+- **Fase 2 (BD):** `pricing_settings.channel_markup` 1.0 → **1.20** en los 4 pisos. El motor re-basa en
+  el siguiente `apply-auto` (08:30/14:30/20:30 UTC); hasta entonces Booking muestra ~+20% (lado seguro).
+- **17/08 ✅ Verificación A5 hecha:** los 4 pisos cuadran `extranet = techo(base×1,20)` (24.08:
+  113/125/126/360€); web directa confirmada al 100%. **Paso B (ocupación) DESCARTADO definitivo:**
+  Smoobu no modela ocupación (precio plano por noche) y PriceLabs está de baja — no hay palanca.
+  👀 Para Alberto: Reform publica Standard Rate «×2» (¿capacidad real?), House «Configurar»/×11.
+  Medición Fase 4 programada 30/08 (`trig_01DHwh…`).
+
+### ✂️ (16/08/2026) Cambios EJECUTADOS en la extranet de Booking (Fase 3 del estudio)
+- Vía Claude Chrome → `docs/BOOKING-CAMBIOS-2026-08-16.md`: **Genius dinámico → No** en
+  Luxury/Reform/Dúplex (tramos fijos 10/15/20 intactos); **NR de Luxury −15% → −10%**;
+  **Oferta estándar 8%** en los 3 (16/08/2026–**31/12/2028**, ⏰ renovar; no permite «sin fin»).
+  House Sevillana: cero cambios. Apilado máx. −37%→−33,8% s/ standard; suelo no-Genius 0%→−8%.
+- **Parado a propósito:** precios por ocupación de Luxury — el Standard Rate es XML de Smoobu
+  (sobrescrito) y la extranet solo acepta €-fijos por fecha → hacerlo en **Smoobu** (pendiente).
+- Siguientes fases: +20% Smoobu = **solo UI de Smoobu, no hay conector ni API para el ajuste por
+  canal** (Alberto o Claude Chrome) → SOLO DESPUÉS `channel_markup=1.20` (Claude; el orden es
+  crítico, ver estudio). Rutinas programadas: medición Fase 4 el 30/08 (`trig_01DHwh6a38D4…`,
+  incluye mirar volumen/conversión, no solo la mediana) y renovación de la oferta el 01/11/2028
+  (`trig_01SDP3vfKHxZ…`).
+
+### 🏷️ (16/08/2026) Inventario de descuentos Booking — el −29% explicado
+- Pasada de solo-lectura por la extranet (Claude Chrome) → `docs/BOOKING-DESCUENTOS-INVENTARIO.md`
+  (copia también en Drive). El −29% de Luxury Busto = **Genius dinámico ~21,5% × móvil 10%**
+  (reserva 6509021916 verificada: 430€ vs 609€ de calendario).
+- Hallazgos clave: Genius dinámico 0-30% ACTIVO en 3 de 4 pisos (House Sevillana en «No» → su
+  exposición máx. es −23,5% vs −37/−46,5% del resto); Luxury Busto con NR a −15% (resto −10%);
+  país+móvil no se acumulan (misma categoría); sin campañas activas; Luxury sin precios por ocupación.
+- Alimenta la Fase 3 del estudio de posicionamiento (PR #1448): decidir dinámico sí/no ANTES del +20%.
+
+### 💓 (16/08/2026) Sonda del verificador de eventos + guarda de regresión (PR #1447)
+- El parte «Sin poder comprobar» decía la verdad: `sivra_eventos_verificar` se declaró en
+  `AGENTES_VIGILADOS` (12/08) sin su sonda en `PROBES` del cron `agentes-latido` — el agente SÍ
+  late (verificado en BD: hoy 05:30, «3 previstos revisados · 3 confirmados»), el vigía no tenía
+  query para leerlo. Fix: sonda gemela de `sivra_eventos`; la sonda exacta probada contra la BD real.
+- **Guarda nueva en `latidos.test.ts`**: todo id de `AGENTES_VIGILADOS` debe tener clave en `PROBES`
+  (verificada en rojo contra el estado pre-fix). tsc 0 · 1227 tests · build OK.
+- Docs al día: regla en `apps/plataforma/CLAUDE.md` (§Latidos) y `docs/RUTINAS-PROGRAMADAS.md` §12
+  (lista de vigilados completada con `sivra_eventos_verificar` y `subastas_mercado`).
+
+### ⏳ (16/08/2026) Estudio posicionamiento Booking — SÍ al +20% por portal, con condición
+- `docs/ESTUDIO-BOOKING-POSICIONAMIENTO.md`: Booking ordena por conversión×precio FINAL; subir la base
+  +20% solo funciona devuelto en descuentos visibles (1,20×0,76≈0,91 vs 0,92 medido en las 20 reservas).
+  Paridad muerta en la UE (DMA) → legal poner la web directa más barata que Booking.
+- Plan 5 fases. 🚨 ORDEN CRÍTICO: Smoobu +20% SOLO canal Booking (Alberto, forzar push de precios)
+  ANTES de `pricing_settings.channel_markup=1.20` (Claude). Pendiente del OK de Alberto para ejecutar.
+- **Convención (petición de Alberto): todo estudio/informe se archiva TAMBIÉN en Drive
+  `CENTRAL/02·CONTABILIDAD/informes`** (`1l2OLodxPuL07tKykZKtBV382w6yRMQQA`, ver `DRIVE-ESTRUCTURA.md`).
+
+### ✅ (16/08/2026) Backlog de PRs resuelto («resuelve todo» de Alberto) + migración v_facturas_sin_cargo aplicada
+- Mergeados los 3 PRs abiertos: #1436 (auditoría ligera), #1437 (auditoría profunda, con bump
+  `next` 15.5.21 en housesevillana) y #1441 (agentes-entrenador). Conflictos de registro de
+  #1437/#1441 resueltos conservando ambos lados (bitácora: poda del entrenador + entrada nueva
+  de psd2-health-check que entró después del corte).
+- **Aplicada en producción** la migración propuesta por #1437 (`revoke_anon_v_facturas_sin_cargo`):
+  `REVOKE ALL FROM anon, authenticated` + `security_invoker=true`. Verificado: vista viva (8 filas),
+  solo roles privilegiados con grant.
+- PSD2, con el aviso del vigilante nuevo (06:02): **BBVA recuperado** (entró 1 mov, Bizum 30€);
+  **Kutxabank ****0855 falla solo la PAGINACIÓN de `/transactions`** (página 1 responde — sesión viva;
+  la 2ª con `continuation_key` revienta, patrón de consentimiento degradado sin SCA reciente, del 14/06).
+  Queda en manos de Alberto re-vincular Kutxabank en `/banca`. Fix en este PR: el error de
+  `enablebanking.ts::api()` pone `HTTP <status>: <motivo>` PRIMERO y la ruta sin query al final — el
+  recorte de 160 chars de los avisos se comía el código HTTP. Pendiente de decisión: skill
+  `mariscos-maestro` (recomendación de #1436).
+
+### 🎓 (16/08/2026) agentes-entrenador: pasada semanal — falsa alarma de facturas-correo diagnosticada
+- Rango 09/08→16/08, 27 entradas de bitácora procesadas y podadas. Backlog de PRs abiertos sano (3,
+  todos del propio 16/08). Sin pendientes en `FEEDBACK-AGENTES.md`.
+- **Hallazgo:** el "fallo" que `facturas-correo` venía anotando 5 pasadas seguidas (12→16/08 —
+  `search_threads label:Facturas/Extraccion-fallida` vacío pese a `list_labels` marcando
+  `messagesTotal:1`) era una falsa alarma: verificado en vivo con el MCP de Gmail que la búsqueda
+  real (ID, nombre con/sin comillas, `in:anywhere`/`includeTrash`) da 0 hilos de forma consistente —
+  el contador de `list_labels` está desincronizado en esa etiqueta de uso raro. Añadida caveat
+  aditiva en `.claude/skills/facturas-correo/SKILL.md` para que no se repita.
+- mercado-booking y pricing-agente: sus únicas dudas/fallos del rango ya estaban resueltos en
+  código/skill antes de esta pasada, sin acción nueva. Detalle completo en la entrada de esta
+  pasada en `docs/AGENTES-BITACORA.md`.
+
+### ⚠️ (16/08/2026) Alerta PSD2 sync — 6 días sin movimientos con la sesión VIVA
+- Último mov `origen='psd2'`: 10/08 (histórico: nunca >1 día de hueco desde 20/07). Cron OK (200 diario).
+- Clave: el SALDO de BBVA …1175 se actualizó el 15/08 → la sesión Enable Banking responde, pero
+  `/transactions` viene vacío/fallando — invisible porque `lib/psd2.ts` lo tragaba con `catch(() => [])`.
+- Causa probable: consentimiento degradado (SCA 14/06, `valid_until` ~11/09 — no caducidad formal). BBVA …2620
+  además muerta desde 27/06 (ya no está en la sesión). Acción de Alberto: re-vincular ambos bancos en /banca.
+- Fix (rama `claude/psd2-sync-no-movements-yw0gig`): `sincronizarSesion/Todas` devuelven `avisos` (fallo de
+  /transactions, ventana 89d vacía en cuenta conocida, drift de saldo con 0 transacciones) + Telegram del cron.
+- La pasada de mañana 06:00 dirá el motivo exacto en el Telegram/logs. Telegram enviado hoy con el diagnóstico.
+- 2ª tanda (orden de Alberto, «que no vuelva a pasar + panel»): semáforo del feed PSD2 en /banca
+  (`lib/psd2-semaforo.ts` puro+testeado, 🟢≤2d·🟠3-5d/caducidad≤10d·🔴≥6d/avisos/caducado), avisos del
+  sync persistidos en `conexiones_banco.ultimo_avisos` (migración aplicada) y aviso previo de caducidad
+  del consentimiento (creado+89d) — deja de depender de que alguien mire el Telegram.
+
+### 📈 (15/08/2026) Agente inversor → copiloto con confirmación humana (decisión de Alberto)
+- Pregunta origen: ¿comprar ya en IBKR? NO — forward −4,38% con 21/120 días del Tramo 2. Decisión:
+  núcleo-satélite (ETF global = grueso, intocable; satélite 10-20% sigue en paper hasta validar).
+- Ampliado `trading-analista`: nuevo `references/copiloto-ordenes.md` — `create_order_instruction`
+  crea BORRADORES que Alberto confirma en IBKR (el MCP no puede ejecutar), solo a petición suya;
+  la Rutina nocturna jamás crea instrucciones. Bloque 💼 Cartera real en la pasada + alertas con email.
+- ⛔ Rotación núcleo→satélite prohibida (timing = el patrón del −33,9% + regla fiscal 2 meses).
+- **Mergeado (16/08, PR #1435, orden de Alberto) y verificado en vivo:** los 3 tools del bloque 💼
+  responden — NAV 32.335,37€, 0 posiciones (100% liquidez), 1 alerta activa preexistente (STX ≥865).
+- **16/08: PRIMERA orden real vía copiloto.** VWCE (Vanguard FTSE All-World Acc, IBIS2): 188 part.
+  LIMIT 169,80€ GTC (~31.922€, cierre vie. 168,88€). Claude preparó la instrucción → Alberto la envió
+  en la app → orden viva `PENDING_NEW` (se ejecuta lunes en apertura Xetra). El núcleo NO se toca.
+- Pendiente: verificar ejecución el lunes (la pasada 💼 debe cantarla); reservas directas Booking → aparte.
+
+### 👁️ (15/08/2026) Registro de accesos/actividad de ialimp + historial en el god-panel de plataforma
+- Alberto preguntó por el último acceso de Vanessa: no existía rastro (el login de empresa solo tenía el
+  flag `sesion_activa`, sin fecha). Decisión: historial completo (logins + páginas + acciones) en SU panel.
+- Tabla compartida `registro_actividad` (aplicada; ialimp escribe, `prisma_plataforma` lee) + columna
+  `empresas.ultimo_acceso`. Captura: 4 logins + middleware de ialimp fire-and-forget → `/api/interno/actividad`
+  (Bearer CRON_SECRET). Superadmin excluido; purga 90 días; regla NULL declarada en la UI (tabla nace vacía).
+- Plataforma: `/operador/actividad` (último acceso por persona + historial filtrable 50+Ver más).
+- Spec en `docs/superpowers/specs/2026-08-15-registro-actividad-design.md`. Builds ialimp+plataforma OK.
+
+### 💶 (15/08/2026) Reserva Luxury 22-25/10 a 430€: el canal Booking se comió el 29,4% del listado
+- Alberto preguntó si la reserva (Christophe, 3 noches, 5 adultos, 430€ brutos) «es ok» → **no del todo**:
+  el listado vivo en Smoobu ERA 203€/noche (snapshots 13-15/08, aplicado por el motor el 12/08) = 609€;
+  el bruto 430€ da ratio **0,706** — descuentos de canal apilados (Genius+móvil), en el suelo del rango
+  medido 0,66-1,08 (mediana 0,92). Neto Smoobu 345,20€ (115€/noche): rentable (coste 29,70€, suelo 72€)
+  pero bajo el p25 de mercado de su fecha (165,75€ a 4 plazas). El motor tarificó bien; muerde el canal.
+- Revisión completa OK: apply diario en los 4 pisos, sweep+booking_mcp de hoy, guard 07:30, eventos
+  verificándose, latidos verdes, Telegram 200. Octubre sigue flojo (Busto 7/31 · Dúplex 0/31 · House 6/31
+  · Luxury 6/31+3 de hoy). Alertas `evento_sin_respaldo` 29/08+13/09 (×2,2) obsoletas tras #1416.
+- **Pendiente (Alberto, extranet):** revisar nivel Genius y descuento móvil activos — es la fuga que queda.
+
+### 📧 (15/08/2026) Ayudas conciliación: radar fiscal completo + regla de comunicaciones (PR #1432)
+- Alberto pidió que el asesor fiscal viera la convocatoria de la Consejería de Empleo: Línea 4 (autónomos
+  con hijos <3 años que contraten personal, 6.000–7.200 €) y Línea 5 (riesgo embarazo / descanso por
+  nacimiento). **Plazo de solicitud: hasta el 15/09/2026** (telemática, Oficina Virtual de Empleo).
+- Enviado email a Marta Albarrán (malbarran@aseconconsultores.com, cc Pilar) pidiendo revisar si Alberto
+  o Pilar pueden acogerse y tramitarla. **Pendiente: respuesta de Asecon antes del 15/09.**
+- **🚨 Regla dictada por Alberto a raíz de ese envío (ya en CLAUDE.md):** NUNCA enviar comunicaciones a
+  terceros sin su autorización explícita para ese envío — por defecto, borrador o texto para que decida él.
+- Resolución: NO se solicita (la L4 exige contratar 12 meses y no hay contratación prevista); Marta avisada
+  por Alberto. `fiscal-novedades` ampliado con radar mensual de convocatorias de ayudas + aviso Telegram
+  (Paso 5; estado en `docs/FISCAL-AYUDAS.md`) para que la próxima no llegue por prensa.
+- Ampliación (mismo día): Paso 5 suma bonificaciones SS (checklist anual) + radar por cliente; banner 💶 en
+  `/finanzas` con cuenta atrás (tabla `fiscal_ayudas`, aplicada y sembrada; `AyudaBanner` + descartar).
+- Radar por cliente TERMINADO: perfiles en BD (`ayudas_perfiles`, con `ref_ext` → cuenta/empresa de su app;
+  Joaquín apunta a la cuenta DEMO del almacén hasta sembrar la real) + banner 💶 en `apps/almacen` (panel)
+  y `apps/ialimp` (dashboard empresa, manual actualizado). GRANTs de solo lectura a `prisma_ialimp`/`prisma_almacen`.
+  OJO: `next build` de ialimp falla en este contenedor por envs (preexistente, falla igual sin los cambios).
+  **Pendiente:** borrador Gmail a Marta sobre la cuota RETA de Pilar (serie rara 72→118→32€, ¿bonificación
+  art. 38 LETA aplicada?) — lo envía Alberto si quiere.
+
+### 🧯 (15/08/2026) La curva «PL» congelada era el PROPIO motor: suelo contaminado reteniendo agosto a 2-5× mercado
+- Alberto vio en Smoobu 359/234/414/554€ para la noche del 15/08 (mercado fiable de la fecha: 77/99/113/320€).
+  Causa: la congelación del #1416 re-etiquetó `captured_at` SIN restaurar precios → `pricing_pl_referencia`
+  guardaba el sawtooth del motor (capturas 11-14/08) y el suelo 85% lo blindaba hasta ago-2027.
+- Reconstruida (SQL `2026-08-15_pl_referencia_reconstruida.sql`, aplicada ~06:20 UTC; PR #1427): Busto/Luxury
+  FUERA (motor vivo desde 10/06 y 13/07 — nunca hubo PL genuino en la tabla); Dúplex/House con la foto real del
+  snapshot 08/08 07:00 (caduca 06/12/2026). Sevilla-Rayo duplicado 15+16/08 → fila del 16 descartada (partido: sáb 15).
+  Es la reconstrucción que la entrada ✅ de abajo encontró «sin anotar»: la anotación viajaba en la rama draft.
+- Guarda nueva en apply: con ancla fiable de la fecha, el suelo PL se acota a ×1,2 el ancla
+  (`lib/sivra/pricing-suelo-pl.ts`, puro+test). Una referencia estática ya no puede desmentir al mercado medido.
+- Verificado post-fix (pasada 08:31): los 4 pisos bajaron el raíl completo sin re-anclarse (15/08:
+  359→287 · 234→187 · 414→331 · 554→443; 275 escrituras, toda la curva despinzada).
+
+### 🐛 (15/08/2026) Pasada de trading duplicada: el PASO 0 del trigger no ve una recuperación con `fecha` backdateada
+- El trigger de las 20:15/23:15 disparó otra vez a las ~08:14 UTC. PASO 0 comprobó `trading_pasadas WHERE
+  fecha=CURRENT_DATE` (2026-08-15) → NULL → concluí «no ha corrido hoy» y ejecuté la pasada completa.
+- **Pero SÍ había corrido**: la sesión de la entrada anterior recuperó el viernes 14/08 usando `fecha='2026-08-14'`
+  a propósito (evitar etiqueta corrida) — invisible para un check que mira `CURRENT_DATE`. Mi pasada (NAV→saldo,
+  22 símbolos, /analizar, /puntuar) corrió igual con `fecha='2026-08-15'` pero **con los MISMOS cierres del
+  viernes** (el mercado seguía cerrado) → 88 tesis nuevas duplicando información ya analizada, un día desplazada.
+- **Sin daño operativo**: 0 compras paper nuevas (la barrera "posición ya abierta" protegió), 0 vetados/huérfanas.
+  `ETIQUETA_TOL` ya tolera el desfase sin anular tesis. El coste real es ruido en `trading_estrategia_stats`.
+- **Pendiente:** el PASO 0 del prompt del trigger debería comprobar la HUELLA real (última vela usada / último
+  precio_ref), no solo `fecha=CURRENT_DATE` — una recuperación backdateada lo esquiva. No lo he tocado (vive en
+  la config del trigger, fuera de este repo).
+
+### ✅ (15/08/2026) Verificación final PR #1416 — todo OK; el suelo PL quedó RESTAURADO a la curva genuina
+- Seguimiento cerrado: 9/9 partidos a domicilio siguen descartados (los 3 «vs Sevilla/Betis» vivos son derbis, locales), guardián 07:30 con 0 alertas nuevas, latidos sivra_* en verde, sin recaptura tras las pasadas 20:30/14:30 con código nuevo.
+- Incidencia menor (14/08 ~15:00): la pasada de las 08:31 corrió con código viejo minutos antes del deploy (READY 08:54) y recapturó una última vez; re-congelada en el momento.
+- **Estado REAL de `pricing_pl_referencia` (difiere del PR):** alguien —sin anotarlo en memoria ni commits— la restauró a la curva GENUINA: solo Dúplex+House, 732 filas, `captured_at='2026-08-08'` (verificado: 732/732 cuadran con `rate_snapshots` del 08/08, último día limpio) → caduca ~06/12/2026. Semánticamente mejor que la congelación del PR (que re-fechaba precios ya contaminados). Busto/Luxury fuera: su «PL» ya era espejo del motor.
+- Si fuiste tú (otra sesión): anota tus escrituras de BD en memoria — esta reconstrucción se descubrió por sorpresa en la verificación.
+
 ### 🐕 (15/08/2026) Pasada de trading del 14/08 perdida: recuperada a mano + reintento pendiente de la UI
 - El trigger disparó (20:15:38Z) pero la sesión murió SIN arrancar — fallo transitorio de la plataforma
   (entorno activo, otras rutinas corrieron bien). Watchdog avisó 06:30; Alberto: «¿solución para esto?».
@@ -846,8 +1187,15 @@ completo `docs/AUDITORIA-2026-08.md`.
   page data de `/api/admin/clientes/[vertical]/[id]` YA en main (envs ausentes), no es del cambio.
 
 
-- **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 14/08/2026).** Detalle en
+- **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 16/08/2026).** Detalle en
   `docs/memoria/2026-08.md` y en los PRs citados.
+  - **Ayudas/subvenciones (15/08, #1432):** pendiente respuesta de Asecon (Marta Albarrán) sobre la
+    convocatoria de conciliación antes del **15/09/2026** (plazo de solicitud). Pendiente además un
+    borrador (sin enviar, a decisión de Alberto) sobre la cuota RETA de Pilar (serie 72→118→32€,
+    ¿bonificación art. 38 LETA aplicada?).
+  - **Pricing SIVRA — canal Booking (15/08):** reserva Luxury 22-25/10 mordida 29,4% por
+    Genius+descuento móvil apilados (motor tarificó bien, la fuga es de canal). Pendiente que
+    Alberto revise el nivel Genius y el descuento móvil activos en la extranet.
   - **Pricing SIVRA (motor vivo en los 4 pisos, resuelto desde el 09-10/08):** #1323 (ocupación
     POR MES) rehecho y mergeado sobre `pricing-demanda.ts`, `channel_markup_sin_recargo.sql`
     aplicado, last-minute encendido (`lastminute_k=0,5`) y reparto mes/global ya se persiste en
@@ -873,8 +1221,12 @@ completo `docs/AUDITORIA-2026-08.md`.
     sin decisión de Alberto. Decisión vigente (10/08): no operar más en real por impulso, esperar
     aviso explícito del agente cuando el forward justifique Fase 2 (hoy lejos: hit rate 26-29%, alpha
     ≈0 sobre n grande). FMP sin créditos y redundante (Yahoo cubre); NO recargar. Solo el DCF sigue
-    sin fuente. Nuevo pendiente (13/08): averiguar quién escribe `trading_estrategia_stats.retorno_medio`
-    (dos filas en `0.000000` — centinela «sin calcular», no cero medido).
+    sin fuente. Pendiente (13/08): averiguar quién escribe `trading_estrategia_stats.retorno_medio`
+    (dos filas en `0.000000` — centinela «sin calcular», no cero medido). Pendiente nuevo (15/08,
+    #1431): el PASO 0 del prompt del trigger comprueba `fecha=CURRENT_DATE`, que una recuperación
+    backdateada esquiva (duplicó 88 tesis sin daño operativo) — debería comprobar la huella real
+    (última vela/precio_ref usado); vive en la config del trigger, fuera de este repo. Trigger
+    reprogramado por Alberto (15/08) a `15 20,23 * * 1-5`; estreno real lunes 17/08.
   - **Subastas:** lente 🌊 (costa norte + Matalascañas sin tope) MERGEADA y en prod (#1346/#1349/
     #1351/#1353); pestaña 🔥 Oportunidades rediseñada (#1358 — una tarjeta, chips homogéneos,
     €/m² siempre visible). 🟡 el dispatcher marca timeout en `subastas-mercado` si desborda 280 s

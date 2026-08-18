@@ -59,6 +59,20 @@ dice «Sin limpiezas este día», el briefing dice «sin sesiones programadas» 
 - **Estáticos servidos en la raíz que se necesiten ANTES del login** (login, `/superadmin` pre-sesión): si NO los excluye el `matcher` por extensión (imágenes `svg|png|…` y fuentes `woff2|woff|ttf|otf` están excluidas) deben ir en `PUBLIC_PATHS`, o el middleware los redirige a `/login` y no cargan. Caso típico: **`public/manifest.json`** (PWA) → está en `PUBLIC_PATHS` (su `.json` no lo excluye el matcher). El manifest declara nombre/iconos/colores ialimp genéricos (como el login); el icono es `app/icon.svg`.
 - Crons y llamadas servidor→servidor a `/api/admin/*` DEBEN enviar `Authorization: Bearer CRON_SECRET`, o devuelven **401 silencioso**.
 
+## Registro de accesos y actividad (historial para el god-panel de plataforma) — 15/08/2026
+Tabla compartida **`registro_actividad`** (migración `prisma/migrations/2026-08-15_registro_actividad.sql`,
+aplicada): quién (`actor_tipo` owner/usuario/limpiadora/propietario), qué (`accion` login/login_forzado/
+pagina/accion + `metodo`/`ruta`), IP/user-agent, scope `empresa_id`. La escriben: (1) los **4 logins**
+(`/api/auth/login` —que además estampa la columna nueva **`empresas.ultimo_acceso`**—, `login-usuario`,
+`/api/l/auth` con detalle enlace/pin, `/api/propietario/auth/login`) vía `lib/actividad.ts::registrarActividad`
+(best-effort, jamás rompe la petición); y (2) el **middleware**, que emite fire-and-forget (`event.waitUntil`,
+sin latencia) a **`POST /api/interno/actividad`** (Bearer `CRON_SECRET`, pasa el gate por el pass-through
+existente) las navegaciones de página (document o RSC no-prefetch) y las escrituras a `/api/*` de usuarios
+logueados — el admin viaja identificado desde el JWT; limpiadora/propietario van por su token de cookie y los
+resuelve el endpoint. **El superadmin NO se registra.** Retención: purga best-effort a 90 días dentro del
+endpoint interno. Lo lee el god-panel de plataforma (`/operador/actividad`; GRANT SELECT a `prisma_plataforma`).
+OJO regla NULL: la tabla nació vacía el 15/08/2026 — «sin filas» = «sin registro», nunca «no ha entrado».
+
 ## Diseño (FIJO — nunca cambiar ni mezclar paletas)
 - **IALIMP:** header/botones `#4f46e5` · marca `#6366f1` · suaves `#eef2ff` · texto `#1e1b4b` · fondo `#f1f5f9`. **Tema CLARO siempre** (nunca fondos oscuros). Tipografía **NUNITO en todo** (800/900 en títulos y logo, 400-600 en cuerpo). Logo: "ia" indigo + "limp" oscuro.
   - **Enforce light:** se declara `color-scheme: light` (en `globals.css` `:root`/`html` y en `viewport.colorScheme` de `app/layout.tsx`) para que Android/el navegador NO apliquen "forzar oscuro" e inviertan la app cuando el móvil está en modo oscuro. No quitar.

@@ -1,5 +1,198 @@
 # Auditoría diaria — agosto 2026
 
+# Actualización 2026-08-16 — auditoría diaria (PROFUNDA)
+
+Rango: mismo que la pasada ligera de hoy (49 commits desde el 14/08, `716c8d6..24e8ced`). **Nota de
+coordinación:** hay una pasada ligera CONCURRENTE de hoy sin mergear (**PR #1436**, rama
+`claude/bold-edison-hwkt9u`) que ya cubrió: `apps/mariscos` ausente de `CLAUDE.md`/`MATRIZ.md`/
+`docs/FUENTES-DE-VERDAD.md` y de la matriz de typecheck de `tests.yml`, y la reconciliación del bloque
+«Estado vivo» (3 pendientes del 15/08). Esta pasada profunda **no duplica** ese trabajo — se remite a
+él y recomienda mergearlo primero. Esta pasada añade lo que solo la profunda cubre: typecheck+tests+
+seguridad+deps de las 8 apps y una revisión de infra por MCP más a fondo.
+
+## 🔴 `psd2-sync` — ESCALADO a hallazgo real (6 días sin movimientos, 2 pasadas seguidas igual)
+La pasada ligera de hoy (y la del 14/08) ya vieron `psd2-sync` sobre el umbral de huella y lo dejaron
+como «verificado, no mudo» (el cron corre a diario, `200`, `conexiones_banco.ultimo_sync` se actualiza
+cada día) — el mismo diagnóstico que `updates/sync`/`auto-sessions` (tablas que dependen de actividad
+de negocio, no de salud del cron). Esta pasada invoca el guardián dedicado **`psd2-health-check`** con
+su consulta oficial (`WHERE origen='psd2'`, obligatoria para no mezclar con las cargas manuales) y da
+**🚨 ANOMALÍA CRÍTICA**: último movimiento **10/08/2026**, hoy 16/08 → **6 días, 144h** (umbral 48h).
+`mov_30d=61` vs `mov_30d_prev=72` (sin caída de volumen — descarta que sea solo temporada baja).
+
+Por qué esto ya NO es el mismo patrón que `updates/sync`: son **2 cuentas bancarias activas** (BBVA
+negocio + Kutxa familiar) con un histórico de ~1-6 movimientos/día casi todos los días de los últimos
+20 (`fecha_operacion` con huecos de máximo 1-2 días hasta el 08/08). Un apagón total de **4 días
+laborables seguidos** (11,12,13,14/08, más el finde 15-16) en dos cuentas reales no encaja con
+inactividad orgánica — encaja con el escenario que la propia skill documenta como riesgo: *"el cron
+seguirá ejecutándose sin errores HTTP visibles pero devolviendo 0 movimientos"* (tier gratuito de
+Enable Banking / consentimiento con problemas). El consentimiento se creó el 14/06 y caduca a ~90
+días (~12/09) — no ha caducado, pero eso no descarta otro fallo silencioso de la sesión vinculada.
+
+**Verificado antes de escalar** (Vercel MCP, proyecto `plataforma`): sin runtime errors en
+`/api/cron/psd2-sync` en los últimos 7 días; el log del 15/08 06:00:01 confirma `200`. El fallo, si lo
+hay, está DENTRO del handler (en el `.catch(() => [] as MovEB[])` de `getMovimientos`, que traga
+cualquier error de la sesión EB sin dejar rastro) — Vercel no lo ve como error porque la función no
+lanza.
+
+**Acción recomendada para Alberto:** revisar el consentimiento PSD2 en el panel de Enable Banking (o
+disparar `GET /api/cron/psd2-sync?since=2026-08-10` a mano y mirar la respuesta completa, no solo el
+`200`) — si la sesión está realmente caducada/revocada del lado del banco, hay que re-vincular desde
+`/banca/conectar`. **Aviso Telegram ya enviado** (preflight `200` OK) con este diagnóstico.
+
+## 🟡 Seguridad Supabase (bloque 4/6 — `get_advisors`, ambos proyectos, solo lectura)
+- **Proyecto compartido `wswbehlcuxqxyinousql`:** 1 único **ERROR** (`security_definer_view`):
+  `public.v_facturas_sin_cargo` (creada 11/08/2026, `prisma/sql/2026-08-11_facturas_drive_movimiento_fk.sql`)
+  tiene la propiedad SECURITY DEFINER **y** grants por defecto de `anon`/`authenticated` (SELECT +
+  incluso INSERT/UPDATE/DELETE) sin el `REVOKE` explícito que sí se aplicó a `mapa_arquitectura`
+  (10/07). La vista expone proveedor/importe/nombre de archivo/URL de Drive de las facturas
+  personales de Alberto. 157 WARN (77+77 funciones `security_definer` ejecutables por
+  anon/authenticated, 1 función con `search_path` mutable, 2 extensiones —`pg_net`/`vector`— en
+  `public`) y 303 INFO (`rls_enabled_no_policy`) son un **patrón sistémico YA presente en todo el
+  proyecto** (244 tablas con grant `anon` de base, coherente con la arquitectura BYPASSRLS
+  documentada en `CLAUDE.md`) — no nuevo de este rango, no se re-audita entero aquí.
+- **Proyecto standalone ia-rest `efncqyvhniaxsirhdxaa`:** 47 vistas `security_definer` + 247 WARN —
+  mismo patrón sistémico (POS con muchas vistas de reporting), tampoco nuevo.
+- **Acción de bajo riesgo, NO aplicada** (regla: nunca ejecutar migraciones desde la auditoría) —
+  propuesta en `apps/plataforma/prisma/sql/2026-08-16_revoke_anon_v_facturas_sin_cargo.sql` de este
+  PR: `REVOKE ALL ON v_facturas_sin_cargo FROM anon, authenticated` + `ALTER VIEW ... SET
+  (security_invoker = true)`, mismo patrón que `mapa_arquitectura`. Revisar y aplicar por Supabase
+  MCP si Alberto lo confirma.
+
+## 🟢 Vercel — deploy + runtime
+Último deploy `production` de `plataforma` en `READY` (commit del registro de actividad ialimp,
+PR #1433). Sin runtime errors en `/api/cron/psd2-sync` en los últimos 7 días (ver hallazgo de arriba).
+
+## 🟢 Backlog de PRs de rutinas + salud del automerge
+2 PRs abiertos de ramas `claude/*`: **#1435** (trading copiloto de órdenes, draft, <24h, sin acción) y
+**#1436** (esta auditoría ligera de hoy, draft, código+texto — recomendado mergear pronto ya que las
+dos ramas de auditoría de hoy parten del mismo `main`). `rutinas-automerge.yml` con ejecuciones
+recientes (última hace minutos, éxito) — el vigilante está vivo.
+
+## ✅ Reconciliación memoria/skills
+`docs/SKILLS.md` íntegro contra `.claude/skills/` (32) y `.claude/commands/` (3) — sin huérfanos ni
+faltantes. `lib/correo/rutas.ts` sin drift (9 categorías; ninguna skill nueva del rango produce correo
+sin categoría propia). `docs/FUENTES-DE-VERDAD.md`: los cambios del rango caen dentro de filas ya
+existentes (ialimp/plataforma CLAUDE.md, fiscal-novedades). Sin rotación de memoria pendiente (todas
+las entradas del vivo son de agosto). El hueco de `apps/mariscos` y los 3 pendientes de «Estado vivo»
+del 15/08 ya los cubre el PR #1436 (no se duplican aquí).
+
+## ✅ Manuales de usuario — nada que tocar
+Ningún archivo de `apps/ia-rest/src/app/**`, `apps/ia-rest/src/components/**` ni
+`apps/ia-rest/public/**` cambió en el rango.
+
+## 🟢 Bloque técnico — integridad, typecheck, tests
+- **Integridad estructural:** lockfile en sync (872 paquetes). `pnpm test:guardia` 32/32 OK. **10 apps
+  en el repo** (no 8: `housesevillana` y `mariscos` también cuentan) — las 10 llevan el `ignoreCommand`
+  obligatorio en su `vercel.json` y `transpilePackages` cuadra exactamente con sus imports `@central/*`
+  reales en ambos sentidos. Radiografía de estructura desfasada por timestamp (drift normal entre
+  pushes, se autorregenera) — ya regenerada en el commit anterior de este PR.
+- **Typecheck de las 8 apps con Prisma+ia-rest** (`tsc --noEmit`, client regenerado antes de cada
+  una): **0 errores en las 8**.
+- **`pnpm test`** (raíz): guardián + todos los `packages/*` + tests de apps (ialimp 22, plataforma
+  &gt;900 subtests, rrhh 47 vitest + 7 suites de packages) — **0 fallos reales**.
+- **Seguridad/multi-tenant** (125 archivos de `apps/*/app/api/**` tocados en 30 días): todas las
+  queries multi-tenant revisadas (rrhh admin, almacen, mariscos, ialimp agente-cotizador/leads,
+  plataforma operador) llevan scope explícito por `empresa_id`/`cuenta_id`/sesión. Sin hallazgos.
+- **Documentación:** confirma independientemente lo que ya cubre PR #1436 — `apps/mariscos` sin
+  entrada en `CLAUDE.md` (sección Verticales) ni en `apps/plataforma/lib/estructura.ts`. No se duplica
+  aquí.
+
+## 🔴 `next` desactualizado en `housesevillana` (producción pública) — CORREGIDO en este PR
+`pnpm audit` marcaba `next@15.5.15` en `apps/housesevillana` con **16 CVEs** (varios *high*: DoS,
+SSRF en Server Actions, bypass de middleware/proxy), varias con fix ya publicado. `housesevillana` es
+la landing pública de producción (`housesevillana.es`, canal directo de reservas) — no es tooling
+interno, así que se corrige en el acto (bajo riesgo, mecánico): bump a **`next@15.5.21`** (última
+del mismo major 15.5.x, sin saltar a la 16 para no arriesgar breaking changes sin revisar).
+Verificado tras el bump: `pnpm install` sin conflictos, `next build` compila y genera las 10 páginas
+sin error, `node --test` 47/47 OK. Los errores de `tsc --noEmit` en los ficheros `*.test.ts` (imports
+con extensión `.ts` explícita, patrón de `node --test` de este repo) son preexistentes y no los
+introduce este cambio.
+
+## 🟡 Deps de bajo riesgo, sin acción en este PR (documentadas para Alberto)
+- **`jimp`/`file-type`** (vía `apps/ialimp/app/api/admin/ia/comparar-foto/route.ts`, comparación de
+  foto de limpiadora): vuln de DoS (bucle infinito con input malformado) en una ruta que sí procesa
+  binario subido por usuarios con sesión de limpiadora. Riesgo moderado, no RCE. Recomendado: migrar
+  de `jimp` (sin mantenimiento activo) a `sharp` (ya fijado a `&gt;=0.35.0` en `pnpm.overrides` de la
+  raíz y usado en el resto del monorepo) — cambio de librería, no un bump mecánico, se deja para un
+  PR propio.
+- **`xlsx`** en ialimp: no explotable (solo escribe, nunca parsea un xlsx subido) — sin acción, ya
+  documentado como excepción aceptada.
+- **`pdfjs-dist`** en `apps/ialimp/package.json`: dependencia **muerta** (0 imports reales; ialimp usa
+  la versión correcta y no vulnerable vía `apps/rrhh`) — candidato a retirar del `package.json` y de
+  `serverExternalPackages`, sin urgencia de seguridad.
+- Resto de advisories (`esbuild`/`vite`/`launch-editor` vía vitest, `brace-expansion`/`js-yaml` vía
+  eslint, `nanoid` vía postcss): solo dev-time/build-time, no viajan a producción.
+- **Packages sin consumidor** (`module-agenda`, `module-encargo`, `module-revenue`): reconfirmado
+  el estado ya triado — infraestructura a la espera de vertical, no código muerto por descuido.
+
+---
+
+# Actualización 2026-08-16 — auditoría diaria (ligera)
+
+Rango: 49 commits desde la pasada del 14/08 (`716c8d6..24e8ced`) — casi todo autodocumentado PR a
+PR (registro accesos ialimp #1433, ayudas conciliación #1432, suelo PL reconstruido #1427/#1430,
+trading: reintento aplicado #1428/#1429, pasada duplicada #1431, claridad+apagado #1424, runtime
+errors #1426, 2 merges de conflicto de registro #1425/#1434). SALTA typecheck/tests pesados
+(pasada profunda).
+
+## 🟢 Heartbeat de crons/agentes
+`agente_latidos` (11 filas) — todo `ok=true`, todas dentro de cadencia (más vieja: `paper-tracker`
+semanal, 136h de ~192h). Tablas de dominio (12 huellas): 11/12 ✅, **`psd2-sync` ⛔ por umbral**
+(140h sin fila nueva en `movimientos_bancarios`, umbral 54h) — **investigado, no es un cron mudo**:
+Vercel runtime logs confirman `GET /api/cron/psd2-sync 200` a las 06:00 UTC; simplemente no ha
+habido movimientos bancarios nuevos desde el 10/08 (mismo patrón documentado desde 02/07). Supera
+el umbral de 48h del guardián dedicado (`psd2-health-check`, miércoles) — se deja anotado para su
+próxima pasada.
+
+## 🟢 Backlog de PRs de rutinas + salud del automerge
+`rutinas-automerge.yml`: última ejecución hace <5min, en verde (948 runs históricos, cadencia
+horaria). Un único PR abierto (#1435, copiloto de órdenes trading), draft, <12h — sin acción.
+
+## 🔴→✅ (carril 1) `apps/mariscos` invisible en 3 docs raíz desde su alta (11/08, PR #1055, 5 días)
+El vertical **Mariscos González** (trazabilidad pesquera) tiene `CLAUDE.md` propio y viene en la
+memoria (`CONTEXTO-SESIONES.md`), pero **no aparecía en ninguno de los 3 mapas raíz** que listan
+verticales: `CLAUDE.md` (sección "Verticales"), `MATRIZ.md` (árbol + tabla) ni
+`docs/FUENTES-DE-VERDAD.md`. Corregido en los tres (este commit).
+
+## 🟡→✅ (carril 2) `apps/mariscos` sin typecheck en CI desde su alta — 5 días sin red de seguridad de tipos
+La matriz `typecheck` de `.github/workflows/tests.yml` (bloqueante, 8 apps) no incluía `mariscos` —
+lleva `typescript.ignoreBuildErrors` como el resto de verticales, así que un tipo roto se habría
+colado sin que nada lo cazara. Verificado antes de tocar la matriz: `pnpm exec tsc --noEmit` en
+`apps/mariscos` da **0 errores** y los 8 tests de `@central/module-pesca` pasan. Añadida `mariscos`
+a la matriz (PR de esta auditoría, revisión de código — no carril 1).
+
+## 🟡 (recomendación, sin aplicar) Falta skill `mariscos-maestro`
+Es el único vertical con `CLAUDE.md` propio sin su router `*-maestro` en `.claude/skills/` (todas
+las demás verticales de negocio lo tienen: ia-rest/sivra/ialimp/plataforma/transporte/alquiler). No
+creada en esta pasada — crear una skill nueva es más que un fix de texto acotado (guardarraíl B).
+Propuesta para Alberto: crearla siguiendo el patrón de `alquiler-maestro`/`transporte-maestro`.
+
+## ✅ Reconciliación memoria — 0 huecos de commit, bloque «Estado vivo» actualizado
+Todos los commits del rango ya estaban autodocumentados en `CONTEXTO-SESIONES.md` (patrón PR+docs
+funcionando). El bloque «Estado vivo» (sin refrescar desde 14/08) tenía 3 pendientes nuevos del
+15/08 sin reflejar: respuesta de Asecon sobre ayudas de conciliación (plazo 15/09, #1432), revisión
+de Alberto del nivel Genius/descuento móvil en la extranet de Booking (#1432), y el PASO 0 del
+trigger de trading que no distingue una recuperación con fecha backdateada (#1431). Añadidos.
+Sin drift en `docs/SKILLS.md` (comandos/skills reales = los listados) ni en `lib/correo/rutas.ts`
+(sin categorías nuevas de correo en el rango). Reglas fiscales dictadas consistentes (`perfil-fiscal`
+sigue con «amortizable = nunca sin orden expresa»).
+
+## ✅ Integridad estructural — sin hallazgos nuevos
+Lockfile presente y al día. `ignoreCommand` obligatorio verificado en las 10 apps (incluida
+`mariscos`, que ya lo traía). `transpilePackages` de `mariscos` coincide con sus deps `@central/*`
+declaradas.
+
+## ✅ Manuales de usuario — nada que tocar
+Ningún archivo de `apps/ia-rest/src/app/**` ni `apps/ia-rest/public/**` cambió en el rango (los
+cambios visibles del rango son de `apps/ialimp` y `apps/plataforma`, ya autodocumentados en sus
+propios PRs — `apps/ialimp/public/manual.html` se actualizó en el propio PR #1432).
+
+## Checklist de acciones manuales de Alberto (esta pasada)
+- Ninguna urgente. Opcional: revisar nivel Genius/descuento móvil en la extranet de Booking
+  (fuga de canal en la reserva Luxury 22-25/10, ver memoria 15/08).
+- Cuando tengas un rato: decidir si quieres la skill `mariscos-maestro` (recomendación arriba).
+
+---
 # Actualización 2026-08-14 — auditoría diaria (ligera)
 
 Rango: 18 commits desde la pasada del 13/08 (`d76db8c..716c8d6`) — 6 regeneraciones automáticas de

@@ -1,12 +1,14 @@
 ---
 name: trading-analista
-description: Pasada diaria del agente de inversión sobre Interactive Brokers (Fase 1, SOLO paper). Lee cartera + watchlist, tira precios (IBKR) y fundamentales (FMP) por MCP, llama a /api/trading/analizar y /api/trading/puntuar de plataforma, y resume por Telegram. NUNCA ejecuta órdenes reales.
+description: Pasada diaria del agente de inversión sobre Interactive Brokers (Fase 1, SOLO paper). Lee cartera real + watchlist, tira precios (IBKR) y fundamentales por MCP, llama a /api/trading/analizar y /api/trading/puntuar de plataforma, y resume por Telegram. Copiloto de órdenes: solo INSTRUCCIONES que Alberto confirma en IBKR, y solo si él las pide. NUNCA ejecuta órdenes reales.
 ---
 
 # Trading-analista (Fase 1 · paper) — router
 
 ## Qué hace la pasada diaria
-Lee el NAV de IBKR (`get_account_summary`) y lo empuja a `/api/trading/saldo`; carga la
+Lee el NAV de IBKR (`get_account_summary`) y lo empuja a `/api/trading/saldo`; lee las
+posiciones reales (`get_account_positions`) y las empuja a `/api/trading/cartera` (la sección
+«💼 Cartera real» de `/trading` SOLO se refresca por ahí, 17/08/2026); carga la
 watchlist activa, baja velas diarias por símbolo (IBKR) y fundamentales (FMP best-effort);
 llama a `POST /api/trading/analizar` (torneo + barreras + aperturas paper) y a
 `POST /api/trading/puntuar` (walk-forward + stops paper); resume por Telegram (importes
@@ -18,6 +20,12 @@ Detalle paso a paso en `references/pasada-diaria.md`.
   `get_price_history`, `get_price_snapshot`, `get_watchlist`) y endpoints de plataforma.
   Operativa 100% simulada en BD. Si dudas, no operas. Aplica también a la cartera de
   estudio (30.000€ SIMULADOS) y a la cartera cohetes: cero órdenes reales, siempre.
+  **Matiz copiloto (15/08/2026, decidido por Alberto):** `create_order_instruction` NO crea
+  una orden viva — crea un borrador que Alberto revisa y envía él mismo en IBKR. Está
+  permitido SOLO cuando Alberto pide esa instrucción concreta en conversación; la Rutina
+  programada JAMÁS crea instrucciones por su cuenta en Fase 1. Contrato completo, doctrina
+  núcleo-satélite (⛔ nunca proponer vender el ETF núcleo para financiar una señal) y
+  alertas en `references/copiloto-ordenes.md`.
 - **Autonomía = DESCUBRIR, no ejecutar.** La cantera decide qué estudiar; todo sigue en paper.
 - **Puerta a Fase 2:** no proponer ejecución real hasta rentabilidad sostenida y fuera de
   muestra en `trading_estrategia_stats`. Esa decisión es de Alberto.
@@ -129,3 +137,8 @@ Detalle paso a paso en `references/pasada-diaria.md`.
   watchdog, forward paper (cohortes, curva, riesgo, atribución), radar del universo EEUU
   (crons, ranking, retrovisor, satélite 🚀, cartera cohetes), puerta a Fase 2 y protocolo del
   canal de aviso. Léelo para infra/auth, crons, el forward paper o si algo falla (401, mudo).
+- **`references/copiloto-ordenes.md`** — copiloto con confirmación humana (15/08/2026):
+  doctrina núcleo-satélite (ETF núcleo intocable, satélite en paper hasta Tramo 2), cuándo
+  sí/no crear `create_order_instruction`, el bloque 💼 Cartera real de la pasada diaria y
+  las alertas de precio. Léelo si Alberto pide preparar una orden/alerta o al montar el
+  bloque de cartera real.

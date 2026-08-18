@@ -35,6 +35,11 @@
   (Vercel `almacen`, tenant DEMO poblado; tenant real de Joaquín aún sin sembrar). **Aún sin `apps/almacen/CLAUDE.md`
   propio** — ver `docs/CONTEXTO-SESIONES.md` (entrada 15/07/2026) y `docs/ALMACEN-JJ-reunion-y-auditoria.md`
   mientras tanto.
+- **`apps/mariscos`** — **Mariscos González**: trazabilidad pesquera + etiquetado por peso (mayorista/pescadería
+  de marisco; Fase 1, PR #1055, 11/08/2026). Recepción de partidas (albarán, lote de origen), envasado que
+  CONSERVA el lote, etiqueta por canal (con/sin lote). Compone `@central/module-pesca`. BD compartida (auth
+  propio, cookie `mariscos_session`). Ver `apps/mariscos/CLAUDE.md`. **Pendiente para darla por viva:** proyecto
+  Vercel, ejecutar su SQL en Supabase (preview→prod), sembrar cuenta real de Mariscos González.
 
 ## Módulos compartidos (`packages/*`, fuente TS pura, portables)
 > **Scope npm = `@central/*`** (renombrado desde `@iarest/*` el 11/06/2026, antes de tener clientes).
@@ -85,6 +90,14 @@ Salvaguardas para no perder información:
 
 ## Estilo de respuesta — regla global permanente
 **Responde de forma sintética y directa.** Ve al grano: da el resultado o la respuesta primero, sin resúmenes largos, sin repetir el contexto que Alberto ya conoce, sin recapitular lo que acabas de hacer. Nada de listas exhaustivas de opciones que no vas a seguir ni de narrar cada paso. Si hace falta explicar un porqué, hazlo en una o dos frases. Extiéndete SOLO cuando Alberto lo pida explícitamente ("dame el detalle", "explícame", etc.). Esto NO aplica al código, comentarios ni mensajes de commit/PR (esos siguen sus propias reglas).
+
+## Comunicaciones salientes — regla global permanente
+**NUNCA enviar correos, mensajes ni ninguna comunicación a terceros (email a la asesoría, a clientes,
+a quien sea) sin autorización explícita de Alberto para ESE envío concreto.** Que Alberto pida que un
+tercero "vea" o "sepa" algo NO autoriza a enviárselo: por defecto se prepara un **borrador** o se le
+presenta a Alberto el texto/análisis y decide él si se envía. (Dictado 15/08/2026, tras enviarse un
+email a Asecon sin permiso.) No afecta a los avisos automáticos ya existentes dirigidos al propio
+Alberto (Telegram del monorepo, crons).
 
 ## Dato que NO hay ≠ dato que NO se ha mirado — regla global permanente
 **Nunca afirmes una ausencia con un dato que todavía no se ha comprobado.** En este monorepo casi

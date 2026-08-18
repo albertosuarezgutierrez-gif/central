@@ -13,6 +13,32 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-08-16** · `docs/AUDITORIA-2026-08.md` · sección "Actualización 2026-08-16 — auditoría diaria
+  (PROFUNDA)" completa (hallazgo `psd2-sync` escalado a 🔴 tras 6 días sin movimientos + guardián
+  `psd2-health-check` en crítico, Telegram enviado; hallazgo Supabase `v_facturas_sin_cargo`
+  SECURITY DEFINER sin revoke de anon/authenticated; bloque técnico completo — 10 apps con
+  `ignoreCommand`/`transpilePackages` OK, typecheck 8/8 apps sin errores, tests raíz sin fallos,
+  scoping multi-tenant OK en 125 rutas recientes) · commit de esta auditoría
+- **2026-08-16** · `apps/housesevillana/package.json` + `pnpm-lock.yaml` · bump `next` 15.5.15→15.5.21
+  (16 CVEs, varios high, con fix publicado; landing pública de producción) · verificado `next build` +
+  `node --test` 47/47 OK tras el bump · commit de esta auditoría
+- **2026-08-16** · `apps/plataforma/lib/estructura.generated.json` + `docs/ARQUITECTURA.generated.md` ·
+  regeneración automática de la radiografía de estructura (`node scripts/auditar-estructura.mjs`) ·
+  refleja el estado real del repo tras los commits del 15-16/08 · commit de esta auditoría
+- **2026-08-16** · `CLAUDE.md` (raíz), `MATRIZ.md`, `docs/FUENTES-DE-VERDAD.md` · añadida
+  `apps/mariscos` (Mariscos González, trazabilidad pesquera) a la sección "Verticales", al árbol +
+  tabla de apps, y al mapa doc→código · el vertical existe desde el 11/08 (PR #1055) con su propio
+  `CLAUDE.md` pero no aparecía en ninguno de los 3 mapas raíz que listan verticales · pasada ligera
+  diaria, rango 49 commits desde `716c8d6` (última auditoría, 14/08) · commit de esta auditoría
+- **2026-08-16** · `docs/CONTEXTO-SESIONES.md` · bloque «Estado vivo» (sin refrescar desde 14/08)
+  actualizado con 3 pendientes del 15/08 sin reflejar: respuesta de Asecon sobre ayudas de
+  conciliación (#1432, plazo 15/09), revisión de Alberto del nivel Genius/descuento móvil en la
+  extranet (#1432), y el PASO 0 del trigger de trading que no distingue una recuperación con fecha
+  backdateada (#1431) · 0 huecos de commit (el rango ya estaba autodocumentado PR a PR) · pasada
+  ligera diaria · commit de esta auditoría
+- **2026-08-16** · `docs/AUDITORIA-2026-08.md` · informe de esta pasada (heartbeat, backlog PRs,
+  gap de `mariscos` en docs+CI, reconciliación de memoria) · commit de esta auditoría
+
 - **2026-08-14** · `docs/CONTEXTO-SESIONES.md` · entrada nueva para PR #1405 (pricing: democión por
   nombre de jornada de liga, evita factor x2.2 en partidos regulares) · el commit no se había
   anotado en memoria · poda de 2 pendientes ya resueltos en «Estado vivo» (PR #1370 mergeado desde

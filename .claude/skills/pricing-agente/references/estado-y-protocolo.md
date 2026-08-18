@@ -2,6 +2,63 @@
 
 ## Estado vivo (13/07/2026) — leer al empezar el ciclo
 
+### Actualización 17/08/2026 — filtro €/plaza en los lectores de mercado + Booking a 24 ventanas (PR #1453, mergeado)
+- **Los percentiles ya FILTRAN plausibilidad €/plaza** (`lib/sivra/pricing-comps-plausibles.ts`,
+  umbral 12€/plaza sobre precio y aforo CRUDOS; sin aforo declarado NO se juzga): un comp a 44-104€
+  «para 12 personas» es una habitación vestida de piso entero. Detectado en House: 364 filas /
+  36 fechas, TODAS `fuente='serper'` (0 de `booking_mcp`). Aplicado en `apply` (3 consultas),
+  `guard` (#4/#5/#7/#8/#9 — el guardián filtra LO MISMO que el motor), `recommend`, `pilot-track`
+  y `settings`. Si ves comps absurdos que PASAN el filtro, sube el caso, no el umbral a ojo.
+- **La rutina `mercado-booking` pide `?max=24`** (antes 12; techo del endpoint 30) para acumular
+  3 fechas fiables/mes por piso y poder retirar Serper (fase 2 del landmine `market_rates.fuente`).
+- **FLOOR_SEASONAL nov ×1,00→×1,10** (OK de Alberto): ADR realizado de noviembre en House (2024+)
+  489€, mejor que junio (×1,15); suave a propósito para no cerrar el mercado flojo real.
+- **🪤 Al cruzar `incomes` con una fecha**: cobertura = `checkIn <= fecha < checkOut`, NUNCA
+  `checkIn = fecha` (el ciclo del 17/08 dio por «sin income» 3 noches de House con reserva real —
+  una de ellas la Feria 2027 vendida a ~1.659€/noche). Detalle en `references/ciclo.md` Paso 1.
+- **Al analizar ADR de House excluye los incomes DIRECTO/OTRO con <~100€/noche** (huecos de
+  amigos/bloqueos a 0-200€): el «ADR de agosto 62€» era ese artefacto — la única venta real de
+  agosto desde 2024 fue 543,98€/noche. Suelo estacional de House VERIFICADO contra la serie 2024+
+  (no está plano en la práctica); aprendizaje en `pricing_aprendizaje` id 74.
+- **`gastos_fijos` de House YA tiene sus 2 filas** (17/08/2026, derivadas de banca real por indicación
+  de Alberto — «los gastos de Socorro están en la cuenta de Kutxa»): IBI 40,49€/mes (2 plazos
+  semestrales ~242,93€; el 2º —nov— es ESTIMADO igual al 1º, confirmar al cobrarse) + seguro hogar
+  Occident 49,45€/mes (593,45€/año, cargo 16/01; renovación ene-2027 → actualizar importe). Los
+  SUMINISTROS de House (Endesa/EMASESA/DIGI) NO van en fijos a propósito: ya entran por factura real
+  en `gastos` y duplicarían. El recibo de Ayto. de 130,93€ (16/04/2026) era de Monte
+  Carmelo (vivienda habitual → personal, NO deducible); reclasificado en banca el 17/08/2026.
+
+### 🚨 Actualización 16-17/08/2026 — `channel_markup = 1.20` CASADO con el escaparate real (+20% Smoobu)
+- Desde el 16/08 Smoobu lleva **`priceDifference` +20% SOLO en el canal Booking** (resto de portales
+  a 0%; campo único por canal, no por piso) y `pricing_settings.channel_markup` está a **1.20 en los
+  4 pisos**. Booking publica `techo(base × 1,20)` — verificado el 17/08 dígito a dígito en los 4.
+  **La nota del 09/08 de abajo («channel_markup = 1.0», «el 1,16 NO existe») es HISTÓRICA: describía
+  el escaparate a 0%. NO «corregir» el 1.20 de vuelta a 1.0** — la regla permanente es que el markup
+  del motor debe ser el ESPEJO del ajuste real del canal en Smoobu; si cambia uno, cambia el otro
+  (y en ese orden: Smoobu primero).
+- El margen del +20% lo devuelven los descuentos de la extranet (16/08): Genius fijo 10/15/20 (el
+  DINÁMICO se apagó — no reactivar), tarifa móvil 10% y **oferta estándar 8% hasta el 31/12/2028**
+  (rutina de renovación programada nov-2028). Apilado máx. −33,8% s/ Standard. Al comparar
+  bruto/listado en reservas nuevas: ratio esperado ~0,66-0,92 SOBRE el listado ya inflado ×1,20.
+- Medición Fase 4 programada (rutina 30/08): mediana pagado/listado + volumen de reservas; si mediana
+  <0,85 se baja la oferta 8%→5-6%; si mediana bien pero reservas secas, el culpable es el markup.
+  Contexto completo: `docs/ESTUDIO-BOOKING-POSICIONAMIENTO.md` + `docs/BOOKING-*.md`.
+
+### Actualización 15/08/2026 — la curva PL «congelada» era el PROPIO motor; reconstruida + cota de cordura
+- **La congelación del #1416 re-etiquetó `captured_at='2026-08-10'` SIN restaurar los precios**: el upsert
+  autorreferente corrió hasta el despliegue, así que `pricing_pl_referencia` guardaba el sawtooth del motor
+  (capturas 11-14/08) y el suelo 85% retenía la noche del 15/08 a 359€ (Busto, 2 plazas) con la mediana
+  fiable de SU fecha en 77€ — y toda la curva hasta ago-2027 blindada a −15% del propio motor.
+- **Reconstruida** (`2026-08-15_pl_referencia_reconstruida.sql`, aplicada): Busto/Luxury BORRADOS de la tabla
+  (motor en vivo desde 10/06 y 13/07 — la tabla, nacida el 18/07, nunca tuvo PL genuino suyo); Dúplex/House
+  repuestos con el snapshot del 08/08 07:00 UTC (última foto pre-motor; el suelo caduca el **06/12/2026**).
+- **Cota de cordura en `apply`** (`lib/sivra/pricing-suelo-pl.ts`, puro+test; campo `pl_suelo_acotadas` en la
+  respuesta): con ancla FIABLE de la fecha, el suelo PL se acota a ×1,2 el ancla. Una noche especial sin comps
+  sigue protegida (punto ciego original); una referencia estática ya no puede desmentir al mercado medido.
+- **Sevilla-Rayo estaba confirmado en 15 Y 16/08** (websearch, sin evidencia): el partido es el sáb 15
+  (verificado, web oficial) → fila del 16 `descartado`+`decidido_por='alberto'`. `price_pricelabs` del
+  snapshot NO se corta: es «precio vivo en Smoobu» (documentado en su route) y lo consumen guard/pilot-track.
+
 ### Actualización 14/08/2026 — suelo PL congelado + partidos a domicilio (PR #1416)
 - **El suelo PriceLabs era autorreferente:** `pricing/apply` re-capturaba `pricing_pl_referencia`
   a diario desde `rate_snapshots` — que desde la baja de PL refleja los precios del PROPIO motor —
@@ -289,9 +346,13 @@ y testeada en **`lib/sivra/pricing-centinelas.ts`** (21/21), cableada en el rout
   house_sevillana — los dos últimos activados 09/08/2026 con OK de Alberto). **PriceLabs DE BAJA
   09/08/2026**: Alberto pausó los listados de Dúplex/House ese día y canceló la suscripción; ya no
   escribe en Smoobu ni se espera factura nueva. Su última curva queda persistida en
-  `pricing_pl_referencia` (366 fechas/piso, **congelada a `captured_at='2026-08-10'`, caduca
-  08/12/2026** — la recaptura diaria era autorreferente y se eliminó, PR #1416). NO actives
-  ni desactives `apply_enabled` de un piso sin OK explícito de Alberto.
+  `pricing_pl_referencia` (**estado real verificado 15/08/2026: SOLO Dúplex+House, 366 fechas/piso,
+  todo `captured_at='2026-08-08'` → caduca ~06/12/2026** — la recaptura diaria autorreferente se
+  eliminó en el PR #1416, y después alguien restauró la tabla a la curva GENUINA del snapshot del
+  08/08, último día limpio antes de la pausa, descartando Busto/Luxury cuyo «PL» ya era espejo del
+  motor; restauración fiel —732/732 filas cuadran con `rate_snapshots` del 08/08— pero SIN autoría
+  anotada en memoria/commits). NO actives ni desactives `apply_enabled` de un piso sin OK explícito
+  de Alberto.
 - **Mercado cargado a 12 meses** (Booking MCP, barrido F1 13/07): verano, Semana Santa 2027 (~462€ p50),
   Feria 2027, may/jun/jul 2027. **Ticketmaster VIVO** (cron semanal; busca por latlong — postalCode da 0
   fuera de EE.UU.). **🔥 KAROL G 3 noches en La Cartuja 11-13 jun 2027** (mercado 4-8x, factor 2,5) — rampar.

@@ -54,7 +54,7 @@ rutina y no un `CRON_JOBS`.
 
 ### 1. Pide el plan
 ```
-GET {PLATAFORMA_URL}/api/sivra/mercado/plan?max=12
+GET {PLATAFORMA_URL}/api/sivra/mercado/plan?max=24
 Authorization: Bearer {ALERTA_TOKEN}
 ```
 Devuelve `{ventanas:[{checkin, checkout, aforo, pisos[], motivo, etiqueta, ronda, diasSinMedir,
@@ -127,9 +127,13 @@ se lee como «no se dispara» y manda a mirar al sitio equivocado (lección del 
 
 ## Presupuesto y límites (asumidos, no son un fallo)
 
-- **12 ventanas por pasada** de un plan de ~96: la cobertura se ACUMULA (el motor mira 120 días
-  atrás), así que en 3-4 días está el plan entero y luego se auto-refresca por antigüedad. Pedir más
-  no cabe en el contexto de una sesión.
+- **24 ventanas por pasada** (subido de 12 el 17/08/2026 con OK de Alberto: el plan creció a ~464
+  ventanas con las rondas de profundidad y a 12/día tardaba ~5 semanas — el objetivo es acumular
+  3 fechas/mes por piso cuanto antes para poder retirar el sweep de Serper, cuyo corpus sin fecha
+  metía además precios de habitación como si fueran pisos enteros). El techo duro del endpoint es
+  30. La cobertura se ACUMULA (el motor mira 120 días atrás). **Si la sesión se te queda sin
+  contexto a mitad, NO pasa nada: los comps ya escritos quedan (el ingest es idempotente) — manda
+  el latido con lo que llevas y que la pasada de mañana siga; en el parte di hasta dónde llegaste.**
 - Cada respuesta del conector es grande: no la pegues entera en el informe, solo los campos que usas.
 - El bucket mensual del motor exige **≥3 fechas distintas del mes**, así que un mes no queda
   «cubierto» hasta la 3ª pasada. Hasta entonces sus comps solo alimentan el bucket por fecha exacta.

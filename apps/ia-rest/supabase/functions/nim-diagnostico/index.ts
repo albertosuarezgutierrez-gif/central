@@ -15,7 +15,7 @@ async function diagnosticar(apiKey: string, funcion: string, mensaje: string, st
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
-      model: 'meta/llama-3.3-70b-instruct',
+      model: 'z-ai/glm-5.2',
       max_tokens: 200,
       temperature: 0.2,
       messages: [

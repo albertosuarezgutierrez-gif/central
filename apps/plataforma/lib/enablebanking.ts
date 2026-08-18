@@ -88,7 +88,10 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
     headers: { Authorization: `Bearer ${await jwt()}`, 'Content-Type': 'application/json', Accept: 'application/json', ...(init?.headers ?? {}) },
     cache: 'no-store',
   })
-  if (!res.ok) throw new Error(`EnableBanking ${path} HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`)
+  // Estado y motivo PRIMERO y la ruta SIN query string al final: los avisos aguas abajo
+  // recortan a 160 chars (lib/psd2.ts) y una URL con continuation_key se come el hueco —
+  // el aviso del 16/08/2026 llegó sin el código HTTP, que es justo lo que diagnostica.
+  if (!res.ok) throw new Error(`EnableBanking HTTP ${res.status}: ${(await res.text()).slice(0, 200)} (${path.split('?')[0]})`)
   return res.json() as Promise<T>
 }
 
@@ -118,13 +121,15 @@ export function iniciarAuth(aspspName: string, country: string, redirect: string
 }
 
 // Canjea el `code` del callback por una sesión autenticada con la lista de cuentas (uids).
-export type Sesion = { session_id: string; accounts: string[]; aspsp?: string }
+// `status` es el estado de la sesión según Enable Banking (AUTHORIZED cuando está viva;
+// CLOSED/EXPIRED/REVOKED cuando el banco o una re-vinculación la ha invalidado).
+export type Sesion = { session_id: string; accounts: string[]; aspsp?: string; status?: string }
 export async function crearSesion(code: string): Promise<Sesion> {
   const j = await api<Record<string, unknown>>('/sessions', {
     method: 'POST',
     body: JSON.stringify({ code }),
   })
-  return { session_id: String(j.session_id ?? ''), accounts: extraerUids(j), aspsp: nombreAspsp(j) }
+  return { session_id: String(j.session_id ?? ''), accounts: extraerUids(j), aspsp: nombreAspsp(j), status: estadoSesion(j) }
 }
 
 // Recupera una sesión ya creada (para el re-sync diario): devuelve sus cuentas (uids).
@@ -132,7 +137,11 @@ export async function crearSesion(code: string): Promise<Sesion> {
 // string según el endpoint; aceptamos varias formas para no perder ninguna cuenta.
 export async function getSesion(sessionId: string): Promise<Sesion> {
   const j = await api<Record<string, unknown>>(`/sessions/${sessionId}`)
-  return { session_id: sessionId, accounts: extraerUids(j), aspsp: nombreAspsp(j) }
+  return { session_id: sessionId, accounts: extraerUids(j), aspsp: nombreAspsp(j), status: estadoSesion(j) }
+}
+
+function estadoSesion(j: Record<string, unknown>): string | undefined {
+  return typeof j.status === 'string' ? j.status : undefined
 }
 
 function nombreAspsp(j: Record<string, unknown>): string | undefined {
@@ -242,12 +251,12 @@ export async function estadoPago(paymentId: string): Promise<EstadoPagoEB> {
   return (j.transaction_status ?? j.status ?? 'DESCONOCIDO') as EstadoPagoEB
 }
 
-export async function getMovimientos(accountUid: string, dateFromOverride?: string): Promise<MovEB[]> {
+function diasAtrasISO(dias: number): string {
+  return new Date(Date.now() - dias * 24 * 3600 * 1000).toISOString().slice(0, 10)
+}
+
+async function pedirTransacciones(accountUid: string, dateFrom: string): Promise<MovEB[]> {
   const out: MovEB[] = []
-  // Enable Banking exige un rango de fechas para las transacciones; sin date_from devuelve
-  // vacío. Por defecto ~89 días para el sync diario. Pasa dateFromOverride para importar
-  // histórico desde una fecha concreta (p. ej. "2026-01-01").
-  const dateFrom = dateFromOverride ?? new Date(Date.now() - 89 * 24 * 3600 * 1000).toISOString().slice(0, 10)
   let cont: string | undefined
   let guard = 0
   do {
@@ -272,4 +281,42 @@ export async function getMovimientos(accountUid: string, dateFromOverride?: stri
     cont = j.continuation_key
   } while (cont && ++guard < 20)
   return out
+}
+
+// Resultado con la ventana realmente usada: si el banco rechazó la de 89 días y funcionó una
+// más corta, `degradada=true` y `desde` dice desde cuándo hay datos — el caller lo declara en
+// avisos en vez de fingir que se importó todo (regla «dato que no hay ≠ dato no mirado»).
+export type MovsVentana = { movs: MovEB[]; desde: string; degradada: boolean }
+
+export async function getMovimientos(accountUid: string, dateFromOverride?: string): Promise<MovEB[]> {
+  return (await getMovimientosConVentana(accountUid, dateFromOverride)).movs
+}
+
+// Enable Banking exige un rango de fechas para las transacciones; sin date_from devuelve
+// vacío. Por defecto ~89 días para el sync diario, con FALLBACK a ventanas más cortas
+// (30 → 7 días) si el banco rechaza la petición: Kutxabank respondió «Account not found /
+// AccountNotAccessibleException» (HTTP 400) a la ventana larga en 3 sesiones RECIÉN
+// autorizadas seguidas (16-17/08/2026) — con la sesión AUTHORIZED y detalle/saldo sirviendo,
+// así que el sospechoso es el rango, no el consentimiento. Con dateFromOverride explícito
+// (importar histórico) NO se degrada: si esa ventana falla, falla — degradarla en silencio
+// importaría MENOS de lo pedido sin que nadie lo sepa.
+export async function getMovimientosConVentana(accountUid: string, dateFromOverride?: string): Promise<MovsVentana> {
+  if (dateFromOverride) {
+    return { movs: await pedirTransacciones(accountUid, dateFromOverride), desde: dateFromOverride, degradada: false }
+  }
+  const ventanas = [89, 30, 7]
+  let ultimoError: unknown = null
+  for (const dias of ventanas) {
+    const desde = diasAtrasISO(dias)
+    try {
+      const movs = await pedirTransacciones(accountUid, desde)
+      return { movs, desde, degradada: dias !== ventanas[0] }
+    } catch (e) {
+      ultimoError = e
+      // Solo tiene sentido reintentar ante un rechazo del banco/EB (4xx); un fallo de red o
+      // 5xx con otra ventana pediría lo mismo a la misma infraestructura caída.
+      if (!/HTTP 4\d\d/.test(String(e))) throw e
+    }
+  }
+  throw ultimoError
 }

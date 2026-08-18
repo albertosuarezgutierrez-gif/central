@@ -10,7 +10,7 @@
 import { createHash } from 'node:crypto'
 import { Prisma } from '@prisma/client'
 import { prisma } from './db'
-import { getSesion, getDetalleCuenta, getSaldo, getMovimientos, type MovEB } from './enablebanking'
+import { getSesion, getDetalleCuenta, getSaldo, getMovimientosConVentana, type MovEB, type MovsVentana } from './enablebanking'
 
 function hashMov(cbId: string, m: MovEB): string {
   // Dedupe ESTABLE entre pasadas, por CONTENIDO. Ni el entry_reference ni el accountUid de
@@ -26,21 +26,43 @@ function hashMov(cbId: string, m: MovEB): string {
 
 // Sincroniza todas las cuentas de una sesión vinculada. Idempotente (upsert + dedupe).
 // dateFrom: override opcional para importar histórico (p. ej. "2026-01-01"). Por defecto 89 días.
+//
+// `avisos` distingue «el banco no devolvió nada» de «no se pudo preguntar»: un fallo del
+// endpoint de transacciones aquí NO puede colapsar a lista vacía en silencio — con el saldo
+// actualizándose a diario, insertar 0 parecería «no hay movimientos» durante semanas
+// (pasó del 11 al 16/08/2026: 6 días secos con la sesión viva y ni un error visible).
 export async function sincronizarSesion(
   cuentaId: string,
   sociedadId: string,
   sessionId: string,
   dateFrom?: string,
-): Promise<{ cuentas: number; insertados: number; duplicados: number }> {
+): Promise<{ cuentas: number; insertados: number; duplicados: number; avisos: string[] }> {
   const ses = await getSesion(sessionId)
   let cuentas = 0, insertados = 0, duplicados = 0
+  const avisos: string[] = []
+
+  // Diagnóstico de raíz ANTES de tocar cuentas: si Enable Banking ya dice que la sesión no
+  // está AUTHORIZED (CLOSED/EXPIRED/REVOKED — p. ej. el banco la invalidó al autorizar una
+  // re-vinculación posterior), los fallos por cuenta («Account not found», «authentication
+  // failure») son solo el síntoma. Se intenta igual (conservador), pero el aviso lleva la causa.
+  if (ses.status && ses.status !== 'AUTHORIZED') {
+    avisos.push(`sesión …${sessionId.slice(-6)} (${ses.aspsp ?? '?'}): estado ${ses.status} en Enable Banking — re-vincular en /banca`)
+  }
 
   for (const accountUid of ses.accounts ?? []) {
-    const [detalle, saldo, movs] = await Promise.all([
-      getDetalleCuenta(accountUid).catch(() => null),
+    let movsFallo: string | null = null
+    const [detalle, saldo, ventana] = await Promise.all([
+      getDetalleCuenta(accountUid).catch((e: unknown) => {
+        avisos.push(`detalle de cuenta …${accountUid.slice(-6)} (${ses.aspsp ?? '?'}): ${String(e).slice(0, 160)}`)
+        return null
+      }),
       getSaldo(accountUid).catch(() => null),
-      getMovimientos(accountUid, dateFrom).catch(() => [] as MovEB[]),
+      getMovimientosConVentana(accountUid, dateFrom).catch((e: unknown) => {
+        movsFallo = String(e).slice(0, 160)
+        return { movs: [] as MovEB[], desde: '', degradada: false } satisfies MovsVentana
+      }),
     ])
+    const movs = ventana.movs
     const iban = detalle?.iban || accountUid
     // Si getDetalleCuenta falló, accountUid es un UUID opaco (no un IBAN real). Insertar
     // ese UUID como IBAN crea una cuenta_bancaria fantasma que burla el dedupe cross-sesión.
@@ -48,6 +70,14 @@ export async function sincronizarSesion(
     if (!/^[A-Z]{2}[0-9]{2}/.test(iban)) continue
     const banco = ses.aspsp || detalle?.nombre || 'Banco (PSD2)'
     const mascara = iban.length >= 4 ? `****${iban.slice(-4)}` : iban
+
+    // Saldo ANTES del upsert: si luego cambia con 0 transacciones devueltas, el feed está roto
+    // (el upsert pisa saldo_actual y pone saldo_fecha=hoy siempre, así que no se puede mirar después).
+    const previa = await prisma.$queryRaw<Array<{ saldo: string | null }>>`
+      SELECT saldo_actual::text AS saldo FROM cuentas_bancarias
+      WHERE sociedad_id = ${sociedadId}::uuid AND iban = ${iban}
+    `
+    const saldoPrevio = previa.length ? (previa[0].saldo != null ? Number(previa[0].saldo) : null) : undefined
 
     const filas = await prisma.$queryRaw<Array<{ id: string }>>`
       INSERT INTO cuentas_bancarias (cuenta_id, sociedad_id, banco, iban, iban_mascara, divisa, saldo_actual, saldo_fecha)
@@ -135,25 +165,63 @@ export async function sincronizarSesion(
         await Promise.allSettled(nuevos.map(m => categorizarYAlertar(cbId, m)))
       }
     }
+
+    if (movsFallo) {
+      avisos.push(`${banco} ${mascara}: /transactions falló — ${movsFallo}`)
+    } else if (ventana.degradada) {
+      // La ventana larga fue rechazada y una corta funcionó: hay datos, pero SOLO desde
+      // `desde` — se declara para que nadie lea el hueco anterior como «no hubo movimientos».
+      // El prefijo ℹ️ marca el aviso como INFORMATIVO: el semáforo (psd2-semaforo.ts) no lo
+      // trata como feed roto — el feed FUNCIONA, solo que con ventana corta.
+      avisos.push(`ℹ️ ${banco} ${mascara}: el banco rechazó la ventana de 89 días — importado solo desde ${ventana.desde}`)
+    } else if (movs.length === 0 && previa.length > 0) {
+      // Ventana de 89 días VACÍA en una cuenta ya conocida: aunque hoy no hubiera nada nuevo,
+      // el banco devolvería el histórico reciente (que saldría como duplicados). Cero absoluto
+      // = el consentimiento sirve saldos pero ya no transacciones (SCA/renovación pendiente).
+      const drift = saldoPrevio != null && saldo !== null && Math.abs(saldo - saldoPrevio) > 0.005
+        ? ` y el saldo SÍ cambió (${saldoPrevio.toFixed(2)} → ${saldo.toFixed(2)})`
+        : ''
+      avisos.push(`${banco} ${mascara}: 0 transacciones en toda la ventana${drift} — probable consentimiento degradado, re-vincular en /banca`)
+    }
   }
 
+  // Persiste el desenlace del sync en la conexión para el panel /banca (lib/psd2-estado.ts):
+  // `[]` explícito = pasada limpia; con contenido = qué falló. NULL queda solo en filas que
+  // ningún sync nuevo ha tocado («no se sabe», no «limpio»).
   await prisma.$executeRaw`
-    UPDATE conexiones_banco SET estado = 'vinculada', ultimo_sync = now()
+    UPDATE conexiones_banco SET estado = 'vinculada', ultimo_sync = now(),
+      ultimo_avisos = ${JSON.stringify(avisos)}::jsonb,
+      avisos_at = ${avisos.length > 0 ? new Date() : null}
     WHERE requisition_id = ${sessionId} AND cuenta_id = ${cuentaId}::uuid
   `
-  return { cuentas, insertados, duplicados }
+  return { cuentas, insertados, duplicados, avisos }
 }
 
 // Re-sincroniza todas las conexiones vinculadas de todas las cuentas (cron diario).
 // dateFrom: override para importar histórico (p. ej. "2026-01-01"). Por defecto 89 días.
-export async function sincronizarTodas(dateFrom?: string): Promise<{ conexiones: number; insertados: number }> {
+// Los fallos por sesión NO se tragan: van en `avisos` (y a los logs) para que el cron
+// pueda avisar por Telegram — un sync que falla en silencio se lee como «no hay movimientos».
+export async function sincronizarTodas(dateFrom?: string): Promise<{ conexiones: number; insertados: number; avisos: string[] }> {
   const conns = await prisma.$queryRaw<Array<{ cuenta_id: string; sociedad_id: string; requisition_id: string }>>`
     SELECT cuenta_id, sociedad_id, requisition_id FROM conexiones_banco WHERE estado = 'vinculada'
   `
   let insertados = 0
+  const avisos: string[] = []
   for (const c of conns) {
-    const r = await sincronizarSesion(c.cuenta_id, c.sociedad_id, c.requisition_id, dateFrom).catch(() => null)
-    if (r) insertados += r.insertados
+    const r = await sincronizarSesion(c.cuenta_id, c.sociedad_id, c.requisition_id, dateFrom).catch((e: unknown) => {
+      avisos.push(`sesión …${c.requisition_id.slice(-6)}: sync falló — ${String(e).slice(0, 160)}`)
+      return null
+    })
+    if (r) { insertados += r.insertados; avisos.push(...r.avisos) }
+    else {
+      // La sesión entera falló (getSesion lanzó): deja el motivo en la conexión para el panel —
+      // aquí no llega el UPDATE final de sincronizarSesion.
+      await prisma.$executeRaw`
+        UPDATE conexiones_banco SET ultimo_avisos = ${JSON.stringify([avisos[avisos.length - 1]])}::jsonb, avisos_at = now()
+        WHERE requisition_id = ${c.requisition_id} AND cuenta_id = ${c.cuenta_id}::uuid
+      `.catch(() => {})
+    }
   }
-  return { conexiones: conns.length, insertados }
+  if (avisos.length) console.error('[psd2-sync] avisos:', avisos.join(' | '))
+  return { conexiones: conns.length, insertados, avisos }
 }

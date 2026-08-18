@@ -50,9 +50,12 @@ Reglas de acciones:
 // analista de cifras que Llama y gratis con la misma NVIDIA_API_KEY. Un id erróneo NO rompe (degrada
 // a Groq → Kimi). CONTABLE_MODEL='' fuerza el default de la pasarela (Llama). Para el chat conviene
 // un modelo RÁPIDO (no R1) para no agotar el timeout.
+// Swap 17/08/2026: `deepseek-ai/deepseek-v3` YA NO existe en el API de NIM (verificado contra
+// `/v1/models` con key real; solo quedan deepseek-coder-6.7b y deepseek-v4-flash-0731). El sucesor
+// v4-flash se probó en vivo con una pregunta de cifras: respuesta correcta, 1 frase, sin <think>.
 const MODELO_CONTABLE = process.env.CONTABLE_MODEL === ''
   ? undefined
-  : (process.env.CONTABLE_MODEL ?? 'deepseek-ai/deepseek-v3')
+  : (process.env.CONTABLE_MODEL ?? 'deepseek-ai/deepseek-v4-flash-0731')
 
 export async function responder(
   cuentaId: string, mensaje: string, canal = 'web',

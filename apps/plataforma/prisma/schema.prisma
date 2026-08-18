@@ -98,6 +98,24 @@ model FiscalNovedad {
   @@map("fiscal_novedades")
 }
 
+// Radar de ayudas/subvenciones (skill fiscal-novedades): convocatorias con plazo.
+// tenant NULL = Alberto (se pintan en /finanzas); con valor = radar por cliente.
+model FiscalAyuda {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  titulo       String
+  organismo    String?
+  cuantiaTexto String?   @map("cuantia_texto")
+  encaje       String?
+  url          String?
+  plazoFin     DateTime? @map("plazo_fin") @db.Date
+  tenant       String?
+  descartado   Boolean   @default(false)
+  detectadoAt  DateTime  @default(now()) @map("detectado_at") @db.Timestamptz(6)
+
+  @@index([descartado, plazoFin])
+  @@map("fiscal_ayudas")
+}
+
 // ── Trading-analista (IBKR, Fase 1 · paper). Tablas nuevas y aisladas; no tocan otras verticales ──
 model TradingWatchlist {
   id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -372,4 +390,40 @@ model BrokerSaldo {
   @@unique([cuentaId, broker])
   @@index([cuentaId])
   @@map("broker_saldos")
+}
+
+// 💼 Cartera REAL del bróker (posición a posición) para el panel /trading. La refresca la pasada
+// diaria del agente `trading-analista` por POST /api/trading/cartera (la app no habla con IBKR).
+// Importes en la DIVISA de cada posición (no siempre EUR); NULL = IBKR no dio el dato, jamás 0.
+model TradingCarteraReal {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId       String   @map("cuenta_id") @db.Uuid
+  broker         String
+  simbolo        String
+  descripcion    String?
+  cantidad       Decimal  @db.Decimal(18, 4)
+  precioMedio    Decimal? @map("precio_medio") @db.Decimal(18, 6)
+  precioActual   Decimal? @map("precio_actual") @db.Decimal(18, 6)
+  valorMercado   Decimal? @map("valor_mercado") @db.Decimal(16, 2)
+  pnlNoRealizado Decimal? @map("pnl_no_realizado") @db.Decimal(16, 2)
+  pnlDiario      Decimal? @map("pnl_diario") @db.Decimal(16, 2)
+  divisa         String   @default("EUR")
+  actualizadoEn  DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@unique([cuentaId, broker, simbolo])
+  @@index([cuentaId])
+  @@map("trading_cartera_real")
+}
+
+// Marca de sincronización de la cartera real: sin fila = «IBKR sin leer todavía»; fila con
+// num_posiciones=0 = «leída y vacía». Distingue el «no lo sé» del «no hay» (regla del repo).
+model TradingCarteraRealSync {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId      String   @map("cuenta_id") @db.Uuid
+  broker        String
+  numPosiciones Int      @default(0) @map("num_posiciones")
+  actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@unique([cuentaId, broker])
+  @@map("trading_cartera_real_sync")
 }

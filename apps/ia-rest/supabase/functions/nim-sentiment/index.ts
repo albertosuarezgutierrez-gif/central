@@ -15,7 +15,7 @@ async function clasificar(apiKey: string, texto: string): Promise<{ label: strin
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
-      model: 'meta/llama-3.3-70b-instruct',
+      model: 'z-ai/glm-5.2',
       max_tokens: 120,
       temperature: 0.1,
       messages: [

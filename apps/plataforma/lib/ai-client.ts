@@ -9,7 +9,8 @@ import { openrouterConfigPasarela } from '@/lib/ia-director'
 import { registrarUso, estimarTokens, costeEur } from '@/lib/ai-gateway'
 import { parsearJsonIa } from '@/lib/agente-facturas/parsear-json-ia'
 
-const NVIDIA_TEXT  = 'meta/llama-3.3-70b-instruct'
+// Swap 17/08/2026: el 3.3-70b deja de soportarse en NIM el 25/08/2026 (aviso en build.nvidia.com).
+const NVIDIA_TEXT  = 'z-ai/glm-5.2'
 const NVIDIA_VISION = 'meta/llama-3.2-90b-vision-instruct'
 
 /**
