@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-18T09:39:47Z",
+  "generadoEn": "2026-08-18T19:58:41Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4320,6 +4320,7 @@
       "trading_cantera",
       "trading_cartera_real",
       "trading_cartera_real_sync",
+      "trading_cartera_real_track",
       "trading_cohetes_rebalanceo",
       "trading_cohetes_track",
       "trading_estrategia_stats",

@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-17T10:10:29Z",
-  "sha": "4fb4dcc25bb864c3deac8fa6ea36ecf687f7d0a0",
+  "generadoEn": "2026-08-18T19:58:41Z",
+  "sha": "72a8efffd04e4f420f551240f918f3cfdf99aa02",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -49091,7 +49091,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5b3d8965d90e"
+      "hash": "1c041cff9b63"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/trading/RadarExplorador.tsx",
@@ -49153,7 +49153,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 22
+          "linea": 23
         },
         {
           "nombre": "pctN",
@@ -49161,7 +49161,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 25
+          "linea": 26
         },
         {
           "nombre": "pct0N",
@@ -49169,7 +49169,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 28
+          "linea": 29
         },
         {
           "nombre": "CurvaForward",
@@ -49177,7 +49177,7 @@
           "exportada": false,
           "params": "{ serie }: { serie: { m: number | null; b: number }[] }",
           "retorno": null,
-          "linea": 34,
+          "linea": 35,
           "resumen": "Mini-curva del forward (SVG puro, sin dependencias): línea de la cesta (MEDIANA) vs el SPY a lo largo de los snapshots persistidos. La mediana es la métrica de decisión (un outlier no la mueve)."
         },
         {
@@ -49186,7 +49186,16 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 51
+          "linea": 52
+        },
+        {
+          "nombre": "CurvaCarteraReal",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ filas, divisa }: { filas: FilaTrack[]; divisa: string }",
+          "retorno": null,
+          "linea": 60,
+          "resumen": "📈 Evolución de la cartera REAL (dinero de Alberto): línea del VALOR de mercado contra la línea discontinua de lo INVERTIDO (coste). El área entre ambas es la ganancia/pérdida no realizada. SVG puro s"
         },
         {
           "nombre": "dinero",
@@ -49194,22 +49203,22 @@
           "exportada": false,
           "params": "n: number, divisa: string",
           "retorno": "string",
-          "linea": 98,
+          "linea": 155,
           "resumen": "Importe en la divisa de la posición, formato español (regla global: nunca estilo dólar)."
         },
         {
           "nombre": "TradingDashboard",
           "kind": "function",
           "exportada": true,
-          "params": "{ carteraCohetes, carteraReal }: { carteraCohetes: CarteraCohetesData | null; carteraReal?: CarteraRealUI | null | 'error' }",
+          "params": "{ carteraCohetes, carteraReal, trackCartera }: { carteraCohetes: CarteraCohetesData | null; carteraReal?: CarteraRealUI | null | 'error'; trackCartera?: FilaTrack[] | 'error' }",
           "retorno": null,
-          "linea": 107,
+          "linea": 164,
           "resumen": "`carteraReal` solo llega desde la página con SESIÓN (app/(usuario)/trading/page.tsx): es dinero REAL de Alberto y la vista de invitado (/invitado/trading) no debe verlo — ahí queda undefined y la secc"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2ca09888a91c"
+      "hash": "2a8cb839095a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -57303,7 +57312,7 @@
         "next"
       ],
       "rutaApi": "/api/trading/cartera",
-      "hash": "fc553fc09df5"
+      "hash": "8abf057588af"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/descubrir/route.ts",
@@ -70808,6 +70817,8 @@
       "resumen": "💼 Cartera REAL del bróker — IO (Prisma). La escribe POST /api/trading/cartera (pasada diaria del agente trading-analista, que es quien lee IBKR); la lee el panel /trading. La parte pura (normalización + resumen) vive en cartera-real.ts.",
       "exporta": [
         "reemplazarCarteraReal",
+        "registrarTrackCartera",
+        "getTrackCartera",
         "getCarteraReal"
       ],
       "funciones": [
@@ -70817,8 +70828,26 @@
           "exportada": true,
           "params": "cuentaId: string, broker: string, posiciones: PosicionRealIn[],",
           "retorno": "Promise<void>",
-          "linea": 19,
+          "linea": 20,
           "resumen": "Reemplaza la foto completa de la cartera de una cuenta+bróker (transacción: borrar + insertar + marcar sincronización). Un array vacío es válido: significa «leída, sin posiciones»."
+        },
+        {
+          "nombre": "registrarTrackCartera",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, broker: string, posiciones: PosicionRealIn[], cuando: Date = new Date(),",
+          "retorno": "Promise<number>",
+          "linea": 50,
+          "resumen": "Anota el punto del día en la serie histórica (un punto por día y divisa; la última pasada del día lo reescribe). Se llama DESPUÉS de guardar la foto y es best-effort en el endpoint: perder un punto de"
+        },
+        {
+          "nombre": "getTrackCartera",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, dias = 400",
+          "retorno": "Promise<FilaTrack[]>",
+          "linea": 74,
+          "resumen": "Serie histórica de la cartera real (últimos `dias`). [] = sin puntos todavía — la curva arranca el día que la pasada empieza a anotarlos, y la UI lo dice en vez de fingir una línea plana."
         },
         {
           "nombre": "getCarteraReal",
@@ -70826,13 +70855,13 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<CarteraRealUI | null>",
-          "linea": 49,
+          "linea": 94,
           "resumen": "Última foto conocida de la cartera real de la cuenta. `null` = NUNCA sincronizada (distinto de «sin posiciones»: eso es un objeto con posiciones []). Si hubiera varios brókers, devuelve el sincronizad"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a36d87d0e007"
+      "hash": "b183b79aa774"
     },
     {
       "ruta": "apps/plataforma/lib/trading/cartera-real.ts",
@@ -70884,6 +70913,58 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "b0734d89d48b"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/cartera-track.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "📈 Serie histórica de la cartera REAL — parte PURA (sin BD). El IO vive en cartera-real-io.ts. Por qué existe: `trading_cartera_real` es una FOTO que se reemplaza en cada pasada (borrar + insertar), y `broker_saldos` es una fila que se pisa. Con ese diseño no hay forma de dibujar la evolución: el pa",
+      "exporta": [
+        "diaMadrid",
+        "filasTrack",
+        "serieCartera",
+        "divisasDeTrack"
+      ],
+      "funciones": [
+        {
+          "nombre": "diaMadrid",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: Date",
+          "retorno": "string",
+          "linea": 30,
+          "resumen": "Fecha en el huso de Madrid (la pasada corre de noche en España; usar UTC movería de día los puntos de las pasadas posteriores a medianoche local)."
+        },
+        {
+          "nombre": "filasTrack",
+          "kind": "function",
+          "exportada": true,
+          "params": "resumen: ResumenDivisa[], cuando: Date",
+          "retorno": "FilaTrack[]",
+          "linea": 37,
+          "resumen": "Un punto de serie por divisa a partir del resumen de la foto de hoy (`resumenPorDivisa`). Sin posiciones NO se escribe punto: «leída y vacía» ya lo registra `trading_cartera_real_sync`, y un 0 sin div"
+        },
+        {
+          "nombre": "serieCartera",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: FilaTrack[], divisa: string",
+          "retorno": "SerieCartera",
+          "linea": 70,
+          "resumen": "Prepara la serie de UNA divisa para pintarla. Los puntos sin `valor` no se dibujan (no hay nada que situar en el eje) pero se cuentan, para que el pie del gráfico pueda decir que faltan."
+        },
+        {
+          "nombre": "divisasDeTrack",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: FilaTrack[]",
+          "retorno": "string[]",
+          "linea": 88,
+          "resumen": "Divisas presentes en la serie, la de más peso primero (por el valor del último punto)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e5ee65b368bb"
     },
     {
       "ruta": "apps/plataforma/lib/trading/concentracion.ts",
@@ -92712,7 +92793,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2474,
-    "funciones": 6706
+    "archivos": 2475,
+    "funciones": 6713
   }
 }
