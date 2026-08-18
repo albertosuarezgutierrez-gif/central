@@ -3,6 +3,15 @@
 > **Para qué (idea G).** El **carril 1** de la auditoría diaria empuja los arreglos de texto
 > (memoria/skills/docs/manuales) **directos a `main` sin que nadie los revise**. Esta bitácora
 > es la transparencia de ese "se aplica solo": cada cambio auto-aplicado deja una línea aquí
+
+- **2026-08-18** · `docs/CONTEXTO-SESIONES.md` · entrada nueva de la pasada de hoy + 2 bullets de
+  «Estado vivo» actualizados con su desenlace real (pricing Booking Genius/NR/oferta ejecutados,
+  PASO 0 del trigger de trading estrenado 17/08) + cabecera re-fechada a 18/08 · ambos pendientes
+  llevaban 2-3 días resueltos por commits posteriores sin reconciliar el bloque · pasada ligera
+  diaria, rango 39 commits desde 2026-08-16 (auditoría profunda) · commit de esta auditoría
+- **2026-08-18** · `docs/AUDITORIA-2026-08.md` · sección "Actualización 2026-08-18 — auditoría
+  diaria (ligera)" añadida · informe de esta pasada (heartbeat 23/23 ✅, 0 PRs abiertos, sin
+  hallazgos de código/infra) · commit de esta auditoría
 > para que Alberto lo ojee de un vistazo y, si algo no le cuadra, lo revierta (queda en git).
 >
 > **Cómo se mantiene.** La propia auditoría añade entradas arriba del todo, en el mismo commit

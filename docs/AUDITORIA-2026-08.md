@@ -1,5 +1,56 @@
 # Auditoría diaria — agosto 2026
 
+# Actualización 2026-08-18 — auditoría diaria (ligera)
+
+Rango: 39 commits desde la última auditoría (2026-08-16 PROFUNDA), `27225d8..7f006ec` en `main`.
+Nota: no hubo pasada el 17/08 (día de actividad intensísima — 39 commits, casi todos ya
+autodocumentados PR-a-PR en `docs/CONTEXTO-SESIONES.md`). Rango revisado por completo sin hallazgos
+de código/infra; carril 2 vacío hoy.
+
+## ✅ Heartbeat de crons y agentes (23 huellas) — 23/23 ✅
+- **a) Latidos `agente_latidos` (12):** todos `ok=true`, dentro de cadencia. `trading_watchdog`
+  con 67,6h sin OK — esperado (cron mar-sáb, hoy es martes y aún no ha corrido; el hueco cubre el
+  fin de semana sin actividad, no es mudo).
+- **b) Tablas de dominio (11):** todas ✅, la más antigua `ia-director-refresh` a 21,1h (umbral 192h).
+- Sin ningún ⛔. Sin causa que investigar.
+
+## ✅ Backlog de PRs de rutinas + salud del automerge — sin nada que vigilar
+`gh pr list --state open` → **0 PRs abiertos** (los 3 del 16/08 — #1436/#1437/#1441 — ya mergeados
+según la memoria). Sin backlog, no hace falta comprobar la cadencia del workflow hoy.
+
+## ✅ Integridad estructural — sin hallazgos
+Lockfile (`pnpm-lock.yaml`) presente. Los 10 `apps/*/vercel.json` (incluida `housesevillana`) llevan
+`ignoreCommand: node ../../scripts/vercel-ignore-build.mjs apps/<app>`.
+
+## ✅ Coherencia de docs/skills — sin drift nuevo
+`docs/SKILLS.md` reconciliado contra las 32 skills reales de `.claude/skills/`: todas están
+documentadas, sin huérfanos. `docs/FUENTES-DE-VERDAD.md` tiene fila para `apps/mariscos`;
+`apps/almacen` sigue sin `CLAUDE.md` propio ni fila — es un pendiente YA declarado correctamente
+en `MATRIZ.md` (no es información falsa, es un hueco conocido), no se traduce en un hallazgo nuevo.
+
+## ✅ Reconciliación de memoria — 2 pendientes de «Estado vivo» cerrados con su desenlace
+De los 39 commits del rango, prácticamente todos llevaban su propio commit `docs(...)` de memoria
+emparejado — hueco de reconciliación PR-a-PR: ninguno. El único drift real estaba en el bloque
+**«Estado vivo»** (sin tocar desde el 16/08, con dos pendientes ya resueltos por commits
+posteriores):
+- **Pricing SIVRA — canal Booking:** el pendiente «que Alberto revise el nivel Genius y el
+  descuento móvil» (15/08) ya se ejecutó el 16/08 en la extranet (Genius→No, NR −10%, oferta 8%) y
+  se verificó el `channel_markup=1.20` en los 4 pisos (17/08, PR #1449). Bullet actualizado con el
+  desenlace y el siguiente hito real (medición Fase 4, 30/08).
+- **Trading — PASO 0 del trigger:** el pendiente «el PASO 0 no distingue una recuperación
+  backdateada» (15/08) se cerró con el trigger reprogramado + estreno real el 17/08 (#1471): el
+  disparo primario volvió a fallar (2/2) pero la repesca lo cubrió sin duplicar datos. Bullet
+  actualizado; queda a vigilar si el disparo primario falla una 3ª vez (umbral de Alberto para
+  abrir ticket a soporte, ya anotado).
+- Cabecera del bloque re-fechada a 18/08/2026.
+
+## ✅ Manuales de usuario — nada que tocar
+Ningún cambio del rango toca `apps/ia-rest/src/app/**` ni `apps/ia-rest/public/**` con una feature
+visible para camarero/cocina/owner (los cambios de UI del rango — botón PSD2 en `/banca`, sección
+«Cartera real» en `/trading` — son de `apps/plataforma`, fuera del alcance de este check).
+
+---
+
 # Actualización 2026-08-16 — auditoría diaria (PROFUNDA)
 
 Rango: mismo que la pasada ligera de hoy (49 commits desde el 14/08, `716c8d6..24e8ced`). **Nota de
