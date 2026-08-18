@@ -334,7 +334,10 @@
 - **16/08: PRIMERA orden real vía copiloto.** VWCE (Vanguard FTSE All-World Acc, IBIS2): 188 part.
   LIMIT 169,80€ GTC (~31.922€, cierre vie. 168,88€). Claude preparó la instrucción → Alberto la envió
   en la app → orden viva `PENDING_NEW` (se ejecuta lunes en apertura Xetra). El núcleo NO se toca.
-- Pendiente: verificar ejecución el lunes (la pasada 💼 debe cantarla); reservas directas Booking → aparte.
+- **EJECUTADA (lunes 17/08; verificada 18/08 contra IBKR):** 188 part. a precio medio **169,44€**
+  = 31.855,60€ invertidos, liquidez restante 410,46€. Alerta «VWCE −15%» (≤143,50€, email) creada.
+- Pendiente: DCA 100% automático lo configura Alberto (orden permanente banco + «Recurring
+  Investment» en IBKR; el agente solo audita); reservas directas Booking → conversación aparte.
 
 ### 👁️ (15/08/2026) Registro de accesos/actividad de ialimp + historial en el god-panel de plataforma
 - Alberto preguntó por el último acceso de Vanessa: no existía rastro (el login de empresa solo tenía el
