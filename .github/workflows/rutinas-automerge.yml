@@ -84,6 +84,9 @@ jobs:
           # aún puede empujar la entrada de memoria — mergear antes se la comería. Aplica también
           # a los merges que empuja este propio bot, por el mismo motivo.
           QUIETUD_MIN: '20'
+          # Solo para el camino de conflicto (ver más abajo): hace falta un token de usuario
+          # porque los pushes con GITHUB_TOKEN no disparan la CI.
+          PAT: ${{ secrets.GH_PAT_TRIGGER }}
         run: |
           set -euo pipefail
 
@@ -103,6 +106,19 @@ jobs:
               docs/AUTO-APLICADOS.md)    return 0 ;;
               docs/AUDITORIA-*.md)       return 0 ;;
               docs/memoria/*.md)         return 0 ;;
+              # Generado entero por scripts/auditar-estructura.mjs en cada pasada: es un
+              # RETRATO del repo, no una decisión. Entró aquí el 19/08/2026, cuando el
+              # ruleset de `main` dejó de admitir el push directo de la auditoría.
+              apps/plataforma/lib/estructura.generated.json) return 0 ;;
+              docs/ARQUITECTURA.generated.md)                return 0 ;;
+              docs/mapa-funciones.generated.json)            return 0 ;;
+              # Landing de House Sevillana: la reescribe el agente SEO de sivra cada lunes.
+              # Es código, sí, pero es el ÚNICO fichero de código que escribe un agente sin
+              # humano delante, y lo guarda el test que pilló el fallo de #1487: si el agente
+              # rompe el HTML español, `apps/housesevillana/app/i18n/traducciones.test.ts` se
+              # pone rojo, el check required no pasa y este bot NO lo mergea. Sin ese guardián
+              # esta línea no debería existir.
+              apps/housesevillana/app/route.ts)              return 0 ;;
               *)                         return 1 ;;
             esac
           }
@@ -254,10 +270,23 @@ jobs:
           arriba del todo. Se conservan las dos, primero la que ya estaba en main.
           Resuelto por .github/workflows/rutinas-automerge.yml + scripts/resolver-conflicto-registro.mjs."
 
-            if git push -q origin HEAD:main; then
-              echo "✅ conflicto resuelto y mergeado en main."
+            # Antes esto empujaba el merge directamente a `main`. Desde el 19/08/2026 el ruleset
+            # «main - CI obligatorio» lo rechaza (y `github-actions[bot]` no puede saltárselo), así
+            # que el merge va a la RAMA DEL PR: queda "main mergeado dentro", el PR pasa a
+            # MERGEABLE y la próxima pasada lo cierra por el camino normal (6a).
+            #
+            # Se empuja con GH_PAT_TRIGGER y no con GITHUB_TOKEN a propósito: los pushes hechos
+            # con GITHUB_TOKEN NO disparan workflows, así que el PR se quedaría con la CI del sha
+            # viejo y sin checks para el sha nuevo — atascado para siempre en "sin checks".
+            if [ -z "${PAT:-}" ]; then
+              avisar_conflicto "$n" "conflicto resuelto, pero falta el secret GH_PAT_TRIGGER para empujarlo a la rama del PR (con GITHUB_TOKEN la CI no volvería a correr y el PR quedaría atascado sin checks)"
+              git merge --abort >/dev/null 2>&1 || true
+              echo "::endgroup::"; continue
+            fi
+            if git push -q "https://x-access-token:${PAT}@github.com/${REPO}.git" "HEAD:${rama}"; then
+              echo "✅ conflicto resuelto y empujado a $rama — la CI vuelve a correr y la próxima pasada lo mergea."
             else
-              echo "push rechazado (main se movió mientras tanto) — se reintenta en la próxima pasada."
+              echo "push a $rama rechazado (la rama se movió mientras tanto) — se reintenta en la próxima pasada."
             fi
             echo "::endgroup::"
           done
