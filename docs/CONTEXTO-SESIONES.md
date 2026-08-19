@@ -180,18 +180,21 @@
   primario sigue fallando 2/2 — a vigilar, no bloqueante). Sin manuales de usuario que tocar (ningún
   cambio del rango es feature visible en `apps/ia-rest`).
 
-### 🔑 (19/08/2026) SEO housesevillana sigue en 403 — y ahora el token se puede PROBAR en 1 s
-- Alberto pulsó «Actualizar SEO ahora» y salió el mismo `403 Resource not accessible by personal access
-  token`. No es código: `secrets_audit` dice que la última (y única) escritura de `GITHUB_TOKEN` fue el
-  **03/08**, antes de unificar la landing el 12/08 → el PAT sigue scoped al repo externo viejo.
-  Confirmado por API que `central` es **público** (`private:false`), de ahí que el GET cuele y solo falle el PUT.
-- **PENDIENTE de Alberto (ops), más barato de lo que decía la nota del 17/08:** basta con EDITAR el PAT
-  fine-grained (Repository access = `central`, Contents: Read and write). Editar permisos NO cambia el valor
-  del token → no hay que re-pegarlo en `/operador/secretos` ni redesplegar. Solo si caducó, regenerar.
-- Repo: botón **🔑 Probar acceso a GitHub** en `/sivra/seo` + `sondearEscritura`/`clasificarSondeo` en los DOS
-  `seo-landing.ts` (PUT con sha imposible: 403 = sin permiso, 409 = puede escribir; nunca escribe) y rutas
-  `/api/sivra/seo-token-check` (plataforma) y `/api/seo-token-check` (sivra — el token que usa el cron del lunes).
-  3 estados, solo el 409 se pinta verde. Corregida la nota estale de `SECRETS_REGISTRY` que aún citaba el repo viejo.
+### ✅ (19/08/2026) SEO housesevillana RESUELTO — al PAT le faltaba el REPO, no el permiso
+- El 403 del cron del 17/08 se cerró hoy. Diagnóstico con evidencia, no suposición: `secrets_audit` decía que
+  la única escritura de `GITHUB_TOKEN` fue el **03/08** (antes de unificar la landing el 12/08) y la API que
+  `central` es **público** (`private:false`) — de ahí que el GET colara y solo fallara el PUT.
+- La causa fina: el PAT `seo-housesevillana-panel` YA tenía `Contents: Read and write`; lo que le faltaba era
+  tener `albertosuarezgutierrez-gif/central` en *Repository access* (solo listaba el repo externo viejo).
+  Alberto lo editó sin regenerar → mismo valor, sin re-pegar en `/operador/secretos` ni redesplegar.
+  **Verificado de punta a punta:** commit `79db75e` `chore(seo): actualización automática [2026-08-19]`.
+- Repo (PR #1488): botón **🔑 Probar acceso a GitHub** en `/sivra/seo` + `sondearEscritura`/`clasificarSondeo`
+  en los DOS `seo-landing.ts` (PUT con sha imposible: 403 = sin permiso, 409 = puede escribir; nunca escribe)
+  y rutas `/api/sivra/seo-token-check` (plataforma) y `/api/seo-token-check` (sivra — el token del cron del
+  lunes, que tiene su propia copia). 3 estados, solo el 409 se pinta verde. Corregida la nota estale de
+  `SECRETS_REGISTRY` que aún citaba el repo viejo.
+- **Suelto (menor):** ese PAT NO tiene caducidad y conserva el repo viejo `house-sevillana-landing` en su
+  selección. Recomendado a Alberto ponerle 1 año y quitar el repo muerto; decisión suya, sin hacer.
 
 ### 📈 (17/08/2026) Estreno del doble disparo de trading: la repesca SALVÓ la pasada — el disparo de las 20:15 murió OTRA VEZ
 - Check-in nocturno: el disparo de las 20:15Z no dejó NI UNA huella (2º fallo igual que el 14/08). La
