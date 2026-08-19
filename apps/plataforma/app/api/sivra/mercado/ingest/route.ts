@@ -26,10 +26,19 @@ const FUENTES_INGESTA = ["booking_mcp", "manual"]
 //   "guests":   4,                          // opcional, def. 4
 //   "currency": "EUR",                      // opcional, def. EUR
 //   "apartments": [
-//     { "name": "Singular Metropol", "price_night": 177, "price_total": 177,
+//     { "name": "Singular Metropol", "price_night": 177, "price_total": 354,
 //       "score": 8.7, "review_count": 1263, "location": "Centro" }
 //   ]
 // }
+//
+// `price_total` es el total de la VENTANA (el `price.book` del conector), no el de una noche.
+//
+// 🪞 Si entre los `apartments` viene NUESTRO propio anuncio (lo decide `esAnuncioPropio`, no el
+// prompt de la rutina), no entra como comparable: se guarda en `pricing_escaparate` como una
+// medición de la ventana entera —checkin, noches, aforo, total— y el servidor le añade la base de
+// Smoobu de esas mismas noches. Es el dato con el que `/api/sivra/pricing/canal` calibra la
+// conversión mercado→base del motor. La rutina lo pide explícitamente (bloque `escaparate` de
+// `/api/sivra/mercado/plan`), ya no depende de que el portal lo devuelva por casualidad.
 //
 // Auth de RUTINA (`isRoutineAuthorized`): acepta el token DEDICADO de bajo privilegio
 // `ALERTA_TOKEN` (header-only) o, por compatibilidad, el `CRON_SECRET` maestro.
@@ -86,10 +95,32 @@ export async function POST(req: NextRequest) {
    */
   const propios: string[] = []
 
+  // Noches de la ventana. Es un dato del CUERPO (checkin/checkout), no del apartamento, y hace
+  // falta para el escaparate propio: con una cuota fija por estancia, un precio sin duración no se
+  // puede interpretar (el mismo piso «mide» ×1,33 a 2 noches y ×1,18 a 3).
+  const noches = Math.round(
+    (new Date(`${checkout}T00:00:00Z`).getTime() - new Date(`${checkin}T00:00:00Z`).getTime()) / 86_400_000)
+  if (!Number.isFinite(noches) || noches <= 0) {
+    return NextResponse.json({ error: `checkout (${checkout}) no es posterior a checkin (${checkin})` }, { status: 400 })
+  }
+
   for (const apt of apartments) {
     const name  = apt?.name
-    const night = Number(apt?.price_night)
+    // El precio por noche se DERIVA del total si no viene: el conector devuelve `price.book` (el
+    // total de la ventana) y quien llama puede mandar solo eso. Antes, un item sin `price_night`
+    // se descartaba en silencio — que en el escaparate propio significa perder la medición entera
+    // y quedarse con los parámetros de canal viejos sin que nada lo delate.
+    const totalCrudo = Number(apt?.price_total)
+    const night = Number.isFinite(Number(apt?.price_night)) && Number(apt.price_night) > 0
+      ? Number(apt.price_night)
+      : (Number.isFinite(totalCrudo) && totalCrudo > 0 ? totalCrudo / noches : NaN)
     if (!name || !Number.isFinite(night) || night <= 0) { skipped.push(String(name ?? "?")); continue }
+    // Total de la VENTANA. `price.book` del conector ya lo es. Si solo llega el precio por noche se
+    // reconstruye multiplicando por las noches: el fallback anterior (`= price_night`) daba el
+    // precio de UNA noche etiquetado como total, que en una ventana de 4 noches es un 75% menos.
+    const totalVentana = Number.isFinite(totalCrudo) && totalCrudo > 0
+      ? Math.round(totalCrudo)
+      : Math.round(night * noches)
     // 🪞 Nuestro propio anuncio NO es mercado: escribirlo aquí ancla el ancla al precio que este
     // mismo motor acaba de poner. El raíl va en el endpoint, no solo en el prompt de la rutina.
     //
@@ -101,12 +132,33 @@ export async function POST(req: NextRequest) {
       propios.push(String(name))
       if (String(scenario).startsWith("prop_")) {
         try {
+          // 🚨 `base_total` lo calcula el SERVIDOR, no quien llama. Es la mitad del par: si la
+          // rutina mandara el precio del portal Y la base que ella cree, un desfase entre las dos
+          // (un snapshot viejo, otro piso) produciría una recta plausible y falsa, y esa recta
+          // decide el precio de TODAS las fechas. Aquí se suma `rate_snapshots.price_pricelabs`
+          // —que PESE AL NOMBRE es el precio vivo de Smoobu— de las noches de la ventana, con el
+          // snapshot más cercano al día de la medición. Si falta el precio de alguna noche,
+          // `base_total` queda NULL y el ajuste descarta la ventana: una base a medias no es una
+          // base baja, es una base desconocida.
           await prisma.$executeRaw(Prisma.sql`
-            INSERT INTO pricing_escaparate (property_id, rate_date, guests, price_night, portal, fuente)
-            VALUES (${String(scenario)}, ${checkin}::date, ${guests}, ${Math.round(night)}::integer,
-                    ${String(portal)}, ${fuente})
-            ON CONFLICT (property_id, rate_date, guests, portal, medido_el)
-            DO UPDATE SET price_night = EXCLUDED.price_night, created_at = now()`)
+            INSERT INTO pricing_escaparate
+              (property_id, checkin, noches, guests, precio_total, base_total, portal, fuente)
+            SELECT ${String(scenario)}, ${checkin}::date, ${noches}::integer, ${guests}::integer,
+                   ${totalVentana}::integer, b.base_total, ${String(portal)}, ${fuente}
+            FROM (
+              SELECT CASE WHEN COUNT(n.precio) = ${noches}::integer THEN SUM(n.precio)::int END AS base_total
+              FROM generate_series(${checkin}::date, ${checkin}::date + (${noches}::integer - 1), INTERVAL '1 day') AS d(dia)
+              LEFT JOIN LATERAL (
+                SELECT rs.price_pricelabs AS precio
+                FROM rate_snapshots rs
+                WHERE rs.property_id = ${String(scenario)} AND rs.rate_date = d.dia::date
+                  AND rs.price_pricelabs IS NOT NULL AND rs.snapshot_date <= CURRENT_DATE
+                ORDER BY rs.snapshot_date DESC LIMIT 1
+              ) n ON true
+            ) b
+            ON CONFLICT (property_id, checkin, noches, guests, portal, medido_el)
+            DO UPDATE SET precio_total = EXCLUDED.precio_total, base_total = EXCLUDED.base_total,
+                          created_at = now()`)
           escaparate++
         } catch (e) {
           // Que no se pueda medir el escaparate NO puede tumbar la ingesta de comparables, pero
@@ -116,7 +168,7 @@ export async function POST(req: NextRequest) {
       }
       continue
     }
-    const total  = Number.isFinite(Number(apt?.price_total)) ? Number(apt.price_total) : night
+    const total  = totalVentana
     const score  = apt?.score != null && Number.isFinite(Number(apt.score)) ? Number(apt.score) : null
     const reviews = Number.isFinite(Number(apt?.review_count)) ? Number(apt.review_count) : 0
     const location = apt?.location != null ? String(apt.location) : ""

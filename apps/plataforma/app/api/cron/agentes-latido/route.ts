@@ -70,6 +70,12 @@ const PROBES: Record<string, Prisma.Sql> = {
   sivra_eventos_verificar: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'sivra_eventos_verificar'`,
+  // Canal: la huella es la de la PASADA de calibrado, no `pricing_settings.updated_at` — esa
+  // columna solo se mueve cuando hay algo que corregir, así que un canal ya alineado y un cron
+  // muerto darían la misma señal (que es como el ×1,20 supuesto sobrevivió sin que saltara nada).
+  sivra_canal: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'sivra_canal'`,
   // Subastas/mercado: la huella es la de la PASADA que llega a avisar. NO vale
   // mirar `mercado_comparables` (solo crece si el portal manda alertas nuevas)
   // ni `chollo_avisado_at` (cada anuncio avisa UNA vez en su vida): con esas dos

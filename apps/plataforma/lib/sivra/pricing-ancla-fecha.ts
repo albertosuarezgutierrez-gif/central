@@ -20,6 +20,7 @@
 // Módulo PURO (sin BD ni `@/`) → testeable con node --test.
 
 import type { OrigenBucket } from "./pricing-bucket-fuente"
+import { baseDesdeGuestConFijo } from "./pricing-canal.ts"
 
 export type AnclaFechaInput = {
   /** mediana de mercado (precio GUEST) de la FECHA exacta, ya normalizada por aforo */
@@ -28,8 +29,15 @@ export type AnclaFechaInput = {
   comps: number
   /** procedencia del bucket de la fecha (`elegirBucket`): solo 'fiable' ancla */
   fuente: OrigenBucket
-  /** markup de canal (guest = base × markup) */
+  /** multiplicador del canal (`escaparate = markup × base + cuota fija`) */
   markup: number
+  /**
+   * Parte FIJA que el canal suma a esta noche (la cuota por estancia repartida entre las noches de
+   * la estancia típica del piso). Es obligatoria a propósito: cuando era implícitamente 0, el motor
+   * pedía ~230€ de base de más en las noches caras de House. Un piso sin cuota medida pasa 0, pero
+   * lo pasa MIRANDO — no por olvido.
+   */
+  fijoNoche: number
   /** ajuste demanda/calidad del motor para ESTE día */
   dqFactor: number
 }
@@ -48,5 +56,5 @@ export function anclaMercadoFecha(i: AnclaFechaInput, o: AnclaFechaOpts = {}): n
   if (i.fuente !== "fiable") return 0
   if (i.comps < minComps) return 0
   if (i.medFechaGuest <= 0 || i.markup <= 0 || !(i.dqFactor > 0)) return 0
-  return Math.round((i.medFechaGuest * i.dqFactor) / i.markup)
+  return baseDesdeGuestConFijo(i.medFechaGuest * i.dqFactor, i.markup, i.fijoNoche)
 }

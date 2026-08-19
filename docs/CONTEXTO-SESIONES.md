@@ -32,6 +32,22 @@
 
 ---
 
+### 📐 (19/08/2026) El canal NO es un markup: es una recta — y ahora se mide y se corrige SOLO
+- Medido el escaparate real de los CUATRO pisos con el conector (16 ventanas): el canal multiplica por
+  **menos de 1** (~0,9) y **suma una cuota fija por estancia** (limpieza: 597€ en House). Un «markup»
+  escalar no existe — el mismo piso medía ×1,33 a 2 noches y ×1,18 a 3 sin cambiar nada. Modelo afín
+  `escaparate = m × base + F` en `lib/sivra/pricing-canal.ts`; el motor lo invierte por noche.
+- El ×1,20 supuesto desplazaba TODAS las fechas: a 1.500€/noche pedía 1.250€ de base (correcto ~1.333)
+  y al precio típico de House pedía 568€ cuando tocan 425€. Cableado en apply/engine/ancla/premio/
+  pilot-track (`fijoNoche` OBLIGATORIO) y quitadas las guardas `markup >= 1`, que tiraban lo medido.
+- **Ya no espera a nadie:** `/api/sivra/pricing/canal` (cron 07:45) ajusta y REESCRIBE `channel_markup`
+  + `cuota_fija` + `noches_ref`, acotado a ±15% de efecto/pasada, con interruptor `canal_auto` y latido
+  `sivra_canal`. Y el plan (`/mercado/plan`) pide ya las ventanas propias eligiendo las que dan
+  RECORRIDO de precio (sin él, m y F son indistinguibles) → la rutina de Booking las mide sola.
+- 🚨 Bug gordo de paso: `ANUNCIOS_PROPIOS` solo tenía House, así que **Busto/Luxury/Dúplex llevaban
+  desde el 14/08 entrando como comparables de sí mismos**. Añadidos los 4 nombres de portal.
+- PR #1478 (draft). **Nada de esto corre hasta que se mergee y despliegue.**
+
 ### 🎄 (18/08/2026) La Navidad de House no la tarificaba NADIE — y `price_ours` volvió a engañar
 - Reserva 21-25/12 a 892€/noche (84% de la base). Al mirarla leí `rate_snapshots.price_ours`, que es la
   fórmula sombra LEGACY: dije 334-462€ cuando el precio real era 860-1.247€. **Corregido en el esquema**
