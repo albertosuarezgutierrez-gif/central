@@ -15,7 +15,10 @@ ya está hecho; faltan estos pasos de dashboard, en este orden:
      → Settings → General → Project name → `central` → Save.
    - No rompe nada: el ref, las URLs y las claves no cambian.
 
-2. **Repuntar el webhook de Stripe al proyecto compartido**
+2. ~~Repuntar el webhook de Stripe~~ **YA HECHO por el agente (19/08, conector Stripe MCP)**:
+   el endpoint we_1TU72SK2yY8k1YidQOdbLP2i (modo test, único existente) ya apunta a
+   `https://wswbehlcuxqxyinousql.supabase.co/functions/v1/webhook-stripe` conservando su
+   signing secret. Referencia original del paso:
    - dashboard.stripe.com → Developers → Webhooks → localiza el endpoint que apunta a
      `https://efncqyvhniaxsirhdxaa.supabase.co/functions/v1/webhook-stripe`.
    - **EDITA su URL** (no crees uno nuevo, así se conserva el signing secret) a:
