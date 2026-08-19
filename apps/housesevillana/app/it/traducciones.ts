@@ -74,10 +74,8 @@ export const TRADUCCIONES: Record<string, string> = {
     '&mdash; l\'unico della zona',
   'Confirmaci&oacute;n inmediata':
     'Conferma immediata',
-  'Sin comisiones':
-    'Senza commissioni',
-  '&mdash; el mejor precio est&aacute; aqu&iacute;':
-    '&mdash; il prezzo migliore &egrave; qui',
+  'Sin comisiones</strong> &mdash; el mejor precio est&aacute; aqu&iacute;':
+    'Senza commissioni</strong> &mdash; il prezzo migliore è qui',
   '&middot; 51 rese&ntilde;as verificadas':
     '&middot; 51 recensioni verificate',
   'Una casa sevillana para vivirla':
@@ -205,11 +203,11 @@ export const TRADUCCIONES: Record<string, string> = {
   'Por qu&eacute; reservar aqu&iacute; y no en Booking':
     'Perché prenotare qui e non su Booking',
   'La comisi&oacute;n que cobran los portales acaba en el precio que pagas t&uacute;. Aqu&iacute; no hay intermediario &mdash; y reservar directamente tiene adem&aacute;s ventajas que van m&aacute;s all&aacute; del dinero.':
-    'La commissione che applicano i portali finisce nel prezzo che paghi tu. Qui non ci sono intermediari &mdash; e prenotare direttamente ha inoltre vantaggi che vanno oltre il denaro.',
+    'La commissione che applicano i portali finisce nel prezzo che paghi tu. Qui non c’è nessun intermediario &mdash; e prenotare direttamente offre anche vantaggi che vanno oltre il denaro.',
   'Siempre m&aacute;s barato que en los portales':
     'Sempre più conveniente che sui portali',
   'Aqu&iacute; no hay comisi&oacute;n de Booking, Airbnb ni Expedia, y ese ahorro se descuenta de tu precio. No es una promoci&oacute;n puntual: el descuento por reserva directa se aplica siempre, a cualquier fecha y cualquier estancia.':
-    'Qui non ci sono commissioni di Booking, Airbnb o Expedia, e quel risparmio viene scontato dal tuo prezzo. Non è una promozione temporanea: lo sconto per prenotazione diretta si applica sempre, per qualsiasi data e qualsiasi soggiorno.',
+    'Qui non c’è nessuna commissione di Booking, Airbnb o Expedia, e quel risparmio viene scontato dal tuo prezzo. Non è una promozione temporanea: lo sconto per prenotazione diretta si applica sempre, per qualsiasi data e qualsiasi soggiorno.',
   'Trato directo con el propietario':
     'Rapporto diretto con il proprietario',
   'Hablas con Alberto, no con un call center. Flexible con horarios de llegada, parking, peticiones especiales y necesidades del grupo.':
@@ -225,7 +223,7 @@ export const TRADUCCIONES: Record<string, string> = {
   'Comprueba disponibilidad':
     'Verifica la disponibilità',
   'Reserva directamente sin intermediarios. El descuento por reserva directa ya viene aplicado en el precio que ves &mdash; no necesitas ning&uacute;n c&oacute;digo. Confirmaci&oacute;n inmediata.':
-    'Prenota direttamente, senza intermediari. Lo sconto per prenotazione diretta è già incluso nel prezzo che vedi &mdash; non serve nessun codice. Conferma immediata.',
+    'Prenota direttamente, senza intermediari. Lo sconto per prenotazione diretta è già applicato al prezzo che vedi &mdash; non serve nessun codice. Conferma immediata.',
   'Rese&ntilde;as':
     'Recensioni',
   'Lo que dicen nuestros hu&eacute;spedes':

@@ -51,8 +51,8 @@ export const TRADUCCIONES: Record<string, string> = {
   'Parking privado': 'Private parking',
   '&mdash; el &uacute;nico del barrio': '&mdash; the only one in the area',
   'Confirmaci&oacute;n inmediata': 'Instant confirmation',
-  'Sin comisiones': 'No booking fees',
-  '&mdash; el mejor precio est&aacute; aqu&iacute;': '&mdash; the best price is right here',
+  'Sin comisiones</strong> &mdash; el mejor precio est&aacute; aqu&iacute;':
+    'No booking fees</strong> &mdash; the best rate is right here',
   '&middot; 51 rese&ntilde;as verificadas': '&middot; 51 verified reviews',
 
   // ── La casa ──────────────────────────────────────────────────────────────────
@@ -144,10 +144,10 @@ export const TRADUCCIONES: Record<string, string> = {
   'Mejor precio garantizado': 'Best rate guaranteed',
   'Por qu&eacute; reservar aqu&iacute; y no en Booking': 'Why book here instead of Booking',
   'La comisi&oacute;n que cobran los portales acaba en el precio que pagas t&uacute;. Aqu&iacute; no hay intermediario &mdash; y reservar directamente tiene adem&aacute;s ventajas que van m&aacute;s all&aacute; del dinero.':
-    'The commission the portals charge ends up in the price you pay. Here there is no middleman &mdash; and booking direct also has advantages that go beyond the money.',
+    'The commission the portals charge ends up in the price you pay. Here there is no middleman &mdash; and booking direct also brings advantages that go beyond the money.',
   'Siempre m&aacute;s barato que en los portales': 'Always cheaper than the portals',
   'Aqu&iacute; no hay comisi&oacute;n de Booking, Airbnb ni Expedia, y ese ahorro se descuenta de tu precio. No es una promoci&oacute;n puntual: el descuento por reserva directa se aplica siempre, a cualquier fecha y cualquier estancia.':
-    'There is no Booking, Airbnb or Expedia commission here, and that saving comes off your price. It is not a one-off promotion: the direct-booking discount always applies, on any dates and any stay.',
+    'There is no Booking, Airbnb or Expedia commission here, and that saving comes off your price. It is not a one-off promotion: the direct-booking discount applies always, on any date and any stay.',
   'Trato directo con el propietario': 'Deal directly with the owner',
   'Hablas con Alberto, no con un call center. Flexible con horarios de llegada, parking, peticiones especiales y necesidades del grupo.':
     'You talk to Alberto, not a call centre. Flexible on arrival times, parking, special requests and whatever your group needs.',
