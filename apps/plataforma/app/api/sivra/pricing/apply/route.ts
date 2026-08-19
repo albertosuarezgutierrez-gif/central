@@ -17,6 +17,7 @@ import { aplicarPrior, indicesPrior, type IndicePrior, type MesHistorico } from 
 import { getSmoobuKey } from "@/lib/smoobu"
 import { tgSend } from "@central/core-telegram"
 import { eur } from "@/lib/dinero"
+import { anclaRail } from "@/lib/sivra/pricing-ancla-rail"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -566,10 +567,23 @@ export async function POST(req: NextRequest) {
       property_id AS pid, rate_date::text AS rate_date, new_price AS p
     FROM pricing_applied
     WHERE dry_run = false AND rate_date >= CURRENT_DATE
-      AND applied_at < CURRENT_DATE AND applied_at >= CURRENT_DATE - 7
+      AND applied_at < CURRENT_DATE
     ORDER BY property_id, rate_date, applied_at DESC
   `).catch(() => [])
   const ref24 = new Map(ref24Rows.map(x => [`${x.pid}|${x.rate_date}`, Number(x.p)]))
+
+  // Ancla de respaldo: con qué precio empezó HOY cada fecha (old_price de la 1ª pasada del día).
+  // Cubre las fechas que NUNCA se han escrito —las que entran nuevas en el horizonte—, donde no
+  // hay `ref24` que buscar y sin esto cada pasada re-anclaba en la anterior (-36% en dos pasadas
+  // el 19/08/2026, House Sevillana jun-ago 2027). Ver lib/sivra/pricing-ancla-rail.ts.
+  const anclaHoyRows = await prisma.$queryRaw<{ pid: string; rate_date: string; p: number }[]>(Prisma.sql`
+    SELECT DISTINCT ON (property_id, rate_date)
+      property_id AS pid, rate_date::text AS rate_date, old_price AS p
+    FROM pricing_applied
+    WHERE dry_run = false AND rate_date >= CURRENT_DATE AND applied_at >= CURRENT_DATE
+    ORDER BY property_id, rate_date, applied_at ASC
+  `).catch(() => [])
+  const anclaHoy = new Map(anclaHoyRows.map(x => [`${x.pid}|${x.rate_date}`, Number(x.p)]))
 
   const results: any[] = []
 
@@ -785,8 +799,13 @@ export async function POST(req: NextRequest) {
       if (old != null) {
         // Ancla del raíl = precio de AYER (ref24), no el de la pasada anterior de HOY: así el
         // tope ±max_change_pct es por DÍA aunque el cron corra 3 veces al día. Sin histórico
-        // (fecha nueva/nunca escrita) el ancla es el precio actual, como siempre.
-        const ancla = ref24.get(`${r.property_id}|${date}`) ?? old
+        // (fecha nueva/nunca escrita) cae al precio con el que la fecha EMPEZÓ el día, que
+        // mantiene el tope diario igual; y solo en la 1ª pasada, al precio vivo.
+        const ancla = anclaRail({
+          ref24: ref24.get(`${r.property_id}|${date}`),
+          primeroHoy: anclaHoy.get(`${r.property_id}|${date}`),
+          actual: old,
+        })
         const lo = Math.round(ancla * (1 - Number(r.max_change_pct)))
         const hi = Math.round(ancla * (1 + Number(r.max_change_pct)))
         target = clamp(target, lo, hi)
