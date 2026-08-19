@@ -58,37 +58,29 @@ docs pesados de Drive.
 
 ## 2. SUPABASE — la base de datos y las Edge Functions desplegadas
 
-> 🔴 **CORTE DE BD A MEDIO HACER — split-brain (verificado 12/07/2026, auditoría PR #832).**
-> El corte del 10/06 (PR #117/#110) **copió** funciones/algunos datos al compartido
-> `wswbehlcuxqxyinousql`/schema `iarest`, pero **nunca conmutó el runtime**. A 12/07,
-> el POS + los crons de producción **siguen ejecutando contra el proyecto VIEJO
-> `efncqyvhniaxsirhdxaa`** (confirmado por logs Edge en vivo: `alerta-ritmo-cron`,
-> `push-send`, `courier`…). El `SUPABASE_URL` de Vercel y el `linked-project.json`
-> apuntan al viejo. El compartido solo recibe el subsistema Instagram/Reels
-> (`ig-video-gen` v7 + `instagram_borradores`) y la demo de Catering JJ (25/06).
-> **Decisión (12/07): terminar la migración al compartido (Opción 2).** Hasta que se
-> ejecute el flip de env, **el proyecto vivo es el VIEJO**. El cliente lee el schema
-> vía env `NEXT_PUBLIC_SUPABASE_SCHEMA` (`SB_SCHEMA`/`SB_OPTS` en `src/lib/supabase.ts`;
-> default `public` si no está — hoy el viejo usa `public`).
+> ✅ **BD UNIFICADA — cierre verificado 19/08/2026.** Producción (runtime POS, Edge
+> Functions y crons) vive en el COMPARTIDO **`wswbehlcuxqxyinousql`, schema `iarest`**.
+> La verificación empírica del 19/08: todas las tablas que escribe el runtime en el viejo
+> están congeladas desde primeros de junio, mientras el compartido recibe escrituras
+> vivas (leads hasta agosto) — la nota previa de "split-brain 12/07" quedó desfasada.
+> El cliente fija el schema vía env `NEXT_PUBLIC_SUPABASE_SCHEMA=iarest` (`SB_SCHEMA`/
+> `SB_OPTS` en `src/lib/supabase.ts`).
 
 | Dato | Valor |
 |---|---|
-| Proyecto VIVO (hoy, runtime+crons) | **efncqyvhniaxsirhdxaa** · schema `public` |
-| Proyecto DESTINO (migración decidida) | **wswbehlcuxqxyinousql** (compartido) · schema `iarest` |
+| Proyecto VIVO (runtime + EFs + crons) | **wswbehlcuxqxyinousql** (compartido) · schema `iarest` |
+| Proyecto viejo (BORRADO 19/08/2026) | efncqyvhniaxsirhdxaa — ya no existe; lo valioso se copió al compartido antes de borrarlo |
 
-**Estado del split (12/07):**
-- Viejo `efncqyvhniaxsirhdxaa`: runtime del POS, funciones core frescas (auth-register v34,
-  webhook-stripe v29, courier v26), histórico `comandas` (142, congelado 31/05) y las **6
-  `facturas_verifactu`** (cadena fiscal). Crons `infra-monitor`/`monitor-health` en 500/401.
-  Seguridad SIN auditar: 113 search_path, 47 SECURITY DEFINER views, 23 RLS always-true.
-- Compartido `wswbehlcuxqxyinousql`/`iarest`: funciones `iarest` congeladas en v4 (copia 10/06),
-  `ig-video-gen` v7 (Reels), `instagram_borradores`, demo Catering JJ (`personal`=14). Ya auditado.
-
-**⚠️ Reels / `ig-video-gen`:** `ai-video.ts` la llama en el `SUPABASE_URL` del app (= viejo).
-El 504 previo (la función NO estaba desplegada en el viejo) se **parcheó el 11/07 (PR #791)**
-desplegándola ahí (v1) + añadiendo `instagram_borradores.video_job`. Persiste una copia
-**duplicada** en el compartido (v7, del corte de junio) → cleanliness, se unifica al migrar,
-no es un 504 activo.
+**Cierre del 19/08/2026** (rama `claude/unificar-supabase-ingress-gastos-zwt9mh`):
+- 45 Edge Functions vivas en el compartido (incl. `qr-assistant`, que faltaba y daba 404
+  en el QR de mesa) y sus fuentes versionadas en `apps/ia-rest/supabase/functions/`.
+- 25 cron jobs recreados en el compartido (migración `20260819_crons_bd_compartida.sql`).
+- Realtime: tablas del KDS/bridge añadidas a la publication (`20260819_realtime_publication_iarest.sql`).
+- Datos con valor copiados del viejo (leads, CRM, ia_training_log, stripe_events…); el
+  histórico demo (comandas de mayo, 6 facturas_verifactu de PRUEBA) se queda en el viejo,
+  recuperable mientras esté pausado y no borrado.
+- Regla operativa: **desplegar/aplicar SIEMPRE al compartido**; toda EF/cliente/Realtime
+  nuevo fija schema `iarest` y las tablas con Realtime se añaden a la publication.
 
 **Acceso:** MCP de Supabase / dashboard. Al migrar, toda consulta/cliente DEBE fijar el
 schema `iarest` (en Realtime `schema: 'iarest'`; en EFs `createClient` con `db: { schema: 'iarest' }`).
@@ -229,7 +221,7 @@ GOOGLE_SA_JSON                   # service account Drive — el .json NUNCA al r
 
 | Recurso | Valor |
 |---|---|
-| Supabase | VIVO hoy: **efncqyvhniaxsirhdxaa** (schema `public`, eu-west-1, PG17). Destino migración: **wswbehlcuxqxyinousql** (compartido, schema `iarest`). Ver §2 (split-brain 12/07). |
+| Supabase | **wswbehlcuxqxyinousql** (compartido, schema `iarest`, eu-west-1, PG17). El viejo `efncqyvhniaxsirhdxaa` fue borrado el 19/08/2026 — ver §2. |
 | Vercel team | team_f4gPpt6dPuNcd5YyMt3q27uf |
 | Vercel app | prj_A0xZtqWcH6dtNEmlRiOwgj52GTRo |
 | Vercel docs | prj_eKC4r06S5svI3mwJJUbZmLVnbiQE |

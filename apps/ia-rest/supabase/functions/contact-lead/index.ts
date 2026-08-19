@@ -44,10 +44,7 @@ serve(async (req) => {
     const consent_ip = anonimizarIp(rawIp)
     const consent_at = new Date().toISOString()
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    )
+    const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { db: { schema: 'iarest' } })
 
     const { error: dbError } = await supabase.from('leads').insert({
       nombre,

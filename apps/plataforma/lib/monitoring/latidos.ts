@@ -206,6 +206,22 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'Huella: agente_latidos.sivra_eventos_verificar.',
   },
   {
+    id: 'sivra_canal',
+    etiqueta: '📐 Calibrado del canal Booking (diario 07:45)',
+    maxHoras: 30,
+    nota:
+      'Nadie está comprobando con qué números el motor convierte el mercado en precio base. La ' +
+      'conversión NO es un detalle: durante tres días fue un ×1,20 supuesto contra un canal que en ' +
+      'realidad multiplica por ~0,9 y SUMA una cuota fija por estancia, y eso desplazaba TODAS las ' +
+      'fechas de los cuatro pisos a la vez sin que nada se pusiera rojo (reserva de House de ' +
+      'Navidad, 19/08/2026). EL DETALLE DICE QUÉ PASA: «sin ajuste fiable» en todos los pisos = no ' +
+      'es que el canal cuadre, es que no hay mediciones de escaparate suficientes — el problema ' +
+      'está aguas arriba, en la rutina de Booking (sivra_mercado_booking) y en el plan de ' +
+      'escaparate de /api/sivra/mercado/plan, no en este cron. Si el detalle dice «SIMULACRO», ' +
+      'alguien lo está llamando sin CRON_SECRET y no escribe nada. ' +
+      'Huella: agente_latidos.sivra_canal.',
+  },
+  {
     id: 'sivra_mercado_sweep',
     etiqueta: '🔎 Barrido de mercado por temporada (diario 03:00)',
     maxHoras: 30,

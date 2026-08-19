@@ -33,15 +33,52 @@ export function normalizarNombre(nombre: string): string {
 }
 
 /**
+ * Cómo se llama CADA piso nuestro en el portal, por `property_id`.
+ *
+ * Es la fuente única de dos cosas que antes vivían separadas y se desincronizaron: el filtro que
+ * impide que un anuncio propio entre como comparable, y el nombre EXACTO con el que la rutina de
+ * Booking tiene que pedir nuestro propio escaparate (`hotel_names`). El nombre interno de
+ * `pricing_piso_zona` no sirve para ninguna de las dos: no es el que publica el portal.
+ *
+ * 🚨 Aquí solo entra un nombre que se haya VISTO en una respuesta real del portal, con su
+ * ortografía. Los cuatro están vistos el 19/08/2026.
+ */
+export const NOMBRE_PORTAL: Readonly<Record<string, string>> = {
+  prop_house_sevillana: 'HOUSE SEVILLANA 6 habitaciones',
+  prop_busto_reform:    'Busto Reform Apartamento Centro Sevilla Parking Netflix',
+  prop_luxury_busto:    'Luxury Busto Patio privado Centro',
+  prop_duplex_center:   'Dúplex center',
+}
+
+/**
  * Nombres (ya normalizados) con los que NUESTROS pisos aparecen publicados en los portales.
  *
- * Hoy solo House Sevillana: es el único de los cuatro que se ha visto salir en una búsqueda del
- * conector. Los otros tres (Busto Reform, Duplex Center, Luxury Busto) no han aparecido nunca en
- * los resultados; cuando alguno lo haga, se añade aquí SU nombre de portal —no el nombre interno
- * de `pricing_piso_zona`, que no es el que publica Booking.
+ * 🚨 POR QUÉ ESTÁN LOS CUATRO (19/08/2026). Hasta hoy la lista era `['house sevillana']` con la
+ * nota «los otros tres no han aparecido nunca en los resultados» — una ausencia de prueba anotada
+ * como si fuera un hecho. Al pedirle al conector cada anuncio por su nombre aparecieron los tres a
+ * la primera, así que el filtro dependía de que el portal no los devolviera: un raíl que solo
+ * funciona mientras nadie lo pone a prueba.
+ *
+ * ⚠️ Y la corrección de la corrección, porque este módulo va justo de eso: al VERIFICARLO contra
+ * `market_rates` (mismo día, tras el arreglo) **no había ni una sola fila** con ninguno de los tres
+ * nombres — 2.746 comparables de los tres pisos, 833 nombres distintos, ninguno propio. El corpus
+ * estaba limpio: el riesgo era real y ahora está tapado, pero **no llegó a materializarse**, y
+ * decirlo al revés habría sido exactamente el error que la regla de CLAUDE.md prohíbe. Solo House
+ * salía de verdad en las búsquedas (aforo 12, mercado estrecho) y para ese el filtro ya existía.
+ *
+ * Cuando demos de alta un piso nuevo, su nombre de portal se busca ANTES de que entre al corpus,
+ * no cuando aparezca por casualidad.
+ *
+ * Se comparan trozos distintivos, no el nombre completo: el portal le cuelga sufijos comerciales
+ * que cambian solos. Y NO tokens sueltos («busto», «centro»): hay competencia real en Bustos Tavera
+ * y medio Sevilla se anuncia como «centro» — descartar un comparable legítimo es el fallo simétrico
+ * y adelgaza el corpus de la fecha justo por debajo del umbral que descongela un evento.
  */
 export const ANUNCIOS_PROPIOS: readonly string[] = [
   'house sevillana',
+  'busto reform',
+  'luxury busto',
+  'duplex center',
 ]
 
 /**

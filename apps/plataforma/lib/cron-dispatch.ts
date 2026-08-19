@@ -56,6 +56,11 @@ export const CRON_JOBS: CronJob[] = [
   // refresca lo que se está vendiendo en vez de fotografiar el mismo finde cada siete días.
   { path: '/api/sivra/mercado/sweep', schedule: '0 3 * * *' },
   { path: '/api/sivra/pricing/guard', schedule: '30 7 * * *' },
+  // Calibrado del CANAL contra el escaparate medido (19/08/2026): mide la recta
+  // `escaparate = markup × base + cuota_fija` y la APLICA sola, acotada por pasada. Va DESPUÉS del
+  // snapshot (07:00) y de la guardia: necesita la base del día para poder cruzarla con el portal, y
+  // ANTES de `apply-auto` (08:30) para que el motor tarife el mismo día con lo recalibrado.
+  { path: '/api/sivra/pricing/canal', schedule: '45 7 * * *' },
   { path: '/api/sivra/pricing/experiments/check-results', schedule: '0 8 * * *' },
   { path: '/api/sivra/pricing/experiments/digest', schedule: '0 9 * * 1' },
   { path: '/api/sivra/pricing/apply-auto', schedule: '30 8,14,20 * * *' },

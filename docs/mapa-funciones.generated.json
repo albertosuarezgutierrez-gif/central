@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-18T19:58:41Z",
-  "sha": "72a8efffd04e4f420f551240f918f3cfdf99aa02",
+  "generadoEn": "2026-08-19T11:17:51Z",
+  "sha": "934b464d1b838ac62d89eb7acecface9e35249cf",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3588,7 +3588,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f338640d6110"
+      "hash": "cebe65174ec6"
     },
     {
       "ruta": "apps/ia-rest/scripts/qa-check.ts",
@@ -24302,7 +24302,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "0590321be6ef"
+      "hash": "423dcc919450"
     },
     {
       "ruta": "apps/ia-rest/src/app/tapas-bar/page.tsx",
@@ -31847,7 +31847,7 @@
           "exportada": false,
           "params": "triggerTipos: string[], mesaCodigo: string | null, contexto: Record<string, unknown>",
           "retorno": "string",
-          "linea": 15
+          "linea": 12
         },
         {
           "nombre": "generarTituloPush",
@@ -31855,7 +31855,7 @@
           "exportada": false,
           "params": "triggerTipos: string[], mesaCodigo: string | null",
           "retorno": "string",
-          "linea": 76
+          "linea": 73
         },
         {
           "nombre": "minDesde",
@@ -31863,7 +31863,7 @@
           "exportada": false,
           "params": "ts: string | null",
           "retorno": "number",
-          "linea": 92
+          "linea": 89
         },
         {
           "nombre": "enHorario",
@@ -31871,7 +31871,7 @@
           "exportada": false,
           "params": "desde: string | null, hasta: string | null",
           "retorno": "boolean",
-          "linea": 97
+          "linea": 94
         },
         {
           "nombre": "getComandaIds",
@@ -31879,7 +31879,7 @@
           "exportada": false,
           "params": "mesaId: string",
           "retorno": "Promise<string[]>",
-          "linea": 107
+          "linea": 104
         },
         {
           "nombre": "yaAlertado",
@@ -31887,7 +31887,7 @@
           "exportada": false,
           "params": "reglaId: string, mesaId: string | null",
           "retorno": "Promise<boolean>",
-          "linea": 112
+          "linea": 109
         },
         {
           "nombre": "getDestinatarios",
@@ -31895,7 +31895,7 @@
           "exportada": false,
           "params": "regla: Record<string,unknown>, mesa: Record<string,unknown> | null",
           "retorno": "Promise<string[]>",
-          "linea": 120
+          "linea": 117
         },
         {
           "nombre": "evalCondMesa",
@@ -31903,7 +31903,7 @@
           "exportada": false,
           "params": "cond: Cond, mesa: Mesa",
           "retorno": "Promise<CondResult>",
-          "linea": 140
+          "linea": 137
         },
         {
           "nombre": "evalCondGlobal",
@@ -31911,7 +31911,7 @@
           "exportada": false,
           "params": "cond: Cond, rid: string",
           "retorno": "Promise<CondResult>",
-          "linea": 202
+          "linea": 199
         },
         {
           "nombre": "evaluarRegla",
@@ -31919,7 +31919,7 @@
           "exportada": false,
           "params": "regla: Regla, mesas: Mesa[]",
           "retorno": "Promise<Match[]>",
-          "linea": 230
+          "linea": 227
         },
         {
           "nombre": "enviarPush",
@@ -31927,14 +31927,245 @@
           "exportada": false,
           "params": "camarero_ids: string[], title: string, body: string, mensaje_voz: string",
           "retorno": null,
-          "linea": 257
+          "linea": 254
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "5dc7d45d9d7e"
+      "hash": "fc313ff173fa"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/analizar-cv/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "callAI",
+          "kind": "function",
+          "exportada": false,
+          "params": "system: string, user: string",
+          "retorno": "Promise<string>",
+          "linea": 9
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "e56487af2876"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/auth-pin-validate/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · AUTH-PIN-VALIDATE v9 · con error monitoring",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "hashIP",
+          "kind": "function",
+          "exportada": false,
+          "params": "ip: string, salt: string",
+          "retorno": "Promise<string>",
+          "linea": 16
+        },
+        {
+          "nombre": "getClientIP",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: Request",
+          "retorno": "string",
+          "linea": 22
+        },
+        {
+          "nombre": "jsonResponse",
+          "kind": "function",
+          "exportada": false,
+          "params": "body: object, status = 200",
+          "retorno": "Response",
+          "linea": 30
+        },
+        {
+          "nombre": "reportarError",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
+          "retorno": null,
+          "linea": 36
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "19325bd5fe74"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/auth-register/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "getStripeConfig",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "generarPinSeguro",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 25
+        },
+        {
+          "nombre": "buildLineItems",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number, cfg: ReturnType<typeof getStripeConfig>",
+          "retorno": null,
+          "linea": 31
+        },
+        {
+          "nombre": "toSlug",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 39
+        },
+        {
+          "nombre": "toCodigo",
+          "kind": "function",
+          "exportada": false,
+          "params": "nombre: string",
+          "retorno": null,
+          "linea": 42
+        },
+        {
+          "nombre": "enviarEmailBienvenida",
+          "kind": "function",
+          "exportada": false,
+          "params": "opts: { email: string; nombre: string; nombre_restaurante: string codigo_acceso: string; pin_owner: string; app_url: string }",
+          "retorno": null,
+          "linea": 47
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "0f40172a9aa7"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/auth-verify-sms/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "0797a05fae6f"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/brain-parse/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · BRAIN-PARSE v9 · con error monitoring",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "cargarCarta",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, restaurante_id: string",
+          "retorno": "Promise<string>",
+          "linea": 34
+        },
+        {
+          "nombre": "contextoMesa",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, restaurante_id: string, mesa_id: string",
+          "retorno": "Promise<string>",
+          "linea": 55
+        },
+        {
+          "nombre": "cargarMesas",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, restaurante_id: string",
+          "retorno": "Promise<string>",
+          "linea": 72
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "d621b13a02de"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/brain/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "logTrainingData",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: ReturnType<typeof createClient>, payload: { restaurante_id: string; input_raw: string; input_context: object; output_brain: BrainOutput; latencia_ms: number; modelo_usado: string; }",
+          "retorno": "Promise<string | null>",
+          "linea": 68
+        },
+        {
+          "nombre": "marcarCorreccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: ReturnType<typeof createClient>, log_id: string, correccion: BrainOutput",
+          "retorno": "Promise<void>",
+          "linea": 111
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "d543ca9f4773"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/bridge-agent/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · Bridge Agent API v1 API server-side para el agente local Node.js El agente se autentica con su bridge_token (brt_...) No requiere JWT de Supabase — auth propia por token",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "json",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: unknown, s = 200",
+          "retorno": null,
+          "linea": 20
+        },
+        {
+          "nombre": "getAgent",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 24,
+          "resumen": "Autenticar agente por token en header X-Bridge-Token o Authorization: Bearer"
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "23552ed721f3"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/check-elaboraciones/index.ts",
@@ -31946,7 +32177,71 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "547f5bb2e464"
+      "hash": "7f40acd96313"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/cobro-monei/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "reportarError",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
+          "retorno": null,
+          "linea": 8
+        },
+        {
+          "nombre": "json",
+          "kind": "function",
+          "exportada": false,
+          "params": "data: unknown, status = 200",
+          "retorno": "Response",
+          "linea": 160
+        }
+      ],
+      "tablas": [
+        "jsr"
+      ],
+      "rutaApi": null,
+      "hash": "ca6c85fc9f80"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/cobro-stripe/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "reportarError",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
+          "retorno": null,
+          "linea": 8
+        },
+        {
+          "nombre": "stripe",
+          "kind": "function",
+          "exportada": false,
+          "params": "method: string, path: string, params: URLSearchParams, secretKey: string, idempotencyKey?: string",
+          "retorno": "Promise<Response>",
+          "linea": 184
+        },
+        {
+          "nombre": "json",
+          "kind": "function",
+          "exportada": false,
+          "params": "data: unknown, status = 200",
+          "retorno": "Response",
+          "linea": 196
+        }
+      ],
+      "tablas": [
+        "jsr"
+      ],
+      "rutaApi": null,
+      "hash": "c37fc890842e"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/contact-lead/index.ts",
@@ -31965,7 +32260,28 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "79a41d4b359a"
+      "hash": "3d13323db59f"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/courier-route/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · COURIER-ROUTE v10 · fix nota_general",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "reportarError",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
+          "retorno": null,
+          "linea": 5
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "d395c757b465"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/daily-briefing/index.ts",
@@ -32003,7 +32319,57 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "ec0c7340577b"
+      "hash": "b8eb2746bab0"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/ear-transcribe/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · EAR-TRANSCRIBE v8 · con error monitoring",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "e6b8ff65240e"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/enviar-verifactu/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "generarXmlVerifactu",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: any",
+          "retorno": "string",
+          "linea": 154,
+          "resumen": "── Generar XML LROE (SOAP) para AEAT ─────────────────────────────────── Especificación: Orden HAC/1177/2024 + RD 1007/2023"
+        },
+        {
+          "nombre": "escXml",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 220,
+          "resumen": "Escapar caracteres especiales XML"
+        },
+        {
+          "nombre": "json",
+          "kind": "function",
+          "exportada": false,
+          "params": "data: unknown, status = 200",
+          "retorno": "Response",
+          "linea": 230
+        }
+      ],
+      "tablas": [
+        "jsr"
+      ],
+      "rutaApi": null,
+      "hash": "662bdc343724"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/eventos-entorno/index.ts",
@@ -32031,7 +32397,35 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "a3080da4f33f"
+      "hash": "76fb4fb11d89"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/ia-training-dashboard/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "authPage",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 31
+        },
+        {
+          "nombre": "dashboardPage",
+          "kind": "function",
+          "exportada": false,
+          "params": "pin:string",
+          "retorno": "string",
+          "linea": 35
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "53c48fd2c0dd"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/ig-video-gen/index.ts",
@@ -32090,7 +32484,7 @@
           "exportada": false,
           "params": "ts: string | null",
           "retorno": "number",
-          "linea": 25
+          "linea": 22
         },
         {
           "nombre": "yaAlertado",
@@ -32098,7 +32492,7 @@
           "exportada": false,
           "params": "restauranteId: string, tipo: string",
           "retorno": "Promise<boolean>",
-          "linea": 30
+          "linea": 27
         },
         {
           "nombre": "getOwnerIds",
@@ -32106,7 +32500,7 @@
           "exportada": false,
           "params": "restauranteId: string",
           "retorno": "Promise<string[]>",
-          "linea": 42
+          "linea": 39
         },
         {
           "nombre": "enviarPush",
@@ -32114,7 +32508,7 @@
           "exportada": false,
           "params": "camareroIds: string[], title: string, body: string",
           "retorno": null,
-          "linea": 52
+          "linea": 49
         },
         {
           "nombre": "registrarAlerta",
@@ -32122,14 +32516,85 @@
           "exportada": false,
           "params": "restauranteId: string, tipo: string, mensaje: string",
           "retorno": null,
-          "linea": 61
+          "linea": 58
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "6c081bd1e29d"
+      "hash": "cac8c66b0a11"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/kds-token-validate/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · Edge Function: kds-token-validate Versión: 1.0 Valida el token del KDS de cocina.",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "hashString",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "Promise<string>",
+          "linea": 95
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "f50886c22e14"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/lead-research/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "supabase/functions/lead-research/index.ts v4 — busca email automáticamente. Sin email = lead pausado",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "callNIM",
+          "kind": "function",
+          "exportada": false,
+          "params": "apiKey: string, system: string, user: string, max = 1000",
+          "retorno": "Promise<string>",
+          "linea": 203
+        },
+        {
+          "nombre": "esc",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 214
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "4cd790c66822"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/menu-stockout/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · MENU-STOCKOUT v7 · con error monitoring",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "reportarError",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
+          "retorno": null,
+          "linea": 9
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "c4da498fffd4"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/monitor-health/index.ts",
@@ -32141,7 +32606,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "14b6f5fb72fd"
+      "hash": "320a7bc5c55e"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/nim-diagnostico/index.ts",
@@ -32170,7 +32635,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "0ac3520576ee"
+      "hash": "7f02889bc11c"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/nim-sentiment/index.ts",
@@ -32191,7 +32656,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "3137d667fdba"
+      "hash": "b8c610a6e704"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/notify-error/index.ts",
@@ -32203,7 +32668,227 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "043e5d2d9a60"
+      "hash": "9130bc94328b"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/owner-panel/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "getSession",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 11
+        },
+        {
+          "nombre": "json",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: unknown, s = 200",
+          "retorno": null,
+          "linea": 19
+        },
+        {
+          "nombre": "generarCodigo",
+          "kind": "function",
+          "exportada": false,
+          "params": "zonaNombre: string, numero: number",
+          "retorno": "string",
+          "linea": 21
+        },
+        {
+          "nombre": "getHTML",
+          "kind": "function",
+          "exportada": false,
+          "params": "BASE: string",
+          "retorno": "string",
+          "linea": 203
+        },
+        {
+          "nombre": "api",
+          "kind": "function",
+          "exportada": false,
+          "params": "path,opts={}",
+          "retorno": null,
+          "linea": 254
+        },
+        {
+          "nombre": "set",
+          "kind": "function",
+          "exportada": false,
+          "params": "patch",
+          "retorno": null,
+          "linea": 255
+        },
+        {
+          "nombre": "loadAll",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 256
+        },
+        {
+          "nombre": "loadHW",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 257
+        },
+        {
+          "nombre": "loadZonas",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 258
+        },
+        {
+          "nombre": "el",
+          "kind": "function",
+          "exportada": false,
+          "params": "tag,props,...ch",
+          "retorno": null,
+          "linea": 259
+        },
+        {
+          "nombre": "Toggle",
+          "kind": "function",
+          "exportada": false,
+          "params": "on,onChange",
+          "retorno": null,
+          "linea": 260
+        },
+        {
+          "nombre": "renderLogin",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 261
+        },
+        {
+          "nombre": "buildForm",
+          "kind": "function",
+          "exportada": false,
+          "params": "regla",
+          "retorno": null,
+          "linea": 262
+        },
+        {
+          "nombre": "renderReglaCard",
+          "kind": "function",
+          "exportada": false,
+          "params": "r",
+          "retorno": null,
+          "linea": 264
+        },
+        {
+          "nombre": "renderLog",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 265
+        },
+        {
+          "nombre": "renderMesas",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 266
+        },
+        {
+          "nombre": "buildDeviceForm",
+          "kind": "function",
+          "exportada": false,
+          "params": "device",
+          "retorno": null,
+          "linea": 267
+        },
+        {
+          "nombre": "renderHardware",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 268
+        },
+        {
+          "nombre": "render",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 269
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "0d49776e1d21"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/push-send/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · push-send v1 Envía notificaciones Web Push a camareros usando VAPID Auto-genera y almacena las claves VAPID en sistema_config",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "json",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: unknown, s = 200",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "generarVapidKeys",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 17,
+          "resumen": "── Generación de claves VAPID (ECDSA P-256) ──────────────────────────────"
+        },
+        {
+          "nombre": "getVapidKeys",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 31
+        },
+        {
+          "nombre": "vapidJWT",
+          "kind": "function",
+          "exportada": false,
+          "params": "audience: string, privateKeyB64: string",
+          "retorno": "Promise<string>",
+          "linea": 41,
+          "resumen": "── JWT VAPID ────────────────────────────────────────────────────"
+        },
+        {
+          "nombre": "enviarPushUnitario",
+          "kind": "function",
+          "exportada": false,
+          "params": "sub: { endpoint: string; keys: { p256dh: string; auth: string } }, payload: { title: string; body: string; mensaje_voz?: string }, vapidKeys: { publicKey: string; privateKey: string }",
+          "retorno": null,
+          "linea": 68,
+          "resumen": "── Enviar una notificación push ──────────────────────────────────────"
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "8f842d42c01c"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-assistant/index.ts",
@@ -32229,14 +32914,14 @@
           "exportada": false,
           "params": "msg: string",
           "retorno": null,
-          "linea": 129
+          "linea": 126
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "09cf64a57c4e"
+      "hash": "10654303a21d"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-cobro/index.ts",
@@ -32248,7 +32933,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "be56d397dff0"
+      "hash": "423c7a9b19a6"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-connect/index.ts",
@@ -32260,7 +32945,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "306e0df28a10"
+      "hash": "309b7201382a"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-order/index.ts",
@@ -32281,7 +32966,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "419089981b7c"
+      "hash": "d70fbc80d3a0"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-session/index.ts",
@@ -32295,7 +32980,7 @@
           "exportada": false,
           "params": "d: object",
           "retorno": null,
-          "linea": 215
+          "linea": 212
         },
         {
           "nombre": "res400",
@@ -32303,7 +32988,7 @@
           "exportada": false,
           "params": "e: string",
           "retorno": null,
-          "linea": 216
+          "linea": 213
         },
         {
           "nombre": "res403",
@@ -32311,7 +32996,7 @@
           "exportada": false,
           "params": "e: string",
           "retorno": null,
-          "linea": 217
+          "linea": 214
         },
         {
           "nombre": "res404",
@@ -32319,14 +33004,14 @@
           "exportada": false,
           "params": "e: string",
           "retorno": null,
-          "linea": 218
+          "linea": 215
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "81e47b700b78"
+      "hash": "ed786b0ed02d"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-split/index.ts",
@@ -32355,7 +33040,152 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "b8e8a05b4345"
+      "hash": "05710facd244"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/recuperar-pin/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "216f67321b64"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/stripe-checkout/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "getStripeConfig",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 18
+        },
+        {
+          "nombre": "buildLineItems",
+          "kind": "function",
+          "exportada": false,
+          "params": "numUsuarios: number, cfg: ReturnType<typeof getStripeConfig>",
+          "retorno": null,
+          "linea": 35
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "542001e7eb10"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/test-runner/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · TEST-RUNNER v2 — usa estados reales del schema Ejecuta 10 tests del pipeline y guarda resultado en transcripciones",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "call",
+          "kind": "function",
+          "exportada": false,
+          "params": "slug: string, body: unknown, key: string",
+          "retorno": "Promise<",
+          "linea": 10
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "f63a4e887710"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/verifactu-sign/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · VERIFACTU-SIGN v9 · con error monitoring",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "sha256",
+          "kind": "function",
+          "exportada": false,
+          "params": "data: string",
+          "retorno": "Promise<string>",
+          "linea": 5
+        },
+        {
+          "nombre": "reportarError",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
+          "retorno": null,
+          "linea": 10
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "dba0f12ff64b"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/vox-confirm/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · VOX-CONFIRM v7 · con error monitoring TTS fallback graceful: si OpenAI falla devuelve texto sin audio (el cliente sigue funcionando)",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "reportarError",
+          "kind": "function",
+          "exportada": false,
+          "params": "params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
+          "retorno": null,
+          "linea": 11
+        },
+        {
+          "nombre": "textoConfirmacion",
+          "kind": "function",
+          "exportada": false,
+          "params": "body: any",
+          "retorno": "string",
+          "linea": 31
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "75353d891403"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/webhook-monei/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "reportarError",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
+          "retorno": null,
+          "linea": 10
+        },
+        {
+          "nombre": "verificarFirma",
+          "kind": "function",
+          "exportada": false,
+          "params": "body: string, signature: string, secret: string",
+          "retorno": "boolean",
+          "linea": 142
+        }
+      ],
+      "tablas": [
+        "jsr",
+        "node"
+      ],
+      "rutaApi": null,
+      "hash": "f40e24d47417"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/webhook-stripe/index.ts",
@@ -32377,7 +33207,7 @@
           "exportada": false,
           "params": "supabase: any, paymentIntentId: string, stripeStatus: string, event: any",
           "retorno": null,
-          "linea": 74
+          "linea": 75
         },
         {
           "nombre": "procesarPagoFallido",
@@ -32385,7 +33215,7 @@
           "exportada": false,
           "params": "supabase: any, paymentIntentId: string, stripeStatus: string, event: any",
           "retorno": null,
-          "linea": 81
+          "linea": 82
         },
         {
           "nombre": "activarSuscripcion",
@@ -32393,7 +33223,7 @@
           "exportada": false,
           "params": "supabase: any, session: any",
           "retorno": null,
-          "linea": 88
+          "linea": 89
         },
         {
           "nombre": "renovarSuscripcion",
@@ -32401,7 +33231,7 @@
           "exportada": false,
           "params": "supabase: any, invoice: any",
           "retorno": null,
-          "linea": 98
+          "linea": 99
         },
         {
           "nombre": "actualizarSuscripcion",
@@ -32409,7 +33239,7 @@
           "exportada": false,
           "params": "supabase: any, subscription: any",
           "retorno": null,
-          "linea": 103
+          "linea": 104
         },
         {
           "nombre": "cancelarSuscripcion",
@@ -32417,7 +33247,7 @@
           "exportada": false,
           "params": "supabase: any, subscription: any",
           "retorno": null,
-          "linea": 111
+          "linea": 112
         },
         {
           "nombre": "marcarPagoFallidoSaaS",
@@ -32425,7 +33255,7 @@
           "exportada": false,
           "params": "supabase: any, invoice: any",
           "retorno": null,
-          "linea": 116
+          "linea": 117
         },
         {
           "nombre": "verificarFirmaStripe",
@@ -32433,7 +33263,7 @@
           "exportada": false,
           "params": "body: string, signature: string, secret: string",
           "retorno": "boolean",
-          "linea": 122
+          "linea": 123
         }
       ],
       "tablas": [
@@ -32441,7 +33271,7 @@
         "node"
       ],
       "rutaApi": null,
-      "hash": "16ae95a72f1e"
+      "hash": "f3e65e5eed05"
     },
     {
       "ruta": "apps/ialimp/app/admin/agenda/page.tsx",
@@ -48445,7 +49275,7 @@
           "exportada": false,
           "params": "base64String: string",
           "retorno": null,
-          "linea": 64
+          "linea": 69
         },
         {
           "nombre": "PricingAutoPage",
@@ -48453,7 +49283,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 73
+          "linea": 78
         },
         {
           "nombre": "Stat",
@@ -48461,7 +49291,7 @@
           "exportada": false,
           "params": "{ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: boolean }",
           "retorno": null,
-          "linea": 414
+          "linea": 423
         },
         {
           "nombre": "Toggle",
@@ -48469,7 +49299,7 @@
           "exportada": false,
           "params": "{ label, checked, onChange, warn }: { label: string; checked: boolean; onChange: (v: boolean) => void; warn?: boolean }",
           "retorno": null,
-          "linea": 424
+          "linea": 433
         },
         {
           "nombre": "btn",
@@ -48477,12 +49307,12 @@
           "exportada": false,
           "params": "bg: string, disabled: boolean",
           "retorno": "CSSProperties",
-          "linea": 433
+          "linea": 442
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "27b6db204387"
+      "hash": "1e596f71c3fc"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/pricing/page.tsx",
@@ -51937,7 +52767,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 94
+          "linea": 100
         }
       ],
       "tablas": [
@@ -51948,7 +52778,7 @@
         "pricing_decisiones"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "76e389acfedf"
+      "hash": "650f4ee2a6c1"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -55986,17 +56816,21 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 44,
+          "linea": 53,
           "resumen": "\"portal\": \"booking\", // booking | trivago | expedia | tripadvisor | ... \"scenario\": \"prop_busto_reform\", // prop_<id> para comparables por piso, o normal/corpus \"checkin\": \"2026-06-13\", \"checkout\": \"2"
         }
       ],
       "tablas": [
+        "generate_series",
+        "lateral",
         "market_rates",
         "next",
+        "pricing_escaparate",
+        "rate_snapshots",
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/ingest",
-      "hash": "1c819c451914"
+      "hash": "2c2754b10627"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/plan/route.ts",
@@ -56011,18 +56845,20 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 29,
-          "resumen": "GET /api/sivra/mercado/plan?max=12 QUÉ ventanas (fecha × aforo) debe medir la rutina de Booking en ESTA pasada, ya ordenadas por urgencia. Es el contrato entre el plan de fechas (que vive en el código"
+          "linea": 50,
+          "resumen": "· `escaparate` — NUESTRO propio anuncio, ventana a ventana (19/08/2026). Hasta hoy esto pasaba por casualidad —el piso propio aparecía a veces en una búsqueda de comparables— y por eso el motor llevab"
         }
       ],
       "tablas": [
         "market_rates",
         "next",
+        "pricing_escaparate",
         "pricing_eventos_auto",
-        "pricing_piso_zona"
+        "pricing_piso_zona",
+        "rate_snapshots"
       ],
       "rutaApi": "/api/sivra/mercado/plan",
-      "hash": "374cbe1e5355"
+      "hash": "97a165aacd08"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/search/route.ts",
@@ -56289,7 +57125,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 39
+          "linea": 40
         },
         {
           "nombre": "fmt",
@@ -56297,7 +57133,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 40
+          "linea": 41
         },
         {
           "nombre": "GET",
@@ -56305,7 +57141,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 72,
+          "linea": 73,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -56314,7 +57150,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 76
+          "linea": 77
         }
       ],
       "tablas": [
@@ -56338,7 +57174,95 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "19c32cfcad33"
+      "hash": "ebfea689e042"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "medir",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 106
+        },
+        {
+          "nombre": "cambiosDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "pisos: MedicionCanal[], soloProp: string | null, autoGlobal: boolean",
+          "retorno": "",
+          "linea": 216
+        },
+        {
+          "nombre": "marcarUsadas",
+          "kind": "function",
+          "exportada": false,
+          "params": "ids: number[]",
+          "retorno": null,
+          "linea": 254,
+          "resumen": "Marca las ventanas que han entrado en un ajuste. A partir de aquí ya NO pueden validar nada: el modelo las ha visto. Las que queden a NULL son la muestra limpia de la pasada siguiente."
+        },
+        {
+          "nombre": "coberturaCanales",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 264
+        },
+        {
+          "nombre": "centinelaHuesped",
+          "kind": "function",
+          "exportada": false,
+          "params": "pisos: MedicionCanal[]",
+          "retorno": "Promise<Map<string, ResumenHuesped>>",
+          "linea": 296,
+          "resumen": "¿Qué ve el HUÉSPED en las fechas ya tarifadas? El motor razona en base y con una cuota fija eso deja de describir el precio real (ver `pricing-precio-huesped.ts`). Se cruza la base viva con la mediana"
+        },
+        {
+          "nombre": "escribir",
+          "kind": "function",
+          "exportada": false,
+          "params": "cambios: Cambio[]",
+          "retorno": null,
+          "linea": 333
+        },
+        {
+          "nombre": "lineaCambio",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: Cambio",
+          "retorno": "string",
+          "linea": 343
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 350
+        }
+      ],
+      "tablas": [
+        "base",
+        "incomes",
+        "market_rates",
+        "mkt",
+        "next",
+        "pricing_escaparate",
+        "pricing_piso_zona",
+        "pricing_settings",
+        "rate_snapshots"
+      ],
+      "rutaApi": "/api/sivra/pricing/canal",
+      "hash": "a8b503739644"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -56587,7 +57511,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/pilot-track",
-      "hash": "aef9f760aeaf"
+      "hash": "0ce8c9a23180"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/recommend/route.ts",
@@ -56704,7 +57628,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 39
+          "linea": 46
         },
         {
           "nombre": "PATCH",
@@ -56712,7 +57636,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 182
+          "linea": 197
         }
       ],
       "tablas": [
@@ -56725,7 +57649,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/settings",
-      "hash": "cde6cd9f6a28"
+      "hash": "4cc249692e08"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/stats/route.ts",
@@ -62162,7 +63086,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 106,
+          "linea": 111,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -62171,7 +63095,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 136,
+          "linea": 141,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -62180,7 +63104,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 158
+          "linea": 163
         },
         {
           "nombre": "ventanaMinutos",
@@ -62188,7 +63112,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 166,
+          "linea": 171,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -62197,13 +63121,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 178,
+          "linea": 183,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b5f559ca65be"
+      "hash": "ec5ebb1673eb"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -63727,7 +64651,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ac2522d02d84"
+      "hash": "836e62028010"
     },
     {
       "ruta": "apps/plataforma/lib/extracto-csv.ts",
@@ -64067,7 +64991,7 @@
           "params": "localId: string | null, anio: number",
           "retorno": "Promise<ResumenFinanciero>",
           "linea": 112,
-          "resumen": "ia-rest vive en su PROPIA BD (proyecto Supabase aparte), no en la compartida: el schema `iarest` de la BD unificada quedó como clon vacío del DDL. Por eso el resumen se lee EN VIVO por el puerto HTTP "
+          "resumen": "ia-rest vive en la BD compartida (schema `iarest`) desde el corte de junio 2026, pero el resumen se sigue leyendo por el puerto HTTP de ia-rest (`/api/operador/financiero`, Bearer `OPERADOR_SHARED_SEC"
         },
         {
           "nombre": "getResumenNegocio",
@@ -64103,7 +65027,7 @@
         "v_contab_pyg"
       ],
       "rutaApi": null,
-      "hash": "53ffdc5b4850"
+      "hash": "c3ffc7372d7a"
     },
     {
       "ruta": "apps/plataforma/lib/finanzas.ts",
@@ -65055,7 +65979,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9dc14306d21a"
+      "hash": "40ed75c14b1d"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/sonda-ia.ts",
@@ -65345,7 +66269,7 @@
           "exportada": true,
           "params": "base: number, dateStr: string",
           "retorno": "number",
-          "linea": 82,
+          "linea": 103,
           "resumen": "⚠️ LEGACY / NO ES EL PRECIO REAL (hallazgo 27/07/2026, ver docs/CONTEXTO-SESIONES.md): esta fórmula estática (base fija × estacional × día-semana) es de ANTES de que existiera el motor anclado al merc"
         },
         {
@@ -65354,7 +66278,7 @@
           "exportada": true,
           "params": "dateStr: string",
           "retorno": "number",
-          "linea": 93,
+          "linea": 114,
           "resumen": "Factor RELATIVO de evento para el motor anclado al mercado: sólo sube en fechas con evento declarado (Semana Santa/Feria/…); el resto de estacionalidad/día ya la refleja el mercado. Honra el calendari"
         },
         {
@@ -65363,13 +66287,13 @@
           "exportada": true,
           "params": "dateStr: string, evExterno = 1",
           "retorno": "number",
-          "linea": 124,
+          "linea": 145,
           "resumen": "Suelo estacional relativo a min_price para una fecha. En fechas de evento sube con el evento (mitad del factor, acotado a ×2.0) para que Semana Santa/Feria no puedan venderse a suelo. Devuelve 1.0 (si"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c5972c261373"
+      "hash": "442fe5379192"
     },
     {
       "ruta": "apps/plataforma/lib/programador.ts",
@@ -67106,6 +68030,54 @@
       "hash": "ebf35fd6901b"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/escaparate-plan.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/escaparate-plan.ts — QUÉ ventanas de NUESTRO PROPIO anuncio hay que medir hoy. POR QUÉ EXISTE (19/08/2026). El motor convierte mercado→base con la recta del canal (`escaparate = markup × base + cuota_fija`, ver `pricing-canal.ts`). Esa recta solo se puede ajustar si alguien mira lo que el ",
+      "exporta": [
+        "recorrido",
+        "planEscaparate"
+      ],
+      "funciones": [
+        {
+          "nombre": "sumarDias",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string, dias: number",
+          "retorno": "string",
+          "linea": 97
+        },
+        {
+          "nombre": "diasEntre",
+          "kind": "function",
+          "exportada": false,
+          "params": "desde: string, hasta: string",
+          "retorno": "number",
+          "linea": 101
+        },
+        {
+          "nombre": "recorrido",
+          "kind": "function",
+          "exportada": true,
+          "params": "bases: number[]",
+          "retorno": "number",
+          "linea": 107,
+          "resumen": "Recorrido relativo de una lista de bases (0 = todas iguales). Es lo que separa m de F."
+        },
+        {
+          "nombre": "planEscaparate",
+          "kind": "function",
+          "exportada": true,
+          "params": "pisos: PisoEscaparate[], hoy: string, opts: OpcionesEscaparate = {},",
+          "retorno": "PlanEscaparate",
+          "linea": 127,
+          "resumen": "4. refresco de lo más viejo. Dentro de un piso se elige la candidata que MÁS recorrido añade al conjunto: medir otra vez algo que ya cuesta lo mismo que lo medido no acerca el ajuste ni un paso. A igu"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b94853d34337"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/eventos-estado.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/eventos-estado.ts — qué puede hacer un evento según lo seguro que sea. POR QUÉ (01/08/2026, idea de Alberto: «ver de qué forma podríamos revisar noticias e intentar adelantarnos a las fechas — ejemplo, final de Copa del Rey»). El descubrimiento automático solo veía el PRESENTE: Ticketmaste",
@@ -67463,6 +68435,7 @@
       "exporta": [
         "parsearParametrosPlan",
         "planDeVentanas",
+        "conReservaAltoValor",
         "ventanasQuePedir",
         "detalleIngesta",
         "ingestaFiable"
@@ -67474,7 +68447,7 @@
           "exportada": true,
           "params": "qs: URLSearchParams,",
           "retorno": "",
-          "linea": 115,
+          "linea": 122,
           "resumen": "Lee los parámetros del plan (`max`, `rondas`, `desde`, `hasta`) de una query string. Vive AQUÍ y no en el route handler para poder testearlo: el handler necesita Prisma y el alias `@/`, así que su lóg"
         },
         {
@@ -67483,7 +68456,7 @@
           "exportada": false,
           "params": "desdeIso: string, hastaIso: string",
           "retorno": "number",
-          "linea": 163
+          "linea": 170
         },
         {
           "nombre": "clave",
@@ -67491,7 +68464,7 @@
           "exportada": false,
           "params": "checkin: string, aforo: number",
           "retorno": "string",
-          "linea": 169
+          "linea": 176
         },
         {
           "nombre": "planDeVentanas",
@@ -67499,8 +68472,17 @@
           "exportada": true,
           "params": "plan: Ventana[], aforos: Map<number, string[]>, cobertura: CoberturaVentana[], hoyIso: string, max = 12, filtro: FiltroVentanas = {},",
           "retorno": "PlanPedido",
-          "linea": 195,
+          "linea": 202,
           "resumen": "Cruza el plan de ventanas (fechas) con los aforos de los pisos y la cobertura fiable ya medida, y devuelve las `max` que más falta hacen. Orden de urgencia, y el porqué de cada nivel: 1. **Nunca medid"
+        },
+        {
+          "nombre": "conReservaAltoValor",
+          "kind": "function",
+          "exportada": true,
+          "params": "pedidas: VentanaPedida[], tope: number, reserva = RESERVA_ALTO_VALOR,",
+          "retorno": "VentanaPedida[]",
+          "linea": 286,
+          "resumen": "Reparte el tope de la pasada entre la cola de urgencia y una RESERVA para lo caro sin medir. 🚨 POR QUÉ (18/08/2026, Navidad de House). La cola ordena por urgencia y, dentro de las vírgenes, por CERCA"
         },
         {
           "nombre": "ventanasQuePedir",
@@ -67508,7 +68490,7 @@
           "exportada": true,
           "params": "plan: Ventana[], aforos: Map<number, string[]>, cobertura: CoberturaVentana[], hoyIso: string, max = 12, filtro: FiltroVentanas = {},",
           "retorno": "VentanaPedida[]",
-          "linea": 259,
+          "linea": 314,
           "resumen": "Envoltura histórica: solo la lista. Nuevos usos, mejor `planDeVentanas` (declara el recorte)."
         },
         {
@@ -67517,7 +68499,7 @@
           "exportada": true,
           "params": "r: { ventanas: number comps: number sinRespuesta: number sinPrecio: number errores: string[] /** * Anuncios NUESTROS que el portal devolvió y se descartaron (ver `mercado-propios.ts`). Se * declara aunque sea un descarte correcto: un compar",
           "retorno": "string",
-          "linea": 275,
+          "linea": 330,
           "resumen": "Parte de la pasada para el latido. Igual que en el barrido por búsqueda, **lo que NO se pudo medir va primero**: una ventana que el conector no contestó es «no lo sé», no «no hay mercado», y confundir"
         },
         {
@@ -67526,13 +68508,13 @@
           "exportada": true,
           "params": "r: { ventanas: number comps: number sinRespuesta: number errores: string[] }",
           "retorno": "boolean",
-          "linea": 308,
+          "linea": 363,
           "resumen": "¿Vale la pasada? Conservador igual que `barridoFiable`: hace falta haber MEDIDO algo y que la mayoría de lo intentado haya respondido. Una pasada que pide 12 ventanas y solo contesta 1 no es «poco mer"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a9434f2b70f4"
+      "hash": "3b13a3cc317f"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/mercado-propios.ts",
@@ -67558,13 +68540,13 @@
           "exportada": true,
           "params": "nombre: string",
           "retorno": "boolean",
-          "linea": 54,
+          "linea": 91,
           "resumen": "¿Este comparable es en realidad un anuncio nuestro? Coincide por prefijo/inclusión del nombre curado dentro del nombre publicado, porque el portal le cuelga sufijos comerciales que cambian solos («HOU"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2b62dde309ed"
+      "hash": "0d1ca1e81532"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/mercado-ventanas.ts",
@@ -67585,7 +68567,7 @@
           "exportada": true,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 64,
+          "linea": 71,
           "resumen": "«2026-11-13» → «noviembre 2026» (para la consulta de refuerzo por mes)."
         },
         {
@@ -67594,7 +68576,7 @@
           "exportada": true,
           "params": "checkin: string, checkout: string, aforo: number, motivo: 'mes' | 'evento',",
           "retorno": "ConsultaVentana[]",
-          "linea": 85,
+          "linea": 92,
           "resumen": "Consultas de una ventana, en orden de intento (la siguiente solo se lanza si la anterior no resuelve, y a partir de la segunda pagan el cupo de refuerzo): 1. ABIERTA con la fecha ISO → es la que trae "
         },
         {
@@ -67603,7 +68585,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "Date",
-          "linea": 118
+          "linea": 125
         },
         {
           "nombre": "fmt",
@@ -67611,7 +68593,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 121
+          "linea": 128
         },
         {
           "nombre": "sumarDias",
@@ -67619,7 +68601,7 @@
           "exportada": false,
           "params": "iso: string, n: number",
           "retorno": "string",
-          "linea": 124
+          "linea": 131
         },
         {
           "nombre": "diasEntre",
@@ -67627,7 +68609,7 @@
           "exportada": false,
           "params": "desdeIso: string, hastaIso: string",
           "retorno": "number",
-          "linea": 127
+          "linea": 134
         },
         {
           "nombre": "findeDelMes",
@@ -67635,7 +68617,7 @@
           "exportada": true,
           "params": "hoyIso: string, m: number, orden = 0",
           "retorno": "string",
-          "linea": 150,
+          "linea": 164,
           "resumen": "Fecha de muestra nº `orden` del mes a `m` meses vista. `orden` 0 = primer VIERNES (el que se ha barrido siempre; se mantiene para no mover la serie histórica). 🚨 POR QUÉ HAY MÁS DE UNA (01/08/2026, c"
         },
         {
@@ -67644,7 +68626,7 @@
           "exportada": true,
           "params": "eventos: EventoFecha[], factorMinimo = 1.15",
           "retorno": "EventoFecha[]",
-          "linea": 169,
+          "linea": 183,
           "resumen": "Agrupa fechas de evento CONTIGUAS en bloques y devuelve, de cada bloque, la de mayor factor (empate → la primera). La Feria entera gasta una sola ventana."
         },
         {
@@ -67653,7 +68635,7 @@
           "exportada": true,
           "params": "hoyIso: string, eventos: EventoFecha[], opts: VentanasOpts = {},",
           "retorno": "Ventana[]",
-          "linea": 201,
+          "linea": 215,
           "resumen": "Ventanas a barrer en una pasada. La base mensual va SIEMPRE (es la línea de temporada); las de evento se añaden por cercanía hasta el tope, sin repetir una fecha que ya cubre la base."
         },
         {
@@ -67662,13 +68644,13 @@
           "exportada": true,
           "params": "hoyIso: string, eventos: EventoFecha[], plan: Ventana[], opts: Pick<VentanasOpts, 'factorMinimo' | 'noches' | 'horizonteDias'> = {},",
           "retorno": "Ventana[]",
-          "linea": 294,
+          "linea": 323,
           "resumen": "Ventanas POR FECHA para los eventos CONFIRMADOS, sin colapsar bloques. SOLO para el plan del conector de Booking — el sweep de Serper sigue con `ventanasDelBarrido` a secas. POR QUÉ (14/08/2026, cazad"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "33d7fb499463"
+      "hash": "905221de1dd6"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pilot-track.ts",
@@ -67684,13 +68666,13 @@
           "exportada": true,
           "params": "i: PilotInput",
           "retorno": "PilotVerdict",
-          "linea": 29,
+          "linea": 33,
           "resumen": "Anti-falso-🔴 / anti-falso-🟢: separa \"sin datos\", \"todo bloqueado\", \"todo reservado\" y \"sin demanda\"."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b5de69cb0332"
+      "hash": "81eb443be45b"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pl-mensual.ts",
@@ -67792,13 +68774,13 @@
           "exportada": true,
           "params": "i: AnclaFechaInput, o: AnclaFechaOpts = {}",
           "retorno": "number",
-          "linea": 46,
+          "linea": 54,
           "resumen": "Devuelve el precio BASE (sin markup) mínimo que justifica el mercado de ESA fecha, o 0 si no hay evidencia suficiente. En el motor: `target = max(target, ancla)` ANTES del raíl ±%/día."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "735b380e3667"
+      "hash": "8c368d2f053c"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-bucket-fuente.ts",
@@ -67821,6 +68803,98 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "4b4b31b17913"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pricing-canal.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-canal.ts — la relación REAL entre nuestra base de Smoobu y lo que paga el huésped. POR QUÉ (18/08/2026, reserva de House 21-25/12). El motor tarifica anclado al mercado: mide el precio GUEST de los comparables y lo convierte a precio BASE dividiendo por `channel_markup` (1,20 = «el",
+      "exporta": [
+        "ajusteCanal",
+        "fijoPorNoche",
+        "baseDesdeGuest",
+        "baseDesdeGuestConFijo",
+        "guestDesdeBase",
+        "desviacionCanal",
+        "pasoCanal",
+        "validarCanal"
+      ],
+      "funciones": [
+        {
+          "nombre": "ajusteCanal",
+          "kind": "function",
+          "exportada": true,
+          "params": "ventanas: VentanaEscaparate[], opts: { aforo: number; minVentanas?: number; portal?: string },",
+          "retorno": "AjusteCanal",
+          "linea": 111,
+          "resumen": "Ajusta `escaparate = m × base + F` por mínimos cuadrados sobre las ventanas medidas. Solo entran las del aforo indicado (el mismo con el que se miden los comparables del piso) y con base conocida. Si "
+        },
+        {
+          "nombre": "fijoPorNoche",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: ParametrosCanal",
+          "retorno": "number",
+          "linea": 168,
+          "resumen": "Cuota fija repartida por noche. Es lo que hace que el modelo sea afín y no una regla de tres."
+        },
+        {
+          "nombre": "baseDesdeGuest",
+          "kind": "function",
+          "exportada": true,
+          "params": "guestNoche: number, p: ParametrosCanal",
+          "retorno": "number",
+          "linea": 181,
+          "resumen": "Precio BASE por noche que hay que poner en Smoobu para que el huésped vea `guestNoche`. Es la inversa del modelo afín. Nunca devuelve ≤0: si la cuota fija ya se come el objetivo (un mercado por debajo"
+        },
+        {
+          "nombre": "baseDesdeGuestConFijo",
+          "kind": "function",
+          "exportada": true,
+          "params": "guestNoche: number, markup: number, fijoNoche: number",
+          "retorno": "number",
+          "linea": 193,
+          "resumen": "La misma inversión con la cuota YA repartida por noche. Existe para los helpers del motor (`pricing-ancla-fecha`, `pricing-premio-mercado`), que trabajan con precios por noche y no conocen la duración"
+        },
+        {
+          "nombre": "guestDesdeBase",
+          "kind": "function",
+          "exportada": true,
+          "params": "baseNoche: number, p: ParametrosCanal",
+          "retorno": "number",
+          "linea": 200,
+          "resumen": "Precio que verá el huésped por noche con una base dada. La ida del modelo afín."
+        },
+        {
+          "nombre": "desviacionCanal",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { configurado: ParametrosCanal medido: { markup: number; cuotaFija: number } | null guestRef: number tolerancia?: number }",
+          "retorno": "DesviacionCanal",
+          "linea": 225,
+          "resumen": "¿Describen los parámetros configurados lo que ve el huésped? El sesgo se evalúa sobre un precio de mercado de referencia (`guestRef`) porque con una cuota fija el error NO es un porcentaje plano: pesa"
+        },
+        {
+          "nombre": "pasoCanal",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { configurado: ParametrosCanal medido: { markup: number; cuotaFija: number } guestRef: number maxSalto?: number }",
+          "retorno": "PasoCanal",
+          "linea": 275,
+          "resumen": "Un PASO desde los parámetros configurados hacia los medidos, sin mover el precio más de `maxSalto` en una sola pasada. Por qué un paso y no el salto entero: los parámetros del canal mueven TODAS las f"
+        },
+        {
+          "nombre": "validarCanal",
+          "kind": "function",
+          "exportada": true,
+          "params": "nuevas: VentanaEscaparate[], vigentes: { markup: number; cuotaFija: number }, opts: { aforo: number; tolSesgo?: number; tolError?: number } = { aforo: 0 },",
+          "retorno": "ValidacionCanal",
+          "linea": 348,
+          "resumen": "¿Acierta la recta que está en producción sobre ventanas que NO se usaron para ajustarla? Sin muestras devuelve `sin_muestras`, nunca `ok`: un validador que se pone verde porque no ha podido comparar n"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "566155c806c7"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-centinelas.ts",
@@ -67969,7 +69043,7 @@
           "exportada": true,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 10
+          "linea": 12
         },
         {
           "nombre": "percentile",
@@ -67977,7 +69051,7 @@
           "exportada": true,
           "params": "sorted: number[], q: number",
           "retorno": "number",
-          "linea": 13,
+          "linea": 15,
           "resumen": "Percentil con interpolación lineal sobre una muestra ordenada (ascendente)."
         },
         {
@@ -67986,21 +69060,21 @@
           "exportada": true,
           "params": "p: EngineParams, marketPrices: number[], marketScores: number[], occupancy: number | null,",
           "retorno": "EngineResult",
-          "linea": 41
+          "linea": 43
         },
         {
           "nombre": "recommendedBaseFromEngine",
           "kind": "function",
           "exportada": true,
-          "params": "res: EngineResult, opts: { markup: number; max_change_pct: number; min_price: number | null; max_price: number | null; baseActual: number | null },",
+          "params": "res: EngineResult, opts: { markup: number; max_change_pct: number; min_price: number | null; max_price: number | null baseActual: number | null /** parte FIJA que el canal suma a la noche (cuota por estancia ÷ noches típicas del piso) */ fi",
           "retorno": "number | null",
-          "linea": 88,
+          "linea": 90,
           "resumen": "Convierte el recomendado (huésped) a precio BASE de Smoobu y aplica la cadena de topes del propietario: floor/ceil de mercado (en base) → max_change_pct vs base actual → min/max absolutos. Es la caden"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8555c024d453"
+      "hash": "9fd7c5d50432"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-guardia.ts",
@@ -68064,6 +69138,38 @@
       "hash": "7cd4dba450cd"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/pricing-precio-huesped.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-precio-huesped.ts — lo que ve el HUÉSPED, que no es lo que decide el motor. POR QUÉ (19/08/2026). El motor razona, decide y se autolimita en precio BASE: el ancla de mercado, el suelo `min_price`, el raíl ±%/día, el prior estacional… todo en base. Pero el huésped no paga la base: p",
+      "exporta": [
+        "precioHuesped",
+        "baseDondeLaCuotaMandaya"
+      ],
+      "funciones": [
+        {
+          "nombre": "precioHuesped",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechas: FechaHuesped[], params: ParametrosCanal, opts: { topeCaro?: number; sueloBarato?: number; maxPeores?: number } = {},",
+          "retorno": "ResumenHuesped",
+          "linea": 80,
+          "resumen": "Juzga el precio que ve el huésped fecha a fecha. `peores` sale ordenado por ratio descendente y solo contiene fechas juzgables: una fecha sin mercado nunca puede encabezar un aviso de «estás caro», po"
+        },
+        {
+          "nombre": "baseDondeLaCuotaMandaya",
+          "kind": "function",
+          "exportada": true,
+          "params": "params: ParametrosCanal, pesoMaximo = 0.5,",
+          "retorno": "number | null",
+          "linea": 129,
+          "resumen": "Precio BASE por debajo del cual bajar ya no sirve de nada porque el precio del huésped apenas se mueve: la cuota fija ya es la mayor parte de lo que paga. Es el número que le falta al motor para saber"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7b5783fa8d56"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/pricing-premio-mercado.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/pricing-premio-mercado.ts — lógica PURA (sin BD ni red) del \"premio de mercado por fecha\". Contexto (22/07/2026): el motor (`apply/route.ts`) solo consultaba el mercado por FECHA EXACTA cuando había un factor de evento del CALENDARIO (`if (ev > 1)`). Karol G (11-jun-27) y Feria (15-abr-27)",
@@ -68077,13 +69183,13 @@
           "exportada": true,
           "params": "i: PremioMercadoInput, o: PremioMercadoOpts = {}",
           "retorno": "number",
-          "linea": 43,
+          "linea": 47,
           "resumen": "Devuelve el precio BASE (sin markup) al que anclar la fecha como premium de mercado, o 0 si no aplica. `target_final = max(target, premio)` en el motor, y el premio salta el raíl al alza."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c6e4079eff25"
+      "hash": "ed2c7536f612"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-suelo-pl.ts",
@@ -68408,7 +69514,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "7ce4a72a7921"
+      "hash": "1c7233b376cd"
     },
     {
       "ruta": "apps/plataforma/lib/smoobu.ts",
@@ -92793,7 +93899,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2475,
-    "funciones": 6713
+    "archivos": 2503,
+    "funciones": 6802
   }
 }

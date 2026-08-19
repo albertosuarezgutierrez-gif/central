@@ -119,9 +119,8 @@ Mismo principio que los `packages/*` (núcleos compartidos) frente a `apps/*` (l
     `eslint-config-next` (^16) se desacopla de la de Next por app (el lint son reglas, no runtime; en las 3 apps Next-15
     el lint no es gate ni rompe build por `eslint.ignoreDuringBuilds`).
 - **Abajo (específico de cada vertical)** → en su proyecto Vercel / su carpeta:
-  - secretos de sesión/JWT, dominios (`NEXTAUTH_URL`…), el **silo transitorio** de ia-rest
-    (`efncqyvhniaxsirhdxaa`, **en migración** a la BD compartida — ver "Arquitectura de datos" abajo),
-    y los integradores de cada una (SMTP, Smoobu, Stripe, Apify…).
+  - secretos de sesión/JWT, dominios (`NEXTAUTH_URL`…), y los integradores de cada una
+    (SMTP, Smoobu, Stripe, Apify…).
 
 ## Arquitectura de datos del holding (principio DEFINITIVO)
 
@@ -134,10 +133,10 @@ Mismo principio que los `packages/*` (núcleos compartidos) frente a `apps/*` (l
    por vertical), **scoped por tenant** (`cuenta_id`/`empresa_id`/`negocio_id`) y con rol de BD dedicado.
    El motor de dominio vive en `packages/module-*` (puro, portable).
 3. **`apps/plataforma` consolida:** lee la compartida directamente (jerarquía `Cuenta → Sociedad → Negocio`).
-4. **`apps/ia-rest` es un silo TRANSITORIO** (`efncqyvhniaxsirhdxaa`) en migración al schema `iarest` de la
-   compartida (~80% hecho: DDL/funciones/edge/storage clonados; falta el "flip" de envs + datos vivos).
-   **⚠️ NO se construyen módulos nuevos del holding dentro de ia-rest hasta el flip** — nacen ya en la
-   compartida (patrón `apps/transporte`/`apps/alquiler`).
+4. **`apps/ia-rest` ya vive en la compartida** (schema `iarest`: runtime, Edge Functions y crons;
+   cierre 19/08/2026). Su proyecto viejo `efncqyvhniaxsirhdxaa` fue **BORRADO**
+   el 19/08/2026 — ya no existe; el único proyecto Supabase del holding es `central`. Los módulos nuevos del holding
+   siguen naciendo en la compartida (patrón `apps/transporte`/`apps/alquiler`), nunca como silos.
 
 
 ## Ver también

@@ -82,7 +82,7 @@ export async function runSync(days: number, maxPages = 20, arrFrom?: string, arr
   `)
   const byName = new Map(props.map(p => [p.name.toLowerCase().trim(), p.id]))
 
-  const cnt = { new: 0, modified: 0, cancelled: 0, skipped: 0, reservedAt: 0, registradas: 0 }
+  const cnt = { new: 0, modified: 0, cancelled: 0, skipped: 0, reservedAt: 0, aforo: 0, registradas: 0 }
   const logs: any[] = []
 
   for (const b of all) {
@@ -92,6 +92,17 @@ export async function runSync(days: number, maxPages = 20, arrFrom?: string, arr
     const co = parseDate(b.departure)
     const amtGross = typeof b.price === 'string' ? parseFloat(b.price) : (b.price || 0)
     const portal_tmp = PORTAL_MAP[b.channel?.name || ''] || 'OTRO'
+    // 🚨 CUÁNTA GENTE VIENE (18/08/2026). Sin el aforo, un €/noche no significa nada: Booking cobra
+    // recargo por persona por encima de cierto umbral (medido ese día en House: +24,53€ por persona
+    // y noche a partir de 6), así que la misma reserva puede ser cara o barata según el grupo — y sin
+    // el dato «¿vendimos barato?» solo se puede opinar. `null` cuando el canal no lo informa: un
+    // aforo desconocido NO es cero (regla de CLAUDE.md, tres estados).
+    const enteroOno = (v: unknown): number | null => {
+      const n = typeof v === 'string' ? parseInt(v, 10) : (typeof v === 'number' ? v : NaN)
+      return Number.isFinite(n) && n >= 0 ? n : null
+    }
+    const adultos = enteroOno(b.adults)
+    const ninos = enteroOno(b.children)
     // El precio de Smoobu se escribe TAL CUAL (es el bruto). El neto lo pone el trigger. Ver arriba.
     const amt = amtGross
     const portal = portal_tmp
@@ -160,11 +171,11 @@ export async function runSync(days: number, maxPages = 20, arrFrom?: string, arr
 
     if (ex.length === 0) {
       await prisma.$executeRaw(Prisma.sql`
-        INSERT INTO incomes ("propertyId", date, amount, portal, "reservationId", "guestName", "checkIn", "checkOut", nights, reserved_at)
+        INSERT INTO incomes ("propertyId", date, amount, portal, "reservationId", "guestName", "checkIn", "checkOut", nights, reserved_at, adults, children)
         VALUES (${pid}, ${ci.toISOString()}::timestamptz, ${amt}, ${portal}::"Portal",
                 ${rid}, ${b['guest-name'] || null}, ${ci.toISOString()}::timestamptz,
                 ${co?.toISOString() || null}::timestamptz, ${nights(ci, co)},
-                ${reservedAt}::timestamptz)
+                ${reservedAt}::timestamptz, ${adultos}::smallint, ${ninos}::smallint)
       `)
       cnt.new++
     } else {
@@ -179,10 +190,31 @@ export async function runSync(days: number, maxPages = 20, arrFrom?: string, arr
           UPDATE incomes SET amount=${amt}, "checkIn"=${ci.toISOString()}::timestamptz,
             "checkOut"=${co?.toISOString() || null}::timestamptz, nights=${nights(ci, co)},
             portal=${portal}::"Portal",
-            reserved_at = COALESCE(${reservedAt}::timestamptz, reserved_at)
+            reserved_at = COALESCE(${reservedAt}::timestamptz, reserved_at),
+            -- COALESCE con el valor nuevo delante: si Smoobu deja de informar el aforo, se conserva
+            -- el que ya teníamos en vez de borrarlo (un NULL nuevo es «no me lo han dicho»).
+            adults   = COALESCE(${adultos}::smallint, adults),
+            children = COALESCE(${ninos}::smallint, children)
           WHERE "reservationId" = ${rid}
         `)
         cnt.modified++
+      } else if (adultos != null || ninos != null) {
+        // La fila no cambió de importe ni de fechas, pero puede que le falte el aforo (todas las
+        // anteriores al 18/08/2026 lo tienen NULL). Igual que con `reserved_at`, el sync diario va
+        // completando el histórico solo, sin depender de un backfill que llegue a todo.
+        const rellenadas = await prisma.$executeRaw(Prisma.sql`
+          UPDATE incomes SET adults = COALESCE(adults, ${adultos}::smallint),
+                             children = COALESCE(children, ${ninos}::smallint)
+          WHERE "reservationId" = ${rid}
+            AND (adults IS NULL OR children IS NULL)`)
+        if (rellenadas > 0) cnt.aforo++
+        if (reservedAt) {
+          const conFecha = await prisma.$executeRaw(Prisma.sql`
+            UPDATE incomes SET reserved_at = ${reservedAt}::timestamptz
+            WHERE "reservationId" = ${rid} AND reserved_at IS NULL`)
+          if (conFecha > 0) cnt.reservedAt++
+        }
+        cnt.skipped++
       } else if (reservedAt) {
         // La fila no cambió de importe ni de fechas, pero puede que le falte `reserved_at` (todas
         // las anteriores al 01/08/2026 lo tienen NULL). Rellenarlo aquí hace que el sync diario

@@ -42,8 +42,9 @@ description: >
 
 ## BD compartida (multi-tenant) — frontera crítica
 - Supabase **`wswbehlcuxqxyinousql`** la comparten **ialimp + sivra + plataforma + transporte + alquiler** (schema `public`, scope `empresa_id`/`cuenta_id`).
-- **ia-rest** usa schema `iarest` (aislado por `search_path`), pero sus **datos vivos** siguen en su proyecto propio
-  `efncqyvhniaxsirhdxaa`; plataforma lo lee por **puerto HTTP**, no por Prisma sobre `iarest.*` (clon vacío).
+- **ia-rest** también vive aquí, en su **schema `iarest`** (runtime + Edge Functions + crons, cierre 19/08/2026);
+  su proyecto viejo `efncqyvhniaxsirhdxaa` fue borrado definitivamente (19/08/2026). Plataforma lo sigue leyendo por **puerto HTTP**
+  (patrón de aislamiento entre apps), no por Prisma sobre `iarest.*`.
 - **Cada app conecta con su PROPIO rol de BD** (`prisma_sivra`, `prisma_ialimp`, `prisma_plataforma`, `prisma_transporte`,
   `prisma_alquiler`; rrhh→`rrhh_app`). Todos: `login` + `BYPASSRLS` + grants DML en `public`, **sin CREATE** (mínimo privilegio). **NUNCA conectar una app
   como `postgres`** (superusuario): resetear su contraseña tumba a todas a la vez (incidente 26/06). Una app/vertical nueva → **dale

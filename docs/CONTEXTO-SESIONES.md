@@ -38,6 +38,63 @@
   confirmar) + Genius 15% + móvil 10% + 3 tarifas país −10% (solo No reembolsable) → peor caso
   −39,4%. Preliminar: quitar tarifas país, mantener el resto; Genius nivel 3 NUNCA.
 - Pendientes: Dúplex 2888928 · Luxury 4340072 · Busto Reform 4771238 + veredicto conjunto.
+### 🏷️ (19/08/2026) Tres centinelas del canal — y el primero destapa que ESTAMOS CAROS
+- **Validación FUERA de muestra** (`validarCanal`): el R² del ajuste es circular (mide la recta
+  contra las ventanas que la produjeron). Ahora `pricing_escaparate.usada_en_ajuste_at` marca lo
+  consumido y la pasada siguiente juzga la recta VIGENTE contra las ventanas nuevas. Probado con
+  las 16 reales: los parámetros viejos (×1,20) salen `desviado` (sesgo +8,4%) y los medidos `ok`.
+- **Centinela del precio al HUÉSPED** (`pricing-precio-huesped.ts`): el motor razona en BASE y con
+  cuota fija eso ya no describe lo que se paga. En House, 597€/estancia son 299€/noche que el motor
+  no ve: puede estar en su `min_price` y listar un 78% sobre mercado. Añade `baseDondeLaCuotaMandaya`
+  (House: 331€; por debajo, bajar la base ya no abarata la noche).
+- 🚨 **Lo que ha encontrado al estrenarlo:** el precio al huésped está muy por encima de la mediana
+  de SU mercado. **Busto Reform ×2,18** (mes a mes: 1,4-3,0×; ocupación 90d **11%**) y **House ×1,88**
+  (ocupación 25%). Duplex 1,06× y Luxury 1,10×, sanos. Descartado que sea artefacto: comps al mismo
+  aforo (`pricing_factor_aforo(2,2)=1`), 30-270 comps/mes, y Busto NI SIQUIERA tiene suelo PL.
+  **Decisión pendiente de Alberto: por qué el motor no baja Busto y hasta dónde bajarlo.**
+- **Canal por PORTAL** + cobertura contada en euros: la recta es de Booking, que es el 92-99% del
+  bruto de los cuatro (Airbnb 1,0% House / 2,1% Luxury). El hueco queda declarado, no supuesto.
+- ❌ **`position_factor` de House NO se sube a 1,23.** El «6/6 reservas sobre el p50» era sesgo de
+  supervivencia: la ocupación realizada de House es la más baja de los cuatro (47% a 12 meses) y ya
+  lista al 1,88× del mercado. Subir sería ir en la dirección contraria a lo que dicen los datos.
+- PR #1484.
+
+### 🗄️ (19/08/2026) Unificación Supabase CERRADA — un solo proyecto, ya renombrado a «central»
+- Alberto pidió unir los 2 proyectos Supabase. Hallazgo: el flip de junio SÍ se hizo (viejo congelado
+  desde jun, compartida con escrituras vivas — la nota "split-brain 12/07" estaba desfasada), pero el
+  cierre quedó a medias: 5 EFs desplegadas al proyecto VIEJO tras el corte (qr-assistant daba 404 en
+  prod), los 25 crons sin recrear, y Realtime del KDS sin publication (solo preavisos).
+- Cerrado: 5 EFs redesplegadas + 45 fuentes versionadas, 25 crons recreados (migr. 20260819), Realtime
+  +9 tablas, ~1.390 filas valiosas copiadas por pg_net (leads/CRM/training/stripe_events), crons del
+  viejo apagados (0), refs de repo/skills/MATRIZ corregidas. PR draft de la rama claude/unificar-supabase-*.
+- CERRADO 100%: proyecto viejo PAUSADO, webhook Stripe repuntado (conector MCP), proyecto renombrado a
+  «central» (Claude Chrome), y monitor-health-cron reescrito con la ANON key (verify_jwt acepta cualquier
+  JWT válido) → app.service_role_key ya no hace falta en ningún sitio. MONEI: DESCARTADO — Alberto decide quedarse solo con Stripe para cobros (19/08); su webhook da igual.
+- REMATE: PR #1483 mergeado a main y proyecto viejo `efncqyvhniaxsirhdxaa` BORRADO del todo por Alberto
+  (19/08, verificado con list_projects: solo queda `central`). Sus 27 archivos demo de Storage y el
+  histórico demo de mayo se fueron con él, asumido. Ya NO existe "el proyecto viejo": todo es `central`.
+
+### 📐 (19/08/2026) El canal NO es un markup: es una recta — y ahora se mide y se corrige SOLO
+- Medido el escaparate real de los CUATRO pisos con el conector (16 ventanas): el canal multiplica por
+  **menos de 1** (~0,9) y **suma una cuota fija por estancia** (limpieza: 597€ en House). Un «markup»
+  escalar no existe — el mismo piso medía ×1,33 a 2 noches y ×1,18 a 3 sin cambiar nada. Modelo afín
+  `escaparate = m × base + F` en `lib/sivra/pricing-canal.ts`; el motor lo invierte por noche.
+- El ×1,20 supuesto desplazaba TODAS las fechas: a 1.500€/noche pedía 1.250€ de base (correcto ~1.333)
+  y al precio típico de House pedía 568€ cuando tocan 425€. Cableado en apply/engine/ancla/premio/
+  pilot-track (`fijoNoche` OBLIGATORIO) y quitadas las guardas `markup >= 1`, que tiraban lo medido.
+- **Ya no espera a nadie:** `/api/sivra/pricing/canal` (cron 07:45) ajusta y REESCRIBE `channel_markup`
+  + `cuota_fija` + `noches_ref`, acotado a ±15% de efecto/pasada, con interruptor `canal_auto` y latido
+  `sivra_canal`. Y el plan (`/mercado/plan`) pide ya las ventanas propias eligiendo las que dan
+  RECORRIDO de precio (sin él, m y F son indistinguibles) → la rutina de Booking las mide sola.
+- `ANUNCIOS_PROPIOS` solo tenía House; añadidos los 4 nombres de portal. ⚠️ **Corrijo lo que dije
+  al mergear:** afirmé que Busto/Luxury/Dúplex «llevaban entrando como comparables de sí mismos» y
+  al verificarlo contra `market_rates` **no había ni una fila** (2.746 comps, 833 nombres, ninguno
+  propio). El riesgo era real y ahora está tapado, pero NO se materializó. Lo afirmé sin mirar.
+- 🔗 **Encaja con el hallazgo de Smoobu de hoy (entrada siguiente), no lo contradice:** ese +20% por
+  canal vive DENTRO de Smoobu, así que ya está incluido en lo que mide el conector. Y ojo a las
+  unidades: `0,92 efectivo/base` es lo que COBRAMOS (tras comisión); esta recta es lo que PAGA el
+  huésped. Son dos ratios distintos y no se pueden comparar entre sí.
+- PR #1478 (draft). **Nada de esto corre hasta que se mergee y despliegue.**
 
 ### 🚨 (19/08/2026) El +20% de Booking YA EXISTÍA en Smoobu — Fase 2 (channel_markup) CANCELADA
 - Claude Chrome verificó Smoobu (Precios→Ajustes): el ajuste por canal es ÚNICO por portal (no por
@@ -69,6 +126,23 @@
   insertadas en medio del párrafo de intro — reordenadas.
 - «Estado vivo» sigue al día desde el 18/08, sin pendientes nuevos que anotar. Sin manuales que
   tocar (la única UI nueva del rango, la curva de `/trading`, es de plataforma).
+
+### 🎄 (18/08/2026) La Navidad de House no la tarificaba NADIE — y `price_ours` volvió a engañar
+- Reserva 21-25/12 a 892€/noche (84% de la base). Al mirarla leí `rate_snapshots.price_ours`, que es la
+  fórmula sombra LEGACY: dije 334-462€ cuando el precio real era 860-1.247€. **Corregido en el esquema**
+  (COMMENT en las dos columnas + vista `v_precio_vivo`): el aviso solo vivía en un comentario de TS.
+- Hallazgo: del 17/12 al 05/01 el motor NO ha escrito NUNCA (ni un dry-run). Los precios están congelados
+  desde el 10/08 (última curva de PriceLabs) y solo los sostiene la guarda de outlier, que deja de
+  proteger a 30 días vista — y el suelo PL caduca el 08/12.
+- Causas: (a) el barrido muestreaba SOLO la 1ª quincena (4º martes ahora) y la cola de eventos iba por
+  cercanía, así que Navidad nunca se medía (reserva de alto valor en `planDeVentanas`); (b) 27-30/12 no
+  tenían factor pese a ser el bloque más caro tras Nochevieja (medido: ×1,40 y ×1,85 vs diciembre normal);
+  (c) `channel_markup` 1,20 supuesto contra 1,10 medido en el escaparate real → nueva tabla
+  `pricing_escaparate` + `/api/sivra/pricing/markup` (avisa, no aplica solo); (d) `incomes` no guardaba
+  el aforo (ya sí: `adults`/`children`).
+- Sembrados 30 comps reales de Navidad (fuente `manual`) y las mediciones del escaparate. PR draft.
+- **Pendiente de tu decisión:** House vende a **1,23× la mediana de su bucket** (6/6 reservas por encima)
+  y el motor apunta al p50 con `position_factor` 1,00 → apunta corto por diseño.
 
 ### 📈 (18/08/2026) Gráfico de evolución de la cartera REAL — antes no había pasado que dibujar
 - Alberto pidió ver la evolución del núcleo. Hallazgo: NO existía histórico — `trading_cartera_real` es

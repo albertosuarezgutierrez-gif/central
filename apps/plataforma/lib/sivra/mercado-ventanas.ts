@@ -50,6 +50,13 @@ export type Ventana = {
   ronda: number
   /** el evento de esta ventana está CONFIRMADO (ver `EventoFecha.confirmado`) */
   eventoConfirmado?: boolean
+  /**
+   * Factor de evento de la fecha (1 = ninguno). Viaja hasta el plan porque la cola de urgencia lo
+   * necesita para reservar sitio a los bloques CAROS aunque estén lejos: sin él, la cola se ordena
+   * solo por cercanía y una Navidad o una Feria sin medir se quedan detrás de 40 noches de
+   * septiembre (ver `planDeVentanas`).
+   */
+  factor?: number
 }
 
 export type ConsultaVentana = {
@@ -144,15 +151,22 @@ function diasEntre(desdeIso: string, hastaIso: string): number {
  * La mezcla de días NO es cosmética: el bucket del mes se aplica a TODOS los días de ese mes, así
  * que tiene que parecerse al mes, no a su mejor viernes. Se replica la composición que ya tenían
  * los meses que sí funcionaban (agosto y septiembre: ~2/3 fin de semana, 1/3 entre semana):
- *   orden 0 → primer viernes · orden 1 → segundo sábado · orden 2 → segundo martes.
+ *   orden 0 → primer viernes · orden 1 → segundo sábado · orden 2 → CUARTO martes.
  * Con solo findes el bucket sobrevaloraría el mes entero; con solo entre semana, lo hundiría.
+ *
+ * 🚨 El orden 2 pasó de SEGUNDO a CUARTO martes el 18/08/2026, y no es un detalle: los tres
+ * órdenes caían en la PRIMERA QUINCENA (días 1-14), así que el corpus no tenía una sola medición
+ * de la segunda mitad de ningún mes salvo que hubiera evento. Medido ese día en `market_rates`:
+ * las fechas fiables de diciembre eran 5, 11, 12, 15 y 18 — y con esas cinco el motor decidía el
+ * precio de Nochebuena y de Fin de Año. Cambia el reparto en el calendario, NO la composición
+ * (siguen siendo 2 findes + 1 entre semana) ni el coste (siguen siendo 3 ventanas por mes).
  */
 export function findeDelMes(hoyIso: string, m: number, orden = 0): string {
   const d = aFecha(hoyIso)
   d.setUTCDate(1)
   d.setUTCMonth(d.getUTCMonth() + m)
   // [día de la semana buscado, cuántas veces hay que encontrarlo]
-  const patron: [number, number][] = [[5, 1], [6, 2], [2, 2]]
+  const patron: [number, number][] = [[5, 1], [6, 2], [2, 4]]
   const [diaSemana, ocurrencia] = patron[orden] ?? patron[0]
   let vistas = 0
   while (true) {
@@ -226,10 +240,24 @@ export function ventanasDelBarrido(
   const fechasEvento = new Set(
     eventos.filter(e => Number(e.factor) >= factorMinimo).map(e => e.fecha),
   )
+  // 🚨 La búsqueda de hueco se queda DENTRO DEL MES y prueba también hacia atrás (18/08/2026).
+  // La versión anterior corría la muestra +7 días hasta tres veces, y con un bloque de evento
+  // largo al final del mes eso la sacaba del mes entero: la muestra del 22-dic (cuarto martes)
+  // saltaba a 29-dic, 5-ene y 12-ene, con lo que diciembre se quedaba con DOS fechas y perdía el
+  // bucket mensual —justo el fallo que las tres muestras vinieron a cerrar—. Se conserva el mismo
+  // día de la semana para no cambiar la composición finde/entre semana.
   const muestraDelMes = (m: number, orden: number): string => {
-    let f = findeDelMes(hoyIso, m, orden)
-    for (let intentos = 0; intentos < 3 && fechasEvento.has(f); intentos++) f = sumarDias(f, 7)
-    return f
+    const base = findeDelMes(hoyIso, m, orden)
+    if (!fechasEvento.has(base)) return base
+    const mes = base.slice(0, 7)
+    for (const salto of [7, -7, 14, -14, 21, -21]) {
+      const f = sumarDias(base, salto)
+      if (f.slice(0, 7) === mes && !fechasEvento.has(f)) return f
+    }
+    // Mes copado por eventos (Semana Santa + Feria en abril, p. ej.): se barre la fecha original.
+    // No suma al bucket mensual —el motor excluye las fechas de evento— pero medir esa noche sigue
+    // valiendo para el ancla por fecha, que es lo que tarifica el día caro.
+    return base
   }
 
   const rondasBase: Ventana[][] = []
@@ -265,6 +293,7 @@ export function ventanasDelBarrido(
         etiqueta: e.nombre,
         ronda: 1,
         eventoConfirmado: e.confirmado === true,
+        factor: Number(e.factor),
       })
     }
   }
@@ -318,6 +347,7 @@ export function ventanasDeConfirmadosPorFecha(
       etiqueta: e.nombre,
       ronda: 1,
       eventoConfirmado: true,
+      factor: Number(e.factor),
     })
   }
   return extra.sort((a, b) => a.checkin.localeCompare(b.checkin))

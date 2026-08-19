@@ -16,6 +16,7 @@ type Settings = {
   position_factor: number; quality_k: number; demand_k: number; demand_baseline: number
   own_score: number | null; min_price: number | null; max_price: number | null
   max_change_pct: number; channel_markup: number
+  cuota_fija: number; noches_ref: number; canal_auto: boolean
   events_enabled: boolean; gap_discount_pct: number
 }
 type Market = {
@@ -49,7 +50,11 @@ const NUM_FIELDS: { key: keyof Settings; label: string; step: number; hint: stri
   { key: "demand_k",        label: "Sensib. demanda",    step: 0.02, hint: "cuánto pesa tu ocupación" },
   { key: "demand_baseline", label: "Ocupación neutra",   step: 0.05, hint: "0–1 · por encima sube, por debajo baja" },
   { key: "own_score",       label: "Tu nota (reseñas)",  step: 0.1,  hint: "0–10 · tu puntuación media" },
-  { key: "channel_markup",  label: "Margen canal",       step: 0.01, hint: "×1–2 · 1 = escaparate sin recargo (medido 08/2026)" },
+  // El canal es una RECTA: escaparate = margen × base + cuota fija. Lo miden y lo escriben solos
+  // el cron /api/sivra/pricing/canal y el escaparate real; se editan a mano solo para forzar algo.
+  { key: "channel_markup",  label: "Margen canal (×)",   step: 0.01, hint: "×0.6–1.6 · MEDIDO en el portal, puede ser <1" },
+  { key: "cuota_fija",      label: "Cuota fija canal (€)", step: 1,  hint: "€ por ESTANCIA que suma el portal (limpieza)" },
+  { key: "noches_ref",      label: "Noches típicas",     step: 1,    hint: "entre cuántas noches se reparte la cuota fija" },
   { key: "max_change_pct",  label: "Cambio máx. /vez",   step: 0.05, hint: "0–1 · tope por aplicación (0.2 = ±20%)" },
   { key: "gap_discount_pct",label: "Descuento hueco",    step: 0.05, hint: "0–0.5 · noche suelta entre reservas" },
   { key: "min_price",       label: "Precio mín. (base €)", step: 1,  hint: "suelo de coste (autoridad final)" },
@@ -341,6 +346,10 @@ export default function PricingAutoPage() {
                   onChange={(v) => setField(p.property_id, "apply_enabled", v)} warn />
                 <Toggle label="Eventos (Semana Santa/Feria)" checked={d.events_enabled}
                   onChange={(v) => setField(p.property_id, "events_enabled", v)} />
+                {/* Bajarlo congela margen y cuota del canal: el cron diario deja de recalibrarlos
+                    (y lo declara en su respuesta, para que un piso congelado no sea invisible). */}
+                <Toggle label="Calibrar canal solo (canal_auto)" checked={d.canal_auto}
+                  onChange={(v) => setField(p.property_id, "canal_auto", v)} />
               </div>
 
               {/* Parámetros */}

@@ -4,14 +4,16 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
-# ⚠️ ia-rest es un SILO TRANSITORIO — no construyas módulos nuevos del holding aquí
+# 🗄️ BD de ia-rest: la COMPARTIDA, schema `iarest` — no construyas módulos nuevos del holding aquí
 
-Su BD de producción es el proyecto Supabase **separado** `efncqyvhniaxsirhdxaa` (schema `public`), **en
-migración** a la BD compartida del holding (`wswbehlcuxqxyinousql`, schema `iarest`) — ~80% hecho, falta el
-"flip" de envs + datos. **Hasta ese flip, cualquier módulo NUEVO del holding (almacén, contabilidad, RR.HH…)
-nace directamente en la BD compartida** (patrón `apps/transporte`/`apps/alquiler`), NO extendiendo ia-rest
-ni aplicando migraciones a su silo. Principio definitivo en `MATRIZ.md` ("Arquitectura de datos del holding")
-y plan en `docs/PLAN-consolidacion-BD-holding.md`. Aquí solo se toca lo que ya vive en ia-rest.
+Producción (runtime, Edge Functions y crons) vive en la BD compartida del holding
+(`wswbehlcuxqxyinousql`, **schema `iarest`**) desde el cierre del 19/08/2026. El proyecto viejo
+`efncqyvhniaxsirhdxaa` fue **BORRADO el 19/08/2026** (ya no existe; el único proyecto es `central`). Todo cliente
+Supabase, Edge Function o suscripción Realtime nueva DEBE fijar el schema `iarest` (y añadir la tabla a
+la publication `supabase_realtime` si usa Realtime). Los módulos NUEVOS del holding (almacén,
+contabilidad, RR.HH…) siguen naciendo en la compartida como módulos propios (patrón
+`apps/transporte`/`apps/alquiler`), NO extendiendo ia-rest. Principio definitivo en `MATRIZ.md`
+("Arquitectura de datos del holding"). Aquí solo se toca lo que ya vive en ia-rest.
 
 # Memoria entre sesiones (CRÍTICO — entorno efímero)
 

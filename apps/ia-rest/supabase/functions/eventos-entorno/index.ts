@@ -27,7 +27,7 @@ async function enviarTelegram(msg: string) {
 }
 
 serve(async () => {
-  const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
+  const supabase = createClient(SUPABASE_URL, SERVICE_KEY, { db: { schema: 'iarest' } })
 
   // 1. Restaurantes con CP o coordenadas
   const { data: restaurantes, error: errR } = await supabase

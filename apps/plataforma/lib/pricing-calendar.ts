@@ -36,8 +36,29 @@ export const EVENTS: Record<string, number> = {
   "2026-10-30":1.35,"2026-10-31":1.45,"2026-11-01":1.45,
   // Puente de la Constitución (6-dic) + Inmaculada (8-dic) — alta demanda real (eran 200-216€)
   "2026-12-04":1.70,"2026-12-05":1.85,"2026-12-06":1.90,"2026-12-07":1.85,"2026-12-08":1.80,
-  // Navidad + Fin de Año + Reyes
-  "2026-12-24":1.35,"2026-12-25":1.40,"2026-12-26":1.40,"2026-12-31":1.60,
+  // --- Navidad + Fin de Año + Reyes ---
+  // 🚨 AMPLIADO Y MEDIDO el 18/08/2026 (reserva de House 21-25/12). El bloque tenía factor SOLO en
+  // 24, 25, 26 y 31: del 27 al 30 —que el mercado paga más caro que ninguna otra noche de
+  // diciembre salvo Nochevieja— eran «diciembre normal» para el motor, sin premio y, lo que más
+  // duele, SIN SUELO de evento. Con la curva de PriceLabs congelada desde el 10/08 y su suelo
+  // caducando el 08/12, esas noches se quedaban sin nada que las sostuviera en cuanto entraran en
+  // los 30 días de la guarda de outlier.
+  //
+  // Los factores NO son a ojo: son el cociente contra la mediana de diciembre medida ese día con
+  // el conector de Booking para aforo 12 (comps de Sevilla centro, p50 de las fechas normales
+  // 11/12/15/18-dic ≈ 390€/noche):
+  //     21-23 dic → p50 284€  = 0,73×  → NINGÚN factor: el mercado dice que la víspera larga de
+  //                                      Navidad es FLOJA (todo el mundo aún en casa). Inventarle
+  //                                      un premio por «suena a Navidad» habría sido justo el
+  //                                      error contrario al que se viene a corregir.
+  //     26-28 dic → p50 544€  = 1,40×  (mide las noches 26 y 27)
+  //     29-31 dic → p50 721€  = 1,85×  (mide las noches 29 y 30)
+  // El 28 se queda en 1,40 (entre una noche medida a 1,40 y otra a 1,85, el conservador) y el 31
+  // hereda el 1,85 de sus dos vecinas medidas —no MÁS, aunque Nochevieja casi nunca sea más barata
+  // que el 30: subir por encima de lo medido sería volver a inventar—. Del 2 al 4 de enero siguen
+  // sin factor a propósito: nadie los ha medido todavía.
+  "2026-12-24":1.35,"2026-12-25":1.40,"2026-12-26":1.40,"2026-12-27":1.40,
+  "2026-12-28":1.40,"2026-12-29":1.85,"2026-12-30":1.85,"2026-12-31":1.85,
   "2027-01-01":1.40,"2027-01-05":1.45,"2027-01-06":1.50,
   // Maratón de Sevilla (~3er dom feb) + Puente de Andalucía (28-feb)
   "2027-02-19":1.40,"2027-02-20":1.50,"2027-02-21":1.50,"2027-02-26":1.30,"2027-02-27":1.40,"2027-02-28":1.40,
