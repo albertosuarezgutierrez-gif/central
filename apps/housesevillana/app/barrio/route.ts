@@ -4,12 +4,12 @@ const H = `<!DOCTYPE html><html lang="es">
 <head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Barrio Macarena Sevilla — Dónde alojarse | House Sevillana</title>
-<meta name="description" content="El barrio de la Macarena en Sevilla: calles históricas, tapas auténticas y a 10 minutos a pie de la Catedral. Alójate en House Sevillana y vívelo desde dentro."/>
+<meta name="description" content="El barrio de la Macarena en Sevilla: murallas, tabernas de siempre y la Sevilla de verdad. House Sevillana está en San Julián, la puerta de la Macarena, a 10 minutos a pie de la Catedral."/>
 <link rel="canonical" href="https://www.housesevillana.es/barrio"/>
 <meta property="og:title" content="Barrio Macarena Sevilla | House Sevillana"/>
-<meta property="og:description" content="Vive el barrio más auténtico de Sevilla. Murallas romanas, iglesias barrocas y tapas de verdad."/>
+<meta property="og:description" content="Vive la Sevilla de verdad. Murallas almohades, iglesias barrocas y tabernas de siempre, desde San Julián."/>
 <meta property="og:url" content="https://www.housesevillana.es/barrio"/>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"El barrio de la Macarena en Sevilla","author":{"@type":"Organization","name":"House Sevillana"},"publisher":{"@type":"Organization","name":"House Sevillana","url":"https://www.housesevillana.es"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"El barrio de la Macarena en Sevilla, desde San Julián","author":{"@type":"Organization","name":"House Sevillana"},"publisher":{"@type":"Organization","name":"House Sevillana","url":"https://www.housesevillana.es"}}</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Georgia,serif;color:#1a1a1a;line-height:1.7}
@@ -47,34 +47,34 @@ nav a{display:inline-flex;align-items:center;min-height:44px}
 </nav>
 <div class="breadcrumb"><a href="/">Inicio</a> › Barrio</div>
 <div class="hero">
-  <h1>El barrio de la Macarena</h1>
-  <p>El Sevilla auténtica que los turistas buscan y muy pocos encuentran</p>
+  <h1>El barrio de la Macarena, desde San Julián</h1>
+  <p>La Sevilla auténtica que los turistas buscan y muy pocos encuentran</p>
 </div>
 <div class="container">
   <p>El barrio de la Macarena es uno de los más antiguos e históricos de Sevilla. Sus calles estrechas, sus plazas tranquilas y sus tabernas de toda la vida lo convierten en el lugar perfecto para vivir la ciudad de verdad, lejos de las multitudes de la zona turística.</p>
-  <p>Desde <strong>House Sevillana</strong>, situada en pleno corazón del barrio, puedes llegar andando a los principales monumentos de la ciudad en menos de 15 minutos.</p>
+  <p><strong>House Sevillana</strong> está en la <strong>calle Socorro 24, barrio de San Julián</strong>, dentro del Casco Antiguo. Es el barrio que hace de puerta de la Macarena: la ruta clásica del barrio arranca aquí mismo, en la plaza de San Marcos, y sube por Bustos Tavera hacia la Basílica y las murallas. Estás en la Sevilla de siempre y a la vez a menos de 15 minutos andando de los grandes monumentos.</p>
 
-  <h2>Por qué alojarse en la Macarena</h2>
-  <p>Alojarse en la Macarena significa despertarte con el olor de las azahar, desayunar en una cafetería de barrio y hacer la compra en el mercado de la Feria. Es vivir Sevilla como un sevillano, no como un turista.</p>
+  <h2>Por qué alojarse en esta zona</h2>
+  <p>Significa despertarte con olor a azahar, desayunar en una cafetería de barrio y hacer la compra en el mercado de la Feria. Es vivir Sevilla como un sevillano, no como un turista &mdash; con el centro monumental a un paseo y sin el ruido de la zona turística.</p>
 
   <div class="poi-grid">
-    <div class="poi"><h3>🕌 Basílica de la Macarena</h3><p>A 5 minutos a pie. La Virgen más venerada de Sevilla. Museo con el tesoro original.</p></div>
-    <div class="poi"><h3>🏛️ Muralla Árabe</h3><p>Frente a la Basílica. Los restos mejor conservados de la muralla almohade del s. XII.</p></div>
-    <div class="poi"><h3>🛒 Mercado de la Feria</h3><p>A 7 minutos. El mercado más antiguo de Sevilla. Tapas a 1€ y producto fresco.</p></div>
-    <div class="poi"><h3>⛪ Iglesia de San Luis de los Franceses</h3><p>Joya barroca a 8 minutos. Interior de mármol y pinturas de Lucas Valdés.</p></div>
-    <div class="poi"><h3>🌿 Alameda de Hércules</h3><p>A 6 minutos. El salón de Sevilla. Terrazas, bares y el ambiente más bohemio de la ciudad.</p></div>
-    <div class="poi"><h3>⛩️ Catedral de Sevilla</h3><p>A 15 minutos andando. La catedral gótica más grande del mundo y la Giralda.</p></div>
+    <div class="poi"><h3>Basílica de la Macarena</h3><p>Subiendo por Bustos Tavera hasta la Puerta de la Macarena. La Virgen más venerada de Sevilla; el museo del tesoro merece la visita.</p></div>
+    <div class="poi"><h3>Muralla almohade</h3><p>Frente a la Basílica. Los restos mejor conservados de la muralla del s. XII.</p></div>
+    <div class="poi"><h3>Mercado de la Feria</h3><p>Calle Feria arriba. El mercado más antiguo de Sevilla: tapas baratas y producto fresco.</p></div>
+    <div class="poi"><h3>San Luis de los Franceses</h3><p>A 4 minutos a pie. Joya barroca con interior de mármol y pinturas de Lucas Valdés.</p></div>
+    <div class="poi"><h3>Alameda de Hércules</h3><p>Al oeste, pasando San Juan de la Palma. El salón de Sevilla: terrazas y el ambiente más bohemio.</p></div>
+    <div class="poi"><h3>Catedral de Sevilla</h3><p>A 10 minutos andando. La catedral gótica más grande del mundo, y la Giralda.</p></div>
   </div>
 
   <h2>Gastronomía del barrio</h2>
-  <p>La Macarena conserva las tabernas de toda la vida donde un montado de presa ibérica cuesta 2€ y el fino de barril se sirve bien frío. Algunos clásicos a menos de 10 minutos de House Sevillana:</p>
+  <p>Esta parte de Sevilla conserva las tabernas de toda la vida, donde el fino de barril se sirve bien frío. Algunos clásicos del entorno:</p>
   <p><strong>Bodega San José</strong> — tapas tradicionales desde 1940. <strong>Bar El Tremendo</strong> — el mejor pescaíto frito del barrio. <strong>Taberna Coloniales</strong> — raciones generosas y precios honestos.</p>
 
   <h2>Cómo llegar desde el aeropuerto</h2>
-  <p>El aeropuerto de San Pablo está a 30 minutos en taxi (unos 25€) o en autobús urbano línea EA (1,80€, cada 20 min). House Sevillana está en el barrio de la Macarena, con aparcamiento privado incluido en el precio.</p>
+  <p>El aeropuerto de San Pablo está a unos 20 minutos en taxi (unos 25€) o en autobús urbano línea EA (1,80€, cada 20 min). House Sevillana está en la calle Socorro 24, en San Julián, con plaza de aparcamiento privado reservable con la estancia.</p>
 </div>
 <div class="cta">
-  <p style="font-family:Arial,sans-serif;font-size:18px;font-weight:700">¿Listo para vivir la Macarena?</p>
+  <p style="font-family:Arial,sans-serif;font-size:18px;font-weight:700">¿Listo para vivir esta Sevilla?</p>
   <p style="font-family:Arial,sans-serif;font-size:14px;opacity:.85;margin-top:8px">290 m² · 6 dormitorios · Parking privado · Sin comisiones</p>
   <a href="${MOTOR_RESERVAS}">Comprobar disponibilidad</a>
 </div>
