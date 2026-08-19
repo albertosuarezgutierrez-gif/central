@@ -3,12 +3,38 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPER_PIN = "9999";
 
+// 🧪 PILOTO de la migración a las claves nuevas de Supabase (`sb_secret_…`), ver
+// docs/ROTACION-SERVICE-ROLE.md. Esta función es el conejillo de indias a propósito:
+// solo lee, está detrás de un PIN y se abre en el navegador, así que si la clave nueva
+// NO sirviera contra PostgREST se ve al instante y no se cae nada que importe.
+//
+// Prefiere la clave nueva y cae a la legacy si aún no estuviera: mientras las dos
+// convivan esto es reversible, y el día que se pulse «Disable JWT-based API keys» las
+// 43 funciones de ia-rest tienen que estar ya en la primera rama.
+//
+// OJO al copiar esto a las demás: aquí NO hay problema de cabeceras porque el cliente
+// habla con PostgREST. En las funciones que INVOCAN a otras funciones con
+// `Authorization: Bearer <service_role>` la clave nueva no vale — no es un JWT — y hay
+// que pasarla en `apikey` con `verify_jwt=false` en la función destino.
+function claveSecreta(): string {
+  const nuevas = Deno.env.get("SUPABASE_SECRET_KEYS");
+  if (nuevas) {
+    try {
+      const porNombre = JSON.parse(nuevas) as Record<string, string>;
+      if (porNombre["default"]) return porNombre["default"];
+    } catch { /* JSON ilegible: cae a la legacy en vez de tumbar la función */ }
+  }
+  const legacy = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (legacy) return legacy;
+  throw new Error("Sin clave de servicio: ni SUPABASE_SECRET_KEYS['default'] ni SUPABASE_SERVICE_ROLE_KEY");
+}
+
 Deno.serve(async (req: Request) => {
   const url = new URL(req.url);
   const pin = url.searchParams.get("pin");
   if (!pin || pin !== SUPER_PIN) return new Response(authPage(), { headers: { "Content-Type": "text/html; charset=utf-8" } });
   if (url.searchParams.get("api") === "1") {
-    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { db: { schema: 'iarest' } });
+    const sb = createClient(Deno.env.get("SUPABASE_URL")!, claveSecreta(), { db: { schema: 'iarest' } });
     const [a, b, c, d, e] = await Promise.all([
       sb.from("v_training_stats").select("*"),
       sb.from("ia_training_log").select("id,created_at,input_raw,output_brain,latencia_ms,calidad,fue_corregido").order("created_at",{ascending:false}).limit(20),

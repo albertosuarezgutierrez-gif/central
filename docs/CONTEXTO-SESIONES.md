@@ -32,6 +32,66 @@
 
 ---
 
+### 🌍 (19/08/2026) `main` llegó ROJA: tocar el español de la landing sin el diccionario
+- Al mergear PR #1490 saltó `Tests (packages + guardián)`. **No era mío:** reproducido sobre `origin/main`
+  → `apps/housesevillana` 45/47, mismas 2 pruebas i18n. Lo rompió **PR #1487** al reescribir el copy español
+  de `app/route.ts` (quitó el «hasta un 22%») **sin tocar `app/en|it/traducciones.ts`**: 7 claves huérfanas
+  por idioma, justo la mina documentada en `apps/housesevillana/CLAUDE.md` (el `/en` y el `/it` se DERIVAN
+  del HTML español por cadenas exactas). En vivo: esos párrafos se servían en castellano a ingleses e italianos.
+- 🔴 **El gate no lo paró:** en #1487 el job de tests salió `failure` y aun así el check «Ready to merge»
+  dio `success` y se mergeó. Los tests NO están en la puerta de merge — arreglarlo es un pendiente propio.
+- Arreglado aquí: 7 claves nuevas por idioma con el copy nuevo traducido. Y el delator
+  `'Sin comisiones de Booking'` del test ya no existía en el HTML (guarda muerta que pasaba en vacío) →
+  sustituido por `'no hay comisi&oacute;n de Booking'`, verificado presente en el español.
+
+### 📉 (19/08/2026) El aviso de Supabase NO es tuyo, pero el egress SÍ tiene mala pinta
+- Recon del panel: **ninguna métrica al 100%**. La banda naranja es política fija (el período de gracia
+  acabó el 10/07 y aplica Fair Use), no un límite superado. Ciclo 15/08→15/09: egress 0,599 GB de 5 GB
+  (12% con 4 días), BD 166 MB de 500, EF 8.046 de 500.000, MAU 0.
+- 🔴 Lo que sí importa: **spend cap activo y SIN método de pago** → si el egress llegara a 5 GB no hay
+  factura, hay **corte** (402/read-only) de las 10 apps. Proyección al cierre ~4,3 GB (86%) — y esa
+  proyección es de ANTES de recrear ayer los 25 crons de ia-rest (~1.500 ejecuciones/día nuevas).
+- El **90-94% del egress es Shared Pooler** (Prisma), no PostgREST. Escalón el 08/08: de ~35 a ~130 MB/día
+  y no baja; PostgREST clavado en 17,5 MB/día todo el escalón (o sea, no es tráfico de usuarios).
+- ❌ Hipótesis descartada MIDIENDO antes de escribir el fix: `getTesoreria` lee todo el histórico sin
+  filtro de fecha, pero `movimientos_bancarios` son **2.100 filas / ~97 kB** — acotarlo no ahorra nada.
+- Medido: los 3 roles Prisma juntos devuelven **~37.500 filas/día** (~10 MB), un orden de magnitud por
+  debajo de los 125 MB/día facturados. Luego el egress del pooler **no lo hacen los resultados**: apunta a
+  overhead de conexión (4,5 M llamadas en 115 días). Sin confirmar: hace falta el gráfico de conexiones.
+- **DECISIÓN de Alberto (19/08): no se paga Supabase hasta tener cliente; se retoma si hace falta.** Contexto
+  para cuando toque: el trasvase de la **correduría de Manuel Suárez (~200 MB)** deja la BD en ~366 MB de 500
+  (73%). Hay 57 MB de grasa recuperable sin tocar negocio — `trading_backtest` 30 MB/1.029 filas (blobs JSON)
+  y `rate_snapshots` 27 MB/87.685 filas —; podándolas la correduría entraría al ~60%. El límite que aprieta
+  NO es el disco sino el egress, y ese trasvase ES el cliente que activa la regla de pagar.
+
+### 🔑 (19/08/2026) Repos sueltos: nada que unir — y la `service_role` filtrada sigue viva
+- `house-sevillana-landing` ya está dentro (`apps/housesevillana`, 12/08). VERIFICADO en Vercel: el proyecto
+  apunta a `central` con Root `apps/housesevillana` y el último deployment de prod sale del commit del
+  agente SEO (`79db75e`, hoy) → el repo suelto es cáscara muerta. `Cloude`: 1 commit, README placeholder.
+- Los dos los borra Alberto a mano (destructivo). Borrar quita la exposición pero **NO invalida la clave**.
+- Nuevo `docs/ROTACION-SERVICE-ROLE.md`: inventario + plan. El proyecto ya tiene claves nuevas
+  (`sb_publishable_…` conviviendo con la `anon` legacy) → camino limpio sin tocar el JWT secret.
+- 🔴 Recon del panel: **las legacy NO se desactivan por separado** — un solo botón «Disable JWT-based API
+  keys» mata `service_role` Y `anon` a la vez. Así que la rotación arrastra también los 27 ficheros que
+  leen `ANON_KEY`, no solo la cara service_role (2 envs Vercel: ia-rest y central-rrhh + 43 de 45 EFs).
+  `ialimp` NO tiene la variable: su `storage-limpiadora.ts` lleva roto desde el 12/08, no rotando.
+- `sb_secret_…` y `sb_publishable_…` (`default`) YA existen → no hay que tocar el JWT secret. Pendiente: 2
+  PRs (43 EFs + 27 clientes), cron `monitor-health` a cabecera `apikey`, y pulsar el botón. Hasta ahí la
+  clave filtrada sigue viva.
+- 🟠 Aparte: el panel avisa «período de gracia finalizado» en plan **Free** sobre la BD compartida de todas
+  las verticales. Comprobado por MCP: org en `free`, proyecto `ACTIVE_HEALTHY`, BD 151 MB de 500 → la cuota
+  que se agota NO es almacenamiento (será egress/MAU/compute, invisible por MCP). Mirar Organization → Usage.
+- 🧪 En vez de migrar las 43 EFs a ciegas: **piloto en `ia-training-dashboard`** (solo lee, PIN,
+  `verify_jwt=false`). La doc de Supabase se contradice sobre si `supabase-js` con `sb_secret_…` sigue
+  hablando con PostgREST (manda la clave también en `Bearer`), y eso decide el enfoque de las otras 42.
+  Se prueba abriendo `?pin=9999&api=1` tras desplegarla. Sin `config.toml` en el repo: el `verify_jwt` de
+  cada función se toca a mano en el panel, no viaja en el PR.
+- **MERGEADO a `main` (PR #1490)** tras suite completa en verde: `pnpm test` exit 0, **2.479 tests de
+  `node --test` + 107 de vitest, 0 fallos** (incluye el guardián 32/32). Conflicto con `main` resuelto
+  conservando las entradas de memoria de ambos lados. `docs/ROTACION-SERVICE-ROLE.md` registrado en
+  FUENTES-DE-VERDAD como **pendiente abierto**, para que la auditoría lo vigile hasta que la clave muera,
+  y el aviso (clave viva + las dos trampas: botón único de desactivación y `apikey` ≠ `Bearer`) va también
+  en la skill `central-maestro`, que es lo que se lee ANTES de tocar la BD compartida.
 ### 🔑 (19/08/2026) El 403 del panel SEO era el REPO, no el permiso — y dos «verdes» que mentían — PR #1494
 - `/api/seo-refresh` daba «Resource not accessible by personal access token»: el PAT tenía
   `Contents: R/W` pero en «Repository access» solo estaba `house-sevillana-landing`, no `central`

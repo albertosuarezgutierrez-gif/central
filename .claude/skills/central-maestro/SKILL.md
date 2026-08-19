@@ -54,6 +54,14 @@ description: >
   Las apps no se rompen porque sus roles `prisma_*` tienen **BYPASSRLS**. PERO cualquier acceso SIN bypass
   (REST/anon, o un rol nuevo sin bypassrls) verá **0 filas** hasta que crees políticas RLS. Tenlo en cuenta.
 - Cualquier cambio de RLS/buckets/GRANTs en `public` puede romper otra app silenciosamente → valida con `auditoria-central`.
+- 🔴 **Claves de API de Supabase — PENDIENTE ABIERTO (19/08/2026).** La `service_role` legacy estuvo
+  publicada ~3 meses en la historia del repo suelto `house-sevillana-landing` y **sigue siendo válida**
+  (borrar el repo quita la exposición, no invalida la clave). El proyecto ya tiene las claves nuevas
+  (`sb_secret_…` / `sb_publishable_…`, nombre `default`) conviviendo con las legacy. Dos trampas al migrar:
+  el panel **no desactiva las legacy por separado** (un solo botón «Disable JWT-based API keys» mata `anon`
+  Y `service_role`), y una clave nueva **no es un JWT** → viaja en la cabecera `apikey`, nunca en
+  `Authorization: Bearer`. Plan, inventario y piloto en **`docs/ROTACION-SERVICE-ROLE.md`**; mientras ese
+  doc siga vivo, el trabajo NO está hecho.
 
 ## Principio de la matriz
 Los cambios que ROMPEN (renames de scope, reestructuras de BD, cortes de infra) se hacen **AHORA**, sin
