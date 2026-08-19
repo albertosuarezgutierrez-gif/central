@@ -103,9 +103,15 @@ jobs:
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          # La rama se rehace desde el `main` de esta pasada: la radiografía se regenera entera
-          # cada vez, así que arrastrar la rama anterior solo daría conflictos.
-          git checkout -q -B "$RAMA"
+
+          # La rama local se llama YA como la de esta pasada. Importa: más abajo se cierra el PR
+          # anterior con `--delete-branch`, y eso borra también la rama LOCAL si es la que está
+          # activa. La primera versión hacía `checkout -B "$RAMA"` (el nombre viejo) y el cierre
+          # se llevó por delante el commit recién hecho, dejando el HEAD en `main`; el push subió
+          # `main` y `gh pr create` murió con «No commits between main and …». Con el nombre único
+          # desde el principio, el borrado del PR viejo no puede tocar esta rama.
+          RAMA_RUN="${RAMA}-${{ github.run_id }}"
+          git checkout -q -B "$RAMA_RUN"
           git add $FILES
           git commit -q -m 'chore(auditoría): regenerar radiografía de estructura [skip vercel]'
 
@@ -116,13 +122,18 @@ jobs:
           # ya no hay forma de mergearlo. En cambio CREAR la rama y ABRIR el PR sí los dispara
           # (14 checks, comprobado). Así que cada pasada estrena rama: el PR nace siempre por
           # `opened`, que es el camino que funciona.
-          RAMA_RUN="${RAMA}-${{ github.run_id }}"
           for viejo in $(gh pr list --state open --json number,headRefName \
                           --jq ".[] | select(.headRefName | startswith(\"$RAMA\")) | .number"); do
             gh pr close "$viejo" --comment 'Reemplazado por una radiografía más fresca (cada pasada estrena rama; ver `.github/workflows/auditoria.yml`).' --delete-branch || true
             echo "PR de radiografía anterior #$viejo cerrado."
           done
 
+          # Cinturón: si por lo que sea el HEAD ha vuelto a `main`, NO se empuja. Sin esto el
+          # fallo anterior se veía como un `gh pr create` roto y no como lo que era.
+          if [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ]; then
+            echo '::error::El HEAD es main: el commit de la radiografía se ha perdido. No se empuja nada.'
+            exit 1
+          fi
           git push -q "https://x-access-token:${PAT}@github.com/${REPO}.git" "HEAD:refs/heads/$RAMA_RUN"
           gh pr create --head "$RAMA_RUN" --base main \
             --title 'chore(auditoría): regenerar radiografía de estructura' \
