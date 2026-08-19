@@ -77,7 +77,9 @@
 - **MERGEADO a `main` (PR #1490)** tras suite completa en verde: `pnpm test` exit 0, **2.479 tests de
   `node --test` + 107 de vitest, 0 fallos** (incluye el guardián 32/32). Conflicto con `main` resuelto
   conservando las entradas de memoria de ambos lados. `docs/ROTACION-SERVICE-ROLE.md` registrado en
-  FUENTES-DE-VERDAD como **pendiente abierto**, para que la auditoría lo vigile hasta que la clave muera.
+  FUENTES-DE-VERDAD como **pendiente abierto**, para que la auditoría lo vigile hasta que la clave muera,
+  y el aviso (clave viva + las dos trampas: botón único de desactivación y `apikey` ≠ `Bearer`) va también
+  en la skill `central-maestro`, que es lo que se lee ANTES de tocar la BD compartida.
 
 ### 🔢 (19/08/2026) La nota de House era vieja — y la skill de SEO tiene la ficha de OTRO piso
 - Nota real por el conector de Booking: **8,6/10 con 51 reseñas**. La landing decía 8,1 con +47
