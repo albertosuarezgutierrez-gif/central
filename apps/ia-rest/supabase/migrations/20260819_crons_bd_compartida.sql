@@ -9,9 +9,9 @@
 -- Cambios respecto a los jobs del viejo:
 --   · Todo cualificado a `iarest.` (en el viejo vivían en `public`).
 --   · URLs de functions → https://wswbehlcuxqxyinousql.supabase.co/functions/v1/…
---   · Sin JWTs cableados: monitor-health (único verify_jwt=true invocado por cron) usa
---     current_setting('app.service_role_key') y NO llama si la setting no está configurada
---     (la configura Alberto: ALTER DATABASE postgres SET app.service_role_key = '<service_role>').
+--   · Sin service_role cableada: monitor-health (único verify_jwt=true invocado por cron)
+--     llama con la ANON key pública — el gateway verify_jwt solo exige un JWT válido del
+--     proyecto, no un rol (ver sección 5).
 --   · super-training-monitor: el original filtraba por alerta_log.tipo/created_at, columnas
 --     que NO existen (fallaba en silencio también en el viejo). Adaptado a
 --     trigger_tipos @> ARRAY[...] y disparada_at, que es donde escribe fn_alerta_super.
