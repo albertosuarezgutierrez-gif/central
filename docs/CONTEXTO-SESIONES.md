@@ -32,6 +32,22 @@
 
 ---
 
+### 📅 (19/08/2026) Calendario de disponibilidad en la landing de House
+- Alberto lo pidió: que el huésped vea de un vistazo qué noches hay. Como la landing es HTML plano en
+  rutas `edge` **sin BD ni secretos**, el dato viene de un endpoint público NUEVO en plataforma
+  (`/api/publico/disponibilidad`, en la lista `PUBLIC` del middleware): Smoobu en vivo con caché de
+  10 min, respaldo `rate_snapshots` de ≤2 días con su fecha real, y **503 si no hay ninguno de los dos**.
+- **La regla que gobierna todo:** un `ocupadas: []` de consuelo se pintaría como calendario entero libre.
+  Helper puro `lib/sivra/disponibilidad-publica.ts` (8 tests): `available` ausente/null/raro → `sinDato`,
+  jamás libre. En el widget, **toda celda nace en `sindato`** y un fallo de red va al estado `error`.
+- Cuatro estados distinguibles SIN color (macizo/rayado/contorno punteado/plano). Vive en
+  `app/calendario.ts` para no darle superficie al agente SEO de los lunes — y por eso el guardián i18n
+  pasa a leer también ese fichero (si no, sus 16 claves quedaban fuera de la red: el fallo de #1487).
+- Spec + apéndice con markup y CSS: `docs/superpowers/specs/2026-08-19-calendario-disponibilidad-design.md`.
+- **Sin verificar:** el enlace profundo al motor con fecha (`arrivalDate=dd/mm/yyyy`, NO ISO como su API).
+  Evidencia de dos repos públicos con cuentas Smoobu distintas; el proxy bloquea `*.smoobu.com`. Degrada
+  a abrir el motor sin fecha, así que el riesgo es nulo. **Falta que Alberto pegue la URL en un navegador.**
+
 ### ©️ (19/08/2026) El pie de la landing decía «© 2025 · Bercell»
 - Dos fallos en la misma línea de `apps/housesevillana/app/route.ts`. **El año quemado**: en agosto de 2026
   la portada firmaba «© 2025», que a un huésped le lee como web abandonada. No se ha puesto 2026 (vuelve a

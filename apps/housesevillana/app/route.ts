@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { MOTOR_RESERVAS } from './reservas';
+import { CALENDARIO_HTML, CALENDARIO_PLANTILLAS, CALENDARIO_CSS, CALENDARIO_JS } from './calendario';
 
 export const HTML = `<!DOCTYPE html>
 <html lang="es">
@@ -366,6 +367,7 @@ footer{background:var(--night);color:rgba(255,255,255,.65);padding:4rem 2.5rem 2
   .hero-bg img{animation:none;transform:none}
   .rv{opacity:1!important;transform:none!important}
 }
+${CALENDARIO_CSS}
 </style>
 <!-- Meta Pixel retargeting -->
 <script>
@@ -641,6 +643,8 @@ fbq('init','12124662686780882173');fbq('track','PageView');
 </section>
 
 <!-- BOOKING -->
+${CALENDARIO_HTML}
+
 <div class="book-sec" id="reserva">
   <div class="wrap">
     <div class="tag">Reserva directa</div>
@@ -894,6 +898,9 @@ var REDUCIR=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: re
   update();
 })();
 </script>
+
+${CALENDARIO_PLANTILLAS}
+<script>${CALENDARIO_JS}</script>
 
 </body>
 </html>`;

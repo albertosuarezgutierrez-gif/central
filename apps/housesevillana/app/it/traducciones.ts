@@ -244,6 +244,39 @@ export const TRADUCCIONES: Record<string, string> = {
     'Calle Socorro 24, Siviglia',
   '&copy; House Sevillana &middot; Todos los derechos reservados':
     '&copy; House Sevillana &middot; Tutti i diritti riservati',
+  // --- Calendario de disponibilidad ---
+  'Calendario':
+    'Calendario',
+  'Noches libres de un vistazo':
+    'Notti libere a colpo d&#39;occhio',
+  'Orientativo: el precio y las condiciones exactas de tus fechas se confirman en el motor de reservas.':
+    'Indicativo: il prezzo e le condizioni esatte delle tue date si confermano nel motore di prenotazione.',
+  'Meses anteriores':
+    'Mesi precedenti',
+  'Meses siguientes':
+    'Mesi successivi',
+  'Consultando disponibilidad&hellip;':
+    'Verifica della disponibilit&agrave;&hellip;',
+  'No hemos podido consultar el calendario':
+    'Non siamo riusciti a caricare il calendario',
+  'No sabemos qu&eacute; noches est&aacute;n libres ahora mismo, as&iacute; que preferimos no ense&ntilde;arte un calendario que podr&iacute;a estar equivocado. El motor de reservas s&iacute; tiene la disponibilidad real.':
+    'Non sappiamo quali notti siano libere in questo momento, quindi preferiamo non mostrarti un calendario che potrebbe essere sbagliato. Il motore di prenotazione ha la disponibilit&agrave; reale.',
+  'Ver disponibilidad real':
+    'Vedi la disponibilit&agrave; reale',
+  'Noche libre':
+    'Notte libera',
+  'Noche ocupada':
+    'Notte occupata',
+  'Sin confirmar':
+    'Non confermata',
+  'Fecha pasada':
+    'Data passata',
+  'Disponibilidad actualizada el':
+    'Disponibilit&agrave; aggiornata il',
+  'Elegir fechas y ver precio':
+    'Scegli le date e vedi il prezzo',
+  'Activa JavaScript para ver el calendario de disponibilidad, o consulta las fechas directamente en el motor de reservas.':
+    'Attiva JavaScript per vedere il calendario della disponibilit&agrave;, oppure controlla le date direttamente nel motore di prenotazione.',
   'VFT/SE/01179 &middot; Registro de Turismo de Andaluc&iacute;a':
     'VFT/SE/01179 &middot; Registro del Turismo dell\'Andalusia',
   'Llamar':
