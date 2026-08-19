@@ -21,8 +21,8 @@ agentes IA de producción (NIM/Gemini, sin Anthropic).
 
 1. **BD unificada (cierre 19/08/2026):** producción vive en el COMPARTIDO
    `wswbehlcuxqxyinousql`, **schema `iarest`** — runtime POS, Edge Functions (45) y crons
-   pg_cron. El proyecto viejo `efncqyvhniaxsirhdxaa` está JUBILADO (congelado desde junio,
-   crons apagados; pendiente de pausar/borrar por Alberto). TODO cliente/EF/Realtime nuevo
+   pg_cron. El proyecto viejo `efncqyvhniaxsirhdxaa` fue **BORRADO definitivamente**
+   el 19/08/2026 — ya no existe; el único proyecto Supabase es `central`. TODO cliente/EF/Realtime nuevo
    DEBE fijar schema `iarest` (`db: { schema: 'iarest' }`; Realtime `schema: 'iarest'` y la
    tabla añadida a la publication `supabase_realtime`). NUNCA desplegar functions ni aplicar
    SQL al proyecto viejo.

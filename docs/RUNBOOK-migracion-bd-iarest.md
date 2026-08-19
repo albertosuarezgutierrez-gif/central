@@ -192,11 +192,13 @@ Lo cerrado hoy (rama `claude/unificar-supabase-ingress-gastos-zwt9mh`):
   valor: leads (395) + leads_* + crm_* + ia_training_log (559) + vinos_catalogo + eventos_entorno
   + instagram_* + proveedores_tech* + blog_* + qa_* + agente_historial + stripe_events (63).
   ~1.390 filas. El histórico demo (comandas de mayo, **6 facturas_verifactu de PRUEBA**) se
-  queda en el viejo — recuperable mientras se PAUSE y no se borre.
+  quedó en el viejo y se perdió con su borrado definitivo (19/08, asumido).
 - **Refs en repo**: bridge-v6.js (URL+anon+schema Realtime), super/page.tsx (tg-send),
   setup-vercel-env.sh, estructura.ts, MATRIZ.md, AGENTS.md de ia-rest y 4 skills actualizadas.
 
-Pendiente SOLO de Alberto (ver `docs/PROMPT-CHROME-cierre-supabase.md`): rename del proyecto a
-`central`, repuntar webhooks Stripe/MONEI (¡siguen apuntando al viejo — stripe_events llegaban
-allí hasta el 05/08!), `ALTER DATABASE … SET app.service_role_key` para `monitor-health-cron`,
-y PAUSAR el proyecto viejo.
+REMATE (mismo 19/08/2026, todo ejecutado): proyecto compartido renombrado a **`central`**, webhook
+de Stripe repuntado (MONEI descartado — los cobros se quedan solo con Stripe), `monitor-health-cron`
+reescrito para llamar con la ANON key (el gateway verify_jwt solo exige un JWT válido → ya no hace
+falta `app.service_role_key` en ningún sitio), y el proyecto viejo `efncqyvhniaxsirhdxaa` PAUSADO y
+después **BORRADO definitivamente** por Alberto (verificado con `list_projects`: solo queda `central`).
+PR #1483 mergeado a main. Este runbook queda como documento histórico.

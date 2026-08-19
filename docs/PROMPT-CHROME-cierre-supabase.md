@@ -1,5 +1,9 @@
 # Prompt para Claude en Chrome — cierre de la unificación Supabase (19/08/2026)
 
+> ✅ **CERRADO DEL TODO (19/08/2026, tarde):** el proyecto viejo `efncqyvhniaxsirhdxaa` fue
+> **BORRADO definitivamente** por Alberto (solo queda `central`) y el PR #1483 está mergeado.
+> Documento HISTÓRICO — no queda nada pendiente de esta lista.
+
 > Pasos que SOLO puede hacer Alberto (dashboards con sesión). Copia el bloque de abajo en
 > Claude para Chrome con las pestañas de Supabase/Stripe/MONEI/Vercel abiertas, o síguelo a
 > mano. Contexto: la unificación quedó cerrada por el agente el 19/08/2026 (PR de la rama
@@ -48,7 +52,7 @@ ya está hecho; faltan estos pasos de dashboard, en este orden:
    `TELEGRAM_CHAT_ID`, `FAL_API_KEY`, `CRON_SECRET`, `PLATAFORMA_URL`, `AI_GATEWAY_SECRET`.
    La lista maestra completa está en `docs/RUNBOOK-migracion-bd-iarest.md`.
 
-6. **Storage del proyecto viejo** (opcional, antes de borrarlo algún día): quedan 27 archivos
+6. ~~Storage del proyecto viejo~~ **YA NO APLICA**: el proyecto se borró el 19/08 con sus archivos demo dentro (asumido). Referencia original (opcional, antes de borrarlo algún día): quedan 27 archivos
    demo (3 en `chat-audio`, 23 PDFs en `cobros-pdfs`, 1 en `iarest-app`). Si quieres conservar
    alguno, descárgalo. Mientras el proyecto esté PAUSADO (no borrado) no se pierde nada.
 

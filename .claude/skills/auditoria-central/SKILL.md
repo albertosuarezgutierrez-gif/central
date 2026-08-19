@@ -12,8 +12,8 @@ rrhh, transporte, alquiler, almacen) que buildan **aisladas por Root Directory**
 BD Supabase **compartida** (`wswbehlcuxqxyinousql`): ialimp/sivra/plataforma/rrhh/transporte/
 alquiler/almacen en schema `public` (scope `empresa_id`/tenant) e **ia-rest en su schema
 `iarest`** (runtime + Edge Functions + crons desde el cierre 19/08/2026). El proyecto viejo
-`efncqyvhniaxsirhdxaa` está jubilado (congelado, crons apagados; pausar/borrar pendiente de
-Alberto) — no despliegues ni apliques nada allí. Lee `MATRIZ.md` y `docs/CONTEXTO-SESIONES.md`
+`efncqyvhniaxsirhdxaa` fue BORRADO definitivamente el 19/08/2026 — ya no existe; el único
+proyecto Supabase de la cuenta es `central`. Lee `MATRIZ.md` y `docs/CONTEXTO-SESIONES.md`
 (entradas de arriba) antes de empezar.
 
 ## Cuándo usar
@@ -92,8 +92,8 @@ plantilla. Arregla en el acto solo bugs de bajo riesgo; lo de gran radio se cons
 
 ### 6. Infra real (MCP, solo lectura)
 - Supabase: el proyecto de producción es el compartido `wswbehlcuxqxyinousql` (todas las verticales;
-  ia-rest en schema `iarest`). El viejo `efncqyvhniaxsirhdxaa` está jubilado (pausar/borrar pendiente):
-  si sigue existiendo, verifica que NADIE le haya vuelto a desplegar/escribir. `list_migrations`
+  ia-rest en schema `iarest`). El viejo `efncqyvhniaxsirhdxaa` fue BORRADO el 19/08/2026:
+  `list_projects` debe devolver SOLO `central` — si aparece cualquier otro proyecto, investígalo. `list_migrations`
   (¿migraciones del repo aplicadas?), `list_tables` y `list_edge_functions` en el compartido.
 - Vercel: `list_projects` puede no listar las 8 apps si alguna vive en otro team/cuenta fuera del
   alcance del conector — no lo des por "no desplegada" sin más, márcalo para que Alberto lo mire a

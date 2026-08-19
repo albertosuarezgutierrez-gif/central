@@ -8,7 +8,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 Producción (runtime, Edge Functions y crons) vive en la BD compartida del holding
 (`wswbehlcuxqxyinousql`, **schema `iarest`**) desde el cierre del 19/08/2026. El proyecto viejo
-`efncqyvhniaxsirhdxaa` está JUBILADO: **nunca desplegar functions ni aplicar SQL allí**. Todo cliente
+`efncqyvhniaxsirhdxaa` fue **BORRADO el 19/08/2026** (ya no existe; el único proyecto es `central`). Todo cliente
 Supabase, Edge Function o suscripción Realtime nueva DEBE fijar el schema `iarest` (y añadir la tabla a
 la publication `supabase_realtime` si usa Realtime). Los módulos NUEVOS del holding (almacén,
 contabilidad, RR.HH…) siguen naciendo en la compartida como módulos propios (patrón
