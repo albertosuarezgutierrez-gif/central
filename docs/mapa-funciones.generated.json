@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-19T11:01:33Z",
-  "sha": "0f7b6a3fb3d07ac65c4c8f587a87a787fee9394b",
+  "generadoEn": "2026-08-19T11:17:51Z",
+  "sha": "934b464d1b838ac62d89eb7acecface9e35249cf",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -57189,7 +57189,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<",
-          "linea": 88
+          "linea": 106
         },
         {
           "nombre": "cambiosDe",
@@ -57197,7 +57197,33 @@
           "exportada": false,
           "params": "pisos: MedicionCanal[], soloProp: string | null, autoGlobal: boolean",
           "retorno": "",
-          "linea": 182
+          "linea": 216
+        },
+        {
+          "nombre": "marcarUsadas",
+          "kind": "function",
+          "exportada": false,
+          "params": "ids: number[]",
+          "retorno": null,
+          "linea": 254,
+          "resumen": "Marca las ventanas que han entrado en un ajuste. A partir de aquí ya NO pueden validar nada: el modelo las ha visto. Las que queden a NULL son la muestra limpia de la pasada siguiente."
+        },
+        {
+          "nombre": "coberturaCanales",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 264
+        },
+        {
+          "nombre": "centinelaHuesped",
+          "kind": "function",
+          "exportada": false,
+          "params": "pisos: MedicionCanal[]",
+          "retorno": "Promise<Map<string, ResumenHuesped>>",
+          "linea": 296,
+          "resumen": "¿Qué ve el HUÉSPED en las fechas ya tarifadas? El motor razona en base y con una cuota fija eso deja de describir el precio real (ver `pricing-precio-huesped.ts`). Se cruza la base viva con la mediana"
         },
         {
           "nombre": "escribir",
@@ -57205,7 +57231,7 @@
           "exportada": false,
           "params": "cambios: Cambio[]",
           "retorno": null,
-          "linea": 216
+          "linea": 333
         },
         {
           "nombre": "lineaCambio",
@@ -57213,7 +57239,7 @@
           "exportada": false,
           "params": "c: Cambio",
           "retorno": "string",
-          "linea": 226
+          "linea": 343
         },
         {
           "nombre": "GET",
@@ -57221,18 +57247,22 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 233
+          "linea": 350
         }
       ],
       "tablas": [
+        "base",
         "incomes",
+        "market_rates",
+        "mkt",
         "next",
         "pricing_escaparate",
         "pricing_piso_zona",
-        "pricing_settings"
+        "pricing_settings",
+        "rate_snapshots"
       ],
       "rutaApi": "/api/sivra/pricing/canal",
-      "hash": "ad0f36d307ee"
+      "hash": "a8b503739644"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -68510,13 +68540,13 @@
           "exportada": true,
           "params": "nombre: string",
           "retorno": "boolean",
-          "linea": 83,
+          "linea": 91,
           "resumen": "¿Este comparable es en realidad un anuncio nuestro? Coincide por prefijo/inclusión del nombre curado dentro del nombre publicado, porque el portal le cuelga sufijos comerciales que cambian solos («HOU"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1a7f5cd5d7f1"
+      "hash": "0d1ca1e81532"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/mercado-ventanas.ts",
@@ -68785,16 +68815,17 @@
         "baseDesdeGuestConFijo",
         "guestDesdeBase",
         "desviacionCanal",
-        "pasoCanal"
+        "pasoCanal",
+        "validarCanal"
       ],
       "funciones": [
         {
           "nombre": "ajusteCanal",
           "kind": "function",
           "exportada": true,
-          "params": "ventanas: VentanaEscaparate[], opts: { aforo: number; minVentanas?: number },",
+          "params": "ventanas: VentanaEscaparate[], opts: { aforo: number; minVentanas?: number; portal?: string },",
           "retorno": "AjusteCanal",
-          "linea": 105,
+          "linea": 111,
           "resumen": "Ajusta `escaparate = m × base + F` por mínimos cuadrados sobre las ventanas medidas. Solo entran las del aforo indicado (el mismo con el que se miden los comparables del piso) y con base conocida. Si "
         },
         {
@@ -68803,7 +68834,7 @@
           "exportada": true,
           "params": "p: ParametrosCanal",
           "retorno": "number",
-          "linea": 160,
+          "linea": 168,
           "resumen": "Cuota fija repartida por noche. Es lo que hace que el modelo sea afín y no una regla de tres."
         },
         {
@@ -68812,7 +68843,7 @@
           "exportada": true,
           "params": "guestNoche: number, p: ParametrosCanal",
           "retorno": "number",
-          "linea": 173,
+          "linea": 181,
           "resumen": "Precio BASE por noche que hay que poner en Smoobu para que el huésped vea `guestNoche`. Es la inversa del modelo afín. Nunca devuelve ≤0: si la cuota fija ya se come el objetivo (un mercado por debajo"
         },
         {
@@ -68821,7 +68852,7 @@
           "exportada": true,
           "params": "guestNoche: number, markup: number, fijoNoche: number",
           "retorno": "number",
-          "linea": 185,
+          "linea": 193,
           "resumen": "La misma inversión con la cuota YA repartida por noche. Existe para los helpers del motor (`pricing-ancla-fecha`, `pricing-premio-mercado`), que trabajan con precios por noche y no conocen la duración"
         },
         {
@@ -68830,7 +68861,7 @@
           "exportada": true,
           "params": "baseNoche: number, p: ParametrosCanal",
           "retorno": "number",
-          "linea": 192,
+          "linea": 200,
           "resumen": "Precio que verá el huésped por noche con una base dada. La ida del modelo afín."
         },
         {
@@ -68839,7 +68870,7 @@
           "exportada": true,
           "params": "p: { configurado: ParametrosCanal medido: { markup: number; cuotaFija: number } | null guestRef: number tolerancia?: number }",
           "retorno": "DesviacionCanal",
-          "linea": 217,
+          "linea": 225,
           "resumen": "¿Describen los parámetros configurados lo que ve el huésped? El sesgo se evalúa sobre un precio de mercado de referencia (`guestRef`) porque con una cuota fija el error NO es un porcentaje plano: pesa"
         },
         {
@@ -68848,13 +68879,22 @@
           "exportada": true,
           "params": "p: { configurado: ParametrosCanal medido: { markup: number; cuotaFija: number } guestRef: number maxSalto?: number }",
           "retorno": "PasoCanal",
-          "linea": 267,
+          "linea": 275,
           "resumen": "Un PASO desde los parámetros configurados hacia los medidos, sin mover el precio más de `maxSalto` en una sola pasada. Por qué un paso y no el salto entero: los parámetros del canal mueven TODAS las f"
+        },
+        {
+          "nombre": "validarCanal",
+          "kind": "function",
+          "exportada": true,
+          "params": "nuevas: VentanaEscaparate[], vigentes: { markup: number; cuotaFija: number }, opts: { aforo: number; tolSesgo?: number; tolError?: number } = { aforo: 0 },",
+          "retorno": "ValidacionCanal",
+          "linea": 348,
+          "resumen": "¿Acierta la recta que está en producción sobre ventanas que NO se usaron para ajustarla? Sin muestras devuelve `sin_muestras`, nunca `ok`: un validador que se pone verde porque no ha podido comparar n"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2f9bde72ca9c"
+      "hash": "566155c806c7"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-centinelas.ts",
@@ -69096,6 +69136,38 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "7cd4dba450cd"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pricing-precio-huesped.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-precio-huesped.ts — lo que ve el HUÉSPED, que no es lo que decide el motor. POR QUÉ (19/08/2026). El motor razona, decide y se autolimita en precio BASE: el ancla de mercado, el suelo `min_price`, el raíl ±%/día, el prior estacional… todo en base. Pero el huésped no paga la base: p",
+      "exporta": [
+        "precioHuesped",
+        "baseDondeLaCuotaMandaya"
+      ],
+      "funciones": [
+        {
+          "nombre": "precioHuesped",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechas: FechaHuesped[], params: ParametrosCanal, opts: { topeCaro?: number; sueloBarato?: number; maxPeores?: number } = {},",
+          "retorno": "ResumenHuesped",
+          "linea": 80,
+          "resumen": "Juzga el precio que ve el huésped fecha a fecha. `peores` sale ordenado por ratio descendente y solo contiene fechas juzgables: una fecha sin mercado nunca puede encabezar un aviso de «estás caro», po"
+        },
+        {
+          "nombre": "baseDondeLaCuotaMandaya",
+          "kind": "function",
+          "exportada": true,
+          "params": "params: ParametrosCanal, pesoMaximo = 0.5,",
+          "retorno": "number | null",
+          "linea": 129,
+          "resumen": "Precio BASE por debajo del cual bajar ya no sirve de nada porque el precio del huésped apenas se mueve: la cuota fija ya es la mayor parte de lo que paga. Es el número que le falta al motor para saber"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7b5783fa8d56"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-premio-mercado.ts",
@@ -93827,7 +93899,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2502,
-    "funciones": 6796
+    "archivos": 2503,
+    "funciones": 6802
   }
 }

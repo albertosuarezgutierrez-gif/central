@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-19T10:51:51Z",
+  "generadoEn": "2026-08-19T11:17:51Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4530,6 +4530,18 @@
   ],
   "novedades": [
     {
+      "titulo": "Validación FUERA de muestra",
+      "fecha": ""
+    },
+    {
+      "titulo": "Centinela del precio al HUÉSPED",
+      "fecha": ""
+    },
+    {
+      "titulo": "Canal por PORTAL",
+      "fecha": ""
+    },
+    {
       "titulo": "Ya no espera a nadie:",
       "fecha": ""
     },
@@ -4575,18 +4587,6 @@
     },
     {
       "titulo": "Guarda nueva en `latidos.test.ts`",
-      "fecha": ""
-    },
-    {
-      "titulo": "Aplicada en producción",
-      "fecha": ""
-    },
-    {
-      "titulo": "Hallazgo:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Mergeado (16/08, PR #1435, orden de Alberto) y verificado en vivo:",
       "fecha": ""
     }
   ],
