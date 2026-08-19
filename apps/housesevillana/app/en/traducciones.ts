@@ -35,11 +35,9 @@ export const TRADUCCIONES: Record<string, string> = {
   'de Sevilla': 'of Seville',
   '290 m&sup2; reformados en el casco hist&oacute;rico. 6 dormitorios, 4 ba&ntilde;os, terraza, patio andaluz y parking privado &mdash; para grupos y familias de hasta 12 personas.':
     '290 m&sup2; refurbished in the historic centre. 6 bedrooms, 4 bathrooms, a roof terrace, an Andalusian courtyard and private parking &mdash; for groups and families of up to 12.',
-  '&#127968; 290 m&sup2;': '&#127968; 290 m&sup2;',
-  '&#128717; 6 dorm &middot; 4 ba&ntilde;os': '&#128717; 6 bed &middot; 4 bath',
-  '&#128663; Parking privado': '&#128663; Private parking',
-  '&#9728; Terraza + Patio': '&#9728; Terrace + Courtyard',
-  '&#128101; Hasta 12 personas': '&#128101; Up to 12 guests',
+  '6 dorm &middot; 4 ba&ntilde;os': '6 bed &middot; 4 bath',
+  'Terraza + Patio': 'Terrace + Courtyard',
+  'Hasta 12 personas': 'Up to 12 guests',
   'Consultar disponibilidad': 'Check availability',
   'Ver la casa': 'See the house',
   'La propiedad': 'The property',
@@ -52,7 +50,7 @@ export const TRADUCCIONES: Record<string, string> = {
   'Parking privado': 'Private parking',
   '&mdash; el &uacute;nico del barrio': '&mdash; the only one in the area',
   'Confirmaci&oacute;n inmediata': 'Instant confirmation',
-  '&#128176; Sin comisiones &mdash;': '&#128176; No booking fees &mdash;',
+  'Sin comisiones &mdash;': 'No booking fees &mdash;',
   'ahorra hasta un 22%': 'save up to 22%',
   'vs Booking': 'vs Booking',
   '&middot; +47 rese&ntilde;as verificadas': '&middot; 47+ verified reviews',
@@ -108,6 +106,9 @@ export const TRADUCCIONES: Record<string, string> = {
   // ── FAQ ──────────────────────────────────────────────────────────────────────
   'Preguntas frecuentes': 'Frequently asked questions',
   'Todo lo que necesitas saber': 'Everything you need to know',
+  '&iquest;No encuentras tu respuesta? Escr&iacute;benos por WhatsApp y te contestamos hoy mismo.':
+    'Cannot find your answer? Message us on WhatsApp and we will reply the same day.',
+  'Preguntar por WhatsApp': 'Ask on WhatsApp',
   '&iquest;Tiene parking privado House Sevillana?': 'Does House Sevillana have private parking?',
   'S&iacute;. Dispone de una plaza de garaje privado en el mismo edificio, reservable con tu estancia. Aparcar en el casco antiguo de Sevilla es muy complicado y costoso &mdash; esta es nuestra ventaja m&aacute;s valorada por los hu&eacute;spedes que llegan en coche.':
     'Yes. There is a private garage space in the building itself, bookable with your stay. Parking in Seville&#39;s old town is difficult and expensive &mdash; this is the feature guests arriving by car value most.',
@@ -162,20 +163,8 @@ export const TRADUCCIONES: Record<string, string> = {
   // ── Reseñas ──────────────────────────────────────────────────────────────────
   'Rese&ntilde;as': 'Reviews',
   'Lo que dicen nuestros hu&eacute;spedes': 'What our guests say',
-  'Lo que dicen los huéspedes': 'What guests say',
   '"Espectacular. El patio andaluz es un sue&ntilde;o. Dormimos 10 personas comod&iacute;simas y el parking fue un plus enorme en el casco hist&oacute;rico."':
     '"Spectacular. The Andalusian courtyard is a dream. Ten of us slept very comfortably, and the parking was a huge plus in the historic centre."',
-  '"La casa más especial donde nos hemos alojado. El patio andaluz es increíble y el parking privado fue clave con el coche. Volveremos seguro."':
-    '"The most special house we have ever stayed in. The Andalusian courtyard is incredible and the private parking was key with the car. We will be back."',
-  '"Perfecta para grupos grandes. 6 habitaciones y todo el espacio que necesitas. A 10 minutos de la Catedral a pie. Alberto muy atento."':
-    '"Perfect for large groups. Six bedrooms and all the space you need. A 10-minute walk from the Cathedral. Alberto was very attentive."',
-  '"Vinimos para una boda en Sevilla. La terraza fue perfecta para prepararnos. El barrio de la Macarena es precioso y auténtico."':
-    '"We came for a wedding in Seville. The roof terrace was perfect for getting ready. The Macarena quarter is beautiful and genuine."',
-  'María G. · Familia de 8 · Booking': 'María G. · Family of 8 · Booking',
-  'James T. · Grupo de amigos · Airbnb': 'James T. · Group of friends · Airbnb',
-  'Claudia M. · Grupo boda · Booking': 'Claudia M. · Wedding party · Booking',
-  '⭐⭐⭐⭐⭐ 9.2/10 en Booking · 4.9/5 en Airbnb':
-    '⭐⭐⭐⭐⭐ 9.2/10 on Booking · 4.9/5 on Airbnb',
 
   // ── Pie ──────────────────────────────────────────────────────────────────────
   'Casa tur&iacute;stica en el casco hist&oacute;rico de Sevilla. 290 m&sup2;, 6 dormitorios, parking privado. Reserva directa sin comisiones.':
@@ -187,11 +176,13 @@ export const TRADUCCIONES: Record<string, string> = {
   'Calle Socorro 24, Sevilla': 'Calle Socorro 24, Seville',
   'VFT/SE/01179 &middot; Registro de Turismo de Andaluc&iacute;a':
     'VFT/SE/01179 &middot; Andalusian Tourism Registry',
-  '&#128222; Llamar': '&#128222; Call',
-  '🗺️ Qué ver en Sevilla': '&#128506;&#65039; What to see in Seville',
-  '🏘️ El barrio de la Macarena': '&#127960;&#65039; The Macarena quarter',
-  '🚗 Casa con parking en el centro': '&#128663; House with parking in the centre',
-  '📅 Comprobar disponibilidad': '&#128197; Check availability',
+  'Llamar': 'Call',
+  'Sigue leyendo': 'Keep reading',
+  'M&aacute;s sobre la casa y el barrio': 'More about the house and the area',
+  'Qu&eacute; ver en Sevilla': 'What to see in Seville',
+  'El barrio de la Macarena': 'The Macarena quarter',
+  'Casa con parking en el centro': 'House with parking in the centre',
+  'Comprobar disponibilidad': 'Check availability',
 }
 
 /**

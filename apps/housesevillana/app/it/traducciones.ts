@@ -42,16 +42,12 @@ export const TRADUCCIONES: Record<string, string> = {
     'di Siviglia',
   '290 m&sup2; reformados en el casco hist&oacute;rico. 6 dormitorios, 4 ba&ntilde;os, terraza, patio andaluz y parking privado &mdash; para grupos y familias de hasta 12 personas.':
     '290 m&sup2; ristrutturati nel centro storico. 6 camere, 4 bagni, terrazza, patio andaluso e parcheggio privato &mdash; per gruppi e famiglie fino a 12 persone.',
-  '&#127968; 290 m&sup2;':
-    '&#127968; 290 m&sup2;',
-  '&#128717; 6 dorm &middot; 4 ba&ntilde;os':
-    '&#128717; 6 camere &middot; 4 bagni',
-  '&#128663; Parking privado':
-    '&#128663; Parcheggio privato',
-  '&#9728; Terraza + Patio':
-    '&#9728; Terrazza + Patio',
-  '&#128101; Hasta 12 personas':
-    '&#128101; Fino a 12 persone',
+  '6 dorm &middot; 4 ba&ntilde;os':
+    '6 camere &middot; 4 bagni',
+  'Terraza + Patio':
+    'Terrazza + Patio',
+  'Hasta 12 personas':
+    'Fino a 12 persone',
   'Consultar disponibilidad':
     'Verifica disponibilità',
   'Ver la casa':
@@ -76,8 +72,8 @@ export const TRADUCCIONES: Record<string, string> = {
     '&mdash; l\'unico della zona',
   'Confirmaci&oacute;n inmediata':
     'Conferma immediata',
-  '&#128176; Sin comisiones &mdash;':
-    '&#128176; Senza commissioni &mdash;',
+  'Sin comisiones &mdash;':
+    'Senza commissioni &mdash;',
   'ahorra hasta un 22%':
     'risparmia fino al 22%',
   'vs Booking':
@@ -160,6 +156,10 @@ export const TRADUCCIONES: Record<string, string> = {
     'Domande frequenti',
   'Todo lo que necesitas saber':
     'Tutto quello che c\'è da sapere',
+  '&iquest;No encuentras tu respuesta? Escr&iacute;benos por WhatsApp y te contestamos hoy mismo.':
+    'Non trovi la tua risposta? Scrivici su WhatsApp e ti rispondiamo in giornata.',
+  'Preguntar por WhatsApp':
+    'Chiedi su WhatsApp',
   '&iquest;Tiene parking privado House Sevillana?':
     'House Sevillana ha un parcheggio privato?',
   'S&iacute;. Dispone de una plaza de garaje privado en el mismo edificio, reservable con tu estancia. Aparcar en el casco antiguo de Sevilla es muy complicado y costoso &mdash; esta es nuestra ventaja m&aacute;s valorada por los hu&eacute;spedes que llegan en coche.':
@@ -230,24 +230,8 @@ export const TRADUCCIONES: Record<string, string> = {
     'Recensioni',
   'Lo que dicen nuestros hu&eacute;spedes':
     'Cosa dicono i nostri ospiti',
-  'Lo que dicen los huéspedes':
-    'Cosa dicono gli ospiti',
   '"Espectacular. El patio andaluz es un sue&ntilde;o. Dormimos 10 personas comod&iacute;simas y el parking fue un plus enorme en el casco hist&oacute;rico."':
     '"Spettacolare. Il patio andaluso è un sogno. Abbiamo dormito in dieci comodissimi e il parcheggio è stato un enorme vantaggio nel centro storico."',
-  '"La casa más especial donde nos hemos alojado. El patio andaluz es increíble y el parking privado fue clave con el coche. Volveremos seguro."':
-    '"La casa più speciale in cui abbiamo soggiornato. Il patio andaluso è incredibile e il parcheggio privato è stato decisivo con l\'auto. Torneremo di sicuro."',
-  '"Perfecta para grupos grandes. 6 habitaciones y todo el espacio que necesitas. A 10 minutos de la Catedral a pie. Alberto muy atento."':
-    '"Perfetta per gruppi numerosi. Sei camere e tutto lo spazio che serve. A 10 minuti a piedi dalla Cattedrale. Alberto molto disponibile."',
-  '"Vinimos para una boda en Sevilla. La terraza fue perfecta para prepararnos. El barrio de la Macarena es precioso y auténtico."':
-    '"Siamo venuti per un matrimonio a Siviglia. La terrazza è stata perfetta per prepararci. Il quartiere della Macarena è bellissimo e autentico."',
-  'María G. · Familia de 8 · Booking':
-    'María G. · Famiglia di 8 · Booking',
-  'James T. · Grupo de amigos · Airbnb':
-    'James T. · Gruppo di amici · Airbnb',
-  'Claudia M. · Grupo boda · Booking':
-    'Claudia M. · Gruppo matrimonio · Booking',
-  '⭐⭐⭐⭐⭐ 9.2/10 en Booking · 4.9/5 en Airbnb':
-    '⭐⭐⭐⭐⭐ 9.2/10 su Booking · 4.9/5 su Airbnb',
   'Casa tur&iacute;stica en el casco hist&oacute;rico de Sevilla. 290 m&sup2;, 6 dormitorios, parking privado. Reserva directa sin comisiones.':
     'Casa vacanze con licenza nel centro storico di Siviglia. 290 m&sup2;, 6 camere, parcheggio privato. Prenotazione diretta senza commissioni.',
   'Caracter&iacute;sticas':
@@ -262,14 +246,18 @@ export const TRADUCCIONES: Record<string, string> = {
     'Calle Socorro 24, Siviglia',
   'VFT/SE/01179 &middot; Registro de Turismo de Andaluc&iacute;a':
     'VFT/SE/01179 &middot; Registro del Turismo dell\'Andalusia',
-  '&#128222; Llamar':
-    '&#128222; Chiama',
-  '🗺️ Qué ver en Sevilla':
-    '&#128506;&#65039; Cosa vedere a Siviglia',
-  '🏘️ El barrio de la Macarena':
-    '&#127960;&#65039; Il quartiere della Macarena',
-  '🚗 Casa con parking en el centro':
-    '&#128663; Casa con parcheggio in centro',
-  '📅 Comprobar disponibilidad':
-    '&#128197; Verifica disponibilità',
+  'Llamar':
+    'Chiama',
+  'Sigue leyendo':
+    'Continua a leggere',
+  'M&aacute;s sobre la casa y el barrio':
+    'Altro sulla casa e sul quartiere',
+  'Qu&eacute; ver en Sevilla':
+    'Cosa vedere a Siviglia',
+  'El barrio de la Macarena':
+    'Il quartiere della Macarena',
+  'Casa con parking en el centro':
+    'Casa con parcheggio in centro',
+  'Comprobar disponibilidad':
+    'Verifica disponibilità',
 }

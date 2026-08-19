@@ -32,6 +32,16 @@
 
 ---
 
+### 🎨 (19/08/2026) Repaso de diseño de la landing de House Sevillana
+- **Dos secciones colgaban POR DEBAJO del `<footer>`** con estilos inline ajenos a la paleta:
+  unas reseñas duplicadas (y contradictorias: 9,2/10 + 4,9/5 frente al 8,1/10 del resto) y la
+  barra de enlaces SEO en grises #1a1a1a/#2d2d2d. Reseñas duplicadas fuera; enlaces reescritos
+  como bloque «Sigue leyendo» con los tokens de la casa, ya ANTES del pie.
+- Emojis → SVG de trazo (un emoji lo pinta el SO: ni se tiñe ni se ve igual en cada móvil).
+  Hero con overlay de 3 capas (se ve la casa) y zoom lento; FAQ a dos columnas en escritorio
+  (media pantalla estaba vacía); la tarjeta de datos ya NO se oculta en móvil; `prefers-reduced-motion`.
+- ⚠️ **Sin resolver, es dato de Alberto:** la nota real (8,1 vs 9,2/4,9) y la dirección — la web
+  dice Calle Socorro 24 / San Julián y el CLAUDE.md raíz dice Calle Bustos Tavera 22.
 ### 📋 (19/08/2026) Inventario de ofertas Booking — House hecho, 3 pendientes
 - Nuevo `docs/BOOKING-OFERTAS-INVENTARIO.md`: inventario extranet por piso (Claude Chrome, solo
   lectura) previo a decidir la Fase 3. House: Basic Deal 12% (⚠️ activada 18/08, origen por
