@@ -455,7 +455,7 @@ fbq('init','12124662686780882173');fbq('track','PageView');
   <div class="tb-sep"></div>
   <div class="tb-item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6.5 9.4 17.1 4 11.7"/></svg> <strong>Confirmaci&oacute;n inmediata</strong></div>
   <div class="tb-sep"></div>
-  <div class="tb-item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M15.5 8.8a4.4 4.4 0 0 0-6.2.8 5.2 5.2 0 0 0 0 4.8 4.4 4.4 0 0 0 6.2.8"/><path d="M7 11h5.6M7 13.4h4.6"/></svg> Sin comisiones &mdash; <strong>ahorra hasta un 22%</strong> vs Booking</div>
+  <div class="tb-item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M15.5 8.8a4.4 4.4 0 0 0-6.2.8 5.2 5.2 0 0 0 0 4.8 4.4 4.4 0 0 0 6.2.8"/><path d="M7 11h5.6M7 13.4h4.6"/></svg> <strong>Sin comisiones</strong> &mdash; el mejor precio est&aacute; aqu&iacute;</div>
   <div class="tb-sep"></div>
   <div class="tb-item"><svg class="ico fill" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.6 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5-5.8-3-5.8 3 1.1-6.5L2.6 9.4l6.5-.9z"/></svg> <strong>8,6/10</strong> &middot; 51 rese&ntilde;as verificadas</div>
 </div>
@@ -619,12 +619,12 @@ fbq('init','12124662686780882173');fbq('track','PageView');
   <div class="wrap">
     <div class="tag">Mejor precio garantizado</div>
     <h2>Por qu&eacute; reservar aqu&iacute; y no en Booking</h2>
-    <p class="s-sub">Los portales a&ntilde;aden entre un 15% y un 22% al precio de tu estancia. Reservar directamente tiene ventajas reales que van m&aacute;s all&aacute; del dinero.</p>
+    <p class="s-sub">La comisi&oacute;n que cobran los portales acaba en el precio que pagas t&uacute;. Aqu&iacute; no hay intermediario &mdash; y reservar directamente tiene adem&aacute;s ventajas que van m&aacute;s all&aacute; del dinero.</p>
     <div class="directo-grid">
       <div class="dc">
         <div class="dc-ico"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M15.5 8.8a4.4 4.4 0 0 0-6.2.8 5.2 5.2 0 0 0 0 4.8 4.4 4.4 0 0 0 6.2.8"/><path d="M7 11h5.6M7 13.4h4.6"/></svg></div>
-        <div class="dc-title">Hasta un 22% m&aacute;s barato</div>
-        <div class="dc-text">Sin comisiones de Booking, Airbnb ni Expedia. El ahorro va &iacute;ntegro a tu bolsillo. En una semana de estancia puede suponer 200&euro; o m&aacute;s.</div>
+        <div class="dc-title">Siempre m&aacute;s barato que en los portales</div>
+        <div class="dc-text">Aqu&iacute; no hay comisi&oacute;n de Booking, Airbnb ni Expedia, y ese ahorro se descuenta de tu precio. No es una promoci&oacute;n puntual: el descuento por reserva directa se aplica siempre, a cualquier fecha y cualquier estancia.</div>
       </div>
       <div class="dc">
         <div class="dc-ico"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 12a8.5 8.5 0 1 1-4.1-7.3"/><path d="M20.5 12a8.5 8.5 0 0 1-12.6 7.4L3.5 20.6l1.2-4.4"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01"/></svg></div>
@@ -649,7 +649,7 @@ fbq('init','12124662686780882173');fbq('track','PageView');
   <div class="wrap">
     <div class="tag">Reserva directa</div>
     <h2>Comprueba disponibilidad</h2>
-    <p class="s-sub">Reserva directamente sin intermediarios. Sin comisiones. Confirmaci&oacute;n inmediata.</p>
+    <p class="s-sub">Reserva directamente sin intermediarios. El descuento por reserva directa ya viene aplicado en el precio que ves &mdash; no necesitas ning&uacute;n c&oacute;digo. Confirmaci&oacute;n inmediata.</p>
     <div id="apartmentIframe352007"></div>
   </div>
 </div>

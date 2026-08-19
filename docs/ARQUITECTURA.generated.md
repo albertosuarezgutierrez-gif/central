@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-19T17:46:38Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-19T18:22:44Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -236,9 +236,9 @@
 - Dirección resuelta (Alberto, 19/08):
 - Nuevo `apps/housesevillana/CLAUDE.md`
 - Punto ciego cerrado:
+- Veredicto FINAL: no tocar nada.
+- Dos errores míos corregidos el mismo día:
 - Validación FUERA de muestra
 - Centinela del precio al HUÉSPED
 - Canal por PORTAL
-- Ya no espera a nadie:
-- Consecuencia: NO aplicar `channel_markup=1.20`
 
