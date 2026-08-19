@@ -9,10 +9,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const sb = createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-)
+const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { db: { schema: 'iarest' } })
 const PUSH_URL = Deno.env.get('SUPABASE_URL')!.replace(/\/$/, '') + '/functions/v1/push-send'
 const SRK = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
@@ -59,12 +56,15 @@ async function enviarPush(camareroIds: string[], title: string, body: string) {
 }
 
 async function registrarAlerta(restauranteId: string, tipo: string, mensaje: string) {
-  await sb.from('alerta_log').insert({
+  // OJO: los builders de supabase-js no son Promises completas (.catch no existe en
+  // todas las versiones y reventaba con TypeError en runtime) — usar el error del result.
+  const { error } = await sb.from('alerta_log').insert({
     local_id: restauranteId,
     trigger_tipos: [tipo],
     mensaje_voz: mensaje,
     leida: false,
-  }).catch(e => console.error('[infra-log]', e))
+  })
+  if (error) console.error('[infra-log]', error)
 }
 
 Deno.serve(async () => {

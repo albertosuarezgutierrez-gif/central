@@ -104,11 +104,11 @@ export async function getResumenSivra(anio: number, propertyId?: string | null):
   }
 }
 
-// ia-rest vive en su PROPIA BD (proyecto Supabase aparte), no en la compartida: el
-// schema `iarest` de la BD unificada quedó como clon vacío del DDL. Por eso el resumen
-// se lee EN VIVO por el puerto HTTP de ia-rest (`/api/operador/financiero`, Bearer
-// `OPERADOR_SHARED_SECRET`) — el MISMO patrón que el listado del god-panel
-// (`lib/adapters/iarest.ts`). Sin Prisma, sin 2ª conexión, sin migrar datos.
+// ia-rest vive en la BD compartida (schema `iarest`) desde el corte de junio 2026, pero
+// el resumen se sigue leyendo por el puerto HTTP de ia-rest (`/api/operador/financiero`,
+// Bearer `OPERADOR_SHARED_SECRET`) — el MISMO patrón que el listado del god-panel
+// (`lib/adapters/iarest.ts`): cada app es dueña de su schema y expone puertos, sin que
+// plataforma acople una 2ª conexión ni Prisma sobre `iarest.*`.
 export async function getResumenIaRest(localId: string | null, anio: number): Promise<ResumenFinanciero> {
   if (!localId) return { ...NULO, nota: 'sin local vinculado' }
   const base = process.env.IAREST_URL?.replace(/\/$/, '')

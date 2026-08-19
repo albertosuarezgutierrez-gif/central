@@ -23,4 +23,9 @@ regexes = [
   # que vivió en tuya-cifrado.test.ts (commit del PR de domótica). El código actual la
   # construye por repetición; se allowlista el literal por el historial del PR.
   '''0123456789abcdef0123456789abcdef''',
+  # Anon key PÚBLICA del proyecto Supabase compartido (wswbehlcuxqxyinousql), hardcodeada
+  # en el bridge de impresión (scripts/bridge-v6) igual que lo estaba la del proyecto viejo:
+  # es una clave de cliente (viaja en todo bundle del navegador), la protección real es RLS.
+  # NO es un secreto de auth — esos siguen prohibidos por el guardián.
+  '''pskPJ1U-i0Vjg_suxMfXNqHOtKJpWchf0-CzLUQIzRo''',
 ]

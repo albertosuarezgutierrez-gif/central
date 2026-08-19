@@ -10,12 +10,11 @@ Casa de marcas: raíz = matriz (sin producto), `packages/*` = 38 núcleos TS pur
 `transpilePackages`), `apps/*` = 8 verticales Next.js (ia-rest, ialimp, sivra, plataforma,
 rrhh, transporte, alquiler, almacen) que buildan **aisladas por Root Directory** en Vercel.
 BD Supabase **compartida** (`wswbehlcuxqxyinousql`): ialimp/sivra/plataforma/rrhh/transporte/
-alquiler/almacen en schema `public` (scope `empresa_id`/tenant). ia-rest vive en su propio
-proyecto Supabase **standalone** `efncqyvhniaxsirhdxaa`, schema `public` (aislado por ser el
-único tenant de ese proyecto) — la migración a un schema `iarest` dentro del compartido está
-DISEÑADA pero pendiente de ejecutar (ver skill `ia-rest-maestro`, "Split-brain de BD"); no
-asumas que ya vive ahí. Lee `MATRIZ.md` y `docs/CONTEXTO-SESIONES.md` (entradas de arriba)
-antes de empezar.
+alquiler/almacen en schema `public` (scope `empresa_id`/tenant) e **ia-rest en su schema
+`iarest`** (runtime + Edge Functions + crons desde el cierre 19/08/2026). El proyecto viejo
+`efncqyvhniaxsirhdxaa` está jubilado (congelado, crons apagados; pausar/borrar pendiente de
+Alberto) — no despliegues ni apliques nada allí. Lee `MATRIZ.md` y `docs/CONTEXTO-SESIONES.md`
+(entradas de arriba) antes de empezar.
 
 ## Cuándo usar
 Tras renames de scope (`@iarest/*`→`@central/*`), migraciones de BD, mover/crear
@@ -71,8 +70,8 @@ plantilla. Arregla en el acto solo bugs de bajo riesgo; lo de gran radio se cons
 
 ### 4. Seguridad + multi-tenant (lo más crítico — BD compartida)
 - Toda query scoped por `empresa_id`/tenant en la BD compartida `wswbehlcuxqxyinousql`; ia-rest
-  (proyecto standalone `efncqyvhniaxsirhdxaa`) aísla por ser el único tenant de ese proyecto —
-  ningún cruce entre tenants ni entre proyectos.
+  aísla por su schema `iarest` dentro del mismo proyecto (funciones con `search_path` fijado,
+  clientes con `db: { schema: 'iarest' }`) — ningún cruce entre tenants ni entre schemas.
 - Secretos: ningún `.env` commiteado; sin claves reales hardcodeadas (anon keys de cliente son
   semi-públicas pero anótalas). Crons exigen `Authorization: Bearer CRON_SECRET`.
 - **Guardián de secretos** (gate en `pnpm test:guardia`): `test/regression-secrets.test.ts` falla si un
@@ -92,10 +91,10 @@ plantilla. Arregla en el acto solo bugs de bajo riesgo; lo de gran radio se cons
   romper el build de un cliente vivo si la CDN no es alcanzable. Documenta en vez de arriesgar.
 
 ### 6. Infra real (MCP, solo lectura)
-- Supabase: hay DOS proyectos — el compartido `wswbehlcuxqxyinousql` (sivra/ialimp/plataforma/rrhh/
-  transporte/alquiler/almacen) y el standalone de ia-rest `efncqyvhniaxsirhdxaa`. `list_projects`,
-  `list_migrations` (¿migraciones del repo aplicadas?), `list_tables` (con datos, no vacío) y
-  `list_edge_functions` en AMBOS.
+- Supabase: el proyecto de producción es el compartido `wswbehlcuxqxyinousql` (todas las verticales;
+  ia-rest en schema `iarest`). El viejo `efncqyvhniaxsirhdxaa` está jubilado (pausar/borrar pendiente):
+  si sigue existiendo, verifica que NADIE le haya vuelto a desplegar/escribir. `list_migrations`
+  (¿migraciones del repo aplicadas?), `list_tables` y `list_edge_functions` en el compartido.
 - Vercel: `list_projects` puede no listar las 8 apps si alguna vive en otro team/cuenta fuera del
   alcance del conector — no lo des por "no desplegada" sin más, márcalo para que Alberto lo mire a
   mano en el dashboard. `list_deployments` (último deploy de cada proyecto visible y su resultado).
