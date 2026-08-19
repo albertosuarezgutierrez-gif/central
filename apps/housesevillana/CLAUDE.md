@@ -116,6 +116,12 @@ Supabase.
 - **Nota de Booking: se copia a mano.** Hoy es **8,6/10 con 51 reseñas** (conector de
   Booking, 19/08/2026); la página venía diciendo 8,1 con +47, que era el dato de hacía meses.
   Nada la refresca sola: al tocar la landing, contrasta el número contra la ficha real.
+- **Ninguna sesión de Claude puede VER las fotos.** Viven en Drive y se sirven por
+  `lh3.googleusercontent.com`, que la política de egress bloquea; el conector de Drive lista y
+  da metadatos, pero `read_file_content` devuelve vacío para JPEG y bajarlas en base64 no cabe
+  en contexto. Consecuencia práctica: **no elijas ni juzgues una foto desde una sesión** — lo
+  hace Alberto sobre la carpeta de Drive. Se coló así una escalera como portada, con un `alt`
+  que decía «fachada» (corregido el 19/08/2026: la portada es el salón).
 - **Booking anuncia «Admite mascotas» y aquí se dice que NO.** Sin resolver: es una decisión de
   Alberto, y los dos canales tienen que decir lo mismo.
 - **Minutos a pie** desde Socorro 24 a la Basílica de la Macarena, la muralla, el Mercado de
