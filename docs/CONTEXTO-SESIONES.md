@@ -32,6 +32,17 @@
 
 ---
 
+### 🛡️ (19/08/2026) Grupo Asegura — plan para traer la correduría al monorepo
+- Nuevo `docs/ASEGURA-MIGRACION.md`. El desarrollo externo es el repo **`manuelsuarez/asegura`**
+  (invitación de colaborador del 12/08 en el Gmail, **sin aceptar**); Claude NO puede leerlo desde
+  esta sesión (app instalada solo en `albertosuarezgutierrez-gif`, `add_repo` cross-owner bloqueado).
+- **Decisión: NO se crea proyecto Supabase nuevo** aunque el 2º free cueste 0 €/mes — los free se
+  pausan a los 7 días de inactividad y las cuotas son por organización. Va como schema **`seguros`**
+  en `central` + rol `prisma_seguros`, app `apps/asegura`, marca por `@central/brand`.
+- Bloqueantes de Alberto: aceptar/transferir el repo a su cuenta (copia SIN historia) y pedir al
+  desarrollador el Supabase (transfer o `pg_dump`) + envs/edge functions/buckets. Falta saber en qué
+  plataforma se desarrolló.
+
 ### 📋 (19/08/2026) Inventario de ofertas Booking — House hecho, 3 pendientes
 - Nuevo `docs/BOOKING-OFERTAS-INVENTARIO.md`: inventario extranet por piso (Claude Chrome, solo
   lectura) previo a decidir la Fase 3. House: Basic Deal 12% (⚠️ activada 18/08, origen por
