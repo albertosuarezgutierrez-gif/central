@@ -726,7 +726,7 @@ fbq('init','12124662686780882173');fbq('track','PageView');
       </div>
     </div>
     <div class="fbot">
-      <p>&copy; 2025 House Sevillana &middot; Bercell &middot; Todos los derechos reservados</p>
+      <p>&copy; House Sevillana &middot; Todos los derechos reservados</p>
       <span class="fvft">VFT/SE/01179 &middot; Registro de Turismo de Andaluc&iacute;a</span>
     </div>
   </div>

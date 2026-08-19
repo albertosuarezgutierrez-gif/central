@@ -32,6 +32,17 @@
 
 ---
 
+### ©️ (19/08/2026) El pie de la landing decía «© 2025 · Bercell»
+- Dos fallos en la misma línea de `apps/housesevillana/app/route.ts`. **El año quemado**: en agosto de 2026
+  la portada firmaba «© 2025», que a un huésped le lee como web abandonada. No se ha puesto 2026 (vuelve a
+  caducar) ni `new Date().getFullYear()` (el HTML es una const de módulo y Next puede prerenderizar la ruta:
+  quedaría clavado en el año del build) — **se ha quitado el año**: un copyright no lo necesita y así no hay
+  número que envejezca. Guardián nuevo `app/pie.test.ts` sobre las 4 páginas.
+- **«Bercell»**: aparecía UNA sola vez en todo el monorepo, sin rastro (entró con la importación sin historia
+  del 12/08). Sin poder verificar qué es, se ha quitado en vez de inventar un sustituto — la identidad legal ya
+  la lleva la línea de al lado (`VFT/SE/01179`). **Si es un nombre comercial real, Alberto lo dice y vuelve.**
+- De paso: esa línea no estaba en los diccionarios, así que `/en` y `/it` la servían en castellano. Añadida a los dos.
+
 ### 🌍 (19/08/2026) `main` llegó ROJA: tocar el español de la landing sin el diccionario
 - Al mergear PR #1490 saltó `Tests (packages + guardián)`. **No era mío:** reproducido sobre `origin/main`
   → `apps/housesevillana` 45/47, mismas 2 pruebas i18n. Lo rompió **PR #1487** al reescribir el copy español

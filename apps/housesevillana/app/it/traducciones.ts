@@ -242,6 +242,8 @@ export const TRADUCCIONES: Record<string, string> = {
     'Contatti',
   'Calle Socorro 24, Sevilla':
     'Calle Socorro 24, Siviglia',
+  '&copy; House Sevillana &middot; Todos los derechos reservados':
+    '&copy; House Sevillana &middot; Tutti i diritti riservati',
   'VFT/SE/01179 &middot; Registro de Turismo de Andaluc&iacute;a':
     'VFT/SE/01179 &middot; Registro del Turismo dell\'Andalusia',
   'Llamar':
