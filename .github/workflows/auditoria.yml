@@ -23,6 +23,13 @@ on:
       - 'docs/CONTEXTO-SESIONES.md'
       - 'scripts/auditar-estructura.mjs'
       - '.github/workflows/auditoria.yml'
+  # A mano. Hace falta de verdad, no es un adorno: un push a `main` hecho con el token de una
+  # GitHub App (p. ej. el merge de un PR desde una sesión de Claude Code) NO dispara workflows,
+  # así que hay merges tras los cuales la radiografía sencillamente no se regenera y nadie se
+  # entera. Comprobado el 19/08/2026: el merge de #1501 (a6ef85ab) no disparó NI UN workflow.
+  # `workflow_dispatch` sí se puede lanzar desde la API con ese mismo token, así que es la vía
+  # para forzar una pasada y para probar este workflow sin esperar al siguiente push humano.
+  workflow_dispatch: {}
 
 permissions:
   contents: write

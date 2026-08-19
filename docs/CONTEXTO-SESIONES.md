@@ -46,6 +46,24 @@
   sin password; SELECT en cuentas/sociedades/negocios) — `apps/asegura/prisma/sql/2026-08-19_asegura_bootstrap.sql`.
   Y `docs/ASEGURA-PROMPT-CHROME.md` para inventariar el repo con Claude Chrome. PR #1489.
 
+### 🛑 (19/08/2026) IBKR: no era la selección, eran los stops — libro de operaciones en Supabase
+- Alberto preguntó por VWCE («no para de bajar»): −594,96€, el **3,7%** de los −16.172,49€ que perdió operando
+  en 2026. Sacado de IBKR por MCP; informe visual en artifact (no en repo: dato financiero personal).
+- **Hallazgo:** la selección era buena, el stop era el problema. CRWV **subió 42,1%** entre su primera y última
+  operación y perdió 6.369$ en 33 movimientos; SNDK +7,9% → −4.853$; RBLX +6,1% → −2.689$. Mediana de distancia
+  del stop: **1,30%** (25 de 95 a menos del 1%). Confirmado en los DOS periodos: órdenes STOP −28.710$, órdenes
+  a mercado **+4.487$**. Siete posiciones abiertas y cerradas el mismo día: −3.982$.
+- **Regla 2 meses (art. 33.5.f LIRPF): no bloquea nada.** 23 valores cerrados del todo, ninguna recompra en los
+  2 meses siguientes a su última venta. La pérdida de 2026 es compensable íntegra (4 años de arrastre).
+- **Nuevo en BD:** `trading_operaciones` (libro inmutable de ejecuciones, idempotente por `(broker, trade_id)`)
+  + vistas `v_trading_resumen_anual` y `v_trading_salidas`. Cargadas **455 operaciones** (oct/2025–ago/2026),
+  checksums verificados contra el origen. `tipo_cambio` a NULL a propósito = «aún no consultado», nunca 1.
+- **Decisión (Alberto):** el agente inversor se construye **solo para él**; expandir a terceros, más adelante.
+  Motor fiscal en Supabase; los PDF del broker, en Drive. NADA de recomendar productos (sería asesoramiento CNMV).
+- ⏳ **Pendiente y CADUCA:** IBKR solo sirve ~4 trimestres atrás por esta vía. Falta cargar **jul–sep/2025**
+  (108 ops) y rellenar `tipo_cambio` por fecha (449 filas USD). Sin eso no hay cifra en euros defendible.
+- ❓ Sin comprobar si la cuenta IBKR es real o paper: las herramientas del MCP no lo distinguen.
+
 ### 🔒 (19/08/2026) `main` NO tenía ninguna protección — ahora sí, y rompe a dos bots
 - Tras el fallo de #1487 (tests rojos, mergeado igual) se miró el gate: **no había gate**. Ni branch
   protection clásica ni rulesets. El check «Ready to merge» de `ci.yml` solo hace `needs: check`
@@ -77,6 +95,12 @@
   **atascado para siempre**. Le pasó a #1501 (14 checks aparecieron solo al empujar un commit más). Así
   que `auditoria.yml` empuja y abre el PR con `GH_PAT_TRIGGER`, y si falta el secret **no abre PR**: falla
   con aviso, mejor que un PR zombi. El agente SEO no sufre esto (usa su PAT fine-grained propio).
+- 🔁 **Y la misma trampa, otra vez, en `main`: el merge de #1501 (`a6ef85ab`) no disparó NI UN
+  workflow.** Un push a `main` hecho con el token de una GitHub App (el merge de un PR desde una
+  sesión de Claude Code) no dispara nada, así que la auditoría no se regeneró y el código nuevo se
+  quedó SIN estrenar. No es un fallo del arreglo — es que no llegó a correr. Por eso `auditoria.yml`
+  gana `workflow_dispatch`: se puede lanzar desde la API con ese mismo token, y así ni la radiografía
+  depende de que el último push lo hiciera un humano ni hay que esperar a uno para probar el workflow.
 - ⚠️ Lo que NO se ha podido probar aquí: los workflows solo se ejecutan en GitHub. Las tres piezas se
   verifican solas en su primera pasada real — auditoría al próximo push a `main`, SEO el lunes. Si el
   PR del SEO se queda abierto sin mergear, mirar si `GH_PAT_TRIGGER` sigue vivo. Revertir todo =
