@@ -3,15 +3,6 @@
 > **Para qué (idea G).** El **carril 1** de la auditoría diaria empuja los arreglos de texto
 > (memoria/skills/docs/manuales) **directos a `main` sin que nadie los revise**. Esta bitácora
 > es la transparencia de ese "se aplica solo": cada cambio auto-aplicado deja una línea aquí
-
-- **2026-08-18** · `docs/CONTEXTO-SESIONES.md` · entrada nueva de la pasada de hoy + 2 bullets de
-  «Estado vivo» actualizados con su desenlace real (pricing Booking Genius/NR/oferta ejecutados,
-  PASO 0 del trigger de trading estrenado 17/08) + cabecera re-fechada a 18/08 · ambos pendientes
-  llevaban 2-3 días resueltos por commits posteriores sin reconciliar el bloque · pasada ligera
-  diaria, rango 39 commits desde 2026-08-16 (auditoría profunda) · commit de esta auditoría
-- **2026-08-18** · `docs/AUDITORIA-2026-08.md` · sección "Actualización 2026-08-18 — auditoría
-  diaria (ligera)" añadida · informe de esta pasada (heartbeat 23/23 ✅, 0 PRs abiertos, sin
-  hallazgos de código/infra) · commit de esta auditoría
 > para que Alberto lo ojee de un vistazo y, si algo no le cuadra, lo revierta (queda en git).
 >
 > **Cómo se mantiene.** La propia auditoría añade entradas arriba del todo, en el mismo commit
@@ -22,6 +13,22 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-08-19** · `docs/CONTEXTO-SESIONES.md` + `docs/AUDITORIA-2026-08.md` · entrada nueva de la
+  pasada de hoy (heartbeat 24/24 ✅, backlog de rutinas sano, sin drift de skills/docs, «Estado
+  vivo» sin cambios) · pasada ligera diaria, rango 12 commits desde 2026-08-18 · commit de esta
+  auditoría
+- **2026-08-19** · `docs/AUTO-APLICADOS.md` · movidas 2 entradas del 18/08 que habían quedado mal
+  insertadas en medio del párrafo de intro (antes de que terminara de redactarse) a su sitio bajo
+  `## Registro` · glitch de formato de la pasada anterior, sin pérdida de información · pasada
+  ligera diaria, commit de esta auditoría
+- **2026-08-18** · `docs/CONTEXTO-SESIONES.md` · entrada nueva de la pasada de hoy + 2 bullets de
+  «Estado vivo» actualizados con su desenlace real (pricing Booking Genius/NR/oferta ejecutados,
+  PASO 0 del trigger de trading estrenado 17/08) + cabecera re-fechada a 18/08 · ambos pendientes
+  llevaban 2-3 días resueltos por commits posteriores sin reconciliar el bloque · pasada ligera
+  diaria, rango 39 commits desde 2026-08-16 (auditoría profunda) · commit de esta auditoría
+- **2026-08-18** · `docs/AUDITORIA-2026-08.md` · sección "Actualización 2026-08-18 — auditoría
+  diaria (ligera)" añadida · informe de esta pasada (heartbeat 23/23 ✅, 0 PRs abiertos, sin
+  hallazgos de código/infra) · commit de esta auditoría
 - **2026-08-16** · `docs/AUDITORIA-2026-08.md` · sección "Actualización 2026-08-16 — auditoría diaria
   (PROFUNDA)" completa (hallazgo `psd2-sync` escalado a 🔴 tras 6 días sin movimientos + guardián
   `psd2-health-check` en crítico, Telegram enviado; hallazgo Supabase `v_facturas_sin_cargo`
