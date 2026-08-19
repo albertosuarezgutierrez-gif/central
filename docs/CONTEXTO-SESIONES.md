@@ -111,6 +111,15 @@
   con «No commits between main and …». Arreglo: la rama local se llama YA `…-<run_id>` desde el
   principio, más un cinturón que aborta si el HEAD acaba siendo `main` (sin él, el síntoma parecía
   un `gh pr create` roto y no la pérdida del commit).
+- ✅✅ **PROBADO DE PUNTA A PUNTA (23:42).** `workflow_dispatch` → rama `…-<run_id>` con commit propio
+  → PR #1511 → **15 checks** → **`rutinas-automerge.yml` lo mergeó solo** (`b04de8de` en `main`,
+  merged_by `github-actions[bot]`). La radiografía vuelve a aterrizar sola con el ruleset puesto.
+  Costó CUATRO intentos (#1501, #1503, #1507, #1509) y cada uno destapó un fallo distinto y real.
+- ℹ️ **El cron del automerge NO va al minuto :23 aunque el fichero diga `'23 * * * *'`**: las pasadas
+  programadas reales caen sobre el **:46**. Al depurar, mirar los runs, no el cron.
+- 🧹 Dos cabos sueltos menores: (1) la rama `claude/auditoria-radiografia-32307817350` quedó huérfana
+  del run fallido — el bucle de limpieza cierra PRs, no borra ramas sin PR; (2) dos pasadas seguidas
+  encadenan dos PRs (la segunda cierra el de la primera): funciona, pero mete ruido.
 - ⚠️ Lo que NO se ha podido probar aquí: los workflows solo se ejecutan en GitHub. Las tres piezas se
   verifican solas en su primera pasada real — auditoría al próximo push a `main`, SEO el lunes. Si el
   PR del SEO se queda abierto sin mergear, mirar si `GH_PAT_TRIGGER` sigue vivo. Revertir todo =
