@@ -240,6 +240,21 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
    - `docs/SKILLS.md` (índice vivo): verifica que lista las skills y comandos REALES de
      `.claude/skills/` y `.claude/commands/`; añade los que falten, quita los que ya no
      existan, y corrige las descripciones de "cuándo usar" que estén desactualizadas.
+   - **Skills SINCRONIZADAS** (`/root/.claude/skills/synced/`, si existe la carpeta en la
+     sesión): vienen de la cuenta de Claude, **no están en git y nadie las reconcilia**, así
+     que su drift no caduca nunca — es un punto ciego, no un olvido puntual. Caso fundacional
+     (19/08/2026): `seo-house-sevillana` lleva desde su creación diciendo que House Sevillana
+     está en **Calle Bustos Tavera 22**, que es la dirección de OTROS DOS pisos del grupo
+     (Luxury Busto y Busto Reform); el dato bueno es **Calle Socorro 24, barrio de San
+     Julián**, y está en `apps/housesevillana/CLAUDE.md` y en la propia landing. Lo caro no es
+     la ficha: son sus **dos JSON-LD con `streetAddress`**, que si se publican le dan a Google
+     una dirección falsa para el negocio y encima la de dos competidores propios en la misma
+     búsqueda local. Qué hacer: contrasta los DATOS DUROS de cada skill sincronizada
+     (direcciones, licencias, teléfonos, precios, capacidades) contra el código y los
+     `CLAUDE.md` de la app que describen. **No se pueden auto-aplicar** —no hay dónde
+     commitear—, así que todo hallazgo va por **Telegram**, con el fichero y la línea exactos
+     y el valor correcto, para que Alberto lo corrija en su cuenta. Repítelo mientras siga sin
+     corregirse: aquí el recordatorio es el único mecanismo que hay.
    - **Tabla de rutas del triaje de correo** (`apps/plataforma/lib/correo/rutas.ts`, fuente única):
      Alberto crea agentes/skills continuamente. Comprueba que toda skill/agente que reciba trabajo
      POR CORREO tiene su categoría en `RUTAS[]`. Señales de drift: una skill nueva en `.claude/skills/`

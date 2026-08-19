@@ -36,6 +36,8 @@
 | skill `transporte-maestro` | `apps/transporte/**` |
 | skill `alquiler-maestro` | `apps/alquiler/**` |
 | `apps/mariscos/CLAUDE.md` | `apps/mariscos/**`, `packages/module-pesca/**` |
+| `apps/housesevillana/CLAUDE.md` | `apps/housesevillana/**` (portada `app/route.ts`, diccionarios `app/{en,it}/traducciones.ts`, `app/i18n/motor.ts`, páginas SEO `/barrio` `/que-ver` `/parking`), `apps/sivra/lib/seo-landing.ts` (el agente SEO reescribe la portada los lunes) |
+| skill SINCRONIZADA `seo-house-sevillana` (fuera del repo, `/root/.claude/skills/synced/`) | `apps/housesevillana/**` — **punto ciego: nadie la reconcilia sola**. Su ficha y sus dos JSON-LD dan a House Sevillana la dirección de OTROS pisos (Bustos Tavera 22 en vez de Socorro 24). Dato bueno en `apps/housesevillana/CLAUDE.md`; parche listo en `docs/PARCHE-skill-seo-house-sevillana.md`; aplicarlo es de Alberto |
 | Manuales usuario ia-rest | `apps/ia-rest/src/components/help/help-prompts.ts`, `apps/ia-rest/public/manual*.html`, `apps/ia-rest/src/app/**` (features visibles) |
 | skill `fiscal-novedades` | `apps/plataforma/lib/fiscal-deducciones.ts` (`IMPORTES_POR_ANIO`), tablas `fiscal_novedades`/`fiscal_ayudas`/`ayudas_perfiles`, banners 💶 (`apps/plataforma` `/finanzas`, `apps/almacen` panel, `apps/ialimp` dashboard) |
 | `docs/FISCAL-AYUDAS.md` | tablas `fiscal_ayudas` (convocatorias) y `ayudas_perfiles` (perfiles de tenant del radar) |

@@ -88,10 +88,15 @@ En local, NextAuth v5 necesita además `AUTH_TRUST_HOST=true`.
 > con **`contents:write` sobre el repo `central`** — el **mismo valor** que ya usa el botón manual en
 > `plataforma`. Sin ella, el cron semanal `/api/seo-refresh` da **500**. Se gestiona desde el panel
 > `/operador/secretos` de plataforma (write-through a los proyectos Vercel `sivra` + `plataforma`); si
-> hay que rotarla, se rota desde ese panel, no a mano en Vercel. ⚠️ **El PAT del 03/08/2026 estaba
-> scoped al antiguo repo externo `house-sevillana-landing`** y al unificar la landing quedó sin permiso
-> de escritura sobre `central`: el GET seguía funcionando (repo público) pero el PUT daba
-> `403 Resource not accessible by personal access token` (primer cron tras la unificación, 17/08/2026).
+> hay que rotarla, se rota desde ese panel, no a mano en Vercel. ⚠️ **Lo que falla no suele ser el
+> permiso, sino el REPO:** el PAT del 03/08/2026 ya tenía `Contents: Read and write`, pero su
+> *Repository access* solo listaba el repo externo viejo `house-sevillana-landing`, así que al unificar
+> la landing el PUT empezó a dar `403 Resource not accessible by personal access token` mientras el GET
+> seguía funcionando (`central` es público: lo lee cualquier token). Resuelto el 19/08/2026 añadiendo
+> `central` a la selección — sin regenerar, así que el valor del token no cambió.
+> **Compruébalo en 1 s, sin esperar al cron del lunes:** `GET /api/seo-token-check` de ESTA app (sesión
+> o `Bearer CRON_SECRET`), o el botón «Probar acceso a GitHub» de `/sivra/seo` en plataforma. Sondea con
+> un PUT de `sha` imposible: 403 = sin permiso, 409 = puede escribir, y no escribe nada.
 
 > **🔑 Smoobu key — fuente única (14/06/2026):** la API key de Smoobu se lee ahora de la **BD**
 > (`pms_connections.smoobu_api_key`, la fila de Alberto, tabla propiedad de ialimp) vía

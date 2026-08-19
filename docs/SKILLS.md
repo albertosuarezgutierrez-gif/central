@@ -69,6 +69,16 @@
 | **`code-map`** | Al empezar una tarea de CÓDIGO donde hay que localizar qué archivo/función maneja algo, ANTES de Grep/Read a ciegas. Consulta la tabla `mapa_arquitectura` (índice de firmas, ~0 tokens) por `word_similarity`/GIN para acotar archivos candidatos y leer solo esos. Gemelo lado-sesión del endpoint `/api/ai/codigo`. Degrada al método clásico si el mapa no está. Ver `docs/DIRECTOR-CODIGO.md`. |
 | **`delegar-codigo`** | Cuando una tarea de código sea MECÁNICA o VOLUMINOSA (renames masivos, mismo patrón en N archivos, boilerplate, migraciones planas) y quieras ahorrar tokens de Claude. Esquema "caro planifica / barato ejecuta": tú organizas y decides, un modelo barato de OpenRouter escribe cada archivo vía `scripts/ai-ejecutar.mjs` → `/api/ai/ejecutar` (endpoint `codigo`); tú planificas, delegas y REVISAS/verificas, no generas los diffs. NO usarla para lógica sutil ni sin volumen. Gemela del endpoint `/api/ai/ejecutar`; complementa a `code-map` (que acota QUÉ archivos). Ver `docs/DIRECTOR-CODIGO.md`. |
 
+## Skills SINCRONIZADAS (viven FUERA del repo)
+> Vienen de la cuenta de Claude y se cargan en la sesión desde `/root/.claude/skills/synced/`.
+> **No están en git**, así que ni se versionan ni se pueden corregir desde aquí, y su drift no
+> caduca: nadie las reconcilia salvo que se busque a propósito. Desde el 19/08/2026,
+> `/auditoria-diaria` contrasta sus datos duros y avisa por Telegram; corregirlas es de Alberto.
+
+| Skill sincronizada | Estado |
+|---|---|
+| **`seo-house-sevillana`** | SEO de la landing de House Sevillana. ⚠️ **Dato malo**: le da la dirección de OTROS dos pisos del grupo (Bustos Tavera 22) en la ficha, las keywords, el `SKILL.md` y **sus dos JSON-LD con `streetAddress`**. La buena es **Calle Socorro 24, barrio de San Julián** — ver `apps/housesevillana/CLAUDE.md`, que manda sobre ella. Le asigna además el **ID de Booking de Busto Reform** (`4771238`; el suyo es `2039943`), que es de donde sale todo. Parche listo para pegar en `docs/PARCHE-skill-seo-house-sevillana.md`. |
+
 ## Hooks (automatización, no se invocan a mano)
 | Hook | Qué hace |
 |---|---|

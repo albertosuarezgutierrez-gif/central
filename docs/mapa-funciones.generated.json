@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-19T11:17:51Z",
-  "sha": "934b464d1b838ac62d89eb7acecface9e35249cf",
+  "generadoEn": "2026-08-19T17:47:51Z",
+  "sha": "0ee84745948aa442093edf49a7ab45d9dddd9572",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -2857,7 +2857,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a8c4cb25f8cc"
+      "hash": "96b76e1a7faf"
     },
     {
       "ruta": "apps/housesevillana/app/en/parking/route.ts",
@@ -2915,13 +2915,13 @@
           "exportada": true,
           "params": "html: string",
           "retorno": "string",
-          "linea": 203,
+          "linea": 195,
           "resumen": "Traduce el HTML español al inglés. Sustituye de la cadena más larga a la más corta a propósito: si «La casa» se aplicase antes que «La casa por dentro», la segunda quedaría medio traducida."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d79942b40e51"
+      "hash": "fcfa985f9622"
     },
     {
       "ruta": "apps/housesevillana/app/i18n/motor.ts",
@@ -3101,7 +3101,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 686
+          "linea": 771
         },
         {
           "nombre": "GET",
@@ -3109,14 +3109,14 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 861
+          "linea": 908
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "fa46030ccc2f"
+      "hash": "3bbd311b0e43"
     },
     {
       "ruta": "apps/housesevillana/app/sitemap.xml/route.ts",
@@ -49409,12 +49409,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 16
+          "linea": 26
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e89c8b49dc54"
+      "hash": "e286e180ae92"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/subastas/MapaSubastas.tsx",
@@ -57801,6 +57801,27 @@
       ],
       "rutaApi": "/api/sivra/seo-refresh",
       "hash": "73d97f8bea7f"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/sivra/seo-token-check/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 21,
+          "resumen": "GET /api/sivra/seo-token-check — ¿puede GITHUB_TOKEN commitear la landing de housesevillana? Existe porque el fallo de este agente es SIEMPRE el mismo y era invisible hasta el último paso: la landing "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/sivra/seo-token-check",
+      "hash": "99dae010d068"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/updates/sync/route.ts",
@@ -69390,6 +69411,8 @@
         "decodeLanding",
         "fetchLanding",
         "pushToGitHub",
+        "clasificarSondeo",
+        "sondearEscritura",
         "extractSeoParams",
         "escJs",
         "applySeoReplacements"
@@ -69426,7 +69449,25 @@
           "exportada": true,
           "params": "content: string, sha: string, message: string",
           "retorno": "Promise<void>",
-          "linea": 39
+          "linea": 44
+        },
+        {
+          "nombre": "clasificarSondeo",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, cuerpo: string",
+          "retorno": "Sondeo",
+          "linea": 87,
+          "resumen": "Clasifica la respuesta del PUT-sonda. PURA y testeable (no toca red). 🚨 Solo el 409 se considera verde. Cualquier otra cosa cae en `desconocido`, nunca en «va bien»: un check que se pone verde porque"
+        },
+        {
+          "nombre": "sondearEscritura",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Sondeo>",
+          "linea": 118,
+          "resumen": "Sondea de verdad contra GitHub. Nunca modifica la landing (ver comentario de arriba). Devuelve SIEMPRE un `Sondeo`; no lanza."
         },
         {
           "nombre": "extractSeoParams",
@@ -69434,7 +69475,7 @@
           "exportada": true,
           "params": "raw: string",
           "retorno": null,
-          "linea": 63
+          "linea": 160
         },
         {
           "nombre": "escJs",
@@ -69442,7 +69483,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "string",
-          "linea": 71
+          "linea": 168
         },
         {
           "nombre": "escSegunEstilo",
@@ -69450,7 +69491,7 @@
           "exportada": false,
           "params": "q: string, s: string",
           "retorno": "string",
-          "linea": 74,
+          "linea": 171,
           "resumen": "Escapa el texto SOLO si el tag usa comillas escapadas (q = '\\\\\"'); con comillas normales va tal cual."
         },
         {
@@ -69459,12 +69500,12 @@
           "exportada": true,
           "params": "raw: string, title: string, description: string, ogDescription: string",
           "retorno": "string",
-          "linea": 76
+          "linea": 173
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a0b0e77cf5ef"
+      "hash": "4324fc16cb92"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/smoobu-sync.ts",
@@ -82119,6 +82160,27 @@
       "hash": "1366a60f1512"
     },
     {
+      "ruta": "apps/sivra/app/api/seo-token-check/route.ts",
+      "ambito": "apps/sivra",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 17,
+          "resumen": "GET /api/seo-token-check — gemelo del de plataforma, pero sobre el GITHUB_TOKEN de ESTA app. Importa tenerlo aquí y no solo en plataforma: el cron semanal `/api/seo-refresh` corre en el proyecto Verce"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/seo-token-check",
+      "hash": "63129032d927"
+    },
+    {
       "ruta": "apps/sivra/app/api/smoobu/huespedes-repetidos/route.ts",
       "ambito": "apps/sivra",
       "exporta": [
@@ -83513,6 +83575,8 @@
         "githubToken",
         "fetchLanding",
         "pushToGitHub",
+        "clasificarSondeo",
+        "sondearEscritura",
         "extractSeoParams",
         "escJs",
         "applySeoReplacements"
@@ -83540,7 +83604,25 @@
           "exportada": true,
           "params": "content: string, sha: string, message: string",
           "retorno": "Promise<void>",
-          "linea": 25
+          "linea": 30
+        },
+        {
+          "nombre": "clasificarSondeo",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, cuerpo: string",
+          "retorno": "Sondeo",
+          "linea": 66,
+          "resumen": "Clasifica la respuesta del PUT-sonda. PURA y testeable (no toca red). 🚨 Solo el 409 se considera verde; lo demás cae en `desconocido`, nunca en «va bien»."
+        },
+        {
+          "nombre": "sondearEscritura",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Sondeo>",
+          "linea": 94,
+          "resumen": "Sondea de verdad contra GitHub. Nunca modifica la landing. Devuelve SIEMPRE un `Sondeo`; no lanza."
         },
         {
           "nombre": "extractSeoParams",
@@ -83548,7 +83630,7 @@
           "exportada": true,
           "params": "raw: string",
           "retorno": null,
-          "linea": 49
+          "linea": 136
         },
         {
           "nombre": "escJs",
@@ -83556,7 +83638,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "string",
-          "linea": 57
+          "linea": 144
         },
         {
           "nombre": "escSegunEstilo",
@@ -83564,7 +83646,7 @@
           "exportada": false,
           "params": "q: string, s: string",
           "retorno": "string",
-          "linea": 60,
+          "linea": 147,
           "resumen": "Escapa el texto SOLO si el tag usa comillas escapadas (q = '\\\\\"'); con comillas normales va tal cual."
         },
         {
@@ -83573,13 +83655,13 @@
           "exportada": true,
           "params": "raw: string, title: string, description: string, ogDescription: string, schemaJson?: string,",
           "retorno": "string",
-          "linea": 67,
+          "linea": 154,
           "resumen": "Reescribe title/description/og en la landing. Si se pasa `schemaJson` Y la landing ya contiene un bloque ld+json, reemplaza el PRIMERO (LodgingBusiness); si no existe el bloque, NO inserta nada."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8f491b3dda0c"
+      "hash": "c9dd682fea0a"
     },
     {
       "ruta": "apps/sivra/lib/smoobu.ts",
@@ -93899,7 +93981,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2503,
-    "funciones": 6802
+    "archivos": 2505,
+    "funciones": 6808
   }
 }
