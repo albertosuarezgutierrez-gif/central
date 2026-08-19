@@ -40,8 +40,8 @@
 - Cerrado: 5 EFs redesplegadas + 45 fuentes versionadas, 25 crons recreados (migr. 20260819), Realtime
   +9 tablas, ~1.390 filas valiosas copiadas por pg_net (leads/CRM/training/stripe_events), crons del
   viejo apagados (0), refs de repo/skills/MATRIZ corregidas. PR draft de la rama claude/unificar-supabase-*.
-- Pendiente Alberto (docs/PROMPT-CHROME-cierre-supabase.md): rename→central, webhooks Stripe/MONEI
-  (¡aún apuntan al viejo!), app.service_role_key, pausar proyecto viejo.
+- Proyecto viejo PAUSADO por el agente (reversible). Pendiente Alberto (docs/PROMPT-CHROME-cierre-supabase.md):
+  rename→central, webhooks Stripe/MONEI (¡aún apuntan al viejo, avisarán de fallos!), app.service_role_key.
 
 ### 🩺 (19/08/2026) psd2-health-check — feed sano, sin anomalías
 - Preflight canal alerta OK (200). Frescura `movimientos_bancarios WHERE origen='psd2'`: último

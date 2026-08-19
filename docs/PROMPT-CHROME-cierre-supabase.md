@@ -48,10 +48,10 @@ ya está hecho; faltan estos pasos de dashboard, en este orden:
    demo (3 en `chat-audio`, 23 PDFs en `cobros-pdfs`, 1 en `iarest-app`). Si quieres conservar
    alguno, descárgalo. Mientras el proyecto esté PAUSADO (no borrado) no se pierde nada.
 
-7. **Pausar el proyecto viejo `ia-rest`** (`efncqyvhniaxsirhdxaa`)
-   - Hazlo DESPUÉS de los pasos 2-3 (webhooks): Settings → General → Pause project.
-   - Sus crons ya están apagados y todo lo valioso está copiado/versionado. Borrarlo del todo
-     es decisión posterior; pausado no computa contra el límite de compute y conserva los datos.
+7. ~~Pausar el proyecto viejo~~ **YA HECHO por el agente (19/08, vía MCP)**: `efncqyvhniaxsirhdxaa`
+   está pausado (reversible con Restore). Por eso Stripe/MONEI empezarán a avisar de webhooks
+   fallidos hasta que hagas los pasos 2-3 — es esperado. Borrarlo del todo es decisión posterior;
+   pausado conserva los datos (incluido su Storage del paso 6).
 
 8. **Vercel (comprobación rápida)** — vercel.com → proyecto `ia-rest` → Settings →
    Environment Variables: confirma que `NEXT_PUBLIC_SUPABASE_URL` = la del compartido,
