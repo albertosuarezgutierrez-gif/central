@@ -15,6 +15,14 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-19 · mercado-booking** · hizo: pasada de 24 ventanas (tope duro del endpoint;
+  `plan_total`=468, `candidatas`=468, `recortadas`=444 — el aviso del plan dice que el tope dejó
+  fuera ventanas que casaban). Rondas 0-1 (línea de temporada + eventos confirmados sep-nov),
+  4 pisos (`prop_luxury_busto`, `prop_house_sevillana`, `prop_busto_reform`, `prop_duplex_center`).
+  239 comparables reales escritos (`fuente:booking_mcp`), 0 ventanas sin respuesta del conector.
+  Descartado 1 anuncio propio («HOUSE SEVILLANA 6 habitaciones») en la ventana 2026-11-01/11-03
+  aforo 12 — no escrito en `market_rates`. dudas: —; fallos: —; PRs/commits: — (solo escritura BD +
+  esta bitácora).
 - **2026-08-18 · facturas-correo** · hizo: pasada completa (Paso 0→5). Vía B sana (dias_caido=1,
   última copia `_buzon_pdf` 17/08); sin backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida`
   (verificado por `search_threads`, no por `list_labels`). Candidato Gmail (`newer_than:2d`): 1 hilo
