@@ -81,6 +81,12 @@
   **atascado para siempre**. Le pasó a #1501 (14 checks aparecieron solo al empujar un commit más). Así
   que `auditoria.yml` empuja y abre el PR con `GH_PAT_TRIGGER`, y si falta el secret **no abre PR**: falla
   con aviso, mejor que un PR zombi. El agente SEO no sufre esto (usa su PAT fine-grained propio).
+- 🔁 **Y la misma trampa, otra vez, en `main`: el merge de #1501 (`a6ef85ab`) no disparó NI UN
+  workflow.** Un push a `main` hecho con el token de una GitHub App (el merge de un PR desde una
+  sesión de Claude Code) no dispara nada, así que la auditoría no se regeneró y el código nuevo se
+  quedó SIN estrenar. No es un fallo del arreglo — es que no llegó a correr. Por eso `auditoria.yml`
+  gana `workflow_dispatch`: se puede lanzar desde la API con ese mismo token, y así ni la radiografía
+  depende de que el último push lo hiciera un humano ni hay que esperar a uno para probar el workflow.
 - ⚠️ Lo que NO se ha podido probar aquí: los workflows solo se ejecutan en GitHub. Las tres piezas se
   verifican solas en su primera pasada real — auditoría al próximo push a `main`, SEO el lunes. Si el
   PR del SEO se queda abierto sin mergear, mirar si `GH_PAT_TRIGGER` sigue vivo. Revertir todo =
