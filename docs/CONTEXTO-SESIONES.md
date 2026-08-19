@@ -32,6 +32,13 @@
 
 ---
 
+### 📋 (19/08/2026) Inventario de ofertas Booking — House hecho, 3 pendientes
+- Nuevo `docs/BOOKING-OFERTAS-INVENTARIO.md`: inventario extranet por piso (Claude Chrome, solo
+  lectura) previo a decidir la Fase 3. House: Basic Deal 12% (⚠️ activada 18/08, origen por
+  confirmar) + Genius 15% + móvil 10% + 3 tarifas país −10% (solo No reembolsable) → peor caso
+  −39,4%. Preliminar: quitar tarifas país, mantener el resto; Genius nivel 3 NUNCA.
+- Pendientes: Dúplex 2888928 · Luxury 4340072 · Busto Reform 4771238 + veredicto conjunto.
+
 ### 🚨 (19/08/2026) El +20% de Booking YA EXISTÍA en Smoobu — Fase 2 (channel_markup) CANCELADA
 - Claude Chrome verificó Smoobu (Precios→Ajustes): el ajuste por canal es ÚNICO por portal (no por
   alojamiento) y **Booking.com ya estaba a +20,00%** (resto de canales 0%) — probablemente de la era
