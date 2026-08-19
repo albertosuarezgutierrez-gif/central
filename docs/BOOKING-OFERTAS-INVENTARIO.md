@@ -114,6 +114,55 @@ antelación real ya es corta (16-42 d de mediana) y el motor aplica el descuento
 base desde el 09/08 con la antelación mediana medida por piso y mes — que sale de `incomes`, no de
 este panel.
 
-## Busto Reform (4771238) — PENDIENTE
+## Busto Reform (4771238) — inventariado 19/08/2026 (parcial)
 
-## Veredicto conjunto — PENDIENTE (al completar los 4)
+**Ofertas activas (2), calcadas a Luxury:**
+
+| Oferta | Categoría | % | Reserva | Estancia | Rendimiento 12m |
+|---|---|---|---|---|---|
+| Mobile rate | Tarifa específica | 10% | 07/03/2024 → | siempre | **69 reservas · 274 noches · ADR 85,19€ · 23.343,14€** |
+| «Oferta estándar 8% permanente» | Catálogo de ofertas | 8% | 16/08/2026 → | 16/08/2026–31/12/2028 | sin reservas todavía |
+
+**Apilamiento conocido:** 0,90 × 0,92 = **−17,2%**. Pendientes Genius y planes de tarifa.
+
+### 🚨 El panel de Booking muestra un número ROTO (y por qué importa)
+
+El aviso «los viajeros de UK tienen una tarifa media más alta» dice aquí:
+**«UK 161€ · Tú 0€ · about 922337203685477630x higher than average»**.
+
+Ese factor es **2^63 − 1**: un desbordamiento de entero por dividir entre cero. La causa real es que
+`Tú = 0€` y `Tú = 0 noches` en el bloque de estancia — es decir, **este piso no tiene NI UNA reserva
+de UK**, y Booking presenta ese «no hay datos» como si fuera un valor (0€) y luego calcula un ratio
+sobre él. Es el mismo patrón que la regla del CLAUDE.md sobre el dato que se lee mal, pero cometido
+por el propio panel.
+
+**Consecuencia:** los «Datos clave» de la extranet se usan como PISTA, nunca como cifra. Ya van dos
+métricas suyas descartadas: la antelación (no cuadra con `incomes`) y este ratio (roto de origen).
+
+## Veredicto conjunto (19/08/2026) — preliminar, con lo que falta declarado
+
+| Piso | Ofertas | Móvil | Oferta catálogo | Tarifas país | Apilamiento conocido | Móvil 12m |
+|---|---|---|---|---|---|---|
+| House Sevillana | 5 | 10% | Basic Deal **12%** | **3 × −10%** | **−39,4%** | 70 res · 114.487,94€ |
+| Dúplex Center | 2 | 10% | «8%» → **12%** | no | −20,8% | 80 res · 38.319,10€ |
+| Luxury Busto | 2 | 10% | 8% | no | −17,2% | 121 res · 42.644,51€ |
+| Busto Reform | 2 | 10% | 8% | no | −17,2% | 69 res · 23.343,14€ |
+
+**1. La Fase 3 del estudio YA ESTÁ HECHA — no hay que crear ninguna oferta.** El estudio pedía «UNA
+oferta visible permanente del 10-15% que cree el tachado»: los 4 pisos ya la tienen (8-12%, activadas
+el 16-18/08). Añadir otra sería exactamente el error que el propio estudio advertía.
+
+**2. La tarifa móvil se queda en los cuatro, sin discusión.** Es la palanca que trae el volumen real:
+340 reservas y 218.794,79€ en 12 meses entre los cuatro pisos.
+
+**3. House está en otra liga de descuento (−39,4% frente a −17/−21%)** por sus 3 tarifas país. **NO
+las toco todavía**: falta saber si funcionan (ver punto 5).
+
+**4. Genius nivel 3 (20%): nunca.** Llevaría el peor caso de House al −42,9%.
+
+**Lo que falta para cerrarlo:**
+- Genius y planes de tarifa de Dúplex, Luxury y Busto Reform (solo tengo los de House).
+- El **% de reservas UK de House**, el único piso CON tarifas país. Los otros tres, sin ellas, están
+  los tres a 0%. Si House también está a 0%, las tarifas país no traen nada y sobran; si tiene
+  reservas UK, se quedan. Es el dato que decide, y todavía no lo tengo.
+

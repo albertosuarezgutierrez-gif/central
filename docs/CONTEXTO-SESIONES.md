@@ -47,7 +47,14 @@
 - 🚩 La antelación de los avisos de Booking NO cuadra con `incomes` (Luxury 81d vs 23d real, Dúplex 53
   vs 16). Causa no confirmada (¿canceladas?, `reservas_canceladas` vacía hasta 12/08). No crear
   last-minute deal por ese aviso: el motor ya usa la antelación real.
-- Pendientes: Busto Reform 4771238 + Genius/planes de tarifa de Dúplex y Luxury + veredicto conjunto.
+- Busto Reform: igual que Luxury (móvil 10% con 69 reservas/23.343,14€ + «estándar 8%»), −17,2%.
+  🚨 Su panel muestra un ratio ROTO (2^63) por dividir entre cero: «Tú 0€ / 0 noches» de UK no es un
+  valor, es que NO tiene reservas UK. Los «Datos clave» de la extranet valen como pista, no como cifra.
+- **Veredicto preliminar: la Fase 3 del estudio ya está hecha** — los 4 pisos YA tienen su oferta de
+  escaparate (8-12%, creadas el 16-18/08); crear otra sería el error que el propio estudio advertía.
+  La móvil se queda (340 reservas/218.794,79€ en 12m entre los 4). House sigue en −39,4% por sus 3
+  tarifas país; NO se tocan hasta saber su % de reservas UK (los otros 3, sin ellas, están a 0%).
+- Pendientes: Genius/planes de tarifa de Dúplex, Luxury y Busto + el % UK de House (dato que decide).
 ### 🏷️ (19/08/2026) Tres centinelas del canal — y el primero destapa que ESTAMOS CAROS
 - **Validación FUERA de muestra** (`validarCanal`): el R² del ajuste es circular (mide la recta
   contra las ventanas que la produjeron). Ahora `pricing_escaparate.usada_en_ajuste_at` marca lo
