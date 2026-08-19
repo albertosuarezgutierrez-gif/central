@@ -104,6 +104,13 @@
   eso `auditoria.yml` estrena rama en cada pasada (`…-<run_id>`) y cierra la anterior: el PR nace
   siempre por `opened`, que es el camino que funciona. (`cancel-in-progress: true` se queda, pero
   por higiene, no porque arreglara esto.)
+- 🪤 **Y el arreglo de rama-por-pasada falló a la primera, por un detalle de `gh`:**
+  `gh pr close --delete-branch` borra también la rama **LOCAL** si es la que está activa. Se hacía
+  `checkout -B "$RAMA"` (nombre viejo), se commiteaba, y al cerrar el PR anterior `gh` se llevaba
+  por delante ese commit y dejaba el HEAD en `main` → el push subió `main` y `gh pr create` murió
+  con «No commits between main and …». Arreglo: la rama local se llama YA `…-<run_id>` desde el
+  principio, más un cinturón que aborta si el HEAD acaba siendo `main` (sin él, el síntoma parecía
+  un `gh pr create` roto y no la pérdida del commit).
 - ⚠️ Lo que NO se ha podido probar aquí: los workflows solo se ejecutan en GitHub. Las tres piezas se
   verifican solas en su primera pasada real — auditoría al próximo push a `main`, SEO el lunes. Si el
   PR del SEO se queda abierto sin mergear, mirar si `GH_PAT_TRIGGER` sigue vivo. Revertir todo =
