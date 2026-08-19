@@ -75,6 +75,39 @@
   Se prueba abriendo `?pin=9999&api=1` tras desplegarla. Sin `config.toml` en el repo: el `verify_jwt` de
   cada función se toca a mano en el panel, no viaja en el PR.
 
+### 🔢 (19/08/2026) La nota de House era vieja — y la skill de SEO tiene la ficha de OTRO piso
+- Nota real por el conector de Booking: **8,6/10 con 51 reseñas**. La landing decía 8,1 con +47
+  (dato de hace meses) y el bloque borrado hoy decía 9,2/4,9 (inventado). Aplicado en hero y barra
+  de confianza + claves i18n. **Nada lo refresca solo:** al tocar la landing, contrástalo.
+- **Origen del lío de la dirección:** `seo-house-sevillana` tiene el **ID de Booking `4771238`, que
+  es Busto Reform** (el de House es `2039943`), y con él arrastra Bustos Tavera 22 y sus coordenadas.
+  Parche exacto (7 sitios + teléfono sin rellenar) en `docs/PARCHE-skill-seo-house-sevillana.md`.
+  Las de House: **37.395904, -5.987431**.
+- ⚠️ **Booking anuncia «Admite mascotas» y la web dice que NO.** Decisión de Alberto; no toqué ninguna.
+- Los minutos a pie siguen sin medir: el egress bloquea Nominatim, OSRM y demás APIs de mapas.
+### 🎨 (19/08/2026) Repaso de diseño de la landing de House Sevillana
+- **Dos secciones colgaban POR DEBAJO del `<footer>`** con estilos inline ajenos a la paleta:
+  unas reseñas duplicadas (y contradictorias: 9,2/10 + 4,9/5 frente al 8,1/10 del resto) y la
+  barra de enlaces SEO en grises #1a1a1a/#2d2d2d. Reseñas duplicadas fuera; enlaces reescritos
+  como bloque «Sigue leyendo» con los tokens de la casa, ya ANTES del pie.
+- Emojis → SVG de trazo (un emoji lo pinta el SO: ni se tiñe ni se ve igual en cada móvil).
+  Hero con overlay de 3 capas (se ve la casa) y zoom lento; FAQ a dos columnas en escritorio
+  (media pantalla estaba vacía); la tarjeta de datos ya NO se oculta en móvil; `prefers-reduced-motion`.
+- **Dirección resuelta (Alberto, 19/08):** House es **Calle Socorro 24, 41003, barrio de San Julián**
+  (Casco Antiguo) — la landing lo tenía BIEN. `Bustos Tavera 22` son OTROS dos pisos (Luxury Busto /
+  Busto Reform). Quien lo confunde es la skill `seo-house-sevillana` (ficha, keywords y los DOS JSON-LD
+  con `streetAddress`): vive fuera del repo, la corrige Alberto. Fijado en el CLAUDE.md raíz.
+- `/barrio` reencuadrada (decide Alberto): mantiene la keyword «Macarena» pero sitúa la casa en San
+  Julián, «la puerta de la Macarena». Fuera los minutos que salían de suponer la casa DENTRO del
+  barrio (la Basílica no está a 5 min); solo quedan los que ya declara la portada.
+- **Nuevo `apps/housesevillana/CLAUDE.md`** (no tenía): dirección, la trampa de i18n (EN/IT se
+  DERIVAN del HTML español por cadenas exactas → tocar un texto rompe su traducción), el agente SEO
+  que reescribe el fichero los lunes, y el sistema de tokens/iconos. Fila en FUENTES-DE-VERDAD.
+- **Punto ciego cerrado:** las skills SINCRONIZADAS (`/root/.claude/skills/synced/`) no están en git
+  y NADIE las reconciliaba — por eso el error de dirección llevaba ahí desde siempre. `/auditoria-diaria`
+  contrasta ahora sus datos duros y avisa por Telegram (no se pueden auto-aplicar); listadas en `docs/SKILLS.md`.
+- Mergeado a `main` (PR #1491, 47/47 + guardián 32/32). ⚠️ Sin resolver: la nota real (8,1 vs 9,2/4,9),
+  los minutos a Basílica/Muralla/Mercado/Alameda desde Socorro 24, y corregir la skill sincronizada.
 ### 📋 (19/08/2026) Inventario de ofertas Booking — House hecho, 3 pendientes
 - Nuevo `docs/BOOKING-OFERTAS-INVENTARIO.md`: inventario extranet por piso (Claude Chrome, solo
   lectura) previo a decidir la Fase 3. House: Basic Deal 12% (⚠️ activada 18/08, origen por
@@ -222,6 +255,25 @@
   verificado) y el PASO 0 del trigger de trading (estrenado 17/08: repesca salvó la pasada, disparo
   primario sigue fallando 2/2 — a vigilar, no bloqueante). Sin manuales de usuario que tocar (ningún
   cambio del rango es feature visible en `apps/ia-rest`).
+
+### ✅ (19/08/2026) SEO housesevillana RESUELTO — al PAT le faltaba el REPO, no el permiso
+- El 403 del cron del 17/08 se cerró hoy. Diagnóstico con evidencia, no suposición: `secrets_audit` decía que
+  la única escritura de `GITHUB_TOKEN` fue el **03/08** (antes de unificar la landing el 12/08) y la API que
+  `central` es **público** (`private:false`) — de ahí que el GET colara y solo fallara el PUT.
+- La causa fina: el PAT `seo-housesevillana-panel` YA tenía `Contents: Read and write`; lo que le faltaba era
+  tener `albertosuarezgutierrez-gif/central` en *Repository access* (solo listaba el repo externo viejo).
+  Alberto lo editó sin regenerar → mismo valor, sin re-pegar en `/operador/secretos` ni redesplegar.
+  **Verificado de punta a punta:** commit `79db75e` `chore(seo): actualización automática [2026-08-19]`.
+- Repo (PR #1488): botón **🔑 Probar acceso a GitHub** en `/sivra/seo` + `sondearEscritura`/`clasificarSondeo`
+  en los DOS `seo-landing.ts` (PUT con sha imposible: 403 = sin permiso, 409 = puede escribir; nunca escribe)
+  y rutas `/api/sivra/seo-token-check` (plataforma) y `/api/seo-token-check` (sivra — el token del cron del
+  lunes, que tiene su propia copia). 3 estados, solo el 409 se pinta verde. Corregida la nota estale de
+  `SECRETS_REGISTRY` que aún citaba el repo viejo.
+- **Sondeo estrenado en verde (18:47):** ✅ HTTP 409 en producción, sin escribir nada (el último commit de
+  la landing siguió siendo el refresh de las 18:33). Confirma en vivo la premisa sobre la que se construyó,
+  que hasta entonces era solo documentación de GitHub: **el permiso se valida ANTES que el sha**.
+- **Suelto (menor):** ese PAT NO tiene caducidad y conserva el repo viejo `house-sevillana-landing` en su
+  selección. Recomendado a Alberto ponerle 1 año y quitar el repo muerto; decisión suya, sin hacer.
 
 ### 📈 (17/08/2026) Estreno del doble disparo de trading: la repesca SALVÓ la pasada — el disparo de las 20:15 murió OTRA VEZ
 - Check-in nocturno: el disparo de las 20:15Z no dejó NI UNA huella (2º fallo igual que el 14/08). La

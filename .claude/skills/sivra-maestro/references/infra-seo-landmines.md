@@ -21,12 +21,27 @@
   (no SQL crudo), con `topCompetitors` como `Prisma.InputJsonValue`/`Prisma.JsonNull`. Sigue gateado por kill-switch
   **`SEO_AGENT_ENABLED !== 'true'`** (apagado por defecto; el botón manual con sesión funciona siempre).
   Si en el futuro cambia la ruta del botón, **replicar el cambio aquí** para que no vuelvan a divergir.
-- 🚨 **`GITHUB_TOKEN` debe tener `contents:write` sobre el repo `central`** (la landing vive en el
-  monorepo desde el 12/08/2026: `apps/housesevillana/app/route.ts`). El PAT del 03/08 estaba scoped al
-  antiguo repo externo `house-sevillana-landing` y el primer cron tras la unificación (17/08) falló el
-  commit con `403 Resource not accessible by personal access token` — el GET no avisa porque `central`
-  es público; solo el PUT delata el permiso. Al rotar el PAT (desde `/operador/secretos`), verificar que
-  su scope incluye `central`. Detalle: PR #1470.
+- 🚨 **`GITHUB_TOKEN` necesita el REPO `central` en su selección, no solo el permiso** (la landing vive
+  en el monorepo desde el 12/08/2026: `apps/housesevillana/app/route.ts`). Incidente cerrado el
+  19/08/2026: el PAT `seo-housesevillana-panel` YA tenía `Contents: Read and write`, pero su
+  *Repository access* solo listaba el repo externo viejo `house-sevillana-landing`, así que el cron del
+  17/08 falló con `403 Resource not accessible by personal access token`. **El GET nunca delata nada
+  porque `central` es PÚBLICO** (`private:false`): lee cualquier token, incluso ninguno. Solo el PUT
+  prueba el permiso. Al diagnosticar, mira el repo ANTES que el permiso. PRs #1470 (pista) y #1488 (sondeo).
+- 🔑 **Antes de dar por bueno un PAT, sondéalo — no esperes al lunes.** Botón **«Probar acceso a GitHub»**
+  en `/sivra/seo` (plataforma) → `GET /api/sivra/seo-token-check`; gemelo en sivra →
+  `GET /api/seo-token-check` (auth: sesión o `Bearer CRON_SECRET`). Es el ÚNICO que comprueba el token
+  del entorno donde corre el cron semanal: el panel `/operador/secretos` escribe el mismo valor en los
+  dos proyectos, pero su redeploy es best-effort y el Ignored Build Step puede cancelarlo.
+  **Cómo sondea sin escribir:** PUT real con `sha` de 40 ceros; GitHub valida el permiso ANTES que el
+  sha ⇒ **403 = sin permiso · 409 = puede escribir y no ha tocado nada**. Manda además el contenido
+  ACTUAL sin modificar, así que ni en el caso imposible se pierde la landing.
+  **Solo el 409 se pinta verde**; lo que no se entiende es 🟠 «no lo sé», nunca «va bien»
+  (`clasificarSondeo` es puro y testeado en `apps/plataforma/lib/sivra/seo-landing.test.ts`).
+- ⚠️ **Rotar ≠ editar.** Editar los permisos o los repos de un PAT fine-grained NO cambia su valor: no
+  hay que re-pegarlo en `/operador/secretos` ni redesplegar. Solo «Regenerate token» lo cambia.
+- **Suelto conocido (19/08/2026):** ese PAT no tiene caducidad y conserva el repo muerto
+  `house-sevillana-landing` en su selección. Recomendado a Alberto ponerle 1 año y quitarlo; decisión suya.
 - Envs: `NEXTAUTH_SECRET/URL`, `SMOOBU_API_KEY`, `NVIDIA_API_KEY`, `SERPER_API_KEY`,
   `GMAIL_USER/GMAIL_APP_PASSWORD`, `NEXT_PUBLIC_SUPABASE_URL/ANON_KEY`, `CRON_SECRET`, `DRIVE_SCRIPT_URL`,
   `AUTH_TRUST_HOST=true` (local). Valores en Vercel env, nunca en repo.
