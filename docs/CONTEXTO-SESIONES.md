@@ -39,10 +39,15 @@
 - Los dos los borra Alberto a mano (destructivo). Borrar quita la exposición pero **NO invalida la clave**.
 - Nuevo `docs/ROTACION-SERVICE-ROLE.md`: inventario + plan. El proyecto ya tiene claves nuevas
   (`sb_publishable_…` conviviendo con la `anon` legacy) → camino limpio sin tocar el JWT secret.
-- Superficie real: 3 envs de Vercel (ia-rest, ialimp, central-rrhh) + **43 de 45 Edge Functions** (clave
-  inyectada) + 1 cron `pg_net` con la ANON legacy. GitHub Actions: 0 reales (dummy en ci.yml).
-- Pendiente: crear `sb_secret_…`, PR para las 43 EFs (`SUPABASE_SECRET_KEYS`, cabecera `apikey`, no Bearer)
-  y desactivar las legacy — hasta ese paso la clave filtrada sigue siendo válida.
+- 🔴 Recon del panel: **las legacy NO se desactivan por separado** — un solo botón «Disable JWT-based API
+  keys» mata `service_role` Y `anon` a la vez. Así que la rotación arrastra también los 27 ficheros que
+  leen `ANON_KEY`, no solo la cara service_role (2 envs Vercel: ia-rest y central-rrhh + 43 de 45 EFs).
+  `ialimp` NO tiene la variable: su `storage-limpiadora.ts` lleva roto desde el 12/08, no rotando.
+- `sb_secret_…` y `sb_publishable_…` (`default`) YA existen → no hay que tocar el JWT secret. Pendiente: 2
+  PRs (43 EFs + 27 clientes), cron `monitor-health` a cabecera `apikey`, y pulsar el botón. Hasta ahí la
+  clave filtrada sigue viva.
+- 🟠 Aparte: el panel avisa «período de gracia finalizado» en plan **Free** sobre la BD compartida de todas
+  las verticales. Más urgente que la rotación.
 
 ### 📋 (19/08/2026) Inventario de ofertas Booking — House hecho, 3 pendientes
 - Nuevo `docs/BOOKING-OFERTAS-INVENTARIO.md`: inventario extranet por piso (Claude Chrome, solo
