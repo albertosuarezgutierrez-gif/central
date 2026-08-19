@@ -95,7 +95,7 @@ nav.scrolled{background:rgba(13,9,7,.92);backdrop-filter:blur(18px);-webkit-back
 /* HERO */
 .hero{position:relative;min-height:100vh;display:flex;align-items:center;overflow:hidden}
 .hero-bg{position:absolute;inset:0;z-index:0}
-.hero-bg img{width:100%;height:100%;object-fit:cover;object-position:center 30%;animation:kenburns 26s ease-out forwards}
+.hero-bg img{width:100%;height:100%;object-fit:cover;object-position:center;animation:kenburns 26s ease-out forwards}
 @keyframes kenburns{from{transform:scale(1)}to{transform:scale(1.07)}}
 /* Tres capas en vez de un velo plano: la izquierda se oscurece lo justo para que el
    titular tenga contraste, la derecha se abre para que se VEA la casa —que es lo que
@@ -166,13 +166,13 @@ h2{font-family:var(--serif);font-size:clamp(2rem,4vw,3.2rem);font-weight:400;lin
 .gal-section{background:var(--night);padding:5.5rem 2.5rem}
 .gal-section .tag{color:var(--accent-warm)}
 .gal-section h2{color:var(--white)}
-.gal{display:grid;grid-template-columns:1.7fr 1fr 1fr;grid-template-rows:290px 230px;gap:.75rem;margin-top:2rem}
+.gal{display:grid;grid-template-columns:1.75fr 1fr;grid-template-rows:repeat(3,182px);gap:.75rem;margin-top:2rem}
 .gi{position:relative;border-radius:var(--r);overflow:hidden;background:#2A1A10;cursor:zoom-in}
 .gi::after{content:'';position:absolute;inset:0;border-radius:var(--r);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);pointer-events:none;transition:box-shadow .3s}
 .gi:hover::after{box-shadow:inset 0 0 0 1px rgba(244,164,122,.38)}
 .gi img{width:100%;height:100%;object-fit:cover;transition:transform .5s;display:block;pointer-events:none}
 .gi:hover img{transform:scale(1.04)}
-.gi-main{grid-row:1/3}
+.gi-main{grid-row:1/4}
 
 /* LIGHTBOX */
 .lightbox{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;padding:1rem}
@@ -336,8 +336,8 @@ footer{background:var(--night);color:rgba(255,255,255,.65);padding:4rem 2.5rem 2
   .tb-sep{display:none}
   /* El CTA de la tarjeta repite el botón que ya está tres dedos más arriba. */
   .hc-cta{display:none}
-  .gal{grid-template-columns:1fr 1fr;grid-template-rows:170px 170px 170px}
-  .gi-main{grid-row:1/2;grid-column:1/3}
+  .gal{grid-template-columns:repeat(3,1fr);grid-template-rows:210px 108px}
+  .gi-main{grid-row:1/2;grid-column:1/4}
   .feat-grid,.directo-grid{grid-template-columns:1fr}
   .loc-grid{grid-template-columns:1fr;gap:2rem}
   .map{height:280px}
@@ -401,8 +401,8 @@ fbq('init','12124662686780882173');fbq('track','PageView');
 <!-- HERO -->
 <section class="hero" id="inicio">
   <div class="hero-bg">
-    <img src="https://lh3.googleusercontent.com/d/1YRd-RfZKbIq-I8UqxzH3Qo4HP_6E_UF4"
-         alt="Fachada House Sevillana &mdash; casa tur&iacute;stica con parking en el centro hist&oacute;rico de Sevilla"
+    <img src="https://lh3.googleusercontent.com/d/1rDXs-fjAmmDQFTfZ7fTutPZvosAV2GMo"
+         alt="Sal&oacute;n principal de House Sevillana &mdash; 290 m&sup2; reformados en el casco hist&oacute;rico de Sevilla"
          loading="eager" fetchpriority="high"/>
   </div>
   <div class="hero-overlay"></div>
@@ -508,25 +508,21 @@ fbq('init','12124662686780882173');fbq('track','PageView');
     <h2>La casa por dentro</h2>
     <p style="font-size:.875rem;color:rgba(255,255,255,.45);margin-top:.25rem;font-weight:300">Haz clic en cualquier foto para ampliarla</p>
     <div class="gal">
-      <div class="gi gi-main" onclick="openLb(0)" role="button" tabindex="0" aria-label="Ampliar foto del sal&oacute;n" onkeydown="if(event.key==='Enter')openLb(0)">
-        <img src="https://lh3.googleusercontent.com/d/1rDXs-fjAmmDQFTfZ7fTutPZvosAV2GMo"
-             alt="Sal&oacute;n principal House Sevillana &mdash; 290 m&sup2; en el casco hist&oacute;rico de Sevilla" loading="lazy"/>
+      <div class="gi gi-main" onclick="openLb(0)" role="button" tabindex="0" aria-label="Ampliar foto del patio" onkeydown="if(event.key==='Enter')openLb(0)">
+        <img src="https://lh3.googleusercontent.com/d/1oAiLqJlHLGc6iqIFtiXqZqTandNKewRf"
+             alt="Patio andaluz de House Sevillana &mdash; patio sevillano con azulejos t&iacute;picos y fuente" loading="lazy"/>
       </div>
       <div class="gi" onclick="openLb(1)" role="button" tabindex="0" aria-label="Ampliar foto del dormitorio" onkeydown="if(event.key==='Enter')openLb(1)">
         <img src="https://lh3.googleusercontent.com/d/11KXrpvDr9wfO3W7ds0TSzMj1W7ixnQVQ"
-             alt="Dormitorio House Sevillana &mdash; 6 habitaciones dobles en Sevilla centro" loading="lazy"/>
+             alt="Dormitorio de House Sevillana &mdash; uno de los 6 dormitorios dobles" loading="lazy"/>
       </div>
-      <div class="gi" onclick="openLb(2)" role="button" tabindex="0" aria-label="Ampliar foto del patio" onkeydown="if(event.key==='Enter')openLb(2)">
-        <img src="https://lh3.googleusercontent.com/d/1oAiLqJlHLGc6iqIFtiXqZqTandNKewRf"
-             alt="Patio andaluz House Sevillana &mdash; patio interior con azulejos sevillanos" loading="lazy"/>
-      </div>
-      <div class="gi" onclick="openLb(3)" role="button" tabindex="0" aria-label="Ampliar foto de la cocina" onkeydown="if(event.key==='Enter')openLb(3)">
+      <div class="gi" onclick="openLb(2)" role="button" tabindex="0" aria-label="Ampliar foto de la cocina" onkeydown="if(event.key==='Enter')openLb(2)">
         <img src="https://lh3.googleusercontent.com/d/1nSzkddZhv8ul5HMXpVsfJZfL8XJZMuzd"
-             alt="Cocina House Sevillana &mdash; cocina equipada para grupos grandes" loading="lazy"/>
+             alt="Cocina de House Sevillana &mdash; equipada para cocinar para 12 personas" loading="lazy"/>
       </div>
-      <div class="gi" onclick="openLb(4)" role="button" tabindex="0" aria-label="Ampliar foto de la fachada" onkeydown="if(event.key==='Enter')openLb(4)">
+      <div class="gi" onclick="openLb(3)" role="button" tabindex="0" aria-label="Ampliar foto de la escalera" onkeydown="if(event.key==='Enter')openLb(3)">
         <img src="https://lh3.googleusercontent.com/d/1YRd-RfZKbIq-I8UqxzH3Qo4HP_6E_UF4"
-             alt="Fachada House Sevillana &mdash; casa hist&oacute;rica con parking en Sevilla" loading="lazy"/>
+             alt="Escalera de House Sevillana &mdash; pelda&ntilde;os de azulejos y barandilla de cristal" loading="lazy"/>
       </div>
     </div>
   </div>
@@ -796,13 +792,12 @@ function cm(){document.getElementById('mob').classList.remove('open')}
 // ── LIGHTBOX ──
 (function(){
   var lbImages=[
-    'https://lh3.googleusercontent.com/d/1rDXs-fjAmmDQFTfZ7fTutPZvosAV2GMo',
-    'https://lh3.googleusercontent.com/d/11KXrpvDr9wfO3W7ds0TSzMj1W7ixnQVQ',
     'https://lh3.googleusercontent.com/d/1oAiLqJlHLGc6iqIFtiXqZqTandNKewRf',
+    'https://lh3.googleusercontent.com/d/11KXrpvDr9wfO3W7ds0TSzMj1W7ixnQVQ',
     'https://lh3.googleusercontent.com/d/1nSzkddZhv8ul5HMXpVsfJZfL8XJZMuzd',
     'https://lh3.googleusercontent.com/d/1YRd-RfZKbIq-I8UqxzH3Qo4HP_6E_UF4'
   ];
-  var lbAlts=['Salon House Sevillana','Dormitorio House Sevillana','Patio andaluz House Sevillana','Cocina House Sevillana','Fachada House Sevillana'];
+  var lbAlts=['Patio andaluz de House Sevillana','Dormitorio de House Sevillana','Cocina de House Sevillana','Escalera de House Sevillana'];
   var current=0;
   var overlay=document.getElementById('lb-overlay');
   var lbImg=document.getElementById('lb-img');

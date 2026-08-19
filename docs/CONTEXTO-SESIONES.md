@@ -23,7 +23,16 @@
 > actualizar el bloque, re-fecha su cabecera (si su fecha queda en un mes cerrado, la
 > rotación se lo lleva al archivo).
 >
-> **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🌍 (19/08/2026) `main` llegó ROJA: tocar el español de la landing sin el diccionario
+> **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### … (dd/mm/aaaa)` —
+> son los ÚNICOS que `rotar-memoria.mjs` reconoce como entrada; una cabecera `## ` se
+> funde con la entrada anterior y se archiva mal.
+>
+> Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
+> registro de qué se hizo y qué queda.
+
+---
+
+### 🌍 (19/08/2026) `main` llegó ROJA: tocar el español de la landing sin el diccionario
 - Al mergear PR #1490 saltó `Tests (packages + guardián)`. **No era mío:** reproducido sobre `origin/main`
   → `apps/housesevillana` 45/47, mismas 2 pruebas i18n. Lo rompió **PR #1487** al reescribir el copy español
   de `app/route.ts` (quitó el «hasta un 22%») **sin tocar `app/en|it/traducciones.ts`**: 7 claves huérfanas
@@ -34,15 +43,6 @@
 - Arreglado aquí: 7 claves nuevas por idioma con el copy nuevo traducido. Y el delator
   `'Sin comisiones de Booking'` del test ya no existía en el HTML (guarda muerta que pasaba en vacío) →
   sustituido por `'no hay comisi&oacute;n de Booking'`, verificado presente en el español.
-
-### … (dd/mm/aaaa)` —
-> son los ÚNICOS que `rotar-memoria.mjs` reconoce como entrada; una cabecera `## ` se
-> funde con la entrada anterior y se archiva mal.
->
-> Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
-> registro de qué se hizo y qué queda.
-
----
 
 ### 📉 (19/08/2026) El aviso de Supabase NO es tuyo, pero el egress SÍ tiene mala pinta
 - Recon del panel: **ninguna métrica al 100%**. La banda naranja es política fija (el período de gracia
@@ -93,6 +93,16 @@
   y el aviso (clave viva + las dos trampas: botón único de desactivación y `apikey` ≠ `Bearer`) va también
   en la skill `central-maestro`, que es lo que se lee ANTES de tocar la BD compartida.
 
+### 📸 (19/08/2026) La portada de House era una escalera (y el alt decía «fachada»)
+- Lo vio Alberto, no el repaso de diseño: **ninguna sesión puede ver las fotos** de la landing
+  (Drive/`lh3.googleusercontent.com` bloqueados por egress; el conector de Drive lista pero
+  `read_file_content` da vacío para JPEG). Rendericé con marcadores de color y di el repaso por
+  bueno igualmente — ese fue el fallo.
+- Portada → **salón** (elección de Alberto sobre las 115 fotos de la carpeta de Drive), encuadre
+  centrado, y `alt` que dice la verdad. La galería pierde el salón (ya está arriba): queda patio
+  grande + dormitorio, cocina y escalera, rejilla a 4.
+- ⚠️ Pendiente: Alberto quiere **una foto de Sevilla**; no hay ninguna en Drive y no se genera ni
+  se licencia stock sin su OK.
 ### 🔢 (19/08/2026) La nota de House era vieja — y la skill de SEO tiene la ficha de OTRO piso
 - Nota real por el conector de Booking: **8,6/10 con 51 reseñas**. La landing decía 8,1 con +47
   (dato de hace meses) y el bloque borrado hoy decía 9,2/4,9 (inventado). Aplicado en hero y barra
