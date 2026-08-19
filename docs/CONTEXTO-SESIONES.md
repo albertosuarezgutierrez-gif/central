@@ -73,6 +73,66 @@
   la lleva la línea de al lado (`VFT/SE/01179`). **Si es un nombre comercial real, Alberto lo dice y vuelve.**
 - De paso: esa línea no estaba en los diccionarios, así que `/en` y `/it` la servían en castellano. Añadida a los dos.
 
+### 🛑 (19/08/2026) IBKR: no era la selección, eran los stops — libro de operaciones en Supabase
+- Alberto preguntó por VWCE («no para de bajar»): −594,96€, el **3,7%** de los −16.172,49€ que perdió operando
+  en 2026. Sacado de IBKR por MCP; informe visual en artifact (no en repo: dato financiero personal).
+- **Hallazgo:** la selección era buena, el stop era el problema. CRWV **subió 42,1%** entre su primera y última
+  operación y perdió 6.369$ en 33 movimientos; SNDK +7,9% → −4.853$; RBLX +6,1% → −2.689$. Mediana de distancia
+  del stop: **1,30%** (25 de 95 a menos del 1%). Confirmado en los DOS periodos: órdenes STOP −28.710$, órdenes
+  a mercado **+4.487$**. Siete posiciones abiertas y cerradas el mismo día: −3.982$.
+- **Regla 2 meses (art. 33.5.f LIRPF): no bloquea nada.** 23 valores cerrados del todo, ninguna recompra en los
+  2 meses siguientes a su última venta. La pérdida de 2026 es compensable íntegra (4 años de arrastre).
+- **Nuevo en BD:** `trading_operaciones` (libro inmutable de ejecuciones, idempotente por `(broker, trade_id)`)
+  + vistas `v_trading_resumen_anual` y `v_trading_salidas`. Cargadas **455 operaciones** (oct/2025–ago/2026),
+  checksums verificados contra el origen. `tipo_cambio` a NULL a propósito = «aún no consultado», nunca 1.
+- **Decisión (Alberto):** el agente inversor se construye **solo para él**; expandir a terceros, más adelante.
+  Motor fiscal en Supabase; los PDF del broker, en Drive. NADA de recomendar productos (sería asesoramiento CNMV).
+- ⏳ **Pendiente y CADUCA:** IBKR solo sirve ~4 trimestres atrás por esta vía. Falta cargar **jul–sep/2025**
+  (108 ops) y rellenar `tipo_cambio` por fecha (449 filas USD). Sin eso no hay cifra en euros defendible.
+- ❓ Sin comprobar si la cuenta IBKR es real o paper: las herramientas del MCP no lo distinguen.
+
+### 🔒 (19/08/2026) `main` NO tenía ninguna protección — ahora sí, y rompe a dos bots
+- Tras el fallo de #1487 (tests rojos, mergeado igual) se miró el gate: **no había gate**. Ni branch
+  protection clásica ni rulesets. El check «Ready to merge» de `ci.yml` solo hace `needs: check`
+  (Lint·TypeCheck·Build) y **nunca ha mirado los tests** (viven en otro workflow, `needs:` no cruza
+  workflows): era decorativo. Nada bloqueaba nada.
+- Alberto creó el ruleset **«main - CI obligatorio»** (`/settings/rules/21056649`, activo, `refs/heads/main`):
+  12 checks required (`Tests (packages + guardián)`, `Lint · TypeCheck · Build`, `Análisis estático`,
+  y los 9 `Typecheck · <app>`), `strict_required_status_checks_policy:false` (deliberado: `main` recibe
+  commits del bot cada pocos minutos y exigir «up to date» metería en bucle de re-merge). Sin required:
+  «Ready to merge» ni los `Vercel – *` (salen `Ignored` según el filtro de builds). Omisión VACÍA.
+- 🔴 **Efecto lateral: el ruleset bloquea los pushes directos a `main`, y hay DOS escritores automáticos
+  que van directos.** (1) `auditoria.yml` empuja como `github-actions[bot]`, que no se puede poner en la
+  lista de omisión. (2) El agente SEO (`apps/sivra/lib/seo-landing.ts`) hace `PUT /contents/…` **sin
+  `branch`** → escribe en la rama por defecto. Ese segundo falla EN SILENCIO: la landing deja de
+  optimizarse los lunes y no lo delata nada. Las rutinas normales ya acaban en PR draft, no les afecta.
+- Y un TERCERO que no se vio de primeras: el propio `rutinas-automerge.yml`, en su camino de
+  conflicto, empujaba el merge resuelto a `main`. Fallaba «bien» (reintenta), pero el motivo que
+  imprimía era falso («main se movió») → PRs de registro con conflicto atascados para siempre.
+- **Decisión de Alberto: por PR y definitivo — nada escribe en `main` salvo el merge de un PR verde.**
+  (1) `auditoria.yml` abre PR en `claude/auditoria-radiografia`; su commit lleva `[skip vercel]` y NO
+  `[skip ci]`, porque `[skip ci]` lo honra Actions y dejaría el PR sin checks (y el automerge, con
+  razón, no mergea a ciegas). (2) El agente SEO (`pushToGitHub`, gemelo en sivra y plataforma) resetea
+  `claude/seo-landing` a `main`, escribe con `branch` y abre PR. (3) El automerge acepta ahora esos
+  ficheros y, en conflicto, empuja a la RAMA DEL PR con `GH_PAT_TRIGGER` — no con `GITHUB_TOKEN`,
+  cuyos pushes no disparan CI y dejarían el PR sin checks del sha nuevo.
+- 🪤 **Cuarta pieza, descubierta EN VIVO al vigilar el propio PR #1501: un PR puede nacer con CERO checks.**
+  Empujar la rama y abrir el PR con un token de GitHub App/Actions no dispara los workflows `pull_request`
+  → PR sin checks → el automerge (con razón) no lo mergea, y el ruleset tampoco deja mergearlo a mano:
+  **atascado para siempre**. Le pasó a #1501 (14 checks aparecieron solo al empujar un commit más). Así
+  que `auditoria.yml` empuja y abre el PR con `GH_PAT_TRIGGER`, y si falta el secret **no abre PR**: falla
+  con aviso, mejor que un PR zombi. El agente SEO no sufre esto (usa su PAT fine-grained propio).
+- 🔁 **Y la misma trampa, otra vez, en `main`: el merge de #1501 (`a6ef85ab`) no disparó NI UN
+  workflow.** Un push a `main` hecho con el token de una GitHub App (el merge de un PR desde una
+  sesión de Claude Code) no dispara nada, así que la auditoría no se regeneró y el código nuevo se
+  quedó SIN estrenar. No es un fallo del arreglo — es que no llegó a correr. Por eso `auditoria.yml`
+  gana `workflow_dispatch`: se puede lanzar desde la API con ese mismo token, y así ni la radiografía
+  depende de que el último push lo hiciera un humano ni hay que esperar a uno para probar el workflow.
+- ⚠️ Lo que NO se ha podido probar aquí: los workflows solo se ejecutan en GitHub. Las tres piezas se
+  verifican solas en su primera pasada real — auditoría al próximo push a `main`, SEO el lunes. Si el
+  PR del SEO se queda abierto sin mergear, mirar si `GH_PAT_TRIGGER` sigue vivo. Revertir todo =
+  ruleset a «Desactivado».
+
 ### 🌍 (19/08/2026) `main` llegó ROJA: tocar el español de la landing sin el diccionario
 - Al mergear PR #1490 saltó `Tests (packages + guardián)`. **No era mío:** reproducido sobre `origin/main`
   → `apps/housesevillana` 45/47, mismas 2 pruebas i18n. Lo rompió **PR #1487** al reescribir el copy español
@@ -144,6 +204,17 @@
   metía `withLatestCommit` (reconstruía OTRO commit). Ahora `clasificarEstadoRedeploy` + «sin confirmar».
 - El rojo de `main` por las claves i18n huérfanas lo arregló otra sesión en paralelo (#1495); mi PR
   #1496 se quedó en duplicado. **Dos sesiones sobre el mismo repo: mirar `origin/main` antes de arreglar.**
+
+### 🧪 (19/08/2026) Las guardas i18n de House pasaban EN VACÍO
+- Al reescribir el copy desapareció «Sin comisiones de Booking», que era uno de los *delatores*
+  de `traducciones.test.ts`. Un delator que ya no está en el HTML no puede sobrevivir a
+  `traducir()`: la aserción pasaba sin mirar nada. Otra sesión lo cambió por una frase viva
+  (PR #1490) — pero eso se vuelve a pudrir al siguiente cambio de copy.
+- Arreglo de fondo: cada recorrido comprueba ahora que **encontró algo** (delatores vivos en el
+  HTML; ≥10 anclas y ≥5 ids en `anclas.test.ts`). `enlaces.test.ts` ya lo hacía y sirvió de patrón.
+  Verificado por mutación: cambiar un delator por una frase inexistente pone el test rojo.
+- Es la regla de «dato que no hay ≠ dato que no se ha mirado» aplicada a los tests. 50/50 y
+  32/32 en las guardas raíz. Anotado en `apps/housesevillana/CLAUDE.md`.
 
 ### 📸 (19/08/2026) La portada de House era una escalera (y el alt decía «fachada»)
 - Lo vio Alberto, no el repaso de diseño: **ninguna sesión puede ver las fotos** de la landing

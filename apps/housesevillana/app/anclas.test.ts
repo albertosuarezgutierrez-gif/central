@@ -47,6 +47,18 @@ function anclasDe(html: string) {
 describe('anclas internas', () => {
   const idsPortada = idsDe(PORTADA)
 
+  test('el recorrido encuentra anclas de verdad (no se ha quedado en vacío)', () => {
+    // Los bucles de abajo recorren lo que devuelven `anclasDe`/`idsDe`. Si un cambio de
+    // comillas o de formato dejara esas expresiones sin casar, no fallaría ningún test:
+    // pasarían todos sin haber mirado una sola ancla. Igual que en `enlaces.test.ts`.
+    const total = PAGINAS.reduce((n, { html }) => {
+      const { propias, aPortada } = anclasDe(html)
+      return n + propias.length + aPortada.length
+    }, 0)
+    assert.ok(total >= 10, `solo se han encontrado ${total} anclas en ${PAGINAS.length} páginas`)
+    assert.ok(idsPortada.size >= 5, `la portada solo declara ${idsPortada.size} ids`)
+  })
+
   for (const { nombre, html } of PAGINAS) {
     const { propias, aPortada } = anclasDe(html)
     const idsPropios = idsDe(html)
