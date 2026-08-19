@@ -208,7 +208,8 @@ SELECT cron.schedule('infra-monitor', '*/5 * * * *', $cmd_infra$
   SELECT net.http_post(
     url := 'https://wswbehlcuxqxyinousql.supabase.co/functions/v1/infra-monitor-cron',
     headers := '{"Content-Type": "application/json"}'::jsonb,
-    body := '{}'::jsonb
+    body := '{}'::jsonb,
+    timeout_milliseconds := 30000
   )
 $cmd_infra$);
 
@@ -264,6 +265,8 @@ SELECT cron.schedule('monitor-health-cron', '*/5 * * * *', $cmd_health$
   SELECT net.http_post(
     url := 'https://wswbehlcuxqxyinousql.supabase.co/functions/v1/monitor-health',
     headers := '{"Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indzd2JlaGxjdXhxeHlpbm91c3FsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyNDU2OTIsImV4cCI6MjA5MTgyMTY5Mn0.pskPJ1U-i0Vjg_suxMfXNqHOtKJpWchf0-CzLUQIzRo"}'::jsonb,
-    body := '{}'::jsonb
+    body := '{}'::jsonb,
+    -- 30s: hace varios chequeos seguidos y el default de pg_net (5s) le quedaba corto
+    timeout_milliseconds := 30000
   )
 $cmd_health$);
