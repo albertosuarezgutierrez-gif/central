@@ -44,8 +44,10 @@
   + `cuota_fija` + `noches_ref`, acotado a ±15% de efecto/pasada, con interruptor `canal_auto` y latido
   `sivra_canal`. Y el plan (`/mercado/plan`) pide ya las ventanas propias eligiendo las que dan
   RECORRIDO de precio (sin él, m y F son indistinguibles) → la rutina de Booking las mide sola.
-- 🚨 Bug gordo de paso: `ANUNCIOS_PROPIOS` solo tenía House, así que **Busto/Luxury/Dúplex llevaban
-  desde el 14/08 entrando como comparables de sí mismos**. Añadidos los 4 nombres de portal.
+- `ANUNCIOS_PROPIOS` solo tenía House; añadidos los 4 nombres de portal. ⚠️ **Corrijo lo que dije
+  al mergear:** afirmé que Busto/Luxury/Dúplex «llevaban entrando como comparables de sí mismos» y
+  al verificarlo contra `market_rates` **no había ni una fila** (2.746 comps, 833 nombres, ninguno
+  propio). El riesgo era real y ahora está tapado, pero NO se materializó. Lo afirmé sin mirar.
 - 🔗 **Encaja con el hallazgo de Smoobu de hoy (entrada siguiente), no lo contradice:** ese +20% por
   canal vive DENTRO de Smoobu, así que ya está incluido en lo que mide el conector. Y ojo a las
   unidades: `0,92 efectivo/base` es lo que COBRAMOS (tras comisión); esta recta es lo que PAGA el
