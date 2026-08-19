@@ -50,11 +50,17 @@
 - Busto Reform: igual que Luxury (móvil 10% con 69 reservas/23.343,14€ + «estándar 8%»), −17,2%.
   🚨 Su panel muestra un ratio ROTO (2^63) por dividir entre cero: «Tú 0€ / 0 noches» de UK no es un
   valor, es que NO tiene reservas UK. Los «Datos clave» de la extranet valen como pista, no como cifra.
-- **Veredicto preliminar: la Fase 3 del estudio ya está hecha** — los 4 pisos YA tienen su oferta de
-  escaparate (8-12%, creadas el 16-18/08); crear otra sería el error que el propio estudio advertía.
-  La móvil se queda (340 reservas/218.794,79€ en 12m entre los 4). House sigue en −39,4% por sus 3
-  tarifas país; NO se tocan hasta saber su % de reservas UK (los otros 3, sin ellas, están a 0%).
-- Pendientes: Genius/planes de tarifa de Dúplex, Luxury y Busto + el % UK de House (dato que decide).
+- **Veredicto FINAL: no tocar nada.** (a) La Fase 3 del estudio ya estaba hecha — los 4 pisos tienen
+  su oferta de escaparate (8-12%) desde el 16-18/08. (b) La móvil es la palanca del negocio: 340
+  reservas y 218.794,79€ en 12m entre los 4. (c) EEA country rate de House trae 7.094,51€ reales →
+  se queda; UK/US llevan 0 reservas en 6 meses pero **no suben el apilamiento**, así que quitarlas no
+  da euros. (d) Genius nivel 3 (20%) nunca.
+- 🔧 **Dos errores propios corregidos en el doc:** la tabla de apilamiento comparaba House (con su
+  Genius y plan conocidos) contra los otros 3 (sin ellos) → los 4 están en la misma banda, no había
+  piso «desmadrado»; y las tarifas país NO aumentan el descuento máximo (Booking aplica solo la mayor
+  de cada categoría y la móvil ya la ocupa), así que mi «quitarlas para recuperar margen» era falso.
+- Pendiente sin bloquear: Genius/planes de Dúplex, Luxury y Busto. 3ª métrica del panel descartada
+  (antelación de House: 84d dice Booking vs 42d real).
 ### 🏷️ (19/08/2026) Tres centinelas del canal — y el primero destapa que ESTAMOS CAROS
 - **Validación FUERA de muestra** (`validarCanal`): el R² del ajuste es circular (mide la recta
   contra las ventanas que la produjeron). Ahora `pricing_escaparate.usada_en_ajuste_at` marca lo

@@ -15,13 +15,15 @@
 
 **Ofertas activas (5):**
 
-| Oferta | Categoría | % | Reserva | Estancia | Planes | Condiciones |
-|---|---|---|---|---|---|---|
-| Basic Deal | Catálogo de ofertas | 12% | 18/08/2026 → | hasta 18/08/2030 | Todos | Tachado visible. ⚠️ Activada el 18/08/2026 — origen pendiente de confirmar |
-| Mobile rate | Tarifa específica | 10% | 07/03/2024 → | siempre | Todos | App/web móvil. La de más volumen: 70 reservas / 183 noches / 114.487,94€ en 12 meses |
-| EEA country rate | Tarifa específica | 10% | 19/02/2026 → | siempre | Solo No reembolsable | Mín. 3 noches |
-| UK country rate | Tarifa específica | 10% | 19/02/2026 → | siempre | Solo No reembolsable | Mín. 3 noches |
-| US country rate | Tarifa específica | 10% | 19/02/2026 → | siempre | Solo No reembolsable | Mín. 3 noches |
+| Oferta | Categoría | % | Desde | **Rendimiento 12m (19/08/2026)** |
+|---|---|---|---|---|
+| Mobile rate | Tarifa específica | 10% | 07/03/2024 | **70 reservas · 183 noches · ADR 625,62€ · 114.487,94€** |
+| **EEA country rate** | Tarifa específica | 10% | 19/02/2026 | **3 reservas · 15 noches · ADR 472,97€ · 7.094,51€** ✅ |
+| Basic Deal | Catálogo de ofertas | 12% | 18/08/2026 | 1 reserva · 4 noches · ADR 862,37€ · 3.449,47€ |
+| UK country rate | Tarifa específica | 10% | 19/02/2026 | **— (0 reservas en 6 meses)** |
+| US country rate | Tarifa específica | 10% | 19/02/2026 | **— (0 reservas en 6 meses)** |
+
+(EEA/UK/US: solo plan No reembolsable, mínimo 3 noches. Móvil y Basic Deal: todos los planes.)
 
 **Genius:** activo — Nivel 1-3 al 10% (base bloqueada) + Nivel 2-3 al **15%** (activo).
 Nivel 3 (20%) NO activado (⚠️ no activar). Sin descuento dinámico.
@@ -139,30 +141,45 @@ por el propio panel.
 **Consecuencia:** los «Datos clave» de la extranet se usan como PISTA, nunca como cifra. Ya van dos
 métricas suyas descartadas: la antelación (no cuadra con `incomes`) y este ratio (roto de origen).
 
-## Veredicto conjunto (19/08/2026) — preliminar, con lo que falta declarado
+## ✅ Veredicto FINAL (19/08/2026) — con el rendimiento por oferta de House
 
-| Piso | Ofertas | Móvil | Oferta catálogo | Tarifas país | Apilamiento conocido | Móvil 12m |
-|---|---|---|---|---|---|---|
-| House Sevillana | 5 | 10% | Basic Deal **12%** | **3 × −10%** | **−39,4%** | 70 res · 114.487,94€ |
-| Dúplex Center | 2 | 10% | «8%» → **12%** | no | −20,8% | 80 res · 38.319,10€ |
-| Luxury Busto | 2 | 10% | 8% | no | −17,2% | 121 res · 42.644,51€ |
-| Busto Reform | 2 | 10% | 8% | no | −17,2% | 69 res · 23.343,14€ |
+### 🔧 Corrección de dos errores propios de análisis
 
-**1. La Fase 3 del estudio YA ESTÁ HECHA — no hay que crear ninguna oferta.** El estudio pedía «UNA
-oferta visible permanente del 10-15% que cree el tachado»: los 4 pisos ya la tienen (8-12%, activadas
-el 16-18/08). Añadir otra sería exactamente el error que el propio estudio advertía.
+**1. La tabla comparativa de apilamiento era engañosa.** Comparaba el −39,4% de House (calculado CON
+su Genius 15% y su plan No reembolsable −10%, que sí conocía) contra el −17/−21% de los otros tres
+(calculado SIN Genius ni plan, porque no los tenía). No es que House descuente más: es que de House
+había más datos. Si Luxury/Busto tienen el mismo Genius y planes, su peor caso sale ≈ −36,6%.
+**Los cuatro están probablemente en la misma banda.** No hay ningún piso «desmadrado».
 
-**2. La tarifa móvil se queda en los cuatro, sin discusión.** Es la palanca que trae el volumen real:
-340 reservas y 218.794,79€ en 12 meses entre los cuatro pisos.
+**2. Las tarifas por país NO aumentan el descuento máximo.** Dentro de cada categoría Booking aplica
+**solo la mayor**, y la tarifa móvil (10%) ya ocupa la categoría «tarifas específicas». Quitar EEA/UK/US
+**no baja ni un punto** el peor caso. Mi propuesta inicial de quitarlas para «recuperar margen» era
+sencillamente incorrecta: no había margen que recuperar.
 
-**3. House está en otra liga de descuento (−39,4% frente a −17/−21%)** por sus 3 tarifas país. **NO
-las toco todavía**: falta saber si funcionan (ver punto 5).
+### Lo que dicen los datos de rendimiento
 
-**4. Genius nivel 3 (20%): nunca.** Llevaría el peor caso de House al −42,9%.
+- **EEA country rate: 3 reservas · 15 noches · 7.094,51€ en 6 meses.** Trae negocio real. **Se queda.**
+- **UK y US country rate: 0 reservas en 6 meses.** No aportan, pero tampoco cuestan (no suben el
+  apilamiento). **Dejarlas o quitarlas es indiferente en euros**; si se quitan es por orden, no por
+  dinero. Ojo con la lectura fácil: 0 reservas no prueba que estorben — prueba que ese mercado no ha
+  entrado, con o sin ellas.
+- **Mobile rate: la palanca del negocio en los 4 pisos** — 340 reservas y 218.794,79€ en 12 meses
+  (House 114.487,94€ · Luxury 42.644,51€ · Dúplex 38.319,10€ · Busto 23.343,14€). Intocable.
+- **Basic Deal de House (12%)**: 1 reserva de 4 noches a 862,37€/noche en su primer día. El escaparate
+  funciona sin regalar el precio.
 
-**Lo que falta para cerrarlo:**
-- Genius y planes de tarifa de Dúplex, Luxury y Busto Reform (solo tengo los de House).
-- El **% de reservas UK de House**, el único piso CON tarifas país. Los otros tres, sin ellas, están
-  los tres a 0%. Si House también está a 0%, las tarifas país no traen nada y sobran; si tiene
-  reservas UK, se quedan. Es el dato que decide, y todavía no lo tengo.
+### Decisiones
+
+1. **No crear ninguna oferta nueva.** La Fase 3 del estudio ya estaba hecha antes de empezar: los 4
+   pisos tienen su oferta de escaparate (8-12%) desde el 16-18/08.
+2. **No tocar nada de lo que hay.** Ninguna oferta activa está perdiendo dinero de forma demostrable.
+3. **Genius nivel 3 (20%): no activarlo.** Es lo único que sí subiría el descuento real.
+4. **Sigue faltando** Genius y planes de tarifa de Dúplex, Luxury y Busto Reform — sin ellos no se
+   puede comparar el apilamiento real entre pisos (ver corrección 1). No bloquea ninguna decisión.
+
+### 🚩 Tercera métrica del panel que no cuadra
+
+House: Booking dice **~84 días** de antelación (peer 61,6); nuestro `incomes` dice **42 de mediana**
+(56 de media). Mismo patrón que Luxury (81 vs 23) y Dúplex (53 vs 16): el panel da sistemáticamente
+~2× nuestra cifra. Sigue sin causa confirmada.
 
