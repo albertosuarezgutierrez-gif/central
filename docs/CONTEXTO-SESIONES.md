@@ -44,8 +44,11 @@
   (Casco Antiguo) — la landing lo tenía BIEN. `Bustos Tavera 22` son OTROS dos pisos (Luxury Busto /
   Busto Reform). Quien lo confunde es la skill `seo-house-sevillana` (ficha, keywords y los DOS JSON-LD
   con `streetAddress`): vive fuera del repo, la corrige Alberto. Fijado en el CLAUDE.md raíz.
-- ⚠️ Sin resolver: la nota real (8,1 vs 9,2/4,9) y si `/barrio` sigue posicionando «Macarena» cuando
-  la casa está en San Julián.
+- `/barrio` reencuadrada (decide Alberto): mantiene la keyword «Macarena» pero sitúa la casa en San
+  Julián, «la puerta de la Macarena». Fuera los minutos que salían de suponer la casa DENTRO del
+  barrio (la Basílica no está a 5 min); solo quedan los que ya declara la portada.
+- ⚠️ Sin resolver: la nota real (8,1 vs 9,2/4,9) y los minutos a Basílica, Muralla, Mercado de la
+  Feria y Alameda desde Socorro 24.
 ### 📋 (19/08/2026) Inventario de ofertas Booking — House hecho, 3 pendientes
 - Nuevo `docs/BOOKING-OFERTAS-INVENTARIO.md`: inventario extranet por piso (Claude Chrome, solo
   lectura) previo a decidir la Fase 3. House: Basic Deal 12% (⚠️ activada 18/08, origen por
