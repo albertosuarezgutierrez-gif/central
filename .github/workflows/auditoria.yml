@@ -1,11 +1,12 @@
 name: Auditoría de estructura
 
 # Mantiene la radiografía del repo (apps/plataforma/lib/estructura.generated.json)
-# SIEMPRE al día, sola: en cada push que toque la estructura, regenera el JSON y, si
-# cambió, lo commitea de vuelta. El script es Node puro (no instala dependencias).
+# SIEMPRE al día, sola: en cada push a main que toque la estructura, regenera el JSON y,
+# si cambió, lo deja en un PR. El script es Node puro (no instala dependencias).
 #
-# Sin bucles: el commit lo hace github-actions[bot] con GITHUB_TOKEN (sus pushes no
-# disparan workflows) y lleva [skip ci]; además el JSON conserva su timestamp si el
+# Desde el 19/08/2026 NO commitea contra `main` (el ruleset «main - CI obligatorio» solo
+# admite el merge de un PR verde): abre/actualiza el PR `claude/auditoria-radiografia` y
+# lo mergea `rutinas-automerge.yml`. Sin bucles: el JSON conserva su timestamp si el
 # contenido real no cambió, así que un push que no toca la estructura no genera commit.
 
 on:
@@ -54,19 +55,61 @@ jobs:
       # proyectos Vercel del monorepo (amplificaba la factura de Build CPU Minutes). Además,
       # el propio `ignoreCommand` (scripts/vercel-ignore-build.mjs) ya salta en Vercel los
       # commits con [skip ci]; esta guarda evita incluso generarlos fuera de main.
-      - name: Commitear si cambió
+      # La radiografía aterriza por PR, NO por push a `main`. Desde el 19/08/2026 `main` está
+      # protegido por el ruleset «main - CI obligatorio» y solo acepta el merge de un PR con los
+      # checks required en verde; `github-actions[bot]` no se puede poner en la lista de omisión
+      # del ruleset, así que un push directo desde aquí se rechaza. El PR lo mergea solo
+      # `rutinas-automerge.yml` (estos tres ficheros están en su lista de registro).
+      #
+      # ⚠️ El mensaje lleva `[skip vercel]` y NO `[skip ci]`, a propósito: `[skip ci]` lo honra
+      # GitHub Actions y dejaría el PR SIN checks — y el automerge, con razón, no mergea un PR sin
+      # checks. `[skip vercel]` no lo entiende Actions pero sí `scripts/vercel-ignore-build.mjs`,
+      # así que la CI corre y los builds de Vercel siguen sin dispararse.
+      #
+      # 🔑 El push y el `gh pr create` van con GH_PAT_TRIGGER, NO con GITHUB_TOKEN. Ni los pushes
+      # ni los PRs abiertos con el GITHUB_TOKEN del propio run disparan workflows, así que el PR
+      # nacería con CERO checks — y un PR sin checks no lo mergea `rutinas-automerge.yml` (con
+      # razón: «no hay checks» ≠ «los checks pasaron»). Se quedaría abierto para siempre. Es la
+      # misma trampa documentada en la cabecera de `ai-programar.yml`. Sin el secret NO abrimos
+      # el PR: dejamos la rama pusheada y avisamos, que es mejor que un PR zombi.
+      - name: Abrir/actualizar el PR de la radiografía
         if: github.ref_name == 'main'
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT_TRIGGER }}
+          PAT: ${{ secrets.GH_PAT_TRIGGER }}
+          REPO: ${{ github.repository }}
+          RAMA: claude/auditoria-radiografia
         run: |
+          set -euo pipefail
           FILES="apps/plataforma/lib/estructura.generated.json docs/ARQUITECTURA.generated.md docs/mapa-funciones.generated.json"
-          if [ -n "$(git status --porcelain $FILES)" ]; then
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add $FILES
-            git commit -m 'chore(auditoría): regenerar radiografía de estructura [skip ci]'
-            git push origin HEAD:${{ github.ref_name }}
-            echo "Radiografía (JSON + markdown + mapa de funciones) actualizada y commiteada."
-          else
+          if [ -z "$(git status --porcelain $FILES)" ]; then
             echo "Radiografía ya al día — sin cambios."
+            exit 0
+          fi
+          if [ -z "$PAT" ]; then
+            echo "::error::Falta el secret GH_PAT_TRIGGER — sin él el PR de la radiografía nacería sin checks y nunca se mergearía. La radiografía queda SIN actualizar en main hasta que se configure."
+            exit 1
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          # La rama se rehace desde el `main` de esta pasada: la radiografía se regenera entera
+          # cada vez, así que arrastrar la rama anterior solo daría conflictos.
+          git checkout -q -B "$RAMA"
+          git add $FILES
+          git commit -q -m 'chore(auditoría): regenerar radiografía de estructura [skip vercel]'
+          git push -q -f "https://x-access-token:${PAT}@github.com/${REPO}.git" "$RAMA"
+          if [ -z "$(gh pr list --head "$RAMA" --state open --json number --jq '.[].number')" ]; then
+            gh pr create --head "$RAMA" --base main \
+              --title 'chore(auditoría): regenerar radiografía de estructura' \
+              --body 'Radiografía del repo regenerada por `.github/workflows/auditoria.yml`.
+
+          Va por PR y no por push a `main` porque el ruleset «main - CI obligatorio» exige checks en verde y `github-actions[bot]` no puede saltárselo. Lo mergea `rutinas-automerge.yml` en cuanto la CI pase.
+
+          ---
+          _Generated by [Claude Code](https://claude.ai/code)_'
+            echo "PR de radiografía abierto."
+          else
+            echo "PR de radiografía ya abierto — actualizado con el commit nuevo."
           fi
 
       # Inyecta el índice de funciones en Supabase (tabla mapa_arquitectura) para el Director de
