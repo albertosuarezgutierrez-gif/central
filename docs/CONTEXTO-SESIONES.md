@@ -32,6 +32,24 @@
 
 ---
 
+### 📉 (19/08/2026) IBKR: no era la selección, eran los stops — libro de operaciones en Supabase
+- Alberto preguntó por VWCE («no para de bajar»): −594,96€, el **3,7%** de los −16.172,49€ que perdió operando
+  en 2026. Sacado de IBKR por MCP; informe visual en artifact (no en repo: dato financiero personal).
+- **Hallazgo:** la selección era buena, el stop era el problema. CRWV **subió 42,1%** entre su primera y última
+  operación y perdió 6.369$ en 33 movimientos; SNDK +7,9% → −4.853$; RBLX +6,1% → −2.689$. Mediana de distancia
+  del stop: **1,30%** (25 de 95 a menos del 1%). Confirmado en los DOS periodos: órdenes STOP −28.710$, órdenes
+  a mercado **+4.487$**. Siete posiciones abiertas y cerradas el mismo día: −3.982$.
+- **Regla 2 meses (art. 33.5.f LIRPF): no bloquea nada.** 23 valores cerrados del todo, ninguna recompra en los
+  2 meses siguientes a su última venta. La pérdida de 2026 es compensable íntegra (4 años de arrastre).
+- **Nuevo en BD:** `trading_operaciones` (libro inmutable de ejecuciones, idempotente por `(broker, trade_id)`)
+  + vistas `v_trading_resumen_anual` y `v_trading_salidas`. Cargadas **455 operaciones** (oct/2025–ago/2026),
+  checksums verificados contra el origen. `tipo_cambio` a NULL a propósito = «aún no consultado», nunca 1.
+- **Decisión (Alberto):** el agente inversor se construye **solo para él**; expandir a terceros, más adelante.
+  Motor fiscal en Supabase; los PDF del broker, en Drive. NADA de recomendar productos (sería asesoramiento CNMV).
+- ⏳ **Pendiente y CADUCA:** IBKR solo sirve ~4 trimestres atrás por esta vía. Falta cargar **jul–sep/2025**
+  (108 ops) y rellenar `tipo_cambio` por fecha (449 filas USD). Sin eso no hay cifra en euros defendible.
+- ❓ Sin comprobar si la cuenta IBKR es real o paper: las herramientas del MCP no lo distinguen.
+
 ### 🌍 (19/08/2026) `main` llegó ROJA: tocar el español de la landing sin el diccionario
 - Al mergear PR #1490 saltó `Tests (packages + guardián)`. **No era mío:** reproducido sobre `origin/main`
   → `apps/housesevillana` 45/47, mismas 2 pruebas i18n. Lo rompió **PR #1487** al reescribir el copy español
