@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-19T18:45:23Z",
-  "sha": "a8db64d88c84a97b949843b5dbb9edb5ce17f54e",
+  "generadoEn": "2026-08-19T18:52:11Z",
+  "sha": "203a582924bfa31aed97cd412be86affe549c640",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -57125,7 +57125,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 40
+          "linea": 41
         },
         {
           "nombre": "fmt",
@@ -57133,7 +57133,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 41
+          "linea": 42
         },
         {
           "nombre": "GET",
@@ -57141,7 +57141,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 73,
+          "linea": 74,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -57150,7 +57150,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 77
+          "linea": 78
         }
       ],
       "tablas": [
@@ -57174,7 +57174,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "ebfea689e042"
+      "hash": "5d7d044c9e54"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -68802,6 +68802,37 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "8c368d2f053c"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pricing-ancla-rail.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "apps/plataforma/lib/sivra/pricing-ancla-rail.ts Ancla del raíl ±max_change_pct del motor de precios de SIVRA. 🚨 Por qué existe (auditoría 19/08/2026). El raíl está documentado como tope \"±X%/DÍA\", pero el cron corre 3 veces al día: si cada pasada se ancla en el precio que dejó la anterior, el tope ",
+      "exporta": [
+        "anclaRail"
+      ],
+      "funciones": [
+        {
+          "nombre": "anclaRail",
+          "kind": "function",
+          "exportada": true,
+          "params": "opts: { /** Último precio aplicado por el motor ANTES de hoy. `null` si la fecha no tiene histórico. */ ref24?: number | null /** `old_price` de la PRIMERA pasada de hoy: con qué precio empezó el día la fecha. */ primeroHoy?: number | null ",
+          "retorno": "number",
+          "linea": 32,
+          "resumen": "Precio sobre el que se calcula el rango ±max_change_pct de la pasada."
+        },
+        {
+          "nombre": "esPrecio",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: number | null | undefined",
+          "retorno": "v is number",
+          "linea": 53,
+          "resumen": "Un ancla vale si es un número positivo. El 0 y los negativos se descartan a propósito en vez de colarse como ancla: un 0 haría que `lo` y `hi` fueran 0 y el clamp dejaría el precio en 0€ — regalar la "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "efffa5760bf6"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-bucket-fuente.ts",
@@ -93989,7 +94020,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2505,
-    "funciones": 6809
+    "archivos": 2506,
+    "funciones": 6811
   }
 }
