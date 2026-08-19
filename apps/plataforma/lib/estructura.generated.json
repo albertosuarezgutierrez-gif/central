@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-18T19:58:41Z",
+  "generadoEn": "2026-08-19T10:51:51Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -728,7 +728,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 35
+        "evidencias": 36
       },
       "rrhh": {
         "estado": "usado",
@@ -2242,7 +2242,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 19
+        "evidencias": 20
       },
       "rrhh": {
         "presente": false,
@@ -3874,6 +3874,7 @@
       "/api/sivra/pricing/aplicar-propuesta",
       "/api/sivra/pricing/apply",
       "/api/sivra/pricing/apply-auto",
+      "/api/sivra/pricing/canal",
       "/api/sivra/pricing/config",
       "/api/sivra/pricing/experiments",
       "/api/sivra/pricing/experiments/check-results",
@@ -4297,6 +4298,7 @@
       "patrones_recurrentes_cache",
       "presupuesto_proveedores",
       "pricing_avisos",
+      "pricing_escaparate",
       "pricing_flight_demand",
       "pricing_pl_referencia",
       "reservas_canceladas",
@@ -4528,6 +4530,18 @@
   ],
   "novedades": [
     {
+      "titulo": "Ya no espera a nadie:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Consecuencia: NO aplicar `channel_markup=1.20`",
+      "fecha": ""
+    },
+    {
+      "titulo": "Pendiente de tu decisión:",
+      "fecha": ""
+    },
+    {
       "titulo": "PENDIENTE de Alberto (ops):",
       "fecha": ""
     },
@@ -4573,18 +4587,6 @@
     },
     {
       "titulo": "Mergeado (16/08, PR #1435, orden de Alberto) y verificado en vivo:",
-      "fecha": ""
-    },
-    {
-      "titulo": "16/08: PRIMERA orden real vía copiloto.",
-      "fecha": ""
-    },
-    {
-      "titulo": "EJECUTADA (lunes 17/08; verificada 18/08 contra IBKR):",
-      "fecha": ""
-    },
-    {
-      "titulo": "Pendiente (Alberto, extranet):",
       "fecha": ""
     }
   ],
@@ -4996,7 +4998,7 @@
     "packages": 37,
     "capacidades": 23,
     "skills": 32,
-    "apis": 1166,
+    "apis": 1167,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

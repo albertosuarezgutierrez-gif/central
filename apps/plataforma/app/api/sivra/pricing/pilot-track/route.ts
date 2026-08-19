@@ -49,12 +49,15 @@ export async function GET(req: NextRequest) {
 
   const settings = await prisma.$queryRaw<{
     property_id: string; pilot_no_booking_days: number
-    channel_markup: number; min_price: number | null; max_price: number | null; max_change_pct: number
+    channel_markup: number; cuota_fija: number; noches_ref: number
+    min_price: number | null; max_price: number | null; max_change_pct: number
     target_pctl: number; floor_pctl: number; ceil_pctl: number; position_factor: number
     quality_k: number; demand_k: number; demand_baseline: number; own_score: number | null
   }[]>(Prisma.sql`
     SELECT property_id, pilot_no_booking_days,
-      COALESCE(channel_markup, 1.16)::float8  AS channel_markup,
+      COALESCE(channel_markup, 1.20)::float8  AS channel_markup,
+      COALESCE(cuota_fija, 0)::float8         AS cuota_fija,
+      GREATEST(COALESCE(noches_ref, 2), 1)::int AS noches_ref,
       min_price, max_price,
       COALESCE(max_change_pct, 0.20)::float8  AS max_change_pct,
       COALESCE(target_pctl, 0.50)::float8     AS target_pctl,
@@ -183,6 +186,8 @@ export async function GET(req: NextRequest) {
     const daysSinceBooking = Number(S[id]?.days_since_booking ?? 999)
     const currentBase = B[id]?.current_base != null ? Number(B[id].current_base) : null
     const channelMarkup = Number(s.channel_markup)
+    const nochesRef = Number(s.noches_ref) > 0 ? Number(s.noches_ref) : 2
+    const channelFijoNoche = Number(s.cuota_fija) > 0 ? Number(s.cuota_fija) / nochesRef : 0
     const minPrice = s.min_price != null ? Number(s.min_price) : null
     const extraEur = E[id]?.extra_eur != null ? Number(E[id].extra_eur) : 0
     const recent = Number(P[id]?.recent ?? 0), lastYear = Number(P[id]?.last_year ?? 0)
@@ -198,7 +203,7 @@ export async function GET(req: NextRequest) {
       mkt.prices, mkt.scores, occupancy60,
     )
     const recommendedBase = recommendedBaseFromEngine(eng, {
-      markup: channelMarkup, max_change_pct: Number(s.max_change_pct),
+      markup: channelMarkup, fijoNoche: channelFijoNoche, max_change_pct: Number(s.max_change_pct),
       min_price: minPrice, max_price: s.max_price != null ? Number(s.max_price) : null, baseActual: currentBase,
     })
     const recommendationConfident = eng.confidence === "alta" && mktAge != null && mktAge <= 7
@@ -210,7 +215,7 @@ export async function GET(req: NextRequest) {
     const verdict = evaluatePilot({
       windowNights, freeNights, bookedNights, daysSinceBooking,
       threshold: Number(s.pilot_no_booking_days ?? 7),
-      currentBase, marketP50Guest, channelMarkup, minPrice,
+      currentBase, marketP50Guest, channelMarkup, channelFijoNoche, minPrice,
       recommendedBase, recommendationConfident,
     })
 

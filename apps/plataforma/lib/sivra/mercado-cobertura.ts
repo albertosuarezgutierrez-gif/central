@@ -54,6 +54,8 @@ export type VentanaPedida = {
   ronda: number
   /** ventana de evento CONFIRMADO (su precio está congelado mientras no se mida) */
   eventoConfirmado?: boolean
+  /** factor de evento de la fecha (1 = ninguno). Decide la RESERVA de alto valor, ver abajo. */
+  factor: number
   /** días desde la última medición fiable; `null` = nunca medida (lo más urgente) */
   diasSinMedir: number | null
   comps: number
@@ -78,6 +80,11 @@ export type FiltroVentanas = {
   desde?: string
   /** checkin <= hasta (YYYY-MM-DD) */
   hasta?: string
+  /**
+   * Plazas de la pasada guardadas para los bloques de mayor factor sin medir (ver
+   * `conReservaAltoValor`). Omitido = `RESERVA_ALTO_VALOR`; `0` = cola de urgencia pura.
+   */
+  reservaAltoValor?: number
 }
 
 export type PlanPedido = {
@@ -223,6 +230,7 @@ export function planDeVentanas(
         etiqueta: v.etiqueta,
         ronda: v.ronda,
         eventoConfirmado: v.eventoConfirmado === true,
+        factor: Number(v.factor) > 0 ? Number(v.factor) : 1,
         diasSinMedir,
         comps: c?.comps ?? 0,
       })
@@ -248,11 +256,58 @@ export function planDeVentanas(
   })
 
   const tope = Math.max(1, max)
+  const ventanas = conReservaAltoValor(pedidas, tope, filtro.reservaAltoValor)
   return {
-    ventanas: pedidas.slice(0, tope),
+    ventanas,
     candidatas: pedidas.length,
-    recortadas: Math.max(0, pedidas.length - tope),
+    recortadas: Math.max(0, pedidas.length - ventanas.length),
   }
+}
+
+/** Cuántas plazas de cada pasada se guardan para los bloques CAROS sin medir. */
+export const RESERVA_ALTO_VALOR = 3
+
+/**
+ * Reparte el tope de la pasada entre la cola de urgencia y una RESERVA para lo caro sin medir.
+ *
+ * 🚨 POR QUÉ (18/08/2026, Navidad de House). La cola ordena por urgencia y, dentro de las vírgenes,
+ * por CERCANÍA — y eso, con el plan expandido por fecha de los eventos confirmados, es una cola FIFO
+ * por calendario: entre hoy y Navidad había ~44 noches de evento (Bienal 25, Pilar 4, Todos los
+ * Santos 3, el bloque de noviembre 7, el puente de diciembre 5) × 4 aforos = ~176 ventanas por
+ * delante. A 12 por pasada, la Navidad no se medía hasta diciembre. Medido ese día en `market_rates`:
+ * del 19/12 al 07/01 NO había un solo comparable fiable, y el motor tarificaba Nochebuena con la
+ * mediana de las noches normales de diciembre. El bloque más caro del invierno era el único a ciegas.
+ *
+ * La reserva coge, de lo que el tope dejaría fuera, las ventanas de mayor FACTOR nunca medidas: así
+ * los bloques gordos (Feria 3,2 · Semana Santa 3,2 · puente de diciembre 1,9 · Navidad 1,85) entran
+ * en las primeras pasadas aunque estén a ocho meses, y van rotando solos según se van midiendo.
+ * Nunca crece por encima del tope: la pasada sigue costando lo mismo.
+ */
+export function conReservaAltoValor(
+  pedidas: VentanaPedida[],
+  tope: number,
+  reserva = RESERVA_ALTO_VALOR,
+): VentanaPedida[] {
+  const r = Math.max(0, Math.min(reserva, Math.max(0, tope - 1)))
+  if (r === 0 || pedidas.length <= tope) return pedidas.slice(0, tope)
+
+  const cabeza = pedidas.slice(0, tope - r)
+  const dentro = new Set(cabeza.map(v => clave(v.checkin, v.aforo)))
+  // Solo CONFIRMADOS: un previsto es una apuesta (su premio ya va ponderado y no congela ningún
+  // precio), así que no puede colarse por delante de una noche que el motor tiene congelada.
+  const caras = pedidas
+    .filter(v => !dentro.has(clave(v.checkin, v.aforo)) &&
+      v.diasSinMedir === null && v.factor > 1 && v.eventoConfirmado === true)
+    .sort((a, b) => (b.factor - a.factor) || a.checkin.localeCompare(b.checkin))
+    .slice(0, r)
+
+  // Si no hay bloques caros vírgenes que rescatar, la reserva NO se desperdicia: la pasada vuelve a
+  // llenarse con la cola de urgencia (que es lo que había antes de este reparto).
+  const resto = pedidas.filter(v => {
+    const k = clave(v.checkin, v.aforo)
+    return !dentro.has(k) && !caras.some(c => clave(c.checkin, c.aforo) === k)
+  })
+  return [...cabeza, ...caras, ...resto].slice(0, tope)
 }
 
 /** Envoltura histórica: solo la lista. Nuevos usos, mejor `planDeVentanas` (declara el recorte). */

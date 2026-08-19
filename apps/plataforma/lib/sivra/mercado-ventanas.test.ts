@@ -126,10 +126,40 @@ test('cada mes aporta 3 fechas DISTINTAS, no solo el primer viernes', () => {
 })
 
 test('la mezcla es 2 de finde + 1 entre semana (el bucket se aplica a TODO el mes)', () => {
-  // Septiembre de 2026: primer viernes 04, segundo sabado 12, segundo martes 08.
+  // Septiembre de 2026: primer viernes 04, segundo sabado 12, CUARTO martes 22.
   assert.equal(findeDelMes('2026-08-01', 1, 0), '2026-09-04')
   assert.equal(findeDelMes('2026-08-01', 1, 1), '2026-09-12')
-  assert.equal(findeDelMes('2026-08-01', 1, 2), '2026-09-08')
+  assert.equal(findeDelMes('2026-08-01', 1, 2), '2026-09-22')
+})
+
+test('una de las tres muestras cae en la SEGUNDA quincena', () => {
+  // 🚨 18/08/2026: los tres ordenes caian en dias 1-14, asi que el corpus no tenia ni una medicion
+  // de la segunda mitad del mes salvo que hubiera evento — y con esas fechas el motor decidia el
+  // precio de Nochebuena. Se comprueba en varios meses para que no sea casualidad del calendario.
+  for (const m of [1, 2, 3, 4, 5, 6]) {
+    const dias = [0, 1, 2].map(o => Number(findeDelMes('2026-08-01', m, o).slice(8)))
+    assert.ok(dias.some(d => d >= 15), `mes +${m}: ninguna muestra en la segunda quincena (${dias})`)
+    assert.ok(dias.some(d => d <= 14), `mes +${m}: ninguna muestra en la primera quincena (${dias})`)
+  }
+})
+
+test('con la Navidad entera marcada como evento, diciembre CONSERVA sus 3 fechas', () => {
+  // El cuarto martes de diciembre de 2026 es el 22, dentro del bloque de Navidad. La version
+  // anterior corria la muestra +7 tres veces (29-dic, 5-ene, 12-ene) y sacaba la muestra DEL MES:
+  // diciembre se quedaba con dos fechas, perdia el bucket mensual y volvia al ancla global.
+  const navidad = ['21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31']
+    .map(d => ({ fecha: `2026-12-${d}`, factor: 1.5 }))
+  const v = ventanasDelBarrido('2026-08-01', navidad, { mesesBase: 4, maxEventos: 0 })
+  const dic = v.filter(x => x.motivo === 'mes' && x.checkin.startsWith('2026-12'))
+  assert.equal(dic.length, 3, 'diciembre tiene que seguir aportando 3 fechas propias')
+  assert.ok(dic.every(x => !navidad.some(e => e.fecha === x.checkin)), 'ninguna cae en fecha de evento')
+})
+
+test('el factor del evento viaja hasta la ventana (lo necesita la cola de urgencia)', () => {
+  const v = ventanasDelBarrido('2026-08-01', [{ fecha: '2027-04-16', factor: 3.2, nombre: 'Feria' }],
+    { mesesBase: 1, maxEventos: 6, horizonteDias: 365 })
+  const ev = v.find(x => x.motivo === 'evento')
+  assert.equal(ev?.factor, 3.2)
 })
 
 test('el orden 0 NO cambia: la serie historica del primer viernes se mantiene', () => {

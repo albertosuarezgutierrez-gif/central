@@ -9,7 +9,11 @@ export type PilotInput = {
   threshold: number          // pilot_no_booking_days (def. 7)
   currentBase: number | null // precio base actual en Smoobu
   marketP50Guest: number | null // mediana del mercado (precio HUÉSPED) — para el diagnóstico
-  channelMarkup: number      // base → huésped (def. 1.16)
+  channelMarkup: number      // multiplicador del canal (escaparate = markup × base + cuota fija)
+  // Parte FIJA que el canal suma a la noche (cuota por estancia ÷ noches típicas). Sin ella, el
+  // «precio huésped» que se compara contra el p50 del mercado sale corto y el diagnóstico dice
+  // «no estamos caros» cuando sí lo estamos: en House son ~299€ POR NOCHE de diferencia.
+  channelFijoNoche: number
   minPrice: number | null    // suelo de coste (nunca bajar de aquí)
   recommendedBase: number | null   // precio base recomendado por el MOTOR (lib/sivra/pricing-engine)
   recommendationConfident: boolean // mercado sólido (≥5 comps) y fresco (≤7d)
@@ -38,7 +42,9 @@ export function evaluatePilot(i: PilotInput): PilotVerdict {
   }
 
   const guestPrice =
-    i.currentBase != null ? Math.round(i.currentBase * i.channelMarkup) : null
+    i.currentBase != null
+      ? Math.round(i.currentBase * i.channelMarkup + (i.channelFijoNoche > 0 ? i.channelFijoNoche : 0))
+      : null
   const overMarket =
     guestPrice != null && i.marketP50Guest != null && guestPrice > i.marketP50Guest
 
@@ -67,7 +73,7 @@ export function evaluatePilot(i: PilotInput): PilotVerdict {
         : null
     const proposal =
       proposedBase != null && i.currentBase != null
-        ? `Bajar base ${i.currentBase}€ → ${proposedBase}€ (huésped ~${Math.round(proposedBase * i.channelMarkup)}€).`
+        ? `Bajar base ${i.currentBase}€ → ${proposedBase}€ (huésped ~${Math.round(proposedBase * i.channelMarkup + (i.channelFijoNoche > 0 ? i.channelFijoNoche : 0))}€).`
         : null
 
     return { verdict: "rojo", diagnosis, proposal, proposedBase }
