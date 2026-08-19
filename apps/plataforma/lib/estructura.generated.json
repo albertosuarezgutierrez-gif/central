@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-19T16:24:02Z",
+  "generadoEn": "2026-08-19T16:50:00Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4556,6 +4556,10 @@
       "fecha": ""
     },
     {
+      "titulo": "Sondeo estrenado en verde (18:47):",
+      "fecha": ""
+    },
+    {
       "titulo": "Suelto (menor):",
       "fecha": ""
     },
@@ -4585,10 +4589,6 @@
     },
     {
       "titulo": "17/08 ✅ Verificación A5 hecha:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Parado a propósito:",
       "fecha": ""
     }
   ],

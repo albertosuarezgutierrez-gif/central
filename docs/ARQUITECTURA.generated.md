@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-19T16:24:02Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-19T16:50:00Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -237,8 +237,8 @@
 - Ya no espera a nadie:
 - Consecuencia: NO aplicar `channel_markup=1.20`
 - Pendiente de tu decisión:
+- Sondeo estrenado en verde (18:47):
 - Suelto (menor):
 - PENDIENTE de Alberto (ops):
 - Pendiente Alberto: mergear el PR y re-vincular Kutxabank UNA vez en `/banca`
-- Autocrítica:
 
