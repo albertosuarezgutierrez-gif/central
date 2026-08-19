@@ -22,7 +22,11 @@
 - **`apps/alquiler`** — Alquiler de materiales/menaje (interno al grupo + a terceros). Compone
   `@central/module-alquiler`. BD compartida (rol `prisma_alquiler`). Desplegada y probada. Ver `apps/alquiler/CLAUDE.md`.
 - **`apps/housesevillana`** — **landing pública** de House Sevillana (`housesevillana.es`; 6 dorm/12 personas,
-  parking, centro de Sevilla). Next.js mínimo servido por rutas `edge` (`app/route.ts` devuelve el HTML entero).
+  parking, centro de Sevilla). **Dirección: Calle Socorro 24, 41003 Sevilla, barrio de San Julián**
+  (distrito Casco Antiguo; la calle va de la Plaza de San Román a la de San Marcos). ⚠️ **NO confundir
+  con Bustos Tavera 22**, que son OTROS dos pisos del grupo (Luxury Busto y Busto Reform, bajo dcha/izda,
+  alquilados a Gutiérrez Alcalá). La skill sincronizada `seo-house-sevillana` tiene esa confusión en su
+  ficha y en sus JSON-LD; vive FUERA del repo, así que la corrección es de Alberto (confirmado 19/08/2026). Next.js mínimo servido por rutas `edge` (`app/route.ts` devuelve el HTML entero).
   **Unificada en el monorepo el 12/08/2026** desde el repo suelto `house-sevillana-landing` — vivía fuera y por eso
   era invisible al leer `apps/sivra`, lo que llevó a afirmar por error que «no había web» (PR #1387→#1388). Se
   importó **SIN su historia git a propósito**: esa historia contenía una `service_role` de Supabase (ver
