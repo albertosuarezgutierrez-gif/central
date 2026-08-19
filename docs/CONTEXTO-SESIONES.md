@@ -213,6 +213,21 @@
   primario sigue fallando 2/2 — a vigilar, no bloqueante). Sin manuales de usuario que tocar (ningún
   cambio del rango es feature visible en `apps/ia-rest`).
 
+### 🔴 (19/08/2026) El panel de secretos cantaba «✅ redeploy lanzado» mientras el build moría
+- Salió rotando el `GITHUB_TOKEN` (ver entrada siguiente): el panel dijo OK, pero el redeploy de
+  plataforma acabó en **CANCELED** y el valor nuevo NO llegó a runtime — Alberto tuvo que redesplegar
+  los dos proyectos a mano. Es el landmine que el PR #1236 daba por cerrado, reaparecido por otra vía.
+- **DOS causas que se suman.** (1) El sondeo salía con `break` al ver **BUILDING** y devolvía `ok:true`;
+  pero el Ignored Build Step corre DENTRO del build, así que BUILDING es el estado ANTERIOR a la
+  cancelación: se declaraba éxito en la antesala del fallo. (2) El redeploy iba con
+  `withLatestCommit:true`, o sea pedía el ÚLTIMO commit de `main` — casi siempre el de la auditoría con
+  `[skip ci]`, que `vercel-ignore-build.mjs` salta SIEMPRE por asunto. Pedía justo lo que el filtro
+  tiene orden de cancelar.
+- **Fix:** sin `withLatestCommit` (se redespliega el commit del último deployment que SÍ construyó, que
+  por construcción ya pasó el filtro) y el sondeo solo termina en READY / CANCELED / ERROR; si se agota
+  el presupuesto con el build en marcha devuelve **`sinConfirmar`**, que el panel pinta 🟠 y NO verde.
+  `clasificarEstadoRedeploy` puro + 5 tests. Lección: no des por bueno el estado que precede al fallo.
+
 ### ✅ (19/08/2026) SEO housesevillana RESUELTO — al PAT le faltaba el REPO, no el permiso
 - El 403 del cron del 17/08 se cerró hoy. Diagnóstico con evidencia, no suposición: `secrets_audit` decía que
   la única escritura de `GITHUB_TOKEN` fue el **03/08** (antes de unificar la landing el 12/08) y la API que
@@ -229,8 +244,9 @@
 - **Sondeo estrenado en verde (18:47):** ✅ HTTP 409 en producción, sin escribir nada (el último commit de
   la landing siguió siendo el refresh de las 18:33). Confirma en vivo la premisa sobre la que se construyó,
   que hasta entonces era solo documentación de GitHub: **el permiso se valida ANTES que el sha**.
-- **Suelto (menor):** ese PAT NO tiene caducidad y conserva el repo viejo `house-sevillana-landing` en su
-  selección. Recomendado a Alberto ponerle 1 año y quitar el repo muerto; decisión suya, sin hacer.
+- **PAT rotado y saneado esa misma tarde:** ahora cubre SOLO `central` y **caduca el 19/08/2027**
+  (poner caducidad obliga a regenerar: no hay campo editable en un fine-grained ya creado). Vive solo en
+  los envs de Vercel de sivra y plataforma. Verificado con el sondeo tras la rotación: ✅ 409.
 
 ### 📈 (17/08/2026) Estreno del doble disparo de trading: la repesca SALVÓ la pasada — el disparo de las 20:15 murió OTRA VEZ
 - Check-in nocturno: el disparo de las 20:15Z no dejó NI UNA huella (2º fallo igual que el 14/08). La

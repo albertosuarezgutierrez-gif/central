@@ -29,7 +29,7 @@ export async function upsertProjectEnv(
   projectId: string,
   key: string,
   value: string,
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<ResultadoRedeploy> {
   const token = TOKEN()
   if (!token) return { ok: false, error: 'VERCEL_ADMIN_TOKEN no configurado' }
   const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
@@ -81,10 +81,31 @@ export async function upsertProjectEnv(
  * para que una env recién escrita entre en runtime SIN tener que entrar a Vercel.
  * No bloquea la operación principal: el caller la trata como best-effort.
  */
+/**
+ * Estado de un deployment de Vercel, reducido a lo que decide el veredicto.
+ * PURO y testeable. `desconocido` se trata como «aún no sé», nunca como éxito.
+ */
+export type EstadoRedeploy = 'listo' | 'construyendo' | 'cancelado' | 'error' | 'desconocido'
+
+export function clasificarEstadoRedeploy(estado: unknown): EstadoRedeploy {
+  switch (estado) {
+    case 'READY':        return 'listo'
+    case 'CANCELED':     return 'cancelado'
+    case 'ERROR':        return 'error'
+    case 'QUEUED':
+    case 'INITIALIZING':
+    case 'BUILDING':     return 'construyendo'
+    default:             return 'desconocido'
+  }
+}
+
+/** `sinConfirmar` = se lanzó y no se canceló, pero no dio tiempo a verlo terminar. */
+export type ResultadoRedeploy = { ok: boolean; sinConfirmar?: boolean; error?: string; inspectorUrl?: string }
+
 export async function redeployProjectProduction(
   projectId: string,
   projectName: string,
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<ResultadoRedeploy> {
   const token = TOKEN()
   if (!token) return { ok: false, error: 'VERCEL_ADMIN_TOKEN no configurado' }
   const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
@@ -100,18 +121,26 @@ export async function redeployProjectProduction(
   const deploymentId = last?.uid || last?.id
   if (!deploymentId) return { ok: false, error: 'sin deployment de producción previo que redeployar' }
 
-  // 2) Redeploy con el commit más reciente de la rama (no el viejo sha).
-  //    `commandForIgnoringBuildStep: ''` desactiva el Ignored Build Step SOLO para este
-  //    deployment: un redeploy pedido a mano desde el panel debe construir SIEMPRE.
-  //    Sin el override, `vercel-ignore-build.mjs` cancela el build si el último commit
-  //    de main es el de la auditoría con [skip ci] (que es lo habitual) y la env
-  //    guardada nunca entra en runtime (incidente GITHUB_TOKEN, 03/08/2026).
+  // 2) Redeploy del MISMO deployment, sin `withLatestCommit`.
+  //
+  //    🚨 Antes iba con `withLatestCommit: true` y por eso moría (19/08/2026): eso
+  //    redespliega el ÚLTIMO commit de main, que casi siempre es el de la auditoría con
+  //    `[skip ci]` en el asunto — y `vercel-ignore-build.mjs` salta esos SIEMPRE, por
+  //    asunto y sin mirar rutas. O sea, el redeploy pedía justo el commit que el filtro
+  //    tiene orden de cancelar.
+  //
+  //    Sin ese flag se redespliega el commit del último deployment de producción que SÍ
+  //    construyó, que por construcción ya pasó el filtro de ESTE proyecto → vuelve a
+  //    pasarlo. Y de paso es lo correcto: guardar un secreto no debe publicar además
+  //    código nuevo que nadie ha pedido desplegar.
+  //
+  //    `commandForIgnoringBuildStep: ''` se mantiene como segundo cinturón, pero ya no
+  //    se depende de que Vercel lo respete en un redeploy.
   const cuerpo: Record<string, unknown> = {
     name: projectName,
     project: projectId,
     deploymentId,
     target: 'production',
-    withLatestCommit: true,
   }
   let res = await fetch(`${base}/v13/deployments?teamId=${TEAM}&forceNew=1`, {
     method: 'POST',
@@ -133,29 +162,44 @@ export async function redeployProjectProduction(
   }
 
   // 3) Verificar que el deployment creado no se cancela: "redeploy lanzado" no es
-  //    "redeploy hecho". Sondeo breve; si al agotarlo sigue en cola/build se da por
-  //    bueno (best-effort), pero un CANCELED/ERROR se reporta como fallo real.
+  //    "redeploy hecho".
+  //
+  //    🚨 El bug que esto arregla (19/08/2026): el bucle salía con `break` al ver
+  //    BUILDING y devolvía ok:true. Pero el Ignored Build Step corre DENTRO del build,
+  //    así que BUILDING es justo el estado ANTERIOR a la cancelación — se declaraba
+  //    éxito en la antesala del fallo. El panel cantaba «✅ redeploy lanzado» mientras
+  //    el deployment moría en CANCELED y la env se quedaba fuera de runtime.
+  //
+  //    Ahora BUILDING/QUEUED no terminan el sondeo: solo lo terminan READY (confirmado),
+  //    CANCELED/ERROR (fallo) o agotar el presupuesto → `sinConfirmar`, que NO es verde.
+  //    Tres estados, porque «aún construyendo» no es «ha ido bien».
   const creado = await res.json().catch(() => ({}))
   const nuevoId: string | undefined = creado?.id || creado?.uid
-  if (nuevoId) {
-    const limite = Date.now() + 15_000
-    while (Date.now() < limite) {
-      await new Promise((r) => setTimeout(r, 3_000))
-      const st = await fetch(`${base}/v13/deployments/${nuevoId}?teamId=${TEAM}`, { headers })
-        .then((r) => (r.ok ? r.json() : null))
-        .catch(() => null)
-      const estado = st?.readyState || st?.status
-      if (estado === 'CANCELED') {
+  const inspectorUrl: string | undefined = creado?.inspectorUrl
+  if (!nuevoId) return { ok: true, sinConfirmar: true, inspectorUrl }
+
+  const limite = Date.now() + 20_000
+  while (Date.now() < limite) {
+    await new Promise((r) => setTimeout(r, 3_000))
+    const st = await fetch(`${base}/v13/deployments/${nuevoId}?teamId=${TEAM}`, { headers })
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null)
+    switch (clasificarEstadoRedeploy(st?.readyState ?? st?.status)) {
+      case 'cancelado':
         return {
           ok: false,
+          inspectorUrl,
           error: `el redeploy de ${projectName} se canceló (Ignored Build Step) — la env está guardada pero NO en runtime`,
         }
-      }
-      if (estado === 'ERROR') {
-        return { ok: false, error: `el build del redeploy de ${projectName} falló — la env no está en runtime` }
-      }
-      if (estado === 'READY' || estado === 'BUILDING') break
+      case 'error':
+        return { ok: false, inspectorUrl, error: `el build del redeploy de ${projectName} falló — la env no está en runtime` }
+      case 'listo':
+        return { ok: true, inspectorUrl }
+      default:
+        break // construyendo / desconocido → seguir mirando
     }
   }
-  return { ok: true }
+  // Se agotó el presupuesto con el build todavía en marcha. No es un fallo, pero
+  // tampoco una confirmación: se declara como tal para que el panel no lo pinte verde.
+  return { ok: true, sinConfirmar: true, inspectorUrl }
 }
