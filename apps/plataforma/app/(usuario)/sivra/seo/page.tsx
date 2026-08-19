@@ -13,12 +13,24 @@ type SeoProposal = {
   createdAt: string
 }
 
+// Sondeo del permiso de escritura del GITHUB_TOKEN (ver /api/sivra/seo-token-check).
+// `estado` tiene TRES lecturas, no dos: puede escribir / no puede / no lo sé. El «no lo sé»
+// se pinta ámbar a propósito — un check que se pone verde porque no entendió la respuesta
+// es peor que no tenerlo.
+type Sondeo = {
+  estado: 'puede-escribir' | 'sin-token' | 'token-invalido' | 'sin-permiso' | 'no-lee' | 'desconocido'
+  mensaje: string
+  status: number | null
+}
+
 export default function SeoPage() {
   const [proposals, setProposals] = useState<SeoProposal[]>([])
   const [loading,   setLoading]   = useState(true)
   const [running,   setRunning]   = useState(false)
   const [result,    setResult]    = useState<{ title?: string; analysis?: string; error?: string } | null>(null)
   const [expanded,  setExpanded]  = useState<string | null>(null)
+  const [probando,  setProbando]  = useState(false)
+  const [sondeo,    setSondeo]    = useState<Sondeo | null>(null)
 
   useEffect(() => { fetchHistory() }, [])
 
@@ -52,6 +64,23 @@ export default function SeoPage() {
     }
   }
 
+  async function probarToken() {
+    setProbando(true)
+    setSondeo(null)
+    try {
+      const res  = await fetch('/api/sivra/seo-token-check')
+      const data = await res.json()
+      // Sin `estado` no sabemos nada: NO lo demos por bueno ni por malo, dilo como «no lo sé».
+      setSondeo(data?.estado
+        ? data as Sondeo
+        : { estado: 'desconocido', status: res.status, mensaje: data?.error ?? 'Respuesta inesperada del servidor' })
+    } catch (e) {
+      setSondeo({ estado: 'desconocido', status: null, mensaje: String(e) })
+    } finally {
+      setProbando(false)
+    }
+  }
+
   return (
     <div style={{ padding: '24px', maxWidth: 896 }}>
       <style>{`
@@ -63,6 +92,7 @@ export default function SeoPage() {
           .seo-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
         }
         @media (max-width: 480px) {
+          .seo-header .seo-actions { width: 100% !important; }
           .seo-header button { width: 100% !important; justify-content: center !important; }
         }
       `}</style>
@@ -73,23 +103,66 @@ export default function SeoPage() {
           <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', margin: 0 }}>SEO · housesevillana.es</h1>
           <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4, marginBottom: 0 }}>Analiza la competencia y actualiza los metadatos de la landing directamente</p>
         </div>
-        <button
-          onClick={runSeo}
-          disabled={running}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '10px 20px', borderRadius: 6, fontSize: 13, fontWeight: 600,
-            background: running ? 'var(--primary-hover)' : 'var(--primary)',
-            color: '#fff', border: 'none', cursor: running ? 'not-allowed' : 'pointer',
-            opacity: running ? 0.7 : 1, flexShrink: 0,
-            boxShadow: '0 2px 12px rgba(79,70,229,0.35)',
-          }}
-        >
-          {running
-            ? <><span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⟳</span> Analizando (~30s)...</>
-            : <><span>🔍</span> Actualizar SEO ahora</>}
-        </button>
+        <div className="seo-actions" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flexShrink: 0 }}>
+          {/* Comprobación barata (1 s) del permiso que solo se descubría al final del análisis. */}
+          <button
+            onClick={probarToken}
+            disabled={probando || running}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: '10px 16px', minHeight: 44, borderRadius: 6, fontSize: 13, fontWeight: 600,
+              background: 'transparent', color: 'var(--text)',
+              border: '1px solid var(--border)',
+              cursor: probando || running ? 'not-allowed' : 'pointer',
+              opacity: probando || running ? 0.6 : 1,
+            }}
+          >
+            {probando
+              ? <><span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⟳</span> Probando...</>
+              : <><span>🔑</span> Probar acceso a GitHub</>}
+          </button>
+          <button
+            onClick={runSeo}
+            disabled={running || probando}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: '10px 20px', minHeight: 44, borderRadius: 6, fontSize: 13, fontWeight: 600,
+              background: running ? 'var(--primary-hover)' : 'var(--primary)',
+              color: '#fff', border: 'none', cursor: running || probando ? 'not-allowed' : 'pointer',
+              opacity: running || probando ? 0.7 : 1,
+              boxShadow: '0 2px 12px rgba(79,70,229,0.35)',
+            }}
+          >
+            {running
+              ? <><span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⟳</span> Analizando (~30s)...</>
+              : <><span>🔍</span> Actualizar SEO ahora</>}
+          </button>
+        </div>
       </div>
+
+      {/* Resultado del sondeo del token — TRES estados, nunca dos */}
+      {sondeo && !probando && (() => {
+        const verde = sondeo.estado === 'puede-escribir'
+        const ambar = sondeo.estado === 'desconocido'
+        const paleta = verde
+          ? { bg: '#f0fdf4', bd: '#bbf7d0', fg: '#15803d', icono: '✅', titulo: 'El token puede commitear la landing' }
+          : ambar
+            ? { bg: '#fffbeb', bd: '#fde68a', fg: '#b45309', icono: '🟠', titulo: 'No he podido determinarlo' }
+            : { bg: '#fef2f2', bd: '#fecaca', fg: '#b91c1c', icono: '❌', titulo: 'El token NO puede commitear la landing' }
+        return (
+          <div style={{ marginBottom: 20, borderRadius: 6, padding: 16, background: paleta.bg, border: `1px solid ${paleta.bd}` }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: paleta.fg, marginBottom: 6 }}>
+              {paleta.icono} {paleta.titulo}{sondeo.status ? ` (HTTP ${sondeo.status})` : ''}
+            </div>
+            <div style={{ fontSize: 12, color: '#4b5563', lineHeight: 1.6, wordBreak: 'break-word' }}>{sondeo.mensaje}</div>
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8, lineHeight: 1.5 }}>
+              Sondeo de solo lectura: no escribe nada en el repo. Comprueba el <code>GITHUB_TOKEN</code> de
+              <strong> plataforma</strong>; el cron semanal corre en el proyecto <strong>sivra</strong>, que tiene su
+              propia copia — para esa, <code>/api/seo-token-check</code> en la app sivra.
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Running indicator */}
       {running && (
