@@ -151,9 +151,36 @@ Exporta dos constantes que `route.ts` interpola una sola vez, encima de la secci
 - Meses y días de la semana con `Intl.DateTimeFormat(document.documentElement.lang)`. Sale gratis
   en es/en/it porque `localizar()` ya fija el `lang` de cada variante. Solo la leyenda y los
   mensajes van al diccionario.
-- Pulsar una noche libre abre el motor de reservas. Si se confirma que el motor admite
-  pre-rellenar la fecha por URL, se le pasa; si no, se abre sin fecha. **No se inventa el
-  parámetro.**
+- Pulsar una noche libre abre el motor de reservas **con la fecha ya puesta**. Ver abajo.
+
+#### El enlace profundo al motor (investigado el 19/08/2026)
+
+Smoobu **no documenta** públicamente el pre-relleno de fechas del motor de reservas. Pero dos
+repos públicos, sin relación entre sí y con **dos cuentas Smoobu distintas**, construyen la misma
+URL con los mismos seis parámetros y el mismo formato de fecha (`MehdiTrari/Roaming`, slug
+`RoamingLille`, PHP; `irina-miron/Alojamentos-Ninho`, slug `Ninho`, TS, en cuatro ficheros). Que
+coincidan por casualidad no es plausible:
+
+```
+https://booking.smoobu.com/yourothercity?apartmentId=352007
+  &arrivalDate=24/09/2026&departureDate=27/09/2026
+  &adults=6&children=0&loadForCurrentDate=true
+```
+
+🚨 **`dd/mm/yyyy`, NO ISO.** La API de Smoobu (`login.smoobu.com/api/*`, la que ya usan
+`apps/plataforma` y `apps/sivra`) tiene campos con el **mismo nombre** `arrivalDate`/
+`departureDate` pero en `yyyy-mm-dd`. Mismo nombre, formato distinto. Esto va anotado en
+`app/reservas.ts` junto a la URL, porque el resto del monorepo habla ISO con Smoobu y el
+siguiente que toque esto se equivocará.
+
+**Estado: no verificado end-to-end.** El proxy de red de este entorno bloquea `*.smoobu.com`, así
+que no se ha podido abrir la URL. Se implementa igualmente porque **el modo de fallo es benigno**:
+si el motor ignorase los parámetros, abriría en la casa correcta sin fechas — exactamente lo que
+hace hoy el botón. Lo que no se puede es *afirmar* que las fechas aparecen sin haberlo visto.
+
+**Cierre pendiente (30 segundos de Alberto, no de código):** pegar esa URL en un navegador y mirar
+si el calendario abre con las fechas marcadas y 6 adultos. Es binario. Si no funciona, se quitan
+los parámetros y el clic sigue llevando al motor.
 
 **Accesibilidad:** tabla semántica con `<caption>` por mes, `aria-label` por celda («21 de
 agosto, ocupado»), foco de teclado visible, `prefers-reduced-motion` respetado.
