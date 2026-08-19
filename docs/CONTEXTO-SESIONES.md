@@ -51,7 +51,7 @@
 - ❌ **`position_factor` de House NO se sube a 1,23.** El «6/6 reservas sobre el p50» era sesgo de
   supervivencia: la ocupación realizada de House es la más baja de los cuatro (47% a 12 meses) y ya
   lista al 1,88× del mercado. Subir sería ir en la dirección contraria a lo que dicen los datos.
-- PR #1485.
+- PR #1484.
 
 ### 📐 (19/08/2026) El canal NO es un markup: es una recta — y ahora se mide y se corrige SOLO
 - Medido el escaparate real de los CUATRO pisos con el conector (16 ventanas): el canal multiplica por
