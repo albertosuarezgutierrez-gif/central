@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-19T16:50:00Z",
+  "generadoEn": "2026-08-19T17:28:31Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4532,6 +4532,22 @@
   ],
   "novedades": [
     {
+      "titulo": "Dos secciones colgaban POR DEBAJO del `<footer>`",
+      "fecha": ""
+    },
+    {
+      "titulo": "Dirección resuelta (Alberto, 19/08):",
+      "fecha": ""
+    },
+    {
+      "titulo": "Nuevo `apps/housesevillana/CLAUDE.md`",
+      "fecha": ""
+    },
+    {
+      "titulo": "Punto ciego cerrado:",
+      "fecha": ""
+    },
+    {
       "titulo": "Validación FUERA de muestra",
       "fecha": ""
     },
@@ -4574,29 +4590,12 @@
     {
       "titulo": "Autocrítica:",
       "fecha": ""
-    },
-    {
-      "titulo": "Comps escritos hoy: busto=406 · duplex=263 · luxury=322 · house=186",
-      "fecha": ""
-    },
-    {
-      "titulo": "Fase 1 (Claude Chrome, `docs/BOOKING-FASE1-SMOOBU-2026-08-16.md`):",
-      "fecha": ""
-    },
-    {
-      "titulo": "Fase 2 (BD):",
-      "fecha": ""
-    },
-    {
-      "titulo": "17/08 ✅ Verificación A5 hecha:",
-      "fecha": ""
     }
   ],
   "saludRepo": {
     "packagesSinDescripcion": [],
     "appsSinClaudeMd": [
-      "almacen",
-      "housesevillana"
+      "almacen"
     ],
     "appsSinVercelJson": []
   },

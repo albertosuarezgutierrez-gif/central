@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-19T16:50:00Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-19T17:28:31Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -231,14 +231,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- Dos secciones colgaban POR DEBAJO del `<footer>`
+- Dirección resuelta (Alberto, 19/08):
+- Nuevo `apps/housesevillana/CLAUDE.md`
+- Punto ciego cerrado:
 - Validación FUERA de muestra
 - Centinela del precio al HUÉSPED
 - Canal por PORTAL
 - Ya no espera a nadie:
 - Consecuencia: NO aplicar `channel_markup=1.20`
 - Pendiente de tu decisión:
-- Sondeo estrenado en verde (18:47):
-- Suelto (menor):
-- PENDIENTE de Alberto (ops):
-- Pendiente Alberto: mergear el PR y re-vincular Kutxabank UNA vez en `/banca`
 

@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-19T16:33:40Z",
-  "sha": "b9a32b56246cd0e0a7bcde7aae6b0fcf1cea3b08",
+  "generadoEn": "2026-08-19T17:28:31Z",
+  "sha": "f2a032115f936a6aa5838e765503446bf068a6ed",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -2857,7 +2857,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a8c4cb25f8cc"
+      "hash": "96b76e1a7faf"
     },
     {
       "ruta": "apps/housesevillana/app/en/parking/route.ts",
@@ -2915,13 +2915,13 @@
           "exportada": true,
           "params": "html: string",
           "retorno": "string",
-          "linea": 203,
+          "linea": 194,
           "resumen": "Traduce el HTML español al inglés. Sustituye de la cadena más larga a la más corta a propósito: si «La casa» se aplicase antes que «La casa por dentro», la segunda quedaría medio traducida."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d79942b40e51"
+      "hash": "be4108d28532"
     },
     {
       "ruta": "apps/housesevillana/app/i18n/motor.ts",
@@ -3101,7 +3101,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 686
+          "linea": 771
         },
         {
           "nombre": "GET",
@@ -3109,14 +3109,14 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 861
+          "linea": 908
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "e7770ea0ec40"
+      "hash": "d0a002f5af2e"
     },
     {
       "ruta": "apps/housesevillana/app/sitemap.xml/route.ts",
