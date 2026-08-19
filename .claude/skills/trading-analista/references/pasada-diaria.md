@@ -70,6 +70,11 @@ antes, dilo en el resumen de Telegram — esa pasada mide contra el cierre de ay
    descartada es una compra o una venta que no existe para Hacienda.
    ⚠️ **Límite conocido:** IBKR solo sirve unos cuatro trimestres hacia atrás por esta vía, así que
    el histórico anterior no es recuperable si no se ha volcado ya.
+   **📡 Y SIEMPRE, salga bien o mal, deja el latido** (es lo que distingue «no hubo operaciones» de
+   «llevo tres semanas sin poder leer IBKR», que sin esto se ven idénticos):
+   `POST {PLATAFORMA_URL}/api/internal/latido` (Bearer `ALERTA_TOKEN`) con
+   `{ agente: 'trading_operaciones', ok: <true si LEÍSTE IBKR>, detalle: '<N> nuevas de <M> leídas'
+   | 'sin respuesta del conector' }`. `ok:false` marca el intento sin tocar la última pasada buena.
 
 2. Cargar la watchlist activa (tabla `trading_watchlist`, capas A/B/C; ver spec). En Fase 1 la lista
    inicial se siembra con `apps/plataforma/prisma/sql/trading_watchlist_seed.sql`.
