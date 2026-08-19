@@ -32,6 +32,16 @@
 
 ---
 
+### 📸 (19/08/2026) La portada de House era una escalera (y el alt decía «fachada»)
+- Lo vio Alberto, no el repaso de diseño: **ninguna sesión puede ver las fotos** de la landing
+  (Drive/`lh3.googleusercontent.com` bloqueados por egress; el conector de Drive lista pero
+  `read_file_content` da vacío para JPEG). Rendericé con marcadores de color y di el repaso por
+  bueno igualmente — ese fue el fallo.
+- Portada → **salón** (elección de Alberto sobre las 115 fotos de la carpeta de Drive), encuadre
+  centrado, y `alt` que dice la verdad. La galería pierde el salón (ya está arriba): queda patio
+  grande + dormitorio, cocina y escalera, rejilla a 4.
+- ⚠️ Pendiente: Alberto quiere **una foto de Sevilla**; no hay ninguna en Drive y no se genera ni
+  se licencia stock sin su OK.
 ### 🔢 (19/08/2026) La nota de House era vieja — y la skill de SEO tiene la ficha de OTRO piso
 - Nota real por el conector de Booking: **8,6/10 con 51 reseñas**. La landing decía 8,1 con +47
   (dato de hace meses) y el bloque borrado hoy decía 9,2/4,9 (inventado). Aplicado en hero y barra
