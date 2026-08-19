@@ -58,6 +58,12 @@
   `app/calendario.ts` para no darle superficie al agente SEO de los lunes — y por eso el guardián i18n
   pasa a leer también ese fichero (si no, sus 16 claves quedaban fuera de la red: el fallo de #1487).
 - Spec + apéndice con markup y CSS: `docs/superpowers/specs/2026-08-19-calendario-disponibilidad-design.md`.
+- **🚨 Lección de CI (misma sesión):** el PR pasó ~1h30 sin que corriera NINGÚN check y se llegó a culpar
+  al token de la GitHub App. Falso: el PR estaba en **conflicto** con `main` (#1499→#1503 movieron el
+  archivo de memoria). **Con el PR en conflicto GitHub no puede construir la ref de merge y los workflows
+  `pull_request` ni se disparan** — ni con pushes nuevos ni cerrando y reabriendo el PR. Al mergear `main`
+  en la rama arrancaron los 15 checks en el acto, todos en verde. Antes de diagnosticar «la CI no corre»,
+  mira `mergeable_state` (`dirty` = esto).
 - **Sin verificar:** el enlace profundo al motor con fecha (`arrivalDate=dd/mm/yyyy`, NO ISO como su API).
   Evidencia de dos repos públicos con cuentas Smoobu distintas; el proxy bloquea `*.smoobu.com`. Degrada
   a abrir el motor sin fecha, así que el riesgo es nulo. **Falta que Alberto pegue la URL en un navegador.**
