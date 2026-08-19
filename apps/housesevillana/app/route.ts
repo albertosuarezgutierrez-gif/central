@@ -9,8 +9,8 @@ export const HTML = `<!DOCTYPE html>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNSIgZmlsbD0iI0IwNEUyQSIvPjx0ZXh0IHg9IjE2IiB5PSIyMS41IiBmb250LWZhbWlseT0iR2VvcmdpYSxzZXJpZiIgZm9udC1zaXplPSIxNC41IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgbGV0dGVyLXNwYWNpbmc9IjAuNSI+SFM8L3RleHQ+PC9zdmc+"/>
 
 <!-- SEO Primary -->
-<title>Casa vacacional en Sevilla centro con parking | House Sevillana</title>
-<meta name="description" content="Alquila esta casa de 290m² en Sevilla centro: 6 dormitorios, 4 baños, parking privado y patio andaluz. Ideal para grupos hasta 12 personas. Reserva directa sin comisiones."/>
+<title>Casa Sevilla 12 personas con parking | 6 dormitorios VFT</title>
+<meta name="description" content="Casa vacacional Sevilla centro 290m²: 6 dormitorios, 4 baños, parking privado, patio andaluz. Hasta 12 personas. VFT/SE/01179. Reserva directa sin comisiones."/>
 <link rel="canonical" href="https://www.housesevillana.es/"/>
 <link rel="alternate" hreflang="es" href="https://www.housesevillana.es/"/>
 <link rel="alternate" hreflang="en" href="https://www.housesevillana.es/en"/>
@@ -21,8 +21,8 @@ export const HTML = `<!DOCTYPE html>
 <meta property="og:type" content="website"/>
 <meta property="og:locale" content="es_ES"/>
 <meta property="og:url" content="https://www.housesevillana.es/"/>
-<meta property="og:title" content="Casa vacacional en Sevilla centro con parking | House Sevillana"/>
-<meta property="og:description" content="Casa vacacional en Sevilla centro con parking privado y patio andaluz para 12 personas. Reserva directa sin comisiones."/>
+<meta property="og:title" content="Casa Sevilla 12 personas con parking | 6 dormitorios VFT"/>
+<meta property="og:description" content="Casa 290m² Sevilla centro: 6 dormitorios, parking, patio andaluz. Hasta 12 personas. Reserva sin comisiones."/>
 <meta property="og:image" content="https://lh3.googleusercontent.com/d/1rDXs-fjAmmDQFTfZ7fTutPZvosAV2GMo"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:image" content="https://lh3.googleusercontent.com/d/1rDXs-fjAmmDQFTfZ7fTutPZvosAV2GMo"/>
