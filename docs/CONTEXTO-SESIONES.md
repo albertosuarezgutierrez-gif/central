@@ -47,7 +47,13 @@
   PRs (43 EFs + 27 clientes), cron `monitor-health` a cabecera `apikey`, y pulsar el botón. Hasta ahí la
   clave filtrada sigue viva.
 - 🟠 Aparte: el panel avisa «período de gracia finalizado» en plan **Free** sobre la BD compartida de todas
-  las verticales. Más urgente que la rotación.
+  las verticales. Comprobado por MCP: org en `free`, proyecto `ACTIVE_HEALTHY`, BD 151 MB de 500 → la cuota
+  que se agota NO es almacenamiento (será egress/MAU/compute, invisible por MCP). Mirar Organization → Usage.
+- 🧪 En vez de migrar las 43 EFs a ciegas: **piloto en `ia-training-dashboard`** (solo lee, PIN,
+  `verify_jwt=false`). La doc de Supabase se contradice sobre si `supabase-js` con `sb_secret_…` sigue
+  hablando con PostgREST (manda la clave también en `Bearer`), y eso decide el enfoque de las otras 42.
+  Se prueba abriendo `?pin=9999&api=1` tras desplegarla. Sin `config.toml` en el repo: el `verify_jwt` de
+  cada función se toca a mano en el panel, no viaja en el PR.
 
 ### 📋 (19/08/2026) Inventario de ofertas Booking — House hecho, 3 pendientes
 - Nuevo `docs/BOOKING-OFERTAS-INVENTARIO.md`: inventario extranet por piso (Claude Chrome, solo

@@ -62,12 +62,33 @@ roto, no funcionando**: nada que rotar ahí, pero sí que arreglar algún día �
    (se pueden reactivar si aparece un consumidor olvidado).
 7. **Revisar los logs de Supabase** por uso ajeno entre el 06/05 y la desactivación.
 
+## 🧪 Piloto antes de tocar las 43 (19/08/2026)
+
+La documentación de Supabase se contradice en el punto que MÁS importa aquí. La guía de migración
+dice que en backend basta con `createClient(url, 'sb_secret_…')`, pero la página de claves añade que
+una clave nueva en `Authorization: Bearer` «se reenvía a la base de datos y se rechaza porque no es
+un JWT» — y `supabase-js` manda la clave en **las dos** cabeceras por defecto. No se puede decidir
+desde la documentación si las 43 funciones seguirían hablando con PostgREST tras el cambio.
+
+Por eso **NO** se migran las 43 a ciegas. Primero va una sola, `ia-training-dashboard`, elegida
+porque solo lee, está detrás de un PIN y se abre en el navegador (o sea que ya tiene
+`verify_jwt=false`): si la clave nueva no sirviera, se ve al abrirla y no se cae nada.
+
+- **Cómo se prueba:** desplegar esa función y abrir `…/functions/v1/ia-training-dashboard?pin=9999&api=1`.
+  Si devuelve el JSON de siempre, la clave nueva vale contra PostgREST y las otras 42 son mecánicas.
+  Si devuelve `Invalid JWT` o 401, la migración necesita otro enfoque (SDK `@supabase/server`) y nos
+  hemos enterado con una función tonta en vez de con la de facturar.
+- El helper `claveSecreta()` **prefiere la nueva y cae a la legacy**, así que mientras convivan el
+  cambio es reversible.
+
 ## ⚠️ Trampas conocidas antes de tocar código
 
 - **Las claves nuevas NO son JWT.** Van en la cabecera `apikey`; en `Authorization: Bearer` el gateway
   intenta parsearlas como JWT y devuelve `Invalid JWT`. Esto afecta a los pasos 3, 4 y 5.
-- **`verify_jwt`**: el check del gateway solo entiende las claves legacy. Las funciones que pasen a la
-  clave nueva necesitan `verify_jwt = false` y autorizar en su propio código.
+- **`verify_jwt`**: el check del gateway solo entiende las claves legacy, y la plataforma **no valida
+  la cabecera `apikey`** por su cuenta: la función que pase a la clave nueva necesita `verify_jwt = false`
+  y comprobar el `apikey` en su propio código. Este repo **no tiene `config.toml`**, así que ese ajuste
+  vive en el panel por función y NO puede viajar en un PR: hay que tocarlo a mano al migrar cada una.
 - **Realtime**: las conexiones públicas quedan limitadas a 24 h salvo que se eleven con auth de usuario.
   Ojo al **KDS de ia-rest**, que son pantallas abiertas días enteros.
 
@@ -76,3 +97,9 @@ roto, no funcionando**: nada que rotar ahí, pero sí que arreglar algún día �
 El dashboard muestra una banda naranja permanente: **«El período de gracia ha finalizado · Tus proyectos
 no podrán atender solicitudes cuando agotes tu cuota»**, con el proyecto en plan **Free**. Es la BD
 compartida de TODAS las verticales. Merece mirada propia, y es más urgente que la rotación.
+
+Lo comprobado por MCP (19/08): organización `fzagbwkkzfjlsvflkkvn` en plan **`free`**, proyecto
+`central` en `ACTIVE_HEALTHY` y la BD ocupa **151 MB** (el límite del plan gratuito son 500 MB).
+O sea que **la cuota que se está agotando NO es la de almacenamiento**; será egress, MAU o compute,
+y eso NO se ve por MCP. Hay que abrirlo en Organization → Usage. Ahí decide Alberto: 10 verticales
+en producción sobre un plan sin SLA es la clase de riesgo que no avisa dos veces.
