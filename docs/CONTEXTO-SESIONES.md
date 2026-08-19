@@ -32,6 +32,17 @@
 
 ---
 
+### 🗄️ (19/08/2026) Unificación Supabase CERRADA — un solo proyecto (rename a «central» pendiente de Alberto)
+- Alberto pidió unir los 2 proyectos Supabase. Hallazgo: el flip de junio SÍ se hizo (viejo congelado
+  desde jun, compartida con escrituras vivas — la nota "split-brain 12/07" estaba desfasada), pero el
+  cierre quedó a medias: 5 EFs desplegadas al proyecto VIEJO tras el corte (qr-assistant daba 404 en
+  prod), los 25 crons sin recrear, y Realtime del KDS sin publication (solo preavisos).
+- Cerrado: 5 EFs redesplegadas + 45 fuentes versionadas, 25 crons recreados (migr. 20260819), Realtime
+  +9 tablas, ~1.390 filas valiosas copiadas por pg_net (leads/CRM/training/stripe_events), crons del
+  viejo apagados (0), refs de repo/skills/MATRIZ corregidas. PR draft de la rama claude/unificar-supabase-*.
+- Pendiente Alberto (docs/PROMPT-CHROME-cierre-supabase.md): rename→central, webhooks Stripe/MONEI
+  (¡aún apuntan al viejo!), app.service_role_key, pausar proyecto viejo.
+
 ### 🩺 (19/08/2026) psd2-health-check — feed sano, sin anomalías
 - Preflight canal alerta OK (200). Frescura `movimientos_bancarios WHERE origen='psd2'`: último
   movimiento 17/08 (2 días, dentro de umbral 48h); mov_30d=63 vs mov_30d_prev=71 (caída ~11%,

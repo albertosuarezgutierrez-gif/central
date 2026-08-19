@@ -166,3 +166,37 @@ legibles por API). **NO cambiar las envs de Vercel hasta meter secrets + exponer
    (Si hay `DATABASE_URL`/`DIRECT_URL`, cámbialas también.) Luego **Redeploy** de ia-rest.
 4. Avísame ("**corte hecho**") y hago el smoke test + cierro el puente de plataforma + DROP `_mig_ddl`.
 5. Después: resetear la password de BD de ia-rest (quedó en el chat) y jubilar el proyecto viejo.
+
+---
+
+## ✅ CIERRE FINAL (19/08/2026) — unificación TERMINADA
+
+El flip de envs se ejecutó (mediados de junio/julio): verificación empírica 19/08 — todas las
+tablas de runtime del viejo congeladas desde primeros de junio; el compartido recibe las
+escrituras vivas. La nota de «split-brain 12/07» de `ia-rest-maestro` quedó desfasada y se corrigió.
+
+Lo cerrado hoy (rama `claude/unificar-supabase-ingress-gastos-zwt9mh`):
+- **Edge Functions**: 45 vivas en el compartido. Se repararon 5 con drift que se habían
+  desplegado al proyecto VIEJO después del corte (`qr-assistant` — no existía en el compartido
+  y la app QR le daba 404 —, `daily-briefing` v2 pasarela Director, `nim-sentiment`,
+  `nim-diagnostico` con el swap glm-5.2 de PR #1456, `ig-video-gen` v7 Veo3). Fuentes de las
+  45 versionadas en `apps/ia-rest/supabase/functions/` (antes solo 19). Causa raíz del drift:
+  `supabase/.temp/linked-project.json` apuntaba al viejo — corregido.
+- **Crons**: los 25 jobs de pg_cron del viejo NUNCA se habían recreado → recreados en el
+  compartido cualificados a `iarest.*` (`20260819_crons_bd_compartida.sql`; incluye el fix del
+  guard de `super-training-monitor`, que filtraba por columnas inexistentes). Los del viejo,
+  des-programados (0 jobs).
+- **Realtime**: solo `preavisos` estaba en la publication → añadidas las 9 tablas que
+  suscriben KDS/sala/bridge (`20260819_realtime_publication_iarest.sql`).
+- **Datos**: copiadas por pg_net (server-to-server, RPC temporal ya borrada) las tablas con
+  valor: leads (395) + leads_* + crm_* + ia_training_log (559) + vinos_catalogo + eventos_entorno
+  + instagram_* + proveedores_tech* + blog_* + qa_* + agente_historial + stripe_events (63).
+  ~1.390 filas. El histórico demo (comandas de mayo, **6 facturas_verifactu de PRUEBA**) se
+  queda en el viejo — recuperable mientras se PAUSE y no se borre.
+- **Refs en repo**: bridge-v6.js (URL+anon+schema Realtime), super/page.tsx (tg-send),
+  setup-vercel-env.sh, estructura.ts, MATRIZ.md, AGENTS.md de ia-rest y 4 skills actualizadas.
+
+Pendiente SOLO de Alberto (ver `docs/PROMPT-CHROME-cierre-supabase.md`): rename del proyecto a
+`central`, repuntar webhooks Stripe/MONEI (¡siguen apuntando al viejo — stripe_events llegaban
+allí hasta el 05/08!), `ALTER DATABASE … SET app.service_role_key` para `monitor-health-cron`,
+y PAUSAR el proyecto viejo.

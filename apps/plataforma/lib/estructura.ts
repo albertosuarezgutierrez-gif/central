@@ -160,7 +160,7 @@ export function enlacesApp(app: string): { label: string; url: string }[] {
     { label: 'Vercel', url: `${VERCEL_TEAM}/${app}` },
   ]
   // ia-rest tiene BD propia; el resto comparten la BD del operador.
-  out.push({ label: 'Supabase', url: app === 'ia-rest' ? 'https://supabase.com/dashboard/project/efncqyvhniaxsirhdxaa' : 'https://supabase.com/dashboard/project/wswbehlcuxqxyinousql' })
+  out.push({ label: 'Supabase', url: 'https://supabase.com/dashboard/project/wswbehlcuxqxyinousql' })
   return out
 }
 export function enlacesModulo(id: string): { label: string; url: string }[] {

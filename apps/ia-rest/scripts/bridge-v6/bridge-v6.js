@@ -29,8 +29,8 @@ const { CashlogyManager } = require('./azkoyen-cashlogy')
 
 const VERSION      = '7.0.1'
 const API          = 'https://www.iarest.es'
-const SUPABASE_URL = 'https://efncqyvhniaxsirhdxaa.supabase.co'
-const ANON_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmbmNxeXZobmlheHNpcmhkeGFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2ODk5MzYsImV4cCI6MjA5MzI2NTkzNn0.dt3ko-HWzJK57FQyRDTjU07QBsYv9fpGo8Sm3Cs6heA'
+const SUPABASE_URL = 'https://wswbehlcuxqxyinousql.supabase.co'  // BD compartida (schema iarest)
+const ANON_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indzd2JlaGxjdXhxeHlpbm91c3FsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyNDU2OTIsImV4cCI6MjA5MTgyMTY5Mn0.pskPJ1U-i0Vjg_suxMfXNqHOtKJpWchf0-CzLUQIzRo'
 
 const CONFIG_DIR  = path.join(os.homedir(), '.iarest')
 const CONFIG_FILE = path.join(CONFIG_DIR, 'bridge-v6.json')
@@ -535,11 +535,11 @@ function wsConnect(TOKEN, restauranteId) {
 
     // Suscribir
     ws.send(JSON.stringify({
-      topic: `realtime:public:print_jobs:local_id=eq.${restauranteId}`,
+      topic: `realtime:iarest:print_jobs:local_id=eq.${restauranteId}`,
       event: 'phx_join',
       payload: {
         config: {
-          postgres_changes: [{ event: 'INSERT', schema: 'public', table: 'print_jobs', filter: `local_id=eq.${restauranteId}` }]
+          postgres_changes: [{ event: 'INSERT', schema: 'iarest', table: 'print_jobs', filter: `local_id=eq.${restauranteId}` }]
         }
       },
       ref: String(joinRef++)
