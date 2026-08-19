@@ -47,8 +47,14 @@
 - `/barrio` reencuadrada (decide Alberto): mantiene la keyword «Macarena» pero sitúa la casa en San
   Julián, «la puerta de la Macarena». Fuera los minutos que salían de suponer la casa DENTRO del
   barrio (la Basílica no está a 5 min); solo quedan los que ya declara la portada.
-- ⚠️ Sin resolver: la nota real (8,1 vs 9,2/4,9) y los minutos a Basílica, Muralla, Mercado de la
-  Feria y Alameda desde Socorro 24.
+- **Nuevo `apps/housesevillana/CLAUDE.md`** (no tenía): dirección, la trampa de i18n (EN/IT se
+  DERIVAN del HTML español por cadenas exactas → tocar un texto rompe su traducción), el agente SEO
+  que reescribe el fichero los lunes, y el sistema de tokens/iconos. Fila en FUENTES-DE-VERDAD.
+- **Punto ciego cerrado:** las skills SINCRONIZADAS (`/root/.claude/skills/synced/`) no están en git
+  y NADIE las reconciliaba — por eso el error de dirección llevaba ahí desde siempre. `/auditoria-diaria`
+  contrasta ahora sus datos duros y avisa por Telegram (no se pueden auto-aplicar); listadas en `docs/SKILLS.md`.
+- Mergeado a `main` (PR #1491, 47/47 + guardián 32/32). ⚠️ Sin resolver: la nota real (8,1 vs 9,2/4,9),
+  los minutos a Basílica/Muralla/Mercado/Alameda desde Socorro 24, y corregir la skill sincronizada.
 ### 📋 (19/08/2026) Inventario de ofertas Booking — House hecho, 3 pendientes
 - Nuevo `docs/BOOKING-OFERTAS-INVENTARIO.md`: inventario extranet por piso (Claude Chrome, solo
   lectura) previo a decidir la Fase 3. House: Basic Deal 12% (⚠️ activada 18/08, origen por
