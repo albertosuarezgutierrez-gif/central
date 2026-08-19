@@ -35,8 +35,13 @@ permissions:
   contents: write
 
 concurrency:
+  # `true` a propósito. Este job REGENERA un estado entero, no acumula: de dos pasadas solapadas
+  # solo la última significa algo. Con `false` (como estaba) el 19/08/2026 se solaparon dos —el
+  # push del merge de #1503 y un `workflow_dispatch` 5 s después— y las dos hicieron force-push a
+  # `claude/auditoria-radiografia`: el segundo empujón dejó el PR #1504 sobre un sha SIN los checks
+  # required, o sea imposible de mergear. Cancelar la anterior evita el segundo empujón.
   group: auditoria-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   radiografia:
