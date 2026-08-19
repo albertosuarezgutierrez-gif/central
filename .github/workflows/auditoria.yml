@@ -1,11 +1,12 @@
 name: Auditoría de estructura
 
 # Mantiene la radiografía del repo (apps/plataforma/lib/estructura.generated.json)
-# SIEMPRE al día, sola: en cada push que toque la estructura, regenera el JSON y, si
-# cambió, lo commitea de vuelta. El script es Node puro (no instala dependencias).
+# SIEMPRE al día, sola: en cada push a main que toque la estructura, regenera el JSON y,
+# si cambió, lo deja en un PR. El script es Node puro (no instala dependencias).
 #
-# Sin bucles: el commit lo hace github-actions[bot] con GITHUB_TOKEN (sus pushes no
-# disparan workflows) y lleva [skip ci]; además el JSON conserva su timestamp si el
+# Desde el 19/08/2026 NO commitea contra `main` (el ruleset «main - CI obligatorio» solo
+# admite el merge de un PR verde): abre/actualiza el PR `claude/auditoria-radiografia` y
+# lo mergea `rutinas-automerge.yml`. Sin bucles: el JSON conserva su timestamp si el
 # contenido real no cambió, así que un push que no toca la estructura no genera commit.
 
 on:
@@ -64,10 +65,19 @@ jobs:
       # GitHub Actions y dejaría el PR SIN checks — y el automerge, con razón, no mergea un PR sin
       # checks. `[skip vercel]` no lo entiende Actions pero sí `scripts/vercel-ignore-build.mjs`,
       # así que la CI corre y los builds de Vercel siguen sin dispararse.
+      #
+      # 🔑 El push y el `gh pr create` van con GH_PAT_TRIGGER, NO con GITHUB_TOKEN. Ni los pushes
+      # ni los PRs abiertos con el GITHUB_TOKEN del propio run disparan workflows, así que el PR
+      # nacería con CERO checks — y un PR sin checks no lo mergea `rutinas-automerge.yml` (con
+      # razón: «no hay checks» ≠ «los checks pasaron»). Se quedaría abierto para siempre. Es la
+      # misma trampa documentada en la cabecera de `ai-programar.yml`. Sin el secret NO abrimos
+      # el PR: dejamos la rama pusheada y avisamos, que es mejor que un PR zombi.
       - name: Abrir/actualizar el PR de la radiografía
         if: github.ref_name == 'main'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT_TRIGGER }}
+          PAT: ${{ secrets.GH_PAT_TRIGGER }}
+          REPO: ${{ github.repository }}
           RAMA: claude/auditoria-radiografia
         run: |
           set -euo pipefail
@@ -76,6 +86,10 @@ jobs:
             echo "Radiografía ya al día — sin cambios."
             exit 0
           fi
+          if [ -z "$PAT" ]; then
+            echo "::error::Falta el secret GH_PAT_TRIGGER — sin él el PR de la radiografía nacería sin checks y nunca se mergearía. La radiografía queda SIN actualizar en main hasta que se configure."
+            exit 1
+          fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           # La rama se rehace desde el `main` de esta pasada: la radiografía se regenera entera
@@ -83,7 +97,7 @@ jobs:
           git checkout -q -B "$RAMA"
           git add $FILES
           git commit -q -m 'chore(auditoría): regenerar radiografía de estructura [skip vercel]'
-          git push -q -f origin "$RAMA"
+          git push -q -f "https://x-access-token:${PAT}@github.com/${REPO}.git" "$RAMA"
           if [ -z "$(gh pr list --head "$RAMA" --state open --json number --jq '.[].number')" ]; then
             gh pr create --head "$RAMA" --base main \
               --title 'chore(auditoría): regenerar radiografía de estructura' \

@@ -57,6 +57,12 @@
   `claude/seo-landing` a `main`, escribe con `branch` y abre PR. (3) El automerge acepta ahora esos
   ficheros y, en conflicto, empuja a la RAMA DEL PR con `GH_PAT_TRIGGER` — no con `GITHUB_TOKEN`,
   cuyos pushes no disparan CI y dejarían el PR sin checks del sha nuevo.
+- 🪤 **Cuarta pieza, descubierta EN VIVO al vigilar el propio PR #1501: un PR puede nacer con CERO checks.**
+  Empujar la rama y abrir el PR con un token de GitHub App/Actions no dispara los workflows `pull_request`
+  → PR sin checks → el automerge (con razón) no lo mergea, y el ruleset tampoco deja mergearlo a mano:
+  **atascado para siempre**. Le pasó a #1501 (14 checks aparecieron solo al empujar un commit más). Así
+  que `auditoria.yml` empuja y abre el PR con `GH_PAT_TRIGGER`, y si falta el secret **no abre PR**: falla
+  con aviso, mejor que un PR zombi. El agente SEO no sufre esto (usa su PAT fine-grained propio).
 - ⚠️ Lo que NO se ha podido probar aquí: los workflows solo se ejecutan en GitHub. Las tres piezas se
   verifican solas en su primera pasada real — auditoría al próximo push a `main`, SEO el lunes. Si el
   PR del SEO se queda abierto sin mergear, mirar si `GH_PAT_TRIGGER` sigue vivo. Revertir todo =
