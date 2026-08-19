@@ -5,9 +5,10 @@ description: Rutina PROGRAMADA diaria que mide el precio REAL por fecha y aforo 
 
 # Mercado real por fecha — rutina de Booking (SIVRA)
 
-**Qué haces:** pides al servidor QUÉ ventanas (fecha × aforo) hay que medir, las consultas UNA A UNA
-con el conector de **Booking.com**, escribes los comparables en `market_rates` por el raíl HTTP, y
-dejas huella del latido. Nada más. No decides precios, no tocas Smoobu, no llamas a la IA.
+**Qué haces:** pides al servidor QUÉ hay que medir —ventanas de MERCADO (fecha × aforo) y ventanas
+de NUESTRO PROPIO ESCAPARATE—, las consultas UNA A UNA con el conector de **Booking.com**, lo
+escribes por el raíl HTTP y dejas huella del latido. Nada más. No decides precios, no tocas Smoobu,
+no llamas a la IA.
 
 ## Por qué existes (06/08/2026)
 
@@ -38,6 +39,9 @@ rutina y no un `CRON_JOBS`.
   también lo filtra (`lib/sivra/mercado-propios.ts`) y devuelve `propios[]`, pero no te apoyes solo
   en el raíl: su lista es curada y solo conoce los anuncios ya vistos. Si aparece uno nuestro que no
   esté en ella, descártalo tú y déjalo anotado para añadirlo.
+  🆕 **Pero SÍ mándalo en `apartments` igualmente.** El endpoint lo saca del corpus de comparables y
+  lo guarda aparte, en `pricing_escaparate`. Ojo: eso es el aprovechamiento OPORTUNISTA de cuando
+  aparece solo; la medición de verdad la pides tú en el **paso 2-bis**, que es obligatorio.
   ⚠️ **No confundas con la competencia de la misma calle:** dos de nuestros pisos están en Bustos
   Tavera y ahí hay comparables legítimos ajenos («Monkeys Apartments Casa Palacio Bustos Tavera»,
   «Bustos Tavera Suite»). Se descarta por el NOMBRE del anuncio, nunca por la calle.
@@ -58,8 +62,8 @@ GET {PLATAFORMA_URL}/api/sivra/mercado/plan?max=24
 Authorization: Bearer {ALERTA_TOKEN}
 ```
 Devuelve `{ventanas:[{checkin, checkout, aforo, pisos[], motivo, etiqueta, ronda, diasSinMedir,
-comps}], plan_total, filtro, candidatas, recortadas, pedidas, sin_medir_nunca, avisos}` **ya ordenado
-por urgencia** (lo nunca medido primero, luego lo más viejo). No reordenes ni elijas tú: el orden
+comps}], escaparate:[…], escaparate_huecos:[…], plan_total, filtro, candidatas, recortadas, pedidas,
+sin_medir_nunca, avisos}` **ya ordenado por urgencia** (lo nunca medido primero, luego lo más viejo). No reordenes ni elijas tú: el orden
 protege la línea de temporada. Si trae `avisos`, arrástralos al parte final.
 
 **Pasada acotada (`?rondas=2,3&desde=2026-09-01&hasta=2027-01-31`).** Para dirigir una pasada a una
@@ -90,6 +94,40 @@ y no aporta nada al pricing).
 `price_night = round(price.book / noches)`. Descarta el alojamiento si no trae precio, y descarta
 también **nuestros propios anuncios** (ver «No romper»): con aforos grandes salen entre los resultados.
 
+### 2-bis. Mide NUESTRO propio escaparate (bloque `escaparate` del plan) — OBLIGATORIO
+
+**Por qué (19/08/2026).** El motor tarifica midiendo el precio GUEST del mercado y convirtiéndolo a
+precio BASE de Smoobu. Esa conversión era un **×1,20 supuesto que nadie había medido**, y al mirar el
+portal resultó que ni el número ni el MODELO: el canal multiplica por **menos de 1** (~0,9) y encima
+**suma una cuota fija por estancia** (la limpieza: 598€ en House). Con esos parámetros equivocados el
+motor pedía ~230€ menos de base en las noches caras de Navidad. Hasta hoy esto se medía por
+casualidad —si el piso propio salía en una búsqueda de comparables—; ahora se pide explícitamente.
+
+Por cada entrada de `escaparate` (`{property_id, nombre_portal, checkin, checkout, noches, guests,
+base_total, motivo}`):
+- búsqueda con **`hotel_names: ["<nombre_portal>"]`** (NO `destination` ni `coordinates`: son
+  mutuamente excluyentes con `hotel_names`), `checkin_date`/`checkout_date` de la entrada,
+  `number_of_adults` = `guests`, `currency: EUR`, `user_country_code: es`.
+- del resultado quédate con `price.book`, que es el **TOTAL de la ventana**.
+- escríbelo con el MISMO `POST /api/sivra/mercado/ingest` del paso 3, con `scenario` = el
+  `property_id` de la entrada, las fechas de la entrada y **un solo** `apartments[]` con el nombre
+  devuelto por el portal, `price_total = price.book` y `price_night = round(price.book / noches)`. El endpoint lo reconoce como propio, no lo
+  mete en `market_rates` y le calcula ÉL la base de Smoobu de esas noches.
+
+🚨 **No cambies las fechas ni las noches que te da el plan.** Están elegidas para que las ventanas
+tengan RECORRIDO de precio entre sí: si todas cuestan lo mismo, el multiplicador y la cuota fija son
+matemáticamente indistinguibles y el ajuste responde `indeterminado` — mediste y no sirvió de nada.
+🚨 **El aforo lo manda el plan** (es el máximo del piso, el mismo con el que se miden sus
+comparables). Con un aforo menor mides el recargo por persona, no el canal.
+🚨 Si una entrada no devuelve nada (fechas no disponibles, piso ocupado), **cuéntala como
+`escaparateSinRespuesta` y sigue**: es un hueco, no un «el canal cuadra».
+Arrastra `escaparate_huecos` al parte tal cual: ahí sale, por ejemplo, un piso cuyo nombre de portal
+no conocemos (`lib/sivra/mercado-propios.ts::NOMBRE_PORTAL`) — eso hay que arreglarlo a mano.
+
+Quien usa esto es el cron `/api/sivra/pricing/canal` (07:45 UTC), que ajusta la recta y **reescribe
+él solo** `channel_markup` + `cuota_fija` del piso, acotado a ±15% de efecto por pasada. Tú no
+calculas nada de eso: solo mides.
+
 ### 3. Escribe los comparables
 Una llamada por ventana **y por piso** (los pisos del aforo comparten los mismos comps):
 ```
@@ -110,10 +148,14 @@ Authorization: Bearer {ALERTA_TOKEN}
 { "agente":"sivra_mercado_booking", "ok":<true|false>, "detalle":"<parte>" }
 ```
 `ok = true` **solo si** escribiste comps y **menos de la mitad** de las ventanas se quedaron sin
-respuesta. El `detalle` dice, en este orden: comps escritos y ventanas medidas · ⚠️ ventanas sin
-respuesta del conector · sin precio utilizable · 🪞 anuncios propios descartados · fallos. Ejemplo:
-`«38 comps reales en 12 ventanas · ⚠️ 2 ventanas sin respuesta del conector (NO es «no hay mercado»:
+respuesta. El `detalle` dice, en este orden: comps escritos y ventanas medidas · **ventanas de
+escaparate propio medidas / pedidas** · ⚠️ ventanas sin respuesta del conector · sin precio
+utilizable · 🪞 anuncios propios descartados · fallos. Ejemplo: `«38 comps reales en 12 ventanas ·
+📐 4/4 ventanas de escaparate · ⚠️ 2 ventanas sin respuesta del conector (NO es «no hay mercado»:
 no se ha podido mirar)»`.
+🚨 **Un escaparate sin medir NO puede quedar fuera del parte:** si el plan pedía ventanas propias y
+no mediste ninguna, el latido va `ok:false` aunque los comparables fueran bien — sin escaparate, el
+motor sigue convirtiendo mercado→base con parámetros viejos, y eso mueve TODAS las fechas.
 Si algo revienta a mitad, **manda el latido con `ok:false` antes de rendirte**: un agente sin huella
 se lee como «no se dispara» y manda a mirar al sitio equivocado (lección del 31/07/2026).
 
@@ -127,6 +169,9 @@ se lee como «no se dispara» y manda a mirar al sitio equivocado (lección del 
 
 ## Presupuesto y límites (asumidos, no son un fallo)
 
+- **Las ventanas de escaparate van APARTE del tope de mercado** (`ESCAPARATE_POR_PISO`, hoy 2 por
+  piso y pasada, ~8 consultas). Son baratas y son la mitad del sistema: mídelas siempre, aunque
+  tengas que recortar mercado.
 - **24 ventanas por pasada** (subido de 12 el 17/08/2026 con OK de Alberto: el plan creció a ~464
   ventanas con las rondas de profundidad y a 12/día tardaba ~5 semanas — el objetivo es acumular
   3 fechas/mes por piso cuanto antes para poder retirar el sweep de Serper, cuyo corpus sin fecha

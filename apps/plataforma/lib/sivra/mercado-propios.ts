@@ -33,15 +33,44 @@ export function normalizarNombre(nombre: string): string {
 }
 
 /**
+ * Cómo se llama CADA piso nuestro en el portal, por `property_id`.
+ *
+ * Es la fuente única de dos cosas que antes vivían separadas y se desincronizaron: el filtro que
+ * impide que un anuncio propio entre como comparable, y el nombre EXACTO con el que la rutina de
+ * Booking tiene que pedir nuestro propio escaparate (`hotel_names`). El nombre interno de
+ * `pricing_piso_zona` no sirve para ninguna de las dos: no es el que publica el portal.
+ *
+ * 🚨 Aquí solo entra un nombre que se haya VISTO en una respuesta real del portal, con su
+ * ortografía. Los cuatro están vistos el 19/08/2026.
+ */
+export const NOMBRE_PORTAL: Readonly<Record<string, string>> = {
+  prop_house_sevillana: 'HOUSE SEVILLANA 6 habitaciones',
+  prop_busto_reform:    'Busto Reform Apartamento Centro Sevilla Parking Netflix',
+  prop_luxury_busto:    'Luxury Busto Patio privado Centro',
+  prop_duplex_center:   'Dúplex center',
+}
+
+/**
  * Nombres (ya normalizados) con los que NUESTROS pisos aparecen publicados en los portales.
  *
- * Hoy solo House Sevillana: es el único de los cuatro que se ha visto salir en una búsqueda del
- * conector. Los otros tres (Busto Reform, Duplex Center, Luxury Busto) no han aparecido nunca en
- * los resultados; cuando alguno lo haga, se añade aquí SU nombre de portal —no el nombre interno
- * de `pricing_piso_zona`, que no es el que publica Booking.
+ * 🚨 CUÁNTO COSTÓ TENER SOLO UNO (19/08/2026). Hasta hoy la lista era `['house sevillana']` con la
+ * nota «los otros tres no han aparecido nunca en los resultados». Al medir el escaparate de los
+ * cuatro pisos con el conector aparecieron los tres a la primera: llevaban desde el 14/08 entrando
+ * en `market_rates` como comparables DE SÍ MISMOS. Es el bucle que el módulo entero existe para
+ * evitar, y estuvo abierto porque la ausencia de una prueba («no lo hemos visto») se anotó como si
+ * fuera un hecho («no sale»). Cuando demos de alta un piso nuevo, su nombre de portal se busca
+ * ANTES de que entre al corpus, no cuando aparezca por casualidad.
+ *
+ * Se comparan trozos distintivos, no el nombre completo: el portal le cuelga sufijos comerciales
+ * que cambian solos. Y NO tokens sueltos («busto», «centro»): hay competencia real en Bustos Tavera
+ * y medio Sevilla se anuncia como «centro» — descartar un comparable legítimo es el fallo simétrico
+ * y adelgaza el corpus de la fecha justo por debajo del umbral que descongela un evento.
  */
 export const ANUNCIOS_PROPIOS: readonly string[] = [
   'house sevillana',
+  'busto reform',
+  'luxury busto',
+  'duplex center',
 ]
 
 /**

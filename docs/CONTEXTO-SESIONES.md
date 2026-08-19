@@ -32,6 +32,26 @@
 
 ---
 
+### 📐 (19/08/2026) El canal NO es un markup: es una recta — y ahora se mide y se corrige SOLO
+- Medido el escaparate real de los CUATRO pisos con el conector (16 ventanas): el canal multiplica por
+  **menos de 1** (~0,9) y **suma una cuota fija por estancia** (limpieza: 597€ en House). Un «markup»
+  escalar no existe — el mismo piso medía ×1,33 a 2 noches y ×1,18 a 3 sin cambiar nada. Modelo afín
+  `escaparate = m × base + F` en `lib/sivra/pricing-canal.ts`; el motor lo invierte por noche.
+- El ×1,20 supuesto desplazaba TODAS las fechas: a 1.500€/noche pedía 1.250€ de base (correcto ~1.333)
+  y al precio típico de House pedía 568€ cuando tocan 425€. Cableado en apply/engine/ancla/premio/
+  pilot-track (`fijoNoche` OBLIGATORIO) y quitadas las guardas `markup >= 1`, que tiraban lo medido.
+- **Ya no espera a nadie:** `/api/sivra/pricing/canal` (cron 07:45) ajusta y REESCRIBE `channel_markup`
+  + `cuota_fija` + `noches_ref`, acotado a ±15% de efecto/pasada, con interruptor `canal_auto` y latido
+  `sivra_canal`. Y el plan (`/mercado/plan`) pide ya las ventanas propias eligiendo las que dan
+  RECORRIDO de precio (sin él, m y F son indistinguibles) → la rutina de Booking las mide sola.
+- 🚨 Bug gordo de paso: `ANUNCIOS_PROPIOS` solo tenía House, así que **Busto/Luxury/Dúplex llevaban
+  desde el 14/08 entrando como comparables de sí mismos**. Añadidos los 4 nombres de portal.
+- 🔗 **Encaja con el hallazgo de Smoobu de hoy (entrada siguiente), no lo contradice:** ese +20% por
+  canal vive DENTRO de Smoobu, así que ya está incluido en lo que mide el conector. Y ojo a las
+  unidades: `0,92 efectivo/base` es lo que COBRAMOS (tras comisión); esta recta es lo que PAGA el
+  huésped. Son dos ratios distintos y no se pueden comparar entre sí.
+- PR #1478 (draft). **Nada de esto corre hasta que se mergee y despliegue.**
+
 ### 🚨 (19/08/2026) El +20% de Booking YA EXISTÍA en Smoobu — Fase 2 (channel_markup) CANCELADA
 - Claude Chrome verificó Smoobu (Precios→Ajustes): el ajuste por canal es ÚNICO por portal (no por
   alojamiento) y **Booking.com ya estaba a +20,00%** (resto de canales 0%) — probablemente de la era
@@ -62,6 +82,23 @@
   insertadas en medio del párrafo de intro — reordenadas.
 - «Estado vivo» sigue al día desde el 18/08, sin pendientes nuevos que anotar. Sin manuales que
   tocar (la única UI nueva del rango, la curva de `/trading`, es de plataforma).
+
+### 🎄 (18/08/2026) La Navidad de House no la tarificaba NADIE — y `price_ours` volvió a engañar
+- Reserva 21-25/12 a 892€/noche (84% de la base). Al mirarla leí `rate_snapshots.price_ours`, que es la
+  fórmula sombra LEGACY: dije 334-462€ cuando el precio real era 860-1.247€. **Corregido en el esquema**
+  (COMMENT en las dos columnas + vista `v_precio_vivo`): el aviso solo vivía en un comentario de TS.
+- Hallazgo: del 17/12 al 05/01 el motor NO ha escrito NUNCA (ni un dry-run). Los precios están congelados
+  desde el 10/08 (última curva de PriceLabs) y solo los sostiene la guarda de outlier, que deja de
+  proteger a 30 días vista — y el suelo PL caduca el 08/12.
+- Causas: (a) el barrido muestreaba SOLO la 1ª quincena (4º martes ahora) y la cola de eventos iba por
+  cercanía, así que Navidad nunca se medía (reserva de alto valor en `planDeVentanas`); (b) 27-30/12 no
+  tenían factor pese a ser el bloque más caro tras Nochevieja (medido: ×1,40 y ×1,85 vs diciembre normal);
+  (c) `channel_markup` 1,20 supuesto contra 1,10 medido en el escaparate real → nueva tabla
+  `pricing_escaparate` + `/api/sivra/pricing/markup` (avisa, no aplica solo); (d) `incomes` no guardaba
+  el aforo (ya sí: `adults`/`children`).
+- Sembrados 30 comps reales de Navidad (fuente `manual`) y las mediciones del escaparate. PR draft.
+- **Pendiente de tu decisión:** House vende a **1,23× la mediana de su bucket** (6/6 reservas por encima)
+  y el motor apunta al p50 con `position_factor` 1,00 → apunta corto por diseño.
 
 ### 📈 (18/08/2026) Gráfico de evolución de la cartera REAL — antes no había pasado que dibujar
 - Alberto pidió ver la evolución del núcleo. Hallazgo: NO existía histórico — `trading_cartera_real` es

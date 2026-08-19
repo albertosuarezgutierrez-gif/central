@@ -328,3 +328,52 @@ test('sin anuncios propios el parte no menciona el descarte', () => {
   const d = detalleIngesta({ ventanas: 12, comps: 119, sinRespuesta: 0, sinPrecio: 0, errores: [] })
   assert.doesNotMatch(d, /propio/)
 })
+
+// ─── Reserva de alto valor: lo CARO sin medir no espera a que pase la cola ─────────────────
+
+test('🎄 la Navidad no se queda detrás de 40 noches de septiembre (18/08/2026)', () => {
+  // Caso real: entre hoy y Navidad hay decenas de noches de evento confirmado más cercanas, y la
+  // cola —que dentro de las vírgenes ordena por cercanía— las pide todas antes. Medido ese día:
+  // del 19/12 al 07/01 no había NI UN comparable fiable, y el motor tarificaba Nochebuena con la
+  // mediana de las noches normales de diciembre.
+  const septiembre = Array.from({ length: 20 }, (_, i) => ({
+    checkin: `2026-09-${String(i + 5).padStart(2, '0')}`,
+    checkout: `2026-09-${String(i + 7).padStart(2, '0')}`,
+    motivo: 'evento' as const, ronda: 1, eventoConfirmado: true, factor: 1.25,
+  }))
+  const navidad = [
+    { checkin: '2026-12-29', checkout: '2026-12-31', motivo: 'evento' as const, ronda: 1, eventoConfirmado: true, factor: 1.85 },
+    { checkin: '2026-12-25', checkout: '2026-12-27', motivo: 'evento' as const, ronda: 1, eventoConfirmado: true, factor: 1.40 },
+  ]
+  const aforos = new Map([[12, ['prop_house_sevillana']]])
+  const r = planDeVentanas([...septiembre, ...navidad], aforos, [], '2026-08-18', 12)
+  const fechas = r.ventanas.map(v => v.checkin)
+  assert.equal(r.ventanas.length, 12)
+  assert.ok(fechas.includes('2026-12-29'), 'la noche más cara sin medir tiene que entrar en la pasada')
+  assert.ok(fechas.includes('2026-12-25'), 'y la segunda más cara también')
+  // Sin robarle sitio a la temporada: 9 de las 12 siguen siendo la cola normal.
+  assert.equal(fechas.filter(f => f.startsWith('2026-09')).length, 10)
+})
+
+test('la reserva NO se desperdicia si no hay nada caro que rescatar', () => {
+  const base = Array.from({ length: 20 }, (_, i) => ({
+    checkin: `2026-09-${String(i + 5).padStart(2, '0')}`,
+    checkout: `2026-09-${String(i + 7).padStart(2, '0')}`,
+    motivo: 'mes' as const, ronda: 0, factor: 1,
+  }))
+  const r = planDeVentanas(base, new Map([[12, ['prop_house_sevillana']]]), [], '2026-08-18', 12)
+  assert.equal(r.ventanas.length, 12, 'la pasada se llena igual')
+  assert.equal(r.recortadas, 8)
+})
+
+test('un evento PREVISTO no se cuela por delante de una noche congelada', () => {
+  // Un previsto no congela ningún precio y su premio ya va ponderado: la reserva es para lo que el
+  // motor tiene bloqueado esperando mercado.
+  const pedidas = [
+    { checkin: '2026-09-18', checkout: '2026-09-20', motivo: 'evento' as const, ronda: 1, eventoConfirmado: true, factor: 1.5 },
+    { checkin: '2026-09-21', checkout: '2026-09-23', motivo: 'evento' as const, ronda: 1, eventoConfirmado: true, factor: 1.15 },
+    { checkin: '2026-12-05', checkout: '2026-12-07', motivo: 'evento' as const, ronda: 1, eventoConfirmado: false, factor: 2.5 },
+  ]
+  const r = planDeVentanas(pedidas, new Map([[4, ['prop_duplex_center']]]), [], '2026-08-18', 2)
+  assert.deepEqual(r.ventanas.map(v => v.checkin), ['2026-09-18', '2026-09-21'])
+})

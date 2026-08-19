@@ -31,7 +31,14 @@ const FIELDS: Record<string, (v: any) => any> = {
   min_price:       (v) => (v == null || v === "" ? null : Math.max(0, Math.round(Number(v)))),
   max_price:       (v) => (v == null || v === "" ? null : Math.max(0, Math.round(Number(v)))),
   max_change_pct:  (v) => clamp(Number(v), 0.01, 1),
-  channel_markup:  (v) => clamp(Number(v), 1, 2),
+  // El canal medido multiplica por MENOS de 1 (~0,9) y suma una cuota fija: el rango [1,2] de
+  // antes convertía un valor real en un 1 silencioso. Los límites son ahora los mismos que valida
+  // el ajuste (`MARKUP_MIN`/`MARKUP_MAX` de pricing-canal.ts).
+  channel_markup:  (v) => clamp(Number(v), 0.6, 1.6),
+  cuota_fija:      (v) => Math.max(0, Number(v) || 0),
+  noches_ref:      (v) => clamp(Math.round(Number(v)) || 2, 1, 14),
+  // Interruptor del calibrado automático del canal. Bajarlo CONGELA los parámetros de ese piso.
+  canal_auto:      (v) => Boolean(v),
   events_enabled:  (v) => Boolean(v),
   gap_discount_pct:(v) => clamp(Number(v), 0, 0.5),
 }
@@ -46,7 +53,8 @@ export async function GET() {
     enabled: boolean; apply_enabled: boolean; target_pctl: number; floor_pctl: number; ceil_pctl: number
     position_factor: number; quality_k: number; demand_k: number; demand_baseline: number
     own_score: number | null; min_price: number | null; max_price: number | null
-    max_change_pct: number; channel_markup: number; events_enabled: boolean; gap_discount_pct: number
+    max_change_pct: number; channel_markup: number; cuota_fija: number; noches_ref: number
+    canal_auto: boolean; events_enabled: boolean; gap_discount_pct: number
   }[]>(Prisma.sql`
     SELECT
       p.id AS property_id, p.name, p."maxGuests"::int AS max_guests,
@@ -61,7 +69,10 @@ export async function GET() {
       COALESCE(s.demand_baseline, 0.50)::float8 AS demand_baseline,
       s.own_score::float8 AS own_score, s.min_price, s.max_price,
       COALESCE(s.max_change_pct, 0.20)::float8  AS max_change_pct,
-      COALESCE(s.channel_markup, 1.16)::float8  AS channel_markup,
+      COALESCE(s.channel_markup, 1.20)::float8  AS channel_markup,
+      COALESCE(s.cuota_fija, 0)::float8         AS cuota_fija,
+      GREATEST(COALESCE(s.noches_ref, 2), 1)::int AS noches_ref,
+      COALESCE(s.canal_auto, true)              AS canal_auto,
       COALESCE(s.events_enabled, true)          AS events_enabled,
       COALESCE(s.gap_discount_pct, 0)::float8   AS gap_discount_pct
     FROM properties p
@@ -117,9 +128,12 @@ export async function GET() {
     const g = byScenario[p.property_id]
     const occupancy = occByScenario[p.property_id]
     const baseActual = baseByScenario[p.property_id] ?? null
-    // `>= 1`: un markup de 1.0 (escaparate sin recargo, medido 09/08/2026) es un valor VÁLIDO — la
-    // guarda vieja lo ignoraba en silencio y caía al default 1.16.
-    const markup = Number(p.channel_markup) >= 1 ? Number(p.channel_markup) : 1.16
+    // El canal es una recta `escaparate = markup × base + cuota_fija` (medido 19/08/2026, ver
+    // pricing-canal.ts). Nada de guardas `>= 1`: el multiplicador real es ~0,9 y esa guarda lo
+    // tiraba en silencio a un 1,16 inventado.
+    const markup = Number(p.channel_markup) > 0 ? Number(p.channel_markup) : 1
+    const nochesRef = Number(p.noches_ref) > 0 ? Number(p.noches_ref) : 2
+    const fijoNoche = Number(p.cuota_fija) > 0 ? Number(p.cuota_fija) / nochesRef : 0
 
     let market_ctx: any = { sample: 0 }
     let recommended_guest: number | null = null
@@ -137,7 +151,7 @@ export async function GET() {
       recommended_guest = eng.guest
       // huésped → base de Smoobu + cadena de topes del propietario (autoridad final).
       recommended_base = recommendedBaseFromEngine(eng, {
-        markup, max_change_pct: Number(p.max_change_pct),
+        markup, fijoNoche, max_change_pct: Number(p.max_change_pct),
         min_price: p.min_price, max_price: p.max_price, baseActual,
       })
       if (eng.basis) {
@@ -166,6 +180,7 @@ export async function GET() {
         demand_k: p.demand_k, demand_baseline: p.demand_baseline,
         own_score: p.own_score, min_price: p.min_price, max_price: p.max_price,
         max_change_pct: p.max_change_pct, channel_markup: p.channel_markup,
+        cuota_fija: p.cuota_fija, noches_ref: p.noches_ref, canal_auto: p.canal_auto,
         events_enabled: p.events_enabled, gap_discount_pct: p.gap_discount_pct,
       },
       market: market_ctx,

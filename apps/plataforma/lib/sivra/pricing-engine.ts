@@ -7,6 +7,8 @@
 //   · recommend  → sobre el huésped (comportamiento histórico; ver nota en docs/pricing-automatico.md)
 //   · settings/agente → sobre la BASE (€ reales), vía `recommendedBaseFromEngine`.
 
+import { baseDesdeGuestConFijo } from "./pricing-canal.ts"
+
 export const clamp = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x))
 
 // Percentil con interpolación lineal sobre una muestra ordenada (ascendente).
@@ -87,13 +89,24 @@ export function computeRecommendation(
 // Es la cadena que ya usaba `settings`; el agente la reusa para proponer el MISMO número.
 export function recommendedBaseFromEngine(
   res: EngineResult,
-  opts: { markup: number; max_change_pct: number; min_price: number | null; max_price: number | null; baseActual: number | null },
+  opts: {
+    markup: number; max_change_pct: number; min_price: number | null; max_price: number | null
+    baseActual: number | null
+    /** parte FIJA que el canal suma a la noche (cuota por estancia ÷ noches típicas del piso) */
+    fijoNoche?: number
+  },
 ): number | null {
   if (res.guest == null || res.basis == null) return null
-  // `>= 1`: markup 1.0 (escaparate sin recargo, medido 09/08/2026) es válido; `> 1` lo ignoraba.
-  const markup = opts.markup >= 1 ? opts.markup : 1.16
-  let base = Math.round(res.guest / markup)
-  const floorBase = Math.round(res.basis.floorRaw / markup), ceilBase = Math.round(res.basis.ceilRaw / markup)
+  // 🚨 NO se filtra el markup por `>= 1`. El canal MEDIDO es ~0,9 (multiplica por menos de uno y
+  // suma una cuota fija, 19/08/2026): con la guarda vieja, el valor real se descartaba en silencio
+  // y se dividía por un 1,16 inventado — el mismo fallo mudo que la guarda `> 1` que sustituyó.
+  // Solo se rechaza lo imposible (≤0), y entonces se dice dividiendo por 1 (identidad), no por un
+  // número de fantasía.
+  const markup = opts.markup > 0 ? opts.markup : 1
+  const fijo = Number(opts.fijoNoche) > 0 ? Number(opts.fijoNoche) : 0
+  let base = baseDesdeGuestConFijo(res.guest, markup, fijo)
+  const floorBase = baseDesdeGuestConFijo(res.basis.floorRaw, markup, fijo)
+  const ceilBase = baseDesdeGuestConFijo(res.basis.ceilRaw, markup, fijo)
   base = clamp(base, floorBase, ceilBase)
   if (opts.baseActual != null) {
     base = clamp(base, Math.round(opts.baseActual * (1 - opts.max_change_pct)),

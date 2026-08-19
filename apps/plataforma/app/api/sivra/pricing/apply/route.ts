@@ -9,6 +9,7 @@ import { factorLastMinute } from "@/lib/sivra/pricing-lastminute"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { acotarSueloPL } from "@/lib/sivra/pricing-suelo-pl"
 import { anclaMercadoFecha } from "@/lib/sivra/pricing-ancla-fecha"
+import { baseDesdeGuestConFijo } from "@/lib/sivra/pricing-canal"
 import { factorDemandaFecha, type DemandaFechaResult } from "@/lib/sivra/pricing-demanda"
 import { elegirBucket } from "@/lib/sivra/pricing-bucket-fuente"
 import { MIN_EUR_PLAZA_COMP } from "@/lib/sivra/pricing-comps-plausibles"
@@ -107,7 +108,8 @@ export async function POST(req: NextRequest) {
     property_id: string; recommended_guest: number; med_guest_global: number; floor_guest: number; ceil_guest: number
     demand_factor: number; quality_factor: number
     occupancy_global: number; demand_baseline: number; demand_k: number
-    channel_markup: number; max_change_pct: number; min_price: number | null; max_price: number | null
+    channel_markup: number; cuota_fija: number; noches_ref: number
+    max_change_pct: number; min_price: number | null; max_price: number | null
     sample_n: number; market_age_days: number; events_enabled: boolean; gap_discount_pct: number
     flight_demand_k: number; seasonal_floor_k: number; lastminute_k: number
   }[]>(Prisma.sql`
@@ -158,7 +160,9 @@ export async function POST(req: NextRequest) {
       s.demand_baseline::float8 AS demand_baseline,
       s.demand_k::float8 AS demand_k,
       ROUND(mkt.flo)::int AS floor_guest, ROUND(mkt.cei)::int AS ceil_guest,
-      COALESCE(s.channel_markup, 1.16)::float8 AS channel_markup,
+      COALESCE(s.channel_markup, 1.20)::float8 AS channel_markup,
+      COALESCE(s.cuota_fija, 0)::float8 AS cuota_fija,
+      GREATEST(COALESCE(s.noches_ref, 2), 1)::int AS noches_ref,
       s.max_change_pct::float8 AS max_change_pct,
       s.min_price, s.max_price,
       mkt.sample_n, mkt.market_age_days,
@@ -592,17 +596,27 @@ export async function POST(req: NextRequest) {
       results.push({ property: r.property_id, error: `Smoobu GET ${String(e).slice(0, 80)}` }); continue
     }
 
-    // 🚨 `>= 1`, no `> 1`: con la guarda vieja, poner 1.0 en settings se ignoraba en silencio y
-    // caía al default. El markup debe ser el ESPEJO del ajuste real del canal Booking en Smoobu
-    // (priceDifference): a 0% → 1.0 (estado del 09/08/2026, cuando el ÷1,16 era un −14%
-    // sistemático); desde el 16/08/2026 el canal lleva +20% → 1.20 (plan escaparate,
-    // docs/ESTUDIO-BOOKING-POSICIONAMIENTO.md). Si cambia uno, cambia el otro — Smoobu primero.
-    const markup = Number(r.channel_markup) >= 1 ? Number(r.channel_markup) : 1.16
+    // 🚨 CÓMO SE PASA DE MERCADO (lo que paga el huésped) A BASE (lo que se pone en Smoobu).
+    //
+    // El canal NO es un multiplicador: es una recta `escaparate = markup × base + cuota_fija`, con
+    // la cuota fija (la limpieza) cobrada UNA vez por estancia. Medido en el escaparate real de los
+    // cuatro pisos el 19/08/2026 — ver `lib/sivra/pricing-canal.ts` y el cron
+    // `/api/sivra/pricing/canal`, que es quien escribe estos tres números. Antes aquí había un
+    // ×1,20 SUPUESTO y sin cuota, y ese error viajaba a TODAS las fechas del piso a la vez: en una
+    // noche de mercado de 1.500€ pedía 1.250€ de base cuando lo correcto era ~1.333€.
+    //
+    // Ya NO se filtra `>= 1`: el multiplicador medido es ~0,9 y la guarda vieja lo habría tirado en
+    // silencio para dividir por un 1,16 inventado. Solo se rechaza lo imposible (≤0).
+    const markup = Number(r.channel_markup) > 0 ? Number(r.channel_markup) : 1
+    const nochesRef = Number(r.noches_ref) > 0 ? Number(r.noches_ref) : 2
+    const fijoNoche = Number(r.cuota_fija) > 0 ? Number(r.cuota_fija) / nochesRef : 0
+    /** mercado (guest/noche) → base de Smoobu, con la cuota fija descontada. Única conversión. */
+    const aBase = (guestNoche: number) => baseDesdeGuestConFijo(guestNoche, markup, fijoNoche)
     const demandFactor = Number(r.demand_factor) > 0 ? Number(r.demand_factor) : 1
     const qualityFactor = Number(r.quality_factor) > 0 ? Number(r.quality_factor) : 1
-    const baseTargetGlobal = Math.round(r.recommended_guest / markup)
-    const floorBaseGlobal = Math.round(r.floor_guest / markup)
-    const ceilBaseGlobal = Math.round(r.ceil_guest / markup)
+    const baseTargetGlobal = aBase(r.recommended_guest)
+    const floorBaseGlobal = aBase(r.floor_guest)
+    const ceilBaseGlobal = aBase(r.ceil_guest)
     const mesProp = mes.get(r.property_id)
     const fechaProp = fecha.get(r.property_id)
 
@@ -649,13 +663,13 @@ export async function POST(req: NextRequest) {
       demFuentes[dGate.fuente]++
       if (dGate.gateado) demGateadas++
       const dqDate = dGate.factor * qualityFactor
-      const baseGlobalD = Math.round((r.med_guest_global * dqDate) / markup)
+      const baseGlobalD = aBase(r.med_guest_global * dqDate)
       // El bucket del mes solo vale si hay comps SUFICIENTES y de VARIAS fechas: 10 anuncios del mismo
       // dia describen ese dia, no el mes (lección de junio 2027, ver la nota de la consulta).
       const useMonth = !!mb && mb.n >= MIN_BUCKET && mb.fechas >= MIN_FECHAS_MES
-      const baseD = useMonth ? Math.round((mb!.med * dqDate) / markup) : baseGlobalD
-      const floorD = useMonth ? Math.round(mb!.flo / markup) : floorBaseGlobal
-      const ceilD = useMonth ? Math.round(mb!.cei / markup) : ceilBaseGlobal
+      const baseD = useMonth ? aBase(mb!.med * dqDate) : baseGlobalD
+      const floorD = useMonth ? aBase(mb!.flo) : floorBaseGlobal
+      const ceilD = useMonth ? aBase(mb!.cei) : ceilBaseGlobal
       const normalBase = baseD // "precio normal" del día (mes/global), referencia del outlier (idea #2)
       let target = clamp(baseD, floorD, ceilD)
       let eventTarget = 0
@@ -688,7 +702,7 @@ export async function POST(req: NextRequest) {
           const useFecha = !!fb && fb.n >= MIN_FECHA_BUCKET
           const globalEvent = Math.round(clamp(baseGlobalD, floorBaseGlobal, ceilBaseGlobal) * ev)
           const bestEvent = useFecha
-            ? Math.max(globalEvent, Math.round((fb!.med * dqDate) / markup))
+            ? Math.max(globalEvent, aBase(fb!.med * dqDate))
             : globalEvent
           target = Math.max(target, bestEvent)
           eventTarget = bestEvent // capturado para saltar el raíl ±20% al ALZA (ver abajo)
@@ -701,7 +715,7 @@ export async function POST(req: NextRequest) {
         const fbMkt = fechaProp?.get(date)
         if (fbMkt) {
           const premio = premioMercadoFecha(
-            { medFechaGuest: fbMkt.med, comps: fbMkt.n, normalBase, markup, dqFactor: dqDate },
+            { medFechaGuest: fbMkt.med, comps: fbMkt.n, normalBase, markup, fijoNoche, dqFactor: dqDate },
             { minComps: MIN_FECHA_BUCKET, ratio: PREMIO_MERCADO_RATIO },
           )
           if (premio > target) { target = premio; eventTarget = Math.max(eventTarget, premio) }
@@ -726,7 +740,7 @@ export async function POST(req: NextRequest) {
         const fbA = fechaProp?.get(date)
         if (fbA) {
           anclaF = anclaMercadoFecha({
-            medFechaGuest: fbA.med, comps: fbA.n, fuente: fbA.fuente, markup, dqFactor: dqDate,
+            medFechaGuest: fbA.med, comps: fbA.n, fuente: fbA.fuente, markup, fijoNoche, dqFactor: dqDate,
           })
           if (anclaF > target) target = anclaF
         }

@@ -8,9 +8,22 @@ import {
   planDeVentanas, parsearParametrosPlan, FUENTES_FIABLES,
   type CoberturaVentana,
 } from "@/lib/sivra/mercado-cobertura"
+import { NOMBRE_PORTAL } from "@/lib/sivra/mercado-propios"
+import {
+  planEscaparate, type CandidataEscaparate, type PisoEscaparate,
+} from "@/lib/sivra/escaparate-plan"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
+
+/**
+ * Duraciones con las que se propone medir el escaparate propio. Hay que variarlas a propósito: la
+ * cuota fija del canal es POR ESTANCIA, así que solo se hace visible comparando ventanas de
+ * distinta duración (el mismo piso «mide» ×1,33 a 2 noches y ×1,18 a 3 sin haber cambiado nada).
+ */
+const NOCHES_ESCAPARATE = [2, 3, 4]
+/** Ventanas propias que se piden por piso y pasada. Cada una es una consulta al conector. */
+const ESCAPARATE_POR_PISO = 2
 
 // GET /api/sivra/mercado/plan?max=12
 //
@@ -23,6 +36,14 @@ export const maxDuration = 60
 // ialimp). Aquí el plan se calcula UNA vez, con el mismo helper que usa el barrido, y la rutina
 // solo lo consume. Además, al ordenar por antigüedad del corpus FIABLE, la rutina no necesita
 // recordar por dónde iba: si una pasada se corta, la siguiente retoma lo más urgente sola.
+//
+// Devuelve DOS listas, y las dos son trabajo de la misma pasada:
+//   · `ventanas` — el mercado (comparables de la competencia) que hay que medir;
+//   · `escaparate` — NUESTRO propio anuncio, ventana a ventana (19/08/2026). Hasta hoy esto pasaba
+//     por casualidad —el piso propio aparecía a veces en una búsqueda de comparables— y por eso el
+//     motor llevaba tres días convirtiendo mercado→base con un ×1,20 que nadie había medido. Ver
+//     `lib/sivra/escaparate-plan.ts`: elige las fechas que dan RECORRIDO de precio, que es lo único
+//     que permite separar el multiplicador del canal de su cuota fija.
 //
 // Auth de RUTINA (`isRoutineAuthorized`): `ALERTA_TOKEN` (header-only) o `CRON_SECRET` por compat.
 // Es de solo LECTURA: no escribe nada, así que el radio de daño es nulo.
@@ -124,6 +145,73 @@ export async function GET(req: NextRequest) {
 
   const { ventanas, candidatas, recortadas } = planDeVentanas(plan, aforos, cobertura, hoy, max, filtro)
 
+  // ── Plan del ESCAPARATE propio ───────────────────────────────────────────────────────────────
+  // Mismas fechas del calendario, pero midiendo NUESTRO anuncio. La base de cada ventana se calcula
+  // aquí (suma de `rate_snapshots.price_pricelabs` de sus noches, que PESE AL NOMBRE es el precio
+  // vivo de Smoobu): sin base conocida la ventana no se propone — medir el portal para una noche
+  // que no se puede cruzar con nada no aporta al ajuste.
+  let escaparate: ReturnType<typeof planEscaparate> = { peticiones: [], huecos: [] }
+  try {
+    const aforoPorPiso = new Map<string, number>()
+    for (const f of filas) aforoPorPiso.set(f.property_id, Number(f.max_guests) > 0 ? Number(f.max_guests) : 4)
+
+    const base = await prisma.$queryRaw<{ property_id: string; rate_date: Date; precio: number }[]>(Prisma.sql`
+      SELECT property_id, rate_date, price_pricelabs AS precio
+      FROM rate_snapshots
+      WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM rate_snapshots)
+        AND rate_date >= CURRENT_DATE AND price_pricelabs IS NOT NULL`)
+    const precioNoche = new Map<string, number>()
+    for (const b of base) {
+      precioNoche.set(`${b.property_id}|${new Date(b.rate_date).toISOString().slice(0, 10)}`, Number(b.precio))
+    }
+
+    const medidas = await prisma.$queryRaw<
+      { property_id: string; checkin: Date; noches: number; guests: number; base_total: number | null; medido_el: Date }[]
+    >(Prisma.sql`
+      SELECT property_id, checkin, noches, guests, base_total, medido_el
+      FROM pricing_escaparate WHERE medido_el >= CURRENT_DATE - 120`)
+
+    const checkins = [...new Set(plan.map(v => v.checkin))].sort()
+    const pisosEsc: PisoEscaparate[] = [...aforoPorPiso.entries()].map(([propertyId, aforo]) => {
+      const candidatasPiso: CandidataEscaparate[] = []
+      for (const checkin of checkins) {
+        for (const noches of NOCHES_ESCAPARATE) {
+          let total = 0
+          let completa = true
+          for (let i = 0; i < noches; i++) {
+            const dia = new Date(new Date(`${checkin}T00:00:00Z`).getTime() + i * 86_400_000)
+              .toISOString().slice(0, 10)
+            const precio = precioNoche.get(`${propertyId}|${dia}`)
+            if (precio == null) { completa = false; break }
+            total += precio
+          }
+          candidatasPiso.push({ checkin, noches, baseTotal: completa ? total : null })
+        }
+      }
+      return {
+        propertyId,
+        aforo,
+        nombrePortal: NOMBRE_PORTAL[propertyId] ?? null,
+        candidatas: candidatasPiso,
+        medidas: medidas
+          .filter(m => m.property_id === propertyId)
+          .map(m => ({
+            checkin: new Date(m.checkin).toISOString().slice(0, 10),
+            noches: Number(m.noches),
+            guests: Number(m.guests),
+            baseTotal: m.base_total != null ? Number(m.base_total) : null,
+            medidoEl: new Date(m.medido_el).toISOString().slice(0, 10),
+          })),
+      }
+    })
+    escaparate = planEscaparate(pisosEsc, hoy, { porPiso: ESCAPARATE_POR_PISO })
+    for (const h of escaparate.huecos) avisos.push(`escaparate ${h.property_id}: ${h.motivo}`)
+  } catch (e) {
+    // 🚨 Un plan de escaparate vacío por avería se lee EXACTAMENTE igual que «ya está todo medido»,
+    // y de esa confusión salió el ×1,20 sin contrastar. Se declara.
+    avisos.push(`plan de escaparate ilegible (${String(e).slice(0, 80)}): esta pasada NO mide nuestro propio anuncio`)
+  }
+
   // Un recorte MUDO se lee como «esto era todo lo que había». Se dice, para que el parte de la
   // rutina pueda distinguir «cubierto» de «cubierto hasta donde cabía en la pasada».
   if (recortadas > 0) {
@@ -144,6 +232,11 @@ export async function GET(req: NextRequest) {
     pedidas: ventanas.length,
     sin_medir_nunca: ventanas.filter(v => v.diasSinMedir === null).length,
     ventanas,
+    // NUESTRO propio anuncio: `hotel_names` + fechas exactas. Alimenta `pricing_escaparate` y con
+    // ello el calibrado del canal (`/api/sivra/pricing/canal`), que es quien decide con qué números
+    // el motor convierte mercado→base.
+    escaparate: escaparate.peticiones,
+    escaparate_huecos: escaparate.huecos,
     avisos,
   })
 }

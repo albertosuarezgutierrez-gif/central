@@ -16,6 +16,8 @@
 // (~1,1-1,4× el mes, porque la mediana del mes mezcla entre semana y findes). Así no encarece un
 // sábado corriente; solo dispara en fechas genuinamente especiales. Pura → testeable con node --test.
 
+import { baseDesdeGuestConFijo } from "./pricing-canal.ts"
+
 export type PremioMercadoInput = {
   /** mediana de mercado (precio GUEST) de la FECHA exacta */
   medFechaGuest: number
@@ -23,8 +25,10 @@ export type PremioMercadoInput = {
   comps: number
   /** base "normal" del día (mes/global), en la MISMA unidad (base, sin markup) que el target del motor */
   normalBase: number
-  /** markup de canal (guest = base × markup) */
+  /** multiplicador del canal (`escaparate = markup × base + cuota fija`) */
   markup: number
+  /** parte FIJA que el canal suma a esta noche (cuota por estancia ÷ noches típicas). Obligatoria. */
+  fijoNoche: number
   /** ajuste demanda/calidad del motor (recommended_guest / med_guest_global) */
   dqFactor: number
 }
@@ -45,7 +49,7 @@ export function premioMercadoFecha(i: PremioMercadoInput, o: PremioMercadoOpts =
   const ratio = o.ratio ?? 1.5
   if (i.comps < minComps) return 0
   if (i.medFechaGuest <= 0 || i.markup <= 0 || i.normalBase <= 0) return 0
-  const baseFecha = Math.round((i.medFechaGuest * i.dqFactor) / i.markup)
+  const baseFecha = baseDesdeGuestConFijo(i.medFechaGuest * i.dqFactor, i.markup, i.fijoNoche)
   if (baseFecha < ratio * i.normalBase) return 0
   return baseFecha
 }
