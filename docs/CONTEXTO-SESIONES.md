@@ -32,6 +32,42 @@
 
 ---
 
+### 🔒 (19/08/2026) `main` NO tenía ninguna protección — ahora sí, y rompe a dos bots
+- Tras el fallo de #1487 (tests rojos, mergeado igual) se miró el gate: **no había gate**. Ni branch
+  protection clásica ni rulesets. El check «Ready to merge» de `ci.yml` solo hace `needs: check`
+  (Lint·TypeCheck·Build) y **nunca ha mirado los tests** (viven en otro workflow, `needs:` no cruza
+  workflows): era decorativo. Nada bloqueaba nada.
+- Alberto creó el ruleset **«main - CI obligatorio»** (`/settings/rules/21056649`, activo, `refs/heads/main`):
+  12 checks required (`Tests (packages + guardián)`, `Lint · TypeCheck · Build`, `Análisis estático`,
+  y los 9 `Typecheck · <app>`), `strict_required_status_checks_policy:false` (deliberado: `main` recibe
+  commits del bot cada pocos minutos y exigir «up to date» metería en bucle de re-merge). Sin required:
+  «Ready to merge» ni los `Vercel – *` (salen `Ignored` según el filtro de builds). Omisión VACÍA.
+- 🔴 **Efecto lateral: el ruleset bloquea los pushes directos a `main`, y hay DOS escritores automáticos
+  que van directos.** (1) `auditoria.yml` empuja como `github-actions[bot]`, que no se puede poner en la
+  lista de omisión. (2) El agente SEO (`apps/sivra/lib/seo-landing.ts`) hace `PUT /contents/…` **sin
+  `branch`** → escribe en la rama por defecto. Ese segundo falla EN SILENCIO: la landing deja de
+  optimizarse los lunes y no lo delata nada. Las rutinas normales ya acaban en PR draft, no les afecta.
+- Y un TERCERO que no se vio de primeras: el propio `rutinas-automerge.yml`, en su camino de
+  conflicto, empujaba el merge resuelto a `main`. Fallaba «bien» (reintenta), pero el motivo que
+  imprimía era falso («main se movió») → PRs de registro con conflicto atascados para siempre.
+- **Decisión de Alberto: por PR y definitivo — nada escribe en `main` salvo el merge de un PR verde.**
+  (1) `auditoria.yml` abre PR en `claude/auditoria-radiografia`; su commit lleva `[skip vercel]` y NO
+  `[skip ci]`, porque `[skip ci]` lo honra Actions y dejaría el PR sin checks (y el automerge, con
+  razón, no mergea a ciegas). (2) El agente SEO (`pushToGitHub`, gemelo en sivra y plataforma) resetea
+  `claude/seo-landing` a `main`, escribe con `branch` y abre PR. (3) El automerge acepta ahora esos
+  ficheros y, en conflicto, empuja a la RAMA DEL PR con `GH_PAT_TRIGGER` — no con `GITHUB_TOKEN`,
+  cuyos pushes no disparan CI y dejarían el PR sin checks del sha nuevo.
+- 🪤 **Cuarta pieza, descubierta EN VIVO al vigilar el propio PR #1501: un PR puede nacer con CERO checks.**
+  Empujar la rama y abrir el PR con un token de GitHub App/Actions no dispara los workflows `pull_request`
+  → PR sin checks → el automerge (con razón) no lo mergea, y el ruleset tampoco deja mergearlo a mano:
+  **atascado para siempre**. Le pasó a #1501 (14 checks aparecieron solo al empujar un commit más). Así
+  que `auditoria.yml` empuja y abre el PR con `GH_PAT_TRIGGER`, y si falta el secret **no abre PR**: falla
+  con aviso, mejor que un PR zombi. El agente SEO no sufre esto (usa su PAT fine-grained propio).
+- ⚠️ Lo que NO se ha podido probar aquí: los workflows solo se ejecutan en GitHub. Las tres piezas se
+  verifican solas en su primera pasada real — auditoría al próximo push a `main`, SEO el lunes. Si el
+  PR del SEO se queda abierto sin mergear, mirar si `GH_PAT_TRIGGER` sigue vivo. Revertir todo =
+  ruleset a «Desactivado».
+
 ### 🌍 (19/08/2026) `main` llegó ROJA: tocar el español de la landing sin el diccionario
 - Al mergear PR #1490 saltó `Tests (packages + guardián)`. **No era mío:** reproducido sobre `origin/main`
   → `apps/housesevillana` 45/47, mismas 2 pruebas i18n. Lo rompió **PR #1487** al reescribir el copy español
