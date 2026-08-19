@@ -1,5 +1,46 @@
 # Auditoría diaria — agosto 2026
 
+# Actualización 2026-08-19 — auditoría diaria (ligera)
+
+Rango: 12 commits desde la última auditoría (2026-08-18, `04c3b62..128702c`). Casi todos
+autodocumentados PR-a-PR (curva de evolución de cartera trading #1476/#1477, compra VWCE
+verificada, verificación post-cron PSD2, pasada mercado-booking). Carril 2 vacío hoy.
+
+## ✅ Heartbeat de crons y agentes (24 huellas) — 24/24 ✅
+- **a) Latidos `agente_latidos` (12):** todos `ok=true`, dentro de cadencia.
+- **b) Tablas de dominio (12):** todas ✅, la más antigua `ia-director-refresh` a 45,0h (umbral 192h).
+- Sin ningún ⛔. Sin causa que investigar.
+
+## ✅ Backlog de PRs de rutinas + salud del automerge — sin nada que vigilar
+1 PR abierto (**#1478**, draft, `claude/reserva-diciembre-socorro-w7c3z4`, fix pricing Navidad
+SIVRA) — no es de "solo registro" (toca código) y tiene <24h, fuera del alcance del automerge y
+sin envejecer. `rutinas-automerge.yml` con runs cada hora, el último 19/08 01:56 UTC ✅ (success) —
+vigilante vivo.
+
+## ✅ Integridad estructural — sin hallazgos
+`pnpm install --frozen-lockfile` OK, radiografía de estructura al día, guardián `pnpm test:guardia`
+32/32 ✅ (incluye regresión de scope y de secretos). Los 10 `apps/*/vercel.json` llevan el
+`ignoreCommand` correcto. `@central/*` deps ⊆ `transpilePackages` en las 10 apps, sin huecos.
+
+## ✅ Coherencia de docs/skills — sin drift nuevo
+Sigue habiendo 32 skills en `.claude/skills/` (ninguna nueva desde ayer) — `docs/SKILLS.md` sigue
+al día. Sin contradicciones de "regla permanente" entre memoria y skills.
+
+## ✅ Reconciliación de memoria — nada que anotar de nuevo, un glitch de formato corregido
+Los 12 commits del rango llevan su propio commit de memoria emparejado (curva de trading, compra
+VWCE, verificación PSD2 — todos ya reflejados en `docs/CONTEXTO-SESIONES.md`). El bloque «Estado
+vivo» (actualizado 18/08) sigue vigente, sin pendientes nuevos que cerrar. Único hallazgo: en
+`docs/AUTO-APLICADOS.md` las 2 entradas del 18/08 habían quedado insertadas en medio del párrafo
+de intro (antes de que terminara de redactarse) en vez de bajo `## Registro` — corregido (sin
+pérdida de información, solo reordenado).
+
+## ✅ Manuales de usuario — nada que tocar
+Ningún cambio del rango toca `apps/ia-rest/src/app/**` ni `apps/ia-rest/public/**`; la única
+feature de UI del rango (curva de evolución en `/trading`) es de `apps/plataforma`, fuera del
+alcance de ese check.
+
+---
+
 # Actualización 2026-08-18 — auditoría diaria (ligera)
 
 Rango: 39 commits desde la última auditoría (2026-08-16 PROFUNDA), `27225d8..7f006ec` en `main`.

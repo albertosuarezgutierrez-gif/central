@@ -32,6 +32,19 @@
 
 ---
 
+### 🔍 (19/08/2026) Auditoría diaria (ligera) — todo sano, sin carril 2
+- Rango: 12 commits desde la última auditoría (2026-08-18), todos ya autodocumentados por PR
+  (curva de trading, compra VWCE, verificación PSD2, mercado-booking). Heartbeat de 24 huellas
+  (12 latidos `agente_latidos` + 12 tablas de dominio) **24/24 ✅**, sin crons mudos. Backlog de
+  PRs de rutinas: 1 abierto (#1478, draft de código, <24h) — fuera del alcance del automerge,
+  sin envejecer; `rutinas-automerge.yml` vivo (run hace <1h, success).
+- Integridad estructural sin hallazgos (lockfile, guardián 32/32, `ignoreCommand` en las 10 apps,
+  `transpilePackages` sin huecos). Sin drift nuevo en skills/docs (32 skills, sin contradicciones
+  de reglas permanentes). Único arreglo: `docs/AUTO-APLICADOS.md` tenía 2 entradas del 18/08 mal
+  insertadas en medio del párrafo de intro — reordenadas.
+- «Estado vivo» sigue al día desde el 18/08, sin pendientes nuevos que anotar. Sin manuales que
+  tocar (la única UI nueva del rango, la curva de `/trading`, es de plataforma).
+
 ### 📈 (18/08/2026) Gráfico de evolución de la cartera REAL — antes no había pasado que dibujar
 - Alberto pidió ver la evolución del núcleo. Hallazgo: NO existía histórico — `trading_cartera_real` es
   una foto que se REEMPLAZA cada pasada y `broker_saldos` una fila que se pisa; un gráfico habría tenido
