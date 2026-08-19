@@ -66,7 +66,53 @@ Basic Deal de House (12%, activada 18/08) — las dos nacieron el 16-18/08/2026,
 **Apilamiento conocido hasta ahora:** 0,90 (móvil) × 0,88 (oferta 12%) = **−20,8%**, más Genius y el
 plan de tarifa cuando se confirmen. Muy por debajo del −39,4% de House.
 
-## Luxury Busto (4340072) — PENDIENTE
+## Luxury Busto (4340072) — inventariado 19/08/2026 (parcial)
+
+**Ofertas activas (2), mismo patrón que Dúplex y SIN tarifas por país:**
+
+| Oferta | Categoría | % | Reserva | Estancia | Rendimiento 12m |
+|---|---|---|---|---|---|
+| Mobile rate | Tarifa específica | 10% | 07/03/2024 → | siempre | **121 reservas · 347 noches · ADR 122,89€ · 42.644,51€** |
+| «Oferta estándar 8% permanente» | Catálogo de ofertas | **8%** | 16/08/2026 → | 16/08/2026–31/12/2028 | sin reservas todavía |
+
+📌 Aquí la oferta SÍ descuenta el 8% que dice su nombre — en Dúplex la misma oferta descuenta 12% y
+en House la Basic Deal 12%. El % varía por piso aunque el nombre sea idéntico: no fiarse del nombre.
+
+**Avisos de «Datos clave» (sugerencias de venta de Booking, con sus cifras):**
+- UK 0% vs 9% de la zona (igual que Dúplex).
+- Antelación: nosotros **~81,2 días** vs ~65,7 del grupo (Dúplex: 53 vs 39). Luxury se reserva con
+  mucha más antelación que el Dúplex — dato útil para el `lastminute` por piso del motor.
+- 🆕 **«Los viajeros de UK tienen una tarifa media más alta»: UK 161€ vs nuestros 126€ (~1,3×).**
+  Esto **da la vuelta a mi lectura preliminar** sobre las tarifas por país: el −10% de la tarifa UK
+  no es solo margen regalado, es el precio de entrada a un segmento que paga ~30% más. Antes de
+  recomendar quitar las 3 tarifas país de House hay que comprobarlo con datos propios, no con la
+  intuición de «un descuento menos».
+
+**Pendiente de este piso:** Genius y planes de tarifa.
+
+**Apilamiento conocido:** 0,90 (móvil) × 0,92 (oferta 8%) = **−17,2%** — el más contenido de los tres.
+
+## 🚩 La antelación que dice Booking NO es la nuestra (comprobado 19/08/2026)
+
+Los avisos «tu grupo reserva más de última hora» dan cifras que **no cuadran con `incomes`**:
+
+| Piso | Booking dice | Nuestra mediana real | Nuestra media |
+|---|---|---|---|
+| Luxury Busto | ~81,2 d | **23 d** | 44 d |
+| Dúplex Center | ~53 d | **16 d** | 21 d |
+| House Sevillana | (no visto) | 42 d | 56 d |
+| Busto Reform | (no visto) | 19 d | 51 d |
+
+Medido sobre reservas BOOKING de los últimos 12 meses, tanto por fecha de estancia como por fecha de
+reserva (los dos cortes dan lo mismo, así que no es el filtro). **Causa NO confirmada**: la hipótesis
+razonable es que Booking cuente también las canceladas —que suelen reservarse con mucha antelación y
+nosotros borramos de `incomes`—, pero `reservas_canceladas` arrancó vacía el 12/08/2026 y hoy no
+permite comprobarlo. Queda como discrepancia abierta.
+
+**Consecuencia práctica:** el aviso de Booking NO es motivo para crear una last-minute deal. Nuestra
+antelación real ya es corta (16-42 d de mediana) y el motor aplica el descuento de urgencia sobre la
+base desde el 09/08 con la antelación mediana medida por piso y mes — que sale de `incomes`, no de
+este panel.
 
 ## Busto Reform (4771238) — PENDIENTE
 

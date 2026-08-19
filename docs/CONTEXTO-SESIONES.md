@@ -40,7 +40,14 @@
 - Dúplex (parcial, faltan Genius y planes): solo 2 ofertas (móvil 10% — 80 reservas/38.319,10€ en 12m —
   y una «estándar 8%» que en realidad descuenta 12%), SIN tarifas país → apilamiento −20,8% conocido.
   Booking sugiere ahí UK rate (0% vs 9% zona) y last-minute deal (ya lo hace el motor, no duplicar).
-- Pendientes: Luxury 4340072 · Busto Reform 4771238 + veredicto conjunto.
+- Luxury (parcial): 2 ofertas (móvil 10% — 121 reservas/42.644,51€ — y «estándar 8%» que aquí SÍ es 8%;
+  el mismo nombre descuenta distinto en cada piso). Apilamiento −17,2%. 🆕 Booking dice que el viajero
+  UK paga 161€ vs nuestros 126€ (~1,3×) → **da la vuelta a la idea de quitar las tarifas país**: el −10%
+  compra un segmento que paga 30% más. Pendiente de comprobar con datos propios antes de tocar nada.
+- 🚩 La antelación de los avisos de Booking NO cuadra con `incomes` (Luxury 81d vs 23d real, Dúplex 53
+  vs 16). Causa no confirmada (¿canceladas?, `reservas_canceladas` vacía hasta 12/08). No crear
+  last-minute deal por ese aviso: el motor ya usa la antelación real.
+- Pendientes: Busto Reform 4771238 + Genius/planes de tarifa de Dúplex y Luxury + veredicto conjunto.
 ### 🏷️ (19/08/2026) Tres centinelas del canal — y el primero destapa que ESTAMOS CAROS
 - **Validación FUERA de muestra** (`validarCanal`): el R² del ajuste es circular (mide la recta
   contra las ventanas que la produjeron). Ahora `pricing_escaparate.usada_en_ajuste_at` marca lo
