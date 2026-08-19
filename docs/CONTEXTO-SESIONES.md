@@ -37,7 +37,10 @@
   lectura) previo a decidir la Fase 3. House: Basic Deal 12% (⚠️ activada 18/08, origen por
   confirmar) + Genius 15% + móvil 10% + 3 tarifas país −10% (solo No reembolsable) → peor caso
   −39,4%. Preliminar: quitar tarifas país, mantener el resto; Genius nivel 3 NUNCA.
-- Pendientes: Dúplex 2888928 · Luxury 4340072 · Busto Reform 4771238 + veredicto conjunto.
+- Dúplex (parcial, faltan Genius y planes): solo 2 ofertas (móvil 10% — 80 reservas/38.319,10€ en 12m —
+  y una «estándar 8%» que en realidad descuenta 12%), SIN tarifas país → apilamiento −20,8% conocido.
+  Booking sugiere ahí UK rate (0% vs 9% zona) y last-minute deal (ya lo hace el motor, no duplicar).
+- Pendientes: Luxury 4340072 · Busto Reform 4771238 + veredicto conjunto.
 ### 🏷️ (19/08/2026) Tres centinelas del canal — y el primero destapa que ESTAMOS CAROS
 - **Validación FUERA de muestra** (`validarCanal`): el R² del ajuste es circular (mide la recta
   contra las ventanas que la produjeron). Ahora `pricing_escaparate.usada_en_ajuste_at` marca lo

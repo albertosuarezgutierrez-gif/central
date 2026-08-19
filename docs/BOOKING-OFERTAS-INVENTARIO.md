@@ -39,7 +39,32 @@ tachado del plan) + Genius + móvil; candidatas a QUITAR las 3 tarifas por país
 sin aportar escaparate). En la práctica House apila poco: las 2 reservas de la semana del
 17/08 pagaron el 96,5% y ~94% de lista.
 
-## Dúplex Center (2888928) — PENDIENTE
+## Dúplex Center (2888928) — inventariado 19/08/2026 (parcial)
+
+**Ofertas activas (2) — la mitad que House, y SIN tarifas por país:**
+
+| Oferta | Categoría | % | Reserva | Estancia | Rendimiento 12m |
+|---|---|---|---|---|---|
+| Mobile rate | Tarifa específica | 10% | 07/03/2024 → | siempre | **80 reservas · 335 noches · ADR 114,39€ · 38.319,10€** |
+| «Oferta estándar 8% permanente» | Catálogo de ofertas | **12%** | 16/08/2026 → | 16/08/2026–31/12/2028 | 2 reservas · 4 noches · ADR 121,62€ · 486,47€ |
+
+⚠️ **El nombre miente**: la oferta se llama «estándar 8%» pero descuenta **12%**. Mismo patrón que la
+Basic Deal de House (12%, activada 18/08) — las dos nacieron el 16-18/08/2026, origen por confirmar.
+
+**Avisos que muestra Booking en esta ficha (son sugerencias de venta suyas, no diagnósticos):**
+- «Tus reservas de Reino Unido están por debajo de la media»: Dúplex 0% vs 9% de la zona. Booking
+  empuja a crear una UK country rate. 🔎 Señal a cruzar con House (que SÍ tiene las 3 tarifas país):
+  con n=1 no prueba causalidad, pero hay que mirarlo antes de decidir si se quitan.
+- «Tu grupo de referencia reserva más de última hora»: nosotros ~53 días de antelación vs ~39 del
+  grupo. Encaja con el last-minute del motor (`lastminute_k=0.5` desde el 09/08) — el descuento de
+  urgencia ya lo aplica el motor sobre la base, no hace falta la «last-minute deal» de la extranet
+  (sería un descuento MÁS que se multiplica).
+
+**Pendiente de este piso:** Genius (niveles activos y % máximo) y planes de tarifa
+(Standard/Flexible/No reembolsable/semanal/mensual) — no salen en la pantalla de promociones.
+
+**Apilamiento conocido hasta ahora:** 0,90 (móvil) × 0,88 (oferta 12%) = **−20,8%**, más Genius y el
+plan de tarifa cuando se confirmen. Muy por debajo del −39,4% de House.
 
 ## Luxury Busto (4340072) — PENDIENTE
 
