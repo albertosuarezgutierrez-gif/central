@@ -38,6 +38,7 @@ export const TRADUCCIONES: Record<string, string> = {
   '6 dorm &middot; 4 ba&ntilde;os': '6 bed &middot; 4 bath',
   'Terraza + Patio': 'Terrace + Courtyard',
   'Hasta 12 personas': 'Up to 12 guests',
+  '8,6/10': '8.6/10',
   'Consultar disponibilidad': 'Check availability',
   'Ver la casa': 'See the house',
   'La propiedad': 'The property',
@@ -45,7 +46,7 @@ export const TRADUCCIONES: Record<string, string> = {
   'Ba&ntilde;os': 'Baths',
   'Hu&eacute;spedes': 'Guests',
   'Muy bien valorado': 'Highly rated',
-  'Booking.com &middot; +47 rese&ntilde;as': 'Booking.com &middot; 47+ reviews',
+  'Booking.com &middot; 51 rese&ntilde;as': 'Booking.com &middot; 51 reviews',
   'Ver disponibilidad &#8594;': 'See availability &#8594;',
   'Parking privado': 'Private parking',
   '&mdash; el &uacute;nico del barrio': '&mdash; the only one in the area',
@@ -53,7 +54,7 @@ export const TRADUCCIONES: Record<string, string> = {
   'Sin comisiones &mdash;': 'No booking fees &mdash;',
   'ahorra hasta un 22%': 'save up to 22%',
   'vs Booking': 'vs Booking',
-  '&middot; +47 rese&ntilde;as verificadas': '&middot; 47+ verified reviews',
+  '&middot; 51 rese&ntilde;as verificadas': '&middot; 51 verified reviews',
 
   // ── La casa ──────────────────────────────────────────────────────────────────
   'Una casa sevillana para vivirla': 'A Sevillian house made for living in',

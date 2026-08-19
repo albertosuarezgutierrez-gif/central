@@ -32,6 +32,16 @@
 
 ---
 
+### 🔢 (19/08/2026) La nota de House era vieja — y la skill de SEO tiene la ficha de OTRO piso
+- Nota real por el conector de Booking: **8,6/10 con 51 reseñas**. La landing decía 8,1 con +47
+  (dato de hace meses) y el bloque borrado hoy decía 9,2/4,9 (inventado). Aplicado en hero y barra
+  de confianza + claves i18n. **Nada lo refresca solo:** al tocar la landing, contrástalo.
+- **Origen del lío de la dirección:** `seo-house-sevillana` tiene el **ID de Booking `4771238`, que
+  es Busto Reform** (el de House es `2039943`), y con él arrastra Bustos Tavera 22 y sus coordenadas.
+  Parche exacto (7 sitios + teléfono sin rellenar) en `docs/PARCHE-skill-seo-house-sevillana.md`.
+  Las de House: **37.395904, -5.987431**.
+- ⚠️ **Booking anuncia «Admite mascotas» y la web dice que NO.** Decisión de Alberto; no toqué ninguna.
+- Los minutos a pie siguen sin medir: el egress bloquea Nominatim, OSRM y demás APIs de mapas.
 ### 🎨 (19/08/2026) Repaso de diseño de la landing de House Sevillana
 - **Dos secciones colgaban POR DEBAJO del `<footer>`** con estilos inline ajenos a la paleta:
   unas reseñas duplicadas (y contradictorias: 9,2/10 + 4,9/5 frente al 8,1/10 del resto) y la

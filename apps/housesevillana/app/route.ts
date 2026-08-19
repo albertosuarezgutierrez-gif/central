@@ -434,10 +434,10 @@ fbq('init','12124662686780882173');fbq('track','PageView');
         </div>
       </div>
       <div class="hc-rating">
-        <div class="hc-rating-n">8.1</div>
+        <div class="hc-rating-n">8,6</div>
         <div class="hc-rating-lbl">
           <strong>Muy bien valorado</strong>
-          <span>Booking.com &middot; +47 rese&ntilde;as</span>
+          <span>Booking.com &middot; 51 rese&ntilde;as</span>
         </div>
       </div>
       <a href="#reserva" class="hc-cta">Ver disponibilidad &#8594;</a>
@@ -457,7 +457,7 @@ fbq('init','12124662686780882173');fbq('track','PageView');
   <div class="tb-sep"></div>
   <div class="tb-item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M15.5 8.8a4.4 4.4 0 0 0-6.2.8 5.2 5.2 0 0 0 0 4.8 4.4 4.4 0 0 0 6.2.8"/><path d="M7 11h5.6M7 13.4h4.6"/></svg> Sin comisiones &mdash; <strong>ahorra hasta un 22%</strong> vs Booking</div>
   <div class="tb-sep"></div>
-  <div class="tb-item"><svg class="ico fill" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.6 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5-5.8-3-5.8 3 1.1-6.5L2.6 9.4l6.5-.9z"/></svg> <strong>8.1/10</strong> &middot; +47 rese&ntilde;as verificadas</div>
+  <div class="tb-item"><svg class="ico fill" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.6 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5-5.8-3-5.8 3 1.1-6.5L2.6 9.4l6.5-.9z"/></svg> <strong>8,6/10</strong> &middot; 51 rese&ntilde;as verificadas</div>
 </div>
 
 <!-- CARACTERÍSTICAS -->
