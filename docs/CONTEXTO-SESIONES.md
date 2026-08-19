@@ -32,6 +32,20 @@
 
 ---
 
+### 🛤️ (19/08/2026) El raíl aguanta en vivo — vigilancia diaria de precios BORRADA
+- Verificado sobre la pasada real de las 20:31 UTC. El arreglo (#1497, `1f5a4d0`) estaba en producción
+  desde las **20:13:18 UTC**, 18 min antes (deploy de `a6ef85ab`, del que `1f5a4d0` es ancestro).
+- **0 fugas del raíl en las 351 fechas escritas hoy, en los 4 pisos.** Las 17 que ayer se pasaron son
+  justo las 17 que hoy se reescribieron, y todas frenaron en el tope: Busto Reform 18/09 se quedó en
+  312→250 (ayer siguió a 200, −35,9%) y las 16 de House de 2027 en −20,0%.
+- La peor bajada del día es **−20,23%** (Luxury 22/08, 173→138) y **no es fuga**: `ROUND(173×0,8)=138`,
+  o sea el motor clavó su propio suelo y el exceso es redondeo a euros. Las 3 mayores bajadas caen
+  exactamente en `ROUND(ancla×0,8)`. La mayor subida (+82,4%, Luxury 28-30/12) es el salto de evento
+  de Nochevieja: todo lo posterior al clamp solo SUBE, por diseño.
+- Con eso se cumple el «todo ok» condicionado de Alberto → **borrada `trig_01Eagedr3hBNtpf1oEgDHj5R`**
+  («Vigilancia diaria pricing SIVRA», diaria 09:00 UTC desde el 09/08). Siguen vivos el guardián de
+  las 07:30 con alertas a Telegram, la auditoría diaria y el agente de pricing semanal.
+
 ### 📅 (19/08/2026) Calendario de disponibilidad en la landing de House
 - Alberto lo pidió: que el huésped vea de un vistazo qué noches hay. Como la landing es HTML plano en
   rutas `edge` **sin BD ni secretos**, el dato viene de un endpoint público NUEVO en plataforma
