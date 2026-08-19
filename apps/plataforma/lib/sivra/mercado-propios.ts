@@ -53,13 +53,21 @@ export const NOMBRE_PORTAL: Readonly<Record<string, string>> = {
 /**
  * Nombres (ya normalizados) con los que NUESTROS pisos aparecen publicados en los portales.
  *
- * 🚨 CUÁNTO COSTÓ TENER SOLO UNO (19/08/2026). Hasta hoy la lista era `['house sevillana']` con la
- * nota «los otros tres no han aparecido nunca en los resultados». Al medir el escaparate de los
- * cuatro pisos con el conector aparecieron los tres a la primera: llevaban desde el 14/08 entrando
- * en `market_rates` como comparables DE SÍ MISMOS. Es el bucle que el módulo entero existe para
- * evitar, y estuvo abierto porque la ausencia de una prueba («no lo hemos visto») se anotó como si
- * fuera un hecho («no sale»). Cuando demos de alta un piso nuevo, su nombre de portal se busca
- * ANTES de que entre al corpus, no cuando aparezca por casualidad.
+ * 🚨 POR QUÉ ESTÁN LOS CUATRO (19/08/2026). Hasta hoy la lista era `['house sevillana']` con la
+ * nota «los otros tres no han aparecido nunca en los resultados» — una ausencia de prueba anotada
+ * como si fuera un hecho. Al pedirle al conector cada anuncio por su nombre aparecieron los tres a
+ * la primera, así que el filtro dependía de que el portal no los devolviera: un raíl que solo
+ * funciona mientras nadie lo pone a prueba.
+ *
+ * ⚠️ Y la corrección de la corrección, porque este módulo va justo de eso: al VERIFICARLO contra
+ * `market_rates` (mismo día, tras el arreglo) **no había ni una sola fila** con ninguno de los tres
+ * nombres — 2.746 comparables de los tres pisos, 833 nombres distintos, ninguno propio. El corpus
+ * estaba limpio: el riesgo era real y ahora está tapado, pero **no llegó a materializarse**, y
+ * decirlo al revés habría sido exactamente el error que la regla de CLAUDE.md prohíbe. Solo House
+ * salía de verdad en las búsquedas (aforo 12, mercado estrecho) y para ese el filtro ya existía.
+ *
+ * Cuando demos de alta un piso nuevo, su nombre de portal se busca ANTES de que entre al corpus,
+ * no cuando aparezca por casualidad.
  *
  * Se comparan trozos distintivos, no el nombre completo: el portal le cuelga sufijos comerciales
  * que cambian solos. Y NO tokens sueltos («busto», «centro»): hay competencia real en Bustos Tavera

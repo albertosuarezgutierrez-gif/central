@@ -32,6 +32,27 @@
 
 ---
 
+### 🏷️ (19/08/2026) Tres centinelas del canal — y el primero destapa que ESTAMOS CAROS
+- **Validación FUERA de muestra** (`validarCanal`): el R² del ajuste es circular (mide la recta
+  contra las ventanas que la produjeron). Ahora `pricing_escaparate.usada_en_ajuste_at` marca lo
+  consumido y la pasada siguiente juzga la recta VIGENTE contra las ventanas nuevas. Probado con
+  las 16 reales: los parámetros viejos (×1,20) salen `desviado` (sesgo +8,4%) y los medidos `ok`.
+- **Centinela del precio al HUÉSPED** (`pricing-precio-huesped.ts`): el motor razona en BASE y con
+  cuota fija eso ya no describe lo que se paga. En House, 597€/estancia son 299€/noche que el motor
+  no ve: puede estar en su `min_price` y listar un 78% sobre mercado. Añade `baseDondeLaCuotaMandaya`
+  (House: 331€; por debajo, bajar la base ya no abarata la noche).
+- 🚨 **Lo que ha encontrado al estrenarlo:** el precio al huésped está muy por encima de la mediana
+  de SU mercado. **Busto Reform ×2,18** (mes a mes: 1,4-3,0×; ocupación 90d **11%**) y **House ×1,88**
+  (ocupación 25%). Duplex 1,06× y Luxury 1,10×, sanos. Descartado que sea artefacto: comps al mismo
+  aforo (`pricing_factor_aforo(2,2)=1`), 30-270 comps/mes, y Busto NI SIQUIERA tiene suelo PL.
+  **Decisión pendiente de Alberto: por qué el motor no baja Busto y hasta dónde bajarlo.**
+- **Canal por PORTAL** + cobertura contada en euros: la recta es de Booking, que es el 92-99% del
+  bruto de los cuatro (Airbnb 1,0% House / 2,1% Luxury). El hueco queda declarado, no supuesto.
+- ❌ **`position_factor` de House NO se sube a 1,23.** El «6/6 reservas sobre el p50» era sesgo de
+  supervivencia: la ocupación realizada de House es la más baja de los cuatro (47% a 12 meses) y ya
+  lista al 1,88× del mercado. Subir sería ir en la dirección contraria a lo que dicen los datos.
+- PR #1484.
+
 ### 🗄️ (19/08/2026) Unificación Supabase CERRADA — un solo proyecto, ya renombrado a «central»
 - Alberto pidió unir los 2 proyectos Supabase. Hallazgo: el flip de junio SÍ se hizo (viejo congelado
   desde jun, compartida con escrituras vivas — la nota "split-brain 12/07" estaba desfasada), pero el
@@ -56,8 +77,10 @@
   + `cuota_fija` + `noches_ref`, acotado a ±15% de efecto/pasada, con interruptor `canal_auto` y latido
   `sivra_canal`. Y el plan (`/mercado/plan`) pide ya las ventanas propias eligiendo las que dan
   RECORRIDO de precio (sin él, m y F son indistinguibles) → la rutina de Booking las mide sola.
-- 🚨 Bug gordo de paso: `ANUNCIOS_PROPIOS` solo tenía House, así que **Busto/Luxury/Dúplex llevaban
-  desde el 14/08 entrando como comparables de sí mismos**. Añadidos los 4 nombres de portal.
+- `ANUNCIOS_PROPIOS` solo tenía House; añadidos los 4 nombres de portal. ⚠️ **Corrijo lo que dije
+  al mergear:** afirmé que Busto/Luxury/Dúplex «llevaban entrando como comparables de sí mismos» y
+  al verificarlo contra `market_rates` **no había ni una fila** (2.746 comps, 833 nombres, ninguno
+  propio). El riesgo era real y ahora está tapado, pero NO se materializó. Lo afirmé sin mirar.
 - 🔗 **Encaja con el hallazgo de Smoobu de hoy (entrada siguiente), no lo contradice:** ese +20% por
   canal vive DENTRO de Smoobu, así que ya está incluido en lo que mide el conector. Y ojo a las
   unidades: `0,92 efectivo/base` es lo que COBRAMOS (tras comisión); esta recta es lo que PAGA el
