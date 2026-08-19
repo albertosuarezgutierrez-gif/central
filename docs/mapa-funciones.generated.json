@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-19T18:52:11Z",
-  "sha": "203a582924bfa31aed97cd412be86affe549c640",
+  "generadoEn": "2026-08-19T22:14:21Z",
+  "sha": "a84543471139a44900219dcbe44d73a47c9d24fc",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -32405,12 +32405,21 @@
       "exporta": [],
       "funciones": [
         {
+          "nombre": "claveSecreta",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 19,
+          "resumen": "🧪 PILOTO de la migración a las claves nuevas de Supabase (`sb_secret_…`), ver docs/ROTACION-SERVICE-ROLE.md. Esta función es el conejillo de indias a propósito: solo lee, está detrás de un PIN y se a"
+        },
+        {
           "nombre": "authPage",
           "kind": "function",
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 31
+          "linea": 57
         },
         {
           "nombre": "dashboardPage",
@@ -32418,14 +32427,14 @@
           "exportada": false,
           "params": "pin:string",
           "retorno": "string",
-          "linea": 35
+          "linea": 61
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "53c48fd2c0dd"
+      "hash": "0db021907c48"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/ig-video-gen/index.ts",
@@ -69475,12 +69484,38 @@
           "linea": 31
         },
         {
+          "nombre": "cabecerasGh",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Record<string, string>",
+          "linea": 59
+        },
+        {
+          "nombre": "prepararRama",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<void>",
+          "linea": 69,
+          "resumen": "Deja `RAMA_SEO` apuntando al `main` de ahora mismo (la crea si no existía)."
+        },
+        {
+          "nombre": "abrirPrSiHaceFalta",
+          "kind": "function",
+          "exportada": false,
+          "params": "titulo: string",
+          "retorno": "Promise<void>",
+          "linea": 96,
+          "resumen": "Abre el PR si no hay ya uno abierto para la rama. Si falla, NO tumba la pasada: el commit ya está a salvo en la rama y el PR se puede abrir a mano; se avisa por el mensaje de error."
+        },
+        {
           "nombre": "pushToGitHub",
           "kind": "function",
           "exportada": true,
           "params": "content: string, sha: string, message: string",
           "retorno": "Promise<void>",
-          "linea": 44
+          "linea": 114
         },
         {
           "nombre": "clasificarSondeo",
@@ -69488,7 +69523,7 @@
           "exportada": true,
           "params": "status: number, cuerpo: string",
           "retorno": "Sondeo",
-          "linea": 87,
+          "linea": 160,
           "resumen": "Clasifica la respuesta del PUT-sonda. PURA y testeable (no toca red). 🚨 Solo el 409 se considera verde. Cualquier otra cosa cae en `desconocido`, nunca en «va bien»: un check que se pone verde porque"
         },
         {
@@ -69497,7 +69532,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Sondeo>",
-          "linea": 118,
+          "linea": 191,
           "resumen": "Sondea de verdad contra GitHub. Nunca modifica la landing (ver comentario de arriba). Devuelve SIEMPRE un `Sondeo`; no lanza."
         },
         {
@@ -69506,7 +69541,7 @@
           "exportada": true,
           "params": "raw: string",
           "retorno": null,
-          "linea": 160
+          "linea": 233
         },
         {
           "nombre": "escJs",
@@ -69514,7 +69549,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "string",
-          "linea": 168
+          "linea": 241
         },
         {
           "nombre": "escSegunEstilo",
@@ -69522,7 +69557,7 @@
           "exportada": false,
           "params": "q: string, s: string",
           "retorno": "string",
-          "linea": 171,
+          "linea": 244,
           "resumen": "Escapa el texto SOLO si el tag usa comillas escapadas (q = '\\\\\"'); con comillas normales va tal cual."
         },
         {
@@ -69531,12 +69566,12 @@
           "exportada": true,
           "params": "raw: string, title: string, description: string, ogDescription: string",
           "retorno": "string",
-          "linea": 173
+          "linea": 246
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4324fc16cb92"
+      "hash": "8e334c9e203e"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/smoobu-sync.ts",
@@ -83638,12 +83673,38 @@
           "linea": 13
         },
         {
+          "nombre": "cabecerasGh",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Record<string, string>",
+          "linea": 45
+        },
+        {
+          "nombre": "prepararRama",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<void>",
+          "linea": 55,
+          "resumen": "Deja `RAMA_SEO` apuntando al `main` de ahora mismo (la crea si no existía)."
+        },
+        {
+          "nombre": "abrirPrSiHaceFalta",
+          "kind": "function",
+          "exportada": false,
+          "params": "titulo: string",
+          "retorno": "Promise<void>",
+          "linea": 82,
+          "resumen": "Abre el PR si no hay ya uno abierto para la rama. Si falla, NO tumba la pasada: el commit ya está a salvo en la rama y el PR se puede abrir a mano; se avisa por el mensaje de error."
+        },
+        {
           "nombre": "pushToGitHub",
           "kind": "function",
           "exportada": true,
           "params": "content: string, sha: string, message: string",
           "retorno": "Promise<void>",
-          "linea": 30
+          "linea": 100
         },
         {
           "nombre": "clasificarSondeo",
@@ -83651,7 +83712,7 @@
           "exportada": true,
           "params": "status: number, cuerpo: string",
           "retorno": "Sondeo",
-          "linea": 66,
+          "linea": 139,
           "resumen": "Clasifica la respuesta del PUT-sonda. PURA y testeable (no toca red). 🚨 Solo el 409 se considera verde; lo demás cae en `desconocido`, nunca en «va bien»."
         },
         {
@@ -83660,7 +83721,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Sondeo>",
-          "linea": 94,
+          "linea": 167,
           "resumen": "Sondea de verdad contra GitHub. Nunca modifica la landing. Devuelve SIEMPRE un `Sondeo`; no lanza."
         },
         {
@@ -83669,7 +83730,7 @@
           "exportada": true,
           "params": "raw: string",
           "retorno": null,
-          "linea": 136
+          "linea": 209
         },
         {
           "nombre": "escJs",
@@ -83677,7 +83738,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "string",
-          "linea": 144
+          "linea": 217
         },
         {
           "nombre": "escSegunEstilo",
@@ -83685,7 +83746,7 @@
           "exportada": false,
           "params": "q: string, s: string",
           "retorno": "string",
-          "linea": 147,
+          "linea": 220,
           "resumen": "Escapa el texto SOLO si el tag usa comillas escapadas (q = '\\\\\"'); con comillas normales va tal cual."
         },
         {
@@ -83694,13 +83755,13 @@
           "exportada": true,
           "params": "raw: string, title: string, description: string, ogDescription: string, schemaJson?: string,",
           "retorno": "string",
-          "linea": 154,
+          "linea": 227,
           "resumen": "Reescribe title/description/og en la landing. Si se pasa `schemaJson` Y la landing ya contiene un bloque ld+json, reemplaza el PRIMERO (LodgingBusiness); si no existe el bloque, NO inserta nada."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c9dd682fea0a"
+      "hash": "bbca632701fd"
     },
     {
       "ruta": "apps/sivra/lib/smoobu.ts",
@@ -94021,6 +94082,6 @@
   ],
   "resumen": {
     "archivos": 2506,
-    "funciones": 6811
+    "funciones": 6818
   }
 }
