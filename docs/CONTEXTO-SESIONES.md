@@ -180,6 +180,19 @@
   primario sigue fallando 2/2 — a vigilar, no bloqueante). Sin manuales de usuario que tocar (ningún
   cambio del rango es feature visible en `apps/ia-rest`).
 
+### 🔑 (19/08/2026) SEO housesevillana sigue en 403 — y ahora el token se puede PROBAR en 1 s
+- Alberto pulsó «Actualizar SEO ahora» y salió el mismo `403 Resource not accessible by personal access
+  token`. No es código: `secrets_audit` dice que la última (y única) escritura de `GITHUB_TOKEN` fue el
+  **03/08**, antes de unificar la landing el 12/08 → el PAT sigue scoped al repo externo viejo.
+  Confirmado por API que `central` es **público** (`private:false`), de ahí que el GET cuele y solo falle el PUT.
+- **PENDIENTE de Alberto (ops), más barato de lo que decía la nota del 17/08:** basta con EDITAR el PAT
+  fine-grained (Repository access = `central`, Contents: Read and write). Editar permisos NO cambia el valor
+  del token → no hay que re-pegarlo en `/operador/secretos` ni redesplegar. Solo si caducó, regenerar.
+- Repo: botón **🔑 Probar acceso a GitHub** en `/sivra/seo` + `sondearEscritura`/`clasificarSondeo` en los DOS
+  `seo-landing.ts` (PUT con sha imposible: 403 = sin permiso, 409 = puede escribir; nunca escribe) y rutas
+  `/api/sivra/seo-token-check` (plataforma) y `/api/seo-token-check` (sivra — el token que usa el cron del lunes).
+  3 estados, solo el 409 se pinta verde. Corregida la nota estale de `SECRETS_REGISTRY` que aún citaba el repo viejo.
+
 ### 📈 (17/08/2026) Estreno del doble disparo de trading: la repesca SALVÓ la pasada — el disparo de las 20:15 murió OTRA VEZ
 - Check-in nocturno: el disparo de las 20:15Z no dejó NI UNA huella (2º fallo igual que el 14/08). La
   repesca de las 23:15Z hizo lo diseñado: PASO 0 no vio huella → pasada COMPLETA (saldo 23:16, latidos
