@@ -32,6 +32,18 @@
 
 ---
 
+### 🚨 (19/08/2026) El +20% de Booking YA EXISTÍA en Smoobu — Fase 2 (channel_markup) CANCELADA
+- Claude Chrome verificó Smoobu (Precios→Ajustes): el ajuste por canal es ÚNICO por portal (no por
+  alojamiento) y **Booking.com ya estaba a +20,00%** (resto de canales 0%) — probablemente de la era
+  PriceLabs. Push forzado con «Sobrescribir precios» (no «Guardar»). El rótulo «Sobrescritos por
+  PriceLabs» de Smoobu es etiqueta legacy: PL de baja 09/08, 604/604 escrituras probadas del motor.
+- **Consecuencia: NO aplicar `channel_markup=1.20`** — la mediana 0,92 efectivo/base medida el 09/08
+  YA incluía ese escaparate (el huésped paga ~0,77 del precio MOSTRADO en Booking); cambiar el motor
+  ahora bajaría los precios reales ~17%. El escaparate del estudio ya está puesto; condición cumplida.
+- Fase 3 en pausa: inventariar ofertas activas en la extranet ANTES de añadir ninguna (con ~23% de
+  descuentos ya apilados, añadir un 10-15% probablemente sobra). IDs extranet: House 2039943 ·
+  Dúplex 2888928 · Luxury 4340072 · Busto 4771238.
+
 ### 🩺 (19/08/2026) psd2-health-check — feed sano, sin anomalías
 - Preflight canal alerta OK (200). Frescura `movimientos_bancarios WHERE origen='psd2'`: último
   movimiento 17/08 (2 días, dentro de umbral 48h); mov_30d=63 vs mov_30d_prev=71 (caída ~11%,
