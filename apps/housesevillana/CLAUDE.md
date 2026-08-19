@@ -8,18 +8,20 @@
 
 ## La propiedad (dato fijado, no lo deduzcas)
 
-**Calle Socorro 24, 41003 Sevilla — barrio de San Julián**, distrito Casco Antiguo. La calle
-va de la Plaza de San Román a la Plaza de San Marcos. 290 m², 6 dormitorios, 4 baños, patio
-andaluz, azotea y **plaza de garaje privada en el edificio** (el argumento nº 1: aparcar en el
+**Calle Socorro 24, 41003 Sevilla — barrio de San Julián**, distrito Casco Antiguo
+(37.395904, -5.987431). La calle va de la Plaza de San Román a la Plaza de San Marcos. 290 m²,
+6 dormitorios, 4 baños, patio andaluz, azotea y **plaza de garaje privada en el edificio** (el argumento nº 1: aparcar en el
 casco antiguo es un dolor). Licencia **VFT/SE/01179**, obligatoria y visible en la web.
 
 > 🚨 **NO es Bustos Tavera 22.** Esa es la dirección de OTROS DOS pisos del grupo — *Luxury
 > Busto* y *Busto Reform*, bajo derecha y bajo izquierda, alquilados a Gutiérrez Alcalá. La
 > skill **sincronizada** `seo-house-sevillana` se la atribuye a House Sevillana en siete
-> sitios, **incluidos sus dos JSON-LD con `streetAddress`**: publicar ese schema le daría a
+> sitios, **incluidos sus dos JSON-LD con `streetAddress`** — de raíz, porque le asigna el **ID
+> de Booking `4771238`, que es el de Busto Reform** (el de House Sevillana es `2039943`): publicar ese schema le daría a
 > Google una dirección falsa para el negocio, y encima la de dos competidores propios en la
 > misma búsqueda local. Esa skill vive FUERA del repo (`/root/.claude/skills/synced/`, sin
-> git) y **la tiene que corregir Alberto**; hasta entonces, este fichero manda sobre ella.
+> git) y **la tiene que corregir Alberto**; hasta entonces, este fichero manda sobre ella. El
+> parche exacto, listo para pegar, está en `docs/PARCHE-skill-seo-house-sevillana.md`.
 > (Confirmado por Alberto y por fuentes públicas el 19/08/2026.)
 >
 > Lo mismo con el barrio: **San Julián**, no la Macarena. La página `/barrio` posiciona la
@@ -111,11 +113,14 @@ Supabase.
 
 ## Pendiente
 
-- **La nota media real.** La página dice 8,1/10 con +47 reseñas; un bloque duplicado (ya
-  borrado) decía 9,2/10 y 4,9/5, y las reseñas citan 9,8 y 9,6. Sin confirmar cuál es la
-  buena: no la cambies sin el dato de Alberto.
+- **Nota de Booking: se copia a mano.** Hoy es **8,6/10 con 51 reseñas** (conector de
+  Booking, 19/08/2026); la página venía diciendo 8,1 con +47, que era el dato de hacía meses.
+  Nada la refresca sola: al tocar la landing, contrasta el número contra la ficha real.
+- **Booking anuncia «Admite mascotas» y aquí se dice que NO.** Sin resolver: es una decisión de
+  Alberto, y los dos canales tienen que decir lo mismo.
 - **Minutos a pie** desde Socorro 24 a la Basílica de la Macarena, la muralla, el Mercado de
   la Feria y la Alameda. `/barrio` los perdió porque los que había salían de suponer la casa
-  dentro de la Macarena. Mejor sin número que con el equivocado.
+  dentro de la Macarena. Mejor sin número que con el equivocado. (No se pudieron medir desde
+  la sesión: la política de egress bloquea Nominatim, OSRM y demás APIs de mapas.)
 - `/barrio` y `/que-ver` tienen **su propio CSS**, ajeno al sistema de tokens de la portada
   (Georgia, gradientes naranjas). Unificarlas está sin hacer.

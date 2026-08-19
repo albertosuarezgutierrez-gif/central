@@ -77,7 +77,7 @@
 
 | Skill sincronizada | Estado |
 |---|---|
-| **`seo-house-sevillana`** | SEO de la landing de House Sevillana. ⚠️ **Dato malo**: le da la dirección de OTROS dos pisos del grupo (Bustos Tavera 22) en la ficha, las keywords, el `SKILL.md` y **sus dos JSON-LD con `streetAddress`**. La buena es **Calle Socorro 24, barrio de San Julián** — ver `apps/housesevillana/CLAUDE.md`, que manda sobre ella. Pendiente de que Alberto la corrija en su cuenta. |
+| **`seo-house-sevillana`** | SEO de la landing de House Sevillana. ⚠️ **Dato malo**: le da la dirección de OTROS dos pisos del grupo (Bustos Tavera 22) en la ficha, las keywords, el `SKILL.md` y **sus dos JSON-LD con `streetAddress`**. La buena es **Calle Socorro 24, barrio de San Julián** — ver `apps/housesevillana/CLAUDE.md`, que manda sobre ella. Le asigna además el **ID de Booking de Busto Reform** (`4771238`; el suyo es `2039943`), que es de donde sale todo. Parche listo para pegar en `docs/PARCHE-skill-seo-house-sevillana.md`. |
 
 ## Hooks (automatización, no se invocan a mano)
 | Hook | Qué hace |

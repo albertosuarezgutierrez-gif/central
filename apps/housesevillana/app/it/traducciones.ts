@@ -48,6 +48,8 @@ export const TRADUCCIONES: Record<string, string> = {
     'Terrazza + Patio',
   'Hasta 12 personas':
     'Fino a 12 persone',
+  '8,6/10':
+    '8,6/10',
   'Consultar disponibilidad':
     'Verifica disponibilità',
   'Ver la casa':
@@ -62,8 +64,8 @@ export const TRADUCCIONES: Record<string, string> = {
     'Ospiti',
   'Muy bien valorado':
     'Molto apprezzata',
-  'Booking.com &middot; +47 rese&ntilde;as':
-    'Booking.com &middot; oltre 47 recensioni',
+  'Booking.com &middot; 51 rese&ntilde;as':
+    'Booking.com &middot; 51 recensioni',
   'Ver disponibilidad &#8594;':
     'Vedi disponibilità &#8594;',
   'Parking privado':
@@ -78,8 +80,8 @@ export const TRADUCCIONES: Record<string, string> = {
     'risparmia fino al 22%',
   'vs Booking':
     'rispetto a Booking',
-  '&middot; +47 rese&ntilde;as verificadas':
-    '&middot; oltre 47 recensioni verificate',
+  '&middot; 51 rese&ntilde;as verificadas':
+    '&middot; 51 recensioni verificate',
   'Una casa sevillana para vivirla':
     'Una casa sivigliana da vivere',
   '290 m&sup2; reformados con materiales nobles en el coraz&oacute;n del casco hist&oacute;rico. Pensada para grupos y familias que quieren espacio, comodidad y autenticidad.':
