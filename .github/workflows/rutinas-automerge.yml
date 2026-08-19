@@ -158,7 +158,7 @@ jobs:
             git checkout -q -f -B automerge-tmp origin/main
 
             datos=$(gh pr view "$n" --repo "$REPO" \
-              --json number,author,headRefName,headRefOid,isDraft,mergeable,labels,files,statusCheckRollup)
+              --json number,author,headRefName,headRefOid,isDraft,mergeable,mergeStateStatus,labels,files,statusCheckRollup)
 
             autor=$(jq -r '.author.login' <<<"$datos")
             rama=$(jq -r '.headRefName' <<<"$datos")
@@ -207,6 +207,21 @@ jobs:
             if [ "$total" -eq 0 ]; then echo "sin checks — no se mergea a ciegas."; echo "::endgroup::"; continue; fi
             if [ "$verdes" -ne "$total" ]; then echo "CI $verdes/$total — pendiente o en rojo, se espera."; echo "::endgroup::"; continue; fi
 
+            # 5-bis. «Los checks que veo están verdes» NO es «han pasado los checks que hacen
+            #    falta». Desde que `main` tiene el ruleset «main - CI obligatorio», un PR puede
+            #    enseñar N checks en verde y aun así tener AUSENTES los required — pasó con el
+            #    #1504 el 19/08/2026: el rollup daba 10/10 y GitHub rechazó el merge con «the base
+            #    branch policy prohibits the merge». Es la regla del CLAUDE.md raíz un escalón más
+            #    abajo: el paso 5 mira los checks que HAY, no los que FALTAN, y lo que falta no
+            #    deja hueco visible. `mergeStateStatus` sí es la respuesta de GitHub a la pregunta
+            #    de verdad — «¿lo dejarías mergear?» — así que se pregunta antes de intentarlo.
+            estado=$(jq -r '.mergeStateStatus // ""' <<<"$datos")
+            if [ "$estado" = "BLOCKED" ]; then
+              echo "mergeStateStatus=BLOCKED — faltan checks required del ruleset (o una review). No se intenta."
+              avisar_conflicto "$n" "la CI que se ve está verde pero GitHub lo bloquea (mergeStateStatus=BLOCKED): faltan checks *required* en el sha actual. Suele pasar cuando un push del bot no volvió a disparar la CI; hace falta re-lanzar la CI de ese PR"
+              echo "::endgroup::"; continue
+            fi
+
             mergeable=$(jq -r '.mergeable' <<<"$datos")
 
             # 6a. Camino normal: sin conflicto → fuera de draft y squash por la API de GitHub.
@@ -215,7 +230,16 @@ jobs:
             if [ "$mergeable" = "MERGEABLE" ]; then
               echo "✅ solo registro + CI $verdes/$total en verde → mergeando."
               if [ "$(jq -r '.isDraft' <<<"$datos")" = "true" ]; then gh pr ready "$n" --repo "$REPO"; fi
-              gh pr merge "$n" --repo "$REPO" --squash
+              # `set -e` está activo: si `gh pr merge` falla, el job MUERE aquí y los PRs que
+              # vienen detrás en el bucle no se miran siquiera — y el workflow se queda en rojo
+              # cada hora. Pasó el 19/08/2026 con el #1504. Un merge rechazado es información,
+              # no un motivo para abortar la pasada: se anota, se avisa y se sigue.
+              if ! salida=$(gh pr merge "$n" --repo "$REPO" --squash 2>&1); then
+                echo "::warning::GitHub rechazó el merge del #$n: $salida"
+                avisar_conflicto "$n" "GitHub rechazó el merge pese a verse todo en verde: ${salida}"
+                echo "::endgroup::"; continue
+              fi
+              echo "$salida"
               echo "::endgroup::"; continue
             fi
 
@@ -226,10 +250,9 @@ jobs:
 
             # 6b. Camino de conflicto: se intenta resolver conservando ambas entradas.
             #     Se hace con git de verdad (no con la API) porque hay que MERGEAR el contenido.
-            #     El resultado se empuja a `main` directamente: eso marca el PR como mergeado, y
-            #     evita el commit-de-arreglo en la rama del PR, que con GITHUB_TOKEN no vuelve a
-            #     disparar la CI (los pushes del bot no lanzan workflows) y dejaría el PR atascado
-            #     para siempre en "sin checks". La CI del PR ya se verificó verde en el paso 5.
+            #     El resultado se empuja a la RAMA DEL PR con GH_PAT_TRIGGER (ya no a `main`:
+            #     el ruleset lo rechaza). Con el PAT y no con GITHUB_TOKEN porque los pushes del
+            #     bot no relanzan la CI y el PR se quedaría atascado sin checks del sha nuevo.
             echo "en conflicto — intento resolverlo (inserción pura conserva ambos lados)."
             git fetch -q origin "$rama"
             if git -c merge.conflictStyle=diff3 merge --no-commit --no-ff FETCH_HEAD >/dev/null 2>&1; then
