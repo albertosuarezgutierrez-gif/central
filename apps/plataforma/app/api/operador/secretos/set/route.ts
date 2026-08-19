@@ -93,11 +93,22 @@ export async function POST(req: NextRequest) {
         .filter(Boolean)
         .join('; ')
 
+  // Tercer estado: se lanzó, no se canceló, pero el sondeo se agotó con el build en
+  // marcha. NO es «ha ido bien» — el panel lo pinta en ámbar y enlaza al deployment
+  // para que el operador lo remate con la vista puesta (bug del 19/08/2026: se daba
+  // por bueno el estado BUILDING, que es justo el anterior a la cancelación).
+  const sinConfirmar = redeployed && redeployResults.some((r) => 'sinConfirmar' in r && r.sinConfirmar)
+  const inspectorUrls = redeployResults
+    .map((r, i) => ('inspectorUrl' in r && r.inspectorUrl ? `${allProjects[i]}|${r.inspectorUrl}` : null))
+    .filter(Boolean) as string[]
+
   // Write-only: confirmamos el cambio, NO devolvemos el valor.
   return NextResponse.json({
     ok: true,
     projects: allProjects,
     redeployed,
     redeployError,
+    sinConfirmar,
+    inspectorUrls,
   })
 }

@@ -46,12 +46,81 @@
   sin password; SELECT en cuentas/sociedades/negocios) — `apps/asegura/prisma/sql/2026-08-19_asegura_bootstrap.sql`.
   Y `docs/ASEGURA-PROMPT-CHROME.md` para inventariar el repo con Claude Chrome. PR #1489.
 
+### 🔢 (19/08/2026) La nota de House era vieja — y la skill de SEO tiene la ficha de OTRO piso
+- Nota real por el conector de Booking: **8,6/10 con 51 reseñas**. La landing decía 8,1 con +47
+  (dato de hace meses) y el bloque borrado hoy decía 9,2/4,9 (inventado). Aplicado en hero y barra
+  de confianza + claves i18n. **Nada lo refresca solo:** al tocar la landing, contrástalo.
+- **Origen del lío de la dirección:** `seo-house-sevillana` tiene el **ID de Booking `4771238`, que
+  es Busto Reform** (el de House es `2039943`), y con él arrastra Bustos Tavera 22 y sus coordenadas.
+  Parche exacto (7 sitios + teléfono sin rellenar) en `docs/PARCHE-skill-seo-house-sevillana.md`.
+  Las de House: **37.395904, -5.987431**.
+- ⚠️ **Booking anuncia «Admite mascotas» y la web dice que NO.** Decisión de Alberto; no toqué ninguna.
+- Los minutos a pie siguen sin medir: el egress bloquea Nominatim, OSRM y demás APIs de mapas.
+### 🎨 (19/08/2026) Repaso de diseño de la landing de House Sevillana
+- **Dos secciones colgaban POR DEBAJO del `<footer>`** con estilos inline ajenos a la paleta:
+  unas reseñas duplicadas (y contradictorias: 9,2/10 + 4,9/5 frente al 8,1/10 del resto) y la
+  barra de enlaces SEO en grises #1a1a1a/#2d2d2d. Reseñas duplicadas fuera; enlaces reescritos
+  como bloque «Sigue leyendo» con los tokens de la casa, ya ANTES del pie.
+- Emojis → SVG de trazo (un emoji lo pinta el SO: ni se tiñe ni se ve igual en cada móvil).
+  Hero con overlay de 3 capas (se ve la casa) y zoom lento; FAQ a dos columnas en escritorio
+  (media pantalla estaba vacía); la tarjeta de datos ya NO se oculta en móvil; `prefers-reduced-motion`.
+- **Dirección resuelta (Alberto, 19/08):** House es **Calle Socorro 24, 41003, barrio de San Julián**
+  (Casco Antiguo) — la landing lo tenía BIEN. `Bustos Tavera 22` son OTROS dos pisos (Luxury Busto /
+  Busto Reform). Quien lo confunde es la skill `seo-house-sevillana` (ficha, keywords y los DOS JSON-LD
+  con `streetAddress`): vive fuera del repo, la corrige Alberto. Fijado en el CLAUDE.md raíz.
+- `/barrio` reencuadrada (decide Alberto): mantiene la keyword «Macarena» pero sitúa la casa en San
+  Julián, «la puerta de la Macarena». Fuera los minutos que salían de suponer la casa DENTRO del
+  barrio (la Basílica no está a 5 min); solo quedan los que ya declara la portada.
+- **Nuevo `apps/housesevillana/CLAUDE.md`** (no tenía): dirección, la trampa de i18n (EN/IT se
+  DERIVAN del HTML español por cadenas exactas → tocar un texto rompe su traducción), el agente SEO
+  que reescribe el fichero los lunes, y el sistema de tokens/iconos. Fila en FUENTES-DE-VERDAD.
+- **Punto ciego cerrado:** las skills SINCRONIZADAS (`/root/.claude/skills/synced/`) no están en git
+  y NADIE las reconciliaba — por eso el error de dirección llevaba ahí desde siempre. `/auditoria-diaria`
+  contrasta ahora sus datos duros y avisa por Telegram (no se pueden auto-aplicar); listadas en `docs/SKILLS.md`.
+- Mergeado a `main` (PR #1491, 47/47 + guardián 32/32). ⚠️ Sin resolver: la nota real (8,1 vs 9,2/4,9),
+  los minutos a Basílica/Muralla/Mercado/Alameda desde Socorro 24, y corregir la skill sincronizada.
 ### 📋 (19/08/2026) Inventario de ofertas Booking — House hecho, 3 pendientes
 - Nuevo `docs/BOOKING-OFERTAS-INVENTARIO.md`: inventario extranet por piso (Claude Chrome, solo
   lectura) previo a decidir la Fase 3. House: Basic Deal 12% (⚠️ activada 18/08, origen por
   confirmar) + Genius 15% + móvil 10% + 3 tarifas país −10% (solo No reembolsable) → peor caso
   −39,4%. Preliminar: quitar tarifas país, mantener el resto; Genius nivel 3 NUNCA.
-- Pendientes: Dúplex 2888928 · Luxury 4340072 · Busto Reform 4771238 + veredicto conjunto.
+- Dúplex (parcial, faltan Genius y planes): solo 2 ofertas (móvil 10% — 80 reservas/38.319,10€ en 12m —
+  y una «estándar 8%» que en realidad descuenta 12%), SIN tarifas país → apilamiento −20,8% conocido.
+  Booking sugiere ahí UK rate (0% vs 9% zona) y last-minute deal (ya lo hace el motor, no duplicar).
+- Luxury (parcial): 2 ofertas (móvil 10% — 121 reservas/42.644,51€ — y «estándar 8%» que aquí SÍ es 8%;
+  el mismo nombre descuenta distinto en cada piso). Apilamiento −17,2%. 🆕 Booking dice que el viajero
+  UK paga 161€ vs nuestros 126€ (~1,3×) → **da la vuelta a la idea de quitar las tarifas país**: el −10%
+  compra un segmento que paga 30% más. Pendiente de comprobar con datos propios antes de tocar nada.
+- 🚩 La antelación de los avisos de Booking NO cuadra con `incomes` (Luxury 81d vs 23d real, Dúplex 53
+  vs 16). Causa no confirmada (¿canceladas?, `reservas_canceladas` vacía hasta 12/08). No crear
+  last-minute deal por ese aviso: el motor ya usa la antelación real.
+- Busto Reform: igual que Luxury (móvil 10% con 69 reservas/23.343,14€ + «estándar 8%»), −17,2%.
+  🚨 Su panel muestra un ratio ROTO (2^63) por dividir entre cero: «Tú 0€ / 0 noches» de UK no es un
+  valor, es que NO tiene reservas UK. Los «Datos clave» de la extranet valen como pista, no como cifra.
+- **Veredicto FINAL: no tocar nada.** (a) La Fase 3 del estudio ya estaba hecha — los 4 pisos tienen
+  su oferta de escaparate (8-12%) desde el 16-18/08. (b) La móvil es la palanca del negocio: 340
+  reservas y 218.794,79€ en 12m entre los 4. (c) EEA country rate de House trae 7.094,51€ reales →
+  se queda; UK/US llevan 0 reservas en 6 meses pero **no suben el apilamiento**, así que quitarlas no
+  da euros. (d) Genius nivel 3 (20%) nunca.
+- 🔧 **Dos errores propios corregidos en el doc:** la tabla de apilamiento comparaba House (con su
+  Genius y plan conocidos) contra los otros 3 (sin ellos) → los 4 están en la misma banda, no había
+  piso «desmadrado»; y las tarifas país NO aumentan el descuento máximo (Booking aplica solo la mayor
+  de cada categoría y la móvil ya la ocupa), así que mi «quitarlas para recuperar margen» era falso.
+- Pendiente sin bloquear: Genius/planes de Dúplex, Luxury y Busto. 3ª métrica del panel descartada
+  (antelación de House: 84d dice Booking vs 42d real).
+
+### 🔧 (19/08/2026) El canal directo YA está bien de precio — y dos correcciones mías
+- El «descuento de larga estancia» del motor de Smoobu **no es de larga estancia**: 20% desde 2
+  noches / 30% desde 7 / 40% desde 30, iguales en las 4 propiedades, sobre base (no sobre limpieza).
+  Y **la estancia mínima del calendario son 2 noches** → es un **−20% permanente al canal directo**.
+- Con la comisión de Booking **medida** (19,72%, `amount/amount_gross` sobre 1.322 reservas) y el
+  ratio pagado/base de Booking en estancias de 2-6 noches (**0,976**, n=16): el huésped paga **~18%
+  menos** reservando directo y a Alberto le queda **lo mismo** (0,788 vs 0,784). Nada que tocar.
+- **Dos errores míos corregidos el mismo día:** (1) dije que la web era ~12% más cara — supuse
+  1,00 × base sin medirlo; (2) dije ~9% más barata y comisión ~17% — venía de n=7 (0,88) frente a
+  n=16 (0,976). Un n=7 es intuición, no medición, y la regla del «dato no mirado» aplica al lado propio.
+- `DIRECT20` creado y **borrado** el mismo día (id 166126): sobraba. `FRIENDS` (id 1140) intacto.
+- Pendiente, decisión de Alberto: copy de la landing con número («~18% menos») o sin él.
 ### 🏷️ (19/08/2026) Tres centinelas del canal — y el primero destapa que ESTAMOS CAROS
 - **Validación FUERA de muestra** (`validarCanal`): el R² del ajuste es circular (mide la recta
   contra las ventanas que la produjeron). Ahora `pricing_escaparate.usada_en_ajuste_at` marca lo
@@ -193,6 +262,41 @@
   verificado) y el PASO 0 del trigger de trading (estrenado 17/08: repesca salvó la pasada, disparo
   primario sigue fallando 2/2 — a vigilar, no bloqueante). Sin manuales de usuario que tocar (ningún
   cambio del rango es feature visible en `apps/ia-rest`).
+
+### 🔴 (19/08/2026) El panel de secretos cantaba «✅ redeploy lanzado» mientras el build moría
+- Salió rotando el `GITHUB_TOKEN` (ver entrada siguiente): el panel dijo OK, pero el redeploy de
+  plataforma acabó en **CANCELED** y el valor nuevo NO llegó a runtime — Alberto tuvo que redesplegar
+  los dos proyectos a mano. Es el landmine que el PR #1236 daba por cerrado, reaparecido por otra vía.
+- **DOS causas que se suman.** (1) El sondeo salía con `break` al ver **BUILDING** y devolvía `ok:true`;
+  pero el Ignored Build Step corre DENTRO del build, así que BUILDING es el estado ANTERIOR a la
+  cancelación: se declaraba éxito en la antesala del fallo. (2) El redeploy iba con
+  `withLatestCommit:true`, o sea pedía el ÚLTIMO commit de `main` — casi siempre el de la auditoría con
+  `[skip ci]`, que `vercel-ignore-build.mjs` salta SIEMPRE por asunto. Pedía justo lo que el filtro
+  tiene orden de cancelar.
+- **Fix:** sin `withLatestCommit` (se redespliega el commit del último deployment que SÍ construyó, que
+  por construcción ya pasó el filtro) y el sondeo solo termina en READY / CANCELED / ERROR; si se agota
+  el presupuesto con el build en marcha devuelve **`sinConfirmar`**, que el panel pinta 🟠 y NO verde.
+  `clasificarEstadoRedeploy` puro + 5 tests. Lección: no des por bueno el estado que precede al fallo.
+
+### ✅ (19/08/2026) SEO housesevillana RESUELTO — al PAT le faltaba el REPO, no el permiso
+- El 403 del cron del 17/08 se cerró hoy. Diagnóstico con evidencia, no suposición: `secrets_audit` decía que
+  la única escritura de `GITHUB_TOKEN` fue el **03/08** (antes de unificar la landing el 12/08) y la API que
+  `central` es **público** (`private:false`) — de ahí que el GET colara y solo fallara el PUT.
+- La causa fina: el PAT `seo-housesevillana-panel` YA tenía `Contents: Read and write`; lo que le faltaba era
+  tener `albertosuarezgutierrez-gif/central` en *Repository access* (solo listaba el repo externo viejo).
+  Alberto lo editó sin regenerar → mismo valor, sin re-pegar en `/operador/secretos` ni redesplegar.
+  **Verificado de punta a punta:** commit `79db75e` `chore(seo): actualización automática [2026-08-19]`.
+- Repo (PR #1488): botón **🔑 Probar acceso a GitHub** en `/sivra/seo` + `sondearEscritura`/`clasificarSondeo`
+  en los DOS `seo-landing.ts` (PUT con sha imposible: 403 = sin permiso, 409 = puede escribir; nunca escribe)
+  y rutas `/api/sivra/seo-token-check` (plataforma) y `/api/seo-token-check` (sivra — el token del cron del
+  lunes, que tiene su propia copia). 3 estados, solo el 409 se pinta verde. Corregida la nota estale de
+  `SECRETS_REGISTRY` que aún citaba el repo viejo.
+- **Sondeo estrenado en verde (18:47):** ✅ HTTP 409 en producción, sin escribir nada (el último commit de
+  la landing siguió siendo el refresh de las 18:33). Confirma en vivo la premisa sobre la que se construyó,
+  que hasta entonces era solo documentación de GitHub: **el permiso se valida ANTES que el sha**.
+- **PAT rotado y saneado esa misma tarde:** ahora cubre SOLO `central` y **caduca el 19/08/2027**
+  (poner caducidad obliga a regenerar: no hay campo editable en un fine-grained ya creado). Vive solo en
+  los envs de Vercel de sivra y plataforma. Verificado con el sondeo tras la rotación: ✅ 409.
 
 ### 📈 (17/08/2026) Estreno del doble disparo de trading: la repesca SALVÓ la pasada — el disparo de las 20:15 murió OTRA VEZ
 - Check-in nocturno: el disparo de las 20:15Z no dejó NI UNA huella (2º fallo igual que el 14/08). La

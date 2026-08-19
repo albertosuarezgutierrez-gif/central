@@ -22,6 +22,11 @@ export async function fetchLanding(): Promise<{ content: string; sha: string }> 
   return { content: Buffer.from(d.content, 'base64').toString('utf-8'), sha: d.sha as string }
 }
 
+// Pista que se cuelga de todo 403: es SIEMPRE el mismo fallo y conviene decir el arreglo
+// más barato — editar los permisos de un PAT fine-grained NO cambia su valor, así que no hay
+// que volver a pegarlo en /operador/secretos ni redesplegar.
+const PISTA_403 = ' — el GET funciona porque el repo central es público; un 403 aquí casi siempre es GITHUB_TOKEN sin contents:write sobre albertosuarezgutierrez-gif/central (p. ej. un PAT fine-grained aún limitado al antiguo repo house-sevillana-landing). Arreglo: en GitHub → Fine-grained tokens → ese PAT → Repository access = central + Permissions → Contents: Read and write. Editar permisos NO cambia el valor del token, así que no hace falta volver a pegarlo; solo si está caducado, regenéralo y guárdalo en /operador/secretos de plataforma.'
+
 export async function pushToGitHub(content: string, sha: string, message: string): Promise<void> {
   const res = await fetch(LANDING_API, {
     method: 'PUT',
@@ -29,10 +34,92 @@ export async function pushToGitHub(content: string, sha: string, message: string
     body: JSON.stringify({ message, content: Buffer.from(content).toString('base64'), sha }),
   })
   if (!res.ok) {
-    const pista = res.status === 403
-      ? ' — el GET funciona porque el repo central es público; un 403 aquí casi siempre es GITHUB_TOKEN sin contents:write sobre albertosuarezgutierrez-gif/central (p. ej. un PAT fine-grained aún limitado al antiguo repo house-sevillana-landing). Rotarlo desde /operador/secretos de plataforma.'
-      : ''
+    const pista = res.status === 403 ? PISTA_403 : ''
     throw new Error(`GitHub push failed (${res.status}): ${await res.text()}${pista}`)
+  }
+}
+
+// ── Sondeo de permisos (gemelo del de apps/plataforma/lib/sivra/seo-landing.ts) ────────
+// El cron semanal de ESTA app es el que falla los lunes, así que el sondeo vive también aquí
+// para poder comprobar el token del entorno de sivra, no solo el de plataforma. Si cambia la
+// clasificación, replicar en el gemelo (misma pareja de siempre).
+//
+// Nunca escribe: PUT real con un `sha` imposible (40 ceros). GitHub valida el permiso ANTES
+// que el sha ⇒ 403 = sin permiso, 409 = con permiso y sin tocar nada. Y el contenido enviado
+// es el ACTUAL sin modificar, así que ni en el caso imposible se pierde la landing.
+const SHA_IMPOSIBLE = '0'.repeat(40)
+
+export type EstadoSondeo =
+  | 'puede-escribir'   // ✅ verde: GitHub llegó a validar el sha ⇒ el permiso está
+  | 'sin-token'        // ❌ no hay GITHUB_TOKEN en el entorno
+  | 'token-invalido'   // ❌ 401: caducado, revocado o mal pegado
+  | 'sin-permiso'      // ❌ 403: es LO DE SIEMPRE — el PAT no cubre `central` con contents:write
+  | 'no-lee'           // ❌ ni siquiera se puede leer la landing (ruta cambiada, red, rate-limit)
+  | 'desconocido'      // 🟠 respuesta que no sé interpretar — NUNCA se pinta de verde
+
+export type Sondeo = { estado: EstadoSondeo; mensaje: string; status: number | null }
+
+/**
+ * Clasifica la respuesta del PUT-sonda. PURA y testeable (no toca red).
+ * 🚨 Solo el 409 se considera verde; lo demás cae en `desconocido`, nunca en «va bien».
+ */
+export function clasificarSondeo(status: number, cuerpo: string): Sondeo {
+  if (status === 409) return {
+    estado: 'puede-escribir', status,
+    mensaje: 'El token PUEDE commitear en albertosuarezgutierrez-gif/central. GitHub llegó a validar el sha (409 de conflicto), que es el paso posterior al permiso. No se ha escrito nada.',
+  }
+  if (status === 401) return {
+    estado: 'token-invalido', status,
+    mensaje: 'GITHUB_TOKEN inválido (401 Bad credentials): caducado, revocado o mal pegado. Genera uno nuevo y guárdalo en /operador/secretos de plataforma.',
+  }
+  if (status === 403) return {
+    estado: 'sin-permiso', status,
+    mensaje: `El token NO puede escribir (403).${PISTA_403}`,
+  }
+  if (status === 404) return {
+    estado: 'desconocido', status,
+    mensaje: 'GitHub responde 404 al PUT. El repo es público, así que esto apunta a que la ruta de la landing (apps/housesevillana/app/route.ts) ya no existe, no a un problema de permisos.',
+  }
+  if (status === 200 || status === 201) return {
+    estado: 'desconocido', status,
+    mensaje: '⚠️ GitHub ACEPTÓ el sondeo (debería haber devuelto 409). El commit escrito es idéntico al contenido actual, así que la landing no cambia, pero revisa el historial del repo.',
+  }
+  return {
+    estado: 'desconocido', status,
+    mensaje: `Respuesta inesperada de GitHub (${status}): ${cuerpo.slice(0, 300)}`,
+  }
+}
+
+/** Sondea de verdad contra GitHub. Nunca modifica la landing. Devuelve SIEMPRE un `Sondeo`; no lanza. */
+export async function sondearEscritura(): Promise<Sondeo> {
+  let token: string
+  try {
+    token = githubToken()
+  } catch (err) {
+    return { estado: 'sin-token', status: null, mensaje: String(err instanceof Error ? err.message : err) }
+  }
+
+  let actual: { content: string; sha: string }
+  try {
+    actual = await fetchLanding()
+  } catch (err) {
+    return { estado: 'no-lee', status: null, mensaje: String(err instanceof Error ? err.message : err) }
+  }
+
+  try {
+    const res = await fetch(LANDING_API, {
+      method: 'PUT',
+      headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json', 'User-Agent': 'roi-intranet-seo' },
+      body: JSON.stringify({
+        message: 'chore(seo): sondeo de permisos — nunca debe aplicarse',
+        content: Buffer.from(actual.content).toString('base64'),
+        sha: SHA_IMPOSIBLE,
+      }),
+      signal: AbortSignal.timeout(15_000),
+    })
+    return clasificarSondeo(res.status, await res.text().catch(() => ''))
+  } catch (err) {
+    return { estado: 'desconocido', status: null, mensaje: `No se pudo contactar con GitHub: ${err instanceof Error ? err.message : String(err)}` }
   }
 }
 

@@ -6,7 +6,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { decodeLanding, extractSeoParams, applySeoReplacements } from './seo-landing.ts'
+import { decodeLanding, extractSeoParams, applySeoReplacements, clasificarSondeo } from './seo-landing.ts'
 
 test('respuesta de error de GitHub (sin content) → error claro, NO ERR_INVALID_ARG_TYPE', () => {
   assert.throws(
@@ -85,4 +85,45 @@ test('applySeoReplacements conserva el estilo escapado cuando el fichero lo usa'
 test('sin tag que casar, el resto de reemplazos no rompe (no-op)', () => {
   const out = applySeoReplacements('<title>x</title><p>sin metas</p>', 'T', 'D', 'O')
   assert.equal(out, '<title>T</title><p>sin metas</p>')
+})
+
+// ── Sondeo de permisos de escritura (clasificarSondeo) ────────────────────────────────
+// Bug que fijan (17/08/2026): tras unificar la landing en el monorepo, el PAT seguía scoped al
+// antiguo repo externo. El GET no delataba nada (el repo `central` es público) y el 403 solo
+// aparecía en el PUT, al final del análisis o el lunes en el cron. El sondeo lo dice en 1 s.
+// 🚨 Lo que estos tests protegen de verdad: que SOLO el 409 se pinte de verde.
+
+test('409 (conflicto de sha) → verde: GitHub llegó a validar el sha, luego el permiso está', () => {
+  const s = clasificarSondeo(409, '{"message":"does not match"}')
+  assert.equal(s.estado, 'puede-escribir')
+  assert.equal(s.status, 409)
+  assert.match(s.mensaje, /No se ha escrito nada/)
+})
+
+test('403 → sin permiso, con el arreglo concreto en el mensaje', () => {
+  const s = clasificarSondeo(403, '{"message":"Resource not accessible by personal access token"}')
+  assert.equal(s.estado, 'sin-permiso')
+  assert.match(s.mensaje, /contents:write/)
+  assert.match(s.mensaje, /central/)
+  // El arreglo barato: editar permisos no cambia el valor del token.
+  assert.match(s.mensaje, /NO cambia el valor del token/)
+})
+
+test('401 → token inválido/caducado, NO se confunde con falta de permiso', () => {
+  const s = clasificarSondeo(401, '{"message":"Bad credentials"}')
+  assert.equal(s.estado, 'token-invalido')
+})
+
+test('404 → desconocido y apunta a la RUTA, no al permiso (el repo es público)', () => {
+  const s = clasificarSondeo(404, '{"message":"Not Found"}')
+  assert.equal(s.estado, 'desconocido')
+  assert.match(s.mensaje, /route\.ts/)
+})
+
+test('respuestas inesperadas NUNCA se pintan de verde (ni un 200)', () => {
+  for (const status of [200, 201, 422, 429, 500, 502]) {
+    const s = clasificarSondeo(status, 'lo que sea')
+    assert.equal(s.estado, 'desconocido', `status ${status} no debe dar por bueno el token`)
+    assert.notEqual(s.estado, 'puede-escribir')
+  }
 })
