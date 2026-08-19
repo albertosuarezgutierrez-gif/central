@@ -28,7 +28,7 @@ export default function SecretosClient({ secrets }: { secrets: SecretEntry[] }) 
   const [val, setVal] = useState('')
   const [pwd, setPwd] = useState('')
   const [busy, setBusy] = useState(false)
-  const [msg, setMsg] = useState<{ key: string; text: string; ok: boolean } | null>(null)
+  const [msg, setMsg] = useState<{ key: string; text: string; ok: boolean; aviso?: boolean } | null>(null)
 
   async function guardar(key: string) {
     setBusy(true); setMsg(null)
@@ -41,10 +41,15 @@ export default function SecretosClient({ secrets }: { secrets: SecretEntry[] }) 
       const d = await r.json().catch(() => ({}))
       if (r.ok) {
         const proyectos = Array.isArray(d.projects) ? d.projects.join(' + ') : (d.project ?? '—')
-        const text = d.redeployed
-          ? `✅ Guardada en Vercel (${proyectos}) y redeploy lanzado automáticamente. Tomará efecto en 1-2 min.`
-          : `✅ Guardada en Vercel (${proyectos}). ⚠️ El redeploy automático no salió` + (d.redeployError ? ` (${d.redeployError})` : '') + ' — redeploya el proyecto a mano para que tome efecto.'
-        setMsg({ key, text, ok: true })
+        // TRES estados, no dos: confirmado · sin confirmar · falló. El de en medio
+        // existe porque «el build sigue en marcha» no es «ha ido bien» — darlo por
+        // bueno fue el bug del 19/08/2026 (el panel decía ✅ y el deployment moría).
+        const text = !d.redeployed
+          ? `✅ Guardada en Vercel (${proyectos}). ❌ El redeploy automático NO salió` + (d.redeployError ? ` (${d.redeployError})` : '') + ' — el valor nuevo NO está en runtime: redeploya el proyecto a mano.'
+          : d.sinConfirmar
+            ? `✅ Guardada en Vercel (${proyectos}). 🟠 El redeploy se lanzó pero seguía construyendo al comprobarlo — no puedo confirmar que haya terminado bien. Míralo en Vercel y, si acaba en Canceled, redeploya a mano.`
+            : `✅ Guardada en Vercel (${proyectos}) y redeploy CONFIRMADO en producción. Ya está en runtime.`
+        setMsg({ key, text, ok: d.redeployed && !d.sinConfirmar, aviso: Boolean(d.redeployed && d.sinConfirmar) })
         setEditing(null); setVal(''); setPwd('')
       } else {
         setMsg({ key, text: '❌ ' + (d.error || 'Error'), ok: false })
@@ -227,8 +232,8 @@ export default function SecretosClient({ secrets }: { secrets: SecretEntry[] }) 
                   {msg && msg.key === s.name && (
                     <div style={{
                       fontSize: 12.5, padding: '6px 10px', borderRadius: 6,
-                      color: msg.ok ? '#15803d' : '#b91c1c',
-                      background: msg.ok ? '#dcfce7' : '#fee2e2',
+                      color: msg.aviso ? '#b45309' : msg.ok ? '#15803d' : '#b91c1c',
+                      background: msg.aviso ? '#fffbeb' : msg.ok ? '#dcfce7' : '#fee2e2',
                     }}>
                       {msg.text}
                     </div>
