@@ -200,7 +200,8 @@ SELECT cron.schedule('alerta-ritmo', '*/2 * * * *', $cmd_ritmo$
   SELECT net.http_post(
     url := 'https://wswbehlcuxqxyinousql.supabase.co/functions/v1/alerta-ritmo-cron',
     headers := '{"Content-Type": "application/json"}'::jsonb,
-    body := '{}'::jsonb
+    body := '{}'::jsonb,
+    timeout_milliseconds := 30000
   )
 $cmd_ritmo$);
 
@@ -217,7 +218,8 @@ SELECT cron.schedule('nim-daily-briefing-9am', '0 7 * * *', $cmd_brief$
   SELECT net.http_post(
     url := 'https://wswbehlcuxqxyinousql.supabase.co/functions/v1/daily-briefing',
     headers := '{"Content-Type": "application/json"}'::jsonb,
-    body := '{}'::jsonb
+    body := '{}'::jsonb,
+    timeout_milliseconds := 30000
   )
 $cmd_brief$);
 
@@ -225,7 +227,8 @@ SELECT cron.schedule('nim-sentiment-2am', '0 2 * * *', $cmd_sent$
   SELECT net.http_post(
     url := 'https://wswbehlcuxqxyinousql.supabase.co/functions/v1/nim-sentiment',
     headers := '{"Content-Type": "application/json"}'::jsonb,
-    body := '{}'::jsonb
+    body := '{}'::jsonb,
+    timeout_milliseconds := 30000
   )
 $cmd_sent$);
 
@@ -233,7 +236,8 @@ SELECT cron.schedule('nim-diagnostico-10min', '*/10 * * * *', $cmd_diag$
   SELECT net.http_post(
     url := 'https://wswbehlcuxqxyinousql.supabase.co/functions/v1/nim-diagnostico',
     headers := '{"Content-Type": "application/json"}'::jsonb,
-    body := '{}'::jsonb
+    body := '{}'::jsonb,
+    timeout_milliseconds := 30000
   )
 $cmd_diag$);
 
@@ -241,7 +245,8 @@ SELECT cron.schedule('eventos-entorno-diario', '0 6 * * *', $cmd_entorno$
   SELECT net.http_post(
     url := 'https://wswbehlcuxqxyinousql.supabase.co/functions/v1/eventos-entorno',
     headers := '{"Content-Type": "application/json"}'::jsonb,
-    body := '{}'::jsonb
+    body := '{}'::jsonb,
+    timeout_milliseconds := 30000
   )
 $cmd_entorno$);
 
@@ -249,7 +254,8 @@ SELECT cron.schedule('check-elaboraciones-caducidad', '0 * * * *', $cmd_elab$
   SELECT net.http_post(
     url := 'https://wswbehlcuxqxyinousql.supabase.co/functions/v1/check-elaboraciones',
     headers := '{"Content-Type": "application/json"}'::jsonb,
-    body := '{}'::jsonb
+    body := '{}'::jsonb,
+    timeout_milliseconds := 30000
   )
 $cmd_elab$);
 

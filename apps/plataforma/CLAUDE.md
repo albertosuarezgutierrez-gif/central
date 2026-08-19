@@ -97,13 +97,10 @@ de borrar, `smoobu-sync.ts` deja constancia (helper puro y testeado `lib/sivra/c
 | _(Acceso invitado «Laboratorio de inversión» — 20/07/2026)_ | **NO es una env**, mismo patrón que el de Empresas. Token en la tabla BD **`trading_acceso_token`** (fila única `id=1`, `prisma/sql/2026-07-20_trading_acceso_token.sql`). Enlace: `…/invitado/trading?token=<valor>` → lo canjea `/api/trading/invitado` (fija cookie httpOnly `trading_invitado`, 30 días) → `lib/trading-acceso.ts::accesoTrading` valida contra la BD. `/trading` es 100% LECTURA (sin ninguna acción que escriba), así que la vista de invitado reutiliza tal cual `app/(usuario)/trading/TradingDashboard.tsx` (extraído de `page.tsx` para no duplicar) — el invitado ve exactamente lo mismo que Alberto, sin acceso al resto de la plataforma (banca, fiscal, etc. — fuera del grupo `(usuario)`, sin sidebar). `/invitado/*` y `/api/trading/*` ya estaban exentos del gate de sesión en `middleware.ts` (no requirió tocarlo). **Revocar/rotar:** `UPDATE trading_acceso_token SET token='…'` o `activo=false` (por Supabase MCP). |
 
 > **Sobre la "BD unificada" de ia-rest:** la unificación quedó **a medias**. El schema
-> `iarest` de la BD compartida es un clon del DDL de ia-rest, **mayormente vacío pero NO al 100%**
-> (verificado 26/07/2026: 38 de 252 tablas tienen filas — `leads`/`leads_web_tracking`/
-> `prospeccion_apify_runs`/tablas de cocina, de un módulo de prospección/growth que sí escribe ahí;
-> el **núcleo POS** —pedidos, cobros, comandas— sigue vacío) + tabla de log `_mig_ddl`; los **datos
-> vivos del POS** de ia-rest siguen en su **proyecto Supabase propio** (`efncqyvhniaxsirhdxaa`,
-> schema `public`), de donde lee su producción. Por eso plataforma **NO** lee ia-rest por Prisma
-> sobre `iarest.*`, sino por el **puerto HTTP** (ver abajo).
+> El schema `iarest` de la BD compartida ES la producción de ia-rest (runtime POS, Edge Functions
+> y crons) desde el cierre del 19/08/2026; el proyecto Supabase viejo (`efncqyvhniaxsirhdxaa`)
+> fue borrado ese mismo día. Aun así, plataforma **NO** lee ia-rest por Prisma sobre `iarest.*`,
+> sino por el **puerto HTTP** (ver abajo) — patrón de aislamiento entre apps.
 > `IAREST_SUPABASE_URL` / `IAREST_SUPABASE_SERVICE_KEY` ya no se usan en plataforma.
 
 ## Root Directory en Vercel

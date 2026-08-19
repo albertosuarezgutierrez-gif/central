@@ -64,6 +64,9 @@
 - CERRADO 100%: proyecto viejo PAUSADO, webhook Stripe repuntado (conector MCP), proyecto renombrado a
   «central» (Claude Chrome), y monitor-health-cron reescrito con la ANON key (verify_jwt acepta cualquier
   JWT válido) → app.service_role_key ya no hace falta en ningún sitio. MONEI: DESCARTADO — Alberto decide quedarse solo con Stripe para cobros (19/08); su webhook da igual.
+- REMATE: PR #1483 mergeado a main y proyecto viejo `efncqyvhniaxsirhdxaa` BORRADO del todo por Alberto
+  (19/08, verificado con list_projects: solo queda `central`). Sus 27 archivos demo de Storage y el
+  histórico demo de mayo se fueron con él, asumido. Ya NO existe "el proyecto viejo": todo es `central`.
 
 ### 📐 (19/08/2026) El canal NO es un markup: es una recta — y ahora se mide y se corrige SOLO
 - Medido el escaparate real de los CUATRO pisos con el conector (16 ventanas): el canal multiplica por

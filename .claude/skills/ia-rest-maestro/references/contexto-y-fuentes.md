@@ -69,7 +69,7 @@ docs pesados de Drive.
 | Dato | Valor |
 |---|---|
 | Proyecto VIVO (runtime + EFs + crons) | **wswbehlcuxqxyinousql** (compartido) · schema `iarest` |
-| Proyecto viejo (JUBILADO, congelado desde jun-2026) | efncqyvhniaxsirhdxaa — crons apagados 19/08; pausa/borrado pendiente de Alberto |
+| Proyecto viejo (BORRADO 19/08/2026) | efncqyvhniaxsirhdxaa — ya no existe; lo valioso se copió al compartido antes de borrarlo |
 
 **Cierre del 19/08/2026** (rama `claude/unificar-supabase-ingress-gastos-zwt9mh`):
 - 45 Edge Functions vivas en el compartido (incl. `qr-assistant`, que faltaba y daba 404
@@ -221,7 +221,7 @@ GOOGLE_SA_JSON                   # service account Drive — el .json NUNCA al r
 
 | Recurso | Valor |
 |---|---|
-| Supabase | **wswbehlcuxqxyinousql** (compartido, schema `iarest`, eu-west-1, PG17). El viejo `efncqyvhniaxsirhdxaa` está jubilado — ver §2. |
+| Supabase | **wswbehlcuxqxyinousql** (compartido, schema `iarest`, eu-west-1, PG17). El viejo `efncqyvhniaxsirhdxaa` fue borrado el 19/08/2026 — ver §2. |
 | Vercel team | team_f4gPpt6dPuNcd5YyMt3q27uf |
 | Vercel app | prj_A0xZtqWcH6dtNEmlRiOwgj52GTRo |
 | Vercel docs | prj_eKC4r06S5svI3mwJJUbZmLVnbiQE |

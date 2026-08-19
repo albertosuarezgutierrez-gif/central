@@ -53,7 +53,7 @@ jobs:
       # El objetivo es verificar que el código compila, no que funciona en runtime.
       - name: Build
         env:
-          NEXT_PUBLIC_SUPABASE_URL: https://efncqyvhniaxsirhdxaa.supabase.co
+          NEXT_PUBLIC_SUPABASE_URL: https://wswbehlcuxqxyinousql.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ci_dummy_key_build_check_only
           SUPABASE_SERVICE_ROLE_KEY: ci_dummy_service_role_key
           NEXTAUTH_SECRET: ci_dummy_secret

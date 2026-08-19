@@ -134,8 +134,8 @@ Mismo principio que los `packages/*` (núcleos compartidos) frente a `apps/*` (l
    El motor de dominio vive en `packages/module-*` (puro, portable).
 3. **`apps/plataforma` consolida:** lee la compartida directamente (jerarquía `Cuenta → Sociedad → Negocio`).
 4. **`apps/ia-rest` ya vive en la compartida** (schema `iarest`: runtime, Edge Functions y crons;
-   cierre 19/08/2026). Su proyecto viejo `efncqyvhniaxsirhdxaa` quedó jubilado (pausar/borrar
-   pendiente de Alberto) — **NUNCA desplegar ni aplicar SQL allí**. Los módulos nuevos del holding
+   cierre 19/08/2026). Su proyecto viejo `efncqyvhniaxsirhdxaa` fue **BORRADO**
+   el 19/08/2026 — ya no existe; el único proyecto Supabase del holding es `central`. Los módulos nuevos del holding
    siguen naciendo en la compartida (patrón `apps/transporte`/`apps/alquiler`), nunca como silos.
 
 
