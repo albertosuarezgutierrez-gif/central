@@ -32,6 +32,18 @@
 
 ---
 
+### 🔑 (19/08/2026) El 403 del panel SEO era el REPO, no el permiso — y dos «verdes» que mentían — PR #1494
+- `/api/seo-refresh` daba «Resource not accessible by personal access token»: el PAT tenía
+  `Contents: R/W` pero en «Repository access» solo estaba `house-sevillana-landing`, no `central`
+  (donde vive la landing desde el 12/08). Arreglado por Alberto; PAT rotado, caduca el 19/08/2027.
+- Sonda `sondearEscritura()` + botón «🔑 Probar acceso a GitHub» en `/sivra/seo`: PUT con sha
+  imposible → 409 = puede escribir. **Un GET no valida NADA** en repo público (200 con cualquier
+  token); por eso el panel decía «ok» con un token que no podía commitear. Tres estados, nunca verde por defecto.
+- Mismo patrón en `redeployProjectProduction`: daba «✅ redesplegado» con el deploy en `BUILDING`, y
+  metía `withLatestCommit` (reconstruía OTRO commit). Ahora `clasificarEstadoRedeploy` + «sin confirmar».
+- El rojo de `main` por las claves i18n huérfanas lo arregló otra sesión en paralelo (#1495); mi PR
+  #1496 se quedó en duplicado. **Dos sesiones sobre el mismo repo: mirar `origin/main` antes de arreglar.**
+
 ### 📸 (19/08/2026) La portada de House era una escalera (y el alt decía «fachada»)
 - Lo vio Alberto, no el repaso de diseño: **ninguna sesión puede ver las fotos** de la landing
   (Drive/`lh3.googleusercontent.com` bloqueados por egress; el conector de Drive lista pero
