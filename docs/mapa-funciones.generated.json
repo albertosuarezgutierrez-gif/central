@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-19T17:46:38Z",
-  "sha": "7dfcb518cb83b631cb27d07c5f428a79d08e5c21",
+  "generadoEn": "2026-08-19T17:47:51Z",
+  "sha": "0ee84745948aa442093edf49a7ab45d9dddd9572",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3116,7 +3116,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "9b89c4c13d60"
+      "hash": "3bbd311b0e43"
     },
     {
       "ruta": "apps/housesevillana/app/sitemap.xml/route.ts",
