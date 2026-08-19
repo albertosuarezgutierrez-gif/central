@@ -32,6 +32,12 @@
 
 ---
 
+### 🩺 (19/08/2026) psd2-health-check — feed sano, sin anomalías
+- Preflight canal alerta OK (200). Frescura `movimientos_bancarios WHERE origen='psd2'`: último
+  movimiento 17/08 (2 días, dentro de umbral 48h); mov_30d=63 vs mov_30d_prev=71 (caída ~11%,
+  bajo el umbral del 50%). Estado ✅ OK — sin aviso Telegram. PR #1481 (draft, solo
+  `docs/AGENTES-BITACORA.md`). Sin pendientes.
+
 ### 🔍 (19/08/2026) Auditoría diaria (ligera) — todo sano, sin carril 2
 - Rango: 12 commits desde la última auditoría (2026-08-18), todos ya autodocumentados por PR
   (curva de trading, compra VWCE, verificación PSD2, mercado-booking). Heartbeat de 24 huellas
