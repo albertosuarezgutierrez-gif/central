@@ -104,6 +104,15 @@ pegados a mano, y se ven como lo que son.
 Los tres leen los ficheros **como texto** en vez de importarlos, porque `app/route.ts`
 arrastra `next/server` y el runner de Node no lo resuelve.
 
+**Regla de estas pruebas: una guarda que no encuentra nada NO está en verde, está hueca.**
+Casi todas recorren listas derivadas del HTML (los «delatores» de castellano sin traducir, las
+páginas que descubre `readdirSync`, las anclas que saca una expresión regular). Si el copy
+cambia y una frase deja de existir, o un cambio de formato deja la expresión sin casar, el
+bucle se queda vacío y el test pasa **sin haber comprobado nada**. Pasó el 19/08/2026:
+«Sin comisiones de Booking» desapareció del HTML al reescribir el copy y su delator llevaba
+días pasando en vacío. Por eso cada recorrido lleva ahora su propia comprobación de que
+encontró algo — si añades otro, añádele la suya.
+
 ## Despliegue
 
 Proyecto Vercel `house-sevillana-landing`, Root Directory `apps/housesevillana`, con el
