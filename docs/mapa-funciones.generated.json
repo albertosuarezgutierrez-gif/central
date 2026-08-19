@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-19T10:51:51Z",
-  "sha": "3782b586b3cbad67fc09801076af6e5b29c67b49",
+  "generadoEn": "2026-08-19T11:01:33Z",
+  "sha": "0f7b6a3fb3d07ac65c4c8f587a87a787fee9394b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3588,7 +3588,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f338640d6110"
+      "hash": "cebe65174ec6"
     },
     {
       "ruta": "apps/ia-rest/scripts/qa-check.ts",
@@ -24302,7 +24302,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "0590321be6ef"
+      "hash": "423dcc919450"
     },
     {
       "ruta": "apps/ia-rest/src/app/tapas-bar/page.tsx",
@@ -31847,7 +31847,7 @@
           "exportada": false,
           "params": "triggerTipos: string[], mesaCodigo: string | null, contexto: Record<string, unknown>",
           "retorno": "string",
-          "linea": 15
+          "linea": 12
         },
         {
           "nombre": "generarTituloPush",
@@ -31855,7 +31855,7 @@
           "exportada": false,
           "params": "triggerTipos: string[], mesaCodigo: string | null",
           "retorno": "string",
-          "linea": 76
+          "linea": 73
         },
         {
           "nombre": "minDesde",
@@ -31863,7 +31863,7 @@
           "exportada": false,
           "params": "ts: string | null",
           "retorno": "number",
-          "linea": 92
+          "linea": 89
         },
         {
           "nombre": "enHorario",
@@ -31871,7 +31871,7 @@
           "exportada": false,
           "params": "desde: string | null, hasta: string | null",
           "retorno": "boolean",
-          "linea": 97
+          "linea": 94
         },
         {
           "nombre": "getComandaIds",
@@ -31879,7 +31879,7 @@
           "exportada": false,
           "params": "mesaId: string",
           "retorno": "Promise<string[]>",
-          "linea": 107
+          "linea": 104
         },
         {
           "nombre": "yaAlertado",
@@ -31887,7 +31887,7 @@
           "exportada": false,
           "params": "reglaId: string, mesaId: string | null",
           "retorno": "Promise<boolean>",
-          "linea": 112
+          "linea": 109
         },
         {
           "nombre": "getDestinatarios",
@@ -31895,7 +31895,7 @@
           "exportada": false,
           "params": "regla: Record<string,unknown>, mesa: Record<string,unknown> | null",
           "retorno": "Promise<string[]>",
-          "linea": 120
+          "linea": 117
         },
         {
           "nombre": "evalCondMesa",
@@ -31903,7 +31903,7 @@
           "exportada": false,
           "params": "cond: Cond, mesa: Mesa",
           "retorno": "Promise<CondResult>",
-          "linea": 140
+          "linea": 137
         },
         {
           "nombre": "evalCondGlobal",
@@ -31911,7 +31911,7 @@
           "exportada": false,
           "params": "cond: Cond, rid: string",
           "retorno": "Promise<CondResult>",
-          "linea": 202
+          "linea": 199
         },
         {
           "nombre": "evaluarRegla",
@@ -31919,7 +31919,7 @@
           "exportada": false,
           "params": "regla: Regla, mesas: Mesa[]",
           "retorno": "Promise<Match[]>",
-          "linea": 230
+          "linea": 227
         },
         {
           "nombre": "enviarPush",
@@ -31927,14 +31927,245 @@
           "exportada": false,
           "params": "camarero_ids: string[], title: string, body: string, mensaje_voz: string",
           "retorno": null,
-          "linea": 257
+          "linea": 254
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "5dc7d45d9d7e"
+      "hash": "fc313ff173fa"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/analizar-cv/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "callAI",
+          "kind": "function",
+          "exportada": false,
+          "params": "system: string, user: string",
+          "retorno": "Promise<string>",
+          "linea": 9
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "e56487af2876"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/auth-pin-validate/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · AUTH-PIN-VALIDATE v9 · con error monitoring",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "hashIP",
+          "kind": "function",
+          "exportada": false,
+          "params": "ip: string, salt: string",
+          "retorno": "Promise<string>",
+          "linea": 16
+        },
+        {
+          "nombre": "getClientIP",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: Request",
+          "retorno": "string",
+          "linea": 22
+        },
+        {
+          "nombre": "jsonResponse",
+          "kind": "function",
+          "exportada": false,
+          "params": "body: object, status = 200",
+          "retorno": "Response",
+          "linea": 30
+        },
+        {
+          "nombre": "reportarError",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
+          "retorno": null,
+          "linea": 36
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "19325bd5fe74"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/auth-register/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "getStripeConfig",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "generarPinSeguro",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 25
+        },
+        {
+          "nombre": "buildLineItems",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number, cfg: ReturnType<typeof getStripeConfig>",
+          "retorno": null,
+          "linea": 31
+        },
+        {
+          "nombre": "toSlug",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 39
+        },
+        {
+          "nombre": "toCodigo",
+          "kind": "function",
+          "exportada": false,
+          "params": "nombre: string",
+          "retorno": null,
+          "linea": 42
+        },
+        {
+          "nombre": "enviarEmailBienvenida",
+          "kind": "function",
+          "exportada": false,
+          "params": "opts: { email: string; nombre: string; nombre_restaurante: string codigo_acceso: string; pin_owner: string; app_url: string }",
+          "retorno": null,
+          "linea": 47
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "0f40172a9aa7"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/auth-verify-sms/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "0797a05fae6f"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/brain-parse/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · BRAIN-PARSE v9 · con error monitoring",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "cargarCarta",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, restaurante_id: string",
+          "retorno": "Promise<string>",
+          "linea": 34
+        },
+        {
+          "nombre": "contextoMesa",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, restaurante_id: string, mesa_id: string",
+          "retorno": "Promise<string>",
+          "linea": 55
+        },
+        {
+          "nombre": "cargarMesas",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, restaurante_id: string",
+          "retorno": "Promise<string>",
+          "linea": 72
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "d621b13a02de"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/brain/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "logTrainingData",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: ReturnType<typeof createClient>, payload: { restaurante_id: string; input_raw: string; input_context: object; output_brain: BrainOutput; latencia_ms: number; modelo_usado: string; }",
+          "retorno": "Promise<string | null>",
+          "linea": 68
+        },
+        {
+          "nombre": "marcarCorreccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: ReturnType<typeof createClient>, log_id: string, correccion: BrainOutput",
+          "retorno": "Promise<void>",
+          "linea": 111
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "d543ca9f4773"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/bridge-agent/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · Bridge Agent API v1 API server-side para el agente local Node.js El agente se autentica con su bridge_token (brt_...) No requiere JWT de Supabase — auth propia por token",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "json",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: unknown, s = 200",
+          "retorno": null,
+          "linea": 20
+        },
+        {
+          "nombre": "getAgent",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 24,
+          "resumen": "Autenticar agente por token en header X-Bridge-Token o Authorization: Bearer"
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "23552ed721f3"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/check-elaboraciones/index.ts",
@@ -31946,7 +32177,71 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "547f5bb2e464"
+      "hash": "7f40acd96313"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/cobro-monei/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "reportarError",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
+          "retorno": null,
+          "linea": 8
+        },
+        {
+          "nombre": "json",
+          "kind": "function",
+          "exportada": false,
+          "params": "data: unknown, status = 200",
+          "retorno": "Response",
+          "linea": 160
+        }
+      ],
+      "tablas": [
+        "jsr"
+      ],
+      "rutaApi": null,
+      "hash": "ca6c85fc9f80"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/cobro-stripe/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "reportarError",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
+          "retorno": null,
+          "linea": 8
+        },
+        {
+          "nombre": "stripe",
+          "kind": "function",
+          "exportada": false,
+          "params": "method: string, path: string, params: URLSearchParams, secretKey: string, idempotencyKey?: string",
+          "retorno": "Promise<Response>",
+          "linea": 184
+        },
+        {
+          "nombre": "json",
+          "kind": "function",
+          "exportada": false,
+          "params": "data: unknown, status = 200",
+          "retorno": "Response",
+          "linea": 196
+        }
+      ],
+      "tablas": [
+        "jsr"
+      ],
+      "rutaApi": null,
+      "hash": "c37fc890842e"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/contact-lead/index.ts",
@@ -31965,7 +32260,28 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "79a41d4b359a"
+      "hash": "3d13323db59f"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/courier-route/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · COURIER-ROUTE v10 · fix nota_general",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "reportarError",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
+          "retorno": null,
+          "linea": 5
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "d395c757b465"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/daily-briefing/index.ts",
@@ -32003,7 +32319,57 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "ec0c7340577b"
+      "hash": "b8eb2746bab0"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/ear-transcribe/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · EAR-TRANSCRIBE v8 · con error monitoring",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "e6b8ff65240e"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/enviar-verifactu/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "generarXmlVerifactu",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: any",
+          "retorno": "string",
+          "linea": 154,
+          "resumen": "── Generar XML LROE (SOAP) para AEAT ─────────────────────────────────── Especificación: Orden HAC/1177/2024 + RD 1007/2023"
+        },
+        {
+          "nombre": "escXml",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 220,
+          "resumen": "Escapar caracteres especiales XML"
+        },
+        {
+          "nombre": "json",
+          "kind": "function",
+          "exportada": false,
+          "params": "data: unknown, status = 200",
+          "retorno": "Response",
+          "linea": 230
+        }
+      ],
+      "tablas": [
+        "jsr"
+      ],
+      "rutaApi": null,
+      "hash": "662bdc343724"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/eventos-entorno/index.ts",
@@ -32031,7 +32397,35 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "a3080da4f33f"
+      "hash": "76fb4fb11d89"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/ia-training-dashboard/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "authPage",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 31
+        },
+        {
+          "nombre": "dashboardPage",
+          "kind": "function",
+          "exportada": false,
+          "params": "pin:string",
+          "retorno": "string",
+          "linea": 35
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "53c48fd2c0dd"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/ig-video-gen/index.ts",
@@ -32090,7 +32484,7 @@
           "exportada": false,
           "params": "ts: string | null",
           "retorno": "number",
-          "linea": 25
+          "linea": 22
         },
         {
           "nombre": "yaAlertado",
@@ -32098,7 +32492,7 @@
           "exportada": false,
           "params": "restauranteId: string, tipo: string",
           "retorno": "Promise<boolean>",
-          "linea": 30
+          "linea": 27
         },
         {
           "nombre": "getOwnerIds",
@@ -32106,7 +32500,7 @@
           "exportada": false,
           "params": "restauranteId: string",
           "retorno": "Promise<string[]>",
-          "linea": 42
+          "linea": 39
         },
         {
           "nombre": "enviarPush",
@@ -32114,7 +32508,7 @@
           "exportada": false,
           "params": "camareroIds: string[], title: string, body: string",
           "retorno": null,
-          "linea": 52
+          "linea": 49
         },
         {
           "nombre": "registrarAlerta",
@@ -32122,14 +32516,85 @@
           "exportada": false,
           "params": "restauranteId: string, tipo: string, mensaje: string",
           "retorno": null,
-          "linea": 61
+          "linea": 58
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "6c081bd1e29d"
+      "hash": "cac8c66b0a11"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/kds-token-validate/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · Edge Function: kds-token-validate Versión: 1.0 Valida el token del KDS de cocina.",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "hashString",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "Promise<string>",
+          "linea": 95
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "f50886c22e14"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/lead-research/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "supabase/functions/lead-research/index.ts v4 — busca email automáticamente. Sin email = lead pausado",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "callNIM",
+          "kind": "function",
+          "exportada": false,
+          "params": "apiKey: string, system: string, user: string, max = 1000",
+          "retorno": "Promise<string>",
+          "linea": 203
+        },
+        {
+          "nombre": "esc",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 214
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "4cd790c66822"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/menu-stockout/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · MENU-STOCKOUT v7 · con error monitoring",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "reportarError",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
+          "retorno": null,
+          "linea": 9
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "c4da498fffd4"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/monitor-health/index.ts",
@@ -32141,7 +32606,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "14b6f5fb72fd"
+      "hash": "320a7bc5c55e"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/nim-diagnostico/index.ts",
@@ -32170,7 +32635,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "0ac3520576ee"
+      "hash": "7f02889bc11c"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/nim-sentiment/index.ts",
@@ -32191,7 +32656,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "3137d667fdba"
+      "hash": "b8c610a6e704"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/notify-error/index.ts",
@@ -32203,7 +32668,227 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "043e5d2d9a60"
+      "hash": "9130bc94328b"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/owner-panel/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "getSession",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 11
+        },
+        {
+          "nombre": "json",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: unknown, s = 200",
+          "retorno": null,
+          "linea": 19
+        },
+        {
+          "nombre": "generarCodigo",
+          "kind": "function",
+          "exportada": false,
+          "params": "zonaNombre: string, numero: number",
+          "retorno": "string",
+          "linea": 21
+        },
+        {
+          "nombre": "getHTML",
+          "kind": "function",
+          "exportada": false,
+          "params": "BASE: string",
+          "retorno": "string",
+          "linea": 203
+        },
+        {
+          "nombre": "api",
+          "kind": "function",
+          "exportada": false,
+          "params": "path,opts={}",
+          "retorno": null,
+          "linea": 254
+        },
+        {
+          "nombre": "set",
+          "kind": "function",
+          "exportada": false,
+          "params": "patch",
+          "retorno": null,
+          "linea": 255
+        },
+        {
+          "nombre": "loadAll",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 256
+        },
+        {
+          "nombre": "loadHW",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 257
+        },
+        {
+          "nombre": "loadZonas",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 258
+        },
+        {
+          "nombre": "el",
+          "kind": "function",
+          "exportada": false,
+          "params": "tag,props,...ch",
+          "retorno": null,
+          "linea": 259
+        },
+        {
+          "nombre": "Toggle",
+          "kind": "function",
+          "exportada": false,
+          "params": "on,onChange",
+          "retorno": null,
+          "linea": 260
+        },
+        {
+          "nombre": "renderLogin",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 261
+        },
+        {
+          "nombre": "buildForm",
+          "kind": "function",
+          "exportada": false,
+          "params": "regla",
+          "retorno": null,
+          "linea": 262
+        },
+        {
+          "nombre": "renderReglaCard",
+          "kind": "function",
+          "exportada": false,
+          "params": "r",
+          "retorno": null,
+          "linea": 264
+        },
+        {
+          "nombre": "renderLog",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 265
+        },
+        {
+          "nombre": "renderMesas",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 266
+        },
+        {
+          "nombre": "buildDeviceForm",
+          "kind": "function",
+          "exportada": false,
+          "params": "device",
+          "retorno": null,
+          "linea": 267
+        },
+        {
+          "nombre": "renderHardware",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 268
+        },
+        {
+          "nombre": "render",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 269
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "0d49776e1d21"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/push-send/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · push-send v1 Envía notificaciones Web Push a camareros usando VAPID Auto-genera y almacena las claves VAPID en sistema_config",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "json",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: unknown, s = 200",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "generarVapidKeys",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 17,
+          "resumen": "── Generación de claves VAPID (ECDSA P-256) ──────────────────────────────"
+        },
+        {
+          "nombre": "getVapidKeys",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 31
+        },
+        {
+          "nombre": "vapidJWT",
+          "kind": "function",
+          "exportada": false,
+          "params": "audience: string, privateKeyB64: string",
+          "retorno": "Promise<string>",
+          "linea": 41,
+          "resumen": "── JWT VAPID ────────────────────────────────────────────────────"
+        },
+        {
+          "nombre": "enviarPushUnitario",
+          "kind": "function",
+          "exportada": false,
+          "params": "sub: { endpoint: string; keys: { p256dh: string; auth: string } }, payload: { title: string; body: string; mensaje_voz?: string }, vapidKeys: { publicKey: string; privateKey: string }",
+          "retorno": null,
+          "linea": 68,
+          "resumen": "── Enviar una notificación push ──────────────────────────────────────"
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "8f842d42c01c"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-assistant/index.ts",
@@ -32229,14 +32914,14 @@
           "exportada": false,
           "params": "msg: string",
           "retorno": null,
-          "linea": 129
+          "linea": 126
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "09cf64a57c4e"
+      "hash": "10654303a21d"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-cobro/index.ts",
@@ -32248,7 +32933,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "be56d397dff0"
+      "hash": "423c7a9b19a6"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-connect/index.ts",
@@ -32260,7 +32945,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "306e0df28a10"
+      "hash": "309b7201382a"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-order/index.ts",
@@ -32281,7 +32966,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "419089981b7c"
+      "hash": "d70fbc80d3a0"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-session/index.ts",
@@ -32295,7 +32980,7 @@
           "exportada": false,
           "params": "d: object",
           "retorno": null,
-          "linea": 215
+          "linea": 212
         },
         {
           "nombre": "res400",
@@ -32303,7 +32988,7 @@
           "exportada": false,
           "params": "e: string",
           "retorno": null,
-          "linea": 216
+          "linea": 213
         },
         {
           "nombre": "res403",
@@ -32311,7 +32996,7 @@
           "exportada": false,
           "params": "e: string",
           "retorno": null,
-          "linea": 217
+          "linea": 214
         },
         {
           "nombre": "res404",
@@ -32319,14 +33004,14 @@
           "exportada": false,
           "params": "e: string",
           "retorno": null,
-          "linea": 218
+          "linea": 215
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "81e47b700b78"
+      "hash": "ed786b0ed02d"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-split/index.ts",
@@ -32355,7 +33040,152 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "b8e8a05b4345"
+      "hash": "05710facd244"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/recuperar-pin/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "216f67321b64"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/stripe-checkout/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "getStripeConfig",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 18
+        },
+        {
+          "nombre": "buildLineItems",
+          "kind": "function",
+          "exportada": false,
+          "params": "numUsuarios: number, cfg: ReturnType<typeof getStripeConfig>",
+          "retorno": null,
+          "linea": 35
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "542001e7eb10"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/test-runner/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · TEST-RUNNER v2 — usa estados reales del schema Ejecuta 10 tests del pipeline y guarda resultado en transcripciones",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "call",
+          "kind": "function",
+          "exportada": false,
+          "params": "slug: string, body: unknown, key: string",
+          "retorno": "Promise<",
+          "linea": 10
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "f63a4e887710"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/verifactu-sign/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · VERIFACTU-SIGN v9 · con error monitoring",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "sha256",
+          "kind": "function",
+          "exportada": false,
+          "params": "data: string",
+          "retorno": "Promise<string>",
+          "linea": 5
+        },
+        {
+          "nombre": "reportarError",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
+          "retorno": null,
+          "linea": 10
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "dba0f12ff64b"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/vox-confirm/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · VOX-CONFIRM v7 · con error monitoring TTS fallback graceful: si OpenAI falla devuelve texto sin audio (el cliente sigue funcionando)",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "reportarError",
+          "kind": "function",
+          "exportada": false,
+          "params": "params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
+          "retorno": null,
+          "linea": 11
+        },
+        {
+          "nombre": "textoConfirmacion",
+          "kind": "function",
+          "exportada": false,
+          "params": "body: any",
+          "retorno": "string",
+          "linea": 31
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "75353d891403"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/webhook-monei/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "reportarError",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
+          "retorno": null,
+          "linea": 10
+        },
+        {
+          "nombre": "verificarFirma",
+          "kind": "function",
+          "exportada": false,
+          "params": "body: string, signature: string, secret: string",
+          "retorno": "boolean",
+          "linea": 142
+        }
+      ],
+      "tablas": [
+        "jsr",
+        "node"
+      ],
+      "rutaApi": null,
+      "hash": "f40e24d47417"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/webhook-stripe/index.ts",
@@ -32377,7 +33207,7 @@
           "exportada": false,
           "params": "supabase: any, paymentIntentId: string, stripeStatus: string, event: any",
           "retorno": null,
-          "linea": 74
+          "linea": 75
         },
         {
           "nombre": "procesarPagoFallido",
@@ -32385,7 +33215,7 @@
           "exportada": false,
           "params": "supabase: any, paymentIntentId: string, stripeStatus: string, event: any",
           "retorno": null,
-          "linea": 81
+          "linea": 82
         },
         {
           "nombre": "activarSuscripcion",
@@ -32393,7 +33223,7 @@
           "exportada": false,
           "params": "supabase: any, session: any",
           "retorno": null,
-          "linea": 88
+          "linea": 89
         },
         {
           "nombre": "renovarSuscripcion",
@@ -32401,7 +33231,7 @@
           "exportada": false,
           "params": "supabase: any, invoice: any",
           "retorno": null,
-          "linea": 98
+          "linea": 99
         },
         {
           "nombre": "actualizarSuscripcion",
@@ -32409,7 +33239,7 @@
           "exportada": false,
           "params": "supabase: any, subscription: any",
           "retorno": null,
-          "linea": 103
+          "linea": 104
         },
         {
           "nombre": "cancelarSuscripcion",
@@ -32417,7 +33247,7 @@
           "exportada": false,
           "params": "supabase: any, subscription: any",
           "retorno": null,
-          "linea": 111
+          "linea": 112
         },
         {
           "nombre": "marcarPagoFallidoSaaS",
@@ -32425,7 +33255,7 @@
           "exportada": false,
           "params": "supabase: any, invoice: any",
           "retorno": null,
-          "linea": 116
+          "linea": 117
         },
         {
           "nombre": "verificarFirmaStripe",
@@ -32433,7 +33263,7 @@
           "exportada": false,
           "params": "body: string, signature: string, secret: string",
           "retorno": "boolean",
-          "linea": 122
+          "linea": 123
         }
       ],
       "tablas": [
@@ -32441,7 +33271,7 @@
         "node"
       ],
       "rutaApi": null,
-      "hash": "16ae95a72f1e"
+      "hash": "f3e65e5eed05"
     },
     {
       "ruta": "apps/ialimp/app/admin/agenda/page.tsx",
@@ -63791,7 +64621,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ac2522d02d84"
+      "hash": "836e62028010"
     },
     {
       "ruta": "apps/plataforma/lib/extracto-csv.ts",
@@ -64131,7 +64961,7 @@
           "params": "localId: string | null, anio: number",
           "retorno": "Promise<ResumenFinanciero>",
           "linea": 112,
-          "resumen": "ia-rest vive en su PROPIA BD (proyecto Supabase aparte), no en la compartida: el schema `iarest` de la BD unificada quedó como clon vacío del DDL. Por eso el resumen se lee EN VIVO por el puerto HTTP "
+          "resumen": "ia-rest vive en la BD compartida (schema `iarest`) desde el corte de junio 2026, pero el resumen se sigue leyendo por el puerto HTTP de ia-rest (`/api/operador/financiero`, Bearer `OPERADOR_SHARED_SEC"
         },
         {
           "nombre": "getResumenNegocio",
@@ -64167,7 +64997,7 @@
         "v_contab_pyg"
       ],
       "rutaApi": null,
-      "hash": "53ffdc5b4850"
+      "hash": "c3ffc7372d7a"
     },
     {
       "ruta": "apps/plataforma/lib/finanzas.ts",
@@ -92997,7 +93827,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2478,
-    "funciones": 6730
+    "archivos": 2502,
+    "funciones": 6796
   }
 }
