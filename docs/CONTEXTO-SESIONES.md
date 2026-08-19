@@ -193,6 +193,9 @@
   y rutas `/api/sivra/seo-token-check` (plataforma) y `/api/seo-token-check` (sivra — el token del cron del
   lunes, que tiene su propia copia). 3 estados, solo el 409 se pinta verde. Corregida la nota estale de
   `SECRETS_REGISTRY` que aún citaba el repo viejo.
+- **Sondeo estrenado en verde (18:47):** ✅ HTTP 409 en producción, sin escribir nada (el último commit de
+  la landing siguió siendo el refresh de las 18:33). Confirma en vivo la premisa sobre la que se construyó,
+  que hasta entonces era solo documentación de GitHub: **el permiso se valida ANTES que el sha**.
 - **Suelto (menor):** ese PAT NO tiene caducidad y conserva el repo viejo `house-sevillana-landing` en su
   selección. Recomendado a Alberto ponerle 1 año y quitar el repo muerto; decisión suya, sin hacer.
 
