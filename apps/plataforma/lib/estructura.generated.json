@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-19T17:28:31Z",
+  "generadoEn": "2026-08-19T17:46:38Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4532,6 +4532,10 @@
   ],
   "novedades": [
     {
+      "titulo": "Origen del lío de la dirección:",
+      "fecha": ""
+    },
+    {
       "titulo": "Dos secciones colgaban POR DEBAJO del `<footer>`",
       "fecha": ""
     },
@@ -4585,10 +4589,6 @@
     },
     {
       "titulo": "Pendiente Alberto: mergear el PR y re-vincular Kutxabank UNA vez en `/banca`",
-      "fecha": ""
-    },
-    {
-      "titulo": "Autocrítica:",
       "fecha": ""
     }
   ],

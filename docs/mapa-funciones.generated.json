@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-19T17:28:31Z",
-  "sha": "f2a032115f936a6aa5838e765503446bf068a6ed",
+  "generadoEn": "2026-08-19T17:46:38Z",
+  "sha": "7dfcb518cb83b631cb27d07c5f428a79d08e5c21",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -2915,13 +2915,13 @@
           "exportada": true,
           "params": "html: string",
           "retorno": "string",
-          "linea": 194,
+          "linea": 195,
           "resumen": "Traduce el HTML español al inglés. Sustituye de la cadena más larga a la más corta a propósito: si «La casa» se aplicase antes que «La casa por dentro», la segunda quedaría medio traducida."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "be4108d28532"
+      "hash": "fcfa985f9622"
     },
     {
       "ruta": "apps/housesevillana/app/i18n/motor.ts",
@@ -3116,7 +3116,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "d0a002f5af2e"
+      "hash": "9b89c4c13d60"
     },
     {
       "ruta": "apps/housesevillana/app/sitemap.xml/route.ts",
