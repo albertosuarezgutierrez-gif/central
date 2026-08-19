@@ -253,22 +253,17 @@ SELECT cron.schedule('check-elaboraciones-caducidad', '0 * * * *', $cmd_elab$
 $cmd_elab$);
 
 -- ---------------------------------------------------------------------------
--- 5. monitor-health (verify_jwt=true): solo llama si app.service_role_key está
---    configurada a nivel de BD. Sin JWT cableado en el comando.
+-- 5. monitor-health (verify_jwt=true): el gateway solo exige un JWT VÁLIDO del
+--    proyecto, no un rol concreto, y la función usa su propia SERVICE_ROLE de
+--    env por dentro → basta la ANON key (pública) como Bearer. Así no hace
+--    falta guardar la service_role en ningún GUC/catálogo (la versión inicial
+--    de esta migración usaba current_setting('app.service_role_key'); se
+--    reemplazó el 19/08 por esto y ese setting ya no se usa).
 -- ---------------------------------------------------------------------------
 SELECT cron.schedule('monitor-health-cron', '*/5 * * * *', $cmd_health$
-  DO $inner$
-  BEGIN
-    IF coalesce(current_setting('app.service_role_key', true), '') <> '' THEN
-      PERFORM net.http_post(
-        url := 'https://wswbehlcuxqxyinousql.supabase.co/functions/v1/monitor-health',
-        headers := jsonb_build_object(
-          'Content-Type',  'application/json',
-          'Authorization', 'Bearer ' || current_setting('app.service_role_key', true)
-        ),
-        body := '{}'::jsonb
-      );
-    END IF;
-  END;
-  $inner$;
+  SELECT net.http_post(
+    url := 'https://wswbehlcuxqxyinousql.supabase.co/functions/v1/monitor-health',
+    headers := '{"Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indzd2JlaGxjdXhxeHlpbm91c3FsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyNDU2OTIsImV4cCI6MjA5MTgyMTY5Mn0.pskPJ1U-i0Vjg_suxMfXNqHOtKJpWchf0-CzLUQIzRo"}'::jsonb,
+    body := '{}'::jsonb
+  )
 $cmd_health$);

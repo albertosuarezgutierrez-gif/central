@@ -10,7 +10,8 @@
 Ayúdame a cerrar la unificación de mis dos proyectos Supabase. Todo el trabajo de BD/código
 ya está hecho; faltan estos pasos de dashboard, en este orden:
 
-1. **Renombrar el proyecto compartido a `central`**
+1. ~~Renombrar el proyecto compartido~~ **YA HECHO (19/08, vía Claude Chrome)** — el proyecto
+   `wswbehlcuxqxyinousql` ya se llama `central`. Referencia original:
    - supabase.com/dashboard → proyecto **«Ingresos Y gastos Smoobu»** (ref `wswbehlcuxqxyinousql`)
      → Settings → General → Project name → `central` → Save.
    - No rompe nada: el ref, las URLs y las claves no cambian.
@@ -35,11 +36,10 @@ ya está hecho; faltan estos pasos de dashboard, en este orden:
    - Si MONEI rota el secreto del webhook, actualiza `MONEI_WEBHOOK_SECRET` en los secrets
      de Edge Functions del compartido.
 
-4. **Configurar `app.service_role_key` en la BD compartida** (lo usa el cron `monitor-health-cron`;
-   hasta entonces ese cron simplemente no llama, sin errores)
-   - Supabase compartido → Settings → API → copia la **service_role key** (revélala).
-   - SQL Editor del compartido → ejecuta (pegando la clave):
-     `ALTER DATABASE postgres SET app.service_role_key = '<service_role_key>';`
+4. ~~Configurar `app.service_role_key`~~ **YA NO HACE FALTA (19/08)**: el cron
+   `monitor-health-cron` se reescribió para llamar con la ANON key pública (el gateway
+   `verify_jwt` solo exige un JWT válido del proyecto, no un rol) — la service_role nunca
+   sale de los secrets de Edge Functions ni acaba en un catálogo en claro.
 
 5. **Verificar secrets de Edge Functions del compartido** (Edge Functions → Manage secrets).
    Deberían estar desde junio; confirma en particular estos, que usan las functions
