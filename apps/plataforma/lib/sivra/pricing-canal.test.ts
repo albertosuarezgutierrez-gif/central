@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   ajusteCanal, baseDesdeGuest, guestDesdeBase, fijoPorNoche, desviacionCanal,
-  pasoCanal, MIN_VENTANAS_CANAL, RECORRIDO_MINIMO, MAX_SALTO_CANAL,
+  pasoCanal, validarCanal, MIN_VENTANAS_CANAL, RECORRIDO_MINIMO, MAX_SALTO_CANAL, TOL_SESGO_CANAL,
   type VentanaEscaparate,
 } from './pricing-canal.ts'
 
@@ -177,4 +177,81 @@ test('⚠️ el mismo piso da parámetros DISTINTOS según el aforo, y eso es co
   const conDoce = baseDesdeGuest(682, { markup: doce.markup!, cuotaFija: doce.cuotaFija!, nochesRef: 2 })
   const conSeis = baseDesdeGuest(682, { markup: seis.markup!, cuotaFija: seis.cuotaFija!, nochesRef: 2 })
   assert.ok(Math.abs(conDoce - conSeis) > 20, `${conDoce} vs ${conSeis}`)
+})
+
+// ─── Validación fuera de muestra (el R² no vale para esto) ─────────────────────────────────────
+
+test('🚨 sin ventanas nuevas el validador dice SIN MUESTRAS, jamás "ok"', () => {
+  const v = validarCanal([], { markup: 0.902, cuotaFija: 597 }, { aforo: 12 })
+  assert.equal(v.estado, 'sin_muestras')
+  assert.equal(v.sesgo, null)
+  assert.equal(v.muestras, 0)
+})
+
+test('una recta que acierta en ventanas NUEVAS se declara ok', () => {
+  // Ventanas generadas con los mismos parámetros ±1%: es lo que se espera de un modelo sano.
+  const p = { markup: 0.902, cuotaFija: 597 }
+  const nuevas = [
+    v('2026-10-06', 2, 12, Math.round(p.markup * 900 + p.cuotaFija), 900),
+    v('2026-11-10', 3, 12, Math.round(p.markup * 1800 + p.cuotaFija), 1800),
+    v('2027-01-15', 2, 12, Math.round(p.markup * 2400 + p.cuotaFija), 2400),
+  ]
+  const val = validarCanal(nuevas, p, { aforo: 12 })
+  assert.equal(val.estado, 'ok')
+  assert.ok(Math.abs(val.sesgo!) < 0.01, `sesgo ${val.sesgo}`)
+})
+
+test('🚨 el fallo que el R² NO caza: el portal sube la limpieza y el modelo sigue "ajustando bien"', () => {
+  // Booking pasa la cuota fija de 597€ a 900€. Un reajuste daría R² 0,99 otra vez y nadie lo vería.
+  // La predicción con los parámetros VIGENTES, en cambio, se queda corta de forma sistemática.
+  const vigentes = { markup: 0.902, cuotaFija: 597 }
+  const nuevas = [
+    v('2026-10-06', 2, 12, Math.round(0.902 * 900 + 900), 900),
+    v('2026-11-10', 3, 12, Math.round(0.902 * 1800 + 900), 1800),
+    v('2027-01-15', 2, 12, Math.round(0.902 * 2400 + 900), 2400),
+  ]
+  const val = validarCanal(nuevas, vigentes, { aforo: 12 })
+  assert.equal(val.estado, 'desviado')
+  assert.ok(val.sesgo! > 0, 'el portal cobra MÁS de lo que predecimos')
+  // Y el ajuste sobre esas mismas ventanas sí daría un R² inmejorable: por eso no sirve de vigía.
+  const reajuste = ajusteCanal(nuevas, { aforo: 12 })
+  assert.equal(reajuste.estado, 'medido')
+  assert.ok(reajuste.r2! > 0.99, `R² del reajuste: ${reajuste.r2}`)
+})
+
+test('un error grande pero SIN sesgo es ruido, no un modelo roto', () => {
+  const p = { markup: 1.0, cuotaFija: 100 }
+  const nuevas = [
+    v('a', 2, 4, 1100, 900),   // +10€ sobre lo predicho (1000)
+    v('b', 2, 4, 900, 900),    // −100€
+    v('c', 2, 4, 1050, 900),   // −50€... la media se compensa
+  ]
+  const val = validarCanal(nuevas, p, { aforo: 4 })
+  assert.ok(Math.abs(val.sesgo!) < TOL_SESGO_CANAL, `sesgo ${val.sesgo}`)
+  assert.ok(val.errorMaximo! > val.errorMedio!)
+})
+
+test('el validador ignora las ventanas de otro aforo y las que no tienen base', () => {
+  const p = { markup: 0.9, cuotaFija: 500 }
+  const val = validarCanal([
+    v('a', 2, 12, 1310, 900), v('b', 2, 6, 9999, 900), v('c', 2, 12, 1310, null),
+  ], p, { aforo: 12 })
+  assert.equal(val.muestras, 1)
+})
+
+// ─── Un ajuste por PORTAL ──────────────────────────────────────────────────────────────────────
+
+test('🚨 la recta de un portal no describe la de otro: no se mezclan', () => {
+  const booking = HOUSE.map(w => ({ ...w, portal: 'booking' }))
+  const airbnb = [
+    { ...v('2026-09-08', 2, 6, 1500, 860), portal: 'airbnb' },
+    { ...v('2026-09-08', 3, 6, 2100, 1429), portal: 'airbnb' },
+    { ...v('2026-12-26', 2, 6, 3400, 2787), portal: 'airbnb' },
+  ]
+  const soloBooking = ajusteCanal([...booking, ...airbnb], { aforo: 6, portal: 'booking' })
+  assert.equal(soloBooking.muestras, 3)
+  const mezclado = ajusteCanal([...booking, ...airbnb], { aforo: 6 })
+  assert.equal(mezclado.muestras, 6)
+  // La mezcla describe un canal que no existe: ni el de Booking ni el de Airbnb.
+  assert.notEqual(soloBooking.markup, mezclado.markup)
 })

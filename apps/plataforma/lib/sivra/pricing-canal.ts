@@ -65,6 +65,12 @@ export interface VentanaEscaparate {
    * noche: la ventana no se puede usar (no es un ratio de 1, es un ratio desconocido).
    */
   baseTotal: number | null
+  /**
+   * Portal donde se midió. Cada canal tiene SU recta (comisión y política de limpieza propias), y
+   * mezclarlos daría una media de dos escaparates distintos. Opcional solo por compatibilidad con
+   * los tests históricos; el ajuste filtra por él cuando se le pide.
+   */
+  portal?: string
 }
 
 export type EstadoCanal = 'medido' | 'sin_muestras' | 'muestra_corta' | 'indeterminado' | 'inconsistente'
@@ -104,11 +110,13 @@ export const MARKUP_MAX = 1.6
  */
 export function ajusteCanal(
   ventanas: VentanaEscaparate[],
-  opts: { aforo: number; minVentanas?: number },
+  opts: { aforo: number; minVentanas?: number; portal?: string },
 ): AjusteCanal {
   const minVentanas = opts.minVentanas ?? MIN_VENTANAS_CANAL
   const utiles = (ventanas ?? []).filter(v =>
     Number(v.guests) === Number(opts.aforo) &&
+    // Un solo canal por ajuste: la recta de Booking no describe la de Airbnb.
+    (!opts.portal || !v.portal || v.portal === opts.portal) &&
     Number(v.noches) > 0 &&
     Number.isFinite(Number(v.precioTotal)) && Number(v.precioTotal) > 0 &&
     v.baseTotal != null && Number.isFinite(Number(v.baseTotal)) && Number(v.baseTotal) > 0)
@@ -294,5 +302,77 @@ export function pasoCanal(p: {
     aplicar: { ...aplicar, markup: Number(aplicar.markup.toFixed(4)), cuotaFija: Number(aplicar.cuotaFija.toFixed(1)) },
     efecto: Number(efectoDe(lo).toFixed(4)),
     topado: true,
+  }
+}
+
+// ─── Validación FUERA DE MUESTRA ──────────────────────────────────────────────────────────────
+//
+// 🚨 POR QUÉ NO BASTA CON EL R² (19/08/2026). `ajusteCanal` devuelve un R² altísimo, pero ese R²
+// mide lo bien que la recta describe LAS VENTANAS CON LAS QUE SE AJUSTÓ. Es circular: si Booking
+// cambia mañana su política de comisión o de limpieza, la pasada siguiente vuelve a ajustar sobre
+// las ventanas nuevas, vuelve a salir R²=0,99 y NADIE se entera de que el modelo de ayer estaba
+// equivocado. Un ajuste siempre encaja consigo mismo.
+//
+// Lo que de verdad dice si el modelo sirve es la PREDICCIÓN: con los parámetros que están hoy en
+// producción, ¿cuánto se acerca el precio que anticipamos al que el portal enseña en una ventana
+// que ese ajuste no había visto? Por eso `pricing_escaparate.usada_en_ajuste_at` marca las
+// ventanas ya consumidas: las que están a NULL son las únicas que pueden juzgar al modelo.
+
+export interface ValidacionCanal {
+  /** ventanas nuevas (no usadas en el ajuste vigente) que han podido juzgarse */
+  muestras: number
+  /** error medio ABSOLUTO de predicción, en tanto por uno sobre el precio real */
+  errorMedio: number | null
+  /** peor error absoluto de la muestra */
+  errorMaximo: number | null
+  /**
+   * error medio CON SIGNO: >0 = el portal cobra MÁS de lo que predecimos. Es el que importa: un
+   * error grande pero sin sesgo es ruido de la muestra; un error pequeño y siempre en la misma
+   * dirección es el modelo equivocándose de forma sistemática, y eso viaja a todas las fechas.
+   */
+  sesgo: number | null
+  estado: 'sin_muestras' | 'ok' | 'desviado'
+}
+
+/** Sesgo sistemático tolerado antes de declarar el modelo desviado. */
+export const TOL_SESGO_CANAL = 0.06
+/** Error medio absoluto tolerado (más laxo: absorbe el ruido de una muestra pequeña). */
+export const TOL_ERROR_CANAL = 0.12
+
+/**
+ * ¿Acierta la recta que está en producción sobre ventanas que NO se usaron para ajustarla?
+ *
+ * Sin muestras devuelve `sin_muestras`, nunca `ok`: un validador que se pone verde porque no ha
+ * podido comparar nada es el fallo más caro que hay (regla de CLAUDE.md).
+ */
+export function validarCanal(
+  nuevas: VentanaEscaparate[],
+  vigentes: { markup: number; cuotaFija: number },
+  opts: { aforo: number; tolSesgo?: number; tolError?: number } = { aforo: 0 },
+): ValidacionCanal {
+  const tolSesgo = opts.tolSesgo ?? TOL_SESGO_CANAL
+  const tolError = opts.tolError ?? TOL_ERROR_CANAL
+  const utiles = (nuevas ?? []).filter(v =>
+    (!opts.aforo || Number(v.guests) === Number(opts.aforo)) &&
+    v.baseTotal != null && Number(v.baseTotal) > 0 &&
+    Number.isFinite(Number(v.precioTotal)) && Number(v.precioTotal) > 0)
+
+  if (!utiles.length || !(vigentes?.markup > 0)) {
+    return { muestras: 0, errorMedio: null, errorMaximo: null, sesgo: null, estado: 'sin_muestras' }
+  }
+  const errores = utiles.map(v => {
+    const predicho = vigentes.markup * Number(v.baseTotal) + (vigentes.cuotaFija > 0 ? vigentes.cuotaFija : 0)
+    return (Number(v.precioTotal) - predicho) / Number(v.precioTotal)
+  })
+  const sesgo = errores.reduce((a, b) => a + b, 0) / errores.length
+  const abs = errores.map(Math.abs)
+  const errorMedio = abs.reduce((a, b) => a + b, 0) / abs.length
+  const errorMaximo = Math.max(...abs)
+  return {
+    muestras: utiles.length,
+    errorMedio: Number(errorMedio.toFixed(4)),
+    errorMaximo: Number(errorMaximo.toFixed(4)),
+    sesgo: Number(sesgo.toFixed(4)),
+    estado: Math.abs(sesgo) > tolSesgo || errorMedio > tolError ? 'desviado' : 'ok',
   }
 }

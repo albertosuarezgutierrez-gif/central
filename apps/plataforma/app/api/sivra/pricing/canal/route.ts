@@ -6,10 +6,11 @@ import { tgSend } from "@central/core-telegram"
 import { registrarLatido } from "@/lib/monitoring/latido-escribir"
 import { eur } from "@/lib/dinero"
 import {
-  ajusteCanal, desviacionCanal, pasoCanal, baseDesdeGuest,
+  ajusteCanal, desviacionCanal, pasoCanal, baseDesdeGuest, validarCanal,
   MIN_VENTANAS_CANAL, MAX_SALTO_CANAL,
-  type VentanaEscaparate, type ParametrosCanal,
+  type VentanaEscaparate, type ParametrosCanal, type ValidacionCanal,
 } from "@/lib/sivra/pricing-canal"
+import { precioHuesped, baseDondeLaCuotaMandaya, type ResumenHuesped } from "@/lib/sivra/pricing-precio-huesped"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 120
@@ -40,6 +41,15 @@ export const maxDuration = 120
 
 /** Días de mediciones de escaparate que entran en el ajuste. */
 const VENTANA_DIAS = 45
+/**
+ * Portal cuyo escaparate calibra el motor. Es UNO a propósito: cada canal tiene su comisión y su
+ * política de limpieza, así que mezclarlos daría una recta que no describe a ninguno. Booking es
+ * el 92-99% del ingreso bruto de los cuatro pisos (medido sobre `incomes`, 12 meses, 19/08/2026),
+ * y la base de Smoobu es ÚNICA para todos los canales: los demás heredan esta conversión sin haber
+ * sido medidos. El hueco se declara en `cobertura_canales` con el % de ingreso que representa —
+ * hoy Airbnb es el 1,0% de House y el 2,1% de Luxury, y por eso NO se trata como una avería.
+ */
+const PORTAL_CANAL = "booking"
 
 const PROP_NAMES: Record<string, string> = {
   prop_house_sevillana: "House Sevillana",
@@ -65,6 +75,10 @@ type FilaVentana = {
   guests: number
   precio_total: number
   base_total: number | null
+  portal: string
+  /** null = ventana NUEVA: es la única que puede validar fuera de muestra la recta vigente */
+  usada: Date | null
+  id: number
 }
 
 export type MedicionCanal = {
@@ -83,6 +97,10 @@ export type MedicionCanal = {
   sesgo: number | null
   desviacion: string
   canal_auto: boolean
+  /** ¿acierta la recta VIGENTE en las ventanas que no usó para ajustarse? */
+  validacion: ValidacionCanal
+  /** ids de las ventanas que entran en el ajuste de esta pasada (se marcan al escribir) */
+  ventanas_usadas: number[]
 }
 
 async function medir(): Promise<{ pisos: MedicionCanal[]; ventanas: Map<string, VentanaEscaparate[]> }> {
@@ -104,20 +122,25 @@ async function medir(): Promise<{ pisos: MedicionCanal[]; ventanas: Map<string, 
     ORDER BY s.property_id`)
 
   const medidas = await prisma.$queryRaw<FilaVentana[]>(Prisma.sql`
-    SELECT property_id, checkin::text AS checkin, noches, guests, precio_total, base_total
+    SELECT id, property_id, checkin::text AS checkin, noches, guests, precio_total, base_total,
+           portal, usada_en_ajuste_at AS usada
     FROM pricing_escaparate
     WHERE medido_el >= CURRENT_DATE - ${VENTANA_DIAS}
     ORDER BY property_id, checkin`)
 
-  const porPiso = new Map<string, VentanaEscaparate[]>()
+  type VentanaConId = VentanaEscaparate & { id: number; usada: boolean }
+  const porPiso = new Map<string, VentanaConId[]>()
   for (const v of medidas) {
     const lista = porPiso.get(v.property_id) ?? []
     lista.push({
+      id: Number(v.id),
       checkin: v.checkin,
       noches: Number(v.noches),
       guests: Number(v.guests),
       precioTotal: Number(v.precio_total),
       baseTotal: v.base_total != null ? Number(v.base_total) : null,
+      portal: String(v.portal ?? PORTAL_CANAL),
+      usada: v.usada != null,
     })
     porPiso.set(v.property_id, lista)
   }
@@ -125,7 +148,14 @@ async function medir(): Promise<{ pisos: MedicionCanal[]; ventanas: Map<string, 
   const salida = pisos.map(p => {
     const todas = porPiso.get(p.property_id) ?? []
     const aforo = Number(p.aforo_max)
-    const ajuste = ajusteCanal(todas, { aforo })
+    const ajuste = ajusteCanal(todas, { aforo, portal: PORTAL_CANAL })
+    // 🚨 La validación va ANTES de reajustar y con los parámetros VIGENTES: si se hiciera después,
+    // se estaría comprobando la recta contra las mismas ventanas que acaban de producirla, que es
+    // justo el círculo que este control existe para romper.
+    const validacion = validarCanal(
+      todas.filter(v => !v.usada && v.portal === PORTAL_CANAL),
+      { markup: Number(p.markup_cfg), cuotaFija: Number(p.cuota_cfg) },
+      { aforo })
     // La estancia típica solo se toma del histórico si lo hay; si no, se conserva la guardada (que
     // por defecto es 2) en vez de inventar una duración con la que nunca se ha vendido nada.
     const nochesRef = Number(p.noches_mediana) > 0 ? Number(p.noches_mediana) : Number(p.noches_cfg)
@@ -163,6 +193,10 @@ async function medir(): Promise<{ pisos: MedicionCanal[]; ventanas: Map<string, 
       sesgo: d.sesgo,
       desviacion: d.estado,
       canal_auto: Boolean(p.canal_auto),
+      validacion,
+      ventanas_usadas: ajuste.estado === "medido"
+        ? todas.filter(v => v.guests === aforo && v.portal === PORTAL_CANAL && v.baseTotal != null).map(v => v.id)
+        : [],
     }
   })
 
@@ -213,6 +247,89 @@ function cambiosDe(pisos: MedicionCanal[], soloProp: string | null, autoGlobal: 
   return { cambios, frenados }
 }
 
+/**
+ * Marca las ventanas que han entrado en un ajuste. A partir de aquí ya NO pueden validar nada: el
+ * modelo las ha visto. Las que queden a NULL son la muestra limpia de la pasada siguiente.
+ */
+async function marcarUsadas(ids: number[]) {
+  if (!ids.length) return
+  await prisma.$executeRaw(Prisma.sql`
+    UPDATE pricing_escaparate SET usada_en_ajuste_at = now()
+     WHERE id IN (${Prisma.join(ids)}) AND usada_en_ajuste_at IS NULL`)
+}
+
+/** Peso de cada canal en el ingreso REAL del piso. Convierte «no medimos X» en euros. */
+type Canal = { property_id: string; portal: string; pct: number; bruto: number }
+
+async function coberturaCanales(): Promise<{
+  canales: Canal[]; sinMedir: { property_id: string; portal: string; pct: number }[]
+}> {
+  const filas = await prisma.$queryRaw<{ property_id: string; portal: string; pct: number; bruto: number }[]>(Prisma.sql`
+    SELECT "propertyId" AS property_id, COALESCE(portal, 'OTRO') AS portal,
+           ROUND(SUM(amount_gross)::numeric)::float8 AS bruto,
+           ROUND(100 * SUM(amount_gross)::numeric
+                 / NULLIF(SUM(SUM(amount_gross)::numeric) OVER (PARTITION BY "propertyId"), 0), 1)::float8 AS pct
+    FROM incomes
+    WHERE date >= CURRENT_DATE - 365 AND amount_gross > 0 AND "propertyId" LIKE 'prop_%'
+    GROUP BY 1, 2`)
+  const canales = filas.map(f => ({
+    property_id: f.property_id, portal: String(f.portal).toLowerCase(),
+    pct: Number(f.pct), bruto: Number(f.bruto),
+  }))
+  // Todo canal que NO es el medido hereda la conversión sin haber sido contrastado. No es una
+  // avería —Booking es el 92-99%— pero tiene que estar CONTADO, no supuesto: si Airbnb creciera,
+  // este número crece con él y el hueco deja de ser despreciable solo.
+  return {
+    canales,
+    sinMedir: canales
+      .filter(c => c.portal !== PORTAL_CANAL && c.pct > 0)
+      .map(c => ({ property_id: c.property_id, portal: c.portal, pct: c.pct }))
+      .sort((a, b) => b.pct - a.pct),
+  }
+}
+
+/**
+ * ¿Qué ve el HUÉSPED en las fechas ya tarifadas? El motor razona en base y con una cuota fija eso
+ * deja de describir el precio real (ver `pricing-precio-huesped.ts`). Se cruza la base viva con la
+ * mediana de mercado del mes de cada fecha —solo corpus fiable— y se juzga en la unidad correcta.
+ */
+async function centinelaHuesped(pisos: MedicionCanal[]): Promise<Map<string, ResumenHuesped>> {
+  const filas = await prisma.$queryRaw<{ property_id: string; fecha: string; base: number; med: number | null }[]>(Prisma.sql`
+    WITH base AS (
+      SELECT property_id, rate_date, price_pricelabs AS base
+      FROM rate_snapshots
+      WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM rate_snapshots)
+        AND rate_date BETWEEN CURRENT_DATE AND CURRENT_DATE + 180
+        AND price_pricelabs IS NOT NULL AND available = 1
+    ),
+    mkt AS (
+      SELECT scenario, to_char(checkin_date, 'YYYY-MM') AS ym,
+             percentile_cont(0.5) WITHIN GROUP (ORDER BY price_night)::float8 AS med
+      FROM market_rates
+      WHERE fuente IN ('booking_mcp', 'manual') AND price_night > 0
+        AND checkin_date >= CURRENT_DATE AND search_date >= CURRENT_DATE - 120
+      GROUP BY 1, 2
+    )
+    SELECT b.property_id, b.rate_date::text AS fecha, b.base, m.med
+    FROM base b
+    LEFT JOIN mkt m ON m.scenario = b.property_id AND m.ym = to_char(b.rate_date, 'YYYY-MM')
+    ORDER BY b.property_id, b.rate_date`)
+
+  const porPiso = new Map<string, { fecha: string; baseAplicada: number; medMercadoGuest: number | null }[]>()
+  for (const f of filas) {
+    const l = porPiso.get(f.property_id) ?? []
+    l.push({ fecha: f.fecha, baseAplicada: Number(f.base), medMercadoGuest: f.med != null ? Number(f.med) : null })
+    porPiso.set(f.property_id, l)
+  }
+  const salida = new Map<string, ResumenHuesped>()
+  for (const p of pisos) {
+    const fechas = porPiso.get(p.property_id)
+    if (!fechas?.length) continue
+    salida.set(p.property_id, precioHuesped(fechas, p.configurado))
+  }
+  return salida
+}
+
 async function escribir(cambios: Cambio[]) {
   for (const c of cambios) {
     await prisma.$executeRaw(Prisma.sql`
@@ -245,6 +362,10 @@ export async function GET(req: NextRequest) {
   let pisos: MedicionCanal[] = []
   let cambios: Cambio[] = []
   let frenados: { property_id: string; motivo: string }[] = []
+  let huesped = new Map<string, ResumenHuesped>()
+  let canales: { canales: Canal[]; sinMedir: { property_id: string; portal: string; pct: number }[] } =
+    { canales: [], sinMedir: [] }
+  const avisosCentinela: string[] = []
   try {
     const autoGlobal = process.env.SIVRA_CANAL_AUTO !== "0"
     const m = await medir()
@@ -253,6 +374,19 @@ export async function GET(req: NextRequest) {
     const r = cambiosDe(pisos, soloProp, autoGlobal)
     cambios = r.cambios; frenados = r.frenados
     if (!simulacro && cambios.length > 0) await escribir(cambios)
+    // Las ventanas se marcan DESPUÉS de escribir y solo las de los pisos que se han ajustado: si se
+    // marcaran siempre, una pasada que no ajustó nada quemaría la muestra limpia de la siguiente.
+    if (!simulacro) {
+      const usadas = pisos.filter(p => p.estado === "medido").flatMap(p => p.ventanas_usadas)
+      await marcarUsadas(usadas)
+    }
+    // Los dos centinelas van en su propio try: son vigilancia, no pueden tumbar la corrección.
+    try { huesped = await centinelaHuesped(pisos) } catch (e) {
+      avisosCentinela.push(`centinela del precio al huésped ilegible (${String(e).slice(0, 60)}): esta pasada NO lo ha mirado`)
+    }
+    try { canales = await coberturaCanales() } catch (e) {
+      avisosCentinela.push(`cobertura de canales ilegible (${String(e).slice(0, 60)}): no se sabe qué peso tiene lo no medido`)
+    }
   } catch (e) {
     // Una pasada que revienta NO puede quedar como silencio: sin latido en rojo, «hoy no cambió
     // nada» y «hoy no se pudo mirar» son el mismo parte.
@@ -261,24 +395,74 @@ export async function GET(req: NextRequest) {
   }
 
   const sinMedir = pisos.filter(p => p.estado !== "medido")
+  const desviados = pisos.filter(p => p.validacion.estado === "desviado")
+  const sinValidar = pisos.filter(p => p.validacion.estado === "sin_muestras")
+  const caros = [...huesped.entries()].filter(([, h]) => h.caras > 0)
+
   const detalle =
     `${pisos.length} pisos · ${cambios.length} ajustados` +
     (sinMedir.length ? ` · ${sinMedir.length} sin ajuste fiable (${sinMedir.map(p => p.estado).join(",")})` : "") +
+    ` · validación: ${pisos.length - desviados.length - sinValidar.length} ok, ${desviados.length} desviados, ` +
+    `${sinValidar.length} sin ventanas nuevas` +
+    (caros.length ? ` · 🏷️ ${caros.reduce((a, [, h]) => a + h.caras, 0)} fechas listadas caras al huésped` : "") +
+    (avisosCentinela.length ? ` · ⚠️ ${avisosCentinela.length} centinela(s) sin poder mirar` : "") +
     (simulacro ? " · SIMULACRO" : "")
+
   // La pasada es BUENA si ha podido juzgar a todos los pisos. Un piso sin ventanas suficientes no
   // es un fallo del cron —es un hueco de medición— pero tampoco es «todo cuadra»: por eso el latido
   // se pone en rojo cuando NINGÚN piso tiene ajuste, que es la señal de que el escaparate no se
-  // está midiendo y el motor lleva días dividiendo por un número viejo.
-  await registrarLatido("sivra_canal", pisos.length > 0 && sinMedir.length < pisos.length, detalle)
+  // está midiendo y el motor lleva días dividiendo por un número viejo. Un centinela que no ha
+  // podido mirar también lo pone en rojo: su silencio no es un parte de buena salud.
+  await registrarLatido(
+    "sivra_canal",
+    pisos.length > 0 && sinMedir.length < pisos.length && avisosCentinela.length === 0,
+    detalle)
 
-  if (!simulacro && cambios.length > 0) {
-    try {
-      await tgSend(
+  if (!simulacro) {
+    const bloques: string[] = []
+    if (cambios.length > 0) {
+      bloques.push(
         `📐 *Canal Booking recalibrado* (medido en el escaparate, aplicado solo)\n\n` +
-        cambios.map(lineaCambio).join("\n") +
-        `\n\n_El motor convierte mercado→base con estos parámetros. Para congelar un piso: ` +
-        `\`canal_auto=false\` en pricing\\_settings._`)
-    } catch { /* el aviso no puede tumbar la aplicación */ }
+        cambios.map(lineaCambio).join("\n"))
+    }
+    // 🚨 El modelo FALLANDO en ventanas nuevas es más grave que un parámetro desfasado: significa
+    // que la recta ya no describe al portal y que reajustarla volvería a dar un R² inmejorable
+    // sobre un modelo equivocado. Va siempre, aunque no se haya cambiado nada.
+    if (desviados.length > 0) {
+      bloques.push(
+        `🎯 *La recta del canal NO acierta fuera de muestra*\n\n` +
+        desviados.map(p =>
+          `• ${p.nombre}: ${p.validacion.muestras} ventana(s) nueva(s), error medio ` +
+          `${Math.round((p.validacion.errorMedio ?? 0) * 100)}% y sesgo ` +
+          `${(p.validacion.sesgo ?? 0) > 0 ? "+" : ""}${Math.round((p.validacion.sesgo ?? 0) * 100)}% ` +
+          `(${(p.validacion.sesgo ?? 0) > 0 ? "el portal cobra MÁS de lo que predecimos" : "cobra menos"})`).join("\n") +
+          `\n\n_Si el sesgo persiste, el portal ha cambiado su política: el ajuste se recalibrará solo, ` +
+          `pero conviene mirar la extranet antes de fiarse del número nuevo._`)
+    }
+    // El punto ciego del motor: razona en base, el huésped paga base × markup + cuota fija.
+    if (caros.length > 0) {
+      bloques.push(
+        `🏷️ *Precio al HUÉSPED por encima del mercado en fechas ya tarifadas*\n\n` +
+        caros.map(([id, h]) => {
+          const piso = pisos.find(p => p.property_id === id)
+          const suelo = piso ? baseDondeLaCuotaMandaya(piso.configurado) : null
+          return `• ${piso?.nombre ?? id}: ${h.caras} fecha(s) · peor ${h.peores[0]?.fecha} ` +
+            `${eur(h.peores[0]?.guest ?? 0)}/noche contra ${eur(h.peores[0]?.medMercadoGuest ?? 0)} de mercado ` +
+            `(×${h.peores[0]?.ratio})` +
+            (suelo ? `\n  Por debajo de ${eur(suelo)} de base, la cuota fija ya es la mitad de lo que paga el ` +
+              `huésped: bajar más NO abarata la noche, hay que tocar otra palanca (mín. de noches, oferta del portal).` : "")
+        }).join("\n"))
+    }
+    if (avisosCentinela.length > 0) {
+      bloques.push(`⚠️ *Sin poder comprobar* — esto NO es «todo bien»\n\n` +
+        avisosCentinela.map(a => `• ${a}`).join("\n"))
+    }
+    if (bloques.length > 0) {
+      try {
+        await tgSend(bloques.join("\n\n") +
+          `\n\n_Para congelar el calibrado de un piso: \`canal_auto=false\` en pricing\\_settings._`)
+      } catch { /* el aviso no puede tumbar la aplicación */ }
+    }
   }
 
   return NextResponse.json({
@@ -287,11 +471,24 @@ export async function GET(req: NextRequest) {
     ventana_dias: VENTANA_DIAS,
     min_ventanas: MIN_VENTANAS_CANAL,
     max_salto: MAX_SALTO_CANAL,
+    portal_medido: PORTAL_CANAL,
     pisos,
     cambios,
     // Se declaran los huecos: «sin ajuste fiable» no es «cuadra», y un piso frenado por su
     // interruptor tiene que verse (si no, un `canal_auto=false` olvidado es invisible para siempre).
     frenados,
     sin_ajuste: sinMedir.map(p => ({ property_id: p.property_id, estado: p.estado, ventanas: p.ventanas_totales })),
+    // Validación FUERA de muestra: lo único que puede decir que el modelo sigue siendo válido.
+    validacion: pisos.map(p => ({ property_id: p.property_id, ...p.validacion })),
+    // Lo que ve el huésped en las fechas ya tarifadas (el motor solo mira la base).
+    precio_huesped: [...huesped.entries()].map(([id, h]) => ({
+      property_id: id, caras: h.caras, baratas: h.baratas, ok: h.ok, sin_mercado: h.sinMercado,
+      peores: h.peores,
+      base_donde_manda_la_cuota: baseDondeLaCuotaMandaya(
+        pisos.find(p => p.property_id === id)!.configurado),
+    })),
+    // Qué canales heredan esta conversión SIN haber sido medidos, y cuánto ingreso mueven.
+    cobertura_canales: { medido: PORTAL_CANAL, sin_medir: canales.sinMedir, peso: canales.canales },
+    avisos: avisosCentinela,
   })
 }
