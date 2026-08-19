@@ -42,7 +42,7 @@
   viejo apagados (0), refs de repo/skills/MATRIZ corregidas. PR draft de la rama claude/unificar-supabase-*.
 - CERRADO 100%: proyecto viejo PAUSADO, webhook Stripe repuntado (conector MCP), proyecto renombrado a
   «central» (Claude Chrome), y monitor-health-cron reescrito con la ANON key (verify_jwt acepta cualquier
-  JWT válido) → app.service_role_key ya no hace falta en ningún sitio. MONEI: pendiente de COMPROBAR en su dashboard si hay webhook apuntando al viejo (no visible desde aquí).
+  JWT válido) → app.service_role_key ya no hace falta en ningún sitio. MONEI: DESCARTADO — Alberto decide quedarse solo con Stripe para cobros (19/08); su webhook da igual.
 
 ### 📐 (19/08/2026) El canal NO es un markup: es una recta — y ahora se mide y se corrige SOLO
 - Medido el escaparate real de los CUATRO pisos con el conector (16 ventanas): el canal multiplica por

@@ -30,7 +30,8 @@ ya está hecho; faltan estos pasos de dashboard, en este orden:
    - Evidencia de que estaba mal: el proyecto viejo recibía stripe_events hasta el 05/08;
      el compartido tenía 0.
 
-3. **Repuntar el webhook de MONEI (Bizum)**
+3. ~~Repuntar el webhook de MONEI (Bizum)~~ **YA NO APLICA (19/08)**: Alberto descarta MONEI —
+   los cobros se quedan solo con Stripe. Referencia original:
    - dashboard.monei.com → Settings → Webhooks → cambia la URL a
      `https://wswbehlcuxqxyinousql.supabase.co/functions/v1/webhook-monei`
    - Si MONEI rota el secreto del webhook, actualiza `MONEI_WEBHOOK_SECRET` en los secrets
