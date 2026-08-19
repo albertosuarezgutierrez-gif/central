@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-19T18:22:44Z",
+  "generadoEn": "2026-08-19T22:29:01Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4532,6 +4532,34 @@
   ],
   "novedades": [
     {
+      "titulo": "Hallazgo:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Regla 2 meses (art. 33.5.f LIRPF): no bloquea nada.",
+      "fecha": ""
+    },
+    {
+      "titulo": "Nuevo en BD:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Decisión (Alberto):",
+      "fecha": ""
+    },
+    {
+      "titulo": "Decisión de Alberto: por PR y definitivo — nada escribe en `main` salvo el merge de un PR verde.",
+      "fecha": ""
+    },
+    {
+      "titulo": "DECISIÓN de Alberto (19/08): no se paga Supabase hasta tener cliente; se retoma si hace falta.",
+      "fecha": ""
+    },
+    {
+      "titulo": "MERGEADO a `main` (PR #1490)",
+      "fecha": ""
+    },
+    {
       "titulo": "Origen del lío de la dirección:",
       "fecha": ""
     },
@@ -4561,34 +4589,6 @@
     },
     {
       "titulo": "Validación FUERA de muestra",
-      "fecha": ""
-    },
-    {
-      "titulo": "Centinela del precio al HUÉSPED",
-      "fecha": ""
-    },
-    {
-      "titulo": "Canal por PORTAL",
-      "fecha": ""
-    },
-    {
-      "titulo": "Ya no espera a nadie:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Consecuencia: NO aplicar `channel_markup=1.20`",
-      "fecha": ""
-    },
-    {
-      "titulo": "Pendiente de tu decisión:",
-      "fecha": ""
-    },
-    {
-      "titulo": "DOS causas que se suman.",
-      "fecha": ""
-    },
-    {
-      "titulo": "Fix:",
       "fecha": ""
     }
   ],

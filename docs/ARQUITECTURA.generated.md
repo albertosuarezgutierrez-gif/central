@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-19T18:22:44Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-19T22:29:01Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -231,14 +231,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- Hallazgo:
+- Regla 2 meses (art. 33.5.f LIRPF): no bloquea nada.
+- Nuevo en BD:
+- Decisión (Alberto):
+- Decisión de Alberto: por PR y definitivo — nada escribe en `main` salvo el merge de un PR verde.
+- DECISIÓN de Alberto (19/08): no se paga Supabase hasta tener cliente; se retoma si hace falta.
+- MERGEADO a `main` (PR #1490)
 - Origen del lío de la dirección:
 - Dos secciones colgaban POR DEBAJO del `<footer>`
 - Dirección resuelta (Alberto, 19/08):
-- Nuevo `apps/housesevillana/CLAUDE.md`
-- Punto ciego cerrado:
-- Veredicto FINAL: no tocar nada.
-- Dos errores míos corregidos el mismo día:
-- Validación FUERA de muestra
-- Centinela del precio al HUÉSPED
-- Canal por PORTAL
 
