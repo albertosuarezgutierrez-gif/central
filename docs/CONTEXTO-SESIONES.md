@@ -87,6 +87,23 @@
   quedó SIN estrenar. No es un fallo del arreglo — es que no llegó a correr. Por eso `auditoria.yml`
   gana `workflow_dispatch`: se puede lanzar desde la API con ese mismo token, y así ni la radiografía
   depende de que el último push lo hiciera un humano ni hay que esperar a uno para probar el workflow.
+- ✅ **Probado en vivo: `workflow_dispatch` → rama → PR #1504 → 14 checks.** `GH_PAT_TRIGGER` existe
+  y funciona. Pero el PR **no se mergeó**, y el porqué destapó dos fallos más (PR #1506):
+- 🔴 **«Los checks que veo están verdes» ≠ «han pasado los checks required».** El automerge vio
+  `10/10 en verde` e intentó mergear; GitHub: «the base branch policy prohibits the merge». **Es la
+  regla del NULL un escalón más abajo:** el paso 5 miraba los checks que HAY, no los que FALTAN, y
+  lo que falta no deja hueco. Arreglo: preguntar `mergeStateStatus`, que es la respuesta de GitHub
+  a «¿lo dejarías mergear?».
+- 🔴 **Y un merge rechazado MATABA la pasada entera.** Con `set -e`, el `gh pr merge` fallido tiraba
+  el job: los PRs siguientes del bucle ni se miraban y el workflow salía rojo cada hora. Ahora se
+  anota, se avisa y se sigue.
+- ⚠️ **CORRECCIÓN de lo que dijo el #1506:** culpé del sha sin checks a una CARRERA de dos pasadas
+  de la auditoría. **Era falso.** Re-lancé una sola pasada y volvió a pasar: **un force-push desde
+  dentro de Actions a una rama que YA tiene PR abierto no dispara los workflows `pull_request`** —
+  ni con el PAT en la URL. Dos de dos. Crear la rama y abrir el PR sí los dispara (14 checks). Por
+  eso `auditoria.yml` estrena rama en cada pasada (`…-<run_id>`) y cierra la anterior: el PR nace
+  siempre por `opened`, que es el camino que funciona. (`cancel-in-progress: true` se queda, pero
+  por higiene, no porque arreglara esto.)
 - ⚠️ Lo que NO se ha podido probar aquí: los workflows solo se ejecutan en GitHub. Las tres piezas se
   verifican solas en su primera pasada real — auditoría al próximo push a `main`, SEO el lunes. Si el
   PR del SEO se queda abierto sin mergear, mirar si `GH_PAT_TRIGGER` sigue vivo. Revertir todo =
