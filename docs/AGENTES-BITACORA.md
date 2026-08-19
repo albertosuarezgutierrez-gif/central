@@ -15,6 +15,11 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-19 · psd2-health-check** · hizo: preflight canal alerta OK (200); consulta frescura
+  `movimientos_bancarios WHERE origen='psd2'` → último movimiento 17/08/2026 (2 días, dentro de
+  umbral 48h), mov_30d=63 vs mov_30d_prev=71 (caída ~11%, muy por debajo del umbral 50%). Estado
+  ✅ OK, sin anomalía, sin aviso Telegram, sin entrada en CONTEXTO-SESIONES.md. dudas: —; fallos: —;
+  PRs/commits: — (solo esta bitácora).
 - **2026-08-19 · facturas-correo** · hizo: pasada completa (Paso 0→5). Vía B sana (dias_caido=1,
   última copia `_buzon_pdf` 18/08); sin backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida`
   (verificado por `search_threads`). Paso 4.0 (`v_facturas_sin_cargo`): 8 filas, todas
