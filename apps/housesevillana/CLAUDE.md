@@ -104,6 +104,15 @@ pegados a mano, y se ven como lo que son.
 Los tres leen los ficheros **como texto** en vez de importarlos, porque `app/route.ts`
 arrastra `next/server` y el runner de Node no lo resuelve.
 
+**Regla de estas pruebas: una guarda que no encuentra nada NO está en verde, está hueca.**
+Casi todas recorren listas derivadas del HTML (los «delatores» de castellano sin traducir, las
+páginas que descubre `readdirSync`, las anclas que saca una expresión regular). Si el copy
+cambia y una frase deja de existir, o un cambio de formato deja la expresión sin casar, el
+bucle se queda vacío y el test pasa **sin haber comprobado nada**. Pasó el 19/08/2026:
+«Sin comisiones de Booking» desapareció del HTML al reescribir el copy y su delator llevaba
+días pasando en vacío. Por eso cada recorrido lleva ahora su propia comprobación de que
+encontró algo — si añades otro, añádele la suya.
+
 ## Despliegue
 
 Proyecto Vercel `house-sevillana-landing`, Root Directory `apps/housesevillana`, con el
@@ -116,6 +125,12 @@ Supabase.
 - **Nota de Booking: se copia a mano.** Hoy es **8,6/10 con 51 reseñas** (conector de
   Booking, 19/08/2026); la página venía diciendo 8,1 con +47, que era el dato de hacía meses.
   Nada la refresca sola: al tocar la landing, contrasta el número contra la ficha real.
+- **Ninguna sesión de Claude puede VER las fotos.** Viven en Drive y se sirven por
+  `lh3.googleusercontent.com`, que la política de egress bloquea; el conector de Drive lista y
+  da metadatos, pero `read_file_content` devuelve vacío para JPEG y bajarlas en base64 no cabe
+  en contexto. Consecuencia práctica: **no elijas ni juzgues una foto desde una sesión** — lo
+  hace Alberto sobre la carpeta de Drive. Se coló así una escalera como portada, con un `alt`
+  que decía «fachada» (corregido el 19/08/2026: la portada es el salón).
 - **Booking anuncia «Admite mascotas» y aquí se dice que NO.** Sin resolver: es una decisión de
   Alberto, y los dos canales tienen que decir lo mismo.
 - **Minutos a pie** desde Socorro 24 a la Basílica de la Macarena, la muralla, el Mercado de

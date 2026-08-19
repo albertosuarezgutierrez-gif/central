@@ -18,6 +18,7 @@
 | `MATRIZ.md` | `packages/*/package.json`, `apps/*/package.json`, `apps/*/vercel.json`, `apps/ia-rest/src/lib/supabase.ts` (schema flip) |
 | `docs/PLAN-consolidacion-BD-holding.md` (+ `docs/RUNBOOK-migracion-bd-iarest.md`, `docs/DISEÑO-fusion-bd.md`, `docs/INFORME-unificacion-central.md`) | `apps/ia-rest/src/lib/supabase.ts` (`SB_SCHEMA`), `apps/ia-rest/supabase/**`, envs Supabase de ia-rest en Vercel; migración silo→compartida CERRADA el 19/08/2026 (proyecto viejo borrado; todo vive en `wswbehlcuxqxyinousql`, schema `iarest`) |
 | `docs/SKILLS.md` | `.claude/skills/**`, `.claude/commands/**` |
+| `docs/ROTACION-SERVICE-ROLE.md` | `apps/ia-rest/supabase/functions/**` (las 43 que leen la clave del entorno), `apps/*/lib/**` que lea `SUPABASE_SERVICE_ROLE_KEY` o `*ANON_KEY`, `apps/plataforma/lib/secrets-registry.ts`. **Mientras la clave filtrada siga viva, este doc es un PENDIENTE ABIERTO, no un histórico** |
 | `docs/RUTINAS-PROGRAMADAS.md` | `.claude/commands/auditoria-diaria.md`, `.claude/skills/auditoria-central/**`, los crons de `apps/*/vercel.json` |
 | skill `central-maestro` | `MATRIZ.md`, `packages/*`, raíz del monorepo |
 | skill `ia-rest-maestro` | `apps/ia-rest/**` (rutas, Edge Functions, `supabase/`, `src/**`) |

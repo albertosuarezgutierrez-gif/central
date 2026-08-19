@@ -40,7 +40,7 @@ const PAGINAS = [
       'Consultar disponibilidad',
       'Mejor precio garantizado',
       'dormitorios dobles',
-      'Sin comisiones de Booking',
+      'no hay comisi&oacute;n de Booking',
     ],
   },
   {
@@ -110,6 +110,15 @@ describe('i18n — cada idioma se deriva del español, sin copiar el fichero', (
           })
         })
       }
+
+      test('los delatores siguen existiendo en el HTML español', () => {
+        // Sin esto, la prueba de arriba se vuelve HUECA sin avisar: un delator que ya no
+        // está en el HTML no puede sobrevivir a `traducir`, así que la asercion pasa sin
+        // haber mirado nada. Pasó el 19/08/2026 — al reescribir el copy desapareció
+        // «Sin comisiones de Booking» y la guarda llevaba días pasando en vacío.
+        const fantasmas = p.delatores.filter((f) => !p.html.includes(f))
+        assert.deepEqual(fantasmas, [], `delatores que ya no existen (cámbialos por frases vivas):\n${fantasmas.join('\n')}`)
+      })
 
       test('las variantes cubren exactamente las mismas claves', () => {
         // Si una se queda corta, esa parte de la página saldría en español solo en un idioma
