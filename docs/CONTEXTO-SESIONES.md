@@ -23,7 +23,19 @@
 > actualizar el bloque, re-fecha su cabecera (si su fecha queda en un mes cerrado, la
 > rotación se lo lleva al archivo).
 >
-> **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### … (dd/mm/aaaa)` —
+> **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🌍 (19/08/2026) `main` llegó ROJA: tocar el español de la landing sin el diccionario
+- Al mergear PR #1490 saltó `Tests (packages + guardián)`. **No era mío:** reproducido sobre `origin/main`
+  → `apps/housesevillana` 45/47, mismas 2 pruebas i18n. Lo rompió **PR #1487** al reescribir el copy español
+  de `app/route.ts` (quitó el «hasta un 22%») **sin tocar `app/en|it/traducciones.ts`**: 7 claves huérfanas
+  por idioma, justo la mina documentada en `apps/housesevillana/CLAUDE.md` (el `/en` y el `/it` se DERIVAN
+  del HTML español por cadenas exactas). En vivo: esos párrafos se servían en castellano a ingleses e italianos.
+- 🔴 **El gate no lo paró:** en #1487 el job de tests salió `failure` y aun así el check «Ready to merge»
+  dio `success` y se mergeó. Los tests NO están en la puerta de merge — arreglarlo es un pendiente propio.
+- Arreglado aquí: 7 claves nuevas por idioma con el copy nuevo traducido. Y el delator
+  `'Sin comisiones de Booking'` del test ya no existía en el HTML (guarda muerta que pasaba en vacío) →
+  sustituido por `'no hay comisi&oacute;n de Booking'`, verificado presente en el español.
+
+### … (dd/mm/aaaa)` —
 > son los ÚNICOS que `rotar-memoria.mjs` reconoce como entrada; una cabecera `## ` se
 > funde con la entrada anterior y se archiva mal.
 >

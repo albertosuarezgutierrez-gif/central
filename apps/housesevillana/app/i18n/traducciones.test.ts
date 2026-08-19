@@ -40,7 +40,7 @@ const PAGINAS = [
       'Consultar disponibilidad',
       'Mejor precio garantizado',
       'dormitorios dobles',
-      'Sin comisiones de Booking',
+      'no hay comisi&oacute;n de Booking',
     ],
   },
   {
