@@ -32,6 +32,18 @@
 
 ---
 
+### 🔑 (19/08/2026) Repos sueltos: nada que unir — y la `service_role` filtrada sigue viva
+- `house-sevillana-landing` ya está dentro (`apps/housesevillana`, 12/08). VERIFICADO en Vercel: el proyecto
+  apunta a `central` con Root `apps/housesevillana` y el último deployment de prod sale del commit del
+  agente SEO (`79db75e`, hoy) → el repo suelto es cáscara muerta. `Cloude`: 1 commit, README placeholder.
+- Los dos los borra Alberto a mano (destructivo). Borrar quita la exposición pero **NO invalida la clave**.
+- Nuevo `docs/ROTACION-SERVICE-ROLE.md`: inventario + plan. El proyecto ya tiene claves nuevas
+  (`sb_publishable_…` conviviendo con la `anon` legacy) → camino limpio sin tocar el JWT secret.
+- Superficie real: 3 envs de Vercel (ia-rest, ialimp, central-rrhh) + **43 de 45 Edge Functions** (clave
+  inyectada) + 1 cron `pg_net` con la ANON legacy. GitHub Actions: 0 reales (dummy en ci.yml).
+- Pendiente: crear `sb_secret_…`, PR para las 43 EFs (`SUPABASE_SECRET_KEYS`, cabecera `apikey`, no Bearer)
+  y desactivar las legacy — hasta ese paso la clave filtrada sigue siendo válida.
+
 ### 📋 (19/08/2026) Inventario de ofertas Booking — House hecho, 3 pendientes
 - Nuevo `docs/BOOKING-OFERTAS-INVENTARIO.md`: inventario extranet por piso (Claude Chrome, solo
   lectura) previo a decidir la Fase 3. House: Basic Deal 12% (⚠️ activada 18/08, origen por
