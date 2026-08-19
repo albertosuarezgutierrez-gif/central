@@ -46,7 +46,42 @@
   RECORRIDO de precio (sin él, m y F son indistinguibles) → la rutina de Booking las mide sola.
 - 🚨 Bug gordo de paso: `ANUNCIOS_PROPIOS` solo tenía House, así que **Busto/Luxury/Dúplex llevaban
   desde el 14/08 entrando como comparables de sí mismos**. Añadidos los 4 nombres de portal.
+- 🔗 **Encaja con el hallazgo de Smoobu de hoy (entrada siguiente), no lo contradice:** ese +20% por
+  canal vive DENTRO de Smoobu, así que ya está incluido en lo que mide el conector. Y ojo a las
+  unidades: `0,92 efectivo/base` es lo que COBRAMOS (tras comisión); esta recta es lo que PAGA el
+  huésped. Son dos ratios distintos y no se pueden comparar entre sí.
 - PR #1478 (draft). **Nada de esto corre hasta que se mergee y despliegue.**
+
+### 🚨 (19/08/2026) El +20% de Booking YA EXISTÍA en Smoobu — Fase 2 (channel_markup) CANCELADA
+- Claude Chrome verificó Smoobu (Precios→Ajustes): el ajuste por canal es ÚNICO por portal (no por
+  alojamiento) y **Booking.com ya estaba a +20,00%** (resto de canales 0%) — probablemente de la era
+  PriceLabs. Push forzado con «Sobrescribir precios» (no «Guardar»). El rótulo «Sobrescritos por
+  PriceLabs» de Smoobu es etiqueta legacy: PL de baja 09/08, 604/604 escrituras probadas del motor.
+- **Consecuencia: NO aplicar `channel_markup=1.20`** — la mediana 0,92 efectivo/base medida el 09/08
+  YA incluía ese escaparate (el huésped paga ~0,77 del precio MOSTRADO en Booking); cambiar el motor
+  ahora bajaría los precios reales ~17%. El escaparate del estudio ya está puesto; condición cumplida.
+- Fase 3 en pausa: inventariar ofertas activas en la extranet ANTES de añadir ninguna (con ~23% de
+  descuentos ya apilados, añadir un 10-15% probablemente sobra). IDs extranet: House 2039943 ·
+  Dúplex 2888928 · Luxury 4340072 · Busto 4771238.
+
+### 🩺 (19/08/2026) psd2-health-check — feed sano, sin anomalías
+- Preflight canal alerta OK (200). Frescura `movimientos_bancarios WHERE origen='psd2'`: último
+  movimiento 17/08 (2 días, dentro de umbral 48h); mov_30d=63 vs mov_30d_prev=71 (caída ~11%,
+  bajo el umbral del 50%). Estado ✅ OK — sin aviso Telegram. PR #1481 (draft, solo
+  `docs/AGENTES-BITACORA.md`). Sin pendientes.
+
+### 🔍 (19/08/2026) Auditoría diaria (ligera) — todo sano, sin carril 2
+- Rango: 12 commits desde la última auditoría (2026-08-18), todos ya autodocumentados por PR
+  (curva de trading, compra VWCE, verificación PSD2, mercado-booking). Heartbeat de 24 huellas
+  (12 latidos `agente_latidos` + 12 tablas de dominio) **24/24 ✅**, sin crons mudos. Backlog de
+  PRs de rutinas: 1 abierto (#1478, draft de código, <24h) — fuera del alcance del automerge,
+  sin envejecer; `rutinas-automerge.yml` vivo (run hace <1h, success).
+- Integridad estructural sin hallazgos (lockfile, guardián 32/32, `ignoreCommand` en las 10 apps,
+  `transpilePackages` sin huecos). Sin drift nuevo en skills/docs (32 skills, sin contradicciones
+  de reglas permanentes). Único arreglo: `docs/AUTO-APLICADOS.md` tenía 2 entradas del 18/08 mal
+  insertadas en medio del párrafo de intro — reordenadas.
+- «Estado vivo» sigue al día desde el 18/08, sin pendientes nuevos que anotar. Sin manuales que
+  tocar (la única UI nueva del rango, la curva de `/trading`, es de plataforma).
 
 ### 🎄 (18/08/2026) La Navidad de House no la tarificaba NADIE — y `price_ours` volvió a engañar
 - Reserva 21-25/12 a 892€/noche (84% de la base). Al mirarla leí `rate_snapshots.price_ours`, que es la
