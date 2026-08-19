@@ -61,6 +61,17 @@
   de cada categoría y la móvil ya la ocupa), así que mi «quitarlas para recuperar margen» era falso.
 - Pendiente sin bloquear: Genius/planes de Dúplex, Luxury y Busto. 3ª métrica del panel descartada
   (antelación de House: 84d dice Booking vs 42d real).
+
+### 🚨 (19/08/2026) El canal DIRECTO es más caro que Booking — la landing promete lo que no da
+- Medido con las 7 reservas Booking del último mes: el huésped paga **mediana 0,88 × la base** que
+  escribe el motor (Booking añade +20% y él resta Genius/móvil/oferta/plan). La web propia cobra la
+  base pelada → **reservar por Booking sale ~12% más barato**, y `housesevillana.es` anuncia «mejor
+  precio garantizado / sin comisiones». En 5 de 7 casos Booking ganó.
+- **La palanca:** web directa a −20% → huésped paga 80 (ahorra ~10% vs Booking) y Alberto ingresa ~79
+  frente a los 73 de Booking (comisión ~17%). El descuento sale de la comisión, no del margen.
+  Margen hasta −27% antes de empatar.
+- Pendiente de Alberto: comprobar en Smoobu si el motor de reservas propio admite ajuste porcentual
+  como los canales externos (vía A, −20%) o si hay que ir por código de descuento (vía B).
 ### 🏷️ (19/08/2026) Tres centinelas del canal — y el primero destapa que ESTAMOS CAROS
 - **Validación FUERA de muestra** (`validarCanal`): el R² del ajuste es circular (mide la recta
   contra las ventanas que la produjeron). Ahora `pricing_escaparate.usada_en_ajuste_at` marca lo

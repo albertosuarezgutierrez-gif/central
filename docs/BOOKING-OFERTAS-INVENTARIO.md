@@ -183,3 +183,53 @@ House: Booking dice **~84 días** de antelación (peer 61,6); nuestro `incomes` 
 (56 de media). Mismo patrón que Luxury (81 vs 23) y Dúplex (53 vs 16): el panel da sistemáticamente
 ~2× nuestra cifra. Sigue sin causa confirmada.
 
+
+## 🚨 El canal directo es HOY MÁS CARO que Booking (medido 19/08/2026)
+
+La landing de House promete **«mejor precio garantizado»** y **«sin comisiones»**. Con los datos
+delante, esa promesa **no se cumple**.
+
+**Cómo se forma cada precio.** El motor escribe en Smoobu el precio BASE. Smoobu le suma **+20% al
+enviarlo a Booking** (ajuste de canal), y allí el huésped le resta Genius, tarifa móvil, oferta de
+catálogo y plan. El motor de reservas de la web propia, en cambio, cobra la **base pelada**.
+
+**Qué paga de verdad cada uno.** Ratio pagado/base de las 7 reservas de Booking del último mes:
+
+| Piso | Entrada | Pagado/noche | Base del motor | Ratio |
+|---|---|---|---|---|
+| Luxury | 18/09 | 138€ | 128€ | 1,076 |
+| House | 30/09 | 622€ | 645€ | 0,965 |
+| Dúplex | 03/10 | 138€ | 168€ | 0,821 |
+| Dúplex | 16/10 | 140€ | 175€ | 0,804 |
+| Luxury | 16/10 | 171€ | 194€ | 0,881 |
+| Luxury | 22/10 | 143€ | 203€ | 0,706 |
+| Luxury | 06/11 | 122€ | 122€ | 1,004 |
+
+**Mediana: 0,88.** El huésped de Booking paga el **88% de la base**; la web directa cobra el **100%**.
+En 5 de las 7, Booking salió más barato. **Reservar por Booking sale hoy ~12% mejor que por la web.**
+
+### Por qué esto es la palanca que queda
+
+Con base 100 y comisión Booking ~17%:
+
+| Canal | Paga el huésped | Recibe Alberto |
+|---|---|---|
+| Booking (hoy) | 88 | **73** |
+| Web directa (hoy) | 100 | 100 — pero **no vende**, porque es la cara |
+| **Web directa a −20%** | **80** | **~79** |
+
+Con un −20% en el canal directo, el huésped ahorra un **~10% frente a Booking** y Alberto **ingresa
+un 8% más por noche** (79 vs 73). El descuento no sale del margen: sale de la comisión que hoy se
+lleva Booking. Margen hasta −27% antes de empatar con lo que deja Booking.
+
+### Qué falta por comprobar (no lo sé todavía)
+
+Smoobu tiene ajuste porcentual para los canales **externos** (Booking, Airbnb, Expedia, Agoda,
+HomeToGo — verificado el 19/08). **No está confirmado que su propio motor de reservas admita ese
+mismo ajuste.** Dos vías, y hay que mirar cuál existe antes de tocar:
+- **Vía A (preferida):** ajuste de canal −20% para la web propia → precio directo más bajo, sin que
+  el huésped tenga que hacer nada.
+- **Vía B (alternativa):** código de descuento del motor de reservas, anunciado en la landing.
+  Funciona, pero convierte menos: exige que el huésped copie un código.
+
+Hasta que una de las dos esté puesta, **la landing promete un precio que no da**.
