@@ -46,6 +46,11 @@
 - Medido: los 3 roles Prisma juntos devuelven **~37.500 filas/día** (~10 MB), un orden de magnitud por
   debajo de los 125 MB/día facturados. Luego el egress del pooler **no lo hacen los resultados**: apunta a
   overhead de conexión (4,5 M llamadas en 115 días). Sin confirmar: hace falta el gráfico de conexiones.
+- **DECISIÓN de Alberto (19/08): no se paga Supabase hasta tener cliente; se retoma si hace falta.** Contexto
+  para cuando toque: el trasvase de la **correduría de Manuel Suárez (~200 MB)** deja la BD en ~366 MB de 500
+  (73%). Hay 57 MB de grasa recuperable sin tocar negocio — `trading_backtest` 30 MB/1.029 filas (blobs JSON)
+  y `rate_snapshots` 27 MB/87.685 filas —; podándolas la correduría entraría al ~60%. El límite que aprieta
+  NO es el disco sino el egress, y ese trasvase ES el cliente que activa la regla de pagar.
 
 ### 🔑 (19/08/2026) Repos sueltos: nada que unir — y la `service_role` filtrada sigue viva
 - `house-sevillana-landing` ya está dentro (`apps/housesevillana`, 12/08). VERIFICADO en Vercel: el proyecto
