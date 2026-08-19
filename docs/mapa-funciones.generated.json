@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-18T19:58:41Z",
-  "sha": "72a8efffd04e4f420f551240f918f3cfdf99aa02",
+  "generadoEn": "2026-08-19T10:51:51Z",
+  "sha": "3782b586b3cbad67fc09801076af6e5b29c67b49",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -48445,7 +48445,7 @@
           "exportada": false,
           "params": "base64String: string",
           "retorno": null,
-          "linea": 64
+          "linea": 69
         },
         {
           "nombre": "PricingAutoPage",
@@ -48453,7 +48453,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 73
+          "linea": 78
         },
         {
           "nombre": "Stat",
@@ -48461,7 +48461,7 @@
           "exportada": false,
           "params": "{ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: boolean }",
           "retorno": null,
-          "linea": 414
+          "linea": 423
         },
         {
           "nombre": "Toggle",
@@ -48469,7 +48469,7 @@
           "exportada": false,
           "params": "{ label, checked, onChange, warn }: { label: string; checked: boolean; onChange: (v: boolean) => void; warn?: boolean }",
           "retorno": null,
-          "linea": 424
+          "linea": 433
         },
         {
           "nombre": "btn",
@@ -48477,12 +48477,12 @@
           "exportada": false,
           "params": "bg: string, disabled: boolean",
           "retorno": "CSSProperties",
-          "linea": 433
+          "linea": 442
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "27b6db204387"
+      "hash": "1e596f71c3fc"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/pricing/page.tsx",
@@ -51937,7 +51937,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 94
+          "linea": 100
         }
       ],
       "tablas": [
@@ -51948,7 +51948,7 @@
         "pricing_decisiones"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "76e389acfedf"
+      "hash": "650f4ee2a6c1"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -55986,17 +55986,21 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 44,
+          "linea": 53,
           "resumen": "\"portal\": \"booking\", // booking | trivago | expedia | tripadvisor | ... \"scenario\": \"prop_busto_reform\", // prop_<id> para comparables por piso, o normal/corpus \"checkin\": \"2026-06-13\", \"checkout\": \"2"
         }
       ],
       "tablas": [
+        "generate_series",
+        "lateral",
         "market_rates",
         "next",
+        "pricing_escaparate",
+        "rate_snapshots",
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/ingest",
-      "hash": "1c819c451914"
+      "hash": "2c2754b10627"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/plan/route.ts",
@@ -56011,18 +56015,20 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 29,
-          "resumen": "GET /api/sivra/mercado/plan?max=12 QUÉ ventanas (fecha × aforo) debe medir la rutina de Booking en ESTA pasada, ya ordenadas por urgencia. Es el contrato entre el plan de fechas (que vive en el código"
+          "linea": 50,
+          "resumen": "· `escaparate` — NUESTRO propio anuncio, ventana a ventana (19/08/2026). Hasta hoy esto pasaba por casualidad —el piso propio aparecía a veces en una búsqueda de comparables— y por eso el motor llevab"
         }
       ],
       "tablas": [
         "market_rates",
         "next",
+        "pricing_escaparate",
         "pricing_eventos_auto",
-        "pricing_piso_zona"
+        "pricing_piso_zona",
+        "rate_snapshots"
       ],
       "rutaApi": "/api/sivra/mercado/plan",
-      "hash": "374cbe1e5355"
+      "hash": "97a165aacd08"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/search/route.ts",
@@ -56289,7 +56295,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 39
+          "linea": 40
         },
         {
           "nombre": "fmt",
@@ -56297,7 +56303,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 40
+          "linea": 41
         },
         {
           "nombre": "GET",
@@ -56305,7 +56311,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 72,
+          "linea": 73,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -56314,7 +56320,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 76
+          "linea": 77
         }
       ],
       "tablas": [
@@ -56338,7 +56344,65 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "19c32cfcad33"
+      "hash": "ebfea689e042"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "medir",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 88
+        },
+        {
+          "nombre": "cambiosDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "pisos: MedicionCanal[], soloProp: string | null, autoGlobal: boolean",
+          "retorno": "",
+          "linea": 182
+        },
+        {
+          "nombre": "escribir",
+          "kind": "function",
+          "exportada": false,
+          "params": "cambios: Cambio[]",
+          "retorno": null,
+          "linea": 216
+        },
+        {
+          "nombre": "lineaCambio",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: Cambio",
+          "retorno": "string",
+          "linea": 226
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 233
+        }
+      ],
+      "tablas": [
+        "incomes",
+        "next",
+        "pricing_escaparate",
+        "pricing_piso_zona",
+        "pricing_settings"
+      ],
+      "rutaApi": "/api/sivra/pricing/canal",
+      "hash": "ad0f36d307ee"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -56587,7 +56651,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/pilot-track",
-      "hash": "aef9f760aeaf"
+      "hash": "0ce8c9a23180"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/recommend/route.ts",
@@ -56704,7 +56768,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 39
+          "linea": 46
         },
         {
           "nombre": "PATCH",
@@ -56712,7 +56776,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 182
+          "linea": 197
         }
       ],
       "tablas": [
@@ -56725,7 +56789,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/settings",
-      "hash": "cde6cd9f6a28"
+      "hash": "4cc249692e08"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/stats/route.ts",
@@ -62162,7 +62226,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 106,
+          "linea": 111,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -62171,7 +62235,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 136,
+          "linea": 141,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -62180,7 +62244,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 158
+          "linea": 163
         },
         {
           "nombre": "ventanaMinutos",
@@ -62188,7 +62252,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 166,
+          "linea": 171,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -62197,13 +62261,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 178,
+          "linea": 183,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b5f559ca65be"
+      "hash": "ec5ebb1673eb"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -65055,7 +65119,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9dc14306d21a"
+      "hash": "40ed75c14b1d"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/sonda-ia.ts",
@@ -65345,7 +65409,7 @@
           "exportada": true,
           "params": "base: number, dateStr: string",
           "retorno": "number",
-          "linea": 82,
+          "linea": 103,
           "resumen": "⚠️ LEGACY / NO ES EL PRECIO REAL (hallazgo 27/07/2026, ver docs/CONTEXTO-SESIONES.md): esta fórmula estática (base fija × estacional × día-semana) es de ANTES de que existiera el motor anclado al merc"
         },
         {
@@ -65354,7 +65418,7 @@
           "exportada": true,
           "params": "dateStr: string",
           "retorno": "number",
-          "linea": 93,
+          "linea": 114,
           "resumen": "Factor RELATIVO de evento para el motor anclado al mercado: sólo sube en fechas con evento declarado (Semana Santa/Feria/…); el resto de estacionalidad/día ya la refleja el mercado. Honra el calendari"
         },
         {
@@ -65363,13 +65427,13 @@
           "exportada": true,
           "params": "dateStr: string, evExterno = 1",
           "retorno": "number",
-          "linea": 124,
+          "linea": 145,
           "resumen": "Suelo estacional relativo a min_price para una fecha. En fechas de evento sube con el evento (mitad del factor, acotado a ×2.0) para que Semana Santa/Feria no puedan venderse a suelo. Devuelve 1.0 (si"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c5972c261373"
+      "hash": "442fe5379192"
     },
     {
       "ruta": "apps/plataforma/lib/programador.ts",
@@ -67106,6 +67170,54 @@
       "hash": "ebf35fd6901b"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/escaparate-plan.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/escaparate-plan.ts — QUÉ ventanas de NUESTRO PROPIO anuncio hay que medir hoy. POR QUÉ EXISTE (19/08/2026). El motor convierte mercado→base con la recta del canal (`escaparate = markup × base + cuota_fija`, ver `pricing-canal.ts`). Esa recta solo se puede ajustar si alguien mira lo que el ",
+      "exporta": [
+        "recorrido",
+        "planEscaparate"
+      ],
+      "funciones": [
+        {
+          "nombre": "sumarDias",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string, dias: number",
+          "retorno": "string",
+          "linea": 97
+        },
+        {
+          "nombre": "diasEntre",
+          "kind": "function",
+          "exportada": false,
+          "params": "desde: string, hasta: string",
+          "retorno": "number",
+          "linea": 101
+        },
+        {
+          "nombre": "recorrido",
+          "kind": "function",
+          "exportada": true,
+          "params": "bases: number[]",
+          "retorno": "number",
+          "linea": 107,
+          "resumen": "Recorrido relativo de una lista de bases (0 = todas iguales). Es lo que separa m de F."
+        },
+        {
+          "nombre": "planEscaparate",
+          "kind": "function",
+          "exportada": true,
+          "params": "pisos: PisoEscaparate[], hoy: string, opts: OpcionesEscaparate = {},",
+          "retorno": "PlanEscaparate",
+          "linea": 127,
+          "resumen": "4. refresco de lo más viejo. Dentro de un piso se elige la candidata que MÁS recorrido añade al conjunto: medir otra vez algo que ya cuesta lo mismo que lo medido no acerca el ajuste ni un paso. A igu"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b94853d34337"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/eventos-estado.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/eventos-estado.ts — qué puede hacer un evento según lo seguro que sea. POR QUÉ (01/08/2026, idea de Alberto: «ver de qué forma podríamos revisar noticias e intentar adelantarnos a las fechas — ejemplo, final de Copa del Rey»). El descubrimiento automático solo veía el PRESENTE: Ticketmaste",
@@ -67463,6 +67575,7 @@
       "exporta": [
         "parsearParametrosPlan",
         "planDeVentanas",
+        "conReservaAltoValor",
         "ventanasQuePedir",
         "detalleIngesta",
         "ingestaFiable"
@@ -67474,7 +67587,7 @@
           "exportada": true,
           "params": "qs: URLSearchParams,",
           "retorno": "",
-          "linea": 115,
+          "linea": 122,
           "resumen": "Lee los parámetros del plan (`max`, `rondas`, `desde`, `hasta`) de una query string. Vive AQUÍ y no en el route handler para poder testearlo: el handler necesita Prisma y el alias `@/`, así que su lóg"
         },
         {
@@ -67483,7 +67596,7 @@
           "exportada": false,
           "params": "desdeIso: string, hastaIso: string",
           "retorno": "number",
-          "linea": 163
+          "linea": 170
         },
         {
           "nombre": "clave",
@@ -67491,7 +67604,7 @@
           "exportada": false,
           "params": "checkin: string, aforo: number",
           "retorno": "string",
-          "linea": 169
+          "linea": 176
         },
         {
           "nombre": "planDeVentanas",
@@ -67499,8 +67612,17 @@
           "exportada": true,
           "params": "plan: Ventana[], aforos: Map<number, string[]>, cobertura: CoberturaVentana[], hoyIso: string, max = 12, filtro: FiltroVentanas = {},",
           "retorno": "PlanPedido",
-          "linea": 195,
+          "linea": 202,
           "resumen": "Cruza el plan de ventanas (fechas) con los aforos de los pisos y la cobertura fiable ya medida, y devuelve las `max` que más falta hacen. Orden de urgencia, y el porqué de cada nivel: 1. **Nunca medid"
+        },
+        {
+          "nombre": "conReservaAltoValor",
+          "kind": "function",
+          "exportada": true,
+          "params": "pedidas: VentanaPedida[], tope: number, reserva = RESERVA_ALTO_VALOR,",
+          "retorno": "VentanaPedida[]",
+          "linea": 286,
+          "resumen": "Reparte el tope de la pasada entre la cola de urgencia y una RESERVA para lo caro sin medir. 🚨 POR QUÉ (18/08/2026, Navidad de House). La cola ordena por urgencia y, dentro de las vírgenes, por CERCA"
         },
         {
           "nombre": "ventanasQuePedir",
@@ -67508,7 +67630,7 @@
           "exportada": true,
           "params": "plan: Ventana[], aforos: Map<number, string[]>, cobertura: CoberturaVentana[], hoyIso: string, max = 12, filtro: FiltroVentanas = {},",
           "retorno": "VentanaPedida[]",
-          "linea": 259,
+          "linea": 314,
           "resumen": "Envoltura histórica: solo la lista. Nuevos usos, mejor `planDeVentanas` (declara el recorte)."
         },
         {
@@ -67517,7 +67639,7 @@
           "exportada": true,
           "params": "r: { ventanas: number comps: number sinRespuesta: number sinPrecio: number errores: string[] /** * Anuncios NUESTROS que el portal devolvió y se descartaron (ver `mercado-propios.ts`). Se * declara aunque sea un descarte correcto: un compar",
           "retorno": "string",
-          "linea": 275,
+          "linea": 330,
           "resumen": "Parte de la pasada para el latido. Igual que en el barrido por búsqueda, **lo que NO se pudo medir va primero**: una ventana que el conector no contestó es «no lo sé», no «no hay mercado», y confundir"
         },
         {
@@ -67526,13 +67648,13 @@
           "exportada": true,
           "params": "r: { ventanas: number comps: number sinRespuesta: number errores: string[] }",
           "retorno": "boolean",
-          "linea": 308,
+          "linea": 363,
           "resumen": "¿Vale la pasada? Conservador igual que `barridoFiable`: hace falta haber MEDIDO algo y que la mayoría de lo intentado haya respondido. Una pasada que pide 12 ventanas y solo contesta 1 no es «poco mer"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a9434f2b70f4"
+      "hash": "3b13a3cc317f"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/mercado-propios.ts",
@@ -67558,13 +67680,13 @@
           "exportada": true,
           "params": "nombre: string",
           "retorno": "boolean",
-          "linea": 54,
+          "linea": 83,
           "resumen": "¿Este comparable es en realidad un anuncio nuestro? Coincide por prefijo/inclusión del nombre curado dentro del nombre publicado, porque el portal le cuelga sufijos comerciales que cambian solos («HOU"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2b62dde309ed"
+      "hash": "1a7f5cd5d7f1"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/mercado-ventanas.ts",
@@ -67585,7 +67707,7 @@
           "exportada": true,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 64,
+          "linea": 71,
           "resumen": "«2026-11-13» → «noviembre 2026» (para la consulta de refuerzo por mes)."
         },
         {
@@ -67594,7 +67716,7 @@
           "exportada": true,
           "params": "checkin: string, checkout: string, aforo: number, motivo: 'mes' | 'evento',",
           "retorno": "ConsultaVentana[]",
-          "linea": 85,
+          "linea": 92,
           "resumen": "Consultas de una ventana, en orden de intento (la siguiente solo se lanza si la anterior no resuelve, y a partir de la segunda pagan el cupo de refuerzo): 1. ABIERTA con la fecha ISO → es la que trae "
         },
         {
@@ -67603,7 +67725,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "Date",
-          "linea": 118
+          "linea": 125
         },
         {
           "nombre": "fmt",
@@ -67611,7 +67733,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 121
+          "linea": 128
         },
         {
           "nombre": "sumarDias",
@@ -67619,7 +67741,7 @@
           "exportada": false,
           "params": "iso: string, n: number",
           "retorno": "string",
-          "linea": 124
+          "linea": 131
         },
         {
           "nombre": "diasEntre",
@@ -67627,7 +67749,7 @@
           "exportada": false,
           "params": "desdeIso: string, hastaIso: string",
           "retorno": "number",
-          "linea": 127
+          "linea": 134
         },
         {
           "nombre": "findeDelMes",
@@ -67635,7 +67757,7 @@
           "exportada": true,
           "params": "hoyIso: string, m: number, orden = 0",
           "retorno": "string",
-          "linea": 150,
+          "linea": 164,
           "resumen": "Fecha de muestra nº `orden` del mes a `m` meses vista. `orden` 0 = primer VIERNES (el que se ha barrido siempre; se mantiene para no mover la serie histórica). 🚨 POR QUÉ HAY MÁS DE UNA (01/08/2026, c"
         },
         {
@@ -67644,7 +67766,7 @@
           "exportada": true,
           "params": "eventos: EventoFecha[], factorMinimo = 1.15",
           "retorno": "EventoFecha[]",
-          "linea": 169,
+          "linea": 183,
           "resumen": "Agrupa fechas de evento CONTIGUAS en bloques y devuelve, de cada bloque, la de mayor factor (empate → la primera). La Feria entera gasta una sola ventana."
         },
         {
@@ -67653,7 +67775,7 @@
           "exportada": true,
           "params": "hoyIso: string, eventos: EventoFecha[], opts: VentanasOpts = {},",
           "retorno": "Ventana[]",
-          "linea": 201,
+          "linea": 215,
           "resumen": "Ventanas a barrer en una pasada. La base mensual va SIEMPRE (es la línea de temporada); las de evento se añaden por cercanía hasta el tope, sin repetir una fecha que ya cubre la base."
         },
         {
@@ -67662,13 +67784,13 @@
           "exportada": true,
           "params": "hoyIso: string, eventos: EventoFecha[], plan: Ventana[], opts: Pick<VentanasOpts, 'factorMinimo' | 'noches' | 'horizonteDias'> = {},",
           "retorno": "Ventana[]",
-          "linea": 294,
+          "linea": 323,
           "resumen": "Ventanas POR FECHA para los eventos CONFIRMADOS, sin colapsar bloques. SOLO para el plan del conector de Booking — el sweep de Serper sigue con `ventanasDelBarrido` a secas. POR QUÉ (14/08/2026, cazad"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "33d7fb499463"
+      "hash": "905221de1dd6"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pilot-track.ts",
@@ -67684,13 +67806,13 @@
           "exportada": true,
           "params": "i: PilotInput",
           "retorno": "PilotVerdict",
-          "linea": 29,
+          "linea": 33,
           "resumen": "Anti-falso-🔴 / anti-falso-🟢: separa \"sin datos\", \"todo bloqueado\", \"todo reservado\" y \"sin demanda\"."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b5de69cb0332"
+      "hash": "81eb443be45b"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pl-mensual.ts",
@@ -67792,13 +67914,13 @@
           "exportada": true,
           "params": "i: AnclaFechaInput, o: AnclaFechaOpts = {}",
           "retorno": "number",
-          "linea": 46,
+          "linea": 54,
           "resumen": "Devuelve el precio BASE (sin markup) mínimo que justifica el mercado de ESA fecha, o 0 si no hay evidencia suficiente. En el motor: `target = max(target, ancla)` ANTES del raíl ±%/día."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "735b380e3667"
+      "hash": "8c368d2f053c"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-bucket-fuente.ts",
@@ -67821,6 +67943,88 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "4b4b31b17913"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pricing-canal.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-canal.ts — la relación REAL entre nuestra base de Smoobu y lo que paga el huésped. POR QUÉ (18/08/2026, reserva de House 21-25/12). El motor tarifica anclado al mercado: mide el precio GUEST de los comparables y lo convierte a precio BASE dividiendo por `channel_markup` (1,20 = «el",
+      "exporta": [
+        "ajusteCanal",
+        "fijoPorNoche",
+        "baseDesdeGuest",
+        "baseDesdeGuestConFijo",
+        "guestDesdeBase",
+        "desviacionCanal",
+        "pasoCanal"
+      ],
+      "funciones": [
+        {
+          "nombre": "ajusteCanal",
+          "kind": "function",
+          "exportada": true,
+          "params": "ventanas: VentanaEscaparate[], opts: { aforo: number; minVentanas?: number },",
+          "retorno": "AjusteCanal",
+          "linea": 105,
+          "resumen": "Ajusta `escaparate = m × base + F` por mínimos cuadrados sobre las ventanas medidas. Solo entran las del aforo indicado (el mismo con el que se miden los comparables del piso) y con base conocida. Si "
+        },
+        {
+          "nombre": "fijoPorNoche",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: ParametrosCanal",
+          "retorno": "number",
+          "linea": 160,
+          "resumen": "Cuota fija repartida por noche. Es lo que hace que el modelo sea afín y no una regla de tres."
+        },
+        {
+          "nombre": "baseDesdeGuest",
+          "kind": "function",
+          "exportada": true,
+          "params": "guestNoche: number, p: ParametrosCanal",
+          "retorno": "number",
+          "linea": 173,
+          "resumen": "Precio BASE por noche que hay que poner en Smoobu para que el huésped vea `guestNoche`. Es la inversa del modelo afín. Nunca devuelve ≤0: si la cuota fija ya se come el objetivo (un mercado por debajo"
+        },
+        {
+          "nombre": "baseDesdeGuestConFijo",
+          "kind": "function",
+          "exportada": true,
+          "params": "guestNoche: number, markup: number, fijoNoche: number",
+          "retorno": "number",
+          "linea": 185,
+          "resumen": "La misma inversión con la cuota YA repartida por noche. Existe para los helpers del motor (`pricing-ancla-fecha`, `pricing-premio-mercado`), que trabajan con precios por noche y no conocen la duración"
+        },
+        {
+          "nombre": "guestDesdeBase",
+          "kind": "function",
+          "exportada": true,
+          "params": "baseNoche: number, p: ParametrosCanal",
+          "retorno": "number",
+          "linea": 192,
+          "resumen": "Precio que verá el huésped por noche con una base dada. La ida del modelo afín."
+        },
+        {
+          "nombre": "desviacionCanal",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { configurado: ParametrosCanal medido: { markup: number; cuotaFija: number } | null guestRef: number tolerancia?: number }",
+          "retorno": "DesviacionCanal",
+          "linea": 217,
+          "resumen": "¿Describen los parámetros configurados lo que ve el huésped? El sesgo se evalúa sobre un precio de mercado de referencia (`guestRef`) porque con una cuota fija el error NO es un porcentaje plano: pesa"
+        },
+        {
+          "nombre": "pasoCanal",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { configurado: ParametrosCanal medido: { markup: number; cuotaFija: number } guestRef: number maxSalto?: number }",
+          "retorno": "PasoCanal",
+          "linea": 267,
+          "resumen": "Un PASO desde los parámetros configurados hacia los medidos, sin mover el precio más de `maxSalto` en una sola pasada. Por qué un paso y no el salto entero: los parámetros del canal mueven TODAS las f"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2f9bde72ca9c"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-centinelas.ts",
@@ -67969,7 +68173,7 @@
           "exportada": true,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 10
+          "linea": 12
         },
         {
           "nombre": "percentile",
@@ -67977,7 +68181,7 @@
           "exportada": true,
           "params": "sorted: number[], q: number",
           "retorno": "number",
-          "linea": 13,
+          "linea": 15,
           "resumen": "Percentil con interpolación lineal sobre una muestra ordenada (ascendente)."
         },
         {
@@ -67986,21 +68190,21 @@
           "exportada": true,
           "params": "p: EngineParams, marketPrices: number[], marketScores: number[], occupancy: number | null,",
           "retorno": "EngineResult",
-          "linea": 41
+          "linea": 43
         },
         {
           "nombre": "recommendedBaseFromEngine",
           "kind": "function",
           "exportada": true,
-          "params": "res: EngineResult, opts: { markup: number; max_change_pct: number; min_price: number | null; max_price: number | null; baseActual: number | null },",
+          "params": "res: EngineResult, opts: { markup: number; max_change_pct: number; min_price: number | null; max_price: number | null baseActual: number | null /** parte FIJA que el canal suma a la noche (cuota por estancia ÷ noches típicas del piso) */ fi",
           "retorno": "number | null",
-          "linea": 88,
+          "linea": 90,
           "resumen": "Convierte el recomendado (huésped) a precio BASE de Smoobu y aplica la cadena de topes del propietario: floor/ceil de mercado (en base) → max_change_pct vs base actual → min/max absolutos. Es la caden"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8555c024d453"
+      "hash": "9fd7c5d50432"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-guardia.ts",
@@ -68077,13 +68281,13 @@
           "exportada": true,
           "params": "i: PremioMercadoInput, o: PremioMercadoOpts = {}",
           "retorno": "number",
-          "linea": 43,
+          "linea": 47,
           "resumen": "Devuelve el precio BASE (sin markup) al que anclar la fecha como premium de mercado, o 0 si no aplica. `target_final = max(target, premio)` en el motor, y el premio salta el raíl al alza."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c6e4079eff25"
+      "hash": "ed2c7536f612"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-suelo-pl.ts",
@@ -68408,7 +68612,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "7ce4a72a7921"
+      "hash": "1c7233b376cd"
     },
     {
       "ruta": "apps/plataforma/lib/smoobu.ts",
@@ -92793,7 +92997,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2475,
-    "funciones": 6713
+    "archivos": 2478,
+    "funciones": 6730
   }
 }
