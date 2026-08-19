@@ -104,6 +104,17 @@
 - El rojo de `main` por las claves i18n huérfanas lo arregló otra sesión en paralelo (#1495); mi PR
   #1496 se quedó en duplicado. **Dos sesiones sobre el mismo repo: mirar `origin/main` antes de arreglar.**
 
+### 🧪 (19/08/2026) Las guardas i18n de House pasaban EN VACÍO
+- Al reescribir el copy desapareció «Sin comisiones de Booking», que era uno de los *delatores*
+  de `traducciones.test.ts`. Un delator que ya no está en el HTML no puede sobrevivir a
+  `traducir()`: la aserción pasaba sin mirar nada. Otra sesión lo cambió por una frase viva
+  (PR #1490) — pero eso se vuelve a pudrir al siguiente cambio de copy.
+- Arreglo de fondo: cada recorrido comprueba ahora que **encontró algo** (delatores vivos en el
+  HTML; ≥10 anclas y ≥5 ids en `anclas.test.ts`). `enlaces.test.ts` ya lo hacía y sirvió de patrón.
+  Verificado por mutación: cambiar un delator por una frase inexistente pone el test rojo.
+- Es la regla de «dato que no hay ≠ dato que no se ha mirado» aplicada a los tests. 50/50 y
+  32/32 en las guardas raíz. Anotado en `apps/housesevillana/CLAUDE.md`.
+
 ### 📸 (19/08/2026) La portada de House era una escalera (y el alt decía «fachada»)
 - Lo vio Alberto, no el repaso de diseño: **ninguna sesión puede ver las fotos** de la landing
   (Drive/`lh3.googleusercontent.com` bloqueados por egress; el conector de Drive lista pero
