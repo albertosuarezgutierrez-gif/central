@@ -39,9 +39,12 @@
 - **Decisión: NO se crea proyecto Supabase nuevo** aunque el 2º free cueste 0 €/mes — los free se
   pausan a los 7 días de inactividad y las cuotas son por organización. Va como schema **`seguros`**
   en `central` + rol `prisma_seguros`, app `apps/asegura`, marca por `@central/brand`.
-- Bloqueantes de Alberto: aceptar/transferir el repo a su cuenta (copia SIN historia) y pedir al
-  desarrollador el Supabase (transfer o `pg_dump`) + envs/edge functions/buckets. Falta saber en qué
-  plataforma se desarrolló.
+- Bloqueantes de Alberto: **transferir** el repo a su cuenta (es un Next.js hecho con Claude Code:
+  787 commits, 258 ramas, e2e, tickets Linear LOO-xxx, desplegado en `asegura.vercel.app`; el Vercel
+  y el Supabase también son de Manuel).
+- **Hecho sin depender de él:** schema `seguros` + rol `prisma_seguros` creados en `central` (inerte,
+  sin password; SELECT en cuentas/sociedades/negocios) — `apps/asegura/prisma/sql/2026-08-19_asegura_bootstrap.sql`.
+  Y `docs/ASEGURA-PROMPT-CHROME.md` para inventariar el repo con Claude Chrome. PR #1489.
 
 ### 📋 (19/08/2026) Inventario de ofertas Booking — House hecho, 3 pendientes
 - Nuevo `docs/BOOKING-OFERTAS-INVENTARIO.md`: inventario extranet por piso (Claude Chrome, solo

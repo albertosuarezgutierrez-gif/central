@@ -55,6 +55,17 @@ Se puede (el segundo proyecto free cuesta **0 €/mes**, el plan free da 2). Per
 En qué plataforma se desarrolló (Lovable / Bolt / Base44 / Replit / Next.js a mano). Determina si el
 Supabase es del desarrollador o suyo-de-la-plataforma, y si el repo exportado es directamente usable.
 
+## Hecho ya (19/08/2026), sin depender de Manuel
+
+- **Schema `seguros` creado** en `central` y **rol `prisma_seguros`** (LOGIN + BYPASSRLS, sin
+  `CREATE`), **inerte: sin contraseña** → no puede conectarse hasta que Alberto ejecute
+  `ALTER ROLE prisma_seguros WITH PASSWORD '…'`. Sobre `public` solo tiene **SELECT** de
+  `cuentas`, `sociedades` y `negocios` (mínimo privilegio, lección de `prisma_almacen`).
+  Fichero: `apps/asegura/prisma/sql/2026-08-19_asegura_bootstrap.sql`. Aplicado por MCP y verificado.
+- **Sin tablas todavía**, y eso es "sin inventariar", no "no hay": el modelo vive en el repo externo.
+- `docs/ASEGURA-PROMPT-CHROME.md`: prompt para que **Claude Chrome** saque el inventario del repo
+  por el navegador (Alberto sí entra como colaborador) y me lo devuelva. Es el rodeo al bloqueo.
+
 ## Lo que hago yo cuando esté desbloqueado
 
 1. **Inventario** del repo: tablas, RLS, auth, edge functions, crons, deps, y qué está de verdad hecho.
