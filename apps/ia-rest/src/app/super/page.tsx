@@ -2240,7 +2240,7 @@ function LeadHunterPanel({ C, SN, SM, onLeadCreado, sh }: { C: any; SN: string; 
               const nombre = biz?.nombre || post?.nombre_local || 'Restaurante'
               const trackUrl = landingUrl || propuestaTrackUrl || (propuestaUrl ? `https://www.iarest.es${propuestaUrl}` : null)
               const msg = `🎯 <b>Lead Hunter IA</b>\n\n<b>${nombre}</b>\n📍 ${biz?.ciudad || post?.ciudad || '—'} · ${biz?.tipo_cocina || post?.tipo_cocina || '—'}\n💶 ~${biz?.precio_mrr_estimado || '?'}€/mes${biz?.email_contacto ? `\n📧 ${biz.email_contacto}` : ''}${biz?.telefono ? `\n📞 ${biz.telefono}` : ''}\n\n${(biz?.puntos_dolor || []).map((p: string) => `→ ${p}`).join('\n') || post?.notas || ''}\n\n<b>DM:</b>\n"${result?.dm_sugerido || '—'}"${trackUrl ? `\n\n🔗 <a href="${trackUrl}">Ver propuesta</a>` : ''}\n\n✅ ¿Mandamos?`
-              await fetch('https://efncqyvhniaxsirhdxaa.supabase.co/functions/v1/tg-send', {
+              await fetch('https://wswbehlcuxqxyinousql.supabase.co/functions/v1/tg-send', {
                 method: 'POST', headers: { 'Content-Type': 'application/json', 'x-secret': 'iarest-tg-2026' },
                 body: JSON.stringify({ mensaje: msg })
               })

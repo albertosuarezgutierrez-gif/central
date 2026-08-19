@@ -66,10 +66,9 @@ if [ -z "$VAPID_PRIVATE" ]; then
 fi
 
 # Supabase URLs (públicas, no secret).
-# OJO: la URL apunta al proyecto VIVO actual (efncqyvhniaxsirhdxaa). La migración
-# decidida al compartido (wswbehlcuxqxyinousql/schema iarest) cambia esto en la
-# "Etapa D" del plan — NO tocar aquí hasta el flip, o este script fliparía prod.
-SUPABASE_URL="${SUPABASE_URL:-https://efncqyvhniaxsirhdxaa.supabase.co}"
+# Proyecto VIVO: la BD compartida wswbehlcuxqxyinousql, schema iarest (cierre 19/08/2026).
+# Recuerda que junto a la URL van NEXT_PUBLIC_SUPABASE_SCHEMA=iarest y las keys del compartido.
+SUPABASE_URL="${SUPABASE_URL:-https://wswbehlcuxqxyinousql.supabase.co}"
 # El ANON key es público pero NO se hardcodea (antes había un placeholder que subía
 # una key inválida a Vercel). Pásalo por env SUPABASE_ANON o se pide por teclado.
 if [ -z "$SUPABASE_ANON" ]; then

@@ -32,6 +32,18 @@
 
 ---
 
+### 🗄️ (19/08/2026) Unificación Supabase CERRADA — un solo proyecto, ya renombrado a «central»
+- Alberto pidió unir los 2 proyectos Supabase. Hallazgo: el flip de junio SÍ se hizo (viejo congelado
+  desde jun, compartida con escrituras vivas — la nota "split-brain 12/07" estaba desfasada), pero el
+  cierre quedó a medias: 5 EFs desplegadas al proyecto VIEJO tras el corte (qr-assistant daba 404 en
+  prod), los 25 crons sin recrear, y Realtime del KDS sin publication (solo preavisos).
+- Cerrado: 5 EFs redesplegadas + 45 fuentes versionadas, 25 crons recreados (migr. 20260819), Realtime
+  +9 tablas, ~1.390 filas valiosas copiadas por pg_net (leads/CRM/training/stripe_events), crons del
+  viejo apagados (0), refs de repo/skills/MATRIZ corregidas. PR draft de la rama claude/unificar-supabase-*.
+- CERRADO 100%: proyecto viejo PAUSADO, webhook Stripe repuntado (conector MCP), proyecto renombrado a
+  «central» (Claude Chrome), y monitor-health-cron reescrito con la ANON key (verify_jwt acepta cualquier
+  JWT válido) → app.service_role_key ya no hace falta en ningún sitio. MONEI: DESCARTADO — Alberto decide quedarse solo con Stripe para cobros (19/08); su webhook da igual.
+
 ### 📐 (19/08/2026) El canal NO es un markup: es una recta — y ahora se mide y se corrige SOLO
 - Medido el escaparate real de los CUATRO pisos con el conector (16 ventanas): el canal multiplica por
   **menos de 1** (~0,9) y **suma una cuota fija por estancia** (limpieza: 597€ en House). Un «markup»

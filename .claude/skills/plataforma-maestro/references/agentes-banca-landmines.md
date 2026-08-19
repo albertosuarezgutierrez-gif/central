@@ -50,8 +50,8 @@
   en jun-2026, #429). NO quitar esa excepción ni meter rutas de cron tras el gate sin el secreto. Los
   handlers ya revalidan (`isCronAuthorized` o `secretOk || getSession()`), así que no abre datos.
   Heartbeat de vigilancia: paso 2-bis de `/auditoria-diaria`.
-- **ia-rest vive en OTRA BD**: la unificación quedó a medias; `iarest.*` del compartido es un **clon vacío del DDL**.
-  Los datos vivos están en el proyecto Supabase propio de ia-rest (`efncqyvhniaxsirhdxaa`). Léelo por el **puerto HTTP**.
+- **ia-rest vive en la BD compartida** (schema `iarest`, cierre 19/08/2026), pero plataforma lo sigue
+  leyendo por el **puerto HTTP** (aislamiento entre apps). NO acoples Prisma/SQL directo sobre `iarest.*`.
 - **Adaptadores por vertical** (`lib/adapters/*`, contrato `VerticalAdapter`): ialimp+sivra → BD directa (SQL raw);
   iarest → puerto HTTP. **No se fusiona nada.**
 - Sin `OPERADOR_SHARED_SECRET` correcto, el panel no ve los clientes de ia-rest (ialimp+sivra sí).

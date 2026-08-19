@@ -19,10 +19,13 @@ agentes IA de producción (NIM/Gemini, sin Anthropic).
 
 ## 🚨 No romper / crítico
 
-1. **Split-brain de BD (12/07):** el proyecto Supabase VIVO (runtime POS + crons) es el
-   VIEJO `efncqyvhniaxsirhdxaa` (schema `public`); el compartido `wswbehlcuxqxyinousql`/
-   schema `iarest` es solo el DESTINO de la migración pendiente (+ Instagram/Reels y demo
-   Catering JJ). No asumir que el compartido es producción hasta el flip de env.
+1. **BD unificada (cierre 19/08/2026):** producción vive en el COMPARTIDO
+   `wswbehlcuxqxyinousql`, **schema `iarest`** — runtime POS, Edge Functions (45) y crons
+   pg_cron. El proyecto viejo `efncqyvhniaxsirhdxaa` está JUBILADO (congelado desde junio,
+   crons apagados; pendiente de pausar/borrar por Alberto). TODO cliente/EF/Realtime nuevo
+   DEBE fijar schema `iarest` (`db: { schema: 'iarest' }`; Realtime `schema: 'iarest'` y la
+   tabla añadida a la publication `supabase_realtime`). NUNCA desplegar functions ni aplicar
+   SQL al proyecto viejo.
 2. **Sesión firmada HMAC:** TODA ruta nueva que emita sesión DEBE envolverla con
    `firmarSesion()` (app) o `firmarObjeto()` (portales). Con `SESSION_ENFORCE=true` las
    sesiones sin firma → 401. NUNCA `x-session-token` ni `sesiones_activas` directas.

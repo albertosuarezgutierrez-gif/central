@@ -37,7 +37,7 @@ tags: solo los mencionados en la reseña (puede ser []).`,
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   try {
-    const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+    const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { db: { schema: 'iarest' } })
     const NVIDIA_API_KEY = Deno.env.get('NVIDIA_API_KEY')!
 
     const { data: valoraciones } = await supabase

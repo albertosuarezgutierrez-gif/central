@@ -3,10 +3,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const sb = createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-)
+const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { db: { schema: 'iarest' } })
 const PUSH_URL = Deno.env.get('SUPABASE_URL')!.replace(/\/$/, '') + '/functions/v1/push-send'
 const SRK     = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
