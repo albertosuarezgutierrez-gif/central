@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-19T17:46:38Z",
+  "generadoEn": "2026-08-19T18:22:44Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4552,6 +4552,14 @@
       "fecha": ""
     },
     {
+      "titulo": "Veredicto FINAL: no tocar nada.",
+      "fecha": ""
+    },
+    {
+      "titulo": "Dos errores míos corregidos el mismo día:",
+      "fecha": ""
+    },
+    {
       "titulo": "Validación FUERA de muestra",
       "fecha": ""
     },
@@ -4576,19 +4584,11 @@
       "fecha": ""
     },
     {
-      "titulo": "Sondeo estrenado en verde (18:47):",
+      "titulo": "DOS causas que se suman.",
       "fecha": ""
     },
     {
-      "titulo": "Suelto (menor):",
-      "fecha": ""
-    },
-    {
-      "titulo": "PENDIENTE de Alberto (ops):",
-      "fecha": ""
-    },
-    {
-      "titulo": "Pendiente Alberto: mergear el PR y re-vincular Kutxabank UNA vez en `/banca`",
+      "titulo": "Fix:",
       "fecha": ""
     }
   ],

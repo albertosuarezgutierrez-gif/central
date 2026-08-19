@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-19T17:47:51Z",
-  "sha": "0ee84745948aa442093edf49a7ab45d9dddd9572",
+  "generadoEn": "2026-08-19T18:22:44Z",
+  "sha": "9fffb2e5a56e19ce2edf7c9b4e886201ce3971f5",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3116,7 +3116,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "3bbd311b0e43"
+      "hash": "a7eefda27457"
     },
     {
       "ruta": "apps/housesevillana/app/sitemap.xml/route.ts",
@@ -48467,7 +48467,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "03a8f7f15bb3"
+      "hash": "4c7fc4f1efb9"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/calendario/page.tsx",
@@ -54705,7 +54705,7 @@
         "secrets_audit"
       ],
       "rutaApi": "/api/operador/secretos/set",
-      "hash": "677e30f9c539"
+      "hash": "0268b7637632"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/conciliar-booking/route.ts",
@@ -73592,6 +73592,7 @@
       "exporta": [
         "isVercelAdminConfigured",
         "upsertProjectEnv",
+        "clasificarEstadoRedeploy",
         "redeployProjectProduction"
       ],
       "funciones": [
@@ -73616,23 +73617,30 @@
           "kind": "function",
           "exportada": true,
           "params": "projectId: string, key: string, value: string,",
-          "retorno": "Promise<",
+          "retorno": "Promise<ResultadoRedeploy>",
           "linea": 28,
           "resumen": "Crea o actualiza una env var en un proyecto (target production + preview). Devuelve { ok } o { ok:false, error }. NO devuelve ni lee valores existentes."
+        },
+        {
+          "nombre": "clasificarEstadoRedeploy",
+          "kind": "function",
+          "exportada": true,
+          "params": "estado: unknown",
+          "retorno": "EstadoRedeploy",
+          "linea": 90
         },
         {
           "nombre": "redeployProjectProduction",
           "kind": "function",
           "exportada": true,
           "params": "projectId: string, projectName: string,",
-          "retorno": "Promise<",
-          "linea": 84,
-          "resumen": "Redespliega la PRODUCCIÓN de un proyecto reusando su último deployment de producción pero con el ÚLTIMO commit de su rama (`withLatestCommit`). Sirve para que una env recién escrita entre en runtime S"
+          "retorno": "Promise<ResultadoRedeploy>",
+          "linea": 105
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0aa61a25593a"
+      "hash": "9c663ae0e78e"
     },
     {
       "ruta": "apps/plataforma/lib/vigilantes-tarjeta.ts",
@@ -93982,6 +93990,6 @@
   ],
   "resumen": {
     "archivos": 2505,
-    "funciones": 6808
+    "funciones": 6809
   }
 }
