@@ -62,18 +62,18 @@
 - Pendiente sin bloquear: Genius/planes de Dúplex, Luxury y Busto. 3ª métrica del panel descartada
   (antelación de House: 84d dice Booking vs 42d real).
 
-### 🔧 (19/08/2026) El canal directo ya era MÁS BARATO que Booking — corrección el mismo día
-- Afirmé que la web era ~12% más cara porque **supuse** que cobra 1,00 × base sin medirlo. Falso: el
-  motor de Smoobu aplica **su propio descuento por duración de estancia**. Prueba real (House,
-  21→23/08, base 360,00€/noche confirmada en `pricing_applied`): 720,00€ − 144,00€ larga estancia +
-  110,00€ limpieza = **686,00€**, o sea **0,80 × base**. Booking paga 0,88 × base (mediana de 7).
-- **La web ya era ~9% más barata y rentaba ~8% más** (0,79 vs 0,73 tras comisión ~17%). El problema
-  del directo nunca fue el precio: era el acceso (botón a un dominio sin DNS hasta el 12/08; GA4 da
-  109 sesiones y 1 clic saliente en 12 meses).
-- `DIRECT20` (20%, 4 propiedades, hasta 31/12/2030) creado y verificado pero **NO publicado**: se
-  pasa del punto de empate (−27%) y dejaría el directo a 0,64 × base, rentando menos que Booking.
-- Pendiente antes de publicar nada: la **tabla del descuento por duración** (probado solo a 2 noches;
-  se desconoce 1, 3 y 7). El cupón de Smoobu no admite límite de usos ni restricción por duración.
+### 🔧 (19/08/2026) El canal directo YA está bien de precio — y dos correcciones mías
+- El «descuento de larga estancia» del motor de Smoobu **no es de larga estancia**: 20% desde 2
+  noches / 30% desde 7 / 40% desde 30, iguales en las 4 propiedades, sobre base (no sobre limpieza).
+  Y **la estancia mínima del calendario son 2 noches** → es un **−20% permanente al canal directo**.
+- Con la comisión de Booking **medida** (19,72%, `amount/amount_gross` sobre 1.322 reservas) y el
+  ratio pagado/base de Booking en estancias de 2-6 noches (**0,976**, n=16): el huésped paga **~18%
+  menos** reservando directo y a Alberto le queda **lo mismo** (0,788 vs 0,784). Nada que tocar.
+- **Dos errores míos corregidos el mismo día:** (1) dije que la web era ~12% más cara — supuse
+  1,00 × base sin medirlo; (2) dije ~9% más barata y comisión ~17% — venía de n=7 (0,88) frente a
+  n=16 (0,976). Un n=7 es intuición, no medición, y la regla del «dato no mirado» aplica al lado propio.
+- `DIRECT20` creado y **borrado** el mismo día (id 166126): sobraba. `FRIENDS` (id 1140) intacto.
+- Pendiente, decisión de Alberto: copy de la landing con número («~18% menos») o sin él.
 ### 🏷️ (19/08/2026) Tres centinelas del canal — y el primero destapa que ESTAMOS CAROS
 - **Validación FUERA de muestra** (`validarCanal`): el R² del ajuste es circular (mide la recta
   contra las ventanas que la produjeron). Ahora `pricing_escaparate.usada_en_ajuste_at` marca lo

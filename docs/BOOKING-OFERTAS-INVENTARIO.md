@@ -181,80 +181,91 @@ sencillamente incorrecta: no había margen que recuperar.
 
 House: Booking dice **~84 días** de antelación (peer 61,6); nuestro `incomes` dice **42 de mediana**
 (56 de media). Mismo patrón que Luxury (81 vs 23) y Dúplex (53 vs 16): el panel da sistemáticamente
-~2× nuestra cifra. Sigue sin causa confirmada.## El canal directo y Booking: qué paga de verdad cada uno (medido 19/08/2026)
+~2× nuestra cifra. Sigue sin causa confirmada.## El canal directo y Booking: qué paga de verdad cada uno (medido 19/08/2026)## Canal directo vs Booking: qué paga el huésped y qué te queda (cerrado 19/08/2026)
 
-> **Corrección del 19/08/2026, el mismo día.** La primera versión de esta sección se titulaba «el
-> canal directo es HOY MÁS CARO que Booking» y afirmaba que la web cobra 1,00 × base. **Era falso**,
-> y el error era mío: di por supuesto un lado de la comparación en vez de medirlo. El motor de
-> reservas de Smoobu aplica **su propio descuento por duración de estancia** encima de la base, y yo
-> no sabía que existía. La corrección se deja a la vista porque el fallo —afirmar un lado de una
-> comparación sin haberlo mirado— es justo lo que prohíbe la regla «dato que NO hay ≠ dato que NO se
-> ha mirado», y esta vez se saltó en el lado propio, no en el de la fuente externa.
+> **Esta sección se reescribió tres veces el mismo día**, y las tres versiones están en el historial
+> del PR #1487. Merece la pena decir por qué, porque el patrón se repite: las dos primeras versiones
+> **supusieron** el lado directo en vez de medirlo, y la segunda además usó una muestra de 7 reservas
+> como si fuera un dato firme. Orden de los errores: (1) «la web cobra 1,00 × base» —falso, hay un
+> descuento propio del motor—; (2) «la web es ~9% más barata y la comisión es ~17%» —la muestra corta
+> daba 0,88 donde 16 reservas dan 0,976, y la comisión real medida sobre 1.322 reservas es 19,72%—.
+> La regla «dato que NO hay ≠ dato que NO se ha mirado» aplica también al propio lado de la
+> comparación, y un n=7 es una intuición, no una medición.
 
-**Cómo se forma cada precio.** El motor escribe en Smoobu el precio BASE. Smoobu le suma **+20% al
-enviarlo a Booking** (ajuste de canal), y allí el huésped le resta Genius, tarifa móvil, oferta de
-catálogo y plan. El motor de reservas propio parte de esa misma base y le aplica su **descuento por
-duración de estancia**.
+### Cómo se forma cada precio
 
-### Lado Booking (medido: 7 reservas del último mes)
+El motor escribe en Smoobu el precio BASE. A partir de ahí:
 
-| Piso | Entrada | Pagado/noche | Base del motor | Ratio |
+- **Booking:** Smoobu le suma **+20%** (ajuste de canal) y allí el huésped resta Genius, tarifa
+  móvil, oferta de catálogo y plan. Neto de esa cadena, el huésped acaba pagando ~la base.
+- **Directo:** el motor propio aplica su **descuento por duración**, sobre el precio base y **no**
+  sobre la tarifa de limpieza.
+
+### El «descuento de larga estancia» NO es de larga estancia
+
+Configuración leída en Ajustes → Motor de reservas → Ajustes de propiedad (19/08/2026), **idéntica en
+las 4 propiedades**:
+
+| Estancia mínima | Descuento |
+|---|---|
+| 2 noches | **20%** |
+| 7 noches | 30% |
+| 30 noches | 40% |
+
+Y **la estancia mínima del calendario son 2 noches**: el motor no deja cotizar una sola noche en
+ninguna fecha. Es decir, el primer tramo cubre el 100% de las reservas posibles → **el canal directo
+tiene un −20% permanente**, no un incentivo a estancias largas. El nombre engaña.
+
+### Qué paga el huésped, medido
+
+Ratio pagado/base de las reservas de Booking, por duración (12 meses, solo las que tienen base
+escrita por el motor):
+
+| Tramo | n | Ratio mediana |
+|---|---|---|
+| 2-6 noches | 16 | **0,976** |
+| 7-29 noches | 1 | 0,684 *(sin valor estadístico)* |
+
+Y el directo, por la tabla de arriba: **0,80** (2-6 noches) · 0,70 (7+) · 0,60 (30+).
+
+Prueba real en el motor que lo confirma (House Sevillana, base de `pricing_applied`):
+
+| Estancia | Base | Limpieza | Descuento | Total |
 |---|---|---|---|---|
-| Luxury | 18/09 | 138€ | 128€ | 1,076 |
-| House | 30/09 | 622€ | 645€ | 0,965 |
-| Dúplex | 03/10 | 138€ | 168€ | 0,821 |
-| Dúplex | 16/10 | 140€ | 175€ | 0,804 |
-| Luxury | 16/10 | 171€ | 194€ | 0,881 |
-| Luxury | 22/10 | 143€ | 203€ | 0,706 |
-| Luxury | 06/11 | 122€ | 122€ | 1,004 |
+| 21→23/08 (2 noches) | 720,00€ | 110,00€ | −144,00€ (20%) | **686,00€** |
+| 07→10/09 (3 noches) | 1.560,00€ | 110,00€ | −312,00€ (20%) | **1.358,00€** |
+| 09→16/11 (7 noches) | 3.808,00€ | 110,00€ | −1.142,40€ (30%) | **2.775,60€** |
 
-**Mediana: 0,88.** Dos límites que hay que decir en voz alta: la muestra es de 7, y
-`incomes.amount_gross` **no desglosa la tarifa de limpieza**, así que el ratio la lleva dentro. Vale
-para el orden de magnitud, no para la tercera cifra.
+### La conclusión
 
-### Lado directo (medido: prueba real en el motor de reservas)
+Comisión de Booking **medida**, no estimada: `amount/amount_gross` sobre 1.322 reservas de 12 meses
+da **19,72%** (Airbnb, Expedia, Agoda y directo salen a 0%). Para la estancia típica de 2-6 noches,
+que es 16 de las 17 medibles:
 
-House Sevillana, 21→23/08/2026, 2 noches, 1 persona. Base confirmada en `pricing_applied`:
-**360,00€/noche** los dos días → 720,00€, que es exactamente el «Precio base» que muestra el motor.
-
-| Concepto | Sin código | Con DIRECT20 |
+| Canal | Paga el huésped | Te queda a ti |
 |---|---|---|
-| Precio base | 720,00€ | 720,00€ |
-| Tarifa de limpieza | 110,00€ | 110,00€ |
-| Descuento larga estancia | −144,00€ | −144,00€ |
-| Cupón 20% | — | −137,20€ |
-| **Pago total** | **686,00€** | **548,80€** |
+| Booking | 0,976 × base | **0,784** (−19,72%) |
+| **Directo** | **0,80 × base** | **0,788** (−1,5% Stripe) |
 
-Aislando el alojamiento (fuera la limpieza): **0,80 × base** sin código, **0,64 × base** con DIRECT20.
+**El huésped paga ~18% menos reservando directo y a Alberto le queda lo mismo.** Es la configuración
+correcta: el canal directo no se está financiando con margen, simplemente no paga la comisión. No
+hace falta ningún descuento adicional — y por eso el cupón `DIRECT20` (creado y **borrado** el mismo
+día, id 166126) sobraba: habría dejado el directo en 0,64 × base, ~20 puntos por debajo de Booking.
 
-### La conclusión, corregida
+Sigue vivo, intacto, el cupón `FRIENDS` (ChekingFIDELIZACION, id 1140, 20%, las 4 propiedades, hasta
+25/07/2030) — fidelización, no canal.
 
-| Canal | Paga el huésped | Recibe Alberto |
-|---|---|---|
-| Booking | ~0,88 | ~0,73 (comisión ~17%) |
-| **Web sin código** | **0,80** | **~0,79** (Stripe ~1,5%) |
-| Web con DIRECT20 | 0,64 | ~0,63 |
+### Entonces el problema del directo nunca fue el precio
 
-**La web ya era ~9% más barata que Booking sin haber hecho nada**, y en esa configuración una noche
-directa renta un ~8% más que una de Booking. `DIRECT20` **se pasa de largo**: deja el directo por
-debajo del punto de empate (−27%) y hace que una reserva directa rente **menos** que una de Booking.
-Encima su 20% cae también sobre la tarifa de limpieza (22,00€), que no es margen: al limpiador se le
-pagan los 110,00€ igual.
+Era el acceso. El botón de reservar apuntó a `reservas.house-sevillana.com` —un dominio sin DNS—
+hasta el 12/08/2026, y GA4 da 109 sesiones en 12 meses con **1 solo clic saliente**. Aun así hay
+**19 reservas por canal DIRECTO** en 12 meses, que no vienen de la landing: son repetidores y enlaces
+directos. Ese es el suelo desde el que se mide cualquier mejora del embudo.
 
-**Así que el problema del canal directo nunca fue el precio.** Era el acceso: el botón de reservar
-apuntó a `reservas.house-sevillana.com` —un dominio sin DNS— hasta el 12/08/2026, y GA4 da 109
-sesiones en 12 meses con **1 solo clic saliente**.
+### Pendiente
 
-### Estado y qué falta por mirar
-
-- `DIRECT20` (20%, las 4 propiedades, 19/08/2026 → 31/12/2030) **está creado y verificado**, pero
-  **NO publicado**: no aparece en la landing, así que ningún huésped puede usarlo. Inofensivo
-  mientras siga sin anunciarse.
-- **Pendiente — la tabla del descuento por duración.** La prueba fue de **2 noches**. No se sabe si a
-  1 noche hay descuento (si no lo hay, en estancias cortas la web sí sale más cara que Booking y un
-  código pequeño se justificaría) ni si crece con la duración (si a 7 noches es mayor, `DIRECT20`
-  encima sería ruinoso). **Hasta tener esa tabla no se publica el código ni se toca la landing.**
-- Nota de configuración: el cupón de Smoobu **no admite** límite de usos, importe mínimo ni
-  restricción por duración de estancia — solo propiedades, valor, unidad y fechas. Es un instrumento
-  romo, y por eso no puede compensar un descuento por duración que sí varía.
-- Sigue vivo el cupón `FRIENDS` (ChekingFIDELIZACION, 20%, las 4 propiedades, hasta 25/07/2030).
+- **Copy de la landing.** La promesa de «mejor precio garantizado» ya es cierta y es estructural (el
+  −20% se aplica siempre). Falta decidir si se anuncia con número («hasta un 18% menos») o sin él;
+  el número convierte mejor pero se apoya en n=16. **Decisión de Alberto, no aplicada aún.**
+- **No tocar** los tres tramos de duración. El 30%/40% son agresivos pero una estancia larga tiene
+  una sola limpieza en vez de varias; con n=1 en el tramo 7-29 no hay con qué juzgarlos.
