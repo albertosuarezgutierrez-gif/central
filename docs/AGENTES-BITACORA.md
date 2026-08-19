@@ -15,6 +15,28 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-19 · facturas-correo** · hizo: pasada completa (Paso 0→5). Vía B sana (dias_caido=1,
+  última copia `_buzon_pdf` 18/08); sin backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida`
+  (verificado por `search_threads`). Paso 4.0 (`v_facturas_sin_cargo`): 8 filas, todas
+  `revisada_sin_cargo`, sin novedades. Candidatos Gmail (`newer_than:2d`): 2 hilos, ninguno factura
+  (hoja de medicación REMPe y pedido Amazon personal) → etiquetados Procesada. Paso 1-bis (`_subir_aqui`,
+  raíz 2026): sin subidas manuales nuevas (lo más reciente en raíz es del 05/08, ya cubierto por avisos
+  de papelera existentes). Auto-verificación papelera `_DUPLICADOS_BORRAR`: comprobados 20 de los ~38
+  ficheros enlazados en los 20 avisos pendientes — los 20 siguen existiendo (0 zombis); quedan ~18 sin
+  comprobar hoy por volumen, ningún aviso resuelto. **Seguimiento del hallazgo del 18/08** (cargos Vercel/
+  Anthropic abr-jun sin fila en `facturas_drive`): localicé por Gmail (búsqueda histórica, no restringida
+  a `_buzon_pdf`) los correos-recibo de 8 de los 11 cargos pendientes y los concilié por conciliación
+  inversa — el cuerpo del correo (Stripe/Vercel siempre incluye el desglose en texto plano) dio el
+  importe aunque no se pudo bajar el PDF adjunto (Vía A `gmail-adjuntos` sigue sin provisionar); archivé
+  el texto del recibo como Google Doc en la carpeta del mes y actualicé `movimientos_bancarios`
+  (`conciliado=true`, `factura_ref`) + inserté las filas en `facturas_drive` (proveedores `anthropic`,
+  `anthropic-credit`, `vercel`, `vercel-reembolso` — la unique key `(proveedor,anio,mes)` obligó a
+  diferenciar el proveedor cuando había 2 cargos del mismo emisor en el mismo mes). **Quedan 4 cargos sin
+  resolver** (04-14 −163,21€, 04-27 −94,39€, 05-15 −180,00€, 06-14 −180,00€ · total 617,60€, todos
+  `CLAUDE.AI SUBSCRIPTION`/`ANTHROPIC* CLAUDE SUB`): no aparece correo-recibo ni en bandeja ni en papelera/
+  spam para esas fechas — no descarto que sean de otra cuenta/email o cargados sin notificación. dudas:
+  si Alberto reconoce esos 4 cargos y de dónde vienen (¿otra suscripción, otro email, cargo duplicado de
+  prueba?) — no los he tocado; fallos: —; PRs/commits: — (solo Gmail/Drive/Supabase + esta bitácora).
 - **2026-08-19 · mercado-booking** · hizo: pasada de 24 ventanas (tope duro del endpoint;
   `plan_total`=468, `candidatas`=468, `recortadas`=444 — el aviso del plan dice que el tope dejó
   fuera ventanas que casaban). Rondas 0-1 (línea de temporada + eventos confirmados sep-nov),
