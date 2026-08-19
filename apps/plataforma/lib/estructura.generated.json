@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-19T11:17:51Z",
+  "generadoEn": "2026-08-19T16:24:02Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2376,7 +2376,7 @@
       },
       "sivra": {
         "presente": true,
-        "evidencias": 5
+        "evidencias": 6
       },
       "transporte": {
         "presente": false,
@@ -3893,6 +3893,7 @@
       "/api/sivra/resumen-semanal",
       "/api/sivra/seo-proposals",
       "/api/sivra/seo-refresh",
+      "/api/sivra/seo-token-check",
       "/api/sivra/updates/sync",
       "/api/sociedades",
       "/api/sociedades/[id]",
@@ -4072,6 +4073,7 @@
       "/api/seo-proposals",
       "/api/seo-refresh",
       "/api/seo-revert",
+      "/api/seo-token-check",
       "/api/smoobu/huespedes-repetidos",
       "/api/smoobu/import",
       "/api/updates",
@@ -4554,6 +4556,10 @@
       "fecha": ""
     },
     {
+      "titulo": "Suelto (menor):",
+      "fecha": ""
+    },
+    {
       "titulo": "PENDIENTE de Alberto (ops):",
       "fecha": ""
     },
@@ -4583,10 +4589,6 @@
     },
     {
       "titulo": "Parado a propósito:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Guarda nueva en `latidos.test.ts`",
       "fecha": ""
     }
   ],
@@ -4998,7 +5000,7 @@
     "packages": 37,
     "capacidades": 23,
     "skills": 32,
-    "apis": 1167,
+    "apis": 1169,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
