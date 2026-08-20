@@ -14,7 +14,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { ingerirJunta } from '@/lib/subastas/junta'
 import { procesarDocumentos } from '@/lib/subastas/documentos'
-import { olvidarSesionPortal, sesionPortal, titularSesionPortal } from '@/lib/subastas/portal-sesion'
+import { olvidarSesionPortal, sesionPortal, titularSesionPortal, volcarLoginPortal } from '@/lib/subastas/portal-sesion'
 import { clasificarSubastas } from '@/lib/subastas/clasificar'
 import { reextraerDatosDeTexto } from '@/lib/subastas/reextraer'
 import { aplicarReferenciaMercado, chollosVigentes, enriquecerAnunciantesFotocasa, ingerirComparables, leerIndiceINE, pulsoMercado, referenciaZonasFotocasa, refrescarIndiceINE } from '@/lib/subastas/mercado'
@@ -66,6 +66,12 @@ export async function GET(req: NextRequest) {
   // puede reintentar tras un rechazo, y solo porque lo dispara una persona que
   // acaba de cambiar la credencial. El cron nunca reintenta: el Portal bloquea
   // cuentas tras varios intentos fallidos.
+  // Volcado de la pantalla del segundo factor, para escribir su parser contra
+  // el documento real. No devuelve cookies ni credenciales: solo el HTML.
+  if (sp.get('accion') === 'portal-dump') {
+    const d = await volcarLoginPortal()
+    return NextResponse.json({ ...d, html: d.html.slice(0, 60000) })
+  }
   if (sp.get('accion') === 'portal') {
     olvidarSesionPortal()
     const s = await sesionPortal()
