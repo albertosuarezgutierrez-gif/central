@@ -32,6 +32,39 @@
 
 ---
 
+### 💶 (20/08/2026) Dúplex: plan precio→reforma→venta, y el motor de precios tiene una copia RETIRADA que engaña
+- Del estudio fiscal salió una tercera opción que no estaba sobre la mesa: **antes de reformar (25-40k€) o
+  vender, tocar el precio** — gratis y reversible. Plan con criterios numéricos escritos ANTES de medir en
+  `docs/DUPLEX-plan-precio-reforma-venta.md` (fases A precio → B baño abajo → C 2º dormitorio → D vender).
+- **🪤 Landmine caro:** acusé al motor de pricing de dos fallos leyendo `apps/sivra/lib/pricing-engine.ts`.
+  **Esa copia está RETIRADA** (su ruta da 410 desde el 18/07/2026); el motor vivo es
+  `apps/plataforma/app/api/sivra/pricing/apply` y es mucho más fino. Uno de los «fallos» ya estaba resuelto
+  desde el 09/08 (`pricing-demanda.ts` gatea el descuento fuera de la ventana de venta). Anotado en la skill
+  `pricing-agente`. **Antes de acusar a un motor, comprueba qué copia corre.**
+- **Aplicado en prod con OK de Alberto:** `target_pctl` 0,50→0,60 en `prop_duplex_center` (Fase 1). Pendiente
+  de su decisión `max_change_pct` 0,20→0,08. La ocupación de la competencia **no** se puede usar hoy
+  (`market_rates` no guarda disponibilidad) — haría falta panel fijo de comps.
+- **Rutina nueva** (día 1 de cada mes, `trig_01QLVxzPS1PXAJPuWhApcAFV`): mide el mes cerrado y aplica el
+  criterio de la fase. Ficha en `docs/RUTINAS-PROGRAMADAS.md` §15. PR #1538.
+
+
+### 🏠 (20/08/2026) Estudio fiscal de la venta del dúplex de Villasís por 320.000€
+- Alberto sube la escritura del dúplex (Pj Villasís 1, 1º C) y pregunta cuánto pagaría vendiéndolo por
+  320.000€. **Es una DONACIÓN de su madre del 21/05/2024 por 174.650,90€** (= valor de referencia), con
+  bonificación 99% del ISD andaluz → valor de adquisición = ese, no lo que pagó ella en 2004.
+- Números: ganancia ~145.000€ (sin agencia) → **IRPF ~32.300€ + plusvalía ~970€**; con agencia al 3%,
+  ~30.600€. Neto entre 271.000€ y 286.000€. Estudio completo en `docs/FISCAL-venta-duplex-villasis.md`.
+- **Plusvalía: método objetivo (~970€) vs real (~24.900€)** — hay que pedirlo expresamente.
+- **Palanca grande:** pérdidas realizadas de IBKR (−6.642 USD en 2025, −18.746 USD en 2026) compensan al
+  100% la ganancia → ~3.700€ menos. ⚠️ Son P&L del bróker en USD SIN tipo de cambio: hace falta el
+  informe fiscal en euros antes de contar con ello. El año de venta (2026 vs 2027) importa por esto.
+- **Alcance cerrado:** Alberto confirma que es **un solo piso / una sola finca** (2/18031).
+- **Cruzado con la declaración 2025** (hilo Asecon + registro en Drive): Villasís estuvo **240 días
+  arrendado**, ingresos declarados 18.606,47€ (neto Booking) y gastos 3.052,26€ → renta ~15.554€/año
+  (4,86% sobre 320.000€). Dos preguntas abiertas para Asecon: base de la amortización (valor ISD, no
+  catastral — STS 15/09/2021) y si entraron las limpiezas (~1.800€/año). Rectificables 2024-25 si
+  fallan. Validación final: Asecon.
+
 ### 🔓 (20/08/2026) El cron ya se identifica en el Portal del BOE — y el muro cambia de significado
 - Alberto: «ya tengo usuario en el BOE con mi firma digital». Comprobado en `/acceso.php`: de las tres vías
   (certificado · **usuario+contraseña** · Cl@ve) solo la segunda sirve a un proceso; `POST /id/login.php`

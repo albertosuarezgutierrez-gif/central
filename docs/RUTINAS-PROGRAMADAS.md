@@ -269,6 +269,17 @@ caza lo que las sesiones del día no anotaron a mano.
 
 ---
 
+### 15. Revisión mensual del plan del dúplex de Villasís — *activa desde el 20/08/2026*
+| | |
+|---|---|
+| **Cuándo** | **Día 1 de cada mes**, 07:00 UTC (~09:00 CEST). Trigger `trig_01QLVxzPS1PXAJPuWhApcAFV` (sesión nueva por disparo). |
+| **Prompt** | Autocontenido en el trigger (creado por MCP desde sesión, 20/08/2026 — pedido de Alberto «créame ese plan y hazme recordatorio para ir analizándolo»). |
+| **MCPs / envs** | Supabase (lectura). ⚠️ El trigger se creó por MCP y **no almacena conectores** (misma limitación que la rutina 14): si la sesión disparada no trae Supabase, el prompt no puede medir — que lo diga, **no** que se lo invente. |
+| **Qué hace** | Lee `docs/DUPLEX-plan-precio-reforma-venta.md`, mide del mes **CERRADO** la ocupación real del dúplex (último snapshot de cada noche, nunca el calendario a futuro) + los otros tres pisos como control + qué está haciendo el agente de precios, rellena la fila del mes en la tabla de seguimiento y **aplica el criterio de decisión ya escrito** en la fase en curso. |
+| **Resultado** | PR draft con el documento actualizado + aviso Telegram con el veredicto (ocupación, precio, qué decisión toca). **NO toca `pricing_settings` ni precios publicados** sin OK explícito de Alberto para ese cambio concreto. |
+
+---
+
 ## Resumen de cadencias
 
 > ⚠️ El **triaje de correo** NO es una rutina de Claude Code: son 3 crons de Vercel en
@@ -287,6 +298,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | Domingo 07:30 | Agentes-entrenador (mejora de prompts) |
 | Lunes 07:00 | Buscador de IA |
 | Día 1 del mes 07:00 | Vigilante fiscal IRPF |
+| Día 1 del mes 07:00 | Revisión mensual del plan del dúplex de Villasís |
 | Día 1 del mes 08:00 | RRHH compliance calendar |
 | Día 15 del mes 07:00 | Vigía GitHub/OSS |
 | Diaria 09:45 | Latidos de agentes (cron Vercel) |
