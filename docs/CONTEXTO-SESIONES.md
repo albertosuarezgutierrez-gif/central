@@ -32,6 +32,24 @@
 
 ---
 
+### 🗝️ (20/08/2026) El agente de huéspedes NO tenía ni un dato del piso: la guest app de Smoobu SÍ se puede leer
+- Alberto, del hilo del Dúplex con Samy: «¿tiene acceso a todos los mensajes? ¿puede entrar en la url?».
+  Diagnóstico: `mensajes_guia_cache` con **0 filas desde que existe** — `guia.ts` bajaba el HTML del
+  `guest-app-url`, que es una SPA (2,8 KB sin texto) → el agente respondía **sin ninguna fuente** y
+  rellenaba inventando (a Daniela le AUTO-ENVIÓ «secure keybox»; a Samy dos rutas a pie contradictorias
+  y un `[lien d'accès]` literal, teniendo el enlace en el hilo).
+- **La guest app tiene API JSON abierta con el token del propio enlace:** `login.smoobu.com/api-guest/
+  bookings/{id}?token=` y `.../contents?token=`. El Dúplex son 10 secciones: KEYS (avisa de zona
+  restringida, «no uses GPS», con vídeo), WIFI, RULES, PARKING, azotea, basura…
+- Entrega 1 hecha (spec + plan en `docs/superpowers/`): guía real filtrada por vigencia + **ventana de
+  7 días para las claves** (política de Alberto: se dan una semana antes, porque se reserva y se cancela);
+  `htmlMessage` para no perder los enlaces; dedup de los automáticos (Smoobu los manda dobles: 8 de 25);
+  y la fecha venía en `createdAt`, no `created_at` → el `ts` de TODO el historial estaba vacío.
+- **Precedencia:** la sección PARKING de la guía se excluye — Alberto confirma que **no hay plaza** pese a
+  que la guía Y el email de confirmación se la prometen al huésped (arreglar eso en Smoobu es de Alberto).
+- Pendiente: entregas 2-5 (detector de conflictos, autonomía «si está en la guía contesta solo», hechos
+  permanentes, minería de los 159 hilos de 2026) y **vender/cobrar el parking** (fase 2, pedido por Alberto).
+
 ### 🔔 (20/08/2026) El aviso de cierre de subastas no había sonado NUNCA — y las pujas se leían de la pestaña equivocada
 - Alberto: «que el agente me avise el día antes con cómo van las pujas». Auditoría: 19 filas en el radar,
   18 avisadas, **0 seguidas** — y TODO el cron `subastas-cierre` colgaba de `subastas_seguidas`, que exige
