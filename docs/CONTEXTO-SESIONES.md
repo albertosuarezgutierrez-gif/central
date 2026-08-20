@@ -45,6 +45,10 @@ salida, **si no entra nadie ese día, se quedan hasta las 12:00 sin coste** (mal
 más tarde tiene coste de la empresa de limpieza y el agente lo ofrece SIN precio y escala. Nuevo
 `salida.ts` (ficha + prompt tri-estado) y la consigna de pago pasa a ser el plan B. Lo confirma el
 histórico de Smoobu (26/07, a Manuel: «puedes salir a las 12:00, no entra nadie después de ti»).
+(4) Entrenamiento con los huecos REALES (`mensajes_guia_gaps` + histórico): llaves al salir (Dúplex
+= mesa alta de la cocina; resto = donde se cogieron), equipaje ANTES de entrar con la noche anterior
+ocupada = consigna, tareas al marcharse (aire/luces, ventanas, basura, avisar) y **auto-envío solo de
+la ventana de las 12:00 con ocupación verificada** — nombrar una hora posterior es dinero y escala.
 
 ### 🧭 (20/08/2026) El índice que usa `code-map` llevaba horas desfasado en `main` — y eso no se ve
 `pnpm auditar:check` estaba en ROJO sobre `main`: #1536/#1550/#1551 son posteriores a la última

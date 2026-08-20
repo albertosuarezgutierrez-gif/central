@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert'
-import { bloqueSalida, bloqueSalidaTardia, SALIDA_FLEX_HASTA } from './salida.ts'
+import { bloqueSalida, bloqueSalidaTardia, SALIDA_FLEX_HASTA, llavesAlSalir, TAREAS_AL_SALIR, pideMasAllaDeLaVentana } from './salida.ts'
 import { contieneDatoInventado } from './guardrail.ts'
 import { bloqueEquipaje } from './equipaje.ts'
 
@@ -67,4 +67,49 @@ test('el bloque de consigna manda a mirar la SALIDA antes de derivar a una taqui
   assert.match(b, /12:00 sin coste/)
   assert.ok(b.indexOf('ANTES DE MANDARLE A UNA CONSIGNA') < b.indexOf('Lock & Explore'),
     'el aviso tiene que ir ANTES de la lista de consignas')
+})
+
+test('las llaves: el Dúplex dentro, el resto donde se cogieron', () => {
+  assert.match(llavesAlSalir('prop_duplex_center'), /mesa alta de la cocina/)
+  for (const p of ['prop_house_sevillana', 'prop_busto_reform', 'prop_luxury_busto', '']) {
+    assert.match(llavesAlSalir(p), /donde se recogieron|caja de llaves/i, p)
+  }
+  // Nunca revela un código de acceso, así que vale aunque aún no toque dar las instrucciones.
+  assert.ok(!/\d{4,}/.test(llavesAlSalir('prop_busto_reform')))
+})
+
+test('lo que se les pide al salir son cuatro cosas, y no una lista interminable', () => {
+  assert.match(TAREAS_AL_SALIR, /aire acondicionado y las luces/)
+  assert.match(TAREAS_AL_SALIR, /cerrar las ventanas/)
+  assert.match(TAREAS_AL_SALIR, /sacar la basura/)
+  assert.match(TAREAS_AL_SALIR, /mensaje cuando se vayan/)
+  assert.match(TAREAS_AL_SALIR, /y nada más/)
+})
+
+test('antes de ENTRAR con la noche anterior ocupada, el equipaje no se queda dentro', () => {
+  const b = bloqueSalida('11:00', 'prop_house_sevillana')
+  assert.match(b, /ANTES DE ENTRAR[^\n]*NO se puede dejar el equipaje dentro/)
+})
+
+test('pedir salir a una hora POSTERIOR a las 12:00 sale de la ventana gratuita', () => {
+  for (const t of [
+    '¿podríamos salir a las 13:00?',
+    'nos gustaría quedarnos hasta las 14h',
+    'can we check out at 2pm?',
+    'salimos sobre las 12:30 si se puede',
+  ]) assert.equal(pideMasAllaDeLaVentana(t), true, t)
+})
+
+test('dentro de la ventana (o sin hora) NO se sale de ella', () => {
+  for (const t of [
+    '¿podemos salir un poco más tarde?',
+    'nos iremos sobre las 12:00',
+    'salimos a las 11:30',
+    'somos 4 personas con 3 maletas, ¿podemos salir más tarde?',
+    'we would like to leave at 12',
+  ]) assert.equal(pideMasAllaDeLaVentana(t), false, t)
+})
+
+test('una hora de MADRUGADA no cuenta como salida tardía', () => {
+  assert.equal(pideMasAllaDeLaVentana('llegamos a las 23:30'), false)
 })

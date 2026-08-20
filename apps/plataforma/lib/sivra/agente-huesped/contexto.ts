@@ -199,7 +199,7 @@ export async function construirContexto(bookingId: string, lang: string): Promis
     bloqueLlegada(horaCheckIn),
     bloqueParking(),
     bloqueEquipaje(propertyId),
-    bloqueSalida(horaCheckOut),
+    bloqueSalida(horaCheckOut, propertyId),
   ].filter(Boolean)
   const ficha = fichaLineas.join('\n')
 

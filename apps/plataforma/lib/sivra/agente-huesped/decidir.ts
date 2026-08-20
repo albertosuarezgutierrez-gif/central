@@ -20,7 +20,7 @@ import { hiloComoMensajes } from './hilo'
 import { faseReserva, aplicaEarlyCheckin } from './fases'
 import { revisarCierre, bloqueCierre } from './cierre'
 import { revisarCoherencia, REGLA_COHERENCIA } from './coherencia'
-import { bloqueSalidaTardia } from './salida'
+import { bloqueSalidaTardia, pideMasAllaDeLaVentana, SALIDA_FLEX_HASTA } from './salida'
 import { esSolicitudLateCheckout, esDespedida } from './reglas'
 import { esLlegadaFueraDeHorario, HORARIO_ATENCION } from './llegada'
 
@@ -292,11 +292,16 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
     : await debeEscalar(ctx, pregunta, reply)
   const escalaIA = veredicto === 'ESCALAR'
   const sinVerificar = veredicto === 'DESCONOCIDO'
-  // Late check-out SIEMPRE escala, pase lo que pase con el clasificador de calidad — si el borrador
-  // ahora responde bien, `escalaIA` dejaría de marcarlo, y Alberto pidió que siguiera pasando por él.
+  // Salida tardía: desde el 20/08/2026 (decisión de Alberto) el agente puede confirmar SOLO la
+  // ventana gratuita —hasta las 12:00— y únicamente con la ocupación YA VERIFICADA. Todo lo demás
+  // sigue pasando por él: si nombra una hora posterior entra el coste de la limpieza (dinero), y si
+  // no hemos podido comprobar la ocupación no sabemos si la ventana existe siquiera.
   const lateCheckout = esSolicitudLateCheckout(pregunta)
+  const ventanaVerificada = ctx.lateCheckoutChequeado && ctx.lateCheckoutPosible
+  const dentroDeLaVentana = ventanaVerificada && !pideMasAllaDeLaVentana(pregunta, SALIDA_FLEX_HASTA)
+  const escalaSalida = lateCheckout && !dentroDeLaVentana
 
-  const needs_human = sensible || sentimiento === 'negativo' || inventado || escalaIA || lateCheckout || sinVerificar || cierreFueraDeFase || coherencia.incoherente
+  const needs_human = sensible || sentimiento === 'negativo' || inventado || escalaIA || escalaSalida || sinVerificar || cierreFueraDeFase || coherencia.incoherente
 
   // ¿Se apoya en una fuente real? Es la condición del auto-envío (regla del 20/08/2026). Exige que la
   // guía se haya PODIDO LEER: con `guiaCargada=false` no sabemos si la respuesta está respaldada o
@@ -320,8 +325,8 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
           ? 'la respuesta no cubre bien la pregunta — quizá falta en la guía del piso'
           : sinVerificar
             ? 'no se pudo verificar el borrador (control de calidad caído) — lo reviso yo'
-          : lateCheckout
-            ? 'late check-out: requiere confirmación del anfitrión'
+          : escalaSalida
+            ? `salida más allá de las ${SALIDA_FLEX_HASTA} o sin poder verificar la ocupación: lo confirma el anfitrión (tiene coste de limpieza)`
             : cierreFueraDeFase
               ? 'la despedida no encaja con el momento de la reserva (habla de viaje/adiós y el huésped sigue alojado)'
             : coherencia.incoherente

@@ -21,14 +21,32 @@
 // Hasta esta hora, el día de salida y con el piso libre, la estancia se alarga SIN COSTE.
 export const SALIDA_FLEX_HASTA = '12:00'
 
+// Dónde se dejan las llaves al marcharse (respuesta de Alberto, 20/08/2026, a una pregunta que los
+// huéspedes repetían y el agente no sabía contestar: quedó registrada como hueco en
+// `mensajes_guia_gaps`). En el Dúplex se dejan DENTRO; en el resto, donde se cogieron al entrar.
+// Ojo: esto NO revela ningún código de acceso — decir «donde las cogiste» es seguro aunque todavía
+// no toque dar las instrucciones de entrada.
+export function llavesAlSalir(propertyId = ''): string {
+  return propertyId === 'prop_duplex_center'
+    ? 'LLAVES AL SALIR: se dejan DENTRO del apartamento, encima de la mesa alta de la cocina, y se cierra la puerta al marcharse.'
+    : 'LLAVES AL SALIR: se devuelven al MISMO sitio donde se recogieron al llegar (la caja de llaves del check-in), igual que en la entrada.'
+}
+
+// Lo que sí les pedimos al marcharse. Corto a propósito: son cuatro cosas, no una lista de tareas.
+export const TAREAS_AL_SALIR =
+  'AL MARCHARSE, pídeles solo esto (y nada más): apagar el aire acondicionado y las luces, cerrar las ventanas, sacar la basura al salir, y escribirnos un mensaje cuando se vayan para poder coordinar la limpieza. Del resto se encarga nuestro equipo.'
+
 // Bloque para la `ficha` del piso. El agente lo usa SOLO si el huésped pregunta por la salida o por
 // dónde dejar las maletas (REGLA DE ORO: no añadir información no pedida).
-export function bloqueSalida(horaCheckOut = '11:00'): string {
+export function bloqueSalida(horaCheckOut = '11:00', propertyId = ''): string {
   const salida = horaCheckOut || '11:00'
   return [
     `SALIDA / QUEDARSE MÁS TARDE: la salida oficial es a las ${salida}. Si el día de la salida NO entra ningún huésped nuevo, se pueden quedar en el apartamento hasta las ${SALIDA_FLEX_HASTA} SIN COSTE, y eso incluye dejar el equipaje dentro y volver a por él antes de esa hora. Esta es la respuesta a "¿dónde dejamos las maletas el día que nos vamos?" cuando el piso queda libre: no hace falta ninguna consigna de pago.`,
     `Más allá de las ${SALIDA_FLEX_HASTA} también se puede, pero hay que reorganizar a la empresa de limpieza y TIENE UN COSTE que depende de la hora de salida. Puedes ofrecérselo, pero NUNCA des un precio ni digas que es gratis: dile que lo consultas y se lo confirmas.`,
     `Esta flexibilidad depende de que el piso quede libre ese día: si entra otro huésped, no es posible y la salida es a las ${salida} (ahí sí valen las consignas del bloque anterior).`,
+    `ANTES DE ENTRAR es distinto: si la noche anterior está ocupada NO se puede dejar el equipaje dentro (el piso está ocupado y luego hay que limpiarlo); ahí la respuesta es la consigna hasta la hora de entrada.`,
+    llavesAlSalir(propertyId),
+    TAREAS_AL_SALIR,
   ].join('\n')
 }
 
@@ -57,4 +75,30 @@ export function bloqueSalidaTardia(opts: {
     return `SALIDA TARDÍA: hoy, que es su día de salida, no entra nadie más al piso, así que SÍ puedes confirmarle que pueden quedarse hasta las ${SALIDA_FLEX_HASTA} sin coste —y dejar dentro las maletas hasta esa hora si prefieren salir a dar una vuelta—. ${coste}`
   }
   return `SALIDA TARDÍA: ahora mismo no hay ninguna entrada programada para el día de su salida, así que EN PRINCIPIO SÍ van a poder quedarse hasta las ${SALIDA_FLEX_HASTA} sin coste (y dejar dentro el equipaje hasta esa hora). Como pueden entrar reservas de última hora, NO se lo prometas en firme todavía: dile que en principio no hay problema y que se lo confirmáis el mismo día de la salida. ${coste}`
+}
+
+// ¿El huésped pide QUEDARSE MÁS ALLÁ de la ventana gratuita? Si nombra una hora posterior a las
+// 12:00 estamos en el terreno del coste de la limpieza, que decide Alberto: eso NUNCA se auto-envía.
+// Conservador por diseño: ante una hora ambigua se responde `true` (escala), porque el error caro es
+// mandar solo un mensaje que promete algo que cuesta dinero.
+const RE_HORA = /\b(\d{1,2})(?:[:.](\d{2}))?\s*(h|hs|horas?|am|pm|a\.?m\.?|p\.?m\.?)?\b/gi
+
+export function pideMasAllaDeLaVentana(texto: string, hasta = SALIDA_FLEX_HASTA): boolean {
+  const [hLim, mLim] = hasta.split(':').map(Number)
+  const limite = hLim * 60 + (mLim || 0)
+  const t = texto || ''
+  RE_HORA.lastIndex = 0
+  let m: RegExpExecArray | null
+  while ((m = RE_HORA.exec(t))) {
+    let h = parseInt(m[1], 10)
+    const min = m[2] ? parseInt(m[2], 10) : 0
+    const suf = (m[3] || '').toLowerCase()
+    if (isNaN(h) || h > 24 || min > 59) continue
+    if (suf.startsWith('p') && h < 12) h += 12           // 1pm → 13:00
+    // Un número suelto pequeño sin marca de hora (2 personas, 3 maletas…) no es una hora.
+    if (!m[2] && !suf && h < 8) continue
+    const minutos = h * 60 + min
+    if (minutos > limite && minutos <= 22 * 60) return true
+  }
+  return false
 }
