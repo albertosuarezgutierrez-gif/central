@@ -58,3 +58,16 @@
     porque la app standalone `apps/sivra` se mantiene como web pública (ver `sivra-maestro`).
 - Root Directory Vercel: `apps/plataforma`.
 
+## 🔓 `/api/publico/*` — el ÚNICO endpoint sin sesión (20/08/2026)
+`GET /api/publico/disponibilidad?piso=<slug>&meses=<1..12>` alimenta el calendario de la landing de
+House Sevillana (`apps/housesevillana`, otra app). Está en la lista `PUBLIC` del middleware a
+propósito: solo publica qué noches están cogidas de una lista blanca de 4 slugs, lo mismo que el
+motor de Smoobu ya enseña a cualquiera. Sin huéspedes, sin importes, sin identificadores.
+- **Sus cabeceras son un landmine documentado (3 PRs el mismo día).** Dos reglas que no se negocian:
+  una respuesta **cacheada** no puede depender del `Origin` (por eso el CORS es `*` fijo, en el
+  helper puro `lib/sivra/cors-publico.ts`), y `s-maxage` **sin** `max-age` deja que el NAVEGADOR se
+  sirva su propia copia vieja (por eso lleva `max-age=0, must-revalidate`). Hay tests que vigilan
+  ambas, incluido uno que lee el fuente de la ruta para que no vuelva a ramificar por `Origin`.
+- **Verificar CORS exige el camino real y repetido:** `curl -H "Origin: https://housesevillana.es"`
+  varias veces, mirando `x-vercel-cache`. Un 200 de curl a pelo no prueba nada.
+- Detalle completo en `apps/plataforma/CLAUDE.md` § `/api/publico/*`.
