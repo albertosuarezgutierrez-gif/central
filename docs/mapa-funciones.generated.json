@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-19T22:29:35Z",
-  "sha": "9ab46a743a3b6b5ec59989390d1edc3bcafcf89d",
+  "generadoEn": "2026-08-20T08:31:44Z",
+  "sha": "fc437e4453b3cd917a702b38f726b26d9d239242",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -2915,13 +2915,13 @@
           "exportada": true,
           "params": "html: string",
           "retorno": "string",
-          "linea": 194,
+          "linea": 229,
           "resumen": "Traduce el HTML español al inglés. Sustituye de la cadena más larga a la más corta a propósito: si «La casa» se aplicase antes que «La casa por dentro», la segunda quedaría medio traducida."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "90d6cfd6fb59"
+      "hash": "bb295f237b99"
     },
     {
       "ruta": "apps/housesevillana/app/i18n/motor.ts",
@@ -3101,7 +3101,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 767
+          "linea": 771
         },
         {
           "nombre": "GET",
@@ -3109,14 +3109,14 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 903
+          "linea": 910
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "12b6dbc6042c"
+      "hash": "96e1d54e11bc"
     },
     {
       "ruta": "apps/housesevillana/app/sitemap.xml/route.ts",
@@ -54717,6 +54717,46 @@
       "hash": "0268b7637632"
     },
     {
+      "ruta": "apps/plataforma/app/api/publico/disponibilidad/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "OPTIONS",
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "fmt",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": "string",
+          "linea": 53
+        },
+        {
+          "nombre": "OPTIONS",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 57
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 67
+        }
+      ],
+      "tablas": [
+        "next",
+        "rate_snapshots"
+      ],
+      "rutaApi": "/api/publico/disponibilidad",
+      "hash": "7ca8a5992957"
+    },
+    {
       "ruta": "apps/plataforma/app/api/sivra/conciliar-booking/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -57183,7 +57223,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "5d7d044c9e54"
+      "hash": "8481246aade6"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -57206,7 +57246,7 @@
           "exportada": false,
           "params": "pisos: MedicionCanal[], soloProp: string | null, autoGlobal: boolean",
           "retorno": "",
-          "linea": 216
+          "linea": 221
         },
         {
           "nombre": "marcarUsadas",
@@ -57214,7 +57254,7 @@
           "exportada": false,
           "params": "ids: number[]",
           "retorno": null,
-          "linea": 254,
+          "linea": 259,
           "resumen": "Marca las ventanas que han entrado en un ajuste. A partir de aquí ya NO pueden validar nada: el modelo las ha visto. Las que queden a NULL son la muestra limpia de la pasada siguiente."
         },
         {
@@ -57223,7 +57263,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<",
-          "linea": 264
+          "linea": 269
         },
         {
           "nombre": "centinelaHuesped",
@@ -57231,7 +57271,7 @@
           "exportada": false,
           "params": "pisos: MedicionCanal[]",
           "retorno": "Promise<Map<string, ResumenHuesped>>",
-          "linea": 296,
+          "linea": 301,
           "resumen": "¿Qué ve el HUÉSPED en las fechas ya tarifadas? El motor razona en base y con una cuota fija eso deja de describir el precio real (ver `pricing-precio-huesped.ts`). Se cruza la base viva con la mediana"
         },
         {
@@ -57240,7 +57280,7 @@
           "exportada": false,
           "params": "cambios: Cambio[]",
           "retorno": null,
-          "linea": 333
+          "linea": 338
         },
         {
           "nombre": "lineaCambio",
@@ -57248,7 +57288,7 @@
           "exportada": false,
           "params": "c: Cambio",
           "retorno": "string",
-          "linea": 343
+          "linea": 348
         },
         {
           "nombre": "GET",
@@ -57256,7 +57296,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 350
+          "linea": 355
         }
       ],
       "tablas": [
@@ -57271,7 +57311,7 @@
         "rate_snapshots"
       ],
       "rutaApi": "/api/sivra/pricing/canal",
-      "hash": "a8b503739644"
+      "hash": "a0ac89506055"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -68060,6 +68100,60 @@
       "hash": "ebf35fd6901b"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/cors-publico.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "apps/plataforma/lib/sivra/cors-publico.ts Cabeceras CORS del endpoint público de disponibilidad (el que alimenta el calendario de la landing de House Sevillana). 🚨 LA REGLA, aprendida a base de romperla dos veces el mismo día (20/08/2026): **una respuesta que se cachea NO puede depender del `Origin",
+      "exporta": [
+        "cabecerasCors"
+      ],
+      "funciones": [
+        {
+          "nombre": "cabecerasCors",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Record<string, string>",
+          "linea": 39,
+          "resumen": "Cabeceras CORS del endpoint público. No reciben nada de la petición **a propósito**: son constantes para que la copia que guarde el CDN sirva igual a cualquier navegador."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2daede43c9ea"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/disponibilidad-publica.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "apps/plataforma/lib/sivra/disponibilidad-publica.ts Clasificación de noches para el calendario público de la landing de House Sevillana. Por qué esto es un módulo aparte y testeado en vez de tres líneas dentro del handler: la respuesta de Smoobu tiene TRES estados, no dos. `available: 1` es libre, `",
+      "exporta": [
+        "noches",
+        "clasificar"
+      ],
+      "funciones": [
+        {
+          "nombre": "noches",
+          "kind": "function",
+          "exportada": true,
+          "params": "desde: string, hasta: string",
+          "retorno": "string[]",
+          "linea": 19,
+          "resumen": "Noches del rango [desde, hasta), en orden, como 'AAAA-MM-DD'."
+        },
+        {
+          "nombre": "clasificar",
+          "kind": "function",
+          "exportada": true,
+          "params": "rates: Record<string, { available?: number | null } | undefined>, fechas: string[],",
+          "retorno": "",
+          "linea": 37,
+          "resumen": "Reparte las noches en ocupadas y sin dato. Lo que no cae en ningún cubo es libre. Ojo al `!== 1` del final: no es una forma rebuscada de escribir `== null`. Un `available` con un valor inesperado (un "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "444b5bc3a917"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/escaparate-plan.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/escaparate-plan.ts — QUÉ ventanas de NUESTRO PROPIO anuncio hay que medir hoy. POR QUÉ EXISTE (19/08/2026). El motor convierte mercado→base con la recta del canal (`escaparate = markup × base + cuota_fija`, ver `pricing-canal.ts`). Esa recta solo se puede ajustar si alguien mira lo que el ",
@@ -73838,12 +73932,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 41
+          "linea": 47
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "69d4112fc4fe"
+      "hash": "570067d16579"
     },
     {
       "ruta": "apps/rrhh/app/admin/calendario/CalendarioClient.tsx",
@@ -94081,7 +94175,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2506,
-    "funciones": 6818
+    "archivos": 2509,
+    "funciones": 6824
   }
 }
