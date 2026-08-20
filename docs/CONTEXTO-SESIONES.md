@@ -42,8 +42,8 @@
 - **Palanca grande:** pérdidas realizadas de IBKR (−6.642 USD en 2025, −18.746 USD en 2026) compensan al
   100% la ganancia → ~3.700€ menos. ⚠️ Son P&L del bróker en USD SIN tipo de cambio: hace falta el
   informe fiscal en euros antes de contar con ello. El año de venta (2026 vs 2027) importa por esto.
-- **Pendiente bloqueante:** la escritura aportada es de UNA finca de 65,46 m² en una planta; si el
-  dúplex son dos fincas falta el segundo título y la ganancia bajaría. Validación final: Asecon.
+- **Alcance cerrado:** Alberto confirma que es **un solo piso / una sola finca** (2/18031) → las cifras
+  quedan firmes a falta de las facturas reales de ISD/notaría/gestoría. Validación final: Asecon.
 
 ### 🔧 (20/08/2026) Del latido rojo al MERGE sin humano en medio — reparación automática de agentes
 - Pregunta de Alberto tras el fallo del canal: «¿no hay un agente que revise y repare?». Había quien

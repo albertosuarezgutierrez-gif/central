@@ -22,11 +22,10 @@
 | Plusvalía de la donación | Se solicitó **no sujeción** (alegando que no hubo incremento de valor del suelo) |
 | Gastos | Cláusula TERCERO: **todos los gastos e impuestos los paga el donatario** (Alberto), incluida la plusvalía |
 
-**⚠️ Aviso de alcance:** la escritura aportada cubre **UNA sola finca de 65,46 m² en una planta**. Si lo
-que se vende es un dúplex de dos plantas (dos fincas registrales unidas), **falta la escritura de la
-segunda finca** y todo el cálculo de abajo se queda corto: el valor de adquisición sería la suma de
-ambas y la ganancia bajaría mucho. No se ha dado por supuesto ni una cosa ni la otra — hay que
-aportar el segundo título o confirmar que la finca es una sola.
+**✅ Alcance confirmado (Alberto, 20/08/2026):** es **un solo piso, una sola finca registral** — la
+2/18031 que describe esta escritura. No hay un segundo título que aportar, así que el valor de
+adquisición de abajo es completo y las cifras de este estudio son las definitivas a falta de sustituir
+los importes marcados «⚠️ a confirmar» por las facturas reales.
 
 ## 2. El cálculo, pieza a pieza
 
@@ -159,7 +158,7 @@ de sumar nada, hay que revisar qué facturas de obra del dúplex se dedujeron ya
 
 ## 5. Checklist antes de firmar
 
-- [ ] Aportar la **escritura de la segunda finca** si el dúplex son dos (o confirmar que es una sola).
+- [x] ~~Confirmar si el dúplex son una o dos fincas~~ → **una sola** (confirmado 20/08/2026).
 - [ ] Cartas de pago reales: **ISD**, minuta de **notaría**, **gestoría** de la donación de 2024.
 - [ ] **Días alquilados** 2024 / 2025 / 2026 para cerrar la amortización.
 - [ ] **Informe fiscal de IBKR en euros** (2025 y 2026) para la compensación de pérdidas.
