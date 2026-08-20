@@ -14,7 +14,12 @@ import { EN as PARKING_EN, IT as PARKING_IT } from '../parking/traducciones.ts'
 // así que el texto crudo sirve igual. (Mover el HTML de la portada a otro fichero NO es
 // opción: el agente SEO de sivra la reescribe por esa ruta exacta.)
 const leer = (ruta: string) => readFileSync(fileURLToPath(new URL(ruta, import.meta.url)), 'utf8')
-const PORTADA = leer('../route.ts')
+// La portada se valida contra route.ts MAS calendario.ts. El calendario vive en su propio
+// fichero (para no darle superficie al agente SEO que reescribe route.ts los lunes), y si este
+// test siguiera leyendo solo route.ts, sus cadenas quedarían fuera de la red: el diccionario
+// las tendría como claves huérfanas y /en serviría el calendario en castellano sin que salte
+// nada. Es el fallo exacto de PR #1487, detectado en #1495.
+const PORTADA = leer('../route.ts') + leer('../calendario.ts')
 const PARKING = leer('../parking/contenido.ts')
 
 const IDIOMAS = [

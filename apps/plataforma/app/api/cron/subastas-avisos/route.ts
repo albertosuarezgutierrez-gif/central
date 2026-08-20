@@ -9,7 +9,7 @@ import { tgSend, tgSendButtons } from '@central/core-telegram'
 import { prisma } from '@/lib/db'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { eur } from '@/lib/dinero'
-import { decidirAviso, esEmpresaInmobiliaria, umbralesPuja, zonaPreferenteDe } from '@central/module-subastas'
+import { decidirAviso, esEmpresaInmobiliaria, titularPujas, umbralesPuja, zonaPreferenteDe, type EstadoPujas } from '@central/module-subastas'
 import { RADAR_CON_CORPUS, RADAR_VIGENTE } from '@/lib/subastas-radar'
 
 export const dynamic = 'force-dynamic'
@@ -77,7 +77,12 @@ export async function GET(req: NextRequest) {
              s.tipo AS tipo_subasta, s.valor_subasta, s.cantidad_reclamada,
              -- Para la preferencia 🌊: el tipo de BIEN (vivienda/garaje/…) y la
              -- ubicación viven en el corpus, no siempre en el snapshot del radar.
-             s.tipo_bien, s.municipio AS municipio_corpus, s.descripcion AS descripcion_corpus
+             s.tipo_bien, s.municipio AS municipio_corpus, s.descripcion AS descripcion_corpus,
+             -- Competencia y realidad: si ya ha pujado alguien (pestaña ver=5
+             -- del Portal) y a cuánto se remata DE VERDAD en la zona. Sin esto
+             -- el aviso solo sabía de teoría.
+             s.pujas_estado, s.pujas_estado_at, s.mejor_puja, s.remate_esperado, s.remate_ratio,
+             s.remate_muestra, s.techo_fiable, s.techo_motivo
       ${RADAR_CON_CORPUS}
       WHERE r.avisado_at IS NULL
         AND ${RADAR_VIGENTE}
@@ -198,6 +203,31 @@ export async function GET(req: NextRequest) {
       // hecho esperar) lo dice: la urgencia es de la ZONA, no de que esté limpia.
       if (preferente && d.decision !== 'avisar') {
         lineas.push(`⚠️ <i>Adelantado por tu preferencia (${escapar(d.motivo ?? 'pendiente de verificar')}) — revisa cargas y documentación antes de pujar</i>`)
+      }
+      // Pujas: TRES estados. El silencio no se puede leer como «nadie ha
+      // pujado», así que solo se dice algo cuando el Portal lo ha dicho.
+      // Pujas: los cuatro estados del Portal, con el titular común del módulo
+      // (`titularPujas`) para que el aviso diario y el de cierre digan lo mismo.
+      // `desconocido`/NULL no dice nada: el silencio no es «nadie ha pujado».
+      if (p.pujas_estado != null && p.pujas_estado !== 'desconocido') {
+        const titular = titularPujas(
+          { estado: p.pujas_estado as EstadoPujas, importe: p.mejor_puja == null ? null : Number(p.mejor_puja) },
+          eur,
+          p.valor_subasta == null ? null : Number(p.valor_subasta),
+        )
+        lineas.push(escapar(titular) + (p.pujas_estado_at ? escapar(` (visto el ${new Date(p.pujas_estado_at).toLocaleDateString('es-ES')})`) : ''))
+      }
+      // Lo que se paga de verdad en la zona, con su muestra: el tipo de salida
+      // no dice lo que costará rematar.
+      if (p.remate_esperado != null) {
+        const ratio = p.remate_ratio == null ? null : Math.round(Number(p.remate_ratio) * 100)
+        lineas.push(
+          `⚖️ Remate esperado ${escapar(eur(Number(p.remate_esperado)))}` +
+            (ratio != null ? escapar(` (${ratio}% del tipo, ${p.remate_muestra ?? 0} remates reales)`) : ''),
+        )
+      }
+      if (p.techo_fiable === false && p.techo_motivo) {
+        lineas.push(`⚠️ ${escapar(String(p.techo_motivo))}`)
       }
       if (s.url) lineas.push(escapar(s.url))
 

@@ -1,0 +1,264 @@
+name: 🔧 Reparar un agente en rojo
+
+# Del latido rojo al merge, sin humano en medio — y con Telegram SOLO cuando no se ha resuelto.
+# Decisión de Alberto (20/08/2026): «lo más automático posible y solo avisarme en caso de no
+# resolverse por si tengo que intervenir». Diseño completo:
+# docs/superpowers/specs/2026-08-20-latido-autoreparacion-design.md
+#
+# POR QUÉ EXISTE. El cron `sivra_canal` nació el 19/08/2026 y NUNCA completó una pasada (moría en
+# `42883 date - bigint` en su primera consulta). El latido lo dijo a la primera; pero hasta que un
+# humano leyó el Telegram y abrió una sesión, los cuatro pisos siguieron tarificando con el ×1,20
+# supuesto que ese agente existe para corregir. Había quien detecta. Faltaba quien repara.
+#
+# 🚨 EL GATE ES UNA PRUEBA, NO EL ESTADO DE CI. Un `tsc` verde bendice igual el arreglo bueno y un
+# «arreglo» que borre la consulta entera. Y además el estado de checks de un PR MIENTE en este repo:
+# el PR #1529 mostraba ✅ con `tests.yml` y `ci.yml` sin haberse ejecutado nunca (GitHub no dispara
+# `pull_request` a partir de eventos hechos con según qué token — ver la cabecera de
+# `ai-programar.yml`). Por eso este workflow EJECUTA las pruebas en su propio run: exige un test que
+# FALLE sobre `main` y PASE con el parche. Sin esa pareja no hay merge.
+#
+# Comparte el SCRIPT con `ai-programar.yml`, no el workflow: aquel es el camino MANUAL y termina en
+# PR draft a propósito; envolverlo aquí arrastraría sus pasos de espera de CI, que es justo el
+# veredicto en el que no nos podemos apoyar.
+#
+# 🔑 AUTENTICACIÓN — `ALERTA_TOKEN` PREFERIDO, `CRON_SECRET` DE RESPALDO. Los dos endpoints usan
+# `isRoutineAuthorized`, que acepta cualquiera de los dos. Se pide el estrecho primero y se cae al
+# maestro para que este workflow no dependa de un alta manual: el 20/08/2026 se comprobó que el
+# `ALERTA_TOKEN` de Vercel está marcado como **Sensitive** (escritura sin lectura), así que su valor
+# NO se puede recuperar de ningún sitio — ni por dashboard ni por API — y rotarlo para copiarlo aquí
+# desincronizaría de golpe todas las Rutinas de claude.ai/code, que lo llevan escrito en su prompt
+# (avería ya vivida el 19/07/2026 con el agente de trading). Dar aquí el maestro NO contradice la
+# razón por la que existe el token estrecho: ese motivo es que las Rutinas corren en un entorno cuyo
+# campo de variables es texto plano visible. Los secrets de GitHub Actions no lo son, y `CRON_SECRET`
+# ya vive aquí desde antes (lo usa `auditoria.yml`). Si algún día se da de alta `ALERTA_TOKEN` como
+# secret del repo, este workflow lo empieza a preferir solo, sin tocar nada.
+
+on:
+  schedule:
+    # 08:00 UTC — 15 minutos detrás del cron de latidos (07:45), con su parte ya escrito.
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  # Un solo intento vivo en todo el repo: un reparador que abre tres PRs a la vez es más difícil de
+  # auditar que el problema que arregla.
+  group: latido-reparar
+  cancel-in-progress: false
+
+jobs:
+  reparar:
+    name: Reclamar → orquestar → probar → mergear
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'        # 22 = strip-types nativo para `node --test` sobre .ts
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      # ── 1. ¿Hay algo reparable? ────────────────────────────────────────────────────────────────
+      # La decisión (¿es excepción? ¿firma ya intentada? ¿tope agotado?) vive en plataforma, junto a
+      # la BD y al helper puro que la prueba. GitHub solo ejecuta.
+      - name: Reclamar una reparación
+        id: claim
+        env:
+          PLATAFORMA_URL: ${{ secrets.PLATAFORMA_URL }}
+          # ALERTA_TOKEN es el token estrecho; CRON_SECRET es el respaldo. Ver la nota de arriba.
+          ALERTA_TOKEN: ${{ secrets.ALERTA_TOKEN || secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${PLATAFORMA_URL:-}" ] || [ -z "${ALERTA_TOKEN:-}" ]; then
+            echo "::error::Falta el secret PLATAFORMA_URL y/o (ALERTA_TOKEN o CRON_SECRET)"; exit 1
+          fi
+          resp="$(curl -sS -X POST "$PLATAFORMA_URL/api/internal/reclamar-reparacion" \
+                    -H "Authorization: Bearer $ALERTA_TOKEN" -H 'Content-Type: application/json')"
+          echo "$resp" | head -c 2000
+          hay="$(printf '%s' "$resp" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).hay?"si":"no")}catch{console.log("no")}})')"
+          echo "hay=$hay" >> "$GITHUB_OUTPUT"
+          if [ "$hay" = "si" ]; then
+            printf '%s' "$resp" > /tmp/claim.json
+            node -e '
+              const c = require("/tmp/claim.json").reparacion
+              const fs = require("fs")
+              fs.appendFileSync(process.env.GITHUB_OUTPUT, `id=${c.id}\nagente=${c.agente}\n`)
+              // El detalle va por fichero, NUNCA por output/env interpolado en un `run:`: lleva
+              // saltos de línea, backticks y comillas del error de Postgres.
+              fs.writeFileSync("/tmp/detalle.txt", String(c.detalle ?? ""))
+            '
+          fi
+
+      # ── 2. Localizar el código del agente (determinista, sin narración) ────────────────────────
+      # Quién escribe ese latido lo dice el propio repo. No se le pasa al orquestador ninguna
+      # hipótesis sobre la causa: la nota del aviso ya mandó al sitio equivocado una vez.
+      - name: Construir la orden con la EVIDENCIA
+        id: tarea
+        if: steps.claim.outputs.hay == 'si'
+        env:
+          AGENTE: ${{ steps.claim.outputs.agente }}
+        run: |
+          set -euo pipefail
+          ficheros="$(grep -rlE "registrarLatido\(\s*['\"]${AGENTE}['\"]" \
+                        --include='*.ts' apps packages 2>/dev/null | head -5 || true)"
+          [ -z "$ficheros" ] && ficheros="(no localizado: acota tú)"
+          {
+            echo "El agente '${AGENTE}' está en rojo en agente_latidos y su parte es una EXCEPCION."
+            echo ""
+            echo "PARTE CRUDO DEL LATIDO (es la unica evidencia fiable; no hay diagnostico previo):"
+            sed -e 's/^/    /' /tmp/detalle.txt
+            echo ""
+            echo "FICHEROS QUE ESCRIBEN ESE LATIDO:"
+            echo "$ficheros" | sed -e 's/^/    /'
+            echo ""
+            echo "Arregla la causa de esa excepcion. OBLIGATORIO: anade o modifica un test (*.test.ts)"
+            echo "que FALLE sin el arreglo y PASE con el. Sin ese test el cambio se descarta."
+            echo "NO toques .claude/, CLAUDE.md, AGENTS.md, .github/workflows/ ni ficheros .sql."
+          } > /tmp/tarea.txt
+          cat /tmp/tarea.txt
+
+      - name: Orquestar (acota → planifica → ejecuta → aplica)
+        id: orquestar
+        if: steps.claim.outputs.hay == 'si'
+        continue-on-error: true
+        env:
+          PLATAFORMA_URL: ${{ secrets.PLATAFORMA_URL }}
+          AI_GATEWAY_SECRET: ${{ secrets.AI_GATEWAY_SECRET }}
+        run: |
+          set -euo pipefail
+          TAREA="$(cat /tmp/tarea.txt)"
+          node scripts/ai-programar.mjs --tarea "$TAREA" --topN 6
+
+      # ── 3. Carril acotado + gate de prueba ─────────────────────────────────────────────────────
+      - name: Gate — carril acotado y prueba que discrimina
+        id: gate
+        if: steps.claim.outputs.hay == 'si'
+        run: |
+          set -uo pipefail
+          veredicto() { echo "veredicto=$1" >> "$GITHUB_OUTPUT"; echo "motivo=$2" >> "$GITHUB_OUTPUT"; }
+
+          # `git add -A` ANTES de nada: un test NUEVO es un fichero SIN seguimiento, y `git diff` a
+          # secas no lo ve — el gate se saltaría justo el caso normal (el arreglo trae test nuevo).
+          git add -A
+          cambios="$(git diff --cached --name-only)"
+          if [ -z "$cambios" ]; then
+            veredicto "nada" "el orquestador no produjo cambios aplicables"; exit 0
+          fi
+          echo "Cambios:"; echo "$cambios"
+
+          # Carril acotado: lo que le dice a un agente qué hacer, lo que dispara este mismo
+          # workflow, y las migraciones de la BD compartida NUNCA se auto-mergean.
+          if echo "$cambios" | grep -qE '^(\.claude/|CLAUDE\.md|AGENTS\.md|\.github/workflows/)|\.sql$'; then
+            veredicto "pr" "el diff toca el carril acotado (.claude/, CLAUDE.md, workflows o SQL)"; exit 0
+          fi
+
+          tests="$(echo "$cambios" | grep -E '\.test\.tsx?$' || true)"
+          if [ -z "$tests" ]; then
+            veredicto "pr" "el parche no trae ningun test: no hay forma de probar que arregla algo"; exit 0
+          fi
+
+          git diff --cached > /tmp/full.patch
+          git diff --cached -- $tests > /tmp/tests.patch
+          pnpm install --no-frozen-lockfile
+
+          # Volver a `main` limpio de verdad: `reset --hard` deja los ficheros nuevos en disco, y un
+          # test nuevo sin borrar haría que la mitad (a) corriera con el parche ya puesto.
+          limpiar() { git reset --hard -q && git clean -fdq; }
+
+          # (a) SOLO los tests, sobre main → tienen que FALLAR. Si pasan, el test no describe la
+          #     averia (o no la toca), y un test que pasa antes y despues no prueba nada.
+          limpiar
+          git apply /tmp/tests.patch
+          if node --test $tests; then
+            # Se deja el parche COMPLETO puesto aunque no se vaya a mergear: el PR draft tiene que
+            # llevar contenido para que Alberto pueda mirarlo (un PR vacío no es un aviso, es ruido).
+            limpiar && git apply /tmp/full.patch
+            veredicto "pr" "el test nuevo YA PASA sobre main: no reproduce la averia"; exit 0
+          fi
+
+          # (b) Con el parche completo → tienen que PASAR. Esta mitad tambien cierra el agujero de
+          #     (a): un test que ni siquiera importa "falla" alli, pero aqui tampoco pasaria.
+          limpiar
+          git apply /tmp/full.patch
+          if ! node --test $tests; then
+            veredicto "pr" "el test sigue fallando CON el parche: el arreglo no arregla"; exit 0
+          fi
+          # Y la suite entera, para no cambiar un rojo por otro.
+          if ! pnpm test; then
+            veredicto "pr" "el parche rompe la suite completa"; exit 0
+          fi
+          veredicto "merge" "prueba que falla sin el arreglo y pasa con el, suite en verde"
+
+      # ── 4. Aplicar el desenlace ────────────────────────────────────────────────────────────────
+      - name: Abrir PR y (si procede) mergear
+        id: entregar
+        if: steps.claim.outputs.hay == 'si' && steps.gate.outputs.veredicto != 'nada'
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT_TRIGGER || github.token }}
+          AGENTE: ${{ steps.claim.outputs.agente }}
+          VEREDICTO: ${{ steps.gate.outputs.veredicto }}
+          MOTIVO: ${{ steps.gate.outputs.motivo }}
+        run: |
+          set -euo pipefail
+          BRANCH="ai/reparar-${AGENTE}-${{ github.run_id }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "$(printf 'fix(%s): reparación automática de un latido en rojo\n\n%s\n\nGenerado por latido-reparar.yml a partir del parte crudo del latido.\nGate: %s' "$AGENTE" "$(cat /tmp/tarea.txt | head -6)" "$MOTIVO")"
+          git push -u origin "$BRANCH"
+
+          CUERPO="$(printf '## Reparación automática de \`%s\`\n\n**Veredicto del gate:** %s\n\n### Parte del latido que lo disparó\n```\n%s\n```\n\n🤖 `latido-reparar.yml` — el gate ejecuta las pruebas en su propio run: exige un test que falle sobre `main` y pase con el parche. NO se apoya en el estado de checks del PR.' "$AGENTE" "$MOTIVO" "$(cat /tmp/detalle.txt)")"
+
+          if [ "$VEREDICTO" = "merge" ]; then
+            gh pr create --base main --head "$BRANCH" --title "fix($AGENTE): reparación automática (latido en rojo)" --body "$CUERPO"
+            NUM="$(gh pr view "$BRANCH" --json number -q .number)"
+            gh pr merge "$NUM" --squash
+            echo "estado=mergeada" >> "$GITHUB_OUTPUT"
+          else
+            gh pr create --draft --base main --head "$BRANCH" --title "fix($AGENTE): intento de reparación SIN prueba" --body "$CUERPO"
+            NUM="$(gh pr view "$BRANCH" --json number -q .number)"
+            echo "estado=pr_abierto" >> "$GITHUB_OUTPUT"
+          fi
+          echo "pr=$NUM" >> "$GITHUB_OUTPUT"
+
+      # ── 5. Cerrar el claim SIEMPRE ─────────────────────────────────────────────────────────────
+      # Sin esto, un intento que muera aquí deja la fila en `intentando` y bloquea al agente para
+      # siempre. El aviso a Telegram lo decide el endpoint: el éxito no manda nada.
+      - name: Reportar el resultado
+        if: always() && steps.claim.outputs.hay == 'si'
+        env:
+          PLATAFORMA_URL: ${{ secrets.PLATAFORMA_URL }}
+          # ALERTA_TOKEN es el token estrecho; CRON_SECRET es el respaldo. Ver la nota de arriba.
+          ALERTA_TOKEN: ${{ secrets.ALERTA_TOKEN || secrets.CRON_SECRET }}
+          ID: ${{ steps.claim.outputs.id }}
+          ESTADO: ${{ steps.entregar.outputs.estado }}
+          PR: ${{ steps.entregar.outputs.pr }}
+          MOTIVO: ${{ steps.gate.outputs.motivo }}
+        run: |
+          set -uo pipefail
+          export EST="${ESTADO:-fallida}"
+          node -e '
+            const body = {
+              id: Number(process.env.ID),
+              estado: process.env.EST || "fallida",
+              prNumero: process.env.PR ? Number(process.env.PR) : undefined,
+              runUrl: `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`,
+              motivo: process.env.MOTIVO || undefined,
+            }
+            require("fs").writeFileSync("/tmp/resultado.json", JSON.stringify(body))
+          '
+          curl -sS -X POST "$PLATAFORMA_URL/api/internal/reparacion-resultado" \
+            -H "Authorization: Bearer $ALERTA_TOKEN" -H 'Content-Type: application/json' \
+            --data @/tmp/resultado.json || true
+        continue-on-error: true

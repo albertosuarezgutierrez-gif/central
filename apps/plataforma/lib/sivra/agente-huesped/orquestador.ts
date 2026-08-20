@@ -5,7 +5,7 @@ import { decidir, type Decision } from './decidir'
 import { recomendar } from './recomendar'
 import { enviarAlHuesped } from './enviar'
 import { proponerPorTelegram, avisarAutoEnviado } from './telegram-msg'
-import { logMensaje, registrarGap, autoPermitido } from './aprender'
+import { logMensaje, registrarGap } from './aprender'
 import { claveDedup, claimMensaje, liberarMensaje } from './idempotencia'
 import { esEcoPropio } from './atribucion'
 import { prisma } from '@/lib/db'
@@ -109,22 +109,30 @@ export async function procesarMensajeHuesped(
       dec = await decidir(ctx, pregunta, categoria)
     }
 
-    if (dec.needs_human && !ctx.guia && !ctx.ficha && dec.categoria !== 'recomendacion') {
+    // Hueco de conocimiento: escalamos porque la respuesta no queda cubierta por las fuentes. Antes
+    // solo se anotaba cuando NO había ni ficha ni guía, así que con la guía leída no se anotaría
+    // nunca — y el hueco es justo lo que hay que enseñarle. No se anota lo sensible (queja/dinero),
+    // que escala por política y no por ignorancia.
+    if (dec.needs_human && !dec.apoyada_en_fuente && dec.categoria !== 'recomendacion'
+        && dec.sentimiento !== 'negativo' && /no cubre|no se pudo verificar/.test(dec.motivo || '')) {
       await registrarGap(ctx.propertyId, pregunta)
     }
 
-    // 3) ¿Auto-envío (Fase 2) o propuesta por Telegram (Fase 1 / sensible)?
+    // 3) ¿Auto-envío o propuesta por Telegram?
     // Guardas comunes: nunca se auto-envía nada que requiera ojo humano (sensible / negativo / dato
     // inventado / escalado IA) ni sin borrador ni con sentimiento negativo.
     const guardasOk = !dec.needs_human && !!dec.reply && dec.sentimiento !== 'negativo'
     // (a) CORTESÍA de fin de estancia (despedidas / agradecimientos / cierres puros): respuestas
-    //     "siempre iguales" y de riesgo mínimo → se auto-envían SIN depender del contador de
-    //     graduación por categoría. Decisión de Alberto (26/07/2026): "este tipo de mensajes puede
-    //     mandarse ya automáticamente". Antes un cierre (requiere_respuesta=false) NUNCA se auto-enviaba.
-    // (b) Categoría básica ya GRADUADA (5 aprobaciones sin corregir) con respuesta que sí se requiere.
+    //     "siempre iguales" y de riesgo mínimo. Decisión de Alberto (26/07/2026).
+    // (b) RESPUESTA APOYADA EN UNA FUENTE (20/08/2026, decisión de Alberto): si lo que contesta sale
+    //     de la guía real del piso, de la ficha de la reserva o de los hechos que él ha enseñado, se
+    //     manda solo. Esto SUSTITUYE a la graduación por categorías (`autoPermitido`), que era un
+    //     contador de aprobaciones y no sabía nada de si la respuesta estaba respaldada: con la guía
+    //     leída, la fuente es mejor criterio que la categoría.
+    //     `apoyada_en_fuente` ya exige que la guía se haya podido leer y que nada la marque dudosa.
     const autoCortesia = guardasOk && dec.es_cortesia === true
-    const autoGraduado = guardasOk && dec.requiere_respuesta !== false && await autoPermitido(dec.categoria, dec.confidence)
-    const puedeAuto = autoCortesia || autoGraduado
+    const autoApoyada = guardasOk && dec.requiere_respuesta !== false && dec.apoyada_en_fuente === true
+    const puedeAuto = autoCortesia || autoApoyada
     if (puedeAuto) {
       const ok = await enviarAlHuesped(ctx.reservationId, dec.reply)
       await logMensaje({ bookingId, propertyId: ctx.propertyId, categoria: dec.categoria, pregunta, respuesta: dec.reply, fuente: dec.fuente, confidence: dec.confidence, sentimiento: dec.sentimiento, needs_human: false, auto_sent: ok, edited: false })

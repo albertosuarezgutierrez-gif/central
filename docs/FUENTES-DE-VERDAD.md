@@ -28,6 +28,7 @@
 | skill `perfil-fiscal` | `apps/plataforma/lib/fiscal-deducciones.ts`, `apps/plataforma/lib/finanzas.ts`, `/finanzas` |
 | `apps/ia-rest/CLAUDE.md` | `apps/ia-rest/**` |
 | `apps/sivra/CLAUDE.md` | `apps/sivra/**` |
+| `apps/plataforma/CLAUDE.md` § `/api/publico/*` | `apps/plataforma/app/api/publico/**`, `apps/plataforma/lib/sivra/cors-publico.ts` (+ su `.test.ts`), `apps/plataforma/middleware.ts` (lista PUBLIC). Único endpoint sin sesión; su cabecera de caché y su CORS son un landmine documentado (3 PRs) |
 | `apps/ialimp/CLAUDE.md` | `apps/ialimp/**` |
 | `apps/plataforma/CLAUDE.md` | `apps/plataforma/**` |
 | `apps/rrhh/CLAUDE.md` | `apps/rrhh/**` |
@@ -37,7 +38,8 @@
 | skill `transporte-maestro` | `apps/transporte/**` |
 | skill `alquiler-maestro` | `apps/alquiler/**` |
 | `apps/mariscos/CLAUDE.md` | `apps/mariscos/**`, `packages/module-pesca/**` |
-| `apps/housesevillana/CLAUDE.md` | `apps/housesevillana/**` (portada `app/route.ts`, diccionarios `app/{en,it}/traducciones.ts`, `app/i18n/motor.ts`, páginas SEO `/barrio` `/que-ver` `/parking`), `apps/sivra/lib/seo-landing.ts` (el agente SEO reescribe la portada los lunes) |
+| `docs/TRASPASO-CORREDURIA.md` (+ `docs/CONTRATO-ENCARGADO-TRATAMIENTO-MANUEL.md`) | `apps/seguros/**` (la vertical **aún no existe**: el día que aparezca, este runbook pasa de plan a histórico), `apps/plataforma/lib/correduria.ts` + `apps/plataforma/app/api/correduria/**` (la frontera que el doc marca: comisiones cobradas ≠ operativa del CRM). **PENDIENTE ABIERTO**: mensaje a Manuel enviado el 20/08/2026, esperando su respuesta; el contrato de encargado sigue **sin firmar** (falta decidir quién firma como responsable) y sus categorías de datos se cierran con el inventario de la Fase 1 |
+| `apps/housesevillana/CLAUDE.md` | `apps/housesevillana/**` (portada `app/route.ts`, calendario `app/calendario.ts`, diccionarios `app/{en,it}/traducciones.ts`, `app/i18n/motor.ts`, páginas SEO `/barrio` `/que-ver` `/parking`), `apps/sivra/lib/seo-landing.ts` (el agente SEO reescribe la portada los lunes). **⚠️ Dependencia CROSS-APP:** el calendario se alimenta de `apps/plataforma/app/api/publico/disponibilidad/**` + `apps/plataforma/lib/sivra/{cors-publico,disponibilidad-publica}.ts` — un cambio ahí rompe la landing sin tocar ni un fichero suyo (pasó tres veces el 20/08/2026) |
 | skill SINCRONIZADA `seo-house-sevillana` (fuera del repo, `/root/.claude/skills/synced/`) | `apps/housesevillana/**` — **punto ciego: nadie la reconcilia sola**. Su ficha y sus dos JSON-LD dan a House Sevillana la dirección de OTROS pisos (Bustos Tavera 22 en vez de Socorro 24). Dato bueno en `apps/housesevillana/CLAUDE.md`; parche listo en `docs/PARCHE-skill-seo-house-sevillana.md`; aplicarlo es de Alberto |
 | Manuales usuario ia-rest | `apps/ia-rest/src/components/help/help-prompts.ts`, `apps/ia-rest/public/manual*.html`, `apps/ia-rest/src/app/**` (features visibles) |
 | skill `fiscal-novedades` | `apps/plataforma/lib/fiscal-deducciones.ts` (`IMPORTES_POR_ANIO`), tablas `fiscal_novedades`/`fiscal_ayudas`/`ayudas_perfiles`, banners 💶 (`apps/plataforma` `/finanzas`, `apps/almacen` panel, `apps/ialimp` dashboard) |

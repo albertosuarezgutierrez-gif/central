@@ -22,6 +22,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 
 import { caducidadDelCuadro } from './caducidad.ts'
+import type { MuroDocumental } from './edicto.ts'
 import { norm, parseImporteEs } from './parsing.ts'
 import { numeroAlFinal, palabrasANumero } from './numeros-es.ts'
 
@@ -957,7 +958,9 @@ export function esDocumentoDeCargas(titulo: string | null | undefined): boolean 
  *  · `sin_cargas`             — leídas y cuantificadas: no subsiste ninguna (un 0 leído vale).
  *  · `sin_cuantificar`        — consta que hay cargas, pero nadie ha determinado el importe.
  *  · `publicadas_sin_extraer` — la ficha publica el documento y no tenemos su cuadro de cargas.
- *  · `no_publicadas`          — ficha revisada: no hay documento de cargas que abrir.
+ *  · `ocultas_tras_login`     — el Portal no enseña la lista de documentos sin iniciar sesión.
+ *  · `ocultas_pese_a_sesion`  — el lector YA entró identificado y el Portal las sigue sin publicar.
+ *  · `no_publicadas`          — ficha revisada Y visible entera: no hay documento de cargas que abrir.
  *  · `sin_revisar`            — ni siquiera se ha mirado la ficha todavía.
  */
 export type EstadoCargas =
@@ -965,6 +968,8 @@ export type EstadoCargas =
   | 'sin_cargas'
   | 'sin_cuantificar'
   | 'publicadas_sin_extraer'
+  | 'ocultas_tras_login'
+  | 'ocultas_pese_a_sesion'
   | 'no_publicadas'
   | 'sin_revisar'
 
@@ -982,6 +987,21 @@ export interface EntradaEstadoCargas {
   documentos?: AdjuntoFicha[] | null
   /** `false` para las fuentes sin ficha documental (los lotes de la Junta). */
   publicaAdjuntos?: boolean
+  /**
+   * Lo que el Portal deja ver sin iniciar sesión (`muroDocumental`). Con muro,
+   * una lista corta o vacía NO autoriza a decir que el BOE no publica nada:
+   * lo único cierto es que a nosotros no nos lo enseña.
+   */
+  muro?: MuroDocumental | null
+  /**
+   * ¿La última lectura de la ficha se hizo CON sesión en el Portal?
+   * `true` = sí · `false` = en anónimo · `null`/`undefined` = no consta
+   * (fichas leídas antes de que el cron supiera identificarse).
+   *
+   * Solo cambia el recado cuando hay muro, y ahí lo cambia entero: «inicia
+   * sesión» frente a «pide la certificación al Registro».
+   */
+  sesion?: boolean | null
 }
 
 /**
@@ -1016,6 +1036,18 @@ export function estadoCargas(e: EntradaEstadoCargas): {
   // No se sabe. Lo útil es decir POR QUÉ, porque cada porqué manda a un sitio
   // distinto: abrir el PDF que ya tenemos, esperar al cron, o ir al Registro.
   if (documento) return { estado: 'publicadas_sin_extraer', documento }
+  // 🚨 Antes de negar la publicación, ¿nos la han dejado ver? Con el muro del
+  // Portal la lista que tenemos está capada (o vacía del todo), y decir «no
+  // publicadas» manda a Alberto al Registro a pagar por una certificación que
+  // está a un login de distancia. Va ANTES que el `docs == null` porque el muro
+  // es una respuesta más precisa que «pendiente de revisar».
+  if (e.muro === 'total' || e.muro === 'parcial') {
+    // Y con QUÉ ojos se miró: si la lectura ya iba identificada, «inicia sesión»
+    // es un recado imposible de cumplir y esconde la verdad —que ahí no hay nada
+    // que abrir y toca pedir la certificación al Registro—. Mandar a alguien a
+    // hacer lo que ya está hecho es la forma educada de no decir nada.
+    return { estado: e.sesion === true ? 'ocultas_pese_a_sesion' : 'ocultas_tras_login', documento: null }
+  }
   if (docs == null) {
     return { estado: e.publicaAdjuntos === false ? 'no_publicadas' : 'sin_revisar', documento: null }
   }
@@ -1066,6 +1098,18 @@ export function titularCargas(e: EntradaEstadoCargas): TitularCargas {
         ...base,
         emoji: '🟠',
         texto: `El BOE SÍ publica «${(documento?.titulo ?? 'certificación de cargas').trim()}» pero NO tenemos su cuadro de cargas: ábrela antes de pujar.`,
+      }
+    case 'ocultas_tras_login':
+      return {
+        ...base,
+        emoji: '🟠',
+        texto: 'El Portal del BOE NO enseña los documentos de esta subasta sin iniciar sesión: entra con tu usuario y ábrelos antes de pujar (no hace falta ir al Registro).',
+      }
+    case 'ocultas_pese_a_sesion':
+      return {
+        ...base,
+        emoji: '🟠',
+        texto: 'Ni con sesión iniciada publica el Portal los documentos de esta subasta: aquí sí hace falta pedir la certificación de cargas al Registro (o al juzgado) antes de pujar.',
       }
     case 'sin_revisar':
       return { ...base, emoji: '🟠', texto: 'Cargas sin comprobar: la ficha del BOE todavía no se ha revisado.' }
