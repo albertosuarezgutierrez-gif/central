@@ -18,6 +18,18 @@
 //
 //   --dry   imprime la petición que se enviaría y termina, sin tocar la red.
 //
+// 🚨 CADENA DE CA (verificado el 20/08/2026 contra los dos endpoints reales): SES sirve un
+// certificado que NO valida ningún almacén de CA público — falla con `UnknownIssuer` incluso
+// cargando el bundle completo de Mozilla, y el dominio no tiene emisiones en Certificate
+// Transparency. Hay que darle la cadena de la Administración explícitamente:
+//
+//   NODE_EXTRA_CA_CERTS=/ruta/ses-ca.pem SES_USUARIO=... node scripts/ses-probar-conexion.mjs
+//
+// El PEM se saca del portal de SES o exportando la cadena del endpoint desde el navegador.
+// NUNCA se desactiva la verificación TLS para esquivarlo: por este canal viajan documentos de
+// identidad, y aceptar cualquier certificado convierte un fallo de configuración en un
+// man-in-the-middle silencioso.
+//
 // CÓMO LEER EL RESULTADO:
 //   401  → usuario o contraseña del SERVICIO WEB incorrectos (ojo: son distintos de los del
 //          acceso web con certificado digital, y se cambian en el portal SES).
@@ -125,8 +137,17 @@ try {
     console.log('   consulta bien formada a propósito. Lo que se estaba probando era el acceso.');
   }
 } catch (e) {
+  const detalle = `${e.message} ${e.cause?.message ?? ''}`;
   console.log(`❌ No se pudo conectar: ${e.message}`);
-  console.log('   Si sale un 403 en el CONNECT, la máquina desde la que corres esto tiene');
-  console.log('   bloqueado *.mir.es. Ejecútalo desde una red que lo alcance.');
+  if (/UNABLE_TO_(GET|VERIFY)|SELF_SIGNED|UnknownIssuer|CERT_/i.test(detalle)) {
+    console.log('   Es el fallo de CADENA DE CA conocido: SES no usa una CA pública.');
+    console.log('   Relánzalo con la cadena de la Administración:');
+    console.log('     NODE_EXTRA_CA_CERTS=/ruta/ses-ca.pem node scripts/ses-probar-conexion.mjs');
+    console.log('   No lo esquives desactivando la verificación TLS: por aquí van documentos');
+    console.log('   de identidad y aceptar cualquier certificado abre la puerta a un MITM.');
+  } else {
+    console.log('   Si sale un 403 en el CONNECT, la máquina desde la que corres esto tiene');
+    console.log('   bloqueado *.mir.es. Ejecútalo desde una red que lo alcance.');
+  }
   process.exit(1);
 }
