@@ -45,9 +45,9 @@
 - **Alcance cerrado:** Alberto confirma que es **un solo piso / una sola finca** (2/18031).
 - **Cruzado con la declaración 2025** (hilo Asecon + registro en Drive): Villasís estuvo **240 días
   arrendado**, ingresos declarados 18.606,47€ (neto Booking) y gastos 3.052,26€ → renta ~15.554€/año
-  (4,86% sobre 320.000€). 🚨 **Sospecha: la amortización se calculó sobre el valor catastral de
-  construcción (443€/año) en vez del valor ISD (1.929€/año)** → 1.486€/año de gasto perdido,
-  rectificable 2024-2025. Pedir a Marta el desglose. Validación final: Asecon.
+  (4,86% sobre 320.000€). Dos preguntas abiertas para Asecon: base de la amortización (valor ISD, no
+  catastral — STS 15/09/2021) y si entraron las limpiezas (~1.800€/año). Rectificables 2024-25 si
+  fallan. Validación final: Asecon.
 
 ### 🔧 (20/08/2026) Del latido rojo al MERGE sin humano en medio — reparación automática de agentes
 - Pregunta de Alberto tras el fallo del canal: «¿no hay un agente que revise y repare?». Había quien

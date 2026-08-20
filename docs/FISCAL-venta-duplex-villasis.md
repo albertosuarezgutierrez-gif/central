@@ -69,23 +69,36 @@ deducido o no. La declaración IRPF 2025 (hilo con Asecon, 28/06/2026) da el dat
 
 Si la venta se va a diciembre de 2026, sube a ~3.318,50€ (unos 146€ más de IRPF).
 
-### 2.2 bis 🚨 Posible amortización infra-deducida en 2024 y 2025 — dinero a recuperar
+### 2.2 bis Dos preguntas para Asecon sobre los gastos de 2025
 
-El total de **TODOS** los gastos deducibles del dúplex en 2025 fue **3.052,26€**, y ahí dentro caben
-comunidad (~914€/año), suministros (~1.200€), seguro, IBI **y** la amortización. Los números no dejan
-sitio para una amortización de 1.268€: apunta a que se calculó sobre el **valor catastral de
-construcción** (14.767,86€ → 3% = 443,04€/año) en vez de sobre el valor de adquisición.
+En 2025 el dúplex declaró **3.052,26€** de gastos deducibles TOTALES, que según el hilo incluyen
+«comunidad, suministros, primas de seguro, tributos, amortización y otros». Del desglose solo consta
+el total, así que lo de abajo son **preguntas, no hallazgos**.
 
-Para un inmueble adquirido a **título lucrativo**, el «coste de adquisición satisfecho» del art. 23.1.b
-LIRPF es el **valor declarado en el ISD más gastos y tributos** (STS de 15/09/2021, rec. 5664/2019), y
-se toma el **mayor** de ese coste y el valor catastral. Aquí eso son 64.291,60€ frente a 14.767,86€:
-**1.485,71€ más de gasto deducible al año**.
+**a) ¿Sobre qué base se amortizó?** Para un inmueble adquirido a **título lucrativo**, el «coste de
+adquisición satisfecho» del art. 23.1.b LIRPF es el **valor declarado en el ISD más gastos y tributos**
+(STS de 15/09/2021, rec. 5664/2019), y se toma el **mayor** de ese coste y el valor catastral:
 
-⚠️ **No está confirmado**: el desglose de esos 3.052,26€ no consta en el hilo, solo el total. Hay que
-pedir a Marta el detalle por conceptos. Si se confirma, se puede **rectificar la autoliquidación** de
-2024 y 2025 (4 años de plazo) y recuperar ese gasto **al tipo marginal de la base general** — bastante
-más caro que el 23% al que la amortización encarece ahora la ganancia. Es la única partida de este
-estudio que juega en los dos sentidos: **interesa deducirla bien, aunque suba la ganancia de la venta.**
+| Base usada | 3% anual | Prorrateado a 240 días |
+|---|---|---|
+| **Valor ISD (la correcta aquí)** | 1.928,75€ | **1.268,22€** |
+| Valor catastral de construcción (14.767,86€) | 443,04€ | 291,26€ |
+
+Reconstruyendo los gastos conocidos (comunidad ~914€, luz ~1.214€, internet ~251€, IBI e seguro),
+prorrateados al 240/365, quedan del orden de **1.000-1.200€** para la amortización — o sea, la cifra
+es **compatible con un cálculo correcto**. No hay motivo para pensar que esté mal; simplemente
+conviene confirmarlo, porque la diferencia entre las dos bases es de **977€/año** y aún se puede
+rectificar 2024 y 2025 (4 años de plazo).
+
+**b) ¿Se metieron las limpiezas?** En la BD el dúplex acumula 4-8 limpiezas al mes a 25€ (Sique
+Brilla) → del orden de **1.800€/año**, que son gasto deducible del arrendamiento y no se prorratean
+(son por reserva). Con ellas dentro, el total de gastos se iría muy por encima de 3.052,26€, así que
+o no entraron o entraron por otra vía. Merece la pregunta: es dinero al tipo marginal de la base
+general, más caro que el 23% de la venta.
+
+> Ojo con el sentido del ajuste: **deducir mejor la amortización sube la ganancia de la venta**
+> (art. 35.1.b obliga a restarla del valor de adquisición, se haya deducido o no). Aun así compensa:
+> se recupera al marginal general y solo encarece la venta al 23%.
 
 ### 2.3 Plusvalía municipal (IIVTNU) — elegir método, hay 24.000€ de diferencia
 
@@ -206,7 +219,8 @@ venta, pero sí la foto de rentabilidad.
 - [x] ~~Confirmar si el dúplex son una o dos fincas~~ → **una sola** (confirmado 20/08/2026).
 - [ ] Cartas de pago reales: **ISD**, minuta de **notaría**, **gestoría** de la donación de 2024.
 - [x] ~~Días alquilados 2025~~ → **240 días** (declaración IRPF 2025). Falta el dato de **2024 y 2026**.
-- [ ] 🚨 Pedir a Marta el **desglose de los 3.052,26€** de gastos de 2025: sobre qué base se amortizó.
+- [ ] Pedir a Marta el **desglose de los 3.052,26€** de gastos de 2025: base de amortización y si
+      entraron las limpiezas (ver 2.2 bis).
 - [ ] **Informe fiscal de IBKR en euros** (2025 y 2026) para la compensación de pérdidas.
 - [ ] Confirmar con Marta que la **pérdida patrimonial de IBKR de 2025 quedó declarada** y pendiente de
       compensar (el certificado de IBKR se le entregó el 03/06/2026: «adjunto documento de interactive,
