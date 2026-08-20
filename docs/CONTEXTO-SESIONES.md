@@ -32,6 +32,19 @@
 
 ---
 
+### 🔓 (20/08/2026) El cron ya se identifica en el Portal del BOE — y el muro cambia de significado
+- Alberto: «ya tengo usuario en el BOE con mi firma digital». Comprobado en `/acceso.php`: de las tres vías
+  (certificado · **usuario+contraseña** · Cl@ve) solo la segunda sirve a un proceso; `POST /id/login.php`
+  sin CSRF ni captcha. **La firma digital NO entra en repo ni en Vercel.** Envs: `BOE_PORTAL_USUARIO`,
+  `BOE_PORTAL_PASSWORD` — sin ellas todo sigue en anónimo igual que antes.
+- 🚨 El Portal **bloquea cuentas** («…o está bloqueado»): un rechazo se cachea y NUNCA se reintenta; solo el
+  fallo de red es reintentable. `interpretarLogin` exige el éxito POSITIVO (fixture del error REAL).
+- Columna `documentos_sesion` + estado `ocultas_pese_a_sesion`: el mismo muro significa «identifícate»
+  (gratis) o «pide la certificación al Registro» (tasa) según con qué ojos se miró. Ante `null`, el barato.
+- Las 9 fichas con muro se releen en la primera pasada con sesión (validado contra la BD). 503 tests módulo,
+  1372 plataforma, tsc+build limpios. **Pendiente de Alberto:** poner las dos envs en Vercel y probar con
+  `fase3-debug?accion=portal` (devuelve solo el veredicto, nunca la contraseña).
+
 ### 🛡️ (20/08/2026) Traspaso del CRM de correduría de Manuel Suárez — runbook, BLOQUEADO en Fase 0
 Manuel desarrolló el CRM en SU Supabase y SU Vercel; el negocio es de Alberto y hay que traérselo.
 Plan cerrado en `docs/TRASPASO-CORREDURIA.md`. Decisiones: BD → **schema `seguros` en `central`**

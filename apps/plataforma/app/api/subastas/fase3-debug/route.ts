@@ -14,6 +14,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { ingerirJunta } from '@/lib/subastas/junta'
 import { procesarDocumentos } from '@/lib/subastas/documentos'
+import { olvidarSesionPortal, sesionPortal, titularSesionPortal } from '@/lib/subastas/portal-sesion'
 import { clasificarSubastas } from '@/lib/subastas/clasificar'
 import { reextraerDatosDeTexto } from '@/lib/subastas/reextraer'
 import { aplicarReferenciaMercado, chollosVigentes, enriquecerAnunciantesFotocasa, ingerirComparables, leerIndiceINE, pulsoMercado, referenciaZonasFotocasa, refrescarIndiceINE } from '@/lib/subastas/mercado'
@@ -55,6 +56,26 @@ export async function GET(req: NextRequest) {
     } catch (e: any) {
       return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
     }
+  }
+  // ¿Funcionan las credenciales del Portal? Devuelve SOLO el veredicto y el
+  // usuario configurado — nunca la contraseña, ni la cookie de sesión. Es la
+  // forma de comprobar `BOE_PORTAL_USUARIO`/`BOE_PORTAL_PASSWORD` sin que la
+  // contraseña pase por un chat, un log o un PR.
+  //
+  // 🚨 `olvidarSesionPortal()` aquí es deliberado: es el ÚNICO sitio donde se
+  // puede reintentar tras un rechazo, y solo porque lo dispara una persona que
+  // acaba de cambiar la credencial. El cron nunca reintenta: el Portal bloquea
+  // cuentas tras varios intentos fallidos.
+  if (sp.get('accion') === 'portal') {
+    olvidarSesionPortal()
+    const s = await sesionPortal()
+    return NextResponse.json({
+      ok: s.estado === 'iniciada',
+      estado: s.estado,
+      titular: titularSesionPortal(s),
+      usuario: (process.env.BOE_PORTAL_USUARIO ?? '').trim() || null,
+      passwordConfigurada: Boolean(process.env.BOE_PORTAL_PASSWORD),
+    })
   }
   if (sp.get('accion') === 'documentos') {
     try {

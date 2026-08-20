@@ -73,3 +73,22 @@ test('sin muro nada cambia', () => {
   assert.equal(estadoDocumentacion(null, true, 'ninguno'), 'sin_revisar')
   assert.equal(resumenDocumentos([doc('EDICTO')], true, 'ninguno'), '1 documento')
 })
+
+// ── Con qué ojos se miró el muro ───────────────────────────────────────────
+// Mismo hecho («no veo la lista»), dos recados opuestos: uno cuesta un login y
+// el otro una tasa del Registro. Decir el caro cuando toca el barato le cuesta
+// a Alberto una mañana; decir el barato cuando toca el caro le hace pujar a
+// ciegas creyendo que le falta un clic.
+
+test('🚨 con sesión iniciada no se pide un login que ya se hizo', () => {
+  assert.equal(resumenDocumentos([], true, 'total', true), 'documentos no publicados ni con sesión iniciada')
+  assert.equal(resumenDocumentos([], true, 'total', false), 'documentos ocultos: hay que iniciar sesión en el Portal')
+  // Sin constancia (fichas viejas) se mantiene el recado barato.
+  assert.equal(resumenDocumentos([], true, 'total', null), 'documentos ocultos: hay que iniciar sesión en el Portal')
+})
+
+test('el muro parcial matiza la lista según se leyera identificado o no', () => {
+  const docs = [{ titulo: 'CERTIFICACIÓN DE CARGAS', url: 'x' }]
+  assert.match(resumenDocumentos(docs, true, 'parcial', true), /no publica el resto ni con sesión/)
+  assert.match(resumenDocumentos(docs, true, 'parcial', false), /sin sesión \(el Portal esconde el resto\)/)
+})

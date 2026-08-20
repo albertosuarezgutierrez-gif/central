@@ -101,6 +101,7 @@ export default async function SubastasPage() {
     const docs = new Map<string, {
       semaforo: string | null; analisis: unknown; notasEdicto: string | null; documentos: unknown
       documentosMuro: 'ninguno' | 'parcial' | 'total' | null
+      documentosSesion: boolean | null
       caducidad: ReturnType<typeof caducidadDeFila>
     }>()
     if (radar.length > 0) {
@@ -119,6 +120,7 @@ export default async function SubastasPage() {
           notasEdicto: f.notas_edicto ?? null,
           documentos: f.documentos ?? null,
           documentosMuro: f.documentos_muro ?? null,
+          documentosSesion: f.documentos_sesion ?? null,
           caducidad: caducidadDeFila(f.cargas_detalle),
         })
       }
@@ -162,6 +164,7 @@ export default async function SubastasPage() {
           analisis: f.analisis ?? null,
           documentos: f.documentos ?? null,
           documentosMuro: f.documentos_muro ?? null,
+          documentosSesion: f.documentos_sesion ?? null,
           caducidad: caducidadDeFila(f.cargas_detalle),
           precioM2Zona: f.precio_m2_zona != null ? Number(f.precio_m2_zona) : null,
           muestraZona: f.muestra_zona ?? null,
