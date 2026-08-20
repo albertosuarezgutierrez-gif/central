@@ -262,6 +262,14 @@ descargar desde el contenedor de desarrollo: el proxy de salida bloquea `*.mir.e
 
 Cuatro tablas nuevas, prefijo `ses_`:
 
+> ✅ **CONSTRUIDA Y APLICADA** el 20/08/2026 (`prisma/sql/2026-08-20_ses_establecimientos.sql`),
+> con su pantalla de alta en `/sivra/partes/establecimientos` y el latido leyendo de ella.
+> Env nueva: **`SES_CRYPTO_KEY`** (32 bytes en base64, `openssl rand -base64 32`), sin literal
+> de respaldo. Al crear la tabla se descubrió que en esta BD compartida **una tabla nueva nace
+> abierta a `anon`/`authenticated`** por los privilegios por defecto del schema `public`: la
+> migración incluye el `REVOKE` y eso pasa a ser parte de crear cualquier tabla con datos
+> sensibles aquí.
+
 **`ses_establecimientos`** — `id`, `negocio_id`, `property_id`, `codigo_arrendador`,
 `codigo_establecimiento`, `usuario`, `password_cifrada`, `entorno` (`pruebas`|`produccion`),
 `activo`, `validado_en`, `ultimo_error`.

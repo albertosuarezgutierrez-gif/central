@@ -1,76 +1,85 @@
 // /api/cron/ses-latido — 💓 Latido del TRANSPORTE con SES.HOSPEDAJES.
 //
-// Comprueba a diario que seguimos pudiendo hablar con el Ministerio: TLS, credenciales del
-// servicio web y que el `codigoArrendador` tiene el WS habilitado. Deja huella en
-// `agente_latidos.ses_transporte`, que es lo que vigila `/api/cron/agentes-latido`.
+// Comprueba a diario que seguimos pudiendo hablar con el Ministerio **por cada piso**:
+// TLS, credenciales del servicio web y que el `codigoArrendador` tenga el WS habilitado.
+// Deja huella en `agente_latidos.ses_transporte`, que es lo que vigila
+// `/api/cron/agentes-latido` media hora después.
 //
-// 🚨 Es de SOLO LECTURA: usa la operación `C` (consulta), que no da de alta ni anula nada. No
-// existe todavía ningún envío real de partes — hoy los manda Chekin— y este cron NO envía ninguno.
+// 🚨 Es de SOLO LECTURA: usa la operación `C` (consulta), que no da de alta ni anula nada.
+// No existe todavía ningún envío real de partes —hoy los manda Chekin— y este cron no
+// envía ninguno.
+//
+// POR PISO, NO DE MUESTRA: cada establecimiento tiene sus propias credenciales, así que
+// comprobar uno solo y dar por buenos los demás sería exactamente el «se puso verde
+// porque no miró» que esta casa persigue. Se recorren todos los activos.
 //
 // POR QUÉ EXISTE ANTES QUE EL CONECTOR:
-//   1. **La hoja del certificado de SES caduca el 03/09/2026.** Cuando la roten, esto es lo único
-//      que dirá si la cadena sigue cerrando. Sin el latido nos enteraríamos el día que hiciera
-//      falta enviar un parte, con un plazo legal de 24 h corriendo.
-//   2. El entorno de pruebas del Ministerio (`pre-ses`) devolvía 502 a todo el 20/08/2026: no hay
-//      sandbox. Lo único que se puede ensayar sin riesgo es exactamente esto.
+//   1. **La hoja del certificado de SES caduca el 03/09/2026.** Cuando la roten, esto es lo
+//      único que dirá si la cadena sigue cerrando. Sin el latido nos enteraríamos el día que
+//      hiciera falta enviar un parte, con un plazo legal de 24 h corriendo.
+//   2. El entorno de pruebas del Ministerio (`pre-ses`) devolvía 502 a todo el 20/08/2026:
+//      no hay sandbox. Lo único que se puede ensayar sin riesgo es exactamente esto.
 //
-// SOBRE LA CADENA DE CA: no se configura nada a propósito. La raíz `AC RAIZ FNMT-RCM` es pública y
-// está en el almacén estándar, y SES sirve el intermedio, así que la verificación por defecto de
-// Node debería bastar. Si NO basta en Vercel, este latido lo dirá con un detalle que nombra el TLS
-// —y entonces se carga `packages/module-ses/certs/ses-ca-bundle.pem` vía `NODE_EXTRA_CA_CERTS`.
-// Averiguarlo es parte de lo que este cron está midiendo.
+// SOBRE LA CADENA DE CA: no se configura nada a propósito. La raíz `AC RAIZ FNMT-RCM` es
+// pública y está en el almacén estándar, y SES sirve el intermedio, así que la verificación
+// por defecto de Node debería bastar. Si NO basta en Vercel, este latido lo dirá con un
+// detalle que nombra el TLS —y entonces se carga `packages/module-ses/certs/ses-ca-bundle.pem`
+// vía `NODE_EXTRA_CA_CERTS`. Averiguarlo es parte de lo que este cron está midiendo.
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
-import { ENDPOINTS, peticionConsulta, enviarSes, type Entorno } from '@central/module-ses'
-import { evaluarSondaSes } from '@/lib/ses/sonda'
+import { activosConCredencial, activosSinCredencial } from '@/lib/ses/establecimientos'
+import { probarEstablecimiento } from '@/lib/ses/probar'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
-
-// UUID inexistente pero bien formado. La consulta de un lote que no existe es la petición más
-// inocua que admite el servicio: ejercita todo el camino (TLS → Basic → cabecera → ZIP) sin tocar
-// ni un dato del Ministerio.
-const LOTE_INEXISTENTE = '00000000-0000-0000-0000-000000000000'
+export const maxDuration = 120
 
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 
-  const usuario = process.env.SES_USUARIO
-  const password = process.env.SES_PASSWORD
-  const arrendador = process.env.SES_ARRENDADOR
-  const entorno = (process.env.SES_ENTORNO ?? 'produccion') as Entorno
-  const aplicacion = process.env.SES_APLICACION ?? 'central'
+  const [conCredencial, sinCredencial] = await Promise.all([
+    activosConCredencial(),
+    activosSinCredencial(),
+  ])
 
-  // Sin credenciales NO se late en verde ni se calla: es un «no se ha podido mirar», que el vigía
-  // debe ver igual que una avería. Un latido que se salta la comprobación cuando falta una env es
-  // exactamente el check que se pone verde porque no miró.
-  if (!usuario || !password || !arrendador) {
-    const faltan = [
-      !usuario && 'SES_USUARIO', !password && 'SES_PASSWORD', !arrendador && 'SES_ARRENDADOR',
-    ].filter(Boolean).join(', ')
-    const detalle = `sin credenciales configuradas en Vercel (faltan: ${faltan})`
+  // Cero establecimientos NO es «todo en orden»: es que no hay nada configurado
+  // todavía. Un vigía que se calla cuando no tiene a quién vigilar es un vigía que
+  // se ha apagado sin avisar.
+  if (conCredencial.length === 0 && sinCredencial.length === 0) {
+    const detalle = 'no hay ningún establecimiento dado de alta en /sivra/partes/establecimientos'
     await registrarLatido('ses_transporte', false, detalle)
     return NextResponse.json({ ok: false, motivo: detalle })
   }
 
-  const url = ENDPOINTS[entorno] ?? ENDPOINTS.produccion
-  const respuesta = await enviarSes({
-    url,
-    credenciales: { usuario, password },
-    sobre: peticionConsulta({ codigoArrendador: arrendador, aplicacion, lotes: [LOTE_INEXISTENTE] }),
-  })
+  // Secuencial, no en paralelo: son cuatro pisos y no hay prisa, y así no se
+  // aporrea al Ministerio con peticiones simultáneas desde la misma IP.
+  const resultados: Array<{ nombre: string; ok: boolean; accion: string; detalle: string }> = []
+  for (const e of conCredencial) {
+    const r = await probarEstablecimiento(e.id)
+    resultados.push({ nombre: e.nombre, ...r })
+  }
 
-  const veredicto = evaluarSondaSes(respuesta)
-  await registrarLatido('ses_transporte', veredicto.transporteOk, `${entorno} · ${veredicto.detalle}`)
+  const fallan = resultados.filter((r) => !r.ok)
+  const ok = fallan.length === 0 && sinCredencial.length === 0
 
-  return NextResponse.json({
-    ok: veredicto.transporteOk,
-    entorno,
-    clase: respuesta.clase,
-    codigo: respuesta.codigo,
-    detalle: veredicto.detalle,
-  })
+  // El detalle nombra QUÉ piso falla y CON QUÉ acción, porque «SES falla» sin más
+  // obliga a abrir la pantalla para saber por dónde empezar.
+  const partes: string[] = []
+  if (resultados.length) {
+    partes.push(`${resultados.length - fallan.length}/${resultados.length} pisos con transporte OK`)
+  }
+  for (const f of fallan) {
+    const que = f.accion === 'esperar' ? 'esperar (no es nuestro)' : 'revisar portal SES'
+    partes.push(`${f.nombre}: ${f.detalle} → ${que}`)
+  }
+  if (sinCredencial.length) {
+    partes.push(`sin contraseña guardada: ${sinCredencial.map((e) => e.nombre).join(', ')}`)
+  }
+
+  const detalle = partes.join(' · ')
+  await registrarLatido('ses_transporte', ok, detalle)
+
+  return NextResponse.json({ ok, detalle, resultados, sinCredencial })
 }
