@@ -205,7 +205,7 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
      - `estado='intentando'` o `'mergeada'` con `veredicto IS NULL` → **hay un intento vivo**:
        menciónalo en el informe con su PR y **NO abras un PR de carril 2 por ese agente** (dos
        parches a la vez sobre el mismo fallo se pisan). El veredicto lo dicta el latido a las 24 h.
-     - `estado='rendida'` o `veredicto='sigue_roto'` → el automático ya se rindió y Alberto ya
+     - `estado='rendida'` o `veredicto='sigue_roja'` → el automático ya se rindió y Alberto ya
        tiene su Telegram: **eso SÍ es tuyo**, y es prioritario (nadie más lo va a mirar).
      - `estado='pr_abierto'` → hay un PR draft sin mergear esperando ojo humano; enlázalo en el
        informe en vez de duplicar el trabajo.
