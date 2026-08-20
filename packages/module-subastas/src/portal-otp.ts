@@ -69,14 +69,28 @@ export function codigoDeCorreo(c: Pick<CorreoOtp, 'asunto' | 'cuerpo'>): string 
  * @param intentoEn instante en que se lanzó el POST del login. Un correo
  *   anterior a esto es de OTRO intento, por muy reciente que parezca.
  * @param margenMs  holgura para el desfase de reloj entre Vercel y Gmail.
- *   Pequeña a propósito: cuanto más ancha, más cerca de aceptar el código
- *   anterior. Con dos intentos seguidos separados por segundos, esta ventana
- *   es lo único que los distingue.
+ *
+ *   🚨 AQUÍ HUBO 30 SEGUNDOS Y SE COMIÓ UN INTENTO REAL (20/08/2026). Los
+ *   correos del Portal llegaron a las 16:11:47, 16:11:58 y 16:12:27: **once
+ *   segundos entre dos intentos**. Con un margen de 30 s el correo del intento
+ *   ANTERIOR cae dentro de la ventana, gana por ser «el más reciente válido», y
+ *   el Portal responde «El código de verificación proporcionado es
+ *   incorrecto». O sea: el margen puesto para tolerar el reloj era más ancho
+ *   que la distancia entre intentos, y se convirtió en la puerta de entrada del
+ *   dato viejo que este módulo existe para bloquear.
+ *
+ *   Por eso ahora es de 5 s y, sobre todo, por eso está `yaUsados`: el margen
+ *   solo protege del reloj; lo que impide reusar un código es haber apuntado
+ *   cuáles se han mandado ya.
+ *
+ * @param yaUsados códigos que este proceso YA ha enviado. Un código es de un
+ *   solo uso: reintentarlo no puede funcionar y sí quema el intento.
  */
 export function codigoDelIntento(
   correos: readonly CorreoOtp[],
   intentoEn: Date,
-  margenMs = 30_000,
+  margenMs = 5_000,
+  yaUsados: ReadonlySet<string> = new Set(),
 ): string | null {
   const suelo = intentoEn.getTime() - margenMs
   const validos = correos
@@ -87,7 +101,7 @@ export function codigoDelIntento(
 
   for (const c of validos) {
     const codigo = codigoDeCorreo(c)
-    if (codigo) return codigo
+    if (codigo && !yaUsados.has(codigo)) return codigo
   }
   // Ni uno posterior al intento. NO se cae al más nuevo de los viejos: eso
   // sería mandar el código de la sesión anterior y quemar este intento.

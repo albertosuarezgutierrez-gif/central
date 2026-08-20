@@ -35,10 +35,13 @@ import { norm } from './parsing.ts'
  *  · `rechazada`   — el Portal dice que los datos no valen o la cuenta no está
  *                    activa. **Nunca se reintenta**: el propio mensaje avisa de
  *                    que la cuenta puede acabar bloqueada.
+ *  · `captcha`    — el Portal ha escalado y exige descifrar una imagen. Es su
+ *                    forma explícita de pedir una persona: **se deja de
+ *                    intentar**, no se resuelve. Ver `pideCaptcha`.
  *  · `desconocido` — ni una cosa ni la otra (portal caído, rediseño, HTML que no
  *                    es el esperado). Reintentable, pero SIN afirmar que hay sesión.
  */
-export type EstadoLogin = 'iniciada' | 'rechazada' | 'desconocido'
+export type EstadoLogin = 'iniciada' | 'rechazada' | 'captcha' | 'desconocido'
 
 export interface ResultadoLogin {
   estado: EstadoLogin
@@ -91,6 +94,21 @@ export function interpretarLogin(html: string, cookies: readonly string[] = []):
   // bueno en un `desconocido`.
   if (pareceIdentificada(html)) return { estado: 'iniciada', motivo: null }
 
+  // 🚨 CAPTCHA: el Portal ha escalado. Pasó de verdad el 20/08/2026 tras una
+  // ráfaga de intentos fallidos — dejó de pedir el código y empezó a pedir «los
+  // caracteres de la imagen». Es un control anti-automatización dirigido
+  // exactamente contra este cron, y la respuesta correcta a un «demuéstrame que
+  // eres una persona» es dejar de intentarlo, no buscarle la vuelta.
+  //
+  // Se trata como `rechazada` a efectos de reintento: se recuerda y no se
+  // vuelve a probar. Insistir escalaría a bloqueo de la cuenta.
+  if (pideCaptcha(html)) {
+    return {
+      estado: 'captcha',
+      motivo: 'el Portal exige un captcha: ha detectado el acceso automático y pide una persona',
+    }
+  }
+
   return { estado: 'desconocido', motivo: 'la respuesta del Portal no confirma que la sesión se haya abierto' }
 }
 
@@ -107,4 +125,19 @@ export function pareceIdentificada(html: string): boolean {
   // misma cabecera. «Cerrar sesión» se mantiene por si el Portal lo usa en
   // alguna pantalla, pero NO es lo que enseña la barra.
   return /desconectar/.test(t) || /mi perfil/.test(t) || /cerrar sesion/.test(t)
+}
+
+/**
+ * ¿El Portal está pidiendo un captcha en vez de dejar seguir?
+ *
+ * Se exige la conjunción de la frase Y el campo: el texto solo podría venir de
+ * una página de ayuda, y un `name="captcha"` suelto podría estar oculto en otro
+ * formulario. Ninguna de las dos cosas por separado autoriza a decir que el
+ * Portal ha escalado.
+ */
+export function pideCaptcha(html: string): boolean {
+  const t = texto(html ?? '')
+  const frase = /introduzca los caracteres de la imagen|verificacion de seguridad/.test(t)
+  const campo = /<input\b[^>]*\bname\s*=\s*["\']?captcha\b/i.test(html ?? '')
+  return frase && campo
 }
