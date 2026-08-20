@@ -36,7 +36,13 @@ const PUBLIC = ['/login', '/register', '/api/auth', '/admin', '/api/admin', '/ap
   '/api/sivra/mercado/ingest', '/api/sivra/pricing/aplicar-propuesta',
   // TEMPORAL Fase 3 subastas: puente de exploración de fuentes (auth por token
   // en BD `subastas_debug_token`, hosts oficiales cerrados). Se retira al cerrar la fase.
-  '/api/subastas/fase3-debug']
+  '/api/subastas/fase3-debug',
+  // Calendario de la landing de House Sevillana. SIN auth a propósito y de forma acotada:
+  // publica solo qué noches están cogidas de una lista blanca de pisos, que es exactamente lo
+  // que el motor de reservas de Smoobu ya le enseña a cualquiera que entre en él. No sale ni un
+  // huésped, ni un importe, ni un id de reserva. Un slug fuera de la lista da 400, así que
+  // tampoco sirve de índice de las propiedades del grupo.
+  '/api/publico']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl

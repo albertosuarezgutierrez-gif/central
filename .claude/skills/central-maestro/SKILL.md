@@ -28,9 +28,33 @@ description: >
 | Cuadro de mando consolidado, god-panel `/admin`, Cuenta→Sociedad→Negocio, **concursos/licitaciones** | **plataforma** | `plataforma-maestro` |
 | Flota/camiones como negocio, vehículos, conductores, portes, rutas, servicios de transporte, intercompany flota→catering | **transporte** | `transporte-maestro` |
 | Alquiler de materiales/menaje (catálogo, tarifas/día, fianzas, disponibilidad, reserva→devolución), intercompany materiales→eventos | **alquiler** | `alquiler-maestro` |
+| Correduría de seguros **OPERATIVA**: clientes, pólizas, siniestros, vencimientos, integraciones con aseguradoras | **asegura** (Grupo Asegura) — ⚠️ **la app NO existe todavía**, solo su SQL de cimientos | `docs/TRASPASO-CORREDURIA.md` (doc único) |
 | "¿Se ha roto algo?", auditoría, pruebas/testeo, post-rename/migración | (transversal) | `auditoria-central` |
 | Logo, banner, imagen de marca, mockup visual, iconos, diseño gráfico, activo visual | (transversal Adobe CC) | `adobe-diseno` |
 | "Adáptalo a la imagen corporativa de X", "corporativo 100%", cliente/tenant nuevo o rebrand, dejar la UI idéntica a SU marca (logo/colores/tipografía) | (transversal `@central/brand`) | `marca-cliente` |
+
+### 🛡️ Seguros — DOS cosas distintas con el mismo nombre (20/08/2026)
+Preguntar por «la correduría» es ambiguo y las dos respuestas viven en sitios distintos:
+- **Comisiones COBRADAS** (matriz compañía×mes, CIMA/TIREA, derivado de `movimientos_bancarios`
+  con `destino='seguros'`, siempre BBVA) → **existe y está vivo** en `apps/plataforma /correduria`
+  + `lib/correduria.ts` → skill `plataforma-maestro`.
+- **Operativa del CRM** (clientes, pólizas, siniestros) → **NO está en el repo todavía**. Lo desarrolló
+  Manuel Suárez en SU Supabase y SU Vercel (repo externo `manuelsuarez/asegura`, que Claude **no puede
+  leer**). El traspaso a **`apps/asegura`** + schema `seguros` está planificado en
+  `docs/TRASPASO-CORREDURIA.md`; el mensaje a Manuel se envió el **20/08/2026** y la Fase 1 espera su
+  respuesta. En `central` ya están los **cimientos vacíos**: schema `seguros` + rol `prisma_seguros`
+  (inerte, sin contraseña), en `apps/asegura/prisma/sql/2026-08-19_asegura_bootstrap.sql`.
+
+**🏷️ Nombres — los tres son correctos, cada uno en su capa** (esto causó dos planes duplicados el
+20/08/2026): app/carpeta/Vercel = **`apps/asegura`** (la marca), schema y rol de BD = **`seguros`** /
+`prisma_seguros` (el dominio), módulo compartido si aparece = `packages/module-seguros`. **Hubo un
+`docs/ASEGURA-MIGRACION.md` que planificaba lo mismo con otro nombre: se fundió en
+`docs/TRASPASO-CORREDURIA.md` y se borró.** Si lees `apps/seguros` en algún sitio, es residuo previo
+a la fusión.
+
+🚨 **Que no esté en el repo NO significa que no exista** — es el error que ya se cometió con la landing
+de House Sevillana (se afirmó «no hay web» porque vivía fuera del monorepo, PR #1387→#1388). Antes de
+decirle a Alberto que algo «no existe», comprueba si es que **vive fuera** de `central`.
 
 ## Capa común (matriz + packages/*) — reglas que NO se rompen
 - La **raíz es la MATRIZ**, no una vertical. No metas lógica de producto en la raíz.
@@ -46,7 +70,8 @@ description: >
   su proyecto viejo `efncqyvhniaxsirhdxaa` fue borrado definitivamente (19/08/2026). Plataforma lo sigue leyendo por **puerto HTTP**
   (patrón de aislamiento entre apps), no por Prisma sobre `iarest.*`.
 - **Cada app conecta con su PROPIO rol de BD** (`prisma_sivra`, `prisma_ialimp`, `prisma_plataforma`, `prisma_transporte`,
-  `prisma_alquiler`; rrhh→`rrhh_app`). Todos: `login` + `BYPASSRLS` + grants DML en `public`, **sin CREATE** (mínimo privilegio). **NUNCA conectar una app
+  `prisma_alquiler`; rrhh→`rrhh_app`; correduría→`prisma_seguros` sobre el schema `seguros`, creado pero
+  **inerte hasta que se le ponga contraseña**). Todos: `login` + `BYPASSRLS` + grants DML en `public`, **sin CREATE** (mínimo privilegio). **NUNCA conectar una app
   como `postgres`** (superusuario): resetear su contraseña tumba a todas a la vez (incidente 26/06). Una app/vertical nueva → **dale
   su rol** clonado de `prisma_sivra`. Pooler: `<rol>.wswbehlcuxqxyinousql@aws-0-eu-west-1.pooler.supabase.com` (6543 pooled `?pgbouncer=true` / 5432 direct).
   Las **migraciones** se aplican como `postgres` (Supabase/MCP), no por el rol de la app.

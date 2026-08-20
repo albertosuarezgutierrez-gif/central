@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSmoobuKey, smoobuFetch } from '@/lib/smoobu'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { procesarMensajeHuesped } from '@/lib/sivra/agente-huesped/orquestador'
+import { construirContexto } from '@/lib/sivra/agente-huesped/contexto'
+import { decidir } from '@/lib/sivra/agente-huesped/decidir'
+import { detectLang, detectCategory } from '@/lib/sivra/agente-huesped/reglas'
 import { mensajeYaProcesado } from '@/lib/sivra/agente-huesped/idempotencia'
 import { atribuirEmisor } from '@/lib/sivra/agente-huesped/atribucion'
 
@@ -49,6 +52,38 @@ export async function GET(req: NextRequest) {
   // heurística del hilo (que omite un hilo si su ÚLTIMO mensaje es del host/automático) y enruta
   // directamente al agente. Útil para re-proponer una respuesta (p.ej. corregir la hora de salida).
   const manualBooking = req.nextUrl.searchParams.get('booking')
+
+  // SIMULACRO (?booking=<id>&q=<pregunta>&dry=1): recorre el pipeline completo —guía real del piso,
+  // ventana de acceso, decisión— y DEVUELVE lo que saldría, sin enviar nada al huésped, sin proponer
+  // por Telegram y sin escribir en la BD. Existe porque desde el 20/08/2026 el agente auto-envía
+  // cuando la respuesta se apoya en una fuente: sin simulacro, «probar» con el disparo manual
+  // significaba mandarle un mensaje de verdad a un huésped real.
+  if (manualBooking && req.nextUrl.searchParams.get('dry')) {
+    const pregunta = (req.nextUrl.searchParams.get('q') || '').trim()
+    if (!pregunta) return NextResponse.json({ error: 'falta ?q=<pregunta a simular>' }, { status: 400 })
+    const ctx0 = await construirContexto(manualBooking, 'en')
+    if (!ctx0) return NextResponse.json({ error: 'sin contexto (¿reserva inexistente?)' }, { status: 404 })
+    const lang = detectLang(pregunta, (['es','en','fr','de','it'].includes(ctx0.idiomaReserva) ? ctx0.idiomaReserva : 'en') as any)
+    const categoria = detectCategory(pregunta) || 'general'
+    const dec = await decidir({ ...ctx0, lang }, pregunta, categoria)
+    return NextResponse.json({
+      simulacro: true,
+      piso: ctx0.property,
+      // La distinción que sostiene toda la autonomía: `guiaCargada:false` es «no se pudo leer»,
+      // y con eso NUNCA se auto-envía.
+      guia: { cargada: ctx0.guiaCargada, secciones: (ctx0.guia || '').split('\n## ').length - (ctx0.guia ? 0 : 1), accesoOculto: ctx0.guiaAccesoOculto },
+      hechos: ctx0.hechos.length,
+      hilo: ctx0.historial.length,
+      decision: {
+        categoria: dec.categoria, needs_human: dec.needs_human, apoyada_en_fuente: !!dec.apoyada_en_fuente,
+        sentimiento: dec.sentimiento, motivo: dec.motivo,
+      },
+      seEnviariaSolo: !dec.needs_human && !!dec.reply && dec.sentimiento !== 'negativo'
+        && dec.requiere_respuesta !== false && (!!dec.apoyada_en_fuente || dec.es_cortesia === true),
+      borrador: dec.reply,
+    })
+  }
+
   if (manualBooking) {
     const q = req.nextUrl.searchParams.get('q') || undefined
     const msgId = q ? `manual:${manualBooking}:${Date.now()}` : undefined

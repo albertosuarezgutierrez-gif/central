@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert'
-import { detectLang, detectCategory, extractEarlyTime, PARKING_SPOTS, esSolicitudLateCheckout, esDespedida } from './reglas.ts'
+import { detectLang, detectCategory, extractEarlyTime, PARKING_SPOTS, esSolicitudLateCheckout, esDespedida, esHechoDelPiso } from './reglas.ts'
 
 test('detectLang detecta español', () => assert.equal(detectLang('Hola, ¿a qué hora es el check-in?'), 'es'))
 test('detectLang cae a inglés', () => assert.equal(detectLang('What is the wifi password?'), 'en'))
@@ -66,3 +66,18 @@ test('esDespedida: plan de salida futuro NO dispara', () =>
   assert.equal(esDespedida('Mañana salimos temprano'), false))
 test('esDespedida: pregunta de wifi NO dispara', () =>
   assert.equal(esDespedida('¿Cuál es la contraseña del wifi?'), false))
+
+test('esHechoDelPiso: una pregunta real con respuesta con sustancia SÍ es un hecho', () => {
+  assert.equal(esHechoDelPiso('¿Dónde dejo las llaves?', 'Déjalas en la mesa alta de la cocina y cierra la puerta.'), true)
+  assert.equal(esHechoDelPiso('Where can I park?', 'There is a public car park on Plaza San Juan de la Palma, five minutes away.'), true)
+})
+
+test('esHechoDelPiso: cortesías y acuses NO son hechos', () => {
+  assert.equal(esHechoDelPiso('Muchas gracias por todo', 'Gracias a ti, ha sido un placer recibirte en Sevilla.'), false)
+  assert.equal(esHechoDelPiso('¿Puedo llegar a las 18:00?', 'Ok'), false)
+  assert.equal(esHechoDelPiso('', 'Las llaves están en la caja del portal, con el código de tu reserva.'), false)
+})
+
+test('esHechoDelPiso: una afirmación del huésped sin pregunta no enseña nada', () => {
+  assert.equal(esHechoDelPiso('Llegamos sobre las seis de la tarde', 'Perfecto, tomo nota de vuestra llegada sobre las 18:00.'), false)
+})

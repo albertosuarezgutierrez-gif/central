@@ -127,3 +127,52 @@ const RE_DESPEDIDA = new RegExp([
 export function esDespedida(text: string): boolean {
   return RE_DESPEDIDA.test(text || '')
 }
+
+// ¿Este par pregunta→respuesta enseña un HECHO sobre la vivienda, o es solo cortesía/estilo?
+// Un hecho va SIEMPRE al prompt (es permanente); una cortesía solo alimenta el tono y caduca.
+// Distinguirlos es lo que evita que «las llaves se dejan en la mesa alta de la cocina» (lo único
+// que Alberto llegó a enseñarle de verdad) acabe sepultado bajo veinte «gracias a ti»: en
+// `mensajes_aprendizaje` iban al mismo montón y solo se inyectaban las 8 últimas filas del piso.
+//
+// Conservador a propósito en las DOS direcciones: pedimos que el huésped haya PREGUNTADO algo y que
+// la respuesta tenga sustancia. Un falso negativo solo pierde un hecho (se puede volver a enseñar);
+// un falso positivo mete ruido permanente en el prompt de todas las conversaciones futuras.
+const RE_PREGUNTA = /[?¿]|d[oó]nde|c[oó]mo|cu[aá]l|cu[aá]nt|cu[aá]ndo|qu[eé]\b|hay\b|puedo|podemos|se puede|necesito|where|how|what|which|when|can i|can we|is there|are there|do you have|o[uù]\b|comment|combien|quand|peut|wo\b|wie\b|wann|kann|dove|come\b|quanto|posso/i
+const RE_ACUSE = /^(ok|vale|perfecto|genial|estupendo|de acuerdo|entendido|anotado|tomo nota|noted|great|perfect|d\u0027accord|parfait)\b[\s.!,…]*$/i
+
+export function esHechoDelPiso(pregunta: string, respuesta: string): boolean {
+  const p = (pregunta || '').trim()
+  const r = (respuesta || '').trim()
+  if (r.length < 25) return false          // «de nada 😊» no enseña nada
+  if (RE_ACUSE.test(r)) return false
+  if (!p) return false
+  if (esDespedida(p)) return false         // despedida/agradecimiento → es estilo, no hecho
+  return RE_PREGUNTA.test(p)
+}
+
+// ── Minado del histórico (parte pura) ───────────────────────────────────────
+export type MsgMin = { from: 'guest' | 'host'; text: string; automatico: boolean }
+export type ParQA = { pregunta: string; respuesta: string }
+
+// Empareja cada pregunta del huésped con la PRIMERA respuesta humana del anfitrión que viene
+// después. Descarta los automáticos de Smoobu (confirmaciones, recordatorios: son plantillas, no
+// conocimiento) y los pares que no enseñan nada (`esHechoDelPiso`).
+export function paresPregRespuesta(msgs: MsgMin[]): ParQA[] {
+  const out: ParQA[] = []
+  let pendiente = ''
+  for (const m of msgs || []) {
+    if (!m || !m.text) continue
+    if (m.from === 'guest') { pendiente = m.text; continue }
+    if (m.automatico) continue          // plantilla del sistema: ni contesta ni interrumpe el par
+    if (!pendiente) continue
+    if (esHechoDelPiso(pendiente, m.text)) out.push({ pregunta: pendiente, respuesta: m.text })
+    pendiente = ''
+  }
+  return out
+}
+
+// Los automáticos de Smoobu/Booking llevan ASUNTO; los mensajes escritos a mano, no.
+export function esAutomatico(subject: string, text: string): boolean {
+  if ((subject || '').trim() !== '') return true
+  return /check.?in online|disponible para tu reserva|self.?check.?in|enregistrement en ligne/i.test(text || '')
+}

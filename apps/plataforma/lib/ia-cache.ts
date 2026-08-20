@@ -57,7 +57,9 @@ export async function guardarCache(
     await prisma.$executeRaw`
       INSERT INTO ia_cache_semantica (app, ambito, pregunta, embedding, respuesta, modelo, expira_at)
       VALUES (${app}, ${ambito}, ${texto.slice(0, 4_000)}, ${emb}::vector, ${respuesta}, ${opts.modelo ?? null},
-              now() + make_interval(hours => ${ttl}))`
+              -- ::int OBLIGATORIO: Prisma manda los números como bigint y
+              -- make_interval(hours => bigint) no existe (42883) → NADA se cacheaba.
+              now() + make_interval(hours => ${ttl}::int))`
   } catch { /* fail-open */ }
 }
 

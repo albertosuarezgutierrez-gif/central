@@ -174,6 +174,41 @@ export const TRADUCCIONES: Record<string, string> = {
   'Reservar': 'Book',
   'Contacto': 'Contact',
   'Calle Socorro 24, Sevilla': 'Calle Socorro 24, Seville',
+  '&copy; House Sevillana &middot; Todos los derechos reservados':
+    '&copy; House Sevillana &middot; All rights reserved',
+  // --- Calendario de disponibilidad ---
+  'Calendario':
+    'Calendar',
+  'Noches libres de un vistazo':
+    'Free nights at a glance',
+  'Orientativo: el precio y las condiciones exactas de tus fechas se confirman en el motor de reservas.':
+    'For guidance only: the exact price and conditions for your dates are confirmed in the booking engine.',
+  'Meses anteriores':
+    'Previous months',
+  'Meses siguientes':
+    'Next months',
+  'Consultando disponibilidad&hellip;':
+    'Checking availability&hellip;',
+  'No hemos podido consultar el calendario':
+    'We could not load the calendar',
+  'No sabemos qu&eacute; noches est&aacute;n libres ahora mismo, as&iacute; que preferimos no ense&ntilde;arte un calendario que podr&iacute;a estar equivocado. El motor de reservas s&iacute; tiene la disponibilidad real.':
+    'We do not know which nights are free right now, so we would rather not show you a calendar that could be wrong. The booking engine does have the real availability.',
+  'Ver disponibilidad real':
+    'See real availability',
+  'Noche libre':
+    'Night available',
+  'Noche ocupada':
+    'Night booked',
+  'Sin confirmar':
+    'Not confirmed',
+  'Fecha pasada':
+    'Past date',
+  'Disponibilidad actualizada el':
+    'Availability updated on',
+  'Elegir fechas y ver precio':
+    'Choose dates and see the price',
+  'Activa JavaScript para ver el calendario de disponibilidad, o consulta las fechas directamente en el motor de reservas.':
+    'Enable JavaScript to see the availability calendar, or check the dates directly in the booking engine.',
   'VFT/SE/01179 &middot; Registro de Turismo de Andaluc&iacute;a':
     'VFT/SE/01179 &middot; Andalusian Tourism Registry',
   'Llamar': 'Call',

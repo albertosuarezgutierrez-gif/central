@@ -15,6 +15,29 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-20 · facturas-correo** · hizo: preflight canal alerta OK (200); Vía B sana (1 día,
+  última copia `_buzon_pdf` 19/08); backlog `PDF-pendiente`/`Revisar` vacío; barrido Paso 4.0
+  (`v_facturas_sin_cargo`) sin filas `sin_revisar` (las 8 pendientes ya estaban `revisada_sin_cargo`,
+  nada que reabrir); candidatos Gmail `newer_than:2d` → solo 2 avisos Endesa sin PDF/importe
+  (Dúplex ref P26CON034750472, Socorro ref P26CON034910794 — el portal no adjunta PDF, se cuadran
+  por banco cuando entre el cargo, aún sin postear) + 1 invitación de calendario de Pilar (descartada).
+  Etiquetados `Facturas/Procesada`. Sin candidatos nuevos que archivar/conciliar. ⚠️ Hallazgo:
+  la factura Giraldillo AFV-11808 (72,60€, ya bien archivada en `07-Julio-2026` y conciliada) se
+  sigue duplicando cada pocos días en `ALBERTO 2026 PERSONAL (SEGUROS)/JULIO` junto con más basura
+  no relacionada (PNGs, PDFs de otras empresas) — bug de cron ya avisado el 01/08 en la papelera
+  `_DUPLICADOS_BORRAR`, sigue activo 20 días después y empeorando (3+ copias); no es corregible desde
+  esta skill (código de `apps/plataforma`, agente `facturas-scan`). dudas: —; fallos: cron
+  `facturas-scan` sigue mal-ubicando adjuntos en el árbol PERSONAL (ver arriba); PRs/commits: —
+  (solo bitácora).
+- **2026-08-20 · mercado-booking** · hizo: pasada de 24 ventanas de mercado (plan `?max=24`,
+  488 candidatas totales, 464 recortadas por el tope — aviso arrastrado) — 237 comps reales
+  escritos vía Booking.com MCP, todas con respuesta (0 `sinRespuesta`). Paso 2-bis (escaparate
+  propio) completo: 4/4 ventanas medidas (Busto Reform 3021,05€/4n, Luxury Busto 3379,12€/4n,
+  House Sevillana 10969,52€/4n, Dúplex center 2109,25€/3n), todas reconocidas como propias por
+  el endpoint (`propios[]`) y desviadas a `pricing_escaparate`, ninguna contaminó `market_rates`.
+  3 anuncios propios adicionales descartados al aparecer sueltos en ventanas de mercado (House
+  Sevillana en 19-21 nov aforo 12 y en 26-28 mar Feria aforo 12) — no se escribieron como comps.
+  Latido `ok:true`. dudas: —; fallos: —; PRs/commits: — (solo bitácora + BD).
 - **2026-08-19 · psd2-health-check** · hizo: preflight canal alerta OK (200); consulta frescura
   `movimientos_bancarios WHERE origen='psd2'` → último movimiento 17/08/2026 (2 días, dentro de
   umbral 48h), mov_30d=63 vs mov_30d_prev=71 (caída ~11%, muy por debajo del umbral 50%). Estado

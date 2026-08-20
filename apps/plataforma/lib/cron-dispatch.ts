@@ -42,7 +42,13 @@ export const CRON_JOBS: CronJob[] = [
   { path: '/api/cron/subastas-mercado', schedule: '20 6 * * *' },
   { path: '/api/cron/subastas-radar', schedule: '30 6 * * *' },
   { path: '/api/cron/subastas-avisos', schedule: '0 8 * * *' },
-  { path: '/api/cron/subastas-cierre', schedule: '0 9 * * *' },
+  // DOS pasadas en la misma expresión (11:30 y 20:30 de Madrid): el manifiesto
+  // exige un path ÚNICO —lo fija `cron-dispatch.test.ts`— así que la segunda
+  // hora va en el propio campo, no en una fila nueva. La de la tarde es la que
+  // cuenta el desenlace EL MISMO DÍA del cierre (las subastas del Portal cierran
+  // entre las 18:00 y las 19:30, con prórroga de hasta 24 h si entra una puja al
+  // final); la de la mañana recoge las prorrogadas y los certificados tardíos.
+  { path: '/api/cron/subastas-cierre', schedule: '30 9,18 * * *' },
   { path: '/api/cron/borme-ingesta', schedule: '0 6 * * *' },
   { path: '/api/cron/briefing', schedule: '0 8 * * 1' },
   { path: '/api/cron/banca-alertas', schedule: '0 7 * * *' },

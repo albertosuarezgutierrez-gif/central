@@ -13,6 +13,8 @@ import { paramsDnploc, provinciaCanonica, type CoordenadasCatastro } from '@cent
 import { archivarPasadas, procesarDocumentos } from '@/lib/subastas/documentos'
 import { clasificarSubastas } from '@/lib/subastas/clasificar'
 import { reextraerDatosDeTexto } from '@/lib/subastas/reextraer'
+import { tgSend } from '@central/core-telegram'
+import { sesionPortal, titularSesionPortal } from '@/lib/subastas/portal-sesion'
 
 export const dynamic = 'force-dynamic'
 // 🚨 300 s, no 60: la pasada espacia a propósito sus llamadas a servicios
@@ -257,8 +259,18 @@ export async function GET(req: NextRequest) {
     // Documentos de la ficha (edictos con texto → señales explícitas).
     const documentos = await procesarDocumentos().catch((e) => {
       console.error('[subastas-enriquecer] documentos', e)
-      return { revisadas: 0, conHallazgos: 0, conCargas: 0, analizadas: 0 }
+      return { revisadas: 0, conHallazgos: 0, conCargas: 0, analizadas: 0, conMuro: 0, sesion: 'no se llegó a intentar' }
     })
+
+    // 🚨 Si el Portal RECHAZA las credenciales, esto se dice en voz alta. La
+    // degradación es honesta —las fichas vuelven a decir «inicia sesión»— pero
+    // silenciosa: sin este aviso, una contraseña caducada dejaría el lector
+    // ciego durante semanas sin que nada se pusiera rojo. Un check que se queda
+    // verde porque no ha podido mirar es el fallo más caro que hay.
+    const portal = await sesionPortal()
+    if (portal.estado === 'rechazada' || portal.estado === 'captcha') {
+      await tgSend(titularSesionPortal(portal)).catch(() => {})
+    }
 
     // Datos que ya estaban en el TEXTO y no se habían sabido leer. Va ANTES de
     // las lentes a propósito: sin superficie no hay valor de mercado y el margen

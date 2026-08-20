@@ -36,6 +36,14 @@ export const RUTAS_RUTINA: string[] = [
   // un cron. Ninguno de los dos mueve dinero ni expone datos personales.
   '/api/sivra/mercado/plan',
   '/api/internal/latido',
+  // Reparación automática de un agente en rojo (`.github/workflows/latido-reparar.yml`): reclamar
+  // el caso y reportar cómo acabó. Quien llama es un workflow de GitHub, cuyo token vive en los
+  // secrets del repo — pero el alcance se mide igual que el de una rutina.
+  // Lo peor que permitiría un token filtrado: quemar los 3 intentos de un agente que SÍ está roto,
+  // o marcar un intento como resuelto y silenciar su aviso durante 24 h (hasta que el veredicto del
+  // latido lo desmienta). No mueve dinero, no borra nada y no expone datos personales.
+  '/api/internal/reclamar-reparacion',
+  '/api/internal/reparacion-resultado',
 ]
 
 /** ¿La ruta está declarada como alcanzable por una rutina? (prefijo, como `PUBLIC`). */

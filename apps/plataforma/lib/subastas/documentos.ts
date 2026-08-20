@@ -36,13 +36,24 @@ import {
   esDocumentoDeCargas,
   fichaLegible,
   mismoAcreedorQueEjecutante,
+  muroDocumental,
   notasDeEdicto,
+  pareceIdentificada,
   pareceEscaneado,
   resumirCargas,
   DIAS_PARA_ARCHIVAR,
   type CuadroCargas,
+  type MuroDocumental,
 } from '@central/module-subastas'
 import { fusionarCuadros, leerDocumento, type LecturaDocumento } from '@/lib/subastas/lector-registral'
+import {
+  SIN_INTENTO,
+  cabecerasPortal,
+  sesionPortal,
+  sesionPortalCaducada,
+  titularSesionPortal,
+  type SesionPortal,
+} from '@/lib/subastas/portal-sesion'
 
 const UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36'
 const FICHA = 'https://subastas.boe.es/detalleSubasta.php'
@@ -60,9 +71,9 @@ export const LECTOR_VERSION = 9
 /** Documentos que NO merecen una llamada de IA: no contienen cargas. */
 const RUIDO = /^(justificante|minuta|honorarios|tasa|pago|aranceles?)\b/i
 
-async function bajar(url: string, ms = 30000): Promise<Response> {
+async function bajar(url: string, ms = 30000, sesion: SesionPortal | null = null): Promise<Response> {
   const r = await fetch(url, {
-    headers: { 'User-Agent': UA },
+    headers: cabecerasPortal(sesion),
     signal: AbortSignal.timeout(ms),
     cache: 'no-store',
   })
@@ -99,6 +110,20 @@ export interface ResultadoFicha {
   documentos: DocumentoAdjunto[]
   /** ¿Se llegó a llamar al lector registral (IA) en esta ficha? */
   analisisProfundo: boolean
+  /**
+   * Hasta dónde nos deja ver el Portal la lista de documentos. Con muro,
+   * `documentos` NO es la lista de la subasta: es la que a nosotros nos enseñan.
+   */
+  muro: MuroDocumental
+  /**
+   * ¿La ficha se leyó CON sesión iniciada en el Portal?
+   *
+   * 🚨 Sin esto, `muro: 'total'` es ambiguo y la ambigüedad es cara: leído en
+   * anónimo significa «identifícate y los verás», y leído con sesión significa
+   * «ni registrado se ven, esto hay que pedirlo al Registro». Son dos recados
+   * distintos para Alberto, y uno de los dos le cuesta una mañana y una tasa.
+   */
+  conSesion: boolean
 }
 
 /**
@@ -110,7 +135,24 @@ export async function procesarDocumentosDeFicha(
   identificador: string,
   opts: { leerCargas?: boolean } = {},
 ): Promise<ResultadoFicha> {
-  const html = await (await bajar(`${FICHA}?idSub=${encodeURIComponent(identificador)}`)).text()
+  let sesion = await sesionPortal()
+  let html = await (await bajar(`${FICHA}?idSub=${encodeURIComponent(identificador)}`, 30000, sesion)).text()
+
+  // 🚨 La sesión PHP del Portal caduca sola. Si creíamos tenerla y esta ficha
+  // vuelve a responder como anónima, se reabre y se repite la descarga: seguir
+  // sin comprobarlo grabaría el muro de las fichas restantes como si fuera lo
+  // que ve un usuario registrado. Un solo reintento — si el Portal nos ha
+  // cerrado la puerta, insistir ficha a ficha es lo que bloquea cuentas.
+  if (sesion.estado === 'iniciada' && !pareceIdentificada(html)) {
+    sesionPortalCaducada()
+    sesion = await sesionPortal()
+    if (sesion.estado === 'iniciada') {
+      html = await (await bajar(`${FICHA}?idSub=${encodeURIComponent(identificador)}`, 30000, sesion)).text()
+    }
+  }
+  // Lo que se AFIRMA es lo que se ha comprobado en ESTA respuesta, no lo que
+  // dice la caché de la sesión.
+  const conSesion = pareceIdentificada(html)
   // 🚨 Antes de creerse un «no hay adjuntos», comprobar que esto ES la ficha.
   // Un 200 que no lo sea daría `[]`, se grabaría como «sin documentos» y la
   // cola no volvería a mirar esta subasta jamás. Lanzando, la fila se queda a
@@ -120,6 +162,12 @@ export async function procesarDocumentosDeFicha(
   }
   // Se listan TODOS (los enlaces son gratis) y se descargan solo los primeros.
   const todos = enlacesDocumentos(html)
+  // 🚨 …TODOS los que el Portal nos deje ver. En muchas fichas el bloque
+  // «Información complementaria» está tras el login, y entonces esta lista es
+  // incompleta o vacía SIN que la subasta carezca de documentos. Se propaga
+  // para que nadie aguas abajo lea ese `[]` como «el BOE no publica nada»
+  // (20/08/2026, SUB-JA-2026-262097).
+  const muro = muroDocumental(html)
 
   // 🚨 El gate de RENTABILIDAD no puede ser también el gate de LECTURA.
   // Si la ficha publica la certificación de cargas, se lee — punto. Una lectura
@@ -147,7 +195,10 @@ export async function procesarDocumentosDeFicha(
   for (const i of orden) {
     const doc = todos[i]
     try {
-      const r = await bajar(doc.url, 40000)
+      // Con la MISMA sesión: los adjuntos de una ficha con muro también
+      // exigen identificarse, y sin cookie devuelven un HTML de acceso denegado
+      // en vez del PDF.
+      const r = await bajar(doc.url, 40000, sesion)
       const buf = Buffer.from(await r.arrayBuffer())
       if (buf.length > MAX_BYTES_DOC) continue
 
@@ -201,7 +252,7 @@ export async function procesarDocumentosDeFicha(
     }
   }
 
-  return { notas: [...notas], cuadro: fusionarCuadros(lecturas), leidos, detalle, documentos, analisisProfundo: leerCargas }
+  return { notas: [...notas], cuadro: fusionarCuadros(lecturas), leidos, detalle, documentos, analisisProfundo: leerCargas, muro, conSesion }
 }
 
 /** Fila mínima que necesita la pasada. */
@@ -242,7 +293,29 @@ export async function procesarDocumentos(max = 10): Promise<{
   conHallazgos: number
   conCargas: number
   analizadas: number
+  conMuro: number
+  sesion: string
 }> {
+  // Se abre ANTES de elegir la cola: si hoy hay sesión y antes no la había, las
+  // fichas que se leyeron a ciegas dejan de tener que esperar su semana. El día
+  // que Alberto configure las credenciales, las 8 subastas que decían «cargas no
+  // publicadas» se releen en la primera pasada, no siete días después.
+  // 🚨 Solo se abre sesión si hay algo que SOLO se ve con sesión. Cada login
+  // dispara un código al correo Y al SMS de Alberto: iniciar sesión «por si
+  // acaso» en cada pasada serían ~30 SMS al mes por no leer nada. Con la cola
+  // sin fichas amuralladas el cron ni lo intenta.
+  const [{ pendientes }] = await prisma.$queryRaw<Array<{ pendientes: number }>>(Prisma.sql`
+    SELECT COUNT(*)::int AS pendientes
+    FROM subastas
+    WHERE fuente = 'boe' AND identificador IS NOT NULL AND es_inmueble = true
+      AND (fecha_fin IS NULL OR fecha_fin >= now())
+      AND documentos_muro IN ('total', 'parcial')
+      AND documentos_sesion IS DISTINCT FROM true
+  `)
+  const s = pendientes > 0 ? await sesionPortal() : SIN_INTENTO
+  const hayaSesion = s.estado === 'iniciada'
+  if (pendientes > 0 && !hayaSesion) console.warn('[subastas-documentos]', titularSesionPortal(s))
+
   const filas = await prisma.$queryRaw<FilaPendiente[]>(Prisma.sql`
     SELECT dedupe_key, identificador, autoridad, flip_apto, margen_flip_pct, es_playa,
            CASE
@@ -254,7 +327,20 @@ export async function procesarDocumentos(max = 10): Promise<{
     WHERE fuente = 'boe' AND identificador IS NOT NULL
       AND es_inmueble = true
       AND (fecha_fin IS NULL OR fecha_fin >= now())
-      AND (COALESCE(lector_version, 0) < ${LECTOR_VERSION} OR documentos IS NULL)
+      AND (
+        COALESCE(lector_version, 0) < ${LECTOR_VERSION}
+        OR documentos IS NULL
+        -- Con muro, la lista que tenemos no es la de la subasta: se reintenta
+        -- cada semana por si la autoridad gestora abre los documentos (o por si
+        -- algún día entramos identificados). Sin este límite las fichas con muro
+        -- se quedarían para siempre a la cabeza de la cola y ahogarían a las
+        -- nuevas, que es lo que pasaba con el documentos IS NULL a secas.
+        OR (documentos_muro IN ('total', 'parcial') AND actualizado_en < now() - interval '7 days')
+        -- Y sin esperar la semana cuando AHORA sí podemos identificarnos y la
+        -- última lectura fue a ciegas: es exactamente el caso que el muro
+        -- documental existía para poder rescatar.
+        OR (${hayaSesion} AND documentos_muro IN ('total', 'parcial') AND documentos_sesion IS DISTINCT FROM true)
+      )
     ORDER BY fecha_fin ASC NULLS LAST
     LIMIT ${max}
   `)
@@ -262,6 +348,8 @@ export async function procesarDocumentos(max = 10): Promise<{
   let conHallazgos = 0
   let conCargas = 0
   let analizadas = 0
+  /** Fichas cuyos documentos el Portal esconde tras el login (total o parcial). */
+  let conMuro = 0
 
   for (const f of filas) {
     try {
@@ -270,6 +358,7 @@ export async function procesarDocumentos(max = 10): Promise<{
       // hasta haberla bajado). El contador cuenta lo que de verdad se analizó.
       const r = await procesarDocumentosDeFicha(f.identificador, { leerCargas: mereceAnalisisProfundo(f) })
       if (r.analisisProfundo) analizadas++
+      if (r.muro !== 'ninguno') conMuro++
 
       // Con fecha: así el resumen guardado ya marca las anotaciones que por el
       // art. 86 LH podrían estar caducadas (marcar, no descontar).
@@ -308,6 +397,13 @@ export async function procesarDocumentos(max = 10): Promise<{
           valoracion_pactada_anio = COALESCE(${r.cuadro.valoracionPactada?.anio ?? null}, valoracion_pactada_anio),
           documentos_leidos = ${r.leidos},
           documentos = ${JSON.stringify(r.documentos)}::jsonb,
+          -- Se guarda SIEMPRE, también el 'ninguno': es lo que convierte un
+          -- documentos vacío en una afirmación («la ficha estaba entera a la
+          -- vista y no adjunta nada») en vez de en un «no me lo enseñan».
+          documentos_muro = ${r.muro},
+          -- Con qué ojos se miró. Un muro visto en anónimo dice «identifícate»;
+          -- visto con sesión dice «esto no lo publica el Portal a nadie».
+          documentos_sesion = ${r.conSesion},
           actualizado_en = now()
         WHERE dedupe_key = ${f.dedupe_key}
       `)
@@ -316,7 +412,7 @@ export async function procesarDocumentos(max = 10): Promise<{
     }
   }
 
-  return { revisadas: filas.length, conHallazgos, conCargas, analizadas }
+  return { revisadas: filas.length, conHallazgos, conCargas, analizadas, conMuro, sesion: titularSesionPortal(s) }
 }
 
 /**

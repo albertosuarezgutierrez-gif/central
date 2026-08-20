@@ -23,13 +23,24 @@ on:
       - 'docs/CONTEXTO-SESIONES.md'
       - 'scripts/auditar-estructura.mjs'
       - '.github/workflows/auditoria.yml'
+  # A mano. Hace falta de verdad, no es un adorno: un push a `main` hecho con el token de una
+  # GitHub App (p. ej. el merge de un PR desde una sesión de Claude Code) NO dispara workflows,
+  # así que hay merges tras los cuales la radiografía sencillamente no se regenera y nadie se
+  # entera. Comprobado el 19/08/2026: el merge de #1501 (a6ef85ab) no disparó NI UN workflow.
+  # `workflow_dispatch` sí se puede lanzar desde la API con ese mismo token, así que es la vía
+  # para forzar una pasada y para probar este workflow sin esperar al siguiente push humano.
+  workflow_dispatch: {}
 
 permissions:
   contents: write
 
 concurrency:
+  # `true` porque este job REGENERA un estado entero, no acumula: de dos pasadas solapadas solo la
+  # última significa algo. (Se puso el 19/08/2026 culpando a una carrera de dos pasadas del PR sin
+  # checks; ESO ERA FALSO —ver más abajo, el problema es el force-push, no la carrera—. La opción
+  # se queda igualmente porque regenerar dos veces a la vez no aporta nada.)
   group: auditoria-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   radiografia:
@@ -92,25 +103,49 @@ jobs:
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          # La rama se rehace desde el `main` de esta pasada: la radiografía se regenera entera
-          # cada vez, así que arrastrar la rama anterior solo daría conflictos.
-          git checkout -q -B "$RAMA"
+
+          # La rama local se llama YA como la de esta pasada. Importa: más abajo se cierra el PR
+          # anterior con `--delete-branch`, y eso borra también la rama LOCAL si es la que está
+          # activa. La primera versión hacía `checkout -B "$RAMA"` (el nombre viejo) y el cierre
+          # se llevó por delante el commit recién hecho, dejando el HEAD en `main`; el push subió
+          # `main` y `gh pr create` murió con «No commits between main and …». Con el nombre único
+          # desde el principio, el borrado del PR viejo no puede tocar esta rama.
+          RAMA_RUN="${RAMA}-${{ github.run_id }}"
+          git checkout -q -B "$RAMA_RUN"
           git add $FILES
           git commit -q -m 'chore(auditoría): regenerar radiografía de estructura [skip vercel]'
-          git push -q -f "https://x-access-token:${PAT}@github.com/${REPO}.git" "$RAMA"
-          if [ -z "$(gh pr list --head "$RAMA" --state open --json number --jq '.[].number')" ]; then
-            gh pr create --head "$RAMA" --base main \
-              --title 'chore(auditoría): regenerar radiografía de estructura' \
-              --body 'Radiografía del repo regenerada por `.github/workflows/auditoria.yml`.
+
+          # Se CIERRA el PR anterior y su rama antes de abrir el nuevo, en vez de reutilizarlos.
+          # Medido el 19/08/2026, dos veces seguidas: un force-push desde dentro de Actions a una
+          # rama que YA tiene un PR abierto no dispara los workflows `pull_request` (ni con el PAT
+          # en la URL) → el PR se queda sobre un sha con UN check cosmético, sin los required, y
+          # ya no hay forma de mergearlo. En cambio CREAR la rama y ABRIR el PR sí los dispara
+          # (14 checks, comprobado). Así que cada pasada estrena rama: el PR nace siempre por
+          # `opened`, que es el camino que funciona.
+          for viejo in $(gh pr list --state open --json number,headRefName \
+                          --jq ".[] | select(.headRefName | startswith(\"$RAMA\")) | .number"); do
+            gh pr close "$viejo" --comment 'Reemplazado por una radiografía más fresca (cada pasada estrena rama; ver `.github/workflows/auditoria.yml`).' --delete-branch || true
+            echo "PR de radiografía anterior #$viejo cerrado."
+          done
+
+          # Cinturón: si por lo que sea el HEAD ha vuelto a `main`, NO se empuja. Sin esto el
+          # fallo anterior se veía como un `gh pr create` roto y no como lo que era.
+          if [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ]; then
+            echo '::error::El HEAD es main: el commit de la radiografía se ha perdido. No se empuja nada.'
+            exit 1
+          fi
+          git push -q "https://x-access-token:${PAT}@github.com/${REPO}.git" "HEAD:refs/heads/$RAMA_RUN"
+          gh pr create --head "$RAMA_RUN" --base main \
+            --title 'chore(auditoría): regenerar radiografía de estructura' \
+            --body 'Radiografía del repo regenerada por `.github/workflows/auditoria.yml`.
 
           Va por PR y no por push a `main` porque el ruleset «main - CI obligatorio» exige checks en verde y `github-actions[bot]` no puede saltárselo. Lo mergea `rutinas-automerge.yml` en cuanto la CI pase.
 
+          La rama lleva el id de la pasada porque reutilizar una rama con PR abierto deja el PR sin los checks *required*: un force-push desde Actions no vuelve a disparar la CI.
+
           ---
           _Generated by [Claude Code](https://claude.ai/code)_'
-            echo "PR de radiografía abierto."
-          else
-            echo "PR de radiografía ya abierto — actualizado con el commit nuevo."
-          fi
+          echo "PR de radiografía abierto sobre $RAMA_RUN."
 
       # Inyecta el índice de funciones en Supabase (tabla mapa_arquitectura) para el Director de
       # código. SOLO desde main: la tabla es estado global único → las ramas de feature no la pisan.

@@ -72,7 +72,9 @@ async function procesar(forzar: boolean) {
         JOIN mailing_prospectos p ON p.id = prev.prospecto_id
         WHERE prev.campana_id = ${cid}::uuid AND prev.paso = ${k - 1} AND prev.estado = 'enviado'
           AND prev.abierto_at IS NULL AND prev.click_at IS NULL
-          AND prev.enviado_at + make_interval(days => ${espera}) <= now()
+          -- ::int OBLIGATORIO: Prisma manda los números como bigint y
+          -- make_interval(days => bigint) no existe (42883) → la consulta moría.
+          AND prev.enviado_at + make_interval(days => ${espera}::int) <= now()
           AND p.baja = false AND p.estado NOT IN ('contactado','interesado','descartado','rebotado')
           AND NOT EXISTS (SELECT 1 FROM mailing_envios e2
                           WHERE e2.campana_id = ${cid}::uuid AND e2.prospecto_id = prev.prospecto_id AND e2.paso = ${k})
