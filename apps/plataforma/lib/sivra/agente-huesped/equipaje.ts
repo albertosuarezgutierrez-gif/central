@@ -53,7 +53,7 @@ export function bloqueEquipaje(propertyId = ''): string {
   const red = CONSIGNAS_RED.map(c => `  • ${c.nombre} — ${c.web} (${c.nota})`).join('\n')
   const lineas = [
     'CONSIGNA / GUARDAR MALETAS: el apartamento NO dispone de servicio de consigna ni de guardado de equipaje (ni antes del check-in ni después del check-out).',
-    'Si el huésped pregunta dónde dejar o guardar las maletas, discúlpate brevemente por no ofrecer ese servicio y recomiéndale una consigna cercana:',
+    'Si el huésped pregunta dónde dejar o guardar las maletas, dilo de entrada —sin abrir con «¡claro que sí!» ni «por supuesto», que prometen lo contrario— y pasa enseguida a la consigna cercana, que es lo que de verdad le sirve:',
   ]
   if (cercanas.length) {
     lineas.push(`  • La más cercana a este apartamento: ${cercanas[0].nombre} — ${cercanas[0].web} (${cercanas[0].nota}).`)

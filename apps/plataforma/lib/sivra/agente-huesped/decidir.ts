@@ -19,6 +19,7 @@ import { esSensible } from './sensibilidad'
 import { hiloComoMensajes } from './hilo'
 import { faseReserva, aplicaEarlyCheckin } from './fases'
 import { revisarCierre, bloqueCierre } from './cierre'
+import { revisarCoherencia, REGLA_COHERENCIA } from './coherencia'
 import { esSolicitudLateCheckout, esDespedida } from './reglas'
 import { esLlegadaFueraDeHorario, HORARIO_ATENCION } from './llegada'
 
@@ -218,6 +219,7 @@ export async function decidir(ctx: Contexto, pregunta: string, categoria: string
 Huésped: ${ctx.guestName} · llegada ${ctx.checkIn} · salida ${ctx.checkOut} · canal ${ctx.portal}.${horario}
 Responde SIEMPRE en ${LANG_NAME[ctx.lang] || 'English'} con un tono cálido, cercano y natural, como una persona real escribiendo a mano (no un folleto ni una plantilla). Saluda al huésped por su nombre.
 REGLA DE ORO: responde EXACTAMENTE a lo que el huésped dice y a nada más. NO añadas información que no ha pedido (horarios de entrada/salida, normas, parking, wifi…) salvo que pregunte por ella o sea necesaria para resolver su mensaje. ${faseBlock}
+${REGLA_COHERENCIA}
 ENTRADA AUTÓNOMA — NUNCA impliques un encuentro en persona: el check-in es AUTOMÁTICO (el huésped accede por su cuenta, sin que nadie le reciba ni le abra) y tú solo escribes mensajes, no vas a estar allí. Por eso NO uses jamás fórmulas de encuentro presencial como «nos vemos», «te espero», «te recibo», «estaré allí/en la puerta», «te abro» ni «hasta ahora/luego» con sentido de vernos, en NINGUNA fase de la reserva. Si el huésped confirma su hora de llegada, acúsale recibo sin sugerir cita: por ejemplo «¡Perfecto! Tomo nota de que llegáis sobre las 18:00» en lugar de «Nos vemos a las 18:00».
 NO EJECUTAS ACCIONES: solo escribes mensajes; no gestionas la reserva, no cancelas, no reembolsas, no cambias fechas ni haces cobros. NUNCA afirmes haber hecho o completado una gestión de ese tipo («ya está cancelada», «te he cambiado las fechas», «te he tramitado el reembolso»): no es cierto y no te consta. Si el huésped pide una cancelación, un cambio, un reembolso o cualquier gestión, acúsale recibo con empatía y dile que trasladas su petición al anfitrión, que se encargará y le confirmará — sin darla por hecha ni prometer plazos. Y NO le pidas que te confirme datos de su reserva (fechas, condiciones de cancelación…): ya los tienes en la INFORMACIÓN de abajo, no los verifiques con él.
 HILO: tienes los mensajes anteriores de esta conversación como contexto. Continúala con naturalidad teniendo en cuenta lo ya hablado y NO repitas información que ya le hayas dado antes; responde solo al ÚLTIMO mensaje del huésped.
@@ -274,6 +276,11 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
   reply = revision.texto
   const cierreFueraDeFase = revision.incoherente
 
+  // Coherencia apertura↔respuesta: «¡claro que sí!» seguido de «no tenemos consigna, ve a estas
+  // taquillas» concede lo que niega dos líneas después. Es contenido, no coletilla: no se reescribe
+  // solo, se manda a revisar.
+  const coherencia = revisarCoherencia(reply)
+
   // Decisión de escalado / metadatos, derivada de REGLAS + clasificador de una palabra (no de un JSON).
   const sentimiento = sentimientoDe(pregunta)
   const sensible = esSensible(pregunta)
@@ -288,7 +295,7 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
   // ahora responde bien, `escalaIA` dejaría de marcarlo, y Alberto pidió que siguiera pasando por él.
   const lateCheckout = esSolicitudLateCheckout(pregunta)
 
-  const needs_human = sensible || sentimiento === 'negativo' || inventado || escalaIA || lateCheckout || sinVerificar || cierreFueraDeFase
+  const needs_human = sensible || sentimiento === 'negativo' || inventado || escalaIA || lateCheckout || sinVerificar || cierreFueraDeFase || coherencia.incoherente
 
   // ¿Se apoya en una fuente real? Es la condición del auto-envío (regla del 20/08/2026). Exige que la
   // guía se haya PODIDO LEER: con `guiaCargada=false` no sabemos si la respuesta está respaldada o
@@ -316,6 +323,8 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
             ? 'late check-out: requiere confirmación del anfitrión'
             : cierreFueraDeFase
               ? 'la despedida no encaja con el momento de la reserva (habla de viaje/adiós y el huésped sigue alojado)'
+            : coherencia.incoherente
+              ? `la respuesta abre con «${coherencia.concesion}» y a continuación niega el servicio y deriva fuera`
             : ''
 
   return {
