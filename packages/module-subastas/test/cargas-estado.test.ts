@@ -124,3 +124,46 @@ test('el titular del punto de análisis y el de la ficha son EL MISMO', async ()
     assert.equal(punto?.detalle, titularCargas({ ...s, documentos: docs }).texto)
   }
 })
+
+// ── El muro del Portal: «no me lo enseñan» ≠ «no lo hay» ─────────────────────
+// Regresión real (20/08/2026): SUB-JA-2026-262097 publica «SUBASTA LOCAL
+// COMERCIAL» y «CERTIFICACIÓN DE CARGAS LOCAL COMERCIAL», pero el bloque
+// «Información complementaria» solo se enseña con sesión iniciada. El cron entra
+// anónimo, lista CERO documentos, y ese `[]` se pintaba como «Cargas no
+// publicadas: pide la certificación registral antes de pujar».
+
+test('con muro del Portal NUNCA se dice «no publicadas»', () => {
+  for (const muro of ['total', 'parcial'] as const) {
+    const t = titularCargas({ cargas: null, cargasConocidas: false, documentos: [], muro })
+    assert.equal(t.estado, 'ocultas_tras_login', muro)
+    assert.ok(!/no publicadas/i.test(t.texto), `no debe negar la publicación: ${t.texto}`)
+    // Y manda al sitio correcto: al login del Portal, no al Registro.
+    assert.match(t.texto, /iniciar sesi[oó]n/i)
+    assert.ok(!/certificación registral/i.test(t.texto), t.texto)
+  }
+})
+
+test('el muro tampoco convierte un «sin revisar» en una negación', () => {
+  assert.equal(
+    titularCargas({ cargasConocidas: false, documentos: null, muro: 'total' }).estado,
+    'ocultas_tras_login',
+  )
+})
+
+test('con muro PARCIAL, el documento que SÍ se ve manda sobre el muro', () => {
+  // Caso real SUB-JA-2026-264478: el Portal enseña la certificación y esconde el
+  // resto. Teniendo el PDF, lo útil es abrirlo, no ir a identificarse.
+  const t = titularCargas({ cargasConocidas: false, documentos: [CERT], muro: 'parcial' })
+  assert.equal(t.estado, 'publicadas_sin_extraer')
+  assert.equal(t.documento?.url, CERT.url)
+})
+
+test('sin muro, un `[]` sigue siendo una negación legítima', () => {
+  assert.equal(titularCargas({ cargasConocidas: false, documentos: [], muro: 'ninguno' }).estado, 'no_publicadas')
+  assert.equal(titularCargas({ cargasConocidas: false, documentos: [] }).estado, 'no_publicadas')
+})
+
+test('las cargas ya leídas mandan sobre el muro (no se degradan a «no lo sé»)', () => {
+  assert.equal(titularCargas({ cargas: 43200, cargasConocidas: true, documentos: [], muro: 'total' }).estado, 'subsisten')
+  assert.equal(titularCargas({ cargas: 0, cargasConocidas: true, documentos: [], muro: 'total' }).estado, 'sin_cargas')
+})
