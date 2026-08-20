@@ -48,7 +48,9 @@ tiempo**, todo lo demás lo hace Claude; B: lista de tareas, si no quiere dar es
 despliegue, que debe seguir vivo para la comparación lado a lado. Anticipados tres límites reales
 (org de Supabase con otros clientes · Vercel Hobby no admite miembros · repo en organización ajena),
 ninguno bloqueante: cada uno cae a su fila de la opción B.
-No confundir con `/correduria` de plataforma, que es la contabilidad de comisiones y NO se toca.
+No confundir con `/correduria` de plataforma, que es la contabilidad de comisiones y NO se toca:
+esa ambigüedad queda enrutada en la skill `central-maestro` (+ fila en `docs/FUENTES-DE-VERDAD.md`),
+con el aviso de que «no está en el repo» ≠ «no existe» (lección de la landing de House Sevillana).
 Pendiente: el mensaje a Manuel está redactado en el doc pero **lo envía Alberto** — hasta entonces
 no se puede avanzar de fase.
 ### 🔔 (20/08/2026) El aviso de cierre de subastas no había sonado NUNCA — y las pujas se leían de la pestaña equivocada
