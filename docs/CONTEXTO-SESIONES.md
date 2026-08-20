@@ -32,6 +32,15 @@
 
 ---
 
+### 👋 (20/08/2026) La despedida del agente de huéspedes no miraba la fase de la reserva
+Alberto, sobre una respuesta AUTO-ENVIADA a Pilar (consigna de maletas, correcta en el fondo):
+«¿que tengas un buen viaje? eso sería si hubiera escrito el día de su salida». El prompt no decía
+nada del CIERRE, así que el modelo despedía como si la estancia acabara con la huésped aún alojada.
+Nuevo `lib/sivra/agente-huesped/cierre.ts` (puro, 8 tests): `bloqueCierre()` instruye por fase
+(viaje solo si viene o se va; «hasta la próxima» solo el día de salida o después) y `revisarCierre()`
+poda la fórmula cuando va aislada en su frase — si va entretejida con contenido real NO se reescribe:
+escala a Telegram. Regla: **una frase con sustancia no se toca sola**. Cableado en `decidir.ts`.
+
 ### 🧭 (20/08/2026) El índice que usa `code-map` llevaba horas desfasado en `main` — y eso no se ve
 `pnpm auditar:check` estaba en ROJO sobre `main`: #1536/#1550/#1551 son posteriores a la última
 regeneración (#1547) y ninguno rehizo la radiografía. Lo destapé verificando el PR del traspaso, y

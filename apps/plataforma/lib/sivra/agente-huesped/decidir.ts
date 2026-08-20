@@ -18,6 +18,7 @@ import { contieneDatoInventado } from './guardrail'
 import { esSensible } from './sensibilidad'
 import { hiloComoMensajes } from './hilo'
 import { faseReserva, aplicaEarlyCheckin } from './fases'
+import { revisarCierre, bloqueCierre } from './cierre'
 import { esSolicitudLateCheckout, esDespedida } from './reglas'
 import { esLlegadaFueraDeHorario, HORARIO_ATENCION } from './llegada'
 
@@ -152,6 +153,10 @@ export async function decidir(ctx: Contexto, pregunta: string, categoria: string
         ? `El huésped LLEGA HOY (${ctx.checkIn}) y puede que AÚN NO HAYA ENTRADO al apartamento. Oriéntale sobre el acceso, la hora de entrada o lo que pregunte; si pregunta por entrar antes de la hora oficial o por dónde dejar el equipaje, ten en cuenta el bloque EARLY CHECK-IN de abajo.`
         : `El huésped ya está dentro del apartamento: NO le repitas la hora de check-in/check-out a menos que lo pregunte expresamente.`
 
+  // Cierre coherente con el momento de la reserva: desearle «buen viaje» a quien sigue en el piso
+  // suena a que le estamos despidiendo (lo cazó Alberto en la respuesta a Pilar, 20/08/2026).
+  const cierreBlock = bloqueCierre(fase, esDiaSalida)
+
   // Early check-in: GRATIS, pero SOLO si la noche anterior está libre (regla de Alberto). Aplica en
   // pre-llegada Y EL DÍA DE LLEGADA (en-estancia y post-estancia no tiene sentido). NUNCA se ofrece de pago.
   // Tri-estado: (a) verificado y libre → confirmar; (b) verificado y ocupado → declinar; (c) NO verificado
@@ -216,7 +221,7 @@ REGLA DE ORO: responde EXACTAMENTE a lo que el huésped dice y a nada más. NO a
 ENTRADA AUTÓNOMA — NUNCA impliques un encuentro en persona: el check-in es AUTOMÁTICO (el huésped accede por su cuenta, sin que nadie le reciba ni le abra) y tú solo escribes mensajes, no vas a estar allí. Por eso NO uses jamás fórmulas de encuentro presencial como «nos vemos», «te espero», «te recibo», «estaré allí/en la puerta», «te abro» ni «hasta ahora/luego» con sentido de vernos, en NINGUNA fase de la reserva. Si el huésped confirma su hora de llegada, acúsale recibo sin sugerir cita: por ejemplo «¡Perfecto! Tomo nota de que llegáis sobre las 18:00» en lugar de «Nos vemos a las 18:00».
 NO EJECUTAS ACCIONES: solo escribes mensajes; no gestionas la reserva, no cancelas, no reembolsas, no cambias fechas ni haces cobros. NUNCA afirmes haber hecho o completado una gestión de ese tipo («ya está cancelada», «te he cambiado las fechas», «te he tramitado el reembolso»): no es cierto y no te consta. Si el huésped pide una cancelación, un cambio, un reembolso o cualquier gestión, acúsale recibo con empatía y dile que trasladas su petición al anfitrión, que se encargará y le confirmará — sin darla por hecha ni prometer plazos. Y NO le pidas que te confirme datos de su reserva (fechas, condiciones de cancelación…): ya los tienes en la INFORMACIÓN de abajo, no los verifiques con él.
 HILO: tienes los mensajes anteriores de esta conversación como contexto. Continúala con naturalidad teniendo en cuenta lo ya hablado y NO repitas información que ya le hayas dado antes; responde solo al ÚLTIMO mensaje del huésped.
-Ajusta la longitud al mensaje: si solo agradece, felicita o hace un comentario breve y positivo, contesta con 1-2 frases cálidas y humanas (sin bloques informativos); si hace una pregunta real, respóndela con el detalle necesario, confirmando lo que pide y ofreciéndote a ayudar en lo que necesite. Evita el relleno y las despedidas largas y genéricas.
+Ajusta la longitud al mensaje: si solo agradece, felicita o hace un comentario breve y positivo, contesta con 1-2 frases cálidas y humanas (sin bloques informativos); si hace una pregunta real, respóndela con el detalle necesario, confirmando lo que pide y ofreciéndote a ayudar en lo que necesite. Evita el relleno y las despedidas largas y genéricas. ${cierreBlock}
 
 INFORMACIÓN DISPONIBLE (única fuente de verdad; NO inventes nada que no esté aquí):
 ${ctx.ficha || '(sin ficha)'}
@@ -262,6 +267,13 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
     return { reply: '', confidence: 0, needs_human: true, categoria, sentimiento: 'neutro', motivo: 'IA sin respuesta', fuente: 'ia' }
   }
 
+  // Red determinista sobre la DESPEDIDA: si el borrador cierra con una fórmula de viaje o de adiós
+  // que no toca en esta fase, se poda cuando va aislada en su frase; si va entretejida con contenido
+  // real, no se reescribe y el mensaje pasa por Alberto en vez de auto-enviarse.
+  const revision = revisarCierre(reply, fase, esDiaSalida)
+  reply = revision.texto
+  const cierreFueraDeFase = revision.incoherente
+
   // Decisión de escalado / metadatos, derivada de REGLAS + clasificador de una palabra (no de un JSON).
   const sentimiento = sentimientoDe(pregunta)
   const sensible = esSensible(pregunta)
@@ -276,7 +288,7 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
   // ahora responde bien, `escalaIA` dejaría de marcarlo, y Alberto pidió que siguiera pasando por él.
   const lateCheckout = esSolicitudLateCheckout(pregunta)
 
-  const needs_human = sensible || sentimiento === 'negativo' || inventado || escalaIA || lateCheckout || sinVerificar
+  const needs_human = sensible || sentimiento === 'negativo' || inventado || escalaIA || lateCheckout || sinVerificar || cierreFueraDeFase
 
   // ¿Se apoya en una fuente real? Es la condición del auto-envío (regla del 20/08/2026). Exige que la
   // guía se haya PODIDO LEER: con `guiaCargada=false` no sabemos si la respuesta está respaldada o
@@ -302,6 +314,8 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
             ? 'no se pudo verificar el borrador (control de calidad caído) — lo reviso yo'
           : lateCheckout
             ? 'late check-out: requiere confirmación del anfitrión'
+            : cierreFueraDeFase
+              ? 'la despedida no encaja con el momento de la reserva (habla de viaje/adiós y el huésped sigue alojado)'
             : ''
 
   return {
