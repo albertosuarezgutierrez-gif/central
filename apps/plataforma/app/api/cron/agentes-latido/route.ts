@@ -95,6 +95,9 @@ const PROBES: Record<string, Prisma.Sql> = {
   sivra_pricing_guard: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'sivra_pricing_guard'`,
+  paper_tracker: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'paper-tracker'`,
 }
 
 async function handler(req: NextRequest) {

@@ -267,4 +267,16 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       '«pricing_eventos_auto ILEGIBLE», corrió pero con los centinelas de evento apagados. ' +
       'Huella: agente_latidos.sivra_pricing_guard.',
   },
+  {
+    id: 'paper_tracker',
+    etiqueta: '📊 Paper-tracker de trading (cron semanal lunes 10:00 UTC)',
+    // Semanal → 192 h (8 días) de margen, mismo criterio que el de pricing: solo salta
+    // si se pierde una semana entera + un día. Cron nuevo (18/08/2026, PR #1476) que ya
+    // escribía su latido pero no estaba vigilado: nadie se enteraría si dejara de correr.
+    maxHoras: 192,
+    nota:
+      'El paper-tracker (evolución de las cohortes de paper trading) no ha corrido esta semana. ' +
+      'Revisa el cron `/api/cron/paper-tracker` (`0 10 * * 1`) en Vercel. ' +
+      'Huella: agente_latidos.paper-tracker.',
+  },
 ]
