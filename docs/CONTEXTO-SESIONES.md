@@ -51,6 +51,26 @@ ninguno bloqueante: cada uno cae a su fila de la opción B.
 No confundir con `/correduria` de plataforma, que es la contabilidad de comisiones y NO se toca.
 Pendiente: el mensaje a Manuel está redactado en el doc pero **lo envía Alberto** — hasta entonces
 no se puede avanzar de fase.
+### 🧨 (20/08/2026) `date - bigint`: el calibrado del canal murió en su primera pasada real — y tapaba un suelo apagado
+- **El cron `/api/sivra/pricing/canal` reventó entero** (42883, `operator does not exist: date - bigint`)
+  en `CURRENT_DATE - ${VENTANA_DIAS}`: Prisma manda un número de JS como **int8** y Postgres no tiene
+  `date - bigint`. Compila, pasa `tsc`, pasa `next build`, pasa los 1.342 tests — porque **nada de eso
+  ejecuta la consulta**. `pricing_settings` siguió con el ×1,20/0/2 que ese cron existe para corregir.
+- El **latido `sivra_canal` hizo su trabajo**: rojo, con el error literal. El vigía es lo único que
+  separó «no ha corrido» de «corrió y murió».
+- 🚨 **Lo caro apareció al buscar el patrón:** la MISMA construcción en el suelo de PriceLabs de
+  `pricing/apply` (`captured_at >= CURRENT_DATE - ${PL_REF_MAX_AGE_DAYS}`, desde el 16/08), pero ahí
+  la tapaba un `.catch(() => [])`. Resultado: **el suelo del 85% llevaba días INERTE y su tripwire del
+  70% tampoco podía saltar** — «no he podido leer la referencia» servido como «no hay referencia», el
+  landmine del CLAUDE.md raíz en su forma más cara. 708 filas de referencia vigentes sin usar; medidas
+  107 fechas de House y 81 del Dúplex por debajo del suelo (p. ej. Dúplex 24/10: 148€ contra 220€ de PL).
+- Arreglado: `::int` en ambas, el `catch` del PL ahora **declara** (`pl_degradado`, `ok:false`, Telegram)
+  en vez de degradar en silencio, y guardián nuevo `test/regression-sql-fecha-parametro.test.ts` que
+  falla si alguien vuelve a restar un parámetro sin castear (verificado: caza el bug original).
+- Lección de método: **una consulta que ningún test ejecuta no está probada por tenerlo todo en verde.**
+  Las dos consultas arregladas se probaron contra la BD real con parámetro bigint antes de dar el fix
+  por bueno. (Y ojo: un backtick dentro de un `Prisma.sql` cierra el template — casi se cuela.)
+- Bien: la rutina de Booking SÍ midió sola 6 ventanas nuevas de escaparate (22 en total). PR #1530.
 
 ### ✅ (20/08/2026) El calendario de House Sevillana, EN VIVO — tras romperse TRES veces por caché
 - **Confirmado por Alberto en pantalla.** Verificado además que las fechas son las buenas: las 34

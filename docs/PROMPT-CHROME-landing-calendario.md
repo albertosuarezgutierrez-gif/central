@@ -1,14 +1,19 @@
-# Prompts para Claude Chrome — cierre del calendario de House Sevillana (PR #1500)
+# Prompts para Claude Chrome — lo que queda de la landing de House Sevillana
 
 > Lo que queda del calendario **no se puede hacer desde una sesión de Claude Code**: el proxy de egress
-> de este entorno bloquea `*.smoobu.com`, los `*.vercel.app` de preview y las APIs de mapas. Todo lo de
+> de este entorno bloquea `housesevillana.es`, `*.smoobu.com`, los previews `*.vercel.app` y las APIs de
+> mapas. Todo lo de
 > abajo son comprobaciones de navegador. Copia cada bloque tal cual en Claude Chrome.
 >
-> **Antes de mirar nada:** el widget llama a `https://plataforma-ten-flame.vercel.app/api/publico/disponibilidad`,
-> que es **producción** de plataforma — y ese endpoint **todavía no está desplegado** (vive en la rama del
-> PR #1500, sin mergear). Así que hoy la preview de la landing enseña el **aviso de error**, no la rejilla
-> con datos. No está roto: es el camino degradado. De hecho sirve para validarlo (prueba 2A).
-> Cuando el PR se mergee y plataforma despliegue, la rejilla se llena sola.
+> **Estado (actualizado 20/08/2026): el calendario FUNCIONA en producción.** Alberto lo confirmó en
+> pantalla y las fechas están verificadas contra el snapshot del cron (34 de 34 noches idénticas, sin
+> desfase de un día). Así que lo que se ve en `housesevillana.es` es la **rejilla con datos reales**,
+> no el aviso de error. Tardó tres PRs (#1519, #1521, #1523), todos por caché.
+>
+> **Si al abrirla vieras el aviso de error**, antes de dar nada por roto: la página se cachea con
+> `s-maxage=3600`, así que puedes estar viendo el HTML —y el JS— de hasta una hora antes. Recarga con
+> Ctrl+F5 y, si persiste, mira DevTools → Network → fila `disponibilidad` (si la columna Size dice
+> `disk cache`, es la caché del navegador). El landmine completo está en `apps/plataforma/CLAUDE.md`.
 
 ---
 
@@ -36,26 +41,30 @@ vacío», se quitan los parámetros y el botón se queda como está hoy.
 
 ---
 
-## 2. La preview de la landing con el calendario
+## 2. El calendario en la web
 
-URL de la preview: **https://house-sevillana-landing-git-cl-956d92-pisos-turisticos-projects.vercel.app**
+Ya no hace falta la preview: **usa producción, `https://housesevillana.es`**, que tiene el calendario en vivo.
 
-### 2A. El camino de error (hoy es lo que se ve)
+### 2A. La rejilla con datos (ya en producción)
 
 ```
-Abre https://house-sevillana-landing-git-cl-956d92-pisos-turisticos-projects.vercel.app y baja hasta
-la sección del calendario, justo encima de "Reserva directa".
+Abre https://housesevillana.es y baja hasta la sección del calendario, justo encima de "Reserva directa".
 
 Dime:
-1. ¿Qué mensaje sale? Debería avisar de que la disponibilidad no se ha podido cargar y ofrecer salida al motor de reservas.
-2. ¿Se ve alguna rejilla de días VACÍA o en blanco? (Eso sería un fallo: una rejilla sin marcar se lee como "todo libre".)
-3. Hazme una captura de esa sección.
+1. ¿Se ve la rejilla de días con noches marcadas como ocupadas, o sale un aviso de error?
+2. Comprueba tres fechas concretas que SÍ están ocupadas: 11 y 12 de septiembre de 2026, y 21 a 24 de
+   diciembre de 2026. Deben salir marcadas como ocupadas (rayadas y con el número tachado).
+3. Y una libre: el 13, 14 y 15 de septiembre de 2026 deben verse disponibles.
+4. Hazme una captura de esa sección.
+
+Contexto: las fechas ocupadas están verificadas contra la base de datos el 20/08/2026. Si alguna no
+coincide, dímelo con la fecha exacta — sería un fallo real, no una duda.
 ```
 
 ### 2B. Móvil, 320 px
 
 ```
-En la misma página, abre DevTools (F12) → icono de móvil → pon el ancho a 320 px.
+En https://housesevillana.es, abre DevTools (F12) → icono de móvil → pon el ancho a 320 px.
 Baja al calendario y dime:
 1. ¿Se sale algo del ancho? ¿Hay scroll horizontal en TODA la página (no vale que lo tenga solo el calendario)?
 2. ¿Las flechas de mes y las celdas se pueden pulsar con el dedo (mínimo ~44 px)?
@@ -65,7 +74,7 @@ Baja al calendario y dime:
 ### 2C. Los cuatro estados y las tres lenguas
 
 ```
-Repite en /en y en /it de esa misma preview.
+Repite en https://housesevillana.es/en y en https://housesevillana.es/it.
 1. ¿Queda algún texto del calendario en castellano? (nombres de mes, días de la semana, leyenda, "actualizado el…")
 2. En la leyenda deben distinguirse cuatro estados SIN mirar el color: libre (relleno macizo), ocupada
    (rayada y con el número tachado), sin dato (hueca, borde de puntos, interrogación) y pasada (sin caja).
