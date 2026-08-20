@@ -1906,6 +1906,18 @@ completo `docs/AUDITORIA-2026-08.md`.
 - Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
+## 🛂 (20/08/2026) SES.HOSPEDAJES: diseño de la conectividad (parte de viajeros) — PR #1550 (draft)
+
+Fase de arranque del RD 933/2021 (comunicar viajeros al Ministerio en <24h; multas 100 €–30.000 €).
+Solo diseño, aún sin código: `docs/superpowers/specs/2026-08-20-ses-hospedajes-conectividad-design.md`.
+Protocolo verificado: SOAP a `hospedajes(.pre)-ses.mir.es/hospedajes-web/ws/v1/comunicacion`, Basic auth,
+`<solicitud>` = XML `altaParteHospedaje` en **gzip+base64**. Decisiones de Alberto: conector PROPIO (no
+Smoobu/Chekin), check-in web con OCR por IA **con confirmación humana**, y **solo nuestros 4 pisos** de
+momento (el resto de ideas —venta a terceros, uso comercial de los datos, RH, vehículos— en §9 del spec).
+🚨 Desde el contenedor NO se alcanza `*.mir.es` (proxy): toda prueba contra SES es desde Vercel.
+Pendiente: que Alberto revise el spec → plan de implementación. Códigos/credenciales NUNCA al repo.
+
+
 ## 💹 (09/08/2026) La palanca de DEMANDA ya mira el MES, no el año — PR #1323 (draft, rehecho sobre #1337)
 - #1337 (mergeado el 09/08) quitó el castigo a las fechas sin abrir, pero el `occ` de `pricing/apply`
   seguía siendo UNA ocupación anual por piso: el mes que se LLENA no podía subir el precio.
