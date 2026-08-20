@@ -46,19 +46,48 @@
   **miente** aquí (el #1529 salió ✅ con `tests.yml`/`ci.yml` sin ejecutarse nunca).
 - Frenos: 1 firma = 1 intento · 3/agente en 30 días · carril acotado (nada de `.claude/**`, workflows
   ni `.sql`). Tabla `agente_reparaciones` **ya aplicada**. Éxito = silencio. Spec en `docs/superpowers/specs/`.
+- 🔀 **Choque con #1530, que arregló el MISMO `date - bigint` a la vez.** Me quedo con su versión del
+  código y su guardián; de lo mío sobreviven los **dos sitios que #1530 no tocó** —`lib/ia-cache.ts`
+  (la caché semántica NO guardaba nada) y el mailing de ialimp (pasos ≥2 nunca encolados)— y una
+  regla que a su guardián le faltaba: **`make_interval(days|hours => bigint)` TAMPOCO existe**; solo
+  `secs` lo acepta (es `double precision`). Su cabecera lo recomendaba como cura y no lo es.
 
-### 📐 (20/08/2026) El calibrado del canal Booking NUNCA completó una pasada: `date - bigint` (42883)
-- Latido `sivra_canal` en rojo desde que nació. **Causa raíz:** Prisma manda los números de JS como
-  **bigint** y Postgres no tiene `date - bigint` → la PRIMERA consulta de `medir()` moría en 42883.
-  Reproducido y verificado contra la BD real. El repo ya lo sabía (`concursos-cierre`, 2026-07).
-- **Consecuencia medida, no supuesta:** los cuatro pisos siguen con `channel_markup=1.20` y
-  `cuota_fija=0` en `pricing_settings` — el ×1,20 supuesto de la reserva de Navidad **sigue vivo**.
-  Las 22 mediciones de escaparate estaban ahí (4 pisos, ninguna usada): el hueco NO era aguas arriba.
-- **Mismo fallo en otros 3 sitios, todos silenciosos:** el suelo de PriceLabs de `pricing/apply`
-  (708 filas vivas, se tragaba el 42883 en un `.catch(() => [])` → ahora declara `pl_degradado`),
-  la caché semántica de IA (`ia-cache.ts`: NO cacheaba nada) y el mailing de ialimp (pasos ≥2).
-- Guardián nuevo `test/regression-sql-fechas.test.ts` (gate `pnpm test:guardia`, 33 verdes). `secs`
-  de `make_interval` queda fuera: es `double precision` y sí acepta bigint (comprobado). PR draft.
+### 🧨 (20/08/2026) `date - bigint`: el calibrado del canal murió en su primera pasada real — y tapaba un suelo apagado
+- **El cron `/api/sivra/pricing/canal` reventó entero** (42883, `operator does not exist: date - bigint`)
+  en `CURRENT_DATE - ${VENTANA_DIAS}`: Prisma manda un número de JS como **int8** y Postgres no tiene
+  `date - bigint`. Compila, pasa `tsc`, pasa `next build`, pasa los 1.342 tests — porque **nada de eso
+  ejecuta la consulta**. `pricing_settings` siguió con el ×1,20/0/2 que ese cron existe para corregir.
+- El **latido `sivra_canal` hizo su trabajo**: rojo, con el error literal. El vigía es lo único que
+  separó «no ha corrido» de «corrió y murió».
+- 🚨 **Lo caro apareció al buscar el patrón:** la MISMA construcción en el suelo de PriceLabs de
+  `pricing/apply` (`captured_at >= CURRENT_DATE - ${PL_REF_MAX_AGE_DAYS}`, desde el 16/08), pero ahí
+  la tapaba un `.catch(() => [])`. Resultado: **el suelo del 85% llevaba días INERTE y su tripwire del
+  70% tampoco podía saltar** — «no he podido leer la referencia» servido como «no hay referencia», el
+  landmine del CLAUDE.md raíz en su forma más cara. 708 filas de referencia vigentes sin usar; medidas
+  107 fechas de House y 81 del Dúplex por debajo del suelo (p. ej. Dúplex 24/10: 148€ contra 220€ de PL).
+- Arreglado: `::int` en ambas, el `catch` del PL ahora **declara** (`pl_degradado`, `ok:false`, Telegram)
+  en vez de degradar en silencio, y guardián nuevo `test/regression-sql-fecha-parametro.test.ts` que
+  falla si alguien vuelve a restar un parámetro sin castear (verificado: caza el bug original).
+- Lección de método: **una consulta que ningún test ejecuta no está probada por tenerlo todo en verde.**
+  Las dos consultas arregladas se probaron contra la BD real con parámetro bigint antes de dar el fix
+  por bueno. (Y ojo: un backtick dentro de un `Prisma.sql` cierra el template — casi se cuela.)
+- Bien: la rutina de Booking SÍ midió sola 6 ventanas nuevas de escaparate (22 en total). PR #1530.
+
+### ✅ (20/08/2026) El calendario de House Sevillana, EN VIVO — tras romperse TRES veces por caché
+- **Confirmado por Alberto en pantalla.** Verificado además que las fechas son las buenas: las 34
+  noches ocupadas del endpoint coinciden **una a una** con el snapshot del cron (sin desfase de día,
+  el fallo clásico de husos); rango hoy→+12 meses, sin duplicados, sin fechas pasadas.
+- **Tercera capa, la que sobrevivió a los dos arreglos:** `s-maxage` **NO** significa «cachea solo
+  el CDN». Sin `max-age`, el navegador no tiene vida útil declarada y el `stale-while-revalidate`
+  le deja servirse **su propia copia rota** hasta una hora. Con el endpoint ya impecable (12/12), la
+  web seguía rota y desde el servidor era invisible. Fix #1523: `max-age=0, must-revalidate` (fuera
+  el SWR: no se puede pedir solo para el CDN) + `cache:'no-store'` en el `fetch` del widget.
+- **La lección de método, la misma las tres veces:** tomar «no he podido observar el fallo» por «no
+  hay fallo». Cada arreglo era correcto y cada verificación era real; lo que faltaba era un camino
+  que la comprobación nunca ejercitaba. Escrito en `verification-before-completion`.
+- Aparte: la web estuvo caída un rato con `ERR_SSL_PROTOCOL_ERROR` en `www` (dominio principal).
+  Se recuperó sola; **no se llegó a diagnosticar** — si repite, hay que mirar el certificado en
+  Vercel → Domains, no el código.
 
 ### 🚧 (20/08/2026) El calendario salía «no hemos podido consultar»: se arregló DOS veces — #1519 y #1521
 - Mergeado #1500, el endpoint daba **200 impecable por curl** y estaba roto en el navegador: la

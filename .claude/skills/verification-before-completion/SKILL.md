@@ -90,6 +90,25 @@ Two rules fall out of that, and the second is the one that was missed twice:
    cache-status header (`x-vercel-cache`, `cf-cache-status`, `age`) — a check that cannot tell a
    HIT from a MISS cannot tell you what the next visitor will get.
 
+**And a third time, because the second fix was still verified from the wrong side of the wire.**
+The `*` fix was measured 12/12 green against production — and the user's page was still broken. The
+cause was one layer further out: the response said `s-maxage=600, stale-while-revalidate=3600` and
+no `max-age`, which does *not* mean "only the CDN caches this". `s-maxage` speaks only to shared
+caches, so for the browser the response had no declared lifetime, and `stale-while-revalidate` then
+authorised it to keep serving **its own stored copy** — the broken pre-fix one — for an hour. The
+browser was not asking; it was answering itself. No amount of server-side measurement can see that.
+
+3. **Your client is not the user's client, and caches make the difference invisible.** Between your
+   `curl` and their browser sit: a private cache, a CDN cache, a different PoP, and a page that is
+   itself cached. Each can serve a different vintage of the same URL. When the server measures clean
+   and the user still sees the bug, **stop re-measuring the server** — the discriminating evidence
+   only exists on their side (DevTools → Network → the request row: status, `Size` saying `disk
+   cache`, response headers, cache-status). Ask for it instead of shipping another hypothesis.
+
+The pattern across all three rounds is one mistake wearing different clothes: **treating "I could
+not observe the failure" as "the failure is not there."** Each fix was correct and each verification
+was real; what was missing each time was a path the check never exercised.
+
 ## Red Flags - STOP
 
 - Using "should", "probably", "seems to"
