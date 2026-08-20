@@ -55,6 +55,13 @@
   de estilo, y el borrador que escala por falta de info dice de qué hueco se trata; y **minado del
   histórico** (`/api/sivra/mensajes/minar-historico`, manual) que propone hechos por Telegram con
   botones ✅/❌ — nada entra sin que Alberto lo confirme.
+- **Mergeado y VIVO** (PR #1542, 20/08 14:53). Primera pasada del cron con el código nuevo, 4 minutos
+  después: `mensajes_guia_cache` pasó de 0 filas a las guías reales de Dúplex (10 secciones) y Socorro 24
+  (9), con 3 secciones de acceso detectadas en cada una, y el detector de conflictos disparó sus dos
+  avisos de PARKING (uno por piso). Las cuatro guest apps responden 200 (comprobado antes de mergear).
+- **`?dry=1`** (PR #1546): con la autonomía nueva, el disparo manual le manda el mensaje DE VERDAD al
+  huésped, así que probar costaba un mensaje a un cliente. El simulacro recorre el pipeline y devuelve
+  qué saldría y si se enviaría solo, sin enviar, sin proponer y sin escribir.
 - Pendiente: **vender/cobrar el parking** (fase 2, pedido por Alberto).
 
 ### 💶 (20/08/2026) Dúplex: plan precio→reforma→venta, y el motor de precios tiene una copia RETIRADA que engaña
