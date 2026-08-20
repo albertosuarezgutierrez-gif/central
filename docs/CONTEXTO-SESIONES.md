@@ -40,10 +40,18 @@ del PR — si no, lo habría "arreglado" dentro de un PR de docs y el hallazgo s
 🚨 **Un índice desfasado no falla ruidosamente: manda a la línea equivocada**, que para `code-map` es
 peor que no tener índice (acota mal y encima con confianza). El gate en rojo es la única señal, así
 que dejarlo pasar «porque es un fichero generado» normaliza el rojo y lo vuelve invisible.
-Regenerado en PR #1559 (solo deriva real: cabecera + el `yaUsados` que #1548 añadió a
-`esperarCodigoPortal`). **Hueco aparte que destapó el script y NO se toca**: faltan `almacen`,
-`housesevillana` y `mariscos` en el array `VERTICALES` de `apps/plataforma/lib/estructura.ts` —
-exige decidir `sector`/`desc` de cada una, es criterio de Alberto.
+🚨 **PERO regenerarlo DESDE UN PR es una carrera que se pierde, y la perdí:** el PR #1559 generó el
+fichero sobre `c5d7af05` y, mientras esperaba CI, se mergeó **#1560** (que añade `pideCaptcha`) → mi
+snapshot **llegó ya desfasado** y `main` siguió en rojo tras mergearlo. No es un descuido: en un repo
+con este tráfico, el índice solo es correcto si se regenera **SOBRE `main`, después del último
+merge** — que es justo lo que hace la rutina de auditoría (`chore(auditoría): regenerar radiografía
+[skip vercel]`, ver #1547 y #1554). **Lección: no persigas este gate desde un PR.** Si está rojo,
+la pregunta correcta no es «lo regenero yo» sino «¿está corriendo la rutina que lo mantiene?».
+(La comparación IGNORA `sha` y `generadoEn` a propósito —`stableMapa`, línea 443— así que un rojo
+siempre es deriva REAL de firmas, nunca churn de cabecera.)
+**Hueco aparte que destapó el script y NO se toca**: faltan `almacen`, `housesevillana` y `mariscos`
+en el array `VERTICALES` de `apps/plataforma/lib/estructura.ts` — exige decidir `sector`/`desc` de
+cada una, es criterio de Alberto.
 
 ### 🗝️ (20/08/2026) El agente de huéspedes NO tenía ni un dato del piso: la guest app de Smoobu SÍ se puede leer
 - Alberto, del hilo del Dúplex con Samy: «¿tiene acceso a todos los mensajes? ¿puede entrar en la url?».
