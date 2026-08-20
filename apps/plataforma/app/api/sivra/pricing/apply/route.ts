@@ -543,12 +543,21 @@ export async function POST(req: NextRequest) {
   // última curva real de PL (`captured_at='2026-08-10'`, migración 2026-08-14_pl_referencia_congelada.sql)
   // y el reloj de PL_REF_MAX_AGE_DAYS corre de verdad (suelo inerte desde el 08/12/2026). Regla
   // general: una referencia EXTERNA no puede recapturarse de un espejo que escribes tú mismo.
+  // 🚨 Un `catch` que devuelve [] aquí es indistinguible de «no hay curva de PriceLabs», y esa
+  // confusión APAGA el suelo del 85% en silencio (regla del CLAUDE.md raíz: un dato que no se ha
+  // podido mirar no autoriza a afirmar que no lo hay). La pasada sigue —tarificar sin suelo PL es
+  // mejor que no tarificar— pero se declara degradada y avisa.
+  let plIlegible: string | null = null
   const plRows = await prisma.$queryRaw<{ pid: string; rate_date: string; pl: number }[]>(Prisma.sql`
     SELECT property_id AS pid, rate_date::text AS rate_date, pl_price::float8 AS pl
     FROM pricing_pl_referencia
     WHERE rate_date >= CURRENT_DATE AND pl_price > 0
-      AND captured_at >= CURRENT_DATE - ${PL_REF_MAX_AGE_DAYS}
-  `).catch(() => [])
+      -- 🚨 ::int OBLIGATORIO: Prisma manda el número de JS como int8 y en Postgres el
+      -- operador «date - bigint» NO EXISTE (42883). Sin el cast esto lanza, y el catch de
+      -- abajo lo convertía en «no hay referencia PL»: el suelo del 85% quedaba INERTE y su
+      -- propio tripwire del 70% tampoco podía saltar. Detectado el 20/08/2026.
+      AND captured_at >= CURRENT_DATE - ${PL_REF_MAX_AGE_DAYS}::int
+  `).catch((e: unknown) => { plIlegible = String(e).slice(0, 200); return [] })
   const plPrice = new Map(plRows.map(x => [`${x.pid}|${x.rate_date}`, Number(x.pl)]))
   const plAvisos: string[] = []
   /** fechas donde el mercado fiable de la fecha acotó el suelo PL (referencia desfasada/corrupta) */
@@ -1044,6 +1053,15 @@ export async function POST(req: NextRequest) {
   // febrero. Hasta el 01/08/2026 eso salía como `ok:true` y nadie se enteraba nunca: el `.catch`
   // devolvía un mapa vacío, que es indistinguible de «no hay eventos». Ahora la pasada se declara
   // degradada Y avisa, porque es de las averías más caras que puede tener el motor.
+  if (plIlegible) {
+    try {
+      await tgSend(
+        `🚨 Pricing: no se ha podido leer la referencia de PriceLabs — esta pasada ha tarificado ` +
+        `SIN el suelo del ${Math.round(PL_FLOOR_RATIO * 100)}% (y sin su aviso del 70%).\n${plIlegible}`,
+      )
+    } catch { /* no crítico */ }
+  }
+
   if (eventosIlegibles) {
     try {
       await tgSend(
@@ -1074,8 +1092,9 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({
-    ok: !eventosIlegibles,
+    ok: !eventosIlegibles && !plIlegible,
     degradado: eventosIlegibles ? "pricing_eventos_auto ilegible: tarificado SIN eventos" : undefined,
+    pl_degradado: plIlegible ? `referencia PriceLabs ilegible: tarificado SIN suelo PL (${plIlegible})` : undefined,
     // Degradación menor: no invalida la pasada, pero tiene que verse sin tener que deducirlo.
     demanda_degradada: ocupacionMesIlegible ? "ocupación por mes ilegible: tarificado con la anual" : undefined,
     dryRun, paused, days, properties: recs.length, results, pl_avisos: plAvisos.length,
