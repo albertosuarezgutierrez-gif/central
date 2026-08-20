@@ -6,6 +6,10 @@
 //      ANTES, y el Portal llega a pedir el 20% del tipo (SUB-JA-2026-262097:
 //      3.108,68€ sobre 15.543,40€). Avisar la víspera no da tiempo a moverlo.
 //   2. «ÚLTIMAS 24 HORAS» — con el estado de pujas de HOY.
+//   3. 🔨 «CÓMO ACABARON» — el desenlace de las que YA cerraron: si hubo pujas y
+//      por cuánto se remató, contra el tipo y contra nuestro techo. Lo capturaba
+//      `capturarResultados` en SILENCIO desde julio, y es el único aviso que
+//      dice si en esa zona merece la pena competir.
 //
 // 🚨 Y sobre todo: los avisos cuelgan ahora del RADAR (lo que ya pasó el filtro
 // de rentabilidad), no solo de `subastas_seguidas`. Auditado el 20/08/2026: 19
@@ -25,7 +29,7 @@ import { isCronAuthorized } from '@/lib/cron-auth'
 import { eur } from '@/lib/dinero'
 import { deposito, titularCargas, umbralesPuja, viviendaHabitualDeNotas, type PujasFicha } from '@central/module-subastas'
 import { tesoreriaSubastas } from '@/lib/subastas/tesoreria'
-import { estadoPujasViva } from '@/lib/subastas/enriquecer'
+import { estadoPujasViva, guardarObservacionPujas } from '@/lib/subastas/enriquecer'
 import { COLS_SUBASTA, filaASubasta } from '@/lib/subastas-radar'
 import { calibracionResultados } from '@/lib/subastas/calibracion'
 import { bloqueSubasta, escapar, lecturaRatio, urlFicha, type DatosAviso } from '@/lib/subastas/aviso-cierre'
@@ -40,6 +44,8 @@ const ESTADOS_ACTIVOS = ['interesado', 'analizando', 'pujando']
 /** Tope de fichas consultadas por pasada (una llamada al Portal por subasta). */
 const MAX_VIGILADAS = 12
 const PRESUPUESTO_VIGILANCIA_MS = 35_000
+/** Ventana hacia atrás del parte de desenlaces (la captura reintenta 60 días). */
+const DIAS_DESENLACE = 30
 
 /** Subastas en seguimiento ACTIVO: el radar no las vuelve a avisar. */
 const SIN_SEGUIMIENTO_ACTIVO = Prisma.sql`
@@ -74,8 +80,8 @@ async function vigilarPujas(): Promise<{ vigiladas: number; leidas: number }> {
   // JOIN, así que cada subasta sale UNA vez. Con `DISTINCT` esto era SQL
   // inválido —`ORDER BY s.fecha_fin` sobre una columna fuera del SELECT, error
   // 42P10— y el vigía moría en cada pasada. No lo caza ni `tsc` ni el build.
-  const filas = await prisma.$queryRaw<Array<{ dedupe_key: string; identificador: string }>>(Prisma.sql`
-    SELECT s.dedupe_key, s.identificador
+  const filas = await prisma.$queryRaw<Array<{ dedupe_key: string; identificador: string; fecha_fin: Date }>>(Prisma.sql`
+    SELECT s.dedupe_key, s.identificador, s.fecha_fin
     FROM subastas s
     WHERE s.fuente = 'boe' AND s.identificador IS NOT NULL
       AND s.archivada_at IS NULL
@@ -107,17 +113,13 @@ async function vigilarPujas(): Promise<{ vigiladas: number; leidas: number }> {
     // ayer con un hueco de hoy.
     if (p.estado === 'desconocido') continue
     leidas++
-    await prisma.$executeRaw(Prisma.sql`
-      UPDATE subastas SET
-        pujas_estado = ${p.estado},
-        pujas_estado_at = now(),
-        -- El importe solo llega cuando el Portal lo publica (subasta concluida).
-        -- COALESCE porque una puja solo puede subir: un null no borra lo visto.
-        mejor_puja = COALESCE(${p.importe}, mejor_puja),
-        mejor_puja_at = CASE WHEN ${p.importe}::numeric IS NULL THEN mejor_puja_at ELSE now() END,
-        actualizado_en = now()
-      WHERE dedupe_key = ${f.dedupe_key}
-    `)
+    // Escribe la columna con el estado de HOY y, además, una línea en el
+    // histórico: el Portal solo publica el estado actual —ni la escalera de
+    // pujas ni el número de postores, tampoco al cerrar—, así que «cuándo entró
+    // la primera puja» solo se podrá responder con serie propia.
+    await guardarObservacionPujas({
+      dedupeKey: f.dedupe_key, identificador: f.identificador, pujas: p, fechaFin: f.fecha_fin,
+    })
   }
   return { vigiladas: filas.length, leidas }
 }
@@ -312,10 +314,125 @@ export async function GET(req: NextRequest) {
       console.error('[subastas-cierre] seguidas', e)
       return 0
     })
+    // Y lo que pasó con las que YA cerraron: hasta ahora el remate se capturaba
+    // en silencio y no se enteraba nadie.
+    const desenlaces = await avisarDesenlaces().catch((e) => {
+      console.error('[subastas-cierre] desenlaces', e)
+      return 0
+    })
 
-    return NextResponse.json({ ok: true, ...vigilancia, deposito5d, urgentes, seguidas })
+    return NextResponse.json({ ok: true, ...vigilancia, deposito5d, urgentes, seguidas, desenlaces })
   } catch (e: any) {
     console.error('[subastas-cierre]', e)
     return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
   }
+}
+
+// ── 🔨 Parte del DESENLACE ───────────────────────────────────────────────────
+/**
+ * Cuenta qué pasó con las subastas que ya cerraron: si hubo pujas y por cuánto
+ * se remató, contra el tipo de salida y contra el techo que habíamos calculado
+ * ANTES (`puja_maxima_calc`, congelado al concluir).
+ *
+ * Es el bucle que cierra el sistema. Los avisos de arriba hablan de subastas que
+ * todavía se pueden pujar; este dice cómo acabaron, que es lo que dice si en esa
+ * zona merece la pena competir — y hasta hoy `capturarResultados` lo escribía en
+ * la BD sin que se enterara nadie hasta entrar en /subastas.
+ *
+ * `resultado_avisado_at` fija que cada una se cuenta UNA vez. Las que cerraron y
+ * aún no tienen desenlace publicado se mencionan en bloque: «pendiente de
+ * certificado» NO es «quedó desierta», y callarlas dejaría creer que ya están
+ * todas contadas.
+ */
+async function avisarDesenlaces(): Promise<number> {
+  const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
+    SELECT dedupe_key, identificador, municipio, provincia, direccion, descripcion, fecha_fin,
+           resultado, valor_subasta, importe_adjudicacion, puja_maxima_calc
+    FROM subastas
+    WHERE es_inmueble = true
+      AND resultado IS NOT NULL
+      AND resultado_avisado_at IS NULL
+      AND fecha_fin IS NOT NULL
+      AND fecha_fin >= now() - make_interval(days => ${DIAS_DESENLACE}::int)
+    ORDER BY fecha_fin DESC
+  `)
+
+  // Cerradas todavía sin desenlace: se cuentan como PENDIENTES, nunca como
+  // desiertas (la captura reintenta durante 60 días).
+  const pendientes = await prisma.$queryRaw<Array<{ n: bigint }>>(Prisma.sql`
+    SELECT count(*) AS n FROM subastas
+    WHERE es_inmueble = true AND resultado IS NULL
+      AND fecha_fin IS NOT NULL
+      AND fecha_fin < now() - interval '6 hours'
+      AND fecha_fin >= now() - make_interval(days => ${DIAS_DESENLACE}::int)
+  `)
+  const nPendientes = Number(pendientes[0]?.n ?? 0)
+
+  if (!filas.length) return 0
+
+  const lineas: string[] = ['🔨 <b>Cómo acabaron</b>', '']
+  for (const f of filas) {
+    const donde = String(f.direccion ?? f.descripcion ?? '').replace(/\s+/g, ' ').trim().slice(0, 90)
+    const cierre = new Date(f.fecha_fin).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Europe/Madrid' })
+    const tipo = f.valor_subasta == null ? null : Number(f.valor_subasta)
+    const remate = f.importe_adjudicacion == null ? null : Number(f.importe_adjudicacion)
+
+    lineas.push(`• <b>${escapar(String(f.identificador ?? f.dedupe_key))}</b> — cerró ${escapar(cierre)}`)
+    if (donde) lineas.push(`  ${escapar(donde)}${f.municipio ? escapar(` (${f.municipio})`) : ''}`)
+
+    if (remate != null && tipo != null && tipo > 0) {
+      const pct = Math.round((remate / tipo) * 100)
+      const dif = remate - tipo
+      // Por encima o por debajo del tipo, dicho en EUROS: el porcentaje a secas
+      // no se lee, y es la cifra que calibra cuánto hay que pujar en esa zona.
+      lineas.push(
+        `  💰 Rematada en <b>${escapar(eur(remate))}</b> — ${pct}% del tipo (${escapar(eur(tipo))}), ` +
+          `${dif >= 0 ? `${escapar(eur(dif))} POR ENCIMA` : `${escapar(eur(Math.abs(dif)))} por debajo`}`,
+      )
+    } else if (remate != null) {
+      lineas.push(`  💰 Rematada en <b>${escapar(eur(remate))}</b> (sin tipo publicado con el que comparar)`)
+    } else if (/desiert/i.test(String(f.resultado))) {
+      lineas.push('  🕳️ <b>Quedó DESIERTA</b>: nadie pujó' + (tipo ? escapar(` (tipo ${eur(tipo)})`) : ''))
+    } else {
+      // Estado reconocido pero sin importe: se dice tal cual, no se rellena.
+      lineas.push(`  ⚪ ${escapar(String(f.resultado))} — el Portal no publica importe`)
+    }
+
+    // ¿Habríamos ganado? El techo se congeló ANTES del remate, así que la
+    // comparación es honesta y es la que calibra al agente.
+    const techo = f.puja_maxima_calc == null ? null : Number(f.puja_maxima_calc)
+    if (techo != null && remate != null) {
+      lineas.push(
+        techo >= remate
+          ? `  ✅ Nuestro techo era ${escapar(eur(techo))}: habríamos ganado`
+          : `  ❌ Nuestro techo era ${escapar(eur(techo))}: se fue ${escapar(eur(remate - techo))} por encima`,
+      )
+    }
+    lineas.push('')
+  }
+
+  // La lectura agregada de TODO lo capturado: a qué % del tipo se remata de
+  // verdad. Es el ratio con el que el agente proyecta el remate esperado.
+  try {
+    const calibracion = await calibracionResultados()
+    const global = calibracion.find((z) => z.provincia === '(todas)')
+    if (global?.ratioMediano != null && global.muestraRatio > 0) {
+      lineas.push(
+        `📊 Con ${global.muestraRatio} remate${global.muestraRatio === 1 ? '' : 's'} real${global.muestraRatio === 1 ? '' : 'es'}, ` +
+          `la mediana está en el ${Math.round(global.ratioMediano * 100)}% del tipo.`,
+      )
+    }
+  } catch (e) {
+    console.error('[subastas-cierre] calibración', e)
+  }
+  if (nPendientes > 0) {
+    lineas.push(`⏳ ${nPendientes} cerrada${nPendientes === 1 ? '' : 's'} sin desenlace publicado todavía (no es «desierta»: el Portal aún no lo dice).`)
+  }
+
+  await tgSend(lineas.join('\n'), { html: true }).catch(() => {})
+  await prisma.$executeRaw(Prisma.sql`
+    UPDATE subastas SET resultado_avisado_at = now()
+    WHERE dedupe_key = ANY(${filas.map((f) => String(f.dedupe_key))}::text[])
+  `)
+  return filas.length
 }

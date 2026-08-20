@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-20T12:33:44Z",
-  "sha": "c4d33a3aa16ae27950132c10e3f23facb387a842",
+  "generadoEn": "2026-08-20T17:01:43Z",
+  "sha": "a3f4d3e69b4840f9c19ba65509b0d047005863f7",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -49519,7 +49519,7 @@
         "subastas_criterios"
       ],
       "rutaApi": null,
-      "hash": "f7eabbe268b6"
+      "hash": "537fea745110"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/subastas/SubastasClient.tsx",
@@ -49534,7 +49534,7 @@
           "exportada": false,
           "params": "activo = false",
           "retorno": "React.CSSProperties",
-          "linea": 258
+          "linea": 272
         },
         {
           "nombre": "ChipUI",
@@ -49542,7 +49542,7 @@
           "exportada": false,
           "params": "{ tono = 'neutro', children }: { tono?: TonoChip; children: React.ReactNode }",
           "retorno": null,
-          "linea": 275
+          "linea": 289
         },
         {
           "nombre": "TarjetaOportunidad",
@@ -49550,7 +49550,7 @@
           "exportada": false,
           "params": "p: { precio: number | null precioNota?: string descuento?: { etiqueta: string; tono: TonoChip } | null titulo: string zona?: string | null metros?: string | null chips: Chip[] evidencia?: string | null detalles?: React.ReactNode acento?: bo",
           "retorno": null,
-          "linea": 297,
+          "linea": 311,
           "resumen": "UNA sola anatomía para chollos de portal, preferentes 🌊 y subastas — antes había tres tarjetas distintas y la pestaña se veía destartalada (queja de Alberto, 09/08/2026). Orden de lectura móvil: prec"
         },
         {
@@ -49559,7 +49559,7 @@
           "exportada": false,
           "params": "ch: Chollo",
           "retorno": "Chip[]",
-          "linea": 343,
+          "linea": 357,
           "resumen": "Chips por origen: la FUENTE siempre es el primero (deja de ser texto suelto)."
         },
         {
@@ -49568,7 +49568,7 @@
           "exportada": false,
           "params": "p: Preferente",
           "retorno": "Chip[]",
-          "linea": 352
+          "linea": 366
         },
         {
           "nombre": "chipsDeSubasta",
@@ -49576,7 +49576,7 @@
           "exportada": false,
           "params": "s: SubastaChollo",
           "retorno": "Chip[]",
-          "linea": 359
+          "linea": 373
         },
         {
           "nombre": "fecha",
@@ -49584,7 +49584,7 @@
           "exportada": false,
           "params": "iso: string | null | undefined",
           "retorno": "string | null",
-          "linea": 368
+          "linea": 382
         },
         {
           "nombre": "Puntuacion",
@@ -49592,7 +49592,7 @@
           "exportada": false,
           "params": "{ v }: { v: number | null }",
           "retorno": null,
-          "linea": 382,
+          "linea": 396,
           "resumen": "Semáforo de la puntuación. `null` se pinta distinto a 0: no es lo mismo."
         },
         {
@@ -49601,7 +49601,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 390
+          "linea": 404
         },
         {
           "nombre": "PanelTesoreria",
@@ -49609,7 +49609,7 @@
           "exportada": false,
           "params": "{ t }: { t: Tesoreria }",
           "retorno": null,
-          "linea": 397,
+          "linea": 411,
           "resumen": "Dinero que hay que tener bloqueado para poder pujar. Lo que importa NO es la suma de depósitos sino el máximo simultáneo: los que no se solapan reutilizan el mismo dinero."
         },
         {
@@ -49618,7 +49618,7 @@
           "exportada": false,
           "params": "{ r, dormitorios }: { r: Rendimiento | null | undefined; dormitorios?: number | null }",
           "retorno": null,
-          "linea": 481,
+          "linea": 495,
           "resumen": "Yield turístico estimado con los pisos PROPIOS. Siempre con el caveat: los pisos de referencia son de Sevilla capital — fuera de ahí es extrapolación."
         },
         {
@@ -49627,7 +49627,7 @@
           "exportada": false,
           "params": "{ s, onVerFicha }: { s: SubastaChollo; onVerFicha: () => void }",
           "retorno": null,
-          "linea": 498,
+          "linea": 512,
           "resumen": "Subasta en la vista unificada de Oportunidades, con la anatomía común de `TarjetaOportunidad`. El enlace va a su ficha completa en la pestaña «Todas» — FichaSubasta es demasiado pesada para montarla e"
         },
         {
@@ -49636,7 +49636,7 @@
           "exportada": false,
           "params": "{ s, plantaAparte }: { s: Subasta; plantaAparte?: boolean }",
           "retorno": null,
-          "linea": 542,
+          "linea": 556,
           "resumen": "repetirla sería ruido."
         },
         {
@@ -49645,7 +49645,7 @@
           "exportada": false,
           "params": "{ s, d }: { s: Subasta; d?: Documental | null }",
           "retorno": null,
-          "linea": 579,
+          "linea": 593,
           "resumen": "Resumen de CARGAS + documentación de la subasta. Vive dentro de `FichaSubasta` a propósito: antes el semáforo y las notas del edicto solo se pintaban en la pestaña «Todas» (iban en su `extra`), así qu"
         },
         {
@@ -49654,7 +49654,7 @@
           "exportada": false,
           "params": "{ dedupeKey }: { dedupeKey: string }",
           "retorno": null,
-          "linea": 749,
+          "linea": 768,
           "resumen": "«Nota simple viva»: la certificación que adjunta el juzgado es de hace años y las cargas se mueven. Aquí se sube una nota simple recién pedida al registro y el agente dice QUÉ HA CAMBIADO — es lo únic"
         },
         {
@@ -49663,7 +49663,7 @@
           "exportada": false,
           "params": "{ etiqueta, sub, children }: { etiqueta: string; sub?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 844,
+          "linea": 863,
           "resumen": "Par etiqueta→valor del bloque «💶 Los números»: etiqueta pequeña arriba, valor con peso debajo. La jerarquía la da la tipografía — antes todos los importes eran chips/líneas del mismo peso y se confun"
         },
         {
@@ -49672,7 +49672,7 @@
           "exportada": false,
           "params": "{ u }: { u: ReturnType<typeof umbralesPuja> }",
           "retorno": null,
-          "linea": 862,
+          "linea": 881,
           "resumen": "Umbrales de APROBACIÓN del remate. Corrige la confusión de «hay que pujar el 70% de la deuda»: el 70% de la LEC es del VALOR DE SUBASTA, y la deuda entra como vía alternativa (y como techo probable de"
         },
         {
@@ -49681,7 +49681,7 @@
           "exportada": false,
           "params": "s: Subasta",
           "retorno": "SubastaInmueble",
-          "linea": 878,
+          "linea": 897,
           "resumen": "El `Subasta` del cliente, como lo espera la lógica pura del módulo."
         },
         {
@@ -49690,7 +49690,7 @@
           "exportada": false,
           "params": "{ s, o, params }: { s: Subasta; o?: Oportunidad | null; params?: ParamsCoste }",
           "retorno": null,
-          "linea": 905,
+          "linea": 924,
           "resumen": "«¿Y si pujo X?»: coste puerta abierta, descuento real y banda de aprobación de UNA puja concreta. Mismo motor que el resto de la ficha (`calcularCoste` + `umbralesPuja` del módulo, con la financiación"
         },
         {
@@ -49699,7 +49699,7 @@
           "exportada": false,
           "params": "{ s, o, acciones, extra, doc, escenarios, params }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null; escenarios?: EscenarioUI[] | null; params?: ParamsCoste }",
           "retorno": null,
-          "linea": 970
+          "linea": 989
         },
         {
           "nombre": "SubastasClient",
@@ -49707,14 +49707,14 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Inicial | null }",
           "retorno": null,
-          "linea": 1256
+          "linea": 1296
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "83d6bc20489d"
+      "hash": "5005817aecd5"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -53469,7 +53469,7 @@
         "subastas_radar"
       ],
       "rutaApi": "/api/cron/subastas-avisos",
-      "hash": "1e3e8ade9184"
+      "hash": "49d5bd3bd363"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-cierre/route.ts",
@@ -53485,7 +53485,7 @@
           "exportada": false,
           "params": "claves: string[]",
           "retorno": "Promise<Map<string, any>>",
-          "linea": 53,
+          "linea": 59,
           "resumen": "Fila del corpus por `dedupe_key`, con las columnas canónicas (sin `SELECT *`)."
         },
         {
@@ -53494,7 +53494,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<",
-          "linea": 72,
+          "linea": 78,
           "resumen": "Refresca el estado de PUJAS de lo que cierra pronto (radar + seguidas). 🚨 Lee la pestaña «Pujas» (`ver=5`), que es la única que lo publica: la versión anterior miraba la general, donde solo están la "
         },
         {
@@ -53503,7 +53503,7 @@
           "exportada": false,
           "params": "f: any",
           "retorno": "DatosAviso",
-          "linea": 126,
+          "linea": 128,
           "resumen": "Traduce una fila del corpus al bloque de aviso (con cargas, pujas y umbral)."
         },
         {
@@ -53512,7 +53512,7 @@
           "exportada": false,
           "params": "cuentaId: string",
           "retorno": "Promise<string[]>",
-          "linea": 160,
+          "linea": 163,
           "resumen": "Bloque de tesorería de una cuenta (reusa el plan que ya cae al radar solo)."
         },
         {
@@ -53521,7 +53521,7 @@
           "exportada": false,
           "params": "ventana: 'deposito' | 'cierre'",
           "retorno": "Promise<number>",
-          "linea": 188,
+          "linea": 191,
           "resumen": "Aviso del RADAR. `ventana` elige cuál de los dos: el de preparar el depósito (a `DIAS_PREPARAR` días, dejando fuera las últimas 24 h, que van en el otro) o el urgente de la víspera. Cada uno lleva su "
         },
         {
@@ -53530,7 +53530,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<number>",
-          "linea": 254,
+          "linea": 257,
           "resumen": "Recordatorio de las SEGUIDAS (interés declarado a mano). Se conserva tal cual porque lleva el techo de puja que Alberto fija en el seguimiento, que el radar no tiene. Con 0 seguidas simplemente no man"
         },
         {
@@ -53539,7 +53539,16 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 292
+          "linea": 295
+        },
+        {
+          "nombre": "avisarDesenlaces",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<number>",
+          "linea": 347,
+          "resumen": "Cuenta qué pasó con las subastas que ya cerraron: si hubo pujas y por cuánto se remató, contra el tipo de salida y contra el techo que habíamos calculado ANTES (`puja_maxima_calc`, congelado al conclu"
         }
       ],
       "tablas": [
@@ -53549,7 +53558,7 @@
         "subastas_seguidas"
       ],
       "rutaApi": "/api/cron/subastas-cierre",
-      "hash": "4d92735762c3"
+      "hash": "e83d16cc870e"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-enriquecer/route.ts",
@@ -53565,7 +53574,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 34
+          "linea": 36
         }
       ],
       "tablas": [
@@ -53573,7 +53582,7 @@
         "subastas"
       ],
       "rutaApi": "/api/cron/subastas-enriquecer",
-      "hash": "51ed328ff0b2"
+      "hash": "0a250f59dd59"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-ingesta/route.ts",
@@ -56487,7 +56496,7 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 14
+          "linea": 17
         },
         {
           "nombre": "esMensajeAutomatico",
@@ -56495,7 +56504,7 @@
           "exportada": false,
           "params": "subject: string, text: string",
           "retorno": "boolean",
-          "linea": 25,
+          "linea": 28,
           "resumen": "Los mensajes del HOST / automáticos de Smoobu/Booking llevan ASUNTO (RECORDATORIO, WHERE TO COLLECT, 📈 Ayúdanos…) o son el aviso \"Check-in online disponible\". Los del HUÉSPED llegan con asunto vacío "
         },
         {
@@ -56504,7 +56513,7 @@
           "exportada": false,
           "params": "text: string",
           "retorno": "boolean",
-          "linea": 31,
+          "linea": 34,
           "resumen": "Despedidas / cortesías que no necesitan respuesta."
         },
         {
@@ -56513,13 +56522,13 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 39,
+          "linea": 42,
           "resumen": "Cron (cada 3 min) + red de seguridad del webhook. Sondea los hilos de Smoobu y enruta cada pregunta NUEVA del huésped al agente (propone por Telegram / auto-envía y deja log). Idempotencia por msgId ("
         }
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/mensajes/auto-reply",
-      "hash": "a4b7a63cb8e6"
+      "hash": "31db5ddaec1c"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/diagnostico-guia/route.ts",
@@ -56591,6 +56600,25 @@
       ],
       "rutaApi": "/api/sivra/mensajes/knowledge",
       "hash": "c5ac98ee17b9"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/sivra/mensajes/minar-historico/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "handler",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "Minado del histórico de conversaciones: empareja pregunta del huésped → respuesta de Alberto en los hilos ya cerrados y PROPONE hechos del piso por Telegram. Nada entra al prompt sin que él lo confirm"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/sivra/mensajes/minar-historico",
+      "hash": "e9c8fc48d497"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/reply/route.ts",
@@ -56823,7 +56851,7 @@
         "trading_watchlist"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "17a866702dd8"
+      "hash": "5f8c88d34b3a"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -58093,7 +58121,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 36
+          "linea": 38
         }
       ],
       "tablas": [
@@ -58101,7 +58129,7 @@
         "subastas_debug_token"
       ],
       "rutaApi": "/api/subastas/fase3-debug",
-      "hash": "74411264ca6b"
+      "hash": "269acf739e89"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/mapa/route.ts",
@@ -58210,7 +58238,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 64
+          "linea": 65
         }
       ],
       "tablas": [
@@ -58218,7 +58246,7 @@
         "subastas_radar"
       ],
       "rutaApi": "/api/subastas/radar",
-      "hash": "2936f527cba8"
+      "hash": "dfd3458fbca5"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/route.ts",
@@ -58243,7 +58271,7 @@
         "subastas_criterios"
       ],
       "rutaApi": "/api/subastas",
-      "hash": "821649d201d5"
+      "hash": "8dab8ea6f5b1"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/seguidas/route.ts",
@@ -63242,7 +63270,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 111,
+          "linea": 117,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -63251,7 +63279,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 141,
+          "linea": 147,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -63260,7 +63288,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 163
+          "linea": 169
         },
         {
           "nombre": "ventanaMinutos",
@@ -63268,7 +63296,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 171,
+          "linea": 177,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -63277,13 +63305,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 183,
+          "linea": 189,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ec5ebb1673eb"
+      "hash": "4d8bf0d643da"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -67015,8 +67043,7 @@
       "exporta": [
         "logMensaje",
         "aprenderCorreccion",
-        "registrarGap",
-        "autoPermitido"
+        "registrarGap"
       ],
       "funciones": [
         {
@@ -67025,7 +67052,7 @@
           "exportada": true,
           "params": "p: { bookingId: string; propertyId: string; categoria: string; pregunta: string; respuesta: string fuente: string; confidence: number; sentimiento: string; needs_human: boolean; auto_sent: boolean; edited: boolean }",
           "retorno": "Promise<void>",
-          "linea": 5
+          "linea": 7
         },
         {
           "nombre": "aprenderCorreccion",
@@ -67033,8 +67060,8 @@
           "exportada": true,
           "params": "p: { propertyId: string; categoria: string; pregunta: string; respuestaFinal: string }",
           "retorno": "Promise<void>",
-          "linea": 16,
-          "resumen": "Guarda una corrección de Alberto como ejemplo para el piso/categoría."
+          "linea": 23,
+          "resumen": "Guarda lo que Alberto aprueba o corrige. DOS destinos, no uno: · HECHO del piso (`mensajes_hechos`) si el huésped preguntaba algo y la respuesta enseña algo de la vivienda → permanente, va SIEMPRE al "
         },
         {
           "nombre": "registrarGap",
@@ -67042,27 +67069,17 @@
           "exportada": true,
           "params": "propertyId: string, pregunta: string",
           "retorno": "Promise<void>",
-          "linea": 25,
+          "linea": 36,
           "resumen": "Registra un hueco de la guía (incrementa el contador si ya existía esa pregunta para el piso)."
-        },
-        {
-          "nombre": "autoPermitido",
-          "kind": "function",
-          "exportada": true,
-          "params": "categoria: string, confidence: number",
-          "retorno": "Promise<boolean>",
-          "linea": 38,
-          "resumen": "¿Está habilitado el auto-envío para esta categoría y supera el umbral? (Fase 1 por defecto: false.)"
         }
       ],
       "tablas": [
         "mensajes_aprendizaje",
-        "mensajes_auto_config",
         "mensajes_guia_gaps",
         "mensajes_log"
       ],
       "rutaApi": null,
-      "hash": "2ca2cf1ac702"
+      "hash": "4a4b25ad8c2f"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/atribucion.ts",
@@ -67147,6 +67164,29 @@
       "hash": "e4ffc930be4e"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/agente-huesped/conflictos.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/agente-huesped/conflictos.ts — choques entre la guía de Smoobu y nuestras reglas. La guía del huésped y los overrides de negocio (parking, equipaje, llegada, horarios) pueden decir cosas distintas. La precedencia la resuelve `guest-app.ts` (gana la regla de negocio), pero resolverlo EN SIL",
+      "exporta": [
+        "avisarConflictoGuia"
+      ],
+      "funciones": [
+        {
+          "nombre": "avisarConflictoGuia",
+          "kind": "function",
+          "exportada": true,
+          "params": "propertyId: string, property: string, secciones: string[],",
+          "retorno": "Promise<void>",
+          "linea": 12
+        }
+      ],
+      "tablas": [
+        "mensajes_conflictos_guia"
+      ],
+      "rutaApi": null,
+      "hash": "3eed5fe528f9"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/contexto.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/agente-huesped/contexto.ts — ensambla el contexto de una reserva.",
@@ -67161,7 +67201,7 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 43
+          "linea": 50
         },
         {
           "nombre": "toPropertyId",
@@ -67169,7 +67209,7 @@
           "exportada": true,
           "params": "_apartmentId: unknown, apartmentName: string",
           "retorno": "string",
-          "linea": 48,
+          "linea": 55,
           "resumen": "Mapea apartmentId/nombre de Smoobu → property_id interno (prop_*)."
         },
         {
@@ -67178,7 +67218,7 @@
           "exportada": true,
           "params": "bookingId: string, lang: string",
           "retorno": "Promise<Contexto | null>",
-          "linea": 57
+          "linea": 64
         }
       ],
       "tablas": [
@@ -67186,7 +67226,7 @@
         "mensajes_log"
       ],
       "rutaApi": null,
-      "hash": "73197079cfbf"
+      "hash": "d1a7f885bfb9"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/decidir.ts",
@@ -67202,7 +67242,7 @@
           "exportada": false,
           "params": "text: string",
           "retorno": "boolean",
-          "linea": 65
+          "linea": 69
         },
         {
           "nombre": "sentimientoDe",
@@ -67210,7 +67250,7 @@
           "exportada": false,
           "params": "pregunta: string",
           "retorno": "Decision['sentimiento']",
-          "linea": 69
+          "linea": 73
         },
         {
           "nombre": "limpiarReply",
@@ -67218,7 +67258,7 @@
           "exportada": false,
           "params": "raw: string",
           "retorno": "string",
-          "linea": 77,
+          "linea": 81,
           "resumen": "Limpia adornos por si el modelo, pese a pedírsele texto plano, envuelve la respuesta en JSON, comillas o un prefijo tipo \"Respuesta:\"."
         },
         {
@@ -67226,9 +67266,8 @@
           "kind": "function",
           "exportada": false,
           "params": "ctx: Contexto, pregunta: string, reply: string",
-          "retorno": "Promise<boolean>",
-          "linea": 95,
-          "resumen": "Control de calidad: ¿la respuesta resuelve bien lo que pide el huésped o hay que escalar a Alberto? UNA sola palabra (ESCALAR/OK) — mucho más fiable que un JSON. Si la llamada falla, NO escala por sí "
+          "retorno": "Promise<Veredicto>",
+          "linea": 104
         },
         {
           "nombre": "decidir",
@@ -67236,12 +67275,12 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, categoria: string",
           "retorno": "Promise<Decision>",
-          "linea": 116
+          "linea": 127
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f5243319e2f2"
+      "hash": "afe7775393d4"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/disponibilidad.ts",
@@ -67390,41 +67429,6 @@
       "hash": "38977a777c6a"
     },
     {
-      "ruta": "apps/plataforma/lib/sivra/agente-huesped/graduacion.ts",
-      "ambito": "apps/plataforma",
-      "resumen": "lib/sivra/agente-huesped/graduacion.ts Auto-graduación de categorías básicas: cuando una categoría acumula N respuestas aprobadas SIN corrección, pasa a auto-responderse sola (mensajes_auto_config). SOLO se gradúan las categorías de la ALLOWLIST `GRADUABLES`: el catch-all 'general' y cualquier categ",
-      "exporta": [
-        "graduarCategoria",
-        "evaluarGraduacion"
-      ],
-      "funciones": [
-        {
-          "nombre": "graduarCategoria",
-          "kind": "function",
-          "exportada": true,
-          "params": "categoria: string, on = true, umbral = 0.85",
-          "retorno": "Promise<void>",
-          "linea": 15
-        },
-        {
-          "nombre": "evaluarGraduacion",
-          "kind": "function",
-          "exportada": true,
-          "params": "categoria: string",
-          "retorno": "Promise<boolean>",
-          "linea": 25,
-          "resumen": "Tras una aprobación sin corregir, comprueba si la categoría ya es fiable y la gradúa."
-        }
-      ],
-      "tablas": [
-        "mensajes_auto_config",
-        "mensajes_log",
-        "set"
-      ],
-      "rutaApi": null,
-      "hash": "494d51723b6b"
-    },
-    {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/guardrail.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/agente-huesped/guardrail.ts — anti-invención. Extrae \"datos duros\" (códigos, teléfonos, claves, URLs) de la respuesta y comprueba que estén presentes en las fuentes (guía + historial + datos de reserva).",
@@ -67455,46 +67459,171 @@
       "hash": "da738f18f911"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/agente-huesped/guest-app.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/agente-huesped/guest-app.ts — lectura de la guest app de Smoobu. La guest app (el enlace que Smoobu manda solo al huésped) es una SPA de React, así que bajar su HTML no sirve de nada: devuelve ~2,8 KB sin una línea de texto útil. Eso hacía `guia.ts` desde el principio, y por eso `mensajes_",
+      "exporta": [
+        "parseGuestAppUrl",
+        "htmlATexto",
+        "esSeccionDeAcceso",
+        "normalizarSecciones",
+        "esSeccionPisada",
+        "seccionesVigentes",
+        "seccionesATexto",
+        "fetchGuiaSecciones",
+        "fetchFichaReserva"
+      ],
+      "funciones": [
+        {
+          "nombre": "parseGuestAppUrl",
+          "kind": "function",
+          "exportada": true,
+          "params": "url: string",
+          "retorno": "GuestAppRef | null",
+          "linea": 27,
+          "resumen": "Saca `t`/`b` (o `token`/`bookingId`) de la guest-app-url. null si el enlace no sirve."
+        },
+        {
+          "nombre": "htmlATexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string",
+          "retorno": "string",
+          "linea": 50,
+          "resumen": "Convierte el HTML de una sección (o de un mensaje del hilo) en texto plano CONSERVANDO las URLs: tanto la guía como los automáticos de Smoobu usan anclas cuyo texto visible es \"HERE\"/\"AQUÍ\" y toda la "
+        },
+        {
+          "nombre": "esSeccionDeAcceso",
+          "kind": "function",
+          "exportada": true,
+          "params": "titulo: string, texto: string",
+          "retorno": "boolean",
+          "linea": 75,
+          "resumen": "¿Esta sección contiene datos de acceso que NO deben salir hasta 7 días antes de la llegada? Política de Alberto (20/08/2026): las claves se dan una semana antes, con recordatorios, porque un huésped p"
+        },
+        {
+          "nombre": "normalizarSecciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "crudo: unknown",
+          "retorno": "SeccionGuia[]",
+          "linea": 81,
+          "resumen": "Pasa la respuesta cruda de /contents a secciones utilizables. Descarta las inactivas y las que se quedan sin texto. Nunca lanza: una guía mal formada debe degradar a \"sin guía\", no romper el turno."
+        },
+        {
+          "nombre": "esSeccionPisada",
+          "kind": "function",
+          "exportada": true,
+          "params": "titulo: string",
+          "retorno": "boolean",
+          "linea": 105
+        },
+        {
+          "nombre": "aDias",
+          "kind": "function",
+          "exportada": false,
+          "params": "fecha: string",
+          "retorno": "number | null",
+          "linea": 111
+        },
+        {
+          "nombre": "periodoDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "hoy: string, checkIn: string, checkOut: string",
+          "retorno": "number",
+          "linea": 117,
+          "resumen": "Periodo de Smoobu según la fase de la reserva: 2 = antes de llegar, 4 = durante, 8 = después."
+        },
+        {
+          "nombre": "seccionesVigentes",
+          "kind": "function",
+          "exportada": true,
+          "params": "secciones: SeccionGuia[], ctx: { hoy: string; checkIn: string; checkOut: string },",
+          "retorno": "",
+          "linea": 128,
+          "resumen": "Filtra las secciones que se le pueden enseñar HOY a este huésped. - Vigencia de Smoobu: la propia guest app marca en qué fase enseña cada sección. - Ventana de acceso: las llaves/códigos solo desde 7 "
+        },
+        {
+          "nombre": "seccionesATexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "secciones: SeccionGuia[]",
+          "retorno": "string",
+          "linea": 149,
+          "resumen": "Texto de la guía tal y como lo ve el modelo."
+        },
+        {
+          "nombre": "getJson",
+          "kind": "function",
+          "exportada": false,
+          "params": "url: string",
+          "retorno": "Promise<unknown | null>",
+          "linea": 157
+        },
+        {
+          "nombre": "fetchGuiaSecciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "ref: GuestAppRef",
+          "retorno": "Promise<SeccionGuia[] | null>",
+          "linea": 176,
+          "resumen": "Guía del huésped (secciones). null = NO SE PUDO LEER (≠ \"no hay guía\")."
+        },
+        {
+          "nombre": "fetchFichaReserva",
+          "kind": "function",
+          "exportada": true,
+          "params": "ref: GuestAppRef",
+          "retorno": "Promise<Record<string, any> | null>",
+          "linea": 184,
+          "resumen": "Ficha de la reserva según la guest app (dirección postal completa, horas, onlineCheckInUrl). null = no se pudo leer."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0348598eff9a"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/guia.ts",
       "ambito": "apps/plataforma",
-      "resumen": "lib/sivra/agente-huesped/guia.ts — descarga + caché + extracción de la guía del huésped. Implementación por defecto: HTML legible (caso esperado). Si el sondeo (Task 1) reporta PROBABLE_SPA_JS, adaptar fetchGuiaRaw() al endpoint interno detectado (mismo seam).",
+      "resumen": "lib/sivra/agente-huesped/guia.ts — guía del huésped (guest app de Smoobu) con caché por piso. Antes esto bajaba el HTML del `guest-app-url`, pero la guest app es una SPA de React: devolvía ~2,8 KB sin texto, se descartaba por el umbral de 400 caracteres y `mensajes_guia_cache` llevaba CERO filas des",
       "exporta": [
         "getGuiaPiso"
       ],
       "funciones": [
-        {
-          "nombre": "stripHtml",
-          "kind": "function",
-          "exportada": false,
-          "params": "html: string",
-          "retorno": "string",
-          "linea": 10
-        },
-        {
-          "nombre": "fetchGuiaRaw",
-          "kind": "function",
-          "exportada": false,
-          "params": "guestUrl: string",
-          "retorno": "Promise<string | null>",
-          "linea": 20,
-          "resumen": "Descarga el contenido de la guía. Caso HTML servido (esperado). Devuelve texto o null."
-        },
         {
           "nombre": "getGuestUrl",
           "kind": "function",
           "exportada": false,
           "params": "reservationId: string",
           "retorno": "Promise<string | null>",
-          "linea": 29
+          "linea": 20
+        },
+        {
+          "nombre": "leerCache",
+          "kind": "function",
+          "exportada": false,
+          "params": "propertyId: string",
+          "retorno": "Promise<",
+          "linea": 27
+        },
+        {
+          "nombre": "guardarCache",
+          "kind": "function",
+          "exportada": false,
+          "params": "propertyId: string, secciones: SeccionGuia[], url: string",
+          "retorno": "Promise<void>",
+          "linea": 40
         },
         {
           "nombre": "getGuiaPiso",
           "kind": "function",
           "exportada": true,
           "params": "propertyId: string, reservationId: string",
-          "retorno": "Promise<string | null>",
-          "linea": 37,
-          "resumen": "Devuelve el texto de la guía del piso, con caché por property_id (TTL 7 días)."
+          "retorno": "Promise<GuiaPiso>",
+          "linea": 52,
+          "resumen": "Guía del piso. Caché de 24 h; si la descarga falla se usa la caché vieja (mejor la guía de ayer que ninguna) y solo se marca `cargada=false` cuando no hay NADA que ofrecer — porque aguas abajo ese fal"
         }
       ],
       "tablas": [
@@ -67502,29 +67631,126 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "0422fcd36d73"
+      "hash": "ca0f8b34368a"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/agente-huesped/hechos.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/agente-huesped/hechos.ts — hechos permanentes del piso. `mensajes_aprendizaje` guarda EJEMPLOS DE ESTILO (tono, cortesías) y solo se inyectan los 8 últimos del piso. Eso está bien para el tono y fatal para el conocimiento: el único hecho real que Alberto llegó a enseñar («las llaves se dej",
+      "exporta": [
+        "listarHechos",
+        "guardarHecho",
+        "resolverHecho"
+      ],
+      "funciones": [
+        {
+          "nombre": "listarHechos",
+          "kind": "function",
+          "exportada": true,
+          "params": "propertyId: string",
+          "retorno": "Promise<Hecho[]>",
+          "linea": 17,
+          "resumen": "Hechos CONFIRMADOS del piso, del más reciente al más antiguo. El tope existe para no reventar el prompt; si algún piso llegara a acercarse, es señal de que esos hechos deberían estar en la guía."
+        },
+        {
+          "nombre": "guardarHecho",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { propertyId: string pregunta: string hecho: string origen?: 'alberto' | 'historico' estado?: 'confirmado' | 'propuesto' bookingRef?: string }",
+          "retorno": "Promise<number | null>",
+          "linea": 28,
+          "resumen": "Guarda un hecho. `estado` = 'confirmado' cuando lo enseña Alberto; 'propuesto' cuando sale del minado del histórico y todavía tiene que confirmarlo (un hecho falso aprendido del histórico se propagarí"
+        },
+        {
+          "nombre": "resolverHecho",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: number, estado: 'confirmado' | 'descartado'",
+          "retorno": "Promise<string | null>",
+          "linea": 47,
+          "resumen": "Confirma o descarta un hecho propuesto (botones de Telegram del minado del histórico)."
+        }
+      ],
+      "tablas": [
+        "mensajes_hechos"
+      ],
+      "rutaApi": null,
+      "hash": "83efd9426c48"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/hilo.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/agente-huesped/hilo.ts — helper PURO (solo import de tipo, sin deps de runtime) para dar el HILO de la conversación como contexto a la IA. Testeable con `node --test` sin dependencias.",
       "exporta": [
-        "hiloComoMensajes"
+        "hiloComoMensajes",
+        "dedupHilo"
       ],
       "funciones": [
         {
           "nombre": "hiloComoMensajes",
           "kind": "function",
           "exportada": true,
-          "params": "historial: MensajeHist[], pregunta: string, max = 15,",
+          "params": "historial: MensajeHist[], pregunta: string, max = 25,",
           "retorno": "",
           "linea": 8,
           "resumen": "Convierte el historial del hilo en mensajes de chat (huésped=user, anfitrión=assistant), los `max` más recientes. Quita el último si coincide con la pregunta actual (se añade aparte como turno a respo"
+        },
+        {
+          "nombre": "dedupHilo",
+          "kind": "function",
+          "exportada": true,
+          "params": "historial: MensajeHist[]",
+          "retorno": "MensajeHist[]",
+          "linea": 28,
+          "resumen": "Smoobu manda CADA mensaje automático por duplicado (en el hilo de la reserva 152291091, 8 de 25 mensajes eran copias exactas) y esos duplicados se comían la ventana de contexto del modelo. Quitamos un"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d992d497bd50"
+      "hash": "9c899de9674e"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/agente-huesped/historico.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/agente-huesped/historico.ts — aprender de las conversaciones YA mantenidas. Idea de Alberto (20/08/2026): «también puedes ver las conversaciones de anteriores huéspedes para aprender». En los hilos de Smoobu están las respuestas que él ha dado a mano durante meses — 159 reservas en lo que ",
+      "exporta": [
+        "minarHistorico",
+        "proponerHechos"
+      ],
+      "funciones": [
+        {
+          "nombre": "condensarHecho",
+          "kind": "function",
+          "exportada": false,
+          "params": "par: ParQA",
+          "retorno": "Promise<string>",
+          "linea": 25,
+          "resumen": "── I/O ───────────────────────────────────────────────────────────────────── Condensa un par pregunta→respuesta en UNA afirmación sobre el alojamiento. Devuelve '' si el modelo no ve ningún dato del p"
+        },
+        {
+          "nombre": "minarHistorico",
+          "kind": "function",
+          "exportada": true,
+          "params": "opts: { desde: string hasta: string max?: number avisar?: boolean }",
+          "retorno": "Promise<ResultadoMinado>",
+          "linea": 53,
+          "resumen": "Recorre las reservas de una ventana y propone hechos. `max` acota el número de reservas por pasada (cada una son 2 llamadas a Smoobu + 1 a la IA por par)."
+        },
+        {
+          "nombre": "proponerHechos",
+          "kind": "function",
+          "exportada": true,
+          "params": "hechos: { id: number; propertyId: string; hecho: string }[]",
+          "retorno": "Promise<void>",
+          "linea": 111,
+          "resumen": "Un mensaje por hecho, con botones. Se mandan de uno en uno a propósito: confirmar en bloque es aprobar sin leer, y aquí cada fila acaba en el prompt de todos los huéspedes de ese piso."
+        }
+      ],
+      "tablas": [
+        "mensajes_log"
+      ],
+      "rutaApi": null,
+      "hash": "80bebe0d1b95"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/horarios.ts",
@@ -67675,7 +67901,7 @@
         "mensajes_pendientes_tg"
       ],
       "rutaApi": null,
-      "hash": "727b47944712"
+      "hash": "1245d80634fc"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/parking.ts",
@@ -67759,7 +67985,10 @@
         "detectCategory",
         "detectLang",
         "esSolicitudLateCheckout",
-        "esDespedida"
+        "esDespedida",
+        "esHechoDelPiso",
+        "paresPregRespuesta",
+        "esAutomatico"
       ],
       "funciones": [
         {
@@ -67802,11 +68031,37 @@
           "params": "text: string",
           "retorno": "boolean",
           "linea": 127
+        },
+        {
+          "nombre": "esHechoDelPiso",
+          "kind": "function",
+          "exportada": true,
+          "params": "pregunta: string, respuesta: string",
+          "retorno": "boolean",
+          "linea": 143
+        },
+        {
+          "nombre": "paresPregRespuesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "msgs: MsgMin[]",
+          "retorno": "ParQA[]",
+          "linea": 160,
+          "resumen": "Empareja cada pregunta del huésped con la PRIMERA respuesta humana del anfitrión que viene después. Descarta los automáticos de Smoobu (confirmaciones, recordatorios: son plantillas, no conocimiento) "
+        },
+        {
+          "nombre": "esAutomatico",
+          "kind": "function",
+          "exportada": true,
+          "params": "subject: string, text: string",
+          "retorno": "boolean",
+          "linea": 175,
+          "resumen": "Los automáticos de Smoobu/Booking llevan ASUNTO; los mensajes escritos a mano, no."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3fb1a83ef3a4"
+      "hash": "122ad867ab9a"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/retoque.ts",
@@ -67899,12 +68154,21 @@
           "resumen": "Copia INFORMATIVA (sin botones) de una respuesta que el agente ya envió SOLO (categoría graduada). Alberto NO tiene que hacer nada: es solo para que vea lo que se está mandando en automático. Si el hu"
         },
         {
+          "nombre": "huecoDeGuia",
+          "kind": "function",
+          "exportada": false,
+          "params": "dec: Decision",
+          "retorno": "boolean",
+          "linea": 39,
+          "resumen": "¿Escalamos por FALTA DE INFORMACIÓN (y no por política: queja, dinero, cambios…)? Solo entonces tiene sentido decirle a Alberto que es un hueco de la guía y que su respuesta se va a aprender."
+        },
+        {
           "nombre": "fmtFecha",
           "kind": "function",
           "exportada": false,
           "params": "f: string",
           "retorno": "string",
-          "linea": 41,
+          "linea": 44,
           "resumen": "Fecha YYYY-MM-DD → DD/MM/YYYY (deja igual cualquier otro formato)."
         },
         {
@@ -67913,7 +68177,7 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, dec: Decision",
           "retorno": "Promise<void>",
-          "linea": 47,
+          "linea": 50,
           "resumen": "Propone el borrador por Telegram con botones y guarda el estado pendiente (liga el booking)."
         },
         {
@@ -67922,7 +68186,7 @@
           "exportada": true,
           "params": "pend: { booking_id: string; idioma: string | null }, borrador: string, opts: { borradorEs?: string } = {},",
           "retorno": "Promise<void>",
-          "linea": 110,
+          "linea": 111,
           "resumen": "Re-propone un borrador tras ✏️ Modificar / 🔧 Retocar: muestra el texto FINAL que se va a enviar (en el idioma del huésped + 🔁 español para verificar) con los botones, y deja el pendiente listo para "
         },
         {
@@ -67931,7 +68195,7 @@
           "exportada": true,
           "params": "messageId: number | null, texto: string",
           "retorno": "Promise<void>",
-          "linea": 139
+          "linea": 140
         },
         {
           "nombre": "confirmarDescartado",
@@ -67939,7 +68203,7 @@
           "exportada": true,
           "params": "messageId: number | null",
           "retorno": "Promise<void>",
-          "linea": 143
+          "linea": 144
         }
       ],
       "tablas": [
@@ -67947,7 +68211,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "4c48b06d5c30"
+      "hash": "dfd30e2112c5"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/atribucion-canal.ts",
@@ -69975,7 +70239,7 @@
           "exportada": true,
           "params": "f: any",
           "retorno": "SubastaInmueble",
-          "linea": 101,
+          "linea": 104,
           "resumen": "Fila cruda de `subastas` → el tipo del módulo."
         },
         {
@@ -69984,7 +70248,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<FilaCriterios[]>",
-          "linea": 173,
+          "linea": 185,
           "resumen": "Cuentas con el radar activo y sus criterios."
         },
         {
@@ -69993,7 +70257,7 @@
           "exportada": true,
           "params": "limite = 500",
           "retorno": "Promise<SubastaInmueble[]>",
-          "linea": 199,
+          "linea": 211,
           "resumen": "Subastas candidatas: en plazo (o sin fecha conocida) y recientes. No se rebarre todo el histórico en cada pasada."
         },
         {
@@ -70002,7 +70266,7 @@
           "exportada": true,
           "params": "cuentaId: string, criterios: CriteriosSubasta, corpus: SubastaInmueble[], params: ParamsCoste = {},",
           "retorno": "Promise<number>",
-          "linea": 220,
+          "linea": 232,
           "resumen": "Casa el corpus con los criterios de una cuenta e inserta lo nuevo. El upsert REFRESCA el snapshot y las cifras: el radar corre a las 06:30, DESPUÉS del enriquecimiento (06:15) y del valor de mercado ("
         },
         {
@@ -70011,7 +70275,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 293,
+          "linea": 305,
           "resumen": "Pasada completa: descarga el corpus UNA vez y lo empareja con cada cuenta."
         }
       ],
@@ -70023,7 +70287,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "e2768c8f866e"
+      "hash": "631140e0a3d3"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/aviso-cierre.ts",
@@ -70242,14 +70506,14 @@
           "exportada": true,
           "params": "max = 400",
           "retorno": "Promise<",
-          "linea": 17
+          "linea": 20
         }
       ],
       "tablas": [
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "727bd683f003"
+      "hash": "94d5a2c8ba89"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/consulta-juzgado.ts",
@@ -70403,9 +70667,9 @@
           "nombre": "bajar",
           "kind": "function",
           "exportada": false,
-          "params": "url: string, ms = 30000",
+          "params": "url: string, ms = 30000, sesion: SesionPortal | null = null",
           "retorno": "Promise<Response>",
-          "linea": 65
+          "linea": 74
         },
         {
           "nombre": "textoDePdf",
@@ -70413,7 +70677,7 @@
           "exportada": false,
           "params": "buf: Buffer",
           "retorno": "Promise<string>",
-          "linea": 75
+          "linea": 84
         },
         {
           "nombre": "procesarDocumentosDeFicha",
@@ -70421,7 +70685,7 @@
           "exportada": true,
           "params": "identificador: string, opts: { leerCargas?: boolean } = {},",
           "retorno": "Promise<ResultadoFicha>",
-          "linea": 116,
+          "linea": 134,
           "resumen": "Procesa TODOS los documentos de UNA ficha: señales del edicto + cuadro de cargas. `leerCargas: false` se queda en las señales por regex (gratis), para las subastas que no han pasado el gate de rentabi"
         },
         {
@@ -70430,7 +70694,7 @@
           "exportada": true,
           "params": "f: { flip_apto: boolean | null margen_flip_pct: number | null es_playa: boolean | null descuento_estimado: number | null }",
           "retorno": "boolean",
-          "linea": 237,
+          "linea": 275,
           "resumen": "¿Merece esta subasta el análisis profundo (que cuesta llamadas de IA)? El embudo de Alberto: primero rentabilidad, y solo si cuadra, documentación. Entra si es un flip viable, si es de la costa de Hue"
         },
         {
@@ -70439,7 +70703,7 @@
           "exportada": true,
           "params": "max = 10",
           "retorno": "Promise<",
-          "linea": 253,
+          "linea": 291,
           "resumen": "Pasada sobre las subastas vivas: lee los documentos de las que no están al día con la versión actual del lector. Best-effort: un fallo de descarga deja la fila como está y se reintenta mañana."
         },
         {
@@ -70448,16 +70712,17 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 363,
+          "linea": 429,
           "resumen": "· sin los resultados no hay calibración (la memoria del agente). Así que se borra la BANDEJA de avisos (`subastas_radar`, efímera por diseño) y se marca la subasta como archivada. El histórico se qued"
         }
       ],
       "tablas": [
         "subastas",
-        "subastas_radar"
+        "subastas_radar",
+        "true"
       ],
       "rutaApi": null,
-      "hash": "9982eb2b6992"
+      "hash": "926bf044ef4e"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/enriquecer.ts",
@@ -70466,6 +70731,7 @@
       "exporta": [
         "bajarFicha",
         "estadoPujasViva",
+        "guardarObservacionPujas",
         "bajarCatastro",
         "bajarCoordenadas",
         "resolverNombreVia",
@@ -70478,9 +70744,9 @@
           "nombre": "bajar",
           "kind": "function",
           "exportada": false,
-          "params": "url: string, ms = 20000",
+          "params": "url: string, ms = 20000, cookie?: string",
           "retorno": "Promise<string>",
-          "linea": 47
+          "linea": 48
         },
         {
           "nombre": "turnoCatastro",
@@ -70488,7 +70754,7 @@
           "exportada": false,
           "params": "pausaExtra = 0",
           "retorno": "Promise<void>",
-          "linea": 77,
+          "linea": 82,
           "resumen": "Reserva el siguiente turno del cerrojo y espera a que llegue. `pausaExtra` añade un descanso contado DESDE AHORA (para el reintento: el servicio acaba de cortar y hay que darle aire, no basta con el e"
         },
         {
@@ -70497,7 +70763,7 @@
           "exportada": false,
           "params": "url: string",
           "retorno": "Promise<string>",
-          "linea": 84
+          "linea": 89
         },
         {
           "nombre": "bajarFicha",
@@ -70505,7 +70771,7 @@
           "exportada": true,
           "params": "identificador: string",
           "retorno": "Promise<FichaBoe>",
-          "linea": 113,
+          "linea": 118,
           "resumen": "Descarga y parsea las tres pestañas de la ficha de una subasta. 🚨 Un HTTP 200 que NO sea la ficha (mantenimiento del Portal, muro de un WAF, página de error) es lo más peligroso que puede pasar aquí:"
         },
         {
@@ -70514,8 +70780,17 @@
           "exportada": true,
           "params": "identificador: string",
           "retorno": "Promise<PujasFicha>",
-          "linea": 142,
-          "resumen": "lo publica al concluir. Lanza si la respuesta no es la ficha, igual que `bajarFicha`: un fallo de lectura no es un dato."
+          "linea": 152,
+          "resumen": "Estado de las PUJAS en vivo, de la pestaña que de verdad lo publica. 🚨 Esto sustituye a `mejorPujaViva`, que leía la pestaña GENERAL — donde solo están la puja MÍNIMA y los tramos. Nunca encontraba n"
+        },
+        {
+          "nombre": "guardarObservacionPujas",
+          "kind": "function",
+          "exportada": true,
+          "params": "args: { dedupeKey: string identificador: string | null pujas: PujasFicha fechaFin?: Date | string | null }",
+          "retorno": "Promise<boolean>",
+          "linea": 175,
+          "resumen": "Guarda una observación de pujas: el último estado en la fila y una línea en el HISTÓRICO (`subastas_pujas_obs`). El histórico es lo único que permitirá saber DESPUÉS **cuándo entró la primera puja**: "
         },
         {
           "nombre": "bajarCatastro",
@@ -70523,7 +70798,7 @@
           "exportada": true,
           "params": "refCatastral: string",
           "retorno": "Promise<DatosCatastro | null>",
-          "linea": 163,
+          "linea": 223,
           "resumen": "Consulta el Catastro por referencia catastral. `null` si no hay dato. ⚠️ Solo devuelve datos del BIEN (superficie, año, uso) con la referencia COMPLETA de 20 caracteres. Con la de parcela (14) el serv"
         },
         {
@@ -70532,7 +70807,7 @@
           "exportada": true,
           "params": "refCatastral: string",
           "retorno": "Promise<CoordenadasCatastro | null>",
-          "linea": 178,
+          "linea": 238,
           "resumen": "Coordenadas WGS84 por referencia catastral (`Consulta_CPMRC`, probado el 30/07/2026). El servicio trabaja a nivel de PARCELA: acepta los 14 primeros caracteres; con la referencia de 20 del bien concre"
         },
         {
@@ -70541,7 +70816,7 @@
           "exportada": true,
           "params": "provincia: string, municipio: string, sigla: string, calle: string,",
           "retorno": "Promise<",
-          "linea": 196,
+          "linea": 256,
           "resumen": "Nombre OFICIAL de la vía según el callejero del Catastro (`ConsultaVia`). Se pregunta por UNA PALABRA distintiva, no por el nombre entero: el servicio busca por subcadena y el Catastro reescribe los n"
         },
         {
@@ -70550,7 +70825,7 @@
           "exportada": true,
           "params": "p: ParamsDnploc & { provincia: string; municipio: string },",
           "retorno": "Promise<",
-          "linea": 224,
+          "linea": 284,
           "resumen": "DIRECCIÓN → referencia catastral (`Consulta_DNPLOC`, servicio libre; probado el 30/07/2026). Es lo que desbloquea la ubicación EXACTA de la mayor parte del corpus: el BOE publica la dirección del inmu"
         },
         {
@@ -70559,7 +70834,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<void>",
-          "linea": 292
+          "linea": 352
         },
         {
           "nombre": "geocodificarMunicipio",
@@ -70567,7 +70842,7 @@
           "exportada": true,
           "params": "municipio: string, provincia?: string | null,",
           "retorno": "Promise<CoordenadasCatastro | null>",
-          "linea": 310,
+          "linea": 370,
           "resumen": "Centro del municipio por Nominatim (OSM, gratis). Es el escalón APROXIMADO para las subastas sin referencia catastral (la mayoría del corpus): mejor un pin honesto en el centro del pueblo que un mapa "
         },
         {
@@ -70576,7 +70851,7 @@
           "exportada": false,
           "params": "identificador: string",
           "retorno": "Promise<ResultadoSubasta | null>",
-          "linea": 347,
+          "linea": 407,
           "resumen": "Desenlace desde el certificado de cierre (PDF público del Portal): «La subasta concluyó con pujas (puja máxima X euros)» / «concluyó sin pujas». `null` = certificado no disponible o marcado no reconoc"
         },
         {
@@ -70585,14 +70860,15 @@
           "exportada": true,
           "params": "max = 20",
           "retorno": "Promise<",
-          "linea": 370
+          "linea": 430
         }
       ],
       "tablas": [
-        "subastas"
+        "subastas",
+        "subastas_pujas_obs"
       ],
       "rutaApi": null,
-      "hash": "be730a2e074d"
+      "hash": "cadaeb0512f0"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/gmail-boe.ts",
@@ -70600,7 +70876,8 @@
       "resumen": "──────────────────────────────────────────────────────────────────────────── Lector IMAP de las alertas del Portal de Subastas del BOE. Por qué NO se reutiliza `lib/correo/imap.ts`: aquel lector es incremental sobre INBOX y trunca el cuerpo a ~1500 caracteres para la IA del triaje. Aquí hace falta l",
       "exporta": [
         "leerAlertas",
-        "leerAlertasDesde"
+        "leerAlertasDesde",
+        "esperarCodigoPortal"
       ],
       "funciones": [
         {
@@ -70609,7 +70886,7 @@
           "exportada": false,
           "params": "",
           "retorno": "ImapFlow",
-          "linea": 27
+          "linea": 28
         },
         {
           "nombre": "buzonTodos",
@@ -70617,7 +70894,7 @@
           "exportada": false,
           "params": "client: ImapFlow",
           "retorno": "Promise<string>",
-          "linea": 35,
+          "linea": 36,
           "resumen": "Nombre de la carpeta «Todos los mensajes», resuelto por specialUse (no por idioma)."
         },
         {
@@ -70626,7 +70903,7 @@
           "exportada": false,
           "params": "source: Buffer, uid: number",
           "retorno": "Promise<CorreoAlerta | null>",
-          "linea": 42,
+          "linea": 43,
           "resumen": "Parseo de UN mensaje a `CorreoAlerta`. `null` si el cuerpo no se deja leer."
         },
         {
@@ -70635,7 +70912,7 @@
           "exportada": true,
           "params": "dias = 7, max = 100, remitente = REMITENTE_BOE,",
           "retorno": "Promise<CorreoAlerta[]>",
-          "linea": 64,
+          "linea": 65,
           "resumen": "Descarga las alertas del BOE de los últimos `dias`. @param remitente permite apuntar el lector a otro emisor de alertas (Idealista, un servicer…) sin duplicar la conexión."
         },
         {
@@ -70644,13 +70921,22 @@
           "exportada": true,
           "params": "remitente: string, cursor: CursorCorreo | null, opts: { dias?: number; max?: number } = {},",
           "retorno": "Promise<LoteAlertas>",
-          "linea": 120,
+          "linea": 121,
           "resumen": "Lectura INCREMENTAL de las alertas de un remitente: solo lo posterior al último UID procesado. Por qué convive con `leerAlertas` en vez de sustituirla: la ingesta del BOE (`lib/subastas-ingesta.ts`) r"
+        },
+        {
+          "nombre": "esperarCodigoPortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "intentoEn: Date, yaUsados: ReadonlySet<string> = new Set(), timeoutMs = 45_000, intervaloMs = 4_000,",
+          "retorno": "Promise<string | null>",
+          "linea": 196,
+          "resumen": "Espera al correo con el código del intento de login EN CURSO. Abre UNA conexión IMAP y repregunta cada pocos segundos: el correo tarda unos segundos en llegar, y reconectar en cada vuelta multiplica e"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6d47b9f91f45"
+      "hash": "ec017c9109c1"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/idealista-api.ts",
@@ -71089,6 +71375,146 @@
       "hash": "a816fce0fa2c"
     },
     {
+      "ruta": "apps/plataforma/lib/subastas/portal-sesion.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Sesión con el Portal de Subastas del BOE para los crons. Por qué existe: el bloque «Información complementaria» —donde vive la lista de documentos, incluida la CERTIFICACIÓN DE CARGAS— solo se sirve a usuarios identificados",
+      "exporta": [
+        "olvidarSesionPortal",
+        "sesionPortalCaducada",
+        "rastroOtp",
+        "sesionPortal",
+        "sesionPortalAbierta",
+        "cabecerasPortal",
+        "titularSesionPortal",
+        "volcarLoginPortal"
+      ],
+      "funciones": [
+        {
+          "nombre": "olvidarSesionPortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "void",
+          "linea": 86,
+          "resumen": "Solo para los tests y para el diagnóstico manual: vuelve a empezar."
+        },
+        {
+          "nombre": "sesionPortalCaducada",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "void",
+          "linea": 97,
+          "resumen": "Marca la sesión como caducada. La llama el lector cuando una ficha vuelve a responder como anónima: la siguiente petición reabrirá sesión. No toca `rechazada`: una credencial mala no se rescata reinte"
+        },
+        {
+          "nombre": "credenciales",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "",
+          "linea": 101
+        },
+        {
+          "nombre": "unirCookies",
+          "kind": "function",
+          "exportada": false,
+          "params": "previas: Map<string, string>, set: readonly string[]",
+          "retorno": "Map<string, string>",
+          "linea": 109,
+          "resumen": "Une las cookies recibidas en una cabecera `Cookie`, sin sus atributos."
+        },
+        {
+          "nombre": "cabeceraCookie",
+          "kind": "function",
+          "exportada": false,
+          "params": "jar: Map<string, string>",
+          "retorno": "string",
+          "linea": 118
+        },
+        {
+          "nombre": "leerSetCookie",
+          "kind": "function",
+          "exportada": false,
+          "params": "r: Response",
+          "retorno": "string[]",
+          "linea": 122
+        },
+        {
+          "nombre": "rastroOtp",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "RastroOtp | null",
+          "linea": 142
+        },
+        {
+          "nombre": "segundoFactor",
+          "kind": "function",
+          "exportada": false,
+          "params": "html: string, jar: Map<string, string>, intentoEn: Date",
+          "retorno": "Promise<SesionPortal>",
+          "linea": 144
+        },
+        {
+          "nombre": "abrir",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<SesionPortal>",
+          "linea": 202
+        },
+        {
+          "nombre": "sesionPortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<SesionPortal>",
+          "linea": 261,
+          "resumen": "Sesión utilizable, abriéndola si hace falta. NUNCA lanza: sin sesión el lector sigue funcionando en anónimo — peor, pero honesto, porque el muro documental queda registrado como lo que es."
+        },
+        {
+          "nombre": "sesionPortalAbierta",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "SesionPortal | null",
+          "linea": 300,
+          "resumen": "La sesión que YA esté abierta, sin abrir ninguna. `null` = no hay. 🚨 Existe para no confundir «aprovechar la sesión» con «abrir una»: cada login manda un SMS al móvil de Alberto y el Portal bloquea c"
+        },
+        {
+          "nombre": "cabecerasPortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SesionPortal | null, extra: Record<string, string> = {}",
+          "retorno": "Record<string, string>",
+          "linea": 308,
+          "resumen": "Cabeceras para pedirle una página al Portal, con sesión si la hay."
+        },
+        {
+          "nombre": "titularSesionPortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SesionPortal",
+          "retorno": "string",
+          "linea": 315,
+          "resumen": "Frase para el aviso/diagnóstico. Dice SIEMPRE si se está leyendo a ciegas."
+        },
+        {
+          "nombre": "volcarLoginPortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 339,
+          "resumen": "SOLO DIAGNÓSTICO: hace el primer POST del login y devuelve el HTML crudo de la respuesta, sin enviar ningún código. Es la forma de capturar la pantalla del segundo factor para escribir su parser contr"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b405835897e5"
+    },
+    {
       "ruta": "apps/plataforma/lib/subastas/presupuesto-mercado.ts",
       "ambito": "apps/plataforma",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Reparto del tiempo del cron `subastas-mercado`. PURO y testeado. POR QUÉ EXISTE (incidente 06/08/2026): el handler encadena 8 pasos en serie y los dos de enriquecimiento pueden comerse, ELLOS SOLOS, más que todo el presupue",
@@ -71234,7 +71660,7 @@
           "nombre": "resumenDocumentos",
           "kind": "function",
           "exportada": true,
-          "params": "docs: DocumentoAdjunto[] | null | undefined, publicaAdjuntos = true, muro: Muro = 'ninguno',",
+          "params": "docs: DocumentoAdjunto[] | null | undefined, publicaAdjuntos = true, muro: Muro = 'ninguno', /** * ¿La lectura fue con sesión iniciada? Cambia el recado por completo: sin * sesión el trabajo pendiente es un login; con sesión, el Portal ya h",
           "retorno": "string",
           "linea": 51,
           "resumen": "Texto del `<summary>` de «Cargas y documentación». 🚨 Nunca afirmar una ausencia que no se sabe: la columna `documentos` es más nueva que las filas del corpus, así que una subasta ingerida antes la ti"
@@ -71242,7 +71668,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "492f7b8d133b"
+      "hash": "8e97a0c2ce45"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/surus.ts",
@@ -90258,7 +90684,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0b96cf3d65bc"
+      "hash": "ec785f48fd26"
     },
     {
       "ruta": "packages/module-subastas/src/aviso.ts",
@@ -90652,7 +91078,7 @@
           "exportada": true,
           "params": "e: EntradaEstadoCargas",
           "retorno": "",
-          "linea": 1004,
+          "linea": 1015,
           "resumen": "Estado de las cargas + el documento que hay que abrir, si lo hay. Conservador por diseño: `cargas > 0` manda sobre todo lo demás (si alguna vez hubo una lectura con cargas, no se degrada a «no se sabe"
         },
         {
@@ -90661,12 +91087,12 @@
           "exportada": true,
           "params": "e: EntradaEstadoCargas",
           "retorno": "TitularCargas",
-          "linea": 1060
+          "linea": 1075
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2cef7c06a70d"
+      "hash": "561f7f263c52"
     },
     {
       "ruta": "packages/module-subastas/src/catastro.ts",
@@ -91567,8 +91993,7 @@
         "parsearFichaBoe",
         "resultadoDeFicha",
         "resultadoDeBanner",
-        "parsearCertificadoCierre",
-        "mejorPujaDeFicha"
+        "parsearCertificadoCierre"
       ],
       "funciones": [
         {
@@ -91577,7 +92002,7 @@
           "exportada": true,
           "params": "html: string",
           "retorno": "Map<string, string>",
-          "linea": 66,
+          "linea": 68,
           "resumen": "Extrae los pares `<th>Etiqueta</th><td>Valor</td>` de una pestaña."
         },
         {
@@ -91586,7 +92011,7 @@
           "exportada": false,
           "params": "v: string | undefined",
           "retorno": "boolean",
-          "linea": 79,
+          "linea": 81,
           "resumen": "Centinelas textuales del portal que significan «no hay dato»."
         },
         {
@@ -91595,7 +92020,7 @@
           "exportada": false,
           "params": "m: Map<string, string>, ...claves: string[]",
           "retorno": "string | null",
-          "linea": 84
+          "linea": 86
         },
         {
           "nombre": "importe",
@@ -91603,7 +92028,7 @@
           "exportada": false,
           "params": "m: Map<string, string>, ...claves: string[]",
           "retorno": "number | null",
-          "linea": 97,
+          "linea": 99,
           "resumen": "Importe de la ficha. Devuelve `null` tanto si falta como si vale 0: el portal publica «Tasación 0,00 €» cuando no hay tasación, y tratarlo como cero produciría descuentos infinitos."
         },
         {
@@ -91612,7 +92037,7 @@
           "exportada": false,
           "params": "m: Map<string, string>, clave: string",
           "retorno": "string | null",
-          "linea": 105,
+          "linea": 107,
           "resumen": "Las fechas traen la ISO entre paréntesis: se prefiere por inequívoca."
         },
         {
@@ -91621,7 +92046,7 @@
           "exportada": true,
           "params": "htmlGeneral: string, htmlBien = '', htmlAutoridad = '',",
           "retorno": "FichaBoe",
-          "linea": 129,
+          "linea": 131,
           "resumen": "Parsea la ficha completa. Las tres pestañas son opcionales: con la general ya se obtienen las cifras, que es lo que desbloquea el scoring."
         },
         {
@@ -91630,7 +92055,7 @@
           "exportada": true,
           "params": "pares: Map<string, string>",
           "retorno": "ResultadoSubasta | null",
-          "linea": 210
+          "linea": 212
         },
         {
           "nombre": "texto2",
@@ -91638,7 +92063,7 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 240
+          "linea": 242
         },
         {
           "nombre": "resultadoDeBanner",
@@ -91646,7 +92071,7 @@
           "exportada": true,
           "params": "html: string",
           "retorno": "'concluida' | null",
-          "linea": 258,
+          "linea": 260,
           "resumen": "Detecta el banner de conclusión en el HTML CRUDO de la ficha — no aparece en los pares clave/valor, así que hay que mirar el texto completo. `null` = ningún banner reconocido, que NO es «sigue abierta"
         },
         {
@@ -91655,22 +92080,13 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "CierreCertificado | null",
-          "linea": 278,
+          "linea": 280,
           "resumen": "Desenlace del certificado de cierre (texto extraído de su PDF). Defensivo: si el marcado no se reconoce devuelve `null` y el caller reintenta en la pasada siguiente — nunca inventa."
-        },
-        {
-          "nombre": "mejorPujaDeFicha",
-          "kind": "function",
-          "exportada": true,
-          "params": "pares: Map<string, string>",
-          "retorno": "number | null",
-          "linea": 298,
-          "resumen": "Mejor puja publicada por la ficha de una subasta EN CURSO (sin exigir estado, a diferencia de `resultadoDeFicha`). Sirve para vigilar las seguidas: si alguien ya puja por encima de nuestro techo, deja"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c9a1881eac34"
+      "hash": "b943bc1faa8b"
     },
     {
       "ruta": "packages/module-subastas/src/financiacion.ts",
@@ -92398,6 +92814,174 @@
       "hash": "9b817c88255c"
     },
     {
+      "ruta": "packages/module-subastas/src/portal-form.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Lectura del FORMULARIO que el Portal devuelve tras el usuario+contraseña (la pantalla «Conexión de usuarios» que pide el código). PURO. Por qué genérico y no con los nombres de campo a pelo: el formulario de recuperación de",
+      "exporta": [
+        "formularioOtp",
+        "pideCodigo",
+        "redactarSecretos"
+      ],
+      "funciones": [
+        {
+          "nombre": "atributo",
+          "kind": "function",
+          "exportada": false,
+          "params": "tag: string, nombre: string",
+          "retorno": "string | null",
+          "linea": 33
+        },
+        {
+          "nombre": "camposDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "html: string",
+          "retorno": "Campo[]",
+          "linea": 40
+        },
+        {
+          "nombre": "esCampoDeCodigo",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: Campo, tag: string",
+          "retorno": "boolean",
+          "linea": 52,
+          "resumen": "¿Este campo es donde va el código? Por nombre/id, no por posición."
+        },
+        {
+          "nombre": "formularioOtp",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string",
+          "retorno": "FormularioOtp | null",
+          "linea": 67,
+          "resumen": "El formulario del código, si esta página lo tiene. @param html respuesta del `POST /id/login.php` con las credenciales."
+        },
+        {
+          "nombre": "pideCodigo",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string",
+          "retorno": "boolean",
+          "linea": 103,
+          "resumen": "¿La respuesta del login está pidiendo el segundo factor?"
+        },
+        {
+          "nombre": "redactarSecretos",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string",
+          "retorno": "string",
+          "linea": 117,
+          "resumen": "Redacta de un HTML los campos que llevan la credencial. 🚨 El formulario del código del Portal reenvía la contraseña en un `<input type=\"hidden\" name=\"password\">` (codificada, pero derivada de ella y "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "23d7533c841b"
+    },
+    {
+      "ruta": "packages/module-subastas/src/portal-login.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Interpretación PURA de la respuesta del login del Portal de Subastas. El Portal admite tres vías de acceso (`/acceso.php`, comprobado 20/08/2026): · certificado electrónico cualificado → `/id/checkCert.php` · usuario (corre",
+      "exporta": [
+        "interpretarLogin",
+        "pareceIdentificada",
+        "pideCaptcha"
+      ],
+      "funciones": [
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "html: string",
+          "retorno": "string",
+          "linea": 53,
+          "resumen": "El Portal escribe los acentos como entidades (`est&#xE1;`): hay que decodificar."
+        },
+        {
+          "nombre": "interpretarLogin",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string, cookies: readonly string[] = []",
+          "retorno": "ResultadoLogin",
+          "linea": 66,
+          "resumen": "¿Qué dice la respuesta del `POST /id/login.php`? @param html cuerpo de la respuesta (siguiendo redirecciones). @param cookies cookies recibidas. Se conservan por si algún día el Portal empieza a usarl"
+        },
+        {
+          "nombre": "pareceIdentificada",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string",
+          "retorno": "boolean",
+          "linea": 122,
+          "resumen": "¿La página que acabamos de bajar sigue viniendo de una sesión abierta? Las sesiones del Portal caducan. Se comprueba en cada ficha porque, si ha caducado a mitad de una pasada, el resto de fichas se l"
+        },
+        {
+          "nombre": "pideCaptcha",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string",
+          "retorno": "boolean",
+          "linea": 138,
+          "resumen": "¿El Portal está pidiendo un captcha en vez de dejar seguir? Se exige la conjunción de la frase Y el campo: el texto solo podría venir de una página de ayuda, y un `name=\"captcha\"` suelto podría estar "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9956e4aff062"
+    },
+    {
+      "ruta": "packages/module-subastas/src/portal-otp.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Código de verificación (2FA) del login del Portal de Subastas. PURO. El Portal exige un segundo factor SOLO en la vía usuario+contraseña — la única que puede usar un proceso automático. Manda un código de 8 caracteres al co",
+      "exporta": [
+        "esCorreoDeLogin",
+        "codigoDeCorreo",
+        "codigoDelIntento"
+      ],
+      "funciones": [
+        {
+          "nombre": "esCorreoDeLogin",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Pick<CorreoOtp, 'asunto' | 'cuerpo'>",
+          "retorno": "boolean",
+          "linea": 43,
+          "resumen": "¿Este correo es el del SEGUNDO PASO DEL LOGIN, y no otro del Portal?"
+        },
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 54
+        },
+        {
+          "nombre": "codigoDeCorreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Pick<CorreoOtp, 'asunto' | 'cuerpo'>",
+          "retorno": "string | null",
+          "linea": 59,
+          "resumen": "El código que lleva dentro, o `null` si no hay uno reconocible."
+        },
+        {
+          "nombre": "codigoDelIntento",
+          "kind": "function",
+          "exportada": true,
+          "params": "correos: readonly CorreoOtp[], intentoEn: Date, margenMs = 5_000, yaUsados: ReadonlySet<string> = new Set(),",
+          "retorno": "string | null",
+          "linea": 89,
+          "resumen": "El código del intento en curso, elegido entre los correos del buzón. @param correos candidatos (cualquier orden). @param intentoEn instante en que se lanzó el POST del login. Un correo anterior a esto"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f74efcf2ff17"
+    },
+    {
       "ruta": "packages/module-subastas/src/pujas.ts",
       "ambito": "packages/module-subastas",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Estado de las PUJAS de una subasta del Portal, leído SIN iniciar sesión. PURO. Lo que el Portal enseña a un visitante anónimo en la pestaña «Pujas» (ver=5), verificado contra las 13 subastas vivas el 20/08/2026 — son cuatro",
@@ -92530,6 +93114,78 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "5929e9702f1b"
+    },
+    {
+      "ruta": "packages/module-subastas/src/remate.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Del remate REAL al número que decide la puja. PURO. `calibracionAdjudicaciones` ya sabía a qué % del tipo se remata de verdad en cada provincia… y no lo usaba nadie para decidir: pintaba una frase en la pantalla y el techo ",
+      "exporta": [
+        "remateEsperado",
+        "revisarTecho"
+      ],
+      "funciones": [
+        {
+          "nombre": "SIN_MUESTRA",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "muestra: number",
+          "retorno": "RemateEsperado",
+          "linea": 40
+        },
+        {
+          "nombre": "remateEsperado",
+          "kind": "function",
+          "exportada": true,
+          "params": "valorSubasta: number | null, provincia: string | null, calibracion: CalibracionZona[], minMuestra = MIN_MUESTRA_REMATE,",
+          "retorno": "RemateEsperado",
+          "linea": 56,
+          "resumen": "Euros que cabe esperar de remate para una subasta viva, a partir de lo que se ha rematado DE VERDAD. Prefiere la muestra de su provincia y cae al agregado global solo si la provincia no llega al mínim"
+        },
+        {
+          "nombre": "revisarTecho",
+          "kind": "function",
+          "exportada": true,
+          "params": "args: { /** `puja_maxima_calc`: el techo para el descuento objetivo. */ techo: number | null valorSubasta: number | null /** El valor de mercado usado era la mediana de la zona, no del inmueble. */ valorOrientativo: boolean remate: RemateEs",
+          "retorno": "RevisionTecho",
+          "linea": 112,
+          "resumen": "Contrasta el techo de puja calculado (teoría) con el tipo de salida y con el remate esperado (realidad). No corrige el número: decide si se puede enseñar y qué hay que decir junto a él."
+        },
+        {
+          "nombre": "etiqueta",
+          "kind": "function",
+          "exportada": false,
+          "params": "base: 'provincia' | 'global', zona: CalibracionZona",
+          "retorno": "string",
+          "linea": 153
+        },
+        {
+          "nombre": "minuscula",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 157
+        },
+        {
+          "nombre": "porcentaje",
+          "kind": "function",
+          "exportada": false,
+          "params": "x: number",
+          "retorno": "string",
+          "linea": 161
+        },
+        {
+          "nombre": "eur",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "string",
+          "linea": 165
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fea5138eb021"
     },
     {
       "ruta": "packages/module-subastas/src/scoring.ts",
@@ -94448,7 +95104,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2514,
-    "funciones": 6846
+    "archivos": 2523,
+    "funciones": 6905
   }
 }

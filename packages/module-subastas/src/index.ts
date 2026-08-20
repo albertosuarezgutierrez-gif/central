@@ -57,8 +57,12 @@ export type { LoteSurus } from './surus.ts'
 // Documentos adjuntos a la ficha del BOE: edictos con texto → señales explícitas
 export { pujasDeFicha, titularPujas } from './pujas.ts'
 export type { EstadoPujas, PujasFicha } from './pujas.ts'
-export { interpretarLogin, pareceIdentificada } from './portal-login.ts'
+export { interpretarLogin, pareceIdentificada, pideCaptcha } from './portal-login.ts'
 export type { EstadoLogin, ResultadoLogin } from './portal-login.ts'
+export { codigoDeCorreo, codigoDelIntento, esCorreoDeLogin } from './portal-otp.ts'
+export type { CorreoOtp } from './portal-otp.ts'
+export { formularioOtp, pideCodigo, redactarSecretos } from './portal-form.ts'
+export type { FormularioOtp } from './portal-form.ts'
 export { enlacesDocumentos, fichaLegible, muroDocumental, datosDeEdicto, notasDeEdicto, viviendaHabitualDeNotas } from './edicto.ts'
 export type { DocumentoFicha, DatosEdicto, MuroDocumental } from './edicto.ts'
 
@@ -83,7 +87,7 @@ export {
 export type { UbicacionSubasta } from './geo.ts'
 
 // Ficha del Portal de Subastas (las CIFRAS) y Catastro (superficie, año, uso)
-export { parsearFichaBoe, paresFicha, resultadoDeFicha, resultadoDeBanner, parsearCertificadoCierre, mejorPujaDeFicha } from './ficha-boe.ts'
+export { parsearFichaBoe, paresFicha, resultadoDeFicha, resultadoDeBanner, parsearCertificadoCierre } from './ficha-boe.ts'
 export type { FichaBoe, ResultadoSubasta, CierreCertificado } from './ficha-boe.ts'
 export {
   parsearCatastro, errorCatastro, superficieUtil, parsearCoordenadas,
@@ -111,6 +115,10 @@ export {
 export type { Preferente, ZonaPreferente } from './costa-norte.ts'
 // Calibración con RESULTADOS reales: a qué % del tipo se adjudica de verdad
 export { calibracionAdjudicaciones, calibracionPorCargas, calibracionPuja, MIN_MUESTRA_CALIBRACION, MIN_MUESTRA_PUJA } from './adjudicaciones.ts'
+// …y lo que convierte esa calibración en un número que decide: el remate que
+// cabe esperar y si nuestro techo de puja se sostiene frente a él.
+export { remateEsperado, revisarTecho, MIN_MUESTRA_REMATE } from './remate.ts'
+export type { RemateEsperado, RevisionTecho } from './remate.ts'
 export type {
   ResultadoConcluido, CalibracionZona, ResultadoConCargas, CalibracionCargas,
   ResultadoConPuja, CalibracionPuja,

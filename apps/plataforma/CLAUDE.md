@@ -698,6 +698,38 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
     (`calibracionResultados`), nunca el agregado nacional disfrazado de local: con los 8 remates capturados
     la mediana global es **0,64× el tipo** pero **Sevilla va a 1,42×** (un 165.000€ rematado en 669.900€,
     verificado a mano en el Portal).
+- **🛑 EL LOGIN AUTOMÁTICO DEL PORTAL NO ES VIABLE — no volver a intentarlo (20/08/2026, PRs #1548→#1560).**
+  Se construyó entero y se probó contra producción. El Portal lo cerró en dos escalones:
+  1. **2FA en la única vía automatizable.** El certificado y Cl@ve no los puede usar un proceso; la vía
+     usuario+contraseña sí, pero **es justo la que exige un código** enviado al correo Y al móvil
+     («Se ha recibido un intento de inicio de sesión **utilizando su usuario y contraseña**…»).
+  2. **CAPTCHA.** Tras una ráfaga de intentos, el Portal dejó de pedir el código y pasó a pedir «los
+     caracteres de la imagen» (`<input name="captcha" maxlength="6">`). Es un control anti-automatización
+     dirigido contra este cron. **No se resuelve**: automatizar el acceso propio de Alberto es una cosa;
+     saltarse un «demuéstrame que eres una persona» es otra, y el siguiente escalón es el bloqueo de la
+     cuenta, que el propio Portal anuncia en su mensaje de error.
+  El código se queda porque **degrada honestamente y se calla solo**: `captcha` y `rechazada` no se
+  reintentan nunca, y ambos avisan por Telegram (un cron que se rinde en silencio es indistinguible de uno
+  que funciona). El lector sigue en ANÓNIMO, que es lo que hacía antes: las fichas con muro dicen
+  «identifícate», no «no hay documentos». Las envs `BOE_PORTAL_*` pueden quedarse: sin sesión no cambian nada.
+  - **Lo que sí funcionó y merece la pena recordar:** los documentos SÍ están ahí. Alberto entró a mano con
+    Claude Chrome y bajó **18 documentos de las 9 fichas con muro en dos minutos**. Solo una
+    (`SUB-JA-2026-265289`, Barbate) publica edicto y **no** certificación de cargas: esa sí hay que pedirla
+    al Registro. **Ninguna de las otras 8 carecía de documentación.**
+  - **El camino bueno, por tanto, es el buzón de entrada del lector**, no el login: el cron ya sabe QUÉ
+    fichas tienen muro, Alberto baja los PDFs con Chrome y los deja en Drive (el repo ya escribe en Drive
+    para las facturas) → el lector los procesa. No depende de burlar nada ni se rompe si el BOE cambia una
+    palabra. **PENDIENTE de construir.**
+  - 🚨 **Dos bugs propios que este episodio destapó, y que son la lección de método:**
+    · El detector de sesión buscaba «Cerrar sesión»; la barra del Portal dice **«Desconectar»**. Constaba
+      por escrito en dos observaciones de la página viva, y **el fixture del test se redactó con la misma
+      suposición que el código**, así que la suite daba verde sobre un detector que no reconocía NUNCA una
+      sesión abierta. El fixture de un parser se copia del documento real, jamás se escribe de memoria.
+    · El margen de frescura del código OTP era de 30 s «para el desfase de reloj», pero los intentos
+      llegaron a estar a **11 s** (porque `desconocido` no se cacheaba y cada llamada relanzaba el login).
+      **El margen era más ancho que la distancia entre intentos**, así que se tragaba el código del intento
+      anterior. Un margen de tolerancia es una puerta: hay que medirlo contra la frecuencia real del evento.
+
 - **🔓 El cron ya sabe identificarse en el Portal (20/08/2026, PR de seguimiento):** Alberto se registró con
   su firma digital, y el Portal —una vez registrado— admite **usuario (correo o teléfono) + contraseña** en
   `POST /id/login.php`, sin CSRF ni captcha. Eso es lo único de las tres vías de acceso (`/acceso.php`:

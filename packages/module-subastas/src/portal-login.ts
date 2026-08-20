@@ -35,10 +35,13 @@ import { norm } from './parsing.ts'
  *  · `rechazada`   — el Portal dice que los datos no valen o la cuenta no está
  *                    activa. **Nunca se reintenta**: el propio mensaje avisa de
  *                    que la cuenta puede acabar bloqueada.
+ *  · `captcha`    — el Portal ha escalado y exige descifrar una imagen. Es su
+ *                    forma explícita de pedir una persona: **se deja de
+ *                    intentar**, no se resuelve. Ver `pideCaptcha`.
  *  · `desconocido` — ni una cosa ni la otra (portal caído, rediseño, HTML que no
  *                    es el esperado). Reintentable, pero SIN afirmar que hay sesión.
  */
-export type EstadoLogin = 'iniciada' | 'rechazada' | 'desconocido'
+export type EstadoLogin = 'iniciada' | 'rechazada' | 'captcha' | 'desconocido'
 
 export interface ResultadoLogin {
   estado: EstadoLogin
@@ -55,8 +58,10 @@ function texto(html: string): string {
  * ¿Qué dice la respuesta del `POST /id/login.php`?
  *
  * @param html    cuerpo de la respuesta (siguiendo redirecciones).
- * @param cookies cookies de sesión recibidas. Necesarias pero NO suficientes:
- *                el Portal entrega `PHPSESSID` también a los anónimos.
+ * @param cookies cookies recibidas. Se conservan por si algún día el Portal
+ *                empieza a usarlas, pero NO se exigen: hoy no manda ninguna
+ *                (cero `Set-Cookie` en `/id/login.php`) — el estado va en los
+ *                campos ocultos del formulario.
  */
 export function interpretarLogin(html: string, cookies: readonly string[] = []): ResultadoLogin {
   const t = texto(html ?? '')
@@ -72,14 +77,36 @@ export function interpretarLogin(html: string, cookies: readonly string[] = []):
     return { estado: 'rechazada', motivo: 'el Portal dice que la cuenta está bloqueada' }
   }
 
-  // 2) Éxito POSITIVO: la cabecera del Portal cambia «Iniciar sesión» por
-  // «Cerrar sesión» en cuanto hay sesión. Sin esa prueba no se afirma nada.
-  const sesionVisible = /cerrar sesion/.test(t)
-  if (sesionVisible && cookies.length > 0) return { estado: 'iniciada', motivo: null }
-  if (sesionVisible) {
-    // La página se comporta como identificada pero no nos han dado con qué
-    // mantenerlo: sin cookie no hay peticiones siguientes que valgan.
-    return { estado: 'desconocido', motivo: 'el Portal responde como identificado pero no ha enviado cookie de sesión' }
+  // 2) Éxito POSITIVO: la cabecera cambia «Iniciar sesión» por «Desconectar»
+  // (+ «Mi Perfil») en cuanto hay sesión.
+  //
+  // 🚨 Aquí ponía `cerrar sesion`, que es lo que YO supuse que decía el Portal
+  // —y el fixture del test lo escribí con la misma suposición, así que los
+  // tests confirmaban el error en vez de cazarlo—. El Portal dice
+  // «Desconectar»: lo reportaron dos observaciones distintas de la página viva
+  // (Alberto y Claude en Chrome) antes de que esto se escribiera. La lección es
+  // la de siempre en este repo: el fixture de un parser se copia del documento
+  // real, nunca se redacta de memoria.
+  //
+  // Y NO se exige cookie: el Portal no manda ninguna en el login (comprobado
+  // con `-D` sobre `/id/login.php`: cero `Set-Cookie`), porque lleva el estado
+  // en los ocultos del propio formulario. Exigirla convertía cualquier login
+  // bueno en un `desconocido`.
+  if (pareceIdentificada(html)) return { estado: 'iniciada', motivo: null }
+
+  // 🚨 CAPTCHA: el Portal ha escalado. Pasó de verdad el 20/08/2026 tras una
+  // ráfaga de intentos fallidos — dejó de pedir el código y empezó a pedir «los
+  // caracteres de la imagen». Es un control anti-automatización dirigido
+  // exactamente contra este cron, y la respuesta correcta a un «demuéstrame que
+  // eres una persona» es dejar de intentarlo, no buscarle la vuelta.
+  //
+  // Se trata como `rechazada` a efectos de reintento: se recuerda y no se
+  // vuelve a probar. Insistir escalaría a bloqueo de la cuenta.
+  if (pideCaptcha(html)) {
+    return {
+      estado: 'captcha',
+      motivo: 'el Portal exige un captcha: ha detectado el acceso automático y pide una persona',
+    }
   }
 
   return { estado: 'desconocido', motivo: 'la respuesta del Portal no confirma que la sesión se haya abierto' }
@@ -93,5 +120,24 @@ export function interpretarLogin(html: string, cookies: readonly string[] = []):
  * su muro documental se grabaría como si fuera lo que ve un usuario registrado.
  */
 export function pareceIdentificada(html: string): boolean {
-  return /cerrar sesion/.test(texto(html ?? ''))
+  const t = texto(html ?? '')
+  // «Desconectar» es el rótulo real; «mi perfil» es la segunda señal de la
+  // misma cabecera. «Cerrar sesión» se mantiene por si el Portal lo usa en
+  // alguna pantalla, pero NO es lo que enseña la barra.
+  return /desconectar/.test(t) || /mi perfil/.test(t) || /cerrar sesion/.test(t)
+}
+
+/**
+ * ¿El Portal está pidiendo un captcha en vez de dejar seguir?
+ *
+ * Se exige la conjunción de la frase Y el campo: el texto solo podría venir de
+ * una página de ayuda, y un `name="captcha"` suelto podría estar oculto en otro
+ * formulario. Ninguna de las dos cosas por separado autoriza a decir que el
+ * Portal ha escalado.
+ */
+export function pideCaptcha(html: string): boolean {
+  const t = texto(html ?? '')
+  const frase = /introduzca los caracteres de la imagen|verificacion de seguridad/.test(t)
+  const campo = /<input\b[^>]*\bname\s*=\s*["\']?captcha\b/i.test(html ?? '')
+  return frase && campo
 }

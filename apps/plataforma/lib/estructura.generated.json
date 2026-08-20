@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-20T14:28:56Z",
+  "generadoEn": "2026-08-20T17:01:43Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -350,7 +350,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 29
+        "evidencias": 30
       },
       "rrhh": {
         "estado": "usado",
@@ -728,7 +728,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 38
+        "evidencias": 41
       },
       "rrhh": {
         "estado": "usado",
@@ -1736,7 +1736,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 31
+        "evidencias": 33
       },
       "rrhh": {
         "estado": "no",
@@ -3861,6 +3861,7 @@
       "/api/sivra/mensajes/auto-reply",
       "/api/sivra/mensajes/diagnostico-guia",
       "/api/sivra/mensajes/knowledge",
+      "/api/sivra/mensajes/minar-historico",
       "/api/sivra/mensajes/reply",
       "/api/sivra/mensajes/resumen-diario",
       "/api/sivra/mensajes/seed-aprendizaje",
@@ -4288,8 +4289,10 @@
       "mapa_arquitectura",
       "mensajes_aprendizaje",
       "mensajes_auto_config",
+      "mensajes_conflictos_guia",
       "mensajes_guia_cache",
       "mensajes_guia_gaps",
+      "mensajes_hechos",
       "mensajes_log",
       "mensajes_pendientes_tg",
       "mensajes_procesados",
@@ -4318,6 +4321,7 @@
       "subastas_debug_token",
       "subastas_descartes",
       "subastas_notas_simples",
+      "subastas_pujas_obs",
       "subastas_radar",
       "subastas_reapariciones",
       "subastas_seguidas",
@@ -4536,6 +4540,26 @@
   ],
   "novedades": [
     {
+      "titulo": "La guest app tiene API JSON abierta con el token del propio enlace:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Precedencia:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Entregas 2-5 también hechas",
+      "fecha": ""
+    },
+    {
+      "titulo": "Mergeado y VIVO",
+      "fecha": ""
+    },
+    {
+      "titulo": "`?dry=1`",
+      "fecha": ""
+    },
+    {
       "titulo": "🪤 Landmine caro:",
       "fecha": ""
     },
@@ -4564,35 +4588,15 @@
       "fecha": ""
     },
     {
+      "titulo": "Lo que sí sirve:",
+      "fecha": ""
+    },
+    {
+      "titulo": "TRES sesiones distintas fueron al mismo sitio el mismo día",
+      "fecha": ""
+    },
+    {
       "titulo": "Probar antes de mergear cazó DOS bugs que `tsc` y `next build` dan por buenos:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Raíz:",
-      "fecha": ""
-    },
-    {
-      "titulo": "PENDIENTE (decisión de Alberto):",
-      "fecha": ""
-    },
-    {
-      "titulo": "Dos reglas del disparador:",
-      "fecha": ""
-    },
-    {
-      "titulo": "El gate es una PRUEBA, no CI:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Cierre (mismo día):",
-      "fecha": ""
-    },
-    {
-      "titulo": "El cron `/api/sivra/pricing/canal` reventó entero",
-      "fecha": ""
-    },
-    {
-      "titulo": "Confirmado por Alberto en pantalla.",
       "fecha": ""
     }
   ],
@@ -5003,7 +5007,7 @@
     "packages": 37,
     "capacidades": 23,
     "skills": 32,
-    "apis": 1172,
+    "apis": 1173,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
