@@ -32,16 +32,17 @@
 
 ---
 
-### 📒 (20/08/2026) El libro de operaciones del bróker ya tiene quien lo alimente — y quien lo vigile
-Mergeado el **#1505** (endpoint `POST/GET /api/trading/operaciones`, paso `1d` de la pasada, agente
-`trading_operaciones` vigilado con su sonda). Verificado DESPUÉS del merge: 33+19+130 tests verdes sobre
-`main`, `tsc` limpio, el endpoint en producción responde **401** sin token y la BD tiene 455 ejecuciones con
-**0 grants a `anon`/`authenticated`**. Prueba real: `get_account_trades(DAYS_7)` trae las 2 ejecuciones del
-17/08 y **ya están en el libro con los mismos importes** → el solapamiento es idempotente de verdad.
-**Pendiente y CADUCA:** volcar jul–sep/2025 (108 ops) antes de que IBKR deje de servirlo. `tipo_cambio` sigue
-NULL en 454/455 filas (449 STK + 5 CASH en USD): sin él no hay cifra en euros defendible.
-La doctrina de stop/tamaño medida (109 de 116 ventas de 2026 fueron stops, −21.692,60 USD) entra en la skill
-`trading-analista`; `riesgo-hueco` aún NO está enganchado a la pasada automática.
+### 📒 (20/08/2026) Libro completo (569 ops) y la AUTOPSIA: la pérdida es el INTRADÍA, no los valores
+Mergeado el **#1505** y verificado en prod (401 sin token, 0 grants a `anon`, tests verdes). **Rescatadas
+las 114 ejecuciones de jul–sep/2025 que IBKR iba a dejar de servir** (el libro va ahora de 07/07/2025 a
+17/08/2026); cuadre: 22 de 25 símbolos netean 0 exacto — los 3 restantes son una posición que cruzó a Q4 y
+dos ventas cuyas compras son anteriores a lo que IBKR sirve (**BRZE y NKE se quedan sin coste de
+adquisición: FIFO incompleto ahí**). **Autopsia sobre el libro entero:** vender el MISMO día que compra →
+**−24.278,53 USD en 68 días**; vender otro día → **+3.811,08 USD en 74**. Los STOP de 2025+2026 (248 ventas)
+suman **−26.538,64 USD** y las 29 a mercado/límite **+6.071,19 USD**. Comisiones 542,14 USD y 8,3 M USD de
+volumen sobre ~33.400€: la rotación es el coste invisible. `riesgo-hueco` YA enganchado a `/analizar`
+(`stopViable` por idea) + paso 5-bis de la skill para que se cante. **Sigue pendiente:** `tipo_cambio` NULL
+en 568/569 filas y las acciones corporativas.
 
 ### 🛡️ (20/08/2026) Correduría: había DOS planes para lo mismo con dos nombres — fundidos en uno
 Dos sesiones del mismo día planificaron el traspaso del CRM de Manuel sin verse: `docs/TRASPASO-CORREDURIA.md`
@@ -2083,13 +2084,14 @@ Pendiente: que Alberto revise el spec → plan de implementación. Códigos/cred
     (PASO 0 no vio huella → pasada completa, sin duplicado). Ya no parece transitorio: si el
     disparo primario vuelve a fallar, Alberto abre ticket a soporte de claude.ai (la Rutina es de
     la UI, no editable por MCP).
-    **📒 Libro de operaciones (20/08, #1505 MERGEADO y verificado en prod):** sincronizador + vigía
-    vivos, 455 ejecuciones, endpoint cerrado (401 sin token) y solapamiento de 7 días idempotente
-    contrastado con IBKR. Abiertos: (a) **CADUCA** — volcar jul–sep/2025 (108 ops) mientras IBKR lo
-    sirva; (b) `tipo_cambio` NULL en 454/455 filas → sin cifra en euros para la asesoría; (c) sin
-    acciones corporativas (el primer split con posición abierta romperá el FIFO); (d) `riesgo-hueco`
-    (`@central/module-trading`) mide stop mínimo y tamaño máximo pero **NO está enganchado a la
-    pasada**: hoy se usa a mano al preparar una instrucción.
+    **📒 Libro de operaciones (20/08, #1505 mergeado + #1570):** 569 ejecuciones (07/07/2025→17/08/2026),
+    sincronizador y vigía vivos, endpoint cerrado. El volcado que caducaba YA ESTÁ (114 ops de jul–sep/2025)
+    y `riesgo-hueco` ya viaja en `/analizar` (`stopViable`). Abiertos: (a) `tipo_cambio` NULL en 568/569
+    filas → sin cifra en euros para la asesoría; (b) sin acciones corporativas (el primer split con
+    posición abierta romperá el FIFO); (c) **BRZE y NKE tienen ventas sin compra en el libro** (anteriores
+    a lo que IBKR sirve) → su coste de adquisición hay que sacarlo de los extractos, no del bróker;
+    (d) decisión de Alberto pendiente: pagar fuentes (insiders/13F) o construirlas gratis contra SEC EDGAR
+    (verificado 20/08: `data.sec.gov` responde 200 desde cloud).
   - **Subastas:** lente 🌊 (costa norte + Matalascañas sin tope) MERGEADA y en prod (#1346/#1349/
     #1351/#1353); pestaña 🔥 Oportunidades rediseñada (#1358 — una tarjeta, chips homogéneos,
     €/m² siempre visible). 🟡 el dispatcher marca timeout en `subastas-mercado` si desborda 280 s
