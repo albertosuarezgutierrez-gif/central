@@ -83,6 +83,28 @@
   rotación de claves NO cubre. Y el panel tiene **67 Edge Functions** frente a las 45 del repo: 22 sin versionar.
 - Todo en `docs/ROTACION-SERVICE-ROLE.md`; PR #1517.
 
+### 🛡️ (20/08/2026) Traspaso del CRM de correduría de Manuel Suárez — runbook, BLOQUEADO en Fase 0
+Manuel desarrolló el CRM en SU Supabase y SU Vercel; el negocio es de Alberto y hay que traérselo.
+Plan cerrado en `docs/TRASPASO-CORREDURIA.md`. Decisiones: BD → **schema `seguros` en `central`**
+(no un proyecto aparte: principio de BD única de `MATRIZ.md`) con rol `prisma_seguros`; código →
+vertical **`apps/seguros`** (molde `apps/mariscos`, `ignoreCommand` desde el primer commit); free vs.
+Pro se decide **midiendo el dump**, no con la estimación de ~200 MB (hoy `central` va por ~180/500).
+**No** se transfiere su proyecto Supabase ni se monta MCP/API a medida: para inspeccionar, Manuel
+invita a Alberto a SU organización (el conector de Supabase ya lo ve); para copiar, `pg_dump | psql`
+(un MCP perdería índices, secuencias, constraints y triggers). **GitHub va aparte:** el código entra
+sin historia git y su repo original se TRANSFIERE a Alberto y se archiva como museo.
+La petición a Manuel se plantea en dos opciones — **A (recomendada): tres accesos, ~5 min de su
+tiempo**, todo lo demás lo hace Claude; B: lista de tareas, si no quiere dar ese acceso.
+🚨 **La transferencia del repo va LA ÚLTIMA**: rompe la conexión git de su Vercel y le tumba el
+despliegue, que debe seguir vivo para la comparación lado a lado. Anticipados tres límites reales
+(org de Supabase con otros clientes · Vercel Hobby no admite miembros · repo en organización ajena),
+ninguno bloqueante: cada uno cae a su fila de la opción B.
+No confundir con `/correduria` de plataforma, que es la contabilidad de comisiones y NO se toca:
+esa ambigüedad queda enrutada en la skill `central-maestro` (+ fila en `docs/FUENTES-DE-VERDAD.md`),
+con el aviso de que «no está en el repo» ≠ «no existe» (lección de la landing de House Sevillana).
+Pendiente: el mensaje a Manuel está redactado en el doc pero **lo envía Alberto** — hasta entonces
+no se puede avanzar de fase.
+
 ### 🔔 (20/08/2026) El aviso de cierre de subastas no había sonado NUNCA — y las pujas se leían de la pestaña equivocada
 - Alberto: «que el agente me avise el día antes con cómo van las pujas». Auditoría: 19 filas en el radar,
   18 avisadas, **0 seguidas** — y TODO el cron `subastas-cierre` colgaba de `subastas_seguidas`, que exige
