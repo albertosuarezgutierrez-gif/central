@@ -347,6 +347,19 @@ inventario de la Fase 1, no antes.
   escribía su latido pero nadie lo vigilaba — añadido a `AGENTES_VIGILADOS`/`PROBES`.
 - Informe completo en `docs/AUDITORIA-2026-08.md` (actualización 2026-08-20).
 
+### 🛡️ (19/08/2026) Grupo Asegura — plan para traer la correduría al monorepo
+- Nuevo `docs/ASEGURA-MIGRACION.md`. El desarrollo externo es el repo **`manuelsuarez/asegura`**
+  (invitación de colaborador del 12/08 en el Gmail, **sin aceptar**); Claude NO puede leerlo desde
+  esta sesión (app instalada solo en `albertosuarezgutierrez-gif`, `add_repo` cross-owner bloqueado).
+- **Decisión: NO se crea proyecto Supabase nuevo** aunque el 2º free cueste 0 €/mes — los free se
+  pausan a los 7 días de inactividad y las cuotas son por organización. Va como schema **`seguros`**
+  en `central` + rol `prisma_seguros`, app `apps/asegura`, marca por `@central/brand`.
+- Bloqueantes de Alberto: **transferir** el repo a su cuenta (es un Next.js hecho con Claude Code:
+  787 commits, 258 ramas, e2e, tickets Linear LOO-xxx, desplegado en `asegura.vercel.app`; el Vercel
+  y el Supabase también son de Manuel).
+- **Hecho sin depender de él:** schema `seguros` + rol `prisma_seguros` creados en `central` (inerte,
+  sin password; SELECT en cuentas/sociedades/negocios) — `apps/asegura/prisma/sql/2026-08-19_asegura_bootstrap.sql`.
+  Y `docs/ASEGURA-PROMPT-CHROME.md` para inventariar el repo con Claude Chrome. PR #1489.
 ### 🛤️ (19/08/2026) El raíl aguanta en vivo — vigilancia diaria de precios BORRADA
 - Verificado sobre la pasada real de las 20:31 UTC. El arreglo (#1497, `1f5a4d0`) estaba en producción
   desde las **20:13:18 UTC**, 18 min antes (deploy de `a6ef85ab`, del que `1f5a4d0` es ancestro).
