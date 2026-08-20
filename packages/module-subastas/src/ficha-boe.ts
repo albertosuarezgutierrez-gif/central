@@ -4,11 +4,13 @@
 // que el correo de alerta no trae: valor de subasta, tasación, tramos, depósito,
 // cantidad reclamada, y la situación posesoria real del bien.
 //
-// La ficha son tres pestañas (`&ver=N`), todas con la misma forma
+// La ficha son varias pestañas (`&ver=N`); las de datos comparten la forma
 // `<tr><th>Etiqueta</th><td>Valor</td></tr>`:
 //   · general   → identificador, fechas, importes
 //   · ver=2     → autoridad gestora (juzgado/notaría) con teléfono y correo
 //   · ver=3     → el bien: dirección postal, provincia, posesión, visitable
+//   · ver=5     → PUJAS: ni la general ni ninguna otra publica lo que ha pujado
+//                 nadie, solo esa. La lee `pujasDeFicha` (`pujas.ts`).
 //
 // CENTINELAS: el portal escribe «Sin lotes», «No consta» y —crítico— «0,00 €»
 // cuando NO hay dato. Un 0 que se cuele como número haría dividir por cero en
@@ -283,25 +285,5 @@ export function parsearCertificadoCierre(texto: string): CierreCertificado | nul
     return { resultado: 'con_pujas', pujaMaxima: n != null && n > 0 ? n : null }
   }
   if (/concluyo sin pujas/.test(t)) return { resultado: 'desierta', pujaMaxima: null }
-  return null
-}
-
-/**
- * Mejor puja publicada por la ficha de una subasta EN CURSO (sin exigir
- * estado, a diferencia de `resultadoDeFicha`). Sirve para vigilar las
- * seguidas: si alguien ya puja por encima de nuestro techo, deja de ser
- * negocio y hay que enterarse ANTES del cierre, no en el resultado.
- *
- * `null` = la ficha no la publica (o aún no hay pujas visibles) — que NO es
- * «no hay pujas»: el portal solo enseña la mejor puja en algunos formatos.
- */
-export function mejorPujaDeFicha(pares: Map<string, string>): number | null {
-  for (const [k, v] of pares) {
-    if (/importe de adjudicacion/.test(k)) continue // eso es un resultado, no una puja viva
-    if (/puja maxima|mejor puja|puja mas alta/.test(k)) {
-      const n = parseImporteEs(texto2(v))
-      return n != null && n > 0 ? n : null
-    }
-  }
   return null
 }

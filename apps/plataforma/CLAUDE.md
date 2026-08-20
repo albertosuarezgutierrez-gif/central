@@ -674,7 +674,8 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
     es un stub de 1,1 KB (juzgado + expediente + enlace al Portal) en las 4 subastas de 3 juzgados
     revisadas; las pestañas `ver=2/3/5` tienen el mismo muro; y lo público de la pestaña Bienes ya lo lee
     el cron. **Las cargas no están en ningún sitio público.** El registro en el Portal exige certificado o
-    Cl@ve (una vez), pero luego da usuario/contraseña — eso sí sería automatizable; PENDIENTE de decisión.
+    Cl@ve (una vez), pero luego da usuario/contraseña — eso sí es automatizable, y es lo que hace la sesión
+    del apartado siguiente.
   - **El aviso de cierre no se había disparado NUNCA.** Todo `subastas-cierre` colgaba de
     `subastas_seguidas`, que solo se llena pulsando «👀 Seguir» en Telegram: **19 filas en el radar, 18
     avisadas, 0 seguidas**, y `mejor_puja_at` sin estrenar en las 26 filas del corpus. Un aviso que depende
@@ -697,6 +698,36 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
     (`calibracionResultados`), nunca el agregado nacional disfrazado de local: con los 8 remates capturados
     la mediana global es **0,64× el tipo** pero **Sevilla va a 1,42×** (un 165.000€ rematado en 669.900€,
     verificado a mano en el Portal).
+- **🔓 El cron ya sabe identificarse en el Portal (20/08/2026, PR de seguimiento):** Alberto se registró con
+  su firma digital, y el Portal —una vez registrado— admite **usuario (correo o teléfono) + contraseña** en
+  `POST /id/login.php`, sin CSRF ni captcha. Eso es lo único de las tres vías de acceso (`/acceso.php`:
+  certificado, usuario/contraseña, Cl@ve) que puede usar un proceso automático. **La firma digital NO entra
+  en el repo ni en Vercel**: es la identidad legal de Alberto, no una credencial de app.
+  - Envs (solo en Vercel, nunca en el repo): **`BOE_PORTAL_USUARIO`** y **`BOE_PORTAL_PASSWORD`**.
+    Sin ellas todo sigue funcionando en anónimo, exactamente como antes.
+  - **`interpretarLogin()`** (puro, `module-subastas/portal-login.ts`, fixture con la respuesta REAL de
+    error) devuelve `iniciada | rechazada | desconocido`. **El éxito se exige POSITIVO** (cabecera «Cerrar
+    sesión» + cookie): una respuesta que no lo demuestra es `desconocido`, nunca `iniciada`. Dar por buena
+    una sesión que no existe haría que el muro se grabara como «ni registrado se ve», que es el recado que
+    manda al Registro a pagar una certificación.
+  - **🚨 UN INTENTO Y NO MÁS.** El error literal del Portal es «…los datos de acceso proporcionados son
+    incorrectos, el usuario no está activo **o está bloqueado**»: el Portal bloquea cuentas. `rechazada` se
+    cachea para todo el proceso y NO se reintenta; solo el `desconocido` (red) es reintentable. El único
+    sitio que puede reintentar es el diagnóstico manual `fase3-debug?accion=portal`, que además nunca
+    devuelve la contraseña ni la cookie — solo el veredicto.
+  - **La sesión se verifica en CADA ficha** (`pareceIdentificada`), no solo al abrirla: las sesiones PHP
+    caducan, y si caduca a mitad de pasada el resto de fichas se leerían como anónimas y su muro quedaría
+    grabado como lo que ve un usuario registrado.
+  - Columna **`subastas.documentos_sesion`** (`true` con sesión · `false` en anónimo · `null` = no consta):
+    el mismo `documentos_muro` significa cosas opuestas según con qué ojos se miró — «identifícate» (gratis)
+    frente a «pide la certificación al Registro» (tasa + mañana). De ahí el estado nuevo
+    **`ocultas_pese_a_sesion`**. Ante `null` se mantiene el recado BARATO: mirar antes que pagar.
+  - La cola del lector reintenta las fichas con muro **sin esperar la semana** en cuanto hay sesión y la
+    última lectura fue a ciegas: el día que se configuren las envs, las **9** fichas con muro (8 total + 1
+    parcial) se releen en la primera pasada. Validado contra la BD real.
+  - Si el Portal RECHAZA las credenciales, `subastas-enriquecer` manda **un Telegram**: la degradación a
+    anónimo es honesta pero silenciosa, y una contraseña caducada dejaría el lector ciego semanas.
+
   - **🚨 DOS LANDMINES que `tsc` y `next build` NO cazan, encontradas al probar antes de mergear:**
     **(a)** `datosDe()` leía `pujas_estado`, `pujas_estado_at` y `puja_maxima_calc`, que **no estaban en
     `COLS_SUBASTA`** → las filas llegaban con `undefined` y el aviso salía MUDO («❔ estado de pujas sin

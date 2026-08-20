@@ -45,14 +45,17 @@ export const COLS_SUBASTA = Prisma.raw(
     'planta, cuota_participacion, busqueda_origen, estado_portal, enriquecida_at, cantidad_reclamada, ' +
     'arrendamiento_inscrito, telefono_autoridad, email_autoridad, codigo_postal, superficie_catastro, ' +
     'uso_catastral, direccion_catastro, precio_m2_mercado, muestra_mercado, zona_mercado, notas_edicto, ' +
-    'documentos, documentos_muro, es_playa, margen_flip, margen_flip_pct, flip_apto, semaforo, analisis, precio_m2_zona, ' +
+    'documentos, documentos_muro, documentos_sesion, es_playa, margen_flip, margen_flip_pct, flip_apto, semaforo, analisis, precio_m2_zona, ' +
     'muestra_zona, zona_portal, lat, lon, geo_precision, ' +
     'cargas_detalle, cargas_fuente, documentos_leidos, lector_version, valor_orientativo, mejor_puja, mejor_puja_at, ' +
     // Estado de pujas y techo congelado: los lee `subastas-cierre` para redactar
     // el aviso. Sin ellos las filas llegan con `undefined` y el aviso sale MUDO
     // («estado de pujas sin comprobar») con el dato en la BD — y `tsc` no lo caza
     // porque estas filas son `any`. Lo vigila `cols-subasta.test.ts`.
-    'pujas_estado, pujas_estado_at, puja_maxima_calc',
+    'pujas_estado, pujas_estado_at, puja_maxima_calc, ' +
+    // Remate esperado con los remates REALES ya capturados, y si el techo
+    // calculado se sostiene (ver `remate.ts` del módulo).
+    'remate_esperado, remate_ratio, remate_muestra, techo_fiable, techo_motivo',
 )
 
 /**
@@ -133,6 +136,15 @@ export function filaASubasta(f: any): SubastaInmueble {
     pujaMinima: num(f.puja_minima),
     cantidadReclamada: num(f.cantidad_reclamada),
     mejorPuja: num(f.mejor_puja),
+    // Cuatro estados a propósito: el `?? false` de siempre convertiría un «no lo
+    // hemos mirado» en «nadie ha pujado», que es la afirmación cara.
+    pujasEstado: f.pujas_estado ?? null,
+    pujasAt: f.pujas_estado_at ? new Date(f.pujas_estado_at).toISOString() : null,
+    remateEsperado: num(f.remate_esperado),
+    remateRatio: num(f.remate_ratio),
+    remateMuestra: f.remate_muestra == null ? null : Number(f.remate_muestra),
+    techoFiable: f.techo_fiable ?? null,
+    techoMotivo: f.techo_motivo ?? null,
     tramos: num(f.tramos),
     deposito: num(f.deposito),
     cargas: num(f.cargas),

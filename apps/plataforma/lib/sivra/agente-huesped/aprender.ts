@@ -1,6 +1,8 @@
 // lib/sivra/agente-huesped/aprender.ts — log, aprendizaje, gaps y config de autonomía.
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
+import { esHechoDelPiso } from './reglas'
+import { guardarHecho } from './hechos'
 
 export async function logMensaje(p: {
   bookingId: string; propertyId: string; categoria: string; pregunta: string; respuesta: string
@@ -12,8 +14,17 @@ export async function logMensaje(p: {
   `).catch(() => {})
 }
 
-// Guarda una corrección de Alberto como ejemplo para el piso/categoría.
+// Guarda lo que Alberto aprueba o corrige. DOS destinos, no uno:
+//   · HECHO del piso (`mensajes_hechos`) si el huésped preguntaba algo y la respuesta enseña algo de
+//     la vivienda → permanente, va SIEMPRE al prompt.
+//   · Ejemplo de ESTILO (`mensajes_aprendizaje`) en cualquier otro caso (cortesías, despedidas) →
+//     solo alimenta el tono y caduca con los 8 últimos.
+// Antes iba todo al mismo montón y el conocimiento se perdía debajo de los «gracias a ti».
 export async function aprenderCorreccion(p: { propertyId: string; categoria: string; pregunta: string; respuestaFinal: string }): Promise<void> {
+  if (esHechoDelPiso(p.pregunta, p.respuestaFinal)) {
+    await guardarHecho({ propertyId: p.propertyId, pregunta: p.pregunta, hecho: p.respuestaFinal, origen: 'alberto', estado: 'confirmado' })
+    return
+  }
   const norm = (p.pregunta || '').toLowerCase().slice(0, 300)
   await prisma.$executeRaw(Prisma.sql`
     INSERT INTO mensajes_aprendizaje (property_id, categoria, pregunta_norm, respuesta_final)
@@ -32,14 +43,4 @@ export async function registrarGap(propertyId: string, pregunta: string): Promis
   } else {
     await prisma.$executeRaw(Prisma.sql`INSERT INTO mensajes_guia_gaps (property_id, pregunta) VALUES (${propertyId}, ${norm})`).catch(() => {})
   }
-}
-
-// ¿Está habilitado el auto-envío para esta categoría y supera el umbral? (Fase 1 por defecto: false.)
-export async function autoPermitido(categoria: string, confidence: number): Promise<boolean> {
-  const rows = await prisma.$queryRaw<{ auto_enabled: boolean; umbral: number }[]>(Prisma.sql`
-    SELECT auto_enabled, umbral FROM mensajes_auto_config WHERE categoria = ${categoria} LIMIT 1
-  `)
-  const cfg = rows[0]
-  if (!cfg || !cfg.auto_enabled) return false
-  return confidence >= Number(cfg.umbral)
 }

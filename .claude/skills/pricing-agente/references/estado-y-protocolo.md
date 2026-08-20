@@ -2,6 +2,48 @@
 
 ## Estado vivo (13/07/2026) — leer al empezar el ciclo
 
+### Actualización 20/08/2026 — 🪤 el motor tiene una COPIA RETIRADA que engaña, y `target_pctl` del dúplex a 0,60
+
+**El landmine, porque costó un diagnóstico entero equivocado.** `apps/sivra/lib/pricing-engine.ts`
+existe, se lee bien y **no es el motor**. Su ruta `apps/sivra/app/api/pricing/apply/route.ts`
+devuelve **410 desde el 18/07/2026** (auditoría R5): era el motor original, se quedó congelado en
+junio y escribía en Smoobu con lógica vieja. El motor **CANÓNICO** es
+**`apps/plataforma/app/api/sivra/pricing/apply`** (cron `apply-auto`, 3×/día), y es MUCHO más fino:
+percentil de mercado **por mes de entrada** y por día, prior estacional, antelación real de venta,
+raíl por día, suelo PriceLabs, salto de evento, banda muerta.
+
+- **Antes de acusar al motor de nada, comprueba QUÉ COPIA corre.** El 20/08/2026 se le imputaron dos
+  fallos (descuento de demanda permanente por calendario vacío; vaivén del ±20%) leyendo la copia
+  retirada. El primero **no existe**: está resuelto desde el **09/08/2026** en
+  `apps/plataforma/lib/sivra/pricing-demanda.ts`, que mide la **antelación real por piso y por mes**
+  (de `incomes.reserved_at`) y **neutraliza el descuento en las fechas cuya ventana de venta aún no
+  ha abierto** — conservando el premio si las hay. Las filas de `pricing_applied` lo confirman:
+  salen con `demanda_gateada = true`.
+- **NO bajes `demand_baseline`.** Con baseline 0,50 y k 0,16, premiar exige pasar del 50% vendido:
+  es un listón alto **a propósito y testeado**. Bajarlo encendería el premio casi siempre e inflaría
+  el precio de los meses que solo están «sin juzgar todavía» — el bug original con otro disfraz.
+- **Antelación real medida (mediana, de `incomes.reserved_at`):** Dúplex **7 días** global / **11**
+  en octubre; Busto Reform 3-13 en octubre; Luxury 11-17; House 24-39. Un calendario vacío a 90 días
+  es el estado NORMAL de estos pisos, **no** una señal de demanda floja.
+- **Nota de mercado: usa la MEDIANA, no la media.** Los comparables del dúplex dan media 6,24 y
+  **mediana 8,40** — el motor usa la mediana. El dúplex puntúa **7,6**, o sea **por debajo** de su
+  competencia, y el factor de calidad le resta ~3% con razón (es la queja del baño saliendo en el
+  precio, no un fallo del motor).
+
+**Cambio aplicado en producción (20/08/2026, OK explícito de Alberto):** `pricing_settings` de
+`prop_duplex_center`, **`target_pctl` 0,50 → 0,60**. Es la Fase 1 del plan de decisión del dúplex
+(`docs/DUPLEX-plan-precio-reforma-venta.md`): dejar de apuntar a la mediana de sus comparables
+(129€) y apuntar al percentil 60 (135€), y medir 3 meses si la ocupación aguanta. **Sin tocar**
+`demand_baseline` ni `demand_k`. Queda **pendiente de decisión de Alberto** bajar `max_change_pct`
+de 0,20 a 0,08 (el vaivén está medido — 20/08: 103 cambios todos a la baja, −20,1€ de media; 19/08:
+85 al alza — pero **no** demostrado patológico frente al raíl haciendo su trabajo).
+
+**🪤 Y lo que NO se puede medir hoy, para que nadie lo prometa:** la **ocupación de la competencia**
+no está en `market_rates` — la tabla guarda precios, no disponibilidad, y el nº de comparables por
+fecha (2-10, tope aparente 10) depende de lo que rascó el scraper ese día, no de lo llena que esté
+la zona. Para usarla habría que seguir un **panel fijo** de los mismos comps fecha a fecha anotando
+disponible/no. Es trabajo de scraper, no una consulta.
+
 ### Actualización 17/08/2026 — filtro €/plaza en los lectores de mercado + Booking a 24 ventanas (PR #1453, mergeado)
 - **Los percentiles ya FILTRAN plausibilidad €/plaza** (`lib/sivra/pricing-comps-plausibles.ts`,
   umbral 12€/plaza sobre precio y aforo CRUDOS; sin aforo declarado NO se juzga): un comp a 44-104€

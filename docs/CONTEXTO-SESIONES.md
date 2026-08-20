@@ -32,6 +32,84 @@
 
 ---
 
+### 🗝️ (20/08/2026) El agente de huéspedes NO tenía ni un dato del piso: la guest app de Smoobu SÍ se puede leer
+- Alberto, del hilo del Dúplex con Samy: «¿tiene acceso a todos los mensajes? ¿puede entrar en la url?».
+  Diagnóstico: `mensajes_guia_cache` con **0 filas desde que existe** — `guia.ts` bajaba el HTML del
+  `guest-app-url`, que es una SPA (2,8 KB sin texto) → el agente respondía **sin ninguna fuente** y
+  rellenaba inventando (a Daniela le AUTO-ENVIÓ «secure keybox»; a Samy dos rutas a pie contradictorias
+  y un `[lien d'accès]` literal, teniendo el enlace en el hilo).
+- **La guest app tiene API JSON abierta con el token del propio enlace:** `login.smoobu.com/api-guest/
+  bookings/{id}?token=` y `.../contents?token=`. El Dúplex son 10 secciones: KEYS (avisa de zona
+  restringida, «no uses GPS», con vídeo), WIFI, RULES, PARKING, azotea, basura…
+- Entrega 1 hecha (spec + plan en `docs/superpowers/`): guía real filtrada por vigencia + **ventana de
+  7 días para las claves** (política de Alberto: se dan una semana antes, porque se reserva y se cancela);
+  `htmlMessage` para no perder los enlaces; dedup de los automáticos (Smoobu los manda dobles: 8 de 25);
+  y la fecha venía en `createdAt`, no `created_at` → el `ts` de TODO el historial estaba vacío.
+- **Precedencia:** la sección PARKING de la guía se excluye — Alberto confirma que **no hay plaza** pese a
+  que la guía Y el email de confirmación se la prometen al huésped (arreglar eso en Smoobu es de Alberto).
+- **Entregas 2-5 también hechas** (mismo PR): detector de conflictos guía↔override (avisa 1 vez por
+  piso+sección, tabla `mensajes_conflictos_guia`); **autonomía por FUENTE** — se auto-envía si la
+  respuesta se apoya en guía/ficha/hechos, y eso SUSTITUYE a la graduación por categorías (borrada
+  `graduacion.ts`); el clasificador de calidad pasa a TRES estados (su `catch` devolvía «no escales»
+  = auto-enviar cuando se cae); **hechos permanentes** (`mensajes_hechos`) separados de los ejemplos
+  de estilo, y el borrador que escala por falta de info dice de qué hueco se trata; y **minado del
+  histórico** (`/api/sivra/mensajes/minar-historico`, manual) que propone hechos por Telegram con
+  botones ✅/❌ — nada entra sin que Alberto lo confirme.
+- **Mergeado y VIVO** (PR #1542, 20/08 14:53). Primera pasada del cron con el código nuevo, 4 minutos
+  después: `mensajes_guia_cache` pasó de 0 filas a las guías reales de Dúplex (10 secciones) y Socorro 24
+  (9), con 3 secciones de acceso detectadas en cada una, y el detector de conflictos disparó sus dos
+  avisos de PARKING (uno por piso). Las cuatro guest apps responden 200 (comprobado antes de mergear).
+- **`?dry=1`** (PR #1546): con la autonomía nueva, el disparo manual le manda el mensaje DE VERDAD al
+  huésped, así que probar costaba un mensaje a un cliente. El simulacro recorre el pipeline y devuelve
+  qué saldría y si se enviaría solo, sin enviar, sin proponer y sin escribir.
+- Pendiente: **vender/cobrar el parking** (fase 2, pedido por Alberto).
+
+### 💶 (20/08/2026) Dúplex: plan precio→reforma→venta, y el motor de precios tiene una copia RETIRADA que engaña
+- Del estudio fiscal salió una tercera opción que no estaba sobre la mesa: **antes de reformar (25-40k€) o
+  vender, tocar el precio** — gratis y reversible. Plan con criterios numéricos escritos ANTES de medir en
+  `docs/DUPLEX-plan-precio-reforma-venta.md` (fases A precio → B baño abajo → C 2º dormitorio → D vender).
+- **🪤 Landmine caro:** acusé al motor de pricing de dos fallos leyendo `apps/sivra/lib/pricing-engine.ts`.
+  **Esa copia está RETIRADA** (su ruta da 410 desde el 18/07/2026); el motor vivo es
+  `apps/plataforma/app/api/sivra/pricing/apply` y es mucho más fino. Uno de los «fallos» ya estaba resuelto
+  desde el 09/08 (`pricing-demanda.ts` gatea el descuento fuera de la ventana de venta). Anotado en la skill
+  `pricing-agente`. **Antes de acusar a un motor, comprueba qué copia corre.**
+- **Aplicado en prod con OK de Alberto:** `target_pctl` 0,50→0,60 en `prop_duplex_center` (Fase 1). Pendiente
+  de su decisión `max_change_pct` 0,20→0,08. La ocupación de la competencia **no** se puede usar hoy
+  (`market_rates` no guarda disponibilidad) — haría falta panel fijo de comps.
+- **Rutina nueva** (día 1 de cada mes, `trig_01QLVxzPS1PXAJPuWhApcAFV`): mide el mes cerrado y aplica el
+  criterio de la fase. Ficha en `docs/RUTINAS-PROGRAMADAS.md` §15. PR #1538.
+
+
+### 🏠 (20/08/2026) Estudio fiscal de la venta del dúplex de Villasís por 320.000€
+- Alberto sube la escritura del dúplex (Pj Villasís 1, 1º C) y pregunta cuánto pagaría vendiéndolo por
+  320.000€. **Es una DONACIÓN de su madre del 21/05/2024 por 174.650,90€** (= valor de referencia), con
+  bonificación 99% del ISD andaluz → valor de adquisición = ese, no lo que pagó ella en 2004.
+- Números: ganancia ~145.000€ (sin agencia) → **IRPF ~32.300€ + plusvalía ~970€**; con agencia al 3%,
+  ~30.600€. Neto entre 271.000€ y 286.000€. Estudio completo en `docs/FISCAL-venta-duplex-villasis.md`.
+- **Plusvalía: método objetivo (~970€) vs real (~24.900€)** — hay que pedirlo expresamente.
+- **Palanca grande:** pérdidas realizadas de IBKR (−6.642 USD en 2025, −18.746 USD en 2026) compensan al
+  100% la ganancia → ~3.700€ menos. ⚠️ Son P&L del bróker en USD SIN tipo de cambio: hace falta el
+  informe fiscal en euros antes de contar con ello. El año de venta (2026 vs 2027) importa por esto.
+- **Alcance cerrado:** Alberto confirma que es **un solo piso / una sola finca** (2/18031).
+- **Cruzado con la declaración 2025** (hilo Asecon + registro en Drive): Villasís estuvo **240 días
+  arrendado**, ingresos declarados 18.606,47€ (neto Booking) y gastos 3.052,26€ → renta ~15.554€/año
+  (4,86% sobre 320.000€). Dos preguntas abiertas para Asecon: base de la amortización (valor ISD, no
+  catastral — STS 15/09/2021) y si entraron las limpiezas (~1.800€/año). Rectificables 2024-25 si
+  fallan. Validación final: Asecon.
+
+### 🔓 (20/08/2026) El cron ya se identifica en el Portal del BOE — y el muro cambia de significado
+- Alberto: «ya tengo usuario en el BOE con mi firma digital». Comprobado en `/acceso.php`: de las tres vías
+  (certificado · **usuario+contraseña** · Cl@ve) solo la segunda sirve a un proceso; `POST /id/login.php`
+  sin CSRF ni captcha. **La firma digital NO entra en repo ni en Vercel.** Envs: `BOE_PORTAL_USUARIO`,
+  `BOE_PORTAL_PASSWORD` — sin ellas todo sigue en anónimo igual que antes.
+- 🚨 El Portal **bloquea cuentas** («…o está bloqueado»): un rechazo se cachea y NUNCA se reintenta; solo el
+  fallo de red es reintentable. `interpretarLogin` exige el éxito POSITIVO (fixture del error REAL).
+- Columna `documentos_sesion` + estado `ocultas_pese_a_sesion`: el mismo muro significa «identifícate»
+  (gratis) o «pide la certificación al Registro» (tasa) según con qué ojos se miró. Ante `null`, el barato.
+- Las 9 fichas con muro se releen en la primera pasada con sesión (validado contra la BD). 503 tests módulo,
+  1372 plataforma, tsc+build limpios. **Pendiente de Alberto:** poner las dos envs en Vercel y probar con
+  `fase3-debug?accion=portal` (devuelve solo el veredicto, nunca la contraseña).
+
 ### 🛡️ (20/08/2026) Traspaso del CRM de correduría de Manuel Suárez — runbook, BLOQUEADO en Fase 0
 Manuel desarrolló el CRM en SU Supabase y SU Vercel; el negocio es de Alberto y hay que traérselo.
 Plan cerrado en `docs/TRASPASO-CORREDURIA.md`. Decisiones: BD → **schema `seguros` en `central`**
@@ -59,6 +137,29 @@ depende de a nombre de quién esté la cartera, no verificado) y que lo revise l
 ahora NO legaliza retroactivamente el periodo en que Manuel ya tuvo los datos; documenta la relación y,
 sobre todo, fija entrega + borrado acreditado. Las categorías de datos del contrato se cierran con el
 inventario de la Fase 1, no antes.
+### 🔨 (20/08/2026) Las subastas ya cuentan CÓMO ACABARON, y el techo de puja se contrasta con remates reales — PR #1536
+- **TRES sesiones distintas fueron al mismo sitio el mismo día**: esta, #1537 (pujas `ver=5` + avisos
+  sobre el radar) y #1540/#1548 (login e identificación en el Portal con 2FA). Cada vez que `main`
+  se adelantó, este PR se **reconcilió sobre él** en vez de imponer lo suyo.
+- Lo que se tiró por duplicado: el `pujasDeFicha` de `ficha-boe.ts` (manda `pujas.ts`), las columnas
+  `hay_pujas`/`pujas_secretas`/`pujas_at` (manda `pujas_estado`), y la `PORTAL_SUBASTAS_COOKIE`
+  (manda el login real de #1540/#1548; ahora `sesionPortalAbierta()` aprovecha la sesión si ya está
+  abierta y NO abre ninguna: cada login manda un SMS y el Portal bloquea cuentas).
+- Lección de método: dos agentes sobre el mismo tema el mismo día no cuestan el trabajo repetido,
+  cuestan **dos columnas que dicen lo mismo** y se desincronizan — y entonces se decide una puja
+  mirando la que se quedó vieja. Al reconciliar, manda lo que ya está en `main`.
+- Lo que aporta este PR encima: **`subastas_pujas_obs`** (serie temporal; el Portal solo publica el
+  estado de HOY, así que «cuándo entró la primera puja» solo se responde con histórico propio),
+  **`avisarDesenlaces`** (el remate se capturaba en silencio desde julio: ahora se cuenta por Telegram
+  con el remate contra el tipo EN EUROS y si nuestro techo habría ganado), y **`remate.ts`**
+  (`remateEsperado`/`revisarTecho`) que convierte la calibración en euros por fila.
+- El caso que lo justifica: Dos Hermanas, tipo 739.210,43€ y «techo» calculado de **887.052,43€**
+  sobre la mediana del municipio. Ahora sale como `techo_fiable=false`, no como recomendación.
+- Muestra real: mediana del **64% del tipo**, ninguna desierta; Sevilla capital a 2x y 4x.
+- Cantabria no estaba en `subastas_criterios` pese a los avisos de Alberto: añadida.
+- Verificado antes de mergear: plataforma 1.404 · module-subastas 527 · guardias 33 · vitest 53 ·
+  resto de packages sin fallos · `tsc` limpio. Ficha del agente puesta al día en `agentes-catalogo.ts`.
+
 ### 🔔 (20/08/2026) El aviso de cierre de subastas no había sonado NUNCA — y las pujas se leían de la pestaña equivocada
 - Alberto: «que el agente me avise el día antes con cómo van las pujas». Auditoría: 19 filas en el radar,
   18 avisadas, **0 seguidas** — y TODO el cron `subastas-cierre` colgaba de `subastas_seguidas`, que exige
@@ -1834,6 +1935,18 @@ completo `docs/AUDITORIA-2026-08.md`.
 - Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
+## 🛂 (20/08/2026) SES.HOSPEDAJES: diseño de la conectividad (parte de viajeros) — PR #1550 (draft)
+
+Fase de arranque del RD 933/2021 (comunicar viajeros al Ministerio en <24h; multas 100 €–30.000 €).
+Solo diseño, aún sin código: `docs/superpowers/specs/2026-08-20-ses-hospedajes-conectividad-design.md`.
+Protocolo verificado: SOAP a `hospedajes(.pre)-ses.mir.es/hospedajes-web/ws/v1/comunicacion`, Basic auth,
+`<solicitud>` = XML `altaParteHospedaje` en **gzip+base64**. Decisiones de Alberto: conector PROPIO (no
+Smoobu/Chekin), check-in web con OCR por IA **con confirmación humana**, y **solo nuestros 4 pisos** de
+momento (el resto de ideas —venta a terceros, uso comercial de los datos, RH, vehículos— en §9 del spec).
+🚨 Desde el contenedor NO se alcanza `*.mir.es` (proxy): toda prueba contra SES es desde Vercel.
+Pendiente: que Alberto revise el spec → plan de implementación. Códigos/credenciales NUNCA al repo.
+
+
 ## 💹 (09/08/2026) La palanca de DEMANDA ya mira el MES, no el año — PR #1323 (draft, rehecho sobre #1337)
 - #1337 (mergeado el 09/08) quitó el castigo a las fechas sin abrir, pero el `occ` de `pricing/apply`
   seguía siendo UNA ocupación anual por piso: el mes que se LLENA no podía subir el precio.
@@ -1906,6 +2019,17 @@ completo `docs/AUDITORIA-2026-08.md`.
     (ingesta IMAP no leía nada por saltos de línea/columna) ya arreglado y con regresión — pero el
     correo de alerta de Surus **aún no se ha visto en producción** (alta del mismo día): pendiente
     contrastar el parser contra el primer aviso real que le llegue a Alberto.
+  - **SIVRA — agente de huéspedes (20/08/2026, PR #1542 draft).** Entrega 1 hecha: lee la guía REAL
+    del piso por la API de la guest app de Smoobu (`login.smoobu.com/api-guest/bookings/{id}[/contents]?token=`,
+    el token sale del `guest-app-url`). Pendientes: (a) entregas 2-5 — detector de conflictos
+    guía↔override, autonomía «si está en la guía contesta solo», hechos permanentes separados de las
+    cortesías, y minería de los 159 hilos de 2026 para aprender de lo ya contestado; (b) **parking:
+    que el agente lo VENDA y lo COBRE** (fase 2, pedido por Alberto) — hoy el código pisa a propósito
+    la sección PARKING de la guía y responde «ocupado» + parkings públicos; la guía ofrece el de Plaza
+    San Juan de la Palma a 20 €/día **previa reserva y según disponibilidad**, así que NO es una promesa
+    en falso; (c) **mandar nosotros los datos de viajeros a la Hospedería de la Junta de Andalucía** —
+    hoy va por un tercero (Chekin: el `onlineCheckInUrl` de cada reserva apunta a `guest.chekin.com`);
+    (d) **en marzo vence Smoobu** → decidir si compensa seguir o darlo de baja.
   - **Facturas/banca sin conciliar:** Roborock −247,92€ (House) sin aparecer en banco; Booking Dúplex
     587,23€ vence 16/08; Socorro 24 julio sin factura de comisión; Endesa Dúplex 24/07 87,42€ con
     cargo pero sin PDF archivado; fila duplicada CREATE (`create-socorro` + `create_ventilador`,
