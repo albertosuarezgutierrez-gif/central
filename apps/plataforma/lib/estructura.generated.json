@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-19T22:29:35Z",
+  "generadoEn": "2026-08-20T08:06:59Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3809,6 +3809,7 @@
       "/api/negocios/[id]",
       "/api/operador/flota-mapa",
       "/api/operador/secretos/set",
+      "/api/publico/disponibilidad",
       "/api/sivra/conciliar-booking",
       "/api/sivra/domotica/acceso/[id]",
       "/api/sivra/domotica/acceso/[id]/abrir",
@@ -4532,63 +4533,63 @@
   ],
   "novedades": [
     {
-      "titulo": "Hallazgo:",
+      "titulo": "Confirmado por Alberto en pantalla.",
       "fecha": ""
     },
     {
-      "titulo": "Regla 2 meses (art. 33.5.f LIRPF): no bloquea nada.",
+      "titulo": "Tercera capa, la que sobrevivió a los dos arreglos:",
       "fecha": ""
     },
     {
-      "titulo": "Nuevo en BD:",
+      "titulo": "La lección de método, la misma las tres veces:",
       "fecha": ""
     },
     {
-      "titulo": "Decisión (Alberto):",
+      "titulo": "#1519 (`Vary: Origin` siempre) NO funcionó",
       "fecha": ""
     },
     {
-      "titulo": "Decisión de Alberto: por PR y definitivo — nada escribe en `main` salvo el merge de un PR verde.",
+      "titulo": "#1521 es el arreglo bueno: `Access-Control-Allow-Origin: *` fijo",
       "fecha": ""
     },
     {
-      "titulo": "DECISIÓN de Alberto (19/08): no se paga Supabase hasta tener cliente; se retoma si hace falta.",
+      "titulo": "Dos lecciones a la skill `verification-before-completion`:",
       "fecha": ""
     },
     {
-      "titulo": "MERGEADO a `main` (PR #1490)",
+      "titulo": "Y AUN ASÍ seguía roto en el navegador de Alberto (captura), con el endpoint ya correcto.",
       "fecha": ""
     },
     {
-      "titulo": "Origen del lío de la dirección:",
+      "titulo": "Verificado en producción tras mergear #1521",
       "fecha": ""
     },
     {
-      "titulo": "Dos secciones colgaban POR DEBAJO del `<footer>`",
+      "titulo": "Mascotas: NO se admiten.",
       "fecha": ""
     },
     {
-      "titulo": "Dirección resuelta (Alberto, 19/08):",
+      "titulo": "«Bercell» se queda fuera",
       "fecha": ""
     },
     {
-      "titulo": "Nuevo `apps/housesevillana/CLAUDE.md`",
+      "titulo": "Hallazgo (carril 2, PR aparte):",
       "fecha": ""
     },
     {
-      "titulo": "Punto ciego cerrado:",
+      "titulo": "0 fugas del raíl en las 351 fechas escritas hoy, en los 4 pisos.",
       "fecha": ""
     },
     {
-      "titulo": "Veredicto FINAL: no tocar nada.",
+      "titulo": "La regla que gobierna todo:",
       "fecha": ""
     },
     {
-      "titulo": "Dos errores míos corregidos el mismo día:",
+      "titulo": "🚨 Lección de CI (misma sesión):",
       "fecha": ""
     },
     {
-      "titulo": "Validación FUERA de muestra",
+      "titulo": "Sin verificar:",
       "fecha": ""
     }
   ],
@@ -4999,7 +5000,7 @@
     "packages": 37,
     "capacidades": 23,
     "skills": 32,
-    "apis": 1169,
+    "apis": 1170,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-19T22:29:35Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-20T08:06:59Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 10 apps · 37 packages · 23 capacidades · 32 skills · 1169 rutas API.
+**Resumen:** 10 apps · 37 packages · 23 capacidades · 32 skills · 1170 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -41,7 +41,7 @@
 - **Módulos que usa:** core-ai, core-email, core-identity, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-subastas, module-trading
 - **Capacidades:** Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
 - **Tablas (100):** agente_latidos, agente_salud, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_reglas, correo_cursor, correo_reglas, correo_triaje, cron_dispatch_cursor, cuentas_bancarias, domotica_acceso_pin…
-- **Rutas API:** 286
+- **Rutas API:** 287
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -231,14 +231,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- Hallazgo:
-- Regla 2 meses (art. 33.5.f LIRPF): no bloquea nada.
-- Nuevo en BD:
-- Decisión (Alberto):
-- Decisión de Alberto: por PR y definitivo — nada escribe en `main` salvo el merge de un PR verde.
-- DECISIÓN de Alberto (19/08): no se paga Supabase hasta tener cliente; se retoma si hace falta.
-- MERGEADO a `main` (PR #1490)
-- Origen del lío de la dirección:
-- Dos secciones colgaban POR DEBAJO del `<footer>`
-- Dirección resuelta (Alberto, 19/08):
+- Confirmado por Alberto en pantalla.
+- Tercera capa, la que sobrevivió a los dos arreglos:
+- La lección de método, la misma las tres veces:
+- #1519 (`Vary: Origin` siempre) NO funcionó
+- #1521 es el arreglo bueno: `Access-Control-Allow-Origin: *` fijo
+- Dos lecciones a la skill `verification-before-completion`:
+- Y AUN ASÍ seguía roto en el navegador de Alberto (captura), con el endpoint ya correcto.
+- Verificado en producción tras mergear #1521
+- Mascotas: NO se admiten.
+- «Bercell» se queda fuera
 
