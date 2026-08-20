@@ -32,6 +32,19 @@
 
 ---
 
+### 🏠 (20/08/2026) Estudio fiscal de la venta del dúplex de Villasís por 320.000€
+- Alberto sube la escritura del dúplex (Pj Villasís 1, 1º C) y pregunta cuánto pagaría vendiéndolo por
+  320.000€. **Es una DONACIÓN de su madre del 21/05/2024 por 174.650,90€** (= valor de referencia), con
+  bonificación 99% del ISD andaluz → valor de adquisición = ese, no lo que pagó ella en 2004.
+- Números: ganancia ~145.000€ (sin agencia) → **IRPF ~32.300€ + plusvalía ~970€**; con agencia al 3%,
+  ~30.600€. Neto entre 271.000€ y 286.000€. Estudio completo en `docs/FISCAL-venta-duplex-villasis.md`.
+- **Plusvalía: método objetivo (~970€) vs real (~24.900€)** — hay que pedirlo expresamente.
+- **Palanca grande:** pérdidas realizadas de IBKR (−6.642 USD en 2025, −18.746 USD en 2026) compensan al
+  100% la ganancia → ~3.700€ menos. ⚠️ Son P&L del bróker en USD SIN tipo de cambio: hace falta el
+  informe fiscal en euros antes de contar con ello. El año de venta (2026 vs 2027) importa por esto.
+- **Pendiente bloqueante:** la escritura aportada es de UNA finca de 65,46 m² en una planta; si el
+  dúplex son dos fincas falta el segundo título y la ganancia bajaría. Validación final: Asecon.
+
 ### 🔧 (20/08/2026) Del latido rojo al MERGE sin humano en medio — reparación automática de agentes
 - Pregunta de Alberto tras el fallo del canal: «¿no hay un agente que revise y repare?». Había quien
   DETECTA (`agentes-latido`, `/auditoria-diaria`) y nadie que REPARE. Dictado: **«lo más automático
