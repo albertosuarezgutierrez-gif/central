@@ -101,11 +101,23 @@ El dato no sale de aquí: la landing no tiene BD ni secretos. Lo pide por `fetch
 Consecuencias que muerden:
 - **Toda celda NACE en `sindato`** y un fallo de red va al estado `error`, con aviso visible y salida al
   motor. Nunca a una rejilla vacía: a ojo se lee como «todo libre», que es la mentira cara de esta web.
-- Si ves el aviso «No hemos podido consultar el calendario», el sospechoso nº 1 es **CORS**, no el dato:
-  compruébalo con `curl -H "Origin: https://housesevillana.es"` contra el endpoint y mira si vuelve
-  `access-control-allow-origin`. Un 200 de curl a secas no prueba nada — y como la respuesta se cachea
-  10 min en el CDN, **una sola petición tampoco**: repite varias veces y mira `x-vercel-cache`. El
-  landmine completo (se rompió dos veces el 20/08/2026) está en `apps/plataforma/CLAUDE.md`.
+- **En vivo y verificado el 20/08/2026** (Alberto lo confirmó en pantalla). Las 34 noches ocupadas
+  del endpoint coinciden **una a una** con el snapshot que escribe el cron: sin desfase de un día,
+  que es el fallo clásico al mezclar husos. La ventana del servidor va de hoy a +12 meses en UTC y
+  el widget pinta 12 meses desde el día 1 del mes en curso; los días del mes ya pasados quedan
+  cubiertos porque `pasada` gana a todo.
+- **La etiqueta «actualizado el…» solo sale con `fuente:'snapshot'`**, y lleva la fecha del SNAPSHOT,
+  no la de ahora. Con Smoobu en vivo no se pinta nada: no hay que datar lo que acabas de leer.
+- Si ves el aviso «No hemos podido consultar el calendario», el sospechoso nº 1 es **la caché**, en
+  cualquiera de sus tres capas — y costó tres PRs aprenderlo (#1519, #1521, #1523; la historia
+  completa en `apps/plataforma/CLAUDE.md`). Cómo mirarlo, en orden:
+  1. `curl -H "Origin: https://housesevillana.es"` contra el endpoint, **repetido varias veces**, y
+     comprueba que vuelve `access-control-allow-origin`. Un 200 de curl a secas no prueba nada
+     (curl no manda `Origin`) y con caché delante **una sola petición tampoco mide nada**.
+  2. Si el endpoint responde bien y la página no, el fallo está entre el navegador y su copia:
+     DevTools → Network → fila `disponibilidad` → si la columna Size dice `disk cache`, es su caché.
+  3. La propia página se cachea con `s-maxage=3600`, así que tras un despliegue el CDN puede seguir
+     sirviendo el HTML —y el JS— de hasta una hora antes.
 - Los estados se traducen solos: el `aria-label` se compone con el texto de la leyenda, y meses y días
   salen de `Intl` según el `lang` del documento.
 

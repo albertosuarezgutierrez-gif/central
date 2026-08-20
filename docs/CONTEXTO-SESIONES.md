@@ -32,6 +32,22 @@
 
 ---
 
+### ✅ (20/08/2026) El calendario de House Sevillana, EN VIVO — tras romperse TRES veces por caché
+- **Confirmado por Alberto en pantalla.** Verificado además que las fechas son las buenas: las 34
+  noches ocupadas del endpoint coinciden **una a una** con el snapshot del cron (sin desfase de día,
+  el fallo clásico de husos); rango hoy→+12 meses, sin duplicados, sin fechas pasadas.
+- **Tercera capa, la que sobrevivió a los dos arreglos:** `s-maxage` **NO** significa «cachea solo
+  el CDN». Sin `max-age`, el navegador no tiene vida útil declarada y el `stale-while-revalidate`
+  le deja servirse **su propia copia rota** hasta una hora. Con el endpoint ya impecable (12/12), la
+  web seguía rota y desde el servidor era invisible. Fix #1523: `max-age=0, must-revalidate` (fuera
+  el SWR: no se puede pedir solo para el CDN) + `cache:'no-store'` en el `fetch` del widget.
+- **La lección de método, la misma las tres veces:** tomar «no he podido observar el fallo» por «no
+  hay fallo». Cada arreglo era correcto y cada verificación era real; lo que faltaba era un camino
+  que la comprobación nunca ejercitaba. Escrito en `verification-before-completion`.
+- Aparte: la web estuvo caída un rato con `ERR_SSL_PROTOCOL_ERROR` en `www` (dominio principal).
+  Se recuperó sola; **no se llegó a diagnosticar** — si repite, hay que mirar el certificado en
+  Vercel → Domains, no el código.
+
 ### 🚧 (20/08/2026) El calendario salía «no hemos podido consultar»: se arregló DOS veces — #1519 y #1521
 - Mergeado #1500, el endpoint daba **200 impecable por curl** y estaba roto en el navegador: la
   respuesta se cachea en el CDN (`s-maxage=600`) y sus cabeceras dependían del `Origin`, así que

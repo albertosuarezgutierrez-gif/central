@@ -689,6 +689,17 @@ blanca no protegía nada —no hay nada que robar— y era justo lo que hacía l
   por medio, **una sola petición tampoco prueba nada**: repite varias veces y mira `x-vercel-cache`.
 - Al añadir otro `/api/publico/*` cacheado, esto es parte del PR, no un apaño posterior.
 
+**🚨 Y LA TERCERA CAPA, la que sobrevivió a los dos arreglos anteriores: `s-maxage` sin `max-age`
+NO significa «cachea solo el CDN».** Con el endpoint ya correcto y medido 12/12, la landing SEGUÍA
+enseñando el aviso de error. `s-maxage` solo habla con las cachés compartidas, así que para el
+navegador la respuesta no tenía vida útil declarada → se calcula por heurística (cero, sin
+validador) → y el `stale-while-revalidate` le AUTORIZA a servir su propia copia guardada hasta una
+hora. Esa copia era la rota de antes del arreglo: **el navegador no preguntaba, se respondía solo**,
+y desde el servidor era invisible. Fix (#1523): `public, max-age=0, must-revalidate, s-maxage=600`
+—se renuncia al SWR porque no se puede pedir solo para el CDN— más `cache:'no-store'` en el `fetch`
+del widget, que mira solo a la caché del navegador. Hay dos tests que lo vigilan.
+**Confirmado funcionando por Alberto el 20/08/2026.**
+
 ## 💓 Latidos de agentes — el vigía que avisa por Telegram (ampliado 30/07/2026)
 `lib/monitoring/latidos.ts` (registro + `evaluarLatido` puro) + cron `agentes-latido` (07:45 UTC) →
 **Telegram**. Regla de oro: solo se vigilan huellas que se refrescan en CADA pasada del agente.
