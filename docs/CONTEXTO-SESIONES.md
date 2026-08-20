@@ -1929,6 +1929,17 @@ completo `docs/AUDITORIA-2026-08.md`.
 - Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
+## 💓 SES: latido del transporte antes que el conector (20/08/2026)
+
+Chekin es hoy el emisor real de los partes en los 4 pisos → el proyecto es **sustituirlo**, no
+evitar la multa. Y `pre-ses` da 502 a todo: **no hay sandbox**, así que se empieza por vigilar.
+Nuevo `packages/module-ses` (ZIP+base64 —**no gzip**, era el bug del 10111—, sobre SOAP, envío y
+clasificación de respuesta) + cron `/api/cron/ses-latido` (07:15, operación `C`, SOLO LECTURA) que
+deja huella en `agente_latidos.ses_transporte`. El veredicto separa «SES caído» (esperar) de
+«credenciales/alta» (portal): un aviso que no distingue se deja de leer. Urgencia real: la hoja de
+`*.ses.mir.es` **caduca el 03/09/2026**. Envs pendientes en Vercel: `SES_USUARIO`, `SES_PASSWORD`,
+`SES_ARRENDADOR`. PR #1555.
+
 ## 🔒 (20/08/2026) SES.HOSPEDAJES: el TLS de *.mir.es NO valida con CA pública — PR #1550 (merged)
 
 Probada la conexión REAL a los dos endpoints de SES (desde una Edge Function de Supabase, porque el

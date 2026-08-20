@@ -95,6 +95,24 @@ export type AgenteVigilado = {
 //   - trading (tiene su propio watchdog dedicado con lógica de días).
 export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   {
+    id: 'ses_transporte',
+    etiqueta: '🛂 Transporte con SES.HOSPEDAJES (parte de viajeros, cron diario 07:15)',
+    // Diario a las 07:15 → 30 h dejan pasar un tropiezo aislado y cazan dos días caídos.
+    maxHoras: 30,
+    nota:
+      'No estamos pudiendo hablar con el Ministerio. Hoy NO manda partes nadie de esta casa (los ' +
+      'manda Chekin), así que esto no es todavía un incumplimiento — pero es la puerta por la que ' +
+      'van a ir, y si se cierra hay que saberlo ANTES de depender de ella. Lee el `detalle`, que ' +
+      'distingue las dos averías y son opuestas: «SES no responde» es ESPERAR (su entorno de ' +
+      'pruebas llevaba días dando 502 el 20/08/2026, y no se arregla desde aquí); «credenciales o ' +
+      'alta rechazadas» es ACTUAR, en el portal de SES, no en el repo. ' +
+      '🚨 Sospecha primero del CERTIFICADO si el detalle nombra TLS: la hoja de *.ses.mir.es ' +
+      'caducaba el 03/09/2026 y al rotarla puede cambiar la cadena; el bundle FNMT bueno está en ' +
+      '`packages/module-ses/certs/ses-ca-bundle.pem` y se carga con NODE_EXTRA_CA_CERTS. ' +
+      'Y si el aviso dice «sin ninguna señal registrada» recién desplegado, es el estreno, no una ' +
+      'avería. Huella: agente_latidos.ses_transporte.',
+  },
+  {
     id: 'pricing',
     etiqueta: '🏷️ Agente de pricing (SIVRA, sesión semanal)',
     // Semanal → 8 días de margen: solo salta si se salta una semana entera + un día.

@@ -92,6 +92,9 @@ const PROBES: Record<string, Prisma.Sql> = {
   sivra_mercado_booking: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'sivra_mercado_booking'`,
+  ses_transporte: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'ses_transporte'`,
   sivra_pricing_guard: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'sivra_pricing_guard'`,
