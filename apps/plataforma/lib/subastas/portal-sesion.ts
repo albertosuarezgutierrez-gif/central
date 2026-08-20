@@ -243,6 +243,21 @@ export async function sesionPortal(): Promise<SesionPortal> {
 }
 
 /**
+ * La sesión que YA esté abierta, sin abrir ninguna. `null` = no hay.
+ *
+ * 🚨 Existe para no confundir «aprovechar la sesión» con «abrir una»: cada
+ * login manda un SMS al móvil de Alberto y el Portal bloquea cuentas, así que
+ * `sesionPortal()` solo se llama donde el dato JUSTIFICA el intento (los
+ * documentos tras el muro). Quien solo se beneficiaría de la sesión —la puja en
+ * vivo, que el Portal esconde a los anónimos— la usa si pasa por allí y se
+ * queda con el sí/no público si no.
+ */
+export function sesionPortalAbierta(): SesionPortal | null {
+  if (cache?.estado === 'iniciada' && Date.now() - cache.abiertaEn < VIDA_SESION_MS) return cache
+  return null
+}
+
+/**
  * Cabeceras para pedirle una página al Portal, con sesión si la hay.
  */
 export function cabecerasPortal(s: SesionPortal | null, extra: Record<string, string> = {}): Record<string, string> {

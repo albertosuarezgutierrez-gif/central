@@ -101,11 +101,33 @@ export interface SubastaInmueble {
   /** Depósito exigido para pujar. Si la fuente no lo da se deriva (5%). */
   deposito?: number | null
   /**
-   * Mejor puja publicada por la ficha del portal en la última consulta (solo
-   * se vigila en las SEGUIDAS cerca del cierre). `null` = no publicada o sin
-   * consultar — que NO es «sin pujas»: el portal no siempre la enseña.
+   * IMPORTE de la puja más alta vista. Solo es público en las CONCLUIDAS (o en
+   * vivo con sesión iniciada en el Portal): `null` = importe no publicado, que
+   * NO es «sin pujas» — para eso está `pujasEstado`.
    */
   mejorPuja?: number | null
+  /**
+   * Estado de las pujas leído de la pestaña «Pujas» (`ver=5`), el único dato de
+   * competencia visible sin estar registrado. Los cuatro valores de
+   * `EstadoPujas` (`pujas.ts`): `sin_pujas` · `con_puja` · `secretas` ·
+   * `desconocido`. `null`/`undefined` = nunca se ha mirado, que tampoco es
+   * «sin pujas».
+   */
+  pujasEstado?: string | null
+  /** Cuándo se miró por última vez la pestaña de pujas. */
+  pujasAt?: string | null
+
+  /**
+   * Euros que cabe esperar de remate según los remates REALES ya capturados
+   * (ratio mediano de la provincia x tipo). `null` = aún sin muestra.
+   */
+  remateEsperado?: number | null
+  /** Ratio mediano remate/tipo usado, y cuántos remates lo sostienen. */
+  remateRatio?: number | null
+  remateMuestra?: number | null
+  /** `false` = `pujaMaximaCalc` no es de fiar; el motivo, en `techoMotivo`. */
+  techoFiable?: boolean | null
+  techoMotivo?: string | null
 
   /**
    * Cantidad reclamada en el procedimiento (principal + intereses + costas).
