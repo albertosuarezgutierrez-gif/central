@@ -32,16 +32,19 @@
 
 ---
 
-### 🚧 (20/08/2026) El calendario salía «no hemos podido consultar»: CORS + caché de CDN
-- Mergeado #1500 y el endpoint respondía **200 impecable por curl**… y roto en el navegador.
-  Causa: la respuesta se cachea en el CDN (`s-maxage=600`) y sus cabeceras dependen del `Origin`,
-  pero `Vary: Origin` solo se emitía cuando el origen estaba permitido. **La primera petición
-  decide las cabeceras de todas durante 10 min** — y la primera fue mi propio `curl`, SIN
-  `Origin`: el CDN guardó una copia sin `Access-Control-Allow-Origin` y se la sirvió a
-  housesevillana.es, que la rechazó y pintó el aviso de error.
-- **Lección: un 200 por curl NO prueba que un recurso con CORS funcione.** Hay que pedirlo con
-  `-H "Origin: …"` y mirar que vuelva la cabecera. Fix: `Vary: Origin` SIEMPRE (permitido, no
-  permitido y sin Origin), en helper puro `lib/sivra/cors-publico.ts` con 6 tests.
+### 🚧 (20/08/2026) El calendario salía «no hemos podido consultar»: se arregló DOS veces — #1519 y #1521
+- Mergeado #1500, el endpoint daba **200 impecable por curl** y estaba roto en el navegador: la
+  respuesta se cachea en el CDN (`s-maxage=600`) y sus cabeceras dependían del `Origin`, así que
+  **la primera petición decidió las de todas durante 10 min** — y la primera fue mi propio `curl`
+  SIN `Origin`, que dejó cacheada una copia sin `Access-Control-Allow-Origin`.
+- **#1519 (`Vary: Origin` siempre) NO funcionó**, y solo se supo por verificar en producción:
+  **el CDN de Vercel no cachea por `Origin`** y encima borra ese `vary`. Medido: **12 de 12**
+  peticiones desde housesevillana.es recibían la copia dejada por un curl con `Origin` ajeno.
+- **#1521 es el arreglo bueno: `Access-Control-Allow-Origin: *` fijo**, lista blanca retirada
+  (el endpoint no lee sesión, no hay nada que proteger). Una respuesta cacheada no puede depender
+  del `Origin`. Helper `lib/sivra/cors-publico.ts` sin argumentos + test que vigila la ruta.
+- **Dos lecciones a la skill `verification-before-completion`:** un 200 por curl a pelo no prueba
+  CORS; y **con caché delante, UNA petición no es una medición** (repetir y mirar `x-vercel-cache`).
 
 ### 🐾 (20/08/2026) Tres decisiones de Alberto sobre la landing, y el calendario a producción
 - **Mascotas: NO se admiten.** La ficha de Booking **2039943** publica «Admite mascotas» y la landing dice
