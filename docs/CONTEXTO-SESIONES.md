@@ -32,6 +32,17 @@
 
 ---
 
+### 📒 (20/08/2026) El libro de operaciones del bróker ya tiene quien lo alimente — y quien lo vigile
+Mergeado el **#1505** (endpoint `POST/GET /api/trading/operaciones`, paso `1d` de la pasada, agente
+`trading_operaciones` vigilado con su sonda). Verificado DESPUÉS del merge: 33+19+130 tests verdes sobre
+`main`, `tsc` limpio, el endpoint en producción responde **401** sin token y la BD tiene 455 ejecuciones con
+**0 grants a `anon`/`authenticated`**. Prueba real: `get_account_trades(DAYS_7)` trae las 2 ejecuciones del
+17/08 y **ya están en el libro con los mismos importes** → el solapamiento es idempotente de verdad.
+**Pendiente y CADUCA:** volcar jul–sep/2025 (108 ops) antes de que IBKR deje de servirlo. `tipo_cambio` sigue
+NULL en 454/455 filas (449 STK + 5 CASH en USD): sin él no hay cifra en euros defendible.
+La doctrina de stop/tamaño medida (109 de 116 ventas de 2026 fueron stops, −21.692,60 USD) entra en la skill
+`trading-analista`; `riesgo-hueco` aún NO está enganchado a la pasada automática.
+
 ### 🛡️ (20/08/2026) Correduría: había DOS planes para lo mismo con dos nombres — fundidos en uno
 Dos sesiones del mismo día planificaron el traspaso del CRM de Manuel sin verse: `docs/TRASPASO-CORREDURIA.md`
 (vertical `apps/seguros`, #1532) y `docs/ASEGURA-MIGRACION.md` (vertical `apps/asegura`, #1489). Ambos
@@ -2072,6 +2083,13 @@ Pendiente: que Alberto revise el spec → plan de implementación. Códigos/cred
     (PASO 0 no vio huella → pasada completa, sin duplicado). Ya no parece transitorio: si el
     disparo primario vuelve a fallar, Alberto abre ticket a soporte de claude.ai (la Rutina es de
     la UI, no editable por MCP).
+    **📒 Libro de operaciones (20/08, #1505 MERGEADO y verificado en prod):** sincronizador + vigía
+    vivos, 455 ejecuciones, endpoint cerrado (401 sin token) y solapamiento de 7 días idempotente
+    contrastado con IBKR. Abiertos: (a) **CADUCA** — volcar jul–sep/2025 (108 ops) mientras IBKR lo
+    sirva; (b) `tipo_cambio` NULL en 454/455 filas → sin cifra en euros para la asesoría; (c) sin
+    acciones corporativas (el primer split con posición abierta romperá el FIFO); (d) `riesgo-hueco`
+    (`@central/module-trading`) mide stop mínimo y tamaño máximo pero **NO está enganchado a la
+    pasada**: hoy se usa a mano al preparar una instrucción.
   - **Subastas:** lente 🌊 (costa norte + Matalascañas sin tope) MERGEADA y en prod (#1346/#1349/
     #1351/#1353); pestaña 🔥 Oportunidades rediseñada (#1358 — una tarjeta, chips homogéneos,
     €/m² siempre visible). 🟡 el dispatcher marca timeout en `subastas-mercado` si desborda 280 s
