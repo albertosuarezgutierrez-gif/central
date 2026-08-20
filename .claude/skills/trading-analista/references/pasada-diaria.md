@@ -50,6 +50,32 @@ antes, dilo en el resumen de Telegram — esa pasada mide contra el cierre de ay
    `/trading` (la foto de posiciones se reemplaza cada noche). Un día sin pasada = un hueco real en el
    gráfico. Si `trackError` viene con contenido, dilo en el resumen: la cartera se guardó, pero ese día
    no entra en la curva.
+1d. **📒 Empujar las OPERACIONES ejecutadas al libro (19/08/2026):** leer
+   `get_account_trades` con `period: 'DAYS_7'` (solapar a propósito: pedir de más y dejar que el
+   endpoint descarte los duplicados es lo que evita perder ejecuciones si una pasada falla un día)
+   y `POST {PLATAFORMA_URL}/api/trading/operaciones` (Bearer `ALERTA_TOKEN`) con
+   `{ operaciones: [{ tradeId, orderId, simbolo, descripcion, tipoActivo, lado, cantidad, precio,
+   divisa, comision, importeNeto, tipoOrden, ejecutadoEn, pnlBroker }] }` — mapeo desde IBKR:
+   `trade_id`→tradeId, `order_id`→orderId, `symbol`→simbolo, `company_name`→descripcion,
+   `sec_type`→tipoActivo, `side`→lado, `size`→cantidad, `price`→precio, `currency`→divisa,
+   `commission`→comision, `net_amount`→importeNeto, `order_type`→tipoOrden,
+   `trade_time`→ejecutadoEn, `realized_pnl`→pnlBroker.
+   **Esto NO es la cartera:** la cartera es la foto de hoy y se reemplaza; el libro es inmutable y
+   solo crece. Es la fuente del cálculo fiscal (FIFO, regla de los dos meses), así que una
+   ejecución perdida cambia la renta. Por eso el endpoint **añade, nunca reemplaza**, y reenviar la
+   misma pasada deja el libro idéntico.
+   **Un array vacío significa «leí IBKR y no hubo operaciones nuevas»** — mándalo solo si la
+   lectura fue BUENA; si `get_account_trades` falló, NO llames al endpoint y dilo en el resumen.
+   Si la respuesta trae `descartadas` con contenido, **cántalo en el Telegram**: una ejecución
+   descartada es una compra o una venta que no existe para Hacienda.
+   ⚠️ **Límite conocido:** IBKR solo sirve unos cuatro trimestres hacia atrás por esta vía, así que
+   el histórico anterior no es recuperable si no se ha volcado ya.
+   **📡 Y SIEMPRE, salga bien o mal, deja el latido** (es lo que distingue «no hubo operaciones» de
+   «llevo tres semanas sin poder leer IBKR», que sin esto se ven idénticos):
+   `POST {PLATAFORMA_URL}/api/internal/latido` (Bearer `ALERTA_TOKEN`) con
+   `{ agente: 'trading_operaciones', ok: <true si LEÍSTE IBKR>, detalle: '<N> nuevas de <M> leídas'
+   | 'sin respuesta del conector' }`. `ok:false` marca el intento sin tocar la última pasada buena.
+
 2. Cargar la watchlist activa (tabla `trading_watchlist`, capas A/B/C; ver spec). En Fase 1 la lista
    inicial se siembra con `apps/plataforma/prisma/sql/trading_watchlist_seed.sql`.
 3. Por símbolo: `get_price_history` (diario, ~120 velas) → mapear a `Vela[]`

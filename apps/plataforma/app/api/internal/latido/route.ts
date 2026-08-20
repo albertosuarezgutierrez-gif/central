@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic"
 // endpoint (`ALERTA_TOKEN`) viaja en prompts de rutinas, así que si se filtrara, lo peor que
 // permite es marcar el latido de UNO de estos agentes — nunca inventar un agente nuevo ni tocar
 // la huella de un cron del servidor (esos la escriben ellos mismos, dentro del trabajo que hacen).
-const AGENTES_DE_RUTINA = ["sivra_mercado_booking"]
+const AGENTES_DE_RUTINA = ["sivra_mercado_booking", "trading_operaciones"]
 
 export async function POST(req: NextRequest) {
   if (!isRoutineAuthorized(req)) {
