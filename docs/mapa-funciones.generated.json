@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-20T17:01:43Z",
-  "sha": "a3f4d3e69b4840f9c19ba65509b0d047005863f7",
+  "generadoEn": "2026-08-20T20:32:23Z",
+  "sha": "30507a1ca115a0aa79716ad4840b4b2e4d920ebd",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -52776,7 +52776,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 100
+          "linea": 106
         }
       ],
       "tablas": [
@@ -52788,7 +52788,7 @@
         "pricing_decisiones"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "f76240146f73"
+      "hash": "49b0a627c433"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -54634,7 +54634,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/internal/latido",
-      "hash": "cdfd4410aebf"
+      "hash": "744d8061a081"
     },
     {
       "ruta": "apps/plataforma/app/api/internal/mapa-arquitectura/route.ts",
@@ -58565,6 +58565,48 @@
       "tablas": [],
       "rutaApi": "/api/trading/invitado",
       "hash": "e6b091d9c334"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/trading/operaciones/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Libro de OPERACIONES ejecutadas del bróker (Interactive Brokers). La app no habla con IBKR: es la pasada diaria del agente `trading-analista` quien lee `get_account_trades` por MCP (solo lectura) y empuja aquí las ejecuciones. Mismo contrato de auth que /api/trading/cartera (Bearer ALERTA_TOKEN o CR",
+      "exporta": [
+        "POST",
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "resolverCuenta",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuentaIdBody?: string",
+          "retorno": "Promise<string | null>",
+          "linea": 22
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 32
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 59,
+          "resumen": "Estado del libro, para que la pasada sepa desde cuándo pedir y para vigilar que no se quede mudo. `libro: null` = nunca sincronizado (≠ libro vacío)."
+        }
+      ],
+      "tablas": [
+        "cuentas",
+        "next"
+      ],
+      "rutaApi": "/api/trading/operaciones",
+      "hash": "5dc07cf7b56e"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/paper/route.ts",
@@ -66163,7 +66205,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2e789ee95356"
+      "hash": "1d070e381568"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/reparable.ts",
@@ -73476,6 +73518,76 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "1810b43cbe6f"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/operaciones-io.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "📒 Libro de operaciones del bróker — IO (Prisma). Lo escribe POST /api/trading/operaciones (pasada diaria del agente trading-analista, que es quien lee IBKR). La parte pura vive en operaciones.ts. El libro es INMUTABLE: una ejecución ya registrada no se actualiza nunca, porque el hecho no cambia. Po",
+      "exporta": [
+        "guardarOperaciones",
+        "getEstadoLibro"
+      ],
+      "funciones": [
+        {
+          "nombre": "guardarOperaciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, broker: string, operaciones: OperacionIn[],",
+          "retorno": "Promise<ResultadoGuardado>",
+          "linea": 23
+        },
+        {
+          "nombre": "getEstadoLibro",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string",
+          "retorno": "Promise<EstadoLibro | null>",
+          "linea": 76,
+          "resumen": "Estado del libro. `null` = NUNCA sincronizado, que no es lo mismo que «libro vacío» (eso es un objeto con numOperaciones 0)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1a10a3b5c381"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/operaciones.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "📒 Libro de OPERACIONES ejecutadas del bróker — parte PURA (sin BD): normalización del payload que empuja la pasada diaria del agente (`get_account_trades` de IBKR). El IO (Prisma) vive en operaciones-io.ts. Testeable con node --test. Diferencia con cartera-real.ts: aquella guarda la FOTO de lo que ",
+      "exporta": [
+        "normalizarOperaciones"
+      ],
+      "funciones": [
+        {
+          "nombre": "num",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 44,
+          "resumen": "Número finito o null — un NaN/Infinity/string rara del bróker NO se convierte en 0 (regla del repo: colapsar «no lo sé» a 0 fabrica una afirmación falsa sobre dinero real)."
+        },
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 49
+        },
+        {
+          "nombre": "normalizarOperaciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "",
+          "linea": 56,
+          "resumen": "Valida y normaliza las ejecuciones del body. Lo que no se puede leer se DESCARTA y se cuenta (el endpoint lo devuelve en la respuesta): una ejecución ilegible tragada en silencio es una compra o una v"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5c7e3a712b87"
     },
     {
       "ruta": "apps/plataforma/lib/trading/paper-tracker.ts",
@@ -94326,6 +94438,76 @@
       "hash": "0928f25ab6fd"
     },
     {
+      "ruta": "packages/module-trading/src/riesgo-hueco.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "🕳️ Riesgo de HUECO y viabilidad del stop. Nació de dos hechos medidos el 19/08/2026 sobre la cuenta real: · De las 116 ventas de 2026, 109 fueron órdenes STOP y sumaron −21.692,60 USD; las 7 ventas a mercado sumaron +2.946,74 USD. La mediana de distancia a la que saltó el stop fue del 1,30% sobre l",
+      "exporta": [
+        "huecos",
+        "caidaIntradia",
+        "perfilHuecos",
+        "evaluarStop",
+        "tamanoPorRiesgo"
+      ],
+      "funciones": [
+        {
+          "nombre": "huecos",
+          "kind": "function",
+          "exportada": true,
+          "params": "velas: Vela[]",
+          "retorno": "Hueco[]",
+          "linea": 25,
+          "resumen": "Huecos de apertura de la serie. El signo es el del salto: negativo = abrió por debajo."
+        },
+        {
+          "nombre": "caidaIntradia",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: Vela",
+          "retorno": "number | null",
+          "linea": 37,
+          "resumen": "Recorrido intradía desde la apertura hasta el mínimo, en % (siempre ≤ 0). Es lo que se come un stop en una sesión NORMAL, sin necesidad de que la tesis falle."
+        },
+        {
+          "nombre": "percentil",
+          "kind": "function",
+          "exportada": false,
+          "params": "xs: number[], p: number",
+          "retorno": "number | null",
+          "linea": 42
+        },
+        {
+          "nombre": "perfilHuecos",
+          "kind": "function",
+          "exportada": true,
+          "params": "velas: Vela[], minSesiones = 60",
+          "retorno": "PerfilHueco | null",
+          "linea": 65,
+          "resumen": "Perfil de huecos a la baja. `null` si no hay al menos `minSesiones` (no se estima el riesgo de hueco de un valor recién listado: no hay con qué)."
+        },
+        {
+          "nombre": "evaluarStop",
+          "kind": "function",
+          "exportada": true,
+          "params": "velas: Vela[], distanciaPct: number, opciones: { multiploAtr?: number; minSesiones?: number } = {},",
+          "retorno": "EvaluacionStop | null",
+          "linea": 104,
+          "resumen": "Evalúa una distancia de stop contra el comportamiento REAL del valor. `null` si no hay historia suficiente: sin ella no se puede decir que un stop sea prudente, y decirlo igualmente sería justo el err"
+        },
+        {
+          "nombre": "tamanoPorRiesgo",
+          "kind": "function",
+          "exportada": true,
+          "params": "precio: number, distanciaPct: number, riesgoMaxEur: number,",
+          "retorno": "number | null",
+          "linea": 149,
+          "resumen": "Títulos que se pueden comprar sin arriesgar más de `riesgoMaxEur` si el stop se ejecuta a su distancia — la respuesta correcta a «este stop es demasiado corto» NO es acercarlo aún más ni alejarlo a oj"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "eab4223bfab9"
+    },
+    {
       "ruta": "packages/module-trading/src/riesgo.ts",
       "ambito": "packages/module-trading",
       "exporta": [
@@ -95104,7 +95286,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2523,
-    "funciones": 6905
+    "archivos": 2527,
+    "funciones": 6919
   }
 }
