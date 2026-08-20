@@ -52,7 +52,11 @@ function camposDe(html: string): Campo[] {
 function esCampoDeCodigo(c: Campo, tag: string): boolean {
   if (c.type !== 'text' && c.type !== 'tel' && c.type !== 'number' && c.type !== 'password') return false
   const id = atributo(tag, 'id') ?? ''
-  return /codig|code|otp|verifica/i.test(c.name) || /codig|code|otp|verifica/i.test(id)
+  // `verif` a propósito: el campo REAL del Portal se llama `codVerif`, que no
+  // contiene «codigo» ni «code». Aquí acertaba de rebote por su `id`
+  // (`labelCodigo`), y depender de eso es depender de una casualidad.
+  const PISTA = /codig|c[oó]digo|code|otp|verif/i
+  return PISTA.test(c.name) || PISTA.test(id)
 }
 
 /**
@@ -99,4 +103,22 @@ export function formularioOtp(html: string): FormularioOtp | null {
 export function pideCodigo(html: string): boolean {
   const t = norm(decodificarHtml((html ?? '').replace(/<[^>]*>/g, ' ')))
   return /codigo de verificacion/.test(t) && formularioOtp(html) != null
+}
+
+/**
+ * Redacta de un HTML los campos que llevan la credencial.
+ *
+ * 🚨 El formulario del código del Portal reenvía la contraseña en un
+ * `<input type="hidden" name="password">` (codificada, pero derivada de ella y
+ * suficiente para completar el login junto al código). Cualquier volcado de esa
+ * página —un endpoint de diagnóstico, un log, un fixture de test— la publicaría
+ * sin querer. Lo detectó Claude en Chrome al capturarla, no yo.
+ */
+export function redactarSecretos(html: string): string {
+  return (html ?? '').replace(/<input\b[^>]*>/gi, (tag) => {
+    const name = atributo(tag, 'name') ?? ''
+    const tipo = (atributo(tag, 'type') ?? '').toLowerCase()
+    if (tipo !== 'password' && !/pass|clave|secret|token/i.test(name)) return tag
+    return tag.replace(/\bvalue\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/i, 'value="«REDACTADO»"')
+  })
 }

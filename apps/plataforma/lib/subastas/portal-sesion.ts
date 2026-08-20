@@ -24,7 +24,7 @@
 // convertiría un «no me han dejado verlo» en «ni registrado se ve», que es la
 // afirmación que manda a Alberto al Registro de la Propiedad sin necesidad.
 // ────────────────────────────────────────────────────────────────────────────
-import { formularioOtp, interpretarLogin, pideCodigo, type EstadoLogin } from '@central/module-subastas'
+import { formularioOtp, interpretarLogin, pideCodigo, redactarSecretos, type EstadoLogin } from '@central/module-subastas'
 import { esperarCodigoPortal } from '@/lib/subastas/gmail-boe'
 
 const LOGIN = 'https://subastas.boe.es/id/login.php'
@@ -288,5 +288,14 @@ export async function volcarLoginPortal(): Promise<{ estado: EstadoPortal; pideC
   })
   const html = await r.text()
   const cookies = typeof r.headers.getSetCookie === 'function' ? r.headers.getSetCookie() : []
-  return { estado: interpretarLogin(html, cookies).estado, pideCodigo: pideCodigo(html), html }
+  // 🚨 El formulario del código REENVÍA la credencial en un oculto
+  // `name="password"`. Sin redactar, este endpoint publicaría la contraseña
+  // (codificada, pero suficiente junto al código para completar el login) a
+  // quien tenga el token de diagnóstico. El parseo se hace sobre el HTML
+  // original; lo que sale por la respuesta va limpio.
+  return {
+    estado: interpretarLogin(html, cookies).estado,
+    pideCodigo: pideCodigo(html),
+    html: redactarSecretos(html),
+  }
 }
