@@ -30,6 +30,77 @@ Probado contra el servicio **real** de SES, desde fuera del contenedor de desarr
 Es decir: **todo el transporte está validado**. Lo que falta es el producto — recoger los datos
 del huésped, construir el parte y gestionar el ciclo.
 
+## 1.ter 🚨 Esto NO es un hueco vacío: hoy lo hace Chekin
+
+**Chekin está vivo en los cuatro pisos** y es el emisor real de los partes a SES hoy
+(confirmado por Alberto, 20/08/2026). El proyecto **no es «evitar la multa»** —eso ya está
+cubierto— sino **sustituir a Chekin**: dejar de pagar por check-in y quedarnos nosotros los
+datos del huésped. La urgencia baja; el listón de calidad sube, porque hay que igualar algo que
+ya funciona.
+
+### El riesgo que hay HOY, antes de tocar nada
+
+En Smoobu está activado «enviar datos de invitados automáticamente» hacia SES Hospedajes
+(visible en la configuración de Busto Reform). Si Chekin **también** envía, hay **dos emisores
+sobre el mismo establecimiento**, y de ahí salen dos escenarios, ambos malos:
+
+- **Los dos envían** → partes duplicados por estancia. El control de «lote duplicado» de SES
+  **no protege**: compara XML idénticos, y el de Smoobu no será byte a byte el de Chekin.
+- **Cada uno supone que envía el otro** → Smoobu no tiene documento, soporte ni fecha de
+  nacimiento (eso lo recoge Chekin), así que sus envíos podrían estar fallando en silencio o
+  mandando partes que SES rechaza. Un rechazo que nadie lee **es** no comunicar: infracción
+  grave.
+
+**Acción independiente de este proyecto y anterior a él:** mirar en el portal de SES el
+histórico de comunicaciones recibidas de cada piso — si llegan, cuántas por estancia y de quién.
+Hasta saberlo, «Busto Reform está ok» es una suposición, no un hecho.
+
+Y regla para nosotros: **un tercer emisor sobre el mismo establecimiento empeora el problema.**
+Nada nuestro envía de verdad hasta que el que sustituye esté apagado para ese piso.
+
+### Migración: el patrón PriceLabs, con una diferencia
+
+De PriceLabs se copia lo que lo hizo funcionar: **correr en paralelo con marcador** —
+`price_pricelabs` frente a `price_ours` guardados por fecha, midiendo cuál habría ganado antes
+de soltar nada— y **apagar poco a poco**.
+
+La diferencia: en pricing las dos propuestas pueden convivir porque solo una se aplica. **Aquí no
+se puede sombrear enviando**: dos partes reales son dos partes reales. Así que la sombra es de
+construcción, no de envío.
+
+| Fase | Chekin | Nosotros | Huésped |
+|---|---|---|---|
+| **1 · Sombra** | sigue enviando | exportamos de Chekin los datos de N estancias ya pasadas, construimos **nuestro** parte y lo validamos. **`SES_DRY_RUN`, no se envía.** | no se entera |
+| **2 · Paridad** | sigue enviando | comparamos campo a campo nuestro parte contra el que Chekin envió (portal SES / export de Chekin). Discrepancia = bug nuestro | no se entera |
+| **3 · Corte por piso** | **se apaga en ese piso** | quitamos el dry-run **solo ahí**, con una reserva concreta y vigilada | recibe nuestro enlace |
+| **4 · Repetir** | piso a piso | | |
+| **5 · Baja** | se cancela cuando el último piso esté migrado | | |
+
+La fase 1 no molesta a ningún huésped **a propósito**: mandar nuestro enlace mientras Chekin
+manda el suyo es pedirle a la misma persona que rellene dos formularios legales. Se trabaja sobre
+datos que Chekin ya recogió.
+
+El marcador de la fase 2, análogo al de pricing, es una tabla por estancia: campos que coinciden,
+campos que difieren, y campos que nosotros no supimos rellenar. Un piso pasa a fase 3 cuando
+acumula estancias con paridad completa — no cuando «parece que va».
+
+### Paridad con Chekin: qué hay que igualar antes de apagarlo
+
+⚠️ **Lista incompleta a propósito.** Chekin no se puede inspeccionar desde el contenedor de
+desarrollo (`guest.chekin.com` está bloqueado por el proxy de salida), así que esto **se completa
+mirando la cuenta real**, no de memoria ni por lo que se suponga que hace un producto así:
+
+- [ ] Campos exactos que pide su formulario al huésped.
+- [ ] Si hace OCR del documento y con qué calidad.
+- [ ] Si recoge firma, y a partir de qué edad.
+- [ ] Idiomas en los que sirve el formulario.
+- [ ] Qué manda a SES y qué se guarda él.
+- [ ] Si hace algo más que el parte: tasa turística, contrato, códigos de acceso, upsells.
+- [ ] Cuándo y cómo avisa al huésped, y con qué recordatorios.
+- [ ] Qué pasa cuando el huésped no rellena.
+
+Cada casilla sin marcar es una función que hoy tienes y que perderías el día del corte.
+
 ## 2. Decisiones tomadas
 
 | Decisión | Elegido | Descartado |
