@@ -17,7 +17,7 @@ su vía.
 | Activo | De dónde | A dónde | Mecanismo |
 |---|---|---|---|
 | Datos + esquema | Supabase de Manuel | `central` (`wswbehlcuxqxyinousql`) → schema **`seguros`** | `pg_dump` → `psql` en tubería directa (ver «¿MCP o API?») |
-| Código | repo de Manuel | `apps/seguros` del monorepo | copia del árbol de trabajo, **sin historia git** |
+| Código | repo de Manuel | `apps/seguros` del monorepo | copia del árbol de trabajo, **sin historia git**; el repo original se transfiere y se archiva aparte |
 | Despliegue | Vercel de Manuel | proyecto nuevo en `pisos-turisticos-projects` | Root Directory `apps/seguros` |
 | Credenciales de proveedores | envs de Manuel | envs del proyecto Vercel nuevo | lista de nombres + **rotación** |
 
@@ -53,10 +53,13 @@ puerto HTTP es una **fase posterior**, fuera del alcance del PR de traspaso.
 
 **Para MIRAR (inventario, Fase 1) → el MCP de Supabase que Alberto YA tiene.**
 No hay que construir nada. El conector de Supabase de Claude lista *todos* los proyectos de la cuenta,
-en cualquier organización. Así que basta con que **Manuel invite a Alberto a SU organización de Supabase
-con rol de solo lectura** (*Organization → Team → Invite*). En cuanto acepte, el proyecto de Manuel
-aparece en `list_projects` y Claude puede hacer `list_tables`, `execute_sql`, `get_advisors`, ver
-migraciones y funciones — sin que viaje ninguna contraseña por WhatsApp.
+en cualquier organización. Así que basta con que **Manuel invite a Alberto a SU organización de
+Supabase** (*Organization → Team → Invite*). En cuanto acepte, el proyecto de Manuel aparece en
+`list_projects` y Claude puede hacer `list_tables`, `execute_sql`, `get_advisors`, ver migraciones y
+funciones — sin que viaje ninguna contraseña por WhatsApp.
+
+Con rol **Read-only** basta para *mirar*; con **Administrator** (opción A de abajo) además se hace todo
+lo demás sin volver a molestarle. Esa es la única diferencia entre las dos opciones.
 
 Es exactamente la dirección segura del favor: **Alberto entra en la organización de Manuel**, no al
 revés. Meter a Manuel en la organización de Alberto le daría acceso a `central`, que contiene los datos
@@ -73,85 +76,143 @@ justo el trabajo que ya está resuelto.
 en paralelo durante un tiempo. No es el caso: esto es un corte único: se copia, se verifica, y el
 sistema de Manuel se apaga.
 
-Resumiendo: **invitación de solo lectura para inspeccionar + `pg_dump` para el traslado.** Cero código
-nuevo de fontanería.
+Resumiendo: **invitación a su organización para inspeccionar + `pg_dump` para el traslado.** Cero
+código nuevo de fontanería.
 
 ---
 
-## 📩 Mensaje para Manuel (borrador — lo envía Alberto)
+## 🧩 GitHub: por qué NO se hace igual que Supabase y Vercel
+
+Los otros dos activos se **copian**. El código **no se transfiere como repo**: entra como carpeta
+`apps/seguros` dentro de `central`. Un repo suelto más sería justo lo contrario de la matriz — ya pasó
+con `house-sevillana-landing`, que vivía fuera y por eso era invisible al leer el monorepo.
+
+Y hay una regla dura: **se importa el árbol de trabajo, SIN la historia git.** Precedente del
+12/08/2026: la historia de `house-sevillana-landing` contenía una `service_role` de Supabase. Un
+`clone` + merge arrastraría toda la historia de Manuel, y **un secreto borrado de un fichero sigue
+vivo en los commits antiguos**. Borrarlo después no arregla nada: una clave publicada está quemada
+aunque luego borres el repo.
+
+**Qué hacer con su repo original, entonces:** que **lo transfiera a la cuenta de GitHub de Alberto**
+(*Settings → Transfer ownership*). Es un clic para él, le pasa la propiedad del historial, y ahí se
+deja **privado y archivado** como museo consultable — fuera de `central`, sin contaminar el monorepo.
+Es más fácil para él que invitarnos como colaboradores y limpiarlo luego.
+
+⚠️ Al transferirlo, los secretos de su historia pasan a la cuenta de Alberto. Da igual: se rotan
+igualmente (Fase 4) y el repo queda privado y archivado.
+
+**Revisar antes de archivar:** si su repo tiene GitHub Actions o *repository secrets*, no viajan a
+`central` (que tiene su propio CI). Comprobar si algún workflow hace algo imprescindible — un deploy,
+un cron, una sincronización — antes de darlo por muerto.
+
+---
+
+## 📩 Qué pedirle a Manuel
 
 > ⚠️ Regla del repo: no se envía nada a terceros sin autorización explícita de Alberto para ese envío
-> concreto. Este texto está preparado, no enviado.
+> concreto. Este texto está preparado, **no enviado**.
+
+### Lo más fácil para Manuel: que dé ACCESO, no que haga TAREAS
+
+Casi todo lo que hay que hacer puede hacerlo Alberto con Claude **si tiene acceso**. Convertir cada
+paso en una tarea para Manuel es lo que alarga el traspaso semanas: hay que explicárselo, esperarle,
+y si sale mal, repetir. Por eso la **opción A es la recomendada**: son **tres invitaciones y se acabó**.
+
+| | Opción A — tres invitaciones | Opción B — lista de tareas |
+|---|---|---|
+| Trabajo de Manuel | ~5 minutos, sin tocar SQL | 1-2 horas repartidas en días |
+| Idas y venidas | ninguna | una por cada paso |
+| Cuándo usarla | por defecto | solo si no quiere dar ese acceso |
 
 ---
+
+### ✅ Opción A — recomendada
+
+**Mensaje:**
 
 Hola Manuel:
 
-Vamos a llevar el CRM de la correduría a mi propia infraestructura (mi Supabase y mi Vercel), para
-integrarlo con el resto de mis negocios. No hace falta que reescribas nada: copiamos lo que hay. Te
-pido esto:
+Vamos a llevar el CRM de la correduría a mi propia infraestructura, para integrarlo con el resto de mis
+negocios. Para que no te lleve tiempo, lo más práctico es que me des acceso y lo hago yo:
 
-**1. Invítame a tu organización de Supabase, con permisos de solo lectura.**
-En el panel: *Organization → Team → Invite*, rol **Read-only**, a `alberto.suarez.gutierrez@gmail.com`.
-Con eso puedo inspeccionar el esquema y hacerme una idea del volumen sin tocar nada y sin que me pases
-contraseñas por mensaje. Lo revocas con un clic cuando acabemos.
+1. **Supabase** — invítame a tu organización (*Organization → Team → Invite*) con rol
+   **Administrator**, a `alberto.suarez.gutierrez@gmail.com`. Con eso saco yo la copia de la base de
+   datos sin pedirte nada más. Lo revocas cuando acabemos.
+2. **GitHub** — transfiéreme el repositorio (*Settings → Transfer ownership*) a mi cuenta. Me quedo con
+   el historial y lo archivo; no necesito que hagas nada más con él.
+3. **Vercel** — invítame a tu equipo, para poder ver las variables de entorno y la configuración del
+   dominio sin que tengas que copiármelas a mano.
 
-**1-bis. Y para la copia en sí, una cadena de conexión de solo lectura.**
-*Settings → Database → Connection string*, modo **Direct** (puerto 5432). Mejor que no me des la de
-`postgres`; crea un rol de solo lectura y me pasas esa (mándamela por gestor de contraseñas, no por
-correo ni WhatsApp):
+Dos cosas más, y ya:
 
-```sql
-create role traspaso_lectura login password '<una contraseña larga>';
-grant usage on schema public to traspaso_lectura;
-grant select on all tables in schema public to traspaso_lectura;
-grant select on all sequences in schema public to traspaso_lectura;
-```
+4. **No borres ni desactives nada** — Supabase, Vercel ni el repo — hasta que yo te confirme que está
+   todo verificado funcionando en mi lado. Te aviso expresamente.
+5. **Protección de datos.** Son datos personales de clientes reales, así que necesitamos dejar por
+   escrito el contrato de encargado de tratamiento, la fecha de entrega y el borrado posterior de tu
+   copia. Te paso el documento.
 
-**2. Renombrar el schema justo antes del volcado definitivo.**
-Cuando te avise de que vamos a hacer la copia buena (no ahora), y **después de lanzar un backup desde
-el panel**, ejecuta:
-
-```sql
-alter schema public rename to seguros;
-create schema public;
-```
-
-Son dos segundos y nos ahorra un paso frágil por nuestro lado. Si prefieres no tocarlo, dímelo y lo
-resolvemos nosotros.
-
-**3. Código.** Acceso de lectura a tu repositorio de GitHub, o un ZIP del árbol de la rama que está
-desplegada. **No necesito tu historial de git**, solo el estado actual.
-
-**4. Lo que no viaja en una copia de la base de datos.** Esto es lo que de verdad puede atascar el
-traspaso, así que te agradecería que me lo pusieras por escrito aunque sea en cuatro líneas:
-- **Edge Functions** desplegadas (cuáles son, su código, y qué *secrets* usan).
-- **Buckets de Storage**: nombres, si son públicos, tamaño aproximado.
-- **Autenticación**: ¿usas Supabase Auth (`auth.users`) o una tabla de usuarios propia? ¿Cuántos
-  usuarios reales hay? ¿Hay login con Google / magic link?
-- **Tareas programadas** (`pg_cron`) y **webhooks** configurados.
-- **Integraciones con proveedores externos**: qué proveedor, qué endpoints usas de cada uno, qué
-  credencial y con qué nombre de variable de entorno.
-- **Variables de entorno del proyecto de Vercel**: la **lista de nombres** aquí; los **valores** por un
-  canal aparte (gestor de contraseñas o similar), no por correo ni WhatsApp.
-- Si hay un dominio propio apuntando a tu Vercel, cuál es y dónde está registrado.
-
-**5. No borres ni desactives nada** — ni el proyecto de Supabase, ni el de Vercel, ni el repo — hasta
-que yo te confirme que todo está verificado funcionando en mi lado. Te aviso expresamente.
-
-**6. Protección de datos.** Son datos personales de clientes reales, así que necesitamos dejar por
-escrito el contrato de encargado de tratamiento, la fecha de entrega y el borrado posterior de tu
-copia. Te paso el documento.
+Si algo de esto no te encaja, dímelo y lo hacemos al revés: me pasas tú las copias y yo te voy pidiendo
+lo que falte.
 
 Gracias,
 Alberto
+
+**Qué desbloquea cada invitación (lo hace Claude, no Manuel):**
+
+| Invitación | Lo que pasamos a poder hacer solos |
+|---|---|
+| Supabase Administrator | Crear el rol de lectura · `alter schema public rename to seguros` · lanzar backup · `pg_dump` · ver Edge Functions y sus secrets · listar buckets · comprobar si usa `auth.users` · ver `cron.job`, RLS, funciones y triggers |
+| GitHub (transferencia) | El código completo + el historial, sin depender de él ni de un ZIP suelto |
+| Vercel (miembro de equipo) | Leer los **valores** de las variables de entorno, la config del dominio y qué integraciones externas hay cableadas de verdad |
+
+Es decir: **la Fase 1 entera y el inventario dejan de necesitar a Manuel.** Solo queda la
+coordinación del volcado definitivo, que ya no requiere que él esté delante.
+
+---
+
+### 🅱️ Opción B — si prefiere no dar ese acceso
+
+Entonces sí hay que pedirle cosas concretas. Es el mismo traspaso, más lento:
+
+1. **Invitación de solo lectura a su organización de Supabase** (lo mínimo, para poder inspeccionar el
+   esquema sin contraseñas por mensaje).
+2. **Cadena de conexión de lectura** para el volcado (*Settings → Database → Connection string*, modo
+   Direct, puerto 5432). Que no dé la de `postgres`; que cree un rol:
+   ```sql
+   create role traspaso_lectura login password '<una contraseña larga>';
+   grant usage on schema public to traspaso_lectura;
+   grant select on all tables in schema public to traspaso_lectura;
+   grant select on all sequences in schema public to traspaso_lectura;
+   ```
+   Que la mande por gestor de contraseñas, **no por correo ni WhatsApp**.
+3. **Renombrar el schema** justo antes del volcado definitivo, tras lanzar backup desde el panel:
+   ```sql
+   alter schema public rename to seguros;
+   create schema public;
+   ```
+   Si no quiere tocarlo, lo resolvemos por nuestro lado (Fase 2, plan B).
+4. **El código**: acceso de lectura al repo, o un ZIP del árbol de la rama desplegada. **No hace falta
+   el historial**, pero entonces se pierde para siempre — de ahí que la transferencia sea mejor.
+5. **Inventario por escrito de lo que no viaja en un `pg_dump`** — esto es lo caro de su tiempo, y es
+   justo lo que la opción A nos deja averiguar solos:
+   - **Edge Functions** desplegadas (cuáles, su código, qué *secrets* usan).
+   - **Buckets de Storage**: nombres, si son públicos, tamaño aproximado.
+   - **Autenticación**: ¿Supabase Auth (`auth.users`) o tabla propia? ¿Cuántos usuarios reales?
+     ¿Login con Google / magic link?
+   - **Tareas programadas** (`pg_cron`) y **webhooks** configurados.
+   - **Integraciones externas**: qué proveedor, qué endpoints, qué credencial y con qué nombre de
+     variable de entorno.
+   - **Variables de entorno de Vercel**: lista de nombres aquí, **valores por canal aparte**.
+   - Dominio propio, si lo hay, y dónde está registrado.
+6. **No borrar nada** hasta confirmación, y **contrato de encargado de tratamiento** (igual que en A:
+   estos dos puntos no son negociables en ninguna de las dos opciones).
 
 ---
 
 ## Fase 1 — Inventario y medición (antes de tocar nada)
 
-Con la invitación de solo lectura (por el MCP de Supabase) o con la cadena de lectura, desde una
-sesión de Claude:
+Con el acceso a su organización (opción A o B), a través del conector de Supabase, desde una sesión
+de Claude:
 
 ```sql
 -- Tamaño real por tabla (los ~200 MB son una estimación sin verificar)
