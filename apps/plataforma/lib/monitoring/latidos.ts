@@ -214,10 +214,15 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'conversión NO es un detalle: durante tres días fue un ×1,20 supuesto contra un canal que en ' +
       'realidad multiplica por ~0,9 y SUMA una cuota fija por estancia, y eso desplazaba TODAS las ' +
       'fechas de los cuatro pisos a la vez sin que nada se pusiera rojo (reserva de House de ' +
-      'Navidad, 19/08/2026). EL DETALLE DICE QUÉ PASA: «sin ajuste fiable» en todos los pisos = no ' +
-      'es que el canal cuadre, es que no hay mediciones de escaparate suficientes — el problema ' +
-      'está aguas arriba, en la rutina de Booking (sivra_mercado_booking) y en el plan de ' +
-      'escaparate de /api/sivra/mercado/plan, no en este cron. Si el detalle dice «SIMULACRO», ' +
+      'Navidad, 19/08/2026). LEE EL DETALLE Y NO PRESUPONGAS DÓNDE ESTÁ EL FALLO: el 19/08/2026 ' +
+      'esta misma nota afirmaba que un rojo aquí significaba que el problema estaba «aguas arriba, ' +
+      'en la rutina de Booking y en el plan de escaparate» — y era FALSO: las 22 mediciones de ' +
+      'escaparate estaban en market_rates y el cron moría en su PRIMERA consulta (42883, ' +
+      'date - bigint: Prisma manda los números como int8). Un diagnóstico escrito de antemano ' +
+      'manda al fichero equivocado. Qué mirar, en este orden: (1) si el detalle trae un SQLSTATE o ' +
+      'una excepción, el fallo es de ESTE cron — arréglalo aquí; (2) «sin ajuste fiable» en todos ' +
+      'los pisos SIN excepción = pasó la consulta y no hay mediciones suficientes, y entonces sí ' +
+      'toca mirar aguas arriba (sivra_mercado_booking y /api/sivra/mercado/plan); (3) «SIMULACRO» = ' +
       'alguien lo está llamando sin CRON_SECRET y no escribe nada. ' +
       'Huella: agente_latidos.sivra_canal.',
   },

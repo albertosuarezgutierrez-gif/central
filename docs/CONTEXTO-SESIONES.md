@@ -51,6 +51,13 @@
   (la caché semántica NO guardaba nada) y el mailing de ialimp (pasos ≥2 nunca encolados)— y una
   regla que a su guardián le faltaba: **`make_interval(days|hours => bigint)` TAMPOCO existe**; solo
   `secs` lo acepta (es `double precision`). Su cabecera lo recomendaba como cura y no lo es.
+- **Cierre (mismo día):** corregida la `nota` de `sivra_canal` en `latidos.ts` —afirmaba que un rojo
+  ahí venía «de aguas arriba» y era falso; ahora manda leer el detalle y ordena qué mirar. `/auditoria-diaria`
+  consulta `agente_reparaciones` antes de abrir carril 2 (no duplicar parche sobre un intento vivo) y el
+  reparador queda registrado en `docs/SKILLS.md` para el `agentes-entrenador`, avisando de que su
+  comportamiento es CÓDIGO TESTEADO, no un prompt, y de que su silencio no prueba que corriera.
+- ⏳ **Pendiente de Alberto: añadir el secret `ALERTA_TOKEN` al repo en GitHub Actions** (`PLATAFORMA_URL`,
+  `AI_GATEWAY_SECRET` y `GH_PAT_TRIGGER` ya están). Sin él, `latido-reparar.yml` muere en su primer paso.
 
 ### 🧨 (20/08/2026) `date - bigint`: el calibrado del canal murió en su primera pasada real — y tapaba un suelo apagado
 - **El cron `/api/sivra/pricing/canal` reventó entero** (42883, `operator does not exist: date - bigint`)

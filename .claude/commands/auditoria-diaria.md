@@ -190,6 +190,27 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
      DETERMINISTA de este heartbeat para pricing+correo. Este bloque es el carril CON CONTEXTO
      (razona la causa y abre PR); si añades una huella aquí que ya vigile un cron dedicado, no
      hace falta el segundo aviso — coordina umbrales para no avisar por duplicado.
+
+   - 🔧 **Antes de abrir un hallazgo de carril 2 por un agente en rojo, mira si YA se está
+     reparando solo** (20/08/2026). Desde el workflow `latido-reparar.yml` hay un reparador
+     automático que reclama UN agente al día, escribe el parche y lo mergea si pasa su gate de
+     prueba (ver `apps/plataforma/CLAUDE.md` §«Del latido rojo al merge»). Consulta:
+
+     ```sql
+     SELECT agente, firma, estado, pr_numero, intento_at, merged_at, veredicto
+     FROM agente_reparaciones WHERE intento_at >= now() - interval '7 days'
+     ORDER BY intento_at DESC;
+     ```
+
+     - `estado='intentando'` o `'mergeada'` con `veredicto IS NULL` → **hay un intento vivo**:
+       menciónalo en el informe con su PR y **NO abras un PR de carril 2 por ese agente** (dos
+       parches a la vez sobre el mismo fallo se pisan). El veredicto lo dicta el latido a las 24 h.
+     - `estado='rendida'` o `veredicto='sigue_roto'` → el automático ya se rindió y Alberto ya
+       tiene su Telegram: **eso SÍ es tuyo**, y es prioritario (nadie más lo va a mirar).
+     - `estado='pr_abierto'` → hay un PR draft sin mergear esperando ojo humano; enlázalo en el
+       informe en vez de duplicar el trabajo.
+     - 🚨 Una consulta que falle aquí (tabla ausente, permiso) es «no lo sé», no «no hay
+       reparación en curso»: dilo así y, ante la duda, no abras el PR duplicado.
    - Si todo ✅, una línea verde en el informe y sigue.
 
 2-ter. **Backlog de PRs de rutinas + salud del automerge** (barato, corre SIEMPRE).
