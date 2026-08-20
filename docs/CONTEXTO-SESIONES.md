@@ -32,6 +32,21 @@
 
 ---
 
+### 🔧 (20/08/2026) Del latido rojo al MERGE sin humano en medio — reparación automática de agentes
+- Pregunta de Alberto tras el fallo del canal: «¿no hay un agente que revise y repare?». Había quien
+  DETECTA (`agentes-latido`, `/auditoria-diaria`) y nadie que REPARE. Dictado: **«lo más automático
+  posible y solo avisarme en caso de no resolverse por si tengo que intervenir»**.
+- Flujo: 07:45 latido → 08:00 `latido-reparar.yml` reclama UNO → `scripts/ai-programar.mjs` → **gate**
+  → mergea solo · o PR draft + Telegram. A las 24 h el **propio latido** dicta el veredicto.
+- **Dos reglas del disparador:** solo dispara lo que tiene forma de EXCEPCIÓN (`reparable.ts`, puro y
+  testeado; un IMAP caído no se arregla en el repo), y al orquestador se le manda la **EVIDENCIA**
+  cruda, nunca la narración del aviso — la de `sivra_canal` mandaba al fichero equivocado.
+- **El gate es una PRUEBA, no CI:** exige un test que falle sobre `main` y pase con el parche, y lo
+  ejecuta en su propio run. Motivo doble: un `tsc` verde bendice cualquier cosa, y el estado de checks
+  **miente** aquí (el #1529 salió ✅ con `tests.yml`/`ci.yml` sin ejecutarse nunca).
+- Frenos: 1 firma = 1 intento · 3/agente en 30 días · carril acotado (nada de `.claude/**`, workflows
+  ni `.sql`). Tabla `agente_reparaciones` **ya aplicada**. Éxito = silencio. Spec en `docs/superpowers/specs/`.
+
 ### 📐 (20/08/2026) El calibrado del canal Booking NUNCA completó una pasada: `date - bigint` (42883)
 - Latido `sivra_canal` en rojo desde que nació. **Causa raíz:** Prisma manda los números de JS como
   **bigint** y Postgres no tiene `date - bigint` → la PRIMERA consulta de `medir()` moría en 42883.
