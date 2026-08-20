@@ -33,6 +33,9 @@ const UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Geck
 /** Las sesiones PHP del Portal caducan solas; se renueva antes de que moleste. */
 const VIDA_SESION_MS = 15 * 60 * 1000
 
+/** Cuánto se espera antes de reintentar tras un intento que no abrió sesión. */
+const TREGUA_FALLO_MS = 10 * 60 * 1000
+
 export type EstadoPortal = 'sin-credenciales' | EstadoLogin
 
 export interface SesionPortal {
@@ -43,13 +46,15 @@ export interface SesionPortal {
   motivo: string | null
   /** Cuándo se abrió (ms epoch). */
   abiertaEn: number
+  /** Cuándo se obtuvo este veredicto (ms epoch). Marca la tregua del fallo. */
+  vistoEn: number
 }
 
 const SIN_CREDENCIALES: SesionPortal = {
   estado: 'sin-credenciales',
   cookie: null,
   motivo: 'no hay BOE_PORTAL_USUARIO / BOE_PORTAL_PASSWORD configurados',
-  abiertaEn: 0,
+  abiertaEn: 0, vistoEn: Date.now(),
 }
 
 /**
@@ -63,8 +68,15 @@ export const SIN_INTENTO: SesionPortal = {
   estado: 'desconocido',
   cookie: null,
   motivo: 'no hacía falta sesión en esta pasada (ninguna ficha con muro pendiente)',
-  abiertaEn: 0,
+  abiertaEn: 0, vistoEn: Date.now(),
 }
+
+/**
+ * Códigos ya enviados en este proceso. Un código del Portal es de UN SOLO USO:
+ * reintentarlo no puede funcionar y sí quema el intento. Sin esta lista, dos
+ * logins seguidos podían mandar el mismo código dos veces.
+ */
+const codigosUsados = new Set<string>()
 
 let cache: SesionPortal | null = null
 /** Login en vuelo, para que N fichas en paralelo no manden N logins. */
@@ -138,18 +150,22 @@ async function segundoFactor(html: string, jar: Map<string, string>, intentoEn: 
     htmlFinal: '',
   }
   if (!form) {
-    return { estado: 'desconocido', cookie: null, motivo: 'el Portal pide código pero no se reconoce su formulario', abiertaEn: 0 }
+    return { estado: 'desconocido', cookie: null, motivo: 'el Portal pide código pero no se reconoce su formulario', abiertaEn: 0, vistoEn: Date.now() }
   }
 
-  const codigo = await esperarCodigoPortal(intentoEn).catch((e) => {
+  const codigo = await esperarCodigoPortal(intentoEn, codigosUsados).catch((e) => {
     console.error('[portal-sesion] IMAP', e)
     return null
   })
   if (ultimoRastro) ultimoRastro.codigo = codigo
   if (!codigo) {
     // NUNCA se cae al último código del buzón: sería el de otra sesión.
-    return { estado: 'desconocido', cookie: null, motivo: 'no llegó el código de verificación a tiempo', abiertaEn: 0 }
+    return { estado: 'desconocido', cookie: null, motivo: 'no llegó el código de verificación a tiempo', abiertaEn: 0, vistoEn: Date.now() }
   }
+
+  // Se apunta ANTES de mandarlo: si la petición falla a medio camino, el código
+  // ya está gastado igualmente y reintentarlo solo quemaría otro intento.
+  codigosUsados.add(codigo)
 
   const destino = new URL(form.action || '/id/login.php', LOGIN).toString()
   const cuerpo = new URLSearchParams({ ...form.campos, [form.campoCodigo]: codigo })
@@ -173,14 +189,14 @@ async function segundoFactor(html: string, jar: Map<string, string>, intentoEn: 
     html2 = await r.text()
     if (ultimoRastro) { ultimoRastro.htmlFinal = redactarSecretos(html2); ultimoRastro.cookies = [...jar.keys()] }
   } catch (e) {
-    return { estado: 'desconocido', cookie: null, motivo: `fallo al enviar el código: ${(e as Error).message}`, abiertaEn: 0 }
+    return { estado: 'desconocido', cookie: null, motivo: `fallo al enviar el código: ${(e as Error).message}`, abiertaEn: 0, vistoEn: Date.now() }
   }
 
   const res = interpretarLogin(html2, [...jar.keys()])
   if (res.estado !== 'iniciada') {
-    return { estado: res.estado, cookie: null, motivo: res.motivo ?? 'el código no abrió sesión', abiertaEn: 0 }
+    return { estado: res.estado, cookie: null, motivo: res.motivo ?? 'el código no abrió sesión', abiertaEn: 0, vistoEn: Date.now() }
   }
-  return { estado: 'iniciada', cookie: cabeceraCookie(jar), motivo: null, abiertaEn: Date.now() }
+  return { estado: 'iniciada', cookie: cabeceraCookie(jar), motivo: null, abiertaEn: Date.now(), vistoEn: Date.now() }
 }
 
 async function abrir(): Promise<SesionPortal> {
@@ -221,19 +237,19 @@ async function abrir(): Promise<SesionPortal> {
       estado: 'desconocido',
       cookie: null,
       motivo: `no se pudo contactar con el Portal: ${(e as Error).message}`,
-      abiertaEn: 0,
+      abiertaEn: 0, vistoEn: Date.now(),
     }
   }
 
   const r = interpretarLogin(html, [...jar.keys()])
   // Credenciales rechazadas: se corta aquí y no se reintenta jamás.
-  if (r.estado === 'rechazada') return { estado: r.estado, cookie: null, motivo: r.motivo, abiertaEn: 0 }
+  if (r.estado === 'rechazada') return { estado: r.estado, cookie: null, motivo: r.motivo, abiertaEn: 0, vistoEn: Date.now() }
   if (r.estado === 'iniciada') {
-    return { estado: 'iniciada', cookie: cabeceraCookie(jar), motivo: null, abiertaEn: Date.now() }
+    return { estado: 'iniciada', cookie: cabeceraCookie(jar), motivo: null, abiertaEn: Date.now(), vistoEn: Date.now() }
   }
   // Ni sesión ni rechazo: si lo que hay es la pantalla del código, se resuelve.
   if (pideCodigo(html)) return segundoFactor(html, jar, intentoEn)
-  return { estado: r.estado, cookie: null, motivo: r.motivo, abiertaEn: 0 }
+  return { estado: r.estado, cookie: null, motivo: r.motivo, abiertaEn: 0, vistoEn: Date.now() }
 }
 
 /**
@@ -246,12 +262,21 @@ export async function sesionPortal(): Promise<SesionPortal> {
   // Un rechazo o la falta de credenciales son definitivos para este proceso.
   if (cache && (cache.estado === 'rechazada' || cache.estado === 'sin-credenciales')) return cache
   if (cache?.estado === 'iniciada' && Date.now() - cache.abiertaEn < VIDA_SESION_MS) return cache
+  // Un `desconocido` reciente se reutiliza para no repetir el login (y su SMS)
+  // dentro de la misma pasada; pasada la tregua, se vuelve a intentar.
+  if (cache?.estado === 'desconocido' && Date.now() - cache.vistoEn < TREGUA_FALLO_MS) return cache
   if (enVuelo) return enVuelo
 
   enVuelo = abrir()
     .then((s) => {
-      // El `desconocido` por red NO se cachea: es reintentable en la siguiente ficha.
-      cache = s.estado === 'desconocido' ? null : s
+      // 🚨 El `desconocido` TAMBIÉN se cachea, aunque sea reintentable.
+      // Cuando no se cacheaba, cada `sesionPortal()` de la misma pasada
+      // relanzaba el login entero: el 20/08/2026 una sola petición generó tres
+      // correos (y tres SMS) en 40 segundos, con 11 s entre dos de ellos — y
+      // esa proximidad fue lo que coló el código de un intento en el
+      // siguiente. Se reintenta, pero en la pasada de DESPUÉS, no dentro de la
+      // misma.
+      cache = s
       return s
     })
     .finally(() => {
