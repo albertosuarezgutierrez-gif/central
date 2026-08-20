@@ -32,6 +32,16 @@
 
 ---
 
+### 🐾 (20/08/2026) Tres decisiones de Alberto sobre la landing, y el calendario a producción
+- **Mascotas: NO se admiten.** La ficha de Booking **2039943** publica «Admite mascotas» y la landing dice
+  que no (FAQ + JSON-LD). Comprobado con el conector; la web está BIEN y no se toca — el error está en
+  Booking y lo corrige Alberto en la extranet (prompt listo en `docs/PROMPT-CHROME-landing-calendario.md`).
+- **«Bercell» se queda fuera** del pie, definitivamente. Y el PR #1500 (calendario + pie) **se mergea**.
+- De paso, esa ficha confirma contra fuente real: dirección **Socorro 24**, nota **8,6/51 reseñas** (la web
+  ya lo dice) y que el ID de House Sevillana es 2039943, no el 4771238 que le atribuye la skill de SEO.
+- Lo que queda del calendario es de navegador (deep link `dd/mm/yyyy`, 320 px, minutos a pie): va como
+  prompts para Claude Chrome en `docs/PROMPT-CHROME-landing-calendario.md`, no como lista de deseos.
+
 ### 🔍 (20/08/2026) Auditoría diaria (ligera) — heartbeat 22/22 ✅, sin drift, un vigilante nuevo
 - Rango: 45 commits desde la pasada del 19/08 05:15 UTC, casi todo el cierre de la saga
   `auditoria.yml`/`rutinas-automerge.yml` + sesión IBKR + fixes de housesevillana. Sin huecos en
@@ -41,6 +51,53 @@
 - **Hallazgo (carril 2, PR aparte):** el cron semanal `paper-tracker` (alta 18/08, PR #1476) ya
   escribía su latido pero nadie lo vigilaba — añadido a `AGENTES_VIGILADOS`/`PROBES`.
 - Informe completo en `docs/AUDITORIA-2026-08.md` (actualización 2026-08-20).
+
+### 🛤️ (19/08/2026) El raíl aguanta en vivo — vigilancia diaria de precios BORRADA
+- Verificado sobre la pasada real de las 20:31 UTC. El arreglo (#1497, `1f5a4d0`) estaba en producción
+  desde las **20:13:18 UTC**, 18 min antes (deploy de `a6ef85ab`, del que `1f5a4d0` es ancestro).
+- **0 fugas del raíl en las 351 fechas escritas hoy, en los 4 pisos.** Las 17 que ayer se pasaron son
+  justo las 17 que hoy se reescribieron, y todas frenaron en el tope: Busto Reform 18/09 se quedó en
+  312→250 (ayer siguió a 200, −35,9%) y las 16 de House de 2027 en −20,0%.
+- La peor bajada del día es **−20,23%** (Luxury 22/08, 173→138) y **no es fuga**: `ROUND(173×0,8)=138`,
+  o sea el motor clavó su propio suelo y el exceso es redondeo a euros. Las 3 mayores bajadas caen
+  exactamente en `ROUND(ancla×0,8)`. La mayor subida (+82,4%, Luxury 28-30/12) es el salto de evento
+  de Nochevieja: todo lo posterior al clamp solo SUBE, por diseño.
+- Con eso se cumple el «todo ok» condicionado de Alberto → **borrada `trig_01Eagedr3hBNtpf1oEgDHj5R`**
+  («Vigilancia diaria pricing SIVRA», diaria 09:00 UTC desde el 09/08). Siguen vivos el guardián de
+  las 07:30 con alertas a Telegram, la auditoría diaria y el agente de pricing semanal.
+
+### 📅 (19/08/2026) Calendario de disponibilidad en la landing de House
+- Alberto lo pidió: que el huésped vea de un vistazo qué noches hay. Como la landing es HTML plano en
+  rutas `edge` **sin BD ni secretos**, el dato viene de un endpoint público NUEVO en plataforma
+  (`/api/publico/disponibilidad`, en la lista `PUBLIC` del middleware): Smoobu en vivo con caché de
+  10 min, respaldo `rate_snapshots` de ≤2 días con su fecha real, y **503 si no hay ninguno de los dos**.
+- **La regla que gobierna todo:** un `ocupadas: []` de consuelo se pintaría como calendario entero libre.
+  Helper puro `lib/sivra/disponibilidad-publica.ts` (8 tests): `available` ausente/null/raro → `sinDato`,
+  jamás libre. En el widget, **toda celda nace en `sindato`** y un fallo de red va al estado `error`.
+- Cuatro estados distinguibles SIN color (macizo/rayado/contorno punteado/plano). Vive en
+  `app/calendario.ts` para no darle superficie al agente SEO de los lunes — y por eso el guardián i18n
+  pasa a leer también ese fichero (si no, sus 16 claves quedaban fuera de la red: el fallo de #1487).
+- Spec + apéndice con markup y CSS: `docs/superpowers/specs/2026-08-19-calendario-disponibilidad-design.md`.
+- **🚨 Lección de CI (misma sesión):** el PR pasó ~1h30 sin que corriera NINGÚN check y se llegó a culpar
+  al token de la GitHub App. Falso: el PR estaba en **conflicto** con `main` (#1499→#1503 movieron el
+  archivo de memoria). **Con el PR en conflicto GitHub no puede construir la ref de merge y los workflows
+  `pull_request` ni se disparan** — ni con pushes nuevos ni cerrando y reabriendo el PR. Al mergear `main`
+  en la rama arrancaron los 15 checks en el acto, todos en verde. Antes de diagnosticar «la CI no corre»,
+  mira `mergeable_state` (`dirty` = esto).
+- **Sin verificar:** el enlace profundo al motor con fecha (`arrivalDate=dd/mm/yyyy`, NO ISO como su API).
+  Evidencia de dos repos públicos con cuentas Smoobu distintas; el proxy bloquea `*.smoobu.com`. Degrada
+  a abrir el motor sin fecha, así que el riesgo es nulo. **Falta que Alberto pegue la URL en un navegador.**
+
+### ©️ (19/08/2026) El pie de la landing decía «© 2025 · Bercell»
+- Dos fallos en la misma línea de `apps/housesevillana/app/route.ts`. **El año quemado**: en agosto de 2026
+  la portada firmaba «© 2025», que a un huésped le lee como web abandonada. No se ha puesto 2026 (vuelve a
+  caducar) ni `new Date().getFullYear()` (el HTML es una const de módulo y Next puede prerenderizar la ruta:
+  quedaría clavado en el año del build) — **se ha quitado el año**: un copyright no lo necesita y así no hay
+  número que envejezca. Guardián nuevo `app/pie.test.ts` sobre las 4 páginas.
+- **«Bercell»**: aparecía UNA sola vez en todo el monorepo, sin rastro (entró con la importación sin historia
+  del 12/08). Sin poder verificar qué es, se ha quitado en vez de inventar un sustituto — la identidad legal ya
+  la lleva la línea de al lado (`VFT/SE/01179`). **Si es un nombre comercial real, Alberto lo dice y vuelve.**
+- De paso: esa línea no estaba en los diccionarios, así que `/en` y `/it` la servían en castellano. Añadida a los dos.
 
 ### 🛑 (19/08/2026) IBKR: no era la selección, eran los stops — libro de operaciones en Supabase
 - Alberto preguntó por VWCE («no para de bajar»): −594,96€, el **3,7%** de los −16.172,49€ que perdió operando
