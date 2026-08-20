@@ -20,6 +20,7 @@ import { hiloComoMensajes } from './hilo'
 import { faseReserva, aplicaEarlyCheckin } from './fases'
 import { revisarCierre, bloqueCierre } from './cierre'
 import { revisarCoherencia, REGLA_COHERENCIA } from './coherencia'
+import { bloqueSalidaTardia } from './salida'
 import { esSolicitudLateCheckout, esDespedida } from './reglas'
 import { esLlegadaFueraDeHorario, HORARIO_ATENCION } from './llegada'
 
@@ -173,20 +174,20 @@ export async function decidir(ctx: Contexto, pregunta: string, categoria: string
           : `EARLY CHECK-IN: ahora mismo la noche anterior está LIBRE, así que EN PRINCIPIO la entrada anticipada antes de las ${entrada} SÍ va a ser posible. Pero como pueden entrar reservas de última hora antes de su llegada, NO se lo prometas en firme todavía: dile que en principio no hay problema y que se lo confirmáis definitivamente el día antes de su llegada. NUNCA lo ofrezcas como servicio de pago.`
         : `EARLY CHECK-IN: la noche anterior está OCUPADA por otros huéspedes, así que NO es posible entrar antes de las ${entrada} (el piso aún está ocupado y hay que limpiarlo). Explícalo con amabilidad y confirma que la entrada es a partir de las ${entrada}. NUNCA ofrezcas early check-in (ni gratis ni de pago) en este caso.`
 
-  // Late check-out: mismo patrón tri-estado que el early check-in, con el mismo matiz de "firme solo
-  // el mismo día del hecho, si no se matiza". A diferencia del early check-in, esto SIEMPRE escala a
-  // Alberto (ver esSolicitudLateCheckout más abajo) — el objetivo es que el borrador que le llega ya
-  // traiga la respuesta correcta, no automatizar el envío.
+  // Salida tardía: la política vive en `salida.ts` (hasta las 12:00 sin coste si el piso queda libre
+  // ese día; más tarde tiene coste de la empresa de limpieza y se consulta el precio — dictada por
+  // Alberto el 20/08/2026). Aquí solo se elige el estado según lo que se haya podido verificar.
+  // Sigue escalando SIEMPRE a Alberto (`esSolicitudLateCheckout`): el objetivo es que el borrador que
+  // le llega ya traiga la respuesta correcta, no automatizar el envío.
   const salida = ctx.horaCheckOut || '11:00'
   const lateBlock = esPostEstancia
     ? ''
-    : !ctx.lateCheckoutChequeado
-      ? `LATE CHECK-OUT: ahora mismo NO hemos podido comprobar si el piso queda libre el día de la salida. Si el huésped pide salir más tarde de las ${salida}, NO se lo confirmes NI se lo niegues: dile con amabilidad que lo verificas y se lo confirmas en breve. NUNCA inventes disponibilidad.`
-      : ctx.lateCheckoutPosible
-        ? esDiaSalida
-          ? `LATE CHECK-OUT: hoy mismo, que es su día de salida, no entra nadie más al piso, así que SÍ puedes confirmarle que puede salir más tarde de las ${salida} (a la hora que haya pedido, dentro de lo razonable).`
-          : `LATE CHECK-OUT: ahora mismo no hay ninguna entrada programada para el día de su salida, así que EN PRINCIPIO SÍ va a ser posible salir más tarde de las ${salida}. Pero como pueden entrar reservas de última hora, NO se lo prometas en firme todavía: dile que en principio no hay problema y que se lo confirmáis definitivamente el mismo día de la salida.`
-        : `LATE CHECK-OUT: ese mismo día entra otro huésped al piso, así que NO va a ser posible alargar la salida más allá de las ${salida} (hace falta limpiarlo y prepararlo para la siguiente entrada). Explícaselo con amabilidad y, como alternativa, ofrécele la consigna de equipaje del bloque CONSIGNAS de la ficha para que pueda dejar las maletas y seguir disfrutando de la ciudad hasta la hora que necesite.`
+    : bloqueSalidaTardia({
+        horaCheckOut: salida,
+        chequeado: ctx.lateCheckoutChequeado,
+        posible: ctx.lateCheckoutPosible,
+        esDiaSalida,
+      })
 
   // Llegada tardía: el huésped anuncia (o pregunta por) una llegada fuera de nuestro horario de
   // atención. NO es un caso de disponibilidad —el acceso es autónomo y no hay hora límite— sino de

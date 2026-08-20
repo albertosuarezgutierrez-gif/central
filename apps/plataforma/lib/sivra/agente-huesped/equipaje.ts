@@ -53,6 +53,7 @@ export function bloqueEquipaje(propertyId = ''): string {
   const red = CONSIGNAS_RED.map(c => `  • ${c.nombre} — ${c.web} (${c.nota})`).join('\n')
   const lineas = [
     'CONSIGNA / GUARDAR MALETAS: el apartamento NO dispone de servicio de consigna ni de guardado de equipaje (ni antes del check-in ni después del check-out).',
+    'ANTES DE MANDARLE A UNA CONSIGNA, mira el bloque SALIDA: si pregunta por dejar las maletas EL DÍA QUE SE VA y ese día no entra nadie, la respuesta correcta es que pueden quedarse (y dejar el equipaje dentro) hasta las 12:00 sin coste. La consigna es para cuando el piso NO queda libre, o para cuando necesitan más horas de las que cubre esa ventana.',
     'Si el huésped pregunta dónde dejar o guardar las maletas, dilo de entrada —sin abrir con «¡claro que sí!» ni «por supuesto», que prometen lo contrario— y pasa enseguida a la consigna cercana, que es lo que de verdad le sirve:',
   ]
   if (cercanas.length) {

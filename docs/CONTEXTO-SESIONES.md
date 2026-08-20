@@ -40,6 +40,11 @@ COHERENCIA apertura↔respuesta estaba en el system prompt. Nuevos módulos puro
 la fórmula si va aislada; si va entretejida con contenido real, escala) y `coherencia.ts` (NO poda:
 reescribir una apertura recoloca el mensaje entero, eso lo hace Alberto). 15 tests, PR #1568.
 Regla que queda: **el modelo obedece el prompt o el mensaje pasa por una persona, nunca sale a medias**.
+(3) Y faltaba la POLÍTICA de fondo, que Alberto dictó al ver el caso: no hay consigna, pero el día de
+salida, **si no entra nadie ese día, se quedan hasta las 12:00 sin coste** (maletas dentro incluidas);
+más tarde tiene coste de la empresa de limpieza y el agente lo ofrece SIN precio y escala. Nuevo
+`salida.ts` (ficha + prompt tri-estado) y la consigna de pago pasa a ser el plan B. Lo confirma el
+histórico de Smoobu (26/07, a Manuel: «puedes salir a las 12:00, no entra nadie después de ti»).
 
 ### 🧭 (20/08/2026) El índice que usa `code-map` llevaba horas desfasado en `main` — y eso no se ve
 `pnpm auditar:check` estaba en ROJO sobre `main`: #1536/#1550/#1551 son posteriores a la última
