@@ -32,6 +32,18 @@
 
 ---
 
+### 🛡️ (20/08/2026) Correduría: había DOS planes para lo mismo con dos nombres — fundidos en uno
+Dos sesiones del mismo día planificaron el traspaso del CRM de Manuel sin verse: `docs/TRASPASO-CORREDURIA.md`
+(vertical `apps/seguros`, #1532) y `docs/ASEGURA-MIGRACION.md` (vertical `apps/asegura`, #1489). Ambos
+mergeados → la siguiente sesión habría leído el que le tocara y hecho lo contrario que la anterior.
+**Unificado en `docs/TRASPASO-CORREDURIA.md`** (doc único; el otro absorbido y borrado) con enrutado
+coherente en `central-maestro` y `FUENTES-DE-VERDAD.md`. **Nombre bueno: `apps/asegura`** (la marca) —
+schema y rol siguen siendo `seguros`/`prisma_seguros` (el dominio, y además ya aplicados en la BD).
+🚨 **La lección: un doc duplicado no da error, da instrucciones contradictorias.** Antes de escribir un
+plan nuevo, grep del dominio en `docs/` — el coste de no hacerlo lo paga la sesión siguiente.
+Contrato de encargado (RGPD art. 28.3): responsable decidido = **Alberto persona física**, «Grupo ASegura»,
+fuero Sevilla. **NIF y domicilio a propósito en blanco** — un identificador legal no se escribe de memoria.
+
 ### 🧭 (20/08/2026) El índice que usa `code-map` llevaba horas desfasado en `main` — y eso no se ve
 `pnpm auditar:check` estaba en ROJO sobre `main`: #1536/#1550/#1551 son posteriores a la última
 regeneración (#1547) y ninguno rehizo la radiografía. Lo destapé verificando el PR del traspaso, y
@@ -150,7 +162,7 @@ cada una, es criterio de Alberto.
 Manuel desarrolló el CRM en SU Supabase y SU Vercel; el negocio es de Alberto y hay que traérselo.
 Plan cerrado en `docs/TRASPASO-CORREDURIA.md`. Decisiones: BD → **schema `seguros` en `central`**
 (no un proyecto aparte: principio de BD única de `MATRIZ.md`) con rol `prisma_seguros`; código →
-vertical **`apps/seguros`** (molde `apps/mariscos`, `ignoreCommand` desde el primer commit); free vs.
+vertical **`apps/seguros`** ⚠️ *(nombre SUPERADO el mismo día: la vertical es `apps/asegura` — ver entrada de arriba)* (molde `apps/mariscos`, `ignoreCommand` desde el primer commit); free vs.
 Pro se decide **midiendo el dump**, no con la estimación de ~200 MB (hoy `central` va por ~180/500).
 **No** se transfiere su proyecto Supabase ni se monta MCP/API a medida: para inspeccionar, Manuel
 invita a Alberto a SU organización (el conector de Supabase ya lo ve); para copiar, `pg_dump | psql`
