@@ -36,11 +36,13 @@ import {
   esDocumentoDeCargas,
   fichaLegible,
   mismoAcreedorQueEjecutante,
+  muroDocumental,
   notasDeEdicto,
   pareceEscaneado,
   resumirCargas,
   DIAS_PARA_ARCHIVAR,
   type CuadroCargas,
+  type MuroDocumental,
 } from '@central/module-subastas'
 import { fusionarCuadros, leerDocumento, type LecturaDocumento } from '@/lib/subastas/lector-registral'
 
@@ -99,6 +101,11 @@ export interface ResultadoFicha {
   documentos: DocumentoAdjunto[]
   /** ¿Se llegó a llamar al lector registral (IA) en esta ficha? */
   analisisProfundo: boolean
+  /**
+   * Hasta dónde nos deja ver el Portal la lista de documentos. Con muro,
+   * `documentos` NO es la lista de la subasta: es la que a nosotros nos enseñan.
+   */
+  muro: MuroDocumental
 }
 
 /**
@@ -120,6 +127,12 @@ export async function procesarDocumentosDeFicha(
   }
   // Se listan TODOS (los enlaces son gratis) y se descargan solo los primeros.
   const todos = enlacesDocumentos(html)
+  // 🚨 …TODOS los que el Portal nos deje ver. En muchas fichas el bloque
+  // «Información complementaria» está tras el login, y entonces esta lista es
+  // incompleta o vacía SIN que la subasta carezca de documentos. Se propaga
+  // para que nadie aguas abajo lea ese `[]` como «el BOE no publica nada»
+  // (20/08/2026, SUB-JA-2026-262097).
+  const muro = muroDocumental(html)
 
   // 🚨 El gate de RENTABILIDAD no puede ser también el gate de LECTURA.
   // Si la ficha publica la certificación de cargas, se lee — punto. Una lectura
@@ -201,7 +214,7 @@ export async function procesarDocumentosDeFicha(
     }
   }
 
-  return { notas: [...notas], cuadro: fusionarCuadros(lecturas), leidos, detalle, documentos, analisisProfundo: leerCargas }
+  return { notas: [...notas], cuadro: fusionarCuadros(lecturas), leidos, detalle, documentos, analisisProfundo: leerCargas, muro }
 }
 
 /** Fila mínima que necesita la pasada. */
@@ -242,6 +255,7 @@ export async function procesarDocumentos(max = 10): Promise<{
   conHallazgos: number
   conCargas: number
   analizadas: number
+  conMuro: number
 }> {
   const filas = await prisma.$queryRaw<FilaPendiente[]>(Prisma.sql`
     SELECT dedupe_key, identificador, autoridad, flip_apto, margen_flip_pct, es_playa,
@@ -254,7 +268,16 @@ export async function procesarDocumentos(max = 10): Promise<{
     WHERE fuente = 'boe' AND identificador IS NOT NULL
       AND es_inmueble = true
       AND (fecha_fin IS NULL OR fecha_fin >= now())
-      AND (COALESCE(lector_version, 0) < ${LECTOR_VERSION} OR documentos IS NULL)
+      AND (
+        COALESCE(lector_version, 0) < ${LECTOR_VERSION}
+        OR documentos IS NULL
+        -- Con muro, la lista que tenemos no es la de la subasta: se reintenta
+        -- cada semana por si la autoridad gestora abre los documentos (o por si
+        -- algún día entramos identificados). Sin este límite las fichas con muro
+        -- se quedarían para siempre a la cabeza de la cola y ahogarían a las
+        -- nuevas, que es lo que pasaba con el documentos IS NULL a secas.
+        OR (documentos_muro IN ('total', 'parcial') AND actualizado_en < now() - interval '7 days')
+      )
     ORDER BY fecha_fin ASC NULLS LAST
     LIMIT ${max}
   `)
@@ -262,6 +285,8 @@ export async function procesarDocumentos(max = 10): Promise<{
   let conHallazgos = 0
   let conCargas = 0
   let analizadas = 0
+  /** Fichas cuyos documentos el Portal esconde tras el login (total o parcial). */
+  let conMuro = 0
 
   for (const f of filas) {
     try {
@@ -270,6 +295,7 @@ export async function procesarDocumentos(max = 10): Promise<{
       // hasta haberla bajado). El contador cuenta lo que de verdad se analizó.
       const r = await procesarDocumentosDeFicha(f.identificador, { leerCargas: mereceAnalisisProfundo(f) })
       if (r.analisisProfundo) analizadas++
+      if (r.muro !== 'ninguno') conMuro++
 
       // Con fecha: así el resumen guardado ya marca las anotaciones que por el
       // art. 86 LH podrían estar caducadas (marcar, no descontar).
@@ -308,6 +334,10 @@ export async function procesarDocumentos(max = 10): Promise<{
           valoracion_pactada_anio = COALESCE(${r.cuadro.valoracionPactada?.anio ?? null}, valoracion_pactada_anio),
           documentos_leidos = ${r.leidos},
           documentos = ${JSON.stringify(r.documentos)}::jsonb,
+          -- Se guarda SIEMPRE, también el 'ninguno': es lo que convierte un
+          -- documentos vacío en una afirmación («la ficha estaba entera a la
+          -- vista y no adjunta nada») en vez de en un «no me lo enseñan».
+          documentos_muro = ${r.muro},
           actualizado_en = now()
         WHERE dedupe_key = ${f.dedupe_key}
       `)
@@ -316,7 +346,7 @@ export async function procesarDocumentos(max = 10): Promise<{
     }
   }
 
-  return { revisadas: filas.length, conHallazgos, conCargas, analizadas }
+  return { revisadas: filas.length, conHallazgos, conCargas, analizadas, conMuro }
 }
 
 /**

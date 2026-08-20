@@ -55,8 +55,8 @@ export {
 export type { LoteSurus } from './surus.ts'
 
 // Documentos adjuntos a la ficha del BOE: edictos con texto → señales explícitas
-export { enlacesDocumentos, fichaLegible, datosDeEdicto, notasDeEdicto, viviendaHabitualDeNotas } from './edicto.ts'
-export type { DocumentoFicha, DatosEdicto } from './edicto.ts'
+export { enlacesDocumentos, fichaLegible, muroDocumental, datosDeEdicto, notasDeEdicto, viviendaHabitualDeNotas } from './edicto.ts'
+export type { DocumentoFicha, DatosEdicto, MuroDocumental } from './edicto.ts'
 
 // Extracción de datos desde la descripción registral (tipo, superficie,
 // dirección, finca, dormitorios…) — la materia prima para filtrar de verdad

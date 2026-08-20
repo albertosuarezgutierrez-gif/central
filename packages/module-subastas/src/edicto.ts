@@ -14,6 +14,7 @@
 // Errata REAL vista: «VIVENDA HABITUAL DEL DEMANDADO» (sin la primera I).
 // ────────────────────────────────────────────────────────────────────────────
 import { decodificarHtml } from './email-boe.ts'
+import { norm } from './parsing.ts'
 
 const BASE = 'https://subastas.boe.es/'
 
@@ -60,6 +61,42 @@ export function fichaLegible(html: string, identificador: string): boolean {
   if (!html || !identificador) return false
   const id = identificador.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   return new RegExp(`detalleSubasta\\.php\\?idSub=${id}(&amp;|&)ver=`, 'i').test(html)
+}
+
+/**
+ * Hasta dónde deja VER el Portal los documentos de esta ficha a quien no ha
+ * iniciado sesión.
+ *
+ * 🚨 Caso real (SUB-JA-2026-262097, queja de Alberto el 20/08/2026): la ficha
+ * publica «SUBASTA LOCAL COMERCIAL» y «CERTIFICACIÓN DE CARGAS LOCAL COMERCIAL»,
+ * y la app decía «Cargas no publicadas: pide la certificación registral antes de
+ * pujar». Lo que pasa es que el bloque «Información complementaria» —donde vive
+ * la lista de documentos— el Portal SOLO se lo enseña a los usuarios
+ * identificados en unas subastas y no en otras (lo decide la autoridad gestora).
+ * El cron entra anónimo, recibe un 200 con la ficha entera y CERO enlaces, y ese
+ * «no lo veo» se grababa como «no lo hay». Auditado el mismo día: las 8 subastas
+ * vivas que decían «no publicadas» tenían las tres el muro; NINGUNA carecía de
+ * documentos de verdad.
+ *
+ * `fichaLegible` no lo detecta y no puede: la ficha ES la ficha, con sus datos y
+ * sus pestañas. Lo que falta es el bloque, no la página.
+ *
+ *  · `ninguno` — el Portal enseña la lista entera: un `[]` aquí sí significa
+ *    «esta subasta no adjunta documentos».
+ *  · `parcial` — enseña ALGUNOS y anuncia que hay más tras el login: la lista
+ *    que se lea está incompleta, así que no se puede afirmar que falte nada.
+ *  · `total`   — no enseña ninguno: no sabemos siquiera cuántos hay.
+ */
+export type MuroDocumental = 'ninguno' | 'parcial' | 'total'
+
+export function muroDocumental(html: string): MuroDocumental {
+  // Sin etiquetas y sin entidades: el aviso lleva un <strong> justo en medio
+  // («debe <strong>Iniciar sesión</strong>») y el Portal escribe los acentos
+  // como `&#xF3;`, así que buscar sobre el HTML crudo no encuentra nada.
+  const t = norm(decodificarHtml(html.replace(/<[^>]*>/g, ' ')))
+  if (!/informacion complementaria debe iniciar sesion/.test(t)) return 'ninguno'
+  // «Para consultar MÁS información complementaria…» = ha enseñado algunos.
+  return /consultar mas informacion complementaria/.test(t) ? 'parcial' : 'total'
 }
 
 /** Enlaces a documentos de una ficha del portal (HTML de cualquier pestaña). */

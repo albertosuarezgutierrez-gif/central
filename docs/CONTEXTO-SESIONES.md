@@ -32,6 +32,21 @@
 
 ---
 
+### ⚖️ (20/08/2026) «Cargas no publicadas» con la certificación colgada: el Portal las esconde tras el login
+- Alberto, sobre SUB-JA-2026-262097: «si vienen!! ¿por qué sigue pasando esto?». El BOE publica
+  «SUBASTA LOCAL COMERCIAL» y «CERTIFICACIÓN DE CARGAS», y la ficha decía 🟠 «no publicadas».
+- **Raíz:** el bloque «Información complementaria» solo se enseña con SESIÓN INICIADA en unas subastas.
+  El cron entra anónimo, `enlacesDocumentos` devuelve `[]` (y `fichaLegible` pasa: la ficha ES la ficha),
+  y ese `[]` se grababa como «revisada, el BOE no adjunta nada» + `lector_version` → nunca se reintenta.
+  Medido a mano: **8 de las 13 vivas** decían eso y **las 8 tenían muro; ninguna carecía de documentos**.
+- Fix: `muroDocumental()` (puro) + columna `subastas.documentos_muro` + estado `ocultas_tras_login`
+  («entra con tu usuario», no «ve al Registro»). De paso, `/api/subastas/radar` devolvía el anuncio PELADO:
+  marcar «visto» borraba la documentación de la tarjeta.
+- **PENDIENTE (decisión de Alberto):** (a) ¿dar credenciales del Portal al cron para leer tras el login?
+  (b) SUB-JA-2026-262310 tiene la certificación descargada y sin cuadro: es un escaneo CCITT/JBIG2 con OCR
+  basura (553k chars) → `pareceEscaneado` la da por texto bueno y `localizarJpegs` no ve páginas (solo JPEG).
+  Rescatarla pide rasterizador de PDF, no un ajuste de umbral.
+
 ### 🔧 (20/08/2026) Del latido rojo al MERGE sin humano en medio — reparación automática de agentes
 - Pregunta de Alberto tras el fallo del canal: «¿no hay un agente que revise y repare?». Había quien
   DETECTA (`agentes-latido`, `/auditoria-diaria`) y nadie que REPARE. Dictado: **«lo más automático
