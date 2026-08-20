@@ -4,18 +4,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { parsearCertificadoCierre, parsearFichaBoe, paresFicha, pujasDeFicha, resultadoDeBanner, resultadoDeFicha } from '../src/ficha-boe.ts'
+import { parsearCertificadoCierre, parsearFichaBoe, paresFicha, resultadoDeBanner, resultadoDeFicha } from '../src/ficha-boe.ts'
 import { evaluarOportunidad } from '../src/scoring.ts'
 import type { SubastaInmueble } from '../src/types.ts'
 
 const F = JSON.parse(readFileSync(new URL('./fixtures-ficha.json', import.meta.url), 'utf8')) as {
   general: string; autoridad: string; bien: string
-}
-// Pestaña «Pujas» (`&ver=5`) REAL, descargada el 20/08/2026: los tres estados
-// que publica el Portal, tal cual (SUB-JA-2026-264624 sin pujas,
-// SUB-JA-2026-265014 con pujas y sin sesión, SUB-JA-2026-263425 concluida).
-const P = JSON.parse(readFileSync(new URL('./fixtures-pujas.json', import.meta.url), 'utf8')) as {
-  sinPujas: string; conPujasSinSesion: string; concluidaConImporte: string; secreta: string
 }
 const ficha = parsearFichaBoe(F.general, F.bien, F.autoridad)
 
@@ -114,43 +108,6 @@ test('resultadoDeFicha: la ficha abierta real NO tiene estado → null', () => {
   // paresFicha del fixture real (subasta abierta): no hay clave de estado.
   const g = paresFicha(F.general)
   assert.equal(resultadoDeFicha(g), null)
-})
-
-test('pujasDeFicha: los TRES estados de la pestaña ver=5, con marcado real', () => {
-  // «Revisado, no hay»: el Portal lo AFIRMA, así que sí se puede decir.
-  assert.deepEqual(pujasDeFicha(P.sinPujas), { estado: 'sin_pujas', importe: null, requiereSesion: false })
-  // Hay puja pero el importe está tras el login: NO es un importe desconocido
-  // que valga 0, y tampoco es «sin pujas».
-  assert.deepEqual(pujasDeFicha(P.conPujasSinSesion), { estado: 'hay_pujas', importe: null, requiereSesion: true })
-  // Concluida: el remate en HTML plano, sin tener que abrir el PDF del certificado.
-  assert.deepEqual(pujasDeFicha(P.concluidaConImporte), { estado: 'hay_pujas', importe: 669900, requiereSesion: false })
-})
-
-test('pujasDeFicha: «secreta» es una ausencia DEFINITIVA, no un pendiente', () => {
-  // 3 de las 13 subastas vivas el 20/08/2026 llevan la puja declarada secreta
-  // por la autoridad gestora. No se sabrá ni con sesión iniciada: tratarlo como
-  // «sin comprobar» prometería una pasada futura que nunca traerá el dato, y
-  // tratarlo como «sin pujas» sería directamente falso.
-  assert.deepEqual(pujasDeFicha(P.secreta), { estado: 'secreta', importe: null, requiereSesion: false })
-})
-
-test('pujasDeFicha: lo que NO es la pestaña de pujas no afirma nada', () => {
-  // LA REGRESIÓN QUE ESTO FIJA: el parser anterior miraba la pestaña GENERAL,
-  // que no publica pujas jamás — y su `null` perpetuo se leía aguas abajo como
-  // «nadie ha pujado». Una página que no es `ver=5` es «no lo he mirado».
-  assert.deepEqual(pujasDeFicha(F.general), { estado: 'no_publicado', importe: null, requiereSesion: false })
-  assert.equal(pujasDeFicha('<html><body>Servicio no disponible</body></html>').estado, 'no_publicado')
-  // Y un bloque de pujas que no dice ninguna de las tres cosas tampoco inventa.
-  assert.equal(pujasDeFicha('<h3>Pujas</h3><div id="idBloqueDatos8"><h4>Puja m&#xE1;xima</h4></div>').estado, 'no_publicado')
-})
-
-test('pujasDeFicha: el importe de OTRA pestaña no se cuela como puja', () => {
-  // «Puja mínima» y «Tramos entre pujas» son las REGLAS del remate: si el
-  // recorte del bloque fallara, 3.300,00 € entraría como si alguien hubiera pujado.
-  const mezcla = `<h3>Datos</h3><table><tr><th>Tramos entre pujas</th><td>3.300,00 &#x20AC;</td></tr></table>` +
-    `<h3>Pujas</h3><div id="idBloqueDatos8"><h4>Puja m&#xE1;xima actual de la subasta</h4>` +
-    `<p class="centrador">La subasta no ha recibido pujas.</p></div>`
-  assert.deepEqual(pujasDeFicha(mezcla), { estado: 'sin_pujas', importe: null, requiereSesion: false })
 })
 
 test('resultadoDeFicha: estados concluidos plausibles se clasifican, celebrándose no', () => {

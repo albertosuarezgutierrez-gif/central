@@ -103,24 +103,19 @@ export interface SubastaInmueble {
   /**
    * IMPORTE de la puja más alta vista. Solo es público en las CONCLUIDAS (o en
    * vivo con sesión iniciada en el Portal): `null` = importe no publicado, que
-   * NO es «sin pujas» — para eso está `hayPujas`.
+   * NO es «sin pujas» — para eso está `pujasEstado`.
    */
   mejorPuja?: number | null
   /**
-   * ¿Ha pujado alguien? Lo publica la pestaña «Pujas» (`ver=5`) del Portal, y
-   * es el único dato de competencia que se ve sin estar registrado. TRES
-   * estados: `undefined`/`null` = no se ha mirado · `false` = el Portal afirma
-   * que no ha recibido pujas · `true` = hay al menos una.
+   * Estado de las pujas leído de la pestaña «Pujas» (`ver=5`), el único dato de
+   * competencia visible sin estar registrado. Los cuatro valores de
+   * `EstadoPujas` (`pujas.ts`): `sin_pujas` · `con_puja` · `secretas` ·
+   * `desconocido`. `null`/`undefined` = nunca se ha mirado, que tampoco es
+   * «sin pujas».
    */
-  hayPujas?: boolean | null
+  pujasEstado?: string | null
   /** Cuándo se miró por última vez la pestaña de pujas. */
   pujasAt?: string | null
-  /**
-   * `true` = la autoridad gestora declaró las pujas SECRETAS. Es una ausencia
-   * DEFINITIVA: `hayPujas` se quedará en `null` para siempre y no hay nada
-   * pendiente de mirar. Distinguirlo evita prometer un dato que no llegará.
-   */
-  pujasSecretas?: boolean | null
 
   /**
    * Euros que cabe esperar de remate según los remates REALES ya capturados

@@ -56,6 +56,8 @@ export async function clasificarSubastas(max = 400): Promise<{ revisadas: number
       f.notas_edicto ?? null,
       Array.isArray(f.documentos) ? f.documentos : null,
       (f.fuente ?? 'boe') === 'boe',
+      // Y el muro del Portal: con él, una lista vacía no es «no hay documentos».
+      f.documentos_muro ?? 'ninguno',
     )
     // Techo de puja para un 25% de descuento REAL — el mismo que pinta la ficha.
     // Se CONGELA aquí: cuando la subasta concluya, esta fila deja de entrar en la

@@ -9,7 +9,7 @@ import { tgSend, tgSendButtons } from '@central/core-telegram'
 import { prisma } from '@/lib/db'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { eur } from '@/lib/dinero'
-import { decidirAviso, esEmpresaInmobiliaria, umbralesPuja, zonaPreferenteDe } from '@central/module-subastas'
+import { decidirAviso, esEmpresaInmobiliaria, titularPujas, umbralesPuja, zonaPreferenteDe, type EstadoPujas } from '@central/module-subastas'
 import { RADAR_CON_CORPUS, RADAR_VIGENTE } from '@/lib/subastas-radar'
 
 export const dynamic = 'force-dynamic'
@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
              -- Competencia y realidad: si ya ha pujado alguien (pestaña ver=5
              -- del Portal) y a cuánto se remata DE VERDAD en la zona. Sin esto
              -- el aviso solo sabía de teoría.
-             s.hay_pujas, s.pujas_at, s.pujas_secretas, s.mejor_puja, s.remate_esperado, s.remate_ratio,
+             s.pujas_estado, s.pujas_estado_at, s.mejor_puja, s.remate_esperado, s.remate_ratio,
              s.remate_muestra, s.techo_fiable, s.techo_motivo
       ${RADAR_CON_CORPUS}
       WHERE r.avisado_at IS NULL
@@ -206,17 +206,16 @@ export async function GET(req: NextRequest) {
       }
       // Pujas: TRES estados. El silencio no se puede leer como «nadie ha
       // pujado», así que solo se dice algo cuando el Portal lo ha dicho.
-      if (p.pujas_secretas === true) {
-        // Ausencia definitiva: se dice y no se vuelve a prometer.
-        lineas.push('🔒 Pujas <b>secretas</b> por decisión del juzgado: no se sabrá si hay competencia')
-      } else if (p.hay_pujas === true) {
-        lineas.push(
-          p.mejor_puja != null
-            ? `🔥 <b>Ya hay pujas</b>: ${escapar(eur(Number(p.mejor_puja)))}`
-            : '🔥 <b>Ya hay pujas</b> (el Portal no publica el importe sin sesión)',
+      // Pujas: los cuatro estados del Portal, con el titular común del módulo
+      // (`titularPujas`) para que el aviso diario y el de cierre digan lo mismo.
+      // `desconocido`/NULL no dice nada: el silencio no es «nadie ha pujado».
+      if (p.pujas_estado != null && p.pujas_estado !== 'desconocido') {
+        const titular = titularPujas(
+          { estado: p.pujas_estado as EstadoPujas, importe: p.mejor_puja == null ? null : Number(p.mejor_puja) },
+          eur,
+          p.valor_subasta == null ? null : Number(p.valor_subasta),
         )
-      } else if (p.hay_pujas === false) {
-        lineas.push('🟢 Todavía nadie ha pujado' + (p.pujas_at ? escapar(` (visto el ${new Date(p.pujas_at).toLocaleDateString('es-ES')})`) : ''))
+        lineas.push(escapar(titular) + (p.pujas_estado_at ? escapar(` (visto el ${new Date(p.pujas_estado_at).toLocaleDateString('es-ES')})`) : ''))
       }
       // Lo que se paga de verdad en la zona, con su muestra: el tipo de salida
       // no dice lo que costará rematar.

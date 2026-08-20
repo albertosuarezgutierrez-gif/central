@@ -55,8 +55,10 @@ export {
 export type { LoteSurus } from './surus.ts'
 
 // Documentos adjuntos a la ficha del BOE: edictos con texto → señales explícitas
-export { enlacesDocumentos, fichaLegible, datosDeEdicto, notasDeEdicto, viviendaHabitualDeNotas } from './edicto.ts'
-export type { DocumentoFicha, DatosEdicto } from './edicto.ts'
+export { pujasDeFicha, titularPujas } from './pujas.ts'
+export type { EstadoPujas, PujasFicha } from './pujas.ts'
+export { enlacesDocumentos, fichaLegible, muroDocumental, datosDeEdicto, notasDeEdicto, viviendaHabitualDeNotas } from './edicto.ts'
+export type { DocumentoFicha, DatosEdicto, MuroDocumental } from './edicto.ts'
 
 // Extracción de datos desde la descripción registral (tipo, superficie,
 // dirección, finca, dormitorios…) — la materia prima para filtrar de verdad
@@ -79,8 +81,8 @@ export {
 export type { UbicacionSubasta } from './geo.ts'
 
 // Ficha del Portal de Subastas (las CIFRAS) y Catastro (superficie, año, uso)
-export { parsearFichaBoe, paresFicha, resultadoDeFicha, resultadoDeBanner, parsearCertificadoCierre, pujasDeFicha } from './ficha-boe.ts'
-export type { FichaBoe, ResultadoSubasta, CierreCertificado, EstadoPujas, ObservacionPujas } from './ficha-boe.ts'
+export { parsearFichaBoe, paresFicha, resultadoDeFicha, resultadoDeBanner, parsearCertificadoCierre } from './ficha-boe.ts'
+export type { FichaBoe, ResultadoSubasta, CierreCertificado } from './ficha-boe.ts'
 export {
   parsearCatastro, errorCatastro, superficieUtil, parsearCoordenadas,
   refParcela, direccionCatastro, parsearInmueblesDnploc, parcelaUnica, paramsDnploc,

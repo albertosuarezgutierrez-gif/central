@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-20T08:31:44Z",
+  "generadoEn": "2026-08-20T12:33:44Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -728,7 +728,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 36
+        "evidencias": 38
       },
       "rrhh": {
         "estado": "usado",
@@ -1736,7 +1736,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 29
+        "evidencias": 31
       },
       "rrhh": {
         "estado": "no",
@@ -3805,6 +3805,8 @@
       "/api/internal/alerta",
       "/api/internal/latido",
       "/api/internal/mapa-arquitectura",
+      "/api/internal/reclamar-reparacion",
+      "/api/internal/reparacion-resultado",
       "/api/negocios",
       "/api/negocios/[id]",
       "/api/operador/flota-mapa",
@@ -4240,6 +4242,7 @@
     ],
     "plataforma": [
       "agente_latidos",
+      "agente_reparaciones",
       "agente_salud",
       "ai_usos",
       "ayudas_perfiles",
@@ -4533,6 +4536,30 @@
   ],
   "novedades": [
     {
+      "titulo": "Probar antes de mergear cazó DOS bugs que `tsc` y `next build` dan por buenos:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Raíz:",
+      "fecha": ""
+    },
+    {
+      "titulo": "PENDIENTE (decisión de Alberto):",
+      "fecha": ""
+    },
+    {
+      "titulo": "Dos reglas del disparador:",
+      "fecha": ""
+    },
+    {
+      "titulo": "El gate es una PRUEBA, no CI:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Cierre (mismo día):",
+      "fecha": ""
+    },
+    {
       "titulo": "El cron `/api/sivra/pricing/canal` reventó entero",
       "fecha": ""
     },
@@ -4566,30 +4593,6 @@
     },
     {
       "titulo": "Verificado en producción tras mergear #1521",
-      "fecha": ""
-    },
-    {
-      "titulo": "Mascotas: NO se admiten.",
-      "fecha": ""
-    },
-    {
-      "titulo": "«Bercell» se queda fuera",
-      "fecha": ""
-    },
-    {
-      "titulo": "Hallazgo (carril 2, PR aparte):",
-      "fecha": ""
-    },
-    {
-      "titulo": "0 fugas del raíl en las 351 fechas escritas hoy, en los 4 pisos.",
-      "fecha": ""
-    },
-    {
-      "titulo": "La regla que gobierna todo:",
-      "fecha": ""
-    },
-    {
-      "titulo": "🚨 Lección de CI (misma sesión):",
       "fecha": ""
     }
   ],
@@ -5000,7 +5003,7 @@
     "packages": 37,
     "capacidades": 23,
     "skills": 32,
-    "apis": 1170,
+    "apis": 1172,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

@@ -32,22 +32,75 @@
 
 ---
 
-### 🔨 (20/08/2026) Las PUJAS existían y las mirábamos donde no están — y el remate real ya decide
-- Pregunta de Alberto: «¿en las subastas se indican las pujas y el precio de cierre? ¿lo guardamos?».
-  El **precio de cierre sí** (`resultado`+`importe_adjudicacion`, 8 de 13 concluidas). Las **pujas no**:
-  `mejor_puja` llevaba desde el 08/08 con **0 filas** por dos fallos: `mejorPujaViva` leía la pestaña
-  GENERAL (que no publica pujas jamás) y solo vigilaba `subastas_seguidas`, que está **vacía**.
-- Las pujas viven en **`detalleSubasta.php?…&ver=5`**. CUATRO estados, verificados contra el Portal:
-  «no ha recibido pujas» (revisado, no hay) · «ha recibido alguna puja» sin importe (exige sesión) ·
-  **«es secreta»** (ausencia DEFINITIVA, 3 de 13 vivas) · importe visible (concluida, sin abrir el PDF).
-  `pujasDeFicha` + `subastas_pujas_obs` (serie temporal) + `hay_pujas`/`pujas_secretas`.
-- **El agente ya avisa del desenlace** (`avisarDesenlaces`): antes el remate entraba en la BD en
-  silencio. Segunda pasada del cron a las 20:30 Madrid para contarlo **el día del cierre**.
-- **La calibración por fin decide**: `remateEsperado`/`revisarTecho` (puros) convierten los remates
-  reales en euros y destapan techos absurdos (Dos Hermanas: tipo 739.210,43€, «techo» 887.052,43€).
-  Mediana global: **64% del tipo**; en Sevilla capital 2x y 4x — el tipo NO es el valor de mercado.
-- Cantabria **no estaba** en `subastas_criterios` pese a los avisos que dio de alta Alberto: añadida.
-- Pendiente: `PORTAL_SUBASTAS_COOKIE` (opcional) para ver el IMPORTE en vivo — Alberto tiene cuenta.
+### 🛡️ (20/08/2026) Traspaso del CRM de correduría de Manuel Suárez — runbook, BLOQUEADO en Fase 0
+Manuel desarrolló el CRM en SU Supabase y SU Vercel; el negocio es de Alberto y hay que traérselo.
+Plan cerrado en `docs/TRASPASO-CORREDURIA.md`. Decisiones: BD → **schema `seguros` en `central`**
+(no un proyecto aparte: principio de BD única de `MATRIZ.md`) con rol `prisma_seguros`; código →
+vertical **`apps/seguros`** (molde `apps/mariscos`, `ignoreCommand` desde el primer commit); free vs.
+Pro se decide **midiendo el dump**, no con la estimación de ~200 MB (hoy `central` va por ~180/500).
+**No** se transfiere su proyecto Supabase ni se monta MCP/API a medida: para inspeccionar, Manuel
+invita a Alberto a SU organización (el conector de Supabase ya lo ve); para copiar, `pg_dump | psql`
+(un MCP perdería índices, secuencias, constraints y triggers). **GitHub va aparte:** el código entra
+sin historia git y su repo original se TRANSFIERE a Alberto y se archiva como museo.
+La petición a Manuel se plantea en dos opciones — **A (recomendada): tres accesos, ~5 min de su
+tiempo**, todo lo demás lo hace Claude; B: lista de tareas, si no quiere dar ese acceso.
+🚨 **La transferencia del repo va LA ÚLTIMA**: rompe la conexión git de su Vercel y le tumba el
+despliegue, que debe seguir vivo para la comparación lado a lado. Anticipados tres límites reales
+(org de Supabase con otros clientes · Vercel Hobby no admite miembros · repo en organización ajena),
+ninguno bloqueante: cada uno cae a su fila de la opción B.
+No confundir con `/correduria` de plataforma, que es la contabilidad de comisiones y NO se toca:
+esa ambigüedad queda enrutada en la skill `central-maestro` (+ fila en `docs/FUENTES-DE-VERDAD.md`),
+con el aviso de que «no está en el repo» ≠ «no existe» (lección de la landing de House Sevillana).
+Pendiente: el mensaje a Manuel está redactado en el doc pero **lo envía Alberto** — hasta entonces
+no se puede avanzar de fase.
+### 🔨 (20/08/2026) Las subastas ya cuentan CÓMO ACABARON, y el techo de puja se contrasta con remates reales
+- Sesión paralela a la de #1537 (mismo día, mismo tema): las dos leyeron el Portal y llegaron a la
+  MISMA conclusión sobre `ver=5`. #1537 entró antes en `main`, así que **este PR se reconcilió sobre
+  él**: fuera el `pujasDeFicha` duplicado de `ficha-boe.ts` y fuera las columnas `hay_pujas`/
+  `pujas_secretas` — manda el contrato de #1537 (`pujas_estado` con sus cuatro estados).
+- Lección: dos agentes sobre el mismo tema el mismo día producen dos verdades para el mismo hecho.
+  Lo caro no es el trabajo repetido, son **dos columnas que dicen lo mismo** y se desincronizan.
+- Lo que aporta este PR encima: **`subastas_pujas_obs`** (serie temporal; el Portal solo publica el
+  estado de HOY, así que «cuándo entró la primera puja» solo se responde con histórico propio),
+  **`avisarDesenlaces`** (el remate se capturaba en silencio desde julio: ahora se cuenta por Telegram
+  con el remate contra el tipo EN EUROS y si nuestro techo habría ganado), y **`remate.ts`**
+  (`remateEsperado`/`revisarTecho`) que convierte la calibración en euros por fila.
+- El caso que lo justifica: Dos Hermanas, tipo 739.210,43€ y «techo» calculado de **887.052,43€**
+  sobre la mediana del municipio. Ahora sale como `techo_fiable=false`, no como recomendación.
+- Muestra real: mediana del **64% del tipo**, ninguna desierta; Sevilla capital a 2x y 4x.
+- Cantabria no estaba en `subastas_criterios` pese a los avisos de Alberto: añadida.
+
+### 🔔 (20/08/2026) El aviso de cierre de subastas no había sonado NUNCA — y las pujas se leían de la pestaña equivocada
+- Alberto: «que el agente me avise el día antes con cómo van las pujas». Auditoría: 19 filas en el radar,
+  18 avisadas, **0 seguidas** — y TODO el cron `subastas-cierre` colgaba de `subastas_seguidas`, que exige
+  pulsar «👀 Seguir». Nunca se disparó (`mejor_puja_at` sin estrenar en las 26 filas).
+- `mejorPujaViva` leía la pestaña GENERAL, donde solo están la puja MÍNIMA y los tramos → nunca encontró nada.
+  La pestaña `ver=5` sí lo dice: medido en las 13 vivas, **5 sin pujas · 5 con puja de importe oculto · 3
+  secretas**. El importe solo se publica al CONCLUIR (y ahí sí: 8 remates reales, mediana **0,64× el tipo** —
+  pero **Sevilla va a 1,42×**, con un 165.000€ → 669.900€ verificado a mano).
+- Hecho: `pujasDeFicha` (4 estados, `desconocido` nunca es «sin pujas») + `pujas_estado` + avisos sobre el
+  RADAR con **dos ventanas**: «prepara el depósito» a 5 días (el cuello de botella es el dinero: el Portal
+  llega a pedir el 20%) y «últimas 24 h». Con ratio de remate de SU provincia y suelo del art. 670.
+- **Probar antes de mergear cazó DOS bugs que `tsc` y `next build` dan por buenos:** tres columnas que el
+  cron lee y faltaban en `COLS_SUBASTA` (filas `$queryRaw` = `any` → aviso MUDO con el dato en la BD; ahora
+  lo vigila `cols-subasta.test.ts`) y un `SELECT DISTINCT … ORDER BY` fuera del SELECT (**42P10**, el vigía
+  moría en cada pasada). Regla: **el SQL de un cron nuevo se ejecuta contra la BD real antes de mergear.**
+- Pendiente: llevar el estado de pujas a la ficha de `/subastas`; registrar el MOTIVO del descarte.
+
+### ⚖️ (20/08/2026) «Cargas no publicadas» con la certificación colgada: el Portal las esconde tras el login
+- Alberto, sobre SUB-JA-2026-262097: «si vienen!! ¿por qué sigue pasando esto?». El BOE publica
+  «SUBASTA LOCAL COMERCIAL» y «CERTIFICACIÓN DE CARGAS», y la ficha decía 🟠 «no publicadas».
+- **Raíz:** el bloque «Información complementaria» solo se enseña con SESIÓN INICIADA en unas subastas.
+  El cron entra anónimo, `enlacesDocumentos` devuelve `[]` (y `fichaLegible` pasa: la ficha ES la ficha),
+  y ese `[]` se grababa como «revisada, el BOE no adjunta nada» + `lector_version` → nunca se reintenta.
+  Medido a mano: **8 de las 13 vivas** decían eso y **las 8 tenían muro; ninguna carecía de documentos**.
+- Fix: `muroDocumental()` (puro) + columna `subastas.documentos_muro` + estado `ocultas_tras_login`
+  («entra con tu usuario», no «ve al Registro»). De paso, `/api/subastas/radar` devolvía el anuncio PELADO:
+  marcar «visto» borraba la documentación de la tarjeta.
+- **PENDIENTE (decisión de Alberto):** (a) ¿dar credenciales del Portal al cron para leer tras el login?
+  (b) SUB-JA-2026-262310 tiene la certificación descargada y sin cuadro: es un escaneo CCITT/JBIG2 con OCR
+  basura (553k chars) → `pareceEscaneado` la da por texto bueno y `localizarJpegs` no ve páginas (solo JPEG).
+  Rescatarla pide rasterizador de PDF, no un ajuste de umbral.
 
 ### 🔧 (20/08/2026) Del latido rojo al MERGE sin humano en medio — reparación automática de agentes
 - Pregunta de Alberto tras el fallo del canal: «¿no hay un agente que revise y repare?». Había quien
@@ -73,8 +126,15 @@
   consulta `agente_reparaciones` antes de abrir carril 2 (no duplicar parche sobre un intento vivo) y el
   reparador queda registrado en `docs/SKILLS.md` para el `agentes-entrenador`, avisando de que su
   comportamiento es CÓDIGO TESTEADO, no un prompt, y de que su silencio no prueba que corriera.
-- ⏳ **Pendiente de Alberto: añadir el secret `ALERTA_TOKEN` al repo en GitHub Actions** (`PLATAFORMA_URL`,
-  `AI_GATEWAY_SECRET` y `GH_PAT_TRIGGER` ya están). Sin él, `latido-reparar.yml` muere en su primer paso.
+- 🔑 **Ese «pendiente de Alberto» se cerró solo, y el intento de cerrarlo destapó algo que hay que
+  recordar: el `ALERTA_TOKEN` de Vercel está marcado Sensitive** — escritura sin lectura, no lo
+  devuelve ni el dashboard ni la API, así que **su valor no se puede recuperar de ningún sitio**. Y
+  rotarlo para copiarlo a GitHub habría desincronizado de golpe TODAS las Rutinas de claude.ai/code,
+  que lo llevan escrito en el prompt (es la avería del 19/07/2026 del agente de trading, y la
+  variable de Vercel lleva justo esa fecha). Salida: `latido-reparar.yml` pide
+  `secrets.ALERTA_TOKEN || secrets.CRON_SECRET` — los dos endpoints usan `isRoutineAuthorized`, que
+  acepta ambos, y `CRON_SECRET` ya estaba en los secrets del repo. **No contradice el token estrecho:**
+  este existe porque las Rutinas corren con las variables a la vista; los secrets de Actions no.
 
 ### 🧨 (20/08/2026) `date - bigint`: el calibrado del canal murió en su primera pasada real — y tapaba un suelo apagado
 - **El cron `/api/sivra/pricing/canal` reventó entero** (42883, `operator does not exist: date - bigint`)
