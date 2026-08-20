@@ -10,7 +10,14 @@
 
 **Alcance:** Entrega 1 del spec `docs/superpowers/specs/2026-08-20-agente-huesped-autonomo-design.md` (§3, §5, §10, §11) **más** la ventana de 7 días de §6. La ventana se adelanta a esta entrega a propósito: la categoría `checkin` ya está graduada y auto-envía, así que sin el filtro una pregunta de check-in a tres meses vista podría soltar la caja de llaves sin que nadie lo revise.
 
-**Fuera de esta entrega:** detector de conflictos guía↔override (§4), nueva regla de autonomía (§7), hechos permanentes (§8), minería del histórico (§9).
+**Fuera de esta entrega:** el AVISO del detector de conflictos guía↔override (§4), nueva regla de autonomía (§7), hechos permanentes (§8), minería del histórico (§9).
+
+**Añadido sobre la marcha (§4, precedencia):** la PRECEDENCIA sí entra en esta entrega, aunque el aviso
+no. Al verificar contra el catálogo real del Dúplex se vio que la sección `PARKING` de la guía —que
+promete el aparcamiento de Plaza San Juan de la Palma a 20 €/día— entraría al prompt y contradiría el
+override de `parking.ts` («no hay plaza», confirmado por Alberto el 20/08/2026), **auto-enviándose**
+porque `parking` es categoría graduada. `esSeccionPisada()` la excluye y `seccionesVigentes` devuelve
+las secciones pisadas en `pisadas` para que la Entrega 2 pueda avisar del choque en vez de callarlo.
 
 ---
 

@@ -189,6 +189,14 @@ export async function decidir(ctx: Contexto, pregunta: string, categoria: string
     ? `\nRESEÑA: el huésped se está despidiendo. Cierra tu respuesta con UNA sola frase amable y nada insistente invitándole a dejar una reseña de su estancia en ${ctx.portal || 'la plataforma donde reservó'} — a un alojamiento pequeño le ayuda muchísimo. No ofrezcas nada a cambio, no pidas que sea positiva y no lo conviertas en un párrafo comercial.`
     : ''
 
+  // Falta más de una semana para la llegada y la guía SÍ tiene instrucciones de acceso, pero aún no
+  // toca darlas: la política de Alberto es mandarlas una semana antes, porque se reserva y se cancela.
+  // No es un hueco de información — la respuesta correcta es la que ya promete la plantilla de
+  // confirmación de Smoobu, así que el agente puede darla sin escalar.
+  const accesoBlock = ctx.guiaAccesoOculto
+    ? `\nCLAVES DE ACCESO: todavía NO se le pueden dar las instrucciones de entrada, porque faltan más de 7 días para su llegada. Si pregunta por las llaves, por códigos o por cómo entrar, dile con naturalidad que le enviaremos toda la información para recoger las llaves UNA SEMANA ANTES de su llegada. NO te inventes códigos, cajas de llaves ni instrucciones de acceso, y NO le digas que no lo sabes: sí lo sabemos, es que aún no toca.`
+    : ''
+
   const system = `Eres el asistente de atención al huésped de ${ctx.property} (alquiler turístico en ${ctx.zona}).
 Huésped: ${ctx.guestName} · llegada ${ctx.checkIn} · salida ${ctx.checkOut} · canal ${ctx.portal}.${horario}
 Responde SIEMPRE en ${LANG_NAME[ctx.lang] || 'English'} con un tono cálido, cercano y natural, como una persona real escribiendo a mano (no un folleto ni una plantilla). Saluda al huésped por su nombre.
@@ -200,7 +208,7 @@ Ajusta la longitud al mensaje: si solo agradece, felicita o hace un comentario b
 
 INFORMACIÓN DISPONIBLE (única fuente de verdad; NO inventes nada que no esté aquí):
 ${ctx.ficha || '(sin ficha)'}
-${ctx.guia ? `\nGUÍA DEL HUÉSPED:\n${ctx.guia}` : ''}
+${ctx.guia ? `\nGUÍA DEL HUÉSPED:\n${ctx.guia}` : ''}${accesoBlock}
 
 ${aprend ? `EJEMPLOS DE RESPUESTAS APROBADAS POR EL ANFITRIÓN (imítalos en tono y criterio):\n${aprend}\n` : ''}
 ${earlyBlock}

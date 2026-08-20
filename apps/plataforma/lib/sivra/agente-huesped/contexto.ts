@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { smoobuFetch } from '@/lib/smoobu'
 import { getGuiaPiso } from './guia'
+import { htmlATexto, seccionesVigentes, seccionesATexto } from './guest-app'
+import { dedupHilo } from './hilo'
 import { horarioPiso } from './horarios'
 import { nocheAnteriorLibre, restarDias, entradaMismoDiaLibre, sumarDias } from './disponibilidad'
 import { setEnviados, corregirAtribucion, atribuirEmisor } from './atribucion'
@@ -34,7 +36,9 @@ export type Contexto = {
   zona: string
   direccion: string
   ficha: string           // ficha ESTRUCTURADA del piso (datos oficiales de Smoobu)
-  guia: string | null
+  guia: string | null     // guía REAL del piso, ya filtrada por lo que hoy se le puede enseñar
+  guiaCargada: boolean    // false = NO SE PUDO LEER. NO significa "no hay guía" (CLAUDE.md, tres estados)
+  guiaAccesoOculto: boolean  // hay secciones de llaves/códigos pero aún no toca (faltan >7 días)
   historial: MensajeHist[]
   enviados: Set<string>   // respuestas que YA enviamos (normalizadas) — para no respondernos a nosotros
   aprendizajes: Aprendizaje[]
@@ -68,11 +72,24 @@ export async function construirContexto(bookingId: string, lang: string): Promis
 
   const msgRaw: any[] = await smoobuFetch(`/api/reservations/${bookingId}/messages`, { cache: 'no-store' })
     .then(r => r.json()).then(d => (Array.isArray(d?.messages) ? d.messages : Array.isArray(d) ? d : [])).catch(() => [])
-  const historialRaw: MensajeHist[] = msgRaw.map(m => ({
-    id: String(m.id || m.created_at || ''),
-    from: atribuirEmisor(m),   // `type`/`sent_by_owner` nativos de Smoobu (no solo `sent_by_owner`)
-    text: strip(m.message || m.text || ''), ts: m.created_at || '',
-  })).filter(m => m.text)
+  // El texto PLANO de Smoobu (`message`) se come los enlaces: los automáticos traen anclas cuyo texto
+  // visible es "AQUÍ"/"HERE" y la URL solo está en `htmlMessage`. Leer el plano es lo que hizo que el
+  // agente le escribiera el marcador literal "[lien d'accès]" a un huésped (20/08/2026) teniendo el
+  // enlace en el hilo. El ASUNTO también importa: "WHERE TO COLLECT THE KEYS?" es la mitad del mensaje.
+  // OJO con la fecha: Smoobu la manda en `createdAt` (camelCase). Leer solo `created_at` dejaba el `ts`
+  // VACÍO en todo el historial → el guard anti-duplicado `ya_respondido` del orquestador no podía
+  // comparar nada y se colaban propuestas repetidas para la misma pregunta.
+  const historialRaw: MensajeHist[] = msgRaw.map(m => {
+    const html = String(m.htmlMessage || '')
+    const cuerpo = html ? htmlATexto(html) : strip(m.message || m.text || '')
+    const asunto = String(m.subject || '').trim()
+    return {
+      id: String(m.id || m.createdAt || m.created_at || ''),
+      from: atribuirEmisor(m),   // `type`/`sent_by_owner` nativos de Smoobu (no solo `sent_by_owner`)
+      text: asunto ? `${asunto}\n${cuerpo}`.trim() : cuerpo,
+      ts: m.created_at || m.createdAt || '',
+    }
+  }).filter(m => m.text)
 
   // Lo que YA enviamos al huésped (ground truth). Smoobu no siempre marca el emisor (`sent_by_owner`
   // vacío), así que nuestra propia respuesta puede reaparecer en el hilo como si fuera del huésped.
@@ -84,9 +101,20 @@ export async function construirContexto(bookingId: string, lang: string): Promis
     ORDER BY created_at DESC LIMIT 30
   `).catch(() => [])
   const enviados = setEnviados(enviadosRows.map((r: { respuesta: string }) => r.respuesta))
-  const historial = corregirAtribucion(historialRaw, enviados)
+  // Smoobu manda cada automático POR DUPLICADO (8 de los 25 mensajes del hilo de la reserva
+  // 152291091 eran copias) y esas copias se comían la ventana de contexto del modelo.
+  const historial = dedupHilo(corregirAtribucion(historialRaw, enviados))
 
-  const guia = await getGuiaPiso(propertyId, bookingId)
+  // Guía REAL del piso (guest app de Smoobu), filtrada por lo que HOY se le puede enseñar a este
+  // huésped: vigencia declarada por Smoobu + ventana de 7 días para llaves y códigos.
+  const guiaPiso = await getGuiaPiso(propertyId, bookingId)
+  const hoyMadrid = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' })
+  const vigentes = seccionesVigentes(guiaPiso.secciones, {
+    hoy: hoyMadrid,
+    checkIn: String(reserva?.arrival || ''),
+    checkOut: String(reserva?.departure || ''),
+  })
+  const guia = seccionesATexto(vigentes.secciones) || null
 
   const aprendizajes = await prisma.$queryRaw<Aprendizaje[]>(Prisma.sql`
     SELECT categoria, pregunta_norm, respuesta_final FROM mensajes_aprendizaje
@@ -175,6 +203,7 @@ export async function construirContexto(bookingId: string, lang: string): Promis
     lateCheckoutPosible, lateCheckoutChequeado,
     lat: apt?.location?.latitude ?? null, lng: apt?.location?.longitude ?? null,
     zona: [apt?.location?.city, apt?.location?.country].filter(Boolean).join(', ') || 'Sevilla, España',
-    direccion, ficha, guia, historial, enviados, aprendizajes,
+    direccion, ficha, guia, guiaCargada: guiaPiso.cargada, guiaAccesoOculto: vigentes.accesoOculto,
+    historial, enviados, aprendizajes,
   }
 }

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert'
-import { hiloComoMensajes } from './hilo.ts'
+import { hiloComoMensajes, dedupHilo } from './hilo.ts'
 
 const H = (from: 'guest' | 'host', text: string) => ({ id: text, from, text, ts: '' })
 
@@ -35,4 +35,23 @@ test('cap a los N más recientes', () => {
 
 test('historial vacío → array vacío', () => {
   assert.deepEqual(hiloComoMensajes([], 'hola'), [])
+})
+
+const M = (from: 'guest' | 'host', text: string, ts: string) => ({ id: `${text}-${ts}`, from, text, ts })
+
+test('quita el automático duplicado que manda Smoobu por partida doble', () => {
+  const out = dedupHilo([
+    M('host', 'Booking Confirmation', '2026-08-20 13:30:20'),
+    M('host', 'Booking Confirmation', '2026-08-20 13:30:20'),
+    M('guest', 'gracias', '2026-08-20 13:31:00'),
+  ])
+  assert.equal(out.length, 2)
+})
+
+test('no toca una repetición legítima horas después', () => {
+  const out = dedupHilo([
+    M('guest', '¿hola?', '2026-08-20 10:00:00'),
+    M('guest', '¿hola?', '2026-08-20 14:00:00'),
+  ])
+  assert.equal(out.length, 2)
 })

@@ -127,6 +127,13 @@ test('sin periodos declarados la sección se considera siempre vigente', () => {
   assert.equal(r.secciones.length, 1)
 })
 
+test('la sección de parking de la guía NO entra: manda nuestra regla de negocio', () => {
+  const PARKING = S('PARKING', [2, 4], false)
+  const r = seccionesVigentes([PARKING, BARES], { hoy: '2026-08-21', checkIn: '2026-08-20', checkOut: '2026-08-22' })
+  assert.deepEqual(r.secciones.map(s => s.titulo), ['BARES'])
+  assert.deepEqual(r.pisadas, ['PARKING'])
+})
+
 // ── seccionesATexto ─────────────────────────────────────────────────────────
 test('renderiza cada sección con su título como cabecera', () => {
   const txt = seccionesATexto([

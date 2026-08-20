@@ -94,6 +94,18 @@ export function normalizarSecciones(crudo: unknown): SeccionGuia[] {
   return out
 }
 
+// Temas donde MANDA una regla nuestra, no la guía. Hoy solo el parking: la guía de Smoobu (y la
+// plantilla de confirmación) siguen prometiendo el aparcamiento de Plaza San Juan de la Palma a
+// 20 €/día, pero Alberto confirmó el 20/08/2026 que YA NO HAY plaza y que se responde con los
+// parkings públicos cercanos (`parking.ts`). Si esa sección entrara al prompt, el agente ofrecería
+// un servicio inexistente — y encima solo, porque `parking` es categoría graduada.
+// Se devuelven aparte (`pisadas`) para poder avisar del choque en vez de resolverlo en silencio.
+const RE_SECCION_PISADA = /\b(parking|aparcamiento|garaje|estacionamiento)\b/i
+
+export function esSeccionPisada(titulo: string): boolean {
+  return RE_SECCION_PISADA.test(titulo || '')
+}
+
 export const DIAS_VENTANA_ACCESO = 7
 
 function aDias(fecha: string): number | null {
@@ -116,19 +128,21 @@ function periodoDe(hoy: string, checkIn: string, checkOut: string): number {
 export function seccionesVigentes(
   secciones: SeccionGuia[],
   ctx: { hoy: string; checkIn: string; checkOut: string },
-): { secciones: SeccionGuia[]; accesoOculto: boolean } {
+): { secciones: SeccionGuia[]; accesoOculto: boolean; pisadas: string[] } {
   const periodo = periodoDe(ctx.hoy, ctx.checkIn, ctx.checkOut)
   const dHoy = aDias(ctx.hoy)
   const dIn = aDias(ctx.checkIn)
   const faltan = dHoy !== null && dIn !== null ? dIn - dHoy : 0
   const dentroVentana = faltan <= DIAS_VENTANA_ACCESO
   let accesoOculto = false
+  const pisadas: string[] = []
   const vivas = (secciones || []).filter(s => {
+    if (esSeccionPisada(s.titulo)) { pisadas.push(s.titulo); return false }
     if (s.periodos.length && !s.periodos.includes(periodo)) return false
     if (s.esAcceso && !dentroVentana) { accesoOculto = true; return false }
     return true
   })
-  return { secciones: vivas, accesoOculto }
+  return { secciones: vivas, accesoOculto, pisadas }
 }
 
 // Texto de la guía tal y como lo ve el modelo.
