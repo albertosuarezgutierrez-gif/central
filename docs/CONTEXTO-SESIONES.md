@@ -32,6 +32,16 @@
 
 ---
 
+### 🔍 (20/08/2026) Auditoría diaria (ligera) — heartbeat 22/22 ✅, sin drift, un vigilante nuevo
+- Rango: 45 commits desde la pasada del 19/08 05:15 UTC, casi todo el cierre de la saga
+  `auditoria.yml`/`rutinas-automerge.yml` + sesión IBKR + fixes de housesevillana. Sin huecos en
+  memoria (el guardián ya lo había anotado todo), `docs/SKILLS.md` al día, sin contradicción fiscal.
+- `rutinas-automerge.yml` confirmado sano: última pasada 01:55 UTC en verde, cada hora sin huecos —
+  la saga del 19/08 (PRs #1501→#1511) quedó resuelta de verdad.
+- **Hallazgo (carril 2, PR aparte):** el cron semanal `paper-tracker` (alta 18/08, PR #1476) ya
+  escribía su latido pero nadie lo vigilaba — añadido a `AGENTES_VIGILADOS`/`PROBES`.
+- Informe completo en `docs/AUDITORIA-2026-08.md` (actualización 2026-08-20).
+
 ### 🛡️ (19/08/2026) Grupo Asegura — plan para traer la correduría al monorepo
 - Nuevo `docs/ASEGURA-MIGRACION.md`. El desarrollo externo es el repo **`manuelsuarez/asegura`**
   (invitación de colaborador del 12/08 en el Gmail, **sin aceptar**); Claude NO puede leerlo desde
@@ -101,6 +111,39 @@
   quedó SIN estrenar. No es un fallo del arreglo — es que no llegó a correr. Por eso `auditoria.yml`
   gana `workflow_dispatch`: se puede lanzar desde la API con ese mismo token, y así ni la radiografía
   depende de que el último push lo hiciera un humano ni hay que esperar a uno para probar el workflow.
+- ✅ **Probado en vivo: `workflow_dispatch` → rama → PR #1504 → 14 checks.** `GH_PAT_TRIGGER` existe
+  y funciona. Pero el PR **no se mergeó**, y el porqué destapó dos fallos más (PR #1506):
+- 🔴 **«Los checks que veo están verdes» ≠ «han pasado los checks required».** El automerge vio
+  `10/10 en verde` e intentó mergear; GitHub: «the base branch policy prohibits the merge». **Es la
+  regla del NULL un escalón más abajo:** el paso 5 miraba los checks que HAY, no los que FALTAN, y
+  lo que falta no deja hueco. Arreglo: preguntar `mergeStateStatus`, que es la respuesta de GitHub
+  a «¿lo dejarías mergear?».
+- 🔴 **Y un merge rechazado MATABA la pasada entera.** Con `set -e`, el `gh pr merge` fallido tiraba
+  el job: los PRs siguientes del bucle ni se miraban y el workflow salía rojo cada hora. Ahora se
+  anota, se avisa y se sigue.
+- ⚠️ **CORRECCIÓN de lo que dijo el #1506:** culpé del sha sin checks a una CARRERA de dos pasadas
+  de la auditoría. **Era falso.** Re-lancé una sola pasada y volvió a pasar: **un force-push desde
+  dentro de Actions a una rama que YA tiene PR abierto no dispara los workflows `pull_request`** —
+  ni con el PAT en la URL. Dos de dos. Crear la rama y abrir el PR sí los dispara (14 checks). Por
+  eso `auditoria.yml` estrena rama en cada pasada (`…-<run_id>`) y cierra la anterior: el PR nace
+  siempre por `opened`, que es el camino que funciona. (`cancel-in-progress: true` se queda, pero
+  por higiene, no porque arreglara esto.)
+- 🪤 **Y el arreglo de rama-por-pasada falló a la primera, por un detalle de `gh`:**
+  `gh pr close --delete-branch` borra también la rama **LOCAL** si es la que está activa. Se hacía
+  `checkout -B "$RAMA"` (nombre viejo), se commiteaba, y al cerrar el PR anterior `gh` se llevaba
+  por delante ese commit y dejaba el HEAD en `main` → el push subió `main` y `gh pr create` murió
+  con «No commits between main and …». Arreglo: la rama local se llama YA `…-<run_id>` desde el
+  principio, más un cinturón que aborta si el HEAD acaba siendo `main` (sin él, el síntoma parecía
+  un `gh pr create` roto y no la pérdida del commit).
+- ✅✅ **PROBADO DE PUNTA A PUNTA (23:42).** `workflow_dispatch` → rama `…-<run_id>` con commit propio
+  → PR #1511 → **15 checks** → **`rutinas-automerge.yml` lo mergeó solo** (`b04de8de` en `main`,
+  merged_by `github-actions[bot]`). La radiografía vuelve a aterrizar sola con el ruleset puesto.
+  Costó CUATRO intentos (#1501, #1503, #1507, #1509) y cada uno destapó un fallo distinto y real.
+- ℹ️ **El cron del automerge NO va al minuto :23 aunque el fichero diga `'23 * * * *'`**: las pasadas
+  programadas reales caen sobre el **:46**. Al depurar, mirar los runs, no el cron.
+- 🧹 Dos cabos sueltos menores: (1) la rama `claude/auditoria-radiografia-32307817350` quedó huérfana
+  del run fallido — el bucle de limpieza cierra PRs, no borra ramas sin PR; (2) dos pasadas seguidas
+  encadenan dos PRs (la segunda cierra el de la primera): funciona, pero mete ruido.
 - ⚠️ Lo que NO se ha podido probar aquí: los workflows solo se ejecutan en GitHub. Las tres piezas se
   verifican solas en su primera pasada real — auditoría al próximo push a `main`, SEO el lunes. Si el
   PR del SEO se queda abierto sin mergear, mirar si `GH_PAT_TRIGGER` sigue vivo. Revertir todo =

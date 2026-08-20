@@ -1012,3 +1012,48 @@ lleva sin actividad real desde el 03/08. Mismo patrón documentado desde el 02/0
 ## ✅ Integridad estructural — sin hallazgos
 Lockfile presente, y las 8 apps (`ia-rest`, `sivra`, `ialimp`, `plataforma`, `rrhh`, `transporte`,
 `alquiler`, `almacen`) tienen el `ignoreCommand` obligatorio en su `vercel.json`.
+
+---
+
+# Actualización 2026-08-20 — auditoría diaria (ligera)
+
+Rango: 45 commits desde la pasada del 19/08 05:15 UTC (`daf811ab`), casi todos del cierre de la saga
+de `auditoria.yml`/`rutinas-automerge.yml` (ver `CONTEXTO-SESIONES.md` 19-20/08) + sesión IBKR (libro
+de operaciones) + fixes de `housesevillana` (i18n, 403 SEO, guardas de test).
+
+## ✅ Reconciliación memoria/skills — sin huecos
+Los 45 commits del rango ya estaban auto-documentados por sus propias sesiones en
+`docs/CONTEXTO-SESIONES.md` (el guardián `persist-memoria.sh` hizo su trabajo). `docs/SKILLS.md`
+verificado contra `.claude/skills/` (32) y `.claude/commands/` (3): sin huérfanos ni faltantes.
+`perfil-fiscal` sin contradicción con la regla `amortizable` de memoria. `lib/correo/rutas.ts`: sin
+skill nueva del rango que produzca correo sin categoría (la correduría de Grupo Asegura, PR #1489,
+ya tiene `categoria: 'correduria'`).
+
+## 🟡→✅ Backlog de agentes vigilados — `paper_tracker` sin monitor (arreglado en este PR)
+El cron semanal `/api/cron/paper-tracker` (`0 10 * * 1`, alta 18/08/2026 PR #1476) ya escribía su
+latido en `agente_latidos` pero no estaba en `AGENTES_VIGILADOS`/`PROBES` — si dejara de correr,
+nadie se enteraría (mismo patrón que el resto de agentes antes de ser dados de alta). Añadido
+`paper_tracker` (192h, criterio semanal) en `apps/plataforma/lib/monitoring/latidos.ts` +
+`apps/plataforma/app/api/cron/agentes-latido/route.ts`. Verificado: `node --test latidos.test.ts`
+9/9, `eslint` limpio. `sivra_canal` (mismo PR #1484, cron 07:45 UTC) SÍ está en el vigilante — aún
+no ha tenido su primera oportunidad de correr desde que se desplegó (11:17 CEST del 19/08, después
+del disparo de ese día); no es un hallazgo, solo pendiente de que corra mañana.
+
+## ✅ Heartbeat de agentes/crons (`agente_latidos` + tablas de dominio) — 22/22 ✅
+Sin crons mudos. `agente_latidos`: 12 filas, todas dentro de su umbral (peor caso `paper-tracker`
+64h de 192h, cadencia semanal correcta). Tablas de dominio (query b): 12/12 ✅, la más ajustada
+`correo_cursor` a 0h.
+
+## ✅ Backlog de PRs de rutinas + salud del automerge — sin hallazgos
+3 PRs abiertos, los 3 draft de carril 2 con código real (#1489 correduría, #1500 sivra landing,
+#1505 trading), ninguno >7 días sin actividad ni con ficheros solo-registro atascados.
+`rutinas-automerge.yml`: última ejecución 01:55 UTC (17 min antes de esta pasada), `success`,
+corriendo cada hora sin huecos — confirma que la saga de arreglos del 19/08 (PRs #1501→#1511) quedó
+resuelta de verdad, no solo "probada una vez".
+
+## ✅ Integridad estructural — sin hallazgos
+`pnpm install --frozen-lockfile` OK. Radiografía regenerada hoy mismo (PR #1511, vía automerge).
+
+## ✅ Manuales de usuario — nada que tocar
+Ningún archivo de `apps/ia-rest/src/app/**` ni `apps/ia-rest/public/**` cambió en el rango (el
+rango tocó housesevillana, sivra/plataforma-lib y trading — sin UI de ia-rest).
