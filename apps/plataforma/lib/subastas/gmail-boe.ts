@@ -13,6 +13,7 @@
 import { ImapFlow } from 'imapflow'
 import { simpleParser } from 'mailparser'
 import { avanzarCursor, detalleLectura, planificarLectura, uidsALeer, type CursorCorreo, type PlanLectura } from '@/lib/subastas/correo-incremental'
+import { codigoDelIntento, type CorreoOtp } from '@central/module-subastas'
 
 export const REMITENTE_BOE = 'no-responder@boe.es'
 
@@ -165,6 +166,67 @@ export async function leerAlertasDesde(
         detalle: detalleLectura(remitente, plan, correos.length),
         plan,
       }
+    } finally {
+      lock.release()
+    }
+  } finally {
+    await client.logout().catch(() => {})
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Segundo factor del login del Portal (ver `portal-otp.ts` para el porqué).
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Quien manda los códigos. OJO: NO es `no-responder@boe.es` (las alertas). */
+export const REMITENTE_OTP = 'noresponder-subastas@boe.es'
+
+/**
+ * Espera al correo con el código del intento de login EN CURSO.
+ *
+ * Abre UNA conexión IMAP y repregunta cada pocos segundos: el correo tarda
+ * unos segundos en llegar, y reconectar en cada vuelta multiplica el tiempo y
+ * el riesgo de que Gmail corte por exceso de conexiones.
+ *
+ * 🚨 `codigoDelIntento` descarta todo lo anterior a `intentoEn`. Si el correo
+ * no llega dentro del plazo se devuelve `null` y el login se queda sin hacer:
+ * mandar el código de la sesión anterior quemaría este intento contra un
+ * Portal que bloquea cuentas.
+ */
+export async function esperarCodigoPortal(
+  intentoEn: Date,
+  timeoutMs = 45_000,
+  intervaloMs = 4_000,
+): Promise<string | null> {
+  const client = nuevoCliente()
+  await client.connect()
+  try {
+    const carpeta = await buzonTodos(client)
+    const lock = await client.getMailboxLock(carpeta)
+    try {
+      // `since` en IMAP tiene granularidad de DÍA: acota la descarga, no
+      // decide la frescura. Quien decide es `codigoDelIntento` con la hora.
+      const desde = new Date(intentoEn.getTime() - 86400_000)
+      const limite = Date.now() + timeoutMs
+
+      do {
+        const uids = (await client.search({ from: REMITENTE_OTP, since: desde }, { uid: true })) || []
+        const seleccion = [...uids].sort((a, b) => b - a).slice(0, 20)
+        if (seleccion.length) {
+          const candidatos: CorreoOtp[] = []
+          for await (const msg of client.fetch(seleccion, { uid: true, source: true }, { uid: true })) {
+            if (!msg.source) continue
+            const a = await aAlerta(msg.source, msg.uid)
+            if (a) candidatos.push({ asunto: a.subject, cuerpo: a.html, fecha: a.fecha })
+          }
+          const codigo = codigoDelIntento(candidatos, intentoEn)
+          if (codigo) return codigo
+        }
+        if (Date.now() + intervaloMs >= limite) break
+        await new Promise((r) => setTimeout(r, intervaloMs))
+      } while (Date.now() < limite)
+
+      return null
     } finally {
       lock.release()
     }

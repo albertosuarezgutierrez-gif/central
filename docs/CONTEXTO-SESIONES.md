@@ -183,6 +183,28 @@ esa ambigüedad queda enrutada en la skill `central-maestro` (+ fila en `docs/FU
 con el aviso de que «no está en el repo» ≠ «no existe» (lección de la landing de House Sevillana).
 Pendiente: el mensaje a Manuel está redactado en el doc pero **lo envía Alberto** — hasta entonces
 no se puede avanzar de fase.
+### 🔨 (20/08/2026) Las subastas ya cuentan CÓMO ACABARON, y el techo de puja se contrasta con remates reales — PR #1536
+- **TRES sesiones distintas fueron al mismo sitio el mismo día**: esta, #1537 (pujas `ver=5` + avisos
+  sobre el radar) y #1540/#1548 (login e identificación en el Portal con 2FA). Cada vez que `main`
+  se adelantó, este PR se **reconcilió sobre él** en vez de imponer lo suyo.
+- Lo que se tiró por duplicado: el `pujasDeFicha` de `ficha-boe.ts` (manda `pujas.ts`), las columnas
+  `hay_pujas`/`pujas_secretas`/`pujas_at` (manda `pujas_estado`), y la `PORTAL_SUBASTAS_COOKIE`
+  (manda el login real de #1540/#1548; ahora `sesionPortalAbierta()` aprovecha la sesión si ya está
+  abierta y NO abre ninguna: cada login manda un SMS y el Portal bloquea cuentas).
+- Lección de método: dos agentes sobre el mismo tema el mismo día no cuestan el trabajo repetido,
+  cuestan **dos columnas que dicen lo mismo** y se desincronizan — y entonces se decide una puja
+  mirando la que se quedó vieja. Al reconciliar, manda lo que ya está en `main`.
+- Lo que aporta este PR encima: **`subastas_pujas_obs`** (serie temporal; el Portal solo publica el
+  estado de HOY, así que «cuándo entró la primera puja» solo se responde con histórico propio),
+  **`avisarDesenlaces`** (el remate se capturaba en silencio desde julio: ahora se cuenta por Telegram
+  con el remate contra el tipo EN EUROS y si nuestro techo habría ganado), y **`remate.ts`**
+  (`remateEsperado`/`revisarTecho`) que convierte la calibración en euros por fila.
+- El caso que lo justifica: Dos Hermanas, tipo 739.210,43€ y «techo» calculado de **887.052,43€**
+  sobre la mediana del municipio. Ahora sale como `techo_fiable=false`, no como recomendación.
+- Muestra real: mediana del **64% del tipo**, ninguna desierta; Sevilla capital a 2x y 4x.
+- Cantabria no estaba en `subastas_criterios` pese a los avisos de Alberto: añadida.
+- Verificado antes de mergear: plataforma 1.404 · module-subastas 527 · guardias 33 · vitest 53 ·
+  resto de packages sin fallos · `tsc` limpio. Ficha del agente puesta al día en `agentes-catalogo.ts`.
 
 ### 🔔 (20/08/2026) El aviso de cierre de subastas no había sonado NUNCA — y las pujas se leían de la pestaña equivocada
 - Alberto: «que el agente me avise el día antes con cómo van las pujas». Auditoría: 19 filas en el radar,
@@ -1961,6 +1983,18 @@ completo `docs/AUDITORIA-2026-08.md`.
 - Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
+## 🛂 (20/08/2026) SES.HOSPEDAJES: diseño de la conectividad (parte de viajeros) — PR #1550 (draft)
+
+Fase de arranque del RD 933/2021 (comunicar viajeros al Ministerio en <24h; multas 100 €–30.000 €).
+Solo diseño, aún sin código: `docs/superpowers/specs/2026-08-20-ses-hospedajes-conectividad-design.md`.
+Protocolo verificado: SOAP a `hospedajes(.pre)-ses.mir.es/hospedajes-web/ws/v1/comunicacion`, Basic auth,
+`<solicitud>` = XML `altaParteHospedaje` en **gzip+base64**. Decisiones de Alberto: conector PROPIO (no
+Smoobu/Chekin), check-in web con OCR por IA **con confirmación humana**, y **solo nuestros 4 pisos** de
+momento (el resto de ideas —venta a terceros, uso comercial de los datos, RH, vehículos— en §9 del spec).
+🚨 Desde el contenedor NO se alcanza `*.mir.es` (proxy): toda prueba contra SES es desde Vercel.
+Pendiente: que Alberto revise el spec → plan de implementación. Códigos/credenciales NUNCA al repo.
+
+
 ## 💹 (09/08/2026) La palanca de DEMANDA ya mira el MES, no el año — PR #1323 (draft, rehecho sobre #1337)
 - #1337 (mergeado el 09/08) quitó el castigo a las fechas sin abrir, pero el `occ` de `pricing/apply`
   seguía siendo UNA ocupación anual por piso: el mes que se LLENA no podía subir el precio.

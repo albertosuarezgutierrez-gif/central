@@ -18,12 +18,22 @@ const ERROR_REAL = `
   </div>
 </div>`
 
+// Cabecera ANÓNIMA: copiada literal de `/id/login.php`.
 const CABECERA_ANONIMA = `
 <li id="acceso"><a href="https://subastas.boe.es/acceso.php" title="Pulse para acceder o registrarse como usuario en el Portal de Subastas">Iniciar sesi&#xF3;n</a></li>`
 
+// Cabecera IDENTIFICADA. 🚨 Los rótulos («Desconectar», «Mi Perfil») son los
+// que enseña el Portal de verdad — dos observaciones independientes de la
+// página viva el 20/08/2026. El MARCADO de alrededor está reconstruido, no
+// copiado: no se ha podido capturar esa página desde aquí. Se declara para que
+// nadie lo tome por literal.
+//
+// Aquí ponía «Cerrar sesión», inventado por quien escribió el parser, y por eso
+// este test daba verde sobre un detector que en producción no reconocía NUNCA
+// una sesión abierta.
 const CABECERA_IDENTIFICADA = `
-<li id="acceso"><a href="https://subastas.boe.es/id/logout.php">Cerrar sesi&#xF3;n</a></li>
-<div id="contenido"><h2>Mis subastas</h2></div>`
+<li id="acceso"><a href="https://subastas.boe.es/id/logout.php">Desconectar</a></li>
+<li><a href="https://subastas.boe.es/reg/perfil.php">Mi Perfil</a></li>`
 
 // ── Rechazo: el estado que PROHÍBE reintentar ──────────────────────────────
 
@@ -42,16 +52,23 @@ test('🚨 una cookie de sesión NO convierte un rechazo en un acceso', () => {
 
 // ── Éxito: se exige POSITIVO ───────────────────────────────────────────────
 
-test('la cabecera con «Cerrar sesión» + cookie es el único éxito', () => {
-  const r = interpretarLogin(CABECERA_IDENTIFICADA, ['PHPSESSID=abc'])
+test('la cabecera con «Desconectar» es el éxito', () => {
+  const r = interpretarLogin(CABECERA_IDENTIFICADA, [])
   assert.equal(r.estado, 'iniciada')
   assert.equal(r.motivo, null)
 })
 
-test('🚨 sin cookie no hay sesión que mantener, aunque la página lo parezca', () => {
-  const r = interpretarLogin(CABECERA_IDENTIFICADA, [])
-  assert.equal(r.estado, 'desconocido')
-  assert.match(r.motivo!, /no ha enviado cookie/)
+test('🚨 el Portal NO manda cookies: exigirlas anulaba todo login bueno', () => {
+  // Comprobado con `-D` sobre `/id/login.php`: cero `Set-Cookie`. El estado
+  // viaja en los ocultos del formulario (`usuario`/`password`/`idUsuario`).
+  assert.equal(interpretarLogin(CABECERA_IDENTIFICADA, []).estado, 'iniciada')
+  assert.equal(interpretarLogin(CABECERA_IDENTIFICADA, ['PHPSESSID=abc']).estado, 'iniciada')
+})
+
+test('🚨 «Cerrar sesión» era una invención: la barra dice «Desconectar»', () => {
+  // Regresión del fallo real. Cada uno de los dos rótulos basta por separado.
+  assert.equal(interpretarLogin('<a>Desconectar</a>').estado, 'iniciada')
+  assert.equal(interpretarLogin('<a>Mi Perfil</a>').estado, 'iniciada')
 })
 
 // ── Lo que no se sabe se dice ──────────────────────────────────────────────
