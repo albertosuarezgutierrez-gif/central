@@ -57,7 +57,7 @@ export type { LoteSurus } from './surus.ts'
 // Documentos adjuntos a la ficha del BOE: edictos con texto → señales explícitas
 export { pujasDeFicha, titularPujas } from './pujas.ts'
 export type { EstadoPujas, PujasFicha } from './pujas.ts'
-export { interpretarLogin, pareceIdentificada } from './portal-login.ts'
+export { interpretarLogin, pareceIdentificada, pideCaptcha } from './portal-login.ts'
 export type { EstadoLogin, ResultadoLogin } from './portal-login.ts'
 export { codigoDeCorreo, codigoDelIntento, esCorreoDeLogin } from './portal-otp.ts'
 export type { CorreoOtp } from './portal-otp.ts'

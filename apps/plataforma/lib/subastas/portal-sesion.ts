@@ -260,7 +260,9 @@ async function abrir(): Promise<SesionPortal> {
  */
 export async function sesionPortal(): Promise<SesionPortal> {
   // Un rechazo o la falta de credenciales son definitivos para este proceso.
-  if (cache && (cache.estado === 'rechazada' || cache.estado === 'sin-credenciales')) return cache
+  // `captcha` va con `rechazada`: los dos significan «no insistas». Uno porque
+  // la credencial no vale; el otro porque el Portal ha pedido una persona.
+  if (cache && (cache.estado === 'rechazada' || cache.estado === 'captcha' || cache.estado === 'sin-credenciales')) return cache
   if (cache?.estado === 'iniciada' && Date.now() - cache.abiertaEn < VIDA_SESION_MS) return cache
   // Un `desconocido` reciente se reutiliza para no repetir el login (y su SMS)
   // dentro de la misma pasada; pasada la tregua, se vuelve a intentar.
@@ -316,6 +318,8 @@ export function titularSesionPortal(s: SesionPortal): string {
       return '🔓 Sesión abierta en el Portal del BOE: se leen también los documentos que exigen identificarse.'
     case 'sin-credenciales':
       return '🔒 Sin credenciales del Portal: las subastas con muro documental se quedan sin leer (configura BOE_PORTAL_USUARIO y BOE_PORTAL_PASSWORD).'
+    case 'captcha':
+      return '🛑 El Portal ha puesto un CAPTCHA: ha detectado el acceso automático y exige una persona. El cron deja de intentarlo — entra tú a mano y baja los documentos.'
     case 'rechazada':
       return `🚨 El Portal RECHAZA las credenciales y no se reintenta para no bloquear la cuenta: ${s.motivo}. Entra a mano en subastas.boe.es y revísalas.`
     case 'desconocido':

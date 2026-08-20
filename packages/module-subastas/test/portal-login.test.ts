@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { interpretarLogin, pareceIdentificada } from '../src/portal-login.ts'
+import { interpretarLogin, pareceIdentificada, pideCaptcha } from '../src/portal-login.ts'
 
 // Fragmentos LITERALES del Portal (subastas.boe.es, 20/08/2026). El de error es
 // la respuesta real a un `POST /id/login.php` con credenciales inexistentes; el
@@ -88,4 +88,39 @@ test('`pareceIdentificada` distingue la ficha anónima de la identificada', () =
   assert.equal(pareceIdentificada(CABECERA_IDENTIFICADA), true)
   assert.equal(pareceIdentificada(CABECERA_ANONIMA), false)
   assert.equal(pareceIdentificada(''), false)
+})
+
+// ── El Portal escala a captcha (20/08/2026) ────────────────────────────────
+// Tras una ráfaga de intentos fallidos, el Portal dejó de pedir el código y
+// empezó a pedir «los caracteres de la imagen». Fragmento LITERAL de esa
+// respuesta, con la credencial ya redactada.
+const CAPTCHA_REAL = `
+<form action="/id/login.php" method="post" accept-charset="UTF-8">
+  <input type="hidden" name="namespace" value="52035939c71f1fac8a69af7914afe49f"/>
+  <input type="hidden" name="usuario" value="alberto@ejemplo.es"/>
+  <input type="hidden" name="password" value="«REDACTADO»"/>
+  <fieldset><legend>Verificaci&#xF3;n de seguridad</legend>
+    <label for="casillaCaptcha">Como medida de seguridad, introduzca los caracteres de la imagen en la siguiente casilla</label>
+    <input required type="text" name="captcha" id="casillaCaptcha" size="10" maxlength="6" />
+  </fieldset>
+  <input type="submit" class="boton" id="enviar" name="enviar" value="Enviar" />
+</form>`
+
+test('🚨 el captcha se reconoce y NO se trata como un fallo reintentable', () => {
+  const r = interpretarLogin(CAPTCHA_REAL, [])
+  assert.equal(r.estado, 'captcha')
+  assert.match(r.motivo!, /pide una persona/)
+})
+
+test('el captcha exige la frase Y el campo, no uno de los dos', () => {
+  assert.equal(pideCaptcha(CAPTCHA_REAL), true)
+  // Solo el texto (una página de ayuda que lo mencione) no cuenta.
+  assert.equal(pideCaptcha('<p>introduzca los caracteres de la imagen</p>'), false)
+  // Y un campo suelto sin el aviso, tampoco.
+  assert.equal(pideCaptcha('<input name="captcha">'), false)
+})
+
+test('una sesión abierta manda sobre el captcha', () => {
+  // Si la página ya viene identificada, no hay nada que escalar.
+  assert.equal(interpretarLogin(CABECERA_IDENTIFICADA + CAPTCHA_REAL, []).estado, 'iniciada')
 })

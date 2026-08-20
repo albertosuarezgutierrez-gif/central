@@ -268,7 +268,7 @@ export async function GET(req: NextRequest) {
     // ciego durante semanas sin que nada se pusiera rojo. Un check que se queda
     // verde porque no ha podido mirar es el fallo más caro que hay.
     const portal = await sesionPortal()
-    if (portal.estado === 'rechazada') {
+    if (portal.estado === 'rechazada' || portal.estado === 'captcha') {
       await tgSend(titularSesionPortal(portal)).catch(() => {})
     }
 
