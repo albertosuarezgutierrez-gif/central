@@ -32,6 +32,16 @@
 
 ---
 
+### 🐾 (20/08/2026) Tres decisiones de Alberto sobre la landing, y el calendario a producción
+- **Mascotas: NO se admiten.** La ficha de Booking **2039943** publica «Admite mascotas» y la landing dice
+  que no (FAQ + JSON-LD). Comprobado con el conector; la web está BIEN y no se toca — el error está en
+  Booking y lo corrige Alberto en la extranet (prompt listo en `docs/PROMPT-CHROME-landing-calendario.md`).
+- **«Bercell» se queda fuera** del pie, definitivamente. Y el PR #1500 (calendario + pie) **se mergea**.
+- De paso, esa ficha confirma contra fuente real: dirección **Socorro 24**, nota **8,6/51 reseñas** (la web
+  ya lo dice) y que el ID de House Sevillana es 2039943, no el 4771238 que le atribuye la skill de SEO.
+- Lo que queda del calendario es de navegador (deep link `dd/mm/yyyy`, 320 px, minutos a pie): va como
+  prompts para Claude Chrome en `docs/PROMPT-CHROME-landing-calendario.md`, no como lista de deseos.
+
 ### 🔍 (20/08/2026) Auditoría diaria (ligera) — heartbeat 22/22 ✅, sin drift, un vigilante nuevo
 - Rango: 45 commits desde la pasada del 19/08 05:15 UTC, casi todo el cierre de la saga
   `auditoria.yml`/`rutinas-automerge.yml` + sesión IBKR + fixes de housesevillana. Sin huecos en

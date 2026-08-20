@@ -94,18 +94,23 @@ que solo vuelven cuando salgan de la dirección real.
 
 ---
 
-## 4. Mascotas: la web y Booking dicen cosas distintas
+## 4. Mascotas: Booking está mal, hay que corregirlo allí
 
 Comprobado el 20/08/2026 con el conector de Booking: la ficha **2039943 · «HOUSE SEVILLANA 6 habitaciones»**
 (Calle Socorro 24, 8,6/10 con 51 reseñas) publica **«Admite mascotas»** entre sus servicios. La landing dice
-lo contrario, dos veces: en el FAQ visible y dentro del JSON-LD (`"No se admiten mascotas"`).
+lo contrario, dos veces: en el FAQ visible y dentro del JSON-LD.
 
-Es una decisión de Alberto, no un bug que se arregle solo: los dos canales tienen que decir lo mismo.
+**Decidido por Alberto el 20/08/2026: NO se admiten mascotas.** La web está bien y no se toca; el error está
+en Booking, que anuncia algo que la casa no ofrece — y eso llega como reseña mala, no como cancelación.
 
 ```
-Entra en la extranet de Booking (admin.booking.com) → House Sevillana → Alojamiento → Normas de la casa,
-y dime qué pone exactamente en el apartado de mascotas (¿permitidas?, ¿con suplemento?, ¿bajo petición?).
-No cambies nada todavía.
+Entra en la extranet de Booking (admin.booking.com), alojamiento House Sevillana (ID 2039943),
+y quita "Admite mascotas" de los servicios / normas de la casa: la casa NO admite mascotas.
+
+Antes de guardar, enséñame una captura de la pantalla con el cambio, para confirmar que es el
+alojamiento correcto (Calle Socorro 24) y que no toco nada más.
+Ojo: House Sevillana NO es Bustos Tavera 22 — esa es la dirección de Luxury Busto y Busto Reform,
+que son otros dos pisos y tienen sus propias fichas.
 ```
 
 ---
