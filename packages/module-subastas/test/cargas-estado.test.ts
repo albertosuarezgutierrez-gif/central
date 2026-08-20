@@ -150,6 +150,29 @@ test('el muro tampoco convierte un «sin revisar» en una negación', () => {
   )
 })
 
+// ── Y con qué ojos se miró ──────────────────────────────────────────────────
+// El muro es la misma observación con dos significados opuestos según se mirara
+// identificado o no, y el recado que sale de cada uno manda a Alberto a sitios
+// distintos (a hacer login, que es gratis, o al Registro, que cuesta tasa y
+// mañana). Confundirlos es exactamente el fallo que arregló el muro.
+
+test('🚨 con sesión iniciada NO se manda a «iniciar sesión»: eso ya está hecho', () => {
+  const t = titularCargas({ cargas: null, cargasConocidas: false, documentos: [], muro: 'total', sesion: true })
+  assert.equal(t.estado, 'ocultas_pese_a_sesion')
+  assert.ok(!/iniciar sesi[oó]n/i.test(t.texto), t.texto)
+  // Aquí SÍ toca el Registro: no es que no nos lo enseñen, es que no está.
+  assert.match(t.texto, /Registro|juzgado/i)
+})
+
+test('sin constancia de sesión se mantiene el recado barato (login)', () => {
+  // `null` = fichas leídas antes de que el cron supiera identificarse. Ante la
+  // duda, lo que no cuesta dinero: mirar primero, pagar después.
+  for (const sesion of [false, null, undefined]) {
+    const t = titularCargas({ cargasConocidas: false, documentos: [], muro: 'total', sesion })
+    assert.equal(t.estado, 'ocultas_tras_login', String(sesion))
+  }
+})
+
 test('con muro PARCIAL, el documento que SÍ se ve manda sobre el muro', () => {
   // Caso real SUB-JA-2026-264478: el Portal enseña la certificación y esconde el
   // resto. Teniendo el PDF, lo útil es abrirlo, no ir a identificarse.
