@@ -67,41 +67,62 @@ debería gastarse 25.000€ en un segundo dormitorio antes de comprobar si el pr
 > **Corrección del 20/08/2026, medida en BD.** Esta fase estaba mal planteada: no es «encender el
 > agente de precios». **El agente ya está encendido y aplicando** sobre el dúplex —
 > `pricing_settings.enabled = true`, `apply_enabled = true`, `pricing_config.paused = false`. Lleva
-> meses moviendo el precio solo. La prueba, por tanto, es **cambiarle los parámetros**, no activarlo.
+> meses moviendo el precio solo. La prueba, por tanto, es **cambiarle un parámetro**, no activarlo.
 
-**Lo que está haciendo hoy el agente, medido:**
+> ⚠️ **Y una segunda corrección, el mismo día.** La primera versión de esta sección acusaba al motor
+> de dos fallos, leyendo `apps/sivra/lib/pricing-engine.ts`. **Ese fichero es una copia RETIRADA**
+> (`apps/sivra/app/api/pricing/apply/route.ts` devuelve 410 desde el 18/07/2026). El motor vivo es
+> **`apps/plataforma/app/api/sivra/pricing/apply`** y es mucho más fino. Los dos «fallos» no existen:
+>
+> - **«Confunde calendario vacío con falta de demanda»** — ya está resuelto, y por el mismo
+>   razonamiento, desde el **09/08/2026**. `lib/sivra/pricing-demanda.ts` mide la **antelación real de
+>   venta por piso y por mes** (de `incomes.reserved_at`) y **neutraliza el descuento en las fechas
+>   cuya ventana de venta aún no ha abierto**, conservando el premio si las hay. Su cabecera dice
+>   literalmente que un 0% a diez meses vista «es un "todavía no se sabe" con forma de dato». El
+>   dúplex está medido ahí: vende con **7 días de antelación** en global, **11 en octubre**. Las filas
+>   de `pricing_applied` de hoy salen con `demanda_gateada = true`: el gate está actuando.
+> - **`demand_baseline` 0,50 → 0,10** era, por tanto, **una mala idea y no se ha aplicado.** Con
+>   baseline 0,50 y k 0,16 premiar exige pasar del 50% vendido, y eso es deliberado y está testeado.
+>   Bajarlo a 0,10 encendería el premio casi siempre e inflaría el precio de los meses que solo están
+>   «sin juzgar todavía» — reintroduciendo el bug con otro disfraz.
+>
+> Lección de método, que es la misma de siempre en este repo: **antes de acusar a un motor, comprobar
+> cuál de sus copias es la que corre.**
 
-| Qué | Valor | Por qué importa |
+**Lo que sí está medido y sigue en pie:**
+
+| Qué | Valor | Nota |
 |---|---|---|
-| `target_pctl` | 0,50 | Apunta a la **mediana de su propio grupo de comparables**… |
-| p50 de ese grupo | **129,00€** | …que es más barato que el corpus completo (144€). 87 comparables, nota media **6,24** |
-| `channel_markup` | 1,20 | El recomendado al huésped se divide por 1,20 → base ≈ **107€** |
-| `max_change_pct` | 0,20 | Puede mover ±20% **cada día** |
-| Ocupación que lee | **0,019** | vs `demand_baseline` 0,50 → factor de demanda **0,923 = −8% automático** |
+| `target_pctl` | 0,50 → **0,60** ✅ aplicado el 20/08/2026 | Apuntaba a la mediana de sus comparables; ahora al percentil 60 |
+| p50 / p60 de sus comparables | **129,00€ / 135,00€** | 87 comparables del snapshot del 20/08 |
+| `channel_markup` | 1,20 | El recomendado al huésped se divide por 1,20 para dar la base de Smoobu |
+| Nota propia vs mercado | **7,6 contra 8,40 de mediana** | ⚠️ El piso puntúa **por DEBAJO** de sus comparables → el factor de calidad le resta ~3% |
 
-**Dos cosas van mal, y ninguna es «el precio está bajo» a secas:**
+⚠️ **Ojo con esa última fila.** La primera versión decía «7,6 contra 6,2, compite hacia abajo». Era
+**la media, no la mediana**, y el motor usa la mediana: **8,40**. O sea justo lo contrario — el piso
+está peor valorado que su competencia, y el motor le descuenta por ello con razón. **Eso no es un
+fallo del motor: es la queja del baño saliendo en el precio.** Refuerza la Fase 2, no la debilita.
 
-1. **Oscila.** El 20/08 hizo 103 cambios, **todos a la baja**, −20,1€ de media (el tope exacto del
-   ±20%). El 19/08, 85 cambios **al alza**. El 18/08, 133 a la baja, −26,8€. Eso no es un motor que
-   converge: es un lazo de control persiguiéndose la cola, y ese vaivén diario también castiga en el
-   ranking del portal.
-2. **Lee «calendario vacío» como «no hay demanda», y no lo es.** El piso **se llena a última hora**:
-   mirando el propio histórico de `rate_snapshots`, en TODOS los cortes el hueco a 30 días y el hueco
-   a 90 días son casi el mismo número — nunca se reserva más allá de un mes. El 10/05 el calendario
-   marcaba **0 noches** vendidas para los 90 días siguientes… y mayo cerró al **85%**. Con
-   `demand_baseline` a 0,50, esa ocupación estructuralmente baja se traduce en un descuento
-   automático permanente. **El agente se está bajando el precio a sí mismo por un dato que no
-   significa lo que él cree.**
+**Lo que queda pendiente de decidir:** `max_change_pct` 0,20 → 0,08. El vaivén está medido (el 20/08,
+103 cambios **todos a la baja**, −20,1€ de media, el tope exacto del ±20%; el 19/08, 85 al alza; el
+18/08, 133 a la baja) pero **no está demostrado que sea patológico** en vez del raíl haciendo su
+trabajo mientras el bucket de mercado se mueve. Es un juicio, no un fallo probado, así que se deja a
+decisión de Alberto.
 
-**Qué se hace:** tocar tres parámetros de `pricing_settings` y dejarlo correr 3 meses.
+**Sobre «que el agente sepa que agosto es el peor mes» (idea de Alberto, 20/08/2026):**
 
-| Parámetro | Hoy | Propuesto | Por qué |
-|---|---|---|---|
-| `target_pctl` | 0,50 | **0,60** | Apuntar por encima de la mediana de su grupo; el piso tiene nota 7,6 contra 6,24 del grupo |
-| `demand_baseline` | 0,50 | **0,10** | Que la ocupación a futuro real (~0,02, por reserva de última hora) deje de leerse como demanda floja |
-| `max_change_pct` | 0,20 | **0,08** | Matar el vaivén diario del ±20% |
-
-No se toca nada más: ni obra, ni muebles, ni fotos, ni anuncio.
+- ✅ **Ya lo sabe, y por su propio histórico.** El motor aplica un **prior estacional**
+  (`lib/sivra/prior-estacional.ts`, activo desde el 17/07/2026): un índice por mes calculado con el
+  ADR histórico y la ocupación relativa del propio piso, asimétrico a propósito (sube con ADR ×
+  ocupación, baja solo con ADR). Además tarifica el mercado **por mes de entrada**, no con una cifra
+  anual aplanada.
+- ❌ **La ocupación de la competencia NO se puede usar hoy.** `market_rates` no guarda disponibilidad:
+  solo precios de los anuncios que devolvió cada búsqueda. Y el número de comparables por fecha
+  (entre 2 y 10, con tope aparente de 10) **depende de lo que rascó el scraper ese día**, no de lo
+  llena que esté la zona — así que «solo salen 2» no distingue «zona llena» de «búsqueda floja».
+  Para hacerlo bien habría que seguir un **panel fijo** de los mismos competidores fecha a fecha y
+  anotar disponible/no disponible. Eso es tocar el scraper, no una consulta. **Queda anotado como
+  mejora, sin fingir que el dato está.**
 
 **Criterio de decisión, escrito por adelantado:**
 
@@ -215,7 +236,8 @@ si la queja del baño se está corrigiendo, así que hay que empezar a anotarla 
 
 | Qué | A quién | Bloquea |
 |---|---|---|
-| Visto bueno a los 3 parámetros de la Fase 1 | Alberto | **La Fase 1 entera** |
+| ¿Bajar `max_change_pct` de 0,20 a 0,08? | Alberto | Nada; la Fase 1 ya corre con `target_pctl` 0,60 |
+| Panel fijo de competidores para medir su ocupación | Scraper de mercado | Usar la ocupación de la zona como señal |
 | ¿Ventila el pasaje un dormitorio? | Arquitecto | **Toda la Fase 3** |
 | Altura libre del altillo | Arquitecto (metro) | Fase 3 |
 | Presupuestos del baño abajo | 2-3 industriales | Fase 2 |
