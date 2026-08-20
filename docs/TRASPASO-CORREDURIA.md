@@ -221,7 +221,8 @@ Entonces sí hay que pedirle cosas concretas. Es el mismo traspaso, más lento:
    ```
    Si no quiere tocarlo, lo resolvemos por nuestro lado (Fase 2, plan B).
 4. **El código**: acceso de lectura al repo, o un ZIP del árbol de la rama desplegada. **No hace falta
-   el historial**, pero entonces se pierde para siempre — de ahí que la transferencia sea mejor.
+   el historial** para el traspaso; si además quiere cedérselo, la transferencia del repo se pide **al
+   final**, nunca ahora (le tumbaría el despliegue de Vercel).
 5. **Inventario por escrito de lo que no viaja en un `pg_dump`** — esto es lo caro de su tiempo, y es
    justo lo que la opción A nos deja averiguar solos:
    - **Edge Functions** desplegadas (cuáles, su código, qué *secrets* usan).
@@ -412,16 +413,18 @@ póliza, vencimientos), baja a `packages/module-seguros` y la app la consume por
 ## Orden de ejecución
 
 ```
-0. Mensaje a Manuel            → lo envía Alberto            [BLOQUEA TODO LO DEMÁS]
-1. Inventario + medición       → sección nueva en este doc + decisión free/Pro
+0. Mensaje a Manuel                 → lo envía Alberto       [BLOQUEA TODO LO DEMÁS]
+1. Inventario + medición            → sección nueva en este doc + decisión free/Pro
 2. Schema `seguros` + rol + volcado → datos dentro de `central`
 3. apps/seguros + registros + skill → PR draft
 4. Proyecto Vercel + envs rotadas   → preview verde
-5. Verificación end-to-end          → luz verde a Manuel para borrar
+5. Verificación end-to-end          → luz verde a Manuel
+6. Transferencia del repo + archivo → lo ÚLTIMO (le corta el despliegue)
 ```
 
-Las fases 1 y 3 pueden solaparse en cuanto haya código y acceso de lectura. La 2 necesita el volcado
-definitivo; la 4 necesita la 2 y la 3.
+Las fases 1 y 3 pueden solaparse en cuanto haya acceso. La 2 necesita el volcado definitivo; la 4
+necesita la 2 y la 3. **La 6 va después de la 5, siempre**: mientras el traspaso no esté verificado,
+su sistema tiene que seguir en pie para la comparación lado a lado.
 
 ---
 
