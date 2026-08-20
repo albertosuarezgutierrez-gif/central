@@ -82,6 +82,11 @@ interface Documental {
   analisis?: PuntoAnalisis[] | null
   notasEdicto?: string | null
   documentos?: DocumentoAdjunto[] | null
+  /**
+   * Lo que el Portal del BOE deja ver sin sesión iniciada. Con muro, un
+   * `documentos: []` NO significa que la subasta no adjunte nada.
+   */
+  documentosMuro?: 'ninguno' | 'parcial' | 'total' | null
   /** Anotaciones de embargo pasadas de plazo (art. 86 LH). `null` = ninguna. */
   caducidad?: { cuantas: number; importeSiCaducan: number | null } | null
 }
@@ -100,6 +105,7 @@ interface Resultado {
   tipoBien?: string | null; esPlaya?: boolean; margenFlip?: number | null
   margenFlipPct?: number | null; flipApto?: boolean; semaforo?: string | null
   analisis?: PuntoAnalisis[] | null; documentos?: DocumentoAdjunto[] | null
+  documentosMuro?: 'ninguno' | 'parcial' | 'total' | null
   caducidad?: { cuantas: number; importeSiCaducan: number | null } | null
   precioM2Zona?: number | null; muestraZona?: number | null; zonaPortal?: string | null
 }
@@ -580,7 +586,13 @@ function ResumenDocumental({ s, d }: { s: Subasta; d?: Documental | null }) {
   // pendiente de nada. Sin `fuente` (snapshots antiguos del radar) se asume BOE
   // porque ante la duda toca decir «sin revisar», no negar los adjuntos.
   const publicaAdjuntos = (s.fuente ?? 'boe') === 'boe'
-  const sinRevisar = estadoDocumentacion(docs, publicaAdjuntos) === 'sin_revisar'
+  // 🚨 El Portal enseña el bloque «Información complementaria» —donde vive la
+  // lista de documentos— solo a quien ha iniciado sesión en unas subastas y no
+  // en otras. Sin esto, ese `[]` de un cron anónimo se pintaba como «Cargas no
+  // publicadas: pide la certificación registral» teniendo la certificación
+  // colgada de la ficha (20/08/2026, SUB-JA-2026-262097).
+  const muro = d?.documentosMuro ?? 'ninguno'
+  const sinRevisar = estadoDocumentacion(docs, publicaAdjuntos, muro) === 'sin_revisar'
   const puntos = d?.analisis ?? []
   const cargasTexto = (s.cargasTexto ?? '').trim()
 
@@ -591,16 +603,17 @@ function ResumenDocumental({ s, d }: { s: Subasta; d?: Documental | null }) {
     cargasConocidas: s.cargasConocidas,
     documentos: docs,
     publicaAdjuntos,
+    muro,
   })
 
   // Solo se calla cuando no hay NADA que decir: cargas leídas y sin nada que
   // subsista. Un «no se sabe» siempre se pinta (antes `cargasConocidas`
   // `undefined` caía en el 🟢 y la ficha afirmaba que no había cargas).
-  if (titular.estado === 'sin_cargas' && !cargasTexto && notas.length === 0 && !docs?.length && puntos.length === 0) {
+  if (titular.estado === 'sin_cargas' && !cargasTexto && notas.length === 0 && !docs?.length && puntos.length === 0 && muro === 'ninguno') {
     return null
   }
 
-  const resumenDocs = resumenDocumentos(docs, publicaAdjuntos)
+  const resumenDocs = resumenDocumentos(docs, publicaAdjuntos, muro)
 
   return (
     <div style={{ marginTop: 10 }}>
@@ -611,6 +624,23 @@ function ResumenDocumental({ s, d }: { s: Subasta; d?: Documental | null }) {
       {/* El PDF que resuelve la duda, a un toque: decirle «pide la certificación
           registral» teniéndola enlazada aquí mismo es mandarlo al Registro para
           nada. Botón de 44 px (regla táctil del repo). */}
+      {/* Con muro no hay PDF que enlazar —no nos lo enseñan—, pero sí la ficha:
+          el trabajo de Alberto es iniciar sesión ahí, no ir al Registro. */}
+      {titular.estado === 'ocultas_tras_login' && s.identificador && (
+        <p style={{ margin: '4px 0 0' }}>
+          <a
+            href={`https://subastas.boe.es/detalleSubasta.php?idSub=${encodeURIComponent(s.identificador)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 44,
+              fontSize: 13, color: 'var(--primary)', textDecoration: 'underline',
+            }}
+          >
+            🔐 Abrir la ficha del Portal e iniciar sesión
+          </a>
+        </p>
+      )}
       {titular.estado === 'publicadas_sin_extraer' && titular.documento?.url && (
         <p style={{ margin: '4px 0 0' }}>
           <a
@@ -1360,7 +1390,21 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
       const r = await fetch('/api/subastas/radar')
       if (!r.ok) return
       const j = await r.json()
-      setDatos((d) => (d ? { ...d, radar: j.anuncios ?? [] } : d))
+      // Los `escenarios` y la foto VIVA de la subasta los calcula el servidor al
+      // pintar la página y este endpoint no los trae: se conservan los que ya
+      // teníamos por `dedupe_key` en vez de sustituir la fila entera, que dejaba
+      // la tarjeta a medias en cuanto se marcaba una como vista.
+      setDatos((d) => {
+        if (!d) return d
+        const previos = new Map((d.radar ?? []).map((x: any) => [x.dedupe_key, x]))
+        return {
+          ...d,
+          radar: (j.anuncios ?? []).map((a: any) => {
+            const p = previos.get(a.dedupe_key)
+            return p ? { ...p, ...a, doc: a.doc ?? p.doc } : a
+          }),
+        }
+      })
     } catch { /* la vista previa se mantiene */ }
   }, [])
 
@@ -1867,7 +1911,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                 key={r.subasta.dedupeKey}
                 s={r.subasta}
                 o={r.oportunidad}
-                doc={{ semaforo: r.semaforo, analisis: r.analisis, notasEdicto: r.notasEdicto, documentos: r.documentos, caducidad: r.caducidad }}
+                doc={{ semaforo: r.semaforo, analisis: r.analisis, notasEdicto: r.notasEdicto, documentos: r.documentos, documentosMuro: r.documentosMuro, caducidad: r.caducidad }}
                 escenarios={r.escenarios}
                 params={paramsCoste}
                 acciones={<button onClick={() => seguir(r.subasta)} style={boton()}>👀 Seguir</button>}

@@ -11,7 +11,10 @@ export interface DocumentoAdjunto {
   legible?: boolean | null
 }
 
-export type EstadoDocumentacion = 'sin_revisar' | 'sin_adjuntos' | 'con_adjuntos'
+export type EstadoDocumentacion = 'sin_revisar' | 'sin_adjuntos' | 'con_adjuntos' | 'ocultos'
+
+/** Lo que el Portal deja ver sin sesión iniciada (`muroDocumental` del módulo). */
+export type Muro = 'ninguno' | 'parcial' | 'total' | null | undefined
 
 /**
  * `null`/`undefined` = la ficha AÚN NO se ha revisado. `[]` = revisada y el BOE
@@ -25,7 +28,12 @@ export type EstadoDocumentacion = 'sin_revisar' | 'sin_adjuntos' | 'con_adjuntos
 export function estadoDocumentacion(
   docs: DocumentoAdjunto[] | null | undefined,
   publicaAdjuntos = true,
+  muro: Muro = 'ninguno',
 ): EstadoDocumentacion {
+  // 🚨 Un `[]` detrás del muro del Portal no es «revisada y sin adjuntos»: es
+  // «no me dejan ver la lista». Con adjuntos a la vista se dice lo que hay —
+  // pero sabiendo que puede faltar alguno (`parcial`), eso lo matiza el resumen.
+  if ((muro === 'total' || muro === 'parcial') && !docs?.length) return 'ocultos'
   if (docs == null) return publicaAdjuntos ? 'sin_revisar' : 'sin_adjuntos'
   return docs.length === 0 ? 'sin_adjuntos' : 'con_adjuntos'
 }
@@ -43,11 +51,17 @@ export function estadoDocumentacion(
 export function resumenDocumentos(
   docs: DocumentoAdjunto[] | null | undefined,
   publicaAdjuntos = true,
+  muro: Muro = 'ninguno',
 ): string {
-  const estado = estadoDocumentacion(docs, publicaAdjuntos)
+  const estado = estadoDocumentacion(docs, publicaAdjuntos, muro)
+  if (estado === 'ocultos') return 'documentos ocultos: hay que iniciar sesión en el Portal'
   if (estado === 'sin_revisar') return 'adjuntos sin revisar'
   if (estado === 'sin_adjuntos') return 'sin documentos adjuntos'
   const lista = docs as DocumentoAdjunto[]
   const escaneados = lista.filter((d) => d.legible === false).length
-  return `${lista.length} documento${lista.length === 1 ? '' : 's'}${escaneados > 0 ? `, ${escaneados} sin capa de texto` : ''}`
+  // Con muro parcial la lista está capada: decir «2 documentos» a secas invita a
+  // dar por hecho que no hay más, y el Portal acaba de decir que sí los hay.
+  const uno = lista.length === 1
+  const capada = muro === 'parcial' ? ` visible${uno ? '' : 's'} sin sesión (el Portal esconde el resto)` : ''
+  return `${lista.length} documento${uno ? '' : 's'}${capada}${escaneados > 0 ? `, ${escaneados} sin capa de texto` : ''}`
 }
