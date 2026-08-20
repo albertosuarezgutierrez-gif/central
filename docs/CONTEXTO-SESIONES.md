@@ -32,6 +32,19 @@
 
 ---
 
+### 🔔 (20/08/2026) El aviso de cierre de subastas no había sonado NUNCA — y las pujas se leían de la pestaña equivocada
+- Alberto: «que el agente me avise el día antes con cómo van las pujas». Auditoría: 19 filas en el radar,
+  18 avisadas, **0 seguidas** — y TODO el cron `subastas-cierre` colgaba de `subastas_seguidas`, que exige
+  pulsar «👀 Seguir». Nunca se disparó (`mejor_puja_at` sin estrenar en las 26 filas).
+- `mejorPujaViva` leía la pestaña GENERAL, donde solo están la puja MÍNIMA y los tramos → nunca encontró nada.
+  La pestaña `ver=5` sí lo dice: medido en las 13 vivas, **5 sin pujas · 5 con puja de importe oculto · 3
+  secretas**. El importe solo se publica al CONCLUIR (y ahí sí: 8 remates reales, mediana **0,64× el tipo** —
+  pero **Sevilla va a 1,42×**, con un 165.000€ → 669.900€ verificado a mano).
+- Hecho: `pujasDeFicha` (4 estados, `desconocido` nunca es «sin pujas») + `pujas_estado` + avisos sobre el
+  RADAR con **dos ventanas**: «prepara el depósito» a 5 días (el cuello de botella es el dinero: el Portal
+  llega a pedir el 20%) y «últimas 24 h». Con ratio de remate de SU provincia y suelo del art. 670.
+- Pendiente: llevar el estado de pujas a la ficha de `/subastas`; registrar el MOTIVO del descarte.
+
 ### ⚖️ (20/08/2026) «Cargas no publicadas» con la certificación colgada: el Portal las esconde tras el login
 - Alberto, sobre SUB-JA-2026-262097: «si vienen!! ¿por qué sigue pasando esto?». El BOE publica
   «SUBASTA LOCAL COMERCIAL» y «CERTIFICACIÓN DE CARGAS», y la ficha decía 🟠 «no publicadas».
