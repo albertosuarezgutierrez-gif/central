@@ -174,29 +174,57 @@ de sumar nada, hay que revisar qué facturas de obra del dúplex se dedujeron ya
 - **Coeficientes de abatimiento (DT 9ª)** — no: solo para adquisiciones anteriores a 31/12/1994.
 - **Repartir con Pilar** — no: el piso es **privativo** (donación de la madre, así consta en escritura).
 
-## 3 bis. Vender vs. mantener — qué renta da hoy el dúplex
+## 3 bis. Vender vs. mantener — qué renta de verdad el dúplex
 
-De la declaración IRPF 2025 presentada (conjunta, a devolver 2.968,26€):
+Hay **dos vistas** del mismo piso y conviene no mezclarlas:
+
+**a) Lo declarado en el IRPF 2025** (criterio de caja, solo los abonos de Booking del año natural):
 
 | Concepto | 2025 |
 |---|---|
-| Ingresos Booking íntegros (datos fiscales) | 23.896,00€ (comisión 5.290,00€) |
-| Ingresos Airbnb | 751,00€ (comisión 138,00€) |
-| **Ingresos finalmente declarados** (neto Booking, criterio de Alberto) | **18.606,47€** |
+| Ingresos declarados (neto de comisión Booking) | 18.606,47€ |
 | Gastos deducibles | 3.052,26€ |
-| **Rendimiento neto** | **≈ 15.554,21€** |
-| Imputación de renta por los 125 días sin arrendar | 276,89€ |
+| **Rendimiento neto** | **15.554,21€** |
+| Días arrendado / a disposición | 240 / 125 |
+| Imputación de renta por los días vacíos | 276,89€ |
 
-Sobre un precio de 320.000€ eso es una **rentabilidad bruta del 4,86%** (6,75% si se toman los
-ingresos íntegros del primer borrador), y tributa al **tipo marginal de la base general**, no al 23%
-del ahorro. Es el número contra el que hay que medir qué se hace con los ~277.000-286.000€ que
-quedarían tras vender.
+**b) El detalle de reservas** (tabla `_csv_staging`, por fecha de entrada, importes brutos de portal):
 
-⚠️ Dos cautelas sobre esa cifra: (1) los 18.606,47€ son el **neto de comisión de Booking**, criterio
-que Alberto fijó el 30/06/2026 y que subió la devolución de ~1.156€ a 2.968,26€; (2) queda abierto en
-el propio hilo un **posible doble cómputo de Booking** (imputado a Alberto y a la sociedad), con un
-descuadre de ~21.692€ en la cuenta de Punto y Coma. Ninguna de las dos cosas cambia el cálculo de la
-venta, pero sí la foto de rentabilidad.
+| Año | Reservas | Noches | Bruto portales | ADR | Ocupación |
+|---|---|---|---|---|---|
+| 2024 (desde la donación) | 28 | 96 | 9.678,93€ | 100,82€ | — |
+| **2025** | **63** | **251** | **26.195,20€** | **104,36€** | **68,8%** |
+| 2026 (hasta el 20/05) | 27 | 109 | 12.853,47€ | **117,92€** | — |
+
+### Estimación 2026
+
+Comparando el mismo periodo (enero–abril, el único cerrado en ambos años):
+
+| | 2025 | 2026 | Δ |
+|---|---|---|---|
+| Noches | 93 | 95 | +2,2% |
+| Importe | 9.591,65€ | 11.326,88€ | **+18,1%** |
+| ADR | 103,14€ | 119,23€ | **+15,6%** |
+
+La ocupación está plana; **lo que ha subido es el precio por noche**. Proyectando 2026 completo:
+
+| Escenario | Bruto | Neto de comisión (~22,1%) | Rendimiento tras ~4.000€ de gastos |
+|---|---|---|---|
+| Prudente (plano vs 2025) | 26.195€ | 20.396€ | ~16.400€ |
+| **Conservador (mismas noches, ADR +15,6%)** | **30.283€** | **23.578€** | **~19.600€** |
+| Central (+18% sobre 2025) | 30.934€ | 24.085€ | ~20.100€ |
+
+**Sobre un precio de venta de 320.000€ eso es un ~6% bruto**, no el 4,86% que salía de la cifra
+declarada de 2025 — y tributa al **marginal de la base general**, no al 23% del ahorro. Es el número
+contra el que hay que medir la venta.
+
+⚠️ Cautelas: (1) `_csv_staging` es una tabla de importación puntual cuyos datos **terminan el
+27/05/2026** — de junio en adelante no hay reservas cargadas ahí, así que la proyección es
+extrapolación, no cartera confirmada; (2) no hay filas del dúplex en `reservas_canceladas`, pero eso
+mide lo que esa tabla llegó a capturar, no que no haya habido cancelaciones; (3) los 18.606,47€ son
+el neto de comisión, criterio que Alberto fijó el 30/06/2026 y que subió la devolución de ~1.156€ a
+2.968,26€; (4) sigue abierto en el hilo con Asecon un **posible doble cómputo de Booking** (imputado a
+Alberto y a la sociedad), con un descuadre de ~21.692€ en la cuenta de Punto y Coma.
 
 ## 4. Riesgos a vigilar
 
@@ -235,4 +263,5 @@ venta, pero sí la foto de rentabilidad.
 Vendiendo por 320.000€ salen **~33.300€ de impuestos** (32.304€ de IRPF + 970€ de plusvalía) si se
 vende sin agencia, o **~30.600€** con agencia al 3%. Con las pérdidas de trading de 2026 bien
 liquidadas en euros, la factura puede bajar a **~27.000€**. El neto en el bolsillo queda entre
-**271.000€ y 286.000€** según cómo se venda, frente a un piso que hoy renta **~15.554€ netos al año**.
+**271.000€ y 286.000€** según cómo se venda, frente a un piso que a ritmo de 2026 renta del orden
+de **19.000-20.000€ netos al año (~6% bruto sobre el precio)**, tributando al marginal general.
