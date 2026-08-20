@@ -56,6 +56,21 @@
   `ai-programar.yml`. Prueba empírica: el PR #1511 de la radiografía se abrió y mergeó hoy por esa vía.
 - Suite completa en verde antes de tocar nada: `pnpm test` exit 0 — **2.494** `node --test` + **107** vitest, 0 fallos.
 
+### 🛑 (20/08/2026) El «cero tráfico legacy» que casi tumba el monitor de salud
+- Auditoría de logs (24 h, todo lo que retiene el plan Free): 0 peticiones con JWT legacy → se concluyó que
+  las apps ya estaban migradas y que pulsar «Disable JWT-based API keys» era gratis. **Falso.**
+- Contraejemplo medido: `cron.job` **jobid 28** (`monitor-health`, `*/5`) lleva un **JWT legacy incrustado**
+  en `Authorization: Bearer`, 288 ejecuciones/día, respuestas 200. `pg_net` sale de DENTRO de la BD, así que
+  no aparece en `edge_logs`: *no estaba en la tabla* se leyó como *no existe*.
+- Y `cron.job_run_details` daba `succeeded` 250/250 — pero en `net.http_post` eso significa **«encolado»**,
+  no 200. El estado real está en `net._http_response`. El check que engaña era el del propio monitor.
+- **Regla:** para desactivar las legacy, censo por CÓDIGO y CONFIGURACIÓN (grep, `cron.job`, envs, funciones
+  no versionadas), nunca por tráfico observado. La retención de logs en Free son ~24 h; un cron mensual no sale.
+- Inventario Vercel de los 10 proyectos cerrado (era un hueco del doc). 🔴 **`plataforma`, `almacen`,
+  `alquiler` y `transporte` NO usan la API de Supabase**: entran por `DATABASE_URL` (Prisma directo), que la
+  rotación de claves NO cubre. Y el panel tiene **67 Edge Functions** frente a las 45 del repo: 22 sin versionar.
+- Todo en `docs/ROTACION-SERVICE-ROLE.md`; PR #1517.
+
 ### 🔍 (20/08/2026) Auditoría diaria (ligera) — heartbeat 22/22 ✅, sin drift, un vigilante nuevo
 - Rango: 45 commits desde la pasada del 19/08 05:15 UTC, casi todo el cierre de la saga
   `auditoria.yml`/`rutinas-automerge.yml` + sesión IBKR + fixes de housesevillana. Sin huecos en

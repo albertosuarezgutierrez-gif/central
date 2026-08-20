@@ -32,7 +32,8 @@ secret ni invalidar las sesiones de usuario.
 |---|---|---|
 | Vercel env `SUPABASE_SERVICE_ROLE_KEY` en **`ia-rest`** | 1 | All Environments, «Updated Jun 10», sin marcar Sensitive |
 | Vercel env `SUPABASE_SERVICE_ROLE_KEY` en **`central-rrhh`** | 1 | Production + Preview, marcada Sensitive |
-| Edge Functions de ia-rest con `Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')` | **43 de 45** | la inyecta Supabase; en el panel ya sale **DEPRECATED**, sustituta `SUPABASE_SECRET_KEYS` |
+| Edge Functions de ia-rest con `Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')` | **43 de 45 en el repo** | la inyecta Supabase; en el panel ya sale **DEPRECATED**, sustituta `SUPABASE_SECRET_KEYS` (ya inyectada, junto con `SUPABASE_PUBLISHABLE_KEYS`) |
+| ⚠️ Edge Functions **desplegadas en el panel** | **67** | 22 MÁS que las 45 del repo (20/08). No se sabe qué hacen ni qué clave leen: no están versionadas. Hay que inventariarlas antes de pulsar nada |
 | GitHub Actions | 0 reales | `ci.yml` usa `ci_dummy_service_role_key` |
 
 ⚠️ **`ialimp` NO tiene la variable** (verificado en el panel: ni propias, ni compartidas, ni de equipo).
@@ -44,9 +45,61 @@ roto, no funcionando**: nada que rotar ahí, pero sí que arreglar algún día �
 
 | Dónde | Cuántos |
 |---|---|
-| Ficheros que leen `*ANON_KEY` | **27** (`ia-rest` 14, `ialimp` 10, `sivra` 2, `rrhh` 1) |
-| Envs `NEXT_PUBLIC_SUPABASE_ANON_KEY` en Vercel | al menos `ialimp` (All Environments); revisar el resto de proyectos |
-| Cron `pg_net` `monitor-health` (`20260819_crons_bd_compartida.sql`) | 1 — manda la **anon legacy** como `Bearer` |
+| Ficheros que leen `*ANON_KEY` | **28** (`ia-rest` 15, `ialimp` 10, `sivra` 2, `rrhh` 1) — recuento del 20/08 |
+| Cron `pg_net` `monitor-health` (`20260819_crons_bd_compartida.sql`) | 1 — manda la **anon legacy** como `Bearer`, cada 5 min |
+
+**Envs de Vercel — inventario COMPLETO de los 10 proyectos (20/08/2026, cierra el «revisar el resto»):**
+
+| Proyecto | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `SUPABASE_SERVICE_ROLE_KEY` |
+|---|---|---|
+| `ia-rest` | plain · prod+preview+**dev** | plain · prod+preview+**dev** |
+| `central-rrhh` | sensitive · prod+preview | sensitive · prod+preview |
+| `ialimp` | plain · prod+preview+dev | — |
+| `sivra` | plain · prod+preview+dev | — |
+| `plataforma`, `almacen`, `alquiler`, `transporte`, `ialimp-landing`, `house-sevillana-landing` | — | — |
+
+🔴 **Hallazgo que ENSANCHA el trabajo: 4 apps no entran por la API de Supabase.** `plataforma`, `almacen`,
+`alquiler` y `transporte` no tienen NINGUNA variable de Supabase: hablan con Postgres por `DATABASE_URL` /
+`DIRECT_URL` (Prisma, conexión directa). **Rotar las claves API no las protege** — su credencial es la
+contraseña de Postgres dentro de esa cadena, que es un secreto distinto y NO entra en el botón «Disable
+JWT-based API keys». Si el objetivo es cerrar el acceso a la BD tras la filtración, `DATABASE_URL` necesita
+su propia decisión. (La `service_role` filtrada no expone esa contraseña, así que no es el mismo incendio;
+pero tampoco queda cubierto por esta rotación, y conviene no creer que sí.)
+
+## 🛑 «Cero tráfico legacy en 24 h» NO autoriza a pulsar el botón (20/08/2026)
+
+Una auditoría de los logs del panel agrupó las 10.727 peticiones de 24 h por prefijo de clave y encontró
+**cero** con JWT legacy: todo iba por `sb_secret_…` / `sb_publishable_…`. De ahí se concluyó que las apps
+ya estaban migradas y que pulsar «Disable JWT-based API keys» no rompería nada, evitando los 28 ficheros.
+
+**Es falso, y hay contraejemplo medido.** El cron `pg_cron` **jobid 28** (`monitor-health`, `*/5 * * * *`)
+lleva un **JWT legacy incrustado en el propio comando SQL**, en cabecera `Authorization: Bearer`:
+
+```sql
+select command like '%eyJ%' as lleva_jwt,
+       substring(command from 'Bearer ([A-Za-z0-9]{3})') as prefijo
+from cron.job where jobid = 28;   -- → lleva_jwt = true, prefijo = 'eyJ'
+```
+
+Se ejecuta **288 veces al día** y sus respuestas son 200. O sea: la clave legacy **está en uso ahora
+mismo**. Pulsar el botón mataría el monitor de salud — y lo mataría **en silencio**, que es el peor sitio
+donde puede fallar algo.
+
+**Por qué la auditoría no lo vio:** las llamadas de `pg_net` salen de dentro de la propia base de datos,
+no del edge, así que no aparecen en la agrupación de `edge_logs` que se muestreó. *No estaban en la tabla*
+se leyó como *no existen*.
+
+⚠️ **Y `cron.job_run_details` tampoco sirve para desmentirlo.** Ahí el jobid 28 sale `succeeded` 250 de 250
+veces… pero `SELECT net.http_post(...)` es **asíncrono**: «succeeded» significa **«la petición se encoló»**,
+no que devolviera 200. El estado real está en `net._http_response`. Es literalmente la regla de la casa:
+*un check que se pone verde porque la consulta no devolvió nada es el fallo más caro que hay* — y aquí el
+check que engaña es el del propio monitor de salud.
+
+**Regla operativa que queda:** la ausencia de tráfico en una ventana de logs **no** demuestra la ausencia
+de consumidores. Antes de desactivar las legacy hay que agotar el censo por el lado del CÓDIGO y de la
+CONFIGURACIÓN (grep del repo, `cron.job`, envs de Vercel, las 22 Edge Functions no versionadas), no por
+el lado del tráfico observado. Un cron mensual no aparece en 24 h de logs, y la retención del plan Free
+es de ~24 h.
 
 ## Plan de rotación (orden obligatorio, sin downtime)
 
