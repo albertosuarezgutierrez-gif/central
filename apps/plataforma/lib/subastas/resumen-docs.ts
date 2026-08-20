@@ -52,9 +52,19 @@ export function resumenDocumentos(
   docs: DocumentoAdjunto[] | null | undefined,
   publicaAdjuntos = true,
   muro: Muro = 'ninguno',
+  /**
+   * ¿La lectura fue con sesión iniciada? Cambia el recado por completo: sin
+   * sesión el trabajo pendiente es un login; con sesión, el Portal ya ha dicho
+   * todo lo que iba a decir y lo que falta hay que pedirlo fuera.
+   */
+  sesion: boolean | null | undefined = null,
 ): string {
   const estado = estadoDocumentacion(docs, publicaAdjuntos, muro)
-  if (estado === 'ocultos') return 'documentos ocultos: hay que iniciar sesión en el Portal'
+  if (estado === 'ocultos') {
+    return sesion === true
+      ? 'documentos no publicados ni con sesión iniciada'
+      : 'documentos ocultos: hay que iniciar sesión en el Portal'
+  }
   if (estado === 'sin_revisar') return 'adjuntos sin revisar'
   if (estado === 'sin_adjuntos') return 'sin documentos adjuntos'
   const lista = docs as DocumentoAdjunto[]
@@ -62,6 +72,11 @@ export function resumenDocumentos(
   // Con muro parcial la lista está capada: decir «2 documentos» a secas invita a
   // dar por hecho que no hay más, y el Portal acaba de decir que sí los hay.
   const uno = lista.length === 1
-  const capada = muro === 'parcial' ? ` visible${uno ? '' : 's'} sin sesión (el Portal esconde el resto)` : ''
+  const capada =
+    muro === 'parcial'
+      ? sesion === true
+        ? ` visible${uno ? '' : 's'} (el Portal no publica el resto ni con sesión)`
+        : ` visible${uno ? '' : 's'} sin sesión (el Portal esconde el resto)`
+      : ''
   return `${lista.length} documento${uno ? '' : 's'}${capada}${escaneados > 0 ? `, ${escaneados} sin capa de texto` : ''}`
 }

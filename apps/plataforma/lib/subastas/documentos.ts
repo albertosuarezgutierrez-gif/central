@@ -38,6 +38,7 @@ import {
   mismoAcreedorQueEjecutante,
   muroDocumental,
   notasDeEdicto,
+  pareceIdentificada,
   pareceEscaneado,
   resumirCargas,
   DIAS_PARA_ARCHIVAR,
@@ -45,6 +46,13 @@ import {
   type MuroDocumental,
 } from '@central/module-subastas'
 import { fusionarCuadros, leerDocumento, type LecturaDocumento } from '@/lib/subastas/lector-registral'
+import {
+  cabecerasPortal,
+  sesionPortal,
+  sesionPortalCaducada,
+  titularSesionPortal,
+  type SesionPortal,
+} from '@/lib/subastas/portal-sesion'
 
 const UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36'
 const FICHA = 'https://subastas.boe.es/detalleSubasta.php'
@@ -62,9 +70,9 @@ export const LECTOR_VERSION = 9
 /** Documentos que NO merecen una llamada de IA: no contienen cargas. */
 const RUIDO = /^(justificante|minuta|honorarios|tasa|pago|aranceles?)\b/i
 
-async function bajar(url: string, ms = 30000): Promise<Response> {
+async function bajar(url: string, ms = 30000, sesion: SesionPortal | null = null): Promise<Response> {
   const r = await fetch(url, {
-    headers: { 'User-Agent': UA },
+    headers: cabecerasPortal(sesion),
     signal: AbortSignal.timeout(ms),
     cache: 'no-store',
   })
@@ -106,6 +114,15 @@ export interface ResultadoFicha {
    * `documentos` NO es la lista de la subasta: es la que a nosotros nos enseñan.
    */
   muro: MuroDocumental
+  /**
+   * ¿La ficha se leyó CON sesión iniciada en el Portal?
+   *
+   * 🚨 Sin esto, `muro: 'total'` es ambiguo y la ambigüedad es cara: leído en
+   * anónimo significa «identifícate y los verás», y leído con sesión significa
+   * «ni registrado se ven, esto hay que pedirlo al Registro». Son dos recados
+   * distintos para Alberto, y uno de los dos le cuesta una mañana y una tasa.
+   */
+  conSesion: boolean
 }
 
 /**
@@ -117,7 +134,24 @@ export async function procesarDocumentosDeFicha(
   identificador: string,
   opts: { leerCargas?: boolean } = {},
 ): Promise<ResultadoFicha> {
-  const html = await (await bajar(`${FICHA}?idSub=${encodeURIComponent(identificador)}`)).text()
+  let sesion = await sesionPortal()
+  let html = await (await bajar(`${FICHA}?idSub=${encodeURIComponent(identificador)}`, 30000, sesion)).text()
+
+  // 🚨 La sesión PHP del Portal caduca sola. Si creíamos tenerla y esta ficha
+  // vuelve a responder como anónima, se reabre y se repite la descarga: seguir
+  // sin comprobarlo grabaría el muro de las fichas restantes como si fuera lo
+  // que ve un usuario registrado. Un solo reintento — si el Portal nos ha
+  // cerrado la puerta, insistir ficha a ficha es lo que bloquea cuentas.
+  if (sesion.estado === 'iniciada' && !pareceIdentificada(html)) {
+    sesionPortalCaducada()
+    sesion = await sesionPortal()
+    if (sesion.estado === 'iniciada') {
+      html = await (await bajar(`${FICHA}?idSub=${encodeURIComponent(identificador)}`, 30000, sesion)).text()
+    }
+  }
+  // Lo que se AFIRMA es lo que se ha comprobado en ESTA respuesta, no lo que
+  // dice la caché de la sesión.
+  const conSesion = pareceIdentificada(html)
   // 🚨 Antes de creerse un «no hay adjuntos», comprobar que esto ES la ficha.
   // Un 200 que no lo sea daría `[]`, se grabaría como «sin documentos» y la
   // cola no volvería a mirar esta subasta jamás. Lanzando, la fila se queda a
@@ -160,7 +194,10 @@ export async function procesarDocumentosDeFicha(
   for (const i of orden) {
     const doc = todos[i]
     try {
-      const r = await bajar(doc.url, 40000)
+      // Con la MISMA sesión: los adjuntos de una ficha con muro también
+      // exigen identificarse, y sin cookie devuelven un HTML de acceso denegado
+      // en vez del PDF.
+      const r = await bajar(doc.url, 40000, sesion)
       const buf = Buffer.from(await r.arrayBuffer())
       if (buf.length > MAX_BYTES_DOC) continue
 
@@ -214,7 +251,7 @@ export async function procesarDocumentosDeFicha(
     }
   }
 
-  return { notas: [...notas], cuadro: fusionarCuadros(lecturas), leidos, detalle, documentos, analisisProfundo: leerCargas, muro }
+  return { notas: [...notas], cuadro: fusionarCuadros(lecturas), leidos, detalle, documentos, analisisProfundo: leerCargas, muro, conSesion }
 }
 
 /** Fila mínima que necesita la pasada. */
@@ -256,7 +293,16 @@ export async function procesarDocumentos(max = 10): Promise<{
   conCargas: number
   analizadas: number
   conMuro: number
+  sesion: string
 }> {
+  // Se abre ANTES de elegir la cola: si hoy hay sesión y antes no la había, las
+  // fichas que se leyeron a ciegas dejan de tener que esperar su semana. El día
+  // que Alberto configure las credenciales, las 8 subastas que decían «cargas no
+  // publicadas» se releen en la primera pasada, no siete días después.
+  const s = await sesionPortal()
+  const hayaSesion = s.estado === 'iniciada'
+  if (!hayaSesion) console.warn('[subastas-documentos]', titularSesionPortal(s))
+
   const filas = await prisma.$queryRaw<FilaPendiente[]>(Prisma.sql`
     SELECT dedupe_key, identificador, autoridad, flip_apto, margen_flip_pct, es_playa,
            CASE
@@ -277,6 +323,10 @@ export async function procesarDocumentos(max = 10): Promise<{
         -- se quedarían para siempre a la cabeza de la cola y ahogarían a las
         -- nuevas, que es lo que pasaba con el documentos IS NULL a secas.
         OR (documentos_muro IN ('total', 'parcial') AND actualizado_en < now() - interval '7 days')
+        -- Y sin esperar la semana cuando AHORA sí podemos identificarnos y la
+        -- última lectura fue a ciegas: es exactamente el caso que el muro
+        -- documental existía para poder rescatar.
+        OR (${hayaSesion} AND documentos_muro IN ('total', 'parcial') AND documentos_sesion IS DISTINCT FROM true)
       )
     ORDER BY fecha_fin ASC NULLS LAST
     LIMIT ${max}
@@ -338,6 +388,9 @@ export async function procesarDocumentos(max = 10): Promise<{
           -- documentos vacío en una afirmación («la ficha estaba entera a la
           -- vista y no adjunta nada») en vez de en un «no me lo enseñan».
           documentos_muro = ${r.muro},
+          -- Con qué ojos se miró. Un muro visto en anónimo dice «identifícate»;
+          -- visto con sesión dice «esto no lo publica el Portal a nadie».
+          documentos_sesion = ${r.conSesion},
           actualizado_en = now()
         WHERE dedupe_key = ${f.dedupe_key}
       `)
@@ -346,7 +399,7 @@ export async function procesarDocumentos(max = 10): Promise<{
     }
   }
 
-  return { revisadas: filas.length, conHallazgos, conCargas, analizadas, conMuro }
+  return { revisadas: filas.length, conHallazgos, conCargas, analizadas, conMuro, sesion: titularSesionPortal(s) }
 }
 
 /**
