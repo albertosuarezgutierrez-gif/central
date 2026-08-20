@@ -13,14 +13,26 @@
 
 ---
 
-## 🔴 Datos que faltan — hay que rellenarlos antes de nada
+## ✅ Decidido — quién firma como Responsable (20/08/2026)
+
+Firma **Alberto Suárez Gutiérrez, persona física**, actuando bajo el nombre comercial
+**«Grupo ASegura»**. Decisión de Alberto en esta sesión.
+
+> **Qué implica y por qué conviene saberlo:** el responsable del tratamiento es **de quien sean los
+> clientes de la cartera**. En `apps/plataforma` la correduría figura contablemente como ASegura S.L.
+> (CS-F/0170), pero eso es la **contabilidad de las comisiones**, no la titularidad de los clientes del
+> CRM. Alberto ha decidido firmar como persona física. **Si al revisarlo la asesoría ve que la cartera
+> está a nombre de la sociedad, la que tiene que firmar es la sociedad** y hay que rehacer el bloque de
+> REUNIDOS — es un cambio de dos líneas, pero no se puede firmar «a medias».
+
+## 🔴 Datos que siguen faltando — rellenar antes de firmar
 
 No los invento: son identificadores legales y un error aquí invalida el documento.
 
 | Hueco | Qué hace falta | Nota |
 |---|---|---|
-| **Quién firma como Responsable** | ¿**ASegura S.L.** (CIF) o **Alberto como persona física**? | **Es la decisión de fondo, no un hueco de rellenar.** El responsable es de quien sean los clientes de la cartera. En `apps/plataforma` la correduría figura como ASegura S.L. (CS-F/0170), pero eso es la contabilidad de comisiones — **no he verificado a nombre de quién están los clientes del CRM**. Si son de la S.L., firma la S.L. |
-| Domicilio social y CIF/NIF del Responsable | — | |
+| **NIF de Alberto** | El número, tal cual | ⚠️ **Deliberadamente en blanco.** No lo escribo de memoria en un documento legal: lo pone Alberto o lo confirma antes de firmar |
+| **Domicilio de Alberto** a efectos de notificaciones | — | El que use para su actividad |
 | Nombre completo, NIF y domicilio de Manuel Suárez | — | Firma como persona física salvo que facturase por sociedad |
 | Fecha de inicio real del tratamiento | Desde cuándo tiene Manuel los datos | Ver abajo, «lo que este contrato NO arregla» |
 | Categorías de datos y ramos | Sale del **inventario de la Fase 1** | Hasta ver las tablas no se sabe si hay art. 9 |
@@ -35,12 +47,13 @@ en todos los escenarios.
 
 ## CONTRATO DE ENCARGADO DE TRATAMIENTO
 
-**En [LUGAR], a [FECHA]**
+**En Sevilla, a [FECHA]**
 
 ### REUNIDOS
 
-De una parte, **[RESPONSABLE: nombre / razón social]**, con **[NIF/CIF]** y domicilio en
-**[DOMICILIO]**, en adelante el **RESPONSABLE DEL TRATAMIENTO**.
+De una parte, **D. Alberto Suárez Gutiérrez**, mayor de edad, que actúa en su propio nombre y derecho
+bajo el nombre comercial **«Grupo ASegura»**, con NIF **[NIF]** y domicilio a efectos de notificaciones
+en **[DOMICILIO]**, en adelante el **RESPONSABLE DEL TRATAMIENTO**.
 
 De otra parte, **D. Manuel Suárez [APELLIDO 2]**, mayor de edad, con NIF **[NIF]** y domicilio en
 **[DOMICILIO]**, en adelante el **ENCARGADO DEL TRATAMIENTO**.
@@ -49,8 +62,8 @@ Ambas partes se reconocen capacidad legal suficiente para obligarse y
 
 ### EXPONEN
 
-**I.** Que el RESPONSABLE desarrolla la actividad de **correduría de seguros** y, en el marco de esa
-actividad, trata datos personales de sus clientes y de los tomadores, asegurados y beneficiarios de las
+**I.** Que el RESPONSABLE desarrolla la actividad de **correduría de seguros** bajo el nombre comercial
+«Grupo ASegura» y, en el marco de esa actividad, trata datos personales de sus clientes y de los tomadores, asegurados y beneficiarios de las
 pólizas intermediadas.
 
 **II.** Que el ENCARGADO ha desarrollado, por encargo del RESPONSABLE, una aplicación de gestión (CRM)
@@ -165,7 +178,7 @@ caso puedan extraerse copias fuera de los sistemas autorizados.
 
 Cada parte responderá de los incumplimientos que le sean imputables conforme al art. 82 RGPD. Este
 contrato se rige por el RGPD, la LOPDGDD y el Derecho español, sometiéndose las partes a los **juzgados y
-tribunales de [CIUDAD]** con renuncia a cualquier otro fuero.
+tribunales de Sevilla** con renuncia a cualquier otro fuero.
 
 ---
 
@@ -173,7 +186,7 @@ Y en prueba de conformidad, firman por duplicado en el lugar y fecha indicados.
 
 | EL RESPONSABLE | EL ENCARGADO |
 |---|---|
-| Fdo.: **[NOMBRE]** | Fdo.: **D. Manuel Suárez [APELLIDO 2]** |
+| Fdo.: **D. Alberto Suárez Gutiérrez** | Fdo.: **D. Manuel Suárez [APELLIDO 2]** |
 
 ---
 
