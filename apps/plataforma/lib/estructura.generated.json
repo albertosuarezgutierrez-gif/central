@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-20T09:58:31Z",
+  "generadoEn": "2026-08-20T12:33:44Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1736,7 +1736,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 29
+        "evidencias": 31
       },
       "rrhh": {
         "estado": "no",
@@ -4536,6 +4536,18 @@
   ],
   "novedades": [
     {
+      "titulo": "Probar antes de mergear cazó DOS bugs que `tsc` y `next build` dan por buenos:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Raíz:",
+      "fecha": ""
+    },
+    {
+      "titulo": "PENDIENTE (decisión de Alberto):",
+      "fecha": ""
+    },
+    {
       "titulo": "Dos reglas del disparador:",
       "fecha": ""
     },
@@ -4581,18 +4593,6 @@
     },
     {
       "titulo": "Verificado en producción tras mergear #1521",
-      "fecha": ""
-    },
-    {
-      "titulo": "Mascotas: NO se admiten.",
-      "fecha": ""
-    },
-    {
-      "titulo": "«Bercell» se queda fuera",
-      "fecha": ""
-    },
-    {
-      "titulo": "Hallazgo (carril 2, PR aparte):",
       "fecha": ""
     }
   ],

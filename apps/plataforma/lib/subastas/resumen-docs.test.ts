@@ -41,3 +41,35 @@ test('avisa de los escaneados (sin capa de texto)', () => {
   // `legible: null` = no se intentó leer: no es un escaneado confirmado.
   assert.equal(resumenDocumentos([doc('EDICTO', true), doc('CERTIFICACION', null)]), '2 documentos')
 })
+
+// ── El muro del Portal (20/08/2026) ─────────────────────────────────────────
+// El bloque «Información complementaria» del BOE —donde vive la lista de
+// adjuntos— solo se enseña con sesión iniciada en unas subastas. El cron entra
+// anónimo: su `[]` es «no me lo enseñan», no «la subasta no adjunta nada».
+
+test('con muro, un `[]` no se afirma como «sin documentos adjuntos»', () => {
+  for (const muro of ['total', 'parcial'] as const) {
+    assert.equal(estadoDocumentacion([], true, muro), 'ocultos', muro)
+    assert.equal(resumenDocumentos([], true, muro), 'documentos ocultos: hay que iniciar sesión en el Portal')
+    // Y un NULL con muro tampoco es «pendiente de revisar»: ya se revisó.
+    assert.equal(estadoDocumentacion(null, true, muro), 'ocultos', muro)
+  }
+})
+
+test('con muro PARCIAL la lista visible se cuenta, pero se avisa de que está capada', () => {
+  assert.equal(estadoDocumentacion([doc('EDICTO')], true, 'parcial'), 'con_adjuntos')
+  assert.equal(
+    resumenDocumentos([doc('EDICTO')], true, 'parcial'),
+    '1 documento visible sin sesión (el Portal esconde el resto)',
+  )
+  assert.equal(
+    resumenDocumentos([doc('EDICTO'), doc('CERTIFICACION')], true, 'parcial'),
+    '2 documentos visibles sin sesión (el Portal esconde el resto)',
+  )
+})
+
+test('sin muro nada cambia', () => {
+  assert.equal(estadoDocumentacion([], true, 'ninguno'), 'sin_adjuntos')
+  assert.equal(estadoDocumentacion(null, true, 'ninguno'), 'sin_revisar')
+  assert.equal(resumenDocumentos([doc('EDICTO')], true, 'ninguno'), '1 documento')
+})

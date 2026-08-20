@@ -5,6 +5,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { requireEmpresaId } from '@/lib/tenant'
 import { RADAR_CON_CORPUS, RADAR_VIGENTE } from '@/lib/subastas-radar'
+import { caducidadDeFila } from '@/lib/subastas/caducidad-fila'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,15 +22,33 @@ export async function GET(req: NextRequest) {
 
   // `RADAR_VIGENTE` deja fuera lo ya cerrado: la bandeja es de cosas que aún
   // se pueden pujar, no un histórico (para eso está el corpus).
-  const anuncios = await prisma.$queryRaw<any[]>(Prisma.sql`
+  const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT r.id, r.dedupe_key, r.subasta, r.puntuacion, r.motivos, r.avisos, r.coste_total,
            r.descuento, r.visto, r.descartado, COALESCE(s.fecha_fin, r.fecha_fin) AS fecha_fin,
-           r.created_at
+           r.created_at,
+           -- 🚨 La documentación viaja con la fila. Sin estas columnas este
+           -- endpoint devolvía el anuncio PELADO, y como la pantalla recarga la
+           -- bandeja por aquí al marcar «visto», la misma ficha que acababa de
+           -- decir «El BOE SÍ publica la certificación» pasaba a decir «la ficha
+           -- del BOE todavía no se ha revisado» con solo tocarla (20/08/2026).
+           s.semaforo, s.analisis, s.notas_edicto, s.documentos, s.documentos_muro, s.cargas_detalle
     ${RADAR_CON_CORPUS}
     WHERE r.cuenta_id = ${cuentaId}::uuid AND ${RADAR_VIGENTE} ${filtro}
     ORDER BY r.puntuacion DESC NULLS LAST, r.created_at DESC
     LIMIT 200
   `)
+
+  const anuncios = filas.map(({ semaforo, analisis, notas_edicto, documentos, documentos_muro, cargas_detalle, ...r }) => ({
+    ...r,
+    doc: {
+      semaforo: semaforo ?? null,
+      analisis: analisis ?? null,
+      notasEdicto: notas_edicto ?? null,
+      documentos: documentos ?? null,
+      documentosMuro: documentos_muro ?? null,
+      caducidad: caducidadDeFila(cargas_detalle),
+    },
+  }))
 
   // El contador va por el MISMO filtro: un badge que cuenta subastas cerradas
   // manda a Alberto a una bandeja donde no hay nada que hacer.
