@@ -656,6 +656,74 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
   Valenciana gana su tipo general (9%, antes heredaba el genérico); `mejorPujaViva()` (vigía de pujas en
   vivo del PR anterior) gana presupuesto de tiempo propio para no comerse el del cron `subastas-cierre`.
 
+- **🔐 El Portal ESCONDE documentos y pujas tras el login — y el aviso de cierre no había sonado nunca
+  (20/08/2026, PR #1537):** dos hallazgos de mirar qué publica de verdad `subastas.boe.es` a un anónimo.
+  - **«Cargas no publicadas» con la certificación colgada de la ficha.** El bloque «Información
+    complementaria» —donde vive la lista de documentos— **solo se enseña a usuarios identificados**, en
+    unas subastas sí y en otras no (lo decide la autoridad gestora). El cron entra anónimo,
+    `fichaLegible()` PASA (la ficha ES la ficha; lo que falta es el bloque), `enlacesDocumentos()` devuelve
+    `[]`, y ese «no lo veo» se persistía como `documentos = []` = «revisada, el BOE no adjunta nada» con
+    `lector_version` sellado → no se reintentaba jamás. Medido: de las 13 vivas, **las 8 que decían «no
+    publicadas» tenían muro total; NINGUNA carecía de documentos**. Fix: **`muroDocumental()`** (puro,
+    `module-subastas/edicto.ts`, fixtures literales de tres fichas reales) → `ninguno|parcial|total`;
+    columna **`subastas.documentos_muro`** escrita SIEMPRE (también el `'ninguno'`: es lo que convierte un
+    listado vacío en una AFIRMACIÓN en vez de en un hueco); estado **`ocultas_tras_login`** en
+    `titularCargas`/`analisisDocumental`/`resumenDocumentos`, que manda al LOGIN, no al Registro. Con muro
+    parcial el documento que SÍ se ve sigue mandando. Las fichas con muro se reintentan cada 7 días sin
+    monopolizar la cola del lector. **Comprobado y descartado como alternativa gratis:** el anuncio del BOE
+    es un stub de 1,1 KB (juzgado + expediente + enlace al Portal) en las 4 subastas de 3 juzgados
+    revisadas; las pestañas `ver=2/3/5` tienen el mismo muro; y lo público de la pestaña Bienes ya lo lee
+    el cron. **Las cargas no están en ningún sitio público.** El registro en el Portal exige certificado o
+    Cl@ve (una vez), pero luego da usuario/contraseña — eso sí sería automatizable; PENDIENTE de decisión.
+  - **El aviso de cierre no se había disparado NUNCA.** Todo `subastas-cierre` colgaba de
+    `subastas_seguidas`, que solo se llena pulsando «👀 Seguir» en Telegram: **19 filas en el radar, 18
+    avisadas, 0 seguidas**, y `mejor_puja_at` sin estrenar en las 26 filas del corpus. Un aviso que depende
+    de un botón que nadie pulsa es un aviso que no existe → los avisos salen ahora del **RADAR** (lo que ya
+    pasó el filtro de rentabilidad); las seguidas conservan su camino y el radar las excluye
+    (`SIN_SEGUIMIENTO_ACTIVO`) para no avisar dos veces. **Y la puja se leía de la pestaña equivocada:**
+    `mejorPujaViva` miraba la GENERAL, donde solo están la puja MÍNIMA y los tramos → no encontraba nada
+    nunca, y como el `null` se interpretaba (bien) como «no publicado», el fallo era invisible. La pestaña
+    **`ver=5`** sí responde a un anónimo con una de cuatro frases → **`pujasDeFicha`** (puro) con
+    `sin_pujas | con_puja | secretas | desconocido`; `desconocido` **NUNCA** se colapsa con `sin_pujas`.
+    Medido en las 13 vivas: 5 sin pujas · 5 con puja de importe oculto · 3 secretas por decisión del
+    juzgado. **El importe solo se publica al CONCLUIR** (y ahí sí lo captura ya `capturarResultados`).
+  - **Dos ventanas de aviso, no una** (petición de Alberto): **💶 «prepara el depósito» a 5 días** y **🚨
+    «últimas 24 h»** (`subastas_radar.aviso_deposito_at` / `aviso_cierre_at`). El cuello de botella real es
+    el DINERO, no la documentación: el Portal llega a pedir el **20%** del tipo (SUB-JA-2026-262097:
+    3.108,68€ sobre 15.543,40€) y avisar la víspera no da tiempo a moverlo. Texto en el helper PURO
+    `lib/subastas/aviso-cierre.ts` (testeado): depósito, estado de pujas **con su fecha de lectura**, suelo
+    del art. 670 **solo si de verdad no hay pujas** (cantarlo con una puja viva encima invita a pujar por
+    debajo de lo que ya hay), techo de puja, cargas y enlace. **Ratio de remate real de SU provincia**
+    (`calibracionResultados`), nunca el agregado nacional disfrazado de local: con los 8 remates capturados
+    la mediana global es **0,64× el tipo** pero **Sevilla va a 1,42×** (un 165.000€ rematado en 669.900€,
+    verificado a mano en el Portal).
+  - **🚨 DOS LANDMINES que `tsc` y `next build` NO cazan, encontradas al probar antes de mergear:**
+    **(a)** `datosDe()` leía `pujas_estado`, `pujas_estado_at` y `puja_maxima_calc`, que **no estaban en
+    `COLS_SUBASTA`** → las filas llegaban con `undefined` y el aviso salía MUDO («❔ estado de pujas sin
+    comprobar», sin techo) **con el dato en la BD**. Las filas de `$queryRaw` son `any`, así que
+    `f.columna_que_no_existe` es TypeScript válido. Lo vigila ahora **`lib/subastas/cols-subasta.test.ts`**,
+    que lee el FUENTE del cron y exige que toda `f.<col>` esté declarada (probado en rojo quitando una
+    columna a propósito). **Al añadir una columna que el código necesita, va a `COLS_SUBASTA` en el mismo
+    PR** — ya lo decía el comentario de la constante. **(b)** `vigilarPujas()` usaba
+    `SELECT DISTINCT … ORDER BY s.fecha_fin` con `fecha_fin` fuera del SELECT: **SQL inválido (42P10)**, el
+    vigía moría en cada pasada. No hacía falta `DISTINCT` (se consulta `subastas` con dos `EXISTS`, no con
+    un JOIN). Lección: **el SQL de un cron nuevo se ejecuta contra la BD real antes de mergear** — ni el
+    typecheck ni el build miran dentro de un `Prisma.sql`.
+  - Migraciones aplicadas: `2026-08-20_subastas_documentos_muro.sql` (columna + re-encolado de lo grabado
+    como «revisada y sin adjuntos» + saneo del `analisis` guardado, que repetía la negación en el
+    desplegable) y `2026-08-20_subastas_pujas_avisos.sql`. Las 13 vivas quedaron reclasificadas con el muro
+    y el estado de pujas MEDIDOS contra el Portal, no supuestos.
+  - **De paso:** `GET /api/subastas/radar` devolvía el anuncio PELADO (sin `analisis`/`notas_edicto`/
+    `documentos`/`cargas_detalle`), y como la página recarga la bandeja por ahí al marcar «visto», la misma
+    ficha que acababa de decir «el BOE SÍ publica la certificación» pasaba a decir «todavía no se ha
+    revisado» **con solo tocarla**. Ahora la documentación viaja con la fila y el cliente FUSIONA en vez de
+    sustituir (el endpoint no calcula `escenarios` ni la foto viva de la subasta).
+  - **PENDIENTE:** llevar el estado de pujas a la ficha de `/subastas` (hoy solo va en el Telegram);
+    registrar el MOTIVO del descarte para que el radar aprenda; y `SUB-JA-2026-262310`, cuya certificación
+    está descargada y sin cuadro — 26 páginas CCITT/JBIG2 con **OCR basura** (553.750 chars del tipo
+    «puntaumbña@registrodelapropiedad.org»): `pareceEscaneado()` mide CANTIDAD de texto, no calidad, y
+    `localizarJpegs()` solo ve JPEG (ahí no hay ninguno). Pide rasterizador de PDF, no un umbral.
+
 ## 🔓 `/api/publico/*` — el único endpoint sin sesión, y su landmine de CORS (20/08/2026)
 `GET /api/publico/disponibilidad?piso=<slug>&meses=<1..12>` alimenta el calendario de la landing de
 House Sevillana (`apps/housesevillana`). Está en la lista `PUBLIC` del middleware a propósito: publica

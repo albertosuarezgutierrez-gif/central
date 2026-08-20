@@ -70,8 +70,12 @@ async function corpusPorClave(claves: string[]): Promise<Map<string, any>> {
  * Un fallo de lectura NO escribe: deja el último estado conocido con su fecha.
  */
 async function vigilarPujas(): Promise<{ vigiladas: number; leidas: number }> {
+  // Sin DISTINCT a propósito: se consulta `subastas` con dos EXISTS, no con un
+  // JOIN, así que cada subasta sale UNA vez. Con `DISTINCT` esto era SQL
+  // inválido —`ORDER BY s.fecha_fin` sobre una columna fuera del SELECT, error
+  // 42P10— y el vigía moría en cada pasada. No lo caza ni `tsc` ni el build.
   const filas = await prisma.$queryRaw<Array<{ dedupe_key: string; identificador: string }>>(Prisma.sql`
-    SELECT DISTINCT s.dedupe_key, s.identificador
+    SELECT s.dedupe_key, s.identificador
     FROM subastas s
     WHERE s.fuente = 'boe' AND s.identificador IS NOT NULL
       AND s.archivada_at IS NULL

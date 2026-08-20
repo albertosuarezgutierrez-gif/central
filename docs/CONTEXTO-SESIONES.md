@@ -43,6 +43,10 @@
 - Hecho: `pujasDeFicha` (4 estados, `desconocido` nunca es «sin pujas») + `pujas_estado` + avisos sobre el
   RADAR con **dos ventanas**: «prepara el depósito» a 5 días (el cuello de botella es el dinero: el Portal
   llega a pedir el 20%) y «últimas 24 h». Con ratio de remate de SU provincia y suelo del art. 670.
+- **Probar antes de mergear cazó DOS bugs que `tsc` y `next build` dan por buenos:** tres columnas que el
+  cron lee y faltaban en `COLS_SUBASTA` (filas `$queryRaw` = `any` → aviso MUDO con el dato en la BD; ahora
+  lo vigila `cols-subasta.test.ts`) y un `SELECT DISTINCT … ORDER BY` fuera del SELECT (**42P10**, el vigía
+  moría en cada pasada). Regla: **el SQL de un cron nuevo se ejecuta contra la BD real antes de mergear.**
 - Pendiente: llevar el estado de pujas a la ficha de `/subastas`; registrar el MOTIVO del descarte.
 
 ### ⚖️ (20/08/2026) «Cargas no publicadas» con la certificación colgada: el Portal las esconde tras el login

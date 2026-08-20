@@ -47,7 +47,12 @@ export const COLS_SUBASTA = Prisma.raw(
     'uso_catastral, direccion_catastro, precio_m2_mercado, muestra_mercado, zona_mercado, notas_edicto, ' +
     'documentos, documentos_muro, es_playa, margen_flip, margen_flip_pct, flip_apto, semaforo, analisis, precio_m2_zona, ' +
     'muestra_zona, zona_portal, lat, lon, geo_precision, ' +
-    'cargas_detalle, cargas_fuente, documentos_leidos, lector_version, valor_orientativo, mejor_puja, mejor_puja_at',
+    'cargas_detalle, cargas_fuente, documentos_leidos, lector_version, valor_orientativo, mejor_puja, mejor_puja_at, ' +
+    // Estado de pujas y techo congelado: los lee `subastas-cierre` para redactar
+    // el aviso. Sin ellos las filas llegan con `undefined` y el aviso sale MUDO
+    // («estado de pujas sin comprobar») con el dato en la BD — y `tsc` no lo caza
+    // porque estas filas son `any`. Lo vigila `cols-subasta.test.ts`.
+    'pujas_estado, pujas_estado_at, puja_maxima_calc',
 )
 
 /**
