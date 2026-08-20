@@ -13,6 +13,10 @@ paths = [
   # Falso positivo: enablebanking.ts construye la cabecera "-----BEGIN PRIVATE KEY-----"
   # alrededor de una variable de runtime (la clave real viene de env); no hay material de clave.
   '''apps/plataforma/lib/enablebanking\.ts''',
+  # Mismo falso positivo: la Edge Function rescatada `drive-upload-factura` hace
+  # `sa.private_key.replace(/-----BEGIN PRIVATE KEY-----|…/g, '')` para quitar la cabecera PEM
+  # de una clave que viene de env. Es la cabecera literal dentro de un regex, no material de clave.
+  '''supabase/functions-rescatadas/drive-upload-factura/index\.ts''',
 ]
 regexes = [
   # Smoobu key filtrada en el historial pre-#219. El código actual la lee de
