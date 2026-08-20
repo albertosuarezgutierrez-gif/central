@@ -841,6 +841,31 @@ del widget, que mira solo a la caché del navegador. Hay dos tests que lo vigila
   `latidos.test.ts` que compara los ids del registro contra las claves de `PROBES` (lee el fuente de la
   ruta, porque `Prisma.sql` no es importable desde `node --test`).
 
+## 🔧 Del latido rojo al merge: reparación automática de agentes (20/08/2026)
+El vigía de latidos DETECTA; hasta hoy nadie REPARABA. El `sivra_canal` roto el 19/08 (moría en
+`42883 date - bigint` en su primera consulta) siguió dejando los cuatro pisos con el ×1,20 supuesto
+hasta que un humano leyó el Telegram. Decisión de Alberto: «lo más automático posible y solo avisarme
+en caso de no resolverse». Diseño: `docs/superpowers/specs/2026-08-20-latido-autoreparacion-design.md`.
+- **Disparador:** `.github/workflows/latido-reparar.yml` (08:00 UTC, 15 min detrás del cron de
+  latidos) → `POST /api/internal/reclamar-reparacion` → `scripts/ai-programar.mjs` → gate → merge o
+  PR draft + Telegram. **Plataforma decide, GitHub ejecuta, el latido juzga.**
+- **Solo dispara lo que tiene forma de EXCEPCIÓN** (`lib/monitoring/reparable.ts`, puro y testeado
+  con partes reales): SQLSTATE, nombre compuesto de excepción o marcador de runtime. Un `error:`
+  suelto NO basta — en castellano aparece en partes de degradación normal. La doctrina «no lo sé ≠
+  no hay» aplicada al disparador: un IMAP caído o un Serper vacío no se arreglan tocando el repo.
+- **🚨 Al orquestador se le manda la EVIDENCIA, nunca el diagnóstico.** La `nota` de `sivra_canal` en
+  `AGENTES_VIGILADOS` decía que el fallo estaba «aguas arriba, en la rutina de Booking y en el plan de
+  escaparate» — falso: las 22 mediciones estaban. Lo único cierto era la cadena de la excepción.
+- **🚨 El gate es una PRUEBA, no el estado de CI.** El diff debe traer un `*.test.ts` que falle sobre
+  `main` y pase con el parche (el workflow lo ejecuta él mismo, en su run). Doble motivo: un `tsc`
+  verde bendice igual un «arreglo» que borre la consulta, y **el estado de checks de un PR miente
+  aquí** — el PR #1529 mostraba ✅ con `tests.yml`/`ci.yml` sin haberse ejecutado nunca.
+- **Frenos:** una firma de error (`firmaError`) = un intento · 3 por agente en 30 días · un intento
+  vivo (claim `agente_reparaciones`, migración `2026-08-20_agente_reparaciones.sql`) · el diff nunca
+  toca `.claude/**`, `CLAUDE.md`, `.github/workflows/**` ni `.sql`.
+- **El agente no se declara curado a sí mismo:** a las 24 h del merge, `agentes-latido` compara
+  `ultimo_ok_at` contra `merged_at`. Verde → cierra en silencio. Rojo → Telegram. **Éxito = silencio.**
+
 ## Reglas
 - Multi-tenant: SIEMPRE filtrar por `cuenta_id` en todas las queries.
 - Sin credenciales en repo.
