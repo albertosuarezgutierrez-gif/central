@@ -32,6 +32,16 @@
 
 ---
 
+### 🔍 (20/08/2026) Auditoría diaria (ligera) — heartbeat 22/22 ✅, sin drift, un vigilante nuevo
+- Rango: 45 commits desde la pasada del 19/08 05:15 UTC, casi todo el cierre de la saga
+  `auditoria.yml`/`rutinas-automerge.yml` + sesión IBKR + fixes de housesevillana. Sin huecos en
+  memoria (el guardián ya lo había anotado todo), `docs/SKILLS.md` al día, sin contradicción fiscal.
+- `rutinas-automerge.yml` confirmado sano: última pasada 01:55 UTC en verde, cada hora sin huecos —
+  la saga del 19/08 (PRs #1501→#1511) quedó resuelta de verdad.
+- **Hallazgo (carril 2, PR aparte):** el cron semanal `paper-tracker` (alta 18/08, PR #1476) ya
+  escribía su latido pero nadie lo vigilaba — añadido a `AGENTES_VIGILADOS`/`PROBES`.
+- Informe completo en `docs/AUDITORIA-2026-08.md` (actualización 2026-08-20).
+
 ### 🛑 (19/08/2026) IBKR: no era la selección, eran los stops — libro de operaciones en Supabase
 - Alberto preguntó por VWCE («no para de bajar»): −594,96€, el **3,7%** de los −16.172,49€ que perdió operando
   en 2026. Sacado de IBKR por MCP; informe visual en artifact (no en repo: dato financiero personal).

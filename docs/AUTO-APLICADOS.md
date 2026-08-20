@@ -13,6 +13,10 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-08-20** · `docs/CONTEXTO-SESIONES.md` + `docs/AUDITORIA-2026-08.md` · entrada nueva de la
+  pasada de hoy (heartbeat 22/22 ✅, backlog de rutinas sano y `rutinas-automerge.yml` corriendo en
+  verde cada hora, sin drift de skills/docs) · pasada ligera diaria, rango 45 commits desde
+  2026-08-19 05:15 UTC · commit de esta auditoría
 - **2026-08-19** · `docs/CONTEXTO-SESIONES.md` + `docs/AUDITORIA-2026-08.md` · entrada nueva de la
   pasada de hoy (heartbeat 24/24 ✅, backlog de rutinas sano, sin drift de skills/docs, «Estado
   vivo» sin cambios) · pasada ligera diaria, rango 12 commits desde 2026-08-18 · commit de esta
