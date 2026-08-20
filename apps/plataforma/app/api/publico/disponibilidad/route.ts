@@ -32,7 +32,20 @@ const PISOS: Record<string, { propId: string; smoobuId: string }> = {
   'luxury-busto': { propId: 'prop_luxury_busto', smoobuId: '352943' },
 }
 
-const CACHE = 'public, s-maxage=600, stale-while-revalidate=3600'
+// 🚨 `max-age=0, must-revalidate` es para el NAVEGADOR; `s-maxage` para el CDN.
+//
+// Antes esto era `public, s-maxage=600, stale-while-revalidate=3600`, sin `max-age`. Para una
+// caché privada (el navegador) eso NO fija vida útil, así que Chrome la calcula por heurística
+// —cero, sin validador— y entonces el `stale-while-revalidate` le AUTORIZA a seguir sirviendo su
+// copia guardada hasta una hora mientras revalida por detrás. Resultado el 20/08/2026: con el
+// endpoint ya arreglado y respondiendo bien a cualquiera, la landing seguía enseñando el aviso de
+// error, porque el navegador se servía a sí mismo la copia vieja —la que no llevaba
+// `Access-Control-Allow-Origin`— de antes del arreglo. Desde el servidor era imposible de ver.
+//
+// Se renuncia al `stale-while-revalidate` a propósito: no hay forma de pedirlo solo para el CDN
+// (`must-revalidate` vale para todas las cachés), y en un calendario del que la gente reserva es
+// mejor pagar una revalidación que enseñar una noche libre que ya no lo está.
+const CACHE = 'public, max-age=0, must-revalidate, s-maxage=600'
 
 /** Antigüedad máxima del respaldo. El cron de snapshots corre a diario: 2 días = cron muerto. */
 const DIAS_SNAPSHOT_VALIDO = 2

@@ -45,6 +45,20 @@
   del `Origin`. Helper `lib/sivra/cors-publico.ts` sin argumentos + test que vigila la ruta.
 - **Dos lecciones a la skill `verification-before-completion`:** un 200 por curl a pelo no prueba
   CORS; y **con caché delante, UNA petición no es una medición** (repetir y mirar `x-vercel-cache`).
+- **Y AUN ASÍ seguía roto en el navegador de Alberto (captura), con el endpoint ya correcto.**
+  Tercera capa, la que no se ve desde el servidor: la cabecera era `s-maxage=600,
+  stale-while-revalidate=3600` **sin `max-age`**. Para una caché PRIVADA eso no fija vida útil
+  (heurística = 0 sin validador) y el `stale-while-revalidate` **autoriza al navegador a servir su
+  propia copia vieja hasta una hora** — la copia rota de antes del arreglo. Fix (#1525):
+  `public, max-age=0, must-revalidate, s-maxage=600` (se renuncia al SWR: no se puede pedir solo
+  para el CDN) + `cache:'no-store'` en el `fetch` del widget, que solo toca la caché del navegador.
+  Regla: **`s-maxage` sin `max-age` no es «cachea solo el CDN»**; el navegador también guarda.
+- **Verificado en producción tras mergear #1521** (20/08, 07:40 UTC): se envenenó la caché a propósito
+  con `Origin: https://competencia.com` y aun así **12/12** peticiones desde housesevillana.es
+  recibieron `access-control-allow-origin: *` (todas `HIT`, o sea de la copia envenenada). Igual sin
+  `Origin`, y el preflight `OPTIONS` da 204 con la cabecera. Cuerpo: `fuente:smoobu`, 34 noches
+  ocupadas, 0 sin dato. ⚠️ La landing en sí **no se pudo mirar desde el contenedor** (el proxy bloquea
+  `housesevillana.es` y los previews `*.vercel.app`) — falta el Ctrl+F5 de Alberto para cerrarlo.
 
 ### 🐾 (20/08/2026) Tres decisiones de Alberto sobre la landing, y el calendario a producción
 - **Mascotas: NO se admiten.** La ficha de Booking **2039943** publica «Admite mascotas» y la landing dice

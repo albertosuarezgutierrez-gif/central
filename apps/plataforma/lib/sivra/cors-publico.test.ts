@@ -39,3 +39,22 @@ test('el endpoint publico sigue cacheandose (si esto cambia, revisa el comodin)'
   )
   assert.ok(/s-maxage=\d+/.test(ruta), 'se esperaba una respuesta cacheable en el CDN')
 })
+
+test('la cache del CDN no se le sirve tambien al navegador como copia reutilizable', () => {
+  // La segunda mitad del incidente del 20/08/2026: `s-maxage` SIN `max-age` deja la vida util de
+  // la copia privada a la heuristica del navegador, y `stale-while-revalidate` le autoriza ademas
+  // a servir la suya vieja hasta una hora. Con una copia guardada rota, la pagina sigue rota
+  // aunque el endpoint ya no lo este — y desde el servidor no hay forma de verlo.
+  const ruta = readFileSync(
+    new URL('../../app/api/publico/disponibilidad/route.ts', import.meta.url),
+    'utf8',
+  )
+  const cache = /const CACHE = '([^']+)'/.exec(ruta)?.[1]
+  assert.ok(cache, 'no se encontro la constante CACHE')
+  assert.match(cache, /max-age=0/, 'el navegador debe revalidar en cada carga')
+  assert.match(cache, /must-revalidate/, 'sin esto el navegador puede servir su copia vieja')
+  assert.ok(
+    !cache.includes('stale-while-revalidate'),
+    'stale-while-revalidate no se puede pedir solo para el CDN: autoriza al navegador a servir lo viejo',
+  )
+})

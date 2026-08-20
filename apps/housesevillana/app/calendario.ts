@@ -379,7 +379,12 @@ export const CALENDARIO_JS = `
     desplazamiento = Math.min(VENTANA_MESES - paso(), desplazamiento + paso()); pintar();
   });
 
-  fetch('${API_DISPONIBILIDAD}', { headers: { 'Accept':'application/json' } })
+  // \`cache:'no-store'\` mira SOLO a la cache del navegador: el CDN sigue sirviendo su copia de
+  // 10 minutos, que es lo que abarata esto. Sin ello, el navegador puede reutilizar durante un
+  // buen rato una respuesta suya anterior — y si esa se guardo rota (paso el 20/08/2026: una
+  // copia sin la cabecera CORS), la pagina sigue enseñando el aviso de error aunque el endpoint
+  // ya este arreglado, sin manera de verlo desde el servidor.
+  fetch('${API_DISPONIBILIDAD}', { cache: 'no-store', headers: { 'Accept':'application/json' } })
     .then(function(r){ if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
     .then(function(d){
       if (!d || !Array.isArray(d.ocupadas) || !Array.isArray(d.sinDato)) throw new Error('respuesta ilegible');
