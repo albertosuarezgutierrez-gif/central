@@ -134,6 +134,7 @@ function datosDe(f: any): DatosAviso {
     documentos: Array.isArray(f.documentos) ? f.documentos : null,
     publicaAdjuntos: (f.fuente ?? 'boe') === 'boe',
     muro: f.documentos_muro ?? 'ninguno',
+    sesion: f.documentos_sesion ?? null,
   })
   return {
     identificador: f.identificador ?? f.dedupe_key,

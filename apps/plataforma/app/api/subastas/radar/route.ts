@@ -31,14 +31,14 @@ export async function GET(req: NextRequest) {
            -- bandeja por aquí al marcar «visto», la misma ficha que acababa de
            -- decir «El BOE SÍ publica la certificación» pasaba a decir «la ficha
            -- del BOE todavía no se ha revisado» con solo tocarla (20/08/2026).
-           s.semaforo, s.analisis, s.notas_edicto, s.documentos, s.documentos_muro, s.cargas_detalle
+           s.semaforo, s.analisis, s.notas_edicto, s.documentos, s.documentos_muro, s.documentos_sesion, s.cargas_detalle
     ${RADAR_CON_CORPUS}
     WHERE r.cuenta_id = ${cuentaId}::uuid AND ${RADAR_VIGENTE} ${filtro}
     ORDER BY r.puntuacion DESC NULLS LAST, r.created_at DESC
     LIMIT 200
   `)
 
-  const anuncios = filas.map(({ semaforo, analisis, notas_edicto, documentos, documentos_muro, cargas_detalle, ...r }) => ({
+  const anuncios = filas.map(({ semaforo, analisis, notas_edicto, documentos, documentos_muro, documentos_sesion, cargas_detalle, ...r }) => ({
     ...r,
     doc: {
       semaforo: semaforo ?? null,
@@ -46,6 +46,7 @@ export async function GET(req: NextRequest) {
       notasEdicto: notas_edicto ?? null,
       documentos: documentos ?? null,
       documentosMuro: documentos_muro ?? null,
+      documentosSesion: documentos_sesion ?? null,
       caducidad: caducidadDeFila(cargas_detalle),
     },
   }))

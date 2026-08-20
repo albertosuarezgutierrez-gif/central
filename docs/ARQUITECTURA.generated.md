@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-20T12:33:44Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-20T14:28:56Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -231,14 +231,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- 🪤 Landmine caro:
+- Aplicado en prod con OK de Alberto:
+- Rutina nueva
+- Plusvalía: método objetivo (~970€) vs real (~24.900€)
+- Palanca grande:
+- Alcance cerrado:
+- Cruzado con la declaración 2025
 - Probar antes de mergear cazó DOS bugs que `tsc` y `next build` dan por buenos:
 - Raíz:
 - PENDIENTE (decisión de Alberto):
-- Dos reglas del disparador:
-- El gate es una PRUEBA, no CI:
-- Cierre (mismo día):
-- El cron `/api/sivra/pricing/canal` reventó entero
-- Confirmado por Alberto en pantalla.
-- Tercera capa, la que sobrevivió a los dos arreglos:
-- La lección de método, la misma las tres veces:
 

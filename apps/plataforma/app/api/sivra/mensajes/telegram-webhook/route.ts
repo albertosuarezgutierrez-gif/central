@@ -5,7 +5,7 @@ import { parseCallback, tgAnswerCallback, tgAskForReply, tgSend, tgSendButtons, 
 import { enviarAlHuesped } from '@/lib/sivra/agente-huesped/enviar'
 import { confirmarEnviado, confirmarDescartado, reproponerBorrador } from '@/lib/sivra/agente-huesped/telegram-msg'
 import { aprenderCorreccion } from '@/lib/sivra/agente-huesped/aprender'
-import { evaluarGraduacion, graduarCategoria } from '@/lib/sivra/agente-huesped/graduacion'
+import { resolverHecho } from '@/lib/sivra/agente-huesped/hechos'
 import { aplicarRetoque } from '@/lib/sivra/agente-huesped/retoque'
 import { redactarDesdeIdea } from '@/lib/sivra/agente-huesped/redactar'
 import type { ContextoRedaccion } from '@/lib/sivra/agente-huesped/redactar'
@@ -673,6 +673,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
+    // ── Hechos minados del histórico: confirmar/descartar (hch_ok / hch_no) ──
+    // Lo que sale del minado entra como `propuesto`; solo al confirmar aquí pasa a ser un dato del
+    // piso que el agente le cuenta a cualquier huésped.
+    if (prefix === 'hch') {
+      const hechoId = Number(args[0] || 0)
+      const estadoHecho = action === 'ok' ? 'confirmado' : 'descartado'
+      const hechoTxt = hechoId ? await resolverHecho(hechoId, estadoHecho) : null
+      await tgAnswerCallback(cb.id, hechoTxt ? (estadoHecho === 'confirmado' ? 'Aprendido ✅' : 'Descartado') : 'Ya no está pendiente')
+      const midHecho = cb.message?.message_id
+      if (midHecho && hechoTxt) {
+        await tgEditMessage(midHecho, estadoHecho === 'confirmado'
+          ? `🧠 <b>Aprendido:</b> ${escapeHtml(hechoTxt)}`
+          : `🗑️ <i>Descartado:</i> ${escapeHtml(hechoTxt)}`).catch(() => {})
+      }
+      return NextResponse.json({ ok: true })
+    }
+
     if (prefix !== 'hsp') return NextResponse.json({ ok: true }) // no es de este agente (bot compartido)
     const bookingId = args[0]
     const pend = bookingId ? await getPendiente(bookingId) : null
@@ -681,16 +698,16 @@ export async function POST(req: NextRequest) {
       // propuesta DUPLICADA ya resuelta (mismo mensaje del huésped propuesto dos veces). En vez del
       // críptico "Ya no está disponible", avisamos claro y RETIRAMOS los botones del mensaje pulsado
       // (editar el texto sin reply_markup quita el teclado) para que no vuelva a inducir a error.
-      const eraEnvio = action === 'send' || action === 'grant' || action === 'grad'
+      const eraEnvio = action === 'send' || action === 'grant'
       await tgAnswerCallback(cb.id, eraEnvio ? 'Ese borrador ya se envió o se gestionó' : 'Ya no está disponible')
       const staleId = cb.message?.message_id
       if (staleId) await tgEditMessage(staleId, '☑️ <i>Este borrador ya se gestionó (enviado o descartado en otro aviso).</i>').catch(() => {})
       return NextResponse.json({ ok: true })
     }
 
-    if (action === 'send' || action === 'grant' || action === 'grad') {
+    if (action === 'send' || action === 'grant') {
       const ok = await enviarAlHuesped(bookingId, pend.borrador || '')
-      await tgAnswerCallback(cb.id, ok ? (action === 'grad' ? 'Enviado · categoría graduada ✅' : 'Enviado ✅') : 'No se pudo enviar — reintenta')
+      await tgAnswerCallback(cb.id, ok ? 'Enviado ✅' : 'No se pudo enviar — reintenta')
       // Si el envío FALLA, NO tocamos nada (dejamos el pendiente y los botones para reintentar).
       if (!ok) {
         await tgSend('❌ No se pudo enviar al huésped. Vuelve a darle a ✅ Enviar en un momento.')
@@ -708,8 +725,6 @@ export async function POST(req: NextRequest) {
       await aprenderCorreccion({ propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: pend.pregunta || '', respuestaFinal: pend.borrador || '' })
       // Graduación: explícita con el botón "a partir de ahora solas", o automática tras N aprobaciones.
       if (pend.categoria) {
-        if (action === 'grad') await graduarCategoria(pend.categoria, true)
-        else await evaluarGraduacion(pend.categoria)
       }
       await prisma.$executeRaw(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId}`).catch(() => {})
       return NextResponse.json({ ok: true })
@@ -771,7 +786,6 @@ export async function POST(req: NextRequest) {
           UPDATE mensajes_log SET auto_sent = true
           WHERE booking_id = ${bookingId} AND created_at = (SELECT max(created_at) FROM mensajes_log WHERE booking_id = ${bookingId})
         `).catch(() => {})
-        if (pend.categoria) await evaluarGraduacion(pend.categoria)
         await aprenderCorreccion({ propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: pend.pregunta || '', respuestaFinal: pend.borrador || '' })
         await prisma.$executeRaw(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId}`).catch(() => {})
         await tgSend(`✅ Enviado al huésped:\n${escapeHtml(pend.borrador || '')}`)

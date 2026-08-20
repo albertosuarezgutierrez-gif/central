@@ -47,6 +47,9 @@ export async function clasificarSubastas(max = 400): Promise<{ revisadas: number
       (f.fuente ?? 'boe') === 'boe',
       // Y el muro del Portal: con él, una lista vacía no es «no hay documentos».
       f.documentos_muro ?? 'ninguno',
+      // …y con qué ojos se miró: un muro visto con sesión ya no se arregla con
+      // un login, y decirlo así evita mandar a hacer lo que está hecho.
+      f.documentos_sesion ?? null,
     )
     // Techo de puja para un 25% de descuento REAL — el mismo que pinta la ficha.
     // Se CONGELA aquí: cuando la subasta concluya, esta fila deja de entrar en la
