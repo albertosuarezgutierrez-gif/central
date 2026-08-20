@@ -48,6 +48,7 @@
   (4,86% sobre 320.000€). Dos preguntas abiertas para Asecon: base de la amortización (valor ISD, no
   catastral — STS 15/09/2021) y si entraron las limpiezas (~1.800€/año). Rectificables 2024-25 si
   fallan. Validación final: Asecon.
+
 ### 🔔 (20/08/2026) El aviso de cierre de subastas no había sonado NUNCA — y las pujas se leían de la pestaña equivocada
 - Alberto: «que el agente me avise el día antes con cómo van las pujas». Auditoría: 19 filas en el radar,
   18 avisadas, **0 seguidas** — y TODO el cron `subastas-cierre` colgaba de `subastas_seguidas`, que exige
