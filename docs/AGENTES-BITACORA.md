@@ -15,6 +15,15 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-20 · mercado-booking** · hizo: pasada de 24 ventanas de mercado (plan `?max=24`,
+  488 candidatas totales, 464 recortadas por el tope — aviso arrastrado) — 237 comps reales
+  escritos vía Booking.com MCP, todas con respuesta (0 `sinRespuesta`). Paso 2-bis (escaparate
+  propio) completo: 4/4 ventanas medidas (Busto Reform 3021,05€/4n, Luxury Busto 3379,12€/4n,
+  House Sevillana 10969,52€/4n, Dúplex center 2109,25€/3n), todas reconocidas como propias por
+  el endpoint (`propios[]`) y desviadas a `pricing_escaparate`, ninguna contaminó `market_rates`.
+  3 anuncios propios adicionales descartados al aparecer sueltos en ventanas de mercado (House
+  Sevillana en 19-21 nov aforo 12 y en 26-28 mar Feria aforo 12) — no se escribieron como comps.
+  Latido `ok:true`. dudas: —; fallos: —; PRs/commits: — (solo bitácora + BD).
 - **2026-08-19 · psd2-health-check** · hizo: preflight canal alerta OK (200); consulta frescura
   `movimientos_bancarios WHERE origen='psd2'` → último movimiento 17/08/2026 (2 días, dentro de
   umbral 48h), mov_30d=63 vs mov_30d_prev=71 (caída ~11%, muy por debajo del umbral 50%). Estado
