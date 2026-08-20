@@ -1897,6 +1897,17 @@ completo `docs/AUDITORIA-2026-08.md`.
     (ingesta IMAP no leía nada por saltos de línea/columna) ya arreglado y con regresión — pero el
     correo de alerta de Surus **aún no se ha visto en producción** (alta del mismo día): pendiente
     contrastar el parser contra el primer aviso real que le llegue a Alberto.
+  - **SIVRA — agente de huéspedes (20/08/2026, PR #1542 draft).** Entrega 1 hecha: lee la guía REAL
+    del piso por la API de la guest app de Smoobu (`login.smoobu.com/api-guest/bookings/{id}[/contents]?token=`,
+    el token sale del `guest-app-url`). Pendientes: (a) entregas 2-5 — detector de conflictos
+    guía↔override, autonomía «si está en la guía contesta solo», hechos permanentes separados de las
+    cortesías, y minería de los 159 hilos de 2026 para aprender de lo ya contestado; (b) **parking:
+    que el agente lo VENDA y lo COBRE** (fase 2, pedido por Alberto) — hoy el código pisa a propósito
+    la sección PARKING de la guía y responde «ocupado» + parkings públicos; la guía ofrece el de Plaza
+    San Juan de la Palma a 20 €/día **previa reserva y según disponibilidad**, así que NO es una promesa
+    en falso; (c) **mandar nosotros los datos de viajeros a la Hospedería de la Junta de Andalucía** —
+    hoy va por un tercero (Chekin: el `onlineCheckInUrl` de cada reserva apunta a `guest.chekin.com`);
+    (d) **en marzo vence Smoobu** → decidir si compensa seguir o darlo de baja.
   - **Facturas/banca sin conciliar:** Roborock −247,92€ (House) sin aparecer en banco; Booking Dúplex
     587,23€ vence 16/08; Socorro 24 julio sin factura de comisión; Endesa Dúplex 24/07 87,42€ con
     cargo pero sin PDF archivado; fila duplicada CREATE (`create-socorro` + `create_ventilador`,
