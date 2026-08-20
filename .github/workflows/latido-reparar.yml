@@ -20,6 +20,18 @@ name: 🔧 Reparar un agente en rojo
 # Comparte el SCRIPT con `ai-programar.yml`, no el workflow: aquel es el camino MANUAL y termina en
 # PR draft a propósito; envolverlo aquí arrastraría sus pasos de espera de CI, que es justo el
 # veredicto en el que no nos podemos apoyar.
+#
+# 🔑 AUTENTICACIÓN — `ALERTA_TOKEN` PREFERIDO, `CRON_SECRET` DE RESPALDO. Los dos endpoints usan
+# `isRoutineAuthorized`, que acepta cualquiera de los dos. Se pide el estrecho primero y se cae al
+# maestro para que este workflow no dependa de un alta manual: el 20/08/2026 se comprobó que el
+# `ALERTA_TOKEN` de Vercel está marcado como **Sensitive** (escritura sin lectura), así que su valor
+# NO se puede recuperar de ningún sitio — ni por dashboard ni por API — y rotarlo para copiarlo aquí
+# desincronizaría de golpe todas las Rutinas de claude.ai/code, que lo llevan escrito en su prompt
+# (avería ya vivida el 19/07/2026 con el agente de trading). Dar aquí el maestro NO contradice la
+# razón por la que existe el token estrecho: ese motivo es que las Rutinas corren en un entorno cuyo
+# campo de variables es texto plano visible. Los secrets de GitHub Actions no lo son, y `CRON_SECRET`
+# ya vive aquí desde antes (lo usa `auditoria.yml`). Si algún día se da de alta `ALERTA_TOKEN` como
+# secret del repo, este workflow lo empieza a preferir solo, sin tocar nada.
 
 on:
   schedule:
@@ -63,11 +75,12 @@ jobs:
         id: claim
         env:
           PLATAFORMA_URL: ${{ secrets.PLATAFORMA_URL }}
-          ALERTA_TOKEN: ${{ secrets.ALERTA_TOKEN }}
+          # ALERTA_TOKEN es el token estrecho; CRON_SECRET es el respaldo. Ver la nota de arriba.
+          ALERTA_TOKEN: ${{ secrets.ALERTA_TOKEN || secrets.CRON_SECRET }}
         run: |
           set -euo pipefail
           if [ -z "${PLATAFORMA_URL:-}" ] || [ -z "${ALERTA_TOKEN:-}" ]; then
-            echo "::error::Faltan secrets PLATAFORMA_URL y/o ALERTA_TOKEN"; exit 1
+            echo "::error::Falta el secret PLATAFORMA_URL y/o (ALERTA_TOKEN o CRON_SECRET)"; exit 1
           fi
           resp="$(curl -sS -X POST "$PLATAFORMA_URL/api/internal/reclamar-reparacion" \
                     -H "Authorization: Bearer $ALERTA_TOKEN" -H 'Content-Type: application/json')"
@@ -226,7 +239,8 @@ jobs:
         if: always() && steps.claim.outputs.hay == 'si'
         env:
           PLATAFORMA_URL: ${{ secrets.PLATAFORMA_URL }}
-          ALERTA_TOKEN: ${{ secrets.ALERTA_TOKEN }}
+          # ALERTA_TOKEN es el token estrecho; CRON_SECRET es el respaldo. Ver la nota de arriba.
+          ALERTA_TOKEN: ${{ secrets.ALERTA_TOKEN || secrets.CRON_SECRET }}
           ID: ${{ steps.claim.outputs.id }}
           ESTADO: ${{ steps.entregar.outputs.estado }}
           PR: ${{ steps.entregar.outputs.pr }}

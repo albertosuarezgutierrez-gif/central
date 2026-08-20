@@ -56,8 +56,15 @@
   consulta `agente_reparaciones` antes de abrir carril 2 (no duplicar parche sobre un intento vivo) y el
   reparador queda registrado en `docs/SKILLS.md` para el `agentes-entrenador`, avisando de que su
   comportamiento es CÓDIGO TESTEADO, no un prompt, y de que su silencio no prueba que corriera.
-- ⏳ **Pendiente de Alberto: añadir el secret `ALERTA_TOKEN` al repo en GitHub Actions** (`PLATAFORMA_URL`,
-  `AI_GATEWAY_SECRET` y `GH_PAT_TRIGGER` ya están). Sin él, `latido-reparar.yml` muere en su primer paso.
+- 🔑 **Ese «pendiente de Alberto» se cerró solo, y el intento de cerrarlo destapó algo que hay que
+  recordar: el `ALERTA_TOKEN` de Vercel está marcado Sensitive** — escritura sin lectura, no lo
+  devuelve ni el dashboard ni la API, así que **su valor no se puede recuperar de ningún sitio**. Y
+  rotarlo para copiarlo a GitHub habría desincronizado de golpe TODAS las Rutinas de claude.ai/code,
+  que lo llevan escrito en el prompt (es la avería del 19/07/2026 del agente de trading, y la
+  variable de Vercel lleva justo esa fecha). Salida: `latido-reparar.yml` pide
+  `secrets.ALERTA_TOKEN || secrets.CRON_SECRET` — los dos endpoints usan `isRoutineAuthorized`, que
+  acepta ambos, y `CRON_SECRET` ya estaba en los secrets del repo. **No contradice el token estrecho:**
+  este existe porque las Rutinas corren con las variables a la vista; los secrets de Actions no.
 
 ### 🧨 (20/08/2026) `date - bigint`: el calibrado del canal murió en su primera pasada real — y tapaba un suelo apagado
 - **El cron `/api/sivra/pricing/canal` reventó entero** (42883, `operator does not exist: date - bigint`)
