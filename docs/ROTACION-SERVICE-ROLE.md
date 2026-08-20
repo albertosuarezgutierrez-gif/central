@@ -33,7 +33,7 @@ secret ni invalidar las sesiones de usuario.
 | Vercel env `SUPABASE_SERVICE_ROLE_KEY` en **`ia-rest`** | 1 | All Environments, «Updated Jun 10», sin marcar Sensitive |
 | Vercel env `SUPABASE_SERVICE_ROLE_KEY` en **`central-rrhh`** | 1 | Production + Preview, marcada Sensitive |
 | Edge Functions de ia-rest con `Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')` | **43 de 45 en el repo** | la inyecta Supabase; en el panel ya sale **DEPRECATED**, sustituta `SUPABASE_SECRET_KEYS` (ya inyectada, junto con `SUPABASE_PUBLISHABLE_KEYS`) |
-| ⚠️ Edge Functions **desplegadas en el panel** | **67** | 22 MÁS que las 45 del repo (20/08). No se sabe qué hacen ni qué clave leen: no están versionadas. Hay que inventariarlas antes de pulsar nada |
+| 🔴 Edge Functions **desplegadas y NO versionadas** | **22** | ver lista abajo. Al menos una (`sync-smoobu`) lee `SUPABASE_SERVICE_ROLE_KEY` legacy, la invoca un cron diario y **borra filas de `incomes`** |
 | GitHub Actions | 0 reales | `ci.yml` usa `ci_dummy_service_role_key` |
 
 ⚠️ **`ialimp` NO tiene la variable** (verificado en el panel: ni propias, ni compartidas, ni de equipo).
@@ -65,6 +65,35 @@ contraseña de Postgres dentro de esa cadena, que es un secreto distinto y NO en
 JWT-based API keys». Si el objetivo es cerrar el acceso a la BD tras la filtración, `DATABASE_URL` necesita
 su propia decisión. (La `service_role` filtrada no expone esa contraseña, así que no es el mismo incendio;
 pero tampoco queda cubierto por esta rotación, y conviene no creer que sí.)
+
+## 🔴 22 Edge Functions desplegadas sin código en el repo (20/08/2026)
+
+El panel sirve **67** funciones; el repo versiona **45**. El diff (por MCP, `list_edge_functions` contra
+`ls apps/ia-rest/supabase/functions/`) da **22 huérfanas** y **0** en el sentido contrario — o sea, no hay
+código muerto: hay **código fantasma**, ejecutándose en producción sin fuente en ningún repositorio.
+
+`add-smoobu-booking` · `boe-doc` · `deploy-agente` · `deploy-dashboard` · `drive-folder-list` ·
+`drive-photos-publish` · `drive-upload-factura` · `ficha-fotocasa` · `github-commit` · `import_csv` ·
+`inject-ga4` · `junta-pdf-texto` · `merge-landing-to-main` · `push-clean-page` · `push-route-ga4` ·
+`rehost-catalogo` · `sync-smoobu` · `trigger-deploy` · `trigger-redeploy` · `upload-landing` ·
+`upload-photo-github` · `zona-fotocasa`
+
+**Por qué bloquea la rotación:** el inventario de consumidores de la clave legacy se hizo por `grep` del
+repo, y estas 22 no están en el repo. Cualquiera puede ser un consumidor. Comprobado en la primera que se
+miró — `sync-smoobu`, invocada por el cron `jobid 1` a diario:
+
+```ts
+const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!   // legacy
+await supabase.from('incomes').delete().eq('id', incId)          // borra ingresos de SIVRA
+```
+
+**Y es un riesgo por sí mismo, aparte de la rotación:** su fuente solo existe en los servidores de
+Supabase. No hay historia, no hay revisión, no hay vuelta atrás. Se recupera con
+`get_edge_function` (devuelve el fichero entero) — hacerlo ANTES de tocar nada.
+
+⚠️ No todas son de `ia-rest`: `sync-smoobu` y `add-smoobu-booking` son de SIVRA, `boe-doc` y
+`junta-pdf-texto` huelen a subastas (plataforma), `ficha-fotocasa`/`zona-fotocasa` a inmobiliario. Al
+rescatarlas hay que decidir a qué app va cada una, no volcarlas todas en `apps/ia-rest`.
 
 ## 🛑 «Cero tráfico legacy en 24 h» NO autoriza a pulsar el botón (20/08/2026)
 
