@@ -32,6 +32,20 @@
 
 ---
 
+### 🛑 (20/08/2026) `Cloude` NO es un repo vacío — la entrada del 19/08 se quedó mirando `main`
+- Corrige lo escrito abajo («`Cloude`: 1 commit, README placeholder»): eso es solo su `main`. Alberto
+  reportó 2 PRs **en borrador** con el proyecto **NIVELA** (~10.000 líneas: scaffold Next.js 15 PWA +
+  Supabase, dominio obra/partida/albarán/fichaje, panel CAE, set de marca). Vive SOLO en ramas y PRs.
+- **NO borrar `Cloude`**: borrarlo se lleva NIVELA entero. Sin verificar por MCP — ese repo está fuera
+  del scope de esta sesión; hay que mirarlo desde el navegador o añadirlo al scope.
+- Método: **mirar `main` no es mirar el repo.** Antes de dar un repo por muerto, contar ramas y PRs.
+- `house-sevillana-landing` sí queda confirmado como cáscara muerta, ahora también desde el código: el
+  cron SEO (`apps/sivra/vercel.json`, lunes 10:00 UTC) escribe en `central` (`seo-landing.ts:5`), y no
+  queda ninguna referencia viva al repo suelto. Su último commit (10/08) es el lunes previo a la migración.
+- `GH_PAT_TRIGGER` vivo y en uso real: `auditoria.yml` (aborta si falta), `rutinas-automerge.yml` y
+  `ai-programar.yml`. Prueba empírica: el PR #1511 de la radiografía se abrió y mergeó hoy por esa vía.
+- Suite completa en verde antes de tocar nada: `pnpm test` exit 0 — **2.494** `node --test` + **107** vitest, 0 fallos.
+
 ### 🔍 (20/08/2026) Auditoría diaria (ligera) — heartbeat 22/22 ✅, sin drift, un vigilante nuevo
 - Rango: 45 commits desde la pasada del 19/08 05:15 UTC, casi todo el cierre de la saga
   `auditoria.yml`/`rutinas-automerge.yml` + sesión IBKR + fixes de housesevillana. Sin huecos en
@@ -171,7 +185,9 @@
 - `house-sevillana-landing` ya está dentro (`apps/housesevillana`, 12/08). VERIFICADO en Vercel: el proyecto
   apunta a `central` con Root `apps/housesevillana` y el último deployment de prod sale del commit del
   agente SEO (`79db75e`, hoy) → el repo suelto es cáscara muerta. `Cloude`: 1 commit, README placeholder.
-- Los dos los borra Alberto a mano (destructivo). Borrar quita la exposición pero **NO invalida la clave**.
+  🛑 **CORREGIDO el 20/08 (ver entrada arriba): eso era solo su `main`. `Cloude` tiene 2 PRs draft con
+  el proyecto NIVELA — NO borrarlo.**
+- El landing lo borra Alberto a mano (destructivo). Borrar quita la exposición pero **NO invalida la clave**.
 - Nuevo `docs/ROTACION-SERVICE-ROLE.md`: inventario + plan. El proyecto ya tiene claves nuevas
   (`sb_publishable_…` conviviendo con la `anon` legacy) → camino limpio sin tocar el JWT secret.
 - 🔴 Recon del panel: **las legacy NO se desactivan por separado** — un solo botón «Disable JWT-based API
