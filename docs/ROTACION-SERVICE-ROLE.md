@@ -52,7 +52,14 @@ roto, no funcionando**: nada que rotar ahí, pero sí que arreglar algún día �
 
 1. **Ya hecho:** existen `sb_secret_…` y `sb_publishable_…` (`default`). Nada que crear.
 2. **Backends a secret key.** Vercel `ia-rest` y `central-rrhh`: sustituir el valor de
-   `SUPABASE_SERVICE_ROLE_KEY` → redesplegar → verificar. (Marcar Sensitive también en `ia-rest`.)
+   `SUPABASE_SERVICE_ROLE_KEY` → redesplegar → verificar.
+   **Aprovechar para crearla ya como Sensitive en `ia-rest`, no antes** (comprobado 20/08): en Vercel,
+   Sensitive no es una casilla sino un **tipo** de variable, y la doc dice que las sensibles «solo están
+   disponibles en producción y preview» — o sea que marcarla **expulsa Development**, hoy activo. Como
+   este paso ya sustituye el valor, hacerlo aquí sale gratis; hacerlo antes es tocar la variable dos
+   veces. ⚠️ No confundir el tipo **Sensitive** con el tipo **Secret** («Secreto» en el panel
+   traducido): Secret vacía el valor y pide elegir un secreto ya existente de Vercel — no es lo que
+   queremos, y elegirlo por error perdería el valor actual.
 3. **Edge Functions (PR).** `Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')` →
    `JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS')!)['default']`, en 43 funciones.
 4. **Clientes a publishable key (PR).** Los 27 ficheros con `ANON_KEY` + los envs
@@ -92,14 +99,38 @@ porque solo lee, está detrás de un PIN y se abre en el navegador (o sea que ya
 - **Realtime**: las conexiones públicas quedan limitadas a 24 h salvo que se eleven con auth de usuario.
   Ojo al **KDS de ia-rest**, que son pantallas abiertas días enteros.
 
-## 🟠 Aviso ajeno a esto, visto en el mismo panel (19/08/2026)
+## ✅ La banda naranja de Supabase era un aviso legal, no una alarma (medido 20/08/2026)
 
-El dashboard muestra una banda naranja permanente: **«El período de gracia ha finalizado · Tus proyectos
-no podrán atender solicitudes cuando agotes tu cuota»**, con el proyecto en plan **Free**. Es la BD
-compartida de TODAS las verticales. Merece mirada propia, y es más urgente que la rotación.
+El 19/08 se escribió aquí que la banda naranja del dashboard («El período de gracia ha finalizado ·
+Tus proyectos no podrán atender solicitudes cuando agotes tu cuota») era «más urgente que la
+rotación». **Era falso, y el error es de método: se leyó un cartel en vez de medir.**
 
-Lo comprobado por MCP (19/08): organización `fzagbwkkzfjlsvflkkvn` en plan **`free`**, proyecto
-`central` en `ACTIVE_HEALTHY` y la BD ocupa **151 MB** (el límite del plan gratuito son 500 MB).
-O sea que **la cuota que se está agotando NO es la de almacenamiento**; será egress, MAU o compute,
-y eso NO se ve por MCP. Hay que abrirlo en Organization → Usage. Ahí decide Alberto: 10 verticales
-en producción sobre un plan sin SLA es la clase de riesgo que no avisa dos veces.
+Medido en Organization → Usage, ciclo 15/08–15/09/2026 (5 días corridos): **ninguna métrica pasa del
+35%**, y el overage del período es 0 en todas.
+
+| Métrica | Uso | Límite Free | % |
+|---|---|---|---|
+| Database Size | 168,89 MB | 500 MB / proyecto | 35% |
+| Egress | 0,676 GB | 5 GB | 14% |
+| Storage Size | 0,063 GB | 1 GB | 6% |
+| Invocaciones de Edge Functions | 8.978 | 500.000 | 2% |
+| MAU (propios y de terceros) | 0 | 50.000 | 0% |
+| Realtime (picos y mensajes) | 0 | 200 / 2.000.000 | 0% |
+
+Contraste independiente por MCP el mismo día: `pg_database_size` da **154,72 MB (30,9%)**. La cifra
+del panel es algo mayor porque incluye overhead que la consulta no ve; las dos dicen lo mismo.
+
+El texto completo de la banda es condicional y **permanente**: «Tu período de gracia terminó el 10 jul
+2026. Ahora aplica la Fair Use Policy. **Si** tu organización supera su cuota, tus proyectos pueden ser
+restringidos y las peticiones responderán con 402». Es un aviso de estado de cuenta que lleva ahí
+desde julio y seguirá ahí al 2% de consumo. `compute` y `branching` ni siquiera aparecen: no son
+métricas facturables del plan Free.
+
+**Consecuencia práctica:** no hay nada urgente aquí, y la rotación vuelve a ser la prioridad. Lo único
+que sube solo con el tiempo es Database Size, cuyo límite es **por proyecto** — vigilarlo si `central`
+crece rápido, pero 155 MB de 500 no es una urgencia. Si algún día aparece un **402 de verdad** en
+producción, el origen será otro (proyecto pausado por inactividad, rate limit, o la propia app) y se
+mira en los logs, no en esta banda.
+
+> Lección, que es la regla de la casa aplicada a un panel: un cartel de advertencia **condicional** no
+> es un dato de consumo. Antes de declarar una urgencia, medir la métrica.

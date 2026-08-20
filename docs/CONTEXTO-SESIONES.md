@@ -36,8 +36,18 @@
 - Corrige lo escrito abajo («`Cloude`: 1 commit, README placeholder»): eso es solo su `main`. Alberto
   reportó 2 PRs **en borrador** con el proyecto **NIVELA** (~10.000 líneas: scaffold Next.js 15 PWA +
   Supabase, dominio obra/partida/albarán/fichaje, panel CAE, set de marca). Vive SOLO en ramas y PRs.
-- **NO borrar `Cloude`**: borrarlo se lleva NIVELA entero. Sin verificar por MCP — ese repo está fuera
-  del scope de esta sesión; hay que mirarlo desde el navegador o añadirlo al scope.
+- **NO borrar `Cloude`**: borrarlo se lleva NIVELA entero. Inventario verificado desde el navegador y
+  volcado a **`docs/NIVELA-inventario.md`** (el repo es privado y fuera del scope MCP: sin esa ficha
+  habría que re-inventariarlo cada vez). El PR #2 es superconjunto del #1 y ambos salen de una rama
+  base que NO es `main`.
+- **La banda naranja de Supabase era un aviso legal, no una alarma.** Medido en Organization → Usage:
+  ninguna métrica pasa del **35%** (Database Size), overage 0; `pg_database_size` por MCP da 154,72 MB
+  (30,9%). El cartel es la Fair Use Policy desde el 10/07 y es condicional y permanente. Corregido en
+  `docs/ROTACION-SERVICE-ROLE.md`, que lo daba por «más urgente que la rotación». **Un cartel
+  condicional no es un dato de consumo: medir antes de declarar una urgencia.**
+- Vercel: marcar `SUPABASE_SERVICE_ROLE_KEY` como Sensitive **expulsa Development** (la doc dice
+  prod+preview), y el tipo **Secret** («Secreto» en el panel traducido) NO es lo mismo — vacía el valor.
+  Se hará en el paso 2 de la rotación, que ya sustituye el valor; hacerlo antes es tocarla dos veces.
 - Método: **mirar `main` no es mirar el repo.** Antes de dar un repo por muerto, contar ramas y PRs.
 - `house-sevillana-landing` sí queda confirmado como cáscara muerta, ahora también desde el código: el
   cron SEO (`apps/sivra/vercel.json`, lunes 10:00 UTC) escribe en `central` (`seo-landing.ts:5`), y no
