@@ -78,12 +78,19 @@ test('🚨 si el correo del intento NO ha llegado, devuelve null — nunca el an
   assert.equal(codigoDelIntento(soloViejos, INTENTO), null)
 })
 
-test('el margen de reloj admite el correo que se adelanta unos segundos', () => {
-  // Gmail sella con SU reloj, no con el de Vercel; unos segundos de desfase no
-  // pueden descartar el correo bueno.
-  const casi = [correo(LOGIN('9A4CBF71'), ASUNTO_LOGIN, '2026-08-20T15:09:40.000Z')]
+test('el margen tolera el desfase de reloj, pero NO 15 segundos', () => {
+  // Gmail sella con SU reloj, no con el de Vercel: unos pocos segundos de
+  // desfase no pueden descartar el correo bueno.
+  const casi = [correo(LOGIN('9A4CBF71'), ASUNTO_LOGIN, '2026-08-20T15:09:52.000Z')]
   assert.equal(codigoDelIntento(casi, INTENTO), '9A4CBF71')
-  // Pero el margen es estrecho: un correo de hace 10 minutos sigue fuera.
+
+  // 🚨 Este test daba por bueno un correo de 15 s ANTES del intento, y eso es
+  // lo que rompió la primera pasada real: dos logins seguidos van a 11 s de
+  // distancia, así que a 15 s ya no se está tolerando el reloj — se está
+  // aceptando el código de OTRO intento. Ahora se rechaza.
+  const quinceSeg = [correo(LOGIN('9T4D24E9'), ASUNTO_LOGIN, '2026-08-20T15:09:40.000Z')]
+  assert.equal(codigoDelIntento(quinceSeg, INTENTO), null)
+
   const diezMin = [correo(LOGIN('9T4D24E9'), ASUNTO_LOGIN, '2026-08-20T14:59:00.000Z')]
   assert.equal(codigoDelIntento(diezMin, INTENTO), null)
 })
@@ -97,4 +104,36 @@ test('bandeja vacía o fechas corruptas no revientan', () => {
   assert.equal(codigoDelIntento([], INTENTO), null)
   const rota = [{ asunto: ASUNTO_LOGIN, cuerpo: LOGIN('9A4CBF71'), fecha: new Date('nada') }]
   assert.equal(codigoDelIntento(rota, INTENTO), null)
+})
+
+// ── El fallo REAL del 20/08/2026 ────────────────────────────────────────────
+// El Portal mandó tres códigos en 40 s (16:11:47 · 16:11:58 · 16:12:27) porque
+// una sola pasada disparaba varios logins. Con el margen de 30 s que había, el
+// correo del intento ANTERIOR entraba en la ventana y ganaba por ser «el más
+// reciente válido» → «El código de verificación proporcionado es incorrecto».
+
+const T = (iso: string) => new Date(iso)
+
+test('🚨 con dos intentos a 11 s, NO se coge el código del anterior', () => {
+  const bandeja = [
+    correo(LOGIN('AAAA1111'), ASUNTO_LOGIN, '2026-08-20T16:11:47.000Z'),
+    correo(LOGIN('BBBB2222'), ASUNTO_LOGIN, '2026-08-20T16:11:58.000Z'),
+  ]
+  // Intento lanzado a las 16:12:20: los dos correos son de ANTES.
+  assert.equal(codigoDelIntento(bandeja, T('2026-08-20T16:12:20.000Z')), null)
+  // Con el margen viejo de 30 s se colaba el de 16:11:58 y quemaba el intento.
+  assert.equal(codigoDelIntento(bandeja, T('2026-08-20T16:12:20.000Z'), 30_000), 'BBBB2222')
+})
+
+test('🚨 un código YA enviado no se reintenta: es de un solo uso', () => {
+  const bandeja = [correo(LOGIN('CCCC3333'), ASUNTO_LOGIN, '2026-08-20T16:12:27.000Z')]
+  const intento = T('2026-08-20T16:12:25.000Z')
+  assert.equal(codigoDelIntento(bandeja, intento), 'CCCC3333')
+  // Tras usarlo, la misma bandeja ya no lo ofrece — ni cae al siguiente viejo.
+  assert.equal(codigoDelIntento(bandeja, intento, 5_000, new Set(['CCCC3333'])), null)
+})
+
+test('el margen de 5 s sigue tolerando el desfase de reloj real', () => {
+  const bandeja = [correo(LOGIN('DDDD4444'), ASUNTO_LOGIN, '2026-08-20T16:12:22.000Z')]
+  assert.equal(codigoDelIntento(bandeja, T('2026-08-20T16:12:25.000Z')), 'DDDD4444')
 })
