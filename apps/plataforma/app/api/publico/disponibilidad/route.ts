@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { smoobuFetch } from '@/lib/smoobu'
 import { noches, clasificar } from '@/lib/sivra/disponibilidad-publica'
+import { cabecerasCors } from '@/lib/sivra/cors-publico'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,27 +26,6 @@ const PISOS: Record<string, { propId: string; smoobuId: string }> = {
   'busto-reform': { propId: 'prop_busto_reform', smoobuId: '352418' },
   'duplex-center': { propId: 'prop_duplex_center', smoobuId: '352928' },
   'luxury-busto': { propId: 'prop_luxury_busto', smoobuId: '352943' },
-}
-
-/** Orígenes que pueden leer esto desde un navegador. */
-const ORIGENES_EXACTOS = ['https://housesevillana.es', 'https://www.housesevillana.es']
-
-// Los previews de Vercel llevan un hash por despliegue, así que no se pueden listar. El ancla
-// de los dos extremos no es decorativa: sin el `$`, `…vercel.app.de-otro.com` pasaría.
-const ORIGEN_PREVIEW = /^https:\/\/house-sevillana-landing-[a-z0-9-]+\.vercel\.app$/
-
-/**
- * Cabecera CORS para este origen, si se le permite.
- *
- * Se devuelve el origen LITERAL y no la lista: `Access-Control-Allow-Origin` no admite
- * comodines parciales ni varios valores. Sin `Origin` (una llamada de servidor, o curl) no se
- * pone cabecera y se sirve igual: CORS protege al navegador de OTRAS webs, no a este endpoint,
- * que es público a propósito.
- */
-function cabecerasCors(origen: string | null): Record<string, string> {
-  if (!origen) return {}
-  const permitido = ORIGENES_EXACTOS.includes(origen) || ORIGEN_PREVIEW.test(origen)
-  return permitido ? { 'Access-Control-Allow-Origin': origen, Vary: 'Origin' } : {}
 }
 
 const CACHE = 'public, s-maxage=600, stale-while-revalidate=3600'
