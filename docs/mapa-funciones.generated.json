@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-20T16:42:55Z",
-  "sha": "c5d7af05e94597f51b8d9dd1cbd656f2edc9888f",
+  "generadoEn": "2026-08-20T16:58:41Z",
+  "sha": "5cc0d88c28a90327734ebc23b3db477f9fdebd7b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -53582,7 +53582,7 @@
         "subastas"
       ],
       "rutaApi": "/api/cron/subastas-enriquecer",
-      "hash": "657a7ac7a7f2"
+      "hash": "0a250f59dd59"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-ingesta/route.ts",
@@ -71479,7 +71479,7 @@
           "exportada": true,
           "params": "",
           "retorno": "SesionPortal | null",
-          "linea": 298,
+          "linea": 300,
           "resumen": "La sesión que YA esté abierta, sin abrir ninguna. `null` = no hay. 🚨 Existe para no confundir «aprovechar la sesión» con «abrir una»: cada login manda un SMS al móvil de Alberto y el Portal bloquea c"
         },
         {
@@ -71488,7 +71488,7 @@
           "exportada": true,
           "params": "s: SesionPortal | null, extra: Record<string, string> = {}",
           "retorno": "Record<string, string>",
-          "linea": 306,
+          "linea": 308,
           "resumen": "Cabeceras para pedirle una página al Portal, con sesión si la hay."
         },
         {
@@ -71497,7 +71497,7 @@
           "exportada": true,
           "params": "s: SesionPortal",
           "retorno": "string",
-          "linea": 313,
+          "linea": 315,
           "resumen": "Frase para el aviso/diagnóstico. Dice SIEMPRE si se está leyendo a ciegas."
         },
         {
@@ -71506,13 +71506,13 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 335,
+          "linea": 339,
           "resumen": "SOLO DIAGNÓSTICO: hace el primer POST del login y devuelve el HTML crudo de la respuesta, sin enviar ningún código. Es la forma de capturar la pantalla del segundo factor para escribir su parser contr"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9dfd988c6310"
+      "hash": "b405835897e5"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/presupuesto-mercado.ts",
@@ -92886,7 +92886,8 @@
       "resumen": "──────────────────────────────────────────────────────────────────────────── Interpretación PURA de la respuesta del login del Portal de Subastas. El Portal admite tres vías de acceso (`/acceso.php`, comprobado 20/08/2026): · certificado electrónico cualificado → `/id/checkCert.php` · usuario (corre",
       "exporta": [
         "interpretarLogin",
-        "pareceIdentificada"
+        "pareceIdentificada",
+        "pideCaptcha"
       ],
       "funciones": [
         {
@@ -92895,7 +92896,7 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 50,
+          "linea": 53,
           "resumen": "El Portal escribe los acentos como entidades (`est&#xE1;`): hay que decodificar."
         },
         {
@@ -92904,7 +92905,7 @@
           "exportada": true,
           "params": "html: string, cookies: readonly string[] = []",
           "retorno": "ResultadoLogin",
-          "linea": 63,
+          "linea": 66,
           "resumen": "¿Qué dice la respuesta del `POST /id/login.php`? @param html cuerpo de la respuesta (siguiendo redirecciones). @param cookies cookies recibidas. Se conservan por si algún día el Portal empieza a usarl"
         },
         {
@@ -92913,13 +92914,22 @@
           "exportada": true,
           "params": "html: string",
           "retorno": "boolean",
-          "linea": 104,
+          "linea": 122,
           "resumen": "¿La página que acabamos de bajar sigue viniendo de una sesión abierta? Las sesiones del Portal caducan. Se comprueba en cada ficha porque, si ha caducado a mitad de una pasada, el resto de fichas se l"
+        },
+        {
+          "nombre": "pideCaptcha",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string",
+          "retorno": "boolean",
+          "linea": 138,
+          "resumen": "¿El Portal está pidiendo un captcha en vez de dejar seguir? Se exige la conjunción de la frase Y el campo: el texto solo podría venir de una página de ayuda, y un `name=\"captcha\"` suelto podría estar "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7a0b6951d123"
+      "hash": "9956e4aff062"
     },
     {
       "ruta": "packages/module-subastas/src/portal-otp.ts",
@@ -95095,6 +95105,6 @@
   ],
   "resumen": {
     "archivos": 2523,
-    "funciones": 6904
+    "funciones": 6905
   }
 }
