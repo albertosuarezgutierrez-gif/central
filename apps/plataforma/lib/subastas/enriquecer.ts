@@ -27,12 +27,13 @@ import {
   type ParamsDnploc,
   type DatosCatastro,
   type FichaBoe,
-  mejorPujaDeFicha,
+  pujasDeFicha,
   paresFicha,
   parsearCertificadoCierre,
   resultadoDeBanner,
   resultadoDeFicha,
   type ResultadoSubasta,
+  type PujasFicha,
 } from '@central/module-subastas'
 
 const UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36'
@@ -125,20 +126,28 @@ export async function bajarFicha(identificador: string): Promise<FichaBoe> {
 }
 
 /**
- * Mejor puja EN VIVO de una subasta abierta: solo la pestaña general (una
- * llamada, no tres — esto se consulta a diario para cada seguida cerca del
- * cierre). Lanza si la respuesta no es la ficha, igual que `bajarFicha`;
- * `null` = la ficha no publica la puja, que NO es «sin pujas».
+ * Estado de las PUJAS en vivo, de la pestaña que de verdad lo publica.
+ *
+ * 🚨 Esto sustituye a `mejorPujaViva`, que leía la pestaña GENERAL — donde solo
+ * están la puja MÍNIMA y los tramos. Nunca encontraba nada: `subastas.mejor_puja`
+ * llevaba 26 filas a NULL y `mejor_puja_at` sin estrenar, y como el `null` se
+ * trataba (bien) como «no publicado», el fallo era invisible. Auditado el
+ * 20/08/2026 contra las 13 vivas: la pestaña `ver=5` responde a un anónimo con
+ * una de cuatro frases, y 10 de las 13 dicen si hay pujas o no.
+ *
+ * Sigue sin dar el IMPORTE mientras la subasta está abierta (eso exige sesión);
+ * lo publica al concluir. Lanza si la respuesta no es la ficha, igual que
+ * `bajarFicha`: un fallo de lectura no es un dato.
  */
-export async function mejorPujaViva(identificador: string): Promise<number | null> {
-  // Timeout corto a propósito: el cron que llama vigila hasta 10 seguidas con
+export async function estadoPujasViva(identificador: string): Promise<PujasFicha> {
+  // Timeout corto a propósito: el cron que llama vigila hasta 10 fichas con
   // maxDuration 60 s — con el timeout por defecto (20 s) bastarían 3 fichas
   // lentas para comerse la pasada entera.
-  const general = await bajar(`${FICHA}?idSub=${encodeURIComponent(identificador)}`, 8000)
-  if (!fichaLegible(general, identificador)) {
+  const pujas = await bajar(`${FICHA}?idSub=${encodeURIComponent(identificador)}&ver=5`, 8000)
+  if (!fichaLegible(pujas, identificador)) {
     throw new Error('la respuesta del Portal no es la ficha de esta subasta')
   }
-  return mejorPujaDeFicha(paresFicha(general))
+  return pujasDeFicha(pujas)
 }
 
 /**
