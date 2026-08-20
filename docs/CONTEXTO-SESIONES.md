@@ -42,8 +42,12 @@ Pro se decide **midiendo el dump**, no con la estimación de ~200 MB (hoy `centr
 invita a Alberto a SU organización (el conector de Supabase ya lo ve); para copiar, `pg_dump | psql`
 (un MCP perdería índices, secuencias, constraints y triggers). **GitHub va aparte:** el código entra
 sin historia git y su repo original se TRANSFIERE a Alberto y se archiva como museo.
-La petición a Manuel se plantea en dos opciones — **A (recomendada): tres invitaciones, ~5 min de su
+La petición a Manuel se plantea en dos opciones — **A (recomendada): tres accesos, ~5 min de su
 tiempo**, todo lo demás lo hace Claude; B: lista de tareas, si no quiere dar ese acceso.
+🚨 **La transferencia del repo va LA ÚLTIMA**: rompe la conexión git de su Vercel y le tumba el
+despliegue, que debe seguir vivo para la comparación lado a lado. Anticipados tres límites reales
+(org de Supabase con otros clientes · Vercel Hobby no admite miembros · repo en organización ajena),
+ninguno bloqueante: cada uno cae a su fila de la opción B.
 No confundir con `/correduria` de plataforma, que es la contabilidad de comisiones y NO se toca.
 Pendiente: el mensaje a Manuel está redactado en el doc pero **lo envía Alberto** — hasta entonces
 no se puede avanzar de fase.

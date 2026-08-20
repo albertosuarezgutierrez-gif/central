@@ -94,9 +94,14 @@ vivo en los commits antiguos**. Borrarlo después no arregla nada: una clave pub
 aunque luego borres el repo.
 
 **Qué hacer con su repo original, entonces:** que **lo transfiera a la cuenta de GitHub de Alberto**
-(*Settings → Transfer ownership*). Es un clic para él, le pasa la propiedad del historial, y ahí se
-deja **privado y archivado** como museo consultable — fuera de `central`, sin contaminar el monorepo.
-Es más fácil para él que invitarnos como colaboradores y limpiarlo luego.
+(*Settings → Transfer ownership*) y ahí se deja **privado y archivado** como museo consultable — fuera
+de `central`, sin contaminar el monorepo.
+
+🚨 **Pero AL FINAL, no al principio:** transferir el repo rompe la conexión git de su proyecto de
+Vercel y le tumba el despliegue. Mientras el traspaso no esté verificado, su sistema tiene que seguir
+en pie (es la comparación lado a lado de la verificación). Así que primero acceso de LECTURA, y la
+transferencia como último paso. Si no quiere o no puede transferirlo (repo dentro de una organización
+suya, por ejemplo), se pierde el museo, no el traspaso: a `central` solo entra el árbol de trabajo.
 
 ⚠️ Al transferirlo, los secretos de su historia pasan a la cuenta de Alberto. Da igual: se rotan
 igualmente (Fase 4) y el repo queda privado y archivado.
@@ -128,6 +133,11 @@ y si sale mal, repetir. Por eso la **opción A es la recomendada**: son **tres i
 
 ### ✅ Opción A — recomendada
 
+🚨 **El orden importa: la transferencia del repo va LA ÚLTIMA.** Transferir el repositorio de GitHub
+rompe la conexión git de su proyecto de Vercel, así que **le tumba el despliegue en ese momento**. Eso
+choca de frente con «no desactives nada hasta que confirme». Así que el repo se pide **al final**, ya
+verificado el traspaso; mientras tanto, acceso de lectura y basta.
+
 **Mensaje:**
 
 Hola Manuel:
@@ -138,16 +148,22 @@ negocios. Para que no te lleve tiempo, lo más práctico es que me des acceso y 
 1. **Supabase** — invítame a tu organización (*Organization → Team → Invite*) con rol
    **Administrator**, a `alberto.suarez.gutierrez@gmail.com`. Con eso saco yo la copia de la base de
    datos sin pedirte nada más. Lo revocas cuando acabemos.
-2. **GitHub** — transfiéreme el repositorio (*Settings → Transfer ownership*) a mi cuenta. Me quedo con
-   el historial y lo archivo; no necesito que hagas nada más con él.
-3. **Vercel** — invítame a tu equipo, para poder ver las variables de entorno y la configuración del
-   dominio sin que tengas que copiármelas a mano.
+   *(Si en esa organización tienes proyectos de otros clientes, no me invites: dime y lo hacemos de
+   otra forma — no necesito ver nada tuyo que no sea esto.)*
+2. **GitHub** — añádeme como colaborador con permiso de lectura, para copiarme el código.
+3. **Vercel** — invítame a tu equipo, para ver las variables de entorno y la configuración del dominio
+   sin que tengas que copiármelas a mano. *(Si tu cuenta es del plan gratuito y no te deja invitar,
+   dímelo y me pasas los nombres de las variables; los valores por gestor de contraseñas.)*
 
-Dos cosas más, y ya:
+Y tres cosas más:
 
 4. **No borres ni desactives nada** — Supabase, Vercel ni el repo — hasta que yo te confirme que está
    todo verificado funcionando en mi lado. Te aviso expresamente.
-5. **Protección de datos.** Son datos personales de clientes reales, así que necesitamos dejar por
+5. **Al final del todo**, cuando ya te haya confirmado que funciona, transfiéreme el repositorio
+   (*Settings → Transfer ownership*). Lo dejo archivado por si algún día hace falta consultar el
+   historial. Lo dejo para el final a propósito, porque al transferirlo se te desconecta el despliegue
+   de Vercel.
+6. **Protección de datos.** Son datos personales de clientes reales, así que necesitamos dejar por
    escrito el contrato de encargado de tratamiento, la fecha de entrega y el borrado posterior de tu
    copia. Te paso el documento.
 
@@ -157,16 +173,29 @@ lo que falte.
 Gracias,
 Alberto
 
-**Qué desbloquea cada invitación (lo hace Claude, no Manuel):**
+**Qué desbloquea cada acceso (lo hace Claude, no Manuel):**
 
-| Invitación | Lo que pasamos a poder hacer solos |
+| Acceso | Lo que pasamos a poder hacer solos |
 |---|---|
 | Supabase Administrator | Crear el rol de lectura · `alter schema public rename to seguros` · lanzar backup · `pg_dump` · ver Edge Functions y sus secrets · listar buckets · comprobar si usa `auth.users` · ver `cron.job`, RLS, funciones y triggers |
-| GitHub (transferencia) | El código completo + el historial, sin depender de él ni de un ZIP suelto |
+| GitHub lectura | El código completo sin depender de un ZIP suelto ni de que él lo prepare |
 | Vercel (miembro de equipo) | Leer los **valores** de las variables de entorno, la config del dominio y qué integraciones externas hay cableadas de verdad |
+| GitHub transferencia (al final) | El historial, archivado fuera de `central` |
 
-Es decir: **la Fase 1 entera y el inventario dejan de necesitar a Manuel.** Solo queda la
-coordinación del volcado definitivo, que ya no requiere que él esté delante.
+Con eso, **la Fase 1 entera y el inventario dejan de necesitar a Manuel.**
+
+### ⚠️ Tres motivos legítimos por los que puede no poder — y qué hacer
+
+No son excusas; son límites reales. Conviene anticiparlos para no quedarse bloqueado esperando:
+
+| Si… | Por qué | Alternativa |
+|---|---|---|
+| Su organización de Supabase tiene **proyectos de otros clientes** | Invitar a Alberto como Administrator se los expondría. Es una razón profesional para negarse, no cabezonería | Que mueva **solo este proyecto** a una organización nueva vacía (*Project → Settings → General → Transfer*) y ahí sí invite; o que se quede en la opción B (cadena de lectura) |
+| Su **Vercel es plan gratuito** (Hobby) | Las cuentas personales de Vercel no admiten miembros de equipo; invitar exige plan de pago | Que copie la lista de nombres de las variables, y los valores por gestor de contraseñas. Es lo único de la opción B que no se puede evitar |
+| El repo está en **una organización de GitHub** suya, o lo quiere para su portfolio | Transferir un repo de una organización necesita permisos de la organización, y puede que no quiera desprenderse de él | Lectura y ya: se copia el árbol de trabajo (que es lo único que entra en `central`) y se renuncia al historial. Se pierde el «museo», no el traspaso |
+
+Regla general: **ninguna de las tres es bloqueante.** Si falla una, se sustituye por su fila de la
+opción B y el traspaso sigue.
 
 ---
 
