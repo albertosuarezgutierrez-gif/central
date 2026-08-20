@@ -32,6 +32,17 @@
 
 ---
 
+### 🚧 (20/08/2026) El calendario salía «no hemos podido consultar»: CORS + caché de CDN
+- Mergeado #1500 y el endpoint respondía **200 impecable por curl**… y roto en el navegador.
+  Causa: la respuesta se cachea en el CDN (`s-maxage=600`) y sus cabeceras dependen del `Origin`,
+  pero `Vary: Origin` solo se emitía cuando el origen estaba permitido. **La primera petición
+  decide las cabeceras de todas durante 10 min** — y la primera fue mi propio `curl`, SIN
+  `Origin`: el CDN guardó una copia sin `Access-Control-Allow-Origin` y se la sirvió a
+  housesevillana.es, que la rechazó y pintó el aviso de error.
+- **Lección: un 200 por curl NO prueba que un recurso con CORS funcione.** Hay que pedirlo con
+  `-H "Origin: …"` y mirar que vuelva la cabecera. Fix: `Vary: Origin` SIEMPRE (permitido, no
+  permitido y sin Origin), en helper puro `lib/sivra/cors-publico.ts` con 6 tests.
+
 ### 🐾 (20/08/2026) Tres decisiones de Alberto sobre la landing, y el calendario a producción
 - **Mascotas: NO se admiten.** La ficha de Booking **2039943** publica «Admite mascotas» y la landing dice
   que no (FAQ + JSON-LD). Comprobado con el conector; la web está BIEN y no se toca — el error está en
