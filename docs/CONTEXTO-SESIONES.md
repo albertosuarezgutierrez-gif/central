@@ -32,6 +32,19 @@
 
 ---
 
+### 🛡️ (20/08/2026) Traspaso del CRM de correduría de Manuel Suárez — runbook, BLOQUEADO en Fase 0
+Manuel desarrolló el CRM en SU Supabase y SU Vercel; el negocio es de Alberto y hay que traérselo.
+Plan cerrado en `docs/TRASPASO-CORREDURIA.md`. Decisiones: BD → **schema `seguros` en `central`**
+(no un proyecto aparte: principio de BD única de `MATRIZ.md`) con rol `prisma_seguros`; código →
+vertical **`apps/seguros`** (molde `apps/mariscos`, `ignoreCommand` desde el primer commit); free vs.
+Pro se decide **midiendo el dump**, no con la estimación de ~200 MB (hoy `central` va por ~180/500).
+**No** se transfiere su proyecto Supabase ni se monta MCP/API a medida: para inspeccionar, Manuel
+invita a Alberto como read-only a SU organización (el MCP de Supabase ya lo ve); para copiar,
+`pg_dump | psql` (un MCP perdería índices, secuencias, constraints y triggers).
+No confundir con `/correduria` de plataforma, que es la contabilidad de comisiones y NO se toca.
+Pendiente: el mensaje a Manuel está redactado en el doc pero **lo envía Alberto** — hasta entonces
+no se puede avanzar de fase.
+
 ### ✅ (20/08/2026) El calendario de House Sevillana, EN VIVO — tras romperse TRES veces por caché
 - **Confirmado por Alberto en pantalla.** Verificado además que las fechas son las buenas: las 34
   noches ocupadas del endpoint coinciden **una a una** con el snapshot del cron (sin desfase de día,
