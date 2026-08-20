@@ -87,13 +87,37 @@ const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!   // legacy
 await supabase.from('incomes').delete().eq('id', incId)          // borra ingresos de SIVRA
 ```
 
-**Y es un riesgo por sí mismo, aparte de la rotación:** su fuente solo existe en los servidores de
-Supabase. No hay historia, no hay revisión, no hay vuelta atrás. Se recupera con
-`get_edge_function` (devuelve el fichero entero) — hacerlo ANTES de tocar nada.
+**Y es un riesgo por sí mismo, aparte de la rotación:** su fuente solo existía en los servidores de
+Supabase. **Ya no: las 22 están rescatadas** en `supabase/functions-rescatadas/` (PR #1517, 20/08/2026),
+con los secretos sustituidos y `gitleaks` de por medio. Ese README es ahora la fuente de verdad sobre
+qué hace cada una; aquí solo queda lo que afecta a la rotación.
 
-⚠️ No todas son de `ia-rest`: `sync-smoobu` y `add-smoobu-booking` son de SIVRA, `boe-doc` y
-`junta-pdf-texto` huelen a subastas (plataforma), `ficha-fotocasa`/`zona-fotocasa` a inmobiliario. Al
-rescatarlas hay que decidir a qué app va cada una, no volcarlas todas en `apps/ia-rest`.
+**Lo que el rescate cambió para este plan:**
+
+1. **Consumidores legacy confirmados dentro del lote.** `sync-smoobu` (cron jobid 1, diario 05:00) y
+   `github-commit`, `deploy-dashboard`, `inject-ga4`, `rehost-catalogo`, `drive-upload-factura` e
+   `import_csv` leen `SUPABASE_SERVICE_ROLE_KEY` del entorno de Edge Functions. Ninguna aparecía en el
+   grep del repo. Al rotar hay que **actualizar también los secrets de Edge Functions**, no solo Vercel.
+2. **Un consumidor legacy MÁS de la cara anon**, aparte del jobid 28: la landing vieja
+   (`house-sevillana-landing`) leía `_deploy_assets` por PostgREST con la anon incrustada en el bundle
+   —vía `push-route-ga4`—. Medido: esa copia está corrupta (44 caracteres de firma en vez de 43), así
+   que ya no autentica, y la landing viva es hoy `apps/housesevillana`, que no toca Supabase. **No
+   bloquea la rotación**, pero explica por qué aquel invento dejó de funcionar.
+3. **Tres PAT de GitHub y una contraseña personal en claro** dentro de esas fuentes. No es la
+   `service_role`, pero es la misma familia de fuga y va en el mismo lote de revocaciones (detalle y
+   pasos en el README del rescate).
+4. **19 de 22 con `verify_jwt = false`**, seis con efecto real (escritura o fuga de sesión). Eso importa
+   aquí porque **la rotación no las arregla**: cambiar la clave no cierra un endpoint que nunca pidió
+   clave. Borrarlas es trabajo aparte y anterior en prioridad para dos de ellas (`upload-landing`,
+   `trigger-deploy`).
+5. **`sync-smoobu` puede vaciar `incomes`** si Smoobu contesta 200 con lista vacía. No es un problema de
+   claves, pero es la función legacy más peligrosa del lote y conviene arreglarla en la misma pasada en
+   que se le cambie la credencial. Ver hallazgo 3 del README del rescate.
+
+⚠️ No todas son de `ia-rest`: `sync-smoobu` y `add-smoobu-booking` son de SIVRA; `boe-doc`,
+`junta-pdf-texto`, `ficha-fotocasa` y `zona-fotocasa` **sí son de subastas** (`apps/plataforma`) y están
+VIVAS — no borrarlas con el resto; `rehost-catalogo` es de `apps/almacen`. La carpeta del rescate es un
+salvavidas, no el destino definitivo: decidir a qué app va cada una sigue pendiente.
 
 ## 🛑 «Cero tráfico legacy en 24 h» NO autoriza a pulsar el botón (20/08/2026)
 

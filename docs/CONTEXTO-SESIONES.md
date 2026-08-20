@@ -32,6 +32,18 @@
 
 ---
 
+### 🔑 (20/08/2026) Rescatadas las 22 Edge Functions fantasma — y lo que había dentro (PR #1517)
+- El panel sirve 67 Edge Functions y el repo versionaba 45. Las 22 huérfanas ya están en
+  `supabase/functions-rescatadas/` con **secretos sustituidos** y `gitleaks` como gate previo a cada commit.
+- Dentro había **3 PAT de GitHub distintos** (`ghp_97Ct…`, `ghp_5MfB…`, `ghp_hft2…`) y **el email+contraseña
+  de Alberto en claro** (`trigger-deploy`). Sustituir en el repo NO revoca: quedan pendientes para Alberto.
+- Peor que la fuga: **19 de 22 con `verify_jwt=false`**, seis con efecto real. `upload-landing` commitea
+  cualquier fichero a `main` de `roi-intranet` sin login; `trigger-deploy` **devuelve las cookies de sesión**.
+- ☠️ `sync-smoobu` (cron diario) **borra `incomes`** si Smoobu contesta 200 con lista vacía: aborta el error
+  HTTP pero no el vacío. Ver hallazgo 3 del README del rescate.
+- ✅ NO borrar `boe-doc`, `junta-pdf-texto`, `ficha-fotocasa`, `zona-fotocasa`: sostienen subastas Fase 3.
+- Método: el rescate literal habría **republicado** los secretos en un repo público. Sustituir → gitleaks → commit.
+
 ### 🛑 (20/08/2026) `Cloude` NO es un repo vacío — la entrada del 19/08 se quedó mirando `main`
 - Corrige lo escrito abajo («`Cloude`: 1 commit, README placeholder»): eso es solo su `main`. Alberto
   reportó 2 PRs **en borrador** con el proyecto **NIVELA** (~10.000 líneas: scaffold Next.js 15 PWA +
