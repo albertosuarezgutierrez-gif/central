@@ -14,7 +14,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { ingerirJunta } from '@/lib/subastas/junta'
 import { procesarDocumentos } from '@/lib/subastas/documentos'
-import { olvidarSesionPortal, sesionPortal, titularSesionPortal, volcarLoginPortal } from '@/lib/subastas/portal-sesion'
+import { olvidarSesionPortal, rastroOtp, sesionPortal, titularSesionPortal, volcarLoginPortal } from '@/lib/subastas/portal-sesion'
 import { clasificarSubastas } from '@/lib/subastas/clasificar'
 import { reextraerDatosDeTexto } from '@/lib/subastas/reextraer'
 import { aplicarReferenciaMercado, chollosVigentes, enriquecerAnunciantesFotocasa, ingerirComparables, leerIndiceINE, pulsoMercado, referenciaZonasFotocasa, refrescarIndiceINE } from '@/lib/subastas/mercado'
@@ -81,6 +81,9 @@ export async function GET(req: NextRequest) {
       titular: titularSesionPortal(s),
       usuario: (process.env.BOE_PORTAL_USUARIO ?? '').trim() || null,
       passwordConfigurada: Boolean(process.env.BOE_PORTAL_PASSWORD),
+      // Rastro del segundo paso: qué formulario se leyó, si se encontró código
+      // y en qué acabó. Con la contraseña ya redactada por `redactarSecretos`.
+      rastro: sp.get('rastro') === '1' ? rastroOtp() : undefined,
     })
   }
   if (sp.get('accion') === 'documentos') {

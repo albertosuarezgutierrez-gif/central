@@ -119,8 +119,24 @@ function leerSetCookie(r: Response): string[] {
  * esto ocurre dentro de la misma ejecución y con el mismo `jar`. Un código
  * correcto enviado con otra sesión es un intento quemado.
  */
+/** Rastro del segundo paso, SOLO para el diagnóstico manual. Nunca se loguea. */
+export interface RastroOtp {
+  formulario: { action: string; campoCodigo: string; campos: string[] } | null
+  cookies: string[]
+  codigo: string | null
+  htmlFinal: string
+}
+let ultimoRastro: RastroOtp | null = null
+export function rastroOtp(): RastroOtp | null { return ultimoRastro }
+
 async function segundoFactor(html: string, jar: Map<string, string>, intentoEn: Date): Promise<SesionPortal> {
   const form = formularioOtp(html)
+  ultimoRastro = {
+    formulario: form ? { action: form.action, campoCodigo: form.campoCodigo, campos: Object.keys(form.campos) } : null,
+    cookies: [...jar.keys()],
+    codigo: null,
+    htmlFinal: '',
+  }
   if (!form) {
     return { estado: 'desconocido', cookie: null, motivo: 'el Portal pide código pero no se reconoce su formulario', abiertaEn: 0 }
   }
@@ -129,6 +145,7 @@ async function segundoFactor(html: string, jar: Map<string, string>, intentoEn: 
     console.error('[portal-sesion] IMAP', e)
     return null
   })
+  if (ultimoRastro) ultimoRastro.codigo = codigo
   if (!codigo) {
     // NUNCA se cae al último código del buzón: sería el de otra sesión.
     return { estado: 'desconocido', cookie: null, motivo: 'no llegó el código de verificación a tiempo', abiertaEn: 0 }
@@ -154,6 +171,7 @@ async function segundoFactor(html: string, jar: Map<string, string>, intentoEn: 
     })
     unirCookies(jar, leerSetCookie(r))
     html2 = await r.text()
+    if (ultimoRastro) { ultimoRastro.htmlFinal = redactarSecretos(html2); ultimoRastro.cookies = [...jar.keys()] }
   } catch (e) {
     return { estado: 'desconocido', cookie: null, motivo: `fallo al enviar el código: ${(e as Error).message}`, abiertaEn: 0 }
   }
