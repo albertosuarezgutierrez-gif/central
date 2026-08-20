@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-20T16:08:10Z",
-  "sha": "0c4fe8ea03e9d2ac9cd568fec91fdccf4a0049b0",
+  "generadoEn": "2026-08-20T16:36:41Z",
+  "sha": "3fe0fb9cd0930e2ae623d7dfe3e1e114e24c2c20",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -70928,7 +70928,7 @@
           "nombre": "esperarCodigoPortal",
           "kind": "function",
           "exportada": true,
-          "params": "intentoEn: Date, timeoutMs = 45_000, intervaloMs = 4_000,",
+          "params": "intentoEn: Date, yaUsados: ReadonlySet<string> = new Set(), timeoutMs = 45_000, intervaloMs = 4_000,",
           "retorno": "Promise<string | null>",
           "linea": 196,
           "resumen": "Espera al correo con el código del intento de login EN CURSO. Abre UNA conexión IMAP y repregunta cada pocos segundos: el correo tarda unos segundos en llegar, y reconectar en cada vuelta multiplica e"
@@ -70936,7 +70936,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2179cb05ae65"
+      "hash": "ec017c9109c1"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/idealista-api.ts",
@@ -71395,7 +71395,7 @@
           "exportada": true,
           "params": "",
           "retorno": "void",
-          "linea": 74,
+          "linea": 86,
           "resumen": "Solo para los tests y para el diagnóstico manual: vuelve a empezar."
         },
         {
@@ -71404,7 +71404,7 @@
           "exportada": true,
           "params": "",
           "retorno": "void",
-          "linea": 85,
+          "linea": 97,
           "resumen": "Marca la sesión como caducada. La llama el lector cuando una ficha vuelve a responder como anónima: la siguiente petición reabrirá sesión. No toca `rechazada`: una credencial mala no se rescata reinte"
         },
         {
@@ -71413,7 +71413,7 @@
           "exportada": false,
           "params": "",
           "retorno": "",
-          "linea": 89
+          "linea": 101
         },
         {
           "nombre": "unirCookies",
@@ -71421,7 +71421,7 @@
           "exportada": false,
           "params": "previas: Map<string, string>, set: readonly string[]",
           "retorno": "Map<string, string>",
-          "linea": 97,
+          "linea": 109,
           "resumen": "Une las cookies recibidas en una cabecera `Cookie`, sin sus atributos."
         },
         {
@@ -71430,7 +71430,7 @@
           "exportada": false,
           "params": "jar: Map<string, string>",
           "retorno": "string",
-          "linea": 106
+          "linea": 118
         },
         {
           "nombre": "leerSetCookie",
@@ -71438,7 +71438,7 @@
           "exportada": false,
           "params": "r: Response",
           "retorno": "string[]",
-          "linea": 110
+          "linea": 122
         },
         {
           "nombre": "rastroOtp",
@@ -71446,7 +71446,7 @@
           "exportada": true,
           "params": "",
           "retorno": "RastroOtp | null",
-          "linea": 130
+          "linea": 142
         },
         {
           "nombre": "segundoFactor",
@@ -71454,7 +71454,7 @@
           "exportada": false,
           "params": "html: string, jar: Map<string, string>, intentoEn: Date",
           "retorno": "Promise<SesionPortal>",
-          "linea": 132
+          "linea": 144
         },
         {
           "nombre": "abrir",
@@ -71462,7 +71462,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<SesionPortal>",
-          "linea": 186
+          "linea": 202
         },
         {
           "nombre": "sesionPortal",
@@ -71470,7 +71470,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<SesionPortal>",
-          "linea": 245,
+          "linea": 261,
           "resumen": "Sesión utilizable, abriéndola si hace falta. NUNCA lanza: sin sesión el lector sigue funcionando en anónimo — peor, pero honesto, porque el muro documental queda registrado como lo que es."
         },
         {
@@ -71479,7 +71479,7 @@
           "exportada": true,
           "params": "",
           "retorno": "SesionPortal | null",
-          "linea": 273,
+          "linea": 298,
           "resumen": "La sesión que YA esté abierta, sin abrir ninguna. `null` = no hay. 🚨 Existe para no confundir «aprovechar la sesión» con «abrir una»: cada login manda un SMS al móvil de Alberto y el Portal bloquea c"
         },
         {
@@ -71488,7 +71488,7 @@
           "exportada": true,
           "params": "s: SesionPortal | null, extra: Record<string, string> = {}",
           "retorno": "Record<string, string>",
-          "linea": 281,
+          "linea": 306,
           "resumen": "Cabeceras para pedirle una página al Portal, con sesión si la hay."
         },
         {
@@ -71497,7 +71497,7 @@
           "exportada": true,
           "params": "s: SesionPortal",
           "retorno": "string",
-          "linea": 288,
+          "linea": 313,
           "resumen": "Frase para el aviso/diagnóstico. Dice SIEMPRE si se está leyendo a ciegas."
         },
         {
@@ -71506,13 +71506,13 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 310,
+          "linea": 335,
           "resumen": "SOLO DIAGNÓSTICO: hace el primer POST del login y devuelve el HTML crudo de la respuesta, sin enviar ningún código. Es la forma de capturar la pantalla del segundo factor para escribir su parser contr"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ffcb89ba51ca"
+      "hash": "9dfd988c6310"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/presupuesto-mercado.ts",
@@ -92961,15 +92961,15 @@
           "nombre": "codigoDelIntento",
           "kind": "function",
           "exportada": true,
-          "params": "correos: readonly CorreoOtp[], intentoEn: Date, margenMs = 30_000,",
+          "params": "correos: readonly CorreoOtp[], intentoEn: Date, margenMs = 5_000, yaUsados: ReadonlySet<string> = new Set(),",
           "retorno": "string | null",
-          "linea": 76,
+          "linea": 89,
           "resumen": "El código del intento en curso, elegido entre los correos del buzón. @param correos candidatos (cualquier orden). @param intentoEn instante en que se lanzó el POST del login. Un correo anterior a esto"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "45b8495443c2"
+      "hash": "f74efcf2ff17"
     },
     {
       "ruta": "packages/module-subastas/src/pujas.ts",
