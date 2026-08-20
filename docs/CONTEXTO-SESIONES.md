@@ -129,8 +129,14 @@ ninguno bloqueante: cada uno cae a su fila de la opción B.
 No confundir con `/correduria` de plataforma, que es la contabilidad de comisiones y NO se toca:
 esa ambigüedad queda enrutada en la skill `central-maestro` (+ fila en `docs/FUENTES-DE-VERDAD.md`),
 con el aviso de que «no está en el repo» ≠ «no existe» (lección de la landing de House Sevillana).
-Pendiente: el mensaje a Manuel está redactado en el doc pero **lo envía Alberto** — hasta entonces
-no se puede avanzar de fase.
+**Mensaje ENVIADO por WhatsApp el 20/08/2026**, así que la Fase 0 ya no bloquea: se espera respuesta.
+Lo siguiente que le debemos es el documento que le promete el punto 6 — borrador del contrato de
+encargado de tratamiento en `docs/CONTRATO-ENCARGADO-TRATAMIENTO-MANUEL.md`, **sin firmar y sin
+enviar**: falta decidir **quién firma como responsable** (¿ASegura S.L. o Alberto persona física? —
+depende de a nombre de quién esté la cartera, no verificado) y que lo revise la asesoría. Ojo: firmarlo
+ahora NO legaliza retroactivamente el periodo en que Manuel ya tuvo los datos; documenta la relación y,
+sobre todo, fija entrega + borrado acreditado. Las categorías de datos del contrato se cierran con el
+inventario de la Fase 1, no antes.
 ### 🔨 (20/08/2026) Las subastas ya cuentan CÓMO ACABARON, y el techo de puja se contrasta con remates reales — PR #1536
 - **TRES sesiones distintas fueron al mismo sitio el mismo día**: esta, #1537 (pujas `ver=5` + avisos
   sobre el radar) y #1540/#1548 (login e identificación en el Portal con 2FA). Cada vez que `main`

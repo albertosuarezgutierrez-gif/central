@@ -114,8 +114,14 @@ un cron, una sincronización — antes de darlo por muerto.
 
 ## 📩 Qué pedirle a Manuel
 
-> ⚠️ Regla del repo: no se envía nada a terceros sin autorización explícita de Alberto para ese envío
-> concreto. Este texto está preparado, **no enviado**.
+> ✅ **ENVIADO por WhatsApp el 20/08/2026** (lo envió Alberto). La Fase 0 deja de ser el bloqueo:
+> ahora se espera respuesta de Manuel. El texto se conserva abajo tal cual se mandó, como referencia
+> de qué se le pidió exactamente.
+>
+> 📄 **Falta entregarle el documento que le promete el punto 6**: el contrato de encargado de
+> tratamiento. Borrador en **`docs/CONTRATO-ENCARGADO-TRATAMIENTO-MANUEL.md`** — pendiente de rellenar
+> quién firma como responsable, de revisión por la asesoría, y del visto bueno de Alberto antes de
+> enviarlo (regla del repo: ninguna comunicación a terceros sin autorización para ese envío concreto).
 
 ### Lo más fácil para Manuel: que dé ACCESO, no que haga TAREAS
 
