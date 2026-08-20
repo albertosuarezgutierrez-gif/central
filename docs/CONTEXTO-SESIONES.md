@@ -110,6 +110,21 @@ exige decidir `sector`/`desc` de cada una, es criterio de Alberto.
   catastral — STS 15/09/2021) y si entraron las limpiezas (~1.800€/año). Rectificables 2024-25 si
   fallan. Validación final: Asecon.
 
+### 🛑 (20/08/2026) El login automático del Portal NO es viable: 2FA y después CAPTCHA — PRs #1548→#1560
+- Se construyó entero (login, lectura del código por IMAP, segundo POST) y se probó contra producción. El
+  Portal cerró la puerta en dos escalones: **2FA** en la única vía automatizable (usuario+contraseña), y
+  después **CAPTCHA** tras la ráfaga de intentos. **No se resuelve el captcha**: automatizar el acceso
+  propio es una cosa y saltarse un «demuéstrame que eres una persona» es otra; además el escalón siguiente
+  es el bloqueo de la cuenta. `captcha` y `rechazada` no se reintentan y avisan por Telegram.
+- El lector sigue en ANÓNIMO, honesto: con muro dice «identifícate», no «no hay documentos».
+- **Lo que sí sirve:** Alberto entró a mano con Claude Chrome y bajó **18 documentos de las 9 fichas en dos
+  minutos**. Solo Barbate (265289) no publica certificación de cargas. **PENDIENTE: el buzón de Drive** para
+  que el lector procese esos PDFs — ese es el camino, no el login.
+- 🚨 Dos bugs propios de método: (1) el detector buscaba «Cerrar sesión» y el Portal dice **«Desconectar»**,
+  con el fixture escrito con la misma suposición que el código → suite en verde sobre un detector muerto;
+  (2) el margen de frescura del OTP (30 s) era **más ancho que la distancia entre intentos** (11 s) y se
+  tragaba el código anterior. Un margen de tolerancia es una puerta: se mide contra la frecuencia real.
+
 ### 🔓 (20/08/2026) El cron ya se identifica en el Portal del BOE — y el muro cambia de significado
 - Alberto: «ya tengo usuario en el BOE con mi firma digital». Comprobado en `/acceso.php`: de las tres vías
   (certificado · **usuario+contraseña** · Cl@ve) solo la segunda sirve a un proceso; `POST /id/login.php`
