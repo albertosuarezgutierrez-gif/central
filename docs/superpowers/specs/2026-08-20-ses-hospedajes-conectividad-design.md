@@ -16,6 +16,20 @@ Dos hechos condicionan todo el diseño:
 2. **SES se cae con frecuencia.** El sistema debe distinguir «pendiente porque el Ministerio no
    responde» de «pendiente porque nadie ha rellenado nada». Son dos acciones distintas.
 
+## 1.bis Estado verificado (20/08/2026)
+
+Probado contra el servicio **real** de SES, desde fuera del contenedor de desarrollo:
+
+- ✅ **TLS**: valida con la cadena FNMT versionada en el repo.
+- ✅ **Credenciales del servicio web de Busto Reform**: aceptadas (HTTP 200, no 401).
+- ✅ **`codigoArrendador`**: existe y **tiene habilitado el servicio web** (ni `10103` ni `10120`).
+- ✅ **Formato ZIP + Base64**: aceptado (ningún `10111`).
+- ✅ **Operación `C` (consulta)**: `codigo 0 / Ok`.
+- ❌ **Entorno de pruebas (`pre-ses`)**: caído, 502 a todo. Ver §4.5.
+
+Es decir: **todo el transporte está validado**. Lo que falta es el producto — recoger los datos
+del huésped, construir el parte y gestionar el ciclo.
+
 ## 2. Decisiones tomadas
 
 | Decisión | Elegido | Descartado |
@@ -113,8 +127,9 @@ obligatorio. Pero **no documenta nada del interior del ZIP**: ni el nombre de la
 admite más de una, ni el método (deflate vs store), ni si el Base64 puede llevar saltos de línea,
 ni si admite BOM, ni el tamaño máximo. El glosario define «ZIP» y «Base64» citando Wikipedia.
 
-Decisión, marcada como **supuesto a validar contra pre-ses antes de tocar producción** — la
-combinación más conservadora posible:
+Decisión tomada con la combinación más conservadora posible, y **ya validada contra el servicio
+real de producción el 20/08/2026**: SES devolvió `codigo 0 / Ok`, no un `10111`. Deja de ser un
+supuesto:
 
 | Parámetro | Elegido |
 |---|---|
@@ -124,8 +139,9 @@ combinación más conservadora posible:
 | Codificación del XML | UTF-8 **sin BOM** |
 | Base64 | una sola línea, sin saltos |
 
-Esto es un supuesto, no un hecho, y va anotado como tal en el código. Si pre-ses lo rechaza, las
-variables a mover son en este orden: método (deflate → store), nombre de la entrada, y BOM.
+**Confirmado contra el servicio real**: una consulta construida así se acepta. Si alguna vez
+apareciera un `10111`, las variables a mover serían, en este orden: método (deflate → store),
+nombre de la entrada, y BOM.
 
 ### Inconsistencias de la propia guía (no son erratas nuestras)
 
@@ -271,16 +287,28 @@ Los tres crons se declaran en `apps/plataforma/lib/cron-dispatch.ts`, **no** en 
 
 ### 4.5 Puesta en marcha
 
-1. Desplegar con `SES_DRY_RUN=1` y `entorno='pruebas'`.
-2. Dar de alta **un solo piso** (Busto Reform) en la pantalla de establecimientos y pulsar «probar conexión» contra
-   `hospedajes.pre-ses.mir.es`.
-3. Con la conexión validada, quitar el dry-run y mandar un parte de prueba.
-4. Solo entonces pasar ese piso a `produccion`, y después el resto uno a uno.
+🚨 **El entorno de pruebas de SES no funciona.** `hospedajes.pre-ses.mir.es` acepta la conexión
+y valida el TLS, pero responde **502 Proxy Error — «Error reading from remote server»** a toda
+petición, con credenciales válidas o sin ellas. Comprobado el 20/08/2026 en las dos pasadas. Es un
+fallo de su lado, no nuestro.
+
+Eso tumba el plan original de «probar en pre-ses y luego pasar a producción». La puesta en marcha
+real, mientras pre-ses siga caído:
+
+1. Desplegar con **`SES_DRY_RUN=1`** y `entorno='produccion'`. El sistema construye el XML, lo
+   comprime, lo valida y lo registra en `ses_envios` **sin enviarlo**.
+2. Dar de alta Busto Reform en la pantalla de establecimientos y pulsar «probar conexión»
+   (`tipoOperacion` `C`, que no da de alta nada). **Ya verificado a mano: responde `codigo 0 / Ok`.**
+3. Revisar a ojo el XML que ha quedado registrado en dry-run para uno o dos check-ins reales.
+4. Quitar el dry-run **para ese piso solo**, y con una reserva concreta y vigilada.
+5. El resto de los pisos, uno a uno, repitiendo 2-4.
+
+La consecuencia incómoda: el primer envío de verdad va contra producción, así que el dry-run y la
+revisión manual del paso 3 **no son opcionales** — son el único ensayo que vamos a tener.
+Reintentar pre-ses de vez en cuando por si lo arreglan entra en el vigía.
 
 El envío real **no se puede probar desde el contenedor de desarrollo**: el proxy de salida bloquea
-`*.mir.es`. Toda validación contra SES ocurre desde Vercel.
-
-El paso 2 no se puede completar hasta resolver la cadena de CA descrita en §4.6.
+`*.mir.es`, y además intercepta el TLS. Toda validación contra SES ocurre desde Vercel.
 
 ### 4.6 La cadena de CA de SES: qué pasaba de verdad
 
@@ -337,8 +365,15 @@ días de diferencia en la caducidad es justo la clase de detalle que se pasa por
 6. La caducidad del **intermedio (2028-06-24)** entra en el vigía: una cadena caducada deja de
    enviar partes en silencio, y silencio con un plazo de 24 h es lo más caro que hay.
 
-Sigue **sin validarse el usuario y la contraseña** del servicio web: no se ha llegado a la capa
-de autenticación. Es la primera tarea del plan, ahora ya sin obstáculo conocido.
+**Verificado de punta a punta el 20/08/2026.** Con este bundle cargado, la llamada real desde
+fuera del contenedor de desarrollo devuelve:
+
+| Endpoint | TLS | Con credenciales falsas | Con las credenciales reales |
+|---|---|---|---|
+| `hospedajes.ses.mir.es` (producción) | **valida** | HTTP 401 | **HTTP 200 · `codigo 0 / Ok`** |
+| `hospedajes.pre-ses.mir.es` (pruebas) | **valida** | HTTP 502 | HTTP 502 |
+
+El `UnknownIssuer` desaparece: era el intermedio equivocado, no una CA privada.
 
 ### 4.7 🚨 Firma del viajero y registro documental — obligaciones que este diseño no cubría
 
