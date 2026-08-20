@@ -14,7 +14,8 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { ingerirJunta } from '@/lib/subastas/junta'
 import { procesarDocumentos } from '@/lib/subastas/documentos'
-import { olvidarSesionPortal, sesionPortal, titularSesionPortal, volcarLoginPortal } from '@/lib/subastas/portal-sesion'
+import { olvidarSesionPortal, rastroOtp, sesionPortal, titularSesionPortal, volcarLoginPortal } from '@/lib/subastas/portal-sesion'
+import { procesarDocumentosDeFicha } from '@/lib/subastas/documentos'
 import { clasificarSubastas } from '@/lib/subastas/clasificar'
 import { reextraerDatosDeTexto } from '@/lib/subastas/reextraer'
 import { aplicarReferenciaMercado, chollosVigentes, enriquecerAnunciantesFotocasa, ingerirComparables, leerIndiceINE, pulsoMercado, referenciaZonasFotocasa, refrescarIndiceINE } from '@/lib/subastas/mercado'
@@ -81,7 +82,35 @@ export async function GET(req: NextRequest) {
       titular: titularSesionPortal(s),
       usuario: (process.env.BOE_PORTAL_USUARIO ?? '').trim() || null,
       passwordConfigurada: Boolean(process.env.BOE_PORTAL_PASSWORD),
+      // Rastro del segundo paso: qué formulario se leyó, si se encontró código
+      // y en qué acabó. Con la contraseña ya redactada por `redactarSecretos`.
+      rastro: sp.get('rastro') === '1' ? rastroOtp() : undefined,
     })
+  }
+  // Prueba END-TO-END con UNA subasta: abre sesión y lee ESA ficha, diciendo
+  // qué muro ve y qué documentos lista. Es la única comprobación que demuestra
+  // que la sesión sirve para lo que se montó — que el login «funcione» no dice
+  // nada si el Portal sigue escondiendo los documentos.
+  //
+  // NO escribe en BD: `procesarDocumentosDeFicha` solo lee.
+  if (sp.get('accion') === 'portal-ficha') {
+    const id = (sp.get('id') ?? '').trim()
+    if (!id) return NextResponse.json({ error: 'falta ?id=SUB-...' }, { status: 400 })
+    olvidarSesionPortal()
+    const s = await sesionPortal()
+    try {
+      const r = await procesarDocumentosDeFicha(id, { leerCargas: false })
+      return NextResponse.json({
+        id,
+        sesion: s.estado,
+        titular: titularSesionPortal(s),
+        conSesion: r.conSesion,
+        muro: r.muro,
+        documentos: r.documentos.map((d) => d.titulo),
+      })
+    } catch (e: any) {
+      return NextResponse.json({ id, sesion: s.estado, error: e?.message ?? String(e) }, { status: 200 })
+    }
   }
   if (sp.get('accion') === 'documentos') {
     try {
