@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-19T22:29:35Z",
+  "generadoEn": "2026-08-20T07:38:43Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3809,6 +3809,7 @@
       "/api/negocios/[id]",
       "/api/operador/flota-mapa",
       "/api/operador/secretos/set",
+      "/api/publico/disponibilidad",
       "/api/sivra/conciliar-booking",
       "/api/sivra/domotica/acceso/[id]",
       "/api/sivra/domotica/acceso/[id]/abrir",
@@ -4532,6 +4533,50 @@
   ],
   "novedades": [
     {
+      "titulo": "#1519 (`Vary: Origin` siempre) NO funcionó",
+      "fecha": ""
+    },
+    {
+      "titulo": "#1521 es el arreglo bueno: `Access-Control-Allow-Origin: *` fijo",
+      "fecha": ""
+    },
+    {
+      "titulo": "Dos lecciones a la skill `verification-before-completion`:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Mascotas: NO se admiten.",
+      "fecha": ""
+    },
+    {
+      "titulo": "«Bercell» se queda fuera",
+      "fecha": ""
+    },
+    {
+      "titulo": "Hallazgo (carril 2, PR aparte):",
+      "fecha": ""
+    },
+    {
+      "titulo": "0 fugas del raíl en las 351 fechas escritas hoy, en los 4 pisos.",
+      "fecha": ""
+    },
+    {
+      "titulo": "La regla que gobierna todo:",
+      "fecha": ""
+    },
+    {
+      "titulo": "🚨 Lección de CI (misma sesión):",
+      "fecha": ""
+    },
+    {
+      "titulo": "Sin verificar:",
+      "fecha": ""
+    },
+    {
+      "titulo": "«Bercell»",
+      "fecha": ""
+    },
+    {
       "titulo": "Hallazgo:",
       "fecha": ""
     },
@@ -4545,50 +4590,6 @@
     },
     {
       "titulo": "Decisión (Alberto):",
-      "fecha": ""
-    },
-    {
-      "titulo": "Decisión de Alberto: por PR y definitivo — nada escribe en `main` salvo el merge de un PR verde.",
-      "fecha": ""
-    },
-    {
-      "titulo": "DECISIÓN de Alberto (19/08): no se paga Supabase hasta tener cliente; se retoma si hace falta.",
-      "fecha": ""
-    },
-    {
-      "titulo": "MERGEADO a `main` (PR #1490)",
-      "fecha": ""
-    },
-    {
-      "titulo": "Origen del lío de la dirección:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Dos secciones colgaban POR DEBAJO del `<footer>`",
-      "fecha": ""
-    },
-    {
-      "titulo": "Dirección resuelta (Alberto, 19/08):",
-      "fecha": ""
-    },
-    {
-      "titulo": "Nuevo `apps/housesevillana/CLAUDE.md`",
-      "fecha": ""
-    },
-    {
-      "titulo": "Punto ciego cerrado:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Veredicto FINAL: no tocar nada.",
-      "fecha": ""
-    },
-    {
-      "titulo": "Dos errores míos corregidos el mismo día:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Validación FUERA de muestra",
       "fecha": ""
     }
   ],
@@ -4999,7 +5000,7 @@
     "packages": 37,
     "capacidades": 23,
     "skills": 32,
-    "apis": 1169,
+    "apis": 1170,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
