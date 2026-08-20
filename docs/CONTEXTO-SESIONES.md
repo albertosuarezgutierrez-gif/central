@@ -51,7 +51,7 @@
 - Lección de método: **una consulta que ningún test ejecuta no está probada por tenerlo todo en verde.**
   Las dos consultas arregladas se probaron contra la BD real con parámetro bigint antes de dar el fix
   por bueno. (Y ojo: un backtick dentro de un `Prisma.sql` cierra el template — casi se cuela.)
-- Bien: la rutina de Booking SÍ midió sola 6 ventanas nuevas de escaparate (22 en total). PR #1528.
+- Bien: la rutina de Booking SÍ midió sola 6 ventanas nuevas de escaparate (22 en total). PR #1530.
 
 ### ✅ (20/08/2026) El calendario de House Sevillana, EN VIVO — tras romperse TRES veces por caché
 - **Confirmado por Alberto en pantalla.** Verificado además que las fechas son las buenas: las 34
