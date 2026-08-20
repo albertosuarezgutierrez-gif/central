@@ -32,6 +32,19 @@
 
 ---
 
+### 🧭 (20/08/2026) El índice que usa `code-map` llevaba horas desfasado en `main` — y eso no se ve
+`pnpm auditar:check` estaba en ROJO sobre `main`: #1536/#1550/#1551 son posteriores a la última
+regeneración (#1547) y ninguno rehizo la radiografía. Lo destapé verificando el PR del traspaso, y
+antes de tocar nada comprobé **en un worktree sobre `origin/main`** que el fallo era de `main` y no
+del PR — si no, lo habría "arreglado" dentro de un PR de docs y el hallazgo se habría enterrado.
+🚨 **Un índice desfasado no falla ruidosamente: manda a la línea equivocada**, que para `code-map` es
+peor que no tener índice (acota mal y encima con confianza). El gate en rojo es la única señal, así
+que dejarlo pasar «porque es un fichero generado» normaliza el rojo y lo vuelve invisible.
+Regenerado en PR #1559 (solo deriva real: cabecera + el `yaUsados` que #1548 añadió a
+`esperarCodigoPortal`). **Hueco aparte que destapó el script y NO se toca**: faltan `almacen`,
+`housesevillana` y `mariscos` en el array `VERTICALES` de `apps/plataforma/lib/estructura.ts` —
+exige decidir `sector`/`desc` de cada una, es criterio de Alberto.
+
 ### 🗝️ (20/08/2026) El agente de huéspedes NO tenía ni un dato del piso: la guest app de Smoobu SÍ se puede leer
 - Alberto, del hilo del Dúplex con Samy: «¿tiene acceso a todos los mensajes? ¿puede entrar en la url?».
   Diagnóstico: `mensajes_guia_cache` con **0 filas desde que existe** — `guia.ts` bajaba el HTML del
