@@ -32,6 +32,23 @@
 
 ---
 
+### 🔨 (20/08/2026) Las PUJAS existían y las mirábamos donde no están — y el remate real ya decide
+- Pregunta de Alberto: «¿en las subastas se indican las pujas y el precio de cierre? ¿lo guardamos?».
+  El **precio de cierre sí** (`resultado`+`importe_adjudicacion`, 8 de 13 concluidas). Las **pujas no**:
+  `mejor_puja` llevaba desde el 08/08 con **0 filas** por dos fallos: `mejorPujaViva` leía la pestaña
+  GENERAL (que no publica pujas jamás) y solo vigilaba `subastas_seguidas`, que está **vacía**.
+- Las pujas viven en **`detalleSubasta.php?…&ver=5`**. CUATRO estados, verificados contra el Portal:
+  «no ha recibido pujas» (revisado, no hay) · «ha recibido alguna puja» sin importe (exige sesión) ·
+  **«es secreta»** (ausencia DEFINITIVA, 3 de 13 vivas) · importe visible (concluida, sin abrir el PDF).
+  `pujasDeFicha` + `subastas_pujas_obs` (serie temporal) + `hay_pujas`/`pujas_secretas`.
+- **El agente ya avisa del desenlace** (`avisarDesenlaces`): antes el remate entraba en la BD en
+  silencio. Segunda pasada del cron a las 20:30 Madrid para contarlo **el día del cierre**.
+- **La calibración por fin decide**: `remateEsperado`/`revisarTecho` (puros) convierten los remates
+  reales en euros y destapan techos absurdos (Dos Hermanas: tipo 739.210,43€, «techo» 887.052,43€).
+  Mediana global: **64% del tipo**; en Sevilla capital 2x y 4x — el tipo NO es el valor de mercado.
+- Cantabria **no estaba** en `subastas_criterios` pese a los avisos que dio de alta Alberto: añadida.
+- Pendiente: `PORTAL_SUBASTAS_COOKIE` (opcional) para ver el IMPORTE en vivo — Alberto tiene cuenta.
+
 ### 🔧 (20/08/2026) Del latido rojo al MERGE sin humano en medio — reparación automática de agentes
 - Pregunta de Alberto tras el fallo del canal: «¿no hay un agente que revise y repare?». Había quien
   DETECTA (`agentes-latido`, `/auditoria-diaria`) y nadie que REPARE. Dictado: **«lo más automático

@@ -47,7 +47,8 @@ export const COLS_SUBASTA = Prisma.raw(
     'uso_catastral, direccion_catastro, precio_m2_mercado, muestra_mercado, zona_mercado, notas_edicto, ' +
     'documentos, es_playa, margen_flip, margen_flip_pct, flip_apto, semaforo, analisis, precio_m2_zona, ' +
     'muestra_zona, zona_portal, lat, lon, geo_precision, ' +
-    'cargas_detalle, cargas_fuente, documentos_leidos, lector_version, valor_orientativo, mejor_puja, mejor_puja_at',
+    'cargas_detalle, cargas_fuente, documentos_leidos, lector_version, valor_orientativo, mejor_puja, mejor_puja_at, ' +
+    'hay_pujas, pujas_at, pujas_secretas, remate_esperado, remate_ratio, remate_muestra, techo_fiable, techo_motivo',
 )
 
 /**
@@ -128,6 +129,16 @@ export function filaASubasta(f: any): SubastaInmueble {
     pujaMinima: num(f.puja_minima),
     cantidadReclamada: num(f.cantidad_reclamada),
     mejorPuja: num(f.mejor_puja),
+    // Tres estados a propósito: el `?? false` de siempre convertiría un «no lo
+    // hemos mirado» en «nadie ha pujado», que es la afirmación cara.
+    hayPujas: f.hay_pujas ?? null,
+    pujasAt: f.pujas_at ? new Date(f.pujas_at).toISOString() : null,
+    pujasSecretas: f.pujas_secretas ?? null,
+    remateEsperado: num(f.remate_esperado),
+    remateRatio: num(f.remate_ratio),
+    remateMuestra: f.remate_muestra == null ? null : Number(f.remate_muestra),
+    techoFiable: f.techo_fiable ?? null,
+    techoMotivo: f.techo_motivo ?? null,
     tramos: num(f.tramos),
     deposito: num(f.deposito),
     cargas: num(f.cargas),

@@ -27,8 +27,9 @@ import {
   type ParamsDnploc,
   type DatosCatastro,
   type FichaBoe,
-  mejorPujaDeFicha,
   paresFicha,
+  type ObservacionPujas,
+  pujasDeFicha,
   parsearCertificadoCierre,
   resultadoDeBanner,
   resultadoDeFicha,
@@ -43,9 +44,13 @@ const CATASTRO_COORD = 'https://ovc.catastro.meh.es/ovcservweb/OVCSWLocalizacion
 const CATASTRO_DIR = 'https://ovc.catastro.meh.es/ovcservweb/OVCSWLocalizacionRC/OVCCallejero.asmx/Consulta_DNPLOC'
 const CATASTRO_VIA = 'https://ovc.catastro.meh.es/ovcservweb/OVCSWLocalizacionRC/OVCCallejero.asmx/ConsultaVia'
 
-async function bajar(url: string, ms = 20000): Promise<string> {
+async function bajar(url: string, ms = 20000, cookie?: string): Promise<string> {
   const r = await fetch(url, {
-    headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml,application/xml' },
+    headers: {
+      'User-Agent': UA,
+      Accept: 'text/html,application/xhtml+xml,application/xml',
+      ...(cookie ? { Cookie: cookie } : {}),
+    },
     signal: AbortSignal.timeout(ms),
     cache: 'no-store',
   })
@@ -125,20 +130,89 @@ export async function bajarFicha(identificador: string): Promise<FichaBoe> {
 }
 
 /**
- * Mejor puja EN VIVO de una subasta abierta: solo la pestaña general (una
- * llamada, no tres — esto se consulta a diario para cada seguida cerca del
- * cierre). Lanza si la respuesta no es la ficha, igual que `bajarFicha`;
- * `null` = la ficha no publica la puja, que NO es «sin pujas».
+ * Observa la pestaña «Pujas» (`&ver=5`) de una subasta: la ÚNICA del Portal que
+ * dice si alguien ha pujado. Una sola llamada (no las tres de `bajarFicha`),
+ * porque esto se consulta a diario para cada subasta que está a punto de cerrar.
+ *
+ * Devuelve los TRES estados de `pujasDeFicha`; `no_publicado` significa «no se
+ * ha podido mirar» y quien llama NO debe escribir nada con eso.
+ *
+ * Con `PORTAL_SUBASTAS_COOKIE` (cookie de una sesión iniciada a mano en el
+ * Portal) el importe en vivo también es legible; sin ella el Portal publica el
+ * sí/no y esconde la cifra. La cookie caduca: por eso su ausencia NO es un
+ * error, solo menos dato — y cuando caduque, el estado seguirá llegando.
  */
-export async function mejorPujaViva(identificador: string): Promise<number | null> {
-  // Timeout corto a propósito: el cron que llama vigila hasta 10 seguidas con
+export async function observarPujas(identificador: string): Promise<ObservacionPujas> {
+  // Timeout corto a propósito: el cron que llama vigila varias subastas con
   // maxDuration 60 s — con el timeout por defecto (20 s) bastarían 3 fichas
   // lentas para comerse la pasada entera.
-  const general = await bajar(`${FICHA}?idSub=${encodeURIComponent(identificador)}`, 8000)
-  if (!fichaLegible(general, identificador)) {
-    throw new Error('la respuesta del Portal no es la ficha de esta subasta')
+  const html = await bajar(`${FICHA}?idSub=${encodeURIComponent(identificador)}&ver=5`, 8000, cookiePortal())
+  return pujasDeFicha(html)
+}
+
+/**
+ * Guarda una observación de pujas: la columna con el último estado y la fila del
+ * histórico (`subastas_pujas_obs`), que es lo único que permite saber DESPUÉS
+ * cuándo entró la primera puja — el Portal no publica la escalera de pujas ni el
+ * número de postores, ni siquiera al cerrar.
+ *
+ * `no_publicado` NO se guarda: un fallo de lectura no es un dato. Devuelve si
+ * se escribió algo.
+ */
+export async function guardarObservacionPujas(args: {
+  dedupeKey: string
+  identificador: string | null
+  obs: ObservacionPujas
+  fechaFin?: Date | string | null
+}): Promise<boolean> {
+  const { dedupeKey, identificador, obs } = args
+  if (obs.estado === 'no_publicado') return false
+
+  // Pujas declaradas SECRETAS por la autoridad: se marca la fila para poder
+  // decirlo («no se sabrá») en vez de enseñar un «sin comprobar» que promete una
+  // pasada futura, y no se escribe observación: no hay serie que construir.
+  if (obs.estado === 'secreta') {
+    await prisma.$executeRaw(Prisma.sql`
+      UPDATE subastas SET pujas_secretas = true, pujas_at = now(), actualizado_en = now()
+      WHERE dedupe_key = ${dedupeKey}
+    `)
+    return true
   }
-  return mejorPujaDeFicha(paresFicha(general))
+
+  const hay = obs.estado === 'hay_pujas'
+  const fin = args.fechaFin == null ? null : new Date(args.fechaFin)
+  const horas = fin && !Number.isNaN(fin.getTime()) ? (fin.getTime() - Date.now()) / 3_600_000 : null
+  // 'sesion' solo cuando el importe en vivo lo destapó la cookie del Portal:
+  // así se distingue después una serie rica de una serie de sí/no.
+  const fuente = obs.importe != null && horas != null && horas > 0 ? 'sesion' : obs.importe != null ? 'cierre' : 'publico'
+
+  await prisma.$executeRaw(Prisma.sql`
+    UPDATE subastas SET
+      -- Una puja no se puede retirar: el true no vuelve a false por una lectura
+      -- posterior, igual que la mejor puja solo sube.
+      hay_pujas = COALESCE(hay_pujas, false) OR ${hay},
+      pujas_at = now(),
+      pujas_secretas = false,
+      mejor_puja = CASE
+        WHEN ${obs.importe}::numeric IS NULL THEN mejor_puja
+        WHEN mejor_puja IS NULL OR ${obs.importe}::numeric > mejor_puja THEN ${obs.importe}::numeric
+        ELSE mejor_puja END,
+      mejor_puja_at = CASE WHEN ${obs.importe}::numeric IS NULL THEN mejor_puja_at ELSE now() END,
+      actualizado_en = now()
+    WHERE dedupe_key = ${dedupeKey}
+  `)
+  await prisma.$executeRaw(Prisma.sql`
+    INSERT INTO subastas_pujas_obs (dedupe_key, identificador, hay_pujas, importe, fuente, horas_para_cierre)
+    VALUES (${dedupeKey}, ${identificador}, ${hay}, ${obs.importe}, ${fuente}, ${horas})
+    ON CONFLICT DO NOTHING
+  `)
+  return true
+}
+
+/** Cookie de sesión del Portal, si Alberto la ha puesto. `undefined` = anónimo. */
+function cookiePortal(): string | undefined {
+  const c = process.env.PORTAL_SUBASTAS_COOKIE?.trim()
+  return c ? c : undefined
 }
 
 /**
@@ -359,8 +433,8 @@ async function resultadoDeCertificado(identificador: string): Promise<ResultadoS
 }
 
 export async function capturarResultados(max = 20): Promise<{ revisadas: number; capturadas: number }> {
-  const filas = await prisma.$queryRaw<Array<{ dedupe_key: string; identificador: string }>>(Prisma.sql`
-    SELECT dedupe_key, identificador FROM subastas
+  const filas = await prisma.$queryRaw<Array<{ dedupe_key: string; identificador: string; fecha_fin: Date }>>(Prisma.sql`
+    SELECT dedupe_key, identificador, fecha_fin FROM subastas
     WHERE es_inmueble = true
       AND resultado IS NULL
       AND fecha_fin IS NOT NULL
@@ -382,11 +456,30 @@ export async function capturarResultados(max = 20): Promise<{ revisadas: number;
       let res = resultadoDeFicha(pares)
       if (!res && resultadoDeBanner(html)) {
         // La primera conclusión real (09/08/2026, El Puerto) enseñó el marcado:
-        // la ficha concluida publica el estado como BANNER, no como par, y el
-        // desenlace definitivo del periodo de pujas vive en el CERTIFICADO DE
-        // CIERRE (PDF público). Sin certificado legible se deja NULL y la
+        // la ficha concluida publica el estado como BANNER, no como par.
+        //
+        // 20/08/2026: el desenlace NO hace falta ir a buscarlo al PDF en la
+        // mayoría de los casos — la pestaña «Pujas» (`ver=5`) de una concluida
+        // publica «Puja máxima de la subasta» con el importe en HTML plano. Se
+        // mira primero (una petición, sin parsear un PDF) y el CERTIFICADO DE
+        // CIERRE queda de respaldo para cuando esa pestaña no es legible o hay
+        // pujas sin importe visible. Sin ninguna de las dos se deja NULL y la
         // ventana de 60 días reintenta — nunca se inventa un desenlace.
-        res = await resultadoDeCertificado(f.identificador)
+        const obs = await observarPujas(f.identificador).catch((e) => {
+          console.error('[subastas-resultado] pestaña pujas', f.identificador, e)
+          return { estado: 'no_publicado', importe: null, requiereSesion: false } as ObservacionPujas
+        })
+        await guardarObservacionPujas({
+          dedupeKey: f.dedupe_key, identificador: f.identificador, obs, fechaFin: f.fecha_fin,
+        })
+        if (obs.estado === 'hay_pujas' && obs.importe != null) {
+          res = { resultado: 'con_pujas', importe: obs.importe }
+        } else if (obs.estado === 'sin_pujas') {
+          // El Portal lo AFIRMA sobre una subasta ya cerrada: eso es desierta.
+          res = { resultado: 'desierta', importe: null }
+        } else {
+          res = await resultadoDeCertificado(f.identificador)
+        }
       }
       if (!res) {
         // La materia prima para ajustar el parser con la primera real.

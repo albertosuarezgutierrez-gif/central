@@ -11,8 +11,11 @@ import {
   evaluarOportunidad,
   FLIP_MARGEN_MIN,
   pujaMaximaParaDescuento,
+  remateEsperado,
+  revisarTecho,
 } from '@central/module-subastas'
 import { COLS_SUBASTA, filaASubasta } from '@/lib/subastas-radar'
+import { calibracionResultados } from '@/lib/subastas/calibracion'
 
 export async function clasificarSubastas(max = 400): Promise<{ revisadas: number; playa: number; flipViables: number }> {
   // Vigentes siempre (el margen cambia con cada enriquecimiento) + históricas
@@ -26,6 +29,14 @@ export async function clasificarSubastas(max = 400): Promise<{ revisadas: number
   `)
 
   const anio = new Date().getFullYear()
+  // Los remates REALES capturados hasta hoy: una sola consulta para toda la
+  // pasada. Es lo que convierte el techo teórico en un número contrastado —
+  // hasta el 20/08/2026 esta calibración existía y no la usaba nadie para
+  // decidir: solo pintaba una frase en /subastas.
+  const calibracion = await calibracionResultados().catch((e) => {
+    console.error('[subastas/clasificar] calibración', e)
+    return []
+  })
   let enPlaya = 0
   let flipViables = 0
 
@@ -55,6 +66,17 @@ export async function clasificarSubastas(max = 400): Promise<{ revisadas: number
       ? pujaMaximaParaDescuento(s, oportunidad.valorMercado, 0.25).importe
       : null
 
+    // Realidad contra teoría: qué se remata DE VERDAD en esta provincia y si el
+    // techo de arriba se sostiene. Sin muestra suficiente, `remate.importe` es
+    // NULL y no se escribe una cifra inventada.
+    const remate = remateEsperado(s.valorSubasta ?? null, s.provincia ?? null, calibracion)
+    const techo = revisarTecho({
+      techo: pujaMaxima,
+      valorSubasta: s.valorSubasta ?? null,
+      valorOrientativo: oportunidad.valorOrientativo,
+      remate,
+    })
+
     if (playa) enPlaya++
     if (flip.apto && (flip.margenPct ?? -1) >= FLIP_MARGEN_MIN) flipViables++
 
@@ -67,6 +89,11 @@ export async function clasificarSubastas(max = 400): Promise<{ revisadas: number
         semaforo = ${analisis.semaforo},
         analisis = ${JSON.stringify(analisis.puntos)}::jsonb,
         puja_maxima_calc = ${pujaMaxima},
+        remate_esperado = ${remate.importe},
+        remate_ratio = ${remate.ratio},
+        remate_muestra = ${remate.muestra},
+        techo_fiable = ${techo.fiable},
+        techo_motivo = ${techo.motivo},
         valor_orientativo = ${oportunidad.valorOrientativo}
       WHERE dedupe_key = ${f.dedupe_key}
     `)

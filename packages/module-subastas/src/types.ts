@@ -101,11 +101,38 @@ export interface SubastaInmueble {
   /** Depósito exigido para pujar. Si la fuente no lo da se deriva (5%). */
   deposito?: number | null
   /**
-   * Mejor puja publicada por la ficha del portal en la última consulta (solo
-   * se vigila en las SEGUIDAS cerca del cierre). `null` = no publicada o sin
-   * consultar — que NO es «sin pujas»: el portal no siempre la enseña.
+   * IMPORTE de la puja más alta vista. Solo es público en las CONCLUIDAS (o en
+   * vivo con sesión iniciada en el Portal): `null` = importe no publicado, que
+   * NO es «sin pujas» — para eso está `hayPujas`.
    */
   mejorPuja?: number | null
+  /**
+   * ¿Ha pujado alguien? Lo publica la pestaña «Pujas» (`ver=5`) del Portal, y
+   * es el único dato de competencia que se ve sin estar registrado. TRES
+   * estados: `undefined`/`null` = no se ha mirado · `false` = el Portal afirma
+   * que no ha recibido pujas · `true` = hay al menos una.
+   */
+  hayPujas?: boolean | null
+  /** Cuándo se miró por última vez la pestaña de pujas. */
+  pujasAt?: string | null
+  /**
+   * `true` = la autoridad gestora declaró las pujas SECRETAS. Es una ausencia
+   * DEFINITIVA: `hayPujas` se quedará en `null` para siempre y no hay nada
+   * pendiente de mirar. Distinguirlo evita prometer un dato que no llegará.
+   */
+  pujasSecretas?: boolean | null
+
+  /**
+   * Euros que cabe esperar de remate según los remates REALES ya capturados
+   * (ratio mediano de la provincia x tipo). `null` = aún sin muestra.
+   */
+  remateEsperado?: number | null
+  /** Ratio mediano remate/tipo usado, y cuántos remates lo sostienen. */
+  remateRatio?: number | null
+  remateMuestra?: number | null
+  /** `false` = `pujaMaximaCalc` no es de fiar; el motivo, en `techoMotivo`. */
+  techoFiable?: boolean | null
+  techoMotivo?: string | null
 
   /**
    * Cantidad reclamada en el procedimiento (principal + intereses + costas).

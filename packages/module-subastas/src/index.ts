@@ -79,8 +79,8 @@ export {
 export type { UbicacionSubasta } from './geo.ts'
 
 // Ficha del Portal de Subastas (las CIFRAS) y Catastro (superficie, año, uso)
-export { parsearFichaBoe, paresFicha, resultadoDeFicha, resultadoDeBanner, parsearCertificadoCierre, mejorPujaDeFicha } from './ficha-boe.ts'
-export type { FichaBoe, ResultadoSubasta, CierreCertificado } from './ficha-boe.ts'
+export { parsearFichaBoe, paresFicha, resultadoDeFicha, resultadoDeBanner, parsearCertificadoCierre, pujasDeFicha } from './ficha-boe.ts'
+export type { FichaBoe, ResultadoSubasta, CierreCertificado, EstadoPujas, ObservacionPujas } from './ficha-boe.ts'
 export {
   parsearCatastro, errorCatastro, superficieUtil, parsearCoordenadas,
   refParcela, direccionCatastro, parsearInmueblesDnploc, parcelaUnica, paramsDnploc,
@@ -107,6 +107,10 @@ export {
 export type { Preferente, ZonaPreferente } from './costa-norte.ts'
 // Calibración con RESULTADOS reales: a qué % del tipo se adjudica de verdad
 export { calibracionAdjudicaciones, calibracionPorCargas, calibracionPuja, MIN_MUESTRA_CALIBRACION, MIN_MUESTRA_PUJA } from './adjudicaciones.ts'
+// …y lo que convierte esa calibración en un número que decide: el remate que
+// cabe esperar y si nuestro techo de puja se sostiene frente a él.
+export { remateEsperado, revisarTecho, MIN_MUESTRA_REMATE } from './remate.ts'
+export type { RemateEsperado, RevisionTecho } from './remate.ts'
 export type {
   ResultadoConcluido, CalibracionZona, ResultadoConCargas, CalibracionCargas,
   ResultadoConPuja, CalibracionPuja,
