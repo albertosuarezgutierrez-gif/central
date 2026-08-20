@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-20T08:31:44Z",
-  "sha": "fc437e4453b3cd917a702b38f726b26d9d239242",
+  "generadoEn": "2026-08-20T09:45:50Z",
+  "sha": "c769fef7503a0828ad1d76af793b5a625efa0124",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -41411,7 +41411,7 @@
           "exportada": false,
           "params": "cid: string, paso: number, prospectoIds: string[]",
           "retorno": "Promise<number>",
-          "linea": 161,
+          "linea": 163,
           "resumen": "Encola filas de envío (tokens generados en JS), idempotente por (campaña,prospecto,paso)."
         },
         {
@@ -41420,7 +41420,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 175
+          "linea": 177
         },
         {
           "nombre": "POST",
@@ -41428,7 +41428,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 186
+          "linea": 188
         }
       ],
       "tablas": [
@@ -41442,7 +41442,7 @@
         "unnest"
       ],
       "rutaApi": "/api/superadmin/mailing/cron",
-      "hash": "fa05fc856a32"
+      "hash": "65f2317ba9ce"
     },
     {
       "ruta": "apps/ialimp/app/api/superadmin/mailing/prospectos/[id]/route.ts",
@@ -52781,13 +52781,14 @@
       ],
       "tablas": [
         "agente_latidos",
+        "agente_reparaciones",
         "correo_cursor",
         "next",
         "pms_connections",
         "pricing_decisiones"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "650f4ee2a6c1"
+      "hash": "f76240146f73"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -54622,6 +54623,62 @@
       ],
       "rutaApi": "/api/internal/mapa-arquitectura",
       "hash": "1792c1843233"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/internal/reclamar-reparacion/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 36
+        },
+        {
+          "nombre": "avisarRendidos",
+          "kind": "function",
+          "exportada": false,
+          "params": "rendidos: { agente: string; firma: string | null }[]",
+          "retorno": null,
+          "linea": 115,
+          "resumen": "Un agente que agota sus intentos NO puede quedarse en silencio: es justo el caso en el que hace falta el ojo de Alberto. Se avisa UNA vez por firma (marca `avisado_at` en el último intento)."
+        }
+      ],
+      "tablas": [
+        "agente_latidos",
+        "agente_reparaciones",
+        "next"
+      ],
+      "rutaApi": "/api/internal/reclamar-reparacion",
+      "hash": "662aa7bb90d7"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/internal/reparacion-resultado/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 25
+        }
+      ],
+      "tablas": [
+        "agente_reparaciones",
+        "next"
+      ],
+      "rutaApi": "/api/internal/reparacion-resultado",
+      "hash": "3f3a2cff45be"
     },
     {
       "ruta": "apps/plataforma/app/api/negocios/[id]/route.ts",
@@ -65644,7 +65701,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 65,
+          "linea": 67,
           "resumen": "Métricas para el panel /operador/ia: hit-rate del mes (hits vs misses registrados en ai_usos)."
         }
       ],
@@ -65653,7 +65710,7 @@
         "ia_cache_semantica"
       ],
       "rutaApi": null,
-      "hash": "ddb03d4dfc1e"
+      "hash": "30f7dc87bf89"
     },
     {
       "ruta": "apps/plataforma/lib/ia-director-codigo.ts",
@@ -66049,7 +66106,75 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "40ed75c14b1d"
+      "hash": "2e789ee95356"
+    },
+    {
+      "ruta": "apps/plataforma/lib/monitoring/reparable.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "🔧 ¿Este latido rojo se puede intentar reparar solo? — decisión PURA (sin BD ni red). Hermano de `latidos.ts`: aquel decide si un agente ha dejado de latir, y este decide si esa avería tiene pinta de arreglarse TOCANDO CÓDIGO. Lo consume el disparador de `latido-reparar.yml`, que manda el caso al or",
+      "exporta": [
+        "esExcepcion",
+        "firmaError",
+        "decidirReparacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizar",
+          "kind": "function",
+          "exportada": false,
+          "params": "detalle: string | null | undefined",
+          "retorno": "string",
+          "linea": 51
+        },
+        {
+          "nombre": "esExcepcion",
+          "kind": "function",
+          "exportada": true,
+          "params": "detalle: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 64,
+          "resumen": "¿El parte describe una EXCEPCIÓN (reparable aquí) o un «no he podido mirar» (reparable fuera)? 🚨 Un `error:` suelto NO basta. En castellano aparece en partes que describen degradaciones perfectamente"
+        },
+        {
+          "nombre": "sqlstateDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "txt: string",
+          "retorno": "string | null",
+          "linea": 73,
+          "resumen": "SQLSTATE de Postgres tal y como lo publica Prisma (`Code: \\`42883\\``) o un log en castellano."
+        },
+        {
+          "nombre": "nombreExcepcion",
+          "kind": "function",
+          "exportada": false,
+          "params": "txt: string",
+          "retorno": "string | null",
+          "linea": 85,
+          "resumen": "Nombre compuesto de excepción. Se queda con el MÁS LARGO: en `error: PrismaClientKnownRequestError` el primer match sería el `error` de cabecera, que no identifica nada."
+        },
+        {
+          "nombre": "firmaError",
+          "kind": "function",
+          "exportada": true,
+          "params": "detalle: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 102,
+          "resumen": "Huella ESTABLE del fallo. No vale la frase entera: los partes llevan horas, contadores y rutas que cambian en cada pasada, y con eso la misma avería parecería nueva cada día y dispararía un intento di"
+        },
+        {
+          "nombre": "decidirReparacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "params: { ahora: Date detalle: string | null alerta: boolean historial: IntentoPrevio[] maxIntentos?: number ventanaDias?: number }",
+          "retorno": "DecisionReparacion",
+          "linea": 148,
+          "resumen": "¿Se dispara una reparación para este agente? `alerta` viene de `evaluarLatido` (no se duplica aquí la lógica de frescura). `historial` son los intentos previos de ESTE agente, más recientes primero."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6c91c62b9975"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/sonda-ia.ts",
@@ -66780,13 +66905,13 @@
           "exportada": true,
           "params": "pathname: string",
           "retorno": "boolean",
-          "linea": 42,
+          "linea": 50,
           "resumen": "¿La ruta está declarada como alcanzable por una rutina? (prefijo, como `PUBLIC`)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c93963c242aa"
+      "hash": "e2e5a99ac2b5"
     },
     {
       "ruta": "apps/plataforma/lib/rutina-tokens.ts",
@@ -94175,7 +94300,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2509,
-    "funciones": 6824
+    "archivos": 2512,
+    "funciones": 6833
   }
 }
