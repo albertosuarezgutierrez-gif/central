@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-20T15:07:55Z",
+  "generadoEn": "2026-08-20T16:03:01Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1736,7 +1736,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 32
+        "evidencias": 33
       },
       "rrhh": {
         "estado": "no",
@@ -4321,6 +4321,7 @@
       "subastas_debug_token",
       "subastas_descartes",
       "subastas_notas_simples",
+      "subastas_pujas_obs",
       "subastas_radar",
       "subastas_reapariciones",
       "subastas_seguidas",
@@ -4587,15 +4588,15 @@
       "fecha": ""
     },
     {
+      "titulo": "TRES sesiones distintas fueron al mismo sitio el mismo día",
+      "fecha": ""
+    },
+    {
       "titulo": "Probar antes de mergear cazó DOS bugs que `tsc` y `next build` dan por buenos:",
       "fecha": ""
     },
     {
       "titulo": "Raíz:",
-      "fecha": ""
-    },
-    {
-      "titulo": "PENDIENTE (decisión de Alberto):",
       "fecha": ""
     }
   ],
