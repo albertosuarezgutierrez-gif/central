@@ -32,6 +32,19 @@
 
 ---
 
+### 📐 (20/08/2026) El calibrado del canal Booking NUNCA completó una pasada: `date - bigint` (42883)
+- Latido `sivra_canal` en rojo desde que nació. **Causa raíz:** Prisma manda los números de JS como
+  **bigint** y Postgres no tiene `date - bigint` → la PRIMERA consulta de `medir()` moría en 42883.
+  Reproducido y verificado contra la BD real. El repo ya lo sabía (`concursos-cierre`, 2026-07).
+- **Consecuencia medida, no supuesta:** los cuatro pisos siguen con `channel_markup=1.20` y
+  `cuota_fija=0` en `pricing_settings` — el ×1,20 supuesto de la reserva de Navidad **sigue vivo**.
+  Las 22 mediciones de escaparate estaban ahí (4 pisos, ninguna usada): el hueco NO era aguas arriba.
+- **Mismo fallo en otros 3 sitios, todos silenciosos:** el suelo de PriceLabs de `pricing/apply`
+  (708 filas vivas, se tragaba el 42883 en un `.catch(() => [])` → ahora declara `pl_degradado`),
+  la caché semántica de IA (`ia-cache.ts`: NO cacheaba nada) y el mailing de ialimp (pasos ≥2).
+- Guardián nuevo `test/regression-sql-fechas.test.ts` (gate `pnpm test:guardia`, 33 verdes). `secs`
+  de `make_interval` queda fuera: es `double precision` y sí acepta bigint (comprobado). PR draft.
+
 ### 🚧 (20/08/2026) El calendario salía «no hemos podido consultar»: se arregló DOS veces — #1519 y #1521
 - Mergeado #1500, el endpoint daba **200 impecable por curl** y estaba roto en el navegador: la
   respuesta se cachea en el CDN (`s-maxage=600`) y sus cabeceras dependían del `Origin`, así que

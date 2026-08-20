@@ -125,7 +125,9 @@ async function medir(): Promise<{ pisos: MedicionCanal[]; ventanas: Map<string, 
     SELECT id, property_id, checkin::text AS checkin, noches, guests, precio_total, base_total,
            portal, usada_en_ajuste_at AS usada
     FROM pricing_escaparate
-    WHERE medido_el >= CURRENT_DATE - ${VENTANA_DIAS}
+    -- ::int OBLIGATORIO: Prisma manda los números de JS como bigint y Postgres no tiene el
+    -- operador date - bigint → 42883, y la pasada moría antes de medir nada (19-20/08/2026).
+    WHERE medido_el >= CURRENT_DATE - ${VENTANA_DIAS}::int
     ORDER BY property_id, checkin`)
 
   type VentanaConId = VentanaEscaparate & { id: number; usada: boolean }
