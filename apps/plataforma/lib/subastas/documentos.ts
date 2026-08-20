@@ -47,6 +47,7 @@ import {
 } from '@central/module-subastas'
 import { fusionarCuadros, leerDocumento, type LecturaDocumento } from '@/lib/subastas/lector-registral'
 import {
+  SIN_INTENTO,
   cabecerasPortal,
   sesionPortal,
   sesionPortalCaducada,
@@ -299,9 +300,21 @@ export async function procesarDocumentos(max = 10): Promise<{
   // fichas que se leyeron a ciegas dejan de tener que esperar su semana. El día
   // que Alberto configure las credenciales, las 8 subastas que decían «cargas no
   // publicadas» se releen en la primera pasada, no siete días después.
-  const s = await sesionPortal()
+  // 🚨 Solo se abre sesión si hay algo que SOLO se ve con sesión. Cada login
+  // dispara un código al correo Y al SMS de Alberto: iniciar sesión «por si
+  // acaso» en cada pasada serían ~30 SMS al mes por no leer nada. Con la cola
+  // sin fichas amuralladas el cron ni lo intenta.
+  const [{ pendientes }] = await prisma.$queryRaw<Array<{ pendientes: number }>>(Prisma.sql`
+    SELECT COUNT(*)::int AS pendientes
+    FROM subastas
+    WHERE fuente = 'boe' AND identificador IS NOT NULL AND es_inmueble = true
+      AND (fecha_fin IS NULL OR fecha_fin >= now())
+      AND documentos_muro IN ('total', 'parcial')
+      AND documentos_sesion IS DISTINCT FROM true
+  `)
+  const s = pendientes > 0 ? await sesionPortal() : SIN_INTENTO
   const hayaSesion = s.estado === 'iniciada'
-  if (!hayaSesion) console.warn('[subastas-documentos]', titularSesionPortal(s))
+  if (pendientes > 0 && !hayaSesion) console.warn('[subastas-documentos]', titularSesionPortal(s))
 
   const filas = await prisma.$queryRaw<FilaPendiente[]>(Prisma.sql`
     SELECT dedupe_key, identificador, autoridad, flip_apto, margen_flip_pct, es_playa,
