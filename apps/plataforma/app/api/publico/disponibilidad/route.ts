@@ -13,6 +13,10 @@ export const dynamic = 'force-dynamic'
 // en él; aquí no sale ni un huésped, ni un importe, ni un identificador de reserva. La lista
 // blanca de slugs impide además que sirva de índice de las propiedades del grupo.
 //
+// 🚨 Y por eso mismo sus cabeceras CORS son un comodín FIJO (`lib/sivra/cors-publico.ts`): esta
+// respuesta se cachea en el CDN, y una respuesta cacheada no puede depender del `Origin` de quien
+// pregunta. No ramifiques aquí por origen — hay un test que lo vigila.
+//
 // 🚨 La regla que gobierna este fichero: NUNCA devolver una lista vacía porque una consulta
 // falló. Una noche está ocupada, o no se sabe, o está libre por descarte — y si no podemos
 // afirmar ninguna de las tres, esto responde 503 y la landing enseña un aviso. Un
@@ -37,18 +41,18 @@ function fmt(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
-export async function OPTIONS(req: NextRequest) {
+export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,
     headers: {
-      ...cabecerasCors(req.headers.get('origin')),
+      ...cabecerasCors(),
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
     },
   })
 }
 
 export async function GET(req: NextRequest) {
-  const cors = cabecerasCors(req.headers.get('origin'))
+  const cors = cabecerasCors()
   const url = new URL(req.url)
 
   const slug = url.searchParams.get('piso') ?? ''

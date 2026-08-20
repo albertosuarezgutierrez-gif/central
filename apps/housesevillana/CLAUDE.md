@@ -89,6 +89,26 @@ pegados a mano, y se ven como lo que son.
 - Aplican íntegras las reglas globales del `CLAUDE.md` raíz: **responsive** (probado a 320 px,
   objetivos táctiles ≥44 px en móvil), rendimiento y formato de dinero.
 
+## Calendario de disponibilidad (portada, encima de `#reserva`)
+
+Vive en **`app/calendario.ts`** (`CALENDARIO_HTML/_PLANTILLAS/_CSS/_JS`) y entra en `route.ts` por cuatro
+interpolaciones. Está aparte para no darle superficie al agente SEO que reescribe `route.ts` los lunes —
+y por eso `traducciones.test.ts` lee `route.ts` **más** `calendario.ts`: si no, sus 16 cadenas quedarían
+fuera de la red de i18n (el fallo de PR #1487).
+
+El dato no sale de aquí: la landing no tiene BD ni secretos. Lo pide por `fetch` a
+**`plataforma-ten-flame.vercel.app/api/publico/disponibilidad`** (ver `apps/plataforma/CLAUDE.md`).
+Consecuencias que muerden:
+- **Toda celda NACE en `sindato`** y un fallo de red va al estado `error`, con aviso visible y salida al
+  motor. Nunca a una rejilla vacía: a ojo se lee como «todo libre», que es la mentira cara de esta web.
+- Si ves el aviso «No hemos podido consultar el calendario», el sospechoso nº 1 es **CORS**, no el dato:
+  compruébalo con `curl -H "Origin: https://housesevillana.es"` contra el endpoint y mira si vuelve
+  `access-control-allow-origin`. Un 200 de curl a secas no prueba nada — y como la respuesta se cachea
+  10 min en el CDN, **una sola petición tampoco**: repite varias veces y mira `x-vercel-cache`. El
+  landmine completo (se rompió dos veces el 20/08/2026) está en `apps/plataforma/CLAUDE.md`.
+- Los estados se traducen solos: el `aria-label` se compone con el texto de la leyenda, y meses y días
+  salen de `Intl` según el `lang` del documento.
+
 ## Pruebas
 
 `npm test` en esta carpeta (Node test runner sobre los `.ts`, sin build):

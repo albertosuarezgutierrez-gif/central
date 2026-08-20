@@ -3,44 +3,39 @@
 // Cabeceras CORS del endpoint público de disponibilidad (el que alimenta el calendario
 // de la landing de House Sevillana).
 //
-// 🚨 Por qué esto es un módulo aparte y testeado, y por qué `Vary: Origin` va SIEMPRE:
+// 🚨 LA REGLA, aprendida a base de romperla dos veces el mismo día (20/08/2026):
+//    **una respuesta que se cachea NO puede depender del `Origin` de quien pregunta.**
 //
-// La respuesta se cachea en el CDN de Vercel (`s-maxage=600`) y sus cabeceras dependen del
-// `Origin` de quien pregunta. Si `Vary: Origin` solo se emite cuando el origen está permitido,
-// **la primera petición decide las cabeceras de todas las demás durante 10 minutos**: basta
-// con que la primera venga sin `Origin` —un curl, un health-check, un bot— para que el CDN
-// guarde una copia SIN `Access-Control-Allow-Origin` y se la sirva luego al navegador, que la
-// rechaza. La landing lo interpreta como «no se pudo consultar» y enseña el aviso de error.
+// Primer intento (PR #1500): se devolvía el origen literal si estaba en una lista blanca. Como la
+// respuesta lleva `s-maxage=600`, el CDN guardó UNA copia y **la primera petición decidió las
+// cabeceras de todas durante 10 minutos**. La primera fue un `curl` de comprobación SIN `Origin`
+// → copia sin `Access-Control-Allow-Origin` → el navegador de housesevillana.es la rechazó y la
+// landing enseñó su aviso de error. Roto en el navegador, impecable por curl.
 //
-// Pasó de verdad el 20/08/2026, y lo provocó la propia comprobación de que el endpoint
-// funcionaba: `curl` sin `Origin` llenó la caché, y a partir de ahí housesevillana.es no volvió
-// a ver la cabecera. El endpoint respondía 200 impecable desde el servidor y estaba roto en el
-// navegador — la lección es que un 200 por curl NO prueba que un recurso con CORS funcione.
+// Segundo intento (PR #1519): se añadió `Vary: Origin` a TODAS las respuestas, que es lo que dice
+// el estándar HTTP. **No funcionó: el CDN de Vercel no cachea por `Origin`** — sirve una sola copia
+// y de hecho ELIMINA la cabecera `vary: Origin` de lo que entrega. Medido en producción: 12 de 12
+// peticiones desde housesevillana.es recibieron la copia que había dejado un curl con
+// `Origin: https://competencia.com`, sin `Access-Control-Allow-Origin` y sin `vary`. El calendario
+// siguió roto exactamente igual.
 //
-// Con `Vary: Origin` en todas las respuestas, el CDN guarda una copia por origen y cada uno
-// recibe la suya.
-
-/** Orígenes que pueden leer esto desde un navegador. */
-export const ORIGENES_EXACTOS = ['https://housesevillana.es', 'https://www.housesevillana.es']
-
-// Los previews de Vercel llevan un hash por despliegue, así que no se pueden listar. El ancla
-// de los dos extremos no es decorativa: sin el `$`, `…vercel.app.de-otro.com` pasaría.
-export const ORIGEN_PREVIEW = /^https:\/\/house-sevillana-landing-[a-z0-9-]+\.vercel\.app$/
+// Arreglo definitivo: `Access-Control-Allow-Origin: *`, fijo. La respuesta pasa a ser idéntica para
+// todo el mundo, así que da igual qué copia guarde el CDN. Es seguro porque este endpoint es
+// **público a propósito**: no lee cookies ni cabeceras de sesión (con `*` el navegador ni siquiera
+// permite mandarlas), y lo que publica —qué noches están cogidas de una lista blanca de 4 pisos— ya
+// se lo enseña el motor de reservas de Smoobu a cualquiera que entre en él.
+//
+// La lista blanca de orígenes que había aquí no protegía nada (no hay credenciales que robar) y era
+// justo lo que hacía la respuesta dependiente del `Origin`. Por eso se retira en vez de arreglarse.
+//
+// ⚠️ Si algún día este endpoint pasara a leer sesión o a devolver algo por cliente, `*` deja de valer
+// — y entonces lo que hay que quitar es la CACHÉ (`Cache-Control: no-store`), no volver a la lista
+// blanca: seguiría siendo una respuesta variable servida desde una caché que no varía.
 
 /**
- * Cabeceras CORS para este origen.
- *
- * Se devuelve el origen LITERAL y no la lista: `Access-Control-Allow-Origin` no admite
- * comodines parciales ni varios valores. Sin `Origin` (una llamada de servidor, o curl) no se
- * pone esa cabecera y se sirve igual: CORS protege al navegador de OTRAS webs, no a este
- * endpoint, que es público a propósito.
- *
- * `Vary: Origin` va en TODOS los casos —permitido, no permitido y sin `Origin`— porque es lo
- * que le dice al CDN que no puede reutilizar una copia entre orígenes distintos.
+ * Cabeceras CORS del endpoint público. No reciben nada de la petición **a propósito**: son
+ * constantes para que la copia que guarde el CDN sirva igual a cualquier navegador.
  */
-export function cabecerasCors(origen: string | null): Record<string, string> {
-  const base: Record<string, string> = { Vary: 'Origin' }
-  if (!origen) return base
-  const permitido = ORIGENES_EXACTOS.includes(origen) || ORIGEN_PREVIEW.test(origen)
-  return permitido ? { ...base, 'Access-Control-Allow-Origin': origen } : base
+export function cabecerasCors(): Record<string, string> {
+  return { 'Access-Control-Allow-Origin': '*' }
 }
