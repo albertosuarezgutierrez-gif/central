@@ -959,6 +959,7 @@ export function esDocumentoDeCargas(titulo: string | null | undefined): boolean 
  *  · `sin_cuantificar`        — consta que hay cargas, pero nadie ha determinado el importe.
  *  · `publicadas_sin_extraer` — la ficha publica el documento y no tenemos su cuadro de cargas.
  *  · `ocultas_tras_login`     — el Portal no enseña la lista de documentos sin iniciar sesión.
+ *  · `ocultas_pese_a_sesion`  — el lector YA entró identificado y el Portal las sigue sin publicar.
  *  · `no_publicadas`          — ficha revisada Y visible entera: no hay documento de cargas que abrir.
  *  · `sin_revisar`            — ni siquiera se ha mirado la ficha todavía.
  */
@@ -968,6 +969,7 @@ export type EstadoCargas =
   | 'sin_cuantificar'
   | 'publicadas_sin_extraer'
   | 'ocultas_tras_login'
+  | 'ocultas_pese_a_sesion'
   | 'no_publicadas'
   | 'sin_revisar'
 
@@ -991,6 +993,15 @@ export interface EntradaEstadoCargas {
    * lo único cierto es que a nosotros no nos lo enseña.
    */
   muro?: MuroDocumental | null
+  /**
+   * ¿La última lectura de la ficha se hizo CON sesión en el Portal?
+   * `true` = sí · `false` = en anónimo · `null`/`undefined` = no consta
+   * (fichas leídas antes de que el cron supiera identificarse).
+   *
+   * Solo cambia el recado cuando hay muro, y ahí lo cambia entero: «inicia
+   * sesión» frente a «pide la certificación al Registro».
+   */
+  sesion?: boolean | null
 }
 
 /**
@@ -1031,7 +1042,11 @@ export function estadoCargas(e: EntradaEstadoCargas): {
   // está a un login de distancia. Va ANTES que el `docs == null` porque el muro
   // es una respuesta más precisa que «pendiente de revisar».
   if (e.muro === 'total' || e.muro === 'parcial') {
-    return { estado: 'ocultas_tras_login', documento: null }
+    // Y con QUÉ ojos se miró: si la lectura ya iba identificada, «inicia sesión»
+    // es un recado imposible de cumplir y esconde la verdad —que ahí no hay nada
+    // que abrir y toca pedir la certificación al Registro—. Mandar a alguien a
+    // hacer lo que ya está hecho es la forma educada de no decir nada.
+    return { estado: e.sesion === true ? 'ocultas_pese_a_sesion' : 'ocultas_tras_login', documento: null }
   }
   if (docs == null) {
     return { estado: e.publicaAdjuntos === false ? 'no_publicadas' : 'sin_revisar', documento: null }
@@ -1089,6 +1104,12 @@ export function titularCargas(e: EntradaEstadoCargas): TitularCargas {
         ...base,
         emoji: '🟠',
         texto: 'El Portal del BOE NO enseña los documentos de esta subasta sin iniciar sesión: entra con tu usuario y ábrelos antes de pujar (no hace falta ir al Registro).',
+      }
+    case 'ocultas_pese_a_sesion':
+      return {
+        ...base,
+        emoji: '🟠',
+        texto: 'Ni con sesión iniciada publica el Portal los documentos de esta subasta: aquí sí hace falta pedir la certificación de cargas al Registro (o al juzgado) antes de pujar.',
       }
     case 'sin_revisar':
       return { ...base, emoji: '🟠', texto: 'Cargas sin comprobar: la ficha del BOE todavía no se ha revisado.' }

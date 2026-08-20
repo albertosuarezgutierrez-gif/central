@@ -57,6 +57,73 @@
   botones ✅/❌ — nada entra sin que Alberto lo confirme.
 - Pendiente: **vender/cobrar el parking** (fase 2, pedido por Alberto).
 
+### 💶 (20/08/2026) Dúplex: plan precio→reforma→venta, y el motor de precios tiene una copia RETIRADA que engaña
+- Del estudio fiscal salió una tercera opción que no estaba sobre la mesa: **antes de reformar (25-40k€) o
+  vender, tocar el precio** — gratis y reversible. Plan con criterios numéricos escritos ANTES de medir en
+  `docs/DUPLEX-plan-precio-reforma-venta.md` (fases A precio → B baño abajo → C 2º dormitorio → D vender).
+- **🪤 Landmine caro:** acusé al motor de pricing de dos fallos leyendo `apps/sivra/lib/pricing-engine.ts`.
+  **Esa copia está RETIRADA** (su ruta da 410 desde el 18/07/2026); el motor vivo es
+  `apps/plataforma/app/api/sivra/pricing/apply` y es mucho más fino. Uno de los «fallos» ya estaba resuelto
+  desde el 09/08 (`pricing-demanda.ts` gatea el descuento fuera de la ventana de venta). Anotado en la skill
+  `pricing-agente`. **Antes de acusar a un motor, comprueba qué copia corre.**
+- **Aplicado en prod con OK de Alberto:** `target_pctl` 0,50→0,60 en `prop_duplex_center` (Fase 1). Pendiente
+  de su decisión `max_change_pct` 0,20→0,08. La ocupación de la competencia **no** se puede usar hoy
+  (`market_rates` no guarda disponibilidad) — haría falta panel fijo de comps.
+- **Rutina nueva** (día 1 de cada mes, `trig_01QLVxzPS1PXAJPuWhApcAFV`): mide el mes cerrado y aplica el
+  criterio de la fase. Ficha en `docs/RUTINAS-PROGRAMADAS.md` §15. PR #1538.
+
+
+### 🏠 (20/08/2026) Estudio fiscal de la venta del dúplex de Villasís por 320.000€
+- Alberto sube la escritura del dúplex (Pj Villasís 1, 1º C) y pregunta cuánto pagaría vendiéndolo por
+  320.000€. **Es una DONACIÓN de su madre del 21/05/2024 por 174.650,90€** (= valor de referencia), con
+  bonificación 99% del ISD andaluz → valor de adquisición = ese, no lo que pagó ella en 2004.
+- Números: ganancia ~145.000€ (sin agencia) → **IRPF ~32.300€ + plusvalía ~970€**; con agencia al 3%,
+  ~30.600€. Neto entre 271.000€ y 286.000€. Estudio completo en `docs/FISCAL-venta-duplex-villasis.md`.
+- **Plusvalía: método objetivo (~970€) vs real (~24.900€)** — hay que pedirlo expresamente.
+- **Palanca grande:** pérdidas realizadas de IBKR (−6.642 USD en 2025, −18.746 USD en 2026) compensan al
+  100% la ganancia → ~3.700€ menos. ⚠️ Son P&L del bróker en USD SIN tipo de cambio: hace falta el
+  informe fiscal en euros antes de contar con ello. El año de venta (2026 vs 2027) importa por esto.
+- **Alcance cerrado:** Alberto confirma que es **un solo piso / una sola finca** (2/18031).
+- **Cruzado con la declaración 2025** (hilo Asecon + registro en Drive): Villasís estuvo **240 días
+  arrendado**, ingresos declarados 18.606,47€ (neto Booking) y gastos 3.052,26€ → renta ~15.554€/año
+  (4,86% sobre 320.000€). Dos preguntas abiertas para Asecon: base de la amortización (valor ISD, no
+  catastral — STS 15/09/2021) y si entraron las limpiezas (~1.800€/año). Rectificables 2024-25 si
+  fallan. Validación final: Asecon.
+
+### 🔓 (20/08/2026) El cron ya se identifica en el Portal del BOE — y el muro cambia de significado
+- Alberto: «ya tengo usuario en el BOE con mi firma digital». Comprobado en `/acceso.php`: de las tres vías
+  (certificado · **usuario+contraseña** · Cl@ve) solo la segunda sirve a un proceso; `POST /id/login.php`
+  sin CSRF ni captcha. **La firma digital NO entra en repo ni en Vercel.** Envs: `BOE_PORTAL_USUARIO`,
+  `BOE_PORTAL_PASSWORD` — sin ellas todo sigue en anónimo igual que antes.
+- 🚨 El Portal **bloquea cuentas** («…o está bloqueado»): un rechazo se cachea y NUNCA se reintenta; solo el
+  fallo de red es reintentable. `interpretarLogin` exige el éxito POSITIVO (fixture del error REAL).
+- Columna `documentos_sesion` + estado `ocultas_pese_a_sesion`: el mismo muro significa «identifícate»
+  (gratis) o «pide la certificación al Registro» (tasa) según con qué ojos se miró. Ante `null`, el barato.
+- Las 9 fichas con muro se releen en la primera pasada con sesión (validado contra la BD). 503 tests módulo,
+  1372 plataforma, tsc+build limpios. **Pendiente de Alberto:** poner las dos envs en Vercel y probar con
+  `fase3-debug?accion=portal` (devuelve solo el veredicto, nunca la contraseña).
+
+### 🛡️ (20/08/2026) Traspaso del CRM de correduría de Manuel Suárez — runbook, BLOQUEADO en Fase 0
+Manuel desarrolló el CRM en SU Supabase y SU Vercel; el negocio es de Alberto y hay que traérselo.
+Plan cerrado en `docs/TRASPASO-CORREDURIA.md`. Decisiones: BD → **schema `seguros` en `central`**
+(no un proyecto aparte: principio de BD única de `MATRIZ.md`) con rol `prisma_seguros`; código →
+vertical **`apps/seguros`** (molde `apps/mariscos`, `ignoreCommand` desde el primer commit); free vs.
+Pro se decide **midiendo el dump**, no con la estimación de ~200 MB (hoy `central` va por ~180/500).
+**No** se transfiere su proyecto Supabase ni se monta MCP/API a medida: para inspeccionar, Manuel
+invita a Alberto a SU organización (el conector de Supabase ya lo ve); para copiar, `pg_dump | psql`
+(un MCP perdería índices, secuencias, constraints y triggers). **GitHub va aparte:** el código entra
+sin historia git y su repo original se TRANSFIERE a Alberto y se archiva como museo.
+La petición a Manuel se plantea en dos opciones — **A (recomendada): tres accesos, ~5 min de su
+tiempo**, todo lo demás lo hace Claude; B: lista de tareas, si no quiere dar ese acceso.
+🚨 **La transferencia del repo va LA ÚLTIMA**: rompe la conexión git de su Vercel y le tumba el
+despliegue, que debe seguir vivo para la comparación lado a lado. Anticipados tres límites reales
+(org de Supabase con otros clientes · Vercel Hobby no admite miembros · repo en organización ajena),
+ninguno bloqueante: cada uno cae a su fila de la opción B.
+No confundir con `/correduria` de plataforma, que es la contabilidad de comisiones y NO se toca:
+esa ambigüedad queda enrutada en la skill `central-maestro` (+ fila en `docs/FUENTES-DE-VERDAD.md`),
+con el aviso de que «no está en el repo» ≠ «no existe» (lección de la landing de House Sevillana).
+Pendiente: el mensaje a Manuel está redactado en el doc pero **lo envía Alberto** — hasta entonces
+no se puede avanzar de fase.
 ### 🔔 (20/08/2026) El aviso de cierre de subastas no había sonado NUNCA — y las pujas se leían de la pestaña equivocada
 - Alberto: «que el agente me avise el día antes con cómo van las pujas». Auditoría: 19 filas en el radar,
   18 avisadas, **0 seguidas** — y TODO el cron `subastas-cierre` colgaba de `subastas_seguidas`, que exige
