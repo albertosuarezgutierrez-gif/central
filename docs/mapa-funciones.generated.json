@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-20T12:33:44Z",
-  "sha": "c4d33a3aa16ae27950132c10e3f23facb387a842",
+  "generadoEn": "2026-08-20T14:40:59Z",
+  "sha": "325f633dba2271b399cf8b0a842b75b46707e906",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -49519,7 +49519,7 @@
         "subastas_criterios"
       ],
       "rutaApi": null,
-      "hash": "f7eabbe268b6"
+      "hash": "537fea745110"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/subastas/SubastasClient.tsx",
@@ -49534,7 +49534,7 @@
           "exportada": false,
           "params": "activo = false",
           "retorno": "React.CSSProperties",
-          "linea": 258
+          "linea": 261
         },
         {
           "nombre": "ChipUI",
@@ -49542,7 +49542,7 @@
           "exportada": false,
           "params": "{ tono = 'neutro', children }: { tono?: TonoChip; children: React.ReactNode }",
           "retorno": null,
-          "linea": 275
+          "linea": 278
         },
         {
           "nombre": "TarjetaOportunidad",
@@ -49550,7 +49550,7 @@
           "exportada": false,
           "params": "p: { precio: number | null precioNota?: string descuento?: { etiqueta: string; tono: TonoChip } | null titulo: string zona?: string | null metros?: string | null chips: Chip[] evidencia?: string | null detalles?: React.ReactNode acento?: bo",
           "retorno": null,
-          "linea": 297,
+          "linea": 300,
           "resumen": "UNA sola anatomía para chollos de portal, preferentes 🌊 y subastas — antes había tres tarjetas distintas y la pestaña se veía destartalada (queja de Alberto, 09/08/2026). Orden de lectura móvil: prec"
         },
         {
@@ -49559,7 +49559,7 @@
           "exportada": false,
           "params": "ch: Chollo",
           "retorno": "Chip[]",
-          "linea": 343,
+          "linea": 346,
           "resumen": "Chips por origen: la FUENTE siempre es el primero (deja de ser texto suelto)."
         },
         {
@@ -49568,7 +49568,7 @@
           "exportada": false,
           "params": "p: Preferente",
           "retorno": "Chip[]",
-          "linea": 352
+          "linea": 355
         },
         {
           "nombre": "chipsDeSubasta",
@@ -49576,7 +49576,7 @@
           "exportada": false,
           "params": "s: SubastaChollo",
           "retorno": "Chip[]",
-          "linea": 359
+          "linea": 362
         },
         {
           "nombre": "fecha",
@@ -49584,7 +49584,7 @@
           "exportada": false,
           "params": "iso: string | null | undefined",
           "retorno": "string | null",
-          "linea": 368
+          "linea": 371
         },
         {
           "nombre": "Puntuacion",
@@ -49592,7 +49592,7 @@
           "exportada": false,
           "params": "{ v }: { v: number | null }",
           "retorno": null,
-          "linea": 382,
+          "linea": 385,
           "resumen": "Semáforo de la puntuación. `null` se pinta distinto a 0: no es lo mismo."
         },
         {
@@ -49601,7 +49601,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 390
+          "linea": 393
         },
         {
           "nombre": "PanelTesoreria",
@@ -49609,7 +49609,7 @@
           "exportada": false,
           "params": "{ t }: { t: Tesoreria }",
           "retorno": null,
-          "linea": 397,
+          "linea": 400,
           "resumen": "Dinero que hay que tener bloqueado para poder pujar. Lo que importa NO es la suma de depósitos sino el máximo simultáneo: los que no se solapan reutilizan el mismo dinero."
         },
         {
@@ -49618,7 +49618,7 @@
           "exportada": false,
           "params": "{ r, dormitorios }: { r: Rendimiento | null | undefined; dormitorios?: number | null }",
           "retorno": null,
-          "linea": 481,
+          "linea": 484,
           "resumen": "Yield turístico estimado con los pisos PROPIOS. Siempre con el caveat: los pisos de referencia son de Sevilla capital — fuera de ahí es extrapolación."
         },
         {
@@ -49627,7 +49627,7 @@
           "exportada": false,
           "params": "{ s, onVerFicha }: { s: SubastaChollo; onVerFicha: () => void }",
           "retorno": null,
-          "linea": 498,
+          "linea": 501,
           "resumen": "Subasta en la vista unificada de Oportunidades, con la anatomía común de `TarjetaOportunidad`. El enlace va a su ficha completa en la pestaña «Todas» — FichaSubasta es demasiado pesada para montarla e"
         },
         {
@@ -49636,7 +49636,7 @@
           "exportada": false,
           "params": "{ s, plantaAparte }: { s: Subasta; plantaAparte?: boolean }",
           "retorno": null,
-          "linea": 542,
+          "linea": 545,
           "resumen": "repetirla sería ruido."
         },
         {
@@ -49645,7 +49645,7 @@
           "exportada": false,
           "params": "{ s, d }: { s: Subasta; d?: Documental | null }",
           "retorno": null,
-          "linea": 579,
+          "linea": 582,
           "resumen": "Resumen de CARGAS + documentación de la subasta. Vive dentro de `FichaSubasta` a propósito: antes el semáforo y las notas del edicto solo se pintaban en la pestaña «Todas» (iban en su `extra`), así qu"
         },
         {
@@ -49654,7 +49654,7 @@
           "exportada": false,
           "params": "{ dedupeKey }: { dedupeKey: string }",
           "retorno": null,
-          "linea": 749,
+          "linea": 757,
           "resumen": "«Nota simple viva»: la certificación que adjunta el juzgado es de hace años y las cargas se mueven. Aquí se sube una nota simple recién pedida al registro y el agente dice QUÉ HA CAMBIADO — es lo únic"
         },
         {
@@ -49663,7 +49663,7 @@
           "exportada": false,
           "params": "{ etiqueta, sub, children }: { etiqueta: string; sub?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 844,
+          "linea": 852,
           "resumen": "Par etiqueta→valor del bloque «💶 Los números»: etiqueta pequeña arriba, valor con peso debajo. La jerarquía la da la tipografía — antes todos los importes eran chips/líneas del mismo peso y se confun"
         },
         {
@@ -49672,7 +49672,7 @@
           "exportada": false,
           "params": "{ u }: { u: ReturnType<typeof umbralesPuja> }",
           "retorno": null,
-          "linea": 862,
+          "linea": 870,
           "resumen": "Umbrales de APROBACIÓN del remate. Corrige la confusión de «hay que pujar el 70% de la deuda»: el 70% de la LEC es del VALOR DE SUBASTA, y la deuda entra como vía alternativa (y como techo probable de"
         },
         {
@@ -49681,7 +49681,7 @@
           "exportada": false,
           "params": "s: Subasta",
           "retorno": "SubastaInmueble",
-          "linea": 878,
+          "linea": 886,
           "resumen": "El `Subasta` del cliente, como lo espera la lógica pura del módulo."
         },
         {
@@ -49690,7 +49690,7 @@
           "exportada": false,
           "params": "{ s, o, params }: { s: Subasta; o?: Oportunidad | null; params?: ParamsCoste }",
           "retorno": null,
-          "linea": 905,
+          "linea": 913,
           "resumen": "«¿Y si pujo X?»: coste puerta abierta, descuento real y banda de aprobación de UNA puja concreta. Mismo motor que el resto de la ficha (`calcularCoste` + `umbralesPuja` del módulo, con la financiación"
         },
         {
@@ -49699,7 +49699,7 @@
           "exportada": false,
           "params": "{ s, o, acciones, extra, doc, escenarios, params }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null; escenarios?: EscenarioUI[] | null; params?: ParamsCoste }",
           "retorno": null,
-          "linea": 970
+          "linea": 978
         },
         {
           "nombre": "SubastasClient",
@@ -49707,14 +49707,14 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Inicial | null }",
           "retorno": null,
-          "linea": 1256
+          "linea": 1264
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "83d6bc20489d"
+      "hash": "123e5e4e8195"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -53512,7 +53512,7 @@
           "exportada": false,
           "params": "cuentaId: string",
           "retorno": "Promise<string[]>",
-          "linea": 160,
+          "linea": 161,
           "resumen": "Bloque de tesorería de una cuenta (reusa el plan que ya cae al radar solo)."
         },
         {
@@ -53521,7 +53521,7 @@
           "exportada": false,
           "params": "ventana: 'deposito' | 'cierre'",
           "retorno": "Promise<number>",
-          "linea": 188,
+          "linea": 189,
           "resumen": "Aviso del RADAR. `ventana` elige cuál de los dos: el de preparar el depósito (a `DIAS_PREPARAR` días, dejando fuera las últimas 24 h, que van en el otro) o el urgente de la víspera. Cada uno lleva su "
         },
         {
@@ -53530,7 +53530,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<number>",
-          "linea": 254,
+          "linea": 255,
           "resumen": "Recordatorio de las SEGUIDAS (interés declarado a mano). Se conserva tal cual porque lleva el techo de puja que Alberto fija en el seguimiento, que el radar no tiene. Con 0 seguidas simplemente no man"
         },
         {
@@ -53539,7 +53539,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 292
+          "linea": 293
         }
       ],
       "tablas": [
@@ -53549,7 +53549,7 @@
         "subastas_seguidas"
       ],
       "rutaApi": "/api/cron/subastas-cierre",
-      "hash": "4d92735762c3"
+      "hash": "c3cc10742f5e"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-enriquecer/route.ts",
@@ -53565,7 +53565,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 34
+          "linea": 36
         }
       ],
       "tablas": [
@@ -53573,7 +53573,7 @@
         "subastas"
       ],
       "rutaApi": "/api/cron/subastas-enriquecer",
-      "hash": "51ed328ff0b2"
+      "hash": "657a7ac7a7f2"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-ingesta/route.ts",
@@ -58093,7 +58093,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 36
+          "linea": 37
         }
       ],
       "tablas": [
@@ -58101,7 +58101,7 @@
         "subastas_debug_token"
       ],
       "rutaApi": "/api/subastas/fase3-debug",
-      "hash": "74411264ca6b"
+      "hash": "78d549ccabd4"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/mapa/route.ts",
@@ -58210,7 +58210,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 64
+          "linea": 65
         }
       ],
       "tablas": [
@@ -58218,7 +58218,7 @@
         "subastas_radar"
       ],
       "rutaApi": "/api/subastas/radar",
-      "hash": "2936f527cba8"
+      "hash": "dfd3458fbca5"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/route.ts",
@@ -58243,7 +58243,7 @@
         "subastas_criterios"
       ],
       "rutaApi": "/api/subastas",
-      "hash": "821649d201d5"
+      "hash": "8dab8ea6f5b1"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/seguidas/route.ts",
@@ -70023,7 +70023,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "e2768c8f866e"
+      "hash": "1d02604463eb"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/aviso-cierre.ts",
@@ -70249,7 +70249,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "727bd683f003"
+      "hash": "6ffc6e06e9bb"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/consulta-juzgado.ts",
@@ -70403,9 +70403,9 @@
           "nombre": "bajar",
           "kind": "function",
           "exportada": false,
-          "params": "url: string, ms = 30000",
+          "params": "url: string, ms = 30000, sesion: SesionPortal | null = null",
           "retorno": "Promise<Response>",
-          "linea": 65
+          "linea": 73
         },
         {
           "nombre": "textoDePdf",
@@ -70413,7 +70413,7 @@
           "exportada": false,
           "params": "buf: Buffer",
           "retorno": "Promise<string>",
-          "linea": 75
+          "linea": 83
         },
         {
           "nombre": "procesarDocumentosDeFicha",
@@ -70421,7 +70421,7 @@
           "exportada": true,
           "params": "identificador: string, opts: { leerCargas?: boolean } = {},",
           "retorno": "Promise<ResultadoFicha>",
-          "linea": 116,
+          "linea": 133,
           "resumen": "Procesa TODOS los documentos de UNA ficha: señales del edicto + cuadro de cargas. `leerCargas: false` se queda en las señales por regex (gratis), para las subastas que no han pasado el gate de rentabi"
         },
         {
@@ -70430,7 +70430,7 @@
           "exportada": true,
           "params": "f: { flip_apto: boolean | null margen_flip_pct: number | null es_playa: boolean | null descuento_estimado: number | null }",
           "retorno": "boolean",
-          "linea": 237,
+          "linea": 274,
           "resumen": "¿Merece esta subasta el análisis profundo (que cuesta llamadas de IA)? El embudo de Alberto: primero rentabilidad, y solo si cuadra, documentación. Entra si es un flip viable, si es de la costa de Hue"
         },
         {
@@ -70439,7 +70439,7 @@
           "exportada": true,
           "params": "max = 10",
           "retorno": "Promise<",
-          "linea": 253,
+          "linea": 290,
           "resumen": "Pasada sobre las subastas vivas: lee los documentos de las que no están al día con la versión actual del lector. Best-effort: un fallo de descarga deja la fila como está y se reintenta mañana."
         },
         {
@@ -70448,16 +70448,17 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 363,
+          "linea": 416,
           "resumen": "· sin los resultados no hay calibración (la memoria del agente). Así que se borra la BANDEJA de avisos (`subastas_radar`, efímera por diseño) y se marca la subasta como archivada. El histórico se qued"
         }
       ],
       "tablas": [
         "subastas",
-        "subastas_radar"
+        "subastas_radar",
+        "true"
       ],
       "rutaApi": null,
-      "hash": "9982eb2b6992"
+      "hash": "928796f24051"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/enriquecer.ts",
@@ -71089,6 +71090,84 @@
       "hash": "a816fce0fa2c"
     },
     {
+      "ruta": "apps/plataforma/lib/subastas/portal-sesion.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Sesión con el Portal de Subastas del BOE para los crons. Por qué existe: el bloque «Información complementaria» —donde vive la lista de documentos, incluida la CERTIFICACIÓN DE CARGAS— solo se sirve a usuarios identificados",
+      "exporta": [
+        "olvidarSesionPortal",
+        "sesionPortalCaducada",
+        "sesionPortal",
+        "cabecerasPortal",
+        "titularSesionPortal"
+      ],
+      "funciones": [
+        {
+          "nombre": "olvidarSesionPortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "void",
+          "linea": 65,
+          "resumen": "Solo para los tests y para el diagnóstico manual: vuelve a empezar."
+        },
+        {
+          "nombre": "sesionPortalCaducada",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "void",
+          "linea": 76,
+          "resumen": "Marca la sesión como caducada. La llama el lector cuando una ficha vuelve a responder como anónima: la siguiente petición reabrirá sesión. No toca `rechazada`: una credencial mala no se rescata reinte"
+        },
+        {
+          "nombre": "credenciales",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "",
+          "linea": 80
+        },
+        {
+          "nombre": "abrir",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<SesionPortal>",
+          "linea": 87
+        },
+        {
+          "nombre": "sesionPortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<SesionPortal>",
+          "linea": 148,
+          "resumen": "Sesión utilizable, abriéndola si hace falta. NUNCA lanza: sin sesión el lector sigue funcionando en anónimo — peor, pero honesto, porque el muro documental queda registrado como lo que es."
+        },
+        {
+          "nombre": "cabecerasPortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SesionPortal | null, extra: Record<string, string> = {}",
+          "retorno": "Record<string, string>",
+          "linea": 169,
+          "resumen": "Cabeceras para pedirle una página al Portal, con sesión si la hay."
+        },
+        {
+          "nombre": "titularSesionPortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SesionPortal",
+          "retorno": "string",
+          "linea": 176,
+          "resumen": "Frase para el aviso/diagnóstico. Dice SIEMPRE si se está leyendo a ciegas."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0ce23d97fd2b"
+    },
+    {
       "ruta": "apps/plataforma/lib/subastas/presupuesto-mercado.ts",
       "ambito": "apps/plataforma",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Reparto del tiempo del cron `subastas-mercado`. PURO y testeado. POR QUÉ EXISTE (incidente 06/08/2026): el handler encadena 8 pasos en serie y los dos de enriquecimiento pueden comerse, ELLOS SOLOS, más que todo el presupue",
@@ -71234,7 +71313,7 @@
           "nombre": "resumenDocumentos",
           "kind": "function",
           "exportada": true,
-          "params": "docs: DocumentoAdjunto[] | null | undefined, publicaAdjuntos = true, muro: Muro = 'ninguno',",
+          "params": "docs: DocumentoAdjunto[] | null | undefined, publicaAdjuntos = true, muro: Muro = 'ninguno', /** * ¿La lectura fue con sesión iniciada? Cambia el recado por completo: sin * sesión el trabajo pendiente es un login; con sesión, el Portal ya h",
           "retorno": "string",
           "linea": 51,
           "resumen": "Texto del `<summary>` de «Cargas y documentación». 🚨 Nunca afirmar una ausencia que no se sabe: la columna `documentos` es más nueva que las filas del corpus, así que una subasta ingerida antes la ti"
@@ -71242,7 +71321,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "492f7b8d133b"
+      "hash": "8e97a0c2ce45"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/surus.ts",
@@ -90258,7 +90337,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0b96cf3d65bc"
+      "hash": "ec785f48fd26"
     },
     {
       "ruta": "packages/module-subastas/src/aviso.ts",
@@ -90652,7 +90731,7 @@
           "exportada": true,
           "params": "e: EntradaEstadoCargas",
           "retorno": "",
-          "linea": 1004,
+          "linea": 1015,
           "resumen": "Estado de las cargas + el documento que hay que abrir, si lo hay. Conservador por diseño: `cargas > 0` manda sobre todo lo demás (si alguna vez hubo una lectura con cargas, no se degrada a «no se sabe"
         },
         {
@@ -90661,12 +90740,12 @@
           "exportada": true,
           "params": "e: EntradaEstadoCargas",
           "retorno": "TitularCargas",
-          "linea": 1060
+          "linea": 1075
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2cef7c06a70d"
+      "hash": "561f7f263c52"
     },
     {
       "ruta": "packages/module-subastas/src/catastro.ts",
@@ -92396,6 +92475,47 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "9b817c88255c"
+    },
+    {
+      "ruta": "packages/module-subastas/src/portal-login.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Interpretación PURA de la respuesta del login del Portal de Subastas. El Portal admite tres vías de acceso (`/acceso.php`, comprobado 20/08/2026): · certificado electrónico cualificado → `/id/checkCert.php` · usuario (corre",
+      "exporta": [
+        "interpretarLogin",
+        "pareceIdentificada"
+      ],
+      "funciones": [
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "html: string",
+          "retorno": "string",
+          "linea": 50,
+          "resumen": "El Portal escribe los acentos como entidades (`est&#xE1;`): hay que decodificar."
+        },
+        {
+          "nombre": "interpretarLogin",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string, cookies: readonly string[] = []",
+          "retorno": "ResultadoLogin",
+          "linea": 61,
+          "resumen": "¿Qué dice la respuesta del `POST /id/login.php`? @param html cuerpo de la respuesta (siguiendo redirecciones). @param cookies cookies de sesión recibidas. Necesarias pero NO suficientes: el Portal ent"
+        },
+        {
+          "nombre": "pareceIdentificada",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string",
+          "retorno": "boolean",
+          "linea": 95,
+          "resumen": "¿La página que acabamos de bajar sigue viniendo de una sesión abierta? Las sesiones del Portal caducan. Se comprueba en cada ficha porque, si ha caducado a mitad de una pasada, el resto de fichas se l"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "17fdfb3c4087"
     },
     {
       "ruta": "packages/module-subastas/src/pujas.ts",
@@ -94448,7 +94568,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2514,
-    "funciones": 6846
+    "archivos": 2516,
+    "funciones": 6856
   }
 }
