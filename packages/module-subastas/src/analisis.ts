@@ -40,6 +40,8 @@ export function analisisDocumental(
   publicaAdjuntos = true,
   /** Lo que el Portal deja ver sin sesión (`muroDocumental`): con muro, la lista está capada. */
   muro: MuroDocumental | null = 'ninguno',
+  /** ¿La lectura fue con sesión iniciada? `null` = no consta. Cambia el recado. */
+  sesion: boolean | null = null,
 ): AnalisisDocumental {
   const puntos: PuntoAnalisis[] = []
   const notas = notasEdicto ?? null
@@ -63,7 +65,7 @@ export function analisisDocumental(
   // del texto, la ficha y el desplegable llegaron a decir cosas distintas de la
   // misma subasta (01/08/2026, SUB-JA-2026-264478). Aquí solo se traduce el
   // emoji a nivel del semáforo.
-  const cargas = titularCargas({ cargas: s.cargas, cargasConocidas: s.cargasConocidas, documentos, publicaAdjuntos, muro })
+  const cargas = titularCargas({ cargas: s.cargas, cargasConocidas: s.cargasConocidas, documentos, publicaAdjuntos, muro, sesion })
   puntos.push({
     clave: 'cargas',
     nivel: cargas.emoji === '🔴' ? 'rojo' : cargas.emoji === '🟢' ? 'verde' : 'ambar',
@@ -95,7 +97,12 @@ export function analisisDocumental(
             // Lista vacía PORQUE no nos la enseñan: afirmar aquí que la ficha no
             // publica nada es la misma mentira del titular de cargas, colada por
             // el desplegable (20/08/2026).
-            ? 'El Portal esconde los documentos de esta ficha a quien no ha iniciado sesión: ábrelos identificado antes de pujar.'
+            ? sesion === true
+              // Y con sesión ya iniciada no queda login que hacer: lo que falta
+              // hay que pedirlo fuera del Portal. Repetir «identifícate» aquí
+              // sería mandar a Alberto a hacer lo que el cron ya hizo.
+              ? 'Ni con sesión iniciada publica el Portal los documentos de esta ficha: pide la certificación de cargas al Registro (o al juzgado) antes de pujar.'
+              : 'El Portal esconde los documentos de esta ficha a quien no ha iniciado sesión: ábrelos identificado antes de pujar.'
             : 'La ficha no publica edicto ni certificación: no hay documentación que analizar.',
       })
     }
