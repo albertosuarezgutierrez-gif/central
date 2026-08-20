@@ -1,7 +1,8 @@
 # Estudio fiscal — venta del dúplex (Pasaje Villasís 1 / Fco. de Molina 4, 1º C) por 320.000€
 
 > Fecha del estudio: **20/08/2026**. Autor: agente fiscal del monorepo.
-> Fuentes: escritura de donación (protocolo 789/2024, notaría García-Carpintero, Sevilla) + BD de
+> Fuentes: escritura de donación (protocolo 789/2024, notaría García-Carpintero, Sevilla), **el hilo
+> «IRPF 2025» con Asecon y el registro de la declaración presentada** (Drive, 01/07/2026), y la BD de
 > `apps/plataforma` (`gastos`, `v_trading_resumen_anual`, `trading_cartera_real`).
 > **Es una estimación de trabajo, no una liquidación.** Los importes marcados «⚠️ a confirmar» salen
 > de supuestos, no de un documento: hay que sustituirlos por las facturas/cartas de pago reales antes
@@ -43,28 +44,48 @@ menos las amortizaciones.
 | Registro de la Propiedad | 278,03€ | minuta en la escritura ✅ |
 | Gestoría | ~200,00€ | ⚠️ estimado |
 | Plusvalía municipal de la donación | 0,00€ | se pidió no sujeción ✅ |
-| **− Amortizaciones acumuladas** | **−2.632,74€** | ⚠️ ver 2.2 |
-| **Valor de adquisición corregido** | **≈ 173.358,73€** | |
+| **− Amortizaciones acumuladas** | **−2.684,39€** | ver 2.2 (240 días arrendado en 2025) |
+| **Valor de adquisición corregido** | **≈ 173.307,08€** | |
 
-### 2.2 Amortizaciones — el ajuste que casi nadie mete y que sube la factura
+### 2.2 Amortizaciones — ya no es una estimación: la declaración da los días
 
-El dúplex está **en explotación turística** (en `gastos` hay limpiezas de Sique Brilla, luz de
-TotalEnergies/Endesa a nombre de «Pj Francisco Molina 4 1C», comunidad e internet, todo 2026). El art.
-35.1.b LIRPF obliga a **restar del valor de adquisición la amortización mínima**, se haya deducido o no.
+El art. 35.1.b LIRPF obliga a **restar del valor de adquisición la amortización mínima**, se haya
+deducido o no. La declaración IRPF 2025 (hilo con Asecon, 28/06/2026) da el dato exacto que faltaba:
+
+> «Durante 2025 el inmueble ha permanecido **240 días arrendado** y 125 días a disposición de su
+> titular […] ingresos íntegros de 24.647,00 euros y gastos fiscalmente deducibles por importe de
+> 3.052,26 euros, correspondientes a gastos de comunidad, suministros, primas de seguro, tributos,
+> **amortización** y otros […] rendimiento neto reducido de 21.594,74 euros.»
 
 - Base amortizable = (174.650,90€ + gastos) × 36,53% de construcción = **64.291,60€**
-- Al 3% anual = **1.928,75€/año**, prorrateado por días efectivamente alquilados.
+- Al 3% anual = **1.928,75€/año**, prorrateado por días arrendados.
 
-| Escenario | Amortización acumulada | Efecto en la cuota |
+| Ejercicio | Días arrendados | Amortización |
 |---|---|---|
-| Solo empezó a explotarse en 2026 | ~1.157€ | +266€ de IRPF |
-| **Central (~2 años al 65% de ocupación)** | **~2.633€** | **+606€** |
-| Dos años completos alquilado | ~4.050€ | +932€ |
+| 2024 (desde 21/05) | ~148 ⚠️ estimado a la misma ocupación que 2025 | 782,07€ |
+| 2025 | **240** ✅ (declaración) | 1.268,22€ |
+| 2026 hasta la venta (~junio) | ~120 | 634,11€ |
+| **Total** | | **≈ 2.684,39€** |
 
-**⚠️ No he podido medir la ocupación real del dúplex en 2024–2025:** los `gastos` de
-`prop_duplex_center` en la BD **empiezan el 01/01/2026**, y las reservas viven en otra base. Eso NO
-significa que no se alquilara antes — significa que aquí no consta. Con el dato real de días
-alquilados 2024/2025/2026 el número se cierra en un minuto.
+Si la venta se va a diciembre de 2026, sube a ~3.318,50€ (unos 146€ más de IRPF).
+
+### 2.2 bis 🚨 Posible amortización infra-deducida en 2024 y 2025 — dinero a recuperar
+
+El total de **TODOS** los gastos deducibles del dúplex en 2025 fue **3.052,26€**, y ahí dentro caben
+comunidad (~914€/año), suministros (~1.200€), seguro, IBI **y** la amortización. Los números no dejan
+sitio para una amortización de 1.268€: apunta a que se calculó sobre el **valor catastral de
+construcción** (14.767,86€ → 3% = 443,04€/año) en vez de sobre el valor de adquisición.
+
+Para un inmueble adquirido a **título lucrativo**, el «coste de adquisición satisfecho» del art. 23.1.b
+LIRPF es el **valor declarado en el ISD más gastos y tributos** (STS de 15/09/2021, rec. 5664/2019), y
+se toma el **mayor** de ese coste y el valor catastral. Aquí eso son 64.291,60€ frente a 14.767,86€:
+**1.485,71€ más de gasto deducible al año**.
+
+⚠️ **No está confirmado**: el desglose de esos 3.052,26€ no consta en el hilo, solo el total. Hay que
+pedir a Marta el detalle por conceptos. Si se confirma, se puede **rectificar la autoliquidación** de
+2024 y 2025 (4 años de plazo) y recuperar ese gasto **al tipo marginal de la base general** — bastante
+más caro que el 23% al que la amortización encarece ahora la ganancia. Es la única partida de este
+estudio que juega en los dos sentidos: **interesa deducirla bien, aunque suba la ganancia de la venta.**
 
 ### 2.3 Plusvalía municipal (IIVTNU) — elegir método, hay 24.000€ de diferencia
 
@@ -86,9 +107,9 @@ Tarifa del ahorro: 19% hasta 6.000€ · 21% de 6.000 a 50.000€ · 23% de 50.0
 
 | Escenario de venta | Ganancia | IRPF | + Plusvalía | **Neto en bolsillo** |
 |---|---|---|---|---|
-| **A. Venta directa, sin agencia** | 145.271,41€ | **32.292,42€** | 969,86€ | **286.337,72€** |
-| **B. Agencia 3% + IVA (11.616€)** | 133.655,41€ | **29.620,74€** | 969,86€ | **277.393,40€** |
-| **C. Agencia 5% + IVA (19.360€)** | 125.911,41€ | **27.839,62€** | 969,86€ | **271.430,52€** |
+| **A. Venta directa, sin agencia** | 145.323,07€ | **32.304,31€** | 969,86€ | **286.325,84€** |
+| **B. Agencia 3% + IVA (11.616€)** | 133.707,07€ | **29.632,63€** | 969,86€ | **277.381,52€** |
+| **C. Agencia 5% + IVA (19.360€)** | 125.963,07€ | **27.851,51€** | 969,86€ | **271.418,64€** |
 
 Tipo efectivo sobre la ganancia: **~22,2%**. (Incluye 400€ de certificado energético + notaría/gestión
 del vendedor.)
@@ -111,7 +132,7 @@ Las pérdidas patrimoniales compensan **al 100%** las ganancias patrimoniales de
 años anteriores arrastran 4 ejercicios.
 
 > Con ~16.000€ de pérdidas de 2026 (conversión aproximada), en el escenario B el IRPF baja de
-> **29.620,74€ a 25.935,66€** → **~3.685€ de ahorro**. Sumando lo pendiente de 2025, más.
+> **29.632,63€ a 25.947,54€** → **~3.685€ de ahorro**. Sumando lo pendiente de 2025, más.
 
 **⚠️ Estas cifras NO son la base fiscal.** Son el P&L que da el bróker, **en dólares y sin tipo de
 cambio aplicado** (la propia vista marca `sin_tipo_cambio = 227` operaciones). Fiscalmente hay que
@@ -140,6 +161,30 @@ de sumar nada, hay que revisar qué facturas de obra del dúplex se dedujeron ya
 - **Coeficientes de abatimiento (DT 9ª)** — no: solo para adquisiciones anteriores a 31/12/1994.
 - **Repartir con Pilar** — no: el piso es **privativo** (donación de la madre, así consta en escritura).
 
+## 3 bis. Vender vs. mantener — qué renta da hoy el dúplex
+
+De la declaración IRPF 2025 presentada (conjunta, a devolver 2.968,26€):
+
+| Concepto | 2025 |
+|---|---|
+| Ingresos Booking íntegros (datos fiscales) | 23.896,00€ (comisión 5.290,00€) |
+| Ingresos Airbnb | 751,00€ (comisión 138,00€) |
+| **Ingresos finalmente declarados** (neto Booking, criterio de Alberto) | **18.606,47€** |
+| Gastos deducibles | 3.052,26€ |
+| **Rendimiento neto** | **≈ 15.554,21€** |
+| Imputación de renta por los 125 días sin arrendar | 276,89€ |
+
+Sobre un precio de 320.000€ eso es una **rentabilidad bruta del 4,86%** (6,75% si se toman los
+ingresos íntegros del primer borrador), y tributa al **tipo marginal de la base general**, no al 23%
+del ahorro. Es el número contra el que hay que medir qué se hace con los ~277.000-286.000€ que
+quedarían tras vender.
+
+⚠️ Dos cautelas sobre esa cifra: (1) los 18.606,47€ son el **neto de comisión de Booking**, criterio
+que Alberto fijó el 30/06/2026 y que subió la devolución de ~1.156€ a 2.968,26€; (2) queda abierto en
+el propio hilo un **posible doble cómputo de Booking** (imputado a Alberto y a la sociedad), con un
+descuadre de ~21.692€ en la cuenta de Punto y Coma. Ninguna de las dos cosas cambia el cálculo de la
+venta, pero sí la foto de rentabilidad.
+
 ## 4. Riesgos a vigilar
 
 1. **La ganancia patrimonial de la madre en su IRPF 2024.** La donación generó ganancia en el IRPF de
@@ -160,8 +205,12 @@ de sumar nada, hay que revisar qué facturas de obra del dúplex se dedujeron ya
 
 - [x] ~~Confirmar si el dúplex son una o dos fincas~~ → **una sola** (confirmado 20/08/2026).
 - [ ] Cartas de pago reales: **ISD**, minuta de **notaría**, **gestoría** de la donación de 2024.
-- [ ] **Días alquilados** 2024 / 2025 / 2026 para cerrar la amortización.
+- [x] ~~Días alquilados 2025~~ → **240 días** (declaración IRPF 2025). Falta el dato de **2024 y 2026**.
+- [ ] 🚨 Pedir a Marta el **desglose de los 3.052,26€** de gastos de 2025: sobre qué base se amortizó.
 - [ ] **Informe fiscal de IBKR en euros** (2025 y 2026) para la compensación de pérdidas.
+- [ ] Confirmar con Marta que la **pérdida patrimonial de IBKR de 2025 quedó declarada** y pendiente de
+      compensar (el certificado de IBKR se le entregó el 03/06/2026: «adjunto documento de interactive,
+      único que trabajo»). Si no entró, se pierde el arrastre.
 - [ ] Separar facturas de obra del dúplex en **mejora vs reparación**, y cruzar con lo ya deducido.
 - [ ] Simulador de plusvalía del Ayuntamiento de Sevilla + **valor catastral del suelo del IBI vigente**.
 - [ ] Decidir **año de venta** (2026 vs 2027) a la vista de las pérdidas de trading disponibles.
@@ -169,7 +218,7 @@ de sumar nada, hay que revisar qué facturas de obra del dúplex se dedujeron ya
 
 ## 6. Resumen en una línea
 
-Vendiendo por 320.000€ salen **~33.000€ de impuestos** (32.292€ de IRPF + 970€ de plusvalía) si se
+Vendiendo por 320.000€ salen **~33.300€ de impuestos** (32.304€ de IRPF + 970€ de plusvalía) si se
 vende sin agencia, o **~30.600€** con agencia al 3%. Con las pérdidas de trading de 2026 bien
 liquidadas en euros, la factura puede bajar a **~27.000€**. El neto en el bolsillo queda entre
-**271.000€ y 286.000€** según cómo se venda.
+**271.000€ y 286.000€** según cómo se venda, frente a un piso que hoy renta **~15.554€ netos al año**.

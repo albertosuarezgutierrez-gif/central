@@ -42,8 +42,12 @@
 - **Palanca grande:** pérdidas realizadas de IBKR (−6.642 USD en 2025, −18.746 USD en 2026) compensan al
   100% la ganancia → ~3.700€ menos. ⚠️ Son P&L del bróker en USD SIN tipo de cambio: hace falta el
   informe fiscal en euros antes de contar con ello. El año de venta (2026 vs 2027) importa por esto.
-- **Alcance cerrado:** Alberto confirma que es **un solo piso / una sola finca** (2/18031) → las cifras
-  quedan firmes a falta de las facturas reales de ISD/notaría/gestoría. Validación final: Asecon.
+- **Alcance cerrado:** Alberto confirma que es **un solo piso / una sola finca** (2/18031).
+- **Cruzado con la declaración 2025** (hilo Asecon + registro en Drive): Villasís estuvo **240 días
+  arrendado**, ingresos declarados 18.606,47€ (neto Booking) y gastos 3.052,26€ → renta ~15.554€/año
+  (4,86% sobre 320.000€). 🚨 **Sospecha: la amortización se calculó sobre el valor catastral de
+  construcción (443€/año) en vez del valor ISD (1.929€/año)** → 1.486€/año de gasto perdido,
+  rectificable 2024-2025. Pedir a Marta el desglose. Validación final: Asecon.
 
 ### 🔧 (20/08/2026) Del latido rojo al MERGE sin humano en medio — reparación automática de agentes
 - Pregunta de Alberto tras el fallo del canal: «¿no hay un agente que revise y repare?». Había quien
