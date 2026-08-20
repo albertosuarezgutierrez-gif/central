@@ -16,7 +16,16 @@
 // 85% llevaba días INERTE y su propio aviso del 70% tampoco podía saltar, porque «no he podido
 // leer la referencia» se servía como «no hay referencia».
 //
-// La cura es un cast explícito: `${DIAS}::int` (o `::integer`), o `make_interval(days => …)`.
+// La cura es un cast explícito: `${DIAS}::int` (o `::integer`).
+//
+// 🚨 `make_interval(days => …)` NO es una cura por sí sola —esta cabecera lo decía y era falso—:
+// todos sus argumentos son `integer` MENOS `secs` (que es `double precision`), así que
+// `make_interval(days => bigint)` y `(hours => bigint)` fallan con el mismo 42883, y solo
+// `(secs => bigint)` pasa (bigint → double sí tiene cast implícito; comprobado contra la BD).
+// Por eso este guardián vigila también esa forma, y por eso `secs` queda fuera: un guardián que
+// grita por código correcto acaba ignorándose. Cazó dos averías vivas el 20/08/2026:
+// `lib/ia-cache.ts` (la caché semántica NO guardaba NADA) y el cron de mailing de ialimp
+// (los pasos de seguimiento ≥2 nunca se encolaban).
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -37,6 +46,13 @@ const DANGER = new RegExp(
   'g',
 )
 
+// `make_interval(<arg> => ${...})` sin castear. `secs` excluido a propósito (ver cabecera).
+const DANGER_INTERVAL = new RegExp(
+  String.raw`make_interval\s*\(\s*(?!secs\s*=>)[^)]*=>\s*\(?\$\{[^}]+\}\)?` +
+  String.raw`(?!\s*::\s*(?:int|integer|smallint))`,
+  'g',
+)
+
 /** Excepciones triadas a mano. `snippet` debe aparecer en la línea marcada. */
 const ALLOWLIST: { file: string; snippet: string; motivo: string }[] = []
 
@@ -54,13 +70,13 @@ function isAllowed(file: string, line: string): boolean {
   return ALLOWLIST.some((a) => a.file === file && line.includes(a.snippet))
 }
 
-test('ninguna resta/suma de fecha con parámetro sin castear (Postgres no tiene date - bigint)', () => {
+test('ninguna aritmética de fecha con parámetro sin castear (Postgres no tiene date - bigint)', () => {
   const culpables: string[] = []
   for (const f of trackedSqlCarrying()) {
     let content = ''
     try { content = readFileSync(join(ROOT, f), 'utf8') } catch { continue }
     const lines = content.split('\n')
-    for (const m of content.matchAll(DANGER)) {
+    for (const m of [...content.matchAll(DANGER), ...content.matchAll(DANGER_INTERVAL)]) {
       const lineNo = content.slice(0, m.index).split('\n').length
       const line = lines[lineNo - 1] ?? ''
       if (isAllowed(f, line)) continue

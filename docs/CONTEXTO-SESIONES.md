@@ -32,6 +32,33 @@
 
 ---
 
+### 🔧 (20/08/2026) Del latido rojo al MERGE sin humano en medio — reparación automática de agentes
+- Pregunta de Alberto tras el fallo del canal: «¿no hay un agente que revise y repare?». Había quien
+  DETECTA (`agentes-latido`, `/auditoria-diaria`) y nadie que REPARE. Dictado: **«lo más automático
+  posible y solo avisarme en caso de no resolverse por si tengo que intervenir»**.
+- Flujo: 07:45 latido → 08:00 `latido-reparar.yml` reclama UNO → `scripts/ai-programar.mjs` → **gate**
+  → mergea solo · o PR draft + Telegram. A las 24 h el **propio latido** dicta el veredicto.
+- **Dos reglas del disparador:** solo dispara lo que tiene forma de EXCEPCIÓN (`reparable.ts`, puro y
+  testeado; un IMAP caído no se arregla en el repo), y al orquestador se le manda la **EVIDENCIA**
+  cruda, nunca la narración del aviso — la de `sivra_canal` mandaba al fichero equivocado.
+- **El gate es una PRUEBA, no CI:** exige un test que falle sobre `main` y pase con el parche, y lo
+  ejecuta en su propio run. Motivo doble: un `tsc` verde bendice cualquier cosa, y el estado de checks
+  **miente** aquí (el #1529 salió ✅ con `tests.yml`/`ci.yml` sin ejecutarse nunca).
+- Frenos: 1 firma = 1 intento · 3/agente en 30 días · carril acotado (nada de `.claude/**`, workflows
+  ni `.sql`). Tabla `agente_reparaciones` **ya aplicada**. Éxito = silencio. Spec en `docs/superpowers/specs/`.
+- 🔀 **Choque con #1530, que arregló el MISMO `date - bigint` a la vez.** Me quedo con su versión del
+  código y su guardián; de lo mío sobreviven los **dos sitios que #1530 no tocó** —`lib/ia-cache.ts`
+  (la caché semántica NO guardaba nada) y el mailing de ialimp (pasos ≥2 nunca encolados)— y una
+  regla que a su guardián le faltaba: **`make_interval(days|hours => bigint)` TAMPOCO existe**; solo
+  `secs` lo acepta (es `double precision`). Su cabecera lo recomendaba como cura y no lo es.
+- **Cierre (mismo día):** corregida la `nota` de `sivra_canal` en `latidos.ts` —afirmaba que un rojo
+  ahí venía «de aguas arriba» y era falso; ahora manda leer el detalle y ordena qué mirar. `/auditoria-diaria`
+  consulta `agente_reparaciones` antes de abrir carril 2 (no duplicar parche sobre un intento vivo) y el
+  reparador queda registrado en `docs/SKILLS.md` para el `agentes-entrenador`, avisando de que su
+  comportamiento es CÓDIGO TESTEADO, no un prompt, y de que su silencio no prueba que corriera.
+- ⏳ **Pendiente de Alberto: añadir el secret `ALERTA_TOKEN` al repo en GitHub Actions** (`PLATAFORMA_URL`,
+  `AI_GATEWAY_SECRET` y `GH_PAT_TRIGGER` ya están). Sin él, `latido-reparar.yml` muere en su primer paso.
+
 ### 🧨 (20/08/2026) `date - bigint`: el calibrado del canal murió en su primera pasada real — y tapaba un suelo apagado
 - **El cron `/api/sivra/pricing/canal` reventó entero** (42883, `operator does not exist: date - bigint`)
   en `CURRENT_DATE - ${VENTANA_DIAS}`: Prisma manda un número de JS como **int8** y Postgres no tiene
