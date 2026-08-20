@@ -28,9 +28,24 @@ description: >
 | Cuadro de mando consolidado, god-panel `/admin`, Cuenta→Sociedad→Negocio, **concursos/licitaciones** | **plataforma** | `plataforma-maestro` |
 | Flota/camiones como negocio, vehículos, conductores, portes, rutas, servicios de transporte, intercompany flota→catering | **transporte** | `transporte-maestro` |
 | Alquiler de materiales/menaje (catálogo, tarifas/día, fianzas, disponibilidad, reserva→devolución), intercompany materiales→eventos | **alquiler** | `alquiler-maestro` |
+| Correduría de seguros **OPERATIVA**: clientes, pólizas, siniestros, vencimientos, integraciones con aseguradoras | **seguros** — ⚠️ **la vertical NO existe todavía** | `docs/TRASPASO-CORREDURIA.md` |
 | "¿Se ha roto algo?", auditoría, pruebas/testeo, post-rename/migración | (transversal) | `auditoria-central` |
 | Logo, banner, imagen de marca, mockup visual, iconos, diseño gráfico, activo visual | (transversal Adobe CC) | `adobe-diseno` |
 | "Adáptalo a la imagen corporativa de X", "corporativo 100%", cliente/tenant nuevo o rebrand, dejar la UI idéntica a SU marca (logo/colores/tipografía) | (transversal `@central/brand`) | `marca-cliente` |
+
+### 🛡️ Seguros — DOS cosas distintas con el mismo nombre (20/08/2026)
+Preguntar por «la correduría» es ambiguo y las dos respuestas viven en sitios distintos:
+- **Comisiones COBRADAS** (matriz compañía×mes, CIMA/TIREA, derivado de `movimientos_bancarios`
+  con `destino='seguros'`, siempre BBVA) → **existe y está vivo** en `apps/plataforma /correduria`
+  + `lib/correduria.ts` → skill `plataforma-maestro`.
+- **Operativa del CRM** (clientes, pólizas, siniestros) → **NO está en el repo todavía**. Lo desarrolló
+  Manuel Suárez en SU Supabase y SU Vercel; el traspaso a `apps/seguros` + schema `seguros` está
+  planificado en `docs/TRASPASO-CORREDURIA.md` y **BLOQUEADO en Fase 0** hasta que Alberto le envíe el
+  mensaje que ese doc deja escrito.
+
+🚨 **Que no esté en el repo NO significa que no exista** — es el error que ya se cometió con la landing
+de House Sevillana (se afirmó «no hay web» porque vivía fuera del monorepo, PR #1387→#1388). Antes de
+decirle a Alberto que algo «no existe», comprueba si es que **vive fuera** de `central`.
 
 ## Capa común (matriz + packages/*) — reglas que NO se rompen
 - La **raíz es la MATRIZ**, no una vertical. No metas lógica de producto en la raíz.
