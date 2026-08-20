@@ -21,6 +21,11 @@ más barata de todas: **el piso está por debajo de mercado**.
 | **Mediana de mercado, 4 plazas** | **144,00€** | `market_rates`, **2.501 observaciones**, todas las temporadas |
 | **Hueco** | **−18%** | |
 
+⚠️ **Ojo con qué mide cada número.** Los 118€ son **ADR realizado** — lo que dejaron reservas
+hechas hace meses. El **precio publicado hoy** es otra cosa: la mediana de `price_pricelabs` para
+los próximos 366 días es **148€ de base** (×1,20 de markup ≈ 178€ al huésped). O sea que el
+escaparate ya está en mercado; lo que estaba por debajo era la cartera vieja.
+
 Y una foto puntual, medida con el conector de Booking el 20/08/2026 — comparables de 4 plazas en un
 radio de 400 m, para el fin de semana del 16 al 18 de octubre de 2026:
 
@@ -47,7 +52,7 @@ deben citar como si lo fueran.
 
 | Opción | Coste | Retorno estimado | Reversible |
 |---|---|---|---|
-| **A. Subir precio** | 0€ | +5.097€/año netos si llega a la mediana | ✅ total |
+| **A. Reajustar el agente de precios** | 0€ | +5.097€/año netos si llega a la mediana | ✅ total |
 | **B. Bajar el baño a planta baja** | ⚠️ pedir presupuesto | mata la queja de las reseñas | ❌ |
 | **C. Segundo dormitorio** | ⚠️ 25.000-40.000€ | necesita **+48 noches/año** (69% → 82%) solo para pagarse | ❌ |
 | **D. Vender y recomprar fuera** | ~32.300€ de IRPF + ~970€ de plusvalía | neto 271.000-286.000€ | ❌ irreversible |
@@ -57,10 +62,46 @@ debería gastarse 25.000€ en un segundo dormitorio antes de comprobar si el pr
 
 ## El plan
 
-### Fase 1 — Subir precio (septiembre a noviembre de 2026)
+### Fase 1 — Reajustar el agente de precios (septiembre a noviembre de 2026)
 
-**Qué se hace:** llevar el ADR de 118€ a **~131€** (la mitad del hueco hasta la mediana de 144€), con
-el agente de pricing. No se toca nada más: ni obra, ni muebles, ni fotos, ni anuncio.
+> **Corrección del 20/08/2026, medida en BD.** Esta fase estaba mal planteada: no es «encender el
+> agente de precios». **El agente ya está encendido y aplicando** sobre el dúplex —
+> `pricing_settings.enabled = true`, `apply_enabled = true`, `pricing_config.paused = false`. Lleva
+> meses moviendo el precio solo. La prueba, por tanto, es **cambiarle los parámetros**, no activarlo.
+
+**Lo que está haciendo hoy el agente, medido:**
+
+| Qué | Valor | Por qué importa |
+|---|---|---|
+| `target_pctl` | 0,50 | Apunta a la **mediana de su propio grupo de comparables**… |
+| p50 de ese grupo | **129,00€** | …que es más barato que el corpus completo (144€). 87 comparables, nota media **6,24** |
+| `channel_markup` | 1,20 | El recomendado al huésped se divide por 1,20 → base ≈ **107€** |
+| `max_change_pct` | 0,20 | Puede mover ±20% **cada día** |
+| Ocupación que lee | **0,019** | vs `demand_baseline` 0,50 → factor de demanda **0,923 = −8% automático** |
+
+**Dos cosas van mal, y ninguna es «el precio está bajo» a secas:**
+
+1. **Oscila.** El 20/08 hizo 103 cambios, **todos a la baja**, −20,1€ de media (el tope exacto del
+   ±20%). El 19/08, 85 cambios **al alza**. El 18/08, 133 a la baja, −26,8€. Eso no es un motor que
+   converge: es un lazo de control persiguiéndose la cola, y ese vaivén diario también castiga en el
+   ranking del portal.
+2. **Lee «calendario vacío» como «no hay demanda», y no lo es.** El piso **se llena a última hora**:
+   mirando el propio histórico de `rate_snapshots`, en TODOS los cortes el hueco a 30 días y el hueco
+   a 90 días son casi el mismo número — nunca se reserva más allá de un mes. El 10/05 el calendario
+   marcaba **0 noches** vendidas para los 90 días siguientes… y mayo cerró al **85%**. Con
+   `demand_baseline` a 0,50, esa ocupación estructuralmente baja se traduce en un descuento
+   automático permanente. **El agente se está bajando el precio a sí mismo por un dato que no
+   significa lo que él cree.**
+
+**Qué se hace:** tocar tres parámetros de `pricing_settings` y dejarlo correr 3 meses.
+
+| Parámetro | Hoy | Propuesto | Por qué |
+|---|---|---|---|
+| `target_pctl` | 0,50 | **0,60** | Apuntar por encima de la mediana de su grupo; el piso tiene nota 7,6 contra 6,24 del grupo |
+| `demand_baseline` | 0,50 | **0,10** | Que la ocupación a futuro real (~0,02, por reserva de última hora) deje de leerse como demanda floja |
+| `max_change_pct` | 0,20 | **0,08** | Matar el vaivén diario del ±20% |
+
+No se toca nada más: ni obra, ni muebles, ni fotos, ni anuncio.
 
 **Criterio de decisión, escrito por adelantado:**
 
@@ -69,6 +110,20 @@ el agente de pricing. No se toca nada más: ni obra, ni muebles, ni fotos, ni an
 | **se mantiene ≥ 60%** | El problema era el precio. Seguir subiendo hacia 144€. **No hay nada que reformar.** |
 | **cae entre 50% y 60%** | Mezcla de precio y producto. Ir a la Fase 2 (baño) y volver a probar precio después. |
 | **cae por debajo del 50%** | Es producto, no precio. Volver al precio anterior y pasar a Fase 2. |
+
+**Cómo se mide la ocupación en esta fase, para no engañarse:** se mide **a toro pasado**, mes
+cerrado, tomando el último snapshot de cada noche — nunca mirando el calendario a futuro, que en este
+piso siempre está casi vacío y no predice nada.
+
+**Y dos contextos que hay que tener delante antes de asustarse con un mes malo:**
+
+- **Agosto al 0% es estacional y de toda la cartera, no del dúplex.** Medido sobre `rate_snapshots`:
+  en agosto de 2026 están al 0% *tres* de los cuatro pisos (dúplex, Busto Reform y Luxury Busto);
+  solo House Sevillana aguanta un 21%. La serie del dúplex fue 85% (mayo) → 60% (junio) → 29%
+  (julio) → 0% (agosto), con el precio base plano en 95-101€. Bajar precio no llenó julio ni agosto.
+- **El libro a futuro no es un termómetro.** 7 noches vendidas para los próximos 90 días parece
+  alarmante y no lo es: es el patrón normal de este piso (ver arriba, el 0/90 del 10/05 que acabó en
+  85%). Septiembre y octubre **no** están perdidos.
 
 **Por qué el 60%:** hoy se facturan **29.618€** (118€ × 251 noches). A 131€ hace falta llegar a
 **226 noches = 61,9%** para igualar esa cifra: ese es el umbral real de indiferencia. El listón se
@@ -148,7 +203,7 @@ Se rellena en cada revisión. Sin estas filas, ninguna fase se da por superada.
 
 | Mes | ADR €/noche | Noches | Ocupación | Nota Booking | Observaciones |
 |---|---|---|---|---|---|
-| Ago 2026 (base) | ~118 | — | 68,8% (2025) | ⚠️ sin medir | Punto de partida |
+| Ago 2026 (base) | 118 realizado / **148 publicado** | 0 | **0%** | ⚠️ sin medir | Punto de partida. El 0% es estacional: 3 de los 4 pisos igual |
 | Sep 2026 | | | | | |
 | Oct 2026 | | | | | |
 | Nov 2026 | | | | | |
@@ -160,6 +215,7 @@ si la queja del baño se está corrigiendo, así que hay que empezar a anotarla 
 
 | Qué | A quién | Bloquea |
 |---|---|---|
+| Visto bueno a los 3 parámetros de la Fase 1 | Alberto | **La Fase 1 entera** |
 | ¿Ventila el pasaje un dormitorio? | Arquitecto | **Toda la Fase 3** |
 | Altura libre del altillo | Arquitecto (metro) | Fase 3 |
 | Presupuestos del baño abajo | 2-3 industriales | Fase 2 |
