@@ -15,6 +15,20 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-20 · facturas-correo** · hizo: preflight canal alerta OK (200); Vía B sana (1 día,
+  última copia `_buzon_pdf` 19/08); backlog `PDF-pendiente`/`Revisar` vacío; barrido Paso 4.0
+  (`v_facturas_sin_cargo`) sin filas `sin_revisar` (las 8 pendientes ya estaban `revisada_sin_cargo`,
+  nada que reabrir); candidatos Gmail `newer_than:2d` → solo 2 avisos Endesa sin PDF/importe
+  (Dúplex ref P26CON034750472, Socorro ref P26CON034910794 — el portal no adjunta PDF, se cuadran
+  por banco cuando entre el cargo, aún sin postear) + 1 invitación de calendario de Pilar (descartada).
+  Etiquetados `Facturas/Procesada`. Sin candidatos nuevos que archivar/conciliar. ⚠️ Hallazgo:
+  la factura Giraldillo AFV-11808 (72,60€, ya bien archivada en `07-Julio-2026` y conciliada) se
+  sigue duplicando cada pocos días en `ALBERTO 2026 PERSONAL (SEGUROS)/JULIO` junto con más basura
+  no relacionada (PNGs, PDFs de otras empresas) — bug de cron ya avisado el 01/08 en la papelera
+  `_DUPLICADOS_BORRAR`, sigue activo 20 días después y empeorando (3+ copias); no es corregible desde
+  esta skill (código de `apps/plataforma`, agente `facturas-scan`). dudas: —; fallos: cron
+  `facturas-scan` sigue mal-ubicando adjuntos en el árbol PERSONAL (ver arriba); PRs/commits: —
+  (solo bitácora).
 - **2026-08-20 · mercado-booking** · hizo: pasada de 24 ventanas de mercado (plan `?max=24`,
   488 candidatas totales, 464 recortadas por el tope — aviso arrastrado) — 237 comps reales
   escritos vía Booking.com MCP, todas con respuesta (0 `sinRespuesta`). Paso 2-bis (escaparate
