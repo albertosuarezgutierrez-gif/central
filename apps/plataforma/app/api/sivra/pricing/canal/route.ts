@@ -125,7 +125,12 @@ async function medir(): Promise<{ pisos: MedicionCanal[]; ventanas: Map<string, 
     SELECT id, property_id, checkin::text AS checkin, noches, guests, precio_total, base_total,
            portal, usada_en_ajuste_at AS usada
     FROM pricing_escaparate
-    WHERE medido_el >= CURRENT_DATE - ${VENTANA_DIAS}
+    -- 🚨 El ::int NO es decorativo: Prisma manda un número de JS como int8, y en Postgres
+    -- el operador «date - bigint» NO EXISTE (42883). Sin el cast la consulta revienta EN
+    -- RUNTIME, y ni tsc ni next build ni los tests la ejecutan nunca. Fue el fallo de la
+    -- primera pasada real del cron (20/08/2026): el calibrado murió entero y pricing_settings
+    -- se quedó con el x1,20 inventado. Al interpolar un número junto a una fecha, castea SIEMPRE.
+    WHERE medido_el >= CURRENT_DATE - ${VENTANA_DIAS}::int
     ORDER BY property_id, checkin`)
 
   type VentanaConId = VentanaEscaparate & { id: number; usada: boolean }
