@@ -47,8 +47,15 @@
   y la fecha venía en `createdAt`, no `created_at` → el `ts` de TODO el historial estaba vacío.
 - **Precedencia:** la sección PARKING de la guía se excluye — Alberto confirma que **no hay plaza** pese a
   que la guía Y el email de confirmación se la prometen al huésped (arreglar eso en Smoobu es de Alberto).
-- Pendiente: entregas 2-5 (detector de conflictos, autonomía «si está en la guía contesta solo», hechos
-  permanentes, minería de los 159 hilos de 2026) y **vender/cobrar el parking** (fase 2, pedido por Alberto).
+- **Entregas 2-5 también hechas** (mismo PR): detector de conflictos guía↔override (avisa 1 vez por
+  piso+sección, tabla `mensajes_conflictos_guia`); **autonomía por FUENTE** — se auto-envía si la
+  respuesta se apoya en guía/ficha/hechos, y eso SUSTITUYE a la graduación por categorías (borrada
+  `graduacion.ts`); el clasificador de calidad pasa a TRES estados (su `catch` devolvía «no escales»
+  = auto-enviar cuando se cae); **hechos permanentes** (`mensajes_hechos`) separados de los ejemplos
+  de estilo, y el borrador que escala por falta de info dice de qué hueco se trata; y **minado del
+  histórico** (`/api/sivra/mensajes/minar-historico`, manual) que propone hechos por Telegram con
+  botones ✅/❌ — nada entra sin que Alberto lo confirme.
+- Pendiente: **vender/cobrar el parking** (fase 2, pedido por Alberto).
 
 ### 🔔 (20/08/2026) El aviso de cierre de subastas no había sonado NUNCA — y las pujas se leían de la pestaña equivocada
 - Alberto: «que el agente me avise el día antes con cómo van las pujas». Auditoría: 19 filas en el radar,

@@ -34,8 +34,11 @@ export async function avisarAutoEnviado(ctx: Contexto, pregunta: string, dec: De
     `\n\n<i>ℹ️ Solo para tu información — enviado sin tu intervención (categoría «${escapeHtml(dec.categoria)}»).</i>`
   await tgSend(cuerpo).catch(() => {})
 }
-// Categorías básicas que pueden graduarse a auto-respuesta (no sensibles).
-const GRADUABLES = new Set(['wifi', 'acceso', 'checkin', 'checkout', 'parking', 'equipaje', 'normas', 'contacto', 'faq'])
+// ¿Escalamos por FALTA DE INFORMACIÓN (y no por política: queja, dinero, cambios…)? Solo entonces
+// tiene sentido decirle a Alberto que es un hueco de la guía y que su respuesta se va a aprender.
+function huecoDeGuia(dec: Decision): boolean {
+  return dec.needs_human && !dec.apoyada_en_fuente && /no cubre|no se pudo verificar/.test(dec.motivo || '')
+}
 
 // Fecha YYYY-MM-DD → DD/MM/YYYY (deja igual cualquier otro formato).
 function fmtFecha(f: string): string {
@@ -74,7 +77,10 @@ export async function proponerPorTelegram(ctx: Contexto, pregunta: string, dec: 
     `\n\n<b>Borrador${idiomaNota}:</b>\n${escapeHtml(dec.reply || '(sin borrador — escribe tú con Modificar)')}` +
     (borradorEs ? `\n<i>🔁 ${escapeHtml(borradorEs)}</i>` : '') +
     (noRespuesta ? `\n\nℹ️ <i>Parece un cierre de conversación — quizá no requiere respuesta.</i>` : '') +
-    (dec.motivo ? `\n\n<i>${escapeHtml(dec.motivo)}</i>` : '')
+    (dec.motivo ? `\n\n<i>${escapeHtml(dec.motivo)}</i>` : '') +
+    // Si escalamos porque la pregunta NO queda cubierta por las fuentes, decirlo con nombre y
+    // apellidos: es un hueco de conocimiento del piso, y lo que Alberto conteste se aprende.
+    (huecoDeGuia(dec) ? `\n\n❓ <b>Esto no lo encuentro en la guía de ${escapeHtml(ctx.property)}.</b> Lo que le respondas se guarda como hecho de este piso y lo usaré la próxima vez.` : '')
 
   const botones: Boton[][] = [[
     { texto: '✅ Enviar', callback: `hsp_send:${ctx.bookingId}` },
@@ -89,11 +95,6 @@ export async function proponerPorTelegram(ctx: Contexto, pregunta: string, dec: 
   if (dec.categoria === 'late_checkout' || dec.categoria === 'early_checkin') {
     botones.push([{ texto: '🕒 Conceder', callback: `hsp_grant:${ctx.bookingId}` }])
   }
-  // Graduar: aprobar y, a partir de ahora, responder esta categoría básica sola.
-  if (dec.reply && GRADUABLES.has(dec.categoria)) {
-    botones.push([{ texto: '✅ Aprobar y a partir de ahora solas', callback: `hsp_grad:${ctx.bookingId}` }])
-  }
-
   const mid = await tgSendButtons(`${cabecera}\n\n${cuerpo}`, botones)
   // Guardamos el idioma del huésped para que, si Alberto modifica en español, se traduzca a SU idioma.
   await prisma.$executeRaw(Prisma.sql`

@@ -5,6 +5,8 @@ import { smoobuFetch } from '@/lib/smoobu'
 import { getGuiaPiso } from './guia'
 import { htmlATexto, seccionesVigentes, seccionesATexto } from './guest-app'
 import { dedupHilo } from './hilo'
+import { listarHechos } from './hechos'
+import { avisarConflictoGuia } from './conflictos'
 import { horarioPiso } from './horarios'
 import { nocheAnteriorLibre, restarDias, entradaMismoDiaLibre, sumarDias } from './disponibilidad'
 import { setEnviados, corregirAtribucion, atribuirEmisor } from './atribucion'
@@ -39,6 +41,7 @@ export type Contexto = {
   guia: string | null     // guía REAL del piso, ya filtrada por lo que hoy se le puede enseñar
   guiaCargada: boolean    // false = NO SE PUDO LEER. NO significa "no hay guía" (CLAUDE.md, tres estados)
   guiaAccesoOculto: boolean  // hay secciones de llaves/códigos pero aún no toca (faltan >7 días)
+  hechos: string[]        // hechos permanentes del piso que enseñó Alberto (van SIEMPRE al prompt)
   historial: MensajeHist[]
   enviados: Set<string>   // respuestas que YA enviamos (normalizadas) — para no respondernos a nosotros
   aprendizajes: Aprendizaje[]
@@ -115,6 +118,13 @@ export async function construirContexto(bookingId: string, lang: string): Promis
     checkOut: String(reserva?.departure || ''),
   })
   const guia = seccionesATexto(vigentes.secciones) || null
+  // Una sección de la guía que pisamos con una regla de negocio se avisa UNA vez (no se resuelve en
+  // silencio). Best-effort: nunca debe romper ni retrasar la respuesta al huésped.
+  if (vigentes.pisadas.length) {
+    void avisarConflictoGuia(propertyId, apartmentName || propertyId, vigentes.pisadas).catch(() => {})
+  }
+
+  const hechos = (await listarHechos(propertyId)).map(h => h.hecho)
 
   const aprendizajes = await prisma.$queryRaw<Aprendizaje[]>(Prisma.sql`
     SELECT categoria, pregunta_norm, respuesta_final FROM mensajes_aprendizaje
@@ -204,6 +214,6 @@ export async function construirContexto(bookingId: string, lang: string): Promis
     lat: apt?.location?.latitude ?? null, lng: apt?.location?.longitude ?? null,
     zona: [apt?.location?.city, apt?.location?.country].filter(Boolean).join(', ') || 'Sevilla, España',
     direccion, ficha, guia, guiaCargada: guiaPiso.cargada, guiaAccesoOculto: vigentes.accesoOculto,
-    historial, enviados, aprendizajes,
+    hechos, historial, enviados, aprendizajes,
   }
 }

@@ -32,6 +32,10 @@ export type Decision = {
   // agradecimiento) → una respuesta cálida "siempre igual", auto-enviable sin pasar por la graduación
   // por categoría, SIEMPRE que además pase las guardas (needs_human=false, sentimiento no negativo).
   es_cortesia?: boolean
+  // true si la respuesta se apoya en una FUENTE real (ficha/guía/hechos del piso) y nada la marca
+  // como dudosa. Es lo que autoriza el auto-envío desde el 20/08/2026: «si está en la guía, contesta
+  // solo». Nunca es true si la guía no se pudo leer — eso es «no lo sé todavía», no «no hay guía».
+  apoyada_en_fuente?: boolean
   categoria: string
   sentimiento: 'positivo' | 'neutro' | 'negativo'
   motivo: string
@@ -92,7 +96,12 @@ function limpiarReply(raw: string): string {
 // Control de calidad: ¿la respuesta resuelve bien lo que pide el huésped o hay que escalar a Alberto?
 // UNA sola palabra (ESCALAR/OK) — mucho más fiable que un JSON. Si la llamada falla, NO escala por
 // sí misma (se apoya en las reglas: esSensible + sentimiento + guardrail).
-async function debeEscalar(ctx: Contexto, pregunta: string, reply: string): Promise<boolean> {
+// Tres estados a propósito. Antes devolvía boolean y el `catch` daba `false` = «no escales»: con la
+// autonomía nueva eso significaría AUTO-ENVIAR cada vez que el clasificador se cae, que es convertir
+// un «no he podido comprobarlo» en un «está comprobado». DESCONOCIDO escala como cualquier duda.
+type Veredicto = 'ESCALAR' | 'OK' | 'DESCONOCIDO'
+
+async function debeEscalar(ctx: Contexto, pregunta: string, reply: string): Promise<Veredicto> {
   const system = `Eres un control de calidad de un agente de atención al huésped de un alquiler turístico.
 Te doy la INFORMACIÓN disponible del alojamiento, el último mensaje del huésped y el BORRADOR de respuesta.
 Responde con UNA sola palabra, sin nada más:
@@ -107,14 +116,17 @@ MENSAJE DEL HUÉSPED: ${pregunta}
 BORRADOR: ${reply}`
   try {
     const out = await aiComplete([{ role: 'user' as const, content: user }], { system, maxTokens: 4, temperature: 0, timeoutMs: HUESPED_TIMEOUT_MS })
-    return /escalar/i.test(out || '')
+    if (/escalar/i.test(out || '')) return 'ESCALAR'
+    if (/\bok\b/i.test(out || '')) return 'OK'
+    return 'DESCONOCIDO'
   } catch {
-    return false
+    return 'DESCONOCIDO'
   }
 }
 
 export async function decidir(ctx: Contexto, pregunta: string, categoria: string): Promise<Decision> {
-  const fuentes = [ctx.ficha || '', ctx.guia || '', ctx.historial.map(h => h.text).join(' ')].join('\n')
+  const hechosTxt = (ctx.hechos || []).map(h => `- ${h}`).join('\n')
+  const fuentes = [ctx.ficha || '', ctx.guia || '', hechosTxt, ctx.historial.map(h => h.text).join(' ')].join('\n')
   const aprend = ctx.aprendizajes.map(a => `P: ${a.pregunta_norm}\nR: ${a.respuesta_final}`).join('\n\n')
 
   const horario = (ctx.horaCheckIn || ctx.horaCheckOut)
@@ -208,7 +220,7 @@ Ajusta la longitud al mensaje: si solo agradece, felicita o hace un comentario b
 
 INFORMACIÓN DISPONIBLE (única fuente de verdad; NO inventes nada que no esté aquí):
 ${ctx.ficha || '(sin ficha)'}
-${ctx.guia ? `\nGUÍA DEL HUÉSPED:\n${ctx.guia}` : ''}${accesoBlock}
+${ctx.guia ? `\nGUÍA DEL HUÉSPED:\n${ctx.guia}` : ''}${hechosTxt ? `\nHECHOS DE ESTE PISO (te los ha enseñado el anfitrión — son ciertos y valen tanto como la guía):\n${hechosTxt}` : ''}${accesoBlock}
 
 ${aprend ? `EJEMPLOS DE RESPUESTAS APROBADAS POR EL ANFITRIÓN (imítalos en tono y criterio):\n${aprend}\n` : ''}
 ${earlyBlock}
@@ -254,12 +266,22 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
   const sentimiento = sentimientoDe(pregunta)
   const sensible = esSensible(pregunta)
   const inventado = contieneDatoInventado(reply, fuentes)
-  const escalaIA = (sensible || sentimiento === 'negativo' || inventado) ? false : await debeEscalar(ctx, pregunta, reply)
+  // Si ya hay motivo firme para escalar, no gastamos la llamada al clasificador.
+  const veredicto: Veredicto = (sensible || sentimiento === 'negativo' || inventado)
+    ? 'ESCALAR'
+    : await debeEscalar(ctx, pregunta, reply)
+  const escalaIA = veredicto === 'ESCALAR'
+  const sinVerificar = veredicto === 'DESCONOCIDO'
   // Late check-out SIEMPRE escala, pase lo que pase con el clasificador de calidad — si el borrador
   // ahora responde bien, `escalaIA` dejaría de marcarlo, y Alberto pidió que siguiera pasando por él.
   const lateCheckout = esSolicitudLateCheckout(pregunta)
 
-  const needs_human = sensible || sentimiento === 'negativo' || inventado || escalaIA || lateCheckout
+  const needs_human = sensible || sentimiento === 'negativo' || inventado || escalaIA || lateCheckout || sinVerificar
+
+  // ¿Se apoya en una fuente real? Es la condición del auto-envío (regla del 20/08/2026). Exige que la
+  // guía se haya PODIDO LEER: con `guiaCargada=false` no sabemos si la respuesta está respaldada o
+  // si el agente está rellenando huecos de memoria, y ante esa duda no se manda nada solo.
+  const apoyada_en_fuente = !needs_human && ctx.guiaCargada && !!reply
   // Un cierre de conversación (gracias/ok…) por defecto no requiere respuesta; cualquier otra cosa sí.
   // Si escalamos, SIEMPRE requiere respuesta (no se descarta a la ligera).
   const requiere_respuesta = needs_human ? true : !esCierre(pregunta)
@@ -275,7 +297,9 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
       : sentimiento === 'negativo'
         ? 'sentimiento negativo'
         : escalaIA
-          ? 'la respuesta no cubre bien la pregunta'
+          ? 'la respuesta no cubre bien la pregunta — quizá falta en la guía del piso'
+          : sinVerificar
+            ? 'no se pudo verificar el borrador (control de calidad caído) — lo reviso yo'
           : lateCheckout
             ? 'late check-out: requiere confirmación del anfitrión'
             : ''
@@ -286,6 +310,7 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
     needs_human,
     requiere_respuesta,
     es_cortesia,
+    apoyada_en_fuente,
     categoria,
     sentimiento,
     motivo,
