@@ -11,6 +11,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
+import { sesionPortalAbierta } from '@/lib/subastas/portal-sesion'
 import {
   elegirVia,
   errorCatastro,
@@ -140,9 +141,10 @@ export async function bajarFicha(identificador: string): Promise<FichaBoe> {
  * una de cuatro frases, y 10 de las 13 dicen si hay pujas o no.
  *
  * Sin sesión no da el IMPORTE mientras la subasta está abierta (lo publica al
- * concluir). Con `PORTAL_SUBASTAS_COOKIE` —cookie de una sesión iniciada a mano
- * en el Portal— también se ve en vivo; la cookie CADUCA, así que su ausencia no
- * es un error: se degrada al sí/no, que es lo que el Portal da a un anónimo.
+ * concluir). Si la pasada ya tiene sesión abierta por los documentos (#1540 y
+ * #1548), se aprovecha y el importe en vivo también se ve; NO se abre una para
+ * esto: cada login manda un SMS y el Portal bloquea cuentas, y el sí/no público
+ * ya es la señal de competencia. Su ausencia no es un error, es menos dato.
  *
  * Lanza si la respuesta no es la ficha, igual que `bajarFicha`: un fallo de
  * lectura no es un dato.
@@ -151,17 +153,11 @@ export async function estadoPujasViva(identificador: string): Promise<PujasFicha
   // Timeout corto a propósito: el cron que llama vigila hasta 10 fichas con
   // maxDuration 60 s — con el timeout por defecto (20 s) bastarían 3 fichas
   // lentas para comerse la pasada entera.
-  const pujas = await bajar(`${FICHA}?idSub=${encodeURIComponent(identificador)}&ver=5`, 8000, cookiePortal())
+  const pujas = await bajar(`${FICHA}?idSub=${encodeURIComponent(identificador)}&ver=5`, 8000, sesionPortalAbierta()?.cookie ?? undefined)
   if (!fichaLegible(pujas, identificador)) {
     throw new Error('la respuesta del Portal no es la ficha de esta subasta')
   }
   return pujasDeFicha(pujas)
-}
-
-/** Cookie de sesión del Portal, si Alberto la ha puesto. `undefined` = anónimo. */
-function cookiePortal(): string | undefined {
-  const c = process.env.PORTAL_SUBASTAS_COOKIE?.trim()
-  return c ? c : undefined
 }
 
 /**
