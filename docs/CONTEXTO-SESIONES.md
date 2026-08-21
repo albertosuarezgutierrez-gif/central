@@ -32,6 +32,15 @@
 
 ---
 
+### 🔧 (21/08/2026) Auditoría ligera: PR #1514 desatascado, heartbeat 12+13/25 ✅
+Pasada rutinaria sin hallazgos de memoria/skills (`docs/SKILLS.md` y `FUENTES-DE-VERDAD.md` al
+día). Único hallazgo: **PR #1514** (carril 2 del 20/08, monitor de `paper_tracker`) llevaba ~24h en
+conflicto — el PR #1505 (libro de trading) añadió una entrada hermana al mismo array en
+`latidos.ts`/`agentes-latido/route.ts`. Conflicto de inserción pura: fusionado `main`, conservadas
+ambas entradas, `latidos.test.ts` 9/9 verde, empujado a la rama existente (sin PR nuevo). Heartbeat,
+backlog de PRs y `rutinas-automerge.yml` sin más hallazgos. `sivra_canal`: su próxima pasada (07:45
+UTC) aún no ha corrido desde el fix del PR #1529/#1530; a revisar mañana, no es hallazgo hoy.
+
 ### 👋 (20/08/2026) La respuesta auto-enviada a Pilar: dos incoherencias que el prompt no cubría
 (1) Cerraba con «que tengas un buen viaje» a una huésped **en plena estancia** («eso sería si
 hubiera escrito el día de su salida»); (2) abría con «¡claro que sí!» y dos líneas después negaba

@@ -13,6 +13,11 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-08-21** · `docs/CONTEXTO-SESIONES.md` + `docs/AUDITORIA-2026-08.md` · entrada nueva de la
+  pasada de hoy (PR #1514 desatascado — conflicto de inserción pura con el PR de trading,
+  resuelto y empujado a su rama existente; heartbeat 13+12 ✅ salvo `sivra_canal` pendiente de su
+  próxima pasada tras el fix del 20/08; sin drift de skills/docs) · pasada ligera diaria, rango 36
+  commits desde 2026-08-20 05:14 UTC · commit de esta auditoría
 - **2026-08-20** · `docs/CONTEXTO-SESIONES.md` + `docs/AUDITORIA-2026-08.md` · entrada nueva de la
   pasada de hoy (heartbeat 22/22 ✅, backlog de rutinas sano y `rutinas-automerge.yml` corriendo en
   verde cada hora, sin drift de skills/docs) · pasada ligera diaria, rango 45 commits desde
