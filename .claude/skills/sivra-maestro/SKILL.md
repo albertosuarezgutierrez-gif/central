@@ -3,8 +3,8 @@ name: sivra-maestro
 description: >
   Router de contexto de la vertical SIVRA (pisos turísticos Sevilla; package.json
   `roi-intranet`). USAR SIEMPRE que Alberto pida cualquier cosa de sivra: ingresos/gastos,
-  pricing, mensajería huéspedes, limpiadoras de ESTE repo, agente IA, Smoobu, o
-  arquitectura/despliegue de sivra. Sin secretos: solo nombres de variable.
+  pricing, mensajería huéspedes, limpiadoras de ESTE repo, agente IA, Smoobu, partes de
+  viajeros (SES.HOSPEDAJES / Chekin), o arquitectura/despliegue de sivra. Sin secretos: solo nombres de variable.
 ---
 
 # SIVRA — router de contexto
@@ -37,6 +37,12 @@ compartida `wswbehlcuxqxyinousql` (con ialimp+plataforma).
    negocio viven en plataforma — NO re-programarlos en sivra.
 10. **Agente huéspedes: solo el botón ✅ Enviar manda al huésped**; quejas/dinero/cambios
     NUNCA se auto-envían (allowlist de graduación + cortesía con guardas).
+11. 🚨 **Partes de viajeros (SES.HOSPEDAJES): el emisor REAL de hoy es Chekin, en los cuatro pisos.**
+    Nada nuestro envía un parte hasta apagar Chekin piso a piso (sustitución en fases, como
+    PriceLabs) — dos emisores a la vez = partes duplicados. Detalle en `references/infra-seo-landmines.md`.
+12. 🚨 **Una tabla NUEVA en `public` nace abierta a `anon`/`authenticated`** por los privilegios por
+    defecto del schema. En esta BD compartida, toda tabla sensible lleva su `REVOKE` en la propia
+    migración (patrón: `prisma/sql/2026-08-20_ses_establecimientos.sql`).
 
 ## ÍNDICE de references/
 **Lee SOLO el archivo que necesite la tarea; no los cargues todos.**

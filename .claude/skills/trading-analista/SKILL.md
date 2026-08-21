@@ -140,5 +140,7 @@ Detalle paso a paso en `references/pasada-diaria.md`.
 - **`references/copiloto-ordenes.md`** — copiloto con confirmación humana (15/08/2026):
   doctrina núcleo-satélite (ETF núcleo intocable, satélite en paper hasta Tramo 2), cuándo
   sí/no crear `create_order_instruction`, el bloque 💼 Cartera real de la pasada diaria y
-  las alertas de precio. Léelo si Alberto pide preparar una orden/alerta o al montar el
-  bloque de cartera real.
+  las alertas de precio, y **la distancia mínima de stop y el tamaño máximo medidos con
+  `riesgo-hueco` de `@central/module-trading`** (20/08/2026: 109 de las 116 ventas de 2026
+  fueron stops y perdieron 21.692,60 USD; los valores no eran el problema, la distancia sí).
+  Léelo si Alberto pide preparar una orden/alerta o al montar el bloque de cartera real.

@@ -1,0 +1,21 @@
+{
+  "name": "@central/module-ses",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Transporte con SES.HOSPEDAJES (Ministerio del Interior, RD 933/2021): ZIP+base64 de la solicitud, sobre SOAP, envío con Basic auth sobre la cadena FNMT, y clasificación de la respuesta. Lógica pura salvo `enviar`, que recibe el `fetch` por parámetro. Sin BD ni secretos.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./zip": "./src/zip.ts",
+    "./soap": "./src/soap.ts",
+    "./respuesta": "./src/respuesta.ts",
+    "./enviar": "./src/enviar.ts"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts"
+  },
+  "sideEffects": false,
+  "license": "UNLICENSED"
+}

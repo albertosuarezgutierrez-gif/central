@@ -63,3 +63,35 @@ bloque **💼 Cartera real** (2-4 líneas):
 - Antes de crear, `get_alerts` para no duplicar; anotar en el resumen qué alertas viven.
 - Una alerta es un aviso, no una autorización: si dispara, se le cuenta a Alberto — no se
   crea ninguna instrucción sin que él la pida.
+
+## 📏 El stop y el tamaño salen de los datos, no del pulso (20/08/2026)
+Medido sobre la cuenta real (sesión 19/08, PR #1505): de las **116 ventas de 2026, 109 fueron
+órdenes STOP** y sumaron **−21.692,60 USD**; las 7 ventas a mercado sumaron **+2.946,74 USD**.
+La mediana de distancia a la que saltó el stop fue del **1,30%** y 25 de 95 saltaron a menos del 1%.
+CoreWeave **subió un 42,1%** entre la primera y la última operación mientras dejaba **−6.369 USD** en
+33 movimientos. **La pérdida no vino de elegir mal los valores, vino de dónde estaba el stop.**
+
+Antes de preparar cualquier instrucción (y solo cuando Alberto la pida — la Rutina programada sigue
+sin crear instrucciones), pasa las velas que ya tienes por **`@central/module-trading`**
+(`packages/module-trading/src/riesgo-hueco.ts`):
+- **`evaluarStop(velas, distanciaPct)`** → `saltaPorRuido` (% de sesiones normales en las que el
+  recorrido desde la apertura habría tocado el stop), `saltaPorHueco` (% de sesiones en las que un
+  hueco de apertura lo ATRAVESÓ: ahí el stop no protege, solo fija el peor precio), `sugerida`
+  (distancia en múltiplos de ATR) y un veredicto `decorativo | ajustado | razonable` con su frase.
+- **`tamanoPorRiesgo(precio, distanciaPct, riesgoMaxEur)`** → **la respuesta correcta a «este stop es
+  demasiado corto» NO es acercarlo ni alejarlo a ojo, es COMPRAR MENOS.** Con 500€ de riesgo caben
+  494 títulos a un stop del 1,30% y 53 a uno del 12%: el stop corto no limitaba la pérdida, hacía que
+  una posición enorme pareciera prudente.
+- **Sin historia suficiente devuelven `null`, y `null` no se pinta como «riesgo 0»**: se dice que no
+  se ha podido medir. Un cero tranquilizador aquí es exactamente el error que el módulo existe para
+  evitar.
+
+Contexto medido sobre 40 sesiones reales de CRWV: hueco de apertura a la baja típico **2,07%** (más
+grande que su mediana de stop), un stop al 1,30% salta por ruido normal en el **75%** de las sesiones
+y es atravesado por un hueco en el **33%**; el ATR sugería ~20%. Y la lección de Moderna del 19/08
+(abrió **+84,3%** sobre el cierre anterior): un hueco no respeta el stop, lo atraviesa — entre el
+cierre y la apertura no hay precio donde ejecutar.
+
+⚠️ **Estado: el módulo NO está enganchado a la pasada automática.** Hoy se usa a mano cuando Alberto
+pide una instrucción. Engancharlo al paso de propuestas (que el aviso diga «stop mínimo X%, tamaño
+máximo Y títulos») está pendiente y es lo siguiente que toca.

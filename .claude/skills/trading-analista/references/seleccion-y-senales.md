@@ -118,6 +118,15 @@ es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
   (`lib/trading/form4.ts`: `parseForm4Xml`/`extraerEntradasAtom`/`elegirDocForm4` + `agregarInsiders` del módulo).
   Corre en Vercel (2 hops por filing → `limite` bajo, default 40). Si `transacciones` viene 0, revisar el feed
   getcurrent / User-Agent. NO opera; alimenta `/analizar`.
+- **💸 NO hace falta pagar por insiders ni por 13F: ya están montados y son GRATIS (comprobado 21/08/2026).**
+  El MCP `Datos_financieros` (financialdatasets.ai) aparece conectado en la sesión, pero **responde
+  `Your current balance is $0.00`** a `get_insider_trades` y `get_institutional_holdings` — está SIN saldo, no
+  roto. Antes de proponer recargarlo (20 $ = 1.000 consultas), recuerda que su cobertura ya la dan piezas
+  propias sin coste: **Form 4 → `/api/trading/insiders`** (feed getcurrent de la SEC), **13F → `/api/trading/gurus`**
+  (Dataroma) y **fundamentales → `/api/trading/fundamentales`** (SEC XBRL). Lo que el de pago añadiría es
+  comodidad y `screen_stocks`, no un dato que aquí falte. Y OJO con la regla de la casa: que el MCP devuelva ese
+  error **no autoriza a decir «no hay datos de insiders»** — significa «esta fuente está sin saldo», y la buena
+  está en Vercel.
 - El agente reúne además el **momentum de precio** con `momentum12_1(cierres)` de las velas de IBKR y puede seguir
   usando FMP (plan Free `/stable`) como fuente alternativa de fundamentales.
 - **`POST {PLATAFORMA_URL}/api/trading/seleccion`** con `{ gestores?, minPiotroski?, minRoic?, tam?, maxFundamentales? }`

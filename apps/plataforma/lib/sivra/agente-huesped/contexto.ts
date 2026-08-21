@@ -13,6 +13,7 @@ import { setEnviados, corregirAtribucion, atribuirEmisor } from './atribucion'
 import { bloqueParking } from './parking'
 import { bloqueEquipaje } from './equipaje'
 import { bloqueLlegada } from './llegada'
+import { bloqueSalida } from './salida'
 
 export type MensajeHist = { id: string; from: 'guest' | 'host'; text: string; ts: string }
 export type Aprendizaje = { categoria: string; pregunta_norm: string; respuesta_final: string }
@@ -198,6 +199,7 @@ export async function construirContexto(bookingId: string, lang: string): Promis
     bloqueLlegada(horaCheckIn),
     bloqueParking(),
     bloqueEquipaje(propertyId),
+    bloqueSalida(horaCheckOut, propertyId),
   ].filter(Boolean)
   const ficha = fichaLineas.join('\n')
 

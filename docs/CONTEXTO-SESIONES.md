@@ -83,6 +83,28 @@
   rotación de claves NO cubre. Y el panel tiene **67 Edge Functions** frente a las 45 del repo: 22 sin versionar.
 - Todo en `docs/ROTACION-SERVICE-ROLE.md`; PR #1517.
 
+### 📮 (21/08/2026) SES.HOSPEDAJES: transporte validado contra el servicio REAL y mergeado (PR #1555)
+Operación `C` contra `hospedajes.ses.mir.es` → **200 `codigo 0 / Ok`**: TLS con cadena FNMT (raíz
+pública, sí está en el almacén), credenciales de servicio web, arrendador habilitado y **ZIP aceptado**
+(era gzip: habría fallado TODO con `10111`). `pre-ses` devuelve **502 a todo** → no hay sandbox: el
+ensayo es dry-run contra producción. Credenciales **por piso** en `ses_establecimientos` (AES-256-GCM,
+`SES_CRYPTO_KEY`), pantalla `/sivra/partes/establecimientos` y latido diario 07:15 que recorre TODOS
+los activos. 🚨 **Chekin es hoy el emisor real en los 4 pisos** — nada nuestro envía hasta apagarlo,
+y se sustituye en fases como PriceLabs. 🚨 Tabla nueva en `public` nace abierta a `anon`: la migración
+hace `REVOKE`. **Pendiente de Alberto:** `SES_CRYPTO_KEY` en Vercel, rotar las contraseñas del portal
+SES y dar de alta los cuatro pisos.
+
+### 💸 (21/08/2026) Los insiders y los 13F NO hay que comprarlos: ya estaban montados y gratis
+Alberto preguntó el precio de las fuentes de datos y la respuesta correcta es **0 €**. El MCP
+`Datos_financieros` (financialdatasets.ai) está conectado pero devuelve `Your current balance is $0.00`
+—sin saldo, no roto— y lo que vendería ya lo cubren piezas propias en Vercel: **Form 4 →
+`/api/trading/insiders`**, **13F → `/api/trading/gurus`** (Dataroma) y **fundamentales →
+`/api/trading/fundamentales`** (SEC XBRL, gratis). Lo de pago solo añadiría comodidad y `screen_stocks`.
+Anotado en la skill `trading-analista` (`seleccion-y-senales.md`) con el matiz de la regla de la casa:
+ese error significa «fuente sin saldo», **nunca «no hay datos de insiders»**. Queda pendiente de decidir
+si se recargan los 20 $ solo por el screener; hoy no hace falta para operar.
+
+
 ### 🔧 (21/08/2026) Auditoría ligera: PR #1514 desatascado, heartbeat 12+13/25 ✅
 Pasada rutinaria sin hallazgos de memoria/skills (`docs/SKILLS.md` y `FUENTES-DE-VERDAD.md` al
 día). Único hallazgo: **PR #1514** (carril 2 del 20/08, monitor de `paper_tracker`) llevaba ~24h en
@@ -91,6 +113,38 @@ conflicto — el PR #1505 (libro de trading) añadió una entrada hermana al mis
 ambas entradas, `latidos.test.ts` 9/9 verde, empujado a la rama existente (sin PR nuevo). Heartbeat,
 backlog de PRs y `rutinas-automerge.yml` sin más hallazgos. `sivra_canal`: su próxima pasada (07:45
 UTC) aún no ha corrido desde el fix del PR #1529/#1530; a revisar mañana, no es hallazgo hoy.
+
+### 👋 (20/08/2026) La respuesta auto-enviada a Pilar: dos incoherencias que el prompt no cubría
+(1) Cerraba con «que tengas un buen viaje» a una huésped **en plena estancia** («eso sería si
+hubiera escrito el día de su salida»); (2) abría con «¡claro que sí!» y dos líneas después negaba
+la consigna y la mandaba a taquillas de fuera («no tiene lógica»). Nada del CIERRE ni de la
+COHERENCIA apertura↔respuesta estaba en el system prompt. Nuevos módulos puros `cierre.ts` (poda
+la fórmula si va aislada; si va entretejida con contenido real, escala) y `coherencia.ts` (NO poda:
+reescribir una apertura recoloca el mensaje entero, eso lo hace Alberto). 15 tests, PR #1568.
+Regla que queda: **el modelo obedece el prompt o el mensaje pasa por una persona, nunca sale a medias**.
+(3) Y faltaba la POLÍTICA de fondo, que Alberto dictó al ver el caso: no hay consigna, pero el día de
+salida, **si no entra nadie ese día, se quedan hasta las 12:00 sin coste** (maletas dentro incluidas);
+más tarde tiene coste de la empresa de limpieza y el agente lo ofrece SIN precio y escala. Nuevo
+`salida.ts` (ficha + prompt tri-estado) y la consigna de pago pasa a ser el plan B. Lo confirma el
+histórico de Smoobu (26/07, a Manuel: «puedes salir a las 12:00, no entra nadie después de ti»).
+(4) Entrenamiento con los huecos REALES (`mensajes_guia_gaps` + histórico): llaves al salir (Dúplex
+= mesa alta de la cocina; resto = donde se cogieron), equipaje ANTES de entrar con la noche anterior
+ocupada = consigna, tareas al marcharse (aire/luces, ventanas, basura, avisar) y **auto-envío solo de
+la ventana de las 12:00 con ocupación verificada** — nombrar una hora posterior es dinero y escala.
+Mergeado el 21/08 con CI en verde; la skill `sivra-maestro` (referencia del agente huésped) ya lleva
+`salida.ts`, `cierre.ts` y `coherencia.ts`, y el matiz de que el late check-out ya NO escala siempre.
+
+### 📒 (20/08/2026) Libro completo (569 ops) y la AUTOPSIA: la pérdida es el INTRADÍA, no los valores
+Mergeado el **#1505** y verificado en prod (401 sin token, 0 grants a `anon`, tests verdes). **Rescatadas
+las 114 ejecuciones de jul–sep/2025 que IBKR iba a dejar de servir** (el libro va ahora de 07/07/2025 a
+17/08/2026); cuadre: 22 de 25 símbolos netean 0 exacto — los 3 restantes son una posición que cruzó a Q4 y
+dos ventas cuyas compras son anteriores a lo que IBKR sirve (**BRZE y NKE se quedan sin coste de
+adquisición: FIFO incompleto ahí**). **Autopsia sobre el libro entero:** vender el MISMO día que compra →
+**−24.278,53 USD en 68 días**; vender otro día → **+3.811,08 USD en 74**. Los STOP de 2025+2026 (248 ventas)
+suman **−26.538,64 USD** y las 29 a mercado/límite **+6.071,19 USD**. Comisiones 542,14 USD y 8,3 M USD de
+volumen sobre ~33.400€: la rotación es el coste invisible. `riesgo-hueco` YA enganchado a `/analizar`
+(`stopViable` por idea) + paso 5-bis de la skill para que se cante. **Sigue pendiente:** `tipo_cambio` NULL
+en 568/569 filas y las acciones corporativas.
 
 
 ### 🛡️ (20/08/2026) Correduría: había DOS planes para lo mismo con dos nombres — fundidos en uno
@@ -2062,6 +2116,31 @@ completo `docs/AUDITORIA-2026-08.md`.
 - Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
+## 💓 SES: latido del transporte antes que el conector (20/08/2026)
+
+Chekin es hoy el emisor real de los partes en los 4 pisos → el proyecto es **sustituirlo**, no
+evitar la multa. Y `pre-ses` da 502 a todo: **no hay sandbox**, así que se empieza por vigilar.
+Nuevo `packages/module-ses` (ZIP+base64 —**no gzip**, era el bug del 10111—, sobre SOAP, envío y
+clasificación de respuesta) + cron `/api/cron/ses-latido` (07:15, operación `C`, SOLO LECTURA) que
+deja huella en `agente_latidos.ses_transporte`. El veredicto separa «SES caído» (esperar) de
+«credenciales/alta» (portal): un aviso que no distingue se deja de leer. Urgencia real: la hoja de
+`*.ses.mir.es` **caduca el 03/09/2026**. Envs pendientes en Vercel: `SES_USUARIO`, `SES_PASSWORD`,
+`SES_ARRENDADOR`. PR #1555.
+
+## 🔒 (20/08/2026) SES.HOSPEDAJES: el TLS de *.mir.es NO valida con CA pública — PR #1550 (merged)
+
+Probada la conexión REAL a los dos endpoints de SES (desde una Edge Function de Supabase, porque el
+contenedor tiene `*.mir.es` bloqueado por el proxy): **`invalid peer certificate: UnknownIssuer`**,
+y se repite cargando el bundle Mozilla entero (121 CAs). CertSpotter da **cero emisiones** en
+Certificate Transparency para `hospedajes.ses.mir.es` → SES usa una CA de la Administración, no
+pública. Por eso la implementación de referencia en Python usaba `verify=False`. 🚨 El conector
+versionará el PEM en `packages/module-ses` + `NODE_EXTRA_CA_CERTS`; NUNCA desactivar la verificación.
+Las credenciales SIGUEN sin validar: el fallo es anterior a la autenticación. Función `ses-probar` inerte.
+🚨 Además, el RD obliga a MÁS que comunicar: firma del parte por cada mayor de **14** años (digital vale)
+y conservar el registro **3 años**. Spec §4.6 y §4.7. ⚠️ Lo legal está en fuentes secundarias: el proxy
+bloquea boe.es — falta contrastarlo con el BOE o la asesoría antes de implementar.
+
+
 ## 🛂 (20/08/2026) SES.HOSPEDAJES: diseño de la conectividad (parte de viajeros) — PR #1550 (draft)
 
 Fase de arranque del RD 933/2021 (comunicar viajeros al Ministerio en <24h; multas 100 €–30.000 €).
@@ -2095,7 +2174,7 @@ Pendiente: que Alberto revise el spec → plan de implementación. Códigos/cred
   page data de `/api/admin/clientes/[vertical]/[id]` YA en main (envs ausentes), no es del cambio.
 
 
-- **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 18/08/2026).** Detalle en
+- **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 21/08/2026).** Detalle en
   `docs/memoria/2026-08.md` y en los PRs citados.
   - **Ayudas/subvenciones (15/08, #1432):** pendiente respuesta de Asecon (Marta Albarrán) sobre la
     convocatoria de conciliación antes del **15/09/2026** (plazo de solicitud). Pendiente además un
@@ -2138,6 +2217,17 @@ Pendiente: que Alberto revise el spec → plan de implementación. Códigos/cred
     (PASO 0 no vio huella → pasada completa, sin duplicado). Ya no parece transitorio: si el
     disparo primario vuelve a fallar, Alberto abre ticket a soporte de claude.ai (la Rutina es de
     la UI, no editable por MCP).
+    **📒 Libro de operaciones (20-21/08, #1505 y #1570 mergeados):** 569 ejecuciones (07/07/2025→17/08/2026),
+    sincronizador y vigía vivos, endpoint cerrado. El volcado que caducaba YA ESTÁ (114 ops de jul–sep/2025)
+    y `riesgo-hueco` ya viaja en `/analizar` (`stopViable`). Abiertos: (a) `tipo_cambio` NULL en 568/569
+    filas → sin cifra en euros para la asesoría; (b) sin acciones corporativas (el primer split con
+    posición abierta romperá el FIFO); (c) **BRZE y NKE tienen ventas sin compra en el libro** (anteriores
+    a lo que IBKR sirve) → su coste de adquisición hay que sacarlo de los extractos, no del bróker;
+    (d) **CERRADO 21/08 — no hay que pagar fuentes:** el MCP `Datos_financieros` (financialdatasets.ai)
+    responde `Your current balance is $0.00` (sin saldo, no roto) y su cobertura ya la dan piezas propias
+    gratis — Form 4 por `/api/trading/insiders`, 13F por `/api/trading/gurus` (Dataroma) y fundamentales
+    por `/api/trading/fundamentales` (SEC XBRL). Lo de pago solo añadiría comodidad y `screen_stocks`
+    (20 $ una vez); recargarlo sigue siendo opción de Alberto, no una necesidad para operar.
   - **Subastas:** lente 🌊 (costa norte + Matalascañas sin tope) MERGEADA y en prod (#1346/#1349/
     #1351/#1353); pestaña 🔥 Oportunidades rediseñada (#1358 — una tarjeta, chips homogéneos,
     €/m² siempre visible). 🟡 el dispatcher marca timeout en `subastas-mercado` si desborda 280 s

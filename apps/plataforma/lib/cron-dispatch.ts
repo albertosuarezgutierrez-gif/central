@@ -28,6 +28,11 @@ export const CRON_JOBS: CronJob[] = [
   // no da precios para ellas — es un «no hay», no un «falta por hacer», y el ciclo las reintenta igual.
   // Devuelto a 2 h: en régimen estacionario solo hay que refrescar rancidez y sobra de largo.
   { path: '/api/cron/trading-backtest', schedule: '10 */2 * * *' },
+  // 07:15, treinta minutos ANTES de `agentes-latido`: así el vigía de las 07:45 lee siempre una
+  // huella del mismo día en vez de la de ayer. Solo lectura (operación C de SES): no envía ningún
+  // parte. La fecha que lo hace urgente es el 03/09/2026, cuando caduca la hoja del certificado
+  // de `*.ses.mir.es` y hay que saber si la cadena sigue cerrando.
+  { path: '/api/cron/ses-latido', schedule: '15 7 * * *' },
   { path: '/api/cron/agentes-latido', schedule: '45 7 * * *' },
   { path: '/api/cron/paper-tracker', schedule: '0 10 * * 1' },
   { path: '/api/cron/resumen-mensual', schedule: '0 8 1 * *' },
