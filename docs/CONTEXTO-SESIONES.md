@@ -43,6 +43,17 @@ y se sustituye en fases como PriceLabs. 🚨 Tabla nueva en `public` nace abiert
 hace `REVOKE`. **Pendiente de Alberto:** `SES_CRYPTO_KEY` en Vercel, rotar las contraseñas del portal
 SES y dar de alta los cuatro pisos.
 
+### 🔎 (21/08/2026) Screener de pago recargado: sirve, pero llega con TRES trampas y una cuarta al lado
+Alberto puso los 20 $ (1.000 peticiones) y `Datos_financieros` ya responde. La primera consulta real
+destapó lo que había que tapar antes de usarlo: (1) **ordena por ABECEDARIO y sin paginación** —
+`limit:25` devolvió ABCB, ABEV, ACIW, ACN…, o sea los 25 primeros por la A, no los 25 mejores (máx 100
+→ hay que trocear por sector); (2) **ROIC de 668% en ASAN y 345% en ATAT**, capital invertido ≈ 0: un
+«no lo sé disfrazado de valor» que **cruza el gate `roic ≥ 0,10`** justo al revés de lo que se busca;
+(3) **solo devuelve los campos por los que filtras**. Y de propina, `get_institutional_holdings` trae
+el `value_usd` **×1.000** en algunos declarantes (BCV: 23.063 acciones = 2.295 M$). Nuevo módulo puro
+`screenerMercado.ts` (traduce a `MetricasFactor`, ANULA el ROIC increíble en vez de recortarlo, anula
+yields fuera de USD, marca `truncada`), 11 tests, + skill. Corre en la sesión Claude, no en Vercel.
+
 ### 💸 (21/08/2026) Los insiders y los 13F NO hay que comprarlos: ya estaban montados y gratis
 Alberto preguntó el precio de las fuentes de datos y la respuesta correcta es **0 €**. El MCP
 `Datos_financieros` (financialdatasets.ai) está conectado pero devuelve `Your current balance is $0.00`
@@ -2165,11 +2176,11 @@ Pendiente: que Alberto revise el spec → plan de implementación. Códigos/cred
     filas → sin cifra en euros para la asesoría; (b) sin acciones corporativas (el primer split con
     posición abierta romperá el FIFO); (c) **BRZE y NKE tienen ventas sin compra en el libro** (anteriores
     a lo que IBKR sirve) → su coste de adquisición hay que sacarlo de los extractos, no del bróker;
-    (d) **CERRADO 21/08 — no hay que pagar fuentes:** el MCP `Datos_financieros` (financialdatasets.ai)
-    responde `Your current balance is $0.00` (sin saldo, no roto) y su cobertura ya la dan piezas propias
-    gratis — Form 4 por `/api/trading/insiders`, 13F por `/api/trading/gurus` (Dataroma) y fundamentales
-    por `/api/trading/fundamentales` (SEC XBRL). Lo de pago solo añadiría comodidad y `screen_stocks`
-    (20 $ una vez); recargarlo sigue siendo opción de Alberto, no una necesidad para operar.
+    (d) **CERRADO 21/08 — fuentes:** insiders, 13F y fundamentales NO se pagan (Form 4 por
+    `/api/trading/insiders`, Dataroma por `/api/trading/gurus`, SEC XBRL por `/api/trading/fundamentales`).
+    Lo único que faltaba era el SCREENER, y **Alberto recargó los 20 $ (1.000 peticiones) el 21/08**: ya
+    responde y está saneado por `screenerMercado.ts`. Cuenta las peticiones — el saldo es finito.
+    Pendiente de decidir: si el screener entra como pilar fijo de la pasada diaria o se usa a demanda.
   - **Subastas:** lente 🌊 (costa norte + Matalascañas sin tope) MERGEADA y en prod (#1346/#1349/
     #1351/#1353); pestaña 🔥 Oportunidades rediseñada (#1358 — una tarjeta, chips homogéneos,
     €/m² siempre visible). 🟡 el dispatcher marca timeout en `subastas-mercado` si desborda 280 s

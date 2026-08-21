@@ -9,6 +9,11 @@ export type { Resultado, StatsEstrategia } from './scoring.ts'
 export { rvol, tendenciaVolumen, volumenInusual, confirmaVolumen } from './volumen.ts'
 export { infravalorada, pasaScreener, puntuarCandidato, rankearCantera } from './screener.ts'
 export { dedupCandidatos, puntuarDescubrimiento, descubrir } from './descubrimiento.ts'
+// Cribado del MERCADO ENTERO por métricas (Financial Datasets). Traduce sus filas a `MetricasFactor`
+// anulando el ROIC increíble (capital invertido ≈ 0) y los yields fuera de USD, y marca si la
+// respuesta llegó al límite —el proveedor ordena por ABECEDARIO, no por calidad.
+export { traducirFila, traducirScreener, truncadaPorLimite, ROIC_MAX_CREIBLE } from './screenerMercado.ts'
+export type { FilaScreener, FilaTraducida, Traduccion } from './screenerMercado.ts'
 export { posicionRango52, tendenciaMedias, fuerzaRelativa, rankearSectores, inclinacionSector, regimenMercado } from './mercado.ts'
 export type { SectorRank } from './mercado.ts'
 // Riesgo de HUECO y viabilidad del stop: ¿está el stop dentro del ruido normal del valor, y

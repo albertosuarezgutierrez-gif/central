@@ -90,6 +90,13 @@ Detalle paso a paso en `references/pasada-diaria.md`.
 - **Congelar cohortes = AÑADIR entrada a `COHORTES_PAPER`, nunca editar una existente** (no
   romper el out-of-sample). No cambiar pesos del blend por el retrovisor: solo si el FORWARD
   lo confirma.
+- **🚨 LANDMINE — el screener de pago (`screen_stocks`) trae tres trampas medidas (21/08/2026):**
+  ordena por **ABECEDARIO** y sin paginación (`limit: 25` = los 25 primeros por la A, no los mejores);
+  devuelve **ROIC de 668%** cuando el capital invertido es ≈ 0 (pasa un gate `roic ≥ 0,10` justo al
+  revés de lo que quieres); y **solo trae los campos por los que filtras**. Pásalo SIEMPRE por
+  `traducirScreener` (`@central/module-trading::screenerMercado.ts`, 11 tests) y lee
+  `references/seleccion-y-senales.md`. Hermano: **`get_institutional_holdings` tiene el `value_usd`
+  ×1.000 en algunos declarantes** — comprueba `shares × reported_price` o usa Dataroma, que es gratis.
 - **🚨 LANDMINE — los fundamentales de EDGAR mienten en silencio si el parser se despista
   (31/07/2026, PR #1189).** Salió mirando ORCL: la ficha daba **FCF yield +3,49%** cuando el flujo
   libre real de FY2026 era **−23.700 M$ (−6,99%)**. Cuatro fallos, todos del mismo tipo — el dato
