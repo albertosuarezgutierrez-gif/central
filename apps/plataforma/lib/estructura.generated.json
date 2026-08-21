@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-20T15:07:55Z",
+  "generadoEn": "2026-08-20T20:32:23Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1736,7 +1736,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 32
+        "evidencias": 33
       },
       "rrhh": {
         "estado": "no",
@@ -3920,6 +3920,7 @@
       "/api/trading/gurus",
       "/api/trading/insiders",
       "/api/trading/invitado",
+      "/api/trading/operaciones",
       "/api/trading/paper",
       "/api/trading/puntuar",
       "/api/trading/saldo",
@@ -4321,6 +4322,7 @@
       "subastas_debug_token",
       "subastas_descartes",
       "subastas_notas_simples",
+      "subastas_pujas_obs",
       "subastas_radar",
       "subastas_reapariciones",
       "subastas_seguidas",
@@ -4335,6 +4337,8 @@
       "trading_cohetes_rebalanceo",
       "trading_cohetes_track",
       "trading_estrategia_stats",
+      "trading_operaciones",
+      "trading_operaciones_sync",
       "trading_paper_orden",
       "trading_paper_posicion",
       "trading_paper_track",
@@ -4587,15 +4591,15 @@
       "fecha": ""
     },
     {
+      "titulo": "Lo que sí sirve:",
+      "fecha": ""
+    },
+    {
+      "titulo": "TRES sesiones distintas fueron al mismo sitio el mismo día",
+      "fecha": ""
+    },
+    {
       "titulo": "Probar antes de mergear cazó DOS bugs que `tsc` y `next build` dan por buenos:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Raíz:",
-      "fecha": ""
-    },
-    {
-      "titulo": "PENDIENTE (decisión de Alberto):",
       "fecha": ""
     }
   ],
@@ -5006,7 +5010,7 @@
     "packages": 37,
     "capacidades": 23,
     "skills": 32,
-    "apis": 1173,
+    "apis": 1174,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

@@ -195,6 +195,7 @@ export const REMITENTE_OTP = 'noresponder-subastas@boe.es'
  */
 export async function esperarCodigoPortal(
   intentoEn: Date,
+  yaUsados: ReadonlySet<string> = new Set(),
   timeoutMs = 45_000,
   intervaloMs = 4_000,
 ): Promise<string | null> {
@@ -219,7 +220,7 @@ export async function esperarCodigoPortal(
             const a = await aAlerta(msg.source, msg.uid)
             if (a) candidatos.push({ asunto: a.subject, cuerpo: a.html, fecha: a.fecha })
           }
-          const codigo = codigoDelIntento(candidatos, intentoEn)
+          const codigo = codigoDelIntento(candidatos, intentoEn, undefined, yaUsados)
           if (codigo) return codigo
         }
         if (Date.now() + intervaloMs >= limite) break

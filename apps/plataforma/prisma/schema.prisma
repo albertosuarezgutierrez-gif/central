@@ -206,18 +206,18 @@ model TradingTesisResultado {
 }
 
 model TradingPaperOrden {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  simbolo   String
-  lado      String // BUY | SELL
-  cantidad  Int
-  precio    Float
-  fecha     DateTime @db.Date
-  motivo    String
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  simbolo            String
+  lado               String // BUY | SELL
+  cantidad           Int
+  precio             Float
+  fecha              DateTime @db.Date
+  motivo             String
   // Deslizamiento (proxy): precio del día SIGUIENTE a la señal (lo rellena /puntuar). En real no se
   // ejecuta al cierre de la señal sino al día siguiente — esta columna mide cuánto cuesta esa espera,
   // la única incógnita que el paper no medía. NULL = aún sin dato (no 0).
-  precioDiaSiguiente Float? @map("precio_dia_siguiente")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  precioDiaSiguiente Float?   @map("precio_dia_siguiente")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   // Una orden por símbolo+lado+día: los reintentos de la pasada nocturna no duplican el libro
   // (04/08/2026: 5 BUY idénticas de MSFT). Los endpoints escriben con createMany+skipDuplicates.
@@ -426,6 +426,57 @@ model TradingCarteraRealSync {
 
   @@unique([cuentaId, broker])
   @@map("trading_cartera_real_sync")
+}
+
+// 📒 Libro INMUTABLE de ejecuciones del bróker. A diferencia de TradingCarteraReal (una foto que
+// se reemplaza entera cada pasada), aquí cada fila es un hecho que se inserta una vez y no se toca
+// más: es la fuente del cálculo fiscal español (FIFO por valores homogéneos, regla de los dos meses
+// del art. 33.5.f LIRPF), donde perder o duplicar una línea cambia la renta. La clave única
+// broker+tradeId hace que reenviar una pasada no duplique nada.
+// La columna generada `fecha` existe en la BD pero no se declara aquí: Prisma no la escribe.
+model TradingOperacion {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId    String    @map("cuenta_id") @db.Uuid
+  broker      String    @default("Interactive Brokers")
+  tradeId     String    @map("trade_id")
+  orderId     String?   @map("order_id")
+  simbolo     String
+  descripcion String?
+  tipoActivo  String?   @map("tipo_activo")
+  lado        String
+  cantidad    Decimal
+  precio      Decimal
+  divisa      String
+  comision    Decimal   @default(0)
+  importeNeto Decimal?  @map("importe_neto")
+  tipoOrden   String?   @map("tipo_orden")
+  ejecutadoEn DateTime  @map("ejecutado_en") @db.Timestamptz(6)
+  // Resultado realizado SEGÚN EL BRÓKER (coste medio). NO es el fiscal español, que exige FIFO.
+  pnlBroker   Decimal?  @map("pnl_broker")
+  // Unidades de `divisa` por 1 EUR el día de la operación. null = TODAVÍA NO CONSULTADO, nunca 1.
+  tipoCambio  Decimal?  @map("tipo_cambio")
+  tcFuente    String?   @map("tc_fuente")
+  tcFecha     DateTime? @map("tc_fecha") @db.Date
+  importadoEn DateTime  @default(now()) @map("importado_en") @db.Timestamptz(6)
+
+  @@unique([broker, tradeId], map: "trading_operaciones_broker_trade_uk")
+  @@index([cuentaId, simbolo, ejecutadoEn])
+  @@map("trading_operaciones")
+}
+
+// Marca de sincronización del libro: sin fila = «IBKR sin leer todavía»; fila con la fecha de hoy
+// y 0 nuevas = «leído, no hubo operaciones». Sin esto, un sincronizador mudo durante semanas se ve
+// exactamente igual que un mes tranquilo.
+model TradingOperacionesSync {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId        String    @map("cuenta_id") @db.Uuid
+  broker          String
+  ultimaEjecucion DateTime? @map("ultima_ejecucion") @db.Timestamptz(6)
+  numOperaciones  Int       @default(0) @map("num_operaciones")
+  actualizadoEn   DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@unique([cuentaId, broker])
+  @@map("trading_operaciones_sync")
 }
 
 // Serie histórica de la cartera real: un punto por día y DIVISA (nunca se suman divisas). La foto

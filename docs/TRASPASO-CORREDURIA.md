@@ -1,8 +1,30 @@
 # 🛡️ Traspaso del CRM de correduría (Manuel Suárez) → `central`
 
-> **Estado: FASE 0 — bloqueado a la espera de la entrega de Manuel.** Nada se ha migrado todavía.
-> Este documento es el runbook del traspaso y la fuente de verdad mientras dure. Cuando el traspaso
-> se cierre, esto se sustituye por `apps/seguros/CLAUDE.md` y una entrada en `docs/CONTEXTO-SESIONES.md`.
+> **Estado: FASE 0 — enviada la petición a Manuel (WhatsApp, 20/08/2026), esperando respuesta.**
+> Ningún dato se ha migrado todavía; lo único hecho en `central` son los cimientos vacíos (ver
+> «Hecho ya»). Este documento es el runbook del traspaso y **la ÚNICA fuente de verdad** mientras dure.
+> Cuando el traspaso se cierre, esto se sustituye por `apps/asegura/CLAUDE.md` y una entrada en
+> `docs/CONTEXTO-SESIONES.md`.
+>
+> 🔗 **Documento único (20/08/2026).** Hasta hoy había **dos planes en paralelo** para lo mismo, escritos
+> por dos sesiones distintas que no se vieron: este (`docs/TRASPASO-CORREDURIA.md`, vertical `apps/seguros`)
+> y `docs/ASEGURA-MIGRACION.md` (vertical `apps/asegura`). Se han **fundido en este**, que absorbe todo lo
+> que el otro tenía y el otro se ha borrado. Si encuentras una referencia suelta a `apps/seguros`, es de
+> antes de la fusión: el nombre bueno es **`apps/asegura`**.
+
+## 🏷️ Cómo se llama cada cosa (y por qué no todo igual)
+
+| Pieza | Nombre | Por qué |
+|---|---|---|
+| Vertical / carpeta / proyecto Vercel | **`apps/asegura`** | Es la **marca** del negocio, «Grupo Asegura». Y la carpeta ya existe con su SQL aplicado (PR #1489): renombrarla ahora sería churn sin ganancia |
+| Schema de la BD | **`seguros`** | **Ya creado y aplicado** en `central`. Es el **dominio**, no la marca: si mañana la marca cambia, el schema no se toca |
+| Rol de BD de la app | **`prisma_seguros`** | Ya creado (inerte, sin contraseña). Renombrar un rol vivo por estética no se hace |
+| Módulo compartido, si aparece | **`packages/module-seguros`** | Los módulos van por dominio (`module-pesca`, `module-flota`), no por marca |
+| Secreto de sesión | **`ASEGURA_SESSION_SECRET`** | Los envs van por app |
+
+> **La confusión de fondo, dicha una vez:** «Asegura» es el **cliente/marca** y «seguros» es el
+> **dominio**. Ambos nombres son correctos, cada uno en su capa. Lo que estaba mal era tener dos
+> documentos usándolos como si fueran dos proyectos distintos.
 
 ## Qué es esto
 
@@ -17,24 +39,43 @@ su vía.
 | Activo | De dónde | A dónde | Mecanismo |
 |---|---|---|---|
 | Datos + esquema | Supabase de Manuel | `central` (`wswbehlcuxqxyinousql`) → schema **`seguros`** | `pg_dump` → `psql` en tubería directa (ver «¿MCP o API?») |
-| Código | repo de Manuel | `apps/seguros` del monorepo | copia del árbol de trabajo, **sin historia git**; el repo original se transfiere y se archiva aparte |
-| Despliegue | Vercel de Manuel | proyecto nuevo en `pisos-turisticos-projects` | Root Directory `apps/seguros` |
+| Código | repo de Manuel | `apps/asegura` del monorepo | copia del árbol de trabajo, **sin historia git**; el repo original se transfiere y se archiva aparte |
+| Despliegue | Vercel de Manuel | proyecto nuevo en `pisos-turisticos-projects` | Root Directory `apps/asegura` |
 | Credenciales de proveedores | envs de Manuel | envs del proyecto Vercel nuevo | lista de nombres + **rotación** |
 
 ### Decisiones ya tomadas (20/08/2026)
 1. **Schema `seguros` dentro de `central`**, no un proyecto Supabase aparte. Lo manda `MATRIZ.md`:
    una sola BD para todo el holding (dos proyectos = doble cobro y consolidación imposible).
-2. **Vertical nueva `apps/seguros`** con su proyecto Vercel propio, patrón `apps/mariscos`.
+2. **Vertical nueva `apps/asegura`** con su proyecto Vercel propio, patrón `apps/mariscos`.
 3. **Free vs. Pro de Supabase se decide midiendo el dump real**, no con la estimación de los ~200 MB.
 4. **NO se transfiere el proyecto Supabase de Manuel.** Sería un segundo proyecto (rompe el punto 1) y
    exigiría meterle como miembro de la organización que contiene TODOS los datos del holding. Se copia
    el contenido y él borra el suyo después.
 
+> **Por qué un segundo proyecto Supabase no es «gratis» aunque el free permita dos.** Cuesta 0 €/mes,
+> sí, pero: (a) **un proyecto free se pausa solo a los 7 días de poca actividad** —una correduría que
+> se consulta a ratos se apaga sola, y recuperarla es manual, con ventana de 90 días—; (b) los límites
+> del free (5 GB de egress, cuotas) son **por organización**, así que dos proyectos no dan el doble:
+> se reparten y suman puntos de fallo; (c) sin joins contra `movimientos_bancarios` / `cuentas` /
+> `negocios` la consolidación es imposible, y hay que duplicar roles, backups, migraciones y envs.
+> **Cuándo sí tocaría proyecto aparte:** si la correduría se vendiera o se separara del grupo, o si un
+> requisito legal obligara a aislar los datos. Hoy no es el caso.
+
 ### Punto de partida verificado (20/08/2026)
 - Supabase: una sola organización (`fzagbwkkzfjlsvflkkvn`), **plan FREE**, un solo proyecto `central`.
   Uso ≈ **180 MB** de 500 (`public` 151 MB · `iarest` 22 MB · `rrhh` 1,5 MB). `cron` y `net` ya instaladas.
 - Vercel: equipo `pisos-turisticos-projects` (`team_f4gPpt6dPuNcd5YyMt3q27uf`).
-- En el repo **no existe** `apps/seguros` ni ninguna carpeta de correduría.
+- En el repo, `apps/asegura/` existe pero **solo contiene su SQL de cimientos** — no hay app Next.js
+  todavía, ni `package.json`, ni `CLAUDE.md` propio.
+
+### ✅ Hecho ya en `central` (19/08/2026, PR #1489) — sin depender de Manuel
+- **Schema `seguros` creado** y **rol `prisma_seguros`** (LOGIN + BYPASSRLS, **sin `CREATE`**), en
+  `apps/asegura/prisma/sql/2026-08-19_asegura_bootstrap.sql`. Aplicado por MCP y verificado.
+- El rol está **inerte a propósito: sin contraseña**. No puede conectarse hasta que Alberto ejecute
+  `ALTER ROLE prisma_seguros WITH PASSWORD '…'`. Sobre `public` solo tiene **SELECT** de `cuentas`,
+  `sociedades` y `negocios` (mínimo privilegio, lección de `prisma_almacen`).
+- **Cero tablas.** Y eso es «sin inventariar», no «no hay»: el modelo de datos vive en el sistema de
+  Manuel. La Fase 1 es la que lo cierra.
 
 ### 🚧 Frontera con lo que YA existe (no confundir, no duplicar)
 `apps/plataforma` ya tiene `/correduria` + `lib/correduria.ts` + `app/api/correduria/*` + CIMA/TIREA.
@@ -44,6 +85,12 @@ Eso es la **contabilidad de las comisiones cobradas** de ASegura S.L. (CS-F/0170
 Lo de Manuel es la **operativa**: clientes, pólizas, siniestros, vencimientos, integraciones con
 aseguradoras. Conviven. Que plataforma consolide leyendo `seguros.*` (como ya hace con `rrhh.*`) o por
 puerto HTTP es una **fase posterior**, fuera del alcance del PR de traspaso.
+
+**Lo que esa fase posterior arregla, para no perderlo de vista:** hoy `/correduria` **adivina la
+compañía por el concepto bancario** y arrastra una fila «Otras» poco fiable. Con la cartera real
+cargada deja de adivinar: se cruza cada ingreso contra las pólizas. Es la ganancia concreta del
+traspaso para lo que ya existe — pero se hace **después** de que los datos estén dentro y verificados,
+no durante.
 
 ---
 
@@ -81,10 +128,29 @@ código nuevo de fontanería.
 
 ---
 
-## 🧩 GitHub: por qué NO se hace igual que Supabase y Vercel
+## 🧩 GitHub: el repo externo, y por qué NO se hace igual que Supabase y Vercel
+
+### Estado real del acceso (comprobado, no supuesto)
+
+| Cosa | Estado |
+|---|---|
+| El repo | **`manuelsuarez/asegura`** en GitHub. **787 commits, 258 ramas**, suite e2e, tickets de Linear (`LOO-xxx`), desplegado en `asegura.vercel.app`. No es un prototipo: es un proyecto con historia |
+| Invitación a Alberto | Enviada el **12/08/2026** (correo de `noreply@github.com`) como colaborador. **Sin aceptar** — no aparece entre los repos accesibles |
+| Acceso de Claude a ese repo | **NO, y no se puede arreglar desde aquí.** La app de Claude solo está instalada en `albertosuarezgutierrez-gif`, y una sesión no admite añadir repos de otro dueño (`add_repo` → *cross-tier adds are not supported*) |
+
+**El rodeo mientras siga bloqueado:** `docs/ASEGURA-PROMPT-CHROME.md` es un prompt listo para que
+**Claude Chrome** saque el inventario del repo por el navegador —Alberto sí entra como colaborador— y
+lo devuelva aquí. No sustituye al acceso real, pero desbloquea el inventario sin esperar a Manuel.
+
+**Y un dato que falta y decide bastante:** **en qué plataforma se desarrolló** (Lovable / Bolt /
+Base44 / Replit / Next.js a mano). Determina si el Supabase es de Manuel o es el que le da la
+plataforma, y si el código exportado es directamente usable o hay que reescribir el andamiaje.
+
+### Por qué el código no viaja como repo
+
 
 Los otros dos activos se **copian**. El código **no se transfiere como repo**: entra como carpeta
-`apps/seguros` dentro de `central`. Un repo suelto más sería justo lo contrario de la matriz — ya pasó
+`apps/asegura` dentro de `central`. Un repo suelto más sería justo lo contrario de la matriz — ya pasó
 con `house-sevillana-landing`, que vivía fuera y por eso era invisible al leer el monorepo.
 
 Y hay una regla dura: **se importa el árbol de trabajo, SIN la historia git.** Precedente del
@@ -114,8 +180,14 @@ un cron, una sincronización — antes de darlo por muerto.
 
 ## 📩 Qué pedirle a Manuel
 
-> ⚠️ Regla del repo: no se envía nada a terceros sin autorización explícita de Alberto para ese envío
-> concreto. Este texto está preparado, **no enviado**.
+> ✅ **ENVIADO por WhatsApp el 20/08/2026** (lo envió Alberto). La Fase 0 deja de ser el bloqueo:
+> ahora se espera respuesta de Manuel. El texto se conserva abajo tal cual se mandó, como referencia
+> de qué se le pidió exactamente.
+>
+> 📄 **Falta entregarle el documento que le promete el punto 6**: el contrato de encargado de
+> tratamiento. Borrador en **`docs/CONTRATO-ENCARGADO-TRATAMIENTO-MANUEL.md`** — pendiente de rellenar
+> quién firma como responsable, de revisión por la asesoría, y del visto bueno de Alberto antes de
+> enviarlo (regla del repo: ninguna comunicación a terceros sin autorización para ese envío concreto).
 
 ### Lo más fácil para Manuel: que dé ACCESO, no que haga TAREAS
 
@@ -316,9 +388,9 @@ pg_dump --no-owner --no-acl --schema=seguros \
 
 ---
 
-## Fase 3 — El código como vertical `apps/seguros`
+## Fase 3 — El código como vertical `apps/asegura`
 
-Molde vivo: `apps/mariscos` (PR #1055). Ficheros obligatorios dentro de `apps/seguros/`:
+Molde vivo: `apps/mariscos` (PR #1055). Ficheros obligatorios dentro de `apps/asegura/`:
 
 - `package.json` — deps `@central/*` con **`workspace:*`**, nunca `file:`.
 - `vercel.json` — 🚨 **el `ignoreCommand` es obligatorio desde el primer commit.** Sin él, como todos
@@ -326,7 +398,7 @@ Molde vivo: `apps/mariscos` (PR #1055). Ficheros obligatorios dentro de `apps/se
   ~600 US$/mes, PR #904):
   ```json
   {
-    "ignoreCommand": "node ../../scripts/vercel-ignore-build.mjs apps/seguros",
+    "ignoreCommand": "node ../../scripts/vercel-ignore-build.mjs apps/asegura",
     "buildCommand": "prisma generate && next build",
     "installCommand": "npx --yes pnpm@10.33.0 install --no-frozen-lockfile",
     "framework": "nextjs"
@@ -339,7 +411,7 @@ Molde vivo: `apps/mariscos` (PR #1055). Ficheros obligatorios dentro de `apps/se
 - `prisma/schema.prisma` con `schemas = ["seguros","public"]`. Se puede generar con `prisma db pull`
   contra la BD ya migrada en vez de escribirlo a mano.
 - `lib/{db,auth,session}.ts` — patrón de `apps/mariscos/lib/`.
-  🚨 Secreto de sesión (`SEGUROS_SESSION_SECRET`) **sin fallback a literal**: usar la guarda multilínea
+  🚨 Secreto de sesión (`ASEGURA_SESSION_SECRET`) **sin fallback a literal**: usar la guarda multilínea
   de `apps/mariscos/lib/auth.ts`, que es la única forma que no dispara `test/regression-secrets.test.ts`.
 - `CLAUDE.md` propio — lo exige el guardián `appsSinClaudeMd` (`scripts/auditar-estructura.mjs:397`).
 
@@ -354,19 +426,19 @@ Molde vivo: `apps/mariscos` (PR #1055). Ficheros obligatorios dentro de `apps/se
 póliza, vencimientos), baja a `packages/module-seguros` y la app la consume por adaptador, igual que
 `apps/ialimp/lib/adapters/crm.ts` implementa el puerto de `packages/module-crm`.
 
-**Registros fuera de `apps/seguros/`** (si falta alguno, la app queda a medias en el sistema — a
+**Registros fuera de `apps/asegura/`** (si falta alguno, la app queda a medias en el sistema — a
 `mariscos` todavía le faltan cuatro):
 
 | Fichero | Qué añadir |
 |---|---|
-| `.github/workflows/tests.yml` (~l.56) | `seguros` en la matriz de `typecheck` |
+| `.github/workflows/tests.yml` (~l.56) | `asegura` en la matriz de `typecheck` |
 | `CLAUDE.md` (raíz) | bullet en la lista de verticales |
 | `MATRIZ.md` | árbol ASCII (~l.34) **y** tabla de verticales (~l.50) |
 | `docs/ESTRUCTURA.md` | fila en la tabla de apps |
-| `docs/FUENTES-DE-VERDAD.md` | `apps/seguros/CLAUDE.md` → `apps/seguros/**` |
+| `docs/FUENTES-DE-VERDAD.md` | `apps/asegura/CLAUDE.md` → `apps/asegura/**` |
 | `apps/plataforma/lib/estructura.ts` | entrada en el array `VERTICALES` |
 | `.claude/skills/central-maestro/SKILL.md` | fila de enrutado + mención en el bloque de BD/roles |
-| `.claude/skills/seguros-maestro/SKILL.md` | skill router de la vertical (nueva) |
+| `.claude/skills/asegura-maestro/SKILL.md` | skill router de la vertical (nueva) |
 | `docs/CONTEXTO-SESIONES.md` | entrada de la sesión |
 | — | regenerar con `pnpm auditar` |
 
@@ -376,11 +448,11 @@ póliza, vencimientos), baja a `packages/module-seguros` y la app la consume por
 
 ## Fase 4 — Vercel y proveedores externos
 
-1. Proyecto nuevo en `pisos-turisticos-projects`, **Root Directory `apps/seguros`**, install
+1. Proyecto nuevo en `pisos-turisticos-projects`, **Root Directory `apps/asegura`**, install
    `npx --yes pnpm@10.33.0 install --no-frozen-lockfile`.
 2. Envs: `DATABASE_URL` / `DIRECT_URL` por el pooler con el rol propio
    (`prisma_seguros.wswbehlcuxqxyinousql@aws-0-eu-west-1.pooler.supabase.com`, 6543 pooled
-   `?pgbouncer=true` / 5432 directa), `SEGUROS_SESSION_SECRET`, y una por integración externa.
+   `?pgbouncer=true` / 5432 directa), `ASEGURA_SESSION_SECRET`, y una por integración externa.
 3. **Rotar todas las credenciales de proveedores.** Han vivido en la cuenta y el historial de Manuel;
    el traspaso es el momento natural de cambiarlas. Donde el proveedor permita cuenta propia, dar de
    alta la de Alberto en vez de heredar la de Manuel.
@@ -400,9 +472,9 @@ póliza, vencimientos), baja a `packages/module-seguros` y la app la consume por
 2. **Conexión real de la app**: `psql` con la cadena de `prisma_seguros` sobre el pooler y
    `select count(*)` en tres tablas. Tiene que funcionar **sin** ser `postgres`.
 3. **Repo**: `pnpm test` (guardianes de secretos, scope `@central/*`, estructura generada,
-   `vercel-ignore-build`), `pnpm auditar:check`, y el `typecheck` de la matriz para `seguros`.
-4. **Build**: preview de Vercel en verde desde `apps/seguros`, y comprobar que un commit que solo toca
-   `apps/seguros/` **no** dispara builds de las otras apps.
+   `vercel-ignore-build`), `pnpm auditar:check`, y el `typecheck` de la matriz para `asegura`.
+4. **Build**: preview de Vercel en verde desde `apps/asegura`, y comprobar que un commit que solo toca
+   `apps/asegura/` **no** dispara builds de las otras apps.
 5. **Funcional**: login, alta de póliza y **una llamada real a cada integración externa** con las
    credenciales rotadas. Una integración que no se ha probado no está migrada, está sin comprobar.
 6. **Comparación lado a lado**: la app de Manuel todavía viva junto a la nueva, misma consulta en
@@ -413,14 +485,18 @@ póliza, vencimientos), baja a `packages/module-seguros` y la app la consume por
 ## Orden de ejecución
 
 ```
-0. Mensaje a Manuel                 → lo envía Alberto       [BLOQUEA TODO LO DEMÁS]
+0. Mensaje a Manuel                 → ✅ enviado 20/08/2026    [esperando su respuesta]
 1. Inventario + medición            → sección nueva en este doc + decisión free/Pro
 2. Schema `seguros` + rol + volcado → datos dentro de `central`
-3. apps/seguros + registros + skill → PR draft
+3. apps/asegura + registros + skill → PR draft
 4. Proyecto Vercel + envs rotadas   → preview verde
 5. Verificación end-to-end          → luz verde a Manuel
 6. Transferencia del repo + archivo → lo ÚLTIMO (le corta el despliegue)
 ```
+
+**Lo que bloquea hoy es la respuesta de Manuel**, no el mensaje. Lo único que se puede adelantar sin
+él es el inventario del repo por Claude Chrome (`docs/ASEGURA-PROMPT-CHROME.md`) y el contrato de
+encargado de tratamiento (`docs/CONTRATO-ENCARGADO-TRATAMIENTO-MANUEL.md`).
 
 Las fases 1 y 3 pueden solaparse en cuanto haya acceso. La 2 necesita el volcado definitivo; la 4
 necesita la 2 y la 3. **La 6 va después de la 5, siempre**: mientras el traspaso no esté verificado,

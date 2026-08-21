@@ -32,6 +32,48 @@
 
 ---
 
+### 🔧 (21/08/2026) Auditoría ligera: PR #1514 desatascado, heartbeat 12+13/25 ✅
+Pasada rutinaria sin hallazgos de memoria/skills (`docs/SKILLS.md` y `FUENTES-DE-VERDAD.md` al
+día). Único hallazgo: **PR #1514** (carril 2 del 20/08, monitor de `paper_tracker`) llevaba ~24h en
+conflicto — el PR #1505 (libro de trading) añadió una entrada hermana al mismo array en
+`latidos.ts`/`agentes-latido/route.ts`. Conflicto de inserción pura: fusionado `main`, conservadas
+ambas entradas, `latidos.test.ts` 9/9 verde, empujado a la rama existente (sin PR nuevo). Heartbeat,
+backlog de PRs y `rutinas-automerge.yml` sin más hallazgos. `sivra_canal`: su próxima pasada (07:45
+UTC) aún no ha corrido desde el fix del PR #1529/#1530; a revisar mañana, no es hallazgo hoy.
+
+### 🛡️ (20/08/2026) Correduría: había DOS planes para lo mismo con dos nombres — fundidos en uno
+Dos sesiones del mismo día planificaron el traspaso del CRM de Manuel sin verse: `docs/TRASPASO-CORREDURIA.md`
+(vertical `apps/seguros`, #1532) y `docs/ASEGURA-MIGRACION.md` (vertical `apps/asegura`, #1489). Ambos
+mergeados → la siguiente sesión habría leído el que le tocara y hecho lo contrario que la anterior.
+**Unificado en `docs/TRASPASO-CORREDURIA.md`** (doc único; el otro absorbido y borrado) con enrutado
+coherente en `central-maestro` y `FUENTES-DE-VERDAD.md`. **Nombre bueno: `apps/asegura`** (la marca) —
+schema y rol siguen siendo `seguros`/`prisma_seguros` (el dominio, y además ya aplicados en la BD).
+🚨 **La lección: un doc duplicado no da error, da instrucciones contradictorias.** Antes de escribir un
+plan nuevo, grep del dominio en `docs/` — el coste de no hacerlo lo paga la sesión siguiente.
+Contrato de encargado (RGPD art. 28.3): responsable decidido = **Alberto persona física**, «Grupo ASegura»,
+fuero Sevilla. **NIF y domicilio a propósito en blanco** — un identificador legal no se escribe de memoria.
+
+### 🧭 (20/08/2026) El índice que usa `code-map` llevaba horas desfasado en `main` — y eso no se ve
+`pnpm auditar:check` estaba en ROJO sobre `main`: #1536/#1550/#1551 son posteriores a la última
+regeneración (#1547) y ninguno rehizo la radiografía. Lo destapé verificando el PR del traspaso, y
+antes de tocar nada comprobé **en un worktree sobre `origin/main`** que el fallo era de `main` y no
+del PR — si no, lo habría "arreglado" dentro de un PR de docs y el hallazgo se habría enterrado.
+🚨 **Un índice desfasado no falla ruidosamente: manda a la línea equivocada**, que para `code-map` es
+peor que no tener índice (acota mal y encima con confianza). El gate en rojo es la única señal, así
+que dejarlo pasar «porque es un fichero generado» normaliza el rojo y lo vuelve invisible.
+🚨 **PERO regenerarlo DESDE UN PR es una carrera que se pierde, y la perdí:** el PR #1559 generó el
+fichero sobre `c5d7af05` y, mientras esperaba CI, se mergeó **#1560** (que añade `pideCaptcha`) → mi
+snapshot **llegó ya desfasado** y `main` siguió en rojo tras mergearlo. No es un descuido: en un repo
+con este tráfico, el índice solo es correcto si se regenera **SOBRE `main`, después del último
+merge** — que es justo lo que hace la rutina de auditoría (`chore(auditoría): regenerar radiografía
+[skip vercel]`, ver #1547 y #1554). **Lección: no persigas este gate desde un PR.** Si está rojo,
+la pregunta correcta no es «lo regenero yo» sino «¿está corriendo la rutina que lo mantiene?».
+(La comparación IGNORA `sha` y `generadoEn` a propósito —`stableMapa`, línea 443— así que un rojo
+siempre es deriva REAL de firmas, nunca churn de cabecera.)
+**Hueco aparte que destapó el script y NO se toca**: faltan `almacen`, `housesevillana` y `mariscos`
+en el array `VERTICALES` de `apps/plataforma/lib/estructura.ts` — exige decidir `sector`/`desc` de
+cada una, es criterio de Alberto.
+
 ### 🗝️ (20/08/2026) El agente de huéspedes NO tenía ni un dato del piso: la guest app de Smoobu SÍ se puede leer
 - Alberto, del hilo del Dúplex con Samy: «¿tiene acceso a todos los mensajes? ¿puede entrar en la url?».
   Diagnóstico: `mensajes_guia_cache` con **0 filas desde que existe** — `guia.ts` bajaba el HTML del
@@ -97,6 +139,21 @@
   catastral — STS 15/09/2021) y si entraron las limpiezas (~1.800€/año). Rectificables 2024-25 si
   fallan. Validación final: Asecon.
 
+### 🛑 (20/08/2026) El login automático del Portal NO es viable: 2FA y después CAPTCHA — PRs #1548→#1560
+- Se construyó entero (login, lectura del código por IMAP, segundo POST) y se probó contra producción. El
+  Portal cerró la puerta en dos escalones: **2FA** en la única vía automatizable (usuario+contraseña), y
+  después **CAPTCHA** tras la ráfaga de intentos. **No se resuelve el captcha**: automatizar el acceso
+  propio es una cosa y saltarse un «demuéstrame que eres una persona» es otra; además el escalón siguiente
+  es el bloqueo de la cuenta. `captcha` y `rechazada` no se reintentan y avisan por Telegram.
+- El lector sigue en ANÓNIMO, honesto: con muro dice «identifícate», no «no hay documentos».
+- **Lo que sí sirve:** Alberto entró a mano con Claude Chrome y bajó **18 documentos de las 9 fichas en dos
+  minutos**. Solo Barbate (265289) no publica certificación de cargas. **PENDIENTE: el buzón de Drive** para
+  que el lector procese esos PDFs — ese es el camino, no el login.
+- 🚨 Dos bugs propios de método: (1) el detector buscaba «Cerrar sesión» y el Portal dice **«Desconectar»**,
+  con el fixture escrito con la misma suposición que el código → suite en verde sobre un detector muerto;
+  (2) el margen de frescura del OTP (30 s) era **más ancho que la distancia entre intentos** (11 s) y se
+  tragaba el código anterior. Un margen de tolerancia es una puerta: se mide contra la frecuencia real.
+
 ### 🔓 (20/08/2026) El cron ya se identifica en el Portal del BOE — y el muro cambia de significado
 - Alberto: «ya tengo usuario en el BOE con mi firma digital». Comprobado en `/acceso.php`: de las tres vías
   (certificado · **usuario+contraseña** · Cl@ve) solo la segunda sirve a un proceso; `POST /id/login.php`
@@ -114,7 +171,7 @@
 Manuel desarrolló el CRM en SU Supabase y SU Vercel; el negocio es de Alberto y hay que traérselo.
 Plan cerrado en `docs/TRASPASO-CORREDURIA.md`. Decisiones: BD → **schema `seguros` en `central`**
 (no un proyecto aparte: principio de BD única de `MATRIZ.md`) con rol `prisma_seguros`; código →
-vertical **`apps/seguros`** (molde `apps/mariscos`, `ignoreCommand` desde el primer commit); free vs.
+vertical **`apps/seguros`** ⚠️ *(nombre SUPERADO el mismo día: la vertical es `apps/asegura` — ver entrada de arriba)* (molde `apps/mariscos`, `ignoreCommand` desde el primer commit); free vs.
 Pro se decide **midiendo el dump**, no con la estimación de ~200 MB (hoy `central` va por ~180/500).
 **No** se transfiere su proyecto Supabase ni se monta MCP/API a medida: para inspeccionar, Manuel
 invita a Alberto a SU organización (el conector de Supabase ya lo ve); para copiar, `pg_dump | psql`
@@ -129,8 +186,14 @@ ninguno bloqueante: cada uno cae a su fila de la opción B.
 No confundir con `/correduria` de plataforma, que es la contabilidad de comisiones y NO se toca:
 esa ambigüedad queda enrutada en la skill `central-maestro` (+ fila en `docs/FUENTES-DE-VERDAD.md`),
 con el aviso de que «no está en el repo» ≠ «no existe» (lección de la landing de House Sevillana).
-Pendiente: el mensaje a Manuel está redactado en el doc pero **lo envía Alberto** — hasta entonces
-no se puede avanzar de fase.
+**Mensaje ENVIADO por WhatsApp el 20/08/2026**, así que la Fase 0 ya no bloquea: se espera respuesta.
+Lo siguiente que le debemos es el documento que le promete el punto 6 — borrador del contrato de
+encargado de tratamiento en `docs/CONTRATO-ENCARGADO-TRATAMIENTO-MANUEL.md`, **sin firmar y sin
+enviar**: falta decidir **quién firma como responsable** (¿ASegura S.L. o Alberto persona física? —
+depende de a nombre de quién esté la cartera, no verificado) y que lo revise la asesoría. Ojo: firmarlo
+ahora NO legaliza retroactivamente el periodo en que Manuel ya tuvo los datos; documenta la relación y,
+sobre todo, fija entrega + borrado acreditado. Las categorías de datos del contrato se cierran con el
+inventario de la Fase 1, no antes.
 ### 🔨 (20/08/2026) Las subastas ya cuentan CÓMO ACABARON, y el techo de puja se contrasta con remates reales — PR #1536
 - **TRES sesiones distintas fueron al mismo sitio el mismo día**: esta, #1537 (pujas `ver=5` + avisos
   sobre el radar) y #1540/#1548 (login e identificación en el Portal con 2FA). Cada vez que `main`
@@ -305,6 +368,19 @@ no se puede avanzar de fase.
   escribía su latido pero nadie lo vigilaba — añadido a `AGENTES_VIGILADOS`/`PROBES`.
 - Informe completo en `docs/AUDITORIA-2026-08.md` (actualización 2026-08-20).
 
+### 🛡️ (19/08/2026) Grupo Asegura — plan para traer la correduría al monorepo
+- Nuevo `docs/ASEGURA-MIGRACION.md`. El desarrollo externo es el repo **`manuelsuarez/asegura`**
+  (invitación de colaborador del 12/08 en el Gmail, **sin aceptar**); Claude NO puede leerlo desde
+  esta sesión (app instalada solo en `albertosuarezgutierrez-gif`, `add_repo` cross-owner bloqueado).
+- **Decisión: NO se crea proyecto Supabase nuevo** aunque el 2º free cueste 0 €/mes — los free se
+  pausan a los 7 días de inactividad y las cuotas son por organización. Va como schema **`seguros`**
+  en `central` + rol `prisma_seguros`, app `apps/asegura`, marca por `@central/brand`.
+- Bloqueantes de Alberto: **transferir** el repo a su cuenta (es un Next.js hecho con Claude Code:
+  787 commits, 258 ramas, e2e, tickets Linear LOO-xxx, desplegado en `asegura.vercel.app`; el Vercel
+  y el Supabase también son de Manuel).
+- **Hecho sin depender de él:** schema `seguros` + rol `prisma_seguros` creados en `central` (inerte,
+  sin password; SELECT en cuentas/sociedades/negocios) — `apps/asegura/prisma/sql/2026-08-19_asegura_bootstrap.sql`.
+  Y `docs/ASEGURA-PROMPT-CHROME.md` para inventariar el repo con Claude Chrome. PR #1489.
 ### 🛤️ (19/08/2026) El raíl aguanta en vivo — vigilancia diaria de precios BORRADA
 - Verificado sobre la pasada real de las 20:31 UTC. El arreglo (#1497, `1f5a4d0`) estaba en producción
   desde las **20:13:18 UTC**, 18 min antes (deploy de `a6ef85ab`, del que `1f5a4d0` es ancestro).

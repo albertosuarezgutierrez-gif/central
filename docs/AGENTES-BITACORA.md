@@ -15,6 +15,15 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-21 · mercado-booking** · hizo: pasada de 24 ventanas de mercado (plan `?max=24`,
+  488 candidatas, 464 recortadas por el tope — mismo aviso arrastrado que ayer) — 237 comps reales
+  escritos vía Booking.com MCP, las 24 ventanas con respuesta (0 `sinRespuesta`). Paso 2-bis
+  (escaparate propio) completo: 4/4 ventanas medidas (Luxury Busto 128,78€/n, House Sevillana
+  464,80€/n, Busto Reform 94,65€/n, Dúplex center 112,54€/n), ingest reconoce cada una como propia
+  (`propios[]` → `pricing_escaparate`), ninguna contaminó `market_rates`. 3 anuncios propios
+  descartados al aparecer sueltos en ventanas de mercado (HOUSE SEVILLANA 6 habitaciones en las
+  3 ventanas aforo 12 de eventos de diciembre: 04-06, 06-08 y 07-09) — no se escribieron como comps.
+  Latido `ok:true`. dudas: —; fallos: —; PRs/commits: — (solo bitácora + BD).
 - **2026-08-20 · facturas-correo** · hizo: preflight canal alerta OK (200); Vía B sana (1 día,
   última copia `_buzon_pdf` 19/08); backlog `PDF-pendiente`/`Revisar` vacío; barrido Paso 4.0
   (`v_facturas_sin_cargo`) sin filas `sin_revisar` (las 8 pendientes ya estaban `revisada_sin_cargo`,

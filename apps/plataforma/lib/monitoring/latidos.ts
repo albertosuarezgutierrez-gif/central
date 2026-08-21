@@ -290,4 +290,22 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       '«pricing_eventos_auto ILEGIBLE», corrió pero con los centinelas de evento apagados. ' +
       'Huella: agente_latidos.sivra_pricing_guard.',
   },
+  {
+    id: 'trading_operaciones',
+    etiqueta: '📒 Libro de operaciones del bróker (pasada diaria, paso 1d)',
+    // La pasada corre L-V ~20:15 UTC, así que el hueco legítimo más largo es viernes → lunes = 72 h.
+    // 80 h evita saltar todos los lunes sin avería (mismo criterio que trading_watchdog).
+    maxHoras: 80,
+    nota:
+      'El libro de ejecuciones no se está alimentando. NO es «no has operado»: la huella se escribe ' +
+      'en CADA pasada, incluso cuando IBKR devuelve cero operaciones nuevas — precisamente para que ' +
+      'un mes tranquilo no se confunda con un sincronizador roto. Mientras esté mudo, el cálculo ' +
+      'fiscal (FIFO, regla de los dos meses) trabaja sobre un libro incompleto, y una ejecución que ' +
+      'falta cambia la renta. Urge además por una razón con fecha: IBKR solo sirve unos cuatro ' +
+      'trimestres hacia atrás por MCP, así que lo que no se vuelque a tiempo NO se puede recuperar ' +
+      'después. Si el detalle dice «sin respuesta del conector», IBKR no contestó (NO es «no hubo ' +
+      'operaciones»). Revisa en claude.ai → Rutinas que la pasada corre con el conector de IBKR ' +
+      'adjunto y que su env lleva PLATAFORMA_URL + ALERTA_TOKEN. ' +
+      'Huella: agente_latidos.trading_operaciones.',
+  },
 ]
