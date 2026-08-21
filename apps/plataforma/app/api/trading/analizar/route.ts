@@ -7,6 +7,7 @@ import { mensajeCompraPaper } from '@/lib/trading-notify'
 import {
   indicadoresDe, torneo, dimensionar, abrir,
   superaConcentracion, superaLimiteOps, earningsInminente, bajoTendencia, factorFlojo, regimenMercado, ajustesDeStats, rvol, confirmaVolumen,
+  evaluarStop, tamanoPorRiesgo,
 } from '@central/module-trading'
 import type { Vela, Fundamentales } from '@central/module-trading'
 import { datosYahoo, lineaEarningsProximos, type FechaEarnings } from '@/lib/trading/earnings-yahoo'
@@ -131,7 +132,18 @@ export async function POST(req: NextRequest) {
     await tgSend(`⚠️ <b>Trading ${fecha}:</b> precio no fiable, esos símbolos NO se analizan hoy.\n${aviso}`).catch(() => {})
   }
 
-  const ideas: Array<{ simbolo: string; estrategia: string; direccion: string; confianza: number; operada: boolean; motivo?: string; rvol?: number | null; volConfirma?: string; factorScore?: number }> = []
+  type StopViable = {
+    distanciaPct: number
+    veredicto: 'decorativo' | 'ajustado' | 'razonable'
+    saltaPorRuido: number
+    saltaPorHueco: number
+    /** Distancia en múltiplos de ATR, `null` si no se pudo calcular. */
+    sugeridaPct: number | null
+    /** Títulos que caben arriesgando el 1% del NAV a esa distancia. `null` = no calculable. */
+    titulosMax: number | null
+    motivo: string
+  }
+  const ideas: Array<{ simbolo: string; estrategia: string; direccion: string; confianza: number; operada: boolean; motivo?: string; rvol?: number | null; volConfirma?: string; factorScore?: number; stopViable?: StopViable | null }> = []
 
   for (const s of simbolos) {
     if (!s.velas?.length) continue
@@ -160,6 +172,27 @@ export async function POST(req: NextRequest) {
     // Barreras de riesgo.
     const cantidad = dimensionar(nav, precioRef, precioRef - 2 * (ind.atr14 ?? precioRef * 0.02), 0.01)
     const valorPos = cantidad * precioRef
+
+    // 🕳️ ¿CABE el stop en el ruido de ESTE valor? Medido sobre el libro real (569 ejecuciones): las 248
+    // ventas por STOP de 2025+2026 suman −26.538,64 USD y las 29 a mercado/límite +6.071,19 USD. La
+    // mediana de distancia era 1,30%, por debajo del hueco de apertura típico de esos mismos valores:
+    // el stop no medía riesgo, medía impaciencia, y su brevedad permitía posiciones enormes.
+    // Esto NO bloquea nada (el stop del paper ya es 2×ATR, que suele ser holgado): viaja en la idea para
+    // que el aviso diga la distancia mínima y el tamaño máximo ANTES de que Alberto teclee la orden.
+    // `null` cuando no hay historia suficiente — y entonces no se afirma nada sobre el riesgo.
+    const distanciaStopPct = ((2 * (ind.atr14 ?? precioRef * 0.02)) / precioRef) * 100
+    const ev = evaluarStop(s.velas, distanciaStopPct)
+    const stopViable = ev
+      ? {
+          distanciaPct: Number(distanciaStopPct.toFixed(2)),
+          veredicto: ev.veredicto,
+          saltaPorRuido: Number(ev.saltaPorRuido.toFixed(0)),
+          saltaPorHueco: Number(ev.saltaPorHueco.toFixed(1)),
+          sugeridaPct: ev.sugerida === null ? null : Number(ev.sugerida.toFixed(2)),
+          titulosMax: tamanoPorRiesgo(precioRef, distanciaStopPct, nav * 0.01),
+          motivo: ev.motivo,
+        }
+      : null
     // Posición ya abierta = barrera, ANTES de registrar nada: un reintento de la misma pasada (o una
     // señal repetida en días siguientes) no debe crear otra orden BUY (el 04/08 quedaron 5 idénticas,
     // y cada duplicada inflaba opsPorNombre para la barrera de límite de ops).
@@ -203,7 +236,7 @@ export async function POST(req: NextRequest) {
       // Aviso inmediato por Telegram (aquí la posición es siempre nueva: `yaAbierta` es barrera arriba). Best-effort.
       await tgSend(mensajeCompraPaper(fecha, { simbolo: s.simbolo, cantidad, precio: precioRef, estrategia: ganadora.estrategia, confianza: ganadora.confianza, stop: pos.stop, pctNav: valorPos / nav })).catch(() => {})
     }
-    ideas.push({ simbolo: s.simbolo, estrategia: ganadora.estrategia, direccion: ganadora.direccion, confianza: ganadora.confianza, operada: !motivo, motivo, rvol: volumenRel, volConfirma: confirmaVolumen(ganadora.direccion, volumenRel), factorScore: s.factorScore })
+    ideas.push({ simbolo: s.simbolo, estrategia: ganadora.estrategia, direccion: ganadora.direccion, confianza: ganadora.confianza, operada: !motivo, motivo, rvol: volumenRel, volConfirma: confirmaVolumen(ganadora.direccion, volumenRel), factorScore: s.factorScore, stopViable })
   }
 
   // 📅 Aviso diario de resultados inminentes en la watchlist (el digest del radar es semanal y los

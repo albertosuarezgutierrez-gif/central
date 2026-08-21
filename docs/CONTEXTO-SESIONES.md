@@ -32,6 +32,16 @@
 
 ---
 
+### 💸 (21/08/2026) Los insiders y los 13F NO hay que comprarlos: ya estaban montados y gratis
+Alberto preguntó el precio de las fuentes de datos y la respuesta correcta es **0 €**. El MCP
+`Datos_financieros` (financialdatasets.ai) está conectado pero devuelve `Your current balance is $0.00`
+—sin saldo, no roto— y lo que vendería ya lo cubren piezas propias en Vercel: **Form 4 →
+`/api/trading/insiders`**, **13F → `/api/trading/gurus`** (Dataroma) y **fundamentales →
+`/api/trading/fundamentales`** (SEC XBRL, gratis). Lo de pago solo añadiría comodidad y `screen_stocks`.
+Anotado en la skill `trading-analista` (`seleccion-y-senales.md`) con el matiz de la regla de la casa:
+ese error significa «fuente sin saldo», **nunca «no hay datos de insiders»**. Queda pendiente de decidir
+si se recargan los 20 $ solo por el screener; hoy no hace falta para operar.
+
 ### 🔧 (21/08/2026) Auditoría ligera: PR #1514 desatascado, heartbeat 12+13/25 ✅
 Pasada rutinaria sin hallazgos de memoria/skills (`docs/SKILLS.md` y `FUENTES-DE-VERDAD.md` al
 día). Único hallazgo: **PR #1514** (carril 2 del 20/08, monitor de `paper_tracker`) llevaba ~24h en
@@ -60,6 +70,18 @@ ocupada = consigna, tareas al marcharse (aire/luces, ventanas, basura, avisar) y
 la ventana de las 12:00 con ocupación verificada** — nombrar una hora posterior es dinero y escala.
 Mergeado el 21/08 con CI en verde; la skill `sivra-maestro` (referencia del agente huésped) ya lleva
 `salida.ts`, `cierre.ts` y `coherencia.ts`, y el matiz de que el late check-out ya NO escala siempre.
+
+### 📒 (20/08/2026) Libro completo (569 ops) y la AUTOPSIA: la pérdida es el INTRADÍA, no los valores
+Mergeado el **#1505** y verificado en prod (401 sin token, 0 grants a `anon`, tests verdes). **Rescatadas
+las 114 ejecuciones de jul–sep/2025 que IBKR iba a dejar de servir** (el libro va ahora de 07/07/2025 a
+17/08/2026); cuadre: 22 de 25 símbolos netean 0 exacto — los 3 restantes son una posición que cruzó a Q4 y
+dos ventas cuyas compras son anteriores a lo que IBKR sirve (**BRZE y NKE se quedan sin coste de
+adquisición: FIFO incompleto ahí**). **Autopsia sobre el libro entero:** vender el MISMO día que compra →
+**−24.278,53 USD en 68 días**; vender otro día → **+3.811,08 USD en 74**. Los STOP de 2025+2026 (248 ventas)
+suman **−26.538,64 USD** y las 29 a mercado/límite **+6.071,19 USD**. Comisiones 542,14 USD y 8,3 M USD de
+volumen sobre ~33.400€: la rotación es el coste invisible. `riesgo-hueco` YA enganchado a `/analizar`
+(`stopViable` por idea) + paso 5-bis de la skill para que se cante. **Sigue pendiente:** `tipo_cambio` NULL
+en 568/569 filas y las acciones corporativas.
 
 ### 🛡️ (20/08/2026) Correduría: había DOS planes para lo mismo con dos nombres — fundidos en uno
 Dos sesiones del mismo día planificaron el traspaso del CRM de Manuel sin verse: `docs/TRASPASO-CORREDURIA.md`
@@ -2101,6 +2123,14 @@ Pendiente: que Alberto revise el spec → plan de implementación. Códigos/cred
     (PASO 0 no vio huella → pasada completa, sin duplicado). Ya no parece transitorio: si el
     disparo primario vuelve a fallar, Alberto abre ticket a soporte de claude.ai (la Rutina es de
     la UI, no editable por MCP).
+    **📒 Libro de operaciones (20/08, #1505 mergeado + #1570):** 569 ejecuciones (07/07/2025→17/08/2026),
+    sincronizador y vigía vivos, endpoint cerrado. El volcado que caducaba YA ESTÁ (114 ops de jul–sep/2025)
+    y `riesgo-hueco` ya viaja en `/analizar` (`stopViable`). Abiertos: (a) `tipo_cambio` NULL en 568/569
+    filas → sin cifra en euros para la asesoría; (b) sin acciones corporativas (el primer split con
+    posición abierta romperá el FIFO); (c) **BRZE y NKE tienen ventas sin compra en el libro** (anteriores
+    a lo que IBKR sirve) → su coste de adquisición hay que sacarlo de los extractos, no del bróker;
+    (d) decisión de Alberto pendiente: pagar fuentes (insiders/13F) o construirlas gratis contra SEC EDGAR
+    (verificado 20/08: `data.sec.gov` responde 200 desde cloud).
   - **Subastas:** lente 🌊 (costa norte + Matalascañas sin tope) MERGEADA y en prod (#1346/#1349/
     #1351/#1353); pestaña 🔥 Oportunidades rediseñada (#1358 — una tarjeta, chips homogéneos,
     €/m² siempre visible). 🟡 el dispatcher marca timeout en `subastas-mercado` si desborda 280 s
