@@ -16,6 +16,91 @@ Dos hechos condicionan todo el diseño:
 2. **SES se cae con frecuencia.** El sistema debe distinguir «pendiente porque el Ministerio no
    responde» de «pendiente porque nadie ha rellenado nada». Son dos acciones distintas.
 
+## 1.bis Estado verificado (20/08/2026)
+
+Probado contra el servicio **real** de SES, desde fuera del contenedor de desarrollo:
+
+- ✅ **TLS**: valida con la cadena FNMT versionada en el repo.
+- ✅ **Credenciales del servicio web de Busto Reform**: aceptadas (HTTP 200, no 401).
+- ✅ **`codigoArrendador`**: existe y **tiene habilitado el servicio web** (ni `10103` ni `10120`).
+- ✅ **Formato ZIP + Base64**: aceptado (ningún `10111`).
+- ✅ **Operación `C` (consulta)**: `codigo 0 / Ok`.
+- ❌ **Entorno de pruebas (`pre-ses`)**: caído, 502 a todo. Ver §4.5.
+
+Es decir: **todo el transporte está validado**. Lo que falta es el producto — recoger los datos
+del huésped, construir el parte y gestionar el ciclo.
+
+## 1.ter 🚨 Esto NO es un hueco vacío: hoy lo hace Chekin
+
+**Chekin está vivo en los cuatro pisos** y es el emisor real de los partes a SES hoy
+(confirmado por Alberto, 20/08/2026). El proyecto **no es «evitar la multa»** —eso ya está
+cubierto— sino **sustituir a Chekin**: dejar de pagar por check-in y quedarnos nosotros los
+datos del huésped. La urgencia baja; el listón de calidad sube, porque hay que igualar algo que
+ya funciona.
+
+### El riesgo que hay HOY, antes de tocar nada
+
+En Smoobu está activado «enviar datos de invitados automáticamente» hacia SES Hospedajes
+(visible en la configuración de Busto Reform). Si Chekin **también** envía, hay **dos emisores
+sobre el mismo establecimiento**, y de ahí salen dos escenarios, ambos malos:
+
+- **Los dos envían** → partes duplicados por estancia. El control de «lote duplicado» de SES
+  **no protege**: compara XML idénticos, y el de Smoobu no será byte a byte el de Chekin.
+- **Cada uno supone que envía el otro** → Smoobu no tiene documento, soporte ni fecha de
+  nacimiento (eso lo recoge Chekin), así que sus envíos podrían estar fallando en silencio o
+  mandando partes que SES rechaza. Un rechazo que nadie lee **es** no comunicar: infracción
+  grave.
+
+**Acción independiente de este proyecto y anterior a él:** mirar en el portal de SES el
+histórico de comunicaciones recibidas de cada piso — si llegan, cuántas por estancia y de quién.
+Hasta saberlo, «Busto Reform está ok» es una suposición, no un hecho.
+
+Y regla para nosotros: **un tercer emisor sobre el mismo establecimiento empeora el problema.**
+Nada nuestro envía de verdad hasta que el que sustituye esté apagado para ese piso.
+
+### Migración: el patrón PriceLabs, con una diferencia
+
+De PriceLabs se copia lo que lo hizo funcionar: **correr en paralelo con marcador** —
+`price_pricelabs` frente a `price_ours` guardados por fecha, midiendo cuál habría ganado antes
+de soltar nada— y **apagar poco a poco**.
+
+La diferencia: en pricing las dos propuestas pueden convivir porque solo una se aplica. **Aquí no
+se puede sombrear enviando**: dos partes reales son dos partes reales. Así que la sombra es de
+construcción, no de envío.
+
+| Fase | Chekin | Nosotros | Huésped |
+|---|---|---|---|
+| **1 · Sombra** | sigue enviando | exportamos de Chekin los datos de N estancias ya pasadas, construimos **nuestro** parte y lo validamos. **`SES_DRY_RUN`, no se envía.** | no se entera |
+| **2 · Paridad** | sigue enviando | comparamos campo a campo nuestro parte contra el que Chekin envió (portal SES / export de Chekin). Discrepancia = bug nuestro | no se entera |
+| **3 · Corte por piso** | **se apaga en ese piso** | quitamos el dry-run **solo ahí**, con una reserva concreta y vigilada | recibe nuestro enlace |
+| **4 · Repetir** | piso a piso | | |
+| **5 · Baja** | se cancela cuando el último piso esté migrado | | |
+
+La fase 1 no molesta a ningún huésped **a propósito**: mandar nuestro enlace mientras Chekin
+manda el suyo es pedirle a la misma persona que rellene dos formularios legales. Se trabaja sobre
+datos que Chekin ya recogió.
+
+El marcador de la fase 2, análogo al de pricing, es una tabla por estancia: campos que coinciden,
+campos que difieren, y campos que nosotros no supimos rellenar. Un piso pasa a fase 3 cuando
+acumula estancias con paridad completa — no cuando «parece que va».
+
+### Paridad con Chekin: qué hay que igualar antes de apagarlo
+
+⚠️ **Lista incompleta a propósito.** Chekin no se puede inspeccionar desde el contenedor de
+desarrollo (`guest.chekin.com` está bloqueado por el proxy de salida), así que esto **se completa
+mirando la cuenta real**, no de memoria ni por lo que se suponga que hace un producto así:
+
+- [ ] Campos exactos que pide su formulario al huésped.
+- [ ] Si hace OCR del documento y con qué calidad.
+- [ ] Si recoge firma, y a partir de qué edad.
+- [ ] Idiomas en los que sirve el formulario.
+- [ ] Qué manda a SES y qué se guarda él.
+- [ ] Si hace algo más que el parte: tasa turística, contrato, códigos de acceso, upsells.
+- [ ] Cuándo y cómo avisa al huésped, y con qué recordatorios.
+- [ ] Qué pasa cuando el huésped no rellena.
+
+Cada casilla sin marcar es una función que hoy tienes y que perderías el día del corte.
+
 ## 2. Decisiones tomadas
 
 | Decisión | Elegido | Descartado |
@@ -33,7 +118,15 @@ Dos hechos condicionan todo el diseño:
   con certificado digital).
 - **Envoltura:** SOAP `com:comunicacionRequest` → `<peticion>` con `<cabecera>`
   (`codigoArrendador`, `aplicacion`, `tipoOperacion` A/C/B, `tipoComunicacion` PV/RH) y
-  `<solicitud>`, que es el **XML real comprimido en gzip y codificado en base64**.
+  `<solicitud>`, que es el **XML real comprimido en ZIP y codificado en base64**.
+- 🚨 **ZIP, no gzip.** Verificado literal contra la guía oficial v3.1.2: *«Este fichero XML deberá
+  ser comprimido según el algoritmo ZIP y codificado en Base64»*, y el error `10111` es
+  *«Formato de solicitud incorrecto. Ha de ir comprimido (zip) y codificado en Base64»*. Son
+  formatos de contenedor distintos: `gzipSync` produce un stream gzip, no un fichero ZIP. Una
+  primera versión de este diseño usaba gzip y **todas sus peticiones habrían sido rechazadas**
+  con un 10111 que además parece un error de credenciales si no se lee el código.
+- **`tipoComunicacion` va en el alta (A) pero NO en la consulta (C).** La cabecera de C solo lleva
+  `codigoArrendador`, `aplicacion` y `tipoOperacion`.
 - **XML interior:** `ns2:peticion` (namespace `http://www.neg.hospedajes.mir.es/altaParteHospedaje`)
   → `<solicitud>` → `<codigoEstablecimiento>` + N `<comunicacion>`, cada una con `<contrato>`
   (referencia, fechaContrato, fechaEntrada/fechaSalida `AAAA-MM-DDThh:mm:ss`, numPersonas,
@@ -55,6 +148,95 @@ Dos hechos condicionan todo el diseño:
 - Dirección: `pais` en ISO-3166-1 alpha-3; si `pais` = `ESP`, `codigoMunicipio` del INE (5 dígitos,
   provincia + municipio) y **no** puede haber `codigoMunicipio` si el país no es España.
 
+### Consulta (C) y anulación (B) — estructura exacta
+
+Ambas son **asíncronas**: devuelven un `<lote>` que después se consulta con C.
+
+**Consulta**, XML interior (comprimido en ZIP + base64 dentro de `<solicitud>`):
+
+```xml
+<con:lotes xmlns:con="http://www.neg.hospedajes.mir.es/consultarComunicacion">
+  <con:lote>00000000-0000-0000-0000-000000000000</con:lote>
+</con:lotes>
+```
+
+**Anulación**:
+
+```xml
+<anul:comunicaciones xmlns:anul="http://www.neg.hospedajes.mir.es/anularComunicacion">
+  <anul:codigoComunicacion>44444444-4444-4444-4444-444444444441</anul:codigoComunicacion>
+</anul:comunicaciones>
+```
+
+🚨 **Código de lote ≠ código de comunicación.** Para anular hay que mandar el **código de
+comunicación**; mandar el de lote devuelve *«No existe una comunicación para ese código»*. Son
+dos UUID con la misma pinta, así que `ses_envios` guarda los dos por separado y con nombres que
+no se puedan confundir.
+
+⚠️ **Erratas en el XSD oficial, que NO hay que corregir en el parser**: la respuesta trae
+`<tipoComuniacion>` (sin la `c`) y `<resutadoComunicacion>` (sin la `l`). Están así en el
+esquema del Ministerio; «arreglarlas» rompe el parseo.
+
+### Límites y comportamiento del servicio
+
+- **100** comunicaciones por petición de alta (configurable por el Ministerio).
+- **10** lotes por consulta, **10** comunicaciones por consulta.
+- Anulación: la guía dice que hay límite pero **no da la cifra**.
+- **No hay cuota por minuto documentada** en la v3.1.2. Ausencia de documentación no es garantía
+  de que no exista: el cliente respeta un ritmo conservador igualmente.
+- **Un XML idéntico a uno anterior se rechaza como «Lote duplicado».** El control opera sobre
+  **el XML, no sobre el ZIP**: recomprimir el mismo contenido NO lo esquiva. Es una red de
+  seguridad contra el doble envío, pero **no sustituye a nuestra idempotencia** — y de hecho
+  estorba al reintento legítimo tras un timeout, donde no sabemos si SES llegó a procesarlo.
+  Ante un fallo de transporte hay que **consultar el lote** (operación C), no reenviar a ciegas.
+
+### Cómo se monta el ZIP: la guía no lo dice
+
+Verificado grepeando las 76 páginas: la guía repite tres veces el orden —**XML (UTF-8) → ZIP →
+Base64** → ese texto va en `<solicitud>`— y la tabla de campos tipa `solicitud` como `Base64`
+obligatorio. Pero **no documenta nada del interior del ZIP**: ni el nombre de la entrada, ni si
+admite más de una, ni el método (deflate vs store), ni si el Base64 puede llevar saltos de línea,
+ni si admite BOM, ni el tamaño máximo. El glosario define «ZIP» y «Base64» citando Wikipedia.
+
+Decisión tomada con la combinación más conservadora posible, y **ya validada contra el servicio
+real de producción el 20/08/2026**: SES devolvió `codigo 0 / Ok`, no un `10111`. Deja de ser un
+supuesto:
+
+| Parámetro | Elegido |
+|---|---|
+| Entradas en el ZIP | **una sola** |
+| Nombre de la entrada | `solicitud.xml` |
+| Método de compresión | **deflate** |
+| Codificación del XML | UTF-8 **sin BOM** |
+| Base64 | una sola línea, sin saltos |
+
+**Confirmado contra el servicio real**: una consulta construida así se acepta. Si alguna vez
+apareciera un `10111`, las variables a mover serían, en este orden: método (deflate → store),
+nombre de la entrada, y BOM.
+
+### Inconsistencias de la propia guía (no son erratas nuestras)
+
+- El ejemplo de error del Anexo I devuelve **`<codigoRetorno>109</codigoRetorno>`**, pero en la
+  tabla del apartado 5 ese error es el **10111**, con otra redacción, y **no existe ningún 109**.
+  El parser no debe asumir la longitud del código, y ante uno desconocido registra el valor
+  literal en vez de descartarlo.
+- La tabla de campos llama al campo **`arrendador`** (String(10)); todos los ejemplos SOAP usan
+  **`codigoArrendador`**. Se sigue el ejemplo.
+- Lo mismo con **`aplicación`** (con tilde en la tabla) frente a **`aplicacion`** en los ejemplos.
+  Se sigue el ejemplo.
+
+### Tablas maestras: se piden al servicio, no se cablean
+
+La guía documenta una operación **`catalogo`** que devuelve las tablas maestras vigentes:
+`SEXO`, `TIPO_DOCUMENTO`, `TIPO_PAGO`, `TIPO_PARENTESCO`, `TIPO_ESTABLECIMIENTO`,
+`TIPO_COLOR`, `TIPO_MARCA_VEHICULO`, `TIPO_PERMISO_CONDUCIR`, `TIPO_VEHICULO`. Sin parámetro
+devuelve la lista de tablas soportadas.
+
+Esto **sustituye** al plan inicial de cablear los códigos en el módulo: se vuelcan a BD en el
+alta y se refrescan periódicamente. Un catálogo cableado es un dato que caduca en silencio, que
+es justo el fallo que la regla del monorepo prohíbe. (El `codigoMunicipio` del INE **no** está
+entre las tablas maestras, así que ese sí sigue siendo tabla estática nuestra.)
+
 ## 4. Arquitectura
 
 ### 4.1 `packages/module-ses` (TS puro, portable)
@@ -69,7 +251,8 @@ consumirlo `apps/ia-rest` (hostelería) el día que haga falta.
 | `validar.ts` | **Helper puro y testeado.** `validarComunicacion(c) → ErrorValidacion[]`. Implementa todas las reglas de §3. Es la pieza que usa tanto el formulario del huésped (en vivo) como el envío (última barrera). |
 | `xml.ts` | `construirParteXml(solicitud)` → XML `altaParteHospedaje`; `envolverPeticion(cabecera, solicitudB64)` → SOAP. Escapado XML propio, sin dependencias. |
 | `xsd.ts` | Validación del XML generado contra el XSD oficial del Ministerio antes de enviar. |
-| `enviar.ts` | `enviarComunicacion(cfg, peticion, deps)`. gzip + base64 + POST con Basic. `fetch` **inyectable** para poder testear sin red. |
+| `zip.ts` | Escritor ZIP mínimo de una entrada (deflate + CRC-32), sin dependencias. Es el formato que exige SES; gzip **no** vale. |
+| `enviar.ts` | `enviarComunicacion(cfg, peticion, deps)`. ZIP + base64 + POST con Basic, sobre un agente HTTPS con la cadena FNMT. Cliente HTTP **inyectable** para poder testear sin red. |
 | `respuesta.ts` | Parsea la respuesta SOAP → `{ ok, loteId, codigoRetorno, errores[] }`. Distingue explícitamente **error de datos** (culpa nuestra, no reintentar igual) de **error de transporte/5xx** (SES caído, reintentar). |
 
 Los XSD oficiales se descargan del portal SES y se versionan dentro del módulo. *No se pueden
@@ -78,6 +261,14 @@ descargar desde el contenedor de desarrollo: el proxy de salida bloquea `*.mir.e
 ### 4.2 Base de datos (Supabase compartida)
 
 Cuatro tablas nuevas, prefijo `ses_`:
+
+> ✅ **CONSTRUIDA Y APLICADA** el 20/08/2026 (`prisma/sql/2026-08-20_ses_establecimientos.sql`),
+> con su pantalla de alta en `/sivra/partes/establecimientos` y el latido leyendo de ella.
+> Env nueva: **`SES_CRYPTO_KEY`** (32 bytes en base64, `openssl rand -base64 32`), sin literal
+> de respaldo. Al crear la tabla se descubrió que en esta BD compartida **una tabla nueva nace
+> abierta a `anon`/`authenticated`** por los privilegios por defecto del schema `public`: la
+> migración incluye el `REVOKE` y eso pasa a ser parte de crear cualquier tabla con datos
+> sensibles aquí.
 
 **`ses_establecimientos`** — `id`, `negocio_id`, `property_id`, `codigo_arrendador`,
 `codigo_establecimiento`, `usuario`, `password_cifrada`, `entorno` (`pruebas`|`produccion`),
@@ -175,24 +366,223 @@ Los tres crons se declaran en `apps/plataforma/lib/cron-dispatch.ts`, **no** en 
 
 ### 4.5 Puesta en marcha
 
-1. Desplegar con `SES_DRY_RUN=1` y `entorno='pruebas'`.
-2. Dar de alta **un solo piso** (Busto Reform) en la pantalla de establecimientos y pulsar «probar conexión» contra
-   `hospedajes.pre-ses.mir.es`.
-3. Con la conexión validada, quitar el dry-run y mandar un parte de prueba.
-4. Solo entonces pasar ese piso a `produccion`, y después el resto uno a uno.
+🚨 **El entorno de pruebas de SES no funciona.** `hospedajes.pre-ses.mir.es` acepta la conexión
+y valida el TLS, pero responde **502 Proxy Error — «Error reading from remote server»** a toda
+petición, con credenciales válidas o sin ellas. Comprobado el 20/08/2026 en las dos pasadas. Es un
+fallo de su lado, no nuestro.
+
+Eso tumba el plan original de «probar en pre-ses y luego pasar a producción». La puesta en marcha
+real, mientras pre-ses siga caído:
+
+1. Desplegar con **`SES_DRY_RUN=1`** y `entorno='produccion'`. El sistema construye el XML, lo
+   comprime, lo valida y lo registra en `ses_envios` **sin enviarlo**.
+2. Dar de alta Busto Reform en la pantalla de establecimientos y pulsar «probar conexión»
+   (`tipoOperacion` `C`, que no da de alta nada). **Ya verificado a mano: responde `codigo 0 / Ok`.**
+3. Revisar a ojo el XML que ha quedado registrado en dry-run para uno o dos check-ins reales.
+4. Quitar el dry-run **para ese piso solo**, y con una reserva concreta y vigilada.
+5. El resto de los pisos, uno a uno, repitiendo 2-4.
+
+La consecuencia incómoda: el primer envío de verdad va contra producción, así que el dry-run y la
+revisión manual del paso 3 **no son opcionales** — son el único ensayo que vamos a tener.
+Reintentar pre-ses de vez en cuando por si lo arreglan entra en el vigía.
 
 El envío real **no se puede probar desde el contenedor de desarrollo**: el proxy de salida bloquea
-`*.mir.es`. Toda validación contra SES ocurre desde Vercel.
+`*.mir.es`, y además intercepta el TLS. Toda validación contra SES ocurre desde Vercel.
+
+### 4.6 La cadena de CA de SES: qué pasaba de verdad
+
+**Corrección de una conclusión anterior de este mismo spec.** La versión previa afirmaba que
+«SES no usa una CA pública, sino una de la Administración». **Era falsa**, y la prueba en que se
+apoyaba no daba para afirmarlo.
+
+Lo que se sabe ahora, verificado el 20/08/2026:
+
+- La cadena real es `*.ses.mir.es` (O = MINISTERIO INTERIOR – SECRETARIA ESTADO SEGURIDAD –
+  SGSICS) → `OU=AC Componentes Informáticos, O=FNMT-RCM` → `OU=AC RAIZ FNMT-RCM, O=FNMT-RCM`.
+- **`AC RAIZ FNMT-RCM` es una CA pública y está en el almacén de Mozilla.** Comprobado por huella
+  SHA-256 contra el almacén de este propio contenedor: `/usr/share/ca-certificates/mozilla/
+  AC_RAIZ_FNMT-RCM.crt`, presente entre los 152 certificados de `ca-certificates.crt`.
+- `openssl verify -CAfile <raíz> <intermedio>` → **OK**.
+
+Por qué la prueba anterior falló y aun así no probaba nada: se hizo contra un bundle de **121**
+certificados que se describió como «el bundle de Mozilla completo». El de verdad trae **152**, y
+la raíz FNMT está entre los que faltaban. Se sacó una conclusión firme —«no es una CA pública»—
+de un experimento que solo demostraba que a *ese* runtime le faltaba *esa* raíz. La lección de
+método es la de siempre en este repo: **una ausencia solo se afirma sobre lo que se ha mirado**,
+y «bundle completo» era una suposición, no una comprobación.
+
+⚠️ **La trampa que probablemente causó el fallo original.** La página de descargas de la Sede de
+la FNMT sirve, **bajo el mismo nombre** «AC Componentes Informáticos», un certificado **distinto**
+del que usa SES:
+
+| Fichero | Caduca | Huella SHA-256 | ¿Sirve? |
+|---|---|---|---|
+| `http://www.cert.fnmt.es/certs/ACCOMP.crt` | 2028-06-**24** | `F038421F…7690554EF23876AB` | ✅ **este** |
+| `sede.fnmt.gob.es/…/AC_Componentes_Informaticos.cer` | 2028-06-**27** | `DB0DA160…E1BCE2BD` | ❌ no cierra |
+
+Cargar el segundo da exactamente `UnknownIssuer`. Dos certificados con el mismo nombre y tres
+días de diferencia en la caducidad es justo la clase de detalle que se pasa por alto.
+
+**Consecuencias para el conector:**
+
+1. Se versiona en `packages/module-ses` el bundle **raíz + intermedio** (`ses-ca-bundle.pem`),
+   con las huellas SHA-256 en un comentario del fichero. No porque la raíz falte en los almacenes
+   estándar —no falta—, sino porque **el intermedio hay que servirlo con la certeza de que es el
+   correcto** y porque fija el entorno frente a runtimes con almacenes recortados, que es
+   exactamente lo que pasó aquí.
+2. En Vercel se carga con **`NODE_EXTRA_CA_CERTS`**; `enviar.ts` acepta además un `ca` explícito
+   para no depender solo de la variable de entorno.
+3. **Nunca se desactiva la verificación TLS** (`rejectUnauthorized: false`, `verify=False`).
+   Por este canal viajan documentos de identidad: aceptar cualquier certificado convierte un
+   error de configuración en un man-in-the-middle silencioso sobre datos personales sensibles.
+   Si la cadena no valida, el envío falla y se registra como `error_transporte`.
+4. **Un mismo truststore vale para los dos entornos**: `pre-ses` usa idénticos raíz e intermedio
+   y solo cambia la hoja.
+5. **No se fija (pin) la hoja.** Caduca el **03/09/2026** —dos semanas— y la van a rotar. Se
+   confía en raíz e intermedio, que duran hasta 2030 y 2028. Una rotación de la hoja **no** debe
+   romper el envío; que lo rompiera sería un fallo nuestro de diseño, no del Ministerio.
+6. La caducidad del **intermedio (2028-06-24)** entra en el vigía: una cadena caducada deja de
+   enviar partes en silencio, y silencio con un plazo de 24 h es lo más caro que hay.
+
+**Verificado de punta a punta el 20/08/2026.** Con este bundle cargado, la llamada real desde
+fuera del contenedor de desarrollo devuelve:
+
+| Endpoint | TLS | Con credenciales falsas | Con las credenciales reales |
+|---|---|---|---|
+| `hospedajes.ses.mir.es` (producción) | **valida** | HTTP 401 | **HTTP 200 · `codigo 0 / Ok`** |
+| `hospedajes.pre-ses.mir.es` (pruebas) | **valida** | HTTP 502 | HTTP 502 |
+
+El `UnknownIssuer` desaparece: era el intermedio equivocado, no una CA privada.
+
+### 4.7 🚨 Firma del viajero y registro documental — obligaciones que este diseño no cubría
+
+Revisado el 20/08/2026. El RD 933/2021 impone **tres** obligaciones, no una, y el diseño inicial
+solo cubría la segunda:
+
+1. **Registro documental** (el «libro-registro», hoy informático) con los datos de los viajeros.
+2. **Comunicación** a SES.HOSPEDAJES dentro de las 24 h.
+3. **Conservación durante TRES AÑOS** desde la finalización del servicio contratado.
+
+Y sobre la firma, **artículo 4.2, literal del BOE**:
+
+> «Los partes de entrada para el uso de los servicios de hospedaje deberán ser firmados por toda
+> persona mayor de catorce años que haga uso de los mismos, conforme al sistema y modelo que se
+> establezca. En el caso de las personas menores de catorce años, sus datos serán proporcionados
+> por la persona mayor de edad de la que vayan acompañados.»
+
+Los menores de 14 no firman; sus datos los facilita el adulto acompañante, que es para lo que
+sirve el campo `parentesco` de §3.
+
+🚨 **Corrección: que la firma digital valga NO está confirmado.** Una versión anterior de este
+spec afirmaba que «la firma digital tiene la misma validez que la manuscrita». **El RD 933/2021
+no dice eso, ni lo contrario**: no menciona la firma electrónica, digital, manuscrita ni
+biométrica en todo su articulado. El artículo 4.2 remite a *«el sistema y modelo que se
+establezca»*, y la disposición adicional segunda remite a su vez al Ministerio:
+
+> «La transmisión y conservación de los datos exigida por este real decreto a los sujetos
+> obligados se hará conforme a los sistemas y procedimientos que se establezcan por el
+> Ministerio del Interior.»
+
+Es decir: la respuesta está en normas de desarrollo que **no se han consultado**. El diseño sigue
+adelante con firma digital en el check-in porque es la única opción operativa para un piso sin
+recepción, pero **queda marcado como supuesto sin verificar**, no como hecho. Confirmarlo con la
+asesoría es tarea del plan, y es barato comparado con descubrir que el registro documental no
+vale.
+
+Contexto normativo: la Orden INT/1922/2003 (libros-registro y partes de entrada) **no está
+derogada del todo**; sigue vigente en lo que no contradiga el RD 933/2021, y de ahí que el modelo
+de parte de entrada firmado siga siendo la referencia.
+
+Excepción que **no** nos aplica: quien ejerce el hospedaje de forma **no profesional** queda
+exento del registro documental y de la conservación, y solo tiene la obligación de comunicar.
+El alquiler turístico de los pisos es actividad profesional, así que nos aplican las tres.
+
+✅ **Contrastado contra el BOE el 20/08/2026** (texto consolidado de BOE-A-2021-17461, sin
+modificaciones posteriores al texto inicial). Los artículos que sostienen este diseño:
+
+| Obligación | Artículo | Texto |
+|---|---|---|
+| Firma de mayores de 14 | **4.2** | ver cita arriba |
+| Responsabilidad sobre la exactitud de los datos | **4.3** | el establecimiento responde de que coincidan con el documento de identidad |
+| Registro **informático** (no libro en papel) | **5.1** | datos de los anexos I y II |
+| **Tres años** de conservación | **5.3** | «desde la finalización del servicio o prestación contratada» |
+| Comunicación en **24 h** | **6.3** | dos disparadores distintos, ver abajo |
+| Régimen sancionador | **8** | remite a la LO 4/2015 |
+
+Los importes **no están en el RD**: salen del artículo **39.1 de la LO 4/2015** — graves 601 a
+30.000 €, leves 100 a 600 €. Y la clasificación importa más de lo que parece: **comunicar tarde
+es leve** (100–600 €); **no comunicar o no tener registro es grave** (hasta 30.000 €). El sistema
+debe preferir siempre enviar tarde a no enviar, que es justo lo que hace la cola de reintentos.
+
+La **Orden INT/1922/2003 sigue vigente «en lo que no contravenga»** el RD (disposición derogatoria
+única, apartado 2), y solo hasta que se dicte el desarrollo reglamentario.
+
+🚨 **Obligación que faltaba: el artículo 6.3 tiene DOS disparadores, no uno.** Literal:
+
+> «Esta comunicación se realizará de manera inmediata, y en todo caso en un plazo no superior a
+> 24 horas […] a partir de los siguientes momentos: a) Al realizar la reserva o la formalización
+> del contrato **o, en su caso, su anulación**. b) Al inicio de los servicios contratados.»
+
+El diseño solo cubría (b). La reserva —y **su anulación**— también obliga a comunicar en 24 h.
+Eso es la comunicación `RH`, que §6 había dejado fuera de alcance por suponer que era cosa de las
+plataformas de intermediación. **Hay que resolverlo antes de implementar**, porque cambia el
+alcance: si nos aplica, el conector necesita reaccionar a altas y cancelaciones de Smoobu, no
+solo a check-ins. Es la segunda pregunta para la asesoría.
+
+Además, el artículo 6.1–6.2 obliga a comunicar los **datos del establecimiento** antes de iniciar
+la actividad, y de nuevo ante cualquier modificación. Eso ya está hecho por el portal —de ahí
+salen `codigoArrendador` y `codigoEstablecimiento`—, pero un cambio de dirección o de titularidad
+obliga a repetirlo, y conviene que la pantalla de establecimientos lo recuerde.
+
+🚨 **El anexo I exige datos de pago que este diseño no había mirado.** El apartado A.4.d pide
+tipo de pago, **identificación del medio de pago (tipo y número de tarjeta, IBAN)**, titular,
+caducidad de la tarjeta y fecha del pago. Eso es un salto de categoría en sensibilidad: guardar
+números de tarjeta arrastra obligaciones de PCI-DSS que hoy no tenemos, y el resto del sistema
+nunca ha almacenado un PAN. **Decisión para el plan, no para aquí**: averiguar el mínimo que SES
+acepta en `<pago>` (el ejemplo oficial usa `EFECT`) y no guardar ni un dígito de tarjeta mientras
+no sea estrictamente exigible. Hasta resolverlo, el campo se rellena con el tipo de pago y nada
+más.
+
+**Cambios que esto introduce en el diseño:**
+
+- **`ses_viajeros` gana la firma**: `firma_png` (el trazo, imagen pequeña), `firmado_en`,
+  `firma_ip`, `firma_user_agent` y `firma_hash` (hash del conjunto de datos firmados, para poder
+  demostrar que la firma corresponde a ESOS datos y no a otros). Solo se exige a mayores de 14;
+  para el resto queda a NULL con `parentesco` relleno, que es un «no aplica», **no** un «falta».
+  La UI y las guardas deben distinguir esos dos casos, igual que §4.2 exige para el resto.
+- **El parte de entrada se materializa**: al completar el check-in se genera un PDF por contrato
+  con los datos y las firmas, y se guarda en un bucket **privado** (`ses-partes`). Ese PDF, junto
+  con las filas de `ses_checkins`/`ses_viajeros`, es nuestro registro documental.
+- **Cron `ses-purga`** (mensual): borra checkins, viajeros y PDFs cuya fecha de salida tenga más
+  de tres años. Cumple las dos caras de la obligación — conservar tres años **y** no conservar de
+  más, que es lo que exige la minimización del RGPD. La purga se registra en bitácora: un borrado
+  silencioso no se puede auditar.
+- **La página de check-in** necesita un campo de firma por viajero mayor de 14 (canvas táctil,
+  usable a 320 px como exige la regla responsive del monorepo) y el texto informativo de
+  protección de datos: quién es el responsable, que la base legal del envío al Ministerio es una
+  obligación legal, y el plazo de conservación de tres años.
+
+Lo que **no** cambia: la foto del documento se sigue procesando en memoria y sin persistir (§3).
+La obligación es conservar los **datos** y el parte firmado, no la imagen del documento de
+identidad, y guardarla solo añadiría superficie sin necesidad legal.
 
 ## 5. Pruebas
 
 - `validar.ts` — un test por regla de §3, incluyendo los casos frontera: cumpleaños 18 justo el día
   de la entrada, NIF de extranjero, menor sin parentesco, documento duplicado.
+- Firma (§4.7) — el umbral son **14 años**, distinto del de la documentación, que son 18: un
+  viajero de 15 firma pero puede no llevar documento propio, y uno de 13 ni firma ni lo lleva.
+  Un test por cada lado de los dos umbrales, con el cumpleaños cayendo el mismo día de la entrada.
+- Purga a tres años — que borra lo caducado, que **no** borra lo que está en plazo, y que deja
+  rastro en bitácora.
 - `xml.ts` — comparación contra XML de referencia; escapado de caracteres (`&`, `<`, comillas,
   tildes) en nombres y direcciones.
 - `respuesta.ts` — clasificación `datos` vs `transporte` a partir de respuestas reales de SES.
-- `enviar.ts` — con `fetch` inyectado: gzip+base64 correcto, cabecera `Authorization` bien formada,
-  y que un 503 se clasifica como transporte.
+- `zip.ts` — el ZIP producido lo abre un descompresor real (no solo «nuestro código lo relee»):
+  una entrada, `solicitud.xml`, deflate, CRC correcto, y el XML íntegro tras descomprimir.
+- `enviar.ts` — con el cliente HTTP inyectado: ZIP+base64 correcto, cabecera `Authorization` bien
+  formada, que un 503 se clasifica como transporte y que un TLS que no valida **falla**, nunca
+  se acepta.
 - Cifrado de credenciales — roundtrip cifrar/descifrar, y que una clave de longitud incorrecta
   falla de forma explícita.
 

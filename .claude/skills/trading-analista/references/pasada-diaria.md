@@ -124,6 +124,20 @@ antes, dilo en el resumen de Telegram — esa pasada mide contra el cierre de ay
    (Bearer `ALERTA_TOKEN`). Devuelve el `top` de ideas.
 5. `POST {PLATAFORMA_URL}/api/trading/puntuar` con `{ hoy, precios }` (snapshot de cada símbolo con
    posición/tesis viva). Puntúa walk-forward, actualiza stats y aplica stops paper.
+5-bis. **🕳️ CANTA el stop viable de cada idea del top (20/08/2026).** La respuesta de `/analizar`
+   trae ahora `stopViable` por idea: `{distanciaPct, veredicto, saltaPorRuido, saltaPorHueco,
+   sugeridaPct, titulosMax, motivo}`. Ponlo en el Telegram de cada propuesta, en UNA línea:
+   «stop mínimo X% · máx. N títulos». Es el dato que evita repetir lo de 2025-2026 — 248 ventas por
+   STOP sumaron **−26.538,64 USD** y las 29 a mercado/límite **+6.071,19 USD**, con una mediana de
+   distancia del 1,30%, por debajo del hueco de apertura típico de esos mismos valores.
+   · `veredicto:'decorativo'` → dilo con todas las letras: ese stop mide impaciencia, no riesgo.
+   · `saltaPorHueco > 0` → avisa de que un hueco lo ATRAVIESA (ahí el stop no protege, solo fija el
+     peor precio), aunque la distancia parezca holgada.
+   · **`stopViable: null` = no había historia suficiente para medirlo.** Dilo así; NO lo pintes como
+     «riesgo bajo» ni lo omitas: un hueco en el aviso se lee como que no hay problema.
+   · `titulosMax` sale de arriesgar el 1% del NAV a esa distancia. Si Alberto ejecuta a mano, ES el
+     tope: la respuesta a un stop demasiado corto no es acercarlo, es COMPRAR MENOS.
+
 6. Enviar por Telegram el resumen (usa `resumenPasada(...)` de `apps/plataforma/lib/trading-notify.ts`
    o deja que plataforma lo mande): top ideas + pulso de la cartera paper. Importes en formato español.
    **Nota:** cada COMPRA paper ya dispara un aviso inmediato por Telegram desde el propio

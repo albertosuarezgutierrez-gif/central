@@ -517,6 +517,9 @@ importers:
       '@central/module-pagos':
         specifier: workspace:*
         version: link:../../packages/module-pagos
+      '@central/module-ses':
+        specifier: workspace:*
+        version: link:../../packages/module-ses
       '@central/module-subastas':
         specifier: workspace:*
         version: link:../../packages/module-subastas
@@ -1001,6 +1004,8 @@ importers:
       '@central/module-documental':
         specifier: workspace:*
         version: link:../module-documental
+
+  packages/module-ses: {}
 
   packages/module-subastas: {}
 
