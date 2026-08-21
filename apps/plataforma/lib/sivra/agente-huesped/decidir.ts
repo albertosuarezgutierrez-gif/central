@@ -18,6 +18,9 @@ import { contieneDatoInventado } from './guardrail'
 import { esSensible } from './sensibilidad'
 import { hiloComoMensajes } from './hilo'
 import { faseReserva, aplicaEarlyCheckin } from './fases'
+import { revisarCierre, bloqueCierre } from './cierre'
+import { revisarCoherencia, REGLA_COHERENCIA } from './coherencia'
+import { bloqueSalidaTardia, pideMasAllaDeLaVentana, SALIDA_FLEX_HASTA } from './salida'
 import { esSolicitudLateCheckout, esDespedida } from './reglas'
 import { esLlegadaFueraDeHorario, HORARIO_ATENCION } from './llegada'
 
@@ -152,6 +155,10 @@ export async function decidir(ctx: Contexto, pregunta: string, categoria: string
         ? `El huésped LLEGA HOY (${ctx.checkIn}) y puede que AÚN NO HAYA ENTRADO al apartamento. Oriéntale sobre el acceso, la hora de entrada o lo que pregunte; si pregunta por entrar antes de la hora oficial o por dónde dejar el equipaje, ten en cuenta el bloque EARLY CHECK-IN de abajo.`
         : `El huésped ya está dentro del apartamento: NO le repitas la hora de check-in/check-out a menos que lo pregunte expresamente.`
 
+  // Cierre coherente con el momento de la reserva: desearle «buen viaje» a quien sigue en el piso
+  // suena a que le estamos despidiendo (lo cazó Alberto en la respuesta a Pilar, 20/08/2026).
+  const cierreBlock = bloqueCierre(fase, esDiaSalida)
+
   // Early check-in: GRATIS, pero SOLO si la noche anterior está libre (regla de Alberto). Aplica en
   // pre-llegada Y EL DÍA DE LLEGADA (en-estancia y post-estancia no tiene sentido). NUNCA se ofrece de pago.
   // Tri-estado: (a) verificado y libre → confirmar; (b) verificado y ocupado → declinar; (c) NO verificado
@@ -167,20 +174,20 @@ export async function decidir(ctx: Contexto, pregunta: string, categoria: string
           : `EARLY CHECK-IN: ahora mismo la noche anterior está LIBRE, así que EN PRINCIPIO la entrada anticipada antes de las ${entrada} SÍ va a ser posible. Pero como pueden entrar reservas de última hora antes de su llegada, NO se lo prometas en firme todavía: dile que en principio no hay problema y que se lo confirmáis definitivamente el día antes de su llegada. NUNCA lo ofrezcas como servicio de pago.`
         : `EARLY CHECK-IN: la noche anterior está OCUPADA por otros huéspedes, así que NO es posible entrar antes de las ${entrada} (el piso aún está ocupado y hay que limpiarlo). Explícalo con amabilidad y confirma que la entrada es a partir de las ${entrada}. NUNCA ofrezcas early check-in (ni gratis ni de pago) en este caso.`
 
-  // Late check-out: mismo patrón tri-estado que el early check-in, con el mismo matiz de "firme solo
-  // el mismo día del hecho, si no se matiza". A diferencia del early check-in, esto SIEMPRE escala a
-  // Alberto (ver esSolicitudLateCheckout más abajo) — el objetivo es que el borrador que le llega ya
-  // traiga la respuesta correcta, no automatizar el envío.
+  // Salida tardía: la política vive en `salida.ts` (hasta las 12:00 sin coste si el piso queda libre
+  // ese día; más tarde tiene coste de la empresa de limpieza y se consulta el precio — dictada por
+  // Alberto el 20/08/2026). Aquí solo se elige el estado según lo que se haya podido verificar.
+  // Sigue escalando SIEMPRE a Alberto (`esSolicitudLateCheckout`): el objetivo es que el borrador que
+  // le llega ya traiga la respuesta correcta, no automatizar el envío.
   const salida = ctx.horaCheckOut || '11:00'
   const lateBlock = esPostEstancia
     ? ''
-    : !ctx.lateCheckoutChequeado
-      ? `LATE CHECK-OUT: ahora mismo NO hemos podido comprobar si el piso queda libre el día de la salida. Si el huésped pide salir más tarde de las ${salida}, NO se lo confirmes NI se lo niegues: dile con amabilidad que lo verificas y se lo confirmas en breve. NUNCA inventes disponibilidad.`
-      : ctx.lateCheckoutPosible
-        ? esDiaSalida
-          ? `LATE CHECK-OUT: hoy mismo, que es su día de salida, no entra nadie más al piso, así que SÍ puedes confirmarle que puede salir más tarde de las ${salida} (a la hora que haya pedido, dentro de lo razonable).`
-          : `LATE CHECK-OUT: ahora mismo no hay ninguna entrada programada para el día de su salida, así que EN PRINCIPIO SÍ va a ser posible salir más tarde de las ${salida}. Pero como pueden entrar reservas de última hora, NO se lo prometas en firme todavía: dile que en principio no hay problema y que se lo confirmáis definitivamente el mismo día de la salida.`
-        : `LATE CHECK-OUT: ese mismo día entra otro huésped al piso, así que NO va a ser posible alargar la salida más allá de las ${salida} (hace falta limpiarlo y prepararlo para la siguiente entrada). Explícaselo con amabilidad y, como alternativa, ofrécele la consigna de equipaje del bloque CONSIGNAS de la ficha para que pueda dejar las maletas y seguir disfrutando de la ciudad hasta la hora que necesite.`
+    : bloqueSalidaTardia({
+        horaCheckOut: salida,
+        chequeado: ctx.lateCheckoutChequeado,
+        posible: ctx.lateCheckoutPosible,
+        esDiaSalida,
+      })
 
   // Llegada tardía: el huésped anuncia (o pregunta por) una llegada fuera de nuestro horario de
   // atención. NO es un caso de disponibilidad —el acceso es autónomo y no hay hora límite— sino de
@@ -213,10 +220,11 @@ export async function decidir(ctx: Contexto, pregunta: string, categoria: string
 Huésped: ${ctx.guestName} · llegada ${ctx.checkIn} · salida ${ctx.checkOut} · canal ${ctx.portal}.${horario}
 Responde SIEMPRE en ${LANG_NAME[ctx.lang] || 'English'} con un tono cálido, cercano y natural, como una persona real escribiendo a mano (no un folleto ni una plantilla). Saluda al huésped por su nombre.
 REGLA DE ORO: responde EXACTAMENTE a lo que el huésped dice y a nada más. NO añadas información que no ha pedido (horarios de entrada/salida, normas, parking, wifi…) salvo que pregunte por ella o sea necesaria para resolver su mensaje. ${faseBlock}
+${REGLA_COHERENCIA}
 ENTRADA AUTÓNOMA — NUNCA impliques un encuentro en persona: el check-in es AUTOMÁTICO (el huésped accede por su cuenta, sin que nadie le reciba ni le abra) y tú solo escribes mensajes, no vas a estar allí. Por eso NO uses jamás fórmulas de encuentro presencial como «nos vemos», «te espero», «te recibo», «estaré allí/en la puerta», «te abro» ni «hasta ahora/luego» con sentido de vernos, en NINGUNA fase de la reserva. Si el huésped confirma su hora de llegada, acúsale recibo sin sugerir cita: por ejemplo «¡Perfecto! Tomo nota de que llegáis sobre las 18:00» en lugar de «Nos vemos a las 18:00».
 NO EJECUTAS ACCIONES: solo escribes mensajes; no gestionas la reserva, no cancelas, no reembolsas, no cambias fechas ni haces cobros. NUNCA afirmes haber hecho o completado una gestión de ese tipo («ya está cancelada», «te he cambiado las fechas», «te he tramitado el reembolso»): no es cierto y no te consta. Si el huésped pide una cancelación, un cambio, un reembolso o cualquier gestión, acúsale recibo con empatía y dile que trasladas su petición al anfitrión, que se encargará y le confirmará — sin darla por hecha ni prometer plazos. Y NO le pidas que te confirme datos de su reserva (fechas, condiciones de cancelación…): ya los tienes en la INFORMACIÓN de abajo, no los verifiques con él.
 HILO: tienes los mensajes anteriores de esta conversación como contexto. Continúala con naturalidad teniendo en cuenta lo ya hablado y NO repitas información que ya le hayas dado antes; responde solo al ÚLTIMO mensaje del huésped.
-Ajusta la longitud al mensaje: si solo agradece, felicita o hace un comentario breve y positivo, contesta con 1-2 frases cálidas y humanas (sin bloques informativos); si hace una pregunta real, respóndela con el detalle necesario, confirmando lo que pide y ofreciéndote a ayudar en lo que necesite. Evita el relleno y las despedidas largas y genéricas.
+Ajusta la longitud al mensaje: si solo agradece, felicita o hace un comentario breve y positivo, contesta con 1-2 frases cálidas y humanas (sin bloques informativos); si hace una pregunta real, respóndela con el detalle necesario, confirmando lo que pide y ofreciéndote a ayudar en lo que necesite. Evita el relleno y las despedidas largas y genéricas. ${cierreBlock}
 
 INFORMACIÓN DISPONIBLE (única fuente de verdad; NO inventes nada que no esté aquí):
 ${ctx.ficha || '(sin ficha)'}
@@ -262,6 +270,18 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
     return { reply: '', confidence: 0, needs_human: true, categoria, sentimiento: 'neutro', motivo: 'IA sin respuesta', fuente: 'ia' }
   }
 
+  // Red determinista sobre la DESPEDIDA: si el borrador cierra con una fórmula de viaje o de adiós
+  // que no toca en esta fase, se poda cuando va aislada en su frase; si va entretejida con contenido
+  // real, no se reescribe y el mensaje pasa por Alberto en vez de auto-enviarse.
+  const revision = revisarCierre(reply, fase, esDiaSalida)
+  reply = revision.texto
+  const cierreFueraDeFase = revision.incoherente
+
+  // Coherencia apertura↔respuesta: «¡claro que sí!» seguido de «no tenemos consigna, ve a estas
+  // taquillas» concede lo que niega dos líneas después. Es contenido, no coletilla: no se reescribe
+  // solo, se manda a revisar.
+  const coherencia = revisarCoherencia(reply)
+
   // Decisión de escalado / metadatos, derivada de REGLAS + clasificador de una palabra (no de un JSON).
   const sentimiento = sentimientoDe(pregunta)
   const sensible = esSensible(pregunta)
@@ -272,11 +292,16 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
     : await debeEscalar(ctx, pregunta, reply)
   const escalaIA = veredicto === 'ESCALAR'
   const sinVerificar = veredicto === 'DESCONOCIDO'
-  // Late check-out SIEMPRE escala, pase lo que pase con el clasificador de calidad — si el borrador
-  // ahora responde bien, `escalaIA` dejaría de marcarlo, y Alberto pidió que siguiera pasando por él.
+  // Salida tardía: desde el 20/08/2026 (decisión de Alberto) el agente puede confirmar SOLO la
+  // ventana gratuita —hasta las 12:00— y únicamente con la ocupación YA VERIFICADA. Todo lo demás
+  // sigue pasando por él: si nombra una hora posterior entra el coste de la limpieza (dinero), y si
+  // no hemos podido comprobar la ocupación no sabemos si la ventana existe siquiera.
   const lateCheckout = esSolicitudLateCheckout(pregunta)
+  const ventanaVerificada = ctx.lateCheckoutChequeado && ctx.lateCheckoutPosible
+  const dentroDeLaVentana = ventanaVerificada && !pideMasAllaDeLaVentana(pregunta, SALIDA_FLEX_HASTA)
+  const escalaSalida = lateCheckout && !dentroDeLaVentana
 
-  const needs_human = sensible || sentimiento === 'negativo' || inventado || escalaIA || lateCheckout || sinVerificar
+  const needs_human = sensible || sentimiento === 'negativo' || inventado || escalaIA || escalaSalida || sinVerificar || cierreFueraDeFase || coherencia.incoherente
 
   // ¿Se apoya en una fuente real? Es la condición del auto-envío (regla del 20/08/2026). Exige que la
   // guía se haya PODIDO LEER: con `guiaCargada=false` no sabemos si la respuesta está respaldada o
@@ -300,8 +325,12 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
           ? 'la respuesta no cubre bien la pregunta — quizá falta en la guía del piso'
           : sinVerificar
             ? 'no se pudo verificar el borrador (control de calidad caído) — lo reviso yo'
-          : lateCheckout
-            ? 'late check-out: requiere confirmación del anfitrión'
+          : escalaSalida
+            ? `salida más allá de las ${SALIDA_FLEX_HASTA} o sin poder verificar la ocupación: lo confirma el anfitrión (tiene coste de limpieza)`
+            : cierreFueraDeFase
+              ? 'la despedida no encaja con el momento de la reserva (habla de viaje/adiós y el huésped sigue alojado)'
+            : coherencia.incoherente
+              ? `la respuesta abre con «${coherencia.concesion}» y a continuación niega el servicio y deriva fuera`
             : ''
 
   return {
