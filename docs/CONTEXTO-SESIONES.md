@@ -2005,6 +2005,20 @@ completo `docs/AUDITORIA-2026-08.md`.
 - Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
+## 🟡 (21/08/2026) El Telegram del PSD2 contradecía al panel — PR #1575 (draft)
+- Alberto: «me dice esto y en mi panel pone q todo ok». **Mentía el Telegram**, no el panel:
+  Kutxabank ****0855 con último mov. del 20/08 (34 en 30d) y el sync de hoy 06:00 limpio; el único
+  aviso era la nota ℹ️ de la ventana de 89 días rechazada (el feed va con ventana corta, no roto).
+- El corte «ℹ️ = informativo» se puso en `psd2-semaforo.ts` el 17/08 y NUNCA llegó al cron, que
+  gritaba «el banco no está entregando movimientos» con `if (avisos.length)`. Ahora usa el MISMO
+  `partirAvisos()`; una nota sola se cuenta UNA vez (dedupe por `claveAviso`, que neutraliza la
+  fecha ISO: la ventana corta se corre sola cada día y el texto crudo repetiría el aviso a diario).
+- Otra mitad: `/banca` solo pintaba `detalles` si el nivel ≠ 'ok' → la nota era INVISIBLE en verde.
+  Sale a campo propio `EstadoFeed.notas` y se pinta también en 🟢.
+- Anotado sin tocar: `getEstadoFeedPsd2` mide frescura por MAX entre cuentas (BBVA a 4 días queda
+  tapada). Por cuenta daría falsos positivos: la BBVA tiene huecos reales de hasta 10 días.
+
+
 ## 🛂 (20/08/2026) SES.HOSPEDAJES: diseño de la conectividad (parte de viajeros) — PR #1550 (draft)
 
 Fase de arranque del RD 933/2021 (comunicar viajeros al Ministerio en <24h; multas 100 €–30.000 €).
