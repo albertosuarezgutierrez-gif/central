@@ -41,6 +41,26 @@ ambas entradas, `latidos.test.ts` 9/9 verde, empujado a la rama existente (sin P
 backlog de PRs y `rutinas-automerge.yml` sin más hallazgos. `sivra_canal`: su próxima pasada (07:45
 UTC) aún no ha corrido desde el fix del PR #1529/#1530; a revisar mañana, no es hallazgo hoy.
 
+### 👋 (20/08/2026) La respuesta auto-enviada a Pilar: dos incoherencias que el prompt no cubría
+(1) Cerraba con «que tengas un buen viaje» a una huésped **en plena estancia** («eso sería si
+hubiera escrito el día de su salida»); (2) abría con «¡claro que sí!» y dos líneas después negaba
+la consigna y la mandaba a taquillas de fuera («no tiene lógica»). Nada del CIERRE ni de la
+COHERENCIA apertura↔respuesta estaba en el system prompt. Nuevos módulos puros `cierre.ts` (poda
+la fórmula si va aislada; si va entretejida con contenido real, escala) y `coherencia.ts` (NO poda:
+reescribir una apertura recoloca el mensaje entero, eso lo hace Alberto). 15 tests, PR #1568.
+Regla que queda: **el modelo obedece el prompt o el mensaje pasa por una persona, nunca sale a medias**.
+(3) Y faltaba la POLÍTICA de fondo, que Alberto dictó al ver el caso: no hay consigna, pero el día de
+salida, **si no entra nadie ese día, se quedan hasta las 12:00 sin coste** (maletas dentro incluidas);
+más tarde tiene coste de la empresa de limpieza y el agente lo ofrece SIN precio y escala. Nuevo
+`salida.ts` (ficha + prompt tri-estado) y la consigna de pago pasa a ser el plan B. Lo confirma el
+histórico de Smoobu (26/07, a Manuel: «puedes salir a las 12:00, no entra nadie después de ti»).
+(4) Entrenamiento con los huecos REALES (`mensajes_guia_gaps` + histórico): llaves al salir (Dúplex
+= mesa alta de la cocina; resto = donde se cogieron), equipaje ANTES de entrar con la noche anterior
+ocupada = consigna, tareas al marcharse (aire/luces, ventanas, basura, avisar) y **auto-envío solo de
+la ventana de las 12:00 con ocupación verificada** — nombrar una hora posterior es dinero y escala.
+Mergeado el 21/08 con CI en verde; la skill `sivra-maestro` (referencia del agente huésped) ya lleva
+`salida.ts`, `cierre.ts` y `coherencia.ts`, y el matiz de que el late check-out ya NO escala siempre.
+
 ### 📒 (20/08/2026) Libro completo (569 ops) y la AUTOPSIA: la pérdida es el INTRADÍA, no los valores
 Mergeado el **#1505** y verificado en prod (401 sin token, 0 grants a `anon`, tests verdes). **Rescatadas
 las 114 ejecuciones de jul–sep/2025 que IBKR iba a dejar de servir** (el libro va ahora de 07/07/2025 a
