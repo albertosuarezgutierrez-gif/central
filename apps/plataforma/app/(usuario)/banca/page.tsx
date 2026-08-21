@@ -225,6 +225,12 @@ export default async function BancaPage({ searchParams }: {
               {feedPsd2.estado.nivel !== 'ok' && feedPsd2.estado.detalles.map((d, i) => (
                 <div key={i} style={{ marginTop: '4px', color: 'var(--text)' }}>• {d}</div>
               ))}
+              {/* Las notas ℹ️ se pintan TAMBIÉN en verde: dicen desde cuándo hay datos de verdad
+                  («el banco rechazó la ventana de 89 días»), y esconderlas bajo un 🟢 hace leer el
+                  hueco anterior como «no hubo movimientos» (21/08/2026). */}
+              {feedPsd2.estado.notas.map((n, i) => (
+                <div key={`nota-${i}`} style={{ marginTop: '4px', color: 'var(--text)' }}>{n}</div>
+              ))}
               <div style={{ marginTop: '4px', fontSize: '12px', color: 'var(--muted)' }}>
                 {feedPsd2.cuentas.map(c => `${c.banco || 'Banco'} ${c.mascara || ''}: último mov. ${c.ultimoMov ?? 'ninguno'}`).join(' · ')}
                 {feedPsd2.estado.nivel === 'ok' && feedPsd2.estado.detalles[0] ? ` · ${feedPsd2.estado.detalles[0]}` : ''}

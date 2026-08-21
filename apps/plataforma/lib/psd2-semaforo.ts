@@ -10,6 +10,11 @@ export type EstadoFeed = {
   nivel: NivelFeed
   titular: string
   detalles: string[]
+  // Avisos INFORMATIVOS del último sync (prefijo ℹ️). Van APARTE de `detalles` porque se
+  // muestran SIEMPRE, también en verde: son limitaciones reales del feed («solo hay datos
+  // desde X») que en un panel «todo ok» quedarían invisibles — y un hueco no declarado se
+  // lee como «no hubo movimientos».
+  notas: string[]
 }
 
 const DIA_MS = 24 * 3600 * 1000
@@ -35,6 +40,32 @@ function fmtDDMM(iso: string): string {
 
 const ACCION = 'Re-vincula el banco desde «➕ Añadir → Conectar banco» (pide firmar en tu banco).'
 
+// Un aviso con prefijo ℹ️ es INFORMATIVO: describe una limitación con la que el feed SIGUE
+// funcionando (p. ej. «el banco rechazó la ventana de 89 días»). No es un fallo y por tanto
+// no pone el semáforo en rojo ni dispara la alarma del cron. Los demás son fallos.
+export function esNota(aviso: string): boolean {
+  return aviso.startsWith('ℹ️')
+}
+
+export function partirAvisos(avisos: string[] | null): { criticos: string[]; notas: string[] } {
+  const todos = avisos ?? []
+  return { criticos: todos.filter(a => !esNota(a)), notas: todos.filter(esNota) }
+}
+
+// Clave estable de un aviso para compararlo ENTRE pasadas del cron: las fechas ISO que lleva
+// dentro se mueven solas cada día (la ventana corta es `hoy - 30 días`, ver
+// getMovimientosConVentana), así que comparar el texto crudo haría que la MISMA incidencia
+// pareciese nueva cada mañana — que es justo lo que convierte un aviso en ruido.
+export function claveAviso(aviso: string): string {
+  return aviso.replace(/\d{4}-\d{2}-\d{2}/g, '·').trim()
+}
+
+// Avisos de `actuales` que NO estaban ya en `previos` (comparando por clave estable).
+export function avisosNuevos(previos: string[], actuales: string[]): string[] {
+  const vistos = new Set(previos.map(claveAviso))
+  return actuales.filter(a => !vistos.has(claveAviso(a)))
+}
+
 export function semaforoFeed(p: {
   hoyISO: string
   // Último movimiento psd2 importado (el más reciente entre todas las cuentas del feed).
@@ -55,9 +86,8 @@ export function semaforoFeed(p: {
   // Los avisos con prefijo ℹ️ son INFORMATIVOS (p. ej. «ventana de 89 días rechazada, importado
   // desde X» — el feed FUNCIONA con ventana corta, caso Kutxabank 17/08/2026): se muestran pero
   // no ponen el semáforo en rojo ni piden re-vincular. Solo los avisos de FALLO son críticos.
-  const criticos = (p.avisos ?? []).filter(a => !a.startsWith('ℹ️'))
-  const notas = (p.avisos ?? []).filter(a => a.startsWith('ℹ️'))
-  const conNotas = (e: EstadoFeed): EstadoFeed => notas.length ? { ...e, detalles: [...e.detalles, ...notas] } : e
+  const { criticos, notas } = partirAvisos(p.avisos)
+  const conNotas = (e: Omit<EstadoFeed, 'notas'>): EstadoFeed => ({ ...e, notas })
 
   if (caducaEn <= 0) {
     return conNotas({ nivel: 'roto', titular: 'Consentimiento bancario CADUCADO — el banco ya no entrega datos', detalles: [lineaConsent, ACCION] })
