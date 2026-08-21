@@ -32,6 +32,16 @@
 
 ---
 
+### 💸 (21/08/2026) Los insiders y los 13F NO hay que comprarlos: ya estaban montados y gratis
+Alberto preguntó el precio de las fuentes de datos y la respuesta correcta es **0 €**. El MCP
+`Datos_financieros` (financialdatasets.ai) está conectado pero devuelve `Your current balance is $0.00`
+—sin saldo, no roto— y lo que vendería ya lo cubren piezas propias en Vercel: **Form 4 →
+`/api/trading/insiders`**, **13F → `/api/trading/gurus`** (Dataroma) y **fundamentales →
+`/api/trading/fundamentales`** (SEC XBRL, gratis). Lo de pago solo añadiría comodidad y `screen_stocks`.
+Anotado en la skill `trading-analista` (`seleccion-y-senales.md`) con el matiz de la regla de la casa:
+ese error significa «fuente sin saldo», **nunca «no hay datos de insiders»**. Queda pendiente de decidir
+si se recargan los 20 $ solo por el screener; hoy no hace falta para operar.
+
 ### 🔧 (21/08/2026) Auditoría ligera: PR #1514 desatascado, heartbeat 12+13/25 ✅
 Pasada rutinaria sin hallazgos de memoria/skills (`docs/SKILLS.md` y `FUENTES-DE-VERDAD.md` al
 día). Único hallazgo: **PR #1514** (carril 2 del 20/08, monitor de `paper_tracker`) llevaba ~24h en
