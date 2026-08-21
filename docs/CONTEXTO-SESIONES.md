@@ -32,6 +32,16 @@
 
 ---
 
+### 🔌 (21/08/2026) Vigía de conectores MCP: diseño firmado + Alpha Vantage verificado a mano
+Alberto preguntó si hay conectores de bolsa que añadir y si cabe un agente que los revise. Del registro
+solo Alpha Vantage cierra huecos reales; **conectado y probado con llamadas de verdad**:
+`EARNINGS_CALENDAR` ✅ gratis (ISRG 20/10/2026) y `LISTING_STATUS` ✅ gratis (8.491 deslistadas), pero
+`TIME_SERIES_DAILY_ADJUSTED` es **premium** — el 3er fallback de precios ajustados NO se cierra.
+Diseñado `conectores-vigia` (mensual día 5, criterio huecos+integraciones, B+C, canario sobre los
+conectores en uso) en `docs/superpowers/specs/2026-08-21-conectores-vigia-design.md`.
+**Hallazgo colateral:** el automerge NO reconoce `VIGIA-OSS.md`/`BUSCADOR-IA.md`/`FISCAL-AYUDAS.md`
+como registro → los PRs de esas 3 rutinas esperan ojo humano para nada. Pendiente: plan + PRs.
+
 ### 📮 (21/08/2026) SES.HOSPEDAJES: transporte validado contra el servicio REAL y mergeado (PR #1555)
 Operación `C` contra `hospedajes.ses.mir.es` → **200 `codigo 0 / Ok`**: TLS con cadena FNMT (raíz
 pública, sí está en el almacén), credenciales de servicio web, arrendador habilitado y **ZIP aceptado**
