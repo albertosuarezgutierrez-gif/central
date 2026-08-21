@@ -75,6 +75,34 @@ ficheros**, y al revés, si la landing enseña el aviso de error el problema cas
 - El widget vive **aparte de `route.ts` a propósito**: el agente SEO reescribe la portada los lunes y
   no debe tener superficie sobre él. Por eso el guardián de i18n lee **los dos** ficheros.
 
+## 📮 Partes de viajeros — SES.HOSPEDAJES (RD 933/2021) · estado 21/08/2026 (PR #1550, #1555)
+
+**Quién emite HOY: Chekin**, en los cuatro pisos, y es el flujo real que Alberto usa. Lo nuestro
+solo tiene el TRANSPORTE probado; **no envía nada**. 🚨 Encender el envío propio sin apagar Chekin
+en ese piso = partes duplicados al Ministerio. La sustitución es en fases, como se hizo con
+PriceLabs: primero sombra (construir nuestro parte y compararlo), luego corte piso a piso.
+
+- **Código**: `packages/module-ses` (`zip.ts` · `soap.ts` · `respuesta.ts` · `enviar.ts`, puro salvo
+  el envío) + `apps/plataforma/lib/ses/*` (`cifrado.ts`, `establecimientos.ts`, `probar.ts`, `sonda.ts`).
+- **Pantalla**: `/sivra/partes/establecimientos` (alta/edición + «probar conexión», operación `C`,
+  solo lectura). **Latido**: `/api/cron/ses-latido` 07:15 vía `lib/cron-dispatch.ts` (NUNCA en
+  `vercel.json`); recorre **todos** los establecimientos activos, y cero establecimientos = rojo.
+- **Credenciales POR PISO**, no en env vars: tabla `ses_establecimientos`, contraseña en AES-256-GCM
+  con `SES_CRYPTO_KEY`. Se descifran en **un solo sitio** (`credencialesDe()`); el listado devuelve
+  `tienePassword` y nunca el valor. Campo vacío al editar = «no la cambies», jamás «bórrala».
+- **Protocolo** (trampas caras): el `<solicitud>` es XML comprimido en **ZIP** (no gzip) + base64 —
+  gzip da `10111`, que se lee como si fueran las credenciales. `tipoComunicacion` va en el alta pero
+  **NO** en la consulta. Erratas del XSD que hay que conservar: `tipoComuniacion`, `resutadoComunicacion`.
+- **No hay sandbox**: `hospedajes.pre-ses.mir.es` devuelve **502 a todo** (fallo suyo). El único
+  ensayo posible es dry-run contra producción con revisión manual del XML.
+- **TLS**: la raíz `AC RAIZ FNMT-RCM` SÍ es pública y está en el almacén estándar → no se configura
+  cadena propia. Trampa: la Sede FNMT publica otro intermedio con el MISMO nombre (caduca 2028-06-27);
+  el bueno es `http://www.cert.fnmt.es/certs/ACCOMP.crt` (2028-06-24). **La hoja caduca el 03/09/2026**
+  — cuando la roten, el latido es lo único que avisará.
+- **Pendiente de Alberto**: `SES_CRYPTO_KEY` en Vercel (proyecto `plataforma`), rotar las contraseñas
+  en el portal SES y dar de alta los cuatro pisos. Diseño completo:
+  `docs/superpowers/specs/2026-08-20-ses-hospedajes-conectividad-design.md`.
+
 ## Frontera multi-tenant
 Es intranet de los pisos de Alberto, pero la BD es compartida y multi-tenant para el módulo limpiadoras
 (`empresa_id`). Cualquier cambio transversal de BD se valida también contra ialimp (ver `auditoria-central`).

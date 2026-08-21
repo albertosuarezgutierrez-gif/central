@@ -32,6 +32,17 @@
 
 ---
 
+### 📮 (21/08/2026) SES.HOSPEDAJES: transporte validado contra el servicio REAL y mergeado (PR #1555)
+Operación `C` contra `hospedajes.ses.mir.es` → **200 `codigo 0 / Ok`**: TLS con cadena FNMT (raíz
+pública, sí está en el almacén), credenciales de servicio web, arrendador habilitado y **ZIP aceptado**
+(era gzip: habría fallado TODO con `10111`). `pre-ses` devuelve **502 a todo** → no hay sandbox: el
+ensayo es dry-run contra producción. Credenciales **por piso** en `ses_establecimientos` (AES-256-GCM,
+`SES_CRYPTO_KEY`), pantalla `/sivra/partes/establecimientos` y latido diario 07:15 que recorre TODOS
+los activos. 🚨 **Chekin es hoy el emisor real en los 4 pisos** — nada nuestro envía hasta apagarlo,
+y se sustituye en fases como PriceLabs. 🚨 Tabla nueva en `public` nace abierta a `anon`: la migración
+hace `REVOKE`. **Pendiente de Alberto:** `SES_CRYPTO_KEY` en Vercel, rotar las contraseñas del portal
+SES y dar de alta los cuatro pisos.
+
 ### 🔧 (21/08/2026) Auditoría ligera: PR #1514 desatascado, heartbeat 12+13/25 ✅
 Pasada rutinaria sin hallazgos de memoria/skills (`docs/SKILLS.md` y `FUENTES-DE-VERDAD.md` al
 día). Único hallazgo: **PR #1514** (carril 2 del 20/08, monitor de `paper_tracker`) llevaba ~24h en
