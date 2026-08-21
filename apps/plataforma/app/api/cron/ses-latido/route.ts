@@ -53,12 +53,27 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, motivo: detalle })
   }
 
+  // Latido de INTENTO antes de hablar con nadie. La huella se escribe DENTRO del
+  // trabajo que vigila, así que si la pasada muere a mitad (timeout, excepción no
+  // prevista) el vigía tiene que poder distinguir «no se dispara» de «se dispara y
+  // no termina»: mandan a mirar a sitios distintos. No toca `ultimo_ok_at`.
+  await registrarLatido('ses_transporte', false, `comprobando ${conCredencial.length} piso(s)…`)
+
   // Secuencial, no en paralelo: son cuatro pisos y no hay prisa, y así no se
   // aporrea al Ministerio con peticiones simultáneas desde la misma IP.
   const resultados: Array<{ nombre: string; ok: boolean; accion: string; detalle: string }> = []
   for (const e of conCredencial) {
-    const r = await probarEstablecimiento(e.id)
-    resultados.push({ nombre: e.nombre, ...r })
+    try {
+      const r = await probarEstablecimiento(e.id)
+      resultados.push({ nombre: e.nombre, ...r })
+    } catch (err) {
+      // Un piso que revienta —contraseña cifrada con una clave que ya no está,
+      // BD que no responde— NO puede dejar sin comprobar a los otros tres. Y se
+      // cuenta como fallo suyo, no como piso que no existe: un establecimiento
+      // que desaparece del recuento es indistinguible de uno que va bien.
+      const detalle = err instanceof Error ? err.message : String(err)
+      resultados.push({ nombre: e.nombre, ok: false, accion: 'revisar_portal', detalle })
+    }
   }
 
   const fallan = resultados.filter((r) => !r.ok)
