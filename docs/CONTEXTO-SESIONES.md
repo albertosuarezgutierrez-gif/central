@@ -2080,7 +2080,7 @@ Pendiente: que Alberto revise el spec → plan de implementación. Códigos/cred
   page data de `/api/admin/clientes/[vertical]/[id]` YA en main (envs ausentes), no es del cambio.
 
 
-- **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 18/08/2026).** Detalle en
+- **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 21/08/2026).** Detalle en
   `docs/memoria/2026-08.md` y en los PRs citados.
   - **Ayudas/subvenciones (15/08, #1432):** pendiente respuesta de Asecon (Marta Albarrán) sobre la
     convocatoria de conciliación antes del **15/09/2026** (plazo de solicitud). Pendiente además un
@@ -2123,14 +2123,17 @@ Pendiente: que Alberto revise el spec → plan de implementación. Códigos/cred
     (PASO 0 no vio huella → pasada completa, sin duplicado). Ya no parece transitorio: si el
     disparo primario vuelve a fallar, Alberto abre ticket a soporte de claude.ai (la Rutina es de
     la UI, no editable por MCP).
-    **📒 Libro de operaciones (20/08, #1505 mergeado + #1570):** 569 ejecuciones (07/07/2025→17/08/2026),
+    **📒 Libro de operaciones (20-21/08, #1505 y #1570 mergeados):** 569 ejecuciones (07/07/2025→17/08/2026),
     sincronizador y vigía vivos, endpoint cerrado. El volcado que caducaba YA ESTÁ (114 ops de jul–sep/2025)
     y `riesgo-hueco` ya viaja en `/analizar` (`stopViable`). Abiertos: (a) `tipo_cambio` NULL en 568/569
     filas → sin cifra en euros para la asesoría; (b) sin acciones corporativas (el primer split con
     posición abierta romperá el FIFO); (c) **BRZE y NKE tienen ventas sin compra en el libro** (anteriores
     a lo que IBKR sirve) → su coste de adquisición hay que sacarlo de los extractos, no del bróker;
-    (d) decisión de Alberto pendiente: pagar fuentes (insiders/13F) o construirlas gratis contra SEC EDGAR
-    (verificado 20/08: `data.sec.gov` responde 200 desde cloud).
+    (d) **CERRADO 21/08 — no hay que pagar fuentes:** el MCP `Datos_financieros` (financialdatasets.ai)
+    responde `Your current balance is $0.00` (sin saldo, no roto) y su cobertura ya la dan piezas propias
+    gratis — Form 4 por `/api/trading/insiders`, 13F por `/api/trading/gurus` (Dataroma) y fundamentales
+    por `/api/trading/fundamentales` (SEC XBRL). Lo de pago solo añadiría comodidad y `screen_stocks`
+    (20 $ una vez); recargarlo sigue siendo opción de Alberto, no una necesidad para operar.
   - **Subastas:** lente 🌊 (costa norte + Matalascañas sin tope) MERGEADA y en prod (#1346/#1349/
     #1351/#1353); pestaña 🔥 Oportunidades rediseñada (#1358 — una tarjeta, chips homogéneos,
     €/m² siempre visible). 🟡 el dispatcher marca timeout en `subastas-mercado` si desborda 280 s
