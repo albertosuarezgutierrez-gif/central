@@ -14,6 +14,10 @@ export { dedupCandidatos, puntuarDescubrimiento, descubrir } from './descubrimie
 // respuesta llegó al límite —el proveedor ordena por ABECEDARIO, no por calidad.
 export { traducirFila, traducirScreener, truncadaPorLimite, ROIC_MAX_CREIBLE } from './screenerMercado.ts'
 export type { FilaScreener, FilaTraducida, Traduccion } from './screenerMercado.ts'
+// Segunda opinión sobre las cifras de una idea antes de teclear la orden: compara NUESTRA ficha de
+// EDGAR contra otra fuente y marca dónde no se puede afirmar nada. No elige ganador.
+export { contrastar, avisoContraste, TOLERANCIA_REL } from './contraste.ts'
+export type { FichaFundamental, Contraste, ContrasteMetrica, VeredictoMetrica } from './contraste.ts'
 export { posicionRango52, tendenciaMedias, fuerzaRelativa, rankearSectores, inclinacionSector, regimenMercado } from './mercado.ts'
 export type { SectorRank } from './mercado.ts'
 // Riesgo de HUECO y viabilidad del stop: ¿está el stop dentro del ruido normal del valor, y

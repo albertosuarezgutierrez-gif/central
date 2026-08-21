@@ -43,6 +43,18 @@ y se sustituye en fases como PriceLabs. 🚨 Tabla nueva en `public` nace abiert
 hace `REVOKE`. **Pendiente de Alberto:** `SES_CRYPTO_KEY` en Vercel, rotar las contraseñas del portal
 SES y dar de alta los cuatro pisos.
 
+### 🔍 (21/08/2026) La segunda opinión: lo que el screener no vale, lo vale contrastar la cifra
+Pregunta de Alberto: ¿no da IBKR estos datos? **No** — el conector solo expone precio, volumen,
+volatilidad y rendimientos; ni flujo de caja ni ROIC ni márgenes (su plataforma sí los tiene, el MCP no).
+Y el uso que SÍ paga los 20 $ no es descubrir nombres, es **contrastar la cifra de una idea antes de la
+orden**: pedida la ficha de ORCL a la fuente de pago da **−5,79% de FCF yield = −23.690 M$** contra los
+**−23.700 M$ reales**, cuando nuestro parser de EDGAR llegó a decir **+3,49%** (PR #1189). Habría cazado
+el fallo fundacional el primer día. Nuevo `contraste.ts` (12 tests): compara las dos fichas y **NO elige
+ganador** — signo opuesto = la cifra no se canta; misma dirección pero lejos = orientativo; falta el dato
+= «sin contrastar», que no es «bien». Paso `5-ter` en la pasada. Presupuesto: 0,02 $/consulta, 1-2 al día
+(solo las ideas que acaban en propuesta) → las ~995 restantes duran años; barrer el ranking las funde.
+La fuente de pago también miente (dio `gross_margin: 1` en ORCL): es contraste, no sustituto.
+
 ### 🔎 (21/08/2026) Screener de pago recargado: sirve, pero llega con TRES trampas y una cuarta al lado
 Alberto puso los 20 $ (1.000 peticiones) y `Datos_financieros` ya responde. La primera consulta real
 destapó lo que había que tapar antes de usarlo: (1) **ordena por ABECEDARIO y sin paginación** —
