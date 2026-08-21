@@ -43,6 +43,19 @@ y se sustituye en fases como PriceLabs. 🚨 Tabla nueva en `public` nace abiert
 hace `REVOKE`. **Pendiente de Alberto:** `SES_CRYPTO_KEY` en Vercel, rotar las contraseñas del portal
 SES y dar de alta los cuatro pisos.
 
+### 🧾 (21/08/2026) Cuadre de la cuenta: el VWCE cuadra al céntimo y el 10/08 costó 1.113,87 USD
+Reconciliado el libro contra IBKR. **Cuadra exacto:** VWCE 188×169,36€ + 15,92€ de comisión =
+**31.855,60€**, y el precio medio de IBKR (169,44467979×188) da **31.855,60€**. El 17/08 la cuenta pasó
+a euros (`EUR BUY 32.105,69 @ 1,15912` = **37.214,35 USD → 32.105,69€**) y con eso compró el ETF; caja
+implícita 250,09€ contra los 410,46€ que declara IBKR → **160,37€ sin explicar** (¿resto en dólares?, no
+lo afirmo). **La caída de NAV:** el **10/08, −1.113,87 USD en un solo día** (9 ops, todas intradía, todas
+por STOP: SPCX −855,10, PLTR −258,77) — el patrón de la autopsia repetido 5 días DESPUÉS de firmar el
+preregistro — más **−670,16€ de latente** en el VWCE. Quedan ~240€ sin cuadrar y **no se pueden cerrar**:
+`tipo_cambio` NULL en 568/569. **Todo netea a cero salvo** VWCE (+188), BRZE (−1000) y NKE (−190).
+Las 5 conversiones de divisa están tipadas `CASH` y las vistas filtran `tipo_activo='STK'` agrupando por
+divisa: la guarda ya estaba. El único número falso de la sesión lo generé yo con una consulta ad-hoc que
+sumaba EUR con USD («flujo neto 2.801,85»); la vista no lo habría hecho.
+
 ### 🚨 (21/08/2026) La cuenta está al 98,6% en VWCE: la escalera de tramos hoy NO es financiable
 Al preguntar Alberto si adelantaría la inversión real, miré la cuenta en vez de dar por buena la cifra
 del preregistro. **NAV 31.531,10€, efectivo 410,46€, posiciones 31.106,48€** — todo en **UNA** posición:
