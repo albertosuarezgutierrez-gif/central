@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-20T20:32:23Z",
-  "sha": "30507a1ca115a0aa79716ad4840b4b2e4d920ebd",
+  "generadoEn": "2026-08-21T06:36:51Z",
+  "sha": "f820f3eb9285ee8a3d887bfe27e979b9e886cc41",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -67185,6 +67185,73 @@
       "hash": "045a05624554"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/agente-huesped/cierre.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/agente-huesped/cierre.ts — coherencia de la DESPEDIDA con la fase de la reserva. Caso fundacional (20/08/2026, detectado por Alberto): a Pilar, que estaba EN PLENA ESTANCIA y preguntaba dónde dejar las maletas el domingo, el agente le auto-envió una respuesta correcta en el fondo… cerrada ",
+      "exporta": [
+        "bloqueCierre",
+        "revisarCierre"
+      ],
+      "funciones": [
+        {
+          "nombre": "enViaje",
+          "kind": "function",
+          "exportada": false,
+          "params": "fase: FaseReserva, esDiaSalida: boolean",
+          "retorno": "boolean",
+          "linea": 26,
+          "resumen": "¿En esta fase el huésped está viajando (viniendo o volviéndose)?"
+        },
+        {
+          "nombre": "enCierre",
+          "kind": "function",
+          "exportada": false,
+          "params": "fase: FaseReserva, esDiaSalida: boolean",
+          "retorno": "boolean",
+          "linea": 31,
+          "resumen": "¿En esta fase se está cerrando la relación (se va o ya se ha ido)?"
+        },
+        {
+          "nombre": "bloqueCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "fase: FaseReserva, esDiaSalida: boolean",
+          "retorno": "string",
+          "linea": 36,
+          "resumen": "Instrucción para el system prompt: qué tipo de cierre encaja con el momento de la reserva."
+        },
+        {
+          "nombre": "frases",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string",
+          "retorno": "string[]",
+          "linea": 51,
+          "resumen": "Trocea el borrador en frases conservando su puntuación y saltos de línea, para poder quitar UNA sin descolocar el resto."
+        },
+        {
+          "nombre": "esSoloFormula",
+          "kind": "function",
+          "exportada": false,
+          "params": "frase: string, re: RegExp",
+          "retorno": "boolean",
+          "linea": 61
+        },
+        {
+          "nombre": "revisarCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "reply: string, fase: FaseReserva, esDiaSalida: boolean",
+          "retorno": "RevisionCierre",
+          "linea": 74,
+          "resumen": "Red determinista sobre el borrador ya escrito. `fase`/`esDiaSalida` vienen de `faseReserva()`."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "01c05d1eb979"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/clave-dedup.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/agente-huesped/clave-dedup.ts Clave de idempotencia de un mensaje del huésped (pura, testeable con `node --test`). Usa el id del mensaje de Smoobu si lo hay; si NO lo hay (p.ej. el webhook no lo trae), cae a una clave estable por reserva+contenido, para no reprocesar el MISMO mensaje en ca",
@@ -67204,6 +67271,37 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "e4ffc930be4e"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/agente-huesped/coherencia.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/agente-huesped/coherencia.ts — la apertura tiene que decir lo mismo que la respuesta. Caso fundacional (20/08/2026, detectado por Alberto sobre la respuesta auto-enviada a Pilar): «Hola Pilar, ¡claro que sí! Aunque el apartamento no tiene servicio de consigna, te recomiendo estas opciones ",
+      "exporta": [
+        "revisarCoherencia"
+      ],
+      "funciones": [
+        {
+          "nombre": "apertura",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string",
+          "retorno": "string",
+          "linea": 41,
+          "resumen": "Longitud de la APERTURA: el saludo y la primera frase, que es lo que el huésped lee de un vistazo (y lo único que se ve en la notificación del móvil)."
+        },
+        {
+          "nombre": "revisarCoherencia",
+          "kind": "function",
+          "exportada": true,
+          "params": "reply: string",
+          "retorno": "RevisionCoherencia",
+          "linea": 53,
+          "resumen": "¿El mensaje abre concediendo lo que luego niega? Devuelve la fórmula para poder explicarlo."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f7c454113e9d"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/conflictos.ts",
@@ -67243,7 +67341,7 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 50
+          "linea": 51
         },
         {
           "nombre": "toPropertyId",
@@ -67251,7 +67349,7 @@
           "exportada": true,
           "params": "_apartmentId: unknown, apartmentName: string",
           "retorno": "string",
-          "linea": 55,
+          "linea": 56,
           "resumen": "Mapea apartmentId/nombre de Smoobu → property_id interno (prop_*)."
         },
         {
@@ -67260,7 +67358,7 @@
           "exportada": true,
           "params": "bookingId: string, lang: string",
           "retorno": "Promise<Contexto | null>",
-          "linea": 64
+          "linea": 65
         }
       ],
       "tablas": [
@@ -67268,7 +67366,7 @@
         "mensajes_log"
       ],
       "rutaApi": null,
-      "hash": "d1a7f885bfb9"
+      "hash": "7f5e9814d2bf"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/decidir.ts",
@@ -67284,7 +67382,7 @@
           "exportada": false,
           "params": "text: string",
           "retorno": "boolean",
-          "linea": 69
+          "linea": 72
         },
         {
           "nombre": "sentimientoDe",
@@ -67292,7 +67390,7 @@
           "exportada": false,
           "params": "pregunta: string",
           "retorno": "Decision['sentimiento']",
-          "linea": 73
+          "linea": 76
         },
         {
           "nombre": "limpiarReply",
@@ -67300,7 +67398,7 @@
           "exportada": false,
           "params": "raw: string",
           "retorno": "string",
-          "linea": 81,
+          "linea": 84,
           "resumen": "Limpia adornos por si el modelo, pese a pedírsele texto plano, envuelve la respuesta en JSON, comillas o un prefijo tipo \"Respuesta:\"."
         },
         {
@@ -67309,7 +67407,7 @@
           "exportada": false,
           "params": "ctx: Contexto, pregunta: string, reply: string",
           "retorno": "Promise<Veredicto>",
-          "linea": 104
+          "linea": 107
         },
         {
           "nombre": "decidir",
@@ -67317,12 +67415,12 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, categoria: string",
           "retorno": "Promise<Decision>",
-          "linea": 127
+          "linea": 130
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "afe7775393d4"
+      "hash": "157dec5bd933"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/disponibilidad.ts",
@@ -67437,7 +67535,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3fa686335100"
+      "hash": "d8c72e8a00ac"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/fases.ts",
@@ -68135,6 +68233,57 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "4446d539a3f5"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/agente-huesped/salida.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/agente-huesped/salida.ts — política de SALIDA TARDÍA y de dónde dejar las maletas el último día. Dictada por Alberto el 20/08/2026, a raíz de la respuesta a Pilar («¿podemos dejar las maletas el domingo?»), que la mandó a unas taquillas de pago cuando el piso podía estar libre. La política",
+      "exporta": [
+        "llavesAlSalir",
+        "bloqueSalida",
+        "bloqueSalidaTardia",
+        "pideMasAllaDeLaVentana"
+      ],
+      "funciones": [
+        {
+          "nombre": "llavesAlSalir",
+          "kind": "function",
+          "exportada": true,
+          "params": "propertyId = ''",
+          "retorno": "string",
+          "linea": 29,
+          "resumen": "Dónde se dejan las llaves al marcharse (respuesta de Alberto, 20/08/2026, a una pregunta que los huéspedes repetían y el agente no sabía contestar: quedó registrada como hueco en `mensajes_guia_gaps`)"
+        },
+        {
+          "nombre": "bloqueSalida",
+          "kind": "function",
+          "exportada": true,
+          "params": "horaCheckOut = '11:00', propertyId = ''",
+          "retorno": "string",
+          "linea": 41,
+          "resumen": "Bloque para la `ficha` del piso. El agente lo usa SOLO si el huésped pregunta por la salida o por dónde dejar las maletas (REGLA DE ORO: no añadir información no pedida)."
+        },
+        {
+          "nombre": "bloqueSalidaTardia",
+          "kind": "function",
+          "exportada": true,
+          "params": "opts: { horaCheckOut?: string chequeado: boolean posible: boolean esDiaSalida: boolean }",
+          "retorno": "string",
+          "linea": 56,
+          "resumen": "Bloque para el system prompt, según lo que se haya podido verificar de la ocupación del día de salida. Tri-estado, como el early check-in: verificado y libre / verificado y ocupado / sin verificar — p"
+        },
+        {
+          "nombre": "pideMasAllaDeLaVentana",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string, hasta = SALIDA_FLEX_HASTA",
+          "retorno": "boolean",
+          "linea": 86
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "00f3c44c33d2"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/sensibilidad.ts",
@@ -95286,7 +95435,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2527,
-    "funciones": 6919
+    "archivos": 2530,
+    "funciones": 6931
   }
 }
