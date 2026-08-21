@@ -1057,3 +1057,47 @@ resuelta de verdad, no solo "probada una vez".
 ## ✅ Manuales de usuario — nada que tocar
 Ningún archivo de `apps/ia-rest/src/app/**` ni `apps/ia-rest/public/**` cambió en el rango (el
 rango tocó housesevillana, sivra/plataforma-lib y trading — sin UI de ia-rest).
+
+---
+
+# Actualización 2026-08-21 — auditoría diaria (ligera)
+
+Rango: 36 commits desde la pasada del 20/08 05:14 UTC (`a3f4d3e..a953b05`) — cierre de la saga del
+Portal del BOE (login/2FA/captcha, #1537→#1562), agente de huéspedes SIVRA (guía real + autonomía,
+#1542/#1546), cimientos de la correduría/Grupo Asegura (#1489/#1567) y el libro de operaciones de
+IBKR (#1505).
+
+## ✅ Reconciliación memoria/skills — sin huecos
+Los 36 commits ya estaban auto-documentados por sus propias sesiones en `CONTEXTO-SESIONES.md`.
+`docs/SKILLS.md` verificado contra `.claude/skills/` y `.claude/commands/`: sin huérfanos ni
+faltantes. `docs/FUENTES-DE-VERDAD.md` cubre ya los dominios más tocados del rango (trading,
+subastas, asegura). Sin skill nueva del rango que produzca correo sin categoría en
+`lib/correo/rutas.ts`.
+
+## 🟡→✅ Backlog de PRs de rutinas — #1514 desatascado (arreglado en este PR)
+El PR #1514 (carril 2 de la pasada del 20/08: dar de alta `paper_tracker` en `AGENTES_VIGILADOS`)
+llevaba abierto ~24h con `mergeable_state: dirty`. Causa: el PR #1505 (libro de operaciones del
+bróker, mergeado horas después) añadió una entrada HERMANA al mismo array/objeto en
+`apps/plataforma/lib/monitoring/latidos.ts` y `apps/plataforma/app/api/cron/agentes-latido/route.ts`
+— conflicto de **inserción pura** (ambos lados añaden, ninguno edita lo del otro). Resuelto
+fusionando `main` en la rama del PR y conservando las dos entradas; `node --test latidos.test.ts`
+9/9 (incluye el test de regresión `AGENTES_VIGILADOS`↔`PROBES`); empujado a la rama existente del
+PR — no hizo falta un PR nuevo. Resto del backlog (#1517, #1555, #1568, #1570): 4 PRs draft, todos
+`mergeable_state: clean`, ninguno >7 días sin actividad. `rutinas-automerge.yml`: última ejecución
+02:05 UTC (17 min antes de esta pasada), `success`, cadencia horaria sin huecos.
+
+## ✅ Heartbeat de crons y agentes (13+12 huellas) — sin ⛔
+- **a) Latidos `agente_latidos` (13):** todos `ok=true` salvo `sivra_canal` (`ok=false`, sin
+  `ultimo_ok_at`) — pero su último intento (07:45 UTC 20/08) es ANTERIOR al fix de `date - bigint`
+  (PRs #1530/#1529, mergeados esa misma mañana a las 10:31/11:45); su próxima pasada natural
+  (07:45 UTC 21/08) aún no ha corrido a la hora de esta auditoría (02:01 UTC). No es un hallazgo,
+  es pendiente de confirmar mañana.
+- **b) Tablas de dominio (12):** todas ✅, la más antigua `ia-director-refresh` a 93,0h (umbral 192h).
+- `agente_reparaciones`: sin intentos de auto-reparación en los últimos 7 días (nada que coordinar).
+
+## ✅ Integridad estructural — sin hallazgos
+`pnpm install --frozen-lockfile` OK. `pnpm auditar:check`: radiografía al día (regenerada en el
+último commit del rango, #1569).
+
+## ✅ Manuales de usuario — nada que tocar
+Ningún archivo de `apps/ia-rest/src/app/**` ni `apps/ia-rest/public/**` cambió en el rango.
