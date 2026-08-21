@@ -15,6 +15,16 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-21 · facturas-correo** · hizo: Vía B sana (1 día, última copia `_buzon_pdf` 20/08,
+  actualizado `agente_salud`); backlog `PDF-pendiente`/`Revisar`/`Extraccion-fallida` vacío;
+  barrido Paso 4.0 (`v_facturas_sin_cargo`) sin filas `sin_revisar` (las 8 ya `revisada_sin_cargo`,
+  nada que reabrir); candidatos Gmail `newer_than:2d` → ninguna factura nueva (mensajes de
+  huéspedes Booking, aviso de login, pedido personal Amazon sin adjunto, correspondencia del
+  seguro de fallecimiento — todo descartado); `_subir_aqui` vacío; los PDF sueltos en la raíz de
+  `FACTURAS Apartamentos/2026` (Castuera, 2× Endesa Bustos, 2× FACTURA JULIO SOCORRO) ya tenían
+  aviso en `_DUPLICADOS_BORRAR` de pasadas previas, nada nuevo. dudas: hilo `Luz pendiente 2026`
+  de TotalEnergies (abril-2026) sigue sin `Facturas/Procesada` — es del contrato viejo de la SL,
+  fuera de alcance según la skill, no tocado; fallos: —; PRs/commits: — (solo bitácora + BD).
 - **2026-08-21 · mercado-booking** · hizo: pasada de 24 ventanas de mercado (plan `?max=24`,
   488 candidatas, 464 recortadas por el tope — mismo aviso arrastrado que ayer) — 237 comps reales
   escritos vía Booking.com MCP, las 24 ventanas con respuesta (0 `sinRespuesta`). Paso 2-bis
