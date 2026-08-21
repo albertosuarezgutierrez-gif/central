@@ -2058,6 +2058,23 @@ completo `docs/AUDITORIA-2026-08.md`.
 - Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
+## 🟡 (21/08/2026) El Telegram del PSD2 contradecía al panel — PR #1575
+- Alberto: «me dice esto y en mi panel pone q todo ok». **Mentía el Telegram**, no el panel:
+  Kutxabank ****0855 con último mov. del 20/08 (34 en 30d) y el sync de hoy 06:00 limpio; el único
+  aviso era la nota ℹ️ de la ventana de 89 días rechazada (el feed va con ventana corta, no roto).
+- El corte «ℹ️ = informativo» se puso en `psd2-semaforo.ts` el 17/08 y NUNCA llegó al cron, que
+  gritaba «el banco no está entregando movimientos» con `if (avisos.length)`. Ahora usa el MISMO
+  `partirAvisos()`; una nota sola se cuenta UNA vez (dedupe por `claveAviso`, que neutraliza la
+  fecha ISO: la ventana corta se corre sola cada día y el texto crudo repetiría el aviso a diario).
+- Otra mitad: `/banca` solo pintaba `detalles` si el nivel ≠ 'ok' → la nota era INVISIBLE en verde.
+  Sale a campo propio `EstadoFeed.notas` y se pinta también en 🟢.
+- Verificado contra los avisos REALES de `conexiones_banco`: hoy y mañana (fecha corrida) → silencio;
+  con un aviso de fallo → alarma; primera aparición de la nota → un aviso ℹ️ sin alarma. Panel: verde
+  con la nota visible. Landmine en `apps/plataforma/CLAUDE.md` y aviso en la skill `psd2-health-check`
+  (un `ℹ️` NO es anomalía; el corte canónico es `partirAvisos()`).
+- Anotado sin tocar: `getEstadoFeedPsd2` mide frescura por MAX entre cuentas (BBVA a 4 días queda
+  tapada). Por cuenta daría falsos positivos: la BBVA tiene huecos reales de hasta 10 días.
+
 ## 💓 SES: latido del transporte antes que el conector (20/08/2026)
 
 Chekin es hoy el emisor real de los partes en los 4 pisos → el proyecto es **sustituirlo**, no

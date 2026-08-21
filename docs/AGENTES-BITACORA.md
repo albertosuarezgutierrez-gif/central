@@ -15,6 +15,11 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-21 · psd2-health-check** · hizo: feed PSD2 **verde** (Kutxabank ****0855 último mov. 20/08,
+  34 mov/30d vs 41 previos; BBVA ****1175 17/08, 23 vs 35 — dentro de sus huecos históricos, máx. 10d);
+  investigada la contradicción Telegram↔panel que reportó Alberto y arreglada en PR #1575 (draft):
+  el cron no aplicaba el corte ℹ️ del semáforo y `/banca` escondía las notas bajo el 🟢.
+  dudas: —; fallos: —; PRs/commits: PR #1575, commit cdc48bb.
 - **2026-08-21 · facturas-correo** · hizo: Vía B sana (1 día, última copia `_buzon_pdf` 20/08,
   actualizado `agente_salud`); backlog `PDF-pendiente`/`Revisar`/`Extraccion-fallida` vacío;
   barrido Paso 4.0 (`v_facturas_sin_cargo`) sin filas `sin_revisar` (las 8 ya `revisada_sin_cargo`,
