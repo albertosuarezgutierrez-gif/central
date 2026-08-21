@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-20T20:32:23Z",
-  "sha": "30507a1ca115a0aa79716ad4840b4b2e4d920ebd",
+  "generadoEn": "2026-08-21T06:53:08Z",
+  "sha": "1d850e84c4e333efb9f9adf79a99a37cf9a02f3e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -49272,6 +49272,58 @@
       "hash": "722b1e306dcd"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/sivra/partes/establecimientos/EstablecimientosClient.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "EstablecimientosClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "Estado",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ e }: { e: EstablecimientoPublico }",
+          "retorno": null,
+          "linea": 27,
+          "resumen": "Estado de validación con TRES valores, no dos: nunca probado ≠ probado y falla. Pintar de rojo un piso recién dado de alta manda a buscar una avería que no existe."
+        },
+        {
+          "nombre": "EstablecimientosClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ inicial }: { inicial: EstablecimientoPublico[] }",
+          "retorno": null,
+          "linea": 38
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "55dfbcef0a6a"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/sivra/partes/establecimientos/page.tsx",
+      "ambito": "apps/plataforma",
+      "resumen": "Alta de establecimientos SES.HOSPEDAJES — una fila por piso. Pantalla interna y pequeña a propósito (cuatro pisos): sin onboarding ni autoservicio. Existe porque cada piso tiene sus PROPIAS credenciales del servicio web, así que no caben en variables de entorno sin convertir cada alta y cada rotació",
+      "exporta": [
+        "Page"
+      ],
+      "funciones": [
+        {
+          "nombre": "Page",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 14
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "88fb6e25ff0a"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/sivra/pricing-auto/page.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -52776,7 +52828,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 106
+          "linea": 109
         }
       ],
       "tablas": [
@@ -52788,7 +52840,7 @@
         "pricing_decisiones"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "49b0a627c433"
+      "hash": "70bcef06ffc1"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -53427,6 +53479,27 @@
       "tablas": [],
       "rutaApi": "/api/cron/resumen-semanal",
       "hash": "ef41d64d1f31"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/ses-latido/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "/api/cron/ses-latido — 💓 Latido del TRANSPORTE con SES.HOSPEDAJES. Comprueba a diario que seguimos pudiendo hablar con el Ministerio **por cada piso**: TLS, credenciales del servicio web y que el `codigoArrendador` tenga el WS habilitado. Deja huella en `agente_latidos.ses_transporte`, que es lo qu",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 37
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/ses-latido",
+      "hash": "20c772521cd1"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-avisos/route.ts",
@@ -57987,6 +58060,57 @@
       "hash": "99dae010d068"
     },
     {
+      "ruta": "apps/plataforma/app/api/sivra/ses/establecimientos/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Alta y listado de establecimientos SES. Pantalla interna: sesión obligatoria. 🔐 El GET NUNCA devuelve la contraseña — `listar()` no la trae siquiera del módulo de acceso, así que no hay forma de filtrarla aquí por descuido.",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 11
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 17
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/sivra/ses/establecimientos",
+      "hash": "850710f74c68"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/sivra/ses/probar/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Botón «probar conexión». Solo lectura contra SES: no da de alta ningún parte.",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 9
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/sivra/ses/probar",
+      "hash": "4a71d9a8bc22"
+    },
+    {
       "ruta": "apps/plataforma/app/api/sivra/updates/sync/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -58366,7 +58490,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 23
+          "linea": 24
         }
       ],
       "tablas": [
@@ -58376,7 +58500,7 @@
         "trading_tesis"
       ],
       "rutaApi": "/api/trading/analizar",
-      "hash": "641485451c0f"
+      "hash": "f448d7ecd725"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/cartera-estudio/route.ts",
@@ -63312,7 +63436,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 117,
+          "linea": 122,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -63321,7 +63445,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 147,
+          "linea": 152,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -63330,7 +63454,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 169
+          "linea": 174
         },
         {
           "nombre": "ventanaMinutos",
@@ -63338,7 +63462,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 177,
+          "linea": 182,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -63347,13 +63471,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 189,
+          "linea": 194,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4d8bf0d643da"
+      "hash": "864196cfa9c6"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -66205,7 +66329,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1d070e381568"
+      "hash": "d7d7877cc093"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/reparable.ts",
@@ -67048,6 +67172,167 @@
       "hash": "cd4cfd4d20a0"
     },
     {
+      "ruta": "apps/plataforma/lib/ses/cifrado.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Cifrado de las contraseñas del servicio web de SES.HOSPEDAJES. AES-256-GCM, no CBC ni ECB: GCM viene con autenticación integrada, así que un texto cifrado manipulado falla al descifrar en vez de devolver basura que luego mandaríamos al Ministerio como si fuera una contraseña. Formato guardado: `v1.<",
+      "exporta": [
+        "cifrarPassword",
+        "descifrarPassword"
+      ],
+      "funciones": [
+        {
+          "nombre": "clave",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Buffer",
+          "linea": 29,
+          "resumen": "La clave viaja en base64 y debe medir 32 bytes. Falla EXPLÍCITO si no los mide, nombrando lo que ha llegado: una clave mal pegada en Vercel produce si no un \"Invalid key length\" opaco en mitad de un c"
+        },
+        {
+          "nombre": "cifrarPassword",
+          "kind": "function",
+          "exportada": true,
+          "params": "plano: string",
+          "retorno": "string",
+          "linea": 47
+        },
+        {
+          "nombre": "descifrarPassword",
+          "kind": "function",
+          "exportada": true,
+          "params": "guardado: string",
+          "retorno": "string",
+          "linea": 60
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "82eb6a11eb69"
+    },
+    {
+      "ruta": "apps/plataforma/lib/ses/establecimientos.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Acceso a `ses_establecimientos`: una fila por piso dado de alta en SES.HOSPEDAJES. 🔐 REGLA QUE NO SE SALTA: la contraseña en claro NO sale de este módulo salvo por `credencialesDe()`, que es lo único que la descifra y solo se llama justo antes de hablar con el Ministerio. `listar()` devuelve `tiene",
+      "exporta": [
+        "listar",
+        "guardar",
+        "credencialesDe",
+        "activosConCredencial",
+        "activosSinCredencial",
+        "anotarPrueba"
+      ],
+      "funciones": [
+        {
+          "nombre": "aPublico",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FilaCruda",
+          "retorno": "EstablecimientoPublico",
+          "linea": 42
+        },
+        {
+          "nombre": "listar",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<EstablecimientoPublico[]>",
+          "linea": 58
+        },
+        {
+          "nombre": "guardar",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaAlta",
+          "retorno": "Promise<string>",
+          "linea": 80
+        },
+        {
+          "nombre": "credencialesDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "Promise<",
+          "linea": 124,
+          "resumen": "Lo ÚNICO que descifra. Se llama justo antes de hablar con SES, nunca antes."
+        },
+        {
+          "nombre": "activosConCredencial",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Array<",
+          "linea": 149,
+          "resumen": "Los activos con credencial, para que el latido recorra TODOS y no uno de muestra."
+        },
+        {
+          "nombre": "activosSinCredencial",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Array<",
+          "linea": 157,
+          "resumen": "Activos SIN credencial: no son un cero, son un «te falta meter la contraseña»."
+        },
+        {
+          "nombre": "anotarPrueba",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string, ok: boolean, detalle: string",
+          "retorno": "Promise<void>",
+          "linea": 164
+        }
+      ],
+      "tablas": [
+        "ses_establecimientos",
+        "set"
+      ],
+      "rutaApi": null,
+      "hash": "18848753886c"
+    },
+    {
+      "ruta": "apps/plataforma/lib/ses/probar.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Prueba de conexión de UN establecimiento contra SES.HOSPEDAJES. Compartida a propósito entre el botón «probar conexión» de la pantalla y el cron del latido: si fueran dos implementaciones, el día que divergieran el botón diría verde y el latido rojo (o al revés) y no habría forma de saber cuál mient",
+      "exporta": [
+        "probarEstablecimiento"
+      ],
+      "funciones": [
+        {
+          "nombre": "probarEstablecimiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "Promise<ResultadoPrueba>",
+          "linea": 24
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "724116817682"
+    },
+    {
+      "ruta": "apps/plataforma/lib/ses/sonda.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Veredicto del latido de SES, en función PURA para poder probarlo sin red ni credenciales. 🚨 Lo que mide este latido es **la puerta, no el contenido**: que el TLS cierre, que las credenciales valgan y que el arrendador tenga habilitado el servicio web. NO mide que un parte esté bien formado, porque ",
+      "exporta": [
+        "evaluarSondaSes"
+      ],
+      "funciones": [
+        {
+          "nombre": "evaluarSondaSes",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RespuestaSes",
+          "retorno": "VeredictoSonda",
+          "linea": 25
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "655de21952bd"
+    },
+    {
       "ruta": "apps/plataforma/lib/session.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -67185,6 +67470,73 @@
       "hash": "045a05624554"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/agente-huesped/cierre.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/agente-huesped/cierre.ts — coherencia de la DESPEDIDA con la fase de la reserva. Caso fundacional (20/08/2026, detectado por Alberto): a Pilar, que estaba EN PLENA ESTANCIA y preguntaba dónde dejar las maletas el domingo, el agente le auto-envió una respuesta correcta en el fondo… cerrada ",
+      "exporta": [
+        "bloqueCierre",
+        "revisarCierre"
+      ],
+      "funciones": [
+        {
+          "nombre": "enViaje",
+          "kind": "function",
+          "exportada": false,
+          "params": "fase: FaseReserva, esDiaSalida: boolean",
+          "retorno": "boolean",
+          "linea": 26,
+          "resumen": "¿En esta fase el huésped está viajando (viniendo o volviéndose)?"
+        },
+        {
+          "nombre": "enCierre",
+          "kind": "function",
+          "exportada": false,
+          "params": "fase: FaseReserva, esDiaSalida: boolean",
+          "retorno": "boolean",
+          "linea": 31,
+          "resumen": "¿En esta fase se está cerrando la relación (se va o ya se ha ido)?"
+        },
+        {
+          "nombre": "bloqueCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "fase: FaseReserva, esDiaSalida: boolean",
+          "retorno": "string",
+          "linea": 36,
+          "resumen": "Instrucción para el system prompt: qué tipo de cierre encaja con el momento de la reserva."
+        },
+        {
+          "nombre": "frases",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string",
+          "retorno": "string[]",
+          "linea": 51,
+          "resumen": "Trocea el borrador en frases conservando su puntuación y saltos de línea, para poder quitar UNA sin descolocar el resto."
+        },
+        {
+          "nombre": "esSoloFormula",
+          "kind": "function",
+          "exportada": false,
+          "params": "frase: string, re: RegExp",
+          "retorno": "boolean",
+          "linea": 61
+        },
+        {
+          "nombre": "revisarCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "reply: string, fase: FaseReserva, esDiaSalida: boolean",
+          "retorno": "RevisionCierre",
+          "linea": 74,
+          "resumen": "Red determinista sobre el borrador ya escrito. `fase`/`esDiaSalida` vienen de `faseReserva()`."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "01c05d1eb979"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/clave-dedup.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/agente-huesped/clave-dedup.ts Clave de idempotencia de un mensaje del huésped (pura, testeable con `node --test`). Usa el id del mensaje de Smoobu si lo hay; si NO lo hay (p.ej. el webhook no lo trae), cae a una clave estable por reserva+contenido, para no reprocesar el MISMO mensaje en ca",
@@ -67204,6 +67556,37 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "e4ffc930be4e"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/agente-huesped/coherencia.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/agente-huesped/coherencia.ts — la apertura tiene que decir lo mismo que la respuesta. Caso fundacional (20/08/2026, detectado por Alberto sobre la respuesta auto-enviada a Pilar): «Hola Pilar, ¡claro que sí! Aunque el apartamento no tiene servicio de consigna, te recomiendo estas opciones ",
+      "exporta": [
+        "revisarCoherencia"
+      ],
+      "funciones": [
+        {
+          "nombre": "apertura",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string",
+          "retorno": "string",
+          "linea": 41,
+          "resumen": "Longitud de la APERTURA: el saludo y la primera frase, que es lo que el huésped lee de un vistazo (y lo único que se ve en la notificación del móvil)."
+        },
+        {
+          "nombre": "revisarCoherencia",
+          "kind": "function",
+          "exportada": true,
+          "params": "reply: string",
+          "retorno": "RevisionCoherencia",
+          "linea": 53,
+          "resumen": "¿El mensaje abre concediendo lo que luego niega? Devuelve la fórmula para poder explicarlo."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f7c454113e9d"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/conflictos.ts",
@@ -67243,7 +67626,7 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 50
+          "linea": 51
         },
         {
           "nombre": "toPropertyId",
@@ -67251,7 +67634,7 @@
           "exportada": true,
           "params": "_apartmentId: unknown, apartmentName: string",
           "retorno": "string",
-          "linea": 55,
+          "linea": 56,
           "resumen": "Mapea apartmentId/nombre de Smoobu → property_id interno (prop_*)."
         },
         {
@@ -67260,7 +67643,7 @@
           "exportada": true,
           "params": "bookingId: string, lang: string",
           "retorno": "Promise<Contexto | null>",
-          "linea": 64
+          "linea": 65
         }
       ],
       "tablas": [
@@ -67268,7 +67651,7 @@
         "mensajes_log"
       ],
       "rutaApi": null,
-      "hash": "d1a7f885bfb9"
+      "hash": "7f5e9814d2bf"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/decidir.ts",
@@ -67284,7 +67667,7 @@
           "exportada": false,
           "params": "text: string",
           "retorno": "boolean",
-          "linea": 69
+          "linea": 72
         },
         {
           "nombre": "sentimientoDe",
@@ -67292,7 +67675,7 @@
           "exportada": false,
           "params": "pregunta: string",
           "retorno": "Decision['sentimiento']",
-          "linea": 73
+          "linea": 76
         },
         {
           "nombre": "limpiarReply",
@@ -67300,7 +67683,7 @@
           "exportada": false,
           "params": "raw: string",
           "retorno": "string",
-          "linea": 81,
+          "linea": 84,
           "resumen": "Limpia adornos por si el modelo, pese a pedírsele texto plano, envuelve la respuesta en JSON, comillas o un prefijo tipo \"Respuesta:\"."
         },
         {
@@ -67309,7 +67692,7 @@
           "exportada": false,
           "params": "ctx: Contexto, pregunta: string, reply: string",
           "retorno": "Promise<Veredicto>",
-          "linea": 104
+          "linea": 107
         },
         {
           "nombre": "decidir",
@@ -67317,12 +67700,12 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, categoria: string",
           "retorno": "Promise<Decision>",
-          "linea": 127
+          "linea": 130
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "afe7775393d4"
+      "hash": "157dec5bd933"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/disponibilidad.ts",
@@ -67437,7 +67820,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3fa686335100"
+      "hash": "d8c72e8a00ac"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/fases.ts",
@@ -68135,6 +68518,57 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "4446d539a3f5"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/agente-huesped/salida.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/agente-huesped/salida.ts — política de SALIDA TARDÍA y de dónde dejar las maletas el último día. Dictada por Alberto el 20/08/2026, a raíz de la respuesta a Pilar («¿podemos dejar las maletas el domingo?»), que la mandó a unas taquillas de pago cuando el piso podía estar libre. La política",
+      "exporta": [
+        "llavesAlSalir",
+        "bloqueSalida",
+        "bloqueSalidaTardia",
+        "pideMasAllaDeLaVentana"
+      ],
+      "funciones": [
+        {
+          "nombre": "llavesAlSalir",
+          "kind": "function",
+          "exportada": true,
+          "params": "propertyId = ''",
+          "retorno": "string",
+          "linea": 29,
+          "resumen": "Dónde se dejan las llaves al marcharse (respuesta de Alberto, 20/08/2026, a una pregunta que los huéspedes repetían y el agente no sabía contestar: quedó registrada como hueco en `mensajes_guia_gaps`)"
+        },
+        {
+          "nombre": "bloqueSalida",
+          "kind": "function",
+          "exportada": true,
+          "params": "horaCheckOut = '11:00', propertyId = ''",
+          "retorno": "string",
+          "linea": 41,
+          "resumen": "Bloque para la `ficha` del piso. El agente lo usa SOLO si el huésped pregunta por la salida o por dónde dejar las maletas (REGLA DE ORO: no añadir información no pedida)."
+        },
+        {
+          "nombre": "bloqueSalidaTardia",
+          "kind": "function",
+          "exportada": true,
+          "params": "opts: { horaCheckOut?: string chequeado: boolean posible: boolean esDiaSalida: boolean }",
+          "retorno": "string",
+          "linea": 56,
+          "resumen": "Bloque para el system prompt, según lo que se haya podido verificar de la ocupación del día de salida. Tri-estado, como el early check-in: verificado y libre / verificado y ocupado / sin verificar — p"
+        },
+        {
+          "nombre": "pideMasAllaDeLaVentana",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string, hasta = SALIDA_FLEX_HASTA",
+          "retorno": "boolean",
+          "linea": 86
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "00f3c44c33d2"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/sensibilidad.ts",
@@ -90727,6 +91161,168 @@
       "hash": "072f6d3a7b93"
     },
     {
+      "ruta": "packages/module-ses/src/enviar.ts",
+      "ambito": "packages/module-ses",
+      "resumen": "Envío a SES: lo ÚNICO de este módulo que toca la red. El `fetch` entra por parámetro para poder probar el resto sin red y sin credenciales.",
+      "exporta": [
+        "enviarSes"
+      ],
+      "funciones": [
+        {
+          "nombre": "enviarSes",
+          "kind": "function",
+          "exportada": true,
+          "params": "opts: OpcionesEnvio",
+          "retorno": "Promise<RespuestaSes>",
+          "linea": 33,
+          "resumen": "POST del sobre con Basic auth. 🚨 **Nunca se desactiva la verificación TLS.** Por este canal viajan documentos de identidad de personas: aceptar cualquier certificado convierte un error de configuraci"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e791f54f457b"
+    },
+    {
+      "ruta": "packages/module-ses/src/respuesta.ts",
+      "ambito": "packages/module-ses",
+      "resumen": "Lectura y CLASIFICACIÓN de la respuesta de SES. 🚨 La razón de ser de este fichero: **SES no tiene código de retorno para «estoy caído»**. La tabla del apartado 5 de la guía solo cubre errores de la petición; una caída del Ministerio se manifiesta como error de transporte (timeout, 5xx, SOAP Fault),",
+      "exporta": [
+        "clasificarCodigo",
+        "leerRespuesta"
+      ],
+      "funciones": [
+        {
+          "nombre": "clasificarCodigo",
+          "kind": "function",
+          "exportada": true,
+          "params": "codigo: number",
+          "retorno": "ClaseFallo",
+          "linea": 71
+        },
+        {
+          "nombre": "extraer",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuerpo: string, etiqueta: string",
+          "retorno": "string | null",
+          "linea": 80
+        },
+        {
+          "nombre": "extraerTodos",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuerpo: string, etiqueta: string",
+          "retorno": "string[]",
+          "linea": 87
+        },
+        {
+          "nombre": "leerRespuesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, cuerpo: string",
+          "retorno": "RespuestaSes",
+          "linea": 101,
+          "resumen": "Interpreta una respuesta HTTP de SES. `status` 0 (o cualquier fallo antes de tener respuesta) se pasa como transporte desde `enviar`, que es quien conoce la excepción de red."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "85643b7990b3"
+    },
+    {
+      "ruta": "packages/module-ses/src/soap.ts",
+      "ambito": "packages/module-ses",
+      "resumen": "Sobre SOAP de SES.HOSPEDAJES y construcción de la solicitud de CONSULTA. Estructura verificada contra la guía oficial v3.1.2 (anexos II y III).",
+      "exporta": [
+        "escaparXml",
+        "envolverPeticion",
+        "solicitudConsultaLotes",
+        "peticionConsulta"
+      ],
+      "funciones": [
+        {
+          "nombre": "escaparXml",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 16
+        },
+        {
+          "nombre": "envolverPeticion",
+          "kind": "function",
+          "exportada": true,
+          "params": "params: { codigoArrendador: string aplicacion: string tipoOperacion: TipoOperacion tipoComunicacion?: 'PV' | 'RH' | 'AV' | 'RV' solicitudB64: string }",
+          "retorno": "string",
+          "linea": 28,
+          "resumen": "Sobre SOAP completo. 🚨 `tipoComunicacion` va en el ALTA pero **no** en la consulta: la cabecera de `C` solo lleva `codigoArrendador`, `aplicacion` y `tipoOperacion`. Por eso es opcional aquí y no se "
+        },
+        {
+          "nombre": "solicitudConsultaLotes",
+          "kind": "function",
+          "exportada": true,
+          "params": "lotes: string[]",
+          "retorno": "string",
+          "linea": 62,
+          "resumen": "Solicitud de consulta de lotes (operación `C`). Máximo 10 lotes por petición. Es la única operación de SOLO LECTURA del servicio: no da de alta ni anula nada. Por eso es la que usa el latido para comp"
+        },
+        {
+          "nombre": "peticionConsulta",
+          "kind": "function",
+          "exportada": true,
+          "params": "params: { codigoArrendador: string aplicacion: string lotes: string[] }",
+          "retorno": "string",
+          "linea": 68,
+          "resumen": "Sobre listo para enviar de una consulta de lotes."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "93e165b2ed20"
+    },
+    {
+      "ruta": "packages/module-ses/src/zip.ts",
+      "ambito": "packages/module-ses",
+      "resumen": "La `<solicitud>` de SES viaja como XML comprimido en **ZIP** y codificado en base64. 🚨 ZIP, no gzip. Es la corrección más cara de este módulo: una primera versión usó `gzipSync` y TODAS sus peticiones habrían salido rechazadas con el código `10111`, que además se lee como un problema de formato gen",
+      "exporta": [
+        "crc32",
+        "zipUnaEntrada",
+        "solicitudEnBase64"
+      ],
+      "funciones": [
+        {
+          "nombre": "crc32",
+          "kind": "function",
+          "exportada": true,
+          "params": "buf: Uint8Array",
+          "retorno": "number",
+          "linea": 15,
+          "resumen": "CRC-32 (polinomio 0xedb88320), que el formato ZIP exige en la cabecera de cada entrada."
+        },
+        {
+          "nombre": "zipUnaEntrada",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string, contenido: string",
+          "retorno": "Buffer",
+          "linea": 39,
+          "resumen": "ZIP de UNA entrada, método deflate, sin BOM. La fecha va fija a 1980-01-01 a propósito: sin reloj, la salida es **reproducible** para el mismo contenido. Eso importa aquí más de lo normal, porque SES "
+        },
+        {
+          "nombre": "solicitudEnBase64",
+          "kind": "function",
+          "exportada": true,
+          "params": "xml: string",
+          "retorno": "string",
+          "linea": 93,
+          "resumen": "La `<solicitud>` tal y como la espera el sobre: ZIP de una entrada, en base64."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8a58248ee930"
+    },
+    {
       "ruta": "packages/module-subastas/src/adjudicaciones.ts",
       "ambito": "packages/module-subastas",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Calibración del scoring con RESULTADOS reales de subastas concluidas. PURO. El BOE publica el resultado de cada subasta (adjudicada/desierta y el importe de adjudicación); `capturarResultados` lo guarda. Con muestra suficie",
@@ -95286,7 +95882,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2527,
-    "funciones": 6919
+    "archivos": 2543,
+    "funciones": 6962
   }
 }

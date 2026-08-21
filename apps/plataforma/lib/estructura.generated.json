@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-20T20:32:23Z",
+  "generadoEn": "2026-08-21T06:53:08Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -178,6 +178,11 @@
       "id": "module-rrhh",
       "tipo": "module",
       "npm": "@central/module-rrhh"
+    },
+    {
+      "id": "module-ses",
+      "tipo": "module",
+      "npm": "@central/module-ses"
     },
     {
       "id": "module-subastas",
@@ -518,7 +523,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "rrhh": {
         "estado": "usado",
@@ -1699,6 +1704,48 @@
       "rrhh": {
         "estado": "usado",
         "evidencias": 3
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-ses": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "usado",
+        "evidencias": 3
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
       },
       "sivra": {
         "estado": "no",
@@ -2890,6 +2937,7 @@
       "core-firma",
       "module-documental"
     ],
+    "module-ses": [],
     "module-subastas": [
       "module-concursos"
     ],
@@ -3758,6 +3806,7 @@
       "/api/cron/psd2-sync",
       "/api/cron/resumen-mensual",
       "/api/cron/resumen-semanal",
+      "/api/cron/ses-latido",
       "/api/cron/subastas-avisos",
       "/api/cron/subastas-cierre",
       "/api/cron/subastas-enriquecer",
@@ -3898,6 +3947,8 @@
       "/api/sivra/seo-proposals",
       "/api/sivra/seo-refresh",
       "/api/sivra/seo-token-check",
+      "/api/sivra/ses/establecimientos",
+      "/api/sivra/ses/probar",
       "/api/sivra/updates/sync",
       "/api/sociedades",
       "/api/sociedades/[id]",
@@ -4315,6 +4366,7 @@
       "rutina_tokens",
       "secrets_audit",
       "sector_tendencias",
+      "ses_establecimientos",
       "subastas",
       "subastas_consultas",
       "subastas_correo_cursor",
@@ -5007,10 +5059,10 @@
   },
   "resumen": {
     "verticales": 10,
-    "packages": 37,
+    "packages": 38,
     "capacidades": 23,
     "skills": 32,
-    "apis": 1174,
+    "apis": 1177,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
