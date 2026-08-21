@@ -58,6 +58,8 @@ histórico de Smoobu (26/07, a Manuel: «puedes salir a las 12:00, no entra nadi
 = mesa alta de la cocina; resto = donde se cogieron), equipaje ANTES de entrar con la noche anterior
 ocupada = consigna, tareas al marcharse (aire/luces, ventanas, basura, avisar) y **auto-envío solo de
 la ventana de las 12:00 con ocupación verificada** — nombrar una hora posterior es dinero y escala.
+Mergeado el 21/08 con CI en verde; la skill `sivra-maestro` (referencia del agente huésped) ya lleva
+`salida.ts`, `cierre.ts` y `coherencia.ts`, y el matiz de que el late check-out ya NO escala siempre.
 
 ### 🛡️ (20/08/2026) Correduría: había DOS planes para lo mismo con dos nombres — fundidos en uno
 Dos sesiones del mismo día planificaron el traspaso del CRM de Manuel sin verse: `docs/TRASPASO-CORREDURIA.md`

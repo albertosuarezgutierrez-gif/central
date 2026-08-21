@@ -123,11 +123,13 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
   consulto y te digo" a ciegas — función espejo **`entradaMismoDiaLibre`** (¿entra otro huésped el
   MISMO día de la salida? si entra, hace falta turnover: limpieza + la siguiente entrada), consultada
   en Smoobu igual que el early check-in (`lateCheckoutPosible`/`lateCheckoutChequeado` en `contexto.ts`).
-  **SIEMPRE escala a Telegram** — `esSolicitudLateCheckout` (`reglas.ts`) fuerza `needs_human=true`
-  con independencia de si el borrador ya responde bien, porque el objetivo es que el borrador que le
-  llega a Alberto YA traiga la respuesta correcta (calendario real), no automatizar el envío. Si toca
-  declinar, el borrador sugiere la consigna de equipaje (`bloqueEquipaje`, ya en la ficha) como
-  alternativa.
+  **Escalaba SIEMPRE hasta el 20/08/2026** (`esSolicitudLateCheckout` de `reglas.ts` forzaba
+  `needs_human=true`); desde el PR #1568 el agente auto-envía **solo la ventana gratuita** —ver la
+  viñeta de `salida.ts`—: `escalaSalida = esSolicitudLateCheckout && !dentroDeLaVentana`, donde
+  `dentroDeLaVentana` exige ocupación YA verificada (`lateCheckoutChequeado && lateCheckoutPosible`)
+  **y** que el huésped no nombre una hora posterior a las 12:00 (`pideMasAllaDeLaVentana`). Todo lo
+  demás sigue pasando por Alberto. Si toca declinar, el borrador sugiere la consigna de equipaje
+  (`bloqueEquipaje`, ya en la ficha) como alternativa.
 - **Matiz "firme solo el mismo día" (19/07/2026, PR #1015):** tanto early check-in como late check-out
   solo confirman EN FIRME si hoy es el día del hecho (llegada/salida respectivamente). Preguntado con
   antelación y sin conflicto detectado, el borrador matiza "en principio sí, se confirma ese mismo
@@ -153,6 +155,32 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
   41003 (junto a Encarnación/Las Setas), a minutos entre sí. Inyectado en la **`ficha`** (`contexto.ts`, pasa `propertyId`),
   guardrail-safe. Categoría `equipaje` en `reglas.ts::detectCategory` **ANTES que checkout** (porque "dejar las
   maletas" contiene "dejar" = patrón de checkout) y en la allowlist de graduación.
+  **Desde el 20/08/2026 la consigna es el PLAN B, no la primera respuesta:** si preguntan por las maletas
+  el DÍA DE SALIDA y el piso queda libre, la respuesta buena es que se queden hasta las 12:00 (ver `salida.ts`);
+  `equipaje.ts` se consulta después de mirar la salida.
+- **Salida y maletas el último día (`salida.ts` — 20/08/2026, PR #1568):** política dictada por Alberto.
+  Consigna como servicio NO hay, **pero el día de salida, si ese día no entra nadie, pueden quedarse en el
+  apartamento hasta las `SALIDA_FLEX_HASTA` = 12:00 SIN COSTE**, equipaje dentro incluido. Más tarde también
+  se puede, pero hay que reorganizar a la empresa de limpieza y **tiene coste según la hora**: el agente lo
+  OFRECE, **nunca da un precio** y lo consulta con Alberto (hay un test que vigila que ningún bloque lleve
+  importes). `bloqueSalida()` va a la **ficha** (fuente de verdad + guardrail-safe, como parking/equipaje) e
+  incluye además **llaves al salir** (`llavesAlSalir`: Dúplex → dentro, en la mesa alta de la cocina; el resto
+  → donde se recogieron) y **tareas al marcharse** (`TAREAS_AL_SALIR`: aire y luces, ventanas, basura, avisar
+  por mensaje — y nada más). `bloqueSalidaTardia()` va al prompt con los **tres estados de siempre**
+  (verificado y libre / verificado y ocupado / sin verificar). **Antes de ENTRAR es distinto:** con la noche
+  anterior ocupada no se puede dejar el equipaje dentro → consigna hasta la hora de entrada. Lo confirma el
+  histórico de Smoobu (26/07/2026, a Manuel: «puedes salir a las 12:00, no entra nadie después de ti»).
+- **Cierre coherente con la fase (`cierre.ts` — 20/08/2026, PR #1568):** a Pilar, **en plena estancia**, el
+  agente le auto-envió una respuesta correcta cerrada con «¡Que tengas un buen viaje!». `bloqueCierre(fase,
+  esDiaSalida)` fija la regla en el prompt (viaje solo si viene o se va; despedida final solo el día de salida
+  o después; en mitad de la estancia, que disfrute de Sevilla) y `revisarCierre()` es la red determinista sobre
+  el borrador: **si la fórmula va aislada en su frase se poda** y el mensaje sale igual; si va entretejida con
+  contenido real NO se reescribe y el mensaje pasa por Alberto (`cierreFueraDeFase` → `needs_human`).
+- **Coherencia apertura↔respuesta (`coherencia.ts` — 20/08/2026, PR #1568):** el mismo mensaje abría con
+  «¡claro que sí!» y dos líneas después negaba la consigna y la mandaba a taquillas de fuera; la primera línea
+  es lo único que se ve en la notificación del móvil. `REGLA_COHERENCIA` va en el prompt (se empieza por lo que
+  hay de verdad, sin concesión delante) y `revisarCoherencia(reply)` caza el patrón y **escala**: aquí **no se
+  poda**, porque reescribir la apertura recoloca el mensaje entero — eso lo hace Alberto.
 - **Idioma:** al huésped se le responde SIEMPRE en su idioma; a Alberto (Telegram) se le traduce al español
   con línea **🔁** (pregunta + borrador). Si Alberto **modifica**, escribe en español y se traduce al idioma
   del huésped antes de enviar (`mensajes_pendientes_tg.idioma`).
