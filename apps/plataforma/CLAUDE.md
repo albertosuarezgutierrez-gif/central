@@ -656,6 +656,181 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
   Valenciana gana su tipo general (9%, antes heredaba el genérico); `mejorPujaViva()` (vigía de pujas en
   vivo del PR anterior) gana presupuesto de tiempo propio para no comerse el del cron `subastas-cierre`.
 
+- **🔐 El Portal ESCONDE documentos y pujas tras el login — y el aviso de cierre no había sonado nunca
+  (20/08/2026, PR #1537):** dos hallazgos de mirar qué publica de verdad `subastas.boe.es` a un anónimo.
+  - **«Cargas no publicadas» con la certificación colgada de la ficha.** El bloque «Información
+    complementaria» —donde vive la lista de documentos— **solo se enseña a usuarios identificados**, en
+    unas subastas sí y en otras no (lo decide la autoridad gestora). El cron entra anónimo,
+    `fichaLegible()` PASA (la ficha ES la ficha; lo que falta es el bloque), `enlacesDocumentos()` devuelve
+    `[]`, y ese «no lo veo» se persistía como `documentos = []` = «revisada, el BOE no adjunta nada» con
+    `lector_version` sellado → no se reintentaba jamás. Medido: de las 13 vivas, **las 8 que decían «no
+    publicadas» tenían muro total; NINGUNA carecía de documentos**. Fix: **`muroDocumental()`** (puro,
+    `module-subastas/edicto.ts`, fixtures literales de tres fichas reales) → `ninguno|parcial|total`;
+    columna **`subastas.documentos_muro`** escrita SIEMPRE (también el `'ninguno'`: es lo que convierte un
+    listado vacío en una AFIRMACIÓN en vez de en un hueco); estado **`ocultas_tras_login`** en
+    `titularCargas`/`analisisDocumental`/`resumenDocumentos`, que manda al LOGIN, no al Registro. Con muro
+    parcial el documento que SÍ se ve sigue mandando. Las fichas con muro se reintentan cada 7 días sin
+    monopolizar la cola del lector. **Comprobado y descartado como alternativa gratis:** el anuncio del BOE
+    es un stub de 1,1 KB (juzgado + expediente + enlace al Portal) en las 4 subastas de 3 juzgados
+    revisadas; las pestañas `ver=2/3/5` tienen el mismo muro; y lo público de la pestaña Bienes ya lo lee
+    el cron. **Las cargas no están en ningún sitio público.** El registro en el Portal exige certificado o
+    Cl@ve (una vez), pero luego da usuario/contraseña — eso sí es automatizable, y es lo que hace la sesión
+    del apartado siguiente.
+  - **El aviso de cierre no se había disparado NUNCA.** Todo `subastas-cierre` colgaba de
+    `subastas_seguidas`, que solo se llena pulsando «👀 Seguir» en Telegram: **19 filas en el radar, 18
+    avisadas, 0 seguidas**, y `mejor_puja_at` sin estrenar en las 26 filas del corpus. Un aviso que depende
+    de un botón que nadie pulsa es un aviso que no existe → los avisos salen ahora del **RADAR** (lo que ya
+    pasó el filtro de rentabilidad); las seguidas conservan su camino y el radar las excluye
+    (`SIN_SEGUIMIENTO_ACTIVO`) para no avisar dos veces. **Y la puja se leía de la pestaña equivocada:**
+    `mejorPujaViva` miraba la GENERAL, donde solo están la puja MÍNIMA y los tramos → no encontraba nada
+    nunca, y como el `null` se interpretaba (bien) como «no publicado», el fallo era invisible. La pestaña
+    **`ver=5`** sí responde a un anónimo con una de cuatro frases → **`pujasDeFicha`** (puro) con
+    `sin_pujas | con_puja | secretas | desconocido`; `desconocido` **NUNCA** se colapsa con `sin_pujas`.
+    Medido en las 13 vivas: 5 sin pujas · 5 con puja de importe oculto · 3 secretas por decisión del
+    juzgado. **El importe solo se publica al CONCLUIR** (y ahí sí lo captura ya `capturarResultados`).
+  - **Dos ventanas de aviso, no una** (petición de Alberto): **💶 «prepara el depósito» a 5 días** y **🚨
+    «últimas 24 h»** (`subastas_radar.aviso_deposito_at` / `aviso_cierre_at`). El cuello de botella real es
+    el DINERO, no la documentación: el Portal llega a pedir el **20%** del tipo (SUB-JA-2026-262097:
+    3.108,68€ sobre 15.543,40€) y avisar la víspera no da tiempo a moverlo. Texto en el helper PURO
+    `lib/subastas/aviso-cierre.ts` (testeado): depósito, estado de pujas **con su fecha de lectura**, suelo
+    del art. 670 **solo si de verdad no hay pujas** (cantarlo con una puja viva encima invita a pujar por
+    debajo de lo que ya hay), techo de puja, cargas y enlace. **Ratio de remate real de SU provincia**
+    (`calibracionResultados`), nunca el agregado nacional disfrazado de local: con los 8 remates capturados
+    la mediana global es **0,64× el tipo** pero **Sevilla va a 1,42×** (un 165.000€ rematado en 669.900€,
+    verificado a mano en el Portal).
+- **🛑 EL LOGIN AUTOMÁTICO DEL PORTAL NO ES VIABLE — no volver a intentarlo (20/08/2026, PRs #1548→#1560).**
+  Se construyó entero y se probó contra producción. El Portal lo cerró en dos escalones:
+  1. **2FA en la única vía automatizable.** El certificado y Cl@ve no los puede usar un proceso; la vía
+     usuario+contraseña sí, pero **es justo la que exige un código** enviado al correo Y al móvil
+     («Se ha recibido un intento de inicio de sesión **utilizando su usuario y contraseña**…»).
+  2. **CAPTCHA.** Tras una ráfaga de intentos, el Portal dejó de pedir el código y pasó a pedir «los
+     caracteres de la imagen» (`<input name="captcha" maxlength="6">`). Es un control anti-automatización
+     dirigido contra este cron. **No se resuelve**: automatizar el acceso propio de Alberto es una cosa;
+     saltarse un «demuéstrame que eres una persona» es otra, y el siguiente escalón es el bloqueo de la
+     cuenta, que el propio Portal anuncia en su mensaje de error.
+  El código se queda porque **degrada honestamente y se calla solo**: `captcha` y `rechazada` no se
+  reintentan nunca, y ambos avisan por Telegram (un cron que se rinde en silencio es indistinguible de uno
+  que funciona). El lector sigue en ANÓNIMO, que es lo que hacía antes: las fichas con muro dicen
+  «identifícate», no «no hay documentos». Las envs `BOE_PORTAL_*` pueden quedarse: sin sesión no cambian nada.
+  - **Lo que sí funcionó y merece la pena recordar:** los documentos SÍ están ahí. Alberto entró a mano con
+    Claude Chrome y bajó **18 documentos de las 9 fichas con muro en dos minutos**. Solo una
+    (`SUB-JA-2026-265289`, Barbate) publica edicto y **no** certificación de cargas: esa sí hay que pedirla
+    al Registro. **Ninguna de las otras 8 carecía de documentación.**
+  - **El camino bueno, por tanto, es el buzón de entrada del lector**, no el login: el cron ya sabe QUÉ
+    fichas tienen muro, Alberto baja los PDFs con Chrome y los deja en Drive (el repo ya escribe en Drive
+    para las facturas) → el lector los procesa. No depende de burlar nada ni se rompe si el BOE cambia una
+    palabra. **PENDIENTE de construir.**
+  - 🚨 **Dos bugs propios que este episodio destapó, y que son la lección de método:**
+    · El detector de sesión buscaba «Cerrar sesión»; la barra del Portal dice **«Desconectar»**. Constaba
+      por escrito en dos observaciones de la página viva, y **el fixture del test se redactó con la misma
+      suposición que el código**, así que la suite daba verde sobre un detector que no reconocía NUNCA una
+      sesión abierta. El fixture de un parser se copia del documento real, jamás se escribe de memoria.
+    · El margen de frescura del código OTP era de 30 s «para el desfase de reloj», pero los intentos
+      llegaron a estar a **11 s** (porque `desconocido` no se cacheaba y cada llamada relanzaba el login).
+      **El margen era más ancho que la distancia entre intentos**, así que se tragaba el código del intento
+      anterior. Un margen de tolerancia es una puerta: hay que medirlo contra la frecuencia real del evento.
+
+- **🔓 El cron ya sabe identificarse en el Portal (20/08/2026, PR de seguimiento):** Alberto se registró con
+  su firma digital, y el Portal —una vez registrado— admite **usuario (correo o teléfono) + contraseña** en
+  `POST /id/login.php`, sin CSRF ni captcha. Eso es lo único de las tres vías de acceso (`/acceso.php`:
+  certificado, usuario/contraseña, Cl@ve) que puede usar un proceso automático. **La firma digital NO entra
+  en el repo ni en Vercel**: es la identidad legal de Alberto, no una credencial de app.
+  - Envs (solo en Vercel, nunca en el repo): **`BOE_PORTAL_USUARIO`** y **`BOE_PORTAL_PASSWORD`**.
+    Sin ellas todo sigue funcionando en anónimo, exactamente como antes.
+  - **`interpretarLogin()`** (puro, `module-subastas/portal-login.ts`, fixture con la respuesta REAL de
+    error) devuelve `iniciada | rechazada | desconocido`. **El éxito se exige POSITIVO** (cabecera «Cerrar
+    sesión» + cookie): una respuesta que no lo demuestra es `desconocido`, nunca `iniciada`. Dar por buena
+    una sesión que no existe haría que el muro se grabara como «ni registrado se ve», que es el recado que
+    manda al Registro a pagar una certificación.
+  - **🚨 UN INTENTO Y NO MÁS.** El error literal del Portal es «…los datos de acceso proporcionados son
+    incorrectos, el usuario no está activo **o está bloqueado**»: el Portal bloquea cuentas. `rechazada` se
+    cachea para todo el proceso y NO se reintenta; solo el `desconocido` (red) es reintentable. El único
+    sitio que puede reintentar es el diagnóstico manual `fase3-debug?accion=portal`, que además nunca
+    devuelve la contraseña ni la cookie — solo el veredicto.
+  - **La sesión se verifica en CADA ficha** (`pareceIdentificada`), no solo al abrirla: las sesiones PHP
+    caducan, y si caduca a mitad de pasada el resto de fichas se leerían como anónimas y su muro quedaría
+    grabado como lo que ve un usuario registrado.
+  - Columna **`subastas.documentos_sesion`** (`true` con sesión · `false` en anónimo · `null` = no consta):
+    el mismo `documentos_muro` significa cosas opuestas según con qué ojos se miró — «identifícate» (gratis)
+    frente a «pide la certificación al Registro» (tasa + mañana). De ahí el estado nuevo
+    **`ocultas_pese_a_sesion`**. Ante `null` se mantiene el recado BARATO: mirar antes que pagar.
+  - La cola del lector reintenta las fichas con muro **sin esperar la semana** en cuanto hay sesión y la
+    última lectura fue a ciegas: el día que se configuren las envs, las **9** fichas con muro (8 total + 1
+    parcial) se releen en la primera pasada. Validado contra la BD real.
+  - Si el Portal RECHAZA las credenciales, `subastas-enriquecer` manda **un Telegram**: la degradación a
+    anónimo es honesta pero silenciosa, y una contraseña caducada dejaría el lector ciego semanas.
+
+  - **🚨 DOS LANDMINES que `tsc` y `next build` NO cazan, encontradas al probar antes de mergear:**
+    **(a)** `datosDe()` leía `pujas_estado`, `pujas_estado_at` y `puja_maxima_calc`, que **no estaban en
+    `COLS_SUBASTA`** → las filas llegaban con `undefined` y el aviso salía MUDO («❔ estado de pujas sin
+    comprobar», sin techo) **con el dato en la BD**. Las filas de `$queryRaw` son `any`, así que
+    `f.columna_que_no_existe` es TypeScript válido. Lo vigila ahora **`lib/subastas/cols-subasta.test.ts`**,
+    que lee el FUENTE del cron y exige que toda `f.<col>` esté declarada (probado en rojo quitando una
+    columna a propósito). **Al añadir una columna que el código necesita, va a `COLS_SUBASTA` en el mismo
+    PR** — ya lo decía el comentario de la constante. **(b)** `vigilarPujas()` usaba
+    `SELECT DISTINCT … ORDER BY s.fecha_fin` con `fecha_fin` fuera del SELECT: **SQL inválido (42P10)**, el
+    vigía moría en cada pasada. No hacía falta `DISTINCT` (se consulta `subastas` con dos `EXISTS`, no con
+    un JOIN). Lección: **el SQL de un cron nuevo se ejecuta contra la BD real antes de mergear** — ni el
+    typecheck ni el build miran dentro de un `Prisma.sql`.
+  - Migraciones aplicadas: `2026-08-20_subastas_documentos_muro.sql` (columna + re-encolado de lo grabado
+    como «revisada y sin adjuntos» + saneo del `analisis` guardado, que repetía la negación en el
+    desplegable) y `2026-08-20_subastas_pujas_avisos.sql`. Las 13 vivas quedaron reclasificadas con el muro
+    y el estado de pujas MEDIDOS contra el Portal, no supuestos.
+  - **De paso:** `GET /api/subastas/radar` devolvía el anuncio PELADO (sin `analisis`/`notas_edicto`/
+    `documentos`/`cargas_detalle`), y como la página recarga la bandeja por ahí al marcar «visto», la misma
+    ficha que acababa de decir «el BOE SÍ publica la certificación» pasaba a decir «todavía no se ha
+    revisado» **con solo tocarla**. Ahora la documentación viaja con la fila y el cliente FUSIONA en vez de
+    sustituir (el endpoint no calcula `escenarios` ni la foto viva de la subasta).
+  - **PENDIENTE:** llevar el estado de pujas a la ficha de `/subastas` (hoy solo va en el Telegram);
+    registrar el MOTIVO del descarte para que el radar aprenda; y `SUB-JA-2026-262310`, cuya certificación
+    está descargada y sin cuadro — 26 páginas CCITT/JBIG2 con **OCR basura** (553.750 chars del tipo
+    «puntaumbña@registrodelapropiedad.org»): `pareceEscaneado()` mide CANTIDAD de texto, no calidad, y
+    `localizarJpegs()` solo ve JPEG (ahí no hay ninguno). Pide rasterizador de PDF, no un umbral.
+
+## 🔓 `/api/publico/*` — el único endpoint sin sesión, y su landmine de CORS (20/08/2026)
+`GET /api/publico/disponibilidad?piso=<slug>&meses=<1..12>` alimenta el calendario de la landing de
+House Sevillana (`apps/housesevillana`). Está en la lista `PUBLIC` del middleware a propósito: publica
+solo qué noches están cogidas de una lista blanca de 4 slugs — lo mismo que el motor de Smoobu ya enseña
+a cualquiera. Degrada Smoobu en vivo → `rate_snapshots` de ≤2 días (devolviendo la fecha del snapshot,
+no `now()`) → **503**, nunca `ocupadas: []`: aguas abajo eso se pintaría como calendario entero libre.
+
+**🚨 LANDMINE — una respuesta CACHEADA no puede depender del `Origin`. Y en Vercel, `Vary` NO te
+salva.** La respuesta lleva `s-maxage=600`, así que la sirve el CDN. Se rompió DOS veces el 20/08/2026:
+1. **PR #1500** devolvía el origen literal si estaba en una lista blanca. El CDN guarda **una sola
+   copia**, así que **la primera petición decidió las cabeceras de todas durante 10 minutos**: la
+   primera fue un `curl` de comprobación SIN `Origin` → copia sin `Access-Control-Allow-Origin` → el
+   navegador de housesevillana.es la rechazó y la landing enseñó su aviso de error.
+2. **PR #1519** añadió `Vary: Origin` a todas las respuestas, que es lo que manda el estándar HTTP.
+   **No funcionó: el CDN de Vercel no cachea por `Origin`** — sirve una copia única y encima ELIMINA
+   el `vary: Origin` de lo que entrega. Medido en producción tras desplegar: **12 de 12** peticiones
+   desde housesevillana.es recibieron la copia dejada por un curl con `Origin: https://competencia.com`
+   (`x-vercel-cache: HIT`, sin ACAO, sin `vary`). El calendario siguió roto igual.
+
+**Arreglo (PR #1521): `Access-Control-Allow-Origin: *` FIJO** y la lista blanca retirada. La respuesta
+pasa a ser idéntica para todos, así que da igual qué copia guarde el CDN. Es seguro porque el endpoint
+es público a propósito y **no lee sesión** (con `*` el navegador ni deja mandar credenciales); la lista
+blanca no protegía nada —no hay nada que robar— y era justo lo que hacía la respuesta variable.
+- Helper puro **`lib/sivra/cors-publico.ts`** (4 tests): no acepta argumentos **a propósito**, y uno de
+  los tests lee el fuente de la ruta para vigilar que no vuelva a ramificar por `Origin`.
+- Si algún día este endpoint leyera sesión, `*` deja de valer — y entonces lo que se quita es la
+  **caché** (`no-store`), no se vuelve a la lista blanca: seguiría siendo una respuesta variable
+  servida desde una caché que no varía.
+- **Verificar CORS exige el camino real:** `curl -H "Origin: https://housesevillana.es"` y mirar que
+  vuelve la cabecera. Un 200 de `curl` a pelo no prueba nada — curl no manda `Origin`. Y con caché de
+  por medio, **una sola petición tampoco prueba nada**: repite varias veces y mira `x-vercel-cache`.
+- Al añadir otro `/api/publico/*` cacheado, esto es parte del PR, no un apaño posterior.
+
+**🚨 Y LA TERCERA CAPA, la que sobrevivió a los dos arreglos anteriores: `s-maxage` sin `max-age`
+NO significa «cachea solo el CDN».** Con el endpoint ya correcto y medido 12/12, la landing SEGUÍA
+enseñando el aviso de error. `s-maxage` solo habla con las cachés compartidas, así que para el
+navegador la respuesta no tenía vida útil declarada → se calcula por heurística (cero, sin
+validador) → y el `stale-while-revalidate` le AUTORIZA a servir su propia copia guardada hasta una
+hora. Esa copia era la rota de antes del arreglo: **el navegador no preguntaba, se respondía solo**,
+y desde el servidor era invisible. Fix (#1523): `public, max-age=0, must-revalidate, s-maxage=600`
+—se renuncia al SWR porque no se puede pedir solo para el CDN— más `cache:'no-store'` en el `fetch`
+del widget, que mira solo a la caché del navegador. Hay dos tests que lo vigilan.
+**Confirmado funcionando por Alberto el 20/08/2026.**
+
 ## 💓 Latidos de agentes — el vigía que avisa por Telegram (ampliado 30/07/2026)
 `lib/monitoring/latidos.ts` (registro + `evaluarLatido` puro) + cron `agentes-latido` (07:45 UTC) →
 **Telegram**. Regla de oro: solo se vigilan huellas que se refrescan en CADA pasada del agente.
@@ -796,6 +971,31 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
   lo listaba en «Sin poder comprobar» aunque el agente latía bien en `agente_latidos`. Lo fija un test de
   `latidos.test.ts` que compara los ids del registro contra las claves de `PROBES` (lee el fuente de la
   ruta, porque `Prisma.sql` no es importable desde `node --test`).
+
+## 🔧 Del latido rojo al merge: reparación automática de agentes (20/08/2026)
+El vigía de latidos DETECTA; hasta hoy nadie REPARABA. El `sivra_canal` roto el 19/08 (moría en
+`42883 date - bigint` en su primera consulta) siguió dejando los cuatro pisos con el ×1,20 supuesto
+hasta que un humano leyó el Telegram. Decisión de Alberto: «lo más automático posible y solo avisarme
+en caso de no resolverse». Diseño: `docs/superpowers/specs/2026-08-20-latido-autoreparacion-design.md`.
+- **Disparador:** `.github/workflows/latido-reparar.yml` (08:00 UTC, 15 min detrás del cron de
+  latidos) → `POST /api/internal/reclamar-reparacion` → `scripts/ai-programar.mjs` → gate → merge o
+  PR draft + Telegram. **Plataforma decide, GitHub ejecuta, el latido juzga.**
+- **Solo dispara lo que tiene forma de EXCEPCIÓN** (`lib/monitoring/reparable.ts`, puro y testeado
+  con partes reales): SQLSTATE, nombre compuesto de excepción o marcador de runtime. Un `error:`
+  suelto NO basta — en castellano aparece en partes de degradación normal. La doctrina «no lo sé ≠
+  no hay» aplicada al disparador: un IMAP caído o un Serper vacío no se arreglan tocando el repo.
+- **🚨 Al orquestador se le manda la EVIDENCIA, nunca el diagnóstico.** La `nota` de `sivra_canal` en
+  `AGENTES_VIGILADOS` decía que el fallo estaba «aguas arriba, en la rutina de Booking y en el plan de
+  escaparate» — falso: las 22 mediciones estaban. Lo único cierto era la cadena de la excepción.
+- **🚨 El gate es una PRUEBA, no el estado de CI.** El diff debe traer un `*.test.ts` que falle sobre
+  `main` y pase con el parche (el workflow lo ejecuta él mismo, en su run). Doble motivo: un `tsc`
+  verde bendice igual un «arreglo» que borre la consulta, y **el estado de checks de un PR miente
+  aquí** — el PR #1529 mostraba ✅ con `tests.yml`/`ci.yml` sin haberse ejecutado nunca.
+- **Frenos:** una firma de error (`firmaError`) = un intento · 3 por agente en 30 días · un intento
+  vivo (claim `agente_reparaciones`, migración `2026-08-20_agente_reparaciones.sql`) · el diff nunca
+  toca `.claude/**`, `CLAUDE.md`, `.github/workflows/**` ni `.sql`.
+- **El agente no se declara curado a sí mismo:** a las 24 h del merge, `agentes-latido` compara
+  `ultimo_ok_at` contra `merged_at`. Verde → cierra en silencio. Rojo → Telegram. **Éxito = silencio.**
 
 ## Reglas
 - Multi-tenant: SIEMPRE filtrar por `cuenta_id` en todas las queries.

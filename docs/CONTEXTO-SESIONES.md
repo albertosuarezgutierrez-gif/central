@@ -32,6 +32,393 @@
 
 ---
 
+### 🛡️ (20/08/2026) Correduría: había DOS planes para lo mismo con dos nombres — fundidos en uno
+Dos sesiones del mismo día planificaron el traspaso del CRM de Manuel sin verse: `docs/TRASPASO-CORREDURIA.md`
+(vertical `apps/seguros`, #1532) y `docs/ASEGURA-MIGRACION.md` (vertical `apps/asegura`, #1489). Ambos
+mergeados → la siguiente sesión habría leído el que le tocara y hecho lo contrario que la anterior.
+**Unificado en `docs/TRASPASO-CORREDURIA.md`** (doc único; el otro absorbido y borrado) con enrutado
+coherente en `central-maestro` y `FUENTES-DE-VERDAD.md`. **Nombre bueno: `apps/asegura`** (la marca) —
+schema y rol siguen siendo `seguros`/`prisma_seguros` (el dominio, y además ya aplicados en la BD).
+🚨 **La lección: un doc duplicado no da error, da instrucciones contradictorias.** Antes de escribir un
+plan nuevo, grep del dominio en `docs/` — el coste de no hacerlo lo paga la sesión siguiente.
+Contrato de encargado (RGPD art. 28.3): responsable decidido = **Alberto persona física**, «Grupo ASegura»,
+fuero Sevilla. **NIF y domicilio a propósito en blanco** — un identificador legal no se escribe de memoria.
+
+### 🧭 (20/08/2026) El índice que usa `code-map` llevaba horas desfasado en `main` — y eso no se ve
+`pnpm auditar:check` estaba en ROJO sobre `main`: #1536/#1550/#1551 son posteriores a la última
+regeneración (#1547) y ninguno rehizo la radiografía. Lo destapé verificando el PR del traspaso, y
+antes de tocar nada comprobé **en un worktree sobre `origin/main`** que el fallo era de `main` y no
+del PR — si no, lo habría "arreglado" dentro de un PR de docs y el hallazgo se habría enterrado.
+🚨 **Un índice desfasado no falla ruidosamente: manda a la línea equivocada**, que para `code-map` es
+peor que no tener índice (acota mal y encima con confianza). El gate en rojo es la única señal, así
+que dejarlo pasar «porque es un fichero generado» normaliza el rojo y lo vuelve invisible.
+🚨 **PERO regenerarlo DESDE UN PR es una carrera que se pierde, y la perdí:** el PR #1559 generó el
+fichero sobre `c5d7af05` y, mientras esperaba CI, se mergeó **#1560** (que añade `pideCaptcha`) → mi
+snapshot **llegó ya desfasado** y `main` siguió en rojo tras mergearlo. No es un descuido: en un repo
+con este tráfico, el índice solo es correcto si se regenera **SOBRE `main`, después del último
+merge** — que es justo lo que hace la rutina de auditoría (`chore(auditoría): regenerar radiografía
+[skip vercel]`, ver #1547 y #1554). **Lección: no persigas este gate desde un PR.** Si está rojo,
+la pregunta correcta no es «lo regenero yo» sino «¿está corriendo la rutina que lo mantiene?».
+(La comparación IGNORA `sha` y `generadoEn` a propósito —`stableMapa`, línea 443— así que un rojo
+siempre es deriva REAL de firmas, nunca churn de cabecera.)
+**Hueco aparte que destapó el script y NO se toca**: faltan `almacen`, `housesevillana` y `mariscos`
+en el array `VERTICALES` de `apps/plataforma/lib/estructura.ts` — exige decidir `sector`/`desc` de
+cada una, es criterio de Alberto.
+
+### 🗝️ (20/08/2026) El agente de huéspedes NO tenía ni un dato del piso: la guest app de Smoobu SÍ se puede leer
+- Alberto, del hilo del Dúplex con Samy: «¿tiene acceso a todos los mensajes? ¿puede entrar en la url?».
+  Diagnóstico: `mensajes_guia_cache` con **0 filas desde que existe** — `guia.ts` bajaba el HTML del
+  `guest-app-url`, que es una SPA (2,8 KB sin texto) → el agente respondía **sin ninguna fuente** y
+  rellenaba inventando (a Daniela le AUTO-ENVIÓ «secure keybox»; a Samy dos rutas a pie contradictorias
+  y un `[lien d'accès]` literal, teniendo el enlace en el hilo).
+- **La guest app tiene API JSON abierta con el token del propio enlace:** `login.smoobu.com/api-guest/
+  bookings/{id}?token=` y `.../contents?token=`. El Dúplex son 10 secciones: KEYS (avisa de zona
+  restringida, «no uses GPS», con vídeo), WIFI, RULES, PARKING, azotea, basura…
+- Entrega 1 hecha (spec + plan en `docs/superpowers/`): guía real filtrada por vigencia + **ventana de
+  7 días para las claves** (política de Alberto: se dan una semana antes, porque se reserva y se cancela);
+  `htmlMessage` para no perder los enlaces; dedup de los automáticos (Smoobu los manda dobles: 8 de 25);
+  y la fecha venía en `createdAt`, no `created_at` → el `ts` de TODO el historial estaba vacío.
+- **Precedencia:** la sección PARKING de la guía se excluye — Alberto confirma que **no hay plaza** pese a
+  que la guía Y el email de confirmación se la prometen al huésped (arreglar eso en Smoobu es de Alberto).
+- **Entregas 2-5 también hechas** (mismo PR): detector de conflictos guía↔override (avisa 1 vez por
+  piso+sección, tabla `mensajes_conflictos_guia`); **autonomía por FUENTE** — se auto-envía si la
+  respuesta se apoya en guía/ficha/hechos, y eso SUSTITUYE a la graduación por categorías (borrada
+  `graduacion.ts`); el clasificador de calidad pasa a TRES estados (su `catch` devolvía «no escales»
+  = auto-enviar cuando se cae); **hechos permanentes** (`mensajes_hechos`) separados de los ejemplos
+  de estilo, y el borrador que escala por falta de info dice de qué hueco se trata; y **minado del
+  histórico** (`/api/sivra/mensajes/minar-historico`, manual) que propone hechos por Telegram con
+  botones ✅/❌ — nada entra sin que Alberto lo confirme.
+- **Mergeado y VIVO** (PR #1542, 20/08 14:53). Primera pasada del cron con el código nuevo, 4 minutos
+  después: `mensajes_guia_cache` pasó de 0 filas a las guías reales de Dúplex (10 secciones) y Socorro 24
+  (9), con 3 secciones de acceso detectadas en cada una, y el detector de conflictos disparó sus dos
+  avisos de PARKING (uno por piso). Las cuatro guest apps responden 200 (comprobado antes de mergear).
+- **`?dry=1`** (PR #1546): con la autonomía nueva, el disparo manual le manda el mensaje DE VERDAD al
+  huésped, así que probar costaba un mensaje a un cliente. El simulacro recorre el pipeline y devuelve
+  qué saldría y si se enviaría solo, sin enviar, sin proponer y sin escribir.
+- Pendiente: **vender/cobrar el parking** (fase 2, pedido por Alberto).
+
+### 💶 (20/08/2026) Dúplex: plan precio→reforma→venta, y el motor de precios tiene una copia RETIRADA que engaña
+- Del estudio fiscal salió una tercera opción que no estaba sobre la mesa: **antes de reformar (25-40k€) o
+  vender, tocar el precio** — gratis y reversible. Plan con criterios numéricos escritos ANTES de medir en
+  `docs/DUPLEX-plan-precio-reforma-venta.md` (fases A precio → B baño abajo → C 2º dormitorio → D vender).
+- **🪤 Landmine caro:** acusé al motor de pricing de dos fallos leyendo `apps/sivra/lib/pricing-engine.ts`.
+  **Esa copia está RETIRADA** (su ruta da 410 desde el 18/07/2026); el motor vivo es
+  `apps/plataforma/app/api/sivra/pricing/apply` y es mucho más fino. Uno de los «fallos» ya estaba resuelto
+  desde el 09/08 (`pricing-demanda.ts` gatea el descuento fuera de la ventana de venta). Anotado en la skill
+  `pricing-agente`. **Antes de acusar a un motor, comprueba qué copia corre.**
+- **Aplicado en prod con OK de Alberto:** `target_pctl` 0,50→0,60 en `prop_duplex_center` (Fase 1). Pendiente
+  de su decisión `max_change_pct` 0,20→0,08. La ocupación de la competencia **no** se puede usar hoy
+  (`market_rates` no guarda disponibilidad) — haría falta panel fijo de comps.
+- **Rutina nueva** (día 1 de cada mes, `trig_01QLVxzPS1PXAJPuWhApcAFV`): mide el mes cerrado y aplica el
+  criterio de la fase. Ficha en `docs/RUTINAS-PROGRAMADAS.md` §15. PR #1538.
+
+
+### 🏠 (20/08/2026) Estudio fiscal de la venta del dúplex de Villasís por 320.000€
+- Alberto sube la escritura del dúplex (Pj Villasís 1, 1º C) y pregunta cuánto pagaría vendiéndolo por
+  320.000€. **Es una DONACIÓN de su madre del 21/05/2024 por 174.650,90€** (= valor de referencia), con
+  bonificación 99% del ISD andaluz → valor de adquisición = ese, no lo que pagó ella en 2004.
+- Números: ganancia ~145.000€ (sin agencia) → **IRPF ~32.300€ + plusvalía ~970€**; con agencia al 3%,
+  ~30.600€. Neto entre 271.000€ y 286.000€. Estudio completo en `docs/FISCAL-venta-duplex-villasis.md`.
+- **Plusvalía: método objetivo (~970€) vs real (~24.900€)** — hay que pedirlo expresamente.
+- **Palanca grande:** pérdidas realizadas de IBKR (−6.642 USD en 2025, −18.746 USD en 2026) compensan al
+  100% la ganancia → ~3.700€ menos. ⚠️ Son P&L del bróker en USD SIN tipo de cambio: hace falta el
+  informe fiscal en euros antes de contar con ello. El año de venta (2026 vs 2027) importa por esto.
+- **Alcance cerrado:** Alberto confirma que es **un solo piso / una sola finca** (2/18031).
+- **Cruzado con la declaración 2025** (hilo Asecon + registro en Drive): Villasís estuvo **240 días
+  arrendado**, ingresos declarados 18.606,47€ (neto Booking) y gastos 3.052,26€ → renta ~15.554€/año
+  (4,86% sobre 320.000€). Dos preguntas abiertas para Asecon: base de la amortización (valor ISD, no
+  catastral — STS 15/09/2021) y si entraron las limpiezas (~1.800€/año). Rectificables 2024-25 si
+  fallan. Validación final: Asecon.
+
+### 🛑 (20/08/2026) El login automático del Portal NO es viable: 2FA y después CAPTCHA — PRs #1548→#1560
+- Se construyó entero (login, lectura del código por IMAP, segundo POST) y se probó contra producción. El
+  Portal cerró la puerta en dos escalones: **2FA** en la única vía automatizable (usuario+contraseña), y
+  después **CAPTCHA** tras la ráfaga de intentos. **No se resuelve el captcha**: automatizar el acceso
+  propio es una cosa y saltarse un «demuéstrame que eres una persona» es otra; además el escalón siguiente
+  es el bloqueo de la cuenta. `captcha` y `rechazada` no se reintentan y avisan por Telegram.
+- El lector sigue en ANÓNIMO, honesto: con muro dice «identifícate», no «no hay documentos».
+- **Lo que sí sirve:** Alberto entró a mano con Claude Chrome y bajó **18 documentos de las 9 fichas en dos
+  minutos**. Solo Barbate (265289) no publica certificación de cargas. **PENDIENTE: el buzón de Drive** para
+  que el lector procese esos PDFs — ese es el camino, no el login.
+- 🚨 Dos bugs propios de método: (1) el detector buscaba «Cerrar sesión» y el Portal dice **«Desconectar»**,
+  con el fixture escrito con la misma suposición que el código → suite en verde sobre un detector muerto;
+  (2) el margen de frescura del OTP (30 s) era **más ancho que la distancia entre intentos** (11 s) y se
+  tragaba el código anterior. Un margen de tolerancia es una puerta: se mide contra la frecuencia real.
+
+### 🔓 (20/08/2026) El cron ya se identifica en el Portal del BOE — y el muro cambia de significado
+- Alberto: «ya tengo usuario en el BOE con mi firma digital». Comprobado en `/acceso.php`: de las tres vías
+  (certificado · **usuario+contraseña** · Cl@ve) solo la segunda sirve a un proceso; `POST /id/login.php`
+  sin CSRF ni captcha. **La firma digital NO entra en repo ni en Vercel.** Envs: `BOE_PORTAL_USUARIO`,
+  `BOE_PORTAL_PASSWORD` — sin ellas todo sigue en anónimo igual que antes.
+- 🚨 El Portal **bloquea cuentas** («…o está bloqueado»): un rechazo se cachea y NUNCA se reintenta; solo el
+  fallo de red es reintentable. `interpretarLogin` exige el éxito POSITIVO (fixture del error REAL).
+- Columna `documentos_sesion` + estado `ocultas_pese_a_sesion`: el mismo muro significa «identifícate»
+  (gratis) o «pide la certificación al Registro» (tasa) según con qué ojos se miró. Ante `null`, el barato.
+- Las 9 fichas con muro se releen en la primera pasada con sesión (validado contra la BD). 503 tests módulo,
+  1372 plataforma, tsc+build limpios. **Pendiente de Alberto:** poner las dos envs en Vercel y probar con
+  `fase3-debug?accion=portal` (devuelve solo el veredicto, nunca la contraseña).
+
+### 🛡️ (20/08/2026) Traspaso del CRM de correduría de Manuel Suárez — runbook, BLOQUEADO en Fase 0
+Manuel desarrolló el CRM en SU Supabase y SU Vercel; el negocio es de Alberto y hay que traérselo.
+Plan cerrado en `docs/TRASPASO-CORREDURIA.md`. Decisiones: BD → **schema `seguros` en `central`**
+(no un proyecto aparte: principio de BD única de `MATRIZ.md`) con rol `prisma_seguros`; código →
+vertical **`apps/seguros`** ⚠️ *(nombre SUPERADO el mismo día: la vertical es `apps/asegura` — ver entrada de arriba)* (molde `apps/mariscos`, `ignoreCommand` desde el primer commit); free vs.
+Pro se decide **midiendo el dump**, no con la estimación de ~200 MB (hoy `central` va por ~180/500).
+**No** se transfiere su proyecto Supabase ni se monta MCP/API a medida: para inspeccionar, Manuel
+invita a Alberto a SU organización (el conector de Supabase ya lo ve); para copiar, `pg_dump | psql`
+(un MCP perdería índices, secuencias, constraints y triggers). **GitHub va aparte:** el código entra
+sin historia git y su repo original se TRANSFIERE a Alberto y se archiva como museo.
+La petición a Manuel se plantea en dos opciones — **A (recomendada): tres accesos, ~5 min de su
+tiempo**, todo lo demás lo hace Claude; B: lista de tareas, si no quiere dar ese acceso.
+🚨 **La transferencia del repo va LA ÚLTIMA**: rompe la conexión git de su Vercel y le tumba el
+despliegue, que debe seguir vivo para la comparación lado a lado. Anticipados tres límites reales
+(org de Supabase con otros clientes · Vercel Hobby no admite miembros · repo en organización ajena),
+ninguno bloqueante: cada uno cae a su fila de la opción B.
+No confundir con `/correduria` de plataforma, que es la contabilidad de comisiones y NO se toca:
+esa ambigüedad queda enrutada en la skill `central-maestro` (+ fila en `docs/FUENTES-DE-VERDAD.md`),
+con el aviso de que «no está en el repo» ≠ «no existe» (lección de la landing de House Sevillana).
+**Mensaje ENVIADO por WhatsApp el 20/08/2026**, así que la Fase 0 ya no bloquea: se espera respuesta.
+Lo siguiente que le debemos es el documento que le promete el punto 6 — borrador del contrato de
+encargado de tratamiento en `docs/CONTRATO-ENCARGADO-TRATAMIENTO-MANUEL.md`, **sin firmar y sin
+enviar**: falta decidir **quién firma como responsable** (¿ASegura S.L. o Alberto persona física? —
+depende de a nombre de quién esté la cartera, no verificado) y que lo revise la asesoría. Ojo: firmarlo
+ahora NO legaliza retroactivamente el periodo en que Manuel ya tuvo los datos; documenta la relación y,
+sobre todo, fija entrega + borrado acreditado. Las categorías de datos del contrato se cierran con el
+inventario de la Fase 1, no antes.
+### 🔨 (20/08/2026) Las subastas ya cuentan CÓMO ACABARON, y el techo de puja se contrasta con remates reales — PR #1536
+- **TRES sesiones distintas fueron al mismo sitio el mismo día**: esta, #1537 (pujas `ver=5` + avisos
+  sobre el radar) y #1540/#1548 (login e identificación en el Portal con 2FA). Cada vez que `main`
+  se adelantó, este PR se **reconcilió sobre él** en vez de imponer lo suyo.
+- Lo que se tiró por duplicado: el `pujasDeFicha` de `ficha-boe.ts` (manda `pujas.ts`), las columnas
+  `hay_pujas`/`pujas_secretas`/`pujas_at` (manda `pujas_estado`), y la `PORTAL_SUBASTAS_COOKIE`
+  (manda el login real de #1540/#1548; ahora `sesionPortalAbierta()` aprovecha la sesión si ya está
+  abierta y NO abre ninguna: cada login manda un SMS y el Portal bloquea cuentas).
+- Lección de método: dos agentes sobre el mismo tema el mismo día no cuestan el trabajo repetido,
+  cuestan **dos columnas que dicen lo mismo** y se desincronizan — y entonces se decide una puja
+  mirando la que se quedó vieja. Al reconciliar, manda lo que ya está en `main`.
+- Lo que aporta este PR encima: **`subastas_pujas_obs`** (serie temporal; el Portal solo publica el
+  estado de HOY, así que «cuándo entró la primera puja» solo se responde con histórico propio),
+  **`avisarDesenlaces`** (el remate se capturaba en silencio desde julio: ahora se cuenta por Telegram
+  con el remate contra el tipo EN EUROS y si nuestro techo habría ganado), y **`remate.ts`**
+  (`remateEsperado`/`revisarTecho`) que convierte la calibración en euros por fila.
+- El caso que lo justifica: Dos Hermanas, tipo 739.210,43€ y «techo» calculado de **887.052,43€**
+  sobre la mediana del municipio. Ahora sale como `techo_fiable=false`, no como recomendación.
+- Muestra real: mediana del **64% del tipo**, ninguna desierta; Sevilla capital a 2x y 4x.
+- Cantabria no estaba en `subastas_criterios` pese a los avisos de Alberto: añadida.
+- Verificado antes de mergear: plataforma 1.404 · module-subastas 527 · guardias 33 · vitest 53 ·
+  resto de packages sin fallos · `tsc` limpio. Ficha del agente puesta al día en `agentes-catalogo.ts`.
+
+### 🔔 (20/08/2026) El aviso de cierre de subastas no había sonado NUNCA — y las pujas se leían de la pestaña equivocada
+- Alberto: «que el agente me avise el día antes con cómo van las pujas». Auditoría: 19 filas en el radar,
+  18 avisadas, **0 seguidas** — y TODO el cron `subastas-cierre` colgaba de `subastas_seguidas`, que exige
+  pulsar «👀 Seguir». Nunca se disparó (`mejor_puja_at` sin estrenar en las 26 filas).
+- `mejorPujaViva` leía la pestaña GENERAL, donde solo están la puja MÍNIMA y los tramos → nunca encontró nada.
+  La pestaña `ver=5` sí lo dice: medido en las 13 vivas, **5 sin pujas · 5 con puja de importe oculto · 3
+  secretas**. El importe solo se publica al CONCLUIR (y ahí sí: 8 remates reales, mediana **0,64× el tipo** —
+  pero **Sevilla va a 1,42×**, con un 165.000€ → 669.900€ verificado a mano).
+- Hecho: `pujasDeFicha` (4 estados, `desconocido` nunca es «sin pujas») + `pujas_estado` + avisos sobre el
+  RADAR con **dos ventanas**: «prepara el depósito» a 5 días (el cuello de botella es el dinero: el Portal
+  llega a pedir el 20%) y «últimas 24 h». Con ratio de remate de SU provincia y suelo del art. 670.
+- **Probar antes de mergear cazó DOS bugs que `tsc` y `next build` dan por buenos:** tres columnas que el
+  cron lee y faltaban en `COLS_SUBASTA` (filas `$queryRaw` = `any` → aviso MUDO con el dato en la BD; ahora
+  lo vigila `cols-subasta.test.ts`) y un `SELECT DISTINCT … ORDER BY` fuera del SELECT (**42P10**, el vigía
+  moría en cada pasada). Regla: **el SQL de un cron nuevo se ejecuta contra la BD real antes de mergear.**
+- Pendiente: llevar el estado de pujas a la ficha de `/subastas`; registrar el MOTIVO del descarte.
+
+### ⚖️ (20/08/2026) «Cargas no publicadas» con la certificación colgada: el Portal las esconde tras el login
+- Alberto, sobre SUB-JA-2026-262097: «si vienen!! ¿por qué sigue pasando esto?». El BOE publica
+  «SUBASTA LOCAL COMERCIAL» y «CERTIFICACIÓN DE CARGAS», y la ficha decía 🟠 «no publicadas».
+- **Raíz:** el bloque «Información complementaria» solo se enseña con SESIÓN INICIADA en unas subastas.
+  El cron entra anónimo, `enlacesDocumentos` devuelve `[]` (y `fichaLegible` pasa: la ficha ES la ficha),
+  y ese `[]` se grababa como «revisada, el BOE no adjunta nada» + `lector_version` → nunca se reintenta.
+  Medido a mano: **8 de las 13 vivas** decían eso y **las 8 tenían muro; ninguna carecía de documentos**.
+- Fix: `muroDocumental()` (puro) + columna `subastas.documentos_muro` + estado `ocultas_tras_login`
+  («entra con tu usuario», no «ve al Registro»). De paso, `/api/subastas/radar` devolvía el anuncio PELADO:
+  marcar «visto» borraba la documentación de la tarjeta.
+- **PENDIENTE (decisión de Alberto):** (a) ¿dar credenciales del Portal al cron para leer tras el login?
+  (b) SUB-JA-2026-262310 tiene la certificación descargada y sin cuadro: es un escaneo CCITT/JBIG2 con OCR
+  basura (553k chars) → `pareceEscaneado` la da por texto bueno y `localizarJpegs` no ve páginas (solo JPEG).
+  Rescatarla pide rasterizador de PDF, no un ajuste de umbral.
+
+### 🔧 (20/08/2026) Del latido rojo al MERGE sin humano en medio — reparación automática de agentes
+- Pregunta de Alberto tras el fallo del canal: «¿no hay un agente que revise y repare?». Había quien
+  DETECTA (`agentes-latido`, `/auditoria-diaria`) y nadie que REPARE. Dictado: **«lo más automático
+  posible y solo avisarme en caso de no resolverse por si tengo que intervenir»**.
+- Flujo: 07:45 latido → 08:00 `latido-reparar.yml` reclama UNO → `scripts/ai-programar.mjs` → **gate**
+  → mergea solo · o PR draft + Telegram. A las 24 h el **propio latido** dicta el veredicto.
+- **Dos reglas del disparador:** solo dispara lo que tiene forma de EXCEPCIÓN (`reparable.ts`, puro y
+  testeado; un IMAP caído no se arregla en el repo), y al orquestador se le manda la **EVIDENCIA**
+  cruda, nunca la narración del aviso — la de `sivra_canal` mandaba al fichero equivocado.
+- **El gate es una PRUEBA, no CI:** exige un test que falle sobre `main` y pase con el parche, y lo
+  ejecuta en su propio run. Motivo doble: un `tsc` verde bendice cualquier cosa, y el estado de checks
+  **miente** aquí (el #1529 salió ✅ con `tests.yml`/`ci.yml` sin ejecutarse nunca).
+- Frenos: 1 firma = 1 intento · 3/agente en 30 días · carril acotado (nada de `.claude/**`, workflows
+  ni `.sql`). Tabla `agente_reparaciones` **ya aplicada**. Éxito = silencio. Spec en `docs/superpowers/specs/`.
+- 🔀 **Choque con #1530, que arregló el MISMO `date - bigint` a la vez.** Me quedo con su versión del
+  código y su guardián; de lo mío sobreviven los **dos sitios que #1530 no tocó** —`lib/ia-cache.ts`
+  (la caché semántica NO guardaba nada) y el mailing de ialimp (pasos ≥2 nunca encolados)— y una
+  regla que a su guardián le faltaba: **`make_interval(days|hours => bigint)` TAMPOCO existe**; solo
+  `secs` lo acepta (es `double precision`). Su cabecera lo recomendaba como cura y no lo es.
+- **Cierre (mismo día):** corregida la `nota` de `sivra_canal` en `latidos.ts` —afirmaba que un rojo
+  ahí venía «de aguas arriba» y era falso; ahora manda leer el detalle y ordena qué mirar. `/auditoria-diaria`
+  consulta `agente_reparaciones` antes de abrir carril 2 (no duplicar parche sobre un intento vivo) y el
+  reparador queda registrado en `docs/SKILLS.md` para el `agentes-entrenador`, avisando de que su
+  comportamiento es CÓDIGO TESTEADO, no un prompt, y de que su silencio no prueba que corriera.
+- 🔑 **Ese «pendiente de Alberto» se cerró solo, y el intento de cerrarlo destapó algo que hay que
+  recordar: el `ALERTA_TOKEN` de Vercel está marcado Sensitive** — escritura sin lectura, no lo
+  devuelve ni el dashboard ni la API, así que **su valor no se puede recuperar de ningún sitio**. Y
+  rotarlo para copiarlo a GitHub habría desincronizado de golpe TODAS las Rutinas de claude.ai/code,
+  que lo llevan escrito en el prompt (es la avería del 19/07/2026 del agente de trading, y la
+  variable de Vercel lleva justo esa fecha). Salida: `latido-reparar.yml` pide
+  `secrets.ALERTA_TOKEN || secrets.CRON_SECRET` — los dos endpoints usan `isRoutineAuthorized`, que
+  acepta ambos, y `CRON_SECRET` ya estaba en los secrets del repo. **No contradice el token estrecho:**
+  este existe porque las Rutinas corren con las variables a la vista; los secrets de Actions no.
+
+### 🧨 (20/08/2026) `date - bigint`: el calibrado del canal murió en su primera pasada real — y tapaba un suelo apagado
+- **El cron `/api/sivra/pricing/canal` reventó entero** (42883, `operator does not exist: date - bigint`)
+  en `CURRENT_DATE - ${VENTANA_DIAS}`: Prisma manda un número de JS como **int8** y Postgres no tiene
+  `date - bigint`. Compila, pasa `tsc`, pasa `next build`, pasa los 1.342 tests — porque **nada de eso
+  ejecuta la consulta**. `pricing_settings` siguió con el ×1,20/0/2 que ese cron existe para corregir.
+- El **latido `sivra_canal` hizo su trabajo**: rojo, con el error literal. El vigía es lo único que
+  separó «no ha corrido» de «corrió y murió».
+- 🚨 **Lo caro apareció al buscar el patrón:** la MISMA construcción en el suelo de PriceLabs de
+  `pricing/apply` (`captured_at >= CURRENT_DATE - ${PL_REF_MAX_AGE_DAYS}`, desde el 16/08), pero ahí
+  la tapaba un `.catch(() => [])`. Resultado: **el suelo del 85% llevaba días INERTE y su tripwire del
+  70% tampoco podía saltar** — «no he podido leer la referencia» servido como «no hay referencia», el
+  landmine del CLAUDE.md raíz en su forma más cara. 708 filas de referencia vigentes sin usar; medidas
+  107 fechas de House y 81 del Dúplex por debajo del suelo (p. ej. Dúplex 24/10: 148€ contra 220€ de PL).
+- Arreglado: `::int` en ambas, el `catch` del PL ahora **declara** (`pl_degradado`, `ok:false`, Telegram)
+  en vez de degradar en silencio, y guardián nuevo `test/regression-sql-fecha-parametro.test.ts` que
+  falla si alguien vuelve a restar un parámetro sin castear (verificado: caza el bug original).
+- Lección de método: **una consulta que ningún test ejecuta no está probada por tenerlo todo en verde.**
+  Las dos consultas arregladas se probaron contra la BD real con parámetro bigint antes de dar el fix
+  por bueno. (Y ojo: un backtick dentro de un `Prisma.sql` cierra el template — casi se cuela.)
+- Bien: la rutina de Booking SÍ midió sola 6 ventanas nuevas de escaparate (22 en total). PR #1530.
+
+### ✅ (20/08/2026) El calendario de House Sevillana, EN VIVO — tras romperse TRES veces por caché
+- **Confirmado por Alberto en pantalla.** Verificado además que las fechas son las buenas: las 34
+  noches ocupadas del endpoint coinciden **una a una** con el snapshot del cron (sin desfase de día,
+  el fallo clásico de husos); rango hoy→+12 meses, sin duplicados, sin fechas pasadas.
+- **Tercera capa, la que sobrevivió a los dos arreglos:** `s-maxage` **NO** significa «cachea solo
+  el CDN». Sin `max-age`, el navegador no tiene vida útil declarada y el `stale-while-revalidate`
+  le deja servirse **su propia copia rota** hasta una hora. Con el endpoint ya impecable (12/12), la
+  web seguía rota y desde el servidor era invisible. Fix #1523: `max-age=0, must-revalidate` (fuera
+  el SWR: no se puede pedir solo para el CDN) + `cache:'no-store'` en el `fetch` del widget.
+- **La lección de método, la misma las tres veces:** tomar «no he podido observar el fallo» por «no
+  hay fallo». Cada arreglo era correcto y cada verificación era real; lo que faltaba era un camino
+  que la comprobación nunca ejercitaba. Escrito en `verification-before-completion`.
+- Aparte: la web estuvo caída un rato con `ERR_SSL_PROTOCOL_ERROR` en `www` (dominio principal).
+  Se recuperó sola; **no se llegó a diagnosticar** — si repite, hay que mirar el certificado en
+  Vercel → Domains, no el código.
+
+### 🚧 (20/08/2026) El calendario salía «no hemos podido consultar»: se arregló DOS veces — #1519 y #1521
+- Mergeado #1500, el endpoint daba **200 impecable por curl** y estaba roto en el navegador: la
+  respuesta se cachea en el CDN (`s-maxage=600`) y sus cabeceras dependían del `Origin`, así que
+  **la primera petición decidió las de todas durante 10 min** — y la primera fue mi propio `curl`
+  SIN `Origin`, que dejó cacheada una copia sin `Access-Control-Allow-Origin`.
+- **#1519 (`Vary: Origin` siempre) NO funcionó**, y solo se supo por verificar en producción:
+  **el CDN de Vercel no cachea por `Origin`** y encima borra ese `vary`. Medido: **12 de 12**
+  peticiones desde housesevillana.es recibían la copia dejada por un curl con `Origin` ajeno.
+- **#1521 es el arreglo bueno: `Access-Control-Allow-Origin: *` fijo**, lista blanca retirada
+  (el endpoint no lee sesión, no hay nada que proteger). Una respuesta cacheada no puede depender
+  del `Origin`. Helper `lib/sivra/cors-publico.ts` sin argumentos + test que vigila la ruta.
+- **Dos lecciones a la skill `verification-before-completion`:** un 200 por curl a pelo no prueba
+  CORS; y **con caché delante, UNA petición no es una medición** (repetir y mirar `x-vercel-cache`).
+- **Y AUN ASÍ seguía roto en el navegador de Alberto (captura), con el endpoint ya correcto.**
+  Tercera capa, la que no se ve desde el servidor: la cabecera era `s-maxage=600,
+  stale-while-revalidate=3600` **sin `max-age`**. Para una caché PRIVADA eso no fija vida útil
+  (heurística = 0 sin validador) y el `stale-while-revalidate` **autoriza al navegador a servir su
+  propia copia vieja hasta una hora** — la copia rota de antes del arreglo. Fix (#1525):
+  `public, max-age=0, must-revalidate, s-maxage=600` (se renuncia al SWR: no se puede pedir solo
+  para el CDN) + `cache:'no-store'` en el `fetch` del widget, que solo toca la caché del navegador.
+  Regla: **`s-maxage` sin `max-age` no es «cachea solo el CDN»**; el navegador también guarda.
+- **Verificado en producción tras mergear #1521** (20/08, 07:40 UTC): se envenenó la caché a propósito
+  con `Origin: https://competencia.com` y aun así **12/12** peticiones desde housesevillana.es
+  recibieron `access-control-allow-origin: *` (todas `HIT`, o sea de la copia envenenada). Igual sin
+  `Origin`, y el preflight `OPTIONS` da 204 con la cabecera. Cuerpo: `fuente:smoobu`, 34 noches
+  ocupadas, 0 sin dato. ⚠️ La landing en sí **no se pudo mirar desde el contenedor** (el proxy bloquea
+  `housesevillana.es` y los previews `*.vercel.app`) — falta el Ctrl+F5 de Alberto para cerrarlo.
+
+### 🐾 (20/08/2026) Tres decisiones de Alberto sobre la landing, y el calendario a producción
+- **Mascotas: NO se admiten.** La ficha de Booking **2039943** publica «Admite mascotas» y la landing dice
+  que no (FAQ + JSON-LD). Comprobado con el conector; la web está BIEN y no se toca — el error está en
+  Booking y lo corrige Alberto en la extranet (prompt listo en `docs/PROMPT-CHROME-landing-calendario.md`).
+- **«Bercell» se queda fuera** del pie, definitivamente. Y el PR #1500 (calendario + pie) **se mergea**.
+- De paso, esa ficha confirma contra fuente real: dirección **Socorro 24**, nota **8,6/51 reseñas** (la web
+  ya lo dice) y que el ID de House Sevillana es 2039943, no el 4771238 que le atribuye la skill de SEO.
+- Lo que queda del calendario es de navegador (deep link `dd/mm/yyyy`, 320 px, minutos a pie): va como
+  prompts para Claude Chrome en `docs/PROMPT-CHROME-landing-calendario.md`, no como lista de deseos.
+
+### 🔍 (20/08/2026) Auditoría diaria (ligera) — heartbeat 22/22 ✅, sin drift, un vigilante nuevo
+- Rango: 45 commits desde la pasada del 19/08 05:15 UTC, casi todo el cierre de la saga
+  `auditoria.yml`/`rutinas-automerge.yml` + sesión IBKR + fixes de housesevillana. Sin huecos en
+  memoria (el guardián ya lo había anotado todo), `docs/SKILLS.md` al día, sin contradicción fiscal.
+- `rutinas-automerge.yml` confirmado sano: última pasada 01:55 UTC en verde, cada hora sin huecos —
+  la saga del 19/08 (PRs #1501→#1511) quedó resuelta de verdad.
+- **Hallazgo (carril 2, PR aparte):** el cron semanal `paper-tracker` (alta 18/08, PR #1476) ya
+  escribía su latido pero nadie lo vigilaba — añadido a `AGENTES_VIGILADOS`/`PROBES`.
+- Informe completo en `docs/AUDITORIA-2026-08.md` (actualización 2026-08-20).
+
+### 🛡️ (19/08/2026) Grupo Asegura — plan para traer la correduría al monorepo
+- Nuevo `docs/ASEGURA-MIGRACION.md`. El desarrollo externo es el repo **`manuelsuarez/asegura`**
+  (invitación de colaborador del 12/08 en el Gmail, **sin aceptar**); Claude NO puede leerlo desde
+  esta sesión (app instalada solo en `albertosuarezgutierrez-gif`, `add_repo` cross-owner bloqueado).
+- **Decisión: NO se crea proyecto Supabase nuevo** aunque el 2º free cueste 0 €/mes — los free se
+  pausan a los 7 días de inactividad y las cuotas son por organización. Va como schema **`seguros`**
+  en `central` + rol `prisma_seguros`, app `apps/asegura`, marca por `@central/brand`.
+- Bloqueantes de Alberto: **transferir** el repo a su cuenta (es un Next.js hecho con Claude Code:
+  787 commits, 258 ramas, e2e, tickets Linear LOO-xxx, desplegado en `asegura.vercel.app`; el Vercel
+  y el Supabase también son de Manuel).
+- **Hecho sin depender de él:** schema `seguros` + rol `prisma_seguros` creados en `central` (inerte,
+  sin password; SELECT en cuentas/sociedades/negocios) — `apps/asegura/prisma/sql/2026-08-19_asegura_bootstrap.sql`.
+  Y `docs/ASEGURA-PROMPT-CHROME.md` para inventariar el repo con Claude Chrome. PR #1489.
+### 🛤️ (19/08/2026) El raíl aguanta en vivo — vigilancia diaria de precios BORRADA
+- Verificado sobre la pasada real de las 20:31 UTC. El arreglo (#1497, `1f5a4d0`) estaba en producción
+  desde las **20:13:18 UTC**, 18 min antes (deploy de `a6ef85ab`, del que `1f5a4d0` es ancestro).
+- **0 fugas del raíl en las 351 fechas escritas hoy, en los 4 pisos.** Las 17 que ayer se pasaron son
+  justo las 17 que hoy se reescribieron, y todas frenaron en el tope: Busto Reform 18/09 se quedó en
+  312→250 (ayer siguió a 200, −35,9%) y las 16 de House de 2027 en −20,0%.
+- La peor bajada del día es **−20,23%** (Luxury 22/08, 173→138) y **no es fuga**: `ROUND(173×0,8)=138`,
+  o sea el motor clavó su propio suelo y el exceso es redondeo a euros. Las 3 mayores bajadas caen
+  exactamente en `ROUND(ancla×0,8)`. La mayor subida (+82,4%, Luxury 28-30/12) es el salto de evento
+  de Nochevieja: todo lo posterior al clamp solo SUBE, por diseño.
+- Con eso se cumple el «todo ok» condicionado de Alberto → **borrada `trig_01Eagedr3hBNtpf1oEgDHj5R`**
+  («Vigilancia diaria pricing SIVRA», diaria 09:00 UTC desde el 09/08). Siguen vivos el guardián de
+  las 07:30 con alertas a Telegram, la auditoría diaria y el agente de pricing semanal.
+
+### 📅 (19/08/2026) Calendario de disponibilidad en la landing de House
+- Alberto lo pidió: que el huésped vea de un vistazo qué noches hay. Como la landing es HTML plano en
+  rutas `edge` **sin BD ni secretos**, el dato viene de un endpoint público NUEVO en plataforma
+  (`/api/publico/disponibilidad`, en la lista `PUBLIC` del middleware): Smoobu en vivo con caché de
+  10 min, respaldo `rate_snapshots` de ≤2 días con su fecha real, y **503 si no hay ninguno de los dos**.
+- **La regla que gobierna todo:** un `ocupadas: []` de consuelo se pintaría como calendario entero libre.
+  Helper puro `lib/sivra/disponibilidad-publica.ts` (8 tests): `available` ausente/null/raro → `sinDato`,
+  jamás libre. En el widget, **toda celda nace en `sindato`** y un fallo de red va al estado `error`.
+- Cuatro estados distinguibles SIN color (macizo/rayado/contorno punteado/plano). Vive en
+  `app/calendario.ts` para no darle superficie al agente SEO de los lunes — y por eso el guardián i18n
+  pasa a leer también ese fichero (si no, sus 16 claves quedaban fuera de la red: el fallo de #1487).
+- Spec + apéndice con markup y CSS: `docs/superpowers/specs/2026-08-19-calendario-disponibilidad-design.md`.
+- **🚨 Lección de CI (misma sesión):** el PR pasó ~1h30 sin que corriera NINGÚN check y se llegó a culpar
+  al token de la GitHub App. Falso: el PR estaba en **conflicto** con `main` (#1499→#1503 movieron el
+  archivo de memoria). **Con el PR en conflicto GitHub no puede construir la ref de merge y los workflows
+  `pull_request` ni se disparan** — ni con pushes nuevos ni cerrando y reabriendo el PR. Al mergear `main`
+  en la rama arrancaron los 15 checks en el acto, todos en verde. Antes de diagnosticar «la CI no corre»,
+  mira `mergeable_state` (`dirty` = esto).
+- **Sin verificar:** el enlace profundo al motor con fecha (`arrivalDate=dd/mm/yyyy`, NO ISO como su API).
+  Evidencia de dos repos públicos con cuentas Smoobu distintas; el proxy bloquea `*.smoobu.com`. Degrada
+  a abrir el motor sin fecha, así que el riesgo es nulo. **Falta que Alberto pegue la URL en un navegador.**
+
+### ©️ (19/08/2026) El pie de la landing decía «© 2025 · Bercell»
+- Dos fallos en la misma línea de `apps/housesevillana/app/route.ts`. **El año quemado**: en agosto de 2026
+  la portada firmaba «© 2025», que a un huésped le lee como web abandonada. No se ha puesto 2026 (vuelve a
+  caducar) ni `new Date().getFullYear()` (el HTML es una const de módulo y Next puede prerenderizar la ruta:
+  quedaría clavado en el año del build) — **se ha quitado el año**: un copyright no lo necesita y así no hay
+  número que envejezca. Guardián nuevo `app/pie.test.ts` sobre las 4 páginas.
+- **«Bercell»**: aparecía UNA sola vez en todo el monorepo, sin rastro (entró con la importación sin historia
+  del 12/08). Sin poder verificar qué es, se ha quitado en vez de inventar un sustituto — la identidad legal ya
+  la lleva la línea de al lado (`VFT/SE/01179`). **Si es un nombre comercial real, Alberto lo dice y vuelve.**
+- De paso: esa línea no estaba en los diccionarios, así que `/en` y `/it` la servían en castellano. Añadida a los dos.
+
 ### 🛑 (19/08/2026) IBKR: no era la selección, eran los stops — libro de operaciones en Supabase
 - Alberto preguntó por VWCE («no para de bajar»): −594,96€, el **3,7%** de los −16.172,49€ que perdió operando
   en 2026. Sacado de IBKR por MCP; informe visual en artifact (no en repo: dato financiero personal).
@@ -1609,6 +1996,18 @@ completo `docs/AUDITORIA-2026-08.md`.
 - Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
+## 🛂 (20/08/2026) SES.HOSPEDAJES: diseño de la conectividad (parte de viajeros) — PR #1550 (draft)
+
+Fase de arranque del RD 933/2021 (comunicar viajeros al Ministerio en <24h; multas 100 €–30.000 €).
+Solo diseño, aún sin código: `docs/superpowers/specs/2026-08-20-ses-hospedajes-conectividad-design.md`.
+Protocolo verificado: SOAP a `hospedajes(.pre)-ses.mir.es/hospedajes-web/ws/v1/comunicacion`, Basic auth,
+`<solicitud>` = XML `altaParteHospedaje` en **gzip+base64**. Decisiones de Alberto: conector PROPIO (no
+Smoobu/Chekin), check-in web con OCR por IA **con confirmación humana**, y **solo nuestros 4 pisos** de
+momento (el resto de ideas —venta a terceros, uso comercial de los datos, RH, vehículos— en §9 del spec).
+🚨 Desde el contenedor NO se alcanza `*.mir.es` (proxy): toda prueba contra SES es desde Vercel.
+Pendiente: que Alberto revise el spec → plan de implementación. Códigos/credenciales NUNCA al repo.
+
+
 ## 💹 (09/08/2026) La palanca de DEMANDA ya mira el MES, no el año — PR #1323 (draft, rehecho sobre #1337)
 - #1337 (mergeado el 09/08) quitó el castigo a las fechas sin abrir, pero el `occ` de `pricing/apply`
   seguía siendo UNA ocupación anual por piso: el mes que se LLENA no podía subir el precio.
@@ -1681,6 +2080,17 @@ completo `docs/AUDITORIA-2026-08.md`.
     (ingesta IMAP no leía nada por saltos de línea/columna) ya arreglado y con regresión — pero el
     correo de alerta de Surus **aún no se ha visto en producción** (alta del mismo día): pendiente
     contrastar el parser contra el primer aviso real que le llegue a Alberto.
+  - **SIVRA — agente de huéspedes (20/08/2026, PR #1542 draft).** Entrega 1 hecha: lee la guía REAL
+    del piso por la API de la guest app de Smoobu (`login.smoobu.com/api-guest/bookings/{id}[/contents]?token=`,
+    el token sale del `guest-app-url`). Pendientes: (a) entregas 2-5 — detector de conflictos
+    guía↔override, autonomía «si está en la guía contesta solo», hechos permanentes separados de las
+    cortesías, y minería de los 159 hilos de 2026 para aprender de lo ya contestado; (b) **parking:
+    que el agente lo VENDA y lo COBRE** (fase 2, pedido por Alberto) — hoy el código pisa a propósito
+    la sección PARKING de la guía y responde «ocupado» + parkings públicos; la guía ofrece el de Plaza
+    San Juan de la Palma a 20 €/día **previa reserva y según disponibilidad**, así que NO es una promesa
+    en falso; (c) **mandar nosotros los datos de viajeros a la Hospedería de la Junta de Andalucía** —
+    hoy va por un tercero (Chekin: el `onlineCheckInUrl` de cada reserva apunta a `guest.chekin.com`);
+    (d) **en marzo vence Smoobu** → decidir si compensa seguir o darlo de baja.
   - **Facturas/banca sin conciliar:** Roborock −247,92€ (House) sin aparecer en banco; Booking Dúplex
     587,23€ vence 16/08; Socorro 24 julio sin factura de comisión; Endesa Dúplex 24/07 87,42€ con
     cargo pero sin PDF archivado; fila duplicada CREATE (`create-socorro` + `create_ventilador`,

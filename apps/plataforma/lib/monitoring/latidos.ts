@@ -214,10 +214,15 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'conversión NO es un detalle: durante tres días fue un ×1,20 supuesto contra un canal que en ' +
       'realidad multiplica por ~0,9 y SUMA una cuota fija por estancia, y eso desplazaba TODAS las ' +
       'fechas de los cuatro pisos a la vez sin que nada se pusiera rojo (reserva de House de ' +
-      'Navidad, 19/08/2026). EL DETALLE DICE QUÉ PASA: «sin ajuste fiable» en todos los pisos = no ' +
-      'es que el canal cuadre, es que no hay mediciones de escaparate suficientes — el problema ' +
-      'está aguas arriba, en la rutina de Booking (sivra_mercado_booking) y en el plan de ' +
-      'escaparate de /api/sivra/mercado/plan, no en este cron. Si el detalle dice «SIMULACRO», ' +
+      'Navidad, 19/08/2026). LEE EL DETALLE Y NO PRESUPONGAS DÓNDE ESTÁ EL FALLO: el 19/08/2026 ' +
+      'esta misma nota afirmaba que un rojo aquí significaba que el problema estaba «aguas arriba, ' +
+      'en la rutina de Booking y en el plan de escaparate» — y era FALSO: las 22 mediciones de ' +
+      'escaparate estaban en market_rates y el cron moría en su PRIMERA consulta (42883, ' +
+      'date - bigint: Prisma manda los números como int8). Un diagnóstico escrito de antemano ' +
+      'manda al fichero equivocado. Qué mirar, en este orden: (1) si el detalle trae un SQLSTATE o ' +
+      'una excepción, el fallo es de ESTE cron — arréglalo aquí; (2) «sin ajuste fiable» en todos ' +
+      'los pisos SIN excepción = pasó la consulta y no hay mediciones suficientes, y entonces sí ' +
+      'toca mirar aguas arriba (sivra_mercado_booking y /api/sivra/mercado/plan); (3) «SIMULACRO» = ' +
       'alguien lo está llamando sin CRON_SECRET y no escribe nada. ' +
       'Huella: agente_latidos.sivra_canal.',
   },
@@ -278,5 +283,23 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'El paper-tracker (evolución de las cohortes de paper trading) no ha corrido esta semana. ' +
       'Revisa el cron `/api/cron/paper-tracker` (`0 10 * * 1`) en Vercel. ' +
       'Huella: agente_latidos.paper-tracker.',
+  },
+  {
+    id: 'trading_operaciones',
+    etiqueta: '📒 Libro de operaciones del bróker (pasada diaria, paso 1d)',
+    // La pasada corre L-V ~20:15 UTC, así que el hueco legítimo más largo es viernes → lunes = 72 h.
+    // 80 h evita saltar todos los lunes sin avería (mismo criterio que trading_watchdog).
+    maxHoras: 80,
+    nota:
+      'El libro de ejecuciones no se está alimentando. NO es «no has operado»: la huella se escribe ' +
+      'en CADA pasada, incluso cuando IBKR devuelve cero operaciones nuevas — precisamente para que ' +
+      'un mes tranquilo no se confunda con un sincronizador roto. Mientras esté mudo, el cálculo ' +
+      'fiscal (FIFO, regla de los dos meses) trabaja sobre un libro incompleto, y una ejecución que ' +
+      'falta cambia la renta. Urge además por una razón con fecha: IBKR solo sirve unos cuatro ' +
+      'trimestres hacia atrás por MCP, así que lo que no se vuelque a tiempo NO se puede recuperar ' +
+      'después. Si el detalle dice «sin respuesta del conector», IBKR no contestó (NO es «no hubo ' +
+      'operaciones»). Revisa en claude.ai → Rutinas que la pasada corre con el conector de IBKR ' +
+      'adjunto y que su env lleva PLATAFORMA_URL + ALERTA_TOKEN. ' +
+      'Huella: agente_latidos.trading_operaciones.',
   },
 ]

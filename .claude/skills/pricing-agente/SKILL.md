@@ -28,6 +28,11 @@ sobrevive a la sesión efímera). Cierra con informe a Alberto y auto-informe en
 - **Auth: `Authorization: Bearer {ALERTA_TOKEN}`** (header-only). **NO pidas ni uses
   `CRON_SECRET`** en prompts de rutinas. Con `ALERTA_TOKEN` el Paso 4 es SIEMPRE dry-run
   forzado (`dryRunForzado:true`) — es lo correcto, no un fallo: Alberto aplica en vivo.
+- **🪤 El motor vivo es el de PLATAFORMA, no el de sivra.**
+  `apps/plataforma/app/api/sivra/pricing/apply`. La copia `apps/sivra/lib/pricing-engine.ts` está
+  **RETIRADA** (su ruta devuelve 410 desde el 18/07/2026) y se lee igual de bien: leerla lleva a
+  diagnósticos falsos. Comprueba qué copia corre ANTES de acusar al motor de un fallo — pasó el
+  20/08/2026. Detalle en `references/estado-y-protocolo.md`.
 - **NUNCA fabriques `pricing_decisiones` a mano.** Si el Paso 4 falla dos ciclos seguidos,
   avisa por Telegram (`/api/internal/alerta`), nunca falles en silencio.
 - Circuit-breaker (HTTP 409) → NO lo fuerces: reparte la subida en varios ciclos.

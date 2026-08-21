@@ -4,7 +4,7 @@
 // 29/07/2026 (errata «VIVENDA» incluida — venía así en el documento).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { datosDeEdicto, enlacesDocumentos, fichaLegible, notasDeEdicto, viviendaHabitualDeNotas } from '../src/edicto.ts'
+import { datosDeEdicto, enlacesDocumentos, fichaLegible, muroDocumental, notasDeEdicto, viviendaHabitualDeNotas } from '../src/edicto.ts'
 
 // Anclas reales de la ficha (con &amp; y entidades tal cual las sirve el portal).
 const FICHA_HTML = `
@@ -164,4 +164,47 @@ test('viviendaHabitualDeNotas hace round-trip con las notas que genera notasDeEd
   }
   assert.equal(viviendaHabitualDeNotas(null), null)
   assert.equal(viviendaHabitualDeNotas(''), null)
+})
+
+// ── El muro del Portal ───────────────────────────────────────────────────────
+// Fragmentos LITERALES de las tres fichas vivas el 20/08/2026 (entidades y
+// <strong> intercalado tal cual los sirve subastas.boe.es). Sin muro no habría
+// forma de distinguir «esta subasta no adjunta documentos» de «no me los
+// enseñan sin iniciar sesión», que es lo que hacía decir «Cargas no publicadas»
+// a SUB-JA-2026-262097 teniendo su certificación de cargas colgada de la ficha.
+
+// SUB-JA-2026-262097: NINGÚN documento a la vista.
+const MURO_TOTAL = `<h4>Informaci&#xF3;n complementaria de la subasta</h4>
+            <div class="caja gris info">
+              <p>Para consultar la informaci&#xF3;n complementaria debe <strong>Iniciar sesi&#xF3;n</strong> en el Portal de Subastas.</p>
+            </div>`
+
+// SUB-JA-2026-264478: enseña la certificación y esconde el resto («M\u00c1S»).
+const MURO_PARCIAL = `<div class="caja gris">
+              <h5 class="legend">Documentos</h5>
+              <ul class="enlaces"><li class="puntoPDF">
+                <a href="verDocumento.php?idSub=SUB-JA-2026-264478&amp;idDoc=2-7b5e9d1ab4e884b5d277951dedffdda7" target="_blank">certificaci&#xF3;n de dominio y cargas</a>
+              </li></ul>
+            </div>
+            <div class="caja gris info">
+              <p>Para consultar m&#xE1;s informaci&#xF3;n complementaria debe <strong>Iniciar sesi&#xF3;n</strong> en el Portal de Subastas.</p>
+            </div>`
+
+test('muroDocumental distingue lista escondida, lista capada y lista entera', () => {
+  assert.equal(muroDocumental(MURO_TOTAL), 'total')
+  assert.equal(muroDocumental(MURO_PARCIAL), 'parcial')
+  // SUB-JA-2026-262310 publica EDICTO y certificación sin pedir nada: sin muro.
+  assert.equal(muroDocumental(FICHA_HTML), 'ninguno')
+  assert.equal(muroDocumental(''), 'ninguno')
+})
+
+test('con muro parcial los documentos visibles se siguen listando', () => {
+  // El muro no puede tapar lo que SÍ nos enseñan: el PDF está y hay que abrirlo.
+  const docs = enlacesDocumentos(MURO_PARCIAL)
+  assert.equal(docs.length, 1)
+  assert.equal(docs[0].titulo, 'certificación de dominio y cargas')
+})
+
+test('con muro total no hay ningún enlace que listar (y por eso hace falta el muro)', () => {
+  assert.deepEqual(enlacesDocumentos(MURO_TOTAL), [])
 })

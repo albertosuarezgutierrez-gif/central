@@ -12,6 +12,7 @@
 
 import type { SubastaInmueble } from './types.ts'
 import { titularCargas, type AdjuntoFicha } from './cargas.ts'
+import type { MuroDocumental } from './edicto.ts'
 
 export type Nivel = 'verde' | 'ambar' | 'rojo'
 
@@ -37,6 +38,10 @@ export function analisisDocumental(
   documentos?: AdjuntoFicha[] | null,
   /** `false` en las fuentes sin ficha documental (Junta): ahí no hay nada que revisar. */
   publicaAdjuntos = true,
+  /** Lo que el Portal deja ver sin sesión (`muroDocumental`): con muro, la lista está capada. */
+  muro: MuroDocumental | null = 'ninguno',
+  /** ¿La lectura fue con sesión iniciada? `null` = no consta. Cambia el recado. */
+  sesion: boolean | null = null,
 ): AnalisisDocumental {
   const puntos: PuntoAnalisis[] = []
   const notas = notasEdicto ?? null
@@ -60,7 +65,7 @@ export function analisisDocumental(
   // del texto, la ficha y el desplegable llegaron a decir cosas distintas de la
   // misma subasta (01/08/2026, SUB-JA-2026-264478). Aquí solo se traduce el
   // emoji a nivel del semáforo.
-  const cargas = titularCargas({ cargas: s.cargas, cargasConocidas: s.cargasConocidas, documentos, publicaAdjuntos })
+  const cargas = titularCargas({ cargas: s.cargas, cargasConocidas: s.cargasConocidas, documentos, publicaAdjuntos, muro, sesion })
   puntos.push({
     clave: 'cargas',
     nivel: cargas.emoji === '🔴' ? 'rojo' : cargas.emoji === '🟢' ? 'verde' : 'ambar',
@@ -86,9 +91,19 @@ export function analisisDocumental(
       puntos.push({
         clave: 'documentacion',
         nivel: 'ambar',
-        detalle: documentos!.length === 0
-          ? 'La ficha no publica edicto ni certificación: no hay documentación que analizar.'
-          : 'Los adjuntos de la ficha son escaneados sin texto: hay que leerlos a mano antes de pujar.',
+        detalle: documentos!.length > 0
+          ? 'Los adjuntos de la ficha son escaneados sin texto: hay que leerlos a mano antes de pujar.'
+          : muro === 'total' || muro === 'parcial'
+            // Lista vacía PORQUE no nos la enseñan: afirmar aquí que la ficha no
+            // publica nada es la misma mentira del titular de cargas, colada por
+            // el desplegable (20/08/2026).
+            ? sesion === true
+              // Y con sesión ya iniciada no queda login que hacer: lo que falta
+              // hay que pedirlo fuera del Portal. Repetir «identifícate» aquí
+              // sería mandar a Alberto a hacer lo que el cron ya hizo.
+              ? 'Ni con sesión iniciada publica el Portal los documentos de esta ficha: pide la certificación de cargas al Registro (o al juzgado) antes de pujar.'
+              : 'El Portal esconde los documentos de esta ficha a quien no ha iniciado sesión: ábrelos identificado antes de pujar.'
+            : 'La ficha no publica edicto ni certificación: no hay documentación que analizar.',
       })
     }
     if (/herencia yacente/i.test(notas)) {

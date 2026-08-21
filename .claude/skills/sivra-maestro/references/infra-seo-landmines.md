@@ -55,6 +55,26 @@
 - `app/limpiadoras/` de ESTE repo sirve a `sivra-app`/`housesevillana`, **no** a las limpiadoras reales (esas son ialimp).
 - Bucket `cleaning-photos` sigue **público**; cerrar buckets/vistas requiere portar antes el proxy de signed URLs a ialimp.
 
+## 📅 Calendario de la landing — dependencia CROSS-APP y su landmine de caché (20/08/2026)
+La portada de `apps/housesevillana` pinta un calendario de disponibilidad (`app/calendario.ts`) que
+**no tiene datos propios**: los pide a un endpoint que vive en OTRA app,
+`apps/plataforma/app/api/publico/disponibilidad`. Consecuencia que hay que tener presente antes de
+tocar nada: **un cambio en plataforma puede romper la landing sin que se toque ni uno de sus
+ficheros**, y al revés, si la landing enseña el aviso de error el problema casi nunca está en ella.
+- **Se rompió TRES veces el mismo día, siempre por caché, siempre invisible desde el servidor**
+  (PRs #1519, #1521, #1523). Lo que hay que saber, en una frase cada uno:
+  1. El CDN de Vercel **no cachea por `Origin`** y borra el `vary: Origin` → una respuesta cacheada
+     **no puede** llevar cabeceras que dependan del origen. Por eso el CORS es un comodín fijo.
+  2. **`s-maxage` sin `max-age` NO es «cachea solo el CDN»**: el navegador también guarda, y con
+     `stale-while-revalidate` puede servirse su propia copia vieja hasta una hora.
+  3. Un 200 por `curl` **no prueba** que un recurso con CORS funcione (curl no manda `Origin`), y con
+     caché delante **una sola petición no mide nada**: repetir y leer `x-vercel-cache`.
+- **Regla de oro del endpoint:** nunca `ocupadas: []` por un fallo. Degrada Smoobu en vivo →
+  `rate_snapshots` de ≤2 días → **503**, y la landing enseña un aviso. Una lista vacía se pintaría
+  como calendario entero libre, que es la mentira más cara que tiene esa web.
+- El widget vive **aparte de `route.ts` a propósito**: el agente SEO reescribe la portada los lunes y
+  no debe tener superficie sobre él. Por eso el guardián de i18n lee **los dos** ficheros.
+
 ## Frontera multi-tenant
 Es intranet de los pisos de Alberto, pero la BD es compartida y multi-tenant para el módulo limpiadoras
 (`empresa_id`). Cualquier cambio transversal de BD se valida también contra ialimp (ver `auditoria-central`).

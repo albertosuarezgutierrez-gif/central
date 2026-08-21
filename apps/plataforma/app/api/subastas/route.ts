@@ -112,6 +112,8 @@ export async function GET(req: NextRequest) {
         semaforo: f.semaforo ?? null,
         analisis: f.analisis ?? null,
         documentos: f.documentos ?? null,
+        documentosMuro: f.documentos_muro ?? null,
+        documentosSesion: f.documentos_sesion ?? null,
         caducidad: caducidadDeFila(f.cargas_detalle),
         precioM2Zona: f.precio_m2_zona != null ? Number(f.precio_m2_zona) : null,
         muestraZona: f.muestra_zona ?? null,

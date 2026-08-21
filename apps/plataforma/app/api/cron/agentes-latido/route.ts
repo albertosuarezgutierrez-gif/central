@@ -98,6 +98,12 @@ const PROBES: Record<string, Prisma.Sql> = {
   paper_tracker: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'paper-tracker'`,
+  // La huella NO es `trading_operaciones_sync`: esa tabla solo se escribe cuando el empujón LLEGA,
+  // así que una pasada que no pudo leer IBKR no dejaría rastro y su silencio se leería como «no
+  // hubo operaciones». El latido lo manda la pasada por /api/internal/latido pase lo que pase.
+  trading_operaciones: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'trading_operaciones'`,
 }
 
 async function handler(req: NextRequest) {
@@ -159,6 +165,39 @@ async function handler(req: NextRequest) {
       alertas.push(
         `• <b>🧹 PMS de ialimp — ${c.cliente_nombre}</b>: sincroniza, pero con errores: ${String(c.sync_error).slice(0, 160)}.\n` +
           '  Las reservas pueden estar entrando a medias: revisa la clave de Smoobu y los iCal.',
+      )
+    }
+  }
+
+  // ── 🔧 Veredicto de las reparaciones automáticas (20/08/2026) ────────────────────────────────
+  // Una reparación mergeada NO se declara resuelta a sí misma: lo dice la huella del agente. Pasadas
+  // 24 h desde el merge, o el latido volvió a ponerse verde (se cierra en silencio, el éxito no
+  // avisa) o sigue rojo — y entonces sí hace falta el ojo de Alberto, porque el arreglo automático
+  // ya se gastó su turno. Es la misma regla que rige todo el repo: el que mide no es el interesado.
+  const veredictos = await prisma
+    .$queryRaw<Array<{ id: bigint; agente: string; pr_numero: number | null; curada: boolean }>>(
+      Prisma.sql`
+        SELECT r.id, r.agente, r.pr_numero,
+               (l.ultimo_ok_at IS NOT NULL AND l.ultimo_ok_at > r.merged_at) AS curada
+          FROM agente_reparaciones r
+          JOIN agente_latidos l ON l.agente = r.agente
+         WHERE r.estado = 'mergeada' AND r.veredicto IS NULL
+           AND r.merged_at < now() - interval '24 hours'`,
+    )
+    .catch(() => null)
+  if (veredictos == null) {
+    sondasRotas.push('• <b>🔧 Reparaciones automáticas</b>: no se ha podido juzgar si la última reparación funcionó.')
+  } else {
+    for (const v of veredictos) {
+      await prisma.$executeRaw(Prisma.sql`
+        UPDATE agente_reparaciones
+           SET veredicto = ${v.curada ? 'resuelta' : 'sigue_roja'}, veredicto_at = now()
+         WHERE id = ${v.id}`)
+      if (v.curada) continue // silencio: funcionó
+      const etiqueta = AGENTES_VIGILADOS.find(a => a.id === v.agente)?.etiqueta ?? v.agente
+      alertas.push(
+        `• <b>🔧 ${etiqueta}</b>: lo intenté reparar solo${v.pr_numero ? ` (PR #${v.pr_numero}, mergeado)` : ''} ` +
+          'y 24 h después SIGUE sin latir. El arreglo automático ya se gastó su turno: esto necesita tu ojo.',
       )
     }
   }
