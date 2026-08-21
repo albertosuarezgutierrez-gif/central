@@ -83,6 +83,16 @@
   rotación de claves NO cubre. Y el panel tiene **67 Edge Functions** frente a las 45 del repo: 22 sin versionar.
 - Todo en `docs/ROTACION-SERVICE-ROLE.md`; PR #1517.
 
+### 🔧 (21/08/2026) Auditoría ligera: PR #1514 desatascado, heartbeat 12+13/25 ✅
+Pasada rutinaria sin hallazgos de memoria/skills (`docs/SKILLS.md` y `FUENTES-DE-VERDAD.md` al
+día). Único hallazgo: **PR #1514** (carril 2 del 20/08, monitor de `paper_tracker`) llevaba ~24h en
+conflicto — el PR #1505 (libro de trading) añadió una entrada hermana al mismo array en
+`latidos.ts`/`agentes-latido/route.ts`. Conflicto de inserción pura: fusionado `main`, conservadas
+ambas entradas, `latidos.test.ts` 9/9 verde, empujado a la rama existente (sin PR nuevo). Heartbeat,
+backlog de PRs y `rutinas-automerge.yml` sin más hallazgos. `sivra_canal`: su próxima pasada (07:45
+UTC) aún no ha corrido desde el fix del PR #1529/#1530; a revisar mañana, no es hallazgo hoy.
+
+
 ### 🛡️ (20/08/2026) Correduría: había DOS planes para lo mismo con dos nombres — fundidos en uno
 Dos sesiones del mismo día planificaron el traspaso del CRM de Manuel sin verse: `docs/TRASPASO-CORREDURIA.md`
 (vertical `apps/seguros`, #1532) y `docs/ASEGURA-MIGRACION.md` (vertical `apps/asegura`, #1489). Ambos

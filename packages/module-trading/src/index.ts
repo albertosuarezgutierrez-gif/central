@@ -11,6 +11,10 @@ export { infravalorada, pasaScreener, puntuarCandidato, rankearCantera } from '.
 export { dedupCandidatos, puntuarDescubrimiento, descubrir } from './descubrimiento.ts'
 export { posicionRango52, tendenciaMedias, fuerzaRelativa, rankearSectores, inclinacionSector, regimenMercado } from './mercado.ts'
 export type { SectorRank } from './mercado.ts'
+// Riesgo de HUECO y viabilidad del stop: ¿está el stop dentro del ruido normal del valor, y
+// cuántas veces lo atravesó un hueco de apertura? (medido, no estimado a ojo).
+export { huecos, caidaIntradia, perfilHuecos, evaluarStop, tamanoPorRiesgo } from './riesgo-hueco.ts'
+export type { Hueco, PerfilHueco, EvaluacionStop, Veredicto } from './riesgo-hueco.ts'
 export { backtestSimbolo, backtestOOS } from './backtest.ts'
 export type { TradeBT, ResultadoBacktest, OpcionesBacktest, ResultadoOOS } from './backtest.ts'
 export { backtestCartera } from './cartera.ts'
