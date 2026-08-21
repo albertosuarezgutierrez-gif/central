@@ -43,6 +43,17 @@ y se sustituye en fases como PriceLabs. 🚨 Tabla nueva en `public` nace abiert
 hace `REVOKE`. **Pendiente de Alberto:** `SES_CRYPTO_KEY` en Vercel, rotar las contraseñas del portal
 SES y dar de alta los cuatro pisos.
 
+### 🚨 (21/08/2026) La cuenta está al 98,6% en VWCE: la escalera de tramos hoy NO es financiable
+Al preguntar Alberto si adelantaría la inversión real, miré la cuenta en vez de dar por buena la cifra
+del preregistro. **NAV 31.531,10€, efectivo 410,46€, posiciones 31.106,48€** — todo en **UNA** posición:
+`VWCE` (188 part. del Vanguard FTSE All-World, precio medio 169,44€, latente **−670,16€**). El
+preregistro firmado el 05/08 dice «cash de referencia ~33.400€» y sobre eso monta la escalera; ese cash
+**ya no existe**. Con 407,63€ de poder de compra **no cabe ni el Tramo 1 (1.000€)**: financiarlo sería
+**vender índice para comprar agente**, decisión distinta a la firmada. Anotado en el preregistro como
+comprobación de estado, **sin tocar ningún requisito ni la fecha del Tramo 3**. Pendiente de Alberto:
+si enmienda la escalera sobre el capital real o la deja congelada de hecho. Sin mirar: por qué el NAV
+bajó de ~33.400€ a 31.531€ (¿retiradas? ¿pérdidas?) — no lo afirmo hasta verlo.
+
 ### 🔍 (21/08/2026) La segunda opinión: lo que el screener no vale, lo vale contrastar la cifra
 Pregunta de Alberto: ¿no da IBKR estos datos? **No** — el conector solo expone precio, volumen,
 volatilidad y rendimientos; ni flujo de caja ni ROIC ni márgenes (su plataforma sí los tiene, el MCP no).
