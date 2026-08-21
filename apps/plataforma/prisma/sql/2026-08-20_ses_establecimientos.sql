@@ -18,6 +18,12 @@
 -- rojo un establecimiento recién dado de alta manda a buscar una avería inexistente.
 -- ────────────────────────────────────────────────────────────────────────────
 
+-- ⚠️ SIN `cuenta_id`, A PROPÓSITO Y CON FECHA DE CADUCIDAD. La regla multi-tenant de
+-- `apps/plataforma` es filtrar SIEMPRE por `cuenta_id`, y esta tabla NO la cumple: hoy
+-- son los cuatro pisos de Alberto y la pantalla es interna (sesión obligatoria), así que
+-- `listar()` devuelve todas las filas. El día que un segundo titular dé de alta un piso
+-- aquí, esto deja de ser una simplificación y pasa a ser una fuga: la columna y el filtro
+-- van ANTES de ese alta, no después.
 CREATE TABLE IF NOT EXISTS ses_establecimientos (
   id                     uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 
