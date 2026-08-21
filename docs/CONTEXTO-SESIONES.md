@@ -32,6 +32,17 @@
 
 ---
 
+### 📮 (21/08/2026) SES.HOSPEDAJES: transporte validado contra el servicio REAL y mergeado (PR #1555)
+Operación `C` contra `hospedajes.ses.mir.es` → **200 `codigo 0 / Ok`**: TLS con cadena FNMT (raíz
+pública, sí está en el almacén), credenciales de servicio web, arrendador habilitado y **ZIP aceptado**
+(era gzip: habría fallado TODO con `10111`). `pre-ses` devuelve **502 a todo** → no hay sandbox: el
+ensayo es dry-run contra producción. Credenciales **por piso** en `ses_establecimientos` (AES-256-GCM,
+`SES_CRYPTO_KEY`), pantalla `/sivra/partes/establecimientos` y latido diario 07:15 que recorre TODOS
+los activos. 🚨 **Chekin es hoy el emisor real en los 4 pisos** — nada nuestro envía hasta apagarlo,
+y se sustituye en fases como PriceLabs. 🚨 Tabla nueva en `public` nace abierta a `anon`: la migración
+hace `REVOKE`. **Pendiente de Alberto:** `SES_CRYPTO_KEY` en Vercel, rotar las contraseñas del portal
+SES y dar de alta los cuatro pisos.
+
 ### 💸 (21/08/2026) Los insiders y los 13F NO hay que comprarlos: ya estaban montados y gratis
 Alberto preguntó el precio de las fuentes de datos y la respuesta correcta es **0 €**. El MCP
 `Datos_financieros` (financialdatasets.ai) está conectado pero devuelve `Your current balance is $0.00`
@@ -2047,6 +2058,31 @@ completo `docs/AUDITORIA-2026-08.md`.
 - Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
+## 💓 SES: latido del transporte antes que el conector (20/08/2026)
+
+Chekin es hoy el emisor real de los partes en los 4 pisos → el proyecto es **sustituirlo**, no
+evitar la multa. Y `pre-ses` da 502 a todo: **no hay sandbox**, así que se empieza por vigilar.
+Nuevo `packages/module-ses` (ZIP+base64 —**no gzip**, era el bug del 10111—, sobre SOAP, envío y
+clasificación de respuesta) + cron `/api/cron/ses-latido` (07:15, operación `C`, SOLO LECTURA) que
+deja huella en `agente_latidos.ses_transporte`. El veredicto separa «SES caído» (esperar) de
+«credenciales/alta» (portal): un aviso que no distingue se deja de leer. Urgencia real: la hoja de
+`*.ses.mir.es` **caduca el 03/09/2026**. Envs pendientes en Vercel: `SES_USUARIO`, `SES_PASSWORD`,
+`SES_ARRENDADOR`. PR #1555.
+
+## 🔒 (20/08/2026) SES.HOSPEDAJES: el TLS de *.mir.es NO valida con CA pública — PR #1550 (merged)
+
+Probada la conexión REAL a los dos endpoints de SES (desde una Edge Function de Supabase, porque el
+contenedor tiene `*.mir.es` bloqueado por el proxy): **`invalid peer certificate: UnknownIssuer`**,
+y se repite cargando el bundle Mozilla entero (121 CAs). CertSpotter da **cero emisiones** en
+Certificate Transparency para `hospedajes.ses.mir.es` → SES usa una CA de la Administración, no
+pública. Por eso la implementación de referencia en Python usaba `verify=False`. 🚨 El conector
+versionará el PEM en `packages/module-ses` + `NODE_EXTRA_CA_CERTS`; NUNCA desactivar la verificación.
+Las credenciales SIGUEN sin validar: el fallo es anterior a la autenticación. Función `ses-probar` inerte.
+🚨 Además, el RD obliga a MÁS que comunicar: firma del parte por cada mayor de **14** años (digital vale)
+y conservar el registro **3 años**. Spec §4.6 y §4.7. ⚠️ Lo legal está en fuentes secundarias: el proxy
+bloquea boe.es — falta contrastarlo con el BOE o la asesoría antes de implementar.
+
+
 ## 🛂 (20/08/2026) SES.HOSPEDAJES: diseño de la conectividad (parte de viajeros) — PR #1550 (draft)
 
 Fase de arranque del RD 933/2021 (comunicar viajeros al Ministerio en <24h; multas 100 €–30.000 €).
