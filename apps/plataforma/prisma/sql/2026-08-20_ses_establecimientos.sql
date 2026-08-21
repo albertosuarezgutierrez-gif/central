@@ -78,3 +78,10 @@ CREATE INDEX IF NOT EXISTS ses_establecimientos_activo_idx
 -- cosa, la tabla entera quedaría abierta sin que nadie lo note. Al crear una tabla con
 -- datos sensibles en esta BD compartida, este REVOKE va en la misma migración.
 REVOKE ALL ON ses_establecimientos FROM anon, authenticated;
+
+-- Y por la MISMA razón, los roles de las otras verticales: los privilegios por defecto del
+-- schema se los dieron también a ellos, y ninguna toca esta tabla (la única app que la lee
+-- es plataforma). No es un riesgo de navegador como `anon` — son roles de servidor — pero
+-- aquí viven credenciales del Ministerio y no hay motivo para que las alcance una app de
+-- limpiezas, de almacén, de alquiler o de transporte.
+REVOKE ALL ON ses_establecimientos FROM prisma_ialimp, prisma_almacen, prisma_alquiler, prisma_transporte;
