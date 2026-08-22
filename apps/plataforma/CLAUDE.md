@@ -333,6 +333,32 @@ declara **UN solo cron**: `/api/cron/dispatch` cada minuto.
     - Regla que deja el caso: **un vigilante solo habla cuando la señal DISTINGUE el aviso del
       comportamiento normal.** El ruido no es un aviso conservador — entrena a ignorar el mensaje entero.
 - [x] **`/banca` = cuadro financiero UNIFICADO + IA GRATIS (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, PRs #882/#886-893):** sustituye a la vista suelta de movimientos. **Core (F1-F3):** period-driven (`?year/quarter/desde/hasta`, default mes en curso, mismo `IntervaloSelector` que la radiografía) — `ResumenPeriodo.tsx` reusa `getResumenFinanciero`; gráficas Recharts (evolución + dona); P&L de pisos (`getPLMensual`); libro completo paginado con reclasificación en línea (`MovimientosTabla`, PR #840, ver bullet de arriba). **Extras de IA GRATIS bajo demanda (todos: la IA solo SUGIERE/CLASIFICA/NARRA, los importes SIEMPRE salen de `lib/banca.ts`/`lib/finanzas.ts`, nunca los inventa):** 🧾 **Cazador de deducciones** (`lib/cazador-deducciones.ts`, `POST /api/banca/cazador-deducciones`) — gasto personal que probablemente es deducible + ahorro fiscal estimado; 💬 **Mini-chat** (`MiniChatContable.tsx` → `POST /api/contable/chat`, embebe el agente contable existente); 🤖 **Sugerir por fila** en cargos del libro (reusa `POST /api/finanzas/gastos/sugerir`); 📈 **Benchmark entre pisos** (`BenchmarkPisos.tsx`, lectura IA bajo demanda vía `POST /api/banca/benchmark-pisos`); ✂️ **Fugas en recurrentes** (`POST /api/banca/fugas`, anualiza los recurrentes que ya detecta la tesorería y marca cancelar/renegociar); 🚨 **Antifraude** (`POST /api/banca/antifraude`, **reglas DETERMINISTAS sin IA** — cobro doble/comercio nuevo/subida de precio/cargo financiero, reusa `lib/vigilantes-tarjeta.ts` + `lib/comercio.ts`); 📤 **Cierre de mes narrado** (`lib/resumen-mensual.ts::enviarResumenMensual`, cron día 1 08:00 `/api/cron/resumen-mensual`, por cuenta: cifras del mes anterior + narración IA de 1-2 frases que degrada sin romper). Todo verificado `tsc` 0 + `next build` exit 0. Pendiente (F4 cola): desviación explicada, aviso fiscal proactivo, adjuntar/conciliar factura por foto en banca; F5: módulo 🛒 tickets de súper + comparador de precios.
+- [x] **🚨 LANDMINE — un criterio que decide si algo está roto vive en UN sitio y lo aplican TODOS sus
+  consumidores (21/08/2026, PR #1575):** el 17/08 se decidió que un aviso del sync PSD2 con prefijo
+  **`ℹ️` es INFORMATIVO** (el banco impone una limitación pero el feed SIGUE entregando: Kutxabank
+  rechaza la ventana de 89 días y se cae a la de 30). El corte se implementó en `lib/psd2-semaforo.ts`
+  y **nunca llegó al cron**, que seguía disparando con `if (sync.avisos.length)` → cada mañana un
+  Telegram «⚠️ el banco no está entregando movimientos» cuyo único contenido era esa nota, mientras
+  `/banca` pintaba verde **con razón**. Alarma y panel afirmando lo contrario sobre el MISMO hecho: el
+  usuario deja de creerse los dos. El corte es ahora el helper puro **`partirAvisos()`** (con
+  `esNota`/`claveAviso`/`avisosNuevos`, testeados) y lo consumen el semáforo Y el cron.
+  - **Dedupe de un aviso repetido: por clave estable, NUNCA por el texto.** La ventana corta es
+    `hoy − 30 días`, así que la fecha DENTRO del aviso se corre sola cada día: comparar el texto crudo
+    haría que la misma incidencia pareciese nueva cada mañana — exactamente el ruido que se arreglaba.
+    `claveAviso()` neutraliza las fechas ISO antes de comparar. Si no se pueden leer los avisos
+    previos se devuelve `[]`: la nota se REPITE, nunca se silencia.
+  - **Hermano en la UI:** `banca/page.tsx` renderizaba `estado.detalles` solo cuando el nivel ≠ `ok`,
+    y las notas ℹ️ iban dentro de `detalles` → bajo el 🟢 eran **invisibles** y el panel decía «todo
+    ok» sin declarar que del feed PSD2 de Kutxabank solo hay datos **desde el 22/07**. Un hueco no
+    declarado se lee como «no hubo movimientos» (regla raíz «dato que NO hay ≠ dato que NO se ha
+    mirado»). Las notas viven ahora en **`EstadoFeed.notas`**, aparte de `detalles`, y se pintan
+    SIEMPRE, también en verde. Al añadir un estado «esto no es un fallo pero condiciona el dato»,
+    la UI tiene que poder decirlo con el semáforo en verde.
+  - **Pendiente conocido, NO olvido:** `getEstadoFeedPsd2` decide la frescura con el **MAX** entre
+    todas las cuentas, así que una rezagada queda tapada por otra fresca. No se pasó a por-cuenta
+    porque los umbrales (3/6 días) se calibraron sobre «nunca más de 1 día de hueco» y el histórico
+    real de 120 días de la BBVA ****1175 da **hueco máximo de 10 días** (media 1,06): por cuenta sería
+    una fábrica de falsos positivos. El pie del panel sí lista el último movimiento de cada cuenta.
 - [x] **🚨 LANDMINE — flag `requiere_revision` zombie: confirmar destino DEBE limpiarlo (PR #906, 15/07/2026):**
   `requiere_revision` es el flag del **destino** (negocio dudoso), NO de la categoría contable ni de la
   subcategoría personal (esa es `subcategoria_revisar`). **Invariante doble:** (a) TODO endpoint/acción que
@@ -830,6 +856,28 @@ y desde el servidor era invisible. Fix (#1523): `public, max-age=0, must-revalid
 —se renuncia al SWR porque no se puede pedir solo para el CDN— más `cache:'no-store'` en el `fetch`
 del widget, que mira solo a la caché del navegador. Hay dos tests que lo vigilan.
 **Confirmado funcionando por Alberto el 20/08/2026.**
+
+## 🛑 El canal: un piso que NO se ajusta no puede evaporarse del parte (22/08/2026)
+`/api/sivra/pricing/canal` reparte los pisos en **tres** cubos, no dos (`repartirCambios` en
+`lib/sivra/pricing-canal.ts`, puro y testeado): **`cambios`** (se ajusta) · **`frenados`** («no he
+podido»: sin ajuste fiable, interruptor bajado, o **el paso acotado no mueve la base redondeada**)
+· **`sinCambio`** («no hacía falta»: la recta vigente ya cuadra).
+- **Caso fundacional.** Antes había dos `continue` MUDOS —`desviacion === 'ok'` y «la base no se
+  mueve»— que no dejaban rastro en ninguna lista. El parte decía «4 pisos · 3 ajustados» y el cuarto
+  desaparecía, así que «ya cuadra» y «está desviado y no he sabido moverlo» se leían igual. **House
+  Sevillana llevaba del 17 al 22/08 con el `channel_markup` = 1,20 INVENTADO** que este cron existe
+  para corregir, mientras los otros tres se calibraban a ~0,95–1,04 + cuota fija.
+- 🚨 **`usada_en_ajuste_at` se marca solo en los pisos AJUSTADOS, nunca en los MEDIDOS**
+  (`ventanasAConsumir`). El marcado iba por `estado === 'medido'` —se pudo medir— en vez de por «se
+  ajustó», que son cosas distintas: House quemaba sus 7 ventanas de aforo 12 en cada pasada sin
+  corregirse, y se quedó **a cero de muestra limpia**. Un piso frenado que además pierde su muestra
+  no vuelve a tener con qué corregirse: el freno se hace permanente por agotamiento, en silencio.
+  El flag existe para romper un círculo (una ventana que produjo la recta ya no puede validarla);
+  si no hubo recta nueva, no hay círculo que romper y la muestra sigue limpia.
+- El detalle del latido antepone `🛑 N SIN corregir (piso: motivo)` y la respuesta expone
+  `frenados` y `sin_cambio` por separado. Hermano de la regla «un dato que NO hay ≠ dato que NO se
+  ha mirado» del CLAUDE.md raíz, aplicada a las ACCIONES: un «no lo he hecho» no puede presentarse
+  como un «no hacía falta».
 
 ## 💓 Latidos de agentes — el vigía que avisa por Telegram (ampliado 30/07/2026)
 `lib/monitoring/latidos.ts` (registro + `evaluarLatido` puro) + cron `agentes-latido` (07:45 UTC) →

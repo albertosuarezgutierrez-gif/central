@@ -83,6 +83,49 @@
   rotación de claves NO cubre. Y el panel tiene **67 Edge Functions** frente a las 45 del repo: 22 sin versionar.
 - Todo en `docs/ROTACION-SERVICE-ROLE.md`; PR #1517.
 
+### 🛑 (22/08/2026) El canal ya se cura solo — y al comprobarlo, House llevaba 5 días con el ×1,20
+- **Verificado el trabajo del 20/08:** `sivra_canal` en verde y el ×1,20 SUPUESTO caído en 3 de 4
+  pisos, con valores que confirman la hipótesis: markup ~0,95–1,04 **+ cuota fija por estancia**
+  (22,30€ Busto Reform · 39,90€ Dúplex), no un ×1,20 plano. `agente_reparaciones` vacía = correcto
+  (a las 08:00 el canal ya estaba verde), pero el reparador **sigue sin probarse end-to-end**.
+- **El cuarto piso destapó el fallo:** House Sevillana seguía en 1,20 desde el 17/08 pese a ser el
+  que MÁS mediciones tiene (7 de su aforo 12). Dos `continue` mudos en `cambiosDe` lo evaporaban del
+  parte («4 pisos · 3 ajustados») y, peor, el marcado de ventanas iba por `estado === 'medido'` en
+  vez de por «se ajustó» → **quemaba su muestra en cada pasada sin corregirse**, y se quedó a cero.
+- Arreglo: `repartirCambios` (3 cubos: cambios · frenados · sinCambio) y `ventanasAConsumir` en
+  `lib/sivra/pricing-canal.ts`, puros y testeados — 6 tests nuevos, **verificados por reintroducción
+  del bug** (tumban 29, 33 y 34). El latido antepone `🛑 N SIN corregir (piso: motivo)`.
+- La lección, hermana de «NULL ≠ 0» pero sobre ACCIONES: **un «no lo he hecho» no puede presentarse
+  como un «no hacía falta»**. Y un flag de consumo que se marca de más agota la muestra que hace
+  falta para reintentar: el freno se vuelve permanente por agotamiento, sin que nadie lo vea.
+
+### 🧠 (22/08/2026) Health-check: sonda IA muerta (`z-ai/glm-5.2` 410) → swap a `meta/llama-3.1-70b-instruct`
+Skill `buscador-ia` disparada por el health-check diario (no la pasada semanal). Confirmado con
+`/v1/models` real (harness temporal + `pg_net`, WebFetch a NVIDIA/Supabase bloqueado por el proxy)
+que GLM-5.2 murió 3 días antes de su EOL anunciado. Swap en todo el radio (core-ai, plataforma,
+rrhh, ia-rest) + 4 edge functions redesplegadas y verificadas. Detalle en `docs/BUSCADOR-IA.md`.
+Pendiente sin tocar (no es de código): Alberto tiene que subir el PDF de movimientos de la tarjeta
+****0302 de julio (629,86€ liquidados 01/08) para poder conciliarlo.
+
+### 🎯 (21/08/2026) El calibrado ya corre, pero medía la desviación en UN punto — y House se libraba
+- Segunda pasada del cron de canal: **corre y en verde** (latido `sivra_canal` ok, 07:45). Ajustó
+  3 de 4 pisos (Busto 0,995/22,3 · Duplex 0,949/39,9 · Luxury 1,0428/0, todos con paso acotado).
+- 🚨 **House NO se ajustó, y en silencio** (seguía en ×1,20/0 del 17/08). Su ajuste era bueno
+  —1,032 + 318€/estancia, R² 0,9985, 7 ventanas— pero `desviacionCanal` compara vigente vs medido
+  **en un solo precio** (la mediana), y con cuota fija las dos rectas SE CRUZAN. La mediana de House
+  (881€/noche) caía justo en el cruce: sesgo −4,6% → «ok» → `continue` sin pasar ni por `frenados`.
+  En sus extremos reales el error era **−23,5% a 465€/noche y +9,5% a 2.743€**. Es el markup escalar
+  disfrazado, dentro del módulo que existe para no volver a caer en él.
+- **Arreglado midiendo el RANGO, no un punto** (`guestMin`/`guestMax`): el peor sesgo del rango
+  decide, el de la referencia se conserva con su significado. House pasa a `desviado`.
+- **Y el raíl tenía el mismo agujero:** `pasoCanal` acotaba el salto por su efecto EN LA MEDIANA, así
+  que la corrección de House habría entrado entera (−4,6% ahí) siendo un −23,5% en las fechas baratas
+  — saltándose de facto el tope del ±15%. Ahora acota por el peor extremo: entra troceada.
+- Método: reproducido contra el módulo real con las 7 ventanas de producción antes de tocar nada, no
+  a ojo. Los 9 errores de `tsc` del árbol eran previos (deps sin instalar), verificado con `git stash`.
+- Verificado: 1.465 tests + 33 del guardián · tsc 0 · build OK. PR #1582.
+
+
 ### 📮 (21/08/2026) SES.HOSPEDAJES: transporte validado contra el servicio REAL y mergeado (PR #1555)
 Operación `C` contra `hospedajes.ses.mir.es` → **200 `codigo 0 / Ok`**: TLS con cadena FNMT (raíz
 pública, sí está en el almacén), credenciales de servicio web, arrendador habilitado y **ZIP aceptado**
@@ -2116,6 +2159,23 @@ completo `docs/AUDITORIA-2026-08.md`.
 - Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
+## 🟡 (21/08/2026) El Telegram del PSD2 contradecía al panel — PR #1575
+- Alberto: «me dice esto y en mi panel pone q todo ok». **Mentía el Telegram**, no el panel:
+  Kutxabank ****0855 con último mov. del 20/08 (34 en 30d) y el sync de hoy 06:00 limpio; el único
+  aviso era la nota ℹ️ de la ventana de 89 días rechazada (el feed va con ventana corta, no roto).
+- El corte «ℹ️ = informativo» se puso en `psd2-semaforo.ts` el 17/08 y NUNCA llegó al cron, que
+  gritaba «el banco no está entregando movimientos» con `if (avisos.length)`. Ahora usa el MISMO
+  `partirAvisos()`; una nota sola se cuenta UNA vez (dedupe por `claveAviso`, que neutraliza la
+  fecha ISO: la ventana corta se corre sola cada día y el texto crudo repetiría el aviso a diario).
+- Otra mitad: `/banca` solo pintaba `detalles` si el nivel ≠ 'ok' → la nota era INVISIBLE en verde.
+  Sale a campo propio `EstadoFeed.notas` y se pinta también en 🟢.
+- Verificado contra los avisos REALES de `conexiones_banco`: hoy y mañana (fecha corrida) → silencio;
+  con un aviso de fallo → alarma; primera aparición de la nota → un aviso ℹ️ sin alarma. Panel: verde
+  con la nota visible. Landmine en `apps/plataforma/CLAUDE.md` y aviso en la skill `psd2-health-check`
+  (un `ℹ️` NO es anomalía; el corte canónico es `partirAvisos()`).
+- Anotado sin tocar: `getEstadoFeedPsd2` mide frescura por MAX entre cuentas (BBVA a 4 días queda
+  tapada). Por cuenta daría falsos positivos: la BBVA tiene huecos reales de hasta 10 días.
+
 ## 💓 SES: latido del transporte antes que el conector (20/08/2026)
 
 Chekin es hoy el emisor real de los partes en los 4 pisos → el proyecto es **sustituirlo**, no
