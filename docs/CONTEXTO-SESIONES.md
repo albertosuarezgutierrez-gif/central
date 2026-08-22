@@ -48,13 +48,15 @@
   como un «no hacía falta»**. Y un flag de consumo que se marca de más agota la muestra que hace
   falta para reintentar: el freno se vuelve permanente por agotamiento, sin que nadie lo vea.
 
-### 🧠 (22/08/2026) Health-check: sonda IA muerta (`z-ai/glm-5.2` 410) → swap a `meta/llama-3.1-70b-instruct`
+### 🧠 (22/08/2026) Health-check: sonda IA muerta (`z-ai/glm-5.2` 410) → swap a `meta/llama-3.1-70b-instruct` — MERGEADO (PR #1583)
 Skill `buscador-ia` disparada por el health-check diario (no la pasada semanal). Confirmado con
 `/v1/models` real (harness temporal + `pg_net`, WebFetch a NVIDIA/Supabase bloqueado por el proxy)
 que GLM-5.2 murió 3 días antes de su EOL anunciado. Swap en todo el radio (core-ai, plataforma,
-rrhh, ia-rest) + 4 edge functions redesplegadas y verificadas. Detalle en `docs/BUSCADOR-IA.md`.
-Pendiente sin tocar (no es de código): Alberto tiene que subir el PDF de movimientos de la tarjeta
-****0302 de julio (629,86€ liquidados 01/08) para poder conciliarlo.
+rrhh, ia-rest) + 4 edge functions redesplegadas. **Mergeado a `main`** (squash, commit `5e6bbed`);
+CI verde + 9 previews Vercel Ready antes del merge. **Verificado EN VIVO otra vez tras el merge**
+contra la API real de NVIDIA: `meta/llama-3.1-70b-instruct` responde 200 OK (sin 410). Detalle en
+`docs/BUSCADOR-IA.md`. Pendiente sin tocar (no es de código): Alberto tiene que subir el PDF de
+movimientos de la tarjeta ****0302 de julio (629,86€ liquidados 01/08) para poder conciliarlo.
 
 ### 🎯 (21/08/2026) El calibrado ya corre, pero medía la desviación en UN punto — y House se libraba
 - Segunda pasada del cron de canal: **corre y en verde** (latido `sivra_canal` ok, 07:45). Ajustó

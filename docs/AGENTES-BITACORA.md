@@ -22,7 +22,8 @@
   Mini-eval en vivo de 4 candidatos → swap a `meta/llama-3.1-70b-instruct` en TODO el radio
   (core-ai, plataforma, rrhh, ia-rest) + 4 edge functions redesplegadas y verificadas (200 OK).
   dudas: —; fallos: mistral-large-2-instruct listaba en el catálogo pero dio 404 para la cuenta
-  (no toda entrada de `/v1/models` implica acceso real); PRs/commits: ver PR de esta rama.
+  (no toda entrada de `/v1/models` implica acceso real); PRs/commits: **PR #1583, mergeado (commit
+  5e6bbed), re-verificado en vivo tras el merge (200 OK, sin 410)**.
 - **2026-08-21 · psd2-health-check** · hizo: feed PSD2 **verde** (Kutxabank ****0855 último mov. 20/08,
   34 mov/30d vs 41 previos; BBVA ****1175 17/08, 23 vs 35 — dentro de sus huecos históricos, máx. 10d);
   investigada la contradicción Telegram↔panel que reportó Alberto y arreglada en PR #1575 (draft):
