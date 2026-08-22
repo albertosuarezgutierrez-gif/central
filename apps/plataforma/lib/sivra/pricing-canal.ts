@@ -410,3 +410,114 @@ export function validarCanal(
     estado: Math.abs(sesgo) > tolSesgo || errorMedio > tolError ? 'desviado' : 'ok',
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// QUÉ PISOS SE AJUSTAN — y, sobre todo, QUÉ PASA CON LOS QUE NO
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+
+/** Lo mínimo que hace falta de un piso medido para decidir si se le toca el canal. */
+export interface PisoParaCambio {
+  property_id: string
+  nombre: string
+  estado: string
+  markup: number | null
+  cuota_fija: number | null
+  guest_ref: number | null
+  muestras: number
+  desviacion: string
+  canal_auto: boolean
+  noches_ref: number
+  configurado: ParametrosCanal
+  /** ids de las ventanas que produjeron ESTA medición */
+  ventanas_usadas: number[]
+}
+
+export interface CambioCanal {
+  property_id: string; nombre: string
+  de: ParametrosCanal; a: ParametrosCanal
+  medido: { markup: number; cuotaFija: number }
+  guest_ref: number
+  base_antes: number; base_despues: number
+  efecto: number; topado: boolean
+}
+
+/** Un piso al que no se le ha tocado nada, y POR QUÉ. Los dos motivos NO son lo mismo. */
+export interface NoTocado { property_id: string; motivo: string }
+
+/**
+ * Reparte los pisos medidos en tres cubos: los que se ajustan, los que NO SE HAN PODIDO ajustar
+ * (`frenados`) y los que NO HACÍA FALTA ajustar (`sinCambio`).
+ *
+ * 🚨 LA RAZÓN DE QUE SEAN TRES Y NO DOS (22/08/2026). Antes esta función tenía dos salidas mudas:
+ * `desviacion === 'ok'` y «la base redondeada no se mueve» hacían `continue` sin dejar rastro en
+ * ninguna lista. El parte diario decía «4 pisos · 3 ajustados» y el cuarto se evaporaba, con lo que
+ * «ya cuadra» y «está desviado pero no he sabido moverlo» se leían igual: como una pasada normal.
+ * House Sevillana llevaba así desde el 17/08 con el ×1,20 INVENTADO que este agente existe para
+ * corregir. Es la regla de casa: un «no lo he hecho» no puede presentarse como un «no hacía falta».
+ */
+export function repartirCambios(
+  pisos: PisoParaCambio[],
+  opciones: { soloProp?: string | null; autoGlobal?: boolean } = {},
+): { cambios: CambioCanal[]; frenados: NoTocado[]; sinCambio: NoTocado[] } {
+  const soloProp = opciones.soloProp ?? null
+  const autoGlobal = opciones.autoGlobal !== false
+  const cambios: CambioCanal[] = []
+  const frenados: NoTocado[] = []
+  const sinCambio: NoTocado[] = []
+
+  for (const p of pisos) {
+    if (soloProp && p.property_id !== soloProp) continue
+    if (p.estado !== 'medido' || p.markup == null || p.cuota_fija == null || p.guest_ref == null) {
+      // No es un «cuadra»: es un «no lo sé». Se declara, nunca se escribe.
+      frenados.push({ property_id: p.property_id, motivo: `ajuste ${p.estado} (${p.muestras} ventanas)` })
+      continue
+    }
+    // Este SÍ es un «no hacía falta»: la recta vigente ya describe al portal.
+    if (p.desviacion === 'ok') { sinCambio.push({ property_id: p.property_id, motivo: 'la recta vigente ya cuadra' }); continue }
+    if (!autoGlobal) { frenados.push({ property_id: p.property_id, motivo: 'SIVRA_CANAL_AUTO=0' }); continue }
+    if (!p.canal_auto) { frenados.push({ property_id: p.property_id, motivo: 'canal_auto=false en el piso' }); continue }
+
+    const medido = { markup: p.markup, cuotaFija: p.cuota_fija }
+    const paso = pasoCanal({ configurado: p.configurado, medido, guestRef: p.guest_ref })
+    // `noches_ref` viaja SIEMPRE con la cuota, aunque el paso vaya topado: son las dos mitades del
+    // mismo reparto y desparejarlas describiría un canal que no existe.
+    const a: ParametrosCanal = { ...paso.aplicar, nochesRef: p.noches_ref }
+    const baseAntes = baseDesdeGuest(p.guest_ref, p.configurado)
+    const baseDespues = baseDesdeGuest(p.guest_ref, a)
+    if (baseAntes === baseDespues && a.nochesRef === p.configurado.nochesRef) {
+      // 🚨 Este es el caso caro: el piso ESTÁ desviado y quiere corregirse, pero el paso acotado se
+      // queda por debajo del redondeo a euro de la base, así que la escritura no cambiaría nada.
+      // Sin declararlo, el piso se queda con su parámetro viejo PARA SIEMPRE y en silencio.
+      frenados.push({
+        property_id: p.property_id,
+        motivo: `el paso acotado no mueve la base (${baseAntes}€ → ${baseDespues}€): desviado y sin corregir`,
+      })
+      continue
+    }
+    cambios.push({
+      property_id: p.property_id, nombre: p.nombre,
+      de: p.configurado, a, medido, guest_ref: p.guest_ref,
+      base_antes: baseAntes, base_despues: baseDespues,
+      efecto: paso.efecto, topado: paso.topado,
+    })
+  }
+  return { cambios, frenados, sinCambio }
+}
+
+/**
+ * Ventanas que se marcan como consumidas al final de una pasada.
+ *
+ * 🚨 SOLO las de los pisos que se han AJUSTADO DE VERDAD (22/08/2026). `usada_en_ajuste_at` existe
+ * para romper un círculo: una ventana que produjo la recta ya no puede validarla. Si un piso no se
+ * ajustó, su recta NO salió de esas ventanas, así que siguen siendo muestra limpia — y quemarlas
+ * deja al piso sin con qué corregirse en la pasada siguiente. El código marcaba por `estado ===
+ * 'medido'` (se pudo medir), no por «se ajustó», que son cosas distintas: House Sevillana gastó sus
+ * 7 ventanas de aforo 12 sin moverse del ×1,20 y se quedó a cero de muestra limpia.
+ */
+export function ventanasAConsumir(
+  pisos: Pick<PisoParaCambio, 'property_id' | 'ventanas_usadas'>[],
+  cambios: Pick<CambioCanal, 'property_id'>[],
+): number[] {
+  const ajustados = new Set(cambios.map(c => c.property_id))
+  return pisos.filter(p => ajustados.has(p.property_id)).flatMap(p => p.ventanas_usadas)
+}
