@@ -192,10 +192,22 @@ regla `docs/VIGIA-*.md` + las dos rutas sueltas. **PR propio** — toca un workf
 | 4 | Integrar `EARNINGS_CALENDAR` en `trading-analista` | **PR propio** |
 | 5 | Crear el trigger en `claude.ai → Rutinas` | **Manual de Alberto** |
 
-El entregable 4 es independiente del vigía y ya es accionable: cierra el hueco que
-`TRADING-FUENTES-PAGO.md` marca como **el único con coste directo en dinero real** (la guarda
-`earningsInminente` hoy no veta porque el plan Free de FMP no da la fecha; sin fecha, un gap de
-earnings con dinero real no se puede deshacer).
+**El entregable 4 se CANCELÓ el mismo día de escribir el plan (21/08/2026), y su cancelación es
+el mejor argumento a favor de este vigía.** Iba a integrar `EARNINGS_CALENDAR` de Alpha Vantage
+porque `TRADING-FUENTES-PAGO.md` §2 marcaba la fecha de earnings como el único hueco con coste
+directo en dinero real. Al ir a escribir el paso en la pasada nocturna apareció
+`apps/plataforma/lib/trading/earnings-yahoo.ts`: cerró ese hueco el **05/08**, diez días ANTES de
+que se escribiera el doc que lo declaraba abierto. Y lo cierra mejor — da `confirmada` (anunciada
+por la empresa vs estimada), que Alpha Vantage no da, y corre server-side para todas las rutas.
+
+Integrarlo habría añadido una fuente redundante, peor, y que gasta una cuota compartida de ~25
+llamadas/día. De la fase 3 sobrevive `estadoEarnings()` (§9, entregable 4') y la corrección de los
+docs obsoletos.
+
+**Cuarta forma de la misma regla: el catálogo que miente puede ser el tuyo.** Un doc de huecos
+envejece hacia el lado peligroso — sigue pidiendo lo que ya tienes, y nadie lo nota porque pedir
+de más no rompe nada visible. Por eso el paso 0-bis cruza contra el CÓDIGO, no contra el doc que
+declaró el hueco.
 
 ## 10. Riesgos y cosas a verificar en la primera pasada
 

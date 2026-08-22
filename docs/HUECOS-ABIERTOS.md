@@ -27,5 +27,14 @@
 
 | Hueco | Cerrado con | Fecha |
 |---|---|---|
-| Fecha de próximos resultados (la guarda `earningsInminente` no podía vetar sin ella) | Alpha Vantage `EARNINGS_CALENDAR`, tier gratis | 21/08/2026 |
-| Histórico de deslistadas (sesgo de supervivencia del retrovisor) | Alpha Vantage `LISTING_STATUS`, tier gratis (8.491 filas con `ipoDate`/`delistingDate`) | 21/08/2026 |
+| Fecha de próximos resultados (la guarda `earningsInminente` no podía vetar sin ella) | **Pieza propia**: `apps/plataforma/lib/trading/earnings-yahoo.ts`, que `/api/trading/analizar` ya usa. Da además `confirmada` (anunciada por la empresa vs estimada), que Alpha Vantage NO da, y corre server-side para todas las rutas, no solo la sesión Claude. | **05/08/2026** |
+| Histórico de deslistadas (sesgo de supervivencia del retrovisor) | Alpha Vantage `LISTING_STATUS`, tier gratis (8.491 filas con `ipoDate`/`delistingDate`). Sin equivalente propio en el repo (comprobado 21/08/2026). **Pendiente de integrar**: se consume por HTTP/CSV, no por MCP (182.000 tokens). | 21/08/2026 |
+
+> ⚠️ **Lección del 21/08/2026, la tercera vez que muerde la misma regla.** Este catálogo se sembró
+> desde `docs/TRADING-FUENTES-PAGO.md` §2 (15/08) dando por bueno que el calendario de earnings
+> seguía abierto. **Llevaba diez días cerrado** por `earnings-yahoo.ts` (05/08), y por eso se estuvo
+> a punto de meter Alpha Vantage como fuente de earnings: redundante, peor (sin `confirmada`) y
+> gastando una cuota compartida de ~25 llamadas/día.
+>
+> Un doc de huecos envejece hacia el lado peligroso: **sigue pidiendo lo que ya tienes**. Antes de
+> declarar un hueco vivo, comprueba el CÓDIGO, no el doc que lo declaró.
