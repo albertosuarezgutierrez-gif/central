@@ -36,6 +36,28 @@ export function factorFlojo(score: number | null | undefined, minimo: number | n
   return score < minimo
 }
 
+/**
+ * Tres estados, no dos (regla de la casa: `NULL` ≠ «no hay»).
+ *
+ * `earningsInminente` devuelve `false` tanto cuando SABEMOS que no hay resultados cerca como
+ * cuando NO TENEMOS la fecha, y aguas abajo las dos cosas se leen igual: «vía libre». La segunda
+ * no lo es — es un «no lo sé» — y con dinero real un gap de earnings no se deshace.
+ *
+ * Esta función no cambia ninguna decisión (el veto sigue siendo de `earningsInminente`): existe
+ * para que quien llama pueda DECIR «earnings sin comprobar: X, Y» en vez de callar.
+ *
+ * `fuera_de_ventana` cubre tanto los resultados ya publicados como los lejanos: en ambos casos
+ * sabemos que no hay riesgo de gap dentro de la ventana.
+ */
+export function estadoEarnings(
+  proximoEarnings: string | undefined,
+  hoy: string,
+  dias = 3,
+): 'desconocido' | 'inminente' | 'fuera_de_ventana' {
+  if (!proximoEarnings) return 'desconocido'
+  return earningsInminente(proximoEarnings, hoy, dias) ? 'inminente' : 'fuera_de_ventana'
+}
+
 // No abrir un largo justo ANTES de resultados: el gap de earnings puede saltarse el stop de golpe
 // (la lección de ISRG/IBM, que se desplomaron el día del anuncio). Veta la entrada si el próximo
 // earnings cae dentro de `dias` (default 3). Sin fecha de earnings, no veta (degrada).

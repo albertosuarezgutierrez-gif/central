@@ -278,6 +278,24 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Qué hace** | Lee `docs/DUPLEX-plan-precio-reforma-venta.md`, mide del mes **CERRADO** la ocupación real del dúplex (último snapshot de cada noche, nunca el calendario a futuro) + los otros tres pisos como control + qué está haciendo el agente de precios, rellena la fila del mes en la tabla de seguimiento y **aplica el criterio de decisión ya escrito** en la fase en curso. |
 | **Resultado** | PR draft con el documento actualizado + aviso Telegram con el veredicto (ocupación, precio, qué decisión toca). **NO toca `pricing_settings` ni precios publicados** sin OK explícito de Alberto para ese cambio concreto. |
 
+### 16. Vigía de conectores MCP — *pendiente de trigger*
+| | |
+|---|---|
+| **Cuándo** | Mensual, **día 5**, ~04:00 CEST (el 15 lo ocupa `github-vigia`) |
+| **Prompt** | `Ejecuta la skill conectores-vigia` |
+| **MCPs / envs** | **Probablemente NINGÚN conector.** `SearchMcpRegistry`/`ListConnectors` parecen nativas del harness — la primera pasada lo verifica y lo deja escrito. **GitHub es nativo** al vincular el repo. `PLATAFORMA_URL` + `ALERTA_TOKEN` para el aviso (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos). |
+| **Qué hace** | Cruza `docs/HUECOS-ABIERTOS.md` contra el registro de conectores; inventaría las APIs externas del repo buscando **fallback**; **canario** con llamada real sobre los endpoints de los que dependen las rutinas vivas; higiene de los ya conectados (sin uso, `installState: unknown`, con herramientas de escritura). |
+| **Resultado** | `docs/VIGIA-CONECTORES.md` siempre, **con fecha de pasada aunque no haya hallazgos** (sin fecha no se distingue «pasada limpia» de «rutina muerta»). Telegram si hay hallazgo. PR draft `claude/conectores-vigia-<fecha>` si hay trabajo que dejar hecho. Sin hallazgos → sin ruido. |
+
+**Regla dura de esta rutina:** ningún conector se recomienda, y ningún endpoint se da por vivo, sin
+una llamada real al endpoint que supuestamente cierra el hueco. El catálogo describe lo que el
+producto hace, no lo que NUESTRO tier deja hacer (se ganó dos veces el 21/08/2026 — ver
+`docs/superpowers/specs/2026-08-21-conectores-vigia-design.md` §5).
+
+**El paso que más vale no es el descubrimiento, es el canario.** Que aparezca un conector nuevo es
+una oportunidad; que se rompa el que sostiene `mercado-booking` o `trading-analista` es una avería
+que hoy nadie detectaría, porque su modo de fallo no es un error ruidoso sino un dato vacío.
+
 ---
 
 ## Resumen de cadencias
@@ -298,6 +316,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | Domingo 07:30 | Agentes-entrenador (mejora de prompts) |
 | Lunes 07:00 | Buscador de IA |
 | Día 1 del mes 07:00 | Vigilante fiscal IRPF |
+| Día 5 del mes 04:00 | Vigía de conectores MCP |
 | Día 1 del mes 07:00 | Revisión mensual del plan del dúplex de Villasís |
 | Día 1 del mes 08:00 | RRHH compliance calendar |
 | Día 15 del mes 07:00 | Vigía GitHub/OSS |
