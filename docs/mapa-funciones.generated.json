@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-22T08:35:56Z",
-  "sha": "ae85781a58a5f29ed688a6a89db97715d8c57cbe",
+  "generadoEn": "2026-08-22T21:10:33Z",
+  "sha": "e5dcf462de78b0517e601b46f6a28546945e3447",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -94662,6 +94662,46 @@
       "hash": "0b5140149a53"
     },
     {
+      "ruta": "packages/module-trading/src/contraste.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "Segunda opinión sobre las cifras de una idea ANTES de que Alberto teclee la orden. Por qué existe: el fallo más caro del radar (PR #1189, 31/07/2026) no fue un dato que faltara, fue un dato PLAUSIBLE y falso — nuestro parser de EDGAR daba a ORCL un flujo de caja libre de +3,49% mientras la empresa q",
+      "exporta": [
+        "contrastar",
+        "avisoContraste"
+      ],
+      "funciones": [
+        {
+          "nombre": "compararUna",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: number | undefined, b: number | undefined",
+          "retorno": "",
+          "linea": 49
+        },
+        {
+          "nombre": "contrastar",
+          "kind": "function",
+          "exportada": true,
+          "params": "nuestro: FichaFundamental, segunda: FichaFundamental",
+          "retorno": "Contraste",
+          "linea": 70,
+          "resumen": "Contrasta NUESTRA ficha (EDGAR) contra una SEGUNDA fuente. No decide cuál tiene razón: marca dónde no se puede afirmar nada."
+        },
+        {
+          "nombre": "avisoContraste",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Contraste",
+          "retorno": "string | null",
+          "linea": 87,
+          "resumen": "Línea para el aviso de Telegram. `null` cuando no hay nada que decir (todo coincide)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "85ca7ab88f30"
+    },
+    {
       "ruta": "packages/module-trading/src/descubrimiento.ts",
       "ambito": "packages/module-trading",
       "exporta": [
@@ -94701,6 +94741,76 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "68979c503501"
+    },
+    {
+      "ruta": "packages/module-trading/src/divisa.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "Tipo de cambio por FECHA para poder decir en euros lo que el bróker apunta en dólares. Por qué existe: el libro tiene `tipo_cambio` a NULL en 568 de 569 filas, y sin él **no hay cifra en euros defendible** — ni para la asesoría ni para cuadrar el NAV. No vale usar el cambio de HOY para una operación",
+      "exporta": [
+        "parseFxDailyCsv",
+        "indexarFx",
+        "resolverTipoCambio",
+        "usdAEur",
+        "dentroDelRango"
+      ],
+      "funciones": [
+        {
+          "nombre": "parseFxDailyCsv",
+          "kind": "function",
+          "exportada": true,
+          "params": "csv: string",
+          "retorno": "PuntoFx[]",
+          "linea": 14,
+          "resumen": "Parsea el CSV de la serie diaria. Ignora filas mal formadas en vez de inventar un 0."
+        },
+        {
+          "nombre": "indexarFx",
+          "kind": "function",
+          "exportada": true,
+          "params": "puntos: PuntoFx[]",
+          "retorno": "Map<string, number>",
+          "linea": 29,
+          "resumen": "Índice fecha→cierre para resolver en O(1)."
+        },
+        {
+          "nombre": "restarDias",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string, n: number",
+          "retorno": "string",
+          "linea": 45
+        },
+        {
+          "nombre": "resolverTipoCambio",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string, indice: Map<string, number>",
+          "retorno": "ResolucionFx",
+          "linea": 61,
+          "resumen": "Resuelve el cambio de una fecha. Si ese día no cotizó (fin de semana, festivo), retrocede hasta `MAX_DIAS_ATRAS` buscando la última sesión ANTERIOR. 🚨 Nunca mira hacia DELANTE: usar el cambio del lun"
+        },
+        {
+          "nombre": "usdAEur",
+          "kind": "function",
+          "exportada": true,
+          "params": "importeUsd: number, tipoCambioEurUsd: number | null",
+          "retorno": "number | null",
+          "linea": 74,
+          "resumen": "Convierte un importe en USD a EUR. La serie es EUR→USD (cuántos dólares vale un euro), así que se DIVIDE. Devuelve `null` si no hay cambio: quien llame debe decir «pendiente», no pintar un 0."
+        },
+        {
+          "nombre": "dentroDelRango",
+          "kind": "function",
+          "exportada": true,
+          "params": "ejecutado: number, low: number, high: number",
+          "retorno": "boolean",
+          "linea": 80,
+          "resumen": "¿Cae el cambio ejecutado por el bróker dentro del rango del día? Contraste de cordura."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8b516a00d315"
     },
     {
       "ruta": "packages/module-trading/src/estrategias.ts",
@@ -95526,6 +95636,46 @@
       "hash": "06b950eecd64"
     },
     {
+      "ruta": "packages/module-trading/src/screenerMercado.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "Cribado del MERCADO ENTERO por métricas (Financial Datasets `screen_stocks`) → `MetricasFactor`. Es el ÚNICO pilar de selección que no teníamos gratis: Form 4, 13F y fundamentales ya salen de la SEC y de Dataroma sin coste. Lo que este añade es partir de \"todas las empresas que cumplen X\" en vez de ",
+      "exporta": [
+        "traducirFila",
+        "truncadaPorLimite",
+        "traducirScreener"
+      ],
+      "funciones": [
+        {
+          "nombre": "traducirFila",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FilaScreener",
+          "retorno": "FilaTraducida",
+          "linea": 37
+        },
+        {
+          "nombre": "truncadaPorLimite",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: FilaScreener[], limite: number",
+          "retorno": "boolean",
+          "linea": 78,
+          "resumen": "🚨 TRAMPA 3 — el screener FILTRA, no rankea: devuelve por orden alfabético de ticker. Una petición con `limit: 25` no da \"los 25 mejores\", da los 25 primeros empezando por la A — y no hay parámetro de"
+        },
+        {
+          "nombre": "traducirScreener",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: FilaScreener[], limite: number",
+          "retorno": "Traduccion",
+          "linea": 82
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "bcff42b3fac3"
+    },
+    {
       "ruta": "packages/module-trading/src/seleccion.ts",
       "ambito": "packages/module-trading",
       "resumen": "SELECCIÓN COMBINADA (Fase B): cruza la CONVICCIÓN de los gurús (qué compran) con la CALIDAD fundamental (Piotroski + ROIC de EDGAR) para no quedarnos con una lotería de un solo nombre. La convicción decide QUÉ mirar; la calidad es una PUERTA (gate): solo pasan los que además son negocios sólidos. La",
@@ -95588,6 +95738,58 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "94bc9fa3d79b"
+    },
+    {
+      "ruta": "packages/module-trading/src/splits.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "Acciones corporativas (splits): sin esto, el primer desdoblamiento con posición abierta rompe el FIFO **con un número plausible**. El caso: una compra de 100 títulos a 178,04 y, tras un split 10:1, una venta de 1.000 a 17,80. Las cantidades no casan, el FIFO empareja mal y sale una plusvalía inventa",
+      "exporta": [
+        "factorAcumulado",
+        "ajustarPorSplits",
+        "ajustarSimbolo",
+        "parseSplits"
+      ],
+      "funciones": [
+        {
+          "nombre": "factorAcumulado",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string, splits: Split[]",
+          "retorno": "number",
+          "linea": 22,
+          "resumen": "Producto de los splits POSTERIORES a esa fecha: por cuánto hay que multiplicar los títulos de entonces para expresarlos en títulos de hoy. Sin splits posteriores devuelve 1."
+        },
+        {
+          "nombre": "ajustarPorSplits",
+          "kind": "function",
+          "exportada": true,
+          "params": "op: T, splits: Split[]",
+          "retorno": "Ajuste<T>",
+          "linea": 41,
+          "resumen": "Reexpresa una operación en títulos de hoy. `cantidad × precio` se conserva: si el importe cambiara, el ajuste estaría inventando dinero."
+        },
+        {
+          "nombre": "ajustarSimbolo",
+          "kind": "function",
+          "exportada": true,
+          "params": "operaciones: T[], splits: Split[] | null,",
+          "retorno": "ResultadoAjuste<T>",
+          "linea": 64,
+          "resumen": "Ajusta un símbolo entero. 🚨 `splits === null` significa **«no se ha consultado»**, y NO es lo mismo que «no tiene splits». Es la regla del CLAUDE.md: colapsar ese null a lista vacía haría que una fic"
+        },
+        {
+          "nombre": "parseSplits",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: { effective_date?: string; split_factor?: string | number }[]",
+          "retorno": "Split[]",
+          "linea": 81,
+          "resumen": "Parsea la respuesta del proveedor (`{effective_date, split_factor}`), descartando lo ilegible."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b75cee5006ee"
     },
     {
       "ruta": "packages/module-trading/src/universo.ts",
@@ -96060,7 +96262,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2546,
-    "funciones": 6976
+    "archivos": 2550,
+    "funciones": 6992
   }
 }
