@@ -8,6 +8,10 @@ on:
   pull_request:
   push:
     branches: [main]
+  # Disparo a mano: los pushes hechos con token de App NO disparan workflows, así que un
+  # PR que recibe más de un commit se queda con los checks del PRIMERO y aspecto de estar bien.
+  # Sin esto, este check no se puede relanzar sobre el head actual (20/08/2026).
+  workflow_dispatch: {}
 
 permissions:
   contents: read

@@ -32,7 +32,8 @@ secret ni invalidar las sesiones de usuario.
 |---|---|---|
 | Vercel env `SUPABASE_SERVICE_ROLE_KEY` en **`ia-rest`** | 1 | All Environments, «Updated Jun 10», sin marcar Sensitive |
 | Vercel env `SUPABASE_SERVICE_ROLE_KEY` en **`central-rrhh`** | 1 | Production + Preview, marcada Sensitive |
-| Edge Functions de ia-rest con `Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')` | **43 de 45** | la inyecta Supabase; en el panel ya sale **DEPRECATED**, sustituta `SUPABASE_SECRET_KEYS` |
+| Edge Functions de ia-rest con `Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')` | **43 de 45 en el repo** | la inyecta Supabase; en el panel ya sale **DEPRECATED**, sustituta `SUPABASE_SECRET_KEYS` (ya inyectada, junto con `SUPABASE_PUBLISHABLE_KEYS`) |
+| 🔴 Edge Functions **desplegadas y NO versionadas** | **22** | ver lista abajo. Al menos una (`sync-smoobu`) lee `SUPABASE_SERVICE_ROLE_KEY` legacy, la invoca un cron diario y **borra filas de `incomes`** |
 | GitHub Actions | 0 reales | `ci.yml` usa `ci_dummy_service_role_key` |
 
 ⚠️ **`ialimp` NO tiene la variable** (verificado en el panel: ni propias, ni compartidas, ni de equipo).
@@ -44,15 +45,127 @@ roto, no funcionando**: nada que rotar ahí, pero sí que arreglar algún día �
 
 | Dónde | Cuántos |
 |---|---|
-| Ficheros que leen `*ANON_KEY` | **27** (`ia-rest` 14, `ialimp` 10, `sivra` 2, `rrhh` 1) |
-| Envs `NEXT_PUBLIC_SUPABASE_ANON_KEY` en Vercel | al menos `ialimp` (All Environments); revisar el resto de proyectos |
-| Cron `pg_net` `monitor-health` (`20260819_crons_bd_compartida.sql`) | 1 — manda la **anon legacy** como `Bearer` |
+| Ficheros que leen `*ANON_KEY` | **28** (`ia-rest` 15, `ialimp` 10, `sivra` 2, `rrhh` 1) — recuento del 20/08 |
+| Cron `pg_net` `monitor-health` (`20260819_crons_bd_compartida.sql`) | 1 — manda la **anon legacy** como `Bearer`, cada 5 min |
+
+**Envs de Vercel — inventario COMPLETO de los 10 proyectos (20/08/2026, cierra el «revisar el resto»):**
+
+| Proyecto | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `SUPABASE_SERVICE_ROLE_KEY` |
+|---|---|---|
+| `ia-rest` | plain · prod+preview+**dev** | plain · prod+preview+**dev** |
+| `central-rrhh` | sensitive · prod+preview | sensitive · prod+preview |
+| `ialimp` | plain · prod+preview+dev | — |
+| `sivra` | plain · prod+preview+dev | — |
+| `plataforma`, `almacen`, `alquiler`, `transporte`, `ialimp-landing`, `house-sevillana-landing` | — | — |
+
+🔴 **Hallazgo que ENSANCHA el trabajo: 4 apps no entran por la API de Supabase.** `plataforma`, `almacen`,
+`alquiler` y `transporte` no tienen NINGUNA variable de Supabase: hablan con Postgres por `DATABASE_URL` /
+`DIRECT_URL` (Prisma, conexión directa). **Rotar las claves API no las protege** — su credencial es la
+contraseña de Postgres dentro de esa cadena, que es un secreto distinto y NO entra en el botón «Disable
+JWT-based API keys». Si el objetivo es cerrar el acceso a la BD tras la filtración, `DATABASE_URL` necesita
+su propia decisión. (La `service_role` filtrada no expone esa contraseña, así que no es el mismo incendio;
+pero tampoco queda cubierto por esta rotación, y conviene no creer que sí.)
+
+## 🔴 22 Edge Functions desplegadas sin código en el repo (20/08/2026)
+
+El panel sirve **67** funciones; el repo versiona **45**. El diff (por MCP, `list_edge_functions` contra
+`ls apps/ia-rest/supabase/functions/`) da **22 huérfanas** y **0** en el sentido contrario — o sea, no hay
+código muerto: hay **código fantasma**, ejecutándose en producción sin fuente en ningún repositorio.
+
+`add-smoobu-booking` · `boe-doc` · `deploy-agente` · `deploy-dashboard` · `drive-folder-list` ·
+`drive-photos-publish` · `drive-upload-factura` · `ficha-fotocasa` · `github-commit` · `import_csv` ·
+`inject-ga4` · `junta-pdf-texto` · `merge-landing-to-main` · `push-clean-page` · `push-route-ga4` ·
+`rehost-catalogo` · `sync-smoobu` · `trigger-deploy` · `trigger-redeploy` · `upload-landing` ·
+`upload-photo-github` · `zona-fotocasa`
+
+**Por qué bloquea la rotación:** el inventario de consumidores de la clave legacy se hizo por `grep` del
+repo, y estas 22 no están en el repo. Cualquiera puede ser un consumidor. Comprobado en la primera que se
+miró — `sync-smoobu`, invocada por el cron `jobid 1` a diario:
+
+```ts
+const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!   // legacy
+await supabase.from('incomes').delete().eq('id', incId)          // borra ingresos de SIVRA
+```
+
+**Y es un riesgo por sí mismo, aparte de la rotación:** su fuente solo existía en los servidores de
+Supabase. **Ya no: las 22 están rescatadas** en `supabase/functions-rescatadas/` (PR #1517, 20/08/2026),
+con los secretos sustituidos y `gitleaks` de por medio. Ese README es ahora la fuente de verdad sobre
+qué hace cada una; aquí solo queda lo que afecta a la rotación.
+
+**Lo que el rescate cambió para este plan:**
+
+1. **Consumidores legacy confirmados dentro del lote.** `sync-smoobu` (cron jobid 1, diario 05:00) y
+   `github-commit`, `deploy-dashboard`, `inject-ga4`, `rehost-catalogo`, `drive-upload-factura` e
+   `import_csv` leen `SUPABASE_SERVICE_ROLE_KEY` del entorno de Edge Functions. Ninguna aparecía en el
+   grep del repo. Al rotar hay que **actualizar también los secrets de Edge Functions**, no solo Vercel.
+2. **Un consumidor legacy MÁS de la cara anon**, aparte del jobid 28: la landing vieja
+   (`house-sevillana-landing`) leía `_deploy_assets` por PostgREST con la anon incrustada en el bundle
+   —vía `push-route-ga4`—. Medido: esa copia está corrupta (44 caracteres de firma en vez de 43), así
+   que ya no autentica, y la landing viva es hoy `apps/housesevillana`, que no toca Supabase. **No
+   bloquea la rotación**, pero explica por qué aquel invento dejó de funcionar.
+3. **Tres PAT de GitHub y una contraseña personal en claro** dentro de esas fuentes. No es la
+   `service_role`, pero es la misma familia de fuga y va en el mismo lote de revocaciones (detalle y
+   pasos en el README del rescate).
+4. **19 de 22 con `verify_jwt = false`**, seis con efecto real (escritura o fuga de sesión). Eso importa
+   aquí porque **la rotación no las arregla**: cambiar la clave no cierra un endpoint que nunca pidió
+   clave. Borrarlas es trabajo aparte y anterior en prioridad para dos de ellas (`upload-landing`,
+   `trigger-deploy`).
+5. **`sync-smoobu` puede vaciar `incomes`** si Smoobu contesta 200 con lista vacía. No es un problema de
+   claves, pero es la función legacy más peligrosa del lote y conviene arreglarla en la misma pasada en
+   que se le cambie la credencial. Ver hallazgo 3 del README del rescate.
+
+⚠️ No todas son de `ia-rest`: `sync-smoobu` y `add-smoobu-booking` son de SIVRA; `boe-doc`,
+`junta-pdf-texto`, `ficha-fotocasa` y `zona-fotocasa` **sí son de subastas** (`apps/plataforma`) y están
+VIVAS — no borrarlas con el resto; `rehost-catalogo` es de `apps/almacen`. La carpeta del rescate es un
+salvavidas, no el destino definitivo: decidir a qué app va cada una sigue pendiente.
+
+## 🛑 «Cero tráfico legacy en 24 h» NO autoriza a pulsar el botón (20/08/2026)
+
+Una auditoría de los logs del panel agrupó las 10.727 peticiones de 24 h por prefijo de clave y encontró
+**cero** con JWT legacy: todo iba por `sb_secret_…` / `sb_publishable_…`. De ahí se concluyó que las apps
+ya estaban migradas y que pulsar «Disable JWT-based API keys» no rompería nada, evitando los 28 ficheros.
+
+**Es falso, y hay contraejemplo medido.** El cron `pg_cron` **jobid 28** (`monitor-health`, `*/5 * * * *`)
+lleva un **JWT legacy incrustado en el propio comando SQL**, en cabecera `Authorization: Bearer`:
+
+```sql
+select command like '%eyJ%' as lleva_jwt,
+       substring(command from 'Bearer ([A-Za-z0-9]{3})') as prefijo
+from cron.job where jobid = 28;   -- → lleva_jwt = true, prefijo = 'eyJ'
+```
+
+Se ejecuta **288 veces al día** y sus respuestas son 200. O sea: la clave legacy **está en uso ahora
+mismo**. Pulsar el botón mataría el monitor de salud — y lo mataría **en silencio**, que es el peor sitio
+donde puede fallar algo.
+
+**Por qué la auditoría no lo vio:** las llamadas de `pg_net` salen de dentro de la propia base de datos,
+no del edge, así que no aparecen en la agrupación de `edge_logs` que se muestreó. *No estaban en la tabla*
+se leyó como *no existen*.
+
+⚠️ **Y `cron.job_run_details` tampoco sirve para desmentirlo.** Ahí el jobid 28 sale `succeeded` 250 de 250
+veces… pero `SELECT net.http_post(...)` es **asíncrono**: «succeeded» significa **«la petición se encoló»**,
+no que devolviera 200. El estado real está en `net._http_response`. Es literalmente la regla de la casa:
+*un check que se pone verde porque la consulta no devolvió nada es el fallo más caro que hay* — y aquí el
+check que engaña es el del propio monitor de salud.
+
+**Regla operativa que queda:** la ausencia de tráfico en una ventana de logs **no** demuestra la ausencia
+de consumidores. Antes de desactivar las legacy hay que agotar el censo por el lado del CÓDIGO y de la
+CONFIGURACIÓN (grep del repo, `cron.job`, envs de Vercel, las 22 Edge Functions no versionadas), no por
+el lado del tráfico observado. Un cron mensual no aparece en 24 h de logs, y la retención del plan Free
+es de ~24 h.
 
 ## Plan de rotación (orden obligatorio, sin downtime)
 
 1. **Ya hecho:** existen `sb_secret_…` y `sb_publishable_…` (`default`). Nada que crear.
 2. **Backends a secret key.** Vercel `ia-rest` y `central-rrhh`: sustituir el valor de
-   `SUPABASE_SERVICE_ROLE_KEY` → redesplegar → verificar. (Marcar Sensitive también en `ia-rest`.)
+   `SUPABASE_SERVICE_ROLE_KEY` → redesplegar → verificar.
+   **Aprovechar para crearla ya como Sensitive en `ia-rest`, no antes** (comprobado 20/08): en Vercel,
+   Sensitive no es una casilla sino un **tipo** de variable, y la doc dice que las sensibles «solo están
+   disponibles en producción y preview» — o sea que marcarla **expulsa Development**, hoy activo. Como
+   este paso ya sustituye el valor, hacerlo aquí sale gratis; hacerlo antes es tocar la variable dos
+   veces. ⚠️ No confundir el tipo **Sensitive** con el tipo **Secret** («Secreto» en el panel
+   traducido): Secret vacía el valor y pide elegir un secreto ya existente de Vercel — no es lo que
+   queremos, y elegirlo por error perdería el valor actual.
 3. **Edge Functions (PR).** `Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')` →
    `JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS')!)['default']`, en 43 funciones.
 4. **Clientes a publishable key (PR).** Los 27 ficheros con `ANON_KEY` + los envs
@@ -92,14 +205,38 @@ porque solo lee, está detrás de un PIN y se abre en el navegador (o sea que ya
 - **Realtime**: las conexiones públicas quedan limitadas a 24 h salvo que se eleven con auth de usuario.
   Ojo al **KDS de ia-rest**, que son pantallas abiertas días enteros.
 
-## 🟠 Aviso ajeno a esto, visto en el mismo panel (19/08/2026)
+## ✅ La banda naranja de Supabase era un aviso legal, no una alarma (medido 20/08/2026)
 
-El dashboard muestra una banda naranja permanente: **«El período de gracia ha finalizado · Tus proyectos
-no podrán atender solicitudes cuando agotes tu cuota»**, con el proyecto en plan **Free**. Es la BD
-compartida de TODAS las verticales. Merece mirada propia, y es más urgente que la rotación.
+El 19/08 se escribió aquí que la banda naranja del dashboard («El período de gracia ha finalizado ·
+Tus proyectos no podrán atender solicitudes cuando agotes tu cuota») era «más urgente que la
+rotación». **Era falso, y el error es de método: se leyó un cartel en vez de medir.**
 
-Lo comprobado por MCP (19/08): organización `fzagbwkkzfjlsvflkkvn` en plan **`free`**, proyecto
-`central` en `ACTIVE_HEALTHY` y la BD ocupa **151 MB** (el límite del plan gratuito son 500 MB).
-O sea que **la cuota que se está agotando NO es la de almacenamiento**; será egress, MAU o compute,
-y eso NO se ve por MCP. Hay que abrirlo en Organization → Usage. Ahí decide Alberto: 10 verticales
-en producción sobre un plan sin SLA es la clase de riesgo que no avisa dos veces.
+Medido en Organization → Usage, ciclo 15/08–15/09/2026 (5 días corridos): **ninguna métrica pasa del
+35%**, y el overage del período es 0 en todas.
+
+| Métrica | Uso | Límite Free | % |
+|---|---|---|---|
+| Database Size | 168,89 MB | 500 MB / proyecto | 35% |
+| Egress | 0,676 GB | 5 GB | 14% |
+| Storage Size | 0,063 GB | 1 GB | 6% |
+| Invocaciones de Edge Functions | 8.978 | 500.000 | 2% |
+| MAU (propios y de terceros) | 0 | 50.000 | 0% |
+| Realtime (picos y mensajes) | 0 | 200 / 2.000.000 | 0% |
+
+Contraste independiente por MCP el mismo día: `pg_database_size` da **154,72 MB (30,9%)**. La cifra
+del panel es algo mayor porque incluye overhead que la consulta no ve; las dos dicen lo mismo.
+
+El texto completo de la banda es condicional y **permanente**: «Tu período de gracia terminó el 10 jul
+2026. Ahora aplica la Fair Use Policy. **Si** tu organización supera su cuota, tus proyectos pueden ser
+restringidos y las peticiones responderán con 402». Es un aviso de estado de cuenta que lleva ahí
+desde julio y seguirá ahí al 2% de consumo. `compute` y `branching` ni siquiera aparecen: no son
+métricas facturables del plan Free.
+
+**Consecuencia práctica:** no hay nada urgente aquí, y la rotación vuelve a ser la prioridad. Lo único
+que sube solo con el tiempo es Database Size, cuyo límite es **por proyecto** — vigilarlo si `central`
+crece rápido, pero 155 MB de 500 no es una urgencia. Si algún día aparece un **402 de verdad** en
+producción, el origen será otro (proyecto pausado por inactividad, rate limit, o la propia app) y se
+mira en los logs, no en esta banda.
+
+> Lección, que es la regla de la casa aplicada a un panel: un cartel de advertencia **condicional** no
+> es un dato de consumo. Antes de declarar una urgencia, medir la métrica.
