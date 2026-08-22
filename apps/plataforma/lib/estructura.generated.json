@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-21T06:53:08Z",
+  "generadoEn": "2026-08-22T07:48:10Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4595,6 +4595,22 @@
   ],
   "novedades": [
     {
+      "titulo": "Verificado el trabajo del 20/08:",
+      "fecha": ""
+    },
+    {
+      "titulo": "El cuarto piso destapó el fallo:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Arreglado midiendo el RANGO, no un punto",
+      "fecha": ""
+    },
+    {
+      "titulo": "Y el raíl tenía el mismo agujero:",
+      "fecha": ""
+    },
+    {
       "titulo": "La guest app tiene API JSON abierta con el token del propio enlace:",
       "fecha": ""
     },
@@ -4636,22 +4652,6 @@
     },
     {
       "titulo": "Alcance cerrado:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Cruzado con la declaración 2025",
-      "fecha": ""
-    },
-    {
-      "titulo": "Lo que sí sirve:",
-      "fecha": ""
-    },
-    {
-      "titulo": "TRES sesiones distintas fueron al mismo sitio el mismo día",
-      "fecha": ""
-    },
-    {
-      "titulo": "Probar antes de mergear cazó DOS bugs que `tsc` y `next build` dan por buenos:",
       "fecha": ""
     }
   ],
