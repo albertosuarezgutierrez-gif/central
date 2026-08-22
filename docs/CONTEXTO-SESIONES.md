@@ -32,6 +32,16 @@
 
 ---
 
+### 💼 (22/08/2026) Nace el coordinador patrimonial: base de activos + /patrimonio + 2 agentes
+Alberto pidió un «CFO personal» que exprima el rendimiento de lo que ya tiene (objetivo mixto,
+riesgo DINÁMICO con salvaguarda Socorro; jugada de referencia: vender Dúplex en el tope → fondo →
+recomprar en bajada). Diseño con 10 ampliaciones aprobadas en `specs/2026-08-22-patrimonio-cfo-design.md`.
+Hecho: tablas `patrimonio_activos/valoraciones/recomendaciones` (aplicadas + seed 5 inmuebles;
+NULL = «no se sabe»), página `/patrimonio` (neto MÍNIMO declarado + intake), skills `radar-espana`
+(quincenal, valoración viva y DUAL vivienda/VUT) y `patrimonio-cfo` (mensual día 2). De paso: catálogo
+de agentes des-desfasado (mercado-booking añadida, trading-analista→activo). **Pendiente de Alberto:**
+crear los 2 triggers (fichas 16-17 de RUTINAS-PROGRAMADAS) y contestar el intake de `/patrimonio`.
+
 ### 📮 (21/08/2026) SES.HOSPEDAJES: transporte validado contra el servicio REAL y mergeado (PR #1555)
 Operación `C` contra `hospedajes.ses.mir.es` → **200 `codigo 0 / Ok`**: TLS con cadena FNMT (raíz
 pública, sí está en el almacén), credenciales de servicio web, arrendador habilitado y **ZIP aceptado**
