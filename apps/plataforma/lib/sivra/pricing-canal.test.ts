@@ -255,3 +255,55 @@ test('🚨 la recta de un portal no describe la de otro: no se mezclan', () => {
   // La mezcla describe un canal que no existe: ni el de Booking ni el de Airbnb.
   assert.notEqual(soloBooking.markup, mezclado.markup)
 })
+
+// 🚨 Caso REAL de House Sevillana, pasada del 21/08/2026: el ajuste salió `medido` con R²=0,9985
+// y aun así el calibrado no corrigió NADA, porque la desviación se medía en un solo punto.
+// Con cuota fija las dos rectas se CRUZAN, y la mediana de House caía justo en el cruce.
+test('🚨 dos canales muy distintos NO son «ok» por cruzarse en la mediana', () => {
+  const configurado = { markup: 1.20, cuotaFija: 0, nochesRef: 2 }
+  const medido = { markup: 1.032, cuotaFija: 318 }
+  // Precios/noche REALES de sus 7 ventanas de aforo 12: 465 … 881 (mediana) … 2743.
+  const soloMediana = desviacionCanal({ configurado, medido, guestRef: 881 })
+  assert.equal(soloMediana.estado, 'ok', 'así se comportaba antes: ciego')
+
+  const conRango = desviacionCanal({ configurado, medido, guestRef: 881, guestMin: 465, guestMax: 2743 })
+  assert.equal(conRango.estado, 'desviado')
+  assert.equal(conRango.sesgo, soloMediana.sesgo, 'el sesgo de la referencia no cambia de significado')
+  assert.ok(Math.abs(conRango.sesgoMax!) > 0.20, `peor sesgo del rango: ${conRango.sesgoMax}`)
+})
+
+test('con el rango dentro de tolerancia sigue diciendo «ok» (no grita por gritar)', () => {
+  const configurado = { markup: 1.00, cuotaFija: 0, nochesRef: 2 }
+  const medido = { markup: 1.01, cuotaFija: 0 }
+  const d = desviacionCanal({ configurado, medido, guestRef: 300, guestMin: 100, guestMax: 3000 })
+  assert.equal(d.estado, 'ok')
+})
+
+test('sin rango degrada al punto de siempre, no revienta', () => {
+  const d = desviacionCanal({
+    configurado: { markup: 1.20, cuotaFija: 0, nochesRef: 2 },
+    medido: { markup: 0.9, cuotaFija: 100 }, guestRef: 500,
+  })
+  assert.ok(d.estado === 'ok' || d.estado === 'desviado')
+  assert.equal(typeof d.sesgoMax, 'number')
+})
+
+test('🚨 el raíl del salto se acota por el PEOR efecto del rango, no por el de la mediana', () => {
+  const configurado = { markup: 1.20, cuotaFija: 0, nochesRef: 2 }
+  const medido = { markup: 1.032, cuotaFija: 318 }
+  // Sin rango: el efecto en la mediana es −4,6%, cabe en el ±15% y entra ENTERO de una vez…
+  const ciego = pasoCanal({ configurado, medido, guestRef: 881 })
+  assert.equal(ciego.topado, false)
+  // …pero en las fechas baratas ese mismo cambio vale −23,5%, muy por encima del tope.
+  const real = (p: { markup: number; cuotaFija: number; nochesRef: number }) =>
+    baseDesdeGuest(465, p) / baseDesdeGuest(465, configurado) - 1
+  assert.ok(Math.abs(real({ ...ciego.aplicar })) > MAX_SALTO_CANAL)
+
+  // Con el rango, el paso se trocea para que NINGÚN extremo pase del tope.
+  const acotado = pasoCanal({ configurado, medido, guestRef: 881, guestMin: 465, guestMax: 2743 })
+  assert.equal(acotado.topado, true)
+  assert.ok(Math.abs(real({ ...acotado.aplicar })) <= MAX_SALTO_CANAL + 1e-6,
+    `efecto en la fecha barata: ${real({ ...acotado.aplicar })}`)
+  // Y sigue yendo hacia lo medido, no se queda quieto.
+  assert.ok(acotado.aplicar.cuotaFija > 0 && acotado.aplicar.markup < configurado.markup)
+})

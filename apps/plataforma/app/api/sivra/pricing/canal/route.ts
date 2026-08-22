@@ -95,6 +95,11 @@ export type MedicionCanal = {
   estado: string
   guest_ref: number | null
   sesgo: number | null
+  /** peor sesgo del RANGO medido (el que decide si se corrige), no solo el de la mediana */
+  sesgo_max: number | null
+  /** extremos del precio/noche medido: acotan el salto por su peor efecto, no por el de la mediana */
+  guest_min: number | null
+  guest_max: number | null
   desviacion: string
   canal_auto: boolean
   /** ¿acierta la recta VIGENTE en las ventanas que no usó para ajustarse? */
@@ -173,15 +178,20 @@ async function medir(): Promise<{ pisos: MedicionCanal[]; ventanas: Map<string, 
     const delAforo = todas.filter(v => v.guests === aforo && v.noches > 0)
     const porNoche = delAforo.map(v => v.precioTotal / v.noches).sort((a, b) => a - b)
     const guestRef = porNoche.length ? Math.round(porNoche[Math.floor((porNoche.length - 1) / 2)]) : null
+    // Los EXTREMOS del rango medido viajan con la mediana: son los que delatan una recta vigente
+    // equivocada. Con solo la mediana, House salía «ok» el 21/08 estando a −23,5% en sus fechas
+    // baratas — el cruce de las dos rectas caía justo ahí.
+    const guestMin = porNoche.length ? Math.round(porNoche[0]) : undefined
+    const guestMax = porNoche.length ? Math.round(porNoche[porNoche.length - 1]) : undefined
     const d = guestRef != null
       ? desviacionCanal({
           configurado,
           medido: ajuste.markup != null && ajuste.cuotaFija != null && ajuste.estado === "medido"
             ? { markup: ajuste.markup, cuotaFija: ajuste.cuotaFija }
             : null,
-          guestRef,
+          guestRef, guestMin, guestMax,
         })
-      : { estado: "sin_datos" as const, sesgo: null }
+      : { estado: "sin_datos" as const, sesgo: null, sesgoMax: null }
     return {
       property_id: p.property_id,
       nombre: PROP_NAMES[p.property_id] ?? p.property_id,
@@ -195,7 +205,10 @@ async function medir(): Promise<{ pisos: MedicionCanal[]; ventanas: Map<string, 
       r2: ajuste.r2,
       estado: ajuste.estado,
       guest_ref: guestRef,
+      guest_min: guestMin ?? null,
+      guest_max: guestMax ?? null,
       sesgo: d.sesgo,
+      sesgo_max: d.sesgoMax,
       desviacion: d.estado,
       canal_auto: Boolean(p.canal_auto),
       validacion,
@@ -235,7 +248,10 @@ function cambiosDe(pisos: MedicionCanal[], soloProp: string | null, autoGlobal: 
     if (!p.canal_auto) { frenados.push({ property_id: p.property_id, motivo: "canal_auto=false en el piso" }); continue }
 
     const medido = { markup: p.markup, cuotaFija: p.cuota_fija }
-    const paso = pasoCanal({ configurado: p.configurado, medido, guestRef: p.guest_ref })
+    const paso = pasoCanal({
+      configurado: p.configurado, medido, guestRef: p.guest_ref,
+      guestMin: p.guest_min ?? undefined, guestMax: p.guest_max ?? undefined,
+    })
     // `noches_ref` viaja SIEMPRE con la cuota, aunque el paso vaya topado: son las dos mitades del
     // mismo reparto y desparejarlas describiría un canal que no existe.
     const a: ParametrosCanal = { ...paso.aplicar, nochesRef: p.noches_ref }
