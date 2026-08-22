@@ -163,11 +163,14 @@ a Alberto.
 
 ## 8. Hallazgo colateral — el automerge no reconoce los ficheros de estado de los vigías
 
-`.github/workflows/rutinas-automerge.yml` reconoce **cinco** rutas como "registro":
+La función `es_registro()` de `.github/workflows/rutinas-automerge.yml` reconoce **nueve** rutas:
+cinco de registro puro, tres de ficheros generados y la landing de House Sevillana.
 
 ```
 docs/CONTEXTO-SESIONES.md · docs/AGENTES-BITACORA.md · docs/AUTO-APLICADOS.md
 docs/AUDITORIA-*.md · docs/memoria/*.md
+apps/plataforma/lib/estructura.generated.json · docs/ARQUITECTURA.generated.md
+docs/mapa-funciones.generated.json · apps/housesevillana/app/route.ts
 ```
 
 **No están** `docs/VIGIA-OSS.md`, `docs/BUSCADOR-IA.md` ni `docs/FISCAL-AYUDAS.md` — los ficheros de
