@@ -14,6 +14,8 @@
 | `Leaflet/Leaflet` | El mapa de `/(usuario)/mapa` (transporte) y el consolidado de plataforma cargan Leaflet por CDN | transporte / plataforma | 1.9.4 (npm) | 2026-07-02 |
 | `traccar/traccar` | Nuestro endpoint de ingesta habla su protocolo (`osmand`/`traccar`); cambios de protocolo nos afectan | transporte / module-geo | v6.14.5 | 2026-07-02 |
 | `web-push-libs/web-push` | Única dependencia npm propia de un core (`core-push`); CVEs o cambios VAPID nos tocan directo | core-push (ia-rest, ialimp) | 3.6.7 (npm) | 2026-07-02 |
+| `dgunning/edgartools` | **MIT** y Python. Normaliza XBRL de EDGAR: mapea conceptos entre empresas, series por periodo y unidades. Es EXACTAMENTE el problema que nos mintió en el PR #1189 (ORCL: +3,49% de FCF yield contra −6,99% real). No se integra (somos TS en Vercel): se lee su tabla de alias/conceptos como REFERENCIA para `lib/trading/edgar.ts`. Mantenido por una sola persona | trading | — | 2026-08-22 |
+| `OpenBB-finance/OpenBB` | Agregador Python de fuentes financieras. 🚫 **AGPLv3: copiar su código a nuestro SaaS privado obligaría a publicar el nuestro** — solo lectura, nunca copia-pega. Además no trae dataset propio (sigue haciendo falta nuestra API key de cada proveedor) y no tiene cliente JS/TS. Vale como catálogo de qué proveedor cubre qué | trading (referencia) | — | 2026-08-22 |
 | `zarpilla/verifactu-node-lib` | Librería JS/TS para VeriFactu (MIT). HOY inmadura (10 commits, sin releases, no firma ni envía a AEAT) — vigilar por si madura; referencia útil para `core-fiscal` | core-fiscal (ia-rest) | — (sin releases) | 2026-07-02 |
 
 ## Bitácora de hallazgos (lo más reciente arriba)
