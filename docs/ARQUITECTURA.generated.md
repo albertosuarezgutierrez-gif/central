@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-22T07:58:21Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-22T08:29:55Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 10 apps · 38 packages · 23 capacidades · 32 skills · 1177 rutas API.
+**Resumen:** 10 apps · 38 packages · 23 capacidades · 33 skills · 1177 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -183,6 +183,7 @@
 - **buscador-ia** — Agente PROGRAMADO semanal que vigila los LLMs de la cadena de fallback de `@central/core-ai` por CALIDAD/PRECIO — watch de deprecación de los modelos cableados (NIM, Groq, Gemini, Kimi), descubrimiento de candidatos y mini-eval. Estado en docs/BUSCADOR-IA.md; Telegram + PR draft solo para swaps seguros. Úsala si Alberto pide "revisa las novedades de IA / si hay una IA mejor" o al disparo semanal. Sin secretos.
 - **central-maestro** — >
 - **code-map** — Úsala al EMPEZAR cualquier tarea de CÓDIGO cuando haya que localizar QUÉ archivo/función maneja algo, ANTES de Grep/Read a ciegas — consulta la tabla Supabase `mapa_arquitectura` (índice de firmas del repo) para acotar candidatos a coste ~0 y leer SOLO esos. No reemplaza a Grep/Read: los enfoca. Sin tabla o sin candidatos, método clásico.
+- **conectores-vigia** — Agente PROGRAMADO mensual (día 5) que vigila los conectores MCP — cruza el registro contra docs/HUECOS-ABIERTOS.md, hace de canario sobre los conectores de los que dependen las rutinas vivas, y audita la higiene de los ya conectados. Estado en docs/VIGIA-CONECTORES.md; Telegram + PR draft. Úsala si Alberto pide "revisa si hay conectores nuevos que encajen" o al disparo mensual. Sin secretos.
 - **correo-triaje** — Router de contexto del agente de TRIAJE DE CORREO — cron de Vercel en apps/plataforma cada ~10 min (NO sesión Claude) que lee Gmail por IMAP, clasifica y actúa (etiquetas, archivado, aviso Telegram). Úsala si Alberto pide "revisa/ajusta el triaje de correo", añadir categoría/remitente, o cuando /auditoria-diaria reconcilie la tabla de rutas. Sin secretos.
 - **delegar-codigo** — Úsala cuando una tarea tenga código MECÁNICO o VOLUMINOSO (renames masivos, mismo patrón en N archivos, boilerplate, migraciones planas) — Claude planifica y REVISA, y delega la escritura a un coder barato vía `/api/ai/ejecutar` de plataforma (OpenRouter, categoría `codigo`). NO para lógica sutil ni cambios de 1-2 archivos. Complementa a `code-map`.
 - **facturas-correo** — Agente PROGRAMADO que revisa el Gmail de Alberto buscando facturas/justificantes de gasto, los clasifica (personal vs negocio deducible), archiva en Google Drive los deducibles y los concilia con los movimientos bancarios de plataforma. Úsala cuando Alberto pida "revisa mis correos/facturas", o cuando la dispare el trigger diario de Claude Code web. NO es un proceso 24/7: se despierta, hace una pasada sobre lo nuevo y deja un resumen.

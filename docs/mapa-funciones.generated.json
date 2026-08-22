@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-22T07:58:21Z",
-  "sha": "80f358c475d6cd39b74037c0dbcb040730e97d82",
+  "generadoEn": "2026-08-22T08:29:55Z",
+  "sha": "5e6da1766ef7d01812c2957ea4ace6e59900c9b1",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -95175,6 +95175,7 @@
         "superaLimiteOps",
         "bajoTendencia",
         "factorFlojo",
+        "estadoEarnings",
         "earningsInminente"
       ],
       "funciones": [
@@ -95224,18 +95225,27 @@
           "resumen": "Barrera de SELECCIÓN (Fase B): no abrir un largo en un nombre cuyo score de factores (value+quality+momentum, de `rankearFactores`) esté por debajo del mínimo. La selección FILTRA al timing técnico: a"
         },
         {
+          "nombre": "estadoEarnings",
+          "kind": "function",
+          "exportada": true,
+          "params": "proximoEarnings: string | undefined, hoy: string, dias = 3,",
+          "retorno": "'desconocido' | 'inminente' | 'fuera_de_ventana'",
+          "linea": 52,
+          "resumen": "Tres estados, no dos (regla de la casa: `NULL` ≠ «no hay»). `earningsInminente` devuelve `false` tanto cuando SABEMOS que no hay resultados cerca como cuando NO TENEMOS la fecha, y aguas abajo las dos"
+        },
+        {
           "nombre": "earningsInminente",
           "kind": "function",
           "exportada": true,
           "params": "proximoEarnings: string | undefined, hoy: string, dias = 3",
           "retorno": "boolean",
-          "linea": 42,
+          "linea": 64,
           "resumen": "No abrir un largo justo ANTES de resultados: el gap de earnings puede saltarse el stop de golpe (la lección de ISRG/IBM, que se desplomaron el día del anuncio). Veta la entrada si el próximo earnings "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0ca11463b235"
+      "hash": "567d02607fd4"
     },
     {
       "ruta": "packages/module-trading/src/riesgoCesta.ts",
@@ -95946,6 +95956,6 @@
   ],
   "resumen": {
     "archivos": 2543,
-    "funciones": 6968
+    "funciones": 6969
   }
 }
