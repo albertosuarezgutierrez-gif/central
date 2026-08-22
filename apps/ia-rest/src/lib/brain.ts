@@ -358,7 +358,7 @@ async function callNvidia(systemPrompt: string, userText: string): Promise<strin
   const apiKey = process.env.NVIDIA_API_KEY
   if (!apiKey) throw new Error('NVIDIA_API_KEY no configurada')
 
-  const model = process.env.NVIDIA_BRAIN_MODEL ?? 'z-ai/glm-5.2'
+  const model = process.env.NVIDIA_BRAIN_MODEL ?? 'meta/llama-3.1-70b-instruct'
 
   const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
     method: 'POST',
@@ -447,7 +447,7 @@ export async function parsearComanda(
         ),
       ])
       const result = parseAndValidate(raw)
-      const model = process.env.NVIDIA_BRAIN_MODEL ?? 'z-ai/glm-5.2'
+      const model = process.env.NVIDIA_BRAIN_MODEL ?? 'meta/llama-3.1-70b-instruct'
 
       // Si confianza es baja y tenemos memoria de sesión, reintentar con contexto enriquecido
       if ((result.confianza ?? 1) < 0.72 && sesionContext) {

@@ -212,6 +212,12 @@ export interface DesviacionCanal {
    * medición.
    */
   sesgo: number | null
+  /**
+   * El PEOR sesgo sobre el rango de precios REALMENTE medido, no solo en la referencia. Es el que
+   * decide `estado`: con un modelo afín el sesgo NO es plano, así que mirar un punto solo puede
+   * decir «ok» justo donde las dos rectas se cruzan. `null` sin medición o sin rango.
+   */
+  sesgoMax: number | null
 }
 
 /**
@@ -227,19 +233,35 @@ export function desviacionCanal(p: {
   medido: { markup: number; cuotaFija: number } | null
   guestRef: number
   tolerancia?: number
+  /** extremos del rango de precio/noche REALMENTE medido; sin ellos degrada al punto de siempre */
+  guestMin?: number
+  guestMax?: number
 }): DesviacionCanal {
   const tol = p.tolerancia ?? 0.05
   if (!p.medido || !(p.medido.markup > 0)) {
-    return { estado: 'sin_datos', configurado: p.configurado, medido: null, sesgo: null }
+    return { estado: 'sin_datos', configurado: p.configurado, medido: null, sesgo: null, sesgoMax: null }
   }
-  const conConfig = baseDesdeGuest(p.guestRef, p.configurado)
-  const conMedido = baseDesdeGuest(p.guestRef, { ...p.medido, nochesRef: p.configurado.nochesRef })
-  const sesgo = Number((conMedido / conConfig - 1).toFixed(4))
+  const medido = { ...p.medido, nochesRef: p.configurado.nochesRef }
+  const sesgoEn = (g: number) =>
+    Number((baseDesdeGuest(g, medido) / baseDesdeGuest(g, p.configurado) - 1).toFixed(4))
+
+  const sesgo = sesgoEn(p.guestRef)
+  // 🚨 Con cuota fija el sesgo NO es un porcentaje plano: las dos rectas se CRUZAN, y cerca del
+  // cruce hasta dos canales totalmente distintos parecen el mismo. Evaluar solo en la mediana es
+  // un markup escalar disfrazado — justo lo que este módulo existe para no volver a hacer.
+  // Como el modelo es afín, el peor sesgo del rango está SIEMPRE en un extremo: basta con mirarlos.
+  // Caso fundacional (21/08/2026): House medía 1,032 + 318€/estancia contra un 1,20 vigente y salía
+  // «ok» con −4,6% en su mediana (881€/noche), mientras se desviaba −23,5% a 465€ y +9,5% a 2.743€.
+  // El calibrado se saltó el piso entero, en silencio y por segundo día.
+  const extremos = [p.guestMin, p.guestMax].filter((g): g is number => typeof g === 'number' && g > 0)
+  const candidatos = [sesgo, ...extremos.map(sesgoEn)]
+  const sesgoMax = candidatos.reduce((peor, x) => (Math.abs(x) > Math.abs(peor) ? x : peor), 0)
   return {
-    estado: Math.abs(sesgo) > tol ? 'desviado' : 'ok',
+    estado: Math.abs(sesgoMax) > tol ? 'desviado' : 'ok',
     configurado: p.configurado,
     medido: p.medido,
     sesgo,
+    sesgoMax,
   }
 }
 
@@ -277,6 +299,9 @@ export function pasoCanal(p: {
   medido: { markup: number; cuotaFija: number }
   guestRef: number
   maxSalto?: number
+  /** extremos del rango de precio/noche medido: el salto se acota por el PEOR de ellos */
+  guestMin?: number
+  guestMax?: number
 }): PasoCanal {
   const maxSalto = p.maxSalto ?? MAX_SALTO_CANAL
   const nochesRef = Number(p.configurado.nochesRef) > 0 ? Number(p.configurado.nochesRef) : 2
@@ -285,8 +310,17 @@ export function pasoCanal(p: {
     cuotaFija: p.configurado.cuotaFija + (p.medido.cuotaFija - p.configurado.cuotaFija) * t,
     nochesRef,
   })
-  const baseAntes = baseDesdeGuest(p.guestRef, p.configurado)
-  const efectoDe = (t: number) => baseDesdeGuest(p.guestRef, mezcla(t)) / baseAntes - 1
+  // 🚨 El raíl acota el salto por su EFECTO sobre el precio, y ese efecto tampoco es plano cuando
+  // hay cuota fija: el mismo cambio de parámetros vale −4,6% en la mediana de House y −23,5% en sus
+  // fechas baratas. Acotar mirando solo la mediana deja pasar de una vez un salto que el tope del
+  // ±15% existe para impedir. Se mide en la referencia Y en los extremos, y manda el peor.
+  // (21/08/2026, misma raíz que el punto ciego de `desviacionCanal`.)
+  const puntos = [p.guestRef, p.guestMin, p.guestMax]
+    .filter((g): g is number => typeof g === 'number' && g > 0)
+  const efectosDe = (t: number) => puntos.map(g => baseDesdeGuest(g, mezcla(t)) / baseDesdeGuest(g, p.configurado) - 1)
+  /** el efecto que MANDA: el mayor en valor absoluto de todo el rango medido */
+  const efectoDe = (t: number) =>
+    efectosDe(t).reduce((peor, x) => (Math.abs(x) > Math.abs(peor) ? x : peor), 0)
 
   const efectoTotal = efectoDe(1)
   if (Math.abs(efectoTotal) <= maxSalto) {
@@ -375,4 +409,115 @@ export function validarCanal(
     sesgo: Number(sesgo.toFixed(4)),
     estado: Math.abs(sesgo) > tolSesgo || errorMedio > tolError ? 'desviado' : 'ok',
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// QUÉ PISOS SE AJUSTAN — y, sobre todo, QUÉ PASA CON LOS QUE NO
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+
+/** Lo mínimo que hace falta de un piso medido para decidir si se le toca el canal. */
+export interface PisoParaCambio {
+  property_id: string
+  nombre: string
+  estado: string
+  markup: number | null
+  cuota_fija: number | null
+  guest_ref: number | null
+  muestras: number
+  desviacion: string
+  canal_auto: boolean
+  noches_ref: number
+  configurado: ParametrosCanal
+  /** ids de las ventanas que produjeron ESTA medición */
+  ventanas_usadas: number[]
+}
+
+export interface CambioCanal {
+  property_id: string; nombre: string
+  de: ParametrosCanal; a: ParametrosCanal
+  medido: { markup: number; cuotaFija: number }
+  guest_ref: number
+  base_antes: number; base_despues: number
+  efecto: number; topado: boolean
+}
+
+/** Un piso al que no se le ha tocado nada, y POR QUÉ. Los dos motivos NO son lo mismo. */
+export interface NoTocado { property_id: string; motivo: string }
+
+/**
+ * Reparte los pisos medidos en tres cubos: los que se ajustan, los que NO SE HAN PODIDO ajustar
+ * (`frenados`) y los que NO HACÍA FALTA ajustar (`sinCambio`).
+ *
+ * 🚨 LA RAZÓN DE QUE SEAN TRES Y NO DOS (22/08/2026). Antes esta función tenía dos salidas mudas:
+ * `desviacion === 'ok'` y «la base redondeada no se mueve» hacían `continue` sin dejar rastro en
+ * ninguna lista. El parte diario decía «4 pisos · 3 ajustados» y el cuarto se evaporaba, con lo que
+ * «ya cuadra» y «está desviado pero no he sabido moverlo» se leían igual: como una pasada normal.
+ * House Sevillana llevaba así desde el 17/08 con el ×1,20 INVENTADO que este agente existe para
+ * corregir. Es la regla de casa: un «no lo he hecho» no puede presentarse como un «no hacía falta».
+ */
+export function repartirCambios(
+  pisos: PisoParaCambio[],
+  opciones: { soloProp?: string | null; autoGlobal?: boolean } = {},
+): { cambios: CambioCanal[]; frenados: NoTocado[]; sinCambio: NoTocado[] } {
+  const soloProp = opciones.soloProp ?? null
+  const autoGlobal = opciones.autoGlobal !== false
+  const cambios: CambioCanal[] = []
+  const frenados: NoTocado[] = []
+  const sinCambio: NoTocado[] = []
+
+  for (const p of pisos) {
+    if (soloProp && p.property_id !== soloProp) continue
+    if (p.estado !== 'medido' || p.markup == null || p.cuota_fija == null || p.guest_ref == null) {
+      // No es un «cuadra»: es un «no lo sé». Se declara, nunca se escribe.
+      frenados.push({ property_id: p.property_id, motivo: `ajuste ${p.estado} (${p.muestras} ventanas)` })
+      continue
+    }
+    // Este SÍ es un «no hacía falta»: la recta vigente ya describe al portal.
+    if (p.desviacion === 'ok') { sinCambio.push({ property_id: p.property_id, motivo: 'la recta vigente ya cuadra' }); continue }
+    if (!autoGlobal) { frenados.push({ property_id: p.property_id, motivo: 'SIVRA_CANAL_AUTO=0' }); continue }
+    if (!p.canal_auto) { frenados.push({ property_id: p.property_id, motivo: 'canal_auto=false en el piso' }); continue }
+
+    const medido = { markup: p.markup, cuotaFija: p.cuota_fija }
+    const paso = pasoCanal({ configurado: p.configurado, medido, guestRef: p.guest_ref })
+    // `noches_ref` viaja SIEMPRE con la cuota, aunque el paso vaya topado: son las dos mitades del
+    // mismo reparto y desparejarlas describiría un canal que no existe.
+    const a: ParametrosCanal = { ...paso.aplicar, nochesRef: p.noches_ref }
+    const baseAntes = baseDesdeGuest(p.guest_ref, p.configurado)
+    const baseDespues = baseDesdeGuest(p.guest_ref, a)
+    if (baseAntes === baseDespues && a.nochesRef === p.configurado.nochesRef) {
+      // 🚨 Este es el caso caro: el piso ESTÁ desviado y quiere corregirse, pero el paso acotado se
+      // queda por debajo del redondeo a euro de la base, así que la escritura no cambiaría nada.
+      // Sin declararlo, el piso se queda con su parámetro viejo PARA SIEMPRE y en silencio.
+      frenados.push({
+        property_id: p.property_id,
+        motivo: `el paso acotado no mueve la base (${baseAntes}€ → ${baseDespues}€): desviado y sin corregir`,
+      })
+      continue
+    }
+    cambios.push({
+      property_id: p.property_id, nombre: p.nombre,
+      de: p.configurado, a, medido, guest_ref: p.guest_ref,
+      base_antes: baseAntes, base_despues: baseDespues,
+      efecto: paso.efecto, topado: paso.topado,
+    })
+  }
+  return { cambios, frenados, sinCambio }
+}
+
+/**
+ * Ventanas que se marcan como consumidas al final de una pasada.
+ *
+ * 🚨 SOLO las de los pisos que se han AJUSTADO DE VERDAD (22/08/2026). `usada_en_ajuste_at` existe
+ * para romper un círculo: una ventana que produjo la recta ya no puede validarla. Si un piso no se
+ * ajustó, su recta NO salió de esas ventanas, así que siguen siendo muestra limpia — y quemarlas
+ * deja al piso sin con qué corregirse en la pasada siguiente. El código marcaba por `estado ===
+ * 'medido'` (se pudo medir), no por «se ajustó», que son cosas distintas: House Sevillana gastó sus
+ * 7 ventanas de aforo 12 sin moverse del ×1,20 y se quedó a cero de muestra limpia.
+ */
+export function ventanasAConsumir(
+  pisos: Pick<PisoParaCambio, 'property_id' | 'ventanas_usadas'>[],
+  cambios: Pick<CambioCanal, 'property_id'>[],
+): number[] {
+  const ajustados = new Set(cambios.map(c => c.property_id))
+  return pisos.filter(p => ajustados.has(p.property_id)).flatMap(p => p.ventanas_usadas)
 }

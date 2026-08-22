@@ -46,7 +46,7 @@ function sondasConfiguradas(): Sonda[] {
 
   const nimKey = process.env.NVIDIA_API_KEY
   if (nimKey) {
-    const modelo = 'z-ai/glm-5.2'
+    const modelo = 'meta/llama-3.1-70b-instruct'
     lista.push({ proveedor: 'nim', modelo, llamar: (signal) => nimChat({ apiKey: nimKey, textModel: modelo }, PING, { ...opts, signal }) })
   }
 
