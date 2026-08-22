@@ -32,6 +32,22 @@
 
 ---
 
+### 🛑 (22/08/2026) El canal ya se cura solo — y al comprobarlo, House llevaba 5 días con el ×1,20
+- **Verificado el trabajo del 20/08:** `sivra_canal` en verde y el ×1,20 SUPUESTO caído en 3 de 4
+  pisos, con valores que confirman la hipótesis: markup ~0,95–1,04 **+ cuota fija por estancia**
+  (22,30€ Busto Reform · 39,90€ Dúplex), no un ×1,20 plano. `agente_reparaciones` vacía = correcto
+  (a las 08:00 el canal ya estaba verde), pero el reparador **sigue sin probarse end-to-end**.
+- **El cuarto piso destapó el fallo:** House Sevillana seguía en 1,20 desde el 17/08 pese a ser el
+  que MÁS mediciones tiene (7 de su aforo 12). Dos `continue` mudos en `cambiosDe` lo evaporaban del
+  parte («4 pisos · 3 ajustados») y, peor, el marcado de ventanas iba por `estado === 'medido'` en
+  vez de por «se ajustó» → **quemaba su muestra en cada pasada sin corregirse**, y se quedó a cero.
+- Arreglo: `repartirCambios` (3 cubos: cambios · frenados · sinCambio) y `ventanasAConsumir` en
+  `lib/sivra/pricing-canal.ts`, puros y testeados — 6 tests nuevos, **verificados por reintroducción
+  del bug** (tumban 29, 33 y 34). El latido antepone `🛑 N SIN corregir (piso: motivo)`.
+- La lección, hermana de «NULL ≠ 0» pero sobre ACCIONES: **un «no lo he hecho» no puede presentarse
+  como un «no hacía falta»**. Y un flag de consumo que se marca de más agota la muestra que hace
+  falta para reintentar: el freno se vuelve permanente por agotamiento, sin que nadie lo vea.
+
 ### 🎯 (21/08/2026) El calibrado ya corre, pero medía la desviación en UN punto — y House se libraba
 - Segunda pasada del cron de canal: **corre y en verde** (latido `sivra_canal` ok, 07:45). Ajustó
   3 de 4 pisos (Busto 0,995/22,3 · Duplex 0,949/39,9 · Luxury 1,0428/0, todos con paso acotado).
