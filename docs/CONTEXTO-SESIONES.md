@@ -32,6 +32,14 @@
 
 ---
 
+### 🧠 (22/08/2026) Health-check: sonda IA muerta (`z-ai/glm-5.2` 410) → swap a `meta/llama-3.1-70b-instruct`
+Skill `buscador-ia` disparada por el health-check diario (no la pasada semanal). Confirmado con
+`/v1/models` real (harness temporal + `pg_net`, WebFetch a NVIDIA/Supabase bloqueado por el proxy)
+que GLM-5.2 murió 3 días antes de su EOL anunciado. Swap en todo el radio (core-ai, plataforma,
+rrhh, ia-rest) + 4 edge functions redesplegadas y verificadas. Detalle en `docs/BUSCADOR-IA.md`.
+Pendiente sin tocar (no es de código): Alberto tiene que subir el PDF de movimientos de la tarjeta
+****0302 de julio (629,86€ liquidados 01/08) para poder conciliarlo.
+
 ### 📮 (21/08/2026) SES.HOSPEDAJES: transporte validado contra el servicio REAL y mergeado (PR #1555)
 Operación `C` contra `hospedajes.ses.mir.es` → **200 `codigo 0 / Ok`**: TLS con cadena FNMT (raíz
 pública, sí está en el almacén), credenciales de servicio web, arrendador habilitado y **ZIP aceptado**
