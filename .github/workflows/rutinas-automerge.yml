@@ -106,6 +106,17 @@ jobs:
               docs/AUTO-APLICADOS.md)    return 0 ;;
               docs/AUDITORIA-*.md)       return 0 ;;
               docs/memoria/*.md)         return 0 ;;
+              # Ficheros de ESTADO de los agentes programados: el agente cuenta ahí lo que vio
+              # (versiones, veredictos, fecha de pasada). Es registro puro, igual que una entrada
+              # de bitácora. Sin esta línea el PR de cada vigía espera ojo humano para nada y se
+              # pudre en conflicto — el fallo de los cinco PRs del 04-07/08/2026, repetido en las
+              # tres rutinas a las que nadie miró (detectado 21/08/2026). Lo guarda
+              # test/regression-automerge-registro.test.ts.
+              # OJO: el CATÁLOGO de huecos (docs/HUECOS-ABIERTOS.md) NO entra aquí: eso no cuenta
+              # lo que pasó, decide qué buscamos. Lo mira Alberto.
+              docs/VIGIA-*.md)           return 0 ;;
+              docs/BUSCADOR-IA.md)       return 0 ;;
+              docs/FISCAL-AYUDAS.md)     return 0 ;;
               # Generado entero por scripts/auditar-estructura.mjs en cada pasada: es un
               # RETRATO del repo, no una decisión. Entró aquí el 19/08/2026, cuando el
               # ruleset de `main` dejó de admitir el push directo de la auditoría.

@@ -80,6 +80,8 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
 - **`docs/FUENTES-DE-VERDAD.md`** (manifiesto, idea F): mapea cada doc/skill → los paths de
   código que describe. Úsalo para saber **exactamente** qué doc releer cuando un path cambia,
   en vez de adivinar. Si tocas un doc/skill o ves que el mapa está incompleto, actualízalo.
+- **`docs/HUECOS-ABIERTOS.md`**: catálogo de «esto nos falta», con la fuente de cada hueco. Lo
+  consume `conectores-vigia`. Lo mantiene esta auditoría (carril 1) — ver el paso de frescura.
 
 ## Pasos (crea un TodoWrite por bloque)
 
@@ -288,6 +290,25 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
      path de código mapeado **cambió en el rango**, reverifícalo (es candidato a stale).
      Estampa/actualiza el sello `<!-- verificado: YYYY-MM-DD -->` al pie del doc tras
      reconciliarlo. Un doc con sello muy viejo cuyo código cambió = revisar sí o sí.
+   - **Catálogo de huecos (`docs/HUECOS-ABIERTOS.md`) — carril 1.** Es lo que cruza
+     `conectores-vigia` contra el registro de conectores, así que si envejece, ese agente calla
+     por la razón equivocada: no porque no haya nada, sino porque no sabe lo que falta. Dos
+     direcciones, y la segunda es la que muerde:
+     1. **Huecos nuevos:** si en el rango aparece un `TODO`/comentario/doc declarando que falta
+        una fuente de datos o una capacidad externa, añádelo con su fuente citada.
+     2. **Huecos ya CERRADOS que siguen listados como vivos.** Por cada hueco vivo, comprueba en
+        el **CÓDIGO** que sigue abierto — no en el doc que lo declaró. Si hay una pieza propia que
+        ya lo cubre, muévelo a «cerrados» diciendo con qué.
+
+     El caso fundacional es del 21/08/2026 y es el motivo de que este paso exista:
+     `TRADING-FUENTES-PAGO.md` (15/08) declaraba la fecha de earnings como «el único hueco con
+     coste directo en dinero real» cuando `apps/plataforma/lib/trading/earnings-yahoo.ts` la
+     cerraba desde el **05/08** — diez días antes de que se escribiera el doc. Se estuvo a punto
+     de integrar un conector redundante y peor por creerle al doc.
+
+     **Un catálogo de huecos envejece hacia el lado peligroso: sigue pidiendo lo que ya tienes, y
+     nadie lo nota porque pedir de más no rompe nada visible.** Por eso se comprueba contra el
+     código, no contra el doc.
    - **Manuales de usuario final** (que el código nuevo casi nunca actualiza — punto ciego
      histórico). Procedimiento concreto, no "echar un vistazo":
      1. Del `git log` del rango, lista las features VISIBLES para el usuario (rutas nuevas en

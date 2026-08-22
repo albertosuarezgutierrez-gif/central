@@ -19,6 +19,7 @@ const NAV_NEGOCIO = [
   { href: '/subastas', icon: '⚖️', label: 'Subastas y chollos' },
   { href: '/empresas', icon: '🏢', label: 'Empresas' },
   { href: '/trading', icon: '📈', label: 'Inversión' },
+  { href: '/patrimonio', icon: '💼', label: 'Patrimonio' },
 ]
 
 // Entrada única para una cuenta acotada a la sección Empresas (rol='empresas').

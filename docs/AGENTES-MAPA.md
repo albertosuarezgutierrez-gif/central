@@ -31,6 +31,7 @@ flowchart TB
     A8["github-vigia"]
     A9["agentes-entrenador"]
     A10["buscador-ia"]
+    A11["conectores-vigia"]
   end
 
   subgraph B["B · Agente Director (pasarela IA)"]
@@ -86,6 +87,9 @@ flowchart TB
 | Vigía GitHub/OSS | Releases vigilados + descubrimiento + npm outdated/CVE | Día 15 mes 07:00 · *pendiente trigger* | PR draft | ✅ | `.claude/skills/github-vigia` |
 | Agentes-entrenador | Mejora los prompts de los agentes por rendimiento/calidad | Domingo 07:30 | PR draft | ✅ | `.claude/skills/agentes-entrenador` |
 | Buscador de IA | Watch de deprecación + descubrimiento + mini-eval de core-ai | Lunes 07:00 · *pendiente trigger* | PR draft | ✅ | `.claude/skills/buscador-ia` |
+| Radar España | Ciclo inmobiliario por zona + regulación VUT + valoración viva/dual de los inmuebles | Días 1 y 16, 08:00 · *pendiente trigger* | BD + doc estado | señal accionable | `.claude/skills/radar-espana` |
+| Coordinador patrimonial (CFO) | Neto + coste de oportunidad por activo + escenarios con impuestos + memoria de decisiones | Día 2 mes 09:00 · *pendiente trigger* | informe + BD | ✅ | `.claude/skills/patrimonio-cfo` |
+| Vigía de conectores MCP | Huecos vs registro + canario sobre los conectores en uso + higiene de los conectados | Día 5 mes 04:00 · *pendiente trigger* | PR draft | ✅ | `.claude/skills/conectores-vigia` |
 
 ## B · Agente Director (pasarela IA)
 

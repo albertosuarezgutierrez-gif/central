@@ -81,7 +81,9 @@
   ia-rest + **4 edge functions redesplegadas** (`nim-diagnostico`, `nim-sentiment`, `qr-assistant`,
   `daily-briefing`) y verificadas con una llamada real post-deploy (200 OK). Harness temporal
   neutralizado (redesplegado a un 410 estático + `verify_jwt: true`; no hay tool de borrado de edge
-  functions por MCP). PR draft con el commit; Telegram enviado si el canal respondía.
+  functions por MCP). **PR #1583 mergeado a `main` (squash, commit `5e6bbed`)** tras CI verde + 9
+  previews Vercel Ready; re-verificado EN VIVO contra la API real de NVIDIA tras el merge (200 OK,
+  sin 410).
 
 - **2026-08-17 (2ª parte) · 🔴 CORRECCIÓN VERIFICADA EN VIVO: Maverick estaba MUERTO en el API (410) →
   GLM-5.2; y `deepseek-v3` del contable también muerto → `deepseek-v4-flash-0731`.** Al probar el swap

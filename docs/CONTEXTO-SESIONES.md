@@ -45,12 +45,92 @@ sesión, ningún retroceso). Con eso el libro ya habla en euros: realizado **−
 **−16.053,40€** (2026) = **−17.674,34€**; comisiones 451,01€. `tc_fuente`/`tc_fecha` guardan que es
 CIERRE diario, no el cambio intradía de cada orden — aproximación declarada, no exacta.
 ### 🧠 (22/08/2026) Health-check: sonda IA muerta (`z-ai/glm-5.2` 410) → swap a `meta/llama-3.1-70b-instruct`
+### 💼 (22/08/2026) Nace el coordinador patrimonial: base de activos + /patrimonio + 2 agentes (PR #1591)
+Alberto pidió un «CFO personal» que exprima el rendimiento de lo que ya tiene (objetivo mixto,
+riesgo DINÁMICO con salvaguarda Socorro; jugada de referencia: vender Dúplex en el tope → fondo →
+recomprar en bajada). Diseño con 10 ampliaciones aprobadas en `specs/2026-08-22-patrimonio-cfo-design.md`.
+Hecho: tablas `patrimonio_activos/valoraciones/recomendaciones` (aplicadas + seed 5 inmuebles;
+NULL = «no se sabe»), página `/patrimonio` (neto MÍNIMO declarado + intake), skills `radar-espana`
+(quincenal, valoración viva y DUAL vivienda/VUT) y `patrimonio-cfo` (mensual día 2). De paso: catálogo
+de agentes des-desfasado (mercado-booking añadida, trading-analista→activo). **Pendiente de Alberto:**
+crear los 2 triggers (fichas 16-17 de RUTINAS-PROGRAMADAS) y contestar el intake de `/patrimonio`.
+
+### 🔑 (20/08/2026) Rescatadas las 22 Edge Functions fantasma — y lo que había dentro (PR #1517)
+- El panel sirve 67 Edge Functions y el repo versionaba 45. Las 22 huérfanas ya están en
+  `supabase/functions-rescatadas/` con **secretos sustituidos** y `gitleaks` como gate previo a cada commit.
+- Dentro había **3 PAT de GitHub distintos** (`ghp_97Ct…`, `ghp_5MfB…`, `ghp_hft2…`) y **el email+contraseña
+  de Alberto en claro** (`trigger-deploy`). Sustituir en el repo NO revoca: quedan pendientes para Alberto.
+- Peor que la fuga: **19 de 22 con `verify_jwt=false`**, seis con efecto real. `upload-landing` commitea
+  cualquier fichero a `main` de `roi-intranet` sin login; `trigger-deploy` **devuelve las cookies de sesión**.
+- ☠️ `sync-smoobu` (cron diario) **borra `incomes`** si Smoobu contesta 200 con lista vacía: aborta el error
+  HTTP pero no el vacío. Ver hallazgo 3 del README del rescate.
+- ✅ NO borrar `boe-doc`, `junta-pdf-texto`, `ficha-fotocasa`, `zona-fotocasa`: sostienen subastas Fase 3.
+- Método: el rescate literal habría **republicado** los secretos en un repo público. Sustituir → gitleaks → commit.
+
+### 🛑 (20/08/2026) `Cloude` NO es un repo vacío — la entrada del 19/08 se quedó mirando `main`
+- Corrige lo escrito abajo («`Cloude`: 1 commit, README placeholder»): eso es solo su `main`. Alberto
+  reportó 2 PRs **en borrador** con el proyecto **NIVELA** (~10.000 líneas: scaffold Next.js 15 PWA +
+  Supabase, dominio obra/partida/albarán/fichaje, panel CAE, set de marca). Vive SOLO en ramas y PRs.
+- **NO borrar `Cloude`**: borrarlo se lleva NIVELA entero. Inventario verificado desde el navegador y
+  volcado a **`docs/NIVELA-inventario.md`** (el repo es privado y fuera del scope MCP: sin esa ficha
+  habría que re-inventariarlo cada vez). El PR #2 es superconjunto del #1 y ambos salen de una rama
+  base que NO es `main`.
+- **La banda naranja de Supabase era un aviso legal, no una alarma.** Medido en Organization → Usage:
+  ninguna métrica pasa del **35%** (Database Size), overage 0; `pg_database_size` por MCP da 154,72 MB
+  (30,9%). El cartel es la Fair Use Policy desde el 10/07 y es condicional y permanente. Corregido en
+  `docs/ROTACION-SERVICE-ROLE.md`, que lo daba por «más urgente que la rotación». **Un cartel
+  condicional no es un dato de consumo: medir antes de declarar una urgencia.**
+- Vercel: marcar `SUPABASE_SERVICE_ROLE_KEY` como Sensitive **expulsa Development** (la doc dice
+  prod+preview), y el tipo **Secret** («Secreto» en el panel traducido) NO es lo mismo — vacía el valor.
+  Se hará en el paso 2 de la rotación, que ya sustituye el valor; hacerlo antes es tocarla dos veces.
+- Método: **mirar `main` no es mirar el repo.** Antes de dar un repo por muerto, contar ramas y PRs.
+- `house-sevillana-landing` sí queda confirmado como cáscara muerta, ahora también desde el código: el
+  cron SEO (`apps/sivra/vercel.json`, lunes 10:00 UTC) escribe en `central` (`seo-landing.ts:5`), y no
+  queda ninguna referencia viva al repo suelto. Su último commit (10/08) es el lunes previo a la migración.
+- `GH_PAT_TRIGGER` vivo y en uso real: `auditoria.yml` (aborta si falta), `rutinas-automerge.yml` y
+  `ai-programar.yml`. Prueba empírica: el PR #1511 de la radiografía se abrió y mergeó hoy por esa vía.
+- Suite completa en verde antes de tocar nada: `pnpm test` exit 0 — **2.494** `node --test` + **107** vitest, 0 fallos.
+
+### 🛑 (20/08/2026) El «cero tráfico legacy» que casi tumba el monitor de salud
+- Auditoría de logs (24 h, todo lo que retiene el plan Free): 0 peticiones con JWT legacy → se concluyó que
+  las apps ya estaban migradas y que pulsar «Disable JWT-based API keys» era gratis. **Falso.**
+- Contraejemplo medido: `cron.job` **jobid 28** (`monitor-health`, `*/5`) lleva un **JWT legacy incrustado**
+  en `Authorization: Bearer`, 288 ejecuciones/día, respuestas 200. `pg_net` sale de DENTRO de la BD, así que
+  no aparece en `edge_logs`: *no estaba en la tabla* se leyó como *no existe*.
+- Y `cron.job_run_details` daba `succeeded` 250/250 — pero en `net.http_post` eso significa **«encolado»**,
+  no 200. El estado real está en `net._http_response`. El check que engaña era el del propio monitor.
+- **Regla:** para desactivar las legacy, censo por CÓDIGO y CONFIGURACIÓN (grep, `cron.job`, envs, funciones
+  no versionadas), nunca por tráfico observado. La retención de logs en Free son ~24 h; un cron mensual no sale.
+- Inventario Vercel de los 10 proyectos cerrado (era un hueco del doc). 🔴 **`plataforma`, `almacen`,
+  `alquiler` y `transporte` NO usan la API de Supabase**: entran por `DATABASE_URL` (Prisma directo), que la
+  rotación de claves NO cubre. Y el panel tiene **67 Edge Functions** frente a las 45 del repo: 22 sin versionar.
+- Todo en `docs/ROTACION-SERVICE-ROLE.md`; PR #1517.
+
+### 🛑 (22/08/2026) El canal ya se cura solo — y al comprobarlo, House llevaba 5 días con el ×1,20
+- **Verificado el trabajo del 20/08:** `sivra_canal` en verde y el ×1,20 SUPUESTO caído en 3 de 4
+  pisos, con valores que confirman la hipótesis: markup ~0,95–1,04 **+ cuota fija por estancia**
+  (22,30€ Busto Reform · 39,90€ Dúplex), no un ×1,20 plano. `agente_reparaciones` vacía = correcto
+  (a las 08:00 el canal ya estaba verde), pero el reparador **sigue sin probarse end-to-end**.
+- **El cuarto piso destapó el fallo:** House Sevillana seguía en 1,20 desde el 17/08 pese a ser el
+  que MÁS mediciones tiene (7 de su aforo 12). Dos `continue` mudos en `cambiosDe` lo evaporaban del
+  parte («4 pisos · 3 ajustados») y, peor, el marcado de ventanas iba por `estado === 'medido'` en
+  vez de por «se ajustó» → **quemaba su muestra en cada pasada sin corregirse**, y se quedó a cero.
+- Arreglo: `repartirCambios` (3 cubos: cambios · frenados · sinCambio) y `ventanasAConsumir` en
+  `lib/sivra/pricing-canal.ts`, puros y testeados — 6 tests nuevos, **verificados por reintroducción
+  del bug** (tumban 29, 33 y 34). El latido antepone `🛑 N SIN corregir (piso: motivo)`.
+- La lección, hermana de «NULL ≠ 0» pero sobre ACCIONES: **un «no lo he hecho» no puede presentarse
+  como un «no hacía falta»**. Y un flag de consumo que se marca de más agota la muestra que hace
+  falta para reintentar: el freno se vuelve permanente por agotamiento, sin que nadie lo vea.
+
+### 🧠 (22/08/2026) Health-check: sonda IA muerta (`z-ai/glm-5.2` 410) → swap a `meta/llama-3.1-70b-instruct` — MERGEADO (PR #1583)
 Skill `buscador-ia` disparada por el health-check diario (no la pasada semanal). Confirmado con
 `/v1/models` real (harness temporal + `pg_net`, WebFetch a NVIDIA/Supabase bloqueado por el proxy)
 que GLM-5.2 murió 3 días antes de su EOL anunciado. Swap en todo el radio (core-ai, plataforma,
-rrhh, ia-rest) + 4 edge functions redesplegadas y verificadas. Detalle en `docs/BUSCADOR-IA.md`.
-Pendiente sin tocar (no es de código): Alberto tiene que subir el PDF de movimientos de la tarjeta
-****0302 de julio (629,86€ liquidados 01/08) para poder conciliarlo.
+rrhh, ia-rest) + 4 edge functions redesplegadas. **Mergeado a `main`** (squash, commit `5e6bbed`);
+CI verde + 9 previews Vercel Ready antes del merge. **Verificado EN VIVO otra vez tras el merge**
+contra la API real de NVIDIA: `meta/llama-3.1-70b-instruct` responde 200 OK (sin 410). Detalle en
+`docs/BUSCADOR-IA.md`. Pendiente sin tocar (no es de código): Alberto tiene que subir el PDF de
+movimientos de la tarjeta ****0302 de julio (629,86€ liquidados 01/08) para poder conciliarlo.
 
 ### 🎯 (21/08/2026) El calibrado ya corre, pero medía la desviación en UN punto — y House se libraba
 - Segunda pasada del cron de canal: **corre y en verde** (latido `sivra_canal` ok, 07:45). Ajustó
@@ -69,6 +149,29 @@ Pendiente sin tocar (no es de código): Alberto tiene que subir el PDF de movimi
 - Método: reproducido contra el módulo real con las 7 ventanas de producción antes de tocar nada, no
   a ojo. Los 9 errores de `tsc` del árbol eran previos (deps sin instalar), verificado con `git stash`.
 - Verificado: 1.465 tests + 33 del guardián · tsc 0 · build OK. PR #1582.
+
+
+### 🪞 (21/08/2026) El calendario de earnings ya estaba cerrado: el doc de huecos pedía lo que ya teníamos
+Al implementar la Fase 3 apareció `apps/plataforma/lib/trading/earnings-yahoo.ts`: cierra la fecha de
+earnings desde el **05/08**, diez días ANTES de que `TRADING-FUENTES-PAGO.md` (15/08) la declarara «el
+único hueco con coste directo en dinero real». Y mejor: da `confirmada` y corre server-side. Integrar
+`EARNINGS_CALENDAR` se CANCELA (redundante, peor, gasta cuota). De Alpha Vantage sobrevive solo
+`LISTING_STATUS` (sesgo de supervivencia, sin equivalente propio) — **pendiente de integrar por HTTP**.
+Sí entra `estadoEarnings()`: distingue «no lo sé» de «no hay riesgo», que `earningsInminente` colapsaba.
+Corregidos los 3 docs que arrastraban la afirmación. Lección: **un doc de huecos envejece pidiendo lo
+que ya tienes, y nadie lo nota porque pedir de más no rompe nada visible.** PR #1581.
+
+### 🔌 (21/08/2026) Vigía de conectores MCP: diseño firmado + Alpha Vantage verificado a mano
+Alberto preguntó si hay conectores de bolsa que añadir y si cabe un agente que los revise. Del registro
+solo Alpha Vantage cierra huecos reales; **conectado y probado con llamadas de verdad**:
+`EARNINGS_CALENDAR` ✅ gratis (ISRG 20/10/2026) y `LISTING_STATUS` ✅ gratis (8.491 deslistadas), pero
+`TIME_SERIES_DAILY_ADJUSTED` es **premium** — el 3er fallback de precios ajustados NO se cierra.
+Diseñado `conectores-vigia` (mensual día 5, criterio huecos+integraciones, B+C, canario sobre los
+conectores en uso) en `docs/superpowers/specs/2026-08-21-conectores-vigia-design.md`.
+**Hallazgo colateral:** el automerge NO reconocía `VIGIA-OSS.md`/`BUSCADOR-IA.md`/`FISCAL-AYUDAS.md`
+como registro → los PRs de esas 3 rutinas esperaban ojo humano para nada; **arreglado y anclado** con un
+guardián que ejecuta la función bash REAL extraída del YAML. **MERGEADO (PR #1581).** Falta solo crear
+el trigger de la rutina 16 en `claude.ai → Rutinas` (día 5, 04:00 CEST) — eso es de Alberto.
 
 ### 📮 (21/08/2026) SES.HOSPEDAJES: transporte validado contra el servicio REAL y mergeado (PR #1555)
 Operación `C` contra `hospedajes.ses.mir.es` → **200 `codigo 0 / Ok`**: TLS con cadena FNMT (raíz
@@ -138,6 +241,7 @@ Anotado en la skill `trading-analista` (`seleccion-y-senales.md`) con el matiz d
 ese error significa «fuente sin saldo», **nunca «no hay datos de insiders»**. Queda pendiente de decidir
 si se recargan los 20 $ solo por el screener; hoy no hace falta para operar.
 
+
 ### 🔧 (21/08/2026) Auditoría ligera: PR #1514 desatascado, heartbeat 12+13/25 ✅
 Pasada rutinaria sin hallazgos de memoria/skills (`docs/SKILLS.md` y `FUENTES-DE-VERDAD.md` al
 día). Único hallazgo: **PR #1514** (carril 2 del 20/08, monitor de `paper_tracker`) llevaba ~24h en
@@ -179,6 +283,7 @@ volumen sobre ~33.400€: la rotación es el coste invisible. `riesgo-hueco` YA 
 (`stopViable` por idea) + paso 5-bis de la skill para que se cante. **Sigue pendiente:** `tipo_cambio` NULL
 en 568/569 filas y las acciones corporativas.
 
+
 ### 🛡️ (20/08/2026) Correduría: había DOS planes para lo mismo con dos nombres — fundidos en uno
 Dos sesiones del mismo día planificaron el traspaso del CRM de Manuel sin verse: `docs/TRASPASO-CORREDURIA.md`
 (vertical `apps/seguros`, #1532) y `docs/ASEGURA-MIGRACION.md` (vertical `apps/asegura`, #1489). Ambos
@@ -190,6 +295,7 @@ schema y rol siguen siendo `seguros`/`prisma_seguros` (el dominio, y además ya 
 plan nuevo, grep del dominio en `docs/` — el coste de no hacerlo lo paga la sesión siguiente.
 Contrato de encargado (RGPD art. 28.3): responsable decidido = **Alberto persona física**, «Grupo ASegura»,
 fuero Sevilla. **NIF y domicilio a propósito en blanco** — un identificador legal no se escribe de memoria.
+
 
 ### 🧭 (20/08/2026) El índice que usa `code-map` llevaba horas desfasado en `main` — y eso no se ve
 `pnpm auditar:check` estaba en ROJO sobre `main`: #1536/#1550/#1551 son posteriores a la última
@@ -211,6 +317,7 @@ siempre es deriva REAL de firmas, nunca churn de cabecera.)
 **Hueco aparte que destapó el script y NO se toca**: faltan `almacen`, `housesevillana` y `mariscos`
 en el array `VERTICALES` de `apps/plataforma/lib/estructura.ts` — exige decidir `sector`/`desc` de
 cada una, es criterio de Alberto.
+
 
 ### 🗝️ (20/08/2026) El agente de huéspedes NO tenía ni un dato del piso: la guest app de Smoobu SÍ se puede leer
 - Alberto, del hilo del Dúplex con Samy: «¿tiene acceso a todos los mensajes? ¿puede entrar en la url?».
@@ -304,6 +411,7 @@ cada una, es criterio de Alberto.
 - Las 9 fichas con muro se releen en la primera pasada con sesión (validado contra la BD). 503 tests módulo,
   1372 plataforma, tsc+build limpios. **Pendiente de Alberto:** poner las dos envs en Vercel y probar con
   `fase3-debug?accion=portal` (devuelve solo el veredicto, nunca la contraseña).
+
 
 ### 🛡️ (20/08/2026) Traspaso del CRM de correduría de Manuel Suárez — runbook, BLOQUEADO en Fase 0
 Manuel desarrolló el CRM en SU Supabase y SU Vercel; el negocio es de Alberto y hay que traérselo.
@@ -695,7 +803,9 @@ inventario de la Fase 1, no antes.
 - `house-sevillana-landing` ya está dentro (`apps/housesevillana`, 12/08). VERIFICADO en Vercel: el proyecto
   apunta a `central` con Root `apps/housesevillana` y el último deployment de prod sale del commit del
   agente SEO (`79db75e`, hoy) → el repo suelto es cáscara muerta. `Cloude`: 1 commit, README placeholder.
-- Los dos los borra Alberto a mano (destructivo). Borrar quita la exposición pero **NO invalida la clave**.
+  🛑 **CORREGIDO el 20/08 (ver entrada arriba): eso era solo su `main`. `Cloude` tiene 2 PRs draft con
+  el proyecto NIVELA — NO borrarlo.**
+- El landing lo borra Alberto a mano (destructivo). Borrar quita la exposición pero **NO invalida la clave**.
 - Nuevo `docs/ROTACION-SERVICE-ROLE.md`: inventario + plan. El proyecto ya tiene claves nuevas
   (`sb_publishable_…` conviviendo con la `anon` legacy) → camino limpio sin tocar el JWT secret.
 - 🔴 Recon del panel: **las legacy NO se desactivan por separado** — un solo botón «Disable JWT-based API

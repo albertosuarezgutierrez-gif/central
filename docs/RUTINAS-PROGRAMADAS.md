@@ -278,6 +278,48 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Qué hace** | Lee `docs/DUPLEX-plan-precio-reforma-venta.md`, mide del mes **CERRADO** la ocupación real del dúplex (último snapshot de cada noche, nunca el calendario a futuro) + los otros tres pisos como control + qué está haciendo el agente de precios, rellena la fila del mes en la tabla de seguimiento y **aplica el criterio de decisión ya escrito** en la fase en curso. |
 | **Resultado** | PR draft con el documento actualizado + aviso Telegram con el veredicto (ocupación, precio, qué decisión toca). **NO toca `pricing_settings` ni precios publicados** sin OK explícito de Alberto para ese cambio concreto. |
 
+### 16. Vigía de conectores MCP — *pendiente de trigger*
+| | |
+|---|---|
+| **Cuándo** | Mensual, **día 5**, ~04:00 CEST (el 15 lo ocupa `github-vigia`) |
+| **Prompt** | `Ejecuta la skill conectores-vigia` |
+| **MCPs / envs** | **Probablemente NINGÚN conector.** `SearchMcpRegistry`/`ListConnectors` parecen nativas del harness — la primera pasada lo verifica y lo deja escrito. **GitHub es nativo** al vincular el repo. `PLATAFORMA_URL` + `ALERTA_TOKEN` para el aviso (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos). |
+| **Qué hace** | Cruza `docs/HUECOS-ABIERTOS.md` contra el registro de conectores; inventaría las APIs externas del repo buscando **fallback**; **canario** con llamada real sobre los endpoints de los que dependen las rutinas vivas; higiene de los ya conectados (sin uso, `installState: unknown`, con herramientas de escritura). |
+| **Resultado** | `docs/VIGIA-CONECTORES.md` siempre, **con fecha de pasada aunque no haya hallazgos** (sin fecha no se distingue «pasada limpia» de «rutina muerta»). Telegram si hay hallazgo. PR draft `claude/conectores-vigia-<fecha>` si hay trabajo que dejar hecho. Sin hallazgos → sin ruido. |
+
+**Regla dura de esta rutina:** ningún conector se recomienda, y ningún endpoint se da por vivo, sin
+una llamada real al endpoint que supuestamente cierra el hueco. El catálogo describe lo que el
+producto hace, no lo que NUESTRO tier deja hacer (se ganó dos veces el 21/08/2026 — ver
+`docs/superpowers/specs/2026-08-21-conectores-vigia-design.md` §5).
+
+**El paso que más vale no es el descubrimiento, es el canario.** Que aparezca un conector nuevo es
+una oportunidad; que se rompa el que sostiene `mercado-booking` o `trading-analista` es una avería
+que hoy nadie detectaría, porque su modo de fallo no es un error ruidoso sino un dato vacío.
+
+---
+
+### 16. Radar España (coyuntura + valoración de inmuebles) — *pendiente de trigger*
+| | |
+|---|---|
+| **Cuándo** | Quincenal, **días 1 y 16, ~06:00 UTC (08:00 CEST)** — antes que el `patrimonio-cfo` del día 2, que consume su salida. |
+| **Prompt** | `Ejecuta la skill radar-espana` (+ bloque de envs del workaround: `PLATAFORMA_URL` + `ALERTA_TOKEN`). |
+| **MCPs** | Supabase. WebFetch/WebSearch son nativas. GitHub nativo (commit del doc de estado). |
+| **Qué hace** | Termómetro de ciclo inmobiliario por zona (Sevilla + provincias de `subastas_criterios`), regulación VUT, y **valoración viva y DUAL** (vivienda/VUT) de los inmuebles de Alberto → filas nuevas en `patrimonio_valoraciones` (`fuente='agente:<método>'`, nunca pisa). Estado en `docs/RADAR-ESPANA.md`. |
+| **Resultado** | Doc de estado actualizado; Telegram SOLO con señal accionable (giro de termómetro, cambio regulatorio con plazo, valoración ±10%). |
+| **Verificar** | `SELECT * FROM patrimonio_valoraciones WHERE fuente LIKE 'agente%' ORDER BY created_at DESC LIMIT 10` + tabla del termómetro con fechas de medición. |
+
+---
+
+### 17. Coordinador patrimonial (patrimonio-cfo) — *pendiente de trigger*
+| | |
+|---|---|
+| **Cuándo** | Mensual, **día 2, ~07:00 UTC (09:00 CEST)** — el día 2 a propósito: consume las pasadas del día 1 (fiscal-novedades, plan dúplex, radar-espana, quincenal trading). |
+| **Prompt** | `Ejecuta la skill patrimonio-cfo` (+ bloque de envs del workaround: `PLATAFORMA_URL` + `ALERTA_TOKEN`). |
+| **MCPs** | Supabase. GitHub nativo. |
+| **Qué hace** | El «CFO personal»: consolida BD + bitácora de agentes + radar, calcula neto (mínimo declarado) y **coste de oportunidad por activo**, monta 2-3 escenarios con impuestos (vender/recomprar/bolsa; plantilla del estudio del Dúplex), registra recomendaciones en `patrimonio_recomendaciones`, pregunta el intake pendiente y lanza alertas de ventana (Modelo 720 a 45k€ de IBKR, plazos). **Nunca ejecuta ni comunica a terceros.** Primera pasada = dossier inicial. |
+| **Resultado** | Informe mensual por Telegram + `docs/PATRIMONIO-CFO.md` actualizado; PR draft solo si propone un agente nuevo. |
+| **Verificar** | Filas nuevas en `patrimonio_recomendaciones` + informe en el doc de estado. |
+
 ---
 
 ## Resumen de cadencias
@@ -298,8 +340,11 @@ caza lo que las sesiones del día no anotaron a mano.
 | Domingo 07:30 | Agentes-entrenador (mejora de prompts) |
 | Lunes 07:00 | Buscador de IA |
 | Día 1 del mes 07:00 | Vigilante fiscal IRPF |
+| Día 5 del mes 04:00 | Vigía de conectores MCP |
 | Día 1 del mes 07:00 | Revisión mensual del plan del dúplex de Villasís |
 | Día 1 del mes 08:00 | RRHH compliance calendar |
+| Días 1 y 16, 08:00 | Radar España (*pendiente de trigger*) |
+| Día 2 del mes 09:00 | Coordinador patrimonial patrimonio-cfo (*pendiente de trigger*) |
 | Día 15 del mes 07:00 | Vigía GitHub/OSS |
 | Diaria 09:45 | Latidos de agentes (cron Vercel) |
 | Mar-sáb 08:30 | Watchdog trading (cron Vercel) |
