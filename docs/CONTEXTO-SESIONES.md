@@ -48,7 +48,7 @@
   — saltándose de facto el tope del ±15%. Ahora acota por el peor extremo: entra troceada.
 - Método: reproducido contra el módulo real con las 7 ventanas de producción antes de tocar nada, no
   a ojo. Los 9 errores de `tsc` del árbol eran previos (deps sin instalar), verificado con `git stash`.
-- Verificado: 1.465 tests + 33 del guardián · tsc 0 · build OK. PR #1541.
+- Verificado: 1.465 tests + 33 del guardián · tsc 0 · build OK. PR #1582.
 
 ### 📮 (21/08/2026) SES.HOSPEDAJES: transporte validado contra el servicio REAL y mergeado (PR #1555)
 Operación `C` contra `hospedajes.ses.mir.es` → **200 `codigo 0 / Ok`**: TLS con cadena FNMT (raíz
