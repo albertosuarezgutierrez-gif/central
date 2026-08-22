@@ -32,6 +32,17 @@
 
 ---
 
+### 📈 (22/08/2026) Alpha Vantage: el barrido de splits dice que el FIFO está limpio (por poco)
+Conector nuevo → cubre lo que IBKR no da (su `get_price_snapshot` tiene el enum CERRADO). Dos módulos
+puros nuevos en `@central/module-trading` (171 tests verdes): **`splits.ts`** (reexpresa lo anterior a
+un desdoblamiento en títulos de hoy; `null` = «sin consultar» ≠ «sin splits») y **`divisa.ts`**
+(cambio del DÍA de cada operación por `FX_DAILY`; **nunca mira hacia delante**, y devuelve `null`
+antes que inventar un cambio). **Barrido de los 18 símbolos con recorrido >30 días:** un único split
+dentro de la ventana del libro, **NFLX 10:1 del 17/11/2025**, y la posición estaba **plana al
+cruzarlo** (03/11 → 17/12) ⇒ el FIFO no está roto. Caduca: rebarrer al abrir símbolo nuevo.
+🚫 **El backfill de `tipo_cambio` (110 fechas, serie ya resuelta) lo BLOQUEÓ el clasificador de
+permisos** — sigue NULL en 568/569, así que no hay cifra en euros del libro. Pendiente de Alberto.
+
 ### 📮 (21/08/2026) SES.HOSPEDAJES: transporte validado contra el servicio REAL y mergeado (PR #1555)
 Operación `C` contra `hospedajes.ses.mir.es` → **200 `codigo 0 / Ok`**: TLS con cadena FNMT (raíz
 pública, sí está en el almacén), credenciales de servicio web, arrendador habilitado y **ZIP aceptado**
