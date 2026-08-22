@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-21T07:37:17Z",
-  "sha": "01af248c295c9dc0bfeea02068466d2da6a21e4a",
+  "generadoEn": "2026-08-22T07:21:01Z",
+  "sha": "9e659f46c3d07d424f30f0c89f8828fa06aebd9f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -57437,7 +57437,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<",
-          "linea": 106
+          "linea": 111
         },
         {
           "nombre": "cambiosDe",
@@ -57445,7 +57445,7 @@
           "exportada": false,
           "params": "pisos: MedicionCanal[], soloProp: string | null, autoGlobal: boolean",
           "retorno": "",
-          "linea": 221
+          "linea": 234
         },
         {
           "nombre": "marcarUsadas",
@@ -57453,7 +57453,7 @@
           "exportada": false,
           "params": "ids: number[]",
           "retorno": null,
-          "linea": 259,
+          "linea": 275,
           "resumen": "Marca las ventanas que han entrado en un ajuste. A partir de aquí ya NO pueden validar nada: el modelo las ha visto. Las que queden a NULL son la muestra limpia de la pasada siguiente."
         },
         {
@@ -57462,7 +57462,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<",
-          "linea": 269
+          "linea": 285
         },
         {
           "nombre": "centinelaHuesped",
@@ -57470,7 +57470,7 @@
           "exportada": false,
           "params": "pisos: MedicionCanal[]",
           "retorno": "Promise<Map<string, ResumenHuesped>>",
-          "linea": 301,
+          "linea": 317,
           "resumen": "¿Qué ve el HUÉSPED en las fechas ya tarifadas? El motor razona en base y con una cuota fija eso deja de describir el precio real (ver `pricing-precio-huesped.ts`). Se cruza la base viva con la mediana"
         },
         {
@@ -57479,7 +57479,7 @@
           "exportada": false,
           "params": "cambios: Cambio[]",
           "retorno": null,
-          "linea": 338
+          "linea": 354
         },
         {
           "nombre": "lineaCambio",
@@ -57487,7 +57487,7 @@
           "exportada": false,
           "params": "c: Cambio",
           "retorno": "string",
-          "linea": 348
+          "linea": 364
         },
         {
           "nombre": "GET",
@@ -57495,7 +57495,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 355
+          "linea": 371
         }
       ],
       "tablas": [
@@ -57510,7 +57510,7 @@
         "rate_snapshots"
       ],
       "rutaApi": "/api/sivra/pricing/canal",
-      "hash": "a0ac89506055"
+      "hash": "033c45455124"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -69968,18 +69968,18 @@
           "nombre": "desviacionCanal",
           "kind": "function",
           "exportada": true,
-          "params": "p: { configurado: ParametrosCanal medido: { markup: number; cuotaFija: number } | null guestRef: number tolerancia?: number }",
+          "params": "p: { configurado: ParametrosCanal medido: { markup: number; cuotaFija: number } | null guestRef: number tolerancia?: number /** extremos del rango de precio/noche REALMENTE medido; sin ellos degrada al punto de siempre */ guestMin?: number ",
           "retorno": "DesviacionCanal",
-          "linea": 225,
+          "linea": 231,
           "resumen": "¿Describen los parámetros configurados lo que ve el huésped? El sesgo se evalúa sobre un precio de mercado de referencia (`guestRef`) porque con una cuota fija el error NO es un porcentaje plano: pesa"
         },
         {
           "nombre": "pasoCanal",
           "kind": "function",
           "exportada": true,
-          "params": "p: { configurado: ParametrosCanal medido: { markup: number; cuotaFija: number } guestRef: number maxSalto?: number }",
+          "params": "p: { configurado: ParametrosCanal medido: { markup: number; cuotaFija: number } guestRef: number maxSalto?: number /** extremos del rango de precio/noche medido: el salto se acota por el PEOR de ellos */ guestMin?: number guestMax?: number ",
           "retorno": "PasoCanal",
-          "linea": 275,
+          "linea": 297,
           "resumen": "Un PASO desde los parámetros configurados hacia los medidos, sin mover el precio más de `maxSalto` en una sola pasada. Por qué un paso y no el salto entero: los parámetros del canal mueven TODAS las f"
         },
         {
@@ -69988,13 +69988,13 @@
           "exportada": true,
           "params": "nuevas: VentanaEscaparate[], vigentes: { markup: number; cuotaFija: number }, opts: { aforo: number; tolSesgo?: number; tolError?: number } = { aforo: 0 },",
           "retorno": "ValidacionCanal",
-          "linea": 348,
+          "linea": 382,
           "resumen": "¿Acierta la recta que está en producción sobre ventanas que NO se usaron para ajustarla? Sin muestras devuelve `sin_muestras`, nunca `ok`: un validador que se pone verde porque no ha podido comparar n"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "566155c806c7"
+      "hash": "f67ab6bbad2c"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-centinelas.ts",
