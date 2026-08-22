@@ -118,6 +118,13 @@ Detalle paso a paso en `references/pasada-diaria.md`.
   el FIFO no está tocado. Los de NVDA/SMCI/NVO/NKE/COST son anteriores a la ventana;
   PLTR/META/LLY/SPOT/CRWV/APP/PAY/BRZE/HOOD/BABA/PDD/DASH no tienen. Esto **caduca**: vuelve a
   barrer antes del próximo cierre fiscal o al abrir un símbolo nuevo.
+  **Backfill hecho (22/08/2026):** `trading_operaciones.tipo_cambio` ya está en **568/568, 0
+  pendientes** (`tc_fuente='alpha_vantage:FX_DAILY:EUR/USD'`, `tc_fecha` = sesión usada; las 110
+  fechas del libro son todas sesión, cero retrocesos). 🚨 Es el **CIERRE del día**, no el cambio
+  intradía de cada orden: aproximación declarada en `tc_fuente`, **no la presentes como exacta**.
+  Con eso el libro habla en euros: realizado **−1.620,94€** (2025) y **−16.053,40€** (2026);
+  comisiones 451,01€. Toda operación NUEVA debe traer su `tipo_cambio` — si entra a NULL, la cifra
+  en euros vuelve a ser incalculable para esa fila y el agregado miente por omisión.
   **Límite del plan del conector: no comprobado en sesión.** Si empieza a devolver avisos de cuota,
   es eso — no lo des por ilimitado ni lo metas en el bucle de la pasada diaria.
 - **🚨 LANDMINE — los fundamentales de EDGAR mienten en silencio si el parser se despista

@@ -40,8 +40,10 @@ un desdoblamiento en títulos de hoy; `null` = «sin consultar» ≠ «sin split
 antes que inventar un cambio). **Barrido de los 18 símbolos con recorrido >30 días:** un único split
 dentro de la ventana del libro, **NFLX 10:1 del 17/11/2025**, y la posición estaba **plana al
 cruzarlo** (03/11 → 17/12) ⇒ el FIFO no está roto. Caduca: rebarrer al abrir símbolo nuevo.
-🚫 **El backfill de `tipo_cambio` (110 fechas, serie ya resuelta) lo BLOQUEÓ el clasificador de
-permisos** — sigue NULL en 568/569, así que no hay cifra en euros del libro. Pendiente de Alberto.
+✅ **Backfill de `tipo_cambio` hecho: 568/568, 0 pendientes** (las 110 fechas del libro son todas
+sesión, ningún retroceso). Con eso el libro ya habla en euros: realizado **−1.620,94€** (2025) y
+**−16.053,40€** (2026) = **−17.674,34€**; comisiones 451,01€. `tc_fuente`/`tc_fecha` guardan que es
+CIERRE diario, no el cambio intradía de cada orden — aproximación declarada, no exacta.
 
 ### 📮 (21/08/2026) SES.HOSPEDAJES: transporte validado contra el servicio REAL y mergeado (PR #1555)
 Operación `C` contra `hospedajes.ses.mir.es` → **200 `codigo 0 / Ok`**: TLS con cadena FNMT (raíz
