@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
 import { MIN_EUR_PLAZA_COMP } from "@/lib/sivra/pricing-comps-plausibles"
+import { sqlUltimaPasadaUtil } from "@/lib/sivra/pricing-corpus-utilizable"
 import { evaluatePilot, type PilotVerdict } from "@/lib/sivra/pilot-track"
 import { computeRecommendation, recommendedBaseFromEngine, percentile } from "@/lib/sivra/pricing-engine"
 import { EVENTS_LAST_DATE } from "@/lib/pricing-calendar"
@@ -121,10 +122,7 @@ export async function GET(req: NextRequest) {
     FROM incomes GROUP BY "propertyId"`)
 
   const marketRows = await prisma.$queryRaw<{ property_id: string; price: number; score: number | null }[]>(Prisma.sql`
-    WITH latest AS (
-      SELECT scenario, MAX(search_date) AS sd FROM market_rates
-      WHERE scenario LIKE 'prop_%' AND price_night > 0 GROUP BY scenario
-    )
+    WITH latest AS (${Prisma.raw(sqlUltimaPasadaUtil())})
     SELECT m.scenario AS property_id, m.price_night::float8 AS price, m.score::float8 AS score
     FROM market_rates m JOIN latest l ON l.scenario = m.scenario AND l.sd = m.search_date
     WHERE m.price_night > 0
