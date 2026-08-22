@@ -34,7 +34,7 @@
 
 ### 📈 (22/08/2026) Alpha Vantage: el barrido de splits dice que el FIFO está limpio (por poco)
 Conector nuevo → cubre lo que IBKR no da (su `get_price_snapshot` tiene el enum CERRADO). Dos módulos
-puros nuevos en `@central/module-trading` (171 tests verdes): **`splits.ts`** (reexpresa lo anterior a
+puros nuevos en `@central/module-trading` (173 tests verdes): **`splits.ts`** (reexpresa lo anterior a
 un desdoblamiento en títulos de hoy; `null` = «sin consultar» ≠ «sin splits») y **`divisa.ts`**
 (cambio del DÍA de cada operación por `FX_DAILY`; **nunca mira hacia delante**, y devuelve `null`
 antes que inventar un cambio). **Barrido de los 18 símbolos con recorrido >30 días:** un único split
@@ -44,6 +44,12 @@ cruzarlo** (03/11 → 17/12) ⇒ el FIFO no está roto. Caduca: rebarrer al abri
 sesión, ningún retroceso). Con eso el libro ya habla en euros: realizado **−1.620,94€** (2025) y
 **−16.053,40€** (2026) = **−17.674,34€**; comisiones 451,01€. `tc_fuente`/`tc_fecha` guardan que es
 CIERRE diario, no el cambio intradía de cada orden — aproximación declarada, no exacta.
+**Mergeado en PR #1579** (173 tests del módulo + 35 del guardián en verde, 17 checks). De paso, respuesta a
+«¿nos sirve OpenBB?»: **no** — AGPLv3 (copiarlo obligaría a publicar nuestro SaaS), Python y sin dataset propio;
+sí queda `dgunning/edgartools` (MIT) como REFERENCIA de normalización XBRL, ambos anotados en `docs/VIGIA-OSS.md`
+para que el vigía mensual los siga. **Pendiente de Alberto:** enmendar (o no) la escalera de tramos —la cuenta
+está al 98,6% en VWCE y el poder de compra no cubre el Tramo 1— y el coste de adquisición de BRZE/NKE, que hay
+que sacar de los extractos porque IBKR ya no sirve esas compras.
 ### 🧠 (22/08/2026) Health-check: sonda IA muerta (`z-ai/glm-5.2` 410) → swap a `meta/llama-3.1-70b-instruct`
 ### 💼 (22/08/2026) Nace el coordinador patrimonial: base de activos + /patrimonio + 2 agentes (PR #1591)
 Alberto pidió un «CFO personal» que exprima el rendimiento de lo que ya tiene (objetivo mixto,
