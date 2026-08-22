@@ -23,10 +23,10 @@
 > **27/07/2026 — eslabón Cerebras** (si hay `CEREBRAS_API_KEY`): 4º proveedor gratis, infra WSE
 > independiente de NIM/Groq. Hoy INACTIVO (sin key).
 
-| Eslabón | id por defecto | Env (key / override) | Coste | Estado (comprobado 2026-08-17) |
+| Eslabón | id por defecto | Env (key / override) | Coste | Estado (comprobado 2026-08-22) |
 |---|---|---|---|---|
 | OpenRouter (primario pasarela — lo vigila SU cron, no este agente) | `deepseek/deepseek-chat` | `OPENROUTER_API_KEY` / `OPENROUTER_MODEL` | según modelo (tope 1€/día) | fuera de scope (cron `ia-director-refresh`) |
-| NVIDIA NIM (primario cadena directa) | `z-ai/glm-5.2` | `NVIDIA_API_KEY` | gratis (~40 RPM) | 🔄 **SWAP 17/08/2026, verificado EN VIVO** — el 3.3-70b deja de soportarse el 25/08/2026 (banner en [su ficha](https://build.nvidia.com/meta/llama-3_3-70b-instruct); ese día además respondía 503 por saturación). El primer sustituto (llama-4-maverick, elegido por ficha web) resultó **410 Gone en el API** (EOL 27/07/2026 — la ficha seguía viva). GLM-5.2 salió del listado real `GET /v1/models` (102 modelos) y pasó la mini-eval con key real: prompt A (huésped) respuesta cálida directa en español, prompt B devuelve exactamente `ESCALAR`, sin razonamiento parásito. Descartado `nvidia/llama-3.3-nemotron-super-49b-v1.5` (razonador: `content:null` con maxTokens cortos). |
+| NVIDIA NIM (primario cadena directa) | `meta/llama-3.1-70b-instruct` | `NVIDIA_API_KEY` | gratis (~40 RPM) | 🔄 **SWAP 22/08/2026, verificado EN VIVO** — `z-ai/glm-5.2` (default desde el 17/08) murió por **HTTP 410 Gone** el 21/08/2026, ANTES de la fecha 24/08/2026 que anunciaba su propia ficha (`build.nvidia.com/z-ai/glm-5.2/modelcard`) — otra vez la ficha no probaba el API. Confirmado contra el listado real `GET /v1/models` (102 vivos, ni un solo `z-ai/*`) vía harness temporal (`nim-catalogo-temp`, edge function de ia-rest, borrada/neutralizada tras usar) llamado desde SQL con `pg_net` (WebFetch a dominios NVIDIA/Supabase seguía bloqueado por el proxy de esta sesión). Mini-eval con key real sobre 4 candidatos vivos: `meta/llama-3.1-70b-instruct` **PASA limpio y rápido** (A: respuesta cálida directa en español · B: exactamente `ESCALAR`); `openai/gpt-oss-120b` y `minimaxai/minimax-m3` **>25s por respuesta en NIM** (descartados por latencia, aunque minimax sí devolvió `ESCALAR` limpio); `mistralai/mistral-large-2-instruct` **404 "Not found for account"** pese a listar en `/v1/models` (no todos los ids del catálogo están habilitados para la cuenta gratuita). Swap aplicado en TODO el radio (core-ai, plataforma, rrhh, ia-rest + 4 edge functions redesplegadas + `sonda-ia.ts`, que es la sonda exacta que el health-check reportó muerta). |
 | Groq (fallback 1) | `openai/gpt-oss-120b` | `GROQ_API_KEY` / `GROQ_BRAIN_MODEL` | gratis (rate-limited) | ✅ **VIVO** (10/08) — destino de migración recomendado de otros modelos que Groq deprecia |
 | Cerebras (fallback 2, plumbing 27/07/2026) | `gpt-oss-120b` | `CEREBRAS_API_KEY` / `CEREBRAS_MODEL` | gratis (1M tok/día, ctx 8192 en tier gratis) | ✅ vivo (10/08) — **INACTIVO sin key**, pendiente de Alberto |
 | Gemini (fallback 3, APAGADO por defecto) | `gemini-flash-latest` | `GEMINI_API_KEY` **+ `GEMINI_TEXTO=1`** / `GEMINI_BRAIN_MODEL` | gratis | ✅ vivo (10/08) — alias rodante apunta a Gemini 3.5 Flash GA; sigue apagado por falta de cuota real |
@@ -54,11 +54,34 @@
 
 | Candidato | Proveedor | id | Gratis/límite | Encaja para | Mini-eval |
 |---|---|---|---|---|---|
-| ~~GLM-5.2 (z-ai)~~ **PROMOVIDO a primario NIM el 17/08/2026** | NVIDIA NIM | `z-ai/glm-5.2` | Gratis, ~40 RPM | Ya no es candidato: es el default de la cadena directa (ver tabla). Mini-eval en vivo A 2/2 · B 2/2 | ✅ eval con key real 17/08 |
+| ~~GLM-5.2 (z-ai)~~ **MUERTO 21/08/2026 (410 Gone)** | NVIDIA NIM | `z-ai/glm-5.2` | — | Reemplazado por `meta/llama-3.1-70b-instruct` el 22/08/2026 (ver tabla) | ✅ eval con key real 17/08, murió 4 días después |
+| minimax-m3 | NVIDIA NIM | `minimaxai/minimax-m3` | Gratis (catálogo NIM) | Backup si `llama-3.1-70b-instruct` se degrada — B limpio (`ESCALAR`), pero >25s de latencia en NIM | ✅ B con key real 22/08; A sin completar (timeout) |
+| mistral-large-2-instruct | NVIDIA NIM | `mistralai/mistral-large-2-instruct` | Listado gratis pero **404 para esta cuenta** | Descartado: no todo lo que aparece en `/v1/models` está habilitado para la cuenta | ❌ 404 "Not found for account" |
 | MiMo-V2.5 / -Pro (Xiaomi) | OpenRouter (de pago) o self-host (MIT) | `xiaomi/mimo-v2.5[-pro]` | NO gratis por API | Interés por ranking de uso en OpenRouter; fuera del scope de la cadena directa | Sin mini-eval |
 | Mistral (La Plateforme, free tier "Experiment") | Mistral | — | ~1B tok/mes, límites no publicados | 5º backstop potencial; el propio proveedor lo marca "evaluación, no producción" | En seguimiento, sin plumbing |
 
 ## Bitácora de hallazgos (lo más reciente arriba)
+
+- **2026-08-22 · 🔴 HALLAZGO CRÍTICO desde el health-check (no la pasada semanal habitual): `z-ai/glm-5.2`
+  MURIÓ (410 Gone, EOL real 21/08/2026, 3 días antes de la fecha 24/08/2026 de su propia ficha) →
+  swap a `meta/llama-3.1-70b-instruct`.** El health-check diario reportó `AiHttpError: NVIDIA HTTP 410`
+  en la sonda `sonda-ia.ts` — el tráfico real no lo notaba (fallback a Groq lo tapaba) pero cada
+  llamada pagaba un intento muerto. Sin `NVIDIA_API_KEY` en esta sesión ni WebFetch a dominios NVIDIA
+  (bloqueado por el proxy): se creó un harness temporal (`nim-catalogo-temp`, edge function en el
+  proyecto Supabase de ia-rest, que SÍ tiene la key) y se invocó desde SQL con `net.http_get` de
+  `pg_net` para no depender del proxy de esta sesión — mismo patrón que el 17/08 pero por una vía
+  distinta (antes fue vía otra edge function con harness temporal). Confirmado con `/v1/models`
+  real: 102 modelos vivos, cero `z-ai/*`. Mini-eval A/B en vivo sobre 4 candidatos: `meta/llama-3.1-
+  70b-instruct` pasó limpio y rápido; `openai/gpt-oss-120b` y `minimaxai/minimax-m3` tardaron >25s en
+  NIM (descartados por latencia); `mistralai/mistral-large-2-instruct` dio 404 pese a listar en el
+  catálogo (no habilitado para esta cuenta — **lección nueva**: estar en `/v1/models` no implica que
+  la cuenta tenga acceso, hay que probar la llamada). Swap aplicado en TODO el radio: `client.ts`/
+  `nim.ts`/`types.ts` de core-ai, `ai-client.ts`+`sonda-ia.ts`+`decidir.ts` de plataforma, `asistente.ts`/
+  `asistente-admin.ts` de rrhh, `ai-client.ts`/`brain.ts`/`.env.example`/`privacidad/page.tsx` de
+  ia-rest + **4 edge functions redesplegadas** (`nim-diagnostico`, `nim-sentiment`, `qr-assistant`,
+  `daily-briefing`) y verificadas con una llamada real post-deploy (200 OK). Harness temporal
+  neutralizado (redesplegado a un 410 estático + `verify_jwt: true`; no hay tool de borrado de edge
+  functions por MCP). PR draft con el commit; Telegram enviado si el canal respondía.
 
 - **2026-08-17 (2ª parte) · 🔴 CORRECCIÓN VERIFICADA EN VIVO: Maverick estaba MUERTO en el API (410) →
   GLM-5.2; y `deepseek-v3` del contable también muerto → `deepseek-v4-flash-0731`.** Al probar el swap

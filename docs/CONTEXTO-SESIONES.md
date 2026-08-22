@@ -48,6 +48,14 @@
   como un «no hacía falta»**. Y un flag de consumo que se marca de más agota la muestra que hace
   falta para reintentar: el freno se vuelve permanente por agotamiento, sin que nadie lo vea.
 
+### 🧠 (22/08/2026) Health-check: sonda IA muerta (`z-ai/glm-5.2` 410) → swap a `meta/llama-3.1-70b-instruct`
+Skill `buscador-ia` disparada por el health-check diario (no la pasada semanal). Confirmado con
+`/v1/models` real (harness temporal + `pg_net`, WebFetch a NVIDIA/Supabase bloqueado por el proxy)
+que GLM-5.2 murió 3 días antes de su EOL anunciado. Swap en todo el radio (core-ai, plataforma,
+rrhh, ia-rest) + 4 edge functions redesplegadas y verificadas. Detalle en `docs/BUSCADOR-IA.md`.
+Pendiente sin tocar (no es de código): Alberto tiene que subir el PDF de movimientos de la tarjeta
+****0302 de julio (629,86€ liquidados 01/08) para poder conciliarlo.
+
 ### 🎯 (21/08/2026) El calibrado ya corre, pero medía la desviación en UN punto — y House se libraba
 - Segunda pasada del cron de canal: **corre y en verde** (latido `sivra_canal` ok, 07:45). Ajustó
   3 de 4 pisos (Busto 0,995/22,3 · Duplex 0,949/39,9 · Luxury 1,0428/0, todos con paso acotado).

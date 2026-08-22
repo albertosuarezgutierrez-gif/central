@@ -16,6 +16,6 @@ export interface ImageInput {
 export interface NimConfig {
   apiKey: string
   baseUrl?: string      // default: endpoint OpenAI-compatible de NVIDIA
-  textModel?: string    // default: z-ai/glm-5.2
+  textModel?: string    // default: meta/llama-3.1-70b-instruct
   visionModel?: string  // default: meta/llama-3.2-11b-vision-instruct
 }
