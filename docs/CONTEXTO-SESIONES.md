@@ -145,8 +145,10 @@ solo Alpha Vantage cierra huecos reales; **conectado y probado con llamadas de v
 `TIME_SERIES_DAILY_ADJUSTED` es **premium** — el 3er fallback de precios ajustados NO se cierra.
 Diseñado `conectores-vigia` (mensual día 5, criterio huecos+integraciones, B+C, canario sobre los
 conectores en uso) en `docs/superpowers/specs/2026-08-21-conectores-vigia-design.md`.
-**Hallazgo colateral:** el automerge NO reconoce `VIGIA-OSS.md`/`BUSCADOR-IA.md`/`FISCAL-AYUDAS.md`
-como registro → los PRs de esas 3 rutinas esperan ojo humano para nada. Pendiente: plan + PRs.
+**Hallazgo colateral:** el automerge NO reconocía `VIGIA-OSS.md`/`BUSCADOR-IA.md`/`FISCAL-AYUDAS.md`
+como registro → los PRs de esas 3 rutinas esperaban ojo humano para nada; **arreglado y anclado** con un
+guardián que ejecuta la función bash REAL extraída del YAML. **MERGEADO (PR #1581).** Falta solo crear
+el trigger de la rutina 16 en `claude.ai → Rutinas` (día 5, 04:00 CEST) — eso es de Alberto.
 
 ### 📮 (21/08/2026) SES.HOSPEDAJES: transporte validado contra el servicio REAL y mergeado (PR #1555)
 Operación `C` contra `hospedajes.ses.mir.es` → **200 `codigo 0 / Ok`**: TLS con cadena FNMT (raíz
