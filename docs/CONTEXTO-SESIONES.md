@@ -32,6 +32,16 @@
 
 ---
 
+### 💼 (22/08/2026) Nace el coordinador patrimonial: base de activos + /patrimonio + 2 agentes (PR #1591)
+Alberto pidió un «CFO personal» que exprima el rendimiento de lo que ya tiene (objetivo mixto,
+riesgo DINÁMICO con salvaguarda Socorro; jugada de referencia: vender Dúplex en el tope → fondo →
+recomprar en bajada). Diseño con 10 ampliaciones aprobadas en `specs/2026-08-22-patrimonio-cfo-design.md`.
+Hecho: tablas `patrimonio_activos/valoraciones/recomendaciones` (aplicadas + seed 5 inmuebles;
+NULL = «no se sabe»), página `/patrimonio` (neto MÍNIMO declarado + intake), skills `radar-espana`
+(quincenal, valoración viva y DUAL vivienda/VUT) y `patrimonio-cfo` (mensual día 2). De paso: catálogo
+de agentes des-desfasado (mercado-booking añadida, trading-analista→activo). **Pendiente de Alberto:**
+crear los 2 triggers (fichas 16-17 de RUTINAS-PROGRAMADAS) y contestar el intake de `/patrimonio`.
+
 ### 🔑 (20/08/2026) Rescatadas las 22 Edge Functions fantasma — y lo que había dentro (PR #1517)
 - El panel sirve 67 Edge Functions y el repo versionaba 45. Las 22 huérfanas ya están en
   `supabase/functions-rescatadas/` con **secretos sustituidos** y `gitleaks` como gate previo a cada commit.

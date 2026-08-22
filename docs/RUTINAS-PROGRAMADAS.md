@@ -298,6 +298,30 @@ que hoy nadie detectaría, porque su modo de fallo no es un error ruidoso sino u
 
 ---
 
+### 16. Radar España (coyuntura + valoración de inmuebles) — *pendiente de trigger*
+| | |
+|---|---|
+| **Cuándo** | Quincenal, **días 1 y 16, ~06:00 UTC (08:00 CEST)** — antes que el `patrimonio-cfo` del día 2, que consume su salida. |
+| **Prompt** | `Ejecuta la skill radar-espana` (+ bloque de envs del workaround: `PLATAFORMA_URL` + `ALERTA_TOKEN`). |
+| **MCPs** | Supabase. WebFetch/WebSearch son nativas. GitHub nativo (commit del doc de estado). |
+| **Qué hace** | Termómetro de ciclo inmobiliario por zona (Sevilla + provincias de `subastas_criterios`), regulación VUT, y **valoración viva y DUAL** (vivienda/VUT) de los inmuebles de Alberto → filas nuevas en `patrimonio_valoraciones` (`fuente='agente:<método>'`, nunca pisa). Estado en `docs/RADAR-ESPANA.md`. |
+| **Resultado** | Doc de estado actualizado; Telegram SOLO con señal accionable (giro de termómetro, cambio regulatorio con plazo, valoración ±10%). |
+| **Verificar** | `SELECT * FROM patrimonio_valoraciones WHERE fuente LIKE 'agente%' ORDER BY created_at DESC LIMIT 10` + tabla del termómetro con fechas de medición. |
+
+---
+
+### 17. Coordinador patrimonial (patrimonio-cfo) — *pendiente de trigger*
+| | |
+|---|---|
+| **Cuándo** | Mensual, **día 2, ~07:00 UTC (09:00 CEST)** — el día 2 a propósito: consume las pasadas del día 1 (fiscal-novedades, plan dúplex, radar-espana, quincenal trading). |
+| **Prompt** | `Ejecuta la skill patrimonio-cfo` (+ bloque de envs del workaround: `PLATAFORMA_URL` + `ALERTA_TOKEN`). |
+| **MCPs** | Supabase. GitHub nativo. |
+| **Qué hace** | El «CFO personal»: consolida BD + bitácora de agentes + radar, calcula neto (mínimo declarado) y **coste de oportunidad por activo**, monta 2-3 escenarios con impuestos (vender/recomprar/bolsa; plantilla del estudio del Dúplex), registra recomendaciones en `patrimonio_recomendaciones`, pregunta el intake pendiente y lanza alertas de ventana (Modelo 720 a 45k€ de IBKR, plazos). **Nunca ejecuta ni comunica a terceros.** Primera pasada = dossier inicial. |
+| **Resultado** | Informe mensual por Telegram + `docs/PATRIMONIO-CFO.md` actualizado; PR draft solo si propone un agente nuevo. |
+| **Verificar** | Filas nuevas en `patrimonio_recomendaciones` + informe en el doc de estado. |
+
+---
+
 ## Resumen de cadencias
 
 > ⚠️ El **triaje de correo** NO es una rutina de Claude Code: son 3 crons de Vercel en
@@ -319,6 +343,8 @@ que hoy nadie detectaría, porque su modo de fallo no es un error ruidoso sino u
 | Día 5 del mes 04:00 | Vigía de conectores MCP |
 | Día 1 del mes 07:00 | Revisión mensual del plan del dúplex de Villasís |
 | Día 1 del mes 08:00 | RRHH compliance calendar |
+| Días 1 y 16, 08:00 | Radar España (*pendiente de trigger*) |
+| Día 2 del mes 09:00 | Coordinador patrimonial patrimonio-cfo (*pendiente de trigger*) |
 | Día 15 del mes 07:00 | Vigía GitHub/OSS |
 | Diaria 09:45 | Latidos de agentes (cron Vercel) |
 | Mar-sáb 08:30 | Watchdog trading (cron Vercel) |
