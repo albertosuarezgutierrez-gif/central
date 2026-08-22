@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-21T07:37:17Z",
-  "sha": "01af248c295c9dc0bfeea02068466d2da6a21e4a",
+  "generadoEn": "2026-08-22T07:56:54Z",
+  "sha": "21ffd19e2a8da363de007ec2f46d8fa6e5bf9adc",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -22717,7 +22717,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "07a31756bed2"
+      "hash": "05270c38947a"
     },
     {
       "ruta": "apps/ia-rest/src/app/produccion/page.tsx",
@@ -28699,7 +28699,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7d004ab6c910"
+      "hash": "cf7aee5c9169"
     },
     {
       "ruta": "apps/ia-rest/src/lib/ai-video.ts",
@@ -29285,7 +29285,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4d00ea5e2d82"
+      "hash": "c78207463e47"
     },
     {
       "ruta": "apps/ia-rest/src/lib/carta-recomendar.ts",
@@ -32319,7 +32319,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "b8eb2746bab0"
+      "hash": "80daa542a9da"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/ear-transcribe/index.ts",
@@ -32644,7 +32644,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "7f02889bc11c"
+      "hash": "d5d8111a4632"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/nim-sentiment/index.ts",
@@ -32665,7 +32665,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "b8c610a6e704"
+      "hash": "49f9740d31f4"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/notify-error/index.ts",
@@ -32909,7 +32909,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "a58cca3924ba"
+      "hash": "94c39d6ca520"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-call-waiter/index.ts",
@@ -57437,15 +57437,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<",
-          "linea": 106
-        },
-        {
-          "nombre": "cambiosDe",
-          "kind": "function",
-          "exportada": false,
-          "params": "pisos: MedicionCanal[], soloProp: string | null, autoGlobal: boolean",
-          "retorno": "",
-          "linea": 221
+          "linea": 113
         },
         {
           "nombre": "marcarUsadas",
@@ -57453,7 +57445,7 @@
           "exportada": false,
           "params": "ids: number[]",
           "retorno": null,
-          "linea": 259,
+          "linea": 234,
           "resumen": "Marca las ventanas que han entrado en un ajuste. A partir de aquí ya NO pueden validar nada: el modelo las ha visto. Las que queden a NULL son la muestra limpia de la pasada siguiente."
         },
         {
@@ -57462,7 +57454,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<",
-          "linea": 269
+          "linea": 244
         },
         {
           "nombre": "centinelaHuesped",
@@ -57470,7 +57462,7 @@
           "exportada": false,
           "params": "pisos: MedicionCanal[]",
           "retorno": "Promise<Map<string, ResumenHuesped>>",
-          "linea": 301,
+          "linea": 276,
           "resumen": "¿Qué ve el HUÉSPED en las fechas ya tarifadas? El motor razona en base y con una cuota fija eso deja de describir el precio real (ver `pricing-precio-huesped.ts`). Se cruza la base viva con la mediana"
         },
         {
@@ -57479,7 +57471,7 @@
           "exportada": false,
           "params": "cambios: Cambio[]",
           "retorno": null,
-          "linea": 338
+          "linea": 313
         },
         {
           "nombre": "lineaCambio",
@@ -57487,7 +57479,7 @@
           "exportada": false,
           "params": "c: Cambio",
           "retorno": "string",
-          "linea": 348
+          "linea": 323
         },
         {
           "nombre": "GET",
@@ -57495,7 +57487,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 355
+          "linea": 330
         }
       ],
       "tablas": [
@@ -57510,7 +57502,7 @@
         "rate_snapshots"
       ],
       "rutaApi": "/api/sivra/pricing/canal",
-      "hash": "a0ac89506055"
+      "hash": "40c6852d6f41"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -60521,7 +60513,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "af991fbbd44c"
+      "hash": "5739adab21e8"
     },
     {
       "ruta": "apps/plataforma/lib/ai-gateway.ts",
@@ -66448,7 +66440,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2abbc0fd5f20"
+      "hash": "432391021181"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/sonda-veredicto.ts",
@@ -67756,7 +67748,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "157dec5bd933"
+      "hash": "55e40072a4be"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/disponibilidad.ts",
@@ -69916,7 +69908,9 @@
         "guestDesdeBase",
         "desviacionCanal",
         "pasoCanal",
-        "validarCanal"
+        "validarCanal",
+        "repartirCambios",
+        "ventanasAConsumir"
       ],
       "funciones": [
         {
@@ -69968,18 +69962,18 @@
           "nombre": "desviacionCanal",
           "kind": "function",
           "exportada": true,
-          "params": "p: { configurado: ParametrosCanal medido: { markup: number; cuotaFija: number } | null guestRef: number tolerancia?: number }",
+          "params": "p: { configurado: ParametrosCanal medido: { markup: number; cuotaFija: number } | null guestRef: number tolerancia?: number /** extremos del rango de precio/noche REALMENTE medido; sin ellos degrada al punto de siempre */ guestMin?: number ",
           "retorno": "DesviacionCanal",
-          "linea": 225,
+          "linea": 231,
           "resumen": "¿Describen los parámetros configurados lo que ve el huésped? El sesgo se evalúa sobre un precio de mercado de referencia (`guestRef`) porque con una cuota fija el error NO es un porcentaje plano: pesa"
         },
         {
           "nombre": "pasoCanal",
           "kind": "function",
           "exportada": true,
-          "params": "p: { configurado: ParametrosCanal medido: { markup: number; cuotaFija: number } guestRef: number maxSalto?: number }",
+          "params": "p: { configurado: ParametrosCanal medido: { markup: number; cuotaFija: number } guestRef: number maxSalto?: number /** extremos del rango de precio/noche medido: el salto se acota por el PEOR de ellos */ guestMin?: number guestMax?: number ",
           "retorno": "PasoCanal",
-          "linea": 275,
+          "linea": 297,
           "resumen": "Un PASO desde los parámetros configurados hacia los medidos, sin mover el precio más de `maxSalto` en una sola pasada. Por qué un paso y no el salto entero: los parámetros del canal mueven TODAS las f"
         },
         {
@@ -69988,13 +69982,31 @@
           "exportada": true,
           "params": "nuevas: VentanaEscaparate[], vigentes: { markup: number; cuotaFija: number }, opts: { aforo: number; tolSesgo?: number; tolError?: number } = { aforo: 0 },",
           "retorno": "ValidacionCanal",
-          "linea": 348,
+          "linea": 382,
           "resumen": "¿Acierta la recta que está en producción sobre ventanas que NO se usaron para ajustarla? Sin muestras devuelve `sin_muestras`, nunca `ok`: un validador que se pone verde porque no ha podido comparar n"
+        },
+        {
+          "nombre": "repartirCambios",
+          "kind": "function",
+          "exportada": true,
+          "params": "pisos: PisoParaCambio[], opciones: { soloProp?: string | null; autoGlobal?: boolean } = {},",
+          "retorno": "",
+          "linea": 458,
+          "resumen": "Reparte los pisos medidos en tres cubos: los que se ajustan, los que NO SE HAN PODIDO ajustar (`frenados`) y los que NO HACÍA FALTA ajustar (`sinCambio`). 🚨 LA RAZÓN DE QUE SEAN TRES Y NO DOS (22/08/"
+        },
+        {
+          "nombre": "ventanasAConsumir",
+          "kind": "function",
+          "exportada": true,
+          "params": "pisos: Pick<PisoParaCambio, 'property_id' | 'ventanas_usadas'>[], cambios: Pick<CambioCanal, 'property_id'>[],",
+          "retorno": "number[]",
+          "linea": 517,
+          "resumen": "Ventanas que se marcan como consumidas al final de una pasada. 🚨 SOLO las de los pisos que se han AJUSTADO DE VERDAD (22/08/2026). `usada_en_ajuste_at` existe para romper un círculo: una ventana que "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "566155c806c7"
+      "hash": "30d004d2f14a"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-centinelas.ts",
@@ -77786,7 +77798,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "d24c480923c8"
+      "hash": "c6c563952609"
     },
     {
       "ruta": "apps/rrhh/lib/asistente-prompt.ts",
@@ -77839,7 +77851,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "85d54c502ff3"
+      "hash": "2b3b2e8b118a"
     },
     {
       "ruta": "apps/rrhh/lib/at-ep-agente.ts",
@@ -86335,7 +86347,7 @@
           "exportada": false,
           "params": "model?: string",
           "retorno": "NimConfig",
-          "linea": 48
+          "linea": 50
         },
         {
           "nombre": "groqEnvConfig",
@@ -86343,7 +86355,7 @@
           "exportada": false,
           "params": "",
           "retorno": "GroqConfig | null",
-          "linea": 57,
+          "linea": 59,
           "resumen": "Config Groq de fallback desde el entorno. Devuelve null si no hay GROQ_API_KEY (el fallback queda inactivo sin romper nada). NO reutiliza el `model` de NIM (ids distintos): usa el modelo Groq propio ("
         },
         {
@@ -86352,7 +86364,7 @@
           "exportada": false,
           "params": "",
           "retorno": "CerebrasConfig | null",
-          "linea": 67,
+          "linea": 69,
           "resumen": "Config Cerebras de fallback GRATIS desde el entorno (4º proveedor, infra WSE distinta de NIM/Groq: sube la resiliencia frente a un apagón simultáneo como el del 06/07/2026). null si no hay CEREBRAS_AP"
         },
         {
@@ -86361,7 +86373,7 @@
           "exportada": false,
           "params": "",
           "retorno": "GeminiConfig | null",
-          "linea": 76,
+          "linea": 78,
           "resumen": "Config Gemini de fallback desde el entorno. APAGADO por defecto (ver cabecera: la key lleva meses sin cuota y el eslabón solo pagaba timeouts): requiere `GEMINI_TEXTO=1` ADEMÁS de GEMINI_API_KEY. Usa "
         },
         {
@@ -86370,7 +86382,7 @@
           "exportada": false,
           "params": "",
           "retorno": "MoonshotConfig | null",
-          "linea": 84,
+          "linea": 86,
           "resumen": "Config Moonshot/Kimi de ÚLTIMO fallback (de pago) desde el entorno. null si no hay MOONSHOT_API_KEY (queda inactivo sin romper nada). Modelo override: MOONSHOT_MODEL."
         },
         {
@@ -86379,7 +86391,7 @@
           "exportada": false,
           "params": "",
           "retorno": "OpenRouterConfig | null",
-          "linea": 94,
+          "linea": 96,
           "resumen": "Config OpenRouter PRIMARIO desde el entorno. null si no hay OPENROUTER_API_KEY (queda inactivo y la cadena arranca en NIM como siempre → rollout por proyecto poniendo la env). OPENROUTER_MODEL = model"
         },
         {
@@ -86388,7 +86400,7 @@
           "exportada": true,
           "params": "promptOrMessages: string | NimChatMessage[], options: { system?: string maxTokens?: number temperature?: number timeoutMs?: number model?: string /** La PASARELA lo pone a true cuando ya intentó/bloqueó OpenRouter (presupuesto): evita reint",
           "retorno": "Promise<string>",
-          "linea": 118,
+          "linea": 120,
           "resumen": "Completion de texto: OpenRouter (agregador, si hay key) → NVIDIA NIM (gratis) → Groq (gratis) → Cerebras (gratis) → [Gemini, solo con GEMINI_TEXTO=1] → Kimi (de pago). Cada eslabón se activa solo si e"
         },
         {
@@ -86397,13 +86409,13 @@
           "exportada": true,
           "params": "messages: NimToolMessage[], tools: unknown[], options: { system?: string; maxTokens?: number; model?: string; skipOpenRouter?: boolean } = {},",
           "retorno": "Promise<NimToolResult>",
-          "linea": 209,
+          "linea": 211,
           "resumen": "Function-calling: OpenRouter (si hay key) → NVIDIA NIM (gratis) → Groq (gratis) de fallback. Lee `OPENROUTER_API_KEY`/`NVIDIA_API_KEY`/`GROQ_API_KEY` del entorno. Wrapper usado por la pasarela central"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6257fac15d0a"
+      "hash": "0388c13cc180"
     },
     {
       "ruta": "packages/core-ai/src/embeddings.ts",
@@ -86790,7 +86802,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1c03ff629a1e"
+      "hash": "de801596fc56"
     },
     {
       "ruta": "packages/core-ai/src/openrouter.ts",
@@ -95934,6 +95946,6 @@
   ],
   "resumen": {
     "archivos": 2543,
-    "funciones": 6967
+    "funciones": 6968
   }
 }
