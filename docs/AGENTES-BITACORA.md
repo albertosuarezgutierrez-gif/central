@@ -15,6 +15,19 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-22 · buscador-ia** · hizo: disparado por hallazgo del health-check diario (no pasada
+  semanal): `z-ai/glm-5.2` (default NIM desde 17/08) murió por 410 Gone el 21/08, 3 días antes de
+  su propia fecha de EOL anunciada. Confirmado contra `/v1/models` real vía harness temporal en
+  edge function + `pg_net` (WebFetch a NVIDIA/Supabase bloqueado por el proxy de esta sesión).
+  Mini-eval en vivo de 4 candidatos → swap a `meta/llama-3.1-70b-instruct` en TODO el radio
+  (core-ai, plataforma, rrhh, ia-rest) + 4 edge functions redesplegadas y verificadas (200 OK).
+  dudas: —; fallos: mistral-large-2-instruct listaba en el catálogo pero dio 404 para la cuenta
+  (no toda entrada de `/v1/models` implica acceso real); PRs/commits: ver PR de esta rama.
+- **2026-08-21 · psd2-health-check** · hizo: feed PSD2 **verde** (Kutxabank ****0855 último mov. 20/08,
+  34 mov/30d vs 41 previos; BBVA ****1175 17/08, 23 vs 35 — dentro de sus huecos históricos, máx. 10d);
+  investigada la contradicción Telegram↔panel que reportó Alberto y arreglada en PR #1575 (draft):
+  el cron no aplicaba el corte ℹ️ del semáforo y `/banca` escondía las notas bajo el 🟢.
+  dudas: —; fallos: —; PRs/commits: PR #1575, commit cdc48bb.
 - **2026-08-21 · facturas-correo** · hizo: Vía B sana (1 día, última copia `_buzon_pdf` 20/08,
   actualizado `agente_salud`); backlog `PDF-pendiente`/`Revisar`/`Extraccion-fallida` vacío;
   barrido Paso 4.0 (`v_facturas_sin_cargo`) sin filas `sin_revisar` (las 8 ya `revisada_sin_cargo`,

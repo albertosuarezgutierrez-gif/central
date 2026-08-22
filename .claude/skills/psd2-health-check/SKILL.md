@@ -37,6 +37,14 @@ WHERE origen = 'psd2';
 > pero el feed PSD2 estaba sano — la caída era 100% de las importaciones manuales, fuera del alcance de
 > esta skill). Si el feed PSD2 real está seco, dilo; si son las manuales, no es una anomalía de esta skill.
 
+> **Un aviso `ℹ️` de `conexiones_banco.ultimo_avisos` NO es una anomalía.** El prefijo `ℹ️` marca
+> una limitación con la que el feed SIGUE entregando (hoy: «Kutxabank ****0855: el banco rechazó la
+> ventana de 89 días — importado solo desde X», y el sync cae a la ventana de 30 días). Lo único que
+> cuenta como fallo son los avisos SIN ese prefijo. El corte canónico es el helper puro
+> `partirAvisos()` de `apps/plataforma/lib/psd2-semaforo.ts` — úsalo como criterio, no leas el texto a
+> ojo. Lo que sí hay que decir de una nota `ℹ️` es **desde cuándo hay datos de verdad** en esa cuenta:
+> el hueco anterior no está medido y no se afirma «no hubo movimientos» sobre él (21/08/2026, PR #1575).
+
 Evalúa:
 - `ultimo_movimiento < CURRENT_DATE - 2` → **anomalía crítica** (>48h sin datos)
 - `mov_30d < mov_30d_prev * 0.5` → **anomalía moderada** (caída >50 % en volumen)
