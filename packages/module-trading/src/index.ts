@@ -9,6 +9,15 @@ export type { Resultado, StatsEstrategia } from './scoring.ts'
 export { rvol, tendenciaVolumen, volumenInusual, confirmaVolumen } from './volumen.ts'
 export { infravalorada, pasaScreener, puntuarCandidato, rankearCantera } from './screener.ts'
 export { dedupCandidatos, puntuarDescubrimiento, descubrir } from './descubrimiento.ts'
+// Cribado del MERCADO ENTERO por métricas (Financial Datasets). Traduce sus filas a `MetricasFactor`
+// anulando el ROIC increíble (capital invertido ≈ 0) y los yields fuera de USD, y marca si la
+// respuesta llegó al límite —el proveedor ordena por ABECEDARIO, no por calidad.
+export { traducirFila, traducirScreener, truncadaPorLimite, ROIC_MAX_CREIBLE } from './screenerMercado.ts'
+export type { FilaScreener, FilaTraducida, Traduccion } from './screenerMercado.ts'
+// Segunda opinión sobre las cifras de una idea antes de teclear la orden: compara NUESTRA ficha de
+// EDGAR contra otra fuente y marca dónde no se puede afirmar nada. No elige ganador.
+export { contrastar, avisoContraste, TOLERANCIA_REL } from './contraste.ts'
+export type { FichaFundamental, Contraste, ContrasteMetrica, VeredictoMetrica } from './contraste.ts'
 export { posicionRango52, tendenciaMedias, fuerzaRelativa, rankearSectores, inclinacionSector, regimenMercado } from './mercado.ts'
 export type { SectorRank } from './mercado.ts'
 // Riesgo de HUECO y viabilidad del stop: ¿está el stop dentro del ruido normal del valor, y
@@ -42,3 +51,11 @@ export { rankearUniverso, etiquetaCalidad, diffRanking, snapshotsParaEvaluar, re
 export type { EmpresaUniverso, ItemRadar, ResultadoRadar, EvaluacionSnapshot } from './universo.ts'
 export { rebalancear, valorar } from './carteraCohetes.ts'
 export type { CohetePick, Tenencia, Rebalanceo, ValoracionNombre, Valoracion } from './carteraCohetes.ts'
+// Tipo de cambio POR FECHA (serie diaria EUR/USD). Sin esto no hay cifra en euros defendible: el
+// libro tiene `tipo_cambio` a NULL en casi todas las filas. Nunca mira hacia delante ni rellena.
+export { parseFxDailyCsv, indexarFx, resolverTipoCambio, usdAEur, dentroDelRango, MAX_DIAS_ATRAS } from './divisa.ts'
+export type { PuntoFx, ResolucionFx } from './divisa.ts'
+// Splits: reexpresa las operaciones anteriores a un desdoblamiento en títulos de hoy para que el FIFO
+// no empareje mal. `splits === null` = «sin consultar», que NO es «no tiene splits».
+export { factorAcumulado, ajustarPorSplits, ajustarSimbolo, parseSplits } from './splits.ts'
+export type { Split, OperacionAjustable, Ajuste, EstadoSplits, ResultadoAjuste } from './splits.ts'

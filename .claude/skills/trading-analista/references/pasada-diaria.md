@@ -138,6 +138,24 @@ antes, dilo en el resumen de Telegram — esa pasada mide contra el cierre de ay
    · `titulosMax` sale de arriesgar el 1% del NAV a esa distancia. Si Alberto ejecuta a mano, ES el
      tope: la respuesta a un stop demasiado corto no es acercarlo, es COMPRAR MENOS.
 
+5-ter. **🔍 CONTRASTA las cifras de las ideas que de verdad vas a proponer (21/08/2026).** No las 20 del
+   ranking: solo las 0–2 que acaban en una propuesta de orden. Para cada una, **una** llamada a
+   `mcp__Datos_financieros__get_financial_metrics_snapshot(ticker)` y pásala con la nuestra por
+   `contrastar()` (`@central/module-trading::contraste.ts`); `avisoContraste()` da la línea del Telegram.
+   · **Por qué:** el fallo más caro del radar no fue un dato que faltara, fue uno PLAUSIBLE y falso —
+     ORCL con +3,49% de FCF yield mientras quemaba −23.700 M$ (PR #1189). No hay hueco que delate eso;
+     solo lo caza otra fuente. Comprobado el 21/08: la segunda fuente da −5,79% → −23.690 M$.
+   · **🔴 `signoOpuesto`** (una dice que genera caja y la otra que la quema) = **no cantes ninguna de las
+     dos cifras**. La idea puede seguir, pero sin número; y NO elijas la fuente que más te gusta.
+   · **🟠 `discrepan`** (mismo signo, magnitudes lejanas) = dilo como orientativo y sigue.
+   · **`sinContraste: true`** = la segunda fuente no trajo nada comparable. Eso es «sin comprobar»,
+     **no** «comprobado y bien»: dilo igual que el `stopViable: null`.
+   · **Presupuesto:** el saldo es finito (1.000 peticiones, ~995 al 21/08/2026, 0,02 $ cada una) y NO se
+     renueva solo. A 1-2 al día dura años; barrer el ranking entero lo funde en semanas. Si el saldo se
+     agota, el MCP responde `Your current balance is $0.00` → eso es **«sin contrastar»**, nunca «no hay
+     datos». La fuente de pago también se equivoca (dio `gross_margin: 1` en ORCL): es un CONTRASTE,
+     no un sustituto de EDGAR.
+
 6. Enviar por Telegram el resumen (usa `resumenPasada(...)` de `apps/plataforma/lib/trading-notify.ts`
    o deja que plataforma lo mande): top ideas + pulso de la cartera paper. Importes en formato español.
    **Nota:** cada COMPRA paper ya dispara un aviso inmediato por Telegram desde el propio
