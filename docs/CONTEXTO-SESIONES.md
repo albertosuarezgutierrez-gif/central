@@ -32,6 +32,16 @@
 
 ---
 
+### 🪞 (21/08/2026) El calendario de earnings ya estaba cerrado: el doc de huecos pedía lo que ya teníamos
+Al implementar la Fase 3 apareció `apps/plataforma/lib/trading/earnings-yahoo.ts`: cierra la fecha de
+earnings desde el **05/08**, diez días ANTES de que `TRADING-FUENTES-PAGO.md` (15/08) la declarara «el
+único hueco con coste directo en dinero real». Y mejor: da `confirmada` y corre server-side. Integrar
+`EARNINGS_CALENDAR` se CANCELA (redundante, peor, gasta cuota). De Alpha Vantage sobrevive solo
+`LISTING_STATUS` (sesgo de supervivencia, sin equivalente propio) — **pendiente de integrar por HTTP**.
+Sí entra `estadoEarnings()`: distingue «no lo sé» de «no hay riesgo», que `earningsInminente` colapsaba.
+Corregidos los 3 docs que arrastraban la afirmación. Lección: **un doc de huecos envejece pidiendo lo
+que ya tienes, y nadie lo nota porque pedir de más no rompe nada visible.** PR #1581.
+
 ### 🔌 (21/08/2026) Vigía de conectores MCP: diseño firmado + Alpha Vantage verificado a mano
 Alberto preguntó si hay conectores de bolsa que añadir y si cabe un agente que los revise. Del registro
 solo Alpha Vantage cierra huecos reales; **conectado y probado con llamadas de verdad**:
