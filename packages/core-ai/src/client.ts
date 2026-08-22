@@ -33,12 +33,14 @@ import type { MoonshotConfig } from './moonshot'
 import type { GeminiConfig } from './gemini'
 import type { OpenRouterConfig } from './openrouter'
 
-// `meta/llama-3.3-70b-instruct` deja de soportarse en NIM el 25/08/2026 (aviso en su ficha
-// de build.nvidia.com; NVIDIA no nombra sucesor). ⚠️ La ficha web NO prueba que el modelo viva:
-// el primer sustituto elegido (llama-4-maverick) tenía ficha viva y el API devolvía 410 Gone
-// (EOL 27/07/2026). GLM-5.2 se eligió del listado REAL `/v1/models` y se verificó con llamadas
-// en vivo (17/08/2026): responde directo (sin razonamiento parásito), multilingüe y gratis.
-const DEFAULT_MODEL = 'z-ai/glm-5.2'
+// `z-ai/glm-5.2` (nuestro default desde el 17/08) murió por HTTP 410 el 21/08/2026 — EOL real,
+// antes incluso de la fecha 24/08/2026 que anunciaba su ficha. Repite el patrón del swap
+// anterior (llama-4-maverick con ficha viva y 410 en el API): la ficha NO prueba que el modelo
+// viva. Reemplazo elegido del listado REAL `/v1/models` (102 vivos, ni un solo `z-ai/*`) y
+// verificado con llamadas en vivo (22/08/2026): responde directo, sin razonamiento parásito,
+// rápido (a diferencia de `openai/gpt-oss-120b` y `minimaxai/minimax-m3`, que en NIM tardaron
+// >25s en esta prueba).
+const DEFAULT_MODEL = 'meta/llama-3.1-70b-instruct'
 const DEFAULT_GROQ_MODEL = 'openai/gpt-oss-120b'
 const DEFAULT_CEREBRAS_MODEL = 'gpt-oss-120b'
 const DEFAULT_MOONSHOT_MODEL = 'kimi-k2.6'

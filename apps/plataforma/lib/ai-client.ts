@@ -9,8 +9,8 @@ import { openrouterConfigPasarela } from '@/lib/ia-director'
 import { registrarUso, estimarTokens, costeEur } from '@/lib/ai-gateway'
 import { parsearJsonIa } from '@/lib/agente-facturas/parsear-json-ia'
 
-// Swap 17/08/2026: el 3.3-70b deja de soportarse en NIM el 25/08/2026 (aviso en build.nvidia.com).
-const NVIDIA_TEXT  = 'z-ai/glm-5.2'
+// Swap 22/08/2026: `z-ai/glm-5.2` murió (410 Gone, EOL real 21/08/2026) — ver client.ts de core-ai.
+const NVIDIA_TEXT  = 'meta/llama-3.1-70b-instruct'
 const NVIDIA_VISION = 'meta/llama-3.2-90b-vision-instruct'
 
 /**
