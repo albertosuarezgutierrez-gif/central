@@ -212,6 +212,12 @@ export interface DesviacionCanal {
    * medición.
    */
   sesgo: number | null
+  /**
+   * El PEOR sesgo sobre el rango de precios REALMENTE medido, no solo en la referencia. Es el que
+   * decide `estado`: con un modelo afín el sesgo NO es plano, así que mirar un punto solo puede
+   * decir «ok» justo donde las dos rectas se cruzan. `null` sin medición o sin rango.
+   */
+  sesgoMax: number | null
 }
 
 /**
@@ -227,19 +233,35 @@ export function desviacionCanal(p: {
   medido: { markup: number; cuotaFija: number } | null
   guestRef: number
   tolerancia?: number
+  /** extremos del rango de precio/noche REALMENTE medido; sin ellos degrada al punto de siempre */
+  guestMin?: number
+  guestMax?: number
 }): DesviacionCanal {
   const tol = p.tolerancia ?? 0.05
   if (!p.medido || !(p.medido.markup > 0)) {
-    return { estado: 'sin_datos', configurado: p.configurado, medido: null, sesgo: null }
+    return { estado: 'sin_datos', configurado: p.configurado, medido: null, sesgo: null, sesgoMax: null }
   }
-  const conConfig = baseDesdeGuest(p.guestRef, p.configurado)
-  const conMedido = baseDesdeGuest(p.guestRef, { ...p.medido, nochesRef: p.configurado.nochesRef })
-  const sesgo = Number((conMedido / conConfig - 1).toFixed(4))
+  const medido = { ...p.medido, nochesRef: p.configurado.nochesRef }
+  const sesgoEn = (g: number) =>
+    Number((baseDesdeGuest(g, medido) / baseDesdeGuest(g, p.configurado) - 1).toFixed(4))
+
+  const sesgo = sesgoEn(p.guestRef)
+  // 🚨 Con cuota fija el sesgo NO es un porcentaje plano: las dos rectas se CRUZAN, y cerca del
+  // cruce hasta dos canales totalmente distintos parecen el mismo. Evaluar solo en la mediana es
+  // un markup escalar disfrazado — justo lo que este módulo existe para no volver a hacer.
+  // Como el modelo es afín, el peor sesgo del rango está SIEMPRE en un extremo: basta con mirarlos.
+  // Caso fundacional (21/08/2026): House medía 1,032 + 318€/estancia contra un 1,20 vigente y salía
+  // «ok» con −4,6% en su mediana (881€/noche), mientras se desviaba −23,5% a 465€ y +9,5% a 2.743€.
+  // El calibrado se saltó el piso entero, en silencio y por segundo día.
+  const extremos = [p.guestMin, p.guestMax].filter((g): g is number => typeof g === 'number' && g > 0)
+  const candidatos = [sesgo, ...extremos.map(sesgoEn)]
+  const sesgoMax = candidatos.reduce((peor, x) => (Math.abs(x) > Math.abs(peor) ? x : peor), 0)
   return {
-    estado: Math.abs(sesgo) > tol ? 'desviado' : 'ok',
+    estado: Math.abs(sesgoMax) > tol ? 'desviado' : 'ok',
     configurado: p.configurado,
     medido: p.medido,
     sesgo,
+    sesgoMax,
   }
 }
 
@@ -277,6 +299,9 @@ export function pasoCanal(p: {
   medido: { markup: number; cuotaFija: number }
   guestRef: number
   maxSalto?: number
+  /** extremos del rango de precio/noche medido: el salto se acota por el PEOR de ellos */
+  guestMin?: number
+  guestMax?: number
 }): PasoCanal {
   const maxSalto = p.maxSalto ?? MAX_SALTO_CANAL
   const nochesRef = Number(p.configurado.nochesRef) > 0 ? Number(p.configurado.nochesRef) : 2
@@ -285,8 +310,17 @@ export function pasoCanal(p: {
     cuotaFija: p.configurado.cuotaFija + (p.medido.cuotaFija - p.configurado.cuotaFija) * t,
     nochesRef,
   })
-  const baseAntes = baseDesdeGuest(p.guestRef, p.configurado)
-  const efectoDe = (t: number) => baseDesdeGuest(p.guestRef, mezcla(t)) / baseAntes - 1
+  // 🚨 El raíl acota el salto por su EFECTO sobre el precio, y ese efecto tampoco es plano cuando
+  // hay cuota fija: el mismo cambio de parámetros vale −4,6% en la mediana de House y −23,5% en sus
+  // fechas baratas. Acotar mirando solo la mediana deja pasar de una vez un salto que el tope del
+  // ±15% existe para impedir. Se mide en la referencia Y en los extremos, y manda el peor.
+  // (21/08/2026, misma raíz que el punto ciego de `desviacionCanal`.)
+  const puntos = [p.guestRef, p.guestMin, p.guestMax]
+    .filter((g): g is number => typeof g === 'number' && g > 0)
+  const efectosDe = (t: number) => puntos.map(g => baseDesdeGuest(g, mezcla(t)) / baseDesdeGuest(g, p.configurado) - 1)
+  /** el efecto que MANDA: el mayor en valor absoluto de todo el rango medido */
+  const efectoDe = (t: number) =>
+    efectosDe(t).reduce((peor, x) => (Math.abs(x) > Math.abs(peor) ? x : peor), 0)
 
   const efectoTotal = efectoDe(1)
   if (Math.abs(efectoTotal) <= maxSalto) {
