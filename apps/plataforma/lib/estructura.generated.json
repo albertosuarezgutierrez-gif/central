@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-22T07:58:21Z",
+  "generadoEn": "2026-08-22T08:35:56Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4356,6 +4356,9 @@
       "movimiento_reparto",
       "movimientos_bancarios",
       "operaciones_intercompany",
+      "patrimonio_activos",
+      "patrimonio_recomendaciones",
+      "patrimonio_valoraciones",
       "patrones_recurrentes_cache",
       "presupuesto_proveedores",
       "pricing_avisos",
@@ -4473,6 +4476,11 @@
       "description": "Úsala al EMPEZAR cualquier tarea de CÓDIGO cuando haya que localizar QUÉ archivo/función maneja algo, ANTES de Grep/Read a ciegas — consulta la tabla Supabase `mapa_arquitectura` (índice de firmas del repo) para acotar candidatos a coste ~0 y leer SOLO esos. No reemplaza a Grep/Read: los enfoca. Sin tabla o sin candidatos, método clásico."
     },
     {
+      "id": "conectores-vigia",
+      "name": "conectores-vigia",
+      "description": "Agente PROGRAMADO mensual (día 5) que vigila los conectores MCP — cruza el registro contra docs/HUECOS-ABIERTOS.md, hace de canario sobre los conectores de los que dependen las rutinas vivas, y audita la higiene de los ya conectados. Estado en docs/VIGIA-CONECTORES.md; Telegram + PR draft. Úsala si Alberto pide \"revisa si hay conectores nuevos que encajen\" o al disparo mensual. Sin secretos."
+    },
+    {
       "id": "correo-triaje",
       "name": "correo-triaje",
       "description": "Router de contexto del agente de TRIAJE DE CORREO — cron de Vercel en apps/plataforma cada ~10 min (NO sesión Claude) que lee Gmail por IMAP, clasifica y actúa (etiquetas, archivado, aviso Telegram). Úsala si Alberto pide \"revisa/ajusta el triaje de correo\", añadir categoría/remitente, o cuando /auditoria-diaria reconcilie la tabla de rutas. Sin secretos."
@@ -4523,6 +4531,11 @@
       "description": "Rutina PROGRAMADA diaria que mide el precio REAL por fecha y aforo con el conector de Booking.com y lo escribe en market_rates (fuente booking_mcp) — la única fuente de SIVRA que distingue temporada. Úsala al disparo diario o si Alberto pide \"mide el mercado de verdad\" / \"refresca los comparables por fecha\". Sin secretos: solo nombres de variable."
     },
     {
+      "id": "patrimonio-cfo",
+      "name": "patrimonio-cfo",
+      "description": "Agente PROGRAMADO mensual (día 2) — coordinador patrimonial («CFO personal»). Consolida BD + agentes + radar-espana, calcula neto y COSTE DE OPORTUNIDAD por activo, monta escenarios con impuestos (vender/recomprar/bolsa), registra recomendaciones y pregunta lo que falte. Solo orienta, nunca ejecuta. Úsala si Alberto pide «analiza mi patrimonio»."
+    },
+    {
       "id": "perfil-fiscal",
       "name": "perfil-fiscal",
       "description": "Router de contexto FISCAL y PATRIMONIAL de Alberto (persona física) + Punto y Coma SL. Úsalo SIEMPRE que Alberto pida algo de su renta/IRPF, declaración, gastos deducibles, qué piso tributa dónde, o su asesoría, y al trabajar con `facturas-correo`, `fiscal-novedades` o el módulo `/finanzas`. Sin cifras ni datos sensibles."
@@ -4541,6 +4554,11 @@
       "id": "psd2-health-check",
       "name": "psd2-health-check",
       "description": "Guardián de la sincronización bancaria (Enable Banking / PSD2). Verifica que los movimientos bancarios llegan frescos (< 48h) a `movimientos_bancarios`. Si la última importación es antigua o hay una caída >50% en volumen, alerta por Telegram y anota en CONTEXTO-SESIONES.md. Úsala en la rutina semanal de salud financiera o cuando Alberto sospeche que el sync está roto. Sin secretos: solo nombres de variable."
+    },
+    {
+      "id": "radar-espana",
+      "name": "radar-espana",
+      "description": "Agente PROGRAMADO quincenal (días 1 y 16) — coyuntura de España (termómetro de ciclo inmobiliario por zona, economía, regulación VUT) y valoración VIVA y DUAL (vivienda/VUT) de los inmuebles de Alberto en patrimonio_valoraciones. Estado en docs/RADAR-ESPANA.md. Úsala si Alberto pide «revisa el mercado / el valor de mis pisos». Sin secretos."
     },
     {
       "id": "receiving-code-review",
@@ -5061,7 +5079,7 @@
     "verticales": 10,
     "packages": 38,
     "capacidades": 23,
-    "skills": 32,
+    "skills": 35,
     "apis": 1177,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,

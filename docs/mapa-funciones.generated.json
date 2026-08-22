@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-22T07:58:21Z",
-  "sha": "80f358c475d6cd39b74037c0dbcb040730e97d82",
+  "generadoEn": "2026-08-22T08:35:56Z",
+  "sha": "ae85781a58a5f29ed688a6a89db97715d8c57cbe",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -48479,6 +48479,27 @@
       "hash": "4c7fc4f1efb9"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/patrimonio/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "PatrimonioPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "PatrimonioPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 12,
+          "resumen": "🏛️ Patrimonio — la foto de ACTIVOS del grupo familiar (los pisos como activo, no como explotación) + neto mínimo declarado. Regla de la casa: NULL = «no se sabe» — un activo sin valorar se pinta PEND"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "26e2355faffa"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/sivra/calendario/page.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -50124,12 +50145,12 @@
           "exportada": true,
           "params": "{ email, nombre, isOperator, operadorRol, rol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string; rol?: string | null }",
           "retorno": null,
-          "linea": 69
+          "linea": 70
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3f01656103d3"
+      "hash": "add23948820d"
     },
     {
       "ruta": "apps/plataforma/app/admin/MapaArquitectura.tsx",
@@ -66623,6 +66644,90 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "7fb1c52514e3"
+    },
+    {
+      "ruta": "apps/plataforma/lib/patrimonio-resumen.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Lógica PURA del resumen patrimonial (sin `@/` ni prisma → testeable con `node --test`). Regla de la casa que este módulo encarna: NULL = «no se sabe todavía». Un activo sin valoración NO entra como 0 en el neto — no entra, y el neto se declara PARCIAL con el motivo. Igual con una hipoteca cuya cuota",
+      "exporta": [
+        "estadoActivo",
+        "resumenPatrimonio",
+        "preguntasIntake"
+      ],
+      "funciones": [
+        {
+          "nombre": "estadoActivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: ActivoPatrimonio",
+          "retorno": "EstadoActivo",
+          "linea": 43,
+          "resumen": "Estado tri-valuado de un activo de cara al neto. Un subarrendado no aplica (genera negocio, pero no es propiedad); un propio sin valoración está PENDIENTE, no a cero."
+        },
+        {
+          "nombre": "resumenPatrimonio",
+          "kind": "function",
+          "exportada": true,
+          "params": "activos: ActivoPatrimonio[], liquidez: number, broker: number, opts?: { cuentasSinSaldo?: number },",
+          "retorno": "ResumenPatrimonio",
+          "linea": 64
+        },
+        {
+          "nombre": "preguntasIntake",
+          "kind": "function",
+          "exportada": true,
+          "params": "activos: ActivoPatrimonio[]",
+          "retorno": "string[]",
+          "linea": 108,
+          "resumen": "Preguntas de intake: los NULL que impiden valorar o decidir, en lenguaje de Alberto. Solo se pregunta lo que falta; a un subarrendado no se le piden datos de propietario."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "52a8a88ab61e"
+    },
+    {
+      "ruta": "apps/plataforma/lib/patrimonio.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Acceso a la base patrimonial (patrimonio_activos + patrimonio_valoraciones) y composición del resumen para /patrimonio. La lógica de titulares vive en lib/patrimonio-resumen.ts (pura, testeada); aquí solo se lee la BD y se compone con liquidez + bróker. Tablas: prisma/sql/2026-08-22_patrimonio.sql (",
+      "exporta": [
+        "getActivos",
+        "getPatrimonio"
+      ],
+      "funciones": [
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 24
+        },
+        {
+          "nombre": "getActivos",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string",
+          "retorno": "Promise<ActivoConEstado[]>",
+          "linea": 35,
+          "resumen": "Activos vivos de la cuenta con su valoración vigente por enfoque (DISTINCT ON fecha desc)."
+        },
+        {
+          "nombre": "getPatrimonio",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string",
+          "retorno": "Promise<Patrimonio>",
+          "linea": 96,
+          "resumen": "Foto completa: activos + neto mínimo declarado (liquidez + bróker + inmuebles − pasivos) + preguntas de intake pendientes para Alberto."
+        }
+      ],
+      "tablas": [
+        "patrimonio_activos",
+        "patrimonio_valoraciones"
+      ],
+      "rutaApi": null,
+      "hash": "4455bc20dfc2"
     },
     {
       "ruta": "apps/plataforma/lib/personas.ts",
@@ -95175,6 +95280,7 @@
         "superaLimiteOps",
         "bajoTendencia",
         "factorFlojo",
+        "estadoEarnings",
         "earningsInminente"
       ],
       "funciones": [
@@ -95224,18 +95330,27 @@
           "resumen": "Barrera de SELECCIÓN (Fase B): no abrir un largo en un nombre cuyo score de factores (value+quality+momentum, de `rankearFactores`) esté por debajo del mínimo. La selección FILTRA al timing técnico: a"
         },
         {
+          "nombre": "estadoEarnings",
+          "kind": "function",
+          "exportada": true,
+          "params": "proximoEarnings: string | undefined, hoy: string, dias = 3,",
+          "retorno": "'desconocido' | 'inminente' | 'fuera_de_ventana'",
+          "linea": 52,
+          "resumen": "Tres estados, no dos (regla de la casa: `NULL` ≠ «no hay»). `earningsInminente` devuelve `false` tanto cuando SABEMOS que no hay resultados cerca como cuando NO TENEMOS la fecha, y aguas abajo las dos"
+        },
+        {
           "nombre": "earningsInminente",
           "kind": "function",
           "exportada": true,
           "params": "proximoEarnings: string | undefined, hoy: string, dias = 3",
           "retorno": "boolean",
-          "linea": 42,
+          "linea": 64,
           "resumen": "No abrir un largo justo ANTES de resultados: el gap de earnings puede saltarse el stop de golpe (la lección de ISRG/IBM, que se desplomaron el día del anuncio). Veta la entrada si el próximo earnings "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0ca11463b235"
+      "hash": "567d02607fd4"
     },
     {
       "ruta": "packages/module-trading/src/riesgoCesta.ts",
@@ -95945,7 +96060,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2543,
-    "funciones": 6968
+    "archivos": 2546,
+    "funciones": 6976
   }
 }
