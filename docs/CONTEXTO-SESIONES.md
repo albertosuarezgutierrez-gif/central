@@ -40,6 +40,24 @@ rrhh, ia-rest) + 4 edge functions redesplegadas y verificadas. Detalle en `docs/
 Pendiente sin tocar (no es de código): Alberto tiene que subir el PDF de movimientos de la tarjeta
 ****0302 de julio (629,86€ liquidados 01/08) para poder conciliarlo.
 
+### 🎯 (21/08/2026) El calibrado ya corre, pero medía la desviación en UN punto — y House se libraba
+- Segunda pasada del cron de canal: **corre y en verde** (latido `sivra_canal` ok, 07:45). Ajustó
+  3 de 4 pisos (Busto 0,995/22,3 · Duplex 0,949/39,9 · Luxury 1,0428/0, todos con paso acotado).
+- 🚨 **House NO se ajustó, y en silencio** (seguía en ×1,20/0 del 17/08). Su ajuste era bueno
+  —1,032 + 318€/estancia, R² 0,9985, 7 ventanas— pero `desviacionCanal` compara vigente vs medido
+  **en un solo precio** (la mediana), y con cuota fija las dos rectas SE CRUZAN. La mediana de House
+  (881€/noche) caía justo en el cruce: sesgo −4,6% → «ok» → `continue` sin pasar ni por `frenados`.
+  En sus extremos reales el error era **−23,5% a 465€/noche y +9,5% a 2.743€**. Es el markup escalar
+  disfrazado, dentro del módulo que existe para no volver a caer en él.
+- **Arreglado midiendo el RANGO, no un punto** (`guestMin`/`guestMax`): el peor sesgo del rango
+  decide, el de la referencia se conserva con su significado. House pasa a `desviado`.
+- **Y el raíl tenía el mismo agujero:** `pasoCanal` acotaba el salto por su efecto EN LA MEDIANA, así
+  que la corrección de House habría entrado entera (−4,6% ahí) siendo un −23,5% en las fechas baratas
+  — saltándose de facto el tope del ±15%. Ahora acota por el peor extremo: entra troceada.
+- Método: reproducido contra el módulo real con las 7 ventanas de producción antes de tocar nada, no
+  a ojo. Los 9 errores de `tsc` del árbol eran previos (deps sin instalar), verificado con `git stash`.
+- Verificado: 1.465 tests + 33 del guardián · tsc 0 · build OK. PR #1582.
+
 ### 📮 (21/08/2026) SES.HOSPEDAJES: transporte validado contra el servicio REAL y mergeado (PR #1555)
 Operación `C` contra `hospedajes.ses.mir.es` → **200 `codigo 0 / Ok`**: TLS con cadena FNMT (raíz
 pública, sí está en el almacén), credenciales de servicio web, arrendador habilitado y **ZIP aceptado**
