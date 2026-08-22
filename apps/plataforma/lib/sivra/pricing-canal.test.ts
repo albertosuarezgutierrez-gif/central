@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import {
   ajusteCanal, baseDesdeGuest, guestDesdeBase, fijoPorNoche, desviacionCanal,
   pasoCanal, validarCanal, MIN_VENTANAS_CANAL, RECORRIDO_MINIMO, MAX_SALTO_CANAL, TOL_SESGO_CANAL,
-  type VentanaEscaparate,
+  repartirCambios, ventanasAConsumir,
+  type VentanaEscaparate, type PisoParaCambio,
 } from './pricing-canal.ts'
 
 const v = (checkin: string, noches: number, guests: number, precioTotal: number, baseTotal: number | null): VentanaEscaparate =>
@@ -254,4 +255,125 @@ test('🚨 la recta de un portal no describe la de otro: no se mezclan', () => {
   assert.equal(mezclado.muestras, 6)
   // La mezcla describe un canal que no existe: ni el de Booking ni el de Airbnb.
   assert.notEqual(soloBooking.markup, mezclado.markup)
+})
+
+// 🚨 Caso REAL de House Sevillana, pasada del 21/08/2026: el ajuste salió `medido` con R²=0,9985
+// y aun así el calibrado no corrigió NADA, porque la desviación se medía en un solo punto.
+// Con cuota fija las dos rectas se CRUZAN, y la mediana de House caía justo en el cruce.
+test('🚨 dos canales muy distintos NO son «ok» por cruzarse en la mediana', () => {
+  const configurado = { markup: 1.20, cuotaFija: 0, nochesRef: 2 }
+  const medido = { markup: 1.032, cuotaFija: 318 }
+  // Precios/noche REALES de sus 7 ventanas de aforo 12: 465 … 881 (mediana) … 2743.
+  const soloMediana = desviacionCanal({ configurado, medido, guestRef: 881 })
+  assert.equal(soloMediana.estado, 'ok', 'así se comportaba antes: ciego')
+
+  const conRango = desviacionCanal({ configurado, medido, guestRef: 881, guestMin: 465, guestMax: 2743 })
+  assert.equal(conRango.estado, 'desviado')
+  assert.equal(conRango.sesgo, soloMediana.sesgo, 'el sesgo de la referencia no cambia de significado')
+  assert.ok(Math.abs(conRango.sesgoMax!) > 0.20, `peor sesgo del rango: ${conRango.sesgoMax}`)
+})
+
+test('con el rango dentro de tolerancia sigue diciendo «ok» (no grita por gritar)', () => {
+  const configurado = { markup: 1.00, cuotaFija: 0, nochesRef: 2 }
+  const medido = { markup: 1.01, cuotaFija: 0 }
+  const d = desviacionCanal({ configurado, medido, guestRef: 300, guestMin: 100, guestMax: 3000 })
+  assert.equal(d.estado, 'ok')
+})
+
+test('sin rango degrada al punto de siempre, no revienta', () => {
+  const d = desviacionCanal({
+    configurado: { markup: 1.20, cuotaFija: 0, nochesRef: 2 },
+    medido: { markup: 0.9, cuotaFija: 100 }, guestRef: 500,
+  })
+  assert.ok(d.estado === 'ok' || d.estado === 'desviado')
+  assert.equal(typeof d.sesgoMax, 'number')
+})
+
+test('🚨 el raíl del salto se acota por el PEOR efecto del rango, no por el de la mediana', () => {
+  const configurado = { markup: 1.20, cuotaFija: 0, nochesRef: 2 }
+  const medido = { markup: 1.032, cuotaFija: 318 }
+  // Sin rango: el efecto en la mediana es −4,6%, cabe en el ±15% y entra ENTERO de una vez…
+  const ciego = pasoCanal({ configurado, medido, guestRef: 881 })
+  assert.equal(ciego.topado, false)
+  // …pero en las fechas baratas ese mismo cambio vale −23,5%, muy por encima del tope.
+  const real = (p: { markup: number; cuotaFija: number; nochesRef: number }) =>
+    baseDesdeGuest(465, p) / baseDesdeGuest(465, configurado) - 1
+  assert.ok(Math.abs(real({ ...ciego.aplicar })) > MAX_SALTO_CANAL)
+
+  // Con el rango, el paso se trocea para que NINGÚN extremo pase del tope.
+  const acotado = pasoCanal({ configurado, medido, guestRef: 881, guestMin: 465, guestMax: 2743 })
+  assert.equal(acotado.topado, true)
+  assert.ok(Math.abs(real({ ...acotado.aplicar })) <= MAX_SALTO_CANAL + 1e-6,
+    `efecto en la fecha barata: ${real({ ...acotado.aplicar })}`)
+  // Y sigue yendo hacia lo medido, no se queda quieto.
+  assert.ok(acotado.aplicar.cuotaFija > 0 && acotado.aplicar.markup < configurado.markup)
+})
+
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// EL PISO QUE NO SE AJUSTA NO PUEDE EVAPORARSE DEL PARTE (caso REAL de House, 17→22/08/2026)
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+
+const piso = (over: Partial<PisoParaCambio> = {}): PisoParaCambio => ({
+  property_id: 'prop_house_sevillana',
+  nombre: 'House Sevillana',
+  estado: 'medido',
+  markup: 0.95,
+  cuota_fija: 30,
+  guest_ref: 400,
+  muestras: 7,
+  desviacion: 'desviado',
+  canal_auto: true,
+  noches_ref: 3,
+  configurado: { markup: 1.20, cuotaFija: 0, nochesRef: 3 },
+  ventanas_usadas: [1, 2, 3, 4, 5, 6, 7],
+  ...over,
+})
+
+test('un piso desviado cuyo paso no mueve la base sale en frenados, NO en silencio', () => {
+  // Se fuerza el empate haciendo que lo medido YA sea lo configurado salvo por un pelo: el paso
+  // acotado se queda por debajo del redondeo a euro y la escritura no cambiaría nada.
+  const p = piso({ markup: 1.2001, cuota_fija: 0, guest_ref: 400 })
+  const r = repartirCambios([p])
+  assert.equal(r.cambios.length, 0)
+  assert.equal(r.sinCambio.length, 0, 'NO es un «ya cuadra»: está desviado')
+  assert.equal(r.frenados.length, 1, 'tiene que quedar constancia de que sigue sin corregirse')
+  assert.match(r.frenados[0].motivo, /no mueve la base/)
+})
+
+test('«ya cuadra» y «no he podido» son cubos DISTINTOS', () => {
+  const r = repartirCambios([piso({ desviacion: 'ok' })])
+  assert.equal(r.sinCambio.length, 1)
+  assert.equal(r.frenados.length, 0)
+  assert.match(r.sinCambio[0].motivo, /ya cuadra/)
+})
+
+test('el interruptor del piso frena, y lo dice', () => {
+  const r = repartirCambios([piso({ canal_auto: false })])
+  assert.equal(r.cambios.length, 0)
+  assert.equal(r.frenados.length, 1)
+  assert.match(r.frenados[0].motivo, /canal_auto/)
+})
+
+test('un piso que SÍ se corrige produce cambio y consume sus ventanas', () => {
+  const r = repartirCambios([piso()])
+  assert.equal(r.cambios.length, 1, 'de 1,20 a ~0,95+30€ hay recorrido de sobra')
+  assert.deepEqual(ventanasAConsumir([piso()], r.cambios), [1, 2, 3, 4, 5, 6, 7])
+})
+
+test('🚨 las ventanas de un piso NO ajustado NO se consumen', () => {
+  // La regresión que dejó a House sin muestra limpia: se marcaba por «se pudo medir», no por
+  // «se ajustó», así que un piso frenado quemaba su muestra en cada pasada sin corregirse nunca.
+  const frenado = piso({ canal_auto: false })
+  const r = repartirCambios([frenado])
+  assert.equal(r.cambios.length, 0)
+  assert.deepEqual(ventanasAConsumir([frenado], r.cambios), [],
+    'sin ajuste, la muestra sigue limpia para la pasada siguiente')
+})
+
+test('con varios pisos solo se consumen las ventanas de los ajustados', () => {
+  const ok = piso({ property_id: 'prop_duplex_center', ventanas_usadas: [10, 11] })
+  const no = piso({ property_id: 'prop_house_sevillana', canal_auto: false, ventanas_usadas: [20, 21] })
+  const r = repartirCambios([ok, no])
+  assert.deepEqual(ventanasAConsumir([ok, no], r.cambios), [10, 11])
 })

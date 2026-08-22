@@ -76,8 +76,8 @@ export { cleanJSON }
 export type { ImageInput }
 
 // Modelos por defecto (sobrescribibles via env var si hace falta)
-// Swap 17/08/2026: el 3.3-70b deja de soportarse en NIM el 25/08/2026 (aviso en build.nvidia.com).
-const TEXT_MODEL_NVIDIA   = process.env.NVIDIA_BRAIN_MODEL      ?? 'z-ai/glm-5.2'
+// Swap 22/08/2026: `z-ai/glm-5.2` murió (410 Gone, EOL real 21/08/2026) — ver client.ts de core-ai.
+const TEXT_MODEL_NVIDIA   = process.env.NVIDIA_BRAIN_MODEL      ?? 'meta/llama-3.1-70b-instruct'
 const VISION_MODEL_NVIDIA = process.env.NVIDIA_VISION_MODEL     ?? 'meta/llama-3.2-11b-vision-instruct'
 // Fallback de texto GRATIS: Groq con gpt-oss-120b, en otra infra.
 const TEXT_MODEL_GROQ     = process.env.GROQ_BRAIN_MODEL        ?? 'openai/gpt-oss-120b'

@@ -6,9 +6,11 @@ import { tgSend } from "@central/core-telegram"
 import { registrarLatido } from "@/lib/monitoring/latido-escribir"
 import { eur } from "@/lib/dinero"
 import {
-  ajusteCanal, desviacionCanal, pasoCanal, baseDesdeGuest, validarCanal,
+  ajusteCanal, desviacionCanal, baseDesdeGuest, validarCanal,
+  repartirCambios, ventanasAConsumir,
   MIN_VENTANAS_CANAL, MAX_SALTO_CANAL,
   type VentanaEscaparate, type ParametrosCanal, type ValidacionCanal,
+  type CambioCanal, type NoTocado,
 } from "@/lib/sivra/pricing-canal"
 import { precioHuesped, baseDondeLaCuotaMandaya, type ResumenHuesped } from "@/lib/sivra/pricing-precio-huesped"
 
@@ -95,6 +97,11 @@ export type MedicionCanal = {
   estado: string
   guest_ref: number | null
   sesgo: number | null
+  /** peor sesgo del RANGO medido (el que decide si se corrige), no solo el de la mediana */
+  sesgo_max: number | null
+  /** extremos del precio/noche medido: acotan el salto por su peor efecto, no por el de la mediana */
+  guest_min: number | null
+  guest_max: number | null
   desviacion: string
   canal_auto: boolean
   /** ¿acierta la recta VIGENTE en las ventanas que no usó para ajustarse? */
@@ -173,15 +180,20 @@ async function medir(): Promise<{ pisos: MedicionCanal[]; ventanas: Map<string, 
     const delAforo = todas.filter(v => v.guests === aforo && v.noches > 0)
     const porNoche = delAforo.map(v => v.precioTotal / v.noches).sort((a, b) => a - b)
     const guestRef = porNoche.length ? Math.round(porNoche[Math.floor((porNoche.length - 1) / 2)]) : null
+    // Los EXTREMOS del rango medido viajan con la mediana: son los que delatan una recta vigente
+    // equivocada. Con solo la mediana, House salía «ok» el 21/08 estando a −23,5% en sus fechas
+    // baratas — el cruce de las dos rectas caía justo ahí.
+    const guestMin = porNoche.length ? Math.round(porNoche[0]) : undefined
+    const guestMax = porNoche.length ? Math.round(porNoche[porNoche.length - 1]) : undefined
     const d = guestRef != null
       ? desviacionCanal({
           configurado,
           medido: ajuste.markup != null && ajuste.cuotaFija != null && ajuste.estado === "medido"
             ? { markup: ajuste.markup, cuotaFija: ajuste.cuotaFija }
             : null,
-          guestRef,
+          guestRef, guestMin, guestMax,
         })
-      : { estado: "sin_datos" as const, sesgo: null }
+      : { estado: "sin_datos" as const, sesgo: null, sesgoMax: null }
     return {
       property_id: p.property_id,
       nombre: PROP_NAMES[p.property_id] ?? p.property_id,
@@ -195,7 +207,10 @@ async function medir(): Promise<{ pisos: MedicionCanal[]; ventanas: Map<string, 
       r2: ajuste.r2,
       estado: ajuste.estado,
       guest_ref: guestRef,
+      guest_min: guestMin ?? null,
+      guest_max: guestMax ?? null,
       sesgo: d.sesgo,
+      sesgo_max: d.sesgoMax,
       desviacion: d.estado,
       canal_auto: Boolean(p.canal_auto),
       validacion,
@@ -209,48 +224,8 @@ async function medir(): Promise<{ pisos: MedicionCanal[]; ventanas: Map<string, 
 }
 
 /** Un cambio efectivamente escrito (o simulado) en `pricing_settings`. */
-type Cambio = {
-  property_id: string; nombre: string
-  de: ParametrosCanal; a: ParametrosCanal
-  medido: { markup: number; cuotaFija: number }
-  guest_ref: number
-  base_antes: number; base_despues: number
-  efecto: number; topado: boolean
-}
-
-function cambiosDe(pisos: MedicionCanal[], soloProp: string | null, autoGlobal: boolean): {
-  cambios: Cambio[]; frenados: { property_id: string; motivo: string }[]
-} {
-  const cambios: Cambio[] = []
-  const frenados: { property_id: string; motivo: string }[] = []
-  for (const p of pisos) {
-    if (soloProp && p.property_id !== soloProp) continue
-    if (p.estado !== "medido" || p.markup == null || p.cuota_fija == null || p.guest_ref == null) {
-      // No es un «cuadra»: es un «no lo sé». Se declara, nunca se escribe.
-      frenados.push({ property_id: p.property_id, motivo: `ajuste ${p.estado} (${p.muestras} ventanas)` })
-      continue
-    }
-    if (p.desviacion === "ok") continue
-    if (!autoGlobal) { frenados.push({ property_id: p.property_id, motivo: "SIVRA_CANAL_AUTO=0" }); continue }
-    if (!p.canal_auto) { frenados.push({ property_id: p.property_id, motivo: "canal_auto=false en el piso" }); continue }
-
-    const medido = { markup: p.markup, cuotaFija: p.cuota_fija }
-    const paso = pasoCanal({ configurado: p.configurado, medido, guestRef: p.guest_ref })
-    // `noches_ref` viaja SIEMPRE con la cuota, aunque el paso vaya topado: son las dos mitades del
-    // mismo reparto y desparejarlas describiría un canal que no existe.
-    const a: ParametrosCanal = { ...paso.aplicar, nochesRef: p.noches_ref }
-    const baseAntes = baseDesdeGuest(p.guest_ref, p.configurado)
-    const baseDespues = baseDesdeGuest(p.guest_ref, a)
-    if (baseAntes === baseDespues && a.nochesRef === p.configurado.nochesRef) continue
-    cambios.push({
-      property_id: p.property_id, nombre: p.nombre,
-      de: p.configurado, a, medido, guest_ref: p.guest_ref,
-      base_antes: baseAntes, base_despues: baseDespues,
-      efecto: paso.efecto, topado: paso.topado,
-    })
-  }
-  return { cambios, frenados }
-}
+/** El cambio aplicable a un piso. La decisión vive en `repartirCambios` (puro y testeado). */
+type Cambio = CambioCanal
 
 /**
  * Marca las ventanas que han entrado en un ajuste. A partir de aquí ya NO pueden validar nada: el
@@ -366,7 +341,8 @@ export async function GET(req: NextRequest) {
 
   let pisos: MedicionCanal[] = []
   let cambios: Cambio[] = []
-  let frenados: { property_id: string; motivo: string }[] = []
+  let frenados: NoTocado[] = []
+  let sinCambio: NoTocado[] = []
   let huesped = new Map<string, ResumenHuesped>()
   let canales: { canales: Canal[]; sinMedir: { property_id: string; portal: string; pct: number }[] } =
     { canales: [], sinMedir: [] }
@@ -376,15 +352,13 @@ export async function GET(req: NextRequest) {
     const m = await medir()
     pisos = m.pisos
     const soloProp = req.nextUrl.searchParams.get("property")
-    const r = cambiosDe(pisos, soloProp, autoGlobal)
-    cambios = r.cambios; frenados = r.frenados
+    const r = repartirCambios(pisos, { soloProp, autoGlobal })
+    cambios = r.cambios; frenados = r.frenados; sinCambio = r.sinCambio
     if (!simulacro && cambios.length > 0) await escribir(cambios)
-    // Las ventanas se marcan DESPUÉS de escribir y solo las de los pisos que se han ajustado: si se
-    // marcaran siempre, una pasada que no ajustó nada quemaría la muestra limpia de la siguiente.
-    if (!simulacro) {
-      const usadas = pisos.filter(p => p.estado === "medido").flatMap(p => p.ventanas_usadas)
-      await marcarUsadas(usadas)
-    }
+    // Las ventanas se marcan DESPUÉS de escribir y SOLO las de los pisos que se han ajustado de
+    // verdad — no las de los que simplemente se pudieron medir. Ver `ventanasAConsumir`: marcar de
+    // más deja al piso sin muestra limpia con la que corregirse en la pasada siguiente.
+    if (!simulacro) await marcarUsadas(ventanasAConsumir(pisos, cambios))
     // Los dos centinelas van en su propio try: son vigilancia, no pueden tumbar la corrección.
     try { huesped = await centinelaHuesped(pisos) } catch (e) {
       avisosCentinela.push(`centinela del precio al huésped ilegible (${String(e).slice(0, 60)}): esta pasada NO lo ha mirado`)
@@ -404,8 +378,17 @@ export async function GET(req: NextRequest) {
   const sinValidar = pisos.filter(p => p.validacion.estado === "sin_muestras")
   const caros = [...huesped.entries()].filter(([, h]) => h.caras > 0)
 
+  // 🚨 Un piso que no se ha ajustado NO puede desaparecer del parte. `frenados` es «no he podido»
+  // (incluye el desviado cuyo paso acotado no mueve la base, que si no se declara se queda con su
+  // parámetro viejo para siempre) y `sinCambio` es «no hacía falta». Mezclarlos, o callar el
+  // primero, es servir un «no lo sé» como un «todo cuadra» — ver repartirCambios.
+  const frenadosReales = frenados.filter(f => !sinMedir.some(p => p.property_id === f.property_id))
   const detalle =
     `${pisos.length} pisos · ${cambios.length} ajustados` +
+    (frenadosReales.length
+      ? ` · 🛑 ${frenadosReales.length} SIN corregir (${frenadosReales.map(f => `${f.property_id}: ${f.motivo}`).join(" | ")})`
+      : "") +
+    (sinCambio.length ? ` · ${sinCambio.length} ya cuadraban` : "") +
     (sinMedir.length ? ` · ${sinMedir.length} sin ajuste fiable (${sinMedir.map(p => p.estado).join(",")})` : "") +
     ` · validación: ${pisos.length - desviados.length - sinValidar.length} ok, ${desviados.length} desviados, ` +
     `${sinValidar.length} sin ventanas nuevas` +
@@ -482,6 +465,9 @@ export async function GET(req: NextRequest) {
     // Se declaran los huecos: «sin ajuste fiable» no es «cuadra», y un piso frenado por su
     // interruptor tiene que verse (si no, un `canal_auto=false` olvidado es invisible para siempre).
     frenados,
+    // Los que NO hacía falta tocar, en su propio cubo: mezclarlos con los frenados volvería a
+    // hacer indistinguible «ya cuadra» de «está desviado y no he sabido moverlo».
+    sin_cambio: sinCambio,
     sin_ajuste: sinMedir.map(p => ({ property_id: p.property_id, estado: p.estado, ventanas: p.ventanas_totales })),
     // Validación FUERA de muestra: lo único que puede decir que el modelo sigue siendo válido.
     validacion: pisos.map(p => ({ property_id: p.property_id, ...p.validacion })),

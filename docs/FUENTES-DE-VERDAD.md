@@ -22,6 +22,7 @@
 | `docs/HUECOS-ABIERTOS.md` | `docs/TRADING-FUENTES-PAGO.md`, `packages/module-trading/**`, `apps/plataforma/app/api/trading/**`, `apps/plataforma/lib/trading/**` — **comprobar contra el CÓDIGO que cada hueco sigue abierto, no contra el doc que lo declaró** (caso 21/08/2026) |
 | skill `conectores-vigia` | `docs/VIGIA-CONECTORES.md`, `docs/HUECOS-ABIERTOS.md`, `.github/workflows/rutinas-automerge.yml` |
 | `docs/ROTACION-SERVICE-ROLE.md` | `apps/ia-rest/supabase/functions/**` (las 43 que leen la clave del entorno), `apps/*/lib/**` que lea `SUPABASE_SERVICE_ROLE_KEY` o `*ANON_KEY`, `apps/plataforma/lib/secrets-registry.ts`. **Mientras la clave filtrada siga viva, este doc es un PENDIENTE ABIERTO, no un histórico** |
+| `docs/NIVELA-inventario.md` | **Ninguno en este repo** — describe el repo externo y privado `albertosuarezgutierrez-gif/Cloude`, fuera del scope MCP de las sesiones sobre `central`. No lo marques obsoleto por falta de código que lo respalde: solo caduca si NIVELA se importa como `apps/nivela` (entonces esta fila pasa a apuntar ahí) o si Alberto decide descartarlo |
 | `docs/RUTINAS-PROGRAMADAS.md` | `.claude/commands/auditoria-diaria.md`, `.claude/skills/auditoria-central/**`, los crons de `apps/*/vercel.json` |
 | skill `central-maestro` | `MATRIZ.md`, `packages/*`, raíz del monorepo |
 | skill `ia-rest-maestro` | `apps/ia-rest/**` (rutas, Edge Functions, `supabase/`, `src/**`) |

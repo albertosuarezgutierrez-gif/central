@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-21T06:53:08Z",
-  "sha": "1d850e84c4e333efb9f9adf79a99a37cf9a02f3e",
+  "generadoEn": "2026-08-21T07:37:17Z",
+  "sha": "01af248c295c9dc0bfeea02068466d2da6a21e4a",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -46052,7 +46052,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "8de25412e050"
+      "hash": "cf9f6d2738d4"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",
@@ -53435,12 +53435,24 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 14
+          "linea": 16
+        },
+        {
+          "nombre": "avisosPersistidos",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<string[]>",
+          "linea": 61,
+          "resumen": "Avisos que dejó escritos la pasada anterior en las conexiones vinculadas. Si la consulta falla se devuelve `[]`, que aquí es el lado CONSERVADOR: «no sé qué se avisó ayer» hace que una nota se repita,"
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "conexiones_banco",
+        "next"
+      ],
       "rutaApi": "/api/cron/psd2-sync",
-      "hash": "4f54017b7d8c"
+      "hash": "686f118761e5"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/resumen-mensual/route.ts",
@@ -66867,6 +66879,10 @@
       "exporta": [
         "diasEntre",
         "fechaCaducidadConsent",
+        "esNota",
+        "partirAvisos",
+        "claveAviso",
+        "avisosNuevos",
         "semaforoFeed"
       ],
       "funciones": [
@@ -66876,7 +66892,7 @@
           "exportada": true,
           "params": "aISO: string, bISO: string",
           "retorno": "number",
-          "linea": 23
+          "linea": 28
         },
         {
           "nombre": "fechaCaducidadConsent",
@@ -66884,7 +66900,7 @@
           "exportada": true,
           "params": "consentCreadaISO: string",
           "retorno": "string",
-          "linea": 27
+          "linea": 32
         },
         {
           "nombre": "fmtDDMM",
@@ -66892,7 +66908,42 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 31
+          "linea": 36
+        },
+        {
+          "nombre": "esNota",
+          "kind": "function",
+          "exportada": true,
+          "params": "aviso: string",
+          "retorno": "boolean",
+          "linea": 46,
+          "resumen": "Un aviso con prefijo ℹ️ es INFORMATIVO: describe una limitación con la que el feed SIGUE funcionando (p. ej. «el banco rechazó la ventana de 89 días»). No es un fallo y por tanto no pone el semáforo e"
+        },
+        {
+          "nombre": "partirAvisos",
+          "kind": "function",
+          "exportada": true,
+          "params": "avisos: string[] | null",
+          "retorno": "",
+          "linea": 50
+        },
+        {
+          "nombre": "claveAviso",
+          "kind": "function",
+          "exportada": true,
+          "params": "aviso: string",
+          "retorno": "string",
+          "linea": 59,
+          "resumen": "Clave estable de un aviso para compararlo ENTRE pasadas del cron: las fechas ISO que lleva dentro se mueven solas cada día (la ventana corta es `hoy - 30 días`, ver getMovimientosConVentana), así que "
+        },
+        {
+          "nombre": "avisosNuevos",
+          "kind": "function",
+          "exportada": true,
+          "params": "previos: string[], actuales: string[]",
+          "retorno": "string[]",
+          "linea": 64,
+          "resumen": "Avisos de `actuales` que NO estaban ya en `previos` (comparando por clave estable)."
         },
         {
           "nombre": "semaforoFeed",
@@ -66900,12 +66951,12 @@
           "exportada": true,
           "params": "p: { hoyISO: string // Último movimiento psd2 importado (el más reciente entre todas las cuentas del feed). ultimoMovISO: string | null // ultimo_avisos del último sync; null = el sync aún no reporta (fila anterior al cambio) — // NO equiva",
           "retorno": "EstadoFeed",
-          "linea": 38
+          "linea": 69
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e0abb1171a8c"
+      "hash": "7f66bd62b6e5"
     },
     {
       "ruta": "apps/plataforma/lib/psd2.ts",
@@ -95883,6 +95934,6 @@
   ],
   "resumen": {
     "archivos": 2543,
-    "funciones": 6962
+    "funciones": 6967
   }
 }

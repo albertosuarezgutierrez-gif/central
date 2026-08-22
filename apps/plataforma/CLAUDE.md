@@ -857,6 +857,28 @@ y desde el servidor era invisible. Fix (#1523): `public, max-age=0, must-revalid
 del widget, que mira solo a la caché del navegador. Hay dos tests que lo vigilan.
 **Confirmado funcionando por Alberto el 20/08/2026.**
 
+## 🛑 El canal: un piso que NO se ajusta no puede evaporarse del parte (22/08/2026)
+`/api/sivra/pricing/canal` reparte los pisos en **tres** cubos, no dos (`repartirCambios` en
+`lib/sivra/pricing-canal.ts`, puro y testeado): **`cambios`** (se ajusta) · **`frenados`** («no he
+podido»: sin ajuste fiable, interruptor bajado, o **el paso acotado no mueve la base redondeada**)
+· **`sinCambio`** («no hacía falta»: la recta vigente ya cuadra).
+- **Caso fundacional.** Antes había dos `continue` MUDOS —`desviacion === 'ok'` y «la base no se
+  mueve»— que no dejaban rastro en ninguna lista. El parte decía «4 pisos · 3 ajustados» y el cuarto
+  desaparecía, así que «ya cuadra» y «está desviado y no he sabido moverlo» se leían igual. **House
+  Sevillana llevaba del 17 al 22/08 con el `channel_markup` = 1,20 INVENTADO** que este cron existe
+  para corregir, mientras los otros tres se calibraban a ~0,95–1,04 + cuota fija.
+- 🚨 **`usada_en_ajuste_at` se marca solo en los pisos AJUSTADOS, nunca en los MEDIDOS**
+  (`ventanasAConsumir`). El marcado iba por `estado === 'medido'` —se pudo medir— en vez de por «se
+  ajustó», que son cosas distintas: House quemaba sus 7 ventanas de aforo 12 en cada pasada sin
+  corregirse, y se quedó **a cero de muestra limpia**. Un piso frenado que además pierde su muestra
+  no vuelve a tener con qué corregirse: el freno se hace permanente por agotamiento, en silencio.
+  El flag existe para romper un círculo (una ventana que produjo la recta ya no puede validarla);
+  si no hubo recta nueva, no hay círculo que romper y la muestra sigue limpia.
+- El detalle del latido antepone `🛑 N SIN corregir (piso: motivo)` y la respuesta expone
+  `frenados` y `sin_cambio` por separado. Hermano de la regla «un dato que NO hay ≠ dato que NO se
+  ha mirado» del CLAUDE.md raíz, aplicada a las ACCIONES: un «no lo he hecho» no puede presentarse
+  como un «no hacía falta».
+
 ## 💓 Latidos de agentes — el vigía que avisa por Telegram (ampliado 30/07/2026)
 `lib/monitoring/latidos.ts` (registro + `evaluarLatido` puro) + cron `agentes-latido` (07:45 UTC) →
 **Telegram**. Regla de oro: solo se vigilan huellas que se refrescan en CADA pasada del agente.
