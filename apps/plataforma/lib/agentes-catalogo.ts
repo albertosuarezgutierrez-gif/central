@@ -76,7 +76,20 @@ export const RUTINAS_CLAUDE: AgenteInfo[] = [
   { id: 'trading-analista', nombre: 'Trading-analista (IBKR, paper)', tipo: 'rutina-claude',
     funcion: 'Analiza técnico+fundamental, torneo de estrategias y opera SOLO en paper; aprende por track record',
     cadencia: 'Diaria ~22:15 (cierre US)', disparo: 'Trigger Claude', entrega: 'lectura', telegram: true,
-    archivo: '.claude/skills/trading-analista + /api/trading/*', vertical: 'Transversal (finanzas)', estado: 'pendiente-trigger' },
+    // Trigger creado y corriendo de punta a punta desde el 20/07/2026 (docs/RUTINAS-PROGRAMADAS.md).
+    archivo: '.claude/skills/trading-analista + /api/trading/*', vertical: 'Transversal (finanzas)', estado: 'activo' },
+  { id: 'mercado-booking', nombre: 'Mercado real por fecha (Booking)', tipo: 'rutina-claude',
+    funcion: 'Mide el precio REAL por fecha/aforo con el conector de Booking → market_rates (fuente booking_mcp)',
+    cadencia: 'Diaria 05:30', disparo: 'Trigger Claude', entrega: 'accion-directa', telegram: false,
+    archivo: '.claude/skills/mercado-booking', vertical: 'SIVRA', estado: 'activo' },
+  { id: 'radar-espana', nombre: 'Radar España (ciclo + valoraciones)', tipo: 'rutina-claude',
+    funcion: 'Termómetro de ciclo inmobiliario por zona + regulación VUT + valoración viva/dual de los inmuebles',
+    cadencia: 'Días 1 y 16, 08:00', disparo: 'Trigger Claude', entrega: 'accion-directa', telegram: true,
+    archivo: '.claude/skills/radar-espana → docs/RADAR-ESPANA.md', vertical: 'Patrimonio', estado: 'pendiente-trigger' },
+  { id: 'patrimonio-cfo', nombre: 'Coordinador patrimonial (CFO)', tipo: 'rutina-claude',
+    funcion: 'Consolida BD+agentes+radar: neto, coste de oportunidad por activo, escenarios con impuestos; solo orienta',
+    cadencia: 'Día 2 mes 09:00', disparo: 'Trigger Claude', entrega: 'mixto', telegram: true,
+    archivo: '.claude/skills/patrimonio-cfo → docs/PATRIMONIO-CFO.md', vertical: 'Patrimonio', estado: 'pendiente-trigger' },
 ]
 
 // ── B. Agente Director + su meta-agente (router de modelos de la pasarela IA) ──────────────────
