@@ -138,6 +138,28 @@ movimientos de la tarjeta ****0302 de julio (629,86€ liquidados 01/08) para po
 - Verificado: 1.465 tests + 33 del guardián · tsc 0 · build OK. PR #1582.
 
 
+### 🪞 (21/08/2026) El calendario de earnings ya estaba cerrado: el doc de huecos pedía lo que ya teníamos
+Al implementar la Fase 3 apareció `apps/plataforma/lib/trading/earnings-yahoo.ts`: cierra la fecha de
+earnings desde el **05/08**, diez días ANTES de que `TRADING-FUENTES-PAGO.md` (15/08) la declarara «el
+único hueco con coste directo en dinero real». Y mejor: da `confirmada` y corre server-side. Integrar
+`EARNINGS_CALENDAR` se CANCELA (redundante, peor, gasta cuota). De Alpha Vantage sobrevive solo
+`LISTING_STATUS` (sesgo de supervivencia, sin equivalente propio) — **pendiente de integrar por HTTP**.
+Sí entra `estadoEarnings()`: distingue «no lo sé» de «no hay riesgo», que `earningsInminente` colapsaba.
+Corregidos los 3 docs que arrastraban la afirmación. Lección: **un doc de huecos envejece pidiendo lo
+que ya tienes, y nadie lo nota porque pedir de más no rompe nada visible.** PR #1581.
+
+### 🔌 (21/08/2026) Vigía de conectores MCP: diseño firmado + Alpha Vantage verificado a mano
+Alberto preguntó si hay conectores de bolsa que añadir y si cabe un agente que los revise. Del registro
+solo Alpha Vantage cierra huecos reales; **conectado y probado con llamadas de verdad**:
+`EARNINGS_CALENDAR` ✅ gratis (ISRG 20/10/2026) y `LISTING_STATUS` ✅ gratis (8.491 deslistadas), pero
+`TIME_SERIES_DAILY_ADJUSTED` es **premium** — el 3er fallback de precios ajustados NO se cierra.
+Diseñado `conectores-vigia` (mensual día 5, criterio huecos+integraciones, B+C, canario sobre los
+conectores en uso) en `docs/superpowers/specs/2026-08-21-conectores-vigia-design.md`.
+**Hallazgo colateral:** el automerge NO reconocía `VIGIA-OSS.md`/`BUSCADOR-IA.md`/`FISCAL-AYUDAS.md`
+como registro → los PRs de esas 3 rutinas esperaban ojo humano para nada; **arreglado y anclado** con un
+guardián que ejecuta la función bash REAL extraída del YAML. **MERGEADO (PR #1581).** Falta solo crear
+el trigger de la rutina 16 en `claude.ai → Rutinas` (día 5, 04:00 CEST) — eso es de Alberto.
+
 ### 📮 (21/08/2026) SES.HOSPEDAJES: transporte validado contra el servicio REAL y mergeado (PR #1555)
 Operación `C` contra `hospedajes.ses.mir.es` → **200 `codigo 0 / Ok`**: TLS con cadena FNMT (raíz
 pública, sí está en el almacén), credenciales de servicio web, arrendador habilitado y **ZIP aceptado**

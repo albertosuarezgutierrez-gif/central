@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { superaConcentracion, esPromediarPerdedor, superaLimiteOps, earningsInminente, bajoTendencia, factorFlojo } from '../src/riesgo.ts'
+import { superaConcentracion, esPromediarPerdedor, superaLimiteOps, earningsInminente, estadoEarnings, bajoTendencia, factorFlojo } from '../src/riesgo.ts'
 import type { PaperPosicion } from '../src/types.ts'
 
 const pos: PaperPosicion = { simbolo: 'NVDA', cantidad: 10, precioEntrada: 100, stop: 90, abiertaEn: '2026-07-01' }
@@ -41,4 +41,24 @@ test('factorFlojo veta el largo cuando el score de factores está bajo el mínim
   assert.equal(factorFlojo(0, 0), false)        // justo en el umbral, no veta (< estricto)
   assert.equal(factorFlojo(undefined, 0), false)// sin score → degrada (comportamiento anterior)
   assert.equal(factorFlojo(-2, null), false)    // sin umbral → no veta
+})
+
+test('estadoEarnings distingue "no lo sé" de "no hay riesgo"', () => {
+  // Sin fecha NO es "no hay earnings próximos": es "no se ha podido mirar". Quien llame debe
+  // poder decirlo, porque con dinero real un gap de earnings no se deshace. earningsInminente
+  // devuelve false en los dos casos y por eso no basta.
+  assert.equal(estadoEarnings(undefined, '2026-07-18', 3), 'desconocido')
+  assert.equal(estadoEarnings('2026-07-20', '2026-07-18', 3), 'inminente')        // en 2 días
+  assert.equal(estadoEarnings('2026-07-25', '2026-07-18', 3), 'fuera_de_ventana') // en 7 días
+  assert.equal(estadoEarnings('2026-07-15', '2026-07-18', 3), 'fuera_de_ventana') // ya pasaron
+})
+
+test('estadoEarnings no cambia lo que decide earningsInminente', () => {
+  for (const f of [undefined, '2026-07-20', '2026-07-25', '2026-07-15']) {
+    assert.equal(
+      estadoEarnings(f, '2026-07-18', 3) === 'inminente',
+      earningsInminente(f, '2026-07-18', 3),
+      `divergen para ${f}: el estado es informativo, el veto sigue siendo de earningsInminente`,
+    )
+  }
 })

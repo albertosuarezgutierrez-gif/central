@@ -6,6 +6,15 @@
 > contrata algo. La decisión marco sigue siendo la firmada en la skill (`infra-forward-radar.md`):
 > **datos de pago APLAZADOS, fuera del camino crítico** — este doc la detalla, no la revoca.
 
+> ⚠️ **OBSOLETO EN UN PUNTO (corregido el 21/08/2026).** Este doc dice que el calendario de
+> earnings fiable es «el único hueco de datos con coste DIRECTO en dinero real» y lo pone como
+> gasto a activar al abrir el Tramo 1. **Ya no lo es: llevaba diez días cerrado cuando se escribió.**
+> `apps/plataforma/lib/trading/earnings-yahoo.ts` (05/08/2026) da la fecha del próximo informe —y
+> además si está `confirmada` por la empresa o solo estimada— gratis y server-side, para todas las
+> rutas y no solo la sesión Claude. La fila 2 del ranking de abajo queda reducida al screener.
+> El resto del veredicto (§1: los datos de pago NO acortan el camino) sigue vigente y es lo
+> importante.
+
 ## 1. Respuesta directa: NO, las fuentes de pago no acortan el camino al dinero real
 
 El reloj que abre los tramos **no es de datos, es de tiempo fuera de muestra**:
@@ -28,7 +37,7 @@ earnings que no degrade. Eso hace **más fiable** el veredicto de los tramos; no
 | # | Fuente | Coste aprox.* | Qué resuelve de lo ya declarado como debilidad |
 |---|---|---|---|
 | 1 | **EODHD** (all-in-one) | ~50-80 US$/mes | Las TRES a la vez: 3er fallback de precios (Stooq→Yahoo→EODHD, ya previsto en la skill) · cierres **ajustados por splits y dividendos** (la guarda `serieDiscontinua` caza lo imposible, no lo erróneo, y a 15 años hay muchos splits) · **histórico de DESLISTADAS** (el sesgo de supervivencia del retrovisor, declarado severo a 15 años) · calendario de earnings y fundamentales de respaldo. |
-| 2 | **FMP de pago** (tier básico) | ~20-30 US$/mes | El único hueco de datos con coste DIRECTO en dinero real: la guarda `earningsInminente` (veta abrir largos a ≤3 días de resultados) hoy es best-effort del plan Free — **sin fecha, no veta**, y un gap de earnings con dinero real no se puede deshacer. También desbloquea el screener (`/stable/company-screener`) para la cantera. |
+| 2 | **FMP de pago** (tier básico) | ~20-30 US$/mes | ~~El único hueco de datos con coste DIRECTO en dinero real: la guarda `earningsInminente`…~~ **Corregido 21/08/2026: la fecha de earnings ya la da `lib/trading/earnings-yahoo.ts` gratis desde el 05/08, con el flag `confirmada` que FMP no da.** De esta fila queda vivo SOLO el screener (`/stable/company-screener`) para la cantera → hueco H2 de `docs/HUECOS-ABIERTOS.md`. |
 | 3 | **Norgate Data** | ~30-40 US$/mes | El patrón oro de survivorship-free para EEUU (solo retrovisor). Prioridad baja: está firmado que **ningún tramo de capital se mueve con datos del retrovisor**, así que mejora un instrumento que no decide dinero. |
 | 4 | **Suscripciones de datos de mercado de IBKR** | pocos US$/mes | Imprescindibles al abrir el Tramo 1 de todas formas (datos en vivo consolidados para ejecutar las órdenes a mano). No son «investigación»: son fontanería de la ejecución real. |
 
@@ -43,9 +52,10 @@ alternativo (satélites, tarjetas…) — este sistema no tiene ninguna hipótes
 1. **Hoy: nada.** Stooq+Yahoo cubren el forward; los incidentes de precios ya tienen guardias
    (×2, contraste, diferido, huérfanas) y el trabajo pendiente declarado es validar la fuente
    contra IBKR, que es gratis.
-2. **Al abrir el Tramo 1 (decisión de Alberto):** activar **el calendario de earnings fiable**
-   (FMP de pago o EODHD, el que salga mejor en ese momento) + las suscripciones de datos de IBKR.
-   Es el único gasto en datos que protege dinero real de forma directa.
+2. **Al abrir el Tramo 1 (decisión de Alberto):** ~~activar el calendario de earnings fiable~~
+   **(ya cubierto gratis desde el 05/08 por `lib/trading/earnings-yahoo.ts` — corregido 21/08/2026)**
+   + las suscripciones de datos de mercado de IBKR, que sí siguen haciendo falta: son fontanería de
+   la ejecución real, no investigación.
 3. **Si Stooq y Yahoo caen a la vez** (condición ya firmada en la skill): EODHD como 3er fallback.
 4. **Norgate/limpieza del retrovisor:** solo si algún día una hipótesis firmada necesita el nivel
    absoluto de retorno histórico (hoy ninguna lo usa — está declarado que el nivel absoluto del
