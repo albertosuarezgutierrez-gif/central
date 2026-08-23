@@ -1,6 +1,67 @@
 # Auditoría diaria — agosto 2026
 
-# Actualización 2026-08-19 — auditoría diaria (ligera)
+# Actualización 2026-08-23 — auditoría diaria (ligera)
+
+Rango: 21 commits desde la pasada del 21/08 05:26 UTC (`0958a0e..5a469d0`) — **sin pasada el
+22/08** (ver hallazgo 🔴 de abajo). Casi todo autodocumentado PR a PR (Alpha Vantage
+splits/divisa/screener #1579, coordinador patrimonial #1591, vigía de conectores #1581, fix
+`sivra_canal` #1586, swap IA #1583, rescate Edge Functions #1517).
+
+## 🔴 Hallazgo — 3 rutinas Claude programadas sin rastro el 22/08/2026
+`auditoria-diaria`, `mercado-booking` y `facturas-correo` dejan commit de autoinforme cada vez
+que corren (`chore(auditoría): pasada ligera…`, `mercado-booking: bitácora pasada…`,
+`facturas-correo: auto-informe pasada…`). Los tres tienen su último commit el **21/08** y el
+siguiente es **hoy, 23/08** — ninguno dejó rastro el 22/08. En el mismo día sí se dispararon
+otras sesiones (health-check IA → `buscador-ia`, coordinador patrimonial, fix de `sivra_canal`,
+PR #1594) y los crons de Vercel corrieron con normalidad (`smoobu_sync`, `sivra_canal`,
+`trading_*`, etc. todos con huella el 22/08). No hay causa visible desde el repo — no es un
+apagón de infraestructura de Claude Code en general, es específico de estos 3 triggers.
+**Efecto medido:** `market_rates` con `fuente='booking_mcp'` lleva desde 21/08 03:40 UTC sin
+fila nueva (46,4h > umbral 30h de `AGENTES_VIGILADOS`), y `agente_latidos.sivra_mercado_booking`
+confirma el mismo hueco.
+**Acción manual de Alberto:** revisar en claude.ai (Configuración → Triggers programados) que
+los 3 triggers siguen activos y con la hora correcta — no hay manera de diagnosticarlo por MCP
+desde este entorno. Anotado también en `docs/CONTEXTO-SESIONES.md` (Estado vivo).
+
+## ⛔→ℹ️ Heartbeat de crons y agentes (13+12 huellas)
+- **a) Latidos `agente_latidos` (13):** `ses_transporte` sin ninguna pasada OK todavía —
+  `detalle`: «no hay ningún establecimiento dado de alta en /sivra/partes/establecimientos»
+  (falta configurar, no es la avería de SES/credenciales que describe la nota del latido).
+  `sivra_mercado_sweep` con `ok=false` (47h sin OK, Serper 400 en una fecha concreta) — **es el
+  latido rojo A PROPÓSITO** ya documentado en «Estado vivo» (Mercado SIVRA) hasta que la Rutina
+  Booking consolide el corpus; no es hallazgo nuevo. `sivra_mercado_booking` en rojo por el hueco
+  del 22/08 de arriba. Resto (11) ✅ dentro de cadencia.
+- **b) Tablas de dominio (12):** `psd2-sync` ⛔ a 68h (>54h) — coincide con el fin de semana sin
+  movimientos nuevos, cubierto por el guardián dedicado `psd2-health-check` (umbral <48h); no se
+  reabre aquí. `AGENTE mercado-booking (diario)` ⛔ — mismo hallazgo del hueco del 22/08. Resto
+  (10) ✅.
+- `agente_reparaciones`: sin intentos de auto-reparación en 7 días — coherente, ninguno de los
+  fallos de arriba tiene forma de excepción reparable (son degradaciones externas o config
+  pendiente, no bugs de código).
+
+## ✅ Backlog de PRs de rutinas + salud del automerge
+2 PRs abiertos, ambos draft y sin conflicto: **#1594** (`claude/reserva-diciembre-socorro-w7c3z4`,
+22/08, fix real de producción — un piso se quedó sin tarifar por un `MAX(search_date)` sin
+filtrar comparables plausibles; pendiente de revisión/merge de Alberto) y **#1514** (20/08, ya
+desatascado en la pasada del 21/08, sigue esperando ojo humano). Ninguno >7 días. `rutinas-
+automerge.yml`: ejecuciones horarias sin huecos, última 02:04 UTC (17 min antes de esta pasada).
+
+## ✅ Integridad estructural — sin hallazgos
+`pnpm install --frozen-lockfile` OK. `pnpm auditar:check`: radiografía al día.
+
+## ✅ Reconciliación memoria/skills — 2 correcciones de texto (carril 1)
+- `docs/HUECOS-ABIERTOS.md`: **H2 (screener de acciones) cerrado** — `screenerMercado.ts`
+  (PR #1579) consume Financial Datasets `screen_stocks` con crédito real activado 21/08; seguía
+  listado como vivo pese a que el propio `docs/CONTEXTO-SESIONES.md` (Estado vivo, trading) ya
+  lo daba por cerrado.
+- `docs/CONTEXTO-SESIONES.md`: añadida referencia `(PR #1586)` a la entrada del 22/08 sobre el
+  canal (título coincidía con el commit pero no citaba el número); `Estado vivo` re-fechado a
+  23/08 con los 3 pendientes de arriba.
+- `docs/SKILLS.md`, skills-maestro y manuales de `apps/ia-rest`: sin drift — el rango no toca
+  ningún archivo visible de `apps/ia-rest/src/app` ni `public/`, y las skills nuevas
+  (`radar-espana`, `patrimonio-cfo`) ya se dieron de alta en el propio PR #1591.
+
+
 
 Rango: 12 commits desde la última auditoría (2026-08-18, `04c3b62..128702c`). Casi todos
 autodocumentados PR-a-PR (curva de evolución de cartera trading #1476/#1477, compra VWCE
