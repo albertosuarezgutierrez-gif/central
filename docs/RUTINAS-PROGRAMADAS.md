@@ -399,9 +399,34 @@ hecho contra la configuración de las 30 rutinas, no contra la pantalla.
 | `rrhh-compliance-calendar` | rrhh-compliance-calendar | Día 1 | ⛔ sin línea |
 | `github-vigia` | — | — | sin trigger (ya sabido) |
 
-**Ninguna de esas 8 skills declara qué hacer si el token falta**, así que el fallo es mudo: la
-rutina corre, hace su trabajo, y el aviso no sale. Aguas arriba se lee igual que «no había nada
-que contar».
+**Corrección del mismo día, tras leer el código: el fallo NO es mudo por diseño — es mudo en la
+práctica, que es peor.** Las 13 skills SÍ hacen el preflight `GET /api/internal/alerta` al arrancar,
+y su protocolo manda que ante un `401` griten en sesión con `🔇 SIN TELEGRAM (401):` y dejen el aviso
+entero en `docs/AGENTES-BITACORA.md`. La vía ruidosa está escrita.
+
+**Y no se ha ejecutado nunca:** `SIN TELEGRAM` aparece **0 veces** en toda la bitácora. Mientras
+tanto esas mismas rutinas sí escriben ahí sus partes normales (`facturas-correo` dejó el suyo el
+23/08 a las 06:33, sin token). O sea: **la bitácora se lee sana mientras el canal está muerto**, y el
+registro que debía delatarlo está a cero. No sabemos si se saltan el preflight o si lo hacen y no
+cumplen el «déjalo escrito»: eso se mira en una pasada real, no se deduce.
+
+El endpoint además **se chiva de sus propios 401** por Telegram —se construyó tras el incidente del
+26-27/07/2026 justo para eso— pero con esta guarda:
+
+```js
+// Solo si venía un Bearer: una petición SIN token no es una rutina rota, es ruido de internet.
+if (!req.headers.get('authorization')) return
+```
+
+Cubre «el token se desincronizó» (llega Bearer malo → avisa) y es **ciego a «la rutina nunca tuvo
+token»** (no llega Bearer → silencio). Que es exactamente la forma de estas 8: el mecanismo
+antisilencio tiene un punto ciego con la forma del caso que más importa.
+
+**Vía que ya existe y nadie usa:** `rutina_tokens` (tabla, solo SHA-256) — token POR rutina,
+revocable individualmente, **rotable sin redeploy y sin entrar a Vercel**, con alcance a este
+endpoint y nada más. Implementada (`lib/rutina-tokens.ts`, guardián
+`test/regression-rutina-tokens.test.ts`) y documentada en `docs/AVISOS-AGENTES.md`. Es la respuesta
+a la objeción de fondo —un secreto portador copiado a mano en N prompts— y lleva ahí sin usarse.
 
 El caso que más duele es **`psd2-health-check`**: su ÚNICO producto es gritar cuando la banca deja
 de sincronizar. Un guardián que no puede gritar no es medio guardián — es peor que ninguno, porque

@@ -2405,6 +2405,18 @@ Pendiente: que Alberto revise el spec → plan de implementación. Códigos/cred
     abrir la rutina YA GUARDADA; 4 min así, 0 ejecuciones, sin acceso a nada. **Regla nueva: el
     formulario no es evidencia, el estado guardado sí.** Las 2 y 3, con clicks reales, salieron
     bien. Escrito en la skill `conectores-vigia` y en el pendiente 12 de `RUTINAS-PROGRAMADAS.md`.
+  - **🔴 El registro que debía delatar el canal muerto está a CERO (23/08, corrige a #1615)** — las
+    13 skills SÍ hacen preflight y su protocolo manda gritar `🔇 SIN TELEGRAM (401):` y anotarlo en
+    `docs/AGENTES-BITACORA.md` ante un 401. Esa cadena **nunca se ha ejecutado**: `SIN TELEGRAM`
+    sale 0 veces en toda la bitácora, mientras esas mismas rutinas sí dejan ahí sus partes normales
+    (`facturas-correo`, hoy 06:33, sin token). **La bitácora se lee sana con el canal muerto.**
+    Falta saber si se saltan el preflight o si lo hacen y no cumplen el «déjalo escrito» — se mira
+    en una pasada real. Y el chivatazo del propio endpoint tiene un punto ciego: solo salta si llega
+    un Bearer, así que «rutina que NUNCA tuvo token» pasa por ruido de internet.
+  - **🟢 La solución ya está en el repo sin usar: `rutina_tokens`** (tabla, solo SHA-256) — token por
+    rutina, revocable, **rotable sin redeploy ni entrar a Vercel**, con alcance solo a
+    `/api/internal/alerta`. `lib/rutina-tokens.ts` + guardián + `docs/AVISOS-AGENTES.md`. Es la
+    respuesta a «un secreto portador copiado a mano en N prompts», y lleva ahí sin estrenar.
   - **🔴 8 rutinas dicen que avisan por Telegram y NO pueden (23/08)** — cruce skills-que-avisan ×
     triggers-con-token: `psd2-health-check`, `trading-analista`, `mercado-booking` (línea VACÍA),
     `pricing-agente`, `facturas-correo`, `fiscal-novedades`, `ialimp-client-health` y
