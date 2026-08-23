@@ -14,6 +14,7 @@ import { factorDemandaFecha, type DemandaFechaResult } from "@/lib/sivra/pricing
 import { elegirBucket } from "@/lib/sivra/pricing-bucket-fuente"
 import { MIN_EUR_PLAZA_COMP } from "@/lib/sivra/pricing-comps-plausibles"
 import { sqlUltimaPasadaUtil, avisoPisosSinTarifar, type PisoSaltado } from "@/lib/sivra/pricing-corpus-utilizable"
+import { avisoSmoobuRechaza, type FalloEscritura } from "@/lib/sivra/pricing-latido-apply"
 import { aplicarPrior, indicesPrior, type IndicePrior, type MesHistorico } from "@/lib/sivra/prior-estacional"
 import { getSmoobuKey } from "@/lib/smoobu"
 import { tgSend } from "@central/core-telegram"
@@ -178,7 +179,9 @@ export async function POST(req: NextRequest) {
   `)
 
   if (recs.length === 0) {
-    return NextResponse.json({ ok: true, dryRun, applied: 0, message: "Ningún piso con apply_enabled=true (o filtro sin match)" })
+    // `paused` viaja también por esta puerta corta: sin él, `apply-auto` no puede distinguir en su
+    // latido una pausa global (motor apagado a propósito, o por olvido) de un simulacro cualquiera.
+    return NextResponse.json({ ok: true, dryRun, paused, applied: 0, fechas_escritas: 0, properties: 0, message: "Ningún piso con apply_enabled=true (o filtro sin match)" })
   }
 
   const today = new Date()
@@ -597,6 +600,13 @@ export async function POST(req: NextRequest) {
   // dentro, en un array que solo ve quien lee la respuesta HTTP a mano. Ese día House se quedó el
   // día entero sin tarificar (1 comparable utilizable de 22) y ni Telegram ni el latido lo dijeron.
   const sinTarifar: PisoSaltado[] = []
+  // 🛑 Escrituras que Smoobu RECHAZÓ. Es el hallazgo 🔴 nº2 de la auditoría del 23/08/2026: el
+  // eslabón que pone el precio delante del huésped fallaba en silencio — solo se apuntaba en
+  // `results`, que no lee nadie. Ahora sale por Telegram, marca `ok:false` y tiñe el latido.
+  const fallosSmoobu: FalloEscritura[] = []
+  // Noches que SÍ entraron en el canal. Sin este contador, el latido no puede distinguir «corrió y
+  // nada cruzó el umbral del 3%» de «corrió y Smoobu lo rechazó todo».
+  let fechasEscritas = 0
 
   for (const r of recs) {
     const smoobuId = SMOOBU_ID[r.property_id]
@@ -951,13 +961,26 @@ export async function POST(req: NextRequest) {
           body: JSON.stringify({ apartments: [smoobuId], operations: ops }),
         })
         written = res.ok
-        if (!res.ok) results.push({ property: r.property_id, error: `Smoobu POST ${res.status}` })
+        if (!res.ok) {
+          results.push({ property: r.property_id, error: `Smoobu POST ${res.status}` })
+          fallosSmoobu.push({ property: r.property_id, motivo: `Smoobu POST ${res.status}`, fechas: ops.length })
+        }
       } catch (e) {
         results.push({ property: r.property_id, error: `Smoobu POST ${String(e).slice(0, 80)}` })
+        fallosSmoobu.push({ property: r.property_id, motivo: `Smoobu POST ${String(e).slice(0, 60)}`, fechas: ops.length })
       }
     }
+    if (written) fechasEscritas += ops.length
 
-    if (audit.length > 0) {
+    // 🛑 Si Smoobu rechazó, NO se anota nada en `pricing_applied`. Escribirlo igual —que es lo que
+    // se hacía hasta el 23/08/2026— tiene dos costes, y el segundo es el que muerde:
+    //   1. La tabla de auditoría AFIRMA «481€ aplicado» con el canal en 534€. Nadie lo comprueba.
+    //   2. `pricing_applied` es de donde sale `ref24`, el ancla del raíl de MAÑANA (ver la consulta
+    //      de arriba). Un precio fantasma se convierte en el punto desde el que se mide el ±20%,
+    //      así que el error no se queda quieto: se propaga y se compone.
+    // En simulacro sí se anota, como siempre: `dry_run=true` ya lo distingue y `ref24` lo excluye.
+    const anotable = dryRun || written || ops.length === 0
+    if (audit.length > 0 && anotable) {
       try {
         const auditRows = audit.map(a =>
           Prisma.sql`(${r.property_id}, ${a.rate_date}::date, ${a.old_price}::int, ${a.new_price}::int, ${dryRun}, ${a.demanda_fuente}, ${a.demanda_gateada})`)
@@ -1061,6 +1084,17 @@ export async function POST(req: NextRequest) {
     } catch { /* best-effort: el hueco ya va declarado en la respuesta */ }
   }
 
+  // 🛑 Smoobu ha rechazado la escritura de algún piso: el motor decidió y el canal no lo aceptó.
+  // SIN dedupe a propósito, al revés que el aviso de `sin-tarifar`: aquel se repite las 3 pasadas
+  // porque el corpus tarda un día en rehacerse, y un mensaje al día basta. Éste es una avería viva
+  // del canal — si sigue rota a las 14:30 y a las 20:30, hay que oírlo las tres veces.
+  const avisoRechazo = avisoSmoobuRechaza(fallosSmoobu)
+  if (avisoRechazo) {
+    try {
+      await tgSend(avisoRechazo)
+    } catch { /* best-effort: el fallo ya va en la respuesta y en el latido de apply-auto */ }
+  }
+
   if (plAvisos.length > 0) {
     try {
       await tgSend(
@@ -1114,7 +1148,15 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({
-    ok: !eventosIlegibles && !plIlegible,
+    // 🛑 Un rechazo de Smoobu invalida la pasada: el precio no ha llegado al huésped, que es lo
+    // único que este endpoint existe para conseguir. Hasta el 23/08/2026 esto salía `ok:true`.
+    ok: !eventosIlegibles && !plIlegible && fallosSmoobu.length === 0,
+    // Escrituras rechazadas por el canal, con las noches que se quedaron sin aplicar. Las lee
+    // `apply-auto` para teñir su latido; van en la respuesta para que el camino manual las vea igual.
+    smoobu_rechazos: fallosSmoobu.length > 0 ? fallosSmoobu : undefined,
+    // Noches que SÍ entraron. Un 0 aquí es «nada cruzó el umbral del 3%», no «no corrió»: eso
+    // último lo dice la AUSENCIA de latido, no este número.
+    fechas_escritas: fechasEscritas,
     degradado: eventosIlegibles ? "pricing_eventos_auto ilegible: tarificado SIN eventos" : undefined,
     pl_degradado: plIlegible ? `referencia PriceLabs ilegible: tarificado SIN suelo PL (${plIlegible})` : undefined,
     // Degradación menor: no invalida la pasada, pero tiene que verse sin tener que deducirlo.

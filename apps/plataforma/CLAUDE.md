@@ -904,10 +904,39 @@ tenía 93 comparables plausibles. Una pasada ilegible SOMBREABA a una legible �
   (`avisoPisosSinTarifar`, dedupe por piso y día sobre `pricing_avisos` porque el motor corre 3 veces
   al día) y campo `sin_tarifar` en la respuesta. **No** marca `ok:false` a propósito: los demás pisos
   sí se tarificaron, y el vigía de latidos sigue reservado para lo que invalida la pasada entera.
-- **`apply-auto` NO deja latido en `agente_latidos`**, así que «0 filas en `pricing_applied`» no
-  distingue «corrió y nada se movió ≥3%» de «no corrió». Se resolvió a mano contrastando el patrón
-  histórico (el 21/08 tampoco hubo pasada de las 14h) y `lib/cron-dispatch.ts`. **Pendiente**: darle
-  huella propia.
+- **`apply-auto` YA deja latido propio** (`sivra_pricing_apply`, 23/08/2026 — antes había que
+  deducirlo a mano contra `lib/cron-dispatch.ts`, porque «0 filas en `pricing_applied`» no distingue
+  «corrió y nada se movió ≥3%» de «no corrió»). Ver el apartado siguiente.
+
+## 🛑 El precio que Smoobu RECHAZA + el latido de `apply-auto` (23/08/2026)
+Hallazgos 🔴 1 y 2 de `docs/AUDITORIA-2026-08-pricing-mudo.md`, cerrados juntos porque son el mismo
+silencio en el mismo eslabón: **el que pone el precio delante del huésped**.
+- **Latido `sivra_pricing_apply`** (cron 08:30 · 14:30 · 20:30). **Umbral 26 h, y el número está
+  razonado, no copiado**: el hueco legítimo más largo es 20:30 → 08:30 = 12 h, y el vigía comprueba
+  a las 07:45 (11,25 h en un día sano). Con 26 h salta al perder un DÍA ENTERO y se calla si solo
+  faltó una pasada suelta. **Los 30 h de los crons diarios NO valen aquí** — no llegaría a saltar
+  hasta perder día y medio. Escribe **latido de INTENTO al arrancar** (lección de `facturas-scan`,
+  31/07): son 365 días × 4 pisos contra Smoobu con `maxDuration = 300`, y sin esa marca un 504 a
+  mitad sería indistinguible de «el cron no se dispara».
+- **🚦 Lo que NO pone el latido en rojo, a propósito:** `0 noches escritas` (es «nada cruzó el 3%»;
+  lo que no puede ser es indistinguible de «no corrió», y eso lo arregla que EXISTA el latido, no
+  su color), un piso `sin_tarifar` (tiene su propio aviso) y `demanda_degradada` (degradación menor
+  ya declarada). Un vigía que grita por lo que no le toca acaba ignorándose.
+- **La pausa global gana al «SIMULACRO» en el parte**: `apply` convierte la pasada en `dryRun`
+  cuando `pricing_config.paused`, así que ambos casos llegan con el mismo flag. Sin distinguirlos,
+  una pausa OLVIDADA —el motor entero apagado— se leería como una llamada de prueba.
+- **Smoobu rechaza → 🛑 Telegram + `ok:false` + latido rojo** (antes: solo una línea en el array
+  `results` de la respuesta HTTP, que no lee nadie). **SIN dedupe**, al revés que el aviso de
+  `sin-tarifar`: aquel se repite las 3 pasadas porque el corpus tarda un día en rehacerse; éste es
+  una avería VIVA del canal y hay que oírla las tres veces.
+- 🚨 **Y lo menos obvio: si Smoobu rechaza, NO se anota en `pricing_applied`.** Anotarlo igual
+  —que es lo que se hacía— cuesta dos cosas, y la segunda muerde: (1) la tabla de auditoría afirma
+  «481€ aplicado» con el canal en 534€; (2) **`pricing_applied` es de donde sale `ref24`, el ancla
+  del raíl de MAÑANA**, así que un precio fantasma se convierte en el punto desde el que se mide el
+  ±20% y el error se propaga y se compone. En simulacro sí se anota (`dry_run=true` lo distingue y
+  `ref24` ya lo excluye).
+- Lógica en el módulo PURO `lib/sivra/pricing-latido-apply.ts` (`pasadaFiable`/`detalleApply`/
+  `avisoSmoobuRechaza`, 15 tests), no incrustada en el route.
 
 ## 💓 Latidos de agentes — el vigía que avisa por Telegram (ampliado 30/07/2026)
 `lib/monitoring/latidos.ts` (registro + `evaluarLatido` puro) + cron `agentes-latido` (07:45 UTC) →

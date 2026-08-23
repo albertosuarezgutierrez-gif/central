@@ -277,6 +277,30 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'Huella: agente_latidos.sivra_mercado_booking.',
   },
   {
+    id: 'sivra_pricing_apply',
+    etiqueta: '💰 Motor de precios, pasada automática (08:30 · 14:30 · 20:30)',
+    // 🚨 El umbral sale de la ARITMÉTICA del cron, no de copiar el 30 h de los diarios. Corre 3
+    // veces al día, así que el hueco legítimo más largo es 20:30 → 08:30 = 12 h. El vigía comprueba
+    // a las 07:45, y ahí la última pasada buena de un día sano es la de las 20:30 de ayer: 11,25 h.
+    // Con 26 h salta cuando se pierde un DÍA ENTERO (35,25 h desde anteayer) y se calla si solo
+    // faltó alguna pasada suelta — que es lo que se quiere cazar aquí. Con 30 h no llegaría a
+    // saltar hasta perder día y medio; con 12 h saltaría el primer despiste.
+    maxHoras: 26,
+    nota:
+      'NADIE está escribiendo precios. Es el último eslabón: lo que decide este cron es lo que ve ' +
+      'el huésped, y mientras esté mudo los cuatro pisos se quedan con el precio del último día ' +
+      'que funcionó — que NO es «el mercado dice que están bien», es «no se ha podido mirar». ' +
+      'LEE EL DETALLE, que distingue tres averías distintas y mandan a sitios opuestos: ' +
+      '(1) «🛑 Smoobu RECHAZÓ» = el motor calculó bien y el CANAL no lo aceptó — mira la API key de ' +
+      'Smoobu, no el pricing; esas noches NO se anotaron en `pricing_applied` a propósito, así que ' +
+      'la tabla de auditoría sigue siendo verdad; (2) «degradado» = tarificó sin eventos o sin el ' +
+      'suelo de PriceLabs, y esos precios no son de fiar para fechas de evento; (3) «pasada en ' +
+      'curso — aún sin completar» con horas encima = arranca y muere antes de terminar (mira si hay ' +
+      '504 en los logs: son 365 días × 4 pisos contra Smoobu con maxDuration 300). ' +
+      '⚠️ «0 noche(s) escritas en 4 piso(s)» NO es una avería: es que nada cruzó el umbral del 3%. ' +
+      'La avería sería que no hubiera latido. Huella: agente_latidos.sivra_pricing_apply.',
+  },
+  {
     id: 'sivra_pricing_guard',
     etiqueta: '🛡️ Guardián de precios (diario 07:30)',
     // Cron diario → 30 h deja pasar una pasada saltada sin dar la lata.

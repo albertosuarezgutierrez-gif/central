@@ -95,6 +95,14 @@ const PROBES: Record<string, Prisma.Sql> = {
   ses_transporte: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'ses_transporte'`,
+  // Motor de precios. La huella NO puede ser `max(applied_at) FROM pricing_applied`: esa tabla
+  // solo crece cuando alguna noche cruza el umbral del 3%, así que una pasada tranquila y un cron
+  // muerto darían la MISMA señal — que es exactamente la ambigüedad que hubo que deshacer a mano el
+  // 22/08/2026. La huella es la de la PASADA: `apply-auto` la escribe corra lo que corra, y además
+  // deja marca de INTENTO al arrancar para distinguir «no se dispara» de «no termina».
+  sivra_pricing_apply: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'sivra_pricing_apply'`,
   sivra_pricing_guard: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'sivra_pricing_guard'`,
