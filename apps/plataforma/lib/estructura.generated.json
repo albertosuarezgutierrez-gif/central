@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-22T08:35:56Z",
+  "generadoEn": "2026-08-23T09:44:18Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4613,6 +4613,34 @@
   ],
   "novedades": [
     {
+      "titulo": "Latido `sivra_pricing_apply`",
+      "fecha": ""
+    },
+    {
+      "titulo": "Smoobu rechaza → Telegram + `ok:false` + latido rojo",
+      "fecha": ""
+    },
+    {
+      "titulo": "Siguen abiertos:",
+      "fecha": ""
+    },
+    {
+      "titulo": "3 🔴:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Comprobado a mano que el 2 NO está ocurriendo:",
+      "fecha": ""
+    },
+    {
+      "titulo": "2 🟡:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Pendiente de Alberto:",
+      "fecha": ""
+    },
+    {
       "titulo": "NO borrar `Cloude`",
       "fecha": ""
     },
@@ -4642,34 +4670,6 @@
     },
     {
       "titulo": "La guest app tiene API JSON abierta con el token del propio enlace:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Precedencia:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Entregas 2-5 también hechas",
-      "fecha": ""
-    },
-    {
-      "titulo": "Mergeado y VIVO",
-      "fecha": ""
-    },
-    {
-      "titulo": "`?dry=1`",
-      "fecha": ""
-    },
-    {
-      "titulo": "🪤 Landmine caro:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Aplicado en prod con OK de Alberto:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Rutina nueva",
       "fecha": ""
     }
   ],
