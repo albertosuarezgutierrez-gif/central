@@ -15,6 +15,15 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-23 · mercado-booking** · hizo: pasada diaria, plan `?max=24` (512 ventanas candidatas,
+  488 recortadas por el tope — todas las 24 pedidas eran de ronda 1/evento, `sin_medir_nunca:24`).
+  238 comps reales escritos en `market_rates` (9-10 por ventana; medianas ~90-160€/noche en fechas
+  normales, hasta ~1.300-3.500€/noche en Semana Santa 25-27/03 y Feria por el factor de evento).
+  📐 4/4 ventanas de escaparate propio medidas (paso 2-bis) → `pricing_escaparate` para que el cron
+  de canal recalibre `channel_markup`/`cuota_fija`. 🪞 2 anuncios propios descartados del corpus de
+  comparables (HOUSE SEVILLANA en 2026-10-25 aforo12 y 2027-03-25 aforo12, este último con la
+  ventana de Semana Santa a 3.957€/2 noches). ⚠️ 0 ventanas sin respuesta del conector. dudas: —;
+  fallos: —; PRs/commits: — (solo escritura vía `/api/sivra/mercado/ingest`, sin cambios de código).
 - **2026-08-22 · buscador-ia** · hizo: disparado por hallazgo del health-check diario (no pasada
   semanal): `z-ai/glm-5.2` (default NIM desde 17/08) murió por 410 Gone el 21/08, 3 días antes de
   su propia fecha de EOL anunciada. Confirmado contra `/v1/models` real vía harness temporal en
