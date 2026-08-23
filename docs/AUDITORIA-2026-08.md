@@ -95,8 +95,14 @@ Cada hallazgo se investigó a causa raíz antes de tocar nada:
   doble: el cron diario `mercado/cron` (payload distinto, sin cambios) cayó a la vez con el mismo
   400, y la pasada del 22/08 03:00 escribió ~98 filas y EMPEZÓ a fallar a mitad — la misma key
   funcionó y dejó de funcionar dentro de una invocación, o sea que la key es válida y lo que cambió
-  fue el saldo (Serper devuelve 400 «Not enough credits» sin créditos, 403 con key mala). El gasto
-  cuadra: el sweep pasó a diario el 01/08 (~130 búsquedas/día) y fundió el paquete en ~3 semanas.
+  fue el saldo (Serper devuelve 400 «Not enough credits» sin créditos, 403 con key mala).
+  ⚠️ **Matiz corregido el mismo día:** la aritmética de «se agotó por el ritmo de gasto» NO cuadra
+  (~130 búsquedas/día × 3 semanas ≈ 2.700 créditos, no un paquete entero de 50k) — o quedaba muy
+  poco saldo de un paquete viejo, o los créditos **CADUCARON** (Serper los caduca a los 6 meses, y
+  una caducidad instantánea produce la misma firma de degradación a mitad de pasada). Verificar en
+  Billing cuál de las dos fue antes de recargar: si fue caducidad, comprar grande repite el
+  desperdicio. A ~4.000-5.000 búsquedas/mes el paquete racional es el pequeño (Starter 50 US$/50k),
+  aunque su tarifa unitaria sea peor — los paquetes grandes caducan sin usarse.
   **Acción de Alberto: recargar créditos en serper.dev → Billing** — al recargar se recupera solo.
   De paso (este PR): los dos `throw` de Serper incluyen ahora el body del error
   (`sweep/route.ts` y `cron/route.ts`) para que el próximo agotamiento se autodiagnostique.
@@ -106,9 +112,20 @@ Cada hallazgo se investigó a causa raíz antes de tocar nada:
   01→04/08). Semáforo de `/banca` en ámbar, coherente. ⚠️ **Aviso de calendario: el consent PSD2 de
   BBVA caduca el 11/09** (~19 días) — renovar desde `/banca` → «➕ Añadir → Conectar banco».
 - **`sivra_mercado_booking` → SE RECUPERÓ SOLA.** La rutina corrió hoy (PR #1601, 238 comps, 24
-  ventanas + escaparate). El hueco fue el 22/08 y afectó a 3 rutinas de sesión a la vez
-  (ya diagnosticado por la pasada ligera de hoy, PR #1598) — el porqué del hueco del sábado sigue
-  siendo del trigger de claude.ai, que solo puede mirar Alberto.
+  ventanas + escaparate). El hueco fue el 22/08 y afectó a 3 rutinas de sesión a la vez.
+  - **CAUSA REAL del hueco (corregida el mismo día por Alberto, con el historial de claude.ai
+    delante — la hipótesis inicial «el trigger no dispara en finde» era FALSA):** las tres rutinas
+    **SÍ dispararon puntualmente** el sábado 22/08 (04:01, 05:34 y 08:04 CEST) y las bloqueó el
+    **límite semanal de uso de Claude** («You've hit your weekly limit · resets 7am UTC»). No es
+    puntual: mismo fallo los sábados 1, 8 y 22 de agosto — la cuota semanal se agota el viernes por
+    la noche y la madrugada del sábado (antes del reset de las 07:00 UTC / 09:00 CEST) es franja
+    muerta. El 1 y el 8 hubo reintento a las ~09:17 CEST (post-reset) y funcionó; el 22 no lo hubo.
+  - **Mitigación propuesta (de Alberto/Chrome, pendiente de aplicar en claude.ai → Rutinas):**
+    mover las rutinas de madrugada del sábado a ≥09:30 CEST. Ojo: el patrón afecta a CUALQUIER
+    rutina en esa franja (p. ej. `trading-analista` corre mar-sáb de madrugada), no solo a las 3
+    detectadas — y mover horarios sin bajar consumo solo desplaza el agotamiento al viernes. El
+    fallo por límite además no genera hoy ninguna alerta útil (se supo 2 días tarde, por el
+    heartbeat): hueco conocido, candidato a diseño aparte.
 - **PR #1594 → CONFLICTO RESUELTO.** Merge de `main` en su rama conservando ambas entradas de
   memoria (inserción pura verificada con diff3), código del PR intacto byte a byte, 7/7 tests del
   módulo en verde, push `7563289f`. El PR queda mergeable (draft, decide Alberto).
@@ -122,9 +139,12 @@ Cada hallazgo se investigó a causa raíz antes de tocar nada:
   el último que tocó sus árboles de dependencias).
 
 ## Acciones manuales de Alberto (lo que queda)
-1. **Recargar créditos de Serper** (serper.dev → Billing) — hasta entonces el sweep seguirá en rojo
-   (el corpus por fecha lo sostiene `mercado-booking`, que ya corre).
-2. **Revisar por qué las rutinas de sesión no corrieron el sábado 22/08** (trigger de claude.ai).
+1. **Serper**: verificar en Billing si el saldo se agotó o CADUCÓ, y recargar (a este volumen, el
+   paquete pequeño — los grandes caducan a los 6 meses sin usarse). Hasta entonces el sweep sigue
+   en rojo (el corpus por fecha lo sostiene `mercado-booking`, que ya corre).
+2. **Rutinas del sábado**: mover las de madrugada del sábado a ≥09:30 CEST en claude.ai → Rutinas
+   (causa real confirmada: límite semanal de Claude, reset sábado 07:00 UTC — ver arriba) y
+   plantearse recortar el consumo semanal para que el agotamiento no se corra al viernes.
 3. **Renovar el consent PSD2 de BBVA antes del 11/09** (desde `/banca`).
 4. Decidir sobre los PRs draft #1594 (ya mergeable) y #1514.
 
