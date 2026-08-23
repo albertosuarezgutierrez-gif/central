@@ -15,6 +15,19 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-23 · pricing-agente / mercado-booking** · hizo: seguimiento pedido por Alberto tras el
+  arreglo del canal (#1582) — al comprobar que el precio llegaba a Smoobu apareció que **House
+  Sevillana no recibió NI UNA fila de `pricing_applied` el 22/08** (los otros tres, 526 entre los
+  tres). Causa: `mercado-booking` no entregó ese día (0 filas `booking_mcp` frente a 237/238/239 los
+  días 19-21) y el motor elegía corpus por `MAX(search_date)` a secas → ganó una pasada de serper con
+  1 comparable plausible de 22 → `datos_insuficientes` → piso saltado en silencio. Arreglado y
+  mergeado (#1594): se elige la última pasada con ≥5 plausibles y el salto avisa por Telegram.
+  El 23/08 la rutina volvió a entregar (238 comps) y House recuperó 58 comparables plausibles.
+  dudas: `apply-auto` no deja latido, así que «0 filas» es ambiguo por diseño — se resolvió
+  contrastando el patrón histórico, no con un dato directo; **propuesta para el entrenador: darle
+  huella propia en `agente_latidos`**. fallos: el fallo de `mercado-booking` del 22/08 no disparó
+  ninguna alerta propia — su latido quedó a 41 h sin latir y nadie lo miró hasta que se buscó la
+  causa aguas arriba de otro síntoma. PRs/commits: #1594
 - **2026-08-23 · mercado-booking** · hizo: pasada diaria, plan `?max=24` (512 ventanas candidatas,
   488 recortadas por el tope — todas las 24 pedidas eran de ronda 1/evento, `sin_medir_nunca:24`).
   238 comps reales escritos en `market_rates` (9-10 por ventana; medianas ~90-160€/noche en fechas
