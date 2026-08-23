@@ -98,6 +98,9 @@ const PROBES: Record<string, Prisma.Sql> = {
   sivra_pricing_guard: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'sivra_pricing_guard'`,
+  paper_tracker: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'paper-tracker'`,
   // La huella NO es `trading_operaciones_sync`: esa tabla solo se escribe cuando el empujón LLEGA,
   // así que una pasada que no pudo leer IBKR no dejaría rastro y su silencio se leería como «no
   // hubo operaciones». El latido lo manda la pasada por /api/internal/latido pase lo que pase.
