@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-23T09:44:18Z",
-  "sha": "c0b3b5303d2ae6c523e220c98e495a4d3e9ba484",
+  "generadoEn": "2026-08-23T10:16:07Z",
+  "sha": "1082c4e1ca3d0779a3ec4b79ea941b187bcb13ea",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -57400,7 +57400,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/pricing/apply-auto",
-      "hash": "a368de9152a5"
+      "hash": "564242424235"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/apply/route.ts",
@@ -57416,7 +57416,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 43
+          "linea": 44
         },
         {
           "nombre": "fmt",
@@ -57424,7 +57424,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 44
+          "linea": 45
         },
         {
           "nombre": "GET",
@@ -57432,7 +57432,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 76,
+          "linea": 77,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -57441,7 +57441,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 80
+          "linea": 81
         }
       ],
       "tablas": [
@@ -57465,7 +57465,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "63b43df3be62"
+      "hash": "16fb6d26b896"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -70016,7 +70016,9 @@
       "ambito": "apps/plataforma",
       "resumen": "apps/plataforma/lib/sivra/pricing-ancla-rail.ts Ancla del raíl ±max_change_pct del motor de precios de SIVRA. 🚨 Por qué existe (auditoría 19/08/2026). El raíl está documentado como tope \"±X%/DÍA\", pero el cron corre 3 veces al día: si cada pasada se ancla en el precio que dejó la anterior, el tope ",
       "exporta": [
-        "anclaRail"
+        "anclaRail",
+        "topeRealSinAncla",
+        "avisoRailCiego"
       ],
       "funciones": [
         {
@@ -70036,11 +70038,29 @@
           "retorno": "v is number",
           "linea": 53,
           "resumen": "Un ancla vale si es un número positivo. El 0 y los negativos se descartan a propósito en vez de colarse como ancla: un 0 haría que `lo` y `hi` fueran 0 y el clamp dejaría el precio en 0€ — regalar la "
+        },
+        {
+          "nombre": "topeRealSinAncla",
+          "kind": "function",
+          "exportada": true,
+          "params": "maxChangePct: number, pasadasPorDia: number",
+          "retorno": "",
+          "linea": 81,
+          "resumen": "Tope REAL que queda cuando el ancla se pierde y cada pasada se ancla en la anterior. Se CALCULA en vez de escribirse a mano porque `max_change_pct` es por piso y el nº de pasadas sale del cron: un «−4"
+        },
+        {
+          "nombre": "avisoRailCiego",
+          "kind": "function",
+          "exportada": true,
+          "params": "fallos: LecturaAncla[], rail: { maxChangePct: number; pasadasPorDia: number },",
+          "retorno": "string | null",
+          "linea": 93,
+          "resumen": "Aviso de Telegram cuando la pasada se aborta por no poder leer el ancla. `null` si no hay fallos. Dice explícitamente que los precios se quedan como estaban Y por qué eso es lo correcto: si no, «no se"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "efffa5760bf6"
+      "hash": "8dc407af5c6c"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-bucket-fuente.ts",
@@ -70467,7 +70487,7 @@
           "exportada": true,
           "params": "p: ParteApply",
           "retorno": "boolean",
-          "linea": 54,
+          "linea": 63,
           "resumen": "¿Vale esta pasada como «buena» para el vigía de latidos? Rojo si el motor tarificó degradado (ya era `ok:false` en la respuesta) **o si alguna escritura fue rechazada**: un precio que no llega a Smoob"
         },
         {
@@ -70476,7 +70496,7 @@
           "exportada": true,
           "params": "p: ParteApply",
           "retorno": "string",
-          "linea": 62,
+          "linea": 71,
           "resumen": "Parte legible para `agente_latidos.detalle`. Lo lee un humano a las 07:45 con el Telegram del vigía delante, así que antepone lo que exige acción y dice SIEMPRE de cuántos pisos habla."
         },
         {
@@ -70485,13 +70505,13 @@
           "exportada": true,
           "params": "fallos: FalloEscritura[]",
           "retorno": "string | null",
-          "linea": 91,
+          "linea": 100,
           "resumen": "Aviso de Telegram cuando Smoobu rechaza la escritura. `null` si no hay ninguno. El texto tiene que dejar claro lo que separa este fallo de todos los demás de la cadena: aquí el precio NO cambió en el "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ac86ff64b34d"
+      "hash": "089c84cdb09a"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-precio-huesped.ts",
@@ -96473,6 +96493,6 @@
   ],
   "resumen": {
     "archivos": 2555,
-    "funciones": 7007
+    "funciones": 7009
   }
 }
