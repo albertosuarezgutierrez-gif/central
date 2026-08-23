@@ -32,6 +32,20 @@
 
 ---
 
+### 🛑 (23/08/2026) El raíl ciego: si no se puede leer el ancla, el motor NO tarifa — PR (🔴 3)
+
+- Cierra el tercer y último 🔴 de la auditoría. Las dos lecturas del ancla (`ref24`/`anclaHoy`)
+  colgaban de un `.catch(() => [])`, y un `[]` por excepción es indistinguible del `[]` legítimo
+  (fecha sin histórico, 1ª pasada del día) → el motor caía a `actual` para TODAS las fechas y el tope
+  ±20%/DÍA pasaba a ±20%/PASADA. Mismo agujero del 19/08 (−36% en House), otra puerta.
+- **Cura: abortar, no adivinar.** 503 + `ok:false` + `rail_ciego` + Telegram + latido rojo. También
+  en simulacro (un preview con el raíl 3× más ancho no lo debe mirar nadie).
+- El aviso **CALCULA** el tope real (`topeRealSinAncla`): `max_change_pct` es por piso y las pasadas
+  salen del cron — un «−49%/+73%» hardcodeado caduca solo, y un número falso es peor que ninguno.
+  `PASADAS_POR_DIA_APPLY` lo vigila un test que lee el fuente de `cron-dispatch.ts` (probado en rojo).
+- **Auditoría: los 3 🔴 cerrados.** Siguen abiertos los tres 🟡 (8 degradaciones mudas, watchdog de
+  `pilot-track` sin Telegram, 5 jobs sin latido).
+
 ### 💰 (23/08/2026) El motor de precios ya late, y un rechazo de Smoobu ya se oye — PR (hallazgos 🔴 1 y 2)
 
 - Cierra los dos primeros 🔴 de la auditoría de esta misma mañana. Son el mismo silencio en el

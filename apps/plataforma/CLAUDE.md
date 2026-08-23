@@ -938,6 +938,28 @@ silencio en el mismo eslabón: **el que pone el precio delante del huésped**.
 - Lógica en el módulo PURO `lib/sivra/pricing-latido-apply.ts` (`pasadaFiable`/`detalleApply`/
   `avisoSmoobuRechaza`, 15 tests), no incrustada en el route.
 
+## 🛑 El raíl CIEGO: si no se puede leer el ancla, NO se tarifa (23/08/2026)
+Hallazgo 🔴 3 de la auditoría. Las dos lecturas que alimentan el ancla (`ref24` = último precio
+aplicado ANTES de hoy; `anclaHoy` = con qué precio empezó el día la fecha) colgaban de un
+`.catch(() => [])`.
+- **Por qué era invisible:** un `[]` es LEGÍTIMO (fecha sin histórico, 1ª pasada del día), así que
+  el fallo de consulta entraba por la MISMA puerta que el caso normal. `anclaRail()` caía a `actual`
+  para TODAS las fechas y, con 3 pasadas al día, el tope dejaba de ser ±X%/día para ser ±X%/PASADA.
+  Es el agujero del 19/08 (−36% en 16 fechas de House) **por otra puerta**: allí faltaba histórico,
+  aquí falla la consulta. Y que puede fallar no es teórico — el `42883` del 20/08 tumbó `sivra_canal`
+  en esta misma cadena.
+- **La cura no es adivinar un ancla, es NO TARIFAR:** si cualquiera de las dos revienta, la pasada
+  se aborta (**503** + `ok:false` + `rail_ciego` + Telegram + latido en rojo). Una pasada saltada
+  cuesta seis horas de precio viejo; una con el raíl ciego puede costar la mitad de la noche. La
+  siguiente pasada lo reintenta sola.
+- **Se aborta también en SIMULACRO**, a propósito: un preview con el raíl 3× más ancho son números
+  que nadie debería mirar, y así queda un solo camino que razonar.
+- 🚨 **El aviso CALCULA el tope real** (`topeRealSinAncla`, en `pricing-ancla-rail.ts`) en vez de
+  citar el «−49%/+73%». `max_change_pct` es POR PISO y las pasadas salen del cron: un número
+  hardcodeado deja de ser verdad al cambiar cualquiera de los dos, y **un aviso con un número falso
+  es peor que uno sin número**. `PASADAS_POR_DIA_APPLY` (en `pricing-latido-apply.ts`) lo vigila un
+  test que lee el FUENTE de `cron-dispatch.ts`: si alguien añade una 4ª pasada, salta en rojo.
+
 ## 💓 Latidos de agentes — el vigía que avisa por Telegram (ampliado 30/07/2026)
 `lib/monitoring/latidos.ts` (registro + `evaluarLatido` puro) + cron `agentes-latido` (07:45 UTC) →
 **Telegram**. Regla de oro: solo se vigilan huellas que se refrescan en CADA pasada del agente.

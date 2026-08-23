@@ -17,7 +17,7 @@
 |---|---|---|---|
 | 1 | `apply-auto` — el eslabón que ESCRIBE precios — no tiene latido | 🔴 | ✅ **CERRADO 23/08/2026** |
 | 2 | Un fallo de escritura en Smoobu es mudo, y `pricing_applied` se escribe igual | 🔴 | ✅ **CERRADO 23/08/2026** |
-| 3 | El raíl de ±20%/día se ensancha a ±20%/pasada si falla una lectura | 🔴 | abierto |
+| 3 | El raíl de ±20%/día se ensancha a ±20%/pasada si falla una lectura | 🔴 | ✅ **CERRADO 23/08/2026** |
 | 4 | 8 de las 11 lecturas del motor degradan sin declararse | 🟡 | abierto |
 | 5 | El watchdog de la cadena existe y no lo lee nadie | 🟡 | abierto |
 | 6 | Cinco jobs de la cadena sin latido | 🟡 | abierto |
@@ -80,6 +80,12 @@ Lo que no existe es nada que lo compruebe salvo esta consulta hecha a mano.
 > que **Smoobu aceptó**. Son dos afirmaciones distintas y hoy solo la primera es observable.
 
 ## 🔴 3 · El raíl «±20%/día» se convierte en ±20%/pasada si falla una lectura
+
+> ✅ **CERRADO el 23/08/2026.** Las dos lecturas del ancla ya no se tragan la excepción: si
+> `ref24` o `anclaHoy` revientan, la pasada **se ABORTA** (503, `ok:false`, Telegram, latido rojo) en
+> vez de tarifar con el raíl ensanchado. También en simulacro, para dejar un solo camino que razonar.
+> El aviso **calcula** el tope real (`topeRealSinAncla`) en vez de citar un «−49%/+73%» hardcodeado,
+> que dejaría de ser verdad al cambiar `max_change_pct` o el nº de pasadas del cron.
 
 El ancla del raíl sale de dos consultas, y las dos degradan a lista vacía:
 
@@ -157,7 +163,7 @@ piso que no se ajusta no desaparece del parte — el arreglo del 22/08 sostiene.
 
 1. ~~**Latido para `apply-auto`**~~ ✅ **hecho el 23/08/2026** + que un `error` de Smoobu lo ponga en rojo. Cierra 1 y 2 de una vez,
    y es lo más pequeño de los tres 🔴.
-2. **Declarar las dos lecturas del ancla** (579/592): si fallan, marcar la pasada degradada y **no
+2. ~~**Declarar las dos lecturas del ancla**~~ ✅ **hecho el 23/08/2026** — (579/592): si fallan, marcar la pasada degradada y **no
    aplicar** en vez de aplicar con el raíl ensanchado. Cierra el 3.
 3. **Conciliación `pricing_applied` ↔ snapshot**: la consulta de este informe, en el cron diario.
    Convierte el hallazgo 2 en algo observable en vez de en algo que compruebo yo a mano.

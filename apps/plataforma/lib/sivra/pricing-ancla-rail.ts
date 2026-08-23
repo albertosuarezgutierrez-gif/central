@@ -53,3 +53,56 @@ export function anclaRail(opts: {
 function esPrecio(v: number | null | undefined): v is number {
   return typeof v === 'number' && Number.isFinite(v) && v > 0
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 🚨 TERCER agujero del raíl (auditoría 23/08/2026, hallazgo 🔴 3): las dos lecturas que
+// alimentan el ancla —`ref24` y `anclaHoy`— colgaban de un `.catch(() => [])`. Un array vacío es
+// LEGÍTIMO (una fecha sin histórico, la 1ª pasada del día), así que un fallo de lectura entraba
+// por la MISMA puerta que el caso normal y `anclaRail()` caía a `actual` para TODAS las fechas.
+// Con el cron corriendo 3 veces al día, el tope deja de ser ±X%/día y pasa a ±X%/PASADA.
+//
+// Es el MISMO agujero de arriba (−36% en 16 fechas de House en dos pasadas) entrando por otra
+// puerta: allí faltaba histórico, aquí falla la consulta. Y que la consulta puede fallar no es
+// teórico — el `42883` del 20/08 tumbó `sivra_canal` en esta misma cadena.
+//
+// La cura no es adivinar un ancla: es NO TARIFAR. Una pasada saltada cuesta seis horas de precio
+// viejo; una pasada con el raíl ciego puede costar la mitad del precio de la noche.
+
+/** Una lectura de ancla que reventó. `error` es el mensaje, recortado. */
+export type LecturaAncla = { nombre: string; error: string }
+
+/**
+ * Tope REAL que queda cuando el ancla se pierde y cada pasada se ancla en la anterior.
+ *
+ * Se CALCULA en vez de escribirse a mano porque `max_change_pct` es por piso y el nº de pasadas
+ * sale del cron: un «−49%/+73%» hardcodeado deja de ser verdad en cuanto cambie cualquiera de los
+ * dos, y un aviso con un número falso es peor que uno sin número.
+ */
+export function topeRealSinAncla(maxChangePct: number, pasadasPorDia: number): { caidaPct: number; subidaPct: number } {
+  const caida = 1 - Math.pow(1 - maxChangePct, pasadasPorDia)
+  const subida = Math.pow(1 + maxChangePct, pasadasPorDia) - 1
+  return { caidaPct: Math.round(caida * 1000) / 10, subidaPct: Math.round(subida * 1000) / 10 }
+}
+
+/**
+ * Aviso de Telegram cuando la pasada se aborta por no poder leer el ancla. `null` si no hay fallos.
+ *
+ * Dice explícitamente que los precios se quedan como estaban Y por qué eso es lo correcto: si no,
+ * «no se ha tarificado» se lee como una avería del motor y no como la salvaguarda que es.
+ */
+export function avisoRailCiego(
+  fallos: LecturaAncla[],
+  rail: { maxChangePct: number; pasadasPorDia: number },
+): string | null {
+  if (fallos.length === 0) return null
+  const { caidaPct, subidaPct } = topeRealSinAncla(rail.maxChangePct, rail.pasadasPorDia)
+  return (
+    `🛑 *Pricing: pasada ABORTADA — no se ha podido leer el ancla del raíl*\n\n` +
+    fallos.map(f => `• ${f.nombre}: ${f.error}`).join('\n') +
+    `\n\nNO se ha tarificado nada, y es lo correcto: sin ancla, cada una de las ` +
+    `${rail.pasadasPorDia} pasadas del día se anclaría en la anterior y el tope de ` +
+    `±${Math.round(rail.maxChangePct * 100)}%/día pasaría a ser −${caidaPct}% / +${subidaPct}% ` +
+    `en un solo día. Los precios se quedan como estaban.\n\n` +
+    `La siguiente pasada lo reintenta sola. Si se repite, mira la BD (\`pricing_applied\`).`
+  )
+}
