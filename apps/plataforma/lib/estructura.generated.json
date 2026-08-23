@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-23T09:44:18Z",
+  "generadoEn": "2026-08-23T10:16:07Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4613,6 +4613,14 @@
   ],
   "novedades": [
     {
+      "titulo": "Cura: abortar, no adivinar.",
+      "fecha": ""
+    },
+    {
+      "titulo": "Auditoría: los 3 🔴 cerrados.",
+      "fecha": ""
+    },
+    {
       "titulo": "Latido `sivra_pricing_apply`",
       "fecha": ""
     },
@@ -4662,14 +4670,6 @@
     },
     {
       "titulo": "Arreglado midiendo el RANGO, no un punto",
-      "fecha": ""
-    },
-    {
-      "titulo": "Y el raíl tenía el mismo agujero:",
-      "fecha": ""
-    },
-    {
-      "titulo": "La guest app tiene API JSON abierta con el token del propio enlace:",
       "fecha": ""
     }
   ],

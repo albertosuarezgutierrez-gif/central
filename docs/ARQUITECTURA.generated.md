@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-23T09:44:18Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-23T10:16:07Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -237,6 +237,8 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- Cura: abortar, no adivinar.
+- Auditoría: los 3 🔴 cerrados.
 - Latido `sivra_pricing_apply`
 - Smoobu rechaza → Telegram + `ok:false` + latido rojo
 - Siguen abiertos:
@@ -245,6 +247,4 @@
 - 2 🟡:
 - Pendiente de Alberto:
 - NO borrar `Cloude`
-- La banda naranja de Supabase era un aviso legal, no una alarma.
-- Regla:
 
