@@ -32,6 +32,16 @@
 
 ---
 
+### 🏦 (23/08/2026) Valoraciones AVM de BBVA registradas como fuente propia + contraste de métodos
+Alberto pasó el pantallazo de «Patrimonio no financiero» de BBVA → 3 filas nuevas en
+`patrimonio_valoraciones` con `fuente='bbva'`: Socorro 832.000€, Dúplex («Campana») 294.000€,
+Monte Carmelo 764.000€. Contraste con las del agente (`agente:m2zona`): Dúplex casi clavado
+(−2%, valida el método); Socorro la del agente sale ~45% arriba (el €/m² p50 de zona no
+descuenta el tamaño de una casa de 275 m²); Monte Carmelo confirma que el proxy municipal
+infravaloraba (~3.727€/m² implícitos en Los Remedios vs 2.635 del proxy). Fuentes de datos
+REALES propuestas a Alberto: MITMA valor tasado + INE IPV (cron pendiente de que lo pida),
+valor de referencia del Catastro (manual anual, Cl@ve) e Idealista API (alta aún pendiente).
+
 ### 🛑 (23/08/2026) Un día sin conector de Booking dejó a House sin precio — y el motor no lo dijo (PR #1594)
 
 - Seguimiento del arreglo del canal (#1582): el canal SÍ se corrigió solo el 22/08 (House 1,20/0 →

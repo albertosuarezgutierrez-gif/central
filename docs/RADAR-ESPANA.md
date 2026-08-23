@@ -40,6 +40,18 @@ Las semilla (`fuente='alberto'`) siguen al lado: Dúplex 320.000€ (vut, plan d
 20/08/2026) y Socorro 1.000.000€ (mixto, estimación verbal orientativa 22/08/2026 — la
 valoración por zona sale un ~20% por encima).
 
+**Tercera fuente desde el 23/08/2026: `fuente='bbva'`** (AVM del banco, pantallazo de la
+Posición Global de Alberto): Socorro **832.000€** (−1,82%) · Dúplex/«Campana» **294.000€**
+(+9,35%) · Monte Carmelo **764.000€** (+5,2%). Lecciones para las pasadas del agente:
+- Dúplex casi idéntico al `agente:m2zona` (−2%) → el método €/m² de zona vale cuando el
+  inmueble es del tamaño típico de la muestra.
+- Socorro: la de zona sale ~45% por encima del AVM — **el p50 de pisos de 60-120 m² NO
+  extrapola a una casa de 275 m²** (descuento por tamaño). Próxima pasada: usar testigos
+  de superficie comparable (±30%, que la skill ya pide) y no el p50 plano.
+- Monte Carmelo: el AVM implica **~3.727€/m² en Los Remedios** vs los 2.635 del proxy
+  municipal → confirma el hueco «medir zona los-remedios».
+Alberto puede refrescar el AVM con un pantallazo cuando quiera; se registra sin pisar nada.
+
 Referencia disponible en BD (`mercado_zonas`, 29/07/2026): `sevilla-capital` p50 2.635 €/m² ·
 `sevilla-capital/casco-antiguo` p50 4.390 €/m². OJO: es el corpus de subastas — contrastar
 frescura antes de usarlo.
