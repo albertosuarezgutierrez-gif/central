@@ -19,6 +19,14 @@ rutinas. Entorno **efímero**: cada pasada es completa e idempotente; el estado 
 >
 > Corolario: `Your current balance is $0.00`, un `rate_limit` o un 401 significan **«fuente no
 > disponible»**, JAMÁS «no hay datos». Confundirlos es la regla de la casa incumplida.
+>
+> **Y no basta con saber que falló: hay que saber SI SE ARREGLA SOLO.** El campo `type` de un error
+> suele ser un cajón de sastre. Alpha Vantage devuelve `type: "rate_limit"` tanto cuando se agotó la
+> cuota (transitorio, mañana vuelve) como cuando el endpoint es de pago (permanente, no vuelve
+> nunca) — comprobado el 23/08/2026 con dos llamadas seguidas: `TIME_SERIES_DAILY_ADJUSTED` dio
+> `rate_limit` mientras `GLOBAL_QUOTE` devolvía datos reales. **Lee siempre `message`, nunca `type`,
+> y clasifica el fallo en las dos categorías antes de escribirlo.** Dar un gate premium por «cuota,
+> ya volverá» es prometer una pasada que no va a llegar.
 
 ## Paso 0 — Contexto
 1. `docs/HUECOS-ABIERTOS.md` — contra qué se cruza.
@@ -56,6 +64,15 @@ se pinta como «no hay nada».
 Cualquier cambio (endpoint que pasa a premium, se renombra, devuelve 401, cambia de forma) es
 **hallazgo de Telegram**, aunque no rompa todavía.
 
+Al anotar un canario en rojo, di **cuál de las dos** es, porque la acción es opuesta:
+- **PERMANENTE** (premium, 401, renombrado, saldo a 0) → la rutina que dependa de él está rota a
+  partir de ya. Telegram, y el hueco vuelve a `docs/HUECOS-ABIERTOS.md` como VIVO.
+- **TRANSITORIO** (cuota del día agotada) → se anota y se reintenta la pasada siguiente; no se
+  reabre ningún hueco.
+
+Si el `message` no permite distinguirlo, **es permanente hasta que se demuestre lo contrario**: el
+error conservador es dar por rota una fuente que funcionaba, no dar por viva una que no está.
+
 ## Paso 4 — Higiene de los conectados
 `ListConnectors` y cruce con el uso real en el repo. Marca:
 - **Sin uso:** conectado y nadie lo llama.
@@ -90,7 +107,10 @@ espera a Alberto. `docs/VIGIA-CONECTORES.md` es registro; `docs/HUECOS-ABIERTOS.
   HTTP hacia el código que lo necesite.
 - Máximo **3 candidatos** por pasada. Si no hay ninguno, dilo y calla: poder callar es lo que hace
   que tu Telegram signifique algo.
-- No inventes veredictos ni cuotas: sin evidencia, no se anota.
+- No inventes veredictos ni cuotas: sin evidencia, no se anota. **Una cuota NO es observable desde
+  la API** — averiguar el número exige agotarla, que es justo lo que no se hace con un recurso
+  compartido. Si no está en el panel de la cuenta, se escribe «no se sabe», no una estimación (el
+  «~25/día» del 21/08 salió de leer mal un gate premium).
 
 ## Auto-informe (obligatorio al terminar la pasada)
 

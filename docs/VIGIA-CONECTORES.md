@@ -23,11 +23,27 @@
 | Morningstar · MSCI · Moody's | Descartados | Enterprise de pago; ninguna hipótesis firmada los usa. | 21/08/2026 |
 | D&B Finance · Datarails | Descartados | No son bolsa (crédito corporativo y FP&A). | 21/08/2026 |
 
+> ⚠️ **23/08/2026 — `type: "rate_limit"` de Alpha Vantage NO significa «cuota agotada».** Es un cajón
+> de sastre para «llamada rechazada»; el motivo real vive en `message`. Comprobado con dos llamadas
+> seguidas el mismo día:
+>
+> | Llamada | Respuesta |
+> |---|---|
+> | `TIME_SERIES_DAILY_ADJUSTED` (IBM) | `type: "rate_limit"` · *"This is a premium endpoint"* |
+> | `GLOBAL_QUOTE` (IBM) | datos reales (235,68 USD, cierre del 21/08) |
+>
+> Si la cuota estuviera agotada, la segunda habría fallado también. Es decir: **el mismo `type`
+> tapa una avería PERMANENTE (endpoint de pago) y una TRANSITORIA (cuota gastada)**, y son
+> decisiones opuestas — una se arregla mañana sola, la otra no se arregla nunca. El canario debe
+> leer `message`, nunca `type`.
+>
+> De aquí salió el «~25/día»: se leyó el gate premium del 21/08 como si fuera la cuota tocando techo.
+
 ## Cuotas (recurso COMPARTIDO — quien la gasta se la quita a otro)
 
 | Conector | Cuota | Quién la consume | Notas |
 |---|---|---|---|
-| Alpha Vantage | ~25 llamadas/día en el tier gratis. **Sin verificar:** el número sale de un `rate_limit` observado el 21/08, no de la factura. | `conectores-vigia` (canarios, 1/mes). **`trading-analista` NO lo usa** — su calendario de earnings es propio. | `EARNINGS_CALENDAR` se pide UNA vez SIN `symbol` (devuelve el calendario entero) y se filtra en local. Símbolo a símbolo revienta la cuota con una watchlist de 15. |
+| Alpha Vantage | **No se sabe, y no se puede saber desde la API.** El «~25/día» que puso aquí la primera pasada era una LECTURA MAL HECHA del `type: "rate_limit"` del gate premium (ver nota abajo, 23/08). Averiguar el número real exige agotar la cuota, que es justo lo que no se puede hacer con un recurso compartido. **Única fuente: el panel de la cuenta de Alberto.** Lo comprobado el 23/08 es que el 21/08 **quedaba** cuota, no cuánta. | `conectores-vigia` (canarios, 1/mes). **`trading-analista` NO lo usa** — su calendario de earnings es propio. | `EARNINGS_CALENDAR` se pide UNA vez SIN `symbol` (devuelve el calendario entero) y se filtra en local. Símbolo a símbolo revienta la cuota con una watchlist de 15. |
 | Datos financieros | Saldo agotado (`$0.00`) | nadie | Recargar solo si se decide desbloquear H2 (~20 US$). |
 
 ## Mapa rutina → endpoint del que depende (lo recorre el paso canario)
