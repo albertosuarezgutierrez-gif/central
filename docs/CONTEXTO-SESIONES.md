@@ -32,6 +32,15 @@
 
 ---
 
+### 📈 (23/08/2026) Botón «🔄 Actualizar» en /trading + precio EN VIVO (rama claude/query-refresh-button-k58lkx)
+Alberto: la pasada del agente es diaria y a mitad de sesión de bolsa el panel enseñaba la película
+de ayer. Nuevo `lib/trading/precio-vivo.ts` (meta del chart de Yahoo — precio intradía + divisa +
+hora; fixture REAL vía pg_net, el quote de Stooq `q/l` da 404 a IPs datacenter) con doble guarda
+antes de PINTAR: divisa igual + banda ×2 contra referencia (lecciones PR #1315/#1189). Cartera
+paper y cartera IBKR se re-valoran con ⚡ declarado (fuente+hora); nada se persiste (el track
+record sigue con precios-guardia). Botón cliente = router.refresh() (página force-dynamic).
+Ideas/radar/foto IBKR siguen siendo de la pasada diaria y la UI lo declara. tsc 0 · 1505 tests · build OK.
+
 ### 🏦 (23/08/2026) Vigía de hipoteca en el agente contable + borrador a CajaSur
 El contable proactivo (cron lunes 09:00) ahora vigila los recibos `CUOTA PTMO <ref>` de banca:
 avisa por Telegram si la cuota cambia entre recibos (revisión de tipo/bonificación) o si la ficha
