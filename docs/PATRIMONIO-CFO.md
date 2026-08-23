@@ -25,12 +25,24 @@ Monte Carmelo vivienda habitual con hipoteca de cuota conocida y capital sin dat
 Ninguna registrada (`patrimonio_recomendaciones` vacía — 0 filas = tabla recién creada, no
 «sin recomendaciones históricas»).
 
+## 🏦 Hipoteca de Monte Carmelo — condiciones cargadas (22/08/2026, de la escritura)
+
+Alberto subió la escritura (CAJASUR nº 856289293-5, abr-2021) y la ficha `act_monte_carmelo`
+de `patrimonio_activos` quedó completada: capital inicial 230.501,03€ · 30 años (vence
+05/04/2051) · tipo FIJO 2,10% nominal **bonificable** (aplicado real ~1,11% hasta abr-2026 y
+~1,31% desde entonces — perdió ~0,20 pts de bonificación, revisar qué producto dejó de
+cumplir) · cuota 772,86€ · capital pendiente **≈195.300€ (ESTIMADO** por sistema francés;
+confirmar con recibo) · amortización anticipada con comisión efectiva ≈0€ mientras los tipos
+de mercado superen el suyo. **Consigna de Alberto: el CFO evalúa en cada pasada si merece la
+pena amortizar** — contra la alternativa neta, y mirando primero las bonificaciones perdidas
+(recuperar 0,10-0,50 pts suele rendir más que amortizar). Detalle en la skill, Paso 4.
+
 ## ❓ Intake pendiente (espejo de /patrimonio)
 
 Primer cuestionario previsto para el dossier inicial: m² y ref. catastral de Socorro y Monte
 Carmelo; valor/año de compra de Socorro (la cifra sembrada es orientativa) y Monte Carmelo;
-capital pendiente, tipo y vencimiento de la hipoteca; titularidad de Monte Carmelo; números de
-licencia VUT de los 4 pisos.
+titularidad de Monte Carmelo; números de licencia VUT de los 4 pisos; y confirmar el capital
+pendiente exacto de la hipoteca con el recibo/área de cliente (el sembrado es estimación).
 
 ## Escenarios en cartera (contexto para próximas pasadas)
 
