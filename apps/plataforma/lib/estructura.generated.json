@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-22T08:35:56Z",
+  "generadoEn": "2026-08-23T09:18:10Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4613,6 +4613,22 @@
   ],
   "novedades": [
     {
+      "titulo": "3 🔴:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Comprobado a mano que el 2 NO está ocurriendo:",
+      "fecha": ""
+    },
+    {
+      "titulo": "2 🟡:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Pendiente de Alberto:",
+      "fecha": ""
+    },
+    {
       "titulo": "NO borrar `Cloude`",
       "fecha": ""
     },
@@ -4654,22 +4670,6 @@
     },
     {
       "titulo": "Mergeado y VIVO",
-      "fecha": ""
-    },
-    {
-      "titulo": "`?dry=1`",
-      "fecha": ""
-    },
-    {
-      "titulo": "🪤 Landmine caro:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Aplicado en prod con OK de Alberto:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Rutina nueva",
       "fecha": ""
     }
   ],
