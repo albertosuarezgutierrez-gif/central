@@ -37,6 +37,14 @@ de mercado superen el suyo. **Consigna de Alberto: el CFO evalúa en cada pasada
 pena amortizar** — contra la alternativa neta, y mirando primero las bonificaciones perdidas
 (recuperar 0,10-0,50 pts suele rendir más que amortizar). Detalle en la skill, Paso 4.
 
+**Vigilancia continua (23/08/2026):** el agente contable proactivo (cron lunes 09:00) vigila
+los recibos `CUOTA PTMO 856289293-5` de la banca — si la cuota cambia entre recibos, o la
+ficha `act_monte_carmelo` se desincroniza de lo que el banco cobra, avisa por Telegram
+(`apps/plataforma/lib/contable/hipoteca-vigia.ts`, helper puro con tests). Este agente
+analiza en mensual lo que aquel detecta en semanal. Además hay borrador de email a la
+gestora (María Luz, CajaSur) en el Gmail de Alberto pidiendo bonificación perdida, capital
+exacto y cuadro — pendiente de que Alberto lo envíe y llegue respuesta.
+
 ## ❓ Intake pendiente (espejo de /patrimonio)
 
 Primer cuestionario previsto para el dossier inicial: m² y ref. catastral de Socorro y Monte

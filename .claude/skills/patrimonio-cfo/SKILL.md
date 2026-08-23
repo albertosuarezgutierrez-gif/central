@@ -84,6 +84,13 @@ oportunidad:
   riesgo.** Compáralo contra la rentabilidad NETA (después de IRPF del ahorro) de letras/
   monetario/indexado. Con un tipo bonificado muy bajo, amortizar suele PERDER contra la
   alternativa — dilo con los números del mes, no como dogma.
+- **La cuota REAL sale de la banca, no de la ficha:** los recibos llegan a
+  `movimientos_bancarios` como `CUOTA PTMO 856289293-5`. Concilia el último recibo con
+  `hipoteca_cuota_mensual` de la ficha; si difieren, la ficha está vieja → actualízala y
+  averigua el porqué del cambio (revisión de tipo / bonificación). El agente contable
+  proactivo (cron de los lunes) ya vigila esto en continuo (`lib/contable/hipoteca-vigia.ts`)
+  y avisa por Telegram al detectar un salto de cuota — esta pasada mensual lo ANALIZA
+  (cuánto cuesta el salto al año, qué palanca lo revierte), no lo re-detecta.
 - **Bonificaciones antes que amortización:** el tipo es bonificable por productos vinculados
   (detalle en las notas del activo). Si el tipo aplicado subió, averiguar qué bonificación se
   perdió y si recuperarla cuesta menos de lo que ahorra — recuperar 0,10-0,50 puntos suele
