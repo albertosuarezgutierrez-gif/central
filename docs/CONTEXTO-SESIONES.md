@@ -45,6 +45,14 @@
   global gana al «SIMULACRO» en el parte. Módulo puro `lib/sivra/pricing-latido-apply.ts`, 15 tests.
 - **Siguen abiertos:** 🔴 3 (raíl que se ensancha si falla una lectura) y los tres 🟡.
 
+### 🟠 (23/08/2026) Banner PSD2 «3 días sin movimientos» — diagnóstico + texto sin falsedad
+Alberto preguntó por el banner naranja de /banca: diagnóstico = feed VIVO (2 conexiones sync OK ese
+día, volumen 30d 54 vs 75, aviso Kutxabank es ℹ️), el hueco era jueves→domingo sin operaciones
+(corroborado por facturas-correo: tampoco PDFs en Gmail). Le confundía el texto «>1 día no había
+pasado» — FALSO (hubo huecos legítimos de hasta 10 días, BBVA). Reescritos los detalles de
+`psd2-semaforo.ts` (atención: «fin de semana/festivos, a los 6 se da por roto»; roto sin la
+falsedad) + test que fija el tono. Umbrales 3/6 SIN tocar. PR #1617 (rama problem-diagnosis).
+
 ### 🪪 (23/08/2026) Licencias VUT cargadas de las resoluciones del RTA
 Alberto subió las dos resoluciones: Socorro **VFT/SE/01179** (titular Pilar, 08/11/2016, completa,
 2 hab/5 plazas) y Dúplex **VFT/SE/01932** (titular Alberto, 20/04/2017, completa, 2 hab/4 plazas).
