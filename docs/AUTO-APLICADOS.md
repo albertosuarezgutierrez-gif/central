@@ -13,6 +13,12 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-08-23** · `docs/CONTEXTO-SESIONES.md` + `docs/VIGIA-CONECTORES.md` + `docs/HUECOS-ABIERTOS.md`
+  + `.claude/skills/plataforma-maestro/references/mapa-gate-infra.md` + `docs/AUDITORIA-2026-08.md` ·
+  entrada nueva de la pasada; `VIGIA-CONECTORES.md`/`HUECOS-ABIERTOS.md` desfasados (H2 screener ya
+  cerrado — Alberto recargó saldo el 21/08 y `screenerMercado.ts` PR #1579 lo usa); fila de Patrimonio
+  (PR #1591) añadida al router `plataforma-maestro`, que no la mencionaba · pasada **profunda** (semanal),
+  rango 22 commits desde 2026-08-21 02:01 UTC · commit de esta auditoría
 - **2026-08-21** · `docs/CONTEXTO-SESIONES.md` + `docs/AUDITORIA-2026-08.md` · entrada nueva de la
   pasada de hoy (PR #1514 desatascado — conflicto de inserción pura con el PR de trading,
   resuelto y empujado a su rama existente; heartbeat 13+12 ✅ salvo `sivra_canal` pendiente de su

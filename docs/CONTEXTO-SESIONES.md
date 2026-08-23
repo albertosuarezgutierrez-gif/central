@@ -32,6 +32,19 @@
 
 ---
 
+### 🔎 (23/08/2026) Auditoría profunda semanal: 3 crons mudos reales + reconciliación de docs stale
+Pasada `--profunda` (22 commits desde el 21/08). **Técnico:** typecheck 9 apps + tests (0 fallos) +
+seguridad multi-tenant + advisors Supabase todo limpio; hallazgos menores: `pdfjs-dist` desactualizado
+en `apps/ialimp` (CVE, procesa PDFs de nómina — priorizar bump a ≥6.2.108) y `ia-rest`/`transporte`/
+`central-rrhh` con 20/20 últimos deploys Vercel CANCELED (probable cadencia de pushes, verificar que
+producción sirve `main`). **Heartbeat 🔴:** `psd2-sync` 68h mudo (umbral 54h) y la rutina de sesión
+`sivra_mercado_booking` sin correr desde el viernes (46,5h) — arrastra a `sivra_canal` (4 pisos sin
+ajustar) y `sivra_mercado_sweep` (70 fallos Serper 400). Causa probable común: el trigger de Rutinas
+no disparó en fin de semana — a revisar por Alberto. **PRs:** #1594 en conflicto de inserción pura
+(fácil), #1514 limpio esperando revisión (3 días). **Carril 1 aplicado:** `docs/VIGIA-CONECTORES.md`
+y `docs/HUECOS-ABIERTOS.md` (H2 screener ya cerrado, Alberto recargó saldo el 21/08) al día; fila de
+Patrimonio añadida a `plataforma-maestro`. Informe completo en `docs/AUDITORIA-2026-08.md` y PR draft.
+
 ### 📈 (22/08/2026) Alpha Vantage: el barrido de splits dice que el FIFO está limpio (por poco)
 Conector nuevo → cubre lo que IBKR no da (su `get_price_snapshot` tiene el enum CERRADO). Dos módulos
 puros nuevos en `@central/module-trading` (173 tests verdes): **`splits.ts`** (reexpresa lo anterior a

@@ -1,5 +1,105 @@
 # Auditoría diaria — agosto 2026
 
+# Actualización 2026-08-23 — auditoría PROFUNDA (semanal)
+
+Rango: 22 commits desde la última auditoría (2026-08-21 02:01 UTC, `a953b05..HEAD`). Incluye: trading
+(screener saneado + contraste de cifras + splits/divisa, PR #1579), coordinador patrimonial (`/patrimonio`
++ skills `radar-espana`/`patrimonio-cfo`, PR #1591), vigía de conectores MCP (PR #1581), swap del modelo
+NIM por defecto (PR #1583), dos fixes de `pricing-canal.ts` en sivra (PRs #1582/#1586), rescate de 22 Edge
+Functions huérfanas (PR #1517), SES.HOSPEDAJES (PR #1555), fix de ruido en psd2 (PR #1575), cierre/coherencia
+del agente-huésped (PR #1568).
+
+## 🔴 Heartbeat de crons y agentes — 3 hallazgos reales, causa probable común
+**a) `agente_latidos`:**
+- ⛔ `sivra_mercado_sweep` — 47,1h sin pasada buena (umbral 30h). Detalle: 70 fallos "Serper 400" en
+  la última pasada — degradación técnica del buscador, no falta de mercado.
+- ⛔ `sivra_mercado_booking` — `ok=true` pero 46,5h desde el último latido (umbral 30h; es rutina de
+  sesión Claude, no cron Vercel). Última pasada viernes 21/08 03:40 — no corrió el fin de semana.
+  **Consecuencia visible:** `sivra_canal` (18,4h, ok) reporta "4 pisos · 4 sin ventanas nuevas" — los
+  4 pisos frenados por falta de mercado fresco, correlación directa con lo anterior.
+- 🟡 `ses_transporte` — `ok=false`, nunca tuvo pasada buena. Detalle: "no hay ningún establecimiento
+  dado de alta en /sivra/partes/establecimientos" — coincide con el pendiente ya conocido de Alberto
+  (PR #1555: dar de alta los 4 pisos), no es una avería nueva.
+- 🟡 `trading_operaciones` — declarado en `AGENTES_VIGILADOS` (umbral 80h) pero **cero filas** en
+  `agente_latidos`: nunca ha latido. La tabla se creó el 19/08 con una carga manual única (455
+  operaciones); no hay indicio de que la rutina diaria la esté disparando todavía.
+
+**b) Tablas de dominio:**
+- ⛔ **`psd2-sync`** — `movimientos_bancarios` sin fila nueva desde hace **68,2h** (umbral 54h, ya
+  ampliado para cubrir fin de semana). Sin huella propia en `agente_latidos`; el guardián dedicado
+  `psd2-health-check` solo corre los miércoles, así que si el corte empezó el viernes nadie lo habría
+  cazado hasta la próxima pasada semanal.
+- ⛔ `AGENTE mercado-booking (diario)` — mismo hallazgo que en (a), 46,5h.
+
+**c) Auto-reparaciones (`agente_reparaciones`):** ✅ sin intentos en 7 días, nada que coordinar.
+
+**Cobertura:** 🟡 `radar-espana` (nuevo, PR #1591) está en `docs/RUTINAS-PROGRAMADAS.md` pero sin huella
+en `AGENTES_VIGILADOS` ni en la query de tablas de dominio; su próxima pasada natural es el 01/09, así
+que un fallo silencioso no lo cazaría nadie hasta entonces. `patrimonio-cfo` ya consta "pendiente de
+trigger" en su propio doc — no es hallazgo nuevo.
+
+**Causa probable común (a)+(b):** la rutina de sesión `mercado-booking` no corrió el fin de semana
+(21→23/08), lo que arrastra `sivra_canal` sin corregir y puede explicar también el corte de `psd2-sync`
+si comparten el mismo patrón de disparo de fin de semana en el trigger de Rutinas de claude.ai. **Acción
+recomendada:** Alberto revisa si el trigger de las rutinas de sesión (mercado-booking, psd2-health-check,
+y por extensión radar-espana/patrimonio-cfo cuando se creen) está configurado para disparar también en
+sábado/domingo.
+
+## 🟡 Backlog de PRs de rutinas — automerge sano, 2 PRs en revisión
+`rutinas-automerge.yml`: 🟢 corre cada hora, última ejecución 23/08 02:04 UTC exitosa. Sin PRs de
+solo-registro atascados >24h.
+
+| # | Título | Estado | Severidad |
+|---|---|---|---|
+| [#1594](https://github.com/albertosuarezgutierrez-gif/central/pull/1594) | fix(sivra): pasada de mercado sin comps deja piso sin tarifar | `mergeable_state: dirty` — conflicto de inserción pura en `docs/CONTEXTO-SESIONES.md` (único archivo en conflicto; el resto son ficheros nuevos sin solape) | 🟡 fácil de resolver |
+| [#1514](https://github.com/albertosuarezgutierrez-gif/central/pull/1514) | fix(plataforma): paper-tracker sin vigilante en agentes-latido | `mergeable_state: clean`, 3 días sin actividad (bajo el umbral de 7 días) | 🟢 esperando revisión |
+
+## 🟢 Auditoría técnica profunda — sin regresiones, 2 hallazgos menores
+- **Integridad/typecheck/tests:** `pnpm install --frozen-lockfile` limpio, radiografía al día,
+  typecheck 0 errores en las 9 apps, `pnpm test` 0 fallos (guardián raíz + vitest de ialimp/rrhh/packages).
+- **Seguridad multi-tenant:** sin hallazgos en el código tocado en las últimas 48h; guardián de
+  secretos de auth en verde; `ses_establecimientos` sin filtro de tenant es intencional y ya declarado
+  con fecha de caducidad en su propio SQL (no es hallazgo nuevo).
+- **Supabase advisors:** sin ninguna tabla con RLS deshabilitado; 0 errores de seguridad; volumen de
+  warnings preexistente y sistémico (no accionable como "nuevo").
+- 🟡 **`pdfjs-dist` desactualizado en `apps/ialimp`** — CVE de ejecución JS arbitraria al abrir un PDF
+  malicioso; la app procesa PDFs de nóminas/firmas (`lib/nomina-pdf.ts`, `lib/firma-limpiadora.ts`).
+  Sin explotación conocida en curso, pero vale la pena priorizar el bump a `>=6.2.108`.
+- 🟡 **Vercel `ia-rest`/`transporte`/`central-rrhh`:** 20/20 últimos deploys visibles en estado
+  `CANCELED` (0 `READY` en la ventana), probablemente por la cadencia alta de pushes a `main` (Vercel
+  cancela el build anterior al llegar uno nuevo antes de que termine) y no por un build roto —
+  `plataforma` en la misma ventana sí tiene varios `READY`. **Acción recomendada:** comprobación puntual
+  de que `iarest.es` y el dominio de `transporte` sirven el commit actual de `main`.
+- Nota de metodología (no accionable para Alberto): correr los typechecks Prisma de las 8 apps en
+  paralelo sin regenerar el cliente por-app da ~180 falsos positivos (pnpm hoistea `@prisma/client` a
+  una única carpeta compartida). No afecta a Vercel (build aislado por Root Directory).
+
+## ✅ Reconciliación de memoria/skills/docs (carril 1, aplicado)
+- `docs/CONTEXTO-SESIONES.md`: los 9 commits sustantivos del rango ya tenían entrada propia — sin huecos.
+  Sin contenido de un mes cerrado pendiente de rotar.
+- `docs/SKILLS.md`: `patrimonio-cfo`, `radar-espana` y `conectores-vigia` correctamente listadas.
+- **`plataforma-maestro` sin fila para el coordinador patrimonial** (PR #1591) — añadida fila en
+  `.claude/skills/plataforma-maestro/references/mapa-gate-infra.md` tras la de Subastas.
+- **`docs/HUECOS-ABIERTOS.md` desfasado:** H2 (screener de pago) seguía como hueco vivo pese a que
+  Alberto recargó el saldo el 21/08 y `screenerMercado.ts` (PR #1579) ya lo usa saneado — movido a
+  "huecos cerrados". Mismo desfase en `docs/VIGIA-CONECTORES.md` ("Datos financieros… SIN SALDO") —
+  actualizado a "conectado y con saldo".
+- Sin contradicciones en reglas fiscales/negocio dictadas (rango no las toca).
+- `apps/plataforma/lib/correo/rutas.ts`: ninguna skill nueva del rango produce correo — sin hallazgos.
+- Manuales de usuario ia-rest: el rango solo tocó el swap mecánico de modelo NIM (`ai-client.ts`,
+  `brain.ts`, 4 edge functions) — nada de `app/**` funcional ni `public/**`, sin hallazgos.
+
+## Acciones manuales de Alberto (orden sugerido)
+1. **Revisar el trigger de las rutinas de sesión** (mercado-booking, psd2-health-check) — parece no
+   disparar en fin de semana; causa raíz probable de los 3 crons mudos de arriba.
+2. Resolver/mergear PR #1594 (conflicto trivial de inserción) y decidir sobre PR #1514.
+3. Bump de `pdfjs-dist` en `apps/ialimp` a `>=6.2.108`.
+4. Verificar que `iarest.es` y el dominio de `transporte` sirven el commit actual de `main`.
+
+<!-- verificado: 2026-08-23 -->
+
+---
+
 # Actualización 2026-08-19 — auditoría diaria (ligera)
 
 Rango: 12 commits desde la última auditoría (2026-08-18, `04c3b62..128702c`). Casi todos
