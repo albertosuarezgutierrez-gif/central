@@ -32,6 +32,16 @@
 
 ---
 
+### 🪪 (23/08/2026) Licencias VUT cargadas de las resoluciones del RTA
+Alberto subió las dos resoluciones: Socorro **VFT/SE/01179** (titular Pilar, 08/11/2016, completa,
+2 hab/5 plazas) y Dúplex **VFT/SE/01932** (titular Alberto, 20/04/2017, completa, 2 hab/4 plazas).
+`patrimonio_activos` actualizado (`licencia_vut`/`licencia_vut_num`; Monte Carmelo → `false`).
+⚠️ Discrepancia a vigilar: la resolución de Socorro dice 2 hab/5 plazas y House Sevillana se
+comercializa como 6 dorm/12 — falta confirmar si hay declaración responsable posterior que amplíe
+capacidad (modificar sin comunicar al RTA es infracción grave). Con esto el intake del CFO solo
+tiene abiertos: valor de compra de Socorro, capital exacto de la hipoteca y gastos de adquisición
+de Monte Carmelo.
+
 ### 🏦 (23/08/2026) Valoraciones AVM de BBVA registradas como fuente propia + contraste de métodos
 Alberto pasó el pantallazo de «Patrimonio no financiero» de BBVA → 3 filas nuevas en
 `patrimonio_valoraciones` con `fuente='bbva'`: Socorro 832.000€, Dúplex («Campana») 294.000€,

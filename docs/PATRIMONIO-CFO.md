@@ -59,9 +59,13 @@ valor/año de compra de Socorro (la cifra sembrada es orientativa); ~~valor/año
 titularidad de Monte Carmelo~~ (cerrado 23/08/2026 — escritura de compraventa: 270.000€ el
 29/03/2021, 50/50 Alberto+Pilar privativo, finca 7523 Registro Sevilla nº2, superficie
 registral 172,50 m²; los gastos de adquisición —ITP/notaría/registro— NO constan y siguen
-pendientes); números de licencia VUT de los pisos en propiedad; y confirmar
-el capital pendiente exacto de la hipoteca con el recibo/área de cliente (el sembrado es
-estimación).
+pendientes); ~~números de licencia VUT de los pisos en propiedad~~ (cerrado 23/08/2026 —
+resoluciones del RTA: Socorro **VFT/SE/01179** (titular Pilar, 08/11/2016, **2 hab/5 plazas
+según la resolución** ⚠️ la explotación actual es 6 dorm/12 — comprobar si hay declaración
+posterior que amplíe capacidad) y Dúplex **VFT/SE/01932** (titular Alberto, 20/04/2017,
+2 hab/4 plazas); Monte Carmelo sin VUT (vivienda habitual, `licencia_vut=false`)); y
+confirmar el capital pendiente exacto de la hipoteca con el recibo/área de cliente (el
+sembrado es estimación).
 
 ## Escenarios en cartera (contexto para próximas pasadas)
 
