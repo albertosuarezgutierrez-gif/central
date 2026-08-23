@@ -2,6 +2,8 @@ import { prisma } from '@/lib/db'
 import { eur, eurSinDecimales } from '@/lib/dinero'
 import { curvaEnEuros, CAPITAL_ESTUDIO_EUR } from '@/lib/trading/cartera-estudio'
 import { puntosDiarios } from '@/lib/trading/precios-stooq'
+import { preciosVivos, precioVivoFiable, conPrecioVivo, type PrecioVivo } from '@/lib/trading/precio-vivo'
+import ActualizarConsulta from './ActualizarConsulta'
 import { neutralizarUniverso } from '@/lib/trading/calidad-datos'
 import { etiquetaCalidad, rankearUniverso, type EmpresaUniverso } from '@central/module-trading'
 import OnboardingBanner from './OnboardingBanner'
@@ -270,19 +272,45 @@ export default async function TradingDashboard({ carteraCohetes, carteraReal, tr
   const nadaDeNada = vacio && fallos.length === 0 && !radar && universoFilas.length === 0 && cohortesPaper.length === 0
     && !(carteraReal != null && (carteraReal === 'error' || carteraReal.posiciones.length > 0))
 
-  // 💵 Precio actual de cada posición abierta (último cierre público, Stooq→Yahoo) para poder pintar
-  // la RENTABILIDAD por posición — lo que faltaba cuando se retiró la «Cartera simulada» (04/08) y lo
-  // que Alberto pidió el 15/08. Best-effort con presupuesto corto: sin precio → null y se DECLARA
-  // («—»), nunca un 0 ni la entrada disfrazada de precio de hoy.
-  const precioAhora = new Map<string, number | null>()
-  if (posiciones.length) {
-    const hoyIso = new Date().toISOString().slice(0, 10)
-    const desde = new Date(Date.now() - 10 * 86_400_000).toISOString().slice(0, 10)
-    const cierres = await Promise.all(posiciones.map(p =>
-      puntosDiarios(p.simbolo, desde, hoyIso, 2500).then(s => s.at(-1)?.cierre ?? null).catch(() => null),
-    ))
-    posiciones.forEach((p, i) => precioAhora.set(p.simbolo, cierres[i]))
-  }
+  // 💵 Precio de cada posición para pintar la RENTABILIDAD: primero el precio EN VIVO público
+  // (meta del chart de Yahoo — intradía; es lo que refresca el botón «🔄 Actualizar», petición de
+  // Alberto 23/08/2026: la pasada del agente es diaria y a mitad de sesión salía la película de
+  // ayer), con el último CIERRE (Stooq→Yahoo) como referencia de la banda ×2 y como respaldo.
+  // Best-effort con presupuesto corto: sin precio → null y se DECLARA («—»), nunca un 0 ni la
+  // entrada disfrazada de precio de hoy. NADA de esto se persiste (el track record se puntúa por
+  // la cadena vigilada de precios-guardia, no por lo que pinta el panel).
+  const simbolosReal = carteraReal != null && carteraReal !== 'error' ? carteraReal.posiciones.map(p => p.simbolo) : []
+  const simbolosVivos = [...new Set([...posiciones.map(p => p.simbolo), ...simbolosReal])]
+  const [vivos, cierresPaper] = await Promise.all([
+    simbolosVivos.length ? preciosVivos(simbolosVivos, 3000) : Promise.resolve(new Map<string, PrecioVivo | null>()),
+    posiciones.length
+      ? (() => {
+          const hoyIso = new Date().toISOString().slice(0, 10)
+          const desde = new Date(Date.now() - 10 * 86_400_000).toISOString().slice(0, 10)
+          return Promise.all(posiciones.map(p =>
+            puntosDiarios(p.simbolo, desde, hoyIso, 2500).then(s => s.at(-1)?.cierre ?? null).catch(() => null),
+          ))
+        })()
+      : Promise.resolve([] as (number | null)[]),
+  ])
+  const precioAhora = new Map<string, { precio: number; vivo: boolean } | null>()
+  posiciones.forEach((p, i) => {
+    const cierre = cierresPaper[i]
+    const v = vivos.get(p.simbolo)
+    // El paper cotiza en USD (así se pinta): un vivo en otra divisa sería OTRO instrumento con el
+    // mismo ticker. Y sin cierre de referencia no hay banda ×2 → se queda el cierre/el hueco.
+    if (v && v.divisa === 'USD' && precioVivoFiable(v.precio, cierre)) precioAhora.set(p.simbolo, { precio: v.precio, vivo: true })
+    else precioAhora.set(p.simbolo, cierre != null ? { precio: cierre, vivo: false } : null)
+  })
+  // 💼 Cartera real re-valorada con el vivo SOLO si divisa y banda ×2 cuadran (conPrecioVivo);
+  // si no, la posición queda intacta con la última lectura de IBKR, y se declara cuál es cuál.
+  const carteraRealVivo = carteraReal != null && carteraReal !== 'error'
+    ? carteraReal.posiciones.map(p => conPrecioVivo(p, vivos.get(p.simbolo)))
+    : []
+  const numVivosReal = carteraRealVivo.filter(x => x.esVivo).length
+  // Hora del último precio negociado entre los vivos traídos (para declarar la frescura en el pie).
+  const horaVivosISO = [...vivos.values()].map(v => v?.horaISO ?? null).filter((h): h is string => h != null).sort().at(-1) ?? null
+  const horaVivos = horaVivosISO ? new Date(horaVivosISO).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Madrid' }) : null
   const usd = (n: number): string => `${n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`
 
   // 📌 Datos del hero (las dos respuestas de la página; cero queries nuevas): cohorte de referencia
@@ -326,10 +354,13 @@ export default async function TradingDashboard({ carteraCohetes, carteraReal, tr
         <h1 style={{ margin: 0, fontSize: 24 }}>📈 Laboratorio de inversión</h1>
         <span style={{ background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid var(--border)', borderRadius: 999, padding: '2px 10px', fontSize: 12, fontWeight: 700 }}>SOLO SIMULADO · PAPER</span>
       </div>
-      <p style={{ color: 'var(--muted)', marginTop: 4, marginBottom: 14, fontSize: 14 }}>
+      <p style={{ color: 'var(--muted)', marginTop: 4, marginBottom: 8, fontSize: 14 }}>
         El agente estudia el mercado y opera <strong>en simulación</strong>. No toca tu cuenta real de Interactive Brokers.
         {ultimaPasada ? <> Última pasada: <strong>{fechaCorta(ultimaPasada)}</strong>.</> : null}
       </p>
+      {/* 🔄 Refresco bajo demanda (Alberto, 23/08/2026): la pasada es diaria; a mitad de sesión de
+          bolsa este botón relee BD + precios públicos EN VIVO sin esperar a mañana. */}
+      <ActualizarConsulta consultaDe={new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Madrid' })} />
       <OnboardingBanner />
     </>
   )
@@ -461,16 +492,16 @@ export default async function TradingDashboard({ carteraCohetes, carteraReal, tr
             <>
               <div style={{ ...card, padding: 0, overflowX: 'auto' }}>
                 <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 640 }}>
-                  <thead><tr><th style={th}>Posición</th><th style={th}>Cantidad</th><th style={th} title="coste medio por unidad, en la divisa de la posición">Precio medio</th><th style={th} title="precio de mercado del último refresco (la pasada diaria del agente); «—» = IBKR no lo dio, no un 0">Precio</th><th style={th}>Valor</th><th style={th} title="plusvalía/minusvalía NO realizada según IBKR, sobre el coste">Resultado</th></tr></thead>
+                  <thead><tr><th style={th}>Posición</th><th style={th}>Cantidad</th><th style={th} title="coste medio por unidad, en la divisa de la posición">Precio medio</th><th style={th} title="⚡ = precio público en vivo de hoy (botón Actualizar); sin ⚡ = última lectura de IBKR (la pasada diaria); «—» = sin precio, no un 0">Precio</th><th style={th}>Valor</th><th style={th} title="plusvalía/minusvalía NO realizada sobre el coste (recalculada con el precio ⚡ cuando lo hay)">Resultado</th></tr></thead>
                   <tbody>
-                    {carteraReal.posiciones.map(p => {
+                    {carteraRealVivo.map(({ posicion: p, esVivo }) => {
                       const ret = rentabilidadPosicion(p)
                       return (
                         <tr key={p.simbolo}>
                           <td style={{ ...td, fontWeight: 700 }}>{p.simbolo}{p.descripcion ? <span style={{ color: 'var(--muted)', fontWeight: 400, fontSize: 12 }}> — {p.descripcion}</span> : null}</td>
                           <td style={td}>{p.cantidad.toLocaleString('es-ES')}</td>
                           <td style={td}>{p.precioMedio != null ? dinero(p.precioMedio, p.divisa) : <span style={{ color: 'var(--muted)' }}>—</span>}</td>
-                          <td style={td}>{p.precioActual != null ? dinero(p.precioActual, p.divisa) : <span style={{ color: 'var(--muted)' }}>—</span>}</td>
+                          <td style={td} title={esVivo ? 'precio público en vivo de hoy' : 'última lectura de IBKR (pasada diaria)'}>{p.precioActual != null ? <>{dinero(p.precioActual, p.divisa)}{esVivo ? ' ⚡' : ''}</> : <span style={{ color: 'var(--muted)' }}>—</span>}</td>
                           <td style={td}>{p.valorMercado != null ? dinero(p.valorMercado, p.divisa) : <span style={{ color: 'var(--muted)' }}>—</span>}</td>
                           <td style={{ ...td, fontWeight: 700, color: p.pnlNoRealizado == null ? 'var(--muted)' : p.pnlNoRealizado >= 0 ? 'var(--positive)' : 'var(--negative)' }}>
                             {p.pnlNoRealizado != null ? <>{p.pnlNoRealizado >= 0 ? '+' : ''}{dinero(p.pnlNoRealizado, p.divisa)}{ret != null ? ` (${pct(ret)})` : ''}</> : '—'}
@@ -482,7 +513,7 @@ export default async function TradingDashboard({ carteraCohetes, carteraReal, tr
                 </table>
               </div>
               <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
-                {resumenPorDivisa(carteraReal.posiciones).map(r => (
+                {resumenPorDivisa(carteraRealVivo.map(x => x.posicion)).map(r => (
                   <span key={r.divisa}>
                     Total {r.divisa}{r.completo ? '' : ' (parcial — a alguna posición le falta un dato)'}: {r.invertido != null ? <>invertido {dinero(r.invertido, r.divisa)} → </> : null}
                     {r.valor != null ? <strong style={{ color: r.pnl == null ? 'var(--text)' : r.pnl >= 0 ? 'var(--positive)' : 'var(--negative)' }}>{dinero(r.valor, r.divisa)}</strong> : '—'}
@@ -492,6 +523,11 @@ export default async function TradingDashboard({ carteraCohetes, carteraReal, tr
                 ))}
                 Última lectura de IBKR: <strong>{fechaCorta(carteraReal.actualizado)}</strong> — la refresca la pasada diaria del agente
                 (solo lectura; el agente jamás ejecuta órdenes). Los importes van en la divisa de cada posición, sin mezclar divisas.
+                {numVivosReal > 0 ? (
+                  <> ⚡ {numVivosReal}/{carteraRealVivo.length} posiciones re-valoradas con el precio público en vivo{horaVivos ? <> (últ. negociación {horaVivos}h Madrid)</> : null} — el botón 🔄 Actualizar las relee; solo se usa si la divisa coincide y el precio pasa la banda ×2 contra la lectura de IBKR.</>
+                ) : carteraRealVivo.length > 0 ? (
+                  <> Sin precio público en vivo fiable ahora mismo: se pinta la lectura de IBKR (esto es «no lo sé en vivo», no un fallo de tu cartera).</>
+                ) : null}
               </p>
               {/* 📈 Evolución (18/08/2026). La serie la anota la pasada diaria en
                   trading_cartera_real_track: la foto de posiciones se REEMPLAZA cada noche, así que sin
@@ -535,10 +571,11 @@ export default async function TradingDashboard({ carteraCohetes, carteraReal, tr
           <h2 style={{ fontSize: 17, marginBottom: 8 }}>📦 Cartera paper — {posiciones.length} posiciones abiertas <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>— qué tiene comprado el agente AHORA (simulado) y cómo va cada una</span></h2>
           <div style={{ ...card, padding: 0, overflowX: 'auto' }}>
             <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 560 }}>
-              <thead><tr><th style={th}>Símbolo</th><th style={th}>Abierta</th><th style={th}>Cantidad</th><th style={th}>Entrada</th><th style={th} title="último cierre público (Stooq→Yahoo); «—» = sin precio ahora mismo, no un 0">Precio ahora</th><th style={th}>Rentabilidad</th></tr></thead>
+              <thead><tr><th style={th}>Símbolo</th><th style={th}>Abierta</th><th style={th}>Cantidad</th><th style={th}>Entrada</th><th style={th} title="⚡ = precio público en vivo de hoy (botón Actualizar); sin ⚡ = último cierre público (Stooq→Yahoo); «—» = sin precio ahora mismo, no un 0">Precio ahora</th><th style={th}>Rentabilidad</th></tr></thead>
               <tbody>
                 {posiciones.map(p => {
-                  const px = precioAhora.get(p.simbolo) ?? null
+                  const pa = precioAhora.get(p.simbolo) ?? null
+                  const px = pa?.precio ?? null
                   const ret = px != null && p.precioEntrada > 0 ? px / p.precioEntrada - 1 : null
                   return (
                     <tr key={p.id}>
@@ -546,7 +583,7 @@ export default async function TradingDashboard({ carteraCohetes, carteraReal, tr
                       <td style={{ ...td, color: 'var(--muted)' }}>{fechaCorta(p.abiertaEn)}</td>
                       <td style={td}>{p.cantidad}</td>
                       <td style={td}>{usd(p.precioEntrada)}</td>
-                      <td style={td}>{px != null ? usd(px) : <span style={{ color: 'var(--muted)' }}>—</span>}</td>
+                      <td style={td} title={pa?.vivo ? 'precio público en vivo de hoy' : 'último cierre público'}>{px != null ? <>{usd(px)}{pa?.vivo ? ' ⚡' : ''}</> : <span style={{ color: 'var(--muted)' }}>—</span>}</td>
                       <td style={{ ...td, fontWeight: 700, color: ret == null ? 'var(--muted)' : ret >= 0 ? 'var(--positive)' : 'var(--negative)' }}>{pctN(ret)}</td>
                     </tr>
                   )
@@ -557,14 +594,18 @@ export default async function TradingDashboard({ carteraCohetes, carteraReal, tr
           {(() => {
             const conPrecio = posiciones.filter(p => (precioAhora.get(p.simbolo) ?? null) != null && p.precioEntrada > 0)
             const invertido = conPrecio.reduce((s, p) => s + p.cantidad * p.precioEntrada, 0)
-            const ahora = conPrecio.reduce((s, p) => s + p.cantidad * (precioAhora.get(p.simbolo) as number), 0)
+            const ahora = conPrecio.reduce((s, p) => s + p.cantidad * (precioAhora.get(p.simbolo)!.precio), 0)
             const completo = conPrecio.length === posiciones.length
+            const numVivosPaper = posiciones.filter(p => precioAhora.get(p.simbolo)?.vivo).length
             return (
               <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
                 {invertido > 0 && (
                   <>Total{completo ? '' : ` (${conPrecio.length}/${posiciones.length} con precio — parcial, no la cartera entera)`}: invertido {usd(invertido)} → ahora <strong style={{ color: ahora >= invertido ? 'var(--positive)' : 'var(--negative)' }}>{usd(ahora)}</strong> ({pct(ahora / invertido - 1)}) · </>
                 )}
-                Valorada con el último cierre público; «—» = sin precio ahora mismo (no un 0). Estas posiciones son la razón de los vetos «posición ya abierta»: el agente no duplica compras. La salida es por TIEMPO al vencer la ventana de cada tesis (regla firmada: los stops empeoran, H9).
+                {numVivosPaper > 0
+                  ? <>Valorada con el precio público EN VIVO (⚡, {numVivosPaper}/{posiciones.length}{horaVivos ? `, últ. negociación ${horaVivos}h Madrid` : ''}; el resto, último cierre) — el botón 🔄 Actualizar la relee. </>
+                  : <>Valorada con el último cierre público (sin precio en vivo fiable ahora mismo). </>}
+                «—» = sin precio ahora mismo (no un 0). Estas posiciones son la razón de los vetos «posición ya abierta»: el agente no duplica compras. La salida es por TIEMPO al vencer la ventana de cada tesis (regla firmada: los stops empeoran, H9).
               </p>
             )
           })()}

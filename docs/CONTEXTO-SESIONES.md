@@ -50,6 +50,22 @@
   **no los manda a ningún sitio** («sin push/email en plataforma — simplificado»).
 - Orden propuesto a Alberto: latido de `apply-auto` + rojo si falla Smoobu · declarar el ancla y NO
   aplicar si se pierde · conciliación `pricing_applied` ↔ snapshot en el cron diario.
+### 📜 (23/08/2026) Escritura de compraventa de Monte Carmelo → ficha patrimonial completa
+Alberto subió la escritura (29/03/2021, notario García-Carpintero, protocolo 488): precio
+**270.000€**, comprado **50/50 Alberto+Pilar** por mitades indivisas con carácter privativo.
+`act_monte_carmelo` actualizado en BD (valor/fecha/modo/pcts, fuente `escritura`; finca 7523
+Registro Sevilla nº2, superficie registral 172,50 m² vs 205 catastral). Intake del CFO: solo
+quedan valor de compra de Socorro, licencias VUT, capital pendiente exacto de la hipoteca y
+los gastos de adquisición de Monte Carmelo (no constan en la escritura). PR docs propio.
+
+### 📈 (23/08/2026) Botón «🔄 Actualizar» en /trading + precio EN VIVO (PR #1619, mergeado)
+Alberto: la pasada del agente es diaria y a mitad de sesión de bolsa el panel enseñaba la película
+de ayer. Nuevo `lib/trading/precio-vivo.ts` (meta del chart de Yahoo — precio intradía + divisa +
+hora; fixture REAL vía pg_net, el quote de Stooq `q/l` da 404 a IPs datacenter) con doble guarda
+antes de PINTAR: divisa igual + banda ×2 contra referencia (lecciones PR #1315/#1189). Cartera
+paper y cartera IBKR se re-valoran con ⚡ declarado (fuente+hora); nada se persiste (el track
+record sigue con precios-guardia). Botón cliente = router.refresh() (página force-dynamic).
+Ideas/radar/foto IBKR siguen siendo de la pasada diaria y la UI lo declara. tsc 0 · 1505 tests · build OK.
 
 ### 🏛️ (23/08/2026) Patrimonio: Catastro de Socorro y Monte Carmelo + baja de los Busto
 Alberto dio las refs catastrales: Socorro 24 `5732032TG3453B0001PK` (275 m², año 2000) y Monte
