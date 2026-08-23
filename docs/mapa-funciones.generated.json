@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-23T06:32:23Z",
-  "sha": "0c82587f07d1398804c57192ce0156f623ab13f0",
+  "generadoEn": "2026-08-23T08:59:04Z",
+  "sha": "912f43d2106a20e55092d7326f2e15fa3018a00d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -49818,6 +49818,27 @@
       "hash": "bdd245cab712"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/trading/ActualizarConsulta.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "ActualizarConsulta"
+      ],
+      "funciones": [
+        {
+          "nombre": "ActualizarConsulta",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ consultaDe }: { consultaDe: string }",
+          "retorno": null,
+          "linea": 10,
+          "resumen": "🔄 Botón «Actualizar» del Laboratorio (petición de Alberto, 23/08/2026): la pasada del agente es diaria y a mitad de sesión de bolsa el panel enseñaba la película de ayer. El refresco re-ejecuta la pá"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7e2176f5982f"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/trading/AnalisisSimbolo.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -50065,7 +50086,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 23
+          "linea": 25
         },
         {
           "nombre": "pctN",
@@ -50073,7 +50094,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 26
+          "linea": 28
         },
         {
           "nombre": "pct0N",
@@ -50081,7 +50102,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 29
+          "linea": 31
         },
         {
           "nombre": "CurvaForward",
@@ -50089,7 +50110,7 @@
           "exportada": false,
           "params": "{ serie }: { serie: { m: number | null; b: number }[] }",
           "retorno": null,
-          "linea": 35,
+          "linea": 37,
           "resumen": "Mini-curva del forward (SVG puro, sin dependencias): línea de la cesta (MEDIANA) vs el SPY a lo largo de los snapshots persistidos. La mediana es la métrica de decisión (un outlier no la mueve)."
         },
         {
@@ -50098,7 +50119,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 52
+          "linea": 54
         },
         {
           "nombre": "CurvaCarteraReal",
@@ -50106,7 +50127,7 @@
           "exportada": false,
           "params": "{ filas, divisa }: { filas: FilaTrack[]; divisa: string }",
           "retorno": null,
-          "linea": 60,
+          "linea": 62,
           "resumen": "📈 Evolución de la cartera REAL (dinero de Alberto): línea del VALOR de mercado contra la línea discontinua de lo INVERTIDO (coste). El área entre ambas es la ganancia/pérdida no realizada. SVG puro s"
         },
         {
@@ -50115,7 +50136,7 @@
           "exportada": false,
           "params": "n: number, divisa: string",
           "retorno": "string",
-          "linea": 155,
+          "linea": 157,
           "resumen": "Importe en la divisa de la posición, formato español (regla global: nunca estilo dólar)."
         },
         {
@@ -50124,13 +50145,13 @@
           "exportada": true,
           "params": "{ carteraCohetes, carteraReal, trackCartera }: { carteraCohetes: CarteraCohetesData | null; carteraReal?: CarteraRealUI | null | 'error'; trackCartera?: FilaTrack[] | 'error' }",
           "retorno": null,
-          "linea": 164,
+          "linea": 166,
           "resumen": "`carteraReal` solo llega desde la página con SESIÓN (app/(usuario)/trading/page.tsx): es dinero REAL de Alberto y la vista de invitado (/invitado/trading) no debe verlo — ahí queda undefined y la secc"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2a8cb839095a"
+      "hash": "e86cf859610a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -62448,6 +62469,46 @@
       "hash": "7c6fc66e40ea"
     },
     {
+      "ruta": "apps/plataforma/lib/contable/hipoteca-vigia.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "apps/plataforma/lib/contable/hipoteca-vigia.ts Vigía de hipoteca del agente contable: detecta desde los movimientos bancarios (a) un CAMBIO de cuota en un préstamo (suele significar revisión de tipo o bonificación perdida/recuperada) y (b) que la ficha de `patrimonio_activos` se quede desincronizada",
+      "exporta": [
+        "refPrestamo",
+        "avisosHipoteca"
+      ],
+      "funciones": [
+        {
+          "nombre": "refPrestamo",
+          "kind": "function",
+          "exportada": true,
+          "params": "concepto: string",
+          "retorno": "string | null",
+          "linea": 20,
+          "resumen": "Referencia del préstamo dentro del concepto bancario, p.ej. \"CUOTA PTMO 856289293-5\"."
+        },
+        {
+          "nombre": "mismaCuota",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a: number, b: number",
+          "retorno": null,
+          "linea": 25
+        },
+        {
+          "nombre": "avisosHipoteca",
+          "kind": "function",
+          "exportada": true,
+          "params": "movs: CuotaMov[], fichas: FichaHipoteca[]",
+          "retorno": "string[]",
+          "linea": 29,
+          "resumen": "Movimientos de cuota (importe negativo en banca) → avisos. `movs` puede venir en cualquier orden; se agrupa por préstamo y se ordena por fecha."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2e8acb945766"
+    },
+    {
       "ruta": "apps/plataforma/lib/contable/intencion.ts",
       "ambito": "apps/plataforma",
       "resumen": "apps/plataforma/lib/contable/intencion.ts Router de intención PURO: detecta preguntas frecuentes y estructuradas (\"gasto total junio\", \"cuánto llevo en luz\", \"facturas pendientes\", \"pisos vs correduría\") para responderlas DIRECTO por SQL, sin pasar por el LLM. Beneficio: funciona aunque la IA esté s",
@@ -62787,7 +62848,7 @@
           "exportada": false,
           "params": "sql: Prisma.Sql",
           "retorno": "Promise<number>",
-          "linea": 10
+          "linea": 11
         },
         {
           "nombre": "construirResumenProactivo",
@@ -62795,7 +62856,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<string | null>",
-          "linea": 15
+          "linea": 16
         },
         {
           "nombre": "resumenProactivo",
@@ -62803,17 +62864,18 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 59,
+          "linea": 86,
           "resumen": "Envía el resumen si hay algo que decir. Devuelve si se envió."
         }
       ],
       "tablas": [
         "cuentas_bancarias",
         "facturas_proveedor",
-        "movimientos_bancarios"
+        "movimientos_bancarios",
+        "patrimonio_activos"
       ],
       "rutaApi": null,
-      "hash": "593a43edcbe0"
+      "hash": "6a673baa2cea"
     },
     {
       "ruta": "apps/plataforma/lib/contable/respuestas-directas.ts",
@@ -74344,6 +74406,77 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "eb977da532da"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/precio-vivo.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "⚡ Precio EN VIVO (intradía, público) — para el botón «Actualizar» de /trading (23/08/2026). La pasada del agente es DIARIA, así que a mitad de sesión el panel enseñaba la película de ayer; este módulo lee el último precio negociado de la meta del chart de Yahoo (la misma fuente de respaldo que ya si",
+      "exporta": [
+        "urlYahooVivo",
+        "parseYahooVivo",
+        "precioVivoFiable",
+        "conPrecioVivo",
+        "precioVivoYahoo",
+        "preciosVivos"
+      ],
+      "funciones": [
+        {
+          "nombre": "urlYahooVivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string",
+          "retorno": "string",
+          "linea": 26
+        },
+        {
+          "nombre": "parseYahooVivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "json: unknown",
+          "retorno": "PrecioVivo | null",
+          "linea": 33,
+          "resumen": "Meta del chart de Yahoo → precio vivo. Defensivo: sin regularMarketPrice finito>0 o sin currency legible → null (nunca un 0 ni un precio de otra cosa)."
+        },
+        {
+          "nombre": "precioVivoFiable",
+          "kind": "function",
+          "exportada": true,
+          "params": "vivo: number, referencia: number | null | undefined",
+          "retorno": "boolean",
+          "linea": 48,
+          "resumen": "Banda ×2 contra una referencia conocida (misma guarda que precios-guardia, PR #1315): sin referencia NO se juzga — y por tanto no se usa el vivo, que es el estado conservador."
+        },
+        {
+          "nombre": "conPrecioVivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: T, vivo: PrecioVivo | null | undefined",
+          "retorno": "",
+          "linea": 58,
+          "resumen": "Posición de la cartera real re-valorada con el precio vivo — SOLO si la divisa coincide y el precio pasa la banda ×2 contra el último precio que dio IBKR (sin referencia de IBKR no se toca nada: mejor"
+        },
+        {
+          "nombre": "precioVivoYahoo",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string, timeoutMs = 3000",
+          "retorno": "Promise<PrecioVivo | null>",
+          "linea": 78,
+          "resumen": "Último precio negociado de UN símbolo. Best-effort: cualquier fallo → null (el caller pinta el cierre/última lectura que ya tenía, nunca un hueco disfrazado de 0)."
+        },
+        {
+          "nombre": "preciosVivos",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolos: string[], timeoutMs = 3000",
+          "retorno": "Promise<Map<string, PrecioVivo | null>>",
+          "linea": 93,
+          "resumen": "Precios vivos de un lote de símbolos (dedupe interno). Un símbolo sin precio queda en el mapa con null — «no lo sé ahora mismo», que el caller debe declarar, no colapsar."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ebf829d1368c"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-contraste.ts",
@@ -96296,7 +96429,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2551,
-    "funciones": 6994
+    "archivos": 2554,
+    "funciones": 7004
   }
 }
