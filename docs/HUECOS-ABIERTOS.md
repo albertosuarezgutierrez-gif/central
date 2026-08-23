@@ -20,7 +20,6 @@
 | # | Hueco | Vertical | Fuente | Por qué importa |
 |---|---|---|---|---|
 | H1 | Cierres ajustados por splits y dividendos (3er fallback de precios, tras Stooq y Yahoo) | trading | `docs/TRADING-FUENTES-PAGO.md` §2 | A 15 años hay muchos splits. La guarda `serieDiscontinua` caza lo imposible, no lo erróneo. **Alpha Vantage NO lo cierra**: `TIME_SERIES_DAILY_ADJUSTED` es premium (verificado 21/08/2026). Candidato: EODHD (~50-80 US$/mes). |
-| H2 | Screener de acciones para la cantera | trading | `docs/TRADING-FUENTES-PAGO.md` §2 | El plan Free de FMP no da `/stable/company-screener`. `Datos financieros` tiene `screen_stocks` pero esa cuenta está a `$0.00`. Coste de desbloqueo: ~20 US$. |
 | H3 | Datos de mercado en vivo de IBKR | trading | `docs/TRADING-FUENTES-PAGO.md` §2 | No es investigación, es fontanería de la ejecución: imprescindibles al abrir el Tramo 1 con dinero real. Pocos US$/mes. |
 
 ## Huecos cerrados (histórico corto)
@@ -29,6 +28,7 @@
 |---|---|---|
 | Fecha de próximos resultados (la guarda `earningsInminente` no podía vetar sin ella) | **Pieza propia**: `apps/plataforma/lib/trading/earnings-yahoo.ts`, que `/api/trading/analizar` ya usa. Da además `confirmada` (anunciada por la empresa vs estimada), que Alpha Vantage NO da, y corre server-side para todas las rutas, no solo la sesión Claude. | **05/08/2026** |
 | Histórico de deslistadas (sesgo de supervivencia del retrovisor) | Alpha Vantage `LISTING_STATUS`, tier gratis (8.491 filas con `ipoDate`/`delistingDate`). Sin equivalente propio en el repo (comprobado 21/08/2026). **Pendiente de integrar**: se consume por HTTP/CSV, no por MCP (182.000 tokens). | 21/08/2026 |
+| Screener de acciones para la cantera (H2) | **Financial Datasets `screen_stocks`**, cuenta con crédito real activado. `packages/module-trading/src/screenerMercado.ts` (PR #1579) traduce las filas al contrato `MetricasFactor` y neutraliza ROIC/divisa/nulos con denominador ≈0. | 21/08/2026 |
 
 > ⚠️ **Lección del 21/08/2026, la tercera vez que muerde la misma regla.** Este catálogo se sembró
 > desde `docs/TRADING-FUENTES-PAGO.md` §2 (15/08) dando por bueno que el calendario de earnings
