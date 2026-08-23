@@ -125,7 +125,7 @@ crear los 2 triggers (fichas 16-17 de RUTINAS-PROGRAMADAS) y contestar el intake
   rotación de claves NO cubre. Y el panel tiene **67 Edge Functions** frente a las 45 del repo: 22 sin versionar.
 - Todo en `docs/ROTACION-SERVICE-ROLE.md`; PR #1517.
 
-### 🛑 (22/08/2026) El canal ya se cura solo — y al comprobarlo, House llevaba 5 días con el ×1,20
+### 🛑 (22/08/2026) El canal ya se cura solo — y al comprobarlo, House llevaba 5 días con el ×1,20 (PR #1586)
 - **Verificado el trabajo del 20/08:** `sivra_canal` en verde y el ×1,20 SUPUESTO caído en 3 de 4
   pisos, con valores que confirman la hipótesis: markup ~0,95–1,04 **+ cuota fija por estancia**
   (22,30€ Busto Reform · 39,90€ Dúplex), no un ×1,20 plano. `agente_reparaciones` vacía = correcto
@@ -2347,8 +2347,23 @@ Pendiente: que Alberto revise el spec → plan de implementación. Códigos/cred
   page data de `/api/admin/clientes/[vertical]/[id]` YA en main (envs ausentes), no es del cambio.
 
 
-- **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 21/08/2026).** Detalle en
+- **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 23/08/2026).** Detalle en
   `docs/memoria/2026-08.md` y en los PRs citados.
+  - **🔴 Nuevo (23/08, auditoría diaria): 3 rutinas Claude programadas sin rastro el 22/08** —
+    `auditoria-diaria`, `mercado-booking` y `facturas-correo` no dejaron commit ese día (sí lo hicieron
+    el 21/08 y el 23/08); los crons de Vercel sí corrieron con normalidad y otras sesiones (health-check
+    IA→`buscador-ia`, patrimonio-cfo, fix `sivra_canal`) sí se dispararon. Efecto medido: `market_rates
+    booking_mcp` lleva desde el 21/08 03:40 sin fila nueva (46h). Revisar en claude.ai la configuración
+    de los 3 triggers (¿deshabilitado, hora movida, fallo del scheduler?) — no hay causa visible desde el repo.
+  - **`ses_transporte` sin ninguna pasada OK todavía:** `detalle` dice «no hay ningún establecimiento
+    dado de alta en /sivra/partes/establecimientos» — no es la avería del Ministerio ni de credenciales
+    que ya describe la nota del latido, es que falta dar de alta el primer establecimiento. Acción de
+    Alberto, no de código.
+  - **PR #1594 (draft, sin mergear) — fix real de producción:** un piso (House Sevillana) se quedó sin
+    tarifar el 22/08 porque el motor elegía el `MAX(search_date)` de `market_rates` sin filtrar por
+    comparables plausibles, y una pasada de barrido barato (Serper) con solo 1 comp útil sombreaba a la
+    pasada rica del día anterior (93 comps). Corrige seleccionando la última pasada con ≥5 comparables
+    creíbles. Pendiente de revisión/merge de Alberto.
   - **Ayudas/subvenciones (15/08, #1432):** pendiente respuesta de Asecon (Marta Albarrán) sobre la
     convocatoria de conciliación antes del **15/09/2026** (plazo de solicitud). Pendiente además un
     borrador (sin enviar, a decisión de Alberto) sobre la cuota RETA de Pilar (serie 72→118→32€,
