@@ -13,6 +13,7 @@ import { baseDesdeGuestConFijo } from "@/lib/sivra/pricing-canal"
 import { factorDemandaFecha, type DemandaFechaResult } from "@/lib/sivra/pricing-demanda"
 import { elegirBucket } from "@/lib/sivra/pricing-bucket-fuente"
 import { MIN_EUR_PLAZA_COMP } from "@/lib/sivra/pricing-comps-plausibles"
+import { sqlUltimaPasadaUtil, avisoPisosSinTarifar, type PisoSaltado } from "@/lib/sivra/pricing-corpus-utilizable"
 import { aplicarPrior, indicesPrior, type IndicePrior, type MesHistorico } from "@/lib/sivra/prior-estacional"
 import { getSmoobuKey } from "@/lib/smoobu"
 import { tgSend } from "@central/core-telegram"
@@ -114,10 +115,7 @@ export async function POST(req: NextRequest) {
     sample_n: number; market_age_days: number; events_enabled: boolean; gap_discount_pct: number
     flight_demand_k: number; seasonal_floor_k: number; lastminute_k: number
   }[]>(Prisma.sql`
-    WITH latest AS (
-      SELECT scenario, MAX(search_date) sd FROM market_rates
-      WHERE scenario LIKE 'prop_%' AND price_night > 0 GROUP BY scenario
-    ),
+    WITH latest AS (${Prisma.raw(sqlUltimaPasadaUtil())}),
     -- Cada comparable se NORMALIZA al aforo del piso (pricing_factor_aforo) antes de entrar en el
     -- percentil. Sin esto, una casa de 12 plazas se tarificaba contra apartamentos de 4-8 y salia
     -- a mitad de precio (hallazgo 31/07/2026). Con comps del mismo aforo el factor es 1: no cambia nada.
@@ -595,6 +593,10 @@ export async function POST(req: NextRequest) {
   const anclaHoy = new Map(anclaHoyRows.map(x => [`${x.pid}|${x.rate_date}`, Number(x.p)]))
 
   const results: any[] = []
+  // 🚨 Un piso que no se tarifica es CARO y hasta el 22/08/2026 era INVISIBLE: vivía solo aquí
+  // dentro, en un array que solo ve quien lee la respuesta HTTP a mano. Ese día House se quedó el
+  // día entero sin tarificar (1 comparable utilizable de 22) y ni Telegram ni el latido lo dijeron.
+  const sinTarifar: PisoSaltado[] = []
 
   for (const r of recs) {
     const smoobuId = SMOOBU_ID[r.property_id]
@@ -605,6 +607,9 @@ export async function POST(req: NextRequest) {
         property: r.property_id, skipped: "datos_insuficientes",
         sample_n: r.sample_n, market_age_days: r.market_age_days,
         detail: `Necesita ≥${MIN_SAMPLE} comparables y mercado ≤${MAX_MARKET_AGE_DAYS}d`,
+      })
+      sinTarifar.push({
+        property: r.property_id, sample_n: r.sample_n, market_age_days: r.market_age_days,
       })
       continue
     }
@@ -1039,6 +1044,23 @@ export async function POST(req: NextRequest) {
     } catch { /* best-effort: la congelación en sí ya está aplicada y declarada en la respuesta */ }
   }
 
+  // ⚠️ Aviso de los pisos que esta pasada NO ha tarificado. Dedupe por (piso, DÍA) sobre la misma
+  // `pricing_avisos` que usan las congeladas: el motor corre 3 veces al día y un piso sin corpus lo
+  // está las tres, así que sin dedupe serían 3 mensajes iguales; con él, uno al día mientras dure.
+  // El aviso NO marca `ok:false`: los demás pisos sí se tarificaron y el vigía de latidos debe
+  // seguir reservado para lo que invalida la pasada entera.
+  const avisoSinTarifar = avisoPisosSinTarifar(sinTarifar, MIN_SAMPLE, MAX_MARKET_AGE_DAYS)
+  if (!dryRun && avisoSinTarifar) {
+    try {
+      const hoyClave = new Date().toISOString().slice(0, 10)
+      const claves = sinTarifar.map(p => Prisma.sql`(${`sin-tarifar:${p.property}:${hoyClave}`}, now())`)
+      const nuevas = await prisma.$queryRaw<{ clave: string }[]>(Prisma.sql`
+        INSERT INTO pricing_avisos (clave, enviado_at) VALUES ${Prisma.join(claves)}
+        ON CONFLICT (clave) DO NOTHING RETURNING clave`)
+      if (nuevas.length > 0) await tgSend(avisoSinTarifar)
+    } catch { /* best-effort: el hueco ya va declarado en la respuesta */ }
+  }
+
   if (plAvisos.length > 0) {
     try {
       await tgSend(
@@ -1097,6 +1119,9 @@ export async function POST(req: NextRequest) {
     pl_degradado: plIlegible ? `referencia PriceLabs ilegible: tarificado SIN suelo PL (${plIlegible})` : undefined,
     // Degradación menor: no invalida la pasada, pero tiene que verse sin tener que deducirlo.
     demanda_degradada: ocupacionMesIlegible ? "ocupación por mes ilegible: tarificado con la anual" : undefined,
+    // Pisos que esta pasada dejó sin tarificar. En la respuesta a propósito: sus precios se quedan
+    // como estaban, y eso NO es «el mercado dice que están bien» — es «no se ha podido mirar».
+    sin_tarifar: sinTarifar.length > 0 ? sinTarifar : undefined,
     dryRun, paused, days, properties: recs.length, results, pl_avisos: plAvisos.length,
     pl_suelo_acotadas: plSueloAcotadas,
   })

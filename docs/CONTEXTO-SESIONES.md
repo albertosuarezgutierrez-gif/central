@@ -32,6 +32,21 @@
 
 ---
 
+### 🛑 (22/08/2026) Una pasada de mercado sin comps utilizables dejó a House un día entero sin tarifar (PR #1593)
+
+- Verificando la producción tras el arreglo del canal (#1582) salió que House **no recibió NI UNA fila
+  de `pricing_applied`** hoy, mientras Busto/Dúplex/Luxury recibían 130/237/159. El canal sí se corrigió
+  solo a las 07:46 (1,20/0 → **1,0872 / 213,50€**), pero el precio nunca llegó a Smoobu.
+- Causa: `latest` elegía corpus con `MAX(search_date)` a secas. Hoy corrió el barrido barato (`serper`)
+  y NO el conector bueno (`booking_mcp`), así que el MAX cayó en una pasada de 22 comps con **1** plausible
+  (<`MIN_SAMPLE`) → `datos_insuficientes` → piso saltado. Una pasada ilegible **sombreaba** a una legible:
+  la del día anterior tenía 93 comps buenos. Los otros 3 se libraron por tener el umbral de €/plaza bajo
+  (2/4/5 plazas): **cuanto más grande el piso, más fácil le es caer**.
+- Arreglo: `sqlUltimaPasadaUtil()` elige la última pasada con ≥5 comps **plausibles** (apply + settings +
+  pilot-track), y el salto **ahora avisa** por Telegram (antes solo vivía en el array `results` del HTTP).
+- Pendiente de Alberto: la **brecha escaparate↔caja** de House — lo listado es 1,07–1,47× la base pero
+  lo cobrado 0,87–0,98×. Causa sin comprobar (promos de Booking vs limpieza cobrada aparte). Rutina el 30/08.
+
 ### 📈 (22/08/2026) Alpha Vantage: el barrido de splits dice que el FIFO está limpio (por poco)
 Conector nuevo → cubre lo que IBKR no da (su `get_price_snapshot` tiene el enum CERRADO). Dos módulos
 puros nuevos en `@central/module-trading` (173 tests verdes): **`splits.ts`** (reexpresa lo anterior a
@@ -51,6 +66,7 @@ para que el vigía mensual los siga. **Pendiente de Alberto:** enmendar (o no) l
 está al 98,6% en VWCE y el poder de compra no cubre el Tramo 1— y el coste de adquisición de BRZE/NKE, que hay
 que sacar de los extractos porque IBKR ya no sirve esas compras.
 ### 🧠 (22/08/2026) Health-check: sonda IA muerta (`z-ai/glm-5.2` 410) → swap a `meta/llama-3.1-70b-instruct`
+
 ### 💼 (22/08/2026) Nace el coordinador patrimonial: base de activos + /patrimonio + 2 agentes (PR #1591)
 Alberto pidió un «CFO personal» que exprima el rendimiento de lo que ya tiene (objetivo mixto,
 riesgo DINÁMICO con salvaguarda Socorro; jugada de referencia: vender Dúplex en el tope → fondo →
