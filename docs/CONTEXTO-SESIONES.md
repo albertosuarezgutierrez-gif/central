@@ -2370,6 +2370,11 @@ Pendiente: que Alberto revise el spec → plan de implementación. Códigos/cred
     comparables plausibles, y una pasada de barrido barato (Serper) con solo 1 comp útil sombreaba a la
     pasada rica del día anterior (93 comps). Corrige seleccionando la última pasada con ≥5 comparables
     creíbles. Pendiente de revisión/merge de Alberto.
+  - **Nuevo (23/08, auditoría profunda): `pdfjs-dist` desactualizado en `apps/ialimp`** (CVE; la app
+    procesa PDFs de nómina/firma) — bump a `>=6.2.108` pendiente.
+  - **Nuevo (23/08, auditoría profunda):** últimos 20 deploys Vercel de `ia-rest`/`transporte`/
+    `central-rrhh` en CANCELED — probable cadencia de pushes (varios commits seguidos cancelan el
+    deploy anterior), no build roto; verificar que producción sirve el commit actual de `main`.
   - **Ayudas/subvenciones (15/08, #1432):** pendiente respuesta de Asecon (Marta Albarrán) sobre la
     convocatoria de conciliación antes del **15/09/2026** (plazo de solicitud). Pendiente además un
     borrador (sin enviar, a decisión de Alberto) sobre la cuota RETA de Pilar (serie 72→118→32€,
