@@ -33,6 +33,16 @@ sobrevive a la sesión efímera). Cierra con informe a Alberto y auto-informe en
   **RETIRADA** (su ruta devuelve 410 desde el 18/07/2026) y se lee igual de bien: leerla lleva a
   diagnósticos falsos. Comprueba qué copia corre ANTES de acusar al motor de un fallo — pasó el
   20/08/2026. Detalle en `references/estado-y-protocolo.md`.
+- **🚨 UN PISO PUEDE DESAPARECER DEL APPLY SIN QUE NADIE LO DIGA — compruébalo (22/08/2026).**
+  Antes de dar por buena una pasada, mira que los CUATRO pisos tengan filas:
+  `SELECT property_id, count(*) FROM pricing_applied WHERE applied_at >= CURRENT_DATE GROUP BY 1;`
+  Si falta uno, no es que «no hiciera falta moverlo»: es que el motor lo saltó con
+  `skipped:"datos_insuficientes"` (menos de 5 comparables plausibles, o mercado de más de 7 días).
+  Ese día House Sevillana se quedó el día entero sin tarifar mientras los otros tres recibían 526
+  filas, y el aviso vivía SOLO en el array `results` de la respuesta HTTP, que no lee nadie. Desde el
+  PR #1594 el salto **avisa por Telegram** y sale en el campo `sin_tarifar` de la respuesta — pero
+  míralo igual: la causa suele estar aguas arriba (la rutina `mercado-booking` no entregó), y ahí no
+  hay nada que arreglar en el motor.
 - **NUNCA fabriques `pricing_decisiones` a mano.** Si el Paso 4 falla dos ciclos seguidos,
   avisa por Telegram (`/api/internal/alerta`), nunca falles en silencio.
 - Circuit-breaker (HTTP 409) → NO lo fuerces: reparte la subida en varios ciclos.

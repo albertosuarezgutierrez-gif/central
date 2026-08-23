@@ -45,6 +45,19 @@ rutina y no un `CRON_JOBS`.
   ⚠️ **No confundas con la competencia de la misma calle:** dos de nuestros pisos están en Bustos
   Tavera y ahí hay comparables legítimos ajenos («Monkeys Apartments Casa Palacio Bustos Tavera»,
   «Bustos Tavera Suite»). Se descarta por el NOMBRE del anuncio, nunca por la calle.
+- **🚨 SI NO CORRES, UN PISO SE QUEDA SIN PRECIO. Medido el 22/08/2026.** Esta rutina no es un
+  «nice to have» que enriquece el corpus: es la ÚNICA fuente fiable de la pasada que el motor elige
+  cada día. Ese día no entregaste (0 filas `booking_mcp` frente a las 237-239 de los tres días
+  anteriores), el barrido barato sí corrió, y el motor —que cogía la pasada más RECIENTE sin más
+  condición— se quedó con 22 comparables de Serper de los que **uno solo** sobrevivía al filtro de
+  €/plaza. Por debajo del mínimo de 5, `pricing/apply` saltó **House Sevillana entera**: cero filas
+  en `pricing_applied` en todo el día, en el piso que más factura, justo el día en que su canal
+  acababa de corregirse. Cuanto más grande es el piso, más fácil le pasa (su umbral de €/plaza es el
+  más alto: 12 plazas × 12€ = 144€, contra los 24-60€ de los otros tres).
+  **Ya hay red** desde el PR #1594: el motor elige la última pasada que deje ≥5 comparables
+  plausibles, así que un día tuyo en blanco cae al corpus de ayer en vez de dejar el piso mudo. Pero
+  la red tiene un límite duro: **`MAX_MARKET_AGE_DAYS = 7`**. Dos o tres días sin entregar se
+  aguantan; una semana deja al motor sin mercado y esta vez la red no lo tapa.
 - **NO inventes comparables ni rellenes huecos.** Si una ventana no devuelve nada, cuéntala como
   `sinRespuesta` y sigue: «el conector no contestó» NO es «no hay mercado». Esa distinción es el
   motivo de que exista esta rutina.
