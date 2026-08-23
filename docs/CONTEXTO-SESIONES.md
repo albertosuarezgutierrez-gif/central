@@ -32,6 +32,14 @@
 
 ---
 
+### 📜 (23/08/2026) Escritura de compraventa de Monte Carmelo → ficha patrimonial completa
+Alberto subió la escritura (29/03/2021, notario García-Carpintero, protocolo 488): precio
+**270.000€**, comprado **50/50 Alberto+Pilar** por mitades indivisas con carácter privativo.
+`act_monte_carmelo` actualizado en BD (valor/fecha/modo/pcts, fuente `escritura`; finca 7523
+Registro Sevilla nº2, superficie registral 172,50 m² vs 205 catastral). Intake del CFO: solo
+quedan valor de compra de Socorro, licencias VUT, capital pendiente exacto de la hipoteca y
+los gastos de adquisición de Monte Carmelo (no constan en la escritura). PR docs propio.
+
 ### 🏛️ (23/08/2026) Patrimonio: Catastro de Socorro y Monte Carmelo + baja de los Busto
 Alberto dio las refs catastrales: Socorro 24 `5732032TG3453B0001PK` (275 m², año 2000) y Monte
 Carmelo 68 `4707007TG3440N0003TR` (205 m², 1º izq, año 1964, Los Remedios) — leídas del Catastro
