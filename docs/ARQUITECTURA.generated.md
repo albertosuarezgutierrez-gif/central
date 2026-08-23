@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-22T08:35:56Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-23T09:08:27Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -237,14 +237,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- 3 🔴:
+- Comprobado a mano que el 2 NO está ocurriendo:
+- 2 🟡:
+- Pendiente de Alberto:
 - NO borrar `Cloude`
 - La banda naranja de Supabase era un aviso legal, no una alarma.
 - Regla:
 - Verificado el trabajo del 20/08:
 - El cuarto piso destapó el fallo:
 - Arreglado midiendo el RANGO, no un punto
-- Y el raíl tenía el mismo agujero:
-- La guest app tiene API JSON abierta con el token del propio enlace:
-- Precedencia:
-- Entregas 2-5 también hechas
 
