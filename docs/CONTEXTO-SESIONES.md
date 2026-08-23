@@ -32,7 +32,7 @@
 
 ---
 
-### 📈 (23/08/2026) Botón «🔄 Actualizar» en /trading + precio EN VIVO (rama claude/query-refresh-button-k58lkx)
+### 📈 (23/08/2026) Botón «🔄 Actualizar» en /trading + precio EN VIVO (PR #1619, mergeado)
 Alberto: la pasada del agente es diaria y a mitad de sesión de bolsa el panel enseñaba la película
 de ayer. Nuevo `lib/trading/precio-vivo.ts` (meta del chart de Yahoo — precio intradía + divisa +
 hora; fixture REAL vía pg_net, el quote de Stooq `q/l` da 404 a IPs datacenter) con doble guarda
