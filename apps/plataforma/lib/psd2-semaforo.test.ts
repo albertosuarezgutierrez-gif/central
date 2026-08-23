@@ -34,6 +34,16 @@ test('fronteras de frescura: 2 días ok · 3 atención · 6 roto', () => {
   assert.equal(semaforoFeed({ hoyISO: '2026-08-16', ultimoMovISO: '2026-08-10', avisos: [], consentCreadaISO: CONSENT }).nivel, 'roto')
 })
 
+test('el detalle de «atención» explica el hueco (fin de semana) y no alarma con falsedades', () => {
+  // Queja de Alberto (23/08/2026): domingo con último movimiento el jueves → el texto decía
+  // «>1 día no había pasado», que es falso (hubo huecos legítimos de hasta 10 días) y confunde.
+  const e = semaforoFeed({ hoyISO: '2026-08-23', ultimoMovISO: '2026-08-20', avisos: [], consentCreadaISO: CONSENT })
+  assert.equal(e.nivel, 'atencion')
+  const detalle = e.detalles[0]
+  assert.match(detalle, /fin de semana/)
+  assert.doesNotMatch(detalle, /no había pasado|nunca hubo/)
+})
+
 test('sin movimientos importados nunca → atención («no lo sé»), jamás ok', () => {
   const e = semaforoFeed({ hoyISO: '2026-06-15', ultimoMovISO: null, avisos: [], consentCreadaISO: CONSENT })
   assert.equal(e.nivel, 'atencion')
