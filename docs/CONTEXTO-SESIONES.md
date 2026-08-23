@@ -32,6 +32,15 @@
 
 ---
 
+### 🏦 (23/08/2026) Vigía de hipoteca en el agente contable + borrador a CajaSur
+El contable proactivo (cron lunes 09:00) ahora vigila los recibos `CUOTA PTMO <ref>` de banca:
+avisa por Telegram si la cuota cambia entre recibos (revisión de tipo/bonificación) o si la ficha
+de `patrimonio_activos` se desincroniza de lo que cobra el banco. Helper puro
+`lib/contable/hipoteca-vigia.ts` + 9 tests; skill `patrimonio-cfo` (Paso 4) concilia cuota real
+banca↔ficha y ANALIZA el salto (el contable lo detecta en semanal). Borrador Gmail a la gestora
+(María Luz, CajaSur, oficina Virgen de Luján) pidiendo bonificación perdida + capital exacto +
+cuadro — pendiente de que Alberto lo envíe. Registro en AGENTES-MAPA y PATRIMONIO-CFO.md.
+
 ### 🏦 (22/08/2026) Hipoteca de Monte Carmelo leída de la escritura → ficha patrimonial completa
 Alberto subió la escritura (CAJASUR 856289293-5, abr-2021): 230.501,03€ a 30 años (vence
 05/04/2051), FIJO 2,10% bonificable — el aplicado real fue ~1,11% y subió a ~1,31% en abr-2026
