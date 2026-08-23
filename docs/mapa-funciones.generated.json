@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-23T06:32:23Z",
-  "sha": "0c82587f07d1398804c57192ce0156f623ab13f0",
+  "generadoEn": "2026-08-23T08:45:27Z",
+  "sha": "114ed6959311663926993d3d5e7f1291d852ca5a",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -62448,6 +62448,46 @@
       "hash": "7c6fc66e40ea"
     },
     {
+      "ruta": "apps/plataforma/lib/contable/hipoteca-vigia.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "apps/plataforma/lib/contable/hipoteca-vigia.ts Vigía de hipoteca del agente contable: detecta desde los movimientos bancarios (a) un CAMBIO de cuota en un préstamo (suele significar revisión de tipo o bonificación perdida/recuperada) y (b) que la ficha de `patrimonio_activos` se quede desincronizada",
+      "exporta": [
+        "refPrestamo",
+        "avisosHipoteca"
+      ],
+      "funciones": [
+        {
+          "nombre": "refPrestamo",
+          "kind": "function",
+          "exportada": true,
+          "params": "concepto: string",
+          "retorno": "string | null",
+          "linea": 20,
+          "resumen": "Referencia del préstamo dentro del concepto bancario, p.ej. \"CUOTA PTMO 856289293-5\"."
+        },
+        {
+          "nombre": "mismaCuota",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a: number, b: number",
+          "retorno": null,
+          "linea": 25
+        },
+        {
+          "nombre": "avisosHipoteca",
+          "kind": "function",
+          "exportada": true,
+          "params": "movs: CuotaMov[], fichas: FichaHipoteca[]",
+          "retorno": "string[]",
+          "linea": 29,
+          "resumen": "Movimientos de cuota (importe negativo en banca) → avisos. `movs` puede venir en cualquier orden; se agrupa por préstamo y se ordena por fecha."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2e8acb945766"
+    },
+    {
       "ruta": "apps/plataforma/lib/contable/intencion.ts",
       "ambito": "apps/plataforma",
       "resumen": "apps/plataforma/lib/contable/intencion.ts Router de intención PURO: detecta preguntas frecuentes y estructuradas (\"gasto total junio\", \"cuánto llevo en luz\", \"facturas pendientes\", \"pisos vs correduría\") para responderlas DIRECTO por SQL, sin pasar por el LLM. Beneficio: funciona aunque la IA esté s",
@@ -62787,7 +62827,7 @@
           "exportada": false,
           "params": "sql: Prisma.Sql",
           "retorno": "Promise<number>",
-          "linea": 10
+          "linea": 11
         },
         {
           "nombre": "construirResumenProactivo",
@@ -62795,7 +62835,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<string | null>",
-          "linea": 15
+          "linea": 16
         },
         {
           "nombre": "resumenProactivo",
@@ -62803,17 +62843,18 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 59,
+          "linea": 86,
           "resumen": "Envía el resumen si hay algo que decir. Devuelve si se envió."
         }
       ],
       "tablas": [
         "cuentas_bancarias",
         "facturas_proveedor",
-        "movimientos_bancarios"
+        "movimientos_bancarios",
+        "patrimonio_activos"
       ],
       "rutaApi": null,
-      "hash": "593a43edcbe0"
+      "hash": "6a673baa2cea"
     },
     {
       "ruta": "apps/plataforma/lib/contable/respuestas-directas.ts",
@@ -96296,7 +96337,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2551,
-    "funciones": 6994
+    "archivos": 2552,
+    "funciones": 6997
   }
 }
