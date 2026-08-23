@@ -36,9 +36,11 @@
 Alberto subió las dos resoluciones: Socorro **VFT/SE/01179** (titular Pilar, 08/11/2016, completa,
 2 hab/5 plazas) y Dúplex **VFT/SE/01932** (titular Alberto, 20/04/2017, completa, 2 hab/4 plazas).
 `patrimonio_activos` actualizado (`licencia_vut`/`licencia_vut_num`; Monte Carmelo → `false`).
-⚠️ Discrepancia a vigilar: la resolución de Socorro dice 2 hab/5 plazas y House Sevillana se
-comercializa como 6 dorm/12 — falta confirmar si hay declaración responsable posterior que amplíe
-capacidad (modificar sin comunicar al RTA es infracción grave). Con esto el intake del CFO solo
+✅ La discrepancia de capacidad se CERRÓ en la misma sesión: Alberto subió la modificación de
+bases (declaración responsable de Pilar 14/05/2025, resolución 30/05/2025) que amplía Socorro a
+**6 hab/12 plazas** — la explotación actual está regularizada. ⚠️ Errata detectada: el RESUELVO
+de esa resolución repite la capacidad antigua (2/5); comprobar el RTA y pedir corrección de
+errores (art. 109.2 Ley 39/2015) si consta mal. Con esto el intake del CFO solo
 tiene abiertos: valor de compra de Socorro, capital exacto de la hipoteca y gastos de adquisición
 de Monte Carmelo.
 
