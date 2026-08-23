@@ -32,6 +32,28 @@
 
 ---
 
+### 🪪 (23/08/2026) Licencias VUT cargadas de las resoluciones del RTA
+Alberto subió las dos resoluciones: Socorro **VFT/SE/01179** (titular Pilar, 08/11/2016, completa,
+2 hab/5 plazas) y Dúplex **VFT/SE/01932** (titular Alberto, 20/04/2017, completa, 2 hab/4 plazas).
+`patrimonio_activos` actualizado (`licencia_vut`/`licencia_vut_num`; Monte Carmelo → `false`).
+✅ La discrepancia de capacidad se CERRÓ en la misma sesión: Alberto subió la modificación de
+bases (declaración responsable de Pilar 14/05/2025, resolución 30/05/2025) que amplía Socorro a
+**6 hab/12 plazas** — la explotación actual está regularizada. ⚠️ Errata detectada: el RESUELVO
+de esa resolución repite la capacidad antigua (2/5); comprobar el RTA y pedir corrección de
+errores (art. 109.2 Ley 39/2015) si consta mal. Con esto el intake del CFO solo
+tiene abiertos: valor de compra de Socorro, capital exacto de la hipoteca y gastos de adquisición
+de Monte Carmelo.
+
+### 🏦 (23/08/2026) Valoraciones AVM de BBVA registradas como fuente propia + contraste de métodos
+Alberto pasó el pantallazo de «Patrimonio no financiero» de BBVA → 3 filas nuevas en
+`patrimonio_valoraciones` con `fuente='bbva'`: Socorro 832.000€, Dúplex («Campana») 294.000€,
+Monte Carmelo 764.000€. Contraste con las del agente (`agente:m2zona`): Dúplex casi clavado
+(−2%, valida el método); Socorro la del agente sale ~45% arriba (el €/m² p50 de zona no
+descuenta el tamaño de una casa de 275 m²); Monte Carmelo confirma que el proxy municipal
+infravaloraba (~3.727€/m² implícitos en Los Remedios vs 2.635 del proxy). Fuentes de datos
+REALES propuestas a Alberto: MITMA valor tasado + INE IPV (cron pendiente de que lo pida),
+valor de referencia del Catastro (manual anual, Cl@ve) e Idealista API (alta aún pendiente).
+
 ### 🔎 (23/08/2026) Auditoría: dónde es MUDO un fallo en la cadena de pricing
 
 - Pedida por Alberto tras cuatro fallos silenciosos en cinco días en la misma cadena (todos
