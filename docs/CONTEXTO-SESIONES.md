@@ -157,6 +157,17 @@ movimientos de la tarjeta ****0302 de julio (629,86€ liquidados 01/08) para po
 - Verificado: 1.465 tests + 33 del guardián · tsc 0 · build OK. PR #1582.
 
 
+### 🔢 (22/08/2026) Dos rutinas con el mismo número: la colisión que no rompe nada visible
+Al mergear #1581 (conectores-vigia = rutina 16) apareció que `radar-espana` de #1591 también era la
+16 — **mergeados con 6 minutos de diferencia**. Y auditando salió la MISMA colisión de julio, viva
+desde entonces: `agentes-entrenador` y `Triaje de correo` ambos «10» (#716 vs #718). Un número
+duplicado no rompe el render, solo hace que «ver punto 10» apunte a dos sitios y el lector se quede
+con el primero — el fallo de leer mal, no el de que falte el dato. Regla escrita: **la ficha que se
+mergeó ANTES conserva el número**, la otra coge uno libre, y **jamás se renumeran las viejas** (sus
+números se citan desde la memoria, `CLAUDE.md` y los specs). Radar→17, CFO→18, Triaje→19. Guardián
+`test/regression-rutinas-numeracion.test.ts` (probado contra el fallo real). De paso: al resumen de
+cadencias le faltaban DOS rutinas diarias activas (8-bis y 8-ter).
+
 ### 🪞 (21/08/2026) El calendario de earnings ya estaba cerrado: el doc de huecos pedía lo que ya teníamos
 Al implementar la Fase 3 apareció `apps/plataforma/lib/trading/earnings-yahoo.ts`: cierra la fecha de
 earnings desde el **05/08**, diez días ANTES de que `TRADING-FUENTES-PAGO.md` (15/08) la declarara «el
