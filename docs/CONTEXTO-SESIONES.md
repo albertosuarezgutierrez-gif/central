@@ -32,6 +32,14 @@
 
 ---
 
+### 📜 (23/08/2026) Escritura de compraventa de Monte Carmelo → ficha patrimonial completa
+Alberto subió la escritura (29/03/2021, notario García-Carpintero, protocolo 488): precio
+**270.000€**, comprado **50/50 Alberto+Pilar** por mitades indivisas con carácter privativo.
+`act_monte_carmelo` actualizado en BD (valor/fecha/modo/pcts, fuente `escritura`; finca 7523
+Registro Sevilla nº2, superficie registral 172,50 m² vs 205 catastral). Intake del CFO: solo
+quedan valor de compra de Socorro, licencias VUT, capital pendiente exacto de la hipoteca y
+los gastos de adquisición de Monte Carmelo (no constan en la escritura). PR docs propio.
+
 ### 📈 (23/08/2026) Botón «🔄 Actualizar» en /trading + precio EN VIVO (PR #1619, mergeado)
 Alberto: la pasada del agente es diaria y a mitad de sesión de bolsa el panel enseñaba la película
 de ayer. Nuevo `lib/trading/precio-vivo.ts` (meta del chart de Yahoo — precio intradía + divisa +
