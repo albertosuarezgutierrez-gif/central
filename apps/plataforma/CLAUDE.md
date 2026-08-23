@@ -879,6 +879,36 @@ podido»: sin ajuste fiable, interruptor bajado, o **el paso acotado no mueve la
   ha mirado» del CLAUDE.md raíz, aplicada a las ACCIONES: un «no lo he hecho» no puede presentarse
   como un «no hacía falta».
 
+## 🛑 La pasada de mercado más FRESCA no es la más informativa (23/08/2026, PR #1594)
+`pricing/apply`, `pricing/settings` y `pricing/pilot-track` elegían corpus con
+`SELECT scenario, MAX(search_date) FROM market_rates` **sin más condición**. El 22/08 corrió el
+barrido barato (`serper`) y NO la rutina `mercado-booking`: el `MAX` cayó en una pasada de 22
+comparables de los que **1** sobrevivía al filtro de €/plaza (`MIN_EUR_PLAZA_COMP`) — el resto,
+apartamentos de 45-108€ etiquetados «aforo 12». Con `1 < MIN_SAMPLE (5)`, el apply saltó **House
+Sevillana entera**: cero filas en `pricing_applied` en todo el día, justo el día en que su canal
+acababa de corregirse de 1,20 a 1,0872 / 213,50€. **No faltaban datos**: la pasada del día anterior
+tenía 93 comparables plausibles. Una pasada ilegible SOMBREABA a una legible — la familia de «un
+`catch` que devuelve `[]` no autoriza a afirmar que no hay nada», pero con un `MAX()` en vez de un
+`catch`.
+- **Cura:** `lib/sivra/pricing-corpus-utilizable.ts::sqlUltimaPasadaUtil()` (puro, testeado, va por
+  `Prisma.raw`) elige la última `search_date` que deja ≥5 comparables plausibles, **filtrando por
+  €/plaza ANTES de contar**. Cableado en las tres consultas. El tope de frescura NO se toca:
+  `MAX_MARKET_AGE_DAYS` sigue vigilando que la pasada elegida no sea vieja — retroceder un día está
+  bien, retroceder un mes lo sigue frenando.
+- **El sesgo es lo desagradable:** los otros tres pisos se libraron **por casualidad**. Con 2, 4 y 5
+  plazas su umbral de €/plaza es 24, 48 y 60€ y el ruido lo pasa; House necesita 144€. **Cuanto más
+  grande es el piso, más fácil le es caer** — y el piso grande es el que más factura.
+- **El hueco no sonaba:** `skipped:"datos_insuficientes"` vivía SOLO en el array `results` de la
+  respuesta HTTP. Un piso de cuatro dejó de tarificarse un día entero y no lo dijo ni Telegram ni el
+  latido (`sivra_pricing_guard` reportó «ok · 0 alertas nuevas»). Ahora hay aviso agrupado
+  (`avisoPisosSinTarifar`, dedupe por piso y día sobre `pricing_avisos` porque el motor corre 3 veces
+  al día) y campo `sin_tarifar` en la respuesta. **No** marca `ok:false` a propósito: los demás pisos
+  sí se tarificaron, y el vigía de latidos sigue reservado para lo que invalida la pasada entera.
+- **`apply-auto` NO deja latido en `agente_latidos`**, así que «0 filas en `pricing_applied`» no
+  distingue «corrió y nada se movió ≥3%» de «no corrió». Se resolvió a mano contrastando el patrón
+  histórico (el 21/08 tampoco hubo pasada de las 14h) y `lib/cron-dispatch.ts`. **Pendiente**: darle
+  huella propia.
+
 ## 💓 Latidos de agentes — el vigía que avisa por Telegram (ampliado 30/07/2026)
 `lib/monitoring/latidos.ts` (registro + `evaluarLatido` puro) + cron `agentes-latido` (07:45 UTC) →
 **Telegram**. Regla de oro: solo se vigilan huellas que se refrescan en CADA pasada del agente.

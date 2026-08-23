@@ -40,6 +40,91 @@ pasado» — FALSO (hubo huecos legítimos de hasta 10 días, BBVA). Reescritos 
 `psd2-semaforo.ts` (atención: «fin de semana/festivos, a los 6 se da por roto»; roto sin la
 falsedad) + test que fija el tono. Umbrales 3/6 SIN tocar. PR #1617 (rama problem-diagnosis).
 
+### 🪪 (23/08/2026) Licencias VUT cargadas de las resoluciones del RTA
+Alberto subió las dos resoluciones: Socorro **VFT/SE/01179** (titular Pilar, 08/11/2016, completa,
+2 hab/5 plazas) y Dúplex **VFT/SE/01932** (titular Alberto, 20/04/2017, completa, 2 hab/4 plazas).
+`patrimonio_activos` actualizado (`licencia_vut`/`licencia_vut_num`; Monte Carmelo → `false`).
+✅ La discrepancia de capacidad se CERRÓ en la misma sesión: Alberto subió la modificación de
+bases (declaración responsable de Pilar 14/05/2025, resolución 30/05/2025) que amplía Socorro a
+**6 hab/12 plazas** — la explotación actual está regularizada. ⚠️ Errata detectada: el RESUELVO
+de esa resolución repite la capacidad antigua (2/5); comprobar el RTA y pedir corrección de
+errores (art. 109.2 Ley 39/2015) si consta mal. Con esto el intake del CFO solo
+tiene abiertos: valor de compra de Socorro, capital exacto de la hipoteca y gastos de adquisición
+de Monte Carmelo.
+
+### 🏦 (23/08/2026) Valoraciones AVM de BBVA registradas como fuente propia + contraste de métodos
+Alberto pasó el pantallazo de «Patrimonio no financiero» de BBVA → 3 filas nuevas en
+`patrimonio_valoraciones` con `fuente='bbva'`: Socorro 832.000€, Dúplex («Campana») 294.000€,
+Monte Carmelo 764.000€. Contraste con las del agente (`agente:m2zona`): Dúplex casi clavado
+(−2%, valida el método); Socorro la del agente sale ~45% arriba (el €/m² p50 de zona no
+descuenta el tamaño de una casa de 275 m²); Monte Carmelo confirma que el proxy municipal
+infravaloraba (~3.727€/m² implícitos en Los Remedios vs 2.635 del proxy). Fuentes de datos
+REALES propuestas a Alberto: MITMA valor tasado + INE IPV (cron pendiente de que lo pida),
+valor de referencia del Catastro (manual anual, Cl@ve) e Idealista API (alta aún pendiente).
+
+### 🔎 (23/08/2026) Auditoría: dónde es MUDO un fallo en la cadena de pricing
+
+- Pedida por Alberto tras cuatro fallos silenciosos en cinco días en la misma cadena (todos
+  encontrados de rebote, ninguno cazado por un vigía). Alcance: mercado → canal → motor → Smoobu.
+  Informe en `docs/AUDITORIA-2026-08-pricing-mudo.md`. **No se tocó nada.**
+- **3 🔴:** (1) `apply-auto` —el único eslabón que ESCRIBE precios— no tiene latido; (2) un fallo
+  del POST a Smoobu solo va al array `results` del HTTP, y `pricing_applied` se escribe igual, así
+  que la auditoría puede divergir de la realidad; (3) si fallan las dos lecturas del ancla
+  (`ref24`/`anclaHoy`, ambas `.catch(() => [])`), `anclaRail` cae al precio vivo y el tope pasa de
+  ±20%/día a ±20%/**pasada** = −49%/+73% al día — el agujero del 19/08 por otra puerta.
+- **Comprobado a mano que el 2 NO está ocurriendo:** de las 526 fechas aplicadas el 22/08, 523
+  coinciden exactas con el snapshot del 23/08 y 3 no tienen snapshot. Las escrituras llegan; lo que
+  no existe es nada que lo compruebe.
+- **2 🟡:** 8 de las 11 lecturas del motor degradan sin declararse (las dos peores: bucket de
+  mercado por mes y por fecha); y el watchdog de `pilot-track` detecta snapshot/mercado viejos y
+  **no los manda a ningún sitio** («sin push/email en plataforma — simplificado»).
+- Orden propuesto a Alberto: latido de `apply-auto` + rojo si falla Smoobu · declarar el ancla y NO
+  aplicar si se pierde · conciliación `pricing_applied` ↔ snapshot en el cron diario.
+### 🛑 (23/08/2026) Un día sin conector de Booking dejó a House sin precio — y el motor no lo dijo (PR #1594)
+
+- Seguimiento del arreglo del canal (#1582): el canal SÍ se corrigió solo el 22/08 (House 1,20/0 →
+  **1,0872 / 213,50€**), pero al comprobar que el precio llegaba a Smoobu apareció que **House no
+  recibió ni una fila de `pricing_applied` en todo el día** (los otros tres, 526 entre los tres).
+- Causa encadenada: la rutina `mercado-booking` **no entregó el 22/08** (0 filas `booking_mcp` frente
+  a 237/238/239 los días 19-21) y el motor elegía corpus con `MAX(search_date)` a secas → ganó una
+  pasada de serper con **1 comparable plausible de 22** → `datos_insuficientes` → piso saltado. El
+  corpus bueno seguía ahí (93 plausibles el día antes): una pasada ilegible **sombreaba** a una legible.
+- Sesgo: los otros tres se libraron por casualidad — su umbral de €/plaza es 24/48/60€ y House necesita
+  144€. **Cuanto más grande el piso, más fácil le es caer**, y es el que más factura.
+- Arreglado y **mergeado**: `sqlUltimaPasadaUtil()` elige la última pasada con ≥5 plausibles (apply +
+  settings + pilot-track) y el salto **avisa por Telegram** (antes vivía solo en el `results` del HTTP).
+- El 23/08 `mercado-booking` volvió a entregar (238 comps) y House recuperó 58 plausibles: el hueco se
+  cerró solo, pero ahora hay red para la próxima.
+- **Pendiente de Alberto:** (a) apalancamiento del calibrado — junio 2027 pesa el 78% del ajuste de
+  House; (b) **brecha escaparate↔caja**: lo listado es 1,07-1,47× la base y lo cobrado 0,87-0,98×,
+  causa SIN comprobar (promos de Booking vs limpieza fuera del total de Smoobu), rutina propia el 30/08;
+  (c) `apply-auto` no deja latido, así que «0 filas» no distingue «corrió y nada se movió» de «no corrió».
+### 📜 (23/08/2026) Escritura de compraventa de Monte Carmelo → ficha patrimonial completa
+Alberto subió la escritura (29/03/2021, notario García-Carpintero, protocolo 488): precio
+**270.000€**, comprado **50/50 Alberto+Pilar** por mitades indivisas con carácter privativo.
+`act_monte_carmelo` actualizado en BD (valor/fecha/modo/pcts, fuente `escritura`; finca 7523
+Registro Sevilla nº2, superficie registral 172,50 m² vs 205 catastral). Intake del CFO: solo
+quedan valor de compra de Socorro, licencias VUT, capital pendiente exacto de la hipoteca y
+los gastos de adquisición de Monte Carmelo (no constan en la escritura). PR docs propio.
+
+### 📈 (23/08/2026) Botón «🔄 Actualizar» en /trading + precio EN VIVO (PR #1619, mergeado)
+Alberto: la pasada del agente es diaria y a mitad de sesión de bolsa el panel enseñaba la película
+de ayer. Nuevo `lib/trading/precio-vivo.ts` (meta del chart de Yahoo — precio intradía + divisa +
+hora; fixture REAL vía pg_net, el quote de Stooq `q/l` da 404 a IPs datacenter) con doble guarda
+antes de PINTAR: divisa igual + banda ×2 contra referencia (lecciones PR #1315/#1189). Cartera
+paper y cartera IBKR se re-valoran con ⚡ declarado (fuente+hora); nada se persiste (el track
+record sigue con precios-guardia). Botón cliente = router.refresh() (página force-dynamic).
+Ideas/radar/foto IBKR siguen siendo de la pasada diaria y la UI lo declara. tsc 0 · 1505 tests · build OK.
+
+### 🏛️ (23/08/2026) Patrimonio: Catastro de Socorro y Monte Carmelo + baja de los Busto
+Alberto dio las refs catastrales: Socorro 24 `5732032TG3453B0001PK` (275 m², año 2000) y Monte
+Carmelo 68 `4707007TG3440N0003TR` (205 m², 1º izq, año 1964, Los Remedios) — leídas del Catastro
+(`Consulta_DNPRC`) y escritas en `patrimonio_activos`. Los dos Busto → `estado='baja'` (subarrendados,
+no propiedad; nuevo valor de estado documentado en el DDL). Valoraciones `agente:m2zona` enfoque
+vivienda: Socorro 1.207.250€ y Dúplex 287.369€ (casco-antiguo p50 4.390€/m²), Monte Carmelo 540.175€
+(PROXY sevilla-capital p50 2.635€/m² — falta zona `los-remedios` en `mercado_zonas`, hueco anotado
+para radar-espana). Estado en `docs/RADAR-ESPANA.md`.
+
 ### 🏦 (23/08/2026) Vigía de hipoteca en el agente contable + borrador a CajaSur
 El contable proactivo (cron lunes 09:00) ahora vigila los recibos `CUOTA PTMO <ref>` de banca:
 avisa por Telegram si la cuota cambia entre recibos (revisión de tipo/bonificación) o si la ficha
@@ -59,7 +144,7 @@ mercado supere su tipo. Consigna dictada: **el CFO evalúa amortizar en cada pas
 `patrimonio-cfo` ampliada (bonificaciones primero, comparar contra alternativa neta, plazo vs
 cuota) + `docs/PATRIMONIO-CFO.md`. El intake de /patrimonio ya solo pide confirmar el capital.
 
-### 🛑 (22/08/2026) Una pasada de mercado sin comps utilizables dejó a House un día entero sin tarifar (PR #1593)
+### 🛑 (22/08/2026) Una pasada de mercado sin comps utilizables dejó a House un día entero sin tarifar (PR #1594)
 
 - Verificando la producción tras el arreglo del canal (#1582) salió que House **no recibió NI UNA fila
   de `pricing_applied`** hoy, mientras Busto/Dúplex/Luxury recibían 130/237/159. El canal sí se corrigió
@@ -2413,9 +2498,35 @@ Pendiente: que Alberto revise el spec → plan de implementación. Códigos/cred
     abrir la rutina YA GUARDADA; 4 min así, 0 ejecuciones, sin acceso a nada. **Regla nueva: el
     formulario no es evidencia, el estado guardado sí.** Las 2 y 3, con clicks reales, salieron
     bien. Escrito en la skill `conectores-vigia` y en el pendiente 12 de `RUTINAS-PROGRAMADAS.md`.
-  - **🟡 `ALERTA_TOKEN` con placeholder literal en las 3 rutinas nuevas (16/17/18)** — su aviso de
-    Telegram fallará con error de autenticación (no en silencio) hasta que Alberto pegue el valor
-    real; está en las rutinas `buscador-ia` y `agentes-entrenador`. Acción de Alberto.
+  - **🔴 El registro que debía delatar el canal muerto está a CERO (23/08, corrige a #1615)** — las
+    13 skills SÍ hacen preflight y su protocolo manda gritar `🔇 SIN TELEGRAM (401):` y anotarlo en
+    `docs/AGENTES-BITACORA.md` ante un 401. Esa cadena **nunca se ha ejecutado**: `SIN TELEGRAM`
+    sale 0 veces en toda la bitácora, mientras esas mismas rutinas sí dejan ahí sus partes normales
+    (`facturas-correo`, hoy 06:33, sin token). **La bitácora se lee sana con el canal muerto.**
+    Falta saber si se saltan el preflight o si lo hacen y no cumplen el «déjalo escrito» — se mira
+    en una pasada real. Y el chivatazo del propio endpoint tiene un punto ciego: solo salta si llega
+    un Bearer, así que «rutina que NUNCA tuvo token» pasa por ruido de internet.
+  - **🟢 La solución ya está en el repo sin usar: `rutina_tokens`** (tabla, solo SHA-256) — token por
+    rutina, revocable, **rotable sin redeploy ni entrar a Vercel**, con alcance solo a
+    `/api/internal/alerta`. `lib/rutina-tokens.ts` + guardián + `docs/AVISOS-AGENTES.md`. Es la
+    respuesta a «un secreto portador copiado a mano en N prompts», y lleva ahí sin estrenar.
+  - **🔴 8 rutinas dicen que avisan por Telegram y NO pueden (23/08)** — cruce skills-que-avisan ×
+    triggers-con-token: `psd2-health-check`, `trading-analista`, `mercado-booking` (línea VACÍA),
+    `pricing-agente`, `facturas-correo`, `fiscal-novedades`, `ialimp-client-health` y
+    `rrhh-compliance-calendar`. Ninguna declara qué hacer sin token, así que corren, trabajan y el
+    aviso no sale: **silencio que se lee como «nada que contar»**. El peor es psd2 —un guardián que
+    no puede gritar fabrica la confianza de que alguien mira— y trading-analista, con dos disparos
+    «muertos sin huella» en memoria que nunca pudieron avisar. Tabla en `RUTINAS-PROGRAMADAS.md`;
+    arreglo = pegar el token en las 8 (de Alberto). **NO afecta** a los latidos de los crons de
+    Vercel, que van por otro camino y sí funcionan.
+  - **✅ Decisión de Alberto (23/08): NO rotar `ALERTA_TOKEN`** pese a quedar visible en una captura
+    al verificar la rutina 16. Es token estrecho (solo abre `/api/internal/alerta`: quien lo tenga
+    puede mandar un Telegram, nada más), y esa acotación es justo por lo que se eligió frente a
+    `CRON_SECRET`. **Decisión explícita, no olvido.**
+  - **🟡 Rotar este token es caro por diseño** — vive copiado a mano en el prompt de cada rutina, así
+    que rotar son N ediciones + una ventana en la que el endpoint rechaza al viejo o al nuevo (solo
+    acepta uno). Arreglo de fondo pendiente: que `/api/internal/alerta` admita dos valores en
+    transición, o que las skills lo lean de un secreto del repo y no del prompt.
   - **🟡 El día 1 acumula 5 rutinas y la 18 depende de la 17** — `radar-espana` (día 1) alimenta a
     `patrimonio-cfo` (día 2). Con el 🔴 de rutinas que no dejaron rastro el 22/08, esa cadena es
     frágil. Mitigado por el lado del consumidor (el CFO ya comprueba «Última pasada» del radar y
