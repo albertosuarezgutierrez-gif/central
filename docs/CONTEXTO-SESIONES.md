@@ -2390,6 +2390,16 @@ Pendiente: que Alberto revise el spec → plan de implementación. Códigos/cred
     IA→`buscador-ia`, patrimonio-cfo, fix `sivra_canal`) sí se dispararon. Efecto medido: `market_rates
     booking_mcp` lleva desde el 21/08 03:40 sin fila nueva (46h). Revisar en claude.ai la configuración
     de los 3 triggers (¿deshabilitado, hora movida, fallo del scheduler?) — no hay causa visible desde el repo.
+  - **🟡 Tres skills mergeadas y SIN trigger (23/08)** — existen pero nadie las dispara, así que
+    su silencio no significa «nada que contar»: rutinas **16 `conectores-vigia`** (día 5, 04:00),
+    **17 `radar-espana`** (días 1 y 16, 08:00) y **18 `patrimonio-cfo`** (día 2, 09:00). Cron,
+    conectores y prompt listos en `docs/RUTINAS-PROGRAMADAS.md`, pendiente #12. Crearlos es de
+    Alberto (la UI de Rutinas pide su sesión). **No confundir con el 🔴 de arriba**, que son otras
+    tres rutinas ya existentes que se saltaron el 22/08.
+  - **Cuota de Alpha Vantage — CERRADO como «no se sabe» (23/08, PR #1610):** el «~25 llamadas/día»
+    se retiró; salía de leer un `type:"rate_limit"` que en realidad era el muro de pago. No es
+    observable desde la API sin agotarla; única fuente, el panel de la cuenta. Lo verificado: el
+    21/08 quedaba cuota, y `TIME_SERIES_DAILY_ADJUSTED` sigue siendo premium (**H1 vivo**).
   - **`ses_transporte` sin ninguna pasada OK todavía:** `detalle` dice «no hay ningún establecimiento
     dado de alta en /sivra/partes/establecimientos» — no es la avería del Ministerio ni de credenciales
     que ya describe la nota del latido, es que falta dar de alta el primer establecimiento. Acción de
