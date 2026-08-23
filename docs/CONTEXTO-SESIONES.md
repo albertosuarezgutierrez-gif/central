@@ -32,6 +32,15 @@
 
 ---
 
+### 📈 (23/08/2026) Botón «🔄 Actualizar» en /trading + precio EN VIVO (PR #1619, mergeado)
+Alberto: la pasada del agente es diaria y a mitad de sesión de bolsa el panel enseñaba la película
+de ayer. Nuevo `lib/trading/precio-vivo.ts` (meta del chart de Yahoo — precio intradía + divisa +
+hora; fixture REAL vía pg_net, el quote de Stooq `q/l` da 404 a IPs datacenter) con doble guarda
+antes de PINTAR: divisa igual + banda ×2 contra referencia (lecciones PR #1315/#1189). Cartera
+paper y cartera IBKR se re-valoran con ⚡ declarado (fuente+hora); nada se persiste (el track
+record sigue con precios-guardia). Botón cliente = router.refresh() (página force-dynamic).
+Ideas/radar/foto IBKR siguen siendo de la pasada diaria y la UI lo declara. tsc 0 · 1505 tests · build OK.
+
 ### 🏛️ (23/08/2026) Patrimonio: Catastro de Socorro y Monte Carmelo + baja de los Busto
 Alberto dio las refs catastrales: Socorro 24 `5732032TG3453B0001PK` (275 m², año 2000) y Monte
 Carmelo 68 `4707007TG3440N0003TR` (205 m², 1º izq, año 1964, Los Remedios) — leídas del Catastro
