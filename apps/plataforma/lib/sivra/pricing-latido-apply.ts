@@ -15,6 +15,15 @@
 // silencio un eslabón más abajo. Aquí duele más: el motor decidió un precio, la tabla de auditoría
 // dice que se aplicó, y el huésped sigue viendo el viejo.
 
+/**
+ * Cuántas veces al día corre `apply-auto` (`lib/cron-dispatch.ts`: `30 8,14,20 * * *`).
+ *
+ * Vive aquí porque es lo que hace que el umbral del latido (26 h) y el ensanchamiento del raíl
+ * sin ancla (±X%/pasada en vez de ±X%/día) sean los números que son. Un test lo contrasta contra
+ * el fuente del cron: si alguien añade una 4ª pasada, salta en rojo en vez de mentir en silencio.
+ */
+export const PASADAS_POR_DIA_APPLY = 3
+
 /** Un piso cuya escritura a Smoobu no entró. `fechas` = cuántas noches se quedaron sin aplicar. */
 export type FalloEscritura = { property: string; motivo: string; fechas: number }
 

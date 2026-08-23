@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
       ok?: boolean; properties?: number; fechas_escritas?: number
       smoobu_rechazos?: FalloEscritura[]; sin_tarifar?: unknown[]; dryRun?: boolean
       degradado?: string; pl_degradado?: string; demanda_degradada?: string
-      paused?: boolean; message?: string
+      paused?: boolean; message?: string; rail_ciego?: string
     }
     const parte = {
       pisos: b.properties ?? 0,
@@ -55,7 +55,8 @@ export async function GET(req: NextRequest) {
       // `demanda_degradada` NO entra: el motor la declara como degradación MENOR a propósito (los
       // precios son defendibles, solo más bajos) y ya tiene su Telegram. Meterla aquí pondría el
       // latido rojo por algo que no invalida la pasada.
-      degradaciones: [b.degradado, b.pl_degradado].filter((x): x is string => !!x),
+      // `rail_ciego` SÍ entra: la pasada se abortó entera, es lo más grave que puede pasar aquí.
+      degradaciones: [b.degradado, b.pl_degradado, b.rail_ciego].filter((x): x is string => !!x),
       dryRun: b.dryRun ?? false,
       paused: b.paused ?? false,
       nota: b.message ?? null,

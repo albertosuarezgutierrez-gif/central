@@ -19,7 +19,8 @@ import { aplicarPrior, indicesPrior, type IndicePrior, type MesHistorico } from 
 import { getSmoobuKey } from "@/lib/smoobu"
 import { tgSend } from "@central/core-telegram"
 import { eur } from "@/lib/dinero"
-import { anclaRail } from "@/lib/sivra/pricing-ancla-rail"
+import { anclaRail, avisoRailCiego, type LecturaAncla } from "@/lib/sivra/pricing-ancla-rail"
+import { PASADAS_POR_DIA_APPLY } from "@/lib/sivra/pricing-latido-apply"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -572,6 +573,8 @@ export async function POST(req: NextRequest) {
   // (344€ una noche de mercado ~930€). Referencia del raíl = último precio aplicado ANTES de hoy;
   // las pasadas 2ª/3ª del día se mueven dentro del MISMO rango diario. Los saltos legítimos al
   // alza (evento de calendario, suelo PL, suelo estacional) siguen saltando el raíl como antes.
+  // Lecturas del ancla que han reventado. Vacío = las dos respondieron (aunque sea con 0 filas).
+  const anclaCaida: LecturaAncla[] = []
   const ref24Rows = await prisma.$queryRaw<{ pid: string; rate_date: string; p: number }[]>(Prisma.sql`
     SELECT DISTINCT ON (property_id, rate_date)
       property_id AS pid, rate_date::text AS rate_date, new_price AS p
@@ -579,7 +582,7 @@ export async function POST(req: NextRequest) {
     WHERE dry_run = false AND rate_date >= CURRENT_DATE
       AND applied_at < CURRENT_DATE
     ORDER BY property_id, rate_date, applied_at DESC
-  `).catch(() => [])
+  `).catch((e) => { anclaCaida.push({ nombre: 'ref24', error: String(e).slice(0, 120) }); return [] })
   const ref24 = new Map(ref24Rows.map(x => [`${x.pid}|${x.rate_date}`, Number(x.p)]))
 
   // Ancla de respaldo: con qué precio empezó HOY cada fecha (old_price de la 1ª pasada del día).
@@ -592,8 +595,26 @@ export async function POST(req: NextRequest) {
     FROM pricing_applied
     WHERE dry_run = false AND rate_date >= CURRENT_DATE AND applied_at >= CURRENT_DATE
     ORDER BY property_id, rate_date, applied_at ASC
-  `).catch(() => [])
+  `).catch((e) => { anclaCaida.push({ nombre: 'anclaHoy', error: String(e).slice(0, 120) }); return [] })
   const anclaHoy = new Map(anclaHoyRows.map(x => [`${x.pid}|${x.rate_date}`, Number(x.p)]))
+
+  // 🛑 Si CUALQUIERA de las dos lecturas reventó, esta pasada NO tarifica. Ver la cabecera de
+  // `pricing-ancla-rail.ts`: un `[]` por excepción es indistinguible del `[]` legítimo (fecha sin
+  // histórico, 1ª pasada del día), así que el motor caería a `actual` para TODAS las fechas y el
+  // tope ±X%/DÍA pasaría a ser ±X%/PASADA — el mismo −36% del 19/08, por otra puerta.
+  //
+  // Se aborta también en SIMULACRO a propósito: un preview calculado con el raíl 3× más ancho son
+  // números que nadie debería mirar, y así queda UN solo camino que razonar.
+  if (anclaCaida.length > 0) {
+    const maxPct = recs.reduce((m, r) => Math.max(m, Number(r.max_change_pct) || 0), 0)
+    const aviso = avisoRailCiego(anclaCaida, { maxChangePct: maxPct, pasadasPorDia: PASADAS_POR_DIA_APPLY })
+    if (aviso) { try { await tgSend(aviso) } catch { /* el flag de la respuesta manda */ } }
+    return NextResponse.json({
+      ok: false,
+      rail_ciego: `ancla ilegible (${anclaCaida.map(f => f.nombre).join(', ')}): pasada abortada para no tarifar con el raíl ensanchado`,
+      dryRun, paused, days, properties: recs.length, fechas_escritas: 0, results: [],
+    }, { status: 503 })
+  }
 
   const results: any[] = []
   // 🚨 Un piso que no se tarifica es CARO y hasta el 22/08/2026 era INVISIBLE: vivía solo aquí
