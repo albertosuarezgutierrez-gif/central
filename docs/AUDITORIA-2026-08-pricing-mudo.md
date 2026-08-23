@@ -13,19 +13,25 @@
 
 ## Resumen
 
-| # | Hallazgo | Sev |
-|---|---|---|
-| 1 | `apply-auto` — el eslabón que ESCRIBE precios — no tiene latido | 🔴 |
-| 2 | Un fallo de escritura en Smoobu es mudo, y `pricing_applied` se escribe igual | 🔴 |
-| 3 | El raíl de ±20%/día se ensancha a ±20%/pasada si falla una lectura | 🔴 |
-| 4 | 8 de las 11 lecturas del motor degradan sin declararse | 🟡 |
-| 5 | El watchdog de la cadena existe y no lo lee nadie | 🟡 |
-| 6 | Cinco jobs de la cadena sin latido | 🟡 |
-| — | Lo que SÍ está vigilado (7 latidos con sonda) | 🟢 |
+| # | Hallazgo | Sev | Estado |
+|---|---|---|---|
+| 1 | `apply-auto` — el eslabón que ESCRIBE precios — no tiene latido | 🔴 | ✅ **CERRADO 23/08/2026** |
+| 2 | Un fallo de escritura en Smoobu es mudo, y `pricing_applied` se escribe igual | 🔴 | ✅ **CERRADO 23/08/2026** |
+| 3 | El raíl de ±20%/día se ensancha a ±20%/pasada si falla una lectura | 🔴 | abierto |
+| 4 | 8 de las 11 lecturas del motor degradan sin declararse | 🟡 | abierto |
+| 5 | El watchdog de la cadena existe y no lo lee nadie | 🟡 | abierto |
+| 6 | Cinco jobs de la cadena sin latido | 🟡 | abierto |
+| — | Lo que SÍ está vigilado (**8** latidos con sonda tras cerrar el nº1) | 🟢 | — |
 
 ---
 
 ## 🔴 1 · El eslabón que escribe precios es el único sin latido
+
+> ✅ **CERRADO el 23/08/2026.** Latido `sivra_pricing_apply` (umbral **26 h**, razonado sobre el
+> horario real del cron: hueco legítimo máximo 20:30→08:30 = 12 h, comprobación a las 07:45; los
+> 30 h de los crons diarios no llegarían a saltar hasta perder día y medio). Escribe latido de
+> INTENTO al arrancar, así que un 504 a mitad se distingue de «no se dispara». Detalle en
+> `apps/plataforma/CLAUDE.md`.
 
 De los jobs de la cadena, **siete registran latido** (`sivra_mercado_sweep`,
 `sivra_mercado_booking`, `sivra_eventos`, `sivra_eventos_verificar`, `sivra_pricing_guard`,
@@ -43,6 +49,12 @@ Hay una entrada `pricing` en `AGENTES_VIGILADOS`, pero vigila **otra cosa**: la 
 `apps/plataforma/lib/monitoring/latidos.ts:116` · `apps/plataforma/app/api/cron/agentes-latido/route.ts:35`
 
 ## 🔴 2 · Si Smoobu rechaza la escritura, no se entera nadie
+
+> ✅ **CERRADO el 23/08/2026.** El rechazo sale por Telegram (sin dedupe: es una avería viva del
+> canal), marca `ok:false` y tiñe el latido. **Y el `INSERT INTO pricing_applied` ya no ocurre
+> cuando la escritura falló** — que era el agravante y la mitad menos obvia: esa tabla es de donde
+> sale `ref24`, el ancla del raíl del día siguiente, así que un precio fantasma no solo mentía en
+> la auditoría, se convertía en el punto desde el que se mide el ±20% del día siguiente.
 
 ```ts
 // apps/plataforma/app/api/sivra/pricing/apply/route.ts:954
@@ -143,7 +155,7 @@ piso que no se ajusta no desaparece del parte — el arreglo del 22/08 sostiene.
 
 ## Orden que propongo (tú decides)
 
-1. **Latido para `apply-auto`** + que un `error` de Smoobu lo ponga en rojo. Cierra 1 y 2 de una vez,
+1. ~~**Latido para `apply-auto`**~~ ✅ **hecho el 23/08/2026** + que un `error` de Smoobu lo ponga en rojo. Cierra 1 y 2 de una vez,
    y es lo más pequeño de los tres 🔴.
 2. **Declarar las dos lecturas del ancla** (579/592): si fallan, marcar la pasada degradada y **no
    aplicar** en vez de aplicar con el raíl ensanchado. Cierra el 3.

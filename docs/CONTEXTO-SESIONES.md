@@ -32,6 +32,19 @@
 
 ---
 
+### 💰 (23/08/2026) El motor de precios ya late, y un rechazo de Smoobu ya se oye — PR (hallazgos 🔴 1 y 2)
+
+- Cierra los dos primeros 🔴 de la auditoría de esta misma mañana. Son el mismo silencio en el
+  mismo eslabón: el que pone el precio delante del huésped.
+- **Latido `sivra_pricing_apply`** (08:30·14:30·20:30). Umbral **26 h razonado, no copiado**: hueco
+  legítimo máx. 12 h y el vigía mira a las 07:45 → los 30 h de los diarios no saltarían hasta perder
+  día y medio. Latido de INTENTO al arrancar (365d × 4 pisos con `maxDuration` 300).
+- **Smoobu rechaza → Telegram + `ok:false` + latido rojo**, y **ya NO se anota en `pricing_applied`**:
+  esa tabla es de donde sale `ref24`, el ancla del raíl de mañana — un precio fantasma se componía.
+- NO ponen rojo (a propósito): 0 noches escritas, piso `sin_tarifar`, `demanda_degradada`. La pausa
+  global gana al «SIMULACRO» en el parte. Módulo puro `lib/sivra/pricing-latido-apply.ts`, 15 tests.
+- **Siguen abiertos:** 🔴 3 (raíl que se ensancha si falla una lectura) y los tres 🟡.
+
 ### 🟠 (23/08/2026) Banner PSD2 «3 días sin movimientos» — diagnóstico + texto sin falsedad
 Alberto preguntó por el banner naranja de /banca: diagnóstico = feed VIVO (2 conexiones sync OK ese
 día, volumen 30d 54 vs 75, aviso Kutxabank es ℹ️), el hueco era jueves→domingo sin operaciones
