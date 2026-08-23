@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-22T21:10:33Z",
-  "sha": "e5dcf462de78b0517e601b46f6a28546945e3447",
+  "generadoEn": "2026-08-23T06:24:33Z",
+  "sha": "04cdc09280fc2a912fc21a17f0b7938f301f46e0",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -52849,7 +52849,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 109
+          "linea": 112
         }
       ],
       "tablas": [
@@ -52861,7 +52861,7 @@
         "pricing_decisiones"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "70bcef06ffc1"
+      "hash": "2ccb1b0497a0"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -66354,7 +66354,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d7d7877cc093"
+      "hash": "5eabbbd5f125"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/reparable.ts",
