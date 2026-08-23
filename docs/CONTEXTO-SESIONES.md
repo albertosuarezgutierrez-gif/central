@@ -50,6 +50,25 @@
   **no los manda a ningún sitio** («sin push/email en plataforma — simplificado»).
 - Orden propuesto a Alberto: latido de `apply-auto` + rojo si falla Smoobu · declarar el ancla y NO
   aplicar si se pierde · conciliación `pricing_applied` ↔ snapshot en el cron diario.
+### 🛑 (23/08/2026) Un día sin conector de Booking dejó a House sin precio — y el motor no lo dijo (PR #1594)
+
+- Seguimiento del arreglo del canal (#1582): el canal SÍ se corrigió solo el 22/08 (House 1,20/0 →
+  **1,0872 / 213,50€**), pero al comprobar que el precio llegaba a Smoobu apareció que **House no
+  recibió ni una fila de `pricing_applied` en todo el día** (los otros tres, 526 entre los tres).
+- Causa encadenada: la rutina `mercado-booking` **no entregó el 22/08** (0 filas `booking_mcp` frente
+  a 237/238/239 los días 19-21) y el motor elegía corpus con `MAX(search_date)` a secas → ganó una
+  pasada de serper con **1 comparable plausible de 22** → `datos_insuficientes` → piso saltado. El
+  corpus bueno seguía ahí (93 plausibles el día antes): una pasada ilegible **sombreaba** a una legible.
+- Sesgo: los otros tres se libraron por casualidad — su umbral de €/plaza es 24/48/60€ y House necesita
+  144€. **Cuanto más grande el piso, más fácil le es caer**, y es el que más factura.
+- Arreglado y **mergeado**: `sqlUltimaPasadaUtil()` elige la última pasada con ≥5 plausibles (apply +
+  settings + pilot-track) y el salto **avisa por Telegram** (antes vivía solo en el `results` del HTTP).
+- El 23/08 `mercado-booking` volvió a entregar (238 comps) y House recuperó 58 plausibles: el hueco se
+  cerró solo, pero ahora hay red para la próxima.
+- **Pendiente de Alberto:** (a) apalancamiento del calibrado — junio 2027 pesa el 78% del ajuste de
+  House; (b) **brecha escaparate↔caja**: lo listado es 1,07-1,47× la base y lo cobrado 0,87-0,98×,
+  causa SIN comprobar (promos de Booking vs limpieza fuera del total de Smoobu), rutina propia el 30/08;
+  (c) `apply-auto` no deja latido, así que «0 filas» no distingue «corrió y nada se movió» de «no corrió».
 ### 📜 (23/08/2026) Escritura de compraventa de Monte Carmelo → ficha patrimonial completa
 Alberto subió la escritura (29/03/2021, notario García-Carpintero, protocolo 488): precio
 **270.000€**, comprado **50/50 Alberto+Pilar** por mitades indivisas con carácter privativo.
@@ -95,7 +114,7 @@ mercado supere su tipo. Consigna dictada: **el CFO evalúa amortizar en cada pas
 `patrimonio-cfo` ampliada (bonificaciones primero, comparar contra alternativa neta, plazo vs
 cuota) + `docs/PATRIMONIO-CFO.md`. El intake de /patrimonio ya solo pide confirmar el capital.
 
-### 🛑 (22/08/2026) Una pasada de mercado sin comps utilizables dejó a House un día entero sin tarifar (PR #1593)
+### 🛑 (22/08/2026) Una pasada de mercado sin comps utilizables dejó a House un día entero sin tarifar (PR #1594)
 
 - Verificando la producción tras el arreglo del canal (#1582) salió que House **no recibió NI UNA fila
   de `pricing_applied`** hoy, mientras Busto/Dúplex/Luxury recibían 130/237/159. El canal sí se corrigió
