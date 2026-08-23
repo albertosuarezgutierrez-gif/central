@@ -110,7 +110,7 @@ Envs de control: `DIRECTOR_MODO`, `DIRECTOR_PRESUPUESTO_UMBRAL`, `DIRECTOR_PRESU
 |---|---|---|---|---|
 | Triaje de correo | Lee Gmail por IMAP, clasifica y actúa (ruido/contabilidad/avisos) | cada 10 min | Plataforma | `lib/correo/` |
 | Agente huésped (SIVRA) | Conversa con huéspedes; solo redacta borradores | cada 3 min + webhook | SIVRA | `lib/sivra/agente-huesped/` |
-| Agente contable proactivo | Chat financiero + avisos de movimientos dudosos (enruta por Director) | Lunes 09:00 | Plataforma | `lib/contable/` |
+| Agente contable proactivo | Chat financiero + avisos de movimientos dudosos (enruta por Director) + vigía de hipoteca (cambio de cuota `CUOTA PTMO` y ficha de patrimonio desincronizada) | Lunes 09:00 | Plataforma | `lib/contable/` |
 | Agente de concursos | Ingesta PLACSP, radar por CPV, avisos y cierre | cada 6 h | Plataforma | `@central/module-concursos` |
 | Radar de subastas | Ingiere BOE + comparables Idealista, enriquece (ficha, Catastro), calcula coste real, puja máxima y yield con datos propios, detecta chollos/bajadas, captura adjudicaciones, avisa con botones y vigila la antesala concursal (BORME) | diaria 06:00–09:00 | Plataforma | `@central/module-subastas` |
 | Agente de pago de facturas | Escanea facturas proveedor → OCR → paga (PIS/SEPA) → concilia | diaria 06:15 | Plataforma | `lib/agente-facturas/pagos.ts` |

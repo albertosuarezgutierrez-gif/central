@@ -54,7 +54,8 @@ CREATE TABLE IF NOT EXISTS patrimonio_activos (
   hipoteca_cuota_mensual     numeric,
   hipoteca_tipo              text,
   hipoteca_vencimiento       date,
-  -- 'activo' | 'vendido'.
+  -- 'activo' | 'vendido' | 'baja' (retirado del patrimonio sin venta: p.ej. los dos Busto,
+  -- subarrendados — no son propiedad; dados de baja el 23/08/2026 por orden de Alberto).
   estado        text NOT NULL DEFAULT 'activo',
   fecha_venta   date,
   importe_venta numeric,

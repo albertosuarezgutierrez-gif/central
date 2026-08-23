@@ -51,8 +51,44 @@
   House; (b) **brecha escaparate↔caja**: lo listado es 1,07-1,47× la base y lo cobrado 0,87-0,98×,
   causa SIN comprobar (promos de Booking vs limpieza fuera del total de Smoobu), rutina propia el 30/08;
   (c) `apply-auto` no deja latido, así que «0 filas» no distingue «corrió y nada se movió» de «no corrió».
+### 📈 (23/08/2026) Botón «🔄 Actualizar» en /trading + precio EN VIVO (PR #1619, mergeado)
+Alberto: la pasada del agente es diaria y a mitad de sesión de bolsa el panel enseñaba la película
+de ayer. Nuevo `lib/trading/precio-vivo.ts` (meta del chart de Yahoo — precio intradía + divisa +
+hora; fixture REAL vía pg_net, el quote de Stooq `q/l` da 404 a IPs datacenter) con doble guarda
+antes de PINTAR: divisa igual + banda ×2 contra referencia (lecciones PR #1315/#1189). Cartera
+paper y cartera IBKR se re-valoran con ⚡ declarado (fuente+hora); nada se persiste (el track
+record sigue con precios-guardia). Botón cliente = router.refresh() (página force-dynamic).
+Ideas/radar/foto IBKR siguen siendo de la pasada diaria y la UI lo declara. tsc 0 · 1505 tests · build OK.
 
-### 🛑 (22/08/2026) Una pasada de mercado sin comps utilizables dejó a House un día entero sin tarifar (PR #1593)
+### 🏛️ (23/08/2026) Patrimonio: Catastro de Socorro y Monte Carmelo + baja de los Busto
+Alberto dio las refs catastrales: Socorro 24 `5732032TG3453B0001PK` (275 m², año 2000) y Monte
+Carmelo 68 `4707007TG3440N0003TR` (205 m², 1º izq, año 1964, Los Remedios) — leídas del Catastro
+(`Consulta_DNPRC`) y escritas en `patrimonio_activos`. Los dos Busto → `estado='baja'` (subarrendados,
+no propiedad; nuevo valor de estado documentado en el DDL). Valoraciones `agente:m2zona` enfoque
+vivienda: Socorro 1.207.250€ y Dúplex 287.369€ (casco-antiguo p50 4.390€/m²), Monte Carmelo 540.175€
+(PROXY sevilla-capital p50 2.635€/m² — falta zona `los-remedios` en `mercado_zonas`, hueco anotado
+para radar-espana). Estado en `docs/RADAR-ESPANA.md`.
+
+### 🏦 (23/08/2026) Vigía de hipoteca en el agente contable + borrador a CajaSur
+El contable proactivo (cron lunes 09:00) ahora vigila los recibos `CUOTA PTMO <ref>` de banca:
+avisa por Telegram si la cuota cambia entre recibos (revisión de tipo/bonificación) o si la ficha
+de `patrimonio_activos` se desincroniza de lo que cobra el banco. Helper puro
+`lib/contable/hipoteca-vigia.ts` + 9 tests; skill `patrimonio-cfo` (Paso 4) concilia cuota real
+banca↔ficha y ANALIZA el salto (el contable lo detecta en semanal). Borrador Gmail a la gestora
+(María Luz, CajaSur, oficina Virgen de Luján) pidiendo bonificación perdida + capital exacto +
+cuadro — pendiente de que Alberto lo envíe. Registro en AGENTES-MAPA y PATRIMONIO-CFO.md.
+
+### 🏦 (22/08/2026) Hipoteca de Monte Carmelo leída de la escritura → ficha patrimonial completa
+Alberto subió la escritura (CAJASUR 856289293-5, abr-2021): 230.501,03€ a 30 años (vence
+05/04/2051), FIJO 2,10% bonificable — el aplicado real fue ~1,11% y subió a ~1,31% en abr-2026
+(perdió ~0,20 pts de bonificación: averiguar qué producto dejó de cumplir), cuota 772,86€,
+pendiente **≈195.300€ estimado** (sembrado en `patrimonio_activos.act_monte_carmelo` con método
+declarado; confirmar con recibo). Amortización anticipada: comisión efectiva ≈0€ mientras el
+mercado supere su tipo. Consigna dictada: **el CFO evalúa amortizar en cada pasada** — skill
+`patrimonio-cfo` ampliada (bonificaciones primero, comparar contra alternativa neta, plazo vs
+cuota) + `docs/PATRIMONIO-CFO.md`. El intake de /patrimonio ya solo pide confirmar el capital.
+
+### 🛑 (22/08/2026) Una pasada de mercado sin comps utilizables dejó a House un día entero sin tarifar (PR #1594)
 
 - Verificando la producción tras el arreglo del canal (#1582) salió que House **no recibió NI UNA fila
   de `pricing_applied`** hoy, mientras Busto/Dúplex/Luxury recibían 130/237/159. El canal sí se corrigió
@@ -192,6 +228,17 @@ movimientos de la tarjeta ****0302 de julio (629,86€ liquidados 01/08) para po
   a ojo. Los 9 errores de `tsc` del árbol eran previos (deps sin instalar), verificado con `git stash`.
 - Verificado: 1.465 tests + 33 del guardián · tsc 0 · build OK. PR #1582.
 
+
+### 🎭 (23/08/2026) El «~25 llamadas/día» de Alpha Vantage no existía: era el gate premium mal leído
+Alberto pidió verificar la cuota. Dos llamadas seguidas lo zanjan: `TIME_SERIES_DAILY_ADJUSTED` →
+`type:"rate_limit"` con `message` *«This is a premium endpoint»*, y acto seguido `GLOBAL_QUOTE` →
+datos reales (IBM 235,68 USD). Si la cuota estuviera agotada, la segunda habría fallado. O sea que
+el `rate_limit` del 21/08 del que salió el «~25/día» era el **muro de pago**, no la cuota tocando
+techo — cifra RETIRADA, no «sin verificar»: no tenía base. Y el fallo de fondo es peor que el número:
+**el mismo `type` tapa una avería PERMANENTE (endpoint de pago) y una TRANSITORIA (cuota gastada)**,
+que piden acciones opuestas. El canario de `conectores-vigia` habría dado un muro de pago por «ya
+volverá mañana». Arreglado: lee `message`, clasifica en las dos categorías, y ante la duda
+**permanente**. Una cuota no es observable desde la API — solo desde el panel. PR #1610.
 
 ### 🔢 (22/08/2026) Dos rutinas con el mismo número: la colisión que no rompe nada visible
 Al mergear #1581 (conectores-vigia = rutina 16) apareció que `radar-espana` de #1591 también era la
@@ -2389,6 +2436,50 @@ Pendiente: que Alberto revise el spec → plan de implementación. Códigos/cred
     IA→`buscador-ia`, patrimonio-cfo, fix `sivra_canal`) sí se dispararon. Efecto medido: `market_rates
     booking_mcp` lleva desde el 21/08 03:40 sin fila nueva (46h). Revisar en claude.ai la configuración
     de los 3 triggers (¿deshabilitado, hora movida, fallo del scheduler?) — no hay causa visible desde el repo.
+  - **🚨 La UI de Rutinas aceptó clicks sin persistirlos (23/08)** — al crear la rutina 16 se
+    guardó con **25 conectores adjuntos** (Gmail, Stripe, Supabase con ESCRITURA, Booking) pese a
+    haberlos desmarcado; los clicks iban por script y la UI los aceptó sin guardarlos. Cazado al
+    abrir la rutina YA GUARDADA; 4 min así, 0 ejecuciones, sin acceso a nada. **Regla nueva: el
+    formulario no es evidencia, el estado guardado sí.** Las 2 y 3, con clicks reales, salieron
+    bien. Escrito en la skill `conectores-vigia` y en el pendiente 12 de `RUTINAS-PROGRAMADAS.md`.
+  - **🔴 El registro que debía delatar el canal muerto está a CERO (23/08, corrige a #1615)** — las
+    13 skills SÍ hacen preflight y su protocolo manda gritar `🔇 SIN TELEGRAM (401):` y anotarlo en
+    `docs/AGENTES-BITACORA.md` ante un 401. Esa cadena **nunca se ha ejecutado**: `SIN TELEGRAM`
+    sale 0 veces en toda la bitácora, mientras esas mismas rutinas sí dejan ahí sus partes normales
+    (`facturas-correo`, hoy 06:33, sin token). **La bitácora se lee sana con el canal muerto.**
+    Falta saber si se saltan el preflight o si lo hacen y no cumplen el «déjalo escrito» — se mira
+    en una pasada real. Y el chivatazo del propio endpoint tiene un punto ciego: solo salta si llega
+    un Bearer, así que «rutina que NUNCA tuvo token» pasa por ruido de internet.
+  - **🟢 La solución ya está en el repo sin usar: `rutina_tokens`** (tabla, solo SHA-256) — token por
+    rutina, revocable, **rotable sin redeploy ni entrar a Vercel**, con alcance solo a
+    `/api/internal/alerta`. `lib/rutina-tokens.ts` + guardián + `docs/AVISOS-AGENTES.md`. Es la
+    respuesta a «un secreto portador copiado a mano en N prompts», y lleva ahí sin estrenar.
+  - **🔴 8 rutinas dicen que avisan por Telegram y NO pueden (23/08)** — cruce skills-que-avisan ×
+    triggers-con-token: `psd2-health-check`, `trading-analista`, `mercado-booking` (línea VACÍA),
+    `pricing-agente`, `facturas-correo`, `fiscal-novedades`, `ialimp-client-health` y
+    `rrhh-compliance-calendar`. Ninguna declara qué hacer sin token, así que corren, trabajan y el
+    aviso no sale: **silencio que se lee como «nada que contar»**. El peor es psd2 —un guardián que
+    no puede gritar fabrica la confianza de que alguien mira— y trading-analista, con dos disparos
+    «muertos sin huella» en memoria que nunca pudieron avisar. Tabla en `RUTINAS-PROGRAMADAS.md`;
+    arreglo = pegar el token en las 8 (de Alberto). **NO afecta** a los latidos de los crons de
+    Vercel, que van por otro camino y sí funcionan.
+  - **✅ Decisión de Alberto (23/08): NO rotar `ALERTA_TOKEN`** pese a quedar visible en una captura
+    al verificar la rutina 16. Es token estrecho (solo abre `/api/internal/alerta`: quien lo tenga
+    puede mandar un Telegram, nada más), y esa acotación es justo por lo que se eligió frente a
+    `CRON_SECRET`. **Decisión explícita, no olvido.**
+  - **🟡 Rotar este token es caro por diseño** — vive copiado a mano en el prompt de cada rutina, así
+    que rotar son N ediciones + una ventana en la que el endpoint rechaza al viejo o al nuevo (solo
+    acepta uno). Arreglo de fondo pendiente: que `/api/internal/alerta` admita dos valores en
+    transición, o que las skills lo lean de un secreto del repo y no del prompt.
+  - **🟡 El día 1 acumula 5 rutinas y la 18 depende de la 17** — `radar-espana` (día 1) alimenta a
+    `patrimonio-cfo` (día 2). Con el 🔴 de rutinas que no dejaron rastro el 22/08, esa cadena es
+    frágil. Mitigado por el lado del consumidor (el CFO ya comprueba «Última pasada» del radar y
+    no abre escenarios de venta sobre un termómetro caducado); **sin mitigar por el lado del
+    productor**: si el día 1 se satura, nadie reintenta el radar.
+  - **Cuota de Alpha Vantage — CERRADO como «no se sabe» (23/08, PR #1610):** el «~25 llamadas/día»
+    se retiró; salía de leer un `type:"rate_limit"` que en realidad era el muro de pago. No es
+    observable desde la API sin agotarla; única fuente, el panel de la cuenta. Lo verificado: el
+    21/08 quedaba cuota, y `TIME_SERIES_DAILY_ADJUSTED` sigue siendo premium (**H1 vivo**).
   - **`ses_transporte` sin ninguna pasada OK todavía:** `detalle` dice «no hay ningún establecimiento
     dado de alta en /sivra/partes/establecimientos» — no es la avería del Ministerio ni de credenciales
     que ya describe la nota del latido, es que falta dar de alta el primer establecimiento. Acción de

@@ -28,6 +28,19 @@
   huella propia en `agente_latidos`**. fallos: el fallo de `mercado-booking` del 22/08 no disparó
   ninguna alerta propia — su latido quedó a 41 h sin latir y nadie lo miró hasta que se buscó la
   causa aguas arriba de otro síntoma. PRs/commits: #1594
+- **2026-08-23 · facturas-correo** · hizo: preflight canal alerta OK (200); Vía B: última copia
+  `_buzon_pdf` 20/08 (dias_caido=3 por fórmula), pero verificado con búsqueda directa
+  (`has:attachment filename:pdf newer_than:3d`) que no ha entrado NINGÚN PDF nuevo en Gmail desde
+  entonces — no es corte, `agente_salud` actualizado a `ok=true` con el detalle; backlog
+  `PDF-pendiente`/`Revisar`/`Extraccion-fallida` vacío (confirmado por `search_threads`, no por el
+  contador de `list_labels`); Paso 4.0 (`v_facturas_sin_cargo`) sin filas `sin_revisar`. 1 candidato
+  nuevo: recibo Stripe "Financial Datasets, Inc." 17,78€ (21/08) — API de fundamentales que usa
+  `packages/module-trading`/trading-analista → `seguros` (correduría), archivado en Drive
+  (08-Agosto-2026, doc de texto por ser recibo HTML sin PDF) + fila en `facturas_drive`; sin cargo
+  bancario aún (PSD2 solo llega hasta 20/08) → queda pendiente de conciliar. `_subir_aqui` vacío;
+  root de `FACTURAS Apartamentos/2026` sin PDFs huérfanos nuevos (los 20 que hay ya tienen aviso en
+  `_DUPLICADOS_BORRAR` de pasadas previas, papelera sin verificar zombis hoy por volumen). dudas: —;
+  fallos: —; PRs/commits: — (solo bitácora + BD + Drive).
 - **2026-08-23 · mercado-booking** · hizo: pasada diaria, plan `?max=24` (512 ventanas candidatas,
   488 recortadas por el tope — todas las 24 pedidas eran de ronda 1/evento, `sin_medir_nunca:24`).
   238 comps reales escritos en `market_rates` (9-10 por ventana; medianas ~90-160€/noche en fechas

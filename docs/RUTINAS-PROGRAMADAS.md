@@ -284,7 +284,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Qué hace** | Lee `docs/DUPLEX-plan-precio-reforma-venta.md`, mide del mes **CERRADO** la ocupación real del dúplex (último snapshot de cada noche, nunca el calendario a futuro) + los otros tres pisos como control + qué está haciendo el agente de precios, rellena la fila del mes en la tabla de seguimiento y **aplica el criterio de decisión ya escrito** en la fase en curso. |
 | **Resultado** | PR draft con el documento actualizado + aviso Telegram con el veredicto (ocupación, precio, qué decisión toca). **NO toca `pricing_settings` ni precios publicados** sin OK explícito de Alberto para ese cambio concreto. |
 
-### 16. Vigía de conectores MCP — *pendiente de trigger*
+### 16. Vigía de conectores MCP — *ACTIVA desde el 23/08/2026* (`trig_01Kf4G2s3rgDzr9GddwXjTNL`)
 | | |
 |---|---|
 | **Cuándo** | Mensual, **día 5**, ~04:00 CEST (el 15 lo ocupa `github-vigia`) |
@@ -304,7 +304,7 @@ que hoy nadie detectaría, porque su modo de fallo no es un error ruidoso sino u
 
 ---
 
-### 17. Radar España (coyuntura + valoración de inmuebles) — *pendiente de trigger*
+### 17. Radar España (coyuntura + valoración de inmuebles) — *ACTIVA desde el 23/08/2026* (`trig_01NLeiXPfS3PwwyVS4or7geo`)
 | | |
 |---|---|
 | **Cuándo** | Quincenal, **días 1 y 16, ~06:00 UTC (08:00 CEST)** — antes que el `patrimonio-cfo` del día 2, que consume su salida. |
@@ -316,7 +316,7 @@ que hoy nadie detectaría, porque su modo de fallo no es un error ruidoso sino u
 
 ---
 
-### 18. Coordinador patrimonial (patrimonio-cfo) — *pendiente de trigger*
+### 18. Coordinador patrimonial (patrimonio-cfo) — *ACTIVA desde el 23/08/2026* (`trig_01NtNkTDWKX7UbDjkWYfQpuq`)
 | | |
 |---|---|
 | **Cuándo** | Mensual, **día 2, ~07:00 UTC (09:00 CEST)** — el día 2 a propósito: consume las pasadas del día 1 (fiscal-novedades, plan dúplex, radar-espana, quincenal trading). |
@@ -348,11 +348,11 @@ que hoy nadie detectaría, porque su modo de fallo no es un error ruidoso sino u
 | Domingo 07:30 | Agentes-entrenador (mejora de prompts) |
 | Lunes 07:00 | Buscador de IA |
 | Día 1 del mes 07:00 | Vigilante fiscal IRPF |
-| Día 5 del mes 04:00 | Vigía de conectores MCP (*pendiente de trigger*) |
+| Día 5 del mes 04:00 | Vigía de conectores MCP |
 | Día 1 del mes 07:00 | Revisión mensual del plan del dúplex de Villasís |
 | Día 1 del mes 08:00 | RRHH compliance calendar |
-| Días 1 y 16, 08:00 | Radar España (*pendiente de trigger*) |
-| Día 2 del mes 09:00 | Coordinador patrimonial patrimonio-cfo (*pendiente de trigger*) |
+| Días 1 y 16, 08:00 | Radar España |
+| Día 2 del mes 09:00 | Coordinador patrimonial patrimonio-cfo |
 | Día 15 del mes 07:00 | Vigía GitHub/OSS |
 | Diaria 09:45 | Latidos de agentes (cron Vercel) |
 | Mar-sáb 08:30 | Watchdog trading (cron Vercel) |
@@ -376,6 +376,72 @@ Content-Type: application/json
 - `ALERTA_TOKEN` = token **DEDICADO** que SOLO abre `/api/internal/alerta` (crear en Vercel plataforma).
   ⚠️ **NO uses `CRON_SECRET` aquí:** es la llave maestra de todos los crons (aplica precios, etc.) y no debe
   vivir en un prompt. El endpoint acepta `CRON_SECRET` solo por compatibilidad transitoria.
+
+### 🔴 Auditoría del canal de aviso (23/08/2026) — 8 rutinas NO pueden avisar
+
+Cruce entre **qué skills avisan** por `/api/internal/alerta` y **qué triggers llevan el token**,
+hecho contra la configuración de las 30 rutinas, no contra la pantalla.
+
+| Skill que avisa | Rutina | Cadencia | Canal |
+|---|---|---|---|
+| `agentes-entrenador` | agentes-entrenador | Dom 07:30 | ✅ |
+| `buscador-ia` | buscador-ia | Lun 07:00 | ✅ |
+| `conectores-vigia` | Vigía de conectores MCP | Día 5 | ✅ |
+| `patrimonio-cfo` | Coordinador patrimonial (CFO) | Día 2 | ✅ |
+| `radar-espana` | Radar España | Días 1 y 16 | ✅ |
+| `psd2-health-check` | psd2-health-check | Mié | ⛔ sin línea |
+| `trading-analista` | Agente trading-analista | L-V 20:15 y 23:15 | ⛔ sin línea |
+| `mercado-booking` | SIVRA mercado booking | diaria | ⛔ **línea VACÍA** |
+| `pricing-agente` | Agente de pricing (sivra) | Lun | ⛔ sin línea |
+| `facturas-correo` | Revisar facturas correo | diaria | ⛔ sin línea |
+| `fiscal-novedades` | fiscal-novedades | Día 1 | ⛔ sin línea |
+| `ialimp-client-health` | ialimp-client-health | Vie | ⛔ sin línea |
+| `rrhh-compliance-calendar` | rrhh-compliance-calendar | Día 1 | ⛔ sin línea |
+| `github-vigia` | — | — | sin trigger (ya sabido) |
+
+**Corrección del mismo día, tras leer el código: el fallo NO es mudo por diseño — es mudo en la
+práctica, que es peor.** Las 13 skills SÍ hacen el preflight `GET /api/internal/alerta` al arrancar,
+y su protocolo manda que ante un `401` griten en sesión con `🔇 SIN TELEGRAM (401):` y dejen el aviso
+entero en `docs/AGENTES-BITACORA.md`. La vía ruidosa está escrita.
+
+**Y no se ha ejecutado nunca:** `SIN TELEGRAM` aparece **0 veces** en toda la bitácora. Mientras
+tanto esas mismas rutinas sí escriben ahí sus partes normales (`facturas-correo` dejó el suyo el
+23/08 a las 06:33, sin token). O sea: **la bitácora se lee sana mientras el canal está muerto**, y el
+registro que debía delatarlo está a cero. No sabemos si se saltan el preflight o si lo hacen y no
+cumplen el «déjalo escrito»: eso se mira en una pasada real, no se deduce.
+
+El endpoint además **se chiva de sus propios 401** por Telegram —se construyó tras el incidente del
+26-27/07/2026 justo para eso— pero con esta guarda:
+
+```js
+// Solo si venía un Bearer: una petición SIN token no es una rutina rota, es ruido de internet.
+if (!req.headers.get('authorization')) return
+```
+
+Cubre «el token se desincronizó» (llega Bearer malo → avisa) y es **ciego a «la rutina nunca tuvo
+token»** (no llega Bearer → silencio). Que es exactamente la forma de estas 8: el mecanismo
+antisilencio tiene un punto ciego con la forma del caso que más importa.
+
+**Vía que ya existe y nadie usa:** `rutina_tokens` (tabla, solo SHA-256) — token POR rutina,
+revocable individualmente, **rotable sin redeploy y sin entrar a Vercel**, con alcance a este
+endpoint y nada más. Implementada (`lib/rutina-tokens.ts`, guardián
+`test/regression-rutina-tokens.test.ts`) y documentada en `docs/AVISOS-AGENTES.md`. Es la respuesta
+a la objeción de fondo —un secreto portador copiado a mano en N prompts— y lleva ahí sin usarse.
+
+El caso que más duele es **`psd2-health-check`**: su ÚNICO producto es gritar cuando la banca deja
+de sincronizar. Un guardián que no puede gritar no es medio guardián — es peor que ninguno, porque
+fabrica la confianza de que alguien está mirando. Y **`trading-analista`** lleva en memoria dos
+disparos «muertos sin huella»: con el canal sin cablear, «no dijo nada» nunca fue prueba de nada.
+
+> ⚠️ **Alcance:** esto tumba el aviso que manda la **sesión de la rutina**. Los latidos y alertas que
+> salen de los crons de Vercel usan otro camino (el token vive allí) y SÍ funcionan — por eso llegan
+> los de `sivra_canal`. No confundas «me llegan avisos» con «esta rutina puede avisar».
+
+**Cómo se audita, para la próxima:** cuenta la LÍNEA `ALERTA_TOKEN=`, no su valor. Un barrido que
+exija valor no vacío da por ausente lo que está presente y vacío — el mismo `NULL` colapsado de la
+regla de la casa, cometido dentro de la propia auditoría (el 23/08 un barrido así dijo 5 donde
+había 7). Y el emparejamiento skill→rutina hazlo por `Ejecuta la skill <nombre>`, no por subcadena:
+buscar suelto empareja rutinas que no son.
 
 ### ⚠️ Workaround — la UI de Rutinas no tiene sección de env vars (jul 2026)
 
@@ -412,7 +478,7 @@ Así si el bot cambia, solo se actualiza en Vercel plataforma — ninguna rutina
 ## Pendientes manuales de Alberto
 1. ~~Crear los 5 triggers pendientes~~ ✅ Hecho (01/07/2026) — rutinas 4-8 activas.
 2. ~~Confirmar MCP Booking.com~~ ✅ Confirmado — Booking.com está disponible y configurado en pricing-agente.
-3. **Añadir `ALERTA_TOKEN` al campo "Instrucciones"** de las rutinas 6 (psd2-health-check) y 7 (ialimp-client-health) para habilitar alertas Telegram (ver sección workaround arriba). `PLATAFORMA_URL` también si no está en el prompt. **NO usar `TELEGRAM_BOT_TOKEN`** (vive en Vercel plataforma) **ni `CRON_SECRET`** (llave maestra — ver pendiente #9; usa el token estrecho `ALERTA_TOKEN`).
+3. 🔴 **Añadir `ALERTA_TOKEN` al campo "Instrucciones"** de las **8** rutinas con el canal muerto (ver «Auditoría del canal de aviso», 23/08/2026 — NO son solo psd2 y ialimp-client-health, como decía este punto) para habilitar alertas Telegram (ver sección workaround arriba). `PLATAFORMA_URL` también si no está en el prompt. **NO usar `TELEGRAM_BOT_TOKEN`** (vive en Vercel plataforma) **ni `CRON_SECRET`** (llave maestra — ver pendiente #9; usa el token estrecho `ALERTA_TOKEN`).
 4. **Primer ciclo de pricing-agente** (próximo lunes): revisar el PR draft con propuestas antes de aprobar. La skill impone `dryRun: true` en el primer ciclo automáticamente.
 5. **Crear el trigger de la rutina 9 (github-vigia)**: mensual día 15 ~07:00, prompt `Ejecuta la skill github-vigia` + al final `PLATAFORMA_URL`/`ALERTA_TOKEN` (token estrecho, NO `CRON_SECRET` — ver pendiente #9). Al crearlo, cambiar su estado a *activa* en este doc.
 6. ~~Crear el trigger de la rutina 10 (agentes-entrenador)~~ ✅ Hecho (03/07/2026) — rutina 10 activa.
@@ -559,11 +625,15 @@ allá de `analizar`/`puntuar`: `factores`, `gurus`, `fundamentales`, `insiders`,
   `(simbolo,fecha,estrategia)`), así que el coste de un fallo del PASO 0 es un aviso, no datos
   corruptos. Primer estreno real: lunes 17/08 (check-in de esa noche armado en la sesión del 15/08).
 
-12. 🟡 **Crear los 3 triggers pendientes** en `claude.ai/code → Rutinas` — las skills están
-    mergeadas y sin disparo nadie las ejecuta:
-    - **16 · `conectores-vigia`** — día 5, 04:00 CEST (`0 2 5 * *` UTC). Prompt: `Ejecuta la skill
-      conectores-vigia`. **Ningún conector adjunto** (GitHub es nativo; las herramientas de registro
-      parecen nativas del harness — la 1ª pasada lo verifica). `PLATAFORMA_URL` + `ALERTA_TOKEN` en
-      Instrucciones.
-    - **17 · `radar-espana`** — días 1 y 16, 08:00 CEST. Conector Supabase.
-    - **18 · `patrimonio-cfo`** — día 2, 09:00 CEST. Conector Supabase. Consume la salida de la 17.
+12. ✅ **RESUELTO (23/08/2026) — los 3 triggers creados** (16 `conectores-vigia`
+    `trig_01Kf4G2s3rgDzr9GddwXjTNL`, 17 `radar-espana` `trig_01NLeiXPfS3PwwyVS4or7geo`,
+    18 `patrimonio-cfo` `trig_01NtNkTDWKX7UbDjkWYfQpuq`), los tres activos y con el cron correcto.
+    **🚨 La lección, que vale para toda alta futura: la UI aceptó clicks del formulario sin
+    persistirlos.** La rutina 16 se guardó con **25 conectores adjuntos** (Gmail, Stripe, Supabase
+    con ESCRITURA, Booking) cuando su ficha pide NINGUNO; Alberto los había desmarcado, pero por
+    script. Lo cazó **abriendo la rutina ya guardada**, no mirando el formulario. Cuatro minutos
+    así, 0 ejecuciones, sin acceso a nada. Regla: **el formulario no es evidencia, el estado
+    guardado sí** — tras crear o editar una rutina, vuelve a abrirla y lee lo que quedó.
+    **Pendiente menor:** las tres llevan `ALERTA_TOKEN` con el placeholder literal, así que su
+    aviso de Telegram fallará con error de autenticación hasta que Alberto pegue el valor real
+    (está en las rutinas `buscador-ia` y `agentes-entrenador`).
