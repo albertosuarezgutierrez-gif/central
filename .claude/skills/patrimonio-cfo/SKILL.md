@@ -25,6 +25,22 @@ Preflight del canal de aviso (bloque de abajo) AL ARRANCAR. Lee `docs/PATRIMONIO
 (estado anterior), la skill `perfil-fiscal` (mapa fiscal canónico) y `docs/RADAR-ESPANA.md`
 (termómetro y valoraciones del radar — su pasada del día 1).
 
+> 🚨 **Comprueba «Última pasada» de `RADAR-ESPANA.md` ANTES de usar nada suyo.** Corres el día 2
+> **suponiendo** que el radar corrió el día 1, y esa suposición se rompe sola: el día 1 acumula
+> cinco rutinas, y ya ha habido días en que rutinas programadas no dejaron rastro (🔴 del 22/08).
+> El radar no te avisa de que no pasó — su doc simplemente sigue diciendo lo de la quincena
+> anterior, y un termómetro viejo se lee exactamente igual que uno de hoy.
+>
+> - **Sin pasada, o con una anterior al día 1 de este mes:** dilo en el informe con su fecha
+>   («termómetro del DD/MM, el radar no pasó el día 1»), y **no abras ningún escenario cuyo
+>   disparador sea el termómetro** — el «cuándo» de una venta no se decide con una foto caducada.
+>   Las valoraciones se etiquetan con su fecha, nunca como «vigente» a secas.
+> - **`sin datos` en una zona es «no se ha medido», jamás «todo tranquilo»** (lo dice el propio
+>   doc del radar). No lo colapses a un verde ni lo omitas: una zona sin medir es una zona sobre
+>   la que no puedes recomendar.
+>
+> Que el radar falle es un problema; que el CFO recomiende vender sobre su cadáver es el caro.
+
 ## Paso 1 — Recopilar (leer, no recalcular)
 - **BD** (Supabase `wswbehlcuxqxyinousql`): `patrimonio_activos` + `patrimonio_valoraciones`
   (vigente por activo/enfoque), `broker_saldos` + `trading_cartera_real`, `cuentas_bancarias`

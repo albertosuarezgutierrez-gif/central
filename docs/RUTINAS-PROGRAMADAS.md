@@ -284,7 +284,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Qué hace** | Lee `docs/DUPLEX-plan-precio-reforma-venta.md`, mide del mes **CERRADO** la ocupación real del dúplex (último snapshot de cada noche, nunca el calendario a futuro) + los otros tres pisos como control + qué está haciendo el agente de precios, rellena la fila del mes en la tabla de seguimiento y **aplica el criterio de decisión ya escrito** en la fase en curso. |
 | **Resultado** | PR draft con el documento actualizado + aviso Telegram con el veredicto (ocupación, precio, qué decisión toca). **NO toca `pricing_settings` ni precios publicados** sin OK explícito de Alberto para ese cambio concreto. |
 
-### 16. Vigía de conectores MCP — *pendiente de trigger*
+### 16. Vigía de conectores MCP — *ACTIVA desde el 23/08/2026* (`trig_01Kf4G2s3rgDzr9GddwXjTNL`)
 | | |
 |---|---|
 | **Cuándo** | Mensual, **día 5**, ~04:00 CEST (el 15 lo ocupa `github-vigia`) |
@@ -304,7 +304,7 @@ que hoy nadie detectaría, porque su modo de fallo no es un error ruidoso sino u
 
 ---
 
-### 17. Radar España (coyuntura + valoración de inmuebles) — *pendiente de trigger*
+### 17. Radar España (coyuntura + valoración de inmuebles) — *ACTIVA desde el 23/08/2026* (`trig_01NLeiXPfS3PwwyVS4or7geo`)
 | | |
 |---|---|
 | **Cuándo** | Quincenal, **días 1 y 16, ~06:00 UTC (08:00 CEST)** — antes que el `patrimonio-cfo` del día 2, que consume su salida. |
@@ -316,7 +316,7 @@ que hoy nadie detectaría, porque su modo de fallo no es un error ruidoso sino u
 
 ---
 
-### 18. Coordinador patrimonial (patrimonio-cfo) — *pendiente de trigger*
+### 18. Coordinador patrimonial (patrimonio-cfo) — *ACTIVA desde el 23/08/2026* (`trig_01NtNkTDWKX7UbDjkWYfQpuq`)
 | | |
 |---|---|
 | **Cuándo** | Mensual, **día 2, ~07:00 UTC (09:00 CEST)** — el día 2 a propósito: consume las pasadas del día 1 (fiscal-novedades, plan dúplex, radar-espana, quincenal trading). |
@@ -348,11 +348,11 @@ que hoy nadie detectaría, porque su modo de fallo no es un error ruidoso sino u
 | Domingo 07:30 | Agentes-entrenador (mejora de prompts) |
 | Lunes 07:00 | Buscador de IA |
 | Día 1 del mes 07:00 | Vigilante fiscal IRPF |
-| Día 5 del mes 04:00 | Vigía de conectores MCP (*pendiente de trigger*) |
+| Día 5 del mes 04:00 | Vigía de conectores MCP |
 | Día 1 del mes 07:00 | Revisión mensual del plan del dúplex de Villasís |
 | Día 1 del mes 08:00 | RRHH compliance calendar |
-| Días 1 y 16, 08:00 | Radar España (*pendiente de trigger*) |
-| Día 2 del mes 09:00 | Coordinador patrimonial patrimonio-cfo (*pendiente de trigger*) |
+| Días 1 y 16, 08:00 | Radar España |
+| Día 2 del mes 09:00 | Coordinador patrimonial patrimonio-cfo |
 | Día 15 del mes 07:00 | Vigía GitHub/OSS |
 | Diaria 09:45 | Latidos de agentes (cron Vercel) |
 | Mar-sáb 08:30 | Watchdog trading (cron Vercel) |
@@ -559,11 +559,15 @@ allá de `analizar`/`puntuar`: `factores`, `gurus`, `fundamentales`, `insiders`,
   `(simbolo,fecha,estrategia)`), así que el coste de un fallo del PASO 0 es un aviso, no datos
   corruptos. Primer estreno real: lunes 17/08 (check-in de esa noche armado en la sesión del 15/08).
 
-12. 🟡 **Crear los 3 triggers pendientes** en `claude.ai/code → Rutinas` — las skills están
-    mergeadas y sin disparo nadie las ejecuta:
-    - **16 · `conectores-vigia`** — día 5, 04:00 CEST (`0 2 5 * *` UTC). Prompt: `Ejecuta la skill
-      conectores-vigia`. **Ningún conector adjunto** (GitHub es nativo; las herramientas de registro
-      parecen nativas del harness — la 1ª pasada lo verifica). `PLATAFORMA_URL` + `ALERTA_TOKEN` en
-      Instrucciones.
-    - **17 · `radar-espana`** — días 1 y 16, 08:00 CEST. Conector Supabase.
-    - **18 · `patrimonio-cfo`** — día 2, 09:00 CEST. Conector Supabase. Consume la salida de la 17.
+12. ✅ **RESUELTO (23/08/2026) — los 3 triggers creados** (16 `conectores-vigia`
+    `trig_01Kf4G2s3rgDzr9GddwXjTNL`, 17 `radar-espana` `trig_01NLeiXPfS3PwwyVS4or7geo`,
+    18 `patrimonio-cfo` `trig_01NtNkTDWKX7UbDjkWYfQpuq`), los tres activos y con el cron correcto.
+    **🚨 La lección, que vale para toda alta futura: la UI aceptó clicks del formulario sin
+    persistirlos.** La rutina 16 se guardó con **25 conectores adjuntos** (Gmail, Stripe, Supabase
+    con ESCRITURA, Booking) cuando su ficha pide NINGUNO; Alberto los había desmarcado, pero por
+    script. Lo cazó **abriendo la rutina ya guardada**, no mirando el formulario. Cuatro minutos
+    así, 0 ejecuciones, sin acceso a nada. Regla: **el formulario no es evidencia, el estado
+    guardado sí** — tras crear o editar una rutina, vuelve a abrirla y lee lo que quedó.
+    **Pendiente menor:** las tres llevan `ALERTA_TOKEN` con el placeholder literal, así que su
+    aviso de Telegram fallará con error de autenticación hasta que Alberto pegue el valor real
+    (está en las rutinas `buscador-ia` y `agentes-entrenador`).

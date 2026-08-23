@@ -2390,12 +2390,20 @@ Pendiente: que Alberto revise el spec → plan de implementación. Códigos/cred
     IA→`buscador-ia`, patrimonio-cfo, fix `sivra_canal`) sí se dispararon. Efecto medido: `market_rates
     booking_mcp` lleva desde el 21/08 03:40 sin fila nueva (46h). Revisar en claude.ai la configuración
     de los 3 triggers (¿deshabilitado, hora movida, fallo del scheduler?) — no hay causa visible desde el repo.
-  - **🟡 Tres skills mergeadas y SIN trigger (23/08)** — existen pero nadie las dispara, así que
-    su silencio no significa «nada que contar»: rutinas **16 `conectores-vigia`** (día 5, 04:00),
-    **17 `radar-espana`** (días 1 y 16, 08:00) y **18 `patrimonio-cfo`** (día 2, 09:00). Cron,
-    conectores y prompt listos en `docs/RUTINAS-PROGRAMADAS.md`, pendiente #12. Crearlos es de
-    Alberto (la UI de Rutinas pide su sesión). **No confundir con el 🔴 de arriba**, que son otras
-    tres rutinas ya existentes que se saltaron el 22/08.
+  - **🚨 La UI de Rutinas aceptó clicks sin persistirlos (23/08)** — al crear la rutina 16 se
+    guardó con **25 conectores adjuntos** (Gmail, Stripe, Supabase con ESCRITURA, Booking) pese a
+    haberlos desmarcado; los clicks iban por script y la UI los aceptó sin guardarlos. Cazado al
+    abrir la rutina YA GUARDADA; 4 min así, 0 ejecuciones, sin acceso a nada. **Regla nueva: el
+    formulario no es evidencia, el estado guardado sí.** Las 2 y 3, con clicks reales, salieron
+    bien. Escrito en la skill `conectores-vigia` y en el pendiente 12 de `RUTINAS-PROGRAMADAS.md`.
+  - **🟡 `ALERTA_TOKEN` con placeholder literal en las 3 rutinas nuevas (16/17/18)** — su aviso de
+    Telegram fallará con error de autenticación (no en silencio) hasta que Alberto pegue el valor
+    real; está en las rutinas `buscador-ia` y `agentes-entrenador`. Acción de Alberto.
+  - **🟡 El día 1 acumula 5 rutinas y la 18 depende de la 17** — `radar-espana` (día 1) alimenta a
+    `patrimonio-cfo` (día 2). Con el 🔴 de rutinas que no dejaron rastro el 22/08, esa cadena es
+    frágil. Mitigado por el lado del consumidor (el CFO ya comprueba «Última pasada» del radar y
+    no abre escenarios de venta sobre un termómetro caducado); **sin mitigar por el lado del
+    productor**: si el día 1 se satura, nadie reintenta el radar.
   - **Cuota de Alpha Vantage — CERRADO como «no se sabe» (23/08, PR #1610):** el «~25 llamadas/día»
     se retiró; salía de leer un `type:"rate_limit"` que en realidad era el muro de pago. No es
     observable desde la API sin agotarla; única fuente, el panel de la cuenta. Lo verificado: el

@@ -74,6 +74,24 @@ Si el `message` no permite distinguirlo, **es permanente hasta que se demuestre 
 error conservador es dar por rota una fuente que funcionaba, no dar por viva una que no está.
 
 ## Paso 4 — Higiene de los conectados
+
+> ⚠️ **Alcance REAL de este paso, dilo en el parte: cubre los conectores DE LA CUENTA, no los
+> adjuntos a cada rutina.** `list_triggers` **no expone** los conectores de un trigger —
+> comprobado el 23/08/2026: `psd2-health-check`, que necesita Supabase y funciona, se ve idéntico
+> a uno sin ningún conector. Así que **no puedes verificar la regla de mínimo alcance por rutina**,
+> y un «higiene ✅» que no lo aclare es un verde que no significa nada. Escribe siempre qué NO
+> pudiste mirar: eso le dice a Alberto dónde poner el ojo (la UI de Rutinas, a mano).
+>
+> No es teórico. Pasó dos veces: el 08/08/2026 una rutina heredó 16 conectores (IBKR, Gmail,
+> Vercel) para escribir comparables de mercado; y el 23/08/2026 la Rutina 16 se guardó con **25
+> conectores adjuntos** —Gmail, Stripe, Supabase con ESCRITURA, Booking— cuando su ficha pide
+> NINGUNO. Alberto los había desmarcado en el formulario, pero por script: **la UI aceptó los
+> clicks y no los persistió.** Lo cazó verificando la rutina YA GUARDADA, no el formulario. Cuatro
+> minutos así, 0 ejecuciones, sin acceso a nada — pero el fallo no se vio en ningún error.
+>
+> Corolario para cualquier alta o cambio de rutina: **el formulario no es evidencia; el estado
+> guardado sí.** Vuelve a abrir la rutina después de crearla y lee lo que quedó.
+
 `ListConnectors` y cruce con el uso real en el repo. Marca:
 - **Sin uso:** conectado y nadie lo llama.
 - **`installState: unknown`:** ni conectado ni desconectado — estado que nadie ha mirado.
@@ -105,6 +123,10 @@ espera a Alberto. `docs/VIGIA-CONECTORES.md` es registro; `docs/HUECOS-ABIERTOS.
   canarios agotan la cuota diaria de un conector, rompes esta noche la rutina que depende de él.
 - **`LISTING_STATUS` no se consume por MCP** (182.000 tokens de CSV se comen la sesión): va por
   HTTP hacia el código que lo necesite.
+- **Primera pasada, comprobar y registrar:** el desplegable de conectores en modo EDICIÓN de una
+  rutina ofrece opciones que el de CREACIÓN no (visto el 23/08/2026: PDF Viewer, Wyndham,
+  DirectBooker, Claude_Code_Remote, Linear). Si se confirma, es un hueco de descubrimiento: un
+  conector que solo aparece al editar no se considera nunca al crear una rutina nueva.
 - Máximo **3 candidatos** por pasada. Si no hay ninguno, dilo y calla: poder callar es lo que hace
   que tu Telegram signifique algo.
 - No inventes veredictos ni cuotas: sin evidencia, no se anota. **Una cuota NO es observable desde
