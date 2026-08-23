@@ -50,6 +50,12 @@ cosas. El de registro se mergea solo y no envejece; el que cambia comportamiento
 
 ## Rutinas
 
+> **El número de cada ficha es un IDENTIFICADOR ESTABLE, no el orden de lectura.** Se cita desde
+> fuera (memoria, `CLAUDE.md`, specs), así que **no se renumera una ficha existente**: si dos PRs
+> en vuelo eligen el mismo «siguiente número», el que se mergeó primero se queda con él y el otro
+> coge uno libre. Por eso el fichero no va en orden y hay huecos. Lo garantiza el guardián
+> `test/regression-rutinas-numeracion.test.ts` (colisiones y referencias «ver punto N» rotas).
+
 ### 1. Auditoría nocturna ligera — *activa*
 | | |
 |---|---|
@@ -228,7 +234,7 @@ caza lo que las sesiones del día no anotaron a mano.
 
 ---
 
-### 10. Triaje de correo — *activa (CRON DE VERCEL, no rutina Claude)*
+### 19. Triaje de correo — *activa (CRON DE VERCEL, no rutina Claude)*
 | | |
 |---|---|
 | **Cuándo** | `apps/plataforma` `vercel.json`: `correo-triaje` cada 10 min, `correo-digest` 20:30, `correo-resumen-semanal` lunes 09:00 |
@@ -298,7 +304,7 @@ que hoy nadie detectaría, porque su modo de fallo no es un error ruidoso sino u
 
 ---
 
-### 16. Radar España (coyuntura + valoración de inmuebles) — *pendiente de trigger*
+### 17. Radar España (coyuntura + valoración de inmuebles) — *pendiente de trigger*
 | | |
 |---|---|
 | **Cuándo** | Quincenal, **días 1 y 16, ~06:00 UTC (08:00 CEST)** — antes que el `patrimonio-cfo` del día 2, que consume su salida. |
@@ -310,7 +316,7 @@ que hoy nadie detectaría, porque su modo de fallo no es un error ruidoso sino u
 
 ---
 
-### 17. Coordinador patrimonial (patrimonio-cfo) — *pendiente de trigger*
+### 18. Coordinador patrimonial (patrimonio-cfo) — *pendiente de trigger*
 | | |
 |---|---|
 | **Cuándo** | Mensual, **día 2, ~07:00 UTC (09:00 CEST)** — el día 2 a propósito: consume las pasadas del día 1 (fiscal-novedades, plan dúplex, radar-espana, quincenal trading). |
@@ -325,13 +331,15 @@ que hoy nadie detectaría, porque su modo de fallo no es un error ruidoso sino u
 ## Resumen de cadencias
 
 > ⚠️ El **triaje de correo** NO es una rutina de Claude Code: son 3 crons de Vercel en
-> `apps/plataforma` (ver punto 10). Las de abajo sí son rutinas Claude (sesión efímera).
+> `apps/plataforma` (ver punto 19). Las de abajo sí son rutinas Claude (sesión efímera).
 
 | Día/hora | Rutina |
 |---|---|
 | Diaria 04:00 | Auditoría nocturna ligera |
 | Días 1 y 15, ~10:00 | Seguimiento quincenal del laboratorio de inversión |
 | Diaria 08:00 | Facturas correo |
+| Diaria 05:30 | Mercado real por fecha (SIVRA / Booking) |
+| Diaria 11:00 | Vigilancia diaria pricing SIVRA (*temporal*) |
 | Lunes 06:00 | Pricing agente SIVRA |
 | Miércoles 09:00 | Guardián PSD2 |
 | Viernes 17:00 | ialimp client health |
@@ -340,7 +348,7 @@ que hoy nadie detectaría, porque su modo de fallo no es un error ruidoso sino u
 | Domingo 07:30 | Agentes-entrenador (mejora de prompts) |
 | Lunes 07:00 | Buscador de IA |
 | Día 1 del mes 07:00 | Vigilante fiscal IRPF |
-| Día 5 del mes 04:00 | Vigía de conectores MCP |
+| Día 5 del mes 04:00 | Vigía de conectores MCP (*pendiente de trigger*) |
 | Día 1 del mes 07:00 | Revisión mensual del plan del dúplex de Villasís |
 | Día 1 del mes 08:00 | RRHH compliance calendar |
 | Días 1 y 16, 08:00 | Radar España (*pendiente de trigger*) |
@@ -550,3 +558,12 @@ allá de `analizar`/`puntuar`: `factores`, `gurus`, `fundamentales`, `insiders`,
   existe de serie (`trading_pasadas` cuenta y avisa a la 2ª pasada; únicos por
   `(simbolo,fecha,estrategia)`), así que el coste de un fallo del PASO 0 es un aviso, no datos
   corruptos. Primer estreno real: lunes 17/08 (check-in de esa noche armado en la sesión del 15/08).
+
+12. 🟡 **Crear los 3 triggers pendientes** en `claude.ai/code → Rutinas` — las skills están
+    mergeadas y sin disparo nadie las ejecuta:
+    - **16 · `conectores-vigia`** — día 5, 04:00 CEST (`0 2 5 * *` UTC). Prompt: `Ejecuta la skill
+      conectores-vigia`. **Ningún conector adjunto** (GitHub es nativo; las herramientas de registro
+      parecen nativas del harness — la 1ª pasada lo verifica). `PLATAFORMA_URL` + `ALERTA_TOKEN` en
+      Instrucciones.
+    - **17 · `radar-espana`** — días 1 y 16, 08:00 CEST. Conector Supabase.
+    - **18 · `patrimonio-cfo`** — día 2, 09:00 CEST. Conector Supabase. Consume la salida de la 17.
