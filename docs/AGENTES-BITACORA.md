@@ -15,6 +15,14 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-23 · psd2-health-check** · hizo: pasada a petición de Alberto (banner «3 días sin
+  movimientos»); feed PSD2 VIVO — las 2 conexiones `vinculada` con sync OK hoy 08:23, último mov
+  20/08 (jueves; 21/08 laborable sin movimientos + fin de semana), volumen 30d 54 vs 75 (−28 %,
+  bajo el umbral del 50 %); el aviso de Kutxabank ****0855 es `ℹ️` (ventana 89d rechazada, datos
+  reales solo desde 24/07) — no es fallo. Veredicto: parón real de actividad, no anomalía técnica
+  (corroborado por facturas-correo: tampoco hay PDFs nuevos en Gmail desde el 20/08); sin alerta
+  Telegram — Alberto ya estaba mirando el panel. dudas: —; fallos: —; PRs/commits: rama
+  `claude/problem-diagnosis-462duc`.
 - **2026-08-23 · facturas-correo** · hizo: preflight canal alerta OK (200); Vía B: última copia
   `_buzon_pdf` 20/08 (dias_caido=3 por fórmula), pero verificado con búsqueda directa
   (`has:attachment filename:pdf newer_than:3d`) que no ha entrado NINGÚN PDF nuevo en Gmail desde
