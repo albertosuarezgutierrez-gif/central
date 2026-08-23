@@ -377,6 +377,47 @@ Content-Type: application/json
   ⚠️ **NO uses `CRON_SECRET` aquí:** es la llave maestra de todos los crons (aplica precios, etc.) y no debe
   vivir en un prompt. El endpoint acepta `CRON_SECRET` solo por compatibilidad transitoria.
 
+### 🔴 Auditoría del canal de aviso (23/08/2026) — 8 rutinas NO pueden avisar
+
+Cruce entre **qué skills avisan** por `/api/internal/alerta` y **qué triggers llevan el token**,
+hecho contra la configuración de las 30 rutinas, no contra la pantalla.
+
+| Skill que avisa | Rutina | Cadencia | Canal |
+|---|---|---|---|
+| `agentes-entrenador` | agentes-entrenador | Dom 07:30 | ✅ |
+| `buscador-ia` | buscador-ia | Lun 07:00 | ✅ |
+| `conectores-vigia` | Vigía de conectores MCP | Día 5 | ✅ |
+| `patrimonio-cfo` | Coordinador patrimonial (CFO) | Día 2 | ✅ |
+| `radar-espana` | Radar España | Días 1 y 16 | ✅ |
+| `psd2-health-check` | psd2-health-check | Mié | ⛔ sin línea |
+| `trading-analista` | Agente trading-analista | L-V 20:15 y 23:15 | ⛔ sin línea |
+| `mercado-booking` | SIVRA mercado booking | diaria | ⛔ **línea VACÍA** |
+| `pricing-agente` | Agente de pricing (sivra) | Lun | ⛔ sin línea |
+| `facturas-correo` | Revisar facturas correo | diaria | ⛔ sin línea |
+| `fiscal-novedades` | fiscal-novedades | Día 1 | ⛔ sin línea |
+| `ialimp-client-health` | ialimp-client-health | Vie | ⛔ sin línea |
+| `rrhh-compliance-calendar` | rrhh-compliance-calendar | Día 1 | ⛔ sin línea |
+| `github-vigia` | — | — | sin trigger (ya sabido) |
+
+**Ninguna de esas 8 skills declara qué hacer si el token falta**, así que el fallo es mudo: la
+rutina corre, hace su trabajo, y el aviso no sale. Aguas arriba se lee igual que «no había nada
+que contar».
+
+El caso que más duele es **`psd2-health-check`**: su ÚNICO producto es gritar cuando la banca deja
+de sincronizar. Un guardián que no puede gritar no es medio guardián — es peor que ninguno, porque
+fabrica la confianza de que alguien está mirando. Y **`trading-analista`** lleva en memoria dos
+disparos «muertos sin huella»: con el canal sin cablear, «no dijo nada» nunca fue prueba de nada.
+
+> ⚠️ **Alcance:** esto tumba el aviso que manda la **sesión de la rutina**. Los latidos y alertas que
+> salen de los crons de Vercel usan otro camino (el token vive allí) y SÍ funcionan — por eso llegan
+> los de `sivra_canal`. No confundas «me llegan avisos» con «esta rutina puede avisar».
+
+**Cómo se audita, para la próxima:** cuenta la LÍNEA `ALERTA_TOKEN=`, no su valor. Un barrido que
+exija valor no vacío da por ausente lo que está presente y vacío — el mismo `NULL` colapsado de la
+regla de la casa, cometido dentro de la propia auditoría (el 23/08 un barrido así dijo 5 donde
+había 7). Y el emparejamiento skill→rutina hazlo por `Ejecuta la skill <nombre>`, no por subcadena:
+buscar suelto empareja rutinas que no son.
+
 ### ⚠️ Workaround — la UI de Rutinas no tiene sección de env vars (jul 2026)
 
 La UI de `claude.ai/code → Rutinas` no expone un campo de variables de entorno.
@@ -412,7 +453,7 @@ Así si el bot cambia, solo se actualiza en Vercel plataforma — ninguna rutina
 ## Pendientes manuales de Alberto
 1. ~~Crear los 5 triggers pendientes~~ ✅ Hecho (01/07/2026) — rutinas 4-8 activas.
 2. ~~Confirmar MCP Booking.com~~ ✅ Confirmado — Booking.com está disponible y configurado en pricing-agente.
-3. **Añadir `ALERTA_TOKEN` al campo "Instrucciones"** de las rutinas 6 (psd2-health-check) y 7 (ialimp-client-health) para habilitar alertas Telegram (ver sección workaround arriba). `PLATAFORMA_URL` también si no está en el prompt. **NO usar `TELEGRAM_BOT_TOKEN`** (vive en Vercel plataforma) **ni `CRON_SECRET`** (llave maestra — ver pendiente #9; usa el token estrecho `ALERTA_TOKEN`).
+3. 🔴 **Añadir `ALERTA_TOKEN` al campo "Instrucciones"** de las **8** rutinas con el canal muerto (ver «Auditoría del canal de aviso», 23/08/2026 — NO son solo psd2 y ialimp-client-health, como decía este punto) para habilitar alertas Telegram (ver sección workaround arriba). `PLATAFORMA_URL` también si no está en el prompt. **NO usar `TELEGRAM_BOT_TOKEN`** (vive en Vercel plataforma) **ni `CRON_SECRET`** (llave maestra — ver pendiente #9; usa el token estrecho `ALERTA_TOKEN`).
 4. **Primer ciclo de pricing-agente** (próximo lunes): revisar el PR draft con propuestas antes de aprobar. La skill impone `dryRun: true` en el primer ciclo automáticamente.
 5. **Crear el trigger de la rutina 9 (github-vigia)**: mensual día 15 ~07:00, prompt `Ejecuta la skill github-vigia` + al final `PLATAFORMA_URL`/`ALERTA_TOKEN` (token estrecho, NO `CRON_SECRET` — ver pendiente #9). Al crearlo, cambiar su estado a *activa* en este doc.
 6. ~~Crear el trigger de la rutina 10 (agentes-entrenador)~~ ✅ Hecho (03/07/2026) — rutina 10 activa.

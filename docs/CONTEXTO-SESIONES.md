@@ -41,6 +41,15 @@ paper y cartera IBKR se re-valoran con ⚡ declarado (fuente+hora); nada se pers
 record sigue con precios-guardia). Botón cliente = router.refresh() (página force-dynamic).
 Ideas/radar/foto IBKR siguen siendo de la pasada diaria y la UI lo declara. tsc 0 · 1505 tests · build OK.
 
+### 🏛️ (23/08/2026) Patrimonio: Catastro de Socorro y Monte Carmelo + baja de los Busto
+Alberto dio las refs catastrales: Socorro 24 `5732032TG3453B0001PK` (275 m², año 2000) y Monte
+Carmelo 68 `4707007TG3440N0003TR` (205 m², 1º izq, año 1964, Los Remedios) — leídas del Catastro
+(`Consulta_DNPRC`) y escritas en `patrimonio_activos`. Los dos Busto → `estado='baja'` (subarrendados,
+no propiedad; nuevo valor de estado documentado en el DDL). Valoraciones `agente:m2zona` enfoque
+vivienda: Socorro 1.207.250€ y Dúplex 287.369€ (casco-antiguo p50 4.390€/m²), Monte Carmelo 540.175€
+(PROXY sevilla-capital p50 2.635€/m² — falta zona `los-remedios` en `mercado_zonas`, hueco anotado
+para radar-espana). Estado en `docs/RADAR-ESPANA.md`.
+
 ### 🏦 (23/08/2026) Vigía de hipoteca en el agente contable + borrador a CajaSur
 El contable proactivo (cron lunes 09:00) ahora vigila los recibos `CUOTA PTMO <ref>` de banca:
 avisa por Telegram si la cuota cambia entre recibos (revisión de tipo/bonificación) o si la ficha
@@ -2414,9 +2423,23 @@ Pendiente: que Alberto revise el spec → plan de implementación. Códigos/cred
     abrir la rutina YA GUARDADA; 4 min así, 0 ejecuciones, sin acceso a nada. **Regla nueva: el
     formulario no es evidencia, el estado guardado sí.** Las 2 y 3, con clicks reales, salieron
     bien. Escrito en la skill `conectores-vigia` y en el pendiente 12 de `RUTINAS-PROGRAMADAS.md`.
-  - **🟡 `ALERTA_TOKEN` con placeholder literal en las 3 rutinas nuevas (16/17/18)** — su aviso de
-    Telegram fallará con error de autenticación (no en silencio) hasta que Alberto pegue el valor
-    real; está en las rutinas `buscador-ia` y `agentes-entrenador`. Acción de Alberto.
+  - **🔴 8 rutinas dicen que avisan por Telegram y NO pueden (23/08)** — cruce skills-que-avisan ×
+    triggers-con-token: `psd2-health-check`, `trading-analista`, `mercado-booking` (línea VACÍA),
+    `pricing-agente`, `facturas-correo`, `fiscal-novedades`, `ialimp-client-health` y
+    `rrhh-compliance-calendar`. Ninguna declara qué hacer sin token, así que corren, trabajan y el
+    aviso no sale: **silencio que se lee como «nada que contar»**. El peor es psd2 —un guardián que
+    no puede gritar fabrica la confianza de que alguien mira— y trading-analista, con dos disparos
+    «muertos sin huella» en memoria que nunca pudieron avisar. Tabla en `RUTINAS-PROGRAMADAS.md`;
+    arreglo = pegar el token en las 8 (de Alberto). **NO afecta** a los latidos de los crons de
+    Vercel, que van por otro camino y sí funcionan.
+  - **✅ Decisión de Alberto (23/08): NO rotar `ALERTA_TOKEN`** pese a quedar visible en una captura
+    al verificar la rutina 16. Es token estrecho (solo abre `/api/internal/alerta`: quien lo tenga
+    puede mandar un Telegram, nada más), y esa acotación es justo por lo que se eligió frente a
+    `CRON_SECRET`. **Decisión explícita, no olvido.**
+  - **🟡 Rotar este token es caro por diseño** — vive copiado a mano en el prompt de cada rutina, así
+    que rotar son N ediciones + una ventana en la que el endpoint rechaza al viejo o al nuevo (solo
+    acepta uno). Arreglo de fondo pendiente: que `/api/internal/alerta` admita dos valores en
+    transición, o que las skills lo lean de un secreto del repo y no del prompt.
   - **🟡 El día 1 acumula 5 rutinas y la 18 depende de la 17** — `radar-espana` (día 1) alimenta a
     `patrimonio-cfo` (día 2). Con el 🔴 de rutinas que no dejaron rastro el 22/08, esa cadena es
     frágil. Mitigado por el lado del consumidor (el CFO ya comprueba «Última pasada» del radar y
