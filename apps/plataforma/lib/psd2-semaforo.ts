@@ -1,8 +1,11 @@
 // lib/psd2-semaforo.ts — decisión PURA del estado del feed bancario PSD2 (Enable Banking)
 // que pinta /banca. Tres estados, nunca dos: un feed que lleva días sin traer nada no es un
 // feed sano aunque el cron devuelva 200 (caso fundacional 11→16/08/2026: 6 días a cero con la
-// sesión viva). El histórico real de estas cuentas nunca tuvo más de 1 día sin movimientos
-// (medido 20/07→10/08/2026): a los 3 días se pide atención, a los 6 se da por roto.
+// sesión viva). Calibración: en 120 días de histórico real el hueco medio fue ~1 día, pero hubo
+// huecos legítimos de hasta 10 (BBVA ****1175) — a los 3 días se pide atención SIN alarmar
+// (un fin de semana ya son 2-3 días sin apuntes), a los 6 se da por roto. El texto del estado
+// «atención» no debe afirmar que un hueco así «nunca había pasado»: es mentira y confunde
+// (queja de Alberto 23/08/2026 con el banner del domingo tras un jueves con movimientos).
 
 export type NivelFeed = 'ok' | 'atencion' | 'roto'
 
@@ -103,14 +106,14 @@ export function semaforoFeed(p: {
     return conNotas({
       nivel: 'roto',
       titular: `${diasMov} días sin movimientos nuevos del banco`,
-      detalles: [`Último movimiento: ${fmtDDMM(p.ultimoMovISO!.slice(0, 10))}. En estas cuentas nunca hubo más de 1 día de hueco — esto es el feed roto, no un parón real.`, lineaConsent, ACCION],
+      detalles: [`Último movimiento: ${fmtDDMM(p.ultimoMovISO!.slice(0, 10))}. Demasiado hueco para ser un parón normal de estas cuentas — lo más probable es que el feed esté roto.`, lineaConsent, ACCION],
     })
   }
   if (diasMov >= DIAS_ATENCION) {
     return conNotas({
       nivel: 'atencion',
       titular: `${diasMov} días sin movimientos nuevos del banco`,
-      detalles: [`Último movimiento: ${fmtDDMM(p.ultimoMovISO!.slice(0, 10))}. Puede ser un parón real, pero en estas cuentas es raro (>1 día no había pasado).`, lineaConsent],
+      detalles: [`Último movimiento: ${fmtDDMM(p.ultimoMovISO!.slice(0, 10))}. La conexión no reporta fallos: lo más probable es que sean días sin operaciones (fin de semana, festivos). Solo si llega a ${DIAS_ROTO} días se dará el feed por roto.`, lineaConsent],
     })
   }
   if (caducaEn <= CONSENT_AVISO_DIAS) {

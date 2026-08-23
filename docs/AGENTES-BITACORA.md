@@ -15,6 +15,14 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-23 · psd2-health-check** · hizo: pasada a petición de Alberto (banner «3 días sin
+  movimientos»); feed PSD2 VIVO — las 2 conexiones `vinculada` con sync OK hoy 08:23, último mov
+  20/08 (jueves; 21/08 laborable sin movimientos + fin de semana), volumen 30d 54 vs 75 (−28 %,
+  bajo el umbral del 50 %); el aviso de Kutxabank ****0855 es `ℹ️` (ventana 89d rechazada, datos
+  reales solo desde 24/07) — no es fallo. Veredicto: parón real de actividad, no anomalía técnica
+  (corroborado por facturas-correo: tampoco hay PDFs nuevos en Gmail desde el 20/08); sin alerta
+  Telegram — Alberto ya estaba mirando el panel. dudas: —; fallos: —; PRs/commits: rama
+  `claude/problem-diagnosis-462duc`.
 - **2026-08-23 · pricing-agente / mercado-booking** · hizo: seguimiento pedido por Alberto tras el
   arreglo del canal (#1582) — al comprobar que el precio llegaba a Smoobu apareció que **House
   Sevillana no recibió NI UNA fila de `pricing_applied` el 22/08** (los otros tres, 526 entre los
