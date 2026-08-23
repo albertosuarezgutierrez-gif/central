@@ -58,6 +58,27 @@ recompra vs amortizar deuda). Si hay escenario de recompra, cruza con el corpus 
 `subastas` (ya vigila Asturias/Cantabria/Sevilla/Huelva/Cádiz con criterios de Alberto).
 El termómetro del radar decide el «cuándo»: señales de agotamiento = ventana de venta.
 
+**Amortización anticipada de la hipoteca (petición de Alberto, 22/08/2026 — «a veces merece
+la pena amortizar»):** las condiciones REALES de la hipoteca de Monte Carmelo viven en
+`patrimonio_activos` (fila `act_monte_carmelo`: tipo, vencimiento, capital pendiente y el
+detalle completo de la escritura en `notas` — léelas, no las asumas). En cada pasada con
+liquidez ociosa o entrada de dinero, evalúa amortizar como UNA alternativa más del coste de
+oportunidad:
+- **Amortizar rinde exactamente el tipo aplicado del préstamo, libre de impuestos y sin
+  riesgo.** Compáralo contra la rentabilidad NETA (después de IRPF del ahorro) de letras/
+  monetario/indexado. Con un tipo bonificado muy bajo, amortizar suele PERDER contra la
+  alternativa — dilo con los números del mes, no como dogma.
+- **Bonificaciones antes que amortización:** el tipo es bonificable por productos vinculados
+  (detalle en las notas del activo). Si el tipo aplicado subió, averiguar qué bonificación se
+  perdió y si recuperarla cuesta menos de lo que ahorra — recuperar 0,10-0,50 puntos suele
+  rendir más que cualquier amortización parcial. Es la primera palanca, no la última.
+- **Comisión efectiva:** la compensación pactada es la MENOR entre la pérdida financiera del
+  banco y el tope legal — con tipos de mercado por encima del tipo del préstamo, la pérdida
+  del banco es 0 y amortizar no tiene coste. Verifícalo con los tipos del momento.
+- **Si se amortiza parcial, la escritura permite elegir**: reducir plazo (manteniendo cuota)
+  o reducir cuota. Con objetivo MIXTO, razona cuál encaja (reducir plazo ahorra más
+  intereses; reducir cuota da renta disponible hoy) y recomienda una.
+
 ## Paso 5 — Memoria de decisiones (rendir cuentas)
 - Cada recomendación nueva → `INSERT INTO patrimonio_recomendaciones (cuenta_id, titulo,
   recomendacion, datos)` con el snapshot de datos usados (jsonb).

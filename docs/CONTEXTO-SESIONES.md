@@ -32,6 +32,16 @@
 
 ---
 
+### 🏦 (22/08/2026) Hipoteca de Monte Carmelo leída de la escritura → ficha patrimonial completa
+Alberto subió la escritura (CAJASUR 856289293-5, abr-2021): 230.501,03€ a 30 años (vence
+05/04/2051), FIJO 2,10% bonificable — el aplicado real fue ~1,11% y subió a ~1,31% en abr-2026
+(perdió ~0,20 pts de bonificación: averiguar qué producto dejó de cumplir), cuota 772,86€,
+pendiente **≈195.300€ estimado** (sembrado en `patrimonio_activos.act_monte_carmelo` con método
+declarado; confirmar con recibo). Amortización anticipada: comisión efectiva ≈0€ mientras el
+mercado supere su tipo. Consigna dictada: **el CFO evalúa amortizar en cada pasada** — skill
+`patrimonio-cfo` ampliada (bonificaciones primero, comparar contra alternativa neta, plazo vs
+cuota) + `docs/PATRIMONIO-CFO.md`. El intake de /patrimonio ya solo pide confirmar el capital.
+
 ### 🛑 (22/08/2026) Una pasada de mercado sin comps utilizables dejó a House un día entero sin tarifar (PR #1593)
 
 - Verificando la producción tras el arreglo del canal (#1582) salió que House **no recibió NI UNA fila
