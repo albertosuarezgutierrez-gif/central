@@ -2405,9 +2405,23 @@ Pendiente: que Alberto revise el spec → plan de implementación. Códigos/cred
     abrir la rutina YA GUARDADA; 4 min así, 0 ejecuciones, sin acceso a nada. **Regla nueva: el
     formulario no es evidencia, el estado guardado sí.** Las 2 y 3, con clicks reales, salieron
     bien. Escrito en la skill `conectores-vigia` y en el pendiente 12 de `RUTINAS-PROGRAMADAS.md`.
-  - **🟡 `ALERTA_TOKEN` con placeholder literal en las 3 rutinas nuevas (16/17/18)** — su aviso de
-    Telegram fallará con error de autenticación (no en silencio) hasta que Alberto pegue el valor
-    real; está en las rutinas `buscador-ia` y `agentes-entrenador`. Acción de Alberto.
+  - **🔴 8 rutinas dicen que avisan por Telegram y NO pueden (23/08)** — cruce skills-que-avisan ×
+    triggers-con-token: `psd2-health-check`, `trading-analista`, `mercado-booking` (línea VACÍA),
+    `pricing-agente`, `facturas-correo`, `fiscal-novedades`, `ialimp-client-health` y
+    `rrhh-compliance-calendar`. Ninguna declara qué hacer sin token, así que corren, trabajan y el
+    aviso no sale: **silencio que se lee como «nada que contar»**. El peor es psd2 —un guardián que
+    no puede gritar fabrica la confianza de que alguien mira— y trading-analista, con dos disparos
+    «muertos sin huella» en memoria que nunca pudieron avisar. Tabla en `RUTINAS-PROGRAMADAS.md`;
+    arreglo = pegar el token en las 8 (de Alberto). **NO afecta** a los latidos de los crons de
+    Vercel, que van por otro camino y sí funcionan.
+  - **✅ Decisión de Alberto (23/08): NO rotar `ALERTA_TOKEN`** pese a quedar visible en una captura
+    al verificar la rutina 16. Es token estrecho (solo abre `/api/internal/alerta`: quien lo tenga
+    puede mandar un Telegram, nada más), y esa acotación es justo por lo que se eligió frente a
+    `CRON_SECRET`. **Decisión explícita, no olvido.**
+  - **🟡 Rotar este token es caro por diseño** — vive copiado a mano en el prompt de cada rutina, así
+    que rotar son N ediciones + una ventana en la que el endpoint rechaza al viejo o al nuevo (solo
+    acepta uno). Arreglo de fondo pendiente: que `/api/internal/alerta` admita dos valores en
+    transición, o que las skills lo lean de un secreto del repo y no del prompt.
   - **🟡 El día 1 acumula 5 rutinas y la 18 depende de la 17** — `radar-espana` (día 1) alimenta a
     `patrimonio-cfo` (día 2). Con el 🔴 de rutinas que no dejaron rastro el 22/08, esa cadena es
     frágil. Mitigado por el lado del consumidor (el CFO ya comprueba «Última pasada» del radar y
