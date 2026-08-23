@@ -47,6 +47,26 @@
 - Pendiente de Alberto: la **brecha escaparate↔caja** de House — lo listado es 1,07–1,47× la base pero
   lo cobrado 0,87–0,98×. Causa sin comprobar (promos de Booking vs limpieza cobrada aparte). Rutina el 30/08.
 
+### 📈 (22/08/2026) Alpha Vantage: el barrido de splits dice que el FIFO está limpio (por poco)
+Conector nuevo → cubre lo que IBKR no da (su `get_price_snapshot` tiene el enum CERRADO). Dos módulos
+puros nuevos en `@central/module-trading` (173 tests verdes): **`splits.ts`** (reexpresa lo anterior a
+un desdoblamiento en títulos de hoy; `null` = «sin consultar» ≠ «sin splits») y **`divisa.ts`**
+(cambio del DÍA de cada operación por `FX_DAILY`; **nunca mira hacia delante**, y devuelve `null`
+antes que inventar un cambio). **Barrido de los 18 símbolos con recorrido >30 días:** un único split
+dentro de la ventana del libro, **NFLX 10:1 del 17/11/2025**, y la posición estaba **plana al
+cruzarlo** (03/11 → 17/12) ⇒ el FIFO no está roto. Caduca: rebarrer al abrir símbolo nuevo.
+✅ **Backfill de `tipo_cambio` hecho: 568/568, 0 pendientes** (las 110 fechas del libro son todas
+sesión, ningún retroceso). Con eso el libro ya habla en euros: realizado **−1.620,94€** (2025) y
+**−16.053,40€** (2026) = **−17.674,34€**; comisiones 451,01€. `tc_fuente`/`tc_fecha` guardan que es
+CIERRE diario, no el cambio intradía de cada orden — aproximación declarada, no exacta.
+**Mergeado en PR #1579** (173 tests del módulo + 35 del guardián en verde, 17 checks). De paso, respuesta a
+«¿nos sirve OpenBB?»: **no** — AGPLv3 (copiarlo obligaría a publicar nuestro SaaS), Python y sin dataset propio;
+sí queda `dgunning/edgartools` (MIT) como REFERENCIA de normalización XBRL, ambos anotados en `docs/VIGIA-OSS.md`
+para que el vigía mensual los siga. **Pendiente de Alberto:** enmendar (o no) la escalera de tramos —la cuenta
+está al 98,6% en VWCE y el poder de compra no cubre el Tramo 1— y el coste de adquisición de BRZE/NKE, que hay
+que sacar de los extractos porque IBKR ya no sirve esas compras.
+### 🧠 (22/08/2026) Health-check: sonda IA muerta (`z-ai/glm-5.2` 410) → swap a `meta/llama-3.1-70b-instruct`
+
 ### 💼 (22/08/2026) Nace el coordinador patrimonial: base de activos + /patrimonio + 2 agentes (PR #1591)
 Alberto pidió un «CFO personal» que exprima el rendimiento de lo que ya tiene (objetivo mixto,
 riesgo DINÁMICO con salvaguarda Socorro; jugada de referencia: vender Dúplex en el tope → fondo →
@@ -108,7 +128,7 @@ crear los 2 triggers (fichas 16-17 de RUTINAS-PROGRAMADAS) y contestar el intake
   rotación de claves NO cubre. Y el panel tiene **67 Edge Functions** frente a las 45 del repo: 22 sin versionar.
 - Todo en `docs/ROTACION-SERVICE-ROLE.md`; PR #1517.
 
-### 🛑 (22/08/2026) El canal ya se cura solo — y al comprobarlo, House llevaba 5 días con el ×1,20
+### 🛑 (22/08/2026) El canal ya se cura solo — y al comprobarlo, House llevaba 5 días con el ×1,20 (PR #1586)
 - **Verificado el trabajo del 20/08:** `sivra_canal` en verde y el ×1,20 SUPUESTO caído en 3 de 4
   pisos, con valores que confirman la hipótesis: markup ~0,95–1,04 **+ cuota fija por estancia**
   (22,30€ Busto Reform · 39,90€ Dúplex), no un ×1,20 plano. `agente_reparaciones` vacía = correcto
@@ -185,6 +205,53 @@ los activos. 🚨 **Chekin es hoy el emisor real en los 4 pisos** — nada nuest
 y se sustituye en fases como PriceLabs. 🚨 Tabla nueva en `public` nace abierta a `anon`: la migración
 hace `REVOKE`. **Pendiente de Alberto:** `SES_CRYPTO_KEY` en Vercel, rotar las contraseñas del portal
 SES y dar de alta los cuatro pisos.
+
+### 🧾 (21/08/2026) Cuadre de la cuenta: el VWCE cuadra al céntimo y el 10/08 costó 1.113,87 USD
+Reconciliado el libro contra IBKR. **Cuadra exacto:** VWCE 188×169,36€ + 15,92€ de comisión =
+**31.855,60€**, y el precio medio de IBKR (169,44467979×188) da **31.855,60€**. El 17/08 la cuenta pasó
+a euros (`EUR BUY 32.105,69 @ 1,15912` = **37.214,35 USD → 32.105,69€**) y con eso compró el ETF; caja
+implícita 250,09€ contra los 410,46€ que declara IBKR → **160,37€ sin explicar** (¿resto en dólares?, no
+lo afirmo). **La caída de NAV:** el **10/08, −1.113,87 USD en un solo día** (9 ops, todas intradía, todas
+por STOP: SPCX −855,10, PLTR −258,77) — el patrón de la autopsia repetido 5 días DESPUÉS de firmar el
+preregistro — más **−670,16€ de latente** en el VWCE. Quedan ~240€ sin cuadrar y **no se pueden cerrar**:
+`tipo_cambio` NULL en 568/569. **Todo netea a cero salvo** VWCE (+188), BRZE (−1000) y NKE (−190).
+Las 5 conversiones de divisa están tipadas `CASH` y las vistas filtran `tipo_activo='STK'` agrupando por
+divisa: la guarda ya estaba. El único número falso de la sesión lo generé yo con una consulta ad-hoc que
+sumaba EUR con USD («flujo neto 2.801,85»); la vista no lo habría hecho.
+
+### 🚨 (21/08/2026) La cuenta está al 98,6% en VWCE: la escalera de tramos hoy NO es financiable
+Al preguntar Alberto si adelantaría la inversión real, miré la cuenta en vez de dar por buena la cifra
+del preregistro. **NAV 31.531,10€, efectivo 410,46€, posiciones 31.106,48€** — todo en **UNA** posición:
+`VWCE` (188 part. del Vanguard FTSE All-World, precio medio 169,44€, latente **−670,16€**). El
+preregistro firmado el 05/08 dice «cash de referencia ~33.400€» y sobre eso monta la escalera; ese cash
+**ya no existe**. Con 407,63€ de poder de compra **no cabe ni el Tramo 1 (1.000€)**: financiarlo sería
+**vender índice para comprar agente**, decisión distinta a la firmada. Anotado en el preregistro como
+comprobación de estado, **sin tocar ningún requisito ni la fecha del Tramo 3**. Pendiente de Alberto:
+si enmienda la escalera sobre el capital real o la deja congelada de hecho. Sin mirar: por qué el NAV
+bajó de ~33.400€ a 31.531€ (¿retiradas? ¿pérdidas?) — no lo afirmo hasta verlo.
+
+### 🔍 (21/08/2026) La segunda opinión: lo que el screener no vale, lo vale contrastar la cifra
+Pregunta de Alberto: ¿no da IBKR estos datos? **No** — el conector solo expone precio, volumen,
+volatilidad y rendimientos; ni flujo de caja ni ROIC ni márgenes (su plataforma sí los tiene, el MCP no).
+Y el uso que SÍ paga los 20 $ no es descubrir nombres, es **contrastar la cifra de una idea antes de la
+orden**: pedida la ficha de ORCL a la fuente de pago da **−5,79% de FCF yield = −23.690 M$** contra los
+**−23.700 M$ reales**, cuando nuestro parser de EDGAR llegó a decir **+3,49%** (PR #1189). Habría cazado
+el fallo fundacional el primer día. Nuevo `contraste.ts` (12 tests): compara las dos fichas y **NO elige
+ganador** — signo opuesto = la cifra no se canta; misma dirección pero lejos = orientativo; falta el dato
+= «sin contrastar», que no es «bien». Paso `5-ter` en la pasada. Presupuesto: 0,02 $/consulta, 1-2 al día
+(solo las ideas que acaban en propuesta) → las ~995 restantes duran años; barrer el ranking las funde.
+La fuente de pago también miente (dio `gross_margin: 1` en ORCL): es contraste, no sustituto.
+
+### 🔎 (21/08/2026) Screener de pago recargado: sirve, pero llega con TRES trampas y una cuarta al lado
+Alberto puso los 20 $ (1.000 peticiones) y `Datos_financieros` ya responde. La primera consulta real
+destapó lo que había que tapar antes de usarlo: (1) **ordena por ABECEDARIO y sin paginación** —
+`limit:25` devolvió ABCB, ABEV, ACIW, ACN…, o sea los 25 primeros por la A, no los 25 mejores (máx 100
+→ hay que trocear por sector); (2) **ROIC de 668% en ASAN y 345% en ATAT**, capital invertido ≈ 0: un
+«no lo sé disfrazado de valor» que **cruza el gate `roic ≥ 0,10`** justo al revés de lo que se busca;
+(3) **solo devuelve los campos por los que filtras**. Y de propina, `get_institutional_holdings` trae
+el `value_usd` **×1.000** en algunos declarantes (BCV: 23.063 acciones = 2.295 M$). Nuevo módulo puro
+`screenerMercado.ts` (traduce a `MetricasFactor`, ANULA el ROIC increíble en vez de recortarlo, anula
+yields fuera de USD, marca `truncada`), 11 tests, + skill. Corre en la sesión Claude, no en Vercel.
 
 ### 💸 (21/08/2026) Los insiders y los 13F NO hay que comprarlos: ya estaban montados y gratis
 Alberto preguntó el precio de las fuentes de datos y la respuesta correcta es **0 €**. El MCP
@@ -2283,8 +2350,23 @@ Pendiente: que Alberto revise el spec → plan de implementación. Códigos/cred
   page data de `/api/admin/clientes/[vertical]/[id]` YA en main (envs ausentes), no es del cambio.
 
 
-- **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 21/08/2026).** Detalle en
+- **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 23/08/2026).** Detalle en
   `docs/memoria/2026-08.md` y en los PRs citados.
+  - **🔴 Nuevo (23/08, auditoría diaria): 3 rutinas Claude programadas sin rastro el 22/08** —
+    `auditoria-diaria`, `mercado-booking` y `facturas-correo` no dejaron commit ese día (sí lo hicieron
+    el 21/08 y el 23/08); los crons de Vercel sí corrieron con normalidad y otras sesiones (health-check
+    IA→`buscador-ia`, patrimonio-cfo, fix `sivra_canal`) sí se dispararon. Efecto medido: `market_rates
+    booking_mcp` lleva desde el 21/08 03:40 sin fila nueva (46h). Revisar en claude.ai la configuración
+    de los 3 triggers (¿deshabilitado, hora movida, fallo del scheduler?) — no hay causa visible desde el repo.
+  - **`ses_transporte` sin ninguna pasada OK todavía:** `detalle` dice «no hay ningún establecimiento
+    dado de alta en /sivra/partes/establecimientos» — no es la avería del Ministerio ni de credenciales
+    que ya describe la nota del latido, es que falta dar de alta el primer establecimiento. Acción de
+    Alberto, no de código.
+  - **PR #1594 (draft, sin mergear) — fix real de producción:** un piso (House Sevillana) se quedó sin
+    tarifar el 22/08 porque el motor elegía el `MAX(search_date)` de `market_rates` sin filtrar por
+    comparables plausibles, y una pasada de barrido barato (Serper) con solo 1 comp útil sombreaba a la
+    pasada rica del día anterior (93 comps). Corrige seleccionando la última pasada con ≥5 comparables
+    creíbles. Pendiente de revisión/merge de Alberto.
   - **Ayudas/subvenciones (15/08, #1432):** pendiente respuesta de Asecon (Marta Albarrán) sobre la
     convocatoria de conciliación antes del **15/09/2026** (plazo de solicitud). Pendiente además un
     borrador (sin enviar, a decisión de Alberto) sobre la cuota RETA de Pilar (serie 72→118→32€,
@@ -2332,11 +2414,11 @@ Pendiente: que Alberto revise el spec → plan de implementación. Códigos/cred
     filas → sin cifra en euros para la asesoría; (b) sin acciones corporativas (el primer split con
     posición abierta romperá el FIFO); (c) **BRZE y NKE tienen ventas sin compra en el libro** (anteriores
     a lo que IBKR sirve) → su coste de adquisición hay que sacarlo de los extractos, no del bróker;
-    (d) **CERRADO 21/08 — no hay que pagar fuentes:** el MCP `Datos_financieros` (financialdatasets.ai)
-    responde `Your current balance is $0.00` (sin saldo, no roto) y su cobertura ya la dan piezas propias
-    gratis — Form 4 por `/api/trading/insiders`, 13F por `/api/trading/gurus` (Dataroma) y fundamentales
-    por `/api/trading/fundamentales` (SEC XBRL). Lo de pago solo añadiría comodidad y `screen_stocks`
-    (20 $ una vez); recargarlo sigue siendo opción de Alberto, no una necesidad para operar.
+    (d) **CERRADO 21/08 — fuentes:** insiders, 13F y fundamentales NO se pagan (Form 4 por
+    `/api/trading/insiders`, Dataroma por `/api/trading/gurus`, SEC XBRL por `/api/trading/fundamentales`).
+    Lo único que faltaba era el SCREENER, y **Alberto recargó los 20 $ (1.000 peticiones) el 21/08**: ya
+    responde y está saneado por `screenerMercado.ts`. Cuenta las peticiones — el saldo es finito.
+    Pendiente de decidir: si el screener entra como pilar fijo de la pasada diaria o se usa a demanda.
   - **Subastas:** lente 🌊 (costa norte + Matalascañas sin tope) MERGEADA y en prod (#1346/#1349/
     #1351/#1353); pestaña 🔥 Oportunidades rediseñada (#1358 — una tarjeta, chips homogéneos,
     €/m² siempre visible). 🟡 el dispatcher marca timeout en `subastas-mercado` si desborda 280 s

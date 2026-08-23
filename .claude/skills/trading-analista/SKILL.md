@@ -90,6 +90,43 @@ Detalle paso a paso en `references/pasada-diaria.md`.
 - **Congelar cohortes = AÑADIR entrada a `COHORTES_PAPER`, nunca editar una existente** (no
   romper el out-of-sample). No cambiar pesos del blend por el retrovisor: solo si el FORWARD
   lo confirma.
+- **🚨 LANDMINE — el screener de pago (`screen_stocks`) trae tres trampas medidas (21/08/2026):**
+  ordena por **ABECEDARIO** y sin paginación (`limit: 25` = los 25 primeros por la A, no los mejores);
+  devuelve **ROIC de 668%** cuando el capital invertido es ≈ 0 (pasa un gate `roic ≥ 0,10` justo al
+  revés de lo que quieres); y **solo trae los campos por los que filtras**. Pásalo SIEMPRE por
+  `traducirScreener` (`@central/module-trading::screenerMercado.ts`, 11 tests) y lee
+  `references/seleccion-y-senales.md`. Hermano: **`get_institutional_holdings` tiene el `value_usd`
+  ×1.000 en algunos declarantes** — comprueba `shares × reported_price` o usa Dataroma, que es gratis.
+- **📈 Alpha Vantage (conector MCP, 22/08/2026) — para lo que EL BRÓKER NO DA.** IBKR sirve precio y
+  cartera; su `get_price_snapshot` tiene el enum CERRADO, así que no hay fundamentales por ahí. Alpha
+  Vantage cubre tres huecos que sí importan al cuadre:
+  - **`SPLITS`** — obligatorio antes de tocar el FIFO de un símbolo. Sin ajustar, una compra de 100 a
+    178,04 y una venta de 1.000 a 17,80 emparejan mal y sale **una plusvalía inventada, sin ningún
+    hueco que la delate**. Pásalo por `parseSplits`/`ajustarSimbolo` (`@central/module-trading::splits.ts`).
+    🚨 `splits === null` = «no consultado», que NO es «no tiene splits» — el estado viaja con el
+    resultado precisamente para poder decir «sin revisar».
+  - **`FX_DAILY` (EUR/USD)** — el cambio del DÍA de cada operación, no el de hoy. Va por
+    `parseFxDailyCsv`/`resolverTipoCambio`/`usdAEur` (`…::divisa.ts`): retrocede hasta 7 días
+    naturales buscando la última sesión, **nunca mira hacia delante** (sería información que ese día
+    no existía) y devuelve `null` antes que un cambio a mano. Contraste de cordura: el cambio
+    ejecutado por el bróker debe caer en el `low`–`high` del día (`dentroDelRango`).
+  - **`INSIDER_TRANSACTIONS` / `INSTITUTIONAL_HOLDINGS`** — segunda fuente para lo que ya tenemos
+    gratis (Form 4 / Dataroma); úsalo para contrastar, no para sustituir.
+  **Barrido hecho (22/08/2026):** los 18 símbolos del libro con más de 30 días de recorrido, uno a
+  uno. Un solo split cae DENTRO de la ventana del libro — **NFLX 10:1 del 17/11/2025** — y la
+  posición estaba **plana al cruzarlo** (última operación el 03/11, la siguiente el 17/12), así que
+  el FIFO no está tocado. Los de NVDA/SMCI/NVO/NKE/COST son anteriores a la ventana;
+  PLTR/META/LLY/SPOT/CRWV/APP/PAY/BRZE/HOOD/BABA/PDD/DASH no tienen. Esto **caduca**: vuelve a
+  barrer antes del próximo cierre fiscal o al abrir un símbolo nuevo.
+  **Backfill hecho (22/08/2026):** `trading_operaciones.tipo_cambio` ya está en **568/568, 0
+  pendientes** (`tc_fuente='alpha_vantage:FX_DAILY:EUR/USD'`, `tc_fecha` = sesión usada; las 110
+  fechas del libro son todas sesión, cero retrocesos). 🚨 Es el **CIERRE del día**, no el cambio
+  intradía de cada orden: aproximación declarada en `tc_fuente`, **no la presentes como exacta**.
+  Con eso el libro habla en euros: realizado **−1.620,94€** (2025) y **−16.053,40€** (2026);
+  comisiones 451,01€. Toda operación NUEVA debe traer su `tipo_cambio` — si entra a NULL, la cifra
+  en euros vuelve a ser incalculable para esa fila y el agregado miente por omisión.
+  **Límite del plan del conector: no comprobado en sesión.** Si empieza a devolver avisos de cuota,
+  es eso — no lo des por ilimitado ni lo metas en el bucle de la pasada diaria.
 - **🚨 LANDMINE — los fundamentales de EDGAR mienten en silencio si el parser se despista
   (31/07/2026, PR #1189).** Salió mirando ORCL: la ficha daba **FCF yield +3,49%** cuando el flujo
   libre real de FY2026 era **−23.700 M$ (−6,99%)**. Cuatro fallos, todos del mismo tipo — el dato

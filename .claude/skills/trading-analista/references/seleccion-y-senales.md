@@ -118,15 +118,41 @@ es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
   (`lib/trading/form4.ts`: `parseForm4Xml`/`extraerEntradasAtom`/`elegirDocForm4` + `agregarInsiders` del módulo).
   Corre en Vercel (2 hops por filing → `limite` bajo, default 40). Si `transacciones` viene 0, revisar el feed
   getcurrent / User-Agent. NO opera; alimenta `/analizar`.
-- **💸 NO hace falta pagar por insiders ni por 13F: ya están montados y son GRATIS (comprobado 21/08/2026).**
-  El MCP `Datos_financieros` (financialdatasets.ai) aparece conectado en la sesión, pero **responde
-  `Your current balance is $0.00`** a `get_insider_trades` y `get_institutional_holdings` — está SIN saldo, no
-  roto. Antes de proponer recargarlo (20 $ = 1.000 consultas), recuerda que su cobertura ya la dan piezas
-  propias sin coste: **Form 4 → `/api/trading/insiders`** (feed getcurrent de la SEC), **13F → `/api/trading/gurus`**
-  (Dataroma) y **fundamentales → `/api/trading/fundamentales`** (SEC XBRL). Lo que el de pago añadiría es
-  comodidad y `screen_stocks`, no un dato que aquí falte. Y OJO con la regla de la casa: que el MCP devuelva ese
-  error **no autoriza a decir «no hay datos de insiders»** — significa «esta fuente está sin saldo», y la buena
-  está en Vercel.
+- **💸 Insiders y 13F NO se pagan: ya están montados y son gratis.** Form 4 → `/api/trading/insiders`
+  (feed getcurrent de la SEC), 13F → `/api/trading/gurus` (Dataroma), fundamentales →
+  `/api/trading/fundamentales` (SEC XBRL). Si el MCP `Datos_financieros` responde
+  `Your current balance is $0.00`, eso significa **«esta fuente está sin saldo», NUNCA «no hay datos de
+  insiders»** — la buena está en Vercel. Lo único que el proveedor de pago añade de verdad es su
+  SCREENER (abajo). Comprobado el 21/08/2026.
+- **🔎 `screen_stocks` (MCP `Datos_financieros`) — criba del MERCADO ENTERO por métricas.** Es el único
+  pilar que no teníamos: el resto parte de una lista que alguien nos dio (watchlist, gurús, Form 4);
+  este parte de «todas las empresas que cumplen X». **Saldo recargado por Alberto el 21/08/2026 (20 $ =
+  1.000 peticiones): cuéntalas.** Corre en la SESIÓN Claude (el MCP no existe en el egress de Vercel):
+  cribas aquí, y los símbolos resultantes entran al mismo `/analizar` / `/validar-oos` de siempre.
+  Pasa SIEMPRE las filas por `traducirScreener` (`@central/module-trading::screenerMercado.ts`) antes de
+  usarlas — traduce a `MetricasFactor` y tapa las tres trampas medidas en la primera consulta real:
+  1. **Ordena por ABECEDARIO, no por calidad, y no hay paginación.** `limit: 25` devolvió ABCB, ABEV,
+     ACIW, ACN… — los 25 primeros por la A, no los 25 mejores. `limit` máximo 100. Para cubrir el
+     universo hay que **trocear por `sector`** (11 valores) o apretar filtros hasta bajar de 100; el
+     ranking se hace DESPUÉS y aquí, con `rankearFactores`. `truncada: true` = te quedaste sin ver el
+     resto del abecedario; dilo, no lo presentes como «el mercado entero».
+  2. **ROIC con denominador ≈ 0.** Devolvió ASAN 6,68 (668%) y ATAT 3,45 (345%): no son empresas
+     excepcionales, es capital invertido casi nulo. Es el «no lo sé disfrazado de valor» del CLAUDE.md
+     —pasa cualquier guarda de NULL y encima gana el pilar de calidad— así que un gate `roic >= 0,10`
+     deja entrar justo a los peores. `ROIC_MAX_CREIBLE = 1,0`: por encima se **anula** (→ neutral),
+     nunca se recorta a un tope (recortar seguiría afirmando «calidad altísima»).
+  3. **Solo devuelve los campos por los que FILTRAS** (más `ticker`, `market_cap`, `currency`, `sector`,
+     `industry`). Si quieres `net_margin` en la salida, pon un filtro sobre `net_margin`. Y si una fila
+     no viene en USD, sus *yields* se anulan: cruzan una magnitud de la empresa con una capitalización
+     en dólares (la lección del PR #1189). `debt_to_equity` **no** se mapea a `deudaEbitda`: son ratios
+     distintos.
+  Criba de arranque ya probada (25 resultados, todos en la A–B): `roic ≥ 0,10` · `fcf_yield ≥ 0,05` ·
+  `revenue_growth ≥ 0,05` · `market_cap ≥ 2.000 M$` · `debt_to_equity ≤ 1,5`.
+- **📉 `get_institutional_holdings` tiene las unidades ROTAS por declarante.** En la misma consulta,
+  Magnetar y NVIDIA cuadran (acciones × precio ≈ `value_usd`), pero Banque Cantonale Vaudoise declaraba
+  23.063 acciones con `value_usd` 2.295.000.000 — **×1.000 de más**. Nunca ordenes convicción 13F por
+  `value_usd` sin comprobar `shares × reported_price`; si no cuadran, el valor es basura con forma de
+  dato. Para 13F sigue siendo mejor `/api/trading/gurus` (Dataroma), que además es gratis.
 - El agente reúne además el **momentum de precio** con `momentum12_1(cierres)` de las velas de IBKR y puede seguir
   usando FMP (plan Free `/stable`) como fuente alternativa de fundamentales.
 - **`POST {PLATAFORMA_URL}/api/trading/seleccion`** con `{ gestores?, minPiotroski?, minRoic?, tam?, maxFundamentales? }`

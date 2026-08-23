@@ -307,6 +307,14 @@ aceptada y declarada de antemano:
   3. **Tramo 3 — +3.000€ (total ~18%).** Requisito: los criterios originales de dinero real
      (3 cestas distintas, la más vieja ≥6 meses, batiendo ajustado a riesgo) — la fecha estimada
      ene-feb 2027 NO se adelanta; solo se adelanta el aprendizaje.
+- **🚨 Comprobación de estado (21/08/2026) — el cash de referencia YA NO EXISTE, y esto no cambia
+  ningún requisito de arriba, solo advierte de que la escalera hoy no es financiable.** `get_account_summary`
+  da **NAV 31.531,10€** con **410,46€ de efectivo** y **31.106,48€ en posiciones**: la cuenta está al
+  **98,6% invertida en UNA posición, `VWCE`** (188 participaciones del Vanguard FTSE All-World, precio medio
+  169,44€, latente **−670,16€**). Con 407,63€ de poder de compra **no cabe ni el Tramo 1 (1.000€)** sin
+  vender índice. Es decir: financiar la escalera ya no es «meter dinero nuevo», es **cambiar exposición al
+  índice por exposición al agente** — una decisión distinta a la que se firmó el 05/08 y que sigue siendo
+  de Alberto. Lo que NO cambia: los requisitos de cada tramo, ni la fecha del Tramo 3 (ene-feb 2027).
 - **Techo hasta validación: ~6.000€ (18% del cash).** El resto no entra hasta cumplir el tramo 3.
   Cada tramo es una decisión SEPARADA de Alberto; nada se promedia "porque toca".
 - **Congelador (H6):** si SPY cierra un mes por debajo de su media de 10 meses, la escalera se
