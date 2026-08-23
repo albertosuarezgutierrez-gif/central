@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-22T08:35:56Z",
+  "generadoEn": "2026-08-23T09:04:19Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4613,6 +4613,10 @@
   ],
   "novedades": [
     {
+      "titulo": "Pendiente de Alberto:",
+      "fecha": ""
+    },
+    {
       "titulo": "NO borrar `Cloude`",
       "fecha": ""
     },
@@ -4666,10 +4670,6 @@
     },
     {
       "titulo": "Aplicado en prod con OK de Alberto:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Rutina nueva",
       "fecha": ""
     }
   ],
