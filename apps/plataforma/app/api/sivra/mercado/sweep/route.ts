@@ -111,7 +111,9 @@ async function serperSearch(query: string): Promise<{ texto: string; resultados:
     body: JSON.stringify({ q: query, gl: "es", hl: "es", num: 10 }),
     signal: AbortSignal.timeout(10_000),
   })
-  if (!res.ok) throw new Error(`Serper ${res.status}`)
+  // El body del error dice la CAUSA (p. ej. «Not enough credits», 22/08/2026): sin él, un
+  // agotamiento de crédito y un payload roto son el mismo «Serper 400» en el latido.
+  if (!res.ok) throw new Error(`Serper ${res.status}: ${(await res.text()).slice(0, 120)}`)
   const data = await res.json()
   // Mismo aprovechamiento que `mercado/cron`, que es el que sí extrae comps a diario: el precio
   // suele venir en el answerBox o en los sitelinks, no en el snippet principal.

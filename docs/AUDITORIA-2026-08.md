@@ -89,12 +89,44 @@ solo-registro atascados >24h.
 - Manuales de usuario ia-rest: el rango solo tocó el swap mecánico de modelo NIM (`ai-client.ts`,
   `brain.ts`, 4 edge functions) — nada de `app/**` funcional ni `public/**`, sin hallazgos.
 
-## Acciones manuales de Alberto (orden sugerido)
-1. **Revisar el trigger de las rutinas de sesión** (mercado-booking, psd2-health-check) — parece no
-   disparar en fin de semana; causa raíz probable de los 3 crons mudos de arriba.
-2. Resolver/mergear PR #1594 (conflicto trivial de inserción) y decidir sobre PR #1514.
-3. Bump de `pdfjs-dist` en `apps/ialimp` a `>=6.2.108`.
-4. Verificar que `iarest.es` y el dominio de `transporte` sirven el commit actual de `main`.
+## 🔧 Reparación (mismo día, a petición de Alberto — «repara»)
+Cada hallazgo se investigó a causa raíz antes de tocar nada:
+- **`sivra_mercado_sweep` (Serper 400) → CRÉDITO AGOTADO en serper.dev, no es código.** Evidencia
+  doble: el cron diario `mercado/cron` (payload distinto, sin cambios) cayó a la vez con el mismo
+  400, y la pasada del 22/08 03:00 escribió ~98 filas y EMPEZÓ a fallar a mitad — la misma key
+  funcionó y dejó de funcionar dentro de una invocación, o sea que la key es válida y lo que cambió
+  fue el saldo (Serper devuelve 400 «Not enough credits» sin créditos, 403 con key mala). El gasto
+  cuadra: el sweep pasó a diario el 01/08 (~130 búsquedas/día) y fundió el paquete en ~3 semanas.
+  **Acción de Alberto: recargar créditos en serper.dev → Billing** — al recargar se recupera solo.
+  De paso (este PR): los dos `throw` de Serper incluyen ahora el body del error
+  (`sweep/route.ts` y `cron/route.ts`) para que el próximo agotamiento se autodiagnostique.
+- **`psd2-sync` → FALSA ALARMA.** El cron corrió hoy 23/08 a las 06:00 con 200; las dos conexiones
+  (`Kutxabank`, `BBVA`) sincronizaron con `ultimo_sync` de hoy y sin errores. El banco simplemente
+  no reporta operaciones desde el 20/08 (hueco de 3 días vie→dom, con precedente idéntico el
+  01→04/08). Semáforo de `/banca` en ámbar, coherente. ⚠️ **Aviso de calendario: el consent PSD2 de
+  BBVA caduca el 11/09** (~19 días) — renovar desde `/banca` → «➕ Añadir → Conectar banco».
+- **`sivra_mercado_booking` → SE RECUPERÓ SOLA.** La rutina corrió hoy (PR #1601, 238 comps, 24
+  ventanas + escaparate). El hueco fue el 22/08 y afectó a 3 rutinas de sesión a la vez
+  (ya diagnosticado por la pasada ligera de hoy, PR #1598) — el porqué del hueco del sábado sigue
+  siendo del trigger de claude.ai, que solo puede mirar Alberto.
+- **PR #1594 → CONFLICTO RESUELTO.** Merge de `main` en su rama conservando ambas entradas de
+  memoria (inserción pura verificada con diff3), código del PR intacto byte a byte, 7/7 tests del
+  módulo en verde, push `7563289f`. El PR queda mergeable (draft, decide Alberto).
+- **`pdfjs-dist` → PARCHEADO en este PR.** El advisory real es GHSA-hq66-cqwq-w95j (vulnerable
+  ≥5.6.83 <6.2.108); el lockfile anclaba 6.0.227. Bump a ^6.2.108: tests ialimp 22/22, `tsc` 0,
+  `pnpm audit` ya no lo lista. `rrhh` (4.10.38) está fuera del rango vulnerable — no se toca.
+- **Vercel CANCELED → FALSA ALARMA, comportamiento de diseño.** Los CANCELED son el `ignoreCommand`
+  (`vercel-ignore-build.mjs`) saltando builds de commits que no tocan cada app — el ahorro de Build
+  Minutes del incidente de julio funcionando. Verificado positivo: `iarest.es` y
+  `central-rrhh.vercel.app` sirven en producción el build READY del commit `5e6bbed` (el swap NIM,
+  el último que tocó sus árboles de dependencias).
+
+## Acciones manuales de Alberto (lo que queda)
+1. **Recargar créditos de Serper** (serper.dev → Billing) — hasta entonces el sweep seguirá en rojo
+   (el corpus por fecha lo sostiene `mercado-booking`, que ya corre).
+2. **Revisar por qué las rutinas de sesión no corrieron el sábado 22/08** (trigger de claude.ai).
+3. **Renovar el consent PSD2 de BBVA antes del 11/09** (desde `/banca`).
+4. Decidir sobre los PRs draft #1594 (ya mergeable) y #1514.
 
 <!-- verificado: 2026-08-23 -->
 

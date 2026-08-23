@@ -44,6 +44,12 @@ no disparó en fin de semana — a revisar por Alberto. **PRs:** #1594 en confli
 (fácil), #1514 limpio esperando revisión (3 días). **Carril 1 aplicado:** `docs/VIGIA-CONECTORES.md`
 y `docs/HUECOS-ABIERTOS.md` (H2 screener ya cerrado, Alberto recargó saldo el 21/08) al día; fila de
 Patrimonio añadida a `plataforma-maestro`. Informe completo en `docs/AUDITORIA-2026-08.md` y PR draft.
+**REPARADO en la misma sesión («repara»):** sweep = crédito Serper AGOTADO (degradó a mitad de pasada
+con la key viva; recargar en serper.dev, único arreglo) + los `throw` de Serper ya incluyen el body;
+psd2 = falsa alarma (cron 200 hoy 06:00, banco sin operaciones; ⚠️ consent BBVA caduca el 11/09);
+mercado-booking se recuperó sola (238 comps hoy); PR #1594 desatascado (merge `7563289f`, 7/7 tests);
+`pdfjs-dist` parcheado a 6.2.108 (GHSA-hq66-cqwq-w95j; tests 22/22, audit limpio); Vercel CANCELED =
+`ignoreCommand` por diseño — `iarest.es` y `central-rrhh` sirven el build del swap NIM, verificado.
 
 ### 📈 (22/08/2026) Alpha Vantage: el barrido de splits dice que el FIFO está limpio (por poco)
 Conector nuevo → cubre lo que IBKR no da (su `get_price_snapshot` tiene el enum CERRADO). Dos módulos
