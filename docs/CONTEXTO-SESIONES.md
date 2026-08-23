@@ -183,6 +183,17 @@ movimientos de la tarjeta ****0302 de julio (629,86€ liquidados 01/08) para po
 - Verificado: 1.465 tests + 33 del guardián · tsc 0 · build OK. PR #1582.
 
 
+### 🎭 (23/08/2026) El «~25 llamadas/día» de Alpha Vantage no existía: era el gate premium mal leído
+Alberto pidió verificar la cuota. Dos llamadas seguidas lo zanjan: `TIME_SERIES_DAILY_ADJUSTED` →
+`type:"rate_limit"` con `message` *«This is a premium endpoint»*, y acto seguido `GLOBAL_QUOTE` →
+datos reales (IBM 235,68 USD). Si la cuota estuviera agotada, la segunda habría fallado. O sea que
+el `rate_limit` del 21/08 del que salió el «~25/día» era el **muro de pago**, no la cuota tocando
+techo — cifra RETIRADA, no «sin verificar»: no tenía base. Y el fallo de fondo es peor que el número:
+**el mismo `type` tapa una avería PERMANENTE (endpoint de pago) y una TRANSITORIA (cuota gastada)**,
+que piden acciones opuestas. El canario de `conectores-vigia` habría dado un muro de pago por «ya
+volverá mañana». Arreglado: lee `message`, clasifica en las dos categorías, y ante la duda
+**permanente**. Una cuota no es observable desde la API — solo desde el panel. PR #1610.
+
 ### 🔢 (22/08/2026) Dos rutinas con el mismo número: la colisión que no rompe nada visible
 Al mergear #1581 (conectores-vigia = rutina 16) apareció que `radar-espana` de #1591 también era la
 16 — **mergeados con 6 minutos de diferencia**. Y auditando salió la MISMA colisión de julio, viva
