@@ -32,6 +32,15 @@
 
 ---
 
+### 🏛️ (23/08/2026) Patrimonio: Catastro de Socorro y Monte Carmelo + baja de los Busto
+Alberto dio las refs catastrales: Socorro 24 `5732032TG3453B0001PK` (275 m², año 2000) y Monte
+Carmelo 68 `4707007TG3440N0003TR` (205 m², 1º izq, año 1964, Los Remedios) — leídas del Catastro
+(`Consulta_DNPRC`) y escritas en `patrimonio_activos`. Los dos Busto → `estado='baja'` (subarrendados,
+no propiedad; nuevo valor de estado documentado en el DDL). Valoraciones `agente:m2zona` enfoque
+vivienda: Socorro 1.207.250€ y Dúplex 287.369€ (casco-antiguo p50 4.390€/m²), Monte Carmelo 540.175€
+(PROXY sevilla-capital p50 2.635€/m² — falta zona `los-remedios` en `mercado_zonas`, hueco anotado
+para radar-espana). Estado en `docs/RADAR-ESPANA.md`.
+
 ### 🏦 (23/08/2026) Vigía de hipoteca en el agente contable + borrador a CajaSur
 El contable proactivo (cron lunes 09:00) ahora vigila los recibos `CUOTA PTMO <ref>` de banca:
 avisa por Telegram si la cuota cambia entre recibos (revisión de tipo/bonificación) o si la ficha
