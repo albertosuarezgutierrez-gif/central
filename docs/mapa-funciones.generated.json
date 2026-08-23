@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-22T21:10:33Z",
-  "sha": "e5dcf462de78b0517e601b46f6a28546945e3447",
+  "generadoEn": "2026-08-23T06:32:23Z",
+  "sha": "0c82587f07d1398804c57192ce0156f623ab13f0",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -52849,7 +52849,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 109
+          "linea": 112
         }
       ],
       "tablas": [
@@ -52861,7 +52861,7 @@
         "pricing_decisiones"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "70bcef06ffc1"
+      "hash": "2ccb1b0497a0"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -57394,7 +57394,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 41
+          "linea": 42
         },
         {
           "nombre": "fmt",
@@ -57402,7 +57402,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 42
+          "linea": 43
         },
         {
           "nombre": "GET",
@@ -57410,7 +57410,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 74,
+          "linea": 75,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -57419,7 +57419,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 78
+          "linea": 79
         }
       ],
       "tablas": [
@@ -57443,7 +57443,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "8481246aade6"
+      "hash": "54319511666c"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -57755,7 +57755,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 39
+          "linea": 40
         }
       ],
       "tablas": [
@@ -57772,7 +57772,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/pilot-track",
-      "hash": "0ce8c9a23180"
+      "hash": "4ee93605f9ee"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/recommend/route.ts",
@@ -57889,7 +57889,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 46
+          "linea": 47
         },
         {
           "nombre": "PATCH",
@@ -57897,7 +57897,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 197
+          "linea": 195
         }
       ],
       "tablas": [
@@ -57910,7 +57910,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/settings",
-      "hash": "4cc249692e08"
+      "hash": "a482dab412eb"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/stats/route.ts",
@@ -66354,7 +66354,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d7d7877cc093"
+      "hash": "5eabbbd5f125"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/reparable.ts",
@@ -70211,6 +70211,40 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "8bcea36a0776"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pricing-corpus-utilizable.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Qué pasada de mercado es la que MANDA para cada piso. 🚨 La pasada más FRESCA no es la más informativa, y tomarla a ciegas deja pisos sin tarifar. Caso fundacional (22/08/2026, House Sevillana): el motor elegía el corpus con `SELECT scenario, MAX(search_date) FROM market_rates`, sin más condición. E",
+      "exporta": [
+        "sqlUltimaPasadaUtil",
+        "avisoPisosSinTarifar"
+      ],
+      "funciones": [
+        {
+          "nombre": "sqlUltimaPasadaUtil",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 39,
+          "resumen": "Cuerpo del CTE `latest`: una fila por `scenario` con la última `search_date` que deja al menos `MIN_COMPS_PASADA` comparables plausibles. Se devuelve como texto (no como `Prisma.sql`) para que este mó"
+        },
+        {
+          "nombre": "avisoPisosSinTarifar",
+          "kind": "function",
+          "exportada": true,
+          "params": "saltados: PisoSaltado[], minSample: number, maxEdad: number",
+          "retorno": "string | null",
+          "linea": 65,
+          "resumen": "Texto del aviso cuando el motor deja pisos sin tarifar. `null` si no hay ninguno: un aviso que salta siempre deja de leerse. Que un piso no se tarifique es CARO y hasta hoy era invisible — vivía solo "
+        }
+      ],
+      "tablas": [
+        "market_rates"
+      ],
+      "rutaApi": null,
+      "hash": "d4ce69ca95bf"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-demanda.ts",
@@ -96262,7 +96296,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2550,
-    "funciones": 6992
+    "archivos": 2551,
+    "funciones": 6994
   }
 }
