@@ -32,6 +32,24 @@
 
 ---
 
+### 🔎 (23/08/2026) Auditoría: dónde es MUDO un fallo en la cadena de pricing
+
+- Pedida por Alberto tras cuatro fallos silenciosos en cinco días en la misma cadena (todos
+  encontrados de rebote, ninguno cazado por un vigía). Alcance: mercado → canal → motor → Smoobu.
+  Informe en `docs/AUDITORIA-2026-08-pricing-mudo.md`. **No se tocó nada.**
+- **3 🔴:** (1) `apply-auto` —el único eslabón que ESCRIBE precios— no tiene latido; (2) un fallo
+  del POST a Smoobu solo va al array `results` del HTTP, y `pricing_applied` se escribe igual, así
+  que la auditoría puede divergir de la realidad; (3) si fallan las dos lecturas del ancla
+  (`ref24`/`anclaHoy`, ambas `.catch(() => [])`), `anclaRail` cae al precio vivo y el tope pasa de
+  ±20%/día a ±20%/**pasada** = −49%/+73% al día — el agujero del 19/08 por otra puerta.
+- **Comprobado a mano que el 2 NO está ocurriendo:** de las 526 fechas aplicadas el 22/08, 523
+  coinciden exactas con el snapshot del 23/08 y 3 no tienen snapshot. Las escrituras llegan; lo que
+  no existe es nada que lo compruebe.
+- **2 🟡:** 8 de las 11 lecturas del motor degradan sin declararse (las dos peores: bucket de
+  mercado por mes y por fecha); y el watchdog de `pilot-track` detecta snapshot/mercado viejos y
+  **no los manda a ningún sitio** («sin push/email en plataforma — simplificado»).
+- Orden propuesto a Alberto: latido de `apply-auto` + rojo si falla Smoobu · declarar el ancla y NO
+  aplicar si se pierde · conciliación `pricing_applied` ↔ snapshot en el cron diario.
 ### 🛑 (23/08/2026) Un día sin conector de Booking dejó a House sin precio — y el motor no lo dijo (PR #1594)
 
 - Seguimiento del arreglo del canal (#1582): el canal SÍ se corrigió solo el 22/08 (House 1,20/0 →
