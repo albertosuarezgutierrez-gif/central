@@ -32,7 +32,7 @@
 
 ---
 
-### 🛑 (23/08/2026) El raíl ciego: si no se puede leer el ancla, el motor NO tarifa — PR (🔴 3)
+### 🛑 (23/08/2026) El raíl ciego: si no se puede leer el ancla, el motor NO tarifa — PR #1634 (🔴 3)
 
 - Cierra el tercer y último 🔴 de la auditoría. Las dos lecturas del ancla (`ref24`/`anclaHoy`)
   colgaban de un `.catch(() => [])`, y un `[]` por excepción es indistinguible del `[]` legítimo
@@ -45,8 +45,11 @@
   `PASADAS_POR_DIA_APPLY` lo vigila un test que lee el fuente de `cron-dispatch.ts` (probado en rojo).
 - **Auditoría: los 3 🔴 cerrados.** Siguen abiertos los tres 🟡 (8 degradaciones mudas, watchdog de
   `pilot-track` sin Telegram, 5 jobs sin latido).
+- ✅ **Verificado en producción** (pasada de las 14:30 UTC del 23/08): `agente_latidos` tiene la fila
+  `sivra_pricing_apply` con `ok=true` y detalle «3 noche(s) escritas en 4 piso(s)», y `pricing_applied`
+  cuadra (+3 filas de Busto Reform a las 14:30:43). El latido ya no es teoría.
 
-### 💰 (23/08/2026) El motor de precios ya late, y un rechazo de Smoobu ya se oye — PR (hallazgos 🔴 1 y 2)
+### 💰 (23/08/2026) El motor de precios ya late, y un rechazo de Smoobu ya se oye — PR #1631 (hallazgos 🔴 1 y 2)
 
 - Cierra los dos primeros 🔴 de la auditoría de esta misma mañana. Son el mismo silencio en el
   mismo eslabón: el que pone el precio delante del huésped.
