@@ -73,3 +73,18 @@ export function neutralizarUniverso<T extends FilaCalidad>(filas: T[]): { filas:
   })
   return { filas: limpias, anomalias }
 }
+
+// Desglose legible de los errores de la caché para el digest: «139 con error» a secas suena a avería
+// creciente, pero el grueso («sin companyfacts») es ESTRUCTURAL — emisores sin XBRL en la SEC que
+// nunca van a tenerlo. Nombrar cada motivo evita releer el mismo número como degradación cada lunes.
+const MOTIVOS_ESTRUCTURALES = new Set(['sin companyfacts'])
+
+export function resumenErrores(errores: Array<string | null | undefined>): string | null {
+  const cuenta = new Map<string, number>()
+  for (const e of errores) if (e) cuenta.set(e, (cuenta.get(e) ?? 0) + 1)
+  if (!cuenta.size) return null
+  return [...cuenta.entries()]
+    .sort((x, y) => y[1] - x[1])
+    .map(([motivo, n]) => `${n} ${motivo}${MOTIVOS_ESTRUCTURALES.has(motivo) ? ' — estructural' : ''}`)
+    .join(' · ')
+}
