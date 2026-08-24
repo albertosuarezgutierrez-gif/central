@@ -68,10 +68,18 @@ vivienda) en `patrimonio_valoraciones` junto a las de Alberto — ver `docs/RADA
 
 ## 🧭 Recomendaciones vivas (registradas 24/08/2026, pendientes de decisión)
 
-- **#1 Hipoteca: recuperar la bonificación perdida (~0,20 pts ≈ 390€/año) y NO amortizar hoy**
+- **#1 Hipoteca: recuperar la bonificación perdida (~0,20 pts) y NO amortizar hoy**
   — amortizar rinde el 1,31% aplicado vs ~2,16% neto de letras 12m (2,663% bruto, última
-  subasta ago-2026). Primera palanca: la gestora de CajaSur — **Alberto la contactó por la
-  intranet de Kutxabank el 24/08/2026, pendiente de respuesta**.
+  subasta ago-2026). **La gestora RESPONDIÓ el 24/08/2026 (intranet Kutxabank)** con la
+  mecánica: bonificación máxima por planes de pensiones **0,20%** con un **incremento neto de
+  2.000€/año en planes de Kutxabank por período de revisión** (revisión cada **5 de abril**;
+  valen aportaciones o traslados). Con los 936,59€ ya trasladados el 23/04/2026 **faltan
+  1.063,41€** este período; cumpliéndolo (y el resto de bonificaciones), **el tipo quedaría en
+  el 1,20%**. Pendiente de Alberto: darle el **nombre exacto del producto de Generali** (la
+  gestora prepara la solicitud de traslado con firma online) y completar los 1.063,41€.
+  Matiz del CFO (y de la propia gestora): comparar la rentabilidad del plan de Kutxabank vs el
+  PPA de Generali antes de cada traslado — la bonificación no compensa si el destino rinde
+  mucho peor.
 - **#2 Liquidez ociosa → monetario/letras** — 30.634€ a la vista al 0%; ~266€/año brutos por
   cada 10.000€. Pendiente que Alberto defina el colchón.
 - **#3 Dúplex: plan de venta abierto SIN fijar ventana** — el «cuándo» lo decide el termómetro
@@ -95,10 +103,11 @@ pena amortizar** — contra la alternativa neta, y mirando primero las bonificac
 los recibos `CUOTA PTMO 856289293-5` de la banca — si la cuota cambia entre recibos, o la
 ficha `act_monte_carmelo` se desincroniza de lo que el banco cobra, avisa por Telegram
 (`apps/plataforma/lib/contable/hipoteca-vigia.ts`, helper puro con tests). Este agente
-analiza en mensual lo que aquel detecta en semanal. La consulta a la gestora (María Luz,
-CajaSur) por la bonificación perdida **la envió Alberto por la intranet de Kutxabank el
-24/08/2026** (el borrador de Gmail quedó sin usar) — pendiente de respuesta. El capital
-exacto ya no hace falta pedirlo: confirmado con la app del banco.
+analiza en mensual lo que aquel detecta en semanal. La consulta a la gestora por la
+bonificación **la envió Alberto por la intranet de Kutxabank el 24/08/2026 y la gestora
+respondió el mismo día** (mecánica de los 2.000€/año → tipo 1,20%, ver recomendación #1;
+el borrador de Gmail quedó sin usar). El capital exacto ya no hace falta pedirlo:
+confirmado con la app del banco.
 
 ## ❓ Intake pendiente (espejo de /patrimonio)
 
