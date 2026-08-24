@@ -11,6 +11,11 @@ import {
 import { eventFactor } from "@/lib/pricing-calendar"
 import { MIN_EUR_PLAZA_COMP } from "@/lib/sivra/pricing-comps-plausibles"
 import { registrarLatido } from "@/lib/monitoring/latido-escribir"
+import {
+  clasificarNoche, reservaDesdeSmoobu, agruparRangos, ventanaConsulta,
+  type NocheClasificada,
+} from "@/lib/sivra/noches-sin-income"
+import { listarReservasVentana, runSync } from "@/lib/sivra/smoobu-sync"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -41,6 +46,11 @@ export const maxDuration = 60
 //   #9 Comps de OTRO aforo (01/08): el mercado de un piso leído de pisos de otro tamaño. Lo levantó
 //      Alberto ("House Sevillana aún está como dúplex"): los 30 comps vivos de una casa de 12 plazas
 //      eran apartamentos de 8. El ancla no era falsa, era EXTRAPOLADA — y nada lo decía.
+//   #10 Noche bloqueada SIN income (24/08): el calendario dice «vendida» y ningún income la cubre.
+//      Vino de Busto Feria 2027: una reserva Airbnb que el sync incremental se saltó estuvo TRES
+//      ciclos como misterio. Contrasta contra Smoobu en vivo, REPARA re-lanzando el sync sobre la
+//      ventana de llegada, y solo avisa de lo que de verdad es un fallo (una reserva sin sync o una
+//      noche que nada explica) — un bloqueo manual del dueño es normal y no suena.
 //
 // ⚠️ #4 y #5 comparan contra el mercado NORMALIZADO por aforo (`pricing_factor_aforo`), igual que el
 // motor. Iban sin normalizar hasta el 01/08/2026, así que en el único piso donde importaba —House,
@@ -292,6 +302,84 @@ export async function GET(req: NextRequest) {
     }))
     .filter(a => a.ev.alerta)
 
+  // #10 Noche bloqueada SIN income (24/08/2026). El calendario dice «no disponible» y ningún
+  // income cubre la noche. Caso fundacional: Busto 15-17 abr 2027 (Feria) — una reserva de Airbnb
+  // que el sync incremental se saltó estuvo TRES ciclos del agente apareciendo «vendida a 103€ sin
+  // income», sin que nada avisara. El check contrasta contra Smoobu EN VIVO (solo si hay noches que
+  // explicar — los días normales no pagan la llamada) y clasifica: reserva viva sin income →
+  // REPARA re-lanzando runSync sobre la ventana de llegada + alerta alta · bloqueo manual del dueño
+  // → normal, sin alerta · solo una cancelación → el calendario se refresca solo · nada → alerta
+  // media (bloqueo a nivel de tarifa u otra cosa: a mirar).
+  // 🚨 La cobertura compara "checkIn"::date, no el timestamptz: hay incomes con checkIn a las
+  // 12:00 UTC y sin el cast la noche del propio check-in sale como «sin income» (falsos positivos
+  // medidos el 24/08: 4 noches con reserva real).
+  let fantasmasIlegibles: string | null = null
+  const fantasmas = await prisma.$queryRaw<{ property_id: string; rate_date: string }[]>(Prisma.sql`
+    WITH ult AS (
+      SELECT property_id, MAX(snapshot_date) AS sd FROM rate_snapshots GROUP BY property_id
+    )
+    SELECT r.property_id, r.rate_date::text
+    FROM rate_snapshots r
+    JOIN ult u ON u.property_id = r.property_id AND u.sd = r.snapshot_date
+    WHERE r.available = 0 AND r.rate_date > CURRENT_DATE
+      AND NOT EXISTS (
+        SELECT 1 FROM incomes i
+        WHERE i."propertyId" = r.property_id
+          AND i."checkIn"::date <= r.rate_date AND i."checkOut"::date > r.rate_date
+      )
+    ORDER BY r.property_id, r.rate_date
+  `).catch(() => { fantasmasIlegibles = "rate_snapshots/incomes ilegibles"; return [] })
+
+  const fantasmaCnt = { reserva_sin_income: 0, bloqueo_manual: 0, cancelada: 0, sin_explicar: 0 }
+  /** por piso: noches con reserva viva sin income / noches sin explicar (para las alertas) */
+  const fantasmaSinIncome = new Map<string, NocheClasificada[]>()
+  const fantasmaSinExplicar = new Map<string, string[]>()
+  let syncReparadas = 0
+
+  if (fantasmas.length > 0 && !fantasmasIlegibles) {
+    try {
+      const ventana = ventanaConsulta(fantasmas.map(f => f.rate_date))!
+      const crudas = (await listarReservasVentana(ventana.desde, ventana.hasta)).map(reservaDesdeSmoobu)
+      // Mismo emparejamiento nombre→piso que el sync (exacto y por inclusión, en minúsculas).
+      const propRows = await prisma.$queryRaw<{ id: string; name: string }[]>(Prisma.sql`
+        SELECT id, name FROM properties`)
+      const nombreDe = new Map(propRows.map(p => [p.id, p.name.toLowerCase().trim()]))
+      const reservasDe = (pid: string) => {
+        const nombre = nombreDe.get(pid) ?? ""
+        return crudas.filter(r => {
+          const k = (r.apartmentName ?? "").toLowerCase().trim()
+          return k && nombre && (k === nombre || k.includes(nombre) || nombre.includes(k))
+        })
+      }
+      for (const f of fantasmas) {
+        const c = clasificarNoche(f.rate_date, reservasDe(f.property_id))
+        fantasmaCnt[c.tipo]++
+        if (c.tipo === "reserva_sin_income") {
+          const l = fantasmaSinIncome.get(f.property_id) ?? []
+          l.push(c)
+          fantasmaSinIncome.set(f.property_id, l)
+        } else if (c.tipo === "sin_explicar") {
+          const l = fantasmaSinExplicar.get(f.property_id) ?? []
+          l.push(f.rate_date)
+          fantasmaSinExplicar.set(f.property_id, l)
+        }
+      }
+      // REPARACIÓN: re-lanza el sync completo (idempotente) sobre la ventana de llegada de las
+      // noches con reserva viva sin income, con modifiedFrom muy atrás — es el mismo camino
+      // probado de siempre (inserta/actualiza/cancela), no una inserción paralela que divergiría.
+      if (fantasmaSinIncome.size > 0) {
+        const noches = [...fantasmaSinIncome.values()].flat().map(c => c.fecha)
+        const v = ventanaConsulta(noches)!
+        const res = await runSync(800, 20, v.desde, v.hasta).catch(() => null)
+        syncReparadas = res?.new ?? 0
+      }
+    } catch (e) {
+      // Sin poder mirar Smoobu NO se clasifica ni se avisa de «sin explicar»: un veredicto a
+      // ciegas vale menos que ninguno. La pasada queda marcada como degradada (latido + respuesta).
+      fantasmasIlegibles = `Smoobu ilegible: ${String(e).slice(0, 120)}`
+    }
+  }
+
   // #7/#8 Calendario contra mercado. El p50 de la fecha y el del mes se calculan SOBRE LOS MISMOS
   // pisos-escenario (el JOIN restringe el mes a los escenarios que barrieron esa fecha): si un día
   // solo se barrió para la casa de 12 plazas, su mes también sale de la casa, no de la media de
@@ -492,6 +580,35 @@ export async function GET(req: NextRequest) {
     })
     if (ok) created++
   }
+  // #10: reserva viva en Smoobu que NO está en incomes (el sync se la saltó). Alerta ALTA aunque
+  // la reparación haya funcionado: Alberto debe saber que el sync tuvo un hueco, y la alerta
+  // queda de registro (dedupe por piso+primera fecha mientras siga abierta).
+  for (const [pid, noches] of fantasmaSinIncome) {
+    const rangos = agruparRangos(noches.map(n => n.fecha)).map(r => r.desde === r.hasta ? r.desde : `${r.desde}→${r.hasta}`).join(", ")
+    const quien = noches[0].reserva
+    const ok = await pushAlert({
+      tipo: "noche_sin_income", prioridad: "alta", property_id: pid,
+      titulo: `${PROP_NAMES[pid] ?? pid}: ${noches.length} noche(s) bloqueadas por una reserva que NO está en incomes`,
+      detalle: `Smoobu tiene una reserva viva (${quien?.guestName ?? "?"}, id ${quien?.id ?? "?"}) cubriendo ${rangos} y el sync no la tenía. ` +
+        (syncReparadas > 0
+          ? `Reparado en esta pasada: el sync re-lanzado recuperó ${syncReparadas} reserva(s).`
+          : `La reparación automática (re-sync de la ventana) NO recuperó nada — revisa el sync a mano.`),
+      fecha_ref: noches[0].fecha,
+    })
+    if (ok) created++
+  }
+  // #10: bloqueada en el calendario y Smoobu no devuelve NADA que la cubra (probable bloqueo a
+  // nivel de tarifa). No es dinero perdido seguro, pero nadie lo ha decidido conscientemente hoy.
+  for (const [pid, fechas] of fantasmaSinExplicar) {
+    const rangos = agruparRangos(fechas).map(r => r.desde === r.hasta ? r.desde : `${r.desde}→${r.hasta}`).join(", ")
+    const ok = await pushAlert({
+      tipo: "noche_bloqueada_sin_explicar", prioridad: "media", property_id: pid,
+      titulo: `${PROP_NAMES[pid] ?? pid}: ${fechas.length} noche(s) bloqueadas sin reserva ni bloqueo en Smoobu`,
+      detalle: `El calendario tiene ${rangos} en no disponible y Smoobu no devuelve ninguna reserva, bloqueo ni cancelación que lo explique. Mira el calendario de Smoobu: puede ser un bloqueo a nivel de tarifa que nadie recuerda.`,
+      fecha_ref: fechas[0],
+    })
+    if (ok) created++
+  }
 
   // ── AVISO A ALBERTO POR TELEGRAM ──────────────────────────────────────────────
   // Manda UN mensaje con las alertas alta/media aún NO avisadas (cubre también las que crea
@@ -543,18 +660,29 @@ export async function GET(req: NextRequest) {
   // nada que avisar». Se registra al final a propósito —lo que importa es que la pasada COMPLETÓ— y
   // una tabla de eventos ilegible cuenta como pasada mala: con los centinelas #7/#8 apagados, media
   // vigilancia no es vigilancia.
-  await registrarLatido('sivra_pricing_guard', !eventosIlegibles, [
+  await registrarLatido('sivra_pricing_guard', !eventosIlegibles && !fantasmasIlegibles, [
     `${reversions.length + floorHits.length + subHits.length + reservasBajas.length + plazaHits.length + aforoHits.length} hallazgos`,
     `${created} alertas nuevas, ${avisadas} avisadas`,
     `${mercadoDia.length} fechas con mercado evaluable`,
+    fantasmas.length
+      ? `${fantasmas.length} noche(s) bloqueadas sin income (${fantasmaCnt.reserva_sin_income} reserva sin sync` +
+        `${syncReparadas ? `, ${syncReparadas} reparadas` : ''}, ${fantasmaCnt.bloqueo_manual} bloqueo manual, ` +
+        `${fantasmaCnt.cancelada} cancelación pendiente, ${fantasmaCnt.sin_explicar} sin explicar)`
+      : '',
     eventosIlegibles ? 'pricing_eventos_auto ILEGIBLE: #7 y #8 sin evaluar' : '',
+    fantasmasIlegibles ? `check #10 SIN evaluar (${fantasmasIlegibles})` : '',
   ].filter(Boolean).join(' · ')).catch(() => {})
 
   return NextResponse.json({
-    ok: !eventosIlegibles,
-    degradado: eventosIlegibles
-      ? "pricing_eventos_auto ilegible: los centinelas de evento (#7 y #8) NO se han evaluado en esta pasada"
-      : undefined,
+    ok: !eventosIlegibles && !fantasmasIlegibles,
+    degradado: [
+      eventosIlegibles
+        ? "pricing_eventos_auto ilegible: los centinelas de evento (#7 y #8) NO se han evaluado en esta pasada"
+        : null,
+      fantasmasIlegibles
+        ? `check #10 (noches sin income) SIN evaluar: ${fantasmasIlegibles}`
+        : null,
+    ].filter(Boolean).join(" · ") || undefined,
     reversions: reversions.length,
     floor_hits: floorHits.length,
     sub_mercado: subHits.length,
@@ -566,6 +694,14 @@ export async function GET(req: NextRequest) {
     fechas_evaluadas: eventosIlegibles ? 0 : mercadoDia.length,
     eventos_sin_respaldo: sinRespaldo.length,
     eventos_no_catalogados: noCatalogados.length,
+    // #10: siempre los cuatro estados, para que «0 sin income» no tape «no se pudo mirar»
+    // (fantasmasIlegibles ya lo declara arriba) ni «hay bloqueos manuales» (que son normales).
+    noches_fantasma: fantasmas.length,
+    noches_sin_income: fantasmaCnt.reserva_sin_income,
+    noches_bloqueo_manual: fantasmaCnt.bloqueo_manual,
+    noches_cancelada_pendiente: fantasmaCnt.cancelada,
+    noches_sin_explicar: fantasmaCnt.sin_explicar,
+    sync_reparadas: syncReparadas,
     alerts_created: created,
     avisadas,
   })

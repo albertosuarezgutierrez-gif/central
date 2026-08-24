@@ -15,6 +15,13 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-24 · pricing-agente (seguimiento)** · hizo: cerró el pendiente «Busto Feria 17-abr a 103€
+  sin income» (3er ciclo) — era la reserva Airbnb HM9KR9FJFK cancelada el 23/08 que nunca entró en
+  `incomes`; auditó los 4 pisos con el predicado de cobertura corregido (`"checkIn"::date`, hay filas a
+  las 12:00 UTC) → 0 noches bloqueadas sin explicación; construyó el **check #10 del guardián**
+  (detecta+repara noches bloqueadas sin income) y actualizó `references/ciclo.md`;
+  dudas: por qué el sync incremental se saltó la reserva del 20/06 (sin backfill pendiente: ya está
+  cancelada); fallos: —; PRs/commits: PR #1642.
 - **2026-08-24 · facturas-correo** · hizo: pasada diaria completa (Paso 0→5). Preflight canal
   alerta OK (200). Vía B: última copia `_buzon_pdf` sigue en 20/08 (dias_caido=4 por fórmula),
   pero verificado de nuevo con búsqueda directa (`has:attachment filename:pdf newer_than:4d`) que
