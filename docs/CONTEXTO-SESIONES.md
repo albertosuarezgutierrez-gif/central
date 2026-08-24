@@ -32,6 +32,14 @@
 
 ---
 
+### 🔧 (24/08/2026) La prueba real del buzón destapó que el lector registral de TEXTO estaba MUERTO
+Alberto subió 2 docs de Siero (SUB-JA-2026-263989) y ambos salieron «ilegibles». Causas: (1) `leerTexto`
+pasaba el modelo del catálogo como `modelo` a `chatConDirector` — el PIN que salta OpenRouter — y el id
+de OpenRouter (`google/gemini-2.5-flash`) acababa en NIM → «NVIDIA HTTP 404»: TODO documento con capa
+de texto salía ilegible (también en el cron). Fix: `categoria: 'registral'`; guardián que lee el fuente
+(`lector-registral-enrutado.test.ts`). (2) El otro doc es el pendiente conocido de escaneos CCITT/JBIG2
+(0 páginas de `localizarJpegs`) — sigue pendiente el rasterizador. PR posterior al #1671.
+
 ### 📥 (24/08/2026) Subastas: «Aportar documentos» — el buzón del lector para fichas con muro
 Alberto probó con SUB-JA-2026-264175 si el agente ve PDFs subidos al chat: no (no hay canal chat→BD;
 esa ficha además no tenía muro y el cron ya había leído sus 3 docs solo). Se construyó la opción
