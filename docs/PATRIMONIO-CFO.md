@@ -99,6 +99,14 @@ de mercado superen el suyo. **Consigna de Alberto: el CFO evalúa en cada pasada
 pena amortizar** — contra la alternativa neta, y mirando primero las bonificaciones perdidas
 (recuperar 0,10-0,50 pts suele rendir más que amortizar). Detalle en la skill, Paso 4.
 
+**🔁 Estrategia FIJA (Alberto, 24/08/2026): renovar la bonificación por planes CADA período de
+revisión** — 2.000€/año de incremento neto en planes de Kutxabank (revisión cada 5 de abril;
+valen aportaciones o traslados) → bonificación 0,20% → tipo 1,20%. Fuente del traslado: PPA
+**GENERALI PPA III-1, póliza 3V-G-410.000.330** (~0,2% anual garantizado, trasladar casi nunca
+pierde), pero FINITA: tras el traslado de 2026 quedan ~2.700€ (~2 períodos); desde ~2028 la vía
+son aportaciones directas (que además deducen IRPF). El CFO vigila el acumulado del período en
+cada pasada mensual y avisa si en enero-marzo faltan euros para los 2.000€ (skill, Paso 4).
+
 **Vigilancia continua (23/08/2026):** el agente contable proactivo (cron lunes 09:00) vigila
 los recibos `CUOTA PTMO 856289293-5` de la banca — si la cuota cambia entre recibos, o la
 ficha `act_monte_carmelo` se desincroniza de lo que el banco cobra, avisa por Telegram

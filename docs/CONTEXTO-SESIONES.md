@@ -32,6 +32,15 @@
 
 ---
 
+### 🔁 (24/08/2026) ESTRATEGIA FIJA: bonificación de la hipoteca por planes, renovada año tras año
+Alberto: «lo ideal es ir pasando año tras año». La gestora (intranet Kutxabank) confirmó la mecánica:
+2.000€/año de incremento neto en planes de Kutxabank por período de revisión (5-abr) → bonif. 0,20% →
+tipo 1,20%. Fuente: PPA GENERALI PPA III-1 (póliza 3V-G-410.000.330, ~0,2% anual, quedan ~2.700€ tras
+el traslado 2026 → ~2 períodos; desde ~2028, aportaciones directas que además deducen IRPF). Grabado
+en skill `patrimonio-cfo` (Paso 4, vigilancia del acumulado en cada pasada + aviso si en ene-mar
+faltan €), `docs/PATRIMONIO-CFO.md` y reco #1 (`datos`). Pendiente de Alberto: enviar a la gestora el
+nombre del producto (texto ya redactado) y completar 1.063,41€ este período. PRs #1658/#1660/#1662/#1663.
+
 ### 💰 (24/08/2026) DECISIÓN de Alberto: Tramo 1 de la escalera (1.000€ reales) — delegado al criterio del agente
 «Lo dejo en tu criterio» tras ver plazos de la escalera. Criterio aplicado: abrir Tramo 1 (~3% del
 cash; su objetivo es medir FRICCIÓN, prerequisito del Tramo 2 del ~15/11) con la próxima señal viva
