@@ -95,3 +95,38 @@ export function evaluatePilot(i: PilotInput): PilotVerdict {
     proposedBase: null,
   }
 }
+
+// ─── Aviso del watchdog (hallazgo 🟡 5 de la auditoría 23/08/2026) ─────────────────────────────
+//
+// El watchdog de esta cadena detectaba EXACTAMENTE lo que hay que saber —snapshot viejo, mercado
+// de más de 7 días, calendario corto— y lo metía en un array que solo iba al console.warn: el
+// único canal que nadie lee. Un watchdog mudo es peor que ninguno, porque su existencia hace
+// creer que «si pasara algo, avisaría».
+
+export type PisoRojo = { nombre: string; diagnosis: string }
+
+/**
+ * Aviso de Telegram del seguimiento del piloto. `null` si no hay nada que exija ojos —
+ * el día normal NO genera mensaje: un vigía que da la lata a diario se silencia y deja de vigilar.
+ *
+ * Los avisos del watchdog van PRIMERO: «House está rojo» puede ser mentira si el snapshot con el
+ * que se midió lleva tres días sin refrescarse, así que el lector tiene que ver antes de nada si
+ * puede fiarse de la medición.
+ */
+export function avisoPilotTrack(rojos: PisoRojo[], watchdog: string[]): string | null {
+  if (rojos.length === 0 && watchdog.length === 0) return null
+  const partes: string[] = []
+  if (watchdog.length > 0) {
+    partes.push(
+      `⚠️ *Vigía del piloto de precios: ${watchdog.length} aviso(s) de datos*\n` +
+      watchdog.map(w => `• ${w}`).join('\n'),
+    )
+  }
+  if (rojos.length > 0) {
+    partes.push(
+      `🔴 *${rojos.length} piso(s) en rojo* (solo propone, no toca precios)\n` +
+      rojos.map(r => `• ${r.nombre}: ${r.diagnosis}`).join('\n'),
+    )
+  }
+  return partes.join('\n\n')
+}

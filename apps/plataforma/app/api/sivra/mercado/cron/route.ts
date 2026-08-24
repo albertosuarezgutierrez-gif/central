@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { isCronAuthorized } from "@/lib/cron-auth"
+import { registrarLatido } from "@/lib/monitoring/latido-escribir"
 import { chatConDirector } from "@/lib/pasarela"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
@@ -23,7 +24,13 @@ async function serperSearch(query: string): Promise<string> {
     body:    JSON.stringify({ q: query, gl: "es", hl: "es", num: 10 }),
     signal:  AbortSignal.timeout(10_000),
   })
-  if (!res.ok) throw new Error(`Serper ${res.status}`)
+  if (!res.ok) {
+    // El cuerpo dice el PORQUÉ («Not enough credits» vs consulta rechazada) y mandan a sitios
+    // opuestos: recargar la cuenta vs arreglar la query. Un «400» pelado obligó a deducirlo a
+    // mano el 24/08/2026, con la vía Serper entera dos días muerta.
+    const body = await res.text().catch(() => "")
+    throw new Error(`Serper ${res.status}${body ? `: ${body.slice(0, 80)}` : ""}`)
+  }
   const data = await res.json()
   const parts: string[] = []
   // Featured snippet / answer box suelen tener el precio más destacado
@@ -57,7 +64,7 @@ Extrae apartamentos con precios estimados por noche en euros. Si ves rangos como
   } catch { return [] }
 }
 
-async function searchPortal(portal: string, checkin: string, checkout: string): Promise<any[]> {
+async function searchPortal(portal: string, checkin: string, checkout: string, fallos: string[]): Promise<any[]> {
   const queries: Record<string, string> = {
     booking:     `apartamentos turísticos Sevilla centro precio noche euros booking`,
     tripadvisor: `apartamentos Sevilla centro histórico precio noche tripadvisor`,
@@ -68,7 +75,11 @@ async function searchPortal(portal: string, checkin: string, checkout: string): 
     const snippets = await serperSearch(query)
     return await extractPrices(snippets, portal, checkin, checkout)
   } catch (e) {
+    // El fallo se ANOTA, no solo se loguea: un catch que devuelve [] convertía «Serper caído»
+    // en «0 comps hoy», y así murió en silencio la vía entera el 22/08/2026 (dos días sin una
+    // sola fila serper en market_rates y ok:true en cada pasada).
     console.error(`[sivra/mercado/cron] serper error ${portal}:`, e)
+    fallos.push(`${portal}: ${String(e).slice(0, 120)}`)
     return []
   }
 }
@@ -164,9 +175,10 @@ export async function GET(req: NextRequest) {
 
   const portals = ["booking", "tripadvisor", "expedia"]
   const summary: Record<string, number> = {}
+  const fallos: string[] = []
 
   for (const portal of portals) {
-    const apartments = await searchPortal(portal, checkin, checkout)
+    const apartments = await searchPortal(portal, checkin, checkout, fallos)
     let inserted = 0
     for (const apt of apartments) {
       if (!apt.name || !apt.price_night) continue
@@ -203,5 +215,14 @@ export async function GET(req: NextRequest) {
 
   const total = Object.values(summary).reduce((s, n) => s + n, 0)
   console.log(`[sivra/mercado/cron] ${new Date().toISOString()} market:${JSON.stringify(summary)} alerts:${alertsCreated}`)
-  return NextResponse.json({ ok: true, summary, total, alertsCreated, checkin, checkout })
+
+  // 💓 Latido (hallazgo 🟡 6, 24/08/2026). `ok` refleja si las BÚSQUEDAS funcionaron, no si
+  // trajeron comps: «0 comps con Serper sano» es un día flojo; «0 comps con Serper caído» es
+  // ceguera — y son indistinguibles sin esto (así pasó del 22 al 24/08: la vía entera muerta
+  // con ok:true en cada respuesta).
+  await registrarLatido("sivra_mercado_cron", fallos.length === 0,
+    `${total} comp(s) (${portals.map(pt => `${pt}:${summary[pt] ?? 0}`).join(", ")}) · ${alertsCreated} alerta(s)` +
+    (fallos.length > 0 ? ` · 🛑 ${fallos.join(" · ")}`.slice(0, 400) : ""))
+
+  return NextResponse.json({ ok: fallos.length === 0, summary, total, alertsCreated, checkin, checkout, fallos: fallos.length > 0 ? fallos : undefined })
 }

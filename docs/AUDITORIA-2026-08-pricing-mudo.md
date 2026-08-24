@@ -18,10 +18,10 @@
 | 1 | `apply-auto` — el eslabón que ESCRIBE precios — no tiene latido | 🔴 | ✅ **CERRADO 23/08/2026** |
 | 2 | Un fallo de escritura en Smoobu es mudo, y `pricing_applied` se escribe igual | 🔴 | ✅ **CERRADO 23/08/2026** |
 | 3 | El raíl de ±20%/día se ensancha a ±20%/pasada si falla una lectura | 🔴 | ✅ **CERRADO 23/08/2026** |
-| 4 | 8 de las 11 lecturas del motor degradan sin declararse | 🟡 | abierto |
-| 5 | El watchdog de la cadena existe y no lo lee nadie | 🟡 | abierto |
-| 6 | Cinco jobs de la cadena sin latido | 🟡 | abierto |
-| — | Lo que SÍ está vigilado (**8** latidos con sonda tras cerrar el nº1) | 🟢 | — |
+| 4 | 8 de las 11 lecturas del motor degradan sin declararse | 🟡 | ✅ **CERRADO 24/08/2026** |
+| 5 | El watchdog de la cadena existe y no lo lee nadie | 🟡 | ✅ **CERRADO 24/08/2026** |
+| 6 | Cinco jobs de la cadena sin latido | 🟡 | ✅ **CERRADO 24/08/2026** |
+| — | Lo que SÍ está vigilado (**13** latidos con sonda tras cerrar el nº6) | 🟢 | — |
 
 ---
 
@@ -127,6 +127,13 @@ en silencio:**
 Las dos primeras son **las señales principales de mercado**. Un motor que pierde ambas sigue
 devolviendo precios con toda la pinta de estar bien.
 
+> ✅ **CERRADO 24/08/2026.** Las anclas (579/592) abortan la pasada desde el nº3; las otras SEIS
+> lecturas se DECLARAN sin abortar (tienen fallback razonable): cada `.catch` empuja a
+> `lecturasCaidas`, la respuesta sale `ok:false` + campo `lecturas_degradadas`, hay Telegram con el
+> EFECTO de cada señal perdida (`lib/sivra/pricing-lecturas.ts`, puro, 6 tests) y `apply-auto` la
+> mete en las degradaciones del latido → rojo. Las 11 lecturas quedan: 3 declaradas de antes + 2
+> que abortan + 6 declaradas ahora.
+
 ## 🟡 5 · El watchdog de la cadena existe y es mudo
 
 `pilot-track` detecta exactamente lo que haría falta saber —snapshot viejo, mercado de más de 7
@@ -140,6 +147,13 @@ días, calendario corto— y lo mete en un array que **no va a ningún sitio**:
 No hay ni un `tgSend` en toda la ruta. `resumen-diario` tampoco. Son los dos jobs cuyo trabajo es
 precisamente contar cómo fue el día.
 
+> ✅ **CERRADO 24/08/2026.** `pilot-track`: rojos + watchdog → Telegram (`avisoPilotTrack` en
+> `lib/sivra/pilot-track.ts`, puro y testeado; el día normal devuelve `null` — un vigía que da la
+> lata a diario se silencia solo). Los avisos de DATOS van antes que los rojos: un veredicto medido
+> sobre un snapshot viejo puede ser mentira. `resumen-diario` NO manda Telegram a propósito (sería
+> ruido diario): su «cómo fue el día» vive en el detalle de su latido nuevo (hallazgo 6), que el
+> vigía de las 07:45 enseña tal cual.
+
 ## 🟡 6 · Cinco jobs de la cadena sin latido
 
 `mercado/cron` (07:15) · `rates/snapshot` (07:00) · `pricing/resumen-diario` (09:00) ·
@@ -147,6 +161,14 @@ precisamente contar cómo fue el día.
 
 `rates/snapshot` es el que más pesa: alimenta la ocupación y el precio vivo con el que se compara
 todo. Si deja de correr, lo único que lo notaría es el watchdog mudo del hallazgo 5.
+
+> ✅ **CERRADO 24/08/2026.** Los cinco con `registrarLatido` + entrada en `AGENTES_VIGILADOS` + sonda
+> en `PROBES` (mismo PR, regla del #1447): `sivra_rates_snapshot`, `sivra_mercado_cron`,
+> `sivra_resumen_diario`, `sivra_pilot_track`, `sivra_experimentos` (todos diarios, umbral 30 h).
+> De propina, `mercado/cron` deja de tragarse los fallos de Serper (`searchPortal` los anota y el
+> `ok` los refleja) — así murió la vía Serper entera del 22 al 24/08 con `ok:true` en cada pasada —
+> y los TRES `serperSearch` del repo incluyen el CUERPO del error («Serper 400: Not enough credits»
+> manda a recargar la cuenta; un «400» pelado mandaba a leer código).
 
 ## 🟢 Lo que sí está vigilado
 
@@ -167,8 +189,8 @@ piso que no se ajusta no desaparece del parte — el arreglo del 22/08 sostiene.
    aplicar** en vez de aplicar con el raíl ensanchado. Cierra el 3.
 3. **Conciliación `pricing_applied` ↔ snapshot**: la consulta de este informe, en el cron diario.
    Convierte el hallazgo 2 en algo observable en vez de en algo que compruebo yo a mano.
-4. Declarar las 6 degradaciones restantes del hallazgo 4 (las dos de mercado, primero).
-5. Enchufar el watchdog de `pilot-track` al Telegram que ya usa el resto de la cadena.
+4. ~~Declarar las 6 degradaciones restantes del hallazgo 4~~ ✅ **hecho el 24/08/2026**.
+5. ~~Enchufar el watchdog de `pilot-track` al Telegram~~ ✅ **hecho el 24/08/2026** (y los 5 latidos del hallazgo 6).
 
 ## Fuera de alcance, ya declarado en otro sitio
 

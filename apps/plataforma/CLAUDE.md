@@ -960,6 +960,27 @@ aplicado ANTES de hoy; `anclaHoy` = con qué precio empezó el día la fecha) co
   es peor que uno sin número**. `PASADAS_POR_DIA_APPLY` (en `pricing-latido-apply.ts`) lo vigila un
   test que lee el FUENTE de `cron-dispatch.ts`: si alguien añade una 4ª pasada, salta en rojo.
 
+## 🟡 Los tres amarillos de la auditoría del pricing, cerrados (24/08/2026)
+Hallazgos 4-6 de `docs/AUDITORIA-2026-08-pricing-mudo.md` (los 🔴 se cerraron el 23/08):
+- **Las 6 lecturas auxiliares del `apply` que caían a `[]` en silencio** (vuelos, antelación,
+  bucket-mes, bucket-fecha, prior estacional, velocidad) ahora se DECLARAN sin abortar:
+  `lecturasCaidas` → `ok:false` + campo `lecturas_degradadas` + Telegram con el EFECTO de cada señal
+  perdida (`lib/sivra/pricing-lecturas.ts`, puro) + latido rojo vía `apply-auto`. Solo las anclas del
+  raíl ABORTAN (eso cambia el tope del daño); estas seis tienen fallback y lo que no podían es callar.
+- **`pilot-track` dejó de ser un watchdog mudo**: rojos + avisos de datos → Telegram
+  (`avisoPilotTrack` en `lib/sivra/pilot-track.ts`; el día normal = `null`, sin ruido). Los avisos de
+  DATOS van primero: un rojo medido sobre un snapshot viejo puede ser mentira.
+- **Los 5 jobs sin latido ya laten** (todos diarios, umbral 30 h): `sivra_rates_snapshot` (el que más
+  pesa: precio vivo + ocupación), `sivra_mercado_cron`, `sivra_resumen_diario` (su «cómo fue el día»
+  vive en el DETALLE del latido, sin Telegram diario a propósito), `sivra_pilot_track`,
+  `sivra_experimentos` (el bucle de aprendizaje).
+- 🚨 **`mercado/cron` ya no se traga los fallos de Serper**: así murió la vía Serper ENTERA del 22 al
+  24/08 (cero filas `fuente='serper'` en `market_rates`) con `ok:true` en cada pasada — el
+  `catch { return [] }` de `searchPortal` convertía «Serper caído» en «0 comps hoy». Ahora los fallos
+  se anotan, el `ok` y el latido los reflejan, y los TRES `serperSearch` del repo incluyen el CUERPO
+  del error: «Serper 400: Not enough credits» manda a recargar la cuenta en serper.dev; un «400»
+  pelado mandaba a leer código.
+
 ## 💓 Latidos de agentes — el vigía que avisa por Telegram (ampliado 30/07/2026)
 `lib/monitoring/latidos.ts` (registro + `evaluarLatido` puro) + cron `agentes-latido` (07:45 UTC) →
 **Telegram**. Regla de oro: solo se vigilan huellas que se refrescan en CADA pasada del agente.

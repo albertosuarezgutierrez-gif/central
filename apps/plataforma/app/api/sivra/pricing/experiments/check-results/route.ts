@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/session"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
+import { registrarLatido } from "@/lib/monitoring/latido-escribir"
 
 export const dynamic = "force-dynamic"
 
@@ -19,8 +20,16 @@ export async function GET(req: NextRequest) {
 
   // 1) Auto-registra experimentos nuevos desde las escrituras live (pricing_applied);
   // 2) cierra los de fechas pasadas con el resultado real (was_booked + ADR).
-  await prisma.$executeRaw(Prisma.sql`SELECT auto_register_experiments()`)
-  await prisma.$executeRaw(Prisma.sql`SELECT update_experiment_results()`)
+  // 💓 Con latido (hallazgo 🟡 6, 24/08/2026): las dos funciones SQL pueden desaparecer en una
+  // migración y este cron moriría en 500 a diario sin que nadie lo viera — es el que cierra el
+  // bucle de aprendizaje (¿la subida se reservó o no?), y su silencio congela el aprendizaje.
+  try {
+    await prisma.$executeRaw(Prisma.sql`SELECT auto_register_experiments()`)
+    await prisma.$executeRaw(Prisma.sql`SELECT update_experiment_results()`)
+  } catch (e) {
+    await registrarLatido("sivra_experimentos", false, `error: ${String(e).slice(0, 200)}`)
+    throw e
+  }
 
   const updated = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT COUNT(*) AS total
@@ -28,5 +37,8 @@ export async function GET(req: NextRequest) {
     WHERE result_checked_at >= now() - INTERVAL '1 minute'
   `)
 
-  return NextResponse.json({ ok: true, updated: Number(updated[0]?.total ?? 0) })
+  const n = Number(updated[0]?.total ?? 0)
+  await registrarLatido("sivra_experimentos", true, `${n} experimento(s) revisados en esta pasada`)
+
+  return NextResponse.json({ ok: true, updated: n })
 }

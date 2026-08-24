@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/session"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
+import { registrarLatido } from "@/lib/monitoring/latido-escribir"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -43,6 +44,10 @@ export async function GET(req: NextRequest) {
     LIMIT 10`)
 
   if (aplicados.length === 0 && alertas.length === 0) {
+    // 💓 El día sin movimiento TAMBIÉN late (hallazgo 🟡 6, 24/08/2026): sin esta línea, el cron
+    // muerto y el día tranquilo eran el mismo silencio. El «cómo fue el día» vive en el detalle,
+    // que el vigía de las 07:45 muestra tal cual — así este job cuenta el día sin spamear Telegram.
+    await registrarLatido("sivra_resumen_diario", true, "sin movimiento (0 cambios, 0 alertas abiertas)")
     return NextResponse.json({ ok: true, sent: false, message: "Sin movimiento" })
   }
 
@@ -54,6 +59,10 @@ export async function GET(req: NextRequest) {
   for (const a of alertas) {
     console.log(`  [${a.prioridad}] ${a.titulo}`)
   }
+
+  await registrarLatido("sivra_resumen_diario", true,
+    `${aplicados.length} cambio(s) en 24h · ${alertas.length} alerta(s) abiertas` +
+    (alertas.length > 0 ? ` (${alertas.slice(0, 3).map(a => a.titulo).join(" · ")})`.slice(0, 300) : ""))
 
   return NextResponse.json({ ok: true, sent: true, cambios: aplicados.length, alertas: alertas.length })
 }
