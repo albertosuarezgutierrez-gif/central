@@ -32,6 +32,15 @@
 
 ---
 
+### 🛡️ (24/08/2026) Check #10 del guardián: noche bloqueada sin income ya se detecta y REPARA sola
+Para que lo del Busto Feria no se repita (petición de Alberto): `pricing/guard` gana el check #10 —
+noches futuras `available=0` sin income (predicado `::date`), contrastadas contra Smoobu EN VIVO
+(solo si las hay: los días normales no pagan la llamada). Reserva viva sin sync → repara re-lanzando
+`runSync(800, arrFrom, arrTo)` + alerta alta · bloqueo manual → normal, no suena · solo cancelación
+→ se cura solo · nada que lo explique → alerta media. Smoobu ilegible = check sin evaluar declarado
+(latido rojo), nunca «0 fantasmas». Módulo puro `lib/sivra/noches-sin-income.ts` (9 tests) +
+`listarReservasVentana` en `smoobu-sync.ts`. tsc 0 · 1537/1537 tests. PR #1642.
+
 ### ✅ (24/08/2026) Busto «Feria 17-abr vendida a 103€ sin income» — CERRADO (era Airbnb cancelada)
 Las 3 noches 15-17 abr 2027 eran la reserva Airbnb HM9KR9FJFK (387€, creada 20/06/2026) que **nunca
 entró en `incomes`** (probable hueco del sync incremental en la semana de migración de crons 17-22/06;

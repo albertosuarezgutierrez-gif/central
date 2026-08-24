@@ -67,7 +67,13 @@ el 11/07, precio REAL 65-81€ contra un mercado de 80€). El aviso está en la
   314,41€ de penalización — vigilar ese abono en banca). Las 3 noches vuelven al mercado y el motor
   las retarificará a precio de Feria en cuanto el snapshot las vea `available=1`. Lección: una noche
   bloqueada sin income puede ser una reserva que el sync incremental se saltó — `reservas_canceladas`
-  y el payload `datos` son los que lo destapan.
+  y el payload `datos` son los que lo destapan. **Desde el 24/08/2026 esto lo vigila el guardián
+  (check #10 de `pricing/guard`, cron diario 07:30):** detecta noches futuras `available=0` sin income
+  (predicado `::date`), las contrasta contra Smoobu en vivo, REPARA re-lanzando `runSync` sobre la
+  ventana de llegada y avisa por Telegram solo de lo que es fallo (reserva sin sync / sin explicar —
+  un bloqueo manual del dueño no suena). Lógica pura en `lib/sivra/noches-sin-income.ts` (testeada).
+  El ciclo ya NO necesita auditar esto a mano: si el guardián calla y su latido está verde, no hay
+  noches fantasma.
 - `SELECT * FROM pricing_aprendizaje` → insights/overrides previos por piso/temporada (p.ej.
   "Busto no bajar de 120", "Semana Santa muy elástica al alza"). **Respétalos.**
 - Mide outcomes del ciclo anterior: cruza `pricing_decisiones` (lo que decidiste) con

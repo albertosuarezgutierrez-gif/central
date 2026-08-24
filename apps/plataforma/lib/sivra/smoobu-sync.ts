@@ -55,6 +55,29 @@ async function fetchPage(p: number, from: string, apiKey: string, arrFrom?: stri
   return { bookings: d.bookings || [], pageCount: d.page_count || 1 }
 }
 
+/**
+ * Lista las reservas CRUDAS de Smoobu cuya estancia toca la ventana [arrFrom, arrTo] —
+ * canceladas y bloqueos manuales incluidos (showCancellation=1 y sin filtrar
+ * `is-blocked-booking`, al revés que runSync). Lo usa el check #10 del guardián de pricing
+ * para explicar una noche bloqueada sin income: ahí un bloqueo manual es una EXPLICACIÓN,
+ * no ruido. `modifiedDays` va muy atrás a propósito: la reserva que este check existe para
+ * cazar es justo la que el sync incremental no vio en su día (caso Feria 2027, 24/08/2026).
+ */
+export async function listarReservasVentana(arrFrom: string, arrTo: string, modifiedDays = 800, maxPages = 10) {
+  const API_KEY = await getSmoobuKey()
+  if (!API_KEY) throw new Error('SMOOBU_API_KEY no configurada')
+  const from = new Date(Date.now() - modifiedDays * 86400000).toISOString().slice(0, 10)
+  let page = 1, total = 1
+  const all: any[] = []
+  do {
+    const { bookings, pageCount } = await fetchPage(page, from, API_KEY, arrFrom, arrTo)
+    all.push(...bookings)
+    total = pageCount
+    page++
+  } while (page <= total && page <= maxPages)
+  return all
+}
+
 export async function runSync(days: number, maxPages = 20, arrFrom?: string, arrTo?: string) {
   // Latido de INTENTO antes de tocar Smoobu (patrón agente_latidos, landmine 31/07/2026):
   // si la pasada muere a medias, queda constancia de que SE DISPARÓ y no terminó — sin esto,
