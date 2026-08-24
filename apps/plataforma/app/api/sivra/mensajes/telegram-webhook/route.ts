@@ -14,7 +14,7 @@ import { getMovParaCallback, aprenderReglaMovimiento, enviarMensajeDudoso, suger
 import { simboloValido } from '@/lib/trading/cantera'
 import { getCuentaTelegram, resolverAccionTg, manejarTextoLibreTg, manejarDocumentoTg, manejarVozTg, descargarTelegram, adjuntoDeMensaje, vozDeMensaje, arrancarOnboarding, esComandoContable } from '@/lib/contable/telegram'
 import { manejarPatrimonioTg, resolverRecomendacionTg, detalleRecomendacionTg } from '@/lib/patrimonio-telegram'
-import { esPreguntaPatrimonio } from '@/lib/patrimonio-chat'
+import { esPreguntaPatrimonio, esComandoPatrimonio } from '@/lib/patrimonio-chat'
 
 export const dynamic = 'force-dynamic'
 // El reenvío a ia-rest puede tardar (publicar un Reel espera a que Instagram
@@ -789,6 +789,16 @@ export async function POST(req: NextRequest) {
   // B) Respuesta de texto (force_reply) → modificación. Liga por el booking del texto citado.
   const msg = body.message
   if (msg?.reply_to_message?.text) {
+    // 🚨 Un force_reply pendiente (✏️/🔧 del agente de huéspedes) abre el modo respuesta en el
+    // Telegram de Alberto, así que su SIGUIENTE mensaje llega como reply aunque quisiera hablar
+    // con OTRO agente (caso real 24/08/2026: «/patrimonio» aplicado como retoque de un borrador).
+    // Un comando explícito nunca es un retoque: se enruta a su dueño y el pendiente queda
+    // intacto — puede contestar al retoque después.
+    if (esComandoPatrimonio(msg.text || '')) {
+      const cuentaId = await getCuentaTelegram()
+      if (cuentaId) await manejarPatrimonioTg(cuentaId, (msg.text || '').trim())
+      return NextResponse.json({ ok: true })
+    }
     const m = String(msg.reply_to_message.text).match(/reserva (\w+)/)
     const bookingId = m?.[1]
     const pend = bookingId ? await getPendiente(bookingId) : null
