@@ -753,10 +753,18 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
     Claude Chrome y bajó **18 documentos de las 9 fichas con muro en dos minutos**. Solo una
     (`SUB-JA-2026-265289`, Barbate) publica edicto y **no** certificación de cargas: esa sí hay que pedirla
     al Registro. **Ninguna de las otras 8 carecía de documentación.**
-  - **El camino bueno, por tanto, es el buzón de entrada del lector**, no el login: el cron ya sabe QUÉ
-    fichas tienen muro, Alberto baja los PDFs con Chrome y los deja en Drive (el repo ya escribe en Drive
-    para las facturas) → el lector los procesa. No depende de burlar nada ni se rompe si el BOE cambia una
-    palabra. **PENDIENTE de construir.**
+  - **El camino bueno, por tanto, es el buzón de entrada del lector**, no el login — **CONSTRUIDO el
+    24/08/2026, por la FICHA y no por Drive**: botón «📥 Aportar documentos» en `/subastas` (componente
+    `DocsAportados`, multi-fichero, en cada ficha) → `POST /api/subastas/documentos` → el MISMO lector
+    registral que los adjuntos del BOE (doble pasada + consenso, visión para escaneados) → las cargas
+    leídas van al corpus `subastas.cargas_*` **con la semántica exacta del cron** (solo pisa cuando hay
+    cargas leídas; un PDF ilegible se registra como ilegible, jamás como «sin cargas»). Histórico en la
+    tabla **`subastas_docs_aportados`** (migración `2026-08-24_subastas_docs_aportados.sql`, aplicada).
+    Dos decisiones no obvias: (a) a diferencia de la nota simple, lo aportado SÍ escribe el corpus global
+    — son los MISMOS documentos oficiales del Portal, solo que bajados con sesión; (b) las señales del
+    edicto se guardan en `subastas_docs_aportados.notas`, **NO en `subastas.notas_edicto`** — esa columna
+    la pisa el cron incondicionalmente en cada pasada del muro y se llevaría lo aportado. Lógica pura en
+    `lib/subastas/docs-aportados-logica.ts` (testeada); BD/red en `lib/subastas/docs-aportados.ts`.
   - 🚨 **Dos bugs propios que este episodio destapó, y que son la lección de método:**
     · El detector de sesión buscaba «Cerrar sesión»; la barra del Portal dice **«Desconectar»**. Constaba
       por escrito en dos observaciones de la página viva, y **el fixture del test se redactó con la misma

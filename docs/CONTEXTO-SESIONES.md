@@ -32,6 +32,15 @@
 
 ---
 
+### 📥 (24/08/2026) Subastas: «Aportar documentos» — el buzón del lector para fichas con muro
+Alberto probó con SUB-JA-2026-264175 si el agente ve PDFs subidos al chat: no (no hay canal chat→BD;
+esa ficha además no tenía muro y el cron ya había leído sus 3 docs solo). Se construyó la opción
+elegida: botón «📥 Aportar documentos» en cada ficha de `/subastas` → `POST /api/subastas/documentos`
+→ lector registral (doble pasada) → corpus `cargas_*` con la semántica del cron; histórico en tabla
+`subastas_docs_aportados` (migración aplicada). Señales del edicto van a esa tabla, NO a `notas_edicto`
+(el cron la pisa). Cierra el «PENDIENTE de construir» del 20/08. Lógica pura testeada (9 tests);
+tsc 0, 1.569 tests OK, SQL validado contra BD real. Rama `claude/agent-auction-file-access-luhd21`.
+
 ### 📈 (24/08/2026) Trading: «Última pasada» ya dice que la renueva el agente, no el botón
 Alberto: «doy actualizar y no cambia fecha». No era bug: `ultimaPasada` = fecha de la última tesis
 (pasada nocturna 20:15/23:15 UTC lun-vie); verificado en BD que hoy no había corrido. El botón 🔄 solo
