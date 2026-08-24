@@ -5,6 +5,7 @@ import { puntosDiarios } from '@/lib/trading/precios-stooq'
 import { preciosVivos, precioVivoFiable, conPrecioVivo, type PrecioVivo } from '@/lib/trading/precio-vivo'
 import ActualizarConsulta from './ActualizarConsulta'
 import { neutralizarUniverso } from '@/lib/trading/calidad-datos'
+import { etiquetaConcentracion, type ParCorrelacionado } from '@/lib/trading/concentracion'
 import { etiquetaCalidad, rankearUniverso, type EmpresaUniverso } from '@central/module-trading'
 import OnboardingBanner from './OnboardingBanner'
 import RadarExplorador, { type FilaExplorador } from './RadarExplorador'
@@ -768,7 +769,16 @@ export default async function TradingDashboard({ carteraCohetes, carteraReal, tr
           type CoheteUi = { simbolo: string; nombre: string | null; momentum: number | null; piotroski: number | null; roic: number | null; sobreSmaSem: boolean | null; sobreSmaMes: boolean | null; confirmado: boolean; mesesCotizando?: number | null }
           const cohetes = (radar.cohetes as unknown as CoheteUi[] | null) ?? []
           const track = radar.trackRecord as unknown as Track | null
-          const salud = radar.salud as unknown as { total: number; frescas: number; errores: number } | null
+          // parTop/parWatchlist: en el `salud` desde el 24/08/2026 — un snapshot anterior no los trae
+          // (ausencia del dato, no «par bajo»), por eso la línea ⚖️ solo se pinta cuando existen.
+          const salud = radar.salud as unknown as {
+            total: number; frescas: number; errores: number
+            correlacionTop?: number | null; correlacionWatchlist?: number | null
+            parTop?: ParCorrelacionado | null; parWatchlist?: ParCorrelacionado | null
+          } | null
+          const corr2 = (x: number) => x.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+          const parTxt = (p: ParCorrelacionado | null | undefined) =>
+            p ? <> · par más alto: {p.correlacion >= 0.7 ? '⚠️ ' : ''}<b>{p.a}</b>–<b>{p.b}</b> {corr2(p.correlacion)}</> : null
           return (
             <>
               {/* La tabla del ranking vive UNIFICADA en el explorador de abajo (orden por score del
@@ -806,6 +816,12 @@ export default async function TradingDashboard({ carteraCohetes, carteraReal, tr
                   ? <> · track record: {track.bateVentanas}/{track.ventanas} ventanas baten al SPY ({track.evals.map(ev => `${Math.round(ev.dias / 7)}sem ${pct(ev.mediana ?? 0)} vs ${pct(ev.retornoBench)}`).join(' · ')})</>
                   : <> · track record: acumulando historial</>}
               </p>
+              {salud?.correlacionTop != null && (
+                <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 2 }}>
+                  ⚖️ Concentración del top-10: correlación media {corr2(salud.correlacionTop)} (60 sesiones) — {etiquetaConcentracion(salud.correlacionTop)}{parTxt(salud.parTop)}
+                  {salud.correlacionWatchlist != null && <> · watchlist B+C: {corr2(salud.correlacionWatchlist)}{parTxt(salud.parWatchlist)}</>}
+                </p>
+              )}
             </>
           )
         })()}
