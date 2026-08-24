@@ -9,6 +9,19 @@
 claude.ai/code → Rutinas — ver `docs/RUTINAS-PROGRAMADAS.md`). **La primera pasada es el
 DOSSIER INICIAL**: foto completa + cuestionario de intake entero.
 
+## 💬 Canal conversacional por Telegram (24/08/2026)
+Alberto puede hablar con el agente patrimonial desde el móvil, sin esperar a la pasada mensual:
+- **`/patrimonio`** (o «foto»/«resumen») → foto determinista de BD: neto mínimo, activos con su
+  valoración vigente (lo sin valorar se DECLARA, nunca sale como 0), recomendaciones pendientes.
+- **`/patrimonio <pregunta>`** o cualquier mensaje que mencione «patrimonio/patrimonial» → la IA
+  (pasarela gratis) responde SOLO con las cifras del contexto de BD (`lib/patrimonio-telegram.ts`
+  + `lib/patrimonio-chat.ts`, puro y testeado). Si la BD o la IA fallan, lo dice — no inventa.
+- **Botones en las recomendaciones** (`ptr_ok`/`ptr_no`/`ptr_det` en el webhook): el informe
+  mensual manda cada recomendación con «✅ Acepto / ✖️ Descarto / 📋 Detalle» y el toque registra
+  `decision_alberto`/`decidido_at` en `patrimonio_recomendaciones` — cierra el ciclo de
+  aprendizaje sin anotar nada a mano. Los botones viajan por `/api/internal/alerta` (prefijo
+  `ptr_` permitido en `lib/alerta-botones.ts`; solo anotan decisión, jamás ejecutan).
+
 ## Calibración vigente (Alberto, 22/08/2026)
 Objetivo **mixto** (rentas hoy + crecimiento largo plazo) · riesgo **dinámico** (puede proponer
 apalancamiento/rotación con el peor caso cuantificado; salvaguarda: Socorro = base de
