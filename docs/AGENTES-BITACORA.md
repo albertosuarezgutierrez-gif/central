@@ -15,6 +15,13 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-24 · pricing-agente** · hizo: ciclo semanal completo, los 4 pisos (no solo los en vivo).
+  Medí el ciclo anterior (17/08→hoy: House +4 reservas, Dúplex +2, Busto/Luxury 0), sembré mercado
+  Booking en 12 ventanas/piso (120 comps/piso, 0 a cero), apliqué dry-run × 4 (200 OK, sin
+  circuit-breaker), 48 decisiones en `pricing_decisiones`, aprendizaje escrito. dudas: Busto Feria
+  17-abr-2027 sigue "vendida" a 103€ sin income que lo explique, 3er ciclo consecutivo sin resolver —
+  necesita mirar Smoobu directamente, fuera de mi alcance. fallos: solo Booking como fuente esta
+  semana (Trivago/Tripadvisor no consultados por límite de tiempo, riesgo de mono-fuente). PRs/commits: —
 - **2026-08-24 · mercado-booking** · hizo: pasada diaria, plan `?max=24` (516 ventanas candidatas,
   492 recortadas por el tope, `sin_medir_nunca:24` — todas de ronda 1/evento: Navidad-Fin de Año
   25/12-1/01 y Semana Santa 25-27/03). 240 comps reales escritos en `market_rates` (10 por ventana;

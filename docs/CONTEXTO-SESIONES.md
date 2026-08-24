@@ -32,6 +32,19 @@
 
 ---
 
+### 💶 (24/08/2026) Ciclo semanal de pricing completo (los 4 pisos)
+
+Paso 1: 17/08→hoy sin nuevas reservas en Busto/Luxury; House +4 reservas (291-758€/noche según
+mes), Dúplex +2 (83-121€/noche efectivo) — confirmado por incomes, no solo snapshot. Paso 2: mercado
+Booking sembrado en los 4 pisos, 12 ventanas (finde/mes + SS + Feria), **120 comps/piso, 0 a cero**
+(verificación obligatoria pasada). Paso 4: `aplicar-propuesta` dry-run × 4, 200 OK, circuit-breaker
+sin saltar, 48 decisiones en `pricing_decisiones`. Fechas calientes próximas: Nations League España-Croacia
+29-sep (×2,2), LOVE THE 90's 26-sep (×2,2), Bienal Flamenco 10-sep/03-oct. Pendiente sin resolver:
+Busto Feria 17-abr-2027 sigue "vendida" a 103€ sin income que lo explique (3er ciclo). Detalle en
+`pricing_aprendizaje` (`ciclo_24_08_2026`).
+
+---
+
 ### 🔎 (24/08/2026) Auditoría ligera: 4 commits del 23/08 sin entrada propia, reconciliados
 Rango 4f25e64..ed12004 (26 commits, todo el 23/08). Backlog PRs: #1600 y #1602 (ambos draft de carril 2
 del propio 23/08) siguen abiertos, `mergeable_state: dirty` por el aluvión de inserciones posteriores en
