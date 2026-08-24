@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  esPreguntaPatrimonio, preguntaDe, fotoPatrimonioTg, contextoPatrimonioIA,
+  esPreguntaPatrimonio, esComandoPatrimonio, preguntaDe, fotoPatrimonioTg, contextoPatrimonioIA,
 } from './patrimonio-chat.ts'
 import type { ActivoPatrimonio, ResumenPatrimonio } from './patrimonio-resumen.ts'
 
@@ -38,6 +38,15 @@ test('esPreguntaPatrimonio: comando y mención expresa sí; el resto del texto l
   assert.equal(esPreguntaPatrimonio('facturas pendientes'), false)
   // «patrimonial» dentro de otra palabra no dispara (\b).
   assert.equal(esPreguntaPatrimonio('expatrimoniote'), false)
+})
+
+test('esComandoPatrimonio: SOLO el comando explícito — es lo único que desvía una respuesta force_reply', () => {
+  assert.equal(esComandoPatrimonio('/patrimonio'), true)
+  assert.equal(esComandoPatrimonio('  /patrimonio ¿vendo?'), true)
+  // Una respuesta de retoque que menciona «patrimonio» NO se desvía (sería robarle el retoque
+  // al agente de huéspedes); el detector ancho queda para los mensajes sueltos.
+  assert.equal(esComandoPatrimonio('añade que el patrimonio histórico está cerca'), false)
+  assert.equal(esComandoPatrimonio('/patrimonial'), false)
 })
 
 test('preguntaDe: quita el comando y deja la pregunta ("" = foto)', () => {

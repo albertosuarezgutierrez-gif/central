@@ -13,6 +13,13 @@ export type RecomendacionViva = { id: number; fecha: string; titulo: string }
 const esc = (s: string): string =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
+// Comando EXPLÍCITO `/patrimonio …`. Existe aparte del detector ancho porque las RESPUESTAS
+// (force_reply de otros agentes) solo se desvían ante un comando inequívoco: un retoque
+// legítimo podría mencionar la palabra «patrimonio» y no ser para este agente.
+export function esComandoPatrimonio(texto: string): boolean {
+  return /^\/patrimonio\b/i.test(texto.trim())
+}
+
 // ¿Es un mensaje para el agente patrimonial? Comando `/patrimonio …` o mención expresa de
 // patrimonio/patrimonial. Deliberadamente ESTRECHO: el resto del texto libre sigue siendo del
 // agente contable (que ya atiende gasto/ingresos/facturas) — un detector ancho lo secuestraría.
