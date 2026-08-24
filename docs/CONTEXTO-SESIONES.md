@@ -39,7 +39,10 @@ noches futuras `available=0` sin income (predicado `::date`), contrastadas contr
 `runSync(800, arrFrom, arrTo)` + alerta alta · bloqueo manual → normal, no suena · solo cancelación
 → se cura solo · nada que lo explique → alerta media. Smoobu ilegible = check sin evaluar declarado
 (latido rojo), nunca «0 fantasmas». Módulo puro `lib/sivra/noches-sin-income.ts` (9 tests) +
-`listarReservasVentana` en `smoobu-sync.ts`. tsc 0 · 1537/1537 tests. PR #1642.
+`listarReservasVentana` en `smoobu-sync.ts`. tsc 0 · 1537/1537 tests. PR #1642 (**mergeado y VERIFICADO
+en producción el mismo día**: deploy READY 07:03 UTC, pasada del guardián 07:31 en verde con el check
+activo — 0 noches fantasma, correcto: el sync de las 05:00 ya había registrado la cancelación y el
+snapshot liberó Busto 15-17 abr 2027, retarificadas por el motor a 370/390/235€ desde los 103€).
 
 ### ✅ (24/08/2026) Busto «Feria 17-abr vendida a 103€ sin income» — CERRADO (era Airbnb cancelada)
 Las 3 noches 15-17 abr 2027 eran la reserva Airbnb HM9KR9FJFK (387€, creada 20/06/2026) que **nunca
