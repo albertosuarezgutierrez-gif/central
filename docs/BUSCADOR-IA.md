@@ -23,14 +23,14 @@
 > **27/07/2026 — eslabón Cerebras** (si hay `CEREBRAS_API_KEY`): 4º proveedor gratis, infra WSE
 > independiente de NIM/Groq. Hoy INACTIVO (sin key).
 
-| Eslabón | id por defecto | Env (key / override) | Coste | Estado (comprobado 2026-08-22) |
+| Eslabón | id por defecto | Env (key / override) | Coste | Estado (comprobado 2026-08-24) |
 |---|---|---|---|---|
 | OpenRouter (primario pasarela — lo vigila SU cron, no este agente) | `deepseek/deepseek-chat` | `OPENROUTER_API_KEY` / `OPENROUTER_MODEL` | según modelo (tope 1€/día) | fuera de scope (cron `ia-director-refresh`) |
-| NVIDIA NIM (primario cadena directa) | `meta/llama-3.1-70b-instruct` | `NVIDIA_API_KEY` | gratis (~40 RPM) | 🔄 **SWAP 22/08/2026, verificado EN VIVO** — `z-ai/glm-5.2` (default desde el 17/08) murió por **HTTP 410 Gone** el 21/08/2026, ANTES de la fecha 24/08/2026 que anunciaba su propia ficha (`build.nvidia.com/z-ai/glm-5.2/modelcard`) — otra vez la ficha no probaba el API. Confirmado contra el listado real `GET /v1/models` (102 vivos, ni un solo `z-ai/*`) vía harness temporal (`nim-catalogo-temp`, edge function de ia-rest, borrada/neutralizada tras usar) llamado desde SQL con `pg_net` (WebFetch a dominios NVIDIA/Supabase seguía bloqueado por el proxy de esta sesión). Mini-eval con key real sobre 4 candidatos vivos: `meta/llama-3.1-70b-instruct` **PASA limpio y rápido** (A: respuesta cálida directa en español · B: exactamente `ESCALAR`); `openai/gpt-oss-120b` y `minimaxai/minimax-m3` **>25s por respuesta en NIM** (descartados por latencia, aunque minimax sí devolvió `ESCALAR` limpio); `mistralai/mistral-large-2-instruct` **404 "Not found for account"** pese a listar en `/v1/models` (no todos los ids del catálogo están habilitados para la cuenta gratuita). Swap aplicado en TODO el radio (core-ai, plataforma, rrhh, ia-rest + 4 edge functions redesplegadas + `sonda-ia.ts`, que es la sonda exacta que el health-check reportó muerta). |
-| Groq (fallback 1) | `openai/gpt-oss-120b` | `GROQ_API_KEY` / `GROQ_BRAIN_MODEL` | gratis (rate-limited) | ✅ **VIVO** (10/08) — destino de migración recomendado de otros modelos que Groq deprecia |
-| Cerebras (fallback 2, plumbing 27/07/2026) | `gpt-oss-120b` | `CEREBRAS_API_KEY` / `CEREBRAS_MODEL` | gratis (1M tok/día, ctx 8192 en tier gratis) | ✅ vivo (10/08) — **INACTIVO sin key**, pendiente de Alberto |
-| Gemini (fallback 3, APAGADO por defecto) | `gemini-flash-latest` | `GEMINI_API_KEY` **+ `GEMINI_TEXTO=1`** / `GEMINI_BRAIN_MODEL` | gratis | ✅ vivo (10/08) — alias rodante apunta a Gemini 3.5 Flash GA; sigue apagado por falta de cuota real |
-| Kimi/Moonshot (fallback 4, de pago) | `kimi-k2.6` | `MOONSHOT_API_KEY` / `MOONSHOT_MODEL` | $0,95/$4,00 por M | ✅ **VIVO** (10/08) — el sunset del 31/08/2026 es de `kimi-k2.5`/`moonshot-v1`, no afecta |
+| NVIDIA NIM (primario cadena directa) | `meta/llama-3.1-70b-instruct` | `NVIDIA_API_KEY` | gratis (~40 RPM) | 🔄 **SWAP 22/08/2026, verificado EN VIVO** — `z-ai/glm-5.2` (default desde el 17/08) murió por **HTTP 410 Gone** el 21/08/2026, ANTES de la fecha 24/08/2026 que anunciaba su propia ficha (`build.nvidia.com/z-ai/glm-5.2/modelcard`) — otra vez la ficha no probaba el API. Confirmado contra el listado real `GET /v1/models` (102 vivos, ni un solo `z-ai/*`) vía harness temporal (`nim-catalogo-temp`, edge function de ia-rest, borrada/neutralizada tras usar) llamado desde SQL con `pg_net` (WebFetch a dominios NVIDIA/Supabase seguía bloqueado por el proxy de esta sesión). Mini-eval con key real sobre 4 candidatos vivos: `meta/llama-3.1-70b-instruct` **PASA limpio y rápido** (A: respuesta cálida directa en español · B: exactamente `ESCALAR`); `openai/gpt-oss-120b` y `minimaxai/minimax-m3` **>25s por respuesta en NIM** (descartados por latencia, aunque minimax sí devolvió `ESCALAR` limpio); `mistralai/mistral-large-2-instruct` **404 "Not found for account"** pese a listar en `/v1/models` (no todos los ids del catálogo están habilitados para la cuenta gratuita). Swap aplicado en TODO el radio (core-ai, plataforma, rrhh, ia-rest + 4 edge functions redesplegadas + `sonda-ia.ts`, que es la sonda exacta que el health-check reportó muerta). **24/08: repasado por WebSearch (sin `NVIDIA_API_KEY` en esta sesión, WebFetch a `build.nvidia.com`/`docs.api.nvidia.com` bloqueado por el proxy — igual que pasadas anteriores). Única señal de alarma: "NVIDIA NIM Llama-3.1-70b-instruct microservice reached End of Support, July 2026" (NGC) — descartada tras verificar que se refiere al **contenedor NIM autoalojado** (Docker/NGC para on-prem, versión 1.10), NO al endpoint hosted de `build.nvidia.com` que consumimos por API key; son dos ciclos de vida distintos (fuente: developer.nvidia.com/nim, spheron.network). Sin evidencia de retirada del endpoint hosted → se mantiene vivo, sin swap.** |
+| Groq (fallback 1) | `openai/gpt-oss-120b` | `GROQ_API_KEY` / `GROQ_BRAIN_MODEL` | gratis (rate-limited) | ✅ **VIVO, reforzado (24/08)** — sigue siendo el destino de migración recomendado por Groq para TODOS sus deprecados recientes: `kimi-k2-instruct-0905`→(23/03), `llama-4-maverick-17b`→(20/02), `llama-3.1-8b-instant`/`llama-3.3-70b-versatile`/`qwen3-32b`/`llama-4-scout-17b`→(17/06, dejan de servirse en agosto/2026). Cuantos más modelos apuntan aquí, más sólido el eslabón. |
+| Cerebras (fallback 2, plumbing 27/07/2026) | `gpt-oss-120b` | `CEREBRAS_API_KEY` / `CEREBRAS_MODEL` | gratis (1M tok/día, ctx 8192 en tier gratis) | ✅ vivo (24/08) — free tier de 1M tok/día confirmado por fuentes externas; RPM sigue discrepando entre fuentes (5 vs 30) como en pasadas previas, sin key para zanjarlo — **INACTIVO sin key**, pendiente de Alberto |
+| Gemini (fallback 3, APAGADO por defecto) | `gemini-flash-latest` | `GEMINI_API_KEY` **+ `GEMINI_TEXTO=1`** / `GEMINI_BRAIN_MODEL` | gratis | ✅ vivo (24/08) — familia Flash/Flash-Lite mantiene tier gratis (confirmado a 15/08/2026); sin mención de retirada del alias rodante; sigue apagado por falta de cuota real |
+| Kimi/Moonshot (fallback 4, de pago) | `kimi-k2.6` | `MOONSHOT_API_KEY` / `MOONSHOT_MODEL` | $0,95/$4,00 por M | ✅ **VIVO** (24/08) — confirmado de nuevo sin sunset propio; Moonshot empuja hacia K3 (flagship, $3/$15 por M) pero K2.6 sigue en catálogo activo |
 
 **Consumidores con modelo propio:**
 - `AGENTE_HUESPED_MODEL` — **vacío por defecto** (usa el modelo por defecto de la cadena, desde el
@@ -59,8 +59,28 @@
 | mistral-large-2-instruct | NVIDIA NIM | `mistralai/mistral-large-2-instruct` | Listado gratis pero **404 para esta cuenta** | Descartado: no todo lo que aparece en `/v1/models` está habilitado para la cuenta | ❌ 404 "Not found for account" |
 | MiMo-V2.5 / -Pro (Xiaomi) | OpenRouter (de pago) o self-host (MIT) | `xiaomi/mimo-v2.5[-pro]` | NO gratis por API | Interés por ranking de uso en OpenRouter; fuera del scope de la cadena directa | Sin mini-eval |
 | Mistral (La Plateforme, free tier "Experiment") | Mistral | — | ~1B tok/mes, límites no publicados | 5º backstop potencial; el propio proveedor lo marca "evaluación, no producción" | En seguimiento, sin plumbing |
+| DeepSeek V4 Pro | NVIDIA NIM | (id exacto sin confirmar por catálogo) | Gratis (mismo tier NIM) | Posible upgrade de calidad para el primario NIM — citado junto a GLM-5.2/Nemotron 3 Ultra como de los mejores gratis en NIM a 25/07/2026 | Sin mini-eval (sin key ni id exacto confirmado); no desplaza al 70B recién verificado en vivo el 22/08 — no hay urgencia |
+| Qwen3.6-27b | Groq (gratis) | `qwen/qwen3.6-27b` (a confirmar) | Gratis (rate-limited) | Alternativa de Groq a `gpt-oss-120b` en sus propios anuncios de deprecación (17/06) — mismo proveedor, no suma resiliencia, solo posible diversidad de calidad | Sin mini-eval (sin key); no sustituye a `gpt-oss-120b`, que sigue siendo EL destino recomendado por Groq |
 
 ## Bitácora de hallazgos (lo más reciente arriba)
+
+- **2026-08-24 · pasada semanal — los 5 eslabones cableados VIVOS, sin candidatos que crucen el
+  listón, sin hallazgos críticos.** Sin `NVIDIA_API_KEY`/`GROQ_API_KEY`/`GEMINI_API_KEY`/
+  `MOONSHOT_API_KEY`/`CEREBRAS_API_KEY` en esta sesión y WebFetch directo a los 5 catálogos
+  (`build.nvidia.com`, `console.groq.com`, `ai.google.dev`, `platform.moonshot.ai`,
+  `inference-docs.cerebras.ai`) bloqueado por el proxy de egress → verificación por WebSearch
+  dirigido (no por llamada real ni `/v1/models`, a diferencia de la pasada del 22/08). Único punto
+  dudoso investigado a fondo: una señal de "End of Support" para el microservicio NIM
+  `llama-3.1-70b-instruct` (NGC, julio 2026) — descartada como aplicable al endpoint hosted que
+  consumimos (es el ciclo de vida del contenedor Docker autoalojado, no de la API `build.nvidia.com`
+  con key; son productos distintos de NVIDIA). Groq `openai/gpt-oss-120b` sale reforzado: es el
+  destino de migración que Groq mismo eligió para 6 modelos deprecados distintos en lo que va de
+  2026. Kimi K2.6 y Gemini Flash confirmados vivos sin sunset propio. Descubrimiento: 2 candidatos
+  anotados en seguimiento sin mini-eval (sin key) — `DeepSeek V4 Pro` (NIM, gratis, citado como de
+  los mejores del catálogo a 25/07) y `qwen/qwen3.6-27b` (Groq, gratis, alternativa de Groq a
+  gpt-oss-120b en sus propios avisos) — ninguno cruza el listón para acción: no hay evidencia de que
+  batan al eslabón vivo que sustituirían, y el 70B de NIM fue verificado en vivo hace solo 2 días.
+  Sin Telegram (nada que decidir), solo doc.
 
 - **2026-08-22 · 🔴 HALLAZGO CRÍTICO desde el health-check (no la pasada semanal habitual): `z-ai/glm-5.2`
   MURIÓ (410 Gone, EOL real 21/08/2026, 3 días antes de la fecha 24/08/2026 de su propia ficha) →
