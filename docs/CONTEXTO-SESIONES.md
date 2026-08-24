@@ -100,7 +100,10 @@ Decisión suya («¿hacemos punto 2?»): `UNIVERSO_TAM` 800→**1000** (el "Russ
 ~75-80% > umbral 50%. Las ~200 nuevas se siembran en la siguiente pasada del cron (rancias → van
 primero). Alberto pidió no esperar al lunes: nuevo `POST /api/trading/radar` (auth `isRoutineAuthorized`,
 mismo tier que /analizar) para disparar el ranking en cuanto las 200 tengan datos (~25/08 14:40 CEST);
-vigilante armado que lo dispara y avisa. PRs #1666 y el de este endpoint.
+vigilante armado que lo dispara y avisa (incluye puesto de NKE y DBX). PRs #1666 y #1681.
+DECISIÓN (chat): el universo se queda SOLO en EEUU — la ventaja es el dato (EDGAR/Form 4/8-K); el
+núcleo VWCE ya cubre el resto del mundo. Ampliar = más profundidad EEUU (small caps), candidata
+Fase 2 SOLO si el forward valida; exigiría tocar la cadencia del refresco.
 
 ### 💸 (24/08/2026) Vercel 126,77€: el 79% siguen siendo Build CPU Minutes → previews apagadas (`--sin-previews`)
 Factura 14 jul–13 ago (recibo 2886-1078): Build CPU Minutes 32.708 min ≈ 92,51 US$ de 117 US$ de subtotal
