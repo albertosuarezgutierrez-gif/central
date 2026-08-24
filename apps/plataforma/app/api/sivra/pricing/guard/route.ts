@@ -558,7 +558,7 @@ export async function GET(req: NextRequest) {
     const ok = await pushAlert({
       tipo: "comps_otro_aforo", prioridad: "alta", property_id: a.property_id,
       titulo: `${PROP_NAMES[a.property_id] ?? a.property_id}: su mercado se está leyendo de pisos de otro tamaño`,
-      detalle: `${a.ev.motivo} Mientras siga así, NO bajes el precio de este piso con el dato de mercado: lanza el barrido (/api/sivra/mercado/sweep) y vuelve a mirarlo.`,
+      detalle: `${a.ev.motivo} Mientras siga así, NO bajes el precio de este piso con el dato de mercado: revisa que la rutina de Booking (mercado-booking) esté midiendo su aforo y vuelve a mirarlo.`,
     })
     if (ok) created++
   }

@@ -244,21 +244,10 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'alguien lo está llamando sin CRON_SECRET y no escribe nada. ' +
       'Huella: agente_latidos.sivra_canal.',
   },
-  {
-    id: 'sivra_mercado_sweep',
-    etiqueta: '🔎 Barrido de mercado por temporada (diario 03:00)',
-    maxHoras: 30,
-    nota:
-      'El corpus de comparables se está quedando viejo. Sin mercado fresco el motor cae al bucket ' +
-      'global (bajo) y los precios se deslizan hacia el suelo justo en los meses buenos; además los ' +
-      'centinelas de evento se quedan sin muestra y dejan de vigilar (evaluado:false NO es «todo ' +
-      'bien»). EL DETALLE DICE QUÉ MITAD FALLÓ, léelo antes de tocar nada: «búsquedas sin ' +
-      'resultados» = Serper no devuelve nada para la consulta (agotada, o la consulta ya no casa ' +
-      'con nada — pasó el 02/08/2026 con el operador site:booking.com); «que la IA no supo leer» = ' +
-      'la pasarela; «el corpus NO refleja temporada» = sí hay comps, pero son los mismos para todas ' +
-      'las fechas, así que la línea de temporada es falsa. Un «0 comps» a secas NO es «no hay ' +
-      'mercado». Huella: agente_latidos.sivra_mercado_sweep.',
-  },
+  // 🪦 `sivra_mercado_sweep` y `sivra_mercado_cron` se RETIRARON del registro el 24/08/2026 junto
+  // con sus crons (ver `lib/cron-dispatch.ts`): la vía Serper murió por créditos el 22/08 y la
+  // rutina de Booking ya cubre el corpus fiable. Un agente sin cron en el registro sería una
+  // alarma diaria sin arreglo posible — exactamente el ruido que este vigía no puede permitirse.
   {
     id: 'sivra_mercado_booking',
     etiqueta: '🏨 Mercado real por fecha (rutina Booking, diaria)',
@@ -337,19 +326,6 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'ocupación por mes y el fallback `actual` del raíl. Si calla, todos ellos trabajan sobre la ' +
       'foto de ayer sin saberlo. Si el detalle trae «HTTP 401/403», la API key de Smoobu; si trae ' +
       'una excepción de BD, este cron. Huella: agente_latidos.sivra_rates_snapshot.',
-  },
-  {
-    id: 'sivra_mercado_cron',
-    etiqueta: '🔍 Scraper diario de mercado por búsqueda web (diario 07:15)',
-    maxHoras: 30,
-    nota:
-      'La vía Serper de comparables está muda. OJO: `ok=false` con detalle «Serper 4xx» NO se arregla ' +
-      'en el repo — el cuerpo del error dice si es la CUENTA (créditos agotados: recargar en ' +
-      'serper.dev y comprobar SERPER_API_KEY en Vercel) o la consulta. Así murió en silencio del ' +
-      '22 al 24/08/2026: dos días sin una sola fila `fuente=serper` en market_rates con ok:true en ' +
-      'cada respuesta, porque searchPortal se tragaba el fallo con un catch → []. Mientras esté caída, ' +
-      'el corpus pierde amplitud pero la rutina de Booking (fuente fiable) sigue midiendo por fecha. ' +
-      'Huella: agente_latidos.sivra_mercado_cron.',
   },
   {
     id: 'sivra_resumen_diario',

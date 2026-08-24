@@ -483,6 +483,17 @@ declara **UN solo cron**: `/api/cron/dispatch` cada minuto.
   (`intencion`/`parse`/`formato`/`acciones-tipos`/`documentos-tipos`) testeables con `node --test` (sin
   `@/` ni Prisma). Cadena de fallback IA global: **NIM → Groq → Gemini → Kimi** (`@central/core-ai`).
 
+## 🔀 Proveedores de IA — regla permanente (dictada por Alberto, 24/08/2026)
+**Todo lo que PUEDA ir por OpenRouter, va por OpenRouter.** Unificar proveedores: cada proveedor
+suelto (Serper, keys directas de Gemini, APIs de búsqueda de terceros…) es una cuenta más que se
+agota, rota o cambia de precio EN SILENCIO — la caída de Serper del 22/08/2026 tardó dos días en
+verse. OpenRouter ya da modelos + búsqueda web + fallback nativo + presupuesto/auditoría en
+`ai_usos`, todo por una sola key. Al añadir una capacidad nueva de IA/búsqueda, la pregunta no es
+«¿qué API la da?» sino «¿la da OpenRouter?»; solo si no, se considera un proveedor aparte — y
+entonces con latido/presupuesto propios desde el día uno. (Las vías gratis existentes —cadena
+NIM→Groq→…, Gemini gateado— siguen como fallback/opción, pero no se añaden dependencias nuevas
+fuera de OpenRouter sin decisión explícita de Alberto.)
+
 ## Índice de arquitectura a nivel de función + Director de código (10/07/2026)
 Para que los agentes programadores NO lean el repo entero por cada tarea:
 - **Índice (0 tokens):** `scripts/auditar-estructura.mjs` extrae firmas de función + resumen + tablas por archivo
@@ -971,9 +982,10 @@ Hallazgos 4-6 de `docs/AUDITORIA-2026-08-pricing-mudo.md` (los 🔴 se cerraron 
   (`avisoPilotTrack` en `lib/sivra/pilot-track.ts`; el día normal = `null`, sin ruido). Los avisos de
   DATOS van primero: un rojo medido sobre un snapshot viejo puede ser mentira.
 - **Los 5 jobs sin latido ya laten** (todos diarios, umbral 30 h): `sivra_rates_snapshot` (el que más
-  pesa: precio vivo + ocupación), `sivra_mercado_cron`, `sivra_resumen_diario` (su «cómo fue el día»
-  vive en el DETALLE del latido, sin Telegram diario a propósito), `sivra_pilot_track`,
-  `sivra_experimentos` (el bucle de aprendizaje).
+  pesa: precio vivo + ocupación), `sivra_resumen_diario` (su «cómo fue el día» vive en el DETALLE del
+  latido, sin Telegram diario a propósito), `sivra_pilot_track`, `sivra_experimentos` (el bucle de
+  aprendizaje). El 5º (`sivra_mercado_cron`) se retiró horas después junto con toda la vía Serper —
+  ver el 🪦 del landmine `market_rates.fuente`.
 - 🚨 **`mercado/cron` ya no se traga los fallos de Serper**: así murió la vía Serper ENTERA del 22 al
   24/08 (cero filas `fuente='serper'` en `market_rates`) con `ok:true` en cada pasada — el
   `catch { return [] }` de `searchPortal` convertía «Serper caído» en «0 comps hoy». Ahora los fallos
@@ -1040,9 +1052,11 @@ Hallazgos 4-6 de `docs/AUDITORIA-2026-08-pricing-mudo.md` (los 🔴 se cerraron 
   sin fecha. `fuente` (`serper`|`booking_mcp`|`manual`, **default `serper`** = lectura conservadora)
   es lo que permite medir cobertura fiable (`FUENTES_FIABLES` de `lib/sivra/mercado-cobertura.ts`
   excluye Serper) y, en la fase 2, retirarlo sin adivinar por heurística de fechas.
-  **⚠️ NO apagues el sweep de Serper todavía:** hoy TODO el corpus `prop_*` sale de él (el cron
-  diario escribe `scenario='normal'`) y el motor tiene `MAX_MARKET_AGE_DAYS = 7` + bucket mensual con
-  ≥3 fechas — apagarlo antes de que Booking acumule 3 fechas/mes deja el pricing ciego en una semana.
+  **🪦 El sweep de Serper SE APAGÓ el 24/08/2026** (con la condición de arriba ya cumplida, no
+  antes): la cuenta agotó créditos el 22/08 y Booking acumulaba 1.100-1.300 comps fiables por piso en
+  95-99 fechas — dos días sin Serper y el motor tarificó los 4 pisos sin inmutarse. Los dos crons
+  (`mercado/cron` 07:15 y `mercado/sweep` 03:00) están fuera de `CRON_JOBS` y sus latidos fuera del
+  registro; las rutas siguen vivas para llamadas manuales si vuelve a haber SERPER_API_KEY.
   **`fuente` NO es `corpus_clonado`** (columna hermana de #1282, mismo día): `corpus_clonado` es el
   veredicto de UNA pasada (la guardia de medianas clonadas la marcó) y ya excluye a las pasadas del
   sweep del 05/08 en adelante de los buckets por mes y por fecha; `fuente` es la PROCEDENCIA de la
