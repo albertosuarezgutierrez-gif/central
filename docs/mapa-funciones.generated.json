@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-23T10:16:07Z",
-  "sha": "1082c4e1ca3d0779a3ec4b79ea941b187bcb13ea",
+  "generadoEn": "2026-08-24T07:19:35Z",
+  "sha": "9e00e691815780b956978c9ce36cbf59cdbe4d98",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -52870,7 +52870,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 120
+          "linea": 139
         }
       ],
       "tablas": [
@@ -52883,7 +52883,7 @@
         "pricing_decisiones"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "b34f68f6b37e"
+      "hash": "bb90a6c8c214"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -57024,7 +57024,7 @@
           "exportada": false,
           "params": "query: string",
           "retorno": "Promise<string>",
-          "linea": 17,
+          "linea": 18,
           "resumen": "── Serper.dev → búsqueda real en Google ─────────────────────────────────────"
         },
         {
@@ -57033,15 +57033,15 @@
           "exportada": false,
           "params": "snippets: string, portal: string, checkin: string, checkout: string",
           "retorno": "Promise<any[]>",
-          "linea": 40
+          "linea": 47
         },
         {
           "nombre": "searchPortal",
           "kind": "function",
           "exportada": false,
-          "params": "portal: string, checkin: string, checkout: string",
+          "params": "portal: string, checkin: string, checkout: string, fallos: string[]",
           "retorno": "Promise<any[]>",
-          "linea": 60
+          "linea": 67
         },
         {
           "nombre": "generateAlerts",
@@ -57049,7 +57049,7 @@
           "exportada": false,
           "params": "scenario: string, checkin: string",
           "retorno": null,
-          "linea": 76
+          "linea": 87
         },
         {
           "nombre": "GET",
@@ -57057,7 +57057,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 154
+          "linea": 165
         }
       ],
       "tablas": [
@@ -57068,7 +57068,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/cron",
-      "hash": "cf3cd0ff460d"
+      "hash": "255af8c27e5c"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/flights/route.ts",
@@ -57180,7 +57180,7 @@
           "exportada": false,
           "params": "snippets: string, portal: string, checkin: string, checkout: string, guests: number",
           "retorno": "Promise<any[]>",
-          "linea": 35
+          "linea": 40
         },
         {
           "nombre": "searchPortal",
@@ -57188,7 +57188,7 @@
           "exportada": false,
           "params": "portal: string, checkin: string, checkout: string, guests: number, scenario: string",
           "retorno": "Promise<",
-          "linea": 55
+          "linea": 60
         },
         {
           "nombre": "GET",
@@ -57196,7 +57196,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 74
+          "linea": 79
         }
       ],
       "tablas": [
@@ -57205,7 +57205,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/search",
-      "hash": "2dff334c7764"
+      "hash": "b186326e2fae"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/stats/route.ts",
@@ -57278,7 +57278,7 @@
           "exportada": false,
           "params": "snippets: string, checkin: string, checkout: string,",
           "retorno": "Promise<",
-          "linea": 131,
+          "linea": 136,
           "resumen": "`estado` separa «la IA leyó y no había precios» (ausencia real) de «la IA no pudo leer» (fallo técnico: ningún modelo respondió o el JSON vino roto). Antes ambos caían en el mismo `[]`."
         },
         {
@@ -57287,7 +57287,7 @@
           "exportada": false,
           "params": "valores: number[]",
           "retorno": "number | null",
-          "linea": 154
+          "linea": 159
         },
         {
           "nombre": "GET",
@@ -57295,7 +57295,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 161
+          "linea": 166
         }
       ],
       "tablas": [
@@ -57307,7 +57307,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/sweep",
-      "hash": "6d2f0ecf0ce3"
+      "hash": "d63e19d1b5fe"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pl-mensual/route.ts",
@@ -57400,7 +57400,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/pricing/apply-auto",
-      "hash": "564242424235"
+      "hash": "6abde35f1c5a"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/apply/route.ts",
@@ -57416,7 +57416,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 44
+          "linea": 45
         },
         {
           "nombre": "fmt",
@@ -57424,7 +57424,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 45
+          "linea": 46
         },
         {
           "nombre": "GET",
@@ -57432,7 +57432,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 77,
+          "linea": 78,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -57441,7 +57441,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 81
+          "linea": 82
         }
       ],
       "tablas": [
@@ -57465,7 +57465,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "16fb6d26b896"
+      "hash": "ea6397dc1f2c"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -57593,7 +57593,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 10,
+          "linea": 11,
           "resumen": "GET /api/sivra/pricing/experiments/check-results Cron o manual: actualiza resultados de experimentos pasados"
         }
       ],
@@ -57602,7 +57602,7 @@
         "pricing_experiments"
       ],
       "rutaApi": "/api/sivra/pricing/experiments/check-results",
-      "hash": "d5ab2fdc1b09"
+      "hash": "3589b0b04982"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/experiments/digest/route.ts",
@@ -57686,7 +57686,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 64
+          "linea": 74
         }
       ],
       "tablas": [
@@ -57708,13 +57708,14 @@
         "pricing_eventos_auto",
         "pricing_piso_zona",
         "pricing_settings",
+        "properties",
         "rate_snapshots",
         "restringe",
         "snap",
         "ult"
       ],
       "rutaApi": "/api/sivra/pricing/guard",
-      "hash": "cf19e689fa4a"
+      "hash": "04fee64496ea"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/historial/route.ts",
@@ -57777,7 +57778,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 40
+          "linea": 42
         }
       ],
       "tablas": [
@@ -57794,7 +57795,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/pilot-track",
-      "hash": "4ee93605f9ee"
+      "hash": "b02ba71ff006"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/recommend/route.ts",
@@ -57886,7 +57887,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 19
+          "linea": 20
         }
       ],
       "tablas": [
@@ -57895,7 +57896,7 @@
         "pricing_applied"
       ],
       "rutaApi": "/api/sivra/pricing/resumen-diario",
-      "hash": "a1ae0d8aba09"
+      "hash": "a137e5c150fc"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/settings/route.ts",
@@ -57970,7 +57971,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 24
+          "linea": 25
         },
         {
           "nombre": "GET",
@@ -57978,7 +57979,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 28
+          "linea": 29
         }
       ],
       "tablas": [
@@ -57987,7 +57988,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/rates/snapshot",
-      "hash": "d33bd2615c41"
+      "hash": "de4eef9dbf09"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/resumen-semanal/route.ts",
@@ -66417,7 +66418,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "58b3278e3475"
+      "hash": "dafa25089df6"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/reparable.ts",
@@ -69882,11 +69883,80 @@
       "hash": "905221de1dd6"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/noches-sin-income.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/noches-sin-income.ts — clasifica las «noches fantasma»: fechas futuras que el calendario de Smoobu tiene bloqueadas (available=0) sin ningún income que las cubra. Caso fundacional (24/08/2026): Busto Reform 15-17 abr 2027 llevaba TRES ciclos del agente de pricing apareciendo «vendida a 103",
+      "exporta": [
+        "reservaDesdeSmoobu",
+        "clasificarNoche",
+        "agruparRangos",
+        "ventanaConsulta"
+      ],
+      "funciones": [
+        {
+          "nombre": "reservaDesdeSmoobu",
+          "kind": "function",
+          "exportada": true,
+          "params": "b: any",
+          "retorno": "ReservaVentana",
+          "linea": 33,
+          "resumen": "Adapta un booking crudo del API de Smoobu (claves kebab-case) a `ReservaVentana`."
+        },
+        {
+          "nombre": "cubre",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "r: ReservaVentana, fecha: string",
+          "retorno": "boolean",
+          "linea": 64
+        },
+        {
+          "nombre": "clasificarNoche",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string, reservas: ReservaVentana[]",
+          "retorno": "NocheClasificada",
+          "linea": 72,
+          "resumen": "Clasifica UNA noche bloqueada-sin-income contra las reservas que Smoobu devuelve para su ventana. Prioridad deliberada: una reserva viva manda sobre un bloqueo, y ambos sobre una cancelación — lo que "
+        },
+        {
+          "nombre": "agruparRangos",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechas: string[]",
+          "retorno": "",
+          "linea": 84,
+          "resumen": "Agrupa fechas YYYY-MM-DD (no necesariamente ordenadas) en rangos consecutivos inclusivos."
+        },
+        {
+          "nombre": "diaSiguiente",
+          "kind": "function",
+          "exportada": false,
+          "params": "fecha: string",
+          "retorno": "string",
+          "linea": 95
+        },
+        {
+          "nombre": "ventanaConsulta",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechas: string[]",
+          "retorno": "",
+          "linea": 106,
+          "resumen": "Ventana de llegada con la que pedir a Smoobu las reservas que pueden cubrir estas noches. Se abre 35 días hacia atrás: una estancia larga puede cubrir la noche habiendo llegado semanas antes, y el fil"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "07ca18e043fe"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/pilot-track.ts",
       "ambito": "apps/plataforma",
       "resumen": "Lógica PURA del agente de seguimiento del piloto (sin DB ni red → testeable por inspección). El endpoint /api/sivra/pricing/pilot-track aporta los datos; aquí solo se decide el veredicto.",
       "exporta": [
-        "evaluatePilot"
+        "evaluatePilot",
+        "avisoPilotTrack"
       ],
       "funciones": [
         {
@@ -69897,11 +69967,20 @@
           "retorno": "PilotVerdict",
           "linea": 33,
           "resumen": "Anti-falso-🔴 / anti-falso-🟢: separa \"sin datos\", \"todo bloqueado\", \"todo reservado\" y \"sin demanda\"."
+        },
+        {
+          "nombre": "avisoPilotTrack",
+          "kind": "function",
+          "exportada": true,
+          "params": "rojos: PisoRojo[], watchdog: string[]",
+          "retorno": "string | null",
+          "linea": 116,
+          "resumen": "Aviso de Telegram del seguimiento del piloto. `null` si no hay nada que exija ojos — el día normal NO genera mensaje: un vigía que da la lata a diario se silencia y deja de vigilar. Los avisos del wat"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "81eb443be45b"
+      "hash": "0f6d5e489a6b"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pl-mensual.ts",
@@ -70514,6 +70593,38 @@
       "hash": "089c84cdb09a"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/pricing-lecturas.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Lecturas auxiliares del motor de precios que pueden caerse SIN invalidar la pasada — pero que hasta hoy se caían EN SILENCIO (hallazgo 🟡 4 de `docs/AUDITORIA-2026-08-pricing-mudo.md`). El `apply` tiene once lecturas que degradan. Tres ya se declaraban (eventos, PriceLabs, ocupación-por-mes) y dos a",
+      "exporta": [
+        "resumenLecturasCaidas",
+        "avisoLecturasCaidas"
+      ],
+      "funciones": [
+        {
+          "nombre": "resumenLecturasCaidas",
+          "kind": "function",
+          "exportada": true,
+          "params": "fallos: LecturaCaida[]",
+          "retorno": "string | null",
+          "linea": 35,
+          "resumen": "Resumen corto para la respuesta HTTP y el parte del latido. `null` si no cayó ninguna. Va nombre a nombre porque el vigía de las 07:45 decide con esto a qué log ir."
+        },
+        {
+          "nombre": "avisoLecturasCaidas",
+          "kind": "function",
+          "exportada": true,
+          "params": "fallos: LecturaCaida[]",
+          "retorno": "string | null",
+          "linea": 48,
+          "resumen": "Aviso de Telegram cuando alguna lectura auxiliar falla. `null` si ninguna. Deja claro lo que separa esto de un `rail_ciego`: la pasada SÍ tarificó, con fallback — los precios están escritos y son plau"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "736059ce458f"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/pricing-precio-huesped.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/pricing-precio-huesped.ts — lo que ve el HUÉSPED, que no es lo que decide el motor. POR QUÉ (19/08/2026). El motor razona, decide y se autolimita en precio BASE: el ancla de mercado, el suelo `min_price`, el raíl ±%/día, el prior estacional… todo en base. Pero el huésped no paga la base: p",
@@ -70893,6 +71004,7 @@
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/smoobu-sync.ts — sync incremental de reservas de Smoobu → tabla `incomes`. Extraído de app/api/sivra/updates/sync para poder reusarlo desde el webhook (tiempo real) y desde el cron (red de seguridad). Es IDEMPOTENTE: upsert por reservationId, borra en cancelación.",
       "exporta": [
+        "listarReservasVentana",
         "runSync"
       ],
       "funciones": [
@@ -70921,12 +71033,21 @@
           "linea": 43
         },
         {
+          "nombre": "listarReservasVentana",
+          "kind": "function",
+          "exportada": true,
+          "params": "arrFrom: string, arrTo: string, modifiedDays = 800, maxPages = 10",
+          "retorno": null,
+          "linea": 66,
+          "resumen": "Lista las reservas CRUDAS de Smoobu cuya estancia toca la ventana [arrFrom, arrTo] — canceladas y bloqueos manuales incluidos (showCancellation=1 y sin filtrar `is-blocked-booking`, al revés que runSy"
+        },
+        {
           "nombre": "runSync",
           "kind": "function",
           "exportada": true,
           "params": "days: number, maxPages = 20, arrFrom?: string, arrTo?: string",
           "retorno": null,
-          "linea": 58
+          "linea": 81
         }
       ],
       "tablas": [
@@ -70936,7 +71057,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "1c7233b376cd"
+      "hash": "418828309e5f"
     },
     {
       "ruta": "apps/plataforma/lib/smoobu.ts",
@@ -96492,7 +96613,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2555,
-    "funciones": 7009
+    "archivos": 2557,
+    "funciones": 7019
   }
 }
