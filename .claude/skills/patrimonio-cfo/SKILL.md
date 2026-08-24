@@ -95,6 +95,21 @@ oportunidad:
   (detalle en las notas del activo). Si el tipo aplicado subió, averiguar qué bonificación se
   perdió y si recuperarla cuesta menos de lo que ahorra — recuperar 0,10-0,50 puntos suele
   rendir más que cualquier amortización parcial. Es la primera palanca, no la última.
+- **🔁 CICLO ANUAL de la bonificación por planes (estrategia FIJA de Alberto, 24/08/2026 —
+  «lo ideal es ir pasando año tras año»):** la gestora confirmó por la intranet que la
+  bonificación máxima por planes de pensiones (0,20%; con ella el tipo queda en 1,20%) exige
+  un **incremento neto de 2.000€/año en planes de Kutxabank por cada período de revisión**
+  (la revisión es cada **5 de abril**; valen aportaciones o traslados). EN CADA PASADA:
+  calcula cuánto incremento neto lleva el período en curso (5-abr → 5-abr, traslados +
+  aportaciones a los planes de Kutxabank leídos de banca/datos de la reco #1) y cuántos
+  meses quedan; si a partir de ENERO faltan >0€ para los 2.000€, la pasada lo dice en el
+  informe y, si en marzo sigue incompleto, aviso Telegram propio (no esperar al informe).
+  La fuente del traslado es el **PPA GENERALI PPA III-1, póliza 3V-G-410.000.330** (rinde
+  ~0,2% anual garantizado — trasladar casi nunca pierde), pero es FINITA: tras el traslado
+  de 2026 quedan ~2.700€ → da para ~2 períodos más; **desde ~2028 la vía son aportaciones
+  directas** (que además deducen en IRPF — coordinar con `perfil-fiscal`). Antes de cada
+  traslado, comparar rentabilidad del plan destino de Kutxabank vs el PPA (lo pidió la
+  propia gestora). Los datos operativos viven en `patrimonio_recomendaciones` #1 (`datos`).
 - **Comisión efectiva:** la compensación pactada es la MENOR entre la pérdida financiera del
   banco y el tope legal — con tipos de mercado por encima del tipo del préstamo, la pérdida
   del banco es 0 y amortizar no tiene coste. Verifícalo con los tipos del momento.

@@ -32,6 +32,15 @@
 
 ---
 
+### 🔁 (24/08/2026) ESTRATEGIA FIJA: bonificación de la hipoteca por planes, renovada año tras año
+Alberto: «lo ideal es ir pasando año tras año». La gestora (intranet Kutxabank) confirmó la mecánica:
+2.000€/año de incremento neto en planes de Kutxabank por período de revisión (5-abr) → bonif. 0,20% →
+tipo 1,20%. Fuente: PPA GENERALI PPA III-1 (póliza 3V-G-410.000.330, ~0,2% anual, quedan ~2.700€ tras
+el traslado 2026 → ~2 períodos; desde ~2028, aportaciones directas que además deducen IRPF). Grabado
+en skill `patrimonio-cfo` (Paso 4, vigilancia del acumulado en cada pasada + aviso si en ene-mar
+faltan €), `docs/PATRIMONIO-CFO.md` y reco #1 (`datos`). Pendiente de Alberto: enviar a la gestora el
+nombre del producto (texto ya redactado) y completar 1.063,41€ este período. PRs #1658/#1660/#1662/#1663.
+
 ### 📈 (24/08/2026) TRADING — universo del radar 800→1000 (caso DBX)
 Alberto preguntó por qué Dropbox (DBX, ~8-9 B$) no salía en el radar: no estaba en el universo — el
 corte de las 800 primeras de company_tickers.json (SEC) la dejaba fuera; `trading_universo` sin fila.
