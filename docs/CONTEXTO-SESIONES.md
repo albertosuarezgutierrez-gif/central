@@ -32,6 +32,15 @@
 
 ---
 
+- **Canal conversacional del patrimonio + dossier inicial del CFO (24/08/2026).** Alberto pidió
+  poder HABLAR con el agente patrimonial. PR #1648 (draft): `/patrimonio <pregunta>` por Telegram
+  (foto determinista o IA sobre BD; `lib/patrimonio-chat.ts` puro + `lib/patrimonio-telegram.ts`),
+  botones ✅/✖️/📋 en recomendaciones (prefijo `ptr_` en webhook + `alerta-botones`; solo anotan
+  `decision_alberto`), skill `patrimonio-cfo` actualizada. Además se ejecutó la 1ª pasada del CFO
+  a mano (el trigger de agente no puede clonar conectores): neto mínimo 1.756.976,88€,
+  recomendaciones #1-#3 en BD, Telegram msg 3554, termómetro sin medir declarado (radar 01/09).
+  Pendiente: merge #1648 para que boten los botones; respuestas de intake de Alberto (5 preguntas).
+
 ### 🛡️ (24/08/2026) Check #10 del guardián: noche bloqueada sin income ya se detecta y REPARA sola
 Para que lo del Busto Feria no se repita (petición de Alberto): `pricing/guard` gana el check #10 —
 noches futuras `available=0` sin income (predicado `::date`), contrastadas contra Smoobu EN VIVO
