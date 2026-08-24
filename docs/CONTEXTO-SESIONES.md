@@ -32,6 +32,16 @@
 
 ---
 
+- **Canal conversacional del patrimonio + dossier inicial del CFO (24/08/2026).** Alberto pidió
+  poder HABLAR con el agente patrimonial. PR #1648: `/patrimonio <pregunta>` por Telegram
+  (foto determinista o IA sobre BD; `lib/patrimonio-chat.ts` puro + `lib/patrimonio-telegram.ts`),
+  botones ✅/✖️/📋 en recomendaciones (prefijo `ptr_` en webhook + `alerta-botones`; solo anotan
+  `decision_alberto`), skill `patrimonio-cfo` actualizada. Además se ejecutó la 1ª pasada del CFO
+  a mano (el trigger de agente no puede clonar conectores): neto mínimo 1.756.976,88€,
+  recomendaciones #1-#3 en BD, Telegram msg 3554, termómetro sin medir declarado (radar 01/09).
+  Pendiente: respuestas de intake de Alberto (5 preguntas). La reco #1 (bonificación hipoteca)
+  quedó decidida el mismo día en la sesión de charla (entrada 💶 de abajo) → anotada `aceptada`.
+
 ### 🌎 (24/08/2026) Digest del radar S&P 500: par más correlacionado, 🚀 en insiders y errores desglosados
 Revisión del digest semanal con Alberto (verificado contra `trading_ranking` del 24/08: cuadraba todo).
 Tres mejoras en `lib/trading/radar.ts`: (1) `parMasCorrelacionado` (`concentracion.ts`, puro) al lado

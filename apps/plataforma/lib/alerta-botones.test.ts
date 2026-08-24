@@ -11,10 +11,21 @@ test('acepta el teclado real de una propuesta: URL https + callback trd_', () =>
   assert.equal(filas?.[0][1].callback, 'trd_no:100')
 })
 
-test('rechaza callbacks fuera del prefijo trd_ (un token filtrado no fabrica botones de pago)', () => {
+test('rechaza callbacks fuera de los prefijos trd_/ptr_ (un token filtrado no fabrica botones de pago)', () => {
   assert.equal(validarBotones([[{ texto: 'ok', callback: 'pago_aprobar:55' }]]), null)
   assert.equal(validarBotones([[{ texto: 'ok', callback: 'mov_confirmar_ia:1:pisos' }]]), null)
   assert.equal(validarBotones([[{ texto: 'ok', callback: 'trd_' }]]), null)
+  assert.equal(validarBotones([[{ texto: 'ok', callback: 'ptr_' }]]), null)
+})
+
+test('acepta el teclado de una recomendación del patrimonio-cfo (ptr_ok/ptr_no/ptr_det)', () => {
+  const filas = validarBotones([[
+    { texto: '✅ Acepto', callback: 'ptr_ok:12' },
+    { texto: '✖️ Descarto', callback: 'ptr_no:12' },
+    { texto: '📋 Detalle', callback: 'ptr_det:12' },
+  ]])
+  assert.equal(filas?.[0].length, 3)
+  assert.equal(filas?.[0][0].callback, 'ptr_ok:12')
 })
 
 test('rechaza URLs no-https y payloads con url Y callback a la vez', () => {

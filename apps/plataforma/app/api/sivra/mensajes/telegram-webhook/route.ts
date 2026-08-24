@@ -13,6 +13,8 @@ import { aprobarPago, aplazarPago, rechazarFactura, pagarTodo, resumenSemanal } 
 import { getMovParaCallback, aprenderReglaMovimiento, enviarMensajeDudoso, sugerirDestinoConContexto, PROP_LABELS } from '@/lib/agente-movimientos'
 import { simboloValido } from '@/lib/trading/cantera'
 import { getCuentaTelegram, resolverAccionTg, manejarTextoLibreTg, manejarDocumentoTg, manejarVozTg, descargarTelegram, adjuntoDeMensaje, vozDeMensaje, arrancarOnboarding, esComandoContable } from '@/lib/contable/telegram'
+import { manejarPatrimonioTg, resolverRecomendacionTg, detalleRecomendacionTg } from '@/lib/patrimonio-telegram'
+import { esPreguntaPatrimonio } from '@/lib/patrimonio-chat'
 
 export const dynamic = 'force-dynamic'
 // El reenvío a ia-rest puede tardar (publicar un Reel espera a que Instagram
@@ -663,6 +665,39 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
+    // ── Recomendaciones del coordinador patrimonial (ptr_ok / ptr_no / ptr_det) ────────────
+    // Solo registran la DECISIÓN de Alberto en patrimonio_recomendaciones — el CFO es
+    // orientativo y estos botones no ejecutan nada. El `agentes-entrenador` juzga el acierto
+    // del agente con esta tabla, así que la decisión anotada ES el aprendizaje.
+    if (prefix === 'ptr') {
+      const cuentaPtr = await getCuentaTelegram()
+      const recoId = args[0] || ''
+      if (!cuentaPtr || !/^\d+$/.test(recoId)) {
+        await tgAnswerCallback(cb.id, 'Recomendación no encontrada')
+        return NextResponse.json({ ok: true })
+      }
+      if (action === 'det') {
+        const det = await detalleRecomendacionTg(cuentaPtr, recoId)
+        await tgAnswerCallback(cb.id, det ? '📋 Detalle' : 'Ya no existe')
+        if (det) await tgSend(det, { html: true }).catch(() => {})
+        return NextResponse.json({ ok: true })
+      }
+      if (action === 'ok' || action === 'no') {
+        const decision = action === 'ok' ? 'aceptada' : 'rechazada'
+        const titulo = await resolverRecomendacionTg(cuentaPtr, recoId, decision)
+        await tgAnswerCallback(cb.id, titulo ? (action === 'ok' ? '✅ Aceptada — anotada' : '✖️ Descartada — anotada') : 'Ya no existe')
+        if (titulo && cb.message?.message_id) {
+          await tgEditMessage(cb.message.message_id,
+            `${escapeHtml(cb.message.text || `🧭 Recomendación #${recoId}`)}\n\n${action === 'ok'
+              ? '✅ <b>Aceptada.</b> Queda registrada; el CFO hará seguimiento del desenlace.'
+              : '✖️ <b>Descartada.</b> Queda registrada — también se aprende de los noes.'}`).catch(() => {})
+        }
+        return NextResponse.json({ ok: true })
+      }
+      await tgAnswerCallback(cb.id, 'Acción desconocida')
+      return NextResponse.json({ ok: true })
+    }
+
     // ── Agente de contabilidad: confirmar/descartar una acción propuesta (cont_ok/cont_no) ──
     if (prefix === 'cont') {
       const cuentaId = await getCuentaTelegram()
@@ -828,6 +863,10 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true })
       }
       const texto = (msg.text || '').trim()
+      // Canal patrimonial: `/patrimonio …` o mención expresa de patrimonio/patrimonial.
+      // Va ANTES del contable para que estas preguntas no caigan en su cerebro (que no
+      // conoce activos/valoraciones/recomendaciones); el detector es estrecho a propósito.
+      if (texto && esPreguntaPatrimonio(texto)) { await manejarPatrimonioTg(cuentaId, texto); return NextResponse.json({ ok: true }) }
       if (texto && esComandoContable(texto)) { await arrancarOnboarding(); return NextResponse.json({ ok: true }) }
       if (texto && !texto.startsWith('/')) { await manejarTextoLibreTg(cuentaId, texto); return NextResponse.json({ ok: true }) }
     }

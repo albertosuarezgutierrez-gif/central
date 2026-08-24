@@ -4,12 +4,14 @@
 // `rutina_tokens`), pensados para que filtrarlos solo permita "mandar un Telegram". Si un token
 // filtrado pudiera adjuntar CUALQUIER callback, podría fabricar botones `pago_aprobar:*` o
 // `mov_confirmar_*` y convertir un aviso en una acción real al primer toque de Alberto. Por eso:
-//   - callbacks SOLO con prefijo `trd_` (propuestas de trading: descartar, nada más),
+//   - callbacks SOLO con prefijos inofensivos: `trd_` (descartar una propuesta de trading) y
+//     `ptr_` (decidir sobre una recomendación del patrimonio-cfo — solo ANOTA la decisión en
+//     patrimonio_recomendaciones, nunca ejecuta nada),
 //   - URLs SOLO https,
 //   - tamaño acotado (el teclado de Telegram tampoco admite más).
 export type BotonAlerta = { texto: string; url?: string; callback?: string }
 
-const RE_CALLBACK = /^trd_[a-z]{2,12}:[A-Za-z0-9_-]{1,48}$/
+const RE_CALLBACK = /^(?:trd|ptr)_[a-z]{2,12}:[A-Za-z0-9_-]{1,48}$/
 
 /** Devuelve los botones saneados, o null si el payload no es válido (el aviso sale SIN botones). */
 export function validarBotones(raw: unknown): BotonAlerta[][] | null {

@@ -15,6 +15,14 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-24 · patrimonio-cfo** · hizo: DOSSIER INICIAL fuera de ciclo (pedido por Alberto):
+  neto mínimo 1.756.976,88€ declarando estimaciones, yields 12m por activo, 3 recomendaciones
+  registradas (#1 bonificación hipoteca/no amortizar, #2 liquidez ociosa, #3 dúplex sin ventana
+  hasta el termómetro), 5 preguntas de intake, Telegram OK (msg 3554); de paso nació el canal
+  conversacional /patrimonio + botones ptr_ (PR #1648); dudas: gastos con `propiedad IS NULL`
+  en `gastos` suman 3,35M€ en 25 filas — parece de otro tenant, NO se usó, conviene aclararlo;
+  fallos: termómetro del radar sin medir (1ª pasada 01/09) — escenarios de ciclo no abiertos;
+  PRs/commits: PR #1648.
 - **2026-08-24 · pricing-agente (seguimiento)** · hizo: cerró el pendiente «Busto Feria 17-abr a 103€
   sin income» (3er ciclo) — era la reserva Airbnb HM9KR9FJFK cancelada el 23/08 que nunca entró en
   `incomes`; auditó los 4 pisos con el predicado de cobertura corregido (`"checkIn"::date`, hay filas a

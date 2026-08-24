@@ -104,11 +104,14 @@ oportunidad:
 
 ## Paso 5 — Memoria de decisiones (rendir cuentas)
 - Cada recomendación nueva → `INSERT INTO patrimonio_recomendaciones (cuenta_id, titulo,
-  recomendacion, datos)` con el snapshot de datos usados (jsonb).
-- Revisa las anteriores: si Alberto decidió algo (se lo lee en `docs/FEEDBACK-AGENTES.md`, en
-  la conversación del trigger o en cambios de la BD), anota `decision_alberto`/`decidido_at`;
-  cuando el desenlace sea medible, `outcome`/`outcome_at`. El `agentes-entrenador` juzga el
-  acierto con esta tabla — sin filas no hay aprendizaje.
+  recomendacion, datos)` con el snapshot de datos usados (jsonb). **Guárdate el `id` que
+  devuelve el INSERT** (`RETURNING id`): es el que llevan los botones del aviso (Paso 8).
+- Revisa las anteriores: `decision_alberto` puede venir YA rellenado por los **botones de
+  Telegram** (el webhook `ptr_ok`/`ptr_no` lo anota solo, con `decidido_at`) — esa es la vía
+  principal desde el 24/08/2026. Si no, búscalo en `docs/FEEDBACK-AGENTES.md`, en la
+  conversación del trigger o en cambios de la BD y anótalo tú; cuando el desenlace sea medible,
+  `outcome`/`outcome_at`. El `agentes-entrenador` juzga el acierto con esta tabla — sin filas
+  no hay aprendizaje.
 
 ## Paso 6 — Intake (mantener el perfil vivo)
 Los NULL que bloquean análisis (m², capital de hipoteca, titularidades, licencias — espejo del
@@ -126,10 +129,27 @@ Si en ESTA pasada se detecta algo con plazo, Telegram aparte e inmediato:
 - **Telegram**: informe mensual compacto — neto y evolución, tabla corta de yield vs
   alternativa por activo, el/los escenarios del mes con su recomendación y nº de registro,
   preguntas de intake. Formato español (`2.162,49€`), sin tecnicismos huecos.
+- **Cada recomendación nueva va ADEMÁS en un mensaje propio CON BOTONES de decisión** (desde
+  24/08/2026): `POST {PLATAFORMA_URL}/api/internal/alerta` con body
+  `{"text": "🧭 <titulo> (#<id>)\n<resumen en 2-3 líneas>", "botones": [[
+  {"texto":"✅ Acepto","callback":"ptr_ok:<id>"},
+  {"texto":"✖️ Descarto","callback":"ptr_no:<id>"},
+  {"texto":"📋 Detalle","callback":"ptr_det:<id>"}]]}` — el webhook registra
+  `decision_alberto`/`decidido_at` con el toque, sin que Alberto anote nada. Si la respuesta
+  trae `botonesDescartados:true` (despliegue viejo sin el prefijo `ptr_`), el aviso salió sin
+  teclado: no reintentes, la decisión llegará por el feedback de siempre.
 - **`docs/PATRIMONIO-CFO.md`**: estado actualizado (foto, recomendaciones vivas, intake
   pendiente, fecha de próxima pasada) — el informe largo vive aquí, el Telegram es el resumen.
 - Si detecta un hueco que pide un agente nuevo → propuesta por **PR draft + Telegram**
   (jamás alta directa; jamás se auto-modifica — eso es del `agentes-entrenador`).
+
+## Canal conversacional (24/08/2026) — contexto, no tarea
+Alberto puede hablar con «el agente patrimonial» desde Telegram SIN esperar a esta pasada:
+`/patrimonio` (foto determinista de BD) o `/patrimonio <pregunta>` / cualquier mensaje que
+mencione «patrimonio» (IA sobre el contexto de BD; `apps/plataforma/lib/patrimonio-telegram.ts`).
+Ese canal LEE lo que esta pasada deja escrito (activos, valoraciones, recomendaciones): cuanto
+mejor quede la BD y `patrimonio_recomendaciones`, mejor contesta. Las preguntas en caliente NO
+disparan pasadas nuevas ni las sustituyen.
 
 ## Canal de aviso — protocolo común
 **Preflight AL ARRANCAR** (no al final): `GET {PLATAFORMA_URL}/api/internal/alerta` con
