@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-24T11:20:10Z",
-  "sha": "0d32ec7ee3dde6f265db6f57241957ff85ab9616",
+  "generadoEn": "2026-08-24T13:56:23Z",
+  "sha": "5eff483da8cd371a556c0aa5182a70bfa512b83f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -73341,7 +73341,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "843618d03823"
+      "hash": "dc44d6915f9c"
     },
     {
       "ruta": "apps/plataforma/lib/trading/auth.ts",
@@ -75405,7 +75405,7 @@
           "exportada": false,
           "params": "ms: number",
           "retorno": null,
-          "linea": 16
+          "linea": 18
         },
         {
           "nombre": "hoyIso",
@@ -75413,7 +75413,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 17
+          "linea": 19
         },
         {
           "nombre": "haceDias",
@@ -75421,7 +75421,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 18
+          "linea": 20
         },
         {
           "nombre": "listaUniversoActual",
@@ -75429,7 +75429,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 21,
+          "linea": 23,
           "resumen": "Lista del universo: SEC primero; si viene rota/corta, degrada a la semilla (y el caller lo anota)."
         },
         {
@@ -75438,13 +75438,13 @@
           "exportada": true,
           "params": "lote = 50",
           "retorno": "Promise<",
-          "linea": 29,
+          "linea": 31,
           "resumen": "Refresca el siguiente lote: siembra filas nuevas, elige las `lote` más rancias y las rellena."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a8c119d750ea"
+      "hash": "2c644ebdeaa4"
     },
     {
       "ruta": "apps/plataforma/lib/trading/velas.ts",
