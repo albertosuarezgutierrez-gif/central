@@ -32,6 +32,15 @@
 
 ---
 
+### ✅ (24/08/2026) Busto «Feria 17-abr vendida a 103€ sin income» — CERRADO (era Airbnb cancelada)
+Las 3 noches 15-17 abr 2027 eran la reserva Airbnb HM9KR9FJFK (387€, creada 20/06/2026) que **nunca
+entró en `incomes`** (probable hueco del sync incremental en la semana de migración de crons 17-22/06;
+`reservas_canceladas.estaba_en_incomes=false`) y **se canceló el 23/08** — Airbnb liquida 314,41€ de
+penalización al host (vigilar ese abono en banca). Las noches vuelven al mercado a precio de Feria.
+De propina: la consulta de cobertura DEBE castear `"checkIn"::date` (hay filas a las 12:00 UTC) — sin
+el cast, 4 noches con reserva real salían como «vendidas sin income». Auditados los 4 pisos con el
+predicado bueno: **cero noches bloqueadas sin explicación**. Doc: `pricing-agente/references/ciclo.md` Paso 1. PR #1640.
+
 ### 🔎 (24/08/2026) Auditoría ligera: 4 commits del 23/08 sin entrada propia, reconciliados
 Rango 4f25e64..ed12004 (26 commits, todo el 23/08). Backlog PRs: #1600 y #1602 (ambos draft de carril 2
 del propio 23/08) siguen abiertos, `mergeable_state: dirty` por el aluvión de inserciones posteriores en

@@ -15,6 +15,12 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-24 · pricing-agente (seguimiento)** · hizo: cerró el pendiente «Busto Feria 17-abr a 103€
+  sin income» (3er ciclo) — era la reserva Airbnb HM9KR9FJFK cancelada el 23/08 que nunca entró en
+  `incomes`; auditó los 4 pisos con el predicado de cobertura corregido (`"checkIn"::date`, hay filas a
+  las 12:00 UTC) → 0 noches bloqueadas sin explicación; doc actualizada en `references/ciclo.md`;
+  dudas: por qué el sync incremental se saltó la reserva del 20/06 (sin backfill pendiente: ya está
+  cancelada); fallos: —; PRs/commits: PR #1640 (rama del ciclo 24/08).
 - **2026-08-24 · mercado-booking** · hizo: pasada diaria, plan `?max=24` (516 ventanas candidatas,
   492 recortadas por el tope, `sin_medir_nunca:24` — todas de ronda 1/evento: Navidad-Fin de Año
   25/12-1/01 y Semana Santa 25-27/03). 240 comps reales escritos en `market_rates` (10 por ventana;

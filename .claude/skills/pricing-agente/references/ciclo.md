@@ -52,11 +52,22 @@ el 11/07, precio REAL 65-81€ contra un mercado de 80€). El aviso está en la
   `/api/pricing/pisos-zona` (logueado) y PARA. Sin zona real no hay comps por zona.
 
 ### 1. Lee memoria + mide el ciclo anterior (retroalimentación)
-- **🪤 Cruce con `incomes` (17/08/2026):** una noche `rate_date` está cubierta por una reserva si
-  `checkIn <= rate_date AND checkOut > rate_date` — NUNCA busques `checkIn = rate_date` ni por
-  `date`: una reserva de 2+ noches cubre fechas donde no hace check-in. El ciclo del 17/08 reportó
-  3 fechas `no_disponible` de House «sin income» que SÍ tenían reserva real (una de ellas la Feria
-  2027 a ~1.659€/noche). Antes de afirmar «no_disponible sin income», ejecuta el cruce por rango.
+- **🪤 Cruce con `incomes` (17/08/2026; afinado 24/08/2026):** una noche `rate_date` está cubierta si
+  `"checkIn"::date <= rate_date AND "checkOut"::date > rate_date` — NUNCA busques `checkIn = rate_date`
+  ni por `date`: una reserva de 2+ noches cubre fechas donde no hace check-in. Y **el cast `::date` es
+  OBLIGATORIO**: hay filas con `checkIn` a las 12:00 UTC (no a medianoche), así que comparar el
+  timestamptz crudo contra la fecha da FALSO justo en la noche del check-in — el 24/08 ese fallo pintó
+  4 noches con reserva real (Busto 22/25-mar, House 20-sep, Luxury 28-nov) como «vendidas sin income».
+  El ciclo del 17/08 ya reportó 3 fechas de House «sin income» con reserva real (una la Feria 2027 a
+  ~1.659€/noche). Antes de afirmar «no_disponible sin income», ejecuta el cruce por rango con `::date`.
+- **✅ Caso «Busto Feria 17-abr a 103€ sin income» CERRADO (24/08/2026):** era una reserva REAL de
+  Airbnb (HM9KR9FJFK, 15→18 abr 2027, 387€, creada 20/06/2026) que **nunca entró en `incomes`**
+  (`reservas_canceladas.estaba_en_incomes=false` — probable hueco del sync incremental en la semana
+  de la migración de crons, 17-22/06) y que **se canceló el 23/08/2026** (Airbnb liquida al host
+  314,41€ de penalización — vigilar ese abono en banca). Las 3 noches vuelven al mercado y el motor
+  las retarificará a precio de Feria en cuanto el snapshot las vea `available=1`. Lección: una noche
+  bloqueada sin income puede ser una reserva que el sync incremental se saltó — `reservas_canceladas`
+  y el payload `datos` son los que lo destapan.
 - `SELECT * FROM pricing_aprendizaje` → insights/overrides previos por piso/temporada (p.ej.
   "Busto no bajar de 120", "Semana Santa muy elástica al alza"). **Respétalos.**
 - Mide outcomes del ciclo anterior: cruza `pricing_decisiones` (lo que decidiste) con
