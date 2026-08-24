@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-24T07:19:35Z",
-  "sha": "9e00e691815780b956978c9ce36cbf59cdbe4d98",
+  "generadoEn": "2026-08-24T10:29:39Z",
+  "sha": "9b5e8a2206e374f7b186ccbe49626d30fd40e4c6",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -73416,7 +73416,8 @@
       "exporta": [
         "anomaliasUniverso",
         "camposEnvenenados",
-        "neutralizarUniverso"
+        "neutralizarUniverso",
+        "resumenErrores"
       ],
       "funciones": [
         {
@@ -73445,11 +73446,19 @@
           "retorno": "",
           "linea": 63,
           "resumen": "Escaneo + neutralización EN COPIA, en una llamada: los campos imposibles salen a null (esa empresa no puntúa ese factor) y las anomalías se devuelven para DECLARARLAS en la UI/digest. Todo consumidor "
+        },
+        {
+          "nombre": "resumenErrores",
+          "kind": "function",
+          "exportada": true,
+          "params": "errores: Array<string | null | undefined>",
+          "retorno": "string | null",
+          "linea": 82
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "424ab04737aa"
+      "hash": "d49942938e30"
     },
     {
       "ruta": "apps/plataforma/lib/trading/cantera.ts",
@@ -73843,7 +73852,8 @@
       "resumen": "⚖️ CONCENTRACIÓN del top del radar (idea 20/07/2026, con el superciclo de memoria en marcha): si medio top-10 es la MISMA apuesta (BE/LITE/WDC/MU…), la diversificación de la cesta es ilusoria — cuando la burbuja pinche caerán JUNTOS. En vez de etiquetas de sector (los SIC parten el tema memoria en v",
       "exporta": [
         "correlacionMediaCesta",
-        "etiquetaConcentracion"
+        "etiquetaConcentracion",
+        "parMasCorrelacionado"
       ],
       "funciones": [
         {
@@ -73879,11 +73889,19 @@
           "retorno": "string",
           "linea": 52,
           "resumen": "Etiqueta legible para el digest (umbrales clásicos de cestas equiponderadas)."
+        },
+        {
+          "nombre": "parMasCorrelacionado",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolos: string[], seriesCierres: number[][], ventana = 60",
+          "retorno": "ParCorrelacionado | null",
+          "linea": 63
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5dc97ae63ec7"
+      "hash": "a8750cba0201"
     },
     {
       "ruta": "apps/plataforma/lib/trading/dataroma.ts",
@@ -75220,7 +75238,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "27ac4f6ba904"
+      "hash": "1da80051e77a"
     },
     {
       "ruta": "apps/plataforma/lib/trading/salidas.ts",
@@ -96614,6 +96632,6 @@
   ],
   "resumen": {
     "archivos": 2557,
-    "funciones": 7019
+    "funciones": 7021
   }
 }
