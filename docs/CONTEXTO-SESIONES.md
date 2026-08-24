@@ -88,7 +88,9 @@ corte de las 800 primeras de company_tickers.json (SEC) la dejaba fuera; `tradin
 Decisión suya («¿hacemos punto 2?»): `UNIVERSO_TAM` 800→**1000** (el "Russell 1000" del backlog Fase
 1.5). Lote sigue 50/pasada (coste igual); cron cada 6 h → ciclo ~5 días < 14 de frescura; cobertura
 ~75-80% > umbral 50%. Las ~200 nuevas se siembran en la siguiente pasada del cron (rancias → van
-primero) y entran al ranking del lunes 31/08. PR de esta entrada.
+primero). Alberto pidió no esperar al lunes: nuevo `POST /api/trading/radar` (auth `isRoutineAuthorized`,
+mismo tier que /analizar) para disparar el ranking en cuanto las 200 tengan datos (~25/08 14:40 CEST);
+vigilante armado que lo dispara y avisa. PRs #1666 y el de este endpoint.
 
 ### 💸 (24/08/2026) Vercel 126,77€: el 79% siguen siendo Build CPU Minutes → previews apagadas (`--sin-previews`)
 Factura 14 jul–13 ago (recibo 2886-1078): Build CPU Minutes 32.708 min ≈ 92,51 US$ de 117 US$ de subtotal
