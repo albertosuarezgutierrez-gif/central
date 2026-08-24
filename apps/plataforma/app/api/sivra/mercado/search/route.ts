@@ -23,7 +23,12 @@ async function serperSearch(query: string): Promise<string> {
     body:    JSON.stringify({ q: query, gl: "es", hl: "es", num: 10 }),
     signal:  AbortSignal.timeout(10_000),
   })
-  if (!res.ok) throw new Error(`Serper ${res.status}`)
+  if (!res.ok) {
+    // El cuerpo dice el PORQUÉ («Not enough credits» vs consulta rechazada): un «400» pelado
+    // obligó a deducirlo a mano el 24/08/2026, con la vía Serper entera dos días muerta.
+    const body = await res.text().catch(() => "")
+    throw new Error(`Serper ${res.status}${body ? `: ${body.slice(0, 80)}` : ""}`)
+  }
   const data     = await res.json()
   const organic: any[] = data.organic || []
   return organic

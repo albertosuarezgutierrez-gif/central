@@ -111,7 +111,12 @@ async function serperSearch(query: string): Promise<{ texto: string; resultados:
     body: JSON.stringify({ q: query, gl: "es", hl: "es", num: 10 }),
     signal: AbortSignal.timeout(10_000),
   })
-  if (!res.ok) throw new Error(`Serper ${res.status}`)
+  if (!res.ok) {
+    // El cuerpo dice el PORQUÉ («Not enough credits» vs consulta rechazada): un «400» pelado
+    // obligó a deducirlo a mano el 24/08/2026, con la vía Serper entera dos días muerta.
+    const body = await res.text().catch(() => "")
+    throw new Error(`Serper ${res.status}${body ? `: ${body.slice(0, 80)}` : ""}`)
+  }
   const data = await res.json()
   // Mismo aprovechamiento que `mercado/cron`, que es el que sí extrae comps a diario: el precio
   // suele venir en el answerBox o en los sitelinks, no en el snippet principal.

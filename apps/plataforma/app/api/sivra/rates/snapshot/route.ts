@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { calcOurs, PRICING_HORIZON_DAYS } from '@/lib/pricing-calendar'
 import { getSmoobuKey } from '@/lib/smoobu'
+import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -88,6 +89,13 @@ export async function GET(req: NextRequest) {
   try {
     await prisma.$executeRaw(Prisma.sql`SELECT update_rate_snapshots_booked()`)
   } catch { /* no crítico */ }
+
+  // 💓 Latido (hallazgo 🟡 6, 24/08/2026). Es el job que MÁS pesa de la cadena: alimenta la
+  // ocupación y el precio vivo con el que se compara todo — y hasta hoy, si moría, lo único que
+  // podía notarlo era el watchdog de pilot-track («snapshot viejo»), que era mudo. La huella no
+  // puede ser `rate_snapshots` a secas: un upsert parcial (1 de 4 pisos) también refresca la tabla.
+  await registrarLatido('sivra_rates_snapshot', errors.length === 0,
+    `${upserted} noche(s) snapshoteadas` + (errors.length > 0 ? ` · fallos: ${errors.join(' · ')}`.slice(0, 400) : ''))
 
   return NextResponse.json({ ok: errors.length === 0, snapshot_date: snapshotDate, upserted, errors })
 }

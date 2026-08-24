@@ -89,6 +89,22 @@ El cron semanal `/api/cron/paper-tracker` (alta 18/08, PR #1476) ya escribía su
 pero no estaba en `AGENTES_VIGILADOS`/`PROBES`: si dejara de correr, nadie se enteraría. Añadido con
 umbral semanal (192h). Hallazgo de la propia `/auditoria-diaria` del 20/08, cerrado el 23/08.
 
+### 🟡 (24/08/2026) Auditoría del pricing: los tres amarillos cerrados + Serper caído desde el 22/08 — PR
+
+- «Repara todo para 100%»: auditoría de salud (guardia 38/38, estructura ok, `ignoreCommand` ok,
+  latidos) y cierre de los hallazgos 4-6 de `docs/AUDITORIA-2026-08-pricing-mudo.md`. **La auditoría
+  entera queda cerrada** (3 🔴 el 23/08 + 3 🟡 hoy).
+- **4:** las 6 lecturas mudas del `apply` declaran (`lecturas_degradadas` + Telegram + latido rojo,
+  módulo puro `pricing-lecturas.ts`). **5:** watchdog de `pilot-track` → Telegram (`avisoPilotTrack`).
+  **6:** latido para los 5 jobs (`sivra_rates_snapshot`/`mercado_cron`/`resumen_diario`/`pilot_track`/
+  `experimentos`), con registro + sonda en el mismo PR.
+- 🛑 **Hallazgo NUEVO de la auditoría: la vía Serper está CAÍDA desde el 22/08** («Serper 400», 0 filas
+  `fuente='serper'` en `market_rates` el 23-24; `booking_mcp` sigue midiendo). El código no cambió →
+  cuenta de Serper (créditos/clave). **Acción de Alberto:** revisar serper.dev y, si rota la clave,
+  pegarla en el god-panel → 🔑 Secretos (`SERPER_API_KEY`). `mercado/cron` moría con `ok:true` por un
+  catch mudo (arreglado) y los errores de Serper ahora traen el cuerpo («Not enough credits»).
+- Verificado: plataforma 1538/1538 (+10), guardia 38/38, tsc 0, build 0.
+
 ### 🛑 (23/08/2026) El raíl ciego: si no se puede leer el ancla, el motor NO tarifa — PR #1634 (🔴 3)
 
 - Cierra el tercer y último 🔴 de la auditoría. Las dos lecturas del ancla (`ref24`/`anclaHoy`)

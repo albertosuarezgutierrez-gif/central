@@ -115,6 +115,25 @@ const PROBES: Record<string, Prisma.Sql> = {
   trading_operaciones: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'trading_operaciones'`,
+  // Los cinco jobs de la cadena de pricing que estaban sin latido (hallazgo 🟡 6, 24/08/2026):
+  // snapshot de Smoobu, scraper Serper, resumen del día, pilot-track y cierre de experimentos.
+  // Todos con huella de PASADA en agente_latidos — sus tablas de trabajo solo crecen cuando hay
+  // algo que hacer, así que un día tranquilo y un cron muerto serían la misma señal.
+  sivra_rates_snapshot: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'sivra_rates_snapshot'`,
+  sivra_mercado_cron: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'sivra_mercado_cron'`,
+  sivra_resumen_diario: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'sivra_resumen_diario'`,
+  sivra_pilot_track: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'sivra_pilot_track'`,
+  sivra_experimentos: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'sivra_experimentos'`,
 }
 
 async function handler(req: NextRequest) {

@@ -20,6 +20,7 @@ import { getSmoobuKey } from "@/lib/smoobu"
 import { tgSend } from "@central/core-telegram"
 import { eur } from "@/lib/dinero"
 import { anclaRail, avisoRailCiego, type LecturaAncla } from "@/lib/sivra/pricing-ancla-rail"
+import { resumenLecturasCaidas, avisoLecturasCaidas, type LecturaCaida } from "@/lib/sivra/pricing-lecturas"
 import { PASADAS_POR_DIA_APPLY } from "@/lib/sivra/pricing-latido-apply"
 
 export const dynamic = "force-dynamic"
@@ -235,11 +236,16 @@ export async function POST(req: NextRequest) {
     if (confirmado > 1) autoEvConfirmado.set(fecha, confirmado)
   }
 
+  // 🟠 Lecturas auxiliares que pueden caerse sin invalidar la pasada — pero que se DECLARAN
+  // (hallazgo 4 de la auditoría 23/08/2026): cada una empuja aquí en su .catch, y al final la
+  // pasada sale ok:false + Telegram + latido rojo con el nombre de lo que se perdió.
+  const lecturasCaidas: LecturaCaida[] = []
+
   // Señal de demanda por vuelos a SVQ (Fase 3). Solo influye si flight_demand_k>0 por piso.
   const flightRows = await prisma.$queryRaw<{ rate_date: string; demand_index: number }[]>(Prisma.sql`
     SELECT rate_date::text AS rate_date, demand_index::float8 AS demand_index
     FROM pricing_flight_demand WHERE rate_date >= CURRENT_DATE
-  `).catch(() => [])
+  `).catch((e) => { lecturasCaidas.push({ nombre: 'vuelos', error: String(e).slice(0, 120) }); return [] })
   const flightIdx = new Map(flightRows.map(r => [r.rate_date, Number(r.demand_index)]))
 
   // ─── Bucket por MES = precio de una noche NORMAL de ese mes ──────────────────────────────
@@ -302,7 +308,7 @@ export async function POST(req: NextRequest) {
       AND i."checkIn"::date >= i.reserved_at::date
       AND (ps.historico_desde IS NULL OR i."checkIn"::date >= ps.historico_desde)
     GROUP BY 1, 2
-  `).catch(() => [])
+  `).catch((e) => { lecturasCaidas.push({ nombre: 'antelacion', error: String(e).slice(0, 120) }); return [] })
   const antelacion = new Map(
     antelacionRows.map(a => [
       `${a.property_id}|${a.mes}`,
@@ -416,7 +422,7 @@ export async function POST(req: NextRequest) {
       COUNT(DISTINCT r.checkin_date) FILTER (WHERE r.fuente IN ('booking_mcp','manual'))::int AS fechas_fiable
     FROM recent r JOIN pricing_settings s ON s.property_id = r.scenario
     GROUP BY r.scenario, to_char(r.checkin_date, 'YYYY-MM'), s.target_pctl, s.floor_pctl, s.ceil_pctl
-  `).catch(() => [])
+  `).catch((e) => { lecturasCaidas.push({ nombre: 'bucket_mes', error: String(e).slice(0, 120) }); return [] })
   const mes = new Map<string, Map<string, {
     med: number; flo: number; cei: number; n: number; fechas: number; fuente: 'fiable' | 'mixto'
   }>>()
@@ -469,7 +475,7 @@ export async function POST(req: NextRequest) {
       COUNT(*) FILTER (WHERE r.fuente IN ('booking_mcp','manual'))::int AS n_fiable
     FROM recent r JOIN pricing_settings s ON s.property_id = r.scenario
     GROUP BY r.scenario, r.checkin_date, s.target_pctl
-  `).catch(() => [])
+  `).catch((e) => { lecturasCaidas.push({ nombre: 'bucket_fecha', error: String(e).slice(0, 120) }); return [] })
   const fecha = new Map<string, Map<string, { med: number; n: number; fuente: 'fiable' | 'mixto' }>>()
   // Comps FIABLES crudos por piso×fecha, para la guarda de congelación. Va aparte del mapa `fecha`
   // porque ese descarta filas vía `elegirBucket` — y para la guarda un «0 comps fiables» es
@@ -502,7 +508,7 @@ export async function POST(req: NextRequest) {
     FROM incomes
     WHERE nights > 0 AND amount_gross > 0 AND "checkIn" >= CURRENT_DATE - INTERVAL '6 years'
     GROUP BY 1, 2
-  `).catch(() => [])
+  `).catch((e) => { lecturasCaidas.push({ nombre: 'prior_estacional', error: String(e).slice(0, 120) }); return [] })
   // El cálculo vive en `lib/sivra/prior-estacional.ts` (puro y testeado) porque la regla NO es
   // simétrica: se sube con ADR × ocupación, pero se BAJA solo con ADR. Ver su cabecera.
   const priorIdx = new Map<string, IndicePrior[]>()
@@ -524,7 +530,7 @@ export async function POST(req: NextRequest) {
     FROM incomes
     WHERE "createdAt" >= CURRENT_DATE - 7 AND "checkIn" >= CURRENT_DATE
     GROUP BY 1, 2
-  `).catch(() => [])
+  `).catch((e) => { lecturasCaidas.push({ nombre: 'velocidad_reservas', error: String(e).slice(0, 120) }); return [] })
   const velocidad = new Map<string, Map<string, number>>()
   for (const v of velRows) {
     if (!velocidad.has(v.pid)) velocidad.set(v.pid, new Map())
@@ -1168,10 +1174,20 @@ export async function POST(req: NextRequest) {
     } catch { /* el aviso es best-effort; el flag de la respuesta manda */ }
   }
 
+  // 🟠 Lecturas auxiliares caídas (hallazgo 4, 24/08/2026): la pasada tarificó con fallback y los
+  // precios PARECEN bien — exactamente por eso hay que decirlo. Sin dedupe, como el rechazo de
+  // Smoobu: si la lectura sigue caída a las 14:30 y a las 20:30, hay que oírlo las tres veces.
+  const avisoLecturas = avisoLecturasCaidas(lecturasCaidas)
+  if (avisoLecturas) {
+    try {
+      await tgSend(avisoLecturas)
+    } catch { /* best-effort: el campo de la respuesta y el latido de apply-auto mandan */ }
+  }
+
   return NextResponse.json({
     // 🛑 Un rechazo de Smoobu invalida la pasada: el precio no ha llegado al huésped, que es lo
     // único que este endpoint existe para conseguir. Hasta el 23/08/2026 esto salía `ok:true`.
-    ok: !eventosIlegibles && !plIlegible && fallosSmoobu.length === 0,
+    ok: !eventosIlegibles && !plIlegible && fallosSmoobu.length === 0 && lecturasCaidas.length === 0,
     // Escrituras rechazadas por el canal, con las noches que se quedaron sin aplicar. Las lee
     // `apply-auto` para teñir su latido; van en la respuesta para que el camino manual las vea igual.
     smoobu_rechazos: fallosSmoobu.length > 0 ? fallosSmoobu : undefined,
@@ -1182,6 +1198,9 @@ export async function POST(req: NextRequest) {
     pl_degradado: plIlegible ? `referencia PriceLabs ilegible: tarificado SIN suelo PL (${plIlegible})` : undefined,
     // Degradación menor: no invalida la pasada, pero tiene que verse sin tener que deducirlo.
     demanda_degradada: ocupacionMesIlegible ? "ocupación por mes ilegible: tarificado con la anual" : undefined,
+    // Lecturas auxiliares que fallaron (hallazgo 4): la pasada tarificó con fallback, pero ciega a
+    // estas señales. Lo lee `apply-auto` para teñir su latido, igual que `degradado`.
+    lecturas_degradadas: resumenLecturasCaidas(lecturasCaidas) ?? undefined,
     // Pisos que esta pasada dejó sin tarificar. En la respuesta a propósito: sus precios se quedan
     // como estaban, y eso NO es «el mercado dice que están bien» — es «no se ha podido mirar».
     sin_tarifar: sinTarifar.length > 0 ? sinTarifar : undefined,

@@ -327,6 +327,64 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'Huella: agente_latidos.paper-tracker.',
   },
   {
+    id: 'sivra_rates_snapshot',
+    etiqueta: '📸 Snapshot de precios y disponibilidad de Smoobu (diario 07:00)',
+    // Diario → 30 h, el estándar de los diarios: tolera un día saltado.
+    maxHoras: 30,
+    nota:
+      'Es el job que MÁS pesa de la cadena de pricing: alimenta la ocupación y el precio VIVO ' +
+      '(`rate_snapshots.price_pricelabs`) con el que se compara todo — el motor, el pilot-track, la ' +
+      'ocupación por mes y el fallback `actual` del raíl. Si calla, todos ellos trabajan sobre la ' +
+      'foto de ayer sin saberlo. Si el detalle trae «HTTP 401/403», la API key de Smoobu; si trae ' +
+      'una excepción de BD, este cron. Huella: agente_latidos.sivra_rates_snapshot.',
+  },
+  {
+    id: 'sivra_mercado_cron',
+    etiqueta: '🔍 Scraper diario de mercado por búsqueda web (diario 07:15)',
+    maxHoras: 30,
+    nota:
+      'La vía Serper de comparables está muda. OJO: `ok=false` con detalle «Serper 4xx» NO se arregla ' +
+      'en el repo — el cuerpo del error dice si es la CUENTA (créditos agotados: recargar en ' +
+      'serper.dev y comprobar SERPER_API_KEY en Vercel) o la consulta. Así murió en silencio del ' +
+      '22 al 24/08/2026: dos días sin una sola fila `fuente=serper` en market_rates con ok:true en ' +
+      'cada respuesta, porque searchPortal se tragaba el fallo con un catch → []. Mientras esté caída, ' +
+      'el corpus pierde amplitud pero la rutina de Booking (fuente fiable) sigue midiendo por fecha. ' +
+      'Huella: agente_latidos.sivra_mercado_cron.',
+  },
+  {
+    id: 'sivra_resumen_diario',
+    etiqueta: '📋 Resumen diario de pricing (cambios 24h + alertas, diario 09:00)',
+    maxHoras: 30,
+    nota:
+      'El parte del día no se está escribiendo. No manda Telegram a propósito (sería ruido diario): ' +
+      'su «cómo fue el día» vive en el DETALLE de este latido — cambios aplicados en 24 h y alertas ' +
+      'abiertas de pricing_alerts. Si calla, nadie resume el día y las alertas abiertas se acumulan ' +
+      'sin que se vean. Huella: agente_latidos.sivra_resumen_diario.',
+  },
+  {
+    id: 'sivra_pilot_track',
+    etiqueta: '🚁 Seguimiento del piloto de precios (veredictos + watchdog, diario 09:15)',
+    maxHoras: 30,
+    nota:
+      'El agente que VIGILA los datos de la cadena (snapshot viejo, mercado de +7 días, calendario ' +
+      'corto) no está corriendo — y su silencio se leía como «datos frescos». `ok=false` con el ' +
+      'detalle «⚠️ …» significa que corrió y encontró datos viejos: el fallo está en el job que ' +
+      'nombra el aviso (rates/snapshot o la ingesta de mercado), no en éste. Un piso en 🔴 NO pone ' +
+      'esto en rojo: es el agente haciendo su trabajo y ya avisa por Telegram. ' +
+      'Huella: agente_latidos.sivra_pilot_track.',
+  },
+  {
+    id: 'sivra_experimentos',
+    etiqueta: '🧪 Cierre de experimentos de pricing (¿la subida se reservó?, diario 08:00)',
+    maxHoras: 30,
+    nota:
+      'El bucle de aprendizaje del pricing está congelado: nadie registra qué pasó con los precios ' +
+      'que el motor cambió (auto_register_experiments / update_experiment_results, funciones SQL de ' +
+      'la BD). Si el detalle trae un SQLSTATE, alguna migración se llevó una de las dos funciones ' +
+      'por delante. «0 experimento(s) revisados» NO es avería: es un día sin fechas vencidas que ' +
+      'cerrar. Huella: agente_latidos.sivra_experimentos.',
+  },
+  {
     id: 'trading_operaciones',
     etiqueta: '📒 Libro de operaciones del bróker (pasada diaria, paso 1d)',
     // La pasada corre L-V ~20:15 UTC, así que el hueco legítimo más largo es viernes → lunes = 72 h.

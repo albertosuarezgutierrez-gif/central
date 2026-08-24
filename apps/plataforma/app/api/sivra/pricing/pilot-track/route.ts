@@ -4,7 +4,9 @@ import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
 import { MIN_EUR_PLAZA_COMP } from "@/lib/sivra/pricing-comps-plausibles"
 import { sqlUltimaPasadaUtil } from "@/lib/sivra/pricing-corpus-utilizable"
-import { evaluatePilot, type PilotVerdict } from "@/lib/sivra/pilot-track"
+import { evaluatePilot, avisoPilotTrack, type PilotVerdict } from "@/lib/sivra/pilot-track"
+import { registrarLatido } from "@/lib/monitoring/latido-escribir"
+import { tgSend } from "@central/core-telegram"
 import { computeRecommendation, recommendedBaseFromEngine, percentile } from "@/lib/sivra/pricing-engine"
 import { EVENTS_LAST_DATE } from "@/lib/pricing-calendar"
 
@@ -244,11 +246,28 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Loguear rojos + watchdog (sin push/email en plataforma — simplificado)
+  // 📣 Rojos + watchdog → Telegram (hallazgo 🟡 5, 24/08/2026). Hasta hoy iban SOLO a
+  // console.warn — el watchdog detectaba «snapshot viejo» y «mercado de +7 días» y no lo leía
+  // nadie. El texto lo compone `avisoPilotTrack` (puro, testeado); el día normal devuelve null
+  // y no hay mensaje.
   const rojos = pisos.filter((p) => p.verdict.verdict === "rojo")
-  if (!dryRun && (rojos.length > 0 || watchdog.length > 0)) {
-    if (watchdog.length > 0) console.warn(`[sivra/pricing/pilot-track] watchdog:`, watchdog.join(" · "))
-    if (rojos.length > 0) console.warn(`[sivra/pricing/pilot-track] rojos:`, rojos.map(p => `${PROP_NAMES[p.property_id] ?? p.property_id}: ${p.verdict.diagnosis}`).join(" | "))
+  const aviso = avisoPilotTrack(
+    rojos.map(p => ({ nombre: PROP_NAMES[p.property_id] ?? p.property_id, diagnosis: p.verdict.diagnosis })),
+    watchdog,
+  )
+  if (!dryRun && aviso) {
+    console.warn(`[sivra/pricing/pilot-track] ${watchdog.length} watchdog · ${rojos.length} rojos`)
+    try { await tgSend(aviso) } catch { /* best-effort: watchdog y rojos van en la respuesta */ }
+  }
+
+  // 💓 Latido (hallazgo 🟡 6): sin él, este agente muerto era invisible — y es justo el que
+  // vigila a los demás datos de la cadena. Un watchdog del que nadie sabe si corre no vigila nada.
+  // `ok` refleja los DATOS, no los veredictos: un piso en rojo es el agente haciendo su trabajo;
+  // un aviso de watchdog es que no se puede fiar de la medición.
+  if (!dryRun) {
+    await registrarLatido("sivra_pilot_track", watchdog.length === 0,
+      `${pisos.length} piso(s) · ${rojos.length} rojo(s)` +
+      (watchdog.length > 0 ? ` · ⚠️ ${watchdog.join(" · ")}` : ""))
   }
 
   return NextResponse.json({ ok: true, dryRun, watchdog, pisos })
