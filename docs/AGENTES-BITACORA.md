@@ -18,9 +18,30 @@
 - **2026-08-24 · pricing-agente (seguimiento)** · hizo: cerró el pendiente «Busto Feria 17-abr a 103€
   sin income» (3er ciclo) — era la reserva Airbnb HM9KR9FJFK cancelada el 23/08 que nunca entró en
   `incomes`; auditó los 4 pisos con el predicado de cobertura corregido (`"checkIn"::date`, hay filas a
-  las 12:00 UTC) → 0 noches bloqueadas sin explicación; doc actualizada en `references/ciclo.md`;
+  las 12:00 UTC) → 0 noches bloqueadas sin explicación; construyó el **check #10 del guardián**
+  (detecta+repara noches bloqueadas sin income) y actualizó `references/ciclo.md`;
   dudas: por qué el sync incremental se saltó la reserva del 20/06 (sin backfill pendiente: ya está
-  cancelada); fallos: —; PRs/commits: PR #1640 (rama del ciclo 24/08).
+  cancelada); fallos: —; PRs/commits: PR #1642.
+- **2026-08-24 · facturas-correo** · hizo: pasada diaria completa (Paso 0→5). Preflight canal
+  alerta OK (200). Vía B: última copia `_buzon_pdf` sigue en 20/08 (dias_caido=4 por fórmula),
+  pero verificado de nuevo con búsqueda directa (`has:attachment filename:pdf newer_than:4d`) que
+  sigue sin entrar NINGÚN PDF nuevo en Gmail desde entonces — no es corte (mismo diagnóstico que
+  22/08 y 23/08); `agente_salud` actualizado. Backlog `PDF-pendiente`/`Revisar`/`Extraccion-fallida`
+  vacío (confirmado por `search_threads`). Paso 1/1-bis: 0 candidatos nuevos (solo 2 hilos ruido de
+  mensajería de huéspedes Booking, descartados; `_subir_aqui` y raíz 2026 sin subidas manuales
+  nuevas). Paso 4.0 (`v_facturas_sin_cargo`): 1 sola fila `sin_revisar` — el recibo Stripe
+  "Financial Datasets, Inc." 17,78€ (21/08, ya archivado el 23/08) — sigue sin cargo en el feed
+  PSD2 (fresco hasta hoy 24/08, sin coincidencia por importe/concepto en ±10 días); lo dejo sin
+  `sin_cargo_motivo` (aún reciente) para que la próxima pasada lo reintente en vez de cerrarlo.
+  Resto de la cola ya estaba `revisada_sin_cargo` de pasadas previas (Pepephone ene-jun, Giraldillo
+  mayo, CREATE-Socorro duplicada) — no reabierta. dudas: —; fallos: —. PRs/commits: —
+- **2026-08-24 · pricing-agente** · hizo: ciclo semanal completo, los 4 pisos (no solo los en vivo).
+  Medí el ciclo anterior (17/08→hoy: House +4 reservas, Dúplex +2, Busto/Luxury 0), sembré mercado
+  Booking en 12 ventanas/piso (120 comps/piso, 0 a cero), apliqué dry-run × 4 (200 OK, sin
+  circuit-breaker), 48 decisiones en `pricing_decisiones`, aprendizaje escrito. dudas: Busto Feria
+  17-abr-2027 sigue "vendida" a 103€ sin income que lo explique, 3er ciclo consecutivo sin resolver —
+  necesita mirar Smoobu directamente, fuera de mi alcance. fallos: solo Booking como fuente esta
+  semana (Trivago/Tripadvisor no consultados por límite de tiempo, riesgo de mono-fuente). PRs/commits: —
 - **2026-08-24 · mercado-booking** · hizo: pasada diaria, plan `?max=24` (516 ventanas candidatas,
   492 recortadas por el tope, `sin_medir_nunca:24` — todas de ronda 1/evento: Navidad-Fin de Año
   25/12-1/01 y Semana Santa 25-27/03). 240 comps reales escritos en `market_rates` (10 por ventana;
