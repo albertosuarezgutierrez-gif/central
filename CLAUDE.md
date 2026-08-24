@@ -191,6 +191,12 @@ replican la misma convención. Si un cambio toca una pantalla con importes mal f
   las ~10 apps aunque no lo consumieran) o los manifiestos raíz; los commits con marcador de salto de CI en
   el asunto nunca construyen; fail-open ante dudas. **Al crear una app nueva, añade esta clave y punto**
   (y también su alerta de gasto ya está puesta a nivel de equipo Vercel: Spend Management $50, solo aviso).
+  - **`--sin-previews` (desde 24/08/2026): todas las apps SALVO ialimp lo llevan en su `ignoreCommand`** —
+    los builds de preview de las ramas de PR eran ~la mitad de los Build CPU Minutes que quedaban
+    (factura 14 jul–13 ago: 32.708 min ≈ 92,51 US$ de 117 US$) y no los mira nadie: los agentes verifican
+    con tsc/tests y mergean en minutos. Con el flag solo construye `main` (producción). Para forzar una
+    preview concreta (verificar UI en Vercel antes de mergear), pon **`[preview]` en el ASUNTO del commit**.
+    ialimp NO lo lleva a propósito: cliente vivo (Sique Brilla) → ahí sigue la regla «preview verde antes de main».
 - **NUNCA** poner `apps/` en el `.vercelignore` de la raíz (se aplica a todos los proyectos del
   repo y borraría la carpeta del build por-app → el proyecto caería a construir la raíz).
 - Los módulos compartidos viven en `packages/*` (portables, sin acoplarse a una vertical); las
