@@ -827,10 +827,17 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
     revisado» **con solo tocarla**. Ahora la documentación viaja con la fila y el cliente FUSIONA en vez de
     sustituir (el endpoint no calcula `escenarios` ni la foto viva de la subasta).
   - **PENDIENTE:** llevar el estado de pujas a la ficha de `/subastas` (hoy solo va en el Telegram);
-    registrar el MOTIVO del descarte para que el radar aprenda; y `SUB-JA-2026-262310`, cuya certificación
-    está descargada y sin cuadro — 26 páginas CCITT/JBIG2 con **OCR basura** (553.750 chars del tipo
-    «puntaumbña@registrodelapropiedad.org»): `pareceEscaneado()` mide CANTIDAD de texto, no calidad, y
-    `localizarJpegs()` solo ve JPEG (ahí no hay ninguno). Pide rasterizador de PDF, no un umbral.
+    registrar el MOTIVO del descarte para que el radar aprenda.
+  - **🖨️ Rasterizador de PDF (24/08/2026):** los registros escanean en **CCITT G4/JBIG2** (compresión de
+    fax, sin un solo JPEG embebido) → `localizarJpegs()` devolvía 0 bandas y la certificación salía
+    «ilegible» con el PDF delante (`SUB-JA-2026-262310`, 26 páginas; la de Siero en la prueba del buzón).
+    Respaldo en `lib/subastas/rasterizar-pdf.ts`: **PDFium en WASM** (`@hyzyla/pdfium`, MIT, sin binarios
+    nativos — en `serverExternalPackages` para que webpack no empaquete el .wasm) renderiza las páginas en
+    GRIS y `sharp` las codifica a JPEG; `leerDocumento` lo usa SOLO cuando no hay JPEGs que rescatar (es
+    más caro: ~0,8 s/página). Validado contra la certificación real de Punta Umbría (12 páginas legibles).
+    OJO: el caso «OCR basura» (texto extraíble pero ilegible, `pareceEscaneado()` mide cantidad y no
+    calidad) sigue entrando por la vía de texto — si reaparece, la señal es un cuadro vacío con confianza
+    baja sobre un doc con muchos chars.
 
 ## 🔓 `/api/publico/*` — el único endpoint sin sesión, y su landmine de CORS (20/08/2026)
 `GET /api/publico/disponibilidad?piso=<slug>&meses=<1..12>` alimenta el calendario de la landing de

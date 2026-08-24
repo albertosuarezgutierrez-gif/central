@@ -5,7 +5,9 @@ const monorepoRoot = path.join(__dirname, '..', '..')
 
 const nextConfig: NextConfig = {
   transpilePackages: ['@central/core-ai', '@central/core-email', '@central/core-telegram', '@central/core-identity', '@central/module-concursos', '@central/module-contabilidad', '@central/module-intercompany', '@central/module-pagos', '@central/module-subastas', '@central/module-trading'],
-  serverExternalPackages: ['pdf-parse'],
+  // @hyzyla/pdfium: WASM del rasterizador de PDF (lib/subastas/rasterizar-pdf.ts) —
+  // externo para que webpack no intente empaquetar el .wasm.
+  serverExternalPackages: ['pdf-parse', '@hyzyla/pdfium'],
   outputFileTracingRoot: monorepoRoot,
   eslint: { ignoreDuringBuilds: true },
   // Deliberado (deuda de tipos heredada): el build de Vercel no bloquea por tipos.

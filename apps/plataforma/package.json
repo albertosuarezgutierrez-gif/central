@@ -22,6 +22,7 @@
     "@central/module-ses": "workspace:*",
     "@central/module-subastas": "workspace:*",
     "@central/module-trading": "workspace:*",
+    "@hyzyla/pdfium": "^2.1.13",
     "@prisma/client": "^5.22.0",
     "@supabase/supabase-js": "^2.105.1",
     "bcryptjs": "^2.4.3",

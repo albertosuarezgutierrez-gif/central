@@ -32,6 +32,14 @@
 
 ---
 
+### 🖨️ (24/08/2026) Rasterizador de PDF: los escaneos CCITT/JBIG2 ya se leen
+Cierra el pendiente del 20/08 («pide rasterizador, no un umbral»): `lib/subastas/rasterizar-pdf.ts`
+(PDFium WASM `@hyzyla/pdfium` + sharp, en `serverExternalPackages`) como respaldo de
+`paginasDePdfEscaneado` cuando no hay JPEGs embebidos. Validado contra la certificación real de
+SUB-JA-2026-262310 (26 págs CCITT → 12 páginas JPEG legibles, ~10 s). La 2ª prueba real del buzón
+confirmó además el fix del lector de texto: edicto de Siero leído (hipoteca Santander 161.515,79€,
+vía hipotecaria) y corpus actualizado. tsc 0 · tests OK · next build OK.
+
 ### 🔧 (24/08/2026) La prueba real del buzón destapó que el lector registral de TEXTO estaba MUERTO
 Alberto subió 2 docs de Siero (SUB-JA-2026-263989) y ambos salieron «ilegibles». Causas: (1) `leerTexto`
 pasaba el modelo del catálogo como `modelo` a `chatConDirector` — el PIN que salta OpenRouter — y el id
