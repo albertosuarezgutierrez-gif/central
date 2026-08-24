@@ -32,6 +32,13 @@
 
 ---
 
+### 📈 (24/08/2026) Trading: «Última pasada» ya dice que la renueva el agente, no el botón
+Alberto: «doy actualizar y no cambia fecha». No era bug: `ultimaPasada` = fecha de la última tesis
+(pasada nocturna 20:15/23:15 UTC lun-vie); verificado en BD que hoy no había corrido. El botón 🔄 solo
+relee BD + precios vivos. Fix de texto en `TradingDashboard.tsx` + `ActualizarConsulta.tsx`: la línea
+dice «Última pasada del agente … — la renueva su pasada nocturna (lun–vie), no el botón» y el pie del
+botón incluye la fecha entre lo que trae la pasada. Rama `claude/doi-update-date-issue-ttmrqy`.
+
 ### 🔁 (24/08/2026) ESTRATEGIA FIJA: bonificación de la hipoteca por planes, renovada año tras año
 Alberto: «lo ideal es ir pasando año tras año». La gestora (intranet Kutxabank) confirmó la mecánica:
 2.000€/año de incremento neto en planes de Kutxabank por período de revisión (5-abr) → bonif. 0,20% →
