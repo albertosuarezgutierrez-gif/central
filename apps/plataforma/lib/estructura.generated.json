@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-24T07:19:35Z",
+  "generadoEn": "2026-08-24T10:54:56Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -733,7 +733,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 42
+        "evidencias": 43
       },
       "rrhh": {
         "estado": "usado",
@@ -4613,6 +4613,10 @@
   ],
   "novedades": [
     {
+      "titulo": "Canal conversacional del patrimonio + dossier inicial del CFO (24/08/2026).",
+      "fecha": "24/08/2026"
+    },
+    {
       "titulo": "4:",
       "fecha": ""
     },
@@ -4666,10 +4670,6 @@
     },
     {
       "titulo": "Verificado el trabajo del 20/08:",
-      "fecha": ""
-    },
-    {
-      "titulo": "El cuarto piso destapó el fallo:",
       "fecha": ""
     }
   ],

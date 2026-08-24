@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-24T07:19:35Z",
-  "sha": "9e00e691815780b956978c9ce36cbf59cdbe4d98",
+  "generadoEn": "2026-08-24T10:54:56Z",
+  "sha": "cd7954adbb7fa967683993d3c64cc19123ba8c1c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -52870,7 +52870,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 139
+          "linea": 134
         }
       ],
       "tablas": [
@@ -52883,7 +52883,7 @@
         "pricing_decisiones"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "bb90a6c8c214"
+      "hash": "b8dad9bb5abe"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -56938,7 +56938,7 @@
           "exportada": false,
           "params": "bookingId: string, pend: Pendiente",
           "retorno": "Promise<ContextoRedaccion>",
-          "linea": 29
+          "linea": 31
         },
         {
           "nombre": "getPendiente",
@@ -56946,7 +56946,7 @@
           "exportada": false,
           "params": "bookingId: string",
           "retorno": "Promise<Pendiente | null>",
-          "linea": 56
+          "linea": 58
         },
         {
           "nombre": "POST",
@@ -56954,7 +56954,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 61
+          "linea": 63
         }
       ],
       "tablas": [
@@ -56979,7 +56979,7 @@
         "trading_watchlist"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "5f8c88d34b3a"
+      "hash": "fece8a710581"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -57715,7 +57715,7 @@
         "ult"
       ],
       "rutaApi": "/api/sivra/pricing/guard",
-      "hash": "04fee64496ea"
+      "hash": "60b0fb33a2ff"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/historial/route.ts",
@@ -58045,21 +58045,12 @@
       ],
       "funciones": [
         {
-          "nombre": "serperSearch",
-          "kind": "function",
-          "exportada": false,
-          "params": "key: string, query: string",
-          "retorno": "Promise<string>",
-          "linea": 28,
-          "resumen": "Búsqueda real en Google vía Serper. Devuelve \"título | snippet\" por línea (mismo patrón que mercado)."
-        },
-        {
           "nombre": "parseSeoJson",
           "kind": "function",
           "exportada": false,
           "params": "raw: string",
           "retorno": "Record<string, unknown> | null",
-          "linea": 42,
+          "linea": 29,
           "resumen": "Limpia fences markdown y extrae el primer objeto JSON. null si no hay JSON válido."
         },
         {
@@ -58068,7 +58059,7 @@
           "exportada": false,
           "params": "current: ReturnType<typeof extractSeoParams>",
           "retorno": null,
-          "linea": 49
+          "linea": 36
         },
         {
           "nombre": "GET",
@@ -58076,7 +58067,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 97
+          "linea": 58
         }
       ],
       "tablas": [
@@ -58084,7 +58075,7 @@
         "seo_proposals"
       ],
       "rutaApi": "/api/sivra/seo-refresh",
-      "hash": "73d97f8bea7f"
+      "hash": "d171dfbdedaa"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/seo-token-check/route.ts",
@@ -60721,13 +60712,13 @@
           "exportada": true,
           "params": "raw: unknown",
           "retorno": "BotonAlerta[][] | null",
-          "linea": 15,
+          "linea": 17,
           "resumen": "Devuelve los botones saneados, o null si el payload no es válido (el aviso sale SIN botones)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6359d74a55fa"
+      "hash": "f792e071d07b"
     },
     {
       "ruta": "apps/plataforma/lib/alertas-categoria.ts",
@@ -63525,7 +63516,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 122,
+          "linea": 120,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -63534,7 +63525,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 152,
+          "linea": 150,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -63543,7 +63534,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 174
+          "linea": 172
         },
         {
           "nombre": "ventanaMinutos",
@@ -63551,7 +63542,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 182,
+          "linea": 180,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -63560,13 +63551,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 194,
+          "linea": 192,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "864196cfa9c6"
+      "hash": "1d8226b75b79"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -66418,7 +66409,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dafa25089df6"
+      "hash": "88bbe5f704a2"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/reparable.ts",
@@ -66710,6 +66701,84 @@
       "hash": "7fb1c52514e3"
     },
     {
+      "ruta": "apps/plataforma/lib/patrimonio-chat.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Canal conversacional del PATRIMONIO por Telegram — parte PURA (sin `@/` ni prisma → node --test). Por qué existe: el informe del `patrimonio-cfo` era solo de IDA (Telegram mensual + doc); Alberto no podía preguntar de vuelta desde el móvil. Este módulo decide qué mensajes son del canal patrimonial y",
+      "exporta": [
+        "esComandoPatrimonio",
+        "esPreguntaPatrimonio",
+        "preguntaDe",
+        "fotoPatrimonioTg",
+        "contextoPatrimonioIA"
+      ],
+      "funciones": [
+        {
+          "nombre": "esc",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 13
+        },
+        {
+          "nombre": "esComandoPatrimonio",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "boolean",
+          "linea": 19,
+          "resumen": "Comando EXPLÍCITO `/patrimonio …`. Existe aparte del detector ancho porque las RESPUESTAS (force_reply de otros agentes) solo se desvían ante un comando inequívoco: un retoque legítimo podría menciona"
+        },
+        {
+          "nombre": "esPreguntaPatrimonio",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "boolean",
+          "linea": 26,
+          "resumen": "¿Es un mensaje para el agente patrimonial? Comando `/patrimonio …` o mención expresa de patrimonio/patrimonial. Deliberadamente ESTRECHO: el resto del texto libre sigue siendo del agente contable (que"
+        },
+        {
+          "nombre": "preguntaDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "string",
+          "linea": 33,
+          "resumen": "La pregunta en sí, sin el comando. '' = solo quiere la foto rápida."
+        },
+        {
+          "nombre": "lineaActivo",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: ActivoPatrimonio",
+          "retorno": "string",
+          "linea": 37
+        },
+        {
+          "nombre": "fotoPatrimonioTg",
+          "kind": "function",
+          "exportada": true,
+          "params": "resumen: ResumenPatrimonio, activos: ActivoPatrimonio[], recos: RecomendacionViva[] | null, intake: string[],",
+          "retorno": "string",
+          "linea": 46,
+          "resumen": "Foto rápida en HTML de Telegram. `recos = null` significa «no se ha podido leer la tabla», que NO es lo mismo que «no hay recomendaciones» — y se dice."
+        },
+        {
+          "nombre": "contextoPatrimonioIA",
+          "kind": "function",
+          "exportada": true,
+          "params": "resumen: ResumenPatrimonio, activos: ActivoPatrimonio[], recos: RecoContexto[] | null, pregunta: string,",
+          "retorno": "",
+          "linea": 78,
+          "resumen": "Contexto para el LLM: TODAS las cifras van aquí dentro y la instrucción es no salirse de ellas. La IA redacta y compara; los importes salen de la BD, nunca de su memoria."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "24c23af7ebd7"
+    },
+    {
       "ruta": "apps/plataforma/lib/patrimonio-resumen.ts",
       "ambito": "apps/plataforma",
       "resumen": "Lógica PURA del resumen patrimonial (sin `@/` ni prisma → testeable con `node --test`). Regla de la casa que este módulo encarna: NULL = «no se sabe todavía». Un activo sin valoración NO entra como 0 en el neto — no entra, y el neto se declara PARCIAL con el motivo. Igual con una hipoteca cuya cuota",
@@ -66749,6 +66818,59 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "52a8a88ab61e"
+    },
+    {
+      "ruta": "apps/plataforma/lib/patrimonio-telegram.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Boca Telegram del agente PATRIMONIAL: responde a las preguntas de Alberto sobre su patrimonio (comando /patrimonio o mención de «patrimonio») y registra sus decisiones sobre las recomendaciones del `patrimonio-cfo` (botones ptr_ok / ptr_no / ptr_det del webhook). Reparto de papeles: las CIFRAS salen",
+      "exporta": [
+        "manejarPatrimonioTg",
+        "resolverRecomendacionTg",
+        "detalleRecomendacionTg"
+      ],
+      "funciones": [
+        {
+          "nombre": "recomendacionesVivas",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuentaId: string, max = 5",
+          "retorno": "Promise<RecoContexto[] | null>",
+          "linea": 22,
+          "resumen": "Recomendaciones sin decidir. `null` = no se pudo leer la tabla — que aguas abajo NO se presente como «no hay recomendaciones»."
+        },
+        {
+          "nombre": "manejarPatrimonioTg",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, texto: string",
+          "retorno": "Promise<void>",
+          "linea": 44,
+          "resumen": "Mensaje de texto de Alberto para el canal patrimonial. Sin pregunta (o «foto»/«resumen») → foto determinista; con pregunta → IA sobre el contexto de la BD, con la foto de red de seguridad si la pasare"
+        },
+        {
+          "nombre": "resolverRecomendacionTg",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, recoId: string, decision: 'aceptada' | 'rechazada',",
+          "retorno": "Promise<string | null>",
+          "linea": 85,
+          "resumen": "Registra la decisión de Alberto sobre una recomendación (botón ptr_ok / ptr_no). Devuelve el título, o null si el id no existe para su cuenta. Se permite re-decidir (cambiar de opinión pisa la decisió"
+        },
+        {
+          "nombre": "detalleRecomendacionTg",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, recoId: string",
+          "retorno": "Promise<string | null>",
+          "linea": 98,
+          "resumen": "Detalle completo de una recomendación (botón ptr_det): texto íntegro + estado de decisión."
+        }
+      ],
+      "tablas": [
+        "patrimonio_recomendaciones"
+      ],
+      "rutaApi": null,
+      "hash": "0d7f308d24c0"
     },
     {
       "ruta": "apps/plataforma/lib/patrimonio.ts",
@@ -73416,7 +73538,8 @@
       "exporta": [
         "anomaliasUniverso",
         "camposEnvenenados",
-        "neutralizarUniverso"
+        "neutralizarUniverso",
+        "resumenErrores"
       ],
       "funciones": [
         {
@@ -73445,11 +73568,19 @@
           "retorno": "",
           "linea": 63,
           "resumen": "Escaneo + neutralización EN COPIA, en una llamada: los campos imposibles salen a null (esa empresa no puntúa ese factor) y las anomalías se devuelven para DECLARARLAS en la UI/digest. Todo consumidor "
+        },
+        {
+          "nombre": "resumenErrores",
+          "kind": "function",
+          "exportada": true,
+          "params": "errores: Array<string | null | undefined>",
+          "retorno": "string | null",
+          "linea": 82
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "424ab04737aa"
+      "hash": "d49942938e30"
     },
     {
       "ruta": "apps/plataforma/lib/trading/cantera.ts",
@@ -73843,7 +73974,8 @@
       "resumen": "⚖️ CONCENTRACIÓN del top del radar (idea 20/07/2026, con el superciclo de memoria en marcha): si medio top-10 es la MISMA apuesta (BE/LITE/WDC/MU…), la diversificación de la cesta es ilusoria — cuando la burbuja pinche caerán JUNTOS. En vez de etiquetas de sector (los SIC parten el tema memoria en v",
       "exporta": [
         "correlacionMediaCesta",
-        "etiquetaConcentracion"
+        "etiquetaConcentracion",
+        "parMasCorrelacionado"
       ],
       "funciones": [
         {
@@ -73879,11 +74011,19 @@
           "retorno": "string",
           "linea": 52,
           "resumen": "Etiqueta legible para el digest (umbrales clásicos de cestas equiponderadas)."
+        },
+        {
+          "nombre": "parMasCorrelacionado",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolos: string[], seriesCierres: number[][], ventana = 60",
+          "retorno": "ParCorrelacionado | null",
+          "linea": 63
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5dc97ae63ec7"
+      "hash": "a8750cba0201"
     },
     {
       "ruta": "apps/plataforma/lib/trading/dataroma.ts",
@@ -75220,7 +75360,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "27ac4f6ba904"
+      "hash": "1da80051e77a"
     },
     {
       "ruta": "apps/plataforma/lib/trading/salidas.ts",
@@ -96613,7 +96753,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2557,
-    "funciones": 7019
+    "archivos": 2559,
+    "funciones": 7031
   }
 }
