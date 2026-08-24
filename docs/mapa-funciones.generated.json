@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-24T14:28:34Z",
-  "sha": "46652b6385fe7fcec041b88d106001cbd0f2c61a",
+  "generadoEn": "2026-08-24T15:03:04Z",
+  "sha": "551272a7eb36f08f1982b7362dc460e64565d612",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -49731,12 +49731,21 @@
           "resumen": "«Nota simple viva»: la certificación que adjunta el juzgado es de hace años y las cargas se mueven. Aquí se sube una nota simple recién pedida al registro y el agente dice QUÉ HA CAMBIADO — es lo únic"
         },
         {
+          "nombre": "DocsAportados",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ dedupeKey, muro }: { dedupeKey: string; muro: 'ninguno' | 'parcial' | 'total' }",
+          "retorno": null,
+          "linea": 882,
+          "resumen": "«Aportar documentos»: la puerta de entrada del lector para los PDFs que el cron no puede bajar. El Portal esconde los documentos de muchas fichas tras el login y el login automático no es viable (2FA "
+        },
+        {
           "nombre": "Dato",
           "kind": "function",
           "exportada": false,
           "params": "{ etiqueta, sub, children }: { etiqueta: string; sub?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 863,
+          "linea": 1000,
           "resumen": "Par etiqueta→valor del bloque «💶 Los números»: etiqueta pequeña arriba, valor con peso debajo. La jerarquía la da la tipografía — antes todos los importes eran chips/líneas del mismo peso y se confun"
         },
         {
@@ -49745,7 +49754,7 @@
           "exportada": false,
           "params": "{ u }: { u: ReturnType<typeof umbralesPuja> }",
           "retorno": null,
-          "linea": 881,
+          "linea": 1018,
           "resumen": "Umbrales de APROBACIÓN del remate. Corrige la confusión de «hay que pujar el 70% de la deuda»: el 70% de la LEC es del VALOR DE SUBASTA, y la deuda entra como vía alternativa (y como techo probable de"
         },
         {
@@ -49754,7 +49763,7 @@
           "exportada": false,
           "params": "s: Subasta",
           "retorno": "SubastaInmueble",
-          "linea": 897,
+          "linea": 1034,
           "resumen": "El `Subasta` del cliente, como lo espera la lógica pura del módulo."
         },
         {
@@ -49763,7 +49772,7 @@
           "exportada": false,
           "params": "{ s, o, params }: { s: Subasta; o?: Oportunidad | null; params?: ParamsCoste }",
           "retorno": null,
-          "linea": 924,
+          "linea": 1061,
           "resumen": "«¿Y si pujo X?»: coste puerta abierta, descuento real y banda de aprobación de UNA puja concreta. Mismo motor que el resto de la ficha (`calcularCoste` + `umbralesPuja` del módulo, con la financiación"
         },
         {
@@ -49772,7 +49781,7 @@
           "exportada": false,
           "params": "{ s, o, acciones, extra, doc, escenarios, params }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null; escenarios?: EscenarioUI[] | null; params?: ParamsCoste }",
           "retorno": null,
-          "linea": 989
+          "linea": 1126
         },
         {
           "nombre": "SubastasClient",
@@ -49780,14 +49789,14 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Inicial | null }",
           "retorno": null,
-          "linea": 1296
+          "linea": 1434
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "5005817aecd5"
+      "hash": "63efb76134b5"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -58269,6 +58278,44 @@
       ],
       "rutaApi": "/api/subastas/criterios",
       "hash": "cabc1a2cdeab"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/subastas/documentos/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Documentos aportados a mano a una subasta (el caso de uso: fichas cuyo muro documental el cron no puede cruzar — Alberto los baja con su sesión del Portal y los sube aquí). Se leen con el lector registral y escriben el corpus con la semántica del cron. Ver `lib/subastas/docs-aportados.ts`.",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "cuenta",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<string | null>",
+          "linea": 13
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 21
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 31
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/subastas/documentos",
+      "hash": "5557790209cd"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/fase3-debug/route.ts",
@@ -71697,6 +71744,111 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "b0d0847c2c2d"
+    },
+    {
+      "ruta": "apps/plataforma/lib/subastas/docs-aportados-logica.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Documentos APORTADOS A MANO a una subasta — la parte PURA (sin BD, red ni IA), testeada con `node --test`. Por qué existe: el Portal del BOE esconde los documentos de muchas subastas tras el login, el login automático NO es",
+      "exporta": [
+        "tituloDesdeTexto",
+        "tituloDeAportado",
+        "aportaAlgo",
+        "revivirCuadroGuardado",
+        "cuadroParaCorpus"
+      ],
+      "funciones": [
+        {
+          "nombre": "tituloDesdeTexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 41,
+          "resumen": "Qué ES el documento, leído de su propio texto. Hace falta porque el Portal sirve las descargas con nombres genéricos (`documento1_4.pdf`) que no dicen nada — y el título importa: es lo que usa `autori"
+        },
+        {
+          "nombre": "tituloDeAportado",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombreFichero: string | null | undefined, titulo?: string | null, texto?: string | null",
+          "retorno": "string",
+          "linea": 63,
+          "resumen": "Título con el que se registra el documento: el que dé el usuario > el que declare el propio texto (`tituloDesdeTexto`) > el nombre del fichero. El contenido gana al fichero a propósito: «documento2_4."
+        },
+        {
+          "nombre": "aportaAlgo",
+          "kind": "function",
+          "exportada": true,
+          "params": "l: LecturaAportada",
+          "retorno": "boolean",
+          "linea": 78,
+          "resumen": "¿Esta lectura dice ALGO utilizable? Un edicto sin cargas pero con señales («vivienda habitual: no consta») aporta; un PDF del que no salió nada, no — y ese «nada» se guarda como ilegible, nunca como «"
+        },
+        {
+          "nombre": "revivirCuadroGuardado",
+          "kind": "function",
+          "exportada": true,
+          "params": "bruto: unknown",
+          "retorno": "CuadroCargas | null",
+          "linea": 97,
+          "resumen": "Revive el `cargas_detalle` guardado en la BD como un cuadro de confianza. `null` si no hay nada guardado o lo guardado no trae cargas. Matiz asumido (el mismo que la nota simple): `normalizarCuadroCar"
+        },
+        {
+          "nombre": "cuadroParaCorpus",
+          "kind": "function",
+          "exportada": true,
+          "params": "previo: CuadroCargas | null, nuevos: CuadroCargas[]",
+          "retorno": "CuadroCargas | null",
+          "linea": 116,
+          "resumen": "El cuadro que se escribe al corpus: lo que ya se sabía + lo recién leído, fusionado con UNA fila por asiento registral (`fusionarCargas` del módulo, el mismo que usa el cron — dedupe por identidad, im"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6bbd03cd1980"
+    },
+    {
+      "ruta": "apps/plataforma/lib/subastas/docs-aportados.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Documentos APORTADOS A MANO a una subasta: red + BD. La lógica es pura (`docs-aportados-logica.ts`) y la lectura por IA vive en `lector-registral`. El caso de uso: las fichas con muro documental (`documentos_muro` total o p",
+      "exporta": [
+        "procesarDocAportado",
+        "docsAportadosDe"
+      ],
+      "funciones": [
+        {
+          "nombre": "procesarDocAportado",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, dedupeKey: string, doc: { nombreFichero?: string | null; titulo?: string | null; texto?: string | null; pdf?: Buffer | null; mediaType?: string | null },",
+          "retorno": "Promise<ResultadoAportado>",
+          "linea": 74,
+          "resumen": "Lee un documento aportado, lo guarda en el histórico y —si trae cargas— actualiza el corpus de la subasta como lo haría el cron."
+        },
+        {
+          "nombre": "docsAportadosDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, dedupeKey: string",
+          "retorno": "Promise<DocAportadoGuardado[]>",
+          "linea": 170,
+          "resumen": "Los documentos que la cuenta ya aportó a esta subasta, el más nuevo primero."
+        },
+        {
+          "nombre": "textoDePdf",
+          "kind": "function",
+          "exportada": false,
+          "params": "buf: Buffer",
+          "retorno": "Promise<string>",
+          "linea": 188
+        }
+      ],
+      "tablas": [
+        "subastas",
+        "subastas_docs_aportados"
+      ],
+      "rutaApi": null,
+      "hash": "58e9247222f7"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/documentos.ts",
@@ -96753,7 +96905,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2559,
-    "funciones": 7031
+    "archivos": 2562,
+    "funciones": 7043
   }
 }
