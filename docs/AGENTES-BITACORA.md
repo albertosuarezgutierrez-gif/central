@@ -15,6 +15,19 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-24 · facturas-correo** · hizo: pasada diaria completa (Paso 0→5). Preflight canal
+  alerta OK (200). Vía B: última copia `_buzon_pdf` sigue en 20/08 (dias_caido=4 por fórmula),
+  pero verificado de nuevo con búsqueda directa (`has:attachment filename:pdf newer_than:4d`) que
+  sigue sin entrar NINGÚN PDF nuevo en Gmail desde entonces — no es corte (mismo diagnóstico que
+  22/08 y 23/08); `agente_salud` actualizado. Backlog `PDF-pendiente`/`Revisar`/`Extraccion-fallida`
+  vacío (confirmado por `search_threads`). Paso 1/1-bis: 0 candidatos nuevos (solo 2 hilos ruido de
+  mensajería de huéspedes Booking, descartados; `_subir_aqui` y raíz 2026 sin subidas manuales
+  nuevas). Paso 4.0 (`v_facturas_sin_cargo`): 1 sola fila `sin_revisar` — el recibo Stripe
+  "Financial Datasets, Inc." 17,78€ (21/08, ya archivado el 23/08) — sigue sin cargo en el feed
+  PSD2 (fresco hasta hoy 24/08, sin coincidencia por importe/concepto en ±10 días); lo dejo sin
+  `sin_cargo_motivo` (aún reciente) para que la próxima pasada lo reintente en vez de cerrarlo.
+  Resto de la cola ya estaba `revisada_sin_cargo` de pasadas previas (Pepephone ene-jun, Giraldillo
+  mayo, CREATE-Socorro duplicada) — no reabierta. dudas: —; fallos: —. PRs/commits: —
 - **2026-08-24 · pricing-agente** · hizo: ciclo semanal completo, los 4 pisos (no solo los en vivo).
   Medí el ciclo anterior (17/08→hoy: House +4 reservas, Dúplex +2, Busto/Luxury 0), sembré mercado
   Booking en 12 ventanas/piso (120 comps/piso, 0 a cero), apliqué dry-run × 4 (200 OK, sin
