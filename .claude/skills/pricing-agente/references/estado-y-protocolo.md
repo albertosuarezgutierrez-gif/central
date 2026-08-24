@@ -288,8 +288,8 @@ plausibles y FALSAS: así salió un «ADR de agosto de 102€» que casi lleva a
   con el arreglo: los 30 comps VIVOS de House son de 8 plazas (media 314€), metidos a mano por el `/ingest` de
   la auditoría del 22-29/07. El motor los normaliza (×1,56 → 403€) y no miente, pero ese ancla está
   **EXTRAPOLADA, no medida** — los últimos comps de 12 plazas de verdad (09/06) iban a 621-694€.
-  **Consecuencia directa: la propuesta de bajar House a 330-350€ salió de ahí y queda RETIRADA.** Desde #1203
-  el sweep es DIARIO, así que se repone solo; hasta entonces, no muevas el precio de House con el dato de mercado.
+  **Consecuencia directa: la propuesta de bajar House a 330-350€ salió de ahí y queda RETIRADA.** (El sweep de
+  Serper se RETIRÓ el 24/08/2026; el corpus por fecha lo repone la rutina `mercado-booking` diaria.)
 
 ### 🔴 El bucket mensual solo cuenta con 3 fechas distintas — y el barrido daba 1 (01/08/2026)
 Caso que lo destapó: reserva de Luxury para el **viernes 6-nov**, entrada a las 18:43 después de que
@@ -413,7 +413,8 @@ y testeada en **`lib/sivra/pricing-centinelas.ts`** (21/21), cableada en el rout
 
 ## Recurrencia / autonomía (importante, no prometer 24/7 de más)
 - **Va solo (crons in-app):** `apply-auto` (tarifica Busto a diario), `rates/snapshot` (mide `was_booked`),
-  `mercado/sweep` + `eventos/sync` (refrescan datos), `resumen-diario`/`pilot-track` (KPIs). Bucle determinista
+  `eventos/sync` (refresca eventos; el `mercado/sweep` de Serper se retiró el 24/08/2026 — el corpus
+  por fecha lo mide la rutina `mercado-booking`), `resumen-diario`/`pilot-track` (KPIs). Bucle determinista
   que se retroalimenta sin Claude.
 - **Solo con sesión de Claude:** este agente con los **conectores de viajes** (Booking/Tripadvisor/Trivago) —
   los conectores viven en la sesión, no en la app. Para que corra periódicamente: **sesión programada de Claude

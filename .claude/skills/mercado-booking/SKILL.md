@@ -186,9 +186,9 @@ se lee como «no se dispara» y manda a mirar al sitio equivocado (lección del 
   piso y pasada, ~8 consultas). Son baratas y son la mitad del sistema: mídelas siempre, aunque
   tengas que recortar mercado.
 - **24 ventanas por pasada** (subido de 12 el 17/08/2026 con OK de Alberto: el plan creció a ~464
-  ventanas con las rondas de profundidad y a 12/día tardaba ~5 semanas — el objetivo es acumular
-  3 fechas/mes por piso cuanto antes para poder retirar el sweep de Serper, cuyo corpus sin fecha
-  metía además precios de habitación como si fueran pisos enteros). El techo duro del endpoint es
+  ventanas con las rondas de profundidad y a 12/día tardaba ~5 semanas — el objetivo era acumular
+  3 fechas/mes por piso para poder retirar el sweep de Serper — **RETIRADO el 24/08/2026**: esta
+  rutina es desde entonces la fuente ÚNICA del corpus por fecha, así que su latido pesa más). El techo duro del endpoint es
   30. La cobertura se ACUMULA (el motor mira 120 días atrás). **Si la sesión se te queda sin
   contexto a mitad, NO pasa nada: los comps ya escritos quedan (el ingest es idempotente) — manda
   el latido con lo que llevas y que la pasada de mañana siga; en el parte di hasta dónde llegaste.**

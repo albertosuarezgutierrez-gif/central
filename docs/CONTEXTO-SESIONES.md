@@ -121,6 +121,20 @@ El cron semanal `/api/cron/paper-tracker` (alta 18/08, PR #1476) ya escribía su
 pero no estaba en `AGENTES_VIGILADOS`/`PROBES`: si dejara de correr, nadie se enteraría. Añadido con
 umbral semanal (192h). Hallazgo de la propia `/auditoria-diaria` del 20/08, cerrado el 23/08.
 
+### 🪦 (24/08/2026) La vía Serper, retirada — el SEO pasa a `buscarWeb` — PR
+
+- Decisión de Alberto tras la caída del 22/08 (créditos agotados): **no pagar Serper**. La condición
+  de la fase 2 del landmine `market_rates.fuente` ya se cumplía: 1.100-1.300 comps FIABLES por piso
+  en 95-99 fechas vía rutina Booking, y dos días sin Serper tarificando los 4 pisos sin inmutarse.
+- Fuera de `CRON_JOBS`: `mercado/cron` (07:15) y `mercado/sweep` (03:00); sus latidos fuera del
+  registro/sondas (una alarma diaria sin arreglo posible es ruido). Rutas vivas para uso manual.
+- `seo-refresh` pierde la vía Serper y queda con `buscarWeb` (Gemini gratis si algún día hay key con
+  cuota + `GEMINI_WEBSEARCH=1`; hoy plugin web de OpenRouter, céntimos/mes). Skills y docs al día.
+- La rutina `mercado-booking` es desde hoy la fuente ÚNICA del corpus por fecha: su latido pesa más.
+- 📌 **Regla nueva de Alberto: todo lo que pueda usar OpenRouter, mejor OpenRouter** — unificar
+  proveedores de IA/búsqueda para no repetir caídas silenciosas tipo Serper. Anotada como regla
+  permanente en `apps/plataforma/CLAUDE.md` (sección «🔀 Proveedores de IA»).
+
 ### 🟡 (24/08/2026) Auditoría del pricing: los tres amarillos cerrados + Serper caído desde el 22/08 — PR
 
 - «Repara todo para 100%»: auditoría de salud (guardia 38/38, estructura ok, `ignoreCommand` ok,

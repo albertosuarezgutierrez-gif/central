@@ -59,13 +59,11 @@ export const CRON_JOBS: CronJob[] = [
   { path: '/api/cron/banca-alertas', schedule: '0 7 * * *' },
   { path: '/api/cron/psd2-sync', schedule: '0 6 * * *' },
   { path: '/api/sivra/expenses/fijos/generar', schedule: '0 6 1 * *' },
-  { path: '/api/sivra/mercado/cron', schedule: '15 7 * * *' },
-  // DIARIO desde el 01/08/2026 (era semanal, domingos): con una pasada a la semana el corpus tenía
-  // 5-7 fechas POR MES —octubre, el mejor mes de Sevilla, con el último barrido de hacía 15 días— y
-  // los centinelas de evento no llegaban nunca a la muestra mínima. El barrido es idempotente
-  // (`ON CONFLICT` por search_date) y ahora incluye las fechas de evento, así que repetirlo a diario
-  // refresca lo que se está vendiendo en vez de fotografiar el mismo finde cada siete días.
-  { path: '/api/sivra/mercado/sweep', schedule: '0 3 * * *' },
+  // 🪦 La vía Serper (mercado/cron 07:15 + mercado/sweep 03:00) se RETIRÓ el 24/08/2026: la cuenta
+  // agotó créditos el 22/08 y para entonces la rutina de Booking ya acumulaba 1.100-1.300 comps
+  // FIABLES por piso en 95-99 fechas — la condición que la fase 2 del landmine `market_rates.fuente`
+  // exigía para retirarla. Sus precios eran de ANUNCIO sin fecha (no fiables). Las rutas siguen
+  // vivas para llamadas manuales si algún día vuelve a haber SERPER_API_KEY con créditos.
   { path: '/api/sivra/pricing/guard', schedule: '30 7 * * *' },
   // Calibrado del CANAL contra el escaparate medido (19/08/2026): mide la recta
   // `escaparate = markup × base + cuota_fija` y la APLICA sola, acotada por pasada. Va DESPUÉS del

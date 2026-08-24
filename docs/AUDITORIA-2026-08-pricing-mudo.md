@@ -165,6 +165,8 @@ todo. Si deja de correr, lo único que lo notaría es el watchdog mudo del halla
 > ✅ **CERRADO 24/08/2026.** Los cinco con `registrarLatido` + entrada en `AGENTES_VIGILADOS` + sonda
 > en `PROBES` (mismo PR, regla del #1447): `sivra_rates_snapshot`, `sivra_mercado_cron`,
 > `sivra_resumen_diario`, `sivra_pilot_track`, `sivra_experimentos` (todos diarios, umbral 30 h).
+> *(Horas después, `sivra_mercado_cron` se retiró junto con toda la vía Serper — decisión de
+> Alberto del mismo día: cuenta sin créditos y corpus fiable de Booking ya suficiente.)*
 > De propina, `mercado/cron` deja de tragarse los fallos de Serper (`searchPortal` los anota y el
 > `ok` los refleja) — así murió la vía Serper entera del 22 al 24/08 con `ok:true` en cada pasada —
 > y los TRES `serperSearch` del repo incluyen el CUERPO del error («Serper 400: Not enough credits»

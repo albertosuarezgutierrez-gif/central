@@ -21,7 +21,7 @@ prob_reserva`. Reglas:
 | Zona/CP, coords, aforo, tipo de cada piso | tabla `pricing_piso_zona` (Paso 1; pobla `/api/pricing/pisos-zona`) |
 | Mercado real por fecha (≤90d) | MCP `mcp__Booking_com__accommodations_search` (coords+radio, `number_of_adults`=aforo, APARTMENT, EUR) |
 | Mercado real a futuro (>90d) | MCP `mcp__Tripadvisor__search_hotels` / `mcp__Trivago__trivago-accommodation-radius-search` |
-| Comps históricos por `checkin_date` | tabla `market_rates` (barrido `/api/mercado/sweep`) |
+| Comps históricos por `checkin_date` | tabla `market_rates` (rutina `mercado-booking`; el sweep de Serper se retiró el 24/08/2026) |
 | Eventos (puentes/festivos + aforo) | `apps/sivra/lib/pricing-calendar.ts` (`eventFactor`) + tabla `pricing_eventos_auto` (Ticketmaster) |
 | Ocupación + antelación de reserva | tablas `rate_snapshots` (`available`, `was_booked`), `incomes` |
 | **Precio VIVO de un piso hoy** | `rate_snapshots.price_pricelabs` (nombre LEGACY: es el precio real en Smoobu; PriceLabs de baja 09/08/2026) o `pricing_applied.new_price`. **NUNCA `price_ours`** — ver trampa abajo |
@@ -82,9 +82,9 @@ el 11/07, precio REAL 65-81€ contra un mercado de 80€). El aviso está en la
 
 ### 2. Reúne TODAS las variables (por piso, por fecha)
 - Ventanas: **1 finde/mes hasta ~12 meses + cada fecha de evento**, e **incluye SIEMPRE las semanas
-  altas a futuro** (Semana Santa, Feria, septiembre). El `sweep` de Serper (cron) solo cubre ~8 meses
-  y se queda corto a futuro → si no barres tú las fechas lejanas, el motor las tarifica a ciegas y las
-  **hunde al suelo** (lección cara: Busto abril'27 se vendió a 99€ con mercado real ~150-179€).
+  altas a futuro** (Semana Santa, Feria, septiembre). El sweep de Serper se RETIRÓ el 24/08/2026:
+  esta rutina es la única fuente por fecha → si no barres tú las fechas lejanas, el motor las tarifica
+  a ciegas y las **hunde al suelo** (lección cara: Busto abril'27 se vendió a 99€ con mercado real ~150-179€).
 - Mercado — **triangula 2-3 OTAs por fecha** (resiliencia: si una falla, las otras cubren; pasó el
   23/06 con Trivago/Tripadvisor caídos):
   - `mcp__Booking_com__accommodations_search` con `accommodation_types:["APARTMENT"]`, coords+radio y
