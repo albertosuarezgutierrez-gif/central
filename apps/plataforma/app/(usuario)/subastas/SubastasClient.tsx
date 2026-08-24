@@ -855,6 +855,143 @@ function NotaSimpleViva({ dedupeKey }: { dedupeKey: string }) {
   )
 }
 
+interface RespuestaAportado {
+  titulo?: string
+  legible?: boolean
+  cargas?: number
+  aplicado?: boolean
+  importeSubsistente?: number | null
+  resumen?: string | null
+  avisos?: string[]
+  notas?: string[]
+  error?: string
+}
+
+interface DocAportadoPrevio { id: string; titulo: string; legible: boolean; cargas: number; notas: string[]; creadaEn: string }
+
+/**
+ * «Aportar documentos»: la puerta de entrada del lector para los PDFs que el
+ * cron no puede bajar. El Portal esconde los documentos de muchas fichas tras
+ * el login y el login automático no es viable (2FA + captcha) — pero Alberto
+ * los baja con su sesión en dos minutos. Aquí se los da al MISMO lector que
+ * procesa los adjuntos del BOE y la subasta queda analizada como si no hubiera
+ * muro (las cargas leídas van al corpus con la semántica del cron).
+ *
+ * `<details>` con montaje perezoso, igual que la nota simple.
+ */
+function DocsAportados({ dedupeKey, muro }: { dedupeKey: string; muro: 'ninguno' | 'parcial' | 'total' }) {
+  const [abierto, setAbierto] = useState(false)
+  const [previos, setPrevios] = useState<DocAportadoPrevio[] | null>(null)
+  const [ficheros, setFicheros] = useState<File[]>([])
+  const [leyendo, setLeyendo] = useState<string | null>(null)
+  const [resultados, setResultados] = useState<Array<{ nombre: string; r: RespuestaAportado }>>([])
+
+  useEffect(() => {
+    if (!abierto || previos !== null) return
+    fetch(`/api/subastas/documentos?dedupe_key=${encodeURIComponent(dedupeKey)}`)
+      .then((res) => res.json())
+      .then((j) => setPrevios(Array.isArray(j?.docs) ? j.docs : []))
+      .catch(() => setPrevios([]))
+  }, [abierto, previos, dedupeKey])
+
+  async function enviar() {
+    if (!ficheros.length || leyendo) return
+    setResultados([])
+    // De uno en uno: cada documento paga su propia lectura (doble pasada del
+    // lector registral) y así un PDF que falle no arrastra a los demás.
+    for (const f of ficheros) {
+      setLeyendo(f.name)
+      try {
+        const form = new FormData()
+        form.append('dedupe_key', dedupeKey)
+        form.append('fichero', f)
+        const res = await fetch('/api/subastas/documentos', { method: 'POST', body: form })
+        const r: RespuestaAportado = await res.json()
+        setResultados((prev) => [...prev, { nombre: f.name, r }])
+      } catch (e: any) {
+        setResultados((prev) => [...prev, { nombre: f.name, r: { error: e?.message ?? 'No se ha podido leer' } }])
+      }
+    }
+    setLeyendo(null)
+    setFicheros([])
+    setPrevios(null) // se relee la lista en el próximo render del efecto
+  }
+
+  return (
+    <details style={{ marginTop: 6 }} onToggle={(e) => setAbierto((e.currentTarget as HTMLDetailsElement).open)}>
+      <summary style={{ cursor: 'pointer', fontSize: 13, color: 'var(--text)', minHeight: 36, display: 'flex', alignItems: 'center' }}>
+        {muro !== 'ninguno'
+          ? '📥 El Portal esconde los documentos: bájalos con tu sesión y súbemelos aquí'
+          : '📥 ¿Tienes PDFs de esta subasta (edicto, certificación…)? Súbelos y los leo'}
+      </summary>
+      {abierto && (
+        <div style={{ marginTop: 8 }}>
+          <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--muted)' }}>
+            {muro !== 'ninguno'
+              ? 'El cron entra en anónimo y esta ficha solo enseña sus documentos con sesión iniciada. Descárgalos desde la ficha oficial y súbelos: se leen con el mismo lector (cargas incluidas) y la subasta queda analizada.'
+              : 'Se leen con el mismo lector registral que los adjuntos del BOE y las cargas encontradas se suman al análisis de la ficha.'}
+          </p>
+          <input
+            type="file"
+            accept="application/pdf,image/*"
+            multiple
+            onChange={(e) => setFicheros(Array.from(e.target.files ?? []))}
+            style={{ ...control, width: '100%', maxWidth: '100%', padding: 8, display: 'block' }}
+          />
+          <button type="button" onClick={enviar} disabled={!!leyendo || ficheros.length === 0} style={{ ...boton(true), marginTop: 8 }}>
+            {leyendo ? `Leyendo ${leyendo}…` : `🔍 Leer ${ficheros.length > 1 ? `los ${ficheros.length} documentos` : 'el documento'}`}
+          </button>
+
+          {resultados.map(({ nombre, r }) => (
+            <div key={nombre} style={{ marginTop: 10 }}>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--text)' }}>
+                {r.error
+                  ? `⚠️ ${nombre}: ${r.error}`
+                  : !r.legible
+                    ? `🟠 ${nombre}: no se ha podido sacar nada — léelo a mano.`
+                    : r.aplicado
+                      ? `✅ ${r.titulo}: ${r.cargas === 1 ? '1 carga leída' : `${r.cargas ?? 0} cargas leídas`}${
+                          r.importeSubsistente != null
+                            ? r.importeSubsistente > 0
+                              ? ` — hereda ${eur(r.importeSubsistente)}`
+                              : ' — no subsiste ninguna'
+                            : ' — subsistentes sin cuantificar'
+                        }. Ficha actualizada.`
+                      : `✅ ${r.titulo}: leído (sin cuadro de cargas).`}
+              </p>
+              {(r.notas ?? []).map((n) => (
+                <p key={n} style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text)' }}>📄 {n}</p>
+              ))}
+              {(r.avisos ?? []).map((a) => (
+                <p key={a} style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--muted)' }}>· {a}</p>
+              ))}
+            </div>
+          ))}
+          {resultados.some(({ r }) => r.aplicado) && (
+            <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+              Recarga la página para ver el titular de cargas de la ficha con lo recién leído.
+            </p>
+          )}
+
+          {previos && previos.length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>📥 Ya aportados a esta subasta:</div>
+              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--text)' }}>
+                {previos.map((d) => (
+                  <li key={d.id} style={{ marginBottom: 3 }}>
+                    {d.titulo} · {new Date(d.creadaEn).toLocaleDateString('es-ES')} ·{' '}
+                    {d.legible ? (d.cargas > 0 ? `${d.cargas} carga${d.cargas === 1 ? '' : 's'}` : 'leído') : 'ilegible (léelo a mano)'}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </details>
+  )
+}
+
 /**
  * Par etiqueta→valor del bloque «💶 Los números»: etiqueta pequeña arriba,
  * valor con peso debajo. La jerarquía la da la tipografía — antes todos los
@@ -1261,6 +1398,7 @@ function FichaSubasta({ s, o, acciones, extra, doc, escenarios, params }: { s: S
 
       {/* Cargas + documentación: en TODAS las pestañas, no solo en «Todas». */}
       <ResumenDocumental s={s} d={doc} />
+      <DocsAportados dedupeKey={s.dedupeKey} muro={doc?.documentosMuro ?? 'ninguno'} />
       <NotaSimpleViva dedupeKey={s.dedupeKey} />
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
