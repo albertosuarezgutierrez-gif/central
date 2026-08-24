@@ -102,13 +102,16 @@ exacto ya no hace falta pedirlo: confirmado con la app del banco.
 
 ## ❓ Intake pendiente (espejo de /patrimonio)
 
-**Preguntado en el dossier inicial (24/08/2026, Telegram):** (1) valor/año de compra reales de
-Socorro — **MEDIO cerrado 24/08/2026**: Alberto subió la escritura de compraventa (copia simple
-escaneada) y la **fecha ya es firme: 25/09/2015**, escritura nº 2945 del notario Luis Barriga
-Fernández (Mairena del Aljarafe), compradores Alberto+Pilar SOLTEROS (vendedores Segovia/Riaño;
-la casa es el «36 antiguo / 9 moderno / 26 novísimo, hoy 24», suelo 115,36 m²). ⚠️ El escaneo
-solo trae los folios 1-2 y el **PRECIO no consta** (va en el folio de «Precio y forma de pago»):
-falta que Alberto mande ese folio — los 360.000€ sembrados siguen siendo orientativos;
+**Preguntado en el dossier inicial (24/08/2026, Telegram):** (1) ~~valor/año de compra reales de
+Socorro~~ — **✅ CERRADO 24/08/2026**: Alberto subió la escritura (copia simple, folios 1-2) y el
+**contrato privado de compraventa** firmado por las cuatro partes. **Precio: 346.000€** (contrato
+02/09/2015: 20.000€ de señal en efectivo + 326.000€ por cheque bancario a la firma) · **escritura
+25/09/2015**, nº 2945 del notario Luis Barriga Fernández (Mairena del Aljarafe) · compradores
+Alberto+Pilar SOLTEROS (mitades indivisas), vendedores Segovia/Riaño · finca 1134 de Sevilla,
+IDUFIR 41029000008417, sin cargas; la casa es el «36 antiguo / 9 moderno / 26 novísimo, hoy 24»,
+suelo 115,36 m². Sembrado en `act_house_sevillana` (el 360.000€ orientativo queda corregido).
+Los gastos de adquisición de Socorro (ITP/notaría/registro) NO constan en estos documentos —
+mismo hueco que en Monte Carmelo, no bloquea nada hoy;
 (2) ~~capital pendiente exacto de la hipoteca~~ (✅ cerrado 24/08/2026 — Alberto confirmó
 **195.622,59€** con la pantalla del banco, tras corregir el 195.324€ dictado primero); (3) ~~¿enviado el email a la
 gestora de CajaSur por la bonificación?~~ (✅ cerrado 24/08/2026 — enviado por la **intranet de
@@ -123,8 +126,8 @@ cifras a `patrimonio_activos` (o que Alberto las dicte).
 
 Primer cuestionario previsto para el dossier inicial: ~~m² y ref. catastral de Socorro y
 Monte Carmelo~~ (cerrado 23/08/2026 — Alberto dio las refs y el Catastro dio m²/año);
-valor/año de compra de Socorro (año CERRADO 24/08/2026 con la escritura — 25/09/2015; el precio
-sigue pendiente del folio que falta, la cifra sembrada es orientativa); ~~valor/año de compra y
+~~valor/año de compra de Socorro~~ (CERRADO 24/08/2026 — 346.000€ el 25/09/2015, contrato
+privado + escritura); ~~valor/año de compra y
 titularidad de Monte Carmelo~~ (cerrado 23/08/2026 — escritura de compraventa: 270.000€ el
 29/03/2021, 50/50 Alberto+Pilar privativo, finca 7523 Registro Sevilla nº2, superficie
 registral 172,50 m²; los gastos de adquisición —ITP/notaría/registro— NO constan y siguen
