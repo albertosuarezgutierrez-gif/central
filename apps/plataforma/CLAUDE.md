@@ -838,6 +838,26 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
     OJO: el caso «OCR basura» (texto extraíble pero ilegible, `pareceEscaneado()` mide cantidad y no
     calidad) sigue entrando por la vía de texto — si reaparece, la señal es un cuadro vacío con confianza
     baja sobre un doc con muchos chars.
+  - **🚨 LANDMINE — enrutado de IA del lector: `modelo` ≠ `categoria` en `chatConDirector` (24/08/2026,
+    PR #1675):** `modelo` es un PIN que SALTA OpenRouter entero (la petición va a la cadena clásica NIM);
+    `categoria` elige por catálogo DENTRO de OpenRouter. `leerTexto` pinó un id de catálogo OpenRouter
+    (`google/gemini-2.5-flash`) como `modelo` → NVIDIA devolvía 404 → **el lector de TEXTO llevaba muerto
+    desde su estreno** (solo funcionaba la visión de escaneados), y lo destapó la primera prueba real del
+    buzón. Regla: el lector registral usa `categoria: 'registral'`, jamás `modelo`; lo vigila el guardián
+    `lib/subastas/lector-registral-enrutado.test.ts` (lee el FUENTE — ni tsc ni build cazan este bug).
+  - **🧑‍⚖️ VEREDICTO en la ficha + ref catastral desde los aportados (24/08/2026, PR #1680):**
+    `module-subastas/veredicto.ts` (puro, 11 tests) pinta arriba de cada `FichaSubasta` un titular:
+    🟢 interesa (con techo de puja por bisección sobre `calcularCoste`, descuento objetivo 25%) /
+    🔴 no interesa / 🟠 faltan datos (y dice CUÁLES) / ⚫ cerrada. **Asimetría deliberada:** el 🔴 es
+    afirmable con piezas sin resolver (lo que falta solo empeora); el 🟢 exige valor de mercado REAL
+    (la estimación m²×€/m² de zona NUNCA sentencia — siempre 🟠) y cargas resueltas. Razones: techo vs
+    `cantidad_reclamada` («hasta ahí el ejecutante puede sobrepujarte sin gastar un euro»), ocupada→
+    lanzamiento, y **📊 probabilidad de quedártela** por calibración de remates (`calibracionAdjudicaciones`):
+    compara techo/tipo contra el ratio mediano de SU provincia, y el agregado nacional se DECLARA como tal
+    («sin muestra de Asturias; mediana global 0,64×»), nunca disfrazado de local. Además
+    `procesarDocAportado` extrae la **referencia catastral** del texto/literales de cargas
+    (`extraerRefCatastral`) → tapa `subastas.ref_catastral` SOLO si estaba NULL y pone `enriquecida_at=NULL`
+    para que el cron nocturno traiga m²/año/uso del Catastro (idea de Alberto: Siero no publicaba m²).
 
 ## 🔓 `/api/publico/*` — el único endpoint sin sesión, y su landmine de CORS (20/08/2026)
 `GET /api/publico/disponibilidad?piso=<slug>&meses=<1..12>` alimenta el calendario de la landing de
