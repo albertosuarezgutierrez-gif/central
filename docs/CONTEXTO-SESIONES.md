@@ -41,6 +41,16 @@ en skill `patrimonio-cfo` (Paso 4, vigilancia del acumulado en cada pasada + avi
 faltan €), `docs/PATRIMONIO-CFO.md` y reco #1 (`datos`). Pendiente de Alberto: enviar a la gestora el
 nombre del producto (texto ya redactado) y completar 1.063,41€ este período. PRs #1658/#1660/#1662/#1663.
 
+### 💸 (24/08/2026) Vercel 126,77€: el 79% siguen siendo Build CPU Minutes → previews apagadas (`--sin-previews`)
+Factura 14 jul–13 ago (recibo 2886-1078): Build CPU Minutes 32.708 min ≈ 92,51 US$ de 117 US$ de subtotal
+(el resto: Pro 20 + funciones/observabilidad <5). Causa: 615 commits de main construyeron apps (plataforma
+sola: 527) y cada push de cada rama de PR construía además su preview, que nadie mira. Arreglo: flag
+`--sin-previews` en `vercel-ignore-build.mjs` + en el `ignoreCommand` de TODAS las apps salvo ialimp
+(cliente vivo, preview verde antes de main); escape `[preview]` en el asunto del commit. También
+`--deepen=50` antes de `--unshallow` en el fallback del diff. Ahorro estimado ~40-45 US$/mes.
+Pendiente MANUAL de Alberto (dashboard): fijar Build Machine a Standard (no elástica) en cada proyecto.
+Tests 11/11 + guardianes 43/43. PR draft en rama `claude/vercel-cargo-optimization-5hpbwc`.
+
 ### 💰 (24/08/2026) DECISIÓN de Alberto: Tramo 1 de la escalera (1.000€ reales) — delegado al criterio del agente
 «Lo dejo en tu criterio» tras ver plazos de la escalera. Criterio aplicado: abrir Tramo 1 (~3% del
 cash; su objetivo es medir FRICCIÓN, prerequisito del Tramo 2 del ~15/11) con la próxima señal viva
