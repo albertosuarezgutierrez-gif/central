@@ -32,16 +32,19 @@ subsistencia familiar, siempre marcada) · **nunca ejecuta ni comunica a tercero
 
 ## 📸 Foto patrimonial (24/08/2026 — primera foto)
 
-**Neto mínimo conocido: 1.756.976,88€** (es un MÍNIMO: capital de hipoteca estimado, una
-cuenta oculta sin confirmar, valoraciones AVM no contrastadas con tasación).
+**Neto mínimo conocido: 1.777.111,91€** (es un MÍNIMO: valoraciones AVM no contrastadas con
+tasación y dos cuentas sin saldo conocido; el capital de la hipoteca y la cuenta BBVA personal
+ya están confirmados).
 - 🏠 Inmuebles **1.890.000€** — AVM BBVA 23/08: Socorro 832.000€ · Dúplex 294.000€ · Monte
   Carmelo 764.000€. (Las de Alberto y las `agente:m2zona` del 23/08 quedan al lado en
   `patrimonio_valoraciones`; la vigente por activo es la más fresca.)
-- 💧 Liquidez visible **30.634,40€** (BBVA 19.940,62€ + Kutxabank 10.693,78€, a 24/08).
-  Declaradas y NO sumadas: BBVA oculta con 20.433,62€ (a 27/06, sin confirmar con Alberto),
-  N26 y Kutxa-Pilar sin saldo conocido.
+- 💧 Liquidez **51.068,02€** — BBVA 19.940,62€ + Kutxabank 10.693,78€ (a 24/08) + **BBVA
+  personal ****2620 con 20.433,62€** (saldo a 27/06 — Alberto confirmó el 24/08/2026 que es
+  suya y cuenta; `oculta=false` en `cuentas_bancarias`, saldo pendiente de refrescar).
+  Declaradas y NO sumadas: N26 y Kutxa-Pilar sin saldo conocido.
 - 📈 IBKR **31.666,48€** (23/08) — sin alerta Modelo 720 (umbral de aviso 45.000€).
-- 🏦 Hipoteca Monte Carmelo **−195.324€ (ESTIMADO** por sistema francés; falta recibo).
+- 🏦 Hipoteca Monte Carmelo **−195.622,59€ — CONFIRMADO por Alberto (24/08/2026**, pantalla
+  «Información del préstamo» de la app del banco; corrige el 195.324€ que dictó primero de memoria).
 
 **Yield neto 12m** (incomes − gastos del piso − ¼ de los compartidos `prop_multi_apartamentos`;
 aproximación declarada — no incluye lo que solo está en banca):
@@ -67,7 +70,8 @@ vivienda) en `patrimonio_valoraciones` junto a las de Alberto — ver `docs/RADA
 
 - **#1 Hipoteca: recuperar la bonificación perdida (~0,20 pts ≈ 390€/año) y NO amortizar hoy**
   — amortizar rinde el 1,31% aplicado vs ~2,16% neto de letras 12m (2,663% bruto, última
-  subasta ago-2026). Primera palanca: el email a la gestora de CajaSur (sigue sin enviar).
+  subasta ago-2026). Primera palanca: la gestora de CajaSur — **Alberto la contactó por la
+  intranet de Kutxabank el 24/08/2026, pendiente de respuesta**.
 - **#2 Liquidez ociosa → monetario/letras** — 30.634€ a la vista al 0%; ~266€/año brutos por
   cada 10.000€. Pendiente que Alberto defina el colchón.
 - **#3 Dúplex: plan de venta abierto SIN fijar ventana** — el «cuándo» lo decide el termómetro
@@ -79,8 +83,10 @@ Alberto subió la escritura (CAJASUR nº 856289293-5, abr-2021) y la ficha `act_
 de `patrimonio_activos` quedó completada: capital inicial 230.501,03€ · 30 años (vence
 05/04/2051) · tipo FIJO 2,10% nominal **bonificable** (aplicado real ~1,11% hasta abr-2026 y
 ~1,31% desde entonces — perdió ~0,20 pts de bonificación, revisar qué producto dejó de
-cumplir) · cuota 772,86€ · capital pendiente **≈195.300€ (ESTIMADO** por sistema francés;
-confirmar con recibo) · amortización anticipada con comisión efectiva ≈0€ mientras los tipos
+cumplir) · cuota 772,86€ · capital pendiente **195.622,59€ (CONFIRMADO por Alberto 24/08/2026**, pantalla de la
+app del banco; la estimación por sistema francés —195.324€— se quedó a 298,59€, un 0,15%. La app
+referencia el recibo como `917255085-5`, distinto del nº de escritura `856289293-5` que vigila el
+agente contable en los `CUOTA PTMO` de la banca) · amortización anticipada con comisión efectiva ≈0€ mientras los tipos
 de mercado superen el suyo. **Consigna de Alberto: el CFO evalúa en cada pasada si merece la
 pena amortizar** — contra la alternativa neta, y mirando primero las bonificaciones perdidas
 (recuperar 0,10-0,50 pts suele rendir más que amortizar). Detalle en la skill, Paso 4.
@@ -89,16 +95,25 @@ pena amortizar** — contra la alternativa neta, y mirando primero las bonificac
 los recibos `CUOTA PTMO 856289293-5` de la banca — si la cuota cambia entre recibos, o la
 ficha `act_monte_carmelo` se desincroniza de lo que el banco cobra, avisa por Telegram
 (`apps/plataforma/lib/contable/hipoteca-vigia.ts`, helper puro con tests). Este agente
-analiza en mensual lo que aquel detecta en semanal. Además hay borrador de email a la
-gestora (María Luz, CajaSur) en el Gmail de Alberto pidiendo bonificación perdida, capital
-exacto y cuadro — pendiente de que Alberto lo envíe y llegue respuesta.
+analiza en mensual lo que aquel detecta en semanal. La consulta a la gestora (María Luz,
+CajaSur) por la bonificación perdida **la envió Alberto por la intranet de Kutxabank el
+24/08/2026** (el borrador de Gmail quedó sin usar) — pendiente de respuesta. El capital
+exacto ya no hace falta pedirlo: confirmado con la app del banco.
 
 ## ❓ Intake pendiente (espejo de /patrimonio)
 
 **Preguntado en el dossier inicial (24/08/2026, Telegram):** (1) valor/año de compra reales de
-Socorro; (2) capital pendiente exacto de la hipoteca (recibo); (3) ¿enviado el email a la
-gestora de CajaSur por la bonificación?; (4) ¿la cuenta BBVA oculta con 20.433,62€ (27/06)
-sigue viva y se cuenta?; (5) gastos de adquisición de Monte Carmelo (ITP/notaría/registro).
+Socorro; (2) ~~capital pendiente exacto de la hipoteca~~ (✅ cerrado 24/08/2026 — Alberto confirmó
+**195.622,59€** con la pantalla del banco, tras corregir el 195.324€ dictado primero); (3) ~~¿enviado el email a la
+gestora de CajaSur por la bonificación?~~ (✅ cerrado 24/08/2026 — enviado por la **intranet de
+Kutxabank**, pendiente de respuesta); (4) ~~¿la cuenta BBVA oculta con 20.433,62€ (27/06)
+sigue viva y se cuenta?~~ (✅ cerrado 24/08/2026 — «es mía, personal»: destapada y sumada, ver foto);
+(5) gastos de adquisición de Monte Carmelo (ITP/notaría/registro) — **fuente LOCALIZADA en el
+Gmail de Alberto**: la «Liquidación de Costes» definitiva de la compraventa está en el adjunto
+`PF ALBERTO SUAREZ.PDF` del email de María Luz (CajaSur) del **16/09/2021**, hilo
+«856289293-5 SUAREZ GUTIERREZ, ALBERTO Exp. nº: 210297423» (hubo un faltante de 120,49€ sobre
+la provisión). El conector de Gmail no descarga adjuntos: falta abrir ese PDF y pasar las
+cifras a `patrimonio_activos` (o que Alberto las dicte).
 
 Primer cuestionario previsto para el dossier inicial: ~~m² y ref. catastral de Socorro y
 Monte Carmelo~~ (cerrado 23/08/2026 — Alberto dio las refs y el Catastro dio m²/año);
@@ -113,8 +128,7 @@ responsable de Pilar 14/05/2025; ⚠️ errata en el RESUELVO de esa resolución
 capacidad antigua 2/5: comprobar el RTA y pedir corrección de errores si procede) y Dúplex
 **VFT/SE/01932** (titular Alberto, 20/04/2017,
 2 hab/4 plazas); Monte Carmelo sin VUT (vivienda habitual, `licencia_vut=false`)); y
-confirmar el capital pendiente exacto de la hipoteca con el recibo/área de cliente (el
-sembrado es estimación).
+~~confirmar el capital pendiente exacto de la hipoteca~~ (cerrado 24/08/2026: 195.622,59€ de la app del banco).
 
 ## Escenarios en cartera (contexto para próximas pasadas)
 
