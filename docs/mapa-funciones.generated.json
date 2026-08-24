@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-24T15:41:01Z",
-  "sha": "1a6ae29b8c1d131275368b581d2bfa79fc606c0f",
+  "generadoEn": "2026-08-24T16:42:05Z",
+  "sha": "be55dd8bc4054328cd6acb880d281f72b0bdf362",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -49736,7 +49736,7 @@
           "exportada": false,
           "params": "{ dedupeKey, muro }: { dedupeKey: string; muro: 'ninguno' | 'parcial' | 'total' }",
           "retorno": null,
-          "linea": 882,
+          "linea": 884,
           "resumen": "«Aportar documentos»: la puerta de entrada del lector para los PDFs que el cron no puede bajar. El Portal esconde los documentos de muchas fichas tras el login y el login automático no es viable (2FA "
         },
         {
@@ -49745,7 +49745,7 @@
           "exportada": false,
           "params": "{ etiqueta, sub, children }: { etiqueta: string; sub?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 1000,
+          "linea": 1007,
           "resumen": "Par etiqueta→valor del bloque «💶 Los números»: etiqueta pequeña arriba, valor con peso debajo. La jerarquía la da la tipografía — antes todos los importes eran chips/líneas del mismo peso y se confun"
         },
         {
@@ -49754,7 +49754,7 @@
           "exportada": false,
           "params": "{ u }: { u: ReturnType<typeof umbralesPuja> }",
           "retorno": null,
-          "linea": 1018,
+          "linea": 1025,
           "resumen": "Umbrales de APROBACIÓN del remate. Corrige la confusión de «hay que pujar el 70% de la deuda»: el 70% de la LEC es del VALOR DE SUBASTA, y la deuda entra como vía alternativa (y como techo probable de"
         },
         {
@@ -49763,7 +49763,7 @@
           "exportada": false,
           "params": "s: Subasta",
           "retorno": "SubastaInmueble",
-          "linea": 1034,
+          "linea": 1041,
           "resumen": "El `Subasta` del cliente, como lo espera la lógica pura del módulo."
         },
         {
@@ -49772,16 +49772,16 @@
           "exportada": false,
           "params": "{ s, o, params }: { s: Subasta; o?: Oportunidad | null; params?: ParamsCoste }",
           "retorno": null,
-          "linea": 1061,
+          "linea": 1068,
           "resumen": "«¿Y si pujo X?»: coste puerta abierta, descuento real y banda de aprobación de UNA puja concreta. Mismo motor que el resto de la ficha (`calcularCoste` + `umbralesPuja` del módulo, con la financiación"
         },
         {
           "nombre": "FichaSubasta",
           "kind": "function",
           "exportada": false,
-          "params": "{ s, o, acciones, extra, doc, escenarios, params }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null; escenarios?: EscenarioUI[] | null; params?: ParamsCoste }",
+          "params": "{ s, o, acciones, extra, doc, escenarios, params, precioM2Zona, calibracion }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null; escenarios?: EscenarioUI[] | null; params?: P",
           "retorno": null,
-          "linea": 1126
+          "linea": 1133
         },
         {
           "nombre": "SubastasClient",
@@ -49789,14 +49789,14 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Inicial | null }",
           "retorno": null,
-          "linea": 1434
+          "linea": 1485
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "63efb76134b5"
+      "hash": "a2ddfc0bad24"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -58877,6 +58877,26 @@
       ],
       "rutaApi": "/api/trading/puntuar",
       "hash": "6fea9f5739ef"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/trading/radar/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 18
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/trading/radar",
+      "hash": "9fe3ffab58f1"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/saldo/route.ts",
@@ -71763,7 +71783,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "string | null",
-          "linea": 41,
+          "linea": 43,
           "resumen": "Qué ES el documento, leído de su propio texto. Hace falta porque el Portal sirve las descargas con nombres genéricos (`documento1_4.pdf`) que no dicen nada — y el título importa: es lo que usa `autori"
         },
         {
@@ -71772,7 +71792,7 @@
           "exportada": true,
           "params": "nombreFichero: string | null | undefined, titulo?: string | null, texto?: string | null",
           "retorno": "string",
-          "linea": 63,
+          "linea": 65,
           "resumen": "Título con el que se registra el documento: el que dé el usuario > el que declare el propio texto (`tituloDesdeTexto`) > el nombre del fichero. El contenido gana al fichero a propósito: «documento2_4."
         },
         {
@@ -71781,7 +71801,7 @@
           "exportada": true,
           "params": "l: LecturaAportada",
           "retorno": "boolean",
-          "linea": 78,
+          "linea": 80,
           "resumen": "¿Esta lectura dice ALGO utilizable? Un edicto sin cargas pero con señales («vivienda habitual: no consta») aporta; un PDF del que no salió nada, no — y ese «nada» se guarda como ilegible, nunca como «"
         },
         {
@@ -71790,7 +71810,7 @@
           "exportada": true,
           "params": "bruto: unknown",
           "retorno": "CuadroCargas | null",
-          "linea": 97,
+          "linea": 102,
           "resumen": "Revive el `cargas_detalle` guardado en la BD como un cuadro de confianza. `null` si no hay nada guardado o lo guardado no trae cargas. Matiz asumido (el mismo que la nota simple): `normalizarCuadroCar"
         },
         {
@@ -71799,13 +71819,13 @@
           "exportada": true,
           "params": "previo: CuadroCargas | null, nuevos: CuadroCargas[]",
           "retorno": "CuadroCargas | null",
-          "linea": 116,
+          "linea": 121,
           "resumen": "El cuadro que se escribe al corpus: lo que ya se sabía + lo recién leído, fusionado con UNA fila por asiento registral (`fusionarCargas` del módulo, el mismo que usa el cron — dedupe por identidad, im"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6bbd03cd1980"
+      "hash": "373ac945d63b"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/docs-aportados.ts",
@@ -71822,7 +71842,7 @@
           "exportada": true,
           "params": "cuentaId: string, dedupeKey: string, doc: { nombreFichero?: string | null; titulo?: string | null; texto?: string | null; pdf?: Buffer | null; mediaType?: string | null },",
           "retorno": "Promise<ResultadoAportado>",
-          "linea": 74,
+          "linea": 79,
           "resumen": "Lee un documento aportado, lo guarda en el histórico y —si trae cargas— actualiza el corpus de la subasta como lo haría el cron."
         },
         {
@@ -71831,7 +71851,7 @@
           "exportada": true,
           "params": "cuentaId: string, dedupeKey: string",
           "retorno": "Promise<DocAportadoGuardado[]>",
-          "linea": 170,
+          "linea": 198,
           "resumen": "Los documentos que la cuenta ya aportó a esta subasta, el más nuevo primero."
         },
         {
@@ -71840,7 +71860,7 @@
           "exportada": false,
           "params": "buf: Buffer",
           "retorno": "Promise<string>",
-          "linea": 188
+          "linea": 216
         }
       ],
       "tablas": [
@@ -71848,7 +71868,7 @@
         "subastas_docs_aportados"
       ],
       "rutaApi": null,
-      "hash": "58e9247222f7"
+      "hash": "8c00afa8b03d"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/documentos.ts",
@@ -95169,6 +95189,61 @@
       "hash": "3de8482c029a"
     },
     {
+      "ruta": "packages/module-subastas/src/veredicto.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── VEREDICTO de una subasta: el titular «interesa / no interesa / faltan datos» que Alberto pidió el 24/08/2026 («que me haga una especie de resumen: no interesa, o sí interesa»). Módulo PURO: la UI le pasa lo que ya sabe y aq",
+      "exporta": [
+        "veredicto"
+      ],
+      "funciones": [
+        {
+          "nombre": "eur",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 70
+        },
+        {
+          "nombre": "pct",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: number",
+          "retorno": null,
+          "linea": 72
+        },
+        {
+          "nombre": "motivoCargas",
+          "kind": "function",
+          "exportada": false,
+          "params": "estado: EstadoCargas",
+          "retorno": "string",
+          "linea": 75,
+          "resumen": "Por qué las cargas no están resueltas, en el recado corto de cada estado."
+        },
+        {
+          "nombre": "razonProbabilidad",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: EntradaVeredicto, hastaPuja: number | null, tieneTipo: boolean",
+          "retorno": "string | null",
+          "linea": 93,
+          "resumen": "El techo como probabilidad: tu ×tipo frente al ×tipo mediano de las adjudicadas."
+        },
+        {
+          "nombre": "veredicto",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaVeredicto",
+          "retorno": "Veredicto",
+          "linea": 112
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a6026bd265bf"
+    },
+    {
       "ruta": "packages/module-subastas/src/zona.ts",
       "ambito": "packages/module-subastas",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Referencia €/m² por zona vía la página de búsqueda de Fotocasa. La descarga y la mediana las hace la edge function `zona-fotocasa` (Supabase, región EU — Fotocasa geobloquea datacenters de EE.UU.); aquí vive lo puro: conver",
@@ -96935,7 +97010,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2563,
-    "funciones": 7045
+    "archivos": 2565,
+    "funciones": 7051
   }
 }
