@@ -15,6 +15,16 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-24 · mercado-booking** · hizo: pasada diaria, plan `?max=24` (516 ventanas candidatas,
+  492 recortadas por el tope, `sin_medir_nunca:24` — todas de ronda 1/evento: Navidad-Fin de Año
+  25/12-1/01 y Semana Santa 25-27/03). 240 comps reales escritos en `market_rates` (10 por ventana;
+  medianas ~90-250€/noche en fechas normales de las 4 fechas de evento navideñas, subiendo con el
+  factor 1.4-1.85 hacia Fin de Año, y ~500-800€/noche en Semana Santa). 📐 4/4 ventanas de
+  escaparate propio medidas (paso 2-bis, `hotel_names`) → `pricing_escaparate`. 🪞 0 anuncios
+  propios colados en las 24 búsquedas de mercado (los 4 propios solo salieron, como se espera, en
+  las búsquedas por `hotel_names` del escaparate). ⚠️ 0 ventanas sin respuesta del conector; 0 sin
+  precio utilizable. dudas: —; fallos: —; PRs/commits: — (solo escritura vía
+  `/api/sivra/mercado/ingest`, sin cambios de código).
 - **2026-08-23 · psd2-health-check** · hizo: pasada a petición de Alberto (banner «3 días sin
   movimientos»); feed PSD2 VIVO — las 2 conexiones `vinculada` con sync OK hoy 08:23, último mov
   20/08 (jueves; 21/08 laborable sin movimientos + fin de semana), volumen 30d 54 vs 75 (−28 %,
