@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { correlacionMediaCesta, etiquetaConcentracion } from './concentracion.ts'
+import { correlacionMediaCesta, etiquetaConcentracion, parMasCorrelacionado } from './concentracion.ts'
 
 // Series sintéticas: base común + ruido determinista → correlación alta; independientes → baja.
 function serie(n: number, motor: (i: number) => number): number[] {
@@ -30,4 +30,24 @@ test('etiquetaConcentracion clasifica por umbral', () => {
   assert.ok(etiquetaConcentracion(0.8).includes('🔴'))
   assert.ok(etiquetaConcentracion(0.6).includes('🟡'))
   assert.ok(etiquetaConcentracion(0.3).includes('🟢'))
+})
+
+test('parMasCorrelacionado delata el clúster que la media esconde', () => {
+  // 2 clones (mismo motor) entre 3 independientes: la MEDIA de los 10 pares sale baja, el par no.
+  const simbolos = ['SNDK', 'WDC', 'BKNG', 'NLY', 'MOH']
+  const series = [
+    serie(80, i => ondaA(i) + ruido(1)(i) * 0.1),
+    serie(80, i => ondaA(i) + ruido(2)(i) * 0.1),
+    serie(80, ruido(3)), serie(80, ruido(4)), serie(80, ruido(5)),
+  ]
+  const media = correlacionMediaCesta(series)!
+  assert.ok(media < 0.5, `la media debía quedar baja y salió ${media}`)
+  const par = parMasCorrelacionado(simbolos, series)!
+  assert.deepEqual([par.a, par.b], ['SNDK', 'WDC'])
+  assert.ok(par.correlacion > 0.7, `esperaba >0,7 y salió ${par.correlacion}`)
+})
+
+test('parMasCorrelacionado sin solape suficiente → null (mejor callar)', () => {
+  assert.equal(parMasCorrelacionado(['A', 'B'], [serie(10, ondaA), serie(10, ondaA)]), null)
+  assert.equal(parMasCorrelacionado([], []), null)
 })

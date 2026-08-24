@@ -11,8 +11,8 @@ import { movimientosGestorDataroma, GESTORES_DEFECTO } from './dataroma'
 import { submissionsCik, extraerEventos8K, extraerFilingsForm4, estimarProximoInforme } from './edgar'
 import { transaccionesFiling } from './form4'
 import { acumulacionDistribucion, type VeredictoVolumen } from './volumen'
-import { anomaliasUniverso, camposEnvenenados } from './calidad-datos'
-import { correlacionMediaCesta, etiquetaConcentracion } from './concentracion'
+import { anomaliasUniverso, camposEnvenenados, resumenErrores } from './calidad-datos'
+import { correlacionMediaCesta, etiquetaConcentracion, parMasCorrelacionado, type ParCorrelacionado } from './concentracion'
 import { candidatosCantera, bajasCantera, CANTERA_MAX_PROPUESTAS, type SnapshotTop } from './cantera'
 import { proximaFechaEarningsYahoo } from './earnings-yahoo'
 
@@ -97,6 +97,7 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
   // (acumulación/distribución institucional — misma serie, sin fetch extra; INFO, no filtra).
   const entries: EntryRadar[] = []
   const cierresTop10: number[][] = []   // series del top-10 para la ⚖️ correlación (sin fetch extra)
+  const simbolosTop10: string[] = []    // alineado con cierresTop10, para nombrar el par más correlacionado
   for (const item of radar.items) {
     let tecnico: EntryRadar['tecnico'] = null
     const puntos = await puntosDiariosVol(item.simbolo, haceDias(150), hoy)
@@ -107,13 +108,16 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
         tecnico = cierres[cierres.length - 1] > s50 && r14 >= 40 && r14 <= 70 ? 'si' : 'esperar'
       }
     }
-    if (entries.length < 10) cierresTop10.push(cierres)
+    if (entries.length < 10) { cierresTop10.push(cierres); simbolosTop10.push(item.simbolo) }
     entries.push({ ...item, tecnico, volumen: acumulacionDistribucion(puntos)?.veredicto ?? null })
   }
 
-  // 4-bis-pre-pre) ⚖️ Concentración del top-10: correlación media de retornos diarios (60 sesiones).
+  // 4-bis-pre-pre) ⚖️ Concentración del top-10: correlación media de retornos diarios (60 sesiones)
+  // + el PAR más correlacionado — la media de 45 pares esconde un clúster de 4 (24/08/2026: media
+  // 0,08 🟢 con SNDK/WDC/STX/MU, el mismo tirón de memoria ×4, dentro del top).
   // Alta = el top es UNA sola apuesta (hoy, la manía de memoria) y la diversificación es ilusoria.
   const correlacionTop = correlacionMediaCesta(cierresTop10)
+  const parTop = parMasCorrelacionado(simbolosTop10, cierresTop10)
 
   // ⚖️ Ídem para la WATCHLIST del análisis nocturno (capas B+C; la A son índices): una watchlist
   // correlacionada es UNA sola apuesta aunque tenga 13 nombres — con paper da igual, pero es lo que
@@ -121,10 +125,12 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
   // tirón de almacenamiento por triplicado). Best-effort: sin series suficientes, sin línea.
   const wl = await prisma.tradingWatchlist.findMany({ select: { simbolo: true, capa: true, activo: true } })
   let correlacionWatchlist: number | null = null
+  let parWatchlist: ParCorrelacionado | null = null
   try {
     const simbolosBC = wl.filter(w => w.activo && w.capa !== 'A').map(w => w.simbolo)
     const seriesBC = await Promise.all(simbolosBC.map(s => puntosDiarios(s, haceDias(150), hoy).then(p => p.map(x => x.cierre))))
     correlacionWatchlist = correlacionMediaCesta(seriesBC)
+    parWatchlist = parMasCorrelacionado(simbolosBC, seriesBC)
   } catch { /* la concentración de la watchlist nunca tumba el radar */ }
 
   // 4-bis-pre) RÉGIMEN de mercado: SPY vs su media de 10 MESES (la media clásica de índice; distinta
@@ -240,7 +246,7 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
     // de `rankearUniverso`: antes entraban con zValor = 0, que es la MEDIA del universo, no una
     // abstención. Si este número crece mucho, el problema es la cobertura de datos, no el ranking.
     sinValor: radar.sinValor,
-    correlacionTop, correlacionWatchlist, resultadosProximos,
+    correlacionTop, correlacionWatchlist, parTop, parWatchlist, resultadosProximos,
     anomalias: anomalias.map(a => ({ simbolo: a.simbolo, campo: a.campo, motivo: a.motivo })),
   }
   const ultimo = previos.at(-1)
@@ -254,6 +260,13 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
   // 7) Digest Telegram.
   const d = diffRanking(ultimo ? (ultimo.entries as unknown as EntryRadar[]).slice(0, 10).map(e => e.simbolo) : [], entries.slice(0, 10).map(e => e.simbolo))
   const nom = (s: string) => { const e = entries.find(x => x.simbolo === s); return e?.nombre ? `${s} — ${e.nombre}` : s }
+  const corr = (x: number) => x.toFixed(2).replace('.', ',')
+  // Par más correlacionado al lado de la media: la media puede salir 🟢 con un clúster dentro.
+  const parTxt = (p: ParCorrelacionado | null) =>
+    p ? ` · par más alto: ${p.correlacion >= 0.7 ? '⚠️ ' : ''}<b>${p.a}</b>–<b>${p.b}</b> ${corr(p.correlacion)}` : ''
+  // 🚀 en la línea de insiders = símbolo del satélite caza-cohetes, no del top-10 (antes iban mezclados).
+  const esCohete = new Set(cohetes.map(c => c.simbolo))
+  const desgloseErrores = resumenErrores(filas.map(f => f.error))
   const lineas = [
     '🌎 <b>Radar del mercado — S&P 500</b> (SOLO paper)',
     '',
@@ -264,13 +277,13 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
     evals.length
       ? `Track record: ${evals.map(e => `hace ${Math.round(e.dias / 7)}sem → mediana ${pct(e.mediana)} vs SPY ${pct(e.retornoBench)} (baten ${e.baten}/${e.n})`).join(' · ')} — ${track.bateVentanas}/${track.ventanas} ventanas ganadas`
       : 'Track record: acumulando historial (necesita ≥4 semanas de snapshots).',
-    `Salud: ${frescas.length}/${filas.length} frescos · ${errores} con error`,
+    `Salud: ${frescas.length}/${filas.length} frescos · ${errores} con error${desgloseErrores ? ` (${desgloseErrores})` : ''}`,
     `Régimen: ${regimen === 'alcista' ? '🟢 alcista' : regimen === 'bajista' ? '🔴 BAJISTA — re-medir el retrovisor (las conclusiones actuales son de régimen alcista)' : '—'} (SPY vs media 10 meses)`,
     ...(correlacionTop != null ? [
-      `⚖️ Concentración del top-10: correlación media ${correlacionTop.toFixed(2).replace('.', ',')} (60 sesiones) — ${etiquetaConcentracion(correlacionTop)}`,
+      `⚖️ Concentración del top-10: correlación media ${corr(correlacionTop)} (60 sesiones) — ${etiquetaConcentracion(correlacionTop)}${parTxt(parTop)}`,
     ] : []),
     ...(correlacionWatchlist != null ? [
-      `⚖️ Concentración de la watchlist (B+C): correlación media ${correlacionWatchlist.toFixed(2).replace('.', ',')} — ${etiquetaConcentracion(correlacionWatchlist)}`,
+      `⚖️ Concentración de la watchlist (B+C): correlación media ${corr(correlacionWatchlist)} — ${etiquetaConcentracion(correlacionWatchlist)}${parTxt(parWatchlist)}`,
     ] : []),
     ...(anomalias.length ? [
       `🛡️ Datos sospechosos NEUTRALIZADOS (no puntúan ese factor esta semana): ${anomalias.slice(0, 5).map(a => `<b>${a.simbolo}</b> ${a.campo} (${a.motivo})`).join(' · ')}${anomalias.length > 5 ? ` · +${anomalias.length - 5} más` : ''}`,
@@ -282,7 +295,7 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
       `📰 Eventos 8-K (7 días, SEC — contexto, no filtran): ${eventos.slice(0, 8).map(e => `<b>${e.simbolo}</b> ${e.etiquetas.join(' + ')} (${e.fecha.slice(5)})`).join(' · ')}${eventos.length > 8 ? ` · +${eventos.length - 8} más` : ''}`,
     ] : []),
     ...(insiders.length ? [
-      `🧑‍💼 Insiders Form 4 (7 días, SEC — contexto, no filtran): ${insiders.slice(0, 8).map(i => `<b>${i.simbolo}</b>${i.compras ? ` ${i.compras} compra${i.compras > 1 ? 's' : ''}${i.usdCompras > 0 ? ` ~${Math.round(i.usdCompras / 1000)} k$` : ''}` : ''}${i.compras && i.ventas ? ' /' : ''}${i.ventas ? ` ${i.ventas} venta${i.ventas > 1 ? 's' : ''}` : ''}`).join(' · ')}`,
+      `🧑‍💼 Insiders Form 4 (7 días, SEC — contexto, no filtran${insiders.some(i => esCohete.has(i.simbolo)) ? '; 🚀 = del satélite, no del top-10' : ''}): ${insiders.slice(0, 8).map(i => `${esCohete.has(i.simbolo) ? '🚀' : ''}<b>${i.simbolo}</b>${i.compras ? ` ${i.compras} compra${i.compras > 1 ? 's' : ''}${i.usdCompras > 0 ? ` ~${Math.round(i.usdCompras / 1000)} k$` : ''}` : ''}${i.compras && i.ventas ? ' /' : ''}${i.ventas ? ` ${i.ventas} venta${i.ventas > 1 ? 's' : ''}` : ''}`).join(' · ')}`,
     ] : []),
     ...(cohetes.length ? [
       '',

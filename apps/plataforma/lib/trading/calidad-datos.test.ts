@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { anomaliasUniverso, camposEnvenenados, neutralizarUniverso } from './calidad-datos.ts'
+import { anomaliasUniverso, camposEnvenenados, neutralizarUniverso, resumenErrores } from './calidad-datos.ts'
 
 test('anomaliasUniverso caza el caso MCD (mkt_cap de 196.044$) y el EY inflado', () => {
   const a = anomaliasUniverso([
@@ -52,4 +52,18 @@ test('neutralizarUniverso sin anomalías devuelve las filas tal cual', () => {
   const { filas, anomalias } = neutralizarUniverso(entrada)
   assert.equal(anomalias.length, 0)
   assert.equal(filas, entrada)
+})
+
+test('resumenErrores desglosa por motivo y marca los estructurales (la foto real del 24/08/2026)', () => {
+  const errores = [
+    ...Array(109).fill('sin companyfacts'),
+    ...Array(30).fill('datos incompletos'),
+    ...Array(889).fill(null),
+  ]
+  assert.equal(resumenErrores(errores), '109 sin companyfacts — estructural · 30 datos incompletos')
+})
+
+test('resumenErrores sin errores → null (la línea de salud no añade paréntesis vacío)', () => {
+  assert.equal(resumenErrores([null, undefined, null]), null)
+  assert.equal(resumenErrores([]), null)
 })

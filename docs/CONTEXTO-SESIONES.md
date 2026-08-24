@@ -32,6 +32,15 @@
 
 ---
 
+### 🌎 (24/08/2026) Digest del radar S&P 500: par más correlacionado, 🚀 en insiders y errores desglosados
+Revisión del digest semanal con Alberto (verificado contra `trading_ranking` del 24/08: cuadraba todo).
+Tres mejoras en `lib/trading/radar.ts`: (1) `parMasCorrelacionado` (`concentracion.ts`, puro) al lado
+de la media — la media 0,08 🟢 escondía el clúster SNDK/WDC/STX/MU (4/10 = el mismo trade de memoria);
+(2) la línea de insiders marca con 🚀 los símbolos del satélite caza-cohetes (BE/ARWR iban mezclados
+con el top-10 sin distinguir); (3) `resumenErrores` (`calidad-datos.ts`) desglosa «139 con error» en
+«109 sin companyfacts — estructural · 30 datos incompletos». Par también persistido en `salud`
+(`parTop`/`parWatchlist`). tsc 0 · 1551/1551 tests. PR draft en `claude/sp500-market-radar-6stqbr`.
+
 ### 🛡️ (24/08/2026) Check #10 del guardián: noche bloqueada sin income ya se detecta y REPARA sola
 Para que lo del Busto Feria no se repita (petición de Alberto): `pricing/guard` gana el check #10 —
 noches futuras `available=0` sin income (predicado `::date`), contrastadas contra Smoobu EN VIVO
