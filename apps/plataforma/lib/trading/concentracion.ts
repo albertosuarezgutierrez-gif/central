@@ -54,3 +54,21 @@ export function etiquetaConcentracion(corr: number): string {
     : corr >= 0.5 ? '🟡 media — hay un tema dominante'
     : '🟢 baja — cesta razonablemente diversificada'
 }
+
+// 🧲 El CLÚSTER que la media esconde (24/08/2026): con 10 valores, 4 que se mueven juntos (la manía
+// de memoria: SNDK/WDC/STX/MU) dejan la media de los 45 pares en ~0,1 y el semáforo en 🟢 aunque
+// media cesta sea la misma apuesta. El par más correlacionado delata el bloque sin cambiar la media.
+export type ParCorrelacionado = { a: string; b: string; correlacion: number }
+
+export function parMasCorrelacionado(simbolos: string[], seriesCierres: number[][], ventana = 60): ParCorrelacionado | null {
+  const rets = seriesCierres.map(c => retornos(c, ventana))
+  let mejor: ParCorrelacionado | null = null
+  for (let i = 0; i < rets.length; i++) {
+    for (let j = i + 1; j < rets.length; j++) {
+      const r = pearson(rets[i], rets[j])
+      if (r != null && (mejor == null || r > mejor.correlacion))
+        mejor = { a: simbolos[i] ?? '¿?', b: simbolos[j] ?? '¿?', correlacion: r }
+    }
+  }
+  return mejor
+}

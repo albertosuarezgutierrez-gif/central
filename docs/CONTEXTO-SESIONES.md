@@ -32,6 +32,15 @@
 
 ---
 
+### 🌎 (24/08/2026) Digest del radar S&P 500: par más correlacionado, 🚀 en insiders y errores desglosados
+Revisión del digest semanal con Alberto (verificado contra `trading_ranking` del 24/08: cuadraba todo).
+Tres mejoras en `lib/trading/radar.ts`: (1) `parMasCorrelacionado` (`concentracion.ts`, puro) al lado
+de la media — la media 0,08 🟢 escondía el clúster SNDK/WDC/STX/MU (4/10 = el mismo trade de memoria);
+(2) la línea de insiders marca con 🚀 los símbolos del satélite caza-cohetes (BE/ARWR iban mezclados
+con el top-10 sin distinguir); (3) `resumenErrores` (`calidad-datos.ts`) desglosa «139 con error» en
+«109 sin companyfacts — estructural · 30 datos incompletos». Par también persistido en `salud`
+(`parTop`/`parWatchlist`). tsc 0 · 1551/1551 tests. PR #1649 (mergeado el mismo día).
+
 ### 💶 (24/08/2026) Hipoteca Kutxabank — estrategia de bonificación por plan de pensiones (decisión de Alberto, sesión de charla)
 La subida de cuota de abril 2026 fue por perder la bonificación del plan de pensiones (0,20%); en abril
 2027 cae además la del seguro de vida cancelado (0,10%) → sin actuar, tipo 1,40% (base 2,10%, hoy 1,30%).
