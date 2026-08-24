@@ -32,6 +32,34 @@
 
 ---
 
+### 🔎 (24/08/2026) Auditoría ligera: 4 commits del 23/08 sin entrada propia, reconciliados
+Rango 4f25e64..ed12004 (26 commits, todo el 23/08). Backlog PRs: #1600 y #1602 (ambos draft de carril 2
+del propio 23/08) siguen abiertos, `mergeable_state: dirty` por el aluvión de inserciones posteriores en
+`CONTEXTO-SESIONES.md` — no se tocan aquí (código real dentro, para Alberto). Heartbeat sin ⛔ nuevos
+salvo `psd2-sync` a 92h (probable hueco de fin de semana, guardián dedicado <48h no lo escala). Informe
+completo en `docs/AUDITORIA-2026-08.md`.
+
+### 🏦 (23/08/2026) contable: vigía de hipoteca de Monte Carmelo — PR #1612
+El agente contable (cron lunes) ya veía los recibos `CUOTA PTMO` en banco; ahora vigila que la cuota no
+cambie entre recibos (revisión de tipo/bonificación) y que la ficha de `patrimonio_activos` cuadre con lo
+que el banco cobra de verdad, avisando en su resumen Telegram. Helper puro `lib/contable/hipoteca-vigia.ts`
+(9 tests; sin recibos no afirma nada). `patrimonio-cfo` concilia la cuota real en su pasada mensual.
+
+### 💰 (23/08/2026) patrimonio-cfo: amortización anticipada de la hipoteca de Monte Carmelo — PR #1609
+Condiciones de la escritura (CAJASUR, abr-2021) sembradas en `patrimonio_activos.act_monte_carmelo`
+(capital pendiente ESTIMADO, método declarado). La skill gana el bloque de amortización anticipada:
+bonificaciones primero, comparación contra la alternativa neta, comisión efectiva y elección plazo/cuota.
+
+### 🔢 (23/08/2026) Rutinas: colisiones de numeración deshechas + guardián — PR #1604
+Dos fichas de `docs/RUTINAS-PROGRAMADAS.md` compartían número (10: agentes-entrenador/Triaje de correo;
+16: conectores-vigia/radar-espana) por la misma causa — dos PRs en vuelo eligen a la vez «el siguiente
+número libre» sin verse. Renumeradas y ancladas con un guardián que lo evita a partir de ahora.
+
+### 💓 (23/08/2026) paper-tracker sin vigilante en agentes-latido — hallazgo propio arreglado
+El cron semanal `/api/cron/paper-tracker` (alta 18/08, PR #1476) ya escribía su latido en `agente_latidos`
+pero no estaba en `AGENTES_VIGILADOS`/`PROBES`: si dejara de correr, nadie se enteraría. Añadido con
+umbral semanal (192h). Hallazgo de la propia `/auditoria-diaria` del 20/08, cerrado el 23/08.
+
 ### 🛑 (23/08/2026) El raíl ciego: si no se puede leer el ancla, el motor NO tarifa — PR #1634 (🔴 3)
 
 - Cierra el tercer y último 🔴 de la auditoría. Las dos lecturas del ancla (`ref24`/`anclaHoy`)
@@ -2570,11 +2598,9 @@ Pendiente: que Alberto revise el spec → plan de implementación. Códigos/cred
     dado de alta en /sivra/partes/establecimientos» — no es la avería del Ministerio ni de credenciales
     que ya describe la nota del latido, es que falta dar de alta el primer establecimiento. Acción de
     Alberto, no de código.
-  - **PR #1594 (draft, sin mergear) — fix real de producción:** un piso (House Sevillana) se quedó sin
-    tarifar el 22/08 porque el motor elegía el `MAX(search_date)` de `market_rates` sin filtrar por
-    comparables plausibles, y una pasada de barrido barato (Serper) con solo 1 comp útil sombreaba a la
-    pasada rica del día anterior (93 comps). Corrige seleccionando la última pasada con ≥5 comparables
-    creíbles. Pendiente de revisión/merge de Alberto.
+  - **✅ PR #1594 MERGEADO (23/08, corrige el pendiente de esta lista — auditoría 24/08):** el fix del
+    piso sin tarifar (House Sevillana, `MAX(search_date)` sin filtrar comparables plausibles) entró en
+    `main` el 23/08 06:32 UTC. Ver entrada del 23/08 «El precio que Smoobu RECHAZA» y `apps/plataforma/CLAUDE.md`.
   - **Ayudas/subvenciones (15/08, #1432):** pendiente respuesta de Asecon (Marta Albarrán) sobre la
     convocatoria de conciliación antes del **15/09/2026** (plazo de solicitud). Pendiente además un
     borrador (sin enviar, a decisión de Alberto) sobre la cuota RETA de Pilar (serie 72→118→32€,

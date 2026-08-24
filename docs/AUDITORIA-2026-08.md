@@ -1,5 +1,60 @@
 # Auditoría diaria — agosto 2026
 
+# Actualización 2026-08-24 — auditoría diaria (ligera)
+
+Rango: 26 commits desde la pasada del 23/08 05:26 UTC (`4f25e64..ed12004`) — día muy activo: cierre de
+los 3 hallazgos 🔴 de `docs/AUDITORIA-2026-08-pricing-mudo.md` (latido `sivra_pricing_apply` #1631, raíl
+ciego #1634), coordinador patrimonial (licencias VUT, Catastro, hipoteca Monte Carmelo #1609/#1612/#1618/
+#1623/#1628), banner PSD2 sin falsedades #1617, rutinas 16/17/18 + colisiones de numeración #1604/#1613,
+canal de aviso Telegram #1615/#1620, `agentes-entrenador` semanal.
+
+## ✅ Reconciliación memoria/skills — 4 commits sin entrada propia + 1 dato stale, corregidos (carril 1)
+De los 26 commits, 22 ya estaban autodocumentados por sus propias sesiones. Reconciliado:
+- **4 commits sin entrada dedicada en `CONTEXTO-SESIONES.md`:** vigía de hipoteca (#1612), amortización
+  anticipada Monte Carmelo (#1609), colisiones de numeración de rutinas (#1604), `paper-tracker` sin
+  vigilante en `agentes-latido` (commit `6af63a9`, hallazgo propio de la auditoría del 20/08). Entradas
+  compactas añadidas.
+- **Dato stale en «Estado vivo»:** el bullet de PR #1594 seguía diciendo «draft, sin mergear, pendiente
+  de revisión» — se mergeó el 23/08 06:32 UTC (verificado por GitHub MCP). Corregido a ✅.
+- `docs/SKILLS.md`, `docs/HUECOS-ABIERTOS.md` (H2 ya cerrado correctamente, sin drift) y
+  `docs/FUENTES-DE-VERDAD.md` verificados contra el rango — sin huecos nuevos.
+- `apps/plataforma/lib/correo/rutas.ts`: ninguna skill nueva del rango produce correo — sin hallazgos.
+- Manuales de usuario ia-rest: el rango no tocó `apps/ia-rest/src/app/**` ni `public/**` — sin hallazgos.
+
+## ✅ Heartbeat de crons y agentes (17 latidos + 12 tablas) — 1 hallazgo a vigilar
+- **a) `agente_latidos` (17):** todos ✅ salvo los dos ya conocidos y NO nuevos — `ses_transporte`
+  (`ok=false`, pendiente de que Alberto dé de alta un establecimiento, acción suya no código) y
+  `sivra_mercado_sweep` (`ok=false`, 71h, rojo A PROPÓSITO hasta que Booking consolide el corpus).
+  `sivra_pricing_apply` (nuevo del 23/08) ya en verde, 5,6h, `0 noche(s) escritas` — comportamiento
+  esperado del latido nuevo (no marca rojo por «nada que ajustar»). `trading_watchdog` a 43,6h es
+  cadencia normal (mar-sáb, sin correr fin de semana).
+- **b) Tablas de dominio (12):** 🟡 **`psd2-sync` ⛔ a 92,1h** (>54h) — último movimiento 20/08 06:01.
+  Más largo que el hueco de fin de semana habitual (precedentes 01→04/08 y el del 20-23/08 ya visto en
+  la pasada del 23/08), pero dentro de los huecos legítimos de hasta 10 días documentados para BBVA
+  (`psd2-semaforo.ts`). El guardián dedicado `psd2-health-check` (umbral <48h) no lo ha escalado. No se
+  reabre aquí — a vigilar en la próxima pasada si sigue sin fila nueva.
+- `agente_reparaciones`: sin intentos de auto-reparación en 7 días — nada que coordinar.
+
+## 🟡 Backlog de PRs de rutinas — 2 PRs draft dirty, del propio 23/08, sin tocar
+2 PRs abiertos, ambos de carril 2 con código/skill real, ambos `mergeable_state: dirty` por el aluvión de
+inserciones en `CONTEXTO-SESIONES.md` de todo el 23/08 (conflicto de inserción, no de contenido):
+- **#1600** — «Auditoría profunda 23/08 + reparación» (Serper error body, `pdfjs-dist` bump a 6.2.108,
+  fila de Patrimonio en `plataforma-maestro`). <24h, no se toca por antigüedad; contenido AÚN no está en
+  `main` (el bump de `pdfjs-dist` y el body de error de Serper siguen pendientes).
+- **#1602** — `agentes-entrenador`: caveat en `facturas-correo/SKILL.md` + poda de bitácora. <24h.
+`rutinas-automerge.yml`: corriendo cada hora sin huecos (última ejecución 02:01 UTC, 2 min antes de esta
+pasada, `success`). Ninguno de solo-registro atascado.
+
+## ✅ Integridad estructural — sin hallazgos
+`pnpm install --frozen-lockfile` OK. Radiografía al día (último `chore(auditoría)` del rango, #1635).
+
+## ✅ Manuales de usuario — nada que tocar
+Ningún archivo de `apps/ia-rest/src/app/**` ni `apps/ia-rest/public/**` cambió en el rango.
+
+<!-- verificado: 2026-08-24 -->
+
+---
+
 # Actualización 2026-08-23 — auditoría diaria (ligera)
 
 Rango: 21 commits desde la pasada del 21/08 05:26 UTC (`0958a0e..5a469d0`) — **sin pasada el
