@@ -72,8 +72,12 @@ sola: 527) y cada push de cada rama de PR construía además su preview, que nad
 `--sin-previews` en `vercel-ignore-build.mjs` + en el `ignoreCommand` de TODAS las apps salvo ialimp
 (cliente vivo, preview verde antes de main); escape `[preview]` en el asunto del commit. También
 `--deepen=50` antes de `--unshallow` en el fallback del diff. Ahorro estimado ~40-45 US$/mes.
-Pendiente MANUAL de Alberto (dashboard): fijar Build Machine a Standard (no elástica) en cada proyecto.
-Tests 11/11 + guardianes 43/43. PR draft en rama `claude/vercel-cargo-optimization-5hpbwc`.
+Tests 11/11 + guardianes 43/43. **PR #1664 mergeado el mismo día**; verificado en vivo: previews 9/9
+«Ignored» y producción READY (plataforma, ia-rest, central-rrhh, transporte; ialimp saltado, correcto).
+Cierre del pendiente de máquinas (pasada de Claude Chrome, mismo día): las 9 YA construían en Standard
+— se FIJARON (fixed, ya no elastic). Vigilar: si plataforma da `oom-failure`/timeout, devolver ESE
+proyecto a elastic. Línea base ciclo 14/08 a día 10: 5.940 CPU-min = 20,23 US$ (plataforma 58%,
+~14 builds/día, cuadra con su churn real — sin fuga del ignore-build). Revisar Usage el ~28/08.
 
 ### 💰 (24/08/2026) DECISIÓN de Alberto: Tramo 1 de la escalera (1.000€ reales) — delegado al criterio del agente
 «Lo dejo en tu criterio» tras ver plazos de la escalera. Criterio aplicado: abrir Tramo 1 (~3% del
