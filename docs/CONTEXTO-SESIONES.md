@@ -32,6 +32,15 @@
 
 ---
 
+### 💰 (24/08/2026) DECISIÓN de Alberto: Tramo 1 de la escalera (1.000€ reales) — delegado al criterio del agente
+«Lo dejo en tu criterio» tras ver plazos de la escalera. Criterio aplicado: abrir Tramo 1 (~3% del
+cash; su objetivo es medir FRICCIÓN, prerequisito del Tramo 2 del ~15/11) con la próxima señal viva
+de la pasada nocturna, EXCLUYENDO el clúster de memoria (SNDK/WDC/STX/MU, par WDC–STX 0,89) y
+valores con ventas fuertes de insiders (BKNG). Ejecución SIEMPRE por el raíl del copiloto: el agente
+crea la INSTRUCCIÓN de orden en IBKR y Alberto confirma en su app — jamás ejecuta. One-shot armado
+esa noche 23:30 CEST (`trig_01A4WyjRBJ1KXxweSAa9HMDt`, se re-arma a diario si no hay señal limpia).
+Tramos 2 (~nov) y 3 (~ene) siguen siendo decisiones separadas cuando la 🪜 los marque ✅.
+
 - **Canal conversacional del patrimonio + dossier inicial del CFO (24/08/2026).** Alberto pidió
   poder HABLAR con el agente patrimonial. PR #1648: `/patrimonio <pregunta>` por Telegram
   (foto determinista o IA sobre BD; `lib/patrimonio-chat.ts` puro + `lib/patrimonio-telegram.ts`),
