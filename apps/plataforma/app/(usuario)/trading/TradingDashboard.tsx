@@ -357,7 +357,7 @@ export default async function TradingDashboard({ carteraCohetes, carteraReal, tr
       </div>
       <p style={{ color: 'var(--muted)', marginTop: 4, marginBottom: 8, fontSize: 14 }}>
         El agente estudia el mercado y opera <strong>en simulación</strong>. No toca tu cuenta real de Interactive Brokers.
-        {ultimaPasada ? <> Última pasada: <strong>{fechaCorta(ultimaPasada)}</strong>.</> : null}
+        {ultimaPasada ? <> Última pasada del agente: <strong>{fechaCorta(ultimaPasada)}</strong> — la renueva su pasada nocturna (lun–vie), no el botón «Actualizar».</> : null}
       </p>
       {/* 🔄 Refresco bajo demanda (Alberto, 23/08/2026): la pasada es diaria; a mitad de sesión de
           bolsa este botón relee BD + precios públicos EN VIVO sin esperar a mañana. */}
