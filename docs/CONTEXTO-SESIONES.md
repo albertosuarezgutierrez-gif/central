@@ -40,6 +40,15 @@ SUB-JA-2026-262310 (26 págs CCITT → 12 páginas JPEG legibles, ~10 s). La 2ª
 confirmó además el fix del lector de texto: edicto de Siero leído (hipoteca Santander 161.515,79€,
 vía hipotecaria) y corpus actualizado. tsc 0 · tests OK · next build OK.
 
+### 🧑‍⚖️ (24/08/2026) Subastas: VEREDICTO en la ficha + ref catastral desde los aportados
+Alberto: «que me diga si interesa o no». Nuevo `module-subastas/veredicto.ts` (puro, 10 tests):
+🟢 interesa (hasta qué puja, por bisección) / 🔴 no interesa / 🟠 faltan datos (y CUÁLES) / ⚫ cerrada.
+Asimetría deliberada: el 🔴 es afirmable con piezas sin resolver (solo empeoran); el 🟢 exige valor real
+(no estimación m²×€/m²) y cargas resueltas. Razones incluyen techo vs DEUDA reclamada (hasta ahí el
+banco puja gratis) y aviso de ocupada. UI: bloque arriba de cada `FichaSubasta`. Y los docs aportados
+extraen la REF CATASTRAL (texto+literales) → tapa hueco en `subastas.ref_catastral` y re-encola el
+enriquecimiento (m²/año/uso del Catastro esta noche) — idea de Alberto para el caso Siero sin m².
+
 ### ✅ (24/08/2026) Tercera prueba real: el buzón de aportados queda CERRADO de punta a punta
 Con el rasterizador en producción (PR #1677), Alberto re-subió los 2 docs de Siero (SUB-JA-2026-263989)
 y ambos se leyeron: certificación escaneada CCITT → 5 cargas por visión (hipoteca Santander que se

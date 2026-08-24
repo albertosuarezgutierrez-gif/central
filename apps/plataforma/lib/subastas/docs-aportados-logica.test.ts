@@ -77,6 +77,11 @@ test('cargas, procedimiento, valoración pactada o señales del edicto aportan',
   assert.equal(aportaAlgo({ cuadro: cuadro(), notas: ['Vivienda habitual del demandado: no consta'] }), true)
 })
 
+test('un doc «Datos catastrales» sin cargas aporta por su referencia catastral', () => {
+  assert.equal(aportaAlgo({ cuadro: cuadro(), notas: [], refCatastral: '9872023VH5797S0001WX' }), true)
+  assert.equal(aportaAlgo({ cuadro: cuadro(), notas: [], refCatastral: null }), false)
+})
+
 // ── Cuadro combinado para el corpus ─────────────────────────────────────────
 
 test('lecturas sin nada de cargas → null: el corpus no se toca', () => {

@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { eur } from '@/lib/dinero'
 import { estadoDocumentacion, resumenDocumentos, type DocumentoAdjunto } from '@/lib/subastas/resumen-docs'
-import { calcularCoste, direccionCatastro, esCasa, esDireccionPostal, estadoPujaMinima, titularCargas, umbralesPuja, urlFichaCatastro, urlGoogleMaps, urlStreetView, viviendaHabitualDeNotas, type ParamsCoste, type SubastaInmueble } from '@central/module-subastas'
+import { calcularCoste, direccionCatastro, esCasa, esDireccionPostal, estadoPujaMinima, titularCargas, umbralesPuja, urlFichaCatastro, urlGoogleMaps, urlStreetView, veredicto, viviendaHabitualDeNotas, type CalibracionZona, type ParamsCoste, type SubastaInmueble } from '@central/module-subastas'
 import MapaSubastas from './MapaSubastas'
 
 const PAGE = 50
@@ -860,6 +860,8 @@ interface RespuestaAportado {
   legible?: boolean
   cargas?: number
   aplicado?: boolean
+  refCatastral?: string | null
+  refAplicada?: boolean
   importeSubsistente?: number | null
   resumen?: string | null
   avisos?: string[]
@@ -959,6 +961,11 @@ function DocsAportados({ dedupeKey, muro }: { dedupeKey: string; muro: 'ninguno'
                         }. Ficha actualizada.`
                       : `✅ ${r.titulo}: leído (sin cuadro de cargas).`}
               </p>
+              {r.refAplicada && r.refCatastral && (
+                <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text)' }}>
+                  🏛️ Referencia catastral encontrada: <strong>{r.refCatastral}</strong> — el Catastro rellenará m², año y uso en la próxima pasada nocturna.
+                </p>
+              )}
               {(r.notas ?? []).map((n) => (
                 <p key={n} style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text)' }}>📄 {n}</p>
               ))}
@@ -1123,9 +1130,30 @@ function SimuladorPuja({ s, o, params }: { s: Subasta; o?: Oportunidad | null; p
   )
 }
 
-function FichaSubasta({ s, o, acciones, extra, doc, escenarios, params }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null; escenarios?: EscenarioUI[] | null; params?: ParamsCoste }) {
+function FichaSubasta({ s, o, acciones, extra, doc, escenarios, params, precioM2Zona, calibracion }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null; escenarios?: EscenarioUI[] | null; params?: ParamsCoste; precioM2Zona?: number | null; calibracion?: CalibracionZona[] | null }) {
   const [abierto, setAbierto] = useState(false)
   const cierre = fecha(s.fechaFin)
+  // 🧑‍⚖️ El titular que Alberto pidió: interesa / no interesa / faltan datos
+  // (y CUÁLES). Todo determinista (helper puro del módulo, mismos cálculos que
+  // el resto de la ficha) — aquí no hay IA ni cifras inventadas.
+  const v = veredicto({
+    s: aInmueble(s),
+    valorMercado: o?.valorMercado ?? null,
+    valorOrientativo: o?.valorOrientativo,
+    cargas: {
+      cargas: s.cargas,
+      cargasConocidas: s.cargasConocidas,
+      documentos: doc?.documentos ?? null,
+      publicaAdjuntos: (s.fuente ?? 'boe') === 'boe',
+      muro: doc?.documentosMuro,
+      sesion: doc?.documentosSesion,
+    },
+    superficie: s.superficie,
+    precioM2Zona,
+    cerrada: s.fechaFin != null && new Date(s.fechaFin).getTime() < Date.now(),
+    params,
+    calibracion,
+  })
   // Dirección oficial del Catastro troceada (planta/puerta aparte) y, con ella,
   // el enlace al PORTAL en vez de a un pin anónimo. Sin ninguna pista de
   // ubicación, el botón no sale.
@@ -1151,6 +1179,29 @@ function FichaSubasta({ s, o, acciones, extra, doc, escenarios, params }: { s: S
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'baseline', justifyContent: 'space-between' }}>
         <strong style={{ color: 'var(--text)' }}>{s.identificador ?? s.dedupeKey}</strong>
         {o && <Puntuacion v={o.puntuacion} />}
+      </div>
+
+      {/* 🧑‍⚖️ Veredicto: el resumen accionable, arriba del todo. El detalle
+          (razones + qué falta) plegado — regla de rendimiento del repo. */}
+      <div style={{ margin: '8px 0 0', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--card, transparent)' }}>
+        <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+          {v.emoji} Veredicto: {v.titular}
+        </p>
+        {(v.razones.length > 0 || v.faltan.length > 0) && (
+          <details style={{ marginTop: 2 }}>
+            <summary style={{ cursor: 'pointer', fontSize: 12, color: 'var(--muted)', minHeight: 32, display: 'flex', alignItems: 'center' }}>
+              Por qué{v.faltan.length > 0 ? ` · falta${v.faltan.length === 1 ? '' : 'n'} ${v.faltan.length} dato${v.faltan.length === 1 ? '' : 's'}` : ''}
+            </summary>
+            {v.faltan.length > 0 && (
+              <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 12, color: 'var(--text)' }}>
+                {v.faltan.map((f) => <li key={f}>Falta {f}</li>)}
+              </ul>
+            )}
+            {v.razones.map((rz) => (
+              <p key={rz} style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--muted)' }}>· {rz}</p>
+            ))}
+          </details>
+        )}
       </div>
 
       {/* Primero QUÉ es (tipo, m², distribución); la descripción registral
@@ -1735,6 +1786,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                   doc={r.doc}
                   escenarios={r.escenarios}
                   params={paramsCoste}
+                  calibracion={datos.calibracion}
                   o={{
                     puntuacion: r.puntuacion,
                     descuento: null,
@@ -2092,6 +2144,8 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                 doc={{ semaforo: r.semaforo, analisis: r.analisis, notasEdicto: r.notasEdicto, documentos: r.documentos, documentosMuro: r.documentosMuro, documentosSesion: r.documentosSesion, caducidad: r.caducidad }}
                 escenarios={r.escenarios}
                 params={paramsCoste}
+                precioM2Zona={r.precioM2Zona}
+                calibracion={datos.calibracion}
                 acciones={<button onClick={() => seguir(r.subasta)} style={boton()}>👀 Seguir</button>}
                 extra={
                   <>
