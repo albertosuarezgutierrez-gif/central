@@ -62,11 +62,24 @@ function buscarCommit(cumple: (f: string[]) => boolean): string | null {
 }
 
 // El script se ejecuta con cwd = Root Directory (apps/<app>), igual que en Vercel.
-function correr(appDir: string, sha: string) {
-  const r = spawnSync('node', [`../../${SCRIPT}`, appDir], {
+function correr(
+  appDir: string,
+  sha: string,
+  opts: { flags?: string[]; env?: Record<string, string> } = {},
+) {
+  const r = spawnSync('node', [`../../${SCRIPT}`, appDir, ...(opts.flags ?? [])], {
     cwd: appDir,
     encoding: 'utf8',
-    env: { ...process.env, VERCEL_GIT_COMMIT_SHA: sha, VERCEL_GIT_COMMIT_MESSAGE: '' },
+    env: {
+      ...process.env,
+      VERCEL_GIT_COMMIT_SHA: sha,
+      VERCEL_GIT_COMMIT_MESSAGE: '',
+      // Los tests corren fuera de Vercel: sin limpiarlas, una VERCEL_ENV/REF heredada
+      // del entorno contaminaría los casos que NO simulan preview.
+      VERCEL_ENV: '',
+      VERCEL_GIT_COMMIT_REF: '',
+      ...(opts.env ?? {}),
+    },
   })
   return { construye: r.status === 1, salta: r.status === 0, salida: (r.stdout || '') + (r.stderr || '') }
 }
@@ -167,10 +180,62 @@ test('todas las apps con vercel.json declaran el ignoreCommand con SU ruta', () 
     assert.ok(vercel.ignoreCommand, `apps/${app.name}/vercel.json no tiene "ignoreCommand"`)
     assert.match(
       vercel.ignoreCommand,
-      new RegExp(`vercel-ignore-build\\.mjs apps/${app.name}\\s*$`),
+      new RegExp(`vercel-ignore-build\\.mjs apps/${app.name}( --sin-previews)?\\s*$`),
       `apps/${app.name}: el ignoreCommand no apunta a su propia carpeta → "${vercel.ignoreCommand}"`,
     )
   }
+})
+
+test('ialimp CONSERVA sus previews (cliente vivo: preview verde antes de main)', () => {
+  const vercel = JSON.parse(readFileSync('apps/ialimp/vercel.json', 'utf8')) as { ignoreCommand?: string }
+  assert.ok(
+    !/--sin-previews/.test(vercel.ignoreCommand ?? ''),
+    'ialimp tiene cliente en producción (Sique Brilla) y su regla es verificar en preview antes de mergear: no debe llevar --sin-previews',
+  )
+})
+
+// --sin-previews: la mitad de los Build CPU Minutes de la factura eran previews de PRs
+// que nadie mira. Con el flag, una rama ≠ main salta SIEMPRE (aunque el diff toque la
+// app), salvo [preview] en el asunto. En producción (main) el flag no pinta nada.
+test('--sin-previews: una rama de PR que toca la app NO construye su preview', (t) => {
+  const sha = buscarCommit((f) => f.some((x) => x.startsWith('apps/housesevillana/')))
+  if (!sha) return t.skip(`sin commit que toque apps/housesevillana (shallow=${esSuperficial()})`)
+  const r = correr('apps/housesevillana', sha, {
+    flags: ['--sin-previews'],
+    env: { VERCEL_ENV: 'preview', VERCEL_GIT_COMMIT_REF: 'claude/rama-de-pr' },
+  })
+  assert.ok(r.salta, `con --sin-previews una preview debe saltar aunque el diff toque la app (${sha.slice(0, 7)}).\n${r.salida}`)
+})
+
+test('--sin-previews: [preview] en el asunto fuerza la preview (escape)', (t) => {
+  const sha = buscarCommit((f) => f.some((x) => x.startsWith('apps/housesevillana/')))
+  if (!sha) return t.skip(`sin commit que toque apps/housesevillana (shallow=${esSuperficial()})`)
+  const r = correr('apps/housesevillana', sha, {
+    flags: ['--sin-previews'],
+    env: {
+      VERCEL_ENV: 'preview',
+      VERCEL_GIT_COMMIT_REF: 'claude/rama-de-pr',
+      VERCEL_GIT_COMMIT_MESSAGE: 'fix(landing): probar hero [preview]\n\ncuerpo',
+    },
+  })
+  assert.ok(r.construye, `[preview] en el asunto debe construir la preview (${sha.slice(0, 7)}).\n${r.salida}`)
+})
+
+test('--sin-previews: en main (producción) el flag no cambia nada', (t) => {
+  const sha = buscarCommit((f) => f.some((x) => x.startsWith('apps/housesevillana/')))
+  if (!sha) return t.skip(`sin commit que toque apps/housesevillana (shallow=${esSuperficial()})`)
+  const r = correr('apps/housesevillana', sha, {
+    flags: ['--sin-previews'],
+    env: { VERCEL_ENV: 'production', VERCEL_GIT_COMMIT_REF: 'main' },
+  })
+  assert.ok(r.construye, `producción con diff relevante debe construir con o sin flag (${sha.slice(0, 7)}).\n${r.salida}`)
+})
+
+test('--sin-previews: sin variables de Vercel (local/tests) NO se asume preview', (t) => {
+  const sha = buscarCommit((f) => f.some((x) => x.startsWith('apps/housesevillana/')))
+  if (!sha) return t.skip(`sin commit que toque apps/housesevillana (shallow=${esSuperficial()})`)
+  const r = correr('apps/housesevillana', sha, { flags: ['--sin-previews'] })
+  assert.ok(r.construye, `sin VERCEL_ENV ni VERCEL_GIT_COMMIT_REF debe seguir el fail-open (${sha.slice(0, 7)}).\n${r.salida}`)
 })
 
 test('fail-open: sin argumento de app, construye', () => {

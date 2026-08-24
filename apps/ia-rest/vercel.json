@@ -1,5 +1,5 @@
 {
-  "ignoreCommand": "node ../../scripts/vercel-ignore-build.mjs apps/ia-rest",
+  "ignoreCommand": "node ../../scripts/vercel-ignore-build.mjs apps/ia-rest --sin-previews",
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "outputDirectory": ".next",

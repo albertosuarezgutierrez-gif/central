@@ -15,12 +15,14 @@
 //
 // Regla:
 //   1) Commit marcado [skip ci]/[skip vercel] (p.ej. la radiografía del bot) => SALTAR siempre.
-//   2) El diff toca apps/<app>/, packages/ o los manifiestos raíz            => CONSTRUIR.
-//   3) En cualquier otro caso                                                => SALTAR.
-//   4) Ante CUALQUIER duda (clon shallow, primer commit, error git)          => CONSTRUIR (fail-open).
+//   2) Con `--sin-previews`, un build de PREVIEW (rama ≠ main)               => SALTAR,
+//      salvo que el asunto del commit lleve [preview] (escape para verificar en Vercel).
+//   3) El diff toca apps/<app>/, packages/ o los manifiestos raíz            => CONSTRUIR.
+//   4) En cualquier otro caso                                                => SALTAR.
+//   5) Ante CUALQUIER duda (clon shallow, primer commit, error git)          => CONSTRUIR (fail-open).
 //
 // Uso (en cada apps/<app>/vercel.json):
-//   "ignoreCommand": "node ../../scripts/vercel-ignore-build.mjs apps/<app>"
+//   "ignoreCommand": "node ../../scripts/vercel-ignore-build.mjs apps/<app> [--sin-previews]"
 
 import { execSync } from 'node:child_process';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
@@ -42,6 +44,22 @@ if (/\[(skip ci|ci skip|no ci|skip vercel|vercel skip)\]/i.test(subject)) {
   skip(`asunto marcado para saltar CI ("${subject.slice(0, 60)}")`);
 }
 
+// 1b) Previews (opt-out por proyecto). Medido sobre la factura 14 jul–13 ago 2026: el 79%
+//     del cargo seguían siendo Build CPU Minutes (32.708 min ≈ 92,51 US$), y cerca de la
+//     mitad eran builds de PREVIEW — cada push de cada rama de PR reconstruye la app tocada,
+//     y esas previews no las mira nadie (los agentes verifican con tsc/tests y mergean en
+//     minutos). Con `--sin-previews` el proyecto solo construye producción (main).
+//     Escape: un commit con [preview] en el ASUNTO construye su preview igualmente.
+//     Sin variables de entorno (ejecución local/tests) NO se asume preview: fail-open.
+const sinPreviews = process.argv.slice(3).includes('--sin-previews');
+const refGit = process.env.VERCEL_GIT_COMMIT_REF || '';
+const esPreview =
+  (process.env.VERCEL_ENV && process.env.VERCEL_ENV !== 'production') ||
+  (refGit && refGit !== 'main');
+if (sinPreviews && esPreview && !/\[preview\]/i.test(subject)) {
+  skip(`preview de "${refGit || process.env.VERCEL_ENV}" con --sin-previews (usa [preview] en el asunto para forzarla)`);
+}
+
 // 2) Archivos tocados por el commit (diff contra el commit anterior).
 const sha = process.env.VERCEL_GIT_COMMIT_SHA || 'HEAD';
 let changed;
@@ -54,8 +72,13 @@ try {
   // fail-open (construir de más en las 8 apps, el patrón del incidente PR #904).
   // Profundizamos el clon una vez antes de rendirnos; si tampoco alcanza,
   // seguimos con el fail-open original (más vale construir de más que dejar
-  // de construir algo que sí cambió).
-  try { execSync('git fetch --unshallow', { encoding: 'utf8', stdio: 'pipe' }); } catch {}
+  // de construir algo que sí cambió). Primero --deepen=50 (casi siempre basta
+  // para alcanzar al padre y es mucho más barato que bajarse la historia
+  // ENTERA de este repo en cada ignore-step); --unshallow solo como último cartucho.
+  try { execSync('git fetch --deepen=50', { encoding: 'utf8', stdio: 'pipe' }); } catch {}
+  try { execSync(`git rev-parse ${sha}^`, { stdio: 'pipe' }); } catch {
+    try { execSync('git fetch --unshallow', { encoding: 'utf8', stdio: 'pipe' }); } catch {}
+  }
   try {
     const out = execSync(`git diff --name-only ${sha}^ ${sha}`, { encoding: 'utf8' });
     changed = out.split('\n').map((s) => s.trim()).filter(Boolean);
