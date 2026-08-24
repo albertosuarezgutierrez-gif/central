@@ -49,7 +49,10 @@ de la media — la media 0,08 🟢 escondía el clúster SNDK/WDC/STX/MU (4/10 =
 (2) la línea de insiders marca con 🚀 los símbolos del satélite caza-cohetes (BE/ARWR iban mezclados
 con el top-10 sin distinguir); (3) `resumenErrores` (`calidad-datos.ts`) desglosa «139 con error» en
 «109 sin companyfacts — estructural · 30 datos incompletos». Par también persistido en `salud`
-(`parTop`/`parWatchlist`). tsc 0 · 1551/1551 tests. PR #1649 (mergeado el mismo día).
+(`parTop`/`parWatchlist`). tsc 0 · 1551/1551 tests. PR #1649 (mergeado el mismo día). Verificado con
+velas reales IBKR: media 0,08 🟢 con par WDC–STX 0,89 ⚠️ — el clúster queda a la vista. Cierre: la
+línea ⚖️ (media + par, top-10 y watchlist) también en la UI `/trading` (pie del 🌎 Radar; snapshot
+sin pares = línea sin par, nunca inventado).
 
 ### 💶 (24/08/2026) Hipoteca Kutxabank — estrategia de bonificación por plan de pensiones (decisión de Alberto, sesión de charla)
 La subida de cuota de abril 2026 fue por perder la bonificación del plan de pensiones (0,20%); en abril
