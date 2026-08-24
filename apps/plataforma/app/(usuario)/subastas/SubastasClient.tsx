@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { eur } from '@/lib/dinero'
 import { estadoDocumentacion, resumenDocumentos, type DocumentoAdjunto } from '@/lib/subastas/resumen-docs'
-import { calcularCoste, direccionCatastro, esCasa, esDireccionPostal, estadoPujaMinima, titularCargas, umbralesPuja, urlFichaCatastro, urlGoogleMaps, urlStreetView, veredicto, viviendaHabitualDeNotas, type ParamsCoste, type SubastaInmueble } from '@central/module-subastas'
+import { calcularCoste, direccionCatastro, esCasa, esDireccionPostal, estadoPujaMinima, titularCargas, umbralesPuja, urlFichaCatastro, urlGoogleMaps, urlStreetView, veredicto, viviendaHabitualDeNotas, type CalibracionZona, type ParamsCoste, type SubastaInmueble } from '@central/module-subastas'
 import MapaSubastas from './MapaSubastas'
 
 const PAGE = 50
@@ -1130,7 +1130,7 @@ function SimuladorPuja({ s, o, params }: { s: Subasta; o?: Oportunidad | null; p
   )
 }
 
-function FichaSubasta({ s, o, acciones, extra, doc, escenarios, params, precioM2Zona }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null; escenarios?: EscenarioUI[] | null; params?: ParamsCoste; precioM2Zona?: number | null }) {
+function FichaSubasta({ s, o, acciones, extra, doc, escenarios, params, precioM2Zona, calibracion }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null; escenarios?: EscenarioUI[] | null; params?: ParamsCoste; precioM2Zona?: number | null; calibracion?: CalibracionZona[] | null }) {
   const [abierto, setAbierto] = useState(false)
   const cierre = fecha(s.fechaFin)
   // 🧑‍⚖️ El titular que Alberto pidió: interesa / no interesa / faltan datos
@@ -1152,6 +1152,7 @@ function FichaSubasta({ s, o, acciones, extra, doc, escenarios, params, precioM2
     precioM2Zona,
     cerrada: s.fechaFin != null && new Date(s.fechaFin).getTime() < Date.now(),
     params,
+    calibracion,
   })
   // Dirección oficial del Catastro troceada (planta/puerta aparte) y, con ella,
   // el enlace al PORTAL en vez de a un pin anónimo. Sin ninguna pista de
@@ -1785,6 +1786,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                   doc={r.doc}
                   escenarios={r.escenarios}
                   params={paramsCoste}
+                  calibracion={datos.calibracion}
                   o={{
                     puntuacion: r.puntuacion,
                     descuento: null,
@@ -2143,6 +2145,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                 escenarios={r.escenarios}
                 params={paramsCoste}
                 precioM2Zona={r.precioM2Zona}
+                calibracion={datos.calibracion}
                 acciones={<button onClick={() => seguir(r.subasta)} style={boton()}>👀 Seguir</button>}
                 extra={
                   <>

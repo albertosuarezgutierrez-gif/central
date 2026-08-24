@@ -19,6 +19,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 import { calcularCoste, pujaMaximaParaDescuento } from './costes.ts'
 import { estadoCargas, type EntradaEstadoCargas, type EstadoCargas } from './cargas.ts'
+import type { CalibracionZona } from './adjudicaciones.ts'
 import type { ParamsCoste, SubastaInmueble } from './types.ts'
 
 export interface EntradaVeredicto {
@@ -36,6 +37,13 @@ export interface EntradaVeredicto {
   params?: ParamsCoste
   /** Descuento real objetivo sobre el valor de mercado (default 25%). */
   descuentoObjetivo?: number
+  /**
+   * A cuánto cierran las adjudicadas de verdad (`calibracionAdjudicaciones`):
+   * convierte el techo en una PROBABILIDAD de quedársela. Opcional — sin
+   * muestra no se dice nada, y el agregado nacional nunca se disfraza de dato
+   * provincial (en el corpus real Sevilla va a 1,42× y el conjunto a 0,64×).
+   */
+  calibracion?: CalibracionZona[] | null
 }
 
 export type NivelVeredicto = 'interesa' | 'no_interesa' | 'faltan_datos' | 'cerrada'
@@ -79,6 +87,26 @@ function motivoCargas(estado: EstadoCargas): string {
     default:
       return 'sin revisar todavía'
   }
+}
+
+/** El techo como probabilidad: tu ×tipo frente al ×tipo mediano de las adjudicadas. */
+function razonProbabilidad(e: EntradaVeredicto, hastaPuja: number | null, tieneTipo: boolean): string | null {
+  if (hastaPuja == null || !tieneTipo || !e.calibracion?.length) return null
+  const prov = (e.s.provincia ?? '').trim()
+  const suya = prov ? e.calibracion.find((c) => c.provincia === prov) : undefined
+  const global = e.calibracion.find((c) => c.provincia === '(todas)')
+  const elegida = suya?.ratioMediano != null && suya.muestraRatio > 0 ? suya : global
+  if (!elegida || elegida.ratioMediano == null || elegida.muestraRatio === 0) return null
+
+  const x = (n: number) => `${n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}×`
+  const tuyo = hastaPuja / e.s.valorSubasta!
+  const ambito = elegida === suya
+    ? `en ${prov} las adjudicadas cierran a una mediana de ${x(elegida.ratioMediano)} el tipo`
+    : `sin muestra de ${prov || 'tu provincia'}: en el conjunto del corpus las adjudicadas cierran a ${x(elegida.ratioMediano)} el tipo`
+  const n = `${elegida.muestraRatio} remate${elegida.muestraRatio === 1 ? '' : 's'}`
+  return tuyo < elegida.ratioMediano
+    ? `📊 Tu techo equivale a ${x(tuyo)} el tipo y ${ambito} (${n}): quien suele ganar paga MÁS que tu techo — chollo improbable, cuenta con que te sobrepujen.`
+    : `📊 Tu techo equivale a ${x(tuyo)} el tipo y ${ambito} (${n}): estás en línea o por encima de lo que suele ganar — opciones reales de llevártela.`
 }
 
 export function veredicto(e: EntradaVeredicto): Veredicto {
@@ -160,6 +188,11 @@ export function veredicto(e: EntradaVeredicto): Veredicto {
   if (e.s.situacionPosesoria === 'ocupada') {
     razones.push('⚠️ Consta OCUPADA: al coste y al plazo súmales el lanzamiento.')
   }
+  // ¿Y la probabilidad de QUEDÁRTELA? El techo se contrasta con a cuánto
+  // cierran las adjudicadas reales (mediana de importe/tipo). Sin muestra no se
+  // dice nada, y el agregado nacional se declara como tal, nunca como local.
+  const probabilidad = razonProbabilidad(e, pm.importe, tieneTipo)
+  if (probabilidad) razones.push(probabilidad)
   razones.push(...pm.notas)
 
   const base = { ...vacio, hastaPuja: pm.importe, descuentoAlTipo, valorUsado: valor, valorEstimado: estimado, razones, faltan }

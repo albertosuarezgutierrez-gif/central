@@ -85,6 +85,28 @@ test('el techo se contrasta con la deuda reclamada: hasta ahí el banco puja gra
   }
 })
 
+test('la calibración convierte el techo en probabilidad — y el agregado nunca se disfraza de provincial', () => {
+  // Los números REALES del corpus (20/08/2026): Sevilla 1,42× · global 0,64×.
+  const calibracion = [
+    { provincia: '(todas)', muestra: 13, adjudicadas: 8, desiertas: 5, ratioMediano: 0.64, muestraRatio: 8 },
+    { provincia: 'Sevilla', muestra: 2, adjudicadas: 2, desiertas: 0, ratioMediano: 1.42, muestraRatio: 2 },
+  ]
+  // Asturias no tiene muestra propia → habla el agregado, DECLARADO como tal.
+  const v = veredicto({ s: siero, valorMercado: 500000, cargas: cargasLimpias, calibracion })
+  const linea = v.razones.find((r) => /📊/.test(r))
+  assert.ok(linea, 'debe haber lectura de probabilidad')
+  assert.match(linea!, /sin muestra de Asturias/i)
+  assert.match(linea!, /0,64×/)
+  // En Sevilla habla SU mediana (1,42×), no la global.
+  const sevilla = veredicto({ s: { ...siero, provincia: 'Sevilla' }, valorMercado: 500000, cargas: cargasLimpias, calibracion })
+  const lineaSev = sevilla.razones.find((r) => /📊/.test(r))
+  assert.match(lineaSev!, /en Sevilla/i)
+  assert.match(lineaSev!, /1,42×/)
+  // Sin calibración, la razón simplemente no aparece: nada de inventar.
+  const sinCal = veredicto({ s: siero, valorMercado: 500000, cargas: cargasLimpias })
+  assert.equal(sinCal.razones.some((r) => /📊/.test(r)), false)
+})
+
 test('ocupada añade el aviso de lanzamiento', () => {
   const v = veredicto({ s: { ...siero, situacionPosesoria: 'ocupada' }, valorMercado: 500000, cargas: cargasLimpias })
   assert.ok(v.razones.some((r) => /OCUPADA/.test(r)))
