@@ -32,6 +32,18 @@
   las búsquedas por `hotel_names` del escaparate). ⚠️ 0 ventanas sin respuesta del conector; 0 sin
   precio utilizable. dudas: —; fallos: —; PRs/commits: — (solo escritura vía
   `/api/sivra/mercado/ingest`, sin cambios de código).
+
+- **2026-08-24 · buscador-ia** · hizo: pasada semanal — 5 eslabones cableados (NIM, Groq, Cerebras,
+  Gemini, Kimi) verificados vivos por WebSearch (sin keys en sesión, WebFetch a los 5 catálogos
+  bloqueado por el proxy — no se pudo repetir el patrón `/v1/models` de la pasada del 22/08);
+  descartada una señal ambigua de "End of Support" del NIM autoalojado (no aplica al endpoint
+  hosted); 2 candidatos (DeepSeek V4 Pro en NIM, qwen3.6-27b en Groq) anotados sin mini-eval, no
+  cruzan el listón de acción. dudas: si el proxy siguiera bloqueando estos dominios en pasadas
+  futuras, el watch de deprecación queda permanentemente limitado a WebSearch (menos fiable que
+  `/v1/models` con key real) — valorar si dar a este agente una key de solo-lectura o abrir el
+  proxy a esos 5 dominios; fallos: —; PRs/commits: sin PR (solo doc), commit directo a
+  `claude/youthful-gates-c529ai`.
+
 - **2026-08-23 · psd2-health-check** · hizo: pasada a petición de Alberto (banner «3 días sin
   movimientos»); feed PSD2 VIVO — las 2 conexiones `vinculada` con sync OK hoy 08:23, último mov
   20/08 (jueves; 21/08 laborable sin movimientos + fin de semana), volumen 30d 54 vs 75 (−28 %,

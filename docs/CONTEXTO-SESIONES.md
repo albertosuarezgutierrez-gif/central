@@ -45,6 +45,13 @@ Busto Feria 17-abr-2027 sigue "vendida" a 103€ sin income que lo explique (3er
 
 ---
 
+### 🧠 (24/08/2026) buscador-ia: pasada semanal — 5 eslabones vivos, sin swaps
+Sin API keys en sesión y con WebFetch a los 5 catálogos (NIM/Groq/Gemini/Kimi/Cerebras) bloqueado por
+el proxy, verificación por WebSearch dirigido. Groq `openai/gpt-oss-120b` reforzado (destino de
+migración de 6 modelos que Groq ha ido deprecando en 2026). Descartada una señal de "End of Support"
+del NIM autoalojado por no aplicar al endpoint hosted que usamos. 2 candidatos (DeepSeek V4 Pro,
+qwen3.6-27b) en seguimiento sin mini-eval, ninguno cruza el listón. Detalle en `docs/BUSCADOR-IA.md`.
+
 ### 🔎 (24/08/2026) Auditoría ligera: 4 commits del 23/08 sin entrada propia, reconciliados
 Rango 4f25e64..ed12004 (26 commits, todo el 23/08). Backlog PRs: #1600 y #1602 (ambos draft de carril 2
 del propio 23/08) siguen abiertos, `mergeable_state: dirty` por el aluvión de inserciones posteriores en
