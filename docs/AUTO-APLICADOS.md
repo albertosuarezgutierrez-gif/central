@@ -13,6 +13,12 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-08-24** · `docs/CONTEXTO-SESIONES.md` + `docs/AUDITORIA-2026-08.md` · 4 commits del 23/08 sin
+  entrada propia reconciliados (vigía hipoteca #1612, amortización Monte Carmelo #1609, colisiones de
+  numeración de rutinas #1604, `paper-tracker` sin vigilante en `agentes-latido`); dato stale corregido
+  (PR #1594 ya estaba mergeado el 23/08, «Estado vivo» seguía diciendo «pendiente de revisión»); informe
+  de la pasada ligera (heartbeat `psd2-sync` a 92h a vigilar, backlog #1600/#1602 dirty sin tocar por
+  <24h) · pasada ligera diaria, rango 26 commits desde `4f25e64` · commit de esta auditoría
 - **2026-08-23** · `docs/CONTEXTO-SESIONES.md` · añadida referencia `(PR #1586)` a la entrada del
   22/08 sobre el canal; `Estado vivo` re-fechado a 23/08 con 3 pendientes nuevos (hueco de 3
   rutinas Claude sin rastro el 22/08, `ses_transporte` sin establecimiento dado de alta, PR #1594
