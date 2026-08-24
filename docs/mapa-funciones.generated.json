@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-23T10:16:07Z",
-  "sha": "1082c4e1ca3d0779a3ec4b79ea941b187bcb13ea",
+  "generadoEn": "2026-08-24T07:03:50Z",
+  "sha": "8accd8362317b656b2bfd55eac6bf2a2972729e7",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -57686,7 +57686,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 64
+          "linea": 74
         }
       ],
       "tablas": [
@@ -57708,13 +57708,14 @@
         "pricing_eventos_auto",
         "pricing_piso_zona",
         "pricing_settings",
+        "properties",
         "rate_snapshots",
         "restringe",
         "snap",
         "ult"
       ],
       "rutaApi": "/api/sivra/pricing/guard",
-      "hash": "cf19e689fa4a"
+      "hash": "04fee64496ea"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/historial/route.ts",
@@ -69882,6 +69883,74 @@
       "hash": "905221de1dd6"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/noches-sin-income.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/noches-sin-income.ts — clasifica las «noches fantasma»: fechas futuras que el calendario de Smoobu tiene bloqueadas (available=0) sin ningún income que las cubra. Caso fundacional (24/08/2026): Busto Reform 15-17 abr 2027 llevaba TRES ciclos del agente de pricing apareciendo «vendida a 103",
+      "exporta": [
+        "reservaDesdeSmoobu",
+        "clasificarNoche",
+        "agruparRangos",
+        "ventanaConsulta"
+      ],
+      "funciones": [
+        {
+          "nombre": "reservaDesdeSmoobu",
+          "kind": "function",
+          "exportada": true,
+          "params": "b: any",
+          "retorno": "ReservaVentana",
+          "linea": 33,
+          "resumen": "Adapta un booking crudo del API de Smoobu (claves kebab-case) a `ReservaVentana`."
+        },
+        {
+          "nombre": "cubre",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "r: ReservaVentana, fecha: string",
+          "retorno": "boolean",
+          "linea": 64
+        },
+        {
+          "nombre": "clasificarNoche",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string, reservas: ReservaVentana[]",
+          "retorno": "NocheClasificada",
+          "linea": 72,
+          "resumen": "Clasifica UNA noche bloqueada-sin-income contra las reservas que Smoobu devuelve para su ventana. Prioridad deliberada: una reserva viva manda sobre un bloqueo, y ambos sobre una cancelación — lo que "
+        },
+        {
+          "nombre": "agruparRangos",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechas: string[]",
+          "retorno": "",
+          "linea": 84,
+          "resumen": "Agrupa fechas YYYY-MM-DD (no necesariamente ordenadas) en rangos consecutivos inclusivos."
+        },
+        {
+          "nombre": "diaSiguiente",
+          "kind": "function",
+          "exportada": false,
+          "params": "fecha: string",
+          "retorno": "string",
+          "linea": 95
+        },
+        {
+          "nombre": "ventanaConsulta",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechas: string[]",
+          "retorno": "",
+          "linea": 106,
+          "resumen": "Ventana de llegada con la que pedir a Smoobu las reservas que pueden cubrir estas noches. Se abre 35 días hacia atrás: una estancia larga puede cubrir la noche habiendo llegado semanas antes, y el fil"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "07ca18e043fe"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/pilot-track.ts",
       "ambito": "apps/plataforma",
       "resumen": "Lógica PURA del agente de seguimiento del piloto (sin DB ni red → testeable por inspección). El endpoint /api/sivra/pricing/pilot-track aporta los datos; aquí solo se decide el veredicto.",
@@ -70893,6 +70962,7 @@
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/smoobu-sync.ts — sync incremental de reservas de Smoobu → tabla `incomes`. Extraído de app/api/sivra/updates/sync para poder reusarlo desde el webhook (tiempo real) y desde el cron (red de seguridad). Es IDEMPOTENTE: upsert por reservationId, borra en cancelación.",
       "exporta": [
+        "listarReservasVentana",
         "runSync"
       ],
       "funciones": [
@@ -70921,12 +70991,21 @@
           "linea": 43
         },
         {
+          "nombre": "listarReservasVentana",
+          "kind": "function",
+          "exportada": true,
+          "params": "arrFrom: string, arrTo: string, modifiedDays = 800, maxPages = 10",
+          "retorno": null,
+          "linea": 66,
+          "resumen": "Lista las reservas CRUDAS de Smoobu cuya estancia toca la ventana [arrFrom, arrTo] — canceladas y bloqueos manuales incluidos (showCancellation=1 y sin filtrar `is-blocked-booking`, al revés que runSy"
+        },
+        {
           "nombre": "runSync",
           "kind": "function",
           "exportada": true,
           "params": "days: number, maxPages = 20, arrFrom?: string, arrTo?: string",
           "retorno": null,
-          "linea": 58
+          "linea": 81
         }
       ],
       "tablas": [
@@ -70936,7 +71015,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "1c7233b376cd"
+      "hash": "418828309e5f"
     },
     {
       "ruta": "apps/plataforma/lib/smoobu.ts",
@@ -96492,7 +96571,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2555,
-    "funciones": 7009
+    "archivos": 2556,
+    "funciones": 7016
   }
 }
