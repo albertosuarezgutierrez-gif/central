@@ -30,14 +30,41 @@ export interface LecturaAportada {
 }
 
 /**
- * Título con el que se registra el documento. El título importa: es lo que
- * usa `autoridadDocumental` para arbitrar cuando dos documentos discrepan en
- * el rango de una carga (la certificación manda sobre el edicto), así que si
- * el nombre del fichero dice «certificación», hay que conservarlo.
+ * Qué ES el documento, leído de su propio texto. Hace falta porque el Portal
+ * sirve las descargas con nombres genéricos (`documento1_4.pdf`) que no dicen
+ * nada — y el título importa: es lo que usa `autoridadDocumental` para
+ * arbitrar cuando dos documentos discrepan en el rango de una carga (la
+ * certificación manda sobre el edicto). Los patrones salen de documentos
+ * REALES de SUB-JA-2026-264175 (edicto del Tribunal de Instancia de Sevilla,
+ * certificación del Registro nº 3, consulta catastral del PNJ), no de memoria.
  */
-export function tituloDeAportado(nombreFichero: string | null | undefined, titulo?: string | null): string {
+export function tituloDesdeTexto(texto: string | null | undefined): string | null {
+  const t = (texto ?? '').replace(/\s+/g, ' ')
+  if (!t) return null
+  // «LUIS FRANCISCO MONREAL VIDAL, REGISTRADOR DE LA PROPIEDAD … C E R T I F I C O:»
+  // — con las letras SEPARADAS, tal cual lo maqueta el Registro (documento real
+  // de SUB-JA-2026-264175); de ahí el `\s*` entre letras.
+  if (/REGISTRADOR[A]?\s+DE\s+LA\s+PROPIEDAD/i.test(t) && /\bC\s*E\s*R\s*T\s*I\s*F\s*I\s*C\s*[OA]\b/i.test(t)) {
+    return 'Certificación de dominio y cargas'
+  }
+  if (/\bnota\s+simple\b/i.test(t) && /registro\s+de\s+la\s+propiedad/i.test(t)) return 'Nota simple'
+  if (/\bEDICTO\b/i.test(t) || /se\s+anuncia\s+.{0,60}\bsubasta\b/i.test(t)) return 'Edicto de subasta'
+  // «Consulta Domicilios Catastrales — PLATAFORMA DE SERVICIOS DEL PUNTO NEUTRO JUDICIAL»
+  if (/\bCATASTRAL/i.test(t)) return 'Datos catastrales'
+  return null
+}
+
+/**
+ * Título con el que se registra el documento: el que dé el usuario > el que
+ * declare el propio texto (`tituloDesdeTexto`) > el nombre del fichero. El
+ * contenido gana al fichero a propósito: «documento2_4.pdf» era la
+ * certificación de cargas, y con ese nombre perdería su autoridad documental.
+ */
+export function tituloDeAportado(nombreFichero: string | null | undefined, titulo?: string | null, texto?: string | null): string {
   const dado = (titulo ?? '').trim()
   if (dado) return dado.slice(0, 200)
+  const delTexto = tituloDesdeTexto(texto)
+  if (delTexto) return delTexto
   const nombre = (nombreFichero ?? '').trim().replace(/\.[a-z0-9]{2,5}$/i, '').replace(/[_-]+/g, ' ').trim()
   return (nombre || 'Documento aportado').slice(0, 200)
 }

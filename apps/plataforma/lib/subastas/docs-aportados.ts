@@ -81,10 +81,12 @@ export async function procesarDocAportado(
   `)
   if (!filas.length) throw new Error('Subasta no encontrada')
 
-  const titulo = tituloDeAportado(doc.nombreFichero, doc.titulo)
   const esImagen = /^image\//.test(doc.mediaType ?? '')
   const texto = doc.texto?.trim() || (esImagen || !doc.pdf ? '' : await textoDePdf(doc.pdf).catch(() => ''))
   const escaneado = !texto || pareceEscaneado(texto)
+  // El texto entra en el título a propósito: las descargas del Portal se llaman
+  // «documentoN.pdf» y el contenido es lo único que dice qué documento es.
+  const titulo = tituloDeAportado(doc.nombreFichero, doc.titulo, texto)
 
   const lectura = await leerDocumento({
     texto: escaneado ? null : texto,
