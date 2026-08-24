@@ -14,7 +14,7 @@ import { buscarCandidatos } from './buscar-simbolo'
 // existen en el radar sobre UN símbolo: factores de la caché + puesto en el ranking del blend, técnico
 // (SMA50/RSI), 📊 volumen, 💪 fuerza relativa en caídas, 📰 8-K, 🧑‍💼 insiders y 📅 próximo informe
 // (30 días para el análisis puntual, más ancho que los 7 del digest). Cero cifras inventadas — todo
-// sale de la SEC y de precios públicos. Si el símbolo no está en el universo (~800 mayores de EEUU),
+// sale de la SEC y de precios públicos. Si el símbolo no está en el universo (~1000 mayores de EEUU),
 // degrada al análisis solo-precio (Yahoo cubre cualquier ticker de EEUU). SOLO estudio.
 
 export type AnalisisSimbolo = {
