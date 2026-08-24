@@ -230,3 +230,4 @@ export { evaluarOportunidad, FACTORES } from './scoring.ts'
 
 // Radar por criterios
 export { coincideSubasta, filtrarSubastas, claveInmueble } from './radar.ts'
+export { veredicto, type Veredicto, type EntradaVeredicto, type NivelVeredicto } from './veredicto.ts'

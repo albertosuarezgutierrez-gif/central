@@ -26,6 +26,7 @@ import { prisma } from '@/lib/db'
 import {
   cargasQueSubsisten,
   datosDeEdicto,
+  extraerRefCatastral,
   notasDeEdicto,
   pareceEscaneado,
   resumirCargas,
@@ -61,6 +62,10 @@ export interface ResultadoAportado {
   notas: string[]
   /** ¿Se escribió el corpus (`subastas.cargas_*`) con esta lectura? */
   aplicado: boolean
+  /** Referencia catastral encontrada en el documento. */
+  refCatastral: string | null
+  /** `true` = la ref tapó un hueco y el Catastro rellenará m²/año/uso. */
+  refAplicada: boolean
   /** Lo que hereda el adjudicatario según el cuadro COMBINADO. `null` = sin afirmar. */
   importeSubsistente: number | null
   resumen: string | null
@@ -100,7 +105,26 @@ export async function procesarDocAportado(
     cargas: lectura.cuadro.cargas.map((c) => ({ ...c, documento: titulo })),
   }
   const notas = texto ? notasDeEdicto(datosDeEdicto(texto)) : []
-  const legible = aportaAlgo({ cuadro, notas })
+  // La referencia catastral se busca en el texto Y en los literales de las
+  // cargas: los docs escaneados no tienen texto, pero el lector de visión
+  // copia los literales y ahí a veces viene la referencia.
+  const refCatastral = extraerRefCatastral([texto, ...cuadro.cargas.map((c) => c.literal ?? '')].filter(Boolean).join(' '))
+  const legible = aportaAlgo({ cuadro, notas, refCatastral })
+
+  // La ref es la llave del Catastro (m², año, uso, ubicación exacta): tapa el
+  // hueco y re-encola el enriquecimiento para que el cron los rellene esta
+  // noche. Nunca pisa una ref ya conocida.
+  let refAplicada = false
+  if (refCatastral) {
+    const n = await prisma.$executeRaw(Prisma.sql`
+      UPDATE subastas SET
+        ref_catastral = ${refCatastral},
+        enriquecida_at = NULL,
+        actualizado_en = now()
+      WHERE dedupe_key = ${dedupeKey} AND ref_catastral IS NULL
+    `)
+    refAplicada = Number(n) > 0
+  }
 
   await prisma.$executeRaw(Prisma.sql`
     INSERT INTO subastas_docs_aportados (cuenta_id, dedupe_key, titulo, via, paginas, legible, cuadro, notas)
@@ -117,6 +141,8 @@ export async function procesarDocAportado(
       cargas: 0,
       notas: [],
       aplicado: false,
+      refCatastral,
+      refAplicada,
       importeSubsistente: null,
       resumen: null,
       avisos: [
@@ -131,7 +157,7 @@ export async function procesarDocAportado(
   if (!combinado) {
     // Señales del edicto sin cuadro de cargas: se guardan y se enseñan, pero
     // no hay nada que afirmar sobre las cargas.
-    return { titulo, legible: true, cargas: 0, notas, aplicado: false, importeSubsistente: null, resumen: null, avisos: lectura.discrepancias }
+    return { titulo, legible: true, cargas: 0, notas, aplicado: false, refCatastral, refAplicada, importeSubsistente: null, resumen: null, avisos: lectura.discrepancias }
   }
 
   const subsistentes = cargasQueSubsisten(combinado, new Date())
@@ -160,6 +186,8 @@ export async function procesarDocAportado(
     cargas: cuadro.cargas.length,
     notas,
     aplicado: true,
+    refCatastral,
+    refAplicada,
     importeSubsistente: subsistentes.importe,
     resumen,
     avisos: [...lectura.discrepancias, ...subsistentes.avisos],

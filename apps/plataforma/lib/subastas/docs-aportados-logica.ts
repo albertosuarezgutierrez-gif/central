@@ -27,6 +27,8 @@ export interface LecturaAportada {
   cuadro: CuadroCargas
   /** Señales explícitas del edicto (`notasDeEdicto`), si el texto las traía. */
   notas: string[]
+  /** Referencia catastral encontrada en el texto: llave del enriquecimiento. */
+  refCatastral?: string | null
 }
 
 /**
@@ -80,7 +82,10 @@ export function aportaAlgo(l: LecturaAportada): boolean {
     l.cuadro.cargas.length > 0 ||
     l.cuadro.procedimiento !== 'desconocido' ||
     l.cuadro.valoracionPactada?.importe != null ||
-    l.notas.length > 0
+    l.notas.length > 0 ||
+    // Un doc «Datos catastrales» no trae cargas ni señales, pero su referencia
+    // catastral es la llave que rellena m²/año/uso desde el Catastro.
+    !!l.refCatastral
   )
 }
 
