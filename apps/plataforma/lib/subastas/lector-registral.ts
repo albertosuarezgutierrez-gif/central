@@ -34,6 +34,7 @@ import {
   type CuadroCargas,
 } from '@central/module-subastas'
 import type { ImageInput } from '@central/core-ai'
+import { rasterizarPdf } from '@/lib/subastas/rasterizar-pdf'
 import { aiVision } from '@/lib/ai-client'
 import { chatConDirector } from '@/lib/pasarela'
 import { elegirPorCategoria } from '@/lib/ia-director'
@@ -274,7 +275,13 @@ export async function leerDocumento(
 
     // 3. PDF escaneado: rescatar las páginas y leerlas con visión.
     if (contenido.pdf) {
-      const paginas = await paginasDePdfEscaneado(contenido.pdf)
+      let paginas = await paginasDePdfEscaneado(contenido.pdf)
+      // 🚨 Los registros escanean en CCITT G4/JBIG2 (compresión de fax, sin un
+      // solo JPEG dentro): ahí `localizarJpegs` devuelve 0 bandas y la
+      // certificación salía «ilegible» con el PDF delante (SUB-JA-2026-262310,
+      // 26 páginas; la de Siero, 24/08). El respaldo renderiza las páginas con
+      // PDFium/WASM — más caro, por eso solo cuando no hay JPEGs que rescatar.
+      if (!paginas.length) paginas = await rasterizarPdf(contenido.pdf, MAX_PAGINAS)
       if (!paginas.length) return vacio('vision')
       const a = await leerImagenes(paginas, modelo)
       const b = await leerImagenes(paginas, modelo)
