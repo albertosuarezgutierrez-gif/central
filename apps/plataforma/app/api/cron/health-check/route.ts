@@ -329,13 +329,13 @@ export async function GET(req: NextRequest) {
     // OK). Cuando se agota, TODOS los /api/ai/* responden 429 hasta el día 1 — incluida la cadena
     // gratis (chat/tools por NIM→Groq), que no cuesta nada bloquear. Antes ese estado solo se veía
     // en el god-panel /operador/ia (nadie lo mira a diario) y, disfrazado, en el Check 12 acusando
-    // al proveedor equivocado. Si el bloqueo es esperado no hay nada que hacer; si no, se sube el
-    // límite en Vercel (env AI_GATEWAY_LIMITE_MENSUAL) — decisión de Alberto, no del código.
+    // al proveedor equivocado. El límite vigente sale de la fila única de `ia_limite_mensual`
+    // (editable por Supabase sin redeploy; sin fila, manda la env AI_GATEWAY_LIMITE_MENSUAL).
     const presupuestoMensual = await estadoPresupuesto()
     if (presupuestoMensual.limite > 0 && presupuestoMensual.ratio >= 1) {
       fallos.push(
         `🔴 Pasarela IA: presupuesto mensual AGOTADO (${presupuestoMensual.usado}/${presupuestoMensual.limite} llamadas OK) — ` +
-        `todos los /api/ai/* responden 429 hasta el día 1. Si no es esperado, sube AI_GATEWAY_LIMITE_MENSUAL en Vercel (proyecto plataforma).`,
+        `todos los /api/ai/* responden 429 hasta el día 1. Si no es esperado, sube el límite en la tabla ia_limite_mensual (UPDATE ... SET limite_mensual = N; 0 = sin límite).`,
       )
     } else if (presupuestoMensual.limite > 0 && presupuestoMensual.ratio >= 0.8) {
       fallos.push(`🟡 Pasarela IA: presupuesto mensual al ${Math.round(presupuestoMensual.ratio * 100)}% (${presupuestoMensual.usado}/${presupuestoMensual.limite} llamadas OK)`)

@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db'
 import { tgSend } from '@central/core-telegram'
 import type { OpenRouterUsage } from '@central/core-ai'
+import { limiteMensualEfectivo } from '@/lib/ia-limite-mensual'
 
 /** Valida el secreto Bearer entrante (las verticales llaman con AI_GATEWAY_SECRET). */
 export function verificarSecreto(req: Request): boolean {
@@ -173,10 +174,25 @@ export async function ratioPresupuestoDiario(app: string, clienteRef?: string | 
   } catch { return 0 }
 }
 
+/**
+ * Límite mensual VIGENTE (nº de llamadas OK/mes): la fila única de la tabla `ia_limite_mensual`
+ * manda sobre la env `AI_GATEWAY_LIMITE_MENSUAL` cuando tiene valor (patrón `trading_acceso_token`:
+ * editable por Supabase sin redeploy — las sesiones de Claude no pueden escribir envs de Vercel).
+ * 0 = sin límite. Si la BD no responde o la tabla no existe, manda la env (conservador: un fallo
+ * de lectura no abre el grifo). Nunca lanza.
+ */
+async function limiteMensual(): Promise<number> {
+  const db = await prisma.$queryRaw<Array<{ limite_mensual: number | null }>>`
+    SELECT limite_mensual FROM ia_limite_mensual WHERE id = 1`
+    .then(rows => rows[0]?.limite_mensual)
+    .catch(() => undefined)
+  return limiteMensualEfectivo(db, process.env.AI_GATEWAY_LIMITE_MENSUAL)
+}
+
 /** Presupuesto mensual GLOBAL (nº de llamadas OK). 0/no definido = sin límite. */
 export async function dentroDePresupuesto(): Promise<boolean> {
-  const limite = Number(process.env.AI_GATEWAY_LIMITE_MENSUAL ?? 0)
-  if (!limite || Number.isNaN(limite)) return true
+  const limite = await limiteMensual()
+  if (!limite) return true
   const rows = await prisma.$queryRaw<Array<{ n: bigint }>>`
     SELECT count(*) AS n FROM ai_usos WHERE ok = true AND creada_at >= date_trunc('month', now())`
   return Number(rows[0]?.n ?? 0) < limite
@@ -184,7 +200,7 @@ export async function dentroDePresupuesto(): Promise<boolean> {
 
 /** Estado del presupuesto mensual (para avisos en el god-panel). ratio>=0.8 → alerta. */
 export async function estadoPresupuesto(): Promise<{ usado: number; limite: number; ratio: number }> {
-  const limite = Number(process.env.AI_GATEWAY_LIMITE_MENSUAL ?? 0) || 0
+  const limite = await limiteMensual()
   const rows = await prisma.$queryRaw<Array<{ n: bigint }>>`
     SELECT count(*) AS n FROM ai_usos WHERE ok = true AND creada_at >= date_trunc('month', now())`
   const usado = Number(rows[0]?.n ?? 0)
@@ -285,7 +301,7 @@ export async function resumenIA(): Promise<ResumenIA> {
       app: r.app, endpoint: r.endpoint, proveedor: r.proveedor, modelo: r.modelo, ok: r.ok, ms: r.ms,
       tokens: num(r.tokens), coste: num(r.coste_eur), error: r.error, creada_at: String(r.creada_at),
     })),
-    limite_mensual: Number(process.env.AI_GATEWAY_LIMITE_MENSUAL ?? 0) || 0,
+    limite_mensual: presupuesto.limite,
     presupuesto,
   }
 }
