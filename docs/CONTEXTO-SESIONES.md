@@ -32,6 +32,13 @@
 
 ---
 
+### 🧭 (25/08/2026) Estudio: rentabilidad del motor de precios · salida de Chekin · Booking directo
+- **Motor vs PriceLabs:** medible, pero NO como «2026 vs 2025». PL costaba 64,96€/mes (49,97€ en ago) ≈ 780€/año de ahorro directo. Contrafactual = `pricing_pl_referencia` (Dúplex/House) y **caduca el 06/12/2026**: decidir antes si se paga 1 listado de PL como espejo (~16,24€/mes).
+- 🚨 **Hueco en el histórico:** cero reservas con entrada en **jun y jul 2025** (backfills de Smoobu por ventanas). Reparar desde Smoobu antes de comparar con 2025 — si no, sale una caída falsa.
+- **Salida de Chekin** (plan nuevo `docs/superpowers/plans/2026-08-25-salida-chekin-partes-propios.md`): solo está el TRANSPORTE; faltan `validar/xml/xsd/tipos/municipios`, 3 tablas, formulario, OCR, crons y el registro a 3 años. `ses_establecimientos` **VACÍA** y `SES_CRYPTO_KEY` sin poner. Piloto = **Busto Reform** (aforo 2, credenciales ya validadas). Límite: renovación **07/03/2027**.
+- **Booking directo** (`2026-08-25-booking-directo-y-smoobu.md`): **no viable hoy** (hay que ser Connectivity Partner, con mínimo de propiedades; altas al parecer pausadas — sin confirmar, proxy bloquea sus dominios). Smoobu lo tocan **155 ficheros**. El dinero está en la comisión: **25.610€ en 2026** (19,72%, 92,3% del ingreso) frente a 1.018,05€ de licencia.
+- **Pendiente de Alberto:** portal SES (¿emite Smoobu además de Chekin?), auditar qué hace Chekin, autorizar la consulta a la asesoría (firma art. 4.2), y mirar por qué pagamos **7 unidades** de Smoobu con 4 pisos (~436€/año).
+
 ### 📄 (25/08/2026) La FACTURA de Sique Brilla manda sobre la inferencia del P&L
 Cierra los tres huecos que quedaban del #1692. (1) El desglose se DEDUCÍA del importe; ahora se lee la
 factura: tabla `limpieza_facturas` + helper puro `lib/sivra/factura-limpieza.ts`. El layout lo lee la IA
