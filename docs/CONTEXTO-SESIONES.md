@@ -96,7 +96,10 @@ Hecho en PR #1703: fuera suelo+tripwire, digest, stats, baseline y las etiquetas
 `resultados`/`pilot-track` (publicaban 0€ donde el neto real era −42€, por `GREATEST(…,0)`). Rename
 `price_pricelabs`→`price_live` por expand/contract: migración aditiva **aplicada** (100.861 filas, 0
 descuadradas, trigger de sincronía) y `experiments_sin_baseline_pl.sql` aplicada tras el deploy
-(verificado: 49 filas nuevas, 0 con baseline falso). **Pendiente: solo el `DROP`** de
+(verificado: 49 filas nuevas, 0 con baseline falso). 🚨 **`pricing_pl_referencia` NO se borra**:
+la usa `/sivra/pricing-rentabilidad` (#1702) de contrafactual hasta que caduque el 06/12/2026 — un
+DROP la deja en 500. Guardián que lo fija: `test/regression-pricelabs-retirado.test.ts`.
+**Pendiente: solo el `DROP` de las dos COLUMNAS** de
 `rate_snapshots.price_pricelabs` + `pricing_experiments.price_pricelabs` + `pricing_pl_referencia`,
 en PR aparte tras un ciclo verde. PriceLabs-proveedor-de-gasto NO se toca.
 **Abiertos, ajenos a PL:** diente de sierra (74,4% de fechas subieron Y bajaron la misma semana, ×1,44,
