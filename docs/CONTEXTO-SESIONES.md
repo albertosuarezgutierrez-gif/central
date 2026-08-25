@@ -32,6 +32,20 @@
 
 ---
 
+### 🔀 (25/08/2026) `aiComplete`/`aiTools` eran cajas negras: mismo fallo del gemini/pasarela, pero en la cadena clásica
+Alberto: «revisa si este fallo está en algún sitio más». Sí: `aiComplete`/`aiTools` de `@central/core-ai`
+devolvían solo el `string`/`NimToolResult`, sin decir qué eslabón (NIM/Groq/Cerebras/Gemini/Kimi) sirvió
+de verdad. `pasarela.ts::chatConDirector` (la ruta de TODOS los agentes: contable, concursos, correo,
+categorización…) y `/api/ai/tools` registraban TODO éxito como `proveedor:'nim'` — igual de mentiroso
+que el bug de esta mañana, pero al revés: un NIM muerto quedaría tapado indefinidamente por Groq/Cerebras
+bajo la etiqueta 'nim' (Check 12 nunca lo vería), y Kimi (DE PAGO) se contaba como gasto de NIM (gratis).
+Fix: nuevas `aiCompleteConProveedor`/`aiToolsConProveedor` en core-ai (devuelven `{text,proveedor,modelo}`;
+`aiComplete`/`aiTools` siguen igual para los ~70 callers que no lo necesitan) — cableadas en `pasarela.ts`
+y `tools/route.ts`. De paso: `client.ts` importaba sin `.ts` (rompía `node --test`, invisible porque
+nunca se testeó directo). 8 tests nuevos que mockean fetch por URL y confirman que NIM caído + Groq vivo
+da `proveedor:'groq'`, nunca 'nim'. `costeEur('kimi',…)` sigue en 0€ (sin tarifa cargada — no se inventa).
+tsc 0 · 1617 tests plataforma + 41 core-ai.
+
 ### 📈 (25/08/2026) Cuadro gana «Motor vs mercado real» (#1712) + target_pctl de House 0,50→0,60
 - **Bloque 1-bis en `/sivra/pricing-rentabilidad` (PR #1712, mergeado):** las noches vendidas bajo el motor contra el p50 de comparables fiables de su noche (±10d de la reserva, mismos filtros que el motor). No caduca — releva a PL el 06/12. Primeros datos: Dúplex **−0,4%**, House **+47%**, Luxury **−28%**, Busto sin comps fiables aún.
 - **`target_pctl` de House Sevillana 0,50→0,60 APLICADO en prod** (OK de Alberto en chat): sept al **43% vendido** a >1 mes vista (antelación mediana 24-39d; los otros pisos al 10-13%) y ventas +47% sobre mercado. Registrado en `pricing_aprendizaje` id 76 con criterio de reversión (sept <~30% a 30 días vista → revertir). Mismo experimento que el Dúplex del 20/08.

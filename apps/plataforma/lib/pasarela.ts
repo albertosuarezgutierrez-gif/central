@@ -14,7 +14,7 @@
 // Decisión de Alberto: «usa OpenRouter». Se reactiva con `GEMINI_TEXTO=1` cuando haya una key con
 // cuota (mismo patrón que `GEMINI_WEBSEARCH` en `lib/websearch.ts`).
 
-import { aiComplete, geminiSearch, openrouterChatEx, type NimChatMessage } from '@central/core-ai'
+import { aiCompleteConProveedor, geminiSearch, openrouterChatEx, type NimChatMessage } from '@central/core-ai'
 import {
   registrarUso, estimarTokens, costeEur, costePorUso, dentroDePresupuestoDiario,
 } from '@/lib/ai-gateway'
@@ -135,18 +135,27 @@ export async function chatConDirector(messages: NimChatMessage[], opts: ChatDire
     }
   }
 
-  // ── Cadena clásica GRATIS (NIM → Groq → Gemini → Kimi) — comportamiento de siempre ─────────
+  // ── Cadena clásica GRATIS (NIM → Groq → Cerebras → Gemini → Kimi) — comportamiento de siempre ──
   const modeloCadena = modelo ?? modeloClasico
   const t0 = Date.now()
   try {
-    const text = await aiComplete(messages, {
+    // 🚨 `aiComplete` es una caja negra (devuelve solo el texto): NO asumir que sirvió NIM solo
+    // porque es el primario de la cadena — Groq/Cerebras/Gemini/Kimi pueden haber respondido en
+    // su lugar (25/08/2026, ver cabecera de `aiCompleteConProveedor` en core-ai). Registrar el
+    // proveedor REAL importa por dos motivos: (1) si NIM muere, Groq/Cerebras lo taparían
+    // indefinidamente bajo la etiqueta 'nim' y el Check 12 del health-check nunca lo vería
+    // (mismo patrón que dejó a Gemini acumulando fallos fantasma, pero al revés); (2) Kimi es DE
+    // PAGO — atribuirlo a 'nim' (gratis) subestima el gasto real. `costeEur()` sigue devolviendo 0
+    // para groq/cerebras/kimi (sin tarifa cargada todavía; groq/cerebras SÍ son gratis, kimi no —
+    // pendiente de tarifa real, no se inventa una).
+    const res = await aiCompleteConProveedor(messages, {
       system, model: modeloCadena, maxTokens, temperature, timeoutMs,
       skipOpenRouter: openrouterBloqueado || !!or, // la pasarela ya gestionó OpenRouter aquí arriba
     })
-    const tokens = estimarTokens(entrada, text)
-    await registrarUso({ app, endpoint, proveedor: 'nim', modelo: modeloCadena ?? null, ok: true, ms: Date.now() - t0, tokens, costeEur: costeEur('nim', tokens), clienteRef })
-    if (cacheCfg && cacheActiva()) void guardarCache(app, cacheCfg.ambito, entrada, text, { modelo: modeloCadena ?? null, ttlHoras: cacheCfg.ttlHoras })
-    return { text, modelo: modeloCadena ?? null }
+    const tokens = estimarTokens(entrada, res.text)
+    await registrarUso({ app, endpoint, proveedor: res.proveedor, modelo: res.modelo, ok: true, ms: Date.now() - t0, tokens, costeEur: costeEur(res.proveedor, tokens), clienteRef })
+    if (cacheCfg && cacheActiva()) void guardarCache(app, cacheCfg.ambito, entrada, res.text, { modelo: res.modelo, ttlHoras: cacheCfg.ttlHoras })
+    return { text: res.text, modelo: res.modelo }
   } catch (e) {
     const msg = e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 200) : 'error'
     console.warn('[ai-gateway] chat: cadena clásica falló:', msg)
