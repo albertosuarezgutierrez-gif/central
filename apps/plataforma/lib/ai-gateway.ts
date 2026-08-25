@@ -50,6 +50,17 @@ export function costePorUso(
   return costeEur('openrouter', usage?.total_tokens ?? 0)
 }
 
+/**
+ * Proveedor con el que se registran los rechazos PRE-VUELO de la propia pasarela (presupuesto
+ * mensual excedido, búsqueda sin configurar…): NO se llamó a ningún proveedor, así que atribuir
+ * la fila a 'gemini'/'nim'/'openrouter' es mentira — y una mentira cara: el Check 12 del
+ * health-check (proveedor muerto) contaba esos rechazos como llamadas fallidas del proveedor y
+ * acusó a Gemini de «15 llamadas y ninguna correcta» con Gemini desenchufado desde el 01/08/2026
+ * (caso 25/08/2026: el gate mensual se cruzó el 24/08 y cada 429 del gate renovaba la alerta).
+ * El Check 12 excluye este valor; el agotamiento del presupuesto tiene su propio check.
+ */
+export const PROVEEDOR_PASARELA = 'pasarela'
+
 /** Registra una llamada de IA (para control de coste). Nunca lanza: un fallo de log no rompe la IA. */
 export async function registrarUso(u: {
   app: string; endpoint: string; proveedor: string; modelo: string | null; ok: boolean; ms: number

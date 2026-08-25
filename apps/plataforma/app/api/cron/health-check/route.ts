@@ -10,6 +10,7 @@ import { facturasMensualesFaltantes } from '@/lib/sivra/facturas-mensuales'
 import { eur } from '@/lib/dinero'
 import { veredictoLiquidacion } from '@/lib/cuadre-tarjetas'
 import { sondearProveedoresIA, TIMEOUT_MS as SONDA_TIMEOUT_MS } from '@/lib/monitoring/sonda-ia'
+import { estadoPresupuesto, PROVEEDOR_PASARELA } from '@/lib/ai-gateway'
 import { veredictoSonda } from '@/lib/monitoring/sonda-veredicto'
 import type { TraficoRealProveedor } from '@/lib/monitoring/sonda-veredicto'
 import type { NextRequest } from 'next/server'
@@ -295,6 +296,13 @@ export async function GET(req: NextRequest) {
     // condición el check repetiría la misma alerta cada día sobre un problema ya resuelto — ruido
     // que entrena a ignorar el canal. Un proveedor muerto con cadencia semanal sigue disparando:
     // cada pasada suya renueva los 3 días.
+    //
+    // ⚠️ Se excluye el pseudo-proveedor 'pasarela' (rechazos PRE-VUELO del propio gate: presupuesto
+    // mensual excedido, búsqueda sin configurar): ahí no se llamó a ningún proveedor, así que por
+    // definición nunca tendrán un ok=true y dispararían este check para siempre. Caso 25/08/2026:
+    // esos rechazos iban atribuidos a 'gemini' y el check acusó a Gemini —desenchufado desde el
+    // 01/08— de «15 llamadas y ninguna correcta»; el agotamiento del presupuesto lo canta ahora
+    // su propio check (12-bis), con su nombre.
     const proveedoresMuertos = await prisma.$queryRaw<
       { proveedor: string; llamadas: bigint; dias: number; ultimo_error: string | null }[]
     >`
@@ -304,6 +312,7 @@ export async function GET(req: NextRequest) {
              MAX(left(COALESCE(error, ''), 140)) AS ultimo_error
       FROM ai_usos
       WHERE creada_at > now() - interval '30 days' AND proveedor IS NOT NULL
+        AND proveedor <> ${PROVEEDOR_PASARELA}
       GROUP BY proveedor
       HAVING COUNT(*) >= 10 AND COUNT(*) FILTER (WHERE ok) = 0
          AND MAX(creada_at) > now() - interval '3 days'`
@@ -315,6 +324,26 @@ export async function GET(req: NextRequest) {
       )
     }
     if (!proveedoresMuertos.length) ok.push('✅ Ningún proveedor de IA muerto')
+
+    // Check 12-bis: presupuesto MENSUAL de la pasarela (AI_GATEWAY_LIMITE_MENSUAL, nº de llamadas
+    // OK). Cuando se agota, TODOS los /api/ai/* responden 429 hasta el día 1 — incluida la cadena
+    // gratis (chat/tools por NIM→Groq), que no cuesta nada bloquear. Antes ese estado solo se veía
+    // en el god-panel /operador/ia (nadie lo mira a diario) y, disfrazado, en el Check 12 acusando
+    // al proveedor equivocado. Si el bloqueo es esperado no hay nada que hacer; si no, se sube el
+    // límite en Vercel (env AI_GATEWAY_LIMITE_MENSUAL) — decisión de Alberto, no del código.
+    const presupuestoMensual = await estadoPresupuesto()
+    if (presupuestoMensual.limite > 0 && presupuestoMensual.ratio >= 1) {
+      fallos.push(
+        `🔴 Pasarela IA: presupuesto mensual AGOTADO (${presupuestoMensual.usado}/${presupuestoMensual.limite} llamadas OK) — ` +
+        `todos los /api/ai/* responden 429 hasta el día 1. Si no es esperado, sube AI_GATEWAY_LIMITE_MENSUAL en Vercel (proyecto plataforma).`,
+      )
+    } else if (presupuestoMensual.limite > 0 && presupuestoMensual.ratio >= 0.8) {
+      fallos.push(`🟡 Pasarela IA: presupuesto mensual al ${Math.round(presupuestoMensual.ratio * 100)}% (${presupuestoMensual.usado}/${presupuestoMensual.limite} llamadas OK)`)
+    } else {
+      ok.push(presupuestoMensual.limite > 0
+        ? `✅ Presupuesto mensual IA: ${presupuestoMensual.usado}/${presupuestoMensual.limite} llamadas OK`
+        : '✅ Presupuesto mensual IA: sin límite configurado')
+    }
 
     // Check 13: sonda ACTIVA de proveedores de IA — no espera al tráfico.
     //

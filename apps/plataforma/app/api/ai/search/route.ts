@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { verificarSecreto, registrarUso, dentroDePresupuesto } from '@/lib/ai-gateway'
+import { verificarSecreto, registrarUso, dentroDePresupuesto, PROVEEDOR_PASARELA } from '@/lib/ai-gateway'
 import { buscarWeb, busquedaConfigurada } from '@/lib/websearch'
 
 export const maxDuration = 60
@@ -14,11 +14,11 @@ export async function POST(req: Request) {
   const app = String(body?.app ?? 'desconocida')
 
   if (!busquedaConfigurada()) {
-    await registrarUso({ app, endpoint: 'search', proveedor: 'gemini', modelo: null, ok: false, ms: 0, error: 'sin GEMINI_API_KEY ni OPENROUTER_API_KEY' })
+    await registrarUso({ app, endpoint: 'search', proveedor: PROVEEDOR_PASARELA, modelo: null, ok: false, ms: 0, error: 'sin GEMINI_API_KEY ni OPENROUTER_API_KEY' })
     return NextResponse.json({ error: 'Búsqueda IA no configurada (falta GEMINI_API_KEY u OPENROUTER_API_KEY)' }, { status: 503 })
   }
   if (!(await dentroDePresupuesto())) {
-    await registrarUso({ app, endpoint: 'search', proveedor: 'gemini', modelo: null, ok: false, ms: 0, error: 'presupuesto mensual excedido' })
+    await registrarUso({ app, endpoint: 'search', proveedor: PROVEEDOR_PASARELA, modelo: null, ok: false, ms: 0, error: 'presupuesto mensual excedido' })
     return NextResponse.json({ error: 'Límite mensual de IA alcanzado' }, { status: 429 })
   }
 

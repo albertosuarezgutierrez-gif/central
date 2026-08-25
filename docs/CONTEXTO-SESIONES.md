@@ -32,6 +32,15 @@
 
 ---
 
+### 🔀 (25/08/2026) «IA gemini muerta» del health-check: era el gate mensual disfrazado
+El 🔴 «gemini: 15 llamadas, ninguna correcta» NO eran llamadas a Gemini (apagado desde 01/08, última
+real 01/08): eran rechazos PRE-VUELO del gate `AI_GATEWAY_LIMITE_MENSUAL` (cruzado el 24/08 con
+5.120 llamadas OK) que `/api/ai/search` registraba con `proveedor:'gemini'` hardcodeado (y chat/tools
+con 'nim', codigo/ejecutar/programar con 'openrouter'). Fix: `PROVEEDOR_PASARELA='pasarela'` en los 7
+routes, Check 12 lo excluye, y Check 12-bis nuevo canta el presupuesto mensual con su nombre (🔴 al
+100%, 🟡 al 80%). Guardián `lib/ai-gateway-preflight.test.ts`. tsc 0 · 1.576 tests OK.
+**Pendiente de Alberto:** los /api/ai/* siguen en 429 hasta el día 1 salvo que suba la env en Vercel.
+
 ### 📧 (25/08/2026) facturas-correo — pasada diaria: solo el hueco Paso 4.0 cerrado
 Sin novedades de Gmail (Amazon cosmética y carta de no-renovación de seguro de un cliente, ambos
 sin archivar por no ser gasto). Paso 4.0 encontró 1 `sin_revisar` en `v_facturas_sin_cargo`

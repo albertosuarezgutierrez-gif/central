@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { aiTools, openrouterChatTools, type NimToolMessage } from '@central/core-ai'
 import {
   verificarSecreto, registrarUso, dentroDePresupuesto, dentroDePresupuestoDiario,
-  estimarTokens, costeEur,
+  estimarTokens, costeEur, PROVEEDOR_PASARELA,
 } from '@/lib/ai-gateway'
 import { openrouterConfigPasarela, modelosPorDefecto } from '@/lib/ia-director'
 
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   const clienteRef = typeof body?.cliente === 'string' && body.cliente.trim() ? body.cliente.trim().slice(0, 120) : null
 
   if (!(await dentroDePresupuesto())) {
-    await registrarUso({ app, endpoint: 'tools', proveedor: 'nim', modelo: null, ok: false, ms: 0, error: 'presupuesto mensual excedido', clienteRef })
+    await registrarUso({ app, endpoint: 'tools', proveedor: PROVEEDOR_PASARELA, modelo: null, ok: false, ms: 0, error: 'presupuesto mensual excedido', clienteRef })
     return NextResponse.json({ error: 'Límite mensual de IA alcanzado' }, { status: 429 })
   }
 
